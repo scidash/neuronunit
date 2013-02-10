@@ -7,7 +7,7 @@ import scipy
 SCALE = [1e-4,1] # dt = 0.0001; units = mV or pA.  
 
 # Membrane potential trace (1D numpy array) to matrix of spike snippets (2D numpy array)
-def vm2spikes(vm,scale=SCALE,threshold=0,width=0.01): # Width in s.  
+def vm2spikes(vm, scale=SCALE, threshold=0, width=0.01): # Width in s.  
 	# vm: the membrane potential trace.  
 	# scale[0]: the duration of time (in s) corresponding to one sample (point), i.e. dt.  
 	# scale[1]: the scale (in mV) of the vm array, i.e. vm=3 corresponds to 3*scale[1] mV.   
@@ -22,10 +22,10 @@ def vm2spikes(vm,scale=SCALE,threshold=0,width=0.01): # Width in s.
 	spikes = [vm[maximum[0]:maximum[0]+2*width] for maximum in maxima if maximum[1]>threshold]
 	return array(spikes)
 
-def spikes2amplitudes(spikes,scale=SCALE):
+def spikes2amplitudes(spikes, scale=SCALE):
 	return amax(spikes,axis=1)*scale[1]
 
-def spikes2widths(spikes,scale=SCALE):
+def spikes2widths(spikes, scale=SCALE):
 	widths = []
 	for spike in spikes:
 		x_high = argmax(spike)

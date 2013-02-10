@@ -5,7 +5,8 @@ import neuroelectro
 from numpy import *
 
 class SpikeWidthTest(neuroelectro.NeuroElectroSummaryTest):
-	required_capabilities = (capabilities.ProducesMembranePotential,capabilities.ProducesSpikes)
+	required_capabilities = (capabilities.ProducesMembranePotential,
+							 capabilities.ProducesSpikes)
 	def run_test(self,model):
 		self.get_values()
 		if not model.ran:
