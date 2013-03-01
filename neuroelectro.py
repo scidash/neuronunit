@@ -1,3 +1,34 @@
+"""
+Interface for creating tests using neuroelectro.org as reference data.  
+
+Example workflow:
+
+x = NeuroElectroDataMap() 
+x.set_neuron(nlex_id='nifext_152') # neurolex.org ID for 'Amygdala basolateral nucleus 
+								   # pyramidal neuron'.
+x.set_ephysprop(id=2) # neuroelectro.org ID for 'Spike width'.  
+x.set_article(pmid=18667618) # Pubmed ID for Fajardo et al, 2008 (J. Neurosci.)  
+x.get_values() # Gets values for spike width from this paper.  
+width = x.val # Spike width reported in that paper. 
+
+t = neurounit.tests.SpikeWidthTest(spike_width=width)
+m = sciunit.Model()
+m.execute = code_that_runs_your_model
+result = sciunit.run(t,m)
+print result.score
+
+OR
+
+x = NeuroElectroSummary() 
+x.set_neuron(nlex_id='nifext_152') # neurolex.org ID for 'Amygdala basolateral nucleus 
+								   # pyramidal neuron'.
+x.set_ephysprop(id=2) # neuroelectro.org ID for 'Spike width'.  
+x.get_values() # Gets values for spike width from this paper.  
+width = x.mean # Mean Spike width reported across all matching papers. 
+...
+
+"""
+
 import sciunit
 from urllib import urlencode
 from urllib2 import urlopen
@@ -27,7 +58,7 @@ class Article:
 	pmid = None
 
 # Abstract test class based on neuroelectro.org data using that site's API.  
-class NeuroElectroTest(sciunit.Test):
+class NeuroElectroData(object):
 	url = API_URL # Base URL.  
 	neuron = Neuron()
 	ephysprop = EphysProp() 
@@ -54,7 +85,7 @@ class NeuroElectroTest(sciunit.Test):
 		query['e'] = self.ephysprop.id
 		query['e__name'] = self.ephysprop.name
 		query = {key:value for key,value in query.items() if value is not None}
-		url += urllib2.urlencode(query)
+		url += urlencode(query)
 		return url
 	
 	def get_json(self,params=None): # Gets JSON data from neuroelectro.org based on the currently set neuron and ephys property.  Use 'params' to constrain the data returned.  
@@ -66,13 +97,13 @@ class NeuroElectroTest(sciunit.Test):
 	def get_values(self,params=None): # Gets values from neuroelectro.org.  We will use 'params' in the future to specify metadata (e.g. temperature) that neuroelectro.org will provide.  
 		self.get_json(params=params)
 		data = self.json_object['objects'] # All the summary matches in neuroelectro.org for this combination of neuron and ephys property.  
-		data = data[0] # For now, we are just going to take the first match.  If neuron_id and ephysprop_id where both specified, there should be only one anyway.  
-		return data
-	
+		self.api_data = data[0] # For now, we are just going to take the first match.  If neuron_id and ephysprop_id where both specified, there should be only one anyway.  
+		return self.api_data
+
 	def check(self): # See if the data requested from the server were obtained successfully.  
 		pass
 			
-class NeuroElectroDataMapTest(NeuroElectroTest):
+class NeuroElectroDataMap(NeuroElectroData):
 	url = API_URL+'nedm/'
 	article = Article()
 	
@@ -86,7 +117,7 @@ class NeuroElectroDataMapTest(NeuroElectroTest):
 		query['a'] = self.article.id
 		query['pmid'] self.article.pmid
 		query = {key:value for key,value in query.items() if value is not None}
-		url += '&'+urllib2.urlencode(query)
+		url += '&'+urlencode(query)
 		return url
 	
 	def get_values(self,params=None):
@@ -105,7 +136,7 @@ class NeuroElectroDataMapTest(NeuroElectroTest):
 			print 'The val and err were not found.'
 			raise
 
-class NeuroElectroSummaryTest(NeuroElectroTest):
+class NeuroElectroSummary(NeuroElectroData):
 	url = API_URL+'nes/'
 	
 	def get_values(self,params=None):
@@ -125,19 +156,22 @@ class NeuroElectroSummaryTest(NeuroElectroTest):
 			raise
 
 def test_module():
-	x = NeuroElectroDataMapTest()
+	x = NeuroElectroDataMap()
 	x.set_neuron(id=72)
 	x.set_ephysprop(id=2)
 	x.set_article(pmid=18667618)
 	x.get_values()
 	x.check()
 
-	x = NeuroElectroSummaryTest()
+	x = NeuroElectroSummary()
 	x.set_neuron(id=72)
 	x.set_ephysprop(id=2)
 	x.get_values()
 	x.check()
 	print "Tests passed."
+
+
+
 
 
 
