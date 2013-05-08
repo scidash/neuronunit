@@ -5,19 +5,20 @@ from neurounit.capabilities import ReceivesCurrent
 import spike_functions
 import neuroelectro
 from numpy import *
-from sciunit.tests import RickTest
+from sciunit.tests import StandardTest
 from sciunit.comparators import ZComparator # Comparators.  
 from sciunit.comparators import ZScoreToBooleanScore # Converters.  
 from sciunit.scores import BooleanScore # Scores.  
 
-class SpikeWidthTest(RickTest):
+class SpikeWidthTest(StandardTest):
 	"""Tests the full widths of spikes at their half-maximum."""
 	def __init__(self,
 			     reference_data={'mean':None,'std':None},
-			     candidate_args={}):
+			     candidate_args={},
+			     comparator=ZComparator):
 		"""Takes the mean and standard deviation of reference spike widths"""
 		
-		super(SpikeWidthTest,self).__init__(reference_data,candidate_args) 
+		super(SpikeWidthTest,self).__init__(reference_data,candidate_args,comparator) 
 		"""Register reference data and candidate arguments."""  
 		
 		self.required_capabilities += (ProducesMembranePotential,
@@ -57,9 +58,10 @@ class SpikeWidthTest(RickTest):
 class SpikeWidthTestDynamic(SpikeWidthTest):
 	def __init__(self,
 				 reference_data=SpikeWidthTest.__init__.im_func.func_defaults[0],  
-			     candidate_args={'current':0.0}):
+			     candidate_args={'current':0.0},
+			     comparator=SpikeWidthTest.__init__.im_func.func_defaults[2]):
 		"""Takes a steady-state current to be injected into a cell."""
 
-		super(SpikeWidthTestDynamic,self).__init__(reference_data,candidate_args) 
+		super(SpikeWidthTestDynamic,self).__init__(reference_data,candidate_args,comparator) 
 		self.required_capabilities += (ReceivesCurrent,)
 		
