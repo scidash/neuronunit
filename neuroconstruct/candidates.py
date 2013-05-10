@@ -30,15 +30,26 @@ class NeuroConstructModel(Candidate,
 	Methods will be implemented using the neuroConstruct python 
 	API (in progress)."""
 
-	def __init__(self,**kwargs):
+	def __init__(self,project_path,**kwargs):
+		"""file_path is the full path to an .ncx file."""
+		print "Instantiating a neuroConstruct candidate (model)."
+		self.project_path = project_path
+		self.ran = False
+		self.population_name = putils.POPULATION_NAME
 		for key,value in kwargs.items():
 			setattr(self,key,value)
 
-	ran = False
-	
 	def get_membrane_potential(self):
 		"""Returns a NeuroTools.signals.analogs.AnalogSignal object"""
-		return putils.get_vm(run=(not self.ran))   
+		f = putils.get_vm
+		if self.ran:
+			return f(sim_path=self.sim_path,
+					 population_name=self.population_name) 
+			# Returns cached result.  
+		else:
+			return f(project_path=self.project_path,
+					 population_name=self.population_name) 
+			# Runs sim and returns result.  
 
 	def get_spikes(self):
 		"""Returns an array of spike snippets"""
@@ -53,11 +64,18 @@ class NeuroConstructModel(Candidate,
 	def run(self,**kwargs):
 		"""Runs the model using jython via execnet and returns a 
 		directory of simulation results"""
-		print "Running simulation..."
-		simDir = putils.run_sim(useSocket=True,useNC=True,useNeuroTools=True)
-  		self.ran = True
-  		return simDir
-	
+		if self.ran is False or \
+		("rerun" in kwargs.keys() and kwargs["rerun"] is True) or \
+		hasattr(self,"rerun") and self.rerun is True:
+			print "Running simulation..."
+			self.sim_path = putils.run_sim(project_path=self.project_path,
+									   	   useSocket=True,
+									       useNC=True,
+									       useNeuroTools=True)
+			self.ran = True
+		else:
+			print "Already ran simulation..."
+  		
 class FakeNeuroConstructModel(NeuroConstructModel,
 							  ReceivesCurrent):
 	"""A fake neuroConstruct model that generates a gaussian noise 

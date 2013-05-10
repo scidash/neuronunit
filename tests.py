@@ -17,7 +17,7 @@ class SpikeWidthTest(StandardTest):
 			     candidate_args={},
 			     comparator=ZComparator):
 		"""Takes the mean and standard deviation of reference spike widths"""
-		
+		print "Instantiating a spike width test."
 		super(SpikeWidthTest,self).__init__(reference_data,candidate_args,comparator) 
 		"""Register reference data and candidate arguments."""  
 		
@@ -37,8 +37,9 @@ class SpikeWidthTest(StandardTest):
 		spikes = candidate.get_spikes() # Method implementation guaranteed by 
 									# ProducesSpikes capability. 
 		widths = spike_functions.spikes2widths(spikes)
+		widths *= 1000 # Convert from s to ms.  
 		candidate_data = {'mean':mean(widths),
-					  'std':std(widths)}
+					  	'std':std(widths)}
 		return candidate_data
 
 	def get_candidate_stats(self,candidate_data):

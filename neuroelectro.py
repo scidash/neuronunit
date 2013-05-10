@@ -113,6 +113,7 @@ class NeuroElectroData(object):
 		"""Gets values from neuroelectro.org.  
 		We will use 'params' in the future to specify metadata (e.g. temperature) 
 		that neuroelectro.org will provide."""  
+		print "Getting data values from neuroelectro.org"
 		self.get_json(params=params)
 		data = self.json_object['objects'] 
 		# All the summary matches in neuroelectro.org for this combination 
