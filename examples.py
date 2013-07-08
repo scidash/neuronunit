@@ -34,6 +34,10 @@ class CA1PyramidalCell(candidates.NeuroConstructModel,
 		# This isn't actually used here, but it could be used in the 
 		# appropriate model to inject current into the cell.  
 		self.i = current
+	def get_firing_rate(self):
+		# This isn't actually used here, but it could be used in the 
+		# appropriate model to inject current into the cell.  
+		return len(self.spikes)
 
 # A real model.  
 class PurkinjeCell(candidates.NeuroConstructModel,
@@ -56,16 +60,17 @@ class PurkinjeCell(candidates.NeuroConstructModel,
 	
 # Get reference data from neuroelectro.org.  
 reference_data = neuroelectro.NeuroElectroSummary(
-	neuron = {'id':72}, # DRG neuron.   
+	neuron = {'id':72}, # DRG neuron (18: Purkinje cell).   
 	ephysprop = {'id':23}) # Spike width. 
 
 # Get and verify summary data for the combination above. 
 reference_data.get_values()  
 
 # Initialize (parameterize) the model with some initialization parameters.
+candidate = PurkinjeCell(population_name="OrigChansCellGroup_0")   
+
+#candidate = CA1PyramidalCell(population_name="CG_CML_0")   
 #candidate = DRGCell(diameter=17.0,branches=10)   
-candidate = CA1PyramidalCell(population_name="CG_CML_0")   
-#candidate = PurkinjeCell(population_name="OrigChansCellGroup_0")   
 
 # Initialize the test with summary statistics from the reference data
 # and arguments for the candidate (model).    
