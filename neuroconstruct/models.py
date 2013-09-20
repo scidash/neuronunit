@@ -14,14 +14,14 @@ except KeyError:
 sys.path.append(NC_HOME)
 
 from pythonnC.utils import putils # From the neuroConstruct pythonnC package.  
-from sciunit import Candidate
+from sciunit import Model
 from neurounit.capabilities import ProducesMembranePotential,ProducesSpikes
 from neurounit.capabilities import ReceivesCurrent
 from sciunit.capabilities import Runnable
 import spike_functions
 import numpy as np
 
-class NeuroConstructModel(Candidate,
+class NeuroConstructModel(Model,
 						  Runnable,
 						  ProducesMembranePotential,
 						  ProducesSpikes):
