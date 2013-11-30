@@ -90,10 +90,10 @@ class NeuroElectroData(object):
 		"""Creates the full URL to the neuroelectro API."""  
 		url = self.url+"?"
 		query = {}
+		# Change these for consistency in the neuroelectro.org API.  
 		query['n'] = self.neuron.id 
-		# Change this for consistency in the neuroelectro.org API.  
-		query['nlex'] = self.neuron.nlex_id 
-		# Change this for consistency in the neuroelectro.org API.  
+		query['nlex'] = self.neuron.nlex_id
+		query['n__name'] = self.neuron.name
 		query['e'] = self.ephysprop.id
 		query['e__name'] = self.ephysprop.name
 		query = {key:value for key,value in query.items() if value is not None}

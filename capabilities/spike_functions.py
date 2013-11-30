@@ -1,5 +1,11 @@
-from numpy import *
-import scipy
+try:
+	import numpy as np
+except:
+	print "NumPy not loaded."
+try:
+	import scipy
+except:
+	print "SciPy not loaded."
 
 SCALE = [1e-4,1] # dt = 0.0001; units = mV or pA.  
 
@@ -15,14 +21,14 @@ def vm2spikes(vm, scale=SCALE, threshold=0.0, width=0.01): # Width in s.
 	OUT:
 	 2D (m x n) numpy array of spikes, with n spikes and m samples per spike.   
 	"""
-	vm = array(vm)  
+	vm = np.array(vm)  
 	n_samples = len(vm)
 	(maxima,minima) = peakdet(vm,0)#,x=times)
 	threshold = float(threshold)/scale[1]
 	width = float(width)/scale[0] # Convert to samples.
-	vm = concatenate((ones(width)*vm[0],vm,ones(width)*vm[n_samples-1])) # Prepend and postpend buffer
+	vm = np.concatenate((ones(width)*vm[0],vm,ones(width)*vm[n_samples-1])) # Prepend and postpend buffer
 	spikes = [vm[maximum[0]:maximum[0]+2*width] for maximum in maxima if maximum[1]>threshold]
-	return array(spikes)
+	return np.array(spikes)
 
 def spikes2amplitudes(spikes, scale=SCALE):
 	""" 
@@ -33,7 +39,7 @@ def spikes2amplitudes(spikes, scale=SCALE):
 	OUT:
 	 1D numpy array of spike amplitudes, i.e. the maxima in each waveform.     
 	"""
-	return amax(spikes,axis=1)*scale[1]
+	return np.amax(spikes,axis=1)*scale[1]
 
 def spikes2widths(spikes, scale=SCALE):
 	""" 
@@ -46,13 +52,13 @@ def spikes2widths(spikes, scale=SCALE):
 	"""
 	widths = []
 	for spike in spikes:
-		x_high = argmax(spike)
+		x_high = np.argmax(spike)
 		high = spike[x_high]
 		low = min(spike[:x_high])
 		mid = (high+low)/2
 		spike_top = spike[(spike>mid)]
 		widths.append(len(spike_top))
-	return array(widths)*scale[0]
+	return np.array(widths)*scale[0]
 
 # https://gist.github.com/endolith/250860
 def peakdet(v, delta, x = None):
@@ -73,7 +79,7 @@ def peakdet(v, delta, x = None):
 	if x is None:
 		x = arange(len(v))
 	
-	v = asarray(v)
+	v = np.asarray(v)
 	
 	if len(v) != len(x):
 		sys.exit('Input vectors v and x must have same length')
@@ -89,7 +95,7 @@ def peakdet(v, delta, x = None):
 	
 	lookformax = True
 	
-	for i in arange(len(v)):
+	for i in np.arange(len(v)):
 		this = v[i]
 		if this > mx:
 			mx = this
@@ -111,4 +117,4 @@ def peakdet(v, delta, x = None):
 				mxpos = x[i]
 				lookformax = True
  
-	return array(maxtab), array(mintab)
+	return np.array(maxtab), np.array(mintab)
