@@ -38,4 +38,3 @@ score.summarize()
 
 # Get model output used for this test (optional).
 vm = score.related_data['vm']
-

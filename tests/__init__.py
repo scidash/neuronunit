@@ -1,14 +1,16 @@
 import inspect
 from sciunit.capabilities import Runnable
-from neuronunit.capabilities import ProducesMembranePotential,ProducesSpikes
-from neuronunit.capabilities import ReceivesCurrent,spike_functions
-from neuronunit import neuroelectro
-from sciunit.tests import ZTest
+from neurounit.capabilities import ProducesMembranePotential,ProducesSpikes
+from neurounit.capabilities import ReceivesCurrent,spike_functions
+from neurounit import neuroelectro
+from sciunit.tests import StandardTest
+from sciunit.comparators import ZComparator # Comparators.  
+from sciunit.comparators import ZScoreToBooleanScore # Converters.  
+from sciunit.scores import BooleanScore # Scores.  
 try:
 	import numpy as np
 except:
 	print "NumPy not loaded."
-
 
 class SpikeWidthTest(ZTest):
 	"""Tests the full widths of spikes at their half-maximum."""
@@ -32,24 +34,13 @@ class SpikeWidthTest(ZTest):
 		widths = spike_functions.spikes2widths(spikes)
 		widths *= 1000 # Convert from s to ms.  
 		model_output_data = {'mean':mean(widths),
-					  	'std':std(widths)}
+	  					  	 'std':std(widths)}
 		return model_output_data
 
 	def get_model_stats(self,output_data):
 		"""Puts model stats in a form that the Comparator will understand."""
 		return {'value':output_data['mean']}
 		
-	#def get_reference_stats(self):
-	#	"""Puts reference stats in a form that the Comparator will understand."""
-	#	return {'mean':self.reference_data['mean'],
-	#			'std':self.reference_data['std']}
-		
-	#def generate_score(self,model_data):
-	#	"""Return a score for the model on this test."""  
-	#	score = super(SpikeWidthTest,self).generate_score(model_data)
-	#	return score
-
-
 class SpikeWidthTestDynamic(SpikeWidthTest):
 	"""Tests the full widths of spikes at their half-maximum under current injection."""
 
