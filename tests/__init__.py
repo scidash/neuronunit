@@ -1,11 +1,11 @@
 import inspect
 from sciunit.capabilities import Runnable
-from neurounit.capabilities import ProducesMembranePotential,ProducesSpikes
-from neurounit.capabilities import ReceivesCurrent,spike_functions
-from neurounit import neuroelectro
-from sciunit.tests import StandardTest
+from neuronunit.capabilities import ProducesMembranePotential,ProducesSpikes
+from neuronunit.capabilities import ReceivesCurrent,spike_functions
+from neuronunit import neuroelectro
+from sciunit.tests import ZTest
 from sciunit.comparators import ZComparator # Comparators.  
-from sciunit.comparators import ZScoreToBooleanScore # Converters.  
+from sciunit.comparators import Z_to_Boolean # Converters.  
 from sciunit.scores import BooleanScore # Scores.  
 try:
 	import numpy as np
