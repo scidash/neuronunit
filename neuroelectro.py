@@ -31,7 +31,7 @@ width = x.mean # Mean Spike width reported across all matching papers.
 
 import sciunit
 from urllib import urlencode
-from urllib2 import urlopen
+from urllib2 import urlopen,URLError
 import json
 
 API_VERSION = 1
@@ -90,10 +90,10 @@ class NeuroElectroData(object):
 		"""Creates the full URL to the neuroelectro API."""  
 		url = self.url+"?"
 		query = {}
+		# Change these for consistency in the neuroelectro.org API.  
 		query['n'] = self.neuron.id 
-		# Change this for consistency in the neuroelectro.org API.  
-		query['nlex'] = self.neuron.nlex_id 
-		# Change this for consistency in the neuroelectro.org API.  
+		query['nlex'] = self.neuron.nlex_id
+		query['n__name'] = self.neuron.name
 		query['e'] = self.ephysprop.id
 		query['e__name'] = self.ephysprop.name
 		query = {key:value for key,value in query.items() if value is not None}
@@ -105,10 +105,16 @@ class NeuroElectroData(object):
 		set neuron and ephys property.  Use 'params' to constrain the 
 		data returned."""
 		url = self.make_url(params=params)
-		url_result = urlopen(url) # Get the page.  
-		html = url_result.read() # Read out the HTML (actually JSON)
-		self.json_object = json.loads(html) # Convert into a JSON object.  
-	
+		try:
+			url_result = urlopen(url,None,3) # Get the page.  
+			html = url_result.read() # Read out the HTML (actually JSON)
+		except URLError:
+			print "NeuroElectro.org appears to be down."
+			print "Using fake data for now."
+			html = '{"objects":[{"n":{"name":"CA1 Pyramidal Cell"},"e":{"name":"Spike Width"},\
+			"value_mean":0.001,"value_sd":0.0003}]}'
+		self.json_object = json.loads(html)
+
 	def get_values(self,params=None): 
 		"""Gets values from neuroelectro.org.  
 		We will use 'params' in the future to specify metadata (e.g. temperature) 
