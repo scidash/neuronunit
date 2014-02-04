@@ -124,7 +124,10 @@ class NeuroElectroData(object):
 		data = self.json_object['objects'] 
 		# All the summary matches in neuroelectro.org for this combination 
 		# of neuron and ephys property.  
-		self.api_data = data[0] 
+		if len(data):
+			self.api_data = data[0] 
+		else:
+			self.api_data = None
 		# For now, we are just going to take the first match.  
 		# If neuron_id and ephysprop_id where both specified, 
 		# there should be only one anyway.  
@@ -155,14 +158,16 @@ class NeuroElectroDataMap(NeuroElectroData):
 	
 	def get_values(self,params=None):
 		data = super(NeuroElectroDataMapTest,self).get_values(params=params)
-		self.neuron_name = data['ncm']['n']['name'] 
-		# Set the neuron name from the json data.  
-		self.ephysprop_name = data['ecm']['e']['name'] 
-		# Set the ephys property name from the json data.  
-		self.val = data['val']
-		self.sem = data['err']
-		self.n = data['n']
-		self.check()
+		if data:
+			self.neuron_name = data['ncm']['n']['name'] 
+			# Set the neuron name from the json data.  
+			self.ephysprop_name = data['ecm']['e']['name'] 
+			# Set the ephys property name from the json data.  
+			self.val = data['val']
+			self.sem = data['err']
+			self.n = data['n']
+			self.check()
+		return data
 	
 	def check(self):
 		try:
@@ -180,15 +185,17 @@ class NeuroElectroSummary(NeuroElectroData):
 	
 	def get_values(self,params=None):
 		data = super(NeuroElectroSummary, self).get_values(params=params)
-		self.neuron_name = data['n']['name'] 
-		# Set the neuron name from the json data.  
-		self.ephysprop_name = data['e']['name']
-		# Set the ephys property name from the json data.  
-		self.mean = data['value_mean']
-		self.std = data['value_sd']
-		self.n = data['n']
-		self.check()
-	
+		if data:
+			self.neuron_name = data['n']['name'] 
+			# Set the neuron name from the json data.  
+			self.ephysprop_name = data['e']['name']
+			# Set the ephys property name from the json data.  
+			self.mean = data['value_mean']
+			self.std = data['value_sd']
+			self.n = data['n']
+			self.check()
+		return data
+		
 	def check(self):
 		try:
 			mean = self.mean
