@@ -105,15 +105,27 @@ class NeuroElectroData(object):
 		set neuron and ephys property.  Use 'params' to constrain the 
 		data returned."""
 		url = self.make_url(params=params)
+		print url
 		try:
 			url_result = urlopen(url,None,3) # Get the page.  
 			html = url_result.read() # Read out the HTML (actually JSON)
-		except URLError:
-			print "NeuroElectro.org appears to be down."
-			print "Using fake data for now."
-			html = '{"objects":[{"n":{"name":"CA1 Pyramidal Cell"},"e":{"name":"Spike Width"},\
-			"value_mean":0.001,"value_sd":0.0003}]}'
-		self.json_object = json.loads(html)
+		except URLError,e:
+			html = e.read()
+			self.json_object = json.loads(html)
+			if 'error_message' in self.json_object:
+				if self.json_object['error_message'] == "Neuron matching query does not exist.":
+					print "No matching neuron found at NeuroElectro.org."
+			else:
+				print "NeuroElectro.org appears to be down."
+			#print "Using fake data for now."
+			#html = '{"objects":[{"n":{"name":"CA1 Pyramidal Cell"},
+			#					  "e":{"name":"Spike Width"},\
+			#					  "value_mean":0.001,
+			#					  "value_sd":0.0003}]}'
+			
+		else:
+			self.json_object = json.loads(html)
+		return self.json_object
 
 	def get_values(self,params=None): 
 		"""Gets values from neuroelectro.org.  
@@ -121,10 +133,13 @@ class NeuroElectroData(object):
 		that neuroelectro.org will provide."""  
 		print "Getting data values from neuroelectro.org"
 		self.get_json(params=params)
-		data = self.json_object['objects'] 
+		if 'objects' in self.json_object:
+			data = self.json_object['objects'] 
+		else:
+			data = None
 		# All the summary matches in neuroelectro.org for this combination 
 		# of neuron and ephys property.  
-		if len(data):
+		if data and len(data):
 			self.api_data = data[0] 
 		else:
 			self.api_data = None
