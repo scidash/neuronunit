@@ -56,19 +56,24 @@ class ProducesMembranePotential_NC(ProducesMembranePotential,Runnable):
 	def get_membrane_potential(self,**kwargs):
 		"""Returns a NeuroTools.signals.analogs.AnalogSignal object"""
 		
-		if self.sim_path is None or \
-		self.ran is False:
+		if self.sim_path is None or self.ran is False:
 			self.run(**kwargs)
-		vm = nc_neurotools.get_analog_signal(self.sim_path,self.population_name) 
-		# An AnalogSignal instance. 
+		elif self.sim_path == '':
+			vm = None
+		else:
+			vm = nc_neurotools.get_analog_signal(self.sim_path,
+												 self.population_name) 
+			# An AnalogSignal instance. 
 		return vm 
-  
+  		
 	def get_median_vm(self,**kwargs):
 		"""Returns a float corresponding the median membrane potential.
 		This will in some cases be the resting potential."""
+		
 		vm = self.get_membrane_potential(**kwargs) 
 		# A NeuroTools.signals.AnalogSignal object
-		return np.median(vm.signal)
+		median_vm = np.median(vm.signal)
+		return median_vm
 
 	def get_initial_vm(self):
 		"""Returns a float corresponding to the starting membrane potential.
@@ -109,10 +114,12 @@ class ReceivesCurrent_NC(ReceivesCurrent,Runnable_NC):
 	def set_current_ampl(self,current_ampl):
 		cmd = 'import %s as j;' % JUTILS_PATH
 		cmd += 'import sys;'
-		cmd += 'j.sim.set_current_ampl(%f);' % current_ampl
-		cmd += 'channel.send("Set current amplitude");'
+		cmd += 'err = j.sim.set_current_ampl(%f);' % current_ampl
+		cmd += 'channel.send(err);'
 		channel = self.gateway.remote_exec(cmd)
-		return channel.receive()
+		err = channel.receive() # This will be an error code.  
+		if len(err):
+			raise NotImplementedError(err)
 		#self.current.ampl = current_ampl
 		#self.runtime_methods['set_current_ampl']=[current_ampl]
 
