@@ -1,4 +1,5 @@
 import inspect
+from sciunit import Score
 from sciunit.capabilities import Runnable
 from neuronunit.capabilities import ProducesMembranePotential,ProducesSpikes
 from neuronunit.capabilities import ReceivesCurrent,spike_functions
@@ -6,7 +7,7 @@ from neuronunit import neuroelectro
 from sciunit.tests import ZTest
 from sciunit.comparators import ZComparator # Comparators.  
 from sciunit.comparators import Z_to_Boolean # Converters.  
-from sciunit.scores import BooleanScore # Scores.  
+from sciunit.scores import ErrorScore,BooleanScore # Scores.  
 try:
 	import numpy as np
 except:
@@ -73,11 +74,14 @@ class RestingPotentialTest(ZTest):
 
 	def _judge(self,model,**kwargs):
 		current_ampl = 0.0
-		model.set_current_ampl(current_ampl) 
-		print "Setting current amplitude to %f" % current_ampl
-		# Setting injected current to zero.  
-		score = super(RestingPotentialTest,self)._judge(model,**kwargs) # Run the model.  
-		score.related_data.update({'vm':model.get_membrane_potential()})
+		try:
+			print "Setting current amplitude to %f" % current_ampl
+			# Setting injected current to zero.  
+			model.set_current_ampl(current_ampl) 
+			score = super(RestingPotentialTest,self)._judge(model,**kwargs) # Run the model.  
+			score.related_data.update({'vm':model.get_membrane_potential()})
+		except Exception,e:
+			score = ErrorScore(e,self,model)
 		return score
 
 	def get_model_data(self,model):
