@@ -58,7 +58,6 @@ class ProducesMembranePotential_NC(ProducesMembranePotential,Runnable_NC):
 		
 		if self.sim_path is None or self.ran is False:
 			self.run(**kwargs)
-
 		if self.sim_path == '':
 			vm = None
 		else:

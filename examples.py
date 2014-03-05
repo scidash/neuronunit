@@ -78,6 +78,7 @@ for brain_area in brain_areas:
 			# (2) take the test, 
 			# (3) generate a score and validate it,
 			# (4) bind the score to model/test combination. 
+
 			score = test.judge(model,stop_on_error=False)
 
 			# Summarize the result.  

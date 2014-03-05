@@ -115,4 +115,3 @@ class NeuroML2Model(NeuroConstructModel):
 		project.cellGroupsInfo.setCellType("DefaultCellGroup", cell.getInstanceName()) # Set the type of an existing cell group to this
 		project.saveProject()
 '''
-

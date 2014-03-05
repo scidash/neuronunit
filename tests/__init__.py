@@ -5,6 +5,7 @@ from neuronunit.capabilities import ReceivesCurrent,spike_functions
 from neuronunit import neuroelectro
 from sciunit.comparators import zscore # Converters.  
 from sciunit.scores import ErrorScore,BooleanScore,ZScore # Scores.  
+
 try:
 	import numpy as np
 except:
