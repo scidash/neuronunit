@@ -9,7 +9,6 @@ from pythonnC.utils import putils # From the neuroConstruct pythonnC package.
 from sciunit import Model
 from capabilities import * # neurounit.neuroconstruct.capabilites
 #from neurounit.capabilities import ReceivesCurrent
-from sciunit.capabilities import Runnable
 from neuronunit.capabilities import spike_functions
 import numpy as np
 
@@ -36,7 +35,9 @@ class NeuroConstructModel(Model,
 
 	def get_ncx_file(self):
 		# Get a list of .ncx (neuroConstruct) files.  Should be only one for most projects.  
-		ncx_files = [f for f in os.listdir(self.project_path) if f[-4:]=='.ncx']  
+		ncx_files = [f for f in os.listdir(self.project_path) if f[-4:]=='.ncx'] 
+		if not len(ncx_files):
+			raise IOError("No .ncx files found in %s" % self.project_path)
 		ncx_file = os.path.join(self.project_path,ncx_files[0]) # Get full path to .ncx file.  
 		return ncx_file
 
@@ -80,5 +81,38 @@ class OSBModel(NeuroConstructModel):
 		if 'name' not in kwargs.keys():
 			self._name = u'%s/%s/%s' % (brain_area,cell_type,model_name)
 		NeuroConstructModel.__init__(self,project_path,**kwargs)
+		self.name = model_name
 
 	models_path = putils.OSB_MODELS
+
+# DEPRECATED. 
+''' 
+class NeuroML2Model(NeuroConstructModel):
+	"""A model hosted on Open Source Brain (http://www.opensourcebrain.org).
+	Will be in NeuroML format, and run using neuroConstruct."""
+
+	def __init__(self,model_name,**kwargs):
+		project_path = os.path.join(self.models_path,
+									model_name)
+		if 'name' not in kwargs.keys():
+			self._name = u'%s' % (model_name)
+		#self.create_nc_project()
+		NeuroConstructModel.__init__(self,project_path,**kwargs)
+
+	models_path = putils.NEUROML2_MODELS
+ 
+	def create_nc_project(self):
+		"""Creates a neuroConstruct project from the NeuroML2 file(s)."""
+		from java.io import File
+		from ucl.physiol.neuroconstruct.project import Project
+		from ucl.physiol.neuroconstruct.cell.converters import MorphMLConverter
+		project = Project.createNewProject('/Users/rgerkin/', self.model_name, None)
+		morphDir = File("%s/osb/showcase/neuroConstructShowcase/Ex3_Morphology/importedMorphologies/" % NC_HOME)
+		morphmlFile = File(morphDir, "SimplePurkinjeCell.morph.xml")
+		converter = MorphMLConverter()
+		cell = converter.loadFromMorphologyFile(morphmlFile, "NewCell") 
+		project.cellManager.addCellType(cell) # Actually add it to the project
+		project.cellGroupsInfo.setCellType("DefaultCellGroup", cell.getInstanceName()) # Set the type of an existing cell group to this
+		project.saveProject()
+'''
+

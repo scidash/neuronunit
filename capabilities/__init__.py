@@ -29,6 +29,6 @@ class ProducesSpikes(Capability):
 class ReceivesCurrent(Capability):
 	"""Somatic current can be injected into the model cell."""
 	
-	def set_current(self,current):
+	def inject_current(self,current):
 		raise NotImplementedError()
 
