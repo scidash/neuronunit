@@ -2,4 +2,4 @@ NeuronUnit: A SciUnit repository for neuroscience-related tests, capabilities an
 
 # Concept:  
 
-https://github.com/rgerkin/papers/blob/master/neuroelectro_frontiers/main.pdf
+https://github.com/rgerkin/papers/blob/master/neuronunit_frontiers/Paper.pdf
