@@ -3,3 +3,11 @@ NeuronUnit: A SciUnit repository for neuroscience-related tests, capabilities an
 # Concept:  
 
 https://github.com/rgerkin/papers/blob/master/neuronunit_frontiers/Paper.pdf
+
+# Presentations:  
+
+INCF Meeting (August, 2014) (Less code)
+https://github.com/scidash/assets/blob/master/presentations/SciUnit%20INCF%20Talk.pdf?raw=true
+
+OpenWorm Journal Club (August, 2014) (More code)
+https://github.com/scidash/assets/blob/master/presentations/SciUnit%20OpenWorm%20Journal%20Club.pdf?raw=true
