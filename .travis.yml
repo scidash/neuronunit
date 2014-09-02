@@ -4,7 +4,7 @@ python:
 # command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install: 
   - pip install numpy
-  - pip install scipy
+  - apt-get install scipy
 
 # Setting up pre-requirements
 before_script:
