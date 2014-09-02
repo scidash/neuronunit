@@ -1,4 +1,4 @@
 neurounit
 =========
 
-A SciUnit repository for neuroscience-related tests, capabilities and so on.
+A SciUnit library to assist with testing of single neuron physiology models.
