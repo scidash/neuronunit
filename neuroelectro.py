@@ -33,6 +33,7 @@ import sciunit
 from urllib import urlencode
 from urllib2 import urlopen,URLError
 import json
+from pprint import pprint
 
 API_VERSION = 1
 API_SUFFIX = '/api/%d/' % API_VERSION
@@ -59,11 +60,13 @@ class Article:
  
 class NeuroElectroData(object):
 	"""Abstract class based on neuroelectro.org data using that site's API."""
-	def __init__(self,neuron={},ephysprop={}):
+	def __init__(self,neuron={},ephysprop={},get_values=False):
 		for key,value in neuron.items():
 			setattr(self.neuron,key,value)
 		for key,value in ephysprop.items():
 			setattr(self.ephysprop,key,value)
+		if get_values:
+			self.get_values()
 
 	url = API_URL # Base URL.  
 	neuron = Neuron()
@@ -210,6 +213,13 @@ class NeuroElectroSummary(NeuroElectroData):
 			self.n = data['n']
 			self.check()
 		return data
+
+	def get_observation(self,params=None,show=False):
+		values = self.get_values(params=params)
+		if show:
+			pprint(values)
+		observation = {'mean':self.mean, 'std':self.std}
+		return observation
 		
 	def check(self):
 		try:
