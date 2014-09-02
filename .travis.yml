@@ -1,0 +1,17 @@
+language: python
+python:
+  - "2.7"
+# command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
+install: 
+  - pip install numpy
+  - pip install scipy
+
+# Setting up pre-requirements
+before_script:
+  - cd ..
+  - git clone git://github.com/rgerkin/sciunit.git
+  - export PYTHONPATH=$PYTHONPATH:$PWD/sciunit
+  - print $PYTHONPATH
+
+# command to run tests, e.g. python setup.py test
+script: python example.py
