@@ -1,4 +1,5 @@
 import inspect
+import sciunit
 from sciunit import Test,Score,ObservationError
 from neuronunit.capabilities import ProducesMembranePotential,ProducesSpikes
 from neuronunit.capabilities import ReceivesCurrent,spike_functions
@@ -11,13 +12,13 @@ try:
 except:
 	print "NumPy not loaded."
 
-class SpikeWidthTest(Test):
+class SpikeWidthTest(sciunit.Test):
 	"""Tests the full widths of spikes at their half-maximum."""
 	
 	def __init__(self,
 			     observation={'mean':None,'std':None},
 			     name="Action potential width"):
-		"""Takes the mean and standard deviation of reference spike widths"""
+		"""Takes the mean and standard deviation of observed spike widths"""
 		
 		Test.__init__(self,observation,name) 
 	
@@ -26,7 +27,7 @@ class SpikeWidthTest(Test):
 	description = "A test of the widths of action potentials \
 				   at half of their maximum height."
 
-	score_type = ZScore
+	score_type = sciunit.scores.ZScore
 
 	def validate_observation(self, observation):
 		try:
@@ -38,21 +39,20 @@ class SpikeWidthTest(Test):
 
 	def generate_prediction(self, model):
 		"""Implementation of sciunit.Test.generate_prediction."""
-		spikes = model.get_spikes() # Method implementation guaranteed by 
-									# ProducesSpikes capability. 
-		widths = spike_functions.spikes2widths(spikes)
-		widths *= 1000 # Convert from s to ms.  
-		prediction = {'mean':mean(widths),
-	  				  'std':std(widths)}
+		# Method implementation guaranteed by ProducesSpikes capability.
+		widths = model.get_spike_widths() 
+		# Put prediction in a form that compute_score() can use.  
+		prediction = {'mean':np.mean(widths),
+	  				  'std':np.std(widths)}
 		return prediction
 
 	def compute_score(self, observation, prediction):
 		"""Implementation of sciunit.Test.score_prediction."""
-		score = zscore(observation,prediction)	
-		return ZScore(score)
+		score = sciunit.utils.analysis.zscore(observation,prediction)	
+		return sciunit.scores.ZScore(score)
 		
 
-class DynamicSpikeWidthTest(SpikeWidthTest):
+class InjectedCurrentSpikeWidthTest(SpikeWidthTest):
 	"""Tests the full widths of spikes at their half-maximum under current injection."""
 
 	def __init__(self,
@@ -79,6 +79,14 @@ class DynamicSpikeWidthTest(SpikeWidthTest):
 	  				  'std':std(widths)}
 		return prediction
 
+#def injection_params(amplitude):
+#	return {'injected_current':{'ampl':amplitude}}):
+
+#width_test_1 = InjectedCurrentSpikeWidthTest(observation, injection_params(25.0))
+#width_test_2 = InjectedCurrentSpikeWidthTest(observation, injection_params(50.0))
+#width_test_2 = InjectedCurrentSpikeWidthTest(observation, injection_params(75.0))
+
+#width_suite = sciunit.TestSuite([width_test_1,width_test_2,width_test_3])
 
 class RestingPotentialTest(Test):
 	"""Tests the resting potential under zero current injection."""
@@ -116,5 +124,8 @@ class RestingPotentialTest(Test):
 	def compute_score(self, observation, prediction):
 		"""Implementation of sciunit.Test.score_prediction."""
 		score = zscore(observation,prediction)	
-		return ZScore(score)
-	
+		score = ZScore(score)
+		score.related_data['mean_vm'] = prediction['mean']
+		return score
+
+		
