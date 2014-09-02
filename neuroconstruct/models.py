@@ -21,7 +21,7 @@ class NeuroConstructModel(Model,
 	Methods will be implemented using the neuroConstruct python 
 	API (in progress)."""
 
-	def __init__(self,project_path,**kwargs):
+	def __init__(self,project_path,name=None,**kwargs):
 		"""file_path is the full path to an .ncx file."""
 		print "Instantiating a neuroConstruct candidate (model) from %s." % project_path
 		self.project_path = project_path
@@ -32,6 +32,7 @@ class NeuroConstructModel(Model,
 		ReceivesCurrent_NC.__init__(self)
 		for key,value in kwargs.items():
 			setattr(self,key,value)
+		super(Model,self).__init__(name=name,**kwargs)
 
 	def get_ncx_file(self):
 		# Get a list of .ncx (neuroConstruct) files.  Should be only one for most projects.  
@@ -82,6 +83,15 @@ class OSBModel(NeuroConstructModel):
 			self._name = u'%s/%s/%s' % (brain_area,cell_type,model_name)
 		NeuroConstructModel.__init__(self,project_path,**kwargs)
 		self.name = model_name
+
+	@classmethod
+	def make_model(self,brain_area,cell_type,model_name,**kwargs):
+		project_path = os.path.join(self.models_path,
+									brain_area,
+									cell_type,
+									model_name,
+									"neuroConstruct")
+		return NeuroConstructModel(project_path,**kwargs)
 
 	models_path = putils.OSB_MODELS
 
