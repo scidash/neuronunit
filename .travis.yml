@@ -13,6 +13,7 @@ before_script:
   - export PYTHONPATH=$PYTHONPATH:$PWD/sciunit
   - echo $PYTHONPATH
   - cd neuronunit
+  - ls
 
 # command to run tests, e.g. python setup.py test
 script: python example.py
