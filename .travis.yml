@@ -5,6 +5,7 @@ python:
 install: 
   - pip install numpy
   - sudo apt-get install python-scipy
+  - pip install neurotools
 
 # Setting up pre-requirements
 before_script:
