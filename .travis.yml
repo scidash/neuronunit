@@ -10,7 +10,7 @@ install:
 before_script:
   - cd ..
   - git clone git://github.com/rgerkin/sciunit.git
-  - export PYTHONPATH=$PYTHONPATH:$PWD/sciunit
+  - export PYTHONPATH=$PYTHONPATH:$PWD:$PWD/sciunit
   - echo $PYTHONPATH
   - cd neuronunit
   - ls
