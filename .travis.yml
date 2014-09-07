@@ -1,10 +1,9 @@
 language: python
 python:
-  - "2.7"
+  - "2.7_with_system_site_packages"
 # command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
 install: 
-  - pip install numpy
-  - sudo apt-get install python-scipy
+  - sudo apt-get install python-numpy python-scipy
   - pip install neurotools
 
 # Setting up pre-requirements
