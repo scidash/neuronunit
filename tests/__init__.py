@@ -1,90 +1,131 @@
 import inspect
-from sciunit.capabilities import Runnable
+import sciunit
+from sciunit import Test,Score,ObservationError
 from neuronunit.capabilities import ProducesMembranePotential,ProducesSpikes
 from neuronunit.capabilities import ReceivesCurrent,spike_functions
 from neuronunit import neuroelectro
-from sciunit.tests import ZTest
-from sciunit.comparators import ZComparator # Comparators.  
-from sciunit.comparators import Z_to_Boolean # Converters.  
-from sciunit.scores import BooleanScore # Scores.  
+from sciunit.comparators import zscore # Converters.  
+from sciunit.scores import ErrorScore,BooleanScore,ZScore # Scores.  
+
 try:
 	import numpy as np
 except:
 	print "NumPy not loaded."
 
-class SpikeWidthTest(ZTest):
+class SpikeWidthTest(sciunit.Test):
 	"""Tests the full widths of spikes at their half-maximum."""
 	
 	def __init__(self,
-			     reference_data={'mean':None,'std':None},
-			     model_args={}):
-		"""Takes the mean and standard deviation of reference spike widths"""
-		print "Instantiating a spike width test."
-		ZTest.__init__(self,reference_data,model_args) 
-		"""Register reference data and model arguments."""  
-		self.required_capabilities += (ProducesMembranePotential,
-							  		   ProducesSpikes,)
-
-	desc = "spike widths"
-
-	def get_output_data(self,model):
-		"""Extracts data from the model and returns it."""
-		spikes = model.get_spikes() # Method implementation guaranteed by 
-									# ProducesSpikes capability. 
-		widths = spike_functions.spikes2widths(spikes)
-		widths *= 1000 # Convert from s to ms.  
-		model_output_data = {'mean':mean(widths),
-	  					  	 'std':std(widths)}
-		return model_output_data
-
-	def get_model_stats(self,output_data):
-		"""Puts model stats in a form that the Comparator will understand."""
-		return {'value':output_data['mean']}
+			     observation={'mean':None,'std':None},
+			     name="Action potential width"):
+		"""Takes the mean and standard deviation of observed spike widths"""
 		
-class SpikeWidthTestDynamic(SpikeWidthTest):
+		Test.__init__(self,observation,name) 
+	
+	required_capabilities = (ProducesMembranePotential,ProducesSpikes,)
+
+	description = "A test of the widths of action potentials \
+				   at half of their maximum height."
+
+	score_type = sciunit.scores.ZScore
+
+	def validate_observation(self, observation):
+		try:
+			assert type(observation['mean']) is float
+			assert type(observation['std']) is float
+		except Exception,e:
+			raise ObservationError("Observation must be of the form \
+				{'mean':float,'std':float}") 
+
+	def generate_prediction(self, model):
+		"""Implementation of sciunit.Test.generate_prediction."""
+		# Method implementation guaranteed by ProducesSpikes capability.
+		widths = model.get_spike_widths() 
+		# Put prediction in a form that compute_score() can use.  
+		prediction = {'mean':np.mean(widths),
+	  				  'std':np.std(widths)}
+		return prediction
+
+	def compute_score(self, observation, prediction):
+		"""Implementation of sciunit.Test.score_prediction."""
+		score = sciunit.utils.analysis.zscore(observation,prediction)	
+		return sciunit.scores.ZScore(score)
+		
+
+class InjectedCurrentSpikeWidthTest(SpikeWidthTest):
 	"""Tests the full widths of spikes at their half-maximum under current injection."""
 
 	def __init__(self,
-				 reference_data=SpikeWidthTest.__init__.im_func.func_defaults[0],  
-			     model_args={'injected_current':0.0}):
+				 observation={'mean':None,'std':None},
+			     name="Action potential width under current injection",
+			     params={'injected_current':{'ampl':0.0}}):
 		"""Takes a steady-state current to be injected into a cell."""
 
-		SpikeWidthTest.__init__(self,reference_data,model_args) 
+		SpikeWidthTest.__init__(self,observation,name) 
 		self.required_capabilities += (ReceivesCurrent,)
 
-	desc = "spike widths under current injection"
+	description = "A test of the widths of action potentials \
+				   at half of their maximum height when current \
+				   is injected into cell."
 
+	def generate_prediction(self, model):
+		"""Implementation of sciunit.Test.generate_prediction."""
 
-class RestingPotentialTest(ZTest):
+		model.inject_current(self.params['injected_current']) 	
+		spikes = model.get_spikes()
+		widths = spike_functions.spikes2widths(spikes)
+		widths *= 1000 # Convert from s to ms.  
+		prediction = {'mean':mean(widths),
+	  				  'std':std(widths)}
+		return prediction
+
+#def injection_params(amplitude):
+#	return {'injected_current':{'ampl':amplitude}}):
+
+#width_test_1 = InjectedCurrentSpikeWidthTest(observation, injection_params(25.0))
+#width_test_2 = InjectedCurrentSpikeWidthTest(observation, injection_params(50.0))
+#width_test_2 = InjectedCurrentSpikeWidthTest(observation, injection_params(75.0))
+
+#width_suite = sciunit.TestSuite([width_test_1,width_test_2,width_test_3])
+
+class RestingPotentialTest(Test):
 	"""Tests the resting potential under zero current injection."""
 	
 	def __init__(self,
-			     reference_data={'mean':None,'std':None},
-			     model_args={}):
-		"""Takes the mean and standard deviation of reference spike widths"""
+			     observation={'mean':None,'std':None},
+			     name="Resting potential test"):
+		"""Takes the mean and standard deviation of reference membrane potentials."""
 		
-		ZTest.__init__(self,reference_data,model_args) 
-		"""Register reference data and model arguments."""  
-		
+		Test.__init__(self,observation,name)
 		self.required_capabilities += (ProducesMembranePotential,
 							  		   ReceivesCurrent,)
 
-	desc = "resting potential (zero current injection)"
+	description = "A test of the resting potential of a cell\
+				   where injected current is set to zero."
 
-	def _judge(self,model,**kwargs):
+	score_type = ZScore
+
+	def validate_observation(self, observation):
+		try:
+			assert type(observation['mean']) is float
+			assert type(observation['std']) is float
+		except Exception,e:
+			raise ObservationError("Observation must be of the form \
+				{'mean':float,'std':float}") 
+
+	def generate_prediction(self, model):
+		"""Implementation of sciunit.Test.generate_prediction."""
 		current_ampl = 0.0
-		model.set_current_ampl(current_ampl) 
-		print "Setting current amplitude to %f" % current_ampl
-		# Setting injected current to zero.  
-		score = super(RestingPotentialTest,self)._judge(model,**kwargs) # Run the model.  
-		score.related_data.update({'vm':model.get_membrane_potential()})
+		model.inject_current({'ampl':0.0}) 
+		vm = model.get_median_vm() # Use median instead of mean for robustness.  
+		prediction = {'mean':vm}
+		return prediction
+
+	def compute_score(self, observation, prediction):
+		"""Implementation of sciunit.Test.score_prediction."""
+		score = zscore(observation,prediction)	
+		score = ZScore(score)
+		score.related_data['mean_vm'] = prediction['mean']
 		return score
 
-	def get_model_data(self,model):
-		"""Extracts data from the model and returns it."""
-		
-		resting_potential = model.get_median_vm() # Resting potential in mV.
-		model_data = {'value':resting_potential,}
-		return model_data
-		
 		

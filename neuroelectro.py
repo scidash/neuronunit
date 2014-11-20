@@ -33,6 +33,7 @@ import sciunit
 from urllib import urlencode
 from urllib2 import urlopen,URLError
 import json
+from pprint import pprint
 
 API_VERSION = 1
 API_SUFFIX = '/api/%d/' % API_VERSION
@@ -59,11 +60,13 @@ class Article:
  
 class NeuroElectroData(object):
 	"""Abstract class based on neuroelectro.org data using that site's API."""
-	def __init__(self,neuron={},ephysprop={}):
+	def __init__(self,neuron={},ephysprop={},get_values=False):
 		for key,value in neuron.items():
 			setattr(self.neuron,key,value)
 		for key,value in ephysprop.items():
 			setattr(self.ephysprop,key,value)
+		if get_values:
+			self.get_values()
 
 	url = API_URL # Base URL.  
 	neuron = Neuron()
@@ -105,15 +108,27 @@ class NeuroElectroData(object):
 		set neuron and ephys property.  Use 'params' to constrain the 
 		data returned."""
 		url = self.make_url(params=params)
+		print url
 		try:
 			url_result = urlopen(url,None,3) # Get the page.  
 			html = url_result.read() # Read out the HTML (actually JSON)
-		except URLError:
-			print "NeuroElectro.org appears to be down."
-			print "Using fake data for now."
-			html = '{"objects":[{"n":{"name":"CA1 Pyramidal Cell"},"e":{"name":"Spike Width"},\
-			"value_mean":0.001,"value_sd":0.0003}]}'
-		self.json_object = json.loads(html)
+		except URLError,e:
+			html = e.read()
+			self.json_object = json.loads(html)
+			if 'error_message' in self.json_object:
+				if self.json_object['error_message'] == "Neuron matching query does not exist.":
+					print "No matching neuron found at NeuroElectro.org."
+			else:
+				print "NeuroElectro.org appears to be down."
+			#print "Using fake data for now."
+			#html = '{"objects":[{"n":{"name":"CA1 Pyramidal Cell"},
+			#					  "e":{"name":"Spike Width"},\
+			#					  "value_mean":0.001,
+			#					  "value_sd":0.0003}]}'
+			
+		else:
+			self.json_object = json.loads(html)
+		return self.json_object
 
 	def get_values(self,params=None): 
 		"""Gets values from neuroelectro.org.  
@@ -121,10 +136,16 @@ class NeuroElectroData(object):
 		that neuroelectro.org will provide."""  
 		print "Getting data values from neuroelectro.org"
 		self.get_json(params=params)
-		data = self.json_object['objects'] 
+		if 'objects' in self.json_object:
+			data = self.json_object['objects'] 
+		else:
+			data = None
 		# All the summary matches in neuroelectro.org for this combination 
 		# of neuron and ephys property.  
-		self.api_data = data[0] 
+		if data and len(data):
+			self.api_data = data[0] 
+		else:
+			self.api_data = None
 		# For now, we are just going to take the first match.  
 		# If neuron_id and ephysprop_id where both specified, 
 		# there should be only one anyway.  
@@ -155,14 +176,16 @@ class NeuroElectroDataMap(NeuroElectroData):
 	
 	def get_values(self,params=None):
 		data = super(NeuroElectroDataMapTest,self).get_values(params=params)
-		self.neuron_name = data['ncm']['n']['name'] 
-		# Set the neuron name from the json data.  
-		self.ephysprop_name = data['ecm']['e']['name'] 
-		# Set the ephys property name from the json data.  
-		self.val = data['val']
-		self.sem = data['err']
-		self.n = data['n']
-		self.check()
+		if data:
+			self.neuron_name = data['ncm']['n']['name'] 
+			# Set the neuron name from the json data.  
+			self.ephysprop_name = data['ecm']['e']['name'] 
+			# Set the ephys property name from the json data.  
+			self.val = data['val']
+			self.sem = data['err']
+			self.n = data['n']
+			self.check()
+		return data
 	
 	def check(self):
 		try:
@@ -180,15 +203,24 @@ class NeuroElectroSummary(NeuroElectroData):
 	
 	def get_values(self,params=None):
 		data = super(NeuroElectroSummary, self).get_values(params=params)
-		self.neuron_name = data['n']['name'] 
-		# Set the neuron name from the json data.  
-		self.ephysprop_name = data['e']['name']
-		# Set the ephys property name from the json data.  
-		self.mean = data['value_mean']
-		self.std = data['value_sd']
-		self.n = data['n']
-		self.check()
-	
+		if data:
+			self.neuron_name = data['n']['name'] 
+			# Set the neuron name from the json data.  
+			self.ephysprop_name = data['e']['name']
+			# Set the ephys property name from the json data.  
+			self.mean = data['value_mean']
+			self.std = data['value_sd']
+			self.n = data['n']
+			self.check()
+		return data
+
+	def get_observation(self,params=None,show=False):
+		values = self.get_values(params=params)
+		if show:
+			pprint(values)
+		observation = {'mean':self.mean, 'std':self.std}
+		return observation
+		
 	def check(self):
 		try:
 			mean = self.mean
