@@ -1,0 +1,3 @@
+[submodule "nml/NeuroML2"]
+	path = nml/NeuroML2
+	url = http://github.com/NeuroML/NeuroML2
