@@ -1,0 +1,281 @@
+<Lems>
+
+    <!-- Specify which component to run -->
+    <Target component="sim1"/>
+
+    <!-- Include core NeuroML2 ComponentType definitions -->
+    <Include file="Cells.xml"/>
+    <Include file="Networks.xml"/>
+    <Include file="Simulation.xml"/>
+
+    <Include file="/Users/rgerkin/Dropbox/dev/muscle_model/NeuroML2/ca_boyle.channel.nml"/>
+    
+    <!-- These may eventually be moved to core NeuroML definition files -->
+    
+    <ComponentType name="vClampedCell" extends="baseCellMembPot" description="A 'cell' which can be clamped to a specific voltage for a certain duration to examine ion channel behaviour."> 
+
+        <Parameter name="delay" dimension="time"/>
+        <Parameter name="duration" dimension="time"/>
+        <Parameter name="baseVoltage" dimension="voltage"/>
+        <Parameter name="targetVoltage" dimension="voltage"/>
+        
+        <Parameter name="caConc" dimension="concentration"/>
+
+        <Children name="channelPopulation" type="channelPopulation"/>
+
+        <Dynamics>
+
+            <StateVariable name="v" exposure="v" dimension="voltage"/>
+
+            <OnStart>
+                <StateAssignment variable="v" value="baseVoltage"/>
+            </OnStart>
+
+            <OnCondition test="t .geq. delay .and. t .lt. duration+delay">
+                <StateAssignment variable="v" value="targetVoltage"/>
+            </OnCondition>
+
+            <OnCondition test="t .gt. duration+delay">
+                <StateAssignment variable="v" value="baseVoltage"/>
+            </OnCondition>
+
+        </Dynamics>
+
+    </ComponentType>
+    
+    <ComponentType name="vClampedRampCell" extends="baseCellMembPot" description="A 'cell' which can be clamped to a steadily changing voltage for a certain duration to examine ion channel behaviour."> 
+
+        <Parameter name="delay" dimension="time"/>
+        <Parameter name="duration" dimension="time"/>
+        <Parameter name="baseVoltage" dimension="voltage"/>
+        <Parameter name="targetVoltage0" dimension="voltage"/>
+        <Parameter name="targetVoltage1" dimension="voltage"/>
+        
+        <Parameter name="caConc" dimension="concentration"/>
+        
+        <Child name="channelPopulation" type="channelPopulation"/>
+
+        <Dynamics>
+
+            <StateVariable name="v" exposure="v" dimension="voltage"/>
+            
+            <OnStart>
+                <StateAssignment variable="v" value="baseVoltage"/>
+            </OnStart>
+
+            <OnCondition test="t .geq. delay .and. t .lt. duration+delay">
+                <StateAssignment variable="v" value="targetVoltage0 + (targetVoltage1-targetVoltage0)*(t-delay)/(duration)"/>
+            </OnCondition>
+
+            <OnCondition test="t .gt. duration+delay">
+                <StateAssignment variable="v" value="baseVoltage"/>
+            </OnCondition>
+
+        </Dynamics>
+
+    </ComponentType>
+    
+
+    <vClampedCell id="holderCell_min55" delay="10ms" duration="580ms" baseVoltage="-55mV" targetVoltage="-55mV" caConc="0.001mM">
+        <channelPopulation id="test" ionChannel="ca_boyle" number="1" erev="50mV"/>
+    </vClampedCell>
+    <vClampedCell id="holderCell_min45" delay="10ms" duration="580ms" baseVoltage="-55mV" targetVoltage="-45mV" caConc="0.001mM">
+        <channelPopulation id="test" ionChannel="ca_boyle" number="1" erev="50mV"/>
+    </vClampedCell>
+    <vClampedCell id="holderCell_min35" delay="10ms" duration="580ms" baseVoltage="-55mV" targetVoltage="-35mV" caConc="0.001mM">
+        <channelPopulation id="test" ionChannel="ca_boyle" number="1" erev="50mV"/>
+    </vClampedCell>
+    <vClampedCell id="holderCell_min25" delay="10ms" duration="580ms" baseVoltage="-55mV" targetVoltage="-25mV" caConc="0.001mM">
+        <channelPopulation id="test" ionChannel="ca_boyle" number="1" erev="50mV"/>
+    </vClampedCell>
+    <vClampedCell id="holderCell_min15" delay="10ms" duration="580ms" baseVoltage="-55mV" targetVoltage="-15mV" caConc="0.001mM">
+        <channelPopulation id="test" ionChannel="ca_boyle" number="1" erev="50mV"/>
+    </vClampedCell>
+    <vClampedCell id="holderCell_min5" delay="10ms" duration="580ms" baseVoltage="-55mV" targetVoltage="-5mV" caConc="0.001mM">
+        <channelPopulation id="test" ionChannel="ca_boyle" number="1" erev="50mV"/>
+    </vClampedCell>
+    <vClampedCell id="holderCell_5" delay="10ms" duration="580ms" baseVoltage="-55mV" targetVoltage="5mV" caConc="0.001mM">
+        <channelPopulation id="test" ionChannel="ca_boyle" number="1" erev="50mV"/>
+    </vClampedCell>
+    <vClampedCell id="holderCell_15" delay="10ms" duration="580ms" baseVoltage="-55mV" targetVoltage="15mV" caConc="0.001mM">
+        <channelPopulation id="test" ionChannel="ca_boyle" number="1" erev="50mV"/>
+    </vClampedCell>
+    <vClampedCell id="holderCell_25" delay="10ms" duration="580ms" baseVoltage="-55mV" targetVoltage="25mV" caConc="0.001mM">
+        <channelPopulation id="test" ionChannel="ca_boyle" number="1" erev="50mV"/>
+    </vClampedCell>
+    <vClampedCell id="holderCell_35" delay="10ms" duration="580ms" baseVoltage="-55mV" targetVoltage="35mV" caConc="0.001mM">
+        <channelPopulation id="test" ionChannel="ca_boyle" number="1" erev="50mV"/>
+    </vClampedCell>
+    <vClampedCell id="holderCell_45" delay="10ms" duration="580ms" baseVoltage="-55mV" targetVoltage="45mV" caConc="0.001mM">
+        <channelPopulation id="test" ionChannel="ca_boyle" number="1" erev="50mV"/>
+    </vClampedCell>
+    <vClampedCell id="holderCell_55" delay="10ms" duration="580ms" baseVoltage="-55mV" targetVoltage="55mV" caConc="0.001mM">
+        <channelPopulation id="test" ionChannel="ca_boyle" number="1" erev="50mV"/>
+    </vClampedCell>
+    <vClampedCell id="holderCell_65" delay="10ms" duration="580ms" baseVoltage="-55mV" targetVoltage="65mV" caConc="0.001mM">
+        <channelPopulation id="test" ionChannel="ca_boyle" number="1" erev="50mV"/>
+    </vClampedCell>
+    <vClampedCell id="holderCell_75" delay="10ms" duration="580ms" baseVoltage="-55mV" targetVoltage="75mV" caConc="0.001mM">
+        <channelPopulation id="test" ionChannel="ca_boyle" number="1" erev="50mV"/>
+    </vClampedCell>
+    
+    <vClampedRampCell id="rampCell0" delay="0ms" duration="600ms" baseVoltage="-55mV" targetVoltage0="-55mV" targetVoltage1="80mV" caConc="0.001mM">
+        <channelPopulation id="test" ionChannel="ca_boyle" number="1" erev="50mV"/>
+    </vClampedRampCell>
+
+    
+    <network id="net1" type="networkWithTemperature" temperature = "34 degC">
+        
+        <population id="holderCellPop_min55" component="holderCell_min55" size="1"/>
+        <population id="holderCellPop_min45" component="holderCell_min45" size="1"/>
+        <population id="holderCellPop_min35" component="holderCell_min35" size="1"/>
+        <population id="holderCellPop_min25" component="holderCell_min25" size="1"/>
+        <population id="holderCellPop_min15" component="holderCell_min15" size="1"/>
+        <population id="holderCellPop_min5" component="holderCell_min5" size="1"/>
+        <population id="holderCellPop_5" component="holderCell_5" size="1"/>
+        <population id="holderCellPop_15" component="holderCell_15" size="1"/>
+        <population id="holderCellPop_25" component="holderCell_25" size="1"/>
+        <population id="holderCellPop_35" component="holderCell_35" size="1"/>
+        <population id="holderCellPop_45" component="holderCell_45" size="1"/>
+        <population id="holderCellPop_55" component="holderCell_55" size="1"/>
+        <population id="holderCellPop_65" component="holderCell_65" size="1"/>
+        <population id="holderCellPop_75" component="holderCell_75" size="1"/>
+        
+        <population id="rampCellPop0" component="rampCell0" size="1"/>
+    </network>
+
+
+    <Simulation id="sim1" length="600ms" step="0.15ms" target="net1">
+        
+        <Display id="d0" title="ca_boyle: Clamp voltages (mV)"  timeScale="1ms" xmin="-60.0" xmax="660.0" ymin="-68.5" ymax="93.5">
+            <Line id="-55mV" quantity="holderCellPop_min55[0]/v" scale="1mV"  color="#ffff00" timeScale="1ms"/>
+            <Line id="-45mV" quantity="holderCellPop_min45[0]/v" scale="1mV"  color="#ffeb00" timeScale="1ms"/>
+            <Line id="-35mV" quantity="holderCellPop_min35[0]/v" scale="1mV"  color="#ffd700" timeScale="1ms"/>
+            <Line id="-25mV" quantity="holderCellPop_min25[0]/v" scale="1mV"  color="#ffc400" timeScale="1ms"/>
+            <Line id="-15mV" quantity="holderCellPop_min15[0]/v" scale="1mV"  color="#ffb000" timeScale="1ms"/>
+            <Line id="-5mV" quantity="holderCellPop_min5[0]/v" scale="1mV"  color="#ff9c00" timeScale="1ms"/>
+            <Line id="5mV" quantity="holderCellPop_5[0]/v" scale="1mV"  color="#ff8900" timeScale="1ms"/>
+            <Line id="15mV" quantity="holderCellPop_15[0]/v" scale="1mV"  color="#ff7500" timeScale="1ms"/>
+            <Line id="25mV" quantity="holderCellPop_25[0]/v" scale="1mV"  color="#ff6200" timeScale="1ms"/>
+            <Line id="35mV" quantity="holderCellPop_35[0]/v" scale="1mV"  color="#ff4e00" timeScale="1ms"/>
+            <Line id="45mV" quantity="holderCellPop_45[0]/v" scale="1mV"  color="#ff3a00" timeScale="1ms"/>
+            <Line id="55mV" quantity="holderCellPop_55[0]/v" scale="1mV"  color="#ff2700" timeScale="1ms"/>
+            <Line id="65mV" quantity="holderCellPop_65[0]/v" scale="1mV"  color="#ff1300" timeScale="1ms"/>
+            <Line id="75mV" quantity="holderCellPop_75[0]/v" scale="1mV"  color="#ff0000" timeScale="1ms"/>
+        </Display>
+
+        <Display id="d1" title="ca_boyle: Fractional conductance at 34 degC"  timeScale="1ms" xmin="-60.0" xmax="660.0" ymin="-0.1" ymax="1.1">
+            <Line id="-55mV" quantity="holderCellPop_min55[0]/test/ca_boyle/fopen" scale="1"  color="#ffff00" timeScale="1ms"/>
+            <Line id="-45mV" quantity="holderCellPop_min45[0]/test/ca_boyle/fopen" scale="1"  color="#ffeb00" timeScale="1ms"/>
+            <Line id="-35mV" quantity="holderCellPop_min35[0]/test/ca_boyle/fopen" scale="1"  color="#ffd700" timeScale="1ms"/>
+            <Line id="-25mV" quantity="holderCellPop_min25[0]/test/ca_boyle/fopen" scale="1"  color="#ffc400" timeScale="1ms"/>
+            <Line id="-15mV" quantity="holderCellPop_min15[0]/test/ca_boyle/fopen" scale="1"  color="#ffb000" timeScale="1ms"/>
+            <Line id="-5mV" quantity="holderCellPop_min5[0]/test/ca_boyle/fopen" scale="1"  color="#ff9c00" timeScale="1ms"/>
+            <Line id="5mV" quantity="holderCellPop_5[0]/test/ca_boyle/fopen" scale="1"  color="#ff8900" timeScale="1ms"/>
+            <Line id="15mV" quantity="holderCellPop_15[0]/test/ca_boyle/fopen" scale="1"  color="#ff7500" timeScale="1ms"/>
+            <Line id="25mV" quantity="holderCellPop_25[0]/test/ca_boyle/fopen" scale="1"  color="#ff6200" timeScale="1ms"/>
+            <Line id="35mV" quantity="holderCellPop_35[0]/test/ca_boyle/fopen" scale="1"  color="#ff4e00" timeScale="1ms"/>
+            <Line id="45mV" quantity="holderCellPop_45[0]/test/ca_boyle/fopen" scale="1"  color="#ff3a00" timeScale="1ms"/>
+            <Line id="55mV" quantity="holderCellPop_55[0]/test/ca_boyle/fopen" scale="1"  color="#ff2700" timeScale="1ms"/>
+            <Line id="65mV" quantity="holderCellPop_65[0]/test/ca_boyle/fopen" scale="1"  color="#ff1300" timeScale="1ms"/>
+            <Line id="75mV" quantity="holderCellPop_75[0]/test/ca_boyle/fopen" scale="1"  color="#ff0000" timeScale="1ms"/>
+        </Display>
+        
+        <Display id="d7" title="ca_boyle: Currents (nA) at different clamped potentials; 34 degC; rev potential: 50 mV"  timeScale="1ms" xmin="-60.0" xmax="660.0" ymin="-0.00002" ymax="0.0014">
+            <Line id="-55mV" quantity="holderCellPop_min55[0]/test/i" scale="1nA"  color="#ffff00" timeScale="1ms"/>
+            <Line id="-45mV" quantity="holderCellPop_min45[0]/test/i" scale="1nA"  color="#ffeb00" timeScale="1ms"/>
+            <Line id="-35mV" quantity="holderCellPop_min35[0]/test/i" scale="1nA"  color="#ffd700" timeScale="1ms"/>
+            <Line id="-25mV" quantity="holderCellPop_min25[0]/test/i" scale="1nA"  color="#ffc400" timeScale="1ms"/>
+            <Line id="-15mV" quantity="holderCellPop_min15[0]/test/i" scale="1nA"  color="#ffb000" timeScale="1ms"/>
+            <Line id="-5mV" quantity="holderCellPop_min5[0]/test/i" scale="1nA"  color="#ff9c00" timeScale="1ms"/>
+            <Line id="5mV" quantity="holderCellPop_5[0]/test/i" scale="1nA"  color="#ff8900" timeScale="1ms"/>
+            <Line id="15mV" quantity="holderCellPop_15[0]/test/i" scale="1nA"  color="#ff7500" timeScale="1ms"/>
+            <Line id="25mV" quantity="holderCellPop_25[0]/test/i" scale="1nA"  color="#ff6200" timeScale="1ms"/>
+            <Line id="35mV" quantity="holderCellPop_35[0]/test/i" scale="1nA"  color="#ff4e00" timeScale="1ms"/>
+            <Line id="45mV" quantity="holderCellPop_45[0]/test/i" scale="1nA"  color="#ff3a00" timeScale="1ms"/>
+            <Line id="55mV" quantity="holderCellPop_55[0]/test/i" scale="1nA"  color="#ff2700" timeScale="1ms"/>
+            <Line id="65mV" quantity="holderCellPop_65[0]/test/i" scale="1nA"  color="#ff1300" timeScale="1ms"/>
+            <Line id="75mV" quantity="holderCellPop_75[0]/test/i" scale="1nA"  color="#ff0000" timeScale="1ms"/>
+        </Display>
+
+        <Display id="e_inf" title="ca_boyle: Gate e steady state, e_inf"  timeScale="1ms" xmin="-60.0" xmax="660.0" ymin="-0.1" ymax="1.1">
+            <Line id="e_inf (x axis: -55mV to 80mV)" quantity="rampCellPop0[0]/test/ca_boyle/e/inf" scale="1"  color="#000000" timeScale="1ms"/>
+        </Display>
+        
+        <Display id="e_tau" title="ca_boyle: Gate e time course, e_tau (ms) at 34 degC"  timeScale="1ms" xmin="-60.0" xmax="660.0" ymin="-10" ymax="110">
+            <Line id="e_tau (x axis: -55mV to 80mV)" quantity="rampCellPop0[0]/test/ca_boyle/e/tau" scale="1ms"  color="#000000" timeScale="1ms"/>
+        </Display>
+        <Display id="f_inf" title="ca_boyle: Gate f steady state, f_inf"  timeScale="1ms" xmin="-60.0" xmax="660.0" ymin="-0.1" ymax="1.1">
+            <Line id="f_inf (x axis: -55mV to 80mV)" quantity="rampCellPop0[0]/test/ca_boyle/f/inf" scale="1"  color="#000000" timeScale="1ms"/>
+        </Display>
+        
+        <Display id="f_tau" title="ca_boyle: Gate f time course, f_tau (ms) at 34 degC"  timeScale="1ms" xmin="-60.0" xmax="660.0" ymin="-10" ymax="110">
+            <Line id="f_tau (x axis: -55mV to 80mV)" quantity="rampCellPop0[0]/test/ca_boyle/f/tau" scale="1ms"  color="#000000" timeScale="1ms"/>
+        </Display>
+
+        <OutputFile id="i_min55_of1" fileName="i_min55.lems.dat">
+            <OutputColumn id="min55" quantity="holderCellPop_min55[0]/test/i"/> 
+        </OutputFile>
+        <OutputFile id="i_min45_of1" fileName="i_min45.lems.dat">
+            <OutputColumn id="min45" quantity="holderCellPop_min45[0]/test/i"/> 
+        </OutputFile>
+        <OutputFile id="i_min35_of1" fileName="i_min35.lems.dat">
+            <OutputColumn id="min35" quantity="holderCellPop_min35[0]/test/i"/> 
+        </OutputFile>
+        <OutputFile id="i_min25_of1" fileName="i_min25.lems.dat">
+            <OutputColumn id="min25" quantity="holderCellPop_min25[0]/test/i"/> 
+        </OutputFile>
+        <OutputFile id="i_min15_of1" fileName="i_min15.lems.dat">
+            <OutputColumn id="min15" quantity="holderCellPop_min15[0]/test/i"/> 
+        </OutputFile>
+        <OutputFile id="i_min5_of1" fileName="i_min5.lems.dat">
+            <OutputColumn id="min5" quantity="holderCellPop_min5[0]/test/i"/> 
+        </OutputFile>
+        <OutputFile id="i_5_of1" fileName="i_5.lems.dat">
+            <OutputColumn id="5" quantity="holderCellPop_5[0]/test/i"/> 
+        </OutputFile>
+        <OutputFile id="i_15_of1" fileName="i_15.lems.dat">
+            <OutputColumn id="15" quantity="holderCellPop_15[0]/test/i"/> 
+        </OutputFile>
+        <OutputFile id="i_25_of1" fileName="i_25.lems.dat">
+            <OutputColumn id="25" quantity="holderCellPop_25[0]/test/i"/> 
+        </OutputFile>
+        <OutputFile id="i_35_of1" fileName="i_35.lems.dat">
+            <OutputColumn id="35" quantity="holderCellPop_35[0]/test/i"/> 
+        </OutputFile>
+        <OutputFile id="i_45_of1" fileName="i_45.lems.dat">
+            <OutputColumn id="45" quantity="holderCellPop_45[0]/test/i"/> 
+        </OutputFile>
+        <OutputFile id="i_55_of1" fileName="i_55.lems.dat">
+            <OutputColumn id="55" quantity="holderCellPop_55[0]/test/i"/> 
+        </OutputFile>
+        <OutputFile id="i_65_of1" fileName="i_65.lems.dat">
+            <OutputColumn id="65" quantity="holderCellPop_65[0]/test/i"/> 
+        </OutputFile>
+        <OutputFile id="i_75_of1" fileName="i_75.lems.dat">
+            <OutputColumn id="75" quantity="holderCellPop_75[0]/test/i"/> 
+        </OutputFile>
+
+        <OutputFile id="e_inf_of1" fileName="ca_boyle.e.inf.lems.dat">
+            <OutputColumn id="e" quantity="rampCellPop0[0]/test/ca_boyle/e/inf"/> 
+        </OutputFile>
+        <OutputFile id="e_tau_of1" fileName="ca_boyle.e.tau.lems.dat">
+            <OutputColumn id="e" quantity="rampCellPop0[0]/test/ca_boyle/e/tau"/> 
+        </OutputFile>
+        <OutputFile id="f_inf_of1" fileName="ca_boyle.f.inf.lems.dat">
+            <OutputColumn id="f" quantity="rampCellPop0[0]/test/ca_boyle/f/inf"/> 
+        </OutputFile>
+        <OutputFile id="f_tau_of1" fileName="ca_boyle.f.tau.lems.dat">
+            <OutputColumn id="f" quantity="rampCellPop0[0]/test/ca_boyle/f/tau"/> 
+        </OutputFile>
+
+        <OutputFile id="rampCellV" fileName="ca_boyle.rampV.lems.dat">
+            <OutputColumn id="v" quantity="rampCellPop0[0]/v"/> 
+        </OutputFile>
+
+
+
+    </Simulation>
+
+
+</Lems>
