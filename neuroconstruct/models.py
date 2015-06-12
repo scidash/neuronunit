@@ -3,11 +3,12 @@ Implementation of a model built in neuroConstruct.
 http://www.neuroconstruct.org/
 """
 
+import os
 from xml.etree.ElementTree import XML
 from __init__ import *
 from pythonnC.utils import putils # From the neuroConstruct pythonnC package.  
 from sciunit import Model
-from capabilities import * # neurounit.neuroconstruct.capabilites
+from .capabilities import * # neurounit.neuroconstruct.capabilites
 #from neurounit.capabilities import ReceivesCurrent
 from neuronunit.capabilities import spike_functions
 import numpy as np
@@ -21,9 +22,9 @@ class NeuroConstructModel(Model,
 	Methods will be implemented using the neuroConstruct python 
 	API (in progress)."""
 
-	def __init__(self,project_path,name=None,**kwargs):
+	def __init__(self, project_path, name=None, **kwargs):
 		"""file_path is the full path to an .ncx file."""
-		print "Instantiating a neuroConstruct candidate (model) from %s." % project_path
+		print("Instantiating a neuroConstruct model from %s." % project_path)
 		self.project_path = project_path
 		self.ran = False
 		self.population_name = self.get_cell_group()+'_0'
@@ -32,7 +33,7 @@ class NeuroConstructModel(Model,
 		ReceivesCurrent_NC.__init__(self)
 		for key,value in kwargs.items():
 			setattr(self,key,value)
-		super(Model,self).__init__(name=name,**kwargs)
+		super().__init__(name=name, **kwargs)
 
 	def get_ncx_file(self):
 		# Get a list of .ncx (neuroConstruct) files.  Should be only one for most projects.  

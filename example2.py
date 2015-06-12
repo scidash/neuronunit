@@ -7,9 +7,9 @@ import os
 import sciunit
 from neuronunit import neuroelectro,tests,capabilities
 from neuronunit.neuroconstruct import models
-import osb_api as osb
+import osb
 
-project_list = osb.get_project_list()
+osb_projects = osb.get_projects(1)
 
 # Initialize the test with summary statistics from the reference data
 # and arguments for the model (model).  
@@ -17,6 +17,7 @@ project_list = osb.get_project_list()
 from pythonnC.utils.putils import OSB_MODELS
 brain_areas = os.listdir(OSB_MODELS)
 models_tested = 0
+nlex_ids = {}
 for brain_area in brain_areas:
 	path = os.path.join(OSB_MODELS,brain_area)
 	if not os.path.isdir(path):
@@ -32,27 +33,40 @@ for brain_area in brain_areas:
 			if not os.path.isdir(path):
 				continue
 			
-			if models_tested not in [11,17]:
-				models_tested += 1
+			if model_name in ['korngreen-pyramidal',
+							  'IzhikevichModel',
+							  'RothmanEtAl_KoleEtAl_PyrCell']:
 				continue
+			#if models_tested not in [11,17]:
+			#	models_tested += 1
+			#	continue
 					
-			print "\r\r*** %d: %s ***\r\r" % (models_tested,model_name)
+			print("\r\r*** %d: %s ***\r\r" % (models_tested,model_name))
 			models_tested += 1
-
-			project = osb.get_project(model_name,project_list=project_list,fuzzy=True)
+			identifier = model_name#.lower()
+			project = osb.get_project_with_identifier(identifier,projects=osb_projects)
 			if project is None:
-				print "No OSB project identifier found for model %s" % model_name
+				print("No OSB project identifier found for model %s" % model_name)
 				continue
-
-			neurolex_ids = osb.get_cell_neurolex_ids(project)
+			
+			neurolex_ids = project.NEUROLEX_IDS_CELLS
 			if not neurolex_ids or not len(neurolex_ids):
-				print "No neurolex ids found for model %s" % model_name
+				print("No neurolex ids found for model %s" % model_name)
 				continue
-			neurolex_id = neurolex_ids[0]
-			print "Neurolex ID is %s" % neurolex_id
-
+			if ';' not in neurolex_ids:
+				neurolex_id = neurolex_ids
+			else:
+				print("Multiple neurolex ids found; skipping...")
+				continue
+			print("Neurolex ID is %s" % neurolex_id)
+			if neurolex_id in nlex_ids:
+				nlex_ids[neurolex_id] += 1
+			else:
+				nlex_ids[neurolex_id] = 1
+			print(brain_area,neuron_type,model_name)
+			
 			if model_name in ['MainenEtAl_PyramidalCell']: # Number 12 hangs.  
-				print "Skipping model %s" % model_name
+				print("Skipping model %s" % model_name)
 				continue
 			
 			model_info = (brain_area,neuron_type,model_name)
@@ -67,7 +81,7 @@ for brain_area in brain_areas:
 
 			# Get and verify summary data for the combination above from neuroelectro.org. 
 			if reference_data.get_values() is None:
-				print "Unable to get the reference data from NeuroElectro.org."
+				print("Unable to get the reference data from NeuroElectro.org.")
 				continue  
 			
 			test = tests.RestingPotentialTest(
@@ -79,17 +93,13 @@ for brain_area in brain_areas:
 			# (3) generate a score and validate it,
 			# (4) bind the score to model/test combination. 
 
-			score = test.judge(model,stop_on_error=False)
+			score = test.judge(model,stop_on_error=True)
 
 			# Summarize the result.  
-			print "========="
-			print "========="
-			print "========="
+			print("=========\r"*3)
 			score.summarize()
-			print "========="
-			print "========="
-			print "========="
-
+			print("=========\r"*3)
+			
 			# Get model output used for this test (optional).
 			vm = score.related_data
 

@@ -10,7 +10,7 @@ from sciunit.scores import ErrorScore,BooleanScore,ZScore # Scores.
 try:
 	import numpy as np
 except:
-	print "NumPy not loaded."
+	print("NumPy not loaded.")
 
 class SpikeWidthTest(sciunit.Test):
 	"""Tests the full widths of spikes at their half-maximum."""
@@ -27,13 +27,13 @@ class SpikeWidthTest(sciunit.Test):
 	description = "A test of the widths of action potentials \
 				   at half of their maximum height."
 
-	score_type = sciunit.scores.ZScore
+	score_type = ZScore
 
 	def validate_observation(self, observation):
 		try:
 			assert type(observation['mean']) is float
 			assert type(observation['std']) is float
-		except Exception,e:
+		except Exception as e:
 			raise ObservationError("Observation must be of the form \
 				{'mean':float,'std':float}") 
 
@@ -48,8 +48,12 @@ class SpikeWidthTest(sciunit.Test):
 
 	def compute_score(self, observation, prediction):
 		"""Implementation of sciunit.Test.score_prediction."""
-		score = sciunit.utils.analysis.zscore(observation,prediction)	
-		return sciunit.scores.ZScore(score)
+		print("%s: Observation = %s, Prediction = %s" % (self.name,str(observation),str(prediction)))
+
+		score = zscore(observation,prediction)	
+		score = ZScore(score)
+		score.related_data['mean_spikewidth'] = prediction['mean']
+		return score
 		
 
 class InjectedCurrentSpikeWidthTest(SpikeWidthTest):
@@ -61,7 +65,8 @@ class InjectedCurrentSpikeWidthTest(SpikeWidthTest):
 			     params={'injected_current':{'ampl':0.0}}):
 		"""Takes a steady-state current to be injected into a cell."""
 
-		SpikeWidthTest.__init__(self,observation,name) 
+		SpikeWidthTest.__init__(self,observation,name)
+		self.params = params 
 		self.required_capabilities += (ReceivesCurrent,)
 
 	description = "A test of the widths of action potentials \
@@ -74,9 +79,9 @@ class InjectedCurrentSpikeWidthTest(SpikeWidthTest):
 		model.inject_current(self.params['injected_current']) 	
 		spikes = model.get_spikes()
 		widths = spike_functions.spikes2widths(spikes)
-		widths *= 1000 # Convert from s to ms.  
-		prediction = {'mean':mean(widths),
-	  				  'std':std(widths)}
+		#widths *= 1000 # Convert from s to ms.  
+		prediction = {'mean':np.mean(widths),
+	  				  'std':np.std(widths)}
 		return prediction
 
 #def injection_params(amplitude):
@@ -109,7 +114,7 @@ class RestingPotentialTest(Test):
 		try:
 			assert type(observation['mean']) is float
 			assert type(observation['std']) is float
-		except Exception,e:
+		except Exception as e:
 			raise ObservationError("Observation must be of the form \
 				{'mean':float,'std':float}") 
 

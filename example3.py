@@ -7,34 +7,36 @@ import glob
 
 QUIET = False
 for arg in sys.argv[1:]:
-    try:
-        key,value = arg.split(":")
-    except ValueError,e:
-        print "Command line argument %s had error %s" % (arg,e.strerror)
-    else:
-        if key == "quiet":
-       		if int(value):            
-           		QUIET = 1
-           	else:
-           		QUIET = 0
+	try:
+		key,value = arg.split(":")
+	except ValueError as e:
+		print("Command line argument %s had error %s" % (arg,e.strerror))
+	else:
+		if key == "quiet":
+			if int(value):            
+				QUIET = 1
+			else:
+				QUIET = 0
 
 # Installed packages.  
 import neuroml.loaders as loaders
-import osb_api
+import osb
 import sciunit
 from neuronunit import neuroelectro,tests,capabilities
 from neuronunit.neuroconstruct import models
 
 def qprint(string):
 	if not QUIET:
-		print string
+		print(string)
 
 ephys_property = "Resting Membrane Potential"  
 nml2_model_list = os.listdir(NEUROML2_PATH)
 
-osb_projects = osb_api.get_project_list()
+# Get projects with medium curation level. 
+osb_projects = osb.get_projects('Medium')  
 
 for model_name in nml2_model_list:
+	print(model_name)
 	path = os.path.join(NEUROML2_PATH,model_name)
 	nml_files = glob.glob(path+"/*.nml")
 	if not len(nml_files):
@@ -44,10 +46,9 @@ for model_name in nml2_model_list:
 		for cell in nml.cells:
 			nlex_id = cell.neuro_lex_id
 			if nlex_id is None:
-				project = osb_api.get_project(model_name,
-											  project_list=osb_projects)
+				project = osb.get_project_with_identifier(model_name,osb_projects)
 				if project:
-					nlex_id_list = osb_api.get_cell_neurolex_ids(project)
+					nlex_id_list = project.NEUROLEX_IDS_CELLS
 					if len(nlex_id_list):
 						if ';' not in nlex_id_list:
 							nlex_id = nlex_id_list
@@ -77,11 +78,9 @@ for model_name in nml2_model_list:
 
 			# Initialize the test with summary statistics from the 
 			# reference data and arguments for the model (model).    
-			from sciunit.comparators import ZComparator
 			test = tests.RestingPotentialTest(
-				reference_data = {'mean':reference_data.mean,
-					 			  'std':reference_data.std},
-				model_args = {})
+					observation = {'mean':reference_data.mean,
+								   'std':reference_data.std})
 
 			# Initialize (parameterize) the model with some initialization parameters.
 			model = models.NeuroML2Model(model_name)

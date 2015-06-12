@@ -10,17 +10,23 @@ USE_PYLEMS = False
 if USE_PYLEMS:
     from lems.run import run
 try:
-    OPENWORM_HOME = os.environ['OPENWORM_HOME']
+    OPENWORM_HOME = '/Users/rgerkin/Dropbox/dev'#os.environ['OPENWORM_HOME']
 except KeyError:
     OPENWORM_HOME = '~/git'
 LEMS_FILE_PATH = os.path.join(OPENWORM_HOME,'muscle_model/NeuroML2/LEMS_Test_k_fast.xml')
 sys.path.append(os.path.join(OPENWORM_HOME,'BlueBrainProjectShowcase/Channelpedia'))
+sys.path.append(os.path.join(OPENWORM_HOME,'pyNeuroML'))
 JNML_HOME = os.path.join(OPENWORM_HOME,'jNeuroML')
 JNML_BIN = os.path.join(JNML_HOME,'jnml')
+
 try:
-    import NML2ChannelAnalyse
+    from pyneuroml.analysis import NML2ChannelAnalysis # Import NML2ChannelAnalysis, etc.  
 except ImportError:
-    print("Could not import NML2 Channel Analyzer")
+    print("Could not import pynml.analysis")
+    try:
+        import NML2ChannelAnalyse
+    except ImportError:
+        print("Could not import NML2 Channel Analyzer")
 
 def run_lems(lems_file_path):
     """Runs a LEMS file with pylems (via jlems)"""
@@ -31,9 +37,11 @@ def run_lems(lems_file_path):
     if USE_PYLEMS:
         result = run(lems_file_path, include_dirs=include_dirs, nogui=True)
     else:
-        p = subprocess.Popen(["%s %s -nogui" % (JNML_BIN,lems_file_path)], 
+        p = subprocess.Popen([JNML_BIN,lems_file_path,"-nogui"], 
                          stdout=subprocess.PIPE, 
-                         stderr=subprocess.PIPE, shell=True)
+                         stderr=subprocess.PIPE, 
+                         #shell=True,
+                         env=dict(os.environ,JNML_HOME=JNML_HOME))
         result, err = p.communicate()
         result = str(result).split('\\n')
         if len(err):
@@ -43,17 +51,22 @@ def run_lems(lems_file_path):
 
 def make_lems(nml_file_path,tool,**kwargs):
     """Creates a LEMS file from a NeuroML file with parameters."""
-    assert tool in ['NML2ChannelAnalyse'], "Not a supported tool"
+    print(tool.__name__)
+    assert tool.__name__.split('.')[-1] in \
+        ['NML2ChannelAnalyse', 'NML2ChannelAnalysis'], "Not a supported tool"
     lems_file_path = None
-    if tool == 'NML2ChannelAnalyse':
-        args = argparse.Namespace()
-        args.channelFile = nml_file_path
-        for key,value in kwargs.items():
-            args.__dict__[key] = value
-        for key,value in NML2ChannelAnalyse.DEFAULTS.items():
+    args = argparse.Namespace()
+    args.channelFiles = [nml_file_path]
+    #args.target_file = nml_file_path
+    args.nogui = True
+    for key,value in kwargs.items():
+        setattr(args,key,value)
+    if hasattr(tool,'DEFAULTS'):
+        for key,value in tool.DEFAULTS.items():
             if not hasattr(args,key):
                 setattr(args,key,value)
-        lems_file_path = NML2ChannelAnalyse.main(args=args)
+    lems_file_path = tool.main(args=args)
+    lems_file_path = os.path.join(os.getcwd(),lems_file_path)
     return lems_file_path
 
 def run_nml(nml_file_path,tool,**args):
@@ -75,7 +88,7 @@ def load_dat(dat_file_path):
 
 def main():
     run_nml(os.path.join(OPENWORM_HOME,'muscle_model/NeuroML2/k_fast.channel.nml'), # File.  
-            'NML2ChannelAnalyse', # Tool.  
+            NML2ChannelAnalysis, # Tool.  
             channelId='k_fast', 
             temperature=34, 
             minV=55, 

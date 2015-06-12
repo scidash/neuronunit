@@ -22,32 +22,39 @@ class Runnable_NC(Capability):
 		self.rerun = False
 		self.runtime_methods = {}
 		self.sim_path = None
-		if CPYTHON:
-			self.gateway = utils.open_gateway(useSocket=True,
-									automatic_socket=utils.AUTOMATIC_SOCKET)
-			cmd = 'import %s as j;' % JUTILS_PATH
-			cmd += 'import sys;'
-			cmd += 'j.sim = j.Sim(project_path="%s");' % self.project_path
-			cmd += 'channel.send(0)'
-  			channel = self.gateway.remote_exec(cmd)
-  			channel.receive()
+
+	def prepare(self):
+		if not hasattr(self,'gateway'):
+			if CPYTHON:
+				self.gateway = utils.open_gateway(useSocket=True,
+										automatic_socket=utils.AUTOMATIC_SOCKET)
+				cmd = 'import %s as j;' % JUTILS_PATH
+				cmd += 'import sys;'
+				cmd += 'j.sim = j.Sim(project_path="%s");' % self.project_path
+				cmd += 'channel.send(0)'
+				channel = self.gateway.remote_exec(cmd)
+				channel.receive()
+				#self.gateway.terminate()
+			
 
 	def run(self):
 		"""Runs the model using jython via execnet and returns a 
 		directory of simulation results"""
+		self.prepare()
 		if self.ran is False or self.rerun is True:
-			print "Running simulation..."
+			print("Running simulation...")	
 			self.sim_path = utils.run_sim(project_path=self.project_path,
-									   	  useSocket=True,
-									      useNC=True,
-									      useNeuroTools=True,
-									      runtime_methods=self.runtime_methods,
-									      gw=self.gateway)
+										  useSocket=True,
+										  useNC=True,
+										  useNeuroTools=True,
+										  runtime_methods=self.runtime_methods,
+										  gw=self.gateway)
 			self.run_t = datetime.now()
 			self.ran = True
 			self.rerun = False
+			del self.gateway
 		else:
-			print "Already ran simulation..."
+			print("Already ran simulation...")
 
 
 class ProducesMembranePotential_NC(ProducesMembranePotential,Runnable_NC):
@@ -61,11 +68,22 @@ class ProducesMembranePotential_NC(ProducesMembranePotential,Runnable_NC):
 		if self.sim_path == '':
 			vm = None
 		else:
+			print("Getting membrane potential from %s/%s" \
+				  % (self.sim_path,self.population_name))
 			vm = nc_neurotools.get_analog_signal(self.sim_path,
-												 self.population_name) 
+												 self.population_name)
+			vm_sig = vm.signal
+			t =  nc_neurotools.get_analog_signal(self.sim_path,
+												 'time')
+			t_sig = t.signal
+			t_new = np.arange(t_sig.min(),t_sig.max(),0.01)
+			from scipy import interpolate
+			f = interpolate.interp1d(t_sig,vm_sig)
+			vm_new = f(t_new)
+			vm.signal = vm_new
 			# An AnalogSignal instance. 
 		return vm 
-  		
+		
 	def get_median_vm(self,**kwargs):
 		"""Returns a float corresponding the median membrane potential.
 		This will in some cases be the resting potential."""
@@ -99,6 +117,10 @@ class ProducesSpikes_NC(ProducesSpikes,ProducesMembranePotential):
 		# A NeuroTools.signals.AnalogSignal object
 		return vm.threshold_detection()
 
+	def get_spike_widths(self,**kwargs):
+		spikes = self.get_spikes(**kwargs)
+		return spike_functions.spikes2widths(spikes)
+
 
 class ReceivesCurrent_NC(ReceivesCurrent,Runnable_NC):
 	"""An array of somatic injected current samples"""
@@ -112,11 +134,13 @@ class ReceivesCurrent_NC(ReceivesCurrent,Runnable_NC):
 		offset = 0
 
 	def inject_current(self,injected_current):
+		self.prepare()
 		cmd = 'import %s as j;' % JUTILS_PATH
 		cmd += 'import sys;'
 		cmd += 'err = j.sim.set_current_ampl(%f);' % injected_current['ampl']
 		cmd += 'channel.send(err);'
 		channel = self.gateway.remote_exec(cmd)
+		#print(cmd)
 		err = channel.receive() # This will be an error code.  
 		if len(err):
 			raise NotImplementedError(err)

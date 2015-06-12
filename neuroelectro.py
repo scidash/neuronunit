@@ -30,8 +30,12 @@ width = x.mean # Mean Spike width reported across all matching papers.
 """
 
 import sciunit
-from urllib import urlencode
-from urllib2 import urlopen,URLError
+try: # Python 2
+	from urllib import urlencode
+	from urllib2 import urlopen,URLError
+except: # Python 3
+	from urllib.parse import urlencode
+	from urllib.request import urlopen,URLError
 import json
 from pprint import pprint
 
@@ -108,18 +112,18 @@ class NeuroElectroData(object):
 		set neuron and ephys property.  Use 'params' to constrain the 
 		data returned."""
 		url = self.make_url(params=params)
-		print url
+		print(url)
 		try:
 			url_result = urlopen(url,None,3) # Get the page.  
 			html = url_result.read() # Read out the HTML (actually JSON)
-		except URLError,e:
-			html = e.read()
+		except URLError as e:
+			html = e.read().decode('utf-8')
 			self.json_object = json.loads(html)
 			if 'error_message' in self.json_object:
 				if self.json_object['error_message'] == "Neuron matching query does not exist.":
-					print "No matching neuron found at NeuroElectro.org."
+					print("No matching neuron found at NeuroElectro.org.")
 			else:
-				print "NeuroElectro.org appears to be down."
+				print("NeuroElectro.org appears to be down.")
 			#print "Using fake data for now."
 			#html = '{"objects":[{"n":{"name":"CA1 Pyramidal Cell"},
 			#					  "e":{"name":"Spike Width"},\
@@ -127,6 +131,7 @@ class NeuroElectroData(object):
 			#					  "value_sd":0.0003}]}'
 			
 		else:
+			html = html.decode('utf-8')
 			self.json_object = json.loads(html)
 		return self.json_object
 
@@ -134,7 +139,7 @@ class NeuroElectroData(object):
 		"""Gets values from neuroelectro.org.  
 		We will use 'params' in the future to specify metadata (e.g. temperature) 
 		that neuroelectro.org will provide."""  
-		print "Getting data values from neuroelectro.org"
+		print("Getting data values from neuroelectro.org")
 		self.get_json(params=params)
 		if 'objects' in self.json_object:
 			data = self.json_object['objects'] 
@@ -192,7 +197,7 @@ class NeuroElectroDataMap(NeuroElectroData):
 			val = self.val
 			std = self.sem
 		except AttributeError as a:
-			print 'The attributes "val" and "sem" were not found.'
+			print('The attributes "val" and "sem" were not found.')
 			raise
 
 class NeuroElectroSummary(NeuroElectroData):
@@ -226,7 +231,7 @@ class NeuroElectroSummary(NeuroElectroData):
 			mean = self.mean
 			std = self.std
 		except AttributeError as a:
-			print 'The attributes "mean" and "sd" were not found.'
+			print('The attributes "mean" and "sd" were not found.')
 			raise
 
 def test_module():
@@ -242,7 +247,7 @@ def test_module():
 	x.set_ephysprop(id=2)
 	x.get_values()
 	x.check()
-	print "Tests passed."
+	print("Tests passed.")
 
 
 

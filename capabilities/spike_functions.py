@@ -1,23 +1,23 @@
 try:
 	import numpy as np
 except:
-	print "NumPy not loaded."
+	print("NumPy not loaded.")
 try:
 	import scipy
 except:
-	print "SciPy not loaded."
+	print("SciPy not loaded.")
 
-SCALE = [1e-4,1] # dt = 0.0001; units = mV or pA.  
+SCALE = [0.01,1] # [dt in units of ms/sample, amplitude in units of mV or pA per unit].  
 
 # Membrane potential trace (1D numpy array) to matrix of spike snippets (2D numpy array)
-def vm2spikes(vm, scale=SCALE, threshold=0.0, width=0.01): # Width in s.  
+def vm2spikes(vm, scale=SCALE, threshold=0.0, width=5): 
 	""" 
 	IN:
 	 vm: the membrane potential trace. 1D numpy array or list.  
 	 scale[0]: the duration of time (in s) corresponding to one sample (point), i.e. dt. Scalar float.    
 	 scale[1]: the scale (in mV) of the vm array, i.e. vm=3 corresponds to 3*scale[1] mV.  Scalar float.  
 	 threshold: the value (in mV) above which vm has to cross for there to be a spike.  Scalar float.  
-	 width: the length (in s) of the snippet extracted, centered at the spike peak.  Scalar float.  
+	 width: the length (in ms) of the snippet extracted, centered at the spike peak.  Scalar float.  
 	OUT:
 	 2D (m x n) numpy array of spikes, with n spikes and m samples per spike.   
 	"""
@@ -26,8 +26,8 @@ def vm2spikes(vm, scale=SCALE, threshold=0.0, width=0.01): # Width in s.
 	(maxima,minima) = peakdet(vm,0)#,x=times)
 	threshold = float(threshold)/scale[1]
 	width = float(width)/scale[0] # Convert to samples.
-	vm = np.concatenate((ones(width)*vm[0],vm,ones(width)*vm[n_samples-1])) # Prepend and postpend buffer
-	spikes = [vm[maximum[0]:maximum[0]+2*width] for maximum in maxima if maximum[1]>threshold]
+	vm = np.concatenate((np.ones(width)*vm[0],vm,np.ones(width)*vm[n_samples-1])) # Prepend and postpend buffer
+	spikes = [vm[maximum[0]+np.round(width/2):maximum[0]+np.round(3*width/2)] for maximum in maxima if maximum[1]>threshold]
 	return np.array(spikes)
 
 def spikes2amplitudes(spikes, scale=SCALE):
@@ -51,14 +51,21 @@ def spikes2widths(spikes, scale=SCALE):
 	 1D numpy array of spike widths, specifically the full width at half the maximum amplitude.     
 	"""
 	widths = []
+	print("There are %d spikes" % len(spikes))
 	for spike in spikes:
+		#print("This spikes has duration %d samples" % len(spike))
 		x_high = np.argmax(spike)
+		print("Spikes has duration %d samples, and sample %d is the high point" % (len(spike),x_high))
 		high = spike[x_high]
-		low = min(spike[:x_high])
-		mid = (high+low)/2
-		spike_top = spike[(spike>mid)]
-		widths.append(len(spike_top))
-	return np.array(widths)*scale[0]
+		if x_high > 0:
+			low = np.min(spike[:x_high])
+			mid = (high+low)/2
+			spike_top = spike[(spike>mid)]
+			widths.append(len(spike_top))
+			print(low,mid,high)
+	widths = np.array(widths)*scale[0]
+	print("Spike widths are %s" % str(widths))
+	return widths
 
 # https://gist.github.com/endolith/250860
 def peakdet(v, delta, x = None):
@@ -77,21 +84,21 @@ def peakdet(v, delta, x = None):
 	mintab = []
 	   
 	if x is None:
-		x = arange(len(v))
+		x = np.arange(len(v))
 	
 	v = np.asarray(v)
 	
 	if len(v) != len(x):
 		sys.exit('Input vectors v and x must have same length')
 	
-	if not isscalar(delta):
+	if not np.isscalar(delta):
 		sys.exit('Input argument delta must be a scalar')
 	
 	if delta <= 0:
 		pass#sys.exit('Input argument delta must be positive')
 	
-	mn, mx = Inf, -Inf
-	mnpos, mxpos = NaN, NaN
+	mn, mx = np.inf, -np.inf
+	mnpos, mxpos = np.nan, np.nan
 	
 	lookformax = True
 	
