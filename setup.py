@@ -10,5 +10,5 @@ setup(
 	license='MIT',
 	description='A SciUnit library for data-driven testing of single-neuron physiology models.',
 	long_description="",
-	install_requires=[sciunit,numpy,scipy]
+	install_requires=['sciunit','numpy','scipy']
 )
