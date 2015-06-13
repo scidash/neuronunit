@@ -11,7 +11,7 @@ setup(
             'neuronunit.nml',
             'neuronunit.neuroconstruct',
             'neuronunit.models',
-            'neuronunit.tests'
+            'neuronunit.tests'],
 	url='http://github.com/scidash/neuronunit',
 	license='MIT',
 	description='A SciUnit library for data-driven testing of single-neuron physiology models.',
