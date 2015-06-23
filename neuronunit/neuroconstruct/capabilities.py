@@ -1,5 +1,5 @@
-"""NeuroUnit capability classes implemented using a combination of
-NeuroConstruct and NeuroTools."""
+"""NeuronUnit capability classes implemented using a combination of
+NeuroConstruct and neo."""
 
 from __init__ import *
 from datetime import datetime
@@ -61,7 +61,7 @@ class ProducesMembranePotential_NC(ProducesMembranePotential,Runnable_NC):
 	"""An array of somatic membrane potential samples"""
 	
 	def get_membrane_potential(self,**kwargs):
-		"""Returns a NeuroTools.signals.analogs.AnalogSignal object"""
+		"""Returns a neo.core.AnalogSignal object"""
 		
 		if self.sim_path is None or self.ran is False:
 			self.run(**kwargs)
@@ -89,7 +89,7 @@ class ProducesMembranePotential_NC(ProducesMembranePotential,Runnable_NC):
 		This will in some cases be the resting potential."""
 		
 		vm = self.get_membrane_potential(**kwargs) 
-		# A NeuroTools.signals.AnalogSignal object
+		# A neo.core.AnalogSignal object
 		median_vm = np.median(vm.signal)
 		return median_vm
 
@@ -97,7 +97,7 @@ class ProducesMembranePotential_NC(ProducesMembranePotential,Runnable_NC):
 		"""Returns a float corresponding to the starting membrane potential.
 		This will in some cases be the resting potential."""
 		vm = self.get_membrane_potential() 
-		# A NeuroTools.signals.AnalogSignal object
+		# A neo.core.AnalogSignal object
 		return vm.signal[0]
 
 
@@ -108,13 +108,13 @@ class ProducesSpikes_NC(ProducesSpikes,ProducesMembranePotential):
 	def get_spikes(self,**kwargs):
 		"""Returns an array of spike snippets"""
 		vm = self.get_membrane_potential(**kwargs) 
-		# A NeuroTools.signals.AnalogSignal object
+		# A neo.core.AnalogSignal object
 		return spike_functions.vm2spikes(vm.signal)
 
 	def get_spike_train(self,**kwargs):
-		"""Returns a NeuroTools.signals.spikes.SpikeTrain object"""
+		"""Returns a neo.core.SpikeTrain object"""
 		vm = self.get_membrane_potential(**kwargs) 
-		# A NeuroTools.signals.AnalogSignal object
+		# A neo.core.AnalogSignal object
 		return vm.threshold_detection()
 
 	def get_spike_widths(self,**kwargs):

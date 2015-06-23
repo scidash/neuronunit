@@ -1,6 +1,7 @@
-"""SciUnit capability classes for NeuroUnit.
+"""SciUnit capability classes for NeuronUnit.
 The goal is to enumerate all possible capabilities of a model 
-that would be tested using NeuroUnit."""
+that would be tested using NeuronUnit.
+These capabilities exchange 'neo' objects."""
 
 import numpy as np
 
@@ -12,7 +13,7 @@ class ProducesMembranePotential(Capability):
 	"""Indicates that the model produces a somatic membrane potential."""
 	
 	def get_membrane_potential(self):
-		"""Returns a NeuroTools.signals.AnalogSignal."""
+		"""Must return a neo.core.AnalogSignal."""
 		raise NotImplementedError()
 
 	def get_median_vm(self):
@@ -29,7 +30,7 @@ class ProducesSpikes(sciunit.Capability):
 		"""Gets computed spike times from the model.
 		
 		Arguments: None.
-		Returns: a NeuroTools SpikeTrain object.
+		Returns: a neo.core.SpikeTrain object.
 		"""
 		
 		raise NotImplementedError()
@@ -45,8 +46,8 @@ class ProducesActionPotentials(ProducesSpikes):
 		
     	Returns
     	-------
-    	NeuroTools.signals.AnalogSignalList
-        	A list of spike waveforms
+    	Must return a neo.core.AnalogSignalArray.
+        Each neo.core.AnalogSignal in the array should be a spike waveform.
 		"""
 
 		raise NotImplementedError()
@@ -64,8 +65,8 @@ class ReceivesCurrent(Capability):
 
 	    Parameters
 	    ----------
-	    current : NeuroTools.signals.AnalogSignal
-	        A times series of the current to be injected.  
+	    current : neo.core.AnalogSignal
+	    This is a time series of the current to be injected.  
 	    """
 		
 		raise NotImplementedError()
