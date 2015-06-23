@@ -5,17 +5,12 @@ python:
 install: 
   - sudo apt-get install python-numpy python-scipy
   - pip install neo
-  - git clone git://github.com/rgerkin/pyNeuroML.git
-  - cd pyNeuroML
-  - python setup.py install
+  - pip install git+git://github.com/rgerkin/pyNeuroML.git
+  - pip install git+git://github.com/rgerkin/sciunit.git
 
 # Setting up pre-requirements
 before_script:
-  - cd ..
-  - git clone git://github.com/rgerkin/sciunit.git
-  - export PYTHONPATH=$PYTHONPATH:$PWD:$PWD/sciunit
   - echo $PYTHONPATH
-  - cd neuronunit
   - ls
 
 # command to run tests, e.g. python setup.py test
