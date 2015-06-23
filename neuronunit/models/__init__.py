@@ -2,6 +2,7 @@ import numpy as np
 import sciunit
 from neuronunit.capabilities import ReceivesCurrent,ProducesMembranePotential
 from NeuroTools.signals import AnalogSignal
+from .channel import *
 
 class SimpleModel(sciunit.Model,
                   ReceivesCurrent,
