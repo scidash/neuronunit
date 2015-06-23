@@ -1,3 +1,5 @@
+"""A module of auxiliary helper functions, not capabilities."""
+
 try:
 	import numpy as np
 except:

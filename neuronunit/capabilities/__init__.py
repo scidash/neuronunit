@@ -6,6 +6,7 @@ import numpy as np
 
 import sciunit
 from sciunit import Capability
+from .channel import *
 
 class ProducesMembranePotential(Capability):
 	"""Indicates that the model produces a somatic membrane potential."""
