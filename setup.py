@@ -8,7 +8,6 @@ setup(
         packages=[
             'neuronunit',
             'neuronunit.capabilities',
-            'neuronunit.nml',
             'neuronunit.neuroconstruct',
             'neuronunit.models',
             'neuronunit.tests'],
