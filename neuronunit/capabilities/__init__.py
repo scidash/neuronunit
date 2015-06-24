@@ -18,7 +18,7 @@ class ProducesMembranePotential(Capability):
 
 	def get_median_vm(self):
 		vm = self.get_membrane_potential()
-		return np.median(vm.signal)
+		return np.median(vm)
 
 class ProducesSpikes(sciunit.Capability):
 	"""
