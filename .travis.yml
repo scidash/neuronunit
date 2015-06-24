@@ -7,7 +7,7 @@ python:
 install: 
   - sudo apt-get install python-numpy python-scipy
   - pip install neo
-  - pip install git+git://github.com/NeuralEnsemble/libNeuroML.git
+  - pip install git+git://github.com/NeuralEnsemble/libNeuroML.git@development
   - pip install git+git://github.com/rgerkin/pyNeuroML.git
   - pip install git+git://github.com/rgerkin/sciunit.git
 
