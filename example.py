@@ -2,6 +2,7 @@
 
 import os
 
+from quantities import mV
 import sciunit
 from neuronunit import neuroelectro,tests,capabilities,models
 
@@ -16,8 +17,8 @@ reference_data.get_values()
 # Initialize the test with summary statistics from the reference data
 # and arguments for the model (model).    
 test = tests.RestingPotentialTest(
-    observation = {'mean':reference_data.mean,
-                      'std':reference_data.std},
+    observation = {'mean':reference_data.mean*mV,
+                      'std':reference_data.std*mV},
                 )
 
 # Initialize (parameterize) the model with some initialization parameters.

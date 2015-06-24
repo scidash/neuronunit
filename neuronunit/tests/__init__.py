@@ -1,4 +1,5 @@
 import inspect
+from quantities.quantity import Quantity
 import sciunit
 from sciunit import Test,Score,ObservationError
 from neuronunit.capabilities import ProducesMembranePotential,ProducesSpikes
@@ -6,6 +7,7 @@ from neuronunit.capabilities import ReceivesCurrent,spike_functions
 from neuronunit import neuroelectro
 from sciunit.comparators import zscore # Converters.  
 from sciunit.scores import ErrorScore,BooleanScore,ZScore # Scores.  
+from .channel import *
 
 try:
 	import numpy as np
@@ -31,11 +33,11 @@ class SpikeWidthTest(sciunit.Test):
 
 	def validate_observation(self, observation):
 		try:
-			assert type(observation['mean']) is float
-			assert type(observation['std']) is float
+			assert type(observation['mean']) is Quantity
+			assert type(observation['std']) is Quantity
 		except Exception as e:
-			raise ObservationError("Observation must be of the form \
-				{'mean':float,'std':float}") 
+			raise ObservationError(("Observation must be of the form "
+									"{'mean':float*mV,'std':float*mV}")) 
 
 	def generate_prediction(self, model):
 		"""Implementation of sciunit.Test.generate_prediction."""
@@ -112,11 +114,11 @@ class RestingPotentialTest(Test):
 
 	def validate_observation(self, observation):
 		try:
-			assert type(observation['mean']) is float
-			assert type(observation['std']) is float
+			assert type(observation['mean']) is Quantity
+			assert type(observation['std']) is Quantity
 		except Exception as e:
-			raise ObservationError("Observation must be of the form \
-				{'mean':float,'std':float}") 
+			raise ObservationError(("Observation must be of the form "
+									"{'mean':float*mV,'std':float*mV}")) 
 
 	def generate_prediction(self, model):
 		"""Implementation of sciunit.Test.generate_prediction."""

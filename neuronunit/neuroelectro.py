@@ -29,6 +29,7 @@ width = x.mean # Mean Spike width reported across all matching papers.
 
 """
 
+import quantities
 import sciunit
 try: # Python 2
 	from urllib import urlencode
