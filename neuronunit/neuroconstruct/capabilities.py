@@ -72,33 +72,33 @@ class ProducesMembranePotential_NC(ProducesMembranePotential,Runnable_NC):
 				  % (self.sim_path,self.population_name))
 			vm = nc_neurotools.get_analog_signal(self.sim_path,
 												 self.population_name)
-			vm_sig = vm.signal
+			vm_sig = vm.data
 			t =  nc_neurotools.get_analog_signal(self.sim_path,
 												 'time')
-			t_sig = t.signal
+			t_sig = t.data
 			t_new = np.arange(t_sig.min(),t_sig.max(),0.01)
 			from scipy import interpolate
 			f = interpolate.interp1d(t_sig,vm_sig)
 			vm_new = f(t_new)
-			vm.signal = vm_new
+			vm.data = vm_new
 			# An AnalogSignal instance. 
 		return vm 
 		
 	def get_median_vm(self,**kwargs):
-		"""Returns a float corresponding the median membrane potential.
+		"""Returns a quantity corresponding the median membrane potential.
 		This will in some cases be the resting potential."""
 		
 		vm = self.get_membrane_potential(**kwargs) 
 		# A neo.core.AnalogSignal object
-		median_vm = np.median(vm.signal)
+		median_vm = np.median(vm)
 		return median_vm
 
 	def get_initial_vm(self):
-		"""Returns a float corresponding to the starting membrane potential.
+		"""Returns a quantity corresponding to the starting membrane potential.
 		This will in some cases be the resting potential."""
 		vm = self.get_membrane_potential() 
 		# A neo.core.AnalogSignal object
-		return vm.signal[0]
+		return vm[0]
 
 
 class ProducesSpikes_NC(ProducesSpikes,ProducesMembranePotential):
@@ -109,7 +109,7 @@ class ProducesSpikes_NC(ProducesSpikes,ProducesMembranePotential):
 		"""Returns an array of spike snippets"""
 		vm = self.get_membrane_potential(**kwargs) 
 		# A neo.core.AnalogSignal object
-		return spike_functions.vm2spikes(vm.signal)
+		return spike_functions.vm2spikes(vm)
 
 	def get_spike_train(self,**kwargs):
 		"""Returns a neo.core.SpikeTrain object"""
