@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
 	name='neuronunit',
-	version='0.1.3',
+	version='0.1.3.1',
 	author='Rick Gerkin',
 	author_email='rgerkin@asu.edu',
         packages=[
@@ -15,5 +15,5 @@ setup(
 	license='MIT',
 	description='A SciUnit library for data-driven testing of single-neuron physiology models.',
 	long_description="",
-	install_requires=['sciunit>=0.1.3','numpy','scipy','neo']
+	install_requires=['sciunit>=0.1.3.1','numpy','scipy','neo']
 )
