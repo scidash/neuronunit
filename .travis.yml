@@ -21,6 +21,7 @@ install:
   - pip install git+https://github.com/neuralensemble/libNeuroML@development
   - pip install git+https://github.com/purcell/airspeed.git
   - pip install --allow-all-external git+https://github.com/rgerkin/pyNeuroML.git
+  - pip install --allow-all-external git+https://github.com/neuralensemble/python-neo.git
   - pip install --allow-all-external git+https://github.com/neuralensemble/elephant.git
   - pip install git+https://github.com/rgerkin/sciunit.git
   - python setup.py install
