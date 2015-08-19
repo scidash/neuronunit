@@ -71,3 +71,9 @@ class ReceivesCurrent(Capability):
 		
 		raise NotImplementedError()
 
+class LEMS_Runnable(sciunit.Capability):
+    """Capability for models that can be run by executing LEMS files."""
+    def LEMS_run(self,**run_params):
+        return NotImplementedError("%s not implemented" % inspect.stack()[0][3])
+ 
+
