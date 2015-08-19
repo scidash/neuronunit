@@ -1,4 +1,7 @@
-from distutils.core import setup
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
 
 setup(
 	name='neuronunit',
@@ -15,5 +18,7 @@ setup(
 	license='MIT',
 	description='A SciUnit library for data-driven testing of single-neuron physiology models.',
 	long_description="",
-	install_requires=['sciunit>=0.1.3.1','numpy','scipy','neo','elephant']
+	install_requires=['sciunit>=0.1.3.1','numpy','scipy','neo','elephant'],
+        dependency_links = ['git+http://github.com/neuralensemble/python-neo.git#egg=neo-0.4.0dev',
+                            'git+http://github.com/neuralensemble/elephant.git#egg=elephant-0.1.1']
 )
