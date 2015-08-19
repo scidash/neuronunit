@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
 	name='neuronunit',
-	version='0.1.3.1',
+	version='0.1.4',
 	author='Rick Gerkin',
 	author_email='rgerkin@asu.edu',
         packages=[
