@@ -21,7 +21,7 @@ class IVCurveTest(sciunit.Test):
         assert type(observation) is dict
         for item in ['v', 'i']:
             assert item in observation
-            assert type(observation[item]) in [list,np.ndarray]
+            assert type(observation[item]) in [list,tuple,np.ndarray]
     
     def generate_prediction(self, model):
         raise Exception('This is a meta-class for tests; use tests derived from this class instead')
