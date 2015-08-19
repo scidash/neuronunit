@@ -33,3 +33,4 @@ pip-log.txt
 *scratch.py
 *.xml
 *.ipynb_checkpoints
+*.dat
