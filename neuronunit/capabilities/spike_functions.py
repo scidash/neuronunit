@@ -1,49 +1,41 @@
 """A module of auxiliary helper functions, not capabilities."""
 
-try:
-	import numpy as np
-except:
-	print("NumPy not loaded.")
-try:
-	import scipy
-except:
-	print("SciPy not loaded.")
-
-SCALE = [0.01,1] # [dt in units of ms/sample, amplitude in units of mV or pA per unit].  
+import neo
+from elephant.spike_train_generation import threshold_detection
+from quantities import mV, ms
 
 # Membrane potential trace (1D numpy array) to matrix of spike snippets (2D numpy array)
-def vm2spikes(vm, scale=SCALE, threshold=0.0, width=5): 
+def get_spike_waveforms(vm, threshold=0.0*mV, width=5*ms): 
 	""" 
-	IN:
-	 vm: the membrane potential trace. 1D numpy array or list.  
-	 scale[0]: the duration of time (in s) corresponding to one sample (point), i.e. dt. Scalar float.    
-	 scale[1]: the scale (in mV) of the vm array, i.e. vm=3 corresponds to 3*scale[1] mV.  Scalar float.  
-	 threshold: the value (in mV) above which vm has to cross for there to be a spike.  Scalar float.  
-	 width: the length (in ms) of the snippet extracted, centered at the spike peak.  Scalar float.  
-	OUT:
-	 2D (m x n) numpy array of spikes, with n spikes and m samples per spike.   
+	 vm: a neo.core.AnalogSignal corresponding to a membrane potential trace.   
+	 threshold: the value (in mV) above which vm has to cross for there 
+	 			to be a spike.  Scalar float.  
+	 width: the length (in ms) of the snippet extracted, 
+	 		centered at the spike peak.  
+	
+	Returns:
+	 a neo.core.AnalogSignalArray of membrane potential snippets 
+	 corresponding to each spike.  
 	"""
-	vm = np.array(vm)  
-	n_samples = len(vm)
-	(maxima,minima) = peakdet(vm,0)#,x=times)
-	threshold = float(threshold)/scale[1]
-	width = float(width)/scale[0] # Convert to samples.
-	vm = np.concatenate((np.ones(width)*vm[0],vm,np.ones(width)*vm[n_samples-1])) # Prepend and postpend buffer
-	spikes = [vm[maximum[0]+np.round(width/2):maximum[0]+np.round(3*width/2)] for maximum in maxima if maximum[1]>threshold]
-	return np.array(spikes)
+	spike_train = threshold_detection(vm,threshold=threshold)
+	vm_array = neo.core.AnalogSignalArray(vm,units=vm.units,
+											 sampling_rate=vm.sampling_rate)
+	snippets = [vm_array.time_slice(t-width/2,t+width/2) for t in spikes]
+	return neo.core.AnalogSignalArray(snippets,units=vm.units,
+											   sampling_rate=vm.sampling_rate)
 
-def spikes2amplitudes(spikes, scale=SCALE):
+def get_spike_amplitudes(spike_waveforms):
 	""" 
 	IN:
-	 spikes: Spike waveforms, e.g. from vm2spikes(). 2D numpy array, see vm2spikes output.    
-	 scale[0]: the duration of time (in s) corresponding to one sample (point), i.e. dt. Scalar float.    
-	 scale[1]: the scale (in mV) of the vm array, i.e. vm=3 corresponds to 3*scale[1] mV.  Scalar float.  
+	 spikes: Spike waveforms, e.g. from get_spike_waveforms(). 
+	 		 neo.core.AnalogSignalArray
 	OUT:
 	 1D numpy array of spike amplitudes, i.e. the maxima in each waveform.     
 	"""
-	return np.amax(spikes,axis=1)*scale[1]
+	return np.max(spikes,axis=1)
+	
 
-def spikes2widths(spikes, scale=SCALE):
+def spikes2widths(spikes, scale=[0.1*ms,1*mV]):
 	""" 
 	IN:
 	 spikes: Spike waveforms, e.g. from vm2spikes(). 2D numpy array, see vm2spikes output.    
