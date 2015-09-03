@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.interpolate import interp1d
+import quantities as pq
 
 import sciunit, sciunit.scores
 from neuronunit.capabilities.channel import * 
@@ -21,7 +22,12 @@ class IVCurveTest(sciunit.Test):
         assert type(observation) is dict
         for item in ['v', 'i']:
             assert item in observation
-            assert type(observation[item]) in [list,tuple,np.ndarray]
+            assert type(observation[item]) in [list,tuple] \
+                or isinstance(observation[item],np.ndarray)
+        if hasattr(observation['v'],'units'):
+            observation['v'] = observation['v'].rescale(pq.V) # Rescale to volts.  
+        if hasattr(observation['i'],'units'):
+            observation['i'] = observation['i'].rescale(pq.pA) # Rescale to picoamps.      
     
     def generate_prediction(self, model):
         raise Exception('This is a meta-class for tests; use tests derived from this class instead')
