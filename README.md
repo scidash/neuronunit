@@ -110,7 +110,7 @@ for model_name in model_names # Iterate through a list of models downloaded from
 score_matrix = suite.judge(models,stop_on_error=True) 
 score_matrix.view()
 ```
-
+#####Score Matrix for Test Suite 'Neuron Tests'
 | Model                   | Spike Width                     | Resting Potential      |
 |-------------------------|:-------------------------------:|:----------------------:|
 |                         | (InjectedCurrentSpikeWidthTest) | (RestingPotentialTest) |
