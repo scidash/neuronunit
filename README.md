@@ -99,7 +99,7 @@ spikewidth_test = tests.InjectedCurrentSpikeWidthTest(
                 params={'injected_current':{'ampl':0.0053}}) # 0.0053 nA (5.3 pA) of injected current.  
 
 # Create a test suite from these two tests.  
-suite = sciunit.TestSuite('Tests',(spikewidth_test,vm_test))
+suite = sciunit.TestSuite('Neuron Tests',(spikewidth_test,vm_test))
 
 models = []
 for model_name in model_names # Iterate through a list of models downloaded from http://opensourcebrain.org
@@ -110,7 +110,7 @@ for model_name in model_names # Iterate through a list of models downloaded from
 score_matrix = suite.judge(models,stop_on_error=True) 
 score_matrix.view()
 ```
-#####Score Matrix for Test Suite 'Neuron Tests'
+###Score Matrix for Test Suite 'Neuron Tests'
 | Model                   | Spike Width                     | Resting Potential      |
 |-------------------------|:-------------------------------:|:----------------------:|
 |                         | (InjectedCurrentSpikeWidthTest) | (RestingPotentialTest) |
@@ -131,4 +131,48 @@ ax2.set_xlim(283,284.7)
 ![png](https://raw.githubusercontent.com/scidash/assets/master/figures/spike_width_test2.png)
 
 # Tutorial:
+NeuronUnit is based on SciUnit, a discpline-agnostic framework for data-driven unit testing of scientific models.  Any test script will do the following things in sequence.  Most of these will be abstracted away in SciUnit or NeuronUnit modules that make things easier:  
 
+1. Instantiate a model(s) from a model class, with parameters of interest to build a specific model.    
+1. Instantiate a test(s) from a test class, with parameters of interest to build a specific test.  
+2. Check that the model has the capabilities required to take the test.     
+1. Make the model take the test.  
+2. Generate a score from that test run.  
+1. Bind the score to the specific model/test combination and any related data from test execution. 
+1. Visualize the score (i.e. print or display the result of the test).  
+
+Here, we will break down how this is accomplished in NeuronUnit.  Although NeuronUnit contains several model and test classes that make it easy to work with standards in neuron modeling and electrophysiology data reporting, here we will use toy model and test classes constructed on-the-fly so the process of model and test construction is fully transparent.  
+
+Here is a toy model class:  
+```python
+class ToyNeuronModel(sciunit.Model,
+                     neuronunit.capabilities.ProducesMembranePotential):
+    """A toy neuron model that is always at it resting potential"""
+    def __init__(self, v_rest, name=None):
+        self.v_rest = v_rest
+        sciunit.Model.__init__(self, name=name)
+
+    def get_membrane_potential(self):
+        array = np.ones(10000) * self.v_rest
+        dt = 1*ms # Time per sample in milliseconds.  
+        vm = AnalogSignal(array,units=mV,sampling_rate=1.0/dt)
+        return vm
+```
+
+The `ToyNeuronModel` class inherits from `sciunit.Model` (as do all NeuronUnit models), and also from  `ProducesMembranePotential`, which is a subclass of `sciunit.Capability`.  Inheriting from a SciUnit `Capability` is a how a SciUnit `Model` lets tests know what it can and cannot do.  It tells tests that the model will be implement any method stubbed out in the definition of that `Capability`.   
+
+Let's see what the `neuronunit.capabilities.ProducesMembranePotential` capability looks like:  
+```python
+class ProducesMembranePotential(Capability):
+	"""Indicates that the model produces a somatic membrane potential."""
+	
+	def get_membrane_potential(self):
+		"""Must return a neo.core.AnalogSignal."""
+		raise NotImplementedError()
+
+	def get_median_vm(self):
+		vm = self.get_membrane_potential()
+		return np.median(vm)
+```
+
+`ProducesMembranePotential` has two methods.  The first is unimplemented by design.  There is no way to know how each model will generate and return a membrane potential time series, 
