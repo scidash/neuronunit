@@ -175,4 +175,97 @@ class ProducesMembranePotential(Capability):
 		return np.median(vm)
 ```
 
-`ProducesMembranePotential` has two methods.  The first is unimplemented by design.  There is no way to know how each model will generate and return a membrane potential time series, 
+`ProducesMembranePotential` has two methods.  The first, `get_membrane_potential` is unimplemented by design.  Since there is no way to know how each model will generate and return a membrane potential time series, the `get_membrane_potential` method in this capability is left unimplemented, while the docstring describes what the model must implement in order to satisfy that capability.  In the `ToyNeuronModel` above, we see that the model implements it by simply creating a long array of resting potential values, and returning it as a `neo.core.AnalogSignal` object.  
+
+The second, `get_median_vm` is implemented, which means there is no need for the model to do implement it again.  For its implementation to work, however, the implementation of `get_membrane_potential` must be complete.  Pre-implemented capability methods such as these allow the developer to focus on implementing only a few core interactions with the model, and then getting a lot of extra functionality for free.  In the example above, once we know that the membrane potential is being returned as a `neo.core.AnalogSignal`, we can simply take the median using numpy.  We know that the membrane potential isn't being returned as a list or a tuple or some other object on which numpy's median function won't necessarily work.  
+
+Let's construct a single instance of this model, by choosing a value for the single membrane potential argument.  This toy model will now have a 60 mV membrane potential at all times:  
+
+```python
+from quantities import mV
+my_neuron_model = ToyNeuronModel(-60.0*mV, name='my_neuron_model')
+```
+
+Now we can then construct a simple test to use on this model or any other that expresses the appropriate capabilities:  
+
+```python
+class ToyAveragePotentialTest(sciunit.Test):
+	"""Tests the average membrane potential of a neuron."""
+	
+	def __init__(self,
+			     observation={'mean':None,'std':None},
+			     name="Average potential test"):
+		"""Takes the mean and standard deviation of reference membrane potentials."""
+		
+		sciunit.Test.__init__(self,observation,name) # Call the base constructor.  
+		self.required_capabilities += (neuronunit.capabilities.ProducesMembranePotential,)
+							  		   # This test will require a model to express the above capabilities
+
+	description = "A test of the average membrane potential of a cell."
+	score_type = sciunit.scores.ZScore # The test will return this kind of score.  
+
+	def validate_observation(self, observation):
+	    """An optional method that makes sure an observation to be used as 
+	    reference data has the right form"""
+		try:
+			assert type(observation['mean']) is quantities.Quantity # From the 'quantities' package
+			assert type(observation['std']) is quantities.Quantity
+		except Exception as e:
+			raise sciunit.ObservationError(("Observation must be of the form "
+									"{'mean':float*mV,'std':float*mV}")) 
+
+	def generate_prediction(self, model):
+		"""Implementation of sciunit.Test.generate_prediction."""
+		vm = model.get_median_vm() # If the model has the capability 'ProducesMembranePotential', 
+		                           # then it implements this method
+		prediction = {'mean':vm}
+		return prediction
+
+	def compute_score(self, observation, prediction):
+		"""Implementation of sciunit.Test.score_prediction."""
+		score = sciunit.comparators.zscore(observation,prediction)	# Computes a decimal Z score.  
+		score = sciunit.scores.ZScore(score) # Wraps it in a sciunit.Score type.  
+		score.related_data['mean_vm'] = prediction['mean'] # Binds some related data about the test run.  
+		return score
+```
+
+The test constructor takes an observation to parameterize the test, e.g.:  
+
+```python
+from quantities import mV
+my_observation = {'mean':-60.0*mV, 
+                  'std':3.5*mV}
+my_average_potential_test = ToyAveragePotentialTest(my_observation, name='my_average_potential_test')
+```
+
+A few things happen upon test instantiation, including validation of the observation. Since the observation has the correct format (for this test class), `ToyAveragePotentialTest.validate_observation` will complete successfully and the test will be ready for use.  
+
+```python
+score = my_average_potential_test.judge(my_neuron_model)
+```
+
+The `sciunit.Test.judge` method does several things.  
+-- First, it checks to makes sure that my_neuron_model expresses the capabilities required to take the test.  It doesn't check to see if they are implemented correctly (how could it know?) but it does check to make sure the model at least claims (through inheritance) to express these capabilities.  The required capabilities are none other than those in the test's `required_capabilities` attribute.  Since `ProducesMembranePotential` is the only required capability, and the `ToyNeuronModel` class inherits from this capability class, that check passes.  
+-- Second, it calls the test's `generate_prediction` method, which uses the model's capabilities to make the model return some quantity of interest, in this case the median membrane potential.  
+-- Third, it calls the test's `compute_score` method, which compares the observation the test was instantiated with against the prediction returned in the previous step.  This comparison of quantities is cast into a `score` (in this case, a Z Score), bounds to some model output of interest (in this case, the model's mean membrane potential), and that `score` object is returned.  
+-- Fourth, the score returned is checked to make sure it is of the type promised in the class definition, i.e. that a Z Score is returned if a Z Score is listed in the test's `score_type` attribute.  
+-- Fifth, the score is bound to the test that returned it, the model that took the test, and the prediction and observation that were used to compute it.  
+
+If all these checks pass (and there are no runtime errors) then we will get back a `score` object.  Usually this will be the kind of score we can use to evaluate model/data agreement.  If one of the capabilities required by the test is not expressed by the model, `judge` returns a special `NAScore` score type, which can be thought of as a blank.  It's not an error -- it just means that the model, as written, is not capable of taking that test.  If there are runtime errors, they will be raised during test execution; however if the optional `stop_on_error` keyword argument is set to `False` when we call `judge`, then it we will return a special `ErrorScore` score type, encoding the error that was raised.  This is useful when batch testing many model and test combinations, so that the whole script doesn't get halted.  One can always check the scores at the end and then fix and re-run the subset of model/test combinations that returned an `ErrorScore`.
+
+For any score, we can summarize it like so:  
+```python
+score.summarize()
+''' OUTPUT:
+=== Model my_neuron_model (ToyAveragePotentialModel) achieved score 1.0 on test my_average_potential_test (ToyAveragePotentialTest)'. ===
+'''
+```
+
+and we can get more information about the score:  
+
+```python
+score.describe()
+''' OUTPUT:
+The score was computed according to 'the difference of the predicted and observed means divided by the observed standard deviation' with raw value 1.0
+'''
+```
