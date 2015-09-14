@@ -2,7 +2,10 @@ import numpy as np
 from scipy.interpolate import interp1d
 import quantities as pq
 
-import sciunit, sciunit.scores
+import sciunit
+from sciunit.scores import BooleanScore
+from sciunit.comparators import compute_ssd
+from sciunit.converters import AtMostToBoolean
 from neuronunit.capabilities.channel import * 
 
 class IVCurveTest(sciunit.Test):
@@ -12,10 +15,12 @@ class IVCurveTest(sciunit.Test):
         self.validate_observation(observation)
         for key,value in observation.items():
             setattr(self, key, value)
+        self.comparator = compute_ssd
+        self.converter = AtMostToBoolean(pq.Quantity(100,'pA**2'))
         super(IVCurveTest,self).__init__(observation, name=name, **params)
     
     required_capabilities = (ProducesIVCurve,)
-    score_type = sciunit.scores.BooleanScore
+    score_type = BooleanScore
     meta = True # i.e. don't use derive tests directly from this class.  
     
     def validate_observation(self, observation):
@@ -60,14 +65,17 @@ class IVCurveTest(sciunit.Test):
         o = observation
         p = prediction
         interped = self.interp_IV_curves(o['v'], o['i'], p['v'], p['i'])
-        sse = np.sum((interped['i_obs'] - interped['i_pred'])**2) # The sum of the squared differences
-        score = sciunit.scores.BooleanScore(sse<100)
+        self.interped = interped
+        score = self.comparator(interped['i_obs'],interped['i_pred'])
+        return score
+
+    def bind_score(self,score,model,observation,prediction):
         score.description = ("The sum-squared difference in the observed and predicted current values "
                              "over the range of the tested holding potentials.")
-        score.value = '%.4g pA^2' % sse
+        score.string = '%.4g pA^2' % score.score
         # Observationa and prediction are automatically stored in score, but since that is before
         # interpolation, we store the interpolated versions as well.  
-        score.related_data = interped
+        score.related_data = self.interped
         score.plot = self.last_model.plot_iv_curve
         return score
 

@@ -5,7 +5,7 @@ from sciunit import Test,Score,ObservationError
 from neuronunit.capabilities import ProducesMembranePotential,ProducesSpikes
 from neuronunit.capabilities import ReceivesCurrent,spike_functions
 from neuronunit import neuroelectro
-from sciunit.comparators import zscore # Converters.  
+from sciunit.comparators import compute_zscore # Converters.  
 from sciunit.scores import ErrorScore,BooleanScore,ZScore # Scores.  
 from .channel import *
 
@@ -52,8 +52,8 @@ class SpikeWidthTest(sciunit.Test):
 		"""Implementation of sciunit.Test.score_prediction."""
 		print("%s: Observation = %s, Prediction = %s" % (self.name,str(observation),str(prediction)))
 
-		score = zscore(observation,prediction)	
-		score = ZScore(score)
+		z = compute_zscore(observation,prediction)	
+		score = ZScore(z.score)
 		score.related_data['mean_spikewidth'] = prediction['mean']
 		return score
 		
@@ -130,8 +130,8 @@ class RestingPotentialTest(Test):
 
 	def compute_score(self, observation, prediction):
 		"""Implementation of sciunit.Test.score_prediction."""
-		score = zscore(observation,prediction)	
-		score = ZScore(score)
+		z = compute_zscore(observation,prediction)	
+		score = ZScore(z.score)
 		score.related_data['mean_vm'] = prediction['mean']
 		return score
 
