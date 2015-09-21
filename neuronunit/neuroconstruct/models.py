@@ -24,7 +24,7 @@ class NeuroConstructModel(Model,
 
 	def __init__(self, project_path, name=None, **kwargs):
 		"""file_path is the full path to an .ncx file."""
-		print("Instantiating a neuroConstruct model from %s." % project_path)
+		#print("Instantiating a neuroConstruct model from %s." % project_path)
 		self.project_path = project_path
 		self.ran = False
 		self.population_name = self.get_cell_group()+'_0'
