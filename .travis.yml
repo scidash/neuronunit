@@ -32,4 +32,4 @@ before_script:
   - ls
 
 # command to run tests, e.g. python setup.py test
-script: python example.py
+script: python docs/chapter1.py

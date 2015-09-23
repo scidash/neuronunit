@@ -26,7 +26,7 @@ class ProducesSpikes(sciunit.Capability):
 	No duration is required for these spikes.
 	"""
 
-	def get_spikes(self):
+	def get_spike_train(self):
 		"""Gets computed spike times from the model.
 		
 		Arguments: None.

@@ -20,6 +20,7 @@ class Runnable_NC(Capability):
 	def __init__(self):
 		self.ran = False
 		self.rerun = False
+		self.always_rerun = False
 		self.runtime_methods = {}
 		self.sim_path = None
 
@@ -41,7 +42,7 @@ class Runnable_NC(Capability):
 		"""Runs the model using jython via execnet and returns a 
 		directory of simulation results"""
 		self.prepare()
-		if self.ran is False or self.rerun is True:
+		if self.ran is False or self.rerun is True or self.always_rerun is True:
 			print("Running simulation...")	
 			self.sim_path = utils.run_sim(project_path=self.project_path,
 										  useSocket=True,
@@ -63,24 +64,16 @@ class ProducesMembranePotential_NC(ProducesMembranePotential,Runnable_NC):
 	def get_membrane_potential(self,**kwargs):
 		"""Returns a neo.core.AnalogSignal object"""
 		
-		if self.sim_path is None or self.ran is False:
+		if self.sim_path is None or self.ran is False \
+			or self.rerun or self.always_rerun:
 			self.run(**kwargs)
 		if self.sim_path == '':
 			vm = None
 		else:
-			print("Getting membrane potential from %s/%s" \
-				  % (self.sim_path,self.population_name))
+			#print("Getting membrane potential...")#" from %s/%s" \
+			#	  % (self.sim_path,self.population_name))
 			vm = nc_neurotools.get_analog_signal(self.sim_path,
 												 self.population_name)
-			vm_sig = vm.data
-			t =  nc_neurotools.get_analog_signal(self.sim_path,
-												 'time')
-			t_sig = t.data
-			t_new = np.arange(t_sig.min(),t_sig.max(),0.01)
-			from scipy import interpolate
-			f = interpolate.interp1d(t_sig,vm_sig)
-			vm_new = f(t_new)
-			vm.data = vm_new
 			# An AnalogSignal instance. 
 		return vm 
 		
@@ -105,20 +98,21 @@ class ProducesSpikes_NC(ProducesSpikes,ProducesMembranePotential):
 	"""Requires ProducesMembranePotential.
 	Produces MembranePotentialNC is a logical choice.""" 
 	
-	def get_spikes(self,**kwargs):
-		"""Returns an array of spike snippets"""
-		vm = self.get_membrane_potential(**kwargs) 
-		# A neo.core.AnalogSignal object
-		return spike_functions.vm2spikes(vm)
-
 	def get_spike_train(self,**kwargs):
 		"""Returns a neo.core.SpikeTrain object"""
 		vm = self.get_membrane_potential(**kwargs) 
 		# A neo.core.AnalogSignal object
-		return vm.threshold_detection()
+		return spike_functions.get_spike_train(vm)
+
+	def get_spike_waveforms(self,**kwargs):
+		"""Returns an neo.core.AnalogSignalArray of spike snippets"""
+		vm = self.get_membrane_potential(**kwargs) 
+		# A neo.core.AnalogSignal object
+		return spike_functions.get_spike_waveforms(vm)
 
 	def get_spike_widths(self,**kwargs):
-		spikes = self.get_spikes(**kwargs)
+		"""Returns an array of spike widths"""
+		spikes = self.get_spike_waveforms(**kwargs)
 		return spike_functions.spikes2widths(spikes)
 
 
