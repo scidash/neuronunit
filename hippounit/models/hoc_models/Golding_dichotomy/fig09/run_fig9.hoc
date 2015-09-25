@@ -1,0 +1,444 @@
+
+load_file("nrngui.hoc")
+
+/*************************************************
+* load dendritic morphology                      *
+*************************************************/
+
+xopen("dend2.nrn")
+
+/*************************************************
+* load 'fake' axon                               *
+*************************************************/
+
+xopen("naceaxon.nrn")
+
+/*************************************************
+* set up section lists and initialize parameters *
+*************************************************/
+
+xopen("init_fig9.hoc")
+
+/*************************************************
+* set up control windows                         *
+*************************************************/
+
+/* stimulating electrode... */
+
+objectvar stim
+access somaA
+stim = new IClamp(0.5)
+stim.del = 1
+stim.dur = 3
+stim.amp = 0.4
+
+/* ...and menu to control its parameters */
+
+objref stimbox
+stimbox = new VBox()
+stimbox.intercept(1)
+nrnpointmenu(stim)
+stimbox.intercept(0)
+stimbox.map("Iclamp params",0,75,-1,-1)
+
+/* menu of various parameters */
+
+xpanel("Channel parameters")
+xvalue("Global Ra","global_ra",1)
+xvalue("Rn","Rn",1)
+xvalue("Cmy","Cmy",1)
+xvalue("Rm","Rm",1)
+xvalue("Cm","Cm",1)
+xvalue("spinelimit","spinelimit",1)
+xvalue("spinefactor","spinefactor",1)
+xvalue("gnabar","gnabar",1)
+xvalue("nalimit","nalimit",1)
+xvalue("naslope","naslope",1)
+xvalue("gnode","gnode",1)
+xvalue("gkdr","gkdr",1)
+xvalue("gkap","gkap",1)
+xvalue("gkad","gkad",1)
+xvalue("dlimit","dlimit",1)
+xvalue("dprox","dprox",1)
+xvalue("dslope","dslope",1)
+xpanel(0,150)
+
+/*************************************************
+* initialization routines                        *
+*************************************************/
+
+initchannels()
+
+proc init() {
+
+     /* add initchannels() to init(), so parameter changes show up */
+     initchannels()       
+     finitialize(v_init)
+     fcurrent()
+}
+
+tstop=15
+
+/*************************************************
+* main control window                            *
+*************************************************/
+
+objref contrl
+contrl = new VBox()
+contrl.intercept(1)
+nrncontrolmenu()
+contrl.intercept(0)
+contrl.map("Control",1,500,-1,-1)
+
+
+/*************************************************
+* output graphs                                  *
+*************************************************/
+
+/* range variable plot of channel densities */
+
+objref densities
+
+densities = new VBox()
+densities.intercept(1)
+
+objectvar rvpna,rvpkdr,rvpkap,rvpkad
+rvpna = new RangeVarPlot("gbar_nax")
+rvpkdr = new RangeVarPlot("gkdrbar_kdr")
+rvpkap = new RangeVarPlot("gkabar_kap")
+rvpkad = new RangeVarPlot("gkabar_kad")
+access dendA5_0          
+rvpna.begin(0)
+rvpkdr.begin(0)
+rvpkap.begin(0)
+rvpkad.begin(0)
+rvpna.origin(0)
+rvpkdr.origin(0)
+rvpkap.origin(0)
+rvpkad.origin(0)
+access dendA5_0111111111111111111
+rvpna.end(1)
+rvpkdr.end(1)
+rvpkap.end(1)
+rvpkad.end(1)
+objref rvpdensity
+rvpdensity = new Graph()
+rvpdensity.addobject(rvpna,1,0)
+rvpdensity.addobject(rvpkdr,2,0)
+rvpdensity.addobject(rvpkap,3,0)
+rvpdensity.addobject(rvpkad,4,0)
+rvpdensity.size(0,450,0,0.5)
+graphList[0].append(rvpdensity)
+flush_list.append(rvpdensity)
+densities.intercept(0)
+densities.map("densities",700,450,300,300)
+
+/* vbox for voltage plots */
+
+objref volts
+
+volts = new VBox()
+volts.intercept(1)
+
+
+/* regular plot of  voltages */
+
+objref g
+g = new Graph()
+g.addvar("somaA.v(0.5)",1,0)
+g.addvar("dendA5_01111.v(0.5)",2,0)
+g.addvar("dendA5_011111111.v(0.5)",3,0)
+g.addvar("dendA5_0111111111111.v(0.5)",4,0)
+g.addvar("dendA5_01111111111111111.v(0.5)",5,0)
+g.size(0,tstop,-75,50)
+graphList[0].append(g)
+
+
+/* range variable plot of voltages */
+
+objectvar rvp1,rvp2
+rvp1 = new RangeVarPlot("vm_vmax2")
+rvp2 = new RangeVarPlot("v")
+access dendA5_0
+rvp1.begin(0)
+rvp2.begin(0)
+rvp1.origin(0)
+rvp2.origin(0)
+access dendA5_01111111111111111
+rvp1.end(1)
+rvp2.end(1)
+
+objref rvpgraph
+rvpgraph = new Graph()
+rvpgraph.addobject(rvp1,1,0)
+rvpgraph.addobject(rvp2,2,0)
+rvpgraph.size(0,450,-80,40)
+graphList[0].append(rvpgraph)
+flush_list.append(rvpgraph)
+volts.intercept(0)
+volts.map("voltages",350,0,300,600)
+
+
+/* shape plot */
+
+objref shbox
+shbox = new VBox()
+shbox.intercept(1)
+access somaA
+objref sl 
+sl = new SectionList()
+sl.wholetree()
+objref s
+s = new PlotShape(sl)
+s.colormap(12,1)
+s.colormap(0,0,0,255)
+s.colormap(1,0,85,255)
+s.colormap(2,0,170,255)
+s.colormap(3,0,255,255)
+s.colormap(4,0,255,128)
+s.colormap(5,0,255,0)
+s.colormap(6,110,255,0) 
+s.colormap(7,180,255,0)
+s.colormap(8,255,255,0) 
+s.colormap(9,255,170,0)
+s.colormap(10,255,100,0)
+s.colormap(11,255,0,0)
+s.variable("vm_vmax2")
+s.exec_menu("Shape Plot")
+s.scale(-70,40)
+fast_flush_list.append(s)
+shbox.intercept(0)
+shbox.map("Shape",700,10,400,400)
+
+
+/***************************************************
+* set up procedures to run a family of simulations *
+****************************************************/
+
+/* parameters for steps of Na channel density profile */
+
+nasomastart=0.042
+nasomastep=-0.003
+naslopestart=0.0
+naslopestep=0.00125
+nanumsteps=5
+
+/* parameters for steps of KA channel density profile */
+
+kasomastart=0.1
+kasomastep=0.005
+dslopestart=0.01
+dslopestep=0.0
+kanumsteps=5
+
+/* create array for saving voltage */
+
+objref savevolt[nanumsteps+1]
+for (i=0; i<=nanumsteps; i=i+1) {
+  savevolt[i]=new Vector()
+}
+
+
+/* save distance information for later graphing */
+
+objref xloc
+xloc=new Vector()
+xloc.resize(0)
+
+forsec primary_apical_list {
+           for (x) { 
+           if ((x!=0)&&(x!=1)&&(distance(x)<=405)) xloc.append(distance(x))
+           }
+}
+
+/* make a graph to show AP amplitude profiles */
+
+objref volts2
+volts2 = new VBox()
+volts2.intercept(1)
+
+objref voltgraph
+voltgraph = new Graph()
+voltgraph.size(0,400,0,90)
+voltgraph.exec_menu("Keep Lines")
+graphList[0].append(voltgraph)
+flush_list.append(voltgraph)
+
+volts2.intercept(0)
+volts2.map("AP amplitude",0,100,300,200)
+
+/* AP threshhold is 2.5% of maximum slope */
+/* delay added to miss large voltage slope due to injected current */
+
+vtfrac=0.025      
+vtscale_vmax2=vtfrac
+delay_vmax2=stim.del
+eps=1.0                    
+
+/* procedure for setting AP threshhold in mod file range variable */
+
+proc dothresh () {
+     saveth.resize(0)
+     forsec primary_apical_list {
+           for (x) {
+             saveth.append(vtfrac*vtm_vmax2(x)+eps)
+           }
+     }
+}    
+
+/* add marks while running to show AP threshholds */
+
+proc add_marks() {
+access somaA
+g.mark(tsave_vmax2(0.5),vap_vmax2(0.5),"+",12,1,0)
+access dendA5_01111
+g.mark(tsave_vmax2(0.5),vap_vmax2(0.5),"+",12,2,0)
+access dendA5_011111111
+g.mark(tsave_vmax2(0.5),vap_vmax2(0.5),"+",12,3,0)
+access dendA5_0111111111111
+g.mark(tsave_vmax2(0.5),vap_vmax2(0.5),"+",12,4,0)
+access dendA5_01111111111111111
+g.mark(tsave_vmax2(0.5),vap_vmax2(0.5),"+",12,5,0)
+}
+
+/* procedure to run family of simulations */
+
+proc narunfamily() {
+
+   voltgraph.exec_menu("Erase")
+
+   gnabar=0.042	
+   nalimit=275  
+   naslope=0.0   
+
+   gkdr=0.040  
+   gkap=0.1 
+   gkad=0.1 
+   dslope=0.01 
+
+   /* make new vectors to save voltage profiles */
+
+   objref savevolt[nanumsteps+1]
+   for (i=0; i<=nanumsteps; i=i+1) {
+      savevolt[i]=new Vector()
+   }
+
+   print "\n"
+   print "Do one run to initialize AP calculation machinery"
+   gnabar = nasomastart
+   naslope = naslopestart
+   run()
+   dothresh()
+   for (k=0; k<=nanumsteps; k=k+1) {
+        print " "
+        print "First pass, step ",k
+        gnabar=nasomastart+k*nasomastep
+        naslope=naslopestart+k*naslopestep
+        savevolt[k].resize(0)
+        run()
+        add_marks()
+        g.flush()
+        dothresh()
+        print " "
+        print "Second pass, step ",k
+        run()
+        g.exec_menu("Erase")
+        g.exec_menu("Crosshair")
+        
+        forsec primary_apical_list {
+           for (x) {
+             if ((x!=0)&&(x!=1)&&(distance(x)<=405)) {
+                savevolt[k].append(vm_vmax2(x)-vap_vmax2(x))
+             }
+           }
+        }
+        savevolt[k].line(voltgraph,xloc,k+1,0)
+        voltgraph.flush()
+    }
+}
+
+
+proc karunfamily() {
+
+   voltgraph.exec_menu("Erase")
+
+   gnabar=0.027	
+   nalimit=275  
+   naslope=0.00625   
+
+   gkdr=0.040  
+   gkap=0.1 
+   gkad=0.1 
+   dslope=0.01 
+
+   /* make new vectors to save voltage profiles */
+
+   objref savevolt[kanumsteps+1]
+   for (i=0; i<=kanumsteps; i=i+1) {
+      savevolt[i]=new Vector()
+   }
+
+   print "\n"
+   print "Do one run to initialize AP calculation machinery"
+   gkap = kasomastart
+   gkad = gkap
+   dslope = dslopestart
+   run()
+   dothresh()
+   for (k=0; k<=kanumsteps; k=k+1) {
+        print " "
+        print "First pass, step ",k
+        gkap=kasomastart+k*kasomastep
+        gkad=gkap
+        dslope=dslopestart+k*dslopestep
+        savevolt[k].resize(0)
+        run()
+        add_marks()
+        g.flush()
+        dothresh()
+        print " "
+        print "Second pass, step ",k
+        run()
+        g.exec_menu("Erase")
+        g.exec_menu("Crosshair")
+        
+        forsec primary_apical_list {
+           for (x) {
+             if ((x!=0)&&(x!=1)&&(distance(x)<=405)) {
+                savevolt[k].append(vm_vmax2(x)-vap_vmax2(x))
+             }
+           }
+        }
+        savevolt[k].line(voltgraph,xloc,k+1,0)
+        voltgraph.flush()
+   }
+}
+
+xpanel("Channel parameters")
+xvalue("kasomastart","kasomastart",1)
+xvalue("kasomastep","kasomastep",1)
+xvalue("dslopestart","dslopestart",1)
+xvalue("dslopestep","dslopestep",1)
+xvalue("kanumsteps","kanumsteps",1)
+xpanel(100,350)
+
+xpanel("Channel parameters")
+xvalue("nasomastart","nasomastart",1)
+xvalue("nasomastep","nasomastep",1)
+xvalue("naslopestart","naslopestart",1)
+xvalue("naslopestep","naslopestep",1)
+xvalue("nanumsteps","nanumsteps",1)
+xpanel(100,450)
+
+
+xpanel("Run buttons",0)
+xlabel("Run Golding, et al. Figure 9")
+xbutton("Fig. 9A","narunfamily()")
+xbutton("Fig. 9B","karunfamily()")
+xlabel("Each parameter runs twice")
+xlabel("First run computes threshhold")
+xlabel("2nd run computes AP amplitude")
+xpanel(1000,675)
+
+
+

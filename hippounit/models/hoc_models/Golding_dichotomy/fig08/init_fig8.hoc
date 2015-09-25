@@ -1,0 +1,232 @@
+
+/*************************************************
+* section list of all apical dendrites           *
+*************************************************/
+
+objref all_apicals
+all_apicals = new SectionList()
+dendA5_0 all_apicals.subtree()
+
+/*************************************************
+* section list of all basal dendrites            *
+*************************************************/
+
+objref all_basals
+all_basals = new SectionList()
+dendA1_0 all_basals.subtree()
+dendA2_0 all_basals.subtree()
+dendA3_0 all_basals.subtree()
+dendA4_0 all_basals.subtree()
+
+/*************************************************
+* section list of primary apical branch          *
+*************************************************/
+
+objref primary_apical_list
+primary_apical_list = new SectionList()
+dendA5_0 primary_apical_list.append
+dendA5_01 primary_apical_list.append
+dendA5_011 primary_apical_list.append
+dendA5_0111 primary_apical_list.append
+dendA5_01111 primary_apical_list.append
+dendA5_011111 primary_apical_list.append
+dendA5_0111111 primary_apical_list.append
+dendA5_01111111 primary_apical_list.append
+dendA5_011111111 primary_apical_list.append
+dendA5_0111111111 primary_apical_list.append
+dendA5_01111111111 primary_apical_list.append
+dendA5_011111111111 primary_apical_list.append
+dendA5_0111111111111 primary_apical_list.append
+dendA5_01111111111111 primary_apical_list.append
+dendA5_011111111111111 primary_apical_list.append
+dendA5_0111111111111111 primary_apical_list.append
+dendA5_01111111111111111 primary_apical_list.append
+dendA5_011111111111111111 primary_apical_list.append
+dendA5_0111111111111111111 primary_apical_list.append
+
+/* reset nseg in primary apical so none smaller than 5 microns */
+
+forsec primary_apical_list { ns=int(L/5+0.5)
+        if (ns==0) {
+             ns=1
+        }
+        if ((ns-int(ns/2)*2)==0) {
+             ns=ns+1
+        }
+        nseg = ns
+}
+
+
+/*************************************************
+* initialize basic parameters                    *
+*************************************************/
+
+celsius = 35
+v_init=-70
+
+global_ra=200.00 	/* internal resistivity in ohm-cm */
+Cm=0.75			/* specific membrane capacitance in uF/cm^2 */
+Cmy=0.075 		/* capacitance in myelin */
+Rm=40000		/* specific membrane resistivity in ohm-cm^2 */ 
+Rn=50			/* nodal resistivity */
+Vleak=-66		/* leak reversal -66 in Cs+*/
+Vrest=-70		/* resting potential -60 in control, -66 in Cs+*/
+
+spinelimit=100          /* distance beyond which to modify for spines */
+spinefactor=2.0         /* factor by which to change passive properties */
+
+gnabar=0.042		/* sodium conductance 0.030 */
+nalimit=275             /* cut-off limit for increase of sodium conductance */
+naslope=0.0             /* slope of sodium channel density */
+
+gnode=50.0		/* sodium conductance at a node */
+
+gkdr=0.040              /* delayed rectifier density */
+gkap=0.1                /* proximal A-type potassium starting density */
+gkad=0.1                /* distal A-type potassium  starting density */
+
+dlimit=300              /* cut-off for increase of A-type density */
+dprox=100               /* distance to switch from proximal to distal type */
+dslope=0.01             /* slope of A-type density */
+
+isegfactor=100
+isegfrac=0.8
+
+
+/*************************************************
+* procedure to insert and initialize channels    *
+*************************************************/
+
+proc initchannels(){
+
+/* passive properties */
+
+print "Inserting passive membrane properties"
+forall {insert pas  g_pas=1/(Rm)  Ra=global_ra  e_pas=Vleak 
+        insert vmax }
+
+/* soma active properties */
+
+somaA { 
+    insert nax  gbar_nax=gnabar  
+    insert kdr  gkdrbar_kdr=gkdr
+    insert kap  gkabar_kap=gkap
+    insert pas	e_pas=Vleak  g_pas=1/Rm   Ra=global_ra  cm=Cm
+}
+
+/* axon hillock active properties */
+
+hill { 
+    insert nax  gbar_nax=gnabar  
+    insert kdr  gkdrbar_kdr=gkdr
+    insert kap  gkabar_kap=gkap
+    insert pas	e_pas=Vleak  g_pas=1/Rm   Ra=global_ra   cm=Cm
+}
+
+/* initial segment active properties */
+
+iseg { 
+    insert nax  
+    for (x) { if (x<isegfrac) {
+                 gbar_nax(x)=gnabar
+            } else {
+                 gbar_nax(x)=isegfactor*gnabar
+            }
+    }
+    insert kdr  gkdrbar_kdr=gkdr
+    insert kap  gkabar_kap=gkap
+    insert pas	e_pas=Vleak  g_pas=1/Rm   Ra=global_ra   cm=Cm
+}
+
+/* internodal segments active properties */
+
+for i=0,2 inode[i] { 
+    insert nax  gbar_nax=gnabar  
+    insert kdr  gkdrbar_kdr=gkdr
+    insert kap  gkabar_kap=gkap*0.2
+    insert pas	e_pas=Vleak  g_pas=1/Rm   Ra=global_ra   cm=Cmy
+}
+
+/* nodes of Ranvier active properties */
+
+for i=0,1 node[i] { 
+    insert nax  gbar_nax=gnode  
+    insert kdr  gkdrbar_kdr=gkdr
+    insert kap  gkabar_kap=gkap*0.2
+    insert pas	e_pas=Vleak  g_pas=1/Rn   Ra=global_ra   cm=Cm
+}
+
+/* basal dendrites active properties */
+
+forsec all_basals {
+    insert nax  gbar_nax=gnabar  
+    insert kdr  gkdrbar_kdr=gkdr
+    insert kap  gkabar_kap=gkap
+    insert pas	e_pas=Vleak  g_pas=1/Rm   Ra=global_ra  cm=Cm
+}
+
+/* reset distance */
+
+access somaA
+area(0.5)
+distance()
+
+/* procedure to insert channels and set parameters in apical dendrites */
+
+forsec all_apicals {
+
+    /* do passive properties; modify for spines if far enough out */    
+
+    insert pas	e_pas=Vleak  Ra=global_ra 
+    for (x) { xdist=distance(x)
+              if (xdist<=spinelimit) {
+                 g_pas(x)=1/Rm
+                 cm(x)=Cm
+              } else {
+                 g_pas(x)=spinefactor/Rm
+                 cm(x)=spinefactor*Cm
+              }
+    }
+
+    /* sodium channels */
+
+    insert nax  
+    for (x) { xdist=distance(x)
+              nafactor=(1+xdist*naslope)
+              if (xdist>nalimit) {
+                    xdist=nalimit
+                  nafactor=(1+xdist*naslope)
+              }
+              if (x!=1) gbar_nax(x)=gnabar*nafactor
+    }
+
+    /* delayed rectifier channels */
+
+    insert kdr  gkdrbar_kdr=gkdr
+
+    /* A-type potassium channels */
+
+    insert kap
+    insert kad
+    gkabar_kap=0
+    gkabar_kad=0   
+    for (x) { xdist=distance(x)
+              if (xdist>dlimit) {
+                      xdist=dlimit
+              }
+              if (x!=1) {
+              gkabar_kap(x)=0
+              gkabar_kad(x)=0
+              if (xdist>dprox) {
+                      gkabar_kad(x) = gkad*(1+xdist*dslope)
+              } else {
+                      gkabar_kap(x) = gkap*(1+xdist*dslope)
+              }
+    }
+}
+}
+
+print "Passive properties and channels initialized"
+print "gnabar at distall end ", gnabar*(1+nalimit*naslope)
+
+}

@@ -1,0 +1,24 @@
+// This function makes a list with all dendritic sections in the basal tree
+// written by Yiota Poirazi, July 2001, poirazi@LNC.usc.edu
+
+objref basal_tree_list
+basal_tree_list=new SectionList()
+
+forall {
+  if (issection("dendrite.*"))  {
+    skip=0
+    ifsec axon_sec_list { skip=1 }
+    if (!skip) {
+      basal_tree_list.append()
+    } 
+  }
+}
+
+/* Make a shape graph showing all basal sections
+
+objref basal_tree_list_shape
+basal_tree_list_shape=new Shape()
+color_index=3
+basal_tree_list_shape.color_list(basal_tree_list,color_index)
+basal_tree_list_shape.printfile("basal-tree-list.eps")
+*/

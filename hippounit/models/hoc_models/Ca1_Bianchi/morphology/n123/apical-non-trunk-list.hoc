@@ -1,0 +1,22 @@
+// This function makes a list with all sections NOT on the apical trunk 
+// written by Yiota Poirazi, July 2001, poirazi@LNC.usc.edu
+
+objref apical_non_trunk_list
+apical_non_trunk_list=new SectionList()
+
+forsec "apical" {
+   skip = 0
+   ifsec apical_trunk_list { skip=1 }
+   if (!skip) {
+    apical_non_trunk_list.append()
+  }
+}
+
+/* Make a graph with all non-trunk sections
+
+objref apical_non_trunk_list_shape
+apical_non_trunk_list_shape=new Shape()
+color_index = 3
+apical_non_trunk_list_shape.color_list(apical_non_trunk_list,color_index)
+apical_non_trunk_list_shape.printfile("apical-non-trunk-list.eps")
+*/

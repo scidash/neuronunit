@@ -34,3 +34,7 @@ pip-log.txt
 *.xml
 *.ipynb_checkpoints
 *.dat
+
+x86_64
+figs/
+temp_data/

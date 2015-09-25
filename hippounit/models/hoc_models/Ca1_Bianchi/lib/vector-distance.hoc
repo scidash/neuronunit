@@ -1,0 +1,109 @@
+// Given a reference point (ie, soma), an apex point, and a point of
+// interest, (POI), this function returns the distance from the reference point to
+// the POI. These three points are vectors with x,y,z as their values
+// written by Terrence Brannon, last modified by Yiota Poirazi, July 2001, poirazi@LNC.usc.edu
+
+objref RP, POI, APEX
+
+proc pvec() {
+  printf("%s: \t", $s1)
+  $o2.printf("%f ")
+}
+
+proc pvecs() {
+  pvec("RP", RP)
+  pvec("APEX",APEX)
+  pvec("POI",POI)
+}
+
+proc clear_vecs() {
+  RP=new Vector()
+  APEX=new Vector()
+  POI=new Vector()
+}
+
+objref vhold
+vhold=new Vector()
+
+func vector_distance() { local adjustment
+//  print "func vector_distance() {"
+
+  clear_vecs()
+  
+  RP=$o1.c
+  APEX=$o2.c
+  POI=$o3.c
+  adjustment = $4
+
+//  pvecs()
+
+  // Subtract Psoma: Qapex = Papex - Psoma. Therefore Qsoma=0,0,0
+
+  APEX.sub(RP)
+  POI.sub(RP)
+    RP.sub(RP)
+
+//    pvecs()
+
+  // Normalize Qapex, Creating Uapex
+
+  vhold=APEX.c
+  vhold.mul(vhold)
+  APEX_BAR=sqrt(vhold.sum())
+
+//  printf("APEX_BAR: %f\n", APEX_BAR)
+
+  APEX.div(APEX_BAR)
+
+//  pvec("UAPEX", APEX)
+
+  // Find length of projection of Qdend onto Uapex
+
+  H = POI.dot(APEX) + adjustment
+  
+  H=abs(H)
+
+  return(H)
+}
+
+objref fvd_vec
+strdef fvd_str
+func find_vector_distance() {
+
+  fvd_vec=new Vector()
+  sprint(fvd_str, "access %s", $s1)
+  execute1(fvd_str)
+  
+  vcreate2(fvd_vec,0)
+  
+  return(vector_distance(vRP,vAPEX,fvd_vec,adjustment))
+}
+
+func find_vector_distance_precise() {
+
+  fvd_vec=new Vector()
+  sprint(fvd_str, "access %s", $s1)
+  execute1(fvd_str)
+  
+  vcreate3(fvd_vec,$2)
+  
+  return(vector_distance(vRP,vAPEX,fvd_vec,adjustment))
+}
+
+proc vcreate() {
+  $o1.append(x3d(0))
+  $o1.append(y3d(0))
+  $o1.append(z3d(0))
+}
+
+proc vcreate2() {
+  $o1.append(x3d($2))
+  $o1.append(y3d($2))
+  $o1.append(z3d($2))
+}
+
+proc vcreate3() {
+  $o1.append(x_d3($2))
+  $o1.append(y_d3($2))
+  $o1.append(z_d3($2))
+}

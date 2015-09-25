@@ -1,0 +1,27 @@
+// This function makes a list with all sections on the axon
+// written by Yiota Poirazi, July 2001, poirazi@LNC.usc.edu
+
+objref axon_sec_list
+axon_sec_list = new SectionList()
+
+for i = 30,34 dendrite[i] {
+  axon_sec_list.append()
+}
+
+
+/*
+for i = 18,22 dendrite[i] {
+  axon_sec_list.append()
+}
+
+*/
+
+
+/* Make a shape graph showing the axon sections
+
+objref axon_sec_list_shape
+axon_sec_list_shape=new Shape()
+color_index = 3
+axon_sec_list_shape.color_list(axon_sec_list, color_index)
+axon_sec_list_shape.printfile("axon-sec-list.eps")
+*/

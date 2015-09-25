@@ -1,0 +1,226 @@
+
+//load_file("nrngui.hoc")
+load_file("stdrun.hoc")
+
+/*************************************************
+* load dendritic morphology                      *
+*************************************************/
+
+xopen("dend2.nrn")
+
+/*************************************************
+* load 'fake' axon                               *
+*************************************************/
+
+xopen("naceaxon.nrn")
+
+/*************************************************
+* set up section lists and initialize parameters *
+*************************************************/
+
+xopen("init_fig8.hoc")
+
+initchannels()
+
+
+
+/*
+//A-típusú K-csatorna sűrűségének megváltoztatása
+
+objref num
+num = new Vector(32)                          // akkora a size, ahány seg van
+num.x[0]=0
+
+for i=1,num.size()-1{                       // vektor feltöltése
+	num.x[i]=num.x[i-1]+(1/(num.size()-1))
+	if (num.x[i]>1){                        // előfordulhat, hogy az utolsó kicsit nagyobb lesz mint 1, mert a következő ciklusban nem tetszik neki
+		num.x[i]=1
+		}
+	}
+
+for i=0,num.size()-1{
+	dendA5_0111111111111111100.gkabar_kad(num.x[i])=dendA5_0111111111111111100.gkabar_kad(num.x[i])-(dendA5_0111111111111111100.gkabar_kad(num.x[i])*0.9)
+	print dendA5_0111111111111111100.gkabar_kad(num.x[i])
+	}
+//dendA5_0111111111111111100.gkabar_kap(1)=dendA5_0111111111111111100.gkabar_kap(1)-(dendA5_0111111111111111100.gkabar_kap(1)*0.5)
+	//print dendA5_0111111111111111100.gkabar_kad(1)
+*/
+
+/*
+/// szinapszis:
+
+objref ampasyn, ns1, nc
+
+dendA5_01111111100 ampasyn = new Exp2Syn(0.5)
+ampasyn.tau1 = 0.3
+ampasyn.tau2 = 3
+
+ns1 = new NetStim(.5)
+ns1.start = 100
+ns1.interval = 1000
+
+nc = new NetCon(ns1, ampasyn)
+nc.weight = 0.1
+nc.delay = 0.0
+*/
+objref ampasyn, ns1, nc, ns2, nc2
+
+proc ampa(){								// meghivni: dendrite[129] ampa(ampasyn,0.5,1,0.1,1000,100)
+
+        ampasyn= new Exp2Syn($1)
+        ampasyn.tau1 = $2
+        ampasyn.tau2 = $3
+
+        ns1 = new NetStim($1)
+		ns1.start = $4
+        ns1.interval = $5
+		ns1.number=$6
+
+        nc = new NetCon(ns1,ampasyn)
+        nc.weight = $7
+}
+
+objref ampasyn2, ampasyn3, ampasyn4, ampasyn5, ampasyn6, ampasyn7, ns1, ns2, ns3, ns4, ns5, ns6, ns7, nc1_1, nc1_2, nc2_1, nc2_2, nc3_1, nc3_2, nc4_1, nc4_2
+objref nc5_1, nc5_2, nc6_1, nc6_2, nc7_1, nc7_2, nmdar, nmdar2, nmdar3, nmdar4, nmdar5, nmdar6, nmdar7, ns2, ns3, ns4, ns5, ns6, ns7
+
+proc ampa_nmda(){								// meghivni: dendrite[129] ampa(ampasyn,0.5,1,0.1,1000,100)
+
+        ampasyn = new Exp2Syn($1)
+        ampasyn.tau1 = $2
+        ampasyn.tau2 = $3
+
+		ns1 = new NetStim($1)
+		ns1.start = $4
+        ns1.interval = $5
+		ns1.number=$6
+
+        nc1_1 = new NetCon(ns1,ampasyn)
+        nc1_1.weight = $7
+
+        nmdar = new NMDA($1)
+
+        nc1_2 = new NetCon(ns1,nmdar)
+        nc1_2.weight = $7*0.396
+}
+
+
+
+proc ampa_nmda2(){								// meghivni: dendrite[129] ampa(ampasyn,0.5,1,0.1,1000,100)
+
+        ampasyn2= new Exp2Syn($1)
+        ampasyn2.tau1 = $2
+        ampasyn2.tau2 = $3
+
+		ns2 = new NetStim($1)
+		ns2.start = $4
+        ns2.interval = $5
+		ns2.number=$6
+
+        nc2_1 = new NetCon(ns2,ampasyn2)
+        nc2_1.weight = $7
+
+        nmdar2 = new NMDA($1)
+
+        nc2_2 = new NetCon(ns2,nmdar2)
+        nc2_2.weight = $7*0.396
+}
+
+proc ampa_nmda3(){								// meghivni: dendrite[129] ampa(ampasyn,0.5,1,0.1,1000,100)
+
+        ampasyn3= new Exp2Syn($1)
+        ampasyn3.tau1 = $2
+        ampasyn3.tau2 = $3
+
+		ns3 = new NetStim($1)
+		ns3.start = $4
+        ns3.interval = $5
+		ns3.number=$6
+
+        nc3_1 = new NetCon(ns3,ampasyn3)
+        nc3_1.weight = $7
+
+        nmdar3 = new NMDA($1)
+
+        nc3_2 = new NetCon(ns3,nmdar3)
+        nc3_2.weight = $7*0.396
+}
+
+proc ampa_nmda4(){								// meghivni: dendrite[129] ampa(ampasyn,0.5,1,0.1,1000,100)
+
+        ampasyn4= new Exp2Syn($1)
+        ampasyn4.tau1 = $2
+        ampasyn4.tau2 = $3
+
+		ns4 = new NetStim($1)
+		ns4.start = $4
+        ns4.interval = $5
+		ns4.number=$6
+
+        nc4_1 = new NetCon(ns4,ampasyn4)
+        nc4_1.weight = $7
+
+        nmdar4 = new NMDA($1)
+
+        nc4_2 = new NetCon(ns4,nmdar4)
+        nc4_2.weight = $7*0.396
+}
+
+proc ampa_nmda5(){								// meghivni: dendrite[129] ampa(ampasyn,0.5,1,0.1,1000,100)
+
+        ampasyn5= new Exp2Syn($1)
+        ampasyn5.tau1 = $2
+        ampasyn5.tau2 = $3
+
+		ns5 = new NetStim($1)
+		ns5.start = $4
+        ns5.interval = $5
+		ns5.number=$6
+
+        nc5_1 = new NetCon(ns5,ampasyn5)
+        nc5_1.weight = $7
+
+        nmdar5 = new NMDA($1)
+
+        nc5_2 = new NetCon(ns5,nmdar5)
+        nc5_2.weight = $7*0.396
+}
+
+proc ampa_nmda6(){								// meghivni: dendrite[129] ampa(ampasyn,0.5,1,0.1,1000,100)
+
+        ampasyn6= new Exp2Syn($1)
+        ampasyn6.tau1 = $2
+        ampasyn6.tau2 = $3
+
+		ns6 = new NetStim($1)
+		ns6.start = $4
+        ns6.interval = $5
+		ns6.number=$6
+
+        nc6_1 = new NetCon(ns6,ampasyn6)
+        nc6_1.weight = $7
+
+        nmdar6 = new NMDA($1)
+
+        nc6_2 = new NetCon(ns6,nmdar6)
+        nc6_2.weight = $7*0.396
+}
+
+proc ampa_nmda7(){								// meghivni: dendrite[129] ampa(ampasyn,0.5,1,0.1,1000,100)
+
+        ampasyn7= new Exp2Syn($1)
+        ampasyn7.tau1 = $2
+        ampasyn7.tau2 = $3
+
+		ns7 = new NetStim($1)
+		ns7.start = $4
+        ns7.interval = $5
+		ns7.number=$6
+
+        nc7_1 = new NetCon(ns7,ampasyn7)
+        nc7_1.weight = $7
+
+        nmdar7 = new NMDA($1)
+
+        nc7_2 = new NetCon(ns7,nmdar7)
+        nc7_2.weight = $7*0.396
+}

@@ -1,0 +1,112 @@
+// This function centralizes parameters so that we won't confuse experimental variable bindings with 
+// neurophysiological variable bindings
+// written by Terrence Brannon, modified by Yiota Poirazi, July 2001, poirazi@LNC.usc.edu
+ 
+
+begintemplate ExperimentControl
+
+public morphology_dir, generic_dir, data_dir 
+strdef morphology_dir, generic_dir, data_dir
+
+public syscmd
+strdef syscmd
+
+public tmp_str, tmp_str2, tmp_str3
+strdef tmp_str, tmp_str2, tmp_str3, tmp_str_internal
+
+public defvar, self_define
+public add_lib_dir, xopen_geometry_dependent, xopen_generic, xopen_library
+
+public printfile, create_variable
+
+objref this, filep
+
+objref tmpo, tmpo2, tmpo3
+public tmpo, tmpo2, tmpo3
+
+objref grapho[20], fileo[20]
+public grapho, fileo
+
+proc init () {
+  print "object ExperimentControl created.\n"
+  sprint(tmp_str,"show_errmess_always(%d)",$1)
+  execute1(tmp_str)
+
+  verbose_level=$2
+
+  variable_dump_cleared=0
+}
+
+
+proc clear_variable_dump() {
+  sprint(tmp_str, "system(\"rm -rf %s/variable_dump\")", data_dir)
+  execute1(tmp_str)
+}
+
+proc defvar() {
+  if (!variable_dump_cleared) {
+    clear_variable_dump()
+    variable_dump_cleared=1
+  }
+    
+  sprint(tmp_str,"%s = %s", $s2, $s3)
+  execute1(tmp_str)
+  dump_variable($s1,$s2,$s3,$s4)
+}
+
+proc dump_variable() {
+/*
+ if (unix_mac_pc()==1) {	// only the original unix platform currently is setup to write data files
+
+    filep=new File()
+
+    sprint(tmp_str,"%s/variable_dump",data_dir)
+    filep.aopen(tmp_str)
+    filep.printf("%s\n%s\n%s\n%s\n\n", $s1, $s2, $s3, $s4)
+    filep.close()
+  }*/
+}
+
+proc create_variable() {
+  sprint(tmp_str_internal,"%s=%s",$s1,$s2)
+  execute1(tmp_str_internal)
+}
+
+
+proc self_define() {
+  this = $o1
+}
+
+proc xopen_geometry_dependent() {
+  sprint(tmp_str,"xopen(\"%s/%s.hoc\")",morphology_dir,$s1)
+  execute1(tmp_str)
+}
+
+proc xopen_generic() {
+  sprint(tmp_str,"xopen(\"%s/%s.hoc\")",generic_dir,$s1)
+  execute1(tmp_str)
+}
+
+proc xopen_library() {
+  sprint(tmp_str, "%s.tmp_str2=lib_dir_%s",this,$s1)
+  execute1(tmp_str)
+  sprint(tmp_str3,"xopen(\"%s/%s.hoc\")",tmp_str2,$s2)
+  print tmp_str3
+  execute1(tmp_str3)
+}
+
+proc printfile() {
+  sprint(tmp_str2, "%s/%s.ps", $s1,$s2)
+  tmpo.printfile(tmp_str2)
+}
+
+proc add_lib_dir() {
+  sprint(tmp_str,"strdef lib_dir_%s",$s1)
+  execute1(tmp_str)
+  sprint(tmp_str,"lib_dir_%s=\"%s\"",$s1,$s2)
+  execute1(tmp_str)
+}
+
+endtemplate ExperimentControl
+
+

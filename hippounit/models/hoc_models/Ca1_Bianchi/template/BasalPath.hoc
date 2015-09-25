@@ -1,0 +1,51 @@
+// This template creates the Basal Path lists, starting from the
+// section attached to the trunk and ending with the basal tip section 
+// written by Yiota Poirazi, July 2001, poirazi@LNC.usc.edu
+
+begintemplate BasalPath
+
+public basal_dtrunk_to_tip, basal_trunk_section, root_basal
+
+strdef sexec
+
+objref basal_trunk_section
+strdef basal_trunk_section_name
+
+objref root_basal
+strdef root_basal_name
+
+objref basal_tip_section
+strdef basal_tip_section_name
+
+objref basal_path
+
+proc init () {
+  sec_count=0
+
+  forsec $o1 {
+
+    if (sec_count==1) {
+       root_basal    = new SectionRef()
+       root_basal_name=secname()
+    }
+      
+    if (!sec_count) {
+       distance(0,1)
+       basal_trunk_section  = new SectionRef()
+       basal_trunk_section_name=secname()
+      }
+    sec_count=sec_count+1
+
+    basal_tip_section    = new SectionRef()
+    basal_tip_section_name=secname()
+  }
+
+  access root_basal.sec
+  distance(0,0)
+  access basal_tip_section.sec
+  basal_dtrunk_to_tip=distance(1,1)
+
+//printf("BasalPath basal_trunk_section: %s root_basal: %s basal_tip_section: %s distance between root_basal and basal_tip_section: %g\n", basal_trunk_section_name, root_basal_name, basal_tip_section_name, basal_dtrunk_to_tip)
+}
+
+endtemplate BasalPath

@@ -1,0 +1,410 @@
+load_file("nrngui.hoc")
+use_mcell_ran4(1) // MUST be used on CINECA
+cvode_active(0)
+
+a1=0.1
+
+b1=0.48
+a1max=0.1
+
+b1max=0.48
+rap=5
+
+
+numaxon=1
+numsoma=1
+numbasal=70
+numapical=31
+numtrunk=38
+cont=11  // ******  number of obliques*/
+last=5 //********  n-ple size*/
+ns=13  //********  number of trunk comps with noise*/
+numtest=10 //number of test simulations
+
+double pin[cont]
+double cond[cont]
+double trunko[cont]
+double dendo[cont]
+double u2[last+3]
+
+weight=80
+seed=1
+
+xopen("geo9068802.hoc")             // geometry file
+xopen("fixnseg.hoc")           
+
+Rm = 28000
+RmDend = Rm/1
+RmSoma = Rm
+RmAx = Rm
+
+Cm    = 1
+CmSoma= Cm
+CmAx  = Cm
+CmDend = Cm*1
+
+RaAll= 150
+RaSoma=150  
+RaAx = 50
+
+Vrest = -65
+dt = 0.1
+gna =  .025
+AXONM = 5
+gkdr = 0.01
+celsius = 35.0  
+KMULT =  0.03
+KMULTP = 0.03
+ghd=0.00005
+nash=0
+
+objref g, b,c, stim, vbox,vecchio,pc, args, args2
+objref  p, s[cont], rsyn[cont], nc[cont], sref, blist[numtrunk],aplist,f[2*cont]
+strdef dend, trunk
+
+for i=0, numtrunk-1 {blist[i] = new Vector()}
+
+args = new Vector()
+args2 = new Vector()
+
+
+aplist = new Vector(numapical)
+
+forsec "axon" {insert pas e_pas=Vrest g_pas = 1/RmAx Ra=RaAx cm=CmAx}
+forsec "soma" {insert pas e_pas=Vrest g_pas = 1/RmSoma Ra=RaSoma cm=CmSoma}
+forsec "dendrite"{insert pas e_pas=Vrest g_pas = 1/RmDend Ra=RaAll cm=CmDend}
+forsec "user5" {insert pas e_pas=Vrest g_pas = 1/RmDend Ra=RaAll cm=CmDend}
+
+access soma
+freq=50
+geom_nseg()
+tot=0
+forall {tot=tot+nseg}
+
+distance()
+maxdist=0
+forsec "user5" for(x) {if (distance(x)>maxdist) {maxdist=distance(x)}}
+print "total # of segments (50Hz): ",tot, "  max path distance: ", maxdist
+
+
+//*********mapping bifurcations******************/
+
+
+for i=0, numapical-1 apical_dendrite[i] {
+	while (!issection("user5.*")) {
+	//print "before  ", i, secname()
+		sref = new SectionRef()
+		access sref.parent
+		sprint(dend, secname())
+	}
+	//print "apical ",i," ",dend
+	for k=0, numtrunk-1 user5[k] {
+		sprint(trunk,secname())
+		x=strcmp(dend, trunk)
+		if (x==0) {blist[k].append(i)aplist.x[i]=k}
+	}
+}
+
+/*****************lettura da file********************/
+
+vecchio = new File()
+vecchio.ropen("condu.txt")
+
+for i=0,cont-1 {
+	trunko[i]=vecchio.scanvar()
+	dendo[i]=vecchio.scanvar()
+	pin[i]=vecchio.scanvar()
+	cond[i]=vecchio.scanvar()
+}
+
+vecchio.close()
+
+/********************  fine  **********************/
+
+
+tstop=100
+
+for z=0, cont-1 apical_dendrite[dendo[z]] {
+printf("obliquo %d distanza %g\n",dendo[z],distance(0.5))
+}
+
+for z=0, last-1 apical_dendrite[dendo[z]] {
+	s[z] = new NetStims(.5)
+	s[z].interval=0.2
+	s[z].number = 1
+	s[z].start=50
+	s[z].noise=0
+	s[z].seed(987651119)
+	rsyn[z] = new Exp2Syn(0.5)
+	rsyn[z].tau1 = 0.4
+	rsyn[z].tau2 = 1
+	rsyn.e=0
+	nc[z] = new NetCon(s[z],rsyn[z],0,0,weight*1.e-3)
+}
+
+user5[13] {		// *************cell dependent
+	printf("user5[13] distanza %g\n",distance(0.5))
+	stim= new IClamp(0.3)
+	stim.amp=0
+	stim.dur=tstop
+	stim.del=0
+}
+
+forsec "axon" {   
+                insert nax gbar_nax=gna * AXONM	sh_nax=nash
+                insert kdr gkdrbar_kdr=gkdr
+                insert kap gkabar_kap = KMULTP*1
+}
+
+forsec "soma" {   
+		insert hd ghdbar_hd=ghd	vhalfl_hd=-73
+                insert na3 ar_na3=1 sh_na3=nash gbar_na3=gna
+                insert kdr gkdrbar_kdr=gkdr
+                insert kap gkabar_kap = KMULTP
+		insert ds
+}
+
+for i=0, numbasal-1 dendrite[i] {
+		insert hd ghdbar_hd=ghd	vhalfl_hd=-73
+                insert na3 ar_na3=1 gbar_na3=gna sh_na3=nash
+                insert kdr gkdrbar_kdr=gkdr
+                insert kap gkabar_kap = KMULTP
+}
+                
+
+forsec "user5" {
+	insert hd ghdbar_hd=ghd
+        insert na3 ar_na3=1 gbar_na3=gna sh_na3=nash
+        insert kdr gkdrbar_kdr=gkdr
+	insert kap gkabar_kap=0
+	insert kad gkabar_kad=0
+	for (x,0) { 
+		xdist = distance(x)
+               	ghdbar_hd(x) = ghd*(1+3*xdist/100)
+               		if (xdist > 100){
+						vhalfl_hd=-81
+                    	gkabar_kad(x) = KMULT*(1+xdist/100)
+               		} else {
+						vhalfl_hd=-73
+                    	gkabar_kap(x) = KMULTP*(1+xdist/100)
+        			}
+	}
+}
+
+for i=0, numapical-1 apical_dendrite[i] {
+	insert hd 
+        insert na3 ar_na3=1 gbar_na3=gna sh_na3=nash
+        insert kdr gkdrbar_kdr=gkdr
+	insert kap
+	insert kad
+		gkabar_kad = 1*user5[aplist.x[i]].gkabar_kad(1)
+		gkabar_kap = 1*user5[aplist.x[i]].gkabar_kap(1)
+		vhalfl_hd = user5[aplist.x[i]].vhalfl_hd
+       	ghdbar_hd = user5[aplist.x[i]].ghdbar_hd(1)
+}
+
+for kk=0, ns user5[kk] {  // cell-dependent
+	f[kk] = new Gfluct2(0.5)
+	f[kk].g_e0 = a1
+	f[kk].g_i0 = b1
+	f[kk].std_e = a1/rap
+	f[kk].std_i = b1/rap
+	f[kk].new_seed(seed)
+	print " noise #",kk, " at ",secname()
+
+}
+
+
+proc init() {
+
+	for rr=0, ns {
+		f[rr].g_e0 = a1
+		f[rr].g_i0 = b1
+		f[rr].std_e = a1/rap
+		f[rr].std_i = b1/rap
+	}
+	t=0
+    forall {
+    	v=Vrest
+    	if (ismembrane("nax") || ismembrane("na3")) {ena=55}
+       	if (ismembrane("kdr") || ismembrane("kap") || ismembrane("kad")) {ek=-90}
+       	if (ismembrane("hd") ) {ehd_hd=-30}
+	}
+	finitialize(Vrest)
+    fcurrent()
+
+    forall {
+		for (x) {
+			if (ismembrane("na3")||ismembrane("nax")){e_pas(x)=v(x)+(ina(x)+ik(x))/g_pas(x)}
+			if (ismembrane("hd")) {e_pas(x)=e_pas(x)+i_hd(x)/g_pas(x)}
+		}
+	}
+	cvode.re_init()
+	cvode.event(tstop)
+	access soma
+	flag=0
+	
+}
+
+
+proc advance() {
+	fadvance()
+	if (vmax_ds(.5)>0) {t=tstop flag=1}
+	doNotify()
+}
+
+
+func superrun() {local id
+	id = hoc_ac_
+	for ss=0, last-1 {
+		u2[ss]=$o2.x[ss]
+		apical_dendrite[u2[ss]] rsyn[ss].loc(0.5)
+	}
+
+	a1=$o2.x[last]
+	b1=$o2.x[last+1]
+	stim.amp=0.33
+	seed=$o2.x[last+2]
+	spikec=0   
+	end = 0
+	i = 0 
+	print " testing combination n.",id, " obliques ", u2[0], u2[1], u2[2], u2[3], u2[4]
+	while ( (end == 0) && (i<numtest) ) {
+		run()
+		if (flag==1) {spikec=spikec+1} //increase spike number
+		if (spikec > (numtest/2) ){ // n-pla can be tested
+			end=1 
+		}
+		i = i + 1 
+	}
+	valida = 0 
+	//testing n-upla 
+	if (spikec > (numtest/2) ){
+		i = 0
+		uscita = 0
+		valida = 1
+		while( (uscita == 0 ) && (i < last) ) {
+				nc[i].weight = 0 
+				k=0
+				spikev = 0 //spike number
+				nspike = 0 //no spike number 
+				exit = 0
+				while( (exit == 0) && (k < numtest) ){
+					run()
+					if (flag == 1) {
+						//increment spike number
+						spikev = spikev + 1 
+					}else{
+						//increment no spike number	
+						nspike = nspike + 1
+					}
+					if( nspike >=(numtest/2) ){
+						//no spike are sufficient
+						exit = 1
+					}
+					if (spikev > (numtest/2) ){
+						//n-upla isn't valid 
+						valida = 0
+						exit = 1
+						uscita = 1
+					}
+					k = k + 1
+				}
+				nc[i].weight = weight * 1.e-3 //reset original weight
+				i=i+1	
+		}
+	}else{ valida = 0 }
+//	print " tested combination n.",id, spikev, nspike, a1, b1, seed
+	if (valida>0) {print " valid combination n.",id, spikev, nspike, a1, b1, seed}
+	pc.post(id, $o2, spikec,valida)
+	return id
+}
+
+load_file("schizopr.ses")
+PlotShape[0].exec_menu("Shape Plot")
+
+pc = new ParallelContext()
+pc.runworker()
+
+double u[last]
+
+for yy=0, last-1 {u[yy]=0}
+
+order=0
+conto=0
+
+print "Begin Simulation"
+
+objref aa1, bb1, aamp
+aa1 = new Vector()
+bb1 = new Vector()
+
+
+/*set inibitory and excitatory noise*/
+//aa1.append(0.0,0.1,0.13,0.16,0.2,0.256,0.32,0.4,0.5)
+//bb1.append(0.0,0.1,0.13,0.16,0.2,0.256,0.32,0.4,0.5)
+aa1.append(0.4)
+bb1.append(0.4)
+
+/* context 0 over all seeds */
+aamp = new Vector()
+//aamp.append(0,1,1000,12345,65000,98525,110652,234567,432597,654321)
+aamp.append(1)
+proc loop() { local k, first
+	k=$1
+	if (k==0) {first=0} else {first=u[k-1]+1}
+	for u[k]=first, cont-1 {
+		if (k<last-1) {
+			loop(k+1)
+		} else {
+			args.resize(0)      
+			for z=0, last-1 {args.append(dendo[u[z]])}
+			args.append(aa1.x[nsim]*a1max)
+			args.append(bb1.x[nsim]*b1max)
+			args.append(aamp.x[n_ctx])
+			pc.submit("superrun", order, args)
+			order=order+1
+		}
+	}
+}
+
+
+ 
+strdef name,name2
+
+/*main loop*/	
+for n_ctx=0, aamp.size() -1 {	
+	for nsim=0, aa1.size()-1 {
+		loop(0)
+	}
+}
+
+/*Set validFile name*/
+sprint(name,"context033s1-modeldb.txt")
+
+objref outfile
+outfile = new File()
+
+total=0
+
+while ((id = pc.working) != 0) {
+	pc.take(id)
+	args2 = pc.upkvec
+	m  = pc.upkscalar
+	valid = pc.upkscalar
+	total = total +1
+//	args2.append(seed)
+		
+	if ( valid == 1) {
+
+	//append valid n-ple in a file
+		
+		outfile.aopen(name)
+		args2.printf(outfile, " %g ")
+		outfile.close()
+	} 
+}
+	
+print " simulation ended "
+pc.done
+quit()

@@ -1,0 +1,52 @@
+// This function makes a list with primary oblique dendrites
+// written by Yiota Poirazi, July 2001, poirazi@LNC.usc.edu
+
+objref apical_tip_list
+apical_tip_list=new SectionList()
+
+// List of obliques located at distances approximatelly less than 300 microns from the soma
+
+proc proximals() {
+
+  apical_dendrite[3]    apical_tip_list.append()   // 1 degree                 74.4  microns from soma
+  apical_dendrite[5]    apical_tip_list.append()   // 0 degree                 57.46 (vertical distance)
+  apical_dendrite[24]   apical_tip_list.append()   // 0 degree                 92.05
+  apical_dendrite[30]   apical_tip_list.append()   // 0 degree  (essentially) 153.44
+  apical_dendrite[34]   apical_tip_list.append()   // 2 degrees (ignore 3rd)  215.06
+  apical_dendrite[45]   apical_tip_list.append()   // 0 degree. (essentially) 170.32
+  apical_dendrite[51]   apical_tip_list.append()   // 2 degrees               210.93
+  apical_dendrite[59]   apical_tip_list.append()   //                         189.34
+  apical_dendrite[61]   apical_tip_list.append()   //                         221.55
+  apical_dendrite[63]   apical_tip_list.append()   //                         231.58
+  apical_dendrite[68]   apical_tip_list.append()   // 2 degrees               277.48
+  apical_dendrite[70]   apical_tip_list.append()   // 0 degree                300.94
+  apical_dendrite[106]  apical_tip_list.append()   // 0 degree                258.05
+  apical_dendrite[107]  apical_tip_list.append()   // 0 degree                159.55      
+  apical_dendrite[111]  apical_tip_list.append()   // 1 degree                106.30
+  apical_dendrite[112]  apical_tip_list.append()   // 0 degree                 88.52
+  apical_dendrite[115]  apical_tip_list.append()   // 1 degree                117.79
+  apical_dendrite[118]  apical_tip_list.append()   // 0 degree                 81.66
+}
+
+// List of obliques located beyond 300 microns from the soma
+
+proc distals() {    
+  apical_dendrite[73]   apical_tip_list.append()   // 0 degree                334.84 
+  apical_dendrite[82]   apical_tip_list.append()   // 0 degree                360.28
+  apical_dendrite[86]   apical_tip_list.append()   // 0 degree                419.68
+  apical_dendrite[93]   apical_tip_list.append()   // 0 degree                468.60
+  apical_dendrite[97]   apical_tip_list.append()   // 0 degree                445.90
+  apical_dendrite[105]  apical_tip_list.append()   // 0 degree                425.58
+}
+
+proximals()
+distals()
+
+/* Make a shape graph with apical oblique dendrites
+objref apical_tip_list_shape
+color_index = 2
+apical_tip_list_shape=new Shape()
+apical_tip_list_shape.color_list(apical_tip_list,color_index)
+apical_tip_list_shape.action("secname()")
+apical_tip_list_shape.printfile("apical-tip-list.eps")
+*/

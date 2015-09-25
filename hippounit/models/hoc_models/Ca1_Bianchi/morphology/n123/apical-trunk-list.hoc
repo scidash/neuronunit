@@ -1,0 +1,43 @@
+// This function makes a list with all dendritic sections in the apical trunk
+// written by Yiota Poirazi, July 2001, poirazi@LNC.usc.edu
+
+objref apical_trunk_list
+apical_trunk_list=new SectionList()
+
+apical_dendrite[0]  apical_trunk_list.append() // 13.40  microns from soma 
+apical_dendrite[4]  apical_trunk_list.append() // 46.03 (vertical distance)
+apical_dendrite[6]  apical_trunk_list.append() // 45.75
+apical_dendrite[14] apical_trunk_list.append() // 52.53
+apical_dendrite[15] apical_trunk_list.append() // 58.97
+apical_dendrite[16] apical_trunk_list.append() // 70.89
+apical_dendrite[22] apical_trunk_list.append() // 72.93
+apical_dendrite[23] apical_trunk_list.append() // 74.48
+apical_dendrite[25] apical_trunk_list.append() // 93.56
+apical_dendrite[26] apical_trunk_list.append() // 98.55
+apical_dendrite[27] apical_trunk_list.append() // 121.89
+apical_dendrite[41] apical_trunk_list.append() // 144.46
+apical_dendrite[42] apical_trunk_list.append() // 142.81
+apical_dendrite[46] apical_trunk_list.append() // 156.96
+apical_dendrite[48] apical_trunk_list.append() // 162.99
+apical_dendrite[56] apical_trunk_list.append() // 179.58
+apical_dendrite[58] apical_trunk_list.append() // 180.11
+apical_dendrite[60] apical_trunk_list.append() // 210.33
+apical_dendrite[62] apical_trunk_list.append() // 222.80
+apical_dendrite[64] apical_trunk_list.append() // 233.67
+apical_dendrite[65] apical_trunk_list.append() // 252.71
+apical_dendrite[69] apical_trunk_list.append() // 292.06
+apical_dendrite[71] apical_trunk_list.append() // 324.53 
+apical_dendrite[81] apical_trunk_list.append() // 346.84
+apical_dendrite[83] apical_trunk_list.append() // 387.00
+apical_dendrite[95] apical_trunk_list.append() // 413.05
+apical_dendrite[103] apical_trunk_list.append() // 417.73
+apical_dendrite[104] apical_trunk_list.append() // 423.75
+
+/* Make a shape graph with apical trunk sections
+
+objref apical_trunk_list_shape
+apical_trunk_list_shape=new Shape()
+color_index=3
+apical_trunk_list_shape.color_list(apical_trunk_list,color_index)
+apical_trunk_list_shape.printfile("apical-trunk-list.eps")
+*/
