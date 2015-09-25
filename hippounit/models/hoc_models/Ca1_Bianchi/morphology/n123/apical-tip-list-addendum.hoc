@@ -1,0 +1,46 @@
+// This function makes a list with oblique branches in addition to 
+// the primary list in apical-tip-list.hoc 
+// written by Yiota Poirazi, July 2001, poirazi@LNC.usc.edu
+
+objref apical_tip_list_addendum
+apical_tip_list_addendum=new SectionList()
+
+
+//    SISTER of apical_dendrite[3]   is apical_dendrite[2]    
+//    SISTER of apical_dendrite[34]  is apical_dendrite[33]   
+//    SISTER of apical_dendrite[37]  is apical_dendrite[36]   
+//    SISTER of apical_dendrite[40]  is apical_dendrite[39]
+//    SISTER of apical_dendrite[45]  is apical_dendrite[44]
+//    SISTER of apical_dendrite[54]  is apical_dendrite[53] 
+//    SISTER of apical_dendrite[68]  is apical_dendrite[67] 
+//    SISTER of apical_dendrite[111] is apical_dendrite[110] 
+//    SISTER of apical_dendrite[115] is apical_dendrite[114] 
+//    SISTER of apical_dendrite[118] is apical_dendrite[117] 
+
+  apical_dendrite[2]    apical_tip_list_addendum.append()  // 1 degree      69.9821  microns from soma
+  apical_dendrite[33]   apical_tip_list_addendum.append()  // 2 degrees    177.4831 (vertical distance)
+  apical_dendrite[36]   apical_tip_list_addendum.append()  // 2 degree     189.0447 
+  apical_dendrite[37]   apical_tip_list_addendum.append()  // 2 degrees    180.5792 
+  apical_dendrite[39]   apical_tip_list_addendum.append()  // 1 degree      83.7030
+  apical_dendrite[40]   apical_tip_list_addendum.append()  // 1 degreee    102.6654
+  apical_dendrite[44]   apical_tip_list_addendum.append()  // 0 degree     172.7760 
+  apical_dendrite[47]   apical_tip_list_addendum.append()  // 0 degree.    177.4980
+  apical_dendrite[53]   apical_tip_list_addendum.append()  // 3 degrees    202.8910
+  apical_dendrite[54]   apical_tip_list_addendum.append()  // 3 degrees    190.3009
+  apical_dendrite[67]   apical_tip_list_addendum.append()  // 2 degrees    289.5367   
+  apical_dendrite[110]  apical_tip_list_addendum.append()  // 1 degree      98.7392
+  apical_dendrite[114]  apical_tip_list_addendum.append()  // 1 degree     123.9962
+  apical_dendrite[117]  apical_tip_list_addendum.append()  // 0 degree      67.6363
+
+//  forsec apical_tip_list_addendum {
+//    apical_tip_list.append()
+//  }
+
+/* Make a shape graph with the additional oblique branches
+
+objref apical_tip_list_addendum_shape
+color_index = 3
+apical_tip_list_addendum_shape=new Shape()
+apical_tip_list_addendum_shape.color_list(apical_tip_list_addendum,color_index)
+apical_tip_list_addendum_shape.printfile("apical-tip-list-addendum.eps")
+*/

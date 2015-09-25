@@ -1,0 +1,45 @@
+// For each section location, define x,y,z coordinates so it can be
+// displayed in 3-D
+
+proc endpt() {
+  P=(n3d()-1)*$1
+
+  x_d3($1)=x3d(P)
+  y_d3($1)=y3d(P)
+  z_d3($1)=z3d(P)
+
+}
+proc fracpt() { local posn, A
+  A=$1
+  posn=$2
+  x_d3(posn)=x3d(i-1) + (x3d(i) - x3d(i-1))*A
+  y_d3(posn)=y3d(i-1) + (y3d(i) - y3d(i-1))*A
+  z_d3(posn)=z3d(i-1) + (z3d(i) - z3d(i-1))*A
+
+}
+proc map_segments_to_3d() {
+
+    forall {
+    
+    insert d3
+    i=0
+    endpt(0)
+
+    for (x) if (x > 0 && x < 1) {
+
+      while (arc3d(i)/L < x) {
+        i += 1
+      }
+      D=arc3d(i) - arc3d(i-1)
+      if (D <= 0) {
+      printf("\t\t * %s had a D < 0\n", secname())
+      }
+      alpha = (x*L - arc3d(i-1))/D
+      fracpt(alpha,x)
+
+    }
+    endpt(1)
+
+  }
+}
+

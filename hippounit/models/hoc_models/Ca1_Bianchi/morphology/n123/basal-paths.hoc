@@ -1,0 +1,227 @@
+// This function makes a set of lists, each containing the basal sections
+// that form a continuous path: starting from the section attached 
+// to the trunk and ending at the basal tip section. 
+// written by Yiota Poirazi, July 2001, poirazi@LNC.usc.edu
+
+objref bl[150],obl[150]
+
+blcount=0
+bl[blcount]=new SectionList()
+dendrite[0] bl[blcount].append()
+dendrite[16] bl[blcount].append()
+obl[blcount]=new BasalPath(bl[blcount])
+
+blcount=blcount + 1
+bl[blcount]=new SectionList()
+dendrite[0] bl[blcount].append()
+dendrite[1] bl[blcount].append()
+dendrite[2] bl[blcount].append()
+dendrite[3] bl[blcount].append()
+dendrite[4] bl[blcount].append()
+dendrite[5] bl[blcount].append()
+obl[blcount]=new BasalPath(bl[blcount])
+
+blcount=blcount + 1
+bl[blcount]=new SectionList()
+dendrite[0] bl[blcount].append()
+dendrite[1] bl[blcount].append()
+dendrite[2] bl[blcount].append()
+dendrite[3] bl[blcount].append()
+dendrite[4] bl[blcount].append()
+dendrite[6] bl[blcount].append()
+obl[blcount]=new BasalPath(bl[blcount])
+
+blcount=blcount + 1
+bl[blcount]=new SectionList()
+dendrite[0] bl[blcount].append()
+dendrite[1] bl[blcount].append()
+dendrite[2] bl[blcount].append()
+dendrite[3] bl[blcount].append()
+dendrite[7] bl[blcount].append()
+obl[blcount]=new BasalPath(bl[blcount])
+
+blcount=blcount + 1
+bl[blcount]=new SectionList()
+dendrite[0] bl[blcount].append()
+dendrite[1] bl[blcount].append()
+dendrite[2] bl[blcount].append()
+dendrite[8] bl[blcount].append()
+obl[blcount]=new BasalPath(bl[blcount])
+
+blcount=blcount + 1
+bl[blcount]=new SectionList()
+dendrite[0] bl[blcount].append()
+dendrite[1] bl[blcount].append()
+dendrite[2] bl[blcount].append()
+dendrite[9] bl[blcount].append()
+dendrite[10] bl[blcount].append()
+dendrite[11] bl[blcount].append()
+obl[blcount]=new BasalPath(bl[blcount])
+
+blcount=blcount + 1
+bl[blcount]=new SectionList()
+dendrite[0] bl[blcount].append()
+dendrite[1] bl[blcount].append()
+dendrite[2] bl[blcount].append()
+dendrite[9] bl[blcount].append()
+dendrite[10] bl[blcount].append()
+dendrite[12] bl[blcount].append()
+obl[blcount]=new BasalPath(bl[blcount])
+
+blcount=blcount + 1
+bl[blcount]=new SectionList()
+dendrite[13] bl[blcount].append()
+dendrite[14] bl[blcount].append()
+obl[blcount]=new BasalPath(bl[blcount])
+
+blcount=blcount + 1
+bl[blcount]=new SectionList()
+dendrite[54] bl[blcount].append()
+dendrite[55] bl[blcount].append()
+dendrite[57] bl[blcount].append()
+dendrite[13] bl[blcount].append()
+dendrite[15] bl[blcount].append()
+obl[blcount]=new BasalPath(bl[blcount])
+
+blcount=blcount + 1
+bl[blcount]=new SectionList()
+dendrite[15] bl[blcount].append()
+dendrite[17] bl[blcount].append()
+obl[blcount]=new BasalPath(bl[blcount])
+
+
+blcount=blcount + 1
+bl[blcount]=new SectionList()
+dendrite[23] bl[blcount].append()
+dendrite[24] bl[blcount].append()
+dendrite[25] bl[blcount].append()
+obl[blcount]=new BasalPath(bl[blcount])
+
+
+blcount=blcount + 1
+bl[blcount]=new SectionList()
+dendrite[23] bl[blcount].append()
+dendrite[24] bl[blcount].append()
+dendrite[26] bl[blcount].append()
+dendrite[27] bl[blcount].append()
+obl[blcount]=new BasalPath(bl[blcount])
+
+blcount=blcount + 1
+bl[blcount]=new SectionList()
+dendrite[23] bl[blcount].append()
+dendrite[24] bl[blcount].append()
+dendrite[26] bl[blcount].append()
+dendrite[28] bl[blcount].append()
+obl[blcount]=new BasalPath(bl[blcount])
+
+blcount=blcount + 1
+bl[blcount]=new SectionList()
+dendrite[23] bl[blcount].append()
+dendrite[29] bl[blcount].append()
+obl[blcount]=new BasalPath(bl[blcount])
+
+blcount=blcount + 1
+bl[blcount]=new SectionList()
+dendrite[35] bl[blcount].append()
+dendrite[36] bl[blcount].append()
+dendrite[37] bl[blcount].append()
+dendrite[38] bl[blcount].append()
+obl[blcount]=new BasalPath(bl[blcount])
+
+blcount=blcount + 1
+bl[blcount]=new SectionList()
+dendrite[35] bl[blcount].append()
+dendrite[36] bl[blcount].append()
+dendrite[37] bl[blcount].append()
+dendrite[39] bl[blcount].append()
+dendrite[40] bl[blcount].append()
+obl[blcount]=new BasalPath(bl[blcount])
+
+
+blcount=blcount + 1
+bl[blcount]=new SectionList()
+dendrite[35] bl[blcount].append()
+dendrite[36] bl[blcount].append()
+dendrite[37] bl[blcount].append()
+dendrite[39] bl[blcount].append()
+dendrite[41] bl[blcount].append()
+obl[blcount]=new BasalPath(bl[blcount])
+
+blcount=blcount + 1
+bl[blcount]=new SectionList()
+dendrite[35] bl[blcount].append()
+dendrite[36] bl[blcount].append()
+dendrite[42] bl[blcount].append()
+dendrite[43] bl[blcount].append()
+dendrite[44] bl[blcount].append()
+dendrite[45] bl[blcount].append()
+dendrite[46] bl[blcount].append()
+obl[blcount]=new BasalPath(bl[blcount])
+
+blcount=blcount + 1
+bl[blcount]=new SectionList()
+dendrite[35] bl[blcount].append()
+dendrite[36] bl[blcount].append()
+dendrite[42] bl[blcount].append()
+dendrite[43] bl[blcount].append()
+dendrite[44] bl[blcount].append()
+dendrite[45] bl[blcount].append()
+dendrite[47] bl[blcount].append()
+obl[blcount]=new BasalPath(bl[blcount])
+
+blcount=blcount + 1
+bl[blcount]=new SectionList()
+dendrite[35] bl[blcount].append()
+dendrite[36] bl[blcount].append()
+dendrite[49] bl[blcount].append()
+obl[blcount]=new BasalPath(bl[blcount])
+
+blcount=blcount + 1
+bl[blcount]=new SectionList()
+dendrite[35] bl[blcount].append()
+dendrite[36] bl[blcount].append()
+dendrite[50] bl[blcount].append()
+obl[blcount]=new BasalPath(bl[blcount])
+
+
+blcount=blcount + 1
+bl[blcount]=new SectionList()
+dendrite[35] bl[blcount].append()
+dendrite[51] bl[blcount].append()
+dendrite[52] bl[blcount].append()
+obl[blcount]=new BasalPath(bl[blcount])
+
+blcount=blcount + 1
+bl[blcount]=new SectionList()
+dendrite[35] bl[blcount].append()
+dendrite[51] bl[blcount].append()
+dendrite[53] bl[blcount].append()
+obl[blcount]=new BasalPath(bl[blcount])
+
+
+blcount=blcount + 1
+bl[blcount]=new SectionList()
+dendrite[54] bl[blcount].append()
+dendrite[56] bl[blcount].append()
+obl[blcount]=new BasalPath(bl[blcount])
+
+blcount=blcount + 1
+bl[blcount]=new SectionList()
+dendrite[54] bl[blcount].append()
+dendrite[55] bl[blcount].append()
+dendrite[57] bl[blcount].append()
+obl[blcount]=new BasalPath(bl[blcount])
+
+blcount=blcount + 1
+bl[blcount]=new SectionList()
+dendrite[54] bl[blcount].append()
+dendrite[58] bl[blcount].append()
+obl[blcount]=new BasalPath(bl[blcount])
+
+
+
+
+
+
+
+

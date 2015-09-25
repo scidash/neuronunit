@@ -1,0 +1,34 @@
+// This function is used to balance the membrane potential to v_init (= -70 mV)
+// written by Yiota Poirazi, July 2001, poirazi@LNC.usc.edu
+
+
+
+proc current_balance() {
+
+ // print "Note: This does not account for non-specific ion currents.\n"
+
+  finitialize($1)
+  
+  printf("Balancing each compartment to %d mV\n", $1)
+
+  forall {
+      for (x) {
+        if (ismembrane("na_ion") && ismembrane("ca_ion") && ismembrane("Ca_ion") && (ismembrane("k_ion"))) {
+            e_pas(x)=(ina(x)+ik(x)+ica(x)+iCa(x)+g_pas(x)*v(x))/g_pas(x) 
+        } else if (ismembrane("na_ion") && ismembrane("ca_ion") && (ismembrane("k_ion"))){
+            e_pas(x)=(ina(x)+ik(x)+ica(x)+g_pas(x)*v(x))/g_pas(x) 
+        } else if (ismembrane("na_ion") && (ismembrane("k_ion"))) {
+            e_pas(x)=(ina(x)+ik(x)+g_pas(x)*v(x))/g_pas(x)
+         // printf("Section %s ina: %g ik: %g\n", secname(), ina(x), ik(x))
+         // psection()
+        } else {
+          print "simply assigning v(x)"
+          e_pas(x)=v(x)
+        }
+      fcurrent()
+    }
+  }
+
+frecord_init()
+
+}

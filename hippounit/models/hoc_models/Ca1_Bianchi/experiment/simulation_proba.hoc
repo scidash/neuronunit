@@ -1,0 +1,93 @@
+
+
+//////// load needed templates////////////
+load_file("nrngui.hoc")
+load_file("../template/load_templates.hoc")
+
+objref econ                                                                  
+show_errs=1
+debug_lev=1
+econ=new ExperimentControl(show_errs,debug_lev)
+econ.self_define(econ)
+
+econ.morphology_dir = "../morphology/n123"       // set location for morphology files
+econ.add_lib_dir("Terrence","../lib")                     // set location for library files
+econ.generic_dir    = "../experiment"             // set location for cell-setup file 
+
+v_init=-70
+
+econ.xopen_geometry_dependent("cell")                                        // load raw cell morphology
+econ.xopen_geometry_dependent("cell-analysis")                               // load user-defined semantics on morphology
+cell_analysis(econ)
+printf("Opening cell setup\n")                                               // load cell-setup to
+econ.xopen_generic("cell-setup")                                             // specify all mechanisms,
+printf("Opened. Setting up cell\n")                                          // membrane properties etc
+cell_setup(econ)
+
+///////////////////Load File//////////////////////
+
+load_file("2_sessio.ses")
+cvode_active(1)
+
+//////   Spike counter//////////
+
+objref apc, v1
+
+proc insert_APC() {
+apc = new APCount(0.5)
+apc.thresh = $1
+v1 = new Vector()
+apc.record(v1)
+}
+
+//////    IClamp    ///////
+objectvar clamp
+proc insert_IClamp() {
+     clamp = new IClamp(0.5)
+     clamp.del = $3
+     clamp.dur = $1
+     clamp.amp = $2
+}
+
+
+
+            
+////////////////////Main///////////////////
+
+
+proc main(){
+
+  del=100
+  tstop=1000+del+200
+  tstopI=1000
+  
+  in=0
+  
+  th=-20
+  access soma
+  insert_APC(th)
+  
+  for u= in,15{
+
+ 
+current=u*0.1
+access soma
+insert_IClamp(tstopI,current,del)
+
+//////////////run//////////////////////// 
+ finitialize(v_init)
+ fcurrent()
+ run()
+/////////////////////////////////////
+ 
+  // print the spike number 
+  printf("\n Current: %.2f nA | # Spikes: %d\n", current,  apc.n)
+  printf("___________________\n")
+   
+}   // for u
+
+}
+
+main()
+/********    end file    ******/
+
