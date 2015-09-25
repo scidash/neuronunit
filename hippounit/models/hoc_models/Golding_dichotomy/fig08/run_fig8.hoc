@@ -1,0 +1,229 @@
+
+load_file("nrngui.hoc")
+
+/*************************************************
+* load dendritic morphology                      *
+*************************************************/
+
+xopen("dend2.nrn")
+
+/*************************************************
+* load 'fake' axon                               *
+*************************************************/
+
+xopen("naceaxon.nrn")
+
+/*************************************************
+* set up section lists and initialize parameters *
+*************************************************/
+
+xopen("init_fig8.hoc")
+
+/*************************************************
+* set up control windows                         *
+*************************************************/
+
+/* stimulating electrode... */
+
+objectvar stim
+access somaA
+stim = new IClamp(0.5)
+stim.del = 1
+stim.dur = 3
+stim.amp = 0.4
+
+/* ...and menu to control its parameters */
+
+objref stimbox
+stimbox = new VBox()
+stimbox.intercept(1)
+nrnpointmenu(stim)
+stimbox.intercept(0)
+stimbox.map("Iclamp params",0,75,-1,-1)
+
+/* menu of various parameters */
+
+xpanel("Channel parameters")
+xvalue("Global Ra","global_ra",1)
+xvalue("Rn","Rn",1)
+xvalue("Cmy","Cmy",1)
+xvalue("Rm","Rm",1)
+xvalue("Cm","Cm",1)
+xvalue("spinelimit","spinelimit",1)
+xvalue("spinefactor","spinefactor",1)
+xvalue("gnabar","gnabar",1)
+xvalue("nalimit","nalimit",1)
+xvalue("naslope","naslope",1)
+xvalue("gnode","gnode",1)
+xvalue("gkdr","gkdr",1)
+xvalue("gkap","gkap",1)
+xvalue("gkad","gkad",1)
+xvalue("dlimit","dlimit",1)
+xvalue("dprox","dprox",1)
+xvalue("dslope","dslope",1)
+xpanel(0,150)
+
+/*************************************************
+* initialization routines                        *
+*************************************************/
+
+initchannels()
+
+proc init() {
+
+     /* add initchannels() to init(), so parameter changes show up */
+     initchannels()       
+     finitialize(v_init)
+     fcurrent()
+}
+
+tstop=15
+
+/*************************************************
+* main control window                            *
+*************************************************/
+
+objref contrl
+contrl = new VBox()
+contrl.intercept(1)
+nrncontrolmenu()
+contrl.intercept(0)
+contrl.map("Control",1,500,-1,-1)
+
+
+/*************************************************
+* output graphs                                  *
+*************************************************/
+
+/* range variable plot of channel densities */
+
+objref densities
+
+densities = new VBox()
+densities.intercept(1)
+
+objectvar rvpna,rvpkdr,rvpkap,rvpkad
+rvpna = new RangeVarPlot("gbar_nax")
+rvpkdr = new RangeVarPlot("gkdrbar_kdr")
+rvpkap = new RangeVarPlot("gkabar_kap")
+rvpkad = new RangeVarPlot("gkabar_kad")
+access dendA5_0          
+rvpna.begin(0)
+rvpkdr.begin(0)
+rvpkap.begin(0)
+rvpkad.begin(0)
+rvpna.origin(0)
+rvpkdr.origin(0)
+rvpkap.origin(0)
+rvpkad.origin(0)
+access dendA5_0111111111111111111
+rvpna.end(1)
+rvpkdr.end(1)
+rvpkap.end(1)
+rvpkad.end(1)
+objref rvpdensity
+rvpdensity = new Graph()
+rvpdensity.addobject(rvpna,1,0)
+rvpdensity.addobject(rvpkdr,2,0)
+rvpdensity.addobject(rvpkap,3,0)
+rvpdensity.addobject(rvpkad,4,0)
+rvpdensity.size(0,450,0,0.5)
+graphList[0].append(rvpdensity)
+flush_list.append(rvpdensity)
+densities.intercept(0)
+densities.map("densities",700,450,300,300)
+
+/* vbox for voltage plots */
+
+objref volts
+
+volts = new VBox()
+volts.intercept(1)
+
+
+/* regular plot of  voltages */
+
+objref g
+g = new Graph()
+g.addvar("somaA.v(0.5)",1,0)
+g.addvar("dendA5_0111111111111111.v(0.5)",2,0)
+g.size(0,tstop,-75,50)
+graphList[0].append(g)
+
+
+/* range variable plot of voltages */
+
+objectvar rvp1,rvp2
+rvp1 = new RangeVarPlot("vm_vmax")
+rvp2 = new RangeVarPlot("v")
+access dendA5_0
+rvp1.begin(0)
+rvp2.begin(0)
+rvp1.origin(0)
+rvp2.origin(0)
+access dendA5_01111111111111111
+rvp1.end(1)
+rvp2.end(1)
+
+objref rvpgraph
+rvpgraph = new Graph()
+rvpgraph.addobject(rvp1,1,0)
+rvpgraph.addobject(rvp2,2,0)
+rvpgraph.size(0,450,-80,40)
+graphList[0].append(rvpgraph)
+flush_list.append(rvpgraph)
+volts.intercept(0)
+volts.map("voltages",300,0,300,600)
+
+
+/* shape plot */
+
+objref shbox
+shbox = new VBox()
+shbox.intercept(1)
+access somaA
+objref sl 
+sl = new SectionList()
+sl.wholetree()
+objref s
+s = new PlotShape(sl)
+s.colormap(12,1)
+s.colormap(0,0,0,255)
+s.colormap(1,0,85,255)
+s.colormap(2,0,170,255)
+s.colormap(3,0,255,255)
+s.colormap(4,0,255,128)
+s.colormap(5,0,255,0)
+s.colormap(6,110,255,0) 
+s.colormap(7,180,255,0)
+s.colormap(8,255,255,0) 
+s.colormap(9,255,170,0)
+s.colormap(10,255,100,0)
+s.colormap(11,255,0,0)
+s.variable("vm_vmax")
+s.exec_menu("Shape Plot")
+s.scale(-70,40)
+fast_flush_list.append(s)
+shbox.intercept(0)
+shbox.map("Shape",700,10,400,400)
+
+
+proc fig8a() {
+     gnabar = 0.042
+     naslope = 0.0
+     run()
+}
+
+proc fig8b() {
+     gnabar = 0.03
+     naslope = 0.005
+     run()
+}
+
+xpanel("Run buttons",0)
+xlabel("Run Golding, et al. Figure 8")
+xbutton("Fig. 8A","fig8a()")
+xbutton("Fig. 8B","fig8b()")
+xpanel(1000,650)
+
+

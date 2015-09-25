@@ -1,0 +1,60 @@
+// This function loads all morphology-related files and templates that will 
+// most probably be needed in the experiments to follow.
+// written by Terrence Brannon, modified Yiota Poirazi, July 2001, poirazi@LNC.usc.edu
+
+objref vRP, vAPEX
+
+proc cell_analysis() {
+
+  load_template("ObliquePath")
+  load_template("BasalPath")
+
+  forall insert d3   // mod file to enable 3-D mapping of each point along the cell
+
+  $o1.defvar("Distance Calculation", "adjustment", "41.1", "This adjustment factor is supplied to the vector distance function so that distance calculations are measured at the cell body.")
+
+  $o1.xopen_library("Terrence","vector-distance")
+
+  vRP=new Vector()
+  access  apical_dendrite[4]   // set point of reference (if adjustment=0). With adjustment factor = 41.1
+  vcreate(vRP)                 // the point of reference is the soma
+
+  vAPEX=new Vector()
+  access apical_dendrite[92]  // set the apex point
+  vcreate2(vAPEX,0.5)
+
+  $o1.xopen_geometry_dependent("soma-list")
+  $o1.xopen_geometry_dependent("axon-sec-list")
+  $o1.xopen_geometry_dependent("basal-tree-list")
+  $o1.xopen_geometry_dependent("apical-tip-list")
+  $o1.xopen_geometry_dependent("apical-tip-list-addendum")
+  $o1.xopen_geometry_dependent("apical-trunk-list")
+  $o1.xopen_geometry_dependent("peri-trunk-list")
+  $o1.xopen_geometry_dependent("apical-non-trunk-list")
+  $o1.xopen_geometry_dependent("oblique-paths")
+  $o1.xopen_geometry_dependent("basal-paths")
+  //$o1.xopen_geometry_dependent("superlinear-apical-tip-list")
+  
+  //sprint($o1.syscmd, "mv soma-list.eps axon-sec-list.eps %s", $o1.generic_dir)
+  //system($o1.syscmd)
+  //sprint($o1.syscmd, "mv apical-tip-list.eps  %s", $o1.generic_dir)
+  //system($o1.syscmd)
+  //sprint($o1.syscmd, "mv apical-tip-list-addendum.eps  %s", $o1.generic_dir)
+  //system($o1.syscmd)
+  //sprint($o1.syscmd, "mv apical-trunk-list.eps %s", $o1.generic_dir)
+  //system($o1.syscmd)
+  //sprint($o1.syscmd, "mv apical-non-trunk-list.eps %s", $o1.generic_dir)
+  //system($o1.syscmd)
+  //sprint($o1.syscmd, "mv basal-tree-list.eps %s", $o1.generic_dir)
+  //system($o1.syscmd)
+
+}
+
+
+
+
+
+
+
+
+

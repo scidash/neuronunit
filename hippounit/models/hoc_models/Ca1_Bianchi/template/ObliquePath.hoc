@@ -1,0 +1,51 @@
+// This template creates the Basal Path lists, starting from the
+// section attached to the trunk and ending with the basal tip section 
+// written by Terrence Brannon, modified by Yiota Poirazi, July 2001, poirazi@LNC.usc.edu
+
+begintemplate ObliquePath
+
+public dtrunk_to_tip, trunk_section, root_oblique
+
+strdef sexec
+
+objref trunk_section
+strdef trunk_section_name
+
+objref root_oblique
+strdef root_oblique_name
+
+objref tip_section
+strdef tip_section_name
+
+objref oblique_path
+
+proc init () {
+  sec_count=0
+
+  forsec $o1 {
+
+    if (sec_count==1) {
+       root_oblique    = new SectionRef()
+       root_oblique_name=secname()
+    }
+      
+    if (!sec_count) {
+       distance(0,1)
+       trunk_section  = new SectionRef()
+       trunk_section_name=secname()
+      }
+    sec_count=sec_count+1
+
+    tip_section    = new SectionRef()
+    tip_section_name=secname()
+  }
+
+  access root_oblique.sec
+  distance(0,0)
+  access tip_section.sec
+  dtrunk_to_tip=distance(1,1)
+
+//  printf("ObliquePath trunk_section: %s root_oblique: %s tip_section: %s distance between root_oblique and tip_section: %g\n", trunk_section_name, root_oblique_name, tip_section_name, dtrunk_to_tip)
+}
+
+endtemplate ObliquePath

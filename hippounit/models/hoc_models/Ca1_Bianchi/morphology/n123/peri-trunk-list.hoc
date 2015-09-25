@@ -1,0 +1,36 @@
+// This function makes a list with all dendritic sections directly attached to the apical trunk
+// written by Terrence Brannon, modified by Yiota Poirazi, July 2001, poirazi@LNC.usc.edu
+
+objref peri_trunk_list
+peri_trunk_list=new SectionList()
+
+apical_dendrite[1] peri_trunk_list.append()
+apical_dendrite[5] peri_trunk_list.append()
+apical_dendrite[7] peri_trunk_list.append()
+apical_dendrite[17] peri_trunk_list.append()
+apical_dendrite[24] peri_trunk_list.append()
+apical_dendrite[28] peri_trunk_list.append()
+apical_dendrite[29] peri_trunk_list.append()
+apical_dendrite[30] peri_trunk_list.append()
+apical_dendrite[40] peri_trunk_list.append()
+apical_dendrite[43] peri_trunk_list.append()
+apical_dendrite[47] peri_trunk_list.append()
+apical_dendrite[49] peri_trunk_list.append()
+apical_dendrite[57] peri_trunk_list.append()
+apical_dendrite[59] peri_trunk_list.append()
+apical_dendrite[61] peri_trunk_list.append()
+apical_dendrite[63] peri_trunk_list.append()
+apical_dendrite[66] peri_trunk_list.append()
+apical_dendrite[70] peri_trunk_list.append()
+apical_dendrite[72] peri_trunk_list.append()
+apical_dendrite[96] peri_trunk_list.append()
+apical_dendrite[104] peri_trunk_list.append()
+
+objref peri_trunk_addl 
+peri_trunk_addl=new SectionList()
+apical_dendrite[8]   peri_trunk_addl.append()
+apical_dendrite[18]  peri_trunk_addl.append()
+apical_dendrite[44]  peri_trunk_addl.append()
+apical_dendrite[73]  peri_trunk_addl.append()
+apical_dendrite[105] peri_trunk_addl.append()
+

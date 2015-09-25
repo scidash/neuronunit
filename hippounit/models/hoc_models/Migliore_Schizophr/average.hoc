@@ -1,0 +1,56 @@
+objref fil, vec_ob, vec1, vec2, vec3, oblist, g
+strdef infile1
+fil = new File()
+last = 5  // ******  n-ple size */
+cont =11  // ******  number of obliques*/
+vec_ob = new Vector(27,-1)
+vec1 = new Vector(cont,0)
+vec2= new Vector(46, 0)
+vec3= new Vector(46, 0)
+oblist=new Vector()
+oblist.append(0, 5, 8, 9, 14, 17, 18, 19, 22, 23, 26)//list of obliques
+
+sprint(infile1,"c033-all-seeds.txt")	
+line =0
+
+fil.ropen(infile1)
+
+while(!fil.eof()){	
+	for i=0, last-1{
+		oblique = fil.scanvar()
+		vec_ob.x[oblique] = vec_ob.x[oblique] + 1  	
+	}
+
+	dummy = fil.scanvar()   
+	dummy = fil.scanvar()   
+	dummy = fil.scanvar()   
+	line = line +1
+}
+fil.close()
+
+/*  average presence for each oblique in valid 5-ple */
+for i = 0, oblist.size()-1{
+	vec1.x[i] = 100*(vec_ob.x[oblist.x[i]] + 1) / line
+     }
+
+/* plot */
+for (t=0; t<11; t=t+1) {
+vec3.x[4*t+2]=vec1.x[t]
+vec3.x[4*t+3]=vec1.x[t]
+}
+
+for (t=0; t<22; t=t+1) {
+vec2.x[2*t+1] = 0.75+0.5*t
+vec2.x[2*t+2] = 0.75+0.5*t
+}
+
+g = new Graph()
+g.size(0,12,0,100)
+g.yaxis(3)
+g.yaxis(0,100)
+g.beginline()
+for (t=0; t<46; t=t+1){
+     g.line(vec2.x[t],vec3.x[t])
+}
+g.flush()
+

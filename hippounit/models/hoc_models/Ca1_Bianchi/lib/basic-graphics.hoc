@@ -1,0 +1,70 @@
+// This function creates a new graphical display and allows printing
+// of graphs to eps files.
+// edited by Yiota Poirazi, July 2001, poirazi@LNC.usc.edu
+
+objref win[200]
+ngraph = 0
+
+proc addgraph() {       // define subroutine to add a new graph
+                        // addgraph("variable", minvalue, maxvalue)
+        ngraph = ngraph+1
+        windex = ngraph-1
+        win[windex] = new Graph()
+        win[windex].size(0,tstop,$2,$3)
+//      win[windex].view(0,$2,tstop,$3-$2,0,0,600,100)  // only for printing
+        win[windex].xaxis()
+        win[windex].yaxis()
+        win[windex].label(0.1,1.0)
+        win[windex].addvar($s1,1,0)
+        win[windex].save_name("graphList[0].")
+        graphList[0].append(win[windex])
+}
+
+proc addgraph_and_soma() {      // define subroutine to add a new graph
+                                // addgraph("variable", minvalue, maxvalue)
+        ngraph = ngraph+1
+        windex = ngraph-1
+        win[windex] = new Graph()
+        win[windex].size(0,tstop,$2,$3)
+//      win[windex].view(0,$2,tstop,$3-$2,0,0,600,100)  // only for printing
+        win[windex].xaxis()
+        win[windex].yaxis()
+        win[windex].label(0.1,1.0)
+        win[windex].addvar($s1,5,0)
+        win[windex].addvar("soma.v(0.5)",1,0)
+        win[windex].save_name("graphList[0].")
+        graphList[0].append(win[windex])
+}
+
+
+if(ismenu==0) {
+  nrnmainmenu()                 // create main menu
+  nrncontrolmenu()              // crate control menu
+  ismenu=1
+}
+proc addgraph_2() {             // define subroutine to add a new graph
+                                // addgraph("variable", minvalue, maxvalue)
+        ngraph = ngraph+1
+        windex = ngraph-1
+        win[windex] = new Graph()
+        win[windex].size($2,$3,$4,$5)
+//      win[windex].view(0,$2,tstop,$3-$2,0,0,600,100)  // only for printing
+        win[windex].xaxis()
+        win[windex].yaxis()
+        win[windex].label(0.1,1.0)
+        win[windex].addvar($s1,1,0)
+        win[windex].save_name("graphList[0].")
+        graphList[0].append(win[windex])
+}
+
+
+proc graph_label() {             // define subroutine to re-label a graph
+                                 // graph_label("variable", minvalue, maxvalue)
+        win[windex].erase_all()                        
+        win[windex].size($2,$3,$4,$5)
+        win[windex].xaxis()
+        win[windex].yaxis()
+        win[windex].label(0.1,1)
+        win[windex].addvar($s1,1,0)
+
+}

@@ -1,0 +1,18 @@
+load_file("nrngui.hoc")
+
+{pwmcnt= PWManager[0].count}
+
+xpanel("select an option")
+  xbutton("Display a fig. 4 averages plot","display_averages()")
+  xbutton("Load the cell model","display_cell()")
+xpanel()
+
+proc display_averages() {
+  {PWManager[0].close(pwmcnt-1)}
+  {xopen("average.hoc")}
+}
+
+proc display_cell() {
+  {PWManager[0].close(pwmcnt-1)}
+  {xopen("sim_9068802-test.hoc")}
+}

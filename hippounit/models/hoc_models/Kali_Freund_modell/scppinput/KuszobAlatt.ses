@@ -1,0 +1,144 @@
+{load_file("nrngui.hoc")}
+objectvar save_window_, rvp_
+objectvar scene_vector_[10]
+objectvar ocbox_, ocbox_list_, scene_, scene_list_
+{ocbox_list_ = new List()  scene_list_ = new List()}
+{pwman_place(0,0,0)}
+{
+xpanel("Reduce A-type K channel density", 0)
+l = 0
+xvalue("dendrite[j], j= ","l", 1,"which_dendrite(l)", 0, 0 )
+percentage = 0
+xvalue("Percentage                                         ","percentage", 1,"A_type_K(percentage)", 0, 0 )
+xpanel(499,199)
+}
+{
+xpanel("Reset A-type K channel density", 0)
+l = 0
+xvalue("dendrite[j], j= ","l", 1,"which_dendrite(l)", 0, 0 )
+percentage2 = 0
+xvalue("By what percentage was it reduced?","percentage2", 1,"A_type_K_original_value(percentage2)", 0, 0 )
+xpanel(499,324)
+}
+{
+xpanel("Globally reduce A-type K channel density", 0)
+percentage3 = 0
+xvalue("Percentage                                  ","percentage3", 1,"global_A_type_K(percentage3)", 0, 0 )
+xpanel(999,199)
+}
+{
+xpanel("Globally reset A-type K channel density", 0)
+percentage4 = 0
+xvalue("By what percentage was it reduced?","percentage4", 1,"global_A_type_K_original_value(percentage4)", 0, 0 )
+xpanel(999,324)
+}
+{
+xpanel("Reduce A-type K channel density", 0)
+l = 0
+xvalue("dendrite[j], j= ","l", 1,"which_dendrite(l)", 0, 0 )
+percentage = 0
+xvalue("Percentage                                         ","percentage", 1,"A_type_K(percentage)", 0, 0 )
+xpanel(498,198)
+}
+{
+xpanel("Reset A-type K channel density", 0)
+l = 0
+xvalue("dendrite[j], j= ","l", 1,"which_dendrite(l)", 0, 0 )
+percentage2 = 0
+xvalue("By what percentage was it reduced?","percentage2", 1,"A_type_K_original_value(percentage2)", 0, 0 )
+xpanel(498,324)
+}
+{
+xpanel("Globally reduce A-type K channel density", 0)
+percentage3 = 0
+xvalue("Percentage                                  ","percentage3", 1,"global_A_type_K(percentage3)", 0, 0 )
+xpanel(998,198)
+}
+{
+xpanel("Globally reset A-type K channel density", 0)
+percentage4 = 0
+xvalue("By what percentage was it reduced?","percentage4", 1,"global_A_type_K_original_value(percentage4)", 0, 0 )
+xpanel(998,324)
+}
+{
+save_window_ = new Graph(0)
+save_window_.size(0,5,-1,1)
+scene_vector_[2] = save_window_
+{save_window_.view(0, -1, 5, 2, 1016, 122, 407.7, 398.8)}
+graphList[1].append(save_window_)
+save_window_.save_name("graphList[1].")
+save_window_.addexpr("dendrite[80].i_H_CA1pyr_dist( 0.39 )", 1, 1, 0.8, 0.9, 2)
+save_window_.addexpr("dendrite[80].i_H_CA1pyr_prox( 0.39 )", 2, 1, 0.8, 0.9, 2)
+save_window_.addexpr("dendrite[80].i_Leak_pyr( 0.39 )", 3, 1, 0.8, 0.9, 2)
+save_window_.addexpr("dendrite[80].ik_K_A_dist( 0.39 )", 4, 1, 0.8, 0.9, 2)
+save_window_.addexpr("dendrite[80].ik_K_A_prox( 0.39 )", 5, 1, 0.8, 0.9, 2)
+save_window_.addexpr("dendrite[80].ik_K_M2( 0.39 )", 7, 1, 0.8, 0.9, 2)
+save_window_.addexpr("dendrite[80].ica_CaT( 0.39 )", 6, 1, 0.8, 0.9, 2)
+}
+{
+save_window_ = new Graph(0)
+save_window_.size(0,5,-1,1)
+scene_vector_[3] = save_window_
+{save_window_.view(0, -1, 5, 2, 164, 166, 570.6, 356.5)}
+graphList[1].append(save_window_)
+save_window_.save_name("graphList[1].")
+save_window_.addexpr("dendrite[80].gion_H_CA1pyr_dist( 0.39 )", 1, 1, 0.8, 0.9, 2)
+save_window_.addexpr("dendrite[80].gion_H_CA1pyr_prox( 0.39 )", 2, 1, 0.8, 0.9, 2)
+save_window_.addexpr("dendrite[80].gion_K_A_dist( 0.39 )", 4, 1, 0.8, 0.9, 2)
+save_window_.addexpr("dendrite[80].gion_K_A_prox( 0.39)", 5, 1, 0.8, 0.9, 2)
+save_window_.addexpr("dendrite[80].gion_K_M2( 0.39 )", 7, 1, 0.8, 0.9, 2)
+save_window_.addexpr("dendrite[80].gion_CaT( 0.39 )", 6, 1, 0.8, 0.9, 2)
+}
+{
+save_window_ = new Graph(0)
+save_window_.size(0,5,-1,1)
+scene_vector_[4] = save_window_
+{save_window_.view(0, -1, 5, 2, 608, 210, 431.1, 377.2)}
+graphList[1].append(save_window_)
+save_window_.save_name("graphList[1].")
+save_window_.addvar("soma.i_H_CA1pyr_prox( 0.5 )", 2, 1, 0.8, 0.9, 2)
+save_window_.addvar("soma.i_Leak_pyr( 0.5 )", 3, 1, 0.8, 0.9, 2)
+save_window_.addvar("soma.ik_K_A_prox( 0.5 )", 5, 1, 0.8, 0.9, 2)
+save_window_.addvar("soma.ik_K_M2( 0.5 )", 7, 1, 0.8, 0.9, 2)
+}
+{
+save_window_ = new Graph(0)
+save_window_.size(0,5,-1,1)
+scene_vector_[5] = save_window_
+{save_window_.view(0, -1, 5, 2, 400, 178, 408.6, 311.5)}
+graphList[1].append(save_window_)
+save_window_.save_name("graphList[1].")
+save_window_.addvar("soma.gion_H_CA1pyr_prox( 0.5 )", 2, 1, 0.8, 0.9, 2)
+save_window_.addvar("soma.gion_K_A_prox( 0.5 )", 5, 1, 0.8, 0.9, 2)
+save_window_.addvar("soma.gion_K_M2( 0.5 )", 7, 1, 0.8, 0.9, 2)
+}
+{
+xpanel("Reduce A-type K channel density", 0)
+l = 0
+xvalue("dendrite[j], j= ","l", 1,"which_dendrite(l)", 0, 0 )
+percentage = 0
+xvalue("Percentage                                         ","percentage", 1,"A_type_K(percentage)", 0, 0 )
+xpanel(498,198)
+}
+{
+xpanel("Reset A-type K channel density", 0)
+l = 0
+xvalue("dendrite[j], j= ","l", 1,"which_dendrite(l)", 0, 0 )
+percentage2 = 0
+xvalue("By what percentage was it reduced?","percentage2", 1,"A_type_K_original_value(percentage2)", 0, 0 )
+xpanel(498,324)
+}
+{
+xpanel("Globally reduce A-type K channel density", 0)
+percentage3 = 0
+xvalue("Percentage                                  ","percentage3", 1,"global_A_type_K(percentage3)", 0, 0 )
+xpanel(998,198)
+}
+{
+xpanel("Globally reset A-type K channel density", 0)
+percentage4 = 0
+xvalue("By what percentage was it reduced?","percentage4", 1,"global_A_type_K_original_value(percentage4)", 0, 0 )
+xpanel(998,324)
+}
+objectvar scene_vector_[1]
+{doNotify()}
