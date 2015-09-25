@@ -103,11 +103,10 @@ Change the name of the model in oblique_integration.py at model = models.KaliFre
 
 
 This unittest is based on:
+============
 
 NeuronUnit: A SciUnit repository for neuroscience-related tests, capabilities and so on.
 
 ![NeuronUnit Logo](https://raw.githubusercontent.com/scidash/assets/master/logos/neuronunit.png)
-
-# Concept:  
 
 https://github.com/rgerkin/papers/blob/master/neuronunit_frontiers/Paper.pdf
