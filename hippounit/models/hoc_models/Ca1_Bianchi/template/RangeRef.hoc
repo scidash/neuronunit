@@ -1,0 +1,18 @@
+// This function creates a reference pointer to the currently accessed section, at a specified location
+// written by Terrence Brannon, modified by Yiota Poirazi, July 2001, poirazi@LNC.usc.edu
+
+begintemplate RangeRef
+
+public section_ref, range_ref
+
+objref section_ref
+
+proc init () {
+  section_ref  = new SectionRef()
+  range_ref    = $1
+  if ($2) {
+//    printf ("RangeRef created for %s(%f)\n", secname(), $1)
+  }
+}
+
+endtemplate RangeRef

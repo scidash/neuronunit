@@ -1,0 +1,658 @@
+/* ---------------------   PROCEEDURES USED IN CELL SETUP  -------------------------*/
+
+/*  To make the distal membrane less conductive, vis-a-vis Stuart G.
+and Spruston N., J. Neuroscience 18(10) 3501-3510, 1998, we deceay Rm 
+from proximal to distal sigmoidally
+*/
+
+proc Rm_sigmoid() { local rm
+     $o1.defvar("channel:pas","Rm_soma", "Rm_soma", "")
+//     $o1.defvar("channel:pas","Rm_end",  "5e3", "")
+     $o1.defvar("channel:pas","Rm_end",  "12e3", "")
+     $o1.defvar("channel:pas","dhalf",   "200",   "")
+     $o1.defvar("channel:pas","steep",   "50",   "")
+
+     for (x) {  
+       xdist = find_vector_distance_precise(secname(),x)    // calc. perpedicular distance      
+       rm = Rm_soma + (Rm_end - Rm_soma)/(1.0 + exp((dhalf-xdist)/steep))
+       g_pas(x) = 1.0/rm
+     }
+
+}
+
+/* Changing Ra sigmoidally along the apical trunk (obsolete in this case)*/
+
+proc Ra_sigmoid() {  
+     $o1.defvar("channel:pas","Ra_soma", "Ra_soma", "")  
+//     $o1.defvar("channel:pas","Ra_end",  "Ra_default", "")           
+     $o1.defvar("channel:pas","Ra_end",  "35", "")             
+     $o1.defvar("channel:pas","dhalf",   "210",   "")
+     $o1.defvar("channel:pas","steep",   "50",   "")
+
+     for (x) {  
+       xdist = find_vector_distance_precise(secname(),x)  //calc. perpedicular distance
+       Ra = Ra_soma + (Ra_end - Ra_soma)/(1.0 + exp((dhalf-xdist)/steep))
+     }
+}
+
+/* To make the distal trunk h-current conductance, g_h, about 7
+times higher (at 300 um) than the somatic value vis-a-vis Magee
+J., J. of Neuroscience 18(19) 7613-7624, 1998, we vary I_h
+conductance sigmoidally along the apical trunk.
+*/
+
+proc apical_h_insert_sig() {
+     $o1.defvar("channel:h","gh_soma", "soma_hbar", "")
+
+     $o1.defvar("channel:h","gh_end",  "soma_hbar*9", "")
+     $o1.defvar("channel:h","dhalf",   "280",   "")
+     $o1.defvar("channel:h","steep",   "50",   "")
+
+     for (x) {  
+       xdist = find_vector_distance_precise(secname(),x)  //calc. perpedicular distance
+       insert h
+       gbar_h(x) = gh_soma + (gh_end - gh_soma)/(1.0 + exp((dhalf-xdist)/steep))
+
+       }  
+}
+
+
+/* Inserting A-type currents along the apical trunk in
+a linearly increasing manner 
+*/
+
+
+proc A_insert() {
+    $o1.defvar("channel:kap","kap_distal_maxfactor", "1", "maximum cond. factor in dendrites")
+   $o1.defvar("channel:kap","kap_distal_distance", "100", "distance in dendrites for maximum cond.")
+    $o1.defvar("channel:kad","kad_distal_distance", "500", "distance in dendrites for maximum cond.")
+
+     for (x) {  
+       xdist=find_vector_distance_precise(secname(),x)
+       insert kap
+       insert kad 
+       ek = -80
+       if (xdist < kap_distal_distance ) {
+          gkabar_kad(x) = 0
+         bar_kap(x) =soma_kap *(1+xdist/100)
+
+       } else if (xdist < kad_distal_distance ) {
+          gkabar_kap(x) = 0
+          gkabar_kad(x) = soma_kad*(1+xdist/100)
+
+          
+       } else {
+          gkabar_kap(x) = 0
+          gkabar_kad(x) = soma_kad*6
+
+       }
+     }
+
+}
+
+
+/* Inserting K(Ca++)-type channels and calsium pumps along the
+apical trunk with maximum conductances in 50 < xdist < 200 
+*/
+
+proc apical_kca_insert() {
+
+    $o1.defvar("channel:kca","kca_distal_maxfactor", "1", "maximum cond. factor in dendrites")
+
+   //  $o1.defvar("channel:kca","kca_distal_maxfactor", "0", "maximum cond. factor in dendrites")
+     $o1.defvar("channel:kca","kca_distal_distance", "200", "distance in dendrites for maximum cond.")
+  
+     for (x) {  
+       xdist = find_vector_distance_precise(secname(),x)
+       fr = xdist/kca_distal_distance 
+        insert cad    // calsium pump/buffering mechanism
+       insert kca    // slow AHP K++ current
+       insert mykca  // medium AHP K++ current
+
+	if (xdist < kca_distal_distance && xdist > 50) {       
+            gbar_kca(x) = 5*soma_kca
+            gkbar_mykca = 2*mykca_init
+        } else {
+            gbar_kca(x) = 0.5*soma_kca
+            gkbar_mykca = 0.25*mykca_init
+       }
+
+     }
+}
+
+/* Inserting LVA Ca++ T-type channels along the apical trunk in
+a linearly increasing manner, for xdist > 100 um 
+*/
+
+proc apical_caT_insert() {
+     $o1.defvar("channel:cat","caT_distal_maxfactor", "4", "maximum cond. factor in dendrites")
+     $o1.defvar("channel:cat","caT_distal_distance", "350", "distance in dendrites for maximum cond.")
+
+     for (x) {  
+        xdist = find_vector_distance_precise(secname(),x)
+        fr = xdist/caT_distal_distance
+        insert cat  
+        if (xdist < 100) {
+           gcatbar_cat(x) = 0
+        } else {
+           gcatbar_cat(x) = caT_distal_maxfactor*soma_caT*fr
+        } 
+    }
+}
+
+
+/* Inserting HVAm Ca++ R-type and HVA L-type channesls along
+the apical trunk. The R-type current is distributed in a fixed
+conductance while the L-type current is distributed in a
+maximum fixed conductance for distances xdist > 50 um and in a very
+small conductance for xdist < 50 um
+*/
+
+proc apical_caR_caLH_insert() {
+     for (x) {  
+         xdist = find_vector_distance_precise(secname(),x)
+         insert car
+         gcabar_car(x) = 0.1*soma_car
+
+         insert calH
+         if (xdist > 50) {            
+            gcalbar_calH(x) = 2*soma_caLH    //4.6*soma_caLH
+         } else {
+            gcalbar_calH(x) = 0.1*soma_caLH               //0.1*soma_caLH
+         }
+     }
+}
+
+
+/* Seting conductances in all apical oblique dendrites so that the values of all dedrites after an initial section
+are the same (or a multiple) as the values in apical_dendrite[46]. The values in the initial section of 50 um from 
+the parent trunk are set equal to the parent trunk conductances. For dendrites located beyond  300 (or/and 350) um, 
+we increase the Na+-persistent current, the A current, the Ca++ and K(Ca++) conductances and reduce the spike 
+attenuation coefficent. */
+
+strdef khsection
+
+proc khoblique_peri_decay() { local i,x,d
+$o1.defvar("channel:obliques", "khsection", "\"apical_dendrite[46]\"", "Trunk section used for oblique conductance values")
+$o1.defvar("morphology:apical-non-trunk", "peri_trunkl", "50.0", "Length of the peri-trunk region")
+
+// Holding the conductance values from apical_dendrite[46] 
+
+//sprint($o1.tmp_str,"%s { hold_cat=gcatbar_cat(1) hold_car=soma_car hold_calH=soma_caLH hold_nap=0.0004*gnabar_hha_old }", khsection)
+
+sprint($o1.tmp_str,"%s { hold_cat=gcatbar_cat(1) hold_car=soma_car hold_calH=soma_caLH hold_nap=0.0004*gna }", khsection)
+
+execute1($o1.tmp_str)
+//sprint($o1.tmp_str,"%s { hold_h=gbar_h(1) hold_ar2_hha_old=ar2_hha_old(1) hold_kdr=gkbar_hha_old(1) }", khsection)
+sprint($o1.tmp_str,"%s { hold_h=gbar_h(1)  hold_kdr=gkdr }", khsection)
+
+execute1($o1.tmp_str)
+sprint($o1.tmp_str,"%s { hold_g_pas=g_pas(1) hold_kap=gkabar_kap(1) hold_kad=gkabar_kad(1) }", khsection) 
+execute1($o1.tmp_str)
+sprint($o1.tmp_str,"%s { hold_mykca=gkbar_mykca(1) hold_kca=gbar_kca(1) }", khsection)
+execute1($o1.tmp_str)
+
+     for i=0,plcount {
+    
+        // set the origin to the currently accessed section 
+        access opl[i].trunk_section.sec
+        xdist = find_vector_distance_precise(secname(),0)  
+
+        distance(0,1)
+    
+        trunk_kap = gkabar_kap(1)  // holding the parent trunk values
+        trunk_kad = gkabar_kad(1)
+        trunk_h  = gbar_h(1)
+        trunk_pas = g_pas(1)
+       // trunk_Ra = Ra 
+        trunk_car  = gcabar_car(1)
+        trunk_calH  = gcalbar_calH(1)
+        trunk_cat  = gcatbar_cat(1)
+        trunk_kca  = gbar_kca(1)
+        trunk_mykca  = gkbar_mykca(1)
+        trunk_nap  = 0.2*hold_nap // No persistent I_Na at the trunk => hold a small persent of hold_nap value
+   //     trunk_ar2_hha_old  = ar2_hha_old(1) // spike attenuation variable
+
+        sec_count=0
+  
+       forsec pl[i] {
+//           printf("\t-- %s --\n", secname()) access all oblique paths from parent trunk to root oblique
+                           
+	   if (!sec_count) {              // skip all trunk sections
+               sec_count=sec_count+1
+               continue
+            }         
+                insert kap 
+                insert kad
+                insert h     
+                insert pas         
+                insert car
+                insert calH
+                insert cat
+                insert kca
+                insert mykca
+                insert nap
+               insert cad
+
+                e_pas = v_init
+                ek = -80
+
+                for (x) {
+              //    diam(x)/2   // mine insertion
+                
+                  if (x > 0 && x < 1) {
+                     d = distance(1,x)
+                     if (d < peri_trunkl) {   // for distances close to the parent trunk section keep trunk values
+                        Ra = Ra_trunk  
+                        gkabar_kap(x) = trunk_kap  
+                        gkabar_kad(x) = trunk_kad   
+                        gbar_h(x) = trunk_h  
+                        g_pas(x) = trunk_pas
+                        gcabar_car(x) = trunk_car
+                        gcalbar_calH(x) = trunk_calH
+                       gcatbar_cat(x) = trunk_cat  
+                        gbar_kca(x) = trunk_kca  
+                        gkbar_mykca = mykca_init 
+                        gnabar_nap(x) = trunk_nap
+                  //      ar2_hha_old(x) = trunk_ar2_hha_old         
+                    
+                     } else {          // for further distances set conductances to apical_dendrite[46] values (or a multiple)            
+                        gkabar_kap(x) = hold_kap *(1+xdist/100) 
+                        gkabar_kad(x) = hold_kad *(1+xdist/100)
+                        gbar_h(x) = hold_h  
+                        g_pas(x) = hold_g_pas
+		            Ra =  Ra_trunk
+                        gcabar_car(x) =hold_car         //trunk_car*5  // hold_car=soma_car
+                        gcalbar_calH(x) = hold_calH 
+                        gcatbar_cat(x) = hold_cat  
+                        //ar2_hha_old(x) = 0.8*hold_ar2_hha_old  // set to 80% of dend. 46 value  
+                        gbar_kca(x) =hold_kca
+                        gkbar_mykca =1.1*mykca_init 
+                        gnabar_nap(x) = hold_nap  
+                       
+             
+                        if (xdist > 300 ) {                  // for xdist > 300 um increase:
+                           gcabar_car(x) = 13*hold_car     //trunk_car*10    //13*hold_car       // Ca++-R current,
+                           gcalbar_calH(x) = 5*hold_calH   //5*hold_calH     //14*hold_calH     // Ca++-L current,
+                           gbar_kca(x) = 5*soma_kca         // slow AHP current  
+                          // gkbar_hha_old(x) = 1.07*hold_kdr // delayed rectifier
+                           //gkbar_hha_old(x) = 1.1*hold_kdr // delayed rectifier
+                         }
+
+                        if (xdist > 350) {             // for xdist > 350 um increase even more:
+                           gcalbar_calH(x)=6*hold_calH  //     6*hold_calH     //15*hold_calH  // Ca++-L current,
+                           //ar2_hha_old(x) = 0.95         // less spike attenuation 
+                           gnabar_nap(x)=2*hold_nap      // Na+ persistent                   
+
+                        }
+                         if (xdist > 500) {  
+                          gkabar_kad(x) = hold_kad*6   // A-current,
+
+                     }
+                           
+                     } 
+   		}
+	    }
+         
+          sec_count=sec_count+1
+        }
+    }
+}
+
+
+/* Seting conductance values in all basal dendrites to be the
+same as the values in apical_dendrite[14], except for the A
+current conductance which is 0.6 times higher.  
+*/
+
+proc khbasal_fixed() { local i,x,d
+$o1.defvar("channel:basal", "khsection", "\"apical_dendrite[14]\"", "Trunk section used for basal conductance values")
+sprint($o1.tmp_str,"%s { hold_g_pas=g_pas(1) hold_kap=gkabar_kap(1)  hold_kad=gkabar_kad(1) hold_h=gbar_h(1)}", khsection)
+execute1($o1.tmp_str)
+
+forsec basal_tree_list {
+
+      insert kap 
+      insert kad
+      insert h                
+      insert pas
+      
+
+      for (x) {
+       
+
+         gkabar_kap(x) =1.6*hold_kap    //1.6
+         gkabar_kad(x) = 1.6*hold_kad   //1.6
+         gbar_h(x) = soma_hbar
+         g_pas(x) =  hold_g_pas
+         Ra =  Ra_basal
+         e_pas = v_init
+         ek = -80 
+     }
+  }
+}
+
+/* The Na channels developed Mel and modified by Brannon,
+Poirazi (hha2 and hha_old) both reduce activation as function
+of voltage. In other words, they show actvity-dependent
+attenuation of conductance.  Within both of these mechanisms,
+ar2 ([0..1]) is used to inversely describe the intensity of
+voltage-dependent attenuation. 0 is maximum attenuation, 1 is
+no attenuation.
+
+Within the cell model, we vary the amount of attenuation along
+the apical trunk as a function of distance from the cell body
+such that proximal sections show little attenuation and distal
+sections show comparably more (with the exception of distal
+obliques).
+
+We typically decay ar2 linearly from proximal to distal with
+the maximum and minimum values of decay as
+parameters. Initialize these parameters: 
+*/
+
+
+
+/*_______ END OF PROCEEDURES ROUTINELY USED IN CELL SETUP______*/
+
+
+
+
+//__________________________________________________________________________________________________________
+
+
+/* ____________      CELL SET-UP PROCEEDURE      _____________ */
+
+maximum_segment_length=75
+strdef sectype
+objref CAN_temp, CAL_temp, CAT_temp, KAD_temp, KAP_temp, NA_temp
+
+proc cell_setup() {
+
+  // Set passive membrane properties
+  
+  
+    $o1.defvar("passive", "Rm_trunk", "36900","Non-oblique dendritic specific membrane resistance.")
+    $o1.defvar("passive", "Rm_non_trunk", "36900","Apical oblique specific membrane resistance.") 
+    $o1.defvar("passive", "Rm_basal", "46000","Basal specific membrane resistance.")
+    $o1.defvar("passive", "Rm_tip", "36900","Tip specific membrane resistance.")  
+   $o1.defvar("passive", "Rm_soma", "20000", "Somatic specific membrane resistance.") 
+  $o1.defvar("passive", "Rm_axon", "28000", "Axonal specific membrane resistance. ")   
+
+   $o1.defvar("passive", "Ra_basal", "150","Basal specific axial resistance.")
+    $o1.defvar("passive", "Ra_trunk", "150","Somatic specific axial resistance.")
+    $o1.defvar("passive", "Ra_non_trunk","150","Somatic specific axial resistance.")
+    $o1.defvar("passive", "Ra_soma", "150","Somatic specific axial resistance.")
+    $o1.defvar("passive", "Ra_tip", "150","Apical tip specific axial resistance.")
+    $o1.defvar("passive", "Ra_axon", "50","Axonal specific axial resistance. ")
+ 
+ 
+
+   $o1.defvar("passive", "Cm_default", "1","Default specific capacitance.")
+    $o1.defvar("passive", "Cm_axon", "Cm_default","Axonal specific capacitance. ")  
+    $o1.defvar("passive", "Cm_soma", "1","Somatic specific capacitance. ")     
+    $o1.defvar("passive", "Cm_trunk", "1.192","Trunk specific capacitance.")         
+    $o1.defvar("passive","Cm_non_trunk", "1.192","Oblique specific capacitance.")    
+    $o1.defvar("passive", "Cm_basal", "1.144","Basal specific capacitance.")       
+    $o1.defvar("passive", "Cm_tip", "1.192","Apical tip specific capacitance.")   
+
+
+  // SEVERELY affects experiment results
+  $o1.defvar("general", "celsius", "34","Temperature of slice.")
+        
+  // Set HH Sodium - Potassium properties
+
+  
+    $o1.xopen_library("Terrence","cut-sections")
+    cut_sections(maximum_segment_length)
+
+
+// make 3-d mapping of cell sections
+
+    //$o1.xopen_library("Terrence","map-segments-to-3d")
+    //map_segments_to_3d()
+
+// prepare to make a graph with cell configuration
+    $o1.tmpo2=new Shape()
+  
+
+
+// Set initial conductance values 
+  
+   soma_caL =0.0005
+   soma_car =0.0003  // for dendrite
+   gsomacar =0.0001
+   soma_caLH =0.0003
+   soma_caT =0.00005
+   soma_km=0.001
+   potNa=50
+   mykca_init =0.045 
+   soma_kca =0.003
+   soma_kap =0.0005
+   soma_hbar =1.8e-5 
+   soma_kad = 0.0005
+   gna=0.035
+   gkdr=0.015
+   gnadend=0.0125
+   gkdrdend=0.009
+   gnanotrunk=0.035
+   gkdrnotrunk=0.015
+   AXKdr=1
+   AXNa=1
+ 
+//v_init=-70
+
+// Start inserting mechanisms in cell
+
+      sectype ="soma"
+      forsec "soma" {
+
+       
+
+          insert na3
+	    insert kdr
+          gbar_na3=gna
+          gkdrbar_kdr=gkdr
+          ena         = potNa
+
+         
+
+            insert pas    // leak conductance
+                    g_pas = 1/Rm_soma       
+                    e_pas = v_init
+                    Ra    = Ra_soma
+                    cm= Cm_soma
+
+    
+           insert h     // h current 
+                   gbar_h  = soma_hbar
+                   K_h     = 8.8
+                   vhalf_h = -82
+
+            insert kap  // proximal A current
+                   gkabar_kap = soma_kap
+                   ek         = -80
+
+            insert km  // m-type potassium current
+                   gbar_km    = soma_km
+                   ek         = -80 
+           
+            insert cal // HVA Ca++-L type current
+                   gcalbar_cal = soma_caL
+           
+            insert cat // LVA Ca++-T type current
+                   gcatbar_cat = soma_caT
+
+            insert somacar // HVAm Ca++-R type current
+                   gcabar_somacar = gsomacar
+            
+            insert kca   // K(Ca) sAHP potassium type current
+                   gbar_kca = 5*soma_kca
+         
+            insert mykca // K(Ca) mAHP potassium type current
+	           gkbar_mykca = 5.5*mykca_init        
+        
+            insert cad  // calcium pump/buffering mechanism 
+
+
+            $o1.tmpo2.color(2)            
+      }
+
+//  Configure Axon
+
+      sectype="axon"
+      forsec axon_sec_list {
+
+                          
+	    insert nax
+	    insert kdr
+          gbar_nax=gna*AXNa
+          gkdrbar_kdr=gkdr*AXKdr
+          ena         = potNa
+
+
+
+
+             insert pas  // leak conductance
+                    g_pas      = 1/Rm_axon  
+                    e_pas       = v_init
+                    Ra          = Ra_axon
+                    cm          = Cm_axon
+
+             insert km  // m-type potassium current
+                    gbar_km     = 3*soma_km
+                    ek          = -80
+
+             insert kap  // proximal A current
+                   gkabar_kap = soma_kap
+                   ek         = -80
+
+           
+               
+      }
+    
+//  Configure apical trunk
+ 
+      forsec apical_trunk_list {
+
+          apical_h_insert_sig($o1)    // Inserting h-current
+          apical_caR_caLH_insert($o1) // Inserting Ca++ R-type and Ca++ L-type currents
+          apical_caT_insert($o1)      // Inserting Ca++ T-type current
+          apical_kca_insert($o1)      // Inserting K(Ca) sAHP and mAHP potassium currents
+          A_insert($o1)               // Inserting A-current
+         
+     
+
+          insert na3
+	    insert kdr
+          gbar_na3=gna
+          gkdrbar_kdr=gkdr
+          ena         = potNa
+
+
+                        
+          insert pas // leak conductance
+                    g_pas     =  1/Rm_trunk  
+                    e_pas          = v_init
+                    Ra             = Ra_trunk
+                    cm             = Cm_trunk
+
+          Rm_sigmoid($o1)   // configure Rm along apical trunk
+          Ra_sigmoid($o1)   // configure Ra along apical trunk
+          $o1.tmpo2.color(4)
+
+          
+      }
+ 
+
+// Configure the apical-non-trunk section: insert basic mechanisms  
+ 
+    sectype = "apical non-trunk"
+
+    forsec apical_non_trunk_list {
+       
+                
+          insert na3notrunk
+	    insert kdr
+          gbar_na3notrunk=gnanotrunk
+          gkdrbar_kdr=gkdrnotrunk
+          ena         = potNa
+
+
+ 
+
+
+               insert pas // passive properties
+                     g_pas     =  1/Rm_non_trunk 
+                     e_pas     = v_init                     
+                     Ra        = Ra_non_trunk
+                     cm        = Cm_non_trunk
+             
+ 
+               $o1.tmpo2.color(3)
+
+        
+
+    }
+
+    khoblique_peri_decay($o1)  // Configure the apical oblique dendrites
+
+// Configure the basal dendrites
+
+   sectype = "basal tree"
+   forsec basal_tree_list {
+     
+          insert na3dend
+	    insert kdr
+          gbar_na3dend=gnadend
+          gkdrbar_kdr=gkdrdend
+         ena         = potNa
+
+
+            insert pas // passive properties
+                    g_pas          = 1/Rm_basal  
+                    e_pas          = v_init
+                    Ra             = Ra_basal
+                    cm             = Cm_basal
+
+
+
+    
+
+         Ra_sigmoid($o1) // configure Ra
+        $o1.tmpo2.color(5)
+      }
+   khbasal_fixed($o1) // Configure basal dendrites         
+   
+    forsec "soma" { g_pas= 1/Rm_soma} // force Rm at all soma sections
+
+
+forall if (ismembrane("kdr") ) {  
+          ek         = -77      //-77 
+     }
+
+
+ 
+
+    forall if(ismembrane("ca_ion")) {
+      eca =140
+      ion_style("ca_ion",0,1,0,0,0)
+      vshift_ca = 0
+
+          }
+  
+
+
+
+   // Print a postcript file in the generic directory with the cell configuration
+
+   sprint($o1.tmp_str2, "%s/configure_sections.eps", $o1.generic_dir)
+   $o1.tmpo2.printfile($o1.tmp_str2)
+
+econ.xopen_library("Terrence","current-balance") 
+current_balance(v_init)
+
+  
+
+  }
+

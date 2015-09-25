@@ -1,0 +1,8 @@
+// This function specifies the number of segments in all sections of the cell
+// edited by Yiota Poirazi, July 2001, poirazi@LNC.usc.edu
+
+proc cut_sections() {  
+  forall {
+      nseg=1+int(L/$1)
+  }
+}

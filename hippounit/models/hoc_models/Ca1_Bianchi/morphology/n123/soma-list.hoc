@@ -1,0 +1,19 @@
+// This function makes a list with somatic sections
+// written by Terrence Brannon, modified by Yiota Poirazi, July 2001, poirazi@LNC.usc.edu
+
+objref soma_list
+soma_list=new SectionList()
+
+forsec "soma" {
+      soma_list.append()
+} 
+
+/* Make a shape graph with somatic sections
+
+objref soma_list_shape
+soma_list_shape=new Shape()
+color_index = 3
+soma_list_shape.color_list(soma_list,color_index)
+soma_list_shape.show(0)
+soma_list_shape.printfile("soma-list.eps")
+*/
