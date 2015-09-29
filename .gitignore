@@ -36,5 +36,4 @@ pip-log.txt
 *.dat
 
 x86_64
-figs/
 temp_data/
