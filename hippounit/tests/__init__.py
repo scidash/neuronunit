@@ -411,6 +411,7 @@ class DepolarizationBlockTest(Test):
 		plt.xticks([1], labels2)
 		plt.margins(0.2)
 		plt.ylabel("Number of AP at Ith")
+		plt.savefig(path_figs + 'num_of_APs_at_Ith' + '.pdf', dpi=600)
 
 		return Ith, Veq
 
@@ -576,7 +577,7 @@ class ObliqueIntegrationTest(Test):
 	            #print c_stim
 	            first = 0
 	            last = numpy.size(c_stim, axis=0)-1
-	            num = [3,4]
+	            num = [4,5]
 
 
 	            while first<=last and not found:
@@ -688,9 +689,28 @@ class ObliqueIntegrationTest(Test):
 
 	        plt.xlabel("time (ms)")
 	        plt.ylabel("Voltage (mV)")
+	        plt.xlim(140, 250)
+
 	    fig0 = plt.gcf()
 	    fig0.set_size_inches(12, 18)
 	    plt.savefig(path_figs + 'traces_sync' + '.pdf', dpi=600,)
+
+	    fig0, axes0 = plt.subplots(nrows=2, ncols=1)
+	    fig0.tight_layout()
+	    fig0.suptitle('Synchronous inputs')
+	    for i in range (0,len(dend_loc000)):
+	        plt.subplot(5,2,i+1)
+	        plt.subplots_adjust(hspace = 0.5)
+	        for j, number in enumerate(num):
+	            plt.plot(sep_results[i][j][0][0]['T'],sep_results[i][j][0][0]['V'], 'k')       # somatic traces
+	        plt.title('Input in dendrite '+str(dend_loc000[i][0])+ ' at location: ' +str(dend_loc000[i][1]))
+
+	        plt.xlabel("time (ms)")
+	        plt.ylabel("Somatic voltage (mV)")
+	        plt.xlim(140, 250)
+	    fig0 = plt.gcf()
+	    fig0.set_size_inches(12, 18)
+	    plt.savefig(path_figs + 'somatic_traces_sync' + '.pdf', dpi=600,)
 
 	    soma_depol=numpy.array([])
 	    soma_depols=[]
@@ -761,7 +781,6 @@ class ObliqueIntegrationTest(Test):
 	            threshold_index=threshold_index0
 
 	        threshold=soma_expected[threshold_index]
-
 
 	        sep_soma_depols.append(soma_depols)
 	        sep_dV_dt.append(dV_dt)
@@ -915,7 +934,7 @@ class ObliqueIntegrationTest(Test):
 	        dist_depol_input=numpy.array([])
 	        dist_expected_depol_input=numpy.array([])
 
-	    plt.figure(2)
+	    plt.figure(3)
 
 
 	    plt.title('Synchronous inputs')
@@ -932,9 +951,9 @@ class ObliqueIntegrationTest(Test):
 	        plt.legend(loc=2, prop={'size':10})
 	    fig = plt.gcf()
 	    fig.set_size_inches(12, 12)
-	    plt.savefig(path_figs + 'input_output_curve_sync' + '.pdf', dpi=600,)
+	    plt.savefig(path_figs + 'input_output_curves_sync' + '.pdf', dpi=600,)
 
-	    plt.figure(3)
+	    plt.figure(4)
 	    plt.suptitle('Synchronous inputs')
 
 	    plt.subplot(3,1,1)
@@ -972,7 +991,7 @@ class ObliqueIntegrationTest(Test):
 	    fig.set_size_inches(12, 15)
 	    plt.savefig(path_figs + 'summary_input_output_curve_sync' + '.pdf', dpi=600,)
 
-	    plt.figure(4)
+	    plt.figure(5)
 
 	    plt.subplot(2,1,1)
 	    plt.title('Synchronous inputs')
@@ -1111,7 +1130,7 @@ class ObliqueIntegrationTest(Test):
 	    plt.xticks(x, labels, rotation=20)
 	    plt.tick_params(labelsize=10)
 	    plt.margins(0.1)
-	    plt.ylabel("supth. degree of nonlinearity (%)")
+	    plt.ylabel("suprath. degree of nonlinearity (%)")
 
 	    plt.subplot(4, 2, 7)
 
@@ -1269,69 +1288,74 @@ class ObliqueIntegrationTest(Test):
 	# mean values plot
 	    fig3, axes3 = plt.subplots(nrows=2, ncols=1)
 	    fig3.tight_layout()
-	    fig3.suptitle('Synchronous inputs')
+	    fig3.suptitle('Synchronous inputs', fontsize=15)
 	    plt.subplot(2,2,1)
 
 	    e_values = numpy.array([threshold_SD, sd_sep_threshold, threshold_prox_SD, sd_prox_thresholds, threshold_dist_SD, sd_dist_thresholds, amp_SD, sd_amp_at_threshold])
-	    x_values =numpy.array([1,2,3,4,5,6,7,8])
+	    x_values =numpy.array([1,2,4,5,7,8,10,11])
 	    y_values = numpy.array([experimental_mean_threshold, mean_sep_threshold, threshold_prox, mean_prox_thresholds, threshold_dist, mean_dist_thresholds, exp_mean_amp, mean_amp_at_threshold])
-	    labels_values=['experimental mean threshold', 'model mean threshold', 'exp mean proximal threshold', 'model mean proximal threshold', 'exp mean distal threshold', 'model mean distal threshold','exp mean amplitude at th.', 'model mean amplitude at th.']
+	    labels_values=['experimental mean threshold', 'model mean threshold', 'exp. mean proximal threshold', 'model mean proximal threshold', 'exp. mean distal threshold', 'model mean distal threshold','exp. mean amplitude at th.', 'model mean amplitude at th.']
 	    plt.errorbar(x_values, y_values, e_values, linestyle='None', marker='o')
-	    plt.xticks(x_values, labels_values, rotation=10)
+	    plt.xticks(x_values, labels_values, rotation=20)
+	    plt.tick_params(labelsize=15)
 	    plt.margins(0.1)
-	    plt.ylabel("experimental and model mean values with SD (mV)")
+	    plt.ylabel("experimental and model mean values with SD (mV)", fontsize=15)
 
 	    plt.subplot(2,2,2)
 
 	    e_values = numpy.array([deriv_SD, sd_peak_dV_dt_at_threshold])
 	    x_values =numpy.array([1,2])
 	    y_values = numpy.array([exp_mean_peak_deriv, mean_peak_dV_dt_at_threshold])
-	    labels_values=['exp mean peak dV/dt at th.', 'model mean peak dV/dt at th.']
+	    labels_values=['exp. mean peak dV/dt at th.', 'model mean peak dV/dt at th.']
 	    plt.errorbar(x_values, y_values, e_values, linestyle='None', marker='o')
-	    plt.xticks(x_values, labels_values, rotation=10)
+	    plt.xticks(x_values, labels_values, rotation=20)
+	    plt.tick_params(labelsize=15)
 	    plt.margins(0.1)
-	    plt.ylabel("experimental and model mean max dV/dt with SD (V/s)")
+	    plt.ylabel("experimental and model mean max dV/dt with SD (V/s)", fontsize=15)
 
 	    plt.subplot(2,2,3)
 
 	    e_values = numpy.array([nonlin_SD, sd_nonlin, suprath_nonlin_SD, suprath_sd_nonlin])
-	    x_values =numpy.array([1,2,3,4])
+	    x_values =numpy.array([1,2,4,5])
 	    y_values = numpy.array([exp_mean_nonlin, mean_nonlin, suprath_exp_mean_nonlin, suprath_mean_nonlin])
-	    labels_values=['exp mean degree of nonlinearity at th.', 'model mean degree of nonlinearity at th.', 'exp mean supth. degree of nonlinearity', 'model mean supth. degree of nonlinearity']
+	    labels_values=['exp mean degree of nonlinearity at th.', 'model mean degree of nonlinearity at th.', 'exp mean suprath. degree of nonlinearity', 'model mean suprath. degree of nonlinearity']
 	    plt.errorbar(x_values, y_values, e_values, linestyle='None', marker='o')
 	    plt.xticks(x_values, labels_values, rotation=10)
+	    plt.tick_params(labelsize=15)
 	    plt.margins(0.1)
-	    plt.ylabel("experimental and model mean degree of nonlinearity with SD (%)")
+	    plt.ylabel("experimental and model mean degree of nonlinearity with SD (%)", fontsize=15)
 
 	    plt.subplot(2,2,4)
 
 	    e_values = numpy.array([exp_mean_time_to_peak_SD, sd_time_to_peak_at_threshold])
 	    x_values =numpy.array([1,2])
 	    y_values = numpy.array([exp_mean_time_to_peak, mean_time_to_peak_at_threshold])
-	    labels_values=['exp mean time to peak at th.', 'model mean time to peak at th.']
+	    labels_values=['exp. mean time to peak at th.', 'model mean time to peak at th.']
 	    plt.errorbar(x_values, y_values, e_values, linestyle='None', marker='o')
 	    plt.xticks(x_values, labels_values, rotation=10)
+	    plt.tick_params(labelsize=15)
 	    plt.margins(0.1)
-	    plt.ylabel("experimental and model mean time to peak with SD (ms)")
+	    plt.ylabel("experimental and model mean time to peak with SD (ms)", fontsize=15)
 
 	    fig = plt.gcf()
-	    fig.set_size_inches(22, 16)
+	    fig.set_size_inches(22, 18)
 	    plt.savefig(path_figs + 'mean_values_sync' + '.pdf', dpi=600,)
 
 	    plt.figure()
 	# mean errors plot
-	    plt.title('Synchronous inputs')
+	    plt.title('Synchronous inputs', fontsize=15)
 	    e_errors = numpy.array([sd_threshold_errors, sd_prox_threshold_errors, sd_dist_threshold_errors, sd_peak_deriv_errors, sd_nonlin_errors, suprath_sd_nonlin_errors, sd_amplitude_errors, sd_time_to_peak_errors])
 	    x_errors =numpy.array([1,2,3,4,5,6,7,8])
 	    y_errors = numpy.array([mean_threshold_errors,  mean_prox_threshold_errors, mean_dist_threshold_errors, mean_peak_deriv_errors, mean_nonlin_errors, suprath_mean_nonlin_errors, mean_amplitude_errors, mean_time_to_peak_errors ])
-	    labels_errors=['mean threshold error', 'mean proximal threshold error', 'mean distal threshold error', 'mean peak dV/dt at th. error', 'mean degree of nonlinearity at th.error', 'mean supth. degree of nonlinearity error','mean amplitude at th. error', 'mean time to peak at th. error']
+	    labels_errors=['mean threshold error', 'mean proximal threshold error', 'mean distal threshold error', 'mean peak dV/dt at th. error', 'mean degree of nonlinearity at th.error', 'mean suprath. degree of nonlinearity error','mean amplitude at th. error', 'mean time to peak at th. error']
 	    plt.errorbar(x_errors, y_errors, e_errors, linestyle='None', marker='o')
-	    plt.xticks(x_errors, labels_errors, rotation=10)
+	    plt.xticks(x_errors, labels_errors, rotation=20)
+	    plt.tick_params(labelsize=15)
 	    plt.margins(0.1)
-	    plt.ylabel("model mean errors in unit of the experimental SD (with SD)")
+	    plt.ylabel("model mean errors in unit of the experimental SD (with SD)", fontsize=15)
 
 	    fig = plt.gcf()
-	    fig.set_size_inches(16, 16)
+	    fig.set_size_inches(16, 18)
 	    plt.savefig(path_figs + 'mean_errors_sync' + '.pdf', dpi=600,)
 
 	    exp_n=92
@@ -1391,9 +1415,27 @@ class ObliqueIntegrationTest(Test):
 
 	        plt.xlabel("time (ms)")
 	        plt.ylabel("Voltage (mV)")
+	        plt.xlim(140, 250)
 	    fig = plt.gcf()
 	    fig.set_size_inches(12, 18)
 	    plt.savefig(path_figs + 'traces_async' + '.pdf', dpi=600,)
+
+	    fig0, axes0 = plt.subplots(nrows=2, ncols=1)
+	    fig0.tight_layout()
+	    fig0.suptitle('Asynchronous inputs')
+	    for i in range (0,len(dend_loc000)):
+	        plt.subplot(5,2,i+1)
+	        plt.subplots_adjust(hspace = 0.5)
+	        for j, number in enumerate(num):
+	            plt.plot(sep_results[i][j][0][0]['T'],sep_results[i][j][0][0]['V'], 'k')       # somatic traces
+	        plt.title('Input in dendrite '+str(dend_loc000[i][0])+ ' at location: ' +str(dend_loc000[i][1]))
+
+	        plt.xlabel("time (ms)")
+	        plt.ylabel("Somatic voltage (mV)")
+	        plt.xlim(140, 250)
+	    fig = plt.gcf()
+	    fig.set_size_inches(12, 18)
+	    plt.savefig(path_figs + 'somatic_traces_async' + '.pdf', dpi=600,)
 
 	    soma_depol=numpy.array([])
 	    soma_depols=[]
@@ -1441,7 +1483,7 @@ class ObliqueIntegrationTest(Test):
 	        sep_soma_expected.append(soma_expected)
 	        sep_max_dV_dt.append(max_dV_dt)
 	        sep_nonlin.append(nonlin)
-	        nonlins_at_th=numpy.append(nonlins_at_th, nonlin[4])      #degree of nonlin at 4 inputs, that is the threshold in the synchronous case
+	        nonlins_at_th=numpy.append(nonlins_at_th, nonlin[5])      #degree of nonlin at 4 inputs, that is the threshold in the synchronous case
 
 	        soma_depols=[]
 	        dV_dt=[]
@@ -1545,11 +1587,11 @@ class ObliqueIntegrationTest(Test):
 
 	    fig0, axes0 = plt.subplots(nrows=5, ncols=2)
 	    fig0.tight_layout()
-	    fig0.suptitle('Asynchronous inputs')
+	    fig0.suptitle('Asynchronous inputs', fontsize=15)
 	    for j in range (0,len(dend_loc000)):
 	        plt.subplot(5,2,j+1)
 	        x =numpy.array([])
-	        labels = ['exp mean\n with SD']
+	        labels = ['exp. mean\n with SD']
 	        e = numpy.array([async_nonlin_SD])
 	        x2 =numpy.array([1])
 	        y2 = numpy.array([async_nonlin])
@@ -1560,9 +1602,10 @@ class ObliqueIntegrationTest(Test):
 	            plt.plot(x[i+1], sep_nonlin[j][i], 'o')
 
 	        plt.errorbar(x2, y2, e, linestyle='None', marker='o', color='blue')
-	        plt.xticks(x, labels, rotation=30)
+	        plt.xticks(x, labels, rotation=40)
+	        plt.tick_params(labelsize=15)
 	        plt.margins(0.1)
-	        plt.ylabel("Degree of nonlinearity (%)")
+	        plt.ylabel("Degree of nonlinearity (%)", fontsize=15)
 	        plt.title('dendrite '+str(dend_loc000[j][0])+ ' location: ' +str(dend_loc000[j][1]))
 
 	    fig = plt.gcf()
@@ -1584,15 +1627,16 @@ class ObliqueIntegrationTest(Test):
 
 	    fig0, axes0 = plt.subplots(nrows=5, ncols=2)
 	    fig0.tight_layout()
-	    fig0.suptitle('Asynchronous inputs')
+	    fig0.suptitle('Asynchronous inputs', fontsize=15)
 	    for j in range (0,len(dend_loc000)):
 	        plt.subplot(5,2,j+1)
 	        for i in range (0, len(async_nonlin_errors[j])):
 	            plt.plot(x[i], async_nonlin_errors[j][i], 'o')
 
 	        plt.xticks(x, labels[1:-1], rotation=20)
+	        plt.tick_params(labelsize=15)
 	        plt.margins(0.1)
-	        plt.ylabel("Degree of nonlin. error (%)")
+	        plt.ylabel("Degree of nonlin. error (%)", fontsize=15)
 	        plt.title('dendrite '+str(dend_loc000[j][0])+ ' location: ' +str(dend_loc000[j][1]))
 	    fig = plt.gcf()
 	    fig.set_size_inches(18, 20)
@@ -1740,7 +1784,7 @@ class ObliqueIntegrationTest(Test):
 
 
 class SomaticFeaturesTest(Test):
-	"""Tests if the model enters depolarization block under current injection of increasing amplitudes."""
+	"""Tests some somatic features under current injection of increasing amplitudes."""
 
 	def __init__(self,
 			     observation = {}  ,
@@ -1760,7 +1804,7 @@ class SomaticFeaturesTest(Test):
 		with open('./stimfeat/PC_newfeat_No14112401_15012303-m990803_stimfeat.json') as f:
 		    self.config = json.load(f, object_pairs_hook=collections.OrderedDict)
 
-		description = "Tests if the model enters depolarization block under current injection of increasing amplitudes."
+		description = "Tests some somatic features under current injection of increasing amplitudes."
 
 	score_type = ZScore3
 
@@ -1876,24 +1920,13 @@ class SomaticFeaturesTest(Test):
 	    feature_values=efel_results[0][feature_type]
 
 
-	    #feature_error=abs(feature_values-target_mean)/target_sd
 	    feature_mean=numpy.mean(feature_values)
 	    feature_sd=numpy.std(feature_values)
-	    #feature_error_mean=numpy.mean(feature_error)
-	    #feature_error_sd=numpy.std(feature_error)
-
 
 	    feature_result={feature_name:{'traces':traces,
 	                                  'feature values': feature_values,
-	                                  #'feature error':feature_error,
 	                                  'feature mean': feature_mean,
 	                                  'feature sd': feature_sd}}
-	                                  #'mean feature error':feature_error_mean,
-	                                  #'feature error sd':feature_error_sd,
-	                                  #'target mean': target_mean,
-	                                  #'target sd': target_sd}}
-
-	    #feature_result[feature_name]=[traces, efel_results]
 	    return feature_result
 
 	def create_figs(self, model, traces_results, features_names, feature_results_dict, observation):
@@ -1943,18 +1976,6 @@ class SomaticFeaturesTest(Test):
 	    axs[0].set_title('Absolute Features')
 	    plt.savefig(path_figs + 'absolute_features' + '.pdf', dpi=600,)
 
-	'''
-	def validate_observation(self, observation):
-
-		try:
-			assert type(observation['mean_Ith']) is Quantity
-			assert type(observation['Ith_std']) is Quantity
-			assert type(observation['mean_Veq']) is Quantity
-			assert type(observation['Veq_std']) is Quantity
-		except Exception as e:
-			raise ObservationError(("Observation must be of the form "
-									"{'mean':float*mV,'std':float*mV}"))
-	'''
 
 	def generate_prediction(self, model):
 		"""Implementation of sciunit.Test.generate_prediction."""
