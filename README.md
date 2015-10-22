@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/scidash/neuronunit.svg?branch=master)](https://travis-ci.org/scidash/neuronunit)
+[![Build Status](https://travis-ci.org/rgerkin/neuronunit.svg?branch=master)](https://travis-ci.org/rgerkin/neuronunit)
 
 NeuronUnit: A SciUnit repository for neuroscience-related tests, capabilities and so on.
 
