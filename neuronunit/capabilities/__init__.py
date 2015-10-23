@@ -23,8 +23,8 @@ class ProducesMembranePotential(Capability):
 		print("Vm mean is", np.mean(vm))
 		print("Vm base mean is ", np.mean(vm.base))
 		print("Vm base median is ", np.median(vm.base))
-		print("Vm median is ", np.median(vm))
-		return np.median(vm)
+		print("Vm median is ", np.median(vm.base)*vm.units)
+		return np.median(vm.base)*vm.units
 
 class ProducesSpikes(sciunit.Capability):
 	"""
