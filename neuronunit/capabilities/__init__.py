@@ -20,6 +20,10 @@ class ProducesMembranePotential(Capability):
 		vm = self.get_membrane_potential()
 		print("Vm is", vm)
 		print("Vm base is", vm.base)
+		print("Vm mean is", np.mean(vm))
+		print("Vm base mean is ", np.mean(vm.base))
+		print("Vm base median is ", np.median(vm.base))
+		print("Vm median is ", np.median(vm))
 		return np.median(vm)
 
 class ProducesSpikes(sciunit.Capability):
