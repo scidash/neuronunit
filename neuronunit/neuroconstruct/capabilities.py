@@ -37,21 +37,24 @@ class Runnable_NC(Capability):
 				channel.receive()
 				#self.gateway.terminate()
 			
-
-	def run(self):
+	def run(self, only_generate=False):
 		"""Runs the model using jython via execnet and returns a 
 		directory of simulation results"""
 		self.prepare()
 		if self.ran is False or self.rerun is True or self.always_rerun is True:
-			print("Running simulation...")	
+			if only_generate:
+				print("Generating simulation files...")
+			else:
+				print("Running simulation...")	
 			self.sim_path = utils.run_sim(project_path=self.project_path,
+										  only_generate=only_generate,
 										  useSocket=True,
 										  useNC=True,
 										  useNeuroTools=True,
 										  runtime_methods=self.runtime_methods,
 										  gw=self.gateway)
 			self.run_t = datetime.now()
-			self.ran = True
+			self.ran = not only_generate
 			self.rerun = False
 			del self.gateway
 		else:
