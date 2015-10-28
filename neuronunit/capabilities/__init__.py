@@ -18,12 +18,7 @@ class ProducesMembranePotential(Capability):
 
 	def get_median_vm(self):
 		vm = self.get_membrane_potential()
-		print("Vm is", vm)
-		print("Vm base is", vm.base)
-		print("Vm mean is", np.mean(vm))
-		print("Vm base mean is ", np.mean(vm.base))
-		print("Vm base median is ", np.median(vm.base))
-		print("Vm median is ", np.median(vm.base)*vm.units)
+		# return np.median(vm) # Doesn't work due to issues with 'quantities'
 		return np.median(vm.base)*vm.units
 
 class ProducesSpikes(sciunit.Capability):
