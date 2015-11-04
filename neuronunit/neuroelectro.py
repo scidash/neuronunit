@@ -108,12 +108,13 @@ class NeuroElectroData(object):
 		url += urlencode(query)
 		return url
 	
-	def get_json(self,params=None):
+	def get_json(self, params=None, quiet=False):
 		"""Gets JSON data from neuroelectro.org based on the currently 
 		set neuron and ephys property.  Use 'params' to constrain the 
 		data returned."""
 		url = self.make_url(params=params)
-		print(url)
+		if not quiet:
+			print(url)
 		try:
 			url_result = urlopen(url,None,3) # Get the page.  
 			html = url_result.read() # Read out the HTML (actually JSON)
@@ -136,12 +137,13 @@ class NeuroElectroData(object):
 			self.json_object = json.loads(html)
 		return self.json_object
 
-	def get_values(self,params=None): 
+	def get_values(self, params=None, quiet=False): 
 		"""Gets values from neuroelectro.org.  
 		We will use 'params' in the future to specify metadata (e.g. temperature) 
 		that neuroelectro.org will provide."""  
-		print("Getting data values from neuroelectro.org")
-		self.get_json(params=params)
+		if not quiet:
+			print("Getting data values from neuroelectro.org")
+		self.get_json(params=params, quiet=quiet)
 		if 'objects' in self.json_object:
 			data = self.json_object['objects'] 
 		else:
@@ -180,8 +182,9 @@ class NeuroElectroDataMap(NeuroElectroData):
 		url += '&'+urlencode(query)
 		return url
 	
-	def get_values(self,params=None):
-		data = super(NeuroElectroDataMapTest,self).get_values(params=params)
+	def get_values(self, params=None, quiet=False):
+		data = super(NeuroElectroDataMapTest,self).get_values(params=params, \
+															  quiet=quiet)
 		if data:
 			self.neuron_name = data['ncm']['n']['name'] 
 			# Set the neuron name from the json data.  
@@ -207,8 +210,9 @@ class NeuroElectroSummary(NeuroElectroData):
 	
 	url = API_URL+'nes/'
 	
-	def get_values(self,params=None):
-		data = super(NeuroElectroSummary, self).get_values(params=params)
+	def get_values(self, params=None, quiet=False):
+		data = super(NeuroElectroSummary, self).get_values(params=params, \
+														   quiet=quiet)
 		if data:
 			self.neuron_name = data['n']['name'] 
 			# Set the neuron name from the json data.  

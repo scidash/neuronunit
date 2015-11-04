@@ -5,7 +5,7 @@ except ImportError:
 
 setup(
 	name='neuronunit',
-	version='0.1.7.1',
+	version='0.1.7.2',
 	author='Rick Gerkin',
 	author_email='rgerkin@asu.edu',
         packages=[
