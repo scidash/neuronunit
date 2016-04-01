@@ -7,6 +7,7 @@ import numpy as np
 
 import sciunit
 from sciunit import Capability
+from .spike_functions import spikes2amplitudes,spikes2widths
 from .channel import *
 
 class ProducesMembranePotential(Capability):
@@ -16,10 +17,26 @@ class ProducesMembranePotential(Capability):
 		"""Must return a neo.core.AnalogSignal."""
 		raise NotImplementedError()
 
+	def get_mean_vm(self):
+		vm = self.get_membrane_potential()
+		# return np.median(vm) # Doesn't work due to issues with 'quantities'
+		return np.mean(vm.base)*vm.units
+
 	def get_median_vm(self):
 		vm = self.get_membrane_potential()
 		# return np.median(vm) # Doesn't work due to issues with 'quantities'
 		return np.median(vm.base)*vm.units
+
+	def get_std_vm(self):
+		vm = self.get_membrane_potential()
+		# return np.median(vm) # Doesn't work due to issues with 'quantities'
+		return np.std(vm.base)*vm.units
+
+	def get_iqr_vm(self):
+		vm = self.get_membrane_potential()
+		# return np.median(vm) # Doesn't work due to issues with 'quantities'
+		return (np.percentile(75) - np.percentile(25))*vm.units
+
 
 class ProducesSpikes(sciunit.Capability):
 	"""
@@ -36,13 +53,17 @@ class ProducesSpikes(sciunit.Capability):
 		
 		raise NotImplementedError()
 
+	def get_spike_count(self):
+		spike_train = self.get_spike_train()
+		return len(spike_train)
+
 
 class ProducesActionPotentials(ProducesSpikes):
 	"""Indicates the model produces action potential waveforms.
 	Waveforms must have a temporal extent.
 	""" 
 
-	def get_action_potentials(self):
+	def get_APs(self):
 		"""Gets action potential waveform chunks from the model.
 		
     	Returns
@@ -53,10 +74,16 @@ class ProducesActionPotentials(ProducesSpikes):
 
 		raise NotImplementedError()
 
-	def get_action_potential_widths(self):
-		action_potentials = self.get_action_potentials()
-		widths = [utils.ap_width(x) for x in action_potentials]
+	def get_AP_widths(self):
+		action_potentials = self.get_APs()
+		widths = spikes2widths(action_potentials)
 		return widths
+
+	def get_AP_amplitudes(self):
+		action_potentials = self.get_APs()
+		amplitudes = spikes2amplitudes(action_potentials)
+		return amplitudes
+
 
 class ReceivesCurrent(Capability):
 	"""Indicates that somatic current can be injected into the model."""
@@ -72,9 +99,11 @@ class ReceivesCurrent(Capability):
 		
 		raise NotImplementedError()
 
-class LEMS_Runnable(sciunit.Capability):
-    """Capability for models that can be run by executing LEMS files."""
-    def LEMS_run(self,**run_params):
+
+class Runnable(sciunit.Capability):
+    """Capability for models that can be run."""
+    
+    def run(self, **run_params):
         return NotImplementedError("%s not implemented" % inspect.stack()[0][3])
  
 
