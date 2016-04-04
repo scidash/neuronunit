@@ -34,7 +34,7 @@ class TFRTypeTest(RheobaseTest):
         if verbose:
             if len(sub):
                 print("Highest subthreshold current is %s" \
-                      % (float(sub.max().round(2)))
+                      % float(sub.max().round(2)))
             else:
                 print("No subthreshold current was tested.")
             if len(supra):
