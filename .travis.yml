@@ -3,7 +3,7 @@ python:
   - "2.7"
   - "3.4"
 
-# Setup anaconda just to get fast binary installation of common pacakges
+# Setup anaconda just to get fast binary installation of common packages
 before_install:
   - sudo apt-get update
   # We do this conditionally because it saves us some downloading if the
@@ -34,6 +34,7 @@ install:
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION atlas numpy scipy matplotlib
   - source activate test-environment
   #- conda install --yes python=$TRAVIS_PYTHON_VERSION atlas numpy scipy matplotlib
+  - pip install quantities>=0.10
   - pip install neo
   - pip install git+https://github.com/neuralensemble/libNeuroML@development
   - pip install git+https://github.com/purcell/airspeed.git
