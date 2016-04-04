@@ -39,7 +39,7 @@ install:
   - pip install git+https://github.com/neuralensemble/libNeuroML@development
   - pip install git+https://github.com/purcell/airspeed.git
   - pip install --allow-all-external git+https://github.com/rgerkin/pyNeuroML.git
-  - pip install git+https://github.com/sciunit/sciunit.git@dev
+  - pip install https://codeload.github.com/scidash/sciunit/legacy.tar.gz/dev
   - python setup.py install
 
 # Setting up pre-requirements
