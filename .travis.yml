@@ -41,7 +41,7 @@ install:
   - pip install --allow-all-external git+https://github.com/rgerkin/pyNeuroML.git
   - pip install --allow-all-external git+https://github.com/neuralensemble/python-neo.git
   - pip install --allow-all-external git+https://github.com/neuralensemble/elephant.git
-  - pip install git+https://github.com/rgerkin/sciunit.git@dev
+  - pip install git+https://github.com/scidash/sciunit.git@dev
   - python setup.py install
 
 # Setting up pre-requirements
