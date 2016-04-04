@@ -19,5 +19,6 @@ setup(
 	description='A SciUnit library for data-driven testing of single-neuron physiology models.',
 	long_description="",
 	install_requires=['neo','elephant','sciunit>=0.1.5',],
-    dependency_links = ['git+http://github.com/neuralensemble/python-neo.git#egg=neo-0.4.0dev',]
+    dependency_links = ['git+http://github.com/neuralensemble/python-neo.git#egg=neo-0.4.0dev',
+                        'git+http://github.com/scidash/sciunit.git@dev']
 )
