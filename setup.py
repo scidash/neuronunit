@@ -20,5 +20,5 @@ setup(
 	long_description="",
 	install_requires=['neo','elephant','sciunit>=0.1.5',],
     dependency_links = ['git+http://github.com/neuralensemble/python-neo.git#egg=neo-0.4.0dev',
-                        'git+http://github.com/scidash/sciunit.git@dev']
+                        'https://github.com/scidash/sciunit/tarball/dev']
 )
