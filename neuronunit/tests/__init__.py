@@ -280,9 +280,34 @@ class RheobaseTest(VmTest):
 		model.rerun = True
 		units = self.observation['value'].units
 
+		lookup = self.threshold_FI(model, units)
+		sub = np.array([x for x in lookup if lookup[x]==0])*units
+		supra = np.array([x for x in lookup if lookup[x]>0])*units
+			
+		if verbose:
+			if len(sub):
+				print("Highest subthreshold current is %s" \
+					  % (float(sub.max().round(2))*units))
+			else:
+				print("No subthreshold current was tested.")
+			if len(supra):
+				print("Lowest suprathreshold current is %s" \
+					  % supra.min().round(2))
+			else:
+				print("No suprathreshold current was tested.")
+				
+		if len(sub) and len(supra):
+			rheobase = supra.min()
+		else:
+			rheobase = None
+		prediction['value'] = rheobase
+
+		return prediction
+
+	def threshold_FI(self, model):
 		lookup = {} # A lookup table global to the function below.  
+		
 		def f(ampl):
-			"""Returns 0 when 'ampl' is sufficient to produce one spike"""
 			if float(ampl) not in lookup:
 				model.inject_current({'amplitude':ampl}) 
 				n_spikes = model.get_spike_count()
@@ -310,25 +335,7 @@ class RheobaseTest(VmTest):
 				f(min(-small,supra.min()*2))
 			i += 1
 
-		if verbose:
-			if len(sub):
-				print("Highest subthreshold current is %s" \
-					  % (float(sub.max().round(2))*units))
-			else:
-				print("No subthreshold current was tested.")
-			if len(supra):
-				print("Lowest suprathreshold current is %s" \
-					  % supra.min().round(2))
-			else:
-				print("No suprathreshold current was tested.")
-				
-		if len(sub) and len(supra):
-			rheobase = supra.min()
-		else:
-			rheobase = None
-		prediction['value'] = rheobase
-
-		return prediction
+		return lookup
 
 	def compute_score(self, observation, prediction, verbose=False):
 		"""Implementation of sciunit.Test.score_prediction."""
