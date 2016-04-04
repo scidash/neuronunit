@@ -34,8 +34,8 @@ install:
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION atlas numpy scipy matplotlib
   - source activate test-environment
   #- conda install --yes python=$TRAVIS_PYTHON_VERSION atlas numpy scipy matplotlib
-  - pip install git+https://github.com/neuralensemble/python-neo.git
   - pip install quantities
+  - pip install git+https://github.com/neuralensemble/python-neo.git
   - pip install elephant
   - pip install git+https://github.com/neuralensemble/libNeuroML@development
   - pip install git+https://github.com/purcell/airspeed.git
