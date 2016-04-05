@@ -34,12 +34,13 @@ install:
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION atlas numpy scipy matplotlib
   - source activate test-environment
   #- conda install --yes python=$TRAVIS_PYTHON_VERSION atlas numpy scipy matplotlib
-  - pip install --allow-all-external git+https://github.com/neuralensemble/python-neo.git
+  - pip install git+https://github.com/python-quantities/python-quantities@master
+  - pip install git+https://github.com/neuralensemble/python-neo.git
   - pip install elephant
   - pip install git+https://github.com/neuralensemble/libNeuroML@development
   - pip install git+https://github.com/purcell/airspeed.git
-  - pip install --allow-all-external git+https://github.com/rgerkin/pyNeuroML.git
-  - pip install git+https://github.com/sciunit/sciunit.git@dev
+  - pip install git+https://github.com/rgerkin/pyNeuroML.git
+  - pip install https://codeload.github.com/scidash/sciunit/legacy.tar.gz/dev
   - python setup.py install
 
 # Setting up pre-requirements
