@@ -44,28 +44,33 @@ class VmTest(sciunit.Test):
 	# Observation values with units.  
 	united_observation_keys = ['value','mean','std'] 
 
-	def validate_observation(self, observation):
+	def validate_observation(self, observation, united_keys=['value','mean'], nonunited_keys=[]):
 		try:
 			assert type(observation) is dict
-			keys = ['value','mean']
-			assert any([key in observation for key in keys])
-			for key in keys:
+			assert any([key in observation for key in united_keys]) \
+				or len(nonunited_keys)
+			for key in united_keys:
 				if key in observation:
 					assert type(observation[key]) is Quantity
+			for key in nonunited_keys:
+				if key in observation:
+					assert type(observation[key]) is not Quantity
 		except Exception as e:
-			raise sciunit.ObservationError(("Observation must be a dictionary with a "
-									"value key and/or a mean key and each must "
-									"have units from the quantities package."))
-		for key in keys:
+			key_str = 'and/or a '.join(['%s key' % key for key in united_keys])
+			msg = ("Observation must be a dictionary with a %s and each key "
+				   "must have units from the quantities package." % key_str)
+			raise sciunit.ObservationError(msg)
+		for key in united_keys:
 			if key in observation:
 				provided = observation[key].simplified.units
 				required = self.units.simplified.units
 				if provided != required: # Units don't match spec.  
-					raise sciunit.ObservationError(("Units of %s are required for %s "
-											"but units of %s were provided") %\
-											(required.dimensionality.__str__(),
-											 key, 
-											 provied.dimensionality.__str__())) 
+					msg = ("Units of %s are required for %s but units of %s "
+						   "were provided" % (required.dimensionality.__str__(),
+											  key, 
+											  provided.dimensionality.__str__())
+						   )
+					raise sciunit.ObservationError(msg) 
 
 	def bind_score(self, score, model, observation, prediction):
 		score.related_data['vm'] = model.get_membrane_potential()
@@ -304,7 +309,7 @@ class RheobaseTest(VmTest):
 
 		return prediction
 
-	def threshold_FI(self, model):
+	def threshold_FI(self, model, units, guess=None):
 		lookup = {} # A lookup table global to the function below.  
 		
 		def f(ampl):
@@ -316,7 +321,12 @@ class RheobaseTest(VmTest):
 
 		max_iters = 10
 		f(0.0*units)
-		high = self.observation['value']*2
+		if guess is None:
+			try:
+				guess = self.observation['value']
+			except KeyError:
+				guess = 100*pq.pA
+		high = guess*2
 		high = (50.0*pq.pA).rescale(units) if not high else high 
 		small = (1*pq.pA).rescale(units)
 		f(high)
