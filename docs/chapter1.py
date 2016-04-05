@@ -3,14 +3,14 @@
 
 # ![NeuronUnit Logo](https://raw.githubusercontent.com/scidash/assets/master/logos/neuronunit.png)
 
-# ###NeuronUnit is based on SciUnit, a discpline-agnostic framework for data-driven unit testing of scientific models.  
+# ### NeuronUnit is based on SciUnit, a discpline-agnostic framework for data-driven unit testing of scientific models.  
 # 
-# #Chapter 1
+# # Chapter 1
 # NeuronUnit can be used to test neuron and ion channel models against the experimental data that you think they should aim to recapitulate.  
 # - Have you read the [SciUnit documentation](https://github.com/scidash/sciunit/blob/master/docs/chapter1.ipynb)?  It might be good to start there!<br>
 # - A few common Python packages are used below, all of which are available from PyPI.<hr>
 
-# ###Any NeuronUnit test script will have the following actions: 
+# ### Any NeuronUnit test script will have the following actions: 
 # Most of these will be abstracted away in SciUnit or NeuronUnit modules that make things easier for the developer:  
 # 1. Instantiate a model(s) from a model class, with parameters of interest to build a specific model.    
 # 1. Instantiate a test(s) from a test class, with parameters of interest to build a specific test.  
@@ -20,7 +20,7 @@
 # 1. Bind the score to the specific model/test combination and any related data from test execution. 
 # 1. Visualize the score (i.e. print or display the result of the test).  
 
-# ###Here, we will break down how this is accomplished in NeuronUnit.  
+# ### Here, we will break down how this is accomplished in NeuronUnit.  
 # Although NeuronUnit contains several model and test classes that make it easy to work with standards in neuron modeling and electrophysiology data reporting, here we will use toy model and test classes constructed on-the-fly so the process of model and test construction is fully transparent.  
 # 
 # Here is a toy model class:
@@ -89,7 +89,6 @@ my_neuron_model = ToyNeuronModel(-60.0*mV, name='my_neuron_model')
 
 from quantities import Quantity
 from sciunit.scores import BooleanScore # One of many score types.  
-from sciunit.comparators import compute_zscore # A function for computing a raw z-score.  
 from sciunit.converters import RangeToBoolean
 
 class ToyAveragePotentialTest(sciunit.Test):
@@ -103,7 +102,6 @@ class ToyAveragePotentialTest(sciunit.Test):
         sciunit.Test.__init__(self,observation,name) # Call the base constructor.  
         self.required_capabilities += (ProducesMembranePotential,) # This test will require a model to 
                                                                    # express these capabilities
-        self.comparator = compute_zscore
         self.converter = RangeToBoolean(-2,2)
 
     description = "A test of the average membrane potential of a cell."
@@ -118,7 +116,7 @@ class ToyAveragePotentialTest(sciunit.Test):
             raise sciunit.ObservationError(("Observation must be of the form "
                                             "{'mean':float*mV,'std':float*mV}")) # If not, raise this exception.  
 
-    def generate_prediction(self, model):
+    def generate_prediction(self, model, verbose=True):
         """Implementation of sciunit.Test.generate_prediction."""
         vm = model.get_median_vm() # If the model has the capability 'ProducesMembranePotential', 
                                    # then it implements this method
@@ -131,7 +129,7 @@ class ToyAveragePotentialTest(sciunit.Test):
         return score
 
 
-# ###The test constructor takes an *observation* to parameterize the test
+# ### The test constructor takes an *observation* to parameterize the test
 # This observation could come from anywhere:  
 # - Data from your lab
 # - Results you saw in a paper
@@ -148,7 +146,7 @@ my_average_potential_test = ToyAveragePotentialTest(my_observation, name='my_ave
 
 # A few things happen upon test instantiation, including validation of the observation. Since the observation has the correct format (for this test class), `ToyAveragePotentialTest.validate_observation` will complete successfully and the test will be ready for use.  
 # 
-# ###Now we judge our toy model using the test we wrote above:
+# ### Now we judge our toy model using the test we wrote above:
 
 # In[5]:
 
@@ -180,4 +178,4 @@ score.summarize()
 score.describe()
 
 
-# ###On to [Chapter 2](chapter2.ipynb)!
+# ### On to [Chapter 2](chapter2.ipynb)!
