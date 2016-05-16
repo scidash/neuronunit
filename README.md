@@ -137,7 +137,7 @@ ax2.set_xlim(283,284.7)
 ![png](https://raw.githubusercontent.com/scidash/assets/master/figures/spike_width_test2.png)
 
 # Tutorial:
-NeuronUnit is based on SciUnit, a discpline-agnostic framework for data-driven unit testing of scientific models.  Any test script will do the following things in sequence.  Most of these will be abstracted away in SciUnit or NeuronUnit modules that make things easier:  
+NeuronUnit is based on SciUnit, a discipline-agnostic framework for data-driven unit testing of scientific models.  Any test script will do the following things in sequence.  Most of these will be abstracted away in SciUnit or NeuronUnit modules that make things easier:  
 
 1. Instantiate a model(s) from a model class, with parameters of interest to build a specific model.    
 1. Instantiate a test(s) from a test class, with parameters of interest to build a specific test.  
