@@ -137,7 +137,7 @@ ax2.set_xlim(283,284.7)
 ![png](https://raw.githubusercontent.com/scidash/assets/master/figures/spike_width_test2.png)
 
 # Tutorial:
-NeuronUnit is based on SciUnit, a discpline-agnostic framework for data-driven unit testing of scientific models.  Any test script will do the following things in sequence.  Most of these will be abstracted away in SciUnit or NeuronUnit modules that make things easier:  
+NeuronUnit is based on SciUnit, a discipline-agnostic framework for data-driven unit testing of scientific models.  Any test script will do the following things in sequence.  Most of these will be abstracted away in SciUnit or NeuronUnit modules that make things easier:  
 
 1. Instantiate a model(s) from a model class, with parameters of interest to build a specific model.    
 1. Instantiate a test(s) from a test class, with parameters of interest to build a specific test.  
@@ -153,7 +153,7 @@ Here is a toy model class:
 ```python
 class ToyNeuronModel(sciunit.Model,
                      neuronunit.capabilities.ProducesMembranePotential):
-    """A toy neuron model that is always at it resting potential"""
+    """A toy neuron model that is always at its resting potential"""
     def __init__(self, v_rest, name=None):
         self.v_rest = v_rest
         sciunit.Model.__init__(self, name=name)
@@ -165,7 +165,7 @@ class ToyNeuronModel(sciunit.Model,
         return vm
 ```
 
-The `ToyNeuronModel` class inherits from `sciunit.Model` (as do all NeuronUnit models), and also from  `ProducesMembranePotential`, which is a subclass of `sciunit.Capability`.  Inheriting from a SciUnit `Capability` is a how a SciUnit `Model` lets tests know what it can and cannot do.  It tells tests that the model will be implement any method stubbed out in the definition of that `Capability`.   
+The `ToyNeuronModel` class inherits from `sciunit.Model` (as do all NeuronUnit models), and also from  `ProducesMembranePotential`, which is a subclass of `sciunit.Capability`.  Inheriting from a SciUnit `Capability` is a how a SciUnit `Model` lets tests know what it can and cannot do.  It tells tests that the model will be implementing any method stubbed out in the definition of that `Capability`.   
 
 Let's see what the `neuronunit.capabilities.ProducesMembranePotential` capability looks like:  
 ```python
@@ -183,7 +183,7 @@ class ProducesMembranePotential(Capability):
 
 `ProducesMembranePotential` has two methods.  The first, `get_membrane_potential` is unimplemented by design.  Since there is no way to know how each model will generate and return a membrane potential time series, the `get_membrane_potential` method in this capability is left unimplemented, while the docstring describes what the model must implement in order to satisfy that capability.  In the `ToyNeuronModel` above, we see that the model implements it by simply creating a long array of resting potential values, and returning it as a `neo.core.AnalogSignal` object.  
 
-The second, `get_median_vm` is implemented, which means there is no need for the model to do implement it again.  For its implementation to work, however, the implementation of `get_membrane_potential` must be complete.  Pre-implemented capability methods such as these allow the developer to focus on implementing only a few core interactions with the model, and then getting a lot of extra functionality for free.  In the example above, once we know that the membrane potential is being returned as a `neo.core.AnalogSignal`, we can simply take the median using numpy.  We know that the membrane potential isn't being returned as a list or a tuple or some other object on which numpy's median function won't necessarily work.  
+The second, `get_median_vm` is implemented, which means there is no need for the model to implement it again.  For its implementation to work, however, the implementation of `get_membrane_potential` must be complete.  Pre-implemented capability methods such as these allow the developer to focus on implementing only a few core interactions with the model, and then getting a lot of extra functionality for free.  In the example above, once we know that the membrane potential is being returned as a `neo.core.AnalogSignal`, we can simply take the median using numpy.  We know that the membrane potential isn't being returned as a list or a tuple or some other object on which numpy's median function won't necessarily work.  
 
 Let's construct a single instance of this model, by choosing a value for the single membrane potential argument.  This toy model will now have a 60 mV membrane potential at all times:  
 
@@ -192,7 +192,7 @@ from quantities import mV
 my_neuron_model = ToyNeuronModel(-60.0*mV, name='my_neuron_model')
 ```
 
-Now we can then construct a simple test to use on this model or any other that expresses the appropriate capabilities:  
+Now we can then construct a simple test to use on this model or any other test that expresses the appropriate capabilities:  
 
 ```python
 class ToyAveragePotentialTest(sciunit.Test):
