@@ -3,8 +3,7 @@ from scipy.interpolate import interp1d
 import quantities as pq
 
 import sciunit
-from sciunit.scores import BooleanScore
-from sciunit.comparators import compute_ssd
+from sciunit.scores import BooleanScore,FloatScore
 from sciunit.converters import AtMostToBoolean
 from neuronunit.capabilities.channel import * 
 
@@ -15,7 +14,6 @@ class IVCurveTest(sciunit.Test):
         self.validate_observation(observation)
         for key,value in observation.items():
             setattr(self, key, value)
-        self.comparator = compute_ssd
         self.converter = AtMostToBoolean(pq.Quantity(100,'pA**2'))
         super(IVCurveTest,self).__init__(observation, name=name, **params)
     
@@ -66,7 +64,7 @@ class IVCurveTest(sciunit.Test):
         p = prediction
         interped = self.interp_IV_curves(o['v'], o['i'], p['v'], p['i'])
         self.interped = interped
-        score = self.comparator(interped['i_obs'],interped['i_pred'])
+        score = FloatScore.compute_ssd(interped['i_obs'],interped['i_pred'])
         return score
 
     def bind_score(self,score,model,observation,prediction):
