@@ -86,6 +86,8 @@ class LEMSModel(sciunit.Model, cap.Runnable):
                          verbose=self.run_params['v'])
         self.last_run_params = deepcopy(self.run_params)
         self.rerun = False
+        self.run_params = {} # Reset run parameters so the next test has to pass
+                             # its own run parameters and not use the same ones
 
     def update_run_params(self):
         from lxml import etree

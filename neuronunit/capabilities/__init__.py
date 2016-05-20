@@ -7,7 +7,7 @@ import numpy as np
 
 import sciunit
 from sciunit import Capability
-from .spike_functions import spikes2amplitudes,spikes2widths
+from .spike_functions import spikes2amplitudes,spikes2widths,spikes2thresholds
 from .channel import *
 
 class ProducesMembranePotential(Capability):
@@ -83,6 +83,11 @@ class ProducesActionPotentials(ProducesSpikes):
 		action_potentials = self.get_APs()
 		amplitudes = spikes2amplitudes(action_potentials)
 		return amplitudes
+
+	def get_AP_thresholds(self):
+		action_potentials = self.get_APs()
+		thresholds = spikes2thresholds(action_potentials)
+		return thresholds
 
 
 class ReceivesCurrent(Capability):
