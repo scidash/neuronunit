@@ -114,7 +114,7 @@ class VmTest(sciunit.Test):
 class InputResistanceTest(VmTest):
 	"""Tests the input resistance of a cell."""
 	
-	required_capabilities = (cap.ReceivesCurrent,)
+	required_capabilities = (cap.ReceivesSquareCurrent,)
 
 	name = "Input resistance test"
 
@@ -196,7 +196,7 @@ class InjectedCurrentAPWidthTest(APWidthTest):
 	under current injection.
 	"""
 
-	required_capabilities = (cap.ReceivesCurrent,)
+	required_capabilities = (cap.ReceivesSquareCurrent,)
 
 	params = {'injected_square_current': 
 				{'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
@@ -271,7 +271,7 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
 	under current injection.
 	"""
 
-	required_capabilities = (cap.ReceivesCurrent,)
+	required_capabilities = (cap.ReceivesSquareCurrent,)
 
 	params = {'injected_square_current': 
 				{'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
@@ -332,7 +332,7 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
 	under current injection.
 	"""
 
-	required_capabilities = (cap.ReceivesCurrent,)
+	required_capabilities = (cap.ReceivesSquareCurrent,)
 
 	params = {'injected_square_current': 
 				{'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
@@ -354,7 +354,7 @@ class RheobaseTest(VmTest):
 	under current injection.
 	"""
 
-	required_capabilities = (cap.ReceivesCurrent,
+	required_capabilities = (cap.ReceivesSquareCurrent,
 							 cap.ProducesSpikes)
 
 	params = {'injected_square_current': 
@@ -459,7 +459,7 @@ class RheobaseTest(VmTest):
 class RestingPotentialTest(VmTest):
 	"""Tests the resting potential under zero current injection."""
 	
-	required_capabilities = (cap.ReceivesCurrent,)
+	required_capabilities = (cap.ReceivesSquareCurrent,)
 
 	params = {'injected_square_current': 
 				{'amplitude':0.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
