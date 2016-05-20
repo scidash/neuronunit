@@ -14,6 +14,10 @@ import neuronunit.capabilities as cap
 from neuronunit import neuroelectro
 from .channel import *
 
+AMPL = 0.0*pq.pA
+DELAY = 100.0*pq.ms
+DURATION = 1000.0*pq.ms
+
 class VmTest(sciunit.Test):
 	"""Base class for tests involving the membrane potential of a model."""
 
@@ -44,7 +48,8 @@ class VmTest(sciunit.Test):
 	# Observation values with units.  
 	united_observation_keys = ['value','mean','std'] 
 
-	def validate_observation(self, observation, united_keys=['value','mean'], nonunited_keys=[]):
+	def validate_observation(self, observation, 
+							 united_keys=['value','mean'], nonunited_keys=[]):
 		try:
 			assert type(observation) is dict
 			assert any([key in observation for key in united_keys]) \
@@ -54,7 +59,8 @@ class VmTest(sciunit.Test):
 					assert type(observation[key]) is Quantity
 			for key in nonunited_keys:
 				if key in observation:
-					assert type(observation[key]) is not Quantity
+					assert type(observation[key]) is not Quantity \
+						or observation[key].units == pq.Dimensionless
 		except Exception as e:
 			key_str = 'and/or a '.join(['%s key' % key for key in united_keys])
 			msg = ("Observation must be a dictionary with a %s and each key "
@@ -76,13 +82,15 @@ class VmTest(sciunit.Test):
 		score.related_data['vm'] = model.get_membrane_potential()
 		score.related_data['model_name'] = '%s_%s' % (model.name,self.name)
 		
-		def plot_vm(self,ax=None,ylim=(-80,20)):
+		def plot_vm(self,ax=None,ylim=(None,None)):
 			"""A plot method the score can use for convenience."""
 			if ax is None:
 				ax = plt.gca()
 			vm = score.related_data['vm'].rescale('mV')
 			ax.plot(vm.times,vm)
-			ax.set_ylim(ylim)
+			y_min = float(vm.min()-5.0*pq.mV) if ylim[0] is None else ylim[0]
+			y_max = float(vm.max()+5.0*pq.mV) if ylim[1] is None else ylim[1]
+			ax.set_ylim(y_min,y_max)
 			ax.set_xlabel('Time (s)')
 			ax.set_ylabel('Vm (mV)')
 		score.plot_vm = MethodType(plot_vm, score) # Bind to the score.  
@@ -92,9 +100,11 @@ class VmTest(sciunit.Test):
 	def neuroelectro_summary_observation(cls, neuron):
 		reference_data = neuroelectro.NeuroElectroSummary(
 			neuron = neuron, # Neuron type lookup using the NeuroLex ID.  
-			ephysprop = {'name': cls.ephysprop_name} # Ephys property name in the NeuroElectro ontology. 
+			ephysprop = {'name': cls.ephysprop_name} # Ephys property name in 
+													 # NeuroElectro ontology. 
 			)
-		reference_data.get_values() # Get and verify summary data from neuroelectro.org. 
+		reference_data.get_values() # Get and verify summary data 
+									# from neuroelectro.org. 
 		observation = {'mean': reference_data.mean*cls.units,
 					   'std': reference_data.std*cls.units,
 					   'n': reference_data.n}
@@ -114,9 +124,8 @@ class InputResistanceTest(VmTest):
 	
 	units = pq.ohm*1e6
 
-	params = {'injected_current':
-				{'amplitude':-10.0*pq.pA, 'delay':100*pq.ms, 
-				 'duration':500*pq.ms}}
+	params = {'injected_current': 
+				{'amplitude':-10.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 	
 	ephysprop_name = 'Input Resistance'
 
@@ -161,7 +170,8 @@ class APWidthTest(VmTest):
 
 	def generate_prediction(self, model, verbose=False):
 		"""Implementation of sciunit.Test.generate_prediction."""
-		# Method implementation guaranteed by ProducesActionPotentials capability.
+		# Method implementation guaranteed by 
+		# ProducesActionPotentials capability.
 		model.rerun = True
 		widths = model.get_AP_widths() 
 		# Put prediction in a form that compute_score() can use.  
@@ -175,7 +185,8 @@ class APWidthTest(VmTest):
 		if prediction['n'] == 0:
 			score = scores.InsufficientDataScore(None)
 		else:
-			score = super(APWidthTest,self).compute_score(observation,prediction)	
+			score = super(APWidthTest,self).compute_score(observation,
+														  prediction)	
 		return score
 
 
@@ -187,8 +198,9 @@ class InjectedCurrentAPWidthTest(APWidthTest):
 
 	required_capabilities = (cap.ReceivesCurrent,)
 
-	params = {'injected_current':{'amplitude':100.0*pq.pA}}
-
+	params = {'injected_current': 
+				{'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+	
 	name = "Injected current AP width test"
 
 	description = ("A test of the widths of action potentials "
@@ -197,7 +209,8 @@ class InjectedCurrentAPWidthTest(APWidthTest):
 
 	def generate_prediction(self, model, verbose=False):
 		model.inject_current(self.params['injected_current']) 
-		return super(InjectedCurrentAPWidthTest,self).generate_prediction(model, verbose=verbose)
+		return super(InjectedCurrentAPWidthTest,self).\
+			generate_prediction(model, verbose=verbose)
 
 
 class APAmplitudeTest(VmTest):
@@ -207,7 +220,7 @@ class APAmplitudeTest(VmTest):
 
 	name = "AP amplitude test"
 
-	description = ("A test of the heights (peak amplitude) of "
+	description = ("A test of the amplitude (peak minus threshold) of "
 				   "action potentials.")
 
 	score_type = scores.ZScore
@@ -218,9 +231,10 @@ class APAmplitudeTest(VmTest):
 
 	def generate_prediction(self, model, verbose=False):
 		"""Implementation of sciunit.Test.generate_prediction."""
-		# Method implementation guaranteed by ProducesActionPotentials capability.
+		# Method implementation guaranteed by 
+		# ProducesActionPotentials capability.
 		model.rerun = True
-		heights = model.get_AP_amplitudes() 
+		heights = model.get_AP_amplitudes() - model.get_AP_thresholds()
 		# Put prediction in a form that compute_score() can use.  
 		prediction = {'mean':np.mean(heights) if len(heights) else None,
 					  'std':np.std(heights) if len(heights) else None,
@@ -236,6 +250,20 @@ class APAmplitudeTest(VmTest):
 												prediction, verbose=verbose)	
 		return score
 
+	@classmethod
+	def neuroelectro_summary_observation(cls, neuron):
+		reference_data = neuroelectro.NeuroElectroSummary(
+			neuron = neuron, # Neuron type lookup using the NeuroLex ID.  
+			ephysprop = {'name': cls.ephysprop_name} # Ephys property name in 
+													 # NeuroElectro ontology. 
+			)
+		reference_data.get_values() # Get and verify summary data 
+									# from neuroelectro.org. 
+		observation = {'mean': reference_data.mean*cls.units,
+					   'std': reference_data.std*cls.units,
+					   'n': reference_data.n}
+		return observation
+
 
 class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
 	"""
@@ -245,8 +273,9 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
 
 	required_capabilities = (cap.ReceivesCurrent,)
 
-	params = {'injected_current':{'amplitude':100.0*pq.pA}}
-
+	params = {'injected_current': 
+				{'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+	
 	name = "Injected current AP amplitude test"
 
 	description = ("A test of the heights (peak amplitudes) of "
@@ -255,7 +284,68 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
 
 	def generate_prediction(self, model, verbose=False):
 		model.inject_current(self.params['injected_current']) 
-		return super(InjectedCurrentAPAmplitudeTest,self).generate_prediction(model, verbose=verbose)
+		return super(InjectedCurrentAPAmplitudeTest,self).\
+				generate_prediction(model, verbose=verbose)
+
+
+class APThresholdTest(VmTest):
+	"""Tests the full widths of action potentials at their half-maximum."""
+	
+	required_capabilities = (cap.ProducesActionPotentials,)
+
+	name = "AP threshold test"
+
+	description = ("A test of the membrane potential threshold at which "
+				   "action potentials are produced.")
+
+	score_type = scores.ZScore
+	
+	units = pq.mV
+	
+	ephysprop_name = 'Spike Threshold'
+
+	def generate_prediction(self, model, verbose=False):
+		"""Implementation of sciunit.Test.generate_prediction."""
+		# Method implementation guaranteed by 
+		# ProducesActionPotentials capability.
+		model.rerun = True
+		threshes = model.get_AP_thresholds() 
+		# Put prediction in a form that compute_score() can use.  
+		prediction = {'mean':np.mean(threshes) if len(threshes) else None,
+					  'std':np.std(threshes) if len(threshes) else None,
+					  'n':len(threshes)}
+		return prediction
+
+	def compute_score(self, observation, prediction, verbose=False):
+		"""Implementation of sciunit.Test.score_prediction."""
+		if prediction['n'] == 0:
+			score = scores.InsufficientDataScore(None)
+		else:
+			score = super(APThresholdTest,self).compute_score(observation,
+															  prediction)	
+		return score
+
+
+class InjectedCurrentAPThresholdTest(APThresholdTest):
+	"""
+	Tests the thresholds of action potentials 
+	under current injection.
+	"""
+
+	required_capabilities = (cap.ReceivesCurrent,)
+
+	params = {'injected_current': 
+				{'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+	
+	name = "Injected current AP threshold test"
+
+	description = ("A test of the membrane potential threshold at which "
+				   "action potentials are produced under current injection.")
+
+	def generate_prediction(self, model, verbose=False):
+		model.inject_current(self.params['injected_current']) 
+		return super(InjectedCurrentAPThresholdTest,self).\
+				generate_prediction(model, verbose=verbose)
 
 
 class RheobaseTest(VmTest):
@@ -267,8 +357,9 @@ class RheobaseTest(VmTest):
 	required_capabilities = (cap.ReceivesCurrent,
 							 cap.ProducesSpikes)
 
-	params = {'injected_current':{'amplitude':0.0*pq.pA}}
-
+	params = {'injected_current': 
+				{'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+	
 	name = "Rheobase test"
 
 	description = ("A test of the rheobase, i.e. the minimum injected current "
@@ -280,12 +371,13 @@ class RheobaseTest(VmTest):
 		
 	def generate_prediction(self, model, verbose=False):
 		"""Implementation of sciunit.Test.generate_prediction."""
-		# Method implementation guaranteed by ProducesActionPotentials capability.
+		# Method implementation guaranteed by 
+		# ProducesActionPotentials capability.
 		prediction = {'value': None}
 		model.rerun = True
 		units = self.observation['value'].units
 
-		lookup = self.threshold_FI(model, units)
+		lookup = self.threshold_FI(model, units, verbose=verbose)
 		sub = np.array([x for x in lookup if lookup[x]==0])*units
 		supra = np.array([x for x in lookup if lookup[x]>0])*units
 			
@@ -309,14 +401,16 @@ class RheobaseTest(VmTest):
 
 		return prediction
 
-	def threshold_FI(self, model, units, guess=None):
+	def threshold_FI(self, model, units, guess=None, verbose=False):
 		lookup = {} # A lookup table global to the function below.  
 		
 		def f(ampl):
 			if float(ampl) not in lookup:
 				model.inject_current({'amplitude':ampl}) 
 				n_spikes = model.get_spike_count()
-				print("Injected %s current and got %d spikes" % (ampl,n_spikes))
+				if verbose:
+					print("Injected %s current and got %d spikes" % \
+							(ampl,n_spikes))
 				lookup[float(ampl)] = n_spikes
 
 		max_iters = 10
@@ -354,7 +448,9 @@ class RheobaseTest(VmTest):
 		if prediction['value'] is None:
 			score = scores.InsufficientDataScore(None)
 		else:
-			score = super(RheobaseTest,self).compute_score(observation, prediction, verbose=verbose)	
+			score = super(RheobaseTest,self).\
+						compute_score(observation, prediction, verbose=verbose)	
+			#self.bind_score(score,None,observation,prediction)
 		return score
 
 
@@ -386,7 +482,7 @@ class RestingPotentialTest(VmTest):
 		"""Implementation of sciunit.Test.generate_prediction."""
 		model.rerun = True
 		model.inject_current({'amplitude':0.0*pq.pA}) 
-		median = model.get_median_vm() # Use median instead of mean for robustness.  
+		median = model.get_median_vm() # Use median for robustness.  
 		std = model.get_std_vm()
 		prediction = {'mean':median, 'std':std}
 		return prediction
