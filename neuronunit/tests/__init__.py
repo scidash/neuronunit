@@ -124,14 +124,14 @@ class InputResistanceTest(VmTest):
 	
 	units = pq.ohm*1e6
 
-	params = {'injected_current': 
+	params = {'injected_square_current': 
 				{'amplitude':-10.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 	
 	ephysprop_name = 'Input Resistance'
 
 	def generate_prediction(self, model, verbose=False):
 		"""Implementation of sciunit.Test.generate_prediction."""
-		model.inject_current(self.params['injected_current']) 
+		model.inject_square_current(self.params['injected_square_current']) 
 		vm = model.get_membrane_potential() 
 		
 		def get_segment(self,vm,start,finish):
@@ -139,7 +139,7 @@ class InputResistanceTest(VmTest):
 			finish = int((finish/vm.sampling_period).simplified)
 			return vm[start:finish]
 
-		i = self.params['injected_current']
+		i = self.params['injected_square_current']
 		start, stop = -11*pq.ms, -1*pq.ms
 		before = get_segment(self,vm,start+i['delay'],
 									 stop+i['delay'])
@@ -198,7 +198,7 @@ class InjectedCurrentAPWidthTest(APWidthTest):
 
 	required_capabilities = (cap.ReceivesCurrent,)
 
-	params = {'injected_current': 
+	params = {'injected_square_current': 
 				{'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 	
 	name = "Injected current AP width test"
@@ -208,7 +208,7 @@ class InjectedCurrentAPWidthTest(APWidthTest):
 				   "is injected into cell.")
 
 	def generate_prediction(self, model, verbose=False):
-		model.inject_current(self.params['injected_current']) 
+		model.inject_square_current(self.params['injected_square_current']) 
 		return super(InjectedCurrentAPWidthTest,self).\
 			generate_prediction(model, verbose=verbose)
 
@@ -273,7 +273,7 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
 
 	required_capabilities = (cap.ReceivesCurrent,)
 
-	params = {'injected_current': 
+	params = {'injected_square_current': 
 				{'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 	
 	name = "Injected current AP amplitude test"
@@ -283,7 +283,7 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
 				   "is injected into cell.")
 
 	def generate_prediction(self, model, verbose=False):
-		model.inject_current(self.params['injected_current']) 
+		model.inject_square_current(self.params['injected_square_current']) 
 		return super(InjectedCurrentAPAmplitudeTest,self).\
 				generate_prediction(model, verbose=verbose)
 
@@ -334,7 +334,7 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
 
 	required_capabilities = (cap.ReceivesCurrent,)
 
-	params = {'injected_current': 
+	params = {'injected_square_current': 
 				{'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 	
 	name = "Injected current AP threshold test"
@@ -343,7 +343,7 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
 				   "action potentials are produced under current injection.")
 
 	def generate_prediction(self, model, verbose=False):
-		model.inject_current(self.params['injected_current']) 
+		model.inject_square_current(self.params['injected_square_current']) 
 		return super(InjectedCurrentAPThresholdTest,self).\
 				generate_prediction(model, verbose=verbose)
 
@@ -357,7 +357,7 @@ class RheobaseTest(VmTest):
 	required_capabilities = (cap.ReceivesCurrent,
 							 cap.ProducesSpikes)
 
-	params = {'injected_current': 
+	params = {'injected_square_current': 
 				{'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 	
 	name = "Rheobase test"
@@ -406,7 +406,9 @@ class RheobaseTest(VmTest):
 		
 		def f(ampl):
 			if float(ampl) not in lookup:
-				model.inject_current({'amplitude':ampl}) 
+				current = params.copy()
+				current['amplitude'] = ampl
+				model.inject_square_current(current) 
 				n_spikes = model.get_spike_count()
 				if verbose:
 					print("Injected %s current and got %d spikes" % \
@@ -459,6 +461,9 @@ class RestingPotentialTest(VmTest):
 	
 	required_capabilities = (cap.ReceivesCurrent,)
 
+	params = {'injected_square_current': 
+				{'amplitude':0.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+
 	name = "Resting potential test"
 
 	description = ("A test of the resting potential of a cell "
@@ -481,7 +486,7 @@ class RestingPotentialTest(VmTest):
 	def generate_prediction(self, model, verbose=False):
 		"""Implementation of sciunit.Test.generate_prediction."""
 		model.rerun = True
-		model.inject_current({'amplitude':0.0*pq.pA}) 
+		model.inject_square_current(self.params['injected_square_current']) 
 		median = model.get_median_vm() # Use median for robustness.  
 		std = model.get_std_vm()
 		prediction = {'mean':median, 'std':std}

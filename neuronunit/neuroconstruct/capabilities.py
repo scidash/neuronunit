@@ -130,11 +130,12 @@ class ReceivesCurrent_NC(ReceivesCurrent,Runnable_NC):
 		duration = 0
 		offset = 0
 
-	def inject_current(self,injected_current):
+	def inject_square_current(self,injected_current):
 		self.prepare()
 		cmd = 'import %s as j;' % JUTILS_PATH
 		cmd += 'import sys;'
-		cmd += 'err = j.sim.set_current_ampl(%f);' % injected_current['ampl']
+		cmd += 'err = j.sim.set_current_ampl(%f);' % \
+					injected_current['amplitude']
 		cmd += 'channel.send(err);'
 		channel = self.gateway.remote_exec(cmd)
 		#print(cmd)
