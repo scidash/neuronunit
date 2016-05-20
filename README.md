@@ -98,11 +98,14 @@ reference_data = neuroelectro.NeuroElectroSummary(
     ephysprop = {'name':'Spike Half-Width'}) # Electrophysiological property name. 
 # Get and verify summary data for the combination above from neuroelectro.org. 
 reference_data.get_values()
-spikewidth_test = tests.InjectedCurrentSpikeWidthTest(
+spikewidth_test = tests.InjectedCurrentAPWidthTest(
                 observation = {'mean':reference_data.mean,
                                'std':reference_data.std},
                 name = 'Spike Width',
-                params={'injected_current':{'ampl':0.0053}}) # 0.0053 nA (5.3 pA) of injected current.  
+                params={'injected_square_current':{'amplitude':5.3*pq.pA,
+                                                   'delay':50.0*pq.ms,
+                                                   'duration':500.0*pq.ms}}) 
+                # 5.3 pA of injected current in a 500 ms square pulse.  
 
 # Create a test suite from these two tests.  
 suite = sciunit.TestSuite('Neuron Tests',(spikewidth_test,vm_test))

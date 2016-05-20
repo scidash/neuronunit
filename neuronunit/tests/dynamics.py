@@ -99,7 +99,7 @@ class BurstinessTest(InjectedCurrentAPWidthTest):
                                                      nonunited_keys=['cv'])
         
     def generate_prediction(self, model, verbose=False):
-        model.inject_current(observation['current']) 
+        model.inject_square_current(observation['current']) 
         spike_train = model.get_spike_train()
         if len(spike_train) >= 3:
             isis = isi(spike_train)

@@ -104,6 +104,21 @@ class ReceivesCurrent(Capability):
 		
 		raise NotImplementedError()
 
+	def inject_square_current(self,current):
+		"""Injects somatic current into the model.  
+
+	    Parameters
+	    ----------
+	    current : a dictionary like:
+	    		      	{'amplitude':-10.0*pq.pA, 
+	    		      	 'delay':100*pq.ms, 
+	    		      	 'duration':500*pq.ms}}
+	    		  where 'pq' is the quantities package
+	    This describes the current to be injected.  
+	    """
+		
+		raise NotImplementedError()
+
 
 class Runnable(sciunit.Capability):
     """Capability for models that can be run."""
