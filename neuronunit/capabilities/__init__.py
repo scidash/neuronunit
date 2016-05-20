@@ -6,11 +6,10 @@ These capabilities exchange 'neo' objects."""
 import numpy as np
 
 import sciunit
-from sciunit import Capability
 from .spike_functions import spikes2amplitudes,spikes2widths,spikes2thresholds
 from .channel import *
 
-class ProducesMembranePotential(Capability):
+class ProducesMembranePotential(sciunit.Capability):
 	"""Indicates that the model produces a somatic membrane potential."""
 	
 	def get_membrane_potential(self):
@@ -90,8 +89,31 @@ class ProducesActionPotentials(ProducesSpikes):
 		return thresholds
 
 
-class ReceivesCurrent(Capability):
-	"""Indicates that somatic current can be injected into the model."""
+class ReceivesSquareCurrent(ReceivesSquareCurrent):
+	"""Indicates that somatic current can be injected into the model as 
+	a square pulse.
+	"""
+	
+	def inject_square_current(self,current):
+			"""Injects somatic current into the model.  
+
+		    Parameters
+		    ----------
+		    current : a dictionary like:
+		    		      	{'amplitude':-10.0*pq.pA, 
+		    		      	 'delay':100*pq.ms, 
+		    		      	 'duration':500*pq.ms}}
+		    		  where 'pq' is the quantities package
+		    This describes the current to be injected.  
+		    """
+			
+			raise NotImplementedError()
+
+
+class ReceivesCurrent(ReceivesSquareCurrent):
+	"""Indicates that somatic current can be injected into the model as 
+	either an arbitrary waveform or as a square pulse.
+	"""
 	
 	def inject_current(self,current):
 		"""Injects somatic current into the model.  
@@ -100,21 +122,6 @@ class ReceivesCurrent(Capability):
 	    ----------
 	    current : neo.core.AnalogSignal
 	    This is a time series of the current to be injected.  
-	    """
-		
-		raise NotImplementedError()
-
-	def inject_square_current(self,current):
-		"""Injects somatic current into the model.  
-
-	    Parameters
-	    ----------
-	    current : a dictionary like:
-	    		      	{'amplitude':-10.0*pq.pA, 
-	    		      	 'delay':100*pq.ms, 
-	    		      	 'duration':500*pq.ms}}
-	    		  where 'pq' is the quantities package
-	    This describes the current to be injected.  
 	    """
 		
 		raise NotImplementedError()
