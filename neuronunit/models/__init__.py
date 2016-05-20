@@ -105,7 +105,7 @@ class LEMSModel(sciunit.Model, cap.Runnable):
         # Edit NML files. 
         for file_path,tree in trees.items(): 
             for key,value in self.run_params.items():
-                if key == 'injected_current':
+                if key == 'injected_square_current':
                     pulse_generators = tree.findall('pulseGenerator')
                     for i,pg in enumerate(pulse_generators):
                         for attr in ['delay', 'duration', 'amplitude']:

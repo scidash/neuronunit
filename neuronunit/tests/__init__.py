@@ -406,7 +406,7 @@ class RheobaseTest(VmTest):
 		
 		def f(ampl):
 			if float(ampl) not in lookup:
-				current = params.copy()
+				current = self.params.copy()
 				current['amplitude'] = ampl
 				model.inject_square_current(current) 
 				n_spikes = model.get_spike_count()

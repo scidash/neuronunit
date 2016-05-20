@@ -89,7 +89,7 @@ class ProducesActionPotentials(ProducesSpikes):
 		return thresholds
 
 
-class ReceivesSquareCurrent(ReceivesSquareCurrent):
+class ReceivesSquareCurrent(sciunit.Capability):
 	"""Indicates that somatic current can be injected into the model as 
 	a square pulse.
 	"""
