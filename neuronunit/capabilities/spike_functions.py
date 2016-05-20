@@ -88,3 +88,23 @@ def spikes2widths(spike_waveforms):
 		widths *= s.sampling_period # Convert from samples to time.  
 	#print("Spike widths are %s" % str(widths))
 	return widths
+
+def spikes2thresholds(spike_waveforms):
+	""" 
+	IN:
+	 spike_waveforms: Spike waveforms, e.g. from get_spike_waveforms(). 
+	 	neo.core.AnalogSignalArray    
+	OUT:
+	 1D numpy array of spike thresholds, specifically the membrane potential 
+	 at which 1/10 the maximum slope is reached.     
+	"""
+	n_spikes = len(spike_waveforms)
+	thresholds = []
+	for i,s in enumerate(spike_waveforms):
+		s = np.array(s)
+		dvdt = np.diff(s)
+		trigger = dvdt.max()/10
+		x_loc = np.where(dvdt >= trigger)[0][0]
+		thresh = (s[x_loc]+s[x_loc+1])/2	
+		thresholds.append(thresh)
+	return thresholds * spike_waveforms.units

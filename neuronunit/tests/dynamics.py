@@ -1,10 +1,11 @@
 import numpy as np
 import quantities as pq
+from elephant.statistics import isi
 
 import sciunit
-from sciunit.scores import BooleanScore,FloatScore
+from sciunit.scores import BooleanScore,FloatScore,RatioScore
 from neuronunit.capabilities.channel import * 
-from .__init__ import RheobaseTest
+from .__init__ import RheobaseTest,InjectedCurrentAPWidthTest
 
 class TFRTypeTest(RheobaseTest):
     """Tests whether a model has particular threshold firing rate dynamics, 
@@ -32,7 +33,6 @@ class TFRTypeTest(RheobaseTest):
         
     def generate_prediction(self, model, verbose=False):
         """Implementation of sciunit.Test.generate_prediction."""
-        # Method implementation guaranteed by ProducesActionPotentials capability.
         
         model.rerun = True
         if 'rheobase' in self.observation:
@@ -77,13 +77,43 @@ class TFRTypeTest(RheobaseTest):
         return score
 
 
-class BurstingTest(RheobaseTest):
-    """Tests whether a model exhibits bursting.
-    NOT IMPLEMENTED YET"""
-    
-    name = "Bursting test"
+class BurstinessTest(InjectedCurrentAPWidthTest):
+    """Tests whether a model exhibits the observed burstiness"""
 
-    description = (("A test of the AP bursting"))
+    def __init__(self, observation={'cv_mean':None,'cv_std':None},
+                 name=None,
+                 params=None):
 
-    score_type = BooleanScore
+    name = "Burstiness test"
 
+    description = (("A test of AP bursting at the provided current"))
+
+    score_type = RatioScore
+
+    units = pq.Dimensionless
+
+    cv_threshold = 1.0
+
+    def validate_observation(self, observation):
+        super(TFRTypeTest,self).validate_observation(observation, 
+                                                     nonunited_keys=['cv'])
+        
+    def generate_prediction(self, model, verbose=False):
+        model.inject_square_current(observation['current']) 
+        spike_train = model.get_spike_train()
+        if len(spike_train) >= 3:
+            isis = isi(spike_train)
+            cv = np.std(isis) / np.mean(isis)
+        else:
+            cv = None
+        return {'cv':cv}
+
+    def compute_score(self, observation, prediction, verbose=False):
+        """Implementation of sciunit.Test.score_prediction."""
+        #print("%s: Observation = %s, Prediction = %s" % \
+        #    (self.name,str(observation),str(prediction)))
+        if prediction is None:
+            score = scores.InsufficientDataScore(None)
+        else:
+            score = self.score_type.compute(observation,prediction,key='cv')
+        return score

@@ -86,6 +86,8 @@ class LEMSModel(sciunit.Model, cap.Runnable):
                          verbose=self.run_params['v'])
         self.last_run_params = deepcopy(self.run_params)
         self.rerun = False
+        self.run_params = {} # Reset run parameters so the next test has to pass
+                             # its own run parameters and not use the same ones
 
     def update_run_params(self):
         from lxml import etree
@@ -103,7 +105,7 @@ class LEMSModel(sciunit.Model, cap.Runnable):
         # Edit NML files. 
         for file_path,tree in trees.items(): 
             for key,value in self.run_params.items():
-                if key == 'injected_current':
+                if key == 'injected_square_current':
                     pulse_generators = tree.findall('pulseGenerator')
                     for i,pg in enumerate(pulse_generators):
                         for attr in ['delay', 'duration', 'amplitude']:
