@@ -12,6 +12,7 @@ setup(
             'neuronunit',
             'neuronunit.capabilities',
             'neuronunit.neuroconstruct',
+            'neuronunit.neuron',
             'neuronunit.models',
             'neuronunit.tests'],
 	url='http://github.com/scidash/neuronunit',
