@@ -5,7 +5,8 @@ import quantities as pq
 from quantities.quantity import Quantity
 import numpy as np
 import matplotlib.pyplot as plt
-
+from scipy.optimize import curve_fit
+		
 import sciunit
 import sciunit.scores as scores
 
@@ -111,44 +112,125 @@ class VmTest(sciunit.Test):
 		return observation
 
 
-class InputResistanceTest(VmTest):
-	"""Tests the input resistance of a cell."""
+class TestPulseTest(VmTest):
+	"""A base class for tests that use a square test pulse"""
 	
 	required_capabilities = (cap.ReceivesSquareCurrent,)
 
-	name = "Input resistance test"
-
-	description = ("A test of the input resistance of a cell.")
+	name = ''
 
 	score_type = scores.ZScore
 	
-	units = pq.ohm*1e6
-
 	params = {'injected_square_current': 
 				{'amplitude':-10.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 	
-	ephysprop_name = 'Input Resistance'
-
 	def generate_prediction(self, model, verbose=False):
 		"""Implementation of sciunit.Test.generate_prediction."""
 		model.inject_square_current(self.params['injected_square_current']) 
 		vm = model.get_membrane_potential() 
-		
-		def get_segment(self,vm,start,finish):
-			start = int((start/vm.sampling_period).simplified)
-			finish = int((finish/vm.sampling_period).simplified)
-			return vm[start:finish]
-
 		i = self.params['injected_square_current']
+		return (i,vm)
+
+	@classmethod
+	def get_segment(cls, vm, start, finish):
+		start = int((start/vm.sampling_period).simplified)
+		finish = int((finish/vm.sampling_period).simplified)
+		return vm[start:finish]
+
+	@classmethod
+	def get_rin(cls, vm, i):
 		start, stop = -11*pq.ms, -1*pq.ms
-		before = get_segment(self,vm,start+i['delay'],
+		before = cls.get_segment(vm,start+i['delay'],
 									 stop+i['delay'])
-		after = get_segment(self,vm,start+i['delay']+i['duration'],
+		after = cls.get_segment(vm,start+i['delay']+i['duration'],
 									stop+i['delay']+i['duration'])
 		r_in = (after.mean()-before.mean())/i['amplitude']
+		return r_in.simplified
 
+	@classmethod
+	def get_tau(cls, vm, i):
+		start, stop = -11*pq.ms, (i['duration']-(1*pq.ms))
+		region = cls.get_segment(vm,start+i['delay'],stop+i['delay'])
+		coefs = cls.exponential_fit(region, i['delay'])
+		tau = (pq.s/coefs[1]).rescale('ms')
+		return tau
+	
+	@classmethod
+	def exponential_fit(cls, segment, offset):
+		def func(x, a, b, c):
+			return a * np.exp(-b * (x-offset)) + c
+
+		x = segment.times.rescale('s')
+		y = segment.rescale('V').data
+		offset = float(offset.rescale('s')) # Strip units for optimization
+		popt, pcov = curve_fit(func, x, y)
+		return popt
+
+
+class InputResistanceTest(TestPulseTest):
+	"""Tests the input resistance of a cell."""
+	
+	name = "Input resistance test"
+
+	description = ("A test of the input resistance of a cell.")
+
+	units = pq.ohm*1e6
+
+	ephysprop_name = 'Input Resistance'
+
+	def generate_prediction(self, model, verbose=False):
+		"""Implementation of sciunit.Test.generate_prediction."""
+		i,vm = super(InputResistanceTest,self).\
+							generate_prediction(model,verbose=verbose)
+		r_in = self.__class__.get_rin(vm, i)
+		r_in = r_in.simplified
 		# Put prediction in a form that compute_score() can use.  
-		prediction = {'value':r_in.simplified}
+		prediction = {'value':r_in}
+		return prediction
+
+
+class TimeConstantTest(TestPulseTest):
+	"""Tests the input resistance of a cell."""
+	
+	name = "Time constant test"
+
+	description = ("A test of membrane time constant of a cell.")
+
+	units = pq.ms
+
+	ephysprop_name = 'Membrane Time Constant'
+	
+	def generate_prediction(self, model, verbose=False):
+		"""Implementation of sciunit.Test.generate_prediction."""
+		i,vm = super(TimeConstantTest,self).\
+							generate_prediction(model,verbose=verbose)
+		tau = self.__class__.get_tau(vm, i)
+		tau = tau.simplified
+		# Put prediction in a form that compute_score() can use.  
+		prediction = {'value':tau}
+		return prediction
+
+
+class CapacitanceTest(TestPulseTest):
+	"""Tests the input resistance of a cell."""
+	
+	name = "Capacitance test"
+
+	description = ("A test of the membrane capacitance of a cell.")
+
+	units = pq.F*1e-12
+
+	ephysprop_name = 'Cell Capacitance'
+
+	def generate_prediction(self, model, verbose=False):
+		"""Implementation of sciunit.Test.generate_prediction."""
+		i,vm = super(CapacitanceTest,self).\
+							generate_prediction(model,verbose=verbose)
+		r_in = self.__class__.get_rin(vm, i)
+		tau = self.__class__.get_tau(vm, i)
+		c = (tau/r_in).simplified
+		# Put prediction in a form that compute_score() can use.  
+		prediction = {'value':c}
 		return prediction
 
 
