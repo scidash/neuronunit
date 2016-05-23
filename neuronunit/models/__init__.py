@@ -44,6 +44,7 @@ class LEMSModel(sciunit.Model, cap.Runnable):
         self.run_params = {}
         self.last_run_params = {}
         self.skip_run = False
+        self.rerun = True # Needs to be rerun since it hasn't been run yet!
         if name is None:
             name = os.path.split(self.lems_file_path)[1].split('.')[0]
         super(LEMSModel,self).__init__(name=name)
