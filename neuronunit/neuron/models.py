@@ -24,6 +24,7 @@ class NeuronModel(sciunit.Model):
     
     def setH(self, hVariable):
         """Sets the NEURON h variable"""
+
         self.h = hVariable
         self.h.load_file("stdlib.hoc")
         self.h.load_file("stdgui.hoc")
@@ -81,7 +82,6 @@ class SingleCellModel(NeuronModel, \
         hVar: the h variable of NEURON
         section: NEURON Section object of an isolated single cell into which current will be injected, and whose voltage will be observed.
         loc: the fraction along the Section object length that will be used for current injection and voltage observation.
-        simDuration: the simulation length in ms
         name: Optional model name.
         """
         
