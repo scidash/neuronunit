@@ -46,19 +46,20 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
 											   sampling_rate=vm.sampling_rate)
 
 def spikes2amplitudes(spike_waveforms):
-	""" 
-	IN:
-	 spike_waveforms: Spike waveforms, e.g. from get_spike_waveforms(). 
-	 	neo.core.AnalogSignalArray
-	OUT:
-	 1D numpy array of spike amplitudes, i.e. the maxima in each waveform.     
-	"""
+    """
+    IN:
+     spike_waveforms: Spike waveforms, e.g. from get_spike_waveforms().
+        neo.core.AnalogSignalArray
+    OUT:
+     1D numpy array of spike amplitudes, i.e. the maxima in each waveform.
+    """
 
-	if len(spike_waveforms):
-		ampls = np.max(spike_waveforms.data,axis=1)
-	else: 
-		ampls = np.array([])
-	return ampls * spike_waveforms.units
+    if len(spike_waveforms):
+        ampls = np.max(np.array(spike_waveforms),axis=1)
+    else:
+        ampls = np.array([])
+
+    return ampls * spike_waveforms.units
 
 def spikes2widths(spike_waveforms):
 	""" 
