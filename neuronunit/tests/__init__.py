@@ -111,6 +111,20 @@ class VmTest(sciunit.Test):
 					   'n': reference_data.n}
 		return observation
 
+	@classmethod
+	def neuroelectro_pooled_observation(cls, neuron, quiet=True):
+		reference_data = neuroelectro.NeuroElectroPooledSummary(
+			neuron = neuron, # Neuron type lookup using the NeuroLex ID.
+			ephysprop = {'name': cls.ephysprop_name} # Ephys property name in
+													 # NeuroElectro ontology.
+			)
+		reference_data.get_values(quiet=quiet) # Get and verify summary data
+									# from neuroelectro.org.
+		observation = {'mean': reference_data.mean*cls.units,
+					   'std': reference_data.std*cls.units,
+					   'n': reference_data.n}
+		return observation
+
 
 class TestPulseTest(VmTest):
 	"""A base class for tests that use a square test pulse"""

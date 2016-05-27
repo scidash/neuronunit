@@ -39,6 +39,8 @@ except: # Python 3
 	from urllib.request import urlopen,URLError
 import json
 from pprint import pprint
+from math import sqrt
+import numpy as np
 
 API_VERSION = 1
 API_SUFFIX = '/api/%d/' % API_VERSION
@@ -75,8 +77,10 @@ class NeuroElectroData(object):
 
 	url = API_URL # Base URL.  
 	neuron = Neuron()
-	ephysprop = EphysProp() 
-	
+	ephysprop = EphysProp()
+
+	get_one_match = True # By default only get the first match
+
 	@classmethod
 	def set_names(cls,neuron_name,ephysprop_name):
 		cls.set_neuron(name=neuron_name)
@@ -105,6 +109,12 @@ class NeuroElectroData(object):
 		query['e'] = self.ephysprop.id
 		query['e__name'] = self.ephysprop.name
 		query = {key:value for key,value in query.items() if value is not None}
+
+		if params is not None:
+			for key in params.keys():
+				if params[key] is not None:
+					query[key] = params[key]
+
 		url += urlencode(query)
 		return url
 	
@@ -151,7 +161,7 @@ class NeuroElectroData(object):
 		# All the summary matches in neuroelectro.org for this combination 
 		# of neuron and ephys property.  
 		if data and len(data):
-			self.api_data = data[0] 
+			self.api_data = data[0] if self.get_one_match else data
 		else:
 			self.api_data = None
 		# For now, we are just going to take the first match.  
@@ -183,12 +193,12 @@ class NeuroElectroDataMap(NeuroElectroData):
 		return url
 	
 	def get_values(self, params=None, quiet=False):
-		data = super(NeuroElectroDataMapTest,self).get_values(params=params, \
+		data = super(NeuroElectroDataMap,self).get_values(params=params, \
 															  quiet=quiet)
 		if data:
 			self.neuron_name = data['ncm']['n']['name'] 
 			# Set the neuron name from the json data.  
-			self.ephysprop_name = data['ecm']['e']['name'] 
+			self.ephysprop_name = data['ecm']['e']['name']
 			# Set the ephys property name from the json data.  
 			self.val = data['val']
 			self.sem = data['err']
@@ -199,13 +209,13 @@ class NeuroElectroDataMap(NeuroElectroData):
 	def check(self):
 		try:
 			val = self.val
-			std = self.sem
+			sem = self.sem
 		except AttributeError as a:
 			print('The attributes "val" and "sem" were not found.')
 			raise
 
 class NeuroElectroSummary(NeuroElectroData):
-	"""Class for getting summary values (across reports) from 
+	"""Class for getting summary values (across reports) from
 	neuroelectro.org."""
 	
 	url = API_URL+'nes/'
@@ -238,6 +248,179 @@ class NeuroElectroSummary(NeuroElectroData):
 		except AttributeError as a:
 			print('The attributes "mean" and "sd" were not found.')
 			raise
+
+class NeuroElectroPooledSummary(NeuroElectroDataMap):
+    """Class for getting summary values by pooling each report's mean and SD from
+    neuroelectro.org."""
+
+    def get_values(self, params=None, quiet=False):
+
+        # Get all papers reporting the neuron's property value
+        self.get_one_match = False # We want all matches
+
+        if params is None:
+            params = {}
+
+        params['limit'] = 999
+
+        data = super(NeuroElectroDataMap, self).get_values(params=params, quiet=quiet)
+
+        if data and len(data) > 0:
+
+            # Ensure data from api matches the requested params
+            data = [item for item in data \
+                    if (item['ecm']['e']['name'] == self.ephysprop.name.lower() or \
+                        item['ecm']['e']['id']   == self.ephysprop.id) \
+                    and \
+                       (item['ncm']['n']['nlex_id'] == self.neuron.nlex_id or \
+                        item['ncm']['n']['id']      == self.neuron.id) \
+                   ]
+
+            # Set the neuron name and prop from the first json data object.
+            self.neuron_name = data[0]['ncm']['n']['name']
+            self.ephysprop_name = data[0]['ecm']['e']['name']
+
+            # Pool each paper by weighing each mean by the paper's N and SD
+            stats = self.get_pooled_stats(data, quiet)
+
+            self.mean = stats['mean']
+            self.std = stats['std']
+            self.n = stats['n']
+
+            # Needed by check()
+            self.val = stats['mean']
+            self.sem = stats['sem']
+
+            self.check()
+
+        return data
+
+    def get_observation(self,params=None,show=False):
+        values = self.get_values(params=params)
+
+        if show:
+            pprint(values)
+
+        observation = {'mean':self.mean, 'std':self.std, 'n':self.n }
+
+        return observation
+
+    def get_pooled_stats(self, data, quiet = True):
+
+        means = []
+        sems = []
+        sds = []
+        ns = []
+        weights = []
+
+        if not quiet:
+            print("Raw Values")
+
+        # Collect raw values for each paper from NeuroElectro
+        for item in data:
+
+            err_is_sem = False # item['err_is_SE'] # Change this when API returns err type (SEM or SD)
+            sem = item['err_norm'] if err_is_sem else None
+            sd = item['err_norm'] if not err_is_sem else None
+
+            mean = item['val_norm'] if item['val_norm'] is not None else item['val']
+            n = item['n']
+
+            means.append(mean)
+            sems.append(sem)
+            sds.append(sd)
+            ns.append(n)
+
+            if not quiet:
+                print({ 'mean': mean, 'std': sd, 'sem': sem, 'n': n })
+
+        # Fill in missing values
+        self.fill_missing_ns(ns)
+        self.fill_missing_sems_sds(sems, sds, ns)
+
+        if not quiet:
+            print("---------------------------------------------------")
+            print("Filled in Values (computed or median where missing)")
+
+        # Compute the weighted grand_mean
+        # From https://github.com/neuroelectro/neuroelectro_org/issues/290#issuecomment-209672921 :
+        # grand_mean = gm = (w_1*mean_1 + w_2*mean_2) / (w_1+w_2+...)
+
+        n_sum = 0
+        weight_sum = 0.0
+        weighed_mean_sum = 0.0
+
+        for i in xrange(len(means)):
+            # Weigh the mean by n and squared reciprocal of sem
+            weight = ns[i]/(sems[i]*sems[i])
+
+            n_sum += ns[i]
+            weight_sum += weight
+            weighed_mean_sum += (weight * means[i])
+
+            weights.append(weight)
+
+            if not quiet:
+                print({ 'mean': means[i], 'std': sds[i], 'sem': sems[i], 'n': ns[i], 'weight': weights[i] })
+
+        grand_mean = weighed_mean_sum / weight_sum
+
+        # Compute the weighted grand_variance
+        # grand_variance = (w_1*(mean_1-gm)^2 + w_2*(mean2-gm)^2+...) / (w_1+w_2+...)
+
+        weighed_mean_squared_difference_sum = 0.0
+
+        for i in xrange(len(means)):
+            dist_from_gm = means[i] - grand_mean
+            dist_sq = dist_from_gm*dist_from_gm
+            weighed_mean_squared_difference_sum += (weights[i]*dist_sq)
+
+        grand_variance = weighed_mean_squared_difference_sum / weight_sum
+        grand_sd = sqrt(grand_variance)
+        grand_sem = grand_sd / sqrt(n_sum)
+
+        return { 'mean': grand_mean, 'sem': grand_sem, 'std': grand_sd, 'n': n_sum }
+
+    def fill_missing_ns(self, ns):
+        # Fill in the missing N's with median N
+        none_free_ns = np.array(ns)[ns != np.array(None)]
+
+        if len(none_free_ns) > 0:
+            n_median = int(np.median(none_free_ns))
+        else:
+            n_median = 1 # If no N's reported at all, weigh all means equally
+
+        for i in xrange(len(ns)):
+            if ns[i] is None:
+                ns[i] = n_median
+
+    def fill_missing_sems_sds(self, sems, sds, ns):
+        # Fill in computable sems/sds
+        for i in xrange(len(sems)):
+
+            # Check if sem or sd is computable
+            if sems[i] is None and sds[i] is not None:
+                sems[i] = sds[i] / sqrt(ns[i])
+
+            if sds[i] is None and sems[i] is not None:
+                sds[i] = sems[i] * sqrt(ns[i])
+
+        # Fill in the remaining missing using median sd
+        none_free_sds = np.array(sds)[sds != np.array(None)]
+
+        if len(none_free_sds) > 0:
+            sd_median = np.median(none_free_sds)
+
+        else: # If no SDs or SEMs reported at all, raise error
+
+            # Perhaps the median SD of all cells for this property could be used
+            # however, NE API nes interface does not support summary prop values without specifying the neuron id
+            raise NotImplementedError('No StDevs or SEMs reported for "%s" property "%s"'%(self.neuron_name,self.ephysprop_name))
+
+        for i in xrange(len(sds)):
+            if sds[i] is None:
+                sds[i] = sd_median
+                sems[i] = sd_median / sqrt(ns[i])
 
 def test_module():
 	x = NeuroElectroDataMap()
