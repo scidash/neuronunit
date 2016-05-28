@@ -319,10 +319,11 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
         # Collect raw values for each paper from NeuroElectro
         for item in data:
 
-            err_is_sem = False # item['err_is_SE'] # Change this when API returns err type (SEM or SD)
-            sem = item['err_norm'] if err_is_sem else None
-            sd = item['err_norm'] if not err_is_sem else None
+            err_is_sem = True # item['err_is_SE'] # Change this when API returns err type (SEM or SD)
+            err = (item['err_norm'] if item['err_norm'] is not None else item['err'])
 
+            sem = err if err_is_sem else None
+            sd = err if not err_is_sem else None
             mean = item['val_norm'] if item['val_norm'] is not None else item['val']
             n = item['n']
 
