@@ -344,7 +344,9 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
             print("Filled in Values (computed or median where missing)")
 
         # Compute the weighted grand_mean
-        # From https://github.com/neuroelectro/neuroelectro_org/issues/290#issuecomment-209672921 :
+        # From https://github.com/scidash/neuronunit/issues/13#issue-156620228 :
+        # If it is an SD, then w = N/(SD^2), and if it is already an SE than just w=1/SE^2. 
+        # And from https://github.com/neuroelectro/neuroelectro_org/issues/290#issuecomment-209672921 :
         # grand_mean = gm = (w_1*mean_1 + w_2*mean_2) / (w_1+w_2+...)
 
         n_sum = 0
@@ -352,8 +354,8 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
         weighed_mean_sum = 0.0
 
         for i in xrange(len(means)):
-            # Weigh the mean by n and squared reciprocal of sem
-            weight = ns[i]/(sems[i]*sems[i])
+            # Weigh the mean by n and squared reciprocal of sd
+            weight = ns[i]/(sds[i]*sds[i])
 
             n_sum += ns[i]
             weight_sum += weight
