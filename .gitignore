@@ -43,3 +43,4 @@ neuronunit.xcworkspace/contents.xcworkspacedata
 *.xccheckout
 
 .idea/
+*.pyproj
