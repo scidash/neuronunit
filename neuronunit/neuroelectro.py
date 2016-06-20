@@ -293,6 +293,9 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
 
             self.check()
 
+        else:
+            raise RuntimeError("No data was returned by the NeuroElectro API")
+
         return data
 
     def get_observation(self,params=None,show=False):
@@ -319,10 +322,11 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
         # Collect raw values for each paper from NeuroElectro
         for item in data:
 
-            err_is_sem = False # item['err_is_SE'] # Change this when API returns err type (SEM or SD)
-            sem = item['err_norm'] if err_is_sem else None
-            sd = item['err_norm'] if not err_is_sem else None
+            err_is_sem = True # item['err_is_SE'] # Change this when API returns err type (SEM or SD)
+            err = (item['err_norm'] if item['err_norm'] is not None else item['err'])
 
+            sem = err if err_is_sem else None
+            sd = err if not err_is_sem else None
             mean = item['val_norm'] if item['val_norm'] is not None else item['val']
             n = item['n']
 
@@ -342,41 +346,20 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
             print("---------------------------------------------------")
             print("Filled in Values (computed or median where missing)")
 
+            for i in xrange(len(means)):
+                print({ 'mean': means[i], 'sd': sds[i], 'sem': sems[i], 'n': ns[i] })
+
         # Compute the weighted grand_mean
-        # From https://github.com/neuroelectro/neuroelectro_org/issues/290#issuecomment-209672921 :
-        # grand_mean = gm = (w_1*mean_1 + w_2*mean_2) / (w_1+w_2+...)
+        # grand_mean  = SUM( N[i]*Mean[i] ) / SUM(N[i])
+        # grand_sd = SQRT( SUM( (N[i]-1)*SD[i]^2 ) / SUM(N[i]-1) )
 
-        n_sum = 0
-        weight_sum = 0.0
-        weighed_mean_sum = 0.0
+        ns_np = np.array(ns)
+        means_np = np.array(means)
+        sds_np = np.array(sds)
+        n_sum = ns_np.sum()
 
-        for i in xrange(len(means)):
-            # Weigh the mean by n and squared reciprocal of sem
-            weight = ns[i]/(sems[i]*sems[i])
-
-            n_sum += ns[i]
-            weight_sum += weight
-            weighed_mean_sum += (weight * means[i])
-
-            weights.append(weight)
-
-            if not quiet:
-                print({ 'mean': means[i], 'std': sds[i], 'sem': sems[i], 'n': ns[i], 'weight': weights[i] })
-
-        grand_mean = weighed_mean_sum / weight_sum
-
-        # Compute the weighted grand_variance
-        # grand_variance = (w_1*(mean_1-gm)^2 + w_2*(mean2-gm)^2+...) / (w_1+w_2+...)
-
-        weighed_mean_squared_difference_sum = 0.0
-
-        for i in xrange(len(means)):
-            dist_from_gm = means[i] - grand_mean
-            dist_sq = dist_from_gm*dist_from_gm
-            weighed_mean_squared_difference_sum += (weights[i]*dist_sq)
-
-        grand_variance = weighed_mean_squared_difference_sum / weight_sum
-        grand_sd = sqrt(grand_variance)
+        grand_mean = np.sum(ns_np * means_np) / n_sum
+        grand_sd = np.sqrt( np.sum( (ns_np-1)*(sds_np**2) ) / np.sum(ns_np-1) )
         grand_sem = grand_sd / sqrt(n_sum)
 
         return { 'mean': grand_mean, 'sem': grand_sem, 'std': grand_sd, 'n': n_sum }
