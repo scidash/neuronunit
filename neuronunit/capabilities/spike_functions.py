@@ -81,8 +81,16 @@ def spikes2widths(spike_waveforms):
 		#	   (len(s),x_high)))
 		high = s[x_high]
 		if x_high > 0:
-			low = np.min(s[:x_high])
-			mid = (high+low)/2
+			try: # Use threshold to compute half-max.  
+				s = np.array(s)
+				dvdt = np.diff(s)
+				trigger = dvdt.max()/10
+				x_loc = np.where(dvdt >= trigger)[0][0]
+				thresh = (s[x_loc]+s[x_loc+1])/2	
+				mid = (high+thresh)/2
+			except: # Use minimum value to compute half-max.  
+				low = np.min(s[:x_high])
+				mid = (high+low)/2
 			n_samples = sum(s>mid) # Number of samples above the half-max.  
 			widths.append(n_samples)
 	if n_spikes:
