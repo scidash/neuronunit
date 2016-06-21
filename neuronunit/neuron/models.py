@@ -46,8 +46,8 @@ class NeuronModel(sciunit.Model):
         dt = integrationTimeStep
         dt.units = ms
 
-        self.h.dt = float(dt)
-    
+        self.h.dt = self.fixedTimeStep = float(dt)
+
     def setTolerance(self, tolerance = 0.001):
         """Sets the variable time step integration method absolute tolerance """
         """tolerance: absolute tolerance value"""
@@ -89,10 +89,12 @@ class SingleCellModel(NeuronModel, \
     
         self.setSegment(section, loc)
         
-        # Store voltage values
+        # Store voltage and time values
+        self.tVector = self.h.Vector()
         self.vVector = self.h.Vector()
         self.vVector.record(self.getSegment()._ref_v)
-        
+        self.tVector.record(self.h._ref_t)
+
         return
 
     def get_spike_train(self):
@@ -117,12 +119,45 @@ class SingleCellModel(NeuronModel, \
 
     def get_membrane_potential(self):
         """Must return a neo.core.AnalogSignal."""
-        
+
+        if self.h.cvode.active() == 0:
+            fixedSignal = self.vVector.to_python()
+
+        else:
+            fixedSignal = self.get_variable_step_analog_signal()
+
         return AnalogSignal( \
-                 self.vVector.to_python(), \
+                 fixedSignal, \
                  units = mV, \
                  sampling_period = self.h.dt * ms \
         )
+
+    def get_variable_step_analog_signal(self):
+
+        fPots = []
+        fDt = self.fixedTimeStep
+
+        vPots = self.vVector.to_python()
+        vTimes = self.tVector.to_python()
+
+        duration = vTimes[len(vTimes)-1]
+
+        fTime = 0
+        vTime = vTimes[0]
+        vIndex = 0
+
+        while fTime <= duration:
+
+            while fTime > vTime and vIndex < len(vTimes):
+                vIndex += 1
+                vTime = vTimes[vIndex]
+
+            fPots.append(vPots[vIndex])
+
+            fTime += fDt
+
+        return fPots
+
 
     def inject_square_current(self,current):
         """Injects somatic current into the model.
