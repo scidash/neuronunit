@@ -286,6 +286,7 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
             self.mean = stats['mean']
             self.std = stats['std']
             self.n = stats['n']
+            self.items = stats['items']
 
             # Needed by check()
             self.val = stats['mean']
@@ -296,7 +297,7 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
         else:
             raise RuntimeError("No data was returned by the NeuroElectro API")
 
-        return data
+        return self.items
 
     def get_observation(self,params=None,show=False):
         values = self.get_values(params=params)
@@ -310,11 +311,13 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
 
     def get_pooled_stats(self, data, quiet = True):
 
+        lines = []
         means = []
         sems = []
         sds = []
         ns = []
         weights = []
+        sources = []
 
         if not quiet:
             print("Raw Values")
@@ -322,18 +325,20 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
         # Collect raw values for each paper from NeuroElectro
         for item in data:
 
-            err_is_sem = True # item['err_is_SE'] # Change this when API returns err type (SEM or SD)
+            err_is_sem = item['error_type'] == "sem" # SEM or SD
             err = (item['err_norm'] if item['err_norm'] is not None else item['err'])
 
             sem = err if err_is_sem else None
             sd = err if not err_is_sem else None
             mean = item['val_norm'] if item['val_norm'] is not None else item['val']
             n = item['n']
+            source = item['source']
 
             means.append(mean)
             sems.append(sem)
             sds.append(sd)
             ns.append(n)
+            sources.append(source)
 
             if not quiet:
                 print({ 'mean': mean, 'std': sd, 'sem': sem, 'n': n })
@@ -347,7 +352,9 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
             print("Filled in Values (computed or median where missing)")
 
             for i in xrange(len(means)):
-                print({ 'mean': means[i], 'sd': sds[i], 'sem': sems[i], 'n': ns[i] })
+                line = { 'mean': means[i], 'sd': sds[i], 'sem': sems[i], 'n': ns[i], "source": sources[i] }
+                lines.append(line)
+                print(line)
 
         # Compute the weighted grand_mean
         # grand_mean  = SUM( N[i]*Mean[i] ) / SUM(N[i])
@@ -362,7 +369,7 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
         grand_sd = np.sqrt( np.sum( (ns_np-1)*(sds_np**2) ) / np.sum(ns_np-1) )
         grand_sem = grand_sd / sqrt(n_sum)
 
-        return { 'mean': grand_mean, 'sem': grand_sem, 'std': grand_sd, 'n': n_sum }
+        return { 'mean': grand_mean, 'sem': grand_sem, 'std': grand_sd, 'n': n_sum, 'items': lines }
 
     def fill_missing_ns(self, ns):
         # Fill in the missing N's with median N
