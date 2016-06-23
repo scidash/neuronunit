@@ -122,42 +122,78 @@ class SingleCellModel(NeuronModel, \
 
         if self.h.cvode.active() == 0:
             fixedSignal = self.vVector.to_python()
+            dt = self.h.dt
 
         else:
             fixedSignal = self.get_variable_step_analog_signal()
+            dt = self.fixedTimeStep
 
         return AnalogSignal( \
                  fixedSignal, \
                  units = mV, \
-                 sampling_period = self.h.dt * ms \
+                 sampling_period = dt * ms \
         )
 
     def get_variable_step_analog_signal(self):
+        """ Converts variable dt array values to fixed dt array by using linear interpolation"""
 
+        # Fixed dt potential
         fPots = []
         fDt = self.fixedTimeStep
 
+        # Variable dt potential
         vPots = self.vVector.to_python()
+
+        # Variable dt times
         vTimes = self.tVector.to_python()
 
         duration = vTimes[len(vTimes)-1]
 
-        fTime = 0
-        vTime = vTimes[0]
+        # Fixed and Variable dt times
+        fTime = vTime = vTimes[0]
+
+        # Index of variable dt time array
         vIndex = 0
 
+        # Advance the fixed dt position
         while fTime <= duration:
 
-            while fTime > vTime and vIndex < len(vTimes):
-                vIndex += 1
-                vTime = vTimes[vIndex]
+            # If v and f times are exact, no interpolation needed
+            if fTime == vTime:
+                fPots.append(vPots[vIndex])
 
-            fPots.append(vPots[vIndex])
+            # Interpolate between the two nearest vdt times
+            else:
 
+                # Increment vdt time until it surpases the fdt time
+                while fTime > vTime and vIndex < len(vTimes):
+                    vIndex += 1
+                    vTime = vTimes[vIndex]
+
+                # Once surpassed, use the new vdt time and t-1 for interpolation
+                vIndexMinus1 = max(0, vIndex-1)
+                vTimeMinus1 = vTimes[vIndexMinus1]
+
+                fPot = self.linearInterpolate(vTimeMinus1, vTime, \
+                                          vPots[vIndexMinus1], vPots[vIndex], \
+                                          fTime)
+
+                fPots.append(fPot)
+
+            # Go to the next fdt time step
             fTime += fDt
 
         return fPots
 
+    def linearInterpolate(self, tStart, tEnd, vStart, vEnd, tTarget):
+        tRange = float(tEnd - tStart)
+        tFractionAlong = (tTarget - tStart)/tRange
+
+        vRange = vEnd - vStart
+
+        vTarget = vRange*tFractionAlong + vStart
+
+        return vTarget
 
     def inject_square_current(self,current):
         """Injects somatic current into the model.
