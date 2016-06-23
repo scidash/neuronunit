@@ -3,6 +3,7 @@ import os
 import sciunit
 from neuronunit.capabilities.channel import *
 from pyneuroml.analysis import NML2ChannelAnalysis as ca
+import quantities as pq
 
 class ChannelModel(sciunit.Model, NML2_Channel_Runnable, ProducesIVCurve):
     """A model for ion channels"""
@@ -37,10 +38,14 @@ class ChannelModel(sciunit.Model, NML2_Channel_Runnable, ProducesIVCurve):
     def produce_iv_curve(self, **run_params):
         run_params['ivCurve'] = True
         self.NML2_run(**run_params)
-        self.iv_data = ca.compute_iv_curve(self.channel, self.a, self.results)
+        iv_data = ca.compute_iv_curve(self.channel, self.a, self.results)
+        self.iv_data = {}
         for kind in ['i_peak', 'i_steady']:
-            for v,i in self.iv_data[kind].items():
-                self.iv_data[kind][v] = i * 1e12 # Convert from A to pA.  
+            self.iv_data[kind] = {}
+            for v,i in iv_data[kind].items():
+                v = float((v * pq.V).rescale(pq.mV))
+                self.iv_data[kind][v] = (i * pq.A).rescale(pq.pA)
+        self.iv_data['hold_v'] = (iv_data['hold_v'] * pq.V).rescale(pq.mV)
         return self.iv_data
     
     def produce_iv_curve_ss(self, **run_params):
