@@ -172,12 +172,12 @@ class TestPulseTest(VmTest):
     @classmethod
     def exponential_fit(cls, segment, offset):
         def func(x, a, b, c):
-            return a * np.exp(-b * (x-offset)) + c
+            return a * np.exp(-b * x) + c
 
         x = segment.times.rescale('s')
-        y = segment.rescale('V').data
+        y = segment.rescale('V')
         offset = float(offset.rescale('s')) # Strip units for optimization
-        popt, pcov = curve_fit(func, x, y)
+        popt, pcov = curve_fit(func, x-offset*pq.s, y, [0.001,2,y.min()]) # Estimate starting values for better convergence
         return popt
 
 
