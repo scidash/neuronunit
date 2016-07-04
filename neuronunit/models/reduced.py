@@ -41,5 +41,5 @@ class ReducedModel(mod.LEMSModel,
         spike_train = sf.get_spike_train(vm)
         return spike_train
 
-    def inject_current(self,current):
-        self.run_params['injected_current'] = current
+    def inject_square_current(self,current):
+        self.run_params['injected_square_current'] = current

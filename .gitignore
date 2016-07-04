@@ -38,3 +38,9 @@ pip-log.txt
 
 x86_64
 temp_data/
+*.xcuserstate
+neuronunit.xcworkspace/contents.xcworkspacedata
+*.xccheckout
+
+.idea/
+*.pyproj
