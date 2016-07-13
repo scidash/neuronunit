@@ -8,7 +8,7 @@ from sciunit.scores import BooleanScore,FloatScore
 from sciunit.converters import AtMostToBoolean
 from neuronunit.capabilities.channel import * 
 
-class IVCurveTest(sciunit.Test):
+class _IVCurveTest(sciunit.Test):
     """Test the agreement between channel IV curves produced by models and those 
     observed in experiments"""
     
@@ -24,8 +24,7 @@ class IVCurveTest(sciunit.Test):
     
     required_capabilities = (ProducesIVCurve,)
     score_type = BooleanScore
-    meta = True # base class for deriving useful test classes 
-
+    
     def validate_observation(self, observation):
         assert type(observation) is dict
         for item in ['v', 'i']:
@@ -115,14 +114,14 @@ class IVCurveTest(sciunit.Test):
         return score
 
 
-class IVCurveSSTest(IVCurveTest):
+class IVCurveSSTest(_IVCurveTest):
     """Test IV curves using steady-state curent"""
     
     def generate_prediction(self, model, verbose=False):
         return model.produce_iv_curve_ss(**self.params)
     
     
-class IVCurvePeakTest(IVCurveTest):
+class IVCurvePeakTest(_IVCurveTest):
     """Test IV curves using steady-state curent"""
     
     def generate_prediction(self, model, verbose=False):
