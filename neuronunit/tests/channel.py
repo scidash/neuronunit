@@ -1,3 +1,5 @@
+from types import MethodType
+
 import numpy as np
 from scipy.interpolate import interp1d
 from scipy.optimize import minimize
@@ -20,7 +22,7 @@ class _IVCurveTest(sciunit.Test):
         self.scale = scale # Whether to scale the predicted IV curve to 
                            # minimize distance from the observed IV curve
         self.converter = AtMostToBoolean(pq.Quantity(1.0,'pA**2'))
-        super(IVCurveTest,self).__init__(observation, name=name, **params)
+        super(_IVCurveTest,self).__init__(observation, name=name, **params)
     
     required_capabilities = (ProducesIVCurve,)
     score_type = BooleanScore
@@ -110,10 +112,23 @@ class _IVCurveTest(sciunit.Test):
         # but since that is before interpolation, we store the interpolated 
         # versions as well.  
         score.related_data.update(self.interped)
-        score.plot = self.last_model.plot_iv_curve
+
+        def plot(score):
+            import matplotlib.pyplot as plt
+            rd = score.related_data
+            rd['v'] = rd['v'].rescale('V')
+            rd['i_obs'] = rd['i_obs'].rescale('A')
+            rd['i_pred'] = rd['i_pred'].rescale('A')
+            score.test.last_model.plot_iv_curve(rd['v'],rd['i_obs'],
+                color='k',label='Observed (data)')
+            score.test.last_model.plot_iv_curve(rd['v'],rd['i_pred'],
+                color='r',same_fig=True,label='Predicted (model)')
+            plt.title('%s on %s: %s' % (score.model,score.test,score))
+
+        score.plot = plot.__get__(score) # Binds this method to 'score'.  
         return score
 
-
+    
 class IVCurveSSTest(_IVCurveTest):
     """Test IV curves using steady-state curent"""
     
