@@ -58,5 +58,5 @@ class ChannelModel(sciunit.Model, NML2_Channel_Runnable, ProducesIVCurve):
         return {'v':self.iv_data['hold_v'], 
                 'i':self.iv_data['i_peak']}
         
-    def plot_iv_curve(self, v, i, **plot_args):
-        ca.plot_iv_curve(self.a, v, i, **plot_args)
+    def plot_iv_curve(self, v, i, *plt_args, **plt_kwargs):
+        ca.plot_iv_curve(self.a, v, i, *plt_args, **plt_kwargs)
