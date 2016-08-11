@@ -19,7 +19,7 @@ setup(
     license='MIT',
     description='A SciUnit library for data-driven testing of single-neuron physiology models.',
     long_description="",
-    install_requires=['neo','elephant','sciunit>=0.1.5.5',],
+    install_requires=['neo>=0.4.0','elephant','sciunit>=0.1.5.5',],
     dependency_links = ['git+http://github.com/neuralensemble/python-neo.git#egg=neo-0.4.0dev',
                         'https://github.com/scidash/sciunit/tarball/dev']
 )
