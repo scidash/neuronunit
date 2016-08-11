@@ -133,11 +133,11 @@ class IVCurveSSTest(_IVCurveTest):
     """Test IV curves using steady-state curent"""
     
     def generate_prediction(self, model, verbose=False):
-        return model.produce_iv_curve_ss(**self.params)
+        return model.produce_iv_curve_ss(verbose=verbose, **self.params)
     
     
 class IVCurvePeakTest(_IVCurveTest):
     """Test IV curves using steady-state curent"""
     
     def generate_prediction(self, model, verbose=False):
-        return model.produce_iv_curve_peak(**self.params)
+        return model.produce_iv_curve_peak(verbose=verbose, **self.params)
