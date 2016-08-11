@@ -26,14 +26,16 @@ class ChannelModel(sciunit.Model, NML2_Channel_Runnable, ProducesIVCurve):
             name = os.path.split()[1].split('.')[0]
         super(ChannelModel,self).__init__(name=name)
     
-    def NML2_run(self, rerun=False, a=None, **run_params):
+    def NML2_run(self, rerun=False, a=None, verbose=None, **run_params):
         if not len(run_params):
             run_params = self.run_defaults
-        a = ca.build_namespace(a=a,**run_params) # Convert keyword args to a namespace.  
+        a = ca.build_namespace(a=a,**run_params) # Convert keyword args to a namespace. 
+        if verbose is None:
+            verbose = a.v
         if self.a is None or a.__dict__ != self.a.__dict__ or rerun: # Only rerun if params have changed.  
             self.a = a
-            self.lems_file_path = ca.make_lems_file(self.channel,self.a) # Create a lems file.
-            self.results = ca.run_lems_file(self.lems_file_path,self.a) # Writes data to disk.  
+            self.lems_file_path = ca.make_lems_file(self.channel,self.a) # Create a lems file. 
+            self.results = ca.run_lems_file(self.lems_file_path,verbose) # Writes data to disk.  
     
     def produce_iv_curve(self, **run_params):
         run_params['ivCurve'] = True
