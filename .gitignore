@@ -44,3 +44,5 @@ neuronunit.xcworkspace/contents.xcworkspacedata
 
 .idea/
 *.pyproj
+
+hippounit_bak*
