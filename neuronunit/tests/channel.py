@@ -38,7 +38,7 @@ class _IVCurveTest(sciunit.Test):
         if hasattr(observation['i'],'units'):
             observation['i'] = observation['i'].rescale(pq.pA) # Rescale to pA     
     
-    def generate_prediction(self, model, verbose=False):
+    def generate_prediction(self, model):
         raise Exception(("This is a meta-class for tests; use tests derived "
                          "from this class instead"))
         
@@ -82,7 +82,7 @@ class _IVCurveTest(sciunit.Test):
         
         return {'v':v_new*pq.mV, 'i_pred':i_pred_interp, 'i_obs':i_obs_interp}
     
-    def compute_score(self, observation, prediction, verbose=False):
+    def compute_score(self, observation, prediction):
         # Sum of the difference between the curves.
         o = observation
         p = prediction
@@ -132,12 +132,12 @@ class _IVCurveTest(sciunit.Test):
 class IVCurveSSTest(_IVCurveTest):
     """Test IV curves using steady-state curent"""
     
-    def generate_prediction(self, model, verbose=False):
-        return model.produce_iv_curve_ss(verbose=verbose, **self.params)
+    def generate_prediction(self, model):
+        return model.produce_iv_curve_ss(**self.params)
     
     
 class IVCurvePeakTest(_IVCurveTest):
     """Test IV curves using steady-state curent"""
     
-    def generate_prediction(self, model, verbose=False):
-        return model.produce_iv_curve_peak(verbose=verbose, **self.params)
+    def generate_prediction(self, model):
+        return model.produce_iv_curve_peak(**self.params)
