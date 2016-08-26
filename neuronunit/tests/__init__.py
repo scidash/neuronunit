@@ -25,12 +25,9 @@ class VmTest(sciunit.Test):
     def __init__(self,
                  observation={'mean':None,'std':None},
                  name=None,
-                 params=None):
+                 **params):
 
-        self.params = params if params else self.params
-        if name is None:
-            name = self.__class__.name
-        sciunit.Test.__init__(self,observation,name)
+        super(VmTest,self).__init__(observation,name,**params)
         cap = []
         for cls in self.__class__.__bases__:
             cap += cls.required_capabilities
@@ -43,8 +40,6 @@ class VmTest(sciunit.Test):
     units = pq.Dimensionless
 
     ephysprop_name = ''
-
-    params = {}
 
     # Observation values with units.
     united_observation_keys = ['value','mean','std']
@@ -104,7 +99,7 @@ class VmTest(sciunit.Test):
             ephysprop = {'name': cls.ephysprop_name} # Ephys property name in
                                                      # NeuroElectro ontology.
             )
-        reference_data.get_values() # Get and verify summary data
+        reference_data.get_values(quiet=not verbose) # Get and verify summary data
                                     # from neuroelectro.org.
         observation = {'mean': reference_data.mean*cls.units,
                        'std': reference_data.std*cls.units,
@@ -138,7 +133,7 @@ class TestPulseTest(VmTest):
     params = {'injected_square_current':
                 {'amplitude':-10.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
-    def generate_prediction(self, model, verbose=False):
+    def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
         model.inject_square_current(self.params['injected_square_current'])
         vm = model.get_membrane_potential()
@@ -192,10 +187,10 @@ class InputResistanceTest(TestPulseTest):
 
     ephysprop_name = 'Input Resistance'
 
-    def generate_prediction(self, model, verbose=False):
+    def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
         i,vm = super(InputResistanceTest,self).\
-                            generate_prediction(model,verbose=verbose)
+                            generate_prediction(model)
         r_in = self.__class__.get_rin(vm, i)
         r_in = r_in.simplified
         # Put prediction in a form that compute_score() can use.
@@ -214,10 +209,9 @@ class TimeConstantTest(TestPulseTest):
 
     ephysprop_name = 'Membrane Time Constant'
 
-    def generate_prediction(self, model, verbose=False):
+    def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
-        i,vm = super(TimeConstantTest,self).\
-                            generate_prediction(model,verbose=verbose)
+        i,vm = super(TimeConstantTest,self).generate_prediction(model)
         tau = self.__class__.get_tau(vm, i)
         tau = tau.simplified
         # Put prediction in a form that compute_score() can use.
@@ -236,10 +230,9 @@ class CapacitanceTest(TestPulseTest):
 
     ephysprop_name = 'Cell Capacitance'
 
-    def generate_prediction(self, model, verbose=False):
+    def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
-        i,vm = super(CapacitanceTest,self).\
-                            generate_prediction(model,verbose=verbose)
+        i,vm = super(CapacitanceTest,self).generate_prediction(model)
         r_in = self.__class__.get_rin(vm, i)
         tau = self.__class__.get_tau(vm, i)
         c = (tau/r_in).simplified
@@ -264,7 +257,7 @@ class APWidthTest(VmTest):
 
     ephysprop_name = 'Spike Half-Width'
 
-    def generate_prediction(self, model, verbose=False):
+    def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
@@ -276,7 +269,7 @@ class APWidthTest(VmTest):
                       'n':len(widths)}
         return prediction
 
-    def compute_score(self, observation, prediction, verbose=False):
+    def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
         if prediction['n'] == 0:
             score = scores.InsufficientDataScore(None)
@@ -303,10 +296,9 @@ class InjectedCurrentAPWidthTest(APWidthTest):
                    "at half of their maximum height when current "
                    "is injected into cell.")
 
-    def generate_prediction(self, model, verbose=False):
+    def generate_prediction(self, model):
         model.inject_square_current(self.params['injected_square_current'])
-        return super(InjectedCurrentAPWidthTest,self).\
-            generate_prediction(model, verbose=verbose)
+        return super(InjectedCurrentAPWidthTest,self).generate_prediction(model)
 
 
 class APAmplitudeTest(VmTest):
@@ -325,7 +317,7 @@ class APAmplitudeTest(VmTest):
 
     ephysprop_name = 'Spike Amplitude'
 
-    def generate_prediction(self, model, verbose=False):
+    def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
@@ -337,13 +329,13 @@ class APAmplitudeTest(VmTest):
                       'n':len(heights)}
         return prediction
 
-    def compute_score(self, observation, prediction, verbose=False):
+    def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
         if prediction['n'] == 0:
             score = scores.InsufficientDataScore(None)
         else:
             score = super(APAmplitudeTest,self).compute_score(observation,
-                                                prediction, verbose=verbose)
+                                                              prediction)
         return score
 
     @classmethod
@@ -378,10 +370,10 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
                    "action potentials when current "
                    "is injected into cell.")
 
-    def generate_prediction(self, model, verbose=False):
+    def generate_prediction(self, model):
         model.inject_square_current(self.params['injected_square_current'])
         return super(InjectedCurrentAPAmplitudeTest,self).\
-                generate_prediction(model, verbose=verbose)
+                generate_prediction(model)
 
 
 class APThresholdTest(VmTest):
@@ -400,7 +392,7 @@ class APThresholdTest(VmTest):
 
     ephysprop_name = 'Spike Threshold'
 
-    def generate_prediction(self, model, verbose=False):
+    def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
@@ -412,7 +404,7 @@ class APThresholdTest(VmTest):
                       'n':len(threshes)}
         return prediction
 
-    def compute_score(self, observation, prediction, verbose=False):
+    def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
         if prediction['n'] == 0:
             score = scores.InsufficientDataScore(None)
@@ -438,10 +430,10 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
     description = ("A test of the membrane potential threshold at which "
                    "action potentials are produced under current injection.")
 
-    def generate_prediction(self, model, verbose=False):
+    def generate_prediction(self, model):
         model.inject_square_current(self.params['injected_square_current'])
         return super(InjectedCurrentAPThresholdTest,self).\
-                generate_prediction(model, verbose=verbose)
+                generate_prediction(model)
 
 
 class RheobaseTest(VmTest):
@@ -465,7 +457,7 @@ class RheobaseTest(VmTest):
 
     score_type = scores.RatioScore
 
-    def generate_prediction(self, model, verbose=False):
+    def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
@@ -473,11 +465,11 @@ class RheobaseTest(VmTest):
         model.rerun = True
         units = self.observation['value'].units
 
-        lookup = self.threshold_FI(model, units, verbose=verbose)
+        lookup = self.threshold_FI(model, units)
         sub = np.array([x for x in lookup if lookup[x]==0])*units
         supra = np.array([x for x in lookup if lookup[x]>0])*units
 
-        if verbose:
+        if self.verbose:
             if len(sub):
                 print("Highest subthreshold current is %s" \
                       % (float(sub.max().round(2))*units))
@@ -497,7 +489,7 @@ class RheobaseTest(VmTest):
 
         return prediction
 
-    def threshold_FI(self, model, units, guess=None, verbose=False):
+    def threshold_FI(self, model, units, guess=None):
         lookup = {} # A lookup table global to the function below.
 
         def f(ampl):
@@ -506,7 +498,7 @@ class RheobaseTest(VmTest):
                 current['amplitude'] = ampl
                 model.inject_square_current(current)
                 n_spikes = model.get_spike_count()
-                if verbose:
+                if self.verbose:
                     print("Injected %s current and got %d spikes" % \
                             (ampl,n_spikes))
                 lookup[float(ampl)] = n_spikes
@@ -539,7 +531,7 @@ class RheobaseTest(VmTest):
 
         return lookup
 
-    def compute_score(self, observation, prediction, verbose=False):
+    def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
         #print("%s: Observation = %s, Prediction = %s" % \
         #	 (self.name,str(observation),str(prediction)))
@@ -547,7 +539,7 @@ class RheobaseTest(VmTest):
             score = scores.InsufficientDataScore(None)
         else:
             score = super(RheobaseTest,self).\
-                        compute_score(observation, prediction, verbose=verbose)
+                        compute_score(observation, prediction)
             #self.bind_score(score,None,observation,prediction)
         return score
 
@@ -579,7 +571,7 @@ class RestingPotentialTest(VmTest):
             raise sciunit.ObservationError(("Observation must be of the form "
                                     "{'mean':float*mV,'std':float*mV}"))
 
-    def generate_prediction(self, model, verbose=False):
+    def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
         model.rerun = True
         model.inject_square_current(self.params['injected_square_current'])

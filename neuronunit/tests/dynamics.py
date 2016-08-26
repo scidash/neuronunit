@@ -31,7 +31,7 @@ class TFRTypeTest(RheobaseTest):
             ("observation['type'] must be either 1 or 2, corresponding to "
              "type 1 or type 2 threshold firing rate dynamics.")
         
-    def generate_prediction(self, model, verbose=False):
+    def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
         
         model.rerun = True
@@ -42,7 +42,7 @@ class TFRTypeTest(RheobaseTest):
         lookup = self.threshold_FI(model, self.units, guess=guess)
         sub = np.array([x for x in lookup if lookup[x]==0])*self.units
         supra = np.array([x for x in lookup if lookup[x]>0])*self.units
-        if verbose:
+        if self.verbose:
             if len(sub):
                 print("Highest subthreshold current is %s" \
                       % float(sub.max().round(2)))
@@ -66,7 +66,7 @@ class TFRTypeTest(RheobaseTest):
         
         return prediction
 
-    def compute_score(self, observation, prediction, verbose=False):
+    def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
         #print("%s: Observation = %s, Prediction = %s" % \
         #    (self.name,str(observation),str(prediction)))
@@ -98,7 +98,7 @@ class BurstinessTest(InjectedCurrentAPWidthTest):
         super(TFRTypeTest,self).validate_observation(observation, 
                                                      nonunited_keys=['cv'])
         
-    def generate_prediction(self, model, verbose=False):
+    def generate_prediction(self, model):
         model.inject_square_current(observation['current']) 
         spike_train = model.get_spike_train()
         if len(spike_train) >= 3:
@@ -108,7 +108,7 @@ class BurstinessTest(InjectedCurrentAPWidthTest):
             cv = None
         return {'cv':cv}
 
-    def compute_score(self, observation, prediction, verbose=False):
+    def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
         #print("%s: Observation = %s, Prediction = %s" % \
         #    (self.name,str(observation),str(prediction)))
