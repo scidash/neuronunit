@@ -99,7 +99,7 @@ class VmTest(sciunit.Test):
             ephysprop = {'name': cls.ephysprop_name} # Ephys property name in
                                                      # NeuroElectro ontology.
             )
-        reference_data.get_values(quiet=not verbose) # Get and verify summary data
+        reference_data.get_values(quiet=not cls.verbose) # Get and verify summary data
                                     # from neuroelectro.org.
         observation = {'mean': reference_data.mean*cls.units,
                        'std': reference_data.std*cls.units,
