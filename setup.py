@@ -19,6 +19,6 @@ setup(
     license='MIT',
     description='A SciUnit library for data-driven testing of single-neuron physiology models.',
     long_description="",
-    install_requires=['scipy','matplotlib','neo==0.4','elephant','sciunit>=0.1.5.5',],
+    install_requires=['scipy','matplotlib==1.5','neo==0.4','elephant','sciunit>=0.1.5.5',],
     dependency_links = ['https://github.com/scidash/sciunit/tarball/dev']
 )
