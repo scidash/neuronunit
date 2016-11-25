@@ -22,13 +22,19 @@ class ReducedModel(mod.LEMSModel,
         super(ReducedModel,self).__init__(LEMS_file_path, name=name, attrs=attrs)
 
     def get_membrane_potential(self, rerun=None, **run_params):
+        import pdb
         if rerun is None:
             rerun = self.rerun
         self.run(rerun=rerun, **run_params)
-        v = np.array(self.results['v'])
+        for rkey in self.results.keys():
+            print(rkey)
+            if 'v' in rkey:
+                v = np.array(self.results[rkey])
+                print(v)
         t = np.array(self.results['t'])
         dt = (t[1]-t[0])*pq.s # Time per sample in milliseconds.  
         vm = AnalogSignal(v,units=pq.V,sampling_rate=1.0/dt)
+        print(vm)
         return vm
 
     def get_APs(self, rerun=False, **run_params):
