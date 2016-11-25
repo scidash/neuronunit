@@ -25,11 +25,11 @@ class ReducedModel(mod.LEMSModel,
         import pdb
         if rerun is None:
             rerun = self.rerun
-        self.run(rerun=rerun, **run_params)
-        for rkey in self.results.keys():
-            print(rkey)
-            if 'v' in rkey:
-                v = np.array(self.results[rkey])
+          self.run(rerun=rerun, **run_params)
+          for rkey in self.results.keys():
+              print(rkey)
+              if 'v' in rkey:
+                  v = np.array(self.results[rkey])
                 print(v)
         t = np.array(self.results['t'])
         dt = (t[1]-t[0])*pq.s # Time per sample in milliseconds.  
