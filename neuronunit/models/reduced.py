@@ -22,7 +22,6 @@ class ReducedModel(mod.LEMSModel,
         super(ReducedModel,self).__init__(LEMS_file_path, name=name, attrs=attrs)
 
     def get_membrane_potential(self, rerun=None, **run_params):
-        import pdb
         if rerun is None:
             rerun = self.rerun
         self.run(rerun=rerun, **run_params)
