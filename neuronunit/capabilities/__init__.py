@@ -18,23 +18,19 @@ class ProducesMembranePotential(sciunit.Capability):
 
     def get_mean_vm(self):
         vm = self.get_membrane_potential()
-        # return np.median(vm) # Doesn't work due to issues with 'quantities'
-        return np.mean(vm.base)*vm.units
+        return np.mean(vm.base)
 
     def get_median_vm(self):
         vm = self.get_membrane_potential()
-        # return np.median(vm) # Doesn't work due to issues with 'quantities'
-        return np.median(vm.base)*vm.units
+        return np.median(vm.base)
 
     def get_std_vm(self):
         vm = self.get_membrane_potential()
-        # return np.median(vm) # Doesn't work due to issues with 'quantities'
-        return np.std(vm.base)*vm.units
+        return np.std(vm.base)
 
     def get_iqr_vm(self):
         vm = self.get_membrane_potential()
-        # return np.median(vm) # Doesn't work due to issues with 'quantities'
-        return (np.percentile(75) - np.percentile(25))*vm.units
+        return (np.percentile(vm,75) - np.percentile(vm,25))*vm.units
 
 
 class ProducesSpikes(sciunit.Capability):
