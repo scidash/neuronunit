@@ -1,5 +1,6 @@
 """A module of auxiliary helper functions, not capabilities."""
 
+import sciunit as su
 import numpy as np
 import neo
 from elephant.spike_train_generation import threshold_detection
@@ -62,41 +63,41 @@ def spikes2amplitudes(spike_waveforms):
     return ampls * spike_waveforms.units
 
 def spikes2widths(spike_waveforms):
-	""" 
-	IN:
-	 spike_waveforms: Spike waveforms, e.g. from get_spike_waveforms(). 
-	 	neo.core.AnalogSignalArray    
-	OUT:
-	 1D numpy array of spike widths, specifically the full width 
-	 at half the maximum amplitude.     
-	"""
-	n_spikes = len(spike_waveforms)
-	widths = []
-	#print("There are %d spikes" % n_spikes)
-	for i,s in enumerate(spike_waveforms):
-		#print("This spikes has duration %d samples" % len(spike))
-		x_high = int(np.argmax(s))
-		#print(("Spikes has duration %d samples, "
-		#	   "and sample %d is the high point" % \
-		#	   (len(s),x_high)))
-		high = s[x_high]
-		if x_high > 0:
-			try: # Use threshold to compute half-max.  
-				s = np.array(s)
-				dvdt = np.diff(s)
-				trigger = dvdt.max()/10
-				x_loc = np.where(dvdt >= trigger)[0][0]
-				thresh = (s[x_loc]+s[x_loc+1])/2	
-				mid = (high+thresh)/2
-			except: # Use minimum value to compute half-max.  
-				low = np.min(s[:x_high])
-				mid = (high+low)/2
-			n_samples = sum(s>mid) # Number of samples above the half-max.  
-			widths.append(n_samples)
-	if n_spikes:
-		widths *= s.sampling_period # Convert from samples to time.  
-	#print("Spike widths are %s" % str(widths))
-	return widths
+    """ 
+    IN:
+     spike_waveforms: Spike waveforms, e.g. from get_spike_waveforms(). 
+        neo.core.AnalogSignalArray    
+    OUT:
+     1D numpy array of spike widths, specifically the full width 
+     at half the maximum amplitude.     
+    """
+    n_spikes = len(spike_waveforms)
+    widths = []
+    for i,s in enumerate(spike_waveforms):
+        x_high = int(np.argmax(s))
+        high = s[x_high]
+        if x_high > 0:
+            try: # Use threshold to compute half-max.  
+                y = np.array(s)
+                dvdt = np.diff(y)
+                trigger = dvdt.max()/10
+                x_loc = int(np.where(dvdt >= trigger)[0][0])
+                thresh = (s[x_loc]+s[x_loc+1])/2    
+                mid = (high+thresh)/2
+            except: # Use minimum value to compute half-max. 
+                su.log(("Could not compute threshold; using pre-spike "
+                        "minimum to compute width"))
+                low = np.min(s[:x_high])
+                mid = (high+low)/2
+            n_samples = sum(s>mid) # Number of samples above the half-max.  
+            widths.append(n_samples)
+    widths = np.array(widths,dtype='float')
+    print(widths,n_spikes,len(spike_waveforms))
+    if n_spikes:
+        widths = widths*s.sampling_period # Convert from samples to time.  
+        print(widths,s.sampling_period,widths*s.sampling_period)
+    #print("Spike widths are %s" % str(widths))
+    return widths
 
 def spikes2thresholds(spike_waveforms):
     """
