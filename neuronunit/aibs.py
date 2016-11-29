@@ -1,8 +1,7 @@
 import numpy as np
 import quantities as pq
 from allensdk.api.queries.cell_types_api import CellTypesApi
-from allensdk.ephys.extract_cell_features import get_square_stim_characteristics,\
-                                                 get_sweep_from_nwb
+from allensdk.ephys.extract_cell_features import get_square_stim_characteristics
     
 def get_sweep_params(dataset_id,sweep_id):
     ct = CellTypesApi()
