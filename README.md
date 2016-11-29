@@ -27,7 +27,7 @@ https://github.com/scidash/assets/blob/master/presentations/SciUnit%20OpenWorm%2
 # Examples:
 ### (Example 1) Validating an ion channel model's IV curve against data from a published experiment
 ```python
-from channel_worm.ion_channel.models import GraphData
+from channelworm.ion_channel.models import GraphData
 from neuronunit.tests.channel import IVCurvePeakTest
 from neuronunit.models.channel import ChannelModel
 
