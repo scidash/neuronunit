@@ -15,6 +15,21 @@ def get_sweep_params(dataset_id,sweep_id):
         raise Exception('Sweep with ID %d not found in dataset with ID %d.' % (sweep_id, dataset_id))
     return sp
 
+
+def get_observation(dataset_id,kind,cached=True):
+    ct = CellTypesApi()
+    cmd = ct.get_cell(dataset_id) # Cell metadata
+    
+    sweep_num = None
+    if kind == 'rheobase':
+        sweep_id = cmd['ephys_features'][0]['rheobase_sweep_id']
+    sp = get_sweep_params(dataset_id, sweep_id)
+    if kind == 'rheobase':
+        value = sp['stimulus_absolute_amplitude']
+        value = np.round(value,2) # Round to nearest hundredth of a pA.
+        value *= pq.pA # Apply units.  
+    return {'value': value}
+
 def get_sp(experiment_params,sweep_ids):
     '''
     get sweep parameter. A candidate method for replacing get_sweep_params.
@@ -30,21 +45,6 @@ def get_sp(experiment_params,sweep_ids):
     if sweep_num is None:
         raise Exception('Sweep with ID %d not found in dataset with ID %d.' % (sweep_id, dataset_id))
     return sp
-
-def get_observation(dataset_id,kind,cached=True):
-    ct = CellTypesApi()
-    cmd = ct.get_cell(dataset_id) # Cell metadata
-    
-    sweep_num = None
-    if kind == 'rheobase':
-        sweep_id = cmd['ephys_features'][0]['rheobase_sweep_id']
-    sp = get_sweep_params(dataset_id, sweep_id)
-    if kind == 'rheobase':
-        value = sp['stimulus_absolute_amplitude']
-        value = np.round(value,2) # Round to nearest hundredth of a pA.
-        value *= pq.pA # Apply units.  
-    return {'value': value}
-    
    
 def get_value_dict(experiment_params,sweep_ids,kind,cached=True):
     '''
