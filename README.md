@@ -1,4 +1,6 @@
-[![Build Status](https://travis-ci.org/scidash/neuronunit.svg?branch=master)](https://travis-ci.org/scidash/neuronunit)
+[![Build Status](https://travis-ci.org/scidash/neuronunit.svg?branch=master)](https://travis-ci.org/scidash/neuronunit) (master)
+
+[![Build Status](https://travis-ci.org/scidash/neuronunit.svg?branch=dev)](https://travis-ci.org/scidash/neuronunit) (dev)
 
 NeuronUnit: A SciUnit repository for neuroscience-related tests, models, and capabilities.
 
@@ -25,7 +27,7 @@ https://github.com/scidash/assets/blob/master/presentations/SciUnit%20OpenWorm%2
 # Examples:
 ### (Example 1) Validating an ion channel model's IV curve against data from a published experiment
 ```python
-from channel_worm.ion_channel.models import GraphData
+from channelworm.ion_channel.models import GraphData
 from neuronunit.tests.channel import IVCurvePeakTest
 from neuronunit.models.channel import ChannelModel
 
