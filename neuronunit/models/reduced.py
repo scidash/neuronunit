@@ -25,7 +25,9 @@ class ReducedModel(mod.LEMSModel,
         if rerun is None:
             rerun = self.rerun
         self.run(rerun=rerun, **run_params)
-        v = np.array(self.results['v'])
+        for rkey in self.results.keys():
+            if 'v' in rkey or 'vm' in rkey:
+                v = np.array(self.results[rkey])
         t = np.array(self.results['t'])
         dt = (t[1]-t[0])*pq.s # Time per sample in milliseconds.  
         vm = AnalogSignal(v,units=pq.V,sampling_rate=1.0/dt)
