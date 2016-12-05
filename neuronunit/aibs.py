@@ -1,3 +1,4 @@
+import shelve
 import numpy as np
 import quantities as pq
 from allensdk.api.queries.cell_types_api import CellTypesApi
@@ -16,18 +17,29 @@ def get_sweep_params(dataset_id,sweep_id):
 
 
 def get_observation(dataset_id,kind,cached=True):
-    ct = CellTypesApi()
-    cmd = ct.get_cell(dataset_id) # Cell metadata
+    identifier = '%d_%s' % (dataset_id,kind)
+    if cached:
+        db = shelve.open('aibs-cache')
+    else:
+        db = {}
+
+    if identifier in db:
+        value = db[identifier]
+    else:    
+        ct = CellTypesApi()
+        cmd = ct.get_cell(dataset_id) # Cell metadata
     
-    sweep_num = None
-    if kind == 'rheobase':
-        sweep_id = cmd['ephys_features'][0]['rheobase_sweep_id']
-    sp = get_sweep_params(dataset_id, sweep_id)
-    if kind == 'rheobase':
-        value = sp['stimulus_absolute_amplitude']
-        value = np.round(value,2) # Round to nearest hundredth of a pA.
-        value *= pq.pA # Apply units.  
+        sweep_num = None
+        if kind == 'rheobase':
+            sweep_id = cmd['ephys_features'][0]['rheobase_sweep_id']
+        sp = get_sweep_params(dataset_id, sweep_id)
+        if kind == 'rheobase':
+            value = sp['stimulus_absolute_amplitude']
+            value = np.round(value,2) # Round to nearest hundredth of a pA.
+            value *= pq.pA # Apply units.
+        db[identifier] = value
     return {'value': value}
+
 
 def get_sp(experiment_params,sweep_ids):
     '''
