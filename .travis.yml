@@ -10,16 +10,21 @@ before_install:
   - docker pull scidash/neuronunit-docs
   - pip install nbconvert
 
+install:
+  - pwd
+  - python setup.py install
+
 before_script:
   - echo $PYTHONPATH
   - ls
 
 script: 
-  - docker run -v /home/travis:/home/mnt scidash/neuronunit-docs "pwd"
-  - docker run -v /home/travis:/home/mnt scidash/neuronunit-docs "ls"
-  - docker run -v /home/travis:/home/mnt scidash/neuronunit-docs "ls /home/mnt"
-  - docker run -v /home/travis:/home/mnt scidash/neuronunit-docs "ls /home/mnt/neuronunit"
-  - docker run -v /home/travis:/home/mnt scidash/neuronunit-docs "cd neuronunit; jupyter nbconvert --to notebook --execute docs/chapter1.ipynb"
+  - git clone http://github.com/scidash/neuronunit@$TRAVIS_BRANCH
+  - docker run -v neuronunit:/home/mnt/neuronunit scidash/neuronunit-docs "pwd"
+  - docker run -v neuronunit:/home/mnt/neuronunit scidash/neuronunit-docs "ls"
+  - docker run -v neuronunit:/home/mnt/neuronunit scidash/neuronunit-docs "ls /home/mnt"
+  - docker run -v neuronunit:/home/mnt/neuronunit scidash/neuronunit-docs "ls /home/mnt/neuronunit"
+  - docker run -v neuronunit:/home/mnt/neuronunit scidash/neuronunit-docs "cd /home/mnt/neuronunit; jupyter nbconvert --to notebook --execute docs/chapter1.ipynb"
 #  - python docs/chapter2.py
 #  - python docs/chapter3.py
 #  - python docs/chapter4.py
