@@ -14,6 +14,7 @@ before_script:
   - ls
 
 script: 
+  - docker run -it scidash/neuronunit-docs
   - python docs/chapter1.py
 #  - python docs/chapter2.py
 #  - python docs/chapter3.py
