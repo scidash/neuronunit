@@ -37,6 +37,9 @@ class LEMSModel(sciunit.Model, cap.Runnable):
         LEMS_file_path: Path to LEMS file (an xml file).
         name: Optional model name.
         """
+        if self.backend is None:
+            # The base class should not be called.  
+            raise Exception("A backend (e.g. NEURONBackend) must be selected")
         self.orig_lems_file_path = LEMS_file_path
         self.create_lems_file(name,attrs)
         self.run_defaults = pynml.DEFAULTS
@@ -47,7 +50,12 @@ class LEMSModel(sciunit.Model, cap.Runnable):
         self.rerun = True # Needs to be rerun since it hasn't been run yet!
         if name is None:
             name = os.path.split(self.lems_file_path)[1].split('.')[0]
+        self.backend = backend
+        self.load_model()
         super(LEMSModel,self).__init__(name=name)
+
+    backend = None
+    f = None
 
     def create_lems_file(self, name, attrs):
         if not hasattr(self,'temp_dir'):
@@ -55,9 +63,9 @@ class LEMSModel(sciunit.Model, cap.Runnable):
         self.lems_file_path  = os.path.join(self.temp_dir, '%s.xml' % name)
         shutil.copy2(self.orig_lems_file_path, self.lems_file_path)
         if attrs:
-            self.set_attrs(attrs)    
+            self.set_lems_attrs(attrs)    
 
-    def set_attrs(self, attrs):
+    def set_lems_attrs(self, attrs):
         from lxml import etree
         tree = etree.parse(self.lems_file_path)
         for key1,value1 in attrs.items():
@@ -79,8 +87,9 @@ class LEMSModel(sciunit.Model, cap.Runnable):
             return
         self.update_run_params()
         
-        f = pynml.run_lems_with_jneuroml_neuron
-        #print(self.lems_file_path)
+        if f is None:
+            raise NotImplementedError(("The chosen backend doesn't implement "
+                                       " _run()"))
         self.results = f(self.lems_file_path, skip_run=self.skip_run,
                          nogui=self.run_params['nogui'], 
                          load_saved_data=True, plot=False, 
@@ -89,8 +98,8 @@ class LEMSModel(sciunit.Model, cap.Runnable):
         self.rerun = False
         self.run_params = {} # Reset run parameters so the next test has to pass
                              # its own run parameters and not use the same ones
-
-    def update_run_params(self):
+    
+    def update_lems_run_params(self):
         from lxml import etree
         from neuroml import nml
         lems_tree = etree.parse(self.lems_file_path)
@@ -115,5 +124,4 @@ class LEMSModel(sciunit.Model, cap.Runnable):
                                 pg.attrib[attr] = '%s' % value[attr]
 
             tree.write(file_path)
-            
-        
+
