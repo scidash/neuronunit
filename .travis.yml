@@ -15,7 +15,7 @@ before_script:
   - ls
 
 script: 
-  - docker run -it scidash/neuronunit-docs jupyter nbconvert --to notebook --execute docs/chapter1.ipynb
+  - docker run -v /home/travis:/home/mnt scidash/neuronunit-docs "cd /home/mnt/neuronunit; jupyter nbconvert --to notebook --execute docs/chapter1.ipynb"
 #  - python docs/chapter2.py
 #  - python docs/chapter3.py
 #  - python docs/chapter4.py
