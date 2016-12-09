@@ -6,9 +6,11 @@ from pyneuroml import pynml
 from neo.core import AnalogSignal
 import quantities as pq
 import neuronunit.models as mod
+import neuronunit.models.backends as backends
 import neuronunit.capabilities.spike_functions as sf
 
 class ReducedModel(mod.LEMSModel,
+                   backends.jNeuroMLBackend,
                    cap.ReceivesCurrent,
                    cap.ProducesMembranePotential,
                    cap.ProducesActionPotentials):
