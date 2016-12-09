@@ -6,25 +6,12 @@ sudo: required
 services:
   - docker
   
-before_install:
-  - docker pull scidash/neuronunit-docs
-  - pip install nbconvert
-
-install:
-  - pwd
-  - python setup.py install
-
 before_script:
-  - echo $PYTHONPATH
-  - ls
+  - docker pull scidash/neuronunit-docs
+  - docker build . -t scidash/neuronunit-travis
 
 script: 
-  - git clone http://github.com/scidash/neuronunit@$TRAVIS_BRANCH
-  - docker run -v neuronunit:/home/mnt/neuronunit scidash/neuronunit-docs "pwd"
-  - docker run -v neuronunit:/home/mnt/neuronunit scidash/neuronunit-docs "ls"
-  - docker run -v neuronunit:/home/mnt/neuronunit scidash/neuronunit-docs "ls /home/mnt"
-  - docker run -v neuronunit:/home/mnt/neuronunit scidash/neuronunit-docs "ls /home/mnt/neuronunit"
-  - docker run -v neuronunit:/home/mnt/neuronunit scidash/neuronunit-docs "cd /home/mnt/neuronunit; jupyter nbconvert --to notebook --execute docs/chapter1.ipynb"
+  - docker run -it scidash/neurounit-travis
 #  - python docs/chapter2.py
 #  - python docs/chapter3.py
 #  - python docs/chapter4.py
