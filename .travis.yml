@@ -11,7 +11,7 @@ before_script:
   - docker build . -t scidash/neuronunit-travis
 
 script: 
-  - docker run -it scidash/neurounit-travis
+  - docker run -it scidash/neuronunit-travis
 #  - python docs/chapter2.py
 #  - python docs/chapter3.py
 #  - python docs/chapter4.py
