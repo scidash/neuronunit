@@ -7,11 +7,11 @@ services:
   - docker
   
 before_script:
-  - docker pull scidash/neuronunit-docs
-  - docker build . -t scidash/neuronunit-travis
+  - docker pull scidash/neuron-mpi-neuroml
+  - docker build . -t scidash/neuronunit
 
 script: 
-  - docker run -it scidash/neuronunit-travis
+  - docker run -it scidash/neuronunit python -m unittest test_*
 #  - python docs/chapter2.py
 #  - python docs/chapter3.py
 #  - python docs/chapter4.py

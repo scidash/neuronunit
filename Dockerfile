@@ -1,9 +1,8 @@
-FROM scidash/neuronunit-docs
+FROM scidash/neuron-mpi-neuroml
 
 ADD . /home/mnt
 WORKDIR /home/mnt
-RUN pip install nbconvert ipykernel
 USER root
-RUN chmod -R 777 .
+RUN chown -R $NB_USER . 
 USER $NB_USER
-ENTRYPOINT jupyter nbconvert --to notebook --execute docs/chapter1.ipynb
+RUN python setup.py install
