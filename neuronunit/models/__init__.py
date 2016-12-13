@@ -32,11 +32,13 @@ class SimpleModel(sciunit.Model,
 class LEMSModel(sciunit.Model, cap.Runnable):
     """A generic LEMS model"""
     
-    def __init__(self, LEMS_file_path, name=None, attrs={}):
+    def __init__(self, LEMS_file_path, name=None, backend=None, attrs={}):
         """
         LEMS_file_path: Path to LEMS file (an xml file).
         name: Optional model name.
         """
+        print('got into this source')
+        self.backend='NEURONbackend'
         if self.backend is None:
             # The base class should not be called.  
             raise Exception("A backend (e.g. NEURONBackend) must be selected")
