@@ -34,9 +34,9 @@ class NEURONBackend(Backend):
     def __init__(self,nml_file_path):
         '''
         Arguably nml_file_path can move out of the constructor signature, and into load_model signature.
-        If neuron doesn't exist yet, then create it, however really this is just a place holder for 
-        Its only important that neuron is an object attribute, such that 
-        it has non local scope in the methods below. neuron acts a bit like a global variable object 
+        self.neuron is just a place holder for the neuron object attribute. 
+        neuron is made an object attribute as common usage of neuron is to mutate its contents
+        neuron acts a bit like a global variable object 
         in the scope of this class whose contents are constantly mutated.
         '''
         self.neuron=None
