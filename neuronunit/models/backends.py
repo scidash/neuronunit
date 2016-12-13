@@ -31,9 +31,15 @@ class jNeuroMLBackend(Backend):
 
 
 class NEURONBackend(Backend):
-    def __init__(self,nml_file_path):#If neuron doesn't exist yet, then create it, however really this is just a place holder for 
-        self.neuron=None#Its only important that neuron is an object attribute, such that 
-        #it has non local scope in the methods below. neuron acts a bit like a global variable object type whose contents are constantly mutated.
+    def __init__(self,nml_file_path):
+        '''
+        Arguably nml_file_path can move out of the constructor signature, and into load_model signature.
+        If neuron doesn't exist yet, then create it, however really this is just a place holder for 
+        Its only important that neuron is an object attribute, such that 
+        it has non local scope in the methods below. neuron acts a bit like a global variable object 
+        in the scope of this class whose contents are constantly mutated.
+        '''
+        self.neuron=None
         self.nml_file=nml_file_path
     
     def load_model(self):        
@@ -68,7 +74,7 @@ class NEURONBackend(Backend):
         self.neuron.load_mechanisms(os.getcwd()+'/NeuroML2')    
         #import the default simulation protocol
         from NeuroML2.LEMS_2007One_nrn import NeuronSimulation
-        #self.although this may be unnecessary.
+        #this next step may be unnecessary: TODO delete it and check.
         self.ns = NeuronSimulation(tstop=1600, dt=0.0025)
 
     def update_nrn_param(self,param_dict):
