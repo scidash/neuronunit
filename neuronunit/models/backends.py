@@ -1,5 +1,5 @@
 from pyneuroml import pynml
-
+import os
 
 class Backend:
     # The function (e.g. from pynml) that handles running the simulation
@@ -40,7 +40,8 @@ class NEURONBackend(Backend):
         in the scope of this class whose contents are constantly mutated.
         '''
         self.neuron=None
-        self.nml_file=nml_file_path
+        self.nml_file=nml_file_path+str('/LEMS_2007One.xml')
+        self.nml_file_path=nml_file_path
     
     def load_model(self):        
         '''
@@ -68,12 +69,12 @@ class NEURONBackend(Backend):
                                           exit_on_fail = True)
         
         #import the contents of the file into the current names space.
-        from NeuroML2 import LEMS_2007One_nrn 
+        from neuronunit.tests.NeuroML2 import LEMS_2007One_nrn 
         self.neuron=LEMS_2007One_nrn.neuron
         #make sure mechanisms are loaded
-        self.neuron.load_mechanisms(os.getcwd()+'/NeuroML2')    
+        self.neuron.load_mechanisms(self.nml_file_path)    
         #import the default simulation protocol
-        from NeuroML2.LEMS_2007One_nrn import NeuronSimulation
+        from neuronunit.tests.NeuroML2.LEMS_2007One_nrn import NeuronSimulation
         #this next step may be unnecessary: TODO delete it and check.
         self.ns = NeuronSimulation(tstop=1600, dt=0.0025)
 
