@@ -28,13 +28,10 @@ LEMS_MODEL_PATH=IZHIKEVICH_PATH+str('/LEMS_2007One.xml')
 
 from neuronunit.models import backends
 #model = ReducedModel(IZHIKEVICH_PATH+str('/LEMS_2007One.xml'),name='vanilla')
+
+
+#some testing of functionality Not actually a step in optimization.
 model=backends.NEURONBackend(LEMS_MODEL_PATH,name='vanilla')
-
-
-#some testing of functionality
-#TODO rm later.
-
-NeuronObject=backends.NEURONBackend(IZHIKEVICH_PATH,name='vanilla')
 model=NeuronObject.load_model()
 
 
