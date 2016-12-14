@@ -27,9 +27,10 @@ class NEURONBackend(Backend,
                     cap.ReceivesCurrent,
                     cap.ProducesMembranePotential,
                     cap.ProducesActionPotentials):
-    #model=backends.NEURONBackend(file_path,model_path,name='vanilla')
     def __init__(self,file_path,model_path,name=None,attrs=None):
         '''
+        Inputs: NEURONBackend instance object,file_path,model_path,name=None,attrs=None
+        
         Arguably nml_file_path can move out of the constructor signature, and into load_model signature.
         self.neuron is just a place holder for the neuron object attribute. 
         neuron is made an object attribute as common usage of neuron is to mutate its contents
@@ -44,6 +45,8 @@ class NEURONBackend(Backend,
 
     def load_model(self):        
         '''
+        Inputs: NEURONBackend instance object
+        Outputs: nothing mutates input.
         Take a declarative model description, and convert it into an implementation, stored in a pyhoc file.
         import the pyhoc file thus dragging the neuron variables into memory/python name space.
         Since this only happens once outside of the optimization loop its a tolerable performance hit.
