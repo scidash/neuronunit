@@ -2,6 +2,8 @@ import os
 from copy import deepcopy
 import tempfile
 import shutil
+import inspect
+import types
 
 import numpy as np
 import sciunit
@@ -9,7 +11,9 @@ import neuronunit.capabilities as cap
 from pyneuroml import pynml
 from neo.core import AnalogSignal
 from quantities import ms,mV,Hz
+
 from .channel import *
+from . import backends
 
 
 class SimpleModel(sciunit.Model,
@@ -32,14 +36,12 @@ class SimpleModel(sciunit.Model,
 class LEMSModel(sciunit.Model, cap.Runnable):
     """A generic LEMS model"""
     
-    def __init__(self, LEMS_file_path, name=None, attrs={}):
+    def __init__(self, LEMS_file_path, name=None, backend=None, attrs={}):
         """
         LEMS_file_path: Path to LEMS file (an xml file).
         name: Optional model name.
         """
-        if self.backend is None:
-            # The base class should not be called.  
-            raise Exception("A backend (e.g. NEURONBackend) must be selected")
+        super(LEMSModel,self).__init__(name=name)
         self.orig_lems_file_path = LEMS_file_path
         self.create_lems_file(name,attrs)
         self.run_defaults = pynml.DEFAULTS
@@ -50,13 +52,38 @@ class LEMSModel(sciunit.Model, cap.Runnable):
         self.rerun = True # Needs to be rerun since it hasn't been run yet!
         if name is None:
             name = os.path.split(self.lems_file_path)[1].split('.')[0]
-        self.backend = backend
+        self.set_backend(backend)
         self.load_model()
-        super(LEMSModel,self).__init__(name=name)
 
-    backend = None
-    f = None
-
+    def set_backend(self, backend):
+        if type(backend) is str:
+            name = backend
+            args = []
+            kwargs = {}
+        elif type(backend) in (tuple,list):
+            name = backend[0]
+            args = backend[1]
+            kwargs = backend[2]
+        else:
+            raise "Backend must be string, tuple, or list"
+        options = {x.replace('Backend',''):cls for x, cls \
+                   in backends.__dict__.items() \
+                   if inspect.isclass(cls) and \
+                   issubclass(cls, backends.Backend)}
+        if name in options:
+            self.backend = name
+            self._backend = options[name](*args,**kwargs)
+            # Add all of the backend's methods to the model instance
+            self.__class__.__bases__ = (self._backend.__class__,) + \
+                                        self.__class__.__bases__
+        elif name is None:
+            # The base class should not be called.  
+            raise Exception(("A backend (e.g. 'jNeuroML' or 'NEURON') "
+                             "must be selected"))
+        else:
+            raise Exception("Backend %s not found in backends.py" \
+                            % backend_name)
+        
     def create_lems_file(self, name, attrs):
         if not hasattr(self,'temp_dir'):
             self.temp_dir = tempfile.gettempdir()
@@ -87,7 +114,7 @@ class LEMSModel(sciunit.Model, cap.Runnable):
             return
         self.update_run_params()
         
-        if f is None:
+        if self.f is None:
             raise NotImplementedError(("The chosen backend doesn't implement "
                                        " _run()"))
         self.results = f(self.lems_file_path, skip_run=self.skip_run,

@@ -6,13 +6,34 @@ import pdb
 import neuronunit.capabilities as cap
 import neuronunit.capabilities.spike_functions as sf
 
-class Backend(sciunit.Model):
-    # The function (e.g. from pynml) that handles running the simulation
+class Backend:
+    """Based class for simulator backends that implement simulator-specific
+    details of modifying, running, and reading results from the simulation
+    """
+    
+    # Name of the backend
+    backend = None
+
+    #The function (e.g. from pynml) that handles running the simulation
     f = None
 
+    def set_attrs(self, attrs):
+        """Set model attributes, e.g. input resistance of a cell"""
+        pass
+
+    def update_run_params(self, attrs):
+        """Set run-time parameters, e.g. the somatic current to inject"""
+        pass
+
+    def load_model(self):
+        """Load the model into memory"""
+        pass
 
 
 class jNeuroMLBackend(Backend):
+    """Used for simulation with jNeuroML, a reference simulator for NeuroML"""
+    
+    backend = 'jNeuroML'
     f = pynml.run_lems_with_jneuroml
 
     def set_attrs(self, attrs):
@@ -27,6 +48,10 @@ class NEURONBackend(Backend,
                     cap.ReceivesCurrent,
                     cap.ProducesMembranePotential,
                     cap.ProducesActionPotentials):
+    """Used for simulation with NEURON, a popular simulator
+    http://www.neuron.yale.edu/neuron/
+    """
+
     def __init__(self,file_path,model_path,name=None,attrs=None):
         '''
         Inputs: NEURONBackend instance object,file_path,model_path,name=None,attrs=None
@@ -42,6 +67,8 @@ class NEURONBackend(Backend,
         self.nml_file_path=file_path
         self.name=name
         self.attrs=attrs
+
+    backend = 'NEURON'
 
     def load_model(self):        
         '''
