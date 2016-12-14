@@ -26,7 +26,8 @@ RUN conda install -y matplotlib
 
 WORKDIR /home/jovyan/work/scidash
 
-RUN git clone -b dev https://github.com/scidash/sciunit.git
+RUN git clone -b dev https://github.com/russelljjarvis/sciunit.git
+                     
 WORKDIR /home/jovyan/work/scidash/sciunit
 RUN ln -s /home/jovyan/work/scidash/sciunit/sciunit /opt/conda/lib/python3.5/site-packages/sciunit
 RUN python -c "import sciunit"
