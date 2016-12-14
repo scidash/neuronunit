@@ -115,7 +115,7 @@ def optimize(self,model,rov):
     return pop#(best_params, best_score, model)
 
 my_test = tests[0]
-my_test.verbose = False
+my_test.verbose = True
 my_test.optimize = MethodType(optimize, my_test) # Bind to the score.
 
 
@@ -131,3 +131,42 @@ pop = my_test.optimize(model,rov)
 
 print("%.2f mV" % np.mean([p[0] for p in pop]))
 
+
+NeuronObject=backends.NEURONBackend(LEMS_MODEL_PATH)
+NeuronObject.load_model()#Only needs to occur once
+#NeuronObject.update_nrn_param(param_dict)
+#NeuronObject.update_inject_current(stim_dict)
+'''
+brute force optimization:
+for comparison
+#print(dir(NeuronObject))
+for vr in iter(np.linspace(-75,-50,6)):
+    for i,a in iter(enumerate(np.linspace(0.015,0.045,7))):
+        for j,b in iter(enumerate(np.linspace(-3.5,-0.5,7))):
+            for k in iter(np.linspace(100,200,4)):
+                param_dict={}#Very important to redeclare dictionary or badness.
+                param_dict['vr']=vr
+
+                param_dict['a']=str(a) 
+                param_dict['b']=str(b)               
+                param_dict['C']=str(150)
+                param_dict['k']=str(0.70) 
+                param_dict['vpeak']=str(45)                      
+                             
+                NeuronObject.update_nrn_param(param_dict)
+                stim_dict={}
+                stim_dict['delay']=200
+                stim_dict['duration']=500
+                stim_dict['amplitude']=k#*100+150
+
+                NeuronObject.update_inject_current(stim_dict)
+                NeuronObject.local_run()
+                vm,im,time=NeuronObject.out_to_neo()
+                print('\n')
+                print('\n')
+                print(vm.trace)
+                print(time.trace)
+                print(im.trace)
+                print('\n')
+                print('\n')
+'''
