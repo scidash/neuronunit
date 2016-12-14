@@ -19,7 +19,7 @@ import pdb
 # In[16]:
 
 # This example is from https://github.com/OpenSourceBrain/IzhikevichModel.
-IZHIKEVICH_PATH = os.getcwd()+str('/neuronunit/tests/NeuroML2') # Replace this the path to your 
+IZHIKEVICH_PATH = os.getcwd()+str('NeuroML2') # Replace this the path to your 
                                                                        # working copy of 
                                                                        # github.com/OpenSourceBrain/IzhikevichModel.  
 #LEMS_MODEL_PATH = os.path.join(IZHIKEVICH_PATH,)
