@@ -127,8 +127,6 @@ class NEURONBackend(Backend,
         for key, value in items:
            #TODO make this solution such that it would work for other single cell models specified by a converted from neuroml to pyhoc file.
            self.neuron.hoc.execute('explicitInput_RS_IextRS_pop0.'+str(key)+'='+str(value))
-           print(evalstring) 
-           eval(evalstring)
         self.neuron.hoc.execute('forall{ psection() }')
 
     def get_membrane_potential(self):
