@@ -35,7 +35,7 @@ class NEURONBackend(Backend,
         self.neuron is just a place holder for the neuron object attribute. 
         neuron is made an object attribute as common usage of neuron is to mutate its contents
         neuron acts a bit like a global variable object 
-        in the scope of this class whose contents are constantly mutated.
+        in the scope of this class.
         '''
         self.neuron=None
         self.model_path=model_path
@@ -46,7 +46,7 @@ class NEURONBackend(Backend,
     def load_model(self):        
         '''
         Inputs: NEURONBackend instance object
-        Outputs: nothing mutates input.
+        Outputs: nothing mutates input object.
         Take a declarative model description, and convert it into an implementation, stored in a pyhoc file.
         import the pyhoc file thus dragging the neuron variables into memory/python name space.
         Since this only happens once outside of the optimization loop its a tolerable performance hit.
@@ -72,7 +72,6 @@ class NEURONBackend(Backend,
         self.neuron=LEMS_2007One_nrn.neuron
         #make sure mechanisms are loaded
         self.neuron.load_mechanisms(self.model_path)  
-        pdb.set_trace()  
         #import the default simulation protocol
         from neuronunit.tests.NeuroML2.LEMS_2007One_nrn import NeuronSimulation
         #this next step may be unnecessary: TODO delete it and check.
@@ -141,7 +140,6 @@ class NEURONBackend(Backend,
         mV=pq.mV
         from neuronunit.capabilities import spike_functions
         st=spike_functions.get_spike_train(self.get_membrane_potential(),threshold=0.0*mV)
-        pdb.set_trace()
         return spike_functions.get_spike_train(self.get_membrane_potential())
     
     def get_spike_count(self):
