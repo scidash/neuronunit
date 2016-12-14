@@ -114,29 +114,23 @@ class NEURONBackend(Backend,
         #Below syntax is stupid, but how to just get key generically without for knowledge of its name and without iterating?
         items=[ (key, value) for key,value in param_dict.items() ]
         for key, value in items:
-           print(key, value) 
            #TODO make this solution such that it would work for other single cell models specified by a converted  from neuroml to pyhoc file.
-           evalstring='self.neuron.hoc.execute("m_RS_RS_pop[0].'+str(key)+'='+str(value)+'")'
-           eval(evalstring)
-
+           self.neuron.hoc.execute('m_RS_RS_pop[0].'+str(key)+'='+str(value))   
+    
 
     def update_run_params(self,attrs):
         print(attrs)
         pdb.set_trace()
-       #TODO find out the python3 syntax for dereferencing key value pairs.
+        #TODO find out the python3 syntax for dereferencing key value pairs.
         #Below syntax is stupid, but how to just get key generically without for knowledge of its name and without iterating?
         items=[ (key, value) for key,value in stim_dict.items() ]
         for key, value in items:
-           print(key, value)
            #TODO make this solution such that it would work for other single cell models specified by a converted from neuroml to pyhoc file.
-           evalstring='self.neuron.hoc.execute("explicitInput_RS_IextRS_pop0.'+str(key)+'='+str(value)+'")'
+           self.neuron.hoc.execute('explicitInput_RS_IextRS_pop0.'+str(key)+'='+str(value))
            print(evalstring) 
            eval(evalstring)
         self.neuron.hoc.execute('forall{ psection() }')
 
-        
-
-        
     def get_membrane_potential(self):
         '''
         method required by neuronunit/sciunit
@@ -198,16 +192,9 @@ class NEURONBackend(Backend,
         c['duration'] = re.sub('\ ms$', '', str(c['duration']))
         amps=float(c['amplitude'])/1000.0
         print(amps)
-        pdb.set_trace()
-        evalstring='self.neuron.hoc.execute("explicitInput_RS_IextRS_pop0.'+str('amplitude')+'='+str(amps)+'")'
-        print(evalstring) 
-        eval(evalstring)
-        evalstring='self.neuron.hoc.execute("explicitInput_RS_IextRS_pop0.'+str('duration')+'='+str(c['delay'])+'")'
-        print(evalstring) 
-        eval(evalstring)
-        evalstring='self.neuron.hoc.execute("explicitInput_RS_IextRS_pop0.'+str('delay')+'='+str(c['duration'])+'")'
-        print(evalstring) 
-        eval(evalstring)
+        self.neuron.hoc.execute('explicitInput_RS_IextRS_pop0.'+str('amplitude')+'='+str(amps))
+        self.neuron.hoc.execute('explicitInput_RS_IextRS_pop0.'+str('duration')+'='+str(c['duration']))
+        self.neuron.hoc.execute('explicitInput_RS_IextRS_pop0.'+str('delay')+'='+str(c['delay']))
         self.neuron.hoc.execute('forall{ psection() }')
 
 
