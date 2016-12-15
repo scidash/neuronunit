@@ -127,8 +127,8 @@ class NEURONBackend(Backend,
         for key, value in items:
            #TODO make this solution such that it would work for other single cell models specified by a converted  from neuroml to pyhoc file.
            self.neuron.hoc.execute('m_RS_RS_pop[0].'+str(key)+'='+str(value))   
-        print('PSECTION shows model parameters changing:')
-        neuron.hoc.execute('forall{ psection() }')
+        #print('PSECTION shows model parameters changing:')
+        #neuron.hoc.execute('forall{ psection() }')
         #Reset/reinit HOC recording variables 
         #potentially on every run.
         self.neuron.h(' { v_time = new Vector() } ')
@@ -141,8 +141,7 @@ class NEURONBackend(Backend,
      
 
     def update_run_params(self,attrs):
-        #print(attrs)
-        #
+       
         #TODO find out the python3 syntax for accessing key value pairs.
         #Below syntax is stupid, but how to just get key generically without for knowledge of its name and without iterating?
         #issue is discussed here: https://www.python.org/dev/peps/pep-3106/
@@ -155,13 +154,10 @@ class NEURONBackend(Backend,
              h_assignment=list(value.values())
              h_assignment=h_assignment[0]
              h_assignment = re.sub('\mV$', '', str(h_assignment))
-             #pdb.set_trace()
+
 
              self.neuron.hoc.execute('m_RS_RS_pop[0].'+str(h_variable)+'='+str(h_assignment))   
-        #items2 = items[0][1]
-        #pdb.set_trace()
-        #for key, value in items2:
-            #pdb.set_trace()
+
 
         print('PSECTION shows model parameters changing:')
         self.neuron.hoc.execute('forall{ psection() }')
@@ -222,16 +218,17 @@ class NEURONBackend(Backend,
         i -- nA       
         '''
  
-        print(c)
-        print('PSECTION shows stimultion protocal parameters changing:')
-        print('amplitude cited by neuron is in nano amp, amplitude cited by quantities is pico amp')
+        #print(c)
+        #print('PSECTION shows stimultion protocal parameters changing:')
+        #print('amplitude cited by neuron is in nano amp, amplitude cited by quantities is pico amp')
         self.neuron.hoc.execute('forall{ psection() }')
         self.local_run()
 
 
         
-    def local_run(self):#,duration=1600):
+    def local_run(self):
         '''
+        TODO make this comment true again.
         Optional argument time duration. 
         Executes the neuron simulation specified in the context of the context of NEURONbackend class
         '''
