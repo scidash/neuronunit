@@ -19,15 +19,16 @@ import pickle
 # In[16]:
 
 # This example is from https://github.com/OpenSourceBrain/IzhikevichModel.
-model_path = os.getcwd()+str('/neuronunit/software_tests/NeuroML2') # Replace this the path to your 
+#model_path = os.getcwd()+str('/neuronunit/software_tests/NeuroML2') # Replace this the path to your 
                                                                        # working copy of 
                                                                        # github.com/OpenSourceBrain/IzhikevichModel.  
-file_path=model_path+str('/LEMS_2007One.xml')
+#file_path=model_path+str('/LEMS_2007One.xml')
 
+IZHIKEVICH_PATH = os.getcwd()+str('/neuronunit/software_tests/NeuroML2') # Replace this the path to your
+LEMS_MODEL_PATH = IZHIKEVICH_PATH+str('/LEMS_2007One.xml')
 
 from neuronunit.models import backends
-#This is only a test, it doesn't do anything.
-model=backends.NEURONBackend(file_path,model_path,name='vanilla')
+model=backends.NEURONBackend(LEMS_MODEL_PATH,IZHIKEVICH_PATH,name='vanilla')
 model=model.load_model()
 
 
@@ -74,11 +75,9 @@ else:
     
 def update_amplitude(test,tests,score):
     rheobase = score.prediction['value']
-    #pdb.set_trace()
 
     print(len(tests))
     for i in [4,5,6]:
-        #sprint(tests[i])
         # Set current injection to just suprathreshold
         print(type(rheobase))
         tests[i].params['injected_square_current']['amplitude'] = rheobase*1.01 
@@ -91,9 +90,6 @@ suite = sciunit.TestSuite("vm_suite",tests,hooks=hooks)
 
 
 # In[4]:
-#model = ReducedModel(IZHIKEVICH_PATH+str('/LEMS_2007One.xml'),name='vanilla')
-#model = ReducedModel(LEMS_MODEL_PATH,name='vanilla',backend='NEURONbackend')
-
 
 # In[5]:
 
@@ -108,20 +104,14 @@ from types import MethodType
 def optimize(self,model,rov):
     best_params = None
     best_score = None
-    from sciunitopt.deap_config_simple_sum import DeapCapsule
-    dc=DeapCapsule()
+    from neuronunit.deapcontainer.deap_config_simple_sum import DeapContainer
+    dc=DeapContainer()
     pop_size=12
     ngen=5                                  
     pop = dc.sciunit_optimize(suite,file_path,pop_size,ngen,rov,
                                                          NDIM=2,OBJ_SIZE=2,seed_in=1)
                                                          
-            #sciunit_optimize(self,test_or_suite,model_path,pop_size,ngen,rov,
-            #                  NDIM,OBJ_SIZE,seed_in):
-
-                                                         
-            #sciunit_optimize(self,suite,LEMS_MODEL_PATH,pop_size,ngen,rov,
-    #                                                   NDIM=1,OBJ_SIZE=1,seed_in=1):
-
+      
     return pop#(best_params, best_score, model)
 
 my_test = tests[0]
@@ -133,9 +123,6 @@ my_test.optimize = MethodType(optimize, my_test) # Bind to the score.
 
 rov = np.linspace(-67,-40,1000)
 pop = my_test.optimize(model,rov)
-#print('pareto front top value in pf hall of fame')
-#print('best params',best_params,'best_score',best_score, 'model',model)
-
 
 # In[13]:
 
