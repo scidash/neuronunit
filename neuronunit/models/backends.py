@@ -196,7 +196,10 @@ class NEURONBackend(Backend,
         import re
 
 
-        #Conditionally remake format the dictionary. I suspect I have introduced a bug into the code OR 
+        #Conditionally remake format the dictionary. 
+        #For a reason I don't understand the current dictionary is nested side another dictionary whose only key is:
+        #'injected_square_current'
+        #I think this might have to do with an incomplete transition python2.7->3
         #switching to python3 has meant that updating and accessing dictionary elements is significantly different now.
         #TODO make it so this is no longer necessary.        
    
