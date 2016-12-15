@@ -50,6 +50,14 @@ class NEURONBackend(Backend,
                     cap.ProducesActionPotentials):
     """Used for simulation with NEURON, a popular simulator
     http://www.neuron.yale.edu/neuron/
+    Units used be NEURON are sometimes different to quantities/neo (note nA versus pA)
+    http://neurosimlab.org/ramcd/pyhelp/modelspec/programmatic/mechanisms/mech.html#IClamp
+    NEURONs units:
+    del -- ms
+    dur -- ms
+    amp -- nA
+    i -- nA       
+
     """
 
     def __init__(self,name=None,attrs=None):
@@ -209,18 +217,7 @@ class NEURONBackend(Backend,
         self.neuron.hoc.execute('explicitInput_RS_IextRS_pop0.'+str('amplitude')+'='+str(amps))
         self.neuron.hoc.execute('explicitInput_RS_IextRS_pop0.'+str('duration')+'='+str(c['duration']))
         self.neuron.hoc.execute('explicitInput_RS_IextRS_pop0.'+str('delay')+'='+str(c['delay']))
-        '''
-        http://neurosimlab.org/ramcd/pyhelp/modelspec/programmatic/mechanisms/mech.html#IClamp
-        NEURONs units:
-        del -- ms
-        dur -- ms
-        amp -- nA
-        i -- nA       
-        '''
  
-        #print(c)
-        #print('PSECTION shows stimultion protocal parameters changing:')
-        #print('amplitude cited by neuron is in nano amp, amplitude cited by quantities is pico amp')
         self.neuron.hoc.execute('forall{ psection() }')
         self.local_run()
 
