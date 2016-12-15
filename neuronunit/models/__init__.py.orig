@@ -41,7 +41,15 @@ class LEMSModel(sciunit.Model, cap.Runnable):
         LEMS_file_path: Path to LEMS file (an xml file).
         name: Optional model name.
         """
+<<<<<<< HEAD
+        print('got into this source')
+        self.backend='NEURONbackend'
+        if self.backend is None:
+            # The base class should not be called.  
+            raise Exception("A backend (e.g. NEURONBackend) must be selected")
+=======
         super(LEMSModel,self).__init__(name=name)
+>>>>>>> 5a50008660871a2959671e4fa7c65649376106fc
         self.orig_lems_file_path = LEMS_file_path
         self.create_lems_file(name,attrs)
         self.run_defaults = pynml.DEFAULTS
@@ -54,7 +62,6 @@ class LEMSModel(sciunit.Model, cap.Runnable):
             name = os.path.split(self.lems_file_path)[1].split('.')[0]
         self.set_backend(backend)
         self.load_model()
-
 
     def set_backend(self, backend):
         if type(backend) is str:

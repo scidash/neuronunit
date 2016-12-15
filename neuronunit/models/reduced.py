@@ -10,18 +10,18 @@ import neuronunit.models.backends as backends
 import neuronunit.capabilities.spike_functions as sf
 
 class ReducedModel(mod.LEMSModel,
-                   backends.jNeuroMLBackend,
                    cap.ReceivesCurrent,
                    cap.ProducesMembranePotential,
                    cap.ProducesActionPotentials):
     """Base class for reduced models, using LEMS"""
 
-    def __init__(self, LEMS_file_path, name=None, attrs={}):
+    def __init__(self, LEMS_file_path, name=None, backend='jNeuroML', attrs={}):
         """
         LEMS_file_path: Path to LEMS file (an xml file).
         name: Optional model name.
         """
-        super(ReducedModel,self).__init__(LEMS_file_path, name=name, attrs=attrs)
+        super(ReducedModel,self).__init__(LEMS_file_path, name=name, 
+                                          backend=backend, attrs=attrs)
 
     def get_membrane_potential(self, rerun=None, **run_params):
         if rerun is None:
