@@ -15,27 +15,26 @@ import neuronunit
 from neuronunit import aibs
 from neuronunit.models.reduced import ReducedModel
 import pdb
-
+import pickle
 # In[16]:
 
 # This example is from https://github.com/OpenSourceBrain/IzhikevichModel.
-IZHIKEVICH_PATH = os.getcwd()+str('/neuronunit/tests/NeuroML2') # Replace this the path to your 
+model_path = os.getcwd()+str('/neuronunit/software_tests/NeuroML2') # Replace this the path to your 
                                                                        # working copy of 
                                                                        # github.com/OpenSourceBrain/IzhikevichModel.  
-#LEMS_MODEL_PATH = os.path.join(IZHIKEVICH_PATH,)
-LEMS_MODEL_PATH=IZHIKEVICH_PATH+str('/LEMS_2007One.xml')
+file_path=model_path+str('/LEMS_2007One.xml')
 
 
 from neuronunit.models import backends
-#model = ReducedModel(IZHIKEVICH_PATH+str('/LEMS_2007One.xml'),name='vanilla')
-model=backends.NEURONBackend(LEMS_MODEL_PATH,name='vanilla')
+#This is only a test, it doesn't do anything.
+model=backends.NEURONBackend(file_path,model_path,name='vanilla')
+model=model.load_model()
 
 
 #some testing of functionality
 #TODO rm later.
 
-NeuronObject=backends.NEURONBackend(IZHIKEVICH_PATH,name='vanilla')
-model=NeuronObject.load_model()
+#NeuronObject=backends.NEURONBackend(IZHIKEVICH_PATH,name='vanilla')
 
 
 # In[8]:
@@ -48,27 +47,44 @@ tests = []
 dataset_id = 354190013  # Internal ID that AIBS uses for a particular Scnn1a-Tg2-Cre 
                         # Primary visual area, layer 5 neuron.
 observation = aibs.get_observation(dataset_id,'rheobase')
-tests += [nu_tests.RheobaseTest(observation=observation)]
-    
-test_class_params = [(nu_tests.InputResistanceTest,None),
-                     (nu_tests.TimeConstantTest,None),
-                     (nu_tests.CapacitanceTest,None),
-                     (nu_tests.RestingPotentialTest,None),
-                     (nu_tests.InjectedCurrentAPWidthTest,None),
-                     (nu_tests.InjectedCurrentAPAmplitudeTest,None),
-                     (nu_tests.InjectedCurrentAPThresholdTest,None)]
 
-for cls,params in test_class_params:
-    observation = cls.neuroelectro_summary_observation(neuron)
-    tests += [cls(observation,params=params)]
-    #pdb.set_trace()   
+if os.path.exists(str(os.getcwd())+"/neuroelectro.pickle"):
+    print('attempting to recover from pickled file')
+    with open('neuroelectro.pickle', 'rb') as handle:
+        tests = pickle.load(handle)
+
+else:
+    print('checked path:')
+    print(str(os.getcwd())+"/neuroelectro.pickle")
+    print('no pickled file found. Commencing time intensive Download')
+    
+    tests += [nu_tests.RheobaseTest(observation=observation)]
+    test_class_params = [(nu_tests.InputResistanceTest,None),
+                         (nu_tests.TimeConstantTest,None), 
+                         (nu_tests.RestingPotentialTest,None),
+                         (nu_tests.InjectedCurrentAPWidthTest,None),
+                         (nu_tests.InjectedCurrentAPAmplitudeTest,None),
+                         (nu_tests.InjectedCurrentAPThresholdTest,None)]
+
+    for cls,params in test_class_params:
+        #use of the variable 'neuron' in this conext conflicts with the module name 'neuron'
+        #at the moment it doesn't seem to matter as neuron is encapsulated in a class, but this could cause problems in the future.
+        observation = cls.neuroelectro_summary_observation(neuron)
+        tests += [cls(observation,params=params)]
+
+    with open('neuroelectro.pickle', 'wb') as handle:
+        pickle.dump(tests, handle)  
+
+
 
     
 def update_amplitude(test,tests,score):
     rheobase = score.prediction['value']
-    pdb.set_trace()
-    for i in [5,6,7]:
-        print(tests[i])
+    #pdb.set_trace()
+
+    print(len(tests))
+    for i in [4,5,6]:
+        #sprint(tests[i])
         # Set current injection to just suprathreshold
         print(type(rheobase))
         tests[i].params['injected_square_current']['amplitude'] = rheobase*1.01 
@@ -102,7 +118,7 @@ def optimize(self,model,rov):
     dc=DeapCapsule()
     pop_size=12
     ngen=5                                  
-    pop = dc.sciunit_optimize(suite,LEMS_MODEL_PATH,pop_size,ngen,rov,
+    pop = dc.sciunit_optimize(suite,file_path,pop_size,ngen,rov,
                                                          NDIM=2,OBJ_SIZE=2,seed_in=1)
                                                          
             #sciunit_optimize(self,test_or_suite,model_path,pop_size,ngen,rov,
