@@ -5,15 +5,35 @@ import time
 import pdb
 import neuronunit.capabilities as cap
 import neuronunit.capabilities.spike_functions as sf
-import matplotlib
-#matplotlib.use('Agg')
-class Backend(sciunit.Model):
-    # The function (e.g. from pynml) that handles running the simulation
+
+class Backend:
+    """Based class for simulator backends that implement simulator-specific
+    details of modifying, running, and reading results from the simulation
+    """
+    
+    # Name of the backend
+    backend = None
+
+    #The function (e.g. from pynml) that handles running the simulation
     f = None
 
+    def set_attrs(self, attrs):
+        """Set model attributes, e.g. input resistance of a cell"""
+        pass
+
+    def update_run_params(self, attrs):
+        """Set run-time parameters, e.g. the somatic current to inject"""
+        pass
+
+    def load_model(self):
+        """Load the model into memory"""
+        pass
 
 
 class jNeuroMLBackend(Backend):
+    """Used for simulation with jNeuroML, a reference simulator for NeuroML"""
+    
+    backend = 'jNeuroML'
     f = pynml.run_lems_with_jneuroml
 
     def set_attrs(self, attrs):
@@ -28,36 +48,36 @@ class NEURONBackend(Backend,
                     cap.ReceivesCurrent,
                     cap.ProducesMembranePotential,
                     cap.ProducesActionPotentials):
-    #model=backends.NEURONBackend(file_path,model_path,name='vanilla')
+    """Used for simulation with NEURON, a popular simulator
+    http://www.neuron.yale.edu/neuron/
+    """
+
     def __init__(self,file_path,model_path,name=None,attrs=None):
         '''
+        Inputs: NEURONBackend instance object,file_path,model_path,name=None,attrs=None
+        
         Arguably nml_file_path can move out of the constructor signature, and into load_model signature.
         self.neuron is just a place holder for the neuron object attribute. 
         neuron is made an object attribute as common usage of neuron is to mutate its contents
         neuron acts a bit like a global variable object 
-        in the scope of this class whose contents are constantly mutated.
+        in the scope of this class.
         '''
         self.neuron=None
         self.model_path=model_path
         self.nml_file_path=file_path
         self.name=name
         self.attrs=attrs
-        self.cnt=0
-    
-    #def load_model(self):
-        # Loads the model into memory
-    #    pass
 
+    backend = 'NEURON'
 
     def load_model(self):        
         '''
+        Inputs: NEURONBackend instance object
+        Outputs: nothing mutates input object.
         Take a declarative model description, and convert it into an implementation, stored in a pyhoc file.
         import the pyhoc file thus dragging the neuron variables into memory/python name space.
         Since this only happens once outside of the optimization loop its a tolerable performance hit.
         '''
-        #could this be a shorter root to NeuroML2/LEMS_2007One.xml saving the user from needing to supply it given NeuroML2 may already be installed?
-        #izc=nml.nml.Izhikevich2007Cell
-  
         DEFAULTS={}
         DEFAULTS['v']=True
         #Create a pyhoc file using jneuroml to convert from NeuroML to pyhoc.
@@ -71,6 +91,7 @@ class NEURONBackend(Backend,
                                           plot=False, 
                                           show_plot_already=False, 
                                           exec_in_dir = ".",
+                                          only_generate_scripts = True,
                                           verbose=DEFAULTS['v'],
                                           exit_on_fail = True)
         
@@ -83,56 +104,38 @@ class NEURONBackend(Backend,
         from neuronunit.tests.NeuroML2.LEMS_2007One_nrn import NeuronSimulation
         #this next step may be unnecessary: TODO delete it and check.
         self.ns = NeuronSimulation(tstop=1600, dt=0.0025)
-        
         #return NeuronSimulation
         return self
 
-    #def set_attrs(self, attrs):
-        # Set attributes (e.g. resting potential) of model in memory or on disk
-    #    pass
-        
     def set_attrs(self,attrs):
-        print(attrs)
-        #pdb.set_trace()
+
        
         #TODO find out the python3 syntax for dereferencing key value pairs.
         #Below syntax is stupid, but how to just get key generically without for knowledge of its name and without iterating?
         items=[ (key, value) for key,value in param_dict.items() ]
         for key, value in items:
-           print(key, value) 
            #TODO make this solution such that it would work for other single cell models specified by a converted  from neuroml to pyhoc file.
-
-           self.neuron.hoc.execute('m_RS_RS_pop[0].'+str(key)+'='+str(value))
-
+           self.neuron.hoc.execute('m_RS_RS_pop[0].'+str(key)+'='+str(value))   
         neuron.hoc.execute('forall{ psection() }')
-        
+        #Reset/reinit HOC recording variables 
+        #potentially on every run.
         self.neuron.h(' { v_time = new Vector() } ')
         self.neuron.h(' { v_time.record(&t) } ')
-
         self.neuron.h(' { v_v_of0 = new Vector() } ')
         self.neuron.h(' { v_v_of0.record(&RS_pop[0].v(0.5)) } ')
-
-
         self.neuron.h(' { v_u_of0 = new Vector() } ')
         self.neuron.h(' { v_u_of0.record(&m_RS_RS_pop[0].u) } ')
-
-
-    #def inject_current(self,stim_dict):
-        # Set attributes (e.g. somatic current injection) of simulation 
-        # in memory or on disk
-        #pass
-
+       
+     
 
     def update_run_params(self,attrs):
         print(attrs)
-        #pdb.set_trace()
-       #TODO find out the python3 syntax for dereferencing key value pairs.
+        pdb.set_trace()
+        #TODO find out the python3 syntax for dereferencing key value pairs.
         #Below syntax is stupid, but how to just get key generically without for knowledge of its name and without iterating?
         items=[ (key, value) for key,value in stim_dict.items() ]
         for key, value in items:
-           print(key, value)
            #TODO make this solution such that it would work for other single cell models specified by a converted from neuroml to pyhoc file.
-
            self.neuron.hoc.execute('explicitInput_RS_IextRS_pop0.'+str(key)+'='+str(value))
            
 
@@ -267,61 +270,8 @@ class NEURONBackend(Backend,
         sim_time = sim_end - sim_start
         print("Finished NEURON simulation in %f seconds (%f mins)..."%(sim_time, sim_time/60.0))
     
-        
-    def out_to_neo(self):
-        '''
-        Extracts HOC recording variables from the HOC object namespace,
-        converts them to neo analog signal and returns a tuple. Each element in the tuple is of neo
-        Analog signal type.
-        WARNING probably bug(s). Time conversion not done. Raw time just handed straight to neo without thinking about it.
-        implemented conversions from other sources without thinking about it!
-        conversion that I have applied here probably doesn't apply
-        '''
-        from neo.core import AnalogSignal
-        import quantities as pq
-        import pdb
-        #The pyhoc file generated by pyNeuroML does the conversions below:
-        #voltage is scaled by 1000 (to make it millivolts).
-        #current is scaled by 1,000,000,000 (to make it nanoAmps)
-        #LEMS_2007One_nrn.py
-        t = [ t/1000 for t in self.neuron.h.v_time.to_python() ]  # Convert to Python list for speed...
-        v = [ float(x  / 1000.0) for x in self.neuron.h.v_v_of0.to_python() ]  # Convert to Python list for speed, variable has dim: voltage
-        i = [ float(x  / 1000.0) for x in self.neuron.h.v_u_of0.to_python() ] 
-        #current = [ float(x  / 1.0E9) for x in self.neuron.h.v_u_of0.to_python() ]  # Convert to Python list for speed, variable has dim: current
-        #probably this can be done in the invocation of AnalogSignal below instead.
-        #t = self.neuron.h.v_time.to_python()   # Convert to Python list for speed...
-        #v = self.neuron.h.v_v_of0.to_python()   # Convert to Python list for speed, variable has dim: voltage
-        #i = [ self.neuron.h.v_u_of0.to_python() ]  # Con
-        #pdb.set_trace()
-        dt = (t[1]-t[0])*pq.s # Time per sample in milliseconds.  
-        vm = AnalogSignal(v,units=pq.mV,sampling_rate=1.0/dt)
-        im = AnalogSignal(current,units=pq.nA,sampling_rate=1.0/dt)
-        time = AnalogSignal(t,units=pq.ms,sampling_rate=1.0/dt)
-        return (vm,im,time)
+
     
 
-    def advance(self):
-        '''
-        This method might not do anything.
-        '''
-        #over write/load regular advance
 
-        if not initialized:
-            neuron.hoc.finitialize()
-            initialized = True
 
-        neuron.hoc.fadvance()
-        
-'''
-class NEURONBackend(Backend):
-    f = pynml.run_lems_with_jneuroml_neuron
-
-    def load_model(self):
-        pass
-
-    def set_attrs(self, attrs):
-        pass
-
-    def update_run_params(self):
-        pass
-'''
