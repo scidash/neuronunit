@@ -45,5 +45,6 @@ class ReducedModel(mod.LEMSModel,
         spike_train = sf.get_spike_train(vm)
         return spike_train
 
-    def inject_square_current(self,current):
-        self.run_params['injected_square_current'] = current
+    #This method must be overwritten in the child class or Derived class NEURONbackend but I don't understand how to do that.
+    #def inject_square_current(self,current):
+    #    self.run_params['injected_square_current'] = current

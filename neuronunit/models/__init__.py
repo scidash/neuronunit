@@ -55,6 +55,7 @@ class LEMSModel(sciunit.Model, cap.Runnable):
         self.set_backend(backend)
         self.load_model()
 
+    #This is the part that decides if it should inherit from NEURON backend.
 
     def set_backend(self, backend):
         if type(backend) is str:
@@ -113,15 +114,23 @@ class LEMSModel(sciunit.Model, cap.Runnable):
         if (not rerun) and hasattr(self,'last_run_params') and \
            self.run_params == self.last_run_params:
             return
-        self.update_run_params()
-        
-        if self.f is None:
-            raise NotImplementedError(("The chosen backend doesn't implement "
-                                       " _run()"))
-        self.results = f(self.lems_file_path, skip_run=self.skip_run,
+        self.update_run_params(run_params)
+        #HACK
+        #DO NOT MERGE.
+        #if self.f is None:
+        #    raise NotImplementedError(("The chosen backend doesn't implement "
+        #                               " _run()"))
+
+        self.results = self.local_run()
+        '''
+        Doing things this way calls jNeuroML everytime which is very slow, and 
+        its exactly that we are trying to avoid.
+        self.f(self.lems_file_path, skip_run=self.skip_run,
                          nogui=self.run_params['nogui'], 
                          load_saved_data=True, plot=False, 
-                         verbose=self.run_params['v'])
+                         verbose=self.run_params['v']
+                         )
+        '''                 
         self.last_run_params = deepcopy(self.run_params)
         self.rerun = False
         self.run_params = {} # Reset run parameters so the next test has to pass

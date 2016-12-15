@@ -101,6 +101,11 @@ class VmTest(sciunit.Test):
             )
         reference_data.get_values(quiet=not cls.verbose) # Get and verify summary data
                                     # from neuroelectro.org.
+                                    
+        #import pdb
+        print(reference_data.get_values())
+
+        #pdb.set_trace()                            
         observation = {'mean': reference_data.mean*cls.units,
                        'std': reference_data.std*cls.units,
                        'n': reference_data.n}
@@ -158,9 +163,17 @@ class TestPulseTest(VmTest):
 
     @classmethod
     def get_tau(cls, vm, i):
+    '''
+    bug
+    '''
+    #bug i['delay'] is not a sequence. 
+        import pdb
+        pdb.set_trace()
         start, stop = -11*pq.ms, (i['duration']-(1*pq.ms))
         region = cls.get_segment(vm,start+i['delay'],stop+i['delay'])
-        coefs = cls.exponential_fit(region, i['delay'])
+        b=np.linspace(0,100,len(vm))
+        coefs = cls.exponential_fit(region, b)
+        #coefs = cls.exponential_fit(region, i['delay'])
         tau = (pq.s/coefs[1]).rescale('ms')
         return tau
 
@@ -494,8 +507,14 @@ class RheobaseTest(VmTest):
 
         def f(ampl):
             if float(ampl) not in lookup:
-                current = self.params.copy()
-                current['amplitude'] = ampl
+                current = self.params.copy()['injected_square_current']
+                #This does not do what you would expect.
+                #due to syntax I don't understand. 
+                #updating the dictionary keys with new values doesn't work. 
+                
+                uc={'amplitude':ampl}
+                current.update(uc)
+                current={'injected_square_current':current}
                 model.inject_square_current(current)
                 n_spikes = model.get_spike_count()
                 if self.verbose:
