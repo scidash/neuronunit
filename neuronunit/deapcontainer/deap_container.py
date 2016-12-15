@@ -34,8 +34,10 @@ class DeapContainer:
         #TODO email the DEAP list about this issue too.        
         #TODO refactor MU into pop_size 
                              #self.ff,pop_size,ngen,NDIM=1,OBJ_SIZE=1,self.range_of_values
-    def sciunit_optimize(self,test_or_suite,model_path,pop_size,ngen,rov,
+    def sciunit_optimize(self,test_or_suite,model,pop_size,ngen,rov,
                               NDIM=1,OBJ_SIZE=1,seed_in=1):    
+                              
+        self.model=model                      
         self.ngen = ngen#250
         self.pop_size = pop_size#population size
         self.rov = rov # Range of values
@@ -70,36 +72,46 @@ class DeapContainer:
 
 
         toolbox.register("map", futures.map)
-        assert NDIM==2
+        #assert NDIM==2
         toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
         toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
         toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
-        def call2sciunitjudge(individual):#callsciunitjudge
-
+        def callsciunitjudge(individual):
+        
+            '''
             from neuronunit.models import backends
             import os
             # This example is from https://github.com/OpenSourceBrain/IzhikevichModel.
             IZHIKEVICH_PATH = os.getcwd()+str('/neuronunit/software_tests/NeuroML2') # Replace this the path to your
             LEMS_MODEL_PATH = IZHIKEVICH_PATH+str('/LEMS_2007One.xml')
+            '''
             name={}
             attrs={}
+            
             name_value= str(individual[0])+str('mV')
             name={'V_rest': name_value } 
-            model=backends.NEURONBackend(LEMS_MODEL_PATH,IZHIKEVICH_PATH,
-                         name={'V_rest': name_value }, 
-                         attrs={'//izhikevich2007Cell':{'vr':name_value }}
-                                        )
-            model.load_model()
+            attrs={'//izhikevich2007Cell':{'vr':name_value }}
+            #model=backends.NEURONBackend(LEMS_MODEL_PATH,IZHIKEVICH_PATH,
+            #             name={'V_rest': name_value }, 
+            #             attrs={'//izhikevich2007Cell':{'vr':name_value }}
+            #                            )
+            self.model.name=name
+            self.model.attrs=attrs
+            self.model.load_model()
             score = test_or_suite.judge(model)
-            print("V_rest = %.1f; SortKey = %.3f" % (individual[0],score.sort_key))
+            #import pdb
+            #pdb.set_trace()
+            print(individual[0])
+            print(score.sort_key)
+            #print("V_rest = %.1f; SortKey = %.3f" % (float(individual[0]),float(score.sort_key)))
             error = -score.sort_key
 
             assert type(individual[0])==float# protect input.            
             assert type(individual[1])==float# protect input.            
             return error, 
 
-        toolbox.register("evaluate",call2sciunitjudge)#,individual,ff,previous_best)
+        toolbox.register("evaluate",callsciunitjudge)
         toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
         toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
         toolbox.register("select", tools.selTournament, tournsize=3)        

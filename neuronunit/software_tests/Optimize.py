@@ -24,12 +24,8 @@ import pickle
                                                                        # github.com/OpenSourceBrain/IzhikevichModel.  
 #file_path=model_path+str('/LEMS_2007One.xml')
 
-IZHIKEVICH_PATH = os.getcwd()+str('/neuronunit/software_tests/NeuroML2') # Replace this the path to your
+IZHIKEVICH_PATH = os.getcwd()+str('/NeuroML2') # Replace this the path to your
 LEMS_MODEL_PATH = IZHIKEVICH_PATH+str('/LEMS_2007One.xml')
-
-from neuronunit.models import backends
-model=backends.NEURONBackend(LEMS_MODEL_PATH,IZHIKEVICH_PATH,name='vanilla')
-model=model.load_model()
 
 
 # In[8]:
@@ -74,14 +70,17 @@ else:
 
     
 def update_amplitude(test,tests,score):
-    rheobase = score.prediction['value']
+    rheobase = score.prediction['value']#first find a value for rheobase
+    #then proceed with other optimizing other parameters.
+    
 
     print(len(tests))
     for i in [4,5,6]:
         # Set current injection to just suprathreshold
-        print(type(rheobase))
+        #print(type(rheobase))
+        #pdb.set_trace()
         tests[i].params['injected_square_current']['amplitude'] = rheobase*1.01 
-
+        #pdb.set_trace()
 #update_amplitude(test,tests,score)
 
 hooks = {tests[0]:{'f':update_amplitude}} #This is a trick to dynamically insert the method
@@ -100,15 +99,26 @@ if SUO not in sys.path:
 
 # In[6]:
 
+from neuronunit.models import backends
+from neuronunit.models.reduced import ReducedModel
+
+model = ReducedModel(LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
+model=model.load_model()
+
+
+
 from types import MethodType
 def optimize(self,model,rov):
     best_params = None
     best_score = None
-    from neuronunit.deapcontainer.deap_config_simple_sum import DeapContainer
+    from neuronunit.deapcontainer.deap_container import DeapContainer
     dc=DeapContainer()
     pop_size=12
-    ngen=5                                  
-    pop = dc.sciunit_optimize(suite,file_path,pop_size,ngen,rov,
+    ngen=5            
+    #commited the change: pass in the model to deap, don't recreate it in every iteration just mutate the one existing model.
+    #arguably recreating it would lead to less bugs however so maybe change back later.                      
+    #check performance both ways to check for significant speed up without recreating the model object every iteration.
+    pop = dc.sciunit_optimize(suite,model,pop_size,ngen,rov,
                                                          NDIM=2,OBJ_SIZE=2,seed_in=1)
                                                          
       
@@ -121,7 +131,7 @@ my_test.optimize = MethodType(optimize, my_test) # Bind to the score.
 
 # In[7]:
 
-rov = np.linspace(-67,-40,1000)
+rov = np.linspace(-67,-50,1000)
 pop = my_test.optimize(model,rov)
 
 # In[13]:
