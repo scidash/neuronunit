@@ -31,12 +31,6 @@ model=backends.NEURONBackend(file_path,model_path,name='vanilla')
 model=model.load_model()
 
 
-#some testing of functionality
-#TODO rm later.
-
-#NeuronObject=backends.NEURONBackend(IZHIKEVICH_PATH,name='vanilla')
-
-
 # In[8]:
 
 import quantities as pq
@@ -153,6 +147,9 @@ NeuronObject.load_model()#Only needs to occur once
 #NeuronObject.update_nrn_param(param_dict)
 #NeuronObject.update_inject_current(stim_dict)
 '''
+TODO: change such that it execs simulations.
+Note this is not actually running any simulations. 
+Its just initialising them.
 brute force optimization:
 for comparison
 #print(dir(NeuronObject))
