@@ -1,3 +1,5 @@
+# neuronunit
+# author Rick Gerkin rgerkin@asu.edu
 FROM scidash/neuron-mpi-neuroml
 
 ADD . /home/mnt
