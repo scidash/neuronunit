@@ -49,12 +49,11 @@ else:
     print(str(os.getcwd())+"/neuroelectro.pickle")
     print('no pickled file found. Commencing time intensive Download')
     
-    #(nu_tests.TimeConstantTest,None),  
+    #(nu_tests.TimeConstantTest,None),                           (nu_tests.InjectedCurrentAPAmplitudeTest,None),
     tests += [nu_tests.RheobaseTest(observation=observation)]
     test_class_params = [(nu_tests.InputResistanceTest,None),
                          (nu_tests.RestingPotentialTest,None),
                          (nu_tests.InjectedCurrentAPWidthTest,None),
-                         (nu_tests.InjectedCurrentAPAmplitudeTest,None),
                          (nu_tests.InjectedCurrentAPThresholdTest,None)]
                          
     #pdb.set_trace()                     
@@ -77,7 +76,7 @@ def update_amplitude(test,tests,score):
     
 
     print(len(tests))
-    for i in [3,4,5]:
+    for i in [2,3,4]:
         # Set current injection to just suprathreshold
         #print(type(rheobase))
         #pdb.set_trace()
