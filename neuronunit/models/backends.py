@@ -97,6 +97,7 @@ class NEURONBackend(Backend,
             from neuronunit.tests.NeuroML2 import LEMS_2007One_nrn 
             self.neuron=LEMS_2007One_nrn.neuron
             #make sure mechanisms are loaded
+            #pdb.set_trace()
             modeldirname=os.path.dirname(self.orig_lems_file_path)
             self.neuron.load_mechanisms(modeldirname)  
             #import the default simulation protocol
@@ -142,27 +143,6 @@ class NEURONBackend(Backend,
         return self        
     
 
-    '''
-    def set_attrs(self,attrs):
-
-        pdb.set_trace()
-        #TODO find out the python3 syntax for dereferencing key value pairs.
-        #Below syntax is stupid, but how to just get key generically without for knowledge of its name and without iterating?
-        items=[ (key, value) for key,value in attrs.items() ]
-        for key, value in items:
-           #TODO make this solution such that it would work for other single cell models specified by a converted  from neuroml to pyhoc file.
-           self.neuron.hoc.execute('m_'+str(self.cell_name)+'_'+str(self.cell_name)+'_pop[0].'+str(key)+'='+str(value))   
-        #print('PSECTION shows model parameters changing:')
-        #neuron.hoc.execute('forall{ psection() }')
-        #Reset/reinit HOC recording variables 
-        #potentially on every run.
-        self.neuron.h(' { v_time = new Vector() } ')
-        self.neuron.h(' { v_time.record(&t) } ')
-        self.neuron.h(' { v_v_of0 = new Vector() } ')
-        self.neuron.h(' { v_v_of0.record(&RS_pop[0].v(0.5)) } ')
-        self.neuron.h(' { v_u_of0 = new Vector() } ')
-        self.neuron.h(' { v_u_of0.record(&m_RS_RS_pop[0].u) } ')
-    '''   
      
 
     def update_run_params(self,attrs):

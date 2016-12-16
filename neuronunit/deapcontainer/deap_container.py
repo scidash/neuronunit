@@ -98,23 +98,24 @@ class DeapContainer:
             score = test_or_suite.judge(model)
             individual.sciunit_score=score
             print(individual[0])
-            print(score.sort_key)
+            print(score.sort_keys)
             #print("V_rest = %.1f; SortKey = %.3f" % (float(individual[0]),float(score.sort_key)))
             if type(score) != None:  
                
-                if type(score.sort_key) != None:  
+                if type(score.sort_keys) != None:  
                     
                     #error = -score.sort_key
-                    print(score.get_values())
+                    #print(score.get_values())
+                    #pdb.set_trace()
+                    error = -score.sort_keys.mean()
                     pdb.set_trace()
-                    error = -np.mean(score.get_values())
 
                 else:
-                    pdb.set_trace()
+                    #pdb.set_trace()
                     error=-1   
                     #bug why is sort key None type periodically? 
             else:
-                pdb.set_trace()
+                #pdb.set_trace()
                 #pdb.set_trace()
                 #bug why is sort key None type periodically?
                 error=-1
