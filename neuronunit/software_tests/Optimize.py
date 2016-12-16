@@ -10,7 +10,15 @@ import os,sys
 import numpy as np
 import matplotlib.pyplot as plt
 import quantities as pq
+
+#SUO = '/home/mnt/sciunit/sciunit'
+#if SUO not in sys.path:
+#    sys.path.append(SUO)
 import sciunit
+SUO = '/home/mnt/neuronunit/neuronunit'
+if SUO not in sys.path:
+    sys.path.append(SUO)
+    
 import neuronunit
 from neuronunit import aibs
 from neuronunit.models.reduced import ReducedModel
@@ -39,6 +47,7 @@ dataset_id = 354190013  # Internal ID that AIBS uses for a particular Scnn1a-Tg2
                         # Primary visual area, layer 5 neuron.
 observation = aibs.get_observation(dataset_id,'rheobase')
 
+
 if os.path.exists(str(os.getcwd())+"/neuroelectro.pickle"):
     print('attempting to recover from pickled file')
     with open('neuroelectro.pickle', 'rb') as handle:
@@ -65,10 +74,7 @@ else:
         tests += [cls(observation,params=params)]
 
     with open('neuroelectro.pickle', 'wb') as handle:
-        pickle.dump(tests, handle)  
-
-
-
+        pickle.dump(tests, handle) 
     
 def update_amplitude(test,tests,score):
     rheobase = score.prediction['value']#first find a value for rheobase
@@ -76,7 +82,8 @@ def update_amplitude(test,tests,score):
     
 
     print(len(tests))
-    for i in [2,3,4]:
+    pdb.set_trace()
+    for i in [3,4,5]:
         # Set current injection to just suprathreshold
         #print(type(rheobase))
         #pdb.set_trace()
@@ -93,9 +100,9 @@ suite = sciunit.TestSuite("vm_suite",tests,hooks=hooks)
 
 # In[5]:
 
-SUO = '/home/mnt/scidash/sciunitopt'
-if SUO not in sys.path:
-    sys.path.append(SUO)
+#SUO = '/home/mnt/scidash/sciunitopt'
+#if SUO not in sys.path:
+#    sys.path.append(SUO)
 
 
 # In[6]:
