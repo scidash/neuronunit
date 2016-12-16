@@ -79,36 +79,35 @@ class DeapContainer:
 
         def callsciunitjudge(individual):
         
-            '''
-            from neuronunit.models import backends
-            import os
-            # This example is from https://github.com/OpenSourceBrain/IzhikevichModel.
-            IZHIKEVICH_PATH = os.getcwd()+str('/neuronunit/software_tests/NeuroML2') # Replace this the path to your
-            LEMS_MODEL_PATH = IZHIKEVICH_PATH+str('/LEMS_2007One.xml')
-            '''
             name={}
             attrs={}
-            
+            # Individual and units needs to change
+            # name_value and attrs need to change depending on the test being taken.
             name_value= str(individual[0])+str('mV')
             name={'V_rest': name_value } 
             attrs={'//izhikevich2007Cell':{'vr':name_value }}
-            #model=backends.NEURONBackend(LEMS_MODEL_PATH,IZHIKEVICH_PATH,
-            #             name={'V_rest': name_value }, 
-            #             attrs={'//izhikevich2007Cell':{'vr':name_value }}
-            #                            )
             self.model.name=name
             self.model.attrs=attrs
             self.model.load_model()
             score = test_or_suite.judge(model)
-            #import pdb
-            #pdb.set_trace()
             print(individual[0])
             print(score.sort_key)
             #print("V_rest = %.1f; SortKey = %.3f" % (float(individual[0]),float(score.sort_key)))
-            error = -score.sort_key
+            if type(score) == None:  
+                pdb.set_trace()
+                if type(score.sort_key) == None:  
+                    #error = -score.sort_key
+                    print(score.get_values())
+                    error = -np.mean(score.get_values())
 
-            assert type(individual[0])==float# protect input.            
-            assert type(individual[1])==float# protect input.            
+                else:
+                    error=-1   
+                    #bug why is sort key None type periodically? 
+            else:
+                pdb.set_trace()
+                #bug why is sort key None type periodically?
+                error=-1
+
             return error, 
 
         toolbox.register("evaluate",callsciunitjudge)
