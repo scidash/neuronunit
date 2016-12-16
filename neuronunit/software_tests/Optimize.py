@@ -49,13 +49,15 @@ else:
     print(str(os.getcwd())+"/neuroelectro.pickle")
     print('no pickled file found. Commencing time intensive Download')
     
+    #(nu_tests.TimeConstantTest,None),  
     tests += [nu_tests.RheobaseTest(observation=observation)]
     test_class_params = [(nu_tests.InputResistanceTest,None),
-                         (nu_tests.TimeConstantTest,None), 
                          (nu_tests.RestingPotentialTest,None),
                          (nu_tests.InjectedCurrentAPWidthTest,None),
                          (nu_tests.InjectedCurrentAPAmplitudeTest,None),
                          (nu_tests.InjectedCurrentAPThresholdTest,None)]
+                         
+    #pdb.set_trace()                     
 
     for cls,params in test_class_params:
         #use of the variable 'neuron' in this conext conflicts with the module name 'neuron'
@@ -75,7 +77,7 @@ def update_amplitude(test,tests,score):
     
 
     print(len(tests))
-    for i in [4,5,6]:
+    for i in [3,4,5]:
         # Set current injection to just suprathreshold
         #print(type(rheobase))
         #pdb.set_trace()

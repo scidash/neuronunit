@@ -163,9 +163,9 @@ class TestPulseTest(VmTest):
 
     @classmethod
     def get_tau(cls, vm, i):
-    '''
-    bug
-    '''
+        '''
+        bug
+        '''
     #bug i['delay'] is not a sequence. 
         import pdb
         pdb.set_trace()
@@ -174,7 +174,7 @@ class TestPulseTest(VmTest):
         b=np.linspace(0,100,len(vm))
         coefs = cls.exponential_fit(region, b)
         #coefs = cls.exponential_fit(region, i['delay'])
-        tau = (pq.s/coefs[1]).rescale('ms')
+        #tau = (pq.s/coefs[1]).rescale('ms')
         return tau
 
     @classmethod
