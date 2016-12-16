@@ -105,18 +105,11 @@ class NEURONBackend(Backend,
             self.ns = NeuronSimulation(tstop=1600, dt=0.0025)
             return self
         
-        #if os.path.exists(str(os.getcwd())+"/NeuroML2/LEMS_2007One_nrn1.py"):
-        #    self=cond_load()        
+
             
-        if os.path.exists(self.orig_lems_file_path): #deliberately turning off logic. 
-        #Note must change back.
+        if os.path.exists(self.orig_lems_file_path): 
             self=cond_load()
-            more_attributes=pynml.read_lems_file(self.orig_lems_file_path)
-
- 
-
-                    
-
+            
 
         else:
             pynml.run_lems_with_jneuroml_neuron(self.orig_lems_file_path, 
@@ -132,16 +125,20 @@ class NEURONBackend(Backend,
                    
             self=cond_load()
             more_attributes=pynml.read_lems_file(self.orig_lems_file_path)
-            print(self)        
-            pdb.set_trace()
             return self
             self.f=pynml.run_lems_with_jneuroml_neuron
-        
+
+        #Although the above approach successfuly instantiates a LEMS/neuroml model in pyhoc
+        #the resulting hoc variables for current source and cell name are idiosyncratic (not generic).
+        #This makes the approach hard to make non hard coded, and generalizable code.
+        #work around involves predicting the hoc variable names from LEMS file that was used to generate them.
+        more_attributes=pynml.read_lems_file(self.orig_lems_file_path)
         for i in more_attributes.components:
             if str('pulseGenerator') in i.type: 
                 self.current_src_name=i.id
             if str('Cell') in i.type: 
                 self.cell_name=i.id
+        more_attributes=None#garbage collect more_attributes, its not needed anymore.
         return self        
     
 
