@@ -44,10 +44,10 @@ class jNeuroMLBackend(Backend):
 
 
 
-class NEURONBackend(Backend,
-                    cap.ReceivesCurrent,
-                    cap.ProducesMembranePotential,
-                    cap.ProducesActionPotentials):
+class NEURONBackend(Backend):
+                    #cap.ReceivesCurrent,
+                    #cap.ProducesMembranePotential,
+                    #cap.ProducesActionPotentials):
     """Used for simulation with NEURON, a popular simulator
     http://www.neuron.yale.edu/neuron/
     Units used be NEURON are sometimes different to quantities/neo (note nA versus pA)
@@ -61,8 +61,10 @@ class NEURONBackend(Backend,
     """
 
     def __init__(self,name=None,attrs=None):
+        # Init should have options to specify model-independent NEURON configuration, e.g. parallel environemnt, 
+        # various environment variables, and other options.  
         '''
-        Inputs: NEURONBackend instance object,file_path,model_path,name=None,attrs=None
+        Inputs: name=None,attrs=None
         
         Arguably nml_file_path can move out of the constructor signature, and into load_model signature.
         self.neuron is just a place holder for the neuron object attribute. 
@@ -171,8 +173,8 @@ class NEURONBackend(Backend,
         #Below syntax is stupid, but how to just get key generically without for knowledge of its name and without iterating?
         #issue is discussed here: https://www.python.org/dev/peps/pep-3106/
         import re
-        items=[ (key, value) for key,value in self.attrs.items() ]
-        for key, value in items: 
+        #items=[ (key, value) for key,value in self.attrs.items() ]
+        for key, value in self.attr.items(): 
              h_variable=list(value.keys())
              h_variable=h_variable[0]
 
@@ -233,7 +235,7 @@ class NEURONBackend(Backend,
         c['delay'] = re.sub('\ ms$', '', str(c['delay']))
         c['duration'] = re.sub('\ ms$', '', str(c['duration']))
         amps=float(c['amplitude'])/1000.0 #This is the right scale.
-        
+        #'explicitInput_%s%s_pop0.amplitude%s'+=%f' % (self.current_src_name,self.cell_name,amps)
         self.neuron.hoc.execute('explicitInput_'+str(self.current_src_name)+str(self.cell_name)+'_pop0.'+str('amplitude')+'='+str(amps))
         self.neuron.hoc.execute('explicitInput_'+str(self.current_src_name)+str(self.cell_name)+'_pop0.'+str('duration')+'='+str(c['duration']))
         self.neuron.hoc.execute('explicitInput_'+str(self.current_src_name)+str(self.cell_name)+'_pop0.'+str('delay')+'='+str(c['delay']))
@@ -244,6 +246,8 @@ class NEURONBackend(Backend,
 
         
     def local_run(self):
+        # Maybe this can be called _run.  
+        # In some cases 
         '''
         TODO make this comment true again.
         Optional argument time duration. 
