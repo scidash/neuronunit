@@ -27,6 +27,7 @@ class DeapContainer:
         self.tb = base.Toolbox()
         self.ngen=None
         self.pop_size=None
+        self.param=None
         #Warning, the algorithm below is sensitive to certain multiples in the population size
         #which is denoted by MU.
         #The mutiples of 100 work, many numbers will not work
@@ -34,10 +35,11 @@ class DeapContainer:
         #TODO email the DEAP list about this issue too.        
         #TODO refactor MU into pop_size 
                              #self.ff,pop_size,ngen,NDIM=1,OBJ_SIZE=1,self.range_of_values
-    def sciunit_optimize(self,test_or_suite,model,pop_size,ngen,rov,
+    def sciunit_optimize(self,test_or_suite,model,pop_size,ngen,rov, param,
                               NDIM=1,OBJ_SIZE=1,seed_in=1):    
                               
-        self.model=model                      
+        self.model=model   
+        self.parameters=param                   
         self.ngen = ngen#250
         self.pop_size = pop_size#population size
         self.rov = rov # Range of values
@@ -83,28 +85,37 @@ class DeapContainer:
             attrs={}
             # Individual and units needs to change
             # name_value and attrs need to change depending on the test being taken.
+            #
+            #self.model.attrs=self.param
+            #TODO make it such that                 
             name_value= str(individual[0])+str('mV')
             name={'V_rest': name_value } 
             attrs={'//izhikevich2007Cell':{'vr':name_value }}
+            
             self.model.name=name
-            self.model.attrs=attrs
             self.model.load_model()
+            self.model.attrs=attrs
             score = test_or_suite.judge(model)
+            individual.sciunit_score=score
             print(individual[0])
             print(score.sort_key)
             #print("V_rest = %.1f; SortKey = %.3f" % (float(individual[0]),float(score.sort_key)))
-            if type(score) == None:  
-                pdb.set_trace()
-                if type(score.sort_key) == None:  
+            if type(score) != None:  
+               
+                if type(score.sort_key) != None:  
+                    
                     #error = -score.sort_key
                     print(score.get_values())
+                    pdb.set_trace()
                     error = -np.mean(score.get_values())
 
                 else:
+                    pdb.set_trace()
                     error=-1   
                     #bug why is sort key None type periodically? 
             else:
                 pdb.set_trace()
+                #pdb.set_trace()
                 #bug why is sort key None type periodically?
                 error=-1
 

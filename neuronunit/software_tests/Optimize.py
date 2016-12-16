@@ -82,7 +82,7 @@ def update_amplitude(test,tests,score):
     
 
     print(len(tests))
-    pdb.set_trace()
+    #pdb.set_trace()
     for i in [3,4,5]:
         # Set current injection to just suprathreshold
         #print(type(rheobase))
@@ -116,17 +116,18 @@ model=model.load_model()
 
 
 from types import MethodType
-def optimize(self,model,rov):
+def optimize(self,model,rov,param):
     best_params = None
     best_score = None
     from neuronunit.deapcontainer.deap_container import DeapContainer
     dc=DeapContainer()
     pop_size=12
-    ngen=5            
+    ngen=5
+                
     #commited the change: pass in the model to deap, don't recreate it in every iteration just mutate the one existing model.
     #arguably recreating it would lead to less bugs however so maybe change back later.                      
     #check performance both ways to check for significant speed up without recreating the model object every iteration.
-    pop = dc.sciunit_optimize(suite,model,pop_size,ngen,rov,
+    pop = dc.sciunit_optimize(suite,model,pop_size,ngen,rov, param,
                                                          NDIM=2,OBJ_SIZE=2,seed_in=1)
                                                          
       
@@ -138,9 +139,9 @@ my_test.optimize = MethodType(optimize, my_test) # Bind to the score.
 
 
 # In[7]:
-
+param='vr'
 rov = np.linspace(-67,-50,1000)
-pop = my_test.optimize(model,rov)
+pop = my_test.optimize(model,rov,param)
 
 # In[13]:
 

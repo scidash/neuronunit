@@ -142,7 +142,7 @@ class NEURONBackend(Backend,
         return self        
     
 
-
+    '''
     def set_attrs(self,attrs):
 
         pdb.set_trace()
@@ -162,7 +162,7 @@ class NEURONBackend(Backend,
         self.neuron.h(' { v_v_of0.record(&RS_pop[0].v(0.5)) } ')
         self.neuron.h(' { v_u_of0 = new Vector() } ')
         self.neuron.h(' { v_u_of0.record(&m_RS_RS_pop[0].u) } ')
-       
+    '''   
      
 
     def update_run_params(self,attrs):
@@ -182,7 +182,7 @@ class NEURONBackend(Backend,
 
 
              self.neuron.hoc.execute('m_RS_RS_pop[0].'+str(h_variable)+'='+str(h_assignment))   
-
+             self.neuron.hoc.execute('m_'+str(self.cell_name)+'_'+str(self.cell_name)+'_pop[0].'+str(h_variable)+'='+str(h_assignment))   
 
         print('PSECTION shows model parameters changing:')
         self.neuron.hoc.execute('forall{ psection() }')

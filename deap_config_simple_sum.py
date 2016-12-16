@@ -28,7 +28,6 @@ class DeapCapsule:
         self.tb = base.Toolbox()
         self.ngen=None
         self.pop_size=None
-        self.model=None
         #Warning, the algorithm below is sensitive to certain multiples in the population size
         #which is denoted by MU.
         #The mutiples of 100 work, many numbers will not work
@@ -82,60 +81,39 @@ class DeapCapsule:
         toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
         toolbox.register("population", tools.initRepeat, list, toolbox.individual)
       
-        from neuronunit.models import backends
-        import os
-        IZHIKEVICH_PATH = os.getcwd()+str('/neuronunit/tests/NeuroML2') 
-        NeuronObject=backends.NEURONBackend(IZHIKEVICH_PATH)
-        self.model=NeuronObject.load_model()
-        #pdb.set_trace()
+
+        
         def call2sciunitjudge(individual):#callsciunitjudge
 
-            
-            #from neuronunit.models.reduced import ReducedModel
-            param_dict={}
-            param_dict['vr']=individual[0]
-            pdb.set_trace()
-            self.model.update_nrn_param(param_dict)
-            
-            score = test_or_suite.judge(self.model)
+            from neuronunit.models import backends
+            #model = ReducedModel(IZHIKEVICH_PATH+str('/LEMS_2007One.xml'),name='vanilla')
+            #dir(backends.NeuronBackend)
+            import os
+            # This example is from https://github.com/OpenSourceBrain/IzhikevichModel.
+            IZHIKEVICH_PATH = os.getcwd()+str('/neuronunit/software_tests/NeuroML2') # Replace this the path to your
+            LEMS_MODEL_PATH = IZHIKEVICH_PATH+str('/LEMS_2007One.xml')
+
+                                                                                   # working copy of
+            # github.com/OpenSourceBrain/IzhikevichModel.
+            #LEMS_MODEL_PATH = os.path.join(IZHIKEVICH_PATH,)
+            name={}
+            attrs={}
+            name_value= str(individual[0])+str('mV')
+            name={'V_rest': name_value } 
+            name={'V_rest': name_value }
+            attrs={'//izhikevich2007Cell':{'vr':name_value }}
+            model=backends.NEURONBackend(LEMS_MODEL_PATH,IZHIKEVICH_PATH,
+                         name, 
+                         attrs
+                         )
+            model.load_model()
+            score = test_or_suite.judge(model)
             print("V_rest = %.1f; SortKey = %.3f" % (individual[0],score.sort_key))
             error = -score.sort_key
-
-
-            '''
-            model = ReducedModel(model_path, 
-                         name='V_rest=%dmV' % individual[0], 
-                         attrs={'//izhikevich2007Cell':
-                                    {'vr':'%d mV' %individual[0]}
-                               })
-            '''
-
-
-            #pdb.set_trace()
-
-            #check_error = TestSuite.judge(models=model)#, skip_incapable=True, stop_on_error=True, deep_error=False)
-            
-            #from sciunit import TestSuite
-            #>>> help(TestSuite.judge)
-            #Help on function judge in module sciunit:
-
-            #judge(self, models, skip_incapable=True, stop_on_error=True, deep_error=False)
-
-
-            '''
-            sciunit_judge is pretending to take the model individual and return the quality of the model f(X).
-            ''' 
-            #from scoop.futures import scoop
-            #print(scoop.utils.getHosts())
-            #print(scoop.utils.cpu_count())
             assert type(individual[0])==float# protect input.            
             assert type(individual[1])==float# protect input.            
-            #Linear sum of errors, this is not what I recommend.
-            #error=calc_errorf(individual, ff)+calc_errorg(individual, gg)#Previous_best,ff)
             return error, 
 
-        #pdb.set_trace()
-        #individual,ff,previous_best
         toolbox.register("evaluate",call2sciunitjudge)#,individual,ff,previous_best)
         toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
         toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
