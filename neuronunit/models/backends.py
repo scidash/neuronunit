@@ -104,9 +104,19 @@ class NEURONBackend(Backend,
             #this next step may be unnecessary: TODO delete it and check.
             self.ns = NeuronSimulation(tstop=1600, dt=0.0025)
             return self
+        
+        #if os.path.exists(str(os.getcwd())+"/NeuroML2/LEMS_2007One_nrn1.py"):
+        #    self=cond_load()        
             
-        if os.path.exists(str(os.getcwd())+"/NeuroML2/LEMS_2007One_nrn.py"):
-            self=cond_load()        
+        if os.path.exists(self.orig_lems_file_path): #deliberately turning off logic. 
+        #Note must change back.
+            self=cond_load()
+            more_attributes=pynml.read_lems_file(self.orig_lems_file_path)
+
+ 
+
+                    
+
 
         else:
             pynml.run_lems_with_jneuroml_neuron(self.orig_lems_file_path, 
@@ -119,9 +129,19 @@ class NEURONBackend(Backend,
                               exec_in_dir = ".",
                               verbose=DEFAULTS['v'],
                               exit_on_fail = True)
-            self=cond_load()        
+                   
+            self=cond_load()
+            more_attributes=pynml.read_lems_file(self.orig_lems_file_path)
+            print(self)        
+            pdb.set_trace()
             return self
             self.f=pynml.run_lems_with_jneuroml_neuron
+        
+        for i in more_attributes.components:
+            if str('pulseGenerator') in i.type: 
+                self.current_src_name=i.id
+            if str('Cell') in i.type: 
+                self.cell_name=i.id
         return self        
     
 
@@ -134,7 +154,7 @@ class NEURONBackend(Backend,
         items=[ (key, value) for key,value in attrs.items() ]
         for key, value in items:
            #TODO make this solution such that it would work for other single cell models specified by a converted  from neuroml to pyhoc file.
-           self.neuron.hoc.execute('m_RS_RS_pop[0].'+str(key)+'='+str(value))   
+           self.neuron.hoc.execute('m_'+str(self.cell_name)+'_'+str(self.cell_name)+'_pop[0].'+str(key)+'='+str(value))   
         #print('PSECTION shows model parameters changing:')
         #neuron.hoc.execute('forall{ psection() }')
         #Reset/reinit HOC recording variables 
@@ -217,9 +237,9 @@ class NEURONBackend(Backend,
         c['duration'] = re.sub('\ ms$', '', str(c['duration']))
         amps=float(c['amplitude'])/1000.0 #This is the right scale.
         
-        self.neuron.hoc.execute('explicitInput_RS_IextRS_pop0.'+str('amplitude')+'='+str(amps))
-        self.neuron.hoc.execute('explicitInput_RS_IextRS_pop0.'+str('duration')+'='+str(c['duration']))
-        self.neuron.hoc.execute('explicitInput_RS_IextRS_pop0.'+str('delay')+'='+str(c['delay']))
+        self.neuron.hoc.execute('explicitInput_'+str(self.current_src_name)+str(self.cell_name)+'_pop0.'+str('amplitude')+'='+str(amps))
+        self.neuron.hoc.execute('explicitInput_'+str(self.current_src_name)+str(self.cell_name)+'_pop0.'+str('duration')+'='+str(c['duration']))
+        self.neuron.hoc.execute('explicitInput_'+str(self.current_src_name)+str(self.cell_name)+'_pop0.'+str('delay')+'='+str(c['delay']))
  
         self.neuron.hoc.execute('forall{ psection() }')
         self.local_run()
