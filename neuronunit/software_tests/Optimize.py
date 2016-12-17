@@ -113,6 +113,8 @@ suite = sciunit.TestSuite("vm_suite",tests,hooks=hooks)
 from neuronunit.models import backends
 from neuronunit.models.reduced import ReducedModel
 
+
+#Its because Reduced model is the base class that calling super on SingleCellModel does not work.
 model = ReducedModel(LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
 
 
@@ -132,8 +134,14 @@ def optimize(self,model,rov,param):
     #commited the change: pass in the model to deap, don't recreate it in every iteration just mutate the one existing model.
     #arguably recreating it would lead to less bugs however so maybe change back later.                      
     #check performance both ways to check for significant speed up without recreating the model object every iteration.
-    pop = dc.sciunit_optimize(suite,model,pop_size,ngen,rov, param,
-                                                         NDIM=2,OBJ_SIZE=2,seed_in=1)
+    pop = dc.sciunit_optimize_nsga(suite,model,pop_size,ngen,rov, param,
+                                                         NDIM=1,OBJ_SIZE=6,seed_in=1)
+                                                         
+    '''                                                     
+    #NDIM is the number of parameters that are varied (dimensions of individual in deap). This is 1 (vr)
+    #OBJ_SIZE is the number of error functions or objective functions that are explored this is 6. The elements of the objective functions are:
+    RheobaseTest, InputResistanceTest, RestingPotentialTest,  InjectedCurrentAPWidthTest, InjectedCurrentAPAmplitudeTest, InjectedCurrentAPThresholdTest  
+    '''
                                                          
       
     return pop#(best_params, best_score, model)
