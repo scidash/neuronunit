@@ -89,7 +89,7 @@ class NEURONBackend(Backend):
 
     def invokenrn(self):
         """Sets the NEURON h variable"""
-
+        #Should check if MPI parallel neuron is supported and invoked.
         from neuron import h
         self.h=h
         self.h.load_file("stdlib.hoc")
