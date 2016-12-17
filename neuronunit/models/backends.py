@@ -111,27 +111,6 @@ class NEURONBackend(Backend):
 
         self.h.tstop = float(tstop)
 
-    '''
-    def __init__(self,name=None,attrs=None):
-        # Init should have options to specify model-independent NEURON configuration, e.g. parallel environemnt, 
-        # various environment variables, and other options.  
-      
-        Inputs: name=None,attrs=None
-        
-        Arguably nml_file_path can move out of the constructor signature, and into load_model signature.
-        self.neuron is just a place holder for the neuron object attribute. 
-        neuron is made an object attribute as common usage of neuron is to mutate its contents
-        neuron acts a bit like a global variable object 
-        in the scope of this class.
-
-        self.neuron=None
-        self.model_path=None
-        self.LEMS_file_path=None#LEMS_file_path
-        self.name=name
-        self.attrs=attrs
-        self.f=None
-        #pdb.set_trace()
-    '''
 
     def load_model(self):        
         '''
@@ -200,12 +179,7 @@ class NEURONBackend(Backend):
 
     def update_run_params(self,attrs):
        
-        #TODO find out the python3 syntax for accessing key value pairs.
-        #Below syntax is stupid, but how to just get key generically without for knowledge of its name and without iterating?
-        #issue is discussed here: https://www.python.org/dev/peps/pep-3106/
         import re
-        #items=[ (key, value) for key,value in self.attrs.items() ]
-        #pdb.set_trace()
         for key, value in self.attrs.items(): 
              h_variable=list(value.keys())
              h_variable=h_variable[0]
@@ -218,8 +192,6 @@ class NEURONBackend(Backend):
              self.h('m_RS_RS_pop[0].'+str(h_variable)+'='+str(h_assignment))   
              self.h('m_'+str(self.cell_name)+'_'+str(self.cell_name)+'_pop[0].'+str(h_variable)+'='+str(h_assignment))   
 
-        #print('PSECTION shows model parameters changing:')
-        #self.h('forall{ psection() }')
         
      
         self.h(' { v_time = new Vector() } ')
@@ -247,28 +219,11 @@ class NEURONBackend(Backend):
         import re
 
 
-        #Conditionally remake and format the dictionary. 
-        #For a reason I don't understand the current dictionary is nested side another dictionary whose only key is:
-        #'injected_square_current'
-        #I think this might have to do with an incomplete transition python2.7->3
-        #switching to python3 has meant that updating and accessing dictionary elements is significantly different now.
-        #TODO make it so this is no longer necessary.        
-   
         import copy   
         c=copy.copy(current)
         if 'injected_square_current' in c.keys():
             c=current['injected_square_current']
-        # Set the units to those expected by NEURON IClamp  
-        
-        #amp=c['amplitude'] 
-        #amp.units='nA'
-        #amps = re.sub('\ nA$', '', str(amp))
-        '''
-    
-        print('\n'+str(amps)+' '+str(c['amplitude']))
-        pdb.set_trace()         
-        assert str(amps) is str(c['amplitude'])
-        '''
+  
         c['delay'] = re.sub('\ ms$', '', str(c['delay']))
         c['duration'] = re.sub('\ ms$', '', str(c['duration']))
         c['amplitude'] = re.sub('\ pA$', '', str(c['amplitude']))
@@ -280,7 +235,6 @@ class NEURONBackend(Backend):
         self.h('explicitInput_'+str(self.current_src_name)+str(self.cell_name)+'_pop0.'+str('delay')+'='+str(c['delay']))
  
         
-        #self.h('forall{ psection() }')
         self.local_run()
 
 
@@ -303,7 +257,7 @@ class NEURONBackend(Backend):
         
         print("Running a simulation of %sms (dt = %sms)" % (self.neuron.hoc.tstop, self.neuron.hoc.dt))
         self.h('run()')
-        #self.h('forall{ psection() }')
+
 
         sim_end = time.time()
         sim_time = sim_end - sim_start
