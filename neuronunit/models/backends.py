@@ -174,19 +174,45 @@ class NEURONBackend(Backend):
         more_attributes=None#force garbage collection of more_attributes, its not needed anymore.
         return self        
     
-
-     
-
-    def update_run_params(self,attrs):
+    '''
+    def set_attrs(self,attrs):
        
         import re
-        for key, value in self.attrs.items(): 
+        for key, value in attrs.items(): 
              h_variable=list(value.keys())
              h_variable=h_variable[0]
 
              h_assignment=list(value.values())
              h_assignment=h_assignment[0]
-             h_assignment = re.sub('\mV$', '', str(h_assignment))
+             #h_assignment = re.sub('\mV$', '', str(h_assignment))
+
+
+             self.h('m_RS_RS_pop[0].'+str(h_variable)+'='+str(h_assignment))   
+             self.h('m_'+str(self.cell_name)+'_'+str(self.cell_name)+'_pop[0].'+str(h_variable)+'='+str(h_assignment))   
+
+        
+     
+        self.h(' { v_time = new Vector() } ')
+        self.h(' { v_time.record(&t) } ')
+
+        self.h(' { v_v_of0 = new Vector() } ')
+        self.h(' { v_v_of0.record(&RS_pop[0].v(0.5)) } ')
+
+        self.h(' { v_u_of0 = new Vector() } ')
+        self.h(' { v_u_of0.record(&m_RS_RS_pop[0].u) } ')
+
+    ''' 
+
+    def update_run_params(self,attrs):
+       
+        import re
+        for key, value in attrs.items(): 
+             h_variable=list(value.keys())
+             h_variable=h_variable[0]
+
+             h_assignment=list(value.values())
+             h_assignment=h_assignment[0]
+             #h_assignment = re.sub('\mV$', '', str(h_assignment))
 
 
              self.h('m_RS_RS_pop[0].'+str(h_variable)+'='+str(h_assignment))   
