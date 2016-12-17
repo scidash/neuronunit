@@ -47,7 +47,7 @@ class DeapContainer:
         self.rov = rov # Range of values
 
         toolbox = base.Toolbox()
-        creator.create("FitnessMax", base.Fitness, weights=(-1.0,-1.0,-1.0,-1.0,-1.0,-1.0))#Final comma here, important, not a typo, must be a tuple type.
+        creator.create("FitnessMax", base.Fitness, weights=(-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,))#Final comma here, important, not a typo, must be a tuple type.
         creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMax)
 
         class Individual(list):
@@ -72,7 +72,11 @@ class DeapContainer:
 
 
 
-
+        name=None
+        attrs=None
+        name_value=None
+        error=None
+        score=None
         BOUND_LOW=[ np.min(i) for i in rov ]
         BOUND_UP=[ np.max(i) for i in rov ]
         NDIM = len(rov)
@@ -88,38 +92,39 @@ class DeapContainer:
         toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
         toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
-        def callsciunitjudge(individual):
+        def callsciunitjudge(individual):#This method must be pickle-able for scoop to work.
         
-            name=None
-            attrs=None
+            #local variables in this function are a problem for scoop. Solution make them global.
+            #name=None
+            #attrs=None
 
             for i, p in enumerate(param): 
                 name_value=str(individual[i])
                 #reformate values.
                 self.model.name=name_value
                 attrs={'//izhikevich2007Cell':{p:name_value }}
-                print('this is attrs=')
-                print(attrs)
+                #print('this is attrs=')
+                #print(attrs)
                 self.model.update_run_params(attrs)
-                self.model.h.psection()
+                #self.model.h.psection()
             
             self.model.name=name
             self.model.load_model()
             self.model.set_attrs(attrs)
             score = test_or_suite.judge(model)
-            individual.sciunit_score=score
-            print(individual[0])
-            print(score.sort_keys)
+            #individual.sciunit_score=score
+            #print(individual[0])
+            #print(score.sort_keys)
             #print("V_rest = %.1f; SortKey = %.3f" % (float(individual[0]),float(score.sort_key)))
-            assert type(score) != None
+            #assert type(score) != None
                
-            assert type(score.sort_keys) != None
+            #assert type(score.sort_keys) != None
                     
-            print(score.sort_keys.mean())
-            error = score.sort_keys.values
+            #print(score.sort_keys.mean())
+            error = score.sort_keys.values[0]
   
-            error=error[0]
-            print(len(error))
+            #error=error[0]
+            #print(len(error))
             return (error[0],error[1],error[2],error[3],error[4],error[5]) 
 
         toolbox.register("evaluate",callsciunitjudge)
@@ -134,10 +139,10 @@ class DeapContainer:
 
 
         stats = tools.Statistics(lambda ind: ind.fitness.values)
-        stats.register("avg", numpy.mean, axis=6)
-        stats.register("std", numpy.std, axis=6)
-        stats.register("min", numpy.min, axis=6)
-        stats.register("max", numpy.max, axis=6)
+        stats.register("avg", numpy.mean, axis=0)
+        stats.register("std", numpy.std, axis=0)
+        stats.register("min", numpy.min, axis=0)
+        stats.register("max", numpy.max, axis=0)
 
         logbook = tools.Logbook()
         logbook.header = "gen", "evals", "std", "min", "avg", "max"

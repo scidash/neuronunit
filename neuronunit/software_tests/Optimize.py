@@ -135,7 +135,7 @@ def optimize(self,model,rov,param):
     #arguably recreating it would lead to less bugs however so maybe change back later.                      
     #check performance both ways to check for significant speed up without recreating the model object every iteration.
     pop = dc.sciunit_optimize_nsga(suite,model,pop_size,ngen,rov, param,
-                                                         NDIM=1,OBJ_SIZE=6,seed_in=1)
+                                                         NDIM=3,OBJ_SIZE=6,seed_in=1)
                                                          
     '''                                                     
     #NDIM is the number of parameters that are varied (dimensions of individual in deap). This is 1 (vr)
@@ -162,6 +162,8 @@ rov.append(rov1)
 rov.append(rov2)
 
 pop = my_test.optimize(model,rov,param)
+
+
 
 # In[13]:
 
