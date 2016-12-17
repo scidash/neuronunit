@@ -71,43 +71,49 @@ class DeapContainer:
                 return [random.uniform(a, b) for a, b in zip([low] * size, [up] * size)]
 
 
-        BOUND_LOW=np.min(rov)
-        BOUND_UP=np.max(rov)
+
+
+        BOUND_LOW=[ np.min(i) for i in rov ]
+        BOUND_UP=[ np.max(i) for i in rov ]
+        NDIM = len(rov)
+
+        #BOUND_LOW=np.min(rov)
+        #BOUND_UP=np.max(rov)
 
 
         toolbox.register("map", futures.map)
-        #assert NDIM==2
         toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
+        #assert NDIM==2
+        #toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
         toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
         toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
         def callsciunitjudge(individual):
         
-            name={}
-            attrs={}
-            # Individual and units needs to change
-            # name_value and attrs need to change depending on the test being taken.
-            #
-            #self.model.attrs=self.param
-            #TODO make it such that                 
-            name_value= str(individual[0])+str('mV')
-            name={'V_rest': name_value } 
-            attrs={'//izhikevich2007Cell':{'vr':name_value }}
+            name=None
+            attrs=None
+
+            for i, p in enumerate(param): 
+                name_value=str(individual[i])
+                #reformate values.
+                self.model.name=name_value
+                attrs={'//izhikevich2007Cell':{p:name_value }}
+                print('this is attrs=')
+                print(attrs)
+                self.model.update_run_params(attrs)
+                self.model.h.psection()
             
             self.model.name=name
             self.model.load_model()
-            self.model.attrs=attrs
-            
-
+            self.model.set_attrs(attrs)
             score = test_or_suite.judge(model)
-            
             individual.sciunit_score=score
             print(individual[0])
             print(score.sort_keys)
             #print("V_rest = %.1f; SortKey = %.3f" % (float(individual[0]),float(score.sort_key)))
-            assert type(score) != None:  
+            assert type(score) != None
                
-            assert type(score.sort_keys) != None:  
+            assert type(score.sort_keys) != None
                     
             print(score.sort_keys.mean())
             error = score.sort_keys.values
@@ -117,10 +123,7 @@ class DeapContainer:
             return (error[0],error[1],error[2],error[3],error[4],error[5]) 
 
         toolbox.register("evaluate",callsciunitjudge)
-        #toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
-        #toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
-        #toolbox.register("select", tools.selTournament, tournsize=3)         
-        #toolbox.register("evaluate",sciunitjudge)
+    
         toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
         toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
         toolbox.register("select", tools.selNSGA2)
@@ -129,7 +132,7 @@ class DeapContainer:
        
         CXPB = 0.9#cross over probability
 
-        pdb.set_trace()
+
         stats = tools.Statistics(lambda ind: ind.fitness.values)
         stats.register("avg", numpy.mean, axis=6)
         stats.register("std", numpy.std, axis=6)
@@ -158,13 +161,10 @@ class DeapContainer:
         # This is just to assign the crowding distance to the individuals
         # no actual selection is done
         pop = toolbox.select(pop, len(pop))
-
-        gen=0
-        error_surface(pop,gen,ff=self.ff)
-        
-        #record = stats.compile(pop)
-        #logbook.record(gen=0, evals=len(invalid_ind), **record)
-        #print(logbook.stream)
+ 
+        record = stats.compile(pop)
+        logbook.record(gen=0, evals=len(invalid_ind), **record)
+        print(logbook.stream)
 
         stats_fit = tools.Statistics(key=lambda ind: ind.fitness.values)
         stats_size = tools.Statistics(key=len)
@@ -238,13 +238,17 @@ class DeapContainer:
                 return [random.uniform(a, b) for a, b in zip([low] * size, [up] * size)]
 
 
-        BOUND_LOW=np.min(rov)
-        BOUND_UP=np.max(rov)
-
 
         toolbox.register("map", futures.map)
         #assert NDIM==2
+
+        #for i in rov:
+        BOUND_LOW=[ np.min(i) for i in rov ]
+        BOUND_UP=[ np.max(i) for i in rov ]
+        NDIM = len(rov)
         toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
+
+
         toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
         toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 

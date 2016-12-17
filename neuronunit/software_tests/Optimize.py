@@ -152,8 +152,15 @@ my_test.optimize = MethodType(optimize, my_test) # Bind to the score.
 
 
 # In[7]:
-param='vr'
-rov = np.linspace(-67,-50,1000)
+param=['vr','a','b']
+rov=[]
+rov0 = np.linspace(-67,-50,1000)
+rov1 = np.linspace(0.015,0.045,7)
+rov2 = np.linspace(-3.5,-0.5,7)
+rov.append(rov0)
+rov.append(rov1)
+rov.append(rov2)
+
 pop = my_test.optimize(model,rov,param)
 
 # In[13]:
