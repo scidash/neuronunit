@@ -2,7 +2,7 @@
 # coding: utf-8
 
 # In[17]:
-
+#Retain jupyter notebook cell #s and comments, such that the Notebook can quickly be remade with a conversion.
 #get_ipython().magic('load_ext autoreload')
 #get_ipython().magic('autoreload 2')
 #get_ipython().magic('matplotlib notebook')
@@ -11,13 +11,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 import quantities as pq
 
-#SUO = '/home/mnt/sciunit/sciunit'
-#if SUO not in sys.path:
-#    sys.path.append(SUO)
+
 import sciunit
-SUO = '/home/mnt/neuronunit/neuronunit'
-if SUO not in sys.path:
-    sys.path.append(SUO)
+
+
+#Over ride any neuron units in the PYTHON_PATH with this one.
+#only appropriate for development.
+thisnu = str(os.getcwd())+'/../..'
+sys.path.insert(0,thisnu)
+print(sys.path)
     
 import neuronunit
 from neuronunit import aibs
@@ -65,11 +67,13 @@ else:
                          (nu_tests.InjectedCurrentAPWidthTest,None),
                          (nu_tests.InjectedCurrentAPThresholdTest,None)]
                          
-    #pdb.set_trace()                     
+
 
     for cls,params in test_class_params:
         #use of the variable 'neuron' in this conext conflicts with the module name 'neuron'
         #at the moment it doesn't seem to matter as neuron is encapsulated in a class, but this could cause problems in the future.
+        
+        
         observation = cls.neuroelectro_summary_observation(neuron)
         tests += [cls(observation,params=params)]
 
@@ -85,11 +89,12 @@ def update_amplitude(test,tests,score):
     #pdb.set_trace()
     for i in [3,4,5]:
         # Set current injection to just suprathreshold
-        #print(type(rheobase))
-        #pdb.set_trace()
         tests[i].params['injected_square_current']['amplitude'] = rheobase*1.01 
-        #pdb.set_trace()
-#update_amplitude(test,tests,score)
+
+
+#Do the rheobase test. This is a serial bottle neck that must occur before any parallel optomization.
+#Its because the optimization routine must have apriori knowledge of what suprathreshold current injection values are for each model.
+
 
 hooks = {tests[0]:{'f':update_amplitude}} #This is a trick to dynamically insert the method
 #update amplitude at the location in sciunit thats its passed to, without any loss of generality.
@@ -100,9 +105,7 @@ suite = sciunit.TestSuite("vm_suite",tests,hooks=hooks)
 
 # In[5]:
 
-#SUO = '/home/mnt/scidash/sciunitopt'
-#if SUO not in sys.path:
-#    sys.path.append(SUO)
+#sciunit opt as a repository is now obsolete.
 
 
 # In[6]:
