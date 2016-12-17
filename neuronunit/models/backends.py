@@ -9,6 +9,10 @@ import neuronunit.capabilities.spike_functions as sf
 
 from quantities import ms, mV, nA
 from neo.core import AnalogSignal
+#from neuronunit.models.reduced import ReducedModel
+#TODO above line may become below line.
+#from neuronunit.models.reduced import SingleCellModel
+
 
 class Backend:
     """Based class for simulator backends that implement simulator-specific
@@ -71,7 +75,7 @@ class NEURONBackend(Backend):
         self.f=None
         self.h=None
         self.invokenrn()
-        
+       
         #TODO call super. for some reason these don't work.
         #super(NeuronModel,self).__init__(name=self.name) 
         #Destroy the base classes version of inject_square_current 
@@ -214,8 +218,8 @@ class NEURONBackend(Backend):
              self.h('m_RS_RS_pop[0].'+str(h_variable)+'='+str(h_assignment))   
              self.h('m_'+str(self.cell_name)+'_'+str(self.cell_name)+'_pop[0].'+str(h_variable)+'='+str(h_assignment))   
 
-        print('PSECTION shows model parameters changing:')
-        self.h('forall{ psection() }')
+        #print('PSECTION shows model parameters changing:')
+        #self.h('forall{ psection() }')
         
      
         self.h(' { v_time = new Vector() } ')
@@ -254,21 +258,29 @@ class NEURONBackend(Backend):
         c=copy.copy(current)
         if 'injected_square_current' in c.keys():
             c=current['injected_square_current']
-            c['amplitude'] = re.sub('\ pA$', '', str(c['amplitude']))
-            c['delay'] = re.sub('\ ms$', '', str(c['delay']))
-            c['duration'] = re.sub('\ ms$', '', str(c['duration']))
-
-
-        c['amplitude'] = re.sub('\ pA$', '', str(c['amplitude']))
+        # Set the units to those expected by NEURON IClamp  
+        
+        #amp=c['amplitude'] 
+        #amp.units='nA'
+        #amps = re.sub('\ nA$', '', str(amp))
+        '''
+    
+        print('\n'+str(amps)+' '+str(c['amplitude']))
+        pdb.set_trace()         
+        assert str(amps) is str(c['amplitude'])
+        '''
         c['delay'] = re.sub('\ ms$', '', str(c['delay']))
         c['duration'] = re.sub('\ ms$', '', str(c['duration']))
+        c['amplitude'] = re.sub('\ pA$', '', str(c['amplitude']))
+        #Todo want to convert from nano to pico amps using quantities.
         amps=float(c['amplitude'])/1000.0 #This is the right scale.
-        #'explicitInput_%s%s_pop0.amplitude%s'+=%f' % (self.current_src_name,self.cell_name,amps)
-        self.neuron.hoc.execute('explicitInput_'+str(self.current_src_name)+str(self.cell_name)+'_pop0.'+str('amplitude')+'='+str(amps))
-        self.neuron.hoc.execute('explicitInput_'+str(self.current_src_name)+str(self.cell_name)+'_pop0.'+str('duration')+'='+str(c['duration']))
-        self.neuron.hoc.execute('explicitInput_'+str(self.current_src_name)+str(self.cell_name)+'_pop0.'+str('delay')+'='+str(c['delay']))
+        
+        self.h('explicitInput_'+str(self.current_src_name)+str(self.cell_name)+'_pop0.'+str('amplitude')+'='+str(amps))
+        self.h('explicitInput_'+str(self.current_src_name)+str(self.cell_name)+'_pop0.'+str('duration')+'='+str(c['duration']))
+        self.h('explicitInput_'+str(self.current_src_name)+str(self.cell_name)+'_pop0.'+str('delay')+'='+str(c['delay']))
  
-        self.neuron.hoc.execute('forall{ psection() }')
+        
+        #self.h('forall{ psection() }')
         self.local_run()
 
 
@@ -284,14 +296,14 @@ class NEURONBackend(Backend):
         
         initialized = True
         sim_start = time.time()
-        self.neuron.hoc.execute('tstop='+str(1600))#TODO find a way to make duration changeable.
-        self.neuron.hoc.execute('dt=0.0025')
+        self.h('tstop='+str(1600))#TODO find a way to make duration changeable.
+        self.h('dt=0.0025')
         self.neuron.hoc.tstop=1600
         self.neuron.hoc.dt=0.0025   
         
         print("Running a simulation of %sms (dt = %sms)" % (self.neuron.hoc.tstop, self.neuron.hoc.dt))
-        self.neuron.hoc.execute('run()')
-        self.neuron.hoc.execute('forall{ psection() }')
+        self.h('run()')
+        #self.h('forall{ psection() }')
 
         sim_end = time.time()
         sim_time = sim_end - sim_start

@@ -28,6 +28,7 @@ class DeapContainer:
         self.ngen=None
         self.pop_size=None
         self.param=None
+        self.last_params=None
         #Warning, the algorithm below is sensitive to certain multiples in the population size
         #which is denoted by MU.
         #The mutiples of 100 work, many numbers will not work
@@ -35,8 +36,9 @@ class DeapContainer:
         #TODO email the DEAP list about this issue too.        
         #TODO refactor MU into pop_size 
                              #self.ff,pop_size,ngen,NDIM=1,OBJ_SIZE=1,self.range_of_values
-    def sciunit_optimize(self,test_or_suite,model,pop_size,ngen,rov, param,
-                              NDIM=1,OBJ_SIZE=1,seed_in=1):    
+                             
+    def sciunit_optimize_nsga(self,test_or_suite,model,pop_size,ngen,rov, param,
+                              NDIM=1,OBJ_SIZE=6,seed_in=1):    
                               
         self.model=model   
         self.parameters=param                   
@@ -45,7 +47,7 @@ class DeapContainer:
         self.rov = rov # Range of values
 
         toolbox = base.Toolbox()
-        creator.create("FitnessMax", base.Fitness, weights=(-1.0,))#Final comma here, important, not a typo, must be a tuple type.
+        creator.create("FitnessMax", base.Fitness, weights=(-1.0,-1.0,-1.0,-1.0,-1.0,-1.0))#Final comma here, important, not a typo, must be a tuple type.
         creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMax)
 
         class Individual(list):
@@ -95,8 +97,178 @@ class DeapContainer:
             self.model.name=name
             self.model.load_model()
             self.model.attrs=attrs
+            
+
             score = test_or_suite.judge(model)
+            
             individual.sciunit_score=score
+            print(individual[0])
+            print(score.sort_keys)
+            #print("V_rest = %.1f; SortKey = %.3f" % (float(individual[0]),float(score.sort_key)))
+            assert type(score) != None:  
+               
+            assert type(score.sort_keys) != None:  
+                    
+            print(score.sort_keys.mean())
+            error = score.sort_keys.values
+  
+            error=error[0]
+            print(len(error))
+            return (error[0],error[1],error[2],error[3],error[4],error[5]) 
+
+        toolbox.register("evaluate",callsciunitjudge)
+        #toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
+        #toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
+        #toolbox.register("select", tools.selTournament, tournsize=3)         
+        #toolbox.register("evaluate",sciunitjudge)
+        toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
+        toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
+        toolbox.register("select", tools.selNSGA2)
+
+        random.seed(seed_in)
+       
+        CXPB = 0.9#cross over probability
+
+        pdb.set_trace()
+        stats = tools.Statistics(lambda ind: ind.fitness.values)
+        stats.register("avg", numpy.mean, axis=6)
+        stats.register("std", numpy.std, axis=6)
+        stats.register("min", numpy.min, axis=6)
+        stats.register("max", numpy.max, axis=6)
+
+        logbook = tools.Logbook()
+        logbook.header = "gen", "evals", "std", "min", "avg", "max"
+
+        pop = toolbox.population(n=self.pop_size)
+        
+        
+
+        for ind in pop:
+            ind.sciunitscore={} 
+        
+
+        # Evaluate the individuals with an invalid fitness
+        invalid_ind = [ind for ind in pop if not ind.fitness.valid]
+        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+        
+        for ind, fit in zip(invalid_ind, fitnesses):
+            print(ind,fit)
+            ind.fitness.values = fit
+            print(ind.fitness.values)
+        # This is just to assign the crowding distance to the individuals
+        # no actual selection is done
+        pop = toolbox.select(pop, len(pop))
+
+        gen=0
+        error_surface(pop,gen,ff=self.ff)
+        
+        #record = stats.compile(pop)
+        #logbook.record(gen=0, evals=len(invalid_ind), **record)
+        #print(logbook.stream)
+
+        stats_fit = tools.Statistics(key=lambda ind: ind.fitness.values)
+        stats_size = tools.Statistics(key=len)
+        mstats = tools.MultiStatistics(fitness=stats_fit, size=stats_size)
+        record = mstats.compile(pop)
+
+        # Begin the generational process
+        for gen in range(1,self.ngen):
+            # Vary the population
+            offspring = tools.selTournamentDCD(pop, len(pop))
+            offspring = [toolbox.clone(ind) for ind in offspring]
+            
+            for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
+                if random.random() <= CXPB:
+                    toolbox.mate(ind1, ind2)
+                
+                toolbox.mutate(ind1)
+                toolbox.mutate(ind2)
+                del ind1.fitness.values, ind2.fitness.values
+            
+            # Evaluate the individuals with an invalid fitness
+            invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+            fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+            for ind, fit in zip(invalid_ind, fitnesses):
+                ind.fitness.values = fit
+
+            # Select the next generation population
+            #was this: pop = toolbox.select(pop + offspring, MU)
+            pop = toolbox.select(offspring, self.pop_size)
+            
+            #logbook.record(gen=gen, evals=len(invalid_ind), **record)
+            #print(logbook.stream)
+            error_surface(pop,gen,ff=self.ff)
+               #(best_params, best_score, model)
+        print(record)
+        pdb.set_trace()       
+        return (pop[0][0],pop[0].sciunitscore[0])
+    
+                             
+    def sciunit_optimize(self,test_or_suite,model,pop_size,ngen,rov, param,
+                              NDIM=1,OBJ_SIZE=1,seed_in=1):    
+                              
+        self.model=model   
+        self.parameters=param                   
+        self.ngen = ngen#250
+        self.pop_size = pop_size#population size
+        self.rov = rov # Range of values
+
+        toolbox = base.Toolbox()
+        creator.create("FitnessMax", base.Fitness, weights=(-1.0,-1.0,-1.0,-1.0,-1.0,-1.0))#Final comma here, important, not a typo, must be a tuple type.
+        creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMax)
+
+        class Individual(list):
+            '''
+            When instanced the object from this class is used as one unit of chromosome or allele by DEAP.
+            Extends list via polymorphism.
+            '''
+            def __init__(self, *args):
+                list.__init__(self, *args)
+                self.sciunitscore=[]
+   
+
+        def uniform(low, up, size=None):
+            '''
+            This is the PRNG distribution that defines the initial
+            allele population. Inputs are the maximum and minimal numbers that the PRNG can generate.
+            '''
+            try:
+                return [random.uniform(a, b) for a, b in zip(low, up)]
+            except TypeError:
+                return [random.uniform(a, b) for a, b in zip([low] * size, [up] * size)]
+
+
+        BOUND_LOW=np.min(rov)
+        BOUND_UP=np.max(rov)
+
+
+        toolbox.register("map", futures.map)
+        #assert NDIM==2
+        toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
+        toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
+        toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+
+        def callsciunitjudge(individual):
+        
+            name={}
+            attrs={}
+            # Individual and units needs to change
+            # name_value and attrs need to change depending on the test being taken.
+            #
+            #self.model.attrs=self.param
+            #TODO make it such that                 
+            name_value= str(individual[0])+str('mV')
+            name={'V_rest': name_value } 
+            attrs={'//izhikevich2007Cell':{'vr':name_value }}
+            
+            self.model.name=name
+            self.model.load_model()
+            self.model.attrs=attrs
+            self.model.h.psection()
+            #self.new_params=str(self.model.psection())
+            #self.last_params=str(self.model.psection())
+            score = test_or_suite.judge(model)
+            individual.sciunit_score=score.sort_keys.mean().mean()
             print(individual[0])
             print(score.sort_keys)
             #print("V_rest = %.1f; SortKey = %.3f" % (float(individual[0]),float(score.sort_key)))
@@ -104,21 +276,9 @@ class DeapContainer:
                
                 if type(score.sort_keys) != None:  
                     
-                    #error = -score.sort_key
-                    #print(score.get_values())
-                    #pdb.set_trace()
-                    error = -score.sort_keys.mean()
-                    pdb.set_trace()
+                    error = -score.sort_keys.mean().mean()
 
-                else:
-                    #pdb.set_trace()
-                    error=-1   
-                    #bug why is sort key None type periodically? 
-            else:
-                #pdb.set_trace()
-                #pdb.set_trace()
-                #bug why is sort key None type periodically?
-                error=-1
+                    print(score)
 
             return error, 
 
@@ -203,23 +363,23 @@ class DeapContainer:
         #error_surface(pop,gen,ff=self.ff)
         return pop#(pop[0][0],pop[0].sus0,ff)
 
-        '''
-        Depreciated
-        def error_surface(pop,gen,ff=self.ff):
+     
+        #Depreciated
+        def error_surface(pop,gen):
+            '''
             Plot the population on the error surface at generation number gen.
             solve a trivial parabola by brute force
             plot the function to verify the maxima
             Inputs are DEAP GA population of chromosomes and generation number
             no outputs.
-            xx=np.linspace(-170,170,10000)
-            outf=np.array([ ff(float(i)) for i in xx ])
-            optima_bf=outf[np.where(outf==np.max(outf))][0]
-            #print('maxima of the curve via brute force:', optima_bf)
+            
+            plot the GAs genes parameter values, against the error for each genes parameter.
+            '''
             import matplotlib
             matplotlib.use('agg')
             import matplotlib.pyplot as plt
             plt.hold(True)
-            plt.plot(xx,outf)
+            
             scatter_pop=np.array([ind[0] for ind in pop])
             #note the error score is inverted bellow such that it aligns with the error surface.
             scatter_score=np.array([-ind.sus0 for ind in pop])
@@ -227,4 +387,4 @@ class DeapContainer:
             plt.scatter(scatter_pop,scatter_score)
             plt.hold(False)
             plt.savefig('simple_function'+str(gen)+'.png')
-        ''' 
+
