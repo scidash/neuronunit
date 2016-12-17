@@ -114,6 +114,8 @@ from neuronunit.models import backends
 from neuronunit.models.reduced import ReducedModel
 
 model = ReducedModel(LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
+
+
 model=model.load_model()
 
 

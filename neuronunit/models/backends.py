@@ -6,6 +6,10 @@ import pdb
 import neuronunit.capabilities as cap
 import neuronunit.capabilities.spike_functions as sf
 
+
+from quantities import ms, mV, nA
+from neo.core import AnalogSignal
+
 class Backend:
     """Based class for simulator backends that implement simulator-specific
     details of modifying, running, and reading results from the simulation
@@ -45,9 +49,6 @@ class jNeuroMLBackend(Backend):
 
 
 class NEURONBackend(Backend):
-                    #cap.ReceivesCurrent,
-                    #cap.ProducesMembranePotential,
-                    #cap.ProducesActionPotentials):
     """Used for simulation with NEURON, a popular simulator
     http://www.neuron.yale.edu/neuron/
     Units used be NEURON are sometimes different to quantities/neo (note nA versus pA)
@@ -60,10 +61,57 @@ class NEURONBackend(Backend):
 
     """
 
+        
+    def __init__(self, name=None,attrs=None):
+        self.neuron=None
+        self.model_path=None
+        self.LEMS_file_path=None#LEMS_file_path
+        self.name=None
+        self.attrs=attrs
+        self.f=None
+        self.h=None
+        self.invokenrn()
+        
+        #TODO call super. for some reason these don't work.
+        #super(NeuronModel,self).__init__(name=self.name) 
+        #Destroy the base classes version of inject_square_current 
+        #as for some reason it does override as is desired.
+        #super(ReducedModel,self).inject_square_current=None
+   
+        return
+        
+    #make backend a global variable inside this class.    
+    backend = 'NEURON'
+
+    def invokenrn(self):
+        """Sets the NEURON h variable"""
+
+        from neuron import h
+        self.h=h
+        self.h.load_file("stdlib.hoc")
+        self.h.load_file("stdgui.hoc")
+    
+    def reset_h(self, hVariable):
+        """Sets the NEURON h variable"""
+
+        self.h = hVariable.h
+        self.neuron = hVariable
+        
+
+    def setStopTime(self, stopTime = 1000*ms):
+        """Sets the simulation duration"""
+        """stopTimeMs: duration in milliseconds"""
+
+        tstop = stopTime
+        tstop.units = ms
+
+        self.h.tstop = float(tstop)
+
+    '''
     def __init__(self,name=None,attrs=None):
         # Init should have options to specify model-independent NEURON configuration, e.g. parallel environemnt, 
         # various environment variables, and other options.  
-        '''
+      
         Inputs: name=None,attrs=None
         
         Arguably nml_file_path can move out of the constructor signature, and into load_model signature.
@@ -71,17 +119,15 @@ class NEURONBackend(Backend):
         neuron is made an object attribute as common usage of neuron is to mutate its contents
         neuron acts a bit like a global variable object 
         in the scope of this class.
-        '''
+
         self.neuron=None
         self.model_path=None
         self.LEMS_file_path=None#LEMS_file_path
         self.name=name
         self.attrs=attrs
         self.f=None
-        
         #pdb.set_trace()
-
-    backend = 'NEURON'
+    '''
 
     def load_model(self):        
         '''
@@ -97,9 +143,8 @@ class NEURONBackend(Backend):
         #import the contents of the file into the current names space.
         def cond_load():            
             from neuronunit.tests.NeuroML2 import LEMS_2007One_nrn 
-            self.neuron=LEMS_2007One_nrn.neuron
+            self.reset_h(LEMS_2007One_nrn.neuron)
             #make sure mechanisms are loaded
-            #pdb.set_trace()
             modeldirname=os.path.dirname(self.orig_lems_file_path)
             self.neuron.load_mechanisms(modeldirname)  
             #import the default simulation protocol
@@ -133,15 +178,17 @@ class NEURONBackend(Backend):
 
         #Although the above approach successfuly instantiates a LEMS/neuroml model in pyhoc
         #the resulting hoc variables for current source and cell name are idiosyncratic (not generic).
-        #This makes the approach hard to make non hard coded, and generalizable code.
-        #work around involves predicting the hoc variable names from LEMS file that was used to generate them.
+        #The resulting idiosyncracies makes it hard not have a hard coded approach make non hard coded, and generalizable code.
+        #work around involves predicting the hoc variable names from pyneuroml LEMS file that was used to generate them.
         more_attributes=pynml.read_lems_file(self.orig_lems_file_path)
         for i in more_attributes.components:
+        #TODO strip out simulation parameters from the tree also such as duration.
+        #Strip out values from something a bit like an xml tree.
             if str('pulseGenerator') in i.type: 
                 self.current_src_name=i.id
             if str('Cell') in i.type: 
                 self.cell_name=i.id
-        more_attributes=None#garbage collect more_attributes, its not needed anymore.
+        more_attributes=None#force garbage collection of more_attributes, its not needed anymore.
         return self        
     
 
@@ -154,7 +201,8 @@ class NEURONBackend(Backend):
         #issue is discussed here: https://www.python.org/dev/peps/pep-3106/
         import re
         #items=[ (key, value) for key,value in self.attrs.items() ]
-        for key, value in self.attr.items(): 
+        #pdb.set_trace()
+        for key, value in self.attrs.items(): 
              h_variable=list(value.keys())
              h_variable=h_variable[0]
 
@@ -163,21 +211,21 @@ class NEURONBackend(Backend):
              h_assignment = re.sub('\mV$', '', str(h_assignment))
 
 
-             self.neuron.hoc.execute('m_RS_RS_pop[0].'+str(h_variable)+'='+str(h_assignment))   
-             self.neuron.hoc.execute('m_'+str(self.cell_name)+'_'+str(self.cell_name)+'_pop[0].'+str(h_variable)+'='+str(h_assignment))   
+             self.h('m_RS_RS_pop[0].'+str(h_variable)+'='+str(h_assignment))   
+             self.h('m_'+str(self.cell_name)+'_'+str(self.cell_name)+'_pop[0].'+str(h_variable)+'='+str(h_assignment))   
 
         print('PSECTION shows model parameters changing:')
-        self.neuron.hoc.execute('forall{ psection() }')
+        self.h('forall{ psection() }')
         
      
-        self.neuron.h(' { v_time = new Vector() } ')
-        self.neuron.h(' { v_time.record(&t) } ')
+        self.h(' { v_time = new Vector() } ')
+        self.h(' { v_time.record(&t) } ')
 
-        self.neuron.h(' { v_v_of0 = new Vector() } ')
-        self.neuron.h(' { v_v_of0.record(&RS_pop[0].v(0.5)) } ')
+        self.h(' { v_v_of0 = new Vector() } ')
+        self.h(' { v_v_of0.record(&RS_pop[0].v(0.5)) } ')
 
-        self.neuron.h(' { v_u_of0 = new Vector() } ')
-        self.neuron.h(' { v_u_of0.record(&m_RS_RS_pop[0].u) } ')
+        self.h(' { v_u_of0 = new Vector() } ')
+        self.h(' { v_u_of0.record(&m_RS_RS_pop[0].u) } ')
 
 
         
@@ -195,7 +243,7 @@ class NEURONBackend(Backend):
         import re
 
 
-        #Conditionally remake format the dictionary. 
+        #Conditionally remake and format the dictionary. 
         #For a reason I don't understand the current dictionary is nested side another dictionary whose only key is:
         #'injected_square_current'
         #I think this might have to do with an incomplete transition python2.7->3
