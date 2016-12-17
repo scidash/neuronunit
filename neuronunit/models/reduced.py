@@ -43,6 +43,8 @@ class ReducedModel(mod.LEMSModel,
     def get_spike_train(self, rerun=False, **run_params):
         vm = self.get_membrane_potential(rerun=rerun, **run_params)
         spike_train = sf.get_spike_train(vm)
+        print('Number of spikes is!')
+        print(len(spike_train))
         return spike_train
 
     #This method must be overwritten in the child class or Derived class NEURONbackend but I don't understand how to do that.
