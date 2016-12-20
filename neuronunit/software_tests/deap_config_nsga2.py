@@ -41,13 +41,7 @@ class deap_capsule:
         self.pop_size=pop_size#population size
         self.param=param
         self.rov=range_of_values
-        #pdb.set_trace()
-        #Warning, the algorithm below is sensitive to certain muttiples in the population size
-        #which is denoted by MU.
-        #The mutiples of 100 work, many numbers will not work
-        #TODO write a proper exception handling method.
-        #TODO email the DEAP list about this issue too.
-        #TODO refactor MU into pop_size
+
         toolbox = base.Toolbox()
         creator.create("FitnessMax", base.Fitness, weights=(-1.0,-1.0,-1.0,-1.0,-1.0))#Final comma here, important, not a typo, must be a tuple type.
 
@@ -60,8 +54,9 @@ class deap_capsule:
             def __init__(self, *args):
                 list.__init__(self, *args)
                 model=None
-                self.time_trace=[]
-                self.voltage_trace=[]
+                self.time_trace=None
+                self.voltage_trace=None
+                self.attrs=None
 
 
 
@@ -75,16 +70,14 @@ class deap_capsule:
                 return [random.uniform(a, b) for a, b in zip(low, up)]
             except TypeError:
                 return [random.uniform(a, b) for a, b in zip([low] * size, [up] * size)]
-        #range_of_values=np.linspace(-170,170,10000)
-        #BOUND_LOW=np.min(self.range_of_values)
-        #BOUND_UP=np.max(self.range_of_values)
+
 
         BOUND_LOW=[ np.min(i) for i in self.rov ]
         BOUND_UP=[ np.max(i) for i in self.rov ]
-        #pdb.set_trace()
+
         NDIM = len(self.rov )
 
-        #pdb.set_trace()
+
 
 
         toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
@@ -105,37 +98,18 @@ class deap_capsule:
 
             for i,p in enumerate(self.param):
                 name_value=str(individual[i])#i
-                #reformate values.
-                #self.model.name=name_value
-                #pdb.set_trace()
                 attrs={'//izhikevich2007Cell':{p:name_value }}
-                print(attrs)
                 self.model.update_run_params(attrs)
+            individual.attrs=attrs
 
-                #pdb.set_trace()
-                #print('this is attrs=')
-                #print(attrs)
-
-            #pdb.set_trace()
-            self.model.h.psection()
+            #self.model.h.psection()
             score = test_or_suite.judge(self.model)
-            #In the NSGA version the error returned from objective function
-            #Needs to be a list or a tuple.
-            #pdb.set_trace()
-            #error = -1
-            #print( calc_errorf(individual, ff),calc_errorg(individual, gg) )
-            #error=( calc_errorf(individual, ff),calc_errorg(individual, gg) )
+
             error = score.sort_keys.values[0]
             individual.sciunitscore=error
 
             individual.time_trace=self.model.results['t']
             individual.voltage_trace=self.model.results['vm']
-            #individual.model=self.model
-            #assert type(error)!=None
-            #error=error[0]
-            #print(len(error))
-            #return np.mean(error)
-            print (error[0],error[1],error[2],error[3],error[4],error[5])
 
             return (error[0],error[1],error[2],error[3],error[4],error[5],)
 
@@ -178,11 +152,7 @@ class deap_capsule:
         pop = toolbox.select(pop, len(pop))
 
         gen=0
-        #error_surface(pop,gen)
 
-        #record = stats.compile(pop)
-        #logbook.record(gen=0, evals=len(invalid_ind), **record)
-        #print(logbook.stream)
 
         stats_fit = tools.Statistics(key=lambda ind: ind.fitness.values)
         stats_size = tools.Statistics(key=len)
@@ -213,9 +183,6 @@ class deap_capsule:
             #was this: pop = toolbox.select(pop + offspring, MU)
             pop = toolbox.select(offspring, self.pop_size)
 
-            #logbook.record(gen=gen, evals=len(invalid_ind), **record)
-            #print(logbook.stream)
-            #error_surface(pop,gen,ff=self.ff)
-               #(best_params, best_score, model)
+
         print(record)
-        return (self.model,pop[0][0],pop[0].sciunitscore)
+        return (pop,pop[0],pop[0].sciunitscore)

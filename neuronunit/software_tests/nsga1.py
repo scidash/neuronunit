@@ -124,9 +124,9 @@ suite = sciunit.TestSuite("vm_suite",tests,hooks=hooks)
 
 
 class Test:
-    def __init__(self,range_of_values):
-        #self.ff = ff#place holder
-        self.range_of_values=range_of_values
+    def __init__(self):
+        pass
+        
     def judge(self,model=None):
         pass # already implemented, returns a score
 
@@ -137,18 +137,14 @@ class Test:
         #call to the GA.
         #import deap_config
         from deap_config_nsga2 import deap_capsule
-        #pdb.set_trace()
         dc=deap_capsule()
 
-        #dc=deap_capsule()
-
-                                          #sciunit_optimize(ff=FF,range_of_values=None,seed_in=1)
-                                          #ff,, *args)
         pop_size=12
         ngen=10
+        #These parameters are over written
         NDIM=2
         OBJ_SIZE=2
-        range_of_values=self.range_of_values
+        #range_of_values=self.range_of_values
         seed_in=1
 
 
@@ -167,16 +163,12 @@ class Test:
         param=['vr','a','b']
         rov=[]
         rov0 = np.linspace(-67,-50,10)
-        #h.m_RS_RS_pop[i].a = 0.030000001
-        #h.m_RS_RS_pop[i].b = -0.0019999999
         rov1 = np.linspace(0.015,0.045,10)
         half=0.0019999999/2.0
         rov2 = np.linspace(-0.0019999999-half,-0.0019999999+half,10)
         rov.append(rov0)
         rov.append(rov1)
         rov.append(rov2)
-        #range_of_values=np.linspace(-65.0,-55.0,1000)
-                                   #sciunit_optimize(test_or_suite,param,pop_size,ngen,range_of_values,NDIM=3,OBJ_SIZE=2,seed_in=1):
 
         best_params, best_score, model =dc.sciunit_optimize(suite,param,pop_size,ngen,rov,NDIM,OBJ_SIZE,seed_in=1)
         return (best_params, best_score, model)
@@ -197,8 +189,15 @@ if __name__ == "__main__":
     #logbook,y,x=sciunit_optimize(ff,3)
     #best_params, best_score, model = sciunit_optimize(ff,3)
 
-    range_of_values=np.linspace(-65.0,-55.0,1000)
-    t=Test(range_of_values)
-    best_params, best_score, model=t.optimize()
+    #range_of_values=np.linspace(-65.0,-55.0,1000)
+    t=Test()
+    pop, best_score, model=t.optimize()
+    import matplotlib as plt
+    matplotlib.use('agg')
+    plt.hold(True)
+    for i in xrange(0,9):
+        plt.plot(pop[i].time_trace,pop[i].voltage_trace)
+    plt.savefig('best 10')
+    #(self.model,pop[0],pop[0].sciunitscore)
     print('pareto front top value in pf hall of fame')
-    print('best params',best_params,'best_score',best_score, 'model',model)
+    #print('best params',best_params,'best_score',best_score, 'model',model)
