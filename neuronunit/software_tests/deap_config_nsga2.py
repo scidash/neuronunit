@@ -60,6 +60,8 @@ class deap_capsule:
             def __init__(self, *args):
                 list.__init__(self, *args)
                 model=None
+                self.time_trace=[]
+                self.voltage_trace=[]
 
 
 
@@ -125,8 +127,11 @@ class deap_capsule:
             #error=( calc_errorf(individual, ff),calc_errorg(individual, gg) )
             error = score.sort_keys.values[0]
             individual.sciunitscore=error
-            individual.model=self.model
-            assert type(error)!=None
+
+            individual.time_trace=self.model.results['t']
+            individual.voltage_trace=self.model.results['vm']
+            #individual.model=self.model
+            #assert type(error)!=None
             #error=error[0]
             #print(len(error))
             #return np.mean(error)
