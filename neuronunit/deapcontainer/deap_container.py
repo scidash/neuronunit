@@ -58,6 +58,9 @@ class DeapContainer:
             def __init__(self, *args):
                 list.__init__(self, *args)
                 self.sciunitscore=[]
+                self.model=None
+                self.error=None
+                self.results=None
 
 
         def uniform(low, up, size=None):
@@ -113,6 +116,8 @@ class DeapContainer:
             self.model.set_attrs(attrs)
             score = test_or_suite.judge(model)
             error = score.sort_keys.values[0]
+            individual.results=self.model.results
+            individual.error=error
             return (error[0],error[1],error[2],error[3],error[4])
 
         toolbox.register("evaluate",callsciunitjudge)
@@ -189,8 +194,9 @@ class DeapContainer:
             pop = toolbox.select(offspring, self.pop_size)
 
         print(record)
-        pdb.set_trace()
-        #return (pop[0][0],pop[0].sciunitscore[0])
+        return pop
+        #pdb.set_trace()
+        #return (pop[0][0],pop[0].sciunitscore)
 
 
     def sciunit_optimize(self,test_or_suite,model,pop_size,ngen,rov, param,

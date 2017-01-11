@@ -167,7 +167,7 @@ delta=after_ga-before_ga
 print(delta)
 
 
-
+#This needs to act on error.
 print("%.2f mV" % np.mean([p[0] for p in pop]))
 
 NeuronObject=backends.NEURONBackend(LEMS_MODEL_PATH)
