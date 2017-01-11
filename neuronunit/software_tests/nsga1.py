@@ -193,11 +193,15 @@ if __name__ == "__main__":
 
     #range_of_values=np.linspace(-65.0,-55.0,1000)
     t=Test()
+
+    import time
+    before_ga=time.time()
     pop, best_score, model=t.optimize()
+    after_ga=time.time()
     plt.hold(True)
     for i in xrange(0,9):
         plt.plot(pop[i].time_trace,pop[i].voltage_trace)
     plt.savefig('best 10')
-    #(self.model,pop[0],pop[0].sciunitscore)
-    print('pareto front top value in pf hall of fame')
-    #print('best params',best_params,'best_score',best_score, 'model',model)
+    print('the time was:')
+    delta=after_ga-before_ga
+    print(delta)
