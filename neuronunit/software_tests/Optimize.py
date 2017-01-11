@@ -169,9 +169,9 @@ print(delta)
 
 #This needs to act on error.
 print("%.2f mV" % np.mean([p[0] for p in pop]))
-
-NeuronObject=backends.NEURONBackend(LEMS_MODEL_PATH)
-NeuronObject.load_model()#Only needs to occur once
+pdb.set_trace()
+#NeuronObject=backends.NEURONBackend(LEMS_MODEL_PATH)
+#NeuronObject.load_model()#Only needs to occur once
 #NeuronObject.update_nrn_param(param_dict)
 #NeuronObject.update_inject_current(stim_dict)
 '''
