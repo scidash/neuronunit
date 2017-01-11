@@ -109,7 +109,7 @@ def update_amplitude(test,tests,score):
 
     print(len(tests))
     #pdb.set_trace()
-    for i in [3,4,5]:
+    for i in [2,3,4]:
         # Set current injection to just suprathreshold
         tests[i].params['injected_square_current']['amplitude'] = rheobase*1.01
 
@@ -126,7 +126,7 @@ suite = sciunit.TestSuite("vm_suite",tests,hooks=hooks)
 class Test:
     def __init__(self):
         pass
-        
+
     def judge(self,model=None):
         pass # already implemented, returns a score
 
@@ -176,7 +176,9 @@ class Test:
 
 
 
-
+import matplotlib as matplotlib
+matplotlib.use('agg')
+import matplotlib.pyplot as plt
 if __name__ == "__main__":
 
     #def ff(xx):
@@ -192,8 +194,6 @@ if __name__ == "__main__":
     #range_of_values=np.linspace(-65.0,-55.0,1000)
     t=Test()
     pop, best_score, model=t.optimize()
-    import matplotlib as plt
-    matplotlib.use('agg')
     plt.hold(True)
     for i in xrange(0,9):
         plt.plot(pop[i].time_trace,pop[i].voltage_trace)

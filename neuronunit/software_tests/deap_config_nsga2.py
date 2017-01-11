@@ -110,8 +110,8 @@ class deap_capsule:
 
             individual.time_trace=self.model.results['t']
             individual.voltage_trace=self.model.results['vm']
-
-            return (error[0],error[1],error[2],error[3],error[4],error[5],)
+            #,error[5]
+            return (error[0],error[1],error[2],error[3],error[4],)
 
         toolbox.register("evaluate",sciunitjudge)
         toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
