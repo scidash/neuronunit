@@ -33,15 +33,15 @@ class DeapContainer:
         #which is denoted by MU.
         #The mutiples of 100 work, many numbers will not work
         #TODO write a proper exception handling method.
-        #TODO email the DEAP list about this issue too.        
-        #TODO refactor MU into pop_size 
+        #TODO email the DEAP list about this issue too.
+        #TODO refactor MU into pop_size
                              #self.ff,pop_size,ngen,NDIM=1,OBJ_SIZE=1,self.range_of_values
-                             
+
     def sciunit_optimize_nsga(self,test_or_suite,model,pop_size,ngen,rov, param,
-                              NDIM=1,OBJ_SIZE=6,seed_in=1):    
-                              
-        self.model=model   
-        self.parameters=param                   
+                              NDIM=1,OBJ_SIZE=6,seed_in=1):
+
+        self.model=model
+        self.parameters=param
         self.ngen = ngen#250
         self.pop_size = pop_size#population size
         self.rov = rov # Range of values
@@ -58,7 +58,7 @@ class DeapContainer:
             def __init__(self, *args):
                 list.__init__(self, *args)
                 self.sciunitscore=[]
-   
+
 
         def uniform(low, up, size=None):
             '''
@@ -93,12 +93,12 @@ class DeapContainer:
         toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
         def callsciunitjudge(individual):#This method must be pickle-able for scoop to work.
-        
+
             #local variables in this function are a problem for scoop. Solution make them global.
             #name=None
             #attrs=None
 
-            for i, p in enumerate(param): 
+            for i, p in enumerate(param):
                 name_value=str(individual[i])
                 #reformate values.
                 self.model.name=name_value
@@ -107,34 +107,22 @@ class DeapContainer:
                 #print(attrs)
                 self.model.update_run_params(attrs)
                 #self.model.h.psection()
-            
+
             self.model.name=name
             self.model.load_model()
             self.model.set_attrs(attrs)
             score = test_or_suite.judge(model)
-            #individual.sciunit_score=score
-            #print(individual[0])
-            #print(score.sort_keys)
-            #print("V_rest = %.1f; SortKey = %.3f" % (float(individual[0]),float(score.sort_key)))
-            #assert type(score) != None
-               
-            #assert type(score.sort_keys) != None
-                    
-            #print(score.sort_keys.mean())
             error = score.sort_keys.values[0]
-  
-            #error=error[0]
-            #print(len(error))
-            return (error[0],error[1],error[2],error[3],error[4],error[5]) 
+            return (error[0],error[1],error[2],error[3],error[4]) 
 
         toolbox.register("evaluate",callsciunitjudge)
-    
+
         toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
         toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
         toolbox.register("select", tools.selNSGA2)
 
         random.seed(seed_in)
-       
+
         CXPB = 0.9#cross over probability
 
 
@@ -148,17 +136,17 @@ class DeapContainer:
         logbook.header = "gen", "evals", "std", "min", "avg", "max"
 
         pop = toolbox.population(n=self.pop_size)
-        
-        
+
+
 
         for ind in pop:
-            ind.sciunitscore={} 
-        
+            ind.sciunitscore={}
+
 
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in pop if not ind.fitness.valid]
         fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
-        
+
         for ind, fit in zip(invalid_ind, fitnesses):
             print(ind,fit)
             ind.fitness.values = fit
@@ -166,7 +154,7 @@ class DeapContainer:
         # This is just to assign the crowding distance to the individuals
         # no actual selection is done
         pop = toolbox.select(pop, len(pop))
- 
+
         record = stats.compile(pop)
         logbook.record(gen=0, evals=len(invalid_ind), **record)
         print(logbook.stream)
@@ -181,15 +169,15 @@ class DeapContainer:
             # Vary the population
             offspring = tools.selTournamentDCD(pop, len(pop))
             offspring = [toolbox.clone(ind) for ind in offspring]
-            
+
             for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
                 if random.random() <= CXPB:
                     toolbox.mate(ind1, ind2)
-                
+
                 toolbox.mutate(ind1)
                 toolbox.mutate(ind2)
                 del ind1.fitness.values, ind2.fitness.values
-            
+
             # Evaluate the individuals with an invalid fitness
             invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
             fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
@@ -199,21 +187,21 @@ class DeapContainer:
             # Select the next generation population
             #was this: pop = toolbox.select(pop + offspring, MU)
             pop = toolbox.select(offspring, self.pop_size)
-            
+
             #logbook.record(gen=gen, evals=len(invalid_ind), **record)
             #print(logbook.stream)
             error_surface(pop,gen,ff=self.ff)
                #(best_params, best_score, model)
         print(record)
-        pdb.set_trace()       
+        pdb.set_trace()
         return (pop[0][0],pop[0].sciunitscore[0])
-    
-                             
+
+
     def sciunit_optimize(self,test_or_suite,model,pop_size,ngen,rov, param,
-                              NDIM=1,OBJ_SIZE=1,seed_in=1):    
-                              
-        self.model=model   
-        self.parameters=param                   
+                              NDIM=1,OBJ_SIZE=1,seed_in=1):
+
+        self.model=model
+        self.parameters=param
         self.ngen = ngen#250
         self.pop_size = pop_size#population size
         self.rov = rov # Range of values
@@ -230,7 +218,7 @@ class DeapContainer:
             def __init__(self, *args):
                 list.__init__(self, *args)
                 self.sciunitscore=[]
-   
+
 
         def uniform(low, up, size=None):
             '''
@@ -258,18 +246,18 @@ class DeapContainer:
         toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
         def callsciunitjudge(individual):
-        
+
             name={}
             attrs={}
             # Individual and units needs to change
             # name_value and attrs need to change depending on the test being taken.
             #
             #self.model.attrs=self.param
-            #TODO make it such that                 
+            #TODO make it such that
             name_value= str(individual[0])+str('mV')
-            name={'V_rest': name_value } 
+            name={'V_rest': name_value }
             attrs={'//izhikevich2007Cell':{'vr':name_value }}
-            
+
             self.model.name=name
             self.model.load_model()
             self.model.attrs=attrs
@@ -281,20 +269,20 @@ class DeapContainer:
             print(individual[0])
             print(score.sort_keys)
             #print("V_rest = %.1f; SortKey = %.3f" % (float(individual[0]),float(score.sort_key)))
-            if type(score) != None:  
-               
-                if type(score.sort_keys) != None:  
-                    
+            if type(score) != None:
+
+                if type(score.sort_keys) != None:
+
                     error = -score.sort_keys.mean().mean()
 
                     print(score)
 
-            return error, 
+            return error,
 
         toolbox.register("evaluate",callsciunitjudge)
         toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
         toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
-        toolbox.register("select", tools.selTournament, tournsize=3)        
+        toolbox.register("select", tools.selTournament, tournsize=3)
         seed=1
         random.seed(seed)
 
@@ -311,9 +299,9 @@ class DeapContainer:
 
 
         pop = toolbox.population(n=self.pop_size)
-        
+
         print("Start of evolution")
-        
+
         # Evaluate the entire population
         fitnesses = list(map(toolbox.evaluate, pop))
         for ind, fit in zip(pop, fitnesses):
@@ -322,14 +310,14 @@ class DeapContainer:
 
         # Begin the evolution
         for gen in range(self.ngen):
-            g=gen#TODO refactor 
+            g=gen#TODO refactor
             print("-- Generation %i --" % g)
-            
+
             # Select the next generation individuals
             offspring = toolbox.select(pop, len(pop))
             # Clone the selected individuals
             offspring = list(map(toolbox.clone, offspring))
-        
+
             # Apply crossover and mutation on the offspring
             for child1, child2 in zip(offspring[::2], offspring[1::2]):
 
@@ -348,31 +336,31 @@ class DeapContainer:
                 if random.random() < MUTPB:
                     toolbox.mutate(mutant)
                     del mutant.fitness.values
-        
+
             # Evaluate the individuals with an invalid fitness
             invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
             fitnesses = map(toolbox.evaluate, invalid_ind)
             for ind, fit in zip(invalid_ind, fitnesses):
                 ind.fitness.values = fit
-            
+
             print("  Evaluated %i individuals" % len(invalid_ind))
-            
+
             # The population is entirely replaced by the offspring
             pop[:] = offspring
             #error_surface(pop,gen,ff=self.ff)
             # Gather all the fitnesses in one list and print the stats
             fits = [ind.fitness.values[0] for ind in pop]
-            #TODO terminate DEAP learning when the population converges to save computation 
+            #TODO terminate DEAP learning when the population converges to save computation
             #this will probably involve using term as defined by the import statement above.
             #To be specific using term attributes in a conditional that evaluates to break if true.
-            
+
         record = stats.compile(pop)
         logbook.record(gen=gen, evals=len(invalid_ind), **record)
         print(logbook.stream)
         #error_surface(pop,gen,ff=self.ff)
         return pop#(pop[0][0],pop[0].sus0,ff)
 
-     
+
         #Depreciated
         def error_surface(pop,gen):
             '''
@@ -381,14 +369,14 @@ class DeapContainer:
             plot the function to verify the maxima
             Inputs are DEAP GA population of chromosomes and generation number
             no outputs.
-            
+
             plot the GAs genes parameter values, against the error for each genes parameter.
             '''
             import matplotlib
             matplotlib.use('agg')
             import matplotlib.pyplot as plt
             plt.hold(True)
-            
+
             scatter_pop=np.array([ind[0] for ind in pop])
             #note the error score is inverted bellow such that it aligns with the error surface.
             scatter_score=np.array([-ind.sus0 for ind in pop])
@@ -396,4 +384,3 @@ class DeapContainer:
             plt.scatter(scatter_pop,scatter_score)
             plt.hold(False)
             plt.savefig('simple_function'+str(gen)+'.png')
-

@@ -57,7 +57,7 @@ results=pynml.run_lems_with_jneuroml_neuron(LEMS_MODEL_PATH,
                   verbose=DEFAULTS['v'],
 exit_on_fail = True)
 after_pynml=time.time()
-recorded_times.append(after_pynml-before_pynml)
+delta_pynml=after_pynml-before_pynml
 #pdb.set_trace()
 print('jneuroml time: ',after_pynml-before_pynml)
 
@@ -118,7 +118,7 @@ def update_amplitude(test,tests,score):
 
     print(len(tests))
     #pdb.set_trace()
-    for i in [3,4,5]:
+    for i in [2,3,4]:
         # Set current injection to just suprathreshold
         tests[i].params['injected_square_current']['amplitude'] = rheobase*1.01
 
@@ -155,6 +155,11 @@ model.local_run()
 after_nrn=time.time()
 times_nrn=after_nrn-before_nrn
 print(times_nrn)
+delta_pynml
+delta_nrn_pynml=np.abs(delta_pynml-times_nrn)
+print('the time difference is: ')
+print(delta_nrn_pynml)
+print('press c to continue')
 pdb.set_trace()
 from types import MethodType
 def optimize(self,model,rov,param):
