@@ -194,15 +194,18 @@ rov2 = np.linspace(-3.5,-0.5,7)
 rov.append(rov0)
 rov.append(rov1)
 rov.append(rov2)
-
+before_ga=time.time()
 pop = my_test.optimize(model,rov,param)
+after_ga=time.time()
+print('the time was:')
+delta=after_ga-before_ga
+print(delta)
 
 
 
 # In[13]:
 
 print("%.2f mV" % np.mean([p[0] for p in pop]))
-
 
 NeuronObject=backends.NEURONBackend(LEMS_MODEL_PATH)
 NeuronObject.load_model()#Only needs to occur once
