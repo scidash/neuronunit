@@ -113,7 +113,7 @@ class DeapContainer:
             self.model.set_attrs(attrs)
             score = test_or_suite.judge(model)
             error = score.sort_keys.values[0]
-            return (error[0],error[1],error[2],error[3],error[4]) 
+            return (error[0],error[1],error[2],error[3],error[4])
 
         toolbox.register("evaluate",callsciunitjudge)
 
@@ -190,10 +190,10 @@ class DeapContainer:
 
             #logbook.record(gen=gen, evals=len(invalid_ind), **record)
             #print(logbook.stream)
-            error_surface(pop,gen,ff=self.ff)
+            #error_surface(pop,gen,ff=self.ff)
                #(best_params, best_score, model)
         print(record)
-        pdb.set_trace()
+        #pdb.set_trace()
         return (pop[0][0],pop[0].sciunitscore[0])
 
 
