@@ -1,17 +1,10 @@
 
 # coding: utf-8
 
-# In[17]:
-#Retain jupyter notebook cell #s and comments, such that the Notebook can quickly be remade with a conversion.
-#get_ipython().magic('load_ext autoreload')
-#get_ipython().magic('autoreload 2')
-#get_ipython().magic('matplotlib notebook')
 import os,sys
 import numpy as np
 import matplotlib.pyplot as plt
 import quantities as pq
-
-
 import sciunit
 
 
@@ -26,13 +19,6 @@ from neuronunit import aibs
 from neuronunit.models.reduced import ReducedModel
 import pdb
 import pickle
-# In[16]:
-
-# This example is from https://github.com/OpenSourceBrain/IzhikevichModel.
-#model_path = os.getcwd()+str('/neuronunit/software_tests/NeuroML2') # Replace this the path to your
-                                                                       # working copy of
-                                                                       # github.com/OpenSourceBrain/IzhikevichModel.
-#file_path=model_path+str('/LEMS_2007One.xml')
 
 IZHIKEVICH_PATH = os.getcwd()+str('/NeuroML2') # Replace this the path to your
 LEMS_MODEL_PATH = IZHIKEVICH_PATH+str('/LEMS_2007One.xml')
@@ -58,19 +44,7 @@ results=pynml.run_lems_with_jneuroml_neuron(LEMS_MODEL_PATH,
 exit_on_fail = True)
 after_pynml=time.time()
 delta_pynml=after_pynml-before_pynml
-#pdb.set_trace()
 print('jneuroml time: ',after_pynml-before_pynml)
-
-
-#from neuronunit.models import backends
-#from neuronunit.models.reduced import ReducedModel
-
-
-#Its because Reduced model is the base class that calling super on SingleCellModel does not work.
-
-
-# In[8]:
-
 import quantities as pq
 from neuronunit import tests as nu_tests, neuroelectro
 neuron = {'nlex_id': 'nifext_50'} # Layer V pyramidal cell
@@ -131,25 +105,12 @@ hooks = {tests[0]:{'f':update_amplitude}} #This is a trick to dynamically insert
 #update amplitude at the location in sciunit thats its passed to, without any loss of generality.
 suite = sciunit.TestSuite("vm_suite",tests,hooks=hooks)
 
-
-# In[4]:
-
-# In[5]:
-
-#sciunit opt as a repository is now obsolete.
-
-
-# In[6]:
-
 from neuronunit.models import backends
 from neuronunit.models.reduced import ReducedModel
-
 before_nrn=time.time()
 
 #Its because Reduced model is the base class that calling super on SingleCellModel does not work.
 model = ReducedModel(LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
-
-
 model=model.load_model()
 model.local_run()
 after_nrn=time.time()
@@ -157,7 +118,7 @@ times_nrn=after_nrn-before_nrn
 print(times_nrn)
 delta_pynml
 delta_nrn_pynml=np.abs(delta_pynml-times_nrn)
-print('the time difference is: ')
+print('the time difference is: \n')
 print(delta_nrn_pynml)
 print('press c to continue')
 pdb.set_trace()
@@ -183,14 +144,13 @@ def optimize(self,model,rov,param):
     '''
 
 
-    return pop#(best_params, best_score, model)
+    return pop
 
 my_test = tests[0]
 my_test.verbose = True
 my_test.optimize = MethodType(optimize, my_test) # Bind to the score.
 
 
-# In[7]:
 param=['vr','a','b']
 rov=[]
 rov0 = np.linspace(-67,-50,1000)
@@ -207,8 +167,6 @@ delta=after_ga-before_ga
 print(delta)
 
 
-
-# In[13]:
 
 print("%.2f mV" % np.mean([p[0] for p in pop]))
 
