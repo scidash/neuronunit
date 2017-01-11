@@ -188,13 +188,9 @@ class DeapContainer:
             #was this: pop = toolbox.select(pop + offspring, MU)
             pop = toolbox.select(offspring, self.pop_size)
 
-            #logbook.record(gen=gen, evals=len(invalid_ind), **record)
-            #print(logbook.stream)
-            #error_surface(pop,gen,ff=self.ff)
-               #(best_params, best_score, model)
         print(record)
-        #pdb.set_trace()
-        return (pop[0][0],pop[0].sciunitscore[0])
+        pdb.set_trace()
+        #return (pop[0][0],pop[0].sciunitscore[0])
 
 
     def sciunit_optimize(self,test_or_suite,model,pop_size,ngen,rov, param,
