@@ -15,14 +15,23 @@ class ReducedModel(mod.LEMSModel,
                    cap.ProducesActionPotentials):
     """Base class for reduced models, using LEMS"""
 
-    def __init__(self, LEMS_file_path, name=None, backend='jNeuroML', attrs={}):
+    def __init__(self, LEMS_file_path, name=None, backend=None, attrs={}):
         """
         LEMS_file_path: Path to LEMS file (an xml file).
         name: Optional model name.
         """
-        super(ReducedModel,self).__init__(LEMS_file_path, name=name, 
-                                          backend=backend, attrs=attrs)
+        #import pdb
+        #pdb.set_trace()
+        #self, LEMS_file_path, name=None, backend=None, attrs={}):
 
+        #super(ReducedModel,self).__init__(LEMS_file_path=LEMS_file_path,name=name,backend='NEURON', attrs=attrs)
+        super(ReducedModel,self).__init__(LEMS_file_path,name=name,backend=backend,attrs=attrs)
+
+        #self.LEMS_file_path=LEMS_file_path
+
+        #self.name=name
+        #self.backend=backend
+        #self.attrs=attrs
     def get_membrane_potential(self, rerun=None, **run_params):
         if rerun is None:
             rerun = self.rerun
@@ -31,7 +40,7 @@ class ReducedModel(mod.LEMSModel,
             if 'v' in rkey or 'vm' in rkey:
                 v = np.array(self.results[rkey])
         t = np.array(self.results['t'])
-        dt = (t[1]-t[0])*pq.s # Time per sample in milliseconds.  
+        dt = (t[1]-t[0])*pq.s # Time per sample in milliseconds.
         vm = AnalogSignal(v,units=pq.V,sampling_rate=1.0/dt)
         return vm
 
