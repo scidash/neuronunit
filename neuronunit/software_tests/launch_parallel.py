@@ -1,3 +1,6 @@
+from IPython.parallel import Client
+rc = Client()
+print(rc.ids)
 
 # coding: utf-8
 
@@ -152,34 +155,31 @@ def optimize(self,model,rov,param):
 
 
     return pop
-#toolbox = base.Toolbox()
-#from scoop import futures
-if __name__ == '__main__':
-#toolbox.register("map", futures.map)
-    my_test = tests[0]
-    my_test.verbose = True
-    my_test.optimize = MethodType(optimize, my_test) # Bind to the score.
+
+my_test = tests[0]
+my_test.verbose = True
+my_test.optimize = MethodType(optimize, my_test) # Bind to the score.
 
 
-    param=['vr','a','b']
-    rov=[]
-    rov0 = np.linspace(-67,-50,1000)
-    rov1 = np.linspace(0.015,0.045,7)
-    rov2 = np.linspace(-3.5,-0.5,7)
-    rov.append(rov0)
-    rov.append(rov1)
-    rov.append(rov2)
-    before_ga=time.time()
-    pop = my_test.optimize(model,rov,param)
-    after_ga=time.time()
-    print('the time was:')
-    delta=after_ga-before_ga
-    print(delta)
+param=['vr','a','b']
+rov=[]
+rov0 = np.linspace(-67,-50,1000)
+rov1 = np.linspace(0.015,0.045,7)
+rov2 = np.linspace(-3.5,-0.5,7)
+rov.append(rov0)
+rov.append(rov1)
+rov.append(rov2)
+before_ga=time.time()
+pop = my_test.optimize(model,rov,param)
+after_ga=time.time()
+print('the time was:')
+delta=after_ga-before_ga
+print(delta)
 
 
-    #This needs to act on error.
-    print("%.2f mV" % np.mean([p[0] for p in pop]))
-    pdb.set_trace()
+#This needs to act on error.
+print("%.2f mV" % np.mean([p[0] for p in pop]))
+pdb.set_trace()
 #NeuronObject=backends.NEURONBackend(LEMS_MODEL_PATH)
 #NeuronObject.load_model()#Only needs to occur once
 #NeuronObject.update_nrn_param(param_dict)

@@ -50,6 +50,14 @@ class DeapContainer:
         creator.create("FitnessMax", base.Fitness, weights=(-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,))#Final comma here, important, not a typo, must be a tuple type.
         creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMax)
 
+
+        class DModel():
+            #TODO delete
+            #def __init__():
+            self.name=''
+            self.attrs={}
+            self.results={}
+
         class Individual(list):
             '''
             When instanced the object from this class is used as one unit of chromosome or allele by DEAP.
@@ -61,7 +69,15 @@ class DeapContainer:
                 self.model=None
                 self.error=None
                 self.results=None
+                self.name=''
+                self.attrs={}
+                self.params=None
+                self.score=None
+                self.error=None
 
+
+                self.dmodel=DModel()
+                #pdb.set_trace()
 
         def uniform(low, up, size=None):
             '''
@@ -87,20 +103,30 @@ class DeapContainer:
         #BOUND_LOW=np.min(rov)
         #BOUND_UP=np.max(rov)
 
-
+        #import multiprocessing
+        #pool = multiprocessing.Pool()
         toolbox.register("map", futures.map)
+        #toolbox.register("map", pool.map)
         toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
         #assert NDIM==2
         #toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
         toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
         toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
+        #import pickle
+        #f=open('filename.p','w')
+
+        #with open('filename.pickle', 'wb') as handle:
+        #    pickle.dump(self.model,handle)
         def callsciunitjudge(individual):#This method must be pickle-able for scoop to work.
+            '''
+            NEURON models are not pickable since they contain dynamically loaded C code.
+            '''
+            #pdb.set_trace()
+            #print()
 
-            #local variables in this function are a problem for scoop. Solution make them global.
-            #name=None
-            #attrs=None
-
+            '''
+            self.model=self.model.load_model()
             for i, p in enumerate(param):
                 name_value=str(individual[i])
                 #reformate values.
@@ -110,16 +136,28 @@ class DeapContainer:
                 #print(attrs)
                 self.model.update_run_params(attrs)
                 #self.model.h.psection()
+            '''
+            #self.model.name=name
+            #self.model.load_model()
+            #self.model.set_attrs(attrs)
+            #model=DModel()
+            #model.name='vanilla'
+            #model.params=individual.params
+            #individual.dmodel=DModel()
+            #print(individual.dmodel)
+            #model=individual.dmodel
+            #model.results=individual.results
+            #score = test_or_suite.judge(model)
+            #error = score.sort_keys.values[0]
+            #individual.results=self.model.results
+            error=individual.error
 
-            self.model.name=name
-            self.model.load_model()
-            self.model.set_attrs(attrs)
-            score = test_or_suite.judge(model)
-            error = score.sort_keys.values[0]
-            individual.results=self.model.results
-            individual.error=error
             return (error[0],error[1],error[2],error[3],error[4])
+        import dill
 
+        '{} {}'.format('why it cant pickle',dill.pickles(callsciunitjudge))
+        '{} {}'.format('why it cant pickle',dill.detect.badtypes(callsciunitjudge))
+        #import pdb; pdb.set_trace()
         toolbox.register("evaluate",callsciunitjudge)
 
         toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
@@ -143,13 +181,53 @@ class DeapContainer:
         pop = toolbox.population(n=self.pop_size)
 
 
+        import mpi4py
+        from mpi4py import MPI
+        COMM = MPI.COMM_WORLD
+        SIZE = COMM.Get_size()
+        RANK = COMM.Get_rank()
 
-        for ind in pop:
+        psteps = [ pop[i] for i in range(RANK, len(pop), SIZE) ]
+
+        for ind in psteps:
             ind.sciunitscore={}
+            self.model=self.model.load_model()
+            for i, p in enumerate(param):
+                name_value=str(ind[i])
+                #reformate values.
+                self.model.name=name_value
+                if i==0:
+                    attrs={'//izhikevich2007Cell':{p:name_value }}
+                else:
+                    attrs['//izhikevich2007Cell'][p]=name_value
+            #pdb.set_trace()
+                print('this is attrs=')
+                print(attrs)
+            self.model.update_run_params(attrs)
+            ind.results=self.model.results
+            ind.attrs=attrs
+            ind.name=name_value
+            ind.params=p
+            ind.score = test_or_suite.judge(model)
+            ind.error = ind.score.sort_keys.values[0]
 
+        #COMM.barrier()
+        if RANK==0:
+            pop2 = [ 0 for i in pop ]
+        else:
+            pop2 = None
+        COMM.Reduce([pop, MPI.DOUBLE], [pop2, MPI.DOUBLE], op=MPI.SUM,root=0)
+
+        pop = COMM.bcast(pop2, root=0)
+        COMM.barrier()
 
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in pop if not ind.fitness.valid]
+
+        #for i in invalid_ind:
+        #    print(i)
+        #    toolbox.evaluate(i)
+        #
         fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
 
         for ind, fit in zip(invalid_ind, fitnesses):
