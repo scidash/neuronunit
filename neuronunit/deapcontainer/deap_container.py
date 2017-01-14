@@ -82,7 +82,7 @@ class DeapContainer:
                 self.error=None
 
 
-                self.dmodel=DModel()
+                #self.dmodel=DModel()
                 #pdb.set_trace()
 
         def uniform(low, up, size=None):
@@ -119,45 +119,11 @@ class DeapContainer:
         toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
         toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
-        #import pickle
-        #f=open('filename.p','w')
-
-        #with open('filename.pickle', 'wb') as handle:
-        #    pickle.dump(self.model,handle)
         def callsciunitjudge(individual):#This method must be pickle-able for scoop to work.
-            '''
-            NEURON models are not pickable since they contain dynamically loaded C code.
-            '''
             #pdb.set_trace()
-            #print()
-
-            '''
-            self.model=self.model.load_model()
-            for i, p in enumerate(param):
-                name_value=str(individual[i])
-                #reformate values.
-                self.model.name=name_value
-                attrs={'//izhikevich2007Cell':{p:name_value }}
-                #print('this is attrs=')
-                #print(attrs)
-                self.model.update_run_params(attrs)
-                #self.model.h.psection()
-            '''
-            #self.model.name=name
-            #self.model.load_model()
-            #self.model.set_attrs(attrs)
-            #model=DModel()
-            #model.name='vanilla'
-            #model.params=individual.params
-            #individual.dmodel=DModel()
-            #print(individual.dmodel)
-            #model=individual.dmodel
-            #model.results=individual.results
-            #score = test_or_suite.judge(model)
-            #error = score.sort_keys.values[0]
-            #individual.results=self.model.results
+            print('hello from before error')
             error=individual.error
-
+            print(error)
             return (error[0],error[1],error[2],error[3],error[4])
         import dill
 
@@ -186,13 +152,25 @@ class DeapContainer:
 
         pop = toolbox.population(n=self.pop_size)
 
-
-        psteps = [ pop[i] for i in range(RANK, len(pop), SIZE) ]
-        #import mpi4py_map
-        #for ind in pop:
-        print(RANK)
+        import copy
+        pop1=copy.copy(pop)
+        psteps = [ pop1[i] for i in range(RANK, len(pop), SIZE) ]
+        psteps1=[]
+        for i in range(RANK, len(pop), SIZE):
+            psteps1.append(pop[i])
+        assert len(psteps)==len(psteps1)
+        pop=[]
         def func2map(ind):
-            print(RANK)
+            print('\n')
+            print('\n')
+            print('\n')
+
+            print('hello from rank: ',RANK)
+            print('\n')
+            print('\n')
+            print('\n')
+
+            #print(RANK)
             ind.sciunitscore={}
             self.model=self.model.load_model()
             for i, p in enumerate(param):
@@ -204,12 +182,15 @@ class DeapContainer:
                 else:
                     attrs['//izhikevich2007Cell'][p]=name_value
             #pdb.set_trace()
-                print('this is attrs=')
-                print(attrs)
+                #print('this is attrs=')
+                #print(attrs)
+                print("this is attributes = %s" % attrs)
+
             self.model.update_run_params(attrs)
-            ind.results=self.model.results
+            import copy
+
+            ind.results=copy.copy(self.model.results)
             print(type(ind))
-            pdb.set_trace()
             ind.attrs=attrs
             ind.name=name_value
             ind.params=p
@@ -220,79 +201,72 @@ class DeapContainer:
         for i in psteps:
             i=func2map(i)
 
-
-
-
+        #print('got to barrier')
         COMM.barrier()
 
-        pop2 = COMM.gather(pop, root=0)
+        #pop2 = COMM.gather(psteps, root=0)
         if RANK == 0:
-            pop=[]
+            print('got to past rank0 block')
 
+            pop=[]
             for p in pop2:
                 pop.extend(p)
 
-            print(pop)
+            invalid_ind = [ind for ind in pop if not ind.fitness.valid]
+            for ind in pop:
+                print(hasattr(ind,'error'))
+            print('this is where I should check what attributes ind in pop has')
 
-        else:
-           pop=None
-        pop = COMM.bcast(pop, root=0)
+            #pdb.set_trace()
 
+            #pop1=copy.copy(pop)
+            #psteps = [ pop1[i] for i in range(RANK, len(pop), SIZE) ]
 
-        COMM.barrier()
-
-        # Evaluate the individuals with an invalid fitness
-        invalid_ind = [ind for ind in pop if not ind.fitness.valid]
-
-        #for i in invalid_ind:
-        #    print(i)
-        #    toolbox.evaluate(i)
-        #
-        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
-
-        for ind, fit in zip(invalid_ind, fitnesses):
-            print(ind,fit)
-            ind.fitness.values = fit
-            print(ind.fitness.values)
-        # This is just to assign the crowding distance to the individuals
-        # no actual selection is done
-        pop = toolbox.select(pop, len(pop))
-
-        record = stats.compile(pop)
-        logbook.record(gen=0, evals=len(invalid_ind), **record)
-        print(logbook.stream)
-
-        stats_fit = tools.Statistics(key=lambda ind: ind.fitness.values)
-        stats_size = tools.Statistics(key=len)
-        mstats = tools.MultiStatistics(fitness=stats_fit, size=stats_size)
-        record = mstats.compile(pop)
-
-        # Begin the generational process
-        for gen in range(1,self.ngen):
-            # Vary the population
-            offspring = tools.selTournamentDCD(pop, len(pop))
-            offspring = [toolbox.clone(ind) for ind in offspring]
-
-            for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
-                if random.random() <= CXPB:
-                    toolbox.mate(ind1, ind2)
-
-                toolbox.mutate(ind1)
-                toolbox.mutate(ind2)
-                del ind1.fitness.values, ind2.fitness.values
-
-            # Evaluate the individuals with an invalid fitness
-            invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
             fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+
             for ind, fit in zip(invalid_ind, fitnesses):
+                print(ind,fit)
                 ind.fitness.values = fit
+                print(ind.fitness.values)
+            # This is just to assign the crowding distance to the individuals
+            # no actual selection is done
+            pop = toolbox.select(pop, len(pop))
 
-            # Select the next generation population
-            #was this: pop = toolbox.select(pop + offspring, MU)
-            pop = toolbox.select(offspring, self.pop_size)
+            record = stats.compile(pop)
+            logbook.record(gen=0, evals=len(invalid_ind), **record)
+            print(logbook.stream)
 
-        print(record)
-        return pop
+            stats_fit = tools.Statistics(key=lambda ind: ind.fitness.values)
+            stats_size = tools.Statistics(key=len)
+            mstats = tools.MultiStatistics(fitness=stats_fit, size=stats_size)
+            record = mstats.compile(pop)
+
+            # Begin the generational process
+            for gen in range(1,self.ngen):
+                # Vary the population
+                offspring = tools.selTournamentDCD(pop, len(pop))
+                offspring = [toolbox.clone(ind) for ind in offspring]
+
+                for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
+                    if random.random() <= CXPB:
+                        toolbox.mate(ind1, ind2)
+
+                    toolbox.mutate(ind1)
+                    toolbox.mutate(ind2)
+                    del ind1.fitness.values, ind2.fitness.values
+
+                # Evaluate the individuals with an invalid fitness
+                invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+                fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+                for ind, fit in zip(invalid_ind, fitnesses):
+                    ind.fitness.values = fit
+
+                # Select the next generation population
+                #was this: pop = toolbox.select(pop + offspring, MU)
+                pop = toolbox.select(offspring, self.pop_size)
+
+            print(record)
+            return pop
         #pdb.set_trace()
         #return (pop[0][0],pop[0].sciunitscore)
 

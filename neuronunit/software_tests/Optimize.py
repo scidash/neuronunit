@@ -139,7 +139,7 @@ from types import MethodType
 def optimize(self,model,rov,param):
     best_params = None
     best_score = None
-    from neuronunit.deapcontainer.deap_container import DeapContainer
+    from neuronunit.deapcontainer.deap_container2 import DeapContainer
     dc=DeapContainer()
     pop_size=12
     ngen=5
@@ -184,8 +184,18 @@ if __name__ == '__main__':
 
 
     #This needs to act on error.
-    print("%.2f mV" % np.mean([p[0] for p in pop]))
-    pdb.set_trace()
+    #pdb.set_trace()
+    if RANK==0:
+        print("%.2f mV" % np.mean([p[0] for p in pop]))
+
+
+        import matplotlib as matplotlib
+        matplotlib.use('agg')
+        import matplotlib.pyplot as plt
+        plt.hold(True)
+        for i in xrange(0,9):
+            plt.plot(pop[i].time_trace,pop[i].voltage_trace)
+        plt.savefig('best 10')
 #NeuronObject=backends.NEURONBackend(LEMS_MODEL_PATH)
 #NeuronObject.load_model()#Only needs to occur once
 #NeuronObject.update_nrn_param(param_dict)
