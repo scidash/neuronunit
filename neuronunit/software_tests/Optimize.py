@@ -8,6 +8,12 @@ import quantities as pq
 import sciunit
 
 
+
+import mpi4py
+from mpi4py import MPI
+COMM = MPI.COMM_WORLD
+SIZE = COMM.Get_size()
+RANK = COMM.Get_rank()
 #Over ride any neuron units in the PYTHON_PATH with this one.
 #only appropriate for development.
 thisnu = str(os.getcwd())+'/../..'
@@ -163,9 +169,9 @@ if __name__ == '__main__':
 
     param=['vr','a','b']
     rov=[]
-    rov0 = np.linspace(-67,-50,1000)
+    rov0 = np.linspace(-65,-55,1000)
     rov1 = np.linspace(0.015,0.045,7)
-    rov2 = np.linspace(-3.5,-0.5,7)
+    rov2 = np.linspace(-0.0010,-0.0035,7)
     rov.append(rov0)
     rov.append(rov1)
     rov.append(rov2)

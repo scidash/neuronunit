@@ -19,6 +19,12 @@ from deap import creator
 from deap import tools
 #from inspyred.ec import terminators as term
 
+
+import mpi4py
+from mpi4py import MPI
+COMM = MPI.COMM_WORLD
+SIZE = COMM.Get_size()
+RANK = COMM.Get_rank()
 class DeapContainer:
     '''
     Just a container for hiding implementation, not a very sophisticated one at that.
@@ -181,15 +187,12 @@ class DeapContainer:
         pop = toolbox.population(n=self.pop_size)
 
 
-        import mpi4py
-        from mpi4py import MPI
-        COMM = MPI.COMM_WORLD
-        SIZE = COMM.Get_size()
-        RANK = COMM.Get_rank()
-
         psteps = [ pop[i] for i in range(RANK, len(pop), SIZE) ]
-
-        for ind in psteps:
+        #import mpi4py_map
+        #for ind in pop:
+        print(RANK)
+        def func2map(ind):
+            print(RANK)
             ind.sciunitscore={}
             self.model=self.model.load_model()
             for i, p in enumerate(param):
@@ -205,20 +208,37 @@ class DeapContainer:
                 print(attrs)
             self.model.update_run_params(attrs)
             ind.results=self.model.results
+            print(type(ind))
+            pdb.set_trace()
             ind.attrs=attrs
             ind.name=name_value
             ind.params=p
-            ind.score = test_or_suite.judge(model)
-            ind.error = ind.score.sort_keys.values[0]
+            score = test_or_suite.judge(model)
+            ind.error = score.sort_keys.values[0]
+            return ind
 
-        #COMM.barrier()
-        if RANK==0:
-            pop2 = [ 0 for i in pop ]
+        for i in psteps:
+            i=func2map(i)
+
+
+
+
+        COMM.barrier()
+
+        pop2 = COMM.gather(pop, root=0)
+        if RANK == 0:
+            pop=[]
+
+            for p in pop2:
+                pop.extend(p)
+
+            print(pop)
+
         else:
-            pop2 = None
-        COMM.Reduce([pop, MPI.DOUBLE], [pop2, MPI.DOUBLE], op=MPI.SUM,root=0)
+           pop=None
+        pop = COMM.bcast(pop, root=0)
 
-        pop = COMM.bcast(pop2, root=0)
+
         COMM.barrier()
 
         # Evaluate the individuals with an invalid fitness
