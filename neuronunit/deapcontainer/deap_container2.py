@@ -123,9 +123,31 @@ class DeapContainer:
             #pdb.set_trace()
             print('hello from before error')
             error=individual.error
+            #pdb.set_trace()
 
-            return (error[0],error[1],error[2],error[3],error[4])
+            return (error[0],error[1],error[2],error[3],error[4],)
         import dill
+
+        def paramap(the_func,pop):
+            #Do the function to list element mapping
+            pop=list(map(the_func,pop))
+            #gather all the resulting lists onto rank0
+            pop2 = COMM.gather(pop, root=0)
+            COMM.barrier()
+            if RANK == 0:
+                print('got to past rank0 block')
+                pop=[]
+                #merge all of the lists into one list on rank0
+                for p in pop2:
+                    pop.extend(p)
+            else:
+                pop=[]
+            if RANK==0:
+                #broadcast the results back to all hosts.
+                print('stuck 3')
+                pop = COMM.bcast(pop, root=0)
+            COMM.barrier()
+            return pop
 
         '{} {}'.format('why it cant pickle',dill.pickles(callsciunitjudge))
         '{} {}'.format('why it cant pickle',dill.detect.badtypes(callsciunitjudge))
@@ -194,14 +216,17 @@ class DeapContainer:
             ind.error = score.sort_keys.values[0]
             return ind
 
-        for i in psteps:
-            i=func2map(i)
+        #psteps=list(map(func2map,psteps))
+        psteps=paramap(func2map,psteps)
+        #for i in psteps:
+        #    i=func2map(i)
 
         #print('got to barrier')
-        COMM.barrier()
+        #COMM.barrier()
 
         #
-
+        #pdb.set_trace()
+        #if RANK==0:
         invalid_ind = [ind for ind in psteps if not ind.fitness.valid]
         for ind in invalid_ind:
             print(hasattr(ind,'error'))
@@ -212,83 +237,90 @@ class DeapContainer:
         #pop1=copy.copy(pop)
         #psteps = [ pop1[i] for i in range(RANK, len(pop), SIZE) ]
 
-        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
-
+        #fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+        fitnesses = list(map(callsciunitjudge,invalid_ind))
+        #pdb.set_trace()
         for ind, fit in zip(invalid_ind, fitnesses):
             print(ind,fit)
             ind.fitness.values = fit
             print(ind.fitness.values)
 
-        pop2 = COMM.gather(psteps, root=0)
-        if RANK == 0:
-            print('got to past rank0 block')
-            pop=[]
-            for p in pop2:
-                pop.extend(p)
 
-            # This is just to assign the crowding distance to the individuals
-            # no actual selection is done
-            pop = toolbox.select(pop, len(pop))
+        # This is just to assign the crowding distance to the individuals
+        # no actual selection is done
+        pop = toolbox.select(psteps, len(pop))
+        #pop = toolbox.select(pop, len(pop))
 
-            record = stats.compile(pop)
-            logbook.record(gen=0, evals=len(invalid_ind), **record)
-            print(logbook.stream)
+        record = stats.compile(pop)
+        logbook.record(gen=0, evals=len(invalid_ind), **record)
+        print(logbook.stream)
 
-            stats_fit = tools.Statistics(key=lambda ind: ind.fitness.values)
-            stats_size = tools.Statistics(key=len)
-            mstats = tools.MultiStatistics(fitness=stats_fit, size=stats_size)
-            record = mstats.compile(pop)
+        stats_fit = tools.Statistics(key=lambda ind: ind.fitness.values)
+        stats_size = tools.Statistics(key=len)
+        mstats = tools.MultiStatistics(fitness=stats_fit, size=stats_size)
+        record = mstats.compile(pop)
 
-            # Begin the generational process
-            for gen in range(1,self.ngen):
-                # Vary the population
-                offspring = tools.selTournamentDCD(pop, len(pop))
-                offspring = [toolbox.clone(ind) for ind in offspring]
+        # Begin the generational process
+        for gen in range(1,self.ngen):
+            # Vary the population
+            offspring = tools.selTournamentDCD(pop, len(pop))
+            offspring = [toolbox.clone(ind) for ind in offspring]
 
-                for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
-                    if random.random() <= CXPB:
-                        toolbox.mate(ind1, ind2)
-                    print('ind1 is updating: ')
-                    print(ind1,ind2)
-                    toolbox.mutate(ind1)
-                    toolbox.mutate(ind2)
-                    del ind1.fitness.values, ind2.fitness.values
-                    print('stuck y')
-                    pdb.set_trace()
+            for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
+                if random.random() <= CXPB:
+                    toolbox.mate(ind1, ind2)
+                print('ind1 is updating: ')
+                print(ind1,ind2)
+                toolbox.mutate(ind1)
+                toolbox.mutate(ind2)
+                del ind1.fitness.values, ind2.fitness.values
+                print('stuck y')
+                #pdb.set_trace()
 
 
-                # Evaluate the individuals with an invalid fitness
-                invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-                print('stuck x')
-                pdb.set_trace()
-                fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+            # Evaluate the individuals with an invalid fitness
+            invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+            print('stuck x')
+            #pdb.set_trace()
+            #fitnesses = list(map(callsciunitjudge,invalid_ind))
+            fitnesses=list(map(func2map,invalid_ind))
 
-                for ind, fit in zip(invalid_ind, fitnesses):
-                    ind.fitness.values = fit
+            #fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
 
-                # Select the next generation population
-                #was this: pop = toolbox.select(pop + offspring, MU)
-                pop = toolbox.select(offspring, self.pop_size)
-                print('gen is updating: ', gen)
-                print(gen)
+            for ind, fit in zip(invalid_ind, fitnesses):
+                ind.fitness.values = fit
 
-
+            print('gen is updating: ', gen)
+            print(gen)
             print(record)
-            print('stuck 1')
-        else:
-            print('stuck 2')
 
-            pop=None
-        if RANK==0:
-            print('stuck 3')
-
-            pop = COMM.bcast(pop, root=0)
-            print('stuck 4')
-
-        COMM.barrier()
-        print('stuck 5')
-
+            COMM.barrier()
         return pop
+
+            '''
+            pop2 = COMM.gather(pop, root=0)
+            if RANK == 0:
+                print('got to past rank0 block')
+                pop=[]
+                for p in pop2:
+                    pop.extend(p)
+                    # Select the next generation population
+                    #was this: pop = toolbox.select(pop + offspring, MU)
+                pop = toolbox.select(offspring, self.pop_size)
+
+                print('stuck 1')
+            else:
+                print('stuck 2')
+                pop=None
+            if RANK==0:
+                print('stuck 3')
+                pop = COMM.bcast(pop, root=0)
+                print('stuck 4')
+
+            COMM.barrier()
+            print('stuck 5')
+            '''
+
         #pdb.set_trace()
         #return (pop[0][0],pop[0].sciunitscore)
 
