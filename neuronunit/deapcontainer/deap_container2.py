@@ -20,11 +20,12 @@ from deap import tools
 #from inspyred.ec import terminators as term
 
 
-import mpi4py
-from mpi4py import MPI
-COMM = MPI.COMM_WORLD
-SIZE = COMM.Get_size()
-RANK = COMM.Get_rank()
+
+import ipyparallel as ipp
+rc = ipp.Client()
+v = rc[:]
+
+
 class DeapContainer:
     '''
     Just a container for hiding implementation, not a very sophisticated one at that.
@@ -111,7 +112,12 @@ class DeapContainer:
 
         #import multiprocessing
         #pool = multiprocessing.Pool()
-        toolbox.register("map", futures.map)
+        from ipyparallel import Client
+        rc = Client(profile=os.getenv('IPYTHON_PROFILE'))
+        lview = rc.load_balanced_view()
+
+        map_function = lview.map_sync
+        toolbox.register("map", map_function)
         #toolbox.register("map", pool.map)
         toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
         #assert NDIM==2
@@ -129,24 +135,49 @@ class DeapContainer:
         import dill
 
         def paramap(the_func,pop):
+
+            import mpi4py
+            from mpi4py import MPI
+            COMM = MPI.COMM_WORLD
+            SIZE = COMM.Get_size()
+            RANK = COMM.Get_rank()
+
+
+            import copy
+            pop1=copy.copy(pop)
+            #ROund robin distribution
+            psteps = [ pop1[i] for i in range(RANK, len(pop1), SIZE) ]
+            pop=[]
+
             #Do the function to list element mapping
-            pop=list(map(the_func,pop))
+            pop=list(map(the_func,pop1))
             #gather all the resulting lists onto rank0
+            print('code hangs here why1 ?')
+
             pop2 = COMM.gather(pop, root=0)
-            COMM.barrier()
+            print('code hangs here why2?')
+            #COMM.barrier()
             if RANK == 0:
                 print('got to past rank0 block')
                 pop=[]
                 #merge all of the lists into one list on rank0
                 for p in pop2:
                     pop.extend(p)
+                print('hangs here 2')
+
             else:
                 pop=[]
+                print('hangs here 3')
+
             if RANK==0:
                 #broadcast the results back to all hosts.
                 print('stuck 3')
                 pop = COMM.bcast(pop, root=0)
-            COMM.barrier()
+                print('hangs here 4')
+            #COMM.barrier()
+            #if RANK!=0:
+            #        COMM.Abort()
+            #dir(COMM)
             return pop
 
         '{} {}'.format('why it cant pickle',dill.pickles(callsciunitjudge))
@@ -174,20 +205,16 @@ class DeapContainer:
 
         pop = toolbox.population(n=self.pop_size)
 
-        import copy
-        pop1=copy.copy(pop)
-        psteps = [ pop1[i] for i in range(RANK, len(pop), SIZE) ]
-        psteps1=[]
-        for i in range(RANK, len(pop), SIZE):
-            psteps1.append(pop[i])
-        assert len(psteps)==len(psteps1)
-        pop=[]
+#        #for i in range(RANK, len(pop), SIZE):#
+        #    psteps1.append(pop[i])
+        #assert len(psteps)==len(psteps1)
+        #pop=[]
         def func2map(ind):
             print('\n')
             print('\n')
             print('\n')
 
-            print('hello from rank: ',RANK)
+            #print('hello from rank: ',RANK)
             print('\n')
             print('\n')
             print('\n')
@@ -216,18 +243,11 @@ class DeapContainer:
             ind.error = score.sort_keys.values[0]
             return ind
 
-        #psteps=list(map(func2map,psteps))
-        psteps=paramap(func2map,psteps)
-        #for i in psteps:
-        #    i=func2map(i)
+        #pop=paramap(func2map,pop)
+        #pop=v.map(func2map,pop)
+        pop=list(map(func2map,pop))
 
-        #print('got to barrier')
-        #COMM.barrier()
-
-        #
-        #pdb.set_trace()
-        #if RANK==0:
-        invalid_ind = [ind for ind in psteps if not ind.fitness.valid]
+        invalid_ind = [ind for ind in pop if not ind.fitness.valid]
         for ind in invalid_ind:
             print(hasattr(ind,'error'))
         print('this is where I should check what attributes ind in pop has')
@@ -237,8 +257,9 @@ class DeapContainer:
         #pop1=copy.copy(pop)
         #psteps = [ pop1[i] for i in range(RANK, len(pop), SIZE) ]
 
-        #fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
-        fitnesses = list(map(callsciunitjudge,invalid_ind))
+        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+        #fitnesses = paramap(callsciunitjudge,invalid_ind)
+        #fitnesses = v.map(callsciunitjudge,invalid_ind)
         #pdb.set_trace()
         for ind, fit in zip(invalid_ind, fitnesses):
             print(ind,fit)
@@ -248,7 +269,7 @@ class DeapContainer:
 
         # This is just to assign the crowding distance to the individuals
         # no actual selection is done
-        pop = toolbox.select(psteps, len(pop))
+        pop = toolbox.select(pop, len(pop))
         #pop = toolbox.select(pop, len(pop))
 
         record = stats.compile(pop)
@@ -283,7 +304,10 @@ class DeapContainer:
             print('stuck x')
             #pdb.set_trace()
             #fitnesses = list(map(callsciunitjudge,invalid_ind))
-            fitnesses=list(map(func2map,invalid_ind))
+            #fitnesses = paramap(callsciunitjudge,invalid_ind)
+            fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+
+            #fitnesses=v.map(callsciunitjudge,invalid_ind)
 
             #fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
 
@@ -294,8 +318,8 @@ class DeapContainer:
             print(gen)
             print(record)
 
-            COMM.barrier()
-        return pop
+            #COMM.barrier()
+
 
             '''
             pop2 = COMM.gather(pop, root=0)
@@ -320,6 +344,7 @@ class DeapContainer:
             COMM.barrier()
             print('stuck 5')
             '''
+        return pop
 
         #pdb.set_trace()
         #return (pop[0][0],pop[0].sciunitscore)
