@@ -21,11 +21,6 @@ from deap import tools
 
 
 
-import ipyparallel as ipp
-rc = ipp.Client()
-v = rc[:]
-
-
 class DeapContainer:
     '''
     Just a container for hiding implementation, not a very sophisticated one at that.
@@ -113,6 +108,13 @@ class DeapContainer:
         #import multiprocessing
         #pool = multiprocessing.Pool()
         from ipyparallel import Client
+
+
+
+        #import ipyparallel as ipp
+        #rc = ipp.Client()
+        #v = rc[:]
+        import os
         rc = Client(profile=os.getenv('IPYTHON_PROFILE'))
         lview = rc.load_balanced_view()
 
