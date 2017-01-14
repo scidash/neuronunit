@@ -53,6 +53,8 @@ class DeapContainer:
             '''
             def __init__(self, *args):
                 list.__init__(self, *args)
+                self.error=None
+
                 self.sciunitscore=[]
                 self.model=None
                 self.error=None
@@ -61,7 +63,6 @@ class DeapContainer:
                 self.attrs={}
                 self.params=None
                 self.score=None
-                self.error=None
 
 
         def uniform(low, up, size=None):
@@ -84,27 +85,32 @@ class DeapContainer:
         BOUND_LOW=[ np.min(i) for i in rov ]
         BOUND_UP=[ np.max(i) for i in rov ]
         NDIM = len(rov)
+
+        '''
         from ipyparallel import Client
-
-
         import os
-        rc = Client(profile=os.getenv('IPYTHON_PROFILE'))
+        rc = Client(profile=os.getenv('/home/jovyan/.ipython/profile_chase'))
         lview = rc.load_balanced_view()
 
         map_function = lview.map_sync
-        toolbox.register("map", map_function)
+        '''
+        toolbox.register("map",map)
         toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
         toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
         toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
-        def callsciunitjudge(individual):#This method must be pickle-able for scoop to work.
-            #pdb.set_trace()
-            print('hello from before error')
-            error=individual.error
-            #pdb.set_trace()
 
+        def evaluate(individual):#This method must be pickle-able for scoop to work.
+            #print('hello from before error')
+            error=individual.error
             return (error[0],error[1],error[2],error[3],error[4],)
         import dill
+
+        toolbox.register("evaluate",evaluate)
+
+        '{} {}'.format('why it cant pickle',dill.pickles(evaluate))
+        '{} {}'.format('why it cant pickle',dill.detect.badtypes(evaluate))
+        #pdb.set
 
         def paramap(the_func,pop):
 
@@ -146,16 +152,9 @@ class DeapContainer:
                 print('stuck 3')
                 pop = COMM.bcast(pop, root=0)
                 print('hangs here 4')
-            #COMM.barrier()
-            #if RANK!=0:
-            #        COMM.Abort()
-            #dir(COMM)
+
             return pop
 
-        '{} {}'.format('why it cant pickle',dill.pickles(callsciunitjudge))
-        '{} {}'.format('why it cant pickle',dill.detect.badtypes(callsciunitjudge))
-        #import pdb; pdb.set_trace()
-        toolbox.register("evaluate",callsciunitjudge)
 
         toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
         toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
@@ -182,14 +181,6 @@ class DeapContainer:
         #assert len(psteps)==len(psteps1)
         #pop=[]
         def func2map(ind):
-            print('\n')
-            print('\n')
-            print('\n')
-
-            #print('hello from rank: ',RANK)
-            print('\n')
-            print('\n')
-            print('\n')
 
             #print(RANK)
             ind.sciunitscore={}
@@ -207,28 +198,31 @@ class DeapContainer:
             import copy
 
             ind.results=copy.copy(self.model.results)
-            print(type(ind))
-            ind.attrs=attrs
-            ind.name=name_value
-            ind.params=p
+            #print(type(ind))
+            #ind.attrs=attrs
+            #ind.name=name_value
+            #ind.params=p
             score = test_or_suite.judge(model)
-            ind.error = score.sort_keys.values[0]
+            ind.error = copy.copy(score.sort_keys.values[0])
             return ind
 
         #pop=paramap(func2map,pop)
         #pop=v.map(func2map,pop)
         pop=list(map(func2map,pop))
+        #pop = toolbox.map(func2map,pop)
 
+        #pop=map_function(func2map,pop)
+        #pdb.set_trace()
         invalid_ind = [ind for ind in pop if not ind.fitness.valid]
-        for ind in invalid_ind:
-            print(hasattr(ind,'error'))
+        #for ind in invalid_ind:
+        #    print(hasattr(ind,'error'))
         print('this is where I should check what attributes ind in pop has')
 
         #pdb.set_trace()
 
         #pop1=copy.copy(pop)
         #psteps = [ pop1[i] for i in range(RANK, len(pop), SIZE) ]
-
+        fitnesses()
         fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
         #fitnesses = paramap(callsciunitjudge,invalid_ind)
         #fitnesses = v.map(callsciunitjudge,invalid_ind)
