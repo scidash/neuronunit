@@ -31,13 +31,6 @@ class DeapContainer:
         self.pop_size=None
         self.param=None
         self.last_params=None
-        #Warning, the algorithm below is sensitive to certain multiples in the population size
-        #which is denoted by MU.
-        #The mutiples of 100 work, many numbers will not work
-        #TODO write a proper exception handling method.
-        #TODO email the DEAP list about this issue too.
-        #TODO refactor MU into pop_size
-                             #self.ff,pop_size,ngen,NDIM=1,OBJ_SIZE=1,self.range_of_values
 
     def sciunit_optimize_nsga(self,test_or_suite,model,pop_size,ngen,rov, param,
                               NDIM=1,OBJ_SIZE=6,seed_in=1):
@@ -52,13 +45,6 @@ class DeapContainer:
         creator.create("FitnessMax", base.Fitness, weights=(-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,))#Final comma here, important, not a typo, must be a tuple type.
         creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMax)
 
-
-        class DModel():
-            #TODO delete
-            #def __init__():
-            self.name=''
-            self.attrs={}
-            self.results={}
 
         class Individual(list):
             '''
@@ -77,9 +63,6 @@ class DeapContainer:
                 self.score=None
                 self.error=None
 
-
-                #self.dmodel=DModel()
-                #pdb.set_trace()
 
         def uniform(low, up, size=None):
             '''
@@ -101,29 +84,16 @@ class DeapContainer:
         BOUND_LOW=[ np.min(i) for i in rov ]
         BOUND_UP=[ np.max(i) for i in rov ]
         NDIM = len(rov)
-
-        #BOUND_LOW=np.min(rov)
-        #BOUND_UP=np.max(rov)
-
-        #import multiprocessing
-        #pool = multiprocessing.Pool()
         from ipyparallel import Client
 
 
-
-        #import ipyparallel as ipp
-        #rc = ipp.Client()
-        #v = rc[:]
         import os
         rc = Client(profile=os.getenv('IPYTHON_PROFILE'))
         lview = rc.load_balanced_view()
 
         map_function = lview.map_sync
         toolbox.register("map", map_function)
-        #toolbox.register("map", pool.map)
         toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
-        #assert NDIM==2
-        #toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
         toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
         toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
