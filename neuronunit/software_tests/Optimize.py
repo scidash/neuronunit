@@ -1,6 +1,21 @@
 
 # coding: utf-8
 
+#import os
+#os.system('sudo cp -r /home/jovyan/.ipython/profile_chase/* $HOME/.ipython/profile_default')
+#os.system('sudo chown -R jovyan $HOME/.ipython/profile_default')
+
+#os.system('ipcluster start --profile=chase --debug &')
+#from ipyparallel import Client
+
+#import os
+#rc = Client(profile=os.getenv('/home/jovyan/.ipython/profile_chase/'))
+#rc = Client('/home/jovyan/.ipython/profile_chase')
+#rc = Client()
+
+#lview = rc.load_balanced_view()
+#os.system('sudo cp -r $HOME/.ipython/profile_chase/security $HOME/.ipython/profile_default')
+#os.system('ls $HOME/.ipython/profile_chase/security/')
 import os,sys
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,12 +23,13 @@ import quantities as pq
 import sciunit
 
 
-
+'''
 import mpi4py
 from mpi4py import MPI
 COMM = MPI.COMM_WORLD
 SIZE = COMM.Get_size()
 RANK = COMM.Get_rank()
+'''
 #Over ride any neuron units in the PYTHON_PATH with this one.
 #only appropriate for development.
 thisnu = str(os.getcwd())+'/../..'
