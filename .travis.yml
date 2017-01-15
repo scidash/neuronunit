@@ -12,6 +12,6 @@ before_script:
 script: 
   
   - docker run -it scidash/neuronunit /bin/bash'
-#  - python docs/chapter2.py
+  - python nsga3.py
 #  - python docs/chapter3.py
 #  - python docs/chapter4.py
