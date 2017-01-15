@@ -184,11 +184,11 @@ def func2map(ind):
             attrs['//izhikevich2007Cell'][p]=name_value
 
     model.update_run_params(attrs)
-    import copy
+    #import copy
 
-    ind.results=copy.copy(model.results)
+    ind.results=model.results
     score = suite.judge(model)
-    ind.error = copy.copy(score.sort_keys.values[0])
+    ind.error = score.sort_keys.values[0]
     return ind
 
 def evaluate(individual):#This method must be pickle-able for scoop to work.
@@ -226,10 +226,10 @@ toolbox.register("map", futures.map)
 def main(seed=None):
     random.seed(seed)
 
-    NGEN=3
-    MU=8
-    NGEN = 1
-    MU = 1
+    NGEN=6
+    MU=12
+    #NGEN = 1
+    #MU = 1
     CXPB = 0.9
 
     stats = tools.Statistics(lambda ind: ind.fitness.values)
@@ -282,16 +282,16 @@ def main(seed=None):
             ind.fitness.values = fit
             # Select the next generation population
         pop = toolbox.select(pop + offspring, MU)
-        import copy
-        pop2=copy.copy(pop)
-        assert pop2[0].results
+        #import copy
+        #pop2=copy.copy(pop)
+        #assert pop2[0].results
 
         record = stats.compile(pop)
         logbook.record(gen=gen, evals=len(invalid_ind), **record)
         print(logbook.stream)
     import copy
     pop2=copy.copy(pop)
-    assert pop2[0].results
+    #assert pop2[0].results
     #print("Final population hypervolume is %f" % hypervolume(pop, [11.0, 11.0]))
 
     return pop, pop2, logbook
@@ -318,24 +318,33 @@ if __name__ == "__main__":
 
     #if hasattr(pop2[0],'results'):
     #    print('got here')
-    if hasattr(pop[0],'results'):
-        #for i in range(0,4):
-        plt.plot(pop[0].results['t'],pop[0].results['vm'])
-        plt.savefig('best_0.png')
-    pop.sort(key=lambda x: x.fitness.values)
+    print(len(pop))
+    plt.hold(True)
 
+    for i in range(0,4):
+        if hasattr(pop[i],'results'):
+            plt.plot(pop[i].results['t'],pop[i].results['vm'])
+    plt.savefig('best_5.png')
+    pop.sort(key=lambda x: x.fitness.values)
+    '''
     def map_results(results_2):
         j=[]
-        for i in results_2.items():
-            j.extend(i)
+        for i in results_2:
+            j.extend(i))
         return j
     GLOBAL_RESULTS=list(futures.map(map_results,LOCAL_RESULTS))
+
     print(len(GLOBAL_RESULTS))
+    def map_results2(results_2):
+        j=[]
+        for i in results_2:
+            j.extend(i)
+        return j
     #pdb.set_trace()
-    GLOBAL_pop=list(futures.map(map_results,[pop]))
+    GLOBAL_pop=list(futures.map(map_results2,[pop]))
     print('the final pop size')
     print(len(GLOBAL_pop))
-
+    '''
 
 
     print(stats)
