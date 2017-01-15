@@ -310,24 +310,33 @@ if __name__ == "__main__":
     #pop2=pop[:3]
     #LOCAL_RESULTS=[]
     #list(map(evaluateplt, pop[0]))
+    #print(len(pop))
 
-    print(LOCAL_RESULTS)
-    pdb.set_trace()
+    #print(LOCAL_RESULTS)
+    #pdb.set_trace()
 
 
-    GLOBAL_RESULTS=list(futures.map(map_results,LOCAL_RESULTS))
-
-    if hasattr(pop2[0],'results'):
-        for i in range(0,4):
-            plt.plot(pop2[i].results['t'],pop2[i].results['vm'])
-        plt.savefig('best_5.png')
+    #if hasattr(pop2[0],'results'):
+    #    print('got here')
+    if hasattr(pop[0],'results'):
+        #for i in range(0,4):
+        plt.plot(pop[0].results['t'],pop[0].results['vm'])
+        plt.savefig('best_0.png')
     pop.sort(key=lambda x: x.fitness.values)
 
     def map_results(results_2):
         j=[]
-        for i in results:
+        for i in results_2.items():
             j.extend(i)
         return j
+    GLOBAL_RESULTS=list(futures.map(map_results,LOCAL_RESULTS))
+    print(len(GLOBAL_RESULTS))
+    #pdb.set_trace()
+    GLOBAL_pop=list(futures.map(map_results,[pop]))
+    print('the final pop size')
+    print(len(GLOBAL_pop))
+
+
 
     print(stats)
     #print("Convergence: ", convergence(pop, optimal_front))
