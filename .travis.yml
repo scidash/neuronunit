@@ -6,12 +6,12 @@ services:
   - docker
   
 before_script:
-  - docker pull russelljjarvis/nunit
-  - docker build . -t russelljjarvis/nunit
+  - docker pull russelljarvis/nunit
+  - docker build . -t russelljarvis/nunit
 
 script: 
   
-  - docker run -it russelljjarvis/nunit /bin/bash'
+  - docker run -it russelljarvis/nunit /bin/bash'
   - python nsga3.py
 #  - python docs/chapter3.py
 #  - python docs/chapter4.py
