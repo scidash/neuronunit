@@ -282,19 +282,21 @@ if __name__ == "__main__":
     pdb.set_trace()
     for i in range(0,4):
         plt.plot(pop[i].results['t'],pop[i].results['vm'])
-    plt.savefig('best_5')
-    # pop.sort(key=lambda x: x.fitness.values)
+    plt.savefig('best_5.png')
+    pop.sort(key=lambda x: x.fitness.values)
 
-    # print(stats)
-    # print("Convergence: ", convergence(pop, optimal_front))
-    # print("Diversity: ", diversity(pop, optimal_front[0], optimal_front[-1]))
+    print(stats)
+    print("Convergence: ", convergence(pop, optimal_front))
+    print("Diversity: ", diversity(pop, optimal_front[0], optimal_front[-1]))
 
-    # import matplotlib.pyplot as plt
-    # import numpy
+    import matplotlib.pyplot as plt
+    import numpy
 
-    # front = numpy.array([ind.fitness.values for ind in pop])
-    # optimal_front = numpy.array(optimal_front)
-    # plt.scatter(optimal_front[:,0], optimal_front[:,1], c="r")
-    # plt.scatter(front[:,0], front[:,1], c="b")
-    # plt.axis("tight")
+    front = numpy.array([ind.fitness.values for ind in pop])
+    optimal_front = numpy.array(optimal_front)
+    plt.scatter(optimal_front[:,0], optimal_front[:,1], c="r")
+    plt.scatter(front[:,0], front[:,1], c="b")
+    plt.axis("tight")
+    plt.savefig('front.png')
+
     # plt.show()
