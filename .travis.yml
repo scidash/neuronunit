@@ -8,13 +8,9 @@ services:
   - python
   
 before_script:
-  - docker build -t nunit .
+  - docker build -t russelljjarvis/neuronunit .
 
 script: 
   
-  - docker run -it nunit /bin/bash'
-  - pwd
-  - ls
-  - python nsga3.py
-#  - python docs/chapter3.py
-#  - python docs/chapter4.py
+  - docker run russelljjarvis/neuronunit python nsga3.py'
+
