@@ -11,10 +11,7 @@ before_script:
 
 script: 
   
-  - docker run -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix \
-                                                    -v /dev/shm:/dev/shm \
-                                                    -v ${HOME}/.atom:/home/atom/.atom \
-                                                    deapscoop1 /bin/bash'
+  - docker run -it scidash/neuronunit /bin/bash'
 #  - python docs/chapter2.py
 #  - python docs/chapter3.py
 #  - python docs/chapter4.py
