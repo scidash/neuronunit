@@ -279,8 +279,9 @@ if __name__ == "__main__":
     matplotlib.use('agg')
     import matplotlib.pyplot as plt
     plt.hold(True)
+
     for i in range(0,4):
-        plt.plot(pop[i].time_trace,pop[i].voltage_trace)
+        plt.plot(pop[i].results['t'],pop[i].results['vm'])
     plt.savefig('best 10')
     # pop.sort(key=lambda x: x.fitness.values)
 
