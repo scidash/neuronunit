@@ -8,7 +8,6 @@ services:
   - python
   
 before_script:
-  - docker pull russelljarvis/nunit
   - docker build -t nunit .
 
 script: 
