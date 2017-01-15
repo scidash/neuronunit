@@ -149,7 +149,7 @@ seed_in=1
 BOUND_LOW=[ np.min(i) for i in rov ]
 BOUND_UP=[ np.max(i) for i in rov ]
 NDIM = len(rov)
-
+LOCAL_RESULTS=[]
 
 def uniform(low, up, size=None):
     try:
@@ -172,7 +172,7 @@ model.local_run()
 
 def func2map(ind):
 
-    ind.sciunitscore={}
+    #ind.sciunitscore={}
     #model=model.load_model()
     for i, p in enumerate(param):
         name_value=str(ind[i])
@@ -187,7 +187,6 @@ def func2map(ind):
     import copy
 
     ind.results=copy.copy(model.results)
-
     score = suite.judge(model)
     ind.error = copy.copy(score.sort_keys.values[0])
     return ind
@@ -197,6 +196,7 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
     individual=func2map(individual)
     error=individual.error
     assert individual.results
+    LOCAL_RESULTS.append(individual.results)
 
     return error[0],error[1],error[2],error[3],error[4],
 
@@ -206,6 +206,8 @@ def evaluateplt(individual):#This method must be pickle-able for scoop to work.
 
     import matplotlib.pyplot as plt
     plt.hold(True)
+    #ind.sciunitscore={}
+    pdb.set_trace()
     individual=func2map(individual)
     error=individual.error
     assert individual.results
@@ -224,8 +226,10 @@ toolbox.register("map", futures.map)
 def main(seed=None):
     random.seed(seed)
 
-    NGEN = 3
-    MU = 8
+    NGEN=3
+    MU=8
+    NGEN = 1
+    MU = 1
     CXPB = 0.9
 
     stats = tools.Statistics(lambda ind: ind.fitness.values)
@@ -257,7 +261,11 @@ def main(seed=None):
     for gen in range(1, NGEN):
         # Vary the population
         offspring = tools.selTournamentDCD(pop, len(pop))
+        assert ind.results
+
         offspring = [toolbox.clone(ind) for ind in offspring]
+        print('cloning not true clone')
+        assert ind.results
 
         for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
             if random.random() <= CXPB:
@@ -274,15 +282,19 @@ def main(seed=None):
             ind.fitness.values = fit
             # Select the next generation population
         pop = toolbox.select(pop + offspring, MU)
-        #assert pop[0].results
+        import copy
+        pop2=copy.copy(pop)
+        assert pop2[0].results
 
         record = stats.compile(pop)
         logbook.record(gen=gen, evals=len(invalid_ind), **record)
         print(logbook.stream)
-
+    import copy
+    pop2=copy.copy(pop)
+    assert pop2[0].results
     #print("Final population hypervolume is %f" % hypervolume(pop, [11.0, 11.0]))
 
-    return pop, logbook
+    return pop, pop2, logbook
 
 if __name__ == "__main__":
     # with open("pareto_front/zdt1_front.json") as optimal_front_data:
@@ -290,19 +302,32 @@ if __name__ == "__main__":
     # Use 500 of the 1000 points in the json file
     # optimal_front = sorted(optimal_front[i] for i in range(0, len(optimal_front), 2))
 
-    pop, stats = main()
+    pop, pop2, stats = main()
 
     import matplotlib.pyplot as plt
     #plt.hold(True)
     #pdb.set_trace()
     #pop2=pop[:3]
-    list(map(evaluateplt, pop[0]))
+    #LOCAL_RESULTS=[]
+    #list(map(evaluateplt, pop[0]))
 
-    #if hasattr(pop2[0],results):
-    #    for i in range(0,4):
-    #        plt.plot(pop[i].results['t'],pop[i].results['vm'])
-    #    plt.savefig('best_5.png')
+    print(LOCAL_RESULTS)
+    pdb.set_trace()
+
+
+    #GLOBAL_RESULTS=futures.map(LOCAL_RESULTS,map_results)
+
+    if hasattr(pop2[0],results):
+        for i in range(0,4):
+            plt.plot(pop2[i].results['t'],pop2[i].results['vm'])
+        plt.savefig('best_5.png')
     pop.sort(key=lambda x: x.fitness.values)
+
+    def map_results(results_2):
+        j=[]
+        for i in results:
+            j.extend(i)
+        return j
 
     print(stats)
     #print("Convergence: ", convergence(pop, optimal_front))
