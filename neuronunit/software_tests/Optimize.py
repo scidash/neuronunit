@@ -166,14 +166,14 @@ if __name__ == '__main__':
 
     #This needs to act on error.
     #pdb.set_trace()
-    if RANK==0:
-        print("%.2f mV" % np.mean([p[0] for p in pop]))
+    #if RANK==0:
+        #print("%.2f mV" % np.mean([p[0] for p in pop]))
 
 
-        import matplotlib as matplotlib
-        matplotlib.use('agg')
-        import matplotlib.pyplot as plt
-        plt.hold(True)
-        for i in xrange(0,9):
-            plt.plot(pop[i].time_trace,pop[i].voltage_trace)
-        plt.savefig('best 10')
+    import matplotlib as matplotlib
+    matplotlib.use('agg')
+    import matplotlib.pyplot as plt
+    plt.hold(True)
+    for i in xrange(0,9):
+        plt.plot(pop[i].time_trace,pop[i].voltage_trace)
+    plt.savefig('best 10')
