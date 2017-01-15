@@ -194,7 +194,7 @@ def func2map(ind):
 
 def evaluate(individual):#This method must be pickle-able for scoop to work.
     #print('hello from before error')
-    func2map(individual)
+    individual=func2map(individual)
     error=individual.error
     assert individual.results
     return error[0],error[1],error[2],error[3],error[4],
