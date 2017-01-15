@@ -4,9 +4,11 @@ python:
 sudo: required
 services:
   - docker
+  - git
+  - python
   
 before_script:
-  - git clone -b dev https://github.com/russelljjarvis/neuronunit/
+  - git clone -b dev https://github.com/russelljjarvis/neuronunit/ neuronunit
   - docker build . -t neuronunit/Dockerfile
 
 script: 
