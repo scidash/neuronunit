@@ -263,13 +263,14 @@ def main(seed=None):
 
     # Begin the generational process
     for gen in range(1, NGEN):
+        print(gen)
         # Vary the population
         offspring = tools.selTournamentDCD(pop, len(pop))
-        assert ind.results
+        #assert ind.results
 
         offspring = [toolbox.clone(ind) for ind in offspring]
-        print('cloning not true clone')
-        assert ind.results
+        #print('cloning not true clone')
+        #assert ind.results
 
         for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
             if random.random() <= CXPB:
@@ -293,12 +294,13 @@ def main(seed=None):
         record = stats.compile(pop)
         logbook.record(gen=gen, evals=len(invalid_ind), **record)
         print(logbook.stream)
-    import copy
-    pop2=copy.copy(pop)
+
+    pop = toolbox.map(toolbox.evaluate, pop)
+
     #assert pop2[0].results
     #print("Final population hypervolume is %f" % hypervolume(pop, [11.0, 11.0]))
 
-    return pop, pop2, logbook
+    return pop, logbook
 
 if __name__ == "__main__":
     # with open("pareto_front/zdt1_front.json") as optimal_front_data:
@@ -306,7 +308,7 @@ if __name__ == "__main__":
     # Use 500 of the 1000 points in the json file
     # optimal_front = sorted(optimal_front[i] for i in range(0, len(optimal_front), 2))
 
-    pop, pop2, stats = main()
+    pop, stats = main()
 
     import matplotlib.pyplot as plt
 
