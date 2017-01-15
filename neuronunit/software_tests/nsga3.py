@@ -120,7 +120,6 @@ class Individual(list):
     def __init__(self, *args):
         list.__init__(self, *args)
         self.error=None
-
         self.sciunitscore=[]
         self.model=None
         self.error=None
@@ -195,6 +194,7 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
     #print('hello from before error')
     func2map(individual)
     error=individual.error
+    assert individual.results
     return error[0],error[1],error[2],error[3],error[4],
 
 toolbox.register("evaluate", evaluate)
@@ -208,7 +208,7 @@ toolbox.register("map", futures.map)
 def main(seed=None):
     random.seed(seed)
 
-    NGEN = 4
+    NGEN = 3
     MU = 12
     CXPB = 0.9
 
@@ -279,10 +279,10 @@ if __name__ == "__main__":
     matplotlib.use('agg')
     import matplotlib.pyplot as plt
     plt.hold(True)
-
+    pdb.set_trace()
     for i in range(0,4):
         plt.plot(pop[i].results['t'],pop[i].results['vm'])
-    plt.savefig('best 10')
+    plt.savefig('best_5')
     # pop.sort(key=lambda x: x.fitness.values)
 
     # print(stats)
