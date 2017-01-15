@@ -6,12 +6,12 @@ services:
   - docker
   
 before_script:
-  - docker pull scidash/neuronunit
-  - docker build . -t scidash/neuronunit
+  - docker pull russelljarvis/nunit_deap
+  - docker build . -t russelljarvis/nunit_deap
 
 script: 
   
-  - docker run -it scidash/neuronunit /bin/bash'
+  - docker run -it russelljarvis/nunit_deap /bin/bash'
   - python nsga3.py
 #  - python docs/chapter3.py
 #  - python docs/chapter4.py
