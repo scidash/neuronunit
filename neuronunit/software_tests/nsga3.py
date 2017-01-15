@@ -235,6 +235,7 @@ def main(seed=None):
     fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
 
     import matplotlib.pyplot as plt
+    plt.hold(True)
 
     for ind in pop:
         if hasattr(ind,'results'):
