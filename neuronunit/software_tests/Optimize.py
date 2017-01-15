@@ -121,8 +121,8 @@ def optimize(self,model,rov,param):
     best_score = None
     from neuronunit.deapcontainer.deap_container2 import DeapContainer
     dc=DeapContainer()
-    pop_size=8
-    ngen=0
+    pop_size=12
+    ngen=4
 
     #commited the change: pass in the model to deap, don't recreate it in every iteration just mutate the one existing model.
     #arguably recreating it would lead to less bugs however so maybe change back later.
