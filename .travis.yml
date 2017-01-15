@@ -6,7 +6,7 @@ services:
   - docker
   
 before_script:
-  - docker pull scidash/neuron-mpi-neuroml
+  - docker pull scidash/neuronunit
   - docker build . -t scidash/neuronunit
 
 script: 

@@ -155,38 +155,16 @@ RUN echo 'alias model="cd /work/scidash/neuronunit/neuronunit/models"' >> ~/.bas
 RUN echo 'alias sciunit="cd /work/scidash/sciunit"' >> ~/.bashrc
 RUN echo 'alias nu="python -c "from neuronunit.models.reduced import ReducedModel""'
 RUN export PATH=$PATH
-#RUN sudo ipcluster start
-#CMD sudo ipcluster 
-RUN echo 'grab this again'
 
-RUN echo 'grab this again'
-RUN echo 'grab this again'
+WORKDIR $HOME #/neuronunit/neuronunit/software_tests
+RUN ipcluster start --profile=chase --debug &
+
+
 WORKDIR $HOME
 RUN git clone -b dev https://github.com/russelljjarvis/neuronunit.git
 WORKDIR $HOME/neuronunit/neuronunit/software_tests/NeuroML2
 RUN nrnivmodl
 
-WORKDIR $HOME #/neuronunit/neuronunit/software_tests
-RUN ipcluster start --profile=chase --debug &
-CMD ipcluster start --profile=chase --debug &
-#RUN sleep 45
-#RUN ipcluster stop
-#RUN killall ipcluster
-#CMD ls ~/.ipython
-#RUN sudo mkdir ~/.ipython/profile_default
 
-
-#WORKDIR $HOME/.ipython/profile_chase/security
-#RUN echo 'ipcluster start --profile=chase --debug &' >> ~/.bashrc
-#RUN echo 'sudo cp -r $HOME/.ipython/profile_chase/security/ipcontroller-client.json $HOME/.ipython/profile_default/security' >> ~/.bashrc
-#RUN echo 'sudo chown -R jovyan $HOME/.ipython/profile_default' >> ~/.bashrc
-
-
-#CMD cd neuronunit/neuronunit/software_tests
 WORKDIR $HOME/neuronunit/neuronunit/software_tests
-#RUN sudo chown -R jovyan $HOME/.ipython/profile_default
-#CMD sudo chown -R jovyan $HOME/.ipython/profile_default
-
-#ENTRYPOINT ls `pwd`/*
-ENTRYPOINT mpiexec -np 4 ipython Optimize.py
 
