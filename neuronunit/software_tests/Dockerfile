@@ -157,10 +157,7 @@ RUN echo 'alias nu="python -c "from neuronunit.models.reduced import ReducedMode
 RUN export PATH=$PATH
 #RUN sudo ipcluster start
 #CMD sudo ipcluster 
-
-RUN echo 'grab this fsadfdsa'
-RUN echo 'grab this fsadfdsa'
-RUN echo 'grab this fsadfdsa'
+RUN echo 'grab this again'
 
 RUN echo 'grab this again'
 RUN echo 'grab this again'
@@ -191,5 +188,5 @@ WORKDIR $HOME/neuronunit/neuronunit/software_tests
 #CMD sudo chown -R jovyan $HOME/.ipython/profile_default
 
 #ENTRYPOINT ls `pwd`/*
-ENTRYPOINT ipython Optimize.py
+ENTRYPOINT mpiexec -np 4 ipython Optimize.py
 
