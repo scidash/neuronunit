@@ -86,14 +86,7 @@ class DeapContainer:
         BOUND_UP=[ np.max(i) for i in rov ]
         NDIM = len(rov)
 
-        '''
-        from ipyparallel import Client
-        import os
-        rc = Client(profile=os.getenv('/home/jovyan/.ipython/profile_chase'))
-        lview = rc.load_balanced_view()
 
-        map_function = lview.map_sync
-        '''
         toolbox.register("map",map)
         toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
         toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
@@ -206,9 +199,9 @@ class DeapContainer:
             ind.error = copy.copy(score.sort_keys.values[0])
             return ind
 
-        #pop=paramap(func2map,pop)
+        pop=paramap(func2map,pop)
         #pop=v.map(func2map,pop)
-        pop=list(map(func2map,pop))
+        #pop=list(map(func2map,pop))
         #pop = toolbox.map(func2map,pop)
 
         #pop=map_function(func2map,pop)

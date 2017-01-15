@@ -156,11 +156,9 @@ RUN echo 'alias sciunit="cd /work/scidash/sciunit"' >> ~/.bashrc
 RUN echo 'alias nu="python -c "from neuronunit.models.reduced import ReducedModel""'
 RUN export PATH=$PATH
 #RUN sudo ipcluster start
-#CMD sudo ipcluster start
+#CMD sudo ipcluster 
 
-
-
-RUN echo 're get this  '
+RUN echo 'grab this again'
 WORKDIR $HOME
 RUN git clone -b dev https://github.com/russelljjarvis/neuronunit.git
 WORKDIR $HOME/neuronunit/neuronunit/software_tests/NeuroML2
