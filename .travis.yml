@@ -1,6 +1,5 @@
 language: python
 python:
-  - "2.7"
   - "3.5"
 sudo: required
 services:
@@ -11,7 +10,11 @@ before_script:
   - docker build . -t scidash/neuronunit
 
 script: 
-  - docker run -it scidash/neuronunit python -m unittest test_*
+  
+  - docker run -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix \
+                                                    -v /dev/shm:/dev/shm \
+                                                    -v ${HOME}/.atom:/home/atom/.atom \
+                                                    deapscoop1 /bin/bash'
 #  - python docs/chapter2.py
 #  - python docs/chapter3.py
 #  - python docs/chapter4.py
