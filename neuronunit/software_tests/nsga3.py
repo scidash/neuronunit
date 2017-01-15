@@ -280,7 +280,7 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     plt.hold(True)
     pdb.set_trace()
-    if hasattr(pop[i]):
+    if hasattr(pop[0].results):
         for i in range(0,4):
             plt.plot(pop[i].results['t'],pop[i].results['vm'])
         plt.savefig('best_5.png')
