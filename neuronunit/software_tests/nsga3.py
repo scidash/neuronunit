@@ -241,6 +241,11 @@ def main(seed=None):
     for ind, fit in zip(invalid_ind, fitnesses):
         ind.fitness.values = fit
 
+
+    # This is just to assign the crowding distance to the individuals
+    # no actual selection is done
+    pop = toolbox.select(pop, len(pop))
+
     if hasattr(pop[0],'results'):
         import matplotlib.pyplot as plt
         plt.hold(True)
@@ -252,11 +257,6 @@ def main(seed=None):
 
         plt.hold(False)
         plt.clf()
-    # This is just to assign the crowding distance to the individuals
-    # no actual selection is done
-    pop = toolbox.select(pop, len(pop))
-
-
     record = stats.compile(pop)
     logbook.record(gen=0, evals=len(invalid_ind), **record)
     print(logbook.stream)
@@ -340,10 +340,17 @@ if __name__ == "__main__":
 
     import numpy
     front = numpy.array([ind.fitness.values for ind in pop])
+    front_params = numpy.array([ind for ind in pop])
+
     #optimal_front = numpy.array(optimal_front)
     #plt.scatter(optimal_front[:,0], optimal_front[:,1], c="r")
-    plt.scatter(front[:,0], front[:,1], c="b")
+    plt.scatter(front[:,0], front[:,1], front[:,2], front[:,3], c="b")
     plt.axis("tight")
     plt.savefig('front.png')
 
+    plt.clf()
+
+    plt.scatter(frontparams[:,0], frontparams[:,1], frontparams[:,2], frontparams[:,3], c="b")
+    plt.axis("tight")
+    plt.savefig('front_params.png')
     # plt.show()
