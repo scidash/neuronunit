@@ -296,7 +296,7 @@ if __name__ == "__main__":
     #plt.hold(True)
     #pdb.set_trace()
     #pop2=pop[:3]
-    toolbox.map(evaluateplt, pop[0])
+    list(map(evaluateplt, pop[0]))
 
     #if hasattr(pop2[0],results):
     #    for i in range(0,4):
