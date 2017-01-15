@@ -1,7 +1,9 @@
 
 import os,sys
 import numpy as np
-import matplotlib.pyplot as plt
+
+import matplotlib as matplotlib
+matplotlib.use('agg')
 import quantities as pq
 import sciunit
 
@@ -256,7 +258,7 @@ def main(seed=None):
         fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
-
+            assert ind.results
         # Select the next generation population
         pop = toolbox.select(pop + offspring, MU)
         record = stats.compile(pop)
@@ -275,12 +277,10 @@ if __name__ == "__main__":
 
     pop, stats = main()
 
-    import matplotlib as matplotlib
-    matplotlib.use('agg')
     import matplotlib.pyplot as plt
     plt.hold(True)
     pdb.set_trace()
-    if hasattr(pop[0].results):
+    if hasattr(pop[0],results):
         for i in range(0,4):
             plt.plot(pop[i].results['t'],pop[i].results['vm'])
         plt.savefig('best_5.png')
