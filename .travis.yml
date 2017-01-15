@@ -9,9 +9,9 @@ services:
   
 before_script:
   - cd ..
-  - git clone -b dev https://github.com/russelljjarvis/neuronunit.git neuronunit
+  - git clone -b dev https://github.com/russelljjarvis/neuronunit.git 
   - cd neuronunit
-  - docker build . -t Dockerfile
+  - docker build . -t Dockerfile nunit
 
 script: 
   
