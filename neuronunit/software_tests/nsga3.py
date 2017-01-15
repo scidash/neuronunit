@@ -209,7 +209,7 @@ def main(seed=None):
     random.seed(seed)
 
     NGEN = 4
-    MU = 10
+    MU = 12
     CXPB = 0.9
 
     stats = tools.Statistics(lambda ind: ind.fitness.values)
