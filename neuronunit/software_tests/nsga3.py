@@ -209,7 +209,7 @@ def evaluateplt(individual):#This method must be pickle-able for scoop to work.
     individual=func2map(individual)
     error=individual.error
     assert individual.results
-    plt.plot(pop[i].results['t'],pop[i].results['vm'])
+    plt.plot(individual.results['t'],individual.results['vm'])
     plt.savefig('best_0.png')
     #return plt
 
