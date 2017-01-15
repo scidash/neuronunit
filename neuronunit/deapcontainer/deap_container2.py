@@ -19,11 +19,7 @@ from deap import creator
 from deap import tools
 #from inspyred.ec import terminators as term
 
-import mpi4py
-from mpi4py import MPI
-COMM = MPI.COMM_WORLD
-SIZE = COMM.Get_size()
-RANK = COMM.Get_rank()
+
 
 
 class DeapContainer:
@@ -113,7 +109,11 @@ class DeapContainer:
         def paramap(the_func,pop):
 
 
-
+            import mpi4py
+            from mpi4py import MPI
+            COMM = MPI.COMM_WORLD
+            SIZE = COMM.Get_size()
+            RANK = COMM.Get_rank()
             import copy
             pop1=copy.copy(pop)
             #ROund robin distribution
@@ -151,6 +151,7 @@ class DeapContainer:
                 print('stuck 3')
                 pop = COMM.bcast(pop, root=0)
                 print('hangs here 4')
+                pdb.set_trace()
 
             return pop
 
