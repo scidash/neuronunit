@@ -305,19 +305,7 @@ if __name__ == "__main__":
     pop, pop2, stats = main()
 
     import matplotlib.pyplot as plt
-    #plt.hold(True)
-    #pdb.set_trace()
-    #pop2=pop[:3]
-    #LOCAL_RESULTS=[]
-    #list(map(evaluateplt, pop[0]))
-    #print(len(pop))
 
-    #print(LOCAL_RESULTS)
-    #pdb.set_trace()
-
-
-    #if hasattr(pop2[0],'results'):
-    #    print('got here')
     print(len(pop))
     plt.hold(True)
 
@@ -326,32 +314,11 @@ if __name__ == "__main__":
             plt.plot(pop[i].results['t'],pop[i].results['vm'])
     plt.savefig('best_5.png')
     pop.sort(key=lambda x: x.fitness.values)
-    '''
-    def map_results(results_2):
-        j=[]
-        for i in results_2:
-            j.extend(i))
-        return j
-    GLOBAL_RESULTS=list(futures.map(map_results,LOCAL_RESULTS))
-
-    print(len(GLOBAL_RESULTS))
-    def map_results2(results_2):
-        j=[]
-        for i in results_2:
-            j.extend(i)
-        return j
-    #pdb.set_trace()
-    GLOBAL_pop=list(futures.map(map_results2,[pop]))
-    print('the final pop size')
-    print(len(GLOBAL_pop))
-    '''
-
 
     print(stats)
     #print("Convergence: ", convergence(pop, optimal_front))
     #print("Diversity: ", diversity(pop, optimal_front[0], optimal_front[-1]))
 
-    import matplotlib.pyplot as plt
     import numpy
 
     front = numpy.array([ind.fitness.values for ind in pop])
