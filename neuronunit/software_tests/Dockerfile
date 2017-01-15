@@ -158,6 +158,11 @@ RUN export PATH=$PATH
 #RUN sudo ipcluster start
 #CMD sudo ipcluster 
 
+RUN echo 'grab this fsadfdsa'
+RUN echo 'grab this fsadfdsa'
+RUN echo 'grab this fsadfdsa'
+
+RUN echo 'grab this again'
 RUN echo 'grab this again'
 WORKDIR $HOME
 RUN git clone -b dev https://github.com/russelljjarvis/neuronunit.git

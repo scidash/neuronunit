@@ -117,11 +117,11 @@ class DeapContainer:
             import copy
             pop1=copy.copy(pop)
             #ROund robin distribution
-            psteps = [ pop1[i] for i in range(RANK, len(pop1), SIZE) ]
+            psteps = ( pop1[i] for i in range(RANK, len(pop1), SIZE) )
             pop=[]
 
             #Do the function to list element mapping
-            pop=list(map(the_func,pop1))
+            pop=list(map(the_func,psteps))
             #gather all the resulting lists onto rank0
             print('code hangs here why1 ?')
 
