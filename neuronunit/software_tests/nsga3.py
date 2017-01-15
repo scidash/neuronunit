@@ -315,9 +315,9 @@ if __name__ == "__main__":
     pdb.set_trace()
 
 
-    #GLOBAL_RESULTS=futures.map(LOCAL_RESULTS,map_results)
+    GLOBAL_RESULTS=list(futures.map(map_results,LOCAL_RESULTS))
 
-    if hasattr(pop2[0],results):
+    if hasattr(pop2[0],'results'):
         for i in range(0,4):
             plt.plot(pop2[i].results['t'],pop2[i].results['vm'])
         plt.savefig('best_5.png')
