@@ -315,12 +315,26 @@ if __name__ == "__main__":
     plt.savefig('evolved_pop.png')
     pop.sort(key=lambda x: x.fitness.values)
 
+    plt.hold(False)
+    plt.clf()
+
+
+    for i,ind in enumerate(pop):
+        if(i<5):
+            if hasattr(ind,'results'):
+                plt.plot(ind.results['t'],ind.results['vm'])
+    plt.savefig('best_5.png')
+
+    plt.hold(False)
+    plt.clf()
+
+    pop.sort(key=lambda x: x.fitness.values)
+
     print(stats)
     #print("Convergence: ", convergence(pop, optimal_front))
     #print("Diversity: ", diversity(pop, optimal_front[0], optimal_front[-1]))
 
     import numpy
-
     front = numpy.array([ind.fitness.values for ind in pop])
     #optimal_front = numpy.array(optimal_front)
     #plt.scatter(optimal_front[:,0], optimal_front[:,1], c="r")
