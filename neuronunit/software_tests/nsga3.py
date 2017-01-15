@@ -168,7 +168,7 @@ model = ReducedModel(LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
 model=model.load_model()
 model.local_run()
 
-
+#list_of_results=[]
 
 def func2map(ind):
 
@@ -197,7 +197,21 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
     individual=func2map(individual)
     error=individual.error
     assert individual.results
+
     return error[0],error[1],error[2],error[3],error[4],
+
+
+def evaluateplt(individual):#This method must be pickle-able for scoop to work.
+    #print('hello from before error')
+
+    import matplotlib.pyplot as plt
+    plt.hold(True)
+    individual=func2map(individual)
+    error=individual.error
+    assert individual.results
+    plt.plot(pop[i].results['t'],pop[i].results['vm'])
+    plt.savefig('best_0.png')
+    #return plt
 
 toolbox.register("evaluate", evaluate)
 toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
@@ -258,9 +272,10 @@ def main(seed=None):
         fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
-            assert ind.results
-        # Select the next generation population
+            # Select the next generation population
         pop = toolbox.select(pop + offspring, MU)
+        #assert pop[0].results
+
         record = stats.compile(pop)
         logbook.record(gen=gen, evals=len(invalid_ind), **record)
         print(logbook.stream)
@@ -278,24 +293,27 @@ if __name__ == "__main__":
     pop, stats = main()
 
     import matplotlib.pyplot as plt
-    plt.hold(True)
-    pdb.set_trace()
-    if hasattr(pop[0],results):
-        for i in range(0,4):
-            plt.plot(pop[i].results['t'],pop[i].results['vm'])
-        plt.savefig('best_5.png')
+    #plt.hold(True)
+    #pdb.set_trace()
+    #pop2=pop[:3]
+    toolbox.map(evaluateplt, pop[0])
+
+    #if hasattr(pop2[0],results):
+    #    for i in range(0,4):
+    #        plt.plot(pop[i].results['t'],pop[i].results['vm'])
+    #    plt.savefig('best_5.png')
     pop.sort(key=lambda x: x.fitness.values)
 
     print(stats)
-    print("Convergence: ", convergence(pop, optimal_front))
-    print("Diversity: ", diversity(pop, optimal_front[0], optimal_front[-1]))
+    #print("Convergence: ", convergence(pop, optimal_front))
+    #print("Diversity: ", diversity(pop, optimal_front[0], optimal_front[-1]))
 
     import matplotlib.pyplot as plt
     import numpy
 
     front = numpy.array([ind.fitness.values for ind in pop])
-    optimal_front = numpy.array(optimal_front)
-    plt.scatter(optimal_front[:,0], optimal_front[:,1], c="r")
+    #optimal_front = numpy.array(optimal_front)
+    #plt.scatter(optimal_front[:,0], optimal_front[:,1], c="r")
     plt.scatter(front[:,0], front[:,1], c="b")
     plt.axis("tight")
     plt.savefig('front.png')
