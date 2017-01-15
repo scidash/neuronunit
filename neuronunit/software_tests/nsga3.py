@@ -309,10 +309,10 @@ if __name__ == "__main__":
     print(len(pop))
     plt.hold(True)
 
-    for i in range(0,4):
-        if hasattr(pop[i],'results'):
-            plt.plot(pop[i].results['t'],pop[i].results['vm'])
-    plt.savefig('best_5.png')
+    for ind in pop:
+        if hasattr(ind,'results'):
+            plt.plot(ind.results['t'],ind.results['vm'])
+    plt.savefig('evolved_pop.png')
     pop.sort(key=lambda x: x.fitness.values)
 
     print(stats)
