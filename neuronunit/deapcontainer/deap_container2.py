@@ -221,7 +221,7 @@ class DeapContainer:
 
         #pop1=copy.copy(pop)
         #psteps = [ pop1[i] for i in range(RANK, len(pop), SIZE) ]
-        fitnesses()
+        #fitnesses()
         fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
         #fitnesses = paramap(callsciunitjudge,invalid_ind)
         #fitnesses = v.map(callsciunitjudge,invalid_ind)
