@@ -143,7 +143,7 @@ class DeapContainer:
                 print('hangs here 2')
 
             else:
-                pop=[]
+                pop=None
                 print('hangs here 3')
 
             if RANK==0:
@@ -151,7 +151,7 @@ class DeapContainer:
                 print('stuck 3')
                 pop = COMM.bcast(pop, root=0)
                 print('hangs here 4')
-                pdb.set_trace()
+                #pdb.set_trace()
 
             return pop
 
@@ -206,9 +206,9 @@ class DeapContainer:
             ind.error = copy.copy(score.sort_keys.values[0])
             return ind
 
-        pop=paramap(func2map,pop)
+        #pop=paramap(func2map,pop)
         #pop=v.map(func2map,pop)
-        #pop=list(map(func2map,pop))
+        pop=list(map(func2map,pop))
         #pop = toolbox.map(func2map,pop)
 
         #pop=map_function(func2map,pop)
