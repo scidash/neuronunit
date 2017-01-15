@@ -8,9 +8,6 @@ services:
   - python
   
 before_script:
-  - cd ..
-  - git clone -b dev https://github.com/russelljjarvis/neuronunit.git 
-  - cd neuronunit
   - docker build . -t Dockerfile nunit
 
 script: 
