@@ -201,19 +201,6 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
     return error[0],error[1],error[2],error[3],error[4],
 
 
-def evaluateplt(individual):#This method must be pickle-able for scoop to work.
-    #print('hello from before error')
-
-    import matplotlib.pyplot as plt
-    plt.hold(True)
-    #ind.sciunitscore={}
-    pdb.set_trace()
-    individual=func2map(individual)
-    error=individual.error
-    assert individual.results
-    plt.plot(individual.results['t'],individual.results['vm'])
-    plt.savefig('best_0.png')
-    #return plt
 
 toolbox.register("evaluate", evaluate)
 toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
@@ -246,6 +233,18 @@ def main(seed=None):
     # Evaluate the individuals with an invalid fitness
     invalid_ind = [ind for ind in pop if not ind.fitness.valid]
     fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+
+
+    for ind in pop:
+        if hasattr(ind,'results'):
+            plt.plot(ind.results['t'],ind.results['vm'])
+    plt.savefig('initial_pop.png')
+
+    plt.hold(False)
+    plt.clf()
+
+
+
     for ind, fit in zip(invalid_ind, fitnesses):
         ind.fitness.values = fit
 
