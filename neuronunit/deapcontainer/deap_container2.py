@@ -19,6 +19,11 @@ from deap import creator
 from deap import tools
 #from inspyred.ec import terminators as term
 
+import mpi4py
+from mpi4py import MPI
+COMM = MPI.COMM_WORLD
+SIZE = COMM.Get_size()
+RANK = COMM.Get_rank()
 
 
 class DeapContainer:
@@ -107,11 +112,6 @@ class DeapContainer:
 
         def paramap(the_func,pop):
 
-            import mpi4py
-            from mpi4py import MPI
-            COMM = MPI.COMM_WORLD
-            SIZE = COMM.Get_size()
-            RANK = COMM.Get_rank()
 
 
             import copy
@@ -119,10 +119,6 @@ class DeapContainer:
             #ROund robin distribution
             psteps = ( pop1[i] for i in range(RANK, len(pop1), SIZE) )
             pop=[]
-
-            #Do the function to list element mapping
-            pop=list(map(the_func,psteps))
-            #gather all the resulting lists onto rank0
             print('code hangs here why1 ?')
 
             print('hello from RANK \n', RANK)
@@ -130,6 +126,10 @@ class DeapContainer:
             print('hello from RANK\n', RANK)
 
             print('hello from RANK', RANK)
+            #Do the function to list element mapping
+            pop=list(map(the_func,psteps))
+            #gather all the resulting lists onto rank0
+
 
             pop2 = COMM.gather(pop, root=0)
             print('code hangs here why2?')
