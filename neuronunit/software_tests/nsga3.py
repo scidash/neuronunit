@@ -234,25 +234,28 @@ def main(seed=None):
     invalid_ind = [ind for ind in pop if not ind.fitness.valid]
     fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
 
-    import matplotlib.pyplot as plt
-    plt.hold(True)
 
-    for ind in pop:
-        if hasattr(ind,'results'):
-            plt.plot(ind.results['t'],ind.results['vm'])
-    plt.savefig('initial_pop.png')
-
-    plt.hold(False)
-    plt.clf()
 
 
 
     for ind, fit in zip(invalid_ind, fitnesses):
         ind.fitness.values = fit
 
+    if hasattr(pop[0],'results'):
+        import matplotlib.pyplot as plt
+        plt.hold(True)
+
+        for ind in pop:
+            if hasattr(ind,'results'):
+                plt.plot(ind.results['t'],ind.results['vm'])
+        plt.savefig('initial_pop.png')
+
+        plt.hold(False)
+        plt.clf()
     # This is just to assign the crowding distance to the individuals
     # no actual selection is done
     pop = toolbox.select(pop, len(pop))
+
 
     record = stats.compile(pop)
     logbook.record(gen=0, evals=len(invalid_ind), **record)
