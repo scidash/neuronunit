@@ -209,7 +209,7 @@ def main(seed=None):
     random.seed(seed)
 
     NGEN = 3
-    MU = 12
+    MU = 8
     CXPB = 0.9
 
     stats = tools.Statistics(lambda ind: ind.fitness.values)
@@ -280,9 +280,10 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     plt.hold(True)
     pdb.set_trace()
-    for i in range(0,4):
-        plt.plot(pop[i].results['t'],pop[i].results['vm'])
-    plt.savefig('best_5.png')
+    if hasattr(pop[i]):
+        for i in range(0,4):
+            plt.plot(pop[i].results['t'],pop[i].results['vm'])
+        plt.savefig('best_5.png')
     pop.sort(key=lambda x: x.fitness.values)
 
     print(stats)
