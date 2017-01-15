@@ -13,6 +13,8 @@ before_script:
 script: 
   
   - docker run -it nunit /bin/bash'
+  - pwd
+  - ls
   - python nsga3.py
 #  - python docs/chapter3.py
 #  - python docs/chapter4.py
