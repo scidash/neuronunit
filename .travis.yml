@@ -6,8 +6,8 @@ services:
   - docker
   
 before_script:
-  - docker pull russelljarvis/nunit
-  - docker build . -t russelljarvis/nunit
+  - git clone -b dev https://github.com/russelljjarvis/neuronunit/
+  - docker build . -t neuronunit/Dockerfile
 
 script: 
   
