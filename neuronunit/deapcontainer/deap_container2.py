@@ -125,6 +125,12 @@ class DeapContainer:
             #gather all the resulting lists onto rank0
             print('code hangs here why1 ?')
 
+            print('hello from RANK \n', RANK)
+            print('hello from RANK\n', RANK)
+            print('hello from RANK\n', RANK)
+
+            print('hello from RANK', RANK)
+
             pop2 = COMM.gather(pop, root=0)
             print('code hangs here why2?')
             #COMM.barrier()
