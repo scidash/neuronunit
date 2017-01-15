@@ -12,5 +12,5 @@ before_script:
 
 script: 
   
-  - docker run russelljjarvis/neuronunit python nsga3.py'
+  - docker run russelljjarvis/neuronunit python -m scoop nsga3.py'
 
