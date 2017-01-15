@@ -234,6 +234,7 @@ def main(seed=None):
     invalid_ind = [ind for ind in pop if not ind.fitness.valid]
     fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
 
+    import matplotlib.pyplot as plt
 
     for ind in pop:
         if hasattr(ind,'results'):
