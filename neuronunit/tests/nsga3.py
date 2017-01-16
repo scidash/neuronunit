@@ -224,8 +224,8 @@ def main(seed=None):
 
     random.seed(seed)
 
-    NGEN=3
-    MU=8
+    NGEN=4
+    MU=12
 
     CXPB = 0.9
     import numpy as numpy
@@ -316,7 +316,7 @@ def main(seed=None):
             ind.fitness.values = fit
             # Select the next generation population
         pop = toolbox.select(pop + offspring, MU)
-
+        print(utils.getHosts())
         if hasattr(pop[0],'results'):
             import matplotlib.pyplot as plt
             plt.hold(True)
@@ -327,22 +327,15 @@ def main(seed=None):
                     plt.xlabel(str(ind.attrs))
                     #str(scoop.worker)+
             plt.savefig('snap_shot_at '+str(gen)+str(utils.getHosts())+'.png')
-
             plt.hold(False)
             plt.clf()
-
         record = stats.compile(pop)
         logbook.record(gen=gen, evals=len(invalid_ind), **record)
         print(logbook.stream)
-
-
     #print("Final population hypervolume is %f" % hypervolume(pop, [11.0, 11.0]))
-
     finish_time=time.time()
     ga_time=finish_time-start_time
-
     import matplotlib.pyplot as plt
-
     print(len(pop))
     plt.hold(True)
     plt.title('time expended '+str(int(ga_time/60.0))+' minutes, ngen*pop_size: '+str(NGEN*MU)+'.png')
@@ -354,7 +347,7 @@ def main(seed=None):
             plt.xlabel(str(ind.attrs))
             #plt.ylabel(stats2)
 
-    plt.savefig('evolved_pop+str(utils.getHosts())+.png')
+    plt.savefig('evolved_pop'+str(utils.getHosts())+'.png')
     plt.hold(False)
     plt.clf()
     plt.hold(True)
@@ -370,7 +363,6 @@ def main(seed=None):
 
     plt.savefig('evolved_pop_5.png')
     plt.hold(False)
-
     plt.clf()
 
 
