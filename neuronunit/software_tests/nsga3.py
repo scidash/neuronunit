@@ -213,8 +213,7 @@ def main(seed=None):
 
     NGEN=3
     MU=8
-    #NGEN = 1
-    #MU = 1
+
     CXPB = 0.9
 
     stats = tools.Statistics(lambda ind: ind.fitness.values)
@@ -313,24 +312,34 @@ def main(seed=None):
 
     print(len(pop))
     plt.hold(True)
+    plt.title('time expended '+str(ga_time)+'ngen*pop_size: '+str(NGEN*MU)+'.png')
 
     for ind in pop:
         if hasattr(ind,'results'):
-            plt.title(str(ga_time))
             plt.plot(ind.results['t'],ind.results['vm'])
-            plt.xlabel(str(ind.attrs))
+
+    plt.xlabel(str(ind.attrs))
     plt.savefig('evolved_pop.png')
     plt.hold(False)
     plt.clf()
+    plt.hold(True)
+    plt.title('time expended '+str(ga_time)+'ngen*pop_size: '+str(NGEN*MU)+'.png')
+
     for i,ind in enumerate(pop):
         if(i<5):
             if hasattr(ind,'results'):
                 plt.plot(ind.results['t'],ind.results['vm'])
+    plt.xlabel(str(ind.attrs))
+
+    plt.savefig('evolved_pop_5.png')
     plt.hold(False)
+
     plt.clf()
     return pop, logbook
 
 if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+
     # with open("pareto_front/zdt1_front.json") as optimal_front_data:
     #     optimal_front = json.load(optimal_front_data)
     # Use 500 of the 1000 points in the json file
