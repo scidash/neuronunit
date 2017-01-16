@@ -32,7 +32,6 @@ pip-log.txt
 *sublime*
 *~
 *scratch.py
-*.xml
 *.ipynb_checkpoints
 *.dat
 
