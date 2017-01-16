@@ -166,5 +166,5 @@ WORKDIR $HOME/neuronunit/neuronunit/software_tests/NeuroML2
 RUN nrnivmodl
 
 
-WORKDIR $HOME/neuronunit/neuronunit/software_tests
+WORKDIR $HOME/neuronunit/neuronunit/tests
 ENTRYPOINT python -m scoop nsga3.py
