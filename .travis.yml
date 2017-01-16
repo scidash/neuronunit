@@ -8,8 +8,8 @@ services:
   - python
   
 before_script:
+  - cd neuronunit/neuronunit/software_tests
   - docker build -t neuronunit .
-  - cd software_tests
 script: 
   - docker run neuronunit python -m scoop nsga3.py'
 

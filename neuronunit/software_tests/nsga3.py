@@ -168,12 +168,9 @@ model = ReducedModel(LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
 model=model.load_model()
 model.local_run()
 
-#list_of_results=[]
 
 def func2map(ind):
 
-    #ind.sciunitscore={}
-    #model=model.load_model()
     for i, p in enumerate(param):
         name_value=str(ind[i])
         #reformate values.
@@ -182,9 +179,9 @@ def func2map(ind):
             attrs={'//izhikevich2007Cell':{p:name_value }}
         else:
             attrs['//izhikevich2007Cell'][p]=name_value
-
+    ind.attrs=attrs
     model.update_run_params(attrs)
-    #import copy
+
 
     ind.results=model.results
     score = suite.judge(model)
@@ -192,7 +189,6 @@ def func2map(ind):
     return ind
 
 def evaluate(individual):#This method must be pickle-able for scoop to work.
-    #print('hello from before error')
     individual=func2map(individual)
     error=individual.error
     assert individual.results
@@ -211,17 +207,19 @@ toolbox.register("map", futures.map)
 
 
 def main(seed=None):
+    start_time=time.time()
+
     random.seed(seed)
 
-    NGEN=6
-    MU=12
+    NGEN=3
+    MU=8
     #NGEN = 1
     #MU = 1
     CXPB = 0.9
 
     stats = tools.Statistics(lambda ind: ind.fitness.values)
-    # stats.register("avg", numpy.mean, axis=0)
-    # stats.register("std", numpy.std, axis=0)
+    stats.register("avg", numpy.mean, axis=0)
+    stats.register("std", numpy.std, axis=0)
     stats.register("min", numpy.min, axis=0)
     stats.register("max", numpy.max, axis=0)
 
@@ -287,28 +285,29 @@ def main(seed=None):
             ind.fitness.values = fit
             # Select the next generation population
         pop = toolbox.select(pop + offspring, MU)
-        #import copy
-        #pop2=copy.copy(pop)
-        #assert pop2[0].results
+
+        if hasattr(pop[0],'results'):
+            import matplotlib.pyplot as plt
+            plt.hold(True)
+
+            for ind in pop:
+                if hasattr(ind,'results'):
+                    plt.plot(ind.results['t'],ind.results['vm'])
+                    plt.xlabel(str(ind.attrs))
+            plt.savefig('snap_shot_at '+str(gen)+'.png')
+
+            plt.hold(False)
+            plt.clf()
 
         record = stats.compile(pop)
         logbook.record(gen=gen, evals=len(invalid_ind), **record)
         print(logbook.stream)
 
-    pop = toolbox.map(toolbox.evaluate, pop)
 
-    #assert pop2[0].results
     #print("Final population hypervolume is %f" % hypervolume(pop, [11.0, 11.0]))
 
-    return pop, logbook
-
-if __name__ == "__main__":
-    # with open("pareto_front/zdt1_front.json") as optimal_front_data:
-    #     optimal_front = json.load(optimal_front_data)
-    # Use 500 of the 1000 points in the json file
-    # optimal_front = sorted(optimal_front[i] for i in range(0, len(optimal_front), 2))
-
-    pop, stats = main()
+    finish_time=time.time()
+    ga_time=finish_time-start_time
 
     import matplotlib.pyplot as plt
 
@@ -317,25 +316,34 @@ if __name__ == "__main__":
 
     for ind in pop:
         if hasattr(ind,'results'):
+            plt.title(str(ga_time))
             plt.plot(ind.results['t'],ind.results['vm'])
+            plt.xlabel(str(ind.attrs))
     plt.savefig('evolved_pop.png')
-    pop.sort(key=lambda x: x.fitness.values)
-
     plt.hold(False)
     plt.clf()
-
-
     for i,ind in enumerate(pop):
         if(i<5):
             if hasattr(ind,'results'):
                 plt.plot(ind.results['t'],ind.results['vm'])
-    plt.savefig('best_5.png')
-
     plt.hold(False)
     plt.clf()
+    return pop, logbook
+
+if __name__ == "__main__":
+    # with open("pareto_front/zdt1_front.json") as optimal_front_data:
+    #     optimal_front = json.load(optimal_front_data)
+    # Use 500 of the 1000 points in the json file
+    # optimal_front = sorted(optimal_front[i] for i in range(0, len(optimal_front), 2))
+    pop, stats = main()
 
     pop.sort(key=lambda x: x.fitness.values)
 
+
+
+    pop.sort(key=lambda x: x.fitness.values)
+    print('time:')
+    print(time)
     print(stats)
     #print("Convergence: ", convergence(pop, optimal_front))
     #print("Diversity: ", diversity(pop, optimal_front[0], optimal_front[-1]))
@@ -346,13 +354,13 @@ if __name__ == "__main__":
 
     #optimal_front = numpy.array(optimal_front)
     #plt.scatter(optimal_front[:,0], optimal_front[:,1], c="r")
-    plt.scatter(front[:,0], front[:,1], front[:,2], front[:,3], c="b")
+    plt.scatter(front[:,0], front[:,1], front[:,2], front[:,3])
     plt.axis("tight")
     plt.savefig('front.png')
 
     plt.clf()
 
-    plt.scatter(frontparams[:,0], frontparams[:,1], frontparams[:,2], frontparams[:,3], c="b")
+    plt.scatter(frontparams[:,0], frontparams[:,1], frontparams[:,2], frontparams[:,3])
     plt.axis("tight")
     plt.savefig('front_params.png')
     # plt.show()
