@@ -141,9 +141,10 @@ rov=[]
 #rov0 = np.linspace(-65,-55,2)
 #rov1 = np.linspace(0.015,0.045,2)
 #rov2 = np.linspace(-0.0010,-0.0035,2)
-rov0=[-65,-55]
-rov1=[0.015,0.045]
-rov2=[-0.0010,-0.0035]
+
+rov0 = np.linspace(-65,-55,1000)
+rov1 = np.linspace(0.015,0.045,1000)
+rov2 = np.linspace(-0.0010,-0.0035,1000)
 rov.append(rov0)
 rov.append(rov1)
 rov.append(rov2)
@@ -228,6 +229,13 @@ def main(seed=None):
     stats.register("std", numpy.std, axis=0)
     stats.register("min", numpy.min, axis=0)
     stats.register("max", numpy.max, axis=0)
+
+    stats2 = tools.Statistics(lambda ind: ind.params)
+    stats2.register("avg", numpy.mean, axis=0)
+    stats2.register("std", numpy.std, axis=0)
+    stats2.register("min", numpy.min, axis=0)
+    stats2.register("max", numpy.max, axis=0)
+
 
     logbook = tools.Logbook()
     logbook.header = "gen", "evals", "std", "min", "avg", "max"
@@ -326,6 +334,8 @@ def main(seed=None):
             plt.plot(ind.results['t'],ind.results['vm'])
         if i==0 and hasattr(ind,'attrs'):
             plt.xlabel(str(ind.attrs))
+            plt.ylabel(str(stats2['avg']))
+
     plt.savefig('evolved_pop.png')
     plt.hold(False)
     plt.clf()
@@ -338,6 +348,8 @@ def main(seed=None):
                 plt.plot(ind.results['t'],ind.results['vm'])
         if i==0 and hasattr(ind,'attrs'):
             plt.xlabel(str(ind.attrs))
+            plt.ylabel(str(stats2['avg']))
+
     plt.savefig('evolved_pop_5.png')
     plt.hold(False)
 
@@ -350,21 +362,25 @@ def main(seed=None):
 
     import numpy
     front = numpy.array([ind.fitness.values for ind in pop])
-    pdb.set_trace()
-    pop = list(toolbox.map(toolbox.evaluate, pop))
+    plt.scatter(front[:,0], front[:,1], front[:,2], front[:,3])
+    plt.axis("tight")
+    plt.xlabel(str(stats['avg']))
+    plt.ylabel(str(stats2['avg']))
 
-    front_params = numpy.array([ind.params for ind in pop])
+    plt.savefig('front.png')
+
+    #pdb.set_trace()
+    #pop = list(toolbox.map(toolbox.evaluate, pop))
+
+    #front_params = numpy.array([ind.params for ind in pop])
 
     #optimal_front = numpy.array(optimal_front)
     #plt.scatter(optimal_front[:,0], optimal_front[:,1], c="r")
-    plt.scatter(front[:,0], front[:,1], front[:,2], front[:,3])
-    plt.axis("tight")
-    plt.savefig('front.png')
 
-    plt.clf()
-    plt.scatter(front_params[:,0], front_params[:,1], front_params[:,2], front_params[:,3])
-    plt.axis("tight")
-    plt.savefig('front_params.png')
+    #plt.clf()
+    #plt.scatter(front_params[:,0], front_params[:,1], front_params[:,2], front_params[:,3])
+    #plt.axis("tight")
+    #plt.savefig('front_params.png')
 
     return pop, logbook
 
@@ -380,5 +396,7 @@ if __name__ == "__main__":
     pop.sort(key=lambda x: x.fitness.values)
 
     print(stats)
+    print(stats2)
+
 
     # plt.show()
