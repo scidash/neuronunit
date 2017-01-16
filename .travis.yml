@@ -8,9 +8,9 @@ services:
   - python
   
 before_script:
-  - docker build -t russelljarvis/nunit .
+  - docker build -t nunit .
 
 script: 
   
-  - docker run russelljarvis/nunit python -m scoop nsga3.py'
+  - docker run nunit python -m scoop nsga3.py'
 
