@@ -11,5 +11,5 @@ before_script:
   - cd neuronunit/software_tests
   - docker build -t neuronunit .
 script: 
-  - docker run -it neuronunit bash'
+  - docker run -it neuronunit bash
 
