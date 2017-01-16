@@ -18,8 +18,11 @@ from neuronunit import aibs
 from neuronunit.models.reduced import ReducedModel
 import pdb
 import pickle
+#import scoop
+#scoop.DEBUG=True
+#print(scoop.worker)
 from scoop import futures
-
+from scoop import utils
 IZHIKEVICH_PATH = os.getcwd()+str('/NeuroML2') # Replace this the path to your
 LEMS_MODEL_PATH = IZHIKEVICH_PATH+str('/LEMS_2007One.xml')
 
@@ -322,7 +325,8 @@ def main(seed=None):
                 if hasattr(ind,'results'):
                     plt.plot(ind.results['t'],ind.results['vm'])
                     plt.xlabel(str(ind.attrs))
-            plt.savefig('snap_shot_at '+str(gen)+'.png')
+                    #str(scoop.worker)+
+            plt.savefig('snap_shot_at '+str(gen)+str(utils.getHosts())+'.png')
 
             plt.hold(False)
             plt.clf()
@@ -350,7 +354,7 @@ def main(seed=None):
             plt.xlabel(str(ind.attrs))
             #plt.ylabel(stats2)
 
-    plt.savefig('evolved_pop.png')
+    plt.savefig('evolved_pop+str(utils.getHosts())+.png')
     plt.hold(False)
     plt.clf()
     plt.hold(True)
