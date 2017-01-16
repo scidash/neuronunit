@@ -183,13 +183,15 @@ def func2map(ind):
             attrs={'//izhikevich2007Cell':{p:name_value }}
         else:
             attrs['//izhikevich2007Cell'][p]=name_value
+
+    ind.attrs=attrs
+
+    model.update_run_params(attrs)
+
     ind.params=[]
     for i in attrs['//izhikevich2007Cell'].values():
         if hasattr(ind,'params'):
             ind.params.append(i)
-    ind.attrs=attrs
-    model.update_run_params(attrs)
-
 
     ind.results=model.results
     score = suite.judge(model)
@@ -334,7 +336,7 @@ def main(seed=None):
             plt.plot(ind.results['t'],ind.results['vm'])
         if i==0 and hasattr(ind,'attrs'):
             plt.xlabel(str(ind.attrs))
-            plt.ylabel(str(stats2['avg']))
+            plt.ylabel(stats2)
 
     plt.savefig('evolved_pop.png')
     plt.hold(False)
@@ -348,7 +350,7 @@ def main(seed=None):
                 plt.plot(ind.results['t'],ind.results['vm'])
         if i==0 and hasattr(ind,'attrs'):
             plt.xlabel(str(ind.attrs))
-            plt.ylabel(str(stats2['avg']))
+            plt.ylabel(stats2)
 
     plt.savefig('evolved_pop_5.png')
     plt.hold(False)
@@ -364,8 +366,9 @@ def main(seed=None):
     front = numpy.array([ind.fitness.values for ind in pop])
     plt.scatter(front[:,0], front[:,1], front[:,2], front[:,3])
     plt.axis("tight")
-    plt.xlabel(str(stats['avg']))
-    plt.ylabel(str(stats2['avg']))
+    plt.xlabel(str(stats))
+    plt.ylabel(str(stats2))
+    print(stats2)
 
     plt.savefig('front.png')
 
@@ -396,7 +399,6 @@ if __name__ == "__main__":
     pop.sort(key=lambda x: x.fitness.values)
 
     print(stats)
-    print(stats2)
 
 
     # plt.show()
