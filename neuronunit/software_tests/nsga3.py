@@ -138,9 +138,12 @@ NDIM = 4
 
 param=['vr','a','b']
 rov=[]
-rov0 = np.linspace(-65,-55,1000)
-rov1 = np.linspace(0.015,0.045,7)
-rov2 = np.linspace(-0.0010,-0.0035,7)
+#rov0 = np.linspace(-65,-55,2)
+#rov1 = np.linspace(0.015,0.045,2)
+#rov2 = np.linspace(-0.0010,-0.0035,2)
+rov0=[-65,-55]
+rov1=[0.015,0.045]
+rov2=[-0.0010,-0.0035]
 rov.append(rov0)
 rov.append(rov1)
 rov.append(rov2)
@@ -179,6 +182,9 @@ def func2map(ind):
             attrs={'//izhikevich2007Cell':{p:name_value }}
         else:
             attrs['//izhikevich2007Cell'][p]=name_value
+    ind.params=[]
+    for i in attrs['//izhikevich2007Cell'].values():
+        ind.params.append(i)
     ind.attrs=attrs
     model.update_run_params(attrs)
 
@@ -215,7 +221,7 @@ def main(seed=None):
     MU=8
 
     CXPB = 0.9
-
+    import numpy as numpy
     stats = tools.Statistics(lambda ind: ind.fitness.values)
     stats.register("avg", numpy.mean, axis=0)
     stats.register("std", numpy.std, axis=0)
@@ -312,7 +318,7 @@ def main(seed=None):
 
     print(len(pop))
     plt.hold(True)
-    plt.title('time expended '+str(ga_time)+'ngen*pop_size: '+str(NGEN*MU)+'.png')
+    plt.title('time expended '+str(ga_time/60.0)+' minutes, ngen*pop_size: '+str(NGEN*MU)+'.png')
 
     for i,ind in enumerate(pop):
         if hasattr(ind,'results'):
@@ -323,7 +329,7 @@ def main(seed=None):
     plt.hold(False)
     plt.clf()
     plt.hold(True)
-    plt.title('time expended '+str(ga_time)+'ngen*pop_size: '+str(NGEN*MU)+'.png')
+    plt.title('time expended '+str(ga_time/60.0)+' minutes, ngen*pop_size: '+str(NGEN*MU)+'.png')
 
     for i,ind in enumerate(pop):
         if(i<5):
@@ -335,6 +341,27 @@ def main(seed=None):
     plt.hold(False)
 
     plt.clf()
+
+
+    pop.sort(key=lambda x: x.fitness.values)
+    #print("Convergence: ", convergence(pop, optimal_front))
+    #print("Diversity: ", diversity(pop, optimal_front[0], optimal_front[-1]))
+
+    import numpy
+    front = numpy.array([ind.fitness.values for ind in pop])
+    front_params = numpy.array([ind.params for ind in pop])
+
+    #optimal_front = numpy.array(optimal_front)
+    #plt.scatter(optimal_front[:,0], optimal_front[:,1], c="r")
+    plt.scatter(front[:,0], front[:,1], front[:,2], front[:,3])
+    plt.axis("tight")
+    plt.savefig('front.png')
+
+    plt.clf()
+    plt.scatter(front_params[:,0], front_params[:,1], front_params[:,2], front_params[:,3])
+    plt.axis("tight")
+    plt.savefig('front_params.png')
+
     return pop, logbook
 
 if __name__ == "__main__":
@@ -348,28 +375,6 @@ if __name__ == "__main__":
 
     pop.sort(key=lambda x: x.fitness.values)
 
-
-
-    pop.sort(key=lambda x: x.fitness.values)
-    print('time:')
-    print(time)
     print(stats)
-    #print("Convergence: ", convergence(pop, optimal_front))
-    #print("Diversity: ", diversity(pop, optimal_front[0], optimal_front[-1]))
 
-    import numpy
-    front = numpy.array([ind.fitness.values for ind in pop])
-    front_params = numpy.array([ind for ind in pop])
-
-    #optimal_front = numpy.array(optimal_front)
-    #plt.scatter(optimal_front[:,0], optimal_front[:,1], c="r")
-    plt.scatter(front[:,0], front[:,1], front[:,2], front[:,3])
-    plt.axis("tight")
-    plt.savefig('front.png')
-
-    plt.clf()
-
-    plt.scatter(frontparams[:,0], frontparams[:,1], frontparams[:,2], frontparams[:,3])
-    plt.axis("tight")
-    plt.savefig('front_params.png')
     # plt.show()
