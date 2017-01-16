@@ -232,11 +232,23 @@ def main(seed=None):
     stats.register("min", numpy.min, axis=0)
     stats.register("max", numpy.max, axis=0)
 
-    stats2 = tools.Statistics(lambda ind: ind.params)
+    stats1 = tools.Statistics(lambda ind: ind.params[0])
+    stats1.register("avg", numpy.mean, axis=0)
+    stats1.register("std", numpy.std, axis=0)
+    stats1.register("min", numpy.min, axis=0)
+    stats1.register("max", numpy.max, axis=0)
+
+    stats2 = tools.Statistics(lambda ind: ind.params[1])
     stats2.register("avg", numpy.mean, axis=0)
     stats2.register("std", numpy.std, axis=0)
     stats2.register("min", numpy.min, axis=0)
     stats2.register("max", numpy.max, axis=0)
+
+    stats3 = tools.Statistics(lambda ind: ind.params[2])
+    stats3.register("avg", numpy.mean, axis=0)
+    stats3.register("std", numpy.std, axis=0)
+    stats3.register("min", numpy.min, axis=0)
+    stats3.register("max", numpy.max, axis=0)
 
 
     logbook = tools.Logbook()
