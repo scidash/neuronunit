@@ -167,4 +167,4 @@ RUN nrnivmodl
 
 
 WORKDIR $HOME/neuronunit/neuronunit/software_tests
-
+ENTRYPOINT python -m scoop nsga3.py
