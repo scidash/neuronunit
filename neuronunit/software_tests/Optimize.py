@@ -116,19 +116,41 @@ model=model.load_model()
 model.local_run()
 
 from types import MethodType
-def optimize(self,model,rov,param):
-    best_params = None
-    best_score = None
-    from neuronunit.deapcontainer.deap_container2 import DeapContainer
-    dc=DeapContainer()
-    pop_size=12
-    ngen=4
 
-    #commited the change: pass in the model to deap, don't recreate it in every iteration just mutate the one existing model.
-    #arguably recreating it would lead to less bugs however so maybe change back later.
-    #check performance both ways to check for significant speed up without recreating the model object every iteration.
-    pop = dc.sciunit_optimize_nsga(suite,model,pop_size,ngen,rov, param,
-                                                         NDIM=3,OBJ_SIZE=6,seed_in=1)
+
+
+
+import pdb
+import numpy as np
+
+import random
+import array
+import random
+import scoop as scoop
+import numpy as np, numpy
+import scoop
+from math import sqrt
+from scoop import futures
+from deap import algorithms
+from deap import base
+from deap import benchmarks
+#from deap.benchmarks.tools import diversity, convergence, hypervolume
+from deap import creator
+from deap import tools
+
+#def optimize(self,model,rov,param):
+best_params = None
+best_score = None
+from neuronunit.deapcontainer.deap_container2 import DeapContainer
+dc=DeapContainer()
+pop_size=12
+ngen=4
+
+#commited the change: pass in the model to deap, don't recreate it in every iteration just mutate the one existing model.
+#arguably recreating it would lead to less bugs however so maybe change back later.
+#check performance both ways to check for significant speed up without recreating the model object every iteration.
+pop = dc.sciunit_optimize_nsga(suite,model,pop_size,ngen,rov, param,
+                                                     NDIM=3,OBJ_SIZE=6,seed_in=1)
 
     '''
     #NDIM is the number of parameters that are varied (dimensions of individual in deap). This is 1 (vr)
@@ -174,6 +196,6 @@ if __name__ == '__main__':
     matplotlib.use('agg')
     import matplotlib.pyplot as plt
     plt.hold(True)
-    for i in xrange(0,9):
+    for i in range(0,9):
         plt.plot(pop[i].time_trace,pop[i].voltage_trace)
     plt.savefig('best 10')

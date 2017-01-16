@@ -16,6 +16,7 @@ from neuronunit import aibs
 from neuronunit.models.reduced import ReducedModel
 import pdb
 import pickle
+from scoop import futures
 
 IZHIKEVICH_PATH = os.getcwd()+str('/NeuroML2') # Replace this the path to your
 LEMS_MODEL_PATH = IZHIKEVICH_PATH+str('/LEMS_2007One.xml')
@@ -84,14 +85,8 @@ hooks = {tests[0]:{'f':update_amplitude}} #This is a trick to dynamically insert
 #update amplitude at the location in sciunit thats its passed to, without any loss of generality.
 suite = sciunit.TestSuite("vm_suite",tests,hooks=hooks)
 
-from neuronunit.models import backends
-from neuronunit.models.reduced import ReducedModel
-model = ReducedModel(LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
-model=model.load_model()
-model.local_run()
 
-
-from types import MethodType
+#from types import MethodType
 
 
 
@@ -123,14 +118,14 @@ pop_size=12
 ngen=4
 
 
-from types import MethodType
+#from types import MethodType
 #def optimize(self,model,rov,param):
 best_params = None
 best_score = None
 #from neuronunit.deapcontainer.deap_container2 import DeapContainer
 #dc=DeapContainer()
-pop_size=12
-ngen=4
+pop_size=8
+ngen=1
 
 
 toolbox = base.Toolbox()
@@ -169,17 +164,20 @@ def uniform(low, up, size=None):
 
 
 
-name=None
-attrs=None
-name_value=None
-error=None
-score=None
+param=['vr','a','b']
+rov=[]
+rov0 = np.linspace(-65,-55,1000)
+rov1 = np.linspace(0.015,0.045,7)
+rov2 = np.linspace(-0.0010,-0.0035,7)
+rov.append(rov0)
+rov.append(rov1)
+rov.append(rov2)
+seed_in=1
+
 BOUND_LOW=[ np.min(i) for i in rov ]
 BOUND_UP=[ np.max(i) for i in rov ]
 NDIM = len(rov)
 
-
-toolbox.register("map",map)
 toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
 toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
@@ -187,6 +185,7 @@ toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
 def evaluate(individual):#This method must be pickle-able for scoop to work.
     #print('hello from before error')
+    func2map(individual)
     error=individual.error
     return (error[0],error[1],error[2],error[3],error[4],)
 import dill
@@ -218,7 +217,7 @@ def paramap(the_func,pop):
 
     print('hello from RANK', RANK)
     #Do the function to list element mapping
-    pop=list(map(the_func,psteps))
+    #pop=list(map(the_func,psteps))
     #gather all the resulting lists onto rank0
 
 
@@ -251,6 +250,8 @@ toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND
 toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
 toolbox.register("select", tools.selNSGA2)
 
+from scoop import futures
+toolbox.register("map",futures.map)
 random.seed(seed_in)
 
 CXPB = 0.9#cross over probability
@@ -265,48 +266,44 @@ stats.register("max", numpy.max, axis=0)
 logbook = tools.Logbook()
 logbook.header = "gen", "evals", "std", "min", "avg", "max"
 
-pop = toolbox.population(n=self.pop_size)
+pop = toolbox.population(n=pop_size)
+from neuronunit.models import backends
+from neuronunit.models.reduced import ReducedModel
+model = ReducedModel(LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
+model=model.load_model()
+model.local_run()
 
-#        #for i in range(RANK, len(pop), SIZE):#
-#    psteps1.append(pop[i])
-#assert len(psteps)==len(psteps1)
-#pop=[]
+
 def func2map(ind):
 
-    #print(RANK)
     ind.sciunitscore={}
-    model=model.load_model()
+    #model=model.load_model()
     for i, p in enumerate(param):
         name_value=str(ind[i])
         #reformate values.
-        self.model.name=name_value
+        model.name=name_value
         if i==0:
             attrs={'//izhikevich2007Cell':{p:name_value }}
         else:
             attrs['//izhikevich2007Cell'][p]=name_value
 
-    self.model.update_run_params(attrs)
+    model.update_run_params(attrs)
     import copy
 
-    ind.results=copy.copy(self.model.results)
-    #print(type(ind))
-    #ind.attrs=attrs
-    #ind.name=name_value
-    #ind.params=p
-    score = test_or_suite.judge(model)
+    ind.results=copy.copy(model.results)
+
+    score = suite.judge(model)
     ind.error = copy.copy(score.sort_keys.values[0])
     return ind
 
-#pop=paramap(func2map,pop)
-#pop=v.map(func2map,pop)
-pop=list(map(func2map,pop))
-#pop = toolbox.map(func2map,pop)
 
-#pop=map_function(func2map,pop)
-#pdb.set_trace()
+
+#pop=list(futures.map(func2map,pop))
+#results = toolbox.map(toolbox.algorithm, islands)
+pop = list(toolbox.map(toolbox.evaluate, pop))
+pdb.set_trace()
 invalid_ind = [ind for ind in pop if not ind.fitness.valid]
-#for ind in invalid_ind:
-#    print(hasattr(ind,'error'))
+
 print('this is where I should check what attributes ind in pop has')
 
 fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
@@ -315,12 +312,7 @@ for ind, fit in zip(invalid_ind, fitnesses):
     ind.fitness.values = fit
     print(ind.fitness.values)
 
-
-# This is just to assign the crowding distance to the individuals
-# no actual selection is done
 pop = toolbox.select(pop, len(pop))
-#pop = toolbox.select(pop, len(pop))
-
 record = stats.compile(pop)
 logbook.record(gen=0, evals=len(invalid_ind), **record)
 print(logbook.stream)
@@ -330,8 +322,7 @@ stats_size = tools.Statistics(key=len)
 mstats = tools.MultiStatistics(fitness=stats_fit, size=stats_size)
 record = mstats.compile(pop)
 
-# Begin the generational process
-def sciunitoptime():
+def main(model,rov,param):
     for gen in range(1,self.ngen):
         # Vary the population
         offspring = tools.selTournamentDCD(pop, len(pop))
@@ -345,21 +336,12 @@ def sciunitoptime():
             toolbox.mutate(ind1)
             toolbox.mutate(ind2)
             del ind1.fitness.values, ind2.fitness.values
-            print('stuck y')
-            #pdb.set_trace()
-
 
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-        print('stuck x')
-        #pdb.set_trace()
-        #fitnesses = list(map(callsciunitjudge,invalid_ind))
-        #fitnesses = paramap(callsciunitjudge,invalid_ind)
+
+        #invalid_ind=list(futures.map(func2map,invalid_ind))
         fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
-
-        #fitnesses=v.map(callsciunitjudge,invalid_ind)
-
-        #fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
 
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
@@ -371,36 +353,24 @@ def sciunitoptime():
     return pop
 
 
-#toolbox = base.Toolbox()
-#from scoop import futures
+toolbox = base.Toolbox()
 if __name__ == '__main__':
 
-#toolbox.register("map", futures.map)
+
+    #from scoop import futures
+    #toolbox.register("map", futures.map)
+
+
+    before_ga=time.time()
     my_test = tests[0]
     my_test.verbose = True
-    my_test.optimize = sciunitopt(optimize, my_test) # Bind to the score.
+    my_test.optimize = main(model,rov,param) # Bind to the score.
 
-
-    param=['vr','a','b']
-    rov=[]
-    rov0 = np.linspace(-65,-55,1000)
-    rov1 = np.linspace(0.015,0.045,7)
-    rov2 = np.linspace(-0.0010,-0.0035,7)
-    rov.append(rov0)
-    rov.append(rov1)
-    rov.append(rov2)
-    before_ga=time.time()
-    pop = my_test.optimize(model,rov,param)
+    #pop = my_test.optimize(model,rov,param)
     after_ga=time.time()
     print('the time was:')
     delta=after_ga-before_ga
     print(delta)
-
-
-    #This needs to act on error.
-    #pdb.set_trace()
-    #if RANK==0:
-        #print("%.2f mV" % np.mean([p[0] for p in pop]))
 
 
     import matplotlib as matplotlib
