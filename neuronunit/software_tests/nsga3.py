@@ -184,7 +184,8 @@ def func2map(ind):
             attrs['//izhikevich2007Cell'][p]=name_value
     ind.params=[]
     for i in attrs['//izhikevich2007Cell'].values():
-        ind.params.append(i)
+        if hasattr(ind,'params'):
+            ind.params.append(i)
     ind.attrs=attrs
     model.update_run_params(attrs)
 
@@ -318,7 +319,7 @@ def main(seed=None):
 
     print(len(pop))
     plt.hold(True)
-    plt.title('time expended '+str(ga_time/60.0)+' minutes, ngen*pop_size: '+str(NGEN*MU)+'.png')
+    plt.title('time expended '+str(int(ga_time/60.0))+' minutes, ngen*pop_size: '+str(NGEN*MU)+'.png')
 
     for i,ind in enumerate(pop):
         if hasattr(ind,'results'):
@@ -329,7 +330,7 @@ def main(seed=None):
     plt.hold(False)
     plt.clf()
     plt.hold(True)
-    plt.title('time expended '+str(ga_time/60.0)+' minutes, ngen*pop_size: '+str(NGEN*MU)+'.png')
+    plt.title('time expended '+str(int(ga_time/60.0))+' minutes, ngen*pop_size: '+str(NGEN*MU)+'.png')
 
     for i,ind in enumerate(pop):
         if(i<5):
@@ -346,6 +347,7 @@ def main(seed=None):
     pop.sort(key=lambda x: x.fitness.values)
     #print("Convergence: ", convergence(pop, optimal_front))
     #print("Diversity: ", diversity(pop, optimal_front[0], optimal_front[-1]))
+    pop = list(toolbox.map(toolbox.evaluate, pop))
 
     import numpy
     front = numpy.array([ind.fitness.values for ind in pop])
