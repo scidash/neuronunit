@@ -314,11 +314,11 @@ def main(seed=None):
     plt.hold(True)
     plt.title('time expended '+str(ga_time)+'ngen*pop_size: '+str(NGEN*MU)+'.png')
 
-    for ind in pop:
+    for i,ind in enumerate(pop):
         if hasattr(ind,'results'):
             plt.plot(ind.results['t'],ind.results['vm'])
-
-    plt.xlabel(str(ind.attrs))
+        if i==0 and hasattr(ind,'attrs'):
+            plt.xlabel(str(ind.attrs))
     plt.savefig('evolved_pop.png')
     plt.hold(False)
     plt.clf()
@@ -329,8 +329,8 @@ def main(seed=None):
         if(i<5):
             if hasattr(ind,'results'):
                 plt.plot(ind.results['t'],ind.results['vm'])
-    plt.xlabel(str(ind.attrs))
-
+        if i==0 and hasattr(ind,'attrs'):
+            plt.xlabel(str(ind.attrs))
     plt.savefig('evolved_pop_5.png')
     plt.hold(False)
 
