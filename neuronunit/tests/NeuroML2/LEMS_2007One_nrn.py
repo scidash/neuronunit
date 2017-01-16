@@ -19,7 +19,9 @@ import neuron
 
 import time
 h = neuron.h
-h.load_file("nrngui.hoc")
+h.load_file("stdlib.hoc")
+
+h.load_file("stdgui.hoc")
 
 h("objref p")
 h("p = new PythonObject()")
@@ -74,22 +76,6 @@ class NeuronSimulation():
 
         h.steps_per_ms = 1/h.dt
 
-        # Display: self.display_d1
-        self.display_d1 = h.Graph(0)
-        self.display_d1.size(0,h.tstop,-80.0,50.0)
-        self.display_d1.view(0, -80.0, h.tstop, 130.0, 80, 330, 330, 250)
-        h.graphList[0].append(self.display_d1)
-        # Line, plotting: RS_pop[0]/v
-        self.display_d1.addexpr("RS_pop[0].v(0.5)", "RS_pop[0].v(0.5)", 1, 1, 0.8, 0.9, 2)
-
-        # Display: self.display_d2
-        self.display_d2 = h.Graph(0)
-        self.display_d2.size(0,h.tstop,-80.0,50.0)
-        self.display_d2.view(0, -80.0, h.tstop, 130.0, 80, 330, 330, 250)
-        h.graphList[0].append(self.display_d2)
-        # Line, plotting: RS_pop[0]/u
-        self.display_d2.addexpr("m_RS_RS_pop[0].u", "m_RS_RS_pop[0].u", 1, 1, 0.8, 0.9, 2)
-
 
 
         # File to save: time
@@ -114,9 +100,6 @@ class NeuronSimulation():
         self.initialized = False
 
         self.sim_end = -1 # will be overwritten
-
-        h.nrncontrolmenu()
-
 
     def run(self):
 
@@ -148,8 +131,6 @@ class NeuronSimulation():
 
         if self.sim_end < 0: self.sim_end = time.time()
 
-        self.display_d1.exec_menu("View = plot")
-        self.display_d2.exec_menu("View = plot")
 
         # File to save: time
         py_v_time = [ t/1000 for t in h.v_time.to_python() ]  # Convert to Python list for speed...
@@ -180,6 +161,7 @@ class NeuronSimulation():
 
         print("Done")
 
+        quit()
 if __name__ == '__main__':
 
     ns = NeuronSimulation(tstop=1600, dt=0.0025)
