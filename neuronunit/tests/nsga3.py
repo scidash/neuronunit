@@ -348,7 +348,7 @@ def main(seed=None):
             plt.plot(ind.results['t'],ind.results['vm'])
         if i==0 and hasattr(ind,'attrs'):
             plt.xlabel(str(ind.attrs))
-            plt.ylabel(stats2)
+            #plt.ylabel(stats2)
 
     plt.savefig('evolved_pop.png')
     plt.hold(False)
@@ -362,7 +362,7 @@ def main(seed=None):
                 plt.plot(ind.results['t'],ind.results['vm'])
         if i==0 and hasattr(ind,'attrs'):
             plt.xlabel(str(ind.attrs))
-            plt.ylabel(stats2)
+            #plt.ylabel(stats2)
 
     plt.savefig('evolved_pop_5.png')
     plt.hold(False)
@@ -378,9 +378,12 @@ def main(seed=None):
     front = numpy.array([ind.fitness.values for ind in pop])
     plt.scatter(front[:,0], front[:,1], front[:,2], front[:,3])
     plt.axis("tight")
-    plt.xlabel(str(stats))
-    plt.ylabel(str(stats2))
+    #plt.xlabel(str(stats))
+    #plt.ylabel(str(stats2))
+    print(stats1)
     print(stats2)
+    print(stats3)
+
 
     plt.savefig('front.png')
 
