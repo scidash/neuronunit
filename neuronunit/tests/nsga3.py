@@ -198,10 +198,13 @@ def func2map(ind):
 
     ind.results=model.results
     score = suite.judge(model)
-    print(type(score))
-    print(score)
-    print(dir(score))
-    ind.error = score.sort_keys.values[0]
+    try:
+        ind.error = score.sort_keys()
+    except:
+        print(dir(score))
+        ind.error = score.sort_keys.values[0]
+        print(type(score))
+        print(score)
 
     return ind
 
