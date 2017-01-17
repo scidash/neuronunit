@@ -161,7 +161,7 @@ RUN ipcluster start --profile=chase --debug &
 
 
 WORKDIR $HOME
-RUN git clone -b dev https://github.com/russelljjarvis/neuronunit.git
+RUN git clone -b russell_dev https://github.com/russelljjarvis/neuronunit.git
 WORKDIR $HOME/neuronunit/neuronunit/software_tests/NeuroML2
 RUN nrnivmodl
 
