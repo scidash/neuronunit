@@ -163,9 +163,9 @@ RUN ipcluster start --profile=chase --debug &
 WORKDIR $HOME
 RUN git clone -b russell_dev https://github.com/russelljjarvis/neuronunit.git
 WORKDIR $HOME/neuronunit/neuronunit/tests/NeuroML2
-RUN ls  $HOME/neuronunit/neuronunit/tests/NeuroML2/LEMS_2007One.xml
+
 RUN nrnivmodl
+#RUN ls LEMS_2007One.xml
 
-
-WORKDIR $HOME/neuronunit/neuronunit/tests
-ENTRYPOINT python -m scoop nsga3.py
+WORKDIR ../
+#ENTRYPOINT python -m scoop nsga3.py
