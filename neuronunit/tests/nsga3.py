@@ -108,14 +108,7 @@ def func2map(ind):
 
     ind.results=model.results
     score = get_neab.suite.judge(model)
-    try:
-        ind.error = score.sort_keys[0]
-    except:
-        #print(dir(score))
-        ind.error = score.sort_keys.values[0]
-        #print(type(score))
-        #print(score)
-
+    ind.error [i.sort_key for i in score.unstack() ]
     return ind
 
 def evaluate(individual):#This method must be pickle-able for scoop to work.
@@ -123,7 +116,7 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
     error=individual.error
     assert individual.results
     LOCAL_RESULTS.append(individual.results)
-
+    list_error=error*,
     return error[0],error[1],error[2],error[3],error[4],
 
 
@@ -229,7 +222,7 @@ def main(seed=None):
         plt.axis("tight")
         plt.savefig('front.png')
         plt.clf()
-        
+
     return pop, logbook
 
 if __name__ == "__main__":
@@ -242,31 +235,32 @@ if __name__ == "__main__":
     start_time=time.time()
 
     pop, stats = main()
-    NGEN=4
-    plotss(pop,NGEN)
 
     finish_time=time.time()
     ga_time=finish_time-start_time
     plt.clf()
     print(stats)
     print(LOCAL_RESULTS)
-    '{}{}'.format("finish_time: ",finish_time)
     plt.clf()
     plt.hold(True)
     for i in stats:
         plt.plot(np.sum(i['avg']),i['gen'])
+        '{}{}{}'.format(np.sum(i['avg']),i['gen'],'results')
     plt.savefig('avg_error_versus_gen.png')
     plt.hold(False)
+    '{}{}'.format("finish_time: ",finish_time)
 
     plt.clf()
     #import pdb
     #pdb.set_trace()
-    plotss(invalid_ind,gen)
-    plotr=LOCAL_RESULTS[len(LOCAL_RESULTS-1)]
+    #plotss(invalid_ind,gen)
+    plotr=LOCAL_RESULTS[len(LOCAL_RESULTS)-1]
     plt.plot(plotr['t'],plotr['vm'])
     plt.savefig('final_results_from_only_one_CPU.png')
 
     plt.clf()
+    NGEN=4
+    plotss(pop,NGEN)
 
     #plt
 
