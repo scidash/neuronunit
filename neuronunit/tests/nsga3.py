@@ -246,8 +246,24 @@ if __name__ == "__main__":
     plt.clf()
     print(stats)
     print(LOCAL_RESULTS)
-    import pdb
-    pdb.set_trace()
+    '{}{}'.format("finish_time: ",finish_time)
+    plt.clf()
+    plt.hold(True)
+    for i in stats:
+        plt.plot(np.sum(i['avg'],i['gen']))
+    plt.savefig('avg_error_versus_gen.png')
+    plt.hold(False)
+
+    plt.clf()
+    #import pdb
+    #pdb.set_trace()
+    plotss(invalid_ind,gen)
+    plotr=LOCAL_RESULTS[len(LOCAL_RESULTS-1)]
+    plt.plot(plotr['t'],plotr['vm'])
+    plt.savefig('final_results_from_only_one_CPU.png')
+
+    plt.clf()
+
     #plt
 
 
