@@ -108,7 +108,7 @@ def func2map(ind):
 
     ind.results=model.results
     score = get_neab.suite.judge(model)
-    ind.error [i.sort_key for i in score.unstack() ]
+    ind.error = [ i.sort_key for i in score.unstack() ]
     return ind
 
 def evaluate(individual):#This method must be pickle-able for scoop to work.
@@ -116,7 +116,6 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
     error=individual.error
     assert individual.results
     LOCAL_RESULTS.append(individual.results)
-    list_error=error*,
     return error[0],error[1],error[2],error[3],error[4],
 
 
