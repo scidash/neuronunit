@@ -203,7 +203,7 @@ def main(seed=None):
 
             toolbox.mutate(ind1)
             toolbox.mutate(ind2)
-            #del ind1.fitness.values, ind2.fitness.values
+            del ind1.fitness.values, ind2.fitness.values
 
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
@@ -211,7 +211,9 @@ def main(seed=None):
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
             # Select the next generation population
+        #This way the initial genes keep getting added to each generation.
         #pop = toolbox.select(pop + offspring, MU)
+        #This way each generations genes are completely replaced by the result of mating.
         pop = toolbox.select(offspring, MU)
         plotss(pop,gen)
         record = stats.compile(pop)
