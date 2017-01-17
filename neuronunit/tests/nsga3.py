@@ -12,7 +12,7 @@ import array
 import random
 import json
 
-import numpy
+import numpy as np
 
 from math import sqrt
 
@@ -23,7 +23,7 @@ from deap.benchmarks.tools import diversity, convergence, hypervolume
 from deap import creator
 from deap import tools
 from scoop import futures
-
+import time
 creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0,-1.0,-1.0))
 creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMin)
 
@@ -81,7 +81,7 @@ toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
 from neuronunit.models import backends
 from neuronunit.models.reduced import ReducedModel
-model = ReducedModel(LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
+model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
 model=model.load_model()
 model.local_run()
 
@@ -107,7 +107,7 @@ def func2map(ind):
             ind.params.append(i)
 
     ind.results=model.results
-    score = suite.judge(model)
+    score = get_neab.suite.judge(model)
     try:
         ind.error = score.sort_keys()
     except:
