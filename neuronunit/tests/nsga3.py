@@ -108,11 +108,12 @@ def func2map(ind):
 
     ind.results=model.results
     score = get_neab.suite.judge(model)
-    try:
-        ind.error = score.sort_keys[0]
-    except:
+    ind.error = [ i.sort_key for i in score.unstack() ]
+    #try:
+    #    ind.error = score.sort_keys[0]
+    #except:
         #print(dir(score))
-        ind.error = score.sort_keys.values[0]
+    #    ind.error = score.sort_keys.values[0]
         #print(type(score))
         #print(score)
 
