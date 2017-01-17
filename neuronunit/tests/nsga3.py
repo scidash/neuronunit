@@ -1,95 +1,5 @@
 
-import os,sys
-import numpy as np
-
-import matplotlib as matplotlib
-matplotlib.use('agg')
-import quantities as pq
-import sciunit
-
-#Over ride any neuron units in the PYTHON_PATH with this one.
-#only appropriate for development.
-thisnu = str(os.getcwd())+'/../..'
-sys.path.insert(0,thisnu)
-print(sys.path)
-
-import neuronunit
-from neuronunit import aibs
-from neuronunit.models.reduced import ReducedModel
-import pdb
-import pickle
-#import scoop
-#scoop.DEBUG=True
-#print(scoop.worker)
-from scoop import futures
-from scoop import utils
-IZHIKEVICH_PATH = os.getcwd()+str('/NeuroML2') # Replace this the path to your
-LEMS_MODEL_PATH = IZHIKEVICH_PATH+str('/LEMS_2007One.xml')
-
-
-import time
-
-from pyneuroml import pynml
-
-import quantities as pq
-from neuronunit import tests as nu_tests, neuroelectro
-neuron = {'nlex_id': 'nifext_50'} # Layer V pyramidal cell
-tests = []
-
-dataset_id = 354190013  # Internal ID that AIBS uses for a particular Scnn1a-Tg2-Cre
-                        # Primary visual area, layer 5 neuron.
-observation = aibs.get_observation(dataset_id,'rheobase')
-
-
-if os.path.exists(str(os.getcwd())+"/neuroelectro.pickle"):
-    print('attempting to recover from pickled file')
-    with open('neuroelectro.pickle', 'rb') as handle:
-        tests = pickle.load(handle)
-
-else:
-    print('checked path:')
-    print(str(os.getcwd())+"/neuroelectro.pickle")
-    print('no pickled file found. Commencing time intensive Download')
-
-    #(nu_tests.TimeConstantTest,None),                           (nu_tests.InjectedCurrentAPAmplitudeTest,None),
-    tests += [nu_tests.RheobaseTest(observation=observation)]
-    test_class_params = [(nu_tests.InputResistanceTest,None),
-                         (nu_tests.RestingPotentialTest,None),
-                         (nu_tests.InjectedCurrentAPWidthTest,None),
-                         (nu_tests.InjectedCurrentAPThresholdTest,None)]
-
-
-
-    for cls,params in test_class_params:
-        #use of the variable 'neuron' in this conext conflicts with the module name 'neuron'
-        #at the moment it doesn't seem to matter as neuron is encapsulated in a class, but this could cause problems in the future.
-
-
-        observation = cls.neuroelectro_summary_observation(neuron)
-        tests += [cls(observation,params=params)]
-
-    with open('neuroelectro.pickle', 'wb') as handle:
-        pickle.dump(tests, handle)
-
-def update_amplitude(test,tests,score):
-    rheobase = score.prediction['value']#first find a value for rheobase
-    #then proceed with other optimizing other parameters.
-
-
-    print(len(tests))
-    #pdb.set_trace()
-    for i in [2,3,4]:
-        # Set current injection to just suprathreshold
-        tests[i].params['injected_square_current']['amplitude'] = rheobase*1.01
-
-
-#Do the rheobase test. This is a serial bottle neck that must occur before any parallel optomization.
-#Its because the optimization routine must have apriori knowledge of what suprathreshold current injection values are for each model.
-
-hooks = {tests[0]:{'f':update_amplitude}} #This is a trick to dynamically insert the method
-#update amplitude at the location in sciunit thats its passed to, without any loss of generality.
-suite = sciunit.TestSuite("vm_suite",tests,hooks=hooks)
-
+import get_neab
 
 """
 Code from the deap framework, available at:
@@ -224,10 +134,23 @@ toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_U
 toolbox.register("select", tools.selNSGA2)
 toolbox.register("map", futures.map)
 
+def plotss(pop,gen):
+    import matplotlib.pyplot as plt
+    #print(utils.getHosts())
+    if hasattr(pop[0],'results'):
+        plt.hold(True)
 
+        for ind in pop:
+            if hasattr(ind,'results'):
+                plt.plot(ind.results['t'],ind.results['vm'])
+                plt.xlabel(str(ind.attrs))
+                #str(scoop.worker)+
+        plt.savefig('snap_shot_at '+str(gen)+str(utils.getHosts())+'.png')
+        plt.hold(False)
+        plt.clf()
+    #return 0
 
 def main(seed=None):
-    start_time=time.time()
 
     random.seed(seed)
 
@@ -242,25 +165,6 @@ def main(seed=None):
     stats.register("min", numpy.min, axis=0)
     stats.register("max", numpy.max, axis=0)
 
-    stats1 = tools.Statistics(lambda ind: ind.params[0])
-    stats1.register("avg", numpy.mean, axis=0)
-    stats1.register("std", numpy.std, axis=0)
-    stats1.register("min", numpy.min, axis=0)
-    stats1.register("max", numpy.max, axis=0)
-
-    stats2 = tools.Statistics(lambda ind: ind.params[1])
-    stats2.register("avg", numpy.mean, axis=0)
-    stats2.register("std", numpy.std, axis=0)
-    stats2.register("min", numpy.min, axis=0)
-    stats2.register("max", numpy.max, axis=0)
-
-    stats3 = tools.Statistics(lambda ind: ind.params[2])
-    stats3.register("avg", numpy.mean, axis=0)
-    stats3.register("std", numpy.std, axis=0)
-    stats3.register("min", numpy.min, axis=0)
-    stats3.register("max", numpy.max, axis=0)
-
-
     logbook = tools.Logbook()
     logbook.header = "gen", "evals", "std", "min", "avg", "max"
 
@@ -270,10 +174,6 @@ def main(seed=None):
     invalid_ind = [ind for ind in pop if not ind.fitness.valid]
     fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
 
-
-
-
-
     for ind, fit in zip(invalid_ind, fitnesses):
         ind.fitness.values = fit
 
@@ -282,17 +182,6 @@ def main(seed=None):
     # no actual selection is done
     pop = toolbox.select(pop, len(pop))
 
-    if hasattr(pop[0],'results'):
-        import matplotlib.pyplot as plt
-        plt.hold(True)
-
-        for ind in pop:
-            if hasattr(ind,'results'):
-                plt.plot(ind.results['t'],ind.results['vm'])
-        plt.savefig('initial_pop.png')
-
-        plt.hold(False)
-        plt.clf()
     record = stats.compile(pop)
     logbook.record(gen=0, evals=len(invalid_ind), **record)
     print(logbook.stream)
@@ -306,7 +195,7 @@ def main(seed=None):
 
         offspring = [toolbox.clone(ind) for ind in offspring]
         #print('cloning not true clone')
-        #assert ind.results
+
 
         for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
             if random.random() <= CXPB:
@@ -314,7 +203,7 @@ def main(seed=None):
 
             toolbox.mutate(ind1)
             toolbox.mutate(ind2)
-            del ind1.fitness.values, ind2.fitness.values
+            #del ind1.fitness.values, ind2.fitness.values
 
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
@@ -322,86 +211,13 @@ def main(seed=None):
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
             # Select the next generation population
-        pop = toolbox.select(pop + offspring, MU)
-        print(utils.getHosts())
-        if hasattr(pop[0],'results'):
-            import matplotlib.pyplot as plt
-            plt.hold(True)
-
-            for ind in pop:
-                if hasattr(ind,'results'):
-                    plt.plot(ind.results['t'],ind.results['vm'])
-                    plt.xlabel(str(ind.attrs))
-                    #str(scoop.worker)+
-            plt.savefig('snap_shot_at '+str(gen)+str(utils.getHosts())+'.png')
-            plt.hold(False)
-            plt.clf()
+        #pop = toolbox.select(pop + offspring, MU)
+        pop = toolbox.select(offspring, MU)
+        plotss(pop,gen)
         record = stats.compile(pop)
         logbook.record(gen=gen, evals=len(invalid_ind), **record)
         print(logbook.stream)
-    #print("Final population hypervolume is %f" % hypervolume(pop, [11.0, 11.0]))
-    finish_time=time.time()
-    ga_time=finish_time-start_time
-    import matplotlib.pyplot as plt
-    print(len(pop))
-    plt.hold(True)
-    plt.title('time expended '+str(int(ga_time/60.0))+' minutes, ngen*pop_size: '+str(NGEN*MU)+'.png')
 
-    for i,ind in enumerate(pop):
-        if hasattr(ind,'results'):
-            plt.plot(ind.results['t'],ind.results['vm'])
-        if i==0 and hasattr(ind,'attrs'):
-            plt.xlabel(str(ind.attrs))
-            #plt.ylabel(stats2)
-
-    plt.savefig('evolved_pop'+str(utils.getHosts())+'.png')
-    plt.hold(False)
-    plt.clf()
-    plt.hold(True)
-    plt.title('time expended '+str(int(ga_time/60.0))+' minutes, ngen*pop_size: '+str(NGEN*MU)+'.png')
-
-    for i,ind in enumerate(pop):
-        if(i<5):
-            if hasattr(ind,'results'):
-                plt.plot(ind.results['t'],ind.results['vm'])
-        if i==0 and hasattr(ind,'attrs'):
-            plt.xlabel(str(ind.attrs))
-            #plt.ylabel(stats2)
-
-    plt.savefig('evolved_pop_5.png')
-    plt.hold(False)
-    plt.clf()
-
-
-    pop.sort(key=lambda x: x.fitness.values)
-    #print("Convergence: ", convergence(pop, optimal_front))
-    #print("Diversity: ", diversity(pop, optimal_front[0], optimal_front[-1]))
-
-    import numpy
-    front = numpy.array([ind.fitness.values for ind in pop])
-    plt.scatter(front[:,0], front[:,1], front[:,2], front[:,3])
-    plt.axis("tight")
-    #plt.xlabel(str(stats))
-    #plt.ylabel(str(stats2))
-    print(stats1)
-    print(stats2)
-    print(stats3)
-
-
-    plt.savefig('front.png')
-
-    #pdb.set_trace()
-    #pop = list(toolbox.map(toolbox.evaluate, pop))
-
-    #front_params = numpy.array([ind.params for ind in pop])
-
-    #optimal_front = numpy.array(optimal_front)
-    #plt.scatter(optimal_front[:,0], optimal_front[:,1], c="r")
-
-    #plt.clf()
-    #plt.scatter(front_params[:,0], front_params[:,1], front_params[:,2], front_params[:,3])
-    #plt.axis("tight")
-    #plt.savefig('front_params.png')
 
     return pop, logbook
 
@@ -412,9 +228,17 @@ if __name__ == "__main__":
     #     optimal_front = json.load(optimal_front_data)
     # Use 500 of the 1000 points in the json file
     # optimal_front = sorted(optimal_front[i] for i in range(0, len(optimal_front), 2))
-    pop, stats = main()
+    start_time=time.time()
 
+    pop, stats = main()
+    finish_time=time.time()
+    ga_time=finish_time-start_time
     pop.sort(key=lambda x: x.fitness.values)
+    import numpy
+    front = numpy.array([ind.fitness.values for ind in pop])
+    plt.scatter(front[:,0], front[:,1], front[:,2], front[:,3])
+    plt.axis("tight")
+    plt.savefig('front.png')
 
     print(stats)
 
