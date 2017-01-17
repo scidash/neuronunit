@@ -122,7 +122,7 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
     individual=func2map(individual)
     error=individual.error
     assert individual.results
-    #LOCAL_RESULTS.append(individual.results)
+    LOCAL_RESULTS.append(individual.results)
 
     return error[0],error[1],error[2],error[3],error[4],
 
@@ -137,17 +137,18 @@ toolbox.register("map", futures.map)
 def plotss(pop,gen):
     import matplotlib.pyplot as plt
     #print(utils.getHosts())
-    if hasattr(pop[0],'results'):
-        plt.hold(True)
 
-        for ind in pop:
-            if hasattr(ind,'results'):
-                plt.plot(ind.results['t'],ind.results['vm'])
-                plt.xlabel(str(ind.attrs))
-                #str(scoop.worker)+
-        plt.savefig('snap_shot_at '+str(gen)+str(utils.getHosts())+'.png')
-        plt.hold(False)
-        plt.clf()
+    #plt.hold(True)
+    plt.clf()
+
+    for ind in pop:
+        if hasattr(ind,'results'):
+            plt.plot(ind.results['t'],ind.results['vm'])
+            plt.xlabel(str(ind.attrs))
+            #str(scoop.worker)+
+    plt.savefig('snap_shot_at '+str(gen)+str(utils.getHosts())+'.png')
+    #plt.hold(False)
+    plt.clf()
     #return 0
 
 def main(seed=None):
@@ -242,8 +243,12 @@ if __name__ == "__main__":
     plt.scatter(front[:,0], front[:,1], front[:,2], front[:,3])
     plt.axis("tight")
     plt.savefig('front.png')
-
+    plt.clf()
     print(stats)
+    print(LOCAL_RESULTS)
+    import pdb
+    pdb.set_trace()
+    #plt
 
 
     # plt.show()
