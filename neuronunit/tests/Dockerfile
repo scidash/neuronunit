@@ -162,7 +162,8 @@ RUN ipcluster start --profile=chase --debug &
 
 WORKDIR $HOME
 RUN git clone -b russell_dev https://github.com/russelljjarvis/neuronunit.git
-WORKDIR $HOME/neuronunit/neuronunit/software_tests/NeuroML2
+WORKDIR $HOME/neuronunit/neuronunit/tests/NeuroML2
+RUN ls  $HOME/neuronunit/neuronunit/tests/NeuroML2/LEMS_2007One.xml
 RUN nrnivmodl
 
 
