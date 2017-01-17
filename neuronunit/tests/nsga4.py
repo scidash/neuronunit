@@ -231,7 +231,7 @@ def main(seed=None):
         plt.savefig('avg_error_versus_gen.png')
         plt.hold(False)
         '{}{}'.format("finish_time: ",finish_time)
-
+        '{}{}{}'.format('the size of the population is: ,'len(pop),' is this caused by a generator in the place of list? ')
     return pop, logbook
 
 if __name__ == "__main__":
