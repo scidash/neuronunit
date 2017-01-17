@@ -222,7 +222,14 @@ def main(seed=None):
         logbook.record(gen=gen, evals=len(invalid_ind), **record)
         print(logbook.stream)
 
-
+        pop.sort(key=lambda x: x.fitness.values)
+        import numpy
+        front = numpy.array([ind.fitness.values for ind in pop])
+        plt.scatter(front[:,0], front[:,1], front[:,2], front[:,3])
+        plt.axis("tight")
+        plt.savefig('front.png')
+        plt.clf()
+        
     return pop, logbook
 
 if __name__ == "__main__":
@@ -235,14 +242,11 @@ if __name__ == "__main__":
     start_time=time.time()
 
     pop, stats = main()
+    NGEN=4
+    plotss(pop,NGEN)
+
     finish_time=time.time()
     ga_time=finish_time-start_time
-    pop.sort(key=lambda x: x.fitness.values)
-    import numpy
-    front = numpy.array([ind.fitness.values for ind in pop])
-    plt.scatter(front[:,0], front[:,1], front[:,2], front[:,3])
-    plt.axis("tight")
-    plt.savefig('front.png')
     plt.clf()
     print(stats)
     print(LOCAL_RESULTS)
@@ -250,7 +254,7 @@ if __name__ == "__main__":
     plt.clf()
     plt.hold(True)
     for i in stats:
-        plt.plot(np.sum(i['avg'],i['gen']))
+        plt.plot(np.sum(i['avg']),i['gen'])
     plt.savefig('avg_error_versus_gen.png')
     plt.hold(False)
 
