@@ -198,14 +198,18 @@ def func2map(ind):
 
     ind.results=model.results
     score = suite.judge(model)
+    print(type(score))
+    print(score)
+    print(dir(score))
     ind.error = score.sort_keys.values[0]
+
     return ind
 
 def evaluate(individual):#This method must be pickle-able for scoop to work.
     individual=func2map(individual)
     error=individual.error
     assert individual.results
-    LOCAL_RESULTS.append(individual.results)
+    #LOCAL_RESULTS.append(individual.results)
 
     return error[0],error[1],error[2],error[3],error[4],
 
