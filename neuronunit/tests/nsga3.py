@@ -109,12 +109,12 @@ def func2map(ind):
     ind.results=model.results
     score = get_neab.suite.judge(model)
     try:
-        ind.error = score.sort_keys()
+        ind.error = score.sort_keys[0]
     except:
-        print(dir(score))
+        #print(dir(score))
         ind.error = score.sort_keys.values[0]
-        print(type(score))
-        print(score)
+        #print(type(score))
+        #print(score)
 
     return ind
 
@@ -210,12 +210,13 @@ def main(seed=None):
         fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
+        plotss(invalid_ind,gen)
+
             # Select the next generation population
         #This way the initial genes keep getting added to each generation.
         #pop = toolbox.select(pop + offspring, MU)
         #This way each generations genes are completely replaced by the result of mating.
         pop = toolbox.select(offspring, MU)
-        plotss(pop,gen)
         record = stats.compile(pop)
         logbook.record(gen=gen, evals=len(invalid_ind), **record)
         print(logbook.stream)
