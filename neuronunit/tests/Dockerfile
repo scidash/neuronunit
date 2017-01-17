@@ -159,13 +159,13 @@ RUN export PATH=$PATH
 WORKDIR $HOME #/neuronunit/neuronunit/software_tests
 RUN ipcluster start --profile=chase --debug &
 
-
+RUN echo 'do next line'
 WORKDIR $HOME
-RUN git clone -b russell_dev https://github.com/russelljjarvis/neuronunit.git
+RUN git clone -b russell_dev https://github.com/scidash/neuronunit.git
 WORKDIR $HOME/neuronunit/neuronunit/tests/NeuroML2
 
 RUN nrnivmodl
-#RUN ls LEMS_2007One.xml
+RUN ls LEMS_2007One.xml
 
 WORKDIR ../
-#ENTRYPOINT python -m scoop nsga3.py
+ENTRYPOINT python -m scoop nsga3.py
