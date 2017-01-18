@@ -1,4 +1,11 @@
-
+import os
+os.system('ipcluster start --profile=jovyan --debug &')
+os.system('sleep 25')
+import ipyparallel as ipp
+rc = ipp.Client(profile='jovyan')
+print('hello from before cpu ')
+print(rc.ids)
+v = rc.load_balanced_view()
 import get_neab
 
 """
@@ -112,7 +119,29 @@ def func2map(ind):
     return ind
 
 def evaluate(individual):#This method must be pickle-able for scoop to work.
-    individual=func2map(individual)
+    for i, p in enumerate(param):
+        name_value=str(individual[i])
+        #reformate values.
+        model.name=name_value
+        if i==0:
+            attrs={'//izhikevich2007Cell':{p:name_value }}
+        else:
+            attrs['//izhikevich2007Cell'][p]=name_value
+
+    individual.attrs=attrs
+
+    model.update_run_params(attrs)
+
+    individual.params=[]
+    for i in attrs['//izhikevich2007Cell'].values():
+        if hasattr(ind,'params'):
+            individual.params.append(i)
+
+    individual.results=model.results
+    score = get_neab.suite.judge(model)
+    individual.error = [ i.sort_key for i in score.unstack() ]
+    #return ind
+    #individual=func2map(individual)
     error=individual.error
     assert individual.results
     LOCAL_RESULTS.append(individual.results)
@@ -124,7 +153,7 @@ toolbox.register("evaluate", evaluate)
 toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
 toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
 toolbox.register("select", tools.selNSGA2)
-toolbox.register("map", futures.map)
+toolbox.register("map", v.map)
 
 def plotss(pop,gen):
     import matplotlib.pyplot as plt
