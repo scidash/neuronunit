@@ -1,3 +1,4 @@
+'''
 import os
 os.system('ipcluster start --profile=jovyan --debug &')
 os.system('sleep 25')
@@ -7,6 +8,7 @@ print('hello from before cpu ')
 print(rc.ids)
 #quit()
 v = rc.load_balanced_view()
+'''
 import get_neab
 
 """
