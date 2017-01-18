@@ -5,6 +5,7 @@ import ipyparallel as ipp
 rc = ipp.Client(profile='jovyan')
 print('hello from before cpu ')
 print(rc.ids)
+#quit()
 v = rc.load_balanced_view()
 import get_neab
 
@@ -144,7 +145,8 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
     #individual=func2map(individual)
     error=individual.error
     assert individual.results
-    LOCAL_RESULTS.append(individual.results)
+    print(rc.ids)
+    #LOCAL_RESULTS.append(individual.results)
     return error[0],error[1],error[2],error[3],error[4],
 
 
@@ -153,7 +155,8 @@ toolbox.register("evaluate", evaluate)
 toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
 toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
 toolbox.register("select", tools.selNSGA2)
-toolbox.register("map", v.map)
+#toolbox.register("map", v.map)
+toolbox.register("map", futures.map)
 
 def plotss(pop,gen):
     import matplotlib.pyplot as plt
