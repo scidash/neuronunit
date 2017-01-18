@@ -229,8 +229,8 @@ def main(seed=None):
         '{}{}{}'.format(np.sum(i['avg']),i['gen'],'results')
     plt.savefig('avg_error_versus_gen.png')
     plt.hold(False)
-    '{}{}'.format("finish_time: ",finish_time)
-    return pop, logbook
+    #'{}{}'.format("finish_time: ",finish_time)
+    return pop, list(logbook)
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
@@ -250,7 +250,9 @@ if __name__ == "__main__":
     #print(LOCAL_RESULTS)
     plt.clf()
     plt.hold(True)
+    pdb.set_trace()
     for i in stats:
+
         plt.plot(np.sum(i['avg']),i['gen'])
         '{}{}{}'.format(np.sum(i['avg']),i['gen'],'results')
     plt.savefig('avg_error_versus_gen.png')
