@@ -147,8 +147,8 @@ def main(seed=None):
 
     random.seed(seed)
 
-    NGEN=4
-    MU=12
+    NGEN=5
+    MU=16
 
     CXPB = 0.9
     import numpy as numpy
@@ -221,7 +221,15 @@ def main(seed=None):
         plt.axis("tight")
         plt.savefig('front.png')
         plt.clf()
-
+    pop=list(pop)
+    plt.clf()
+    plt.hold(True)
+    for i in logbook:
+        plt.plot(np.sum(i['avg']),i['gen'])
+        '{}{}{}'.format(np.sum(i['avg']),i['gen'],'results')
+    plt.savefig('avg_error_versus_gen.png')
+    plt.hold(False)
+    '{}{}'.format("finish_time: ",finish_time)
     return pop, logbook
 
 if __name__ == "__main__":
@@ -239,7 +247,7 @@ if __name__ == "__main__":
     ga_time=finish_time-start_time
     plt.clf()
     print(stats)
-    print(LOCAL_RESULTS)
+    #print(LOCAL_RESULTS)
     plt.clf()
     plt.hold(True)
     for i in stats:
