@@ -1,14 +1,13 @@
-'''
 import os
 os.system('ipcluster start --profile=jovyan --debug &')
-os.system('sleep 25')
+os.system('sleep 5')
 import ipyparallel as ipp
 rc = ipp.Client(profile='jovyan')
 print('hello from before cpu ')
 print(rc.ids)
 #quit()
 v = rc.load_balanced_view()
-'''
+
 import get_neab
 
 """
@@ -137,7 +136,7 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
 
     individual.params=[]
     for i in attrs['//izhikevich2007Cell'].values():
-        if hasattr(ind,'params'):
+        if hasattr(individual,'params'):
             individual.params.append(i)
 
     individual.results=model.results
@@ -157,8 +156,8 @@ toolbox.register("evaluate", evaluate)
 toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
 toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
 toolbox.register("select", tools.selNSGA2)
-#toolbox.register("map", v.map)
-toolbox.register("map", futures.map)
+toolbox.register("map", v.map_sync)
+#toolbox.register("map", futures.map)
 
 def plotss(pop,gen):
     import matplotlib.pyplot as plt
@@ -199,7 +198,12 @@ def main(seed=None):
 
     # Evaluate the individuals with an invalid fitness
     invalid_ind = [ind for ind in pop if not ind.fitness.valid]
-    fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+    import pdb
+    pdb.set_trace()
+    fitness1 = list(v.map_sync(evaluate,invalid_ind))
+    print(fitness1)
+    fitnesses = list(toolbox.map(evaluate, invalid_ind))
+    pdb.set_trace()
 
     for ind, fit in zip(invalid_ind, fitnesses):
         ind.fitness.values = fit
@@ -234,7 +238,10 @@ def main(seed=None):
 
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+        fitnesses = list(toolbox.map(toolbox.evaluate, invalid_ind))
+        import pdb
+        pdb.set_trace()
+
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
         plotss(invalid_ind,gen)
