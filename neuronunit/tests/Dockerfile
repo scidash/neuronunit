@@ -56,11 +56,6 @@ RUN python setup.py install
 
 
 
-#perhaps this needs to be done as user:
-#ENV PATH $PATH:/opt/conda/bin
-#ENV PATH $PATH:/opt/conda/bin/ipython
-#ENV PATH $PATH:/opt/conda/bin/pip
-#ENV PATH $PATH:/opt/conda/bin/python
 
 RUN apt-get install -y python3-setuptools
 ENV PATH $PATH:/opt/conda/bin
@@ -77,29 +72,16 @@ RUN pip install git+https://github.com/uqfoundation/multiprocess
 RUN apt-get install -y python-tk
 
 RUN chown -R jovyan $HOME
-RUN echo "Defaults env_keep=$PATH"
-RUN echo "Defaults !env_reset" >> /etc/sudoers
-RUN echo "Defaults env_keep=$PATH" >> /etc/sudoers
-RUN echo "Defaults !env_reset" >> /etc/sudoers
 
 RUN pip install bluepyopt
 RUN python -c "import bluepyopt"
 
-#RUN git clone https://github.com/twiecki/mpi4py_map
-#WORKDIR mpi4py_map
-#RUN python setup.py install
 
 
 RUN pip install git+https://github.com/roryk/ipython-cluster-helper
 
 RUN ipcluster nbextension enable
-#RUN chmod 755 jovyan/ipython/profile_default
-#RUN chmod 744 jovyan/ipython/profile_default
 USER $NB_USER
-#RUN /bin/bash -c "source /etc/sudoers"
-#RUN sudo ipcluster nbextension enable
-#RUN sudo chmod 755 jovyan/ipython/profile_default
-#RUN sudo chmod 744 jovyan/ipython/profile_default
 
 ENV PATH $PATH:/opt/conda/bin
 ENV PATH $PATH:/opt/conda/bin/ipcluster
@@ -117,47 +99,17 @@ RUN sudo /opt/conda/bin/pip install \
 	ipyparallel \
 	enum34
 
-#WORKDIR $HOME
-#RUN git clone https://github.com/ipython/ipyparallel
-
-#WORKDIR $HOME/ipyparallel
-
-
-#RUN python setup.py install	
-
-RUN sudo printenv PATH
-RUN echo 'blah'
-RUN python -c "import pyneuroml"
-RUN python -c "import neuronunit"
-RUN python -c "from neuronunit.models.reduced import ReducedModel"
-RUN python -c "import quantities"
-RUN python -c "import neuron"
-RUN python -c "import pyneuroml"
-RUN nrnivmodl
-RUN python -c "import scoop"
-RUN python -c "import deap"
-
-RUN nrniv
 
 
 #The following are convenience aliases
 RUN echo 'alias pynml=pynml-povray NML2_MultiCompCellNetwork.nml -scalez 15 -conns -conn_points'
 RUN echo 'alias nml2= povray NML2_MultiCompCellNetwork.pov'
 
-RUN echo 'alias nb="jupyter notebook --browswer iceweasel"' >> ~/.bashrc
-RUN echo 'alias st="cd /home/mnt/neuronunit/software_tests"' >> ~/.bashrc
-RUN echo 'alias mnt="cd /home/mnt"' >> ~/.bashrc
-RUN echo 'alias erc="emacs ~/.bashrc"' >> ~/.bashrc
-RUN echo 'alias src="source ~/.bashrc"' >> ~/.bashrc
-RUN echo 'alias egg="cd /opt/conda/lib/python3.5/site-packages/"' >> ~/.bashrc
-RUN echo 'alias nu="cd /home/jovyan/work/scidash/neuronunit"' >> ~/.bashrc
-RUN echo 'alias model="cd /work/scidash/neuronunit/neuronunit/models"' >> ~/.bashrc
-RUN echo 'alias sciunit="cd /work/scidash/sciunit"' >> ~/.bashrc
-RUN echo 'alias nu="python -c "from neuronunit.models.reduced import ReducedModel""'
+
 RUN export PATH=$PATH
 
-WORKDIR $HOME #/neuronunit/neuronunit/software_tests
-RUN ipcluster start --profile=chase --debug &
+WORKDIR $HOME 
+#RUN ipcluster start --profile=jovyan --debug &
 
 WORKDIR $HOME
 RUN git clone -b russell_dev https://github.com/scidash/neuronunit.git
@@ -167,6 +119,10 @@ RUN nrnivmodl
 RUN ls LEMS_2007One.xml
 #WORKDIR $HOME/neuronunit/neuronunit/tests/
 WORKDIR ../
-ENTRYPOINT python -m scoop nsga4.py
-#; eog *.png
+RUN touch run_ipp.py
+RUN echo "import os">> run_ipp1.py
+RUN echo "os.system('ipcluster start --profile=jovyan --debug &')" >> run_ipp1.py
+
+RUN echo "import ipyparallel as ipp ; rc = ipp.Client(profile='jovyan'); print('hello from before cpu '); print(rc.ids);" >> run_ipp2.py
+#ENTRYPOINT cat run_ipp.py && ipython run_ipp1.py && sleep 15 && ipython run_ipp2.py 
 
