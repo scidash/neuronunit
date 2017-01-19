@@ -1,4 +1,4 @@
-'''
+
 import os
 os.system('ipcluster start --profile=jovyan --debug &')
 os.system('sleep 25')
@@ -8,7 +8,8 @@ print('hello from before cpu ')
 print(rc.ids)
 #quit()
 v = rc.load_balanced_view()
-'''
+lview = rc.load_balanced_view()
+map_function = lview.map_sync
 import get_neab
 
 """
@@ -37,7 +38,9 @@ import time
 creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0,-1.0,-1.0))
 creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMin)
 
-class Individual(list):
+#class Individual(list):
+class Individual(object):
+
     '''
     When instanced the object from this class is used as one unit of chromosome or allele by DEAP.
     Extends list via polymorphism.
@@ -54,6 +57,7 @@ class Individual(list):
         self.params=None
         self.score=None
 
+#individual=Individual()
 toolbox = base.Toolbox()
 
 # Functions zdt1, zdt2, zdt3 have 30 dimensions, zdt4 and zdt6 have 10
@@ -97,7 +101,7 @@ model.local_run()
 
 
 def func2map(ind):
-
+    param=['vr','a','b']
     for i, p in enumerate(param):
         name_value=str(ind[i])
         #reformate values.
@@ -122,6 +126,7 @@ def func2map(ind):
     return ind
 
 def evaluate(individual):#This method must be pickle-able for scoop to work.
+    '''
     for i, p in enumerate(param):
         name_value=str(individual[i])
         #reformate values.
@@ -137,28 +142,34 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
 
     individual.params=[]
     for i in attrs['//izhikevich2007Cell'].values():
-        if hasattr(ind,'params'):
+        if hasattr(individual,'params'):
             individual.params.append(i)
 
     individual.results=model.results
     score = get_neab.suite.judge(model)
     individual.error = [ i.sort_key for i in score.unstack() ]
     #return ind
-    #individual=func2map(individual)
+    '''
+    individual=func2map(individual)
     error=individual.error
     assert individual.results
-    print(rc.ids)
+    #print(rc.ids)
     #LOCAL_RESULTS.append(individual.results)
     return error[0],error[1],error[2],error[3],error[4],
 
 
 
 toolbox.register("evaluate", evaluate)
+import dill
+dill.pickles(evaluate)
+dill.detect.badtypes(evaluate, depth=1)
+#import pdb
+#pdb.set_trace()
 toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
 toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
 toolbox.register("select", tools.selNSGA2)
-#toolbox.register("map", v.map)
-toolbox.register("map", futures.map)
+toolbox.register("map", map_function)
+#toolbox.register("map", futures.map)
 
 def plotss(pop,gen):
     import matplotlib.pyplot as plt
@@ -199,8 +210,12 @@ def main(seed=None):
 
     # Evaluate the individuals with an invalid fitness
     invalid_ind = [ind for ind in pop if not ind.fitness.valid]
-    fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+    #invalid_ind = toolbox.map(toolbox.evaluate,invalid_ind)
 
+    #fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+    fitnesses = list(toolbox.map(evaluate,invalid_ind))
+
+    pdb.set_trace()
     for ind, fit in zip(invalid_ind, fitnesses):
         ind.fitness.values = fit
 
@@ -234,7 +249,10 @@ def main(seed=None):
 
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+        #invalid_ind = toolbox.map(func2map,invalid_ind)
+        #fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+        fitnesses = list(toolbox.map(evaluate,invalid_ind))
+
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
         plotss(invalid_ind,gen)
