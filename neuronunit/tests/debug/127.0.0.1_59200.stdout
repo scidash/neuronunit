@@ -1,0 +1,86 @@
+Executing test RheobaseTest on model -0.0031675774226851117... Running a simulation of 1600ms (dt = 0.0025ms)
+Finished NEURON simulation in 2.903746 seconds (0.048396 mins)...
+Running a simulation of 1600ms (dt = 0.0025ms)
+Finished NEURON simulation in 3.673500 seconds (0.061225 mins)...
+Number of spikes is!
+0
+Injected 0.0 pA current and got 0 spikes
+Running a simulation of 1600ms (dt = 0.0025ms)
+Finished NEURON simulation in 2.913656 seconds (0.048561 mins)...
+Number of spikes is!
+49
+Injected 260.0 pA current and got 49 spikes
+Running a simulation of 1600ms (dt = 0.0025ms)
+Finished NEURON simulation in 2.712508 seconds (0.045208 mins)...
+Number of spikes is!
+22
+Injected 130.0 pA current and got 22 spikes
+Running a simulation of 1600ms (dt = 0.0025ms)
+Finished NEURON simulation in 2.625940 seconds (0.043766 mins)...
+Number of spikes is!
+6
+Injected 65.0 pA current and got 6 spikes
+Running a simulation of 1600ms (dt = 0.0025ms)
+Finished NEURON simulation in 2.585675 seconds (0.043095 mins)...
+Number of spikes is!
+0
+Injected 32.5 pA current and got 0 spikes
+Running a simulation of 1600ms (dt = 0.0025ms)
+Finished NEURON simulation in 2.677457 seconds (0.044624 mins)...
+Number of spikes is!
+0
+Injected 48.75 pA current and got 0 spikes
+Running a simulation of 1600ms (dt = 0.0025ms)
+Finished NEURON simulation in 4.047230 seconds (0.067454 mins)...
+Number of spikes is!
+3
+Injected 56.875 pA current and got 3 spikes
+Running a simulation of 1600ms (dt = 0.0025ms)
+Finished NEURON simulation in 3.027859 seconds (0.050464 mins)...
+Number of spikes is!
+1
+Injected 52.8125 pA current and got 1 spikes
+Running a simulation of 1600ms (dt = 0.0025ms)
+Finished NEURON simulation in 3.604367 seconds (0.060073 mins)...
+Number of spikes is!
+0
+Injected 50.78125 pA current and got 0 spikes
+Running a simulation of 1600ms (dt = 0.0025ms)
+Finished NEURON simulation in 2.997859 seconds (0.049964 mins)...
+Number of spikes is!
+1
+Injected 51.796875 pA current and got 1 spikes
+Running a simulation of 1600ms (dt = 0.0025ms)
+Finished NEURON simulation in 3.843045 seconds (0.064051 mins)...
+Number of spikes is!
+0
+Injected 51.2890625 pA current and got 0 spikes
+Running a simulation of 1600ms (dt = 0.0025ms)
+Finished NEURON simulation in 3.149795 seconds (0.052497 mins)...
+Number of spikes is!
+0
+Injected 51.54296875 pA current and got 0 spikes
+Highest subthreshold current is 51.54 pA
+Lowest suprathreshold current is 51.8 pA
+Score is Ratio = 0.40
+5
+Executing test InputResistanceTest on model -0.0031675774226851117... Running a simulation of 1600ms (dt = 0.0025ms)
+Finished NEURON simulation in 3.638406 seconds (0.060640 mins)...
+Score is Z = -1.55
+Executing test RestingPotentialTest on model -0.0031675774226851117... Running a simulation of 1600ms (dt = 0.0025ms)
+Finished NEURON simulation in 3.541561 seconds (0.059026 mins)...
+Running a simulation of 1600ms (dt = 0.0025ms)
+Finished NEURON simulation in 2.902985 seconds (0.048383 mins)...
+Score is Z = 2.23
+Executing test InjectedCurrentAPWidthTest on model -0.0031675774226851117... Running a simulation of 1600ms (dt = 0.0025ms)
+Finished NEURON simulation in 2.720596 seconds (0.045343 mins)...
+[ 2.] 1 1
+[ 0.005] s 0.0025 s [  1.25000000e-05] s**2
+Running a simulation of 1600ms (dt = 0.0025ms)
+Finished NEURON simulation in 3.987926 seconds (0.066465 mins)...
+Score is Z = 7.10
+Executing test InjectedCurrentAPThresholdTest on model -0.0031675774226851117... Running a simulation of 1600ms (dt = 0.0025ms)
+Finished NEURON simulation in 2.897166 seconds (0.048286 mins)...
+Running a simulation of 1600ms (dt = 0.0025ms)
+Finished NEURON simulation in 2.542775 seconds (0.042380 mins)...
+Score is Z = 5.31
