@@ -123,7 +123,7 @@ RUN sudo /opt/conda/bin/pip install \
 #WORKDIR $HOME/ipyparallel
 
 
-#RUN python setup.py install	
+#RUN python setup.py install
 
 RUN sudo printenv PATH
 RUN echo 'blah'
@@ -166,7 +166,6 @@ WORKDIR $HOME/neuronunit/neuronunit/tests/NeuroML2
 RUN nrnivmodl
 RUN ls LEMS_2007One.xml
 #WORKDIR $HOME/neuronunit/neuronunit/tests/
-WORKDIR ../
-ENTRYPOINT python -m scoop nsga4.py
+#WORKDIR ../
+#ENTRYPOINT python -m scoop nsga4.py
 #; eog *.png
-

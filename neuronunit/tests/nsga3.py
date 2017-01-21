@@ -36,7 +36,7 @@ import time
 creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0,-1.0,-1.0))
 creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMin)
 
-class Individual(list):
+class Individual(object):
     '''
     When instanced the object from this class is used as one unit of chromosome or allele by DEAP.
     Extends list via polymorphism.
@@ -52,7 +52,7 @@ class Individual(list):
         self.attrs={}
         self.params=None
         self.score=None
-
+        self.fitness=None
 toolbox = base.Toolbox()
 
 # Functions zdt1, zdt2, zdt3 have 30 dimensions, zdt4 and zdt6 have 10
@@ -76,6 +76,7 @@ BOUND_LOW=[ np.min(i) for i in rov ]
 BOUND_UP=[ np.max(i) for i in rov ]
 NDIM = len(rov)
 LOCAL_RESULTS=[]
+import functools
 
 def uniform(low, up, size=None):
     try:
@@ -84,9 +85,23 @@ def uniform(low, up, size=None):
         return [random.uniform(a, b) for a, b in zip([low] * size, [up] * size)]
 
 toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
-toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
-toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+toolbox.register("Individual", tools.initIterate, creator.Individual, toolbox.attr_float)
+import deap as deap
+#OBJ_SIZE=5
+#toolbox.register(
+#        "Individual",
+#        deap.tools.initIterate,
+#        functools.partial(Individual),
+#        toolbox.attr_float)
 
+toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
+
+        # Register the population format. It is a list of individuals
+#toolbox.register(
+#    "population",
+#    deap.tools.initRepeat,
+#    list,
+#    toolbox.Individual)
 
 from neuronunit.models import backends
 from neuronunit.models.reduced import ReducedModel
@@ -156,6 +171,12 @@ toolbox.register("evaluate", evaluate)
 toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
 toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
 toolbox.register("select", tools.selNSGA2)
+def _reduce_method(meth):
+    """Overwrite reduce"""
+    return (getattr, (meth.__self__, meth.__func__.__name__))
+import copyreg
+import types
+copyreg.pickle(types.MethodType, _reduce_method)
 toolbox.register("map", v.map_sync)
 #toolbox.register("map", futures.map)
 
