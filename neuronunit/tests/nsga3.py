@@ -1,3 +1,4 @@
+'''
 import os
 os.system('ipcluster start --profile=jovyan --debug &')
 os.system('sleep 5')
@@ -7,7 +8,7 @@ print('hello from before cpu ')
 print(rc.ids)
 #quit()
 v = rc.load_balanced_view()
-
+'''
 import get_neab
 
 """
@@ -15,7 +16,6 @@ Code from the deap framework, available at:
 https://code.google.com/p/deap/source/browse/examples/ga/onemax_short.py
 Conversion to its parallel form took two lines:
 from scoop import futures
-toolbox.register("map", futures.map)
 """
 import array
 import random
@@ -53,6 +53,7 @@ class Individual(object):
         self.params=None
         self.score=None
         self.fitness=None
+        self.s_html=None
 toolbox = base.Toolbox()
 
 # Functions zdt1, zdt2, zdt3 have 30 dimensions, zdt4 and zdt6 have 10
@@ -157,13 +158,17 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
     individual.results=model.results
     score = get_neab.suite.judge(model)
     individual.error = [ i.sort_key for i in score.unstack() ]
+    individual.s_html=score.to_html()
+
+    #import pdb
+    #pdb.set_trace()
     #return ind
     #individual=func2map(individual)
     error=individual.error
     assert individual.results
-    print(rc.ids)
+    #print(rc.ids)pd
     #LOCAL_RESULTS.append(individual.results)
-    return error[0],error[1],error[2],error[3],error[4],
+    return error[0],error[1],error[2],error[3],error[4],error[5],error[6],
 
 
 
@@ -171,13 +176,15 @@ toolbox.register("evaluate", evaluate)
 toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
 toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
 toolbox.register("select", tools.selNSGA2)
-def _reduce_method(meth):
-    """Overwrite reduce"""
-    return (getattr, (meth.__self__, meth.__func__.__name__))
-import copyreg
-import types
-copyreg.pickle(types.MethodType, _reduce_method)
-toolbox.register("map", v.map_sync)
+#def _reduce_method(meth):
+#    """Overwrite reduce"""
+#    return (getattr, (meth.__self__, meth.__func__.__name__))
+#import copyreg
+#import types
+#copyreg.pickle(types.MethodType, _reduce_method)
+toolbox.register("map", futures.map)
+
+#toolbox.register("map", v.map_sync)
 #toolbox.register("map", futures.map)
 
 def plotss(pop,gen):
@@ -219,12 +226,7 @@ def main(seed=None):
 
     # Evaluate the individuals with an invalid fitness
     invalid_ind = [ind for ind in pop if not ind.fitness.valid]
-    import pdb
-    pdb.set_trace()
-    fitness1 = list(v.map_sync(evaluate,invalid_ind))
-    print(fitness1)
     fitnesses = list(toolbox.map(evaluate, invalid_ind))
-    pdb.set_trace()
 
     for ind, fit in zip(invalid_ind, fitnesses):
         ind.fitness.values = fit
@@ -304,7 +306,9 @@ if __name__ == "__main__":
     start_time=time.time()
 
     pop, stats = main()
-
+    f=open('html_score_matrix.html','w')
+    f.write(pop[0].s_html)
+    s_html
     finish_time=time.time()
     ga_time=finish_time-start_time
     plt.clf()

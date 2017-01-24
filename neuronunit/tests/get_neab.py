@@ -53,11 +53,21 @@ else:
 
     #(nu_tests.TimeConstantTest,None),                           (nu_tests.InjectedCurrentAPAmplitudeTest,None),
     tests += [nu_tests.RheobaseTest(observation=observation)]
+    '''
     test_class_params = [(nu_tests.InputResistanceTest,None),
                          (nu_tests.RestingPotentialTest,None),
                          (nu_tests.InjectedCurrentAPWidthTest,None),
                          (nu_tests.InjectedCurrentAPThresholdTest,None)]
+    '''
 
+
+    test_class_params = [(nu_tests.InputResistanceTest,None),
+                         (nu_tests.TimeConstantTest,None),
+                         (nu_tests.CapacitanceTest,None),
+                         (nu_tests.RestingPotentialTest,None),
+                         (nu_tests.InjectedCurrentAPWidthTest,None),
+                         (nu_tests.InjectedCurrentAPAmplitudeTest,None),
+                         (nu_tests.InjectedCurrentAPThresholdTest,None)]
 
 
     for cls,params in test_class_params:
