@@ -26,7 +26,7 @@ RUN pip install git+https://github.com/rkern/line_profiler
 ENV ATOM_VERSION v1.12.7
 RUN apt-get update
 RUN apt-get install -y gedit meld gvfs-bin iceweasel
-RUN apt-get install -y curl
+RUN apt-get install -y curl apt-utils
 
 
 
@@ -71,7 +71,17 @@ RUN easy_install greenlet
 
 RUN apt-get install -y povray eog
 WORKDIR $HOME
-RUN git clone https://github.com/BlueBrain/BluePyOpt
+#RUN pip install git+https://github.com/russelljjarvis/BluePyOpt.git
+RUN :
+RUN echo "reget this"
+
+RUN git clone https://github.com/russelljjarvis/BluePyOpt.git
+WORKDIR BluePyOpt
+RUN pwd
+RUN ls *
+RUN python setup.py install
+RUN git remote add me https://github.com/russelljjarvis/BluePyOpt
+RUN git remote add origin https://github.com/BlueBrain/BluePyOpt
 
 RUN pip install git+https://github.com/uqfoundation/multiprocess
 RUN apt-get install -y python-tk
@@ -82,12 +92,12 @@ RUN echo "Defaults !env_reset" >> /etc/sudoers
 RUN echo "Defaults env_keep=$PATH" >> /etc/sudoers
 RUN echo "Defaults !env_reset" >> /etc/sudoers
 
-RUN pip install bluepyopt
+#RUN pip install bluepyopt
 RUN python -c "import bluepyopt"
 
 #RUN git clone https://github.com/twiecki/mpi4py_map
 #WORKDIR mpi4py_map
-#RUN python setup.py install
+#RUN python setup.py installx
 
 
 RUN pip install git+https://github.com/roryk/ipython-cluster-helper
@@ -95,6 +105,9 @@ RUN pip install git+https://github.com/roryk/ipython-cluster-helper
 RUN ipcluster nbextension enable
 #RUN chmod 755 jovyan/ipython/profile_default
 #RUN chmod 744 jovyan/ipython/profile_default
+
+RUN chown -R jovyan /opt/conda/lib/python3.5/site-packages/
+
 USER $NB_USER
 #RUN /bin/bash -c "source /etc/sudoers"
 #RUN sudo ipcluster nbextension enable
