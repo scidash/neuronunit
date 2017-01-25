@@ -33,7 +33,8 @@ from deap import creator
 from deap import tools
 from scoop import futures
 import time
-creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0,-1.0,-1.0))
+creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
+# -1.0, -1.0, -1.0, -1.0,))
 creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMin)
 
 class Individual(object):
@@ -57,20 +58,64 @@ class Individual(object):
 toolbox = base.Toolbox()
 
 # Functions zdt1, zdt2, zdt3 have 30 dimensions, zdt4 and zdt6 have 10
-NDIM = 4
 
 param=['vr','a','b']
 rov=[]
 #rov0 = np.linspace(-65,-55,2)
 #rov1 = np.linspace(0.015,0.045,2)
 #rov2 = np.linspace(-0.0010,-0.0035,2)
+#These are  dimension
+#rov0 = np.linspace(-65,-55,1000)
+#rov1 = np.linspace(0.015,0.045,1000)
+#rov2 = np.linspace(-0.0010,-0.0035,1000)
 
-rov0 = np.linspace(-65,-55,1000)
-rov1 = np.linspace(0.015,0.045,1000)
-rov2 = np.linspace(-0.0010,-0.0035,1000)
+'''
+h.m_RS_RS_pop[i].v0 = -60.0
+h.m_RS_RS_pop[i].k = 7.0E-4
+h.m_RS_RS_pop[i].vr = -60.0
+h.m_RS_RS_pop[i].vt = -40.0
+h.m_RS_RS_pop[i].vpeak = 35.0
+h.m_RS_RS_pop[i].a = 0.030000001
+h.m_RS_RS_pop[i].b = -0.0019999999
+h.m_RS_RS_pop[i].c = -50.0
+h.m_RS_RS_pop[i].d = 0.1
+h.m_RS_RS_pop[i].C = 1.00000005E-4
+'''
+NDIM= 10
+
+vr = np.linspace(-65,-55,1000)
+a = np.linspace(0.015,0.045,1000)
+b = np.linspace(-0.0010,-0.0035,1000)
+
+k = np.linspace(7.0E-4-+7.0E-5,7.0E-4+70E-5,1000)
+c = np.linspace(-50.0-10.0,-50+10,1000)
+C = np.linspace(1.00000005E-4-1.00000005E-5,1.00000005E-4+1.00000005E-5,1000)
+d = np.linspace(0.050,0.2,1000)
+v0 = np.linspace(-65,-55,1000)
+vt =  np.linspace(-50,-30,1000)
+vpeak = np.linspace(25,40,1000)
+param=['vr','a','b','C','c','d','v0','k','vt','vpeak']
+
+rov.append(a)
+rov.append(b)
+rov.append(c)
+rov.append(C)
+rov.append(d)
+rov.append(k)
+
+
+rov.append(vr)
+rov.append(v0)
+rov.append(vt)
+rov.append(vpeak)
+
+
+'''
+
 rov.append(rov0)
 rov.append(rov1)
 rov.append(rov2)
+'''
 seed_in=1
 
 BOUND_LOW=[ np.min(i) for i in rov ]
@@ -88,53 +133,14 @@ def uniform(low, up, size=None):
 toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
 toolbox.register("Individual", tools.initIterate, creator.Individual, toolbox.attr_float)
 import deap as deap
-#OBJ_SIZE=5
-#toolbox.register(
-#        "Individual",
-#        deap.tools.initIterate,
-#        functools.partial(Individual),
-#        toolbox.attr_float)
 
 toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
-
-        # Register the population format. It is a list of individuals
-#toolbox.register(
-#    "population",
-#    deap.tools.initRepeat,
-#    list,
-#    toolbox.Individual)
 
 from neuronunit.models import backends
 from neuronunit.models.reduced import ReducedModel
 model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
 model=model.load_model()
 model.local_run()
-
-
-def func2map(ind):
-
-    for i, p in enumerate(param):
-        name_value=str(ind[i])
-        #reformate values.
-        model.name=name_value
-        if i==0:
-            attrs={'//izhikevich2007Cell':{p:name_value }}
-        else:
-            attrs['//izhikevich2007Cell'][p]=name_value
-
-    ind.attrs=attrs
-
-    model.update_run_params(attrs)
-
-    ind.params=[]
-    for i in attrs['//izhikevich2007Cell'].values():
-        if hasattr(ind,'params'):
-            ind.params.append(i)
-
-    ind.results=model.results
-    score = get_neab.suite.judge(model)
-    ind.error = [ i.sort_key for i in score.unstack() ]
-    return ind
 
 def evaluate(individual):#This method must be pickle-able for scoop to work.
     for i, p in enumerate(param):
@@ -147,7 +153,7 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
             attrs['//izhikevich2007Cell'][p]=name_value
 
     individual.attrs=attrs
-
+    #print(individual.attrs)
     model.update_run_params(attrs)
 
     individual.params=[]
@@ -157,18 +163,12 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
 
     individual.results=model.results
     score = get_neab.suite.judge(model)
-    individual.error = [ i.sort_key for i in score.unstack() ]
+    import numpy as np
+    individual.error = [ np.abs(i.score) for i in score.unstack() ]
     individual.s_html=score.to_html()
-
-    #import pdb
-    #pdb.set_trace()
-    #return ind
-    #individual=func2map(individual)
     error=individual.error
     assert individual.results
-    #print(rc.ids)pd
-    #LOCAL_RESULTS.append(individual.results)
-    return error[0],error[1],error[2],error[3],error[4],error[5],error[6],
+    return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
 
 
 
@@ -176,22 +176,12 @@ toolbox.register("evaluate", evaluate)
 toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
 toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
 toolbox.register("select", tools.selNSGA2)
-#def _reduce_method(meth):
-#    """Overwrite reduce"""
-#    return (getattr, (meth.__self__, meth.__func__.__name__))
-#import copyreg
-#import types
-#copyreg.pickle(types.MethodType, _reduce_method)
+
 toolbox.register("map", futures.map)
 
-#toolbox.register("map", v.map_sync)
-#toolbox.register("map", futures.map)
 
 def plotss(pop,gen):
     import matplotlib.pyplot as plt
-    #print(utils.getHosts())
-
-    #plt.hold(True)
     plt.clf()
 
     for ind in pop:
@@ -199,7 +189,7 @@ def plotss(pop,gen):
             plt.plot(ind.results['t'],ind.results['vm'])
             plt.xlabel(str(ind.attrs))
             #str(scoop.worker)+
-    plt.savefig('snap_shot_at '+str(gen)+str(utils.getHosts())+'.png')
+    plt.savefig('snap_shot_at_'+str(gen)+'.png')
     #plt.hold(False)
     plt.clf()
     #return 0
@@ -208,8 +198,8 @@ def main(seed=None):
 
     random.seed(seed)
 
-    NGEN=5
-    MU=16
+    NGEN=10
+    MU=20
 
     CXPB = 0.9
     import numpy as numpy
@@ -262,8 +252,8 @@ def main(seed=None):
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
         fitnesses = list(toolbox.map(toolbox.evaluate, invalid_ind))
-        import pdb
-        pdb.set_trace()
+        #import pdb
+        #pdb.set_trace()
 
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
@@ -308,7 +298,7 @@ if __name__ == "__main__":
     pop, stats = main()
     f=open('html_score_matrix.html','w')
     f.write(pop[0].s_html)
-    s_html
+    #s_html
     finish_time=time.time()
     ga_time=finish_time-start_time
     plt.clf()
@@ -316,7 +306,8 @@ if __name__ == "__main__":
     #print(LOCAL_RESULTS)
     plt.clf()
     plt.hold(True)
-    pdb.set_trace()
+
+    #pdb.set_trace()
     for i in stats:
 
         plt.plot(np.sum(i['avg']),i['gen'])
@@ -329,12 +320,14 @@ if __name__ == "__main__":
     #import pdb
     #pdb.set_trace()
     #plotss(invalid_ind,gen)
+    '''
     plotr=LOCAL_RESULTS[len(LOCAL_RESULTS)-1]
     plt.plot(plotr['t'],plotr['vm'])
     plt.savefig('final_results_from_only_one_CPU.png')
 
     plt.clf()
-    NGEN=4
+    '''
+    #NGEN=4
     plotss(pop,NGEN)
 
     #plt
