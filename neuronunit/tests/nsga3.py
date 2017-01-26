@@ -9,6 +9,8 @@ print(rc.ids)
 #quit()
 v = rc.load_balanced_view()
 '''
+import time
+init_start=time.time()
 import get_neab
 
 """
@@ -32,7 +34,7 @@ from deap.benchmarks.tools import diversity, convergence, hypervolume
 from deap import creator
 from deap import tools
 from scoop import futures
-import time
+
 creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
 # -1.0, -1.0, -1.0, -1.0,))
 creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMin)
@@ -59,8 +61,7 @@ toolbox = base.Toolbox()
 
 # Functions zdt1, zdt2, zdt3 have 30 dimensions, zdt4 and zdt6 have 10
 
-param=['vr','a','b']
-rov=[]
+#param=['vr','a','b']
 #rov0 = np.linspace(-65,-55,2)
 #rov1 = np.linspace(0.015,0.045,2)
 #rov2 = np.linspace(-0.0010,-0.0035,2)
@@ -82,8 +83,9 @@ h.m_RS_RS_pop[i].d = 0.1
 h.m_RS_RS_pop[i].C = 1.00000005E-4
 '''
 NDIM= 10
+rov=[]
 
-vr = np.linspace(-65,-55,1000)
+vr = np.linspace(-75,-45,1000)
 a = np.linspace(0.015,0.045,1000)
 b = np.linspace(-0.0010,-0.0035,1000)
 
@@ -91,7 +93,7 @@ k = np.linspace(7.0E-4-+7.0E-5,7.0E-4+70E-5,1000)
 c = np.linspace(-50.0-10.0,-50+10,1000)
 C = np.linspace(1.00000005E-4-1.00000005E-5,1.00000005E-4+1.00000005E-5,1000)
 d = np.linspace(0.050,0.2,1000)
-v0 = np.linspace(-65,-55,1000)
+v0 = np.linspace(-75,-45,1000)
 vt =  np.linspace(-50,-30,1000)
 vpeak = np.linspace(25,40,1000)
 param=['vr','a','b','C','c','d','v0','k','vt','vpeak']
@@ -153,9 +155,10 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
             attrs['//izhikevich2007Cell'][p]=name_value
 
     individual.attrs=attrs
-    #print(individual.attrs)
+    b4nrncall=time.time()
     model.update_run_params(attrs)
-
+    afternrncall=time.time()
+    LOCAL_RESULTS.append(afternrncall-b4nrncall)
     individual.params=[]
     for i in attrs['//izhikevich2007Cell'].values():
         if hasattr(individual,'params'):
@@ -275,6 +278,14 @@ def main(seed=None):
         plt.axis("tight")
         plt.savefig('front.png')
         plt.clf()
+    f=open('stats_summart.txt','w')
+    f.write(list(logbook))
+
+    f=open('mean_call_length.txt','w')
+    f.write(np.mean(LOCAL_RESULTS))
+    f.write('the number of calls to NEURON on one CPU only')
+    f.write(len(LOCAL_RESULTS))
+
     pop=list(pop)
     plt.clf()
     plt.hold(True)
@@ -294,6 +305,7 @@ if __name__ == "__main__":
     # Use 500 of the 1000 points in the json file
     # optimal_front = sorted(optimal_front[i] for i in range(0, len(optimal_front), 2))
     start_time=time.time()
+    whole_initialisation=start_time-init_start
 
     pop, stats = main()
     f=open('html_score_matrix.html','w')
@@ -303,6 +315,8 @@ if __name__ == "__main__":
     ga_time=finish_time-start_time
     plt.clf()
     print(stats)
+    f=open('stats_summart.txt','w')
+    f.write(stats)
     #print(LOCAL_RESULTS)
     plt.clf()
     plt.hold(True)
