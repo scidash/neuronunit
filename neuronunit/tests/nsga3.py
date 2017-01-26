@@ -35,7 +35,7 @@ from deap import creator
 from deap import tools
 from scoop import futures
 
-creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
+creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
 # -1.0, -1.0, -1.0, -1.0,))
 creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMin)
 
@@ -82,42 +82,35 @@ h.m_RS_RS_pop[i].c = -50.0
 h.m_RS_RS_pop[i].d = 0.1
 h.m_RS_RS_pop[i].C = 1.00000005E-4
 '''
-NDIM= 10
+NDIM= 5
 rov=[]
 
-vr = np.linspace(-75,-45,1000)
+vr = np.linspace(-75.0,-45.0,1000)
 a = np.linspace(0.015,0.045,1000)
 b = np.linspace(-0.0010,-0.0035,1000)
 
-k = np.linspace(7.0E-4-+7.0E-5,7.0E-4+70E-5,1000)
-c = np.linspace(-50.0-10.0,-50+10,1000)
-C = np.linspace(1.00000005E-4-1.00000005E-5,1.00000005E-4+1.00000005E-5,1000)
+#k = np.linspace(7.0E-4-+7.0E-5,7.0E-4+70E-5,1000)
+c = np.linspace(-55,-60,1000)
+#C = np.linspace(1.00000005E-4-1.00000005E-5,1.00000005E-4+1.00000005E-5,1000)
 d = np.linspace(0.050,0.2,1000)
-v0 = np.linspace(-75,-45,1000)
-vt =  np.linspace(-50,-30,1000)
-vpeak = np.linspace(25,40,1000)
-param=['vr','a','b','C','c','d','v0','k','vt','vpeak']
+#v0 = np.linspace(-75.0,-45.0,1000)
+#vt =  np.linspace(-50.0,-30.0,1000)
+#vpeak = np.linspace(30.0,40.0,1000)
+#param=['vr','a','b','C','c','d','v0','k','vt','vpeak']
+param=['vr','a','b','c','d']
 
 rov.append(a)
 rov.append(b)
 rov.append(c)
-rov.append(C)
+#rov.append(C)
 rov.append(d)
-rov.append(k)
-
-
+#rov.append(k)
 rov.append(vr)
-rov.append(v0)
-rov.append(vt)
-rov.append(vpeak)
+#rov.append(v0)
+#rov.append(vt)
+#rov.append(vpeak)
 
 
-'''
-
-rov.append(rov0)
-rov.append(rov1)
-rov.append(rov2)
-'''
 seed_in=1
 
 BOUND_LOW=[ np.min(i) for i in rov ]
@@ -159,15 +152,30 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
     model.update_run_params(attrs)
     afternrncall=time.time()
     LOCAL_RESULTS.append(afternrncall-b4nrncall)
+
     individual.params=[]
     for i in attrs['//izhikevich2007Cell'].values():
         if hasattr(individual,'params'):
             individual.params.append(i)
 
     individual.results=model.results
+
     score = get_neab.suite.judge(model)
     import numpy as np
+    for i in score.unstack():
+        if isinstance(i.score, NoneType):
+            print('a')
+
+            i.score=-100000
+            pdb.set_trace()
+
+        if isinstance(i.score, None):
+            print('b')
+            i.score=-100000
+            pdb.set_trace()
+#i=-np.inf()
     individual.error = [ np.abs(i.score) for i in score.unstack() ]
+
     individual.s_html=score.to_html()
     error=individual.error
     assert individual.results
@@ -201,8 +209,8 @@ def main(seed=None):
 
     random.seed(seed)
 
-    NGEN=10
-    MU=20
+    NGEN=2
+    MU=32
 
     CXPB = 0.9
     import numpy as numpy
@@ -219,7 +227,7 @@ def main(seed=None):
 
     # Evaluate the individuals with an invalid fitness
     invalid_ind = [ind for ind in pop if not ind.fitness.valid]
-    fitnesses = list(toolbox.map(evaluate, invalid_ind))
+    fitnesses = toolbox.map(evaluate, invalid_ind)
 
     for ind, fit in zip(invalid_ind, fitnesses):
         ind.fitness.values = fit
@@ -254,7 +262,7 @@ def main(seed=None):
 
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-        fitnesses = list(toolbox.map(toolbox.evaluate, invalid_ind))
+        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
         #import pdb
         #pdb.set_trace()
 
@@ -279,14 +287,16 @@ def main(seed=None):
         plt.savefig('front.png')
         plt.clf()
     f=open('stats_summart.txt','w')
-    f.write(list(logbook))
+    for i in list(logbook):
+        f.write(str(i))
 
     f=open('mean_call_length.txt','w')
-    f.write(np.mean(LOCAL_RESULTS))
-    f.write('the number of calls to NEURON on one CPU only')
-    f.write(len(LOCAL_RESULTS))
+    f.write(str(np.mean(LOCAL_RESULTS)/3600.00))
+    f.write('the number of calls to NEURON on one CPU only : \n')
+    f.write(str(len(LOCAL_RESULTS))+str(' \n'))
+    f.write('tseconds ')
 
-    pop=list(pop)
+    #pop=list(pop)
     plt.clf()
     plt.hold(True)
     for i in logbook:
@@ -315,8 +325,9 @@ if __name__ == "__main__":
     ga_time=finish_time-start_time
     plt.clf()
     print(stats)
-    f=open('stats_summart.txt','w')
-    f.write(stats)
+    f=open('finish_time.txt','w')
+    ft='{}{}'.format("finish_time: ",finish_time)
+    f.write(ft)
     #print(LOCAL_RESULTS)
     plt.clf()
     plt.hold(True)
@@ -328,7 +339,7 @@ if __name__ == "__main__":
         '{}{}{}'.format(np.sum(i['avg']),i['gen'],'results')
     plt.savefig('avg_error_versus_gen.png')
     plt.hold(False)
-    '{}{}'.format("finish_time: ",finish_time)
+
 
     plt.clf()
     #import pdb
@@ -342,7 +353,7 @@ if __name__ == "__main__":
     plt.clf()
     '''
     #NGEN=4
-    plotss(pop,NGEN)
+    #plotss(pop,NGEN)
 
     #plt
 
