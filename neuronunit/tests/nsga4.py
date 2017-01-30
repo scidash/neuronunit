@@ -1,14 +1,4 @@
-'''
-import os
-os.system('ipcluster start --profile=jovyan --debug &')
-os.system('sleep 25')
-import ipyparallel as ipp
-rc = ipp.Client(profile='jovyan')
-print('hello from before cpu ')
-print(rc.ids)
-#quit()
-v = rc.load_balanced_view()
-'''
+
 import get_neab
 
 """
@@ -122,33 +112,11 @@ def func2map(ind):
     return ind
 
 def evaluate(individual):#This method must be pickle-able for scoop to work.
-    for i, p in enumerate(param):
-        name_value=str(individual[i])
-        #reformate values.
-        model.name=name_value
-        if i==0:
-            attrs={'//izhikevich2007Cell':{p:name_value }}
-        else:
-            attrs['//izhikevich2007Cell'][p]=name_value
-
-    individual.attrs=attrs
-
-    model.update_run_params(attrs)
-
-    individual.params=[]
-    for i in attrs['//izhikevich2007Cell'].values():
-        if hasattr(ind,'params'):
-            individual.params.append(i)
-
-    individual.results=model.results
-    score = get_neab.suite.judge(model)
-    individual.error = [ i.sort_key for i in score.unstack() ]
-    #return ind
-    #individual=func2map(individual)
+    individual=func2map(individual)
     error=individual.error
     assert individual.results
-    print(rc.ids)
-    #LOCAL_RESULTS.append(individual.results)
+    LOCAL_RESULTS.append(individual.results)
+    #list_error=error*,
     return error[0],error[1],error[2],error[3],error[4],
 
 
@@ -157,7 +125,6 @@ toolbox.register("evaluate", evaluate)
 toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
 toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
 toolbox.register("select", tools.selNSGA2)
-#toolbox.register("map", v.map)
 toolbox.register("map", futures.map)
 
 def plotss(pop,gen):
@@ -215,7 +182,7 @@ def main(seed=None):
 
     # Begin the generational process
     for gen in range(1, NGEN):
-        print(gen)
+        #print(gen)
         # Vary the population
         offspring = tools.selTournamentDCD(pop, len(pop))
         #assert ind.results
@@ -243,28 +210,29 @@ def main(seed=None):
         #This way the initial genes keep getting added to each generation.
         #pop = toolbox.select(pop + offspring, MU)
         #This way each generations genes are completely replaced by the result of mating.
-        pop = toolbox.select(offspring, MU)
+        pop = list(toolbox.select(offspring, MU))
         record = stats.compile(pop)
         logbook.record(gen=gen, evals=len(invalid_ind), **record)
         print(logbook.stream)
 
+        plt.clf()
         pop.sort(key=lambda x: x.fitness.values)
         import numpy
         front = numpy.array([ind.fitness.values for ind in pop])
         plt.scatter(front[:,0], front[:,1], front[:,2], front[:,3])
         plt.axis("tight")
         plt.savefig('front.png')
+
         plt.clf()
-    pop=list(pop)
-    plt.clf()
-    plt.hold(True)
-    for i in logbook:
-        plt.plot(np.sum(i['avg']),i['gen'])
-        '{}{}{}'.format(np.sum(i['avg']),i['gen'],'results')
-    plt.savefig('avg_error_versus_gen.png')
-    plt.hold(False)
-    #'{}{}'.format("finish_time: ",finish_time)
-    return pop, list(logbook)
+        plt.hold(True)
+        for i in stats:
+            plt.plot(np.sum(i['avg']),i['gen'])
+            '{}{}{}'.format(np.sum(i['avg']),i['gen'],'results')
+        plt.savefig('avg_error_versus_gen.png')
+        plt.hold(False)
+        '{}{}'.format("finish_time: ",finish_time)
+        '{}{}{}'.format('the size of the population is: ,'len(pop),' is this caused by a generator in the place of list? ')
+    return pop, logbook
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
@@ -276,19 +244,15 @@ if __name__ == "__main__":
     start_time=time.time()
 
     pop, stats = main()
-    NGEN=4
-    plotss(pop,NGEN)
 
     finish_time=time.time()
     ga_time=finish_time-start_time
     plt.clf()
     print(stats)
-    #print(LOCAL_RESULTS)
+    print(LOCAL_RESULTS)
     plt.clf()
     plt.hold(True)
-    pdb.set_trace()
     for i in stats:
-
         plt.plot(np.sum(i['avg']),i['gen'])
         '{}{}{}'.format(np.sum(i['avg']),i['gen'],'results')
     plt.savefig('avg_error_versus_gen.png')
@@ -306,6 +270,8 @@ if __name__ == "__main__":
     plt.clf()
     NGEN=4
     plotss(pop,NGEN)
+    print('if pop is of type generator, that would explain why it can be used up.W')
+    print(type(pop))
 
     #plt
 
