@@ -82,30 +82,31 @@ h.m_RS_RS_pop[i].c = -50.0
 h.m_RS_RS_pop[i].d = 0.1
 h.m_RS_RS_pop[i].C = 1.00000005E-4
 '''
-NDIM= 5
+NDIM= 3
 rov=[]
 
-vr = np.linspace(-75.0,-45.0,1000)
+vr = np.linspace(-75.0,-65.0,1000)
 a = np.linspace(0.015,0.045,1000)
 b = np.linspace(-0.0010,-0.0035,1000)
 
 #k = np.linspace(7.0E-4-+7.0E-5,7.0E-4+70E-5,1000)
-c = np.linspace(-55,-60,1000)
+#c = np.linspace(-55,-60,1000)
 #C = np.linspace(1.00000005E-4-1.00000005E-5,1.00000005E-4+1.00000005E-5,1000)
-d = np.linspace(0.050,0.2,1000)
+#d = np.linspace(0.050,0.2,1000)
 #v0 = np.linspace(-75.0,-45.0,1000)
 #vt =  np.linspace(-50.0,-30.0,1000)
 #vpeak = np.linspace(30.0,40.0,1000)
 #param=['vr','a','b','C','c','d','v0','k','vt','vpeak']
-param=['vr','a','b','c','d']
+param=['a','b','vr']#,'d'
 
 rov.append(a)
 rov.append(b)
-rov.append(c)
-#rov.append(C)
-rov.append(d)
-#rov.append(k)
 rov.append(vr)
+
+#rov.append(c)
+#rov.append(C)
+#rov.append(d)
+#rov.append(k)
 #rov.append(v0)
 #rov.append(vt)
 #rov.append(vpeak)
@@ -151,7 +152,8 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
     b4nrncall=time.time()
     model.update_run_params(attrs)
     afternrncall=time.time()
-    LOCAL_RESULTS.append(afternrncall-b4nrncall)
+    if afternrncall-b4nrncall>25:
+        LOCAL_RESULTS.append(afternrncall-b4nrncall)
 
     individual.params=[]
     for i in attrs['//izhikevich2007Cell'].values():
@@ -163,17 +165,11 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
     score = get_neab.suite.judge(model)
     import numpy as np
     for i in score.unstack():
-        if isinstance(i.score, NoneType):
-            print('a')
 
-            i.score=-100000
-            pdb.set_trace()
-
-        if isinstance(i.score, None):
+        if i.score is None:
             print('b')
             i.score=-100000
-            pdb.set_trace()
-#i=-np.inf()
+
     individual.error = [ np.abs(i.score) for i in score.unstack() ]
 
     individual.s_html=score.to_html()
@@ -210,7 +206,7 @@ def main(seed=None):
     random.seed(seed)
 
     NGEN=2
-    MU=32
+    MU=64
 
     CXPB = 0.9
     import numpy as numpy

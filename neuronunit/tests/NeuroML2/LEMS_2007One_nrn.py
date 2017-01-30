@@ -133,7 +133,8 @@ class NeuronSimulation():
 
 
         # File to save: time
-        py_v_time = [ t/1000 for t in h.v_time.to_python() ]  # Convert to Python list for speed...
+        #py_v_time = [ t/1000 for t in h.v_time.to_python() ]  # Convert to Python list for speed...
+        py_v_time = [ t for t in h.v_time.to_python() ]  # Convert to Python list for speed...
 
         f_time_f2 = open('time.dat', 'w')
         num_points = len(py_v_time)  # Simulation may have been stopped before tstop...
@@ -167,4 +168,3 @@ if __name__ == '__main__':
     ns = NeuronSimulation(tstop=1600, dt=0.0025)
 
     ns.run()
-
