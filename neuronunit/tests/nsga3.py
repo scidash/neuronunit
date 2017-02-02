@@ -90,14 +90,15 @@ a = np.linspace(0.015,0.045,1000)
 b = np.linspace(-0.0010,-0.0035,1000)
 
 k = np.linspace(7.0E-4-+7.0E-5,7.0E-4+70E-5,1000)
-c = np.linspace(-55,-60,1000)
 C = np.linspace(1.00000005E-4-1.00000005E-5,1.00000005E-4+1.00000005E-5,1000)
+
+c = np.linspace(-55,-60,1000)
 d = np.linspace(0.050,0.2,1000)
 v0 = np.linspace(-75.0,-45.0,1000)
 vt =  np.linspace(-50.0,-30.0,1000)
 vpeak = np.linspace(30.0,40.0,1000)
 #param=['vr','a','b','C','c','d','v0','k','vt','vpeak']
-param=['a','b','vr','k','C']#,'d'
+param=['a','b','vr','k','C','c','d','v0','k','vt','vpeak']#,'d'
 
 rov.append(a)
 rov.append(b)
@@ -105,12 +106,12 @@ rov.append(vr)
 rov.append(k)
 rov.append(C)
 
-#rov.append(c)
-#rov.append(d)
-#rov.append(k)
-#rov.append(v0)
-#rov.append(vt)
-#rov.append(vpeak)
+rov.append(c)
+rov.append(d)
+rov.append(k)
+rov.append(v0)
+rov.append(vt)
+rov.append(vpeak)
 
 
 seed_in=1
@@ -118,7 +119,9 @@ seed_in=1
 BOUND_LOW=[ np.min(i) for i in rov ]
 BOUND_UP=[ np.max(i) for i in rov ]
 NDIM = len(rov)
-LOCAL_RESULTS=[]
+LOCAL_RESULTS_spiking=[]
+LOCAL_RESULTS_no_spiking=[]
+
 import functools
 
 def uniform(low, up, size=None):
@@ -154,7 +157,7 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
     model.update_run_params(attrs)
     afternrncall=time.time()
     #if afternrncall-b4nrncall>25:
-    LOCAL_RESULTS.append(afternrncall-b4nrncall)
+    LOCAL_RESULTS_spiking.append(afternrncall-b4nrncall)
 
     individual.params=[]
     for i in attrs['//izhikevich2007Cell'].values():
@@ -170,10 +173,11 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
     import matplotlib.pyplot as plt
     import quantities as pq
     for i in score.unstack():
-
         if i.score is None:
+            i.score=100.0
+            del LOCAL_RESULTS_spiking[-1]
+            LOCAL_RESULTS_no_spiking.append(afternrncall-b4nrncall)
             pdb.set_trace()
-            i.score=100
 
 
 
