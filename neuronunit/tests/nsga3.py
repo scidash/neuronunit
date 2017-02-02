@@ -89,22 +89,23 @@ vr = np.linspace(-75.0,-65.0,1000)
 a = np.linspace(0.015,0.045,1000)
 b = np.linspace(-0.0010,-0.0035,1000)
 
-#k = np.linspace(7.0E-4-+7.0E-5,7.0E-4+70E-5,1000)
-#c = np.linspace(-55,-60,1000)
-#C = np.linspace(1.00000005E-4-1.00000005E-5,1.00000005E-4+1.00000005E-5,1000)
-#d = np.linspace(0.050,0.2,1000)
-#v0 = np.linspace(-75.0,-45.0,1000)
-#vt =  np.linspace(-50.0,-30.0,1000)
-#vpeak = np.linspace(30.0,40.0,1000)
+k = np.linspace(7.0E-4-+7.0E-5,7.0E-4+70E-5,1000)
+c = np.linspace(-55,-60,1000)
+C = np.linspace(1.00000005E-4-1.00000005E-5,1.00000005E-4+1.00000005E-5,1000)
+d = np.linspace(0.050,0.2,1000)
+v0 = np.linspace(-75.0,-45.0,1000)
+vt =  np.linspace(-50.0,-30.0,1000)
+vpeak = np.linspace(30.0,40.0,1000)
 #param=['vr','a','b','C','c','d','v0','k','vt','vpeak']
-param=['a','b','vr']#,'d'
+param=['a','b','vr','k','C']#,'d'
 
 rov.append(a)
 rov.append(b)
 rov.append(vr)
+rov.append(k)
+rov.append(C)
 
 #rov.append(c)
-#rov.append(C)
 #rov.append(d)
 #rov.append(k)
 #rov.append(v0)
@@ -152,8 +153,8 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
     b4nrncall=time.time()
     model.update_run_params(attrs)
     afternrncall=time.time()
-    if afternrncall-b4nrncall>25:
-        LOCAL_RESULTS.append(afternrncall-b4nrncall)
+    #if afternrncall-b4nrncall>25:
+    LOCAL_RESULTS.append(afternrncall-b4nrncall)
 
     individual.params=[]
     for i in attrs['//izhikevich2007Cell'].values():
@@ -161,16 +162,22 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
             individual.params.append(i)
 
     individual.results=model.results
-
     score = get_neab.suite.judge(model)
     import numpy as np
+    import pdb
+    #import spykeutils as spykeutils
+    #import matplotlib as plt
+    import matplotlib.pyplot as plt
+    import quantities as pq
     for i in score.unstack():
 
         if i.score is None:
-            print('b')
-            i.score=-100000
+            pdb.set_trace()
+            i.score=100
 
-    individual.error = [ np.abs(i.score) for i in score.unstack() ]
+
+
+    individual.error = [ abs(i.score) for i in score.unstack() ]
 
     individual.s_html=score.to_html()
     error=individual.error
@@ -205,8 +212,8 @@ def main(seed=None):
 
     random.seed(seed)
 
-    NGEN=2
-    MU=64
+    NGEN=3
+    MU=16
 
     CXPB = 0.9
     import numpy as numpy
@@ -305,7 +312,19 @@ def main(seed=None):
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
+    import pyneuroml as pynml
+    bfl=time.time()
+    #import pdb
+    #pdb.set_trace()
+    import os
 
+    results = pynml.pynml.run_lems_with_jneuroml(os.path.split(get_neab.LEMS_MODEL_PATH)[1],
+                             verbose=False, load_saved_data=True, nogui=True,
+                             exec_in_dir=os.path.split(get_neab.LEMS_MODEL_PATH)[0],
+                             plot=True)
+    allr=time.time()
+    lemscalltime=allr-bfl
+    flt='{}{}'.format("lemscalltime: ",lemscalltime)
     # with open("pareto_front/zdt1_front.json") as optimal_front_data:
     #     optimal_front = json.load(optimal_front_data)
     # Use 500 of the 1000 points in the json file
@@ -317,6 +336,7 @@ if __name__ == "__main__":
     f=open('html_score_matrix.html','w')
     f.write(pop[0].s_html)
     #s_html
+    f.close()
     finish_time=time.time()
     ga_time=finish_time-start_time
     plt.clf()
@@ -324,11 +344,11 @@ if __name__ == "__main__":
     f=open('finish_time.txt','w')
     ft='{}{}'.format("finish_time: ",finish_time)
     f.write(ft)
+    #f.write(flt)
     #print(LOCAL_RESULTS)
     plt.clf()
     plt.hold(True)
 
-    #pdb.set_trace()
     for i in stats:
 
         plt.plot(np.sum(i['avg']),i['gen'])
@@ -338,20 +358,3 @@ if __name__ == "__main__":
 
 
     plt.clf()
-    #import pdb
-    #pdb.set_trace()
-    #plotss(invalid_ind,gen)
-    '''
-    plotr=LOCAL_RESULTS[len(LOCAL_RESULTS)-1]
-    plt.plot(plotr['t'],plotr['vm'])
-    plt.savefig('final_results_from_only_one_CPU.png')
-
-    plt.clf()
-    '''
-    #NGEN=4
-    #plotss(pop,NGEN)
-
-    #plt
-
-
-    # plt.show()

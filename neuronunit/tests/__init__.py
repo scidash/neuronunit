@@ -101,11 +101,11 @@ class VmTest(sciunit.Test):
             )
         reference_data.get_values(quiet=not cls.verbose) # Get and verify summary data
                                     # from neuroelectro.org.
-                                    
+
         #import pdb
         print(reference_data.get_values())
 
-        #pdb.set_trace()                            
+        #pdb.set_trace()
         observation = {'mean': reference_data.mean*cls.units,
                        'std': reference_data.std*cls.units,
                        'n': reference_data.n}
@@ -163,18 +163,10 @@ class TestPulseTest(VmTest):
 
     @classmethod
     def get_tau(cls, vm, i):
-        '''
-        bug
-        '''
-    #bug i['delay'] is not a sequence. 
-        import pdb
-        pdb.set_trace()
         start, stop = -11*pq.ms, (i['duration']-(1*pq.ms))
         region = cls.get_segment(vm,start+i['delay'],stop+i['delay'])
-        b=np.linspace(0,100,len(vm))
-        coefs = cls.exponential_fit(region, b)
-        #coefs = cls.exponential_fit(region, i['delay'])
-        #tau = (pq.s/coefs[1]).rescale('ms')
+        coefs = cls.exponential_fit(region, i['delay'])
+        tau = (pq.ms/coefs[1]).rescale('ms')
         return tau
 
     @classmethod
@@ -182,10 +174,10 @@ class TestPulseTest(VmTest):
         def func(x, a, b, c):
             return a * np.exp(-b * x) + c
 
-        x = segment.times.rescale('s')
+        x = segment.times.rescale('ms')
         y = segment.rescale('V')
-        offset = float(offset.rescale('s')) # Strip units for optimization
-        popt, pcov = curve_fit(func, x-offset*pq.s, y, [0.001,2,y.min()]) # Estimate starting values for better convergence
+        offset = float(offset.rescale('ms')) # Strip units for optimization
+        popt, pcov = curve_fit(func, x-offset*pq.ms, y, [0.001,2,y.min()]) # Estimate starting values for better convergence
         return popt
 
 
@@ -231,6 +223,29 @@ class TimeConstantTest(TestPulseTest):
         prediction = {'value':tau}
         return prediction
 
+    #super(TimeConstantTest,self).prediction=super(TimeConstantTest,self).generate_prediction(model)
+    #a=super(TimeConstantTest,self).prediction
+    #pdb.set_trace()
+    def compute_score(self, observation, prediction):
+        """Implementation of sciunit.Test.score_prediction."""
+        import pdb
+        #pdb.set_trace()
+        if 'n' in prediction.keys():
+            if prediction['n'] == 0:
+                score = scores.InsufficientDataScore(None)
+        else:
+            #import numpy as np
+            #pdb.set_trace()
+
+            print(observation['mean'])
+            print(prediction['value'])
+            print(observation['mean']-prediction['value'])
+            print('that was the difference between observation and prediction')
+            score = super(TimeConstantTest,self).compute_score(observation,
+                                                          prediction)
+
+        return score
+
 
 class CapacitanceTest(TestPulseTest):
     """Tests the input resistance of a cell."""
@@ -252,6 +267,18 @@ class CapacitanceTest(TestPulseTest):
         # Put prediction in a form that compute_score() can use.
         prediction = {'value':c}
         return prediction
+
+    def compute_score(self, observation, prediction):
+        """Implementation of sciunit.Test.score_prediction."""
+        #import pdb
+        #pdb.set_trace()
+        if 'n' in prediction.keys():
+            if prediction['n'] == 0:
+                score = scores.InsufficientDataScore(None)
+        else:
+            score = super(CapacitanceTest,self).compute_score(observation,
+                                                          prediction)
+        return score
 
 
 class APWidthTest(VmTest):
@@ -509,9 +536,9 @@ class RheobaseTest(VmTest):
             if float(ampl) not in lookup:
                 current = self.params.copy()['injected_square_current']
                 #This does not do what you would expect.
-                #due to syntax I don't understand. 
-                #updating the dictionary keys with new values doesn't work. 
-                
+                #due to syntax I don't understand.
+                #updating the dictionary keys with new values doesn't work.
+
                 uc={'amplitude':ampl}
                 current.update(uc)
                 current={'injected_square_current':current}
