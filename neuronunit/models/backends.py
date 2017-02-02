@@ -174,34 +174,6 @@ class NEURONBackend(Backend):
         more_attributes=None#force garbage collection of more_attributes, its not needed anymore.
         return self
 
-    '''
-    def set_attrs(self,attrs):
-
-        import re
-        for key, value in attrs.items():
-             h_variable=list(value.keys())
-             h_variable=h_variable[0]
-
-             h_assignment=list(value.values())
-             h_assignment=h_assignment[0]
-             #h_assignment = re.sub('\mV$', '', str(h_assignment))
-
-
-             self.h('m_RS_RS_pop[0].'+str(h_variable)+'='+str(h_assignment))
-             self.h('m_'+str(self.cell_name)+'_'+str(self.cell_name)+'_pop[0].'+str(h_variable)+'='+str(h_assignment))
-
-
-
-        self.h(' { v_time = new Vector() } ')
-        self.h(' { v_time.record(&t) } ')
-
-        self.h(' { v_v_of0 = new Vector() } ')
-        self.h(' { v_v_of0.record(&RS_pop[0].v(0.5)) } ')
-
-        self.h(' { v_u_of0 = new Vector() } ')
-        self.h(' { v_u_of0.record(&m_RS_RS_pop[0].u) } ')
-
-    '''
 
     def update_run_params(self,attrs):
 
@@ -289,7 +261,11 @@ class NEURONBackend(Backend):
         sim_time = sim_end - sim_start
         print("Finished NEURON simulation in %f seconds (%f mins)..."%(sim_time, sim_time/60.0))
         self.results={}
-        self.results['vm'] = [ float(x  / 1000.0) for x in self.neuron.h.v_v_of0.to_python() ]  # Convert to Python list for speed, variable has dim: voltage
-        #self.results['vm']=self.neuron.h.v_v_of0.to_python()
-        self.results['t']=self.neuron.h.v_time.to_python()
+        self.results['vm'] = [ float(x/1000.0) for x in self.neuron.h.v_v_of0.to_python() ]  # Convert to Python list for speed, variable has dim: voltage
+        #self.results['vm'] = [ float(x  / 1000.0) for x in self.neuron.h.v_v_of0.to_python() ]  # Convert to Python list for speed, variable has dim: voltage
+
+        #self.results['t']=self.neuron.h.v_time.to_py        #self.results['vm']=self.neuron.h.v_v_of0.to_python()
+        self.results['t'] = [ float(x) for x in self.neuron.h.v_time.to_python() ]  # Convert to Python list for speed, variable has dim: voltage
+
+        #self.results['t']=self.neuron.h.v_time.to_python()
         return self.results
