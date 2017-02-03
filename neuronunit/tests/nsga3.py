@@ -61,9 +61,11 @@ toolbox = base.Toolbox()
 rov=[]
 
 vr = np.linspace(-75.0,-50.0,1000)
+
+
 a = np.linspace(0.015,0.045,1000)
 b = np.linspace(-0.0010,-0.0035,1000)
-
+#b = np.linspace(-3.5,-0.5,1000)
 k = np.linspace(7.0E-4-+7.0E-5,7.0E-4+70E-5,1000)
 C = np.linspace(1.00000005E-4-1.00000005E-5,1.00000005E-4+1.00000005E-5,1000)
 
@@ -149,19 +151,40 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
     import matplotlib.pyplot as plt
     import quantities as pq
     if 'Insufficient Data' in score.unstack():
-        individual.error = [ 100 for i in range(0,8) ]
+        print('got here a')
+        individual.error = [ 100.0 for i in range(0,7) ]
         if len(LOCAL_RESULTS_spiking)>0:
             del LOCAL_RESULTS_spiking[-1]
+        individual.s_html=None
+
+    if 'Insufficient Data' in score:
+        print('got here b')
+        individual.error = [ 100.0 for i in range(0,7) ]
+        if len(LOCAL_RESULTS_spiking)>0:
+            del LOCAL_RESULTS_spiking[-1]
+        individual.s_html=None
+
+
     else:
         for i in score.unstack():
             if i.score is None:
                 i.score=100.0
                 if len(LOCAL_RESULTS_spiking)>0:
                     del LOCAL_RESULTS_spiking[-1]
-
+    try:
+        individual.error = []
         individual.error = [ abs(i.score) for i in score.unstack() ]
+        individual.s_html=score.to_html()
+    except Exception as e:
+        '{}'.format('Insufficient Data \n \n \n \n')
+        '{}'.format('got here a \n \n \n')
+        individual.error = []
+        individual.error = [ 100.0 for i in range(0,7) ]
+        if len(LOCAL_RESULTS_spiking)>0:
+            del LOCAL_RESULTS_spiking[-1]
+        individual.s_html=None
 
-    individual.s_html=score.to_html()
+
     error=individual.error
     assert individual.results
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
@@ -172,7 +195,6 @@ toolbox.register("evaluate", evaluate)
 toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
 toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
 toolbox.register("select", tools.selNSGA2)
-
 toolbox.register("map", futures.map)
 
 
@@ -290,7 +312,7 @@ def main(seed=None):
     #global_sum = futures.map(padd,LOCAL_RESULTS_spiking)
 
     f.write(str(len(LOCAL_RESULTS_spiking))+str(' \n'))
-    f.write(str(len(global_sum))+str(' \n'))
+    #f.write(str(len(global_sum))+str(' \n'))
 
     plt.clf()
     plt.hold(True)
@@ -308,6 +330,7 @@ if __name__ == "__main__":
     #import pdb
     #pdb.set_trace()
     import os
+    '''
     bfl=time.time()
     results = pynml.pynml.run_lems_with_jneuroml(os.path.split(get_neab.LEMS_MODEL_PATH)[1],
                              verbose=False, load_saved_data=True, nogui=True,
@@ -320,7 +343,7 @@ if __name__ == "__main__":
 
     f.write(flt)
     f.close()
-
+    '''
 
     # with open("pareto_front/zdt1_front.json") as optimal_front_data:
     #     optimal_front = json.load(optimal_front_data)
