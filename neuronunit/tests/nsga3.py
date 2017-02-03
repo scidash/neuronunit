@@ -71,7 +71,8 @@ c = np.linspace(-55,-60,1000)
 d = np.linspace(0.050,0.2,1000)
 v0 = np.linspace(-75.0,-45.0,1000)
 vt =  np.linspace(-50.0,-30.0,1000)
-vpeak = np.linspace(30.0,40.0,1000)
+#vpeak = np.linspace(30.0,40.0,1000)
+#vpeak as currently stated causes problems.
 #param=['vr','a','b','C','c','d','v0','k','vt','vpeak']
 param=['a','b','vr','k','C']#,'c','d','v0','k','vt','vpeak']#,'d'
 
@@ -80,13 +81,14 @@ rov.append(b)
 rov.append(vr)
 rov.append(k)
 rov.append(C)
+#rov.append(vpeak)
+
 '''
 rov.append(c)
 rov.append(d)
 rov.append(k)
 rov.append(v0)
 rov.append(vt)
-rov.append(vpeak)
 '''
 
 seed_in=1
@@ -147,23 +149,24 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
     #import matplotlib as plt
     import matplotlib.pyplot as plt
     import quantities as pq
-
+    #for i in score.unstack():
+    #    if i=='Insufficient Data':
+    #        pdb.set_trace()
     if 'Insufficient Data' in score.unstack():
         individual.error = [ 100 for i in range(0,8) ]
-        del LOCAL_RESULTS_spiking[-1]
-        LOCAL_RESULTS_no_spiking.append(afternrncall-b4nrncall)
-        pdb.set_trace()
-
-    for i in score.unstack():
-        if i.score is None:
-            i.score=100.0
+        if len(LOCAL_RESULTS_spiking)>0:
             del LOCAL_RESULTS_spiking[-1]
-            LOCAL_RESULTS_no_spiking.append(afternrncall-b4nrncall)
-            pdb.set_trace()
+        LOCAL_RESULTS_no_spiking.append(afternrncall-b4nrncall)
+        #pdb.set_trace()
+    else:
+        for i in score.unstack():
+            if i.score is None:
+                i.score=100.0
+                if len(LOCAL_RESULTS_spiking)>0:
+                    del LOCAL_RESULTS_spiking[-1]
+                LOCAL_RESULTS_no_spiking.append(afternrncall-b4nrncall)
 
-
-
-    individual.error = [ abs(i.score) for i in score.unstack() ]
+        individual.error = [ abs(i.score) for i in score.unstack() ]
 
     individual.s_html=score.to_html()
     error=individual.error
@@ -188,7 +191,6 @@ def plotss(pop,gen):
         if hasattr(ind,'results'):
             plt.plot(ind.results['t'],ind.results['vm'])
             plt.xlabel(str(ind.attrs))
-            #str(scoop.worker)+
     plt.savefig('snap_shot_at_'+str(gen)+'.png')
     plt.clf()
 
@@ -196,8 +198,8 @@ def main(seed=None):
 
     random.seed(seed)
 
-    NGEN=3
-    MU=32
+    NGEN=2
+    MU=8
 
     CXPB = 0.9
     import numpy as numpy
@@ -265,7 +267,6 @@ def main(seed=None):
         record = stats.compile(pop)
         logbook.record(gen=gen, evals=len(invalid_ind), **record)
         print(logbook.stream)
-
         pop.sort(key=lambda x: x.fitness.values)
         import numpy
         front = numpy.array([ind.fitness.values for ind in pop])
@@ -274,22 +275,29 @@ def main(seed=None):
         plt.savefig('front.png')
         plt.clf()
 
+    #offspring = tools.selTournamentDCD(pop, len(pop))
+    (a,b,c,d,e,f,g,h) = evaluate(invalid_ind[0])
+
+    f=open('html_score_matrix.html','w')
+    f.write(invalid_ind[0].s_html)
+    f.close()
     plotss(invalid_ind,gen)
+    os.system('rm *.txt')
+
     f=open('stats_summart.txt','w')
     for i in list(logbook):
         f.write(str(i))
-    os.system('rm *.txt')
     f=open('mean_call_length_spiking.txt','w')
-    f.write(str(np.mean(LOCAL_RESULTS_spiking/3600.0)))
+    f.write(str(np.mean(LOCAL_RESULTS_spiking))+': \n'))
     f.write('the number of calls to NEURON on one CPU only : \n')
     f.write(str(len(LOCAL_RESULTS_spiking))+str(' \n'))
-    f.write('tseconds ')
+    #f.write('tseconds ')
 
-    f=open('mean_call_length_no_spiking.txt','w')
-    f.write(str(np.mean(LOCAL_RESULTS_no_spiking)))
-    f.write('the number of calls to NEURON on one CPU only : \n')
-    f.write(str(len(LOCAL_RESULTS_no_spiking))+str(' \n'))
-    f.write('tseconds ')
+    #f=open('mean_call_length_no_spiking.txt','w')
+    #f.write(str(np.mean(LOCAL_RESULTS_no_spiking)))
+    #f.write('the number of calls to NEURON on one CPU only : \n')
+    #f.write(str(len(LOCAL_RESULTS_no_spiking))+str(' \n'))
+    #f.write('tseconds ')
 
     #pop=list(pop)
     plt.clf()
@@ -317,16 +325,12 @@ if __name__ == "__main__":
     start_time=time.time()
     whole_initialisation=start_time-init_start
     pop, stats = main()
-    f=open('html_score_matrix.html','w')
-    f.write(pop[0].s_html)
-    #s_html
-    f.close()
     finish_time=time.time()
     ga_time=finish_time-start_time
     plt.clf()
     print(stats)
     f=open('finish_time.txt','w')
-    init_time='{}{}'.format("init time: ",start_time)
+    init_time='{}{}'.format("init time: ",whole_initialisation)
     ft='{}{}'.format("ga_time: ",ga_time)
     f.write(init_time)
     f.write(ft)
@@ -344,8 +348,6 @@ if __name__ == "__main__":
 
 
     plt.clf()
-
-
     results = pynml.pynml.run_lems_with_jneuroml(os.path.split(get_neab.LEMS_MODEL_PATH)[1],
                              verbose=False, load_saved_data=True, nogui=True,
                              exec_in_dir=os.path.split(get_neab.LEMS_MODEL_PATH)[0],
@@ -355,3 +357,17 @@ if __name__ == "__main__":
     flt='{}{}'.format("lemscalltime: ",lemscalltime)
     f.write(flt)
     f.close()
+    '''
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='jNeuroMLBackend')
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla')
+    for i, p in enumerate(param):
+        #name_value=str(individual[i])
+        #reformate values.
+        #model.name=name_value
+        name_value='izhikevich2007Cell'
+        if i==0:
+            attrs={'//izhikevich2007Cell':{p:name_value }}
+        else:
+            attrs['//izhikevich2007Cell'][p]=name_value
+        model.update_run_params(attrs)
+   '''
