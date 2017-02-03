@@ -178,7 +178,6 @@ WORKDIR $HOME/neuronunit/neuronunit/tests/NeuroML2
 
 RUN nrnivmodl
 RUN ls LEMS_2007One.xml
-#WORKDIR $HOME/neuronunit/neuronunit/tests/
-#WORKDIR ../
-#ENTRYPOINT python -m scoop nsga4.py
-#; eog *.png
+WORKDIR $HOME/neuronunit/neuronunit/tests/
+ENTRYPOINT python -m scoop nsga3.py
+
