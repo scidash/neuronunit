@@ -330,20 +330,7 @@ if __name__ == "__main__":
     #import pdb
     #pdb.set_trace()
     import os
-    '''
-    bfl=time.time()
-    results = pynml.pynml.run_lems_with_jneuroml(os.path.split(get_neab.LEMS_MODEL_PATH)[1],
-                             verbose=False, load_saved_data=True, nogui=True,
-                             exec_in_dir=os.path.split(get_neab.LEMS_MODEL_PATH)[0],
-                             plot=True)
-    allr=time.time()
-    lemscalltime=allr-bfl
-    flt='{}{}{}'.format("lemscalltime: ",float(lemscalltime),"\n")
-    f=open('jneuroml_call_time.txt','w')
 
-    f.write(flt)
-    f.close()
-    '''
 
     # with open("pareto_front/zdt1_front.json") as optimal_front_data:
     #     optimal_front = json.load(optimal_front_data)
@@ -362,10 +349,26 @@ if __name__ == "__main__":
     f.write(init_time)
     f.write(ft)
 
+    bfl=time.time()
+    results = pynml.pynml.run_lems_with_jneuroml(os.path.split(get_neab.LEMS_MODEL_PATH)[1],
+                             verbose=False, load_saved_data=True, nogui=True,
+                             exec_in_dir=os.path.split(get_neab.LEMS_MODEL_PATH)[0],
+                             plot=True)
+    allr=time.time()
+    lemscalltime=allr-bfl
+    flt='{}{}{}'.format("lemscalltime: ",float(lemscalltime),"\n")
+    f=open('jneuroml_call_time.txt','w')
+
+    f.write(flt)
+    f.close()
+
     #print(LOCAL_RESULTS)
     plt.clf()
     plt.hold(True)
 
+    import os
+    #display all the results as travis standard out.
+    os.system('cat *.txt')
     for i in stats:
 
         plt.plot(np.sum(i['avg']),i['gen'])
@@ -375,6 +378,9 @@ if __name__ == "__main__":
 
 
     plt.clf()
+
+
+
     '''
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='jNeuroMLBackend')
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla')
