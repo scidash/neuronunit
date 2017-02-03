@@ -58,31 +58,6 @@ class Individual(object):
         self.fitness=None
         self.s_html=None
 toolbox = base.Toolbox()
-
-# Functions zdt1, zdt2, zdt3 have 30 dimensions, zdt4 and zdt6 have 10
-
-#param=['vr','a','b']
-#rov0 = np.linspace(-65,-55,2)
-#rov1 = np.linspace(0.015,0.045,2)
-#rov2 = np.linspace(-0.0010,-0.0035,2)
-#These are  dimension
-#rov0 = np.linspace(-65,-55,1000)
-#rov1 = np.linspace(0.015,0.045,1000)
-#rov2 = np.linspace(-0.0010,-0.0035,1000)
-
-'''
-h.m_RS_RS_pop[i].v0 = -60.0
-h.m_RS_RS_pop[i].k = 7.0E-4
-h.m_RS_RS_pop[i].vr = -60.0
-h.m_RS_RS_pop[i].vt = -40.0
-h.m_RS_RS_pop[i].vpeak = 35.0
-h.m_RS_RS_pop[i].a = 0.030000001
-h.m_RS_RS_pop[i].b = -0.0019999999
-h.m_RS_RS_pop[i].c = -50.0
-h.m_RS_RS_pop[i].d = 0.1
-h.m_RS_RS_pop[i].C = 1.00000005E-4
-'''
-NDIM= 3
 rov=[]
 
 vr = np.linspace(-75.0,-65.0,1000)
@@ -98,27 +73,27 @@ v0 = np.linspace(-75.0,-45.0,1000)
 vt =  np.linspace(-50.0,-30.0,1000)
 vpeak = np.linspace(30.0,40.0,1000)
 #param=['vr','a','b','C','c','d','v0','k','vt','vpeak']
-param=['a','b','vr','k','C','c','d','v0','k','vt','vpeak']#,'d'
+param=['a','b','vr','k','C']#,'c','d','v0','k','vt','vpeak']#,'d'
 
 rov.append(a)
 rov.append(b)
 rov.append(vr)
 rov.append(k)
 rov.append(C)
-
+'''
 rov.append(c)
 rov.append(d)
 rov.append(k)
 rov.append(v0)
 rov.append(vt)
 rov.append(vpeak)
-
+'''
 
 seed_in=1
 
 BOUND_LOW=[ np.min(i) for i in rov ]
 BOUND_UP=[ np.max(i) for i in rov ]
-NDIM = len(rov)
+NDIM = len(param)
 LOCAL_RESULTS_spiking=[]
 LOCAL_RESULTS_no_spiking=[]
 
@@ -172,6 +147,13 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
     #import matplotlib as plt
     import matplotlib.pyplot as plt
     import quantities as pq
+
+    if 'Insufficient Data' in score.unstack():
+        individual.error = [ 100 for i in range(0,8) ]
+        del LOCAL_RESULTS_spiking[-1]
+        LOCAL_RESULTS_no_spiking.append(afternrncall-b4nrncall)
+        pdb.set_trace()
+
     for i in score.unstack():
         if i.score is None:
             i.score=100.0
@@ -208,16 +190,14 @@ def plotss(pop,gen):
             plt.xlabel(str(ind.attrs))
             #str(scoop.worker)+
     plt.savefig('snap_shot_at_'+str(gen)+'.png')
-    #plt.hold(False)
     plt.clf()
-    #return 0
 
 def main(seed=None):
 
     random.seed(seed)
 
     NGEN=3
-    MU=16
+    MU=32
 
     CXPB = 0.9
     import numpy as numpy
@@ -293,14 +273,22 @@ def main(seed=None):
         plt.axis("tight")
         plt.savefig('front.png')
         plt.clf()
+
+    plotss(invalid_ind,gen)
     f=open('stats_summart.txt','w')
     for i in list(logbook):
         f.write(str(i))
-
-    f=open('mean_call_length.txt','w')
-    f.write(str(np.mean(LOCAL_RESULTS)/3600.00))
+    os.system('rm *.txt')
+    f=open('mean_call_length_spiking.txt','w')
+    f.write(str(np.mean(LOCAL_RESULTS_spiking/3600.0)))
     f.write('the number of calls to NEURON on one CPU only : \n')
-    f.write(str(len(LOCAL_RESULTS))+str(' \n'))
+    f.write(str(len(LOCAL_RESULTS_spiking))+str(' \n'))
+    f.write('tseconds ')
+
+    f=open('mean_call_length_no_spiking.txt','w')
+    f.write(str(np.mean(LOCAL_RESULTS_no_spiking)))
+    f.write('the number of calls to NEURON on one CPU only : \n')
+    f.write(str(len(LOCAL_RESULTS_no_spiking))+str(' \n'))
     f.write('tseconds ')
 
     #pop=list(pop)
@@ -322,20 +310,12 @@ if __name__ == "__main__":
     #pdb.set_trace()
     import os
 
-    results = pynml.pynml.run_lems_with_jneuroml(os.path.split(get_neab.LEMS_MODEL_PATH)[1],
-                             verbose=False, load_saved_data=True, nogui=True,
-                             exec_in_dir=os.path.split(get_neab.LEMS_MODEL_PATH)[0],
-                             plot=True)
-    allr=time.time()
-    lemscalltime=allr-bfl
-    flt='{}{}'.format("lemscalltime: ",lemscalltime)
     # with open("pareto_front/zdt1_front.json") as optimal_front_data:
     #     optimal_front = json.load(optimal_front_data)
     # Use 500 of the 1000 points in the json file
     # optimal_front = sorted(optimal_front[i] for i in range(0, len(optimal_front), 2))
     start_time=time.time()
     whole_initialisation=start_time-init_start
-
     pop, stats = main()
     f=open('html_score_matrix.html','w')
     f.write(pop[0].s_html)
@@ -346,9 +326,11 @@ if __name__ == "__main__":
     plt.clf()
     print(stats)
     f=open('finish_time.txt','w')
-    ft='{}{}'.format("finish_time: ",finish_time)
+    init_time='{}{}'.format("init time: ",start_time)
+    ft='{}{}'.format("ga_time: ",ga_time)
+    f.write(init_time)
     f.write(ft)
-    #f.write(flt)
+
     #print(LOCAL_RESULTS)
     plt.clf()
     plt.hold(True)
@@ -362,3 +344,14 @@ if __name__ == "__main__":
 
 
     plt.clf()
+
+
+    results = pynml.pynml.run_lems_with_jneuroml(os.path.split(get_neab.LEMS_MODEL_PATH)[1],
+                             verbose=False, load_saved_data=True, nogui=True,
+                             exec_in_dir=os.path.split(get_neab.LEMS_MODEL_PATH)[0],
+                             plot=True)
+    allr=time.time()
+    lemscalltime=allr-bfl
+    flt='{}{}'.format("lemscalltime: ",lemscalltime)
+    f.write(flt)
+    f.close()
