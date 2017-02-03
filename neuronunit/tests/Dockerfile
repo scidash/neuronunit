@@ -80,8 +80,8 @@ WORKDIR BluePyOpt
 RUN pwd
 RUN ls *
 RUN python setup.py install
-RUN git remote add me https://github.com/russelljjarvis/BluePyOpt
-RUN git remote add origin https://github.com/BlueBrain/BluePyOpt
+#RUN git remote add me https://github.com/russelljjarvis/BluePyOpt
+#RUN git remote add origin https://github.com/BlueBrain/BluePyOpt
 
 RUN pip install git+https://github.com/uqfoundation/multiprocess
 RUN apt-get install -y python-tk
