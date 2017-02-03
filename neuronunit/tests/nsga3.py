@@ -60,7 +60,7 @@ class Individual(object):
 toolbox = base.Toolbox()
 rov=[]
 
-vr = np.linspace(-75.0,-65.0,1000)
+vr = np.linspace(-75.0,-50.0,1000)
 a = np.linspace(0.015,0.045,1000)
 b = np.linspace(-0.0010,-0.0035,1000)
 
@@ -74,13 +74,13 @@ vt =  np.linspace(-50.0,-30.0,1000)
 #vpeak = np.linspace(30.0,40.0,1000)
 #vpeak as currently stated causes problems.
 #param=['vr','a','b','C','c','d','v0','k','vt','vpeak']
-param=['a','b','vr','k','C']#,'c','d','v0','k','vt','vpeak']#,'d'
+param=['a','b','vr']#,'k']#,'C']#,'c','d','v0','k','vt','vpeak']#,'d'
 
 rov.append(a)
 rov.append(b)
 rov.append(vr)
-rov.append(k)
-rov.append(C)
+#rov.append(k)
+#rov.append(C)
 #rov.append(vpeak)
 
 '''
@@ -130,41 +130,34 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
             attrs['//izhikevich2007Cell'][p]=name_value
 
     individual.attrs=attrs
-    b4nrncall=time.time()
     model.update_run_params(attrs)
-    afternrncall=time.time()
-    #if afternrncall-b4nrncall>25:
-    LOCAL_RESULTS_spiking.append(afternrncall-b4nrncall)
 
     individual.params=[]
     for i in attrs['//izhikevich2007Cell'].values():
         if hasattr(individual,'params'):
             individual.params.append(i)
 
+
+    score = get_neab.suite.judge(model)#passing in model, changes model
+
     individual.results=model.results
-    score = get_neab.suite.judge(model)
+
+    LOCAL_RESULTS_spiking.append(model.results['sim_time'])
+    '{}{}'.format('sim time stored: ',model.results['sim_time'])
     import numpy as np
     import pdb
-    #import spykeutils as spykeutils
-    #import matplotlib as plt
     import matplotlib.pyplot as plt
     import quantities as pq
-    #for i in score.unstack():
-    #    if i=='Insufficient Data':
-    #        pdb.set_trace()
     if 'Insufficient Data' in score.unstack():
         individual.error = [ 100 for i in range(0,8) ]
         if len(LOCAL_RESULTS_spiking)>0:
             del LOCAL_RESULTS_spiking[-1]
-        LOCAL_RESULTS_no_spiking.append(afternrncall-b4nrncall)
-        #pdb.set_trace()
     else:
         for i in score.unstack():
             if i.score is None:
                 i.score=100.0
                 if len(LOCAL_RESULTS_spiking)>0:
                     del LOCAL_RESULTS_spiking[-1]
-                LOCAL_RESULTS_no_spiking.append(afternrncall-b4nrncall)
 
         individual.error = [ abs(i.score) for i in score.unstack() ]
 
@@ -198,8 +191,8 @@ def main(seed=None):
 
     random.seed(seed)
 
-    NGEN=2
-    MU=8
+    NGEN=4
+    MU=12
 
     CXPB = 0.9
     import numpy as numpy
@@ -235,10 +228,7 @@ def main(seed=None):
         print(gen)
         # Vary the population
         offspring = tools.selTournamentDCD(pop, len(pop))
-        #assert ind.results
-
         offspring = [toolbox.clone(ind) for ind in offspring]
-        #print('cloning not true clone')
 
 
         for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
@@ -252,14 +242,13 @@ def main(seed=None):
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
         fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
-        #import pdb
-        #pdb.set_trace()
+
 
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
         plotss(invalid_ind,gen)
 
-            # Select the next generation population
+        # Select the next generation population
         #This way the initial genes keep getting added to each generation.
         #pop = toolbox.select(pop + offspring, MU)
         #This way each generations genes are completely replaced by the result of mating.
@@ -275,7 +264,11 @@ def main(seed=None):
         plt.savefig('front.png')
         plt.clf()
 
-    #offspring = tools.selTournamentDCD(pop, len(pop))
+    #when scoop is run in parallel only the fitnesses from the individual object
+    #are retained after distributing individuals and reducing them back to rank0
+    #there is no way to garuntee that the best candidate solution will
+    #retain its object attributes, except via re evaluating it, in a scope outside
+    #of futures.map as is done below.
     (a,b,c,d,e,f,g,h) = evaluate(invalid_ind[0])
 
     f=open('html_score_matrix.html','w')
@@ -288,18 +281,17 @@ def main(seed=None):
     for i in list(logbook):
         f.write(str(i))
     f=open('mean_call_length_spiking.txt','w')
-    f.write(str(np.mean(LOCAL_RESULTS_spiking))+': \n'))
+    mean_spike_call_time='{}{}{}'.format('mean spike call time',str(np.mean(LOCAL_RESULTS_spiking)), str(': \n') )
+    f.write(mean_spike_call_time)
     f.write('the number of calls to NEURON on one CPU only : \n')
+    #def padd(LOCAL_RESULTS_spiking):
+    #    global_sum+=len(LOCAL_RESULTS_spiking)
+    #    return global_sum
+    #global_sum = futures.map(padd,LOCAL_RESULTS_spiking)
+
     f.write(str(len(LOCAL_RESULTS_spiking))+str(' \n'))
-    #f.write('tseconds ')
+    f.write(str(len(global_sum))+str(' \n'))
 
-    #f=open('mean_call_length_no_spiking.txt','w')
-    #f.write(str(np.mean(LOCAL_RESULTS_no_spiking)))
-    #f.write('the number of calls to NEURON on one CPU only : \n')
-    #f.write(str(len(LOCAL_RESULTS_no_spiking))+str(' \n'))
-    #f.write('tseconds ')
-
-    #pop=list(pop)
     plt.clf()
     plt.hold(True)
     for i in logbook:
@@ -313,10 +305,22 @@ def main(seed=None):
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import pyneuroml as pynml
-    bfl=time.time()
     #import pdb
     #pdb.set_trace()
     import os
+    bfl=time.time()
+    results = pynml.pynml.run_lems_with_jneuroml(os.path.split(get_neab.LEMS_MODEL_PATH)[1],
+                             verbose=False, load_saved_data=True, nogui=True,
+                             exec_in_dir=os.path.split(get_neab.LEMS_MODEL_PATH)[0],
+                             plot=True)
+    allr=time.time()
+    lemscalltime=allr-bfl
+    flt='{}{}{}'.format("lemscalltime: ",float(lemscalltime),"\n")
+    f=open('jneuroml_call_time.txt','w')
+
+    f.write(flt)
+    f.close()
+
 
     # with open("pareto_front/zdt1_front.json") as optimal_front_data:
     #     optimal_front = json.load(optimal_front_data)
@@ -330,8 +334,8 @@ if __name__ == "__main__":
     plt.clf()
     print(stats)
     f=open('finish_time.txt','w')
-    init_time='{}{}'.format("init time: ",whole_initialisation)
-    ft='{}{}'.format("ga_time: ",ga_time)
+    init_time='{}{}{}'.format("init time: ",whole_initialisation,"\n")
+    ft='{}{}{}'.format("ga_time: ",ga_time,"\n")
     f.write(init_time)
     f.write(ft)
 
@@ -348,15 +352,6 @@ if __name__ == "__main__":
 
 
     plt.clf()
-    results = pynml.pynml.run_lems_with_jneuroml(os.path.split(get_neab.LEMS_MODEL_PATH)[1],
-                             verbose=False, load_saved_data=True, nogui=True,
-                             exec_in_dir=os.path.split(get_neab.LEMS_MODEL_PATH)[0],
-                             plot=True)
-    allr=time.time()
-    lemscalltime=allr-bfl
-    flt='{}{}'.format("lemscalltime: ",lemscalltime)
-    f.write(flt)
-    f.close()
     '''
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='jNeuroMLBackend')
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla')
