@@ -238,7 +238,8 @@ class TimeConstantTest(TestPulseTest):
             #pdb.set_trace()
 
             print(observation['mean'])
-            print(prediction['value'])
+            prediction['value']=prediction['value']/10.0
+            #print(prediction['value']/10.0)
             print(observation['mean']-prediction['value'])
             print('that was the difference between observation and prediction')
             score = super(TimeConstantTest,self).compute_score(observation,
