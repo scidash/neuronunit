@@ -20,18 +20,8 @@ class ReducedModel(mod.LEMSModel,
         LEMS_file_path: Path to LEMS file (an xml file).
         name: Optional model name.
         """
-        #import pdb
-        #pdb.set_trace()
-        #self, LEMS_file_path, name=None, backend=None, attrs={}):
-
-        #super(ReducedModel,self).__init__(LEMS_file_path=LEMS_file_path,name=name,backend='NEURON', attrs=attrs)
         super(ReducedModel,self).__init__(LEMS_file_path,name=name,backend=backend,attrs=attrs)
-
-        #self.LEMS_file_path=LEMS_file_path
-
-        #self.name=name
-        #self.backend=backend
-        #self.attrs=attrs
+        self.run_number=0
     def get_membrane_potential(self, rerun=None, **run_params):
         if rerun is None:
             rerun = self.rerun

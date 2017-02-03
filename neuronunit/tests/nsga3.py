@@ -24,6 +24,9 @@ import random
 import json
 
 import numpy as np
+import pdb
+import matplotlib.pyplot as plt
+import quantities as pq
 
 from math import sqrt
 
@@ -34,6 +37,7 @@ from deap.benchmarks.tools import diversity, convergence, hypervolume
 from deap import creator
 from deap import tools
 from scoop import futures
+
 
 creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
 # -1.0, -1.0, -1.0, -1.0,))
@@ -64,8 +68,8 @@ vr = np.linspace(-75.0,-50.0,1000)
 
 
 a = np.linspace(0.015,0.045,1000)
-b = np.linspace(-0.0010,-0.0035,1000)
-#b = np.linspace(-3.5,-0.5,1000)
+#b = np.linspace(-0.0010,-0.0035,1000)
+b = np.linspace(-3.5*10E-9,-0.5*10E-9,1000)
 k = np.linspace(7.0E-4-+7.0E-5,7.0E-4+70E-5,1000)
 C = np.linspace(1.00000005E-4-1.00000005E-5,1.00000005E-4+1.00000005E-5,1000)
 
@@ -125,7 +129,7 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
     for i, p in enumerate(param):
         name_value=str(individual[i])
         #reformate values.
-        model.name=name_value
+        model.name=str(model.name)+' '+str(p)+str(name_value)
         if i==0:
             attrs={'//izhikevich2007Cell':{p:name_value }}
         else:
@@ -141,36 +145,14 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
 
 
     score = get_neab.suite.judge(model)#passing in model, changes model
+    model.run_number+=1
+    '{}{}{}'.format('counting simulation run times on models',model.results['run_number'],model.run_number)
 
     individual.results=model.results
-
     LOCAL_RESULTS_spiking.append(model.results['sim_time'])
     '{}{}'.format('sim time stored: ',model.results['sim_time'])
-    import numpy as np
-    import pdb
-    import matplotlib.pyplot as plt
-    import quantities as pq
-    if 'Insufficient Data' in score.unstack():
-        print('got here a')
-        individual.error = [ 100.0 for i in range(0,7) ]
-        if len(LOCAL_RESULTS_spiking)>0:
-            del LOCAL_RESULTS_spiking[-1]
-        individual.s_html=None
-
-    if 'Insufficient Data' in score:
-        print('got here b')
-        individual.error = [ 100.0 for i in range(0,7) ]
-        if len(LOCAL_RESULTS_spiking)>0:
-            del LOCAL_RESULTS_spiking[-1]
-        individual.s_html=None
 
 
-    else:
-        for i in score.unstack():
-            if i.score is None:
-                i.score=100.0
-                if len(LOCAL_RESULTS_spiking)>0:
-                    del LOCAL_RESULTS_spiking[-1]
     try:
         individual.error = []
         individual.error = [ abs(i.score) for i in score.unstack() ]

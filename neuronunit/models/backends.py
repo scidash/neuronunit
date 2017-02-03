@@ -68,6 +68,8 @@ class NEURONBackend(Backend):
         self.f=None
         self.h=None
         self.invokenrn()
+
+
         return
 
     #make backend a global variable inside this class.
@@ -212,4 +214,9 @@ class NEURONBackend(Backend):
         self.results={}
         self.results['vm'] = [ float(x/1000.0) for x in self.neuron.h.v_v_of0.to_python() ]  # Convert to Python list for speed, variable has dim: voltage
         self.results['t'] = [ float(x) for x in self.neuron.h.v_time.to_python() ]  # Convert to Python list for speed, variable has dim: voltage
+        self.results['sim_time']=sim_time
+        if 'run_number' in self.results.keys():
+            self.results['run_number']=self.results['run_number']+1
+        else:
+            self.results['run_number']=1
         return self.results
