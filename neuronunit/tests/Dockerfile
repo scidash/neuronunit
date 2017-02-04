@@ -83,7 +83,7 @@ RUN python setup.py install
 #RUN git remote add me https://github.com/russelljjarvis/BluePyOpt
 #RUN git remote add origin https://github.com/BlueBrain/BluePyOpt
 
-RUN pip install git+https://github.com/uqfoundation/multiprocess
+#RUN pip install git+https://github.com/uqfoundation/multiprocess
 RUN apt-get install -y python-tk
 
 RUN chown -R jovyan $HOME
@@ -179,5 +179,6 @@ WORKDIR $HOME/neuronunit/neuronunit/tests/NeuroML2
 RUN nrnivmodl
 RUN ls LEMS_2007One.xml
 WORKDIR $HOME/neuronunit/neuronunit/tests/
-ENTRYPOINT python -m scoop nsga3.py
+ENTRYPOINT mpiexec -np 8 python brute_force.py
+#ENTRYPOINT python -m scoop nsga3.py
 
