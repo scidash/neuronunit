@@ -30,7 +30,7 @@ iter_list=[ (i,j,r,l,m,n,o,p,q) for i in a for j in b \
                                  for m in C for n in c \
                                  for o in d for p in v0 for q in vt ]
 '''
-iter_list=[ (i,j,k) for i in a for j in b for k in vr for q in vt ]
+iter_list=[ (i,j,k,q) for i in a for j in b for k in vr for q in vt ]
 
 def func2map(iter_arg):
     attrs={}
