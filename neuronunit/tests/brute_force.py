@@ -8,6 +8,7 @@ RANK = COMM.Get_rank()
 
 import get_neab
 import numpy as np
+import time
 #from neuronunit.models import backends
 from neuronunit.models.reduced import ReducedModel
 model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
@@ -33,6 +34,8 @@ def func2map(iter_arg):
     return score
 
 iter_arg = [ i for i in range(RANK, 999, SIZE) ]
+
+bg_bf=time.time()
 score_matrix = [func2map(i) for i in iter_arg]
 
 COMM.barrier()
@@ -42,8 +45,13 @@ if RANK == 0:
     for p in score_matrix:
         score_matrix.extend(p)
     print(score_matrix)
-
+    end_bf=time.time()
+    whole_time=end_bf-bg_bf
     with open('score_matrix.pickle', 'wb') as handle:
         pickle.dump(score_matrix, handle)
+
+    f=open('brute_force_time','w')
+    f.write(str(whole_time))
+    f.close()
 else:
    score_matrix=None
