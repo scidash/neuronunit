@@ -31,16 +31,17 @@ iter_list=[ (i,j,r,l,m,n,o,p,q) for i in a for j in b \
                                  for o in d for p in v0 for q in vt ]
 '''
 iter_list=[ (i,j,k,q) for i in a for j in b for k in vr for q in vt ]
-
+#list_len=len(iter_list)
+#iter_list=iter(iter_list)
 def func2map(iter_arg):
     attrs={}
     attrs['//izhikevich2007Cell']={}
     param=['a','b','vr','vt']
     #param=['a','b','vr','k','C','c','d','v0','vt']
-    i,j,r,q=iter_list[iter_arg]
+    i,j,r,q=iter_arg
 
     #i,j,r,l,m,n,o,p,q=iter_list[iter_arg]
-    model.name=str(i)+str(j)+str(k)
+    model.name=str(i)+str(j)+str(k)+str(k)
     attrs['//izhikevich2007Cell']['a']=i
     attrs['//izhikevich2007Cell']['b']=j
     attrs['//izhikevich2007Cell']['vr']=r
@@ -53,6 +54,7 @@ def func2map(iter_arg):
     attrs['//izhikevich2007Cell']['d']=o
     attrs['//izhikevich2007Cell']['v0']=p
     '''
+    print('failed on attributes: \n')
     print(attrs)
 
     model.update_run_params(attrs)
@@ -61,7 +63,7 @@ def func2map(iter_arg):
     RUN_TIMES='{}{}{}'.format('counting simulation run times on models',model.results['run_number'],model.run_number)
     return score
 
-iter_arg = [ i for i in range(RANK, len(iter_list), SIZE) ]
+iter_arg = iter( iter_list[i] for i in range(RANK, len(iter_list), SIZE) )
 
 bg_bf=time.time()
 score_matrix = [func2map(i) for i in iter_arg]

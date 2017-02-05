@@ -14,6 +14,7 @@ init_start=time.time()
 import get_neab
 
 """
+
 Code from the deap framework, available at:
 https://code.google.com/p/deap/source/browse/examples/ga/onemax_short.py
 Conversion to its parallel form took two lines:
@@ -32,7 +33,6 @@ from math import sqrt
 
 from deap import algorithms
 from deap import base
-from deap import benchmarks
 from deap.benchmarks.tools import diversity, convergence, hypervolume
 from deap import creator
 from deap import tools
@@ -41,7 +41,7 @@ from scoop import futures
 
 creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
 # -1.0, -1.0, -1.0, -1.0,))
-creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMin)
+creator.create("Individual",list, fitness=creator.FitnessMin)
 
 class Individual(object):
     '''
@@ -77,14 +77,16 @@ c = np.linspace(-55,-60,1000)
 d = np.linspace(0.050,0.2,1000)
 v0 = np.linspace(-75.0,-45.0,1000)
 vt =  np.linspace(-50.0,-30.0,1000)
-#vpeak = np.linspace(30.0,40.0,1000)
+
+vpeak= np.linspace(30.0,30.0,1000)
 #vpeak as currently stated causes problems.
 #param=['vr','a','b','C','c','d','v0','k','vt','vpeak']
-param=['a','b','vr']#,'k']#,'C']#,'c','d','v0','k','vt','vpeak']#,'d'
+param=['a','b','vr','vpeak']#,'k']#,'C']#,'c','d','v0','k','vt','vpeak']#,'d'
 
 rov.append(a)
 rov.append(b)
 rov.append(vr)
+rov.append(vpeak)
 #rov.append(k)
 #rov.append(C)
 #rov.append(vpeak)
@@ -104,7 +106,7 @@ BOUND_UP=[ np.max(i) for i in rov ]
 NDIM = len(param)
 LOCAL_RESULTS_spiking=[]
 LOCAL_RESULTS_no_spiking=[]
-
+RUN_TIMES=''
 import functools
 
 def uniform(low, up, size=None):
@@ -122,10 +124,20 @@ toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
 from neuronunit.models import backends
 from neuronunit.models.reduced import ReducedModel
 model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
+
 model=model.load_model()
+vanila_start=time.time()
 model.local_run()
+vanila_stop=time.time()
+vanila_nrn_time=float(vanila_stop-vanila_start)
+f=open('vanila_nrn_time.txt','w')
+vt='{}{}{}'.format("vanila_nrn_time : ",float(vanila_nrn_time),"\n")
+f.write(str(vanila_nrn_time))
+f.close()
+
 
 def evaluate(individual):#This method must be pickle-able for scoop to work.
+    model.name=''
     for i, p in enumerate(param):
         name_value=str(individual[i])
         #reformate values.
@@ -146,7 +158,7 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
 
     score = get_neab.suite.judge(model)#passing in model, changes model
     model.run_number+=1
-    '{}{}{}'.format('counting simulation run times on models',model.results['run_number'],model.run_number)
+    RUN_TIMES='{}{}{}'.format('counting simulation run times on models',model.results['run_number'],model.run_number)
 
     individual.results=model.results
     LOCAL_RESULTS_spiking.append(model.results['sim_time'])
@@ -158,10 +170,9 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
         individual.error = [ abs(i.score) for i in score.unstack() ]
         individual.s_html=score.to_html()
     except Exception as e:
-        '{}'.format('Insufficient Data \n \n \n \n')
-        '{}'.format('got here a \n \n \n')
+        '{}'.format('Insufficient Data')
         individual.error = []
-        individual.error = [ 100.0 for i in range(0,7) ]
+        individual.error = [ 10.0 for i in range(0,8) ]
         if len(LOCAL_RESULTS_spiking)>0:
             del LOCAL_RESULTS_spiking[-1]
         individual.s_html=None
@@ -309,8 +320,6 @@ def main(seed=None):
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import pyneuroml as pynml
-    #import pdb
-    #pdb.set_trace()
     import os
 
 
@@ -331,6 +340,12 @@ if __name__ == "__main__":
     f.write(init_time)
     f.write(ft)
 
+    f=open('other_nrn_count_invokations_run_time_metric.txt','w')
+    f.write(RUN_TIMES)
+    f.write(ft)
+
+
+
     bfl=time.time()
     results = pynml.pynml.run_lems_with_jneuroml(os.path.split(get_neab.LEMS_MODEL_PATH)[1],
                              verbose=False, load_saved_data=True, nogui=True,
@@ -340,6 +355,7 @@ if __name__ == "__main__":
     lemscalltime=allr-bfl
     flt='{}{}{}'.format("lemscalltime: ",float(lemscalltime),"\n")
     f=open('jneuroml_call_time.txt','w')
+    #vanilla model via neuron: 1.1804585456848145
 
     f.write(flt)
     f.close()
