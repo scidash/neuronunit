@@ -59,10 +59,12 @@ iter_list=[ (i,j,r,l,m,n,o,p,q) for i in a for j in b \
                                  for m in C for n in c \
                                  for o in d for p in v0 for q in vt ]
 '''
-iter_list=[ (i,j,k,q,r) for i in a for j in b for k in vr for q in vt for r in vpeak ]
+iter_list=[ (i,j) for i in a for j in b ]
+
+#iter_list=[ (i,j,k,q,r) for i in a for j in b for k in vr for q in vt for r in vpeak ]
 #list_len=len(iter_list)
 #iter_list=iter(iter_list)
-import pdb
+#import pdb
 
 
 #class RheobaseTest(VmTest):
@@ -218,16 +220,18 @@ generate_prediction(model)
 def func2map(iter_arg):
     attrs={}
     attrs['//izhikevich2007Cell']={}
-    param=['a','b','vr','vt','v_peak']
+    param=['a','b']
+    #param=['a','b','vr','vt','v_peak']
     #param=['a','b','vr','k','C','c','d','v0','vt']
-    i,j,r,q,r=iter_arg
+    #i,j,r,q,r=iter_arg
+    i,j=iter_arg
 
     #i,j,r,l,m,n,o,p,q=iter_list[iter_arg]
     model.name=str(i)+str(j)+str(k)+str(k)
     attrs['//izhikevich2007Cell']['a']=i
     attrs['//izhikevich2007Cell']['b']=j
-    attrs['//izhikevich2007Cell']['vr']=r
-    attrs['//izhikevich2007Cell']['vt']=q
+    #attrs['//izhikevich2007Cell']['vr']=r
+    #attrs['//izhikevich2007Cell']['vt']=q
     #Dangerous change
     #Attention change value back later!
     attrs['//izhikevich2007Cell']['vpeak']=40.0
@@ -239,7 +243,6 @@ def func2map(iter_arg):
     attrs['//izhikevich2007Cell']['d']=o
     attrs['//izhikevich2007Cell']['v0']=p
     '''
-    print('failed on attributes: \n')
     print(attrs)
 
     model.update_run_params(attrs)
