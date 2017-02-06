@@ -7,7 +7,9 @@ COMM = MPI.COMM_WORLD
 SIZE = COMM.Get_size()
 RANK = COMM.Get_rank()
 
+import pdb
 import get_neab
+#pdb.set_trace()
 import numpy as np
 import time
 
@@ -27,6 +29,7 @@ import neuronunit.capabilities as cap
 #import neuronunit.capabilities.spike_functions as sf
 #from neuronunit import neuroelectro
 #from .channel import *
+
 
 from scoop import futures
 #from neuronunit.models import backends
@@ -63,15 +66,15 @@ import pdb
 
 
 #class RheobaseTest(VmTest):
-'''
-Tests the full widths of APs at their half-maximum
-under current injection.
+
+#Tests the full widths of APs at their half-maximum
+#under current injection.
 
 
 
 #required_capabilities = (cap.ReceivesSquareCurrent,
 #                         cap.ProducesSpikes)
-
+'''
 params = {'injected_square_current':
             {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
@@ -128,7 +131,7 @@ def generate_prediction(model):
 
 def threshold_FI(model, units, guess=None):
     lookup = {} # A lookup table global to the function below.
-
+    verbose=True
     def f(ampl):
         if float(ampl) not in lookup:
             current = params.copy()['injected_square_current']
@@ -160,7 +163,7 @@ def threshold_FI(model, units, guess=None):
         if n==1:
             if guess is None:
                 try:
-                    guess = observation['value']
+                    guess = get_neab.observation['value']
                 except KeyError:
                     guess = 100*pq.pA
             high = guess*2
@@ -208,6 +211,9 @@ def threshold_FI(model, units, guess=None):
 
 generate_prediction(model)
 '''
+#print('passes rheobase')
+#pdb.set_trace()
+
 
 def func2map(iter_arg):
     attrs={}
