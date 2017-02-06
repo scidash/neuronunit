@@ -247,9 +247,23 @@ def func2map(iter_arg):
 
     model.update_run_params(attrs)
     score = get_neab.suite.judge(model)#passing in model, changes model
+    try:
+        error = []
+        error = [ abs(i.score) for i in score.unstack() ]
+        model.s_html=score.to_html()
+    except Exception as e:
+        '{}'.format('Insufficient Data')
+        model.error = []
+        model.error = [ 10.0 for i in range(0,8) ]
+        if len(LOCAL_RESULTS_spiking)>0:
+            del LOCAL_RESULTS_spiking[-1]
+        model.s_html=None
+
+
+
     model.run_number+=1
     RUN_TIMES='{}{}{}'.format('counting simulation run times on models',model.results['run_number'],model.run_number)
-    return score
+    return score.to_html()
 
 iter_arg = [ iter_list[i] for i in range(RANK, len(iter_list), SIZE) ]
 bg_bf=time.time()
@@ -264,11 +278,14 @@ if RANK == 0:
     print(score_matrix)
     end_bf=time.time()
     whole_time=end_bf-bg_bf
-    with open('score_matrix.pickle', 'wb') as handle:
-        pickle.dump(score_matrix, handle)
-
     f=open('brute_force_time','w')
     f.write(str(whole_time))
     f.close()
+    import pickle
+
+    with open('score_matrix.pickle', 'wb') as handle:
+        pickle.dump(score_matrix, handle)
+
+
 else:
    score_matrix=None
