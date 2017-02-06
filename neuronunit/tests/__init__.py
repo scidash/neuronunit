@@ -15,8 +15,16 @@ import neuronunit.capabilities as cap
 from neuronunit import neuroelectro
 from .channel import *
 from scoop import futures
-
-
+'''
+import os
+os.system('ipcluster start --profile=jovyan --debug &')
+os.system('sleep 5')
+import ipyparallel as ipp
+rc = ipp.Client(profile='jovyan')
+print('hello from before cpu ')
+print(rc.ids)
+v = rc.load_balanced_view()
+'''
 AMPL = 0.0*pq.pA
 DELAY = 100.0*pq.ms
 DURATION = 1000.0*pq.ms
@@ -482,23 +490,7 @@ class RheobaseTest(VmTest):
     Tests the full widths of APs at their half-maximum
     under current injection.
     """
-    from deap import tools
-    from scoop import futures
-    from deap import base
 
-
-    from deap import creator
-    from deap import tools
-
-    #creator.create("FitnessMax", base.Fitness, weights=(1.0,))
-    creator.create("Individual", list)
-
-    IND_SIZE=10
-    from deap import base
-
-    toolbox = base.Toolbox()
-#    toolbox.register("attr_float", random.random)
-    toolbox.register("individual", list)
 
     required_capabilities = (cap.ReceivesSquareCurrent,
                              cap.ProducesSpikes)
@@ -522,7 +514,9 @@ class RheobaseTest(VmTest):
         model.rerun = True
         units = self.observation['value'].units
 
+        #this call is returning none.
         lookup = self.threshold_FI(model, units)
+
         sub = np.array([x for x in lookup if lookup[x]==0])*units
         supra = np.array([x for x in lookup if lookup[x]>0])*units
         self.verbose=True
@@ -539,6 +533,7 @@ class RheobaseTest(VmTest):
                 print("No suprathreshold current was tested.")
 
         if len(sub) and len(supra):
+            #This means the smallest current to cause spiking.
             rheobase = supra.min()
         else:
             rheobase = None
@@ -565,15 +560,19 @@ class RheobaseTest(VmTest):
                     print("Injected %s current and got %d spikes" % \
                             (ampl,n_spikes))
                 lookup[float(ampl)] = n_spikes
-                return lookup
+
 
         max_iters = 10
 
         #evaluate once with a current injection at 0pA
-        def evaluate1(n):
+        def evaluate1(n,guess):
+            #print(n)
+            #print(rc.ids)
             if n==0:
-                lookup=f(0.0*units)
+                f(0.0*units)
 
+                return (None,None,lookup)
+            if n==1:
                 if guess is None:
                     try:
                         guess = self.observation['value']
@@ -582,70 +581,47 @@ class RheobaseTest(VmTest):
                 high = guess*2
                 high = (50.0*pq.pA).rescale(units) if not high else high
                 small = (1*pq.pA).rescale(units)
-
-            if n==1:
                 #f(0.0*units) could happen in parallel with f(high) below
-                lookup=f(high)
+                f(high)
+                import pdb
 
-            return lookup# mutates lookup table.
+                return (small,high)
 
-            def doneElement(inFuture):
-                print("Done: {0}".format(inFuture.result()))
-
-        def main1():
-            launches = [futures.submit(evaluate1, i ) for i in range(2)]
-            # Add a callback on every launches
-            for launch in launches:
-                launch.add_done_callback(doneElement)
-            # Wait for the launches to complete.
-            [completed for completed in futures.as_completed(launches)]
-
-        if __name__ == "__main__":
-            main1()
-
-        def evaluate2():
+        def evaluate2(n,guess,small):
             #sub means below threshold, or no spikes
+            #print(n)
+            #print(rc.ids)
             sub = np.array([x for x in lookup if lookup[x]==0])*units
             #supra means above threshold, but possibly too high above threshold.
             supra = np.array([x for x in lookup if lookup[x]>0])*units
-            #The actual part of the Rheobase test that is
-            #computation intensive and therefore
-            #a target for parellelization.
-            #if there is one element in too small and one element in too large
-            #This will be the case most times.
-            #since the guesses above of 0pA, and a high guess should achieve this
-            #Its this part that should be like an evaluate function that is passed to futures map.
 
             if len(sub) and len(supra):
                 f((supra.min() + sub.max())/2)
 
-            # if there is only a result from too low for a spike.
-
             elif len(sub):
                 #the argument of f resolves to the maximum number of two in a list
                 f(max(small,sub.max()*2))
-
-
-            # If there is only a result from too high for a single spike
-            # use
             elif len(supra):
             #the argument of f resolves to the minimum number of two in a list
-
                 f(min(-small,supra.min()*2))
-            return lookup
+            rlist=[small,sub,supra]
+            return rlist
 
-        #while True:
-        from deap import base
-        toolbox = base.Toolbox()
+        import pdb
+        #strategy get to work with serial map first.
+        #run it in exhaustive search first such that calls to scoop are not nested yet.
+        from itertools import repeat
+        from scoop import futures
+        returned_list = list(map(evaluate1,[i for i in range(0,2)],repeat(guess)))
+        small=returned_list[1]
 
-        toolbox.register("evaluate", evaluate2)
-        toolbox.register("map", futures.map)
-        iterator=[ i for i in range(0,9) ]
-        lookups = toolbox.map(toolbox.evaluate, iterator)
-
-        #    evaluate2()
-
+        rlist = list(map(evaluate2,[i for i in range(1,10)],repeat(guess),repeat(small)))
+        small=rlist[0]
+        sub=rlist[1]
+        supra=rlist[2]
         return lookup
+
+        #main(guess)
 
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
