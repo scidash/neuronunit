@@ -59,8 +59,8 @@ import neuronunit.capabilities as cap
 
 
 vr = np.linspace(-75.0,-50.0,10)
-a = np.linspace(0.015,0.045,2)
-b = np.linspace(-3.5*10E-9,-0.5*10E-9,2)
+a = np.linspace(0.015,0.045,10)
+b = np.linspace(-3.5*10E-9,-0.5*10E-9,10)
 k = np.linspace(7.0E-4-+7.0E-5,7.0E-4+70E-5,10)
 C = np.linspace(1.00000005E-4-1.00000005E-5,1.00000005E-4+1.00000005E-5,10)
 
@@ -209,114 +209,117 @@ def main(iter_arg):
     #model.name=str(i)+str(j)
     model.name=str(i)+str(j)#+str(k)+str(k)
     assert model.name != 'vanilla'
-    print(type(model))
+    if model.name!='vanilla':
 
-    attrs['//izhikevich2007Cell']['a']=i
-    attrs['//izhikevich2007Cell']['b']=j
-    attrs['//izhikevich2007Cell']['vpeak']=40.0
+        print(type(model))
 
-    print(attrs)
+        attrs['//izhikevich2007Cell']['a']=i
+        attrs['//izhikevich2007Cell']['b']=j
+        attrs['//izhikevich2007Cell']['vpeak']=40.0
 
-    model.update_run_params(attrs)
+        print(attrs)
 
-
-
-    import pdb
-    from itertools import repeat
-
-    #pdb.set_trace()
-    #first assume that the emperical observation is the right rheobase current
-    guess = float(get_neab.observation['value'])
-    #guess = 100*pq.pA
-    (ampl,n_spikes,one,lookup)=f(guess)
-    #sub = np.array([ x for x in lookup if x==0 ])#*units
-    #supra = np.array([ x for x in lookup if x>0 ])#*units
-    sub=[]
-    supra=[]
-    if n_spikes==1:
-        return ampl#*pq.pA
-    elif n_spikes==0:
-        sub=[ampl]
-        steps2 = np.linspace(ampl,ampl+150.0,4.0)
-        steps = [ i*pq.pA for i in steps2 ]
-    elif n_spikes>0:
-        supra=[ampl]
-        steps2 = np.linspace(0,ampl,4.0)
-        steps = [ i*pq.pA for i in steps2 ]
+        model.update_run_params(attrs)
 
 
 
-    while_true=True
-    while(while_true):
+        import pdb
         from itertools import repeat
-        lookup2=list(futures.map(f,steps))
-        for x in lookup2:
-            if x[2]==True:
-                print('hit rheobase')
-                print(x)
-                rheobase=x[0]#*pq.pA
-                while_true=False
-                model.rheobase
-                return model.rheobase
 
-                tests=get_neab.tests
-                def update_amplitude(test,tests,score):
-                    for i in [4,5,6]:
-                        tests[i].params['injected_square_current']['amplitude'] = rheobase*1.01
-
-                #update_amplitude.rheobase=rheobase
-                hooks = {tests[0]:{'f':update_amplitude}} #This is a trick to dynamically insert the method
-                #update amplitude at the location in sciunit thats its passed to, without any loss of generality.
-                #pdb.set_trace()
-                suite = sciunit.TestSuite("vm_suite",tests,hooks=hooks)
-                score = suite.judge(model)#passing in model, changes model
-                print(score)
-
-                error = []
-                for i in score.unstack():
-                    pdb.set_trace()
-                    assert type(i)!=None
-                    if type(i)==None:
-                        i=100
-                error = [ abs(i.score) for i in score.unstack() ]
-                print(error)
-                model.s_html=(score.to_html(),attrs)
-                print(attrs)
-
-                model.run_number+=1
-                RUN_TIMES='{}{}{}'.format('counting simulation run times on models',model.results['run_number'],model.run_number)
-
-                #bg_bf=time.time()
-
-
-                return model.s_html
-
-
-        sub = np.array([ x[0] for x in lookup2 if x[1]==0 ])#*units
-        supra = np.array([ x[0] for x in lookup2 if x[1]>0 ])#*units
-
-
-        #print(sub)
-        #print(supra)
-        step_size=abs(float(steps[1])-float(steps[0]))
-        #print(step_size)
-
-        if len(sub) and len(supra):
-            new_search_middle=(supra.min() + sub.max())/2.0
-            steps2 = np.linspace(new_search_middle-(step_size/2.0),new_search_middle+(step_size/2.0),8.0)
+        #pdb.set_trace()
+        #first assume that the emperical observation is the right rheobase current
+        guess = float(get_neab.observation['value'])
+        #guess = 100*pq.pA
+        (ampl,n_spikes,one,lookup)=f(guess)
+        #sub = np.array([ x for x in lookup if x==0 ])#*units
+        #supra = np.array([ x for x in lookup if x>0 ])#*units
+        sub=[]
+        supra=[]
+        if n_spikes==1:
+            return ampl#*pq.pA
+        elif n_spikes==0:
+            sub=[ampl]
+            steps2 = np.linspace(ampl,ampl+150.0,8.0)
+            steps = [ i*pq.pA for i in steps2 ]
+        elif n_spikes>0:
+            supra=[ampl]
+            steps2 = np.linspace(0,ampl,8.0)
             steps = [ i*pq.pA for i in steps2 ]
 
-        elif len(sub):
-            new_search_middle=(sub.max())
-            steps2 = np.linspace(new_search_middle,new_search_middle+(step_size),8.0)
 
-            steps = [ i*pq.pA for i in steps2 ]
 
-        elif len(supra):
-            new_search_middle=(supra.min())
-            steps2 = np.linspace(new_search_middle-(step_size),new_search_middle,8.0)
+        while_true=True
+        while(while_true):
+            from itertools import repeat
+            lookup2=list(futures.map(f,steps))
+            for x in lookup2:
+                if x[2]==True:
+                    print('hit rheobase')
+                    print(x)
+                    rheobase=x[0]#*pq.pA
+                    while_true=False
+                    model.rheobase=rheobase
+                    if model.name!='vanilla':
+                        return model.rheobase
+                    '''
+                    tests=get_neab.tests
+                    def update_amplitude(test,tests,score):
+                        for i in [4,5,6]:
+                            tests[i].params['injected_square_current']['amplitude'] = rheobase*1.01
 
-            steps = [ i*pq.pA for i in steps2 ]
+                    #update_amplitude.rheobase=rheobase
+                    hooks = {tests[0]:{'f':update_amplitude}} #This is a trick to dynamically insert the method
+                    #update amplitude at the location in sciunit thats its passed to, without any loss of generality.
+                    #pdb.set_trace()
+                    suite = sciunit.TestSuite("vm_suite",tests,hooks=hooks)
+                    score = suite.judge(model)#passing in model, changes model
+                    print(score)
+
+                    error = []
+                    for i in score.unstack():
+                        pdb.set_trace()
+                        assert type(i)!=None
+                        if type(i)==None:
+                            i=100
+                    error = [ abs(i.score) for i in score.unstack() ]
+                    print(error)
+                    model.s_html=(score.to_html(),attrs)
+                    print(attrs)
+
+                    model.run_number+=1
+                    RUN_TIMES='{}{}{}'.format('counting simulation run times on models',model.results['run_number'],model.run_number)
+
+                    #bg_bf=time.time()
+
+
+                    return model.s_html
+                    '''
+
+            sub = np.array([ x[0] for x in lookup2 if x[1]==0 ])#*units
+            supra = np.array([ x[0] for x in lookup2 if x[1]>0 ])#*units
+
+
+            #print(sub)
+            #print(supra)
+            step_size=abs(float(steps[1])-float(steps[0]))
+            #print(step_size)
+
+            if len(sub) and len(supra):
+                new_search_middle=(supra.min() + sub.max())/2.0
+                steps2 = np.linspace(new_search_middle-(step_size/2.0),new_search_middle+(step_size/2.0),8.0)
+                steps = [ i*pq.pA for i in steps2 ]
+
+            elif len(sub):
+                new_search_middle=(sub.max())
+                steps2 = np.linspace(new_search_middle,new_search_middle+(step_size),8.0)
+
+                steps = [ i*pq.pA for i in steps2 ]
+
+            elif len(supra):
+                new_search_middle=(supra.min())
+                steps2 = np.linspace(new_search_middle-(step_size),new_search_middle,8.0)
+
+                steps = [ i*pq.pA for i in steps2 ]
 
 
 from itertools import repeat
@@ -330,7 +333,12 @@ def main2(ijiterator):
 if __name__ == "__main__":
     import time
     beggining=time.time()
-    score_matrix=list(futures.map(main,iter_list))
+    score_matrix=[]
+    gen=futures.map(main,iter_list)
+    for g in gen:
+        score_matrix.append(g)
+    print(len(score_matrix))
+    print(score_matrix)
     end=time.time()
     whole_time=end-beggining
     f=open('brute_force_time','w')
