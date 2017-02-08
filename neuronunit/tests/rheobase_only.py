@@ -148,7 +148,8 @@ def f(ampl):
         if verbose:
             print("Injected %s current and got %d spikes" % \
                     (ampl,n_spikes))
-            print(model.name)        
+            '{}{}'.format('models name: ',model.name)
+            print('models name: ',model.name)    
         lookup[float(ampl)] = n_spikes
         if n_spikes==1:
             one=True
@@ -253,8 +254,8 @@ def main(iter_arg):
                 #tests=get_neab.tests
                 tests=get_neab.tests
                 def update_amplitude(test,tests,score):
-                    print(len(tests))
-                    print(type(tests))
+                    #print(len(tests))
+                    #print(type(tests))
                     for i in [4,5,6]:
                         tests[i].params['injected_square_current']['amplitude'] = rheobase*1.01
 
