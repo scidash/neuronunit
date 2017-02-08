@@ -49,6 +49,7 @@ from scipy.optimize import curve_fit
 
 import sciunit
 import sciunit.scores as scores
+from scoop import futures
 
 import neuronunit.capabilities as cap
 #import neuronunit.capabilities.spike_functions as sf
@@ -76,6 +77,8 @@ container=[]
 #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
 #model=model.load_model()
 
+required_capabilities = (cap.ReceivesSquareCurrent,
+                         cap.ProducesSpikes)
 params = {'injected_square_current':
             {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
@@ -149,7 +152,9 @@ def f(ampl):
             print("Injected %s current and got %d spikes" % \
                     (ampl,n_spikes))
             '{}{}'.format('models name: ',model.name)
-            print('models name: ',model.name)    
+            print('models name: ',model.name)
+            print(type(model))
+
         lookup[float(ampl)] = n_spikes
         if n_spikes==1:
             one=True
@@ -158,7 +163,6 @@ def f(ampl):
     return (ampl,n_spikes,one,lookup)
 
 
-from scoop import futures
 #from neuronunit.models import backends
 AMPL = 0.0*pq.pA
 DELAY = 100.0*pq.ms
@@ -202,7 +206,11 @@ def main(iter_arg):
     param=['a','b']
     i,j=iter_arg
     print(i,j)
+    #model.name=str(i)+str(j)
     model.name=str(i)+str(j)#+str(k)+str(k)
+    assert model.name != 'vanilla'
+    print(type(model))
+
     attrs['//izhikevich2007Cell']['a']=i
     attrs['//izhikevich2007Cell']['b']=j
     attrs['//izhikevich2007Cell']['vpeak']=40.0
@@ -215,9 +223,12 @@ def main(iter_arg):
 
     import pdb
     from itertools import repeat
-    from scoop import futures
-    '''
-    (ampl,n_spikes,one,lookup)=f(1)
+
+    #pdb.set_trace()
+    #first assume that the emperical observation is the right rheobase current
+    guess = float(get_neab.observation['value'])
+    #guess = 100*pq.pA
+    (ampl,n_spikes,one,lookup)=f(guess)
     #sub = np.array([ x for x in lookup if x==0 ])#*units
     #supra = np.array([ x for x in lookup if x>0 ])#*units
     sub=[]
@@ -226,36 +237,30 @@ def main(iter_arg):
         return ampl#*pq.pA
     elif n_spikes==0:
         sub=[ampl]
-        steps2 = np.linspace(ampl,ampl+250.0,4.0)
+        steps2 = np.linspace(ampl,ampl+150.0,4.0)
         steps = [ i*pq.pA for i in steps2 ]
     elif n_spikes>0:
         supra=[ampl]
-        steps2 = np.linspace(-250,ampl,4.0)
-        #pdb.set_trace()
+        steps2 = np.linspace(0,ampl,4.0)
         steps = [ i*pq.pA for i in steps2 ]
-    '''
-    #new_search_middle=(supra.min() + sub.max())/2.0
-    steps2 = np.linspace(-200,300,8.0)
-    steps = [ i*pq.pA for i in steps2 ]
 
-    #print(steps)
+
 
     while_true=True
     while(while_true):
         from itertools import repeat
         lookup2=list(futures.map(f,steps))
         for x in lookup2:
-            #print(x[2])
             if x[2]==True:
                 print('hit rheobase')
                 print(x)
                 rheobase=x[0]#*pq.pA
                 while_true=False
-                #tests=get_neab.tests
+                model.rheobase
+                return model.rheobase
+
                 tests=get_neab.tests
                 def update_amplitude(test,tests,score):
-                    #print(len(tests))
-                    #print(type(tests))
                     for i in [4,5,6]:
                         tests[i].params['injected_square_current']['amplitude'] = rheobase*1.01
 
@@ -269,7 +274,10 @@ def main(iter_arg):
 
                 error = []
                 for i in score.unstack():
-                    assert type(i)!='NoneType'
+                    pdb.set_trace()
+                    assert type(i)!=None
+                    if type(i)==None:
+                        i=100
                 error = [ abs(i.score) for i in score.unstack() ]
                 print(error)
                 model.s_html=(score.to_html(),attrs)
@@ -295,18 +303,18 @@ def main(iter_arg):
 
         if len(sub) and len(supra):
             new_search_middle=(supra.min() + sub.max())/2.0
-            steps2 = np.linspace(new_search_middle-(step_size/2.0),new_search_middle+(step_size/2.0),4.0)
+            steps2 = np.linspace(new_search_middle-(step_size/2.0),new_search_middle+(step_size/2.0),8.0)
             steps = [ i*pq.pA for i in steps2 ]
 
         elif len(sub):
             new_search_middle=(sub.max())
-            steps2 = np.linspace(new_search_middle,new_search_middle+(step_size/2.0),8.0)
+            steps2 = np.linspace(new_search_middle,new_search_middle+(step_size),8.0)
 
             steps = [ i*pq.pA for i in steps2 ]
 
         elif len(supra):
             new_search_middle=(supra.min())
-            steps2 = np.linspace(new_search_middle-(step_size/2.0),new_search_middle,4.0)
+            steps2 = np.linspace(new_search_middle-(step_size),new_search_middle,8.0)
 
             steps = [ i*pq.pA for i in steps2 ]
 
