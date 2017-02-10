@@ -150,7 +150,19 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
         if hasattr(individual,'params'):
             individual.params.append(i)
 
-
+    #db.set_trace()
+    #suite.
+    import quantities as qt
+    #v=[v for v in get_neab.suite.tests[0].observation.values()][0]
+    get_neab.suite.tests[0].prediction={}
+    get_neab.suite.tests[0].prediction['value']=individual.rheobase*qt.pA
+    #observation=v
+    #prediction=individual.rheobase*qt.pA)
+    #get_neab.suite.tests[0].compute_score(float(v),float(individual.rheobase*qt.pA))
+    #score = super(get_neab.suite.tests[0],cls).\
+    #            compute_score(observation, prediction)
+    #get_neab.suite.tests.RheobaseTest
+    #get_neab.suite.tests[0]
     score = get_neab.suite.judge(model)#passing in model, changes model
     model.run_number+=1
     RUN_TIMES='{}{}{}'.format('counting simulation run times on models',model.results['run_number'],model.run_number)
@@ -158,7 +170,6 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
     individual.results=model.results
     LOCAL_RESULTS_spiking.append(model.results['sim_time'])
     '{}{}'.format('sim time stored: ',model.results['sim_time'])
-
 
     try:
         individual.error = []
@@ -293,6 +304,11 @@ def main2(ind):
             steps2 = np.linspace(50,190,4.0)
             steps = [ i*pq.pA for i in steps2 ]
             lookup2=list(map(f,steps,repeat(vm),repeat(model)))
+            #lookup2=list(futures.mapReduce(f,steps,repeat(vm),repeat(model)))
+            print(lookup2)
+            print(type(lookup2))
+            print(len(lookup2))
+
         #lookup2=list(map(f,steps,repeat(vm)))
 
         #steps3=[]
@@ -381,6 +397,8 @@ def main(seed=None):
     invalid_ind = [ind for ind in pop if not ind.fitness.valid]
     #pdb.set_trace()
     from itertools import repeat
+
+    #pdb.set_trace()
     invalid_ind = list(futures.map(evaluate2,invalid_ind))
     #pdb.set_trace()
 
