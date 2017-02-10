@@ -57,7 +57,7 @@ import neuronunit.capabilities as cap
 
 
 
-vr = np.linspace(-75.0,-50.0,4)
+vr = np.linspace(-75.0,-50.0,2)
 a = np.linspace(0.015,0.045,2)
 b = np.linspace(-3.5*10E-9,-0.5*10E-9,2)
 k = np.linspace(7.0E-4-+7.0E-5,7.0E-4+70E-5,10)
@@ -67,7 +67,7 @@ c = np.linspace(-55,-60,10)
 d = np.linspace(0.050,0.2,10)
 v0 = np.linspace(-75.0,-45.0,10)
 vt =  np.linspace(-50.0,-30.0,10)
-vpeak =np.linspace(30.0,40.0,4)
+vpeak =np.linspace(30.0,40.0,2)
 container=[]
 
 from neuronunit.models.reduced import ReducedModel
@@ -133,6 +133,7 @@ def f(ampl,vm):
             print("Injected %s current and got %d spikes" % \
                     (ampl,n_spikes))
         vm.lookup[float(ampl)] = n_spikes
+
         return vm
 
     if float(ampl) in vm.lookup:
@@ -161,43 +162,59 @@ def main(iter_arg):
     from itertools import repeat
     vm=VirtuaModel()
     vm.attrs=model.attrs
-
+    begin_time=time.time()
     while_true=True
     while(while_true):
         from itertools import repeat
 
         if len(vm.lookup)==0:
-            steps2 = np.linspace(50,190,8.0)
+            steps2 = np.linspace(50,190,4.0)
+            steps = [ i*pq.pA for i in steps2 ]
+            lookup2=list(map(f,steps,repeat(vm)))
+        #lookup2=list(map(f,steps,repeat(vm)))
+
+        #steps3=[]
+        #for m in lookup2:
+        m = lookup2[0]
+        sub=[]
+        supra=[]
+        for k,v in m.lookup.items():
+            if v==1:
+                while_true=False
+                print('hit')
+                #m.rheobas=k
+                end_time=time.time()
+                total_time=end_time-begin_time
+                print(total_time)
+                pdb.set_trace()
+                return (m.run_number,k,m.attrs)#a
+                break
+            elif v==0:
+                sub.append(k)
+            elif v>0:
+                supra.append(k)
+        sub=np.array(sub)
+        supra=np.array(supra)
+        if len(sub) and len(supra):
+            steps2 = np.linspace(sub.max(),supra.min(),4.0)
             steps = [ i*pq.pA for i in steps2 ]
 
-        lookup2=list(futures.map(f,steps,repeat(vm)))
-        for m in lookup2:
-            sub=[]
-            supra=[]
-            for k,v in m.lookup.items():
-                if v==1:
-                    while_true=False
-                    print('hit')
-                    #m.rheobas=k
-                    return (m.run_number,k,m.attrs)
-                    break
-                elif v==0:
-                    sub.append(k)
-                elif v>0:
-                    supra.append(k)
-            sub=np.array(sub)
-            supra=np.array(supra)
-            if len(sub) and len(supra):
-                steps2 = np.linspace(supra.min(),sub.max(),8.0)
-                steps = [ i*pq.pA for i in steps2 ]
+        elif len(sub):
+            steps2 = np.linspace(sub.max(),2*sub.max(),4.0)
+            steps = [ i*pq.pA for i in steps2 ]
+        elif len(supra):
+            steps2 = np.linspace(-1*(supra.min()),supra.min(),4.0)
+            steps = [ i*pq.pA for i in steps2 ]
 
-            elif len(sub):
-                steps2 = np.linspace(sub.max(),2*sub.max(),8.0)
-                steps = [ i*pq.pA for i in steps2 ]
-            elif len(supra):
-                steps2 = np.linspace(-2*(supra.min()),supra.min(),8.0)
-                steps = [ i*pq.pA for i in steps2 ]
+        lookup2=list(map(f,steps,repeat(vm)))
+        #steps3.extend(steps)
+        #print('this is steps 3: \n\n\n')
+        #print(steps3)
+        #print('this was steps 3: \n\n\n')
 
+
+
+    #return (vm.run_number,k,vm.attrs)
 
 from itertools import repeat
 iter_list=[ (i,j) for i in a for j in b ]
@@ -208,21 +225,21 @@ if __name__ == "__main__":
     score_matrix=[]
     iter_list=[ (i,j) for i in vr for j in vpeak ]
 
-    gen=futures.map(main,iter_list)
+    #gen=list(map(main,iter_list))
     #iter_models= [ m for m in models ]
-
+    gen = list(futures.map(main,iter_list))
     for g in gen:
         score_matrix.append((g))
     print(len(score_matrix))
     print(score_matrix)
     end=time.time()
     whole_time=end-beggining
-    f=open('brute_force_time','w')
+    f=open('brute_force_time_parallel_inl','w')
     f.write(str(whole_time))
     f.close()
     import pickle
 
-    with open('score_matrix.pickle', 'wb') as handle:
+    with open('score_matrix_serial.pickle', 'wb') as handle:
         pickle.dump(score_matrix, handle)
 
     #Do the rheobase test. This is a serial bottle neck that must occur before any parallel optomization.
