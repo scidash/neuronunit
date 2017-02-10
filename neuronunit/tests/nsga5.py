@@ -130,6 +130,11 @@ vt='{}{}{}'.format("vanila_nrn_time : ",float(vanila_nrn_time),"\n")
 f.write(str(vanila_nrn_time))
 f.close()
 
+from neuronunit.models import backends
+from neuronunit.models.reduced import ReducedModel
+model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
+model=model.load_model()
+
 
 def evaluate(individual):#This method must be pickle-able for scoop to work.
     model.name=''
@@ -156,13 +161,12 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
     #v=[v for v in get_neab.suite.tests[0].observation.values()][0]
     get_neab.suite.tests[0].prediction={}
     get_neab.suite.tests[0].prediction['value']=individual.rheobase*qt.pA
-    #observation=v
-    #prediction=individual.rheobase*qt.pA)
-    #get_neab.suite.tests[0].compute_score(float(v),float(individual.rheobase*qt.pA))
-    #score = super(get_neab.suite.tests[0],cls).\
-    #            compute_score(observation, prediction)
-    #get_neab.suite.tests.RheobaseTest
-    #get_neab.suite.tests[0]
+    import os
+    os.system('rm brute_force_time')
+    f=open('brute_force_time','w')
+    f.write(str(attrs))
+    f.close()
+
     score = get_neab.suite.judge(model)#passing in model, changes model
     model.run_number+=1
     RUN_TIMES='{}{}{}'.format('counting simulation run times on models',model.results['run_number'],model.run_number)
@@ -223,7 +227,9 @@ class VirtuaModel:
         self.name=None
 
 
-def f(ampl,vm,model):
+def f(ampl,vm,guess=None):
+    if guess!=None:
+        ampl=guess
 
     if float(ampl) not in vm.lookup:
         current = params.copy()['injected_square_current']
@@ -285,11 +291,6 @@ import quantities as pq
 units = pq.pA
 verbose=True
 
-
-from neuronunit.models import backends
-from neuronunit.models.reduced import ReducedModel
-model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
-model=model.load_model()
 #rheobase=None
 def main2(ind):
     vm=VirtuaModel()
@@ -303,16 +304,13 @@ def main2(ind):
         if len(vm.lookup)==0:
             steps2 = np.linspace(50,190,4.0)
             steps = [ i*pq.pA for i in steps2 ]
-            lookup2=list(map(f,steps,repeat(vm),repeat(model)))
+            lookup2=list(futures.map(f,steps,repeat(vm)))#,repeat(model)))
             #lookup2=list(futures.mapReduce(f,steps,repeat(vm),repeat(model)))
             print(lookup2)
             print(type(lookup2))
             print(len(lookup2))
 
-        #lookup2=list(map(f,steps,repeat(vm)))
 
-        #steps3=[]
-        #for m in lookup2:
         m = lookup2[0]
         sub=[]
         supra=[]
@@ -344,7 +342,7 @@ def main2(ind):
             steps2 = np.linspace(-1*(supra.min()),supra.min(),4.0)
             steps = [ i*pq.pA for i in steps2 ]
 
-        lookup2=list(map(f,steps,repeat(vm),repeat(model)))
+        lookup2=list(map(f,steps,repeat(vm)))
         #steps3.extend(steps)
 
 def evaluate2(individual):#This method must be pickle-able for scoop to work.
@@ -365,12 +363,7 @@ def evaluate2(individual):#This method must be pickle-able for scoop to work.
     (run_number,k,attrs)=main2(individual)
     individual.rheobase=k
     return individual
-    '''
-    individual.params=[]
-    for i in attrs['//izhikevich2007Cell'].values():
-        if hasattr(individual,'params'):
-            individual.params.append(i)
-    '''
+
 
 
 def main(seed=None):
@@ -469,7 +462,7 @@ def main(seed=None):
     f.write(invalid_ind[0].s_html)
     f.close()
     plotss(invalid_ind,gen)
-    os.system('rm *.txt')
+    #os.system('rm *.txt')
 
     f=open('stats_summart.txt','w')
     for i in list(logbook):
