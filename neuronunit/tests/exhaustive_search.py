@@ -25,50 +25,16 @@ from scipy.optimize import curve_fit
 import sciunit
 import sciunit.scores as scores
 
+from neuronunit.models import backends
 import neuronunit.capabilities as cap
+import testsrh
+dir(testsrh)
 #import neuronunit.capabilities.spike_functions as sf
 #from neuronunit import neuroelectro
 #from .channel import *
 
 
 from scoop import futures
-#from neuronunit.models import backends
-AMPL = 0.0*pq.pA
-DELAY = 100.0*pq.ms
-DURATION = 1000.0*pq.ms
-
-
-def update_amplitude(test,tests,score):
-    #tests=get_neab.tests
-    import rheobase_only
-    model=score.model
-    #print(score)
-    #print(type(model))
-    import copy
-    assert model != None
-    rheobase_only.f.model=copy.copy(model)
-    #rheobase_only.model=copy.copy(model)
-    rheobase=rheobase_only.main()
-    print(len(tests))
-    print(type(tests))
-    for i in [4,5,6]:
-        # Set current injection to just suprathreshold
-        tests[i].params['injected_square_current']['amplitude'] = rheobase*1.01
-
-
-#Do the rheobase test. This is a serial bottle neck that must occur before any parallel optomization.
-#Its because the optimization routine must have apriori knowledge of what suprathreshold current injection values are for each model.
-#def main(func2map,iter_list,suite):
-#score_matrix = [func2map(i) for i in iter_arg]
-
-
-tests=get_neab.tests
-hooks = {tests[0]:{'f':update_amplitude}} #This is a trick to dynamically insert the method
-#update amplitude at the location in sciunit thats its passed to, without any loss of generality.
-suite = sciunit.TestSuite("vm_suite",tests,hooks=hooks)
-
-from neuronunit.models.reduced import ReducedModel
-
 
 
 ###################
@@ -77,9 +43,14 @@ from neuronunit.models.reduced import ReducedModel
 # catches the exception
 #{'//izhikevich2007Cell': {'vpeak': '30.0', 'vr': '-53.4989145966',
 #'a': '0.0303440140536', 'b': '-2.38706324769e-08'}}j
+from neuronunit.models.reduced import ReducedModel
 
 model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
 model=model.load_model()
+
+
+#model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
+#model=model.load_model()
 vr = np.linspace(-75.0,-50.0,10)
 a = np.linspace(0.015,0.045,2)
 b = np.linspace(-3.5*10E-9,-0.5*10E-9,2)
@@ -92,6 +63,40 @@ v0 = np.linspace(-75.0,-45.0,10)
 vt =  np.linspace(-50.0,-30.0,10)
 vpeak =np.linspace(30.0,40.0,10)
 container=[]
+import pdb
+
+def build_single():
+
+    #{'//izhikevich2007Cell': {'vpeak': '30.0', 'vr': '-53.4989145966',
+    #'a': '0.0303440140536', 'b': '-2.38706324769e-08'}}j
+    attrs={}
+    attrs['//izhikevich2007Cell']={}
+    attrs['//izhikevich2007Cell']['a']=0.0303440140536
+    attrs['//izhikevich2007Cell']['b']=-2.38706324769e-08
+    attrs['//izhikevich2007Cell']['vpeak']=30.0
+    attrs['//izhikevich2007Cell']['vr']=-53.4989145966
+    print(attrs)
+
+
+    import quantities as qt
+    #v=[v for v in get_neab.suite.tests[0].observation.values()][0]
+    #get_neab.suite.tests[0].prediction={}
+    #get_neab.suite.tests[0].prediction['value']=individual.rheobase*qt.pA
+
+    model.update_run_params(attrs)
+    #get_neab.suite.tests[0].prediction={}
+    score = get_neab.suite.judge(model)#passing in model, changes model
+    error = []
+    error = [ abs(i.score) for i in score.unstack() ]
+    print(score)
+    pdb.set_trace()
+
+    #model.s_html=
+
+build_single()
+
+
+
 def func2map(iter_arg,suite):
     attrs={}
     attrs['//izhikevich2007Cell']={}

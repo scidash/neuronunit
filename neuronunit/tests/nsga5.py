@@ -227,9 +227,10 @@ class VirtuaModel:
         self.name=None
 
 
-def f(ampl,vm,guess=None):
-    if guess!=None:
-        ampl=guess
+def f(ampl,vm):
+
+    #if guess!=None:
+    #    ampl=guess
 
     if float(ampl) not in vm.lookup:
         current = params.copy()['injected_square_current']
@@ -292,7 +293,7 @@ units = pq.pA
 verbose=True
 
 #rheobase=None
-def main2(ind):
+def main2(ind,guess=None):
     vm=VirtuaModel()
     vm.attrs=ind.attrs
     begin_time=time.time()
@@ -300,6 +301,12 @@ def main2(ind):
     while_true=True
     while(while_true):
         from itertools import repeat
+
+        if guess!=None:
+            vm.lookup=f(guess,vm)
+            guess=None#stop reentry into this condition during while,
+            #if this does not find rheobase immediately.
+
 
         if len(vm.lookup)==0:
             steps2 = np.linspace(50,190,4.0)
@@ -345,22 +352,36 @@ def main2(ind):
         lookup2=list(map(f,steps,repeat(vm)))
         #steps3.extend(steps)
 
-def evaluate2(individual):#This method must be pickle-able for scoop to work.
+def evaluate2(individual,guess=None):#This method must be pickle-able for scoop to work.
     #import rheobase_old2 as rh
+
+    if guess!=None:
+        for i, p in enumerate(param):
+            name_value=str(guess[i])
+            #reformate values.
+            model.name=str(model.name)+' '+str(p)+str(name_value)
+            if i==0:
+                attrs={'//izhikevich2007Cell':{p:name_value }}
+            else:
+                attrs['//izhikevich2007Cell'][p]=name_value
+
+
+
+    elif
+
+        for i, p in enumerate(param):
+            name_value=str(individual[i])
+            #reformate values.
+            model.name=str(model.name)+' '+str(p)+str(name_value)
+            if i==0:
+                attrs={'//izhikevich2007Cell':{p:name_value }}
+            else:
+                attrs['//izhikevich2007Cell'][p]=name_value
+
     model=VirtuaModel()
     model.name=''
-
-    for i, p in enumerate(param):
-        name_value=str(individual[i])
-        #reformate values.
-        model.name=str(model.name)+' '+str(p)+str(name_value)
-        if i==0:
-            attrs={'//izhikevich2007Cell':{p:name_value }}
-        else:
-            attrs['//izhikevich2007Cell'][p]=name_value
-
     individual.attrs=attrs
-    (run_number,k,attrs)=main2(individual)
+    (run_number,k,attrs)=main2(individual,guess)
     individual.rheobase=k
     return individual
 
@@ -385,6 +406,14 @@ def main(seed=None):
     logbook.header = "gen", "evals", "std", "min", "avg", "max"
 
     pop = toolbox.population(n=MU)
+    guess=[]
+    guess.append(np.mean( [ i[0] for i in pop ]))
+    guess.append(np.mean( [ i[1] for i in pop ]))
+    guess.append(np.mean( [ i[2] for i in pop ]))
+    guess.append(np.mean( [ i[3] for i in pop ]))
+
+    #pdb.set_trace()
+    #[ind for ind in pop if not ind.fitness.valid]
 
     # Evaluate the individuals with an invalid fitness
     invalid_ind = [ind for ind in pop if not ind.fitness.valid]
@@ -392,7 +421,7 @@ def main(seed=None):
     from itertools import repeat
 
     #pdb.set_trace()
-    invalid_ind = list(futures.map(evaluate2,invalid_ind))
+    invalid_ind = list(futures.map(evaluate2,invalid_ind,repat(guess)))
     #pdb.set_trace()
 
     fitnesses = toolbox.map(evaluate, invalid_ind)
@@ -427,7 +456,7 @@ def main(seed=None):
 
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-        invalid_ind = list(futures.map(evaluate2,invalid_ind))
+        #invalid_ind = list(futures.map(evaluate2,invalid_ind))
         fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
 
 
