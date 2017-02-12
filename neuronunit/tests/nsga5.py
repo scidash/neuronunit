@@ -201,8 +201,12 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
         individual.s_html=score.to_html()
     except Exception as e:
         '{}'.format('Insufficient Data')
-        individual.error = []
-        individual.error = [ 10.0 for i in range(0,8) ]
+        #individual.error = []
+        if np.sum(individual.error)!=0:
+            individual.error = [ (10.0+i)/2.0 for i in individual.error ]
+        else:
+            individual.error = [ 10.0for i in range(0,8) ]
+
         if len(LOCAL_RESULTS_spiking)>0:
             del LOCAL_RESULTS_spiking[-1]
         individual.s_html=None
@@ -413,7 +417,7 @@ def evaluate2(individual, guess_value=None):#This method must be pickle-able for
         for k,v in vm.lookup.items():
             if v==1:
                 individual.rheobase=k
-                print('succeeds in parallel case \n \n\n\n\n\n\n\n')
+                #print('succeeds in parallel case \n \n\n\n\n\n\n\n')
                 return individual
             if v!=1:
                 #pdb.set_trace()
@@ -428,6 +432,40 @@ def evaluate2(individual, guess_value=None):#This method must be pickle-able for
     individual.rheobase=k
     return individual
 
+#some how I destroy the function f.
+
+def ff(ampl,vm):
+    print(vm, ampl)
+    #pdb.set_trace()v
+
+    if float(ampl) not in vm.lookup:
+        current = params.copy()['injected_square_current']
+        print('current, previous = ',ampl,vm.previous)
+        uc={'amplitude':ampl}
+        current.update(uc)
+        current={'injected_square_current':current}
+        vm.run_number+=1
+        print('model run number',vm.run_number)
+        #model.attrs=vm.attrs
+        model.update_run_params(vm.attrs)
+        assert vm.attrs==model.attrs
+        print(vm.attrs)
+        print(model.attrs)
+        model.inject_square_current(current)
+        vm.previous=ampl
+        n_spikes = model.get_spike_count()
+        verbose=True
+        if verbose:
+            print("Injected %s current and got %d spikes" % \
+                    (ampl,n_spikes))
+        vm.lookup[float(ampl)] = n_spikes
+        #vm3=copy.copy(vm)
+
+        return vm
+
+    if float(ampl) in vm.lookup:
+        print('model_in lookup')
+        return vm
 
 
 def main(seed=None):
@@ -455,7 +493,32 @@ def main(seed=None):
     guess_attrs.append(np.mean( [ i[1] for i in pop ]))
     guess_attrs.append(np.mean( [ i[2] for i in pop ]))
     guess_attrs.append(np.mean( [ i[3] for i in pop ]))
+
+    steps2 = np.linspace(50,190,4.0)
+    steps = [ i*pq.pA for i in steps2 ]
+
+
+    print('was this fast?\n\n\n')
     run_number,guess_value,attrs=main2(pop[0],guess_attrs)
+    print(run_number,guess_value,attrs)
+    print(type(ff))
+    from itertools import repeat
+    vm=VirtuaModel()
+    vm.attrs=attrs
+
+    b=time.time()
+    lookup2=list(futures.map(ff,steps,repeat(vm)))
+    e=time.time()
+
+    print('was this fast?\n\n\n')
+    print('was this fast?\n\n\n')
+    print('was this fast?\n\n\n')
+    print('was this fast?\n\n\n')
+    print(e-b)
+
+
+    pdb.set_trace()
+
     attrs=None
     run_number=None
 
@@ -471,8 +534,6 @@ def main(seed=None):
     invalid_indvm=[]
     for i in iterator:
         if hasattr(i,'rheobase'):
-            print('rheobase can update too \n\n\n\n')
-            print(i.rheobase)
             vm=VirtuaModel()
             vm.rheobase=i.rheobase
             guess_value=i.rheobase
@@ -586,6 +647,7 @@ def main(seed=None):
     plt.hold(False)
     #'{}{}'.format("finish_time: ",finish_time)
     return pop, list(logbook)
+
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
