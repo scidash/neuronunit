@@ -319,6 +319,43 @@ import quantities as pq
 units = pq.pA
 verbose=True
 
+
+def check(lookup2):
+    from itertools import repeat
+
+    m = lookup2[0]
+
+    sub=[]
+    supra=[]
+    for k,v in m.lookup.items():
+        if v==1:
+            while_true=False
+            print('hit')
+            end_time=time.time()
+            total_time=end_time-begin_time
+            print(total_time)
+            #pdb.set_trace()
+            rtuple=(m.run_number,k,m.attrs)#a
+            return=(True,rtuple)
+            break
+        elif v==0:
+            sub.append(k)
+        elif v>0:
+            supra.append(k)
+    sub=np.array(sub)
+    supra=np.array(supra)
+    if len(sub) and len(supra):
+        steps2 = np.linspace(sub.max(),supra.min(),4.0)
+        steps = [ i*pq.pA for i in steps2 ]
+
+    elif len(sub):
+        steps2 = np.linspace(sub.max(),2*sub.max(),4.0)
+        steps = [ i*pq.pA for i in steps2 ]
+    elif len(supra):
+        steps2 = np.linspace(-1*(supra.min()),supra.min(),4.0)
+        steps = [ i*pq.pA for i in steps2 ]
+        return (False,steps)
+
 #rheobase=None
 def main2(ind,guess_attrs=None):
     vm=VirtuaModel()
@@ -344,6 +381,7 @@ def main2(ind,guess_attrs=None):
     #pdb.set_trace()
     while_true=True
     while(while_true):
+
         from itertools import repeat
 
         if len(vm.lookup)==0:
@@ -498,7 +536,7 @@ def main(seed=None):
     steps = [ i*pq.pA for i in steps2 ]
 
 
-    print('was this fast?\n\n\n')
+    #print('was this fast?\n\n\n')
     run_number,guess_value,attrs=main2(pop[0],guess_attrs)
     print(run_number,guess_value,attrs)
     print(type(ff))
@@ -508,6 +546,18 @@ def main(seed=None):
 
     b=time.time()
     lookup2=list(futures.map(ff,steps,repeat(vm)))
+    boolean,steps=check(lookup2)
+    if boolen == True:
+        run_number,guess_value,attrs=rtuple
+    else:
+        lookup2=list(futures.map(ff,steps,repeat(vm)))
+
+    if boolen == True:
+        run_number,guess_value,attrs=rtuple
+    else:
+        lookup2=list(futures.map(ff,steps,repeat(vm)))
+
+
     e=time.time()
 
     print('was this fast?\n\n\n')
