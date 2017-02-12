@@ -554,7 +554,7 @@ def main(seed=None):
     #there is no way to garuntee that the best candidate solution will
     #retain its object attributes, except via re evaluating it, in a scope outside
     #of futures.map as is done below.
-    (a,b,c,d,e,f,g,h) = evaluate(invalid_ind[0])
+    (a,b,c,d,e,f,g,h) = evaluate(invalid_ind[0],invalid_indvm[0])
 
     f=open('html_score_matrix.html','w')
     f.write(invalid_ind[0].s_html)
