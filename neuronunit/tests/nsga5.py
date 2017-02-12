@@ -13,7 +13,14 @@ import time
 init_start=time.time()
 import get_neab
 
+#Scoop can only operate on variables classes and methods at top level 0
+#This means something with no indentation, no nesting,
+#and no virtual nesting (like function decorators etc)
+
 """
+
+
+anything that starts at indentation level 0.
 
 Code from the deap framework, available at:
 https://code.google.com/p/deap/source/browse/examples/ga/onemax_short.py
@@ -38,7 +45,7 @@ from deap import creator
 from deap import tools
 from scoop import futures
 
-
+import scoop
 creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
 # -1.0, -1.0, -1.0, -1.0,))
 creator.create("Individual",list, fitness=creator.FitnessMin)
@@ -61,6 +68,8 @@ class Individual(object):
         self.score=None
         self.fitness=None
         self.s_html=None
+        self.lookup={}
+        self.rheobase=None
 toolbox = base.Toolbox()
 rov=[]
 
@@ -136,7 +145,7 @@ model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
 model=model.load_model()
 
 
-def evaluate(individual):#This method must be pickle-able for scoop to work.
+def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
     model.name=''
     for i, p in enumerate(param):
         name_value=str(individual[i])
@@ -160,10 +169,21 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
     import quantities as qt
     #v=[v for v in get_neab.suite.tests[0].observation.values()][0]
     get_neab.suite.tests[0].prediction={}
-    get_neab.suite.tests[0].prediction['value']=individual.rheobase*qt.pA
+    #print(type(rheobase))
+    #print('crashed here')
+    print(vms.rheobase)
+    #pdb.set_trace()
+    get_neab.suite.tests[0].prediction['value']=vms.rheobase*qt.pA
     import os
-    os.system('rm brute_force_time')
-    f=open('brute_force_time','w')
+    import os.path
+    #if os.path.isfile('scoop_log'):
+    #    os.system('rm scoop_log')
+
+    from scoop import utils
+
+    f=open('scoop_log_'+str(utils.getHosts()),'w')
+
+    #f.write(str(sc))
     f.write(str(attrs))
     f.close()
 
@@ -227,10 +247,12 @@ class VirtuaModel:
         self.name=None
 
 
-def f(ampl,vm):
 
-    #if guess!=None:
-    #    ampl=guess
+
+
+def f(ampl,vm):
+    print(vm, ampl)
+    #pdb.set_trace()v
 
     if float(ampl) not in vm.lookup:
         current = params.copy()['injected_square_current']
@@ -253,6 +275,7 @@ def f(ampl,vm):
             print("Injected %s current and got %d spikes" % \
                     (ampl,n_spikes))
         vm.lookup[float(ampl)] = n_spikes
+        #vm3=copy.copy(vm)
 
         return vm
 
@@ -293,39 +316,50 @@ units = pq.pA
 verbose=True
 
 #rheobase=None
-def main2(ind,guess=None):
+def main2(ind,guess_attrs=None):
     vm=VirtuaModel()
-    vm.attrs=ind.attrs
+
+    if guess_attrs!=None:
+        for i, p in enumerate(param):
+            value=str(guess_attrs[i])
+            model.name=str(model.name)+' '+str(p)+str(value)
+            if i==0:
+                attrs={'//izhikevich2007Cell':{p:value }}
+            else:
+                attrs['//izhikevich2007Cell'][p]=value
+        #import copy
+        vm.attrs=attrs
+        guess_attrs=None#stop reentry into this condition during while,
+        #if this does not find rheobase immediately.
+
+    else:
+        import copy
+        vm.attrs=copy.copy(ind.attrs)
+
     begin_time=time.time()
     #pdb.set_trace()
     while_true=True
     while(while_true):
         from itertools import repeat
 
-        if guess!=None:
-            vm.lookup=f(guess,vm)
-            guess=None#stop reentry into this condition during while,
-            #if this does not find rheobase immediately.
-
-
         if len(vm.lookup)==0:
             steps2 = np.linspace(50,190,4.0)
             steps = [ i*pq.pA for i in steps2 ]
-            lookup2=list(futures.map(f,steps,repeat(vm)))#,repeat(model)))
-            #lookup2=list(futures.mapReduce(f,steps,repeat(vm),repeat(model)))
+
+            lookup2=list(map(f,steps,repeat(vm)))#,repeat(model)))
+
             print(lookup2)
             print(type(lookup2))
             print(len(lookup2))
 
-
         m = lookup2[0]
+
         sub=[]
         supra=[]
         for k,v in m.lookup.items():
             if v==1:
                 while_true=False
                 print('hit')
-                #m.rheobas=k
                 end_time=time.time()
                 total_time=end_time-begin_time
                 print(total_time)
@@ -352,36 +386,45 @@ def main2(ind,guess=None):
         lookup2=list(map(f,steps,repeat(vm)))
         #steps3.extend(steps)
 
-def evaluate2(individual,guess=None):#This method must be pickle-able for scoop to work.
+def evaluate2(individual, guess_value=None):#This method must be pickle-able for scoop to work.
     #import rheobase_old2 as rh
-
-    if guess!=None:
-        for i, p in enumerate(param):
-            name_value=str(guess[i])
-            #reformate values.
-            model.name=str(model.name)+' '+str(p)+str(name_value)
-            if i==0:
-                attrs={'//izhikevich2007Cell':{p:name_value }}
-            else:
-                attrs['//izhikevich2007Cell'][p]=name_value
-
-
-
-    elif
-
-        for i, p in enumerate(param):
-            name_value=str(individual[i])
-            #reformate values.
-            model.name=str(model.name)+' '+str(p)+str(name_value)
-            if i==0:
-                attrs={'//izhikevich2007Cell':{p:name_value }}
-            else:
-                attrs['//izhikevich2007Cell'][p]=name_value
-
     model=VirtuaModel()
     model.name=''
+
+    for i, p in enumerate(param):
+        value=str(individual[i])
+        #reformate values.
+        model.name=str(model.name)+' '+str(p)+str(value)
+        if i==0:
+            attrs={'//izhikevich2007Cell':{p:value }}
+        else:
+            attrs['//izhikevich2007Cell'][p]=value
+
     individual.attrs=attrs
-    (run_number,k,attrs)=main2(individual,guess)
+    if guess_value != None:
+
+        individual.lookup={}
+        vm=VirtuaModel()
+        import copy
+        vm.attrs=copy.copy(individual.attrs)
+        #pdb.set_trace()
+        vm=f(guess_value,vm)
+        #pdb.set_trace()
+        for k,v in vm.lookup.items():
+            if v==1:
+                individual.rheobase=k
+                print('succeeds in parallel case \n \n\n\n\n\n\n\n')
+                return individual
+            if v!=1:
+                #pdb.set_trace()
+                guess_value = None#more trial and error.
+        #if individual.lookup
+
+        #in case first guess no good. enable
+
+    if guess_value == None:
+        (run_number,k,attrs)=main2(individual)
+    individual.rheobase=0
     individual.rheobase=k
     return individual
 
@@ -406,25 +449,39 @@ def main(seed=None):
     logbook.header = "gen", "evals", "std", "min", "avg", "max"
 
     pop = toolbox.population(n=MU)
-    guess=[]
-    guess.append(np.mean( [ i[0] for i in pop ]))
-    guess.append(np.mean( [ i[1] for i in pop ]))
-    guess.append(np.mean( [ i[2] for i in pop ]))
-    guess.append(np.mean( [ i[3] for i in pop ]))
+    guess_attrs=[]
+    #find rheobase on a model constructed out of the mean parameter values.
+    guess_attrs.append(np.mean( [ i[0] for i in pop ]))
+    guess_attrs.append(np.mean( [ i[1] for i in pop ]))
+    guess_attrs.append(np.mean( [ i[2] for i in pop ]))
+    guess_attrs.append(np.mean( [ i[3] for i in pop ]))
+    run_number,guess_value,attrs=main2(pop[0],guess_attrs)
+    attrs=None
+    run_number=None
 
-    #pdb.set_trace()
-    #[ind for ind in pop if not ind.fitness.valid]
-
-    # Evaluate the individuals with an invalid fitness
     invalid_ind = [ind for ind in pop if not ind.fitness.valid]
     #pdb.set_trace()
     from itertools import repeat
-
+    print(guess_value)
     #pdb.set_trace()
-    invalid_ind = list(futures.map(evaluate2,invalid_ind,repat(guess)))
+    #pdb.set_trace()
+    #invalid_ind =
+    import copy
+    iterator=(futures.map(evaluate2,invalid_ind,repeat(guess_value)))
+    invalid_indvm=[]
+    for i in iterator:
+        if hasattr(i,'rheobase'):
+            print('rheobase can update too \n\n\n\n')
+            print(i.rheobase)
+            vm=VirtuaModel()
+            vm.rheobase=i.rheobase
+            guess_value=i.rheobase
+        invalid_ind.append(copy.copy(i))
+        invalid_indvm.append(copy.copy(vm))
+    #pdb
     #pdb.set_trace()
 
-    fitnesses = toolbox.map(evaluate, invalid_ind)
+    fitnesses = toolbox.map(evaluate, invalid_ind, invalid_indvm)
 
     for ind, fit in zip(invalid_ind, fitnesses):
         ind.fitness.values = fit
@@ -456,8 +513,20 @@ def main(seed=None):
 
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+
+        iterator=(futures.map(evaluate2,invalid_ind,repeat(guess_value)))
+        invalid_indvm=[]
+        for i in iterator:
+            if hasattr(i,'rheobase'):
+                print('rheobase can update too \n\n\n\n')
+                print(i.rheobase)
+                vm=VirtuaModel()
+                vm.rheobase=i.rheobase
+                guess_value=i.rheobase
+            invalid_ind.append(copy.copy(i))
+            invalid_indvm.append(copy.copy(vm))
         #invalid_ind = list(futures.map(evaluate2,invalid_ind))
-        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind, invalid_indvm)
 
 
         for ind, fit in zip(invalid_ind, fitnesses):
