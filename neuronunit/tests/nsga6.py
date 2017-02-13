@@ -541,7 +541,7 @@ def main(seed=None):
         for l in lookup2:
             for k,v in l.lookup.items():
                 l3.append((v, k))
-                print(l3)
+                #print(l3)
 
         unpack=check_fix_range(l3)
         l3=None
@@ -557,7 +557,7 @@ def main(seed=None):
 
     from itertools import repeat
 
-    steps2 = np.linspace(40,70,8.0)
+    steps2 = np.linspace(-40,170,8.0)
     steps = [ i*pq.pA for i in steps2 ]
 
     lookup2=list(futures.map(ff,steps,repeat(vm)))
@@ -566,21 +566,26 @@ def main(seed=None):
     for l in lookup2:
         for k,v in l.lookup.items():
             l3.append((v, k))
-            print(l3)
 
     unpack=check_fix_range(l3)
     boolean=False
     new_ranges=[]
-    boolean=unpack[0]
-    if True == boolean:
-        print('got here 1')
-        guess_value=unpack[1]
-    else:
-        guess_value=check_repeat(ff,unpack[1],vm)
+    guess_value=unpack
+    n=0
+    while guess_value[0]==False:
+        guess_value=check_repeat(ff,guess_value[1],vm)
+
         print('guess value')
         print(guess_value[0])
         print(guess_value[1])
+        n+=1
+        print('looping \n\n\n',n)
+    if True == guess_value[0]:
+        print('got here 1')
+        guess_value=unpack[1]
+    #else:
 
+    '''
     if guess_value[0]==True:
         print('got here 2')
 
@@ -606,7 +611,7 @@ def main(seed=None):
 
 
     print(gv)
-
+    '''
     def gg(check_iter,ampl):
         vm=check_iter
         print(vm, ampl)
@@ -673,8 +678,8 @@ def main(seed=None):
     indattr = [ ind for ind in pop if not ind.fitness.valid ]
     vmlist=list(map(this_function,indattr))
     #vmlist=list(futures.map(this_function,indattr))
-
-    list_of_hits_misses=list(futures.map(ff,vmlist,repeat(guess_value)))
+    vm_iter=[ i for i, j in enumerate(vmlist) ]
+    list_of_hits_misses=list(futures.map(ff,vm_iter,repeat(vmlist),repeat(guess_value)))
 
 
     b=time.time()
