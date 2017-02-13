@@ -336,7 +336,8 @@ def check(lookup2):
             print(total_time)
             #pdb.set_trace()
             rtuple=(m.run_number,k,m.attrs)#a
-            return=(True,rtuple)
+            boolean=True
+            return (boolean,rtuple)
             break
         elif v==0:
             sub.append(k)
@@ -545,29 +546,7 @@ def main(seed=None):
     vm.attrs=attrs
 
     b=time.time()
-    lookup2=list(futures.map(ff,steps,repeat(vm)))
-    boolean,steps=check(lookup2)
-    if boolen == True:
-        run_number,guess_value,attrs=rtuple
-    else:
-        lookup2=list(futures.map(ff,steps,repeat(vm)))
 
-    if boolen == True:
-        run_number,guess_value,attrs=rtuple
-    else:
-        lookup2=list(futures.map(ff,steps,repeat(vm)))
-
-
-    e=time.time()
-
-    print('was this fast?\n\n\n')
-    print('was this fast?\n\n\n')
-    print('was this fast?\n\n\n')
-    print('was this fast?\n\n\n')
-    print(e-b)
-
-
-    pdb.set_trace()
 
     attrs=None
     run_number=None
