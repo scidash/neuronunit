@@ -459,16 +459,12 @@ def ff(ampl,vm):
 
 
 def check_fix_range(lookup2):
-    from itertools import repeat
 
     sub=[]
     supra=[]
     print(lookup2)
-    #for l in lookup2:
-    #pdb.set_trace()
     for v,k in lookup2:
         if v==1:
-            print('hit\n\n\n')
             return (True,k)
         elif v==0:
             sub.append(k)
@@ -478,11 +474,9 @@ def check_fix_range(lookup2):
     print(sub)
     print(supra)
     lookup2=None
-    #pdb.set_trace()
 
     sub=np.array(sub)
     supra=np.array(supra)
-    #pdb.set_trace()
     if len(sub) and len(supra):
         steps2 = np.linspace(sub.max(),supra.min(),8.0)
         steps = [ i*pq.pA for i in steps2 ]
@@ -493,7 +487,6 @@ def check_fix_range(lookup2):
     elif len(supra):
         steps2 = np.linspace(-1*(supra.min()),supra.min(),8.0)
         steps = [ i*pq.pA for i in steps2 ]
-    print(steps)
     import copy
     return (False,copy.copy(steps))
 
@@ -526,10 +519,6 @@ def main(seed=None):
     steps2 = np.linspace(50,190,8.0)
     steps = [ i*pq.pA for i in steps2 ]
 
-    #Here pop[0] is not needed by the function,
-    #but it is required to satisfy the function signature.
-    #parallelize this search for educated guess rheobase.
-    #run_number,guess_value,attrs=main2(pop[0],guess_attrs)
     from itertools import repeat
     vm=VirtuaModel()
 
@@ -546,11 +535,7 @@ def main(seed=None):
 
 
     def check_repeat(ff,unpack,vm):
-        #if boolean ==False:
-        #    print(new_ranges)
-        #    print('that was new ranges')
         from itertools import repeat
-
         lookup2=list(futures.map(ff,unpack,repeat(vm)))
         l3=[]
         for l in lookup2:
@@ -563,14 +548,12 @@ def main(seed=None):
         boolean=False
         new_ranges=[]
         boolean=unpack[0]
-        #pdb.set_trace()
-
         if True == boolean:
             guess_value=unpack[1]
             print(guess_value)
             return (True,guess_value)
         else:
-            return (False,unpack)
+            return (False,guess_value)
 
     from itertools import repeat
     lookup2=list(futures.map(ff,steps,repeat(vm)))
@@ -580,34 +563,36 @@ def main(seed=None):
         for k,v in l.lookup.items():
             l3.append((v, k))
             print(l3)
-    print('l3: ')
-    print(l3)
+
     unpack=check_fix_range(l3)
     boolean=False
     new_ranges=[]
     boolean=unpack[0]
     if True == boolean:
+        print('got here 1')
         guess_value=unpack[1]
-        #print(guess_value)
     else:
-        #gv=guess_value[1]
         guess_value=check_repeat(ff,unpack[1],vm)
+        print('guess value')
+        print(guess_value[0])
+        print(guess_value[1])
 
+    if guess_value[0]==True:
+        print('got here 2')
 
-    if guess_value[0]==False:
-        unpack=guess_value[1]
-        guess_value=check_repeat(ff,unpack[1],vm)
-    else:
         gv=guess_value[1]
-
-
-    if guess_value[0]==False:
-        unpack=guess_value[1]
-        guess_value=check_repeat(ff,unpack[1],vm)
-
     else:
-        gv=guess_value[1]
+        guess_value=check_repeat(ff,guess_value[1],vm)
+    if guess_value[0]==True:
+        print('got here 3')
 
+        gv=guess_value[1]
+    else:
+        guess_value=check_repeat(ff,guess_value[1],vm)
+
+
+    print(gv)
+    '''
     lookup2=list(futures.map(ff,steps,repeat(vm)))
     print(lookup2)
     l3=[]
@@ -705,7 +690,7 @@ def main(seed=None):
     print(unpack[0])
     print(boolean)
     '''
-
+    '''
     for k,v in lookup2[0].lookup.items():
         l3.append((v, k))
 
