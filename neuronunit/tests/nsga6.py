@@ -465,6 +465,7 @@ def check_fix_range(lookup2):
     print(lookup2)
     for v,k in lookup2:
         if v==1:
+            print('hit !!!\n\n\n')
             return (True,k)
         elif v==0:
             sub.append(k)
@@ -516,8 +517,7 @@ def main(seed=None):
     guess_attrs.append(np.mean( [ i[2] for i in pop ]))
     guess_attrs.append(np.mean( [ i[3] for i in pop ]))
 
-    steps2 = np.linspace(50,190,8.0)
-    steps = [ i*pq.pA for i in steps2 ]
+
 
     from itertools import repeat
     vm=VirtuaModel()
@@ -548,14 +548,18 @@ def main(seed=None):
         boolean=False
         new_ranges=[]
         boolean=unpack[0]
+        guess_value=unpack[1]
         if True == boolean:
-            guess_value=unpack[1]
             print(guess_value)
             return (True,guess_value)
         else:
             return (False,guess_value)
 
     from itertools import repeat
+
+    steps2 = np.linspace(40,70,8.0)
+    steps = [ i*pq.pA for i in steps2 ]
+
     lookup2=list(futures.map(ff,steps,repeat(vm)))
     print(lookup2)
     l3=[]
@@ -589,221 +593,24 @@ def main(seed=None):
         gv=guess_value[1]
     else:
         guess_value=check_repeat(ff,guess_value[1],vm)
+    if guess_value[0]==True:
+        print('got here 4')
+
+        gv=guess_value[1]
+    else:
+        guess_value=check_repeat(ff,guess_value[1],vm)
+    if guess_value[0]==True:
+        print('got here 5')
+
+        gv=guess_value[1]
 
 
     print(gv)
-    '''
-    lookup2=list(futures.map(ff,steps,repeat(vm)))
-    print(lookup2)
-    l3=[]
-    for l in lookup2:
-        for k,v in l.lookup.items():
-            l3.append((v, k))
-            print(l3)
-    print('l3: ')
-    print(l3)
-    unpack=check_fix_range(l3)
-    boolean=False
-    new_ranges=[]
-    boolean=unpack[0]
-    if True == boolean:
-        guess_value=unpack[1]
-        print(guess_value)
-
-        #break
-    if boolean ==False:
-        print(new_ranges)
-        print('that was new ranges')
-        lookup2=list(futures.map(ff,unpack[1],repeat(vm)))
-        l3=[]
-        for l in lookup2:
-            for k,v in l.lookup.items():
-                l3.append((v, k))
-                print(l3)
-
-        unpack=check_fix_range(l3)
-        l3=None
-        boolean=False
-        new_ranges=[]
-        boolean=unpack[0]
-        #pdb.set_trace()
-
-        if True == boolean:
-            guess_value=unpack[1]
-            print(guess_value)
-
-
-        #break
-        if boolean ==False:
-            print(new_ranges)
-            print('that was new ranges')
-            lookup2=list(futures.map(ff,unpack[1],repeat(vm)))
-            l3=[]
-            for l in lookup2:
-                for k,v in l.lookup.items():
-                    l3.append((v, k))
-                    print(l3)
-            unpack=check_fix_range(l3)
-            boolean=False
-            new_ranges=[]
-            boolean=unpack[0]
-            #pdb.set_trace()
-
-        if True == boolean:
-            guess_value=unpack[1]
-            print(guess_value)
-
-
-        #break
-        if boolean ==False:
-            print(new_ranges)
-            print('that was new ranges')
-            lookup2=list(futures.map(ff,unpack[1],repeat(vm)))
-            l3=[]
-            for l in lookup2:
-                for k,v in l.lookup.items():
-                    l3.append((v, k))
-                    print(l3)
-            unpack=check_fix_range(l3)
-            boolean=False
-            new_ranges=[]
-            boolean=unpack[0]
-            if True == boolean:
-                guess_value=unpack[1]
-            #break
-            if boolean ==False:
-                print(new_ranges)
-                print('that was new ranges')
-                lookup2=list(futures.map(ff,unpack[1],repeat(vm)))
-                l3=[]
-                for l in lookup2:
-                    for k,v in l.lookup.items():
-                        l3.append((v, k))
-                        print(l3)
-                unpack=check_fix_range(l3)
-                boolean=False
-                new_ranges=[]
-                boolean=unpack[0]
-
-    print('was there a hit?')
-    print(unpack[1])
-    print(unpack[0])
-    print(boolean)
-    '''
-    '''
-    for k,v in lookup2[0].lookup.items():
-        l3.append((v, k))
-
-        print(l3)
-
-        #pdb.set_trace()
-
-    unpack=check_fix_range(l3)
-
-    print('unpack follows')
-    print(unpack)
-    boolean=False
-    new_ranges=[]
-    #pdb.set_trace()
-    #for u in unpack[0]:
-    boolean=unpack[0]
-    #new_ranges.extend(u[1])
-    #pdb.set_trace()
-    if True == boolean:
-        guess_value=unpack[1]
-        #break
-    if boolean ==False:
-        print(new_ranges)
-        print('that was new ranges')
-        lookup2=list(futures.map(ff,unpack[1],repeat(vm)))
-        l3=[]
-        unpack=check_fix_range(l3)
-
-        print('unpack follows')
-        print(unpack)
-        boolean=False
-        new_ranges=[]
-        #pdb.set_trace()
-        #for u in unpack[0]:
-        boolean=unpack[0]
-        #new_ranges.extend(u[1])
-        #pdb.set_trace()
-        if True == boolean:
-            guess_value=unpack[1]
-            #break
-        if boolean ==False:
-            print(new_ranges)
-            print('that was new ranges')
-            lookup2=list(futures.map(ff,unpack[1],repeat(vm)))
-            l3=[]
-
-
-        for u in unpack:
-            boolean=u[0]
-            new_ranges.extend(u[1])
-            if True == boolean:
-                guess_value=u[1]
-                break
-    if boolean ==False:
-        lookup2=list(futures.map(ff,new_ranges,repeat(vm)))
-        l3=[]
-        for l in lookup2:
-            print(l)
-            for k,v in l.lookup.items():
-                l3.append((v, k))# for k, v in l.iteritems()])
-        print(l3)
-        unpack=list(futures.map(check_fix_range,l3))
-
-        for u in unpack:
-            boolean=u[0]
-            new_ranges.extend(u[1])
-            if True == boolean:
-                guess_value=u[1]
-                break
-    print('three times is plenty did it work? \n\n')
-    print(guess_value)
-    pdb.set_trace()
-    if boolean ==False:
-        lookup2=list(futures.map(ff,new_ranges,repeat(vm)))
-        l3=[]
-        for l in lookup2:
-            print(l)
-            for k,v in l.lookup.items():
-                l3.extend([(v, k)])# for k, v in l.iteritems()])
-        print(l3)
-        unpack=list(futures.map(check_fix_range,l3))
-
-        for u in unpack:
-            if True == u[0]:
-                guess_value=u[1]
-                boolean=u[0]
-                break
-
-    if boolean ==False:
-        lookup2=list(futures.map(ff,unpack[1],repeat(vm)))
-        l3=[]
-        for l in lookup2:
-            print(l)
-            for k,v in l.lookup.items():
-                l3.extend([(v, k)])# for k, v in l.iteritems()])
-        print(l3)
-        unpack=list(futures.map(check_fix_range,l3))
-    '''
-    #print(run_number,guess_value,attrs)
-    #print(type(ff))
-
-    #the function gg is like ff but its different in that it returns
-    # a list of booleans  and also it converts inidividuals into virtual models
-    # if and as required. Its also defined in top level scope.
-
-
 
     def gg(check_iter,ampl):
         vm=check_iter
         print(vm, ampl)
-        #pdb.set_trace()v
-        #futures.map()
-        #if float(ampl) not in vm.lookup:
+
         current = params.copy()['injected_square_current']
         print('current, previous = ',ampl,vm.previous)
         uc={'amplitude':ampl}
@@ -812,7 +619,7 @@ def main(seed=None):
         vm.run_number+=1
         print('model run number',vm.run_number)
         #model.attrs=vm.attrs
-        ff.model.update_run_params(vm.attrs)
+        model.update_run_params(vm.attrs)
         assert vm.attrs==model.attrs
         print(vm.attrs)
         print(model.attrs)
@@ -834,31 +641,43 @@ def main(seed=None):
 
         return (vm,steps)
 
-    #vmlist=[]
-    #for ind in pop:
+
+    def model2map(ind):#This method must be pickle-able for scoop to work.
+        vm=VirtualModel()
+        attrs={}
+        attrs['//izhikevich2007Cell']={}
+        param=['a','b','vr','vpeak']#,'k']#,'C']#,'c','d','v0','k','vt','vpeak']#,'d'
+        #i,j,k,l=iter_arg
+        #print(i,j)
+        model.name=str(i)+str(j)#+str(k)+str(k)
+        attrs['//izhikevich2007Cell']['a']=ind[0]
+        attrs['//izhikevich2007Cell']['b']=ind[1]
+        attrs['//izhikevich2007Cell']['vpeak']=ind[2]
+        attrs['//izhikevich2007Cell']['vr']=ind[3]
+        print(attrs)
+        vm.attrs=attrs
+        return vm
+
 
     def this_function(ind):
-        if not ind.fitness.valid:
-            for i, p in enumerate(param):
-                value=str(ind[i])
-                if i==0:
-                    attrs={'//izhikevich2007Cell':{p:value }}
-                else:
-                    attrs['//izhikevich2007Cell'][p]=value
-            vm=VirtuaModel()
-            vm.attr=attrs
-            return vm
-            #vmlist.append(vm)
-    vmlist=list(futures.map(this_function,pop))
+        for i, p in enumerate(param):
+            value=str(ind[i])
+            if i==0:
+                attrs={'//izhikevich2007Cell':{p:value }}
+            else:
+                attrs['//izhikevich2007Cell'][p]=value
+        vm=VirtuaModel()
+        vm.attr=attrs
+        return vm
 
-    #indattr = [ ind.attr for ind in pop if not ind.fitness.valid ]
-    #check_iter
+    indattr = [ ind for ind in pop if not ind.fitness.valid ]
+    vmlist=list(map(this_function,indattr))
+    #vmlist=list(futures.map(this_function,indattr))
 
-    list_of_hits_misses=list(futures.map(gg,vmlist,repeat(guess_value)))
+    list_of_hits_misses=list(futures.map(ff,vmlist,repeat(guess_value)))
 
 
     b=time.time()
-    #for i in list_of_hits_misses:
 
     def cc(itercc):
         if itercc==False:
