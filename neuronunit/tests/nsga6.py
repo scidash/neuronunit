@@ -86,16 +86,16 @@ vt =  np.linspace(-50.0,-30.0,1000)
 
 #vpeak as currently stated causes problems.
 #param=['vr','a','b','C','c','d','v0','k','vt','vpeak']
-param=['a','b','vr','vpeak']#,'k']#,'C']#,'c','d','v0','k','vt','vpeak']#,'d'
+param=['a','b','vr']#,'vpeak']#,'k']#,'C']#,'c','d','v0','k','vt','vpeak']#,'d'
 rov=[]
 vr = np.linspace(-75.0,-50.0,1000)
 a = np.linspace(0.015,0.045,1000)
 b = np.linspace(-3.5*10E-9,-0.5*10E-9,1000)
-vpeak= np.linspace(30.0,30.0,1000)
+#vpeak= np.linspace(30.0,30.0,1000)
 rov.append(a)
 rov.append(b)
 rov.append(vr)
-rov.append(vpeak)
+#rov.append(vpeak)
 BOUND_LOW=[ np.min(i) for i in rov ]
 BOUND_UP=[ np.max(i) for i in rov ]
 #rov.append(vpeak)
@@ -427,10 +427,10 @@ def ff(ampl,vm):
         vm.run_number+=1
         print('model run number',vm.run_number)
         #model.attrs=vm.attrs
-        model.update_run_params(vm.attrs)
-        assert vm.attrs==model.attrs
-        print(vm.attrs)
-        print(model.attrs)
+        #model.update_run_params(vm.attrs)
+        #assert vm.attrs==model.attrs
+        #print(vm.attrs)
+        #print(model.attrs)
         model.inject_square_current(current)
         vm.previous=ampl
         n_spikes = model.get_spike_count()
@@ -464,20 +464,44 @@ def check_fix_range(lookup2):
         print(k,v)
     print(sub)
     print(supra)
-    lookup2=None
+    #lookup2=None
 
     sub=np.array(sub)
     supra=np.array(supra)
+    #sub_margin=sub.max()+sub.max()/10.0
+    #supra_margin=supra.min()-supra.min()/10.10
+
     if len(sub) and len(supra):
-        steps2 = np.linspace(sub.max(),supra.min(),8.0)
+        center=(sub.max()+supra.min())/2.0
+        steps2=np.linspace(center-sub.max(),center+supra.min(),7.0)
+        steps2 = np.linspace(sub.max(),supra.min(),7.0)
+        np.delete(steps2,np.array(lookup2))
+        #np.delete(steps2,sub.max())
+        #np.delete(steps2,supra.min())
+        steps2[int(len(steps2)/2)+1]=(sub.max()+supra.min())/2.0
+        #pdb.set_trace()
+        #steps2[int(steps2/2)]=(sub.max()+supra.min())/2.0
         steps = [ i*pq.pA for i in steps2 ]
+        #pdb.set_trace()
 
     elif len(sub):
-        steps2 = np.linspace(sub.max(),2*sub.max(),8.0)
+        steps2 = np.linspace(sub.max(),2*sub.max(),7.0)
+        #np.delete(steps2,sub.max())
+        np.delete(steps2,np.array(lookup2))
+
         steps = [ i*pq.pA for i in steps2 ]
     elif len(supra):
-        steps2 = np.linspace(-1*(supra.min()),supra.min(),8.0)
+        steps2 = np.linspace(-2*(supra.min()),supra.min(),7.0)
+        #np.delete(steps2,supra.min())
+        np.delete(steps2,np.array(lookup2))
         steps = [ i*pq.pA for i in steps2 ]
+
+    if len(steps)<7:
+        steps2 = np.linspace(steps.min(),steps.max(),7.0)
+        steps = [ i*pq.pA for i in steps2 ]
+        print(lookup2)
+        print(steps)
+        #pdb.set_trace()
     import copy
     return (False,copy.copy(steps))
 
@@ -505,7 +529,7 @@ def main(seed=None):
     guess_attrs.append(np.mean( [ i[0] for i in pop ]))
     guess_attrs.append(np.mean( [ i[1] for i in pop ]))
     guess_attrs.append(np.mean( [ i[2] for i in pop ]))
-    guess_attrs.append(np.mean( [ i[3] for i in pop ]))
+    #guess_attrs.append(np.mean( [ i[3] for i in pop ]))
 
 
 
@@ -546,25 +570,81 @@ def main(seed=None):
 
     from itertools import repeat
 
-    steps2 = np.linspace(-70,170,8.0)
+    steps2 = np.linspace(40,80,7.0)
     steps = [ i*pq.pA for i in steps2 ]
+    model.attrs=vm.attrs
 
     lookup2=list(futures.map(ff,steps,repeat(vm)))
     print(lookup2)
     l3=[]
+    d={}
     for l in lookup2:
         for k,v in l.lookup.items():
             l3.append((v, k))
+            d[k]=v
 
     unpack=check_fix_range(l3)
+    unpack=check_repeat(ff,unpack[1],vm)
+    if unpack[0]==False:
+
+        l3=[]
+        d={}
+        for l in lookup2:
+            for k,v in l.lookup.items():
+                l3.append((v, k))
+                d[k]=v
+
+        unpack=check_fix_range(l3)
+        unpack=check_repeat(ff,unpack[1],vm)
+
+    if unpack[0]==False:
+
+        l3=[]
+        d={}
+        for l in lookup2:
+            for k,v in l.lookup.items():
+                l3.append((v, k))
+                d[k]=v
+
+        unpack=check_fix_range(l3)
+        unpack=check_repeat(ff,unpack[1],vm)
+
+
+    if unpack[0]==False:
+        vector=unpack[1]
+        high=vector[int(len(vector)/2+1)]
+        small=vector[int(len(vector)/2-1)]
+
+        get_neab.suite.tests[0].high=high#=np.mean()
+        get_neab.suite.tests[0].small=small
+        get_neab.suite.tests[0].lookup=d
+        #model.update_run_params(vm.attrs)
+        print(vm.attrs)
+        #print(get_neab.suite.tests[0].guess)
+        #pdb.set_trace()
+        get_neab.suite.tests[0].generate_prediction(model)
+
+
+    if unpack[0]==True:
+        guess_value=unpack[1]
+    '''
     boolean=False
     new_ranges=[]
-    guess_value=unpack
+    #guess_value=unpack
     n=0
-
-    while guess_value[0]==False and n<10:
+    #while guess_value[0]==False and n<10:
+    if n==0:
+        #fire a shot gun
         guess_value=check_repeat(ff,guess_value[1],vm)
-
+        n+=1
+    if n>0:
+        model.update_run_params(vm.attrs)
+        model.attrs=vm.attrs
+        print(vm.attrs)
+        guess_value[1]
+        #pdb.set_trace()
+        #get_neab.suite.tests[0].guess=
+        get_neab.suite.tests[0].generate_prediction(np.mean(gunpack[1])
         print('guess value')
         print(guess_value[0])
         print(guess_value[1])
@@ -572,10 +652,13 @@ def main(seed=None):
         print('looping \n\n\n',n)
 
     if guess_value[0]==False and not (n<10):
-        get_neab.suite.tests[0].generate_prediction(vm)
+        model.update_run_params(vm.attrs)
+        model.attrs=vm.attrs
+        print(vm.attrs)
+        get_neab.suite.tests[0].generate_prediction(model)
         pdb.set_trace()
 
-    '''
+
     if True == guess_value[0]:
         print('got here 1')
         guess_value=unpack[1]
@@ -716,8 +799,11 @@ def main(seed=None):
     indattr = [ ind for ind in pop if not ind.fitness.valid ]
     vmlist=list(map(this_function,indattr))
     #vmlist=list(futures.map(this_function,indattr))
-    vm_iter=[ i for i, j in enumerate(vmlist) ]
-    list_of_hits_misses=list(futures.map(ff,vm_iter,repeat(vmlist),repeat(guess_value)))
+    #vm_iter=[ (i,j) for i,j in enumerate(vmlist) ]
+
+
+
+    list_of_hits_misses=list(futures.map(ff,repeat(guess_value),vmlist))
 
 
     b=time.time()
