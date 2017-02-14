@@ -104,13 +104,15 @@ def model2map(iter_arg):#This method must be pickle-able for scoop to work.
     attrs={}
     attrs['//izhikevich2007Cell']={}
     param=['a','b']
-    i,j=iter_arg
+    param=['a','b','vr','vpeak']#,'k']#,'C']#,'c','d','v0','k','vt','vpeak']#,'d'
+
+    i,j,k=iter_arg
     print(i,j)
     model.name=str(i)+str(j)#+str(k)+str(k)
     attrs['//izhikevich2007Cell']['a']=i
     attrs['//izhikevich2007Cell']['b']=j
-    attrs['//izhikevich2007Cell']['vpeak']=40.0
-
+    attrs['//izhikevich2007Cell']['vpeak']=k
+    #attrs['//izhikevich2007Cell']['vr']=l
     print(attrs)
     vm.attrs=attrs
     #model.update_run_params(attrs)
@@ -119,19 +121,7 @@ def model2map(iter_arg):#This method must be pickle-able for scoop to work.
 
 
 def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
-    '''
-    attrs={}
-    attrs['//izhikevich2007Cell']={}
-    param=['a','b']
-    i,j=iter_arg
-    print(i,j)
-    model.name=str(i)+str(j)#+str(k)+str(k)
-    attrs['//izhikevich2007Cell']['a']=i
-    attrs['//izhikevich2007Cell']['b']=j
-    attrs['//izhikevich2007Cell']['vpeak']=40.0
 
-    print(attrs)
-    '''
     model.update_run_params(iter_arg.attrs)
 
     import quantities as qt
@@ -166,6 +156,12 @@ def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
 
 
 class VirtualModel:
+    '''
+    This is a shell for the real model, it contains
+    model parameters and other data which can readily be pickeled.
+    Unlike the actual model which contains unpickable HOC code
+    .
+    '''
     def __init__(self):
         self.lookup={}
         self.previous=0
@@ -204,7 +200,6 @@ verbose=True
 
 def f(ampl,vm):
     print(vm, ampl)
-    #pdb.set_trace()v
 
     if float(ampl) not in vm.lookup:
         current = params.copy()['injected_square_current']
@@ -332,7 +327,7 @@ def evaluate2(individual, guess_value=None):#This method must be pickle-able for
 
 
 if __name__ == "__main__":
-    iter_list=[ (i,j) for i in a for j in b ]
+    iter_list=[ (i,j,k) for i in a for j in b for k in vr ]#for l in vpeak]
 
     guess_attrs=[]
     #find rheobase on a model constructed out of the mean parameter values.
@@ -360,6 +355,8 @@ if __name__ == "__main__":
     bg_bf=time.time()
     '''
     score_matrix=list(futures.map(func2map,iterator,repeat(get_neab.suite)))
+    with open('score_matrix.pickle', 'wb') as handle:
+        pickle.dump(score_matrix, handle)
 #
 #    main()
 '''
@@ -377,8 +374,6 @@ if RANK == 0:
     f.close()
     import pickle
 
-    with open('score_matrix.pickle', 'wb') as handle:
-        pickle.dump(score_matrix, handle)
 
 
 else:
