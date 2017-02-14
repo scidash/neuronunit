@@ -152,22 +152,12 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
     for i in attrs['//izhikevich2007Cell'].values():
         if hasattr(individual,'params'):
             individual.params.append(i)
-
-    #db.set_trace()
-    #suite.
     import quantities as qt
-    #v=[v for v in get_neab.suite.tests[0].observation.values()][0]
     get_neab.suite.tests[0].prediction={}
-    #print(type(rheobase))
-    #print('crashed here')
     print(vms.rheobase)
-    #pdb.set_trace()
     get_neab.suite.tests[0].prediction['value']=vms.rheobase*qt.pA
     import os
     import os.path
-    #if os.path.isfile('scoop_log'):
-    #    os.system('rm scoop_log')
-
     from scoop import utils
 
     f=open('scoop_log_'+str(utils.getHosts()),'w')
@@ -191,10 +181,10 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
         if np.sum(individual.error)!=0:
             individual.error = [ (10.0+i)/2.0 for i in individual.error ]
         else:
-            individual.error = [ 10.0for i in range(0,8) ]
+            individual.error = [ 10.0 for i in range(0,8) ]
 
-        if len(LOCAL_RESULTS_spiking)>0:
-            del LOCAL_RESULTS_spiking[-1]
+        #if len(LOCAL_RESULTS_spiking)>0:
+        #    del LOCAL_RESULTS_spiking[-1]
         individual.s_html=None
 
 
@@ -541,7 +531,6 @@ def main(seed=None):
         for l in lookup2:
             for k,v in l.lookup.items():
                 l3.append((v, k))
-                #print(l3)
 
         unpack=check_fix_range(l3)
         l3=None
@@ -557,7 +546,7 @@ def main(seed=None):
 
     from itertools import repeat
 
-    steps2 = np.linspace(-40,170,8.0)
+    steps2 = np.linspace(-70,170,8.0)
     steps = [ i*pq.pA for i in steps2 ]
 
     lookup2=list(futures.map(ff,steps,repeat(vm)))
@@ -572,7 +561,8 @@ def main(seed=None):
     new_ranges=[]
     guess_value=unpack
     n=0
-    while guess_value[0]==False:
+
+    while guess_value[0]==False and n<10:
         guess_value=check_repeat(ff,guess_value[1],vm)
 
         print('guess value')
@@ -580,9 +570,57 @@ def main(seed=None):
         print(guess_value[1])
         n+=1
         print('looping \n\n\n',n)
+
+    if guess_value[0]==False and not (n<10):
+        get_neab.suite.tests[0].generate_prediction(vm)
+        pdb.set_trace()
+
+    '''
     if True == guess_value[0]:
         print('got here 1')
         guess_value=unpack[1]
+        vm=VirtuaModel()
+
+        #if guess_attrs!=None:
+        for i, p in enumerate(param):
+            value=str(pop[0][i])
+            model.name=str(model.name)+' '+str(p)+str(value)
+            if i==0:
+                attrs={'//izhikevich2007Cell':{p:value }}
+            else:
+                attrs['//izhikevich2007Cell'][p]=value
+        vm.attrs=attrs
+        steps2 = np.linspace(-40,170,8.0)
+        steps = [ i*pq.pA for i in steps2 ]
+
+        lookup2=list(futures.map(ff,steps,repeat(vm)))
+        print(lookup2)
+        l3=[]
+        for l in lookup2:
+            for k,v in l.lookup.items():
+                l3.append((v, k))
+
+        unpack=check_fix_range(l3)
+        boolean=False
+        new_ranges=[]
+        guess_value=unpack
+        #n=0
+
+        while guess_value[0]==False and n<10:
+            guess_value=check_repeat(ff,guess_value[1],vm)
+
+            print('guess value')
+            print(guess_value[0])
+            print(guess_value[1])
+            n+=1
+            print('looping \n\n\n',n)
+        if True == guess_value[0]:
+            print('got here 1')
+            guess_value=unpack[1]
+        #if n==10 and False == guess_value:
+
+    '''
+
     #else:
 
     '''
