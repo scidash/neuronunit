@@ -501,7 +501,7 @@ def check_fix_range(lookup2):
         steps = [ i*pq.pA for i in steps2 ]
         print(lookup2)
         print(steps)
-        #pdb.set_trace()
+        pdb.set_trace()
     import copy
     return (False,copy.copy(steps))
 
