@@ -221,6 +221,7 @@ def plotss(pop,gen):
 class VirtuaModel:
     def __init__(self):
         self.lookup={}
+        self.rheobase=None
         self.previous=0
         self.run_number=0
         self.attrs=None
@@ -505,6 +506,39 @@ def check_fix_range(lookup2):
     import copy
     return (False,copy.copy(steps))
 
+
+
+    def cc(itercc):
+        if '1' in itercc.lookup.values():
+            return 1
+        else:
+            return 0
+        #if itercc==False:
+            #vm=VirtuaModel()
+            #vm=itercc.vm
+            #vm.attrs=attrs
+            #boolean,steps=vm.lookup,vm)
+
+        #return (boolean,steps)
+            '''
+            if boolen == True:
+                run_number,guess_value,attrs=rtuple
+            else:
+                lookup2=list(futures.map(ff,steps,repeat(vm)))
+                boolean,steps=check(lookup2)
+            if boolen == True:
+                run_number,guess_value,attrs=rtuple
+            else:
+                lookup2=list(futures.map(ff,steps,repeat(vm)))
+                boolean,steps=check(lookup2)
+            if boolen == True:
+                run_number,guess_value,attrs=rtuple
+            else:
+                lookup2=list(futures.map(ff,steps,repeat(vm)))
+                boolean,steps=check(lookup2)
+            '''
+            #lookup2=list(futures.map(ff,steps,repeat(vm)))
+
 def main(seed=None):
 
     random.seed(seed)
@@ -564,7 +598,9 @@ def main(seed=None):
         guess_value=unpack[1]
         if True == boolean:
             print(guess_value)
+            vm.rheobase=guess_value
             return (True,guess_value)
+
         else:
             return (False,guess_value)
 
@@ -585,6 +621,7 @@ def main(seed=None):
 
     unpack=check_fix_range(l3)
     unpack=check_repeat(ff,unpack[1],vm)
+
     if unpack[0]==False:
 
         l3=[]
@@ -593,7 +630,6 @@ def main(seed=None):
             for k,v in l.lookup.items():
                 l3.append((v, k))
                 d[k]=v
-
         unpack=check_fix_range(l3)
         unpack=check_repeat(ff,unpack[1],vm)
 
@@ -611,6 +647,7 @@ def main(seed=None):
 
 
     if unpack[0]==False:
+        #As a last resort use the old way to find.
         vector=unpack[1]
         high=vector[int(len(vector)/2+1)]
         small=vector[int(len(vector)/2-1)]
@@ -618,121 +655,13 @@ def main(seed=None):
         get_neab.suite.tests[0].high=high#=np.mean()
         get_neab.suite.tests[0].small=small
         get_neab.suite.tests[0].lookup=d
-        #model.update_run_params(vm.attrs)
         print(vm.attrs)
-        #print(get_neab.suite.tests[0].guess)
-        #pdb.set_trace()
         get_neab.suite.tests[0].generate_prediction(model)
 
 
     if unpack[0]==True:
         guess_value=unpack[1]
-    '''
-    boolean=False
-    new_ranges=[]
-    #guess_value=unpack
-    n=0
-    #while guess_value[0]==False and n<10:
-    if n==0:
-        #fire a shot gun
-        guess_value=check_repeat(ff,guess_value[1],vm)
-        n+=1
-    if n>0:
-        model.update_run_params(vm.attrs)
-        model.attrs=vm.attrs
-        print(vm.attrs)
-        guess_value[1]
-        #pdb.set_trace()
-        #get_neab.suite.tests[0].guess=
-        get_neab.suite.tests[0].generate_prediction(np.mean(gunpack[1])
-        print('guess value')
-        print(guess_value[0])
-        print(guess_value[1])
-        n+=1
-        print('looping \n\n\n',n)
 
-    if guess_value[0]==False and not (n<10):
-        model.update_run_params(vm.attrs)
-        model.attrs=vm.attrs
-        print(vm.attrs)
-        get_neab.suite.tests[0].generate_prediction(model)
-        pdb.set_trace()
-
-
-    if True == guess_value[0]:
-        print('got here 1')
-        guess_value=unpack[1]
-        vm=VirtuaModel()
-
-        #if guess_attrs!=None:
-        for i, p in enumerate(param):
-            value=str(pop[0][i])
-            model.name=str(model.name)+' '+str(p)+str(value)
-            if i==0:
-                attrs={'//izhikevich2007Cell':{p:value }}
-            else:
-                attrs['//izhikevich2007Cell'][p]=value
-        vm.attrs=attrs
-        steps2 = np.linspace(-40,170,8.0)
-        steps = [ i*pq.pA for i in steps2 ]
-
-        lookup2=list(futures.map(ff,steps,repeat(vm)))
-        print(lookup2)
-        l3=[]
-        for l in lookup2:
-            for k,v in l.lookup.items():
-                l3.append((v, k))
-
-        unpack=check_fix_range(l3)
-        boolean=False
-        new_ranges=[]
-        guess_value=unpack
-        #n=0
-
-        while guess_value[0]==False and n<10:
-            guess_value=check_repeat(ff,guess_value[1],vm)
-
-            print('guess value')
-            print(guess_value[0])
-            print(guess_value[1])
-            n+=1
-            print('looping \n\n\n',n)
-        if True == guess_value[0]:
-            print('got here 1')
-            guess_value=unpack[1]
-        #if n==10 and False == guess_value:
-
-    '''
-
-    #else:
-
-    '''
-    if guess_value[0]==True:
-        print('got here 2')
-
-        gv=guess_value[1]
-    else:
-        guess_value=check_repeat(ff,guess_value[1],vm)
-    if guess_value[0]==True:
-        print('got here 3')
-
-        gv=guess_value[1]
-    else:
-        guess_value=check_repeat(ff,guess_value[1],vm)
-    if guess_value[0]==True:
-        print('got here 4')
-
-        gv=guess_value[1]
-    else:
-        guess_value=check_repeat(ff,guess_value[1],vm)
-    if guess_value[0]==True:
-        print('got here 5')
-
-        gv=guess_value[1]
-
-
-    print(gv)
-    '''
     def gg(check_iter,ampl):
         vm=check_iter
         print(vm, ampl)
@@ -798,46 +727,67 @@ def main(seed=None):
 
     indattr = [ ind for ind in pop if not ind.fitness.valid ]
     vmlist=list(map(this_function,indattr))
-    #vmlist=list(futures.map(this_function,indattr))
-    #vm_iter=[ (i,j) for i,j in enumerate(vmlist) ]
-
-
 
     list_of_hits_misses=list(futures.map(ff,repeat(guess_value),vmlist))
+
+    for i,j in enumerate(list_of_hits_misses):
+        print(i)
+        print(j)
+        print('do nothing')
+            #break
+        if j.rheobase==None:
+
+
+            for k,v in j.lookup.items():
+                print(j.rheobase)
+                print(type(j))
+                unpack=check_repeat(ff,j.lookup,j)
+                if unpack[0]==False:
+                    print(lookup2)
+                    l3=[]
+                    for l in lookup2:
+                        for k,v in l.lookup.items():
+                            l3.append((v, k))
+
+                    unpack=check_fix_range(l3)
+
+                if unpack[0]==False:
+                    unpack=check_repeat(ff,unpack[1],j)
+                    print(lookup2)
+                    l3=[]
+                    for l in lookup2:
+                        for k,v in l.lookup.items():
+                            l3.append
+                            #d[k]=v
+                    unpack=check_fix_range(l3)
+                j.lookup=unpack[1]
+                j.rheobase=unpack[1]
+
+
+        list_of_hits_misses=list(futures.map(ff,repeat(guess_value),vmlist))
+
+        #list_of_hits_misses=list(futures.map(ff,vmlist))
+
+        for i,j in enumerate(list_of_hits_misses):
+            print(i)
+            print(j)
+
+            for k,v in j.lookup.items():
+                if '1' == v:
+                    print('do nothing')
+                else:
+                    print('do something')
 
 
     b=time.time()
 
-    def cc(itercc):
-        if itercc==False:
-            vm=VirtuaModel()
-            vm=itercc.vm
-            vm.attrs=attrs
-            boolean,steps=check(vm.lookup)
-            if boolen == True:
-                run_number,guess_value,attrs=rtuple
-            else:
-                lookup2=list(futures.map(ff,steps,repeat(vm)))
-                boolean,steps=check(lookup2)
-            if boolen == True:
-                run_number,guess_value,attrs=rtuple
-            else:
-                lookup2=list(futures.map(ff,steps,repeat(vm)))
-                boolean,steps=check(lookup2)
-            if boolen == True:
-                run_number,guess_value,attrs=rtuple
-            else:
-                lookup2=list(futures.map(ff,steps,repeat(vm)))
-                boolean,steps=check(lookup2)
-
-            lookup2=list(futures.map(ff,steps,repeat(vm)))
 
 
-    list(futures.map(cc,list_of_hits_misses))
+    #booleans=list(futures.map(cc,list_of_hits_misses))
 
 
-    lookup2=list(futures.map(ff,steps,repeat(vm)))
-    boolean,steps=check(lookup2)
+    #lookup2=list(futures.map(ff,steps,repeat(vm)))
+    #boolean,steps=check(lookup2)
     if boolen == True:
         run_number,guess_value,attrs=rtuple
     else:
@@ -864,9 +814,7 @@ def main(seed=None):
     #pdb.set_trace()
     from itertools import repeat
     print(guess_value)
-    #pdb.set_trace()
-    #pdb.set_trace()
-    #invalid_ind =
+
     import copy
     iterator=(futures.map(evaluate2,invalid_ind,repeat(guess_value)))
     invalid_indvm=[]
@@ -877,8 +825,7 @@ def main(seed=None):
             guess_value=i.rheobase
         invalid_ind.append(copy.copy(i))
         invalid_indvm.append(copy.copy(vm))
-    #pdb
-    #pdb.set_trace()
+
 
     fitnesses = toolbox.map(evaluate, invalid_ind, invalid_indvm)
 

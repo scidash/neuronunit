@@ -175,7 +175,7 @@ WORKDIR $HOME #/neuronunit/neuronunit/software_tests
 RUN ipcluster start --profile=chase --debug &
 
 WORKDIR $HOME
-RUN git clone -b russell_dev https://github.com/scidash/neuronunit.git
+RUN git clone -b compare_justas https://github.com/scidash/neuronunit.git
 WORKDIR $HOME/neuronunit/neuronunit/tests/NeuroML2
 
 RUN nrnivmodl

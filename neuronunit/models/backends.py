@@ -67,6 +67,7 @@ class NEURONBackend(Backend):
         self.attrs=attrs
         self.f=None
         self.h=None
+        self.rheobase=None
         self.invokenrn()
 
 
@@ -159,7 +160,9 @@ class NEURONBackend(Backend):
 
     def update_run_params(self,attrs):
         import re
-        for key, value in attrs.items():
+        self.attrs=None
+        self.attrs=attrs
+        for key, value in self.attrs.items():
              h_variable=list(value.keys())
              h_variable=h_variable[0]
              h_assignment=list(value.values())

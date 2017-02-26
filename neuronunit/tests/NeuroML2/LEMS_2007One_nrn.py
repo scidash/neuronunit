@@ -54,7 +54,8 @@ class NeuronSimulation():
             h.m_RS_RS_pop[i].k = 7.0E-4
             h.m_RS_RS_pop[i].vr = -60.0
             h.m_RS_RS_pop[i].vt = -40.0
-            h.m_RS_RS_pop[i].vpeak = 35.0
+            h.m_RS_RS_pop[i].vpeak = 35.0 #if this is only 30, the neuron
+            #can be unstable also depending on other parameters too
             h.m_RS_RS_pop[i].a = 0.030000001
             h.m_RS_RS_pop[i].b = -0.0019999999
             h.m_RS_RS_pop[i].c = -50.0
