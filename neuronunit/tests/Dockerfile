@@ -173,9 +173,9 @@ RUN export PATH=$PATH
 
 WORKDIR $HOME #/neuronunit/neuronunit/software_tests
 RUN ipcluster start --profile=chase --debug &
-
+#https://github.com/russelljjarvis/neuronunit.git
 WORKDIR $HOME
-RUN git clone -b compare_justas https://github.com/scidash/neuronunit.git
+RUN git clone -b dev https://github.com/russelljjarvis/neuronunit.git
 WORKDIR $HOME/neuronunit/neuronunit/tests/NeuroML2
 
 RUN nrnivmodl
@@ -183,4 +183,3 @@ RUN ls LEMS_2007One.xml
 WORKDIR $HOME/neuronunit/neuronunit/tests/
 ENTRYPOINT mpiexec -np 8 python exhaustive_search.py
 #ENTRYPOINT python -m scoop nsga3.py
-
