@@ -142,12 +142,13 @@ class BBEvaluator(bpop.evaluators.Evaluator):
 
             individual.results=model.results
             score = get_neab.suite.judge(model)
+            self.objectives= [ i.sort_key for i in score.unstack() ]
             individual.error = [ i.sort_key for i in score.unstack() ]
             #return ind
             #individual=func2map(individual)
             error=individual.error
             assert individual.results
-            print(rc.ids)
+            #print(rc.ids)
             #LOCAL_RESULTS.append(individual.results)
             err.append(error[0],error[1],error[2],error[3],error[4])
 

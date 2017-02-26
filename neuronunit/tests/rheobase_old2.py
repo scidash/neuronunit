@@ -70,9 +70,9 @@ vt =  np.linspace(-50.0,-30.0,10)
 vpeak =np.linspace(30.0,40.0,2)
 container=[]
 
-from neuronunit.models.reduced import ReducedModel
-model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
-model=model.load_model()
+#from neuronunit.models.reduced import ReducedModel
+#model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
+#model=model.load_model()
 
 required_capabilities = (cap.ReceivesSquareCurrent,
                          cap.ProducesSpikes)
@@ -110,7 +110,7 @@ class VirtuaModel:
         self.attrs=None
 
 
-def f(ampl,vm):
+def f(ampl,vm,model):
 
     if float(ampl) not in vm.lookup:
         current = params.copy()['injected_square_current']
@@ -141,7 +141,8 @@ def f(ampl,vm):
         return vm
 
 #rheobase=None
-def main(iter_arg):
+def main(ind,model):
+    '''
     attrs={}
     attrs['//izhikevich2007Cell']={}
     param=['a','b']
@@ -154,15 +155,27 @@ def main(iter_arg):
     assert model.name != 'vanilla'
     attrs['//izhikevich2007Cell']['vr']=i
     attrs['//izhikevich2007Cell']['vpeak']=j#40.0
-    model.lookup={}
-    model.run_number=0
-    print(attrs)
-    model.update_run_params(attrs)
-    import pdb
-    from itertools import repeat
+    '''
+
+    #import pdb
+    #pdb.set_trace()
+    print('individual model')
+    print(ind,model)
+    import pdb;
+    #pdb.set_trace()
+    #pdb.set_trace()
+    #model=ind.model
+    print(ind)
+    #model.lookup={}
+    #model.run_number=0
+    #print(attrs)
+    #model.update_run_params(attrs)
+    #import pdb
+    #from itertools import repeat
     vm=VirtuaModel()
     vm.attrs=model.attrs
     begin_time=time.time()
+    #pdb.set_trace()
     while_true=True
     while(while_true):
         from itertools import repeat
@@ -170,7 +183,7 @@ def main(iter_arg):
         if len(vm.lookup)==0:
             steps2 = np.linspace(50,190,4.0)
             steps = [ i*pq.pA for i in steps2 ]
-            lookup2=list(map(f,steps,repeat(vm)))
+            lookup2=list(map(f,steps,repeat(vm),repeat(model)))
         #lookup2=list(map(f,steps,repeat(vm)))
 
         #steps3=[]
@@ -186,7 +199,7 @@ def main(iter_arg):
                 end_time=time.time()
                 total_time=end_time-begin_time
                 print(total_time)
-                pdb.set_trace()
+                #pdb.set_trace()
                 return (m.run_number,k,m.attrs)#a
                 break
             elif v==0:
@@ -206,7 +219,7 @@ def main(iter_arg):
             steps2 = np.linspace(-1*(supra.min()),supra.min(),4.0)
             steps = [ i*pq.pA for i in steps2 ]
 
-        lookup2=list(map(f,steps,repeat(vm)))
+        lookup2=list(map(f,steps,repeat(vm),repeat(model)))
         #steps3.extend(steps)
         #print('this is steps 3: \n\n\n')
         #print(steps3)

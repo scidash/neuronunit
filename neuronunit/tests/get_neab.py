@@ -1,4 +1,3 @@
-
 import os,sys
 import numpy as np
 
@@ -40,6 +39,7 @@ dataset_id = 354190013  # Internal ID that AIBS uses for a particular Scnn1a-Tg2
                         # Primary visual area, layer 5 neuron.
 observation = aibs.get_observation(dataset_id,'rheobase')
 
+#os.system('rm neuroelectro.pickle')
 
 if os.path.exists(str(os.getcwd())+"/neuroelectro.pickle"):
     print('attempting to recover from pickled file')
@@ -53,12 +53,6 @@ else:
 
     #(nu_tests.TimeConstantTest,None),                           (nu_tests.InjectedCurrentAPAmplitudeTest,None),
     tests += [nu_tests.RheobaseTest(observation=observation)]
-    '''
-    test_class_params = [(nu_tests.InputResistanceTest,None),
-                         (nu_tests.RestingPotentialTest,None),
-                         (nu_tests.InjectedCurrentAPWidthTest,None),
-                         (nu_tests.InjectedCurrentAPThresholdTest,None)]
-    '''
 
 
     test_class_params = [(nu_tests.InputResistanceTest,None),
@@ -88,7 +82,7 @@ def update_amplitude(test,tests,score):
 
     print(len(tests))
     #pdb.set_trace()
-    for i in [5,6,7]:
+    for i in [4,5,6]:
         # Set current injection to just suprathreshold
         tests[i].params['injected_square_current']['amplitude'] = rheobase*1.01
 

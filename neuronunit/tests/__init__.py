@@ -13,7 +13,7 @@ import sciunit.scores as scores
 import neuronunit.capabilities as cap
 #import neuronunit.capabilities.spike_functions as sf
 from neuronunit import neuroelectro
-from .channel import *
+#from .channel import *
 from scoop import futures
 '''
 import os
@@ -233,13 +233,9 @@ class TimeConstantTest(TestPulseTest):
         prediction = {'value':tau}
         return prediction
 
-    #super(TimeConstantTest,self).prediction=super(TimeConstantTest,self).generate_prediction(model)
-    #a=super(TimeConstantTest,self).prediction
-    #pdb.set_trace()
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
-        import pdb
-        #pdb.set_trace()
+
         if 'n' in prediction.keys():
             if prediction['n'] == 0:
                 score = scores.InsufficientDataScore(None)
@@ -279,8 +275,7 @@ class CapacitanceTest(TestPulseTest):
 
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
-        #import pdb
-        #pdb.set_trace()
+
         if 'n' in prediction.keys():
             if prediction['n'] == 0:
                 score = scores.InsufficientDataScore(None)
@@ -490,7 +485,12 @@ class RheobaseTest(VmTest):
     Tests the full widths of APs at their half-maximum
     under current injection.
     """
-
+    def __init__(self):
+        self.prediction=None
+        self.guess=None
+        self.high=None
+        self.small=None
+        self.lookup=None
 
     required_capabilities = (cap.ReceivesSquareCurrent,
                              cap.ProducesSpikes)
@@ -513,10 +513,9 @@ class RheobaseTest(VmTest):
         prediction = {'value': None}
         model.rerun = True
         units = self.observation['value'].units
-
-        #this call is returning none.
+        import time
+        begin_rh=time.time()
         lookup = self.threshold_FI(model, units)
-
         sub = np.array([x for x in lookup if lookup[x]==0])*units
         supra = np.array([x for x in lookup if lookup[x]>0])*units
         self.verbose=True
@@ -533,13 +532,17 @@ class RheobaseTest(VmTest):
                 print("No suprathreshold current was tested.")
 
         if len(sub) and len(supra):
-            #This means the smallest current to cause spiking.
             rheobase = supra.min()
         else:
             rheobase = None
         prediction['value'] = rheobase
+        end_rh=time.time()
+        print(end_rh-begin_rh)
+        #import pdb
+        #pdb.set_trace()
+        self.prediction=prediction
+        return self.prediction
 
-        return prediction
 
     def threshold_FI(self, model, units, guess=None):
         lookup = {} # A lookup table global to the function below.
@@ -561,67 +564,51 @@ class RheobaseTest(VmTest):
                             (ampl,n_spikes))
                 lookup[float(ampl)] = n_spikes
 
-
         max_iters = 10
 
         #evaluate once with a current injection at 0pA
-        def evaluate1(n,guess):
-            #print(n)
-            #print(rc.ids)
-            if n==0:
-                f(0.0*units)
+        high=self.high
+        small=self.small
+        #f(guess*units)
+        #f(0.0*units)
+        '''
+        if guess is None:
+            try:
+                guess = self.observation['value']
+            except KeyError:
+                guess = 100*pq.pA
+        #high = guess*2
+        #high = (50.0*pq.pA).rescale(units) if not high else high
+        #small = (1*pq.pA).rescale(units)
+        '''
+        #f(0.0*units) could happen in parallel with f(high) below
+        f(high)
+        i = 0
 
-                return (None,None,lookup)
-            if n==1:
-                if guess is None:
-                    try:
-                        guess = self.observation['value']
-                    except KeyError:
-                        guess = 100*pq.pA
-                high = guess*2
-                high = (50.0*pq.pA).rescale(units) if not high else high
-                small = (1*pq.pA).rescale(units)
-                #f(0.0*units) could happen in parallel with f(high) below
-                f(high)
-                import pdb
-
-                return (small,high)
-
-        def evaluate2(n,guess,small):
+        while True:
             #sub means below threshold, or no spikes
-            #print(n)
-            #print(rc.ids)
             sub = np.array([x for x in lookup if lookup[x]==0])*units
             #supra means above threshold, but possibly too high above threshold.
-            supra = np.array([x for x in lookup if lookup[x]>0])*units
 
+            supra = np.array([x for x in lookup if lookup[x]>0])*units
+            #The actual part of the Rheobase test that is
+            #computation intensive and therefore
+            #a target for parellelization.
+
+            if i >= max_iters:
+                break
+            #Its this part that should be like an evaluate function that is passed to futures map.
             if len(sub) and len(supra):
                 f((supra.min() + sub.max())/2)
 
             elif len(sub):
-                #the argument of f resolves to the maximum number of two in a list
                 f(max(small,sub.max()*2))
+
             elif len(supra):
-            #the argument of f resolves to the minimum number of two in a list
                 f(min(-small,supra.min()*2))
-            rlist=[small,sub,supra]
-            return rlist
+            i += 1
 
-        import pdb
-        #strategy get to work with serial map first.
-        #run it in exhaustive search first such that calls to scoop are not nested yet.
-        from itertools import repeat
-        from scoop import futures
-        returned_list = list(map(evaluate1,[i for i in range(0,2)],repeat(guess)))
-        small=returned_list[1]
-
-        rlist = list(map(evaluate2,[i for i in range(1,10)],repeat(guess),repeat(small)))
-        small=rlist[0]
-        sub=rlist[1]
-        supra=rlist[2]
         return lookup
-
-        #main(guess)
 
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
@@ -630,6 +617,46 @@ class RheobaseTest(VmTest):
         if prediction['value'] is None:
             score = scores.InsufficientDataScore(None)
         else:
+            print
+            score = super(RheobaseTest,self).\
+                        compute_score(observation, prediction)
+            #self.bind_score(score,None,observation,prediction)
+        return score
+
+
+class RheobaseTestHacked(VmTest):
+    """
+    Tests the full widths of APs at their half-maximum
+    under current injection.
+    """
+    def __init__(self):
+        self.prediction=None
+
+    required_capabilities = (cap.ReceivesSquareCurrent,
+                             cap.ProducesSpikes)
+
+    params = {'injected_square_current':
+                {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+
+    name = "Rheobase test"
+
+    description = ("A test of the rheobase, i.e. the minimum injected current "
+                   "needed to evoke at least one spike.")
+
+    units = pq.pA
+    score_type = scores.RatioScore
+    def generate_prediction(self, model):
+        print (self.prediction)
+        return self.prediction
+
+    def compute_score(self, observation, prediction):
+        """Implementation of sciunit.Test.score_prediction."""
+        #print("%s: Observation = %s, Prediction = %s" % \
+        #	 (self.name,str(observation),str(prediction)))
+        if prediction['value'] is None:
+            score = scores.InsufficientDataScore(None)
+        else:
+            print
             score = super(RheobaseTest,self).\
                         compute_score(observation, prediction)
             #self.bind_score(score,None,observation,prediction)
@@ -671,3 +698,16 @@ class RestingPotentialTest(VmTest):
         std = model.get_std_vm()
         prediction = {'mean':median, 'std':std}
         return prediction
+
+        def compute_score(self, observation, prediction):
+            """Implementation of sciunit.Test.score_prediction."""
+            #print("%s: Observation = %s, Prediction = %s" % \
+            #	 (self.name,str(observation),str(prediction)))
+            if prediction['value'] is None:
+                score = scores.InsufficientDataScore(None)
+            else:
+                print
+                score = super(RestingPotentialTest,self).\
+                            compute_score(observation, prediction)
+                #self.bind_score(score,None,observation,prediction)
+            return score

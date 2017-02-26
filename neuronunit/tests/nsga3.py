@@ -51,8 +51,8 @@ class Individual(object):
     def __init__(self, *args):
         list.__init__(self, *args)
         self.error=None
-        self.sciunitscore=[]
-        self.model=None
+        #self.sciunitscore=[]
+        #self.model=model
         self.error=None
         self.results=None
         self.name=''
@@ -121,13 +121,8 @@ import deap as deap
 
 toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
 
-from neuronunit.models import backends
-from neuronunit.models.reduced import ReducedModel
-model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
-
-model=model.load_model()
 vanila_start=time.time()
-model.local_run()
+#model.local_run()
 vanila_stop=time.time()
 vanila_nrn_time=float(vanila_stop-vanila_start)
 f=open('vanila_nrn_time.txt','w')
@@ -148,7 +143,7 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
             attrs['//izhikevich2007Cell'][p]=name_value
 
     individual.attrs=attrs
-    model.update_run_params(attrs)
+    individual.model=model.update_run_params(attrs)
 
     individual.params=[]
     for i in attrs['//izhikevich2007Cell'].values():
@@ -183,6 +178,9 @@ def evaluate(individual):#This method must be pickle-able for scoop to work.
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
 
 
+#def func2map(pop):
+
+
 
 toolbox.register("evaluate", evaluate)
 toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
@@ -201,6 +199,196 @@ def plotss(pop,gen):
             plt.xlabel(str(ind.attrs))
     plt.savefig('snap_shot_at_'+str(gen)+'.png')
     plt.clf()
+
+
+
+
+class VirtuaModel:
+    def __init__(self):
+        self.lookup={}
+        self.previous=0
+        self.run_number=0
+        self.attrs=None
+        self.name=None
+
+
+def f(ampl,vm,model):
+
+    if float(ampl) not in vm.lookup:
+        current = params.copy()['injected_square_current']
+        print('current, previous = ',ampl,vm.previous)
+        uc={'amplitude':ampl}
+        current.update(uc)
+        current={'injected_square_current':current}
+        vm.run_number+=1
+        print('model run number',vm.run_number)
+        #model.attrs=vm.attrs
+        model.update_run_params(vm.attrs)
+        assert vm.attrs==model.attrs
+        print(vm.attrs)
+        print(model.attrs)
+        model.inject_square_current(current)
+        vm.previous=ampl
+        n_spikes = model.get_spike_count()
+        verbose=True
+        if verbose:
+            print("Injected %s current and got %d spikes" % \
+                    (ampl,n_spikes))
+        vm.lookup[float(ampl)] = n_spikes
+
+        return vm
+
+    if float(ampl) in vm.lookup:
+        print('model_in lookup')
+        return vm
+
+small=None
+from scoop import futures
+#from neuronunit.models import backends
+AMPL = 0.0*pq.pA
+DELAY = 100.0*pq.ms
+DURATION = 1000.0*pq.ms
+from scipy.optimize import curve_fit
+
+import sciunit
+import sciunit.scores as scores
+
+import neuronunit.capabilities as cap
+
+required_capabilities = (cap.ReceivesSquareCurrent,
+                         cap.ProducesSpikes)
+params = {'injected_square_current':
+            {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+
+name = "Rheobase test"
+
+description = ("A test of the rheobase, i.e. the minimum injected current "
+               "needed to evoke at least one spike.")
+
+score_type = scores.RatioScore
+guess=None
+
+lookup = {} # A lookup table global to the function below.
+verbose=True
+import quantities as pq
+units = pq.pA
+verbose=True
+
+#rheobase=None
+def main2(ind):
+    '''
+    attrs={}
+    attrs['//izhikevich2007Cell']={}
+    param=['a','b']
+    i,j=iter_arg
+    print(i,j)
+    model.name=str(i)+str(j)#+str(k)+str(k)
+    assert model.name != 'vanilla'
+    print(type(model))
+    model.name=str(i)+str(j)#+str(k)+str(k)
+    assert model.name != 'vanilla'
+    attrs['//izhikevich2007Cell']['vr']=i
+    attrs['//izhikevich2007Cell']['vpeak']=j#40.0
+    '''
+
+    from neuronunit.models import backends
+    from neuronunit.models.reduced import ReducedModel
+    if 'model' in globals() or 'model' in locals():
+        print('do nothing')
+    else:
+        model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
+        model=model.load_model()
+
+    #import pdb
+    #pdb.set_trace()
+    print('individual model')
+    #print(ind,model)
+    #import pdb;
+    #pdb.set_trace()
+    #pdb.set_trace()
+    #model=ind.model
+    print(ind)
+    #model=ind.model
+    #model.lookup={}
+    #model.run_number=0
+    #print(attrs)
+    #model.update_run_params(attrs)
+    #import pdb
+    #from itertools import repeat
+    vm=VirtuaModel()
+    vm.attrs=ind.attrs
+    begin_time=time.time()
+    #pdb.set_trace()
+    while_true=True
+    while(while_true):
+        from itertools import repeat
+
+        if len(vm.lookup)==0:
+            steps2 = np.linspace(50,190,4.0)
+            steps = [ i*pq.pA for i in steps2 ]
+            lookup2=list(map(f,steps,repeat(vm),repeat(model)))
+        #lookup2=list(map(f,steps,repeat(vm)))
+
+        #steps3=[]
+        #for m in lookup2:
+        m = lookup2[0]
+        sub=[]
+        supra=[]
+        for k,v in m.lookup.items():
+            if v==1:
+                while_true=False
+                print('hit')
+                #m.rheobas=k
+                end_time=time.time()
+                total_time=end_time-begin_time
+                print(total_time)
+                #pdb.set_trace()
+                return (m.run_number,k,m.attrs)#a
+                break
+            elif v==0:
+                sub.append(k)
+            elif v>0:
+                supra.append(k)
+        sub=np.array(sub)
+        supra=np.array(supra)
+        if len(sub) and len(supra):
+            steps2 = np.linspace(sub.max(),supra.min(),4.0)
+            steps = [ i*pq.pA for i in steps2 ]
+
+        elif len(sub):
+            steps2 = np.linspace(sub.max(),2*sub.max(),4.0)
+            steps = [ i*pq.pA for i in steps2 ]
+        elif len(supra):
+            steps2 = np.linspace(-1*(supra.min()),supra.min(),4.0)
+            steps = [ i*pq.pA for i in steps2 ]
+
+        lookup2=list(map(f,steps,repeat(vm),repeat(model)))
+        #steps3.extend(steps)
+
+def evaluate2(individual):#This method must be pickle-able for scoop to work.
+    #import rheobase_old2 as rh
+    model=VirtuaModel()
+    model.name=''
+
+    for i, p in enumerate(param):
+        name_value=str(individual[i])
+        #reformate values.
+        model.name=str(model.name)+' '+str(p)+str(name_value)
+        if i==0:
+            attrs={'//izhikevich2007Cell':{p:name_value }}
+        else:
+            attrs['//izhikevich2007Cell'][p]=name_value
+
+    individual.attrs=attrs
+    #individual.model=model.update_run_params(attrs)
+    individual=main2(individual)
+    '''
+    individual.params=[]
+    for i in attrs['//izhikevich2007Cell'].values():
+        if hasattr(individual,'params'):
+            individual.params.append(i)
+    '''
+
 
 def main(seed=None):
 
@@ -224,6 +412,10 @@ def main(seed=None):
 
     # Evaluate the individuals with an invalid fitness
     invalid_ind = [ind for ind in pop if not ind.fitness.valid]
+    #pdb.set_trace()
+    from itertools import repeat
+    invalid_ind = list(futures.map(evaluate2,invalid_ind))
+
     fitnesses = toolbox.map(evaluate, invalid_ind)
 
     for ind, fit in zip(invalid_ind, fitnesses):
