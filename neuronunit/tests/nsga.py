@@ -349,6 +349,7 @@ def evaluate2(individual, guess_value=None):#This method must be pickle-able for
         for k,v in vm.lookup.items():
             if v==1:
                 individual.rheobase=k
+                vm.rheobase=k
                 return individual
             if v!=1:
                 guess_value = None#more trial and error.
@@ -545,7 +546,7 @@ def main(seed=None):
     # was a lot of code, but all it was really doing was establishing a rheobase value in a fast way,
     #a parallel way, and a reliable way.
     #soon this code will be restated in much neater function definitions.
-    
+
     def individual_to_vm(ind):
         for i, p in enumerate(param):
             value=str(ind[i])
@@ -564,15 +565,15 @@ def main(seed=None):
     #for the list of invalid indexs
     vmlist=list(map(individual_to_vm,indattr))
 
+    #Now attempt to get the rheobase values by first trying the mean rheobase value.
+    #This is not an exhaustive search that results in found all rheobase values
+    #It is just a trying out an educated guess on each individual in the whole population as first pass.
     list_of_hits_misses=list(futures.map(ff,repeat(guess_value),vmlist))
 
 
     for i,j in enumerate(list_of_hits_misses):
-        print(i)
-        print(j)
-        print('do nothing')
-            #break
         if j.rheobase==None:
+            pdb.set_trace()
 
 
             for k,v in j.lookup.items():
