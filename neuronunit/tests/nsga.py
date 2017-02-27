@@ -274,7 +274,7 @@ units = pq.pA
 verbose=True
 
 
-'''
+
 def evaluate2(individual, guess_value=None):#This method must be pickle-able for scoop to work.
     #import rheobase_old2 as rh
     model=VirtuaModel()
@@ -290,12 +290,16 @@ def evaluate2(individual, guess_value=None):#This method must be pickle-able for
             attrs['//izhikevich2007Cell'][p]=value
 
     individual.attrs=attrs
-    if guess_value != None:
+    if guess_value == None:
 
         individual.lookup={}
         vm=VirtuaModel()
         import copy
         vm.attrs=copy.copy(individual.attrs)
+        unpack=check_repeat2(ff,individual.lookup,individual)
+
+        #def check_repeat(ff,unpack,vm):
+
         vm=ff(guess_value,vm)
         for k,v in vm.lookup.items():
             if v==1:
@@ -304,12 +308,12 @@ def evaluate2(individual, guess_value=None):#This method must be pickle-able for
                 return individual
             if v!=1:
                 guess_value = None#more trial and error.
-    if guess_value == None:
-        (run_number,k,attrs)=main2(individual)
-    individual.rheobase=0
+    #if guess_value == None:
+    #    (run_number,k,attrs)=main2(individual)
+    #individual.rheobase=0
     individual.rheobase=k
     return individual
-'''
+
 #some how I destroy the function f.
 
 def check_fix_range(lookup2):
@@ -408,6 +412,36 @@ def main(seed=None):
 
 
 
+    def check_repeat2(ff,unpack,vm):
+        '''
+        inputs:
+        ff, a function,
+        unpack, a dictionary of previous search values:
+        vm a virtual model object.
+
+        '''
+        print(vm)
+        print(type(vm))
+        from itertools import repeat
+        lookup2=list(futures.map(ff,unpack,repeat(vm)))
+        l3=[]
+        for l in lookup2:
+            for k,v in l.lookup.items():
+                l3.append((v, k))
+
+        unpack=check_fix_range(l3)
+        l3=None
+        boolean=False
+        new_ranges=[]
+        boolean=unpack[0]
+        guess_value=unpack[1]
+        if True == boolean:
+            print(guess_value)
+            vm.rheobase=guess_value
+            return (True,guess_value)
+        else:
+            return (False,guess_value)
+
     def check_repeat(ff,unpack,vm):
         '''
         inputs:
@@ -416,6 +450,8 @@ def main(seed=None):
         vm a virtual model object.
 
         '''
+        print(vm)
+        print(type(vm))
         from itertools import repeat
         lookup2=list(futures.map(ff,unpack,repeat(vm)))
         l3=[]
@@ -500,38 +536,23 @@ def main(seed=None):
         vm.attr=attrs
         return vm
 
-    invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
-
-    #For each individual in the new GA population.
-    #Create Virtual Models that are readily pickle-able.
-    #for the list of invalid indexs
-    vmlist=list(map(individual_to_vm,invalid_ind))
+    vmlist=list(map(individual_to_vm,pop))
 
     #Now attempt to get the rheobase values by first trying the mean rheobase value.
     #This is not an exhaustive search that results in found all rheobase values
     #It is just a trying out an educated guess on each individual in the whole population as first pass.
     list_of_hits_misses=list(futures.map(ff,repeat(guess_value),vmlist))
-    for i,j in enumerate(list_of_hits_misses):
-        v=0
-        for k,v in j.lookup.items():
-            if v == 1:
-                print('do nothing',v)
-            else:
-                print('do something',v)
-                lookup2=list(futures.map(ff,j.lookup,repeat(j)))
-                l3=[]
-                d={}
-                for l in lookup2:
-                    for k,v in l.lookup.items():
-                        l3.append((v, k))
-                        d[k]=v
-                #Both ckeck repeat, and check fix range seem to be invoked here :)
-                unpack=check_fix_range(l3)
-                unpack=check_repeat(ff,unpack[1],j)
-                if unpack[0]==True:
-                    guess_value=unpack[1]
-                else:
-                    guess_value=searcher(ff,unpack,j)
+    j=0
+    for i in list_of_hits_misses:
+        print(i.rheobase)
+        j+=1
+        print(j)
+
+    invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
+
+    #For each individual in the new GA population.
+    #Create Virtual Models that are readily pickle-able.
+    #for the list of invalid indexs
 
     b=time.time()
 
@@ -544,22 +565,25 @@ def main(seed=None):
         print(vmlist[i].rheobase)
         print(type(j))
 
-        if type(j.rheobase)==None:
-            #print('do something',v)
-            lookup2=list(futures.map(ff,j.lookup,repeat(j)))
+        if vmlist[i].rheobase==None:
+
+            print(vmlist[i])
+            print(vmlist[i].lookup)
+            lookup2=ff(guess_value,vmlist[i])
             l3=[]
             d={}
-            for l in lookup2:
-                for k,v in l.lookup.items():
-                    l3.append((v, k))
-                    d[k]=v
-            #Both ckeck repeat, and check fix range seem to be invoked here :)
-            unpack=check_fix_range(l3)
-            unpack=check_repeat(ff,unpack[1],j)
-            if unpack[0]==True:
-                guess_value=unpack[1]
-            else:
-                guess_value=searcher(ff,unpack,j)
+            for k,v in lookup2.lookup.items():
+                l3.append((v, k))
+                d[k]=v
+            print(l3)
+            print(d)
+            if 1 not in d.values():
+                unpack=check_fix_range(l3)
+                unpack=check_repeat(ff,unpack[1],vmlist[i])
+                if unpack[0]==True:
+                    guess_value=unpack[1]
+                else:
+                    guess_value=searcher(ff,unpack,vmlist[i])
 
     fitnesses = toolbox.map(evaluate, invalid_ind, vmlist)
 
@@ -594,7 +618,7 @@ def main(seed=None):
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
 
-        iterator=(futures.map(evaluate2,invalid_ind,repeat(guess_value)))
+        iterator=(futures.map(evaluate,invalid_ind,repeat(invalid_ind.rheobase)))
         invalid_indvm=[]
         for i in iterator:
             if hasattr(i,'rheobase'):
@@ -605,7 +629,8 @@ def main(seed=None):
                 guess_value=i.rheobase
             invalid_ind.append(copy.copy(i))
             invalid_indvm.append(copy.copy(vm))
-        #invalid_ind = list(futures.map(evaluate2,invalid_ind))
+
+        invalid_ind = list(futures.map(evaluate2,invalid_ind))
         fitnesses = toolbox.map(toolbox.evaluate, invalid_ind, invalid_indvm)
 
 
