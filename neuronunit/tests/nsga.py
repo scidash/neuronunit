@@ -275,7 +275,7 @@ verbose=True
 
 
 
-def evaluate2(individual, guess_value=None):#This method must be pickle-able for scoop to work.
+def evaluate2(individual):#This method must be pickle-able for scoop to work.
     #import rheobase_old2 as rh
     model=VirtuaModel()
     model.name=''
@@ -290,27 +290,32 @@ def evaluate2(individual, guess_value=None):#This method must be pickle-able for
             attrs['//izhikevich2007Cell'][p]=value
 
     individual.attrs=attrs
-    if guess_value == None:
+    #if guess_value != None:
+    #    pdb.set_trace()
 
-        individual.lookup={}
-        vm=VirtuaModel()
-        import copy
-        vm.attrs=copy.copy(individual.attrs)
-        unpack=check_repeat2(ff,individual.lookup,individual)
+    individual.lookup={}
+    vm=VirtuaModel()
+    import copy
+    vm.attrs=copy.copy(individual.attrs)
+    #def ff(ampl,vm):
 
-        #def check_repeat(ff,unpack,vm):
+    unpack=check_repeat2(ff,individual.lookup,individual)
 
-        vm=ff(guess_value,vm)
-        for k,v in vm.lookup.items():
-            if v==1:
-                individual.rheobase=k
-                vm.rheobase=k
-                return individual
-            if v!=1:
-                guess_value = None#more trial and error.
+    #def check_repeat(ff,unpack,vm):
+
+    '''
+    #vm=ff(guess_value,vm)
+    for k,v in vm.lookup.items():
+        if v==1:
+            individual.rheobase=k
+            vm.rheobase=k
+            return individual
+        if v!=1:
+            guess_value = None#more trial and error.
     #if guess_value == None:
     #    (run_number,k,attrs)=main2(individual)
     #individual.rheobase=0
+    '''
     individual.rheobase=k
     return individual
 
