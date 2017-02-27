@@ -296,7 +296,8 @@ units = pq.pA
 verbose=True
 
 
-#rheobase=None
+#Check is main2 actually executed?
+#If not comment out, and subsequently delete it.
 def main2(ind,guess_attrs=None):
     vm=VirtuaModel()
 
