@@ -8,16 +8,25 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 import sciunit
-import sciunit.scores as scores
-from neuronunit.models import backends
-import neuronunit.capabilities as cap
-#testsrh probably no longer used.
-import testsrh
-import get_neab
+import os, sys
+thisnu = str(os.getcwd())+'/../..'
+sys.path.insert(0,thisnu)
+print(sys.path)
 from scoop import futures
+import sciunit.scores as scores
+import neuronunit.capabilities as cap
+
+import get_neab
+print(get_neab.LEMS_MODEL_PATH)
+
+from neuronunit.models import backends
+from neuronunit.models import LEMSModel
+
 from neuronunit.models.reduced import ReducedModel
 model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
+
 model=model.load_model()
+
 vr = np.linspace(-75.0,-50.0,10)
 a = np.linspace(0.015,0.045,10)
 b = np.linspace(-3.5*10E-9,-0.5*10E-9,10)
@@ -32,7 +41,9 @@ container=[]
 
 
 def build_single():
-
+    '''
+    This method is only used to check singlular sets of hard coded parameters.
+    '''
     attrs={}
     attrs['//izhikevich2007Cell']={}
     attrs['//izhikevich2007Cell']['a']=0.0303440140536
@@ -52,7 +63,7 @@ def model2map(iter_arg):#This method must be pickle-able for scoop to work.
     attrs={}
     attrs['//izhikevich2007Cell']={}
     param=['a','b']
-    param=['a','b','vr','vpeak']#,'k']#,'C']#,'c','d','v0','k','vt','vpeak']#,'d'
+    param=['a','b','vr','vpeak']
     i,j,k=iter_arg
     print(i,j)
     model.name=str(i)+str(j)#+str(k)+str(k)
