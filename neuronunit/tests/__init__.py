@@ -15,16 +15,7 @@ import neuronunit.capabilities as cap
 from neuronunit import neuroelectro
 #from .channel import *
 from scoop import futures
-'''
-import os
-os.system('ipcluster start --profile=jovyan --debug &')
-os.system('sleep 5')
-import ipyparallel as ipp
-rc = ipp.Client(profile='jovyan')
-print('hello from before cpu ')
-print(rc.ids)
-v = rc.load_balanced_view()
-'''
+
 AMPL = 0.0*pq.pA
 DELAY = 100.0*pq.ms
 DURATION = 1000.0*pq.ms
@@ -479,8 +470,7 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
         return super(InjectedCurrentAPThresholdTest,self).\
                 generate_prediction(model)
 
-
-class RheobaseTest(VmTest):
+class RheobaseTestHacked(VmTest):
     """
     Tests the full widths of APs at their half-maximum
     under current injection.
@@ -623,8 +613,8 @@ class RheobaseTest(VmTest):
             #self.bind_score(score,None,observation,prediction)
         return score
 
-
-class RheobaseTestHacked(VmTest):
+class RheobaseTest(VmTest):
+#class RheobaseTestHacked(VmTest):
     """
     Tests the full widths of APs at their half-maximum
     under current injection.
