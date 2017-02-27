@@ -434,6 +434,7 @@ def main(seed=None):
     logbook.header = "gen", "evals", "std", "min", "avg", "max"
 
     pop = toolbox.population(n=MU)
+    #create the first population of individuals
     guess_attrs=[]
     #find rheobase on a model constructed out of the mean parameter values.
     guess_attrs.append(np.mean( [ i[0] for i in pop ]))
@@ -441,9 +442,8 @@ def main(seed=None):
     guess_attrs.append(np.mean( [ i[2] for i in pop ]))
 
     from itertools import repeat
-    vm=VirtuaModel()
+    mean_vm=VirtuaModel()
 
-    #if guess_attrs!=None:
     for i, p in enumerate(param):
         value=str(guess_attrs[i])
         model.name=str(model.name)+' '+str(p)+str(value)
@@ -451,11 +451,10 @@ def main(seed=None):
             attrs={'//izhikevich2007Cell':{p:value }}
         else:
             attrs['//izhikevich2007Cell'][p]=value
-    vm.attrs=attrs
+    mean_vm.attrs=attrs
     import copy
 
 
-    #is check_repeat invoked?
 
     def check_repeat(ff,unpack,vm):
         '''
@@ -490,9 +489,15 @@ def main(seed=None):
 
     steps2 = np.linspace(40,80,7.0)
     steps = [ i*pq.pA for i in steps2 ]
-    model.attrs=vm.attrs
 
-    lookup2=list(futures.map(ff,steps,repeat(vm)))
+
+
+    #this might look like a big list iteration, but its not.
+    #the statement below just finds rheobase on one value, that is the value
+    #constituted by mean_vm. This will be used to speed up the rheobase search later.
+    model.attrs=mean_vm.attrs
+
+    lookup2=list(futures.map(ff,steps,repeat(mean_vm)))
     print(lookup2)
     l3=[]
     d={}
@@ -535,7 +540,13 @@ def main(seed=None):
     if unpack[0]==True:
         guess_value=unpack[1]
 
-    def this_function(ind):
+
+    #The above code between 492-544
+    # was a lot of code, but all it was really doing was establishing a rheobase value in a fast way,
+    #a parallel way, and a reliable way.
+    #soon this code will be restated in much neater function definitions.
+    
+    def individual_to_vm(ind):
         for i, p in enumerate(param):
             value=str(ind[i])
             if i==0:
@@ -547,7 +558,11 @@ def main(seed=None):
         return vm
 
     indattr = [ ind for ind in pop if not ind.fitness.valid ]
-    vmlist=list(map(this_function,indattr))
+
+    #For each individual in the new GA population.
+    #Create Virtual Models that are readily pickle-able.
+    #for the list of invalid indexs
+    vmlist=list(map(individual_to_vm,indattr))
 
     list_of_hits_misses=list(futures.map(ff,repeat(guess_value),vmlist))
 
@@ -587,8 +602,6 @@ def main(seed=None):
 
 
         list_of_hits_misses=list(futures.map(ff,repeat(guess_value),vmlist))
-
-        #list_of_hits_misses=list(futures.map(ff,vmlist))
 
         for i,j in enumerate(list_of_hits_misses):
             print(i)
