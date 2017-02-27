@@ -665,19 +665,20 @@ def main(seed=None):
         logbook.record(gen=gen, evals=len(invalid_ind), **record)
         print(logbook.stream)
         pop.sort(key=lambda x: x.fitness.values)
+        '''
         import numpy
         front = numpy.array([ind.fitness.values for ind in pop])
         plt.scatter(front[:,0], front[:,1], front[:,2], front[:,3])
         plt.axis("tight")
         plt.savefig('front.png')
         plt.clf()
-
+        ''''
     #when scoop is run in parallel only the fitnesses from the individual object
     #are retained after distributing individuals and reducing them back to rank0
     #there is no way to garuntee that the best candidate solution will
     #retain its object attributes, except via re evaluating it, in a scope outside
     #of futures.map as is done below.
-    (a,b,c,d,e,f,g,h) = evaluate(invalid_ind[0],invalid_indvm[0])
+    (a,b,c,d,e,f,g,h) = evaluate(invalid_ind[0],vmlist[0])
 
     f=open('html_score_matrix.html','w')
     f.write(invalid_ind[0].s_html)
