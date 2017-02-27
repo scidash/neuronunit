@@ -500,12 +500,12 @@ def main(seed=None):
         vm.attr=attrs
         return vm
 
-    indattr = [ ind for ind in pop if not ind.fitness.valid ]
+    invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
 
     #For each individual in the new GA population.
     #Create Virtual Models that are readily pickle-able.
     #for the list of invalid indexs
-    vmlist=list(map(individual_to_vm,indattr))
+    vmlist=list(map(individual_to_vm,invalid_ind))
 
     #Now attempt to get the rheobase values by first trying the mean rheobase value.
     #This is not an exhaustive search that results in found all rheobase values
@@ -537,13 +537,11 @@ def main(seed=None):
 
     e=time.time()
 
-
-
-    vmlist=list(map(individual_to_vm,indattr))
-
-    invalid_ind = [ind for ind in pop if not ind.fitness.valid]
-    for i in invalid_ind:
+    for i,j in enumerate(invalid_ind):
         print(i)
+        print('vmlist[i].rheobase')
+        print(vmlist[i].rheobase)
+        
         print(type(i))
     fitnesses = toolbox.map(evaluate, invalid_ind, vmlist)
 
