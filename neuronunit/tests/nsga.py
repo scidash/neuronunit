@@ -1,14 +1,4 @@
-'''
-import os
-os.system('ipcluster start --profile=jovyan --debug &')
-os.system('sleep 5')
-import ipyparallel as ipp
-rc = ipp.Client(profile='jovyan')
-print('hello from before cpu ')
-print(rc.ids)
-#quit()
-v = rc.load_balanced_view()
-'''
+
 import time
 init_start=time.time()
 import get_neab
@@ -18,10 +8,7 @@ import get_neab
 #and no virtual nesting (like function decorators etc)
 
 """
-
-
 anything that starts at indentation level 0.
-
 Code from the deap framework, available at:
 https://code.google.com/p/deap/source/browse/examples/ga/onemax_short.py
 Conversion to its parallel form took two lines:
@@ -135,6 +122,7 @@ model=model.load_model()
 
 
 def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
+    print(vms.rheobase)
     model.name=''
     for i, p in enumerate(param):
         name_value=str(individual[i])
@@ -240,50 +228,13 @@ def ff(ampl,vm):
         model.inject_square_current(current)
         vm.previous=ampl
         n_spikes = model.get_spike_count()
+        if n_spikes==1:
+            vm.rheobase=ampl
         verbose=True
         if verbose:
             print("Injected %s current and got %d spikes" % \
                     (ampl,n_spikes))
         vm.lookup[float(ampl)] = n_spikes
-        return vm
-
-    if float(ampl) in vm.lookup:
-        print('model_in lookup')
-        return vm
-
-
-'''
-What is the difference between f, below, and ff?
-Only one should surfice.
-'''
-
-
-def f(ampl,vm):
-    print(vm, ampl)
-
-    if float(ampl) not in vm.lookup:
-        current = params.copy()['injected_square_current']
-        print('current, previous = ',ampl,vm.previous)
-        uc={'amplitude':ampl}
-        current.update(uc)
-        current={'injected_square_current':current}
-        vm.run_number+=1
-        print('model run number',vm.run_number)
-        #model.attrs=vm.attrs
-        model.update_run_params(vm.attrs)
-        assert vm.attrs==model.attrs
-        print(vm.attrs)
-        print(model.attrs)
-        model.inject_square_current(current)
-        vm.previous=ampl
-        n_spikes = model.get_spike_count()
-        verbose=True
-        if verbose:
-            print("Injected %s current and got %d spikes" % \
-                    (ampl,n_spikes))
-        vm.lookup[float(ampl)] = n_spikes
-        #vm3=copy.copy(vm)
-
         return vm
 
     if float(ampl) in vm.lookup:
@@ -323,7 +274,7 @@ units = pq.pA
 verbose=True
 
 
-
+'''
 def evaluate2(individual, guess_value=None):#This method must be pickle-able for scoop to work.
     #import rheobase_old2 as rh
     model=VirtuaModel()
@@ -358,7 +309,7 @@ def evaluate2(individual, guess_value=None):#This method must be pickle-able for
     individual.rheobase=0
     individual.rheobase=k
     return individual
-
+'''
 #some how I destroy the function f.
 
 def check_fix_range(lookup2):
@@ -482,7 +433,6 @@ def main(seed=None):
             print(guess_value)
             vm.rheobase=guess_value
             return (True,guess_value)
-
         else:
             return (False,guess_value)
 
@@ -497,9 +447,9 @@ def main(seed=None):
     #the statement below just finds rheobase on one value, that is the value
     #constituted by mean_vm. This will be used to speed up the rheobase search later.
     model.attrs=mean_vm.attrs
-
+    #def bulk_process(ff,steps,mean_vm):
     lookup2=list(futures.map(ff,steps,repeat(mean_vm)))
-    print(lookup2)
+
     l3=[]
     d={}
     for l in lookup2:
@@ -510,36 +460,28 @@ def main(seed=None):
 
     #Both ckeck repeat, and check fix range seem to be invoked here :)
     unpack=check_fix_range(l3)
-    unpack=check_repeat(ff,unpack[1],vm)
-
-    if unpack[0]==False:
-
-        l3=[]
-        d={}
-        for l in lookup2:
-            for k,v in l.lookup.items():
-                l3.append((v, k))
-                d[k]=v
-        unpack=check_fix_range(l3)
-        unpack=check_repeat(ff,unpack[1],vm)
-
-    if unpack[0]==False:
-
-        #As a last resort do things the slow old way !
-        #As a last resort use the old way to find.
-        vector=unpack[1]
-        high=vector[int(len(vector)/2+1)]
-        small=vector[int(len(vector)/2-1)]
-
-        get_neab.suite.tests[0].high=high#=np.mean()
-        get_neab.suite.tests[0].small=small
-        get_neab.suite.tests[0].lookup=d
-        print(vm.attrs)
-        get_neab.suite.tests[0].generate_prediction(model)
-
-
+    unpack=check_repeat(ff,unpack[1],mean_vm)
     if unpack[0]==True:
         guess_value=unpack[1]
+
+
+    def searcher(ff,unpack,vms):
+        while unpack[0]==False:
+            l3=[]
+            d={}
+            for l in unpack[1]:
+                for k,v in l.lookup.items():
+                    l3.append((v, k))
+                    d[k]=v
+            unpack=check_fix_range(l3)
+            unpack=check_repeat(ff,unpack[1],vms)
+            print('stuck in a loop?')
+
+            if unpack[0]==True:
+                guess_value=unpack[1]
+                print(guess_value)
+
+                return guess_value
 
 
     #The above code between 492-544
@@ -569,96 +511,41 @@ def main(seed=None):
     #This is not an exhaustive search that results in found all rheobase values
     #It is just a trying out an educated guess on each individual in the whole population as first pass.
     list_of_hits_misses=list(futures.map(ff,repeat(guess_value),vmlist))
-
-
     for i,j in enumerate(list_of_hits_misses):
-        if j.rheobase==None:
-            pdb.set_trace()
-
-
-            for k,v in j.lookup.items():
-                print(j.rheobase)
-                print(type(j))
-                unpack=check_repeat(ff,j.lookup,j)
-                if unpack[0]==False:
-                    print(lookup2)
-                    l3=[]
-                    for l in lookup2:
-                        for k,v in l.lookup.items():
-                            l3.append((v, k))
-
-                    unpack=check_fix_range(l3)
-
-                if unpack[0]==False:
-                    unpack=check_repeat(ff,unpack[1],j)
-                    print(lookup2)
-                    l3=[]
-                    for l in lookup2:
-                        for k,v in l.lookup.items():
-                            l3.append
-                            #d[k]=v
-                    unpack=check_fix_range(l3)
-                j.lookup=unpack[1]
-                j.rheobase=unpack[1]
-
-
-        list_of_hits_misses=list(futures.map(ff,repeat(guess_value),vmlist))
-
-        for i,j in enumerate(list_of_hits_misses):
-            print(i)
-            print(j)
-
-            for k,v in j.lookup.items():
-                #print(v)
-                if v == 1:
-                    print('do nothing',v)
+        for k,v in j.lookup.items():
+            if v == 1:
+                print('do nothing',v)
+            else:
+                print('do something',v)
+                lookup2=list(futures.map(ff,j.lookup,repeat(j)))
+                l3=[]
+                d={}
+                for l in lookup2:
+                    for k,v in l.lookup.items():
+                        l3.append((v, k))
+                        d[k]=v
+                #Both ckeck repeat, and check fix range seem to be invoked here :)
+                unpack=check_fix_range(l3)
+                unpack=check_repeat(ff,unpack[1],j)
+                if unpack[0]==True:
+                    guess_value=unpack[1]
                 else:
-                    print('do something',v)
-
+                    guess_value=searcher(ff,unpack,j)
 
     b=time.time()
-
-
-    if boolen == True:
-        run_number,guess_value,attrs=rtuple
-    else:
-        lookup2=list(futures.map(ff,steps,repeat(vm)))
-        boolean,steps=check(lookup2)
-
-    if boolen == True:
-        run_number,guess_value,attrs=rtuple
-    else:
-        lookup2=list(futures.map(ff,steps,repeat(vm)))
-        boolean,steps=check(lookup2)
 
 
     e=time.time()
 
 
 
-    #pdb.set_trace()
-
-    attrs=None
-    run_number=None
+    vmlist=list(map(individual_to_vm,indattr))
 
     invalid_ind = [ind for ind in pop if not ind.fitness.valid]
-    #pdb.set_trace()
-    from itertools import repeat
-    print(guess_value)
-
-    import copy
-    iterator=(futures.map(evaluate2,invalid_ind,repeat(guess_value)))
-    invalid_indvm=[]
-    for i in iterator:
-        if hasattr(i,'rheobase'):
-            vm=VirtuaModel()
-            vm.rheobase=i.rheobase
-            guess_value=i.rheobase
-        invalid_ind.append(copy.copy(i))
-        invalid_indvm.append(copy.copy(vm))
-
-
-    fitnesses = toolbox.map(evaluate, invalid_ind, invalid_indvm)
+    for i in invalid_ind:
+        print(i)
+        print(type(i))
+    fitnesses = toolbox.map(evaluate, invalid_ind, vmlist)
 
     for ind, fit in zip(invalid_ind, fitnesses):
         ind.fitness.values = fit
