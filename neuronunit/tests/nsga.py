@@ -306,7 +306,7 @@ def evaluate2(individual):#This method must be pickle-able for scoop to work.
     #def ff(ampl,vm):
 
     unpack=check_repeat2(ff,individual.lookup,individual)
-
+    pdb.set_trace()
     #def check_repeat(ff,unpack,vm):
 
     '''
@@ -358,9 +358,11 @@ def check_fix_range(lookup2):
 
     if len(sub) and len(supra):
         center=(sub.max()+supra.min())/2.0
-        steps2=np.linspace(center-sub.max(),center+supra.min(),7.0)
+        #steps2=np.linspace(center-sub.max(),center+supra.min(),7.0)
         steps2 = np.linspace(sub.max(),supra.min(),7.0)
         np.delete(steps2,np.array(lookup2))
+        #make sure that element 4 in a seven element vector
+        #is exactly half way between sub.max() and supra.min()
         steps2[int(len(steps2)/2)+1]=(sub.max()+supra.min())/2.0
         steps = [ i*pq.pA for i in steps2 ]
 
@@ -498,13 +500,9 @@ def main(seed=None):
     lookup2=list(futures.map(ff,steps,repeat(mean_vm)))
 
     l3=[]
-    d={}
     for l in lookup2:
         for k,v in l.lookup.items():
             l3.append((v, k))
-            d[k]=v
-
-
     #Both ckeck repeat, and check fix range seem to be invoked here :)
     unpack=check_fix_range(l3)
     unpack=check_repeat(ff,unpack[1],mean_vm)
@@ -514,20 +512,14 @@ def main(seed=None):
 
     def searcher(ff,unpack,vms):
         while unpack[0]==False:
-            l3=[]
-            d={}
+            l3=[]# convert a dictionary to a list.
             for l in unpack[1]:
                 for k,v in l.lookup.items():
                     l3.append((v, k))
-                    d[k]=v
             unpack=check_fix_range(l3)
             unpack=check_repeat(ff,unpack[1],vms)
-            print('stuck in a loop?')
-
             if unpack[0]==True:
                 guess_value=unpack[1]
-                print(guess_value)
-
                 return guess_value
 
 
@@ -547,19 +539,14 @@ def main(seed=None):
         vm.attr=attrs
         return vm
 
-    vmlist=list(map(individual_to_vm,pop))
 
     #Now attempt to get the rheobase values by first trying the mean rheobase value.
     #This is not an exhaustive search that results in found all rheobase values
-    #It is just a trying out an educated guess on each individual in the whole population as first pass.
-    list_of_hits_misses=list(futures.map(ff,repeat(guess_value),vmlist))
-    j=0
-    for i in list_of_hits_misses:
-        print(i.rheobase)
-        j+=1
-        print(j)
-
+    #It is just a trying out an educated guess on each individual in the whole population as a first pass.
     invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
+    vmlist=list(map(individual_to_vm,invalid_ind))
+
+    list_of_hits_misses=list(futures.map(ff,repeat(guess_value),vmlist))
 
     #For each individual in the new GA population.
     #Create Virtual Models that are readily pickle-able.
@@ -571,23 +558,11 @@ def main(seed=None):
     e=time.time()
 
     for i,j in enumerate(invalid_ind):
-        print(i)
-        print('vmlist[i].rheobase')
-        print(vmlist[i].rheobase)
-        print(type(j))
-
         if vmlist[i].rheobase==None:
-
-            print(vmlist[i])
-            print(vmlist[i].lookup)
             lookup2=ff(guess_value,vmlist[i])
             l3=[]
-            d={}
             for k,v in lookup2.lookup.items():
                 l3.append((v, k))
-                d[k]=v
-            print(l3)
-            print(d)
             if 1 not in d.values():
                 unpack=check_fix_range(l3)
                 unpack=check_repeat(ff,unpack[1],vmlist[i])
@@ -627,8 +602,34 @@ def main(seed=None):
             del ind1.fitness.values, ind2.fitness.values
 
         # Evaluate the individuals with an invalid fitness
-        invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+        #invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+        invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
+        vmlist=[]
+        vmlist=list(map(individual_to_vm,invalid_ind ))
+        list_of_hits_misses=list(futures.map(ff,repeat(guess_value),vmlist))
 
+
+        #genes have changed so check/search rheobase again.
+        for i,j in enumerate(invalid_ind):
+            #if vmlist[i].rheobase==None:
+            lookup2=ff(vmlist[i].rheobase,vmlist[i])
+            pdb.set_trace()
+            l3=[]
+            d={}
+            for k,v in lookup2.lookup.items():
+                d[k]=v
+                l3.append((v, k))
+            if 1 not in d.values():
+                unpack=check_fix_range(l3)
+                unpack=check_repeat(ff,unpack[1],vmlist[i])
+                if unpack[0]==True:
+                    guess_value=unpack[1]
+                else:
+                    guess_value=searcher(ff,unpack,vmlist[i])
+
+        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind, invalid_indvm)
+
+        '''
         iterator=(futures.map(evaluate,invalid_ind,repeat(invalid_ind.rheobase)))
         invalid_indvm=[]
         for i in iterator:
@@ -642,7 +643,7 @@ def main(seed=None):
             invalid_indvm.append(copy.copy(vm))
 
         invalid_ind = list(futures.map(evaluate2,invalid_ind))
-        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind, invalid_indvm)
+        '''
 
 
         for ind, fit in zip(invalid_ind, fitnesses):
