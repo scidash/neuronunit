@@ -3,11 +3,10 @@ import time
 init_start=time.time()
 import get_neab
 
-#Scoop can only operate on variables classes and methods at top level 0
-#This means something with no indentation, no nesting,
-#and no virtual nesting (like function decorators etc)
-
 """
+Scoop can only operate on variables classes and methods at top level 0
+This means something with no indentation, no nesting,
+and no virtual nesting (like function decorators etc)
 anything that starts at indentation level 0.
 Code from the deap framework, available at:
 https://code.google.com/p/deap/source/browse/examples/ga/onemax_short.py
@@ -45,8 +44,6 @@ class Individual(object):
     def __init__(self, *args):
         list.__init__(self, *args)
         self.error=None
-        #self.sciunitscore=[]
-        #self.model=model
         self.error=None
         self.results=None
         self.name=''
@@ -122,6 +119,10 @@ model=model.load_model()
 
 
 def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
+    '''
+    Inputs a gene and a virtual model object.
+    outputs are error components.
+    '''
     print(vms.rheobase)
     model.name=''
     for i, p in enumerate(param):
@@ -148,9 +149,9 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
     import os.path
     from scoop import utils
 
-    f=open('scoop_log_'+str(utils.getHosts()),'w')
-    f.write(str(attrs))
-    f.close()
+    #f=open('scoop_log_'+str(utils.getHosts()),'w')
+    #f.write(str(attrs))
+    #f.close()
     score = get_neab.suite.judge(model)#passing in model, changes model
     model.run_number+=1
     RUN_TIMES='{}{}{}'.format('counting simulation run times on models',model.results['run_number'],model.run_number)
@@ -165,14 +166,15 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
         individual.s_html=score.to_html()
     except Exception as e:
         '{}'.format('Insufficient Data')
-        #individual.error = []
+        #if the error associated with the old version of the gene is not 0
+        #average its old error with 10, to create a gradient.
         if np.sum(individual.error)!=0:
             individual.error = [ (10.0+i)/2.0 for i in individual.error ]
         else:
+            #If the gene has no old error, just make all of its errors 10.
             individual.error = [ 10.0 for i in range(0,8) ]
 
         individual.s_html=None
-
 
     error=individual.error
     assert individual.results
@@ -215,6 +217,10 @@ class VirtuaModel:
 
 
 def ff(ampl,vm):
+    '''
+    Inputs are an amplitude to test and a virtual model
+    output is an virtual model with an updated dictionary.
+    '''
     print(vm, ampl)
     if float(ampl) not in vm.lookup:
         current = params.copy()['injected_square_current']
