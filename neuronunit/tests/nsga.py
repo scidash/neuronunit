@@ -512,6 +512,7 @@ def main(seed=None):
     #It is just a trying out an educated guess on each individual in the whole population as first pass.
     list_of_hits_misses=list(futures.map(ff,repeat(guess_value),vmlist))
     for i,j in enumerate(list_of_hits_misses):
+        v=0
         for k,v in j.lookup.items():
             if v == 1:
                 print('do nothing',v)
@@ -541,8 +542,25 @@ def main(seed=None):
         print(i)
         print('vmlist[i].rheobase')
         print(vmlist[i].rheobase)
-        
-        print(type(i))
+        print(type(j))
+
+        if type(j.rheobase)==None:
+            #print('do something',v)
+            lookup2=list(futures.map(ff,j.lookup,repeat(j)))
+            l3=[]
+            d={}
+            for l in lookup2:
+                for k,v in l.lookup.items():
+                    l3.append((v, k))
+                    d[k]=v
+            #Both ckeck repeat, and check fix range seem to be invoked here :)
+            unpack=check_fix_range(l3)
+            unpack=check_repeat(ff,unpack[1],j)
+            if unpack[0]==True:
+                guess_value=unpack[1]
+            else:
+                guess_value=searcher(ff,unpack,j)
+
     fitnesses = toolbox.map(evaluate, invalid_ind, vmlist)
 
     for ind, fit in zip(invalid_ind, fitnesses):
