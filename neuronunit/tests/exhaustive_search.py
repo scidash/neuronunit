@@ -20,7 +20,7 @@ import get_neab
 print(get_neab.LEMS_MODEL_PATH)
 
 from neuronunit.models import backends
-from neuronunit.models import LEMSModel
+#from neuronunit.models import LEMSModel
 
 from neuronunit.models.reduced import ReducedModel
 model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
@@ -78,6 +78,10 @@ def model2map(iter_arg):#This method must be pickle-able for scoop to work.
 def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
     model.update_run_params(iter_arg.attrs)
     import quantities as qt
+
+
+    #iterator=list(futures.map(evaluate2,list_of_models,repeat(guess_value)))
+    #evaluate2(iter_arg,repeat(guess_value))
     get_neab.suite.tests[0].prediction={}
     get_neab.suite.tests[0].prediction['value']=iter_arg.rheobase*qt.pA
     import os
@@ -100,7 +104,7 @@ def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
             error = [ 10.0 for i in range(0,8) ]
         s_html=score.to_html()
     error=error
-    assert results
+    print(score)
     return score
 
 class VirtualModel:
