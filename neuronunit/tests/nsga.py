@@ -298,8 +298,7 @@ def evaluate2(individual):#This method must be pickle-able for scoop to work.
             attrs['//izhikevich2007Cell'][p]=value
 
     individual.attrs=attrs
-    #if guess_value != None:
-    #    pdb.set_trace()
+
 
     individual.lookup={}
     vm=VirtuaModel()
@@ -516,7 +515,9 @@ def main(seed=None):
         while unpack[0]==False:
             l3=[]# convert a dictionary to a list.
             for l in unpack[1]:
-                for k,v in l.lookup.items():
+                print(l)
+                #pdb.set_trace()
+                for k,v in vms.lookup.items():
                     l3.append((v, k))
             unpack=check_fix_range(l3)
             unpack=check_repeat(ff,unpack[1],vms)
@@ -554,10 +555,6 @@ def main(seed=None):
     #Create Virtual Models that are readily pickle-able.
     #for the list of invalid indexs
 
-    b=time.time()
-
-
-    e=time.time()
 
     for i,j in enumerate(invalid_ind):
         if vmlist[i].rheobase==None:
@@ -609,15 +606,15 @@ def main(seed=None):
         #invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
         invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
         vmlist=[]
-        vmlist=list(map(individual_to_vm,invalid_ind ))
-        #list_of_hits_misses=list(futures.map(ff,repeat(guess_value),vmlist))
+        vmlist=list(map(individual_to_vm,invalid_ind))
 
 
         #genes have changed so check/search rheobase again.
         for i,j in enumerate(invalid_ind):
-            #if vmlist[i].rheobase==None:
-            lookup2=ff(vmlist[i].rheobase,vmlist[i])
-            pdb.set_trace()
+            if vmlist[i].rheobase!=None:
+                lookup2=ff(vmlist[i].rheobase,vmlist[i])
+            else:
+                lookup2=ff(guess_value,vmlist[i])
             l3=[]
             d={}
             for k,v in lookup2.lookup.items():
@@ -630,32 +627,12 @@ def main(seed=None):
                     guess_value=unpack[1]
                 else:
                     guess_value=searcher(ff,unpack,vmlist[i])
-
         #evaluate(individual,vms)
-
-        fitnesses = toolbox.map(toolbox.evaluate, vmlist)
-
-        '''
-        iterator=(futures.map(evaluate,invalid_ind,repeat(invalid_ind.rheobase)))
-        invalid_indvm=[]
-        for i in iterator:
-            if hasattr(i,'rheobase'):
-                print('rheobase can update too \n\n\n\n')
-                print(i.rheobase)
-                vm=VirtuaModel()
-                vm.rheobase=i.rheobase
-                guess_value=i.rheobase
-            invalid_ind.append(copy.copy(i))
-            invalid_indvm.append(copy.copy(vm))
-
-        invalid_ind = list(futures.map(evaluate2,invalid_ind))
-        '''
-
+        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind, vmlist)
 
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
         plotss(invalid_ind,gen)
-
         # Select the next generation population
         #This way the initial genes keep getting added to each generation.
         #pop = toolbox.select(pop + offspring, MU)
@@ -716,7 +693,11 @@ if __name__ == "__main__":
     # optimal_front = sorted(optimal_front[i] for i in range(0, len(optimal_front), 2))
     start_time=time.time()
     whole_initialisation=start_time-init_start
+
+    b=time.time()
     pop, stats = main()
+    e=time.time()
+
     finish_time=time.time()
     ga_time=finish_time-start_time
     plt.clf()
