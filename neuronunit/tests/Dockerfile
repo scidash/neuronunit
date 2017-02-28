@@ -117,4 +117,4 @@ RUN nrnivmodl
 RUN ls LEMS_2007One.xml
 WORKDIR $HOME/neuronunit/neuronunit/tests/
 #ENTRYPOINT python -m scoop exhaustive_search.py
-ENTRYPOINT python -m scoop nsga.py; python -m scoop exhaustive_search.py
+ENTRYPOINT python -m scoop nsga.py && python -m scoop exhaustive_search.py
