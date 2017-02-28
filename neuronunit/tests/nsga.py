@@ -417,11 +417,11 @@ def main(seed=None):
     from itertools import repeat
 
 
-    def searcher_2(ff,unpack,vms):
+    def searcher2(ff,unpack,vms):
         '''
-        ultimately an attempt to capture the essence a lot of repative code below.
+        ultimately an attempt to capture the essence a lot of repeatative code below.
         This is not yet used, but it is intended for future use.
-        Its intended to replace the less general seracher function
+        Its intended to replace the less general searcher function
         '''
         steps2 = np.linspace(40,80,7.0)
         steps = [ i*pq.pA for i in steps2 ]
