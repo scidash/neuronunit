@@ -70,7 +70,8 @@ vt =  np.linspace(-50.0,-30.0,1000)
 vpeak= np.linspace(20.0,30.0,1000)
 
 #vpeak as currently stated causes problems.
-param=['vr','a','b','C','c','d','v0','k','vt','vpeak']
+param=['vr','a','b','C','c']
+#,'d','v0','k','vt','vpeak']
 #param=['a','b','vr']#,'vpeak']#,'k']#,'C']#,'c','d','v0','k','vt','vpeak']#,'d'
 rov=[]
 #vr = np.linspace(-75.0,-50.0,1000)
@@ -81,12 +82,13 @@ rov.append(a)
 rov.append(b)
 rov.append(C)
 rov.append(c)
+'''
 rov.append(d)
 rov.append(v0)
 rov.append(k)
 rov.append(vt)
 rov.append(vpeak)
-
+'''
 
 BOUND_LOW=[ np.min(i) for i in rov ]
 BOUND_UP=[ np.max(i) for i in rov ]
@@ -536,7 +538,7 @@ def main(seed=None):
     print('lists are same length?')
     print(len(invalid_ind),len(vmlist))
     #print(list(fitnesses))
-    pdb.set_trace()
+    #pdb.set_trace()
 
     #fitnesses = toolbox.map(toolbox.evaluate, invalid_ind, vmlist)
     fitnesses = toolbox.map(toolbox.evaluate, invalid_ind, vmlist)
