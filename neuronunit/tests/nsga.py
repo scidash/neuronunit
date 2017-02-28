@@ -137,6 +137,8 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
             attrs['//izhikevich2007Cell'][p]=name_value
 
     individual.attrs=attrs
+    #make sure that the virtual model, and the real model have the same attributes.
+    assert individual.attrs==vms.attrs
     individual.model=model.update_run_params(attrs)
 
     individual.params=[]
@@ -169,11 +171,14 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
     except Exception as e:
         '{}'.format('Insufficient Data')
         #if the error associated with the old version of the gene is not 0
-        #average its old error with 10, to create a gradient.
+        #average its old error with 10, to create a better gradient,
+        #or in other words make a continuously changing surface
+        #as opposed to shelves and cliffs.
         if np.sum(individual.error)!=0:
             individual.error = [ (10.0+i)/2.0 for i in individual.error ]
         else:
             #If the gene has no old error, just make all of its errors 10.
+            #Ie make a cliff, it probably does not matter if it does not happen too often.
             individual.error = [ 10.0 for i in range(0,8) ]
 
         individual.s_html=None
@@ -256,10 +261,8 @@ AMPL = 0.0*pq.pA
 DELAY = 100.0*pq.ms
 DURATION = 1000.0*pq.ms
 from scipy.optimize import curve_fit
-
 import sciunit
 import sciunit.scores as scores
-
 import neuronunit.capabilities as cap
 
 required_capabilities = (cap.ReceivesSquareCurrent,
@@ -268,7 +271,6 @@ params = {'injected_square_current':
             {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
 name = "Rheobase test"
-
 description = ("A test of the rheobase, i.e. the minimum injected current "
                "needed to evoke at least one spike.")
 
@@ -385,7 +387,10 @@ def main(seed=None):
         ff, a function,
         unpack, a dictionary of previous search values:
         vm a virtual model object.
-
+        outputs: a tuple consisting of a boolean flag and
+        the eecond element is a dictionary containing the
+        last range searched such that the latest range searched
+        can be used to seed future searches.
         '''
         print(vm)
         print(type(vm))
@@ -410,6 +415,31 @@ def main(seed=None):
             return (False,guess_value)
 
     from itertools import repeat
+
+
+    def searcher_2(ff,unpack,vms):
+        '''
+        ultimately an attempt to capture the essence a lot of repative code below.
+        This is not yet used, but it is intended for future use.
+        Its intended to replace the less general seracher function
+        '''
+        steps2 = np.linspace(40,80,7.0)
+        steps = [ i*pq.pA for i in steps2 ]
+        model.attrs=mean_vm.attrs
+        lookup2=list(futures.map(ff,steps,repeat(mean_vm)))
+
+        while unpack[0]==False:
+            l3=[]# convert a dictionary to a list.
+            for l in unpack[1]:
+                print(l)
+                for k,v in vms.lookup.items():
+                    l3.append((v, k))
+            unpack=check_fix_range(l3)
+            unpack=check_repeat(ff,unpack[1],vms)
+            if unpack[0]==True:
+                guess_value=unpack[1]
+                return guess_value
+
 
     steps2 = np.linspace(40,80,7.0)
     steps = [ i*pq.pA for i in steps2 ]
@@ -461,7 +491,7 @@ def main(seed=None):
                 attrs['//izhikevich2007Cell'][p]=value
         vm=VirtuaModel()
         vm.attrs=attrs
-        assert ind.attrs==vm.attrs
+        #assert ind.attrs==vm.attrs
         return vm
 
 
