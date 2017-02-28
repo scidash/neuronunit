@@ -533,10 +533,12 @@ def main(seed=None):
         print(i.rheobase)
         assert i.rheobase!=None
 
-
-    fitnesses = toolbox.map(toolbox.evaluate, invalid_ind, vmlist)
-    print(list(fitnesses))
+    print('lists are same length?')
+    print(len(invalid_ind),len(vmlist))
+    #print(list(fitnesses))
     pdb.set_trace()
+
+    #fitnesses = toolbox.map(toolbox.evaluate, invalid_ind, vmlist)
     fitnesses = toolbox.map(toolbox.evaluate, invalid_ind, vmlist)
 
     #print(len(fitnesses))
