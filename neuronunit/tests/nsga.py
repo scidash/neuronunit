@@ -534,8 +534,11 @@ def main(seed=None):
         assert i.rheobase!=None
 
 
-    fitnesses = toolbox.map(evaluate, invalid_ind, vmlist)
-    print(fitnesses)
+    fitnesses = toolbox.map(toolbox.evaluate, invalid_ind, vmlist)
+    print(list(fitnesses))
+    pdb.set_trace()
+    fitnesses = toolbox.map(toolbox.evaluate, invalid_ind, vmlist)
+
     #print(len(fitnesses))
     for ind, fit in zip(invalid_ind, fitnesses):
         ind.fitness.values = fit

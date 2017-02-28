@@ -106,8 +106,8 @@ RUN echo 'alias sciunit="cd /work/scidash/sciunit"' >> ~/.bashrc
 RUN echo 'alias nu="python -c "from neuronunit.models.reduced import ReducedModel""'
 RUN export PATH=$PATH
 
-WORKDIR $HOME #/neuronunit/neuronunit/software_tests
-RUN ipcluster start --profile=chase --debug &
+#un comment the following line to test ipcluster during build.
+#RUN ipcluster start --profile=chase --debug &
 #https://github.com/russelljjarvis/neuronunit.git
 WORKDIR $HOME
 RUN git clone -b dev https://github.com/russelljjarvis/neuronunit.git
