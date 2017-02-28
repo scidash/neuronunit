@@ -149,8 +149,6 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
     get_neab.suite.tests[0].prediction={}
     get_neab.suite.tests[0].prediction['value']=0
     print(vms.rheobase)
-    print('error occured here?')
-
     get_neab.suite.tests[0].prediction['value']=vms.rheobase*qt.pA
     import os
     import os.path
