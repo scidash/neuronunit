@@ -149,6 +149,8 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
     get_neab.suite.tests[0].prediction={}
     get_neab.suite.tests[0].prediction['value']=0
     print(vms.rheobase)
+    assert vms.rheobase!=None
+    #pdb.set_trace()
     get_neab.suite.tests[0].prediction['value']=vms.rheobase*qt.pA
     import os
     import os.path
@@ -180,12 +182,13 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
         else:
             #If the gene has no old error, just make all of its errors 10.
             #Ie make a cliff, it probably does not matter if it does not happen too often.
-            individual.error = [ 10.0 for i in range(0,8) ]
+            individual.error = [ 10.0 for i in individual.error ]
 
         individual.s_html=None
 
     error=individual.error
-    assert individual.results
+    print(len(error))
+    #assert individual.results
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
 
 
@@ -526,8 +529,14 @@ def main(seed=None):
                 else:
                     guess_value=searcher(ff,unpack,vmlist[i])
 
-    fitnesses = toolbox.map(evaluate, invalid_ind, vmlist)
+    for i in vmlist:
+        print(i.rheobase)
+        assert i.rheobase!=None
 
+
+    fitnesses = toolbox.map(evaluate, invalid_ind, vmlist)
+    print(fitnesses)
+    #print(len(fitnesses))
     for ind, fit in zip(invalid_ind, fitnesses):
         ind.fitness.values = fit
 
@@ -582,6 +591,10 @@ def main(seed=None):
                 else:
                     guess_value=searcher(ff,unpack,vmlist[i])
         #evaluate(individual,vms)
+        for i in vmlist:
+            print(i.rheobase)
+            assert i.rheobase!=None
+
         fitnesses = toolbox.map(toolbox.evaluate, invalid_ind, vmlist)
 
         for ind, fit in zip(invalid_ind, fitnesses):
@@ -601,7 +614,7 @@ def main(seed=None):
         #there is no way to garuntee that the best candidate solution will
         #retain its object attributes, except via re evaluating it, in a scope outside
         #of futures.map as is done below.
-    (a,b,c,d,e,f,g,h) = evaluate(invalid_ind[0],vmlist[0])
+    #(a,b,c,d,e,f,g,h) = evaluate(invalid_ind[0],vmlist[0])
 
     f=open('html_score_matrix.html','w')
     f.write(invalid_ind[0].s_html)
