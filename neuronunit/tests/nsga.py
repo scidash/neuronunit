@@ -512,10 +512,11 @@ def main(seed=None):
         if vmlist[i].rheobase==None:
             lookup2=ff(guess_value,vmlist[i])
             l3=[]
-            d={}
-            for k,v in lookup2.lookup.items():
+            #d={}
+            d=lookup2.lookup
+            for k,v in d.items():
                 l3.append((v, k))
-                d[k]=v
+                #d[k]=v
             if 1 not in d.values():
                 unpack=check_fix_range(l3)
                 unpack=check_repeat(ff,unpack[1],vmlist[i])
