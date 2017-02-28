@@ -569,8 +569,8 @@ def main(seed=None):
             else:
                 lookup2=ff(guess_value,vmlist[i])
             l3=[]
-            d={}
-            for k,v in lookup2.lookup.items():
+            d=lookup2.lookup
+            for k,v in d.items():
                 d[k]=v
                 l3.append((v, k))
             if 1 not in d.values():
