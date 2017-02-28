@@ -67,24 +67,33 @@ c = np.linspace(-55,-60,1000)
 d = np.linspace(0.050,0.2,1000)
 v0 = np.linspace(-75.0,-45.0,1000)
 vt =  np.linspace(-50.0,-30.0,1000)
+vpeak= np.linspace(20.0,30.0,1000)
 
 #vpeak as currently stated causes problems.
-#param=['vr','a','b','C','c','d','v0','k','vt','vpeak']
-param=['a','b','vr']#,'vpeak']#,'k']#,'C']#,'c','d','v0','k','vt','vpeak']#,'d'
+param=['vr','a','b','C','c','d','v0','k','vt','vpeak']
+#param=['a','b','vr']#,'vpeak']#,'k']#,'C']#,'c','d','v0','k','vt','vpeak']#,'d'
 rov=[]
-vr = np.linspace(-75.0,-50.0,1000)
-a = np.linspace(0.015,0.045,1000)
-b = np.linspace(-3.5*10E-9,-0.5*10E-9,1000)
-#vpeak= np.linspace(30.0,30.0,1000)
+#vr = np.linspace(-75.0,-50.0,1000)
+#a = np.linspace(0.015,0.045,1000)
+#b = np.linspace(-3.5*10E-9,-0.5*10E-9,1000)
+rov.append(vr)
 rov.append(a)
 rov.append(b)
-rov.append(vr)
-#rov.append(vpeak)
+rov.append(C)
+rov.append(c)
+rov.append(d)
+rov.append(v0)
+rov.append(k)
+rov.append(vt)
+rov.append(vpeak)
+
+
 BOUND_LOW=[ np.min(i) for i in rov ]
 BOUND_UP=[ np.max(i) for i in rov ]
 #rov.append(vpeak)
 
 NDIM = len(param)
+
 LOCAL_RESULTS_spiking=[]
 LOCAL_RESULTS_no_spiking=[]
 RUN_TIMES=''
@@ -102,15 +111,6 @@ toolbox.register("Individual", tools.initIterate, creator.Individual, toolbox.at
 import deap as deap
 
 toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
-
-vanila_start=time.time()
-#model.local_run()
-vanila_stop=time.time()
-vanila_nrn_time=float(vanila_stop-vanila_start)
-f=open('vanila_nrn_time.txt','w')
-vt='{}{}{}'.format("vanila_nrn_time : ",float(vanila_nrn_time),"\n")
-f.write(str(vanila_nrn_time))
-f.close()
 
 from neuronunit.models import backends
 from neuronunit.models.reduced import ReducedModel
@@ -282,52 +282,6 @@ units = pq.pA
 verbose=True
 
 
-
-def evaluate2(individual):#This method must be pickle-able for scoop to work.
-    #import rheobase_old2 as rh
-    model=VirtuaModel()
-    model.name=''
-
-    for i, p in enumerate(param):
-        value=str(individual[i])
-        #reformate values.
-        model.name=str(model.name)+' '+str(p)+str(value)
-        if i==0:
-            attrs={'//izhikevich2007Cell':{p:value }}
-        else:
-            attrs['//izhikevich2007Cell'][p]=value
-
-    individual.attrs=attrs
-
-
-    individual.lookup={}
-    vm=VirtuaModel()
-    import copy
-    vm.attrs=copy.copy(individual.attrs)
-    #def ff(ampl,vm):
-
-    unpack=check_repeat2(ff,individual.lookup,individual)
-    pdb.set_trace()
-    #def check_repeat(ff,unpack,vm):
-
-    '''
-    #vm=ff(guess_value,vm)
-    for k,v in vm.lookup.items():
-        if v==1:
-            individual.rheobase=k
-            vm.rheobase=k
-            return individual
-        if v!=1:
-            guess_value = None#more trial and error.
-    #if guess_value == None:
-    #    (run_number,k,attrs)=main2(individual)
-    #individual.rheobase=0
-    '''
-    individual.rheobase=k
-    return individual
-
-#some how I destroy the function f.
-
 def check_fix_range(lookup2):
     '''
     Inputs: lookup2, A dictionary of previous current injection values
@@ -406,10 +360,10 @@ def main(seed=None):
     pop = toolbox.population(n=MU)
     #create the first population of individuals
     guess_attrs=[]
+
     #find rheobase on a model constructed out of the mean parameter values.
-    guess_attrs.append(np.mean( [ i[0] for i in pop ]))
-    guess_attrs.append(np.mean( [ i[1] for i in pop ]))
-    guess_attrs.append(np.mean( [ i[2] for i in pop ]))
+    for x,y in enumerate(param):
+        guess_attrs.append(np.mean( [ i[x] for i in pop ]))
 
     from itertools import repeat
     mean_vm=VirtuaModel()
@@ -424,37 +378,6 @@ def main(seed=None):
     mean_vm.attrs=attrs
     import copy
 
-
-
-    def check_repeat2(ff,unpack,vm):
-        '''
-        inputs:
-        ff, a function,
-        unpack, a dictionary of previous search values:
-        vm a virtual model object.
-
-        '''
-        print(vm)
-        print(type(vm))
-        from itertools import repeat
-        lookup2=list(futures.map(ff,unpack,repeat(vm)))
-        l3=[]
-        for l in lookup2:
-            for k,v in l.lookup.items():
-                l3.append((v, k))
-
-        unpack=check_fix_range(l3)
-        l3=None
-        boolean=False
-        new_ranges=[]
-        boolean=unpack[0]
-        guess_value=unpack[1]
-        if True == boolean:
-            print(guess_value)
-            vm.rheobase=guess_value
-            return (True,guess_value)
-        else:
-            return (False,guess_value)
 
     def check_repeat(ff,unpack,vm):
         '''
@@ -504,7 +427,6 @@ def main(seed=None):
     for l in lookup2:
         for k,v in l.lookup.items():
             l3.append((v, k))
-    #Both ckeck repeat, and check fix range seem to be invoked here :)
     unpack=check_fix_range(l3)
     unpack=check_repeat(ff,unpack[1],mean_vm)
     if unpack[0]==True:
@@ -516,7 +438,6 @@ def main(seed=None):
             l3=[]# convert a dictionary to a list.
             for l in unpack[1]:
                 print(l)
-                #pdb.set_trace()
                 for k,v in vms.lookup.items():
                     l3.append((v, k))
             unpack=check_fix_range(l3)
@@ -539,7 +460,8 @@ def main(seed=None):
             else:
                 attrs['//izhikevich2007Cell'][p]=value
         vm=VirtuaModel()
-        vm.attr=attrs
+        vm.attrs=attrs
+        assert ind.attrs==vm.attrs
         return vm
 
 
