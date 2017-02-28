@@ -297,7 +297,9 @@ units = pq.pA
 verbose=True
 
 
-#rheobase=None
+#Check is main2 actually executed?
+#If not comment out, and subsequently delete it.
+'''
 def main2(ind,guess_attrs=None):
     vm=VirtuaModel()
 
@@ -369,7 +371,7 @@ def main2(ind,guess_attrs=None):
         lookup2=list(map(f,steps,repeat(vm)))
         #steps3.extend(steps)
 
-
+'''
 
 def evaluate2(individual, guess_value=None):#This method must be pickle-able for scoop to work.
     #import rheobase_old2 as rh
@@ -408,6 +410,7 @@ def evaluate2(individual, guess_value=None):#This method must be pickle-able for
         #in case first guess no good. enable
 
     if guess_value == None:
+        #main2 is executed here, but is this mistaken?
         (run_number,k,attrs)=main2(individual)
     individual.rheobase=0
     individual.rheobase=k
@@ -417,8 +420,6 @@ def evaluate2(individual, guess_value=None):#This method must be pickle-able for
 
 def ff(ampl,vm):
     print(vm, ampl)
-    #pdb.set_trace()v
-    #print(len(ampl))
     if float(ampl) not in vm.lookup:
         current = params.copy()['injected_square_current']
         print('current, previous = ',ampl,vm.previous)
@@ -427,11 +428,7 @@ def ff(ampl,vm):
         current={'injected_square_current':current}
         vm.run_number+=1
         print('model run number',vm.run_number)
-        #model.attrs=vm.attrs
-        #model.update_run_params(vm.attrs)
-        #assert vm.attrs==model.attrs
-        #print(vm.attrs)
-        #print(model.attrs)
+
         model.inject_square_current(current)
         vm.previous=ampl
         n_spikes = model.get_spike_count()
@@ -440,8 +437,6 @@ def ff(ampl,vm):
             print("Injected %s current and got %d spikes" % \
                     (ampl,n_spikes))
         vm.lookup[float(ampl)] = n_spikes
-        #vm3=copy.copy(vm)
-
         return vm
 
     if float(ampl) in vm.lookup:
@@ -450,13 +445,22 @@ def ff(ampl,vm):
 
 
 def check_fix_range(lookup2):
-
+    '''
+    Inputs: lookup2, A dictionary of previous current injection values
+    used to search rheobase
+    Outputs: A boolean to indicate if the correct rheobase current was found
+    and a dictionary containing the range of values used.
+    If rheobase was actually found then rather returning a boolean and a dictionary,
+    instead logical True, and the rheobase current is returned.
+    given a dictionary of rheobase search values, use that
+    dictionary as input for a subsequent search.
+    '''
     sub=[]
     supra=[]
     print(lookup2)
     for v,k in lookup2:
         if v==1:
-            print('hit !!!\n\n\n')
+            #A logical flag is returned to indicate that rheobase was found.
             return (True,k)
         elif v==0:
             sub.append(k)
@@ -465,79 +469,42 @@ def check_fix_range(lookup2):
         print(k,v)
     print(sub)
     print(supra)
-    #lookup2=None
 
     sub=np.array(sub)
     supra=np.array(supra)
-    #sub_margin=sub.max()+sub.max()/10.0
-    #supra_margin=supra.min()-supra.min()/10.10
 
     if len(sub) and len(supra):
         center=(sub.max()+supra.min())/2.0
         steps2=np.linspace(center-sub.max(),center+supra.min(),7.0)
         steps2 = np.linspace(sub.max(),supra.min(),7.0)
         np.delete(steps2,np.array(lookup2))
-        #np.delete(steps2,sub.max())
-        #np.delete(steps2,supra.min())
         steps2[int(len(steps2)/2)+1]=(sub.max()+supra.min())/2.0
-        #pdb.set_trace()
-        #steps2[int(steps2/2)]=(sub.max()+supra.min())/2.0
         steps = [ i*pq.pA for i in steps2 ]
-        #pdb.set_trace()
 
     elif len(sub):
         steps2 = np.linspace(sub.max(),2*sub.max(),7.0)
-        #np.delete(steps2,sub.max())
         np.delete(steps2,np.array(lookup2))
-
         steps = [ i*pq.pA for i in steps2 ]
+
     elif len(supra):
         steps2 = np.linspace(-2*(supra.min()),supra.min(),7.0)
-        #np.delete(steps2,supra.min())
         np.delete(steps2,np.array(lookup2))
         steps = [ i*pq.pA for i in steps2 ]
 
     if len(steps)<7:
         steps2 = np.linspace(steps.min(),steps.max(),7.0)
         steps = [ i*pq.pA for i in steps2 ]
-        print(lookup2)
-        print(steps)
-        pdb.set_trace()
+
     import copy
     return (False,copy.copy(steps))
 
-
-
+    '''
     def cc(itercc):
         if '1' in itercc.lookup.values():
             return 1
         else:
             return 0
-        #if itercc==False:
-            #vm=VirtuaModel()
-            #vm=itercc.vm
-            #vm.attrs=attrs
-            #boolean,steps=vm.lookup,vm)
-
-        #return (boolean,steps)
-            '''
-            if boolen == True:
-                run_number,guess_value,attrs=rtuple
-            else:
-                lookup2=list(futures.map(ff,steps,repeat(vm)))
-                boolean,steps=check(lookup2)
-            if boolen == True:
-                run_number,guess_value,attrs=rtuple
-            else:
-                lookup2=list(futures.map(ff,steps,repeat(vm)))
-                boolean,steps=check(lookup2)
-            if boolen == True:
-                run_number,guess_value,attrs=rtuple
-            else:
-                lookup2=list(futures.map(ff,steps,repeat(vm)))
-                boolean,steps=check(lookup2)
-            '''
-            #lookup2=list(futures.map(ff,steps,repeat(vm)))
+    '''
 
 def main(seed=None):
 
@@ -563,9 +530,6 @@ def main(seed=None):
     guess_attrs.append(np.mean( [ i[0] for i in pop ]))
     guess_attrs.append(np.mean( [ i[1] for i in pop ]))
     guess_attrs.append(np.mean( [ i[2] for i in pop ]))
-    #guess_attrs.append(np.mean( [ i[3] for i in pop ]))
-
-
 
     from itertools import repeat
     vm=VirtuaModel()
@@ -582,7 +546,16 @@ def main(seed=None):
     import copy
 
 
+    #is check_repeat invoked?
+
     def check_repeat(ff,unpack,vm):
+        '''
+        inputs:
+        ff, a function,
+        unpack, a dictionary of previous search values:
+        vm a virtual model object.
+
+        '''
         from itertools import repeat
         lookup2=list(futures.map(ff,unpack,repeat(vm)))
         l3=[]
@@ -619,6 +592,8 @@ def main(seed=None):
             l3.append((v, k))
             d[k]=v
 
+
+    #Both ckeck repeat, and check fix range seem to be invoked here :)
     unpack=check_fix_range(l3)
     unpack=check_repeat(ff,unpack[1],vm)
 
@@ -632,7 +607,7 @@ def main(seed=None):
                 d[k]=v
         unpack=check_fix_range(l3)
         unpack=check_repeat(ff,unpack[1],vm)
-
+    '''
     if unpack[0]==False:
 
         l3=[]
@@ -647,6 +622,8 @@ def main(seed=None):
 
 
     if unpack[0]==False:
+
+        #As a last resort do things the slow old way !
         #As a last resort use the old way to find.
         vector=unpack[1]
         high=vector[int(len(vector)/2+1)]
@@ -661,6 +638,7 @@ def main(seed=None):
 
     if unpack[0]==True:
         guess_value=unpack[1]
+
 
     def gg(check_iter,ampl):
         vm=check_iter
@@ -696,7 +674,6 @@ def main(seed=None):
 
         return (vm,steps)
 
-
     def model2map(ind):#This method must be pickle-able for scoop to work.
         vm=VirtualModel()
         attrs={}
@@ -712,7 +689,7 @@ def main(seed=None):
         print(attrs)
         vm.attrs=attrs
         return vm
-
+    '''
 
     def this_function(ind):
         for i, p in enumerate(param):
@@ -782,12 +759,6 @@ def main(seed=None):
     b=time.time()
 
 
-
-    #booleans=list(futures.map(cc,list_of_hits_misses))
-
-
-    #lookup2=list(futures.map(ff,steps,repeat(vm)))
-    #boolean,steps=check(lookup2)
     if boolen == True:
         run_number,guess_value,attrs=rtuple
     else:
