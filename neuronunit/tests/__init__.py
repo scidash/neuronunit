@@ -616,6 +616,7 @@ class RheobaseTestHacked(VmTest):
 class RheobaseTest(VmTest):
 #class RheobaseTestHacked(VmTest):
     """
+    A hacked version of test Rheobase.
     Tests the full widths of APs at their half-maximum
     under current injection.
     """
@@ -689,15 +690,15 @@ class RestingPotentialTest(VmTest):
         prediction = {'mean':median, 'std':std}
         return prediction
 
-        def compute_score(self, observation, prediction):
-            """Implementation of sciunit.Test.score_prediction."""
-            #print("%s: Observation = %s, Prediction = %s" % \
-            #	 (self.name,str(observation),str(prediction)))
-            if prediction['value'] is None:
-                score = scores.InsufficientDataScore(None)
-            else:
-                print
-                score = super(RestingPotentialTest,self).\
-                            compute_score(observation, prediction)
-                #self.bind_score(score,None,observation,prediction)
-            return score
+    def compute_score(self, observation, prediction):
+        """Implementation of sciunit.Test.score_prediction."""
+        #print("%s: Observation = %s, Prediction = %s" % \
+        #	 (self.name,str(observation),str(prediction)))
+        if prediction['value'] is None:
+            score = scores.InsufficientDataScore(None)
+        else:
+            print
+            score = super(RestingPotentialTest,self).\
+                        compute_score(observation, prediction)
+            #self.bind_score(score,None,observation,prediction)
+        return score
