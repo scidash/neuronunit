@@ -20,18 +20,11 @@ class ReducedModel(mod.LEMSModel,
         LEMS_file_path: Path to LEMS file (an xml file).
         name: Optional model name.
         """
-        #import pdb
-        #pdb.set_trace()
-        #self, LEMS_file_path, name=None, backend=None, attrs={}):
-
-        #super(ReducedModel,self).__init__(LEMS_file_path=LEMS_file_path,name=name,backend='NEURON', attrs=attrs)
         super(ReducedModel,self).__init__(LEMS_file_path,name=name,backend=backend,attrs=attrs)
+        self.run_number=0
+        self.previous=0
+        self.lookup = {}
 
-        #self.LEMS_file_path=LEMS_file_path
-
-        #self.name=name
-        #self.backend=backend
-        #self.attrs=attrs
     def get_membrane_potential(self, rerun=None, **run_params):
         if rerun is None:
             rerun = self.rerun
@@ -40,7 +33,7 @@ class ReducedModel(mod.LEMSModel,
             if 'v' in rkey or 'vm' in rkey:
                 v = np.array(self.results[rkey])
         t = np.array(self.results['t'])
-        dt = (t[1]-t[0])*pq.s # Time per sample in milliseconds.
+        dt = (t[1]-t[0])*pq.ms # Time per sample in milliseconds.
         vm = AnalogSignal(v,units=pq.V,sampling_rate=1.0/dt)
         return vm
 
@@ -52,8 +45,6 @@ class ReducedModel(mod.LEMSModel,
     def get_spike_train(self, rerun=False, **run_params):
         vm = self.get_membrane_potential(rerun=rerun, **run_params)
         spike_train = sf.get_spike_train(vm)
-        print('Number of spikes is!')
-        print(len(spike_train))
         return spike_train
 
     #This method must be overwritten in the child class or Derived class NEURONbackend but I don't understand how to do that.
