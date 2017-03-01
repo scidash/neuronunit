@@ -16,20 +16,23 @@ RUN pip install git+https://github.com/rkern/line_profiler
 
 ENV ATOM_VERSION v1.12.7
 RUN apt-get update
-RUN apt-get install -y gedit meld gvfs-bin iceweasel
+#RUN apt-get install -y gedit meld gvfs-bin iceweasel
 RUN apt-get install -y curl apt-utils
 
-RUN curl -L https://github.com/atom/atom/releases/download/${ATOM_VERSION}/atom-amd64.deb > /tmp/atom.deb && dpkg -i /tmp/atom.deb && rm -f /tmp/atom.deb
+#RUN curl -L https://github.com/atom/atom/releases/download/${ATOM_VERSION}/atom-amd64.deb > /tmp/atom.deb && dpkg -i /tmp/atom.deb && rm -f /tmp/atom.deb
 
 #Install a browser:
-RUN apt-get update && apt-get install -y xvfb chromium
-RUN ln -s /usr/bin/xvfb-chromium /usr/bin/google-chrome
-RUN ln -s /usr/bin/xvfb-chromium /usr/bin/chromium-browse
+#RUN apt-get update && apt-get install -y xvfb chromium
+#RUN ln -s /usr/bin/xvfb-chromium /usr/bin/google-chrome
+#RUN ln -s /usr/bin/xvfb-chromium /usr/bin/chromium-browse
+
+
 ENV WORK_HOME $HOME/work/scidash
 RUN ipython profile create default
 RUN apt-get install -y libxss1
 RUN git clone https://github.com/soravux/scoop
 WORKDIR scoop
+RUN echo "got here"
 RUN python setup.py install
 RUN apt-get install -y python3-setuptools
 ENV PATH $PATH:/opt/conda/bin
@@ -110,6 +113,9 @@ RUN export PATH=$PATH
 #RUN ipcluster start --profile=chase --debug &
 #https://github.com/russelljjarvis/neuronunit.git
 WORKDIR $HOME
+RUN echo "do this part again such that pickled files can be used to bypass problems with aibs.py in the short term fdsa"
+RUN echo "do this part again such that pickled files can be used to bypass problems with aibs.py in the short term"
+RUN echo "definitely not a long term fix"
 RUN git clone -b dev https://github.com/russelljjarvis/neuronunit.git
 WORKDIR $HOME/neuronunit/neuronunit/tests/NeuroML2
 
@@ -117,4 +123,5 @@ RUN nrnivmodl
 RUN ls LEMS_2007One.xml
 WORKDIR $HOME/neuronunit/neuronunit/tests/
 #ENTRYPOINT python -m scoop exhaustive_search.py
+RUN ls *.pickle
 ENTRYPOINT python -m scoop nsga.py && python -m scoop exhaustive_search.py
