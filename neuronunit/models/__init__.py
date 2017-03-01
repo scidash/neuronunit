@@ -41,19 +41,9 @@ class LEMSModel(sciunit.Model, cap.Runnable):
         LEMS_file_path: Path to LEMS file (an xml file).
         name: Optional model name.
         """
-        #import pdb
-        #pdb.set_trace()
-        #print(name)
 
-                                     #def __init__(self, name=None, **params)
         super(LEMSModel,self).__init__(name=name)
-        #self.LEMS_file_path=LEMS_file_path
 
-        #,LEMS_file_path,name=None,backend=None, attrs={})
-        #self.name=name
-        #self.backend=backend
-        #self.attrs=attrs
-        #pdb.set_trace()
 
         self.orig_lems_file_path = LEMS_file_path
         self.create_lems_file(name,attrs)
@@ -65,7 +55,8 @@ class LEMSModel(sciunit.Model, cap.Runnable):
         self.rerun = True # Needs to be rerun since it hasn't been run yet!
         if name is None:
             name = os.path.split(self.lems_file_path)[1].split('.')[0]
-        self.set_backend(backend)
+        print(backend)
+        self.set_backend('NEURON')
         self.load_model()
 
     #This is the part that decides if it should inherit from NEURON backend.
