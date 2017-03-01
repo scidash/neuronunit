@@ -73,6 +73,9 @@ ENV PYTHONPATH=$PYTHONPATH:$HOME/work/scidash/sciunitopt
 WORKDIR $HOME
 RUN python -c "import sciunitopt"
 RUN python -c "from sciunitopt.deap_config_simple_sum import DeapCapsule"
+WORKDIR $HOME
+RUN git clone https://github.com/BlueBrain/BluePyOpt
+RUN pip install bluepyopt
 
 RUN chown -R jovyan $HOME
 
