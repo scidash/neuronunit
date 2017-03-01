@@ -38,7 +38,7 @@ RUN apt-get install -y python3-setuptools
 ENV PATH $PATH:/opt/conda/bin
 RUN easy_install gevent
 RUN easy_install greenlet
-RUN apt-get install -y povray eog
+#RUN apt-get install -y povray eog
 WORKDIR $HOME
 RUN git clone https://github.com/russelljjarvis/BluePyOpt.git
 WORKDIR BluePyOpt
