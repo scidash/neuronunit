@@ -9,92 +9,52 @@ RUN pip install matplotlib
 
 RUN easy_install gevent
 RUN easy_install greenlet
-
-
 RUN pip install git+https://github.com/rkern/line_profiler
+
 #RUN python -m ipykernel install
-
-
-
-
-
-
 #RUN python setup.py install
-
-
 
 ENV ATOM_VERSION v1.12.7
 RUN apt-get update
-RUN apt-get install -y gedit meld gvfs-bin iceweasel
-RUN apt-get install -y curl
+#RUN apt-get install -y gedit meld gvfs-bin iceweasel
+RUN apt-get install -y curl apt-utils
 
-
-
-RUN curl -L https://github.com/atom/atom/releases/download/${ATOM_VERSION}/atom-amd64.deb > /tmp/atom.deb && dpkg -i /tmp/atom.deb && rm -f /tmp/atom.deb
+#RUN curl -L https://github.com/atom/atom/releases/download/${ATOM_VERSION}/atom-amd64.deb > /tmp/atom.deb && dpkg -i /tmp/atom.deb && rm -f /tmp/atom.deb
 
 #Install a browser:
-RUN apt-get update && apt-get install -y xvfb chromium
-#ADD xvfb-chromium /usr/bin/xvfb-chromium
-RUN ln -s /usr/bin/xvfb-chromium /usr/bin/google-chrome
-RUN ln -s /usr/bin/xvfb-chromium /usr/bin/chromium-browse
-
+#RUN apt-get update && apt-get install -y xvfb chromium
+#RUN ln -s /usr/bin/xvfb-chromium /usr/bin/google-chrome
+#RUN ln -s /usr/bin/xvfb-chromium /usr/bin/chromium-browse
 
 
 ENV WORK_HOME $HOME/work/scidash
-
-
 RUN ipython profile create default
-#
 RUN apt-get install -y libxss1
-
-
-
-
 RUN git clone https://github.com/soravux/scoop
 WORKDIR scoop
+RUN echo "got here"
 RUN python setup.py install
-
-
-
-#perhaps this needs to be done as user:
-#ENV PATH $PATH:/opt/conda/bin
-#ENV PATH $PATH:/opt/conda/bin/ipython
-#ENV PATH $PATH:/opt/conda/bin/pip
-#ENV PATH $PATH:/opt/conda/bin/python
-
 RUN apt-get install -y python3-setuptools
 ENV PATH $PATH:/opt/conda/bin
-
-
 RUN easy_install gevent
 RUN easy_install greenlet
-
-RUN apt-get install -y povray eog
+#RUN apt-get install -y povray eog
 WORKDIR $HOME
-RUN git clone https://github.com/BlueBrain/BluePyOpt
-
-RUN pip install git+https://github.com/uqfoundation/multiprocess
+RUN git clone https://github.com/russelljjarvis/BluePyOpt.git
+WORKDIR BluePyOpt
+RUN python setup.py install
 RUN apt-get install -y python-tk
-
 RUN chown -R jovyan $HOME
-RUN echo "Defaults env_keep=$PATH"
-RUN echo "Defaults !env_reset" >> /etc/sudoers
-RUN echo "Defaults env_keep=$PATH" >> /etc/sudoers
-RUN echo "Defaults !env_reset" >> /etc/sudoers
-
-RUN pip install bluepyopt
 RUN python -c "import bluepyopt"
-
-#RUN git clone https://github.com/twiecki/mpi4py_map
-#WORKDIR mpi4py_map
-#RUN python setup.py install
-
-
+RUN conda install mpi4py
 RUN pip install git+https://github.com/roryk/ipython-cluster-helper
 
 RUN ipcluster nbextension enable
 #RUN chmod 755 jovyan/ipython/profile_default
 #RUN chmod 744 jovyan/ipython/profile_default
+
+RUN chown -R jovyan /opt/conda/lib/python3.5/site-packages/
+
 USER $NB_USER
 #RUN /bin/bash -c "source /etc/sudoers"
 #RUN sudo ipcluster nbextension enable
@@ -117,13 +77,6 @@ RUN sudo /opt/conda/bin/pip install \
 	ipyparallel \
 	enum34
 
-#WORKDIR $HOME
-#RUN git clone https://github.com/ipython/ipyparallel
-
-#WORKDIR $HOME/ipyparallel
-
-
-#RUN python setup.py install	
 
 RUN sudo printenv PATH
 RUN echo 'blah'
@@ -156,17 +109,20 @@ RUN echo 'alias sciunit="cd /work/scidash/sciunit"' >> ~/.bashrc
 RUN echo 'alias nu="python -c "from neuronunit.models.reduced import ReducedModel""'
 RUN export PATH=$PATH
 
-WORKDIR $HOME #/neuronunit/neuronunit/software_tests
-RUN ipcluster start --profile=chase --debug &
-
+#un comment the following line to test ipcluster during build.
+#RUN ipcluster start --profile=chase --debug &
+#https://github.com/russelljjarvis/neuronunit.git
 WORKDIR $HOME
-RUN git clone -b russell_dev https://github.com/scidash/neuronunit.git
+RUN echo "do this part again such that pickled files can be used to bypass problems with aibs.py in the short term fdsa"
+RUN echo "do this part again such that pickled files can be used to bypass problems with aibs.py in the short term"
+RUN echo "definitely not a long term fix"
+
+RUN git clone -b dev https://github.com/russelljjarvis/neuronunit.git
 WORKDIR $HOME/neuronunit/neuronunit/tests/NeuroML2
 
 RUN nrnivmodl
 RUN ls LEMS_2007One.xml
-#WORKDIR $HOME/neuronunit/neuronunit/tests/
-WORKDIR ../
-ENTRYPOINT python -m scoop nsga4.py
-#; eog *.png
-
+WORKDIR $HOME/neuronunit/neuronunit/tests/
+#ENTRYPOINT python -m scoop exhaustive_search.py
+RUN ls *.pickle
+ENTRYPOINT python -m scoop exhaustive_search.py && python -m scoop nsga.py

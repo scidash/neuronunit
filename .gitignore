@@ -33,7 +33,6 @@ pip-log.txt
 *~
 *scratch.py
 *.ipynb_checkpoints
-*.dat
 
 x86_64
 temp_data/
