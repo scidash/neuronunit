@@ -644,14 +644,20 @@ class RheobaseTest(VmTest):
         """Implementation of sciunit.Test.score_prediction."""
         #print("%s: Observation = %s, Prediction = %s" % \
         #	 (self.name,str(observation),str(prediction)))
-        if prediction['value'] is None:
-            score = scores.InsufficientDataScore(None)
-        else:
-            print
-            score = super(RheobaseTest,self).\
-                        compute_score(observation, prediction)
-            #self.bind_score(score,None,observation,prediction)
-        return score
+        assert prediction is not None
+        print(prediction,self.prediction)
+        if prediction!=None:
+            if prediction['value'] is None:
+
+                score = scores.InsufficientDataScore(None)
+            else:
+                print('the error is here')
+                print(prediction)
+                #pdb.set_trace()
+                score = super(RheobaseTest,self).\
+                            compute_score(observation, prediction)
+                #self.bind_score(score,None,observation,prediction)
+            return score
 
 
 class RestingPotentialTest(VmTest):
