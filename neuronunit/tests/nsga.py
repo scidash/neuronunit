@@ -70,7 +70,7 @@ vt =  np.linspace(-50.0,-30.0,1000)
 vpeak= np.linspace(20.0,30.0,1000)
 
 #vpeak as currently stated causes problems.
-param=['vr','a','b','C','c']
+param=['vr','a','b','C','c','d','v0','k','vt','vpeak']
 #,'d','v0','k','vt','vpeak']
 #param=['a','b','vr']#,'vpeak']#,'k']#,'C']#,'c','d','v0','k','vt','vpeak']#,'d'
 rov=[]
@@ -82,13 +82,12 @@ rov.append(a)
 rov.append(b)
 rov.append(C)
 rov.append(c)
-'''
+
 rov.append(d)
 rov.append(v0)
 rov.append(k)
 rov.append(vt)
 rov.append(vpeak)
-'''
 
 BOUND_LOW=[ np.min(i) for i in rov ]
 BOUND_UP=[ np.max(i) for i in rov ]
@@ -97,7 +96,7 @@ BOUND_UP=[ np.max(i) for i in rov ]
 NDIM = len(param)
 
 LOCAL_RESULTS_spiking=[]
-LOCAL_RESULTS_no_spiking=[]
+#LOCAL_RESULTS_no_spiking=[]
 RUN_TIMES=''
 import functools
 #seed_in=1
@@ -127,11 +126,15 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
     Inputs a gene and a virtual model object.
     outputs are error components.
     '''
+
+    #print(logbook.stream.max)
+
     print(vms.rheobase)
     model.name=''
     for i, p in enumerate(param):
         name_value=str(individual[i])
         #reformate values.
+        print(individual[i])
         model.name=str(model.name)+' '+str(p)+str(name_value)
         if i==0:
             attrs={'//izhikevich2007Cell':{p:name_value }}
@@ -152,7 +155,6 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
     get_neab.suite.tests[0].prediction['value']=0
     print(vms.rheobase)
     assert vms.rheobase!=None
-    #pdb.set_trace()
     get_neab.suite.tests[0].prediction['value']=vms.rheobase*qt.pA
     import os
     import os.path
@@ -171,8 +173,17 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
 
     try:
         individual.error = []
+        for i in score.unstack():
+            if np.isinf(abs(i.score)):
+                print(i.score)
+                pdb.set_trace()
+
+            if np.isnan(abs(i.score)):
+                print(i.score)
+                pdb.set_trace()
+
         individual.error = [ abs(i.score) for i in score.unstack() ]
-        individual.s_html=score.to_html()
+        individual.s_html = score.to_html()
     except Exception as e:
         '{}'.format('Insufficient Data')
         #if the error associated with the old version of the gene is not 0
@@ -180,17 +191,34 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
         #or in other words make a continuously changing surface
         #as opposed to shelves and cliffs.
         if np.sum(individual.error)!=0:
-            individual.error = [ (10.0+i)/2.0 for i in individual.error ]
+            individual.error = [ (-10.0+i)/2.0 for i in individual.error ]
         else:
             #If the gene has no old error, just make all of its errors 10.
             #Ie make a cliff, it probably does not matter if it does not happen too often.
-            individual.error = [ 10.0 for i in individual.error ]
+            individual.error = [ -10.0 for i in range(0,8) ]
 
         individual.s_html=None
 
     error=individual.error
-    print(len(error))
-    #assert individual.results
+    print((error))
+    assert len(error)>0
+    for i in individual.error:
+        print(type(i))
+        if np.isinf(i):
+            print(i)
+            pdb.set_trace()
+        if np.isnan(i):
+            print(i)
+            pdb.set_trace()
+    if np.isinf(np.array(error).any()):
+        pdb.set_trace()
+
+    if np.isnan(np.array(error).any()):
+        pdb.set_trace()
+
+    assert not np.isinf(np.array(error).all())
+    assert not np.isnan(np.array(error).all())
+
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
 
 
@@ -218,6 +246,16 @@ def plotss(pop,gen):
 
 
 class VirtuaModel:
+    '''
+    This is a pickable dummy clone 
+    version of the NEURON simulation model
+    It does not contain an actual model, but it can be used to 
+    wrap the real model. 
+    This Object class serves as a data type for storing rheobase search
+    attributes and other useful parameters,
+    with the distinction that unlike the NEURON model this class 
+    can be transported across HOSTS/CPUs    
+    '''
     def __init__(self):
         self.lookup={}
         self.rheobase=None
@@ -512,7 +550,10 @@ def main(seed=None):
     #For each individual in the new GA population.
     #Create Virtual Models that are readily pickle-able.
     #for the list of invalid indexs
-
+    print(vmlist[-1].rheobase)
+    print('lists are same length?')
+    print(len(invalid_ind),len(vmlist))
+    assert len(invalid_ind)==len(vmlist)
 
     for i,j in enumerate(invalid_ind):
         if vmlist[i].rheobase==None:
@@ -537,12 +578,13 @@ def main(seed=None):
 
     print('lists are same length?')
     print(len(invalid_ind),len(vmlist))
-    #print(list(fitnesses))
-    #pdb.set_trace()
-
+    assert len(invalid_ind)==len(vmlist)
     #fitnesses = toolbox.map(toolbox.evaluate, invalid_ind, vmlist)
-    fitnesses = toolbox.map(toolbox.evaluate, invalid_ind, vmlist)
 
+    fitnesses = []
+    fitnesses = list(toolbox.map(toolbox.evaluate, invalid_ind, vmlist))
+    print(len(fitnesses),len(invalid_ind))
+    assert len(fitnesses)==len(invalid_ind)
     #print(len(fitnesses))
     for ind, fit in zip(invalid_ind, fitnesses):
         ind.fitness.values = fit
@@ -621,14 +663,15 @@ def main(seed=None):
         #there is no way to garuntee that the best candidate solution will
         #retain its object attributes, except via re evaluating it, in a scope outside
         #of futures.map as is done below.
-    #(a,b,c,d,e,f,g,h) = evaluate(invalid_ind[0],vmlist[0])
+    '''
+    (a,b,c,d,e,f,g,h) = evaluate(invalid_ind[0],vmlist[0])
 
     f=open('html_score_matrix.html','w')
     f.write(invalid_ind[0].s_html)
     f.close()
     plotss(invalid_ind,gen)
     #os.system('rm *.txt')
-
+    '''
     f=open('stats_summart.txt','w')
     for i in list(logbook):
         f.write(str(i))
