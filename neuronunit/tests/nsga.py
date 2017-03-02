@@ -206,6 +206,15 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
         if np.isnan(i):
             print(i)
             pdb.set_trace()
+    if np.isinf(np.array(error).any()):
+        pdb.set_trace()
+
+    if np.isnan(np.array(error).any()):
+        pdb.set_trace()
+
+    assert not np.isinf(np.array(error).all())
+    assert not np.isnan(np.array(error).all())
+
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
 
 
@@ -537,15 +546,9 @@ def main(seed=None):
     #For each individual in the new GA population.
     #Create Virtual Models that are readily pickle-able.
     #for the list of invalid indexs
-
-    #for i in vmlist:
-    #    print(i.rheobase)
-    #    assert i.rheobase!=None
     print(vmlist[-1].rheobase)
-    
     print('lists are same length?')
     print(len(invalid_ind),len(vmlist))
-    #print(list(fitnesses))
     assert len(invalid_ind)==len(vmlist)
 
     for i,j in enumerate(invalid_ind):
