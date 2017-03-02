@@ -52,6 +52,13 @@ RUN pip install git+https://github.com/roryk/ipython-cluster-helper
 RUN ipcluster nbextension enable
 #RUN chmod 755 jovyan/ipython/profile_default
 #RUN chmod 744 jovyan/ipython/profile_default
+ENV ATOM_VERSION v1.12.7
+RUN apt-get install -y gedit meld gvfs-bin iceweasel
+RUN apt-get install -y curl apt-utils
+RUN apt-get update
+ 
+RUN curl -L https://github.com/atom/atom/releases/download/${ATOM_VERSION}/atom-amd64.deb > /tmp/atom.deb && dpkg -i /tmp/atom.deb && rm -f /tmp/atom.deb
+
 
 RUN chown -R jovyan /opt/conda/lib/python3.5/site-packages/
 
@@ -125,4 +132,4 @@ RUN ls LEMS_2007One.xml
 WORKDIR $HOME/neuronunit/neuronunit/tests/
 #ENTRYPOINT python -m scoop exhaustive_search.py
 RUN ls *.pickle
-ENTRYPOINT python -m scoop exhaustive_search.py && python -m scoop nsga.py
+#ENTRYPOINT python -m scoop exhaustive_search.py && python -m scoop nsga.py
