@@ -11,13 +11,11 @@ import sciunit
 import os, sys
 thisnu = str(os.getcwd())+'/../..'
 sys.path.insert(0,thisnu)
-print(sys.path)
 from scoop import futures
 import sciunit.scores as scores
 import neuronunit.capabilities as cap
 
 import get_neab
-print(get_neab.LEMS_MODEL_PATH)
 
 from neuronunit.models import backends
 #from neuronunit.models import LEMSModel
@@ -55,8 +53,7 @@ def build_single():
     score = get_neab.suite.judge(model)#passing in model, changes model
     error = []
     error = [ abs(i.score) for i in score.unstack() ]
-    print(score)
-
+    
 
 def model2map(iter_arg):#This method must be pickle-able for scoop to work.
     vm=VirtualModel()
@@ -65,12 +62,10 @@ def model2map(iter_arg):#This method must be pickle-able for scoop to work.
     param=['a','b']
     param=['a','b','vr','vpeak']
     i,j,k=iter_arg
-    print(i,j)
     model.name=str(i)+str(j)#+str(k)+str(k)
     attrs['//izhikevich2007Cell']['a']=i
     attrs['//izhikevich2007Cell']['b']=j
     attrs['//izhikevich2007Cell']['vpeak']=k
-    print(attrs)
     vm.attrs=attrs
     return vm
 
@@ -104,7 +99,6 @@ def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
             error = [ 10.0 for i in range(0,8) ]
         s_html=score.to_html()
     error=error
-    print(score)
     return score
 
 class VirtualModel:
@@ -147,8 +141,7 @@ units = pq.pA
 verbose=True
 
 def f(ampl,vm):
-    print(vm, ampl)
-
+    
     if float(ampl) not in vm.lookup:
         current = params.copy()['injected_square_current']
         uc={'amplitude':ampl}
@@ -157,12 +150,10 @@ def f(ampl,vm):
         vm.run_number+=1
         model.update_run_params(vm.attrs)
         assert vm.attrs==model.attrs
-        print(vm.attrs)
-        print(model.attrs)
         model.inject_square_current(current)
         vm.previous=ampl
         n_spikes = model.get_spike_count()
-        verbose=True
+        verbose=False
         if verbose:
             print("Injected %s current and got %d spikes" % \
                     (ampl,n_spikes))
@@ -171,7 +162,6 @@ def f(ampl,vm):
         return vm
 
     if float(ampl) in vm.lookup:
-        print('model_in lookup')
         return vm
 
 def main2(ind,guess_attrs=None):

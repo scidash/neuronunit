@@ -127,14 +127,11 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
     outputs are error components.
     '''
 
-    #print(logbook.stream.max)
-
-    print(vms.rheobase)
+    
     model.name=''
     for i, p in enumerate(param):
         name_value=str(individual[i])
         #reformate values.
-        print(individual[i])
         model.name=str(model.name)+' '+str(p)+str(name_value)
         if i==0:
             attrs={'//izhikevich2007Cell':{p:name_value }}
@@ -153,7 +150,6 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
     import quantities as qt
     get_neab.suite.tests[0].prediction={}
     get_neab.suite.tests[0].prediction['value']=0
-    print(vms.rheobase)
     assert vms.rheobase!=None
     get_neab.suite.tests[0].prediction['value']=vms.rheobase*qt.pA
     import os
@@ -175,11 +171,9 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
         individual.error = []
         for i in score.unstack():
             if np.isinf(abs(i.score)):
-                print(i.score)
                 pdb.set_trace()
 
             if np.isnan(abs(i.score)):
-                print(i.score)
                 pdb.set_trace()
 
         individual.error = [ abs(i.score) for i in score.unstack() ]
@@ -200,15 +194,11 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
         individual.s_html=None
 
     error=individual.error
-    print((error))
     assert len(error)>0
     for i in individual.error:
-        print(type(i))
         if np.isinf(i):
-            print(i)
             pdb.set_trace()
         if np.isnan(i):
-            print(i)
             pdb.set_trace()
     if np.isinf(np.array(error).any()):
         pdb.set_trace()
@@ -272,22 +262,19 @@ def ff(ampl,vm):
     Inputs are an amplitude to test and a virtual model
     output is an virtual model with an updated dictionary.
     '''
-    print(vm, ampl)
     if float(ampl) not in vm.lookup:
         current = params.copy()['injected_square_current']
-        print('current, previous = ',ampl,vm.previous)
         uc={'amplitude':ampl}
         current.update(uc)
         current={'injected_square_current':current}
         vm.run_number+=1
-        print('model run number',vm.run_number)
-
+        
         model.inject_square_current(current)
         vm.previous=ampl
         n_spikes = model.get_spike_count()
         if n_spikes==1:
             vm.rheobase=ampl
-        verbose=True
+        verbose=False
         if verbose:
             print("Injected %s current and got %d spikes" % \
                     (ampl,n_spikes))
@@ -295,7 +282,6 @@ def ff(ampl,vm):
         return vm
 
     if float(ampl) in vm.lookup:
-        print('model_in lookup')
         return vm
 
 small=None
@@ -341,7 +327,6 @@ def check_fix_range(lookup2):
     '''
     sub=[]
     supra=[]
-    print(lookup2)
     for v,k in lookup2:
         if v==1:
             #A logical flag is returned to indicate that rheobase was found.
@@ -350,10 +335,7 @@ def check_fix_range(lookup2):
             sub.append(k)
         elif v>0:
             supra.append(k)
-        print(k,v)
-    print(sub)
-    print(supra)
-
+        
     sub=np.array(sub)
     supra=np.array(supra)
 
@@ -436,8 +418,6 @@ def main(seed=None):
         last range searched such that the latest range searched
         can be used to seed future searches.
         '''
-        print(vm)
-        print(type(vm))
         from itertools import repeat
         lookup2=list(futures.map(ff,unpack,repeat(vm)))
         l3=[]
@@ -452,7 +432,6 @@ def main(seed=None):
         boolean=unpack[0]
         guess_value=unpack[1]
         if True == boolean:
-            print(guess_value)
             vm.rheobase=guess_value
             return (True,guess_value)
         else:
@@ -475,7 +454,6 @@ def main(seed=None):
         while unpack[0]==False:
             l3=[]# convert a dictionary to a list.
             for l in unpack[1]:
-                print(l)
                 for k,v in vms.lookup.items():
                     l3.append((v, k))
             unpack=check_fix_range(l3)
@@ -511,7 +489,6 @@ def main(seed=None):
         while unpack[0]==False:
             l3=[]# convert a dictionary to a list.
             for l in unpack[1]:
-                print(l)
                 for k,v in vms.lookup.items():
                     l3.append((v, k))
             unpack=check_fix_range(l3)
@@ -550,9 +527,6 @@ def main(seed=None):
     #For each individual in the new GA population.
     #Create Virtual Models that are readily pickle-able.
     #for the list of invalid indexs
-    print(vmlist[-1].rheobase)
-    print('lists are same length?')
-    print(len(invalid_ind),len(vmlist))
     assert len(invalid_ind)==len(vmlist)
 
     for i,j in enumerate(invalid_ind):
@@ -573,19 +547,14 @@ def main(seed=None):
                     guess_value=searcher(ff,unpack,vmlist[i])
 
     for i in vmlist:
-        print(i.rheobase)
         assert i.rheobase!=None
 
-    print('lists are same length?')
-    print(len(invalid_ind),len(vmlist))
     assert len(invalid_ind)==len(vmlist)
     #fitnesses = toolbox.map(toolbox.evaluate, invalid_ind, vmlist)
 
     fitnesses = []
     fitnesses = list(toolbox.map(toolbox.evaluate, invalid_ind, vmlist))
-    print(len(fitnesses),len(invalid_ind))
     assert len(fitnesses)==len(invalid_ind)
-    #print(len(fitnesses))
     for ind, fit in zip(invalid_ind, fitnesses):
         ind.fitness.values = fit
 
@@ -596,11 +565,9 @@ def main(seed=None):
 
     record = stats.compile(pop)
     logbook.record(gen=0, evals=len(invalid_ind), **record)
-    print(logbook.stream)
-
+    
     # Begin the generational process
     for gen in range(1, NGEN):
-        print(gen)
         # Vary the population
         offspring = tools.selTournamentDCD(pop, len(pop))
         offspring = [toolbox.clone(ind) for ind in offspring]
@@ -641,7 +608,6 @@ def main(seed=None):
                     guess_value=searcher(ff,unpack,vmlist[i])
         #evaluate(individual,vms)
         for i in vmlist:
-            print(i.rheobase)
             assert i.rheobase!=None
 
         fitnesses = toolbox.map(toolbox.evaluate, invalid_ind, vmlist)
@@ -745,7 +711,6 @@ if __name__ == "__main__":
     f.write(flt)
     f.close()
 
-    #print(LOCAL_RESULTS)
     plt.clf()
     plt.hold(True)
 
