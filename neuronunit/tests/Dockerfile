@@ -32,7 +32,6 @@ RUN ipython profile create default
 RUN apt-get install -y libxss1
 RUN git clone https://github.com/soravux/scoop
 WORKDIR scoop
-RUN echo "got here"
 RUN python setup.py install
 RUN apt-get install -y python3-setuptools
 ENV PATH $PATH:/opt/conda/bin
@@ -86,7 +85,6 @@ RUN sudo /opt/conda/bin/pip install \
 
 
 RUN sudo printenv PATH
-RUN echo 'blah'
 RUN python -c "import pyneuroml"
 RUN python -c "import neuronunit"
 RUN python -c "from neuronunit.models.reduced import ReducedModel"
@@ -120,7 +118,7 @@ RUN export PATH=$PATH
 #RUN ipcluster start --profile=chase --debug &
 #https://github.com/russelljjarvis/neuronunit.git
 WORKDIR $HOME
-RUN echo "do this part again such that pickled files can be used to bypass problems with aibs.py in the short term fdsa"
+
 RUN echo "do this part again such that pickled files can be used to bypass problems with aibs.py in the short term"
 RUN echo "definitely not a long term fix"
 
@@ -132,4 +130,4 @@ RUN ls LEMS_2007One.xml
 WORKDIR $HOME/neuronunit/neuronunit/tests/
 #ENTRYPOINT python -m scoop exhaustive_search.py
 RUN ls *.pickle
-#ENTRYPOINT python -m scoop exhaustive_search.py && python -m scoop nsga.py
+ENTRYPOINT python -m scoop exhaustive_search.py && python -m scoop nsga.py
