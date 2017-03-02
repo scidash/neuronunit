@@ -70,7 +70,7 @@ vt =  np.linspace(-50.0,-30.0,1000)
 vpeak= np.linspace(20.0,30.0,1000)
 
 #vpeak as currently stated causes problems.
-param=['vr','a','b','C','c','d','k','vt','vpeak']
+param=['vr','a','b','C','c','d','v0','k','vt','vpeak']
 #,'d','v0','k','vt','vpeak']
 #param=['a','b','vr']#,'vpeak']#,'k']#,'C']#,'c','d','v0','k','vt','vpeak']#,'d'
 rov=[]
@@ -131,6 +131,7 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
     for i, p in enumerate(param):
         name_value=str(individual[i])
         #reformate values.
+        print(individual[i])
         model.name=str(model.name)+' '+str(p)+str(name_value)
         if i==0:
             attrs={'//izhikevich2007Cell':{p:name_value }}
@@ -659,7 +660,7 @@ def main(seed=None):
         #there is no way to garuntee that the best candidate solution will
         #retain its object attributes, except via re evaluating it, in a scope outside
         #of futures.map as is done below.
-    #(a,b,c,d,e,f,g,h) = evaluate(invalid_ind[0],vmlist[0])
+    (a,b,c,d,e,f,g,h) = evaluate(invalid_ind[0],vmlist[0])
 
     f=open('html_score_matrix.html','w')
     f.write(invalid_ind[0].s_html)
