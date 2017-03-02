@@ -95,8 +95,8 @@ BOUND_UP=[ np.max(i) for i in rov ]
 
 NDIM = len(param)
 
-LOCAL_RESULTS_spiking=[]
-LOCAL_RESULTS_no_spiking=[]
+#LOCAL_RESULTS_spiking=[]
+#LOCAL_RESULTS_no_spiking=[]
 RUN_TIMES=''
 import functools
 #seed_in=1
@@ -161,17 +161,17 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
     #f.write(str(attrs))
     #f.close()
     score = get_neab.suite.judge(model)#passing in model, changes model
-    model.run_number+=1
-    RUN_TIMES='{}{}{}'.format('counting simulation run times on models',model.results['run_number'],model.run_number)
+    #model.run_number+=1
+    #RUN_TIMES='{}{}{}'.format('counting simulation run times on models',model.results['run_number'],model.run_number)
 
     individual.results=model.results
-    LOCAL_RESULTS_spiking.append(model.results['sim_time'])
-    '{}{}'.format('sim time stored: ',model.results['sim_time'])
+    #LOCAL_RESULTS_spiking.append(model.results['sim_time'])
+    #'{}{}'.format('sim time stored: ',model.results['sim_time'])
 
     try:
         individual.error = []
         individual.error = [ abs(i.score) for i in score.unstack() ]
-        individual.s_html=score.to_html()
+        individual.s_html = score.to_html()
     except Exception as e:
         '{}'.format('Insufficient Data')
         #if the error associated with the old version of the gene is not 0
@@ -183,12 +183,13 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
         else:
             #If the gene has no old error, just make all of its errors 10.
             #Ie make a cliff, it probably does not matter if it does not happen too often.
-            individual.error = [ 10.0 for i in individual.error ]
+            individual.error = [ 10.0 for i in xrange(0,7) ]
 
         individual.s_html=None
 
     error=individual.error
     print(len(error))
+    assert len(error)>0
     #assert individual.results
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
 
@@ -217,6 +218,16 @@ def plotss(pop,gen):
 
 
 class VirtuaModel:
+    '''
+    This is a pickable dummy clone 
+    version of the NEURON simulation model
+    It does not contain an actual model, but it can be used to 
+    wrap the real model. 
+    This Object class serves as a data type for storing rheobase search
+    attributes and other useful parameters,
+    with the distinction that unlike the NEURON model this class 
+    can be transported across HOSTS/CPUs    
+    '''
     def __init__(self):
         self.lookup={}
         self.rheobase=None
