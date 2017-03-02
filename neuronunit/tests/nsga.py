@@ -126,6 +126,9 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
     Inputs a gene and a virtual model object.
     outputs are error components.
     '''
+
+    #print(logbook.stream.max)
+
     print(vms.rheobase)
     model.name=''
     for i, p in enumerate(param):
@@ -660,6 +663,7 @@ def main(seed=None):
         #there is no way to garuntee that the best candidate solution will
         #retain its object attributes, except via re evaluating it, in a scope outside
         #of futures.map as is done below.
+    '''
     (a,b,c,d,e,f,g,h) = evaluate(invalid_ind[0],vmlist[0])
 
     f=open('html_score_matrix.html','w')
@@ -667,7 +671,7 @@ def main(seed=None):
     f.close()
     plotss(invalid_ind,gen)
     #os.system('rm *.txt')
-
+    '''
     f=open('stats_summart.txt','w')
     for i in list(logbook):
         f.write(str(i))
