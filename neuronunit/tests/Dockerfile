@@ -130,4 +130,5 @@ RUN ls LEMS_2007One.xml
 WORKDIR $HOME/neuronunit/neuronunit/tests/
 #ENTRYPOINT python -m scoop exhaustive_search.py
 RUN ls *.pickle
-ENTRYPOINT python -m scoop exhaustive_search.py && python -m scoop nsga.py
+ENTRYPOINT python -m scoop nsga.py
+#ENTRYPOINT python -m scoop exhaustive_search.py
