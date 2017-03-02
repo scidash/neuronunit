@@ -70,7 +70,7 @@ vt =  np.linspace(-50.0,-30.0,1000)
 vpeak= np.linspace(20.0,30.0,1000)
 
 #vpeak as currently stated causes problems.
-param=['vr','a','b','C','c']
+param=['vr','a','b','C','c','d','k','vt','vpeak']
 #,'d','v0','k','vt','vpeak']
 #param=['a','b','vr']#,'vpeak']#,'k']#,'C']#,'c','d','v0','k','vt','vpeak']#,'d'
 rov=[]
@@ -82,13 +82,12 @@ rov.append(a)
 rov.append(b)
 rov.append(C)
 rov.append(c)
-'''
+
 rov.append(d)
 rov.append(v0)
 rov.append(k)
 rov.append(vt)
 rov.append(vpeak)
-'''
 
 BOUND_LOW=[ np.min(i) for i in rov ]
 BOUND_UP=[ np.max(i) for i in rov ]
@@ -513,6 +512,15 @@ def main(seed=None):
     #Create Virtual Models that are readily pickle-able.
     #for the list of invalid indexs
 
+    #for i in vmlist:
+    #    print(i.rheobase)
+    #    assert i.rheobase!=None
+    print(vmlist[-1].rheobase)
+    
+    print('lists are same length?')
+    print(len(invalid_ind),len(vmlist))
+    #print(list(fitnesses))
+    assert len(invalid_ind)==len(vmlist)
 
     for i,j in enumerate(invalid_ind):
         if vmlist[i].rheobase==None:
@@ -537,12 +545,13 @@ def main(seed=None):
 
     print('lists are same length?')
     print(len(invalid_ind),len(vmlist))
-    #print(list(fitnesses))
-    #pdb.set_trace()
-
+    assert len(invalid_ind)==len(vmlist)
     #fitnesses = toolbox.map(toolbox.evaluate, invalid_ind, vmlist)
-    fitnesses = toolbox.map(toolbox.evaluate, invalid_ind, vmlist)
 
+    fitnesses = []
+    fitnesses = list(toolbox.map(toolbox.evaluate, invalid_ind, vmlist))
+    print(len(fitnesses),len(invalid_ind))
+    assert len(fitnesses)==len(invalid_ind)
     #print(len(fitnesses))
     for ind, fit in zip(invalid_ind, fitnesses):
         ind.fitness.values = fit
