@@ -689,7 +689,7 @@ class RestingPotentialTest(VmTest):
         std = model.get_std_vm()
         prediction = {'mean':median, 'std':std}
         return prediction
-
+    '''
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
         #print("%s: Observation = %s, Prediction = %s" % \
@@ -702,3 +702,4 @@ class RestingPotentialTest(VmTest):
                         compute_score(observation, prediction)
             #self.bind_score(score,None,observation,prediction)
         return score
+    '''
