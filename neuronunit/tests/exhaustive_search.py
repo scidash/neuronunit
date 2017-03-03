@@ -111,6 +111,7 @@ class VirtualModel:
     def __init__(self):
         self.lookup={}
         self.previous=0
+        self.rheobase=0
         self.run_number=0
         self.attrs=None
         self.name=None
@@ -238,9 +239,12 @@ def evaluate2(individual, guess_value=None):#This method must be pickle-able for
                 guess_value = None#more trial and error.
     if guess_value == None:
         (run_number,k,attrs)=main2(individual)
-    individual.rheobase=0
+    #individual.rheobase=0
     individual.rheobase=k
-    return individual
+    model.rheobase=k
+    return model    
+#return individual
+
 
 
 if __name__ == "__main__":
