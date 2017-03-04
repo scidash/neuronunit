@@ -121,7 +121,7 @@ class NEURONBackend(Backend):
             #import the default simulation protocol
             from neuronunit.tests.NeuroML2.LEMS_2007One_nrn import NeuronSimulation
             #this next step may be unnecessary: TODO delete it and check.
-            self.ns = NeuronSimulation(tstop=1600, dt=0.0025)
+            self.ns = NeuronSimulation(tstop=1600, dt=0.025)
             return self
 
         if os.path.exists(self.orig_lems_file_path):
@@ -206,9 +206,9 @@ class NEURONBackend(Backend):
         initialized = True
         sim_start = time.time()
         self.h('tstop='+str(1600))#TODO find a way to make duration changeable.
-        self.h('dt=0.0025')
+        self.h('dt=0.025')
         self.neuron.hoc.tstop=1600
-        self.neuron.hoc.dt=0.0025
+        self.neuron.hoc.dt=0.025
         print("Running a simulation of %sms (dt = %sms)" % (self.neuron.hoc.tstop, self.neuron.hoc.dt))
         self.h('run()')
         sim_end = time.time()
