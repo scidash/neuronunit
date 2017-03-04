@@ -604,34 +604,29 @@ def main(seed=None):
 
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
+
         plotss(invalid_ind,gen)
         # Select the next generation population
         #This way the initial genes keep getting added to each generation.
         #pop = toolbox.select(pop + offspring, MU)
         #This way each generations genes are completely replaced by the result of mating.
         pop = toolbox.select(offspring, MU)
+        if gen==NGEN:
+            vmlist=[]
+            error=evaluate(invalid_ind[0], vmlist[0])
+            vmlist=list(map(individual_to_vm,pop))
+            print(vmlist[0])
+            f=open('html_score_matrix.html','w')
+            f.write(vmlist[0].s_html)
+            f.close()
+
+
         record = stats.compile(pop)
         logbook.record(gen=gen, evals=len(invalid_ind), **record)
         print(logbook.stream)
         pop.sort(key=lambda x: x.fitness.values)
 
 
-    invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
-    vmlist=[]
-    vmlist=list(map(individual_to_vm,invalid_ind))
-
-    f=open('html_score_matrix.html','w')
-    f.write(vmlist[0].s_html)
-    f.close()
-    #plotss(invalid_ind,gen)
-
-        #when scoop is run in parallel only the fitnesses from the individual object
-        #are retained after distributing individuals and reducing them back to rank0
-        #there is no way to garuntee that the best candidate solution will
-        #retain its object attributes, except via re evaluating it, in a scope outside
-        #of futures.map as is done below.
-    #(a,b,c,d,e,f,g,h) = evaluate(invalid_ind[0],vmlist[0])
-#os.system('rm *.txt')
 
     f=open('stats_summart.txt','w')
     for i in list(logbook):
@@ -640,13 +635,7 @@ def main(seed=None):
     mean_spike_call_time='{}{}{}'.format('mean spike call time',str(np.mean(LOCAL_RESULTS_spiking)), str(': \n') )
     f.write(mean_spike_call_time)
     f.write('the number of calls to NEURON on one CPU only : \n')
-    #def padd(LOCAL_RESULTS_spiking):
-    #    global_sum+=len(LOCAL_RESULTS_spiking)
-    #    return global_sum
-    #global_sum = futures.map(padd,LOCAL_RESULTS_spiking)
-
     f.write(str(len(LOCAL_RESULTS_spiking))+str(' \n'))
-    #f.write(str(len(global_sum))+str(' \n'))
 
     plt.clf()
     plt.hold(True)
@@ -655,7 +644,6 @@ def main(seed=None):
         '{}{}{}'.format(np.sum(i['avg']),i['gen'],'results')
     plt.savefig('avg_error_versus_gen.png')
     plt.hold(False)
-    #'{}{}'.format("finish_time: ",finish_time)
     return pop, list(logbook)
 
 
@@ -664,11 +652,6 @@ if __name__ == "__main__":
     import pyneuroml as pynml
     import os
 
-
-    # with open("pareto_front/zdt1_front.json") as optimal_front_data:
-    #     optimal_front = json.load(optimal_front_data)
-    # Use 500 of the 1000 points in the json file
-    # optimal_front = sorted(optimal_front[i] for i in range(0, len(optimal_front), 2))
     start_time=time.time()
     whole_initialisation=start_time-init_start
 
@@ -707,9 +690,6 @@ if __name__ == "__main__":
     plt.clf()
     plt.hold(True)
 
-    import os
-    #display all the results as travis standard out.
-    os.system('cat *.txt')
     for i in stats:
 
         plt.plot(np.sum(i['avg']),i['gen'])
@@ -719,20 +699,3 @@ if __name__ == "__main__":
 
 
     plt.clf()
-
-
-
-    '''
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='jNeuroMLBackend')
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla')
-    for i, p in enumerate(param):
-        #name_value=str(individual[i])
-        #reformate values.
-        #model.name=name_value
-        name_value='izhikevich2007Cell'
-        if i==0:
-            attrs={'//izhikevich2007Cell':{p:name_value }}
-        else:
-            attrs['//izhikevich2007Cell'][p]=name_value
-        model.update_run_params(attrs)
-   '''
