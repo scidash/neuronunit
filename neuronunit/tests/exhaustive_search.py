@@ -74,7 +74,6 @@ def model2map(iter_arg):#This method must be pickle-able for scoop to work.
     vm.attrs=attrs
     return vm
 
-storage=[]
 def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
     model.update_run_params(iter_arg.attrs)
     import quantities as qt
@@ -83,8 +82,10 @@ def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
     #iterator=list(futures.map(evaluate2,list_of_models,repeat(guess_value)))
     #evaluate2(iter_arg,repeat(guess_value))
     get_neab.suite.tests[0].prediction={}
-    get_neab.suite.tests[0].prediction['value']=iter_arg#.rheobase*qt.pA
-    storage.append(iter_arg.rheobase*qt.pA)
+    print(suite*qt.pA)
+    get_neab.suite.tests[0].prediction['value']=suite*qt.pA
+
+    #
     #storage=
     import os
     import os.path
@@ -104,8 +105,9 @@ def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
             error = [ (10.0+i)/2.0 for i in error ]
         else:
             error = [ 10.0 for i in range(0,8) ]
-        s_html=score.to_html()
+        s_html=None
     error=error
+    print(score)
     return score
 
 class VirtualModel:
@@ -285,8 +287,15 @@ if __name__ == "__main__":
     list_of_models=list_of_models[1:5]
     iterator=list(futures.map(evaluate2,list_of_models,repeat(rh_value)))
     #iterator=iterator[0:2]
+    storage = [  i.rheobase for i in iterator ]
+    for i in storage:
+        print(i)
+    #pdb.set_trace()
+    print(len(iterator),len(storage))
     score_matrix=list(futures.map(func2map,iterator,storage))
-    print(score_matrix)
+    for i in score_matrix:
+        print(i)
+    print(len(score_matrix))
     print('pickling the score matrix is what fails')
     import pickle
     with open('score_matrix.pickle', 'wb') as handle:

@@ -333,6 +333,9 @@ class InjectedCurrentAPWidthTest(APWidthTest):
 
     def generate_prediction(self, model):
         model.inject_square_current(self.params['injected_square_current'])
+        print(model.results)
+
+        #pdb.set_trace()
         return super(InjectedCurrentAPWidthTest,self).generate_prediction(model)
 
 
@@ -644,16 +647,12 @@ class RheobaseTest(VmTest):
         """Implementation of sciunit.Test.score_prediction."""
         #print("%s: Observation = %s, Prediction = %s" % \
         #	 (self.name,str(observation),str(prediction)))
-        assert prediction is not None
-        print(prediction,self.prediction)
+
         if prediction!=None:
             if prediction['value'] is None:
 
                 score = scores.InsufficientDataScore(None)
             else:
-                print('the error is here')
-                print(prediction)
-                #pdb.set_trace()
                 score = super(RheobaseTest,self).\
                             compute_score(observation, prediction)
                 #self.bind_score(score,None,observation,prediction)
@@ -717,14 +716,25 @@ class RestingPotentialTest(VmTest):
         """Implementation of sciunit.Test.score_prediction."""
         print("%s: Observation = %s, Prediction = %s" % \
         	 (self.name,str(observation),str(prediction)))
+
+
+        #if np.isinf(prediction['mean'].any()):
+        if np.isnan(prediction['mean']):
+            return scores.InsufficientDataScore(None)
+        if np.isnan(prediction['std']):
+            return scores.InsufficientDataScore(None)
+
         if prediction['mean'] is None:
             score = scores.InsufficientDataScore(None)
+        #elif prediction['mean'] is np.isnan
+        #    score = scores.InsufficientDataScore(None)
+
+
+
         else:
             score = super(RestingPotentialTest,self).\
                         compute_score(observation, prediction)
         #self.bind_score(score,model,observation,prediction)
-        print('got here')
-        print(score)
         return score
 
     '''
