@@ -127,7 +127,7 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
     outputs are error components.
     '''
 
-    
+
     model.name=''
     for i, p in enumerate(param):
         name_value=str(individual[i])
@@ -177,7 +177,7 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
                 pdb.set_trace()
 
         individual.error = [ abs(i.score) for i in score.unstack() ]
-        individual.s_html = score.to_html()
+
     except Exception as e:
         '{}'.format('Insufficient Data')
         #if the error associated with the old version of the gene is not 0
@@ -191,21 +191,10 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
             #Ie make a cliff, it probably does not matter if it does not happen too often.
             individual.error = [ -10.0 for i in range(0,8) ]
 
-        individual.s_html=None
-
+    individual.s_html = score.to_html()
+    vms.s_html=score.to_html()
     error=individual.error
     assert len(error)>0
-    for i in individual.error:
-        if np.isinf(i):
-            pdb.set_trace()
-        if np.isnan(i):
-            pdb.set_trace()
-    if np.isinf(np.array(error).any()):
-        pdb.set_trace()
-
-    if np.isnan(np.array(error).any()):
-        pdb.set_trace()
-
     assert not np.isinf(np.array(error).all())
     assert not np.isnan(np.array(error).all())
 
@@ -237,14 +226,14 @@ def plotss(pop,gen):
 
 class VirtuaModel:
     '''
-    This is a pickable dummy clone 
+    This is a pickable dummy clone
     version of the NEURON simulation model
-    It does not contain an actual model, but it can be used to 
-    wrap the real model. 
+    It does not contain an actual model, but it can be used to
+    wrap the real model.
     This Object class serves as a data type for storing rheobase search
     attributes and other useful parameters,
-    with the distinction that unlike the NEURON model this class 
-    can be transported across HOSTS/CPUs    
+    with the distinction that unlike the NEURON model this class
+    can be transported across HOSTS/CPUs
     '''
     def __init__(self):
         self.lookup={}
@@ -253,6 +242,8 @@ class VirtuaModel:
         self.run_number=0
         self.attrs=None
         self.name=None
+        self.s_html=None
+        self.results=None
 
 
 
@@ -268,7 +259,7 @@ def ff(ampl,vm):
         current.update(uc)
         current={'injected_square_current':current}
         vm.run_number+=1
-        
+
         model.inject_square_current(current)
         vm.previous=ampl
         n_spikes = model.get_spike_count()
@@ -335,7 +326,7 @@ def check_fix_range(lookup2):
             sub.append(k)
         elif v>0:
             supra.append(k)
-        
+
     sub=np.array(sub)
     supra=np.array(supra)
 
@@ -565,7 +556,7 @@ def main(seed=None):
 
     record = stats.compile(pop)
     logbook.record(gen=0, evals=len(invalid_ind), **record)
-    
+
     # Begin the generational process
     for gen in range(1, NGEN):
         # Vary the population
@@ -606,7 +597,6 @@ def main(seed=None):
                     guess_value=unpack[1]
                 else:
                     guess_value=searcher(ff,unpack,vmlist[i])
-        #evaluate(individual,vms)
         for i in vmlist:
             assert i.rheobase!=None
 
@@ -624,20 +614,25 @@ def main(seed=None):
         logbook.record(gen=gen, evals=len(invalid_ind), **record)
         print(logbook.stream)
         pop.sort(key=lambda x: x.fitness.values)
+
+
+    invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
+    vmlist=[]
+    vmlist=list(map(individual_to_vm,invalid_ind))
+
+    f=open('html_score_matrix.html','w')
+    f.write(vmlist[0].s_html)
+    f.close()
+    #plotss(invalid_ind,gen)
+
         #when scoop is run in parallel only the fitnesses from the individual object
         #are retained after distributing individuals and reducing them back to rank0
         #there is no way to garuntee that the best candidate solution will
         #retain its object attributes, except via re evaluating it, in a scope outside
         #of futures.map as is done below.
-    '''
-    (a,b,c,d,e,f,g,h) = evaluate(invalid_ind[0],vmlist[0])
+    #(a,b,c,d,e,f,g,h) = evaluate(invalid_ind[0],vmlist[0])
+#os.system('rm *.txt')
 
-    f=open('html_score_matrix.html','w')
-    f.write(invalid_ind[0].s_html)
-    f.close()
-    plotss(invalid_ind,gen)
-    #os.system('rm *.txt')
-    '''
     f=open('stats_summart.txt','w')
     for i in list(logbook):
         f.write(str(i))
@@ -677,9 +672,7 @@ if __name__ == "__main__":
     start_time=time.time()
     whole_initialisation=start_time-init_start
 
-    b=time.time()
     pop, stats = main()
-    e=time.time()
 
     finish_time=time.time()
     ga_time=finish_time-start_time

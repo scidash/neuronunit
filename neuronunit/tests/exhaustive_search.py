@@ -38,22 +38,27 @@ vpeak =np.linspace(30.0,40.0,10)
 container=[]
 
 
-def build_single():
+def build_single(rh_value):
     '''
     This method is only used to check singlular sets of hard coded parameters.
     '''
+    import quantities as qt
+    get_neab.suite.tests[0].prediction={}
+    get_neab.suite.tests[0].prediction['value']=rh_value*qt.pA
+    print(get_neab.suite.tests[0].prediction['value'])
     attrs={}
     attrs['//izhikevich2007Cell']={}
-    attrs['//izhikevich2007Cell']['a']=0.0303440140536
-    attrs['//izhikevich2007Cell']['b']=-2.38706324769e-08
-    attrs['//izhikevich2007Cell']['vpeak']=30.0
-    attrs['//izhikevich2007Cell']['vr']=-53.4989145966
+    attrs['//izhikevich2007Cell']['a']=0.045
+    attrs['//izhikevich2007Cell']['b']=-5e-09
+    #attrs['//izhikevich2007Cell']['vpeak']=30.0
+    #attrs['//izhikevich2007Cell']['vr']=-53.4989145966
     import quantities as qt
     model.update_run_params(attrs)
     score = get_neab.suite.judge(model)#passing in model, changes model
     error = []
     error = [ abs(i.score) for i in score.unstack() ]
-    
+    return model
+
 
 def model2map(iter_arg):#This method must be pickle-able for scoop to work.
     vm=VirtualModel()
@@ -69,7 +74,7 @@ def model2map(iter_arg):#This method must be pickle-able for scoop to work.
     vm.attrs=attrs
     return vm
 
-
+storage=[]
 def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
     model.update_run_params(iter_arg.attrs)
     import quantities as qt
@@ -78,7 +83,9 @@ def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
     #iterator=list(futures.map(evaluate2,list_of_models,repeat(guess_value)))
     #evaluate2(iter_arg,repeat(guess_value))
     get_neab.suite.tests[0].prediction={}
-    get_neab.suite.tests[0].prediction['value']=iter_arg.rheobase*qt.pA
+    get_neab.suite.tests[0].prediction['value']=iter_arg#.rheobase*qt.pA
+    storage.append(iter_arg.rheobase*qt.pA)
+    #storage=
     import os
     import os.path
     from scoop import utils
@@ -142,7 +149,7 @@ units = pq.pA
 verbose=True
 
 def f(ampl,vm):
-    
+
     if float(ampl) not in vm.lookup:
         current = params.copy()['injected_square_current']
         uc={'amplitude':ampl}
@@ -191,9 +198,12 @@ def main2(ind,guess_attrs=None):
             lookup2=list(map(f,steps,repeat(vm)))#,repeat(model)))
 
         m = lookup2[0]
+        assert(type(m))!=None
 
         sub=[]
         supra=[]
+        import pdb
+        assert(type(m.lookup))!=None
         for k,v in m.lookup.items():
             if v==1:
                 while_true=False
@@ -231,6 +241,10 @@ def evaluate2(individual, guess_value=None):#This method must be pickle-able for
         import copy
         vm.attrs=copy.copy(individual.attrs)
         vm=f(guess_value,vm)
+        import pdb
+        assert(type(vm))!=None
+        assert(type(vm.lookup))!=None
+        #pdb.set_trace()
         for k,v in vm.lookup.items():
             if v==1:
                 individual.rheobase=k
@@ -242,7 +256,7 @@ def evaluate2(individual, guess_value=None):#This method must be pickle-able for
     #individual.rheobase=0
     individual.rheobase=k
     model.rheobase=k
-    return model    
+    return model
 #return individual
 
 
@@ -250,17 +264,30 @@ def evaluate2(individual, guess_value=None):#This method must be pickle-able for
 if __name__ == "__main__":
     iter_list=[ (i,j,k) for i in a for j in b for k in vr ]#for l in vpeak]
     guess_attrs=[]
-    guess_attrs.append(np.mean( [ i for i in a ]))
-    guess_attrs.append(np.mean( [ i for i in b ]))
 
+    guess_attrs.append(0.045)
+    guess_attrs.append(-5e-09)
     steps2 = np.linspace(50,190,4.0)
     steps = [ i*pq.pA for i in steps2 ]
 
-    run_number,guess_value,attrs=main2(model,guess_attrs)
+    run_number,rh_value,attrs=main2(model,guess_attrs)
+    model=build_single(rh_value)
+    guess_attrs=[]
+    guess_attrs.append(np.mean( [ i for i in a ]))
+    guess_attrs.append(np.mean( [ i for i in b ]))
+    run_number,rh_value,attrs=main2(model,guess_attrs)
+
+    #pdb.set_trace()
     from itertools import repeat
     list_of_models=list(futures.map(model2map,iter_list))
-
-    iterator=list(futures.map(evaluate2,list_of_models,repeat(guess_value)))
-    score_matrix=list(futures.map(func2map,iterator,repeat(get_neab.suite)))
+    for i in list_of_models:
+        assert(type(i))!=None
+    list_of_models=list_of_models[1:5]
+    iterator=list(futures.map(evaluate2,list_of_models,repeat(rh_value)))
+    #iterator=iterator[0:2]
+    score_matrix=list(futures.map(func2map,iterator,storage))
+    print(score_matrix)
+    print('pickling the score matrix is what fails')
+    import pickle
     with open('score_matrix.pickle', 'wb') as handle:
-        pickle.dump(score_matrix, handle)
+        pickle.dump(list(score_matrix), handle)
