@@ -293,10 +293,12 @@ if __name__ == "__main__":
     #pdb.set_trace()
     print(len(iterator),len(storage))
     score_matrix=list(futures.map(func2map,iterator,storage))
+    import copy
+    storage=[]
     for i in score_matrix:
-        print(i)
+        storage.append(copy.copy(i))
     print(len(score_matrix))
     print('pickling the score matrix is what fails')
-    import pickle
     with open('score_matrix.pickle', 'wb') as handle:
-        pickle.dump(list(score_matrix), handle)
+    import pickle
+        pickle.dump(storage, handle)
