@@ -236,7 +236,7 @@ class TimeConstantTest(TestPulseTest):
             print(observation['mean'])
             #Hack. Why is this off by a factor of 10 still present?
             #There should be a more simple and transparent way to fix this.
-            prediction['value']=prediction['value']/10.0
+            prediction['value']=prediction['value']#/10.0
             score = super(TimeConstantTest,self).compute_score(observation,
                                                           prediction)
 
@@ -689,12 +689,42 @@ class RestingPotentialTest(VmTest):
 
     def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
+        if type(model)==None:
+            import pdb
+            pdb.set_trace()
+
+        assert model!=None
         model.rerun = True
+        print(model.attrs)
         model.inject_square_current(self.params['injected_square_current'])
+
         median = model.get_median_vm() # Use median for robustness.
         std = model.get_std_vm()
+        spkc=model.get_spike_count()
+        model.get_membrane_potential()
+        print(model)
+        print(spkc)
+        dir(model)
+        import pdb
+        #pdb.set_trace()
         prediction = {'mean':median, 'std':std}
         return prediction
+
+    def compute_score(self, observation, prediction):
+
+        """Implementation of sciunit.Test.score_prediction."""
+        print("%s: Observation = %s, Prediction = %s" % \
+        	 (self.name,str(observation),str(prediction)))
+        if prediction['mean'] is None:
+            score = scores.InsufficientDataScore(None)
+        else:
+            score = super(RestingPotentialTest,self).\
+                        compute_score(observation, prediction)
+        self.bind_score(score,None,observation,prediction)
+        print('got here')
+        print(score)
+        return score
+
     '''
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
