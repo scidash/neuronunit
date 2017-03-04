@@ -1,0 +1,4 @@
+{'min': array([-10., -10., -10., -10., -10., -10., -10., -10.]), 'gen': 0, 'max': array([ 0.4017094 ,  0.58593886,  0.61239417,  0.54747317,  2.23825667,
+        0.61092238,  1.69728883,  2.31100292]), 'std': array([ 4.90341284,  4.95085355,  4.86494343,  4.95338454,  5.74873938,
+        4.98757204,  5.4896973 ,  5.78358802]), 'avg': array([-3.06552707, -2.99917505, -3.12130506, -2.99508285, -1.87090712,
+       -2.9465207 , -2.23657703, -1.82104257]), 'evals': 12}{'min': array([], dtype=float64), 'gen': 1, 'max': array([], dtype=float64), 'std': array([], dtype=float64), 'avg': array([], dtype=float64), 'evals': 0}{'min': array([], dtype=float64), 'gen': 2, 'max': array([], dtype=float64), 'std': array([], dtype=float64), 'avg': array([], dtype=float64), 'evals': 12}{'min': array([], dtype=float64), 'gen': 3, 'max': array([], dtype=float64), 'std': array([], dtype=float64), 'avg': array([], dtype=float64), 'evals': 12}

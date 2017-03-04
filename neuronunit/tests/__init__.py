@@ -701,11 +701,13 @@ class RestingPotentialTest(VmTest):
         median = model.get_median_vm() # Use median for robustness.
         std = model.get_std_vm()
         spkc=model.get_spike_count()
-        model.get_membrane_potential()
+        mp=model.get_membrane_potential()
+        print(mp)
         print(model)
         print(spkc)
-        dir(model)
-        import pdb
+        #print(dir(model))
+
+        #import pdb
         #pdb.set_trace()
         prediction = {'mean':median, 'std':std}
         return prediction
@@ -720,7 +722,7 @@ class RestingPotentialTest(VmTest):
         else:
             score = super(RestingPotentialTest,self).\
                         compute_score(observation, prediction)
-        self.bind_score(score,None,observation,prediction)
+        #self.bind_score(score,model,observation,prediction)
         print('got here')
         print(score)
         return score

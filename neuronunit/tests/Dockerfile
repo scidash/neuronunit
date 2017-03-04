@@ -16,10 +16,15 @@ RUN pip install git+https://github.com/rkern/line_profiler
 
 ENV ATOM_VERSION v1.12.7
 RUN apt-get update
-#RUN apt-get install -y gedit meld gvfs-bin iceweasel
+RUN apt-get install -y gedit meld gvfs-bin
+# iceweasel
 RUN apt-get install -y curl apt-utils
+RUN apt-get -y install software-properties-common
+RUN wget https://github.com/atom/atom/releases/download/v1.14.4/atom-amd64.deb
+RUN dpkg --install atom-amd64.deb
+RUN apt-get update
 
-#RUN curl -L https://github.com/atom/atom/releases/download/${ATOM_VERSION}/atom-amd64.deb > /tmp/atom.deb && dpkg -i /tmp/atom.deb && rm -f /tmp/atom.deb
+#sudo dpkg --install atom-amd64.deb
 
 #Install a browser:
 #RUN apt-get update && apt-get install -y xvfb chromium
@@ -51,13 +56,33 @@ RUN pip install git+https://github.com/roryk/ipython-cluster-helper
 RUN ipcluster nbextension enable
 #RUN chmod 755 jovyan/ipython/profile_default
 #RUN chmod 744 jovyan/ipython/profile_default
-ENV ATOM_VERSION v1.12.7
-RUN apt-get install -y gedit meld gvfs-bin iceweasel
+#ENV ATOM_VERSION v1.12.7
+#RUN apt-get install -y gedit meld gvfs-bin
 RUN apt-get install -y curl apt-utils
 RUN apt-get update
  
-RUN curl -L https://github.com/atom/atom/releases/download/${ATOM_VERSION}/atom-amd64.deb > /tmp/atom.deb && dpkg -i /tmp/atom.deb && rm -f /tmp/atom.deb
+#RUN curl -L https://github.com/atom/atom/releases/download/${ATOM_VERSION}/atom-amd64.deb > /tmp/atom.deb && dpkg -i /tmp/atom.deb && rm -f /tmp/atom.deb
+#RUN git clone https://github.com/atom/atom.git
+#WORKDIR atom
+#WORKDIR script
+#RUN build
 
+
+WORKDIR $HOME/.atom 
+RUN touch config.cson
+
+RUN echo '"*":' >>$HOME/.atom/config.cson 
+
+RUN echo 'core: ' 
+RUN echo 'telemetryConsent: \"no\" '
+RUN echo 'editor:'
+RUN echo 'fontSize: 16'
+RUN echo '"exception-reporting\":'
+RUN echo 'userId: \"a860938d-6042-09ee-3ea9-cae3d624e17e\"'
+RUN echo 'welcome:'
+RUN echo 'showOnStartup: false' >> $HOME/.atom/config.cson 
+
+WORKDIR $HOME
 
 RUN chown -R jovyan /opt/conda/lib/python3.5/site-packages/
 
@@ -66,6 +91,10 @@ USER $NB_USER
 #RUN sudo ipcluster nbextension enable
 #RUN sudo chmod 755 jovyan/ipython/profile_default
 #RUN sudo chmod 744 jovyan/ipython/profile_default
+
+#RUN sudo wget https://github.com/atom/atom/releases/download/v1.14.4/atom-amd64.deb
+#RUN sudo dpkg --install atom-amd64.deb
+
 
 ENV PATH $PATH:/opt/conda/bin
 ENV PATH $PATH:/opt/conda/bin/ipcluster
@@ -130,5 +159,14 @@ RUN ls LEMS_2007One.xml
 WORKDIR $HOME/neuronunit/neuronunit/tests/
 #ENTRYPOINT python -m scoop exhaustive_search.py
 RUN ls *.pickle
-ENTRYPOINT python -m scoop nsga.py
+RUN apm install linter	
+#Next, we’re going to install a Python Linter package, to help us detect errors in our Python code.
+RUN which python3
+
+#This package is called linter-flake8 and it’s an interface to flake8. To install it, you need to run:
+RUN conda install flake8
+RUN conda install flake8-docstrings
+RUN apm install linter-flake8
+
+#ENTRYPOINT python -m scoop nsga.py
 #ENTRYPOINT python -m scoop exhaustive_search.py
