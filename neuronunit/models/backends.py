@@ -69,10 +69,12 @@ class NEURONBackend(Backend):
         self.h=None
         self.rheobase=None
         self.invokenrn()
+        #self.h.cvode.active(1)
+        #pdb.set_trace()
+        #self.h.cvode.active
 
 
         return
-
     #make backend a global variable inside this class.
     backend = 'NEURON'
 
@@ -100,6 +102,101 @@ class NEURONBackend(Backend):
         self.h.tstop = float(tstop)
 
 
+    def setTimeStep(self, integrationTimeStep = 1/128.0 * ms):
+        """Sets the simulation itegration fixed time step"""
+        """integrationTimeStepMs: time step in milliseconds. Powers of two preferred. Defaults to 1/128.0"""
+
+        dt = integrationTimeStep
+        dt.units = ms
+
+        self.h.dt = self.fixedTimeStep = float(dt)
+
+    def setTolerance(self, tolerance = 0.001):
+        """Sets the variable time step integration method absolute tolerance """
+        """tolerance: absolute tolerance value"""
+
+        self.h.cvode.atol(tolerance)
+
+    def setIntegrationMethod(self, method = "fixed"):
+        """Sets the simulation itegration method"""
+        """method: either "fixed" or "variable". Defaults to fixed. cvode is used when "variable" """
+
+        self.h.cvode.active(1 if method == "variable" else 0)
+
+
+    def get_membrane_potential(self):
+        """Must return a neo.core.AnalogSignal."""
+        print('got here')
+        if self.h.cvode.active() == 0:
+            fixedSignal = self.vVector.to_python()
+            dt = self.h.dt
+
+        else:
+            fixedSignal = self.get_variable_step_analog_signal()
+            dt = self.fixedTimeStep
+
+        return AnalogSignal( \
+                 fixedSignal, \
+                 units = mV, \
+                 sampling_period = dt * ms \
+        )
+
+    def get_variable_step_analog_signal(self):
+        """ Converts variable dt array values to fixed dt array by using linear interpolation"""
+
+        # Fixed dt potential
+        fPots = []
+        fDt = self.fixedTimeStep
+        # Variable dt potential
+        vPots = self.vVector.to_python()
+        # Variable dt times
+        vTimes = self.tVector.to_python()
+        duration = vTimes[len(vTimes)-1]
+        # Fixed and Variable dt times
+        fTime = vTime = vTimes[0]
+        # Index of variable dt time array
+        vIndex = 0
+        # Advance the fixed dt position
+        while fTime <= duration:
+
+            # If v and f times are exact, no interpolation needed
+            if fTime == vTime:
+                fPots.append(vPots[vIndex])
+
+            # Interpolate between the two nearest vdt times
+            else:
+
+                # Increment vdt time until it surpases the fdt time
+                while fTime > vTime and vIndex < len(vTimes):
+                    vIndex += 1
+                    vTime = vTimes[vIndex]
+
+                # Once surpassed, use the new vdt time and t-1 for interpolation
+                vIndexMinus1 = max(0, vIndex-1)
+                vTimeMinus1 = vTimes[vIndexMinus1]
+
+                fPot = self.linearInterpolate(vTimeMinus1, vTime, \
+                                          vPots[vIndexMinus1], vPots[vIndex], \
+                                          fTime)
+
+                fPots.append(fPot)
+
+            # Go to the next fdt time step
+            fTime += fDt
+
+        return fPots
+
+    def linearInterpolate(self, tStart, tEnd, vStart, vEnd, tTarget):
+        tRange = float(tEnd - tStart)
+        tFractionAlong = (tTarget - tStart)/tRange
+
+        vRange = vEnd - vStart
+
+        vTarget = vRange*tFractionAlong + vStart
+
+        return vTarget
+
+
     def load_model(self):
         '''
         Inputs: NEURONBackend instance object
@@ -121,7 +218,7 @@ class NEURONBackend(Backend):
             #import the default simulation protocol
             from neuronunit.tests.NeuroML2.LEMS_2007One_nrn import NeuronSimulation
             #this next step may be unnecessary: TODO delete it and check.
-            self.ns = NeuronSimulation(tstop=1600, dt=0.025)
+            self.ns = NeuronSimulation(tstop=1600, dt=0.0025)
             return self
 
         if os.path.exists(self.orig_lems_file_path):
@@ -205,17 +302,25 @@ class NEURONBackend(Backend):
     def local_run(self):
         initialized = True
         sim_start = time.time()
-        self.h('tstop='+str(1600))#TODO find a way to make duration changeable.
-        self.h('dt=0.025')
-        self.neuron.hoc.tstop=1600
-        self.neuron.hoc.dt=0.025
-        print("Running a simulation of %sms (dt = %sms)" % (self.neuron.hoc.tstop, self.neuron.hoc.dt))
+        #self.h.tstop=1600#))#TODO find a way to make duration changeable.
+        #self.h.dt=0.0025
+
+        print(self.h.cvode.active())
+        #pdb.set_trace()
+        print("Running a simulation of %sms (dt = %sms)" % (self.h.tstop, self.h.dt))
         self.h('run()')
         sim_end = time.time()
         sim_time = sim_end - sim_start
         print("Finished NEURON simulation in %f seconds (%f mins)..."%(sim_time, sim_time/60.0))
         self.results={}
         self.results['vm'] = [ float(x/1000.0) for x in self.neuron.h.v_v_of0.to_python() ]  # Convert to Python list for speed, variable has dim: voltage
+        self.results['plausible']=True
+        import math
+        for i in self.results['vm']:
+            if math.isnan(i):
+                self.results['plausible']=False
+
+
         self.results['t'] = [ float(x) for x in self.neuron.h.v_time.to_python() ]  # Convert to Python list for speed, variable has dim: voltage
         self.results['sim_time']=sim_time
         if 'run_number' in self.results.keys():

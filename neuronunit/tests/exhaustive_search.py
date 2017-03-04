@@ -42,6 +42,8 @@ def build_single(rh_value):
     '''
     This method is only used to check singlular sets of hard coded parameters.
     '''
+    import sciunit.scores as scores
+
     import quantities as qt
     get_neab.suite.tests[0].prediction={}
     get_neab.suite.tests[0].prediction['value']=rh_value*qt.pA
@@ -54,9 +56,24 @@ def build_single(rh_value):
     #attrs['//izhikevich2007Cell']['vr']=-53.4989145966
     import quantities as qt
     model.update_run_params(attrs)
+    '''
+    import math, pdb
+    not_plausible=False
+    for i in model.results['vm']:
+        if math.isnan(i):
+            not_plausible=True
+
+    if not_plausible:
+        score=scores.InsufficientDataScore(None)
+        #get_neab.suite.
+        #pdb.set_trace()
+
+        print(model.results['vm'][241110])
+    else:
+    '''
     score = get_neab.suite.judge(model)#passing in model, changes model
-    error = []
-    error = [ abs(i.score) for i in score.unstack() ]
+    #error = []
+    #error = [ abs(i.score) for i in score.unstack() ]
     return model
 
 
@@ -75,55 +92,64 @@ def model2map(iter_arg):#This method must be pickle-able for scoop to work.
     return vm
 
 def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
-    model.update_run_params(iter_arg.attrs)
+    print(iter_arg,suite)
+    import pdb
+    if iter_arg.attrs==None:
+        pdb.set_trace()
+    else:
+        print(iter_arg.attrs)
+        model.update_run_params(iter_arg.attrs)
+        print(model.attrs)
     import quantities as qt
 
 
-    #iterator=list(futures.map(evaluate2,list_of_models,repeat(guess_value)))
-    #evaluate2(iter_arg,repeat(guess_value))
+
     get_neab.suite.tests[0].prediction={}
     print(suite*qt.pA)
     get_neab.suite.tests[0].prediction['value']=suite*qt.pA
 
-    #
-    #storage=
     import os
     import os.path
     from scoop import utils
+    score=None
     score = get_neab.suite.judge(model)#passing in model, changes model
+
+
     model.run_number+=1
     try:
-        error = []
-        error = [ abs(i.score) for i in score.unstack() ]
-        s_html=score.to_html()
+        error = [ float(i.score) for i in score.unstack() ]
+        print(error)
+        #pdb.set_trace()
     except Exception as e:
         '{}'.format('Insufficient Data')
-        f=open('scoop_log_'+str(utils.getHosts()),'w')
-        f.write(str(attrs))
-        f.close()
-        if np.sum(error)!=0:
-            error = [ (10.0+i)/2.0 for i in error ]
-        else:
-            error = [ 10.0 for i in range(0,8) ]
-        s_html=None
-    error=error
-    print(score)
-    return score
+        error = [ 10.0 for i in range(0,8) ]
+    return error
+
+
 
 class VirtualModel:
     '''
-    This is a shell for the real model, it contains
-    model parameters and other data which can readily be pickeled.
-    Unlike the actual model which contains unpickable HOC code
-    .
+    This is a pickable dummy clone
+    version of the NEURON simulation model
+    It does not contain an actual model, but it can be used to
+    wrap the real model.
+    This Object class serves as a data type for storing rheobase search
+    attributes and other useful parameters,
+    with the distinction that unlike the NEURON model this class
+    can be transported across HOSTS/CPUs
     '''
     def __init__(self):
         self.lookup={}
+        self.rheobase=None
         self.previous=0
-        self.rheobase=0
         self.run_number=0
         self.attrs=None
         self.name=None
+        self.s_html=None
+        self.results=None
+
+
+
 
 param=['a','b']
 import neuronunit.capabilities as cap
@@ -148,7 +174,39 @@ lookup = {} # A lookup table global to the function below.
 verbose=True
 import quantities as pq
 units = pq.pA
-verbose=True
+#verbose=True
+
+
+
+
+def ff(ampl,vm):
+    '''
+    Inputs are an amplitude to test and a virtual model
+    output is an virtual model with an updated dictionary.
+    '''
+    if float(ampl) not in vm.lookup:
+        current = params.copy()['injected_square_current']
+        uc={'amplitude':ampl}
+        current.update(uc)
+        current={'injected_square_current':current}
+        vm.run_number+=1
+
+        model.inject_square_current(current)
+        vm.previous=ampl
+        n_spikes = model.get_spike_count()
+        if n_spikes==1:
+            vm.rheobase=ampl
+        verbose=False
+        if verbose:
+            print("Injected %s current and got %d spikes" % \
+                    (ampl,n_spikes))
+        vm.lookup[float(ampl)] = n_spikes
+        return vm
+
+    if float(ampl) in vm.lookup:
+        return vm
+
+
 
 def f(ampl,vm):
 
@@ -255,11 +313,9 @@ def evaluate2(individual, guess_value=None):#This method must be pickle-able for
                 guess_value = None#more trial and error.
     if guess_value == None:
         (run_number,k,attrs)=main2(individual)
-    #individual.rheobase=0
     individual.rheobase=k
     model.rheobase=k
     return model
-#return individual
 
 
 
@@ -274,31 +330,133 @@ if __name__ == "__main__":
 
     run_number,rh_value,attrs=main2(model,guess_attrs)
     model=build_single(rh_value)
+
+    #for x,y in enumerate(param):
+    #    guess_attrs.append(np.mean( [ i[x] for i in pop ]))
+
+    from itertools import repeat
+    mean_vm=VirtualModel()
+
     guess_attrs=[]
     guess_attrs.append(np.mean( [ i for i in a ]))
     guess_attrs.append(np.mean( [ i for i in b ]))
+
+    for i, p in enumerate(param):
+        value=str(guess_attrs[i])
+        model.name=str(model.name)+' '+str(p)+str(value)
+        if i==0:
+            attrs={'//izhikevich2007Cell':{p:value }}
+        else:
+            attrs['//izhikevich2007Cell'][p]=value
+    mean_vm.attrs=attrs
+    import copy
+
+
+
+    steps2 = np.linspace(40,80,7.0)
+    steps = [ i*pq.pA for i in steps2 ]
+
+
+
+    #this might look like a big list iteration, but its not.
+    #the statement below just finds rheobase on one value, that is the value
+    #constituted by mean_vm. This will be used to speed up the rheobase search later.
+    #model.attrs=mean_vm.attrs
+    #def bulk_process(ff,steps,mean_vm):
+
+
+    '''
+    lookup2=list(futures.map(ff,steps,repeat(mean_vm)))
+
+    l3=[]
+    for l in lookup2:
+        for k,v in l.lookup.items():
+            l3.append((v, k))
+    unpack=check_fix_range(l3)
+    unpack=check_repeat(ff,unpack[1],mean_vm)
+    if unpack[0]==True:
+        guess_value=unpack[1]
+
+
+    def searcher(ff,unpack,vms):
+        while unpack[0]==False:
+            l3=[]# convert a dictionary to a list.
+            for l in unpack[1]:
+                for k,v in vms.lookup.items():
+                    l3.append((v, k))
+            unpack=check_fix_range(l3)
+            unpack=check_repeat(ff,unpack[1],vms)
+            if unpack[0]==True:
+                guess_value=unpack[1]
+                return guess_value
+
+
+    #The above code between 492-544
+    # was a lot of code, but all it was really doing was establishing a rheobase value in a fast way,
+    #a parallel way, and a reliable way.
+    #soon this code will be restated in much neater function definitions.
+
+    def individual_to_vm(ind):
+        for i, p in enumerate(param):
+            value=str(ind[i])
+            if i==0:
+                attrs={'//izhikevich2007Cell':{p:value }}
+            else:
+                attrs['//izhikevich2007Cell'][p]=value
+        vm=VirtuaModel()
+        vm.attrs=attrs
+        #assert ind.attrs==vm.attrs
+        return vm
+
+
+    #Now attempt to get the rheobase values by first trying the mean rheobase value.
+    #This is not an exhaustive search that results in found all rheobase values
+    #It is just a trying out an educated guess on each individual in the whole population as a first pass.
+    #invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
+
+
+
+    vmlist=list(map(individual_to_vm,invalid_ind))
+
+    list_of_hits_misses=list(futures.map(ff,repeat(guess_value),vmlist))
+    '''
+
+
     run_number,rh_value,attrs=main2(model,guess_attrs)
 
-    #pdb.set_trace()
     from itertools import repeat
     list_of_models=list(futures.map(model2map,iter_list))
     for i in list_of_models:
         assert(type(i))!=None
-    list_of_models=list_of_models[1:5]
+    #import copy
+    #list_of_models2=copy.copy(list_of_models[1:3])
+    #list_of_models2.extend(list_of_models[int(len(copy.copy(list_of_models))/2)])
+    #list_of_models2.extend(copy.copy(list_of_models[-3:-1]))
     iterator=list(futures.map(evaluate2,list_of_models,repeat(rh_value)))
-    #iterator=iterator[0:2]
-    storage = [  i.rheobase for i in iterator ]
-    for i in storage:
-        print(i)
-    #pdb.set_trace()
-    print(len(iterator),len(storage))
-    score_matrix=list(futures.map(func2map,iterator,storage))
-    import copy
-    storage=[]
-    for i in score_matrix:
-        storage.append(copy.copy(i))
+
+    #print(len(iterator),len(storage))
+    for i,j in enumerate(iterator):
+        if j.attrs==None:
+            del iterator[i]
+
+    for i,j in enumerate(iterator):
+        assert j.attrs!=None
+
+    rhstorage = [  i.rheobase for i in iterator ]
+    score_matrix=list(futures.map(func2map,iterator,rhstorage))
+    print(score_matrix)
+    storagei = [ np.sum(i) for i in score_matrix ]
+    print(storagei)
+
+    print(np.where(storagei==np.min(storagei)))
+    html_opt=score_matrix[np.where(storagei==np.min(storagei))]
+    f=open('html_score_matrix.html','w')
+    f.write(html_opt)
+    f.close()
+    import pickle
+    with open('score_matrix.pickle', 'wb') as handle:
+        pickle.dump(score_matrix, handle)
+
     print(len(score_matrix))
     print('pickling the score matrix is what fails')
-    with open('score_matrix.pickle', 'wb') as handle:
-    import pickle
-        pickle.dump(storage, handle)
+    print(storagek)
