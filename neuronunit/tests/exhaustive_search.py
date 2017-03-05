@@ -427,6 +427,8 @@ if __name__ == "__main__":
     from itertools import repeat
     list_of_models=list(futures.map(model2map,iter_list))
     for i in list_of_models:
+        if type(i)==None:
+            del i
         assert(type(i))!=None
     #import copy
     #list_of_models2=copy.copy(list_of_models[1:3])
@@ -434,10 +436,13 @@ if __name__ == "__main__":
     #list_of_models2.extend(copy.copy(list_of_models[-3:-1]))
     iterator=list(futures.map(evaluate2,list_of_models,repeat(rh_value)))
 
+    #iterator = iterator[-5:-1]
+    iterator = [x for x in iterator if x.attrs != None]
+
     #print(len(iterator),len(storage))
-    for i,j in enumerate(iterator):
-        if j.attrs==None:
-            del iterator[i]
+    #for i,j in enumerate(iterator):
+    #    if j.attrs==None:
+    #        del iterator[i]
 
     for i,j in enumerate(iterator):
         assert j.attrs!=None
@@ -449,9 +454,13 @@ if __name__ == "__main__":
     print(storagei)
 
     print(np.where(storagei==np.min(storagei)))
-    html_opt=score_matrix[np.where(storagei==np.min(storagei))]
+    #np.shape(np.where(storagei==np.min(storagei)))
+    html_optmax=score_matrix[np.where(storagei==np.min(storagei))[0]]
+    html_optmin=score_matrix[np.where(storagei==np.max(storagei))[0]]
+
     f=open('html_score_matrix.html','w')
-    f.write(html_opt)
+    f.write(html_optmax)
+    f.write(html_optmin)
     f.close()
     import pickle
     with open('score_matrix.pickle', 'wb') as handle:
