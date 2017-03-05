@@ -159,7 +159,7 @@ RUN ls LEMS_2007One.xml
 WORKDIR $HOME/neuronunit/neuronunit/tests/
 #ENTRYPOINT python -m scoop exhaustive_search.py
 RUN ls *.pickle
-RUN apm install linter	
+#RUN apm install linter	
 #Next, we’re going to install a Python Linter package, to help us detect errors in our Python code.
 RUN which python3
 
