@@ -169,4 +169,4 @@ RUN conda install flake8-docstrings
 RUN apm install linter-flake8
 
 #ENTRYPOINT python -m scoop nsga.py
-#ENTRYPOINT python -m scoop exhaustive_search.py
+ENTRYPOINT python -m scoop exhaustive_search.py
