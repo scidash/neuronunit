@@ -25,17 +25,7 @@ model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
 
 model=model.load_model()
 
-vr = np.linspace(-75.0,-50.0,10)
-a = np.linspace(0.015,0.045,10)
-b = np.linspace(-3.5*10E-9,-0.5*10E-9,10)
-k = np.linspace(7.0E-4-+7.0E-5,7.0E-4+70E-5,10)
-C = np.linspace(1.00000005E-4-1.00000005E-5,1.00000005E-4+1.00000005E-5,10)
-c = np.linspace(-55,-60,10)
-d = np.linspace(0.050,0.2,10)
-v0 = np.linspace(-75.0,-45.0,10)
-vt =  np.linspace(-50.0,-30.0,10)
-vpeak =np.linspace(30.0,40.0,10)
-container=[]
+
 
 
 def build_single(rh_value):
@@ -117,7 +107,7 @@ def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
 
     model.run_number+=1
     try:
-        error = [ float(i.score) for i in score.unstack() ]
+        error = [ float(i.score) for i in score.unstack() if i.score!=None ]
         print(error)
         #pdb.set_trace()
     except Exception as e:
@@ -320,6 +310,17 @@ def evaluate2(individual, guess_value=None):#This method must be pickle-able for
 
 
 if __name__ == "__main__":
+    vr = np.linspace(-75.0,-50.0,3)
+    a = np.linspace(0.015,0.045,3)
+    b = np.linspace(-3.5*10E-9,-0.5*10E-9,3)
+    k = np.linspace(7.0E-4-+7.0E-5,7.0E-4+70E-5,10)
+    C = np.linspace(1.00000005E-4-1.00000005E-5,1.00000005E-4+1.00000005E-5,10)
+    c = np.linspace(-55,-60,10)
+    d = np.linspace(0.050,0.2,10)
+    v0 = np.linspace(-75.0,-45.0,10)
+    vt =  np.linspace(-50.0,-30.0,10)
+    vpeak =np.linspace(30.0,40.0,10)
+    #container=[]
     iter_list=[ (i,j,k) for i in a for j in b for k in vr ]#for l in vpeak]
     guess_attrs=[]
 
@@ -430,19 +431,9 @@ if __name__ == "__main__":
         if type(i)==None:
             del i
         assert(type(i))!=None
-    #import copy
-    #list_of_models2=copy.copy(list_of_models[1:3])
-    #list_of_models2.extend(list_of_models[int(len(copy.copy(list_of_models))/2)])
-    #list_of_models2.extend(copy.copy(list_of_models[-3:-1]))
-    iterator=list(futures.map(evaluate2,list_of_models,repeat(rh_value)))
 
-    #iterator = iterator[-5:-1]
     iterator = [x for x in iterator if x.attrs != None]
 
-    #print(len(iterator),len(storage))
-    #for i,j in enumerate(iterator):
-    #    if j.attrs==None:
-    #        del iterator[i]
 
     for i,j in enumerate(iterator):
         assert j.attrs!=None
