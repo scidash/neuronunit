@@ -46,21 +46,7 @@ def build_single(rh_value):
     #attrs['//izhikevich2007Cell']['vr']=-53.4989145966
     import quantities as qt
     model.update_run_params(attrs)
-    '''
-    import math, pdb
-    not_plausible=False
-    for i in model.results['vm']:
-        if math.isnan(i):
-            not_plausible=True
 
-    if not_plausible:
-        score=scores.InsufficientDataScore(None)
-        #get_neab.suite.
-        #pdb.set_trace()
-
-        print(model.results['vm'][241110])
-    else:
-    '''
     score = get_neab.suite.judge(model)#passing in model, changes model
     #error = []
     #error = [ abs(i.score) for i in score.unstack() ]
@@ -94,6 +80,7 @@ def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
 
 
 
+
     get_neab.suite.tests[0].prediction={}
     print(suite*qt.pA)
     get_neab.suite.tests[0].prediction['value']=suite*qt.pA
@@ -102,6 +89,22 @@ def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
     import os.path
     from scoop import utils
     score=None
+
+    '''
+    import math, pdb
+    not_plausible=False
+    for i in model.results['vm']:
+        if math.isnan(i):
+            not_plausible=True
+
+    if not_plausible:
+        score=scores.InsufficientDataScore(None)
+        #get_neab.suite.
+        #pdb.set_trace()
+
+        print(model.results['vm'][241110])
+    else:
+    '''
     score = get_neab.suite.judge(model)#passing in model, changes model
 
 
@@ -431,7 +434,7 @@ if __name__ == "__main__":
         if type(i)==None:
             del i
         assert(type(i))!=None
-
+    iterator=list(futures.map(evaluate2,list_of_models,repeat(rh_value)))
     iterator = [x for x in iterator if x.attrs != None]
 
 
