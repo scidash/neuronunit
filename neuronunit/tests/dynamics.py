@@ -83,6 +83,7 @@ class BurstinessTest(InjectedCurrentAPWidthTest):
     def __init__(self, observation={'cv_mean':None,'cv_std':None},
                  name=None,
                  params=None):
+        pass
 
     name = "Burstiness test"
 
