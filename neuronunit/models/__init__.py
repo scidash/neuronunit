@@ -25,23 +25,26 @@ class SimpleModel(sciunit.Model,
 
     def get_membrane_potential(self):
         array = np.ones(10000) * self.v_rest
-        dt = 1*ms # Time per sample in milliseconds.  
+        dt = 1*ms # Time per sample in milliseconds.
         vm = AnalogSignal(array,units=mV,sampling_rate=1.0/dt)
         return vm
 
     def inject_current(self,current):
-        pass # Does not actually inject any current.  
+        pass # Does not actually inject any current.
 
 
 class LEMSModel(sciunit.Model, cap.Runnable):
     """A generic LEMS model"""
-    
-    def __init__(self, LEMS_file_path, name=None, backend=None, attrs={}):
+
+    def __init__(self,LEMS_file_path=None, name=None, backend=None, attrs={}):
         """
         LEMS_file_path: Path to LEMS file (an xml file).
         name: Optional model name.
         """
+
         super(LEMSModel,self).__init__(name=name)
+
+
         self.orig_lems_file_path = LEMS_file_path
         self.create_lems_file(name,attrs)
         self.run_defaults = pynml.DEFAULTS
@@ -52,8 +55,11 @@ class LEMSModel(sciunit.Model, cap.Runnable):
         self.rerun = True # Needs to be rerun since it hasn't been run yet!
         if name is None:
             name = os.path.split(self.lems_file_path)[1].split('.')[0]
-        self.set_backend(backend)
+        print(backend)
+        self.set_backend('NEURON')
         self.load_model()
+
+    #This is the part that decides if it should inherit from NEURON backend.
 
     def set_backend(self, backend):
         if type(backend) is str:
@@ -77,20 +83,20 @@ class LEMSModel(sciunit.Model, cap.Runnable):
             self.__class__.__bases__ = (self._backend.__class__,) + \
                                         self.__class__.__bases__
         elif name is None:
-            # The base class should not be called.  
+            # The base class should not be called.
             raise Exception(("A backend (e.g. 'jNeuroML' or 'NEURON') "
                              "must be selected"))
         else:
             raise Exception("Backend %s not found in backends.py" \
                             % backend_name)
-        
+
     def create_lems_file(self, name, attrs):
         if not hasattr(self,'temp_dir'):
             self.temp_dir = tempfile.gettempdir()
         self.lems_file_path  = os.path.join(self.temp_dir, '%s.xml' % name)
         shutil.copy2(self.orig_lems_file_path, self.lems_file_path)
         if attrs:
-            self.set_lems_attrs(attrs)    
+            self.set_lems_attrs(attrs)
 
     def set_lems_attrs(self, attrs):
         from lxml import etree
@@ -112,20 +118,28 @@ class LEMSModel(sciunit.Model, cap.Runnable):
         if (not rerun) and hasattr(self,'last_run_params') and \
            self.run_params == self.last_run_params:
             return
-        self.update_run_params()
-        
-        if self.f is None:
-            raise NotImplementedError(("The chosen backend doesn't implement "
-                                       " _run()"))
-        self.results = f(self.lems_file_path, skip_run=self.skip_run,
-                         nogui=self.run_params['nogui'], 
-                         load_saved_data=True, plot=False, 
-                         verbose=self.run_params['v'])
+        self.update_run_params(run_params)
+        #HACK
+        #DO NOT MERGE.
+        #if self.f is None:
+        #    raise NotImplementedError(("The chosen backend doesn't implement "
+        #                               " _run()"))
+
+        self.results = self.local_run()
+        '''
+        Doing things this way calls jNeuroML everytime which is very slow, and
+        its exactly that we are trying to avoid.
+        self.f(self.lems_file_path, skip_run=self.skip_run,
+                         nogui=self.run_params['nogui'],
+                         load_saved_data=True, plot=False,
+                         verbose=self.run_params['v']
+                         )
+        '''
         self.last_run_params = deepcopy(self.run_params)
         self.rerun = False
         self.run_params = {} # Reset run parameters so the next test has to pass
                              # its own run parameters and not use the same ones
-    
+
     def update_lems_run_params(self):
         from lxml import etree
         from neuroml import nml
@@ -138,9 +152,9 @@ class LEMSModel(sciunit.Model, cap.Runnable):
         nml_file_paths = [os.path.join(os.path.split(self.lems_file_path)[0],x) \
                           for x in nml_file_rel_paths]
         trees.update({x:nml.nml.parsexml_(x) for x in nml_file_paths})
-        
-        # Edit NML files. 
-        for file_path,tree in trees.items(): 
+
+        # Edit NML files.
+        for file_path,tree in trees.items():
             for key,value in self.run_params.items():
                 if key == 'injected_square_current':
                     pulse_generators = tree.findall('pulseGenerator')
@@ -151,4 +165,3 @@ class LEMSModel(sciunit.Model, cap.Runnable):
                                 pg.attrib[attr] = '%s' % value[attr]
 
             tree.write(file_path)
-
