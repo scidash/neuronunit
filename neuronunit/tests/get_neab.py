@@ -74,3 +74,48 @@ def update_amplitude(test,tests,score):
 hooks = {tests[0]:{'f':update_amplitude}} #This is a trick to dynamically insert the method
 #update amplitude at the location in sciunit thats its passed to, without any loss of generality.
 suite = sciunit.TestSuite("vm_suite",tests,hooks=hooks)
+
+
+import sciunit.scores as scores
+import neuronunit.capabilities as cap
+
+#pdb.set_trace()
+class SanityTest(nu_tests.TestPulseTest):
+#class RheobaseTest(TestPulseTest):
+
+    """Tests the input resistance of a cell."""
+
+    name = "Sanity test"
+
+    description = ("Test for if injecting current results in not a numbers (NAN).")
+
+    score_type = scores.ZScore
+
+
+    required_capabilities = (cap.ReceivesSquareCurrent,
+                             cap.ProducesSpikes)
+
+    def generate_prediction(self, model):
+        """Implementation of sciunit.Test.generate_prediction."""
+        i,vm = super(RheobaseTest,self).generate_prediction(model)
+        results=model.results
+        return results
+
+    def compute_score(self,observation,prediction):
+        """Implementation of sciunit.Test.score_prediction."""
+
+        vm=prediction['vm']
+        import math
+        for j in vm:
+            if math.isnan(j):
+                score = sciunit.ErrorScore(None)
+                return score
+        else:
+            observation['mean']=1.0
+            prediction['mean']=1.0
+            observation['std']=1.0
+            prediction['std']=1.0
+
+            score = super(RheobaseTest,self).\
+                        compute_score(observation,prediction)
+        return score

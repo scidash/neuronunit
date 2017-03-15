@@ -1,0 +1,52 @@
+commit 926729c10b4ab04c4a6e2ace28040338cd39d862
+Author: Russell Jarvis <rjjarvis@asu.edu>
+Date:   Fri Mar 3 12:23:19 2017 -0700
+
+    adding more testing
+
+diff --git a/neuronunit/tests/test_all.py b/neuronunit/tests/test_all.py
+index 2c99080..022efb1 100644
+--- a/neuronunit/tests/test_all.py
++++ b/neuronunit/tests/test_all.py
+@@ -34,10 +34,30 @@ class DocumentationTestCase(unittest.TestCase):
+ 
+ class OptimizationTestCase(unittest.TestCase):
+ 
++    
++    def func2map(file2map):
++        import file2map
++        #provide an exception to clean execution
++        #if exception not raised return clean=True 
++        #return clean
++
++
++    def run_all_files():
++        '''
++        run all files as different CPU threads, thus saving time on travis
++        Since scoop is designed to facilitate nested forking/parallel job dispatch
++        This approach should be scalable to larger CPU pools.
++        '''
++        from scoop import futures
++        files_to_exec=['exhaustive_search.py','nsga.py']
++        clean_or_dirty=list(futures.map(func2map,files_to_exec))   
++        return clean_or_dirty
++
++    '''
+     def load_script(self,name):
+-        f = open('opt/%s.py' % name)
+-        nb = nbformat.read(f, as_version=4)
+-        return f,nb
++        f = open('%s.py' % name)
++        #nb m nbformat.read(f, as_version=4)
++        #return f,nb
+ 
+     def run_notebook(self,nb):
+         if (sys.version_info >= (3, 0)):
+@@ -56,6 +76,7 @@ class OptimizationTestCase(unittest.TestCase):
+ 
+     def test_chapter1(self):
+         self.execute_notebook('chapter1')
++    '''    
+ 
+ if __name__ == '__main__':
+     unittest.main()

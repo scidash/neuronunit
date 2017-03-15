@@ -507,18 +507,16 @@ if __name__ == "__main__":
     storagei = [ np.sum(i) for i in score_matrix ]
     print(storagei)
 
-    storages=np.where(storagei==np.min(storagei))
-    print(np.shape(storages)[0])
+    storagesmin=np.where(storagei==np.min(storagei))
+    storagesmax=np.where(storagei==np.max(storagei))
 
-    #html_optmax=score_matrix[np.where(storagei==np.min(storagei))[0]]
-    #html_optmin=score_matrix[np.where(storagei==np.max(storagei))[0]]
+    print(np.shape(storagesmin)[0])
+    print(np.shape(storagesmax)[0])
+    tuplepickle=(score_matrix[np.shape(storagesmin)[0]],score_matrix[np.shape(storagesmax)
+    with open('minumum_and_maximum_values.pickle', 'wb') as handle:
+        pickle.dump(tuplepickle,handle)
 
-    #f=open('html_score_matrix.html','w')
-    #f.write(html_optmax)
-    #f.write(html_optmin)
-    #f.close()
-
-    print('pickling the score matrix is what fails')
-    print(score_matrix[np.shape(storages)[0]])
-
-    #print(storagek)
+    with open('minumum_and_maximum_values.pickle', 'rb') as handle:
+        opt_values=pickle.load(handle)
+        print('minumum and maximum')
+        print(opt_values)
