@@ -38,14 +38,20 @@ else:
     print('checked path:')
     print(str(os.getcwd())+"/neuroelectro.pickle")
     print('no pickled file found. Commencing time intensive Download')
+    print(observation)
+    #pdb.set_trace()
+    #tests+=[nu_tests.VmTest(observation)]
+    #pdb.set_trace()
+    #tests += [ nu_tests.InputResistanceTest(observation=observation)]
     tests += [nu_tests.RheobaseTest(observation=observation)]
-    test_class_params = [(nu_tests.InputResistanceTest,None),
-                         (nu_tests.TimeConstantTest,None),
-                         (nu_tests.CapacitanceTest,None),
-                         (nu_tests.RestingPotentialTest,None),
-                         (nu_tests.InjectedCurrentAPWidthTest,None),
-                         (nu_tests.InjectedCurrentAPAmplitudeTest,None),
-                         (nu_tests.InjectedCurrentAPThresholdTest,None)]
+
+    test_class_params = [(nu_tests.InputResistanceTest,None),#'inputResistanceTest_name'),
+                         (nu_tests.TimeConstantTest,None),#'timeConstantTest_name'),
+                         (nu_tests.CapacitanceTest,None),#'capacitanceTest_name'),
+                         (nu_tests.RestingPotentialTest,None),#'restingPotentialTest_name'),
+                         (nu_tests.InjectedCurrentAPWidthTest,None),#'injectedCurrentAPWidthTest_name'),
+                         (nu_tests.InjectedCurrentAPAmplitudeTest,None),#'injectedCurrentAPAmplitudeTest_name'),
+                         (nu_tests.InjectedCurrentAPThresholdTest,None),]#'InjectedCurrentAPThresholdTest_name')]
 
 
     for cls,params in test_class_params:
@@ -53,7 +59,9 @@ else:
         #at the moment it doesn't seem to matter as neuron is encapsulated in a class, but this could cause problems in the future.
         observation = cls.neuroelectro_summary_observation(neuron)
         tests += [cls(observation,params=params)]
+        #
 
+    #pdb.set_trace()
     with open('neuroelectro.pickle', 'wb') as handle:
         pickle.dump(tests, handle)
 
@@ -62,7 +70,7 @@ def update_amplitude(test,tests,score):
     #then proceed with other optimizing other parameters.
 
 
-    print(len(tests))
+    #print(len(tests))
     #pdb.set_trace()
     for i in [4,5,6]:
         # Set current injection to just suprathreshold
@@ -74,3 +82,49 @@ def update_amplitude(test,tests,score):
 hooks = {tests[0]:{'f':update_amplitude}} #This is a trick to dynamically insert the method
 #update amplitude at the location in sciunit thats its passed to, without any loss of generality.
 suite = sciunit.TestSuite("vm_suite",tests,hooks=hooks)
+import sciunit.scores as scores
+import neuronunit.capabilities as cap
+
+#pdb.set_trace()
+class SanityTest(nu_tests.TestPulseTest):
+#class RheobaseTest(TestPulseTest):
+
+    """Tests the input resistance of a cell."""
+
+    name = "Sanity test"
+
+    description = ("Test for if injecting current results in not a numbers (NAN).")
+
+    score_type = scores.ZScore
+
+
+    required_capabilities = (cap.ReceivesSquareCurrent,
+                             cap.ProducesSpikes)
+
+    def generate_prediction(self, model):
+        """Implementation of sciunit.Test.generate_prediction."""
+        i,vm = super(RheobaseTest,self).generate_prediction(model)
+        results=model.results
+        return results
+
+    def compute_score(self,observation,prediction):
+        """Implementation of sciunit.Test.score_prediction."""
+
+        vm=prediction['vm']
+        import math
+        for j in vm:
+            if math.isnan(j):
+                score = sciunit.ErrorScore(None)
+                return score
+        else:
+            observation['mean']=1.0
+            prediction['mean']=1.0
+            observation['std']=1.0
+            prediction['std']=1.0
+
+            score = super(RheobaseTest,self).\
+                        compute_score(observation,prediction)
+        return score
+
+#pdb.set_trace()
+#tests.insert(0,nu_tests.SanityTest)

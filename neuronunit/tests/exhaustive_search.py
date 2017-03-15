@@ -14,10 +14,10 @@ sys.path.insert(0,thisnu)
 from scoop import futures
 import sciunit.scores as scores
 import neuronunit.capabilities as cap
-
 import get_neab
-
 from neuronunit.models import backends
+import sciunit.scores as scores
+
 #from neuronunit.models import LEMSModel
 
 from neuronunit.models.reduced import ReducedModel
@@ -35,6 +35,7 @@ def build_single(rh_value):
     import sciunit.scores as scores
 
     import quantities as qt
+
     get_neab.suite.tests[0].prediction={}
     get_neab.suite.tests[0].prediction['value']=rh_value*qt.pA
     print(get_neab.suite.tests[0].prediction['value'])
@@ -52,6 +53,25 @@ def build_single(rh_value):
     #error = [ abs(i.score) for i in score.unstack() ]
     return model
 
+from neuronunit import tests as nutests
+
+class SanityTest(nutests.TestPulseTest):
+    """Tests the input resistance of a cell."""
+
+    name = "Sanity test"
+
+    description = ("Test for if injecting current results in not a numbers (NAN).")
+
+
+
+    def generate_prediction(self, model):
+        """Implementation of sciunit.Test.generate_prediction."""
+        i,vm = super(SanityTest,self).generate_prediction(model)
+        import math
+        for j in vm:
+            if math.isnan(j):
+                return sciunit.ErrorScore
+        return 1
 
 def model2map(iter_arg):#This method must be pickle-able for scoop to work.
     vm=VirtualModel()
