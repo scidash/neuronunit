@@ -18,7 +18,7 @@ def get_spike_train(vm, threshold=0.0*mV):
     return spike_train
 
 # Membrane potential trace (1D numpy array) to matrix of spike snippets (2D numpy array)
-def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms): 
+def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
     """
      vm: a neo.core.AnalogSignal corresponding to a membrane potential trace.
      threshold: the value (in mV) above which vm has to cross for there
@@ -63,13 +63,13 @@ def spikes2amplitudes(spike_waveforms):
     return ampls * spike_waveforms.units
 
 def spikes2widths(spike_waveforms):
-    """ 
+    """
     IN:
-     spike_waveforms: Spike waveforms, e.g. from get_spike_waveforms(). 
-        neo.core.AnalogSignalArray    
+     spike_waveforms: Spike waveforms, e.g. from get_spike_waveforms().
+        neo.core.AnalogSignalArray
     OUT:
-     1D numpy array of spike widths, specifically the full width 
-     at half the maximum amplitude.     
+     1D numpy array of spike widths, specifically the full width
+     at half the maximum amplitude.
     """
     n_spikes = len(spike_waveforms)
     widths = []
@@ -77,24 +77,24 @@ def spikes2widths(spike_waveforms):
         x_high = int(np.argmax(s))
         high = s[x_high]
         if x_high > 0:
-            try: # Use threshold to compute half-max.  
+            try: # Use threshold to compute half-max.
                 y = np.array(s)
                 dvdt = np.diff(y)
                 trigger = dvdt.max()/10
                 x_loc = int(np.where(dvdt >= trigger)[0][0])
-                thresh = (s[x_loc]+s[x_loc+1])/2    
+                thresh = (s[x_loc]+s[x_loc+1])/2
                 mid = (high+thresh)/2
-            except: # Use minimum value to compute half-max. 
+            except: # Use minimum value to compute half-max.
                 su.log(("Could not compute threshold; using pre-spike "
                         "minimum to compute width"))
                 low = np.min(s[:x_high])
                 mid = (high+low)/2
-            n_samples = sum(s>mid) # Number of samples above the half-max.  
+            n_samples = sum(s>mid) # Number of samples above the half-max.
             widths.append(n_samples)
     widths = np.array(widths,dtype='float')
     print(widths,n_spikes,len(spike_waveforms))
     if n_spikes:
-        widths = widths*s.sampling_period # Convert from samples to time.  
+        widths = widths*s.sampling_period # Convert from samples to time.
         print(widths,s.sampling_period,widths*s.sampling_period)
     #print("Spike widths are %s" % str(widths))
     return widths
@@ -107,12 +107,21 @@ def spikes2thresholds(spike_waveforms):
     OUT:
      1D numpy array of spike thresholds, specifically the membrane potential
      at which 1/10 the maximum slope is reached.
+
+    If the derivative contains NaNs, probably because vm contains NaNs
+    Return an empty list with the appropriate units
+
     """
     n_spikes = len(spike_waveforms)
     thresholds = []
     for i,s in enumerate(spike_waveforms):
         s = np.array(s)
         dvdt = np.diff(s)
+        import math
+        for j in dvdt:
+            if math.isnan(j):
+                return thresholds * spike_waveforms.units
+
         trigger = dvdt.max()/10
         x_loc = np.where(dvdt >= trigger)[0][0]
         thresh = (s[x_loc]+s[x_loc+1])/2
