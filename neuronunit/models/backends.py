@@ -7,7 +7,7 @@ import neuronunit.capabilities as cap
 import neuronunit.capabilities.spike_functions as sf
 
 class Backend:
-    """Based class for simulator backends that implement simulator-specific
+    """Base class for simulator backends that implement simulator-specific
     details of modifying, running, and reading results from the simulation
     """
     
@@ -21,7 +21,7 @@ class Backend:
         """Set model attributes, e.g. input resistance of a cell"""
         pass
 
-    def update_run_params(self, attrs):
+    def update_run_params(self):
         """Set run-time parameters, e.g. the somatic current to inject"""
         pass
 
@@ -39,8 +39,8 @@ class jNeuroMLBackend(Backend):
     def set_attrs(self, attrs):
         self.set_lems_attrs(attrs)
 
-    def update_run_params(self, attrs):
-        self.update_lems_run_params(attrs)
+    def update_run_params(self):
+        self.update_lems_run_params()
 
 
 
@@ -118,9 +118,7 @@ class NEURONBackend(Backend,
            self.neuron.hoc.execute('m_RS_RS_pop[0].'+str(key)+'='+str(value))   
     
 
-    def update_run_params(self,attrs):
-        print(attrs)
-        pdb.set_trace()
+    def update_run_params(self):
         #TODO find out the python3 syntax for dereferencing key value pairs.
         #Below syntax is stupid, but how to just get key generically without for knowledge of its name and without iterating?
         items=[ (key, value) for key,value in stim_dict.items() ]
