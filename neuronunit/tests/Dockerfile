@@ -3,20 +3,16 @@
 FROM scidash/neuronunit
 USER root
 
+
 RUN pip install --upgrade pip
 RUN pip install matplotlib
 
 RUN easy_install gevent
 RUN easy_install greenlet
-ENV ATOM_VERSION v1.12.7
-
-RUN apt-get install -y gedit meld gvfs-bin
-
-RUN apt-get install -y build-essential
+RUN apt-get update
+RUN apt-get install -y gvfs-bin
 RUN apt-get update
 
-
-#Create python bindings for NEURON
 
 
 ENV WORK_HOME $HOME/work/scidash
@@ -77,35 +73,10 @@ RUN python -c "import neuron"
 RUN python -c "import pyneuroml"
 RUN nrnivmodl
 RUN python -c "import scoop"
-
 RUN python -c "import deap"
 
-RUN sudo apt-get install -y ssh
-
-RUN sudo apt-get install -y libglib2.0-0 libxext6 libsm6 libxrender1 \
-    gcc g++ build-essential \
-    libglib2.0-0 libxext6 libsm6 libxrender1 \
-libncurses-dev openmpi-bin openmpi-doc libopenmpi-dev
-RUN sudo apt-get -y remove python2.7
-
-
-# Get python bindings for open mpi
-WORKDIR $HOME
-RUN sudo /opt/conda/bin/conda install -y mpi4py
-
-
 RUN nrniv
-WORKDIR $HOME/nrn-7.4
-RUN rm -r /home/jovyan/nrn-7.4/x86_64/
 
-RUN sudo ./configure --prefix=`pwd` --without-iv --with-paranrn=/usr/bin/mpiexec --with-nrnpython=/opt/conda/bin/python
-RUN sudo make all && \
-   sudo make install
-
-WORKDIR src/nrnpython
-RUN sudo /opt/conda/bin/python setup.py install
-ENV PATH $HOME/neuron/nrn-7.4/x86_64/bin:$PATH
-#ENV PYTHONHOME /opt/conda/bin/python
 RUN export PATH=$PATH
 
 #un comment the following line to test ipcluster during build.
@@ -123,7 +94,4 @@ RUN nrnivmodl
 RUN ls LEMS_2007One.xml
 WORKDIR $HOME/neuronunit/neuronunit/tests/
 RUN ls *.pickle
-
-
-#ENTRYPOINT python -m scoop nsga.py
-#ENTRYPOINT python -m scoop exhaustive_search.py
+ENTRYPOINT python -m scoop exhaustive_search.py

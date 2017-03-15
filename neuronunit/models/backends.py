@@ -125,26 +125,33 @@ class NEURONBackend(Backend):
 
 
     def get_membrane_potential(self):
+        """
+        Must return a neo.core.AnalogSignal.
+        And must destroy the hoc vectors that comprise it.
+        """
         import copy
-        """Must return a neo.core.AnalogSignal."""
+
         if self.h.cvode.active() == 0:
             fixedSignal = self.vVector.to_python()
             dt = self.h.dt
-
+            dt_py=float(copy.copy(self.h.dt))
+            fixedSignalcp=copy.copy(fixedSignal)
         else:
             fixedSignal = self.get_variable_step_analog_signal()
+            fixedSignalcp=copy.copy(fixedSignal)
             dt = self.fixedTimeStep
-        tempFixedSignal=copy.copy(fixedSignal)
-        tempDt=copy.copy(dt)
-        voltate = AnalogSignal( \
-                 temp, \
+            dt_py=float(copy.copy(self.fixedTimeStep))
+
+
+        fidxedSignal=None
+        self.h.dt=None
+        self.fixedTimeStep=None
+        return AnalogSignal( \
+                 fixedSignalcp, \
                  units = mV, \
-                 sampling_period = tempDt * ms \
+                 sampling_period = dt_py * ms \
         )
-        fixedSignal=None
-        dt=None
-        return voltage
-        
+
     def get_variable_step_analog_signal(self):
         """ Converts variable dt array values to fixed dt array by using linear interpolation"""
 
@@ -222,7 +229,7 @@ class NEURONBackend(Backend):
             #import the default simulation protocol
             from neuronunit.tests.NeuroML2.LEMS_2007One_nrn import NeuronSimulation
             #this next step may be unnecessary: TODO delete it and check.
-            self.ns = NeuronSimulation(tstop=1600, dt=0.025)
+            self.ns = NeuronSimulation(tstop=1600, dt=0.0025)
             return self
 
         if os.path.exists(self.orig_lems_file_path):
