@@ -134,7 +134,7 @@ class NEURONBackend(Backend):
         if self.h.cvode.active() == 0:
             fixedSignal = self.vVector.to_python()
             dt = self.h.dt
-            dt_py=float(copy.copy(self.h.dt)
+            dt_py=float(copy.copy(self.h.dt))
             fixedSignalcp=copy.copy(fixedSignal)
         else:
             fixedSignal = self.get_variable_step_analog_signal()
