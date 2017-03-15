@@ -9,7 +9,7 @@ RUN pip install matplotlib
 RUN easy_install gevent
 RUN easy_install greenlet
 RUN apt-get update
-RUN apt-get install -y gedit meld gvfs-bin
+RUN apt-get install -y gvfs-bin
 RUN apt-get update
 
 
