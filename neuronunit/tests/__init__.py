@@ -20,6 +20,9 @@ AMPL = 0.0*pq.pA
 DELAY = 100.0*pq.ms
 DURATION = 1000.0*pq.ms
 
+
+
+
 class VmTest(sciunit.Test):
     """Base class for tests involving the membrane potential of a model."""
 
@@ -125,6 +128,8 @@ class VmTest(sciunit.Test):
                        'std': reference_data.std*cls.units,
                        'n': reference_data.n}
         return observation
+
+
 
 
 class TestPulseTest(VmTest):
@@ -233,13 +238,25 @@ class TimeConstantTest(TestPulseTest):
         else:
 
 
-            print(observation['mean'])
+            #print(observation['mean'])
             #Hack. Why is this off by a factor of 10 still present?
             #There should be a more simple and transparent way to fix this.
             prediction['value']=prediction['value']#/10.0
             score = super(TimeConstantTest,self).compute_score(observation,
                                                           prediction)
 
+        return score
+
+
+    def compute_score(self, observation, prediction):
+        """Implementation of sciunit.Test.score_prediction."""
+
+        if 'n' in prediction.keys():
+            if prediction['n'] == 0:
+                score = scores.InsufficientDataScore(None)
+        else:
+            score = super(CapacitanceTest,self).compute_score(observation,
+                                                          prediction)
         return score
 
 
@@ -333,10 +350,13 @@ class InjectedCurrentAPWidthTest(APWidthTest):
 
     def generate_prediction(self, model):
         model.inject_square_current(self.params['injected_square_current'])
-        print(model.results)
+        if model.results['plausible']!=False:
+            return super(InjectedCurrentAPWidthTest,self).generate_prediction(model)
+        else:
+            return scores.InsufficientDataScore(None)
+        #print(model.results['vm'])
 
         #pdb.set_trace()
-        return super(InjectedCurrentAPWidthTest,self).generate_prediction(model)
 
 
 class APAmplitudeTest(VmTest):
@@ -470,10 +490,98 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
 
     def generate_prediction(self, model):
         model.inject_square_current(self.params['injected_square_current'])
-        return super(InjectedCurrentAPThresholdTest,self).\
-                generate_prediction(model)
+        #model.inject_square_current(self.params['injected_square_current'])
+        results=model.results
+        import math
+        for i in results['vm']:
+            if math.isnan(i):
+                #pdb.set_trace()
+                prediction['mean']=math.nan
+                return prediction
+        if results==None:
+            prediction['mean']=math.nan
+            return prediction
+        else:
+            return super(InjectedCurrentAPThresholdTest,self).generate_prediction(model)
 
-class RheobaseTestHacked(VmTest):
+
+    def compute_score(self, observation, prediction):
+
+        """Implementation of sciunit.Test.score_prediction."""
+        print("%s: Observation = %s, Prediction = %s" % \
+        	 (self.name,str(observation),str(prediction)))
+
+        import math
+        print(type(prediction))
+        #if np.isinf(prediction['mean'].any()):
+        if math.isnan(float(prediction['mean'])):
+            print('stuck here')
+            return scores.InsufficientDataScore(None)
+        else:
+            #print(prediction)
+            score = super(InjectedCurrentAPThresholdTest,self).\
+                        compute_score(observation, prediction)
+            #self.bind_score(score,None,observation,prediction)
+        return score
+
+'''
+#class SanityTest(nutests.TestPulseTest):
+class RheobaseTest(TestPulseTest):
+
+    """Tests the input resistance of a cell."""
+
+    name = "Sanity test"
+
+    description = ("Test for if injecting current results in not a numbers (NAN).")
+
+    score_type = scores.ZScore
+
+
+    required_capabilities = (cap.ReceivesSquareCurrent,
+                             cap.ProducesSpikes)
+
+    def generate_prediction(self, model):
+        """Implementation of sciunit.Test.generate_prediction."""
+        i,vm = super(RheobaseTest,self).generate_prediction(model)
+        results=model.results
+        return results#['vm']
+
+    def compute_score(self,observation,prediction):
+        """Implementation of sciunit.Test.score_prediction."""
+
+        vm=prediction['vm']
+        import math
+        for j in vm:
+            if math.isnan(j):
+                score = sciunit.ErrorScore(None)
+                return score
+        else:
+            observation['mean']=1.0
+            prediction['mean']=1.0
+            observation['std']=1.0
+            prediction['std']=1.0
+
+            score = super(RheobaseTest,self).\
+                        compute_score(observation,prediction)
+        return score
+
+
+def compute_score(self, observation, prediction):
+    """Implementation of sciunit.Test.score_prediction."""
+    #print("%s: Observation = %s, Prediction = %s" % \
+    #	 (self.name,str(observation),str(prediction)))
+    if prediction['value'] is None:
+        score = scores.InsufficientDataScore(None)
+    else:
+
+        score = super(RheobaseTest,self).\
+                    compute_score(observation, prediction)
+        #self.bind_score(score,None,observation,prediction)
+    return score
+'''
+
+
+class RheobaseTest(VmTest):
     """
     Tests the full widths of APs at their half-maximum
     under current injection.
@@ -610,7 +718,6 @@ class RheobaseTestHacked(VmTest):
         if prediction['value'] is None:
             score = scores.InsufficientDataScore(None)
         else:
-            print
             score = super(RheobaseTest,self).\
                         compute_score(observation, prediction)
             #self.bind_score(score,None,observation,prediction)
@@ -623,8 +730,8 @@ class RheobaseTest(VmTest):
     Tests the full widths of APs at their half-maximum
     under current injection.
     """
-    def __init__(self):
-        self.prediction=None
+    #def __init__(self):
+    #    self.prediction=None
 
     required_capabilities = (cap.ReceivesSquareCurrent,
                              cap.ProducesSpikes)
@@ -640,8 +747,8 @@ class RheobaseTest(VmTest):
     units = pq.pA
     score_type = scores.RatioScore
     def generate_prediction(self, model):
-        print (self.prediction)
-        return self.prediction
+        #print (self.prediction)
+        return
 
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
@@ -688,26 +795,19 @@ class RestingPotentialTest(VmTest):
 
     def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
-        if type(model)==None:
-            import pdb
-            pdb.set_trace()
-
-        assert model!=None
         model.rerun = True
-        print(model.attrs)
         model.inject_square_current(self.params['injected_square_current'])
 
         median = model.get_median_vm() # Use median for robustness.
         std = model.get_std_vm()
-        spkc=model.get_spike_count()
-        mp=model.get_membrane_potential()
-        print(mp)
-        print(model)
-        print(spkc)
-        #print(dir(model))
+        results=model.results
+        import math, pdb
 
-        #import pdb
-        #pdb.set_trace()
+        for i in results['vm']:
+            if math.isnan(i):
+                print('stuck here 2a')
+                return None
+                #pdb.set_trace()
         prediction = {'mean':median, 'std':std}
         return prediction
 
@@ -716,25 +816,11 @@ class RestingPotentialTest(VmTest):
         """Implementation of sciunit.Test.score_prediction."""
         print("%s: Observation = %s, Prediction = %s" % \
         	 (self.name,str(observation),str(prediction)))
-
-
-        #if np.isinf(prediction['mean'].any()):
-        if np.isnan(prediction['mean']):
-            return scores.InsufficientDataScore(None)
-        if np.isnan(prediction['std']):
-            return scores.InsufficientDataScore(None)
-
-        if prediction['mean'] is None:
+        if prediction==None:
             score = scores.InsufficientDataScore(None)
-        #elif prediction['mean'] is np.isnan
-        #    score = scores.InsufficientDataScore(None)
-
-
-
         else:
             score = super(RestingPotentialTest,self).\
                         compute_score(observation, prediction)
-        #self.bind_score(score,model,observation,prediction)
         return score
 
     '''
