@@ -13,7 +13,8 @@ import sciunit.scores as scores
 import neuronunit.capabilities as cap
 #import neuronunit.capabilities.spike_functions as sf
 from neuronunit import neuroelectro
-from .channel import *
+#from .channel import *
+from scoop import futures
 
 AMPL = 0.0*pq.pA
 DELAY = 100.0*pq.ms
@@ -101,6 +102,11 @@ class VmTest(sciunit.Test):
             )
         reference_data.get_values(quiet=not cls.verbose) # Get and verify summary data
                                     # from neuroelectro.org.
+
+        #import pdb
+        print(reference_data.get_values())
+
+        #pdb.set_trace()
         observation = {'mean': reference_data.mean*cls.units,
                        'std': reference_data.std*cls.units,
                        'n': reference_data.n}
@@ -161,7 +167,7 @@ class TestPulseTest(VmTest):
         start, stop = -11*pq.ms, (i['duration']-(1*pq.ms))
         region = cls.get_segment(vm,start+i['delay'],stop+i['delay'])
         coefs = cls.exponential_fit(region, i['delay'])
-        tau = (pq.s/coefs[1]).rescale('ms')
+        tau = (pq.ms/coefs[1]).rescale('ms')
         return tau
 
     @classmethod
@@ -169,10 +175,10 @@ class TestPulseTest(VmTest):
         def func(x, a, b, c):
             return a * np.exp(-b * x) + c
 
-        x = segment.times.rescale('s')
+        x = segment.times.rescale('ms')
         y = segment.rescale('V')
-        offset = float(offset.rescale('s')) # Strip units for optimization
-        popt, pcov = curve_fit(func, x-offset*pq.s, y, [0.001,2,y.min()]) # Estimate starting values for better convergence
+        offset = float(offset.rescale('ms')) # Strip units for optimization
+        popt, pcov = curve_fit(func, x-offset*pq.ms, y, [0.001,2,y.min()]) # Estimate starting values for better convergence
         return popt
 
 
@@ -218,6 +224,24 @@ class TimeConstantTest(TestPulseTest):
         prediction = {'value':tau}
         return prediction
 
+    def compute_score(self, observation, prediction):
+        """Implementation of sciunit.Test.score_prediction."""
+
+        if 'n' in prediction.keys():
+            if prediction['n'] == 0:
+                score = scores.InsufficientDataScore(None)
+        else:
+
+
+            print(observation['mean'])
+            #Hack. Why is this off by a factor of 10 still present?
+            #There should be a more simple and transparent way to fix this.
+            prediction['value']=prediction['value']#/10.0
+            score = super(TimeConstantTest,self).compute_score(observation,
+                                                          prediction)
+
+        return score
+
 
 class CapacitanceTest(TestPulseTest):
     """Tests the input resistance of a cell."""
@@ -239,6 +263,17 @@ class CapacitanceTest(TestPulseTest):
         # Put prediction in a form that compute_score() can use.
         prediction = {'value':c}
         return prediction
+
+    def compute_score(self, observation, prediction):
+        """Implementation of sciunit.Test.score_prediction."""
+
+        if 'n' in prediction.keys():
+            if prediction['n'] == 0:
+                score = scores.InsufficientDataScore(None)
+        else:
+            score = super(CapacitanceTest,self).compute_score(observation,
+                                                          prediction)
+        return score
 
 
 class APWidthTest(VmTest):
@@ -298,6 +333,9 @@ class InjectedCurrentAPWidthTest(APWidthTest):
 
     def generate_prediction(self, model):
         model.inject_square_current(self.params['injected_square_current'])
+        print(model.results)
+
+        #pdb.set_trace()
         return super(InjectedCurrentAPWidthTest,self).generate_prediction(model)
 
 
@@ -435,12 +473,17 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
         return super(InjectedCurrentAPThresholdTest,self).\
                 generate_prediction(model)
 
-
-class RheobaseTest(VmTest):
+class RheobaseTestHacked(VmTest):
     """
     Tests the full widths of APs at their half-maximum
     under current injection.
     """
+    def __init__(self):
+        self.prediction=None
+        self.guess=None
+        self.high=None
+        self.small=None
+        self.lookup=None
 
     required_capabilities = (cap.ReceivesSquareCurrent,
                              cap.ProducesSpikes)
@@ -454,7 +497,6 @@ class RheobaseTest(VmTest):
                    "needed to evoke at least one spike.")
 
     units = pq.pA
-
     score_type = scores.RatioScore
 
     def generate_prediction(self, model):
@@ -464,11 +506,12 @@ class RheobaseTest(VmTest):
         prediction = {'value': None}
         model.rerun = True
         units = self.observation['value'].units
-
+        import time
+        begin_rh=time.time()
         lookup = self.threshold_FI(model, units)
         sub = np.array([x for x in lookup if lookup[x]==0])*units
         supra = np.array([x for x in lookup if lookup[x]>0])*units
-
+        self.verbose=True
         if self.verbose:
             if len(sub):
                 print("Highest subthreshold current is %s" \
@@ -486,16 +529,27 @@ class RheobaseTest(VmTest):
         else:
             rheobase = None
         prediction['value'] = rheobase
+        end_rh=time.time()
+        print(end_rh-begin_rh)
+        #import pdb
+        #pdb.set_trace()
+        self.prediction=prediction
+        return self.prediction
 
-        return prediction
 
     def threshold_FI(self, model, units, guess=None):
         lookup = {} # A lookup table global to the function below.
 
         def f(ampl):
             if float(ampl) not in lookup:
-                current = self.params.copy()
-                current['amplitude'] = ampl
+                current = self.params.copy()['injected_square_current']
+                #This does not do what you would expect.
+                #due to syntax I don't understand.
+                #updating the dictionary keys with new values doesn't work.
+
+                uc={'amplitude':ampl}
+                current.update(uc)
+                current={'injected_square_current':current}
                 model.inject_square_current(current)
                 n_spikes = model.get_spike_count()
                 if self.verbose:
@@ -504,27 +558,45 @@ class RheobaseTest(VmTest):
                 lookup[float(ampl)] = n_spikes
 
         max_iters = 10
-        f(0.0*units)
+
+        #evaluate once with a current injection at 0pA
+        high=self.high
+        small=self.small
+        #f(guess*units)
+        #f(0.0*units)
+        '''
         if guess is None:
             try:
                 guess = self.observation['value']
             except KeyError:
                 guess = 100*pq.pA
-        high = guess*2
-        high = (50.0*pq.pA).rescale(units) if not high else high
-        small = (1*pq.pA).rescale(units)
+        #high = guess*2
+        #high = (50.0*pq.pA).rescale(units) if not high else high
+        #small = (1*pq.pA).rescale(units)
+        '''
+        #f(0.0*units) could happen in parallel with f(high) below
         f(high)
         i = 0
 
         while True:
+            #sub means below threshold, or no spikes
             sub = np.array([x for x in lookup if lookup[x]==0])*units
+            #supra means above threshold, but possibly too high above threshold.
+
             supra = np.array([x for x in lookup if lookup[x]>0])*units
+            #The actual part of the Rheobase test that is
+            #computation intensive and therefore
+            #a target for parellelization.
+
             if i >= max_iters:
                 break
+            #Its this part that should be like an evaluate function that is passed to futures map.
             if len(sub) and len(supra):
                 f((supra.min() + sub.max())/2)
+
             elif len(sub):
                 f(max(small,sub.max()*2))
+
             elif len(supra):
                 f(min(-small,supra.min()*2))
             i += 1
@@ -538,10 +610,53 @@ class RheobaseTest(VmTest):
         if prediction['value'] is None:
             score = scores.InsufficientDataScore(None)
         else:
+            print
             score = super(RheobaseTest,self).\
                         compute_score(observation, prediction)
             #self.bind_score(score,None,observation,prediction)
         return score
+
+class RheobaseTest(VmTest):
+#class RheobaseTestHacked(VmTest):
+    """
+    A hacked version of test Rheobase.
+    Tests the full widths of APs at their half-maximum
+    under current injection.
+    """
+    def __init__(self):
+        self.prediction=None
+
+    required_capabilities = (cap.ReceivesSquareCurrent,
+                             cap.ProducesSpikes)
+
+    params = {'injected_square_current':
+                {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+
+    name = "Rheobase test"
+
+    description = ("A test of the rheobase, i.e. the minimum injected current "
+                   "needed to evoke at least one spike.")
+
+    units = pq.pA
+    score_type = scores.RatioScore
+    def generate_prediction(self, model):
+        print (self.prediction)
+        return self.prediction
+
+    def compute_score(self, observation, prediction):
+        """Implementation of sciunit.Test.score_prediction."""
+        #print("%s: Observation = %s, Prediction = %s" % \
+        #	 (self.name,str(observation),str(prediction)))
+
+        if prediction!=None:
+            if prediction['value'] is None:
+
+                score = scores.InsufficientDataScore(None)
+            else:
+                score = super(RheobaseTest,self).\
+                            compute_score(observation, prediction)
+                #self.bind_score(score,None,observation,prediction)
+            return score
 
 
 class RestingPotentialTest(VmTest):
@@ -573,9 +688,66 @@ class RestingPotentialTest(VmTest):
 
     def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
+        if type(model)==None:
+            import pdb
+            pdb.set_trace()
+
+        assert model!=None
         model.rerun = True
+        print(model.attrs)
         model.inject_square_current(self.params['injected_square_current'])
+
         median = model.get_median_vm() # Use median for robustness.
         std = model.get_std_vm()
+        spkc=model.get_spike_count()
+        mp=model.get_membrane_potential()
+        print(mp)
+        print(model)
+        print(spkc)
+        #print(dir(model))
+
+        #import pdb
+        #pdb.set_trace()
         prediction = {'mean':median, 'std':std}
         return prediction
+
+    def compute_score(self, observation, prediction):
+
+        """Implementation of sciunit.Test.score_prediction."""
+        print("%s: Observation = %s, Prediction = %s" % \
+        	 (self.name,str(observation),str(prediction)))
+
+
+        #if np.isinf(prediction['mean'].any()):
+        if np.isnan(prediction['mean']):
+            return scores.InsufficientDataScore(None)
+        if np.isnan(prediction['std']):
+            return scores.InsufficientDataScore(None)
+
+        if prediction['mean'] is None:
+            score = scores.InsufficientDataScore(None)
+        #elif prediction['mean'] is np.isnan
+        #    score = scores.InsufficientDataScore(None)
+
+
+
+        else:
+            score = super(RestingPotentialTest,self).\
+                        compute_score(observation, prediction)
+        #self.bind_score(score,model,observation,prediction)
+        return score
+
+    '''
+    def compute_score(self, observation, prediction):
+        """Implementation of sciunit.Test.score_prediction."""
+        #print("%s: Observation = %s, Prediction = %s" % \
+        #	 (self.name,str(observation),str(prediction)))
+        if prediction['value'] is None:
+            score = scores.InsufficientDataScore(None)
+        else:
+            print
+            score = super(RestingPotentialTest,self).\
+                        compute_score(observation, prediction)
+            #self.bind_score(score,None,observation,prediction)
+        return score
+    '''
