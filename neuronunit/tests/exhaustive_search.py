@@ -497,16 +497,18 @@ if __name__ == "__main__":
 
     rhstorage = [  i.rheobase for i in iterator ]
     score_matrix=list(futures.map(func2map,iterator,rhstorage))
+    import pickle
+    with open('score_matrix.pickle', 'wb') as handle:
+        pickle.dump(score_matrix, handle)
 
+    #print(len(score_matrix))
 
     print(score_matrix)
     storagei = [ np.sum(i) for i in score_matrix ]
     print(storagei)
 
-    print(np.where(storagei==np.min(storagei)))
-    #np.shape(np.where(storagei==np.min(storagei)))
-    print(np.min(storagei)[0])
-    print(np.shape(np.min(storagei)[0])[0])
+    storages=np.where(storagei==np.min(storagei))
+    print(np.shape(storages)[0])
 
     #html_optmax=score_matrix[np.where(storagei==np.min(storagei))[0]]
     #html_optmin=score_matrix[np.where(storagei==np.max(storagei))[0]]
@@ -515,12 +517,8 @@ if __name__ == "__main__":
     #f.write(html_optmax)
     #f.write(html_optmin)
     #f.close()
-    import pickle
-    with open('score_matrix.pickle', 'wb') as handle:
-        pickle.dump(score_matrix, handle)
 
-    #print(len(score_matrix))
     print('pickling the score matrix is what fails')
-    print(score_matrix[np.shape(np.min(storagei)[0])[0]])
+    print(score_matrix[np.shape(storages)[0]])
 
     #print(storagek)
