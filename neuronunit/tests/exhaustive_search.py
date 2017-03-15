@@ -81,7 +81,7 @@ class SanityTest():
             import math
             for j in dvdt:
                 if math.isnan(j):
-                    print('caught here missing spike functions')
+
                     return False
 
 
@@ -156,50 +156,18 @@ def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
     score=st.compute_score(vm)
 
     if score == True:
-        print(vm)
-
         get_neab.suite.tests[0].prediction={}
-        print(suite*qt.pA)
         get_neab.suite.tests[0].prediction['value']=suite*qt.pA
-
-
         score = get_neab.suite.judge(model)#passing in model, changes model
-
-
         model.run_number+=1
-        try:
-
-            for i in score.unstack():
-                if type(i.score)!=float:
-                    i.score=10.0
-                    print(score.unstack)
-                    print('from caught exception 1?')
-                    #pdb.set_trace()
-            error = [ float(i.score) for i in score.unstack() if i.score!=None ]
-            print('from inside try block 1')
-            print(error)
-
-            ''''
-            for i in score.unstack():
-                if type(i.score)==scores.InsufficientDataScore:
-                    i.score=10.0
-                    print(score.unstack)
-                    print('from caught exception 2?')
-                    pdb.set_trace()
-            error = [ float(i.score) for i in score.unstack() if i.score!=None ]
-            print('from inside try block')
-            print(error)
-            '''
-            #pdb.set_trace()
-        except Exception as e:
-            '{}'.format('Insufficient Data')
-            error = [ 10.0 for i in range(0,8) ]
+        for i in score.unstack():
+            if type(i.score)!=float:
+                i.score=10.0
+        error = [ float(i.score) for i in score.unstack() if i.score!=None ]
         return error
 
     elif score == False:
         error = sciunit.ErrorScore(None)
-        print(error)
-        #pdb.set_trace()
         return error
 
 
@@ -537,17 +505,22 @@ if __name__ == "__main__":
 
     print(np.where(storagei==np.min(storagei)))
     #np.shape(np.where(storagei==np.min(storagei)))
-    html_optmax=score_matrix[np.where(storagei==np.min(storagei))[0]]
-    html_optmin=score_matrix[np.where(storagei==np.max(storagei))[0]]
+    print(np.min(storagei)[0])
+    print(np.shape(np.min(storagei)[0])[0])
 
-    f=open('html_score_matrix.html','w')
-    f.write(html_optmax)
-    f.write(html_optmin)
-    f.close()
+    #html_optmax=score_matrix[np.where(storagei==np.min(storagei))[0]]
+    #html_optmin=score_matrix[np.where(storagei==np.max(storagei))[0]]
+
+    #f=open('html_score_matrix.html','w')
+    #f.write(html_optmax)
+    #f.write(html_optmin)
+    #f.close()
     import pickle
     with open('score_matrix.pickle', 'wb') as handle:
         pickle.dump(score_matrix, handle)
 
-    print(len(score_matrix))
+    #print(len(score_matrix))
     print('pickling the score matrix is what fails')
-    print(storagek)
+    print(score_matrix[np.shape(np.min(storagei)[0])[0]])
+
+    #print(storagek)
