@@ -94,4 +94,4 @@ RUN nrnivmodl
 RUN ls LEMS_2007One.xml
 WORKDIR $HOME/neuronunit/neuronunit/tests/
 RUN ls *.pickle
-ENTRYPOINT python -m scoop exhaustive_search.py
+#ENTRYPOINT python -m scoop exhaustive_search.py

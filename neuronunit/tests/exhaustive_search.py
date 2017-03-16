@@ -57,10 +57,14 @@ class SanityTest():
         Implementation of sciunit.Test.generate_prediction.
         """
 
+        model.inject_square_current(get_neab.suite.tests[4].params['injected_square_current'])
+        mp=model.get_membrane_potential()
+
         i,vm = nutests.TestPulseTest.generate_prediction(nutests.TestPulseTest,model)
+        #assert mp.all()==vm.all()
         median = model.get_median_vm() # Use median for robustness.
         std = model.get_std_vm()
-        return vm, median, std
+        return vm, mp, median, std
 
     def compute_score(self,prediction):
         """Implementation of sciunit.Test.score_prediction."""
@@ -68,15 +72,21 @@ class SanityTest():
 
         #vm=prediction['vm']
         import math
-        (vm, median, std) = prediction
+        (vm, mp, median, std) = prediction
+        print(vm,mp,median,std)
         for j in vm:
             if math.isnan(j):
                 return False
 
+        for j in mp:
+            if math.isnan(j):
+                return False
+
         from neuronunit.capabilities import spike_functions
-        spike_waveforms=spike_functions.get_spike_waveforms(prediction)
+        spike_waveforms=spike_functions.get_spike_waveforms(vm)
         n_spikes = len(spike_waveforms)
         thresholds = []
+
 
 
         for i,s in enumerate(spike_waveforms):
@@ -89,6 +99,7 @@ class SanityTest():
                 if math.isnan(j):
 
                     return False
+
 
 
 
@@ -125,7 +136,8 @@ def build_single(rh_value):
     #error = [ abs(i.score) for i in score.unstack() ]
         return model
     else:
-        return sciunit.ErrorScore(None)
+        return scores.InsufficientDataScore(None)
+
 
 
 
@@ -169,17 +181,30 @@ def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
     if score == True:
         get_neab.suite.tests[0].prediction={}
         get_neab.suite.tests[0].prediction['value']=suite*qt.pA
+        model.inject_square_current(get_neab.suite.tests[4].params['injected_square_current'])
+        mp=model.get_membrane_potential()
+        import math
+        for i in mp:
+            if math.isnan(i):
+                print(mp)
+                error = scores.InsufficientDataScore(None)
+                #pdb.set_trace()
+                return (error,iter_arg.attrs)
         score = get_neab.suite.judge(model)#passing in model, changes model
         model.run_number+=1
         for i in score.unstack():
             if type(i.score)!=float:
                 i.score=10.0
         error = [ float(i.score) for i in score.unstack() if i.score!=None ]
-        return error
+
 
     elif score == False:
-        error = sciunit.ErrorScore(None)
-        return error
+        import sciunit.scores as scores
+        error = scores.InsufficientDataScore(None)
+        #score = scores.ErrorScore(None)
+
+        #error = sciunit.ErrorScore(None)
+    return (error,iter_arg.attrs)
 
 
 
@@ -505,7 +530,7 @@ if __name__ == "__main__":
         assert j.attrs!=None
 
     rhstorage = [  i.rheobase for i in iterator ]
-    score_matrix=list(futures.map(func2map,iterator,rhstorage))
+    score_matrix,attrs=list(futures.map(func2map,iterator,rhstorage))
     import pickle
     with open('score_matrix.pickle', 'wb') as handle:
         pickle.dump(score_matrix, handle)
