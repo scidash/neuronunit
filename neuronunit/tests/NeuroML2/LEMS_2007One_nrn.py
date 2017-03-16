@@ -20,7 +20,6 @@ import neuron
 import time
 h = neuron.h
 h.load_file("stdlib.hoc")
-
 h.load_file("stdgui.hoc")
 
 h("objref p")
@@ -30,10 +29,10 @@ class NeuronSimulation():
 
     def __init__(self, tstop, dt):
 
-        print("\n    Starting simulation in NEURON generated from NeuroML2 model...\n")
+        #print("\n    Starting simulation in NEURON generated from NeuroML2 model...\n")
 
         # Adding simulation Component(id=sim1 type=Simulation) of network/component: net1 (Type: network)
-        print("Population RS_pop contains 1 instance(s) of component: RS of type: izhikevich2007Cell")
+        #print("Population RS_pop contains 1 instance(s) of component: RS of type: izhikevich2007Cell")
 
         h(" {n_RS_pop = 1} ")
         '''
@@ -128,7 +127,7 @@ class NeuronSimulation():
 
     def save_results(self):
 
-        print("Saving results at t=%s..."%h.t)
+        #print("Saving results at t=%s..."%h.t)
 
         if self.sim_end < 0: self.sim_end = time.time()
 
@@ -142,7 +141,7 @@ class NeuronSimulation():
         for i in range(num_points):
             f_time_f2.write('%f'% py_v_time[i])  # Save in SI units...+ '\n')
         f_time_f2.close()
-        print("Saved data to: time.dat")
+        #print("Saved data to: time.dat")
 
         # File to save: of0
         py_v_v_of0 = [ float(x) for x in h.v_v_of0.to_python() ]  # Convert to Python list for speed, variable has dim: voltage
@@ -153,13 +152,12 @@ class NeuronSimulation():
         for i in range(num_points):
             f_of0_f2.write('%e\t'% py_v_time[i]  + '%e\t'%(py_v_v_of0[i])  + '%e\t'%(py_v_u_of0[i]) + '\n')
         f_of0_f2.close()
-        print("Saved data to: RS_One.dat")
+        #print("Saved data to: RS_One.dat")
 
         save_end = time.time()
         save_time = save_end - self.sim_end
-        print("Finished saving results in %f seconds"%(save_time))
 
-        print("Done")
+        #print("Done")
 
 #        quit()
 #if __name__ == '__main__':
