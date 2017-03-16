@@ -14,8 +14,9 @@ sys.path.insert(0,thisnu)
 from scoop import futures
 import sciunit.scores as scores
 import neuronunit.capabilities as cap
-
 import get_neab
+from neuronunit.models import backends
+import sciunit.scores as scores
 
 from neuronunit.models import backends
 #from neuronunit.models import LEMSModel
@@ -27,6 +28,82 @@ model=model.load_model()
 
 
 
+from neuronunit import tests as nutests
+#pdb.set_trace()
+
+
+import sciunit.scores as scores
+import neuronunit.capabilities as cap
+class SanityTest():
+#class RheobaseTest(TestPulseTest):
+    def __init__(self):
+        self=self
+    """Tests the input resistance of a cell."""
+
+    name = "Sanity test"
+
+    description = ("Test for if injecting current results in not a numbers (NAN).")
+
+    score_type = scores.ZScore
+
+
+    required_capabilities = (cap.ReceivesSquareCurrent,
+                             cap.ProducesSpikes)
+
+
+    def generate_prediction(self,model):
+        """
+        Use inherited code
+        Implementation of sciunit.Test.generate_prediction.
+        """
+
+        model.inject_square_current(get_neab.suite.tests[4].params['injected_square_current'])
+        mp=model.get_membrane_potential()
+
+        i,vm = nutests.TestPulseTest.generate_prediction(nutests.TestPulseTest,model)
+        #assert mp.all()==vm.all()
+        median = model.get_median_vm() # Use median for robustness.
+        std = model.get_std_vm()
+        return vm, mp, median, std
+
+    def compute_score(self,prediction):
+        """Implementation of sciunit.Test.score_prediction."""
+
+
+        #vm=prediction['vm']
+        import math
+        (vm, mp, median, std) = prediction
+        print(vm,mp,median,std)
+        for j in vm:
+            if math.isnan(j):
+                return False
+
+        for j in mp:
+            if math.isnan(j):
+                return False
+
+        from neuronunit.capabilities import spike_functions
+        spike_waveforms=spike_functions.get_spike_waveforms(vm)
+        n_spikes = len(spike_waveforms)
+        thresholds = []
+
+
+
+        for i,s in enumerate(spike_waveforms):
+            s = np.array(s)
+            dvdt = np.diff(s)
+            print(dvdt)
+
+            import math
+            for j in dvdt:
+                if math.isnan(j):
+
+                    return False
+
+
+
+
+        return True
 
 def build_single(rh_value):
     '''
@@ -35,9 +112,6 @@ def build_single(rh_value):
     import sciunit.scores as scores
 
     import quantities as qt
-    get_neab.suite.tests[0].prediction={}
-    get_neab.suite.tests[0].prediction['value']=rh_value*qt.pA
-    print(get_neab.suite.tests[0].prediction['value'])
     attrs={}
     attrs['//izhikevich2007Cell']={}
     attrs['//izhikevich2007Cell']['a']=0.045
@@ -46,18 +120,32 @@ def build_single(rh_value):
     #attrs['//izhikevich2007Cell']['vr']=-53.4989145966
     import quantities as qt
     model.update_run_params(attrs)
+    st=SanityTest()
+    #st=SanityTest(get_neab.suite.tests[0].observation)
+    vm=st.generate_prediction(model)
+    score=st.compute_score(vm)
+    if score == True:
+        #pdb.set_trace()
 
-    score = get_neab.suite.judge(model)#passing in model, changes model
-    #error = []
+        get_neab.suite.tests[0].prediction={}
+        get_neab.suite.tests[0].prediction['value']=rh_value*qt.pA
+        print(get_neab.suite.tests[0].prediction['value'])
+
+        score = get_neab.suite.judge(model)#passing in model, changes model
+        #error = []
     #error = [ abs(i.score) for i in score.unstack() ]
-    return model
+        return model
+    else:
+        return scores.InsufficientDataScore(None)
+
+
 
 
 def model2map(iter_arg):#This method must be pickle-able for scoop to work.
     vm=VirtualModel()
     attrs={}
     attrs['//izhikevich2007Cell']={}
-    param=['a','b']
+
     param=['a','b','vr','vpeak']
     i,j,k=iter_arg
     model.name=str(i)+str(j)#+str(k)+str(k)
@@ -81,42 +169,42 @@ def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
 
 
 
-    get_neab.suite.tests[0].prediction={}
-    print(suite*qt.pA)
-    get_neab.suite.tests[0].prediction['value']=suite*qt.pA
 
     import os
     import os.path
     from scoop import utils
     score=None
+    st=SanityTest()
+    vm=st.generate_prediction(model)
+    score=st.compute_score(vm)
 
-    '''
-    import math, pdb
-    not_plausible=False
-    for i in model.results['vm']:
-        if math.isnan(i):
-            not_plausible=True
-
-    if not_plausible:
-        score=scores.InsufficientDataScore(None)
-        #get_neab.suite.
-        #pdb.set_trace()
-
-        print(model.results['vm'][241110])
-    else:
-    '''
-    score = get_neab.suite.judge(model)#passing in model, changes model
-
-
-    model.run_number+=1
-    try:
+    if score == True:
+        get_neab.suite.tests[0].prediction={}
+        get_neab.suite.tests[0].prediction['value']=suite*qt.pA
+        model.inject_square_current(get_neab.suite.tests[4].params['injected_square_current'])
+        mp=model.get_membrane_potential()
+        import math
+        for i in mp:
+            if math.isnan(i):
+                print(mp)
+                error = scores.InsufficientDataScore(None)
+                #pdb.set_trace()
+                return (error,iter_arg.attrs)
+        score = get_neab.suite.judge(model)#passing in model, changes model
+        model.run_number+=1
+        for i in score.unstack():
+            if type(i.score)!=float:
+                i.score=10.0
         error = [ float(i.score) for i in score.unstack() if i.score!=None ]
-        print(error)
-        #pdb.set_trace()
-    except Exception as e:
-        '{}'.format('Insufficient Data')
-        error = [ 10.0 for i in range(0,8) ]
-    return error
+
+
+    elif score == False:
+        import sciunit.scores as scores
+        error = scores.InsufficientDataScore(None)
+        #score = scores.ErrorScore(None)
+
+        #error = sciunit.ErrorScore(None)
+    return (error,iter_arg.attrs)
 
 
 
@@ -442,24 +530,31 @@ if __name__ == "__main__":
         assert j.attrs!=None
 
     rhstorage = [  i.rheobase for i in iterator ]
-    score_matrix=list(futures.map(func2map,iterator,rhstorage))
-    print(score_matrix)
+    score_matrixt=list(futures.map(func2map,iterator,rhstorage))
+    score_matrix=[]
+    attrs=[]
+    for i,j in score_matrixt:
+        #print(i,j)
+        score_matrix.append(i)
+        attrs.append(j)
+    score_matrix=np.array(score_matrix)
+    import pickle
+    with open('score_matrix.pickle', 'wb') as handle:
+        pickle.dump(score_matrixt, handle)
+
     storagei = [ np.sum(i) for i in score_matrix ]
     print(storagei)
 
-    print(np.where(storagei==np.min(storagei)))
-    #np.shape(np.where(storagei==np.min(storagei)))
-    html_optmax=score_matrix[np.where(storagei==np.min(storagei))[0]]
-    html_optmin=score_matrix[np.where(storagei==np.max(storagei))[0]]
+    storagesmin=np.where(storagei==np.min(storagei))
+    storagesmax=np.where(storagei==np.max(storagei))
 
-    f=open('html_score_matrix.html','w')
-    f.write(html_optmax)
-    f.write(html_optmin)
-    f.close()
-    import pickle
-    with open('score_matrix.pickle', 'wb') as handle:
-        pickle.dump(score_matrix, handle)
+    print(np.shape(storagesmin)[0])
+    print(np.shape(storagesmax)[0])
+    tuplepickle=(score_matrix[np.shape(storagesmin)[0]],score_matrix[np.shape(storagesmax)[0]])
+    with open('minumum_and_maximum_values.pickle', 'wb') as handle:
+        pickle.dump(tuplepickle,handle)
 
-    print(len(score_matrix))
-    print('pickling the score matrix is what fails')
-    print(storagek)
+    with open('minumum_and_maximum_values.pickle', 'rb') as handle:
+        opt_values=pickle.load(handle)
+        print('minumum and maximum')
+        print(opt_values)
