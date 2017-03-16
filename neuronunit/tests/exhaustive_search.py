@@ -55,90 +55,61 @@ class SanityTest():
         """
         Use inherited code
         Implementation of sciunit.Test.generate_prediction.
+        mp and vm are different because they are outputs from different current injections.
+        However they probably both should be the same current found through rheobase current.
         """
-
         model.inject_square_current(get_neab.suite.tests[4].params['injected_square_current'])
         mp=model.get_membrane_potential()
 
         i,vm = nutests.TestPulseTest.generate_prediction(nutests.TestPulseTest,model)
-        #assert mp.all()==vm.all()
         median = model.get_median_vm() # Use median for robustness.
         std = model.get_std_vm()
         return vm, mp, median, std
 
     def compute_score(self,prediction):
         """Implementation of sciunit.Test.score_prediction."""
-
-
-        #vm=prediction['vm']
         import math
         (vm, mp, median, std) = prediction
         print(vm,mp,median,std)
         for j in vm:
             if math.isnan(j):
                 return False
-
         for j in mp:
             if math.isnan(j):
                 return False
-
         from neuronunit.capabilities import spike_functions
         spike_waveforms=spike_functions.get_spike_waveforms(vm)
         n_spikes = len(spike_waveforms)
         thresholds = []
-
-
-
         for i,s in enumerate(spike_waveforms):
             s = np.array(s)
             dvdt = np.diff(s)
-            print(dvdt)
-
             import math
             for j in dvdt:
                 if math.isnan(j):
-
                     return False
-
-
-
-
         return True
 
 def build_single(rh_value):
-    '''
-    This method is only used to check singlular sets of hard coded parameters.
-    '''
+    #This method is only used to check singlular sets of hard coded parameters.]
+    #This medthod is probably only useful for diagnostic purposes.
     import sciunit.scores as scores
-
     import quantities as qt
     attrs={}
     attrs['//izhikevich2007Cell']={}
     attrs['//izhikevich2007Cell']['a']=0.045
     attrs['//izhikevich2007Cell']['b']=-5e-09
-    #attrs['//izhikevich2007Cell']['vpeak']=30.0
-    #attrs['//izhikevich2007Cell']['vr']=-53.4989145966
-    import quantities as qt
     model.update_run_params(attrs)
     st=SanityTest()
-    #st=SanityTest(get_neab.suite.tests[0].observation)
     vm=st.generate_prediction(model)
     score=st.compute_score(vm)
     if score == True:
-        #pdb.set_trace()
-
         get_neab.suite.tests[0].prediction={}
         get_neab.suite.tests[0].prediction['value']=rh_value*qt.pA
-        print(get_neab.suite.tests[0].prediction['value'])
-
         score = get_neab.suite.judge(model)#passing in model, changes model
-        #error = []
-    #error = [ abs(i.score) for i in score.unstack() ]
         return model
     else:
         return 10.0
-        #return scores.InsufficientDataScore(None)
-
 
 
 
@@ -146,7 +117,6 @@ def model2map(iter_arg):#This method must be pickle-able for scoop to work.
     vm=VirtualModel()
     attrs={}
     attrs['//izhikevich2007Cell']={}
-
     param=['a','b','vr','vpeak']
     i,j,k=iter_arg
     model.name=str(i)+str(j)#+str(k)+str(k)
@@ -157,20 +127,15 @@ def model2map(iter_arg):#This method must be pickle-able for scoop to work.
     return vm
 
 def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
+    '''
+    Inputs an iterable list, a neuron unit test object suite of neuron model
+    tests of emperical data reproducibility.
+    '''
     print(iter_arg,suite)
     import pdb
-    if iter_arg.attrs==None:
-        pdb.set_trace()
-    else:
-        print(iter_arg.attrs)
-        model.update_run_params(iter_arg.attrs)
-        print(model.attrs)
+    assert iter_arg.attrs!=None:
+    model.update_run_params(iter_arg.attrs)
     import quantities as qt
-
-
-
-
-
     import os
     import os.path
     from scoop import utils
@@ -480,10 +445,10 @@ if __name__ == "__main__":
     score_matrix=[]
     attrs=[]
     for i,j in score_matrixt:
-        if type(i)!=float:
-            i=10.0
-        score_matrix.append(i)
-        attrs.append(j)
+        if InsufficientDataScore not in i:
+            score_matrix.append(i)
+            attrs.append(j)
+
     score_matrix=np.array(score_matrix)
     import pickle
     with open('score_matrix.pickle', 'wb') as handle:
