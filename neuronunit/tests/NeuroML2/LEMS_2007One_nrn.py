@@ -106,13 +106,13 @@ class NeuronSimulation():
 
         self.initialized = True
         sim_start = time.time()
-        print("Running a simulation of %sms (dt = %sms)" % (h.tstop, h.dt))
+        #print("Running a simulation of %sms (dt = %sms)" % (h.tstop, h.dt))
 
         h.run()
 
         self.sim_end = time.time()
         sim_time = self.sim_end - sim_start
-        print("Finished NEURON simulation in %f seconds (%f mins)..."%(sim_time, sim_time/60.0))
+        #print("Finished NEURON simulation in %f seconds (%f mins)..."%(sim_time, sim_time/60.0))
 
         self.save_results()
 
@@ -134,7 +134,6 @@ class NeuronSimulation():
 
 
         # File to save: time
-        #py_v_time = [ t/1000 for t in h.v_time.to_python() ]  # Convert to Python list for speed...
         py_v_time = [ float(t) for t in h.v_time.to_python() ]  # Convert to Python list for speed...
 
         f_time_f2 = open('time.dat', 'w')
@@ -148,10 +147,6 @@ class NeuronSimulation():
         # File to save: of0
         py_v_v_of0 = [ float(x) for x in h.v_v_of0.to_python() ]  # Convert to Python list for speed, variable has dim: voltage
         py_v_u_of0 = [ float(x) for x in h.v_u_of0.to_python() ]  # Convert to Python list for speed, variable has dim: current
-
-        #py_v_v_of0 = [ float(x  / 1000.0) for x in h.v_v_of0.to_python() ]  # Convert to Python list for speed, variable has dim: voltage
-        #py_v_u_of0 = [ float(x  / 1.0E9) for x in h.v_u_of0.to_python() ]  # Convert to Python list for speed, variable has dim: current
-
         f_of0_f2 = open('RS_One.dat', 'w')
         num_points = len(py_v_time)  # Simulation may have been stopped before tstop...
 
@@ -166,9 +161,9 @@ class NeuronSimulation():
 
         print("Done")
 
-        quit()
-if __name__ == '__main__':
+#        quit()
+#if __name__ == '__main__':
 
-    ns = NeuronSimulation(tstop=1600, dt=0.0025)
+#    ns = NeuronSimulation(tstop=1600, dt=0.0025)
 
-    ns.run()
+#    ns.run()

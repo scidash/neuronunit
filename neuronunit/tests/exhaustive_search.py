@@ -58,7 +58,9 @@ class SanityTest():
         """
 
         i,vm = nutests.TestPulseTest.generate_prediction(nutests.TestPulseTest,model)
-        return vm
+        median = model.get_median_vm() # Use median for robustness.
+        std = model.get_std_vm()
+        return vm, median, std
 
     def compute_score(self,prediction):
         """Implementation of sciunit.Test.score_prediction."""
@@ -66,7 +68,8 @@ class SanityTest():
 
         #vm=prediction['vm']
         import math
-        for j in prediction:
+        (vm, median, std) = prediction
+        for j in vm:
             if math.isnan(j):
                 return False
 
@@ -74,6 +77,8 @@ class SanityTest():
         spike_waveforms=spike_functions.get_spike_waveforms(prediction)
         n_spikes = len(spike_waveforms)
         thresholds = []
+
+
         for i,s in enumerate(spike_waveforms):
             s = np.array(s)
             dvdt = np.diff(s)
