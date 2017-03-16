@@ -530,14 +530,21 @@ if __name__ == "__main__":
         assert j.attrs!=None
 
     rhstorage = [  i.rheobase for i in iterator ]
-    score_matrix,attrs=list(futures.map(func2map,iterator,rhstorage))
+    score_matrixt=list(futures.map(func2map,iterator,rhstorage))
+    score_matrix=[]
+    attrs=[]
+    for i,j in score_matrixt:
+        print(i,j)
+        score_matrix.append(i)
+        attrs.append(j)
+    score_matrix=np.array(score_matrix)
     import pickle
     with open('score_matrix.pickle', 'wb') as handle:
         pickle.dump(score_matrix, handle)
 
     #print(len(score_matrix))
 
-    print(score_matrix)
+    #print(score_matrix)
     storagei = [ np.sum(i) for i in score_matrix ]
     print(storagei)
 
