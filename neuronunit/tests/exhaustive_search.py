@@ -460,63 +460,6 @@ if __name__ == "__main__":
     #def bulk_process(ff,steps,mean_vm):
 
 
-    '''
-    lookup2=list(futures.map(ff,steps,repeat(mean_vm)))
-
-    l3=[]
-    for l in lookup2:
-        for k,v in l.lookup.items():
-            l3.append((v, k))
-    unpack=check_fix_range(l3)
-    unpack=check_repeat(ff,unpack[1],mean_vm)
-    if unpack[0]==True:
-        guess_value=unpack[1]
-
-
-    def searcher(ff,unpack,vms):
-        while unpack[0]==False:
-            l3=[]# convert a dictionary to a list.
-            for l in unpack[1]:
-                for k,v in vms.lookup.items():
-                    l3.append((v, k))
-            unpack=check_fix_range(l3)
-            unpack=check_repeat(ff,unpack[1],vms)
-            if unpack[0]==True:
-                guess_value=unpack[1]
-                return guess_value
-
-
-    #The above code between 492-544
-    # was a lot of code, but all it was really doing was establishing a rheobase value in a fast way,
-    #a parallel way, and a reliable way.
-    #soon this code will be restated in much neater function definitions.
-
-    def individual_to_vm(ind):
-        for i, p in enumerate(param):
-            value=str(ind[i])
-            if i==0:
-                attrs={'//izhikevich2007Cell':{p:value }}
-            else:
-                attrs['//izhikevich2007Cell'][p]=value
-        vm=VirtuaModel()
-        vm.attrs=attrs
-        #assert ind.attrs==vm.attrs
-        return vm
-
-
-    #Now attempt to get the rheobase values by first trying the mean rheobase value.
-    #This is not an exhaustive search that results in found all rheobase values
-    #It is just a trying out an educated guess on each individual in the whole population as a first pass.
-    #invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
-
-
-
-    vmlist=list(map(individual_to_vm,invalid_ind))
-
-    list_of_hits_misses=list(futures.map(ff,repeat(guess_value),vmlist))
-    '''
-
-
     run_number,rh_value,attrs=main2(model,guess_attrs)
 
     from itertools import repeat
@@ -538,6 +481,9 @@ if __name__ == "__main__":
     attrs=[]
     for i,j in score_matrixt:
         #print(i,j)
+        for k in i:
+            if type(k)!=float:
+                k=10.0
         score_matrix.append(i)
         attrs.append(j)
     score_matrix=np.array(score_matrix)
