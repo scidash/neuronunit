@@ -497,7 +497,7 @@ if __name__ == "__main__":
 
     print(np.shape(storagesmin)[0])
     print(np.shape(storagesmax)[0])
-    tuplepickle=(score_matrix[np.shape(storagesmin)[0]],score_matrix[np.shape(storagesmax)[0]],atts[np.shape(storagesmax)[0]])
+    tuplepickle=(score_matrix[np.shape(storagesmin)[0]],score_matrix[np.shape(storagesmax)[0]],attrs[np.shape(storagesmax)[0]])
     with open('minumum_and_maximum_values.pickle', 'wb') as handle:
         pickle.dump(tuplepickle,handle)
 
