@@ -84,8 +84,7 @@ RUN export PATH=$PATH
 #https://github.com/russelljjarvis/neuronunit.git
 WORKDIR $HOME
 
-RUN echo "do this part again such that pickled files can be used to bypass problems with aibs.py in the short term"
-RUN echo "definitely not a long term fix recclone"
+RUN echo "do this part again such that pickled files can be used to bypass problems with aibs.py in the short term  ! !"
 
 RUN git clone -b dev https://github.com/russelljjarvis/neuronunit.git
 WORKDIR $HOME/neuronunit/neuronunit/tests/NeuroML2
@@ -94,4 +93,4 @@ RUN nrnivmodl
 RUN ls LEMS_2007One.xml
 WORKDIR $HOME/neuronunit/neuronunit/tests/
 RUN ls *.pickle
-ENTRYPOINT python -m scoop exhaustive_search.py
+ENTRYPOINT python -m scoop exhaustive_search.py && python -m scoop.nsga
