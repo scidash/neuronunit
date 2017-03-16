@@ -133,7 +133,7 @@ def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
     '''
     print(iter_arg,suite)
     import pdb
-    assert iter_arg.attrs!=None:
+    assert iter_arg.attrs!=None
     model.update_run_params(iter_arg.attrs)
     import quantities as qt
     import os
