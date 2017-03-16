@@ -480,10 +480,8 @@ if __name__ == "__main__":
     score_matrix=[]
     attrs=[]
     for i,j in score_matrixt:
-        #print(i,j)
-        for k in i:
-            if type(k)!=float:
-                k=10.0
+        if type(i)!=float:
+            i=10.0
         score_matrix.append(i)
         attrs.append(j)
     score_matrix=np.array(score_matrix)
