@@ -62,8 +62,6 @@ def update_amplitude(test,tests,score):
     #then proceed with other optimizing other parameters.
 
 
-    print(len(tests))
-    #pdb.set_trace()
     for i in [4,5,6]:
         # Set current injection to just suprathreshold
         tests[i].params['injected_square_current']['amplitude'] = rheobase*1.01
