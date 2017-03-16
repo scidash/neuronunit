@@ -136,7 +136,8 @@ def build_single(rh_value):
     #error = [ abs(i.score) for i in score.unstack() ]
         return model
     else:
-        return scores.InsufficientDataScore(None)
+        return 10.0
+        #return scores.InsufficientDataScore(None)
 
 
 
@@ -189,6 +190,7 @@ def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
                 print(mp)
                 error = scores.InsufficientDataScore(None)
                 #pdb.set_trace()
+                error = 10.0
                 return (error,iter_arg.attrs)
         score = get_neab.suite.judge(model)#passing in model, changes model
         model.run_number+=1
@@ -201,6 +203,7 @@ def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
     elif score == False:
         import sciunit.scores as scores
         error = scores.InsufficientDataScore(None)
+        error = 10.0
         #score = scores.ErrorScore(None)
 
         #error = sciunit.ErrorScore(None)
@@ -550,7 +553,7 @@ if __name__ == "__main__":
 
     print(np.shape(storagesmin)[0])
     print(np.shape(storagesmax)[0])
-    tuplepickle=(score_matrix[np.shape(storagesmin)[0]],score_matrix[np.shape(storagesmax)[0]])
+    tuplepickle=(score_matrix[np.shape(storagesmin)[0]],score_matrix[np.shape(storagesmax)[0]],atts[np.shape(storagesmax)[0]])
     with open('minumum_and_maximum_values.pickle', 'wb') as handle:
         pickle.dump(tuplepickle,handle)
 
