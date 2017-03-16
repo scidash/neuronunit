@@ -534,17 +534,14 @@ if __name__ == "__main__":
     score_matrix=[]
     attrs=[]
     for i,j in score_matrixt:
-        print(i,j)
+        #print(i,j)
         score_matrix.append(i)
         attrs.append(j)
     score_matrix=np.array(score_matrix)
     import pickle
     with open('score_matrix.pickle', 'wb') as handle:
-        pickle.dump(score_matrix, handle)
+        pickle.dump(score_matrixt, handle)
 
-    #print(len(score_matrix))
-
-    #print(score_matrix)
     storagei = [ np.sum(i) for i in score_matrix ]
     print(storagei)
 
