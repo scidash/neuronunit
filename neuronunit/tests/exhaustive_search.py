@@ -207,7 +207,7 @@ def main2(ind,guess_attrs=None):
     while(while_true):
         from itertools import repeat
         if len(vm.lookup)==0:
-            steps2 = np.linspace(50,190,5.0)
+            steps2 = np.linspace(50,190,4.0)
             steps = [ i*pq.pA for i in steps2 ]
             #These never converge if futures.map is utilized
             #thus using serial dumb search instead of serial smart, or parallel dumb/smart
@@ -233,13 +233,13 @@ def main2(ind,guess_attrs=None):
         sub=np.array(sub)
         supra=np.array(supra)
         if len(sub) and len(supra):
-            steps2 = np.linspace(sub.max(),supra.min(),5.0)
+            steps2 = np.linspace(sub.max(),supra.min(),4.0)
             steps = [ i*pq.pA for i in steps2 ]
         elif len(sub):
-            steps2 = np.linspace(sub.max(),2*sub.max(),5.0)
+            steps2 = np.linspace(sub.max(),2*sub.max(),4.0)
             steps = [ i*pq.pA for i in steps2 ]
         elif len(supra):
-            steps2 = np.linspace(-1*(supra.min()),supra.min(),5.0)
+            steps2 = np.linspace(-1*(supra.min()),supra.min(),4.0)
             steps = [ i*pq.pA for i in steps2 ]
                 #These never converge if futures.map is utilized
                 #thus using serial dumb search instead of serial smart, or parallel dumb/smart
