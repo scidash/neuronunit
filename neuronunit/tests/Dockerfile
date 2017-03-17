@@ -10,7 +10,8 @@ RUN pip install matplotlib
 RUN easy_install gevent
 RUN easy_install greenlet
 RUN apt-get update
-RUN apt-get install -y gvfs-bin
+RUN apt-get install -y gvfs-bin 
+#I cant remember what gvfs-bin does
 RUN apt-get update
 
 
@@ -25,18 +26,22 @@ RUN apt-get install -y python3-setuptools
 ENV PATH $PATH:/opt/conda/bin
 RUN easy_install gevent
 RUN easy_install greenlet
-#RUN apt-get install -y povray eog
-WORKDIR $HOME
-RUN git clone https://github.com/russelljjarvis/BluePyOpt.git
-WORKDIR BluePyOpt
-RUN python setup.py install
-RUN apt-get install -y python-tk
-RUN chown -R jovyan $HOME
-RUN python -c "import bluepyopt"
-RUN conda install mpi4py
-RUN pip install git+https://github.com/roryk/ipython-cluster-helper
 
-RUN ipcluster nbextension enable
+#WORKDIR $HOME
+#RUN git clone https://github.com/russelljjarvis/BluePyOpt.git
+#WORKDIR BluePyOpt
+#RUN python setup.py install
+#RUN apt-get install -y python-tk
+
+
+RUN chown -R jovyan $HOME
+#RUN python -c "import bluepyopt"
+
+RUN conda install mpi4py
+#RUN pip install git+https://github.com/roryk/ipython-cluster-helper
+
+#RUN ipcluster nbextension enable
+
 RUN apt-get install -y curl apt-utils
 RUN apt-get update
 
@@ -84,8 +89,7 @@ RUN export PATH=$PATH
 #https://github.com/russelljjarvis/neuronunit.git
 WORKDIR $HOME
 
-RUN echo "do this part again such that pickled files can be used to bypass problems with aibs.py in the short term"
-RUN echo "definitely not a long term fix recclone"
+RUN echo "do this part again such that pickled files can be used to bypass problems with aibs.py in the short term !"
 
 RUN git clone -b dev https://github.com/russelljjarvis/neuronunit.git
 WORKDIR $HOME/neuronunit/neuronunit/tests/NeuroML2
@@ -94,4 +98,4 @@ RUN nrnivmodl
 RUN ls LEMS_2007One.xml
 WORKDIR $HOME/neuronunit/neuronunit/tests/
 RUN ls *.pickle
-ENTRYPOINT python -m scoop exhaustive_search.py
+ENTRYPOINT python -m scoop exhaustive_search.py && python -m scoop.nsga
