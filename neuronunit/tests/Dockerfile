@@ -10,7 +10,7 @@ RUN pip install matplotlib
 RUN easy_install gevent
 RUN easy_install greenlet
 RUN apt-get update
-RUN apt-get install -y gvfs-bin
+RUN apt-get install -y gvfs-bin# I can't remember what gvfs-bin does
 RUN apt-get update
 
 
@@ -25,18 +25,22 @@ RUN apt-get install -y python3-setuptools
 ENV PATH $PATH:/opt/conda/bin
 RUN easy_install gevent
 RUN easy_install greenlet
-#RUN apt-get install -y povray eog
-WORKDIR $HOME
-RUN git clone https://github.com/russelljjarvis/BluePyOpt.git
-WORKDIR BluePyOpt
-RUN python setup.py install
-RUN apt-get install -y python-tk
-RUN chown -R jovyan $HOME
-RUN python -c "import bluepyopt"
-RUN conda install mpi4py
-RUN pip install git+https://github.com/roryk/ipython-cluster-helper
 
-RUN ipcluster nbextension enable
+#WORKDIR $HOME
+#RUN git clone https://github.com/russelljjarvis/BluePyOpt.git
+#WORKDIR BluePyOpt
+#RUN python setup.py install
+#RUN apt-get install -y python-tk
+
+
+RUN chown -R jovyan $HOME
+#RUN python -c "import bluepyopt"
+
+RUN conda install mpi4py
+#RUN pip install git+https://github.com/roryk/ipython-cluster-helper
+
+#RUN ipcluster nbextension enable
+
 RUN apt-get install -y curl apt-utils
 RUN apt-get update
 
