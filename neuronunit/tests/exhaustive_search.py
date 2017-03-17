@@ -337,7 +337,10 @@ if __name__ == "__main__":
     storagesmin=np.where(storagei==np.min(storagei))
     storagesmax=np.where(storagei==np.max(storagei))
     pdb.set_trace()
-    score_typev[np.shape(storagesmin)[0]].related_data['vm']
+    import matplotlib as plt
+    for i,s in enumerate(score_typev[np.shape(storagesmin)[0]])#.related_data['vm']
+        plt.plot(plot_vm())
+        plt.savefig('s'+str(i)+'.png')
     #since there are non unique maximum and minimum values, just take the first ones of each.
     tuplepickle=(score_matrix[np.shape(storagesmin)[0]],score_matrix[np.shape(storagesmax)[0]],attrs[np.shape(storagesmax)[0]])
     with open('minumum_and_maximum_values.pickle', 'wb') as handle:
