@@ -17,21 +17,13 @@ import neuronunit.capabilities as cap
 import get_neab
 from neuronunit.models import backends
 import sciunit.scores as scores
-
 from neuronunit.models import backends
-#from neuronunit.models import LEMSModel
-
 from neuronunit.models.reduced import ReducedModel
 model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
-
 model=model.load_model()
-
-
-
 from neuronunit import tests as nutests
-#pdb.set_trace()
-
-
+import copy
+from itertools import repeat
 import sciunit.scores as scores
 import neuronunit.capabilities as cap
 class SanityTest():
@@ -91,29 +83,6 @@ class SanityTest():
                     return False
         return True
 
-def build_single(rh_value):
-    #This method is only used to check singlular sets of hard coded parameters.]
-    #This medthod is probably only useful for diagnostic purposes.
-    import sciunit.scores as scores
-    import quantities as qt
-    attrs={}
-    attrs['//izhikevich2007Cell']={}
-    attrs['//izhikevich2007Cell']['a']=0.045
-    attrs['//izhikevich2007Cell']['b']=-5e-09
-    model.update_run_params(attrs)
-    st=SanityTest()
-    vm=st.generate_prediction(model)
-    score=st.compute_score(vm)
-    if score == True:
-        get_neab.suite.tests[0].prediction={}
-        get_neab.suite.tests[0].prediction['value']=rh_value*qt.pA
-        score = get_neab.suite.judge(model)#passing in model, changes model
-        return model
-    else:
-        return 10.0
-
-
-
 def model2map(iter_arg):#This method must be pickle-able for scoop to work.
     vm=VirtualModel()
     attrs={}
@@ -154,9 +123,9 @@ def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
         for i in mp:
             if math.isnan(i):
                 print(mp)
-                #error = scores.InsufficientDataScore(None)
+                error = scores.InsufficientDataScore(None)
                 #pdb.set_trace()
-                error = 10.0
+                #error = 10.0
                 return (error,iter_arg.attrs)
         score = get_neab.suite.judge(model)#passing in model, changes model
         model.run_number+=1
@@ -168,8 +137,8 @@ def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
 
     elif score == False:
         import sciunit.scores as scores
-        #error = scores.InsufficientDataScore(None)
-        error = 10.0
+        error = scores.InsufficientDataScore(None)
+        #error = 10.0
         #score = scores.ErrorScore(None)
 
         #error = sciunit.ErrorScore(None)
@@ -370,9 +339,9 @@ def evaluate2(individual, guess_value=None):#This method must be pickle-able for
 
 
 if __name__ == "__main__":
-    vr = np.linspace(-75.0,-50.0,3)
-    a = np.linspace(0.015,0.045,3)
-    b = np.linspace(-3.5*10E-9,-0.5*10E-9,3)
+    vr = np.linspace(-75.0,-50.0,10)
+    a = np.linspace(0.015,0.045,10)
+    b = np.linspace(-3.5*10E-9,-0.5*10E-9,10)
     k = np.linspace(7.0E-4-+7.0E-5,7.0E-4+70E-5,10)
     C = np.linspace(1.00000005E-4-1.00000005E-5,1.00000005E-4+1.00000005E-5,10)
     c = np.linspace(-55,-60,10)
@@ -380,27 +349,23 @@ if __name__ == "__main__":
     v0 = np.linspace(-75.0,-45.0,10)
     vt =  np.linspace(-50.0,-30.0,10)
     vpeak =np.linspace(30.0,40.0,10)
-    #container=[]
-    iter_list=[ (i,j,k) for i in a for j in b for k in vr ]#for l in vpeak]
+    iter_list=[ (i,j,k) for i in a for j in b for k in vr ]
     guess_attrs=[]
-
     guess_attrs.append(0.045)
     guess_attrs.append(-5e-09)
-    steps2 = np.linspace(50,190,4.0)
-    steps = [ i*pq.pA for i in steps2 ]
+
+    #steps2 = np.linspace(50,190,4.0)
+    #steps = [ i*pq.pA for i in steps2 ]
 
     run_number,rh_value,attrs=main2(model,guess_attrs)
-    model=build_single(rh_value)
+    #model=build_single(rh_value)
 
-    #for x,y in enumerate(param):
-    #    guess_attrs.append(np.mean( [ i[x] for i in pop ]))
-
-    from itertools import repeat
     mean_vm=VirtualModel()
 
     guess_attrs=[]
     guess_attrs.append(np.mean( [ i for i in a ]))
     guess_attrs.append(np.mean( [ i for i in b ]))
+    guess_attrs.append(np.mean( [ i for i in k ]))
 
     for i, p in enumerate(param):
         value=str(guess_attrs[i])
@@ -410,12 +375,9 @@ if __name__ == "__main__":
         else:
             attrs['//izhikevich2007Cell'][p]=value
     mean_vm.attrs=attrs
-    import copy
 
-
-
-    steps2 = np.linspace(40,80,7.0)
-    steps = [ i*pq.pA for i in steps2 ]
+    #steps2 = np.linspace(40,80,7.0)
+    #steps = [ i*pq.pA for i in steps2 ]
 
 
 
@@ -428,7 +390,7 @@ if __name__ == "__main__":
 
     run_number,rh_value,attrs=main2(model,guess_attrs)
 
-    from itertools import repeat
+    #from itertools import repeat
     list_of_models=list(futures.map(model2map,iter_list))
     for i in list_of_models:
         if type(i)==None:
