@@ -27,22 +27,14 @@ from itertools import repeat
 import sciunit.scores as scores
 import neuronunit.capabilities as cap
 class SanityTest():
-#class RheobaseTest(TestPulseTest):
     def __init__(self):
         self=self
     """Tests the input resistance of a cell."""
-
     name = "Sanity test"
-
     description = ("Test for if injecting current results in not a numbers (NAN).")
-
     score_type = scores.ZScore
-
-
     required_capabilities = (cap.ReceivesSquareCurrent,
                              cap.ProducesSpikes)
-
-
     def generate_prediction(self,model):
         """
         Use inherited code
@@ -53,7 +45,6 @@ class SanityTest():
         """
         model.inject_square_current(get_neab.suite.tests[4].params['injected_square_current'])
         mp=model.get_membrane_potential()
-
         i,vm = nutests.TestPulseTest.generate_prediction(nutests.TestPulseTest,model)
         median = model.get_median_vm() # Use median for robustness.
         std = model.get_std_vm()
@@ -63,7 +54,6 @@ class SanityTest():
         """Implementation of sciunit.Test.score_prediction."""
         import math
         (vm, mp, median, std) = prediction
-        print(vm,mp,median,std)
         for j in vm:
             if math.isnan(j):
                 return False
@@ -87,12 +77,13 @@ def model2map(iter_arg):#This method must be pickle-able for scoop to work.
     vm=VirtualModel()
     attrs={}
     attrs['//izhikevich2007Cell']={}
-    param=['a','b','vr','vpeak']
-    i,j,k=iter_arg
-    model.name=str(i)+str(j)#+str(k)+str(k)
+    param=['a','b']#,'vr','vpeak']
+    i,j=iter_arg#,k,l
+    model.name=str(i)+str(j)+str(k)+str(l)
     attrs['//izhikevich2007Cell']['a']=i
     attrs['//izhikevich2007Cell']['b']=j
-    attrs['//izhikevich2007Cell']['vpeak']=k
+    #attrs['//izhikevich2007Cell']['vr']=k
+    #attrs['//izhikevich2007Cell']['vpeak']=l
     vm.attrs=attrs
     return vm
 
@@ -101,8 +92,6 @@ def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
     Inputs an iterable list, a neuron unit test object suite of neuron model
     tests of emperical data reproducibility.
     '''
-    print(iter_arg,suite)
-    import pdb
     assert iter_arg.attrs!=None
     model.update_run_params(iter_arg.attrs)
     import quantities as qt
@@ -113,7 +102,6 @@ def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
     st=SanityTest()
     vm=st.generate_prediction(model)
     score=st.compute_score(vm)
-
     if score == True:
         get_neab.suite.tests[0].prediction={}
         get_neab.suite.tests[0].prediction['value']=suite*qt.pA
@@ -122,29 +110,18 @@ def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
         import math
         for i in mp:
             if math.isnan(i):
-                print(mp)
                 error = scores.InsufficientDataScore(None)
-                #pdb.set_trace()
-                #error = 10.0
-                return (error,iter_arg.attrs)
+                return (None,error,iter_arg.attrs)
         score = get_neab.suite.judge(model)#passing in model, changes model
         model.run_number+=1
         for i in score.unstack():
             if type(i.score)!=float:
                 i.score=10.0
         error = [ float(i.score) for i in score.unstack() if i.score!=None ]
-
-
     elif score == False:
         import sciunit.scores as scores
         error = scores.InsufficientDataScore(None)
-        #error = 10.0
-        #score = scores.ErrorScore(None)
-
-        #error = sciunit.ErrorScore(None)
-    return (error,iter_arg.attrs)
-
-
+    return (score,error,iter_arg.attrs)
 
 class VirtualModel:
     '''
@@ -170,7 +147,7 @@ class VirtualModel:
 
 
 
-param=['a','b']
+param=['a','b']#,'vr','vpeak']
 import neuronunit.capabilities as cap
 AMPL = 0.0*pq.pA
 DELAY = 100.0*pq.ms
@@ -180,55 +157,16 @@ required_capabilities = (cap.ReceivesSquareCurrent,
                          cap.ProducesSpikes)
 params = {'injected_square_current':
             {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
-
 name = "Rheobase test"
-
 description = ("A test of the rheobase, i.e. the minimum injected current "
                "needed to evoke at least one spike.")
-
 score_type = scores.RatioScore
 guess=None
-
 lookup = {} # A lookup table global to the function below.
 verbose=True
 import quantities as pq
 units = pq.pA
-#verbose=True
-
-
-
-
-def ff(ampl,vm):
-    '''
-    Inputs are an amplitude to test and a virtual model
-    output is an virtual model with an updated dictionary.
-    '''
-    if float(ampl) not in vm.lookup:
-        current = params.copy()['injected_square_current']
-        uc={'amplitude':ampl}
-        current.update(uc)
-        current={'injected_square_current':current}
-        vm.run_number+=1
-
-        model.inject_square_current(current)
-        vm.previous=ampl
-        n_spikes = model.get_spike_count()
-        if n_spikes==1:
-            vm.rheobase=ampl
-        verbose=False
-        if verbose:
-            print("Injected %s current and got %d spikes" % \
-                    (ampl,n_spikes))
-        vm.lookup[float(ampl)] = n_spikes
-        return vm
-
-    if float(ampl) in vm.lookup:
-        return vm
-
-
-
 def f(ampl,vm):
-
     if float(ampl) not in vm.lookup:
         current = params.copy()['injected_square_current']
         uc={'amplitude':ampl}
@@ -245,9 +183,7 @@ def f(ampl,vm):
             print("Injected %s current and got %d spikes" % \
                     (ampl,n_spikes))
         vm.lookup[float(ampl)] = n_spikes
-
         return vm
-
     if float(ampl) in vm.lookup:
         return vm
 
@@ -266,7 +202,6 @@ def main2(ind,guess_attrs=None):
     else:
         import copy
         vm.attrs=ind.attrs
-
     begin_time=time.time()
     while_true=True
     while(while_true):
@@ -275,10 +210,8 @@ def main2(ind,guess_attrs=None):
             steps2 = np.linspace(50,190,4.0)
             steps = [ i*pq.pA for i in steps2 ]
             lookup2=list(map(f,steps,repeat(vm)))#,repeat(model)))
-
         m = lookup2[0]
         assert(type(m))!=None
-
         sub=[]
         supra=[]
         import pdb
@@ -299,22 +232,19 @@ def main2(ind,guess_attrs=None):
         if len(sub) and len(supra):
             steps2 = np.linspace(sub.max(),supra.min(),4.0)
             steps = [ i*pq.pA for i in steps2 ]
-
         elif len(sub):
             steps2 = np.linspace(sub.max(),2*sub.max(),4.0)
             steps = [ i*pq.pA for i in steps2 ]
         elif len(supra):
             steps2 = np.linspace(-1*(supra.min()),supra.min(),4.0)
             steps = [ i*pq.pA for i in steps2 ]
-
         lookup2=list(map(f,steps,repeat(vm)))
 
 
-def evaluate2(individual, guess_value=None):#This method must be pickle-able for scoop to work.
+def evaluate2(individual, guess_value=None):
+    #This method must be pickle-able for scoop to work.
     model=VirtualModel()
-
     if guess_value != None:
-
         individual.lookup={}
         vm=VirtualModel()
         import copy
@@ -323,7 +253,6 @@ def evaluate2(individual, guess_value=None):#This method must be pickle-able for
         import pdb
         assert(type(vm))!=None
         assert(type(vm.lookup))!=None
-        #pdb.set_trace()
         for k,v in vm.lookup.items():
             if v==1:
                 individual.rheobase=k
@@ -349,24 +278,20 @@ if __name__ == "__main__":
     v0 = np.linspace(-75.0,-45.0,10)
     vt =  np.linspace(-50.0,-30.0,10)
     vpeak =np.linspace(30.0,40.0,10)
-    iter_list=[ (i,j,k) for i in a for j in b for k in vr ]
+    #iter_list=[ (i,j,k,l) for i in a for j in b for k in vr for l in vpeak ]
+    iter_list=[ (i,j) for i in a for j in b  ]
+    guess_attrs=[]
     guess_attrs=[]
     guess_attrs.append(0.045)
     guess_attrs.append(-5e-09)
-
-    #steps2 = np.linspace(50,190,4.0)
-    #steps = [ i*pq.pA for i in steps2 ]
-
     run_number,rh_value,attrs=main2(model,guess_attrs)
-    #model=build_single(rh_value)
-
     mean_vm=VirtualModel()
-
     guess_attrs=[]
     #find the mean parameter sets, and use them to inform the rheobase search.
     guess_attrs.append(np.mean( [ i for i in a ]))
     guess_attrs.append(np.mean( [ i for i in b ]))
-    guess_attrs.append(np.mean( [ i for i in k ]))
+    #guess_attrs.append(np.mean( [ i for i in k ]))
+    #guess_attrs.append(np.mean( [ i for i in l ]))
 
     for i, p in enumerate(param):
         value=str(guess_attrs[i])
@@ -382,50 +307,42 @@ if __name__ == "__main__":
     #constituted by mean_vm. This will be used to speed up the rheobase search later.
     #model.attrs=mean_vm.attrs
     #def bulk_process(ff,steps,mean_vm):
-
-
+    #Attempts to parallelize rheobase search here should be based on those in nsga.py
     run_number,rh_value,attrs=main2(model,guess_attrs)
     list_of_models=list(futures.map(model2map,iter_list))
     for i in list_of_models:
         if type(i)==None:
             del i
-
     iterator=list(futures.map(evaluate2,list_of_models,repeat(rh_value)))
     iterator = [x for x in iterator if x.attrs != None]
-
-
     for i,j in enumerate(iterator):
         assert j.attrs!=None
-
     rhstorage = [  i.rheobase for i in iterator ]
     score_matrixt=list(futures.map(func2map,iterator,rhstorage))
     score_matrix=[]
     attrs=[]
-
-    for score,attr in score_matrixt:
+    score_typev=[]
+    #below score is just the floats associated with RatioScore and Z-scores.
+    for score_type,score,attr in score_matrixt:
         if not isinstance(score,scores.InsufficientDataScore):
             score_matrix.append(score)
             attrs.append(attr)
-
-
+            score_typev.append(score_type)
     score_matrix=np.array(score_matrix)
+
     import pickle
     with open('score_matrix.pickle', 'wb') as handle:
         pickle.dump(score_matrixt, handle)
-
     storagei = [ np.sum(i) for i in score_matrix ]
-    print(storagei)
-
     storagesmin=np.where(storagei==np.min(storagei))
     storagesmax=np.where(storagei==np.max(storagei))
-
-    print(np.shape(storagesmin)[0])
-    print(np.shape(storagesmax)[0])
+    pdb.set_trace()
+    score_typev[np.shape(storagesmin)[0]].related_data['vm']
+    #since there are non unique maximum and minimum values, just take the first ones of each.
     tuplepickle=(score_matrix[np.shape(storagesmin)[0]],score_matrix[np.shape(storagesmax)[0]],attrs[np.shape(storagesmax)[0]])
     with open('minumum_and_maximum_values.pickle', 'wb') as handle:
         pickle.dump(tuplepickle,handle)
-
     with open('minumum_and_maximum_values.pickle', 'rb') as handle:
         opt_values=pickle.load(handle)
-        print('minumum and maximum')
+        print('minumum value')
         print(opt_values)
