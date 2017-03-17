@@ -626,6 +626,12 @@ def main(seed=None):
         logbook.record(gen=gen, evals=len(invalid_ind), **record)
         print(logbook.stream)
         pop.sort(key=lambda x: x.fitness.values)
+        import pickle
+        with open('minumum_and_maximum_values.pickle', 'rb') as handle:
+            opt_values=pickle.load(handle)
+            print('minumum and maximum values from exhaustive search routine')
+            print(opt_values)
+
 
 
 

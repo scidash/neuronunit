@@ -20,7 +20,6 @@ import neuron
 import time
 h = neuron.h
 h.load_file("stdlib.hoc")
-
 h.load_file("stdgui.hoc")
 
 h("objref p")
@@ -30,10 +29,10 @@ class NeuronSimulation():
 
     def __init__(self, tstop, dt):
 
-        print("\n    Starting simulation in NEURON generated from NeuroML2 model...\n")
+        #print("\n    Starting simulation in NEURON generated from NeuroML2 model...\n")
 
         # Adding simulation Component(id=sim1 type=Simulation) of network/component: net1 (Type: network)
-        print("Population RS_pop contains 1 instance(s) of component: RS of type: izhikevich2007Cell")
+        #print("Population RS_pop contains 1 instance(s) of component: RS of type: izhikevich2007Cell")
 
         h(" {n_RS_pop = 1} ")
         '''
@@ -106,13 +105,13 @@ class NeuronSimulation():
 
         self.initialized = True
         sim_start = time.time()
-        print("Running a simulation of %sms (dt = %sms)" % (h.tstop, h.dt))
+        #print("Running a simulation of %sms (dt = %sms)" % (h.tstop, h.dt))
 
         h.run()
 
         self.sim_end = time.time()
         sim_time = self.sim_end - sim_start
-        print("Finished NEURON simulation in %f seconds (%f mins)..."%(sim_time, sim_time/60.0))
+        #print("Finished NEURON simulation in %f seconds (%f mins)..."%(sim_time, sim_time/60.0))
 
         self.save_results()
 
@@ -128,13 +127,12 @@ class NeuronSimulation():
 
     def save_results(self):
 
-        print("Saving results at t=%s..."%h.t)
+        #print("Saving results at t=%s..."%h.t)
 
         if self.sim_end < 0: self.sim_end = time.time()
 
 
         # File to save: time
-        #py_v_time = [ t/1000 for t in h.v_time.to_python() ]  # Convert to Python list for speed...
         py_v_time = [ float(t) for t in h.v_time.to_python() ]  # Convert to Python list for speed...
 
         f_time_f2 = open('time.dat', 'w')
@@ -143,32 +141,27 @@ class NeuronSimulation():
         for i in range(num_points):
             f_time_f2.write('%f'% py_v_time[i])  # Save in SI units...+ '\n')
         f_time_f2.close()
-        print("Saved data to: time.dat")
+        #print("Saved data to: time.dat")
 
         # File to save: of0
         py_v_v_of0 = [ float(x) for x in h.v_v_of0.to_python() ]  # Convert to Python list for speed, variable has dim: voltage
         py_v_u_of0 = [ float(x) for x in h.v_u_of0.to_python() ]  # Convert to Python list for speed, variable has dim: current
-
-        #py_v_v_of0 = [ float(x  / 1000.0) for x in h.v_v_of0.to_python() ]  # Convert to Python list for speed, variable has dim: voltage
-        #py_v_u_of0 = [ float(x  / 1.0E9) for x in h.v_u_of0.to_python() ]  # Convert to Python list for speed, variable has dim: current
-
         f_of0_f2 = open('RS_One.dat', 'w')
         num_points = len(py_v_time)  # Simulation may have been stopped before tstop...
 
         for i in range(num_points):
             f_of0_f2.write('%e\t'% py_v_time[i]  + '%e\t'%(py_v_v_of0[i])  + '%e\t'%(py_v_u_of0[i]) + '\n')
         f_of0_f2.close()
-        print("Saved data to: RS_One.dat")
+        #print("Saved data to: RS_One.dat")
 
         save_end = time.time()
         save_time = save_end - self.sim_end
-        print("Finished saving results in %f seconds"%(save_time))
 
-        print("Done")
+        #print("Done")
 
-        quit()
-if __name__ == '__main__':
+#        quit()
+#if __name__ == '__main__':
 
-    ns = NeuronSimulation(tstop=1600, dt=0.0025)
+#    ns = NeuronSimulation(tstop=1600, dt=0.0025)
 
-    ns.run()
+#    ns.run()
