@@ -363,6 +363,7 @@ if __name__ == "__main__":
     mean_vm=VirtualModel()
 
     guess_attrs=[]
+    #find the mean parameter sets, and use them to inform the rheobase search.
     guess_attrs.append(np.mean( [ i for i in a ]))
     guess_attrs.append(np.mean( [ i for i in b ]))
     guess_attrs.append(np.mean( [ i for i in k ]))
@@ -376,11 +377,6 @@ if __name__ == "__main__":
             attrs['//izhikevich2007Cell'][p]=value
     mean_vm.attrs=attrs
 
-    #steps2 = np.linspace(40,80,7.0)
-    #steps = [ i*pq.pA for i in steps2 ]
-
-
-
     #this might look like a big list iteration, but its not.
     #the statement below just finds rheobase on one value, that is the value
     #constituted by mean_vm. This will be used to speed up the rheobase search later.
@@ -389,8 +385,6 @@ if __name__ == "__main__":
 
 
     run_number,rh_value,attrs=main2(model,guess_attrs)
-
-    #from itertools import repeat
     list_of_models=list(futures.map(model2map,iter_list))
     for i in list_of_models:
         if type(i)==None:
