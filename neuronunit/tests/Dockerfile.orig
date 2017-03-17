@@ -3,17 +3,26 @@
 FROM scidash/neuronunit
 USER root
 
-
 RUN pip install --upgrade pip
 RUN pip install matplotlib
-
 RUN easy_install gevent
 RUN easy_install greenlet
-RUN apt-get update
-RUN apt-get install -y gvfs-bin 
-#I cant remember what gvfs-bin does
+<<<<<<< HEAD
+ENV ATOM_VERSION v1.12.7
+
+RUN apt-get install -y gedit meld gvfs-bin
+
+RUN apt-get install -y build-essential
 RUN apt-get update
 
+
+#Create python bindings for NEURON
+=======
+RUN apt-get update
+RUN apt-get install -y gvfs-bin
+RUN apt-get update
+
+>>>>>>> dev2
 
 
 ENV WORK_HOME $HOME/work/scidash
@@ -26,25 +35,25 @@ RUN apt-get install -y python3-setuptools
 ENV PATH $PATH:/opt/conda/bin
 RUN easy_install gevent
 RUN easy_install greenlet
-
-#WORKDIR $HOME
-#RUN git clone https://github.com/russelljjarvis/BluePyOpt.git
-#WORKDIR BluePyOpt
-#RUN python setup.py install
-#RUN apt-get install -y python-tk
-
-
+#RUN apt-get install -y povray eog
+WORKDIR $HOME
+RUN git clone https://github.com/russelljjarvis/BluePyOpt.git
+WORKDIR BluePyOpt
+RUN python setup.py install
+RUN apt-get install -y python-tk
 RUN chown -R jovyan $HOME
-#RUN python -c "import bluepyopt"
-
+RUN python -c "import bluepyopt"
 RUN conda install mpi4py
-#RUN pip install git+https://github.com/roryk/ipython-cluster-helper
+RUN pip install git+https://github.com/roryk/ipython-cluster-helper
 
-#RUN ipcluster nbextension enable
-
+RUN ipcluster nbextension enable
 RUN apt-get install -y curl apt-utils
 RUN apt-get update
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> dev2
 WORKDIR $HOME
 
 RUN chown -R jovyan /opt/conda/lib/python3.5/site-packages/
@@ -78,10 +87,38 @@ RUN python -c "import neuron"
 RUN python -c "import pyneuroml"
 RUN nrnivmodl
 RUN python -c "import scoop"
+
 RUN python -c "import deap"
 
-RUN nrniv
+RUN sudo apt-get install -y ssh
 
+RUN sudo apt-get install -y libglib2.0-0 libxext6 libsm6 libxrender1 \
+    gcc g++ build-essential \
+    libglib2.0-0 libxext6 libsm6 libxrender1 \
+libncurses-dev openmpi-bin openmpi-doc libopenmpi-dev
+RUN sudo apt-get -y remove python2.7
+
+
+# Get python bindings for open mpi
+WORKDIR $HOME
+RUN sudo /opt/conda/bin/conda install -y mpi4py
+
+
+RUN nrniv
+WORKDIR $HOME/nrn-7.4
+RUN rm -r /home/jovyan/nrn-7.4/x86_64/
+
+<<<<<<< HEAD
+RUN sudo ./configure --prefix=`pwd` --without-iv --with-paranrn=/usr/bin/mpiexec --with-nrnpython=/opt/conda/bin/python
+RUN sudo make all && \
+   sudo make install
+
+WORKDIR src/nrnpython
+RUN sudo /opt/conda/bin/python setup.py install
+ENV PATH $HOME/neuron/nrn-7.4/x86_64/bin:$PATH
+#ENV PYTHONHOME /opt/conda/bin/python
+=======
+>>>>>>> dev2
 RUN export PATH=$PATH
 
 #un comment the following line to test ipcluster during build.
@@ -89,7 +126,6 @@ RUN export PATH=$PATH
 #https://github.com/russelljjarvis/neuronunit.git
 WORKDIR $HOME
 
-RUN echo "do this part again such that pickled files can be used to bypass problems with aibs.py in the short term !"
 
 RUN git clone -b dev https://github.com/russelljjarvis/neuronunit.git
 WORKDIR $HOME/neuronunit/neuronunit/tests/NeuroML2
@@ -98,4 +134,14 @@ RUN nrnivmodl
 RUN ls LEMS_2007One.xml
 WORKDIR $HOME/neuronunit/neuronunit/tests/
 RUN ls *.pickle
-ENTRYPOINT python -m scoop exhaustive_search.py && python -m scoop.nsga
+<<<<<<< HEAD
+
+
+#ENTRYPOINT python -m scoop nsga.py
+#ENTRYPOINT python -m scoop exhaustive_search.py
+=======
+RUN which python3
+
+
+ENTRYPOINT python -m scoop exhaustive_search.py
+>>>>>>> dev2
