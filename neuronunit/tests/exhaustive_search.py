@@ -57,6 +57,7 @@ class SanityTest():
         Implementation of sciunit.Test.generate_prediction.
         mp and vm are different because they are outputs from different current injections.
         However they probably both should be the same current found through rheobase current.
+        TODO investigate this issue.
         """
         model.inject_square_current(get_neab.suite.tests[4].params['injected_square_current'])
         mp=model.get_membrane_potential()
@@ -153,7 +154,7 @@ def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
         for i in mp:
             if math.isnan(i):
                 print(mp)
-                error = scores.InsufficientDataScore(None)
+                #error = scores.InsufficientDataScore(None)
                 #pdb.set_trace()
                 error = 10.0
                 return (error,iter_arg.attrs)
@@ -167,7 +168,7 @@ def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
 
     elif score == False:
         import sciunit.scores as scores
-        error = scores.InsufficientDataScore(None)
+        #error = scores.InsufficientDataScore(None)
         error = 10.0
         #score = scores.ErrorScore(None)
 
@@ -432,7 +433,7 @@ if __name__ == "__main__":
     for i in list_of_models:
         if type(i)==None:
             del i
-        assert(type(i))!=None
+
     iterator=list(futures.map(evaluate2,list_of_models,repeat(rh_value)))
     iterator = [x for x in iterator if x.attrs != None]
 
@@ -444,10 +445,12 @@ if __name__ == "__main__":
     score_matrixt=list(futures.map(func2map,iterator,rhstorage))
     score_matrix=[]
     attrs=[]
-    for i,j in score_matrixt:
-        if InsufficientDataScore not in i:
-            score_matrix.append(i)
-            attrs.append(j)
+
+    for score,attr in score_matrixt:
+        if not isinstance(score,scores.InsufficientDataScore):
+            score_matrix.append(score)
+            attrs.append(attr)
+
 
     score_matrix=np.array(score_matrix)
     import pickle
