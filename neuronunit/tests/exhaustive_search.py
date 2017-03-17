@@ -79,7 +79,7 @@ def model2map(iter_arg):#This method must be pickle-able for scoop to work.
     attrs['//izhikevich2007Cell']={}
     param=['a','b']#,'vr','vpeak']
     i,j=iter_arg#,k,l
-    model.name=str(i)+str(j)+str(k)+str(l)
+    model.name=str(i)+str(j)#+str(k)+str(l)
     attrs['//izhikevich2007Cell']['a']=i
     attrs['//izhikevich2007Cell']['b']=j
     #attrs['//izhikevich2007Cell']['vr']=k
@@ -144,9 +144,6 @@ class VirtualModel:
         self.s_html=None
         self.results=None
 
-
-
-
 param=['a','b']#,'vr','vpeak']
 import neuronunit.capabilities as cap
 AMPL = 0.0*pq.pA
@@ -209,7 +206,7 @@ def main2(ind,guess_attrs=None):
         if len(vm.lookup)==0:
             steps2 = np.linspace(50,190,4.0)
             steps = [ i*pq.pA for i in steps2 ]
-            lookup2=list(map(f,steps,repeat(vm)))#,repeat(model)))
+            lookup2=list(futures.map(f,steps,repeat(vm)))#,repeat(model)))
         m = lookup2[0]
         assert(type(m))!=None
         sub=[]
@@ -238,7 +235,7 @@ def main2(ind,guess_attrs=None):
         elif len(supra):
             steps2 = np.linspace(-1*(supra.min()),supra.min(),4.0)
             steps = [ i*pq.pA for i in steps2 ]
-        lookup2=list(map(f,steps,repeat(vm)))
+        lookup2=list(futures.map(f,steps,repeat(vm)))
 
 
 def evaluate2(individual, guess_value=None):
@@ -280,11 +277,8 @@ if __name__ == "__main__":
     vpeak =np.linspace(30.0,40.0,10)
     #iter_list=[ (i,j,k,l) for i in a for j in b for k in vr for l in vpeak ]
     iter_list=[ (i,j) for i in a for j in b  ]
-    guess_attrs=[]
-    guess_attrs=[]
-    guess_attrs.append(0.045)
-    guess_attrs.append(-5e-09)
-    run_number,rh_value,attrs=main2(model,guess_attrs)
+
+    #run_number,rh_value,attrs=main2(model,guess_attrs)
     mean_vm=VirtualModel()
     guess_attrs=[]
     #find the mean parameter sets, and use them to inform the rheobase search.
@@ -338,7 +332,8 @@ if __name__ == "__main__":
     storagesmax=np.where(storagei==np.max(storagei))
     pdb.set_trace()
     import matplotlib as plt
-    for i,s in enumerate(score_typev[np.shape(storagesmin)[0]])#.related_data['vm']
+    for i,s in enumerate(score_typev[np.shape(storagesmin)[0]]):
+        #.related_data['vm']
         plt.plot(plot_vm())
         plt.savefig('s'+str(i)+'.png')
     #since there are non unique maximum and minimum values, just take the first ones of each.
