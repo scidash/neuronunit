@@ -103,6 +103,8 @@ def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
     vm=st.generate_prediction(model)
     score=st.compute_score(vm)
     if score == True:
+        '''
+        The following code implementation, should already be accomplished in in the sanity test class instance above:
         get_neab.suite.tests[0].prediction={}
         get_neab.suite.tests[0].prediction['value']=suite*qt.pA
         model.inject_square_current(get_neab.suite.tests[4].params['injected_square_current'])
@@ -112,6 +114,7 @@ def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
             if math.isnan(i):
                 error = scores.InsufficientDataScore(None)
                 return (None,error,iter_arg.attrs)
+        '''
         score = get_neab.suite.judge(model)#passing in model, changes model
         model.run_number+=1
         for i in score.unstack():
@@ -121,7 +124,7 @@ def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
     elif score == False:
         import sciunit.scores as scores
         error = scores.InsufficientDataScore(None)
-    return (score,error,iter_arg.attrs)
+    return (error,iter_arg.attrs)
 
 class VirtualModel:
     '''
@@ -317,11 +320,12 @@ if __name__ == "__main__":
     attrs=[]
     score_typev=[]
     #below score is just the floats associated with RatioScore and Z-scores.
-    for score_type,score,attr in score_matrixt:
+    for score,attr in score_matrixt
+    #for score_type,score,attr in score_matrixt:
         if not isinstance(score,scores.InsufficientDataScore):
             score_matrix.append(score)
             attrs.append(attr)
-            score_typev.append(score_type)
+            #score_typev.append(score_type)
     score_matrix=np.array(score_matrix)
 
     import pickle
@@ -330,12 +334,13 @@ if __name__ == "__main__":
     storagei = [ np.sum(i) for i in score_matrix ]
     storagesmin=np.where(storagei==np.min(storagei))
     storagesmax=np.where(storagei==np.max(storagei))
-    pdb.set_trace()
+    '''
     import matplotlib as plt
     for i,s in enumerate(score_typev[np.shape(storagesmin)[0]]):
         #.related_data['vm']
         plt.plot(plot_vm())
         plt.savefig('s'+str(i)+'.png')
+    '''
     #since there are non unique maximum and minimum values, just take the first ones of each.
     tuplepickle=(score_matrix[np.shape(storagesmin)[0]],score_matrix[np.shape(storagesmax)[0]],attrs[np.shape(storagesmax)[0]])
     with open('minumum_and_maximum_values.pickle', 'wb') as handle:
