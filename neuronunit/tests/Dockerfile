@@ -84,7 +84,7 @@ RUN export PATH=$PATH
 #https://github.com/russelljjarvis/neuronunit.git
 WORKDIR $HOME
 
-RUN echo "do this part again such that pickled files can be used to bypass problems with aibs.py in the short term  ! ! !"
+RUN echo "do this part again such that pickled files can be used to bypass problems with aibs.py in the short term !"
 
 RUN git clone -b dev https://github.com/russelljjarvis/neuronunit.git
 WORKDIR $HOME/neuronunit/neuronunit/tests/NeuroML2
