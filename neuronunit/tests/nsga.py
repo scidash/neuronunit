@@ -1,7 +1,11 @@
 
 import time
-init_start=time.time()
-import get_neab
+from math import sqrt
+import pdb
+import array
+import random
+import json
+
 
 """
 Scoop can only operate on variables classes and methods at top level 0
@@ -13,26 +17,23 @@ https://code.google.com/p/deap/source/browse/examples/ga/onemax_short.py
 Conversion to its parallel form took two lines:
 from scoop import futures
 """
-import array
-import random
-import json
 
 import numpy as np
-import pdb
 import matplotlib.pyplot as plt
 import quantities as pq
-
-from math import sqrt
-
 from deap import algorithms
 from deap import base
 from deap.benchmarks.tools import diversity, convergence, hypervolume
 from deap import creator
 from deap import tools
 from scoop import futures
-
 import scoop
-creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
+
+import get_neab
+
+init_start=time.time()
+creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, 
+                                                    -1.0, -1.0, -1.0, -1.0))
 # -1.0, -1.0, -1.0, -1.0,))
 creator.create("Individual",list, fitness=creator.FitnessMin)
 
@@ -331,7 +332,7 @@ def check_fix_range(lookup2):
     supra=np.array(supra)
 
     if len(sub) and len(supra):
-        center=(sub.max()+supra.min())/2.0
+        #center=(sub.max()+supra.min())/2.0
         #steps2=np.linspace(center-sub.max(),center+supra.min(),7.0)
         steps2 = np.linspace(sub.max(),supra.min(),7.0)
         np.delete(steps2,np.array(lookup2))
