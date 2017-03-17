@@ -320,7 +320,7 @@ if __name__ == "__main__":
     attrs=[]
     score_typev=[]
     #below score is just the floats associated with RatioScore and Z-scores.
-    for score,attr in score_matrixt
+    for score,attr in score_matrixt:
     #for score_type,score,attr in score_matrixt:
         if not isinstance(score,scores.InsufficientDataScore):
             score_matrix.append(score)
