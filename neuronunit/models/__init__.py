@@ -118,7 +118,7 @@ class LEMSModel(sciunit.Model, cap.Runnable):
         if (not rerun) and hasattr(self,'last_run_params') and \
            self.run_params == self.last_run_params:
             return
-        self.update_run_params()
+        self.update_run_params(self.attrs)
         #HACK
         #DO NOT MERGE.
         #if self.f is None:
