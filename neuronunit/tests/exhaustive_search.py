@@ -8,7 +8,7 @@ import pickle
 import copy
 from itertools import repeat
 
-import numpy as np    
+import numpy as np
 import quantities as pq
 from quantities.quantity import Quantity
 import numpy as np
@@ -25,7 +25,6 @@ from scoop import futures
 import sciunit.scores as scores
 import neuronunit.capabilities as cap
 import get_neab
-from neuronunit.models import backends
 import sciunit.scores as scores
 from neuronunit.models import backends
 from neuronunit.models.reduced import ReducedModel
@@ -36,52 +35,6 @@ import get_neab
 model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
 model.load_model()
 
-class SanityTest():
-    def __init__(self):
-        self=self
-    """Tests the input resistance of a cell."""
-    name = "Sanity test"
-    description = ("Test for if injecting current results in not a numbers (NAN).")
-    score_type = scores.ZScore
-    required_capabilities = (cap.ReceivesSquareCurrent,
-                             cap.ProducesSpikes)
-    def generate_prediction(self,model):
-        """
-        Use inherited code
-        Implementation of sciunit.Test.generate_prediction.
-        mp and vm are different because they are outputs from different current injections.
-        However they probably both should be the same current found through rheobase current.
-        TODO investigate this issue.
-        """
-        model.inject_square_current(get_neab.suite.tests[4].params['injected_square_current'])
-        mp=model.get_membrane_potential()
-        i,vm = nutests.TestPulseTest.generate_prediction(nutests.TestPulseTest,model)
-        median = model.get_median_vm() # Use median for robustness.
-        std = model.get_std_vm()
-        return vm, mp, median, std
-
-    def compute_score(self,prediction):
-        """Implementation of sciunit.Test.score_prediction."""
-        import math
-        (vm, mp, median, std) = prediction
-        for j in vm:
-            if math.isnan(j):
-                return False
-        for j in mp:
-            if math.isnan(j):
-                return False
-        from neuronunit.capabilities import spike_functions
-        spike_waveforms=spike_functions.get_spike_waveforms(vm)
-        n_spikes = len(spike_waveforms)
-        thresholds = []
-        for i,s in enumerate(spike_waveforms):
-            s = np.array(s)
-            dvdt = np.diff(s)
-            import math
-            for j in dvdt:
-                if math.isnan(j):
-                    return False
-        return True
 
 def model2map(iter_arg):#This method must be pickle-able for scoop to work.
     vm=VirtualModel()
@@ -143,22 +96,6 @@ class VirtualModel:
         self.results=None
 
 param=['a','b']#,'vr','vpeak']
-AMPL = 0.0*pq.pA
-DELAY = 100.0*pq.ms
-DURATION = 1000.0*pq.ms
-required_capabilities = (cap.ReceivesSquareCurrent,
-                         cap.ProducesSpikes)
-params = {'injected_square_current':
-            {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
-name = "Rheobase test"
-description = ("A test of the rheobase, i.e. the minimum injected current "
-               "needed to evoke at least one spike.")
-score_type = scores.RatioScore
-guess=None
-lookup = {} # A lookup table global to the function below.
-verbose=True
-import quantities as pq
-units = pq.pA
 
 
 def check_fix_range(lookup):
@@ -172,6 +109,23 @@ def check_fix_range(lookup):
     given a dictionary of rheobase search values, use that
     dictionary as input for a subsequent search.
     '''
+    required_capabilities = (cap.ReceivesSquareCurrent,
+                             cap.ProducesSpikes)
+    name = "Rheobase test"
+    description = ("A test of the rheobase, i.e. the minimum injected current "
+                   "needed to evoke at least one spike.")
+    score_type = scores.RatioScore
+    guess=None
+    lookup = {} # A lookup table global to the function below.
+    verbose=True
+    import quantities as pq
+    units = pq.pA
+    AMPL = 0.0*pq.pA
+    DELAY = 100.0*pq.ms
+    DURATION = 1000.0*pq.ms
+    params = {'injected_square_current':
+                {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+
     sub=[]
     supra=[]
     for v,k in lookup:
@@ -185,7 +139,9 @@ def check_fix_range(lookup):
 
     sub=np.array(sub)
     supra=np.array(supra)
+    import pdb
 
+    #pdb.set_trace()
     if len(sub) and len(supra):
 
 
@@ -206,6 +162,9 @@ def check_fix_range(lookup):
         np.delete(steps2,np.array(lookup))
         steps = [ i*pq.pA for i in steps2 ]
 
+    print(steps)
+    #pdb.set_trace()
+
     if len(steps)<7:
         steps2 = np.linspace(steps.min(),steps.max(),7.0)
         steps = [ i*pq.pA for i in steps2 ]
@@ -218,14 +177,37 @@ def f(ampl,vm):
     Inputs are an amplitude to test and a virtual model
     output is an virtual model with an updated dictionary.
     '''
+    required_capabilities = (cap.ReceivesSquareCurrent,
+                             cap.ProducesSpikes)
+    name = "Rheobase test"
+    description = ("A test of the rheobase, i.e. the minimum injected current "
+                   "needed to evoke at least one spike.")
+    score_type = scores.RatioScore
+    guess=None
+    lookup = {} # A lookup table global to the function below.
+    verbose=True
+    import quantities as pq
+    units = pq.pA
+    AMPL = 0.0*pq.pA
+    DELAY = 100.0*pq.ms
+    DURATION = 1000.0*pq.ms
+    params = {'injected_square_current':
+                {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+
     if float(ampl) not in vm.lookup:
         current = params.copy()['injected_square_current']
         uc={'amplitude':ampl}
         current.update(uc)
+
         current={'injected_square_current':current}
         vm.run_number+=1
+        print(type(model))
+        print(current)
+        print(vm.attrs)
+        print(type((model)))
         model.update_run_params(vm.attrs)
         assert vm.attrs==model.attrs
+        print(dir(model))
         model.inject_square_current(current)
         vm.previous=ampl
         n_spikes = model.get_spike_count()
@@ -249,12 +231,24 @@ def searcher(f,rh_param,vms):
     This is not yet used, but it is intended for future use.
     Its intended to replace the less general searcher function
     '''
+    import pdb
+    if len(vms.lookup)==0:
+        #vms.lookup=rh_param[1]
+        print(rh_param)
+        print(type(rh_param))
+        #pdb.set_trace()
+        returned_tupel=list(futures.map(f,rh_param[1],repeat(vms)))
+        rh_param=()
+        rh_param=(returned_tupel[0],returned_tupel[1])
+        vms.lookup=rh_param[1]
     while rh_param[0]==False:
         l3=[]# convert a dictionary to a list.
         for l in rh_param[1]:
             for k,v in vms.lookup.items():
                 l3.append((v, k))
+        #the function call below is run in serial, since its hardly computationally intensive.
         rh_param=check_fix_range(l3)
+        #The function call below has a futures.map inside it, since it is computationally intensive.
         rh_param=check_repeat(ff,rh_param[1],vms)
         if rh_param[0]==True:
             return rh_param[1]
@@ -263,7 +257,6 @@ def searcher(f,rh_param,vms):
 
 def evaluate(individual, guess_value=None):
     #This method must be pickle-able for scoop to work.
-    model=VirtualModel()
     if guess_value != None:
         individual.lookup={}
         vm=VirtualModel()
@@ -276,10 +269,8 @@ def evaluate(individual, guess_value=None):
         model.attrs=mean_vm.attrs
         rh_param=(False,steps_current)
         #lookup=list(futures.map(ff,steps,repeat(mean_vm)))
-        vm.rheobase=searcher(ff,rh_param,vm)
-    individual.rheobase=vm.rheobase
-    model.rheobase=vm.rheobase
-    return model
+        vm.rheobase=searcher(f,rh_param,vm)
+    return vm
 
 
 
@@ -303,7 +294,7 @@ if __name__ == "__main__":
     #find the mean parameter sets, and use them to inform the rheobase search.
     guess_attrs.append(np.mean( [ i for i in a ]))
     guess_attrs.append(np.mean( [ i for i in b ]))
-    
+
     for i, p in enumerate(param):
         value=str(guess_attrs[i])
         model.name = str(model.name)+' '+str(p)+str(value)
@@ -327,14 +318,18 @@ if __name__ == "__main__":
     #lookup=list(futures.map(ff,steps,repeat(mean_vm)))
     #vm.rheobase=searcher(ff,steps_current,vm)
     rh_param=(False,steps_current)
-    rh_value=searcher(ff,rh_param,mean_vm)
+    print(rh_param,mean_vm)
+    print('first point of contact')
+    import pdb
+    #pdb.set_trace()
+    rh_value=searcher(f,rh_param,mean_vm)
     list_of_models=list(futures.map(model2map,iter_list))
 
 
     for i in list_of_models:
+        assert(type(i)) is not None
         if type(i) is not None:
             del i
-        assert(type(i)) is not None
     iterator = list(futures.map(evaluate,list_of_models,repeat(rh_value)))
     iterator = [x for x in iterator if x.attrs is not None]
 
