@@ -9,7 +9,7 @@ from quantities import ms, mV, nA
 from neo.core import AnalogSignal
 
 class Backend:
-    """Based class for simulator backends that implement simulator-specific
+    """Base class for simulator backends that implement simulator-specific
     details of modifying, running, and reading results from the simulation
     """
     # Name of the backend
@@ -22,7 +22,7 @@ class Backend:
         """Set model attributes, e.g. input resistance of a cell"""
         pass
 
-    def update_run_params(self, attrs):
+    def update_run_params(self):
         """Set run-time parameters, e.g. the somatic current to inject"""
         pass
 
@@ -40,8 +40,8 @@ class jNeuroMLBackend(Backend):
     def set_attrs(self, attrs):
         self.set_lems_attrs(attrs)
 
-    def update_run_params(self, attrs):
-        self.update_lems_run_params(attrs)
+    def update_run_params(self):
+        self.update_lems_run_params()
 
 
 
@@ -245,6 +245,7 @@ class NEURONBackend(Backend):
                               exec_in_dir = ".",
                               verbose=DEFAULTS['v'],
                               exit_on_fail = True)
+
 
             self=cond_load()
             more_attributes=pynml.read_lems_file(self.orig_lems_file_path)
