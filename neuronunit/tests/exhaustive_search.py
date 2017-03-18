@@ -33,7 +33,7 @@ from neuronunit import tests as nutests
 import get_neab
 
 model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
-model.load_model()
+model = model.load_model()
 
 
 def model2map(iter_arg):#This method must be pickle-able for scoop to work.
@@ -59,17 +59,21 @@ def func2map(iter_arg, value):#This method must be pickle-able for scoop to work
     assert iter_arg.attrs is not None
     model.update_run_params(iter_arg.attrs)
     score=None
-    st = SanityTest()
-    vm = st.generate_prediction(model)
-    score = st.compute_score(vm)
-    if score == True:
+    #st = SanityTest()
+    #vm = st.generate_prediction(model)
+    #score = st.compute_score(vm)
+
+    #if score == True:
+    sc=get_neab.suite[0].sanity_check()
+    if sc==True:
         score = get_neab.suite.judge(model)#passing in model, changes model
-        model.run_number+=1
+
+    #    model.run_number+=1
         for i in score.unstack():
             if type(i.score)!=float:
                 i.score=10.0
         error = [ float(i.score) for i in score.unstack() if i.score!=None ]
-    elif score == False:
+    elif sc == False:
         import sciunit.scores as scores
         error = scores.InsufficientDataScore(None)
     return (error,iter_arg.attrs)
@@ -225,7 +229,26 @@ def f(ampl,vm):
 
 
 
-def searcher(f,rh_param,vms):
+#def searcher(f,rh_param,vms):
+
+
+
+
+def evaluate(individual, guess_value=None):
+    #This method must be pickle-able for scoop to work.
+    #if guess_value != None:
+    individual.lookup={}
+    vm=VirtualModel()
+    import copy
+    vm.attrs=copy.copy(individual.attrs)
+    #should there already exist a lookup table at this late stage in code?
+
+    steps = np.linspace(40,80,7.0)
+    steps_current = [ i*pq.pA for i in steps ]
+    model.attrs=mean_vm.attrs
+    rh_param=(False,steps_current)
+    #lookup=list(futures.map(ff,steps,repeat(mean_vm)))
+    #vm.rheobase=searcher(f,rh_param,vm)
     '''
     ultimately an attempt to capture the essence a lot of repeatative code below.
     This is not yet used, but it is intended for future use.
@@ -251,25 +274,8 @@ def searcher(f,rh_param,vms):
         #The function call below has a futures.map inside it, since it is computationally intensive.
         rh_param=check_repeat(ff,rh_param[1],vms)
         if rh_param[0]==True:
-            return rh_param[1]
-
-
-
-def evaluate(individual, guess_value=None):
-    #This method must be pickle-able for scoop to work.
-    if guess_value != None:
-        individual.lookup={}
-        vm=VirtualModel()
-        import copy
-        vm.attrs=copy.copy(individual.attrs)
-        #should there already exist a lookup table at this late stage in code?
-
-        steps = np.linspace(40,80,7.0)
-        steps_current = [ i*pq.pA for i in steps ]
-        model.attrs=mean_vm.attrs
-        rh_param=(False,steps_current)
-        #lookup=list(futures.map(ff,steps,repeat(mean_vm)))
-        vm.rheobase=searcher(f,rh_param,vm)
+            vm.rheobase=rh_param[1]
+            #return rh_param[1]
     return vm
 
 
@@ -322,7 +328,32 @@ if __name__ == "__main__":
     print('first point of contact')
     import pdb
     #pdb.set_trace()
-    rh_value=searcher(f,rh_param,mean_vm)
+    #rh_value=searcher(f,rh_param,mean_vm)
+    vms=mean_vm
+    if len(vms.lookup)==0:
+        #vms.lookup=rh_param[1]
+        print(rh_param)
+        print(type(rh_param))
+        #pdb.set_trace()
+        print(repeat(vms))
+        returned_tupel=list(futures.map(f,rh_param[1],repeat(vms)))
+        rh_param=()
+        rh_param=(returned_tupel[0],returned_tupel[1])
+        vms.lookup=rh_param[1]
+    while rh_param[0]==False:
+        l3=[]# convert a dictionary to a list.
+        for l in rh_param[1]:
+            for k,v in vms.lookup.items():
+                l3.append((v, k))
+        #the function call below is run in serial, since its hardly computationally intensive.
+        rh_param=check_fix_range(l3)
+        #The function call below has a futures.map inside it, since it is computationally intensive.
+        rh_param=check_repeat(ff,rh_param[1],vms)
+
+    if rh_param[0]==True:
+        vm.rheobase=rh_param[1]
+        rh_value=vm.rheobase
+
     list_of_models=list(futures.map(model2map,iter_list))
 
 
@@ -330,6 +361,7 @@ if __name__ == "__main__":
         assert(type(i)) is not None
         if type(i) is not None:
             del i
+    print(repeat(rh_value))
     iterator = list(futures.map(evaluate,list_of_models,repeat(rh_value)))
     iterator = [x for x in iterator if x.attrs is not None]
 
