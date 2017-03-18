@@ -5,16 +5,17 @@ import warnings
 from scoop import futures
 import os
 
+import quantities as pq
 
 
 class OptimizationTestCase(unittest.TestCase):
 
-    def test_func2map(file2map):
+    def test_func2map(self, file2map):
         exec_string='python '+str(file2map)
         os.system(exec_string)
         return 0
 
-    def test_main(ind,guess_attrs=None):
+    def test_main(self, ind, guess_attrs=None):
         vm=VirtualModel()
         if guess_attrs!=None:
             for i, p in enumerate(param):
@@ -74,13 +75,12 @@ class OptimizationTestCase(unittest.TestCase):
 
 
 
-    def test_build_single(rh_value):
+    def test_build_single(self, rh_value):
         '''
         This method is only used to check singlular sets of hard coded parameters.
         '''
-        import quantities as qt
         get_neab.suite.tests[0].prediction={}
-        get_neab.suite.tests[0].prediction['value']=rh_value*qt.pA
+        get_neab.suite.tests[0].prediction['value']=rh_value*pq.pA
         print(get_neab.suite.tests[0].prediction['value'])
         attrs={}
         attrs['//izhikevich2007Cell']={}
@@ -88,7 +88,6 @@ class OptimizationTestCase(unittest.TestCase):
         attrs['//izhikevich2007Cell']['b']=-5e-09
         #attrs['//izhikevich2007Cell']['vpeak']=30.0
         #attrs['//izhikevich2007Cell']['vr']=-53.4989145966
-        import quantities as qt
         model.update_run_params(attrs)
         score = get_neab.suite.judge(model)#passing in model, changes model
         error = []
@@ -96,7 +95,7 @@ class OptimizationTestCase(unittest.TestCase):
         return model
 
 
-    def test_run_all_files():
+    def test_run_all_files(self):
         '''
         run all files as different CPU threads, thus saving time on travis
         Since scoop is designed to facilitate nested forking/parallel job dispatch

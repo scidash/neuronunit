@@ -80,8 +80,8 @@ class LEMSModel(sciunit.Model, cap.Runnable):
             self.backend = name
             self._backend = options[name](*args,**kwargs)
             # Add all of the backend's methods to the model instance
-            self.__class__.__bases__ = (self._backend.__class__,) + \
-                                        self.__class__.__bases__
+            self.__class__.__bases__ = tuple(set((self._backend.__class__,) + \
+                                        self.__class__.__bases__))
         elif name is None:
             # The base class should not be called.
             raise Exception(("A backend (e.g. 'jNeuroML' or 'NEURON') "
@@ -118,7 +118,7 @@ class LEMSModel(sciunit.Model, cap.Runnable):
         if (not rerun) and hasattr(self,'last_run_params') and \
            self.run_params == self.last_run_params:
             return
-        self.update_run_params(run_params)
+        self.update_run_params()
         #HACK
         #DO NOT MERGE.
         #if self.f is None:
@@ -129,7 +129,7 @@ class LEMSModel(sciunit.Model, cap.Runnable):
         '''
         Doing things this way calls jNeuroML everytime which is very slow, and
         its exactly that we are trying to avoid.
-        self.f(self.lems_file_path, skip_run=self.skip_run,
+        self.results = self.f(self.lems_file_path, skip_run=self.skip_run,
                          nogui=self.run_params['nogui'],
                          load_saved_data=True, plot=False,
                          verbose=self.run_params['v']
