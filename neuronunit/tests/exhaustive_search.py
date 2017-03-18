@@ -26,52 +26,6 @@ import copy
 from itertools import repeat
 import sciunit.scores as scores
 import neuronunit.capabilities as cap
-class SanityTest():
-    def __init__(self):
-        self=self
-    """Tests the input resistance of a cell."""
-    name = "Sanity test"
-    description = ("Test for if injecting current results in not a numbers (NAN).")
-    score_type = scores.ZScore
-    required_capabilities = (cap.ReceivesSquareCurrent,
-                             cap.ProducesSpikes)
-    def generate_prediction(self,model):
-        """
-        Use inherited code
-        Implementation of sciunit.Test.generate_prediction.
-        mp and vm are different because they are outputs from different current injections.
-        However they probably both should be the same current found through rheobase current.
-        TODO investigate this issue.
-        """
-        model.inject_square_current(get_neab.suite.tests[4].params['injected_square_current'])
-        mp=model.get_membrane_potential()
-        i,vm = nutests.TestPulseTest.generate_prediction(nutests.TestPulseTest,model)
-        median = model.get_median_vm() # Use median for robustness.
-        std = model.get_std_vm()
-        return vm, mp, median, std
-
-    def compute_score(self,prediction):
-        """Implementation of sciunit.Test.score_prediction."""
-        import math
-        (vm, mp, median, std) = prediction
-        for j in vm:
-            if math.isnan(j):
-                return False
-        for j in mp:
-            if math.isnan(j):
-                return False
-        from neuronunit.capabilities import spike_functions
-        spike_waveforms=spike_functions.get_spike_waveforms(vm)
-        n_spikes = len(spike_waveforms)
-        thresholds = []
-        for i,s in enumerate(spike_waveforms):
-            s = np.array(s)
-            dvdt = np.diff(s)
-            import math
-            for j in dvdt:
-                if math.isnan(j):
-                    return False
-        return True
 
 def model2map(iter_arg):#This method must be pickle-able for scoop to work.
     vm=VirtualModel()
@@ -103,18 +57,6 @@ def func2map(iter_arg,suite):#This method must be pickle-able for scoop to work.
     vm=st.generate_prediction(model)
     score=st.compute_score(vm)
     if score == True:
-        '''
-        The following code implementation, should already be accomplished in in the sanity test class instance above:
-        get_neab.suite.tests[0].prediction={}
-        get_neab.suite.tests[0].prediction['value']=suite*qt.pA
-        model.inject_square_current(get_neab.suite.tests[4].params['injected_square_current'])
-        mp=model.get_membrane_potential()
-        import math
-        for i in mp:
-            if math.isnan(i):
-                error = scores.InsufficientDataScore(None)
-                return (None,error,iter_arg.attrs)
-        '''
         score = get_neab.suite.judge(model)#passing in model, changes model
         model.run_number+=1
         for i in score.unstack():
@@ -166,88 +108,108 @@ lookup = {} # A lookup table global to the function below.
 verbose=True
 import quantities as pq
 units = pq.pA
+
+
+def check_fix_range(lookup):
+    '''
+    Inputs: lookup, A dictionary of previous current injection values
+    used to search rheobase
+    Outputs: A boolean to indicate if the correct rheobase current was found
+    and a dictionary containing the range of values used.
+    If rheobase was actually found then rather returning a boolean and a dictionary,
+    instead logical True, and the rheobase current is returned.
+    given a dictionary of rheobase search values, use that
+    dictionary as input for a subsequent search.
+    '''
+    sub=[]
+    supra=[]
+    for v,k in lookup:
+        if v==1:
+            #A logical flag is returned to indicate that rheobase was found.
+            return (True,k)
+        elif v==0:
+            sub.append(k)
+        elif v>0:
+            supra.append(k)
+
+    sub=np.array(sub)
+    supra=np.array(supra)
+
+    if len(sub) and len(supra):
+
+
+        center = np.linspace(sub.max(),supra.min(),7.0)
+        np.delete(center,np.array(lookup))
+        #make sure that element 4 in a seven element vector
+        #is exactly half way between sub.max() and supra.min()
+        center[int(len(steps2)/2)+1]=(sub.max()+supra.min())/2.0
+        steps = [ i*pq.pA for i in center ]
+
+    elif len(sub):
+        steps2 = np.linspace(sub.max(),2*sub.max(),7.0)
+        np.delete(steps2,np.array(lookup))
+        steps = [ i*pq.pA for i in steps2 ]
+
+    elif len(supra):
+        steps2 = np.linspace(-2*(supra.min()),supra.min(),7.0)
+        np.delete(steps2,np.array(lookup))
+        steps = [ i*pq.pA for i in steps2 ]
+
+    if len(steps)<7:
+        steps2 = np.linspace(steps.min(),steps.max(),7.0)
+        steps = [ i*pq.pA for i in steps2 ]
+
+    import copy
+    return (False,copy.copy(steps))
+
 def f(ampl,vm):
+    '''
+    Inputs are an amplitude to test and a virtual model
+    output is an virtual model with an updated dictionary.
+    '''
     if float(ampl) not in vm.lookup:
         current = params.copy()['injected_square_current']
         uc={'amplitude':ampl}
         current.update(uc)
         current={'injected_square_current':current}
         vm.run_number+=1
-        model.update_run_params(vm.attrs)
-        assert vm.attrs==model.attrs
+
         model.inject_square_current(current)
         vm.previous=ampl
         n_spikes = model.get_spike_count()
+        if n_spikes==1:
+            vm.rheobase=ampl
         verbose=False
         if verbose:
             print("Injected %s current and got %d spikes" % \
                     (ampl,n_spikes))
         vm.lookup[float(ampl)] = n_spikes
         return vm
+
     if float(ampl) in vm.lookup:
         return vm
 
-def main2(ind,guess_attrs=None):
-    vm=VirtualModel()
-    if guess_attrs!=None:
-        for i, p in enumerate(param):
-            value=str(guess_attrs[i])
-            model.name=str(model.name)+' '+str(p)+str(value)
-            if i==0:
-                attrs={'//izhikevich2007Cell':{p:value }}
-            else:
-                attrs['//izhikevich2007Cell'][p]=value
-        vm.attrs=attrs
-        guess_attrs=None#stop reentry into this condition during while,
-    else:
-        import copy
-        vm.attrs=ind.attrs
-    begin_time=time.time()
-    while_true=True
-    while(while_true):
-        from itertools import repeat
-        if len(vm.lookup)==0:
-            steps2 = np.linspace(50,190,4.0)
-            steps = [ i*pq.pA for i in steps2 ]
-            #These never converge if futures.map is utilized
-            #thus using serial dumb search instead of serial smart, or parallel dumb/smart
-
-            lookup2=list(map(f,steps,repeat(vm)))#,repeat(model)))
-        m = lookup2[0]
-        assert(type(m))!=None
-        sub=[]
-        supra=[]
-        import pdb
-        assert(type(m.lookup))!=None
-        for k,v in m.lookup.items():
-            if v==1:
-                while_true=False
-                end_time=time.time()
-                total_time=end_time-begin_time
-                return (m.run_number,k,m.attrs)#a
-                break
-            elif v==0:
-                sub.append(k)
-            elif v>0:
-                supra.append(k)
-        sub=np.array(sub)
-        supra=np.array(supra)
-        if len(sub) and len(supra):
-            steps2 = np.linspace(sub.max(),supra.min(),4.0)
-            steps = [ i*pq.pA for i in steps2 ]
-        elif len(sub):
-            steps2 = np.linspace(sub.max(),2*sub.max(),4.0)
-            steps = [ i*pq.pA for i in steps2 ]
-        elif len(supra):
-            steps2 = np.linspace(-1*(supra.min()),supra.min(),4.0)
-            steps = [ i*pq.pA for i in steps2 ]
-                #These never converge if futures.map is utilized
-                #thus using serial dumb search instead of serial smart, or parallel dumb/smart
-
-        lookup2=list(map(f,steps,repeat(vm)))
 
 
-def evaluate2(individual, guess_value=None):
+def searcher(f,rh_param,vms):
+    '''
+    ultimately an attempt to capture the essence a lot of repeatative code below.
+    This is not yet used, but it is intended for future use.
+    Its intended to replace the less general searcher function
+    '''
+    while rh_param[0]==False:
+        l3=[]# convert a dictionary to a list.
+        for l in rh_param[1]:
+            for k,v in vms.lookup.items():
+                l3.append((v, k))
+        rh_param=check_fix_range(l3)
+        rh_param=check_repeat(ff,rh_param[1],vms)
+        if rh_param[0]==True:
+            return rh_param[1]
+
+
+
+def evaluate(individual, guess_value=None):
     #This method must be pickle-able for scoop to work.
     model=VirtualModel()
     if guess_value != None:
@@ -255,28 +217,26 @@ def evaluate2(individual, guess_value=None):
         vm=VirtualModel()
         import copy
         vm.attrs=copy.copy(individual.attrs)
-        vm=f(guess_value,vm)
-        import pdb
-        assert(type(vm))!=None
-        assert(type(vm.lookup))!=None
-        for k,v in vm.lookup.items():
-            if v==1:
-                individual.rheobase=k
-                return individual
-            if v!=1:
-                guess_value = None#more trial and error.
-    if guess_value == None:
-        (run_number,k,attrs)=main2(individual)
-    individual.rheobase=k
-    model.rheobase=k
+        #should there already exist a lookup table at this late stage in code?
+
+        steps = np.linspace(40,80,7.0)
+        steps_current = [ i*pq.pA for i in steps ]
+        model.attrs=mean_vm.attrs
+        rh_param=(False,steps_current)
+        #lookup=list(futures.map(ff,steps,repeat(mean_vm)))
+        vm.rheobase=searcher(ff,rh_param,vm)
+    individual.rheobase=vm.rheobase
+    model.rheobase=vm.rheobase
     return model
 
 
 
 if __name__ == "__main__":
-    vr = np.linspace(-75.0,-50.0,10)
-    a = np.linspace(0.015,0.045,10)
-    b = np.linspace(-3.5*10E-9,-0.5*10E-9,10)
+
+    #New file for model parameters.
+    vr = np.linspace(-75.0,-50.0,2)
+    a = np.linspace(0.015,0.045,2)
+    b = np.linspace(-3.5*10E-9,-0.5*10E-9,2)
     k = np.linspace(7.0E-4-+7.0E-5,7.0E-4+70E-5,10)
     C = np.linspace(1.00000005E-4-1.00000005E-5,1.00000005E-4+1.00000005E-5,10)
     c = np.linspace(-55,-60,10)
@@ -284,17 +244,14 @@ if __name__ == "__main__":
     v0 = np.linspace(-75.0,-45.0,10)
     vt =  np.linspace(-50.0,-30.0,10)
     vpeak =np.linspace(30.0,40.0,10)
-    #iter_list=[ (i,j,k,l) for i in a for j in b for k in vr for l in vpeak ]
+
     iter_list=[ (i,j) for i in a for j in b  ]
 
-    #run_number,rh_value,attrs=main2(model,guess_attrs)
     mean_vm=VirtualModel()
     guess_attrs=[]
     #find the mean parameter sets, and use them to inform the rheobase search.
     guess_attrs.append(np.mean( [ i for i in a ]))
     guess_attrs.append(np.mean( [ i for i in b ]))
-    #guess_attrs.append(np.mean( [ i for i in k ]))
-    #guess_attrs.append(np.mean( [ i for i in l ]))
 
     for i, p in enumerate(param):
         value=str(guess_attrs[i])
@@ -311,12 +268,22 @@ if __name__ == "__main__":
     #model.attrs=mean_vm.attrs
     #def bulk_process(ff,steps,mean_vm):
     #Attempts to parallelize rheobase search here should be based on those in nsga.py
-    run_number,rh_value,attrs=main2(model,guess_attrs)
+    #_,rh_value,_=main(model,guess_attrs)
+
+    steps = np.linspace(40,80,7.0)
+    steps_current = [ i*pq.pA for i in steps ]
+    model.attrs=mean_vm.attrs
+    #lookup=list(futures.map(ff,steps,repeat(mean_vm)))
+    #vm.rheobase=searcher(ff,steps_current,vm)
+    rh_param=(False,steps_current)
+    rh_value=searcher(ff,rh_param,mean_vm)
     list_of_models=list(futures.map(model2map,iter_list))
+
+
     for i in list_of_models:
         if type(i)==None:
             del i
-    iterator=list(futures.map(evaluate2,list_of_models,repeat(rh_value)))
+    iterator=list(futures.map(evaluate,list_of_models,repeat(rh_value)))
     iterator = [x for x in iterator if x.attrs != None]
     for i,j in enumerate(iterator):
         assert j.attrs!=None
