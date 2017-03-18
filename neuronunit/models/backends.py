@@ -8,6 +8,10 @@ import neuronunit.capabilities.spike_functions as sf
 from quantities import ms, mV, nA
 from neo.core import AnalogSignal
 
+import quantities as pq
+import re
+import copy
+
 class Backend:
     """Base class for simulator backends that implement simulator-specific
     details of modifying, running, and reading results from the simulation
@@ -294,9 +298,7 @@ class NEURONBackend(Backend):
          'duration':500*pq.ms}}
         where 'pq' is the quantities package
         '''
-        import quantities as pq
-        import re
-        import copy
+
         c=copy.copy(current)
         if 'injected_square_current' in c.keys():
             c=current['injected_square_current']

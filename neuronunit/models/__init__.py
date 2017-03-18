@@ -16,23 +16,6 @@ from .channel import *
 from . import backends
 
 
-class SimpleModel(sciunit.Model,
-                  cap.ReceivesCurrent,
-                  cap.ProducesMembranePotential):
-    def __init__(self, v_rest, name=None):
-        self.v_rest = v_rest
-        sciunit.Model.__init__(self, name=name)
-
-    def get_membrane_potential(self):
-        array = np.ones(10000) * self.v_rest
-        dt = 1*ms # Time per sample in milliseconds.
-        vm = AnalogSignal(array,units=mV,sampling_rate=1.0/dt)
-        return vm
-
-    #Inhirited from backends.
-    #def inject_current(self,current):
-    #    pass # Does not actually inject any current.
-
 
 class LEMSModel(sciunit.Model, cap.Runnable):
     """A generic LEMS model"""
@@ -122,15 +105,7 @@ class LEMSModel(sciunit.Model, cap.Runnable):
         self.update_run_params(self.attrs)
 
         self.results = self.local_run()
-        '''
-        Doing things this way calls jNeuroML everytime which is very slow, and
-        its exactly that we are trying to avoid.
-        self.results = self.f(self.lems_file_path, skip_run=self.skip_run,
-                         nogui=self.run_params['nogui'],
-                         load_saved_data=True, plot=False,
-                         verbose=self.run_params['v']
-                         )
-        '''
+
         self.last_run_params = deepcopy(self.run_params)
         self.rerun = False
         self.run_params = {} # Reset run parameters so the next test has to pass
