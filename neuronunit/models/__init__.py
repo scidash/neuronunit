@@ -29,8 +29,9 @@ class SimpleModel(sciunit.Model,
         vm = AnalogSignal(array,units=mV,sampling_rate=1.0/dt)
         return vm
 
-    def inject_current(self,current):
-        pass # Does not actually inject any current.
+    #Inhirited from backends.
+    #def inject_current(self,current):
+    #    pass # Does not actually inject any current.
 
 
 class LEMSModel(sciunit.Model, cap.Runnable):
@@ -119,11 +120,6 @@ class LEMSModel(sciunit.Model, cap.Runnable):
            self.run_params == self.last_run_params:
             return
         self.update_run_params(self.attrs)
-        #HACK
-        #DO NOT MERGE.
-        #if self.f is None:
-        #    raise NotImplementedError(("The chosen backend doesn't implement "
-        #                               " _run()"))
 
         self.results = self.local_run()
         '''
