@@ -54,20 +54,19 @@ def func2map(iter_arg,value):#This method must be pickle-able for scoop to work.
     from scoop import utils
     score = None
     sane = False
-    #st=SanityTest()
-    #vm=st.generate_prediction(model)
-    #score=st.compute_score(vm)
 
-    get_neab.suite.tests[4].params['injected_square_current']['amplitude'] = value*pq.pA*1.01
-    sane = get_neab.suite.tests[4].sanity_check(rh_value=value*pq.pA*1.01)
+    sane = get_neab.suite.tests[3].sanity_check(value*1.01,model)
+
     if sane == False:
+        print('stopped due to insane model')
         import pdb; pdb.set_trace()
-        
+
+    #get_neab.suite.tests[4].params['injected_square_current']['amplitude'] = value*pq.pA*1.01
+    #sane = get_neab.suite.tests[4].sanity_check(value*pq.pA*1.01)
+
+
     if sane == True:
-        #get_neab.suite.tests[0].prediction = {}
-        #get_neab.suite.tests[0].prediction['value'] = value*pq.pA
-        #model.inject_square_current(get_neab.suite.tests[4].params['injected_square_current'])
-        #mp = model.get_membrane_potential()
+        score = get_neab.suite.tests[0].prediction=value*pq.pA
         score = get_neab.suite.judge(model)#passing in model, changes model
         model.run_number+=1
         for i in score.unstack():
@@ -135,7 +134,7 @@ def check_fix_range(lookup):
     sub=[]
     supra=[]
     print(lookup)
-    for k,v in lookup:
+    for k,v in lookup.items():
         if v==1:
             return (True,k)
         elif v==0:
@@ -145,12 +144,13 @@ def check_fix_range(lookup):
 
     sub=np.array(sub)
     supra=np.array(supra)
-
+                 # concatenate
     if len(sub) and len(supra):
 
+        everything=np.concatenate((sub,supra))
 
         center = np.linspace(sub.max(),supra.min(),7.0)
-        np.delete(center,np.array(lookup))
+        np.delete(center,np.array(everything))
         #make sure that element 4 in a seven element vector
         #is exactly half way between sub.max() and supra.min()
         center[int(len(center)/2)+1]=(sub.max()+supra.min())/2.0
@@ -158,12 +158,12 @@ def check_fix_range(lookup):
 
     elif len(sub):
         steps2 = np.linspace(sub.max(),2*sub.max(),7.0)
-        np.delete(steps2,np.array(lookup))
+        np.delete(steps2,np.array(sub))
         steps = [ i*pq.pA for i in steps2 ]
 
     elif len(supra):
         steps2 = np.linspace(-2*(supra.min()),supra.min(),7.0)
-        np.delete(steps2,np.array(lookup))
+        np.delete(steps2,np.array(supra))
         steps = [ i*pq.pA for i in steps2 ]
 
 
@@ -174,6 +174,7 @@ def f(ampl,vm):
     Inputs are an amplitude to test and a virtual model
     output is an virtual model with an updated dictionary.
     '''
+    import copy
     #import pdb
     #pdb.set_trace()
     if float(ampl) not in vm.lookup or len(vm.lookup)==0:
@@ -193,11 +194,9 @@ def f(ampl,vm):
             print("Injected %s current and got %d spikes" % \
                     (ampl,n_spikes))
         vm.lookup[float(ampl)] = n_spikes
-        #print(vm.lookup)
-        return vm
-
+        return copy.copy(vm.lookup)
     if float(ampl) in vm.lookup:
-        return vm
+        return copy.copy(vm.lookup)
 
 
 
@@ -208,35 +207,32 @@ def searcher(f,rh_param,vms,guess_value=None):
     Its intended to replace the less general searcher function
     '''
     #rh_param[0]=False
+    import pdb
+
     if guess_value!=None:
-        rh_param=f(guess_value,vms)
+        returned_lookup=f(guess_value,vms)
+        rh_param=check_fix_range(returned_lookup)
     else:
         if rh_param[0]==True:
-            print(rh_param)
             return rh_param[1]
         lookuplist=[]
         cnt=0
         while rh_param[0]==False and cnt<3:
             if len(vms.lookup)==0:
                 returned_list1 = list(futures.map(f,rh_param[1],repeat(vms)))
-                #print(returned_list1)
-                for vm in returned_list1:
-                    for k,v in vm.lookup.items():
-                        lookuplist.append((k,v))
+                d={}
+                for r in returned_list1:
+                    d.update(r)
             else:
-                rh_param=check_fix_range(lookuplist)
+                rh_param=check_fix_range(d)
                 if rh_param[0]==True:
                     break
-                    #print(rh_param)
                 returned_list2 = list(futures.map(f,rh_param[1],repeat(vms)))
+                d={}
                 for r in returned_list2:
-                    for k,v in r.lookup.items():
-                        lookuplist.append((k,v))
+                    d.update(r)
             cnt+=1
-
     print(rh_param)
-    #import pdb
-    #pdb.set_trace()
     return rh_param[1]
 
 
@@ -244,18 +240,10 @@ def evaluate(individual, guess_value=None):
     #This method must be pickle-able for scoop to work.
     model=VirtualModel()
     if guess_value != None:
-        #individual.lookup={}
-
         import copy
         model.attrs=copy.copy(individual.attrs)
-        #should there already exist a lookup table at this late stage in code?
-
-        #steps = np.linspace(40,80,7.0)
-        #steps_current = [ i*pq.pA for i in steps ]
-        #model.attrs=vm.attrs
         rh_param=(False,guess_value)
         print(rh_param)
-        #lookup=list(futures.map(ff,steps,repeat(mean_vm)))
         rheobase=searcher(f,rh_param,model,guess_value)
         print(type(rheobase))
     return rheobase
@@ -304,8 +292,6 @@ if __name__ == "__main__":
     steps = np.linspace(40,80,7.0)
     steps_current = [ i*pq.pA for i in steps ]
     model.attrs=mean_vm.attrs
-    #lookup=list(futures.map(ff,steps,repeat(mean_vm)))
-    #vm.rheobase=searcher(ff,steps_current,vm)
     rh_param=(False,steps_current)
     rh_value=searcher(f,rh_param,mean_vm)
     list_of_models=list(futures.map(model2map,iter_list))
@@ -315,25 +301,16 @@ if __name__ == "__main__":
         if type(i)==None:
             del i
     rhstorage=list(futures.map(evaluate,list_of_models,repeat(rh_value)))
-    #rhstorage = [  i.rheobase for i in iterator ]
-
-    #iterator = [x for x in iterator if x.attrs != None]
-    #rheobase = [x.rheobase for x in iterator]
-
-    #for i,j in enumerate(iterator):
-    #    assert j.attrs!=None
     print(rhstorage)
-    score_matrixt=list(futures.map(func2map,iterator,rhstorage))
+    score_matrixt=list(futures.map(func2map,list_of_models,rhstorage))
     score_matrix=[]
     attrs=[]
     score_typev=[]
     #below score is just the floats associated with RatioScore and Z-scores.
     for score,attr in score_matrixt:
-    #for score_type,score,attr in score_matrixt:
-        if not isinstance(score,scores.InsufficientDataScore):
-            score_matrix.append(score)
-            attrs.append(attr)
-            #score_typev.append(score_type)
+        score_matrix.append(score)
+        attrs.append(attr)
+
     score_matrix=np.array(score_matrix)
 
     import pickle
