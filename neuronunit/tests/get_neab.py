@@ -60,12 +60,15 @@ else:
 def update_amplitude(test,tests,score):
     rheobase = score.prediction['value']#first find a value for rheobase
     #then proceed with other optimizing other parameters.
+    #for i in
 
 
     for i in [4,5,6]:
         # Set current injection to just suprathreshold
-        tests[i].params['injected_square_current']['amplitude'] = rheobase*1.01
 
+        tests[i].params['injected_square_current']['amplitude'] = rheobase*1.01
+        tests[i].proceed=tests[i].sanity_check(rh_value=rheobase*1.01)
+        #pdb.set_trace()
 
 #Don't do the rheobase test. This is a serial bottle neck that must occur before any parallel optomization.
 #Its because the optimization routine must have apriori knowledge of what suprathreshold current injection values are for each model.
