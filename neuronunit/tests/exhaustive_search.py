@@ -60,6 +60,9 @@ def func2map(iter_arg,value):#This method must be pickle-able for scoop to work.
 
     get_neab.suite.tests[4].params['injected_square_current']['amplitude'] = value*pq.pA*1.01
     sane = get_neab.suite.tests[4].sanity_check(rh_value=value*pq.pA*1.01)
+    if sane == False:
+        import pdb; pdb.set_trace()
+        
     if sane == True:
         #get_neab.suite.tests[0].prediction = {}
         #get_neab.suite.tests[0].prediction['value'] = value*pq.pA
@@ -212,7 +215,8 @@ def searcher(f,rh_param,vms,guess_value=None):
             print(rh_param)
             return rh_param[1]
         lookuplist=[]
-        while rh_param[0]==False:
+        cnt=0
+        while rh_param[0]==False and cnt<3:
             if len(vms.lookup)==0:
                 returned_list1 = list(futures.map(f,rh_param[1],repeat(vms)))
                 #print(returned_list1)
@@ -228,10 +232,11 @@ def searcher(f,rh_param,vms,guess_value=None):
                 for r in returned_list2:
                     for k,v in r.lookup.items():
                         lookuplist.append((k,v))
+            cnt+=1
 
     print(rh_param)
-    import pdb
-    pdb.set_trace()
+    #import pdb
+    #pdb.set_trace()
     return rh_param[1]
 
 
