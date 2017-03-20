@@ -19,6 +19,26 @@ from neuronunit.models import backends
 import sciunit.scores as scores
 from neuronunit.models import backends
 from neuronunit.models.reduced import ReducedModel
+import neuronunit.capabilities as cap
+AMPL = 0.0*pq.pA
+DELAY = 100.0*pq.ms
+DURATION = 1000.0*pq.ms
+from scipy.optimize import curve_fit
+required_capabilities = (cap.ReceivesSquareCurrent,
+                         cap.ProducesSpikes)
+params = {'injected_square_current':
+            {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+name = "Rheobase test"
+description = ("A test of the rheobase, i.e. the minimum injected current "
+               "needed to evoke at least one spike.")
+score_type = scores.RatioScore
+guess=None
+lookup = {} # A lookup table global to the function below.
+verbose=True
+import quantities as pq
+units = pq.pA
+
+
 model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
 model=model.load_model()
 from neuronunit import tests as nutests
@@ -92,25 +112,6 @@ class VirtualModel:
         self.results=None
 
 param=['a','b']#,'vr','vpeak']
-import neuronunit.capabilities as cap
-AMPL = 0.0*pq.pA
-DELAY = 100.0*pq.ms
-DURATION = 1000.0*pq.ms
-from scipy.optimize import curve_fit
-required_capabilities = (cap.ReceivesSquareCurrent,
-                         cap.ProducesSpikes)
-params = {'injected_square_current':
-            {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
-name = "Rheobase test"
-description = ("A test of the rheobase, i.e. the minimum injected current "
-               "needed to evoke at least one spike.")
-score_type = scores.RatioScore
-guess=None
-lookup = {} # A lookup table global to the function below.
-verbose=True
-import quantities as pq
-units = pq.pA
-
 
 def check_fix_range(lookup):
     '''
