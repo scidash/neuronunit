@@ -1,23 +1,12 @@
-
+import numpy as np
 import time
 import inspect
 from types import MethodType
-import os
-import os.path
-import sys
-import pickle
-import copy
-from itertools import repeat
-
-import numpy as np
 import quantities as pq
 from quantities.quantity import Quantity
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
-from scoop import utils
-from scoop import futures
-
 import sciunit
 import os, sys
 thisnu = str(os.getcwd())+'/../..'
@@ -33,16 +22,10 @@ from neuronunit.models.reduced import ReducedModel
 model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
 model=model.load_model()
 from neuronunit import tests as nutests
-
 import copy
 from itertools import repeat
 import sciunit.scores as scores
 import neuronunit.capabilities as cap
-
-import get_neab
-model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
-model = model.load_model()
-
 
 def model2map(iter_arg):#This method must be pickle-able for scoop to work.
     vm=VirtualModel()
@@ -73,14 +56,6 @@ def func2map(iter_arg,value):#This method must be pickle-able for scoop to work.
     sane = False
 
     sane = get_neab.suite.tests[3].sanity_check(value*1.01,model)
-
-    if sane == False:
-        print('stopped due to insane model')
-        import pdb; pdb.set_trace()
-
-    #get_neab.suite.tests[4].params['injected_square_current']['amplitude'] = value*pq.pA*1.01
-    #sane = get_neab.suite.tests[4].sanity_check(value*pq.pA*1.01)
-
 
     if sane == True:
         score = get_neab.suite.tests[0].prediction=value*pq.pA
