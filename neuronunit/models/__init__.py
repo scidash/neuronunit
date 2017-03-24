@@ -64,8 +64,12 @@ class LEMSModel(sciunit.Model, cap.Runnable):
             self.backend = name
             self._backend = options[name](*args,**kwargs)
             # Add all of the backend's methods to the model instance
-            self.__class__.__bases__ = tuple(set((self._backend.__class__,) + \
-                                        self.__class__.__bases__))
+            #This part is broken, so use the old syntax
+            #self.__class__.__bases__ = tuple(set((self._backend.__class_is_,) + \
+            #                            self.__class__.__bases__))
+                        # Add all of the backend's methods to the model instance
+            self.__class__.__bases__ = (self._backend.__class__,) + \
+                self.__class__.__bases__
         elif name is None:
             # The base class should not be called.
             raise Exception(("A backend (e.g. 'jNeuroML' or 'NEURON') "
@@ -102,7 +106,9 @@ class LEMSModel(sciunit.Model, cap.Runnable):
         if (not rerun) and hasattr(self,'last_run_params') and \
            self.run_params == self.last_run_params:
             return
-        self.update_run_params(self.attrs)
+
+        self.update_run_params(run_params)
+        #self.update_run_params(self.attrs)
 
         self.results = self.local_run()
 
