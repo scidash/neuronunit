@@ -123,6 +123,26 @@ class VmTest(sciunit.Test):
                        'n': reference_data.n}
         return observation
 
+    def sanity_check(rheobase):
+        self.params['injected_square_current']=rheobase
+        model.inject_square_current(self.params['injected_square_current'])
+        mp = model.results['vm']
+        import math
+        for i in mp:
+            if math.isnan(i):
+                return False
+
+        import capabilities.spike_functions as sf
+        sws=sf.get_spike_waveform(mp)
+        for i,s in enumerate(sws):
+            s = np.array(s)
+            dvdt = np.diff(s)
+            import math
+            for j in dvdt:
+                if math.isnan(j):
+                    return False
+
+
 
 
 
