@@ -40,7 +40,8 @@ units = pq.pA
 
 
 model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
-model=model.load_model()
+model.load_model()
+
 from neuronunit import tests as nutests
 import copy
 from itertools import repeat
@@ -75,7 +76,7 @@ def func2map(iter_arg,value):#This method must be pickle-able for scoop to work.
     score = None
     sane = False
 
-    sane = get_neab.suite.tests[3].sanity_check(value*1.01,model)
+    sane = get_neab.suite.tests[3].sanity_check(value*1.01*pq.pA,model)
 
     if sane == True:
         score = get_neab.suite.tests[0].prediction=value*pq.pA
@@ -178,7 +179,7 @@ def f(ampl,vm):
 
         current={'injected_square_current':current}
         vm.run_number+=1
-
+        model.load_model()
         model.inject_square_current(current)
         vm.previous=ampl
         n_spikes = model.get_spike_count()
