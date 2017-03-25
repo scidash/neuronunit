@@ -699,7 +699,7 @@ class RestingPotentialTest(VmTest):
         import math
         for i in mp:
             if math.isnan(i):
-                print(mp)
+                #print(mp)
                 return None
         prediction = {'mean':median, 'std':std}
 

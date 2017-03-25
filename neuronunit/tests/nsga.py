@@ -32,7 +32,7 @@ import scoop
 import get_neab
 
 init_start=time.time()
-creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, 
+creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0,
                                                     -1.0, -1.0, -1.0, -1.0))
 # -1.0, -1.0, -1.0, -1.0,))
 creator.create("Individual",list, fitness=creator.FitnessMin)
@@ -139,9 +139,15 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
         else:
             attrs['//izhikevich2007Cell'][p]=name_value
 
+
     individual.attrs=attrs
     #make sure that the virtual model, and the real model have the same attributes.
     assert individual.attrs==vms.attrs
+
+
+    #Its very important to reset the model here. Such that its vm is new, and does not carry charge from the last simulation
+    model.load_model()
+
     individual.model=model.update_run_params(attrs)
 
     individual.params=[]
@@ -160,6 +166,7 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
     #f=open('scoop_log_'+str(utils.getHosts()),'w')
     #f.write(str(attrs))
     #f.close()
+
     score = get_neab.suite.judge(model)#passing in model, changes model
     model.run_number+=1
     RUN_TIMES='{}{}{}'.format('counting simulation run times on models',model.results['run_number'],model.run_number)
@@ -260,6 +267,7 @@ def ff(ampl,vm):
         current.update(uc)
         current={'injected_square_current':current}
         vm.run_number+=1
+        model.load_model()
 
         model.inject_square_current(current)
         vm.previous=ampl
