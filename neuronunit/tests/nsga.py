@@ -162,6 +162,7 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
     import os
     import os.path
     from scoop import utils
+    model.load_model()
 
     #f=open('scoop_log_'+str(utils.getHosts()),'w')
     #f.write(str(attrs))
