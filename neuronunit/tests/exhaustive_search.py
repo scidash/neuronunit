@@ -40,8 +40,6 @@ units = pq.pA
 
 
 model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
-model.load_model()
-
 from neuronunit import tests as nutests
 import copy
 from itertools import repeat
@@ -79,16 +77,21 @@ def func2map(iter_arg,value):#This method must be pickle-able for scoop to work.
     sane = get_neab.suite.tests[3].sanity_check(value*1.01*pq.pA,model)
 
     if sane == True:
-        score = get_neab.suite.tests[0].prediction=value*pq.pA
+        get_neab.suite.tests[0].prediction={}
+        score = get_neab.suite.tests[0].prediction['value']=value*pq.pA
         score = get_neab.suite.judge(model)#passing in model, changes model
+
         model.run_number+=1
         for i in score.unstack():
             if type(i.score)!=float:
                 i.score=10.0
         error = [ float(i.score) for i in score.unstack() if i.score!=None ]
-    elif score == False:
+
+    elif sane == False:
         import sciunit.scores as scores
         error = scores.InsufficientDataScore(None)
+        error = [ 10.0 for i in score.unstack() if i.score!=None ]
+
     return (error,iter_arg.attrs)
 
 class VirtualModel:
@@ -179,7 +182,7 @@ def f(ampl,vm):
 
         current={'injected_square_current':current}
         vm.run_number+=1
-        model.load_model()
+
         model.inject_square_current(current)
         vm.previous=ampl
         n_spikes = model.get_spike_count()
