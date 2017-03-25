@@ -67,7 +67,7 @@ def update_amplitude(test,tests,score):
         # Set current injection to just suprathreshold
 
         tests[i].params['injected_square_current']['amplitude'] = rheobase*1.01
-        tests[i].proceed=tests[i].sanity_check(rh_value=rheobase*1.01)
+        #tests[i].proceed=tests[i].sanity_check(rh_value=rheobase*1.01)
         #pdb.set_trace()
 
 #Don't do the rheobase test. This is a serial bottle neck that must occur before any parallel optomization.
