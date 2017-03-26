@@ -212,6 +212,8 @@ def f(ampl,vm):
         n_spikes = model.get_spike_count()
         if n_spikes==1:
             vm.rheobase=ampl
+            print(vm.attrs)
+            print(model.attrs)
             print('hit')
         verbose=False
         if verbose:
@@ -350,28 +352,48 @@ if __name__ == "__main__":
             if type(j)==None:
                 j=10.0
             if j==None:
+
                 j=10.0
 
 
     import pickle
     with open('score_matrix.pickle', 'wb') as handle:
         pickle.dump(score_matrixt, handle)
-    import pdb; pdb.set_trace()
-    storagei = [ np.sum(i) for i in score_matrix ]
+
+    with open('score_matrix.pickle', 'rb') as handle:
+        matrix=pickle.load(handle)
+
+
+    matrix3=[]
+    for x,y in matrix:
+        for i in x:
+            matrix2=[]
+            for j in i:
+                if j==None:
+                    j=10.0
+                matrix2.append(j)
+            matrix3.append(matrix2)
+    storagei = [ np.sum(i) for i in matrix3 ]
     storagesmin=np.where(storagei==np.min(storagei))
     storagesmax=np.where(storagei==np.max(storagei))
+    print(matrix[storagesmin[0]])
+    print(matrix[storagesmin[1]])
+
     '''
+    import pdb; pdb.set_trace()
     import matplotlib as plt
     for i,s in enumerate(score_typev[np.shape(storagesmin)[0]]):
         #.related_data['vm']
         plt.plot(plot_vm())
         plt.savefig('s'+str(i)+'.png')
-    '''
     #since there are non unique maximum and minimum values, just take the first ones of each.
     tuplepickle=(score_matrix[np.shape(storagesmin)[0]],score_matrix[np.shape(storagesmax)[0]],attrs[np.shape(storagesmax)[0]])
     with open('minumum_and_maximum_values.pickle', 'wb') as handle:
         pickle.dump(tuplepickle,handle)
-    with open('minumum_and_maximum_values.pickle', 'rb') as handle:
+    with open('score_matri.pickle', 'rb') as handle:
         opt_values=pickle.load(handle)
         print('minumum value')
         print(opt_values)
+    '''
+
+                #print(j)
