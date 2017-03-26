@@ -60,19 +60,44 @@ def model2map(iter_arg):#This method must be pickle-able for scoop to work.
     vm.attrs=attrs
     return vm
 
-def func2map(iter_arg,value):#This method must be pickle-able for scoop to work.
+def plot_everything(tests):
+    import matplotlib as plt
+    #for i,s in enumerate(score_typev[np.shape(storagesmin)[0]]):
+    #.related_data['vm']
+    for i,j in enumerate(tests):
+        plt.plot(i.related_data.results['vm'],i.related_data.results['t'])
+        plt.savefig('s'+str(i)+'.png')
+
+    #plt.plot(plot_vm())
+
+    #tests[0].related_data.results['vm'],tests[0].related_data.results['t']
+    #tests[1].related_data.results['vm']
+    #tests[2].related_data.results['vm']
+    #tests[3].related_data.results['vm']
+
+def func2map(iter_):#This method must be pickle-able for scoop to work.
     '''
     Inputs an iterable list, a neuron unit test object suite of neuron model
     tests of emperical data reproducibility.
     '''
+    print(iter_)
+    iter_arg,value=iter_
     assert iter_arg.attrs!=None
+    model.load_model()
+    import pdb
+    print(iter_arg)
+    print(value)
+    print(value*1.01*pq.pA,model)
     model.update_run_params(iter_arg.attrs)
+    #pdb.set_trace()
+
     import quantities as qt
     import os
     import os.path
     from scoop import utils
     score = None
     sane = False
+    #model.update_run_params(vm.attrs)
 
     sane = get_neab.suite.tests[3].sanity_check(value*1.01*pq.pA,model)
 
@@ -80,19 +105,16 @@ def func2map(iter_arg,value):#This method must be pickle-able for scoop to work.
         get_neab.suite.tests[0].prediction={}
         score = get_neab.suite.tests[0].prediction['value']=value*pq.pA
         score = get_neab.suite.judge(model)#passing in model, changes model
-
         model.run_number+=1
-        for i in score.unstack():
-            if type(i.score)!=float:
-                i.score=10.0
-        error = [ float(i.score) for i in score.unstack() if i.score!=None ]
-
+        for i in score.sort_key.values[0]:
+            if type(i)==None:
+                i=10.0
+        error= score.sort_key.values
     elif sane == False:
         import sciunit.scores as scores
-        error = scores.InsufficientDataScore(None)
-        error = [ 10.0 for i in score.unstack() if i.score!=None ]
-
-    return (error,iter_arg.attrs)
+        #error = scores.InsufficientDataScore(None)
+        error = [ 10.0 for i in range(0,7) ]
+    return (error,iter_arg.attrs)#,score)#.related_data.to_pickle.to_python())
 
 class VirtualModel:
     '''
@@ -173,8 +195,6 @@ def f(ampl,vm):
     output is an virtual model with an updated dictionary.
     '''
     import copy
-    #import pdb
-    #pdb.set_trace()
     if float(ampl) not in vm.lookup or len(vm.lookup)==0:
         current = params.copy()['injected_square_current']
         uc={'amplitude':ampl}
@@ -182,69 +202,89 @@ def f(ampl,vm):
 
         current={'injected_square_current':current}
         vm.run_number+=1
+        model.update_run_params(vm.attrs)
 
+        model.load_model()
+        #print('got here 1')
+        #print(type(model.h.v_v_of0))
         model.inject_square_current(current)
         vm.previous=ampl
         n_spikes = model.get_spike_count()
         if n_spikes==1:
             vm.rheobase=ampl
+            print('hit')
         verbose=False
         if verbose:
             print("Injected %s current and got %d spikes" % \
                     (ampl,n_spikes))
         vm.lookup[float(ampl)] = n_spikes
-        return copy.copy(vm.lookup)
+        return vm.lookup
+        #return copy.copy(vm.lookup)
     if float(ampl) in vm.lookup:
-        return copy.copy(vm.lookup)
+        return vm.lookup
+        #return copy.copy(vm.lookup)
 
 
-
-def searcher(f,rh_param,vms,guess_value=None):
+def searcher2(f,rh_param,vms):
     '''
     ultimately an attempt to capture the essence a lot of repeatative code below.
     This is not yet used, but it is intended for future use.
     Its intended to replace the less general searcher function
     '''
-    #rh_param[0]=False
-    import pdb
+    if rh_param[0]==True:
+        return rh_param[1]
+    lookuplist=[]
+    cnt=0
+    while rh_param[0]==False and cnt<4:
+        print(cnt)
+        print('cnt')
+        if len(vms.lookup)==0:
+            returned_list1 = list(futures.map(f,rh_param[1],repeat(vms)))
+            d={}
+            for r in returned_list1:
+                d.update(r)
+        else:
+            rh_param=check_fix_range(d)
+            print(rh_param)
+            if rh_param[0]==True:
+                return rh_param[1]
+                #break
+            returned_list2 = list(futures.map(f,rh_param[1],repeat(vms)))
+            d={}
+            for r in returned_list2:
+                d.update(r)
+        cnt+=1
+    #print(rh_param)
+    return False#rh_param[1]
 
-    if guess_value!=None:
-        returned_lookup=f(guess_value,vms)
-        rh_param=check_fix_range(returned_lookup)
-    else:
-        if rh_param[0]==True:
-            return rh_param[1]
-        lookuplist=[]
-        cnt=0
-        while rh_param[0]==False and cnt<3:
-            if len(vms.lookup)==0:
-                returned_list1 = list(futures.map(f,rh_param[1],repeat(vms)))
-                d={}
-                for r in returned_list1:
-                    d.update(r)
-            else:
-                rh_param=check_fix_range(d)
-                if rh_param[0]==True:
-                    break
-                returned_list2 = list(futures.map(f,rh_param[1],repeat(vms)))
-                d={}
-                for r in returned_list2:
-                    d.update(r)
-            cnt+=1
-    print(rh_param)
-    return rh_param[1]
+def searcher(f,rh_param,vms):
+    cnt=0
+    while rh_param[0]==False and cnt<4:
+        if len(vms.lookup)==0:
+            d = f(rh_param[1],vms)
+            rh_param=check_fix_range(d)
+            if rh_param[0]==True:
+                return rh_param[1]
+
+        else:
+            rh_param=check_fix_range(d)
+            if rh_param[0]==True:
+                return rh_param[1]
+            returned_list2 = list(futures.map(f,rh_param[1],repeat(vms)))
+            d={}
+            for r in returned_list2:
+                d.update(r)
+        cnt+=1
+    return False
 
 
 def evaluate(individual, guess_value=None):
     #This method must be pickle-able for scoop to work.
-    model=VirtualModel()
-    if guess_value != None:
-        import copy
-        model.attrs=copy.copy(individual.attrs)
-        rh_param=(False,guess_value)
-        print(rh_param)
-        rheobase=searcher(f,rh_param,model,guess_value)
-        print(type(rheobase))
+    vm=VirtualModel()
+    import copy
+    vm.attrs=copy.copy(individual.attrs)
+    rh_param=(False,guess_value)
+    rheobase=searcher(f,rh_param,vm)#,guess_value)
     return rheobase
 
 
@@ -279,37 +319,27 @@ if __name__ == "__main__":
             attrs['//izhikevich2007Cell'][p]=value
     mean_vm.attrs=attrs
 
-    #this might look like a big list iteration, but its not.
-    #the statement below just finds rheobase on one value, that is the value
-    #constituted by mean_vm. This will be used to speed up the rheobase search later.
-    #model.attrs=mean_vm.attrs
-    #def bulk_process(ff,steps,mean_vm):
-    #Attempts to parallelize rheobase search here should be based on those in nsga.py
-    #_,rh_value,_=main(model,guess_attrs)
 
     steps = np.linspace(40,80,7.0)
     steps_current = [ i*pq.pA for i in steps ]
     model.attrs=mean_vm.attrs
-    #lookup=list(futures.map(ff,steps,repeat(mean_vm)))
-    #vm.rheobase=searcher(ff,steps_current,vm)
     rh_param=(False,steps_current)
-    rh_value=searcher(f,rh_param,mean_vm)
+    rh_value=searcher2(f,rh_param,mean_vm)
     list_of_models=list(futures.map(model2map,iter_list))
-
-
-    for i in list_of_models:
-        if type(i)==None:
-            del i
     rhstorage=list(futures.map(evaluate,list_of_models,repeat(rh_value)))
-    print(rhstorage)
-    score_matrixt=list(futures.map(func2map,list_of_models,rhstorage))
+    iter_ = zip(list_of_models,rhstorage)
+    score_matrixt=list(futures.map(func2map,iter_))#list_of_models,rhstorage))
     score_matrix=[]
     attrs=[]
     score_typev=[]
     #below score is just the floats associated with RatioScore and Z-scores.
     for score,attr in score_matrixt:
+        for i in score:
+            if i==None:
+                i=10.0
         score_matrix.append(score)
         attrs.append(attr)
+        print(attr,score)
 
     score_matrix=np.array(score_matrix)
 
