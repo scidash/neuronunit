@@ -291,8 +291,9 @@ def evaluate(individual, guess_value=None):
 
 if __name__ == "__main__":
     #PARAMETER FILE
-    vr = np.linspace(-75.0,-50.0,3)
-    a = np.linspace(0.015,0.045,3)
+    '''
+    vr = np.linspace(-75.0,-50.0,10)
+    a = np.linspace(0.015,0.045,10)
     b = np.linspace(-3.5*10E-9,-0.5*10E-9,3)
     k = np.linspace(7.0E-4-+7.0E-5,7.0E-4+70E-5,10)
     C = np.linspace(1.00000005E-4-1.00000005E-5,1.00000005E-4+1.00000005E-5,10)
@@ -301,14 +302,15 @@ if __name__ == "__main__":
     v0 = np.linspace(-75.0,-45.0,10)
     vt =  np.linspace(-50.0,-30.0,10)
     vpeak =np.linspace(30.0,40.0,10)
-
-    iter_list=[ (i,j) for i in a for j in b  ]
+    '''
+    import model_parameters as modelp
+    iter_list=[ (i,j) for i in modelp.model_params['a'] for j in modelp.model_params['b']  ]
 
     mean_vm=VirtualModel()
-    guess_attrs=[]
+    #guess_attrs=[]
     #find the mean parameter sets, and use them to inform the rheobase search.
-    guess_attrs.append(np.mean( [ i for i in a ]))
-    guess_attrs.append(np.mean( [ i for i in b ]))
+    guess_attrs = modelp.guess_attrs#.append(np.mean( [ i for i in modelp.a ]))
+    #guess_attrs = modelp.guess_attrs#.append(np.mean( [ i for i in modelp.b ]))
 
     for i, p in enumerate(param):
         value=str(guess_attrs[i])
@@ -335,17 +337,26 @@ if __name__ == "__main__":
     #below score is just the floats associated with RatioScore and Z-scores.
     for score,attr in score_matrixt:
         for i in score:
-            if i==None:
-                i=10.0
+            for j in i:
+                if j==None:
+                    j=10.0
         score_matrix.append(score)
         attrs.append(attr)
         print(attr,score)
 
     score_matrix=np.array(score_matrix)
+    for i in score_matrix:
+        for j in i:
+            if type(j)==None:
+                j=10.0
+            if j==None:
+                j=10.0
+
 
     import pickle
     with open('score_matrix.pickle', 'wb') as handle:
         pickle.dump(score_matrixt, handle)
+    import pdb; pdb.set_trace()
     storagei = [ np.sum(i) for i in score_matrix ]
     storagesmin=np.where(storagei==np.min(storagei))
     storagesmax=np.where(storagei==np.max(storagei))
