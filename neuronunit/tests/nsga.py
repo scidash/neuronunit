@@ -148,11 +148,7 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
             attrs['//izhikevich2007Cell'][p]=name_value
 
 
-    individual.attrs=attrs
-    #make sure that the virtual model, and the real model have the same attributes.
-    assert individual.attrs==vms.attrs
-
-
+    #
     #Its very important to reset the model here. Such that its vm is new, and does not carry charge from the last simulation
     model.load_model()
 
@@ -160,8 +156,8 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
     sane = False
     #model.update_run_params(vm.attrs)
 
-    sane = get_neab.suite.tests[3].sanity_check(value*1.01*pq.pA,model)
-
+    sane = get_neab.suite.tests[3].sanity_check(vms.rheobase*1.01*pq.pA,model)
+    print(sane)
     if sane == True:
 
         individual.params=[]
@@ -177,6 +173,7 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
         model.run_number+=1
         individual.results=model.results
         error= score.sort_key.values
+        print(error)
     elif sane == False:
         error = [ 10.0 for i in range(0,7) ]
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
