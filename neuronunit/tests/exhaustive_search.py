@@ -50,30 +50,16 @@ def model2map(iter_arg):#This method must be pickle-able for scoop to work.
     vm=VirtualModel()
     attrs={}
     attrs['//izhikevich2007Cell']={}
-    param=['a','b']#,'vr','vpeak']
-    i,j=iter_arg#,k,l
+    param=['a','b','vr','vpeak']#,'vr','vpeak']
+    i,j,k,l=iter_arg#,k,l
     model.name=str(i)+str(j)#+str(k)+str(l)
     attrs['//izhikevich2007Cell']['a']=i
     attrs['//izhikevich2007Cell']['b']=j
-    #attrs['//izhikevich2007Cell']['vr']=k
-    #attrs['//izhikevich2007Cell']['vpeak']=l
+    attrs['//izhikevich2007Cell']['vr']=k
+    attrs['//izhikevich2007Cell']['vpeak']=l
     vm.attrs=attrs
     return vm
 
-def plot_everything(tests):
-    import matplotlib as plt
-    #for i,s in enumerate(score_typev[np.shape(storagesmin)[0]]):
-    #.related_data['vm']
-    for i,j in enumerate(tests):
-        plt.plot(i.related_data.results['vm'],i.related_data.results['t'])
-        plt.savefig('s'+str(i)+'.png')
-
-    #plt.plot(plot_vm())
-
-    #tests[0].related_data.results['vm'],tests[0].related_data.results['t']
-    #tests[1].related_data.results['vm']
-    #tests[2].related_data.results['vm']
-    #tests[3].related_data.results['vm']
 
 def func2map(iter_):#This method must be pickle-able for scoop to work.
     '''
@@ -114,7 +100,7 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
         import sciunit.scores as scores
         #error = scores.InsufficientDataScore(None)
         error = [ 10.0 for i in range(0,7) ]
-    return (error,iter_arg.attrs)#,score)#.related_data.to_pickle.to_python())
+    return (error,iter_arg.attrs,value*pq.pA)#,score)#.related_data.to_pickle.to_python())
 
 class VirtualModel:
     '''
@@ -189,7 +175,7 @@ def check_fix_range(lookup):
 
     return (False,steps)
 
-def f(ampl,vm):
+def check_current(ampl,vm):
     '''
     Inputs are an amplitude to test and a virtual model
     output is an virtual model with an updated dictionary.
@@ -241,7 +227,7 @@ def searcher2(f,rh_param,vms):
         print(cnt)
         print('cnt')
         if len(vms.lookup)==0:
-            returned_list1 = list(futures.map(f,rh_param[1],repeat(vms)))
+            returned_list1 = list(futures.map(check_current,rh_param[1],repeat(vms)))
             d={}
             for r in returned_list1:
                 d.update(r)
@@ -251,7 +237,7 @@ def searcher2(f,rh_param,vms):
             if rh_param[0]==True:
                 return rh_param[1]
                 #break
-            returned_list2 = list(futures.map(f,rh_param[1],repeat(vms)))
+            returned_list2 = list(futures.map(check_current,rh_param[1],repeat(vms)))
             d={}
             for r in returned_list2:
                 d.update(r)
@@ -263,7 +249,7 @@ def searcher(f,rh_param,vms):
     cnt=0
     while rh_param[0]==False and cnt<4:
         if len(vms.lookup)==0:
-            d = f(rh_param[1],vms)
+            d = check_current(rh_param[1],vms)
             rh_param=check_fix_range(d)
             if rh_param[0]==True:
                 return rh_param[1]
@@ -272,7 +258,7 @@ def searcher(f,rh_param,vms):
             rh_param=check_fix_range(d)
             if rh_param[0]==True:
                 return rh_param[1]
-            returned_list2 = list(futures.map(f,rh_param[1],repeat(vms)))
+            returned_list2 = list(futures.map(check_current,rh_param[1],repeat(vms)))
             d={}
             for r in returned_list2:
                 d.update(r)
@@ -286,7 +272,7 @@ def evaluate(individual, guess_value=None):
     import copy
     vm.attrs=copy.copy(individual.attrs)
     rh_param=(False,guess_value)
-    rheobase=searcher(f,rh_param,vm)#,guess_value)
+    rheobase=searcher(check_current,rh_param,vm)#,guess_value)
     return rheobase
 
 
@@ -328,16 +314,21 @@ if __name__ == "__main__":
     steps_current = [ i*pq.pA for i in steps ]
     model.attrs=mean_vm.attrs
     rh_param=(False,steps_current)
-    rh_value=searcher2(f,rh_param,mean_vm)
+    rh_value=searcher2(check_current,rh_param,mean_vm)
     list_of_models=list(futures.map(model2map,iter_list))
     rhstorage=list(futures.map(evaluate,list_of_models,repeat(rh_value)))
     iter_ = zip(list_of_models,rhstorage)
     score_matrixt=list(futures.map(func2map,iter_))#list_of_models,rhstorage))
+
+    import pickle
+    with open('score_matrix.pickle', 'wb') as handle:
+        pickle.dump(score_matrixt, handle)
+
     score_matrix=[]
     attrs=[]
     score_typev=[]
     #below score is just the floats associated with RatioScore and Z-scores.
-    for score,attr in score_matrixt:
+    for score,attr,_ in score_matrixt:
         for i in score:
             for j in i:
                 if j==None:
@@ -356,10 +347,6 @@ if __name__ == "__main__":
                 j=10.0
 
 
-    import pickle
-    with open('score_matrix.pickle', 'wb') as handle:
-        pickle.dump(score_matrixt, handle)
-
     with open('score_matrix.pickle', 'rb') as handle:
         matrix=pickle.load(handle)
 
@@ -376,8 +363,28 @@ if __name__ == "__main__":
     storagei = [ np.sum(i) for i in matrix3 ]
     storagesmin=np.where(storagei==np.min(storagei))
     storagesmax=np.where(storagei==np.max(storagei))
-    print(matrix[storagesmin[0]])
-    print(matrix[storagesmin[1]])
+    score0,attrs0=matrix[storagesmin[0]]
+    score1,attrs1=matrix[storagesmin[1]]
+
+
+
+    def build_single(attrs):
+        #This method is only used to check singlular sets of hard coded parameters.]
+        #This medthod is probably only useful for diagnostic purposes.
+        import sciunit.scores as scores
+        import quantities as qt
+        vm = VirtuaModel()
+        rh_value=searcher2(check_current,rh_param,vms)
+        get_neab.suite.tests[0].prediction={}
+        get_neab.suite.tests[0].prediction['value']=rh_value*qt.pA
+        score = get_neab.suite.judge(model)#passing in model, changes model
+
+    build_single(attrs)
+
+#    return model
+    #else:
+    #    return 10.0
+
 
     '''
     import pdb; pdb.set_trace()
