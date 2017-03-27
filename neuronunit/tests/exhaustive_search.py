@@ -198,9 +198,6 @@ def check_current(ampl,vm):
         n_spikes = model.get_spike_count()
         if n_spikes==1:
             vm.rheobase=ampl
-            print(vm.attrs)
-            print(model.attrs)
-            print('hit')
         verbose=False
         if verbose:
             print("Injected %s current and got %d spikes" % \
