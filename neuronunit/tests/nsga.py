@@ -564,21 +564,16 @@ def main(seed=None):
         #genes have changed so check/search rheobase again.
         for i,j in enumerate(invalid_ind):
             if vmlist[i].rheobase!=None:
-                lookup2=f(vmlist[i].rheobase,vmlist[i])
+                d=test_current(vmlist[i].rheobase,vmlist[i])
             else:
-                lookup2=f(guess_value,vmlist[i])
-            l3=[]
-            d=lookup2.lookup
-            for k,v in d.items():
-                d[k]=v
-                l3.append((v, k))
+                d=test_current(guess_value,vmlist[i])
             if 1 not in d.values():
-                unpack=check_fix_range(l3)
+                unpack=check_fix_range(d)
                 unpack=check_repeat(test_current,unpack[1],vmlist[i])
                 if unpack[0]==True:
                     guess_value=unpack[1]
                 else:
-                    guess_value=searcher(test_current,unpack,vmlist[i])
+                    guess_value=searcher(test_current,unpack[1],vmlist[i])
         for i in vmlist:
             assert i.rheobase!=None
 
@@ -615,16 +610,7 @@ def main(seed=None):
 
 
 
-    '''
-    f=open('stats_summart.txt','w')
-    for i in list(logbook):
-        f.write(str(i))
-    f=open('mean_call_length_spiking.txt','w')
-    mean_spike_call_time='{}{}{}'.format('mean spike call time',str(np.mean(LOCAL_RESULTS_spiking)), str(': \n') )
-    f.write(mean_spike_call_time)
-    f.write('the number of calls to NEURON on one CPU only : \n')
-    f.write(str(len(LOCAL_RESULTS_spiking))+str(' \n'))
-    '''
+    ''
     plt.clf()
     plt.hold(True)
     for i in logbook:
