@@ -226,34 +226,41 @@ class VirtuaModel:
 
 
 
-def ff(ampl,vm):
+def test_current(ampl,vm):
     '''
     Inputs are an amplitude to test and a virtual model
     output is an virtual model with an updated dictionary.
     '''
-    if float(ampl) not in vm.lookup:
+    import copy
+    if float(ampl) not in vm.lookup or len(vm.lookup)==0:
         current = params.copy()['injected_square_current']
         uc={'amplitude':ampl}
         current.update(uc)
+
         current={'injected_square_current':current}
         vm.run_number+=1
-        model.load_model()
+        model.update_run_params(vm.attrs)
 
+        model.load_model()
+        #print('got here 1')
+        #print(type(model.h.v_v_of0))
         model.inject_square_current(current)
         vm.previous=ampl
         n_spikes = model.get_spike_count()
         if n_spikes==1:
             vm.rheobase=ampl
+            print(vm.attrs)
+            print(model.attrs)
+            print('hit')
         verbose=False
         if verbose:
             print("Injected %s current and got %d spikes" % \
                     (ampl,n_spikes))
         vm.lookup[float(ampl)] = n_spikes
-        return vm
-
+        return vm.lookup
+        #return copy.copy(vm.lookup)
     if float(ampl) in vm.lookup:
-        return vm
-
+        return vm.lookup
 small=None
 from scoop import futures
 #from neuronunit.models import backends
@@ -284,9 +291,9 @@ units = pq.pA
 verbose=True
 
 
-def check_fix_range(lookup2):
+def check_fix_range(lookup):
     '''
-    Inputs: lookup2, A dictionary of previous current injection values
+    Inputs: lookup, A dictionary of previous current injection values
     used to search rheobase
     Outputs: A boolean to indicate if the correct rheobase current was found
     and a dictionary containing the range of values used.
@@ -297,7 +304,8 @@ def check_fix_range(lookup2):
     '''
     sub=[]
     supra=[]
-    for v,k in lookup2:
+    print(lookup)
+    for k,v in lookup.items():
         if v==1:
             #A logical flag is returned to indicate that rheobase was found.
             return (True,k)
@@ -308,33 +316,31 @@ def check_fix_range(lookup2):
 
     sub=np.array(sub)
     supra=np.array(supra)
-
+                 # concatenate
     if len(sub) and len(supra):
-        #center=(sub.max()+supra.min())/2.0
-        #steps2=np.linspace(center-sub.max(),center+supra.min(),7.0)
-        steps2 = np.linspace(sub.max(),supra.min(),7.0)
-        np.delete(steps2,np.array(lookup2))
+
+        everything=np.concatenate((sub,supra))
+
+        center = np.linspace(sub.max(),supra.min(),7.0)
+        np.delete(center,np.array(everything))
         #make sure that element 4 in a seven element vector
         #is exactly half way between sub.max() and supra.min()
-        steps2[int(len(steps2)/2)+1]=(sub.max()+supra.min())/2.0
-        steps = [ i*pq.pA for i in steps2 ]
+        center[int(len(center)/2)+1]=(sub.max()+supra.min())/2.0
+        steps = [ i*pq.pA for i in center ]
 
     elif len(sub):
         steps2 = np.linspace(sub.max(),2*sub.max(),7.0)
-        np.delete(steps2,np.array(lookup2))
+        np.delete(steps2,np.array(sub))
         steps = [ i*pq.pA for i in steps2 ]
 
     elif len(supra):
         steps2 = np.linspace(-2*(supra.min()),supra.min(),7.0)
-        np.delete(steps2,np.array(lookup2))
+        np.delete(steps2,np.array(supra))
         steps = [ i*pq.pA for i in steps2 ]
 
-    if len(steps)<7:
-        steps2 = np.linspace(steps.min(),steps.max(),7.0)
-        steps = [ i*pq.pA for i in steps2 ]
 
-    import copy
-    return (False,copy.copy(steps))
+    return (False,steps)
+
 
 
 def main(seed=None):
@@ -377,10 +383,10 @@ def main(seed=None):
     import copy
 
 
-    def check_repeat(ff,unpack,vm):
+    def check_repeat(test_current,unpack,vm):
         '''
         inputs:
-        ff, a function,
+        test_current, a function,
         unpack, a dictionary of previous search values:
         vm a virtual model object.
         outputs: a tuple consisting of a boolean flag and
@@ -389,7 +395,7 @@ def main(seed=None):
         can be used to seed future searches.
         '''
         from itertools import repeat
-        lookup2=list(futures.map(ff,unpack,repeat(vm)))
+        lookup2=list(futures.map(test_current,unpack,repeat(vm)))
         l3=[]
         for l in lookup2:
             for k,v in l.lookup.items():
@@ -410,59 +416,48 @@ def main(seed=None):
     from itertools import repeat
 
 
-    def searcher2(ff,unpack,vms):
+
+    def searcher2(f,rh_param,vms):
         '''
         ultimately an attempt to capture the essence a lot of repeatative code below.
         This is not yet used, but it is intended for future use.
         Its intended to replace the less general searcher function
         '''
-        steps2 = np.linspace(40,80,7.0)
-        steps = [ i*pq.pA for i in steps2 ]
-        model.attrs=mean_vm.attrs
-        lookup2=list(futures.map(ff,steps,repeat(mean_vm)))
+        if rh_param[0]==True:
+            return rh_param[1]
+        lookuplist=[]
+        cnt=0
+        while rh_param[0]==False and cnt<4:
+            print(cnt)
+            print('cnt')
+            if len(vms.lookup)==0:
+                returned_list1 = list(futures.map(f,rh_param[1],repeat(vms)))
+                d={}
+                for r in returned_list1:
+                    d.update(r)
+            else:
+                rh_param=check_fix_range(d)
+                print(rh_param)
+                if rh_param[0]==True:
+                    return rh_param[1]
+                    #break
+                returned_list2 = list(futures.map(f,rh_param[1],repeat(vms)))
+                d={}
+                for r in returned_list2:
+                    d.update(r)
+            cnt+=1
+        #print(rh_param)
+        return False#rh_param[1]
 
+
+    def searcher(test_current,unpack,vms):
         while unpack[0]==False:
             l3=[]# convert a dictionary to a list.
             for l in unpack[1]:
                 for k,v in vms.lookup.items():
                     l3.append((v, k))
             unpack=check_fix_range(l3)
-            unpack=check_repeat(ff,unpack[1],vms)
-            if unpack[0]==True:
-                guess_value=unpack[1]
-                return guess_value
-
-
-    steps2 = np.linspace(40,80,7.0)
-    steps = [ i*pq.pA for i in steps2 ]
-
-
-
-    #this might look like a big list iteration, but its not.
-    #the statement below just finds rheobase on one value, that is the value
-    #constituted by mean_vm. This will be used to speed up the rheobase search later.
-    model.attrs=mean_vm.attrs
-    #def bulk_process(ff,steps,mean_vm):
-    lookup2=list(futures.map(ff,steps,repeat(mean_vm)))
-
-    l3=[]
-    for l in lookup2:
-        for k,v in l.lookup.items():
-            l3.append((v, k))
-    unpack=check_fix_range(l3)
-    unpack=check_repeat(ff,unpack[1],mean_vm)
-    if unpack[0]==True:
-        guess_value=unpack[1]
-
-
-    def searcher(ff,unpack,vms):
-        while unpack[0]==False:
-            l3=[]# convert a dictionary to a list.
-            for l in unpack[1]:
-                for k,v in vms.lookup.items():
-                    l3.append((v, k))
-            unpack=check_fix_range(l3)
-            unpack=check_repeat(ff,unpack[1],vms)
+            unpack=check_repeat(test_current,unpack[1],vms)
             if unpack[0]==True:
                 guess_value=unpack[1]
                 return guess_value
@@ -491,8 +486,15 @@ def main(seed=None):
     #It is just a trying out an educated guess on each individual in the whole population as a first pass.
     invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
     vmlist=list(map(individual_to_vm,invalid_ind))
+    print(test_current)
+    #guess_value=searcher(test_current,mean_vm)
+    steps = np.linspace(40,80,7.0)
+    steps_current = [ i*pq.pA for i in steps ]
+    model.attrs=mean_vm.attrs
+    rh_param=(False,steps_current)
+    rh_value=searcher2(test_current,rh_param,mean_vm)
 
-    list_of_hits_misses=list(futures.map(ff,repeat(guess_value),vmlist))
+    list_of_hits_misses=list(futures.map(test_current,repeat(rh_value),vmlist))
 
     #For each individual in the new GA population.
     #Create Virtual Models that are readily pickle-able.
@@ -501,20 +503,20 @@ def main(seed=None):
 
     for i,j in enumerate(invalid_ind):
         if vmlist[i].rheobase==None:
-            lookup2=ff(guess_value,vmlist[i])
-            l3=[]
+            d=test_current(rh_value,vmlist[i])
+            #l3=[]
             #d={}
-            d=lookup2.lookup
-            for k,v in d.items():
-                l3.append((v, k))
+            #d=lookup2.lookup
+            #for k,v in d.items():
+            #    l3.append((v, k))
                 #d[k]=v
             if 1 not in d.values():
-                unpack=check_fix_range(l3)
-                unpack=check_repeat(ff,unpack[1],vmlist[i])
+                unpack=check_fix_range(d)
+                unpack=check_repeat(test_current,unpack[1],vmlist[i])
                 if unpack[0]==True:
                     guess_value=unpack[1]
                 else:
-                    guess_value=searcher(ff,unpack,vmlist[i])
+                    guess_value=searcher(test_current,unpack,vmlist[i])
 
     for i in vmlist:
         assert i.rheobase!=None
@@ -561,9 +563,9 @@ def main(seed=None):
         #genes have changed so check/search rheobase again.
         for i,j in enumerate(invalid_ind):
             if vmlist[i].rheobase!=None:
-                lookup2=ff(vmlist[i].rheobase,vmlist[i])
+                lookup2=f(vmlist[i].rheobase,vmlist[i])
             else:
-                lookup2=ff(guess_value,vmlist[i])
+                lookup2=f(guess_value,vmlist[i])
             l3=[]
             d=lookup2.lookup
             for k,v in d.items():
@@ -571,11 +573,11 @@ def main(seed=None):
                 l3.append((v, k))
             if 1 not in d.values():
                 unpack=check_fix_range(l3)
-                unpack=check_repeat(ff,unpack[1],vmlist[i])
+                unpack=check_repeat(test_current,unpack[1],vmlist[i])
                 if unpack[0]==True:
                     guess_value=unpack[1]
                 else:
-                    guess_value=searcher(ff,unpack,vmlist[i])
+                    guess_value=searcher(test_current,unpack,vmlist[i])
         for i in vmlist:
             assert i.rheobase!=None
 
@@ -612,7 +614,7 @@ def main(seed=None):
 
 
 
-
+    '''
     f=open('stats_summart.txt','w')
     for i in list(logbook):
         f.write(str(i))
@@ -621,7 +623,7 @@ def main(seed=None):
     f.write(mean_spike_call_time)
     f.write('the number of calls to NEURON on one CPU only : \n')
     f.write(str(len(LOCAL_RESULTS_spiking))+str(' \n'))
-
+    '''
     plt.clf()
     plt.hold(True)
     for i in logbook:
