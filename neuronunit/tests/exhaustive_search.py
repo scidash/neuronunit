@@ -279,20 +279,8 @@ def evaluate(individual, guess_value=None):
 
 if __name__ == "__main__":
     #PARAMETER FILE
-    '''
-    vr = np.linspace(-75.0,-50.0,10)
-    a = np.linspace(0.015,0.045,10)
-    b = np.linspace(-3.5*10E-9,-0.5*10E-9,3)
-    k = np.linspace(7.0E-4-+7.0E-5,7.0E-4+70E-5,10)
-    C = np.linspace(1.00000005E-4-1.00000005E-5,1.00000005E-4+1.00000005E-5,10)
-    c = np.linspace(-55,-60,10)
-    d = np.linspace(0.050,0.2,10)
-    v0 = np.linspace(-75.0,-45.0,10)
-    vt =  np.linspace(-50.0,-30.0,10)
-    vpeak =np.linspace(30.0,40.0,10)
-    '''
     import model_parameters as modelp
-    iter_list=[ (i,j) for i in modelp.model_params['a'] for j in modelp.model_params['b']  ]
+    iter_list=[ (i,j,k,l) for i in modelp.model_params['a'] for j in modelp.model_params['b'] for k in modelp.model_params['vr'] for l in modelp.model_params['vpeak']  ]
 
     mean_vm=VirtualModel()
     #guess_attrs=[]

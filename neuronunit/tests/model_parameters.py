@@ -18,4 +18,8 @@ steps = [ i*pq.pA for i in steps2 ]
 guess_attrs=[]
 guess_attrs.append(np.mean( [ i for i in model_params['a'] ]))
 guess_attrs.append(np.mean( [ i for i in model_params['b'] ]))
+
+guess_attrs.append(np.mean( [ i for i in model_params['vr'] ]))
+
+guess_attrs.append(np.mean( [ i for i in model_params['vpeak'] ]))
 print(guess_attrs)
