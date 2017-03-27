@@ -31,6 +31,14 @@ import scoop
 
 import get_neab
 
+import quantities as qt
+import os
+import os.path
+from scoop import utils
+
+import sciunit.scores as scores
+
+
 init_start=time.time()
 creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0,
                                                     -1.0, -1.0, -1.0, -1.0))
@@ -149,64 +157,28 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
     model.load_model()
 
     individual.model=model.update_run_params(attrs)
+    sane = False
+    #model.update_run_params(vm.attrs)
 
-    individual.params=[]
-    for i in attrs['//izhikevich2007Cell'].values():
-        if hasattr(individual,'params'):
-            individual.params.append(i)
-    import quantities as qt
-    get_neab.suite.tests[0].prediction={}
-    get_neab.suite.tests[0].prediction['value']=0
-    assert vms.rheobase!=None
-    get_neab.suite.tests[0].prediction['value']=vms.rheobase*qt.pA
-    import os
-    import os.path
-    from scoop import utils
-    model.load_model()
+    sane = get_neab.suite.tests[3].sanity_check(value*1.01*pq.pA,model)
 
-    #f=open('scoop_log_'+str(utils.getHosts()),'w')
-    #f.write(str(attrs))
-    #f.close()
+    if sane == True:
 
-    score = get_neab.suite.judge(model)#passing in model, changes model
-    model.run_number+=1
-    RUN_TIMES='{}{}{}'.format('counting simulation run times on models',model.results['run_number'],model.run_number)
-
-    individual.results=model.results
-    LOCAL_RESULTS_spiking.append(model.results['sim_time'])
-    '{}{}'.format('sim time stored: ',model.results['sim_time'])
-
-    try:
-        individual.error = []
-        for i in score.unstack():
-            if np.isinf(abs(i.score)):
-                pdb.set_trace()
-
-            if np.isnan(abs(i.score)):
-                pdb.set_trace()
-
-        individual.error = [ abs(i.score) for i in score.unstack() ]
-
-    except Exception as e:
-        '{}'.format('Insufficient Data')
-        #if the error associated with the old version of the gene is not 0
-        #average its old error with 10, to create a better gradient,
-        #or in other words make a continuously changing surface
-        #as opposed to shelves and cliffs.
-        if np.sum(individual.error)!=0:
-            individual.error = [ (-10.0+i)/2.0 for i in individual.error ]
-        else:
-            #If the gene has no old error, just make all of its errors 10.
-            #Ie make a cliff, it probably does not matter if it does not happen too often.
-            individual.error = [ -10.0 for i in range(0,8) ]
-
-    individual.s_html = score.to_html()
-    vms.s_html=score.to_html()
-    error=individual.error
-    assert len(error)>0
-    assert not np.isinf(np.array(error).all())
-    assert not np.isnan(np.array(error).all())
-
+        individual.params=[]
+        for i in attrs['//izhikevich2007Cell'].values():
+            if hasattr(individual,'params'):
+                individual.params.append(i)
+        get_neab.suite.tests[0].prediction={}
+        get_neab.suite.tests[0].prediction['value']=0
+        assert vms.rheobase!=None
+        get_neab.suite.tests[0].prediction['value']=vms.rheobase*qt.pA
+        model.load_model()
+        score = get_neab.suite.judge(model)#passing in model, changes model
+        model.run_number+=1
+        individual.results=model.results
+        error= score.sort_key.values
+    elif sane == False:
+        error = [ 10.0 for i in range(0,7) ]
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
 
 
