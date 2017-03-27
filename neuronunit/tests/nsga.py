@@ -172,10 +172,17 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
         score = get_neab.suite.judge(model)#passing in model, changes model
         model.run_number+=1
         individual.results=model.results
-        error= score.sort_key.values
+        error= score.sort_key.values.tolist()[0]
+        individual.error=error
+
         print(error)
     elif sane == False:
-        error = [ 10.0 for i in range(0,7) ]
+        if len(individual.error)!=0:
+            error = [ ((10.0+i)/2.0) for i in error ]
+        else:
+            error = [ 10.0 for i in range(0,8) ]
+
+    #pdb.set_trace()
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
 
 
@@ -486,7 +493,6 @@ def main(seed=None):
     #It is just a trying out an educated guess on each individual in the whole population as a first pass.
     invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
     vmlist=list(map(individual_to_vm,invalid_ind))
-    print(test_current)
     #guess_value=searcher(test_current,mean_vm)
     steps = np.linspace(40,80,7.0)
     steps_current = [ i*pq.pA for i in steps ]
@@ -504,12 +510,6 @@ def main(seed=None):
     for i,j in enumerate(invalid_ind):
         if vmlist[i].rheobase==None:
             d=test_current(rh_value,vmlist[i])
-            #l3=[]
-            #d={}
-            #d=lookup2.lookup
-            #for k,v in d.items():
-            #    l3.append((v, k))
-                #d[k]=v
             if 1 not in d.values():
                 unpack=check_fix_range(d)
                 unpack=check_repeat(test_current,unpack[1],vmlist[i])
@@ -524,7 +524,8 @@ def main(seed=None):
     assert len(invalid_ind)==len(vmlist)
     #fitnesses = toolbox.map(toolbox.evaluate, invalid_ind, vmlist)
 
-    fitnesses = []
+    #fitnesses = list(futures.map(evaluate, invalid_ind, vmlist))
+
     fitnesses = list(toolbox.map(toolbox.evaluate, invalid_ind, vmlist))
     assert len(fitnesses)==len(invalid_ind)
     for ind, fit in zip(invalid_ind, fitnesses):
