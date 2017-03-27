@@ -172,6 +172,8 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
         score = get_neab.suite.judge(model)#passing in model, changes model
         model.run_number+=1
         individual.results=model.results
+        vms.results=model.results
+        vms.score=score.sort_key.values.tolist()[0]
         error= score.sort_key.values.tolist()[0]
         individual.error=error
 
@@ -195,21 +197,23 @@ toolbox.register("select", tools.selNSGA2)
 toolbox.register("map", futures.map)
 
 
-def plotss(pop,gen):
+def plotss(pop,vmlist,gen):
     import matplotlib.pyplot as plt
     plt.clf()
 
-    for ind in pop:
+    for ind,j in enumerate(pop):
         if hasattr(ind,'results'):
             plt.plot(ind.results['t'],ind.results['vm'])
-            plt.xlabel(str(ind.attrs))
-    plt.savefig('snap_shot_at_'+str(gen)+'.png')
+        #if hasattr(vmlist[j],'attrs'):
+        #    vmlist[j].attrs
+            plt.xlabel(str(vmlist[j].attr))
+    plt.savefig('snap_shot_at_gen_'+str(gen)+'.png')
     plt.clf()
 
 
 
 
-class VirtuaModel:
+class VirtualModel:
     '''
     This is a pickable dummy clone
     version of the NEURON simulation model
@@ -229,6 +233,7 @@ class VirtuaModel:
         self.name=None
         self.s_html=None
         self.results=None
+        self.score=None
 
 
 
@@ -377,7 +382,7 @@ def main(seed=None):
         guess_attrs.append(np.mean( [ i[x] for i in pop ]))
 
     from itertools import repeat
-    mean_vm=VirtuaModel()
+    mean_vm=VirtualModel()
 
     for i, p in enumerate(param):
         value=str(guess_attrs[i])
@@ -402,20 +407,18 @@ def main(seed=None):
         can be used to seed future searches.
         '''
         from itertools import repeat
-        lookup2=list(futures.map(test_current,unpack,repeat(vm)))
-        l3=[]
-        for l in lookup2:
-            for k,v in l.lookup.items():
-                l3.append((v, k))
-
-        unpack=check_fix_range(l3)
-        l3=None
+        d={}
+        listtodic=list(futures.map(test_current,unpack,repeat(vm)))
+        for li in listtodic:
+            d.extend(li)
+        unpack=check_fix_range(d)
+        d=None
         boolean=False
         new_ranges=[]
         boolean=unpack[0]
-        guess_value=unpack[1]
+        guess_value = unpack[1]
         if True == boolean:
-            vm.rheobase=guess_value
+            vm.rheobase = guess_value
             return (True,guess_value)
         else:
             return (False,guess_value)
@@ -459,11 +462,10 @@ def main(seed=None):
 
     def searcher(test_current,unpack,vms):
         while unpack[0]==False:
-            l3=[]# convert a dictionary to a list.
+            d={}# convert a dictionary to a list.
             for l in unpack[1]:
-                for k,v in vms.lookup.items():
-                    l3.append((v, k))
-            unpack=check_fix_range(l3)
+                d.extend(vms.lookup)
+            unpack=check_fix_range(d)
             unpack=check_repeat(test_current,unpack[1],vms)
             if unpack[0]==True:
                 guess_value=unpack[1]
@@ -482,7 +484,7 @@ def main(seed=None):
                 attrs={'//izhikevich2007Cell':{p:value }}
             else:
                 attrs['//izhikevich2007Cell'][p]=value
-        vm=VirtuaModel()
+        vm=VirtualModel()
         vm.attrs=attrs
         #assert ind.attrs==vm.attrs
         return vm
@@ -514,17 +516,14 @@ def main(seed=None):
                 unpack=check_fix_range(d)
                 unpack=check_repeat(test_current,unpack[1],vmlist[i])
                 if unpack[0]==True:
-                    guess_value=unpack[1]
+                    rh_value = unpack[1]
                 else:
-                    guess_value=searcher(test_current,unpack,vmlist[i])
+                    rh_value = searcher(test_current,unpack,vmlist[i])
 
     for i in vmlist:
         assert i.rheobase!=None
 
     assert len(invalid_ind)==len(vmlist)
-    #fitnesses = toolbox.map(toolbox.evaluate, invalid_ind, vmlist)
-
-    #fitnesses = list(futures.map(evaluate, invalid_ind, vmlist))
 
     fitnesses = list(toolbox.map(toolbox.evaluate, invalid_ind, vmlist))
     assert len(fitnesses)==len(invalid_ind)
@@ -566,14 +565,14 @@ def main(seed=None):
             if vmlist[i].rheobase!=None:
                 d=test_current(vmlist[i].rheobase,vmlist[i])
             else:
-                d=test_current(guess_value,vmlist[i])
+                d=test_current(rh_value,vmlist[i])
             if 1 not in d.values():
-                unpack=check_fix_range(d)
-                unpack=check_repeat(test_current,unpack[1],vmlist[i])
-                if unpack[0]==True:
-                    guess_value=unpack[1]
+                unpack = check_fix_range(d)
+                unpack = check_repeat(test_current,unpack[1],vmlist[i])
+                if unpack[0] == True:
+                    rh_value = unpack[1]
                 else:
-                    guess_value=searcher(test_current,unpack[1],vmlist[i])
+                    rh_value = searcher(test_current,unpack[1],vmlist[i])
         for i in vmlist:
             assert i.rheobase!=None
 
@@ -582,7 +581,7 @@ def main(seed=None):
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
 
-        plotss(invalid_ind,gen)
+        plotss(invalid_ind,vmlist,gen)
         # Select the next generation population
         #This way the initial genes keep getting added to each generation.
         #pop = toolbox.select(pop + offspring, MU)
