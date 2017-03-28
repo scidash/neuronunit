@@ -177,6 +177,8 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
         vms.score=score.sort_key.values.tolist()[0]
         error= score.sort_key.values.tolist()[0]
         import pickle
+        from pprint import pprint
+        pprint(score.__dict__)
         pickle.dump(score, open( str(individual.params)+".p", "wb" ) )
         individual.error=error
         #pdb.set_trace()
