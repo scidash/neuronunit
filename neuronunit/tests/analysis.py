@@ -20,6 +20,14 @@ import sciunit.scores as scores
 from neuronunit.models import backends
 from neuronunit.models.reduced import ReducedModel
 import neuronunit.capabilities as cap
+
+
+import sciunit.scores as scores
+import quantities as qt
+import pdb
+#vm = VirtualModel()
+#import matplotlib.plot as plt
+import matplotlib.pyplot as plt
 AMPL = 0.0*pq.pA
 DELAY = 100.0*pq.ms
 DURATION = 1000.0*pq.ms
@@ -60,6 +68,8 @@ storagesmin=np.where(storagei==np.min(storagei))
 storagesmax=np.where(storagei==np.max(storagei))
 score0,attrs0,rheobase0=matrix[storagesmin[0][0]]
 score1,attrs1,rheobase1=matrix[storagesmin[0][1]]
+score0max,attrs0max,rheobase0=matrix[storagesmax[0][0]]
+score1max,attrs1max,rheobase1=matrix[storagesmax[0][1]]
 
 
 class VirtualModel:
@@ -85,18 +95,16 @@ class VirtualModel:
 
 
 
-def build_single(attrs,rheobase):
+def build_single(attrs,name):
     #This method is only used to check singlular sets of hard coded parameters.]
     #This medthod is probably only useful for diagnostic purposes.
-    import sciunit.scores as scores
-    import quantities as qt
-    import pdb
-    vm = VirtualModel()
-    #import matplotlib.plot as plt
-    import matplotlib.pyplot as plt
+
+    model.attrs=attrs
+    model.update_run_params(attrs)
+    model.name = str(attrs)
     #rh_value=searcher2(f,rh_param,vms)
     get_neab.suite.tests[0].prediction={}
-    get_neab.suite.tests[0].prediction['value']=52.74444444444445 *qt.pA
+    get_neab.suite.tests[0].prediction['value']=52.22222222222222 *qt.pA
     score = get_neab.suite.judge(model)#passing in model, changes model
     for k,v in score.related_data.items():#.results['vm']
         print(k,v)
@@ -105,9 +113,21 @@ def build_single(attrs,rheobase):
             print(i,j)
             plt.clf()
             time=np.linspace(0,1600,len(j['vm']))
+            plt.xlabel(str(v))
+            plt.ylabel(str(i))
             plt.plot(time,j['vm'])
-            plt.savefig(str(i.keys())+'.png')
+            plt.savefig(str(k)+name+'.png')
+            plt.clf()
+
             #pdb.set_trace()
-print(score0,attrs0,rheobase0)
-build_single(attrs0,rheobase0)
-build_single(attrs1,rheobase1)
+print(score0,attrs0)
+name='min_one'
+build_single(attrs0,name)
+name='min_two'
+build_single(attrs1,name)
+name='max_one'
+build_single(attrs0max,name)
+name='max_two'
+build_single(attrs1max,name)
+
+#sbuild_single(attrs1,rheobase1)
