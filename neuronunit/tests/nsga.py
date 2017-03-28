@@ -65,7 +65,7 @@ class Individual(object):
         self.rheobase=None
 toolbox = base.Toolbox()
 
-import model_params as params
+import model_parameters as params
 
 vr = np.linspace(-75.0,-50.0,1000)
 a = np.linspace(0.015,0.045,1000)
@@ -176,12 +176,14 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
         vms.results=model.results
         vms.score=score.sort_key.values.tolist()[0]
         error= score.sort_key.values.tolist()[0]
+        import pickle
+        pickle.dump(score, open( str(individual.params)+".p", "wb" ) )
         individual.error=error
-
+        #pdb.set_trace()
         print(error)
     elif sane == False:
         if len(individual.error)!=0:
-            error = [ ((10.0+i)/2.0) for i in error ]
+            error = [ ((10.0+i)/2.0) for i in individual.error ]
         else:
             error = [ 10.0 for i in range(0,8) ]
 
@@ -356,9 +358,9 @@ def check_fix_range(lookup):
 
 
 
-def main(seed=None):
+def main():
 
-    random.seed(seed)
+    #random.seed(seed)
 
     NGEN=4
     MU=12
@@ -428,44 +430,33 @@ def main(seed=None):
 
 
 
-def searcher(f,rh_param,vms):
-    '''
-    ultimately an attempt to capture the essence a lot of repeatative code below.
-    This is not yet used, but it is intended for future use.
-    Its intended to replace the less general searcher function
-    '''
-    if rh_param[0]==True:
-        return rh_param[1]
-    cnt=0
-    while rh_param[0]==False and cnt<4:
-        if len(vms.lookup)==0:
-            returned_list1 = list(futures.map(check_current,rh_param[1],repeat(vms)))
-            d={}
-            for r in returned_list1:
-                d.update(r)
-        else:
-            rh_param=check_fix_range(d)
-            if rh_param[0]==True:
-                return rh_param[1]
-            returned_list2 = list(futures.map(check_current,rh_param[1],repeat(vms)))
-            d={}
-            for r in returned_list2:
-                d.update(r)
-        cnt+=1
-    return False
+    def searcher(f,rh_param,vms):
+        '''
+        ultimately an attempt to capture the essence a lot of repeatative code below.
+        This is not yet used, but it is intended for future use.
+        Its intended to replace the less general searcher function
+        '''
+        if rh_param[0]==True:
+            return rh_param[1]
+        cnt=0
+        while rh_param[0]==False and cnt<4:
+            if len(vms.lookup)==0:
+                returned_list1 = list(futures.map(test_current,rh_param[1],repeat(vms)))
+                d={}
+                for r in returned_list1:
+                    d.update(r)
+            else:
+                rh_param=check_fix_range(d)
+                if rh_param[0]==True:
+                    return rh_param[1]
+                returned_list2 = list(futures.map(test_current,rh_param[1],repeat(vms)))
+                d={}
+                for r in returned_list2:
+                    d.update(r)
+            cnt+=1
+        return False
 
-    '''
-    def searcher(test_current,unpack,vms):
-        while unpack[0]==False:
-            d={}# convert a dictionary to a list.
-            for l in unpack[1]:
-                d.extend(vms.lookup)
-            unpack=check_fix_range(d)
-            unpack=check_repeat(test_current,unpack[1],vms)
-            if unpack[0]==True:
-                guess_value=unpack[1]
-                return guess_value
-    '''
+
 
     #The above code between 492-544
     # was a lot of code, but all it was really doing was establishing a rheobase value in a fast way,
@@ -603,15 +594,6 @@ def searcher(f,rh_param,vms):
             print(opt_values)
 
 
-
-    ''
-    plt.clf()
-    plt.hold(True)
-    for i in logbook:
-        plt.plot(np.sum(i['avg']),i['gen'])
-        '{}{}{}'.format(np.sum(i['avg']),i['gen'],'results')
-    plt.savefig('avg_error_versus_gen.png')
-    plt.hold(False)
     return pop, list(logbook)
 
 
@@ -619,7 +601,7 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import pyneuroml as pynml
     import os
-
+    import time
     start_time=time.time()
     whole_initialisation=start_time-init_start
 
