@@ -83,7 +83,6 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
     from scoop import utils
     score = None
     sane = False
-    #model.update_run_params(vm.attrs)
 
     sane = get_neab.suite.tests[3].sanity_check(value*1.01*pq.pA,model)
 
@@ -92,11 +91,10 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
         score = get_neab.suite.tests[0].prediction['value']=value*pq.pA
         score = get_neab.suite.judge(model)#passing in model, changes model
 
-        #pdb.set_trace()
-
-        #import pickle
-        #pickle.dump(score, open( "save.p", "wb" ) )
+        import pickle
+        pickle.dump(score, open( "save.p", "wb" ) )
         #import pdb
+        #pdb.set_trace()
 
         model.run_number+=1
         for i in score.sort_key.values[0]:
@@ -194,16 +192,17 @@ def check_current(ampl,vm):
 
         current={'injected_square_current':current}
         vm.run_number+=1
-        model.load_model()
-
         model.update_run_params(vm.attrs)
 
+        model.load_model()
         model.inject_square_current(current)
         vm.previous=ampl
         n_spikes = model.get_spike_count()
         if n_spikes==1:
             vm.rheobase=ampl
-
+            print(vm.attrs)
+            print(model.attrs)
+            print('hit')
         verbose=False
         if verbose:
             print("Injected %s current and got %d spikes" % \
@@ -227,6 +226,8 @@ def searcher(f,rh_param,vms):
     lookuplist=[]
     cnt=0
     while rh_param[0]==False and cnt<4:
+        print(cnt)
+        print('cnt')
         if type(rh_param[1])==float:
             d=check_current(rh_param[1],vms)
         elif len(vms.lookup)==0 and type(rh_param[1])!=float:
@@ -237,6 +238,7 @@ def searcher(f,rh_param,vms):
                 d.update(r)
         else:
             rh_param=check_fix_range(d)
+            print(rh_param)
             if rh_param[0]==True:
                 return rh_param[1]
                 #break
@@ -246,7 +248,8 @@ def searcher(f,rh_param,vms):
             for r in returned_list:
                 d.update(r)
         cnt+=1
-    return False
+    #print(rh_param)
+    return False#rh_param[1]
 '''
 def searcher(f,rh_param,vms):
     cnt=0
@@ -275,6 +278,8 @@ def evaluate(individual, guess_value=None):
     import copy
     vm.attrs=copy.copy(individual.attrs)
     rh_param=(False,guess_value)
+    print(rh_param[0])
+    print(rh_param[1])
 
     rheobase=searcher(check_current,rh_param,vm)#,guess_value)
     return rheobase
@@ -319,7 +324,8 @@ if __name__ == "__main__":
     rh_param=(False,steps_current)
     rh_value=searcher(check_current,rh_param,mean_vm)
     list_of_models=list(futures.map(model2map,iter_list))
-
+    import pdb
+    pdb.set_trace()
     rhstorage=list(futures.map(evaluate,list_of_models,repeat(rh_value)))
     iter_ = zip(list_of_models,rhstorage)
     score_matrixt=list(futures.map(func2map,iter_))#list_of_models,rhstorage))
