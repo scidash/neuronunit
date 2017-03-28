@@ -65,6 +65,7 @@ class Individual(object):
         self.rheobase=None
 toolbox = base.Toolbox()
 
+import model_params as params
 
 vr = np.linspace(-75.0,-50.0,1000)
 a = np.linspace(0.015,0.045,1000)
@@ -427,39 +428,33 @@ def main(seed=None):
 
 
 
-    def searcher2(f,rh_param,vms):
-        '''
-        ultimately an attempt to capture the essence a lot of repeatative code below.
-        This is not yet used, but it is intended for future use.
-        Its intended to replace the less general searcher function
-        '''
-        if rh_param[0]==True:
-            return rh_param[1]
-        lookuplist=[]
-        cnt=0
-        while rh_param[0]==False and cnt<4:
-            print(cnt)
-            print('cnt')
-            if len(vms.lookup)==0:
-                returned_list1 = list(futures.map(f,rh_param[1],repeat(vms)))
-                d={}
-                for r in returned_list1:
-                    d.update(r)
-            else:
-                rh_param=check_fix_range(d)
-                print(rh_param)
-                if rh_param[0]==True:
-                    return rh_param[1]
-                    #break
-                returned_list2 = list(futures.map(f,rh_param[1],repeat(vms)))
-                d={}
-                for r in returned_list2:
-                    d.update(r)
-            cnt+=1
-        #print(rh_param)
-        return False#rh_param[1]
+def searcher(f,rh_param,vms):
+    '''
+    ultimately an attempt to capture the essence a lot of repeatative code below.
+    This is not yet used, but it is intended for future use.
+    Its intended to replace the less general searcher function
+    '''
+    if rh_param[0]==True:
+        return rh_param[1]
+    cnt=0
+    while rh_param[0]==False and cnt<4:
+        if len(vms.lookup)==0:
+            returned_list1 = list(futures.map(check_current,rh_param[1],repeat(vms)))
+            d={}
+            for r in returned_list1:
+                d.update(r)
+        else:
+            rh_param=check_fix_range(d)
+            if rh_param[0]==True:
+                return rh_param[1]
+            returned_list2 = list(futures.map(check_current,rh_param[1],repeat(vms)))
+            d={}
+            for r in returned_list2:
+                d.update(r)
+        cnt+=1
+    return False
 
-
+    '''
     def searcher(test_current,unpack,vms):
         while unpack[0]==False:
             d={}# convert a dictionary to a list.
@@ -470,7 +465,7 @@ def main(seed=None):
             if unpack[0]==True:
                 guess_value=unpack[1]
                 return guess_value
-
+    '''
 
     #The above code between 492-544
     # was a lot of code, but all it was really doing was establishing a rheobase value in a fast way,
@@ -500,7 +495,7 @@ def main(seed=None):
     steps_current = [ i*pq.pA for i in steps ]
     model.attrs=mean_vm.attrs
     rh_param=(False,steps_current)
-    rh_value=searcher2(test_current,rh_param,mean_vm)
+    rh_value=searcher(test_current,rh_param,mean_vm)
 
     list_of_hits_misses=list(futures.map(test_current,repeat(rh_value),vmlist))
 

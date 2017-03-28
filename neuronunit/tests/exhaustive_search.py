@@ -52,7 +52,7 @@ def model2map(iter_arg):#This method must be pickle-able for scoop to work.
     attrs['//izhikevich2007Cell']={}
     param=['a','b','vr','vpeak']#,'vr','vpeak']
     i,j,k,l=iter_arg#,k,l
-    model.name=str(i)+str(j)#+str(k)+str(l)
+    model.name=str(i)+str(j)+str(k)+str(l)
     attrs['//izhikevich2007Cell']['a']=i
     attrs['//izhikevich2007Cell']['b']=j
     attrs['//izhikevich2007Cell']['vr']=k
@@ -91,6 +91,13 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
         get_neab.suite.tests[0].prediction={}
         score = get_neab.suite.tests[0].prediction['value']=value*pq.pA
         score = get_neab.suite.judge(model)#passing in model, changes model
+
+        #pdb.set_trace()
+
+        #import pickle
+        #pickle.dump(score, open( "save.p", "wb" ) )
+        #import pdb
+
         model.run_number+=1
         for i in score.sort_key.values[0]:
             if type(i)==None:
@@ -138,7 +145,6 @@ def check_fix_range(lookup):
     '''
     sub=[]
     supra=[]
-    print(lookup)
     for k,v in lookup.items():
         if v==1:
             #A logical flag is returned to indicate that rheobase was found.
@@ -188,16 +194,16 @@ def check_current(ampl,vm):
 
         current={'injected_square_current':current}
         vm.run_number+=1
+        model.load_model()
+
         model.update_run_params(vm.attrs)
 
-        model.load_model()
-        #print('got here 1')
-        #print(type(model.h.v_v_of0))
         model.inject_square_current(current)
         vm.previous=ampl
         n_spikes = model.get_spike_count()
         if n_spikes==1:
             vm.rheobase=ampl
+
         verbose=False
         if verbose:
             print("Injected %s current and got %d spikes" % \
@@ -210,7 +216,7 @@ def check_current(ampl,vm):
         #return copy.copy(vm.lookup)
 
 
-def searcher2(f,rh_param,vms):
+def searcher(f,rh_param,vms):
     '''
     ultimately an attempt to capture the essence a lot of repeatative code below.
     This is not yet used, but it is intended for future use.
@@ -221,27 +227,27 @@ def searcher2(f,rh_param,vms):
     lookuplist=[]
     cnt=0
     while rh_param[0]==False and cnt<4:
-        print(cnt)
-        print('cnt')
-        if len(vms.lookup)==0:
-            returned_list1 = list(futures.map(check_current,rh_param[1],repeat(vms)))
+        if type(rh_param[1])==float:
+            d=check_current(rh_param[1],vms)
+        elif len(vms.lookup)==0 and type(rh_param[1])!=float:
+            returned_list=[]
+            returned_list = list(futures.map(check_current,rh_param[1],repeat(vms)))
             d={}
-            for r in returned_list1:
+            for r in returned_list:
                 d.update(r)
         else:
             rh_param=check_fix_range(d)
-            print(rh_param)
             if rh_param[0]==True:
                 return rh_param[1]
                 #break
-            returned_list2 = list(futures.map(check_current,rh_param[1],repeat(vms)))
+            returned_list=[]
+            returned_list = list(futures.map(check_current,rh_param[1],repeat(vms)))
             d={}
-            for r in returned_list2:
+            for r in returned_list:
                 d.update(r)
         cnt+=1
-    #print(rh_param)
-    return False#rh_param[1]
-
+    return False
+'''
 def searcher(f,rh_param,vms):
     cnt=0
     while rh_param[0]==False and cnt<4:
@@ -261,7 +267,7 @@ def searcher(f,rh_param,vms):
                 d.update(r)
         cnt+=1
     return False
-
+'''
 
 def evaluate(individual, guess_value=None):
     #This method must be pickle-able for scoop to work.
@@ -269,6 +275,7 @@ def evaluate(individual, guess_value=None):
     import copy
     vm.attrs=copy.copy(individual.attrs)
     rh_param=(False,guess_value)
+
     rheobase=searcher(check_current,rh_param,vm)#,guess_value)
     return rheobase
 
@@ -276,9 +283,20 @@ def evaluate(individual, guess_value=None):
 
 if __name__ == "__main__":
     #PARAMETER FILE
+    '''
+    vr = np.linspace(-75.0,-50.0,10)
+    a = np.linspace(0.015,0.045,10)
+    b = np.linspace(-3.5*10E-9,-0.5*10E-9,3)
+    k = np.linspace(7.0E-4-+7.0E-5,7.0E-4+70E-5,10)
+    C = np.linspace(1.00000005E-4-1.00000005E-5,1.00000005E-4+1.00000005E-5,10)
+    c = np.linspace(-55,-60,10)
+    d = np.linspace(0.050,0.2,10)
+    v0 = np.linspace(-75.0,-45.0,10)
+    vt =  np.linspace(-50.0,-30.0,10)
+    vpeak =np.linspace(30.0,40.0,10)
+    '''
     import model_parameters as modelp
-    iter_list=[ (i,j,k,l) for i in modelp.model_params['a'] for j in modelp.model_params['b'] for k in modelp.model_params['vr'] for l in modelp.model_params['vpeak']  ]
-
+    iter_list=[ (i,j,k,l) for i in modelp.model_params['a'] for j in modelp.model_params['b'] for k in modelp.model_params['vr'] for l in modelp.model_params['vpeak'] ]
     mean_vm=VirtualModel()
     #guess_attrs=[]
     #find the mean parameter sets, and use them to inform the rheobase search.
@@ -299,8 +317,9 @@ if __name__ == "__main__":
     steps_current = [ i*pq.pA for i in steps ]
     model.attrs=mean_vm.attrs
     rh_param=(False,steps_current)
-    rh_value=searcher2(check_current,rh_param,mean_vm)
+    rh_value=searcher(check_current,rh_param,mean_vm)
     list_of_models=list(futures.map(model2map,iter_list))
+
     rhstorage=list(futures.map(evaluate,list_of_models,repeat(rh_value)))
     iter_ = zip(list_of_models,rhstorage)
     score_matrixt=list(futures.map(func2map,iter_))#list_of_models,rhstorage))
@@ -328,7 +347,6 @@ if __name__ == "__main__":
             if type(j)==None:
                 j=10.0
             if j==None:
-
                 j=10.0
 
 
@@ -359,7 +377,7 @@ if __name__ == "__main__":
         import sciunit.scores as scores
         import quantities as qt
         vm = VirtuaModel()
-        rh_value=searcher2(check_current,rh_param,vms)
+        rh_value=searcher(check,rh_param,vms)
         get_neab.suite.tests[0].prediction={}
         get_neab.suite.tests[0].prediction['value']=rh_value*qt.pA
         score = get_neab.suite.judge(model)#passing in model, changes model
