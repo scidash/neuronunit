@@ -33,7 +33,8 @@ class VmTest(sciunit.Test):
         for cls in self.__class__.__bases__:
             cap += cls.required_capabilities
         self.required_capabilities += tuple(cap)
-
+        self._extra()
+    
     required_capabilities = (cap.ProducesMembranePotential,)
 
     name = ''
@@ -44,6 +45,9 @@ class VmTest(sciunit.Test):
 
     # Observation values with units.
     united_observation_keys = ['value','mean','std']
+
+    def _extra(self):
+        pass
 
     def validate_observation(self, observation,
                              united_keys=['value','mean'], nonunited_keys=[]):
@@ -91,6 +95,7 @@ class VmTest(sciunit.Test):
             ax.set_xlabel('Time (s)')
             ax.set_ylabel('Vm (mV)')
         score.plot_vm = MethodType(plot_vm, score) # Bind to the score.
+        score.unpicklable.append('plot_vm')
         return score
 
     @classmethod
@@ -499,13 +504,11 @@ class RheobaseTestHacked(VmTest):
     Tests the full widths of APs at their half-maximum
     under current injection.
     """
-    def __init__(self):
-        self.prediction=None
-        self.guess=None
-        self.high=None
-        self.small=None
-        self.lookup=None
-
+    def _extra(self):
+        self.prediction = None
+        self.high = 300*pq.pA
+        self.small = 0*pq.pA
+    
     required_capabilities = (cap.ReceivesSquareCurrent,
                              cap.ProducesSpikes)
 
@@ -565,9 +568,8 @@ class RheobaseTestHacked(VmTest):
                 #due to syntax I don't understand.
                 #updating the dictionary keys with new values doesn't work.
 
-                uc={'amplitude':ampl}
+                uc = {'amplitude':ampl}
                 current.update(uc)
-                current={'injected_square_current':current}
                 model.inject_square_current(current)
                 n_spikes = model.get_spike_count()
                 if self.verbose:
@@ -616,7 +618,7 @@ class RheobaseTestHacked(VmTest):
         if prediction['value'] is None:
             score = scores.InsufficientDataScore(None)
         else:
-            score = super(RheobaseTest,self).\
+            score = super(RheobaseTestHacked,self).\
                         compute_score(observation, prediction)
             #self.bind_score(score,None,observation,prediction)
         return score
@@ -628,9 +630,9 @@ class RheobaseTest(VmTest):
     Tests the full widths of APs at their half-maximum
     under current injection.
     """
-    def __init__(self):
+    def _extra(self):    
         self.prediction=None
-
+    
     required_capabilities = (cap.ReceivesSquareCurrent,
                              cap.ProducesSpikes)
 
@@ -644,6 +646,7 @@ class RheobaseTest(VmTest):
 
     units = pq.pA
     score_type = scores.RatioScore
+
     def generate_prediction(self, model):
         return self.prediction
 
