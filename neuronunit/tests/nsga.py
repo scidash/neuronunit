@@ -176,10 +176,26 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
         vms.results=model.results
         vms.score=score.sort_key.values.tolist()[0]
         error= score.sort_key.values.tolist()[0]
+
+        #import pdb;
+        #pdb.set_trace()
         import pickle
         from pprint import pprint
-        pprint(score.__dict__)
-        pickle.dump(score, open( str(individual.params)+".p", "wb" ) )
+
+        for i in get_neab.suite.tests:
+            i.last_model=None
+            pickle.dumps(i)
+
+        #pickle.dumps(score.related_data)
+
+
+        #pprint(score.__dict__)
+        #for
+        #print(vars(score))
+        #a(score)
+        #methodList = [e for e in dir(score) if callable(getattr(object, e))]
+        #print(methodList)
+        #pickle.dump(score, open( str(individual.params)+".p", "wb" ) )
         individual.error=error
         #pdb.set_trace()
         print(error)
