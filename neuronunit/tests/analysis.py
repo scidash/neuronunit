@@ -107,7 +107,10 @@ def build_single(indexs):
     get_neab.suite.tests[0].prediction={}
     get_neab.suite.tests[0].prediction['value']=52.22222222222222 *qt.pA
     score = get_neab.suite.judge(model)#passing in model, changes model
-    print(model.get_spike_count)
+    print('this is the spike count!!!!!!!!!!!: \n \n \n')
+    print('this is the spike count!!!!!!!!!!!: \n \n \n')
+    print('this is the spike count!!!!!!!!!!!: \n \n \n')
+    print(model.get_spike_count())
     plt.plot(model.results['t'],model.results['vm'])
     plt.savefig(name+'.png')
     plt.clf()
