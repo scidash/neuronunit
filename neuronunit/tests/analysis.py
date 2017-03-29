@@ -95,7 +95,8 @@ class VirtualModel:
 
 
 
-def build_single(attrs,name):
+def build_single(indexs):
+    attrs,name=indexs
     #This method is only used to check singlular sets of hard coded parameters.]
     #This medthod is probably only useful for diagnostic purposes.
 
@@ -106,28 +107,27 @@ def build_single(attrs,name):
     get_neab.suite.tests[0].prediction={}
     get_neab.suite.tests[0].prediction['value']=52.22222222222222 *qt.pA
     score = get_neab.suite.judge(model)#passing in model, changes model
-    for k,v in score.related_data.items():#.results['vm']
-        print(k,v)
+    print(model.get_spike_count)
+    plt.plot(model.results['t'],model.results['vm'])
+    plt.savefig(name+'.png')
+    plt.clf()
 
-        for i,j in v.items():
-            print(i,j)
-            plt.clf()
-            time=np.linspace(0,1600,len(j['vm']))
-            plt.xlabel(str(v))
-            plt.ylabel(str(i))
-            plt.plot(time,j['vm'])
-            plt.savefig(str(k)+name+'.png')
-            plt.clf()
 
-            #pdb.set_trace()
 print(score0,attrs0)
 name='min_one'
-build_single(attrs0,name)
+list_of_tups=[]
+list_of_tups.append((attrs0,name))
 name='min_two'
-build_single(attrs1,name)
+list_of_tups.append((attrs1,name))
 name='max_one'
-build_single(attrs0max,name)
+list_of_tups.append((attrs0max,name))
 name='max_two'
-build_single(attrs1max,name)
+list_of_tups.append((attrs1max,name))
+from scoop import futures
+
+if __name__ == "__main__":
+
+    completed=list(futures.map(build_single,list_of_tups))
+
 
 #sbuild_single(attrs1,rheobase1)
