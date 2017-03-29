@@ -7,4 +7,6 @@ WORKDIR /home/mnt
 USER root
 RUN chown -R $NB_USER . 
 USER $NB_USER
+
 RUN python setup.py install
+WORKDIR $HOME/$WORKDIR
