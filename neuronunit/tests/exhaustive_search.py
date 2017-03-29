@@ -281,6 +281,8 @@ def evaluate(individual, guess_value=None):
     print(rh_param[0])
     print(rh_param[1])
 
+    import pdb
+    pdb.set_trace()
     rheobase=searcher(check_current,rh_param,vm)#,guess_value)
     return rheobase
 
@@ -324,8 +326,7 @@ if __name__ == "__main__":
     rh_param=(False,steps_current)
     rh_value=searcher(check_current,rh_param,mean_vm)
     list_of_models=list(futures.map(model2map,iter_list))
-    import pdb
-    pdb.set_trace()
+
     rhstorage=list(futures.map(evaluate,list_of_models,repeat(rh_value)))
     iter_ = zip(list_of_models,rhstorage)
     score_matrixt=list(futures.map(func2map,iter_))#list_of_models,rhstorage))
