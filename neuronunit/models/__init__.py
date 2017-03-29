@@ -16,22 +16,6 @@ from .channel import *
 from . import backends
 
 
-class SimpleModel(sciunit.Model,
-                  cap.ReceivesCurrent,
-                  cap.ProducesMembranePotential):
-    def __init__(self, v_rest, name=None):
-        self.v_rest = v_rest
-        sciunit.Model.__init__(self, name=name)
-
-    def get_membrane_potential(self):
-        array = np.ones(10000) * self.v_rest
-        dt = 1*ms # Time per sample in milliseconds.
-        vm = AnalogSignal(array,units=mV,sampling_rate=1.0/dt)
-        return vm
-
-    def inject_current(self,current):
-        pass # Does not actually inject any current.
-
 
 class LEMSModel(sciunit.Model, cap.Runnable):
     """A generic LEMS model"""
@@ -121,12 +105,9 @@ class LEMSModel(sciunit.Model, cap.Runnable):
         if (not rerun) and hasattr(self,'last_run_params') and \
            self.run_params == self.last_run_params:
             return
-        self.update_run_params()
-        #HACK
-        #DO NOT MERGE.
-        #if self.f is None:
-        #    raise NotImplementedError(("The chosen backend doesn't implement "
-        #                               " _run()"))
+
+        self.update_run_params(run_params)
+        #self.update_run_params(self.attrs)
 
         self.results = self.local_run()
         self.last_run_params = deepcopy(self.run_params)

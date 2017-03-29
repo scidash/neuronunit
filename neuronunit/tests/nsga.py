@@ -31,8 +31,16 @@ import scoop
 
 import get_neab
 
+import quantities as qt
+import os
+import os.path
+from scoop import utils
+
+import sciunit.scores as scores
+
+
 init_start=time.time()
-creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, 
+creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0,
                                                     -1.0, -1.0, -1.0, -1.0))
 # -1.0, -1.0, -1.0, -1.0,))
 creator.create("Individual",list, fitness=creator.FitnessMin)
@@ -57,6 +65,7 @@ class Individual(object):
         self.rheobase=None
 toolbox = base.Toolbox()
 
+import model_parameters as params
 
 vr = np.linspace(-75.0,-50.0,1000)
 a = np.linspace(0.015,0.045,1000)
@@ -139,66 +148,51 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
         else:
             attrs['//izhikevich2007Cell'][p]=name_value
 
-    individual.attrs=attrs
-    #make sure that the virtual model, and the real model have the same attributes.
-    assert individual.attrs==vms.attrs
+
+    #
+    #Its very important to reset the model here. Such that its vm is new, and does not carry charge from the last simulation
+    model.load_model()
+
     individual.model=model.update_run_params(attrs)
+    sane = False
+    #model.update_run_params(vm.attrs)
 
-    individual.params=[]
-    for i in attrs['//izhikevich2007Cell'].values():
-        if hasattr(individual,'params'):
-            individual.params.append(i)
-    import quantities as qt
-    get_neab.suite.tests[0].prediction={}
-    get_neab.suite.tests[0].prediction['value']=0
-    assert vms.rheobase!=None
-    get_neab.suite.tests[0].prediction['value']=vms.rheobase*qt.pA
-    import os
-    import os.path
-    from scoop import utils
+    sane = get_neab.suite.tests[3].sanity_check(vms.rheobase*1.01*pq.pA,model)
+    print(sane)
+    if sane == True:
 
-    #f=open('scoop_log_'+str(utils.getHosts()),'w')
-    #f.write(str(attrs))
-    #f.close()
-    score = get_neab.suite.judge(model)#passing in model, changes model
-    model.run_number+=1
-    RUN_TIMES='{}{}{}'.format('counting simulation run times on models',model.results['run_number'],model.run_number)
+        individual.params=[]
+        for i in attrs['//izhikevich2007Cell'].values():
+            if hasattr(individual,'params'):
+                individual.params.append(i)
+        get_neab.suite.tests[0].prediction={}
+        get_neab.suite.tests[0].prediction['value']=0
+        assert vms.rheobase!=None
+        get_neab.suite.tests[0].prediction['value']=vms.rheobase*qt.pA
+        model.load_model()
+        score = get_neab.suite.judge(model)#passing in model, changes model
+        model.run_number+=1
+        individual.results=model.results
+        vms.results=model.results
+        vms.score=score.sort_key.values.tolist()[0]
+        error= score.sort_key.values.tolist()[0]
 
-    individual.results=model.results
-    LOCAL_RESULTS_spiking.append(model.results['sim_time'])
-    '{}{}'.format('sim time stored: ',model.results['sim_time'])
+        import pickle
+        for i in get_neab.suite.tests:
+            i.last_model=None
+            pickle.dump(i, open(str(i)+".p", "wb" ) )
+            test=pickle.load(open(str(i)+".p", "rb" ) )
+            print(test)
 
-    try:
-        individual.error = []
-        for i in score.unstack():
-            if np.isinf(abs(i.score)):
-                pdb.set_trace()
-
-            if np.isnan(abs(i.score)):
-                pdb.set_trace()
-
-        individual.error = [ abs(i.score) for i in score.unstack() ]
-
-    except Exception as e:
-        '{}'.format('Insufficient Data')
-        #if the error associated with the old version of the gene is not 0
-        #average its old error with 10, to create a better gradient,
-        #or in other words make a continuously changing surface
-        #as opposed to shelves and cliffs.
-        if np.sum(individual.error)!=0:
-            individual.error = [ (-10.0+i)/2.0 for i in individual.error ]
+        individual.error=error
+        print(error)
+    elif sane == False:
+        if len(individual.error)!=0:
+            error = [ ((10.0+i)/2.0) for i in individual.error ]
         else:
-            #If the gene has no old error, just make all of its errors 10.
-            #Ie make a cliff, it probably does not matter if it does not happen too often.
-            individual.error = [ -10.0 for i in range(0,8) ]
+            error = [ 10.0 for i in range(0,8) ]
 
-    individual.s_html = score.to_html()
-    vms.s_html=score.to_html()
-    error=individual.error
-    assert len(error)>0
-    assert not np.isinf(np.array(error).all())
-    assert not np.isnan(np.array(error).all())
-
+    #pdb.set_trace()
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
 
 
@@ -211,21 +205,23 @@ toolbox.register("select", tools.selNSGA2)
 toolbox.register("map", futures.map)
 
 
-def plotss(pop,gen):
+def plotss(pop,vmlist,gen):
     import matplotlib.pyplot as plt
     plt.clf()
 
-    for ind in pop:
+    for ind,j in enumerate(pop):
         if hasattr(ind,'results'):
             plt.plot(ind.results['t'],ind.results['vm'])
-            plt.xlabel(str(ind.attrs))
-    plt.savefig('snap_shot_at_'+str(gen)+'.png')
+        #if hasattr(vmlist[j],'attrs'):
+        #    vmlist[j].attrs
+            plt.xlabel(str(vmlist[j].attr))
+    plt.savefig('snap_shot_at_gen_'+str(gen)+'.png')
     plt.clf()
 
 
 
 
-class VirtuaModel:
+class VirtualModel:
     '''
     This is a pickable dummy clone
     version of the NEURON simulation model
@@ -245,37 +241,46 @@ class VirtuaModel:
         self.name=None
         self.s_html=None
         self.results=None
+        self.score=None
 
 
 
 
-def ff(ampl,vm):
+def test_current(ampl,vm):
     '''
     Inputs are an amplitude to test and a virtual model
     output is an virtual model with an updated dictionary.
     '''
-    if float(ampl) not in vm.lookup:
+    import copy
+    if float(ampl) not in vm.lookup or len(vm.lookup)==0:
         current = params.copy()['injected_square_current']
         uc={'amplitude':ampl}
         current.update(uc)
+
         current={'injected_square_current':current}
         vm.run_number+=1
+        model.update_run_params(vm.attrs)
 
+        model.load_model()
+        #print('got here 1')
+        #print(type(model.h.v_v_of0))
         model.inject_square_current(current)
         vm.previous=ampl
         n_spikes = model.get_spike_count()
         if n_spikes==1:
             vm.rheobase=ampl
+            print(vm.attrs)
+            print(model.attrs)
+            print('hit')
         verbose=False
         if verbose:
             print("Injected %s current and got %d spikes" % \
                     (ampl,n_spikes))
         vm.lookup[float(ampl)] = n_spikes
-        return vm
-
+        return vm.lookup
+        #return copy.copy(vm.lookup)
     if float(ampl) in vm.lookup:
-        return vm
-
+        return vm.lookup
 small=None
 from scoop import futures
 #from neuronunit.models import backends
@@ -306,9 +311,9 @@ units = pq.pA
 verbose=True
 
 
-def check_fix_range(lookup2):
+def check_fix_range(lookup):
     '''
-    Inputs: lookup2, A dictionary of previous current injection values
+    Inputs: lookup, A dictionary of previous current injection values
     used to search rheobase
     Outputs: A boolean to indicate if the correct rheobase current was found
     and a dictionary containing the range of values used.
@@ -319,7 +324,8 @@ def check_fix_range(lookup2):
     '''
     sub=[]
     supra=[]
-    for v,k in lookup2:
+    print(lookup)
+    for k,v in lookup.items():
         if v==1:
             #A logical flag is returned to indicate that rheobase was found.
             return (True,k)
@@ -330,38 +336,36 @@ def check_fix_range(lookup2):
 
     sub=np.array(sub)
     supra=np.array(supra)
-
+                 # concatenate
     if len(sub) and len(supra):
-        #center=(sub.max()+supra.min())/2.0
-        #steps2=np.linspace(center-sub.max(),center+supra.min(),7.0)
-        steps2 = np.linspace(sub.max(),supra.min(),7.0)
-        np.delete(steps2,np.array(lookup2))
+
+        everything=np.concatenate((sub,supra))
+
+        center = np.linspace(sub.max(),supra.min(),7.0)
+        np.delete(center,np.array(everything))
         #make sure that element 4 in a seven element vector
         #is exactly half way between sub.max() and supra.min()
-        steps2[int(len(steps2)/2)+1]=(sub.max()+supra.min())/2.0
-        steps = [ i*pq.pA for i in steps2 ]
+        center[int(len(center)/2)+1]=(sub.max()+supra.min())/2.0
+        steps = [ i*pq.pA for i in center ]
 
     elif len(sub):
         steps2 = np.linspace(sub.max(),2*sub.max(),7.0)
-        np.delete(steps2,np.array(lookup2))
+        np.delete(steps2,np.array(sub))
         steps = [ i*pq.pA for i in steps2 ]
 
     elif len(supra):
         steps2 = np.linspace(-2*(supra.min()),supra.min(),7.0)
-        np.delete(steps2,np.array(lookup2))
+        np.delete(steps2,np.array(supra))
         steps = [ i*pq.pA for i in steps2 ]
 
-    if len(steps)<7:
-        steps2 = np.linspace(steps.min(),steps.max(),7.0)
-        steps = [ i*pq.pA for i in steps2 ]
 
-    import copy
-    return (False,copy.copy(steps))
+    return (False,steps)
 
 
-def main(seed=None):
 
-    random.seed(seed)
+def main():
+
+    #random.seed(seed)
 
     NGEN=4
     MU=12
@@ -386,7 +390,7 @@ def main(seed=None):
         guess_attrs.append(np.mean( [ i[x] for i in pop ]))
 
     from itertools import repeat
-    mean_vm=VirtuaModel()
+    mean_vm=VirtualModel()
 
     for i, p in enumerate(param):
         value=str(guess_attrs[i])
@@ -399,10 +403,10 @@ def main(seed=None):
     import copy
 
 
-    def check_repeat(ff,unpack,vm):
+    def check_repeat(test_current,unpack,vm):
         '''
         inputs:
-        ff, a function,
+        test_current, a function,
         unpack, a dictionary of previous search values:
         vm a virtual model object.
         outputs: a tuple consisting of a boolean flag and
@@ -411,20 +415,18 @@ def main(seed=None):
         can be used to seed future searches.
         '''
         from itertools import repeat
-        lookup2=list(futures.map(ff,unpack,repeat(vm)))
-        l3=[]
-        for l in lookup2:
-            for k,v in l.lookup.items():
-                l3.append((v, k))
-
-        unpack=check_fix_range(l3)
-        l3=None
+        d={}
+        listtodic=list(futures.map(test_current,unpack,repeat(vm)))
+        for li in listtodic:
+            d.extend(li)
+        unpack=check_fix_range(d)
+        d=None
         boolean=False
         new_ranges=[]
         boolean=unpack[0]
-        guess_value=unpack[1]
+        guess_value = unpack[1]
         if True == boolean:
-            vm.rheobase=guess_value
+            vm.rheobase = guess_value
             return (True,guess_value)
         else:
             return (False,guess_value)
@@ -432,62 +434,33 @@ def main(seed=None):
     from itertools import repeat
 
 
-    def searcher2(ff,unpack,vms):
+
+    def searcher(f,rh_param,vms):
         '''
         ultimately an attempt to capture the essence a lot of repeatative code below.
         This is not yet used, but it is intended for future use.
         Its intended to replace the less general searcher function
         '''
-        steps2 = np.linspace(40,80,7.0)
-        steps = [ i*pq.pA for i in steps2 ]
-        model.attrs=mean_vm.attrs
-        lookup2=list(futures.map(ff,steps,repeat(mean_vm)))
+        if rh_param[0]==True:
+            return rh_param[1]
+        cnt=0
+        while rh_param[0]==False and cnt<4:
+            if len(vms.lookup)==0:
+                returned_list1 = list(futures.map(test_current,rh_param[1],repeat(vms)))
+                d={}
+                for r in returned_list1:
+                    d.update(r)
+            else:
+                rh_param=check_fix_range(d)
+                if rh_param[0]==True:
+                    return rh_param[1]
+                returned_list2 = list(futures.map(test_current,rh_param[1],repeat(vms)))
+                d={}
+                for r in returned_list2:
+                    d.update(r)
+            cnt+=1
+        return False
 
-        while unpack[0]==False:
-            l3=[]# convert a dictionary to a list.
-            for l in unpack[1]:
-                for k,v in vms.lookup.items():
-                    l3.append((v, k))
-            unpack=check_fix_range(l3)
-            unpack=check_repeat(ff,unpack[1],vms)
-            if unpack[0]==True:
-                guess_value=unpack[1]
-                return guess_value
-
-
-    steps2 = np.linspace(40,80,7.0)
-    steps = [ i*pq.pA for i in steps2 ]
-
-
-
-    #this might look like a big list iteration, but its not.
-    #the statement below just finds rheobase on one value, that is the value
-    #constituted by mean_vm. This will be used to speed up the rheobase search later.
-    model.attrs=mean_vm.attrs
-    #def bulk_process(ff,steps,mean_vm):
-    lookup2=list(futures.map(ff,steps,repeat(mean_vm)))
-
-    l3=[]
-    for l in lookup2:
-        for k,v in l.lookup.items():
-            l3.append((v, k))
-    unpack=check_fix_range(l3)
-    unpack=check_repeat(ff,unpack[1],mean_vm)
-    if unpack[0]==True:
-        guess_value=unpack[1]
-
-
-    def searcher(ff,unpack,vms):
-        while unpack[0]==False:
-            l3=[]# convert a dictionary to a list.
-            for l in unpack[1]:
-                for k,v in vms.lookup.items():
-                    l3.append((v, k))
-            unpack=check_fix_range(l3)
-            unpack=check_repeat(ff,unpack[1],vms)
-            if unpack[0]==True:
-                guess_value=unpack[1]
-                return guess_value
 
 
     #The above code between 492-544
@@ -502,7 +475,7 @@ def main(seed=None):
                 attrs={'//izhikevich2007Cell':{p:value }}
             else:
                 attrs['//izhikevich2007Cell'][p]=value
-        vm=VirtuaModel()
+        vm=VirtualModel()
         vm.attrs=attrs
         #assert ind.attrs==vm.attrs
         return vm
@@ -513,8 +486,14 @@ def main(seed=None):
     #It is just a trying out an educated guess on each individual in the whole population as a first pass.
     invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
     vmlist=list(map(individual_to_vm,invalid_ind))
+    #guess_value=searcher(test_current,mean_vm)
+    steps = np.linspace(40,80,7.0)
+    steps_current = [ i*pq.pA for i in steps ]
+    model.attrs=mean_vm.attrs
+    rh_param=(False,steps_current)
+    rh_value=searcher(test_current,rh_param,mean_vm)
 
-    list_of_hits_misses=list(futures.map(ff,repeat(guess_value),vmlist))
+    list_of_hits_misses=list(futures.map(test_current,repeat(rh_value),vmlist))
 
     #For each individual in the new GA population.
     #Create Virtual Models that are readily pickle-able.
@@ -523,28 +502,20 @@ def main(seed=None):
 
     for i,j in enumerate(invalid_ind):
         if vmlist[i].rheobase==None:
-            lookup2=ff(guess_value,vmlist[i])
-            l3=[]
-            #d={}
-            d=lookup2.lookup
-            for k,v in d.items():
-                l3.append((v, k))
-                #d[k]=v
+            d=test_current(rh_value,vmlist[i])
             if 1 not in d.values():
-                unpack=check_fix_range(l3)
-                unpack=check_repeat(ff,unpack[1],vmlist[i])
+                unpack=check_fix_range(d)
+                unpack=check_repeat(test_current,unpack[1],vmlist[i])
                 if unpack[0]==True:
-                    guess_value=unpack[1]
+                    rh_value = unpack[1]
                 else:
-                    guess_value=searcher(ff,unpack,vmlist[i])
+                    rh_value = searcher(test_current,unpack,vmlist[i])
 
     for i in vmlist:
         assert i.rheobase!=None
 
     assert len(invalid_ind)==len(vmlist)
-    #fitnesses = toolbox.map(toolbox.evaluate, invalid_ind, vmlist)
 
-    fitnesses = []
     fitnesses = list(toolbox.map(toolbox.evaluate, invalid_ind, vmlist))
     assert len(fitnesses)==len(invalid_ind)
     for ind, fit in zip(invalid_ind, fitnesses):
@@ -583,21 +554,16 @@ def main(seed=None):
         #genes have changed so check/search rheobase again.
         for i,j in enumerate(invalid_ind):
             if vmlist[i].rheobase!=None:
-                lookup2=ff(vmlist[i].rheobase,vmlist[i])
+                d=test_current(vmlist[i].rheobase,vmlist[i])
             else:
-                lookup2=ff(guess_value,vmlist[i])
-            l3=[]
-            d=lookup2.lookup
-            for k,v in d.items():
-                d[k]=v
-                l3.append((v, k))
+                d=test_current(rh_value,vmlist[i])
             if 1 not in d.values():
-                unpack=check_fix_range(l3)
-                unpack=check_repeat(ff,unpack[1],vmlist[i])
-                if unpack[0]==True:
-                    guess_value=unpack[1]
+                unpack = check_fix_range(d)
+                unpack = check_repeat(test_current,unpack[1],vmlist[i])
+                if unpack[0] == True:
+                    rh_value = unpack[1]
                 else:
-                    guess_value=searcher(ff,unpack,vmlist[i])
+                    rh_value = searcher(test_current,unpack[1],vmlist[i])
         for i in vmlist:
             assert i.rheobase!=None
 
@@ -606,7 +572,7 @@ def main(seed=None):
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
 
-        plotss(invalid_ind,gen)
+        plotss(invalid_ind,vmlist,gen)
         # Select the next generation population
         #This way the initial genes keep getting added to each generation.
         #pop = toolbox.select(pop + offspring, MU)
@@ -633,24 +599,6 @@ def main(seed=None):
             print(opt_values)
 
 
-
-
-    f=open('stats_summart.txt','w')
-    for i in list(logbook):
-        f.write(str(i))
-    f=open('mean_call_length_spiking.txt','w')
-    mean_spike_call_time='{}{}{}'.format('mean spike call time',str(np.mean(LOCAL_RESULTS_spiking)), str(': \n') )
-    f.write(mean_spike_call_time)
-    f.write('the number of calls to NEURON on one CPU only : \n')
-    f.write(str(len(LOCAL_RESULTS_spiking))+str(' \n'))
-
-    plt.clf()
-    plt.hold(True)
-    for i in logbook:
-        plt.plot(np.sum(i['avg']),i['gen'])
-        '{}{}{}'.format(np.sum(i['avg']),i['gen'],'results')
-    plt.savefig('avg_error_versus_gen.png')
-    plt.hold(False)
     return pop, list(logbook)
 
 
@@ -658,7 +606,7 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import pyneuroml as pynml
     import os
-
+    import time
     start_time=time.time()
     whole_initialisation=start_time-init_start
 

@@ -8,6 +8,10 @@ import neuronunit.capabilities.spike_functions as sf
 from quantities import ms, mV, nA
 from neo.core import AnalogSignal
 
+import quantities as pq
+import re
+import copy
+
 class Backend:
     """Base class for simulator backends that implement simulator-specific
     details of modifying, running, and reading results from the simulation
@@ -304,9 +308,7 @@ class NEURONBackend(Backend):
          'duration':500*pq.ms}}
         where 'pq' is the quantities package
         '''
-        import quantities as pq
-        import re
-        import copy
+
         c=copy.copy(current)
         if 'injected_square_current' in c.keys():
             c=current['injected_square_current']
@@ -325,26 +327,18 @@ class NEURONBackend(Backend):
         initialized = True
         sim_start = time.time()
         #self.h.tstop=1600#))#TODO find a way to make duration changeable.
-        #self.h.dt=0.0025
-
-        print(self.h.cvode.active())
-        #pdb.set_trace()
-        print("Running a simulation of %sms (dt = %sms)" % (self.h.tstop, self.h.dt))
+        #print(self.h.cvode.active())
         self.h('run()')
         sim_end = time.time()
         sim_time = sim_end - sim_start
-        print("Finished NEURON simulation in %f seconds (%f mins)..."%(sim_time, sim_time/60.0))
+        #print("Finished NEURON simulation in %f seconds (%f mins)..."%(sim_time, sim_time/60.0))
         self.results={}
-        self.results['vm'] = [ float(x/1000.0) for x in self.neuron.h.v_v_of0.to_python() ]  # Convert to Python list for speed, variable has dim: voltage
-        self.results['plausible']=True
-        import math
-        for i in self.results['vm']:
-            if math.isnan(i):
-                self.results['plausible']=False
+        import copy
+        self.results['vm'] = [ float(x/1000.0) for x in copy.copy(self.neuron.h.v_v_of0.to_python()) ]  # Convert to Python list for speed, variable has dim: voltage
+        #self.neuron.h.v_v_of0 = None # Convert to Python list for speed, variable has dim: voltage
 
-
-        self.results['t'] = [ float(x) for x in self.neuron.h.v_time.to_python() ]  # Convert to Python list for speed, variable has dim: voltage
-        self.results['sim_time']=sim_time
+        self.results['t'] = [ float(x) for x in copy.copy(self.neuron.h.v_time.to_python()) ]  # Convert to Python list for speed, variable has dim: voltage
+        #self.neuron.h.v_time = None
         if 'run_number' in self.results.keys():
             self.results['run_number']=self.results['run_number']+1
         else:
