@@ -35,7 +35,6 @@ class jNeuroMLBackend(Backend):
     """Used for simulation with jNeuroML, a reference simulator for NeuroML"""
 
     backend = 'jNeuroML'
-    f = pynml.run_lems_with_jneuroml
 
     def set_attrs(self, attrs):
         self.set_lems_attrs(attrs)
@@ -43,6 +42,17 @@ class jNeuroMLBackend(Backend):
     def update_run_params(self):
         self.update_lems_run_params()
 
+    def inject_square_current(self, current):
+        self.run_params['injected_square_current'] = current
+
+    def local_run(self):
+        f = pynml.run_lems_with_jneuroml
+        result = f(self.lems_file_path, skip_run=self.skip_run,
+                         nogui=self.run_params['nogui'],
+                         load_saved_data=True, plot=False,
+                         verbose=self.run_params['v']
+                         )
+        return result
 
 
 class NEURONBackend(Backend):
