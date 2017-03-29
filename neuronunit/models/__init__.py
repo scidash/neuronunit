@@ -55,8 +55,7 @@ class LEMSModel(sciunit.Model, cap.Runnable):
         self.rerun = True # Needs to be rerun since it hasn't been run yet!
         if name is None:
             name = os.path.split(self.lems_file_path)[1].split('.')[0]
-        print(backend)
-        self.set_backend('NEURON')
+        self.set_backend(backend)
         self.load_model()
 
     #This is the part that decides if it should inherit from NEURON backend.
@@ -80,8 +79,12 @@ class LEMSModel(sciunit.Model, cap.Runnable):
             self.backend = name
             self._backend = options[name](*args,**kwargs)
             # Add all of the backend's methods to the model instance
-            self.__class__.__bases__ = tuple(set((self._backend.__class__,) + \
-                                        self.__class__.__bases__))
+            #self.__class__.__bases__ = tuple(set((self._backend.__class__,) + \
+            #                            self.__class__.__bases__))
+            if self._backend.__class__ not in self.__class__.__bases__:
+                self.__class__.__bases__ = (self._backend.__class__,) + \
+                                        self.__class__.__bases__
+        
         elif name is None:
             # The base class should not be called.
             raise Exception(("A backend (e.g. 'jNeuroML' or 'NEURON') "
@@ -126,15 +129,6 @@ class LEMSModel(sciunit.Model, cap.Runnable):
         #                               " _run()"))
 
         self.results = self.local_run()
-        '''
-        Doing things this way calls jNeuroML everytime which is very slow, and
-        its exactly that we are trying to avoid.
-        self.results = self.f(self.lems_file_path, skip_run=self.skip_run,
-                         nogui=self.run_params['nogui'],
-                         load_saved_data=True, plot=False,
-                         verbose=self.run_params['v']
-                         )
-        '''
         self.last_run_params = deepcopy(self.run_params)
         self.rerun = False
         self.run_params = {} # Reset run parameters so the next test has to pass
