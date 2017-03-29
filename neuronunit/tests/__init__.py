@@ -128,6 +128,36 @@ class VmTest(sciunit.Test):
                        'n': reference_data.n}
         return observation
 
+    def sanity_check(self,rheobase,model):
+        #model.inject_square_current(self.params['injected_square_current'])
+        self.params['injected_square_current']['delay'] = DELAY
+        self.params['injected_square_current']['duration'] = DURATION
+        self.params['injected_square_current']['amplitude'] = rheobase
+        model.inject_square_current(self.params['injected_square_current'])
+
+        mp = model.results['vm']
+        import math
+        for i in mp:
+            if math.isnan(i):
+                return False
+
+        import neuronunit.capabilities as cap
+
+        sws=cap.spike_functions.get_spike_waveforms(model.get_membrane_potential())
+        #sws = model.get_spike_waveforms()
+        #print(sws)
+
+        #sws=spike_functions.get_spike_waveform(mp)
+        for i,s in enumerate(sws):
+            s = np.array(s)
+            dvdt = np.diff(s)
+            import math
+            for j in dvdt:
+                if math.isnan(j):
+                    return False
+        return True
+
+
 
 
 
@@ -625,13 +655,13 @@ class RheobaseTest(VmTest):
         #print("%s: Observation = %s, Prediction = %s" % \
         #	 (self.name,str(observation),str(prediction)))
 
-        if prediction!=None:
-            if prediction['value'] is None:
+        if self.prediction!=None:
+            if self.prediction['value'] is None:
 
                 score = scores.InsufficientDataScore(None)
             else:
                 score = super(RheobaseTest,self).\
-                            compute_score(observation, prediction)
+                            compute_score(observation, self.prediction)
                 #self.bind_score(score,None,observation,prediction)
             return score
 
@@ -682,7 +712,7 @@ class RestingPotentialTest(VmTest):
         import math
         for i in mp:
             if math.isnan(i):
-                print(mp)
+                #print(mp)
                 return None
         prediction = {'mean':median, 'std':std}
 
