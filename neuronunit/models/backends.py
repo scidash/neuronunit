@@ -145,11 +145,11 @@ class NEURONBackend(Backend):
             fixedSignalcp=copy.copy(fixedSignal)
             dt = self.fixedTimeStep
             dt_py=float(copy.copy(self.fixedTimeStep))
-
+            #dt = N
 
         fidxedSignal=None
-        self.h.dt=None
-        self.fixedTimeStep=None
+        #self.h.dt=None
+        #self.fixedTimeStep=None
         return AnalogSignal( \
                  fixedSignalcp, \
                  units = mV, \
@@ -324,11 +324,14 @@ class NEURONBackend(Backend):
         #print("Finished NEURON simulation in %f seconds (%f mins)..."%(sim_time, sim_time/60.0))
         self.results={}
         import copy
-        self.results['vm'] = [ float(x/1000.0) for x in copy.copy(self.neuron.h.v_v_of0.to_python()) ]  # Convert to Python list for speed, variable has dim: voltage
-        #self.neuron.h.v_v_of0 = None # Convert to Python list for speed, variable has dim: voltage
-
-        self.results['t'] = [ float(x) for x in copy.copy(self.neuron.h.v_time.to_python()) ]  # Convert to Python list for speed, variable has dim: voltage
-        #self.neuron.h.v_time = None
+        voltage_vector=self.neuron.h.v_v_of0.to_python()
+        self.results['vm'] = [ float(x/1000.0) for x in copy.copy(voltage_vector) ]  # Convert to Python list for speed, variable has dim: voltage
+        voltage_vector=None
+        #self.neuron.h.v_v_of0 = [] # Convert to Python list for speed, variable has dim: voltage
+        time_vector=self.neuron.h.v_time.to_python()
+        self.results['t'] = [ float(x) for x in copy.copy(time_vector) ]  # Convert to Python list for speed, variable has dim: voltage
+        time_vector=None
+        #self.neuron.h.v_time = []
         if 'run_number' in self.results.keys():
             self.results['run_number']=self.results['run_number']+1
         else:
