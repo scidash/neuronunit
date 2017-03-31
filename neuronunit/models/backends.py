@@ -74,18 +74,16 @@ class NEURONBackend(Backend):
 
 
     def __init__(self, name=None,attrs=None):
-        self.neuron=None
+        #self.neuron=None
         self.model_path=None
         self.LEMS_file_path=None#LEMS_file_path
         self.name=None
-        self.attrs=attrs
+        #self.attrs=attrs
         self.f=None
-        self.h=None
+        #self.h=None
         self.rheobase=None
         self.invokenrn()
-        #self.h.cvode.active(1)
-        #pdb.set_trace()
-        #self.h.cvode.active
+
 
 
         return
@@ -96,10 +94,13 @@ class NEURONBackend(Backend):
         """Sets the NEURON h variable"""
         #Should check if MPI parallel neuron is supported and invoked.
         from neuron import h
+        import neuron
+        self.neuron = neuron
         self.h=h
         self.h.load_file("stdlib.hoc")
         self.h.load_file("stdgui.hoc")
 
+    '''
     def reset_h(self, hVariable):
         """Sets the NEURON h variable"""
 
@@ -136,7 +137,6 @@ class NEURONBackend(Backend):
         """method: either "fixed" or "variable". Defaults to fixed. cvode is used when "variable" """
 
         self.h.cvode.active(1 if method == "variable" else 0)
-
 
     def get_membrane_potential(self):
         """
@@ -220,6 +220,7 @@ class NEURONBackend(Backend):
         vTarget = vRange*tFractionAlong + vStart
 
         return vTarget
+    '''
 
 
     def load_model(self):
@@ -236,7 +237,8 @@ class NEURONBackend(Backend):
         #import the contents of the file into the current names space.
         def cond_load():
             from neuronunit.tests.NeuroML2 import LEMS_2007One_nrn
-            self.reset_h(LEMS_2007One_nrn.neuron)
+            self.invokenrn()
+            #self.reset_h(LEMS_2007One_nrn.neuron)
             #make sure mechanisms are loaded
             modeldirname=os.path.dirname(self.orig_lems_file_path)
             self.neuron.load_mechanisms(modeldirname)
@@ -283,7 +285,7 @@ class NEURONBackend(Backend):
 
     def update_run_params(self,attrs):
         import re
-        self.attrs=None
+        #self.attrs=None
         self.attrs=attrs
         for key, value in self.attrs.items():
              h_variable=list(value.keys())
@@ -292,12 +294,15 @@ class NEURONBackend(Backend):
              h_assignment=h_assignment[0]
              self.h('m_RS_RS_pop[0].'+str(h_variable)+'='+str(h_assignment))
              self.h('m_'+str(self.cell_name)+'_'+str(self.cell_name)+'_pop[0].'+str(h_variable)+'='+str(h_assignment))
+             print(self.h('m_'+str(self.cell_name)+'_'+str(self.cell_name)+'_pop[0].'+str(h_variable)+'='+str(h_assignment)))
+             #pdb.set_trace()
         self.h(' { v_time = new Vector() } ')
         self.h(' { v_time.record(&t) } ')
         self.h(' { v_v_of0 = new Vector() } ')
         self.h(' { v_v_of0.record(&RS_pop[0].v(0.5)) } ')
         self.h(' { v_u_of0 = new Vector() } ')
         self.h(' { v_u_of0.record(&m_RS_RS_pop[0].u) } ')
+        #self.attrs=attrs
 
     def inject_square_current(self,current):
         '''

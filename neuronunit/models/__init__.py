@@ -41,6 +41,7 @@ class LEMSModel(sciunit.Model, cap.Runnable):
             name = os.path.split(self.lems_file_path)[1].split('.')[0]
         self.set_backend(backend)
         self.load_model()
+        self.attrs={}
 
     #This is the part that decides if it should inherit from NEURON backend.
 
@@ -68,7 +69,7 @@ class LEMSModel(sciunit.Model, cap.Runnable):
             if self._backend.__class__ not in self.__class__.__bases__:
                 self.__class__.__bases__ = (self._backend.__class__,) + \
                                         self.__class__.__bases__
-        
+
         elif name is None:
             # The base class should not be called.
             raise Exception(("A backend (e.g. 'jNeuroML' or 'NEURON') "
