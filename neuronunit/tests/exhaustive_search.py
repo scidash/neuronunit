@@ -77,6 +77,11 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
     print(value)
     print(value*pq.pA,model)
     model.update_run_params(iter_arg.attrs)
+    print('sinister bug: ')
+    print('the HOC/NEURON representation, which is all that matters: ')
+    print(model.h.psection())
+    print(model.attrs, ' the model attrs as the model sees it self')
+    print(iter_arg.attrs,' the argument that was fed to model')
     assert model.attrs==iter_arg.attrs
     #pdb.set_trace()
 
@@ -167,6 +172,7 @@ def check_fix_range(lookup):
             print('impossible state')
             print('bizare model attrs')
             print(model.attrs)
+            print(model.h.psection())
             #import pdb; pdb.set_trace()
                  # concatenate
     if len(sub) and len(supra):
@@ -237,14 +243,19 @@ def check_current(ampl,vm):
             print(model.attrs)
             print('hit')
         verbose=False
+
         if verbose:
             print("Injected %s current and got %d spikes" % \
                     (ampl,n_spikes))
-        vm.lookup[float(ampl)] = n_spikes
-        return vm.lookup
+        lookup[float(ampl)] = n_spikes
+        model.lookup.extend(lookup)
+        print(lookup, model.lookup)
+        return lookup
         #return copy.copy(vm.lookup)
-    if float(ampl) in vm.lookup:
-        return vm.lookup
+    if float(ampl) in lookup:
+        print(lookup, model.lookup)
+
+        return lookup
         #return copy.copy(vm.lookup)
 
 
@@ -265,10 +276,13 @@ def searcher(f,rh_param,vms):
             model.attrs=vms.attrs
             print(type(model))
             model.update_run_params(vms.attrs)
+            model.update_run_params(model.attrs)
             model.h.psection()
             #model.update_run_params(model.attrs)
             model.h.psection()
             print(model.attrs)
+            model.update_run_params(model.attrs)
+
             print(model.h.psection())
             print('closer bug id 1')
             #import pdb; pdb.set_trace()
@@ -365,8 +379,15 @@ if __name__ == "__main__":
     rh_param=(False,steps_current)
     rh_value=searcher(check_current,rh_param,mean_vm)
     print(rh_value)
-    list_of_models=list(futures.map(model2map,iter_list))
-    for x in list_of_models:
+    #list_of_models=list(futures.map(model2map,iter_list))
+    list_of_models=list(map(model2map,iter_list))
+
+    print(list_of_models)
+    print(rh_value)
+    #rhstorage=list(futures.map(evaluate,list_of_models,repeat(rh_value)))
+    rhstorage=list(map(evaluate,list_of_models,repeat(rh_value)))
+
+    for x in rhstorage:
         if x==False:
             vm_spot=VirtualModel()
             vm_spot=x.attrs
@@ -374,10 +395,6 @@ if __name__ == "__main__":
             steps_current = [ i*pq.pA for i in steps ]
             rh_param=(False,steps_current)
             rh_value=searcher(check_current,rh_param,vm_spot)
-
-    print(list_of_models)
-    print(rh_value)
-    rhstorage=list(futures.map(evaluate,list_of_models,repeat(rh_value)))
 
     pdb.set_trace()
     iter_ = zip(list_of_models,rhstorage)
