@@ -40,6 +40,8 @@ units = pq.pA
 
 
 model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
+
+from scoop import futures, shared
 from neuronunit import tests as nutests
 import copy
 from itertools import repeat
@@ -73,8 +75,9 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
     import pdb
     print(iter_arg)
     print(value)
-    print(value*1.01*pq.pA,model)
+    print(value*pq.pA,model)
     model.update_run_params(iter_arg.attrs)
+    assert model.attrs==iter_arg.attrs
     #pdb.set_trace()
 
     import quantities as qt
@@ -84,17 +87,18 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
     score = None
     sane = False
 
-    sane = get_neab.suite.tests[3].sanity_check(value*1.01*pq.pA,model)
+    sane = get_neab.suite.tests[3].sanity_check(value*pq.pA,model)
 
     if sane == True:
         get_neab.suite.tests[0].prediction={}
         score = get_neab.suite.tests[0].prediction['value']=value*pq.pA
         score = get_neab.suite.judge(model)#passing in model, changes model
 
+        n_spikes = model.get_spike_count()
+        print(n_spikes, "number of spikes, sinister \n\n\n\n")
         import pickle
         pickle.dump(score, open( "save.p", "wb" ) )
-        #import pdb
-        #pdb.set_trace()
+
 
         model.run_number+=1
         for i in score.sort_key.values[0]:
@@ -128,8 +132,6 @@ class VirtualModel:
         self.s_html=None
         self.results=None
 
-param=['a','b']#,'vr','vpeak']
-
 def check_fix_range(lookup):
     '''
     Inputs: lookup, A dictionary of previous current injection values
@@ -154,6 +156,18 @@ def check_fix_range(lookup):
 
     sub=np.array(sub)
     supra=np.array(supra)
+
+    if len(model.attrs)==0:
+        print('bug id')
+        print(model.h.psection())
+        #import pdb; pdb.set_trace()
+
+    if len(sub)!=0 and len(supra)!=0:
+        if sub.max()>supra.min():
+            print('impossible state')
+            print('bizare model attrs')
+            print(model.attrs)
+            #import pdb; pdb.set_trace()
                  # concatenate
     if len(sub) and len(supra):
 
@@ -176,7 +190,7 @@ def check_fix_range(lookup):
         np.delete(steps2,np.array(supra))
         steps = [ i*pq.pA for i in steps2 ]
 
-
+    print(steps)
     return (False,steps)
 
 def check_current(ampl,vm):
@@ -187,17 +201,36 @@ def check_current(ampl,vm):
     import copy
     if float(ampl) not in vm.lookup or len(vm.lookup)==0:
         current = params.copy()['injected_square_current']
+
         uc={'amplitude':ampl}
         current.update(uc)
 
         current={'injected_square_current':current}
         vm.run_number+=1
-        model.update_run_params(vm.attrs)
-
+        #model = shared.getConst('model')
+        #model = shared.model
         model.load_model()
+        print(type(model), 'type operating on model')
+        model.update_run_params(vm.attrs)
+        model.attrs = vm.attrs
+        if len(model.attrs)==0:
+            #print(model.h.psection())
+            model.update_run_params(vm.attrs)
+            print('model attrs from cpu:')
+            print(model.attrs, ' model.attrs')
+            print(vm.attrs, ' vm.attrs')
+            print(model.h.psection())
+
+            print('closer bug id 1')
+            #import pdb; pdb.set_trace()
+
+        #import pdb; pdb.set_trace()
+        model.update_run_params(vm.attrs)
         model.inject_square_current(current)
+
         vm.previous=ampl
         n_spikes = model.get_spike_count()
+        print(n_spikes, 'n spikes')
         if n_spikes==1:
             vm.rheobase=ampl
             print(vm.attrs)
@@ -225,20 +258,40 @@ def searcher(f,rh_param,vms):
         return rh_param[1]
     lookuplist=[]
     cnt=0
-    while rh_param[0]==False and cnt<4:
-        print(cnt)
-        print('cnt')
+    print(model.h.psection())
+
+    while rh_param[0]==False and cnt<5:
+        if len(model.attrs)==0:
+            model.attrs=vms.attrs
+            print(type(model))
+            model.update_run_params(vms.attrs)
+            model.h.psection()
+            #model.update_run_params(model.attrs)
+            model.h.psection()
+            print(model.attrs)
+            print(model.h.psection())
+            print('closer bug id 1')
+            #import pdb; pdb.set_trace()
         if type(rh_param[1])==float:
             d=check_current(rh_param[1],vms)
+            #if len(d)==0:
+            model.update_run_params(vms.attrs)
+                #import pdb; pdb.set_trace()
+            rh_param=check_fix_range(d)
+            #print(rh_param)
+            if rh_param[0]==True:
+                return rh_param[1]
         elif len(vms.lookup)==0 and type(rh_param[1])!=float:
             returned_list=[]
+            #model.update_run_params(vm.attrs)
+
             returned_list = list(futures.map(check_current,rh_param[1],repeat(vms)))
             d={}
             for r in returned_list:
                 d.update(r)
         else:
             rh_param=check_fix_range(d)
-            print(rh_param)
+            #print(rh_param)
             if rh_param[0]==True:
                 return rh_param[1]
                 #break
@@ -248,29 +301,8 @@ def searcher(f,rh_param,vms):
             for r in returned_list:
                 d.update(r)
         cnt+=1
-    #print(rh_param)
-    return False#rh_param[1]
-'''
-def searcher(f,rh_param,vms):
-    cnt=0
-    while rh_param[0]==False and cnt<4:
-        if len(vms.lookup)==0:
-            d = check_current(rh_param[1],vms)
-            rh_param=check_fix_range(d)
-            if rh_param[0]==True:
-                return rh_param[1]
-
-        else:
-            rh_param=check_fix_range(d)
-            if rh_param[0]==True:
-                return rh_param[1]
-            returned_list2 = list(futures.map(check_current,rh_param[1],repeat(vms)))
-            d={}
-            for r in returned_list2:
-                d.update(r)
-        cnt+=1
+        print(cnt, 'this is cnt, exhausted cnt? ')
     return False
-'''
 
 def evaluate(individual, guess_value=None):
     #This method must be pickle-able for scoop to work.
@@ -281,8 +313,6 @@ def evaluate(individual, guess_value=None):
     print(rh_param[0])
     print(rh_param[1])
 
-    import pdb
-    pdb.set_trace()
     rheobase=searcher(check_current,rh_param,vm)#,guess_value)
     return rheobase
 
@@ -290,44 +320,66 @@ def evaluate(individual, guess_value=None):
 
 if __name__ == "__main__":
     #PARAMETER FILE
-    '''
-    vr = np.linspace(-75.0,-50.0,10)
-    a = np.linspace(0.015,0.045,10)
-    b = np.linspace(-3.5*10E-9,-0.5*10E-9,3)
-    k = np.linspace(7.0E-4-+7.0E-5,7.0E-4+70E-5,10)
-    C = np.linspace(1.00000005E-4-1.00000005E-5,1.00000005E-4+1.00000005E-5,10)
-    c = np.linspace(-55,-60,10)
-    d = np.linspace(0.050,0.2,10)
-    v0 = np.linspace(-75.0,-45.0,10)
-    vt =  np.linspace(-50.0,-30.0,10)
-    vpeak =np.linspace(30.0,40.0,10)
-    '''
+    #shared.model=model
+    import pdb
+    import scoop
+    #scoop.logger.warn("This is a warning!")
+    #print(scoop.logger)
+
+    #pdb.set_trace()
+    #shared.setCont(model=model)
     import model_parameters as modelp
     iter_list=[ (i,j,k,l) for i in modelp.model_params['a'] for j in modelp.model_params['b'] for k in modelp.model_params['vr'] for l in modelp.model_params['vpeak'] ]
     mean_vm=VirtualModel()
     #guess_attrs=[]
+    #modelp.model_params['a'], modelp.model_params['b'], modelp.model_params['vr'], modelp.model_params['vpeak']
     #find the mean parameter sets, and use them to inform the rheobase search.
     guess_attrs = modelp.guess_attrs#.append(np.mean( [ i for i in modelp.a ]))
     #guess_attrs = modelp.guess_attrs#.append(np.mean( [ i for i in modelp.b ]))
-
-    for i, p in enumerate(param):
-        value=str(guess_attrs[i])
-        model.name = str(model.name)+' '+str(p)+str(value)
+    paramslist=['a','b','vr','vpeak']
+    for i,value in enumerate( guess_attrs ):
+        print(value)
+        x=paramslist[i]
+        model.name = str(model.name)+' '+str(x)+str(value)
         if i==0:
-            attrs = {'//izhikevich2007Cell':{p:value }}
+            attrs = {'//izhikevich2007Cell':{x:value }}
         else:
-            attrs['//izhikevich2007Cell'][p]=value
+            attrs['//izhikevich2007Cell'][x]=value
     mean_vm.attrs=attrs
+    import pdb
+
+
 
 
     steps = np.linspace(40,80,7.0)
     steps_current = [ i*pq.pA for i in steps ]
-    model.attrs=mean_vm.attrs
+    #model.attrs=mean_vm.attrs
+    model.update_run_params(mean_vm.attrs)
+
+    print('the line above does not work')
+    print(model.h.psection())
+    print(model.attrs)
+    #pdb.set_trace()
+
+
     rh_param=(False,steps_current)
     rh_value=searcher(check_current,rh_param,mean_vm)
+    print(rh_value)
     list_of_models=list(futures.map(model2map,iter_list))
+    for x in list_of_models:
+        if x==False:
+            vm_spot=VirtualModel()
+            vm_spot=x.attrs
+            steps = np.linspace(40,80,7.0)
+            steps_current = [ i*pq.pA for i in steps ]
+            rh_param=(False,steps_current)
+            rh_value=searcher(check_current,rh_param,vm_spot)
 
+    print(list_of_models)
+    print(rh_value)
     rhstorage=list(futures.map(evaluate,list_of_models,repeat(rh_value)))
+
+    pdb.set_trace()
     iter_ = zip(list_of_models,rhstorage)
     score_matrixt=list(futures.map(func2map,iter_))#list_of_models,rhstorage))
 
