@@ -34,7 +34,7 @@ class VmTest(sciunit.Test):
             cap += cls.required_capabilities
         self.required_capabilities += tuple(cap)
         self._extra()
-    
+
     required_capabilities = (cap.ProducesMembranePotential,)
 
     name = ''
@@ -82,7 +82,8 @@ class VmTest(sciunit.Test):
     def bind_score(self, score, model, observation, prediction):
         score.related_data['vm'] = model.get_membrane_potential()
         score.related_data['model_name'] = '%s_%s' % (model.name,self.name)
-
+        '''
+        This code does not work
         def plot_vm(self,ax=None,ylim=(None,None)):
             """A plot method the score can use for convenience."""
             if ax is None:
@@ -96,6 +97,7 @@ class VmTest(sciunit.Test):
             ax.set_ylabel('Vm (mV)')
         score.plot_vm = MethodType(plot_vm, score) # Bind to the score.
         score.unpicklable.append('plot_vm')
+        '''
         return score
 
     @classmethod
@@ -129,25 +131,24 @@ class VmTest(sciunit.Test):
         return observation
 
     def sanity_check(self,rheobase,model):
-        #model.inject_square_current(self.params['injected_square_current'])
+        '''
+        check if the membrane potential and its derivative, constitute continuous differentiable
+        functions
+        If they don't output boolean false, such that the corresponding model can be discarded
+        inputs: a rheobase value and a model.
+        outputs: a boolean flag.
+        '''
         self.params['injected_square_current']['delay'] = DELAY
         self.params['injected_square_current']['duration'] = DURATION
         self.params['injected_square_current']['amplitude'] = rheobase
         model.inject_square_current(self.params['injected_square_current'])
-
         mp = model.results['vm']
         import math
         for i in mp:
             if math.isnan(i):
                 return False
-
         import neuronunit.capabilities as cap
-
         sws=cap.spike_functions.get_spike_waveforms(model.get_membrane_potential())
-        #sws = model.get_spike_waveforms()
-        #print(sws)
-
-        #sws=spike_functions.get_spike_waveform(mp)
         for i,s in enumerate(sws):
             s = np.array(s)
             dvdt = np.diff(s)
@@ -210,9 +211,18 @@ class TestPulseTest(VmTest):
             return a * np.exp(-b * x) + c
 
         x = segment.times.rescale('ms')
+        print(segment)
         y = segment.rescale('V')
+        print(y)
+
         offset = float(offset.rescale('ms')) # Strip units for optimization
-        popt, pcov = curve_fit(func, x-offset*pq.ms, y, [0.001,2,y.min()]) # Estimate starting values for better convergence
+        #import pdb; pdb.set_trace()
+        #print(x,' x')
+        #print(offset, ' offset')
+        #print(x-offset, ' x - offset')
+
+        #print(y.min(), ' y.min()')
+        popt, pcov = curve_fit(func, x-offset*pq.ms, y*pq.ms, [0.001,2,y.min()]) # Estimate starting values for better convergence
         return popt
 
 
@@ -508,7 +518,7 @@ class RheobaseTestHacked(VmTest):
         self.prediction = None
         self.high = 300*pq.pA
         self.small = 0*pq.pA
-    
+
     required_capabilities = (cap.ReceivesSquareCurrent,
                              cap.ProducesSpikes)
 
@@ -630,9 +640,9 @@ class RheobaseTest(VmTest):
     Tests the full widths of APs at their half-maximum
     under current injection.
     """
-    def _extra(self):    
+    def _extra(self):
         self.prediction=None
-    
+
     required_capabilities = (cap.ReceivesSquareCurrent,
                              cap.ProducesSpikes)
 
