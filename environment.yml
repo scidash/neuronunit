@@ -5,7 +5,7 @@ dependencies:
 - pip:
   - neo==0.4
   - elephant
-  - allensdk==0.12.4.1
+  - allensdk==0.12.4
   - pyneuroml>=0.2.3
   - scoop
-  - git+https://github.com/scidash/sciunit@dev
+  - https://github.com/scidash/sciunit/tarball/dev#egg=sciunit-0.1.5.6
