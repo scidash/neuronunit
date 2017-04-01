@@ -8,7 +8,8 @@ RUN chown -R $NB_USER .
 USER $NB_USER
 
 # Make neuronunit source directory in Travis image visible to Docker.  
-ADD . . 
+ADD . $HOME/neuronunit
+WORKDIR $HOME/neuronunit 
 
 # Install neuronunit and dependencies.
 RUN python setup.py install
