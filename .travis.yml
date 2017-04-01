@@ -6,10 +6,10 @@ services:
   - docker
   - git
   - python
-  
 before_script:
   - docker build . -t scidash/neuronunit
-  - cd tests
+  - pwd
+  - cd neuronunit/tests
   - docker build . -t scidash/neuronunit-tests 
   - cd ..
 script: 
