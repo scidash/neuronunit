@@ -1,25 +1,28 @@
-import numpy as np
+import os, sys
 import time
 import inspect
 from types import MethodType
+import pickle
+
+import pdb
+import numpy as np
 import quantities as pq
 from quantities.quantity import Quantity
-import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
+from scoop import futures
+
 import sciunit
-import os, sys
+import sciunit.scores as scores
+
 thisnu = str(os.getcwd())+'/../..'
 sys.path.insert(0,thisnu)
-from scoop import futures
-import sciunit.scores as scores
+
 import neuronunit.capabilities as cap
-import get_neab
-from neuronunit.models import backends
-import sciunit.scores as scores
+from neuronunit.tests import get_neab
 from neuronunit.models import backends
 from neuronunit.models.reduced import ReducedModel
-import neuronunit.capabilities as cap
+
 AMPL = 0.0*pq.pA
 DELAY = 100.0*pq.ms
 DURATION = 1000.0*pq.ms

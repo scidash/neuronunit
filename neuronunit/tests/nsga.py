@@ -23,13 +23,13 @@ import matplotlib.pyplot as plt
 import quantities as pq
 from deap import algorithms
 from deap import base
-from deap.benchmarks.tools import diversity, convergence, hypervolume
+from deap.benchmarks.tools import diversity, convergence
 from deap import creator
 from deap import tools
 from scoop import futures
 import scoop
 
-import get_neab
+from . import get_neab
 
 import quantities as qt
 import os
@@ -65,7 +65,7 @@ class Individual(object):
         self.rheobase=None
 toolbox = base.Toolbox()
 
-import model_parameters as params
+from . import model_parameters as params
 
 vr = np.linspace(-75.0,-50.0,1000)
 a = np.linspace(0.015,0.045,1000)

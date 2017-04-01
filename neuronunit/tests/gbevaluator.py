@@ -3,7 +3,7 @@
 import numpy
 
 import bluepyopt as bpop
-import stdputil
+from neuronunit.tests import stdputil
 
 
 def gbParam(params):

@@ -1,7 +1,7 @@
 
 
 import pdb
-import get_neab
+from neuronunit.tests import get_neab
 #pdb.set_trace()
 import numpy as np
 import time
@@ -33,7 +33,6 @@ DURATION = 1000.0*pq.ms
 
 
 import pdb
-import get_neab
 #pdb.set_trace()
 import numpy as np
 import time
