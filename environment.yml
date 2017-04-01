@@ -1,0 +1,11 @@
+name: neuronunit_docs
+dependencies:
+- python==3.5
+- matplotlib>=1.5
+- pip:
+  - neo==0.4
+  - elephant
+  - allensdk==0.12.4.1
+  - pyneuroml>=0.2.3
+  - scoop
+  - git+https://github.com/scidash/sciunit@dev
