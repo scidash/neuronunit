@@ -144,8 +144,10 @@ class NeuronSimulation():
         #print("Saved data to: time.dat")
 
         # File to save: of0
-        py_v_v_of0 = [ float(x) for x in h.v_v_of0.to_python() ]  # Convert to Python list for speed, variable has dim: voltage
-        py_v_u_of0 = [ float(x) for x in h.v_u_of0.to_python() ]  # Convert to Python list for speed, variable has dim: current
+        py_v_v_of0 = [ float(x) for x in copy.copy(h.v_v_of0.to_python()) ]  # Convert to Python list for speed, variable has dim: voltage
+        py_v_u_of0 = [ float(x) for x in copy.copy(h.v_u_of0.to_python()) ]  # Convert to Python list for speed, variable has dim: current
+        h.v_v_of0 = None
+        h.v_u_of0 = None 
         f_of0_f2 = open('RS_One.dat', 'w')
         num_points = len(py_v_time)  # Simulation may have been stopped before tstop...
 

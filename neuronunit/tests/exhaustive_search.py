@@ -226,7 +226,7 @@ def check_current(ampl,vm):
             print(model.attrs, ' model.attrs')
             print(vm.attrs, ' vm.attrs')
             print(model.h.psection())
-
+            print(uc)
             print('closer bug id 1')
             #import pdb; pdb.set_trace()
 
@@ -247,15 +247,17 @@ def check_current(ampl,vm):
         if verbose:
             print("Injected %s current and got %d spikes" % \
                     (ampl,n_spikes))
-        lookup[float(ampl)] = n_spikes
-        model.lookup.extend(lookup)
-        print(lookup, model.lookup)
-        return lookup
-        #return copy.copy(vm.lookup)
-    if float(ampl) in lookup:
+        vm.lookup[float(ampl)] = n_spikes
+        #model.lookup.update(lookup)
         print(lookup, model.lookup)
 
-        return lookup
+        #pdb.set_trace()
+        return vm
+        #return copy.copy(vm.lookup)
+    if float(ampl) in vm.lookup:
+        print(lookup, model.lookup)
+
+        return vm
         #return copy.copy(vm.lookup)
 
 
@@ -278,7 +280,6 @@ def searcher(f,rh_param,vms):
             model.update_run_params(vms.attrs)
             model.update_run_params(model.attrs)
             model.h.psection()
-            #model.update_run_params(model.attrs)
             model.h.psection()
             print(model.attrs)
             model.update_run_params(model.attrs)
@@ -287,33 +288,33 @@ def searcher(f,rh_param,vms):
             print('closer bug id 1')
             #import pdb; pdb.set_trace()
         if type(rh_param[1])==float:
-            d=check_current(rh_param[1],vms)
-            #if len(d)==0:
+            vms=check_current(rh_param[1],vms)
             model.update_run_params(vms.attrs)
-                #import pdb; pdb.set_trace()
-            rh_param=check_fix_range(d)
-            #print(rh_param)
+            rh_param=check_fix_range(vms.lookup)
             if rh_param[0]==True:
                 return rh_param[1]
         elif len(vms.lookup)==0 and type(rh_param[1])!=float:
             returned_list=[]
-            #model.update_run_params(vm.attrs)
-
             returned_list = list(futures.map(check_current,rh_param[1],repeat(vms)))
+            pdb.set_trace()
             d={}
-            for r in returned_list:
-                d.update(r)
-        else:
+            for vms in returned_list:
+                print(d)
+                print(vms.lookup)
+                d.update(vms.lookup)
             rh_param=check_fix_range(d)
-            #print(rh_param)
+        else:
+
             if rh_param[0]==True:
                 return rh_param[1]
-                #break
             returned_list=[]
             returned_list = list(futures.map(check_current,rh_param[1],repeat(vms)))
             d={}
-            for r in returned_list:
-                d.update(r)
+            for vms in returned_list:
+                print(d)
+                print(vms.lookup)
+                d.update(vms.lookup)
+            rh_param=check_fix_range(d)
         cnt+=1
         print(cnt, 'this is cnt, exhausted cnt? ')
     return False
@@ -378,13 +379,16 @@ if __name__ == "__main__":
 
     rh_param=(False,steps_current)
     rh_value=searcher(check_current,rh_param,mean_vm)
-    print(rh_value)
+    print(rh_value,' rh_value')
     #list_of_models=list(futures.map(model2map,iter_list))
+    pdb.set_trace()
     list_of_models=list(map(model2map,iter_list))
 
     print(list_of_models)
     print(rh_value)
     #rhstorage=list(futures.map(evaluate,list_of_models,repeat(rh_value)))
+    pdb.set_trace()
+
     rhstorage=list(map(evaluate,list_of_models,repeat(rh_value)))
 
     for x in rhstorage:
@@ -395,7 +399,7 @@ if __name__ == "__main__":
             steps_current = [ i*pq.pA for i in steps ]
             rh_param=(False,steps_current)
             rh_value=searcher(check_current,rh_param,vm_spot)
-
+    import pdb
     pdb.set_trace()
     iter_ = zip(list_of_models,rhstorage)
     score_matrixt=list(futures.map(func2map,iter_))#list_of_models,rhstorage))

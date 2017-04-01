@@ -164,11 +164,12 @@ class VirtualModel:
         self.previous=0
         self.run_number=0
         self.attrs=None
+        self.steps=None
         self.name=None
         self.s_html=None
         self.results=None
 
-def check_fix_range(lookup):
+def check_fix_range(vms):
     '''
     Inputs: lookup, A dictionary of previous current injection values
     used to search rheobase
@@ -181,16 +182,18 @@ def check_fix_range(lookup):
     '''
     sub=[]
     supra=[]
-    #import pdb; pdb.set_trace()
-
-    for k,v in lookup.items():
-        #import pdb; pdb.set_trace()
-
+    vms.rheobase=0.0
+    print(len(vms.lookup), 'len vms')
+    for k,v in vms.lookup.items():
         if v==1:
             #A logical flag is returned to indicate that rheobase was found.
             print('strangely survives this return statement ')
             print(True,k)
-            return (True,k)
+            vms.rheobase=float(k)
+            return (True,vms.rheobase)
+            vms.steps=0.0
+
+            return vms
         elif v==0:
             sub.append(k)
         elif v>0:
@@ -198,8 +201,6 @@ def check_fix_range(lookup):
 
     sub=np.array(sub)
     supra=np.array(supra)
-
-
 
     if len(sub)!=0 and len(supra)!=0:
         if sub.max()>supra.min():
@@ -209,7 +210,6 @@ def check_fix_range(lookup):
             print(model.h.psection())
             import pdb; pdb.set_trace()
     if len(sub) and len(supra):
-
         everything=np.concatenate((sub,supra))
 
         center = np.linspace(sub.max(),supra.min(),7.0)
@@ -229,8 +229,9 @@ def check_fix_range(lookup):
         np.delete(steps2,np.array(supra))
         steps = [ i*pq.pA for i in steps2 ]
 
-    print('gets here ',False,steps)
-    return (False,steps)
+    vms.steps=steps
+    #print('gets here ',False,steps)
+    return (False,vms)
 
 def check_current(ampl,vm):
     '''
@@ -243,42 +244,31 @@ def check_current(ampl,vm):
 
         uc={'amplitude':ampl}
         current.update(uc)
-
         current={'injected_square_current':current}
         vm.run_number+=1
-        #model.load_model()
         model.update_run_params(vm.attrs)
         model.attrs = vm.attrs
         if len(model.attrs)==0:
             model.update_run_params(vm.attrs)
-
         model.inject_square_current(current)
-
         vm.previous=ampl
         n_spikes = model.get_spike_count()
-        print(n_spikes, 'n spikes')
         if n_spikes==1:
             model.rheobase=copy.copy(float(ampl))
             vm.rheobase=copy.copy(float(ampl))
-            print(type(vm.rheobase))
             assert vm.rheobase!=None
             assert model.rheobase!=None
-            #assert vm.rheobase==float
-            #assert model.rheobase==float
-
             print('hit')
-
-
         if verbose:
             print("Injected %s current and got %d spikes" % \
                     (ampl,n_spikes))
         vm.lookup[float(ampl)] = n_spikes
-
-        return copy.copy(vm)
+        print(len(vm.lookup), ' length of lookup ')
+        return vm
 
     if float(ampl) in vm.lookup:
 
-        return copy.copy(vm)
+        return vm
 
 
 
@@ -292,45 +282,60 @@ def searcher(f,rh_param,vms):
         return rh_param[1]
     lookuplist=[]
     cnt=0
+    boolean=False
+    import pdb
+    while boolean==False and cnt<5:
 
-    while rh_param[0]==False and cnt<5:
         if len(model.attrs)==0:
+
             model.attrs=vms.attrs
             model.update_run_params(vms.attrs)
+
         if type(rh_param[1])==float:
             if model.rheobase==None:
                 model.rheobase=rh_param[1]
             vms=check_current(model.rheobase,vms)
-            model.update_run_params(vms.attrs)
-            rh_param=check_fix_range(vms.lookup)
-            if rh_param[0]==True:
-                return rh_param[1]
-        elif len(vms.lookup)==0 and type(rh_param[1])!=float:
-            returned_list=[]
-            returned_list = list(futures.map(check_current,rh_param[1],repeat(vms)))
-            d={}
-            for vms in returned_list:
 
-                d.update(vms.lookup)
-            rh_param=check_fix_range(d)
-            if rh_param[0]==True:
-                return rh_param[1]
-        else:
-            if rh_param[0]==True:
-                return rh_param[1]
+            model.update_run_params(vms.attrs)
+            boolean,vms=check_fix_range(vms)
+
+
+            if boolean:
+                return vms
+        elif len(vms.lookup)==0 and type(rh_param[1])!=float:
+            #if len(vms.lookup)>0:
+            #    rh_param[1]=vms.steps
             returned_list=[]
             returned_list = list(futures.map(check_current,rh_param[1],repeat(vms)))
             d={}
-            for vms in returned_list:
-                d.update(vms.lookup)
-            rh_param=check_fix_range(d)
-            if rh_param[0]==True:
-                return rh_param[1]
+            #pdb.set_trace()
+            assert vms!=None
+            for v in returned_list:
+                #print(v.lookup)
+                #pdb.set_trace()
+                vms.lookup.update(v.lookup)
+            boolean,vms=check_fix_range(vms)
+
+            assert vms!=None
+            if boolean:
+                return vms
+        else:
+            if boolean:
+                return vms
+            returned_list=[]
+            returned_list = list(futures.map(check_current,vms.steps,repeat(vms)))
+            d={}
+            for v in returned_list:
+                vms.lookup.update(v.lookup)
+
+            boolean,vms=check_fix_range(vms)
+            if boolean:
+                return vms
 
 
         cnt+=1
 
-    return False
+    return vms
 
 def evaluate(individual, guess_value=None):
     #This method must be pickle-able for scoop to work.
@@ -353,10 +358,11 @@ if __name__ == "__main__":
     import model_parameters as modelp
     iter_list=[ (i,j,k,l) for i in modelp.model_params['a'] for j in modelp.model_params['b'] for k in modelp.model_params['vr'] for l in modelp.model_params['vpeak'] ]
     mean_vm=VirtualModel()
-    list_of_models=list(map(pop2map,iter_list))
 
-    for li, il in list_of_models:
-        print(li.attrs, il.attrs)
+    #list_of_models=list(map(pop2map,iter_list))
+
+    #for li, il in list_of_models:
+    #    print(li.attrs, il.attrs)
     guess_attrs = modelp.guess_attrs#.append(np.mean( [ i for i in modelp.a ]))
     paramslist=['a','b','vr','vpeak']
     for i,value in enumerate( guess_attrs ):
@@ -393,7 +399,8 @@ if __name__ == "__main__":
     for x in rhstorage:
         if x==False:
             vm_spot=VirtualModel()
-            vm_spot=x.attrs
+            #pdb.set_trace()
+            #vm_spot=x.attrs
             steps = np.linspace(40,80,7.0)
             steps_current = [ i*pq.pA for i in steps ]
             rh_param=(False,steps_current)
