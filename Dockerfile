@@ -12,7 +12,7 @@ ADD . $HOME/neuronunit
 WORKDIR $HOME/neuronunit 
 
 # Install neuronunit and dependencies.
-RUN python setup.py install
+RUN pip install .
 
 # Run all unit tests.
 ENTRYPOINT python -m unittest unit_test/test_*.py
