@@ -9,8 +9,12 @@ from nbconvert.preprocessors import ExecutePreprocessor
 
 class NotebookTest:
     """Base class for testing notebooks"""
+    
+    path = 'unit_test'
+
     def load_notebook(self,name):
-        f = open('docs/%s.ipynb' % name)
+        full_path = os.path.join(self.path,'%s.ipynb' % name)
+        f = open(full_path)
         nb = nbformat.read(f, as_version=4)
         return f,nb
 
@@ -34,6 +38,8 @@ class NotebookTest:
 class DocumentationTestCase(NotebookTest,unittest.TestCase):
     """Testing documentation notebooks"""
 
+    path = 'docs'
+
     #@unittest.skip("Skipping chapter 1")
     def test_chapter1(self):
         self.execute_notebook('chapter1')
@@ -49,6 +55,14 @@ class DocumentationTestCase(NotebookTest,unittest.TestCase):
     @unittest.skip("Skipping chapter 4")
     def test_chapter4(self):
         self.execute_notebook('chapter4')
+
+
+class SciunitTestTestCase(NotebookTest,unittest.TestCase):
+    """Testing documentation notebooks"""
+
+    #@unittest.skip("Skipping get_tau test")
+    def test_get_tau(self):
+        self.execute_notebook('get_tau')
 
 
 if __name__ == '__main__':
