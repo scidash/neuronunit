@@ -2,9 +2,6 @@
 #author Rick Gerkin rgerkin@asu.edu
 FROM scidash/neuronunit
 
-WORKDIR $HOME
-# Add current directory
-ADD . .
 USER root
 RUN apt-get update
 RUN apt-get install -y gvfs-bin 
@@ -43,10 +40,8 @@ RUN ipython profile create default
 #RUN ipcluster start --profile=chase --debug &
 #https://github.com/russelljjarvis/neuronunit.git
 
-USER root
-RUN chown -R $NB_USER $HOME
-RUN chown -R $NB_USER /opt/conda/lib/python3.5/site-packages/
-USER $NB_USER
+RUN chown -R jovyan $HOME
+RUN chown -R jovyan /opt/conda/lib/python3.5/site-packages/
 
 WORKDIR $HOME
 
@@ -72,9 +67,8 @@ RUN nrniv
 RUN export PATH=$PATH
 RUN echo "do this part again such that pickled files can be used to bypass problems with aibs.py in the short term !"
 
-RUN pwd
-RUN ls
-RUN ls $HOME
+# Make neuronunit source directory in Travis image visible to Docker.
+ADD . $HOME/neuronunit
 WORKDIR $HOME/neuronunit/neuronunit/tests/NeuroML2
 RUN nrnivmodl
 RUN ls LEMS_2007One.xml
