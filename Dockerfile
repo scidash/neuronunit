@@ -15,5 +15,3 @@ RUN python setup.py install
 
 # Run all unit tests.
 ENTRYPOINT python -m unittest test_*.py
-
-WORKDIR $WORKDIR
