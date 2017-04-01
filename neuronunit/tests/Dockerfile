@@ -40,8 +40,10 @@ RUN ipython profile create default
 #RUN ipcluster start --profile=chase --debug &
 #https://github.com/russelljjarvis/neuronunit.git
 
+USER root
 RUN chown -R jovyan $HOME
 RUN chown -R jovyan /opt/conda/lib/python3.5/site-packages/
+USER $NB_USER
 
 WORKDIR $HOME
 
