@@ -70,6 +70,9 @@ RUN nrniv
 RUN export PATH=$PATH
 RUN echo "do this part again such that pickled files can be used to bypass problems with aibs.py in the short term !"
 
+RUN pwd
+RUN ls
+RUN ls $HOME
 WORKDIR $HOME/neuronunit/neuronunit/tests/NeuroML2
 RUN nrnivmodl
 RUN ls LEMS_2007One.xml
