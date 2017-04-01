@@ -2,6 +2,7 @@ name: neuronunit_docs
 dependencies:
 - python==3.5
 - matplotlib>=1.5
+- sphinx>=1.5
 - pip:
   - neo==0.4
   - elephant
