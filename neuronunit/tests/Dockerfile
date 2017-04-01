@@ -6,6 +6,7 @@ WORKDIR $HOME
 # Add current directory
 ADD . .
 USER root
+RUN apt-get install update
 RUN apt-get install -y gvfs-bin 
 #I cant remember what gvfs-bin does
 RUN apt-get install -y libxss1
