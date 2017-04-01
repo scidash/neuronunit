@@ -10,7 +10,7 @@ RUN pip install matplotlib
 RUN easy_install gevent
 RUN easy_install greenlet
 RUN apt-get update
-RUN apt-get install -y gvfs-bin 
+RUN apt-get install -y gvfs-bin
 #I cant remember what gvfs-bin does
 RUN apt-get update
 
@@ -98,4 +98,26 @@ RUN nrnivmodl
 RUN ls LEMS_2007One.xml
 WORKDIR $HOME/neuronunit/neuronunit/tests/
 RUN ls *.pickle
-ENTRYPOINT python -m scoop nsga.py
+
+
+WORKDIR /home/mnt
+USER root
+RUN chown -R $NB_USER .
+USER $NB_USER
+
+# This ARG can be replaced with a build-arg containing the hash of the current
+# HEAD, which will ensure that if the HEAD has changed (i.e. new commits),
+# then a new tar of the repo will be downloaded.
+ARG HEAD=1
+#RUN echo "down load anyway please"
+#RUN mkdir -p sciunit
+WORKDIR sciunit
+RUN git clone -b dev http://github.com/scidash/sciunit 
+#RUN tar -xvzf sciunit.tar.gz -C sciunit --strip-components=1
+WORKDIR sciunit
+RUN python setup.py install
+RUN python test_all.py
+RUN git pull origin dev
+RUN python setup.py install
+WORKDIR /home/mnt
+#ENTRYPOINT python -m scoop nsga.py

@@ -1,0 +1,3 @@
+mean spike call time9.75038528442: 
+the number of calls to NEURON on one CPU only : 
+6 

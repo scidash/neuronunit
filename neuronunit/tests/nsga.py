@@ -155,11 +155,10 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
 
     individual.model=model.update_run_params(attrs)
     sane = False
-    #model.update_run_params(vm.attrs)
-
-    sane = get_neab.suite.tests[3].sanity_check(vms.rheobase*1.01*pq.pA,model)
+    sane = get_neab.suite.tests[3].sanity_check(vms.rheobase*pq.pA,model)
+    assert model.n_spikes==1
     print(sane)
-    if sane == True:
+    if sane == True and n_spikes == 1:
 
         individual.params=[]
         for i in attrs['//izhikevich2007Cell'].values():
@@ -169,6 +168,7 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
         get_neab.suite.tests[0].prediction['value']=0
         assert vms.rheobase!=None
         get_neab.suite.tests[0].prediction['value']=vms.rheobase*qt.pA
+        #Reset the model again.
         model.load_model()
         score = get_neab.suite.judge(model)#passing in model, changes model
         model.run_number+=1
@@ -182,10 +182,8 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
             i.last_model=None
             pickle.dump(i, open(str(i)+".p", "wb" ) )
             test=pickle.load(open(str(i)+".p", "rb" ) )
-            print(test)
+            individual.error=error
 
-        individual.error=error
-        print(error)
     elif sane == False:
         if len(individual.error)!=0:
             error = [ ((10.0+i)/2.0) for i in individual.error ]
@@ -205,15 +203,12 @@ toolbox.register("select", tools.selNSGA2)
 toolbox.register("map", futures.map)
 
 
-def plotss(pop,vmlist,gen):
+def plotss(vmlist,gen):
     import matplotlib.pyplot as plt
     plt.clf()
-
-    for ind,j in enumerate(pop):
+    for ind,j in enumerate(vmlist):
         if hasattr(ind,'results'):
             plt.plot(ind.results['t'],ind.results['vm'])
-        #if hasattr(vmlist[j],'attrs'):
-        #    vmlist[j].attrs
             plt.xlabel(str(vmlist[j].attr))
     plt.savefig('snap_shot_at_gen_'+str(gen)+'.png')
     plt.clf()
@@ -572,7 +567,7 @@ def main():
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
 
-        plotss(invalid_ind,vmlist,gen)
+        plotss(vmlist,gen)
         # Select the next generation population
         #This way the initial genes keep getting added to each generation.
         #pop = toolbox.select(pop + offspring, MU)
