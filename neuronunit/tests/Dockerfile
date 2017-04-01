@@ -11,6 +11,7 @@ RUN apt-get install -y curl apt-utils
 RUN apt-get install -y python3-setuptools
 
 USER $NB_USER
+WORKDIR $HOME
 RUN easy_install gevent
 RUN easy_install greenlet
 RUN git clone https://github.com/soravux/scoop
