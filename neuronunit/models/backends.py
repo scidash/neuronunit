@@ -285,24 +285,25 @@ class NEURONBackend(Backend):
 
     def update_run_params(self,attrs):
         import re
-        #self.attrs=None
+        self.attrs=None
         self.attrs=attrs
-        for key, value in self.attrs.items():
-             h_variable=list(value.keys())
-             h_variable=h_variable[0]
-             h_assignment=list(value.values())
-             h_assignment=h_assignment[0]
+        paramdict={}
+        for v in self.attrs.values():
+             paramdict = v
+
+        for key, value in paramdict.items():
+             h_variable=key
+             h_assignment=value
              self.h('m_RS_RS_pop[0].'+str(h_variable)+'='+str(h_assignment))
              self.h('m_'+str(self.cell_name)+'_'+str(self.cell_name)+'_pop[0].'+str(h_variable)+'='+str(h_assignment))
-             print(self.h('m_'+str(self.cell_name)+'_'+str(self.cell_name)+'_pop[0].'+str(h_variable)+'='+str(h_assignment)))
-             #pdb.set_trace()
+             
         self.h(' { v_time = new Vector() } ')
         self.h(' { v_time.record(&t) } ')
         self.h(' { v_v_of0 = new Vector() } ')
         self.h(' { v_v_of0.record(&RS_pop[0].v(0.5)) } ')
         self.h(' { v_u_of0 = new Vector() } ')
         self.h(' { v_u_of0.record(&m_RS_RS_pop[0].u) } ')
-        #self.attrs=attrs
+
 
     def inject_square_current(self,current):
         '''
