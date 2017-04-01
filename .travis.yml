@@ -8,10 +8,7 @@ services:
   - python
 before_script:
   - docker build . -t scidash/neuronunit
-  - pwd
-  - cd neuronunit/tests
-  - docker build . -t scidash/neuronunit-tests 
-  - cd ..
+  - docker build ./neuronunit/tests -t scidash/neuronunit-tests
 script: 
   - docker run -it scidash/neuronunit
   - docker run -it scidash/neuronunit-tests
