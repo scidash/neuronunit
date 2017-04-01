@@ -7,7 +7,9 @@ USER root
 RUN chown -R $NB_USER . 
 USER $NB_USER
 
-# Make neuronunit source directory in Travis image visible to Docker.  
+# Make neuronunit source directory in Travis image visible to Docker.
+RUN pwd
+RUN ls  
 ADD . $HOME/neuronunit
 WORKDIR $HOME/neuronunit 
 
