@@ -40,7 +40,7 @@ units = pq.pA
 
 
 model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
-
+model.rheobase=None
 from scoop import futures, shared
 from neuronunit import tests as nutests
 import copy
@@ -199,9 +199,6 @@ def check_fix_range(lookup):
     sub=np.array(sub)
     supra=np.array(supra)
 
-    if len(model.attrs)==0:
-        print('bug id')
-        print(model.h.psection())
 
 
     if len(sub)!=0 and len(supra)!=0:
@@ -211,8 +208,6 @@ def check_fix_range(lookup):
             print(model.attrs)
             print(model.h.psection())
             import pdb; pdb.set_trace()
-            #import pdb; pdb.set_trace()
-                 # concatenate
     if len(sub) and len(supra):
 
         everything=np.concatenate((sub,supra))
@@ -251,7 +246,7 @@ def check_current(ampl,vm):
 
         current={'injected_square_current':current}
         vm.run_number+=1
-        model.load_model()
+        #model.load_model()
         model.update_run_params(vm.attrs)
         model.attrs = vm.attrs
         if len(model.attrs)==0:
@@ -263,10 +258,16 @@ def check_current(ampl,vm):
         n_spikes = model.get_spike_count()
         print(n_spikes, 'n spikes')
         if n_spikes==1:
-            vm.rheobase=ampl
+            model.rheobase=copy.copy(float(ampl))
+            vm.rheobase=copy.copy(float(ampl))
             print(type(vm.rheobase))
             assert vm.rheobase!=None
+            assert model.rheobase!=None
+            #assert vm.rheobase==float
+            #assert model.rheobase==float
+
             print('hit')
+
 
         if verbose:
             print("Injected %s current and got %d spikes" % \
@@ -297,7 +298,9 @@ def searcher(f,rh_param,vms):
             model.attrs=vms.attrs
             model.update_run_params(vms.attrs)
         if type(rh_param[1])==float:
-            vms=check_current(rh_param[1],vms)
+            if model.rheobase==None:
+                model.rheobase=rh_param[1]
+            vms=check_current(model.rheobase,vms)
             model.update_run_params(vms.attrs)
             rh_param=check_fix_range(vms.lookup)
             if rh_param[0]==True:
@@ -383,7 +386,7 @@ if __name__ == "__main__":
     list_of_models=list(map(model2map,iter_list))
 
     for li in list_of_models:
-        print(li.rheobase, li.attributes)
+        print(li.rheobase, li.attrs)
 
     rhstorage=list(map(evaluate,list_of_models,repeat(rh_value)))
 
