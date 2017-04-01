@@ -1,33 +1,32 @@
-import numpy as np
+import os, sys
 import time
 import inspect
 from types import MethodType
+import pickle
+
+import pdb
+import numpy as np
 import quantities as pq
 from quantities.quantity import Quantity
-import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
+from scoop import futures
+
 import sciunit
-import os, sys
+import sciunit.scores as scores
+
 thisnu = str(os.getcwd())+'/../..'
 sys.path.insert(0,thisnu)
-from scoop import futures
-import sciunit.scores as scores
+
 import neuronunit.capabilities as cap
-import get_neab
-from neuronunit.models import backends
-import sciunit.scores as scores
+from neuronunit.tests import get_neab
 from neuronunit.models import backends
 from neuronunit.models.reduced import ReducedModel
 import neuronunit.capabilities as cap
 
 
-import sciunit.scores as scores
-import quantities as qt
-import pdb
 #vm = VirtualModel()
 #import matplotlib.plot as plt
-import matplotlib.pyplot as plt
 AMPL = 0.0*pq.pA
 DELAY = 100.0*pq.ms
 DURATION = 1000.0*pq.ms
@@ -43,13 +42,14 @@ score_type = scores.RatioScore
 guess=None
 lookup = {} # A lookup table global to the function below.
 verbose=True
-import quantities as pq
 units = pq.pA
 
 
 model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
-import pickle
-with open('score_matrix.pickle', 'rb') as handle:
+
+THIS_DIR = os.path.dirname(os.path.realpath(__file__))
+path = os.path.join(THIS_DIR,'score_matrix.pickle')
+with open(path, 'rb') as handle:
     matrix=pickle.load(handle)
 
 
@@ -104,7 +104,7 @@ def build_single(attrs,name):
     model.name = str(attrs)
     #rh_value=searcher2(f,rh_param,vms)
     get_neab.suite.tests[0].prediction={}
-    get_neab.suite.tests[0].prediction['value']=52.22222222222222 *qt.pA
+    get_neab.suite.tests[0].prediction['value']=52.22222222222222 *pq.pA
     score = get_neab.suite.judge(model)#passing in model, changes model
     for k,v in score.related_data.items():#.results['vm']
         print(k,v)
