@@ -8,4 +8,5 @@ RUN chown -R $NB_USER .
 USER $NB_USER
 
 RUN python setup.py install
+ENTRYPOINT python -m unittest test_*.py
 WORKDIR $WORKDIR
