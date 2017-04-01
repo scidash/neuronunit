@@ -61,7 +61,7 @@ for x,y,rheobase in matrix:
             if j==None:
                 j=10.0
             matrix2.append((j,rheobase))
-            print(j,rheobase)
+            #print(j,rheobase)
         matrix3.append(matrix2)
 storagei = [ np.sum(i) for i in matrix3 ]
 storagesmin=np.where(storagei==np.min(storagei))
@@ -102,6 +102,14 @@ def build_single(indexs):
 
     model.attrs=attrs
     model.update_run_params(attrs)
+    model.h.psection()
+    print('!!!!!\n\n')
+    print(model.attrs)
+    model.update_run_params(model.attrs)
+    model.h.psection()
+    print(model.attrs)
+    print('!!!!!\n\n')
+
     model.name = str(attrs)
     #rh_value=searcher2(f,rh_param,vms)
     get_neab.suite.tests[0].prediction={}
