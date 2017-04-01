@@ -8,10 +8,10 @@ services:
   - python
   
 before_script:
-  - cd neuronunit
-  - docker build -t neuronunit .
-  - cd neuronunit/tests
-  - docker build -t neuronunit-tests .
+  - docker build . -t neuronunit
+  - cd tests
+  - docker build . -t neuronunit-tests 
+  - cd ..
 script: 
   - docker run -it neuronunit
   - docker run -it neuronunit-tests
