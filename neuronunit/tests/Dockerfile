@@ -5,7 +5,6 @@ USER root
 
 
 RUN pip install --upgrade pip
-RUN pip install matplotlib
 
 RUN easy_install gevent
 RUN easy_install greenlet
@@ -26,6 +25,7 @@ RUN apt-get install -y python3-setuptools
 ENV PATH $PATH:/opt/conda/bin
 RUN easy_install gevent
 RUN easy_install greenlet
+RUN pip install deap
 
 #WORKDIR $HOME
 #RUN git clone https://github.com/russelljjarvis/BluePyOpt.git
