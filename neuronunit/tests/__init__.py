@@ -198,22 +198,43 @@ class TestPulseTest(VmTest):
 
     @classmethod
     def get_tau(cls, vm, i):
-        start, stop = -11*pq.ms, (i['duration']-(1*pq.ms))
-        region = cls.get_segment(vm,start+i['delay'],stop+i['delay'])
-        coefs = cls.exponential_fit(region, i['delay'])
-        tau = (pq.ms/coefs[1]).rescale('ms')
+        start = max(i['delay']-10*pq.ms,i['delay']/2) # 10 ms before pulse start or 
+                                                      # halfway between sweep start and pulse start, 
+                                                      # whichever is longer
+        stop = i['duration']+i['delay']-1*pq.ms # 1 ms before pulse end
+        region = cls.get_segment(vm,start,stop)
+        amplitude,tau,y0 = cls.exponential_fit(region, i['delay'])
         return tau
 
     @classmethod
     def exponential_fit(cls, segment, offset):
+        t = segment.times.rescale('ms')
+        start = t[0]
+        offset = offset-start
+        t = t-start
+        t = t.magnitude
+        vm = segment.rescale('mV').magnitude
+        offset = (offset * segment.sampling_rate).simplified
+        assert offset.dimensionality == pq.dimensionless
+        offset = int(offset)
+        guesses = [vm.min(), # amplitude (mV)
+                   10, # time constant (ms)
+                   vm.max()] # y0 (mV)
+        vm_fit = vm.copy()
+        
         def func(x, a, b, c):
-            return a * np.exp(-b * x) + c
-
-        x = segment.times.rescale('ms')
-        y = segment.rescale('V')
-        offset = float(offset.rescale('ms')) # Strip units for optimization
-        popt, pcov = curve_fit(func, x-offset*pq.ms, y, [0.001,2,y.min()]) # Estimate starting values for better convergence
-        return popt
+            vm_fit[:offset] = c
+            vm_fit[offset:] = a * np.exp(-t[offset:]/b) + c
+            return vm_fit
+        
+        popt, pcov = curve_fit(func, t, vm, p0=guesses) # Estimate starting values for better convergence
+        plt.plot(t,vm)
+        plt.plot(t,func(t,*popt))
+        #print(popt)
+        amplitude = popt[0]*pq.mV
+        tau = popt[1]*pq.ms
+        y0 = popt[2]*pq.mV
+        return amplitude,tau,y0
 
 
 class InputResistanceTest(TestPulseTest):
