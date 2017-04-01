@@ -9,7 +9,7 @@ import sciunit
 #only appropriate for development.
 thisnu = str(os.getcwd())+'/../..'
 sys.path.insert(0,thisnu)
-print(sys.path)
+#print(sys.path)
 
 import neuronunit
 from neuronunit import aibs
@@ -17,7 +17,13 @@ import pdb
 import pickle
 from scoop import futures
 from scoop import utils
-IZHIKEVICH_PATH = os.getcwd()+str('/NeuroML2') # Replace this the path to your
+try:
+    IZHIKEVICH_PATH = os.path.join(os.getcwd(),'NeuroML2') 
+    assert os.path.isdir(IZHIKEVICH_PATH)
+except AssertionError:
+    # Replace this with the path to your Izhikevich NeuroML2 directory.
+    IZHIKEVICH_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)),'NeuroML2')
+
 LEMS_MODEL_PATH = IZHIKEVICH_PATH+str('/LEMS_2007One.xml')
 import time
 from pyneuroml import pynml

@@ -20,7 +20,7 @@ from . import backends
 class LEMSModel(sciunit.Model, cap.Runnable):
     """A generic LEMS model"""
 
-    def __init__(self,LEMS_file_path=None, name=None, backend=None, attrs={}):
+    def __init__(self, LEMS_file_path=None, name=None, backend=None, attrs={}):
         """
         LEMS_file_path: Path to LEMS file (an xml file).
         name: Optional model name.
