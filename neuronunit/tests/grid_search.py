@@ -202,7 +202,7 @@ def check_fix_range(lookup):
     if len(model.attrs)==0:
         print('bug id')
         print(model.h.psection())
-        #import pdb; pdb.set_trace()
+
 
     if len(sub)!=0 and len(supra)!=0:
         if sub.max()>supra.min():
@@ -210,6 +210,7 @@ def check_fix_range(lookup):
             print('bizare model attrs')
             print(model.attrs)
             print(model.h.psection())
+            import pdb; pdb.set_trace()
             #import pdb; pdb.set_trace()
                  # concatenate
     if len(sub) and len(supra):
@@ -250,25 +251,12 @@ def check_current(ampl,vm):
 
         current={'injected_square_current':current}
         vm.run_number+=1
-        #model = shared.getConst('model')
-        #model = shared.model
         model.load_model()
-        print(type(model), 'type operating on model')
         model.update_run_params(vm.attrs)
         model.attrs = vm.attrs
         if len(model.attrs)==0:
-            #print(model.h.psection())
             model.update_run_params(vm.attrs)
-            print('model attrs from cpu:')
-            print(model.attrs, ' model.attrs')
-            print(vm.attrs, ' vm.attrs')
-            print(model.h.psection())
-            print(uc, ' current')
-            print('closer bug id 1')
-            #import pdb; pdb.set_trace()
 
-        #import pdb; pdb.set_trace()
-        model.update_run_params(vm.attrs)
         model.inject_square_current(current)
 
         vm.previous=ampl
@@ -276,10 +264,9 @@ def check_current(ampl,vm):
         print(n_spikes, 'n spikes')
         if n_spikes==1:
             vm.rheobase=ampl
-            print(vm.attrs)
-            print(model.attrs)
+            print(type(vm.rheobase))
+            assert vm.rheobase!=None
             print('hit')
-        verbose=False
 
         if verbose:
             print("Injected %s current and got %d spikes" % \
@@ -349,8 +336,8 @@ def evaluate(individual, guess_value=None):
     vm.attrs=copy.copy(individual.attrs)
     rh_param=(False,guess_value)
 
-    rheobase=searcher(check_current,rh_param,vm)#,guess_value)
-    return rheobase
+    vm.rheobase=searcher(check_current,rh_param,vm)#,guess_value)
+    return vm.rheobase
 
 
 
@@ -383,7 +370,7 @@ if __name__ == "__main__":
 
 
 
-    steps = np.linspace(40,80,7.0)
+    steps = np.linspace(50,150,7.0)
     steps_current = [ i*pq.pA for i in steps ]
     #model.attrs=mean_vm.attrs
     model.update_run_params(mean_vm.attrs)
@@ -395,6 +382,8 @@ if __name__ == "__main__":
 
     list_of_models=list(map(model2map,iter_list))
 
+    for li in list_of_models:
+        print(li.rheobase, li.attributes)
 
     rhstorage=list(map(evaluate,list_of_models,repeat(rh_value)))
 
