@@ -118,15 +118,25 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
     assert n_spikes == 1
     if sane == True and n_spikes == 1:
         for i in [4,5,6]:
-            tests[i].params['injected_square_current']['amplitude']=value*pq.pA
+            get_neab.suite.tests[i].params['injected_square_current']['amplitude']=value*pq.pA
         get_neab.suite.tests[0].prediction={}
         score = get_neab.suite.tests[0].prediction['value']=value*pq.pA
         score = get_neab.suite.judge(model)#passing in model, changes model
-        pdb.set_trace()
+        import neuronunit.capabilities as cap
+        spikes_numbers=[]
+        plt.clf()
+        plt.hold(True)
+        for k,v in score.related_data.items():
+            spikes_numbers.append(cap.spike_functions.get_spike_train(((v.values[0]['vm']))))
+            plt.plot(model.results['t'],v.values[0]['vm'])
+        plt.savefig(str(model.name)+'.png')
+        plt.clf()
+
         n_spikes = model.get_spike_count()
-        print(n_spikes, "number of spikes, sinister \n\n\n\n")
-        import pickle
-        pickle.dump(score, open( "save.p", "wb" ) )
+        #assert n_spikes == 1
+        #print(n_spikes, "number of spikes, sinister \n\n\n\n")
+        #import pickle
+        #pickle.dump(score, open( "save.p", "wb" ) )
 
 
         model.run_number+=1
@@ -335,7 +345,7 @@ if __name__ == "__main__":
     import scoop
     import model_parameters as modelp
     iter_list=[ (i,j,k,l) for i in modelp.model_params['a'] for j in modelp.model_params['b'] for k in modelp.model_params['vr'] for l in modelp.model_params['vpeak'] ]
-    iter_list[0:1]
+    #iter_list=iter_list[0:1]
     mean_vm=VirtualModel()
     guess_attrs = modelp.guess_attrs
     paramslist=['a','b','vr','vpeak']
@@ -413,7 +423,7 @@ if __name__ == "__main__":
 
 
     matrix3=[]
-    for x,y in matrix:
+    for x,y, rheobase in matrix:
         for i in x:
             matrix2=[]
             for j in i:
@@ -424,8 +434,9 @@ if __name__ == "__main__":
     storagei = [ np.sum(i) for i in matrix3 ]
     storagesmin=np.where(storagei==np.min(storagei))
     storagesmax=np.where(storagei==np.max(storagei))
-    score0,attrs0=matrix[storagesmin[0]]
-    score1,attrs1=matrix[storagesmin[1]]
+    '''
+    score0,attrs0,rheobase = matrix[storagesmin[0]]
+    score1,attrs1,rheobase = matrix[storagesmin[1]]
 
 
 
@@ -447,7 +458,7 @@ if __name__ == "__main__":
     #    return 10.0
 
 
-    '''
+
     import pdb; pdb.set_trace()
     import matplotlib as plt
     for i,s in enumerate(score_typev[np.shape(storagesmin)[0]]):
