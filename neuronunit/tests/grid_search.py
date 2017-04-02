@@ -117,10 +117,12 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
     print(n_spikes)
     assert n_spikes == 1
     if sane == True and n_spikes == 1:
+        for i in [4,5,6]:
+            tests[i].params['injected_square_current']['amplitude']=value*pq.pA
         get_neab.suite.tests[0].prediction={}
         score = get_neab.suite.tests[0].prediction['value']=value*pq.pA
         score = get_neab.suite.judge(model)#passing in model, changes model
-
+        pdb.set_trace()
         n_spikes = model.get_spike_count()
         print(n_spikes, "number of spikes, sinister \n\n\n\n")
         import pickle
@@ -333,8 +335,9 @@ if __name__ == "__main__":
     import scoop
     import model_parameters as modelp
     iter_list=[ (i,j,k,l) for i in modelp.model_params['a'] for j in modelp.model_params['b'] for k in modelp.model_params['vr'] for l in modelp.model_params['vpeak'] ]
+    iter_list[0:1]
     mean_vm=VirtualModel()
-    guess_attrs = modelp.guess_attrs#.append(np.mean( [ i for i in modelp.a ]))
+    guess_attrs = modelp.guess_attrs
     paramslist=['a','b','vr','vpeak']
     for i,value in enumerate( guess_attrs ):
         print(value)
