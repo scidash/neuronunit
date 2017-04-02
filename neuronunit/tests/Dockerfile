@@ -73,7 +73,6 @@ ADD . $HOME/neuronunit
 WORKDIR $HOME/neuronunit/neuronunit/tests/NeuroML2
 RUN nrnivmodl
 RUN ls LEMS_2007One.xml
-WORKDIR $HOME/neuronunit/neuronunit/tests/
-RUN ls *.pickle
 WORKDIR $HOME/neuronunit
-ENTRYPOINT python -m scoop neuronunit.tests.nsga
+RUN ls neuronunit/tests/*.pickle
+ENTRYPOINT python -m scoop neuronunit/tests/nsga.py
