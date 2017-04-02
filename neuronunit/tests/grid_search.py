@@ -64,6 +64,9 @@ def model2map(iter_arg):#This method must be pickle-able for scoop to work.
 
 
 def pop2map(iter_arg):
+    '''
+    Just a sanity check an otherwise impotent method
+    '''
     vm=VirtualModel()
     attrs={}
     attrs['//izhikevich2007Cell']={}
@@ -75,21 +78,9 @@ def pop2map(iter_arg):
     attrs['//izhikevich2007Cell']['vr']=k
     attrs['//izhikevich2007Cell']['vpeak']=l
     vm.attrs=attrs
-    print(iter_arg)
-    #iter_arg,value=iter_
-    #assert iter_arg.attrs!=None
     model.load_model()
-    import pdb
-    print(iter_arg)
-    #print(value)
-    #print(value*pq.pA,model)
     model.update_run_params(attrs)
     model.update_run_params(model.attrs)
-    print('sinister bug: ')
-    print('the HOC/NEURON representation, which is all that matters: ')
-    print(model.h.psection())
-    print(model.attrs, ' the model attrs as the model sees it self')
-    #print(iter_arg.attrs,' the argument that was fed to model')
     assert model.attrs==attrs==vm.attrs
     return (model, vm)
 
@@ -98,23 +89,13 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
     Inputs an iterable list, a neuron unit test object suite of neuron model
     tests of emperical data reproducibility.
     '''
-    print(iter_)
     iter_arg,value=iter_
     assert iter_arg.attrs!=None
     model.load_model()
     import pdb
-    print(iter_arg)
-    print(value)
-    print(value*pq.pA,model)
     model.update_run_params(iter_arg.attrs)
     model.update_run_params(model.attrs)
-    print('sinister bug: ')
-    print('the HOC/NEURON representation, which is all that matters: ')
-    print(model.h.psection())
-    print(model.attrs, ' the model attrs as the model sees it self')
-    print(iter_arg.attrs,' the argument that was fed to model')
     assert model.attrs==iter_arg.attrs
-    #pdb.set_trace()
 
     import quantities as qt
     import os
@@ -125,7 +106,17 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
 
     sane = get_neab.suite.tests[3].sanity_check(value*pq.pA,model)
 
-    if sane == True:
+    uc = {'amplitude':value}
+    current = params.copy()['injected_square_current']
+    current.update(uc)
+    current = {'injected_square_current':current}
+    if len(model.attrs) == 0:
+        model.update_run_params(vm.attrs)
+    model.inject_square_current(current)
+    n_spikes = model.get_spike_count()
+    print(n_spikes)
+    assert n_spikes == 1
+    if sane == True and n_spikes == 1:
         get_neab.suite.tests[0].prediction={}
         score = get_neab.suite.tests[0].prediction['value']=value*pq.pA
         score = get_neab.suite.judge(model)#passing in model, changes model
@@ -183,15 +174,12 @@ def check_fix_range(vms):
     sub=[]
     supra=[]
     vms.rheobase=0.0
-    print(len(vms.lookup), 'len vms')
     for k,v in vms.lookup.items():
         if v==1:
             #A logical flag is returned to indicate that rheobase was found.
             vms.rheobase=float(k)
             vms.steps=0.0
-
             return (True,vms)
-
         elif v==0:
             sub.append(k)
         elif v>0:
@@ -207,6 +195,7 @@ def check_fix_range(vms):
             print(model.attrs)
             print(model.h.psection())
             import pdb; pdb.set_trace()
+
     if len(sub) and len(supra):
         everything=np.concatenate((sub,supra))
 
@@ -239,32 +228,29 @@ def check_current(ampl,vm):
     if float(ampl) not in vm.lookup or len(vm.lookup)==0:
         current = params.copy()['injected_square_current']
 
-        uc={'amplitude':ampl}
+        uc = {'amplitude':ampl}
         current.update(uc)
-        current={'injected_square_current':current}
-        vm.run_number+=1
+        current = {'injected_square_current':current}
+        vm.run_number += 1
         model.update_run_params(vm.attrs)
         model.attrs = vm.attrs
-        if len(model.attrs)==0:
+        if len(model.attrs) == 0:
             model.update_run_params(vm.attrs)
         model.inject_square_current(current)
         vm.previous=ampl
         n_spikes = model.get_spike_count()
-        if n_spikes==1:
+        if n_spikes == 1:
             model.rheobase=copy.copy(float(ampl))
             vm.rheobase=copy.copy(float(ampl))
-            assert vm.rheobase!=None
-            assert model.rheobase!=None
-            print('hit')
+            assert vm.rheobase != None
+            assert model.rheobase != None
+        verbose = False
         if verbose:
             print("Injected %s current and got %d spikes" % \
                     (ampl,n_spikes))
         vm.lookup[float(ampl)] = n_spikes
-        print(len(vm.lookup), ' length of lookup ')
         return vm
-
     if float(ampl) in vm.lookup:
-
         return vm
 
 
@@ -280,15 +266,12 @@ def searcher(f,rh_param,vms):
     lookuplist=[]
     cnt=0
     boolean=False
-    import pdb
     while boolean==False and cnt<5:
 
         if len(model.attrs)==0:
 
             model.attrs = vms.attrs
             model.update_run_params(vms.attrs)
-            print('this should not happen')
-            #pdb.set_trace()
 
         if type(rh_param[1]) == float:
             #if its a single value educated guess
@@ -302,7 +285,7 @@ def searcher(f,rh_param,vms):
             if boolean:
                 return vms
             else:
-                #else search returned false
+                #else search returned none type, effectively false
                 rh_param = (None,None)
 
         elif len(vms.lookup)==0 and type(rh_param[1])!=float:
@@ -335,13 +318,12 @@ def searcher(f,rh_param,vms):
 
 def evaluate(individual, guess_value=None):
     #This method must be pickle-able for scoop to work.
-    vm=VirtualModel()
+    print(individual.attrs)
+    vm= VirtualModel()
     import copy
-    vm.attrs=copy.copy(individual.attrs)
-    rh_param=(False,guess_value)
-    vm=searcher(check_current,rh_param,vm)
-    print(type(vm.rheobase))
-    print(vm)
+    vm.attrs = copy.copy(individual.attrs)
+    rh_param = (False,guess_value)
+    vm = searcher(check_current,rh_param,vm)
     return vm
 
 
@@ -374,11 +356,13 @@ if __name__ == "__main__":
     pre_rh_value=searcher(check_current,rh_param,mean_vm)
     rh_value=pre_rh_value.rheobase
     list_of_models=list(map(model2map,iter_list))
+    print('gets here c')
 
     for li in list_of_models:
         print(li.rheobase, li.attrs)
 
     rhstorage=list(map(evaluate,list_of_models,repeat(rh_value)))
+    print('gets here b')
 
     for x in rhstorage:
         x=x.rheobase
@@ -388,9 +372,11 @@ if __name__ == "__main__":
             steps_current = [ i*pq.pA for i in steps ]
             rh_param=(False,steps_current)
             rh_value=searcher(check_current,rh_param,vm_spot)
-    import pdb
-    pdb.set_trace()
+
+    rhstorage2 = [i.rheobase for i in rhstorage]
+    rhstorage=rhstorage2
     iter_ = zip(list_of_models,rhstorage)
+    print('gets here a')
     score_matrixt=list(futures.map(func2map,iter_))#list_of_models,rhstorage))
 
     import pickle
