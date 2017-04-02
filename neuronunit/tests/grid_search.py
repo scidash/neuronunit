@@ -132,11 +132,7 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
         plt.savefig(str(model.name)+'.png')
         plt.clf()
 
-        n_spikes = model.get_spike_count()
-        #assert n_spikes == 1
-        #print(n_spikes, "number of spikes, sinister \n\n\n\n")
-        #import pickle
-        #pickle.dump(score, open( "save.p", "wb" ) )
+        #n_spikes = model.get_spike_count()
 
 
         model.run_number+=1
@@ -315,8 +311,7 @@ def searcher(f,rh_param,vms):
         else:
             #Finally if a parallel vector of samples failed zoom into the
             #smallest relevant interval and re-sample at a higher resolution
-            if boolean:
-                return vms
+            
             returned_list=[]
             returned_list = list(futures.map(check_current,vms.steps,repeat(vms)))
             d={}
