@@ -75,4 +75,5 @@ RUN nrnivmodl
 RUN ls LEMS_2007One.xml
 WORKDIR $HOME/neuronunit/neuronunit/tests/
 RUN ls *.pickle
-ENTRYPOINT python -m scoop nsga.py
+WORKDIR $HOME/neuronunit
+ENTRYPOINT python -m scoop neuronunit.tests.nsga
