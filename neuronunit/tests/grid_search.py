@@ -187,13 +187,11 @@ def check_fix_range(vms):
     for k,v in vms.lookup.items():
         if v==1:
             #A logical flag is returned to indicate that rheobase was found.
-            print('strangely survives this return statement ')
-            print(True,k)
             vms.rheobase=float(k)
-            return (True,vms.rheobase)
             vms.steps=0.0
 
-            return vms
+            return (True,vms)
+
         elif v==0:
             sub.append(k)
         elif v>0:
@@ -230,7 +228,6 @@ def check_fix_range(vms):
         steps = [ i*pq.pA for i in steps2 ]
 
     vms.steps=steps
-    #print('gets here ',False,steps)
     return (False,vms)
 
 def check_current(ampl,vm):
@@ -288,38 +285,41 @@ def searcher(f,rh_param,vms):
 
         if len(model.attrs)==0:
 
-            model.attrs=vms.attrs
+            model.attrs = vms.attrs
             model.update_run_params(vms.attrs)
+            print('this should not happen')
+            #pdb.set_trace()
 
-        if type(rh_param[1])==float:
-            if model.rheobase==None:
-                model.rheobase=rh_param[1]
+        if type(rh_param[1]) == float:
+            #if its a single value educated guess
+            if model.rheobase == None:
+                model.rheobase = rh_param[1]
             vms=check_current(model.rheobase,vms)
 
             model.update_run_params(vms.attrs)
-            boolean,vms=check_fix_range(vms)
-
+            boolean,vms = check_fix_range(vms)
 
             if boolean:
                 return vms
+            else:
+                #else search returned false
+                rh_param = (None,None)
+
         elif len(vms.lookup)==0 and type(rh_param[1])!=float:
-            #if len(vms.lookup)>0:
-            #    rh_param[1]=vms.steps
+            #If the educated guess failed, or if the first attempt is parallel vector of samples
             returned_list=[]
             returned_list = list(futures.map(check_current,rh_param[1],repeat(vms)))
             d={}
-            #pdb.set_trace()
             assert vms!=None
             for v in returned_list:
-                #print(v.lookup)
-                #pdb.set_trace()
                 vms.lookup.update(v.lookup)
             boolean,vms=check_fix_range(vms)
-
             assert vms!=None
             if boolean:
                 return vms
         else:
+            #Finally if a parallel vector of samples failed zoom into the
+            #smallest relevant interval and re-sample at a higher resolution
             if boolean:
                 return vms
             returned_list=[]
@@ -327,14 +327,10 @@ def searcher(f,rh_param,vms):
             d={}
             for v in returned_list:
                 vms.lookup.update(v.lookup)
-
             boolean,vms=check_fix_range(vms)
             if boolean:
                 return vms
-
-
         cnt+=1
-
     return vms
 
 def evaluate(individual, guess_value=None):
@@ -343,26 +339,19 @@ def evaluate(individual, guess_value=None):
     import copy
     vm.attrs=copy.copy(individual.attrs)
     rh_param=(False,guess_value)
-
-    vm.rheobase=searcher(check_current,rh_param,vm)#,guess_value)
-    return vm.rheobase
+    vm=searcher(check_current,rh_param,vm)
+    print(type(vm.rheobase))
+    print(vm)
+    return vm
 
 
 
 if __name__ == "__main__":
     import pdb
     import scoop
-
-
-
     import model_parameters as modelp
     iter_list=[ (i,j,k,l) for i in modelp.model_params['a'] for j in modelp.model_params['b'] for k in modelp.model_params['vr'] for l in modelp.model_params['vpeak'] ]
     mean_vm=VirtualModel()
-
-    #list_of_models=list(map(pop2map,iter_list))
-
-    #for li, il in list_of_models:
-    #    print(li.attrs, il.attrs)
     guess_attrs = modelp.guess_attrs#.append(np.mean( [ i for i in modelp.a ]))
     paramslist=['a','b','vr','vpeak']
     for i,value in enumerate( guess_attrs ):
@@ -374,21 +363,16 @@ if __name__ == "__main__":
         else:
             attrs['//izhikevich2007Cell'][x]=value
     mean_vm.attrs=attrs
-    import pdb
-
-
-
 
     steps = np.linspace(50,150,7.0)
     steps_current = [ i*pq.pA for i in steps ]
-    #model.attrs=mean_vm.attrs
     model.update_run_params(mean_vm.attrs)
 
 
 
     rh_param=(False,steps_current)
-    rh_value=searcher(check_current,rh_param,mean_vm)
-
+    pre_rh_value=searcher(check_current,rh_param,mean_vm)
+    rh_value=pre_rh_value.rheobase
     list_of_models=list(map(model2map,iter_list))
 
     for li in list_of_models:
@@ -397,11 +381,10 @@ if __name__ == "__main__":
     rhstorage=list(map(evaluate,list_of_models,repeat(rh_value)))
 
     for x in rhstorage:
+        x=x.rheobase
         if x==False:
             vm_spot=VirtualModel()
-            #pdb.set_trace()
-            #vm_spot=x.attrs
-            steps = np.linspace(40,80,7.0)
+            steps = np.linspace(40,250,7.0)
             steps_current = [ i*pq.pA for i in steps ]
             rh_param=(False,steps_current)
             rh_value=searcher(check_current,rh_param,vm_spot)
