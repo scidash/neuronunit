@@ -112,7 +112,7 @@ ARG HEAD=1
 #RUN echo "down load anyway please"
 #RUN mkdir -p sciunit
 WORKDIR sciunit
-RUN git clone -b dev http://github.com/scidash/sciunit 
+RUN git clone -b dev http://github.com/scidash/sciunit
 #RUN tar -xvzf sciunit.tar.gz -C sciunit --strip-components=1
 WORKDIR sciunit
 RUN python setup.py install
@@ -120,4 +120,4 @@ RUN python test_all.py
 RUN git pull origin dev
 RUN python setup.py install
 WORKDIR /home/mnt
-#ENTRYPOINT python -m scoop nsga.py
+ENTRYPOINT python -m scoop grid_search.py
