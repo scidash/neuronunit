@@ -29,7 +29,10 @@ from deap import tools
 from scoop import futures
 import scoop
 
-from . import get_neab
+try:
+    import get_neab
+except ImportError:
+    from neuronunit.tests import get_neab
 
 import quantities as qt
 import os
@@ -65,7 +68,10 @@ class Individual(object):
         self.rheobase=None
 toolbox = base.Toolbox()
 
-from . import model_parameters as params
+try:
+    import model_parameters
+except ImportError:
+    from neuronunit.tests import model_parameters as params
 
 vr = np.linspace(-75.0,-50.0,1000)
 a = np.linspace(0.015,0.045,1000)
