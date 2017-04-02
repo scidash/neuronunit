@@ -9,9 +9,12 @@ RUN apt-get install -y gvfs-bin
 RUN apt-get install -y libxss1
 RUN apt-get install -y curl apt-utils
 RUN apt-get install -y python3-setuptools
+RUN chown -R $NB_USER $HOME
+RUN chown -R $NB_USER /opt/conda/lib/python3.5/site-packages/
 
 USER $NB_USER
 WORKDIR $HOME
+
 RUN easy_install gevent
 RUN easy_install greenlet
 RUN git clone https://github.com/soravux/scoop
@@ -40,11 +43,6 @@ RUN ipython profile create default
 #un comment the following line to test ipcluster during build.
 #RUN ipcluster start --profile=chase --debug &
 #https://github.com/russelljjarvis/neuronunit.git
-
-USER root
-RUN chown -R jovyan $HOME
-RUN chown -R jovyan /opt/conda/lib/python3.5/site-packages/
-USER $NB_USER
 
 WORKDIR $HOME
 
