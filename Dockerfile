@@ -3,13 +3,10 @@
 
 FROM scidash/neuron-mpi-neuroml
 
-USER root
-RUN chown -R $HOME . 
-USER $NB_USER
-
 # Make neuronunit source directory in Travis image visible to Docker.
+USER root
 ADD . $HOME/neuronunit
-RUN chown -R $HOME/neuronunit . 
+RUN chown -R $NB_USER $HOME 
 WORKDIR $HOME/neuronunit 
 
 # Install neuronunit and dependencies.
