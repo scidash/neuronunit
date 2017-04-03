@@ -123,21 +123,26 @@ import deap as deap
 
 toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
 
-from neuronunit.models import backends
-from neuronunit.models.reduced import ReducedModel
-model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
-model=model.load_model()
+#from neuronunit.models import backends
+#from neuronunit.models.reduced import ReducedModel
+#model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
+#model.load_model()
+#model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
+#model.rheobase=None
+
 import grid_search2 as gs
+model=gs.model
 
 
-def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
+print(model)
+def evaluate(individual,iter_):#This method must be pickle-able for scoop to work.
     '''
     Assumes rheobase for each individual virtual model object (vms) has already been found
     there should be a check for vms.rheobase, and if not then error.
     Inputs a gene and a virtual model object.
     outputs are error components.
     '''
-
+    vms,rheobase=iter_
 
     model.name=''
     for i, p in enumerate(param):
@@ -428,67 +433,6 @@ def main():
     mean_vm.attrs=attrs
     import copy
 
-    '''
-    def check_repeat(test_current,unpack,vm):
-
-        #inputs:
-        #test_current, a function,
-        #unpack, a dictionary of previous search values:
-        #vm a virtual model object.
-        #outputs: a tuple consisting of a boolean flag and
-        #the eecond element is a dictionary containing the
-        #last range searched such that the latest range searched
-        #can be used to seed future searches.
-
-        from itertools import repeat
-        d={}
-        listtodic=list(futures.map(test_current,unpack,repeat(vm)))
-        for li in listtodic:
-            d.extend(li)
-        unpack=check_fix_range(d)
-        d=None
-        boolean=False
-        new_ranges=[]
-        boolean=unpack[0]
-        guess_value = unpack[1]
-        if True == boolean:
-            vm.rheobase = guess_value
-            return (True,guess_value)
-        else:
-            return (False,guess_value)
-
-    from itertools import repeat
-
-
-
-    def searcher(f,rh_param,vms):
-
-        #ultimately an attempt to capture the essence a lot of repeatative code below.
-        #This is not yet used, but it is intended for future use.
-        #Its intended to replace the less general searcher function
-
-        if rh_param[0]==True:
-            return rh_param[1]
-        cnt=0
-        while rh_param[0]==False and cnt<4:
-            if len(vms.lookup)==0:
-                returned_list1 = list(futures.map(test_current,rh_param[1],repeat(vms)))
-                d={}
-                for r in returned_list1:
-                    d.update(r)
-            else:
-                rh_param=check_fix_range(d)
-                if rh_param[0]==True:
-                    return rh_param[1]
-                returned_list2 = list(futures.map(test_current,rh_param[1],repeat(vms)))
-                d={}
-                for r in returned_list2:
-                    d.update(r)
-            cnt+=1
-        return False
-    '''
-
-
     #The above code between 492-544
     # was a lot of code, but all it was really doing was establishing a rheobase value in a fast way,
     #a parallel way, and a reliable way.
@@ -503,6 +447,7 @@ def main():
                 attrs['//izhikevich2007Cell'][p]=value
         vm=VirtualModel()
         vm.attrs=attrs
+        print(vm.attrs, 'vm attributes')
         #assert ind.attrs==vm.attrs
         return vm
 
@@ -511,30 +456,23 @@ def main():
     steps_current = [ i*pq.pA for i in steps ]
     rh_param=(False,steps_current)
     searcher=gs.searcher
+    check_current=gs.check_current
     pre_rh_value=searcher(check_current,rh_param,mean_vm)
     rh_value=pre_rh_value.rheobase
-    pop=list(map(model2map,iter_list))
-    print('gets here c')
+    #print(rh_value, 'rheobase value')
+    for ind in pop:
+        print(ind)
+    vmpop=list(map(individual_to_vm,pop))
+    #print('gets here c')
 
-    for li in list_of_models:
-        print(li.rheobase, li.attrs)
+    #for li in list_of_models:
+    #    print(li.rheobase, li.attrs)
 
-    rhstorage=list(map(evaluate,pop,repeat(rh_value)))
-    print('gets here b')
-
-    for x in rhstorage:
-        x=x.rheobase
-        if x==False:
-            vm_spot=VirtualModel()
-            steps = np.linspace(40,250,7.0)
-            steps_current = [ i*pq.pA for i in steps ]
-            rh_param=(False,steps_current)
-            rh_value=searcher(check_current,rh_param,vm_spot)
+    rhstorage=list(map(gs.evaluate,vmpop,repeat(rh_value)))
 
     rhstorage2 = [i.rheobase for i in rhstorage]
     rhstorage=rhstorage2
-    iter_ = zip(list_of_models,rhstorage)
-    print('gets here a')
+    iter_ = zip(pop,rhstorage)
 
 
 
@@ -542,41 +480,16 @@ def main():
     #This is not an exhaustive search that results in found all rheobase values
     #It is just a trying out an educated guess on each individual in the whole population as a first pass.
     invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
-    vmlist=list(map(individual_to_vm,invalid_ind))
-    #guess_value=searcher(test_current,mean_vm)
-    steps = np.linspace(40,80,7.0)
-    steps_current = [ i*pq.pA for i in steps ]
-    model.attrs=mean_vm.attrs
-    rh_param=(False,steps_current)
-    rh_value=searcher(test_current,rh_param,mean_vm)
 
-    list_of_hits_misses=list(futures.map(test_current,repeat(rh_value),vmlist))
-
-    #For each individual in the new GA population.
-    #Create Virtual Models that are readily pickle-able.
-    #for the list of invalid indexs
-    assert len(invalid_ind)==len(vmlist)
-
-    for i,j in enumerate(invalid_ind):
-        if vmlist[i].rheobase==None:
-            d=test_current(rh_value,vmlist[i])
-            if 1 not in d.values():
-                unpack=check_fix_range(d)
-                unpack=check_repeat(test_current,unpack[1],vmlist[i])
-                if unpack[0]==True:
-                    rh_value = unpack[1]
-                else:
-                    rh_value = searcher(test_current,unpack,vmlist[i])
-
-    for i in vmlist:
-        assert i.rheobase!=None
-
-    assert len(invalid_ind)==len(vmlist)
-
-    fitnesses = list(toolbox.map(toolbox.evaluate, invalid_ind, vmlist))
+    fitnesses = list(toolbox.map(toolbox.evaluate, invalid_ind, iter_))
     assert len(fitnesses)==len(invalid_ind)
+
+    invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
+    vmlist=list(map(individual_to_vm,invalid_ind))
+
     for ind, fit in zip(invalid_ind, fitnesses):
         ind.fitness.values = fit
+
 
 
     # This is just to assign the crowding distance to the individuals
@@ -666,7 +579,7 @@ if __name__ == "__main__":
     import time
     start_time=time.time()
     whole_initialisation=start_time-init_start
-
+    model=gs.model
     pop, stats = main()
 
     finish_time=time.time()
