@@ -127,17 +127,8 @@ import deap as deap
 
 toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
 
-#from neuronunit.models import backends
-#from neuronunit.models.reduced import ReducedModel
-#model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
-#model.load_model()
-#model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
-#model.rheobase=None
-
 import grid_search as gs
 model=gs.model
-#model.cell_name
-
 
 print(model)
 def evaluate(individual,iter_):#This method must be pickle-able for scoop to work.
@@ -154,12 +145,6 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
     outputs are error components.
     '''
 
-    '''
-    DELAY = 100.0*pq.ms
-    DURATION = 1000.0*pq.ms
-    params = {'injected_square_current':
-                {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
-    '''
     vms,rheobase=iter_
     print(vms,rheobase)
     print(vms.attrs)
@@ -172,7 +157,7 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
     #model=gs.model()
     print(type(model))
     print(vms.rheobase,rheobase, ' are these the same')
-    uc = {'amplitude':vms.rheobase}
+    uc = {'amplitude':rheobase}
     current = params.copy()['injected_square_current']
     current.update(uc)
     current = {'injected_square_current':current}
@@ -181,8 +166,6 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
     #model.load_model()
     model.update_run_params(vms.attrs)
 
-    #if len(model.attrs) == 0:
-    #    model.update_run_params(vms.attrs)
     print(model)
     model.inject_square_current(current)
     n_spikes = model.get_spike_count()
@@ -195,34 +178,23 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
 
     print(sane)
     if sane == True and (n_spikes == 1 or n_spikes == 0):
-
-        individual.params=[]
-        for i in attrs['//izhikevich2007Cell'].values():
-            if hasattr(individual,'params'):
-                individual.params.append(i)
+        for i in [4,5,6]:
+            print(i, 'a')
+            get_neab.suite.tests[i].params['injected_square_current']['amplitude']=vms.rheobase*pq.pA
         get_neab.suite.tests[0].prediction={}
-        get_neab.suite.tests[0].prediction['value']=0
-        assert vms.rheobase!=None
-        get_neab.suite.tests[0].prediction['value']=vms.rheobase*qt.pA
-        #Reset the model again.
-        model.load_model()
+        score = get_neab.suite.tests[0].prediction['value']=vms.rheobase*pq.pA
         score = get_neab.suite.judge(model)#passing in model, changes model
-        if sane == True and n_spikes == 1:
-            for i in [4,5,6]:
-                get_neab.suite.tests[i].params['injected_square_current']['amplitude']=value*pq.pA
-            get_neab.suite.tests[0].prediction={}
-            score = get_neab.suite.tests[0].prediction['value']=value*pq.pA
-            score = get_neab.suite.judge(model)#passing in model, changes model
-            import neuronunit.capabilities as cap
-            spikes_numbers=[]
-            plt.clf()
-            plt.hold(True)
-            for k,v in score.related_data.items():
-                spikes_numbers.append(cap.spike_functions.get_spike_train(((v.values[0]['vm']))))
-                plt.plot(model.results['t'],v.values[0]['vm'])
-            plt.savefig(str(model.name)+'.png')
-            plt.clf()
-
+        import neuronunit.capabilities as cap
+        spikes_numbers=[]
+        plt.clf()
+        plt.hold(True)
+        print('b')
+        for k,v in score.related_data.items():
+            spikes_numbers.append(cap.spike_functions.get_spike_train(((v.values[0]['vm']))))
+            plt.plot(model.results['t'],v.values[0]['vm'])
+        plt.savefig(str(model.name)+'.png')
+        plt.clf()
+        print('c')
         model.run_number+=1
         individual.results=model.results
         vms.results=model.results
@@ -291,125 +263,6 @@ class VirtualModel:
         self.score=None
 
 
-
-
-def test_current(ampl,vm):
-    '''
-    Inputs are an amplitude to test and a virtual model
-    output is an virtual model with an updated dictionary.
-    '''
-    import copy
-    if float(ampl) not in vm.lookup or len(vm.lookup)==0:
-        current = params.copy()['injected_square_current']
-        uc={'amplitude':ampl}
-        current.update(uc)
-
-        current={'injected_square_current':current}
-        vm.run_number+=1
-        model.update_run_params(vm.attrs)
-
-        model.load_model()
-        #print('got here 1')
-        #print(type(model.h.v_v_of0))
-        model.inject_square_current(current)
-        vm.previous=ampl
-        n_spikes = model.get_spike_count()
-        if n_spikes==1:
-            vm.rheobase=ampl
-            print(vm.attrs)
-            print(model.attrs)
-            print('hit')
-        verbose=False
-        if verbose:
-            print("Injected %s current and got %d spikes" % \
-                    (ampl,n_spikes))
-        vm.lookup[float(ampl)] = n_spikes
-        return vm.lookup
-        #return copy.copy(vm.lookup)
-    if float(ampl) in vm.lookup:
-        return vm.lookup
-small=None
-from scoop import futures
-#from neuronunit.models import backends
-AMPL = 0.0*pq.pA
-DELAY = 100.0*pq.ms
-DURATION = 1000.0*pq.ms
-from scipy.optimize import curve_fit
-import sciunit
-import sciunit.scores as scores
-import neuronunit.capabilities as cap
-
-required_capabilities = (cap.ReceivesSquareCurrent,
-                         cap.ProducesSpikes)
-params = {'injected_square_current':
-            {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
-
-name = "Rheobase test"
-description = ("A test of the rheobase, i.e. the minimum injected current "
-               "needed to evoke at least one spike.")
-
-score_type = scores.RatioScore
-guess=None
-
-lookup = {} # A lookup table global to the function below.
-verbose=True
-import quantities as pq
-units = pq.pA
-verbose=True
-
-
-def check_fix_range(lookup):
-    '''
-    Inputs: lookup, A dictionary of previous current injection values
-    used to search rheobase
-    Outputs: A boolean to indicate if the correct rheobase current was found
-    and a dictionary containing the range of values used.
-    If rheobase was actually found then rather returning a boolean and a dictionary,
-    instead logical True, and the rheobase current is returned.
-    given a dictionary of rheobase search values, use that
-    dictionary as input for a subsequent search.
-    '''
-    sub=[]
-    supra=[]
-    print(lookup)
-    for k,v in lookup.items():
-        if v==1:
-            #A logical flag is returned to indicate that rheobase was found.
-            return (True,k)
-        elif v==0:
-            sub.append(k)
-        elif v>0:
-            supra.append(k)
-
-    sub=np.array(sub)
-    supra=np.array(supra)
-                 # concatenate
-    if len(sub) and len(supra):
-
-        everything=np.concatenate((sub,supra))
-
-        center = np.linspace(sub.max(),supra.min(),7.0)
-        np.delete(center,np.array(everything))
-        #make sure that element 4 in a seven element vector
-        #is exactly half way between sub.max() and supra.min()
-        center[int(len(center)/2)+1]=(sub.max()+supra.min())/2.0
-        steps = [ i*pq.pA for i in center ]
-
-    elif len(sub):
-        steps2 = np.linspace(sub.max(),2*sub.max(),7.0)
-        np.delete(steps2,np.array(sub))
-        steps = [ i*pq.pA for i in steps2 ]
-
-    elif len(supra):
-        steps2 = np.linspace(-2*(supra.min()),supra.min(),7.0)
-        np.delete(steps2,np.array(supra))
-        steps = [ i*pq.pA for i in steps2 ]
-
-
-    return (False,steps)
-
-
-
 def main():
 
     #random.seed(seed)
@@ -449,11 +302,6 @@ def main():
     mean_vm.attrs=attrs
     import copy
 
-    #The above code between 492-544
-    # was a lot of code, but all it was really doing was establishing a rheobase value in a fast way,
-    #a parallel way, and a reliable way.
-    #soon this code will be restated in much neater function definitions.
-
     def individual_to_vm(ind):
         for i, p in enumerate(param):
             value = str(ind[i])
@@ -464,7 +312,6 @@ def main():
         vm = VirtualModel()
         vm.attrs = attrs
         return vm
-
 
     steps = np.linspace(50,150,7.0)
     steps_current = [ i*pq.pA for i in steps ]
@@ -479,14 +326,14 @@ def main():
     #This is not an exhaustive search that results in found all rheobase values
     #It is just a trying out an educated guess on each individual in the whole population as a first pass.
     #invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
-    rhstorage=list(futures.map(gs.evaluate,vmpop,repeat(rh_value)))
-    rhstorage2 = [i.rheobase for i in rhstorage]
-    rhstorage=rhstorage2
+    vmpop=list(futures.map(gs.evaluate,vmpop,repeat(rh_value)))
+    rhstorage = [i.rheobase for i in vmpop]
     iter_ = zip(vmpop,rhstorage)
 
+
+    #Now get the fitness of genes:
     fitnesses = list(toolbox.map(toolbox.evaluate, pop, iter_))
     assert len(fitnesses)==len(invalid_ind)
-
     invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
     vmlist=list(futures.map(individual_to_vm,invalid_ind))
 
@@ -509,6 +356,7 @@ def main():
         offspring = [toolbox.clone(ind) for ind in offspring]
 
 
+
         for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
             if random.random() <= CXPB:
                 toolbox.mate(ind1, ind2)
@@ -517,30 +365,22 @@ def main():
             toolbox.mutate(ind2)
             del ind1.fitness.values, ind2.fitness.values
 
+        pop = toolbox.select(offspring, MU)
         # Evaluate the individuals with an invalid fitness
         #invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
         invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
         vmlist=[]
         vmlist=list(map(individual_to_vm,invalid_ind))
 
+        vmpop=list(futures.map(gs.evaluate,vmpop,repeat(rh_value)))
+        rhstorage = [i.rheobase for i in vmpop]
+        iter_ = zip(vmpop,rhstorage)
+        fitnesses = list(toolbox.map(toolbox.evaluate, pop, iter_))
+        assert len(fitnesses)==len(invalid_ind)
+        invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
+        vmlist=list(futures.map(individual_to_vm,invalid_ind))
 
-        #genes have changed so check/search rheobase again.
-        for i,j in enumerate(invalid_ind):
-            if vmlist[i].rheobase!=None:
-                d=test_current(vmlist[i].rheobase,vmlist[i])
-            else:
-                d=test_current(rh_value,vmlist[i])
-            if 1 not in d.values():
-                unpack = check_fix_range(d)
-                unpack = check_repeat(test_current,unpack[1],vmlist[i])
-                if unpack[0] == True:
-                    rh_value = unpack[1]
-                else:
-                    rh_value = searcher(test_current,unpack[1],vmlist[i])
-        for i in vmlist:
-            assert i.rheobase!=None
-
-        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind, vmlist)
+        #fitnesses = toolbox.map(toolbox.evaluate, invalid_ind, vmlist)
 
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
@@ -550,7 +390,7 @@ def main():
         #This way the initial genes keep getting added to each generation.
         #pop = toolbox.select(pop + offspring, MU)
         #This way each generations genes are completely replaced by the result of mating.
-        pop = toolbox.select(offspring, MU)
+
         if gen==NGEN:
             vmlist=[]
             error=evaluate(invalid_ind[0], vmlist[0])
