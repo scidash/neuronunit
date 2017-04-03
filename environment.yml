@@ -9,4 +9,4 @@ dependencies:
   - allensdk==0.12.4
   - pyneuroml>=0.2.3
   - scoop
-  - https://github.com/scidash/sciunit/tarball/dev#egg=sciunit-0.1.5.6
+  - https://github.com/scidash/sciunit/tarball/dev#egg=sciunit
