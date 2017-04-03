@@ -1,16 +1,19 @@
-from pyneuroml import pynml
 import os
+import platform
 import sciunit
 import time
 import pdb
-import neuronunit.capabilities as cap
-import neuronunit.capabilities.spike_functions as sf
+import re
+import copy
+
+from pyneuroml import pynml
+import quantities as pq
 from quantities import ms, mV, nA
 from neo.core import AnalogSignal
 
-import quantities as pq
-import re
-import copy
+import neuronunit.capabilities as cap
+import neuronunit.capabilities.spike_functions as sf
+
 
 class Backend:
     """Base class for simulator backends that implement simulator-specific
@@ -246,8 +249,10 @@ class NEURONBackend(Backend):
             self.ns = NeuronSimulation(tstop=1600, dt=0.0025)
             return self
 
-        if os.path.exists(self.orig_lems_file_path):
-            self=cond_load()
+        architecture = platform.machine()
+        NEURON_file_path = os.path.join(self.orig_lems_file_path,architecture)
+        if os.path.exists(NEURON_file_path):
+            self = cond_load()
         else:
             pynml.run_lems_with_jneuroml_neuron(self.orig_lems_file_path,
                               skip_run=False,
