@@ -143,19 +143,24 @@ class VmTest(sciunit.Test):
         self.params['injected_square_current']['amplitude'] = rheobase
         model.inject_square_current(self.params['injected_square_current'])
         mp = model.results['vm']
-        import math
-        for i in mp:
-            if math.isnan(i):
-                return False
-        import neuronunit.capabilities as cap
-        sws=cap.spike_functions.get_spike_waveforms(model.get_membrane_potential())
-        for i,s in enumerate(sws):
-            s = np.array(s)
-            dvdt = np.diff(s)
-            import math
-            for j in dvdt:
-                if math.isnan(j):
-                    return False
+
+        if type(mp)==list:
+            if len(mp)>1:
+                import math
+                for i in mp:
+                    if math.isnan(i):
+                        return False
+                import neuronunit.capabilities as cap
+                sws=cap.spike_functions.get_spike_waveforms(model.get_membrane_potential())
+                for i,s in enumerate(sws):
+                    s = np.array(s)
+                    dvdt = np.diff(s)
+                    import math
+                    for j in dvdt:
+                        if math.isnan(j):
+                            return False
+        else:
+            return False
         return True
 
 
