@@ -5,6 +5,8 @@ FROM scidash/neuron-mpi-neuroml
 
 # Make neuronunit source directory in Travis image visible to Docker.
 USER root
+ARG MOD_DATE=0
+RUN echo $MOD_DATE
 ADD . $HOME/neuronunit
 RUN chown -R $NB_USER $HOME 
 WORKDIR $HOME/neuronunit 
