@@ -130,7 +130,7 @@ toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
 #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
 #model.rheobase=None
 
-import grid_search2 as gs
+import grid_search as gs
 model=gs.model
 
 
@@ -447,8 +447,6 @@ def main():
                 attrs['//izhikevich2007Cell'][p]=value
         vm=VirtualModel()
         vm.attrs=attrs
-        print(vm.attrs, 'vm attributes')
-        #assert ind.attrs==vm.attrs
         return vm
 
 
@@ -459,29 +457,18 @@ def main():
     check_current=gs.check_current
     pre_rh_value=searcher(check_current,rh_param,mean_vm)
     rh_value=pre_rh_value.rheobase
-    #print(rh_value, 'rheobase value')
-    for ind in pop:
-        print(ind)
     vmpop=list(map(individual_to_vm,pop))
-    #print('gets here c')
-
-    #for li in list_of_models:
-    #    print(li.rheobase, li.attrs)
-
-    rhstorage=list(map(gs.evaluate,vmpop,repeat(rh_value)))
-
-    rhstorage2 = [i.rheobase for i in rhstorage]
-    rhstorage=rhstorage2
-    iter_ = zip(pop,rhstorage)
-
-
 
     #Now attempt to get the rheobase values by first trying the mean rheobase value.
     #This is not an exhaustive search that results in found all rheobase values
     #It is just a trying out an educated guess on each individual in the whole population as a first pass.
-    invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
+    #invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
+    rhstorage=list(map(gs.evaluate,vmpop,repeat(rh_value)))
+    rhstorage2 = [i.rheobase for i in rhstorage]
+    rhstorage=rhstorage2
+    iter_ = zip(pop,rhstorage)
 
-    fitnesses = list(toolbox.map(toolbox.evaluate, invalid_ind, iter_))
+    fitnesses = list(toolbox.map(toolbox.evaluate, pop, iter_))
     assert len(fitnesses)==len(invalid_ind)
 
     invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
