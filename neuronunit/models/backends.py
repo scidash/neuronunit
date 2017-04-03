@@ -123,26 +123,19 @@ class NEURONBackend(Backend):
         def cond_load():
             from neuronunit.tests.NeuroML2 import LEMS_2007One_nrn
             self.invokenrn()
-            #self.reset_h(LEMS_2007One_nrn.neuron)
-            #make sure mechanisms are loaded
             modeldirname=os.path.dirname(self.orig_lems_file_path)
             self.neuron.load_mechanisms(modeldirname)
-            #import the default simulation protocol
             from neuronunit.tests.NeuroML2.LEMS_2007One_nrn import NeuronSimulation
-            #this next step may be unnecessary: TODO delete it and check.
             self.ns = NeuronSimulation(tstop=1600, dt=0.0025)
             return self
 
-        architecture = platform.machine()
-        filename, file_extension = os.path.splitext(self.orig_lems_file_path)
-        k=str('/')
-        filename=str(filename).split("/")
-        for i in filename[1:-1]:
-            k+=str(i)+str('/')
-        filename=str(k)
-        NEURON_file_path = os.path.join(filename,architecture)
 
-        if os.path.exists(NEURON_file_path):
+        architecture = platform.machine()
+        LEMS_dir  = os.path.dirname(self.orig_lems_file_path) # Gets full path to directory with file.
+        NEURON_file = os.path.join(LEMS_dir,architecture)
+
+
+        if os.path.exists(NEURON_file):
             self = cond_load()
 
         else:
