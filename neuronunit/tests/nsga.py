@@ -143,7 +143,7 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
     outputs are error components.
     '''
     vms,rheobase=iter_
-
+    print(vms,rheobase)
     model.name=''
     for i, p in enumerate(param):
         name_value=str(individual[i])
@@ -156,7 +156,7 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
 
 
 
-    uc = {'amplitude':value}
+    uc = {'amplitude':rheobase}
     current = params.copy()['injected_square_current']
     current.update(uc)
     current = {'injected_square_current':current}
