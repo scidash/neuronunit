@@ -144,6 +144,8 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
     '''
     vms,rheobase=iter_
     print(vms,rheobase)
+    '''
+    This should already be achieved
     model.name=''
     for i, p in enumerate(param):
         name_value=str(individual[i])
@@ -153,28 +155,27 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
             attrs={'//izhikevich2007Cell':{p:name_value }}
         else:
             attrs['//izhikevich2007Cell'][p]=name_value
-
+    '''
 
 
     uc = {'amplitude':rheobase}
     current = params.copy()['injected_square_current']
     current.update(uc)
     current = {'injected_square_current':current}
-    if len(model.attrs) == 0:
-        model.update_run_params(vm.attrs)
+    model=gs.model
+    #Its very important to reset the model here. Such that its vm is new, and does not carry charge from the last simulation
+    model.load_model()
+    model=model.update_run_params(vms.attrs)
+
+    #if len(model.attrs) == 0:
+    #    model.update_run_params(vms.attrs)
     model.inject_square_current(current)
     n_spikes = model.get_spike_count()
     print(n_spikes)
     assert n_spikes == 1
 
-
-    #
-    #Its very important to reset the model here. Such that its vm is new, and does not carry charge from the last simulation
-    model.load_model()
-    individual.model=model.update_run_params(attrs)
     sane = False
     sane = get_neab.suite.tests[3].sanity_check(vms.rheobase*pq.pA,model)
-    assert model.n_spikes==1
 
 
     print(sane)
