@@ -19,6 +19,11 @@ from neuronunit.models import backends
 import sciunit.scores as scores
 from neuronunit.models import backends
 from neuronunit.models.reduced import ReducedModel
+model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
+model.load_model()
+#model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
+model.rheobase_memory=None
+
 import neuronunit.capabilities as cap
 AMPL = 0.0*pq.pA
 DELAY = 100.0*pq.ms
@@ -39,8 +44,6 @@ import quantities as pq
 units = pq.pA
 
 
-model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
-model.rheobase=None
 from scoop import futures, shared
 from neuronunit import tests as nutests
 import copy
@@ -248,11 +251,11 @@ def check_current(ampl,vm):
         vm.previous=ampl
         n_spikes = model.get_spike_count()
         if n_spikes == 1:
-            model.rheobase=copy.copy(float(ampl))
+            model.rheobase_memory=copy.copy(float(ampl))
             vm.rheobase=copy.copy(float(ampl))
             assert vm.rheobase != None
-            assert model.rheobase != None
-        verbose = False
+            assert model.rheobase_memory != None
+        verbose = True
         if verbose:
             print("Injected %s current and got %d spikes" % \
                     (ampl,n_spikes))
@@ -283,9 +286,16 @@ def searcher(f,rh_param,vms):
 
         if type(rh_param[1]) == float:
             #if its a single value educated guess
-            if model.rheobase == None:
-                model.rheobase = rh_param[1]
-            vms=check_current(model.rheobase,vms)
+            print('educated guess attempted')
+            if model.rheobase_memory == None:
+                #The educated guess, is the average of all the model parameters
+                #with the latest model rheobase that was sampled.
+                #calling model.rheobase rheobase is deceptive. This is not the actual found rheobase
+                # that will get bound to vms its just a memory of the last tried value.
+                model.rheobase_memory = rh_param[1]
+
+            model.rheobase_memory = (model.rheobase_memory + rh_param[1])/2.0
+            vms = check_current(model.rheobase_memory,vms)
 
             model.update_run_params(vms.attrs)
             boolean,vms = check_fix_range(vms)
@@ -311,7 +321,7 @@ def searcher(f,rh_param,vms):
         else:
             #Finally if a parallel vector of samples failed zoom into the
             #smallest relevant interval and re-sample at a higher resolution
-            
+
             returned_list=[]
             returned_list = list(futures.map(check_current,vms.steps,repeat(vms)))
             d={}
@@ -334,8 +344,9 @@ def evaluate(individual, guess_value=None):
     return vm
 
 
-
+'''
 if __name__ == "__main__":
+
     import pdb
     import scoop
     import model_parameters as modelp
@@ -429,7 +440,7 @@ if __name__ == "__main__":
     storagei = [ np.sum(i) for i in matrix3 ]
     storagesmin=np.where(storagei==np.min(storagei))
     storagesmax=np.where(storagei==np.max(storagei))
-    '''
+
     score0,attrs0,rheobase = matrix[storagesmin[0]]
     score1,attrs1,rheobase = matrix[storagesmin[1]]
 
