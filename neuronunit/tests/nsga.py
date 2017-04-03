@@ -146,46 +146,32 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
     '''
 
     vms,rheobase=iter_
-    print(vms,rheobase)
     if vms.rheobase==0:
         #To avoid a strange math domain error.
         vms.rheobase=0.000001
         rheobase=0.000001
-    print(vms.attrs)
     import quantities as pq
 
     params=gs.params
-    print(type(params))
     model=gs.model
-    print(type(model))
-    #model=gs.model()
-    print(type(model))
-    print(vms.rheobase,rheobase, ' are these the same')
+
     uc = {'amplitude':rheobase}
     current = params.copy()['injected_square_current']
     current.update(uc)
     current = {'injected_square_current':current}
 
     #Its very important to reset the model here. Such that its vm is new, and does not carry charge from the last simulation
-    #model.load_model()
+
     model.update_run_params(vms.attrs)
 
-    print(model)
     model.inject_square_current(current)
     n_spikes = model.get_spike_count()
-    print(n_spikes)
     assert n_spikes == 1 or n_spikes == 0
 
     sane = False
-    print('sanity_check fails on args:',vms.rheobase*pq.pA,model)
     sane = get_neab.suite.tests[3].sanity_check(vms.rheobase*pq.pA,model)
-    print(sane)
-
-    #pdb.set_trace()
     if sane == True and (n_spikes == 1 or n_spikes == 0):
         for i in [4,5,6]:
-            print(i, 'a')
-            #pdb.set_trace()
 
             get_neab.suite.tests[i].params['injected_square_current']['amplitude']=vms.rheobase*pq.pA
         get_neab.suite.tests[0].prediction={}
@@ -197,33 +183,46 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
         spikes_numbers=[]
         plt.clf()
         plt.hold(True)
-        print('b')
         for k,v in score.related_data.items():
             spikes_numbers.append(cap.spike_functions.get_spike_train(((v.values[0]['vm']))))
             plt.plot(model.results['t'],v.values[0]['vm'])
         plt.savefig(str(model.name)+'.png')
         plt.clf()
-        print('c')
+        #print('c')
         model.run_number+=1
-        individual.results=model.results
-        vms.results=model.results
-        vms.score=score.sort_key.values.tolist()[0]
-        error= score.sort_key.values.tolist()[0]
+        error = score.sort_key.values.tolist()[0]
         '''
-        import pickle
-        for i in get_neab.suite.tests:
-            i.last_model=None
-            pickle.dump(i, open(str(i)+".p", "wb" ) )
-            test=pickle.load(open(str(i)+".p", "rb" ) )
-            individual.error=error
+        print(error)
+        print(score.sort_key.values.tolist())
+
+        print(len(error))
+        #pdb.set_trace()
+           for x,y in enumerate(error):
+              if type(y)==None:
+                  error[x] = 10.0
+                  print(error[x])
         '''
+        if len(error)>1:
+
+           #I suspect this block is effective and the top one is not.
+           for x,y in enumerate(error):
+              if y == None:
+                  if len(individual.error)>0:
+                      error[x]=(individual.error[x]+10)/2.0
+                  else:
+                      error[x] = 10.0
+                  print(error[x])
+
+        print(error,' error before fail')
+
     elif sane == False:
         if len(individual.error)!=0:
-            error = [ ((10.0+i)/2.0) for i in individual.error ]
+            error = [ ((10.0+i)/2.0) for i in error ]
         else:
             error = [ 10.0 for i in range(0,8) ]
-
-    #pdb.set_trace()
+        print(len(error),'length of error before fail')
+    print(len(error),'length of error before fail')
+    individual.error=error
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
 
 
@@ -270,6 +269,7 @@ class VirtualModel:
         self.s_html=None
         self.results=None
         self.score=None
+        self.error=None
 
 
 def main():
@@ -339,14 +339,13 @@ def main():
     rhstorage = [i.rheobase for i in vmpop]
     iter_ = zip(vmpop,rhstorage)
 
+    assert len(pop)==len(vmpop)
 
     #Now get the fitness of genes:
     fitnesses = list(toolbox.map(toolbox.evaluate, pop, iter_))
     invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
+
     assert len(fitnesses)==len(invalid_ind)
-
-    #vmlist=list(map(individual_to_vm,invalid_ind))
-
 
     for ind, fit in zip(invalid_ind, fitnesses):
         ind.fitness.values = fit
@@ -402,26 +401,31 @@ def main():
         #pop = toolbox.select(pop + offspring, MU)
         #This way each generations genes are completely replaced by the result of mating.
 
-        if gen==NGEN:
-            vmlist=[]
-            error=evaluate(invalid_ind[0], vmlist[0])
-            vmlist=list(map(individual_to_vm,pop))
-            print(vmlist[0])
-            f=open('html_score_matrix.html','w')
-            f.write(vmlist[0].s_html)
-            f.close()
+        #if gen==NGEN:
+        vmlist=[]
+        vmlist=list(map(individual_to_vm,pop))
+        error_local=evaluate(invalid_ind[0], vmlist[0])
+        print(vmlist[0].attrs)
+        print(error_local)
+        f=open('best_candidate.txt','w')
+        f.write(error_local)
+        f.write(vmlist[0].attrs)
+
+            #f.close()
 
 
         record = stats.compile(pop)
         logbook.record(gen=gen, evals=len(invalid_ind), **record)
-        print(logbook.stream)
+        f.write(logbook.stream)
         pop.sort(key=lambda x: x.fitness.values)
         import pickle
-        with open('minumum_and_maximum_values.pickle', 'rb') as handle:
+        '''
+        os.system('touch minumum_and_maximum_values.pickle')
+        with open('minumum_and_maximum_values.pickle', 'wb') as handle:
             opt_values=pickle.load(handle)
             print('minumum and maximum values from exhaustive search routine')
             print(opt_values)
-
+        '''
 
     return pop, list(logbook)
 
