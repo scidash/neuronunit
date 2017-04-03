@@ -127,6 +127,7 @@ from neuronunit.models import backends
 from neuronunit.models.reduced import ReducedModel
 model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
 model=model.load_model()
+import grid_search2 as gs
 
 
 def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
@@ -149,14 +150,28 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
             attrs['//izhikevich2007Cell'][p]=name_value
 
 
+
+    uc = {'amplitude':value}
+    current = params.copy()['injected_square_current']
+    current.update(uc)
+    current = {'injected_square_current':current}
+    if len(model.attrs) == 0:
+        model.update_run_params(vm.attrs)
+    model.inject_square_current(current)
+    n_spikes = model.get_spike_count()
+    print(n_spikes)
+    assert n_spikes == 1
+
+
     #
     #Its very important to reset the model here. Such that its vm is new, and does not carry charge from the last simulation
     model.load_model()
-
     individual.model=model.update_run_params(attrs)
     sane = False
     sane = get_neab.suite.tests[3].sanity_check(vms.rheobase*pq.pA,model)
     assert model.n_spikes==1
+
+
     print(sane)
     if sane == True and n_spikes == 1:
 
@@ -171,6 +186,22 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
         #Reset the model again.
         model.load_model()
         score = get_neab.suite.judge(model)#passing in model, changes model
+        if sane == True and n_spikes == 1:
+            for i in [4,5,6]:
+                get_neab.suite.tests[i].params['injected_square_current']['amplitude']=value*pq.pA
+            get_neab.suite.tests[0].prediction={}
+            score = get_neab.suite.tests[0].prediction['value']=value*pq.pA
+            score = get_neab.suite.judge(model)#passing in model, changes model
+            import neuronunit.capabilities as cap
+            spikes_numbers=[]
+            plt.clf()
+            plt.hold(True)
+            for k,v in score.related_data.items():
+                spikes_numbers.append(cap.spike_functions.get_spike_train(((v.values[0]['vm']))))
+                plt.plot(model.results['t'],v.values[0]['vm'])
+            plt.savefig(str(model.name)+'.png')
+            plt.clf()
+
         model.run_number+=1
         individual.results=model.results
         vms.results=model.results
@@ -397,18 +428,18 @@ def main():
     mean_vm.attrs=attrs
     import copy
 
-
+    '''
     def check_repeat(test_current,unpack,vm):
-        '''
-        inputs:
-        test_current, a function,
-        unpack, a dictionary of previous search values:
-        vm a virtual model object.
-        outputs: a tuple consisting of a boolean flag and
-        the eecond element is a dictionary containing the
-        last range searched such that the latest range searched
-        can be used to seed future searches.
-        '''
+
+        #inputs:
+        #test_current, a function,
+        #unpack, a dictionary of previous search values:
+        #vm a virtual model object.
+        #outputs: a tuple consisting of a boolean flag and
+        #the eecond element is a dictionary containing the
+        #last range searched such that the latest range searched
+        #can be used to seed future searches.
+
         from itertools import repeat
         d={}
         listtodic=list(futures.map(test_current,unpack,repeat(vm)))
@@ -431,11 +462,11 @@ def main():
 
 
     def searcher(f,rh_param,vms):
-        '''
-        ultimately an attempt to capture the essence a lot of repeatative code below.
-        This is not yet used, but it is intended for future use.
-        Its intended to replace the less general searcher function
-        '''
+
+        #ultimately an attempt to capture the essence a lot of repeatative code below.
+        #This is not yet used, but it is intended for future use.
+        #Its intended to replace the less general searcher function
+
         if rh_param[0]==True:
             return rh_param[1]
         cnt=0
@@ -455,7 +486,7 @@ def main():
                     d.update(r)
             cnt+=1
         return False
-
+    '''
 
 
     #The above code between 492-544
@@ -474,6 +505,37 @@ def main():
         vm.attrs=attrs
         #assert ind.attrs==vm.attrs
         return vm
+
+
+    steps = np.linspace(50,150,7.0)
+    steps_current = [ i*pq.pA for i in steps ]
+    rh_param=(False,steps_current)
+    searcher=gs.searcher
+    pre_rh_value=searcher(check_current,rh_param,mean_vm)
+    rh_value=pre_rh_value.rheobase
+    pop=list(map(model2map,iter_list))
+    print('gets here c')
+
+    for li in list_of_models:
+        print(li.rheobase, li.attrs)
+
+    rhstorage=list(map(evaluate,pop,repeat(rh_value)))
+    print('gets here b')
+
+    for x in rhstorage:
+        x=x.rheobase
+        if x==False:
+            vm_spot=VirtualModel()
+            steps = np.linspace(40,250,7.0)
+            steps_current = [ i*pq.pA for i in steps ]
+            rh_param=(False,steps_current)
+            rh_value=searcher(check_current,rh_param,vm_spot)
+
+    rhstorage2 = [i.rheobase for i in rhstorage]
+    rhstorage=rhstorage2
+    iter_ = zip(list_of_models,rhstorage)
+    print('gets here a')
+
 
 
     #Now attempt to get the rheobase values by first trying the mean rheobase value.
