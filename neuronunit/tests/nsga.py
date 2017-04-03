@@ -141,6 +141,12 @@ model=gs.model
 print(model)
 def evaluate(individual,iter_):#This method must be pickle-able for scoop to work.
     '''
+    Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
+    is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
+    value, that was found in a previous rheobase search.
+
+    outputs: a tuple that is a compound error function that NSGA can act on.
+
     Assumes rheobase for each individual virtual model object (vms) has already been found
     there should be a check for vms.rheobase, and if not then error.
     Inputs a gene and a virtual model object.
@@ -148,23 +154,13 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
     '''
     vms,rheobase=iter_
     print(vms,rheobase)
-    print('got here D!')
     print(vms.attrs)
-    '''
-    This should already be achieved
-    model.name=''
-    for i, p in enumerate(param):
-        name_value=str(individual[i])
-        #reformate values.
-        model.name=str(model.name)+' '+str(p)+str(name_value)
-        if i==0:
-            attrs={'//izhikevich2007Cell':{p:name_value }}
-        else:
-            attrs['//izhikevich2007Cell'][p]=name_value
-    '''
+    import quantities as pq
+    DELAY = 100.0*pq.ms
+    DURATION = 1000.0*pq.ms
+    params = {'injected_square_current':
+                {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
-    params = gs.params
-    score_type = gs.score_type
     uc = {'amplitude':rheobase}
     current = params.copy()['injected_square_current']
     current.update(uc)
