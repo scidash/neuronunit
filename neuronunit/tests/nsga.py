@@ -11,10 +11,14 @@ import json
 Scoop can only operate on variables classes and methods at top level 0
 This means something with no indentation, no nesting,
 and no virtual nesting (like function decorators etc)
-anything that starts at indentation level 0.
-Code from the deap framework, available at:
+anything that starts at indentation level 0 is okay.
+
+However the case may be different for functions. Functions may be imported from modules.
+I am unsure if it is only the case that functions can be imported from a module, if they are not bound to
+any particular class in that module.
+
+Code from the DEAP framework, available at:
 https://code.google.com/p/deap/source/browse/examples/ga/onemax_short.py
-Conversion to its parallel form took two lines:
 from scoop import futures
 """
 
@@ -144,6 +148,8 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
     '''
     vms,rheobase=iter_
     print(vms,rheobase)
+    print('got here D!')
+    print(vms.attrs)
     '''
     This should already be achieved
     model.name=''
@@ -157,7 +163,8 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
             attrs['//izhikevich2007Cell'][p]=name_value
     '''
 
-
+    params = gs.params
+    score_type = gs.score_type
     uc = {'amplitude':rheobase}
     current = params.copy()['injected_square_current']
     current.update(uc)
@@ -441,13 +448,13 @@ def main():
 
     def individual_to_vm(ind):
         for i, p in enumerate(param):
-            value=str(ind[i])
-            if i==0:
+            value = str(ind[i])
+            if i == 0:
                 attrs={'//izhikevich2007Cell':{p:value }}
             else:
-                attrs['//izhikevich2007Cell'][p]=value
-        vm=VirtualModel()
-        vm.attrs=attrs
+                attrs['//izhikevich2007Cell'][p] = value
+        vm = VirtualModel()
+        vm.attrs = attrs
         return vm
 
 
@@ -464,16 +471,16 @@ def main():
     #This is not an exhaustive search that results in found all rheobase values
     #It is just a trying out an educated guess on each individual in the whole population as a first pass.
     #invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
-    rhstorage=list(map(gs.evaluate,vmpop,repeat(rh_value)))
+    rhstorage=list(futures.map(gs.evaluate,vmpop,repeat(rh_value)))
     rhstorage2 = [i.rheobase for i in rhstorage]
     rhstorage=rhstorage2
-    iter_ = zip(pop,rhstorage)
+    iter_ = zip(vmpop,rhstorage)
 
     fitnesses = list(toolbox.map(toolbox.evaluate, pop, iter_))
     assert len(fitnesses)==len(invalid_ind)
 
     invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
-    vmlist=list(map(individual_to_vm,invalid_ind))
+    vmlist=list(futures.map(individual_to_vm,invalid_ind))
 
     for ind, fit in zip(invalid_ind, fitnesses):
         ind.fitness.values = fit
