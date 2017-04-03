@@ -147,6 +147,10 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
 
     vms,rheobase=iter_
     print(vms,rheobase)
+    if vms.rheobase==0:
+        #To avoid a strange math domain error.
+        vms.rheobase=0.000001
+        rheobase=0.000001
     print(vms.attrs)
     import quantities as pq
 
@@ -173,16 +177,21 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
     assert n_spikes == 1 or n_spikes == 0
 
     sane = False
+    print('sanity_check fails on args:',vms.rheobase*pq.pA,model)
     sane = get_neab.suite.tests[3].sanity_check(vms.rheobase*pq.pA,model)
-
-
     print(sane)
+
+    #pdb.set_trace()
     if sane == True and (n_spikes == 1 or n_spikes == 0):
         for i in [4,5,6]:
             print(i, 'a')
+            #pdb.set_trace()
+
             get_neab.suite.tests[i].params['injected_square_current']['amplitude']=vms.rheobase*pq.pA
         get_neab.suite.tests[0].prediction={}
+
         score = get_neab.suite.tests[0].prediction['value']=vms.rheobase*pq.pA
+
         score = get_neab.suite.judge(model)#passing in model, changes model
         import neuronunit.capabilities as cap
         spikes_numbers=[]
@@ -200,14 +209,14 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
         vms.results=model.results
         vms.score=score.sort_key.values.tolist()[0]
         error= score.sort_key.values.tolist()[0]
-
+        '''
         import pickle
         for i in get_neab.suite.tests:
             i.last_model=None
             pickle.dump(i, open(str(i)+".p", "wb" ) )
             test=pickle.load(open(str(i)+".p", "rb" ) )
             individual.error=error
-
+        '''
     elif sane == False:
         if len(individual.error)!=0:
             error = [ ((10.0+i)/2.0) for i in individual.error ]
@@ -333,9 +342,11 @@ def main():
 
     #Now get the fitness of genes:
     fitnesses = list(toolbox.map(toolbox.evaluate, pop, iter_))
-    assert len(fitnesses)==len(invalid_ind)
     invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
-    vmlist=list(futures.map(individual_to_vm,invalid_ind))
+    assert len(fitnesses)==len(invalid_ind)
+
+    #vmlist=list(map(individual_to_vm,invalid_ind))
+
 
     for ind, fit in zip(invalid_ind, fitnesses):
         ind.fitness.values = fit
@@ -378,14 +389,14 @@ def main():
         fitnesses = list(toolbox.map(toolbox.evaluate, pop, iter_))
         assert len(fitnesses)==len(invalid_ind)
         invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
-        vmlist=list(futures.map(individual_to_vm,invalid_ind))
+        #vmlist=list(futures.map(individual_to_vm,invalid_ind))
 
         #fitnesses = toolbox.map(toolbox.evaluate, invalid_ind, vmlist)
 
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
 
-        plotss(vmlist,gen)
+        #plotss(vmlist,gen)
         # Select the next generation population
         #This way the initial genes keep getting added to each generation.
         #pop = toolbox.select(pop + offspring, MU)
