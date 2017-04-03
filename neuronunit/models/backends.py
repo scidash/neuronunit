@@ -263,27 +263,25 @@ class NEURONBackend(Backend):
                               show_plot_already=False,
                               exec_in_dir = ".",
                               verbose=DEFAULTS['v'],
-                              exit_on_fail = True)
+                              exit_on_fail=True)
 
 
             self=cond_load()
-            more_attributes=pynml.read_lems_file(self.orig_lems_file_path)
-            return self
-            self.f=pynml.run_lems_with_jneuroml_neuron
-
+            
         #Although the above approach successfuly instantiates a LEMS/neuroml model in pyhoc
         #the resulting hoc variables for current source and cell name are idiosyncratic (not generic).
         #The resulting idiosyncracies makes it hard not have a hard coded approach make non hard coded, and generalizable code.
         #work around involves predicting the hoc variable names from pyneuroml LEMS file that was used to generate them.
-        more_attributes=pynml.read_lems_file(self.orig_lems_file_path)
+        more_attributes = pynml.read_lems_file(self.orig_lems_file_path)
+        #print("Components are %s" % more_attributes.components)
         for i in more_attributes.components:
         #This code strips out simulation parameters from the xml tree also such as duration.
         #Strip out values from something a bit like an xml tree.
             if str('pulseGenerator') in i.type:
-                self.current_src_name=i.id
+                self.current_src_name = i.id
             if str('Cell') in i.type:
-                self.cell_name=i.id
-        more_attributes=None#force garbage collection of more_attributes, its not needed anymore.
+                self.cell_name = i.id
+        more_attributes = None #force garbage collection of more_attributes, its not needed anymore.
         return self
 
     def update_run_params(self,attrs):
