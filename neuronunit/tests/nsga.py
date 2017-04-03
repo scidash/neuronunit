@@ -171,13 +171,14 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
     print(type(model))
     #model=gs.model()
     print(type(model))
-    uc = {'amplitude':rheobase}
+    print(vms.rheobase,rheobase, ' are these the same')
+    uc = {'amplitude':vms.rheobase}
     current = params.copy()['injected_square_current']
     current.update(uc)
     current = {'injected_square_current':current}
 
     #Its very important to reset the model here. Such that its vm is new, and does not carry charge from the last simulation
-    model.load_model()
+    #model.load_model()
     model.update_run_params(vms.attrs)
 
     #if len(model.attrs) == 0:
@@ -186,14 +187,14 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
     model.inject_square_current(current)
     n_spikes = model.get_spike_count()
     print(n_spikes)
-    assert n_spikes == 1
+    assert n_spikes == 1 or n_spikes == 0
 
     sane = False
     sane = get_neab.suite.tests[3].sanity_check(vms.rheobase*pq.pA,model)
 
 
     print(sane)
-    if sane == True and n_spikes == 1:
+    if sane == True and (n_spikes == 1 or n_spikes == 0):
 
         individual.params=[]
         for i in attrs['//izhikevich2007Cell'].values():
