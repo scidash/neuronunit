@@ -1,11 +1,8 @@
-
-This branch:
-
 [![Build Status](https://travis-ci.org/scidash/neuronunit.svg?branch=dev)](https://travis-ci.org/scidash/neuronunit)
 
 [![Documentation Status](https://readthedocs.org/projects/neuronunit/badge/?version=latest)](http://neuronunit.readthedocs.io/en/latest/?badge=latest)
 
-NeuronUnit: A SciUnit repository for neuroscience-related tests, models, and capabilities.
+# NeuronUnit: A SciUnit repository for neuroscience-related tests, models, and capabilities.
 
 ![NeuronUnit Logo](https://raw.githubusercontent.com/scidash/assets/master/logos/neuronunit.png)
 
