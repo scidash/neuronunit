@@ -1,16 +1,25 @@
+
 from pyneuroml import pynml
 import os
+import platform
 import sciunit
 import time
 import pdb
 import neuronunit.capabilities as cap
 import neuronunit.capabilities.spike_functions as sf
+import re
+import copy
+
+from pyneuroml import pynml
+import quantities as pq
 from quantities import ms, mV, nA
 from neo.core import AnalogSignal
 
 import quantities as pq
 import re
 import copy
+import neuronunit.capabilities as cap
+import neuronunit.capabilities.spike_functions as sf
 
 class Backend:
     """Base class for simulator backends that implement simulator-specific
@@ -74,14 +83,12 @@ class NEURONBackend(Backend):
 
 
     def __init__(self, name=None,attrs=None):
-        #self.neuron=None
+        self.cell_name=name
         self.model_path=None
         self.LEMS_file_path=None#LEMS_file_path
         self.name=None
-        #self.attrs=attrs
         self.f=None
-        #self.h=None
-        self.rheobase=None
+        self.rheobase_memory=None
         self.invokenrn()
 
 
@@ -99,128 +106,6 @@ class NEURONBackend(Backend):
         self.h=h
         self.h.load_file("stdlib.hoc")
         self.h.load_file("stdgui.hoc")
-
-    '''
-    def reset_h(self, hVariable):
-        """Sets the NEURON h variable"""
-
-        self.h = hVariable.h
-        self.neuron = hVariable
-
-
-    def setStopTime(self, stopTime = 1000*ms):
-        """Sets the simulation duration"""
-        """stopTimeMs: duration in milliseconds"""
-
-        tstop = stopTime
-        tstop.units = ms
-        self.h.tstop = float(tstop)
-
-
-    def setTimeStep(self, integrationTimeStep = 1/128.0 * ms):
-        """Sets the simulation itegration fixed time step"""
-        """integrationTimeStepMs: time step in milliseconds. Powers of two preferred. Defaults to 1/128.0"""
-
-        dt = integrationTimeStep
-        dt.units = ms
-
-        self.h.dt = self.fixedTimeStep = float(dt)
-
-    def setTolerance(self, tolerance = 0.001):
-        """Sets the variable time step integration method absolute tolerance """
-        """tolerance: absolute tolerance value"""
-
-        self.h.cvode.atol(tolerance)
-
-    def setIntegrationMethod(self, method = "fixed"):
-        """Sets the simulation itegration method"""
-        """method: either "fixed" or "variable". Defaults to fixed. cvode is used when "variable" """
-
-        self.h.cvode.active(1 if method == "variable" else 0)
-
-    def get_membrane_potential(self):
-        """
-        Must return a neo.core.AnalogSignal.
-        And must destroy the hoc vectors that comprise it.
-        """
-        import copy
-
-        if self.h.cvode.active() == 0:
-            fixedSignal = self.vVector.to_python()
-            dt = self.h.dt
-            dt_py=float(copy.copy(self.h.dt))
-            fixedSignalcp=copy.copy(fixedSignal)
-        else:
-            fixedSignal = self.get_variable_step_analog_signal()
-            fixedSignalcp=copy.copy(fixedSignal)
-            dt = self.fixedTimeStep
-            dt_py=float(copy.copy(self.fixedTimeStep))
-            #dt = N
-
-        fidxedSignal=None
-        #self.h.dt=None
-        #self.fixedTimeStep=None
-        return AnalogSignal( \
-                 fixedSignalcp, \
-                 units = mV, \
-                 sampling_period = dt_py * ms \
-        )
-
-    def get_variable_step_analog_signal(self):
-        """ Converts variable dt array values to fixed dt array by using linear interpolation"""
-
-        # Fixed dt potential
-        fPots = []
-        fDt = self.fixedTimeStep
-        # Variable dt potential
-        vPots = self.vVector.to_python()
-        # Variable dt times
-        vTimes = self.tVector.to_python()
-        duration = vTimes[len(vTimes)-1]
-        # Fixed and Variable dt times
-        fTime = vTime = vTimes[0]
-        # Index of variable dt time array
-        vIndex = 0
-        # Advance the fixed dt position
-        while fTime <= duration:
-
-            # If v and f times are exact, no interpolation needed
-            if fTime == vTime:
-                fPots.append(vPots[vIndex])
-
-            # Interpolate between the two nearest vdt times
-            else:
-
-                # Increment vdt time until it surpases the fdt time
-                while fTime > vTime and vIndex < len(vTimes):
-                    vIndex += 1
-                    vTime = vTimes[vIndex]
-
-                # Once surpassed, use the new vdt time and t-1 for interpolation
-                vIndexMinus1 = max(0, vIndex-1)
-                vTimeMinus1 = vTimes[vIndexMinus1]
-
-                fPot = self.linearInterpolate(vTimeMinus1, vTime, \
-                                          vPots[vIndexMinus1], vPots[vIndex], \
-                                          fTime)
-
-                fPots.append(fPot)
-
-            # Go to the next fdt time step
-            fTime += fDt
-
-        return fPots
-
-    def linearInterpolate(self, tStart, tEnd, vStart, vEnd, tTarget):
-        tRange = float(tEnd - tStart)
-        tFractionAlong = (tTarget - tStart)/tRange
-
-        vRange = vEnd - vStart
-
-        vTarget = vRange*tFractionAlong + vStart
-
-        return vTarget
-    '''
 
 
     def load_model(self):
@@ -248,8 +133,18 @@ class NEURONBackend(Backend):
             self.ns = NeuronSimulation(tstop=1600, dt=0.0025)
             return self
 
-        if os.path.exists(self.orig_lems_file_path):
-            self=cond_load()
+        architecture = platform.machine()
+        filename, file_extension = os.path.splitext(self.orig_lems_file_path)
+        k=str('/')
+        filename=str(filename).split("/")
+        for i in filename[1:-1]:
+            k+=str(i)+str('/')
+        filename=str(k)
+        NEURON_file_path = os.path.join(filename,architecture)
+
+        if os.path.exists(NEURON_file_path):
+            self = cond_load()
+
         else:
             pynml.run_lems_with_jneuroml_neuron(self.orig_lems_file_path,
                               skip_run=False,
@@ -280,6 +175,8 @@ class NEURONBackend(Backend):
                 self.current_src_name=i.id
             if str('Cell') in i.type:
                 self.cell_name=i.id
+                print(self.cell_name)
+
         more_attributes=None#force garbage collection of more_attributes, its not needed anymore.
         return self
 
@@ -296,7 +193,7 @@ class NEURONBackend(Backend):
              h_assignment=value
              self.h('m_RS_RS_pop[0].'+str(h_variable)+'='+str(h_assignment))
              self.h('m_'+str(self.cell_name)+'_'+str(self.cell_name)+'_pop[0].'+str(h_variable)+'='+str(h_assignment))
-             
+
         self.h(' { v_time = new Vector() } ')
         self.h(' { v_time.record(&t) } ')
         self.h(' { v_v_of0 = new Vector() } ')
