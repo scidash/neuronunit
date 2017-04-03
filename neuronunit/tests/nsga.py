@@ -136,6 +136,7 @@ toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
 
 import grid_search as gs
 model=gs.model
+#model.cell_name
 
 
 print(model)
@@ -152,26 +153,36 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
     Inputs a gene and a virtual model object.
     outputs are error components.
     '''
-    vms,rheobase=iter_
-    print(vms,rheobase)
-    print(vms.attrs)
-    import quantities as pq
+
+    '''
     DELAY = 100.0*pq.ms
     DURATION = 1000.0*pq.ms
     params = {'injected_square_current':
                 {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+    '''
+    vms,rheobase=iter_
+    print(vms,rheobase)
+    print(vms.attrs)
+    import quantities as pq
 
+    params=gs.params
+    print(type(params))
+    model=gs.model
+    print(type(model))
+    #model=gs.model()
+    print(type(model))
     uc = {'amplitude':rheobase}
     current = params.copy()['injected_square_current']
     current.update(uc)
     current = {'injected_square_current':current}
-    model=gs.model
+
     #Its very important to reset the model here. Such that its vm is new, and does not carry charge from the last simulation
     model.load_model()
-    model=model.update_run_params(vms.attrs)
+    model.update_run_params(vms.attrs)
 
     #if len(model.attrs) == 0:
     #    model.update_run_params(vms.attrs)
+    print(model)
     model.inject_square_current(current)
     n_spikes = model.get_spike_count()
     print(n_spikes)
