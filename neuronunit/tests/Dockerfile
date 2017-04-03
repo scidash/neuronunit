@@ -68,8 +68,16 @@ RUN nrniv
 RUN export PATH=$PATH
 RUN echo "do this part again such that pickled files can be used to bypass problems with aibs.py in the short term !"
 
+# Use this NeuronUnit (delete later)
+USER root
+ARG MOD_DATE=0
+RUN echo $MOD_DATE
 # Make neuronunit source directory in Travis image visible to Docker.
-ADD . $HOME/neuronunit
+ADD . $HOME/neuronunit/neuronunit/tests
+RUN chown -R $NB_USER $HOME/neuronunit/neuronunit/tests
+USER $NB_USER
+
+ENV PYTHONPATH $HOME/neuronunit:$PYTHONPATH
 WORKDIR $HOME/neuronunit/neuronunit/tests/NeuroML2
 RUN nrnivmodl
 RUN ls LEMS_2007One.xml
