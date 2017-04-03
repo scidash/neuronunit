@@ -257,8 +257,10 @@ def check_current(ampl,vm):
             assert model.rheobase_memory != None
         verbose = True
         if verbose:
-            print("Injected %s current and got %d spikes" % \
+            print('This might look a bit strange, but thats because 8 CPUs are  \
+            testing different values of current injections simultaneously Injected %s current and got %d spikes' % \
                     (ampl,n_spikes))
+
         vm.lookup[float(ampl)] = n_spikes
         return vm
     if float(ampl) in vm.lookup:
@@ -290,8 +292,11 @@ def searcher(f,rh_param,vms):
             if model.rheobase_memory == None:
                 #The educated guess, is the average of all the model parameters
                 #with the latest model rheobase that was sampled.
-                #calling model.rheobase rheobase is deceptive. This is not the actual found rheobase
-                # that will get bound to vms its just a memory of the last tried value.
+                # using the name model.rheobase rheobase is deceptive, so I have
+                # used the more accurate label rheobase_memory. This is not the actual found rheobase
+                # that will get bound to vms its just a memory of the last tried value inside the constant variable model.
+                # There is no use in using vms.rheobase for this, because this is a local value we are trying to find, not a global variable
+                # that was already once found.
                 model.rheobase_memory = rh_param[1]
 
             model.rheobase_memory = (model.rheobase_memory + rh_param[1])/2.0
@@ -345,6 +350,7 @@ def evaluate(individual, guess_value=None):
 
 
 '''
+Uncomment the code below to run an exhaustive search.
 if __name__ == "__main__":
 
     import pdb
