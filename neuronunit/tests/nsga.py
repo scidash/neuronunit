@@ -1,6 +1,6 @@
 
 import time
-from math import sqrt
+#from math import sqrt
 import pdb
 import array
 import random
@@ -44,10 +44,9 @@ import sciunit.scores as scores
 
 
 init_start=time.time()
-creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0,
+creator.create("FitnessMax", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0,
                                                     -1.0, -1.0, -1.0, -1.0))
-# -1.0, -1.0, -1.0, -1.0,))
-creator.create("Individual",list, fitness=creator.FitnessMin)
+creator.create("Individual",list, fitness=creator.FitnessMax)
 
 class Individual(object):
     '''
@@ -82,14 +81,9 @@ v0 = np.linspace(-75.0,-45.0,1000)
 vt =  np.linspace(-50.0,-30.0,1000)
 vpeak= np.linspace(20.0,30.0,1000)
 
-#vpeak as currently stated causes problems.
 param=['vr','a','b','C','c','d','v0','k','vt','vpeak']
-#,'d','v0','k','vt','vpeak']
-#param=['a','b','vr']#,'vpeak']#,'k']#,'C']#,'c','d','v0','k','vt','vpeak']#,'d'
 rov=[]
-#vr = np.linspace(-75.0,-50.0,1000)
-#a = np.linspace(0.015,0.045,1000)
-#b = np.linspace(-3.5*10E-9,-0.5*10E-9,1000)
+
 rov.append(vr)
 rov.append(a)
 rov.append(b)
@@ -197,6 +191,12 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
                   else:
                       error[x] = 10.0
                   print(error[x])
+
+           #The following block is crucial given that we are maximising the error
+           #It means that the optima or maximum value will be the scores that are closest
+           # to zero.
+           for x,y in enumerate(error):
+               error[x]=abs(y-0.0)
 
 
     elif sane == False:
@@ -401,19 +401,22 @@ def main():
         print(dir(vmlist[0]))
         print(error_local)
         print(pop[0])
-
+        vm=individual_to_vm(pop[0]):
+        print(vm.attrs)
         f=open('best_candidate.txt','w')
         f.write(pop[0])
         f.write(error_local)
-        f.write(vmlist[0].attrs)
-
-            #f.close()
+        f.write(vm.attrs)
+        #f.write(vmlist[0].attrs)
 
 
         record = stats.compile(pop)
         logbook.record(gen=gen, evals=len(invalid_ind), **record)
-        f.write(logbook.stream)
         pop.sort(key=lambda x: x.fitness.values)
+
+        f.write(logbook.stream)
+        f.close()
+
         import pickle
         '''
         os.system('touch minumum_and_maximum_values.pickle')
