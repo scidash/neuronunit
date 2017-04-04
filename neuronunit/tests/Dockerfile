@@ -5,7 +5,7 @@ USER root
 
 
 RUN pip install --upgrade pip
-RUN pip install matplotlib
+RUN conda install matplotlib
 
 RUN easy_install gevent
 RUN easy_install greenlet
