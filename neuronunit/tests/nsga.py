@@ -1,10 +1,8 @@
 
 import time
-#from math import sqrt
 import pdb
 import array
 import random
-import json
 
 
 """
@@ -143,67 +141,56 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
         vms.rheobase=0.000001
         rheobase=0.000001
     import quantities as pq
-
     params=gs.params
     model=gs.model
-
     uc = {'amplitude':rheobase}
     current = params.copy()['injected_square_current']
     current.update(uc)
     current = {'injected_square_current':current}
-
     #Its very important to reset the model here. Such that its vm is new, and does not carry charge from the last simulation
-
     model.update_run_params(vms.attrs)
-
     model.inject_square_current(current)
     n_spikes = model.get_spike_count()
     assert n_spikes == 1 or n_spikes == 0
     #first populate the list with falses:
     #sane_list = [ False for i in range(0, len(get_neab.suite.tests)) ]
     #sane_list = [ i.sanity_check(vms.rheobase*pq.pA,model) for i in get_neab.suite.tests ]
-
     sane = False
-
     sane = get_neab.suite.tests[0].sanity_check(vms.rheobase*pq.pA,model)
     if sane == True and (n_spikes == 1 or n_spikes == 0):
         for i in [4,5,6]:
-
             get_neab.suite.tests[i].params['injected_square_current']['amplitude']=vms.rheobase*pq.pA
         get_neab.suite.tests[0].prediction={}
-
         score = get_neab.suite.tests[0].prediction['value']=vms.rheobase*pq.pA
-
         score = get_neab.suite.judge(model)#passing in model, changes model
         import neuronunit.capabilities as cap
         spikes_numbers=[]
         model.run_number+=1
         error = score.sort_key.values.tolist()[0]
-
         if len(error)>1:
            #I suspect this block is effective and the top one is not.
            for x,y in enumerate(error):
               if y == None:
                   inderr = getattr(individual, "error", None)
-                  if inderr!=None:
-                      if len(inderr)>0:
-                          error[x]=(inderr[x]+10)/2.0
+                  if inderr!=None and len(inderr)>0:
+                          error[x]=(inderr[x]+-10)/2.0
                   else:
-                      error[x] = 10.0
+                      error[x] = -10.0
                   print(error[x])
-
            #The following block is crucial given that we are maximising the error
            #It means that the optima or maximum value will be the scores that are closest
            # to zero.
            for x,y in enumerate(error):
                error[x]=abs(y-0.0)
-
-
     elif sane == False:
-        if len(individual.error)!=0:
-            error = [ ((10.0+i)/2.0) for i in error ]
+        inderr = getattr(individual, "error", None)
+        if inderr!=None and len(inderr)>0:
+            if len(individual.error)!=0:
+                #the average of 10 and the previous score is chosen as a nominally high distance from zero
+                error = [ ((-10.0+i)/2.0) for i in individual.error ]
         else:
-            error = [ 10.0 for i in range(0,8) ]
+            #10 is chosen as a nominally high distance from zero
+            error = [ -10.0 for i in range(0,8) ]
     individual.error=error
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
 
@@ -395,7 +382,17 @@ def main():
         #def evaluate(individual,iter_):#This method must be pickle-able for scoop to work.
         #    vms,rheobase=iter_
 
+        steps = np.linspace(50,150,7.0)
+        steps_current = [ i*pq.pA for i in steps ]
+        rh_param = (False,steps_current)
+        searcher = gs.searcher
+        check_current = gs.check_current
+        pre_rh_value = searcher(check_current,rh_param,vmlist[0])
+        vmlist[0].rheobase = pre_rh_value.rheobase
+
+
         iter_=(vmlist[0],vmlist[0].rheobase)
+        pdb.set_trace()
         error_local=evaluate(invalid_ind[0],iter_)
         print(vmlist[0])
         print(dir(vmlist[0]))
