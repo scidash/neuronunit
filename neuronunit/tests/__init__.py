@@ -143,24 +143,35 @@ class VmTest(sciunit.Test):
         self.params['injected_square_current']['amplitude'] = rheobase
         model.inject_square_current(self.params['injected_square_current'])
         mp = model.results['vm']
-
-        if type(mp)==list:
-            if len(mp)>1:
+        def nan_test(mp):
+            import math
+            for i in mp:
+                if math.isnan(i):
+                    return False
+            import neuronunit.capabilities as cap
+            sws = cap.spike_functions.get_spike_waveforms(model.get_membrane_potential())
+            for i,s in enumerate(sws):
+                s = np.array(s)
+                dvdt = np.diff(s)
                 import math
-                for i in mp:
-                    if math.isnan(i):
+                for j in dvdt:
+                    if math.isnan(j):
                         return False
-                import neuronunit.capabilities as cap
-                sws=cap.spike_functions.get_spike_waveforms(model.get_membrane_potential())
-                for i,s in enumerate(sws):
-                    s = np.array(s)
-                    dvdt = np.diff(s)
-                    import math
-                    for j in dvdt:
-                        if math.isnan(j):
-                            return False
-        else:
+
+        boolean = nan_test(mp)
+        if boolean == False:
             return False
+
+        self.params['injected_square_current']['delay'] = DELAY
+        self.params['injected_square_current']['duration'] = DURATION
+        self.params['injected_square_current']['amplitude'] = -10.0
+        model.inject_square_current(self.params['injected_square_current'])
+        mp = model.results['vm']
+
+        boolean = nan_test(mp)
+        if boolean == False:
+            return False
+
         return True
 
 
@@ -221,12 +232,8 @@ class TestPulseTest(VmTest):
         print(y)
 
         offset = float(offset.rescale('ms')) # Strip units for optimization
-        #import pdb; pdb.set_trace()
-        #print(x,' x')
-        #print(offset, ' offset')
-        #print(x-offset, ' x - offset')
-
-        #print(y.min(), ' y.min()')
+        #import math
+        #if
         popt, pcov = curve_fit(func, x-offset*pq.ms, y*pq.ms, [0.001,2,y.min()]) # Estimate starting values for better convergence
         return popt
 
@@ -252,6 +259,18 @@ class InputResistanceTest(TestPulseTest):
         prediction = {'value':r_in}
         return prediction
 
+
+    def compute_score(self, observation, prediction):
+        """Implementation of sciunit.Test.score_prediction."""
+
+        if 'n' in prediction.keys():
+            if prediction['n'] == 0:
+                score = scores.InsufficientDataScore(None)
+        else:
+            prediction['value']=prediction['value']
+            score = super(InputResistanceTest,self).compute_score(observation,
+                                                          prediction)
+        return score
 
 class TimeConstantTest(TestPulseTest):
     """Tests the input resistance of a cell."""
@@ -283,7 +302,6 @@ class TimeConstantTest(TestPulseTest):
             prediction['value']=prediction['value']
             score = super(TimeConstantTest,self).compute_score(observation,
                                                           prediction)
-
         return score
 
 
@@ -374,6 +392,8 @@ class InjectedCurrentAPWidthTest(APWidthTest):
     description = ("A test of the widths of action potentials "
                    "at half of their maximum height when current "
                    "is injected into cell.")
+
+
 
     def generate_prediction(self, model):
         model.inject_square_current(self.params['injected_square_current'])

@@ -57,7 +57,6 @@ class Individual(object):
     def __init__(self, *args):
         list.__init__(self, *args)
         self.error=None
-        self.error=None
         self.results=None
         self.name=''
         self.attrs={}
@@ -130,7 +129,6 @@ toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
 import grid_search as gs
 model=gs.model
 
-print(model)
 def evaluate(individual,iter_):#This method must be pickle-able for scoop to work.
     '''
     Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
@@ -167,9 +165,13 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
     model.inject_square_current(current)
     n_spikes = model.get_spike_count()
     assert n_spikes == 1 or n_spikes == 0
+    #first populate the list with falses:
+    #sane_list = [ False for i in range(0, len(get_neab.suite.tests)) ]
+    #sane_list = [ i.sanity_check(vms.rheobase*pq.pA,model) for i in get_neab.suite.tests ]
 
     sane = False
-    sane = get_neab.suite.tests[3].sanity_check(vms.rheobase*pq.pA,model)
+
+    sane = get_neab.suite.tests[0].sanity_check(vms.rheobase*pq.pA,model)
     if sane == True and (n_spikes == 1 or n_spikes == 0):
         for i in [4,5,6]:
 
@@ -181,47 +183,27 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
         score = get_neab.suite.judge(model)#passing in model, changes model
         import neuronunit.capabilities as cap
         spikes_numbers=[]
-        plt.clf()
-        plt.hold(True)
-        for k,v in score.related_data.items():
-            spikes_numbers.append(cap.spike_functions.get_spike_train(((v.values[0]['vm']))))
-            plt.plot(model.results['t'],v.values[0]['vm'])
-        plt.savefig(str(model.name)+'.png')
-        plt.clf()
-        #print('c')
         model.run_number+=1
         error = score.sort_key.values.tolist()[0]
-        '''
-        print(error)
-        print(score.sort_key.values.tolist())
 
-        print(len(error))
-        #pdb.set_trace()
-           for x,y in enumerate(error):
-              if type(y)==None:
-                  error[x] = 10.0
-                  print(error[x])
-        '''
         if len(error)>1:
-
            #I suspect this block is effective and the top one is not.
            for x,y in enumerate(error):
               if y == None:
-                  if len(individual.error)>0:
-                      error[x]=(individual.error[x]+10)/2.0
+                  inderr = getattr(individual, "error", None)
+                  if inderr!=None:
+                      if len(inderr)>0:
+                          error[x]=(inderr[x]+10)/2.0
                   else:
                       error[x] = 10.0
                   print(error[x])
 
-        print(error,' error before fail')
 
     elif sane == False:
         if len(individual.error)!=0:
             error = [ ((10.0+i)/2.0) for i in error ]
         else:
             error = [ 10.0 for i in range(0,8) ]
-        print(len(error),'length of error before fail')
-    print(len(error),'length of error before fail')
     individual.error=error
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
 
@@ -335,13 +317,17 @@ def main():
     #This is not an exhaustive search that results in found all rheobase values
     #It is just a trying out an educated guess on each individual in the whole population as a first pass.
     #invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
-    vmpop=list(futures.map(gs.evaluate,vmpop,repeat(rh_value)))
+
+    rheobase_checking=gs.evaluate
+
+    vmpop=list(futures.map(rheobase_checking,vmpop,repeat(rh_value)))
     rhstorage = [i.rheobase for i in vmpop]
     iter_ = zip(vmpop,rhstorage)
 
     assert len(pop)==len(vmpop)
 
     #Now get the fitness of genes:
+    #Note the evaluate function called is different
     fitnesses = list(toolbox.map(toolbox.evaluate, pop, iter_))
     invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
 
@@ -382,7 +368,7 @@ def main():
         vmlist=[]
         vmlist=list(map(individual_to_vm,invalid_ind))
 
-        vmpop=list(futures.map(gs.evaluate,vmpop,repeat(rh_value)))
+        vmpop=list(futures.map(rheobase_checking,vmpop,repeat(rh_value)))
         rhstorage = [i.rheobase for i in vmpop]
         iter_ = zip(vmpop,rhstorage)
         fitnesses = list(toolbox.map(toolbox.evaluate, pop, iter_))
@@ -404,7 +390,13 @@ def main():
         #if gen==NGEN:
         vmlist=[]
         vmlist=list(map(individual_to_vm,pop))
-        error_local=evaluate(invalid_ind[0], vmlist[0])
+
+
+        #def evaluate(individual,iter_):#This method must be pickle-able for scoop to work.
+        #    vms,rheobase=iter_
+
+        iter_=(vmlist[0],vmlist[0].rheobase)
+        error_local=evaluate(invalid_ind[0],iter_)
         print(vmlist[0].attrs)
         print(error_local)
         f=open('best_candidate.txt','w')

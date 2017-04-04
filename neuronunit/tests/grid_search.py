@@ -117,7 +117,7 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
         model.update_run_params(vm.attrs)
     model.inject_square_current(current)
     n_spikes = model.get_spike_count()
-    print(n_spikes)
+    #print(n_spikes)
     assert n_spikes == 1
     if sane == True and n_spikes == 1:
         for i in [4,5,6]:
@@ -255,10 +255,9 @@ def check_current(ampl,vm):
             vm.rheobase=copy.copy(float(ampl))
             assert vm.rheobase != None
             assert model.rheobase_memory != None
-        verbose = True
+        verbose = False
         if verbose:
-            print('This might look a bit strange, but thats because 8 CPUs are  \
-            testing different values of current injections simultaneously Injected %s current and got %d spikes' % \
+            print('8 CPUs are testing different values of current injections simultaneously Injected %s current and got %d spikes' % \
                     (ampl,n_spikes))
 
         vm.lookup[float(ampl)] = n_spikes
@@ -288,7 +287,7 @@ def searcher(f,rh_param,vms):
 
         if type(rh_param[1]) == float:
             #if its a single value educated guess
-            print('educated guess attempted')
+            #print('educated guess attempted')
             if model.rheobase_memory == None:
                 #The educated guess, is the average of all the model parameters
                 #with the latest model rheobase that was sampled.
@@ -340,7 +339,7 @@ def searcher(f,rh_param,vms):
 
 def evaluate(individual, guess_value=None):
     #This method must be pickle-able for scoop to work.
-    print(individual.attrs)
+    #print(individual.attrs)
     vm= VirtualModel()
     import copy
     vm.attrs = copy.copy(individual.attrs)
