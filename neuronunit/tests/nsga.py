@@ -401,7 +401,7 @@ def main():
         print(dir(vmlist[0]))
         print(error_local)
         print(pop[0])
-        vm=individual_to_vm(pop[0]):
+        vm=individual_to_vm(pop[0])
         print(vm.attrs)
         f=open('best_candidate.txt','w')
         f.write(pop[0])
