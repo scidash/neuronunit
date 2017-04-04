@@ -144,12 +144,22 @@ class VmTest(sciunit.Test):
         model.inject_square_current(self.params['injected_square_current'])
         mp = model.results['vm']
         def nan_test(mp):
+            import numpy as np
+            #is the membrane potential filled with 0's
+            if np.array(mp).all(0)==True:
+                return False
+
             import math
+            #is the membrane potential containing nans's
+
             for i in mp:
                 if math.isnan(i):
                     return False
+
             import neuronunit.capabilities as cap
             sws = cap.spike_functions.get_spike_waveforms(model.get_membrane_potential())
+            #is the membrane potential derivative containing nans's?
+
             for i,s in enumerate(sws):
                 s = np.array(s)
                 dvdt = np.diff(s)
@@ -157,6 +167,13 @@ class VmTest(sciunit.Test):
                 for j in dvdt:
                     if math.isnan(j):
                         return False
+
+            diffarrray = [ np.diff(np.array(s)) for i,s in enumerate(sws)]
+            #is the derivative of the membrane potential filled with 0's
+
+            if np.array(diffarrray).all(0)==True:
+                return False
+
 
         boolean = nan_test(mp)
         if boolean == False:
@@ -227,9 +244,7 @@ class TestPulseTest(VmTest):
             return a * np.exp(-b * x) + c
 
         x = segment.times.rescale('ms')
-        print(segment)
         y = segment.rescale('V')
-        print(y)
 
         offset = float(offset.rescale('ms')) # Strip units for optimization
         #import math
@@ -747,7 +762,6 @@ class RestingPotentialTest(VmTest):
         import math
         for i in mp:
             if math.isnan(i):
-                #print(mp)
                 return None
         prediction = {'mean':median, 'std':std}
 

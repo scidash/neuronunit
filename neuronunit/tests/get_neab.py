@@ -23,12 +23,13 @@ import time
 from pyneuroml import pynml
 import quantities as pq
 from neuronunit import tests as nu_tests, neuroelectro
-neuron = {'nlex_id': 'nifext_50'} # Layer V pyramidal cell
+neural_data = {'nlex_id': 'nifext_50'} # Layer V pyramidal cell
 tests = []
 
 dataset_id = 354190013  # Internal ID that AIBS uses for a particular Scnn1a-Tg2-Cre
                         # Primary visual area, layer 5 neuron.
 observation = aibs.get_observation(dataset_id,'rheobase')
+
 if os.path.exists(str(os.getcwd())+"/neuroelectro.pickle"):
     print('attempting to recover from pickled file')
     with open('neuroelectro.pickle', 'rb') as handle:
@@ -51,7 +52,7 @@ else:
     for cls,params in test_class_params:
         #use of the variable 'neuron' in this conext conflicts with the module name 'neuron'
         #at the moment it doesn't seem to matter as neuron is encapsulated in a class, but this could cause problems in the future.
-        observation = cls.neuroelectro_summary_observation(neuron)
+        observation = cls.neuroelectro_summary_observation(neural_data)
         tests += [cls(observation,params=params)]
 
     with open('neuroelectro.pickle', 'wb') as handle:
