@@ -397,9 +397,13 @@ def main():
 
         iter_=(vmlist[0],vmlist[0].rheobase)
         error_local=evaluate(invalid_ind[0],iter_)
-        print(vmlist[0].attrs)
+        print(vmlist[0])
+        print(dir(vmlist[0]))
         print(error_local)
+        print(pop[0])
+
         f=open('best_candidate.txt','w')
+        f.write(pop[0])
         f.write(error_local)
         f.write(vmlist[0].attrs)
 
