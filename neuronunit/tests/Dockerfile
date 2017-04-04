@@ -120,4 +120,4 @@ RUN python test_all.py
 RUN git pull origin dev
 RUN python setup.py install
 WORKDIR /home/mnt
-ENTRYPOINT python -m scoop nsga.py
+ENTRYPOINT python nsga.py
