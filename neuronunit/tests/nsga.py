@@ -134,7 +134,6 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
     Inputs a gene and a virtual model object.
     outputs are error components.
     '''
-
     vms,rheobase=iter_
     if vms.rheobase==0:
         #To avoid a strange math domain error.
@@ -148,6 +147,7 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
     current.update(uc)
     current = {'injected_square_current':current}
     #Its very important to reset the model here. Such that its vm is new, and does not carry charge from the last simulation
+    model.load_model()#purge models stored charge.
     model.update_run_params(vms.attrs)
     model.inject_square_current(current)
     n_spikes = model.get_spike_count()
@@ -167,30 +167,37 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
         spikes_numbers=[]
         model.run_number+=1
         error = score.sort_key.values.tolist()[0]
+        import pdb
         if len(error)>1:
            #I suspect this block is effective and the top one is not.
            for x,y in enumerate(error):
               if y == None:
                   inderr = getattr(individual, "error", None)
                   if inderr!=None and len(inderr)>0:
-                          error[x]=(inderr[x]+-10)/2.0
+                          error[x]=-abs(inderr[x]+-10)/2.0
                   else:
                       error[x] = -10.0
-                  print(error[x])
            #The following block is crucial given that we are maximising the error
            #It means that the optima or maximum value will be the scores that are closest
            # to zero.
+
+           #Regular error assignment
+           #Hopefuly the majority of model outputs are caught by this condition.
            for x,y in enumerate(error):
-               error[x]=abs(y-0.0)
+               error[x]=-abs(y-0.0)
+    #if the model is completely unplausible
     elif sane == False:
         inderr = getattr(individual, "error", None)
         if inderr!=None and len(inderr)>0:
             if len(individual.error)!=0:
                 #the average of 10 and the previous score is chosen as a nominally high distance from zero
-                error = [ ((-10.0+i)/2.0) for i in individual.error ]
+                error = [ -(abs(-10.0+i)/2.0) for i in individual.error ]
+                #pdb.set_trace()
         else:
             #10 is chosen as a nominally high distance from zero
             error = [ -10.0 for i in range(0,8) ]
+            print(error)
+
     individual.error=error
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
 
@@ -378,7 +385,8 @@ def main():
         vmlist=[]
         vmlist=list(map(individual_to_vm,pop))
 
-
+        for i in invalid_ind:
+            print(i.fitness)
         #def evaluate(individual,iter_):#This method must be pickle-able for scoop to work.
         #    vms,rheobase=iter_
 
@@ -391,9 +399,18 @@ def main():
         vmlist[0].rheobase = pre_rh_value.rheobase
 
 
+
         iter_=(vmlist[0],vmlist[0].rheobase)
-        pdb.set_trace()
+        #pdb.set_trace()
         error_local=evaluate(invalid_ind[0],iter_)
+
+        pre_rh_value = searcher(check_current,rh_param,vmlist[0])
+        vmlist[len(vmlist)-1].rheobase = pre_rh_value.rheobase
+        iter_=(vmlist[len(vmlist)-1],vmlist[len(vmlist)-1].rheobase)
+        #pdb.set_trace()
+        error_local=evaluate(invalid_ind[len(vmlist)-1],iter_)
+
+
         print(vmlist[0])
         print(dir(vmlist[0]))
         print(error_local)

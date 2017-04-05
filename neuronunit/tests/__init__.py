@@ -82,22 +82,7 @@ class VmTest(sciunit.Test):
     def bind_score(self, score, model, observation, prediction):
         score.related_data['vm'] = model.get_membrane_potential()
         score.related_data['model_name'] = '%s_%s' % (model.name,self.name)
-        '''
-        This code does not work
-        def plot_vm(self,ax=None,ylim=(None,None)):
-            """A plot method the score can use for convenience."""
-            if ax is None:
-                ax = plt.gca()
-            vm = score.related_data['vm'].rescale('mV')
-            ax.plot(vm.times,vm)
-            y_min = float(vm.min()-5.0*pq.mV) if ylim[0] is None else ylim[0]
-            y_max = float(vm.max()+5.0*pq.mV) if ylim[1] is None else ylim[1]
-            ax.set_ylim(y_min,y_max)
-            ax.set_xlabel('Time (s)')
-            ax.set_ylabel('Vm (mV)')
-        score.plot_vm = MethodType(plot_vm, score) # Bind to the score.
-        score.unpicklable.append('plot_vm')
-        '''
+
         return score
 
     @classmethod
@@ -142,48 +127,31 @@ class VmTest(sciunit.Test):
         self.params['injected_square_current']['duration'] = DURATION
         self.params['injected_square_current']['amplitude'] = rheobase
         model.inject_square_current(self.params['injected_square_current'])
-        mp = model.results['vm']
+        import numpy as np
+        import copy
+        import math
         def nan_test(mp):
-            import numpy as np
-            #is the membrane potential filled with 0's
-            if np.array(mp).all(0)==True:
-                return False
-
-            import math
-            #is the membrane potential containing nans's
-
             for i in mp:
                 if math.isnan(i):
                     return False
+                if (i == float('inf')) or (i == float('-inf')):
+                    return False
+                if math.isnan(i):
+                    return False
 
-            import neuronunit.capabilities as cap
-            sws = cap.spike_functions.get_spike_waveforms(model.get_membrane_potential())
-            #is the membrane potential derivative containing nans's?
-
-            for i,s in enumerate(sws):
-                s = np.array(s)
-                dvdt = np.diff(s)
-                import math
-                for j in dvdt:
-                    if math.isnan(j):
-                        return False
-
-            diffarrray = [ np.diff(np.array(s)) for i,s in enumerate(sws)]
-            #is the derivative of the membrane potential filled with 0's
-
-            if np.array(diffarrray).all(0)==True:
+            x = mp.std()
+            if x == 0:
                 return False
 
-
+        mp = np.array(copy.copy(model.results['vm']))
+        boolean = True
         boolean = nan_test(mp)
         if boolean == False:
             return False
-
-        self.params['injected_square_current']['delay'] = DELAY
-        self.params['injected_square_current']['duration'] = DURATION
+        model.load_model()#purge models stored charge by re initializing it.
         self.params['injected_square_current']['amplitude'] = -10.0
         model.inject_square_current(self.params['injected_square_current'])
-        mp = model.results['vm']
+        mp = np.array(copy.copy(model.results['vm']))
 
         boolean = nan_test(mp)
         if boolean == False:
