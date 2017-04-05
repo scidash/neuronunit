@@ -69,11 +69,16 @@ tests = []
 dataset_id = 354190013  # Internal ID that AIBS uses for a particular Scnn1a-Tg2-Cre
                         # Primary visual area, layer 5 neuron.
 observation = aibs.get_observation(dataset_id,'rheobase')
+import pdb
+print(observation)
 
 if os.path.exists(str(os.getcwd())+"/neuroelectro.pickle"):
     print('attempting to recover from pickled file')
     with open('neuroelectro.pickle', 'rb') as handle:
         tests = pickle.load(handle)
+
+        #pdb.set_trace()
+
 
 else:
     print('checked path:')
@@ -93,7 +98,8 @@ else:
         #use of the variable 'neuron' in this conext conflicts with the module name 'neuron'
         #at the moment it doesn't seem to matter as neuron is encapsulated in a class, but this could cause problems in the future.
         observation = cls.neuroelectro_summary_observation(neuron)
-        tests += [cls(observation,params=params)]
+        #tests += [cls(observation,params=params)]
+        print(observation, 'observation that I use')
 
     with open('neuroelectro.pickle', 'wb') as handle:
         pickle.dump(tests, handle)
@@ -104,7 +110,6 @@ def update_amplitude(test,tests,score):
     #for i in
 
 
-    for i in [4,5,6]:
 
 required_capabilities = (cap.ReceivesSquareCurrent,
                          cap.ProducesSpikes)
@@ -142,8 +147,8 @@ storagesmin=np.where(storagei==np.min(storagei))
 storagesmax=np.where(storagei==np.max(storagei))
 score0,attrs0,rheobase0=matrix[storagesmin[0][0]]
 score1,attrs1,rheobase1=matrix[storagesmin[0][1]]
-score0max,attrs0max,rheobase0=matrix[storagesmax[0][0]]
-score1max,attrs1max,rheobase1=matrix[storagesmax[0][1]]
+score0max,attrs0max,rheobase0max=matrix[storagesmax[0][0]]
+score1max,attrs1max,rheobase1max=matrix[storagesmax[0][1]]
 
 
 class VirtualModel:
@@ -170,44 +175,43 @@ class VirtualModel:
 
 
 def build_single(indexs):
-    attrs,name=indexs
+    attrs,name,rheobase=indexs
     #This method is only used to check singlular sets of hard coded parameters.]
     #This medthod is probably only useful for diagnostic purposes.
 
     model.attrs=attrs
     model.update_run_params(attrs)
-    model.h.psection()
-    print('!!!!!\n\n')
-    print(model.attrs)
     model.update_run_params(model.attrs)
-    model.h.psection()
-    print(model.attrs)
-    print('!!!!!\n\n')
-
     model.name = str(attrs)
-    #rh_value=searcher2(f,rh_param,vms)
     get_neab.suite.tests[0].prediction={}
-    get_neab.suite.tests[0].prediction['value']=52.22222222222222 *qt.pA
+    get_neab.suite.tests[0].prediction['value']=rheobase*qt.pA
     score = get_neab.suite.judge(model)#passing in model, changes model
-    print('this is the spike count!!!!!!!!!!!: \n \n \n')
-    print('this is the spike count!!!!!!!!!!!: \n \n \n')
-    print('this is the spike count!!!!!!!!!!!: \n \n \n')
-    print(model.get_spike_count())
-    plt.plot(model.results['t'],model.results['vm'])
-    plt.savefig(name+'.png')
-    plt.clf()
+
+
+    for i, j in tests:
+        plt.title(str(j)+str(j.observation['n']['name']))
+        mean_plt = np.empty(len(model.results['t']))
+        mean_plt.fill(j.observation['mean'])
+        mean_std = np.empty(len(mean_plt))
+        mean_std.fill(j.observation['std'])
+        plt.plot(mean_std)
+        plt.plot(mean_plt)
+        vm = score[get_neab.tests[i]][0].related_data['vm'].rescale('mV') # Plot the rheobase current (test 3)
+        plt.plot(model.results['t'],vm)
+        plt.savefig(name+str(str(j)+str(j).observation['n']['name'])+str('.png'))
+        plt.clf()
 
 
 print(score0,attrs0)
 name='min_one'
 list_of_tups=[]
-list_of_tups.append((attrs0,name))
+list_of_tups.append((attrs0, name, rheobase0))
 name='min_two'
-list_of_tups.append((attrs1,name))
+list_of_tups.append((attrs1, name, rheobase1))
 name='max_one'
-list_of_tups.append((attrs0max,name))
+list_of_tups.append((attrs0max, name, rheobase0max))
 name='max_two'
-list_of_tups.append((attrs1max,name))
+list_of_tups.append((attrs1max, name, rheobase1max))
 from scoop import futures
 
 if __name__ == "__main__":

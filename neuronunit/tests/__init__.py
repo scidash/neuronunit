@@ -132,27 +132,29 @@ class VmTest(sciunit.Test):
         import math
         def nan_test(mp):
             for i in mp:
-                if math.isnan(i):
-                    return False
-                if (i == float('inf')) or (i == float('-inf')):
-                    return False
-                if math.isnan(i):
-                    return False
-
+                if type(i)==np.float64:
+                    if math.isnan(i):
+                        return False
+                    if (i == float('inf')) or (i == float('-inf')):
+                        return False
+                    if math.isnan(i):
+                        return False
+                else:
+                    print(i)
+                    print(type(i))
             x = mp.std()
             if x == 0:
                 return False
-
+        model.re_init(model.attrs)
         mp = np.array(copy.copy(model.results['vm']))
         boolean = True
         boolean = nan_test(mp)
         if boolean == False:
             return False
-        model.load_model()#purge models stored charge by re initializing it.
         self.params['injected_square_current']['amplitude'] = -10.0
         model.inject_square_current(self.params['injected_square_current'])
+        model.re_init(model.attrs)
         mp = np.array(copy.copy(model.results['vm']))
-
         boolean = nan_test(mp)
         if boolean == False:
             return False
