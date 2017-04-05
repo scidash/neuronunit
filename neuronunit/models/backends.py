@@ -195,6 +195,14 @@ class NEURONBackend(Backend):
         self.h(' { v_u_of0.record(&m_RS_RS_pop[0].u) } ')
 
 
+
+    def re_init(self,attrs):
+        self.load_model()
+        self.update_run_params(attrs)
+        #print(attrs)
+        #self.h.psection()
+
+
     def inject_square_current(self,current):
         '''
         Inputs: current : a dictionary
@@ -204,7 +212,9 @@ class NEURONBackend(Backend):
          'duration':500*pq.ms}}
         where 'pq' is the quantities package
         '''
-
+        self.re_init(self.attrs)
+        #print(self.attrs)
+        #self.h.psection()
         c=copy.copy(current)
         if 'injected_square_current' in c.keys():
             c=current['injected_square_current']

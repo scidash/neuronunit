@@ -42,9 +42,9 @@ import sciunit.scores as scores
 
 
 init_start=time.time()
-creator.create("FitnessMax", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0,
-                                                    -1.0, -1.0, -1.0, -1.0))
-creator.create("Individual",list, fitness=creator.FitnessMax)
+creator.create("FitnessMin", base.Fitness, weights=(1.0, 1.0, 1.0, 1.0,
+                                                    1.0, 1.0, 1.0, 1.0))
+creator.create("Individual",list, fitness=creator.FitnessMin)
 
 class Individual(object):
     '''
@@ -134,11 +134,17 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
     Inputs a gene and a virtual model object.
     outputs are error components.
     '''
+    print(iter_)
     vms,rheobase=iter_
+    print(vms,rheobase)
+    print(vms.rheobase)
+    assert vms.rheobase==rheobase
+    '''
     if vms.rheobase==0:
         #To avoid a strange math domain error.
-        vms.rheobase=0.000001
-        rheobase=0.000001
+        vms.rheobase=-0.000000001
+        rheobase=-0.000000001
+    '''
     import quantities as pq
     params=gs.params
     model=gs.model
@@ -147,17 +153,23 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
     current.update(uc)
     current = {'injected_square_current':current}
     #Its very important to reset the model here. Such that its vm is new, and does not carry charge from the last simulation
-    model.load_model()#purge models stored charge.
+    model.re_init(vms.attrs)#purge models stored charge. by reinitializing it
+
+    model.load_model()
     model.update_run_params(vms.attrs)
+
     model.inject_square_current(current)
     n_spikes = model.get_spike_count()
+    print(n_spikes, 'assertion error results')
+    model.h.psection()
+    print(model.attrs)
     assert n_spikes == 1 or n_spikes == 0
     #first populate the list with falses:
     #sane_list = [ False for i in range(0, len(get_neab.suite.tests)) ]
     #sane_list = [ i.sanity_check(vms.rheobase*pq.pA,model) for i in get_neab.suite.tests ]
     sane = False
     sane = get_neab.suite.tests[0].sanity_check(vms.rheobase*pq.pA,model)
-    if sane == True and (n_spikes == 1 or n_spikes == 0):
+    if sane == True and (n_spikes == 1 or n_spikes == 0) and vms.rheobase != 0:
         for i in [4,5,6]:
             get_neab.suite.tests[i].params['injected_square_current']['amplitude']=vms.rheobase*pq.pA
         get_neab.suite.tests[0].prediction={}
@@ -167,35 +179,29 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
         spikes_numbers=[]
         model.run_number+=1
         error = score.sort_key.values.tolist()[0]
-        import pdb
-        if len(error)>1:
-           #I suspect this block is effective and the top one is not.
-           for x,y in enumerate(error):
-              if y == None:
-                  inderr = getattr(individual, "error", None)
-                  if inderr!=None and len(inderr)>0:
-                          error[x]=-abs(inderr[x]+-10)/2.0
-                  else:
-                      error[x] = -10.0
-           #The following block is crucial given that we are maximising the error
-           #It means that the optima or maximum value will be the scores that are closest
-           # to zero.
 
-           #Regular error assignment
-           #Hopefuly the majority of model outputs are caught by this condition.
-           for x,y in enumerate(error):
-               error[x]=-abs(y-0.0)
+        for x,y in enumerate(error):
+            if y != None:
+                error[x]= abs(y-0.0)
+            else:
+                inderr = getattr(individual, "error", None)
+                if inderr!=None:
+                    error[x]= abs(inderr[x]+-10)/2.0
+                else:
+                    error[x] = 10.0
+
+
     #if the model is completely unplausible
-    elif sane == False:
+    else:#ie if sane == False or rheobase == 0
         inderr = getattr(individual, "error", None)
-        if inderr!=None and len(inderr)>0:
+        if inderr!=None:
             if len(individual.error)!=0:
                 #the average of 10 and the previous score is chosen as a nominally high distance from zero
-                error = [ -(abs(-10.0+i)/2.0) for i in individual.error ]
+                error = [ (abs(-10.0+i)/2.0) for i in individual.error ]
                 #pdb.set_trace()
         else:
             #10 is chosen as a nominally high distance from zero
-            error = [ -10.0 for i in range(0,8) ]
+            error = [ 10.0 for i in range(0,8) ]
             print(error)
 
     individual.error=error
@@ -325,7 +331,7 @@ def main():
     fitnesses = list(toolbox.map(toolbox.evaluate, pop, iter_))
     invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
 
-    assert len(fitnesses)==len(invalid_ind)
+    #assert len(fitnesses)==len(invalid_ind)
 
     for ind, fit in zip(invalid_ind, fitnesses):
         ind.fitness.values = fit
@@ -366,9 +372,9 @@ def main():
         rhstorage = [i.rheobase for i in vmpop]
         iter_ = zip(vmpop,rhstorage)
         fitnesses = list(toolbox.map(toolbox.evaluate, pop, iter_))
-        assert len(fitnesses)==len(invalid_ind)
         invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
         #vmlist=list(futures.map(individual_to_vm,invalid_ind))
+        assert len(fitnesses)==len(invalid_ind)
 
         #fitnesses = toolbox.map(toolbox.evaluate, invalid_ind, vmlist)
 
@@ -401,27 +407,38 @@ def main():
 
 
         iter_=(vmlist[0],vmlist[0].rheobase)
-        #pdb.set_trace()
-        error_local=evaluate(invalid_ind[0],iter_)
+        error_local_best = evaluate(vmlist[0],iter_)
+        print(error_local_best)
 
-        pre_rh_value = searcher(check_current,rh_param,vmlist[0])
-        vmlist[len(vmlist)-1].rheobase = pre_rh_value.rheobase
-        iter_=(vmlist[len(vmlist)-1],vmlist[len(vmlist)-1].rheobase)
-        #pdb.set_trace()
-        error_local=evaluate(invalid_ind[len(vmlist)-1],iter_)
+        steps = np.linspace(50,150,7.0)
+        steps_current = [ i*pq.pA for i in steps ]
+        rh_param = (False,steps_current)
+        searcher = gs.searcher
+        check_current = gs.check_current
+
+        pre_rh_value = searcher(check_current,rh_param,vmlist[-1])
+        vmlist[-1].rheobase = pre_rh_value.rheobase
+
+        iter_=(vmlist[-1],vmlist[-1].rheobase)
+
+        error_local_worst = evaluate(vmlist[-1],iter_)
 
 
         print(vmlist[0])
         print(dir(vmlist[0]))
-        print(error_local)
+        print(error_local_worst)
         print(pop[0])
         vm=individual_to_vm(pop[0])
         print(vm.attrs)
         f=open('best_candidate.txt','w')
-        f.write(pop[0])
-        f.write(error_local)
-        f.write(vm.attrs)
+        #f.write(pop[0])
+        f.write(str(error_local_best))
+        f.write(vmlist[0].attrs)
+        f.write(str(vmlist[0].rheobase))
         #f.write(vmlist[0].attrs)
+        f.write(str(error_local_worst))
+        f.write(vmlist[-1].attrs)
+        f.write(str(vmlist[-1].rheobase))
 
 
         record = stats.compile(pop)
