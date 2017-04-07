@@ -19,6 +19,9 @@ from neuronunit.models import backends
 import sciunit.scores as scores
 from neuronunit.models import backends
 from neuronunit.models.reduced import ReducedModel
+global model
+model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
+print(model)
 import neuronunit.capabilities as cap
 
 
@@ -63,53 +66,16 @@ neural_data = {'nlex_id': 'nifext_50'} #Layer V pyramidal cell
 # Don't use the label neuron
 #that label will be needed by the HOC/NEURON object which also needs to occupy the same name space
 
+with open('nsga_matrix.pickle', 'rb') as handle:
+    nsga_matrix=pickle.load(handle)
 
-tests = []
-
-dataset_id = 354190013  # Internal ID that AIBS uses for a particular Scnn1a-Tg2-Cre
-                        # Primary visual area, layer 5 neuron.
-observation = aibs.get_observation(dataset_id,'rheobase')
-import pdb
-print(observation)
+parameters_min=nsga_matrix[1][1]
+#parameters_max=nsga_matrix[3]
 
 if os.path.exists(str(os.getcwd())+"/neuroelectro.pickle"):
     print('attempting to recover from pickled file')
     with open('neuroelectro.pickle', 'rb') as handle:
         tests = pickle.load(handle)
-
-        #pdb.set_trace()
-
-
-else:
-    print('checked path:')
-    print(str(os.getcwd())+"/neuroelectro.pickle")
-    print('no pickled file found. Commencing time intensive Download')
-    tests += [nu_tests.RheobaseTest(observation=observation)]
-    test_class_params = [(nu_tests.InputResistanceTest,None),
-                         (nu_tests.TimeConstantTest,None),
-                         (nu_tests.CapacitanceTest,None),
-                         (nu_tests.RestingPotentialTest,None),
-                         (nu_tests.InjectedCurrentAPWidthTest,None),
-                         (nu_tests.InjectedCurrentAPAmplitudeTest,None),
-                         (nu_tests.InjectedCurrentAPThresholdTest,None)]
-
-
-    for cls,params in test_class_params:
-        #use of the variable 'neuron' in this conext conflicts with the module name 'neuron'
-        #at the moment it doesn't seem to matter as neuron is encapsulated in a class, but this could cause problems in the future.
-        observation = cls.neuroelectro_summary_observation(neuron)
-        #tests += [cls(observation,params=params)]
-        print(observation, 'observation that I use')
-
-    with open('neuroelectro.pickle', 'wb') as handle:
-        pickle.dump(tests, handle)
-
-def update_amplitude(test,tests,score):
-    rheobase = score.prediction['value']#first find a value for rheobase
-    #then proceed with other optimizing other parameters.
-    #for i in
-
-
 
 required_capabilities = (cap.ReceivesSquareCurrent,
                          cap.ProducesSpikes)
@@ -126,12 +92,12 @@ import quantities as pq
 units = pq.pA
 
 
-model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
+#model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
 import pickle
 with open('score_matrix.pickle', 'rb') as handle:
     matrix=pickle.load(handle)
-
-
+'''
+print(matrix)
 matrix3=[]
 for x,y,rheobase in matrix:
     for i in x:
@@ -142,6 +108,7 @@ for x,y,rheobase in matrix:
             matrix2.append((j,rheobase))
             #print(j,rheobase)
         matrix3.append(matrix2)
+
 storagei = [ np.sum(i) for i in matrix3 ]
 storagesmin=np.where(storagei==np.min(storagei))
 storagesmax=np.where(storagei==np.max(storagei))
@@ -149,62 +116,52 @@ score0,attrs0,rheobase0=matrix[storagesmin[0][0]]
 score1,attrs1,rheobase1=matrix[storagesmin[0][1]]
 score0max,attrs0max,rheobase0max=matrix[storagesmax[0][0]]
 score1max,attrs1max,rheobase1max=matrix[storagesmax[0][1]]
+'''
 
 
-class VirtualModel:
-    '''
-    This is a pickable dummy clone
-    version of the NEURON simulation model
-    It does not contain an actual model, but it can be used to
-    wrap the real model.
-    This Object class serves as a data type for storing rheobase search
-    attributes and other useful parameters,
-    with the distinction that unlike the NEURON model this class
-    can be transported across HOSTS/CPUs
-    '''
-    def __init__(self):
-        self.lookup={}
-        self.rheobase=None
-        self.previous=0
-        self.run_number=0
-        self.attrs=None
-        self.name=None
-        self.s_html=None
-        self.results=None
+from scoop import futures
 
+
+def test_to_model(local_test_methods,attrs):
+    import matplotlib.pyplot as plt
+    import copy
+    global model
+    model.local_run()
+    model.update_run_params(attrs)
+    model.re_init(attrs)
+    tests = get_neab.suite.tests
+    tests[local_test_methods].judge(model)
+    if hasattr(tests[local_test_methods],'related_data'):
+        if tests[local_test_methods].related_data != None:
+            print(tests[local_test_methods].related_data['vm'])
+    plt.plot(copy.copy(model.results['t']), copy.copy(model.results['vm']))
+    plt.savefig(str(tests[local_test_methods])+str('.png'))
+    plt.clf()
+    model.results['vm']=None
+    model.results['t']=None
+    tests[local_test_methods].related_data=None
+    local_test_methods=None
+    return 0
 
 
 def build_single(indexs):
     attrs,name,rheobase=indexs
-    #This method is only used to check singlular sets of hard coded parameters.]
-    #This medthod is probably only useful for diagnostic purposes.
+    from scoop import futures
+    judged = list(futures.map(test_to_model,local_test_methods,repeat(attrs)))
+    return 0#judged
 
-    model.attrs=attrs
-    model.update_run_params(attrs)
-    model.update_run_params(model.attrs)
-    model.name = str(attrs)
-    get_neab.suite.tests[0].prediction={}
-    get_neab.suite.tests[0].prediction['value']=rheobase*qt.pA
-    score = get_neab.suite.judge(model)#passing in model, changes model
+get_neab.suite.tests[0].prediction={}
+get_neab.suite.tests[0].prediction['value']=nsga_matrix[0][2]*qt.pA
 
+local_test_methods = [ i for i,j in enumerate(get_neab.suite.tests) ]
+from itertools import repeat
 
-    for i, j in tests:
-        plt.title(str(j)+str(j.observation['n']['name']))
-        mean_plt = np.empty(len(model.results['t']))
-        mean_plt.fill(j.observation['mean'])
-        mean_std = np.empty(len(mean_plt))
-        mean_std.fill(j.observation['std'])
-        plt.plot(mean_std)
-        plt.plot(mean_plt)
-        vm = score[get_neab.tests[i]][0].related_data['vm'].rescale('mV') # Plot the rheobase current (test 3)
-        plt.plot(model.results['t'],vm)
-        plt.savefig(name+str(str(j)+str(j).observation['n']['name'])+str('.png'))
-        plt.clf()
-
-
-print(score0,attrs0)
-name='min_one'
 list_of_tups=[]
+list_of_tups.append((nsga_matrix[1][1],'maximum',nsga_matrix[1][2]))
+
+list_of_tups.append((nsga_matrix[0][1],'minimum',nsga_matrix[0][2]))
+
+'''
 list_of_tups.append((attrs0, name, rheobase0))
 name='min_two'
 list_of_tups.append((attrs1, name, rheobase1))
@@ -212,11 +169,15 @@ name='max_one'
 list_of_tups.append((attrs0max, name, rheobase0max))
 name='max_two'
 list_of_tups.append((attrs1max, name, rheobase1max))
-from scoop import futures
+'''
 
 if __name__ == "__main__":
-
-    completed=list(futures.map(build_single,list_of_tups))
+    #print(list_of_tups[0])
+    #completed3 = map(build_single,list_of_tups)
+    completed1 = list(futures.map(build_single,list_of_tups))
+    print('\n\n\n a', completed1, '\n\n\n')
+    completed2 = list(futures.map(build_single,list_of_tups))
+    print('\n\n\n b', completed2, '\n\n\n')
 
 
 #sbuild_single(attrs1,rheobase1)

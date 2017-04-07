@@ -112,7 +112,7 @@ ARG HEAD=1
 #RUN echo "down load anyway please"
 #RUN mkdir -p sciunit
 WORKDIR sciunit
-RUN git clone -b dev http://github.com/scidash/sciunit
+RUN git clone -b dev https://github.com/russelljjarvis/sciunit.git
 #RUN tar -xvzf sciunit.tar.gz -C sciunit --strip-components=1
 WORKDIR sciunit
 RUN python setup.py install
