@@ -92,49 +92,58 @@ import quantities as pq
 units = pq.pA
 
 
-#model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
 import pickle
 with open('score_matrix.pickle', 'rb') as handle:
     matrix=pickle.load(handle)
-'''
-print(matrix)
-matrix3=[]
-for x,y,rheobase in matrix:
-    for i in x:
-        matrix2=[]
-        for j in i:
-            if j==None:
-                j=10.0
-            matrix2.append((j,rheobase))
-            #print(j,rheobase)
-        matrix3.append(matrix2)
-
-storagei = [ np.sum(i) for i in matrix3 ]
-storagesmin=np.where(storagei==np.min(storagei))
-storagesmax=np.where(storagei==np.max(storagei))
-score0,attrs0,rheobase0=matrix[storagesmin[0][0]]
-score1,attrs1,rheobase1=matrix[storagesmin[0][1]]
-score0max,attrs0max,rheobase0max=matrix[storagesmax[0][0]]
-score1max,attrs1max,rheobase1max=matrix[storagesmax[0][1]]
-'''
-
 
 from scoop import futures
-
 
 def test_to_model(local_test_methods,attrs):
     import matplotlib.pyplot as plt
     import copy
     global model
+    global nsga_matrix
     model.local_run()
-    model.update_run_params(attrs)
-    model.re_init(attrs)
+    model.update_run_params(nsga_matrix[0][1])
+    model.re_init(nsga_matrix[0][1])
     tests = get_neab.suite.tests
+
+    if local_test_methods in [4,5,6]:
+        #print('got here')
+        tests[local_test_methods].params['injected_square_current']['amplitude']=nsga_matrix[0][2]*qt.pA
     tests[local_test_methods].judge(model)
     if hasattr(tests[local_test_methods],'related_data'):
+    #            for i in [4,5,6]:
+        if tests[local_test_methods].related_data != None:
+            #print(tests[local_test_methods].related_data['vm'])
+            #plt.xlabel('best candidate of GA')
+            plt.plot(model.results['t'], tests[local_test_methods].related_data['vm'] )
+
+    plt.plot(model.results['t'], model.results['vm'],label='best candidate of GA')
+
+
+    model.update_run_params(nsga_matrix[1][1])
+    model.re_init(nsga_matrix[1][1])
+    tests = get_neab.suite.tests
+
+    if local_test_methods in [4,5,6]:
+        #print('got here')
+        tests[local_test_methods].params['injected_square_current']['amplitude']=nsga_matrix[1][2]*qt.pA
+    tests[local_test_methods].judge(model)
+    if hasattr(tests[local_test_methods],'related_data'):
+    #            for i in [4,5,6]:
         if tests[local_test_methods].related_data != None:
             print(tests[local_test_methods].related_data['vm'])
-    plt.plot(copy.copy(model.results['t']), copy.copy(model.results['vm']))
+            plt.xlabel('worst candidate of GA')
+
+            plt.plot(copy.copy(model.results['t']), tests[local_test_methods].related_data['vm'])
+
+    plt.plot(model.results['t'],model.results['vm'],label='worst candidate of GA')
+
+    plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+               ncol=2, mode="expand", borderaxespad=0.)
+
+
     plt.savefig(str(tests[local_test_methods])+str('.png'))
     plt.clf()
     model.results['vm']=None
@@ -152,32 +161,15 @@ def build_single(indexs):
 
 get_neab.suite.tests[0].prediction={}
 get_neab.suite.tests[0].prediction['value']=nsga_matrix[0][2]*qt.pA
-
 local_test_methods = [ i for i,j in enumerate(get_neab.suite.tests) ]
 from itertools import repeat
 
 list_of_tups=[]
-list_of_tups.append((nsga_matrix[1][1],'maximum',nsga_matrix[1][2]))
-
+#list_of_tups.append((nsga_matrix[1][1],'maximum',nsga_matrix[1][2]))
+#get_neab.suite.tests[0].prediction={}
+#get_neab.suite.tests[0].prediction['value']=nsga_matrix[1][2]*qt.pA
 list_of_tups.append((nsga_matrix[0][1],'minimum',nsga_matrix[0][2]))
 
-'''
-list_of_tups.append((attrs0, name, rheobase0))
-name='min_two'
-list_of_tups.append((attrs1, name, rheobase1))
-name='max_one'
-list_of_tups.append((attrs0max, name, rheobase0max))
-name='max_two'
-list_of_tups.append((attrs1max, name, rheobase1max))
-'''
 
 if __name__ == "__main__":
-    #print(list_of_tups[0])
-    #completed3 = map(build_single,list_of_tups)
     completed1 = list(futures.map(build_single,list_of_tups))
-    print('\n\n\n a', completed1, '\n\n\n')
-    completed2 = list(futures.map(build_single,list_of_tups))
-    print('\n\n\n b', completed2, '\n\n\n')
-
-
-#sbuild_single(attrs1,rheobase1)
