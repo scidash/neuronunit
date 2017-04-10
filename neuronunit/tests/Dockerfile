@@ -111,6 +111,7 @@ USER $NB_USER
 ARG HEAD=1
 #RUN echo "down load anyway please"
 #RUN mkdir -p sciunit
+WORKDIR $HOME
 WORKDIR sciunit
 RUN git clone -b dev https://github.com/russelljjarvis/sciunit.git
 #RUN tar -xvzf sciunit.tar.gz -C sciunit --strip-components=1
@@ -120,4 +121,4 @@ RUN python test_all.py
 RUN git pull origin dev
 RUN python setup.py install
 WORKDIR /home/mnt
-ENTRYPOINT python nsga.py
+#ENTRYPOINT python nsga.py

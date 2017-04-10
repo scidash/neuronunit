@@ -19,7 +19,11 @@ from scoop import futures
 AMPL = 0.0*pq.pA
 DELAY = 100.0*pq.ms
 DURATION = 1000.0*pq.ms
+#import pdb
+#pdb.set_trace()
+#from sciunit import SciUnit
 
+#SciUnit.unpicklable.append(InputResistanceTest)
 class VmTest(sciunit.Test):
     """Base class for tests involving the membrane potential of a model."""
 
@@ -139,9 +143,7 @@ class VmTest(sciunit.Test):
                         return False
                     if math.isnan(i):
                         return False
-                else:
-                    print(i)
-                    print(type(i))
+
             x = mp.std()
             if x == 0:
                 return False
