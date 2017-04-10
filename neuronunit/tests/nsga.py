@@ -139,43 +139,54 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
     print(vms,rheobase)
     print(vms.rheobase)
     assert vms.rheobase==rheobase
-    '''
-    if vms.rheobase==0:
-        #To avoid a strange math domain error.
-        vms.rheobase=-0.000000001
-        rheobase=-0.000000001
-    '''
+
     import quantities as pq
-    params=gs.params
-    model=gs.model
+    params = gs.params
+    #global params
+
+    model = gs.model
+    #global model
+
     uc = {'amplitude':rheobase}
     current = params.copy()['injected_square_current']
     current.update(uc)
     current = {'injected_square_current':current}
     #Its very important to reset the model here. Such that its vm is new, and does not carry charge from the last simulation
     model.re_init(vms.attrs)#purge models stored charge. by reinitializing it
-
     model.load_model()
     model.update_run_params(vms.attrs)
-
     model.inject_square_current(current)
+    import neuronunit.capabilities as cap
     n_spikes = model.get_spike_count()
-    print(n_spikes, 'assertion error results')
     model.h.psection()
     print(model.attrs)
-    assert n_spikes == 1 or n_spikes == 0
-    #first populate the list with falses:
-    #sane_list = [ False for i in range(0, len(get_neab.suite.tests)) ]
-    #sane_list = [ i.sanity_check(vms.rheobase*pq.pA,model) for i in get_neab.suite.tests ]
+    if n_spikes ==0 and rheobase ==0.0:
+        print('this probably means that no rheobase was found, and the value was assigned 0.0 which may cause errors in the rest of the program')
+
+    if n_spikes !=0 and rheobase !=0.0:
+        import matplotlib
+        plt.clf()
+        plt.plot(model.results['t'],model.results['vm'],label='candidate of GA')
+        plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+                   ncol=2, mode="expand", borderaxespad=0.)
+
+        plt.title(str(vms.rheobase*pq.pA))
+        plt.savefig(str(vms.rheobase*pq.pA)+str('.png'))
+    assert n_spikes == 1 or n_spikes == 0  # Its possible that no rheobase was found
+    #filter out such models from the evaluation.
+
     sane = False
+
+    individual.error = [ 10.0 for i in range(0,8) ] #init error such that there is no chance it can become none.
+
     sane = get_neab.suite.tests[0].sanity_check(vms.rheobase*pq.pA,model)
-    if sane == True and (n_spikes == 1 or n_spikes == 0) and vms.rheobase != 0:
+    if sane == True and n_spikes == 1:
         for i in [4,5,6]:
             get_neab.suite.tests[i].params['injected_square_current']['amplitude']=vms.rheobase*pq.pA
         get_neab.suite.tests[0].prediction={}
         score = get_neab.suite.tests[0].prediction['value']=vms.rheobase*pq.pA
         score = get_neab.suite.judge(model)#passing in model, changes model
-        import neuronunit.capabilities as cap
+
         spikes_numbers=[]
         model.run_number+=1
         error = score.sort_key.values.tolist()[0]
@@ -186,7 +197,7 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
             else:
                 inderr = getattr(individual, "error", None)
                 if inderr!=None:
-                    error[x]= abs(inderr[x]+-10)/2.0
+                    error[x]= abs(inderr[x]-10)/2.0
                 else:
                     error[x] = 10.0
 
@@ -204,7 +215,8 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
             error = [ 10.0 for i in range(0,8) ]
             print(error)
 
-    individual.error=error
+    individual.error = error
+    individual.rheobase = vms.rheobase
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
 
 
@@ -222,41 +234,39 @@ def plotss(vmlist,gen):
     plt.clf()
     for ind,j in enumerate(vmlist):
         if hasattr(ind,'results'):
-            plt.plot(ind.results['t'],ind.results['vm'])
-            plt.xlabel(str(vmlist[j].attr))
+            plt.plot(ind.results['t'],ind.results['vm'],label=str(vmlist[j].attr) )
+            #plt.xlabel(str(vmlist[j].attr))
     plt.savefig('snap_shot_at_gen_'+str(gen)+'.png')
     plt.clf()
 
 
+def individual_to_vm(ind):
+    for i, p in enumerate(param):
+        value = str(ind[i])
+        if i == 0:
+            attrs={'//izhikevich2007Cell':{p:value }}
+        else:
+            attrs['//izhikevich2007Cell'][p] = value
+    vm = gs.VirtualModel()
+    vm.attrs = attrs
+
+    inderr = getattr(ind, "error", None)
+    if inderr!=None:
+        vm.error = ind.error
+        print('vm.error: ',vm.error)
+    indrheobase = getattr(ind, "rheobase", None)
+    if indrheobase!=None:
+        vm.rheobase = ind.rheobase
+        print('vm.rheobase: ',vm.rheobase)
+
+    return vm
 
 
-class VirtualModel:
-    '''
-    This is a pickable dummy clone
-    version of the NEURON simulation model
-    It does not contain an actual model, but it can be used to
-    wrap the real model.
-    This Object class serves as a data type for storing rheobase search
-    attributes and other useful parameters,
-    with the distinction that unlike the NEURON model this class
-    can be transported across HOSTS/CPUs
-    '''
-    def __init__(self):
-        self.lookup={}
-        self.rheobase=None
-        self.previous=0
-        self.run_number=0
-        self.attrs=None
-        self.name=None
-        self.s_html=None
-        self.results=None
-        self.score=None
-        self.error=None
+
 
 
 def main():
 
-    #random.seed(seed)
 
     NGEN=4
     MU=12
@@ -281,7 +291,7 @@ def main():
         guess_attrs.append(np.mean( [ i[x] for i in pop ]))
 
     from itertools import repeat
-    mean_vm=VirtualModel()
+    mean_vm=gs.VirtualModel()
 
     for i, p in enumerate(param):
         value=str(guess_attrs[i])
@@ -293,17 +303,6 @@ def main():
     mean_vm.attrs=attrs
     import copy
 
-    def individual_to_vm(ind):
-        for i, p in enumerate(param):
-            value = str(ind[i])
-            if i == 0:
-                attrs={'//izhikevich2007Cell':{p:value }}
-            else:
-                attrs['//izhikevich2007Cell'][p] = value
-        vm = VirtualModel()
-        vm.attrs = attrs
-        return vm
-
     steps = np.linspace(50,150,7.0)
     steps_current = [ i*pq.pA for i in steps ]
     rh_param=(False,steps_current)
@@ -311,6 +310,7 @@ def main():
     check_current=gs.check_current
     pre_rh_value=searcher(check_current,rh_param,mean_vm)
     rh_value=pre_rh_value.rheobase
+    global vmpop
     vmpop=list(map(individual_to_vm,pop))
 
     #Now attempt to get the rheobase values by first trying the mean rheobase value.
@@ -365,8 +365,7 @@ def main():
         # Evaluate the individuals with an invalid fitness
         #invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
         invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
-        vmlist=[]
-        vmlist=list(map(individual_to_vm,invalid_ind))
+        vmpop=list(map(individual_to_vm,invalid_ind))
 
         vmpop=list(futures.map(rheobase_checking,vmpop,repeat(rh_value)))
         rhstorage = [i.rheobase for i in vmpop]
@@ -376,7 +375,6 @@ def main():
         #vmlist=list(futures.map(individual_to_vm,invalid_ind))
         assert len(fitnesses)==len(invalid_ind)
 
-        #fitnesses = toolbox.map(toolbox.evaluate, invalid_ind, vmlist)
 
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
@@ -387,77 +385,27 @@ def main():
         #pop = toolbox.select(pop + offspring, MU)
         #This way each generations genes are completely replaced by the result of mating.
 
-        #if gen==NGEN:
-        vmlist=[]
-        vmlist=list(map(individual_to_vm,pop))
+        vmpop=list(map(individual_to_vm,pop))
+        plotss(vmpop,gen)
 
-        for i in invalid_ind:
-            print(i.fitness)
-        #def evaluate(individual,iter_):#This method must be pickle-able for scoop to work.
-        #    vms,rheobase=iter_
+    record = stats.compile(pop)
+    logbook.record(gen=gen, evals=len(invalid_ind), **record)
+    pop.sort(key=lambda x: x.fitness.values)
+    f=open('best_candidate.txt','w')
+    f.write(str(vmpop[-1].attrs))
+    f.write(str(vmpop[-1].rheobase))
 
-        steps = np.linspace(50,150,7.0)
-        steps_current = [ i*pq.pA for i in steps ]
-        rh_param = (False,steps_current)
-        searcher = gs.searcher
-        check_current = gs.check_current
-        pre_rh_value = searcher(check_current,rh_param,vmlist[0])
-        vmlist[0].rheobase = pre_rh_value.rheobase
+    f.write(logbook.stream)
+    f.close()
 
-
-
-        iter_=(vmlist[0],vmlist[0].rheobase)
-        error_local_best = evaluate(vmlist[0],iter_)
-        print(error_local_best)
-
-        steps = np.linspace(50,150,7.0)
-        steps_current = [ i*pq.pA for i in steps ]
-        rh_param = (False,steps_current)
-        searcher = gs.searcher
-        check_current = gs.check_current
-
-        pre_rh_value = searcher(check_current,rh_param,vmlist[-1])
-        vmlist[-1].rheobase = pre_rh_value.rheobase
-
-        iter_=(vmlist[-1],vmlist[-1].rheobase)
-
-        error_local_worst = evaluate(vmlist[-1],iter_)
+    score_matrixt.append((vmpop[0].error,vmpop[0].attrs,vmpop[0].rheobase))
+    score_matrixt.append((vmpop[-1].error,vmpop[-1].attrs,vmpop[-1].rheobase))
+    import pickle
+    with open('nsga_matrix_worst.pickle', 'wb') as handle:
+        pickle.dump(score_matrixt, handle)
 
 
-        print(vmlist[0])
-        print(dir(vmlist[0]))
-        print(error_local_worst)
-        print(pop[0])
-        vm=individual_to_vm(pop[0])
-        print(vm.attrs)
-        f=open('best_candidate.txt','w')
-        #f.write(pop[0])
-        f.write(str(error_local_best))
-        f.write(vmlist[0].attrs)
-        f.write(str(vmlist[0].rheobase))
-        #f.write(vmlist[0].attrs)
-        f.write(str(error_local_worst))
-        f.write(vmlist[-1].attrs)
-        f.write(str(vmlist[-1].rheobase))
-
-
-        record = stats.compile(pop)
-        logbook.record(gen=gen, evals=len(invalid_ind), **record)
-        pop.sort(key=lambda x: x.fitness.values)
-
-        f.write(logbook.stream)
-        f.close()
-
-        import pickle
-        '''
-        os.system('touch minumum_and_maximum_values.pickle')
-        with open('minumum_and_maximum_values.pickle', 'wb') as handle:
-            opt_values=pickle.load(handle)
-            print('minumum and maximum values from exhaustive search routine')
-            print(opt_values)
-        '''
-
-    return pop, list(logbook)
+    return vmpop, pop, stats, invalid_ind
 
 
 if __name__ == "__main__":
@@ -468,47 +416,16 @@ if __name__ == "__main__":
     start_time=time.time()
     whole_initialisation=start_time-init_start
     model=gs.model
-    pop, stats = main()
+    vmpop, pop, stats, invalid_ind = main()
 
-    finish_time=time.time()
-    ga_time=finish_time-start_time
-    plt.clf()
-    print(stats)
-    f=open('finish_time.txt','w')
-    init_time='{}{}{}'.format("init time: ",whole_initialisation,"\n")
-    ft='{}{}{}'.format("ga_time: ",ga_time,"\n")
-    f.write(init_time)
-    f.write(ft)
+    steps = np.linspace(50,150,7.0)
+    steps_current = [ i*pq.pA for i in steps ]
+    rh_param = (False,steps_current)
+    searcher = gs.searcher
+    check_current = gs.check_current
+    print(vmpop)
 
-    f=open('other_nrn_count_invokations_run_time_metric.txt','w')
-    f.write(RUN_TIMES)
-    f.write(ft)
+    score_matrixt=[]
+    vmpop=list(map(individual_to_vm,pop))
 
-
-
-    bfl=time.time()
-    results = pynml.pynml.run_lems_with_jneuroml(os.path.split(get_neab.LEMS_MODEL_PATH)[1],
-                             verbose=False, load_saved_data=True, nogui=True,
-                             exec_in_dir=os.path.split(get_neab.LEMS_MODEL_PATH)[0],
-                             plot=True)
-    allr=time.time()
-    lemscalltime=allr-bfl
-    flt='{}{}{}'.format("lemscalltime: ",float(lemscalltime),"\n")
-    f=open('jneuroml_call_time.txt','w')
-    #vanilla model via neuron: 1.1804585456848145
-
-    f.write(flt)
-    f.close()
-
-    plt.clf()
-    plt.hold(True)
-
-    for i in stats:
-
-        plt.plot(np.sum(i['avg']),i['gen'])
-        '{}{}{}'.format(np.sum(i['avg']),i['gen'],'results')
-    plt.savefig('avg_error_versus_gen.png')
-    plt.hold(False)
-
-
-    plt.clf()
+    #assert vmpop.error !=
