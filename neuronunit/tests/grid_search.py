@@ -170,7 +170,7 @@ class VirtualModel:
         self.name=None
         self.s_html=None
         self.results=None
-
+        self.error=None
 def check_fix_range(vms):
     '''
     Inputs: lookup, A dictionary of previous current injection values
@@ -200,12 +200,10 @@ def check_fix_range(vms):
     supra=np.array(supra)
 
     if len(sub)!=0 and len(supra)!=0:
-        if sub.max()>supra.min():
-            print('impossible state')
-            print('bizare model attrs')
-            print(model.attrs)
-            print(model.h.psection())
-            import pdb; pdb.set_trace()
+        #this assertion would only be wrong if there was a bug
+
+        assert not sub.max()>supra.min()
+            #import pdb; pdb.set_trace()
 
     if len(sub) and len(supra):
         everything=np.concatenate((sub,supra))
@@ -228,6 +226,7 @@ def check_fix_range(vms):
         steps = [ i*pq.pA for i in steps2 ]
 
     vms.steps=steps
+    vms.rheobase=None
     return (False,vms)
 
 def check_current(ampl,vm):
@@ -243,6 +242,7 @@ def check_current(ampl,vm):
         current.update(uc)
         current = {'injected_square_current':current}
         vm.run_number += 1
+        model.re_init(vm.attrs)
         model.update_run_params(vm.attrs)
         model.attrs = vm.attrs
         if len(model.attrs) == 0:
@@ -255,7 +255,7 @@ def check_current(ampl,vm):
             vm.rheobase=copy.copy(float(ampl))
             assert vm.rheobase != None
             assert model.rheobase_memory != None
-        verbose = False
+        verbose = True
         if verbose:
             print('8 CPUs are testing different values of current injections simultaneously Injected %s current and got %d spikes' % \
                     (ampl,n_spikes))
@@ -297,7 +297,7 @@ def searcher(f,rh_param,vms):
                 # There is no use in using vms.rheobase for this, because this is a local value we are trying to find, not a global variable
                 # that was already once found.
                 model.rheobase_memory = rh_param[1]
-                model.rheobase_memory = (model.rheobase_memory + rh_param[1])/2.0
+                #model.rheobase_memory = (model.rheobase_memory + rh_param[1])/2.0
                 #vms = check_current(rh_param[1],vms)
 
 
@@ -317,7 +317,7 @@ def searcher(f,rh_param,vms):
             #If the educated guess failed, or if the first attempt is parallel vector of samples
             returned_list=[]
             returned_list = list(futures.map(check_current,rh_param[1],repeat(vms)))
-            d={}
+            #d={}
             assert vms!=None
             for v in returned_list:
                 vms.lookup.update(v.lookup)
@@ -331,7 +331,6 @@ def searcher(f,rh_param,vms):
 
             returned_list=[]
             returned_list = list(futures.map(check_current,vms.steps,repeat(vms)))
-            d={}
             for v in returned_list:
                 vms.lookup.update(v.lookup)
             boolean,vms=check_fix_range(vms)

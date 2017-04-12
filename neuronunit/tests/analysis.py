@@ -72,18 +72,16 @@ if os.path.exists(str(os.getcwd())+"/neuroelectro.pickle"):
     print('attempting to recover from pickled file')
     with open('neuroelectro.pickle', 'rb') as handle:
         tests = pickle.load(handle)
-'''
 for i, j in enumerate(tests):
     print(i,j)
     for k,v in j.observation.items():
         print(k,v)
 
-'''
 with open('nsga_matrix_worst.pickle', 'rb') as handle:
     nsga_matrix=pickle.load(handle)
 
 parameters_min=nsga_matrix[1][1]
-pdb.set_trace()
+#pdb.set_trace()
 required_capabilities = (cap.ReceivesSquareCurrent,
                          cap.ProducesSpikes)
 params = {'injected_square_current':
@@ -128,12 +126,20 @@ def test_to_model(local_test_methods,attrs):
     #print(local_test_methods)
     #pdb.set_trace()
     #pdb.set_trace()
-    #if hasattr(tests[local_test_methods],'related_data'):
-    #    if tests[local_test_methods].related_data != None:
-    #        plt.plot(model.results['t'], tests[local_test_methods].related_data['vm'] )
-    #rheobase_current = [ nsga_matrix[0][2] for i in model.results['vm'] ]
-    #plt.plot(model.results['t'], rheobase_current, label=str(nsga_matrix[0][2]))
+    '''
+    if local_test_methods in [0,4,6,7]:
+
+        #print(tests[local_test_methods].observation)
+        #tests[local_test_methods].prediction['value']
+        if 'value' in tests[local_test_methods].observation.keys() and 'value' in tests[local_test_methods].prediction.keys():
+            observ_vector = [tests[local_test_methods].observation['value'].item() for i in model.results['t']]
+            pred_vector = [tests[local_test_methods].prediction['value'].item() for i in model.results['t']]
+
+            plt.plot(model.results['t'], observ_vector, label='observation')
+            plt.plot(model.results['t'], pred_vector, label='prediction')
+    '''
     plt.plot(model.results['t'], model.results['vm'], label='best candidate of GA')
+
     model.update_run_params(nsga_matrix[1][1])
     tests = None
 
@@ -150,14 +156,16 @@ def test_to_model(local_test_methods,attrs):
     model.re_init(nsga_matrix[1][1])
     #tests[local_test_methods].judge(model)
     tests[local_test_methods].generate_prediction(model)
+    '''
+    if local_test_methods in [0,4,6,7]:
+        if 'value' in tests[local_test_methods].observation.keys() and 'value' in tests[local_test_methods].prediction.keys():
+            observ_vector = [tests[local_test_methods].observation['value'].item() for i in model.results['t']]
+            pred_vector = [tests[local_test_methods].prediction['value'].item() for i in model.results['t']]
 
-    #if hasattr(tests[local_test_methods],'related_data'):
-    #    if tests[local_test_methods].related_data != None:
-    #        plt.plot(model.results['t'], tests[local_test_methods].related_data['vm'])
-    #plt.plot(model.results['t'], rheobase_current, label=str(nsga_matrix[1][2]))
-
+            plt.plot(model.results['t'], observ_vector, label='observation')
+            plt.plot(model.results['t'], pred_vector, label='prediction')
+    '''
     plt.plot(model.results['t'],model.results['vm'],label='worst candidate of GA')
-
     plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
                ncol=2, mode="expand", borderaxespad=0.)
 
@@ -177,7 +185,7 @@ def build_single(indexs):
     judged = list(futures.map(test_to_model,local_test_methods,repeat(attrs)))
     return 0#judged
 
-local_test_methods = [ i for i,j in enumerate(get_neab.suite.tests) ]
+local_test_methods = [ i for i,j  in enumerate(get_neab.suite.tests) ]
 from itertools import repeat
 
 list_of_tups=[]
