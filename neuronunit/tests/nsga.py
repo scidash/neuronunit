@@ -1,9 +1,8 @@
-
 import time
 import pdb
 import array
 import random
-
+import copy
 
 """
 Scoop can only operate on variables classes and methods at top level 0
@@ -135,75 +134,46 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
     outputs are error components.
     '''
     print(iter_)
-    vms,rheobase=iter_
+    gen,vms,rheobase=iter_
     print(vms,rheobase)
     print(vms.rheobase)
     assert vms.rheobase==rheobase
 
     import quantities as pq
     params = gs.params
-    #global params
-
     model = gs.model
-    #global model
+    if rheobase == None:
+        error = [ 10.0 for i in range(0,8) ]
+    else:
+        uc = {'amplitude':rheobase}
+        current = params.copy()['injected_square_current']
+        current.update(uc)
+        current = {'injected_square_current':current}
+        #Its very important to reset the model here. Such that its vm is new, and does not carry charge from the last simulation
+        model.re_init(vms.attrs)#purge models stored charge. by reinitializing it
+        model.load_model()
+        model.update_run_params(vms.attrs)
+        model.inject_square_current(current)
+        import neuronunit.capabilities as cap
+        import matplotlib.pyplot as plt
 
-    uc = {'amplitude':rheobase}
-    current = params.copy()['injected_square_current']
-    current.update(uc)
-    current = {'injected_square_current':current}
-    #Its very important to reset the model here. Such that its vm is new, and does not carry charge from the last simulation
-    model.re_init(vms.attrs)#purge models stored charge. by reinitializing it
-    model.load_model()
-    model.update_run_params(vms.attrs)
-    model.inject_square_current(current)
-    import neuronunit.capabilities as cap
-    n_spikes = model.get_spike_count()
-    model.h.psection()
-    print(model.attrs)
-    if n_spikes ==0 and rheobase ==0.0:
-        print('this probably means that no rheobase was found, and the value was assigned 0.0 which may cause errors in the rest of the program')
+        n_spikes = model.get_spike_count()
+        #if n_spikes == 0 and rheobase == 0.0:
 
-    if n_spikes !=0 and rheobase !=0.0:
-        import matplotlib
-        plt.clf()
-        plt.plot(model.results['t'],model.results['vm'],label='candidate of GA')
-        plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
-                   ncol=2, mode="expand", borderaxespad=0.)
+        if n_spikes ==1 and rheobase !=0.0 :
+            plt.plot(model.results['t'],model.results['vm'],label='candidate of GA')
+            plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+                       ncol=2, mode="expand", borderaxespad=0.)
 
-        plt.title(str(vms.rheobase*pq.pA))
-        plt.savefig(str(vms.rheobase*pq.pA)+str('.png'))
-    assert n_spikes == 1 or n_spikes == 0  # Its possible that no rheobase was found
-    #filter out such models from the evaluation.
+            plt.title(str(vms.rheobase*pq.pA)+str(gen))
+            plt.savefig(str('all_rheobase_injections')+'gen'+'_'+str(gen)+'_'+str(vms.rheobase*pq.pA)+str('.png'))
 
-    sane = False
+        assert n_spikes == 1 or n_spikes == 0  # Its possible that no rheobase was found
+        #filter out such models from the evaluation.
 
-    individual.error = [ 10.0 for i in range(0,8) ] #init error such that there is no chance it can become none.
+        sane = False
+        #init error such that there is no chance it can become none.
 
-    sane = get_neab.suite.tests[0].sanity_check(vms.rheobase*pq.pA,model)
-    if sane == True and n_spikes == 1:
-        for i in [4,5,6]:
-            get_neab.suite.tests[i].params['injected_square_current']['amplitude']=vms.rheobase*pq.pA
-        get_neab.suite.tests[0].prediction={}
-        score = get_neab.suite.tests[0].prediction['value']=vms.rheobase*pq.pA
-        score = get_neab.suite.judge(model)#passing in model, changes model
-
-        spikes_numbers=[]
-        model.run_number+=1
-        error = score.sort_key.values.tolist()[0]
-
-        for x,y in enumerate(error):
-            if y != None:
-                error[x]= abs(y-0.0)
-            else:
-                inderr = getattr(individual, "error", None)
-                if inderr!=None:
-                    error[x]= abs(inderr[x]-10)/2.0
-                else:
-                    error[x] = 10.0
-
-
-    #if the model is completely unplausible
-    else:#ie if sane == False or rheobase == 0
         inderr = getattr(individual, "error", None)
         if inderr!=None:
             if len(individual.error)!=0:
@@ -213,10 +183,35 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
         else:
             #10 is chosen as a nominally high distance from zero
             error = [ 10.0 for i in range(0,8) ]
-            print(error)
 
-    individual.error = error
-    individual.rheobase = vms.rheobase
+        sane = get_neab.suite.tests[0].sanity_check(vms.rheobase*pq.pA,model)
+        if sane == True and n_spikes == 1:
+            for i in [4,5,6]:
+                get_neab.suite.tests[i].params['injected_square_current']['amplitude']=vms.rheobase*pq.pA
+            get_neab.suite.tests[0].prediction={}
+            score = get_neab.suite.tests[0].prediction['value']=vms.rheobase*pq.pA
+            score = get_neab.suite.judge(model)#passing in model, changes model
+
+
+            spikes_numbers=[]
+            model.run_number+=1
+            error = score.sort_key.values.tolist()[0]
+            for x,y in enumerate(error):
+                if y != None and x == 0 :
+                    error[x] = abs(vms.rheobase - get_neab.suite.tests[0].observation['value'].item())
+                elif y != None and x!=0:
+                    error[x]= abs(y-0.0)
+                elif y == None:
+                    inderr = getattr(individual, "error", None)
+                    if inderr!=None:
+                        error[x]= abs(inderr[x]-10)/2.0
+                    else:
+                        error[x] = 10.0
+
+        print(error)
+        individual.error = error
+        import copy
+        individual.rheobase = copy.copy(vms.rheobase)
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
 
 
@@ -253,11 +248,11 @@ def individual_to_vm(ind):
     inderr = getattr(ind, "error", None)
     if inderr!=None:
         vm.error = ind.error
-        print('vm.error: ',vm.error)
+        #print('vm.error: ',vm.error)
     indrheobase = getattr(ind, "rheobase", None)
     if indrheobase!=None:
         vm.rheobase = ind.rheobase
-        print('vm.rheobase: ',vm.rheobase)
+        #print('vm.rheobase: ',vm.rheobase)
 
     return vm
 
@@ -268,8 +263,8 @@ def individual_to_vm(ind):
 def main():
 
 
-    NGEN=4
-    MU=12
+    NGEN=8
+    MU=16
 
     CXPB = 0.9
     import numpy as numpy
@@ -322,7 +317,9 @@ def main():
 
     vmpop=list(futures.map(rheobase_checking,vmpop,repeat(rh_value)))
     rhstorage = [i.rheobase for i in vmpop]
-    iter_ = zip(vmpop,rhstorage)
+    gen = [0 for i in vmpop]
+
+    iter_ = zip(gen,vmpop,rhstorage)
 
     assert len(pop)==len(vmpop)
 
@@ -369,7 +366,10 @@ def main():
 
         vmpop=list(futures.map(rheobase_checking,vmpop,repeat(rh_value)))
         rhstorage = [i.rheobase for i in vmpop]
-        iter_ = zip(vmpop,rhstorage)
+        gen = [ gen for i in vmpop ]
+        #iter_ = zip(vmpop,rhstorage)
+        iter_ = zip(gen,vmpop,rhstorage)
+
         fitnesses = list(toolbox.map(toolbox.evaluate, pop, iter_))
         invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
         #vmlist=list(futures.map(individual_to_vm,invalid_ind))
@@ -397,12 +397,14 @@ def main():
 
     f.write(logbook.stream)
     f.close()
-
+    score_matrixt=[]
     score_matrixt.append((vmpop[0].error,vmpop[0].attrs,vmpop[0].rheobase))
     score_matrixt.append((vmpop[-1].error,vmpop[-1].attrs,vmpop[-1].rheobase))
     import pickle
-    with open('nsga_matrix_worst.pickle', 'wb') as handle:
-        pickle.dump(score_matrixt, handle)
+    #import pdb
+    #pdb.set_trace()
+    with open('nsga_vmpop_worst.pickle', 'wb') as handle:
+        pickle.dump(vmpop, handle)
 
 
     return vmpop, pop, stats, invalid_ind
