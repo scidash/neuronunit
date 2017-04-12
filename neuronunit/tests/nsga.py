@@ -204,9 +204,9 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
                 elif y == None:
                     inderr = getattr(individual, "error", None)
                     if inderr!=None:
-                        error[x]= abs(inderr[x]-10)/2.0
+                        error[x]= abs(inderr[x]-10)/2.0 + error[0]
                     else:
-                        error[x] = 10.0
+                        error[x] = 10.0 + error[0]
 
         print(error)
         individual.error = error
@@ -263,8 +263,8 @@ def individual_to_vm(ind):
 def main():
 
 
-    NGEN=8
-    MU=16
+    NGEN=16
+    MU=32
 
     CXPB = 0.9
     import numpy as numpy
