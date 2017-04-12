@@ -200,7 +200,7 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
                 if y != None and x == 0 :
                     error[x] = abs(vms.rheobase - get_neab.suite.tests[0].observation['value'].item())
                 elif y != None and x!=0:
-                    error[x]= abs(y-0.0)
+                    error[x]= abs(y-0.0)+error[0]
                 elif y == None:
                     inderr = getattr(individual, "error", None)
                     if inderr!=None:
