@@ -113,6 +113,7 @@ ARG HEAD=1
 #RUN mkdir -p sciunit
 WORKDIR $HOME
 WORKDIR sciunit
+RUN echo "reclone"
 RUN git clone -b dev https://github.com/russelljjarvis/sciunit.git
 #RUN tar -xvzf sciunit.tar.gz -C sciunit --strip-components=1
 WORKDIR sciunit
