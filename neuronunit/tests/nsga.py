@@ -414,10 +414,10 @@ def main():
         #iter_ = zip(vmpop,rhstorage)
         iter_ = zip(gen,vmpop,rhstorage)
 
-        fitnesses = list(toolbox.map(toolbox.evaluate, pop, iter_))
         invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
 
         invalid_ind , pop = replace_rh(invalid_ind, pop, MU ,rh_value, vmpop)
+        fitnesses = list(toolbox.map(toolbox.evaluate, pop, iter_))
 
         assert len(fitnesses)==len(invalid_ind)
 
