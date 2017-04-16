@@ -192,7 +192,8 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
                 get_neab.suite.tests[i].params['injected_square_current']['amplitude']=vms.rheobase*pq.pA
             get_neab.suite.tests[0].prediction={}
             if vms.rheobase == 0:
-                vms.rheobase = 1E-14
+                vms.rheobase = 1E-10
+            assert vms.rheobase != None
             score = get_neab.suite.tests[0].prediction['value']=vms.rheobase*pq.pA
             score = get_neab.suite.judge(model)#passing in model, changes model
 
@@ -265,20 +266,44 @@ def replace_rh(invalid_ind,pop,MU,rh_value,vmpop):
     from itertools import repeat
     invalid_ind = [ ind for i,ind in enumerate(pop) if not vmpop[i].rheobase == None ]
     pop = [ ind for i,ind in enumerate(pop) if not vmpop[i].rheobase == None ]
-    diff = len(pop) - MU
+    vmpop = [ ind for i,ind in enumerate(vmpop) if not vmpop[i].rheobase == None ]
+
+    diff = abs(len(pop) - MU)
     print(diff)
     while diff > 0:
-        print('got here')
-        diff_pop = toolbox.population(n=diff)
-        diff_pop=list(futures.map(individual_to_vm,diff_pop))
-        diff_pop = list(futures.map(rheobase_checking,diff_pop,repeat(rh_value)))
-        pop.extend(diff_pop)
-        invalid_ind = [ ind for i,ind in enumerate(pop) if not vmpop[i].rheobase == None ]
-        pop = [ ind for i,ind in enumerate(pop) if not vmpop[i].rheobase == None ]
-        diff = len(pop)+1 - MU
+        diff_pop = [ toolbox.Individual() for i in range(0,diff) ]
+                #def assign_param(param):
+        for diff_pop_ind in diff_pop:
+            for i, p in enumerate(param):
+                value=str(diff_pop_ind[i])
+                model.name=str(model.name)+' '+str(p)+str(value)
+                if i==0:
+                    attrs={'//izhikevich2007Cell':{p:value }}
+                else:
+                    attrs['//izhikevich2007Cell'][p]=value
+            diff_pop_ind.attrs=attrs
+        print(diff_pop[0].attrs)
 
+        vm_diff_pop = list(futures.map(individual_to_vm,diff_pop))
+        vm_diff_pop = list(futures.map(rheobase_checking,diff_pop,repeat(rh_value)))
+        print(diff_pop)
+        print(len(diff_pop))
+        for i,j in enumerate(vm_diff_pop):
+            if j.rheobase != None:
+                pop.append(diff_pop[i])
+                print(type(diff_pop[i]))
+                print(diff_pop[i].attrs)
+                print(diff_pop[i][0])
+
+                #assert type(diff_pop[i])== type(toolbox.Individual)
+        vmpop = list(futures.map(individual_to_vm,pop))
+        assert len(vmpop) == len(pop)
+        assert len(vmpop) == len(pop)
+        diff = abs(len(pop) - MU)
         print(abs(diff),'abs diff \n\n\n\n\n\n\n\n\n')
-    return invalid_ind  ,pop
+
+    invalid_ind = [ ind for ind in pop ]
+    return invalid_ind, pop, vmpop
 
 def main():
 
@@ -309,7 +334,7 @@ def main():
 
     from itertools import repeat
     mean_vm = gs.VirtualModel()
-
+    #def assign_param(param):
     for i, p in enumerate(param):
         value=str(guess_attrs[i])
         model.name=str(model.name)+' '+str(p)+str(value)
@@ -328,6 +353,8 @@ def main():
     pre_rh_value=searcher(check_current,rh_param,mean_vm)
     rh_value=pre_rh_value.rheobase
     global vmpop
+    if rh_value == None:
+        rh_value = 0.0
     vmpop = list(map(individual_to_vm,pop))
 
     #Now attempt to get the rheobase values by first trying the mean rheobase value.
@@ -336,6 +363,7 @@ def main():
     #invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
 
     rheobase_checking=gs.evaluate
+
 
     vmpop = list(futures.map(rheobase_checking,vmpop,repeat(rh_value)))
     rhstorage = [i.rheobase for i in vmpop]
@@ -351,7 +379,10 @@ def main():
     invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
     #purge individuals for which rheobase was not found
 
-    invalid_ind,pop = replace_rh(invalid_ind,pop,MU,rh_value,vmpop)
+    before=len(vmpop)
+    invalid_ind,pop,vmpop = replace_rh(invalid_ind,pop,MU,rh_value,vmpop)
+    after=len(vmpop)
+    assert before==after
     #insert function call here.
 
     #invalid_ind = [ ind for ind in pop if not ind.rheobase == None ]
@@ -365,7 +396,7 @@ def main():
 
     # This is just to assign the crowding distance to the individuals
     # no actual selection is done
-    pop = tools.selNSGA2(pop, len(pop))
+    pop = tools.selNSGA2(pop, MU)
 
     record = stats.compile(pop)
     logbook.record(gen=0, evals=len(invalid_ind), **record)
@@ -375,8 +406,11 @@ def main():
         # Vary the population
 
         invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
-        invalid_ind , pop = replace_rh(invalid_ind, pop, MU, rh_value, vmpop)
-
+        before=len(vmpop)
+        invalid_ind,pop,vmpop = replace_rh(invalid_ind,pop,MU,rh_value,vmpop)
+        after=len(vmpop)
+        assert before==after
+        print('why is mu shrinking')
         print(len(pop), MU)
 
         offspring = tools.selNSGA2(pop,MU)
@@ -395,6 +429,10 @@ def main():
         #don't throw out first sample
         #pop = toolbox.selectNSGA2(pop, len(pop))
         #pop = toolbox.selectNSGA2(pop, len(pop))
+        for i, j in enumerate(pop):
+            if i != 0:
+                print(type(j),type(pop[i-1]),' this at cas')
+                assert type(j)==type(pop[i-1])
         pop = tools.selNSGA2(pop,MU)
 
 
@@ -402,21 +440,27 @@ def main():
         #invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
 
         invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
-        invalid_ind , pop = replace_rh(invalid_ind, pop, MU, rh_value, vmpop)
-
+        before=len(vmpop)
+        invalid_ind,pop,vmpop = replace_rh(invalid_ind,pop,MU,rh_value,vmpop)
+        after=len(vmpop)
+        assert before==after
 
 
         vmpop=list(futures.map(individual_to_vm,invalid_ind))
 
         vmpop=list(futures.map(rheobase_checking,vmpop,repeat(rh_value)))
         rhstorage = [i.rheobase for i in vmpop]
-        gen = [ gen for i in vmpop ]
         #iter_ = zip(vmpop,rhstorage)
-        iter_ = zip(gen,vmpop,rhstorage)
+        generations = [ gen for i,j in enumerate(vmpop) ]
+        iter_ = zip(generations,vmpop,rhstorage)
 
         invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
 
-        invalid_ind , pop = replace_rh(invalid_ind, pop, MU ,rh_value, vmpop)
+        before=len(vmpop)
+        invalid_ind,pop,vmpop = replace_rh(invalid_ind,pop,MU,rh_value,vmpop)
+        after=len(vmpop)
+        assert before==after
+        #invalid_ind , pop = replace_rh(invalid_ind, pop, MU ,rh_value, vmpop)
         fitnesses = list(toolbox.map(toolbox.evaluate, pop, iter_))
 
         assert len(fitnesses)==len(invalid_ind)
@@ -432,7 +476,8 @@ def main():
         #This way each generations genes are completely replaced by the result of mating.
 
         vmpop=list(futures.map(individual_to_vm,pop))
-        plotss(vmpop,gen)
+        print(len(vmpop),len(pop),' length of population')
+        #plotss(vmpop,gen)
 
     record = stats.compile(pop)
     logbook.record(gen=gen, evals=len(invalid_ind), **record)
