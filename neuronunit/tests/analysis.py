@@ -19,9 +19,11 @@ from neuronunit.models import backends
 import sciunit.scores as scores
 from neuronunit.models import backends
 from neuronunit.models.reduced import ReducedModel
-global model
-model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
+#global model
+#model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
 
+import grid_search as gs
+model=gs.model
 
 import neuronunit.capabilities as cap
 
@@ -77,10 +79,20 @@ for i, j in enumerate(tests):
     for k,v in j.observation.items():
         print(k,v)
 
-with open('nsga_matrix_worst.pickle', 'rb') as handle:
-    nsga_matrix=pickle.load(handle)
+with open('vmpop.pickle', 'rb') as handle:
+    vmpop = pickle.load(handle)
 
-parameters_min=nsga_matrix[1][1]
+
+with open('score_matrixt.pickle', 'rb') as handle:
+    score_matrixt = pickle.load(handle)
+    pdb.set_trace()
+#pdb.set_trace()
+
+
+#with open('nsga_matrix_worst.pickle', 'rb') as handle:
+#    nsga_matrix=pickle.load(handle)
+
+#parameters_min=nsga_matrix[1][1]
 #pdb.set_trace()
 required_capabilities = (cap.ReceivesSquareCurrent,
                          cap.ProducesSpikes)
@@ -96,10 +108,15 @@ verbose=True
 import quantities as pq
 units = pq.pA
 
-import pickle
-with open('score_matrix.pickle', 'rb') as handle:
-    matrix=pickle.load(handle)
+#import pickle
+#with open('score_matrix.pickle', 'rb') as handle:
+#    matrix=pickle.load(handle)
 
+
+#with open('nsga_vmpop_worst.pickle', 'rb') as handle:
+#    vmpop=pickle.load(handle)
+
+pdb.set_trace()
 
 from scoop import futures
 
@@ -109,16 +126,16 @@ def test_to_model(local_test_methods,attrs):
     global model
     global nsga_matrix
     model.local_run()
-    model.update_run_params(nsga_matrix[0][1])
-    model.re_init(nsga_matrix[0][1])
+    model.update_run_params(nsga_matrix[1][1])
+    model.re_init(nsga_matrix[1][1])
     tests = None
     tests = get_neab.suite.tests
     tests[0].prediction={}
     tests[0].prediction['value']=nsga_matrix[0][2]*qt.pA
-    tests[0].params['injected_square_current']['amplitude']=nsga_matrix[0][2]*qt.pA
+    tests[0].params['injected_square_current']['amplitude']=nsga_matrix[1][2]*qt.pA
     #score = get_neab.suite.judge(model)#pass
     if local_test_methods in [4,5,6]:
-        tests[local_test_methods].params['injected_square_current']['amplitude']=nsga_matrix[0][2]*qt.pA
+        tests[local_test_methods].params['injected_square_current']['amplitude']=nsga_matrix[1][2]*qt.pA
     #model.results['vm'] = [ 0 ]
     model.re_init(nsga_matrix[0][1])
     tests[local_test_methods].generate_prediction(model)
@@ -196,4 +213,4 @@ list_of_tups.append((nsga_matrix[0][1],'minimum',nsga_matrix[0][2]))
 
 
 if __name__ == "__main__":
-    completed1 = list(futures.map(build_single,list_of_tups))
+    completed1 = list(futures.map(build_single,vmpop))

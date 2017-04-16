@@ -41,8 +41,8 @@ import sciunit.scores as scores
 
 
 init_start=time.time()
-creator.create("FitnessMin", base.Fitness, weights=(1.0, 1.0, 1.0, 1.0,
-                                                    1.0, 1.0, 1.0, 1.0))
+creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0,
+                                                    -1.0, -1.0, -1.0, -1.0))
 creator.create("Individual",list, fitness=creator.FitnessMin)
 
 class Individual(object):
@@ -116,9 +116,10 @@ toolbox.register("Individual", tools.initIterate, creator.Individual, toolbox.at
 import deap as deap
 
 toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
+toolbox.register("select", tools.selNSGA2)
 
 import grid_search as gs
-model=gs.model
+model = gs.model
 
 def evaluate(individual,iter_):#This method must be pickle-able for scoop to work.
     '''
@@ -143,7 +144,8 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
     params = gs.params
     model = gs.model
     if rheobase == None:
-        error = [ 10.0 for i in range(0,8) ]
+        #Assign a high error
+        error = [ 100.0 for i in range(0,8) ]
     else:
         uc = {'amplitude':rheobase}
         current = params.copy()['injected_square_current']
@@ -182,13 +184,15 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
                 #pdb.set_trace()
         else:
             #10 is chosen as a nominally high distance from zero
-            error = [ 10.0 for i in range(0,8) ]
+            error = [ 100.0 for i in range(0,8) ]
 
         sane = get_neab.suite.tests[0].sanity_check(vms.rheobase*pq.pA,model)
         if sane == True and n_spikes == 1:
             for i in [4,5,6]:
                 get_neab.suite.tests[i].params['injected_square_current']['amplitude']=vms.rheobase*pq.pA
             get_neab.suite.tests[0].prediction={}
+            if vms.rheobase == 0:
+                vms.rheobase = 1E-14
             score = get_neab.suite.tests[0].prediction['value']=vms.rheobase*pq.pA
             score = get_neab.suite.judge(model)#passing in model, changes model
 
@@ -256,19 +260,37 @@ def individual_to_vm(ind):
 
     return vm
 
+def replace_rh(invalid_ind,pop,MU,rh_value,vmpop):
+    rheobase_checking=gs.evaluate
+    from itertools import repeat
+    invalid_ind = [ ind for i,ind in enumerate(pop) if not vmpop[i].rheobase == None ]
+    pop = [ ind for i,ind in enumerate(pop) if not vmpop[i].rheobase == None ]
+    diff = len(pop) - MU
+    print(diff)
+    while diff > 0:
+        print('got here')
+        diff_pop = toolbox.population(n=diff)
+        diff_pop=list(futures.map(individual_to_vm,diff_pop))
+        diff_pop = list(futures.map(rheobase_checking,diff_pop,repeat(rh_value)))
+        pop.extend(diff_pop)
+        invalid_ind = [ ind for i,ind in enumerate(pop) if not vmpop[i].rheobase == None ]
+        pop = [ ind for i,ind in enumerate(pop) if not vmpop[i].rheobase == None ]
+        diff = len(pop)+1 - MU
 
-
-
+        print(abs(diff),'abs diff \n\n\n\n\n\n\n\n\n')
+    return invalid_ind  ,pop
 
 def main():
 
 
-    NGEN=16
-    MU=32
+    NGEN=6
+    MU=8#Mu must be some multiple of 8, such that it can be split into even numbers over 8 CPUs
 
     CXPB = 0.9
     import numpy as numpy
     stats = tools.Statistics(lambda ind: ind.fitness.values)
+    hof = tools.ParetoFront()
+
     stats.register("avg", numpy.mean, axis=0)
     stats.register("std", numpy.std, axis=0)
     stats.register("min", numpy.min, axis=0)
@@ -286,7 +308,7 @@ def main():
         guess_attrs.append(np.mean( [ i[x] for i in pop ]))
 
     from itertools import repeat
-    mean_vm=gs.VirtualModel()
+    mean_vm = gs.VirtualModel()
 
     for i, p in enumerate(param):
         value=str(guess_attrs[i])
@@ -306,7 +328,7 @@ def main():
     pre_rh_value=searcher(check_current,rh_param,mean_vm)
     rh_value=pre_rh_value.rheobase
     global vmpop
-    vmpop=list(map(individual_to_vm,pop))
+    vmpop = list(map(individual_to_vm,pop))
 
     #Now attempt to get the rheobase values by first trying the mean rheobase value.
     #This is not an exhaustive search that results in found all rheobase values
@@ -315,11 +337,11 @@ def main():
 
     rheobase_checking=gs.evaluate
 
-    vmpop=list(futures.map(rheobase_checking,vmpop,repeat(rh_value)))
+    vmpop = list(futures.map(rheobase_checking,vmpop,repeat(rh_value)))
     rhstorage = [i.rheobase for i in vmpop]
-    gen = [0 for i in vmpop]
+    generations = [0 for i in vmpop]
 
-    iter_ = zip(gen,vmpop,rhstorage)
+    iter_ = zip(generations,vmpop,rhstorage)
 
     assert len(pop)==len(vmpop)
 
@@ -327,7 +349,13 @@ def main():
     #Note the evaluate function called is different
     fitnesses = list(toolbox.map(toolbox.evaluate, pop, iter_))
     invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
+    #purge individuals for which rheobase was not found
 
+    invalid_ind,pop = replace_rh(invalid_ind,pop,MU,rh_value,vmpop)
+    #insert function call here.
+
+    #invalid_ind = [ ind for ind in pop if not ind.rheobase == None ]
+    print(len(invalid_ind))
     #assert len(fitnesses)==len(invalid_ind)
 
     for ind, fit in zip(invalid_ind, fitnesses):
@@ -337,7 +365,7 @@ def main():
 
     # This is just to assign the crowding distance to the individuals
     # no actual selection is done
-    pop = toolbox.select(pop, len(pop))
+    pop = tools.selNSGA2(pop, len(pop))
 
     record = stats.compile(pop)
     logbook.record(gen=0, evals=len(invalid_ind), **record)
@@ -345,7 +373,14 @@ def main():
     # Begin the generational process
     for gen in range(1, NGEN):
         # Vary the population
-        offspring = tools.selTournamentDCD(pop, len(pop))
+
+        invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
+        invalid_ind , pop = replace_rh(invalid_ind, pop, MU, rh_value, vmpop)
+
+        print(len(pop), MU)
+
+        offspring = tools.selNSGA2(pop,MU)
+        #offspring = tools.selTournamentDCD(pop, MU)
         offspring = [toolbox.clone(ind) for ind in offspring]
 
 
@@ -357,12 +392,21 @@ def main():
             toolbox.mutate(ind1)
             toolbox.mutate(ind2)
             del ind1.fitness.values, ind2.fitness.values
+        #don't throw out first sample
+        #pop = toolbox.selectNSGA2(pop, len(pop))
+        #pop = toolbox.selectNSGA2(pop, len(pop))
+        pop = tools.selNSGA2(pop,MU)
 
-        pop = toolbox.select(offspring, MU)
+
         # Evaluate the individuals with an invalid fitness
         #invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+
         invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
-        vmpop=list(map(individual_to_vm,invalid_ind))
+        invalid_ind , pop = replace_rh(invalid_ind, pop, MU, rh_value, vmpop)
+
+
+
+        vmpop=list(futures.map(individual_to_vm,invalid_ind))
 
         vmpop=list(futures.map(rheobase_checking,vmpop,repeat(rh_value)))
         rhstorage = [i.rheobase for i in vmpop]
@@ -372,7 +416,9 @@ def main():
 
         fitnesses = list(toolbox.map(toolbox.evaluate, pop, iter_))
         invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
-        #vmlist=list(futures.map(individual_to_vm,invalid_ind))
+
+        invalid_ind , pop = replace_rh(invalid_ind, pop, MU ,rh_value, vmpop)
+
         assert len(fitnesses)==len(invalid_ind)
 
 
@@ -385,7 +431,7 @@ def main():
         #pop = toolbox.select(pop + offspring, MU)
         #This way each generations genes are completely replaced by the result of mating.
 
-        vmpop=list(map(individual_to_vm,pop))
+        vmpop=list(futures.map(individual_to_vm,pop))
         plotss(vmpop,gen)
 
     record = stats.compile(pop)
@@ -399,12 +445,17 @@ def main():
     f.close()
     score_matrixt=[]
     score_matrixt.append((vmpop[0].error,vmpop[0].attrs,vmpop[0].rheobase))
+    score_matrixt.append((vmpop[1].error,vmpop[1].attrs,vmpop[1].rheobase))
+
     score_matrixt.append((vmpop[-1].error,vmpop[-1].attrs,vmpop[-1].rheobase))
     import pickle
-    #import pdb
-    #pdb.set_trace()
-    with open('nsga_vmpop_worst.pickle', 'wb') as handle:
+    import pickle
+    with open('score_matrixt.pickle', 'wb') as handle:
+        pickle.dump(score_matrixt, handle)
+
+    with open('vmpop.pickle', 'wb') as handle:
         pickle.dump(vmpop, handle)
+
 
 
     return vmpop, pop, stats, invalid_ind
@@ -430,4 +481,5 @@ if __name__ == "__main__":
     score_matrixt=[]
     vmpop=list(map(individual_to_vm,pop))
 
+    pdb.set_trace()
     #assert vmpop.error !=
