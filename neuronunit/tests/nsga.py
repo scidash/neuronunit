@@ -261,7 +261,7 @@ def replace_rh(pop,MU,rh_value,vmpop):
     from itertools import repeat
     #invalid_ind = [ ind for i,ind in enumerate(pop) if not vmpop[i].rheobase == None ]
     print(len(pop), ' length population')
-    pop = [ ind for i,ind in enumerate(vmpop) if not vmpop[i].rheobase == None ]
+    pop = [ ind for i,ind in enumerate(pop) if not vmpop[i].rheobase == None ]
     vmpop = [ ind for i,ind in enumerate(vmpop) if not vmpop[i].rheobase == None ]
 
     for i,ind in enumerate(pop):
