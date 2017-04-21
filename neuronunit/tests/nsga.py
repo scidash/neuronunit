@@ -259,30 +259,22 @@ def individual_to_vm(ind):
 def replace_rh(pop,MU,rh_value,vmpop):
     rheobase_checking=gs.evaluate
     from itertools import repeat
+
+    #assert len(vmpop)!=0
+    #assert len(pop)!=0
+    assert len(pop) == len(vmpop)
     #invalid_ind = [ ind for i,ind in enumerate(pop) if not vmpop[i].rheobase == None ]
     print(len(pop), ' length population')
-    pop = [ ind for i,ind in enumerate(pop) if not vmpop[i].rheobase == None ]
-    vmpop = [ ind for i,ind in enumerate(vmpop) if not vmpop[i].rheobase == None ]
+    pop = [ ind for i,ind in enumerate(pop) if vmpop[i].rheobase != None ]
+        #if not ind.rheobase == None:
+    for ind in vmpop:
+        print(ind.rheobase, ' vmpop rheobase')
 
-    for i,ind in enumerate(pop):
-        print(i,ind, 'this prob does not execute too' )
-        print(vmpop[i].rheobase, ' vmpop[i].rheobase')
-
-        if vmpop[i].rheobase == None:
-            print('this never executes')
-            print(type(vmpop[i]))
-            print(type(pop[i]))
-
-            #del pop[i]
-            #del vmpop[i]
-    print(len(vmpop))
-    print(len(pop))
-    #assert len(pop)!=0
-    assert len(vmpop)!=0
-    assert len(pop)!=0
+    vmpop = [ ind for ind in vmpop if ind.rheobase != None ]
+    for ind in vmpop:
+        print(ind.rheobase, ' vmpop rheobase')
 
     assert len(vmpop) == len(pop)
-    #print(before,after, ' before, after')
 
     diff = abs(len(pop) - MU)
     print(diff)
@@ -299,28 +291,24 @@ def replace_rh(pop,MU,rh_value,vmpop):
                     attrs['//izhikevich2007Cell'][p]=value
             diff_pop_ind.attrs=attrs
 
-        diff_pop = list(futures.map(rheobase_checking,diff_pop,repeat(rh_value)))
-        for i,j in enumerate(diff_pop):
+        diff_pop_rh = list(futures.map(rheobase_checking,diff_pop,repeat(rh_value)))
+        for i,j in enumerate(diff_pop_rh):
             if j.rheobase != None:
                 pop.append(diff_pop[i])
 
         vmpop = list(futures.map(individual_to_vm,pop))
-        #vmpop.extend(list(futures.map(individual_to_vm,diff_pop)))
-
-
 
         assert len(vmpop) == len(pop)
         assert len(vmpop) == len(pop)
         diff = abs(len(pop) - MU)
 
-    #invalid_ind = [ ind for ind in pop ]
     return pop, vmpop
 
 def main():
 
 
-    NGEN=6
-    MU=8#Mu must be some multiple of 8, such that it can be split into even numbers over 8 CPUs
+    NGEN=4
+    MU=16#Mu must be some multiple of 8, such that it can be split into even numbers over 8 CPUs
 
     CXPB = 0.9
     import numpy as numpy
@@ -374,65 +362,51 @@ def main():
     #invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
 
     rheobase_checking=gs.evaluate
-
-
     vmpop = list(futures.map(rheobase_checking,vmpop,repeat(rh_value)))
-    rhstorage = [i.rheobase for i in vmpop]
     generations = [0 for i in vmpop]
-
     before=len(vmpop)
     pop,vmpop = replace_rh(pop,MU,rh_value,vmpop)
     after=len(vmpop)
+    print(len(pop),len(vmpop),before,after,' before, after')
+    assert len(pop)==len(vmpop)
     assert before==after
-
+    rhstorage = [i.rheobase for i in vmpop]
     iter_ = zip(generations,vmpop,rhstorage)
 
-    assert len(pop)==len(vmpop)
 
     #Now get the fitness of genes:
     #Note the evaluate function called is different
     fitnesses = list(toolbox.map(toolbox.evaluate, pop, iter_))
 
-    for ind, fit in zip(invalid_ind, fitnesses):
-        ind.fitness.values = fit
-        #pdb.set_trace()
     invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
+
+    for ind, fit in zip(invalid_ind, fitnesses):
+        print(ind,fit,': ind, fit')
+        ind.fitness.values = fit
     #purge individuals for which rheobase was not found
-
-    #insert function call here.
-
-    #invalid_ind = [ ind for ind in pop if not ind.rheobase == None ]
-    print(len(invalid_ind))
-    #assert len(fitnesses)==len(invalid_ind)
-
-
-
-
     # This is just to assign the crowding distance to the individuals
     # no actual selection is done
     pop = tools.selNSGA2(pop, MU)
-
     record = stats.compile(pop)
     logbook.record(gen=0, evals=len(invalid_ind), **record)
-
     # Begin the generational process
     for gen in range(1, NGEN):
         # Vary the population
-
-
         before=len(vmpop)
         pop, vmpop = replace_rh(pop,MU,rh_value,vmpop)
+        #assert len(pop)!= 0
+        #assert len(vmpop)!= 0
         after=len(vmpop)
         assert before == after
-        #print('why is mu shrinking')
         print(len(pop), MU)
         invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
-        #assert len(invalid_ind) == len(pop)
-        #for p in pop:
-        #    print(type(p),p)
-        offspring = tools.selNSGA2(invalid_ind, len(invalid_ind))
-        #offspring = tools.selTournamentDCD(invalid_ind, len(invalid_ind))
+        print(len(invalid_ind), ' length of invalid_ind')
+        #offspring = tools.selNSGA2(invalid_ind, len(invalid_ind))
+        #assert len(invalid_ind)!= 0
+        offspring = tools.selTournamentDCD(invalid_ind, len(invalid_ind))
         offspring = [toolbox.clone(ind) for ind in offspring]
+        print(len(offspring))
+        #assert len(offspring)!= 0
 
 
 
@@ -444,12 +418,12 @@ def main():
             toolbox.mutate(ind2)
             del ind1.fitness.values, ind2.fitness.values
 
-        #pop = tools.selNSGA2(pop,MU)
-
-
         vmpop=list(futures.map(individual_to_vm,offspring))
+        #assert len(vmpop)!= 0
+
         vmpop=list(futures.map(rheobase_checking,vmpop,repeat(rh_value)))
-        rhstorage = [i.rheobase for i in vmpop]
+        #assert len(vmpop)!= 0
+        rhstorage = [ i.rheobase for i in vmpop ]
         generations = [ gen for i,j in enumerate(vmpop) ]
         iter_ = zip(generations,vmpop,rhstorage)
         before=len(vmpop)
@@ -473,7 +447,7 @@ def main():
         print(len(vmpop),len(pop),' length of population')
 
     record = stats.compile(pop)
-    logbook.record(gen=gen, evals=len(invalid_ind), **record)
+    #logbook.record(gen=gen, evals=len(invalid_ind), **record)
     pop.sort(key=lambda x: x.fitness.values)
     f=open('best_candidate.txt','w')
     f.write(str(vmpop[-1].attrs))
