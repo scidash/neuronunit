@@ -121,5 +121,7 @@ RUN python setup.py install
 RUN python test_all.py
 RUN git pull origin dev
 RUN python setup.py install
+RUN wget https://github.com/robbyrussell/oh-my-zsh/raw/master/tools/install.sh -O - | zsh || true
+
 WORKDIR /home/mnt
 #ENTRYPOINT python nsga.py

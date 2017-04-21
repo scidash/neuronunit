@@ -278,7 +278,7 @@ def searcher(f,rh_param,vms):
     lookuplist=[]
     cnt=0
     boolean=False
-    while boolean==False and cnt<5:
+    while boolean==False and cnt<6:
 
         if len(model.attrs)==0:
 
