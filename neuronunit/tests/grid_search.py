@@ -269,15 +269,15 @@ def check_current(ampl,vm):
 
 def searcher(f,rh_param,vms):
     '''
-    ultimately an attempt to capture the essence a lot of repeatative code below.
-    This is not yet used, but it is intended for future use.
-    Its intended to replace the less general searcher function
+    inputs f a function to evaluate. rh_param a tuple with element 1 boolean, element 2 float or list
+    and a  virtual model object.
     '''
     if rh_param[0]==True:
         return rh_param[1]
     lookuplist=[]
     cnt=0
     boolean=False
+    from itertools import repeat
     while boolean==False and cnt<6:
 
         if len(model.attrs)==0:
@@ -285,7 +285,7 @@ def searcher(f,rh_param,vms):
             model.attrs = vms.attrs
             model.update_run_params(vms.attrs)
 
-        if type(rh_param[1]) == float:
+        if type(rh_param[1]) is float:
             #if its a single value educated guess
             #print('educated guess attempted')
             if model.rheobase_memory == None:
@@ -303,7 +303,7 @@ def searcher(f,rh_param,vms):
 
 
             vms = check_current(model.rheobase_memory,vms)
-            model.update_run_params(vms.attrs)
+            model.re_init(vms.attrs)
             boolean,vms = check_fix_range(vms)
             #vms.rheobase_memory = vms.rheobase_memory
 
@@ -313,9 +313,10 @@ def searcher(f,rh_param,vms):
                 #else search returned none type, effectively false
                 rh_param = (None,None)
 
-        elif len(vms.lookup)==0 and type(rh_param[1])!=float:
+        elif len(vms.lookup)==0 and type(rh_param[1]) is list:
             #If the educated guess failed, or if the first attempt is parallel vector of samples
             returned_list=[]
+
             returned_list = list(futures.map(check_current,rh_param[1],repeat(vms)))
             #d={}
             assert vms!=None
@@ -325,11 +326,19 @@ def searcher(f,rh_param,vms):
             assert vms!=None
             if boolean:
                 return vms
+
         else:
             #Finally if a parallel vector of samples failed zoom into the
             #smallest relevant interval and re-sample at a higher resolution
 
             returned_list=[]
+            if type(vms.steps) is type(None):
+                steps = np.linspace(50,150,7.0)
+                steps_current = [ i*pq.pA for i in steps ]
+                vms.steps = steps_current
+                assert type(vms.steps) is not type(None)
+
+            #rh_param=(False,steps_current)
             returned_list = list(futures.map(check_current,vms.steps,repeat(vms)))
             for v in returned_list:
                 vms.lookup.update(v.lookup)
@@ -342,7 +351,7 @@ def searcher(f,rh_param,vms):
 def evaluate(individual, guess_value=None):
     #This method must be pickle-able for scoop to work.
     #print(individual.attrs)
-    vm= VirtualModel()
+    vm = VirtualModel()
     import copy
     vm.attrs = copy.copy(individual.attrs)
     rh_param = (False,guess_value)
