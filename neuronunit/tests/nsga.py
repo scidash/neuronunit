@@ -131,6 +131,8 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
     '''
     print(iter_)
     gen,vms,rheobase=iter_
+    #if gen!=0:
+    #    pdb.set_trace()
     print(vms,rheobase)
     print(vms.rheobase)
     assert vms.rheobase==rheobase
@@ -165,16 +167,37 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
             end = len(model.results['t'])#/delta
             delay = int((float(get_neab.suite.tests[0].params['injected_square_current']['delay'])/1600.0 ) * end )
             #delay = get_neab.suite.tests[0].params['injected_square_current']['delay']['value']/delta
-            duration = int((float(get_neab.suite.tests[0].params['injected_square_current']['duration'])/1600.0) * end ) # delta
+            duration = int(float(1100.0/1600.0) * end ) # delta
             #print(len(delay),len(duration),len(end),len(model.results['t']),' len(delay),len(duration),len(end),len(model.results["t"]) ' )
             injection_trace[0:int(delay)] = 0.0
             injection_trace[int(delay):int(duration)] = rheobase
             injection_trace[int(duration):int(end)] = 0.0
-            #from matplotlib import rc
-            #rc('font', **{'family':'serif','serif':['Palatino']})
-            #rc('text', usetex=True)
-            plt.hold(True)
+
+            #plt.clf()
+
+
+            plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+                       ncol=2, mode="expand", borderaxespad=0.)
+            plt.plot(model.results['t'],injection_trace,label='$I_{i}$(pA)')
+            if vms.rheobase > 0:
+                plt.ylim(0, 2*rheobase)
+            if vms.rheobase < 0:
+                plt.ylim(2*rheobase,0)
+            plt.xlabel(r'$current injection (pA)$')
+            plt.xlabel(r'$time (ms)$')
+            #pdb.set_trace()
+            #print(get_neab.suite.tests[i].params['injected_square_current'].keys())
+
+            plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+                       ncol=2, mode="expand", borderaxespad=0.)
+
+            plt.title(str(vms.rheobase*pq.pA))
+
+            plt.savefig('just_current_injection.png')
+
             f, axarr = plt.subplots(2, sharex=True)
+            axarr[0].hold(True)
+
             axarr[0].plot(model.results['t'],model.results['vm'],label='$V_{m}$ (mV)')
             axarr[0].set_xlabel(r'$V_{m} (mV)$')
             axarr[0].set_xlabel(r'$time (ms)$')
@@ -197,7 +220,6 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
             plt.title(str(vms.rheobase*pq.pA)+str(gen))
 
             plt.savefig(str('all_rheobase_injections')+'gen'+'_'+str(gen)+'_'+str(vms.rheobase*pq.pA)+str('.png'))
-
 
 
         assert n_spikes == 1 or n_spikes == 0  # Its possible that no rheobase was found
@@ -272,9 +294,9 @@ def plotss(vmlist,gen):
 
 def individual_to_vm(ind,vmpop=None):
 
-
-    steps = np.linspace(50,150,7.0)
-    steps_current = [ i*pq.pA for i in steps ]
+    import copy
+    #steps = np.linspace(50,150,7.0)
+    #steps_current = [ i*pq.pA for i in steps ]
     #rh_param=(False,steps_current)
     if vmpop==None:
         for i, p in enumerate(param):
@@ -285,12 +307,12 @@ def individual_to_vm(ind,vmpop=None):
                 attrs['//izhikevich2007Cell'][p] = value
         vm = gs.VirtualModel()
         vm.attrs = attrs
-        vm.steps = steps_current
+        #vm.steps = steps_current
 
         inderr = getattr(ind, "error", None)
         if not inderr==None:
             #print(vm.error,' before update error')
-            vm.error = ind.error
+            vm.error = copy.copy(ind.error)
             #print(vm.error,' after update error')
             assert not vm.error == None
 
@@ -298,7 +320,7 @@ def individual_to_vm(ind,vmpop=None):
         indrheobase = getattr(ind, "rheobase", None)
         if not indrheobase==None:
             #print(vm.rheobase,' before update rheobase')
-            vm.rheobase = ind.rheobase
+            vm.rheobase =  copy.copy(ind.rheobase)
             #print(vm.rheobase,' after update')
 
             assert not vm.rheobase == None
@@ -310,36 +332,71 @@ def individual_to_vm(ind,vmpop=None):
 def replace_rh(pop,MU,rh_value,vmpop):
     rheobase_checking=gs.evaluate
     from itertools import repeat
+    import copy
 
     #assert len(vmpop)!=0
     #assert len(pop)!=0
     assert len(pop) == len(vmpop)
     #invalid_ind = [ ind for i,ind in enumerate(pop) if not vmpop[i].rheobase == None ]
     print(len(pop), ' length population')
-    pop = [ ind for i,ind in enumerate(pop) if vmpop[i].rheobase != None ]
+
+    for i,ind in enumerate(pop):
+         if type(vmpop[i].rheobase) is type(None):
+              print(vmpop[i].rheobase)
+              print(i,ind)
+              toolbox.mutate(ind)
+              toolbox.mutate(ind)
+              toolbox.mutate(ind)
+              temp = individual_to_vm(ind)
+              pop_rh=rheobase_checking(temp,rh_value)
+              if type(pop_rh.rheobase) is not type(None):
+                  pop.append(ind)
+                  vmpop.append(temp)
+    assert len(pop)!=0
+    assert len(vmpop)==len(pop)
+    return pop, vmpop
+
+    '''
+    nonepop = [ toolbox.clone(ind) for i,ind in enumerate(pop) if type(vmpop[i].rheobase) is type(None) ]
+
+    pop = [ toolbox.clone(ind) for i,ind in enumerate(pop) if type(vmpop[i].rheobase) is not type(None) ]
+
         #if not ind.rheobase == None:
+    print('broken pop')
+    assert len(pop)!=0
     for ind in vmpop:
         print(ind.rheobase, ' vmpop rheobase')
 
-    vmpop = [ ind for ind in vmpop if ind.rheobase != None ]
-    for ind in vmpop:
+    vmpop = [ ind for ind in vmpop if type(ind.rheobase) is not type(None) ]
+    for j,ind in enumerate(vmpop):
         print(ind.rheobase, ' vmpop rheobase')
+        print(pop[j], ' pop ')
 
     assert len(vmpop) == len(pop)
 
     diff = abs(len(pop) - MU)
     print(diff)
     while diff > 0:
-        diff_pop = [ toolbox.Individual() for i in range(0,diff) ]
-        vm_diff_pop = list(futures.map(individual_to_vm,diff_pop))
+        #nonepop = [toolbox.clone(ind) for ind in nonepop ]
+        for i in nonepop:
+            toolbox.mutate(i)
+            toolbox.mutate(i)
+
+        vm_diff_pop = list(futures.map(individual_to_vm,nonepop))
         diff_pop_rh = list(futures.map(rheobase_checking,vm_diff_pop,repeat(rh_value)))
+
         for i,j in enumerate(diff_pop_rh):
-            if j.rheobase != None:
-                pop.append(diff_pop[i])
+            if type(j.rheobase) is not type(None):
+                print(len(pop),' length pop d')
+                pop.append(nonepop[i])
+                print(len(pop),' length pop e')
+
+                assert len(pop)!=0
                 vmpop.append(j)
         assert len(vmpop) == len(pop)
-        diff = abs(len(pop) - MU)
-    return pop, vmpop
+        print(len(pop),' failed assertion k')
+
+    '''
 
 def test_to_model(vms,local_test_methods):
     import get_neab
@@ -370,10 +427,10 @@ def test_to_model(vms,local_test_methods):
     end = len(model.results['t'])#/delta
     delay = int((float(get_neab.suite.tests[0].params['injected_square_current']['delay'])/1600.0 ) * end )
     #delay = get_neab.suite.tests[0].params['injected_square_current']['delay']['value']/delta
-    duration = int((float(get_neab.suite.tests[0].params['injected_square_current']['duration'])/1600.0) * end ) # delta
+    duration = int((float(1100.0)/1600.0) * end ) # delta
     #print(len(delay),len(duration),len(end),len(model.results['t']),' len(delay),len(duration),len(end),len(model.results["t"]) ' )
     injection_trace[0:int(delay)] = 0.0
-    injection_trace[int(delay):int(duration)] = rheobase
+    injection_trace[int(delay):int(duration)] = vms.rheobase
     injection_trace[int(duration):int(end)] = 0.0
     #from matplotlib import rc
     #rc('font', **{'family':'serif','serif':['Palatino']})
@@ -387,9 +444,9 @@ def test_to_model(vms,local_test_methods):
                ncol=2, mode="expand", borderaxespad=0.)
     axarr[1].plot(model.results['t'],injection_trace,label='$I_{i}$(pA)')
     if vms.rheobase > 0:
-        axarr[1].set_ylim(0, 2*rheobase)
+        axarr[1].set_ylim(0, 2*vms.rheobase)
     if vms.rheobase < 0:
-        axarr[1].set_ylim(2*rheobase,0)
+        axarr[1].set_ylim(2*vms.rheobase,0)
     axarr[1].set_xlabel(r'$current injection (pA)$')
     axarr[1].set_xlabel(r'$time (ms)$')
     #pdb.set_trace()
@@ -423,10 +480,10 @@ def test_to_model(vms,local_test_methods):
     end = len(model.results['t'])#/delta
     delay = int((float(get_neab.suite.tests[0].params['injected_square_current']['delay'])/1600.0 ) * end )
     #delay = get_neab.suite.tests[0].params['injected_square_current']['delay']['value']/delta
-    duration = int((float(get_neab.suite.tests[0].params['injected_square_current']['duration'])/1600.0) * end ) # delta
+    duration = int((float(1100.0)/1600.0) * end ) # delta
     #print(len(delay),len(duration),len(end),len(model.results['t']),' len(delay),len(duration),len(end),len(model.results["t"]) ' )
     injection_trace[0:int(delay)] = 0.0
-    injection_trace[int(delay):int(duration)] = rheobase
+    injection_trace[int(delay):int(duration)] = vms.rheobase
     injection_trace[int(duration):int(end)] = 0.0
     #from matplotlib import rc
     #rc('font', **{'family':'serif','serif':['Palatino']})
@@ -440,9 +497,9 @@ def test_to_model(vms,local_test_methods):
                ncol=2, mode="expand", borderaxespad=0.)
     axarr[1].plot(model.results['t'],injection_trace,label='$I_{i}$(pA)')
     if vms.rheobase > 0:
-        axarr[1].set_ylim(0, 2*rheobase)
+        axarr[1].set_ylim(0, 2*vms.rheobase)
     if vms.rheobase < 0:
-        axarr[1].set_ylim(2*rheobase,0)
+        axarr[1].set_ylim(2*vms.rheobase,0)
     axarr[1].set_xlabel(r'$current injection (pA)$')
     axarr[1].set_xlabel(r'$time (ms)$')
     #pdb.set_trace()
@@ -455,8 +512,8 @@ def test_to_model(vms,local_test_methods):
                ncol=2, mode="expand", borderaxespad=0.)
 
     plt.title(str(tests[local_test_methods]))
-    plt.savefig(str(tests[local_test_methods])+str('.png'))
-    plt.clf()
+    plt.savefig(str('best_solution')+str('.png'))
+    #plt.clf()
     model.results['vm']=None
     model.results['t']=None
     tests[local_test_methods].related_data=None
@@ -474,16 +531,26 @@ def updatevmpop(pop,MU,rh_value=None):
     '''
     from itertools import repeat
     import numpy as np
+    import copy
     #global MU
+    pop=copy.copy(pop)
+    assert len(pop)!=0
+
     rheobase_checking=gs.evaluate
-    vmpop = list(futures.map(individual_to_vm,pop))
+    vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in pop] ))
+    print('pop made 0 b')
+
+    assert len(pop)!=0
     if len(pop)!=0 and len(vmpop)!= 0:
         if rh_value == None:
             rh_value = np.mean([i.rheobase for i in vmpop])
             assert type(rh_value) is not type(None)
         rh_value_array = [rh_value for i in vmpop ]
         vmpop = list(futures.map(rheobase_checking,vmpop,repeat(rh_value)))
-        pop,vmpop = replace_rh(pop,MU,rh_value,vmpop)
+        pop,vmpop = replace_rh(copy.copy(pop),MU,rh_value,vmpop)
+        #print('pop made 0 c')
+        assert len(pop)!=0
+
     return pop,vmpop
 
 
@@ -493,7 +560,7 @@ def main():
 
 
     NGEN=6
-    MU=16#Mu must be some multiple of 8, such that it can be split into even numbers over 8 CPUs
+    MU=8#Mu must be some multiple of 8, such that it can be split into even numbers over 8 CPUs
 
     CXPB = 0.9
     import numpy as numpy
@@ -570,21 +637,40 @@ def main():
     # This is just to assign the crowding distance to the individuals
     # no actual selection is done
     pop = tools.selNSGA2(pop, MU)
+    print('pop made 0 a')
+
+    assert len(pop)!=0
     record = stats.compile(pop)
     logbook.record(gen=0, evals=len(invalid_ind), **record)
     # Begin the generational process
     for gen in range(1, NGEN):
         # Vary the population
-        rhstorage = [i.rheobase for i in vmpop]
-        pop,vmpop = updatevmpop(pop,MU,np.mean(rhstorage))
+        for i in vmpop:
+            if type(i.rheobase) is not type(None):
+                rhstorage.append(i.rheobase)
+        #rhmean = np.mean(rhstorage)
+        print(len(rhstorage))
+        rhmean = 120.0
+        #assert len(pop)!=0
+        #assert type(rhmean) is not type(None)
+        pop,vmpop = updatevmpop(pop,MU,rhmean)
+        assert len(pop)!=0
+        assert len(vmpop)!=0
 
 
-        invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
-        #offspring = tools.selTournamentDCD(invalid_ind, len(invalid_ind))
-        offspring = tools.selNSGA2(invalid_ind, len(invalid_ind))
+        invalid_ind = [ ind for ind in pop if ind.fitness.valid ]
+        for ind in pop:
+            print(ind.fitness.valid)
+            if not ind.fitness.valid:
+                print(ind.fitness,'hit ! invalid fitness')
+
+        assert len(invalid_ind)!=0
+        #offspring = tools.selTournamentDCD(pop, len(pop))
+        offspring = tools.selNSGA2(pop, len(pop))
+        assert len(offspring)!=0
 
         offspring = [toolbox.clone(ind) for ind in offspring]
-
+        assert len(offspring)!=0
         for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
             if random.random() <= CXPB:
                 toolbox.mate(ind1, ind2)
@@ -593,54 +679,66 @@ def main():
             toolbox.mutate(ind2)
             del ind1.fitness.values, ind2.fitness.values
 
-        rhstorage = [i.rheobase for i in vmpop]
+        #rhstorage = [i.rheobase for i in vmpop]
 
-        pop,vmpop = updatevmpop(offspring,MU,np.mean(rhstorage))
-        rhstorage = [i.rheobase for i in vmpop]
+        vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in offspring] ))
+
+        vmpop = list(futures.map(rheobase_checking,vmpop,repeat(rh_value)))
+
+        #pop,vmpop = updatevmpop(offspring,MU,np.mean(rhstorage))
+
+        #assert len(pop)!=0
+
+        #rhstorage = [i.rheobase for i in vmpop]
 
 
         rhstorage = [ i.rheobase for i in vmpop ]
-        generations = []
+        #generations = []
 
         #generations = [ gen for i,j in enumerate(vmpop) ]
         iter_ = zip(repeat(gen),copy.copy(vmpop),rhstorage)
 
-        invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
+        #invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
+        #assert len(invalid_ind)!=0
         #print(before,after, ' before, after')
         #assert before==after
         assert len(vmpop)==len(pop)
         #invalid_ind , pop = replace_rh(invalid_ind, pop, MU ,rh_value, vmpop)
-        fitnesses = list(toolbox.map(toolbox.evaluate, invalid_ind , iter_))
+        fitnesses = list(toolbox.map(toolbox.evaluate, offspring , iter_))
         print(len(fitnesses),len(vmpop),len(invalid_ind))
         #assert len(fitnesses) == len(vmpop)
 
 
-        for ind, fit in zip(invalid_ind, fitnesses):
+        for ind, fit in zip(offspring, fitnesses):
             ind.fitness.values = fit
         size_delta = MU-len(invalid_ind)
         '''
 
         if size_delta >0:
             mudiff = [ offspring[i] for i in range(0,size_delta) ]
-            if size_delta != 0:
                 invalid_ind.extend(mudiff)
+                if size_delta != 0:
         '''
-        print(invalid_ind, size_delta)
-        pop = toolbox.select(invalid_ind, MU)
-        print(pop,'got here')
+        print(invalid_ind, size_delta, 'invalid_ind, size delta')
+        pop = toolbox.select(offspring, MU)
+        print(pop,'got here messed up')
         #def
         #vmpop=list(futures.map(individual_to_vm,pop))
         #vmpop=list(futures.map(rheobase_checking,vmpop,repeat(rh_value)))
+        #rhstorage = [ i.rheobase for i in vmpop ]
 
-        pop,vmpop = updatevmpop(pop,MU,np.mean(rhstorage))
+        #pop,vmpop = updatevmpop(pop,MU,np.mean(rhstorage))
+        '''
+        plotss(vmpop,gen)
         sequence = [i for i in range(0,7)]
+        print(gen,' gen ',NGEN,' NGEN')
         if len(vmpop)!=0:
             ttm = list(futures.map(test_to_model,repeat(vmpop[0]),sequence))
             #test_to_model(vmpop[0])
         print(len(vmpop),len(pop),' length of population')
-    if len(vmpop)!=0:
-        ttm = list(futures.map(test_to_model,repeat(vmpop[0]),sequence))
-
+        if len(vmpop)!=0:
+            ttm = list(futures.map(test_to_model,repeat(vmpop[0]),sequence))
+        '''
     #record = stats.compile(pop)
     #logbook.record(gen=gen, evals=len(invalid_ind), **record)
     pop.sort(key=lambda x: x.fitness.values)
