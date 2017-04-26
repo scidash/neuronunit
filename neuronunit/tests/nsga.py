@@ -173,9 +173,42 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
             injection_trace[int(delay):int(duration)] = rheobase
             injection_trace[int(duration):int(end)] = 0.0
 
+
+            plt.title(str(vms.rheobase*pq.pA))
+
+            #plt.savefig('just_current_injection.png')
+
+            #f, axarr = plt.subplots(2, sharex=True)
+            plt.hold(True)
+
+            plt.plot(model.results['t'],model.results['vm'],label='$V_{m}$ (mV)')
+            plt.ylabel(r'$V_{m} (mV)$')
+            plt.xlabel(r'$time (ms)$')
+
+            plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+                       ncol=2, mode="expand", borderaxespad=0.)
+            plt.title(str(vms.rheobase*pq.pA)+str(gen))
+
+            plt.savefig(str('multiple_traces_injections')+'gen'+'_'+str(gen)+'_'+str(vms.rheobase*pq.pA)+str('.png'))
+
+
+            #plt.plot(model.results['t'],injection_trace,label='$I_{i}$(pA)')
+            #if vms.rheobase > 0:
+        #        axarr[1].set_ylim(0, 2*rheobase)
+            #if vms.rheobase < 0:
+            #    axarr[1].set_ylim(2*rheobase,0)
+            #axarr[1].set_xlabel(r'$current injection (pA)$')
+            #axarr[1].set_xlabel(r'$time (ms)$')
+            #pdb.set_trace()
+            #print(get_neab.suite.tests[i].params['injected_square_current'].keys())
+
+            #axarr[1].legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+            #           ncol=2, mode="expand", borderaxespad=0.)
+
+
             #plt.clf()
 
-
+            '''
             plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
                        ncol=2, mode="expand", borderaxespad=0.)
             plt.plot(model.results['t'],injection_trace,label='$I_{i}$(pA)')
@@ -183,7 +216,7 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
                 plt.ylim(0, 2*rheobase)
             if vms.rheobase < 0:
                 plt.ylim(2*rheobase,0)
-            plt.xlabel(r'$current injection (pA)$')
+            plt.ylabel(r'$current injection (pA)$')
             plt.xlabel(r'$time (ms)$')
             #pdb.set_trace()
             #print(get_neab.suite.tests[i].params['injected_square_current'].keys())
@@ -199,7 +232,7 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
             axarr[0].hold(True)
 
             axarr[0].plot(model.results['t'],model.results['vm'],label='$V_{m}$ (mV)')
-            axarr[0].set_xlabel(r'$V_{m} (mV)$')
+            axarr[0].set_ylabel(r'$V_{m} (mV)$')
             axarr[0].set_xlabel(r'$time (ms)$')
 
             axarr[0].legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
@@ -209,7 +242,7 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
                 axarr[1].set_ylim(0, 2*rheobase)
             if vms.rheobase < 0:
                 axarr[1].set_ylim(2*rheobase,0)
-            axarr[1].set_xlabel(r'$current injection (pA)$')
+            axarr[1].set_ylabel(r'$current injection (pA)$')
             axarr[1].set_xlabel(r'$time (ms)$')
             #pdb.set_trace()
             #print(get_neab.suite.tests[i].params['injected_square_current'].keys())
@@ -221,7 +254,7 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
 
             plt.savefig(str('all_rheobase_injections')+'gen'+'_'+str(gen)+'_'+str(vms.rheobase*pq.pA)+str('.png'))
 
-
+            '''
         assert n_spikes == 1 or n_spikes == 0  # Its possible that no rheobase was found
         #filter out such models from the evaluation.
 
@@ -648,11 +681,8 @@ def main():
         for i in vmpop:
             if type(i.rheobase) is not type(None):
                 rhstorage.append(i.rheobase)
-        #rhmean = np.mean(rhstorage)
         print(len(rhstorage))
         rhmean = 120.0
-        #assert len(pop)!=0
-        #assert type(rhmean) is not type(None)
         pop,vmpop = updatevmpop(pop,MU,rhmean)
         assert len(pop)!=0
         assert len(vmpop)!=0
@@ -679,34 +709,14 @@ def main():
             toolbox.mutate(ind2)
             del ind1.fitness.values, ind2.fitness.values
 
-        #rhstorage = [i.rheobase for i in vmpop]
 
         vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in offspring] ))
-
         vmpop = list(futures.map(rheobase_checking,vmpop,repeat(rh_value)))
-
-        #pop,vmpop = updatevmpop(offspring,MU,np.mean(rhstorage))
-
-        #assert len(pop)!=0
-
-        #rhstorage = [i.rheobase for i in vmpop]
-
-
         rhstorage = [ i.rheobase for i in vmpop ]
-        #generations = []
-
-        #generations = [ gen for i,j in enumerate(vmpop) ]
         iter_ = zip(repeat(gen),copy.copy(vmpop),rhstorage)
-
-        #invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
-        #assert len(invalid_ind)!=0
-        #print(before,after, ' before, after')
-        #assert before==after
         assert len(vmpop)==len(pop)
-        #invalid_ind , pop = replace_rh(invalid_ind, pop, MU ,rh_value, vmpop)
         fitnesses = list(toolbox.map(toolbox.evaluate, offspring , iter_))
         print(len(fitnesses),len(vmpop),len(invalid_ind))
-        #assert len(fitnesses) == len(vmpop)
 
 
         for ind, fit in zip(offspring, fitnesses):
@@ -722,25 +732,6 @@ def main():
         print(invalid_ind, size_delta, 'invalid_ind, size delta')
         pop = toolbox.select(offspring, MU)
         print(pop,'got here messed up')
-        #def
-        #vmpop=list(futures.map(individual_to_vm,pop))
-        #vmpop=list(futures.map(rheobase_checking,vmpop,repeat(rh_value)))
-        #rhstorage = [ i.rheobase for i in vmpop ]
-
-        #pop,vmpop = updatevmpop(pop,MU,np.mean(rhstorage))
-        '''
-        plotss(vmpop,gen)
-        sequence = [i for i in range(0,7)]
-        print(gen,' gen ',NGEN,' NGEN')
-        if len(vmpop)!=0:
-            ttm = list(futures.map(test_to_model,repeat(vmpop[0]),sequence))
-            #test_to_model(vmpop[0])
-        print(len(vmpop),len(pop),' length of population')
-        if len(vmpop)!=0:
-            ttm = list(futures.map(test_to_model,repeat(vmpop[0]),sequence))
-        '''
-    #record = stats.compile(pop)
-    #logbook.record(gen=gen, evals=len(invalid_ind), **record)
     pop.sort(key=lambda x: x.fitness.values)
     f=open('worst_candidate.txt','w')
     if len(vmpop)!=0:
