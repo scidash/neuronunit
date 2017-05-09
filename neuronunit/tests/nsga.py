@@ -152,8 +152,9 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
         model.load_model()
 
         model.re_init(vms.attrs)#purge models stored charge. by reinitializing it
-        #model.update_run_params(vms.attrs)
         model.inject_square_current(current)
+
+        #model.update_run_params(vms.attrs)
         import neuronunit.capabilities as cap
         import matplotlib.pyplot as plt
 
@@ -161,100 +162,19 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
         #if n_spikes == 0 and rheobase == 0.0:
 
         if n_spikes == 1 and rheobase != 0.0 :
-            trace_size = int(len(model.results['t']))
-            injection_trace = np.zeros(trace_size)
-
-            end = len(model.results['t'])#/delta
-            delay = int((float(get_neab.suite.tests[0].params['injected_square_current']['delay'])/1600.0 ) * end )
-            #delay = get_neab.suite.tests[0].params['injected_square_current']['delay']['value']/delta
-            duration = int(float(1100.0/1600.0) * end ) # delta
-            #print(len(delay),len(duration),len(end),len(model.results['t']),' len(delay),len(duration),len(end),len(model.results["t"]) ' )
-            injection_trace[0:int(delay)] = 0.0
-            injection_trace[int(delay):int(duration)] = rheobase
-            injection_trace[int(duration):int(end)] = 0.0
-
 
             plt.title(str(vms.rheobase*pq.pA))
-
-            #plt.savefig('just_current_injection.png')
-
-            #f, axarr = plt.subplots(2, sharex=True)
             plt.hold(True)
-
             plt.plot(model.results['t'],model.results['vm'],label='$V_{m}$ (mV)')
             plt.ylabel(r'$V_{m} (mV)$')
             plt.xlabel(r'$time (ms)$')
-
+            plt.xlim(0,1200)
             plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
                        ncol=2, mode="expand", borderaxespad=0.)
             plt.title(str(vms.rheobase*pq.pA)+str(gen))
-
             plt.savefig(str('multiple_traces_injections')+'gen'+'_'+str(gen)+'_'+str(vms.rheobase*pq.pA)+str('.png'))
 
 
-            #plt.plot(model.results['t'],injection_trace,label='$I_{i}$(pA)')
-            #if vms.rheobase > 0:
-        #        axarr[1].set_ylim(0, 2*rheobase)
-            #if vms.rheobase < 0:
-            #    axarr[1].set_ylim(2*rheobase,0)
-            #axarr[1].set_xlabel(r'$current injection (pA)$')
-            #axarr[1].set_xlabel(r'$time (ms)$')
-            #pdb.set_trace()
-            #print(get_neab.suite.tests[i].params['injected_square_current'].keys())
-
-            #axarr[1].legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
-            #           ncol=2, mode="expand", borderaxespad=0.)
-
-
-            #plt.clf()
-
-            '''
-            plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
-                       ncol=2, mode="expand", borderaxespad=0.)
-            plt.plot(model.results['t'],injection_trace,label='$I_{i}$(pA)')
-            if vms.rheobase > 0:
-                plt.ylim(0, 2*rheobase)
-            if vms.rheobase < 0:
-                plt.ylim(2*rheobase,0)
-            plt.ylabel(r'$current injection (pA)$')
-            plt.xlabel(r'$time (ms)$')
-            #pdb.set_trace()
-            #print(get_neab.suite.tests[i].params['injected_square_current'].keys())
-
-            plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
-                       ncol=2, mode="expand", borderaxespad=0.)
-
-            plt.title(str(vms.rheobase*pq.pA))
-
-            plt.savefig('just_current_injection.png')
-
-            f, axarr = plt.subplots(2, sharex=True)
-            axarr[0].hold(True)
-
-            axarr[0].plot(model.results['t'],model.results['vm'],label='$V_{m}$ (mV)')
-            axarr[0].set_ylabel(r'$V_{m} (mV)$')
-            axarr[0].set_xlabel(r'$time (ms)$')
-
-            axarr[0].legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
-                       ncol=2, mode="expand", borderaxespad=0.)
-            axarr[1].plot(model.results['t'],injection_trace,label='$I_{i}$(pA)')
-            if vms.rheobase > 0:
-                axarr[1].set_ylim(0, 2*rheobase)
-            if vms.rheobase < 0:
-                axarr[1].set_ylim(2*rheobase,0)
-            axarr[1].set_ylabel(r'$current injection (pA)$')
-            axarr[1].set_xlabel(r'$time (ms)$')
-            #pdb.set_trace()
-            #print(get_neab.suite.tests[i].params['injected_square_current'].keys())
-
-            axarr[1].legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
-                       ncol=2, mode="expand", borderaxespad=0.)
-
-            plt.title(str(vms.rheobase*pq.pA)+str(gen))
-
-            plt.savefig(str('all_rheobase_injections')+'gen'+'_'+str(gen)+'_'+str(vms.rheobase*pq.pA)+str('.png'))
-
-            '''
         assert n_spikes == 1 or n_spikes == 0  # Its possible that no rheobase was found
         #filter out such models from the evaluation.
 
@@ -366,12 +286,7 @@ def replace_rh(pop,MU,rh_value,vmpop):
     rheobase_checking=gs.evaluate
     from itertools import repeat
     import copy
-
-    #assert len(vmpop)!=0
-    #assert len(pop)!=0
     assert len(pop) == len(vmpop)
-    #invalid_ind = [ ind for i,ind in enumerate(pop) if not vmpop[i].rheobase == None ]
-    print(len(pop), ' length population')
 
     for i,ind in enumerate(pop):
          if type(vmpop[i].rheobase) is type(None):
@@ -389,47 +304,6 @@ def replace_rh(pop,MU,rh_value,vmpop):
     assert len(vmpop)==len(pop)
     return pop, vmpop
 
-    '''
-    nonepop = [ toolbox.clone(ind) for i,ind in enumerate(pop) if type(vmpop[i].rheobase) is type(None) ]
-
-    pop = [ toolbox.clone(ind) for i,ind in enumerate(pop) if type(vmpop[i].rheobase) is not type(None) ]
-
-        #if not ind.rheobase == None:
-    print('broken pop')
-    assert len(pop)!=0
-    for ind in vmpop:
-        print(ind.rheobase, ' vmpop rheobase')
-
-    vmpop = [ ind for ind in vmpop if type(ind.rheobase) is not type(None) ]
-    for j,ind in enumerate(vmpop):
-        print(ind.rheobase, ' vmpop rheobase')
-        print(pop[j], ' pop ')
-
-    assert len(vmpop) == len(pop)
-
-    diff = abs(len(pop) - MU)
-    print(diff)
-    while diff > 0:
-        #nonepop = [toolbox.clone(ind) for ind in nonepop ]
-        for i in nonepop:
-            toolbox.mutate(i)
-            toolbox.mutate(i)
-
-        vm_diff_pop = list(futures.map(individual_to_vm,nonepop))
-        diff_pop_rh = list(futures.map(rheobase_checking,vm_diff_pop,repeat(rh_value)))
-
-        for i,j in enumerate(diff_pop_rh):
-            if type(j.rheobase) is not type(None):
-                print(len(pop),' length pop d')
-                pop.append(nonepop[i])
-                print(len(pop),' length pop e')
-
-                assert len(pop)!=0
-                vmpop.append(j)
-        assert len(vmpop) == len(pop)
-        print(len(pop),' failed assertion k')
-
-    '''
 
 def test_to_model(vms,local_test_methods):
     import get_neab
@@ -590,11 +464,8 @@ def updatevmpop(pop,MU,rh_value=None):
 
 
 def main():
-
-
-    NGEN=6
-    MU=8#Mu must be some multiple of 8, such that it can be split into even numbers over 8 CPUs
-
+    NGEN=3
+    MU=16#Mu must be some multiple of 8, such that it can be split into even numbers over 8 CPUs
     CXPB = 0.9
     import numpy as numpy
     stats = tools.Statistics(lambda ind: ind.fitness.values)
@@ -755,7 +626,14 @@ def main():
     with open('vmpop.pickle', 'wb') as handle:
         pickle.dump(vmpop, handle)
 
+    from sklearn.decomposition import PCA as sklearnPCA
+    from sklearn.preprocessing import StandardScaler
 
+    dictionaries = [p.attrs for p in vmpop ]
+    X = [ v for v in d.values() for d in dictionaries ]
+    X_std = StandardScaler().fit_transform(X)
+    sklearn_pca = sklearnPCA(n_components=4)
+    Y_sklearn = sklearn_pca.fit_transform(X_std)
 
     return vmpop, pop, stats, invalid_ind
 
@@ -782,5 +660,88 @@ if __name__ == "__main__":
     score_matrixt=[]
     vmpop = list(map(individual_to_vm,pop))
 
-    #pdb.set_trace()
-    #assert vmpop.error !=
+
+
+
+
+'''
+trace_size = int(len(model.results['t']))
+
+injection_trace = np.zeros(trace_size)
+
+end = len(model.results['t'])#/delta
+delay = int((float(get_neab.suite.tests[0].params['injected_square_current']['delay'])/1600.0 ) * end )
+#delay = get_neab.suite.tests[0].params['injected_square_current']['delay']['value']/delta
+duration = int(float(1100.0/1600.0) * end ) # delta
+#print(len(delay),len(duration),len(end),len(model.results['t']),' len(delay),len(duration),len(end),len(model.results["t"]) ' )
+injection_trace[0:int(delay)] = 0.0
+injection_trace[int(delay):int(duration)] = rheobase
+injection_trace[int(duration):int(end)] = 0.0
+'''
+
+#plt.plot(model.results['t'],injection_trace,label='$I_{i}$(pA)')
+#if vms.rheobase > 0:
+#        axarr[1].set_ylim(0, 2*rheobase)
+#if vms.rheobase < 0:
+#    axarr[1].set_ylim(2*rheobase,0)
+#axarr[1].set_xlabel(r'$current injection (pA)$')
+#axarr[1].set_xlabel(r'$time (ms)$')
+#pdb.set_trace()
+#print(get_neab.suite.tests[i].params['injected_square_current'].keys())
+
+#axarr[1].legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+#           ncol=2, mode="expand", borderaxespad=0.)
+
+
+#plt.clf()
+
+'''
+plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+           ncol=2, mode="expand", borderaxespad=0.)
+plt.plot(model.results['t'],injection_trace,label='$I_{i}$(pA)')
+if vms.rheobase > 0:
+    plt.ylim(0, 2*rheobase)
+if vms.rheobase < 0:
+    plt.ylim(2*rheobase,0)
+plt.ylabel(r'$current injection (pA)$')
+plt.xlabel(r'$time (ms)$')
+#pdb.set_trace()
+#print(get_neab.suite.tests[i].params['injected_square_current'].keys())
+
+plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+           ncol=2, mode="expand", borderaxespad=0.)
+
+plt.title(str(vms.rheobase*pq.pA))
+
+plt.savefig('just_current_injection.png')
+
+f, axarr = plt.subplots(2, sharex=True)
+axarr[0].hold(True)
+
+axarr[0].plot(model.results['t'],model.results['vm'],label='$V_{m}$ (mV)')
+axarr[0].set_ylabel(r'$V_{m} (mV)$')
+axarr[0].set_xlabel(r'$time (ms)$')
+
+axarr[0].legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+           ncol=2, mode="expand", borderaxespad=0.)
+axarr[1].plot(model.results['t'],injection_trace,label='$I_{i}$(pA)')
+if vms.rheobase > 0:
+    axarr[1].set_ylim(0, 2*rheobase)
+if vms.rheobase < 0:
+    axarr[1].set_ylim(2*rheobase,0)
+axarr[1].set_ylabel(r'$current injection (pA)$')
+axarr[1].set_xlabel(r'$time (ms)$')
+#pdb.set_trace()
+#print(get_neab.suite.tests[i].params['injected_square_current'].keys())
+
+axarr[1].legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+           ncol=2, mode="expand", borderaxespad=0.)
+
+plt.title(str(vms.rheobase*pq.pA)+str(gen))
+
+plt.savefig(str('all_rheobase_injections')+'gen'+'_'+str(gen)+'_'+str(vms.rheobase*pq.pA)+str('.png'))
+
+'''
+
+#pdb.set_trace()
+#assert vmpop.error !=
