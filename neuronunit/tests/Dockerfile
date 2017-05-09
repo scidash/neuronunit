@@ -121,7 +121,18 @@ RUN python setup.py install
 RUN python test_all.py
 RUN git pull origin dev
 RUN python setup.py install
+RUN conda install plotly seaborn
+RUN sudo apt-get install -y zsh
 RUN wget https://github.com/robbyrussell/oh-my-zsh/raw/master/tools/install.sh -O - | zsh || true
 
+#RUN git clone git://github.com/robbyrussell/oh-my-zsh.git ~/.oh-my-zsh
+#RUN cp ~/.zshrc ~/.zshrc.orig
+RUN cp ~/.oh-my-zsh/templates/zshrc.zsh-template ~/.zshrc
+RUN echo "plugins=(cp vim emacs git python)" >> ~/.zshrc
+
+RUN zsh
 WORKDIR /home/mnt
+ENTRYPOINT zsh
 #ENTRYPOINT python nsga.py
+
+
