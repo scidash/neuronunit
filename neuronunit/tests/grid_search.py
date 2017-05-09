@@ -55,13 +55,14 @@ def model2map(iter_arg):#This method must be pickle-able for scoop to work.
     vm=VirtualModel()
     attrs={}
     attrs['//izhikevich2007Cell']={}
-    param=['a','b','vr','vpeak']#,'vr','vpeak']
-    i,j,k,l=iter_arg#,k,l
-    model.name=str(i)+str(j)+str(k)+str(l)
+    param=['a']#,'b','vr','vpeak']#,'vr','vpeak']
+    #i,j,k,l=iter_arg#,k,l
+    i=iter_arg
+    #model.name=str(i)+str(j)+str(k)+str(l)
     attrs['//izhikevich2007Cell']['a']=i
-    attrs['//izhikevich2007Cell']['b']=j
-    attrs['//izhikevich2007Cell']['vr']=k
-    attrs['//izhikevich2007Cell']['vpeak']=l
+    #attrs['//izhikevich2007Cell']['b']=j
+    #attrs['//izhikevich2007Cell']['vr']=k
+    #attrs['//izhikevich2007Cell']['vpeak']=l
     vm.attrs=attrs
     return vm
 
@@ -75,11 +76,12 @@ def pop2map(iter_arg):
     attrs['//izhikevich2007Cell']={}
     param=['a','b','vr','vpeak']#,'vr','vpeak']
     i,j,k,l=iter_arg#,k,l
+    i=iter_arg
     model.name=str(i)+str(j)+str(k)+str(l)
     attrs['//izhikevich2007Cell']['a']=i
-    attrs['//izhikevich2007Cell']['b']=j
-    attrs['//izhikevich2007Cell']['vr']=k
-    attrs['//izhikevich2007Cell']['vpeak']=l
+    #attrs['//izhikevich2007Cell']['b']=j
+    #attrs['//izhikevich2007Cell']['vr']=k
+    #attrs['//izhikevich2007Cell']['vpeak']=l
     vm.attrs=attrs
     model.load_model()
     model.update_run_params(attrs)
@@ -99,7 +101,9 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
     model.update_run_params(iter_arg.attrs)
     model.update_run_params(model.attrs)
     assert model.attrs==iter_arg.attrs
-
+    print(model.attrs)
+    import pdb
+    #pdb.set_trace()
     import quantities as qt
     import os
     import os.path
@@ -114,7 +118,7 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
     current.update(uc)
     current = {'injected_square_current':current}
     if len(model.attrs) == 0:
-        model.update_run_params(vm.attrs)
+        model.re_init(model.attrs)
     model.inject_square_current(current)
     n_spikes = model.get_spike_count()
     #print(n_spikes)
@@ -147,7 +151,8 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
         import sciunit.scores as scores
         #error = scores.InsufficientDataScore(None)
         error = [ 10.0 for i in range(0,7) ]
-    return (error,iter_arg.attrs,value*pq.pA)#,score)#.related_data.to_pickle.to_python())
+        import copy
+    return (error,iter_arg.attrs,value*pq.pA,copy.copy(model.results['t']),copy.copy(model.results['vm']))#,score)#.related_data.to_pickle.to_python())
 
 class VirtualModel:
     '''
