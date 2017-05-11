@@ -66,7 +66,8 @@ RUN sudo /opt/conda/bin/pip install \
 	notebook \
 	ipykernel \
 	ipyparallel \
-	enum34
+	enum34 \
+	deap
 
 
 RUN sudo printenv PATH
@@ -114,19 +115,15 @@ ARG HEAD=1
 WORKDIR $HOME
 WORKDIR sciunit
 RUN echo "reclone"
-RUN git clone -b dev https://github.com/russelljjarvis/sciunit.git
+RUN sudo git clone -b dev https://github.com/russelljjarvis/sciunit.git
 #RUN tar -xvzf sciunit.tar.gz -C sciunit --strip-components=1
 WORKDIR sciunit
-RUN python setup.py install
+RUN sudo python setup.py install
 RUN python test_all.py
-RUN git pull origin dev
-RUN python setup.py install
 RUN conda install plotly seaborn
 RUN sudo apt-get install -y zsh
 RUN wget https://github.com/robbyrussell/oh-my-zsh/raw/master/tools/install.sh -O - | zsh || true
 
-#RUN git clone git://github.com/robbyrussell/oh-my-zsh.git ~/.oh-my-zsh
-#RUN cp ~/.zshrc ~/.zshrc.orig
 RUN cp ~/.oh-my-zsh/templates/zshrc.zsh-template ~/.zshrc
 RUN echo "plugins=(cp vim emacs git python)" >> ~/.zshrc
 
