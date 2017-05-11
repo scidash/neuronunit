@@ -121,16 +121,17 @@ class NEURONBackend(Backend):
         #Create a pyhoc file using jneuroml to convert from NeuroML to pyhoc.
         #import the contents of the file into the current names space.
         def cond_load():
-            from neuronunit.tests.NeuroML2 import LEMS_2007One_nrn
-            self.invokenrn()
             modeldirname=os.path.dirname(self.orig_lems_file_path)
-            print(modeldirname, 'name ')
-            previousdir=os.getcwd()
-            os.chdir(modeldirname)
-            exec_string=str('nrnivmodl ')+str(modeldirname)#+str('')
-            os.system(exec_string)
-            self.neuron.load_mechanisms(str(modeldirname)+str('/NeuroML2/x86_64'))
-            os.chdir(previousdir)
+            self.invokenrn()
+            
+            self.neuron.load_mechanisms(str(modeldirname))
+            from neuronunit.tests.NeuroML2 import LEMS_2007One_nrn
+            #print(modeldirname, 'name ')
+            #previousdir=os.getcwd()
+            #os.chdir(modeldirname)
+            #exec_string=str('nrnivmodl ')+str(modeldirname)#+str('')
+            #os.system(exec_string)
+            #os.chdir(previousdir)
             #self.neuron.load_mechanisms(modeldirname)
             from neuronunit.tests.NeuroML2.LEMS_2007One_nrn import NeuronSimulation
             self.ns = NeuronSimulation(tstop=1600, dt=0.0025)
