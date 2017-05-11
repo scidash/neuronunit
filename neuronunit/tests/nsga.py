@@ -1,3 +1,11 @@
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib as plt
+plt.use('Agg')
+from matplotlib import pyplot
+pyplot.plot(100,100)
+pyplot.savefig('blah2.png')
+
 import time
 import pdb
 import array
@@ -24,7 +32,7 @@ import matplotlib.pyplot as plt
 import quantities as pq
 from deap import algorithms
 from deap import base
-from deap.benchmarks.tools import diversity, convergence, hypervolume
+#from deap.benchmarks.tools import diversity, convergence, hypervolume
 from deap import creator
 from deap import tools
 from scoop import futures
@@ -464,8 +472,8 @@ def updatevmpop(pop,MU,rh_value=None):
 
 
 def main():
-    NGEN=3
-    MU=16#Mu must be some multiple of 8, such that it can be split into even numbers over 8 CPUs
+    NGEN=1
+    MU=8#Mu must be some multiple of 8, such that it can be split into even numbers over 8 CPUs
     CXPB = 0.9
     import numpy as numpy
     stats = tools.Statistics(lambda ind: ind.fitness.values)

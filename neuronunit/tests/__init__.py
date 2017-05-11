@@ -4,6 +4,8 @@ from types import MethodType
 import quantities as pq
 from quantities.quantity import Quantity
 import numpy as np
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
