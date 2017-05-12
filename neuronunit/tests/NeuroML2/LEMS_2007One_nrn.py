@@ -19,8 +19,7 @@ import neuron
 
 import time
 h = neuron.h
-h.load_file("stdlib.hoc")
-h.load_file("stdgui.hoc")
+h.load_file("nrngui.hoc")
 
 h("objref p")
 h("p = new PythonObject()")
@@ -29,10 +28,7 @@ class NeuronSimulation():
 
     def __init__(self, tstop, dt):
 
-        #print("\n    Starting simulation in NEURON generated from NeuroML2 model...\n")
-
         # Adding simulation Component(id=sim1 type=Simulation) of network/component: net1 (Type: network)
-        #print("Population RS_pop contains 1 instance(s) of component: RS of type: izhikevich2007Cell")
 
         h(" {n_RS_pop = 1} ")
         '''
@@ -53,8 +49,7 @@ class NeuronSimulation():
             h.m_RS_RS_pop[i].k = 7.0E-4
             h.m_RS_RS_pop[i].vr = -60.0
             h.m_RS_RS_pop[i].vt = -40.0
-            h.m_RS_RS_pop[i].vpeak = 35.0 #if this is only 30, the neuron
-            #can be unstable also depending on other parameters too
+            h.m_RS_RS_pop[i].vpeak = 35.0
             h.m_RS_RS_pop[i].a = 0.030000001
             h.m_RS_RS_pop[i].b = -0.0019999999
             h.m_RS_RS_pop[i].c = -50.0
@@ -75,6 +70,22 @@ class NeuronSimulation():
         h.dt = dt
 
         h.steps_per_ms = 1/h.dt
+
+        # Display: self.display_d1
+        self.display_d1 = h.Graph(0)
+        self.display_d1.size(0,h.tstop,-80.0,50.0)
+        self.display_d1.view(0, -80.0, h.tstop, 130.0, 80, 330, 330, 250)
+        h.graphList[0].append(self.display_d1)
+        # Line, plotting: RS_pop[0]/v
+        self.display_d1.addexpr("RS_pop[0].v(0.5)", "RS_pop[0].v(0.5)", 1, 1, 0.8, 0.9, 2)
+
+        # Display: self.display_d2
+        self.display_d2 = h.Graph(0)
+        self.display_d2.size(0,h.tstop,-80.0,50.0)
+        self.display_d2.view(0, -80.0, h.tstop, 130.0, 80, 330, 330, 250)
+        h.graphList[0].append(self.display_d2)
+        # Line, plotting: RS_pop[0]/u
+        self.display_d2.addexpr("m_RS_RS_pop[0].u", "m_RS_RS_pop[0].u", 1, 1, 0.8, 0.9, 2)
 
 
 
@@ -101,17 +112,18 @@ class NeuronSimulation():
 
         self.sim_end = -1 # will be overwritten
 
+        h.nrncontrolmenu()
+
+
     def run(self):
 
         self.initialized = True
         sim_start = time.time()
-        #print("Running a simulation of %sms (dt = %sms)" % (h.tstop, h.dt))
 
         h.run()
 
         self.sim_end = time.time()
         sim_time = self.sim_end - sim_start
-        #print("Finished NEURON simulation in %f seconds (%f mins)..."%(sim_time, sim_time/60.0))
 
         self.save_results()
 
@@ -127,13 +139,14 @@ class NeuronSimulation():
 
     def save_results(self):
 
-        #print("Saving results at t=%s..."%h.t)
 
         if self.sim_end < 0: self.sim_end = time.time()
 
+        self.display_d1.exec_menu("View = plot")
+        self.display_d2.exec_menu("View = plot")
 
         # File to save: time
-        py_v_time = [ float(t) for t in h.v_time.to_python() ]  # Convert to Python list for speed...
+        py_v_time = [ t/1000 for t in h.v_time.to_python() ]  # Convert to Python list for speed...
 
         f_time_f2 = open('time.dat', 'w')
         num_points = len(py_v_time)  # Simulation may have been stopped before tstop...
@@ -141,29 +154,24 @@ class NeuronSimulation():
         for i in range(num_points):
             f_time_f2.write('%f'% py_v_time[i])  # Save in SI units...+ '\n')
         f_time_f2.close()
-        #print("Saved data to: time.dat")
-
+      
         # File to save: of0
-        py_v_v_of0 = [ float(x) for x in copy.copy(h.v_v_of0.to_python()) ]  # Convert to Python list for speed, variable has dim: voltage
-        py_v_u_of0 = [ float(x) for x in copy.copy(h.v_u_of0.to_python()) ]  # Convert to Python list for speed, variable has dim: current
-        h.v_v_of0 = None
-        h.v_u_of0 = None 
+        py_v_v_of0 = [ float(x  / 1000.0) for x in h.v_v_of0.to_python() ]  # Convert to Python list for speed, variable has dim: voltage
+        py_v_u_of0 = [ float(x  / 1.0E9) for x in h.v_u_of0.to_python() ]  # Convert to Python list for speed, variable has dim: current
+
         f_of0_f2 = open('RS_One.dat', 'w')
         num_points = len(py_v_time)  # Simulation may have been stopped before tstop...
 
         for i in range(num_points):
             f_of0_f2.write('%e\t'% py_v_time[i]  + '%e\t'%(py_v_v_of0[i])  + '%e\t'%(py_v_u_of0[i]) + '\n')
         f_of0_f2.close()
-        #print("Saved data to: RS_One.dat")
-
         save_end = time.time()
         save_time = save_end - self.sim_end
 
-        #print("Done")
 
-#        quit()
-#if __name__ == '__main__':
+if __name__ == '__main__':
 
-#    ns = NeuronSimulation(tstop=1600, dt=0.0025)
+    ns = NeuronSimulation(tstop=1600, dt=0.0025)
 
-#    ns.run()
+    ns.run()
+

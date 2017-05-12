@@ -119,6 +119,7 @@ RUN sudo git clone -b dev https://github.com/russelljjarvis/sciunit.git
 #RUN tar -xvzf sciunit.tar.gz -C sciunit --strip-components=1
 WORKDIR sciunit
 RUN sudo python setup.py install
+RUN pip install cypy
 RUN python test_all.py
 RUN conda install plotly seaborn
 RUN sudo apt-get install -y zsh
@@ -126,10 +127,12 @@ RUN wget https://github.com/robbyrussell/oh-my-zsh/raw/master/tools/install.sh -
 
 RUN cp ~/.oh-my-zsh/templates/zshrc.zsh-template ~/.zshrc
 RUN echo "plugins=(cp vim emacs git python)" >> ~/.zshrc
-
+WORKDIR $WORK
+RUN sudo git clone https://github.com/jendrikseipp/vulture
+WORKDIR vulture
+RUN sudo python install.py
+WORKDIR 
 RUN zsh
 WORKDIR /home/mnt
 ENTRYPOINT zsh
 #ENTRYPOINT python nsga.py
-
-
