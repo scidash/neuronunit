@@ -1,17 +1,15 @@
 language: python
 python:
-  - "2.7"
   - "3.5"
 sudo: required
 services:
   - docker
-  
+  - git
+  - python
 before_script:
-  - docker pull scidash/neuronunit-docs
-  - docker build . -t scidash/neuronunit-travis
-
+  - docker build . -t scidash/neuronunit
+  - docker build ./neuronunit/tests -t scidash/neuronunit-tests
 script: 
-  - docker run -it scidash/neuronunit-travis
-#  - python docs/chapter2.py
-#  - python docs/chapter3.py
-#  - python docs/chapter4.py
+  - docker run -it scidash/neuronunit
+  - docker run -it scidash/neuronunit-tests
+
