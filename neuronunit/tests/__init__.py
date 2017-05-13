@@ -5,7 +5,7 @@ import quantities as pq
 from quantities.quantity import Quantity
 import numpy as np
 import matplotlib as mpl
-mpl.use('Agg')
+mpl.use('agg',warn=False)
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
@@ -21,8 +21,7 @@ from scoop import futures
 AMPL = 0.0*pq.pA
 DELAY = 100.0*pq.ms
 DURATION = 1000.0*pq.ms
-#import pdb
-#pdb.set_trace()
+
 #from sciunit import SciUnit
 
 #SciUnit.unpicklable.append(InputResistanceTest)
@@ -40,7 +39,6 @@ class VmTest(sciunit.Test):
             cap += cls.required_capabilities
         self.required_capabilities += tuple(cap)
         self._extra()
-
     required_capabilities = (cap.ProducesMembranePotential,)
 
     name = ''
@@ -88,8 +86,23 @@ class VmTest(sciunit.Test):
     def bind_score(self, score, model, observation, prediction):
         score.related_data['vm'] = model.get_membrane_potential()
         score.related_data['model_name'] = '%s_%s' % (model.name,self.name)
-
-        return score
+	'''
+	uncomment this to test if it works.
+        def plot_vm(self,ax=None,ylim=(None,None)):
+            """A plot method the score can use for convenience."""
+            if ax is None:
+                ax = plt.gca()
+            vm = score.related_data['vm'].rescale('mV')
+            ax.plot(vm.times,vm)
+            y_min = float(vm.min()-5.0*pq.mV) if ylim[0] is None else ylim[0]
+            y_max = float(vm.max()+5.0*pq.mV) if ylim[1] is None else ylim[1]
+            ax.set_ylim(y_min,y_max)
+            ax.set_xlabel('Time (s)')
+            ax.set_ylabel('Vm (mV)')
+        score.plot_vm = MethodType(plot_vm, score) # Bind to the score.
+        score.unpicklable.append('plot_vm')
+	'''        
+	return score
 
     @classmethod
     def neuroelectro_summary_observation(cls, neuron):
@@ -150,7 +163,12 @@ class VmTest(sciunit.Test):
             if x == 0:
                 return False
         model.re_init(model.attrs)
-        mp = np.array(copy.copy(model.results['vm']))
+        #mp = np.array(copy.copy(model.results['vm']))
+        mp = model.results['vm']
+        import math
+        for i in mp:
+            if math.isnan(i):
+                return False
         boolean = True
         boolean = nan_test(mp)
         if boolean == False:
@@ -163,6 +181,20 @@ class VmTest(sciunit.Test):
         if boolean == False:
             return False
 
+        import neuronunit.capabilities as cap
+
+        sws=cap.spike_functions.get_spike_waveforms(model.get_membrane_potential())
+        #sws = model.get_spike_waveforms()
+        #print(sws)
+
+        #sws=spike_functions.get_spike_waveform(mp)
+        for i,s in enumerate(sws):
+            s = np.array(s)
+            dvdt = np.diff(s)
+            import math
+            for j in dvdt:
+                if math.isnan(j):
+                    return False
         return True
 
 
@@ -206,25 +238,43 @@ class TestPulseTest(VmTest):
 
     @classmethod
     def get_tau(cls, vm, i):
-        start, stop = -11*pq.ms, (i['duration']-(1*pq.ms))
-        region = cls.get_segment(vm,start+i['delay'],stop+i['delay'])
-        coefs = cls.exponential_fit(region, i['delay'])
-        tau = (pq.ms/coefs[1]).rescale('ms')
+        start = max(i['delay']-10*pq.ms,i['delay']/2) # 10 ms before pulse start or 
+                                                      # halfway between sweep start and pulse start, 
+                                                      # whichever is longer
+        stop = i['duration']+i['delay']-1*pq.ms # 1 ms before pulse end
+        region = cls.get_segment(vm,start,stop)
+        amplitude,tau,y0 = cls.exponential_fit(region, i['delay'])
         return tau
 
     @classmethod
     def exponential_fit(cls, segment, offset):
+        t = segment.times.rescale('ms')
+        start = t[0]
+        offset = offset-start
+        t = t-start
+        t = t.magnitude
+        vm = segment.rescale('mV').magnitude
+        offset = (offset * segment.sampling_rate).simplified
+        assert offset.dimensionality == pq.dimensionless
+        offset = int(offset)
+        guesses = [vm.min(), # amplitude (mV)
+                   10, # time constant (ms)
+                   vm.max()] # y0 (mV)
+        vm_fit = vm.copy()
+        
         def func(x, a, b, c):
-            return a * np.exp(-b * x) + c
-
-        x = segment.times.rescale('ms')
-        y = segment.rescale('V')
-
-        offset = float(offset.rescale('ms')) # Strip units for optimization
-        #import math
-        #if
-        popt, pcov = curve_fit(func, x-offset*pq.ms, y*pq.ms, [0.001,2,y.min()]) # Estimate starting values for better convergence
-        return popt
+            vm_fit[:offset] = c
+            vm_fit[offset:] = a * np.exp(-t[offset:]/b) + c
+            return vm_fit
+        
+        popt, pcov = curve_fit(func, t, vm, p0=guesses) # Estimate starting values for better convergence
+        plt.plot(t,vm)
+        plt.plot(t,func(t,*popt))
+        #print(popt)
+        amplitude = popt[0]*pq.mV
+        tau = popt[1]*pq.ms
+        y0 = popt[2]*pq.mV
+        return amplitude,tau,y0
 
 
 class InputResistanceTest(TestPulseTest):
@@ -382,8 +432,6 @@ class InjectedCurrentAPWidthTest(APWidthTest):
                    "at half of their maximum height when current "
                    "is injected into cell.")
 
-
-
     def generate_prediction(self, model):
         model.inject_square_current(self.params['injected_square_current'])
         return super(InjectedCurrentAPWidthTest,self).generate_prediction(model)
@@ -532,7 +580,7 @@ class RheobaseTestHacked(VmTest):
         self.prediction = None
         self.high = 300*pq.pA
         self.small = 0*pq.pA
-
+    
     required_capabilities = (cap.ReceivesSquareCurrent,
                              cap.ProducesSpikes)
 
