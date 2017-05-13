@@ -251,9 +251,7 @@ class NEURONBackend(Backend):
             return self
 
         sort_file_path, _ = self.orig_lems_file_path.split("/LEMS_2007One")
-
         sort_file_path, _ = os.path.splitext(sort_file_path)
-
         architecture = platform.machine()
         NEURON_file_path = os.path.join(sort_file_path,architecture)
         if os.path.exists(NEURON_file_path):
@@ -322,7 +320,7 @@ class NEURONBackend(Backend):
 
 
     def re_init(self,attrs):
-        self.load_model()
+        #elf.load_model()
         self.update_run_params(attrs)
         #print(attrs)
         #self.h.psection()

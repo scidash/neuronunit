@@ -87,6 +87,10 @@ class VmTest(sciunit.Test):
         score.related_data['vm'] = model.get_membrane_potential()
         score.related_data['model_name'] = '%s_%s' % (model.name,self.name)
         #uncomment this to test if it works.
+        '''
+        Cannot make work:
+        if not hasattr(score,'picklable'):
+            score.picklable = []
         def plot_vm(self,ax=None,ylim=(None,None)):
             """A plot method the score can use for convenience."""
             if ax is None:
@@ -98,8 +102,16 @@ class VmTest(sciunit.Test):
             ax.set_ylim(y_min,y_max)
             ax.set_xlabel('Time (s)')
             ax.set_ylabel('Vm (mV)')
+
+        print('what happened here?')
+        print(score.picklable)
+        print(type(score.picklable))
+
         score.plot_vm = MethodType(plot_vm, score) # Bind to the score.
+        print(dir(score))
+
         score.unpicklable.append('plot_vm')
+        '''
         return score
 
     @classmethod
@@ -157,7 +169,7 @@ class VmTest(sciunit.Test):
                     if math.isnan(i):
                         return False
 
-            x = mp.std()
+            x = np.array(mp).std()
             if x == 0:
                 return False
         model.re_init(model.attrs)
@@ -716,6 +728,11 @@ class RheobaseTest(VmTest):
 
     units = pq.pA
     score_type = scores.RatioScore
+    #from sciunit import Test
+    #score = Test.score
+    #import pdb
+    #pdb.set_trace()
+    #score = VmTest.sciunit.Test.score
 
     def generate_prediction(self, model):
         return self.prediction
@@ -732,6 +749,7 @@ class RheobaseTest(VmTest):
             else:
                 score = super(RheobaseTest,self).\
                             compute_score(observation, self.prediction)
+
                 #self.bind_score(score,None,observation,prediction)
             return score
 
