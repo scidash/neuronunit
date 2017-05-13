@@ -55,6 +55,7 @@ class NeuronSimulation():
             h.m_RS_RS_pop[i].c = -50.0
             h.m_RS_RS_pop[i].d = 0.1
             h.m_RS_RS_pop[i].C = 1.00000005E-4
+            
             h.pop_section()
 
         # Adding input: Component(id=null type=explicitInput)

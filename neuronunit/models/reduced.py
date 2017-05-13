@@ -20,7 +20,10 @@ class ReducedModel(mod.LEMSModel,
         LEMS_file_path: Path to LEMS file (an xml file).
         name: Optional model name.
         """
-        super(ReducedModel,self).__init__(LEMS_file_path,name=name,backend=backend,attrs=attrs)
+        mod.LEMSModel.__init__(self,LEMS_file_path,name=name,
+                                          backend=backend,attrs=attrs)
+        #super(ReducedModel,self).__init__(LEMS_file_path,name=name,
+        #                                  backend=backend,attrs=attrs)
         self.run_number=0
         self.previous=0
         self.lookup = {}
@@ -47,6 +50,7 @@ class ReducedModel(mod.LEMSModel,
         spike_train = sf.get_spike_train(vm)
         return spike_train
 
-    #This method must be overwritten in the child class or Derived class NEURONbackend but I don't understand how to do that.
+    #This method must be overwritten in the child class or Derived class 
+    # NEURONbackend but I don't understand how to do that.
     #def inject_square_current(self,current):
     #    self.run_params['injected_square_current'] = current

@@ -1,12 +1,8 @@
-
-from pyneuroml import pynml
 import os
 import platform
 import sciunit
 import time
 import pdb
-import neuronunit.capabilities as cap
-import neuronunit.capabilities.spike_functions as sf
 import re
 import copy
 
@@ -15,11 +11,9 @@ import quantities as pq
 from quantities import ms, mV, nA
 from neo.core import AnalogSignal
 
-import quantities as pq
-import re
-import copy
 import neuronunit.capabilities as cap
 import neuronunit.capabilities.spike_functions as sf
+
 
 class Backend:
     """Base class for simulator backends that implement simulator-specific
@@ -83,14 +77,18 @@ class NEURONBackend(Backend):
 
 
     def __init__(self, name=None,attrs=None):
-        self.cell_name=name
+        self.neuron=None
         self.model_path=None
         self.LEMS_file_path=None#LEMS_file_path
         self.name=None
+        self.attrs=attrs
         self.f=None
-        self.rheobase_memory=None
+        self.h=None
+        self.rheobase=None
         self.invokenrn()
-
+        #self.h.cvode.active(1)
+        #pdb.set_trace()
+        #self.h.cvode.active
 
 
         return
@@ -107,6 +105,127 @@ class NEURONBackend(Backend):
         self.h.load_file("stdlib.hoc")
         self.h.load_file("stdgui.hoc")
 
+    def reset_h(self, hVariable):
+        """Sets the NEURON h variable"""
+
+        self.h = hVariable.h
+        self.neuron = hVariable
+
+
+    def setStopTime(self, stopTime = 1000*ms):
+        """Sets the simulation duration"""
+        """stopTimeMs: duration in milliseconds"""
+
+        tstop = stopTime
+        tstop.units = ms
+        self.h.tstop = float(tstop)
+
+
+    def setTimeStep(self, integrationTimeStep = 1/128.0 * ms):
+        """Sets the simulation itegration fixed time step"""
+        """integrationTimeStepMs: time step in milliseconds. Powers of two preferred. Defaults to 1/128.0"""
+
+        dt = integrationTimeStep
+        dt.units = ms
+
+        self.h.dt = self.fixedTimeStep = float(dt)
+
+    def setTolerance(self, tolerance = 0.001):
+        """Sets the variable time step integration method absolute tolerance """
+        """tolerance: absolute tolerance value"""
+
+        self.h.cvode.atol(tolerance)
+
+    def setIntegrationMethod(self, method = "fixed"):
+        """Sets the simulation itegration method"""
+        """method: either "fixed" or "variable". Defaults to fixed. cvode is used when "variable" """
+
+        self.h.cvode.active(1 if method == "variable" else 0)
+
+
+    def get_membrane_potential(self):
+        """
+        Must return a neo.core.AnalogSignal.
+        And must destroy the hoc vectors that comprise it.
+        """
+        import copy
+
+        if self.h.cvode.active() == 0:
+            fixedSignal = self.vVector.to_python()
+            dt = self.h.dt
+            dt_py=float(copy.copy(self.h.dt))
+            fixedSignalcp=copy.copy(fixedSignal)
+        else:
+            fixedSignal = self.get_variable_step_analog_signal()
+            fixedSignalcp=copy.copy(fixedSignal)
+            dt = self.fixedTimeStep
+            dt_py=float(copy.copy(self.fixedTimeStep))
+
+
+        fidxedSignal=None
+        self.h.dt=None
+        self.fixedTimeStep=None
+        return AnalogSignal( \
+                 fixedSignalcp, \
+                 units = mV, \
+                 sampling_period = dt_py * ms \
+        )
+
+    def get_variable_step_analog_signal(self):
+        """ Converts variable dt array values to fixed dt array by using linear interpolation"""
+
+        # Fixed dt potential
+        fPots = []
+        fDt = self.fixedTimeStep
+        # Variable dt potential
+        vPots = self.vVector.to_python()
+        # Variable dt times
+        vTimes = self.tVector.to_python()
+        duration = vTimes[len(vTimes)-1]
+        # Fixed and Variable dt times
+        fTime = vTime = vTimes[0]
+        # Index of variable dt time array
+        vIndex = 0
+        # Advance the fixed dt position
+        while fTime <= duration:
+
+            # If v and f times are exact, no interpolation needed
+            if fTime == vTime:
+                fPots.append(vPots[vIndex])
+
+            # Interpolate between the two nearest vdt times
+            else:
+
+                # Increment vdt time until it surpases the fdt time
+                while fTime > vTime and vIndex < len(vTimes):
+                    vIndex += 1
+                    vTime = vTimes[vIndex]
+
+                # Once surpassed, use the new vdt time and t-1 for interpolation
+                vIndexMinus1 = max(0, vIndex-1)
+                vTimeMinus1 = vTimes[vIndexMinus1]
+
+                fPot = self.linearInterpolate(vTimeMinus1, vTime, \
+                                          vPots[vIndexMinus1], vPots[vIndex], \
+                                          fTime)
+
+                fPots.append(fPot)
+
+            # Go to the next fdt time step
+            fTime += fDt
+
+        return fPots
+
+    def linearInterpolate(self, tStart, tEnd, vStart, vEnd, tTarget):
+        tRange = float(tEnd - tStart)
+        tFractionAlong = (tTarget - tStart)/tRange
+
+        vRange = vEnd - vStart
+
+        vTarget = vRange*tFractionAlong + vStart
+
+        return vTarget
+
 
     def load_model(self):
         '''
@@ -122,29 +241,20 @@ class NEURONBackend(Backend):
         #import the contents of the file into the current names space.
         def cond_load():
             from neuronunit.tests.NeuroML2 import LEMS_2007One_nrn
-            self.invokenrn()
+            self.reset_h(LEMS_2007One_nrn.neuron)
+            #make sure mechanisms are loaded
             modeldirname=os.path.dirname(self.orig_lems_file_path)
-            print(modeldirname, 'name ')
-            previousdir=os.getcwd()
-            os.chdir(modeldirname)
-            exec_string=str('nrnivmodl ')+str(modeldirname)#+str('')
-            os.system(exec_string)
-            self.neuron.load_mechanisms(str(modeldirname)+str('/NeuroML2/x86_64'))
-            os.chdir(previousdir)
-            #self.neuron.load_mechanisms(modeldirname)
+            self.neuron.load_mechanisms(modeldirname)
+            #import the default simulation protocol
             from neuronunit.tests.NeuroML2.LEMS_2007One_nrn import NeuronSimulation
+            #this next step may be unnecessary: TODO delete it and check.
             self.ns = NeuronSimulation(tstop=1600, dt=0.0025)
             return self
 
-
         architecture = platform.machine()
-        LEMS_dir  = os.path.dirname(self.orig_lems_file_path) # Gets full path to directory with file.
-        NEURON_file = os.path.join(LEMS_dir,architecture)
-
-
-        if os.path.exists(NEURON_file):
+        NEURON_file_path = os.path.join(self.orig_lems_file_path,architecture)
+        if os.path.exists(NEURON_file_path):
             self = cond_load()
-
         else:
             pynml.run_lems_with_jneuroml_neuron(self.orig_lems_file_path,
                               skip_run=False,
@@ -155,29 +265,25 @@ class NEURONBackend(Backend):
                               show_plot_already=False,
                               exec_in_dir = ".",
                               verbose=DEFAULTS['v'],
-                              exit_on_fail = True)
+                              exit_on_fail=True)
 
 
             self=cond_load()
-            more_attributes=pynml.read_lems_file(self.orig_lems_file_path)
-            return self
-            self.f=pynml.run_lems_with_jneuroml_neuron
-
+            
         #Although the above approach successfuly instantiates a LEMS/neuroml model in pyhoc
         #the resulting hoc variables for current source and cell name are idiosyncratic (not generic).
         #The resulting idiosyncracies makes it hard not have a hard coded approach make non hard coded, and generalizable code.
         #work around involves predicting the hoc variable names from pyneuroml LEMS file that was used to generate them.
-        more_attributes=pynml.read_lems_file(self.orig_lems_file_path)
+        more_attributes = pynml.read_lems_file(self.orig_lems_file_path)
+        #print("Components are %s" % more_attributes.components)
         for i in more_attributes.components:
         #This code strips out simulation parameters from the xml tree also such as duration.
         #Strip out values from something a bit like an xml tree.
             if str('pulseGenerator') in i.type:
-                self.current_src_name=i.id
+                self.current_src_name = i.id
             if str('Cell') in i.type:
-                self.cell_name=i.id
-                print(self.cell_name)
-
-        more_attributes=None#force garbage collection of more_attributes, its not needed anymore.
+                self.cell_name = i.id
+        more_attributes = None #force garbage collection of more_attributes, its not needed anymore.
         return self
 
     def update_run_params(self,attrs):
@@ -185,6 +291,16 @@ class NEURONBackend(Backend):
         self.attrs=None
         self.attrs=attrs
         paramdict={}
+
+	#The following two lined 
+	#for loop is an important hack for instancing parameters in HOC
+	#and assigning to them appropriately.
+	#without these two lines
+	#the program gives the illusion of working
+	#but without updating variables
+	#such that every model is the same, default
+	#model which is not the intended behavior.
+
         for v in self.attrs.values():
              paramdict = v
 
