@@ -1,16 +1,16 @@
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib as plt
-plt.use('Agg')
-from matplotlib import pyplot
-pyplot.plot(100,100)
-pyplot.savefig('blah2.png')
+import matplotlib as mpl
+mpl.use('agg',warn=False)
+#matplotlib.use('Agg')
+#import matplotlib as plt
+#plt.use('Agg')
+from matplotlib import pyplot as plt
+#pyplot.plot(100,100)
+#pyplot.savefig('blah2.png')
 
 import time
 import pdb
 import array
 import random
-import copy
 
 """
 Scoop can only operate on variables classes and methods at top level 0
@@ -24,6 +24,7 @@ any particular class in that module.
 
 Code from the DEAP framework, available at:
 https://code.google.com/p/deap/source/browse/examples/ga/onemax_short.py
+Conversion to its parallel form took two lines:
 from scoop import futures
 """
 
@@ -32,13 +33,16 @@ import matplotlib.pyplot as plt
 import quantities as pq
 from deap import algorithms
 from deap import base
-#from deap.benchmarks.tools import diversity, convergence, hypervolume
+from deap.benchmarks.tools import diversity, convergence
 from deap import creator
 from deap import tools
 from scoop import futures
 import scoop
 
-import get_neab
+try:
+    import get_neab
+except ImportError:
+    from neuronunit.tests import get_neab
 
 import quantities as qt
 import os
@@ -72,7 +76,10 @@ class Individual(object):
         self.rheobase=None
 toolbox = base.Toolbox()
 
-import model_parameters as params
+try:
+    import model_parameters
+except ImportError:
+    from neuronunit.tests import model_parameters as params
 
 vr = np.linspace(-75.0,-50.0,1000)
 a = np.linspace(0.015,0.045,1000)
@@ -88,7 +95,6 @@ vpeak= np.linspace(20.0,30.0,1000)
 
 param=['vr','a','b','C','c','d','v0','k','vt','vpeak']
 rov=[]
-
 rov.append(vr)
 rov.append(a)
 rov.append(b)
@@ -139,8 +145,6 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
     '''
     print(iter_)
     gen,vms,rheobase=iter_
-    #if gen!=0:
-    #    pdb.set_trace()
     print(vms,rheobase)
     print(vms.rheobase)
     assert vms.rheobase==rheobase
@@ -157,7 +161,7 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
         current.update(uc)
         current = {'injected_square_current':current}
         #Its very important to reset the model here. Such that its vm is new, and does not carry charge from the last simulation
-        model.load_model()
+        #model.load_model()
 
         model.re_init(vms.attrs)#purge models stored charge. by reinitializing it
         model.inject_square_current(current)
@@ -167,42 +171,23 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
         import matplotlib.pyplot as plt
 
         n_spikes = model.get_spike_count()
-        #if n_spikes == 0 and rheobase == 0.0:
-
-        if n_spikes == 1 and rheobase != 0.0 :
-
-            plt.title(str(vms.rheobase*pq.pA))
-            plt.hold(True)
-            plt.plot(model.results['t'],model.results['vm'],label='$V_{m}$ (mV)')
-            plt.ylabel(r'$V_{m} (mV)$')
-            plt.xlabel(r'$time (ms)$')
-            plt.xlim(0,1200)
-            plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
-                       ncol=2, mode="expand", borderaxespad=0.)
-            plt.title(str(vms.rheobase*pq.pA)+str(gen))
-            plt.savefig(str('multiple_traces_injections')+'gen'+'_'+str(gen)+'_'+str(vms.rheobase*pq.pA)+str('.png'))
 
 
         assert n_spikes == 1 or n_spikes == 0  # Its possible that no rheobase was found
-        #filter out such models from the evaluation.
-
-        sane = False
-        #init error such that there is no chance it can become none.
 
         inderr = getattr(individual, "error", None)
         if inderr!=None:
             if len(individual.error)!=0:
                 #the average of 10 and the previous score is chosen as a nominally high distance from zero
                 error = [ (abs(-10.0+i)/2.0) for i in individual.error ]
-                #pdb.set_trace()
         else:
-            #10 is chosen as a nominally high distance from zero
+            #100 is chosen as a nominally high distance from zero
             error = [ 100.0 for i in range(0,8) ]
 
         sane = get_neab.suite.tests[0].sanity_check(vms.rheobase*pq.pA,model)
         if sane == True and n_spikes == 1:
             for i in [4,5,6]:
-                get_neab.suite.tests[i].params['injected_square_current']['amplitude']=vms.rheobase*pq.pA
+                get_neab.suite.tests[i].params['injected_square_current']['amplitude'] = vms.rheobase*pq.pA
             get_neab.suite.tests[0].prediction={}
             if vms.rheobase == 0:
                 vms.rheobase = 1E-10
@@ -256,9 +241,6 @@ def plotss(vmlist,gen):
 def individual_to_vm(ind,vmpop=None):
 
     import copy
-    #steps = np.linspace(50,150,7.0)
-    #steps_current = [ i*pq.pA for i in steps ]
-    #rh_param=(False,steps_current)
     if vmpop==None:
         for i, p in enumerate(param):
             value = str(ind[i])
@@ -268,25 +250,17 @@ def individual_to_vm(ind,vmpop=None):
                 attrs['//izhikevich2007Cell'][p] = value
         vm = gs.VirtualModel()
         vm.attrs = attrs
-        #vm.steps = steps_current
 
         inderr = getattr(ind, "error", None)
         if not inderr==None:
-            #print(vm.error,' before update error')
             vm.error = copy.copy(ind.error)
-            #print(vm.error,' after update error')
             assert not vm.error == None
 
-            #print('vm.error: ',vm.error)
         indrheobase = getattr(ind, "rheobase", None)
         if not indrheobase==None:
-            #print(vm.rheobase,' before update rheobase')
             vm.rheobase =  copy.copy(ind.rheobase)
-            #print(vm.rheobase,' after update')
-
             assert not vm.rheobase == None
 
-            #print('vm.rheobase: ',vm.rheobase)
 
     return vm
 
@@ -295,6 +269,7 @@ def replace_rh(pop,MU,rh_value,vmpop):
     from itertools import repeat
     import copy
     assert len(pop) == len(vmpop)
+
 
     for i,ind in enumerate(pop):
          if type(vmpop[i].rheobase) is type(None):
@@ -311,6 +286,8 @@ def replace_rh(pop,MU,rh_value,vmpop):
     assert len(pop)!=0
     assert len(vmpop)==len(pop)
     return pop, vmpop
+
+
 
 
 def test_to_model(vms,local_test_methods):
@@ -364,8 +341,6 @@ def test_to_model(vms,local_test_methods):
         axarr[1].set_ylim(2*vms.rheobase,0)
     axarr[1].set_xlabel(r'$current injection (pA)$')
     axarr[1].set_xlabel(r'$time (ms)$')
-    #pdb.set_trace()
-    #print(get_neab.suite.tests[i].params['injected_square_current'].keys())
 
     axarr[1].legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
                ncol=2, mode="expand", borderaxespad=0.)
@@ -417,8 +392,6 @@ def test_to_model(vms,local_test_methods):
         axarr[1].set_ylim(2*vms.rheobase,0)
     axarr[1].set_xlabel(r'$current injection (pA)$')
     axarr[1].set_xlabel(r'$time (ms)$')
-    #pdb.set_trace()
-    #print(get_neab.suite.tests[i].params['injected_square_current'].keys())
 
     axarr[1].legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
                ncol=2, mode="expand", borderaxespad=0.)
@@ -448,12 +421,11 @@ def updatevmpop(pop,MU,rh_value=None):
     import numpy as np
     import copy
     #global MU
-    pop=copy.copy(pop)
+    #pop=copy.copy(pop)
     assert len(pop)!=0
 
     rheobase_checking=gs.evaluate
     vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in pop] ))
-    print('pop made 0 b')
 
     assert len(pop)!=0
     if len(pop)!=0 and len(vmpop)!= 0:
@@ -462,6 +434,7 @@ def updatevmpop(pop,MU,rh_value=None):
             assert type(rh_value) is not type(None)
         rh_value_array = [rh_value for i in vmpop ]
         vmpop = list(futures.map(rheobase_checking,vmpop,repeat(rh_value)))
+
         pop,vmpop = replace_rh(copy.copy(pop),MU,rh_value,vmpop)
         #print('pop made 0 c')
         assert len(pop)!=0
@@ -472,8 +445,8 @@ def updatevmpop(pop,MU,rh_value=None):
 
 
 def main():
-    NGEN=1
-    MU=8#Mu must be some multiple of 8, such that it can be split into even numbers over 8 CPUs
+    NGEN=6
+    MU=16#Mu must be some multiple of 8, such that it can be split into even numbers over 8 CPUs
     CXPB = 0.9
     import numpy as numpy
     stats = tools.Statistics(lambda ind: ind.fitness.values)
@@ -528,8 +501,6 @@ def main():
     rheobase_checking=gs.evaluate
     pop,vmpop = updatevmpop(pop,MU,rh_value)
 
-
-    #generations = [0 for i in vmpop]
     assert len(pop)==len(vmpop)
     rhstorage = [i.rheobase for i in vmpop]
     from itertools import repeat
@@ -543,13 +514,11 @@ def main():
     invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
 
     for ind, fit in zip(invalid_ind, fitnesses):
-        print(ind,fit,': ind, fit')
         ind.fitness.values = fit
     #purge individuals for which rheobase was not found
     # This is just to assign the crowding distance to the individuals
     # no actual selection is done
     pop = tools.selNSGA2(pop, MU)
-    print('pop made 0 a')
 
     assert len(pop)!=0
     record = stats.compile(pop)
@@ -587,7 +556,6 @@ def main():
             toolbox.mutate(ind1)
             toolbox.mutate(ind2)
             del ind1.fitness.values, ind2.fitness.values
-
 
         vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in offspring] ))
         vmpop = list(futures.map(rheobase_checking,vmpop,repeat(rh_value)))
@@ -637,12 +605,15 @@ def main():
     from sklearn.decomposition import PCA as sklearnPCA
     from sklearn.preprocessing import StandardScaler
 
-    dictionaries = [p.attrs for p in vmpop ]
-    X = [ v for v in d.values() for d in dictionaries ]
+    attr_dict = [p.attrs for p in vmpop ]
+    attr_list = [ i.values() for d in attr_dict for i in d.values() ]
+    X = np.array([i for i in attr_list[0]])
     X_std = StandardScaler().fit_transform(X)
-    sklearn_pca = sklearnPCA(n_components=4)
+    sklearn_pca = sklearnPCA(n_components=3)
     Y_sklearn = sklearn_pca.fit_transform(X_std)
 
+    with open('pca_transform.pickle', 'wb') as handle:
+        pickle.dump(Y_sklearn, handle)
     return vmpop, pop, stats, invalid_ind
 
 
@@ -697,59 +668,5 @@ injection_trace[int(duration):int(end)] = 0.0
 #pdb.set_trace()
 #print(get_neab.suite.tests[i].params['injected_square_current'].keys())
 
-#axarr[1].legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
-#           ncol=2, mode="expand", borderaxespad=0.)
-
 
 #plt.clf()
-
-'''
-plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
-           ncol=2, mode="expand", borderaxespad=0.)
-plt.plot(model.results['t'],injection_trace,label='$I_{i}$(pA)')
-if vms.rheobase > 0:
-    plt.ylim(0, 2*rheobase)
-if vms.rheobase < 0:
-    plt.ylim(2*rheobase,0)
-plt.ylabel(r'$current injection (pA)$')
-plt.xlabel(r'$time (ms)$')
-#pdb.set_trace()
-#print(get_neab.suite.tests[i].params['injected_square_current'].keys())
-
-plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
-           ncol=2, mode="expand", borderaxespad=0.)
-
-plt.title(str(vms.rheobase*pq.pA))
-
-plt.savefig('just_current_injection.png')
-
-f, axarr = plt.subplots(2, sharex=True)
-axarr[0].hold(True)
-
-axarr[0].plot(model.results['t'],model.results['vm'],label='$V_{m}$ (mV)')
-axarr[0].set_ylabel(r'$V_{m} (mV)$')
-axarr[0].set_xlabel(r'$time (ms)$')
-
-axarr[0].legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
-           ncol=2, mode="expand", borderaxespad=0.)
-axarr[1].plot(model.results['t'],injection_trace,label='$I_{i}$(pA)')
-if vms.rheobase > 0:
-    axarr[1].set_ylim(0, 2*rheobase)
-if vms.rheobase < 0:
-    axarr[1].set_ylim(2*rheobase,0)
-axarr[1].set_ylabel(r'$current injection (pA)$')
-axarr[1].set_xlabel(r'$time (ms)$')
-#pdb.set_trace()
-#print(get_neab.suite.tests[i].params['injected_square_current'].keys())
-
-axarr[1].legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
-           ncol=2, mode="expand", borderaxespad=0.)
-
-plt.title(str(vms.rheobase*pq.pA)+str(gen))
-
-plt.savefig(str('all_rheobase_injections')+'gen'+'_'+str(gen)+'_'+str(vms.rheobase*pq.pA)+str('.png'))
-
-'''
-
-#pdb.set_trace()
-#assert vmpop.error !=
