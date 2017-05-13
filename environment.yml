@@ -1,0 +1,12 @@
+name: neuronunit_docs
+dependencies:
+- python==3.5
+- matplotlib>=1.5
+- sphinx>=1.5
+- pip:
+  - neo==0.4
+  - elephant
+  - scoop
+  - git+http://github.com/scidash/sciunit@dev#egg=sciunit-1.5.6
+  - git+http://github.com/rgerkin/AllenSDK@python3.5#egg=allensdk-0.12.4.1
+  - git+http://github.com/rgerkin/pyNeuroML@master#egg=pyneuroml-0.2.3

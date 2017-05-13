@@ -10,18 +10,23 @@ import neuronunit.models.backends as backends
 import neuronunit.capabilities.spike_functions as sf
 
 class ReducedModel(mod.LEMSModel,
-                   backends.jNeuroMLBackend,
                    cap.ReceivesCurrent,
                    cap.ProducesMembranePotential,
                    cap.ProducesActionPotentials):
     """Base class for reduced models, using LEMS"""
 
-    def __init__(self, LEMS_file_path, name=None, attrs={}):
+    def __init__(self, LEMS_file_path, name=None, backend=None, attrs={}):
         """
         LEMS_file_path: Path to LEMS file (an xml file).
         name: Optional model name.
         """
-        super(ReducedModel,self).__init__(LEMS_file_path, name=name, attrs=attrs)
+        mod.LEMSModel.__init__(self,LEMS_file_path,name=name,
+                                          backend=backend,attrs=attrs)
+        #super(ReducedModel,self).__init__(LEMS_file_path,name=name,
+        #                                  backend=backend,attrs=attrs)
+        self.run_number=0
+        self.previous=0
+        self.lookup = {}
 
     def get_membrane_potential(self, rerun=None, **run_params):
         if rerun is None:
@@ -31,7 +36,7 @@ class ReducedModel(mod.LEMSModel,
             if 'v' in rkey or 'vm' in rkey:
                 v = np.array(self.results[rkey])
         t = np.array(self.results['t'])
-        dt = (t[1]-t[0])*pq.s # Time per sample in milliseconds.  
+        dt = (t[1]-t[0])*pq.ms # Time per sample in milliseconds.
         vm = AnalogSignal(v,units=pq.V,sampling_rate=1.0/dt)
         return vm
 
@@ -45,5 +50,7 @@ class ReducedModel(mod.LEMSModel,
         spike_train = sf.get_spike_train(vm)
         return spike_train
 
-    def inject_square_current(self,current):
-        self.run_params['injected_square_current'] = current
+    #This method must be overwritten in the child class or Derived class 
+    # NEURONbackend but I don't understand how to do that.
+    #def inject_square_current(self,current):
+    #    self.run_params['injected_square_current'] = current
