@@ -1,10 +1,11 @@
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib as plt
-plt.use('Agg')
-from matplotlib import pyplot
-pyplot.plot(100,100)
-pyplot.savefig('blah2.png')
+import matplotlib as mpl
+mpl.use('agg',warn=False)
+#matplotlib.use('Agg')
+#import matplotlib as plt
+#plt.use('Agg')
+from matplotlib import pyplot as plt
+#pyplot.plot(100,100)
+#pyplot.savefig('blah2.png')
 
 import time
 import pdb
@@ -170,23 +171,15 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
         import matplotlib.pyplot as plt
 
         n_spikes = model.get_spike_count()
-        #if n_spikes == 0 and rheobase == 0.0:
-
-
 
 
         assert n_spikes == 1 or n_spikes == 0  # Its possible that no rheobase was found
-        #filter out such models from the evaluation.
-
-
-        #init error such that there is no chance it can become none.
 
         inderr = getattr(individual, "error", None)
         if inderr!=None:
             if len(individual.error)!=0:
                 #the average of 10 and the previous score is chosen as a nominally high distance from zero
                 error = [ (abs(-10.0+i)/2.0) for i in individual.error ]
-                #pdb.set_trace()
         else:
             #100 is chosen as a nominally high distance from zero
             error = [ 100.0 for i in range(0,8) ]
@@ -194,7 +187,7 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
         sane = get_neab.suite.tests[0].sanity_check(vms.rheobase*pq.pA,model)
         if sane == True and n_spikes == 1:
             for i in [4,5,6]:
-                get_neab.suite.tests[i].params['injected_square_current']['amplitude']=vms.rheobase*pq.pA
+                get_neab.suite.tests[i].params['injected_square_current']['amplitude'] = vms.rheobase*pq.pA
             get_neab.suite.tests[0].prediction={}
             if vms.rheobase == 0:
                 vms.rheobase = 1E-10
@@ -248,9 +241,6 @@ def plotss(vmlist,gen):
 def individual_to_vm(ind,vmpop=None):
 
     import copy
-    #steps = np.linspace(50,150,7.0)
-    #steps_current = [ i*pq.pA for i in steps ]
-    #rh_param=(False,steps_current)
     if vmpop==None:
         for i, p in enumerate(param):
             value = str(ind[i])
@@ -260,25 +250,17 @@ def individual_to_vm(ind,vmpop=None):
                 attrs['//izhikevich2007Cell'][p] = value
         vm = gs.VirtualModel()
         vm.attrs = attrs
-        #vm.steps = steps_current
 
         inderr = getattr(ind, "error", None)
         if not inderr==None:
-            #print(vm.error,' before update error')
             vm.error = copy.copy(ind.error)
-            #print(vm.error,' after update error')
             assert not vm.error == None
 
-            #print('vm.error: ',vm.error)
         indrheobase = getattr(ind, "rheobase", None)
         if not indrheobase==None:
-            #print(vm.rheobase,' before update rheobase')
             vm.rheobase =  copy.copy(ind.rheobase)
-            #print(vm.rheobase,' after update')
-
             assert not vm.rheobase == None
 
-            #print('vm.rheobase: ',vm.rheobase)
 
     return vm
 
@@ -287,6 +269,7 @@ def replace_rh(pop,MU,rh_value,vmpop):
     from itertools import repeat
     import copy
     assert len(pop) == len(vmpop)
+
 
     for i,ind in enumerate(pop):
          if type(vmpop[i].rheobase) is type(None):
@@ -358,8 +341,6 @@ def test_to_model(vms,local_test_methods):
         axarr[1].set_ylim(2*vms.rheobase,0)
     axarr[1].set_xlabel(r'$current injection (pA)$')
     axarr[1].set_xlabel(r'$time (ms)$')
-    #pdb.set_trace()
-    #print(get_neab.suite.tests[i].params['injected_square_current'].keys())
 
     axarr[1].legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
                ncol=2, mode="expand", borderaxespad=0.)
@@ -411,8 +392,6 @@ def test_to_model(vms,local_test_methods):
         axarr[1].set_ylim(2*vms.rheobase,0)
     axarr[1].set_xlabel(r'$current injection (pA)$')
     axarr[1].set_xlabel(r'$time (ms)$')
-    #pdb.set_trace()
-    #print(get_neab.suite.tests[i].params['injected_square_current'].keys())
 
     axarr[1].legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
                ncol=2, mode="expand", borderaxespad=0.)
@@ -455,6 +434,7 @@ def updatevmpop(pop,MU,rh_value=None):
             assert type(rh_value) is not type(None)
         rh_value_array = [rh_value for i in vmpop ]
         vmpop = list(futures.map(rheobase_checking,vmpop,repeat(rh_value)))
+
         pop,vmpop = replace_rh(copy.copy(pop),MU,rh_value,vmpop)
         #print('pop made 0 c')
         assert len(pop)!=0
@@ -465,8 +445,8 @@ def updatevmpop(pop,MU,rh_value=None):
 
 
 def main():
-    NGEN=1
-    MU=8#Mu must be some multiple of 8, such that it can be split into even numbers over 8 CPUs
+    NGEN=6
+    MU=16#Mu must be some multiple of 8, such that it can be split into even numbers over 8 CPUs
     CXPB = 0.9
     import numpy as numpy
     stats = tools.Statistics(lambda ind: ind.fitness.values)
@@ -539,7 +519,6 @@ def main():
     # This is just to assign the crowding distance to the individuals
     # no actual selection is done
     pop = tools.selNSGA2(pop, MU)
-    print('pop made 0 a')
 
     assert len(pop)!=0
     record = stats.compile(pop)
@@ -626,13 +605,15 @@ def main():
     from sklearn.decomposition import PCA as sklearnPCA
     from sklearn.preprocessing import StandardScaler
 
-    dictionaries = [p.attrs for p in vmpop ]
-    print(dictionaries)
-    #X = [ v for v in d.values() for d in dictionaries ]
-    X_std = StandardScaler().fit_transform(dictionaries)
-    sklearn_pca = sklearnPCA(n_components=4)
+    attr_dict = [p.attrs for p in vmpop ]
+    attr_list = [ i.values() for d in attr_dict for i in d.values() ]
+    X = np.array([i for i in attr_list[0]])
+    X_std = StandardScaler().fit_transform(X)
+    sklearn_pca = sklearnPCA(n_components=3)
     Y_sklearn = sklearn_pca.fit_transform(X_std)
 
+    with open('pca_transform.pickle', 'wb') as handle:
+        pickle.dump(Y_sklearn, handle)
     return vmpop, pop, stats, invalid_ind
 
 

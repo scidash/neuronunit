@@ -22,9 +22,6 @@ AMPL = 0.0*pq.pA
 DELAY = 100.0*pq.ms
 DURATION = 1000.0*pq.ms
 
-#from sciunit import SciUnit
-
-#SciUnit.unpicklable.append(InputResistanceTest)
 class VmTest(sciunit.Test):
     """Base class for tests involving the membrane potential of a model."""
 
@@ -88,9 +85,9 @@ class VmTest(sciunit.Test):
         score.related_data['model_name'] = '%s_%s' % (model.name,self.name)
         #uncomment this to test if it works.
         '''
-        Cannot make work:
-        if not hasattr(score,'picklable'):
-            score.picklable = []
+        #Cannot make work:
+        if not hasattr(score,'unpicklable'):
+            score.unpicklable = []
         def plot_vm(self,ax=None,ylim=(None,None)):
             """A plot method the score can use for convenience."""
             if ax is None:
@@ -103,9 +100,9 @@ class VmTest(sciunit.Test):
             ax.set_xlabel('Time (s)')
             ax.set_ylabel('Vm (mV)')
 
-        print('what happened here?')
-        print(score.picklable)
-        print(type(score.picklable))
+        print('what  here?')
+        print(score.unpicklable)
+        print(type(score.unpicklable))
 
         score.plot_vm = MethodType(plot_vm, score) # Bind to the score.
         print(dir(score))
@@ -768,7 +765,6 @@ class RestingPotentialTest(VmTest):
                    "where injected current is set to zero.")
 
     score_type = scores.ZScore
-    #score_type = scores.ZScore
 
 
     units = pq.mV
