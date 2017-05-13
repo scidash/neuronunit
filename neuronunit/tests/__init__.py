@@ -86,8 +86,7 @@ class VmTest(sciunit.Test):
     def bind_score(self, score, model, observation, prediction):
         score.related_data['vm'] = model.get_membrane_potential()
         score.related_data['model_name'] = '%s_%s' % (model.name,self.name)
-	'''
-	uncomment this to test if it works.
+        #uncomment this to test if it works.
         def plot_vm(self,ax=None,ylim=(None,None)):
             """A plot method the score can use for convenience."""
             if ax is None:
@@ -101,8 +100,7 @@ class VmTest(sciunit.Test):
             ax.set_ylabel('Vm (mV)')
         score.plot_vm = MethodType(plot_vm, score) # Bind to the score.
         score.unpicklable.append('plot_vm')
-	'''        
-	return score
+        return score
 
     @classmethod
     def neuroelectro_summary_observation(cls, neuron):
@@ -238,8 +236,8 @@ class TestPulseTest(VmTest):
 
     @classmethod
     def get_tau(cls, vm, i):
-        start = max(i['delay']-10*pq.ms,i['delay']/2) # 10 ms before pulse start or 
-                                                      # halfway between sweep start and pulse start, 
+        start = max(i['delay']-10*pq.ms,i['delay']/2) # 10 ms before pulse start or
+                                                      # halfway between sweep start and pulse start,
                                                       # whichever is longer
         stop = i['duration']+i['delay']-1*pq.ms # 1 ms before pulse end
         region = cls.get_segment(vm,start,stop)
@@ -261,12 +259,12 @@ class TestPulseTest(VmTest):
                    10, # time constant (ms)
                    vm.max()] # y0 (mV)
         vm_fit = vm.copy()
-        
+
         def func(x, a, b, c):
             vm_fit[:offset] = c
             vm_fit[offset:] = a * np.exp(-t[offset:]/b) + c
             return vm_fit
-        
+
         popt, pcov = curve_fit(func, t, vm, p0=guesses) # Estimate starting values for better convergence
         plt.plot(t,vm)
         plt.plot(t,func(t,*popt))
@@ -580,7 +578,7 @@ class RheobaseTestHacked(VmTest):
         self.prediction = None
         self.high = 300*pq.pA
         self.small = 0*pq.pA
-    
+
     required_capabilities = (cap.ReceivesSquareCurrent,
                              cap.ProducesSpikes)
 
