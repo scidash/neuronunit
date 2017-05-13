@@ -28,10 +28,10 @@ class NeuronSimulation():
 
     def __init__(self, tstop, dt):
 
-        print("\n    Starting simulation in NEURON generated from NeuroML2 model...\n")
+
 
         # Adding simulation Component(id=sim1 type=Simulation) of network/component: net1 (Type: network)
-        print("Population RS_pop contains 1 instance(s) of component: RS of type: izhikevich2007Cell")
+
 
         h(" {n_RS_pop = 1} ")
         '''
@@ -57,7 +57,7 @@ class NeuronSimulation():
             h.m_RS_RS_pop[i].b = -0.0019999999
             h.m_RS_RS_pop[i].c = -50.0
             h.m_RS_RS_pop[i].d = 0.1
-            h.m_RS_RS_pop[i].C = 1.00000005E-4
+            h.m_RS_RS_pop[i].C = 1.00000005E-4           
             h.pop_section()
 
         # Adding input: Component(id=null type=explicitInput)
@@ -122,13 +122,13 @@ class NeuronSimulation():
 
         self.initialized = True
         sim_start = time.time()
-        print("Running a simulation of %sms (dt = %sms)" % (h.tstop, h.dt))
+
 
         h.run()
 
         self.sim_end = time.time()
         sim_time = self.sim_end - sim_start
-        print("Finished NEURON simulation in %f seconds (%f mins)..."%(sim_time, sim_time/60.0))
+
 
         self.save_results()
 
@@ -144,12 +144,9 @@ class NeuronSimulation():
 
     def save_results(self):
 
-        print("Saving results at t=%s..."%h.t)
 
         if self.sim_end < 0: self.sim_end = time.time()
 
-        self.display_d1.exec_menu("View = plot")
-        self.display_d2.exec_menu("View = plot")
 
         # File to save: time
         py_v_time = [ t/1000 for t in h.v_time.to_python() ]  # Convert to Python list for speed...
@@ -160,8 +157,7 @@ class NeuronSimulation():
         for i in range(num_points):
             f_time_f2.write('%f'% py_v_time[i])  # Save in SI units...+ '\n')
         f_time_f2.close()
-        print("Saved data to: time.dat")
-
+      
         # File to save: of0
         py_v_v_of0 = [ float(x  / 1000.0) for x in h.v_v_of0.to_python() ]  # Convert to Python list for speed, variable has dim: voltage
         py_v_u_of0 = [ float(x  / 1.0E9) for x in h.v_u_of0.to_python() ]  # Convert to Python list for speed, variable has dim: current
@@ -172,13 +168,11 @@ class NeuronSimulation():
         for i in range(num_points):
             f_of0_f2.write('%e\t'% py_v_time[i]  + '%e\t'%(py_v_v_of0[i])  + '%e\t'%(py_v_u_of0[i]) + '\n')
         f_of0_f2.close()
-        print("Saved data to: RS_One.dat")
 
         save_end = time.time()
         save_time = save_end - self.sim_end
-        print("Finished saving results in %f seconds"%(save_time))
 
-        print("Done")
+
 
 if __name__ == '__main__':
 
@@ -186,3 +180,5 @@ if __name__ == '__main__':
 
     ns.run()
 
+
+#    ns.run()
