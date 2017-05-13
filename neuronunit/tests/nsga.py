@@ -160,7 +160,7 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
         current.update(uc)
         current = {'injected_square_current':current}
         #Its very important to reset the model here. Such that its vm is new, and does not carry charge from the last simulation
-        model.load_model()
+        #model.load_model()
 
         model.re_init(vms.attrs)#purge models stored charge. by reinitializing it
         model.inject_square_current(current)
