@@ -1,8 +1,12 @@
+
+from pyneuroml import pynml
 import os
 import platform
 import sciunit
 import time
 import pdb
+import neuronunit.capabilities as cap
+import neuronunit.capabilities.spike_functions as sf
 import re
 import copy
 
@@ -13,7 +17,6 @@ from neo.core import AnalogSignal
 
 import neuronunit.capabilities as cap
 import neuronunit.capabilities.spike_functions as sf
-
 
 class Backend:
     """Base class for simulator backends that implement simulator-specific
@@ -86,10 +89,6 @@ class NEURONBackend(Backend):
         self.h=None
         self.rheobase=None
         self.invokenrn()
-        #self.h.cvode.active(1)
-        #pdb.set_trace()
-        #self.h.cvode.active
-
 
         return
     #make backend a global variable inside this class.
@@ -261,8 +260,6 @@ class NEURONBackend(Backend):
         import pdb; pdb.set_trace()
         if os.path.exists(NEURON_file_path):
             self = cond_load()
-            print('from inside quarantine')
-            pdb.set_trace()
         else:
             pynml.run_lems_with_jneuroml_neuron(self.orig_lems_file_path,
                               skip_run=False,
@@ -273,11 +270,10 @@ class NEURONBackend(Backend):
                               show_plot_already=False,
                               exec_in_dir = ".",
                               verbose=DEFAULTS['v'],
-                              exit_on_fail=True)
+                              exit_on_fail = True)
 
 
             self=cond_load()
-
         #Although the above approach successfuly instantiates a LEMS/neuroml model in pyhoc
         #the resulting hoc variables for current source and cell name are idiosyncratic (not generic).
         #The resulting idiosyncracies makes it hard not have a hard coded approach make non hard coded, and generalizable code.
