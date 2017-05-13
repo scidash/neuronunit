@@ -1,6 +1,7 @@
 #author Russell Jarvis rjjarvis@asu.edu
 #author Rick Gerkin rgerkin@asu.edu
 FROM scidash/neuronunit
+
 USER root
 
 
@@ -10,22 +11,34 @@ RUN conda install matplotlib
 RUN easy_install gevent
 RUN easy_install greenlet
 RUN apt-get update
-RUN apt-get install -y gvfs-bin
+RUN apt-get install -y gvfs-bin 
 #I cant remember what gvfs-bin does
-RUN apt-get update
-
-
-
-ENV WORK_HOME $HOME/work/scidash
-RUN ipython profile create default
 RUN apt-get install -y libxss1
+RUN apt-get install -y curl apt-utils
+RUN apt-get install -y python3-setuptools
+RUN chown -R $NB_USER $HOME
+RUN chown -R $NB_USER /opt/conda/lib/python3.5/site-packages/
+
+USER $NB_USER
+WORKDIR $HOME
+
+RUN easy_install gevent
+RUN easy_install greenlet
 RUN git clone https://github.com/soravux/scoop
 WORKDIR scoop
 RUN python setup.py install
 RUN apt-get install -y python3-setuptools
 ENV PATH $PATH:/opt/conda/bin
-RUN easy_install gevent
-RUN easy_install greenlet
+RUN conda install mpi4py
+RUN pip install \
+    deap \
+    IPython \
+    jupyterhub \
+    notebook \
+    ipykernel \
+    ipyparallel \
+    enum34
+RUN ipython profile create default
 
 #WORKDIR $HOME
 #RUN git clone https://github.com/russelljjarvis/BluePyOpt.git
@@ -60,17 +73,7 @@ ENV PATH $PATH:/opt/conda/bin/python
 ENV PATH $PATH:/opt/conda/lib/python3.5/site-packages
 ENV PATH $PATH:$PYTHONPATH
 
-RUN sudo /opt/conda/bin/pip install \
-	IPython \
-	jupyterhub \
-	notebook \
-	ipykernel \
-	ipyparallel \
-	enum34 \
-	deap
-
-
-RUN sudo printenv PATH
+RUN echo $PATH
 RUN python -c "import pyneuroml"
 RUN python -c "import neuronunit"
 RUN python -c "from neuronunit.models.reduced import ReducedModel"
@@ -80,18 +83,23 @@ RUN python -c "import pyneuroml"
 RUN nrnivmodl
 RUN python -c "import scoop"
 RUN python -c "import deap"
-
 RUN nrniv
-
 RUN export PATH=$PATH
 
-#un comment the following line to test ipcluster during build.
+# Use this NeuronUnit (delete later)
+USER root
+ARG MOD_DATE=0
+RUN echo $MOD_DATE
+# Make neuronunit source directory in Travis image visible to Docker.
+ADD . $HOME/neuronunit/neuronunit/tests
+RUN chown -R $NB_USER $HOME/neuronunit/neuronunit/tests
+USER $NB_USER
+
+#fun comment the following line to test ipcluster during build.
 #RUN ipcluster start --profile=chase --debug &
 #https://github.com/russelljjarvis/neuronunit.git
 WORKDIR $HOME
-
-RUN echo "do this part again such that pickled files can be used to bypass problems with aibs.py in the short term !"
-
+ENV PYTHONPATH $HOME/neuronunit:$PYTHONPATH
 RUN git clone -b dev https://github.com/russelljjarvis/neuronunit.git
 WORKDIR $HOME/neuronunit/neuronunit/tests/NeuroML2
 
@@ -110,8 +118,7 @@ USER $NB_USER
 # HEAD, which will ensure that if the HEAD has changed (i.e. new commits),
 # then a new tar of the repo will be downloaded.
 ARG HEAD=1
-#RUN echo "down load anyway please"
-#RUN mkdir -p sciunit
+
 WORKDIR $HOME
 WORKDIR sciunit
 RUN echo "reclone"
@@ -123,10 +130,6 @@ RUN pip install cypy
 RUN python test_all.py
 RUN conda install plotly seaborn
 RUN sudo apt-get install -y zsh
-RUN wget https://github.com/robbyrussell/oh-my-zsh/raw/master/tools/install.sh -O - | zsh || true
-
-RUN cp ~/.oh-my-zsh/templates/zshrc.zsh-template ~/.zshrc
-RUN echo "plugins=(cp vim emacs git python)" >> ~/.zshrc
 WORKDIR $WORK
 RUN sudo git clone https://github.com/jendrikseipp/vulture
 WORKDIR vulture

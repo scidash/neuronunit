@@ -1,12 +1,18 @@
 # neuronunit
 # author Rick Gerkin rgerkin@asu.edu
+
 FROM scidash/neuron-mpi-neuroml
 
-ADD . /home/mnt
-WORKDIR /home/mnt
+# Make neuronunit source directory in Travis image visible to Docker.
 USER root
-RUN chown -R $NB_USER . 
-USER $NB_USER
+ARG MOD_DATE=0
+RUN echo $MOD_DATE
+ADD . $HOME/neuronunit
+RUN chown -R $NB_USER $HOME 
+WORKDIR $HOME/neuronunit 
 
+# Install neuronunit and dependencies.
 RUN python setup.py install
-WORKDIR $HOME/$WORKDIR
+
+# Run all unit tests.
+ENTRYPOINT python -m unittest unit_test/test_*.py
