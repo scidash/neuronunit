@@ -252,12 +252,10 @@ class NEURONBackend(Backend):
 
         sort_file_path, _ = self.orig_lems_file_path.split("/LEMS_2007One")
 
-        #sort_file_path, _ = os.path.splitext(self.orig_lems_file_path)
         sort_file_path, _ = os.path.splitext(sort_file_path)
 
         architecture = platform.machine()
         NEURON_file_path = os.path.join(sort_file_path,architecture)
-        import pdb; pdb.set_trace()
         if os.path.exists(NEURON_file_path):
             self = cond_load()
         else:
