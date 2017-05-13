@@ -445,8 +445,8 @@ def updatevmpop(pop,MU,rh_value=None):
 
 
 def main():
-    NGEN=6
-    MU=16#Mu must be some multiple of 8, such that it can be split into even numbers over 8 CPUs
+    NGEN=3
+    MU=8#Mu must be some multiple of 8, such that it can be split into even numbers over 8 CPUs
     CXPB = 0.9
     import numpy as numpy
     stats = tools.Statistics(lambda ind: ind.fitness.values)
@@ -503,6 +503,7 @@ def main():
 
     assert len(pop)==len(vmpop)
     rhstorage = [i.rheobase for i in vmpop]
+    rhmean = np.mean(np.array(rhstorage))
     from itertools import repeat
     iter_ = zip(repeat(0),vmpop,rhstorage)
 
@@ -524,13 +525,20 @@ def main():
     record = stats.compile(pop)
     logbook.record(gen=0, evals=len(invalid_ind), **record)
     # Begin the generational process
+    rhstorage2 = 0.0
     for gen in range(1, NGEN):
         # Vary the population
         for i in vmpop:
             if type(i.rheobase) is not type(None):
-                rhstorage.append(i.rheobase)
-        print(len(rhstorage))
-        rhmean = 120.0
+                #rhstorage.append(i.rheobase)
+                rhstorage2 += i.rheobase
+
+        rhmean = np.mean(np.array(rhstorage))
+
+        rhmean = rhstorage2/len(vmpop)
+        #print(len(rhstorage))
+        #rhmean = 120.0
+        #rhmean = np.mean(rhstorage)
         pop,vmpop = updatevmpop(pop,MU,rhmean)
         assert len(pop)!=0
         assert len(vmpop)!=0
@@ -580,6 +588,7 @@ def main():
         pop = toolbox.select(offspring, MU)
         print(pop,'got here messed up')
     pop.sort(key=lambda x: x.fitness.values)
+
     f=open('worst_candidate.txt','w')
     if len(vmpop)!=0:
         f.write(str(vmpop[-1].attrs))
@@ -610,7 +619,39 @@ def main():
     X = np.array([i for i in attr_list[0]])
     X_std = StandardScaler().fit_transform(X)
     sklearn_pca = sklearnPCA(n_components=3)
+
     Y_sklearn = sklearn_pca.fit_transform(X_std)
+    traces = []
+    import plotly.plotly as py
+    import plotly.graph_objs as go
+    for name in ('Iris-setosa', 'Iris-versicolor', 'Iris-virginica'):
+
+        trace = Scatter(
+            x=Y_sklearn[y==name,0],
+            y=Y_sklearn[y==name,1],
+            mode='markers',
+            name=name,
+            marker=Marker(
+                size=12,
+                line=Line(
+                    color='rgba(217, 217, 217, 0.14)',
+                    width=0.5),
+                opacity=0.8))
+        traces.append(trace)
+
+
+    data = Data(traces)
+    layout = Layout(xaxis=XAxis(title='PC1', showline=False),
+                    yaxis=YAxis(title='PC2', showline=False))
+    #fig = Figure(data=data, layout=layout)
+    fig = go.Figure(data=data, layout=layout)
+
+    py.image.save_as(fig, filename='principle_components.png')
+
+
+    #from IPython.display import Image
+    #Image('a-simple-plot.png')
+    #py.iplot(fig)
 
     with open('pca_transform.pickle', 'wb') as handle:
         pickle.dump(Y_sklearn, handle)
