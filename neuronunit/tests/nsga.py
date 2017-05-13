@@ -442,12 +442,11 @@ def updatevmpop(pop,MU,rh_value=None):
     import numpy as np
     import copy
     #global MU
-    pop=copy.copy(pop)
+    #pop=copy.copy(pop)
     assert len(pop)!=0
 
     rheobase_checking=gs.evaluate
     vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in pop] ))
-    print('pop made 0 b')
 
     assert len(pop)!=0
     if len(pop)!=0 and len(vmpop)!= 0:
@@ -628,8 +627,9 @@ def main():
     from sklearn.preprocessing import StandardScaler
 
     dictionaries = [p.attrs for p in vmpop ]
-    X = [ v for v in d.values() for d in dictionaries ]
-    X_std = StandardScaler().fit_transform(X)
+    print(dictionaries)
+    #X = [ v for v in d.values() for d in dictionaries ]
+    X_std = StandardScaler().fit_transform(dictionaries)
     sklearn_pca = sklearnPCA(n_components=4)
     Y_sklearn = sklearn_pca.fit_transform(X_std)
 
