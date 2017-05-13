@@ -688,4 +688,4 @@ injection_trace[int(duration):int(end)] = 0.0
 #print(get_neab.suite.tests[i].params['injected_square_current'].keys())
 
 
-    plt.clf()
+#plt.clf()

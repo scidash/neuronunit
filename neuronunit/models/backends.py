@@ -251,10 +251,18 @@ class NEURONBackend(Backend):
             self.ns = NeuronSimulation(tstop=1600, dt=0.0025)
             return self
 
+        sort_file_path, _ = self.orig_lems_file_path.split("/LEMS_2007One")
+
+        #sort_file_path, _ = os.path.splitext(self.orig_lems_file_path)
+        sort_file_path, _ = os.path.splitext(sort_file_path)
+
         architecture = platform.machine()
-        NEURON_file_path = os.path.join(self.orig_lems_file_path,architecture)
+        NEURON_file_path = os.path.join(sort_file_path,architecture)
+        import pdb; pdb.set_trace()
         if os.path.exists(NEURON_file_path):
             self = cond_load()
+            print('from inside quarantine')
+            pdb.set_trace()
         else:
             pynml.run_lems_with_jneuroml_neuron(self.orig_lems_file_path,
                               skip_run=False,
@@ -269,7 +277,7 @@ class NEURONBackend(Backend):
 
 
             self=cond_load()
-            
+
         #Although the above approach successfuly instantiates a LEMS/neuroml model in pyhoc
         #the resulting hoc variables for current source and cell name are idiosyncratic (not generic).
         #The resulting idiosyncracies makes it hard not have a hard coded approach make non hard coded, and generalizable code.
@@ -292,7 +300,7 @@ class NEURONBackend(Backend):
         self.attrs=attrs
         paramdict={}
 
-	#The following two lined 
+	#The following two lined
 	#for loop is an important hack for instancing parameters in HOC
 	#and assigning to them appropriately.
 	#without these two lines
