@@ -4,7 +4,6 @@ import os
 import platform
 import sciunit
 import time
-import pdb
 import neuronunit.capabilities as cap
 import neuronunit.capabilities.spike_functions as sf
 import re
