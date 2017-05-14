@@ -4,6 +4,7 @@ import os
 import platform
 import sciunit
 import time
+
 import neuronunit.capabilities as cap
 import neuronunit.capabilities.spike_functions as sf
 import re
@@ -88,6 +89,8 @@ class NEURONBackend(Backend):
         self.h=None
         self.rheobase=None
         self.invokenrn()
+
+
 
         return
     #make backend a global variable inside this class.
@@ -291,14 +294,14 @@ class NEURONBackend(Backend):
         self.attrs=attrs
         paramdict={}
 
-	#The following two lined
-	#for loop is an important hack for instancing parameters in HOC
-	#and assigning to them appropriately.
-	#without these two lines
-	#the program gives the illusion of working
-	#but without updating variables
-	#such that every model is the same, default
-	#model which is not the intended behavior.
+		#The following two lined
+		#for loop is an important hack for instancing parameters in HOC
+		#and assigning to them appropriately.
+		#without these two lines
+		#the program gives the illusion of working
+		#but without updating variables
+		#such that every model is the same, default
+		#model which is not the intended behavior.
 
         for v in self.attrs.values():
              paramdict = v
@@ -319,7 +322,7 @@ class NEURONBackend(Backend):
 
 
     def re_init(self,attrs):
-        #elf.load_model()
+        #self.load_model()
         self.update_run_params(attrs)
         #print(attrs)
         #self.h.psection()
