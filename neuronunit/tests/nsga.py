@@ -1,11 +1,6 @@
 import matplotlib as mpl
 mpl.use('agg',warn=False)
-#matplotlib.use('Agg')
-#import matplotlib as plt
-#plt.use('Agg')
 from matplotlib import pyplot as plt
-#pyplot.plot(100,100)
-#pyplot.savefig('blah2.png')
 
 import time
 import pdb
