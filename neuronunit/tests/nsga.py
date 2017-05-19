@@ -699,11 +699,11 @@ if __name__ == "__main__":
 
     assert len(vmpop)==len(pop)
     gpop= [ history.genealogy_history[i][0] for i in graph ]
-    colors = list([ i.errors for i in gpop ])
-    #pgop,vmpop = updatevmpop(gpop,rh_value)
-    #iter_ = zip(repeat(gen),vmpop,rhstorage)
+    #colors = list([ i.errors for i in gpop ])
+    pgop,vmpop = updatevmpop(gpop,rh_value)
+    iter_ = zip(repeat(gen),vmpop,rhstorage)
 
-    #colors = list(toolbox.map(toolbox.evaluate, gpop , iter_))
+    colors = list(toolbox.map(toolbox.evaluate, gpop , iter_))
 
     #colors = [toolbox.evaluate(history.genealogy_history[i])[0] for i in graph]
     networkx.draw(graph, node_color=colors)
