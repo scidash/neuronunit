@@ -714,7 +714,7 @@ if __name__ == "__main__":
 
     assert len(vmpop)==len(pop)
     gpop= [ history.genealogy_history[i][0] for i in graph ]
-    colors = list[ i.errors for i in gpop ]
+    colors = list([ i.errors for i in gpop ])
     #pgop,vmpop = updatevmpop(gpop,rh_value)
     #iter_ = zip(repeat(gen),vmpop,rhstorage)
 
