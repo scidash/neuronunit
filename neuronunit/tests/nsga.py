@@ -1,12 +1,6 @@
 import matplotlib as mpl
 mpl.use('agg',warn=False)
-#matplotlib.use('Agg')
-#import matplotlib as plt
-#plt.use('Agg')
 from matplotlib import pyplot as plt
-#pyplot.plot(100,100)
-#pyplot.savefig('blah2.png')
-
 import time
 import pdb
 import array
@@ -28,12 +22,21 @@ Conversion to its parallel form took two lines:
 from scoop import futures
 """
 
+
 import numpy as np
 import matplotlib.pyplot as plt
 import quantities as pq
 from deap import algorithms
 from deap import base
-from deap.benchmarks.tools import diversity, convergence
+from deap.benchmarks.tools import diversity, convergence, hypervolume
+#pdb.set_trace()
+#from deap.benchmarks.tools import hypervolume
+import deap.tools as dt
+#print(dt._hypervolume)
+
+#from dt._hypervolume import hv
+#from dt._hypervolume import pyhv as pyhv
+
 from deap import creator
 from deap import tools
 from scoop import futures
@@ -50,6 +53,8 @@ import os.path
 from scoop import utils
 
 import sciunit.scores as scores
+history = tools.History()
+
 
 
 init_start=time.time()
@@ -75,7 +80,7 @@ class Individual(object):
         self.lookup={}
         self.rheobase=None
 toolbox = base.Toolbox()
-
+# Decorate the variation operators
 try:
     import model_parameters
 except ImportError:
@@ -130,7 +135,31 @@ toolbox.register("select", tools.selNSGA2)
 import grid_search as gs
 model = gs.model
 
-def evaluate(individual,iter_):#This method must be pickle-able for scoop to work.
+
+def hypervolume_contrib(front, **kargs):
+    """Returns the hypervolume contribution of each individual. The provided
+    *front* should be a set of non-dominated individuals having each a
+    :attr:`fitness` attribute.
+    """
+    # Must use wvalues * -1 since hypervolume use implicit minimization
+    # And minimization in deap use max on -obj
+    wobj = numpy.array([ind.fitness.wvalues for ind in front]) * -1
+    ref = kargs.get("ref", None)
+    if ref is None:
+        ref = numpy.max(wobj, axis=0) + 1
+
+    total_hv = hv.hypervolume(wobj, ref)
+
+    def contribution(i):
+        # The contribution of point p_i in point set P
+        # is the hypervolume of P without p_i
+        return total_hv - hv.hypervolume(numpy.concatenate((wobj[:i], wobj[i+1:])), ref)
+
+    # Parallelization note: Cannot pickle local function
+    return map(contribution, range(len(front)))
+
+
+def evaluate(individual,tuple_params):#This method must be pickle-able for scoop to work.
     '''
     Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
     is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
@@ -143,10 +172,7 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
     Inputs a gene and a virtual model object.
     outputs are error components.
     '''
-    print(iter_)
-    gen,vms,rheobase=iter_
-    print(vms,rheobase)
-    print(vms.rheobase)
+    gen,vms,rheobase=tuple_params
     assert vms.rheobase==rheobase
 
     import quantities as pq
@@ -193,7 +219,7 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
                 vms.rheobase = 1E-10
             assert vms.rheobase != None
             score = get_neab.suite.tests[0].prediction['value']=vms.rheobase*pq.pA
-            score = get_neab.suite.judge(model)#passing in model, changes model
+            score = get_neab.suite.judge(model)#passing in model, changes the model
 
 
             spikes_numbers=[]
@@ -211,7 +237,6 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
                     else:
                         error[x] = 10.0 + error[0]
 
-        print(error)
         individual.error = error
         import copy
         individual.rheobase = copy.copy(vms.rheobase)
@@ -223,6 +248,10 @@ def evaluate(individual,iter_):#This method must be pickle-able for scoop to wor
 toolbox.register("evaluate", evaluate)
 toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
 toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
+
+toolbox.decorate("mate", history.decorator)
+toolbox.decorate("mutate", history.decorator)
+
 toolbox.register("select", tools.selNSGA2)
 toolbox.register("map", futures.map)
 
@@ -264,7 +293,7 @@ def individual_to_vm(ind,vmpop=None):
 
     return vm
 
-def replace_rh(pop,MU,rh_value,vmpop):
+def replace_rh(pop,rh_value,vmpop):
     rheobase_checking=gs.evaluate
     from itertools import repeat
     import copy
@@ -273,8 +302,6 @@ def replace_rh(pop,MU,rh_value,vmpop):
 
     for i,ind in enumerate(pop):
          if type(vmpop[i].rheobase) is type(None):
-              print(vmpop[i].rheobase)
-              print(i,ind)
               toolbox.mutate(ind)
               toolbox.mutate(ind)
               toolbox.mutate(ind)
@@ -320,13 +347,9 @@ def test_to_model(vms,local_test_methods):
     delay = int((float(get_neab.suite.tests[0].params['injected_square_current']['delay'])/1600.0 ) * end )
     #delay = get_neab.suite.tests[0].params['injected_square_current']['delay']['value']/delta
     duration = int((float(1100.0)/1600.0) * end ) # delta
-    #print(len(delay),len(duration),len(end),len(model.results['t']),' len(delay),len(duration),len(end),len(model.results["t"]) ' )
     injection_trace[0:int(delay)] = 0.0
     injection_trace[int(delay):int(duration)] = vms.rheobase
     injection_trace[int(duration):int(end)] = 0.0
-    #from matplotlib import rc
-    #rc('font', **{'family':'serif','serif':['Palatino']})
-    #rc('text', usetex=True)
     f, axarr = plt.subplots(2, sharex=True)
     axarr[0].plot(model.results['t'],model.results['vm'],label='$V_{m}$ (mV)')
     axarr[0].set_xlabel(r'$V_{m} (mV)$')
@@ -371,13 +394,9 @@ def test_to_model(vms,local_test_methods):
     delay = int((float(get_neab.suite.tests[0].params['injected_square_current']['delay'])/1600.0 ) * end )
     #delay = get_neab.suite.tests[0].params['injected_square_current']['delay']['value']/delta
     duration = int((float(1100.0)/1600.0) * end ) # delta
-    #print(len(delay),len(duration),len(end),len(model.results['t']),' len(delay),len(duration),len(end),len(model.results["t"]) ' )
     injection_trace[0:int(delay)] = 0.0
     injection_trace[int(delay):int(duration)] = vms.rheobase
     injection_trace[int(duration):int(end)] = 0.0
-    #from matplotlib import rc
-    #rc('font', **{'family':'serif','serif':['Palatino']})
-    #rc('text', usetex=True)
     f, axarr = plt.subplots(2, sharex=True)
     axarr[0].plot(model.results['t'],model.results['vm'],label='$V_{m}$ (mV)')
     axarr[0].set_xlabel(r'$V_{m} (mV)$')
@@ -408,7 +427,7 @@ def test_to_model(vms,local_test_methods):
     local_test_methods=None
     return 0
 
-def updatevmpop(pop,MU,rh_value=None):
+def updatevmpop(pop,rh_value=None):
     '''
     inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
     outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
@@ -423,20 +442,19 @@ def updatevmpop(pop,MU,rh_value=None):
     #global MU
     #pop=copy.copy(pop)
     assert len(pop)!=0
-
+    #MU=len(pop)
     rheobase_checking=gs.evaluate
     vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in pop] ))
 
     assert len(pop)!=0
     if len(pop)!=0 and len(vmpop)!= 0:
         if rh_value == None:
-            rh_value = np.mean([i.rheobase for i in vmpop])
+            rh_value = np.mean(np.array([i.rheobase for i in vmpop]))
             assert type(rh_value) is not type(None)
         rh_value_array = [rh_value for i in vmpop ]
         vmpop = list(futures.map(rheobase_checking,vmpop,repeat(rh_value)))
 
-        pop,vmpop = replace_rh(copy.copy(pop),MU,rh_value,vmpop)
-        #print('pop made 0 c')
+        pop,vmpop = replace_rh(pop,rh_value,vmpop)
         assert len(pop)!=0
 
     return pop,vmpop
@@ -445,12 +463,15 @@ def updatevmpop(pop,MU,rh_value=None):
 
 
 def main():
-    NGEN=3
+    global NGEN
+    NGEN=1
+    global MU
     MU=8#Mu must be some multiple of 8, such that it can be split into even numbers over 8 CPUs
     CXPB = 0.9
     import numpy as numpy
     stats = tools.Statistics(lambda ind: ind.fitness.values)
-    hof = tools.ParetoFront()
+    pf = tools.ParetoFront()
+
 
     stats.register("avg", numpy.mean, axis=0)
     stats.register("std", numpy.std, axis=0)
@@ -461,6 +482,9 @@ def main():
     logbook.header = "gen", "evals", "std", "min", "avg", "max"
 
     pop = toolbox.population(n=MU)
+    pop = [toolbox.clone(i) for i in pop]
+
+
     #create the first population of individuals
     guess_attrs=[]
 
@@ -488,6 +512,7 @@ def main():
     check_current=gs.check_current
     pre_rh_value=searcher(check_current,rh_param,mean_vm)
     rh_value=pre_rh_value.rheobase
+
     global vmpop
     if rh_value == None:
         rh_value = 0.0
@@ -499,11 +524,14 @@ def main():
     #invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
 
     rheobase_checking=gs.evaluate
-    pop,vmpop = updatevmpop(pop,MU,rh_value)
+    pop,vmpop = updatevmpop(pop,rh_value)
+    history.update(pop)
+    pf.update(pop)
+
+    print(pf)
 
     assert len(pop)==len(vmpop)
     rhstorage = [i.rheobase for i in vmpop]
-    rhmean = np.mean(np.array(rhstorage))
     from itertools import repeat
     iter_ = zip(repeat(0),vmpop,rhstorage)
 
@@ -528,30 +556,21 @@ def main():
     rhstorage2 = 0.0
     for gen in range(1, NGEN):
         # Vary the population
+
         for i in vmpop:
             if type(i.rheobase) is not type(None):
                 #rhstorage.append(i.rheobase)
                 rhstorage2 += i.rheobase
-
-        rhmean = np.mean(np.array(rhstorage))
-
+        rhstorage = [i.rheobase for i in vmpop]
         rhmean = rhstorage2/len(vmpop)
-        #print(len(rhstorage))
-        #rhmean = 120.0
-        #rhmean = np.mean(rhstorage)
-        pop,vmpop = updatevmpop(pop,MU,rhmean)
+        pop,vmpop = updatevmpop(pop,rhmean)
         assert len(pop)!=0
         assert len(vmpop)!=0
 
 
         invalid_ind = [ ind for ind in pop if ind.fitness.valid ]
-        for ind in pop:
-            print(ind.fitness.valid)
-            if not ind.fitness.valid:
-                print(ind.fitness,'hit ! invalid fitness')
 
         assert len(invalid_ind)!=0
-        #offspring = tools.selTournamentDCD(pop, len(pop))
         offspring = tools.selNSGA2(pop, len(pop))
         assert len(offspring)!=0
 
@@ -567,26 +586,54 @@ def main():
 
         vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in offspring] ))
         vmpop = list(futures.map(rheobase_checking,vmpop,repeat(rh_value)))
+
         rhstorage = [ i.rheobase for i in vmpop ]
-        iter_ = zip(repeat(gen),copy.copy(vmpop),rhstorage)
+        iter_ = zip(repeat(gen),vmpop,rhstorage)
         assert len(vmpop)==len(pop)
         fitnesses = list(toolbox.map(toolbox.evaluate, offspring , iter_))
-        print(len(fitnesses),len(vmpop),len(invalid_ind))
 
+        attr_dict = [p.attrs for p in vmpop ]
+        #attr_keys = [ i.keys() for d in attr_dict for i in d.values() ][0]
+        attr_list = [ i.values() for d in attr_dict for i in d.values() ][0]
+        #std_dev=np.std(attr_list)
+        #print('the standard deviation is',std_dev)
 
         for ind, fit in zip(offspring, fitnesses):
             ind.fitness.values = fit
         size_delta = MU-len(invalid_ind)
-        '''
 
-        if size_delta >0:
-            mudiff = [ offspring[i] for i in range(0,size_delta) ]
-                invalid_ind.extend(mudiff)
-                if size_delta != 0:
-        '''
-        print(invalid_ind, size_delta, 'invalid_ind, size delta')
         pop = toolbox.select(offspring, MU)
-        print(pop,'got here messed up')
+        print('the pareto front is',pf)
+
+        record = stats.compile(pop)
+        logbook.record(gen=gen, evals=len(invalid_ind), **record)
+        print(logbook.stream)
+
+        evals, gen ,std, avg, max_, min_ = logbook.select("evals","gen","avg", "max", "min", "std")
+        #logbook.header = "gen", "evals", "std", "min", "avg", "max"
+        x = list(range(0, NGEN))
+
+        plt.figure()
+        plt.subplot(2, 2, 1)
+        plt.semilogy(x, avg, "--b")
+        plt.semilogy(x, max_, "--b")
+        plt.semilogy(x, min_, "-b")
+        plt.semilogy(x, fbest, "-c")
+        plt.semilogy(x, sigma, "-g")
+        plt.semilogy(x, axis_ratio, "-r")
+        plt.grid(True)
+        plt.title("blue: f-values, green: sigma, red: axis ratio")
+
+        plt.subplot(2, 2, 2)
+        plt.plot(x, best)
+        plt.grid(True)
+        plt.title("Object Variables")
+
+        plt.subplot(2, 2, 3)
+        plt.semilogy(x, std)
+        plt.grid(True)
+        plt.title("Standard Deviations in All Coordinates")
+
     pop.sort(key=lambda x: x.fitness.values)
 
     f=open('worst_candidate.txt','w')
@@ -615,18 +662,75 @@ def main():
     from sklearn.preprocessing import StandardScaler
 
     attr_dict = [p.attrs for p in vmpop ]
-    attr_list = [ i.values() for d in attr_dict for i in d.values() ]
-    X = np.array([i for i in attr_list[0]])
+    attr_keys = [ i.keys() for d in attr_dict for i in d.values() ][0]
+    print(attr_keys)
+    #attr_list = [ i.values() for d in attr_dict for i in d.values() ][0]
+
+    #std=np.std(attr_list)
+    #X = np.array([i for i in attr_list])
+    #print(X)
+    #print(type(X))
+    X =  [ ind for ind in pop ]
     X_std = StandardScaler().fit_transform(X)
     sklearn_pca = sklearnPCA(n_components=3)
 
     Y_sklearn = sklearn_pca.fit_transform(X_std)
+
+
+
+
+    return vmpop, pop, stats, invalid_ind, Y_sklearn, X
+
+
+
+
+if __name__ == "__main__":
+    import time
+    start_time=time.time()
+    whole_initialisation = start_time-init_start
+    model=gs.model
+    vmpop, pop, stats, invalid_ind, Y_sklearn, X = main()
+    #print("Final population hypervolume is %f" % hypervolume(pop, [11.0, 11.0]))
+
+    print(stats)
+    #print("Convergence: ", convergence(pop, optimal_front))
+    #print("Diversity: ", diversity(pop, optimal_front[0], optimal_front[-1]))
+    import numpy
+    #
+    front = numpy.array([ind.fitness.values for ind in pop])
+    #optimal_front = numpy.array(optimal_front)
+    #plt.scatter(optimal_front[:,0], optimal_front[:,1], c="r")
+    plt.scatter(front[:,0], front[:,1], c="b")
+    plt.axis("tight")
+
+    import networkx
+    import pickle
+    #import networkx
+    with open('pca_transform.pickle', 'wb') as handle:
+        pickle.dump(Y_sklearn, handle)
+
+    graph = networkx.DiGraph(history.genealogy_tree)
+    graph = graph.reverse()     # Make the grah top-down
+
+    assert len(vmpop)==len(pop)
+    gpop= [ history.genealogy_history[i][0] for i in graph ]
+    colors = list[ i.errors for i in gpop ]
+    #pgop,vmpop = updatevmpop(gpop,rh_value)
+    #iter_ = zip(repeat(gen),vmpop,rhstorage)
+
+    #colors = list(toolbox.map(toolbox.evaluate, gpop , iter_))
+
+    #colors = [toolbox.evaluate(history.genealogy_history[i])[0] for i in graph]
+    networkx.draw(graph, node_color=colors)
+    plt.savefig('genealogy_history.png')
+
+    print(len(Y_sklearn))
     traces = []
     import plotly.plotly as py
     import plotly.graph_objs as go
-    for name in ('Iris-setosa', 'Iris-versicolor', 'Iris-virginica'):
+    for name in ('componen1', 'component2', 'component3'):
 
-        trace = Scatter(
+        trace = go.Scatter(
             x=Y_sklearn[y==name,0],
             y=Y_sklearn[y==name,1],
             mode='markers',
@@ -639,43 +743,22 @@ def main():
                 opacity=0.8))
         traces.append(trace)
 
-
+    attr_keys[Y_sklearn]
     data = Data(traces)
     layout = Layout(xaxis=XAxis(title='PC1', showline=False),
                     yaxis=YAxis(title='PC2', showline=False))
-    #fig = Figure(data=data, layout=layout)
     fig = go.Figure(data=data, layout=layout)
 
     py.image.save_as(fig, filename='principle_components.png')
 
 
-    #from IPython.display import Image
-    #Image('a-simple-plot.png')
-    #py.iplot(fig)
 
-    with open('pca_transform.pickle', 'wb') as handle:
-        pickle.dump(Y_sklearn, handle)
-    return vmpop, pop, stats, invalid_ind
-
-
-
-
-if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-    import pyneuroml as pynml
-    import os
-    import time
-    start_time=time.time()
-    whole_initialisation = start_time-init_start
-    model=gs.model
-    vmpop, pop, stats, invalid_ind = main()
 
     steps = np.linspace(50,150,7.0)
     steps_current = [ i*pq.pA for i in steps ]
     rh_param = (False,steps_current)
     searcher = gs.searcher
     check_current = gs.check_current
-    print(vmpop)
 
     score_matrixt=[]
     vmpop = list(map(individual_to_vm,pop))
