@@ -1,4 +1,5 @@
 # Bootstrap definition example neuronunit
+# overlay
 
 %setup
     echo "Looking in directory '$SINGULARITY_ROOTFS' for /bin/sh"
@@ -6,36 +7,61 @@
         echo "Hrmm, this container does not have /bin/sh installed..."
         exit 1
     fi
-    exit 0
+    
+    if [ ! -d "git" ]; then
+        mkdir git
+        cd git
+        git clone -b dev https://github.com/russelljjarvis/neuronunit.git
+       
+        git clone -b dev https://github.com/scidash/sciunit.git
+        cd sciunit
+        /opt/conda/bin/python setup.py install 
+        echo "deleting nunit"
+        #rm -r /neuronunit
+    fi
+    export PATH="$PATH:/home/jovyan/nrn-7.4/x86_64/bin/nrnivmodl:/home/jovyan/nrn-7.4/x86_64/bin"
+    ls /home/jovyan/nrn-7.4/x86_64/bin
+    echo $PATH
+    export PATH="$PATH:/opt/conda/bin/python"
+    export PYTHONPATH="$PYTHONPATH:/home/jovyan"
+    apt-get install libncurses5-dev libreadline-dev
+    apt-get update
+
 
 %post
-    exec /bin/bash
-    su jovyan
-    cd /home/jovyan/neuronunit/neuronunit/tests
-	#echo "Installing Development Tools YUM group"
-	#echo "Installing OpenMPI into container..."
-	#mkdir /tmp/git
-	#cd /tmp/git
-	#git clone https://github.com/open-mpi/ompi.git
-	#cd ompi
-	#./autogen.pl
-	#./configure --prefix=/usr/local
-	#make
-	#make install
-	#/usr/local/bin/mpicc examples/ring_c.c -o /usr/bin/mpi_ring
-	#cd /
-	#rm -rf /tmp/git
-	#exit 0
 
-%runscript
+
+    cd /git/sciunit
+    /opt/conda/bin/python setup.py install 
+    cd /git/neuronunit/neuronunit/tests/NeuroML2
+    bash /home/jovyan/nrn-7.4/x86_64/bin/nrnivmodl
+    cd /git/neuronunit/neuronunit/tests
     /opt/conda/bin/python -m scoop nsga.py 
+    exit 0
+
+ 
+%runscript
+    exec /bin/bash
+    exec su jovyan
+    exec cd /home/jovyan/neuronunit/neuronunit/tests
+    exec ls *.py
+    exec echo `pwd`
+    
+    exec /opt/conda/bin/python -m scoop nsga.py 
+    
 
 	#echo "Arguments received: $*"
 	#exec /bin/bash
 	#exec /usr/bin/python "$@"
 
 %test
-    /opt/conda/bin/python -m scoop nsga.py 
+    exec /bin/bash
+    exec su jovyan
+    exec cd /home/jovyan/neuronunit/neuronunit/tests
+    exec ls *.py
+    exec echo `pwd`
+    
+    exec /opt/conda/bin/python -m scoop nsga.py 
 
 
 #	/usr/local/bin/mpirun --allow-run-as-root /usr/bin/mpi_ring
