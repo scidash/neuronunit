@@ -498,7 +498,7 @@ def main():
 
     assert len(pop)==len(vmpop)
     rhstorage = [i.rheobase for i in vmpop]
-    rhmean = np.mean(np.array(rhstorage))
+    #rhmean = np.mean(np.array(rhstorage))
     from itertools import repeat
     iter_ = zip(repeat(0),vmpop,rhstorage)
 
@@ -528,7 +528,7 @@ def main():
                 #rhstorage.append(i.rheobase)
                 rhstorage2 += i.rheobase
 
-        rhmean = np.mean(np.array(rhstorage))
+        #rhmean = np.mean(np.array(rhstorage))
 
         rhmean = rhstorage2/len(vmpop)
         #print(len(rhstorage))
@@ -621,7 +621,7 @@ def main():
     import plotly.graph_objs as go
     for name in ('Iris-setosa', 'Iris-versicolor', 'Iris-virginica'):
 
-        trace = Scatter(
+        trace = go.Scatter(
             x=Y_sklearn[y==name,0],
             y=Y_sklearn[y==name,1],
             mode='markers',
