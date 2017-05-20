@@ -1,14 +1,45 @@
-## Command Line Access to Comet (of Neuro Science Gateway) Quick start guide:
+## Command Line Access to Comet (of Neuro Science Gateway)
+# Quick start guide:
 
-## Copy relevant files to Comet using the secure copy protocal.
+# Copy relevant files with scp (secure copy)
+
+Use to Comet using the secure copy protocal.
 
 `scp nu.def rjjarvis@comet.sdsc.xsede.org:~/`
 
-## Use rsync to copy bigger files.
+## Use rsync to copy
+
+copy bigger files as it is better at recovery from interruption.
 
 `rsync pnp_latest-2017-05-19-f1d9712ba440.img rjjarvis@comet.sdsc.xsede.org:~/`
 
+## Create a test SLURM script with contents like the following:
+```
+#!/bin/bash
+#SBATCH --job-name=test_singularity
+#SBATCH --time 05:00
+##SBATCH -t 0-2:00 # time (D-HH:MM) 
+#SBATCH --nodes 1
+#SBATCH --output=singularity_test.txt
+#SBATCH --ntasks=4
+#SBATCH --time=10:00
+#SBATCH -o slurm.%N.%j.out # STDOUT 
+#SBATCH -e slurm.%N.%j.err # STDERR s
+#SBATCH --mail-type=END,FAIL 
+# notifications for job done & fail 
+#SBATCH --mail-user=rjjarvis@asu.edu # send-to address  
+##SBATCH --mem-per-cpu=500
 
+
+module load singularity
+singularity bootstrap pnp_latest-2017-05-19-f1d9712ba440.img nu.def
+```
+# Submit the SLURM script to the queue
+If the files name is launch_singularity.sh launch the file with:
+`
+sbatch launch_singularity.sh
+`
+##
 ## The graphical way.
 
 Some considerations for people who are already used to running code on clusters. NSG removes the need to write an explicit PBS script or a SLURM scheduling script, although you will be prompted to enter some of the information contained in these scripts in step 4. You will also not be required to write an $openmpi or $mpiexec launch command, such a command will be constructed for you based on the information you provide.
