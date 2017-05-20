@@ -21,22 +21,12 @@ https://code.google.com/p/deap/source/browse/examples/ga/onemax_short.py
 Conversion to its parallel form took two lines:
 from scoop import futures
 """
-
-
 import numpy as np
 import matplotlib.pyplot as plt
 import quantities as pq
 from deap import algorithms
 from deap import base
-from deap.benchmarks.tools import diversity, convergence, hypervolume
-#pdb.set_trace()
-#from deap.benchmarks.tools import hypervolume
-import deap.tools as dt
-#print(dt._hypervolume)
-
-#from dt._hypervolume import hv
-#from dt._hypervolume import pyhv as pyhv
-
+from deap.benchmarks.tools import diversity, convergence, hypervolume 
 from deap import creator
 from deap import tools
 from scoop import futures
@@ -80,7 +70,6 @@ class Individual(object):
         self.lookup={}
         self.rheobase=None
 toolbox = base.Toolbox()
-# Decorate the variation operators
 try:
     import model_parameters
 except ImportError:
@@ -442,7 +431,6 @@ def updatevmpop(pop,rh_value=None):
     #global MU
     #pop=copy.copy(pop)
     assert len(pop)!=0
-    #MU=len(pop)
     rheobase_checking=gs.evaluate
     vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in pop] ))
 
@@ -512,7 +500,6 @@ def main():
     check_current=gs.check_current
     pre_rh_value=searcher(check_current,rh_param,mean_vm)
     rh_value=pre_rh_value.rheobase
-
     global vmpop
     if rh_value == None:
         rh_value = 0.0
@@ -533,12 +520,12 @@ def main():
     assert len(pop)==len(vmpop)
     rhstorage = [i.rheobase for i in vmpop]
     from itertools import repeat
-    iter_ = zip(repeat(0),vmpop,rhstorage)
+    tuple_storage = zip(repeat(0),vmpop,rhstorage)
 
 
     #Now get the fitness of genes:
     #Note the evaluate function called is different
-    fitnesses = list(toolbox.map(toolbox.evaluate, pop, iter_))
+    fitnesses = list(toolbox.map(toolbox.evaluate, pop, tuple_storage))
 
     invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
 
@@ -556,12 +543,11 @@ def main():
     rhstorage2 = 0.0
     for gen in range(1, NGEN):
         # Vary the population
-
         for i in vmpop:
             if type(i.rheobase) is not type(None):
                 #rhstorage.append(i.rheobase)
                 rhstorage2 += i.rheobase
-        rhstorage = [i.rheobase for i in vmpop]
+        #rhstorage = [i.rheobase for i in vmpop]
         rhmean = rhstorage2/len(vmpop)
         pop,vmpop = updatevmpop(pop,rhmean)
         assert len(pop)!=0
@@ -569,8 +555,8 @@ def main():
 
 
         invalid_ind = [ ind for ind in pop if ind.fitness.valid ]
-
         assert len(invalid_ind)!=0
+        #offspring = tools.selTournamentDCD(pop, len(pop))
         offspring = tools.selNSGA2(pop, len(pop))
         assert len(offspring)!=0
 
@@ -586,11 +572,10 @@ def main():
 
         vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in offspring] ))
         vmpop = list(futures.map(rheobase_checking,vmpop,repeat(rh_value)))
-
         rhstorage = [ i.rheobase for i in vmpop ]
-        iter_ = zip(repeat(gen),vmpop,rhstorage)
+        tuple_storage = zip(repeat(gen),vmpop,rhstorage)
         assert len(vmpop)==len(pop)
-        fitnesses = list(toolbox.map(toolbox.evaluate, offspring , iter_))
+        fitnesses = list(toolbox.map(toolbox.evaluate, offspring , tuple_storage))
 
         attr_dict = [p.attrs for p in vmpop ]
         #attr_keys = [ i.keys() for d in attr_dict for i in d.values() ][0]
@@ -754,13 +739,14 @@ if __name__ == "__main__":
     py.image.save_as(fig, filename='principle_components.png')
 
 
-
+  
 
     steps = np.linspace(50,150,7.0)
     steps_current = [ i*pq.pA for i in steps ]
     rh_param = (False,steps_current)
     searcher = gs.searcher
     check_current = gs.check_current
+    print(vmpop)
 
     score_matrixt=[]
     vmpop = list(map(individual_to_vm,pop))
