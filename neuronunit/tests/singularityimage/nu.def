@@ -1,0 +1,41 @@
+# Bootstrap definition example neuronunit
+
+%setup
+    echo "Looking in directory '$SINGULARITY_ROOTFS' for /bin/sh"
+    if [ ! -x "$SINGULARITY_ROOTFS/bin/sh" ]; then
+        echo "Hrmm, this container does not have /bin/sh installed..."
+        exit 1
+    fi
+    exit 0
+
+%post
+    exec /bin/bash
+    su jovyan
+    cd /home/jovyan/neuronunit/neuronunit/tests
+	#echo "Installing Development Tools YUM group"
+	#echo "Installing OpenMPI into container..."
+	#mkdir /tmp/git
+	#cd /tmp/git
+	#git clone https://github.com/open-mpi/ompi.git
+	#cd ompi
+	#./autogen.pl
+	#./configure --prefix=/usr/local
+	#make
+	#make install
+	#/usr/local/bin/mpicc examples/ring_c.c -o /usr/bin/mpi_ring
+	#cd /
+	#rm -rf /tmp/git
+	#exit 0
+
+%runscript
+    /opt/conda/bin/python -m scoop nsga.py 
+
+	#echo "Arguments received: $*"
+	#exec /bin/bash
+	#exec /usr/bin/python "$@"
+
+%test
+    /opt/conda/bin/python -m scoop nsga.py 
+
+
+#	/usr/local/bin/mpirun --allow-run-as-root /usr/bin/mpi_ring
