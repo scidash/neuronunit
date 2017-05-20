@@ -713,9 +713,11 @@ if __name__ == "__main__":
     graph = graph.reverse()     # Make the grah top-down
 
     assert len(vmpop)==len(pop)
-    gpop= [ history.genealogy_history[i][0] for i in graph ]
+    gpop = [ history.genealogy_history[i][0] for i in graph ]
     #colors = list([ i.errors for i in gpop ])
-    pgop,vmpop = updatevmpop(gpop,rh_value)
+    pgop,vmpop = updatevmpop(gpop)
+    rhstorage = [i.rheobase for i in vmpop]
+
     iter_ = zip(repeat(gen),vmpop,rhstorage)
 
     colors = list(toolbox.map(toolbox.evaluate, gpop , iter_))
