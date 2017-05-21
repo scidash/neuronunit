@@ -12,30 +12,14 @@
     exec /bin/bash
     su jovyan
     cd /home/jovyan/neuronunit/neuronunit/tests
-	#echo "Installing Development Tools YUM group"
-	#echo "Installing OpenMPI into container..."
-	#mkdir /tmp/git
-	#cd /tmp/git
-	#git clone https://github.com/open-mpi/ompi.git
-	#cd ompi
-	#./autogen.pl
-	#./configure --prefix=/usr/local
-	#make
-	#make install
-	#/usr/local/bin/mpicc examples/ring_c.c -o /usr/bin/mpi_ring
-	#cd /
-	#rm -rf /tmp/git
-	#exit 0
+    exit 0	
+
+#only one of the bottom two commands should be sufficient. Need further experimentation to work out which one.
+#for now both work.
 
 %runscript
     /opt/conda/bin/python -m scoop nsga.py 
-
-	#echo "Arguments received: $*"
-	#exec /bin/bash
-	#exec /usr/bin/python "$@"
-
+    
 %test
     /opt/conda/bin/python -m scoop nsga.py 
 
-
-#	/usr/local/bin/mpirun --allow-run-as-root /usr/bin/mpi_ring
