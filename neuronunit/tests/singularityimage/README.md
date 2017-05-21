@@ -1,13 +1,13 @@
 ## Command Line Access to Comet (of Neuro Science Gateway)
 # Quick start guide:
 
-# Copy relevant files with scp (secure copy)
+# Copy relevant files with scp 
 
-Use to Comet using the secure copy protocal.
+Use to Comet using the secure copy (secure copy) protocal.
 
 `scp nu.def rjjarvis@comet.sdsc.xsede.org:~/`
 
-## Use rsync to copy
+## Use rsync for bigger files
 
 copy bigger files as it is better at recovery from interruption.
 
