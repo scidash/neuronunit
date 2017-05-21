@@ -1,7 +1,7 @@
-## Command Line Access to Comet (of Neuro Science Gateway)
-# Quick start guide:
+# Command Line Access to Comet (of Neuro Science Gateway)
+## Quick start guide:
 
-# Copy relevant files with scp 
+## Copy relevant files with scp 
 
 Use to Comet using the secure copy (secure copy) protocal.
 
@@ -39,8 +39,7 @@ If the files name is launch_singularity.sh launch the file with:
 `
 sbatch launch_singularity.sh
 `
-##
-## The graphical way.
+# The graphical way.
 
 Some considerations for people who are already used to running code on clusters. NSG removes the need to write an explicit PBS script or a SLURM scheduling script, although you will be prompted to enter some of the information contained in these scripts in step 4. You will also not be required to write an $openmpi or $mpiexec launch command, such a command will be constructed for you based on the information you provide.
 
