@@ -1,7 +1,7 @@
 # Command Line Access to Comet (of Neuro Science Gateway)
 ## Quick start guide:
 
-To prepare singularity images for NSG-HPC see steps below:
+To prepare singularity images for NSG-HPC see step 5, in command line workflow below:
 
 ## Copy relevant files with scp 
 
@@ -123,7 +123,7 @@ root@rjjarvis:/root# su jovyan
 jovyan@rjjarvis:/root$ cd ~
 jovyan@rjjarvis:~$ ls
 ```
-Singularity image is build from local container, by entering a different special purpose singularity written docker container, whose only only function is to write a singularity image, based on the supplied docker container: 
+Singularity image is build from local container, by entering a different special purpose singularity written docker container, whose only function is to write a singularity image, based on the supplied docker container: 
 
 Giving us an interactive session in our familiar docker like environment:
 ```
