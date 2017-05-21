@@ -1,6 +1,8 @@
 # Command Line Access to Comet (of Neuro Science Gateway)
 ## Quick start guide:
 
+To prepare singularity images for NSG-HPC see steps below:
+
 ## Copy relevant files with scp 
 
 Use to Comet using the secure copy (secure copy) protocal.
@@ -61,3 +63,85 @@ Then press save and run.
 
 ## Step 6.
 You can check job progress and stdout.txt while the job is executing by pressing Tasks and navigating to view status, or view output as appropriate.
+
+# Prepare singularity images (.img) for NSG-HPC:
+
+On OSX sinularity can easily be installed by creating a dedicated Vagrant Ubuntu:latest image, and installing singularity within in it
+
+# 1 On linux build singularity from source:
+```
+$ mkdir ~/git
+$ cd ~/git
+$ git clone https://github.com/singularityware/singularity.git
+$ cd singularity
+$ ./autogen.sh
+```
+Autogen did not work, even after supplying automake as described here, and using `sudo apt-get install automake`
+https://geeksww.com/tutorials/libraries/m4/installation/installing_m4_macro_processor_ubuntu_linux.php
+Installing the yum packages specified below
+https://hpc.nih.gov/apps/singularity.html
+in apt-get as opposed to yum would probably work, but no time. Skip to install approach # 2.
+```
+$ ./configure --prefix=/usr/local --sysconfdir=/etc
+$ make
+$ sudo make install
+```
+# 2 Workaround:
+```
+VERSION=2.2.1
+wget https://github.com/singularityware/singularity/releases/download/$VERSION/singularity-$VERSION.tar.gz
+tar xvf singularity-$VERSION.tar.gz
+cd singularity-$VERSION
+./configure --prefix=/usr/local
+make
+sudo make install
+```
+
+# 3 Convert the local docker container to a local singularity image
+Alias to build a singularity image based on a local docker container:
+```
+alias d2s='sudo docker run -v /var/run/docker.sock:/var/run/docker.sock -v `pwd`/singularity\image:/output --privileged -t --rm singularityware/docker2singularity pnp:latest'
+
+
+```
+
+This results in a directory 
+```
+`pwd`/singularityimage/
+```
+containing the file:
+```
+pnp_latest-2017-04-10-e61582246138.img
+```
+# 4 Enter the Sinularity image
+Then to enter the singularity vm (as opposed to docker container):
+```
+sudo singularity shell -w pnp_latest-2017-04-10-e61582246138.img 
+Singularity: Invoking an interactive shell within container...
+
+root@rjjarvis:/root# su jovyan
+jovyan@rjjarvis:/root$ cd ~
+jovyan@rjjarvis:~$ ls
+```
+Singularity image is build from local container, by entering a different special purpose singularity written docker container, whose only only function is to write a singularity image, based on the supplied docker container: 
+
+Giving us an interactive session in our familiar docker like environment:
+```
+jovyan@rjjarvis:~$ ls
+jLEMS     LEMS        NeuroML2    nrn-7.4        org.neuroml1.model  org.neuroml.import  org.neuroml.model.injectingplugin  sciunit  x86_64
+jNeuroML  libNeuroML  neuronunit  openmpi-2.0.0  org.neuroml.export  org.neuroml.model   pylems                             work
+```
+
+# 5 Try launching a job interactively within the singularity image
+
+if jobs can not be launched without modification to the image, collate all of the BASH commands in a definitions file.
+
+(.def), this file can be launched upon invocation of singularity via the `bootstrap` singularity invocation. Above you will notice that the NSG-HPC slurm script invokes singularity via this `bootstrap` pattern with the bottom two lines: 
+```
+module load singularity
+singularity bootstrap pnp_latest-2017-05-19-f1d9712ba440.img nu.def
+```
+
+
+
+
