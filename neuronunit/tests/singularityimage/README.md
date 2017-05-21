@@ -141,6 +141,9 @@ if jobs can not be launched without modification to the image, collate all of th
 module load singularity
 singularity bootstrap pnp_latest-2017-05-19-f1d9712ba440.img nu.def
 ```
+These definition files serve as an analogous role to Dockeriles with the difference that that the def file is much closer to pure bash, and the def file does not build the image, the image is already built, and the def file is used to initialise the image after its launched for usages where you don't intend to enter the image interactively, you just want singularity to run through a process of automated steps. 
+
+For an example of definition file contents see: [nu.def](https://github.com/russelljjarvis/neuronunit/edit/dev/neuronunit/tests/singularityimage/README.md)
 
 
 
