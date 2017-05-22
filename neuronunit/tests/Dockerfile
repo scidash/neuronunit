@@ -105,7 +105,7 @@ USER $NB_USER
 #https://github.com/russelljjarvis/neuronunit.git
 WORKDIR $HOME
 ENV PYTHONPATH $HOME/neuronunit:$PYTHONPATH
-RUN  if [ ! -d "$/home/jovyan/git/neuronunit" ]; then git clone -b dev https://github.com/russelljjarvis/neuronunit.git
+RUN  if [ ! -d "$/home/jovyan/git/neuronunit" ]; then git clone -b dev https://github.com/russelljjarvis/neuronunit.git; fi
 WORKDIR $HOME/neuronunit/neuronunit/tests/NeuroML2
 
 RUN nrnivmodl
@@ -127,22 +127,12 @@ ARG HEAD=1
 WORKDIR $HOME
 WORKDIR sciunit
 RUN sudo git clone -b dev https://github.com/russelljjarvis/sciunit.git
-#RUN tar -xvzf sciunit.tar.gz -C sciunit --strip-components=1
+RUN tar -xvzf sciunit.tar.gz -C sciunit --strip-components=1
 WORKDIR sciunit
 RUN sudo python setup.py install
 RUN pip install cypy
 RUN python test_all.py
 RUN conda install plotly seaborn
-
+RUN pip install prospector
 RUN pip install vulture
-#RUN zsh
 WORKDIR /home/mnt
-#ENTRYPOINT zsh
-#ENTRYPOINT python nsga.py
-#RUN sudo apt-get install -y zsh
-#WORKDIR $WORK
-#RUN sudo git clone https://github.com/jendrikseipp/vulture
-#WORKDIR vulture
-#RUN ls *
-#RUN cat README.rst
-#RUN sudo python install.py
