@@ -127,12 +127,13 @@ ARG HEAD=1
 WORKDIR $HOME
 WORKDIR sciunit
 RUN sudo git clone -b dev https://github.com/russelljjarvis/sciunit.git
-RUN tar -xvzf sciunit.tar.gz -C sciunit --strip-components=1
+#RUN tar -xvzf sciunit.tar.gz -C sciunit --strip-components=1
 WORKDIR sciunit
 RUN sudo python setup.py install
 RUN pip install cypy
 RUN python test_all.py
 RUN conda install plotly seaborn
 RUN pip install prospector
-RUN pip install vulture
-WORKDIR /home/mnt
+WORKDIR /home/mnt/neuronunit
+RUN python -c "from prospector import run; run.main()"
+#run.main()
