@@ -135,5 +135,11 @@ RUN python test_all.py
 RUN conda install plotly seaborn
 RUN pip install prospector
 WORKDIR /home/mnt/neuronunit
-RUN python -c "from prospector import run; run.main()"
+#RUN python -c "from prospector import run; run.main()"
 #run.main()
+
+
+RUN echo "import os">> run_ipp1.py
+RUN echo "os.system('ipcluster start --profile=chase --debug &')" >> run_ipp1.py
+RUN echo "import ipyparallel as ipp ; rc = ipp.Client(profile='chase'); print('hello from before cpu '); print(rc.ids);" >> run_ipp2.py
+RUN ipython run_ipp1.py && sleep 15 && ipython run_ipp2.py
