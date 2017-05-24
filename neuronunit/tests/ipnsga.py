@@ -1,3 +1,27 @@
+
+
+import os
+os.system('ipcluster start -n 8 --engines=MPIEngineSetLauncher --profile=chase --debug &')
+
+#os.system('sleep 15 &')
+import ipyparallel as ipp
+rc = ipp.Client(profile='chase');
+rc[:].use_cloudpickle()
+
+print('hello from before cpu ');
+print(rc.ids)
+dview = rc[:]
+
+
+
+serial_result = list(map(lambda x:x**10, range(32)))
+parallel_result = list(dview.map_sync(lambda x: x**10, range(32)))
+print(serial_result)
+print(parallel_result, 'parallel_reult')
+assert serial_result == parallel_result
+#RUN ipython run_ipp1.py && sleep 15 && ipython run_ipp2.py
+
+
 import matplotlib as mpl
 mpl.use('agg',warn=False)
 from matplotlib import pyplot as plt
@@ -50,6 +74,7 @@ history = tools.History()
 init_start=time.time()
 creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0,
                                                     -1.0, -1.0, -1.0, -1.0))
+global Individual
 creator.create("Individual",list, fitness=creator.FitnessMin)
 
 class Individual(object):
@@ -130,7 +155,6 @@ def hypervolume_contrib(front, **kargs):
     *front* should be a set of non-dominated individuals having each a
     :attr:`fitness` attribute.
     """
-    import numpy
     # Must use wvalues * -1 since hypervolume use implicit minimization
     # And minimization in deap use max on -obj
     wobj = numpy.array([ind.fitness.wvalues for ind in front]) * -1
@@ -258,7 +282,8 @@ def plotss(vmlist,gen):
 
 
 def individual_to_vm(ind,vmpop=None):
-
+    toolbox.register("Individual", tools.initIterate, creator.Individual, toolbox.attr_float)
+    Individual=ind
     import copy
     if vmpop==None:
         for i, p in enumerate(param):
@@ -433,7 +458,8 @@ def updatevmpop(pop,rh_value=None):
     #pop=copy.copy(pop)
     assert len(pop)!=0
     rheobase_checking=gs.evaluate
-    vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in pop] ))
+    pop_list = [toolbox.clone(i) for i in pop]
+    vmpop = list(dview.map_sync(individual_to_vm, pop_list))
 
     assert len(pop)!=0
     if len(pop)!=0 and len(vmpop)!= 0:
@@ -441,7 +467,7 @@ def updatevmpop(pop,rh_value=None):
             rh_value = np.mean(np.array([i.rheobase for i in vmpop]))
             assert type(rh_value) is not type(None)
         rh_value_array = [rh_value for i in vmpop ]
-        vmpop = list(futures.map(rheobase_checking,vmpop,repeat(rh_value)))
+        vmpop = list(dview.map_sync(rheobase_checking,vmpop,repeat(rh_value)))
 
         pop,vmpop = replace_rh(pop,rh_value,vmpop)
         assert len(pop)!=0
@@ -451,17 +477,12 @@ def updatevmpop(pop,rh_value=None):
 
 
 def main():
-    fbest =[]
     global NGEN
     NGEN=6
     global MU
-    import numpy as np
-    numpy = np
     MU=12#Mu must be some multiple of 8, such that it can be split into even numbers over 8 CPUs
-
-    best = np.ndarray((NGEN,MU))
-
     CXPB = 0.9
+    import numpy as numpy
     stats = tools.Statistics(lambda ind: ind.fitness.values)
     pf = tools.ParetoFront()
 
@@ -575,12 +596,12 @@ def main():
             toolbox.mutate(ind2)
             del ind1.fitness.values, ind2.fitness.values
 
-        vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in offspring] ))
-        vmpop = list(futures.map(rheobase_checking,vmpop,repeat(rh_value)))
+        vmpop = list(dview.map_sync(individual_to_vm,[toolbox.clone(i) for i in offspring] ))
+        vmpop = list(dview.map_sync(rheobase_checking,vmpop,repeat(rh_value)))
         rhstorage = [ i.rheobase for i in vmpop ]
         tuple_storage = zip(repeat(gen),vmpop,rhstorage)
         assert len(vmpop)==len(pop)
-        fitnesses = list(toolbox.map(toolbox.evaluate, offspring , tuple_storage))
+        fitnesses = list(dview.map_sync(toolbox.evaluate, offspring , tuple_storage))
 
         attr_dict = [p.attrs for p in vmpop ]
         #attr_keys = [ i.keys() for d in attr_dict for i in d.values() ][0]
@@ -599,39 +620,34 @@ def main():
         logbook.record(gen=gen, evals=len(invalid_ind), **record)
         print(logbook.stream)
 
+        evals, gen ,std, avg, max_, min_ = logbook.select("evals","gen","avg", "max", "min", "std")
         #logbook.header = "gen", "evals", "std", "min", "avg", "max"
         #x = list(range(0, NGEN))
         #x = list(range(0, strategy.lambda_ * NGEN, strategy.lambda_))
-        fbest.append( pf[0].fitness.values )
-        best[gen, :MU] = pf[0]
+        x = list(range(0,len(avg)))
+        plt.figure()
+        plt.subplot(2, 2, 1)
+        plt.semilogy(x, avg, "--b")
+        plt.semilogy(x, max_, "--b")
+        plt.semilogy(x, min_, "-b")
+        #plt.semilogy(x, fbest, "-c")
+        #plt.semilogy(x, sigma, "-g")
+        #plt.semilogy(x, axis_ratio, "-r")
+        plt.grid(True)
+        plt.title("blue: f-values, green: sigma, red: axis ratio")
 
+        plt.subplot(2, 2, 2)
+        plt.plot(x, best)
+        plt.grid(True)
+        plt.title("Object Variables")
 
+        plt.subplot(2, 2, 3)
+        plt.semilogy(x, std)
+        plt.grid(True)
+        plt.title("Standard Deviations in All Coordinates")
+        plt.savefig('GA_stats_vs_generation.png')
     pop.sort(key=lambda x: x.fitness.values)
-    #logbook select is like a database selection, as opposed to logbook record which initializes and populates the data
-    evals, gen ,std, avg, max_, min_ = logbook.select("evals","gen","avg", "max", "min", "std")
-    x = list(range(0,len(avg)))
 
-    plt.figure()
-    plt.subplot(2, 2, 1)
-    plt.semilogy(x, avg, "--b")
-    plt.semilogy(x, max_, "--b")
-    plt.semilogy(x, min_, "-b")
-    plt.semilogy(x, fbest, "-c")
-    #plt.semilogy(x, sigma, "-g")
-    #plt.semilogy(x, axis_ratio, "-r")
-    plt.grid(True)
-    plt.title("blue: f-values, green: sigma, red: axis ratio")
-
-    plt.subplot(2, 2, 2)
-    plt.plot(x, best)
-    plt.grid(True)
-    plt.title("Object Variables")
-
-    plt.subplot(2, 2, 3)
-    plt.semilogy(x, std)
-    plt.grid(True)
-    plt.title("Standard Deviations in All Coordinates")
-    plt.savefig('GA_stats_vs_generation.png')
     f=open('worst_candidate.txt','w')
     if len(vmpop)!=0:
         f.write(str(vmpop[-1].attrs))
@@ -716,7 +732,7 @@ if __name__ == "__main__":
     print(gpop)
     for j in gpop:
         print(j,'jpop')
-    vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in gpop] ))
+    vmpop = list(dview.map_sync(individual_to_vm,[toolbox.clone(i) for i in gpop] ))
 
     #colors = list([ i.errors for i in gpop ])
     pgop,vmpop = updatevmpop(vmpop)
