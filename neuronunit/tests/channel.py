@@ -1,3 +1,5 @@
+"""NeuronUnit Test classes for ion channel models"""
+
 from types import MethodType
 
 import numpy as np

@@ -1,12 +1,11 @@
-import os
+"""NeuronUnit model class for reduced neuron models"""
+
 import numpy as np
-import sciunit
-import neuronunit.capabilities as cap
-from pyneuroml import pynml
 from neo.core import AnalogSignal
 import quantities as pq
+
+import neuronunit.capabilities as cap
 import neuronunit.models as mod
-import neuronunit.models.backends as backends
 import neuronunit.capabilities.spike_functions as sf
 
 class ReducedModel(mod.LEMSModel,
@@ -15,7 +14,7 @@ class ReducedModel(mod.LEMSModel,
                    cap.ProducesActionPotentials):
     """Base class for reduced models, using LEMS"""
 
-    def __init__(self, LEMS_file_path, name=None, backend=None, attrs={}):
+    def __init__(self, LEMS_file_path, name=None, backend=None, attrs=None):
         """
         LEMS_file_path: Path to LEMS file (an xml file).
         name: Optional model name.

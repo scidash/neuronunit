@@ -1,17 +1,17 @@
 """NeuronUnit capability classes implemented using a combination of
 NeuroConstruct and neo."""
 
-from __init__ import *
 from datetime import datetime
+
 from sciunit import Capability
-from neuronunit import *
-from neuronunit.capabilities import *
+from neuronunit import CPYTHON,JYTHON
+import neuronunit.capabilities as cap
+from pythonnC.utils import neurotools as nc_neurotools
 if CPYTHON:
     from pythonnC.utils import putils as utils # From the neuroConstruct pythonnC package.
     import numpy as np
 if JYTHON:
     from pythonnC.utils import jutils as utils # From the neuroConstruct pythonnC package.
-from pythonnC.utils import neurotools as nc_neurotools
 JUTILS_PATH = 'pythonnC.utils.jutils'
 
 class Runnable_NC(Capability):
@@ -61,10 +61,11 @@ class Runnable_NC(Capability):
             print("Already ran simulation...")
 
 
-class ProducesMembranePotential_NC(ProducesMembranePotential,Runnable_NC):
+class ProducesMembranePotential_NC(cap.ProducesMembranePotential,
+                                   Runnable_NC):
     """An array of somatic membrane potential samples"""
 
-    def get_membrane_potential(self,**kwargs):
+    def get_membrane_potential(self, **kwargs):
         """Returns a neo.core.AnalogSignal object"""
 
         if self.sim_path is None or self.ran is False \
@@ -80,7 +81,7 @@ class ProducesMembranePotential_NC(ProducesMembranePotential,Runnable_NC):
             # An AnalogSignal instance.
         return vm
 
-    def get_median_vm(self,**kwargs):
+    def get_median_vm(self, **kwargs):
         """Returns a quantity corresponding the median membrane potential.
         This will in some cases be the resting potential."""
 
@@ -97,29 +98,31 @@ class ProducesMembranePotential_NC(ProducesMembranePotential,Runnable_NC):
         return vm[0]
 
 
-class ProducesSpikes_NC(ProducesSpikes,ProducesMembranePotential):
+class ProducesSpikes_NC(cap.ProducesSpikes,
+                        cap.ProducesMembranePotential):
     """Requires ProducesMembranePotential.
     Produces MembranePotentialNC is a logical choice."""
 
-    def get_spike_train(self,**kwargs):
+    def get_spike_train(self, **kwargs):
         """Returns a neo.core.SpikeTrain object"""
         vm = self.get_membrane_potential(**kwargs)
         # A neo.core.AnalogSignal object
-        return spike_functions.get_spike_train(vm)
+        return cap.spike_functions.get_spike_train(vm)
 
-    def get_spike_waveforms(self,**kwargs):
+    def get_spike_waveforms(self, **kwargs):
         """Returns an neo.core.AnalogSignalArray of spike snippets"""
         vm = self.get_membrane_potential(**kwargs)
         # A neo.core.AnalogSignal object
-        return spike_functions.get_spike_waveforms(vm)
+        return cap.spike_functions.get_spike_waveforms(vm)
 
-    def get_spike_widths(self,**kwargs):
+    def get_spike_widths(self, **kwargs):
         """Returns an array of spike widths"""
         spikes = self.get_spike_waveforms(**kwargs)
-        return spike_functions.spikes2widths(spikes)
+        return cap.spike_functions.spikes2widths(spikes)
 
 
-class ReceivesCurrent_NC(ReceivesCurrent,Runnable_NC):
+class ReceivesCurrent_NC(cap.ReceivesCurrent,
+                         Runnable_NC):
     """An array of somatic injected current samples"""
 
     def __init__(self):
@@ -130,7 +133,7 @@ class ReceivesCurrent_NC(ReceivesCurrent,Runnable_NC):
         duration = 0
         offset = 0
 
-    def inject_square_current(self,injected_current):
+    def inject_square_current(self, injected_current):
         self.prepare()
         cmd = 'import %s as j;' % JUTILS_PATH
         cmd += 'import sys;'
@@ -140,8 +143,7 @@ class ReceivesCurrent_NC(ReceivesCurrent,Runnable_NC):
         channel = self.gateway.remote_exec(cmd)
         #print(cmd)
         err = channel.receive() # This will be an error code.
-        if len(err):
+        if err:
             raise NotImplementedError(err)
         #self.current.ampl = current_ampl
         #self.runtime_methods['set_current_ampl']=[current_ampl]
-
