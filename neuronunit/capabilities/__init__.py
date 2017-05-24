@@ -1,41 +1,42 @@
-"""SciUnit capability classes for NeuronUnit.
-The goal is to enumerate all possible capabilities of a model 
-that would be tested using NeuronUnit.
-These capabilities exchange 'neo' objects."""
+"""NeuronUnit abstract Capabilities"""
+# The goal is to enumerate all possible capabilities of a model 
+# that would be tested using NeuronUnit.
+# These capabilities exchange 'neo' objects.
+
+import inspect
 
 import numpy as np
 
 import sciunit
 from .spike_functions import spikes2amplitudes,spikes2widths,spikes2thresholds
-from .channel import *
+
 
 class ProducesMembranePotential(sciunit.Capability):
     """Indicates that the model produces a somatic membrane potential."""
 
-    def get_membrane_potential(self):
+    def get_membrane_potential(self, **kwargs):
         """Must return a neo.core.AnalogSignal."""
         raise NotImplementedError()
 
-    def get_mean_vm(self):
-        vm = self.get_membrane_potential()
+    def get_mean_vm(self, **kwargs):
+        vm = self.get_membrane_potential(**kwargs)
         return np.mean(vm.base)
 
-    def get_median_vm(self):
-        vm = self.get_membrane_potential()
+    def get_median_vm(self, **kwargs):
+        vm = self.get_membrane_potential(**kwargs)
         return np.median(vm.base)
 
-    def get_std_vm(self):
-        vm = self.get_membrane_potential()
+    def get_std_vm(self, **kwargs):
+        vm = self.get_membrane_potential(**kwargs)
         return np.std(vm.base)
 
-    def get_iqr_vm(self):
-        vm = self.get_membrane_potential()
+    def get_iqr_vm(self, **kwargs):
+        vm = self.get_membrane_potential(**kwargs)
         return (np.percentile(vm,75) - np.percentile(vm,25))*vm.units
 
 
 class ProducesSpikes(sciunit.Capability):
-    """
-    Indicates that the model produces spikes.
+    """Indicates that the model produces spikes.
     No duration is required for these spikes.
     """
 
@@ -90,20 +91,20 @@ class ReceivesSquareCurrent(sciunit.Capability):
     a square pulse.
     """
 
-    def inject_square_current(self,current):
-            """Injects somatic current into the model.
+    def inject_square_current(self, current):
+        """Injects somatic current into the model.
 
-            Parameters
-            ----------
-            current : a dictionary like:
-                            {'amplitude':-10.0*pq.pA,
-                             'delay':100*pq.ms,
-                             'duration':500*pq.ms}}
-                      where 'pq' is the quantities package
-            This describes the current to be injected.
-            """
+        Parameters
+        ----------
+        current : a dictionary like:
+                        {'amplitude':-10.0*pq.pA,
+                         'delay':100*pq.ms,
+                         'duration':500*pq.ms}}
+                  where 'pq' is the quantities package
+        This describes the current to be injected.
+        """
 
-            raise NotImplementedError()
+        raise NotImplementedError()
 
 
 class ReceivesCurrent(ReceivesSquareCurrent):
@@ -111,7 +112,7 @@ class ReceivesCurrent(ReceivesSquareCurrent):
     either an arbitrary waveform or as a square pulse.
     """
 
-    def inject_current(self,current):
+    def inject_current(self, current):
         """Injects somatic current into the model.
 
         Parameters
@@ -128,5 +129,3 @@ class Runnable(sciunit.Capability):
     
     def run(self, **run_params):
         return NotImplementedError("%s not implemented" % inspect.stack()[0][3])
- 
-
