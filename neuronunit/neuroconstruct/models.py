@@ -4,19 +4,20 @@ http://www.neuroconstruct.org/
 """
 
 import os
+
 from xml.etree.ElementTree import XML
-from __init__ import *
-from pythonnC.utils import putils # From the neuroConstruct pythonnC package.  
-from sciunit import Model
-from .capabilities import * # neurounit.neuroconstruct.capabilites
-#from neurounit.capabilities import ReceivesCurrent
-from neuronunit.capabilities import spike_functions
 import numpy as np
 
+from pythonnC.utils import putils # From the neuroConstruct pythonnC package.  
+from sciunit import Model
+from . import capabilities as cap # neurounit.neuroconstruct.capabilites
+from .__init__ import NC_HOME
+
 class NeuroConstructModel(Model,
-                          ProducesMembranePotential_NC,
-                          ProducesSpikes_NC,
-                          ReceivesCurrent_NC):
+                          cap.Runnable_NC,
+                          cap.ProducesMembranePotential_NC,
+                          cap.ProducesSpikes_NC,
+                          cap.ReceivesCurrent_NC):
     """Implementation of a candidate model usable by neuroConstruct (written in neuroML).
     Execution takes places in the neuroConstruct program.
     Methods will be implemented using the neuroConstruct python
@@ -28,9 +29,6 @@ class NeuroConstructModel(Model,
         self.project_path = project_path
         self.ran = False
         self.population_name = self.get_cell_group()+'_0'
-        Model.__init__(self)
-        Runnable_NC.__init__(self)
-        ReceivesCurrent_NC.__init__(self)
         for key,value in kwargs.items():
             setattr(self,key,value)
         super().__init__(name=name, **kwargs)
@@ -38,7 +36,7 @@ class NeuroConstructModel(Model,
     def get_ncx_file(self):
         # Get a list of .ncx (neuroConstruct) files.  Should be only one for most projects.
         ncx_files = [f for f in os.listdir(self.project_path) if f[-4:]=='.ncx']
-        if not len(ncx_files):
+        if not ncx_files:
             raise IOError("No .ncx files found in %s" % self.project_path)
         ncx_file = os.path.join(self.project_path,ncx_files[0]) # Get full path to .ncx file.
         return ncx_file
@@ -56,11 +54,11 @@ class FakeNeuroConstructModel(NeuroConstructModel):
     membrane potential with some 'spikes'. Eventually I will make the membrane
     potential and the spikes change as a function of the current."""
 
-    def __init__(*args,**kwargs):
-        NeuroConstructModel.__init__(self,*args,**kwargs)
+    def __init__(self, *args, **kwargs):
+        super(FakeNeuroConstructModel,self).__init__(*args,**kwargs)
         self.current_ampl = 0
 
-    def run(self,**kwargs):
+    def run(self, **kwargs):
         n_samples = getattr(self,'n_samples',10000)
         self.vm = np.random.randn(n_samples)-65.0 # -65 mV with gaussian noise.
         for i in range(200,n_samples,200): # Make 50 spikes.
@@ -97,8 +95,7 @@ class OSBModel(NeuroConstructModel):
     models_path = putils.OSB_MODELS
 
 # DEPRECATED. 
-''' 
-class NeuroML2Model(NeuroConstructModel):
+class DEPRECATED_NeuroML2Model(NeuroConstructModel):
     """A model hosted on Open Source Brain (http://www.opensourcebrain.org).
     Will be in NeuroML format, and run using neuroConstruct."""
 
@@ -125,4 +122,3 @@ class NeuroML2Model(NeuroConstructModel):
         project.cellManager.addCellType(cell) # Actually add it to the project
         project.cellGroupsInfo.setCellType("DefaultCellGroup", cell.getInstanceName()) # Set the type of an existing cell group to this
         project.saveProject()
-'''

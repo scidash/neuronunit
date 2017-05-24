@@ -1,40 +1,37 @@
-"""
-Interface for creating tests using neuroelectro.org as reference data.  
+"""NeuronUnit interface to Neuroelectro.org"""
 
-Example workflow:
+# Interface for creating tests using neuroelectro.org as reference data.  
+# 
+# Example workflow:
 
-x = NeuroElectroDataMap() 
-x.set_neuron(nlex_id='nifext_152') # neurolex.org ID for 'Amygdala basolateral
+# x = NeuroElectroDataMap() 
+# x.set_neuron(nlex_id='nifext_152') # neurolex.org ID for 'Amygdala basolateral
                                    # nucleus pyramidal neuron'.
-x.set_ephysprop(id=23) # neuroelectro.org ID for 'Spike width'.  
-x.set_article(pmid=18667618) # Pubmed ID for Fajardo et al, 2008 (J. Neurosci.)  
-x.get_values() # Gets values for spike width from this paper.  
-width = x.val # Spike width reported in that paper. 
+# x.set_ephysprop(id=23) # neuroelectro.org ID for 'Spike width'.  
+# x.set_article(pmid=18667618) # Pubmed ID for Fajardo et al, 2008 (J. Neurosci.)  
+# x.get_values() # Gets values for spike width from this paper.  
+# width = x.val # Spike width reported in that paper. 
 
-t = neurounit.tests.SpikeWidthTest(spike_width=width)
-c = sciunit.Candidate() # Instantiation of your model (or other candidate)
-c.execute = code_that_runs_your_model
-result = sciunit.run(t,m)
-print result.score
-
-OR
-
-x = NeuroElectroSummary() 
-x.set_neuron(nlex_id='nifext_152') # neurolex.org ID for 'Amygdala basolateral 
+# t = neurounit.tests.SpikeWidthTest(spike_width=width)
+# c = sciunit.Candidate() # Instantiation of your model (or other candidate)
+# c.execute = code_that_runs_your_model
+# result = sciunit.run(t,m)
+# print result.score
+#
+# OR
+#
+# x = NeuroElectroSummary() 
+# x.set_neuron(nlex_id='nifext_152') # neurolex.org ID for 'Amygdala basolateral 
                                    # nucleus pyramidal neuron'.
-x.set_ephysprop(id=2) # neuroelectro.org ID for 'Spike width'.  
-x.get_values() # Gets values for spike width from this paper.  
-width = x.mean # Mean Spike width reported across all matching papers. 
-...
+# x.set_ephysprop(id=2) # neuroelectro.org ID for 'Spike width'.  
+# x.get_values() # Gets values for spike width from this paper.  
+# width = x.mean # Mean Spike width reported across all matching papers. 
+# ...
 
-"""
-
-import quantities
-import sciunit
 try: # Python 2
     from urllib import urlencode
     from urllib2 import urlopen,URLError
-except: # Python 3
+except ImportError: # Python 3
     from urllib.parse import urlencode
     from urllib.request import urlopen,URLError
 import json
@@ -67,35 +64,37 @@ class Article:
  
 class NeuroElectroData(object):
     """Abstract class based on neuroelectro.org data using that site's API."""
-    def __init__(self,neuron={},ephysprop={},get_values=False):
-        for key,value in neuron.items():
-            setattr(self.neuron,key,value)
-        for key,value in ephysprop.items():
-            setattr(self.ephysprop,key,value)
+    def __init__(self,neuron=None,ephysprop=None,get_values=False):
+        if neuron:
+            for key,value in neuron.items():
+                setattr(self.neuron,key,value)
+        if ephysprop:
+            for key,value in ephysprop.items():
+                setattr(self.ephysprop,key,value)
         if get_values:
             self.get_values()
 
     url = API_URL # Base URL.
     neuron = Neuron()
     ephysprop = EphysProp()
+    require_attrs = None
 
     get_one_match = True # By default only get the first match
 
-    @classmethod
-    def set_names(cls,neuron_name,ephysprop_name):
-        cls.set_neuron(name=neuron_name)
-        cls.set_ephysprop(name=ephysprop_name)
+    def set_names(self, neuron_name, ephysprop_name):
+        self.set_neuron(name=neuron_name)
+        self.set_ephysprop(name=ephysprop_name)
 
-    def set_neuron(self,id=None,nlex_id=None,name=None):
+    def set_neuron(self, **kwargs):
         """Sets the biological neuron lookup attributes."""
-        for key,value in locals().items():
-            if key != 'self':
+        for key,value in kwargs.items():
+            if key in ['id','nlex_id','name']:
                 setattr(self.neuron,key,value)
 
-    def set_ephysprop(self,id=None,nlex_id=None,name=None):
+    def set_ephysprop(self, **kwargs):
         """Sets the electrophysiological property lookup attributes."""
-        for key,value in locals().items():
-            if key != 'self':
+        for key,value in kwargs.items():
+            if key in ['id','nlex_id','name']:
                 setattr(self.ephysprop,key,value)
 
     def make_url(self,params=None):
@@ -160,7 +159,7 @@ class NeuroElectroData(object):
             data = None
         # All the summary matches in neuroelectro.org for this combination
         # of neuron and ephys property.
-        if data and len(data):
+        if data:
             self.api_data = data[0] if self.get_one_match else data
         else:
             self.api_data = None
@@ -170,20 +169,26 @@ class NeuroElectroData(object):
         return self.api_data
 
     def check(self):
-        """See if the data requested from the server were obtained successfully."""
-        pass
+        """See if the data requested from the server 
+        were obtained successfully."""
+        if self.require_attrs:
+            for attr in self.require_attrs:
+                if not hasattr(self,attr):
+                    raise AttributeError(("The attribute '%s' was "
+                                          "not found.") % attr)
 
 class NeuroElectroDataMap(NeuroElectroData):
     """Class for getting single reported values from neuroelectro.org."""
     url = API_URL+'nedm/'
     article = Article()
+    require_attrs = ['val','sem']
 
-    def set_article(self,id=None,pmid=None):
+    def set_article(self, id_=None, pmid=None):
         """Sets the biological neuron using a NeuroLex ID."""
-        self.article.id = id
+        self.article.id = id_
         self.article.pmid = pmid
 
-    def make_url(self,params=None):
+    def make_url(self, params=None):
         url = super(NeuroElectroDataMap, self).make_url(params=params)
         query = {}
         query['a'] = self.article.id
@@ -206,19 +211,13 @@ class NeuroElectroDataMap(NeuroElectroData):
             self.check()
         return data
 
-    def check(self):
-        try:
-            val = self.val
-            sem = self.sem
-        except AttributeError as a:
-            print('The attributes "val" and "sem" were not found.')
-            raise
 
 class NeuroElectroSummary(NeuroElectroData):
     """Class for getting summary values (across reports) from
     neuroelectro.org."""
 
     url = API_URL+'nes/'
+    require_attrs = ['mean','std']
 
     def get_values(self, params=None, quiet=False):
         data = super(NeuroElectroSummary, self).get_values(params=params, \
@@ -241,13 +240,6 @@ class NeuroElectroSummary(NeuroElectroData):
         observation = {'mean':self.mean, 'std':self.std}
         return observation
 
-    def check(self):
-        try:
-            mean = self.mean
-            std = self.std
-        except AttributeError as a:
-            print('The attributes "mean" and "sd" were not found.')
-            raise
 
 class NeuroElectroPooledSummary(NeuroElectroDataMap):
     """Class for getting summary values by pooling each report's mean and SD from
@@ -263,10 +255,9 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
 
         params['limit'] = 999
 
-        data = super(NeuroElectroDataMap, self).get_values(params=params, quiet=quiet)
+        data = super(NeuroElectroPooledSummary, self).get_values(params=params, quiet=quiet)
 
-        if data and len(data) > 0:
-
+        if data:
             # Ensure data from api matches the requested params
             data = [item for item in data \
                     if (item['ecm']['e']['name'] == self.ephysprop.name.lower() or \
@@ -316,7 +307,6 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
         sems = []
         sds = []
         ns = []
-        weights = []
         sources = []
 
         if not quiet:
@@ -351,7 +341,7 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
             print("---------------------------------------------------")
             print("Filled in Values (computed or median where missing)")
 
-            for i in xrange(len(means)):
+            for i,_ in enumerate(means):
                 line = { 'mean': means[i], 'sd': sds[i], 'sem': sems[i], 'n': ns[i], "source": sources[i] }
                 lines.append(line)
                 print(line)
@@ -375,18 +365,18 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
         # Fill in the missing N's with median N
         none_free_ns = np.array(ns)[ns != np.array(None)]
 
-        if len(none_free_ns) > 0:
+        if none_free_ns:
             n_median = int(np.median(none_free_ns))
         else:
             n_median = 1 # If no N's reported at all, weigh all means equally
 
-        for i in xrange(len(ns)):
+        for i,_ in enumerate(ns):
             if ns[i] is None:
                 ns[i] = n_median
 
     def fill_missing_sems_sds(self, sems, sds, ns):
         # Fill in computable sems/sds
-        for i in xrange(len(sems)):
+        for i,_ in enumerate(sems):
 
             # Check if sem or sd is computable
             if sems[i] is None and sds[i] is not None:
@@ -398,7 +388,7 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
         # Fill in the remaining missing using median sd
         none_free_sds = np.array(sds)[sds != np.array(None)]
 
-        if len(none_free_sds) > 0:
+        if none_free_sds:
             sd_median = np.median(none_free_sds)
 
         else: # If no SDs or SEMs reported at all, raise error
@@ -407,7 +397,7 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
             # however, NE API nes interface does not support summary prop values without specifying the neuron id
             raise NotImplementedError('No StDevs or SEMs reported for "%s" property "%s"'%(self.neuron_name,self.ephysprop_name))
 
-        for i in xrange(len(sds)):
+        for i,_ in enumerate(sds):
             if sds[i] is None:
                 sds[i] = sd_median
                 sems[i] = sd_median / sqrt(ns[i])
@@ -426,12 +416,3 @@ def test_module():
     x.get_values()
     x.check()
     print("Tests passed.")
-
-
-
-
-
-
-
-
-

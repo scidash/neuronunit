@@ -1,8 +1,9 @@
+"""NeuronUnit model class for NEURON models"""
+
 import sciunit
 
-from neuronunit.capabilities import spike_functions
-from neuronunit.capabilities import *
-from neuronunit.neuron.capabilities import *
+import neuronunit.capabilities as cap
+import neuronunit.neuron.capabilities as cap_n
 
 from quantities import ms, mV, nA
 from neo.core import AnalogSignal
@@ -31,8 +32,9 @@ class NeuronModel(sciunit.Model):
 
     
     def setStopTime(self, stopTime = 1000*ms):
-        """Sets the simulation duration"""
-        """stopTimeMs: duration in milliseconds"""
+        """Sets the simulation duration
+        stopTimeMs: duration in milliseconds
+        """
 
         tstop = stopTime
         tstop.units = ms
@@ -40,8 +42,10 @@ class NeuronModel(sciunit.Model):
         self.h.tstop = float(tstop)
     
     def setTimeStep(self, integrationTimeStep = 1/128.0 * ms):
-        """Sets the simulation itegration fixed time step"""
-        """integrationTimeStepMs: time step in milliseconds. Powers of two preferred. Defaults to 1/128.0"""
+        """Sets the simulation itegration fixed time step
+        integrationTimeStepMs: time step in milliseconds. 
+        Powers of two preferred. Defaults to 1/128.0
+        """
 
         dt = integrationTimeStep
         dt.units = ms
@@ -49,14 +53,17 @@ class NeuronModel(sciunit.Model):
         self.h.dt = self.fixedTimeStep = float(dt)
 
     def setTolerance(self, tolerance = 0.001):
-        """Sets the variable time step integration method absolute tolerance """
-        """tolerance: absolute tolerance value"""
+        """Sets the variable time step integration method absolute tolerance.
+        tolerance: absolute tolerance value
+        """
         
         self.h.cvode.atol(tolerance)
     
     def setIntegrationMethod(self, method = "fixed"):
-        """Sets the simulation itegration method"""
-        """method: either "fixed" or "variable". Defaults to fixed. cvode is used when "variable" """
+        """Sets the simulation itegration method
+        method: either "fixed" or "variable". 
+        Defaults to fixed. cvode is used when "variable"
+        """
         
         self.h.cvode.active(1 if method == "variable" else 0)
 
@@ -64,19 +71,19 @@ class NeuronModel(sciunit.Model):
 
 
 
-class SingleCellModel(NeuronModel, \
-                                    HasSegment, \
-                                    ProducesMembranePotential, \
-                                    ReceivesSquareCurrent, \
-                                    ProducesActionPotentials, \
-                                    ProducesSpikes):
+class SingleCellModel(NeuronModel, 
+                      cap_n.HasSegment, 
+                      cap.ProducesMembranePotential, 
+                      cap.ReceivesSquareCurrent, 
+                      cap.ProducesActionPotentials, 
+                      cap.ProducesSpikes):
     
     """A NEURON simulator model for an isolated single cell membrane"""
     
-    def __init__(self, \
-                 hVar, \
-                 section, \
-                 loc = 0.5, \
+    def __init__(self, 
+                 hVar, 
+                 section, 
+                 loc = 0.5, 
                  name=None):
         """
         hVar: the h variable of NEURON
@@ -104,7 +111,8 @@ class SingleCellModel(NeuronModel, \
         Returns: a neo.core.SpikeTrain object.
         """
 
-        return spike_functions.get_spike_train(self.get_membrane_potential())
+        vm = self.get_membrane_potential()
+        return cap.spike_functions.get_spike_train(vm)
     
     def get_APs(self):
         """Gets action potential waveform chunks from the model.
@@ -115,9 +123,10 @@ class SingleCellModel(NeuronModel, \
         Each neo.core.AnalogSignal in the array should be a spike waveform.
         """
         
-        return spike_functions.get_spike_waveforms(self.get_membrane_potential())
+        vm = self.get_membrane_potential()
+        return cap.spike_functions.get_spike_waveforms(vm)
 
-    def get_membrane_potential(self):
+    def get_membrane_potential(self, **kwargs):
         """Must return a neo.core.AnalogSignal."""
 
         if self.h.cvode.active() == 0:
@@ -226,4 +235,3 @@ class SingleCellModel(NeuronModel, \
         self.iclamp.amp = float(amp)
 
         self.h.run()
-
