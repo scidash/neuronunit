@@ -114,7 +114,7 @@ WORKDIR $HOME/neuronunit/neuronunit/tests/
 RUN ls *.pickle
 
 
-WORKDIR /home/mnt
+WORKDIR /home/git
 USER root
 RUN chown -R $NB_USER .
 USER $NB_USER
@@ -134,12 +134,18 @@ RUN pip install cypy
 RUN python test_all.py
 RUN conda install plotly seaborn
 RUN pip install prospector
-WORKDIR /home/mnt/neuronunit
+WORKDIR /home/git/neuronunit
 #RUN python -c "from prospector import run; run.main()"
 #run.main()
 
 
 RUN echo "import os">> run_ipp1.py
+
 RUN echo "os.system('ipcluster start --profile=chase --debug &')" >> run_ipp1.py
 RUN echo "import ipyparallel as ipp ; rc = ipp.Client(profile='chase'); print('hello from before cpu '); print(rc.ids);" >> run_ipp2.py
 RUN ipython run_ipp1.py && sleep 15 && ipython run_ipp2.py
+
+
+RUN /opt/conda/bin/ipython3 -c "import sys; print(sys.path)"
+RUN /opt/conda/bin/ipython3 -c "from ipyparallel import Client"
+RUN /opt/conda/bin/ipython3 -c "os.system('ipcluster start --profile=chase --debug &')" 
