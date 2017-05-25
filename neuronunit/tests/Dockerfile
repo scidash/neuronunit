@@ -138,7 +138,7 @@ RUN pip install vulture
 #RUN zsh
 WORKDIR /home/mnt
 #ENTRYPOINT zsh
-#ENTRYPOINT python nsga.py
+ENTRYPOINT python nsga.py
 #RUN sudo apt-get install -y zsh
 #WORKDIR $WORK
 #RUN sudo git clone https://github.com/jendrikseipp/vulture
