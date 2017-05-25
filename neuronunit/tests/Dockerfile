@@ -1,4 +1,4 @@
-#author Russell Jarvis rjjarvis@asu.edu
+x#author Russell Jarvis rjjarvis@asu.edu
 #author Rick Gerkin rgerkin@asu.edu
 FROM scidash/neuronunit
 
@@ -44,10 +44,10 @@ RUN pip install \
     enum34
 RUN ipython profile create default
 
-#WORKDIR $HOME
-#RUN git clone https://github.com/russelljjarvis/BluePyOpt.git
-#WORKDIR BluePyOpt
-#RUN python setup.py install
+WORKDIR $HOME
+RUN git clone https://github.com/russelljjarvis/BluePyOpt.git
+WORKDIR BluePyOpt
+RUN python setup.py install
 #RUN apt-get install -y python-tk
 
 
@@ -55,9 +55,9 @@ RUN chown -R jovyan $HOME
 #RUN python -c "import bluepyopt"
 
 RUN conda install mpi4py
-#RUN pip install git+https://github.com/roryk/ipython-cluster-helper
+RUN pip install git+https://github.com/roryk/ipython-cluster-helper
 
-#RUN ipcluster nbextension enable
+RUN sudo /opt/conda/bin/ipcluster nbextension enable
 
 RUN apt-get install -y curl apt-utils
 RUN apt-get update
@@ -85,15 +85,15 @@ ENV PATH $PATH:$PYTHONPATH
 RUN echo $PATH
 HEALTHCHECK CMD python -c "import pyneuroml"
 HEALTHCHECK CMD python -c "import neuronunit"
-RUN python -c "from neuronunit.models.reduced import ReducedModel"
-RUN python -c "from deap.tools import hypervolume"
-RUN python -c "import quantities"
-RUN python -c "import neuron"
-RUN python -c "import pyneuroml"
-RUN nrnivmodl
-RUN python -c "import scoop"
-RUN python -c "import deap"
-RUN nrniv
+HEALTHCHECK python -c "from neuronunit.models.reduced import ReducedModel"
+HEALTHCHECK python -c "from deap.tools import hypervolume"
+HEALTHCHECK python -c "import quantities"
+HEALTHCHECK python -c "import neuron"
+HEALTHCHECK python -c "import pyneuroml"
+HEALTHCHECK nrnivmodl
+HEALTHCHECK python -c "import scoop"
+HEALTHCHECK python -c "import deap"
+HEALTHCHECK nrniv
 
 RUN export PATH=$PATH
 
@@ -153,4 +153,5 @@ RUN echo "import os">> run_ipp1.p
 HEALTHCHECK CMD /opt/conda/bin/ipython3 -c "import sys; print(sys.path)"
 #RUN /opt/conda/bin/ipython3 -c "import os; print(sys.path)"
 
-HEALTHCHECK CMD /opt/conda/bin/ipython3 -c "from ipyparallel import Client; import os; os.system('ipcluster start --profile=chase --debug &')" 
+HEALTHCHECK CMD /opt/conda/bin/ipython3 -c "from ipyparallel import Client; import os; os.system('ipcluster start --profile=chase --debug &')"
+# /opt/conda/bin/python3 exhaustive_search.py
