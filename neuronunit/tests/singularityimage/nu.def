@@ -12,6 +12,8 @@
     if [ ! -d "/home/jovyan/git" ]; then
        	 mkdir git; cd git
        	 git clone -b dev https://github.com/russelljjarvis/neuronunit.git
+	 cd neuronunit
+	 /opt/conda/bin/python setup.py install;
 	 git clone -b dev https://github.com/scidash/sciunit.git
 	 cd sciunit
 	 /opt/conda/bin/python setup.py install;
