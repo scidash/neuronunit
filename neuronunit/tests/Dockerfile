@@ -66,6 +66,11 @@ WORKDIR $HOME
 
 RUN chown -R jovyan /opt/conda/lib/python3.5/site-packages/
 
+RUN pip install git+https://github.com/roryk/ipython-cluster-helper
+
+RUN ipcluster nbextension enable
+#RUN chmod 755 jovyan/ipython/profile_default
+#RUN chmod 744 jovyan/ipython/profile_default
 USER $NB_USER
 
 
@@ -78,8 +83,8 @@ ENV PATH $PATH:/opt/conda/lib/python3.5/site-packages
 ENV PATH $PATH:$PYTHONPATH
 
 RUN echo $PATH
-RUN python -c "import pyneuroml"
-RUN python -c "import neuronunit"
+HEALTHCHECK CMD python -c "import pyneuroml"
+HEALTHCHECK CMD python -c "import neuronunit"
 RUN python -c "from neuronunit.models.reduced import ReducedModel"
 RUN python -c "from deap.tools import hypervolume"
 RUN python -c "import quantities"
@@ -89,6 +94,7 @@ RUN nrnivmodl
 RUN python -c "import scoop"
 RUN python -c "import deap"
 RUN nrniv
+
 RUN export PATH=$PATH
 
 # Use this NeuronUnit (delete later)
@@ -112,7 +118,6 @@ RUN nrnivmodl
 RUN ls LEMS_2007One.xml
 WORKDIR $HOME/neuronunit/neuronunit/tests/
 RUN ls *.pickle
-
 
 WORKDIR /home/git
 USER root
@@ -145,7 +150,7 @@ RUN echo "import os">> run_ipp1.p
 #RUN echo "os.system('ipcluster start --profile=chase --debug &')" >> run_ipp1.py
 #RUN echo "import ipyparallel as ipp ; rc = ipp.Client(profile='chase'); print('hello from before cpu '); print(rc.ids);" >> run_ipp2.py
 #RUN ipython run_ipp1.py && sleep 15 && ipython run_ipp2.py
-RUN /opt/conda/bin/ipython3 -c "import sys; print(sys.path)"
+HEALTHCHECK CMD /opt/conda/bin/ipython3 -c "import sys; print(sys.path)"
 #RUN /opt/conda/bin/ipython3 -c "import os; print(sys.path)"
 
-RUN /opt/conda/bin/ipython3 -c "from ipyparallel import Client; import os; os.system('ipcluster start --profile=chase --debug &')" 
+HEALTHCHECK CMD /opt/conda/bin/ipython3 -c "from ipyparallel import Client; import os; os.system('ipcluster start --profile=chase --debug &')" 

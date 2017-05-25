@@ -5,7 +5,8 @@ import time
 import pdb
 import array
 import random
-
+import sys
+sys.path.insert(0,"../../../sciunit")
 """
 Scoop can only operate on variables classes and methods at top level 0
 This means something with no indentation, no nesting,
@@ -603,7 +604,7 @@ def main():
         #x = list(range(0, NGEN))
         #x = list(range(0, strategy.lambda_ * NGEN, strategy.lambda_))
         fbest.append( pf[0].fitness.values )
-        best[gen, :MU] = pf[0]
+        best[gen].append(pf[0])
 
 
     pop.sort(key=lambda x: x.fitness.values)
