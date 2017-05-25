@@ -105,7 +105,7 @@ USER $NB_USER
 #https://github.com/russelljjarvis/neuronunit.git
 WORKDIR $HOME
 ENV PYTHONPATH $HOME/neuronunit:$PYTHONPATH
-RUN git clone -b dev https://github.com/russelljjarvis/neuronunit.git
+RUN  if [ ! -d "$/home/jovyan/git/neuronunit" ]; then git clone -b dev https://github.com/russelljjarvis/neuronunit.git; fi
 WORKDIR $HOME/neuronunit/neuronunit/tests/NeuroML2
 
 RUN nrnivmodl
@@ -114,7 +114,7 @@ WORKDIR $HOME/neuronunit/neuronunit/tests/
 RUN ls *.pickle
 
 
-WORKDIR /home/mnt
+WORKDIR /home/git
 USER root
 RUN chown -R $NB_USER .
 USER $NB_USER
@@ -133,16 +133,19 @@ RUN sudo python setup.py install
 RUN pip install cypy
 RUN python test_all.py
 RUN conda install plotly seaborn
+RUN pip install prospector
+WORKDIR /home/git/neuronunit
+#RUN python -c "from prospector import run; run.main()"
+#run.main()
 
-RUN pip install vulture
-#RUN zsh
-WORKDIR /home/mnt
-#ENTRYPOINT zsh
-ENTRYPOINT python nsga.py
-#RUN sudo apt-get install -y zsh
-#WORKDIR $WORK
-#RUN sudo git clone https://github.com/jendrikseipp/vulture
-#WORKDIR vulture
-#RUN ls *
-#RUN cat README.rst
-#RUN sudo python install.py
+RUN sudo chown -R jovyan .
+
+RUN echo "import os">> run_ipp1.p
+
+#RUN echo "os.system('ipcluster start --profile=chase --debug &')" >> run_ipp1.py
+#RUN echo "import ipyparallel as ipp ; rc = ipp.Client(profile='chase'); print('hello from before cpu '); print(rc.ids);" >> run_ipp2.py
+#RUN ipython run_ipp1.py && sleep 15 && ipython run_ipp2.py
+RUN /opt/conda/bin/ipython3 -c "import sys; print(sys.path)"
+#RUN /opt/conda/bin/ipython3 -c "import os; print(sys.path)"
+
+RUN /opt/conda/bin/ipython3 -c "from ipyparallel import Client; import os; os.system('ipcluster start --profile=chase --debug &')" 
