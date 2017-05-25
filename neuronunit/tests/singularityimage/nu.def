@@ -1,6 +1,6 @@
 # Bootstrap definition example neuronunit
-# overlay
-
+Bootstrap: docker
+From: pnp:latest
 %setup
     echo "Looking in directory '$SINGULARITY_ROOTFS' for /bin/sh"
     if [ ! -x "$SINGULARITY_ROOTFS/bin/sh" ]; then
@@ -16,8 +16,7 @@
         git clone -b dev https://github.com/scidash/sciunit.git
         cd sciunit
         /opt/conda/bin/python setup.py install 
-        echo "deleting nunit"
-        #rm -r /neuronunit
+        echo "deleting nunit";
     fi
     export PATH="$PATH:/home/jovyan/nrn-7.4/x86_64/bin/nrnivmodl:/home/jovyan/nrn-7.4/x86_64/bin"
     ls /home/jovyan/nrn-7.4/x86_64/bin
@@ -26,42 +25,27 @@
     export PYTHONPATH="$PYTHONPATH:/home/jovyan"
     apt-get install libncurses5-dev libreadline-dev
     apt-get update
+    exit 0
 
 
 %post
+    if [ ! -d "/home/jovyan/git" ]; then
+       	 mkdir git; cd git
+       	 git clone -b dev https://github.com/russelljjarvis/neuronunit.git
+	 git clone -b dev https://github.com/scidash/sciunit.git
+	 cd sciunit
+	 /opt/conda/bin/python setup.py install;
+	 fi
+    exec /bin/bash
+    su jovyan
+    cd /home/jovyan/neuronunit/neuronunit/tests
+    exit 0	
 
+#only one of the bottom two commands should be sufficient. Need further experimentation to work out which one.
+#for now both work.
 
-    cd /git/sciunit
-    /opt/conda/bin/python setup.py install 
-    cd /git/neuronunit/neuronunit/tests/NeuroML2
-    bash /home/jovyan/nrn-7.4/x86_64/bin/nrnivmodl
-    cd /git/neuronunit/neuronunit/tests
-    /opt/conda/bin/python -m scoop nsga.py 
-    exit 0
-
- 
 %runscript
-    exec /bin/bash
-    exec su jovyan
-    exec cd /home/jovyan/neuronunit/neuronunit/tests
-    exec ls *.py
-    exec echo `pwd`
+    /opt/conda/bin/python -m scoop nsga.py 
     
-    exec /opt/conda/bin/python -m scoop nsga.py 
-    
-
-	#echo "Arguments received: $*"
-	#exec /bin/bash
-	#exec /usr/bin/python "$@"
-
 %test
-    exec /bin/bash
-    exec su jovyan
-    exec cd /home/jovyan/neuronunit/neuronunit/tests
-    exec ls *.py
-    exec echo `pwd`
-    
-    exec /opt/conda/bin/python -m scoop nsga.py 
-
-
-#	/usr/local/bin/mpirun --allow-run-as-root /usr/bin/mpi_ring
+    /opt/conda/bin/python -m scoop nsga.py 
