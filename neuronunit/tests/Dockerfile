@@ -1,4 +1,4 @@
-x#author Russell Jarvis rjjarvis@asu.edu
+#author Russell Jarvis rjjarvis@asu.edu
 #author Rick Gerkin rgerkin@asu.edu
 FROM scidash/neuronunit
 
