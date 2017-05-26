@@ -13,10 +13,10 @@
        	 mkdir git; cd git
        	 git clone -b dev https://github.com/russelljjarvis/neuronunit.git
 	 cd neuronunit
-	 /opt/conda/bin/python setup.py install;
+	 /opt/conda/bin/python setup.py install
 	 git clone -b dev https://github.com/scidash/sciunit.git
 	 cd sciunit
-	 /opt/conda/bin/python setup.py install;
+	 /opt/conda/bin/python setup.py install; #This semi colon is necessary for closing the BASH conditional.
 	 fi
     exec /bin/bash
     su jovyan
