@@ -4,7 +4,7 @@
 if [ -f "*.img" ] ; then rm *.img;  fi
 #build singularity dev if singularity doesn't exist
 
-if [ -d "~/git/singularity" ]; then
+if [ ! -d "~/git/singularity" ]; then
     cd ~/git
     git clone -b development https://github.com/singularityware/singularity.git
     cd singularity
