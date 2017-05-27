@@ -4,9 +4,9 @@
 if [ -f "*.img" ] ; then rm *.img;  fi
 #build singularity dev if singularity doesn't exist
 
-if [ -d "~/git/singularity" ];
+if [ -d "~/git/singularity" ]; then
     cd ~/git
-    git checkout -b development https://github.com/singularityware/singularity
+    git clone -b development https://github.com/singularityware/singularity.git
     cd singularity
     git pull
     ./autogen.sh
