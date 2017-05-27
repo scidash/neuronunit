@@ -147,7 +147,6 @@ class NeuronSimulation():
 
         if self.sim_end < 0: self.sim_end = time.time()
 
-
         # File to save: time
         py_v_time = [ t/1000 for t in h.v_time.to_python() ]  # Convert to Python list for speed...
 
