@@ -5,7 +5,7 @@ except ImportError:
 
 setup(
     name='neuronunit',
-    version='0.1.8.6',
+    version='0.1.8.7',
     author='Rick Gerkin',
     author_email='rgerkin@asu.edu',
         packages=[
@@ -23,7 +23,7 @@ setup(
                       'matplotlib>=1.5',
                       'neo==0.4',
                       'elephant',
-                      'sciunit==0.1.5.6',
+                      'sciunit==0.1.5.7',
                       'allensdk==0.12.4.1',
                       'pyneuroml>=0.2.3',
                       'scoop'],
