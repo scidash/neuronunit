@@ -260,7 +260,7 @@ def check_current(ampl,vm):
             vm.rheobase=copy.copy(float(ampl))
             assert vm.rheobase != None
             assert model.rheobase_memory != None
-        verbose = True
+        verbose = False
         if verbose:
             print('8 CPUs are testing different values of current injections simultaneously Injected %s current and got %d spikes' % \
                     (ampl,n_spikes))
