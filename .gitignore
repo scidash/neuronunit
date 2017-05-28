@@ -46,3 +46,5 @@ neuronunit.xcworkspace/contents.xcworkspacedata
 hippounit_bak*
 scratch.ipynb
 docs/*.dat
+*.bak
+*.dir
