@@ -35,6 +35,8 @@ class LEMSModel(sciunit.Model, cap.Runnable):
         self.rerun = True # Needs to be rerun since it hasn't been run yet!
         if name is None:
             name = os.path.split(self.lems_file_path)[1].split('.')[0]
+        if backend is None:
+            backend = 'jNeuroML'
         self.set_backend(backend)
         self.load_model()
 
@@ -50,7 +52,7 @@ class LEMSModel(sciunit.Model, cap.Runnable):
             args = backend[1]
             kwargs = backend[2]
         else:
-            raise "Backend must be string, tuple, or list"
+            raise TypeError("Backend must be string, tuple, or list")
         options = {x.replace('Backend',''):cls for x, cls \
                    in backends.__dict__.items() \
                    if inspect.isclass(cls) and \
@@ -94,10 +96,10 @@ class LEMSModel(sciunit.Model, cap.Runnable):
     def run(self, rerun=None, **run_params):
         if rerun is None:
             rerun = self.rerun
-        self.set_run_params(run_params)
+        self.set_run_params(**run_params)
         for key,value in self.run_defaults.items():
             if key not in self.run_params:
-                self.set_run_params({key:value})
+                self.set_run_params(**{key:value})
         if (not rerun) and hasattr(self,'last_run_params') and \
            self.run_params == self.last_run_params:
             return

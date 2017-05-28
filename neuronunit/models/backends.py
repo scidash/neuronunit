@@ -51,10 +51,10 @@ class jNeuroMLBackend(Backend):
 
     def set_run_params(self, **params):
         self.run_params.update(params)
-        self.set_lems_run_params(params)
+        self.set_lems_run_params()
 
     def inject_square_current(self, current):
-        self.set_run_params({'injected_square_current':current})
+        self.set_run_params(injected_square_current=current)
 
     def local_run(self):
         f = pynml.run_lems_with_jneuroml
