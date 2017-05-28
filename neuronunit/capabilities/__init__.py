@@ -34,6 +34,13 @@ class ProducesMembranePotential(sciunit.Capability):
         vm = self.get_membrane_potential(**kwargs)
         return (np.percentile(vm,75) - np.percentile(vm,25))*vm.units
 
+    def get_initial_vm(self,**kwargs):
+        """Returns a quantity corresponding to the starting membrane potential.
+        This will in some cases be the resting potential."""
+        vm = self.get_membrane_potential(**kwargs)
+        # A neo.core.AnalogSignal object
+        return vm[0]
+
 
 class ProducesSpikes(sciunit.Capability):
     """Indicates that the model produces spikes.
@@ -54,7 +61,8 @@ class ProducesSpikes(sciunit.Capability):
         return len(spike_train)
 
 
-class ProducesActionPotentials(ProducesSpikes):
+class ProducesActionPotentials(ProducesSpikes, 
+                               ProducesMembranePotential):
     """Indicates the model produces action potential waveforms.
     Waveforms must have a temporal extent.
     """
