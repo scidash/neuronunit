@@ -160,9 +160,6 @@ class VmTest(sciunit.Test):
         return True
 
 
-
-
-
 class TestPulseTest(VmTest):
     """A base class for tests that use a square test pulse"""
 
@@ -230,8 +227,8 @@ class TestPulseTest(VmTest):
             return vm_fit
         
         popt, pcov = curve_fit(func, t, vm, p0=guesses) # Estimate starting values for better convergence
-        plt.plot(t,vm)
-        plt.plot(t,func(t,*popt))
+        #plt.plot(t,vm)
+        #plt.plot(t,func(t,*popt))
         #print(popt)
         amplitude = popt[0]*pq.mV
         tau = popt[1]*pq.ms
@@ -522,7 +519,8 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
         return super(InjectedCurrentAPThresholdTest,self).\
                 generate_prediction(model)
 
-class RheobaseTestHacked(VmTest):
+
+class RheobaseTest(VmTest):
     """
     Tests the full widths of APs at their half-maximum
     under current injection.
@@ -579,7 +577,6 @@ class RheobaseTestHacked(VmTest):
 
         self.prediction=prediction
         return self.prediction
-
 
     def threshold_FI(self, model, units, guess=None):
         lookup = {} # A lookup table global to the function below.
@@ -641,52 +638,51 @@ class RheobaseTestHacked(VmTest):
         if prediction['value'] is None:
             score = scores.InsufficientDataScore(None)
         else:
-            score = super(RheobaseTestHacked,self).\
+            score = super(RheobaseTest,self).\
                         compute_score(observation, prediction)
             #self.bind_score(score,None,observation,prediction)
         return score
 
-class RheobaseTest(VmTest):
-#class RheobaseTestHacked(VmTest):
-    """
-    A hacked version of test Rheobase.
-    Tests the full widths of APs at their half-maximum
-    under current injection.
-    """
-    def _extra(self):    
-        self.prediction=None
+# class RheobaseTestHacked(VmTest):
+#     """
+#     A hacked version of test Rheobase.
+#     Tests the full widths of APs at their half-maximum
+#     under current injection.
+#     """
+#     def _extra(self):    
+#         self.prediction=None
     
-    required_capabilities = (cap.ReceivesSquareCurrent,
-                             cap.ProducesSpikes)
+#     required_capabilities = (cap.ReceivesSquareCurrent,
+#                              cap.ProducesSpikes)
 
-    params = {'injected_square_current':
-                {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+#     params = {'injected_square_current':
+#                 {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
-    name = "Rheobase test"
+#     name = "Rheobase test"
 
-    description = ("A test of the rheobase, i.e. the minimum injected current "
-                   "needed to evoke at least one spike.")
+#     description = ("A test of the rheobase, i.e. the minimum injected current "
+#                    "needed to evoke at least one spike.")
 
-    units = pq.pA
-    score_type = scores.RatioScore
+#     units = pq.pA
+#     score_type = scores.RatioScore
 
-    def generate_prediction(self, model):
-        return self.prediction
+#     def generate_prediction(self, model):
+#         return self.prediction
 
-    def compute_score(self, observation, prediction):
-        """Implementation of sciunit.Test.score_prediction."""
-        #print("%s: Observation = %s, Prediction = %s" % \
-        #	 (self.name,str(observation),str(prediction)))
+#     def compute_score(self, observation, prediction):
+#         """Implementation of sciunit.Test.score_prediction."""
+#         #print("%s: Observation = %s, Prediction = %s" % \
+#         #	 (self.name,str(observation),str(prediction)))
 
-        if self.prediction!=None:
-            if self.prediction['value'] is None:
+#         if self.prediction is not None:
+#             if self.prediction['value'] is None:
 
-                score = scores.InsufficientDataScore(None)
-            else:
-                score = super(RheobaseTest,self).\
-                            compute_score(observation, self.prediction)
-                #self.bind_score(score,None,observation,prediction)
-            return score
+#                 score = scores.InsufficientDataScore(None)
+#             else:
+#                 score = super(RheobaseTest,self).\
+#                             compute_score(observation, self.prediction)
+#                 #self.bind_score(score,None,observation,prediction)
+#             return score
 
 
 class RestingPotentialTest(VmTest):
