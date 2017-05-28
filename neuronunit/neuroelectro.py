@@ -151,7 +151,8 @@ class NeuroElectroData(object):
         We will use 'params' in the future to specify metadata (e.g. temperature)
         that neuroelectro.org will provide."""
         if not quiet:
-            print("Getting data values from neuroelectro.org")
+            print("Getting %s data values from neuroelectro.org" \
+                  % self.ephysprop.name)
         self.get_json(params=params, quiet=quiet)
         if 'objects' in self.json_object:
             data = self.json_object['objects']

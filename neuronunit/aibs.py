@@ -37,7 +37,7 @@ def get_sp(experiment_params, sweep_ids):
     return sp
 
 
-def get_observation(dataset_id, kind, cached=True):
+def get_observation(dataset_id, kind, cached=True, quiet=False):
     if cached:
         db = shelve.open('aibs-cache')
     else:
@@ -45,8 +45,12 @@ def get_observation(dataset_id, kind, cached=True):
 
     identifier = '%d_%s' % (dataset_id,kind)
     if identifier in db:
+        print("Getting %s cached data value for from AIBS dataset %s" \
+              % (kind.title(),dataset_id))
         value = db[identifier]
-    else:    
+    else:
+        print("Getting %s data value for from AIBS dataset %s" \
+              % (kind.title(),dataset_id))    
         ct = CellTypesApi()
         cmd = ct.get_cell(dataset_id) # Cell metadata
         if kind == 'rheobase':
