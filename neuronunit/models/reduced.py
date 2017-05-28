@@ -10,7 +10,6 @@ import neuronunit.capabilities.spike_functions as sf
 
 class ReducedModel(mod.LEMSModel,
                    cap.ReceivesCurrent,
-                   cap.ProducesMembranePotential,
                    cap.ProducesActionPotentials):
     """Base class for reduced models, using LEMS"""
 
@@ -35,7 +34,7 @@ class ReducedModel(mod.LEMSModel,
             if 'v' in rkey or 'vm' in rkey:
                 v = np.array(self.results[rkey])
         t = np.array(self.results['t'])
-        dt = (t[1]-t[0])*pq.ms # Time per sample in milliseconds.
+        dt = (t[1]-t[0])*pq.s # Time per sample in seconds.
         vm = AnalogSignal(v,units=pq.V,sampling_rate=1.0/dt)
         return vm
 
