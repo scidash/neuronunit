@@ -55,7 +55,7 @@ def spikes2amplitudes(spike_waveforms):
      1D numpy array of spike amplitudes, i.e. the maxima in each waveform.
     """
 
-    if spike_waveforms:
+    if spike_waveforms is not None:
         ampls = np.max(np.array(spike_waveforms),axis=1)
     else:
         ampls = np.array([])
