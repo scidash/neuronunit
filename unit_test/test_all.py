@@ -48,6 +48,23 @@ class SciunitTestTestCase(NotebookTools,unittest.TestCase):
         self.do_notebook('get_tau')
 
 
+class NeuroelectroTestCase(unittest.TestCase):
+    def test_neuroelectro():
+        from neuronunit.neuroelectro import NeuroElectroDataMap,\
+                                            NeuroElectroSummary
+        x = NeuroElectroDataMap()
+        x.set_neuron(id=72)
+        x.set_ephysprop(id=2)
+        x.set_article(pmid=18667618)
+        x.get_values()
+        x.check()
+
+        x = NeuroElectroSummary()
+        x.set_neuron(id=72)
+        x.set_ephysprop(id=2)
+        x.get_values()
+        x.check()
+
+
 if __name__ == '__main__':
     unittest.main()
-        
