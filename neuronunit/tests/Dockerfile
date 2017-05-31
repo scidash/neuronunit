@@ -50,8 +50,10 @@ RUN ipython profile create default
 #RUN python setup.py install
 #This line python-tk is a problem
 #RUN apt-get install -y python-tk
-#RUN chown -R jovyan $HOME
-#HEALTHCHECK python -c "import bluepyopt"
+RUN python -c "import matplotlib"
+
+RUN chown -R jovyan $HOME
+#RUN python -c "import bluepyopt"
 
 RUN conda install mpi4py
 RUN pip install git+https://github.com/roryk/ipython-cluster-helper
@@ -152,7 +154,10 @@ RUN echo "import os">> run_ipp1.p
 HEALTHCHECK CMD /opt/conda/bin/ipython3 -c "import sys; print(sys.path)"
 #RUN /opt/conda/bin/ipython3 -c "import os; print(sys.path)"
 
+WORKDIR /opt/conda/lib/python3.5/site-packages
+RUN rm -r PyQt*
+
+RUN echo "backend      : Agg" >> /opt/conda/lib/python3.5/site-packages/matplotlib/mpl-data/matplotlibrc
+
 HEALTHCHECK CMD /opt/conda/bin/ipython3 -c "from ipyparallel import Client; import os; os.system('ipcluster start --profile=chase --debug &')"
 # /opt/conda/bin/python3 exhaustive_search.py
-RUN echo "alias es='/opt/conda/bin/python3 exhaustive_search.py'" >> ~/.bashrc
-ENV QT_QPA_PLATFORM offscreen #&& /opt/conda/bin/ipython exhaustive_search.py 
