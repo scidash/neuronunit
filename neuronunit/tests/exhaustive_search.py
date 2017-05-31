@@ -99,13 +99,17 @@ if __name__ == "__main__":
 
     pre_rh_value=gs.searcher(gs.check_current,rh_param,mean_vm)
     rh_value=pre_rh_value.rheobase
-    list_of_models=list(futures.map(gs.model2map,iter_list))
+    #list_of_models=list(futures.map(gs.model2map,iter_list))
+    list_of_models=list(dview.map(gs.model2map,iter_list))
     print('gets here c')
 
     for li in list_of_models:
+        print(li)
         print(li.rheobase, li.attrs)
     from itertools import repeat
-    rhstorage=list(futures.map(gs.evaluate,list_of_models,repeat(rh_value)))
+    rhstorage=list(dview.map(gs.evaluate,list_of_models,repeat(rh_value)))
+    print(rhstorage)
+    #rhstorage=list(futures.map(gs.evaluate,list_of_models,repeat(rh_value)))
     print('gets here b')
 
     for x in rhstorage:
@@ -121,7 +125,8 @@ if __name__ == "__main__":
     rhstorage=rhstorage2
     iter_ = zip(list_of_models,rhstorage)
     print('gets here a')
-    score_matrixt=list(futures.map(gs.func2map,iter_))#list_of_models,rhstorage))
+    #score_matrixt=list(futures.map(gs.func2map,iter_))#list_of_models,rhstorage))
+    rhstorage=list(dview.map(gs.func2map,iter_))#list_of_models,rhstorage))
     print(score_matrixt)
     import pdb
     pdb.set_trace()
