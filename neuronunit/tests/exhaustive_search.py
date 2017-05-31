@@ -6,14 +6,8 @@ import ipyparallel as ipp
 rc = ipp.Client(profile='chase');
 rc[:].use_cloudpickle()
 
-print('hello from before cpu ');
-print(rc.ids)
 dview = rc[:]
-serial_result = list(map(lambda x:x**10, range(32)))
-parallel_result = list(dview.map_sync(lambda x: x**10, range(32)))
-print(serial_result)
-print(parallel_result, 'parallel_reult')
-assert serial_result == parallel_result
+
 
 import time
 import pdb
@@ -44,9 +38,6 @@ from deap import base
 from deap.benchmarks.tools import diversity, convergence, hypervolume
 from deap import creator
 from deap import tools
-from scoop import futures
-import scoop
-
 import get_neab
 
 import quantities as qt
@@ -56,8 +47,12 @@ from scoop import utils
 
 import sciunit.scores as scores
 
-
-import grid_search as gs
+global gs
+import grid_search_pyparallel as gs
+gs.rc = rc[:]
+gs.map = rc[:].map
+gs.dview = rc[:]
+#import grid_search as gs
 model=gs.model
 
 
@@ -71,7 +66,7 @@ if __name__ == "__main__":
     #iter_list=[ (i,j,k,l) for i in modelp.model_params['a'] for j in modelp.model_params['b'] for k in modelp.model_params['vr'] for l in modelp.model_params['vpeak'] ]
     iter_list=[ i for i in modelp.model_params['a'] ]
     #iter_list=iter_list[0:1]
-    import grid_search as gs
+    #import grid_search as gs
 
     mean_vm=gs.VirtualModel()
     guess_attrs = modelp.guess_attrs[0]
@@ -99,17 +94,13 @@ if __name__ == "__main__":
 
     pre_rh_value=gs.searcher(gs.check_current,rh_param,mean_vm)
     rh_value=pre_rh_value.rheobase
-    #list_of_models=list(futures.map(gs.model2map,iter_list))
     list_of_models=list(dview.map(gs.model2map,iter_list))
     print('gets here c')
 
     for li in list_of_models:
-        print(li)
         print(li.rheobase, li.attrs)
     from itertools import repeat
     rhstorage=list(dview.map(gs.evaluate,list_of_models,repeat(rh_value)))
-    print(rhstorage)
-    #rhstorage=list(futures.map(gs.evaluate,list_of_models,repeat(rh_value)))
     print('gets here b')
 
     for x in rhstorage:
@@ -125,8 +116,7 @@ if __name__ == "__main__":
     rhstorage=rhstorage2
     iter_ = zip(list_of_models,rhstorage)
     print('gets here a')
-    #score_matrixt=list(futures.map(gs.func2map,iter_))#list_of_models,rhstorage))
-    rhstorage=list(dview.map(gs.func2map,iter_))#list_of_models,rhstorage))
+    score_matrixt=list(dview.map(gs.func2map,iter_))#list_of_models,rhstorage))
     print(score_matrixt)
     import pdb
     pdb.set_trace()
