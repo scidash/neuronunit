@@ -44,12 +44,12 @@ RUN pip install \
     enum34
 RUN ipython profile create default
 
-WORKDIR $HOME
-RUN git clone https://github.com/russelljjarvis/BluePyOpt.git
-WORKDIR BluePyOpt
-RUN python setup.py install
+#WORKDIR $HOME
+#RUN git clone https://github.com/russelljjarvis/BluePyOpt.git
+#WORKDIR BluePyOpt
+#RUN python setup.py install
 #RUN apt-get install -y python-tk
-
+RUN python -c "import matplotlib"
 
 RUN chown -R jovyan $HOME
 #RUN python -c "import bluepyopt"
@@ -137,7 +137,7 @@ WORKDIR sciunit
 RUN sudo python setup.py install
 RUN pip install cypy
 RUN python test_all.py
-RUN conda install plotly seaborn
+#RUN conda install plotly seaborn
 RUN pip install prospector
 WORKDIR /home/git/neuronunit
 #RUN python -c "from prospector import run; run.main()"
@@ -153,6 +153,10 @@ RUN echo "import os">> run_ipp1.p
 HEALTHCHECK CMD /opt/conda/bin/ipython3 -c "import sys; print(sys.path)"
 #RUN /opt/conda/bin/ipython3 -c "import os; print(sys.path)"
 
+WORKDIR /opt/conda/lib/python3.5/site-packages
+RUN rm -r PyQt*
+
+echo "backend      : Agg" >> /opt/conda/lib/python3.5/site-packages/matplotlib/mpl-data/matplotlibrc
+
 HEALTHCHECK CMD /opt/conda/bin/ipython3 -c "from ipyparallel import Client; import os; os.system('ipcluster start --profile=chase --debug &')"
 # /opt/conda/bin/python3 exhaustive_search.py
-WORKDIR /home/mnt
