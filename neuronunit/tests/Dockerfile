@@ -44,15 +44,14 @@ RUN pip install \
     enum34
 RUN ipython profile create default
 
-WORKDIR $HOME
-RUN git clone https://github.com/russelljjarvis/BluePyOpt.git
-WORKDIR BluePyOpt
-RUN python setup.py install
+#WORKDIR $HOME
+#RUN git clone https://github.com/russelljjarvis/BluePyOpt.git
+#WORKDIR BluePyOpt
+#RUN python setup.py install
+#This line python-tk is a problem
 #RUN apt-get install -y python-tk
-
-
-RUN chown -R jovyan $HOME
-#RUN python -c "import bluepyopt"
+#RUN chown -R jovyan $HOME
+#HEALTHCHECK python -c "import bluepyopt"
 
 RUN conda install mpi4py
 RUN pip install git+https://github.com/roryk/ipython-cluster-helper
@@ -85,15 +84,15 @@ ENV PATH $PATH:$PYTHONPATH
 RUN echo $PATH
 HEALTHCHECK CMD python -c "import pyneuroml"
 HEALTHCHECK CMD python -c "import neuronunit"
-HEALTHCHECK python -c "from neuronunit.models.reduced import ReducedModel"
-HEALTHCHECK python -c "from deap.tools import hypervolume"
-HEALTHCHECK python -c "import quantities"
-HEALTHCHECK python -c "import neuron"
-HEALTHCHECK python -c "import pyneuroml"
-HEALTHCHECK nrnivmodl
-HEALTHCHECK python -c "import scoop"
-HEALTHCHECK python -c "import deap"
-HEALTHCHECK nrniv
+HEALTHCHECK CMD python -c "from neuronunit.models.reduced import ReducedModel"
+HEALTHCHECK CMD python -c "from deap.tools import hypervolume"
+HEALTHCHECK CMD python -c "import quantities"
+HEALTHCHECK CMD python -c "import neuron"
+HEALTHCHECK CMD python -c "import pyneuroml"
+HEALTHCHECK CMD nrnivmodl
+HEALTHCHECK CMD python -c "import scoop"
+HEALTHCHECK CMD python -c "import deap"
+HEALTHCHECK CMD nrniv
 
 RUN export PATH=$PATH
 
@@ -155,3 +154,5 @@ HEALTHCHECK CMD /opt/conda/bin/ipython3 -c "import sys; print(sys.path)"
 
 HEALTHCHECK CMD /opt/conda/bin/ipython3 -c "from ipyparallel import Client; import os; os.system('ipcluster start --profile=chase --debug &')"
 # /opt/conda/bin/python3 exhaustive_search.py
+RUN echo "alias es='/opt/conda/bin/python3 exhaustive_search.py'" >> ~/.bashrc
+ENV QT_QPA_PLATFORM offscreen #&& /opt/conda/bin/ipython exhaustive_search.py 
