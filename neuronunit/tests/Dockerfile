@@ -156,7 +156,7 @@ HEALTHCHECK CMD /opt/conda/bin/ipython3 -c "import sys; print(sys.path)"
 WORKDIR /opt/conda/lib/python3.5/site-packages
 RUN rm -r PyQt*
 
-echo "backend      : Agg" >> /opt/conda/lib/python3.5/site-packages/matplotlib/mpl-data/matplotlibrc
+RUN echo "backend      : Agg" >> /opt/conda/lib/python3.5/site-packages/matplotlib/mpl-data/matplotlibrc
 
 HEALTHCHECK CMD /opt/conda/bin/ipython3 -c "from ipyparallel import Client; import os; os.system('ipcluster start --profile=chase --debug &')"
 # /opt/conda/bin/python3 exhaustive_search.py
