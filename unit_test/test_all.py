@@ -27,11 +27,11 @@ class DocumentationTestCase(NotebookTools,unittest.TestCase):
     def test_chapter1(self):
         self.do_notebook('chapter1')
 
-    @unittest.skip("Skipping chapter 2")
+    #@unittest.skip("Skipping chapter 2")
     def test_chapter2(self):
         self.do_notebook('chapter2')
 
-    @unittest.skip("Skipping chapter 3")
+    #@unittest.skip("Skipping chapter 3")
     def test_chapter3(self):
         self.do_notebook('chapter3')
 
