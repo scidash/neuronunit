@@ -85,7 +85,7 @@ class VmTest(sciunit.Test):
         score.related_data['vm'] = model.get_membrane_potential()
         score.related_data['model_name'] = '%s_%s' % (model.name,self.name)
 
-        def plot_vm(self,ax=None,ylim=(None,None)):
+        def plot_vm(self, ax=None, ylim=(None,None)):
             """A plot method the score can use for convenience."""
             if ax is None:
                 ax = plt.gca()
@@ -93,12 +93,12 @@ class VmTest(sciunit.Test):
             ax.plot(vm.times,vm)
             y_min = float(vm.min()-5.0*pq.mV) if ylim[0] is None else ylim[0]
             y_max = float(vm.max()+5.0*pq.mV) if ylim[1] is None else ylim[1]
+            ax.set_xlim(vm.times.min(),vm.times.max())
             ax.set_ylim(y_min,y_max)
             ax.set_xlabel('Time (s)')
             ax.set_ylabel('Vm (mV)')
         score.plot_vm = MethodType(plot_vm, score) # Bind to the score.
         score.unpicklable.append('plot_vm')
-        return score
 
     @classmethod
     def neuroelectro_summary_observation(cls, neuron):
@@ -197,9 +197,9 @@ class TestPulseTest(VmTest):
 
     @classmethod
     def get_tau(cls, vm, i):
-        start = max(i['delay']-10*pq.ms,i['delay']/2) # 10 ms before pulse start or 
-                                                      # halfway between sweep start and pulse start, 
-                                                      # whichever is longer
+        # 10 ms before pulse start or halfway between sweep start 
+        # and pulse start, whichever is longer
+        start = max(i['delay']-10*pq.ms,i['delay']/2) 
         stop = i['duration']+i['delay']-1*pq.ms # 1 ms before pulse end
         region = cls.get_segment(vm,start,stop)
         amplitude,tau,y0 = cls.exponential_fit(region, i['delay'])
@@ -529,6 +529,7 @@ class RheobaseTest(VmTest):
         self.prediction = None
         self.high = 300*pq.pA
         self.small = 0*pq.pA
+        self.rheobase_vm = None
     
     required_capabilities = (cap.ReceivesSquareCurrent,
                              cap.ProducesSpikes)
@@ -575,7 +576,7 @@ class RheobaseTest(VmTest):
             rheobase = None
         prediction['value'] = rheobase
 
-        self.prediction=prediction
+        self.prediction = prediction
         return self.prediction
 
     def threshold_FI(self, model, units, guess=None):
@@ -596,6 +597,9 @@ class RheobaseTest(VmTest):
                     print("Injected %s current and got %d spikes" % \
                             (ampl,n_spikes))
                 lookup[float(ampl)] = n_spikes
+                spike_counts = np.array([n for x,n in lookup.items() if n>0])
+                if n_spikes and n_spikes <= spike_counts.min():
+                    self.rheobase_vm = model.get_membrane_potential()
 
         max_iters = 10
 
@@ -642,6 +646,12 @@ class RheobaseTest(VmTest):
                         compute_score(observation, prediction)
             #self.bind_score(score,None,observation,prediction)
         return score
+
+    def bind_score(self, score, model, observation, prediction):
+        super(RheobaseTest,self).bind_score(score, model, 
+                                            observation, prediction)
+        if self.rheobase_vm is not None:
+            score.related_data['vm'] = self.rheobase_vm
 
 # class RheobaseTestHacked(VmTest):
 #     """
