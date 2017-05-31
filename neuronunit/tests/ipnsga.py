@@ -15,7 +15,7 @@ dview = rc[:]
 
 
 serial_result = list(map(lambda x:x**10, range(32)))
-parallel_result = list(dview.map_sync(lambda x: x**10, range(32)))
+parallel_result = list(dview.map(lambda x: x**10, range(32)))
 print(serial_result)
 print(parallel_result, 'parallel_reult')
 assert serial_result == parallel_result
@@ -24,6 +24,8 @@ assert serial_result == parallel_result
 
 import matplotlib as mpl
 mpl.use('agg',warn=False)
+import matplotlib; matplotlib.use('Agg')
+import El
 from matplotlib import pyplot as plt
 import time
 import pdb
@@ -459,7 +461,7 @@ def updatevmpop(pop,rh_value=None):
     assert len(pop)!=0
     rheobase_checking=gs.evaluate
     pop_list = [toolbox.clone(i) for i in pop]
-    vmpop = list(dview.map_sync(individual_to_vm, pop_list))
+    vmpop = list(dview.map(individual_to_vm, pop_list))
 
     assert len(pop)!=0
     if len(pop)!=0 and len(vmpop)!= 0:
@@ -467,7 +469,7 @@ def updatevmpop(pop,rh_value=None):
             rh_value = np.mean(np.array([i.rheobase for i in vmpop]))
             assert type(rh_value) is not type(None)
         rh_value_array = [rh_value for i in vmpop ]
-        vmpop = list(dview.map_sync(rheobase_checking,vmpop,repeat(rh_value)))
+        vmpop = list(dview.map(rheobase_checking,vmpop,repeat(rh_value)))
 
         pop,vmpop = replace_rh(pop,rh_value,vmpop)
         assert len(pop)!=0
@@ -596,12 +598,12 @@ def main():
             toolbox.mutate(ind2)
             del ind1.fitness.values, ind2.fitness.values
 
-        vmpop = list(dview.map_sync(individual_to_vm,[toolbox.clone(i) for i in offspring] ))
-        vmpop = list(dview.map_sync(rheobase_checking,vmpop,repeat(rh_value)))
+        vmpop = list(dview.map(individual_to_vm,[toolbox.clone(i) for i in offspring] ))
+        vmpop = list(dview.map(rheobase_checking,vmpop,repeat(rh_value)))
         rhstorage = [ i.rheobase for i in vmpop ]
         tuple_storage = zip(repeat(gen),vmpop,rhstorage)
         assert len(vmpop)==len(pop)
-        fitnesses = list(dview.map_sync(toolbox.evaluate, offspring , tuple_storage))
+        fitnesses = list(dview.map(toolbox.evaluate, offspring , tuple_storage))
 
         attr_dict = [p.attrs for p in vmpop ]
         #attr_keys = [ i.keys() for d in attr_dict for i in d.values() ][0]
@@ -732,7 +734,7 @@ if __name__ == "__main__":
     print(gpop)
     for j in gpop:
         print(j,'jpop')
-    vmpop = list(dview.map_sync(individual_to_vm,[toolbox.clone(i) for i in gpop] ))
+    vmpop = list(dview.map(individual_to_vm,[toolbox.clone(i) for i in gpop] ))
 
     #colors = list([ i.errors for i in gpop ])
     pgop,vmpop = updatevmpop(vmpop)

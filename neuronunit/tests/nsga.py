@@ -296,15 +296,17 @@ def replace_rh(pop,rh_value,vmpop):
          #sense if Rheobase is less than or equal to zero.
          #discard models that cause such results,
          # and create new models by mutating these parameters.
-         
+
          while type(vmpop[i].rheobase) is type(None):
               print('this loop appropriately exits none mutate away from ')
-              
+
               toolbox.mutate(ind)
               toolbox.mutate(ind)
               toolbox.mutate(ind)
+              print('tryingmutations', ind)
               temp = individual_to_vm(ind)
-              pop_rh = rheobase_checking(temp,rh_value)
+              pop_rh = rheobase_checking(temp)
+              print('trying ', pop_rh.rheobase)
               if type(pop_rh.rheobase) is not type(None):
                   if not (float(pop_rh.rheobase) <=0.0) :
 
@@ -313,19 +315,26 @@ def replace_rh(pop,rh_value,vmpop):
                       #over write the objects in place, but instead just grow the lists inappropriately
                       #also some of the lines below may be superflous in terms of machine instructions, but
                       #they function to make the code more explicit and human readable.
-                      ind = pop_rh
-                      assert ind.rheobase == pop_rh.rheobase
-                      pop[i] = ind
-                      vmpop[i] = temp
-                
+                      #ind = pop_rh
+                      ind.rheobase = pop_rh.rheobase
+
+                      pop[i] = copy.copy(ind)
+                      vmpop[i] = copy.copy(pop_rh)
+                      print(pop_rh.rheobase, 'rheobase value is updating')
+                      assert ind.rheobase == pop_rh.rheobase == vmpop[i].rheobase
+                      assert vmpop[i].rheobase is not type(None)
+         assert vmpop[i].rheobase is not type(None)
+
          while float(vmpop[i].rheobase) <=0.0 :
              print('this loop appropriately exits less than or equal to zero rheobase mutate away from')
-              
+
              toolbox.mutate(ind)
              toolbox.mutate(ind)
              toolbox.mutate(ind)
+             print('tryingmutations', ind)
              temp = individual_to_vm(ind)
-             pop_rh = rheobase_checking(temp,rh_value)
+             pop_rh = rheobase_checking(temp)
+             print('trying ', pop_rh.rheobase)
              if type(pop_rh.rheobase) is not type(None):
                  if not (float(pop_rh.rheobase) <=0.0) :
                       #make sure that the old individual, and virtual model object are
@@ -333,12 +342,15 @@ def replace_rh(pop,rh_value,vmpop):
                       #over write the objects in place, but instead just grow the lists inappropriately
                       #also some of the lines below may be superflous in terms of machine instructions, but
                       #they function to make the code more explicit and human readable.
-                      ind = pop_rh
-                      assert ind.rheobase == pop_rh.rheobase
-                      pop[i] = ind
-                      vmpop[i] = temp
-                 
-                 
+                      #ind = pop_rh
+                     ind.rheobase = pop_rh.rheobase
+                     pop[i] = ind
+                     vmpop[i] = pop_rh
+                     print(pop_rh.rheobase, 'rheobase value is updating')
+                     assert ind.rheobase == pop_rh.rheobase == vmpop[i].rheobase
+
+
+
     assert len(pop)!=0
     assert len(vmpop)==len(pop)
     return pop, vmpop
