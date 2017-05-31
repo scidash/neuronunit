@@ -28,16 +28,19 @@
 # width = x.mean # Mean Spike width reported across all matching papers. 
 # ...
 
+
+import json
+from pprint import pprint
+import shelve
 try: # Python 2
     from urllib import urlencode
     from urllib2 import urlopen,URLError
 except ImportError: # Python 3
     from urllib.parse import urlencode
     from urllib.request import urlopen,URLError
-import json
-from pprint import pprint
-from math import sqrt
+
 import numpy as np
+
 
 API_VERSION = 1
 API_SUFFIX = '/api/%d/' % API_VERSION
@@ -48,29 +51,39 @@ else:
     DOMAIN = 'http://www.neuroelectro.org'
 API_URL = DOMAIN+API_SUFFIX
 
+
+class NeuroElectroError(Exception):
+    pass
+
+
 class Neuron:
     id = None
     nlex_id = None
     name = None
+
 
 class EphysProp:
     id = None
     nlex_id = None
     name = None
 
+
 class Article:
     id = None
     pmid = None
- 
+
+
 class NeuroElectroData(object):
     """Abstract class based on neuroelectro.org data using that site's API."""
-    def __init__(self,neuron=None,ephysprop=None,get_values=False):
+    def __init__(self, neuron=None, ephysprop=None, \
+                       get_values=False, cached=True):
         if neuron:
             for key,value in neuron.items():
                 setattr(self.neuron,key,value)
         if ephysprop:
             for key,value in ephysprop.items():
                 setattr(self.ephysprop,key,value)
+        self.cached = cached
         if get_values:
             self.get_values()
 
@@ -128,13 +141,15 @@ class NeuroElectroData(object):
             url_result = urlopen(url,None,3) # Get the page.
             html = url_result.read() # Read out the HTML (actually JSON)
         except URLError as e:
-            html = e.read().decode('utf-8')
-            self.json_object = json.loads(html)
-            if 'error_message' in self.json_object:
-                if self.json_object['error_message'] == "Neuron matching query does not exist.":
-                    print("No matching neuron found at NeuroElectro.org.")
-            else:
-                print("NeuroElectro.org appears to be down.")
+            try:
+                html = e.read().decode('utf-8')
+                self.json_object = json.loads(html)
+                if 'error_message' in self.json_object:
+                    raise NeuroElectroError(self.json_object['error_message'])
+            except:
+                if hasattr(e,'reason'):
+                    raise NeuroElectroError(e.reason)
+            raise NeuroElectroError("NeuroElectro.org appears to be down.")
             #print "Using fake data for now."
             #html = '{"objects":[{"n":{"name":"CA1 Pyramidal Cell"},
             #					  "e":{"name":"Spike Width"},\
@@ -146,14 +161,24 @@ class NeuroElectroData(object):
             self.json_object = json.loads(html)
         return self.json_object
 
+    def get_cached_json(self, params=None):
+        pass
+
     def get_values(self, params=None, quiet=False):
         """Gets values from neuroelectro.org.
         We will use 'params' in the future to specify metadata (e.g. temperature)
         that neuroelectro.org will provide."""
+        db = shelve.open('neuroelectro-cache') if self.cached else {}
+        identifier = str(hash(params))
         if not quiet:
-            print("Getting %s data values from neuroelectro.org" \
-                  % self.ephysprop.name)
-        self.get_json(params=params, quiet=quiet)
+            print("Getting %s%s data values from neuroelectro.org" \
+                   % ("cached " if identifier in db else "", \
+                      self.ephysprop.name))
+        if identifier in db:
+            self.json_object = json.loads(db[identifier])
+        else:
+            self.get_json(params=params, quiet=quiet)
+            db[identifier] = json.dumps(self.json_object)
         if 'objects' in self.json_object:
             data = self.json_object['objects']
         else:
@@ -167,6 +192,8 @@ class NeuroElectroData(object):
         # For now, we are just going to take the first match.
         # If neuron_id and ephysprop_id where both specified,
         # there should be only one anyway.
+        if self.cached:
+            db.close()
         return self.api_data
 
     def check(self):
@@ -177,6 +204,7 @@ class NeuroElectroData(object):
                 if not hasattr(self,attr):
                     raise AttributeError(("The attribute '%s' was "
                                           "not found.") % attr)
+
 
 class NeuroElectroDataMap(NeuroElectroData):
     """Class for getting single reported values from neuroelectro.org."""
@@ -199,8 +227,8 @@ class NeuroElectroDataMap(NeuroElectroData):
         return url
 
     def get_values(self, params=None, quiet=False):
-        data = super(NeuroElectroDataMap,self).get_values(params=params, \
-                                                              quiet=quiet)
+        data = super(NeuroElectroDataMap,self).get_values(params=params,
+                                                          quiet=quiet)
         if data:
             self.neuron_name = data['ncm']['n']['name']
             # Set the neuron name from the json data.
@@ -221,7 +249,7 @@ class NeuroElectroSummary(NeuroElectroData):
     require_attrs = ['mean','std']
 
     def get_values(self, params=None, quiet=False):
-        data = super(NeuroElectroSummary, self).get_values(params=params, \
+        data = super(NeuroElectroSummary, self).get_values(params=params,
                                                            quiet=quiet)
         if data:
             self.neuron_name = data['n']['name']
@@ -234,7 +262,7 @@ class NeuroElectroSummary(NeuroElectroData):
             self.check()
         return data
 
-    def get_observation(self,params=None,show=False):
+    def get_observation(self, params=None, show=False):
         values = self.get_values(params=params)
         if show:
             pprint(values)
@@ -256,7 +284,8 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
 
         params['limit'] = 999
 
-        data = super(NeuroElectroPooledSummary, self).get_values(params=params, quiet=quiet)
+        data = super(NeuroElectroPooledSummary,self).get_values(params=params,\
+                                                                quiet=quiet)
 
         if data:
             # Ensure data from api matches the requested params
@@ -291,7 +320,7 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
 
         return self.items
 
-    def get_observation(self,params=None,show=False):
+    def get_observation(self, params=None, show=False):
         values = self.get_values(params=params)
 
         if show:
@@ -358,7 +387,7 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
 
         grand_mean = np.sum(ns_np * means_np) / n_sum
         grand_sd = np.sqrt( np.sum( (ns_np-1)*(sds_np**2) ) / np.sum(ns_np-1) )
-        grand_sem = grand_sd / sqrt(n_sum)
+        grand_sem = grand_sd / np.sqrt(n_sum)
 
         return { 'mean': grand_mean, 'sem': grand_sem, 'std': grand_sd, 'n': n_sum, 'items': lines }
 
@@ -381,10 +410,10 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
 
             # Check if sem or sd is computable
             if sems[i] is None and sds[i] is not None:
-                sems[i] = sds[i] / sqrt(ns[i])
+                sems[i] = sds[i] / np.sqrt(ns[i])
 
             if sds[i] is None and sems[i] is not None:
-                sds[i] = sems[i] * sqrt(ns[i])
+                sds[i] = sems[i] * np.sqrt(ns[i])
 
         # Fill in the remaining missing using median sd
         none_free_sds = np.array(sds)[sds != np.array(None)]
@@ -401,19 +430,4 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
         for i,_ in enumerate(sds):
             if sds[i] is None:
                 sds[i] = sd_median
-                sems[i] = sd_median / sqrt(ns[i])
-
-def test_module():
-    x = NeuroElectroDataMap()
-    x.set_neuron(id=72)
-    x.set_ephysprop(id=2)
-    x.set_article(pmid=18667618)
-    x.get_values()
-    x.check()
-
-    x = NeuroElectroSummary()
-    x.set_neuron(id=72)
-    x.set_ephysprop(id=2)
-    x.get_values()
-    x.check()
-    print("Tests passed.")
+                sems[i] = sd_median / np.sqrt(ns[i])
