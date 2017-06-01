@@ -1,36 +1,32 @@
+"""Model classes for NeuronUnit"""
+
 import os
 from copy import deepcopy
 import tempfile
 import shutil
 import inspect
-import types
 
-import numpy as np
 import sciunit
 import neuronunit.capabilities as cap
 from pyneuroml import pynml
-from neo.core import AnalogSignal
-from quantities import ms,mV,Hz
 
-from .channel import *
 from . import backends
-
 
 
 class LEMSModel(sciunit.Model, cap.Runnable):
     """A generic LEMS model"""
 
-    def __init__(self, LEMS_file_path=None, name=None, backend=None, attrs={}):
+    def __init__(self, LEMS_file_path=None, name=None, 
+                 backend=None, attrs=None):
         """
         LEMS_file_path: Path to LEMS file (an xml file).
         name: Optional model name.
         """
 
         super(LEMSModel,self).__init__(name=name)
-
-
+        self.attrs = attrs if attrs else {}
         self.orig_lems_file_path = LEMS_file_path
-        self.create_lems_file(name,attrs)
+        self.create_lems_file(name)
         self.run_defaults = pynml.DEFAULTS
         self.run_defaults['nogui'] = True
         self.run_params = {}
@@ -39,6 +35,8 @@ class LEMSModel(sciunit.Model, cap.Runnable):
         self.rerun = True # Needs to be rerun since it hasn't been run yet!
         if name is None:
             name = os.path.split(self.lems_file_path)[1].split('.')[0]
+        if backend is None:
+            backend = 'jNeuroML'
         self.set_backend(backend)
         self.load_model()
         self.attrs={}
@@ -46,16 +44,16 @@ class LEMSModel(sciunit.Model, cap.Runnable):
     #This is the part that decides if it should inherit from NEURON backend.
 
     def set_backend(self, backend):
-        if type(backend) is str:
+        if isinstance(backend,str):
             name = backend
             args = []
             kwargs = {}
-        elif type(backend) in (tuple,list):
+        elif isinstance(backend,(tuple,list)):
             name = backend[0]
             args = backend[1]
             kwargs = backend[2]
         else:
-            raise "Backend must be string, tuple, or list"
+            raise TypeError("Backend must be string, tuple, or list")
         options = {x.replace('Backend',''):cls for x, cls \
                    in backends.__dict__.items() \
                    if inspect.isclass(cls) and \
@@ -76,15 +74,15 @@ class LEMSModel(sciunit.Model, cap.Runnable):
                              "must be selected"))
         else:
             raise Exception("Backend %s not found in backends.py" \
-                            % backend_name)
+                            % name)
 
-    def create_lems_file(self, name, attrs):
+    def create_lems_file(self, name):
         if not hasattr(self,'temp_dir'):
             self.temp_dir = tempfile.gettempdir()
         self.lems_file_path  = os.path.join(self.temp_dir, '%s.xml' % name)
         shutil.copy2(self.orig_lems_file_path, self.lems_file_path)
-        if attrs:
-            self.set_lems_attrs(attrs)
+        if self.attrs:
+            self.set_lems_attrs(self.attrs)
 
     def set_lems_attrs(self, attrs):
         from lxml import etree
@@ -99,24 +97,24 @@ class LEMSModel(sciunit.Model, cap.Runnable):
     def run(self, rerun=None, **run_params):
         if rerun is None:
             rerun = self.rerun
-        self.run_params.update(run_params)
+        self.set_run_params(**run_params)
         for key,value in self.run_defaults.items():
             if key not in self.run_params:
-                self.run_params[key] = value
+                self.set_run_params(**{key:value})
         if (not rerun) and hasattr(self,'last_run_params') and \
            self.run_params == self.last_run_params:
             return
 
-        self.update_run_params(run_params)
         #self.update_run_params(self.attrs)
 
         self.results = self.local_run()
         self.last_run_params = deepcopy(self.run_params)
         self.rerun = False
-        self.run_params = {} # Reset run parameters so the next test has to pass
-                             # its own run parameters and not use the same ones
+        # Reset run parameters so the next test has to pass its own 
+        # run parameters and not use the same ones
+        self.run_params = {}    
 
-    def update_lems_run_params(self):
+    def set_lems_run_params(self):
         from lxml import etree
         from neuroml import nml
         lems_tree = etree.parse(self.lems_file_path)
@@ -134,7 +132,7 @@ class LEMSModel(sciunit.Model, cap.Runnable):
             for key,value in self.run_params.items():
                 if key == 'injected_square_current':
                     pulse_generators = tree.findall('pulseGenerator')
-                    for i,pg in enumerate(pulse_generators):
+                    for pg in pulse_generators:
                         for attr in ['delay', 'duration', 'amplitude']:
                             if attr in value:
                                 #print('Setting %s to %f' % (attr,value[attr]))
