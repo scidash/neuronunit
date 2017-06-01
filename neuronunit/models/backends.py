@@ -96,6 +96,13 @@ class NEURONBackend(Backend):
     #make backend a global variable inside this class.
     backend = 'NEURON'
 
+
+
+
+    def re_init(self,attrs):
+        self.update_run_params(attrs)
+
+
     def invokenrn(self):
         """Sets the NEURON h variable"""
         #Should check if MPI parallel neuron is supported and invoked.
@@ -321,12 +328,6 @@ class NEURONBackend(Backend):
 
 
 
-    def re_init(self,attrs):
-        #self.load_model()
-        self.update_run_params(attrs)
-        #print(attrs)
-        #self.h.psection()
-
 
     def inject_square_current(self,current):
         '''
@@ -338,8 +339,6 @@ class NEURONBackend(Backend):
         where 'pq' is the quantities package
         '''
         self.re_init(self.attrs)
-        #print(self.attrs)
-        #self.h.psection()
         c=copy.copy(current)
         if 'injected_square_current' in c.keys():
             c=current['injected_square_current']
