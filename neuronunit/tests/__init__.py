@@ -210,6 +210,7 @@ class VmTest(sciunit.Test):
 
 class TestPulseTest(VmTest):
     """A base class for tests that use a square test pulse"""
+    score_type = scores.ZScore
 
     required_capabilities = (cap.ReceivesSquareCurrent,)
 
@@ -286,15 +287,17 @@ class TestPulseTest(VmTest):
 
 class InputResistanceTest(TestPulseTest):
     """Tests the input resistance of a cell."""
-
+    score_type = scores.ZScore
     name = "Input resistance test"
+
+    score_type = scores.RatioScore
 
     description = ("A test of the input resistance of a cell.")
 
     units = pq.ohm*1e6
 
     ephysprop_name = 'Input Resistance'
-
+    
     def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
         i,vm = super(InputResistanceTest,self).\
@@ -304,7 +307,6 @@ class InputResistanceTest(TestPulseTest):
         # Put prediction in a form that compute_score() can use.
         prediction = {'value':r_in}
         return prediction
-
 
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
@@ -318,9 +320,11 @@ class InputResistanceTest(TestPulseTest):
                                                           prediction)
         return score
 
+
+
 class TimeConstantTest(TestPulseTest):
     """Tests the input resistance of a cell."""
-
+    score_type = scores.ZScore
     name = "Time constant test"
 
     description = ("A test of membrane time constant of a cell.")
@@ -353,7 +357,7 @@ class TimeConstantTest(TestPulseTest):
 
 class CapacitanceTest(TestPulseTest):
     """Tests the input resistance of a cell."""
-
+    score_type = scores.ZScore
     name = "Capacitance test"
 
     description = ("A test of the membrane capacitance of a cell.")
@@ -427,7 +431,7 @@ class InjectedCurrentAPWidthTest(APWidthTest):
     Tests the full widths of APs at their half-maximum
     under current injection.
     """
-
+    score_type = scores.ZScore
     required_capabilities = (cap.ReceivesSquareCurrent,)
 
     params = {'injected_square_current':
@@ -501,7 +505,7 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
     Tests the heights (peak amplitude) of action potentials
     under current injection.
     """
-
+    score_type = scores.ZScore
     required_capabilities = (cap.ReceivesSquareCurrent,)
 
     params = {'injected_square_current':
@@ -562,7 +566,7 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
     Tests the thresholds of action potentials
     under current injection.
     """
-
+    score_type = scores.ZScore
     required_capabilities = (cap.ReceivesSquareCurrent,)
 
     params = {'injected_square_current':
@@ -601,6 +605,7 @@ class RheobaseTestHacked(VmTest):
 
     units = pq.pA
     score_type = scores.RatioScore
+
 
     def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
