@@ -214,7 +214,15 @@ def check_fix_range(vms):
         everything=np.concatenate((sub,supra))
 
         center = np.linspace(sub.max(),supra.min(),7.0)
-        np.delete(center,np.array(everything))
+        centerl = list(center)
+        for i,j in enumerate(centerl):
+            if i in list(everything):
+                np.delete(center,i)
+                del centerl[i]
+                print(i)
+        #print(i,j,'stuck in a loop')
+        #delete the index        
+        #np.delete(center,np.where(everything is in center))
         #make sure that element 4 in a seven element vector
         #is exactly half way between sub.max() and supra.min()
         center[int(len(center)/2)+1]=(sub.max()+supra.min())/2.0
