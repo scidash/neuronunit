@@ -17,7 +17,7 @@ from . import backends
 
 
 
-class LEMSModel(sciunit.Model, cap.Runnable):
+class LEMSModel(sciunit.Model):
     """A generic LEMS model"""
 
     def __init__(self,LEMS_file_path=None, name=None, backend=None, attrs={}):
