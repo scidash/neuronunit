@@ -1,11 +1,14 @@
+"""NeuronUnit model class for ion channels models"""
+
 import os
 
 import sciunit
-from neuronunit.capabilities.channel import *
+import neuronunit.capabilities.channel as cap
 from pyneuroml.analysis import NML2ChannelAnalysis as ca
 import quantities as pq
 
-class ChannelModel(sciunit.Model, NML2_Channel_Runnable, ProducesIVCurve):
+class ChannelModel(sciunit.Model, cap.NML2_Channel_Runnable, 
+                                  cap.ProducesIVCurve):
     """A model for ion channels"""
     
     def __init__(self, channel_file_path, channel_index=0, name=None):
@@ -27,7 +30,7 @@ class ChannelModel(sciunit.Model, NML2_Channel_Runnable, ProducesIVCurve):
         super(ChannelModel,self).__init__(name=name)
     
     def NML2_run(self, rerun=False, a=None, verbose=None, **run_params):
-        if not len(run_params):
+        if not run_params:
             run_params = self.run_defaults
         a = ca.build_namespace(a=a,**run_params) # Convert keyword args to a namespace. 
         if verbose is None:

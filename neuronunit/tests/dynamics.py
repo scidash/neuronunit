@@ -1,3 +1,5 @@
+"""NeuronUnit test classes for testing model dynamics"""
+
 import numpy as np
 import quantities as pq
 from elephant.statistics import isi
