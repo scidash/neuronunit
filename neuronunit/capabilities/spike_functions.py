@@ -1,10 +1,11 @@
 """Auxiliary helper functions for analysis of spiking"""
 
-import sciunit as su
 import numpy as np
 import neo
 from elephant.spike_train_generation import threshold_detection
 from quantities import mV, ms
+
+import sciunit
 
 def get_spike_train(vm, threshold=0.0*mV):
     """
@@ -85,8 +86,8 @@ def spikes2widths(spike_waveforms):
                 thresh = (s[x_loc]+s[x_loc+1])/2
                 mid = (high+thresh)/2
             except: # Use minimum value to compute half-max.
-                su.log(("Could not compute threshold; using pre-spike "
-                        "minimum to compute width"))
+                sciunit.log(("Could not compute threshold; using pre-spike "
+                             "minimum to compute width"))
                 low = np.min(s[:x_high])
                 mid = (high+low)/2
             n_samples = sum(s>mid) # Number of samples above the half-max.
