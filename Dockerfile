@@ -3,7 +3,6 @@
 
 FROM scidash/neuron-mpi-neuroml
 
-# Make neuronunit source directory in Travis image visible to Docker.
 USER root
 ARG MOD_DATE=0
 RUN echo $MOD_DATE
