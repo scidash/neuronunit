@@ -1,22 +1,20 @@
-"""Unit tests for NeuronUnit"""
+"""Unit tests for the core of NeuronUnit"""
 
 # Run with any of:  
-# python test_all.py
-# python -m unittest test_all.py
-
-# coverage run --source . test_all.py
+# python core_tests.py
+# python -m unittest core_tests.py
+# coverage run --source . core_tests.py
 
 import unittest
 import sys
 import os
 import warnings
+import pdb
 
-import nbformat
-from nbconvert.preprocessors import ExecutePreprocessor
+from sciunit.utils import NotebookTools
 
 # CONVERT_NOTEBOOKS environment variable controls whether notebooks are
 # executed as notebooks or converted to regular python files first. 
-
 
 class DocumentationTestCase(NotebookTools,unittest.TestCase):
     """Testing documentation notebooks"""
@@ -27,29 +25,20 @@ class DocumentationTestCase(NotebookTools,unittest.TestCase):
     def test_chapter1(self):
         self.do_notebook('chapter1')
 
-    #@unittest.skip("Skipping chapter 2")
-    def test_chapter2(self):
-        self.do_notebook('chapter2')
+class EphysPropertiesTestCase(NotebookTools,unittest.TestCase):
+    """Testing sciunit tests of ephys properties"""
 
-    #@unittest.skip("Skipping chapter 3")
-    def test_chapter3(self):
-        self.do_notebook('chapter3')
-
-    @unittest.skip("Skipping chapter 4")
-    def test_chapter4(self):
-        self.do_notebook('chapter4')
-
-
-class SciunitTestTestCase(NotebookTools,unittest.TestCase):
-    """Testing documentation notebooks"""
+    path = 'unit_test'
 
     #@unittest.skip("Skipping get_tau test")
     def test_get_tau(self):
         self.do_notebook('get_tau')
 
 
-class NeuroelectroTestCase(unittest.TestCase):
-    def test_neuroelectro():
+class NeuroElectroTestCase(unittest.TestCase):
+    """Testing retrieval of data from NeuroElectro.org"""
+
+    def test_neuroelectro(self):
         from neuronunit.neuroelectro import NeuroElectroDataMap,\
                                             NeuroElectroSummary
         x = NeuroElectroDataMap()
@@ -64,7 +53,7 @@ class NeuroelectroTestCase(unittest.TestCase):
         x.set_ephysprop(id=2)
         x.get_values()
         x.check()
-
+        
 
 if __name__ == '__main__':
     unittest.main()
