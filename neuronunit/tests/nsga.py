@@ -159,7 +159,7 @@ def evaluate(individual,vms):#This method must be pickle-able for scoop to work.
     #Its very important to reset the model here. Such that its vm is new, and does not carry charge from the last simulation
     model.load_model()
 
-    individual.model=model.update_run_params(attrs)
+    individual.model = model.set_run_params(**attrs)
     sane = False
     #model.update_run_params(vm.attrs)
 
@@ -265,7 +265,7 @@ def test_current(ampl,vm):
 
         current={'injected_square_current':current}
         vm.run_number+=1
-        model.update_run_params(vm.attrs)
+        model.set_run_params(**vm.attrs)
 
         model.load_model()
         #print('got here 1')
