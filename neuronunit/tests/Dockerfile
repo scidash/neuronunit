@@ -50,6 +50,7 @@ RUN ipython profile create default
 #RUN python setup.py install
 #This line python-tk is a problem
 #RUN apt-get install -y python-tk
+
 RUN python -c "import matplotlib"
 
 RUN chown -R jovyan $HOME
@@ -154,10 +155,16 @@ RUN echo "import os">> run_ipp1.p
 HEALTHCHECK CMD /opt/conda/bin/ipython3 -c "import sys; print(sys.path)"
 #RUN /opt/conda/bin/ipython3 -c "import os; print(sys.path)"
 
-WORKDIR /opt/conda/lib/python3.5/site-packages
-RUN rm -r PyQt*
+#WORKDIR /opt/conda/lib/python3.5/site-packages
+#RUN rm -r PyQt*
+
+#RUN pip uninstall -y python-tk
+#RUN conda uninstall python-tk
+#RUN pip uninstall pyqt
 
 RUN echo "backend      : Agg" >> /opt/conda/lib/python3.5/site-packages/matplotlib/mpl-data/matplotlibrc
+
+WORKDIR /home/mnt
 
 HEALTHCHECK CMD /opt/conda/bin/ipython3 -c "from ipyparallel import Client; import os; os.system('ipcluster start --profile=chase --debug &')"
 # /opt/conda/bin/python3 exhaustive_search.py

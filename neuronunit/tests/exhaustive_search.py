@@ -6,22 +6,6 @@ import pdb
 import array
 import random
 
-
-"""
-Scoop can only operate on variables classes and methods at top level 0
-This means something with no indentation, no nesting,
-and no virtual nesting (like function decorators etc)
-anything that starts at indentation level 0 is okay.
-
-However the case may be different for functions. Functions may be imported from modules.
-I am unsure if it is only the case that functions can be imported from a module, if they are not bound to
-any particular class in that module.
-
-Code from the DEAP framework, available at:
-https://code.google.com/p/deap/source/browse/examples/ga/onemax_short.py
-from scoop import futures
-"""
-
 import numpy as np
 import matplotlib.pyplot as plt
 import quantities as pq
@@ -42,7 +26,6 @@ import sciunit.scores as scores
 global gs
 import grid_search as gs
 
-#import grid_search as gs
 model=gs.model
 
 
@@ -57,41 +40,41 @@ if __name__ == "__main__":
     iter_list=[ i for i in modelp.model_params['a'] ]
     #iter_list=iter_list[0:1]
     #import grid_search as gs
-
+    import pdb
+    #pdb.set_trace()
     mean_vm=gs.VirtualModel()
-    guess_attrs = modelp.guess_attrs[0]
+    modelp.guess_attrs[0]
     #paramslist=['a','b','vr','vpeak']
     paramslist=['a']#,'b','vr','vpeak']
 
-    #param
-    value=guess_attrs
-    print(value)
-    x=paramslist[0]
-    model.name = str(model.name)+' '+str(x)+str(value)
-    #if i==0:
-    attrs = {'//izhikevich2007Cell':{x:value }}
-    #else:
-    attrs['//izhikevich2007Cell'][x]=value
+
+    model.name = str(model.name)+' '+str(paramslist[0])+str(modelp.guess_attrs[0])
+
+    #Its stupid that the attributes dictionary is formatted this way
+    #attrs = {'izhikevich2007Cell'}#:{x:value }}
+    attrs = {}
+    attrs[paramslist[0]]=modelp.guess_attrs[0]
+    print(attrs)
+    import pdb
     mean_vm.attrs=attrs
+    #pdb.set_trace()
 
     steps = np.linspace(50,150,7.0)
     steps_current = [ i*pq.pA for i in steps ]
-    model.re_init(mean_vm.attrs)
-
-
+    model.update_run_params(params=mean_vm.attrs)
+    #pdb.set_trace()
 
     rh_param=(False,steps_current)
-
-    pre_rh_value=gs.searcher(gs.check_current,rh_param,mean_vm)
-    rh_value=pre_rh_value.rheobase
-    list_of_models=list(futures.map(gs.model2map,iter_list))
-    print('gets here c')
+    print(steps_current)
+    print(rh_param,'rh_param', len(rh_param))
+    pre_rh_value = gs.searcher(rh_param,mean_vm)
+    rh_value = pre_rh_value.rheobase
+    list_of_models = list(futures.map(gs.model2map,iter_list))
 
     for li in list_of_models:
         print(li.rheobase, li.attrs)
     from itertools import repeat
     rhstorage=list(futures.map(gs.evaluate,list_of_models,repeat(rh_value)))
-    print('gets here b')
 
     for x in rhstorage:
         x=x.rheobase
@@ -100,16 +83,16 @@ if __name__ == "__main__":
             steps = np.linspace(40,250,7.0)
             steps_current = [ i*pq.pA for i in steps ]
             rh_param=(False,steps_current)
-            rh_value=gs.searcher(gs.check_current,rh_param,vm_spot)
+            rh_value=gs.searcher(rh_param,vm_spot)
 
     rhstorage2 = [i.rheobase for i in rhstorage]
-    rhstorage=rhstorage2
+    rhstorage = rhstorage2
     iter_ = zip(list_of_models,rhstorage)
-    print('gets here a')
+
     score_matrixt=list(futures.map(gs.func2map,iter_))#list_of_models,rhstorage))
     print(score_matrixt)
     import pdb
-    pdb.set_trace()
+    #pdb.set_trace()
     import pickle
     with open('score_matrix.pickle', 'wb') as handle:
         pickle.dump(score_matrixt, handle)
@@ -164,7 +147,7 @@ if __name__ == "__main__":
         import sciunit.scores as scores
         import quantities as qt
         vm = VirtuaModel()
-        rh_value=searcher(check,rh_param,vms)
+        rh_value=searcher(rh_param,vms)
         get_neab.suite.tests[0].prediction={}
         get_neab.suite.tests[0].prediction['value']=rh_value*qt.pA
         score = get_neab.suite.judge(model)#passing in model, changes model
@@ -177,7 +160,7 @@ if __name__ == "__main__":
 
 
 
-    import pdb; pdb.set_trace()
+    #import pdb; pdb.set_trace()
     import matplotlib as plt
     for i,s in enumerate(score_typev[np.shape(storagesmin)[0]]):
         #.related_data['vm']

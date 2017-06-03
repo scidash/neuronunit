@@ -106,7 +106,7 @@ class LEMSModel(sciunit.Model):
            self.run_params == self.last_run_params:
             return
 
-        self.update_run_params(run_params)
+        self.update_run_params(params=run_params)
         #self.update_run_params(self.attrs)
 
         self.results = self.local_run()
