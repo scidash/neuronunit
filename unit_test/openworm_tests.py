@@ -17,10 +17,10 @@ class DocumentationTestCase(NotebookTools,unittest.TestCase):
 
     path = 'docs'
 
-    #@unittest.skip("Skipping chapter 3")
-    def test_chapter3(self):
-        self.do_notebook('chapter3')
-        
+    #@unittest.skip("Skipping chapter 2")
+    def test_chapter2(self):
+        self.do_notebook('chapter2')
+
 
 if __name__ == '__main__':
     unittest.main()
