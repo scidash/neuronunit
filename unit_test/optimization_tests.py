@@ -1,24 +1,27 @@
-"""Unit tests for NeuronUnit"""
+"""Unit tests for the showcase features of NeuronUnit"""
+
+# Run with any of:  
+# python showcase_tests.py
+# python -m unittest showcase_tests.py
+# coverage run --source . showcase_tests.py
 
 import unittest
-import sys
-import os
-import warnings
-from scoop import futures
 import os
 
+from scoop import futures
 import quantities as pq
 
 
 class OptimizationTestCase(unittest.TestCase):
+    """Testing model optimization"""
 
-    def test_func2map(self, file2map):
+    def func2map(self, file2map):
         exec_string='python '+str(file2map)
         os.system(exec_string)
         return 0
 
     def test_main(self, ind, guess_attrs=None):
-        vm=VirtualModel()
+        vm = VirtualModel()
         if guess_attrs!=None:
             for i, p in enumerate(param):
                 value=str(guess_attrs[i])
@@ -33,8 +36,8 @@ class OptimizationTestCase(unittest.TestCase):
             import copy
             vm.attrs=ind.attrs
 
-        begin_time=time.time()
-        while_true=True
+        begin_time = time.time()
+        while_true = True
         while(while_true):
             from itertools import repeat
             if len(vm.lookup)==0:
@@ -45,9 +48,8 @@ class OptimizationTestCase(unittest.TestCase):
             m = lookup2[0]
             assert(type(m))!=None
 
-            sub=[]
-            supra=[]
-            import pdb
+            sub = []
+            supra = []
             assert(type(m.lookup))!=None
             for k,v in m.lookup.items():
                 if v==1:
@@ -60,8 +62,8 @@ class OptimizationTestCase(unittest.TestCase):
                     sub.append(k)
                 elif v>0:
                     supra.append(k)
-            sub=np.array(sub)
-            supra=np.array(supra)
+            sub = np.array(sub)
+            supra = np.array(supra)
             if len(sub) and len(supra):
                 steps2 = np.linspace(sub.max(),supra.min(),4.0)
                 steps = [ i*pq.pA for i in steps2 ]
@@ -75,14 +77,12 @@ class OptimizationTestCase(unittest.TestCase):
 
             lookup2=list(map(f,steps,repeat(vm)))
 
-
-
     def test_build_single(self, rh_value):
         '''
         This method is only used to check singlular sets of hard coded parameters.
         '''
-        get_neab.suite.tests[0].prediction={}
-        get_neab.suite.tests[0].prediction['value']=rh_value*pq.pA
+        get_neab.suite.tests[0].prediction = {}
+        get_neab.suite.tests[0].prediction['value'] = rh_value*pq.pA
         print(get_neab.suite.tests[0].prediction['value'])
         attrs={}
         attrs['//izhikevich2007Cell']={}
@@ -96,16 +96,17 @@ class OptimizationTestCase(unittest.TestCase):
         error = [ abs(i.score) for i in score.unstack() ]
         return model
 
-
     def test_run_all_files(self):
         '''
         run all files as different CPU threads, thus saving time on travis
         Since scoop is designed to facilitate nested forking/parallel job dispatch
         This approach should be scalable to larger CPU pools.
         '''
-        files_to_exec=['exhaustive_search.py','nsga.py']
-        clean_or_dirty=list(futures.map(testfunc2map,files_to_exec))
+        files_to_exec=['neuronunit/tests/exhaustive_search.py',
+                       'neuronunit/tests/nsga.py']
+        clean_or_dirty=list(futures.map(self.func2map,files_to_exec))
         return clean_or_dirty
+        
 
 if __name__ == '__main__':
     unittest.main()

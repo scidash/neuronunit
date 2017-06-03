@@ -14,4 +14,4 @@ WORKDIR $HOME/neuronunit
 RUN python setup.py install
 
 # Run all unit tests.
-ENTRYPOINT python -m unittest unit_test/test_*.py
+ENTRYPOINT python -m unittest unit_test/core_tests.py
