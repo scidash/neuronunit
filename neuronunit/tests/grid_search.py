@@ -91,45 +91,36 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
     tests of emperical data reproducibility.
     '''
     iter_arg,value=iter_
-    print('failed here')
     assert iter_arg.attrs is not type(None)
     model.load_model()
-    #import pdb
     model.update_run_params(iter_arg.attrs)
-    #model.update_run_params(model.params)
-    #assert model.params==iter_arg.attrs
     print(model.params)
-    #import pdb
-    #pdb.set_trace()
     import quantities as qt
     import os
     import os.path
-    #from scoop import utils
     score = None
     sane = False
-
     sane = get_neab.suite.tests[3].sanity_check(value*pq.pA,model)
-
     uc = {'amplitude':value}
     current = params.copy()['injected_square_current']
     current.update(uc)
     current = {'injected_square_current':current}
-    #if len(model.params) == 0:
-        #model.re_init(model.params)
     model.inject_square_current(current)
     n_spikes = model.get_spike_count()
-    #print(n_spikes)
     print(str(n_spikes), str('=='), str('its still possible that rheobase was not found'))
     assert n_spikes == 1 or n_spikes == 0
 
     if sane == True and n_spikes == 1:
         #we are not using the rheobase test from the test suite, we are using a custom parallel rheobase test
         #instead.
-        del get_neab.suite.tests[0]
+        #del get_neab.suite.tests[0]
         for i in [3,4,5]:
+
             get_neab.suite.tests[i].params['injected_square_current']['amplitude']=value*pq.pA
         get_neab.suite.tests[0].prediction={}
+
         score = get_neab.suite.tests[0].prediction['value']=value*pq.pA
+        print(get_neab.suite.tests[0].prediction['value'],value)
         score = get_neab.suite.judge(model)#passing in model, changes model
         import neuronunit.capabilities as cap
         spikes_numbers=[]
