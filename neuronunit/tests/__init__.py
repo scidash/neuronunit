@@ -15,9 +15,9 @@ import sciunit
 import sciunit.scores as scores
 
 import neuronunit.capabilities as cap
-#import neuronunit.capabilities.spike_functions as sf
+import neuronunit.capabilities.spike_functions as sf
 from neuronunit import neuroelectro
-#from .channel import *
+from .channel import *
 from scoop import futures
 
 AMPL = 0.0*pq.pA
@@ -38,8 +38,11 @@ class VmTest(sciunit.Test):
             cap += cls.required_capabilities
         self.required_capabilities += tuple(cap)
         self._extra()
-    
+
     required_capabilities = (cap.ProducesMembranePotential,)
+
+    score_type = scores.ZScore
+
 
     name = ''
 
@@ -100,7 +103,7 @@ class VmTest(sciunit.Test):
             ax.set_xlabel('Time (s)')
             ax.set_ylabel('Vm (mV)')
         score.plot_vm = MethodType(plot_vm, score) # Bind to the score.
-        score.unpicklable.append('plot_vm')
+        #score.unpicklable.append('plot_vm')
         return score
 
     @classmethod
@@ -161,7 +164,12 @@ class VmTest(sciunit.Test):
             x = np.array(mp).std()
             if x == 0:
                 return False
-        model.re_init(model.attrs)
+        #update run params is necessary to over write previous recording
+        #vectors
+        #Its also necessary to destroy and recreate the model in the HOC memory space
+        #As models that persist in memory, retained model charge from current injections,
+        #from past simulations.
+        model.update_run_params(model.params)
         #mp = np.array(copy.copy(model.results['vm']))
         mp = model.results['vm']
         import math
@@ -174,7 +182,7 @@ class VmTest(sciunit.Test):
             return False
         self.params['injected_square_current']['amplitude'] = -10.0
         model.inject_square_current(self.params['injected_square_current'])
-        model.re_init(model.attrs)
+        model.update_run_params(model.params)
         mp = np.array(copy.copy(model.results['vm']))
         boolean = nan_test(mp)
         if boolean == False:
@@ -183,10 +191,7 @@ class VmTest(sciunit.Test):
         import neuronunit.capabilities as cap
 
         sws=cap.spike_functions.get_spike_waveforms(model.get_membrane_potential())
-        #sws = model.get_spike_waveforms()
-        #print(sws)
 
-        #sws=spike_functions.get_spike_waveform(mp)
         for i,s in enumerate(sws):
             s = np.array(s)
             dvdt = np.diff(s)
@@ -237,9 +242,9 @@ class TestPulseTest(VmTest):
 
     @classmethod
     def get_tau(cls, vm, i):
-        # 10 ms before pulse start or halfway between sweep start 
+        # 10 ms before pulse start or halfway between sweep start
         # and pulse start, whichever is longer
-        start = max(i['delay']-10*pq.ms,i['delay']/2) 
+        start = max(i['delay']-10*pq.ms,i['delay']/2)
         stop = i['duration']+i['delay']-1*pq.ms # 1 ms before pulse end
         region = cls.get_segment(vm,start,stop)
         amplitude,tau,y0 = cls.exponential_fit(region, i['delay'])
@@ -260,25 +265,41 @@ class TestPulseTest(VmTest):
                    10, # time constant (ms)
                    vm.max()] # y0 (mV)
         vm_fit = vm.copy()
-        
+
         def func(x, a, b, c):
             vm_fit[:offset] = c
             vm_fit[offset:] = a * np.exp(-t[offset:]/b) + c
             return vm_fit
-        
+
         popt, pcov = curve_fit(func, t, vm, p0=guesses) # Estimate starting values for better convergence
-        #plt.plot(t,vm)
-        #plt.plot(t,func(t,*popt))
-        #print(popt)
+
         amplitude = popt[0]*pq.mV
         tau = popt[1]*pq.ms
         y0 = popt[2]*pq.mV
         return amplitude,tau,y0
+    '''
+    @classmethod
+    def compute_score(self, observation, prediction):
+        """Implementation of sciunit.Test.score_prediction."""
+        score_type = scores.ZScore
 
+        if 'n' in prediction.keys():
+            if prediction['n'] == 0:
+                score = scores.ZScore
+                score = scores.InsufficientDataScore(None)
+                print(type(score))
+
+        else:
+            prediction['value']=prediction['value']
+            score = scores.ZScore
+            score = super(InputResistanceTest,self).compute_score(observation,
+                                                          prediction)
+            print(type(score))
+        return score
+    '''
 
 class InputResistanceTest(TestPulseTest):
     """Tests the input resistance of a cell."""
-    score_type = scores.ZScore
     name = "Input resistance test"
 
     name = "Input resistance test"
@@ -301,14 +322,21 @@ class InputResistanceTest(TestPulseTest):
 
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
+        score_type = scores.ZScore
 
         if 'n' in prediction.keys():
             if prediction['n'] == 0:
+                score = scores.ZScore
                 score = scores.InsufficientDataScore(None)
+                print(type(score))
+
         else:
-            prediction['value']=prediction['value']
+
+            #prediction['value']=prediction['value']
+            score = scores.ZScore
             score = super(InputResistanceTest,self).compute_score(observation,
                                                           prediction)
+            print(type(score))
         return score
 
 
@@ -574,7 +602,7 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
                 generate_prediction(model)
 
 
-class RheobaseTest(VmTest):
+class RheobaseTestOriginal(VmTest):
     """
     Tests the full widths of APs at their half-maximum
     under current injection.
@@ -584,7 +612,7 @@ class RheobaseTest(VmTest):
         self.high = 300*pq.pA
         self.small = 0*pq.pA
         self.rheobase_vm = None
-    
+
     required_capabilities = (cap.ReceivesSquareCurrent,
                              cap.ProducesSpikes)
 
@@ -704,51 +732,51 @@ class RheobaseTest(VmTest):
         return score
 
     def bind_score(self, score, model, observation, prediction):
-        super(RheobaseTest,self).bind_score(score, model, 
+        super(RheobaseTest,self).bind_score(score, model,
                                             observation, prediction)
         if self.rheobase_vm is not None:
             score.related_data['vm'] = self.rheobase_vm
 
-# class RheobaseTestHacked(VmTest):
-#     """
-#     A hacked version of test Rheobase.
-#     Tests the full widths of APs at their half-maximum
-#     under current injection.
-#     """
-#     def _extra(self):    
-#         self.prediction=None
-    
-#     required_capabilities = (cap.ReceivesSquareCurrent,
-#                              cap.ProducesSpikes)
+class RheobaseTest(VmTest):
+     """
+     A hacked version of test Rheobase.
+     Tests the full widths of APs at their half-maximum
+     under current injection.
+     """
+     def _extra(self):
+         self.prediction=None
 
-#     params = {'injected_square_current':
-#                 {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+     required_capabilities = (cap.ReceivesSquareCurrent,
+                              cap.ProducesSpikes)
 
-#     name = "Rheobase test"
+     params = {'injected_square_current':
+                 {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
-#     description = ("A test of the rheobase, i.e. the minimum injected current "
-#                    "needed to evoke at least one spike.")
+     name = "Rheobase test"
 
-#     units = pq.pA
-#     score_type = scores.RatioScore
+     description = ("A test of the rheobase, i.e. the minimum injected current "
+                    "needed to evoke at least one spike.")
 
-#     def generate_prediction(self, model):
-#         return self.prediction
+     units = pq.pA
+     score_type = scores.RatioScore
 
-#     def compute_score(self, observation, prediction):
-#         """Implementation of sciunit.Test.score_prediction."""
-#         #print("%s: Observation = %s, Prediction = %s" % \
-#         #	 (self.name,str(observation),str(prediction)))
+     def generate_prediction(self, model):
+         return self.prediction
 
-#         if self.prediction is not None:
-#             if self.prediction['value'] is None:
+     def compute_score(self, observation, prediction):
+         """Implementation of sciunit.Test.score_prediction."""
+         #print("%s: Observation = %s, Prediction = %s" % \
+         #	 (self.name,str(observation),str(prediction)))
 
-#                 score = scores.InsufficientDataScore(None)
-#             else:
-#                 score = super(RheobaseTest,self).\
-#                             compute_score(observation, self.prediction)
-#                 #self.bind_score(score,None,observation,prediction)
-#             return score
+         if self.prediction is not None:
+             if self.prediction['value'] is None:
+
+                 score = scores.InsufficientDataScore(None)
+             else:
+                 score = super(RheobaseTest,self).\
+                             compute_score(observation, self.prediction)
+                 #self.bind_score(score,None,observation,prediction)
+             return score
 
 
 class RestingPotentialTest(VmTest):
