@@ -94,8 +94,8 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
     assert iter_arg.attrs is not type(None)
     model.load_model()
     model.update_run_params(iter_arg.attrs)
-    print(model.params)
     import quantities as qt
+    import copy
     import os
     import os.path
     score = None
@@ -109,7 +109,8 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
     n_spikes = model.get_spike_count()
     print(str(n_spikes), str('=='), str('its still possible that rheobase was not found'))
     assert n_spikes == 1 or n_spikes == 0
-
+    get_neab.suite.tests[0].prediction={}
+    get_neab.suite.tests[0].prediction['value'] = value * pq.pA
     if sane == True and n_spikes == 1:
         #we are not using the rheobase test from the test suite, we are using a custom parallel rheobase test
         #instead.
@@ -117,9 +118,8 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
         for i in [3,4,5]:
 
             get_neab.suite.tests[i].params['injected_square_current']['amplitude']=value*pq.pA
-        get_neab.suite.tests[0].prediction={}
 
-        score = get_neab.suite.tests[0].prediction['value']=value*pq.pA
+        #score =
         print(get_neab.suite.tests[0].prediction['value'],value)
         score = get_neab.suite.judge(model)#passing in model, changes model
         import neuronunit.capabilities as cap
@@ -145,7 +145,7 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
         #error = scores.InsufficientDataScore(None)
         error = [ 10.0 for i in range(0,7) ]
         import copy
-    return (error,iter_arg.attrs,value*pq.pA,copy.copy(model.results['t']),copy.copy(model.results['vm']))#,score)#.related_data.to_pickle.to_python())
+    return ( error,iter_arg.attrs,value*pq.pA, copy.copy(model.results['t']), copy.copy(model.results['vm']) )
 
 class VirtualModel:
     '''
@@ -249,14 +249,7 @@ def check_current(ampl,vm):
         current.update(uc)
         current = {'injected_square_current':current}
         vm.run_number += 1
-        #print('updating model here')
-        #model.re_init(vm.attrs)
-        #print(vm.attrs.items())
-        #import pdb; pdb.set_trace()
         model.update_run_params(vm.attrs)
-        #model.attrs = vm.attrs
-        #if len(model.attrs) == 0:
-        #model.update_run_params(vm.attrs)
         model.inject_square_current(current)
         vm.previous=ampl
         n_spikes = model.get_spike_count()

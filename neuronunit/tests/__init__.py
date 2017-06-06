@@ -152,6 +152,10 @@ class VmTest(sciunit.Test):
         import copy
         import math
         def nan_test(mp):
+            x = np.array(mp).std()
+            if x <= 0:
+                return False
+ 
             for i in mp:
                 if type(i)==np.float64:
                     if math.isnan(i):
@@ -161,9 +165,6 @@ class VmTest(sciunit.Test):
                     if math.isnan(i):
                         return False
 
-            x = np.array(mp).std()
-            if x == 0:
-                return False
         #update run params is necessary to over write previous recording
         #vectors
         #Its also necessary to destroy and recreate the model in the HOC memory space
