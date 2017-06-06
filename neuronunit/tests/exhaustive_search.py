@@ -1,6 +1,3 @@
-
-
-
 import time
 import pdb
 import array
@@ -27,12 +24,8 @@ global gs
 import grid_search as gs
 
 model=gs.model
-
-
-
 #Uncomment the code below to run an exhaustive search.
 if __name__ == "__main__":
-
     import pdb
     import scoop
     import model_parameters as modelp
@@ -45,13 +38,8 @@ if __name__ == "__main__":
     mean_vm=gs.VirtualModel()
     modelp.guess_attrs[0]
     #paramslist=['a','b','vr','vpeak']
-    paramslist=['a']#,'b','vr','vpeak']
-
-
+    paramslist=['a']
     model.name = str(model.name)+' '+str(paramslist[0])+str(modelp.guess_attrs[0])
-
-    #Its stupid that the attributes dictionary is formatted this way
-    #attrs = {'izhikevich2007Cell'}#:{x:value }}
     attrs = {}
     attrs[paramslist[0]]=modelp.guess_attrs[0]
     print(attrs)
@@ -101,7 +89,7 @@ if __name__ == "__main__":
     attrs=[]
     score_typev=[]
     #below score is just the floats associated with RatioScore and Z-scores.
-    for score,attr,_ in score_matrixt:
+    for score,attr in score_matrixt:
         for i in score:
             for j in i:
                 if j==None:
