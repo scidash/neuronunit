@@ -26,7 +26,7 @@ import grid_search as gs
 model=gs.model
 #Uncomment the code below to run an exhaustive search.
 if __name__ == "__main__":
-    import pdb
+    #import pdb
     import scoop
     import model_parameters as modelp
     #iter_list=[ (i,j,k,l) for i in modelp.model_params['a'] for j in modelp.model_params['b'] for k in modelp.model_params['vr'] for l in modelp.model_params['vpeak'] ]
@@ -44,17 +44,13 @@ if __name__ == "__main__":
     attrs[paramslist[0]]=modelp.guess_attrs[0]
     print(attrs)
     import pdb
-    mean_vm.attrs=attrs
+    mean_vm.attrs= attrs
     #pdb.set_trace()
 
     steps = np.linspace(50,150,7.0)
     steps_current = [ i*pq.pA for i in steps ]
     model.update_run_params(params=mean_vm.attrs)
-    #pdb.set_trace()
-
-    rh_param=(False,steps_current)
-    print(steps_current)
-    print(rh_param,'rh_param', len(rh_param))
+    rh_param = (False,steps_current)
     pre_rh_value = gs.searcher(rh_param,mean_vm)
     rh_value = pre_rh_value.rheobase
     list_of_models = list(futures.map(gs.model2map,iter_list))
@@ -75,28 +71,36 @@ if __name__ == "__main__":
 
     rhstorage2 = [i.rheobase for i in rhstorage]
     rhstorage = rhstorage2
-    iter_ = zip(list_of_models,rhstorage)
+    iter_ = list(zip(list_of_models,rhstorage))
+    sm = list(futures.map(gs.func2map, iter_))
+    error = [ sm[0][0] , sm[1][0] , sm[2][0] ]
+    rheobase =[ sm[0][2] , sm[1][2] , sm[2][2] ]
+    time_vector = [ sm[0][3] , sm[1][3] , sm[2][3] ]
+    vm =[ sm[0][4] , sm[1][4] , sm[2][4] ]
 
-    score_matrixt=list(futures.map(gs.func2map,iter_))#list_of_models,rhstorage))
-    print(score_matrixt)
-    import pdb
-    #pdb.set_trace()
+
+    #error = score_matrix[0][0] + score_matrix[0][1] + score_matrix[0][2]
+    print(error, 'error')
+    errorind = np.where( error == np.min(error) )
+    print(errorind)
+
+    import matplotlib.pyplot as plt
+    fig, ax1 = plt.subplots()
+    # These are in unitless percentages of the figure size. (0,0 is bottom left)
+    left, bottom, width, height = [0.25, 0.6, 0.2, 0.2]
+    ax2 = fig.add_axes([left, bottom, width, height])
+    #vmindex = np.where(error==np.min(error))[0]
+    print(error,len(vm))
+    print(error)
+
+
+    ax1.plot([i for i in range(0,len(error))], error, color='red')
+    ax2.plot([i for i in range(0,len(vm[errorind]))] ,vm[errorind] , color='green')
+    fig.savefig('inset_figure')
+
     import pickle
     with open('score_matrix.pickle', 'wb') as handle:
-        pickle.dump(score_matrixt, handle)
-
-    score_matrix=[]
-    attrs=[]
-    score_typev=[]
-    #below score is just the floats associated with RatioScore and Z-scores.
-    for score,attr in score_matrixt:
-        for i in score:
-            for j in i:
-                if j==None:
-                    j=10.0
-        score_matrix.append(score)
-        attrs.append(attr)
-        print(attr,score)
+        pickle.dump(score_matrix, handle)
 
     score_matrix=np.array(score_matrix)
     for i in score_matrix:
@@ -141,11 +145,6 @@ if __name__ == "__main__":
         score = get_neab.suite.judge(model)#passing in model, changes model
 
     build_single(attrs)
-
-#    return model
-    #else:
-    #    return 10.0
-
 
 
     #import pdb; pdb.set_trace()
