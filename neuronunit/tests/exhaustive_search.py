@@ -73,16 +73,28 @@ if __name__ == "__main__":
     rhstorage = rhstorage2
     iter_ = list(zip(list_of_models,rhstorage))
     sm = list(futures.map(gs.func2map, iter_))
-    error = [ sm[0][0] , sm[1][0] , sm[2][0] ]
-    rheobase =[ sm[0][2] , sm[1][2] , sm[2][2] ]
-    time_vector = [ sm[0][3] , sm[1][3] , sm[2][3] ]
-    vm =[ sm[0][4] , sm[1][4] , sm[2][4] ]
+    #error = [ sm[0][0] , sm[1][0] , sm[2][0] ] #there are three errors for the three values explored
+    error = [ i for i in sm[0] ]
+    #attributes are dictionaries so they need to be accessed differentely.
+    #rheobase =[ sm[0][2] , sm[1][2] , sm[2][2] ]
+    rheobase = [ i for i in sm[1] ]
+    time_vector =  [ i for i in sm[3] ]
+    vm =  [ i for i in sm[4] ]
+    error_ns = [ i for i in sm[5] ]
+    #time_vector = [ sm[0][3] , sm[1][3] , sm[2][3] ]
+    #vm =[ sm[0][4] , sm[1][4] , sm[2][4] ]
+    #error_ns = [ sm[0][5] , sm[1][5] , sm[2][5] ]
 
 
     #error = score_matrix[0][0] + score_matrix[0][1] + score_matrix[0][2]
     print(error, 'error')
-    errorind = np.where( error == np.min(error) )
-    print(errorind)
+    min_value = min([float(s) for s in error])
+    assert min([float(s) for s in error]) == np.min(np.array(error))
+    print(min([float(s) for s in error]), np.min(np.array(error)))
+    min_ind = np.where( np.array(error) == min([float(s) for s in error]) )[0][0]
+    print(min_ind)
+
+    # dprint(min_ind)
 
     import matplotlib.pyplot as plt
     fig, ax1 = plt.subplots()
@@ -95,15 +107,14 @@ if __name__ == "__main__":
 
 
     ax1.plot([i for i in range(0,len(error))], error, color='red')
-    ax2.plot([i for i in range(0,len(vm[errorind]))] ,vm[errorind] , color='green')
+    ax2.plot(time_vector[min_ind], vm[min_ind],  xcolor='green')
     fig.savefig('inset_figure')
 
     import pickle
     with open('score_matrix.pickle', 'wb') as handle:
-        pickle.dump(score_matrix, handle)
+        pickle.dump(sm, handle)
 
-    score_matrix=np.array(score_matrix)
-    for i in score_matrix:
+    for i in sm:
         for j in i:
             if type(j)==None:
                 j=10.0
@@ -114,9 +125,10 @@ if __name__ == "__main__":
     with open('score_matrix.pickle', 'rb') as handle:
         matrix=pickle.load(handle)
 
+    sm = np.array(sm)
 
     matrix3=[]
-    for x,y, rheobase in matrix:
+    for x,y, rheobase in sm:
         for i in x:
             matrix2=[]
             for j in i:
