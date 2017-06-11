@@ -1,9 +1,9 @@
 import numpy as np
 import time
-import inspect
-from types import MethodType
+#import inspect
+#from types import MethodType
 import quantities as pq
-from quantities.quantity import Quantity
+#from quantities.quantity import Quantity
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
@@ -14,7 +14,11 @@ sys.path.insert(0,thisnu)
 from scoop import futures
 import sciunit.scores as scores
 import neuronunit.capabilities as cap
+
+
 import get_neab
+
+
 from neuronunit.models import backends
 import sciunit.scores as scores
 from neuronunit.models import backends
@@ -90,14 +94,15 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
     Inputs an iterable list, a neuron unit test object suite of neuron model
     tests of emperical data reproducibility.
     '''
-    iter_arg,value=iter_
+    iter_arg,value = iter_
     assert iter_arg.attrs is not type(None)
-    model.load_model()
+    # model.load_model()
     model.update_run_params(iter_arg.attrs)
     import quantities as qt
     import copy
     import os
     import os.path
+    import pdb
     score = None
     sane = False
     sane = get_neab.suite.tests[3].sanity_check(value*pq.pA,model)
@@ -107,10 +112,12 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
     current = {'injected_square_current':current}
     model.inject_square_current(current)
     n_spikes = model.get_spike_count()
-    print(str(n_spikes), str('=='), str('its still possible that rheobase was not found'))
     assert n_spikes == 1 or n_spikes == 0
     get_neab.suite.tests[0].prediction={}
     get_neab.suite.tests[0].prediction['value'] = value * pq.pA
+    #print()
+    return_list = []
+    error = []# re-declare error this way to stop it growing.
     if sane == True and n_spikes == 1:
         #we are not using the rheobase test from the test suite, we are using a custom parallel rheobase test
         #instead.
@@ -122,10 +129,10 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
         #score =
         print(get_neab.suite.tests[0].prediction['value'],value)
         score = get_neab.suite.judge(model)#passing in model, changes model
+
         import neuronunit.capabilities as cap
         spikes_numbers=[]
         plt.clf()
-        plt.hold(True)
         for k,v in score.related_data.items():
             spikes_numbers.append(cap.spike_functions.get_spike_train(((v.values[0]['vm']))))
             plt.plot(model.results['t'],v.values[0]['vm'])
@@ -139,13 +146,36 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
         for i in score.sort_key.values[0]:
             if type(i)==None:
                 i=10.0
-        error= score.sort_key.values
+        error= score.sort_key.values[0]
+        #pdb.set_trace()
+
+        return_list.append(np.sum(error))
+        return_list.append(iter_arg.attrs)
+        return_list.append(value*pq.pA)
+        return_list.append(model.results['t'])
+        return_list.append(model.results['vm'])
+        print(len(error))
     elif sane == False:
         import sciunit.scores as scores
-        #error = scores.InsufficientDataScore(None)
         error = [ 10.0 for i in range(0,7) ]
         import copy
-    return ( error,iter_arg.attrs,value*pq.pA, copy.copy(model.results['t']), copy.copy(model.results['vm']) )
+        print(len(error))
+        print(score.sort_key.values[0])
+        #pdb.set_trace()
+
+        return_list.append(np.sum(error))
+        return_list.append(iter_arg.attrs)
+        return_list.append(value*pq.pA)
+        return_list.append(model.results['t'])
+        return_list.append(model.results['vm'])
+        return_list.append(error)
+        print(len(returned_list[0]))
+        print(len(returned_list[1]))
+        print(len(returned_list[2]))
+        print(len(returned_list[3]))
+
+    return return_list
+    #return list(zip(np.sum(error), iter_arg.attrs, value*pq.pA, model.results['t'], model.results['vm']))
 
 class VirtualModel:
     '''
@@ -281,30 +311,16 @@ def searcher(rh_param,vms):
     cnt=0
     boolean=False
     from itertools import repeat
-    while boolean==False and cnt<6:
-
+    while boolean == False and cnt < 6:
         if len(model.params)==0:
-
-            #model.attrs = vms.attrs
             model.update_run_params(vms.attrs)
-
         if type(rh_param[1]) is float:
             #if its a single value educated guess
-            #print('educated guess attempted')
             if model.rheobase_memory == None:
-                #The educated guess, is the average of all the model parameters
-                #with the latest model rheobase that was sampled.
-                # using the name model.rheobase rheobase is deceptive, so I have
-                # used the more accurate label rheobase_memory. This is not the actual found rheobase
-                # that will get bound to vms its just a memory of the last tried value inside the constant variable model.
-                # There is no use in using vms.rheobase for this, because this is a local value we are trying to find, not a global variable
-                # that was already once found.
                 model.rheobase_memory = rh_param[1]
             vms = check_current(model.rheobase_memory,vms)
             model.update_run_params(vms.attrs)
             boolean,vms = check_fix_range(vms)
-            #vms.rheobase_memory = vms.rheobase_memory
-
             if boolean:
                 return vms
             else:
@@ -313,7 +329,6 @@ def searcher(rh_param,vms):
 
         elif len(vms.lookup)==0 and type(rh_param[1]) is list:
             #If the educated guess failed, or if the first attempt is parallel vector of samples
-            #returned_list=[]
             returned_list = list(futures.map(check_current,rh_param[1],repeat(vms)))
             assert vms!=None
             for v in returned_list:
@@ -326,15 +341,12 @@ def searcher(rh_param,vms):
         else:
             #Finally if a parallel vector of samples failed zoom into the
             #smallest relevant interval and re-sample at a higher resolution
-
             returned_list=[]
             if type(vms.steps) is type(None):
                 steps = np.linspace(50,150,7.0)
                 steps_current = [ i*pq.pA for i in steps ]
                 vms.steps = steps_current
                 assert type(vms.steps) is not type(None)
-
-            #rh_param=(False,steps_current)
             returned_list = list(futures.map(check_current,vms.steps,repeat(vms)))
             for v in returned_list:
                 vms.lookup.update(v.lookup)
@@ -346,7 +358,6 @@ def searcher(rh_param,vms):
 
 def evaluate(individual, guess_value=None):
     #This method must be pickle-able for scoop to work.
-    #print(individual.attrs)
     vm = VirtualModel()
     import copy
     vm.attrs = copy.copy(individual.attrs)
