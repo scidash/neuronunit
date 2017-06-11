@@ -18,7 +18,7 @@ import pickle
 from scoop import futures
 from scoop import utils
 try:
-    IZHIKEVICH_PATH = os.path.join(os.getcwd(),'NeuroML2') 
+    IZHIKEVICH_PATH = os.path.join(os.getcwd(),'NeuroML2')
     assert os.path.isdir(IZHIKEVICH_PATH)
 except AssertionError:
     # Replace this with the path to your Izhikevich NeuroML2 directory.
@@ -34,13 +34,14 @@ tests = []
 
 dataset_id = 354190013  # Internal ID that AIBS uses for a particular Scnn1a-Tg2-Cre
                         # Primary visual area, layer 5 neuron.
-observation = aibs.get_observation(dataset_id,'rheobase')
+#observation = aibs.get_observation(dataset_id,'rheobase')
+
 ne_pickle = os.path.join(THIS_DIR,"neuroelectro.pickle")
+
 if os.path.isfile(ne_pickle):
     print('attempting to recover from pickled file')
     with open(ne_pickle, 'rb') as f:
         tests = pickle.load(f)
-
 else:
     print('Checked path %s and no pickled file found. Commencing time intensive Download' % ne_pickle)
     tests += [nu_tests.RheobaseTest(observation=observation)]
