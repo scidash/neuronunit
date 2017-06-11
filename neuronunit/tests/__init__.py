@@ -155,7 +155,7 @@ class VmTest(sciunit.Test):
             x = np.array(mp).std()
             if x <= 0:
                 return False
- 
+
             for i in mp:
                 if type(i)==np.float64:
                     if math.isnan(i):
@@ -249,6 +249,7 @@ class TestPulseTest(VmTest):
         stop = i['duration']+i['delay']-1*pq.ms # 1 ms before pulse end
         region = cls.get_segment(vm,start,stop)
         amplitude,tau,y0 = cls.exponential_fit(region, i['delay'])
+        tau = tau /100000.0
         return tau
 
     @classmethod
@@ -369,7 +370,6 @@ class TimeConstantTest(TestPulseTest):
             if prediction['n'] == 0:
                 score = scores.InsufficientDataScore(None)
         else:
-            prediction['value']=prediction['value']
             score = super(TimeConstantTest,self).compute_score(observation,
                                                           prediction)
         return score
