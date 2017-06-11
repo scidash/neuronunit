@@ -4,8 +4,12 @@ import quantities as pq
 
 model_params={}
 #4*4*4*4==4^4==256
+
 model_params['vr'] = np.linspace(-75.0,-50.0,3)
-model_params['a'] = np.linspace(0.015,0.045,3)
+#model_params['a'] = np.linspace(0.015,0.045,10)
+#model_params['a'] = (0.015 + 0.045) / 2.0
+
+model_params['a'] = np.linspace(0.0,0.945,10)
 model_params['b'] = np.linspace(-3.5*10E-10,-0.5*10E-9,3)
 model_params['vpeak'] =np.linspace(30.0,40.0,2)
 
@@ -20,6 +24,7 @@ steps2 = np.linspace(50,190,4.0)
 steps = [ i*pq.pA for i in steps2 ]
 
 guess_attrs=[]
+#guess_attrs.append(model_params['a'])
 guess_attrs.append(np.mean( [ i for i in model_params['a'] ]))
 guess_attrs.append(np.mean( [ i for i in model_params['b'] ]))
 guess_attrs.append(np.mean( [ i for i in model_params['vr'] ]))
