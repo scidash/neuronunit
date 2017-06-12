@@ -73,47 +73,41 @@ if __name__ == "__main__":
     rhstorage = rhstorage2
     iter_ = list(zip(list_of_models,rhstorage))
     sm = list(futures.map(gs.func2map, iter_))
-    #error = [ sm[0][0] , sm[1][0] , sm[2][0] ] #there are three errors for the three values explored
-    error = [ i for i in sm[0] ]
-    #attributes are dictionaries so they need to be accessed differentely.
-    #rheobase =[ sm[0][2] , sm[1][2] , sm[2][2] ]
-    rheobase = [ i for i in sm[1] ]
-    time_vector =  [ i for i in sm[3] ]
-    vm =  [ i for i in sm[4] ]
-    error_ns = [ i for i in sm[5] ]
-    #time_vector = [ sm[0][3] , sm[1][3] , sm[2][3] ]
-    #vm =[ sm[0][4] , sm[1][4] , sm[2][4] ]
-    #error_ns = [ sm[0][5] , sm[1][5] , sm[2][5] ]
-
-
-    #error = score_matrix[0][0] + score_matrix[0][1] + score_matrix[0][2]
-    print(error, 'error')
-    min_value = min([float(s) for s in error])
-    assert min([float(s) for s in error]) == np.min(np.array(error))
-    print(min([float(s) for s in error]), np.min(np.array(error)))
-    min_ind = np.where( np.array(error) == min([float(s) for s in error]) )[0][0]
-    print(min_ind)
-
-    # dprint(min_ind)
-
-    import matplotlib.pyplot as plt
-    fig, ax1 = plt.subplots()
-    # These are in unitless percentages of the figure size. (0,0 is bottom left)
-    left, bottom, width, height = [0.25, 0.6, 0.2, 0.2]
-    ax2 = fig.add_axes([left, bottom, width, height])
-    #vmindex = np.where(error==np.min(error))[0]
-    print(error,len(vm))
-    print(error)
-
-
-    ax1.plot([i for i in range(0,len(error))], error, color='red')
-    ax2.plot(time_vector[min_ind], vm[min_ind],  xcolor='green')
-    fig.savefig('inset_figure')
 
     import pickle
     with open('score_matrix.pickle', 'wb') as handle:
         pickle.dump(sm, handle)
 
+    sum_error = [ i[0] for i in sm ]
+    attrs = [ str(k)+str(v) for i in sm for k,v in i[1].items() ]
+    vm = [ i[6] for i in sm ]
+    time_vector = [ i[3] for i in sm ]
+    component_error = [ i[5] for i in sm ]
+
+    print(sum_error, 'error')
+    min_value = min([float(s) for s in sum_error])
+    assert min([float(s) for s in sum_error]) == np.min(np.array(sum_error))
+    print(min([float(s) for s in sum_error]), np.min(np.array(sum_error)))
+    min_ind = np.where( np.array(sum_error) == np.min(np.array(sum_error) ))[0][0]
+    assert sum_error[np.where( np.array(sum_error) == np.min(np.array(sum_error) ))[0][0]] == min([float(s) for s in sum_error])
+    print(min_ind,sum_error[min_ind],sum_error)
+    import matplotlib.pyplot as plt
+    fig, ax1 = plt.subplots()
+    # These are in unitless percentages of the figure size. (0,0 is bottom left)
+    left, bottom, width, height = [0.9*float(min_ind/len(sum_error)), 0.6, 0.2, 0.2]
+    ax2 = fig.add_axes([left, bottom, width, height])
+
+
+
+    ax1.plot([i for i in range(0,len(sum_error))], sum_error, color='red')
+    plt.xlabel('params'+str(attrs[min_ind]))
+    plt.ylabel('error')
+
+    ax2.plot(time_vector[min_ind], vm[min_ind],  color='green',label=str(attrs[min_ind]))
+    legend = ax1.legend(loc='lower center', shadow=True)
+
+    fig.savefig('inset_figure')
+    '''
     for i in sm:
         for j in i:
             if type(j)==None:
@@ -173,3 +167,4 @@ if __name__ == "__main__":
         opt_values=pickle.load(handle)
         print('minumum value')
         print(opt_values)
+    '''
