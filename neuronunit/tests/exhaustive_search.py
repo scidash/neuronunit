@@ -29,16 +29,16 @@ if __name__ == "__main__":
     #import pdb
     import scoop
     import model_parameters as modelp
-    #iter_list=[ (i,j,k,l) for i in modelp.model_params['a'] for j in modelp.model_params['b'] for k in modelp.model_params['vr'] for l in modelp.model_params['vpeak'] ]
-    iter_list=[ i for i in modelp.model_params['a'] ]
+    iter_list=[ (i,j,k,l) for i in modelp.model_params['a'] for j in modelp.model_params['b'] for k in modelp.model_params['vr'] for l in modelp.model_params['vpeak'] ]
+    #iter_list=[ i for i in modelp.model_params['a'] ]
     #iter_list=iter_list[0:1]
     #import grid_search as gs
     import pdb
     #pdb.set_trace()
     mean_vm=gs.VirtualModel()
     modelp.guess_attrs[0]
-    #paramslist=['a','b','vr','vpeak']
-    paramslist=['a']
+    paramslist=['a','b','vr','vpeak']
+    #paramslist=['a']
     model.name = str(model.name)+' '+str(paramslist[0])+str(modelp.guess_attrs[0])
     attrs = {}
     attrs[paramslist[0]]=modelp.guess_attrs[0]
@@ -100,6 +100,7 @@ if __name__ == "__main__":
 
 
     ax1.plot([i for i in range(0,len(sum_error))], sum_error, color='red')
+    ax1.set_yscale('log')
     plt.xlabel('params'+str(attrs[min_ind]))
     plt.ylabel('error')
 
