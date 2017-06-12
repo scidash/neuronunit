@@ -96,6 +96,7 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
     '''
     iter_arg,value = iter_
     assert iter_arg.attrs is not type(None)
+    return_list=[]
     # model.load_model()
     model.update_run_params(iter_arg.attrs)
     import quantities as qt
@@ -105,74 +106,83 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
     import pdb
     score = None
     sane = False
-    sane = get_neab.suite.tests[3].sanity_check(value*pq.pA,model)
-    uc = {'amplitude':value}
-    current = params.copy()['injected_square_current']
-    current.update(uc)
-    current = {'injected_square_current':current}
-    model.inject_square_current(current)
-    n_spikes = model.get_spike_count()
-    assert n_spikes == 1 or n_spikes == 0
-    get_neab.suite.tests[0].prediction={}
-    get_neab.suite.tests[0].prediction['value'] = value * pq.pA
-    #print()
-    return_list = []
-    error = []# re-declare error this way to stop it growing.
-    if sane == True and n_spikes == 1:
-        #we are not using the rheobase test from the test suite, we are using a custom parallel rheobase test
-        #instead.
-        #del get_neab.suite.tests[0]
-        for i in [3,4,5]:
-
-            get_neab.suite.tests[i].params['injected_square_current']['amplitude']=value*pq.pA
-
-        #score =
-        print(get_neab.suite.tests[0].prediction['value'],value)
-        score = get_neab.suite.judge(model)#passing in model, changes model
-
-        import neuronunit.capabilities as cap
-        spikes_numbers=[]
-        plt.clf()
-        for k,v in score.related_data.items():
-            spikes_numbers.append(cap.spike_functions.get_spike_train(((v.values[0]['vm']))))
-            plt.plot(model.results['t'],v.values[0]['vm'])
-        plt.savefig(str(model.name)+'.png')
-        plt.clf()
-
-        #n_spikes = model.get_spike_count()
-
-
-        model.run_number+=1
-        for i in score.sort_key.values[0]:
-            if type(i)==None:
-                i=10.0
-        error= score.sort_key.values[0]
-        #pdb.set_trace()
-
-        return_list.append(np.sum(error))
-        return_list.append(iter_arg.attrs)
-        return_list.append(value*pq.pA)
-        return_list.append(model.results['t'])
-        return_list.append(model.results['vm'])
-        print(len(error))
-    elif sane == False:
-        import sciunit.scores as scores
-        error = [ 10.0 for i in range(0,7) ]
+    if type(value) is not type(None):
+        sane = get_neab.suite.tests[3].sanity_check(value*pq.pA,model)
+        uc = {'amplitude':value}
+        current = params.copy()['injected_square_current']
+        current.update(uc)
+        current = {'injected_square_current':current}
         import copy
-        print(len(error))
-        print(score.sort_key.values[0])
-        #pdb.set_trace()
+        model.inject_square_current(current)
+        init_vm = copy.copy(model.results['vm'])
+        n_spikes = model.get_spike_count()
+        assert n_spikes == 1 or n_spikes == 0
+        get_neab.suite.tests[0].prediction={}
+        get_neab.suite.tests[0].prediction['value'] = value * pq.pA
+        #print()
+        return_list = []
+        error = []# re-declare error this way to stop it growing.
+        if sane == True and n_spikes == 1:
+            #we are not using the rheobase test from the test suite, we are using a custom parallel rheobase test
+            #instead.
+            #del get_neab.suite.tests[0]
+            for i in [3,4,5]:
 
-        return_list.append(np.sum(error))
-        return_list.append(iter_arg.attrs)
-        return_list.append(value*pq.pA)
-        return_list.append(model.results['t'])
-        return_list.append(model.results['vm'])
-        return_list.append(error)
-        print(len(returned_list[0]))
-        print(len(returned_list[1]))
-        print(len(returned_list[2]))
-        print(len(returned_list[3]))
+                get_neab.suite.tests[i].params['injected_square_current']['amplitude']=value*pq.pA
+
+            #score =
+            print(get_neab.suite.tests[0].prediction['value'],value)
+            score = get_neab.suite.judge(model)#passing in model, changes model
+
+            import neuronunit.capabilities as cap
+            spikes_numbers=[]
+            plt.clf()
+            for k,v in score.related_data.items():
+                spikes_numbers.append(cap.spike_functions.get_spike_train(((v.values[0]['vm']))))
+                plt.plot(model.results['t'],v.values[0]['vm'])
+            plt.savefig(str(model.name)+'.png')
+            plt.clf()
+
+            #n_spikes = model.get_spike_count()
+
+
+            model.run_number+=1
+            for i in score.sort_key.values[0]:
+                if type(i)==None:
+                    i=10.0
+            error= score.sort_key.values[0]
+            #pdb.set_trace()
+
+            return_list.append(np.sum(error))
+            return_list.append(iter_arg.attrs)
+            return_list.append(value*pq.pA)
+            return_list.append(model.results['t'])
+            return_list.append(model.results['vm'])
+            return_list.append(error)
+            return_list.append(init_vm)
+
+            print(len(error))
+        elif sane == False:
+            import sciunit.scores as scores
+            error = [ 10.0 for i in range(0,7) ]
+            import copy
+            print(len(error))
+            print(score.sort_key.values[0])
+            #pdb.set_trace()
+
+            return_list.append(np.sum(error))
+            return_list.append(iter_arg.attrs)
+
+            return_list.append(value*pq.pA)
+            return_list.append(model.results['t'])
+            return_list.append(model.results['vm'])
+            return_list.append(error)
+            return_list.append(init_vm)
+
+            print(len(returned_list[0]))
+            print(len(returned_list[1]))
+            print(len(returned_list[2]))
+            print(len(returned_list[3]))
 
     return return_list
     #return list(zip(np.sum(error), iter_arg.attrs, value*pq.pA, model.results['t'], model.results['vm']))
