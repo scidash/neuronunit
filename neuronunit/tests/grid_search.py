@@ -59,7 +59,11 @@ def model2map(iter_arg):#This method must be pickle-able for scoop to work.
     vm=VirtualModel()
     attrs={}
     #param=['a']#,'b','vr','vpeak']#,'vr','vpeak']
-    attrs['a']=iter_arg
+    attrs['a']=iter_arg[0]
+    attrs['b']=iter_arg[1]
+    attrs['vr']=iter_arg[2]
+    attrs['vpeak']=iter_arg[3]
+
     #attrs['//izhikevich2007Cell']['b']=j
     #attrs['//izhikevich2007Cell']['vr']=k
     #attrs['//izhikevich2007Cell']['vpeak']=l
@@ -76,12 +80,12 @@ def pop2map(iter_arg):
     attrs['//izhikevich2007Cell']={}
     param=['a','b','vr','vpeak']#,'vr','vpeak']
     i,j,k,l=iter_arg#,k,l
-    i=iter_arg
+    #i=iter_arg
     model.name=str(i)+str(j)+str(k)+str(l)
     attrs['//izhikevich2007Cell']['a']=i
-    #attrs['//izhikevich2007Cell']['b']=j
-    #attrs['//izhikevich2007Cell']['vr']=k
-    #attrs['//izhikevich2007Cell']['vpeak']=l
+    attrs['//izhikevich2007Cell']['b']=j
+    attrs['//izhikevich2007Cell']['vr']=k
+    attrs['//izhikevich2007Cell']['vpeak']=l
     vm.attrs=attrs
     model.load_model()
     model.update_run_params(vm.attrs)
@@ -132,6 +136,13 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
 
             #score =
             print(get_neab.suite.tests[0].prediction['value'],value)
+            #import pickle
+            #pickle.dump(
+            import os
+            os.system('rm failed_attrs.pickle')
+            with open('failed_attrs.pickle', 'wb') as handle:
+                failed_attrs=(value,iterarg.attrs)
+                pickle.dump(failed_attrs, handle)
             score = get_neab.suite.judge(model)#passing in model, changes model
 
             import neuronunit.capabilities as cap
