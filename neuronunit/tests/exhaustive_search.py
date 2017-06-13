@@ -72,6 +72,10 @@ if __name__ == "__main__":
     rhstorage2 = [i.rheobase for i in rhstorage]
     rhstorage = rhstorage2
     iter_ = list(zip(list_of_models,rhstorage))
+    with open('big_model_list.pickle', 'wb') as handle:
+        pickle.dump(iter_, handle)
+
+
     sm = list(futures.map(gs.func2map, iter_))
 
     import pickle
