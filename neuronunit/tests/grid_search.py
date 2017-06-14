@@ -139,11 +139,20 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
             #import pickle
             #pickle.dump(
             import os
-            os.system('rm failed_attrs.pickle')
-            with open('failed_attrs.pickle', 'wb') as handle:
-                failed_attrs=(value,iterarg.attrs)
+            import scoop
+            #os.system('rm pre_failed_attrs_run.pickle')
+            with open('pre_failed_attrs_run.pickle', 'wb') as handle:
+                scoop.utils.getWorkerQte(scoop.utils.getHosts())
+                failed_attrs=(model.attrs,scoop.utils.socket.gethostname(),scoop.utils.getWorkerQte(scoop.utils.getHosts()))
                 pickle.dump(failed_attrs, handle)
+
             score = get_neab.suite.judge(model)#passing in model, changes model
+
+            #os.system('rm post_failed_attrs_run.pickle')
+            with open('post_failed_attrs_run.pickle', 'wb') as handle:
+                failed_attrs=(model.attrs,scoop.utils.socket.gethostname(),scoop.utils.getWorkerQte(scoop.utils.getHosts()))
+
+                pickle.dump(failed_attrs, handle)
 
             import neuronunit.capabilities as cap
             spikes_numbers=[]
@@ -383,5 +392,16 @@ def evaluate(individual, guess_value=None):
     import copy
     vm.attrs = copy.copy(individual.attrs)
     rh_param = (False,guess_value)
+    import scoop
+    with open('pre_failed_attrs.pickle', 'wb') as handle:
+        scoop.utils.getWorkerQte(scoop.utils.getHosts())
+        failed_attrs=(vm.attrs,scoop.utils.socket.gethostname(),scoop.utils.getWorkerQte(scoop.utils.getHosts()))
+        pickle.dump(failed_attrs, handle)
+
     vm = searcher(rh_param,vm)
+    with open('post_failed_attrs.pickle', 'wb') as handle:
+        scoop.utils.getWorkerQte(utils.getHosts())
+        failed_attrs=(vm.rheobase,vm.attrs,scoop.utils.socket.gethostname(),scoop.utils.getWorkerQte(scoop.utils.getHosts()))
+        pickle.dump(failed_attrs, handle)
+
     return vm
