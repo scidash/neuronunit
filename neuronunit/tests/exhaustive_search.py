@@ -1,21 +1,21 @@
 
 
-import os
-os.system('ipcluster start -n 8 --engines=MPIEngineSetLauncher --profile=chase --debug &')
+#import os
+#os.system('ipcluster start -n 8 --engines=MPIEngineSetLauncher --profile=chase #--debug &')
 
 #os.system('sleep 15 &')
-import ipyparallel as ipp
-rc = ipp.Client(profile='chase');
-rc[:].use_cloudpickle()
+#import ipyparallel as ipp
+#rc = ipp.Client(profile='chase');
+#rc[:].use_cloudpickle()
 
-print('hello from before cpu ');
-print(rc.ids)
-dview = rc[:]
-serial_result = list(map(lambda x:x**10, range(32)))
-parallel_result = list(dview.map_sync(lambda x: x**10, range(32)))
-print(serial_result)
-print(parallel_result, 'parallel_reult')
-assert serial_result == parallel_result
+#print('hello from before cpu ');
+#print(rc.ids)
+#dview = rc[:]
+#serial_result = list(map(lambda x:x**10, range(32)))
+#parallel_result = list(dview.map_sync(lambda x: x**10, range(32)))
+#print(serial_result)
+#print(parallel_result, 'parallel_reult')
+#assert serial_result == parallel_result
 
 import time
 import pdb
