@@ -17,10 +17,10 @@ from . import backends
 
 
 
-class LEMSModel(sciunit.Model, cap.Runnable):
+class LEMSModel(sciunit.Model):
     """A generic LEMS model"""
 
-    def __init__(self, LEMS_file_path=None, name=None, backend=None, attrs={}):
+    def __init__(self,LEMS_file_path=None, name=None, backend=None, attrs={}):
         """
         LEMS_file_path: Path to LEMS file (an xml file).
         name: Optional model name.
@@ -41,7 +41,6 @@ class LEMSModel(sciunit.Model, cap.Runnable):
             name = os.path.split(self.lems_file_path)[1].split('.')[0]
         self.set_backend(backend)
         self.load_model()
-        self.attrs={}
 
     #This is the part that decides if it should inherit from NEURON backend.
 
@@ -107,7 +106,7 @@ class LEMSModel(sciunit.Model, cap.Runnable):
            self.run_params == self.last_run_params:
             return
 
-        self.update_run_params(run_params)
+        self.update_run_params(params=run_params)
         #self.update_run_params(self.attrs)
 
         self.results = self.local_run()

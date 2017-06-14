@@ -1,3 +1,5 @@
+"""Unit tests for NeuronUnit"""
+
 import unittest
 import sys
 import os

@@ -1,7 +1,8 @@
 """Neuroconstruct classes for use with neurounit"""
 
 from __future__ import absolute_import
-import os,sys
+import os
+import sys
 
 try:
     NC_HOME = os.environ["NC_HOME"]
