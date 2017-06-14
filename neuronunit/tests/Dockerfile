@@ -168,3 +168,8 @@ WORKDIR /home/mnt
 
 HEALTHCHECK CMD /opt/conda/bin/ipython3 -c "from ipyparallel import Client; import os; os.system('ipcluster start --profile=chase --debug &')"
 # /opt/conda/bin/python3 exhaustive_search.py
+RUN sudo pip install -y NotebookTools
+RUN conda install anaconda-client
+WORKDIR $HOME/git
+RUN git clone https://github.com/russelljjarvis/catinabox.git
+WORKDIR catinabox

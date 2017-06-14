@@ -1,6 +1,6 @@
 """Unit tests for NeuronUnit"""
 
-# Run with any of:  
+# Run with any of:
 # python test_all.py
 # python -m unittest test_all.py
 
@@ -11,11 +11,38 @@ import sys
 import os
 import warnings
 
-import nbformat
-from nbconvert.preprocessors import ExecutePreprocessor
+#import nbformat
+#from nbconvert.preprocessors import ExecutePreprocessor
 
 # CONVERT_NOTEBOOKS environment variable controls whether notebooks are
-# executed as notebooks or converted to regular python files first. 
+# executed as notebooks or converted to regular python files first.
+
+
+
+class OptimizationTestCase(NotebookTools,unittest.TestCase):
+    """Testing documentation notebooks"""
+
+    path = 'docs'
+
+
+    #@unittest.skip("Skipping chapter 1")
+    def test_chapter1(self):
+        self.do_notebook('get_tau')
+    #@unittest.skip("Skipping chapter 1")
+    def test_chapter1(self):
+        self.do_notebook('chapter1')
+
+    #@unittest.skip("Skipping chapter 2")
+    def test_chapter2(self):
+        self.do_notebook('chapter2')
+
+    #@unittest.skip("Skipping chapter 3")
+    def test_chapter3(self):
+        self.do_notebook('chapter3')
+
+    @unittest.skip("Skipping chapter 4")
+    def test_chapter4(self):
+        self.do_notebook('chapter4')
 
 
 class DocumentationTestCase(NotebookTools,unittest.TestCase):
@@ -23,6 +50,10 @@ class DocumentationTestCase(NotebookTools,unittest.TestCase):
 
     path = 'docs'
 
+
+    #@unittest.skip("Skipping chapter 1")
+    def test_chapter1(self):
+        self.do_notebook('get_tau')
     #@unittest.skip("Skipping chapter 1")
     def test_chapter1(self):
         self.do_notebook('chapter1')
