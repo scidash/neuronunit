@@ -302,7 +302,13 @@ def check_current(ampl,vm):
     output is an virtual model with an updated dictionary.
     '''
     import copy
+    import scoop
+    import pickle
     if float(ampl) not in vm.lookup or len(vm.lookup)==0:
+        with open('test_current_failed_attrs.pickle', 'wb') as handle:
+            scoop.utils.getWorkerQte(scoop.utils.getHosts())
+            failed_attrs=(ampl,vm.attrs,scoop.utils.socket.gethostname(),scoop.utils.getWorkerQte(scoop.utils.getHosts()))
+            pickle.dump(failed_attrs, handle)
         current = params.copy()['injected_square_current']
 
         uc = {'amplitude':ampl}
@@ -393,15 +399,13 @@ def evaluate(individual, guess_value=None):
     vm.attrs = copy.copy(individual.attrs)
     rh_param = (False,guess_value)
     import scoop
+    import pickle
     with open('pre_failed_attrs.pickle', 'wb') as handle:
         scoop.utils.getWorkerQte(scoop.utils.getHosts())
         failed_attrs=(vm.attrs,scoop.utils.socket.gethostname(),scoop.utils.getWorkerQte(scoop.utils.getHosts()))
         pickle.dump(failed_attrs, handle)
 
     vm = searcher(rh_param,vm)
-    with open('post_failed_attrs.pickle', 'wb') as handle:
-        scoop.utils.getWorkerQte(utils.getHosts())
-        failed_attrs=(vm.rheobase,vm.attrs,scoop.utils.socket.gethostname(),scoop.utils.getWorkerQte(scoop.utils.getHosts()))
-        pickle.dump(failed_attrs, handle)
+
 
     return vm
