@@ -48,16 +48,18 @@ RUN ipython profile create default
 #RUN git clone https://github.com/russelljjarvis/BluePyOpt.git
 #WORKDIR BluePyOpt
 #RUN python setup.py install
+#This line python-tk is a problem
 #RUN apt-get install -y python-tk
 
+RUN python -c "import matplotlib"
 
 RUN chown -R jovyan $HOME
 #RUN python -c "import bluepyopt"
 
 RUN conda install mpi4py
-#RUN pip install git+https://github.com/roryk/ipython-cluster-helper
+RUN pip install git+https://github.com/roryk/ipython-cluster-helper
 
-#RUN ipcluster nbextension enable
+RUN sudo /opt/conda/bin/ipcluster nbextension enable
 
 RUN apt-get install -y curl apt-utils
 RUN apt-get update
@@ -85,15 +87,15 @@ ENV PATH $PATH:$PYTHONPATH
 RUN echo $PATH
 HEALTHCHECK CMD python -c "import pyneuroml"
 HEALTHCHECK CMD python -c "import neuronunit"
-RUN python -c "from neuronunit.models.reduced import ReducedModel"
-RUN python -c "from deap.tools import hypervolume"
-RUN python -c "import quantities"
-RUN python -c "import neuron"
-RUN python -c "import pyneuroml"
-RUN nrnivmodl
-RUN python -c "import scoop"
-RUN python -c "import deap"
-RUN nrniv
+HEALTHCHECK CMD python -c "from neuronunit.models.reduced import ReducedModel"
+HEALTHCHECK CMD python -c "from deap.tools import hypervolume"
+HEALTHCHECK CMD python -c "import quantities"
+HEALTHCHECK CMD python -c "import neuron"
+HEALTHCHECK CMD python -c "import pyneuroml"
+HEALTHCHECK CMD nrnivmodl
+HEALTHCHECK CMD python -c "import scoop"
+HEALTHCHECK CMD python -c "import deap"
+HEALTHCHECK CMD nrniv
 
 RUN export PATH=$PATH
 
@@ -153,4 +155,21 @@ RUN echo "import os">> run_ipp1.p
 HEALTHCHECK CMD /opt/conda/bin/ipython3 -c "import sys; print(sys.path)"
 #RUN /opt/conda/bin/ipython3 -c "import os; print(sys.path)"
 
-HEALTHCHECK CMD /opt/conda/bin/ipython3 -c "from ipyparallel import Client; import os; os.system('ipcluster start --profile=chase --debug &')" 
+#WORKDIR /opt/conda/lib/python3.5/site-packages
+#RUN rm -r PyQt*
+
+#RUN pip uninstall -y python-tk
+#RUN conda uninstall python-tk
+#RUN pip uninstall pyqt
+
+RUN echo "backend      : Agg" >> /opt/conda/lib/python3.5/site-packages/matplotlib/mpl-data/matplotlibrc
+
+WORKDIR /home/mnt
+
+HEALTHCHECK CMD /opt/conda/bin/ipython3 -c "from ipyparallel import Client; import os; os.system('ipcluster start --profile=chase --debug &')"
+# /opt/conda/bin/python3 exhaustive_search.py
+RUN sudo pip install -y NotebookTools
+RUN conda install anaconda-client
+WORKDIR $HOME/git
+RUN git clone https://github.com/russelljjarvis/catinabox.git
+WORKDIR catinabox

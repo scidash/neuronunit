@@ -169,7 +169,7 @@ def evaluate(individual,tuple_params):#This method must be pickle-able for scoop
     import quantities as pq
     params = gs.params
     model = gs.model
-    if rheobase == None:
+    if rheobase == None or float(rheobase) <= 0:
         #Assign a high error
         error = [ 100.0 for i in range(0,8) ]
     else:
@@ -292,15 +292,65 @@ def replace_rh(pop,rh_value,vmpop):
 
 
     for i,ind in enumerate(pop):
-         if type(vmpop[i].rheobase) is type(None):
+
+         #sense if Rheobase is less than or equal to zero.
+         #discard models that cause such results,
+         # and create new models by mutating these parameters.
+
+         while type(vmpop[i].rheobase) is type(None):
+              print('this loop appropriately exits none mutate away from ')
+
               toolbox.mutate(ind)
               toolbox.mutate(ind)
               toolbox.mutate(ind)
+              print('tryingmutations', ind)
               temp = individual_to_vm(ind)
-              pop_rh=rheobase_checking(temp,rh_value)
+              pop_rh = rheobase_checking(temp)
+              print('trying ', pop_rh.rheobase)
               if type(pop_rh.rheobase) is not type(None):
-                  pop.append(ind)
-                  vmpop.append(temp)
+                  if not (float(pop_rh.rheobase) <=0.0) :
+
+                      #make sure that the old individual, and virtual model object are
+                      #over written so do not use list append pattern, as this will not
+                      #over write the objects in place, but instead just grow the lists inappropriately
+                      #also some of the lines below may be superflous in terms of machine instructions, but
+                      #they function to make the code more explicit and human readable.
+                      #ind = pop_rh
+                      ind.rheobase = pop_rh.rheobase
+
+                      pop[i] = copy.copy(ind)
+                      vmpop[i] = copy.copy(pop_rh)
+                      print(pop_rh.rheobase, 'rheobase value is updating')
+                      assert ind.rheobase == pop_rh.rheobase == vmpop[i].rheobase
+                      assert vmpop[i].rheobase is not type(None)
+         assert vmpop[i].rheobase is not type(None)
+
+         while float(vmpop[i].rheobase) <=0.0 :
+             print('this loop appropriately exits less than or equal to zero rheobase mutate away from')
+
+             toolbox.mutate(ind)
+             toolbox.mutate(ind)
+             toolbox.mutate(ind)
+             print('tryingmutations', ind)
+             temp = individual_to_vm(ind)
+             pop_rh = rheobase_checking(temp)
+             print('trying ', pop_rh.rheobase)
+             if type(pop_rh.rheobase) is not type(None):
+                 if not (float(pop_rh.rheobase) <=0.0) :
+                      #make sure that the old individual, and virtual model object are
+                      #over written so do not use list append pattern, as this will not
+                      #over write the objects in place, but instead just grow the lists inappropriately
+                      #also some of the lines below may be superflous in terms of machine instructions, but
+                      #they function to make the code more explicit and human readable.
+                      #ind = pop_rh
+                     ind.rheobase = pop_rh.rheobase
+                     pop[i] = ind
+                     vmpop[i] = pop_rh
+                     print(pop_rh.rheobase, 'rheobase value is updating')
+                     assert ind.rheobase == pop_rh.rheobase == vmpop[i].rheobase
+
+
+
     assert len(pop)!=0
     assert len(vmpop)==len(pop)
     return pop, vmpop
@@ -460,7 +510,7 @@ def main():
     numpy = np
     MU=12#Mu must be some multiple of 8, such that it can be split into even numbers over 8 CPUs
 
-    best = np.ndarray((NGEN,MU))
+    best = [ 0 for i in range(0,NGEN) ]
 
     CXPB = 0.9
     stats = tools.Statistics(lambda ind: ind.fitness.values)

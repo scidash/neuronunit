@@ -1,21 +1,19 @@
-import os
+"""NeuronUnit model class for reduced neuron models"""
+
 import numpy as np
-import sciunit
-import neuronunit.capabilities as cap
-from pyneuroml import pynml
 from neo.core import AnalogSignal
 import quantities as pq
+
+import neuronunit.capabilities as cap
 import neuronunit.models as mod
-import neuronunit.models.backends as backends
 import neuronunit.capabilities.spike_functions as sf
 
 class ReducedModel(mod.LEMSModel,
                    cap.ReceivesCurrent,
-                   cap.ProducesMembranePotential,
                    cap.ProducesActionPotentials):
     """Base class for reduced models, using LEMS"""
 
-    def __init__(self, LEMS_file_path, name=None, backend=None, attrs={}):
+    def __init__(self, LEMS_file_path, name=None, backend=None, attrs=None):
         """
         LEMS_file_path: Path to LEMS file (an xml file).
         name: Optional model name.
@@ -27,7 +25,7 @@ class ReducedModel(mod.LEMSModel,
         self.run_number=0
         self.previous=0
         self.lookup = {}
-
+        self.rheobase_memory = None
     def get_membrane_potential(self, rerun=None, **run_params):
         if rerun is None:
             rerun = self.rerun
@@ -36,7 +34,7 @@ class ReducedModel(mod.LEMSModel,
             if 'v' in rkey or 'vm' in rkey:
                 v = np.array(self.results[rkey])
         t = np.array(self.results['t'])
-        dt = (t[1]-t[0])*pq.ms # Time per sample in milliseconds.
+        dt = (t[1]-t[0])*pq.s # Time per sample in seconds.
         vm = AnalogSignal(v,units=pq.V,sampling_rate=1.0/dt)
         return vm
 

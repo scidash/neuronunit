@@ -1,7 +1,5 @@
-#!/usr/bin/env python
-"""DocString"""
+"""Tools for plotting (contributed by Blue Brain Project)"""
 
-from itertools import cycle
 import matplotlib
 import matplotlib.colors as mplcol
 import matplotlib.pyplot as plt
@@ -10,9 +8,9 @@ import numpy
 import collections
 
 
-def adjust_spines(ax, spines, color='k', d_out=10, d_down=[]):
+def adjust_spines(ax, spines, color='k', d_out=10, d_down=None):
 
-    if d_down == []:
+    if d_down in [None,[]]:
         d_down = d_out
 
     ax.set_frame_on(True)
@@ -32,7 +30,7 @@ def adjust_spines(ax, spines, color='k', d_out=10, d_down=[]):
     if 'left' in spines:
         ax.yaxis.set_ticks_position('left')
 
-        if color is not 'k':
+        if color != 'k':
 
             ax.spines['left'].set_color(color)
             ax.yaxis.label.set_color(color)
@@ -46,14 +44,14 @@ def adjust_spines(ax, spines, color='k', d_out=10, d_down=[]):
     if 'right' in spines:
         ax.yaxis.set_ticks_position('right')
 
-        if color is not 'k':
+        if color != 'k':
 
             ax.spines['right'].set_color(color)
             ax.yaxis.label.set_color(color)
             ax.tick_params(axis='y', colors=color)
 
     if 'bottom' in spines:
-        pass
+        #pass
         ax.xaxis.set_ticks_position('bottom')
         #ax.axes.get_xaxis().set_visible(True)
 
@@ -82,11 +80,15 @@ def light_palette(color, n_colors=6, reverse=False, lumlight=0.8, light=None):
     return palette
 
 
-def tiled_figure(figname='', frames=1, columns=2, figs=collections.OrderedDict(), axs=None, orientation='page', width_ratios=None, height_ratios=None, top=0.97, bottom=0.05, left=0.07, right=0.97, hspace=0.6, wspace=0.2, dirname=''):
+def tiled_figure(figname='', frames=1, columns=2, 
+                 figs=collections.OrderedDict(), axs=None, orientation='page', 
+                 width_ratios=None, height_ratios=None, top=0.97, 
+                 bottom=0.05, left=0.07, right=0.97, hspace=0.6, 
+                 wspace=0.2, dirname=''):
 
     if figname not in figs:
 
-        if axs == None:
+        if axs is None:
             axs = []
 
         if orientation == 'landscape':

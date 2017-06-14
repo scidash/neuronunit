@@ -132,7 +132,7 @@ jLEMS     LEMS        NeuroML2    nrn-7.4        org.neuroml1.model  org.neuroml
 jNeuroML  libNeuroML  neuronunit  openmpi-2.0.0  org.neuroml.export  org.neuroml.model   pylems                             work
 ```
 
-# 5 Try launching a job interactively within the singularity image
+# 5 Try launching a job non-interactively within the singularity image
 
 if jobs can not be launched without modification to the image, collate all of the BASH commands in a definitions file.
 

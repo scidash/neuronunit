@@ -1,4 +1,3 @@
-
 from pyneuroml import pynml
 import os
 import platform
@@ -88,6 +87,8 @@ class NEURONBackend(Backend):
         self.f=None
         self.h=None
         self.rheobase=None
+        self.rheobase_memory=None
+
         self.invokenrn()
 
 
@@ -288,30 +289,16 @@ class NEURONBackend(Backend):
         more_attributes = None #force garbage collection of more_attributes, its not needed anymore.
         return self
 
-    def update_run_params(self,attrs):
-        import re
-        self.attrs=None
-        self.attrs=attrs
-        paramdict={}
 
-		#The following two lined
-		#for loop is an important hack for instancing parameters in HOC
-		#and assigning to them appropriately.
-		#without these two lines
-		#the program gives the illusion of working
-		#but without updating variables
-		#such that every model is the same, default
-		#model which is not the intended behavior.
-
-        for v in self.attrs.values():
-             paramdict = v
-
-        for key, value in paramdict.items():
-             h_variable=key
-             h_assignment=value
-             self.h('m_RS_RS_pop[0].'+str(h_variable)+'='+str(h_assignment))
-             self.h('m_'+str(self.cell_name)+'_'+str(self.cell_name)+'_pop[0].'+str(h_variable)+'='+str(h_assignment))
-
+    def update_run_params(self, params):
+        '''
+        the argument name attributes is used, rather than parameters in order to distinguish from
+        stimulus paramters.
+        '''
+        for h_key, h_value in params.items():
+            self.h('m_RS_RS_pop[0].%s=%s' % (h_key,h_value))
+            self.h('m_%s_%s_pop[0].%s=%s' % \
+                   (self.cell_name,self.cell_name,h_key,h_value))
         self.h(' { v_time = new Vector() } ')
         self.h(' { v_time.record(&t) } ')
         self.h(' { v_v_of0 = new Vector() } ')
@@ -320,12 +307,6 @@ class NEURONBackend(Backend):
         self.h(' { v_u_of0.record(&m_RS_RS_pop[0].u) } ')
 
 
-
-    def re_init(self,attrs):
-        #self.load_model()
-        self.update_run_params(attrs)
-        #print(attrs)
-        #self.h.psection()
 
 
     def inject_square_current(self,current):
@@ -337,7 +318,8 @@ class NEURONBackend(Backend):
          'duration':500*pq.ms}}
         where 'pq' is the quantities package
         '''
-        self.re_init(self.attrs)
+        self.update_run_params(self.params)
+        #self.re_init(self.attrs)
         #print(self.attrs)
         #self.h.psection()
         c=copy.copy(current)
