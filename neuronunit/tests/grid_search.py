@@ -99,6 +99,7 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
     tests of emperical data reproducibility.
     '''
     iter_arg,value = iter_
+
     assert iter_arg.attrs is not type(None)
     return_list=[]
     # model.load_model()
@@ -110,7 +111,11 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
     import pdb
     score = None
     sane = False
-    if type(value) is not type(None):
+    #if value<0:
+        #break
+
+    if type(value) is not type(None) and value > 0:
+        assert value > 0
         sane = get_neab.suite.tests[3].sanity_check(value*pq.pA,model)
         uc = {'amplitude':value}
         current = params.copy()['injected_square_current']
@@ -170,7 +175,7 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
             for i in score.sort_key.values[0]:
                 if type(i)==None:
                     i=10.0
-            error= score.sort_key.values[0]
+            error= [np.abs(i) for i in score.sort_key.values[0]]
             #pdb.set_trace()
 
             return_list.append(np.sum(error))
@@ -273,7 +278,7 @@ def check_fix_range(vms):
             if i in list(everything):
                 np.delete(center,i)
                 del centerl[i]
-                print(i)
+                '{}'.format(i)
         #print(i,j,'stuck in a loop')
         #delete the index
         #np.delete(center,np.where(everything is in center))
@@ -304,9 +309,17 @@ def check_current(ampl,vm):
     import copy
     import scoop
     import pickle
+    #from scoop import _debug
+    print(scoop.utils.getWorkerQte(scoop.utils.getHosts()))
+    ##dv = _debug.getDebugIdentifier()
+    #print(dv)
+
     if float(ampl) not in vm.lookup or len(vm.lookup)==0:
-        with open('test_current_failed_attrs.pickle', 'wb') as handle:
-            scoop.utils.getWorkerQte(scoop.utils.getHosts())
+
+
+        filename = '{}{}'.format(str(scoop.utils.getWorkerQte(scoop.utils.getHosts())),'test_current_failed_attrs.pickle')
+        with open(filename, 'wb') as handle:
+            #scoop.utils.getWorkerQte(scoop.utils.getHosts())
             failed_attrs=(ampl,vm.attrs,scoop.utils.socket.gethostname(),scoop.utils.getWorkerQte(scoop.utils.getHosts()))
             pickle.dump(failed_attrs, handle)
         current = params.copy()['injected_square_current']

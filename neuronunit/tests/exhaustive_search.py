@@ -24,6 +24,23 @@ global gs
 import grid_search as gs
 
 model=gs.model
+'''
+(ampl,attrs,host_name,host_number)=pickle.load(open('test_current_failed_attrs.pickle','rb'))
+def build_single(attrs):
+    #This method is only used to check singlular sets of hard coded parameters.]
+    #This medthod is probably only useful for diagnostic purposes.
+    import sciunit.scores as scores
+    import quantities as qt
+    vm = VirtuaModel()
+    rh_value=searcher(rh_param,vms)
+    get_neab.suite.tests[0].prediction={}
+    get_neab.suite.tests[0].prediction['value']=rh_value*qt.pA
+    score = get_neab.suite.judge(model)#passing in model, changes model
+
+build_single(attrs)
+'''
+import scoop
+from scoop import launcher
 #Uncomment the code below to run an exhaustive search.
 if __name__ == "__main__":
     #import pdb
@@ -69,9 +86,18 @@ if __name__ == "__main__":
             rh_param=(False,steps_current)
             rh_value=gs.searcher(rh_param,vm_spot)
 
-    rhstorage2 = [i.rheobase for i in rhstorage]
-    rhstorage = rhstorage2
-    iter_ = list(zip(list_of_models,rhstorage))
+    rhstorage = [i.rheobase for i in rhstorage]
+    iter_=[]
+    for j,i in enumerate(rhstorage):
+        if i.rheobase >= 0:
+            iter_.append((list_of_models,i))
+        else:
+            'print removed value rheobase {} model {}'.format(i.rheobase,list_of_models[j])
+            del i
+            del list_of_models[j]
+            #302746859
+    #iter_ = list(zip(list_of_models,rhstorage))
+
     with open('big_model_list.pickle', 'wb') as handle:
         pickle.dump(iter_, handle)
 
@@ -144,18 +170,6 @@ if __name__ == "__main__":
 
 
 
-    def build_single(attrs):
-        #This method is only used to check singlular sets of hard coded parameters.]
-        #This medthod is probably only useful for diagnostic purposes.
-        import sciunit.scores as scores
-        import quantities as qt
-        vm = VirtuaModel()
-        rh_value=searcher(rh_param,vms)
-        get_neab.suite.tests[0].prediction={}
-        get_neab.suite.tests[0].prediction['value']=rh_value*qt.pA
-        score = get_neab.suite.judge(model)#passing in model, changes model
-
-    build_single(attrs)
 
 
     #import pdb; pdb.set_trace()

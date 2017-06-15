@@ -16,8 +16,13 @@
 #    License along with SCOOP. If not, see <http://www.gnu.org/licenses/>.
 #
 import scoop
-scoop.DEBUG = False
-
+scoop.DEBUG = True
+from scoop.utils import socket
+import zmq
+from zmq.backend.cython.socket.Socket import recv
+print(socket.socket())
+#dir(socket)
+_recv_copy
 import unittest
 import subprocess
 import time
