@@ -5,13 +5,13 @@ import quantities as pq
 model_params={}
 #4*4*4*4==4^4==256
 
-model_params['vr'] = np.linspace(-75.0,-50.0,10)
+model_params['vr'] = np.linspace(-75.0,-50.0,2)
 #model_params['a'] = np.linspace(0.015,0.045,5)
 #model_params['a'] = (0.015 + 0.045) / 2.0
 
-model_params['a'] = np.linspace(0.0,0.945,10)
-model_params['b'] = np.linspace(-3.5*10E-10,-0.5*10E-9,10)
-model_params['vpeak'] =np.linspace(30.0,40.0,10)
+model_params['a'] = np.linspace(0.0,0.945,2)
+model_params['b'] = np.linspace(-3.5*10E-10,-0.5*10E-9,2)
+model_params['vpeak'] =np.linspace(30.0,40.0,2)
 
 model_params['k'] = np.linspace(7.0E-4-+7.0E-5,7.0E-4+70E-5,10)
 model_params['C'] = np.linspace(1.00000005E-4-1.00000005E-5,1.00000005E-4+1.00000005E-5,10)
