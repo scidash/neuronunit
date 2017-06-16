@@ -123,13 +123,18 @@ if __name__ == "__main__":
 
     rhstorage = [i.rheobase for i in rhstorage]
     iter_=[]
-    for j,i in enumerate(rhstorage):
-        if i.rheobase >= 0:
-            iter_.append((list_of_models,i))
+    for i,item in enumerate(rhstorage):
+        if type(item) is not type(None):
+            if item >= 0:
+                iter_.append((list_of_models,item))
+            else:
+                'print removed value rheobase {} model {}'.format(i.rheobase,list_of_models[j])
+                del item
+                del list_of_models[i]
         else:
-            'print removed value rheobase {} model {}'.format(i.rheobase,list_of_models[j])
-            del i
-            del list_of_models[j]
+            del item
+            del list_of_models[i]
+
             #302746859
     #iter_ = list(zip(list_of_models,rhstorage))
 
