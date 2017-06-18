@@ -57,17 +57,17 @@ import neuronunit.capabilities as cap
 
 def model2map(iter_arg):#This method must be pickle-able for scoop to work.
     vm=VirtualModel()
-    attrs={}
-    #param=['a']#,'b','vr','vpeak']#,'vr','vpeak']
-    attrs['a']=iter_arg[0]
-    attrs['b']=iter_arg[1]
-    attrs['vr']=iter_arg[2]
-    attrs['vpeak']=iter_arg[3]
+    vm.attrs={}
+
+    vm.attrs['a']=iter_arg[0]
+    vm.attrs['b']=iter_arg[1]
+    vm.attrs['vr']=iter_arg[2]
+    vm.attrs['vpeak']=iter_arg[3]
 
     #attrs['//izhikevich2007Cell']['b']=j
     #attrs['//izhikevich2007Cell']['vr']=k
     #attrs['//izhikevich2007Cell']['vpeak']=l
-    vm.attrs=attrs
+
     return vm
 
 
@@ -139,25 +139,12 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
 
                 get_neab.suite.tests[i].params['injected_square_current']['amplitude']=value*pq.pA
 
-            #score =
             print(get_neab.suite.tests[0].prediction['value'],value)
-            #import pickle
-            #pickle.dump(
+
             import os
             import scoop
-            #os.system('rm pre_failed_attrs_run.pickle')
-            with open('pre_failed_attrs_run.pickle', 'wb') as handle:
-                scoop.utils.getWorkerQte(scoop.utils.getHosts())
-                failed_attrs=(model.attrs,scoop.utils.socket.gethostname(),scoop.utils.getWorkerQte(scoop.utils.getHosts()))
-                pickle.dump(failed_attrs, handle)
-
+            import pickle
             score = get_neab.suite.judge(model)#passing in model, changes model
-
-            #os.system('rm post_failed_attrs_run.pickle')
-            with open('post_failed_attrs_run.pickle', 'wb') as handle:
-                failed_attrs=(model.attrs,scoop.utils.socket.gethostname(),scoop.utils.getWorkerQte(scoop.utils.getHosts()))
-
-                pickle.dump(failed_attrs, handle)
 
             import neuronunit.capabilities as cap
             spikes_numbers=[]
@@ -316,12 +303,13 @@ def check_current(ampl,vm):
 
     if float(ampl) not in vm.lookup or len(vm.lookup)==0:
 
-
+        '''
         filename = '{}{}'.format(str(scoop.utils.getWorkerQte(scoop.utils.getHosts())),'test_current_failed_attrs.pickle')
         with open(filename, 'wb') as handle:
             #scoop.utils.getWorkerQte(scoop.utils.getHosts())
             failed_attrs=(ampl,vm.attrs,scoop.utils.socket.gethostname(),scoop.utils.getWorkerQte(scoop.utils.getHosts()))
             pickle.dump(failed_attrs, handle)
+        '''
         current = params.copy()['injected_square_current']
 
         uc = {'amplitude':ampl}

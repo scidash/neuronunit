@@ -78,73 +78,31 @@ import scoop
 from scoop import launcher
 #Uncomment the code below to run an exhaustive search.
 if __name__ == "__main__":
-    #import pdb
     import scoop
     import model_parameters as modelp
     iter_list=[ (i,j,k,l) for i in modelp.model_params['a'] for j in modelp.model_params['b'] for k in modelp.model_params['vr'] for l in modelp.model_params['vpeak'] ]
-    #iter_list=[ i for i in modelp.model_params['a'] ]
-    #iter_list=iter_list[0:1]
-    #import grid_search as gs
-    import pdb
-    #pdb.set_trace()
-    mean_vm=gs.VirtualModel()
-    modelp.guess_attrs[0]
-    paramslist=['a','b','vr','vpeak']
-    #paramslist=['a']
-    model.name = str(model.name)+' '+str(paramslist[0])+str(modelp.guess_attrs[0])
-    attrs = {}
-    attrs[paramslist[0]]=modelp.guess_attrs[0]
-    print(attrs)
-    import pdb
-    mean_vm.attrs= attrs
-    #pdb.set_trace()
-
-    steps = np.linspace(50,150,7.0)
-    steps_current = [ i*pq.pA for i in steps ]
-    model.update_run_params(params=mean_vm.attrs)
-    rh_param = (False,steps_current)
-    pre_rh_value = gs.searcher(rh_param,mean_vm)
-    rh_value = pre_rh_value.rheobase
     list_of_models = list(futures.map(gs.model2map,iter_list))
-
     for li in list_of_models:
         print(li.rheobase, li.attrs)
     from itertools import repeat
-    rhstorage=list(futures.map(gs.evaluate,list_of_models,repeat(rh_value)))
-
-    for x in rhstorage:
-        x=x.rheobase
-        if x==False:
-            vm_spot=VirtualModel()
-            steps = np.linspace(40,250,7.0)
-            steps_current = [ i*pq.pA for i in steps ]
-            rh_param=(False,steps_current)
-            rh_value=gs.searcher(rh_param,vm_spot)
-
-    rhstorage = [i.rheobase for i in rhstorage]
+    rhstorage=list(futures.map(gs.evaluate,list_of_models))#,repeat(rh_value)))
     iter_=[]
-    for i,item in enumerate(rhstorage):
-        if type(item) is not type(None):
-            if item >= 0:
-                iter_.append((list_of_models,item))
-            else:
-                'print removed value rheobase {} model {}'.format(i.rheobase,list_of_models[j])
-                del item
-                del list_of_models[i]
-        else:
-            del item
-            del list_of_models[i]
+    rhstorage = list(filter(lambda item: type(item) is not type(None), rhstorage))
 
-            #302746859
-    #iter_ = list(zip(list_of_models,rhstorage))
+    #rhstorage = list(filter(lambda item: (type(item) is not 'NoneType') and (type(item) is not type(None)), rhstorage))
+    rhstorage = list(filter(lambda item: type(item.rheobase) is not type(None), rhstorage))
+    rhstorage = list(filter(lambda item: item.rheobase > 0.0, rhstorage))
 
+    iter_=zip(rhstorage,list(futures.map( lambda item: item.rheobase,rhstorage )))
+    #iter_=zip([ i.rheobase for i in rhstorage ],[ j for j in iter_ ])
+
+    import pickle
     with open('big_model_list.pickle', 'wb') as handle:
         pickle.dump(iter_, handle)
 
 
     sm = list(futures.map(gs.func2map, iter_))
 
-    import pickle
     with open('score_matrix.pickle', 'wb') as handle:
         pickle.dump(sm, handle)
 
