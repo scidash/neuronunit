@@ -23,9 +23,9 @@ model_params['vt'] =  np.linspace(-50.0,-30.0,10)
 steps2 = np.linspace(50,190,4.0)
 steps = [ i*pq.pA for i in steps2 ]
 
-guess_attrs=[]
+init_attrs=[]
 #guess_attrs.append(model_params['a'])
-guess_attrs.append(np.mean( [ i for i in model_params['a'] ]))
-guess_attrs.append(np.mean( [ i for i in model_params['b'] ]))
-guess_attrs.append(np.mean( [ i for i in model_params['vr'] ]))
-guess_attrs.append(np.mean( [ i for i in model_params['vpeak'] ]))
+init_attrs.append(np.mean( [ i for i in model_params['a'] ]))
+init_attrs.append(np.mean( [ i for i in model_params['b'] ]))
+init_attrs.append(np.mean( [ i for i in model_params['vr'] ]))
+init_attrs.append(np.mean( [ i for i in model_params['vpeak'] ]))
