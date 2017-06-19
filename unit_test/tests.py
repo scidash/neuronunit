@@ -16,7 +16,7 @@
 #    License along with SCOOP. If not, see <http://www.gnu.org/licenses/>.
 #
 import scoop
-scoop.DEBUG = True
+#scoop.DEBUG = True
 from scoop.utils import socket
 import zmq
 from zmq.backend.cython.socket.Socket import recv
@@ -42,6 +42,8 @@ from scoop.broker.structs import BrokerInfo
 
 
 subprocesses = []
+
+
 def cleanSubprocesses():
     [a.kill() for a in subprocesses]
 
@@ -51,6 +53,11 @@ except AttributeError:
     # SIGQUIT doesn't exist on Windows
     signal.signal(signal.SIGTERM, cleanSubprocesses)
 
+def funcTR(n):
+    '''
+    A parallel rheobase test
+    '''
+    return result
 
 def func0(n):
     task = futures.submit(func1, n)
