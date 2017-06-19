@@ -114,8 +114,8 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
     #if value<0:
         #break
 
-    if type(value) is not type(None) and value > 0:
-        assert value > 0
+    if type(value) is not type(None) and value >= 0:
+        assert value >= 0
         sane = get_neab.suite.tests[3].sanity_check(value*pq.pA,model)
         uc = {'amplitude':value}
         current = params.copy()['injected_square_current']
@@ -152,17 +152,22 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
             for k,v in score.related_data.items():
                 spikes_numbers.append(cap.spike_functions.get_spike_train(((v.values[0]['vm']))))
                 plt.plot(model.results['t'],v.values[0]['vm'])
-            plt.savefig(str(model.name)+'.png')
+            plt.savefig('{}.png'.format(str(model.name)))
             plt.clf()
 
             #n_spikes = model.get_spike_count()
 
 
             model.run_number+=1
-            for i in score.sort_key.values[0]:
-                if type(i)==None:
-                    i=10.0
-            error= [np.abs(i) for i in score.sort_key.values[0]]
+            skv = list(filter(lambda item: type(item) is not type(None), score.sort_key.values[0]))
+            for i in skv:
+                print(i)
+            if len(error)!=0:
+                error= [np.abs(i) for i in skv ]
+
+            #for i in score.sort_key.values[0]:
+            #    if type(i)==None:
+            #        i=10.0
             #pdb.set_trace()
 
             return_list.append(np.sum(error))
@@ -327,7 +332,7 @@ def check_current(ampl,vm):
             assert model.rheobase_memory != None
         verbose = True
         if verbose:
-            print('8 CPUs are testing different values of current injections simultaneously Injected %s current and got %d spikes on model %s' % \
+            print(' Injected %s current and got %d spikes on model %s' % \
                     (ampl,n_spikes,vm.attrs))
 
         vm.lookup[float(ampl)] = n_spikes
