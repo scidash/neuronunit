@@ -111,7 +111,8 @@ if __name__ == "__main__":
         print(li.rheobase, li.attrs)
     from itertools import repeat
     rhstorage=list(futures.map(gs.evaluate,list_of_models,repeat(rh_value)))
-
+    assert len(rhstorage) == len(list_of_models)
+    '''
     for x in rhstorage:
         x=x.rheobase
         if x==False:
@@ -120,19 +121,20 @@ if __name__ == "__main__":
             steps_current = [ i*pq.pA for i in steps ]
             rh_param=(False,steps_current)
             rh_value=gs.searcher(rh_param,vm_spot)
-
-    rhstorage = [i.rheobase for i in rhstorage]
+    '''
+    rhstorage_c = [i.rheobase for i in rhstorage]
+    assert len(rhstorage) == len(list_of_models) == len(rhstorage_c)
     iter_=[]
-    for i,item in enumerate(rhstorage):
+    for i,item in enumerate(rhstorage_c):
         if type(item) is not type(None):
             if item >= 0:
                 iter_.append((list_of_models,item))
             else:
-                'print removed value rheobase {} model {}'.format(i.rheobase,list_of_models[j])
-                del item
+                'print removed value rheobase {} model {}'.format(item,list_of_models[i])
+                del rhstorage_c[i]
                 del list_of_models[i]
         else:
-            del item
+            del rhstorage_c[i]
             del list_of_models[i]
 
             #302746859
