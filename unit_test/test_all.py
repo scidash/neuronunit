@@ -22,23 +22,24 @@ import warnings
 class OptimizationTestCase(NotebookTools,unittest.TestCase):
     """Testing documentation notebooks"""
 
-    path = 'docs'
-
+    path = 'utils'
+    import utils
 
     #@unittest.skip("Skipping chapter 1")
     def test_chapter1(self):
-        self.do_notebook('get_tau')
+        utils.
+        #self.do_notebook('get_tau')
     #@unittest.skip("Skipping chapter 1")
     def test_chapter1(self):
-        self.do_notebook('chapter1')
+        #self.do_notebook('chapter1')
 
     #@unittest.skip("Skipping chapter 2")
     def test_chapter2(self):
-        self.do_notebook('chapter2')
+        #self.do_notebook('chapter2')
 
     #@unittest.skip("Skipping chapter 3")
     def test_chapter3(self):
-        self.do_notebook('chapter3')
+        #self.do_notebook('chapter3')
 
     @unittest.skip("Skipping chapter 4")
     def test_chapter4(self):
