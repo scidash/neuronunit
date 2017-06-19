@@ -100,9 +100,11 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
     '''
     iter_arg,value = iter_
 
-    assert iter_arg.attrs is not type(None)
     return_list=[]
-    # model.load_model()
+    try:
+        assert iter_arg.attrs is not type(None)
+    except:
+        'exception occured {}'.format()
     model.update_run_params(iter_arg.attrs)
     import quantities as qt
     import copy
@@ -114,7 +116,7 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
     #if value<0:
         #break
 
-    if type(value) is not type(None) and value >= 0:
+    if type(value) is not type(None):# and value >= 0:
         assert value >= 0
         sane = get_neab.suite.tests[3].sanity_check(value*pq.pA,model)
         uc = {'amplitude':value}
@@ -144,31 +146,31 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
             import os
             import scoop
             import pickle
+            print('testing model: {}'.format(str(iter_arg.attrs)))
+            model.name='rheobase {} parameters {}'.format(str(value),str(iter_arg.attrs))
             score = get_neab.suite.judge(model)#passing in model, changes model
 
             import neuronunit.capabilities as cap
             spikes_numbers=[]
+            '''
             plt.clf()
             for k,v in score.related_data.items():
                 spikes_numbers.append(cap.spike_functions.get_spike_train(((v.values[0]['vm']))))
                 plt.plot(model.results['t'],v.values[0]['vm'])
             plt.savefig('{}.png'.format(str(model.name)))
             plt.clf()
-
+            '''
             #n_spikes = model.get_spike_count()
 
 
             model.run_number+=1
+            'gets to checkpoint a !!!!!!!\n\n\n{}'.format(str(score))
             skv = list(filter(lambda item: type(item) is not type(None), score.sort_key.values[0]))
             for i in skv:
                 print(i)
             if len(error)!=0:
                 error= [np.abs(i) for i in skv ]
 
-            #for i in score.sort_key.values[0]:
-            #    if type(i)==None:
-            #        i=10.0
-            #pdb.set_trace()
 
             return_list.append(np.sum(error))
             return_list.append(iter_arg.attrs)
@@ -178,16 +180,16 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
             return_list.append(error)
             return_list.append(init_vm)
 
-            print(len(error))
+            #print(len(error))
         elif sane == False:
-            import sciunit.scores as scores
+            #import sciunit.scores as scores
             error = [ 10.0 for i in range(0,7) ]
             import copy
             print(len(error))
-            print(score.sort_key.values[0])
+            #print(score.sort_key.values[0])
             #pdb.set_trace()
 
-            return_list.append(np.sum(error))
+            return_list.append(error)
             return_list.append(iter_arg.attrs)
 
             return_list.append(value*pq.pA)
@@ -196,10 +198,6 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
             return_list.append(error)
             return_list.append(init_vm)
 
-            print(len(returned_list[0]))
-            print(len(returned_list[1]))
-            print(len(returned_list[2]))
-            print(len(returned_list[3]))
 
     return return_list
     #return list(zip(np.sum(error), iter_arg.attrs, value*pq.pA, model.results['t'], model.results['vm']))

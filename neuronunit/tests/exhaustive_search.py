@@ -58,7 +58,57 @@ import sciunit.scores as scores
 global gs
 import grid_search as gs
 
+
+def plot_results(score_matrix):
+    'gets here?{}'.format(score_matrix)
+    'gets here?{}'.format()
+    sum_error = [ i[0] for i in sm ]
+    attrs = [ str(k)+str(v) for i in sm for k,v in i[1].items() ]
+    vm = [ i[6] for i in sm ]
+    time_vector = [ i[3] for i in sm ]
+    component_error = [ i[5] for i in sm ]
+
+    print(sum_error, 'error')
+
+    min_value = min([float(s) for s in sum_error])
+    assert min([float(s) for s in sum_error]) == np.min(np.array(sum_error))
+    print(min([float(s) for s in sum_error]), np.min(np.array(sum_error)))
+    min_ind = np.where( np.array(sum_error) == np.min(np.array(sum_error) ))[0][0]
+    assert sum_error[np.where( np.array(sum_error) == np.min(np.array(sum_error) ))[0][0]] == min([float(s) for s in sum_error])
+    print(min_ind,sum_error[min_ind],sum_error)
+    import matplotlib.pyplot as plt
+    fig, ax1 = plt.subplots()
+    # These are in unitless percentages of the figure size. (0,0 is bottom left)
+    left, bottom, width, height = [0.9*float(min_ind/len(sum_error)), 0.6, 0.2, 0.2]
+    ax2 = fig.add_axes([left, bottom, width, height])
+
+
+
+    ax1.plot([i for i in range(0,len(sum_error))], sum_error, color='red')
+    ax1.set_yscale('log')
+    plt.xlabel('params'+str(attrs[min_ind]))
+    plt.ylabel('error')
+
+    ax2.plot(time_vector[min_ind], vm[min_ind],  color='green',label=str(attrs[min_ind]))
+    legend = ax1.legend(loc='lower center', shadow=True)
+
+    fig.savefig('inset_figure')
+    return 0
+
+'''
+Move all of this to tests
+'''
+
 model=gs.model
+import pickle
+rcm = pickle.load(open('big_model_list.pickle','rb'))#rcm
+sm = list(futures.map(gs.func2map, rcm))
+print(sm)
+
+'{} gets here'.format()
+plot_results(sm)
+
+
 '''
 (ampl,attrs,host_name,host_number)=pickle.load(open('test_current_failed_attrs.pickle','rb'))
 def build_single(attrs):
@@ -88,8 +138,6 @@ if __name__ == "__main__":
     rhstorage=list(futures.map(gs.evaluate,list_of_models))#,repeat(rh_value)))
     iter_=[]
     rhstorage = list(filter(lambda item: type(item) is not type(None), rhstorage))
-
-    #rhstorage = list(filter(lambda item: (type(item) is not 'NoneType') and (type(item) is not type(None)), rhstorage))
     rhstorage = list(filter(lambda item: type(item.rheobase) is not type(None), rhstorage))
     rhstorage = list(filter(lambda item: item.rheobase > 0.0, rhstorage))
 
