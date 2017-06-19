@@ -141,35 +141,24 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
 
                 get_neab.suite.tests[i].params['injected_square_current']['amplitude']=value*pq.pA
 
-            print(get_neab.suite.tests[0].prediction['value'],value)
-
-            import os
-            import scoop
-            import pickle
-            print('testing model: {}'.format(str(iter_arg.attrs)))
-            model.name='rheobase {} parameters {}'.format(str(value),str(iter_arg.attrs))
+            '{}{}'.format(get_neab.suite.tests[0].prediction['value'],value)
             score = get_neab.suite.judge(model)#passing in model, changes model
 
+
+            skv = list(filter(lambda item: type(item) is not type(None), score.sort_key.values[0]))
+            try:
+                assert len(skv) != 0
+                error= [np.abs(i) for i in skv ]
+            except:
+
+                error = [ 10.0 for i in range(0,7) ]
+                'feigned error {}, this shouldn\'t happen often rheobase {} parameters {}'.format(str(error),str(value),str(iter_arg.attrs))
+            model.name='rheobase {} parameters {}'.format(str(value),str(iter_arg.attrs))
             import neuronunit.capabilities as cap
             spikes_numbers=[]
-            '''
-            plt.clf()
-            for k,v in score.related_data.items():
-                spikes_numbers.append(cap.spike_functions.get_spike_train(((v.values[0]['vm']))))
-                plt.plot(model.results['t'],v.values[0]['vm'])
-            plt.savefig('{}.png'.format(str(model.name)))
-            plt.clf()
-            '''
-            #n_spikes = model.get_spike_count()
-
-
             model.run_number+=1
-            'gets to checkpoint a !!!!!!!\n\n\n{}'.format(str(score))
-            skv = list(filter(lambda item: type(item) is not type(None), score.sort_key.values[0]))
-            for i in skv:
-                print(i)
-            if len(error)!=0:
-                error= [np.abs(i) for i in skv ]
+            print('testing model: {}'.format(str(iter_arg.attrs)))
+            print('gets to checkpoint a !!!!!!!\n\n\n{}'.format(str(score)))
 
 
             return_list.append(np.sum(error))
@@ -180,15 +169,8 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
             return_list.append(error)
             return_list.append(init_vm)
 
-            #print(len(error))
         elif sane == False:
-            #import sciunit.scores as scores
             error = [ 10.0 for i in range(0,7) ]
-            import copy
-            print(len(error))
-            #print(score.sort_key.values[0])
-            #pdb.set_trace()
-
             return_list.append(error)
             return_list.append(iter_arg.attrs)
 
@@ -200,7 +182,6 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
 
 
     return return_list
-    #return list(zip(np.sum(error), iter_arg.attrs, value*pq.pA, model.results['t'], model.results['vm']))
 
 class VirtualModel:
     '''
