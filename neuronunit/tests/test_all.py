@@ -11,9 +11,14 @@ import quantities as pq
 
 
 class OptimizationTestCase(unittest.TestCase):
+    def test_tsuite(self):
+    imported_data = list(pickle.load(open('big_model_list.pickle','rb')))
+    for x,y in imported_data:
+        print(x.attrs,y)
+    #a=pickle.load(open('big_model_list.pickle','rb'))
 
     def test_func2map(self, file2map):
-        exec_string='python '+str(file2map)
+        exec_string='python {}'.format(str(file2map))
         os.system(exec_string)
         return 0
 
