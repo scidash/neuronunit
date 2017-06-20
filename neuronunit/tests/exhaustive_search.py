@@ -22,20 +22,11 @@ import grid_search as gs
 
 
 
-    #(ampl,attrs,host_name,host_number)=pickle.load(open('big_model_evaulated.pickle','rb'))
 def run_single_model(attrs,rhvalue):
-    import sciunit.scores as scores
-    import quantities as qt
-    print(attrs)
-    print(rhvalue)
-    model.rheobase = rhvalue#*qt.pA
     model.update_run_params(attrs)
-    params = {}
     gs.get_neab.suite.tests[0].params['injected_square_current']['amplitude'] = rhvalue
     params = gs.get_neab.suite.tests[0].params
-    #model.params['injected_square_current']['amplitude'] = rhvalue
     model.inject_square_current(params)
-    print(model.results.keys())
     return (model.results['vm'],model.results['t'])
 
 
@@ -73,18 +64,18 @@ def plot_results(ground_error):
 
     fig.savefig('inset_figure.png')
     plt.clf()
-    plot.plot(min_ind, np.min(np.array(sum_error)),'*',color='blue')
-    plt.plot([i for i in range(0,len(sum_error))], sum_error,label='rectified sum of errors')#, color='red')
-    plt.plot([i for i in range(0,len(sum_error))],[i[0] for i in component_error],label='RheobaseTest')#, color='red')
-    plt.plot([i for i in range(0,len(sum_error))],[i[1] for i in component_error],label='InputResistanceTest')#, color='red')
-    plt.plot([i for i in range(0,len(sum_error))],[i[2] for i in component_error],label='TimeConstantTest')#, color='red')
-    plt.plot([i for i in range(0,len(sum_error))],[i[3] for i in component_error],label='CapacitanceTest')#, color='red')
-    plt.plot([i for i in range(0,len(sum_error))],[i[4] for i in component_error],label='RestingPotentialTest')#, color='red')
-    plt.plot([i for i in range(0,len(sum_error))],[i[5] for i in component_error],label='InjectedCurrentAPWidthTest')#, color='red')
-    plt.plot([i for i in range(0,len(sum_error))],[i[6] for i in component_error],label='InjectedCurrentAPAmplitudeTest')#, color='red')
+    plt.plot(min_ind, np.min(np.array(sum_error)),'*',color='blue')
+    plt.plot([i for i in range(0,len(sum_error))], sum_error,label='rectified sum of errors')
+    plt.plot([i for i in range(0,len(sum_error))],[i[0] for i in component_error],label='RheobaseTest')
+    plt.plot([i for i in range(0,len(sum_error))],[i[1] for i in component_error],label='InputResistanceTest')
+    plt.plot([i for i in range(0,len(sum_error))],[i[2] for i in component_error],label='TimeConstantTest')
+    plt.plot([i for i in range(0,len(sum_error))],[i[3] for i in component_error],label='CapacitanceTest')
+    plt.plot([i for i in range(0,len(sum_error))],[i[4] for i in component_error],label='RestingPotentialTest')
+    plt.plot([i for i in range(0,len(sum_error))],[i[5] for i in component_error],label='InjectedCurrentAPWidthTest')
+    plt.plot([i for i in range(0,len(sum_error))],[i[6] for i in component_error],label='InjectedCurrentAPAmplitudeTest')
     for i in component_error:
         try:
-            plt.plot([i for i in range(0,len(sum_error))],[i[7] for i in component_error],label='InjectedCurrentAPThresholdTest')#, color='red')
+            plt.plot([i for i in range(0,len(sum_error))],[i[7] for i in component_error],label='InjectedCurrentAPThresholdTest')
         except:
             '{} AP threshold test had to be abandoned'.format(str('InjectedCurrentAPThresholdTest'))
 
@@ -107,9 +98,14 @@ if __name__ == "__main__":
         '{} it seems the ground truth data does not yet exist, lets create it now '.format()
         import scoop
         import model_parameters as modelp
-        iter_list=[ (i,j,k,l) for i in modelp.model_params['a'] for j in modelp.model_params['b'] for k in modelp.model_params['vr'] for l in modelp.model_params['vpeak'] ]
+        iter_list=[ (i,j,k,l,m,n,o,p) for i in modelp.model_params['a'] for j in modelp.model_params['b'] \
+        for k in modelp.model_params['vr'] for l in modelp.model_params['vpeak'] \
+        for m in modelp.model_params['k'] for n in modelp.model_params['c'] \
+        for n in modelp.model_params['C'] for n in modelp.model_params['d'] \
+        for n in modelp.model_params['v0'] for n in modelp.model_params['vt'] ]
+
         list_of_models = list(futures.map(gs.model2map,iter_list))
-        rhstorage=list(futures.map(gs.evaluate,list_of_models))
+        rhstorage = list(futures.map(gs.evaluate,list_of_models))
         rhstorage = list(filter(lambda item: type(item) is not type(None), rhstorage))
         rhstorage = list(filter(lambda item: type(item.rheobase) is not type(None), rhstorage))
         #rhstorage = list(filter(lambda item: item.rheobase > 0.0, rhstorage))
@@ -126,4 +122,3 @@ if __name__ == "__main__":
         pickle.dump(ground_error,open('big_model_evaulated.pickle','wb'))
 
     _ = plot_results(ground_error)
-    
