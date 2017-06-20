@@ -95,14 +95,14 @@ if __name__ == "__main__":
     try:
         ground_truth = pickle.load(open('big_model_list.pickle','rb'))
     except:
-        '{} it seems the ground truth data does not yet exist, lets create it now '.format()
+        '{}'.format(str('it seems the ground truth data does not yet exist, lets create it now'))
         import scoop
         import model_parameters as modelp
-        iter_list=[ (i,j,k,l,m,n,o,p) for i in modelp.model_params['a'] for j in modelp.model_params['b'] \
+        iter_list=[ (i,j,k,l,m,n,o,p,q,r) for i in modelp.model_params['a'] for j in modelp.model_params['b'] \
         for k in modelp.model_params['vr'] for l in modelp.model_params['vpeak'] \
         for m in modelp.model_params['k'] for n in modelp.model_params['c'] \
-        for n in modelp.model_params['C'] for n in modelp.model_params['d'] \
-        for n in modelp.model_params['v0'] for n in modelp.model_params['vt'] ]
+        for o in modelp.model_params['C'] for p in modelp.model_params['d'] \
+        for q in modelp.model_params['v0'] for r in modelp.model_params['vt'] ]
 
         list_of_models = list(futures.map(gs.model2map,iter_list))
         rhstorage = list(futures.map(gs.evaluate,list_of_models))
