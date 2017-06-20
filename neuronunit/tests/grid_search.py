@@ -246,7 +246,7 @@ def check_current(ampl,vm):
     '''
     import copy
     import scoop
-    'the scoop worker id: {}'.fomrat(scoop.utils.getWorkerQte(scoop.utils.getHosts()))
+    'the scoop worker id: {}'.format(scoop.utils.getWorkerQte(scoop.utils.getHosts()))
 
 
     if float(ampl) not in vm.lookup or len(vm.lookup)==0:
