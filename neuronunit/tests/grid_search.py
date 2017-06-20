@@ -91,7 +91,7 @@ def pop2map(iter_arg):
     print(model.params,attrs,vm.attrs)
     return (model, vm)
 
-def func2map(iter_):#This method must be pickle-able for scoop to work.
+def error2map(iter_):#This method must be pickle-able for scoop to work.
     '''
     Inputs an iterable list, a neuron unit test object suite of neuron model
     tests of emperical data reproducibility.
@@ -246,11 +246,8 @@ def check_current(ampl,vm):
     '''
     import copy
     import scoop
-    import pickle
-    #from scoop import _debug
     'the scoop worker id: {}'.fomrat(scoop.utils.getWorkerQte(scoop.utils.getHosts()))
-    ##dv = _debug.getDebugIdentifier()
-    #print(dv)
+
 
     if float(ampl) not in vm.lookup or len(vm.lookup)==0:
 
