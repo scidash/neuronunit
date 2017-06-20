@@ -59,12 +59,27 @@ global gs
 import grid_search as gs
 
 
+
+
+    #(ampl,attrs,host_name,host_number)=pickle.load(open('big_model_evaulated.pickle','rb'))
+def build_single(attrs):
+    #This method is only used to check singlular sets of hard coded parameters.]
+    #This medthod is probably only useful for diagnostic purposes.
+    import sciunit.scores as scores
+    import quantities as qt
+    vm = VirtuaModel()
+    vm.rheobase = rh_value*qt.pA
+    #rh_value=searcher(rh_param,vms)
+    get_neab.suite.tests[0].prediction={}
+    get_neab.suite.tests[0].prediction['value']=rh_value*qt.pA
+    score = get_neab.suite.judge(model)#passing in model, changes model
+    return (score.related_data['vm'],score.related_data['time'])
+
 def plot_results(score_matrix):
     sum_error = [ i[0] for i in sm ]
-    attrs = [ str(k)+str(v) for i in sm for k,v in i[1].items() ]
-    vm = [ i[6] for i in sm ]
-    time_vector = [ i[3] for i in sm ]
-    component_error = [ i[5] for i in sm ]
+    component_error = [ i[1] for i in sm ]
+    attrs = [ str(k)+str(v) for i in sm for k,v in i[2].items() ]
+    '{}'.format(attrs)
 
 
     min_value = min([float(s) for s in sum_error])
@@ -75,6 +90,8 @@ def plot_results(score_matrix):
     except:
         '{} no uique minimum error found'.format()
     min_ind = np.where( np.array(sum_error) == np.min(np.array(sum_error) ))[0][0]
+    (vm,time) = build_single(attrs[min_ind])
+
     import matplotlib.pyplot as plt
     fig, ax1 = plt.subplots()
     # These are in unitless percentages of the figure size. (0,0 is bottom left)
@@ -101,28 +118,15 @@ if __name__ == "__main__":
     model=gs.model
     import pickle
     ground_truth = pickle.load(open('big_model_list.pickle','rb'))#rcm
-    sm = list(futures.map(gs.func2map, ground_truth))
-    print(sm)
+    ground_truth = list(futures.map(gs.func2map, ground_truth))
+    pickle.dump(open('big_model_evaulated.pickle','wb'),ground_truth)
+    ground_truth = pickle.load(open('big_model_evaulated.pickle','rb'))#rcm
 
-    '{} gets here'.format()
-    plot_results(sm)
+    #print(sm)
 
+    #'{} gets here'.format()
+    #plot_results(ground_truth)
 
-    '''
-    (ampl,attrs,host_name,host_number)=pickle.load(open('test_current_failed_attrs.pickle','rb'))
-    def build_single(attrs):
-        #This method is only used to check singlular sets of hard coded parameters.]
-        #This medthod is probably only useful for diagnostic purposes.
-        import sciunit.scores as scores
-        import quantities as qt
-        vm = VirtuaModel()
-        rh_value=searcher(rh_param,vms)
-        get_neab.suite.tests[0].prediction={}
-        get_neab.suite.tests[0].prediction['value']=rh_value*qt.pA
-        score = get_neab.suite.judge(model)#passing in model, changes model
-
-    build_single(attrs)
-    '''
 
     import scoop
     import model_parameters as modelp
