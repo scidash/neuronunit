@@ -80,7 +80,6 @@ def pop2map(iter_arg):
     attrs['//izhikevich2007Cell']={}
     param=['a','b','vr','vpeak']#,'vr','vpeak']
     i,j,k,l=iter_arg#,k,l
-    #i=iter_arg
     model.name=str(i)+str(j)+str(k)+str(l)
     attrs['//izhikevich2007Cell']['a']=i
     attrs['//izhikevich2007Cell']['b']=j
@@ -89,7 +88,6 @@ def pop2map(iter_arg):
     vm.attrs=attrs
     model.load_model()
     model.update_run_params(vm.attrs)
-    #model.update_run_params(model.attrs)
     print(model.params,attrs,vm.attrs)
     return (model, vm)
 
@@ -107,16 +105,9 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
         'exception occured {}'.format()
     model.update_run_params(iter_arg.attrs)
     import quantities as qt
-    import copy
-    import os
-    import os.path
-    import pdb
     score = None
     sane = False
-    #if value<0:
-        #break
-
-    if type(value) is not type(None):# and value >= 0:
+    if type(value) is not type(None):
         assert value >= 0
         sane = get_neab.suite.tests[3].sanity_check(value*pq.pA,model)
         uc = {'amplitude':value}
@@ -125,60 +116,37 @@ def func2map(iter_):#This method must be pickle-able for scoop to work.
         current = {'injected_square_current':current}
         import copy
         model.inject_square_current(current)
-        init_vm = copy.copy(model.results['vm'])
+        init_vm = model.results['vm']
         n_spikes = model.get_spike_count()
         assert n_spikes == 1 or n_spikes == 0
         get_neab.suite.tests[0].prediction={}
         get_neab.suite.tests[0].prediction['value'] = value * pq.pA
-        #print()
         return_list = []
         error = []# re-declare error this way to stop it growing.
         if sane == True and n_spikes == 1:
-            #we are not using the rheobase test from the test suite, we are using a custom parallel rheobase test
-            #instead.
-            #del get_neab.suite.tests[0]
             for i in [3,4,5]:
-
                 get_neab.suite.tests[i].params['injected_square_current']['amplitude']=value*pq.pA
-
-            '{}{}'.format(get_neab.suite.tests[0].prediction['value'],value)
             score = get_neab.suite.judge(model)#passing in model, changes model
-
-
             skv = list(filter(lambda item: type(item) is not type(None), score.sort_key.values[0]))
             try:
                 assert len(skv) != 0
-                error= [np.abs(i) for i in skv ]
+                error= [ np.abs(i) for i in skv ]
             except:
-
                 error = [ 10.0 for i in range(0,7) ]
-                'feigned error {}, this shouldn\'t happen often rheobase {} parameters {}'.format(str(error),str(value),str(iter_arg.attrs))
             model.name='rheobase {} parameters {}'.format(str(value),str(iter_arg.attrs))
             import neuronunit.capabilities as cap
             spikes_numbers=[]
             model.run_number+=1
-            print('testing model: {}'.format(str(iter_arg.attrs)))
-            print('gets to checkpoint a !!!!!!!\n\n\n{}'.format(str(score)))
-
-
             return_list.append(np.sum(error))
+            return_list.append(error)
             return_list.append(iter_arg.attrs)
             return_list.append(value*pq.pA)
-            return_list.append(model.results['t'])
-            return_list.append(model.results['vm'])
-            return_list.append(error)
-            return_list.append(init_vm)
-
         elif sane == False:
             error = [ 10.0 for i in range(0,7) ]
+            return_list.append(np.sum(error))
             return_list.append(error)
             return_list.append(iter_arg.attrs)
-
             return_list.append(value*pq.pA)
-            return_list.append(model.results['t'])
-            return_list.append(model.results['vm'])
-            return_list.append(error)
-            return_list.append(init_vm)
 
 
     return return_list
@@ -249,8 +217,7 @@ def check_fix_range(vms):
             if i in list(everything):
                 np.delete(center,i)
                 del centerl[i]
-                '{}'.format(i)
-        #print(i,j,'stuck in a loop')
+
         #delete the index
         #np.delete(center,np.where(everything is in center))
         #make sure that element 4 in a seven element vector
@@ -281,19 +248,12 @@ def check_current(ampl,vm):
     import scoop
     import pickle
     #from scoop import _debug
-    print(scoop.utils.getWorkerQte(scoop.utils.getHosts()))
+    'the scoop worker id: {}'.fomrat(scoop.utils.getWorkerQte(scoop.utils.getHosts()))
     ##dv = _debug.getDebugIdentifier()
     #print(dv)
 
     if float(ampl) not in vm.lookup or len(vm.lookup)==0:
 
-        '''
-        filename = '{}{}'.format(str(scoop.utils.getWorkerQte(scoop.utils.getHosts())),'test_current_failed_attrs.pickle')
-        with open(filename, 'wb') as handle:
-            #scoop.utils.getWorkerQte(scoop.utils.getHosts())
-            failed_attrs=(ampl,vm.attrs,scoop.utils.socket.gethostname(),scoop.utils.getWorkerQte(scoop.utils.getHosts()))
-            pickle.dump(failed_attrs, handle)
-        '''
         current = params.copy()['injected_square_current']
 
         uc = {'amplitude':ampl}
@@ -305,11 +265,14 @@ def check_current(ampl,vm):
         vm.previous=ampl
         n_spikes = model.get_spike_count()
         if n_spikes == 1:
-            model.rheobase_memory=copy.copy(float(ampl))
-            vm.rheobase=copy.copy(float(ampl))
-            assert vm.rheobase != None
-            assert model.rheobase_memory != None
-        verbose = True
+            model.rheobase_memory=float(ampl)
+            vm.rheobase=float(ampl)
+            try:
+                assert vm.rheobase != None
+                assert model.rheobase_memory != None
+            except:
+                pass
+        verbose = False
         if verbose:
             print(' Injected %s current and got %d spikes on model %s' % \
                     (ampl,n_spikes,vm.attrs))
@@ -383,14 +346,5 @@ def evaluate(individual, guess_value=None):
     import copy
     vm.attrs = copy.copy(individual.attrs)
     rh_param = (False,guess_value)
-    import scoop
-    import pickle
-    with open('pre_failed_attrs.pickle', 'wb') as handle:
-        scoop.utils.getWorkerQte(scoop.utils.getHosts())
-        failed_attrs=(vm.attrs,scoop.utils.socket.gethostname(),scoop.utils.getWorkerQte(scoop.utils.getHosts()))
-        pickle.dump(failed_attrs, handle)
-
     vm = searcher(rh_param,vm)
-
-
     return vm
