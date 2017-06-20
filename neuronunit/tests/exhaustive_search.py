@@ -62,26 +62,30 @@ import grid_search as gs
 
 
     #(ampl,attrs,host_name,host_number)=pickle.load(open('big_model_evaulated.pickle','rb'))
-def build_single(attrs):
-    #This method is only used to check singlular sets of hard coded parameters.]
-    #This medthod is probably only useful for diagnostic purposes.
+def run_single_model(attrs,rhvalue):
     import sciunit.scores as scores
     import quantities as qt
-    vm = VirtuaModel()
-    vm.rheobase = rh_value*qt.pA
-    #rh_value=searcher(rh_param,vms)
-    get_neab.suite.tests[0].prediction={}
-    get_neab.suite.tests[0].prediction['value']=rh_value*qt.pA
-    score = get_neab.suite.judge(model)#passing in model, changes model
-    return (score.related_data['vm'],score.related_data['time'])
+    print(attrs)
+    print(rhvalue)
+    model.rheobase = rhvalue#*qt.pA
+    model.update_run_params(attrs)
+    params = {}
+    #params['injected_square_current']['delay'] = DELAY
+    #params['injected_square_current']['duration'] = DURATION
+    gs.get_neab.suite.tests[0].params['injected_square_current']['amplitude'] = rhvalue
+    params = gs.get_neab.suite.tests[0].params
+    #model.params['injected_square_current']['amplitude'] = rhvalue
+    model.inject_square_current(params)
+    print(model.results.keys())
+    return (model.results['vm'],model.results['t'])
 
-def plot_results(score_matrix):
-    sum_error = [ i[0] for i in sm ]
-    component_error = [ i[1] for i in sm ]
-    attrs = [ str(k)+str(v) for i in sm for k,v in i[2].items() ]
-    '{}'.format(attrs)
 
+def plot_results(ground_error):
 
+    sum_error = [ i[0] for i in ground_error  ]
+    component_error = [ i[1] for i in ground_error  ]
+    attrs = [ i[2] for i in ground_error ]
+    rhvalue = [ i[3] for i in ground_error ]
     min_value = min([float(s) for s in sum_error])
     try:
         assert min([float(s) for s in sum_error]) == np.min(np.array(sum_error))
@@ -90,7 +94,9 @@ def plot_results(score_matrix):
     except:
         '{} no uique minimum error found'.format()
     min_ind = np.where( np.array(sum_error) == np.min(np.array(sum_error) ))[0][0]
-    (vm,time) = build_single(attrs[min_ind])
+
+    #get the rheobase current injection for this run
+    (vm,time_vector) = run_single_model(attrs[min_ind],rhvalue[min_ind])
 
     import matplotlib.pyplot as plt
     fig, ax1 = plt.subplots()
@@ -98,14 +104,33 @@ def plot_results(score_matrix):
     left, bottom, width, height = [0.9*float(min_ind/len(sum_error)), 0.6, 0.2, 0.2]
     ax2 = fig.add_axes([left, bottom, width, height])
     ax1.plot([i for i in range(0,len(sum_error))], sum_error, color='red')
+    ax1.plot(min_ind, np.min(np.array(sum_error)),'*',color='blue')
     ax1.set_yscale('log')
     plt.xlabel('params'+str(attrs[min_ind]))
     plt.ylabel('error')
 
-    ax2.plot(time_vector[min_ind], vm[min_ind],  color='green',label=str(attrs[min_ind]))
-    legend = ax1.legend(loc='lower center', shadow=True)
+    ax2.plot(time_vector, vm,  color='green',label=str(attrs[min_ind]))
+    legend = ax1.legend(loc='lower center', shadow=False , prop={'size':6})
 
-    fig.savefig('inset_figure')
+    fig.savefig('inset_figure.png')
+    plt.clf()
+    plot.plot(min_ind, np.min(np.array(sum_error)),'*',color='blue')
+    plt.plot([i for i in range(0,len(sum_error))], sum_error,label='rectified sum of errors')#, color='red')
+    plt.plot([i for i in range(0,len(sum_error))],[i[0] for i in component_error],label='RheobaseTest')#, color='red')
+    plt.plot([i for i in range(0,len(sum_error))],[i[1] for i in component_error],label='InputResistanceTest')#, color='red')
+    plt.plot([i for i in range(0,len(sum_error))],[i[2] for i in component_error],label='TimeConstantTest')#, color='red')
+    plt.plot([i for i in range(0,len(sum_error))],[i[3] for i in component_error],label='CapacitanceTest')#, color='red')
+    plt.plot([i for i in range(0,len(sum_error))],[i[4] for i in component_error],label='RestingPotentialTest')#, color='red')
+    plt.plot([i for i in range(0,len(sum_error))],[i[5] for i in component_error],label='InjectedCurrentAPWidthTest')#, color='red')
+    plt.plot([i for i in range(0,len(sum_error))],[i[6] for i in component_error],label='InjectedCurrentAPAmplitudeTest')#, color='red')
+    for i in component_error:
+        try:
+            plt.plot([i for i in range(0,len(sum_error))],[i[7] for i in component_error],label='InjectedCurrentAPThresholdTest')#, color='red')
+        except:
+            '{} AP threshold test had to be abandoned'.format(str('InjectedCurrentAPThresholdTest'))
+
+    legend = plt.legend(loc='upper right', shadow=False, prop={'size':6})
+    fig.savefig('informative_error.png')
     return 0
 
 '''
@@ -117,50 +142,45 @@ from scoop import launcher
 if __name__ == "__main__":
     model=gs.model
     import pickle
-    ground_truth = pickle.load(open('big_model_list.pickle','rb'))#rcm
-    ground_truth = list(futures.map(gs.func2map, ground_truth))
-    pickle.dump(open('big_model_evaulated.pickle','wb'),ground_truth)
-    ground_truth = pickle.load(open('big_model_evaulated.pickle','rb'))#rcm
+    try:
+        ground_truth = pickle.load(open('big_model_list.pickle','rb'))
+    except:
+        '{} it seems the ground truth data does not yet exist, lets create it now '.format()
+        import scoop
+        import model_parameters as modelp
+        iter_list=[ (i,j,k,l) for i in modelp.model_params['a'] for j in modelp.model_params['b'] for k in modelp.model_params['vr'] for l in modelp.model_params['vpeak'] ]
+        list_of_models = list(futures.map(gs.model2map,iter_list))
+        rhstorage=list(futures.map(gs.evaluate,list_of_models))
+        rhstorage = list(filter(lambda item: type(item) is not type(None), rhstorage))
+        rhstorage = list(filter(lambda item: type(item.rheobase) is not type(None), rhstorage))
+        #rhstorage = list(filter(lambda item: item.rheobase > 0.0, rhstorage))
+        data_for_iter = zip(rhstorage,list(futures.map( lambda item: item.rheobase,rhstorage )))
+        import pickle
+        with open('big_model_list.pickle', 'wb') as handle:
+            pickle.dump(data_for_iter, handle)
 
-    #print(sm)
+    try:
+        ground_error = pickle.load(open('big_model_evaulated.pickle','rb'))#rcm
+    except:
+        '{} it seems the error truth data does not yet exist, lets create it now '.format()
+        ground_error = list(futures.map(gs.func2map, ground_truth))
+        pickle.dump(ground_error,open('big_model_evaulated.pickle','wb'))
 
-    #'{} gets here'.format()
-    #plot_results(ground_truth)
+    _ = plot_results(ground_error)
+    #print(ground_error)
+    '''
+    sum_error = [ i[0] for i in ground_error  ]
+    component_error = [ i[1] for i in ground_error  ]
+    attrs = [ i[2] for i in ground_error ]
+    rhvalue = [ i[3] for i in ground_error ]
+    print(attrs)
+    print(len(attrs))
+    print(np.shape(attrs))
+    print(type(attrs))
+    #vm = [ i[6] for i in ground_error  ]
+    #time_vector = [ i[3] for i in ground_error  ]
 
-
-    import scoop
-    import model_parameters as modelp
-    iter_list=[ (i,j,k,l) for i in modelp.model_params['a'] for j in modelp.model_params['b'] for k in modelp.model_params['vr'] for l in modelp.model_params['vpeak'] ]
-    list_of_models = list(futures.map(gs.model2map,iter_list))
-    for li in list_of_models:
-        print(li.rheobase, li.attrs)
-    from itertools import repeat
-    rhstorage=list(futures.map(gs.evaluate,list_of_models))#,repeat(rh_value)))
-    iter_=[]
-    rhstorage = list(filter(lambda item: type(item) is not type(None), rhstorage))
-    rhstorage = list(filter(lambda item: type(item.rheobase) is not type(None), rhstorage))
-    rhstorage = list(filter(lambda item: item.rheobase > 0.0, rhstorage))
-
-    iter_=zip(rhstorage,list(futures.map( lambda item: item.rheobase,rhstorage )))
-    #iter_=zip([ i.rheobase for i in rhstorage ],[ j for j in iter_ ])
-
-    import pickle
-    with open('big_model_list.pickle', 'wb') as handle:
-        pickle.dump(iter_, handle)
-
-
-    sm = list(futures.map(gs.func2map, iter_))
-
-    with open('score_matrix.pickle', 'wb') as handle:
-        pickle.dump(sm, handle)
-
-    sum_error = [ i[0] for i in sm ]
-    attrs = [ str(k)+str(v) for i in sm for k,v in i[1].items() ]
-    vm = [ i[6] for i in sm ]
-    time_vector = [ i[3] for i in sm ]
-    component_error = [ i[5] for i in sm ]
-
-    print(sum_error, 'error')
+    #print(sum_error, 'error')
     min_value = min([float(s) for s in sum_error])
     assert min([float(s) for s in sum_error]) == np.min(np.array(sum_error))
     print(min([float(s) for s in sum_error]), np.min(np.array(sum_error)))
@@ -173,8 +193,6 @@ if __name__ == "__main__":
     left, bottom, width, height = [0.9*float(min_ind/len(sum_error)), 0.6, 0.2, 0.2]
     ax2 = fig.add_axes([left, bottom, width, height])
 
-
-
     ax1.plot([i for i in range(0,len(sum_error))], sum_error, color='red')
     ax1.set_yscale('log')
     plt.xlabel('params'+str(attrs[min_ind]))
@@ -184,6 +202,7 @@ if __name__ == "__main__":
     legend = ax1.legend(loc='lower center', shadow=True)
 
     fig.savefig('inset_figure')
+    '''
     '''
     for i in sm:
         for j in i:
