@@ -7,21 +7,7 @@ import array
 import random
 import sys
 sys.path.insert(0,"../../../sciunit")
-"""
-Scoop can only operate on variables classes and methods at top level 0
-This means something with no indentation, no nesting,
-and no virtual nesting (like function decorators etc)
-anything that starts at indentation level 0 is okay.
 
-However the case may be different for functions. Functions may be imported from modules.
-I am unsure if it is only the case that functions can be imported from a module, if they are not bound to
-any particular class in that module.
-
-Code from the DEAP framework, available at:
-https://code.google.com/p/deap/source/browse/examples/ga/onemax_short.py
-Conversion to its parallel form took two lines:
-from scoop import futures
-"""
 import numpy as np
 import matplotlib.pyplot as plt
 import quantities as pq
@@ -30,7 +16,7 @@ from deap import base
 from deap.benchmarks.tools import diversity, convergence, hypervolume
 from deap import creator
 from deap import tools
-from scoop import futures
+
 import scoop
 
 try:
@@ -42,6 +28,7 @@ import quantities as qt
 import os
 import os.path
 from scoop import utils
+from scoop import futures
 
 import sciunit.scores as scores
 history = tools.History()
@@ -122,8 +109,8 @@ import deap as deap
 toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
 toolbox.register("select", tools.selNSGA2)
 
-import grid_search as gs
-model = gs.model
+import utilities as outils
+model = outils.model
 
 
 def hypervolume_contrib(front, **kargs):
@@ -149,6 +136,9 @@ def hypervolume_contrib(front, **kargs):
     # Parallelization note: Cannot pickle local function
     return map(contribution, range(len(front)))
 
+import quantities as pq
+import neuronunit.capabilities as cap
+import matplotlib.pyplot as plt
 
 def evaluate(individual,tuple_params):#This method must be pickle-able for scoop to work.
     '''
@@ -165,72 +155,63 @@ def evaluate(individual,tuple_params):#This method must be pickle-able for scoop
     '''
     gen,vms,rheobase=tuple_params
     assert vms.rheobase==rheobase
+    params = utitilities.params
+    model = utitilities.model
 
-    import quantities as pq
-    params = gs.params
-    model = gs.model
-    if rheobase == None or float(rheobase) <= 0:
-        #Assign a high error
-        error = [ 100.0 for i in range(0,8) ]
+    uc = {'amplitude':rheobase}
+    current = params.copy()['injected_square_current']
+    current.update(uc)
+    current = {'injected_square_current':current}
+    #Its very important to reset the model here. Such that its vm is new, and does not carry charge from the last simulation
+    #model.load_model()
+
+    model.re_init(vms.attrs)#purge models stored charge. by reinitializing it
+    model.inject_square_current(current)
+
+    #model.update_run_params(vms.attrs)
+
+    n_spikes = model.get_spike_count()
+    assert n_spikes == 1 or n_spikes == 0  # Its possible that no rheobase was found
+
+    inderr = getattr(individual, "error", None)
+    if inderr!=None:
+        if len(individual.error)!=0:
+            #the average of 10 and the previous score is chosen as a nominally high distance from zero
+            error = [ (abs(-10.0+i)/2.0) for i in individual.error ]
     else:
-        uc = {'amplitude':rheobase}
-        current = params.copy()['injected_square_current']
-        current.update(uc)
-        current = {'injected_square_current':current}
-        #Its very important to reset the model here. Such that its vm is new, and does not carry charge from the last simulation
-        #model.load_model()
+        #100 is chosen as a nominally high distance from zero
+        error = [ 100.0 for i in range(0,8) ]
 
-        model.re_init(vms.attrs)#purge models stored charge. by reinitializing it
-        model.inject_square_current(current)
-
-        #model.update_run_params(vms.attrs)
-        import neuronunit.capabilities as cap
-        import matplotlib.pyplot as plt
-
-        n_spikes = model.get_spike_count()
+    sane = get_neab.suite.tests[0].sanity_check(vms.rheobase*pq.pA,model)
+    if sane == True and n_spikes == 1:
+        for i in [4,5,6]:
+            get_neab.suite.tests[i].params['injected_square_current']['amplitude'] = vms.rheobase*pq.pA
+        get_neab.suite.tests[0].prediction={}
+        if vms.rheobase == 0:
+            vms.rheobase = 1E-10
+        assert vms.rheobase != None
+        score = get_neab.suite.tests[0].prediction['value']=vms.rheobase*pq.pA
+        score = get_neab.suite.judge(model)#passing in model, changes the model
 
 
-        assert n_spikes == 1 or n_spikes == 0  # Its possible that no rheobase was found
+        spikes_numbers=[]
+        model.run_number+=1
+        error = score.sort_key.values.tolist()[0]
+        for x,y in enumerate(error):
+            if y != None and x == 0 :
+                error[x] = abs(vms.rheobase - get_neab.suite.tests[0].observation['value'].item())
+            elif y != None and x!=0:
+                error[x]= abs(y-0.0)+error[0]
+            elif y == None:
+                inderr = getattr(individual, "error", None)
+                if inderr!=None:
+                    error[x]= abs(inderr[x]-10)/2.0 + error[0]
+                else:
+                    error[x] = 10.0 + error[0]
 
-        inderr = getattr(individual, "error", None)
-        if inderr!=None:
-            if len(individual.error)!=0:
-                #the average of 10 and the previous score is chosen as a nominally high distance from zero
-                error = [ (abs(-10.0+i)/2.0) for i in individual.error ]
-        else:
-            #100 is chosen as a nominally high distance from zero
-            error = [ 100.0 for i in range(0,8) ]
-
-        sane = get_neab.suite.tests[0].sanity_check(vms.rheobase*pq.pA,model)
-        if sane == True and n_spikes == 1:
-            for i in [4,5,6]:
-                get_neab.suite.tests[i].params['injected_square_current']['amplitude'] = vms.rheobase*pq.pA
-            get_neab.suite.tests[0].prediction={}
-            if vms.rheobase == 0:
-                vms.rheobase = 1E-10
-            assert vms.rheobase != None
-            score = get_neab.suite.tests[0].prediction['value']=vms.rheobase*pq.pA
-            score = get_neab.suite.judge(model)#passing in model, changes the model
-
-
-            spikes_numbers=[]
-            model.run_number+=1
-            error = score.sort_key.values.tolist()[0]
-            for x,y in enumerate(error):
-                if y != None and x == 0 :
-                    error[x] = abs(vms.rheobase - get_neab.suite.tests[0].observation['value'].item())
-                elif y != None and x!=0:
-                    error[x]= abs(y-0.0)+error[0]
-                elif y == None:
-                    inderr = getattr(individual, "error", None)
-                    if inderr!=None:
-                        error[x]= abs(inderr[x]-10)/2.0 + error[0]
-                    else:
-                        error[x] = 10.0 + error[0]
-
-        individual.error = error
-        import copy
-        individual.rheobase = copy.copy(vms.rheobase)
+    individual.error = error
+    import copy
+    individual.rheobase = copy.copy(vms.rheobase)
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
 
 
@@ -268,7 +249,7 @@ def individual_to_vm(ind,vmpop=None):
                 attrs={'//izhikevich2007Cell':{p:value }}
             else:
                 attrs['//izhikevich2007Cell'][p] = value
-        vm = gs.VirtualModel()
+        vm = outils.VirtualModel()
         vm.attrs = attrs
 
         inderr = getattr(ind, "error", None)
@@ -285,7 +266,7 @@ def individual_to_vm(ind,vmpop=None):
     return vm
 
 def replace_rh(pop,rh_value,vmpop):
-    rheobase_checking=gs.evaluate
+    rheobase_checking=outils.evaluate
     from itertools import repeat
     import copy
     assert len(pop) == len(vmpop)
@@ -483,7 +464,7 @@ def updatevmpop(pop,rh_value=None):
     #global MU
     #pop=copy.copy(pop)
     assert len(pop)!=0
-    rheobase_checking=gs.evaluate
+    rheobase_checking=outils.evaluate
     vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in pop] ))
 
     assert len(pop)!=0
@@ -530,14 +511,15 @@ def main():
 
 
     #create the first population of individuals
-    guess_attrs=[]
+    #guess_attrs=[]
 
     #find rheobase on a model constructed out of the mean parameter values.
-    for x,y in enumerate(param):
-        guess_attrs.append(np.mean( [ i[x] for i in pop ]))
+    #for x,y in enumerate(param):
+    #    guess_attrs.append(np.mean( [ i[x] for i in pop ]))
 
-    from itertools import repeat
-    mean_vm = gs.VirtualModel()
+    #from itertools import repeat
+    '''
+    mean_vm = outils.VirtualModel()
     #def assign_param(param):
     for i, p in enumerate(param):
         value=str(guess_attrs[i])
@@ -552,22 +534,22 @@ def main():
     steps = np.linspace(50,150,7.0)
     steps_current = [ i*pq.pA for i in steps ]
     rh_param=(False,steps_current)
-    searcher=gs.searcher
-    check_current=gs.check_current
-    pre_rh_value=searcher(check_current,rh_param,mean_vm)
+    searcher=outils.searcher
+    check_current=outils.check_current
+    pre_rh_value=searcher(check_current,rh_param)
     rh_value=pre_rh_value.rheobase
     global vmpop
     if rh_value == None:
         rh_value = 0.0
-
+    '''
 
     #Now attempt to get the rheobase values by first trying the mean rheobase value.
     #This is not an exhaustive search that results in found all rheobase values
     #It is just a trying out an educated guess on each individual in the whole population as a first pass.
     #invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
 
-    rheobase_checking=gs.evaluate
-    pop,vmpop = updatevmpop(pop,rh_value)
+    rheobase_checking=outils.evaluate
+    pop,vmpop = updatevmpop(pop)
     history.update(pop)
     pf.update(pop)
 
@@ -705,18 +687,40 @@ def main():
     with open('vmpop.pickle', 'wb') as handle:
         pickle.dump(vmpop, handle)
 
+
+
+
+    return vmpop, pop, stats, invalid_ind
+
+
+
+
+if __name__ == "__main__":
+
+    import time
+    start_time=time.time()
+    whole_initialisation = start_time-init_start
+    model=outils.model
+    vmpop, pop, stats, invalid_ind = main()
+
+
+
+    try:
+        ground_error = pickle.load(open('big_model_evaulated.pickle','rb'))
+    except:
+        '{} it seems the error truth data does not yet exist, lets create it now '.format(str(False))
+        ground_error = list(futures.map(util.func2map, ground_truth))
+        pickle.dump(ground_error,open('big_model_evaulated.pickle','wb'))
+
+    _ = plot_results(ground_error)
+
+
     from sklearn.decomposition import PCA as sklearnPCA
     from sklearn.preprocessing import StandardScaler
 
     attr_dict = [p.attrs for p in vmpop ]
     attr_keys = [ i.keys() for d in attr_dict for i in d.values() ][0]
     print(attr_keys)
-    #attr_list = [ i.values() for d in attr_dict for i in d.values() ][0]
-
-    #std=np.std(attr_list)
-    #X = np.array([i for i in attr_list])
-    #print(X)
-    #print(type(X))
     X =  [ ind for ind in pop ]
     X_std = StandardScaler().fit_transform(X)
     sklearn_pca = sklearnPCA(n_components=3)
@@ -725,18 +729,6 @@ def main():
 
 
 
-
-    return vmpop, pop, stats, invalid_ind, Y_sklearn, X
-
-
-
-
-if __name__ == "__main__":
-    import time
-    start_time=time.time()
-    whole_initialisation = start_time-init_start
-    model=gs.model
-    vmpop, pop, stats, invalid_ind, Y_sklearn, X = main()
     #print("Final population hypervolume is %f" % hypervolume(pop, [11.0, 11.0]))
 
     print(stats)
@@ -813,14 +805,12 @@ if __name__ == "__main__":
     steps = np.linspace(50,150,7.0)
     steps_current = [ i*pq.pA for i in steps ]
     rh_param = (False,steps_current)
-    searcher = gs.searcher
-    check_current = gs.check_current
+    searcher = outils.searcher
+    check_current = outils.check_current
     print(vmpop)
 
     score_matrixt=[]
     vmpop = list(map(individual_to_vm,pop))
-
-
 
 
 
