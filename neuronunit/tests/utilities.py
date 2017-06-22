@@ -264,11 +264,15 @@ def check_current(ampl,vm):
         if n_spikes == 1:
             model.rheobase_memory=float(ampl)
             vm.rheobase=float(ampl)
+            'current {} spikes {}'.format(vm.rheobase,n_spikes)
+            return vm
+            '''
             try:
                 assert vm.rheobase != None
-                assert model.rheobase_memory != None
+                #assert model.rheobase_memory != None
             except:
                 pass
+            '''
         verbose = True
         if verbose:
             print(' Injected %s current and got %d spikes on model %s' % \
@@ -301,6 +305,8 @@ def searcher(rh_param,vms):
                 model.rheobase_memory = rh_param[1]
             vms = check_current(model.rheobase_memory,vms)
             model.update_run_params(vms.attrs)
+            #format
+
             boolean,vms = check_fix_range(vms)
             if boolean:
                 return vms
@@ -337,6 +343,7 @@ def searcher(rh_param,vms):
         cnt+=1
     return vms
 
+
 def evaluate(individual, guess_value=None):
     #This method must be pickle-able for scoop to work.
     vm = VirtualModel()
@@ -345,6 +352,54 @@ def evaluate(individual, guess_value=None):
     rh_param = (False,guess_value)
     vm = searcher(rh_param,vm)
     return vm
+
+def plot_stats(pop,logbook):
+    evals, gen ,std, avg, max_, min_ = logbook.select("evals","gen","avg", "max", "min", "std")
+    x = list(range(0,len(avg)))
+
+    plt.figure()
+    plt.subplot(2, 2, 1)
+    plt.semilogy(x, avg, "--b")
+    plt.semilogy(x, max_, "--b")
+    plt.semilogy(x, min_, "-b")
+    plt.semilogy(x, fbest, "-c")
+    #plt.semilogy(x, sigma, "-g")
+    #plt.semilogy(x, axis_ratio, "-r")
+    plt.grid(True)
+    plt.title("blue: f-values, green: sigma, red: axis ratio")
+
+    plt.subplot(2, 2, 2)
+    plt.plot(x, best)
+    plt.grid(True)
+    plt.title("Object Variables")
+
+    plt.subplot(2, 2, 3)
+    plt.semilogy(x, std)
+    plt.grid(True)
+    plt.title("Standard Deviations in All Coordinates")
+    plt.savefig('GA_stats_vs_generation.png')
+    f=open('worst_candidate.txt','w')
+    if len(vmpop)!=0:
+        f.write(str(vmpop[-1].attrs))
+        f.write(str(vmpop[-1].rheobase))
+
+    f.write(logbook.stream)
+    f.close()
+    score_matrixt=[]
+    if len(vmpop)!=0:
+
+        score_matrixt.append((vmpop[0].error,vmpop[0].attrs,vmpop[0].rheobase))
+        score_matrixt.append((vmpop[1].error,vmpop[1].attrs,vmpop[1].rheobase))
+
+        score_matrixt.append((vmpop[-1].error,vmpop[-1].attrs,vmpop[-1].rheobase))
+    import pickle
+    import pickle
+    with open('score_matrixt.pickle', 'wb') as handle:
+        pickle.dump(score_matrixt, handle)
+
+    with open('vmpop.pickle', 'wb') as handle:
+        pickle.dump(vmpop, handle)
+
 
 
 def test_to_model_plot(vms,local_test_methods):
