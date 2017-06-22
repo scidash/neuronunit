@@ -269,7 +269,7 @@ def check_current(ampl,vm):
                 assert model.rheobase_memory != None
             except:
                 pass
-        verbose = False
+        verbose = True
         if verbose:
             print(' Injected %s current and got %d spikes on model %s' % \
                     (ampl,n_spikes,vm.attrs))
@@ -455,4 +455,4 @@ def test_to_model_plot(vms,local_test_methods):
     model.results['t']=None
     tests[local_test_methods].related_data=None
     local_test_methods=None
-    return 0    
+    return 0
