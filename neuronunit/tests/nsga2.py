@@ -171,49 +171,43 @@ def evaluate(individual,tuple_params):#This method must be pickle-able for scoop
     #model.update_run_params(vms.attrs)
 
     n_spikes = model.get_spike_count()
-    try:
-        assert n_spikes == 1 #or n_spikes == 0  # Its possible that no rheobase was found
+    sane = get_neab.suite.tests[0].sanity_check(vms.rheobase*pq.pA,model)
 
+    try:
+        assert n_spikes == 1 and sane == True #or n_spikes == 0  # Its possible that no rheobase was found
+        for i in [4,5,6]:
+            get_neab.suite.tests[i].params['injected_square_current']['amplitude'] = vms.rheobase*pq.pA
+        get_neab.suite.tests[0].prediction={}
+        assert type(vms.rheobase) != type(None)
+        score = get_neab.suite.tests[0].prediction['value']=vms.rheobase*pq.pA
+        score = get_neab.suite.judge(model)#passing in model, changes the model
+        model.run_number+=1
+        error = score.sort_key.values.tolist()[0]
+        '''
+        for x,y in enumerate(error):
+            if y != None and x == 0 :
+                error[x] = abs(vms.rheobase - get_neab.suite.tests[0].observation['value'].item())
+            elif y != None and x!=0:
+                error[x]= abs(y-0.0)+error[0]
+            elif type(y) == type(None):
+                inderr = getattr(individual, "error", None)
+                if inderr!=None:
+                    error[x]= abs(inderr[x]-10)/2.0 + error[0]
+                else:
+                    error[x] = 10.0 + error[0]
+        '''
+
+        individual.error = error
+        individual.rheobase = vms.rheobase
+    except:
         inderr = getattr(individual, "error", None)
         if inderr!=None:
             if len(individual.error)!=0:
                 #the average of 10 and the previous score is chosen as a nominally high distance from zero
                 error = [ (abs(-10.0+i)/2.0) for i in individual.error ]
         else:
-            #100 is chosen as a nominally high distance from zero
             error = [ 100.0 for i in range(0,8) ]
 
-        sane = get_neab.suite.tests[0].sanity_check(vms.rheobase*pq.pA,model)
-        if sane == True and n_spikes == 1:
-            for i in [4,5,6]:
-                get_neab.suite.tests[i].params['injected_square_current']['amplitude'] = vms.rheobase*pq.pA
-            get_neab.suite.tests[0].prediction={}
-            if vms.rheobase == 0:
-                vms.rheobase = 1E-10
-            assert vms.rheobase != None
-            score = get_neab.suite.tests[0].prediction['value']=vms.rheobase*pq.pA
-            score = get_neab.suite.judge(model)#passing in model, changes the model
-
-
-            model.run_number+=1
-            error = score.sort_key.values.tolist()[0]
-            for x,y in enumerate(error):
-                if y != None and x == 0 :
-                    error[x] = abs(vms.rheobase - get_neab.suite.tests[0].observation['value'].item())
-                elif y != None and x!=0:
-                    error[x]= abs(y-0.0)+error[0]
-                elif type(y) == type(None):
-                    inderr = getattr(individual, "error", None)
-                    if inderr!=None:
-                        error[x]= abs(inderr[x]-10)/2.0 + error[0]
-                    else:
-                        error[x] = 10.0 + error[0]
-
-        individual.error = error
-        import copy
-        individual.rheobase = copy.copy(vms.rheobase)
-    except:
-        pass
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
 
 
@@ -369,17 +363,17 @@ def main():
     pf = tools.ParetoFront()
 
 
-    stats.register("avg", numpy.mean, axis=0)
-    stats.register("std", numpy.std, axis=0)
-    stats.register("min", numpy.min, axis=0)
-    stats.register("max", numpy.max, axis=0)
+    stats.register("avg", np.mean, axis=0)
+    stats.register("std", np.std, axis=0)
+    stats.register("min", np.min, axis=0)
+    stats.register("max", np.max, axis=0)
 
     logbook = tools.Logbook()
     logbook.header = "gen", "evals", "std", "min", "avg", "max"
 
     pop = toolbox.population(n=MU)
     pop = [toolbox.clone(i) for i in pop]
-    history.update(pop)
+    #history.update(pop)
     pf.update(pop)
     #Now attempt to get the rheobase values by first trying the mean rheobase value.
     #This is not an exhaustive search that results in found all rheobase values
@@ -389,11 +383,11 @@ def main():
     rheobase_checking=outils.evaluate
     pop,vmpop = updatevmpop(pop)
     #population may also be altered in this process.
-    history.update(pop)
     pf.update(pop)
     rhstorage = [ item.rheobase for item in vmpop]
 
     from itertools import repeat
+    #repeat 0, for generation 0
     tuple_storage = zip(repeat(0),vmpop,rhstorage)
     #Now get the fitness of genes:
     #Note the evaluate function called is different
@@ -413,11 +407,11 @@ def main():
         rhstorage = list(filter(lambda item: type(item.rheobase) is not type(None), vmpop))
         rhmean = np.mean([i.rheobase for i in rhstorage]) #/len(vmpop)
         pop,vmpop = updatevmpop(pop,rhmean)
-        assert len(pop)!=0
-        assert len(vmpop)!=0
+        #assert len(pop)!=0
+        #assert len(vmpop)!=0
 
-        invalid_ind = [ ind for ind in pop if ind.fitness.valid ]
-        assert len(invalid_ind)!=0
+        #invalid_ind = [ ind for ind in pop if ind.fitness.valid ]
+        #assert len(invalid_ind)!=0
         #offspring = tools.selTournamentDCD(pop, len(pop))
         offspring = tools.selNSGA2(pop, len(pop))
         assert len(offspring)!=0
@@ -433,85 +427,23 @@ def main():
             del ind1.fitness.values, ind2.fitness.values
 
         vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in offspring] ))
-        vmpop = list(futures.map(rheobase_checking,vmpop,repeat(rh_value)))
+        vmpop = list(futures.map(rheobase_checking,vmpop,repeat(rhmean)))
         rhstorage = [ i.rheobase for i in vmpop ]
         tuple_storage = zip(repeat(gen),vmpop,rhstorage)
-        assert len(vmpop)==len(pop)
         fitnesses = list(toolbox.map(toolbox.evaluate, offspring , tuple_storage))
 
-        attr_dict = [p.attrs for p in vmpop ]
+        #attr_dict = [p.attrs for p in vmpop ]
         #attr_keys = [ i.keys() for d in attr_dict for i in d.values() ][0]
-        attr_list = [ i.values() for d in attr_dict for i in d.values() ][0]
-        #std_dev=np.std(attr_list)
-        #print('the standard deviation is',std_dev)
+        #attr_list = [ i.values() for d in attr_dict for i in d.values() ][0]
 
         for ind, fit in zip(offspring, fitnesses):
             ind.fitness.values = fit
-        size_delta = MU-len(invalid_ind)
-
+        size_delta = MU-len(offspring)
+        assert size_delta == 0
         pop = toolbox.select(offspring, MU)
-        print('the pareto front is',pf)
-
-        record = stats.compile(pop)
-        logbook.record(gen=gen, evals=len(invalid_ind), **record)
-        print(logbook.stream)
-
-        #logbook.header = "gen", "evals", "std", "min", "avg", "max"
-        #x = list(range(0, NGEN))
-        #x = list(range(0, strategy.lambda_ * NGEN, strategy.lambda_))
-        fbest.append( pf[0].fitness.values )
-        best[gen].append(pf[0])
-
+        'the pareto front is: {}'.format(pf)
 
     pop.sort(key=lambda x: x.fitness.values)
-    #logbook select is like a database selection, as opposed to logbook record which initializes and populates the data
-    evals, gen ,std, avg, max_, min_ = logbook.select("evals","gen","avg", "max", "min", "std")
-    x = list(range(0,len(avg)))
-
-    plt.figure()
-    plt.subplot(2, 2, 1)
-    plt.semilogy(x, avg, "--b")
-    plt.semilogy(x, max_, "--b")
-    plt.semilogy(x, min_, "-b")
-    plt.semilogy(x, fbest, "-c")
-    #plt.semilogy(x, sigma, "-g")
-    #plt.semilogy(x, axis_ratio, "-r")
-    plt.grid(True)
-    plt.title("blue: f-values, green: sigma, red: axis ratio")
-
-    plt.subplot(2, 2, 2)
-    plt.plot(x, best)
-    plt.grid(True)
-    plt.title("Object Variables")
-
-    plt.subplot(2, 2, 3)
-    plt.semilogy(x, std)
-    plt.grid(True)
-    plt.title("Standard Deviations in All Coordinates")
-    plt.savefig('GA_stats_vs_generation.png')
-    f=open('worst_candidate.txt','w')
-    if len(vmpop)!=0:
-        f.write(str(vmpop[-1].attrs))
-        f.write(str(vmpop[-1].rheobase))
-
-    f.write(logbook.stream)
-    f.close()
-    score_matrixt=[]
-    if len(vmpop)!=0:
-
-        score_matrixt.append((vmpop[0].error,vmpop[0].attrs,vmpop[0].rheobase))
-        score_matrixt.append((vmpop[1].error,vmpop[1].attrs,vmpop[1].rheobase))
-
-        score_matrixt.append((vmpop[-1].error,vmpop[-1].attrs,vmpop[-1].rheobase))
-    import pickle
-    import pickle
-    with open('score_matrixt.pickle', 'wb') as handle:
-        pickle.dump(score_matrixt, handle)
-
-    with open('vmpop.pickle', 'wb') as handle:
-        pickle.dump(vmpop, handle)
-
-
 
 
     return vmpop, pop, stats, invalid_ind
