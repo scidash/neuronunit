@@ -2,12 +2,10 @@
 
 [![Documentation Status](https://readthedocs.org/projects/neuronunit/badge/?version=latest)](http://neuronunit.readthedocs.io/en/latest/?badge=latest)
 
-# NeuronUnit: A SciUnit repository for neuroscience-related tests, models, and capabilities.
-
-![NeuronUnit Logo](https://raw.githubusercontent.com/scidash/assets/master/logos/neuronunit.png)
+![NeuronUnit Logo](https://raw.githubusercontent.com/scidash/assets/master/logos/neuronunit/NeuronUnitBlack2.png)
 
 # Concept:  
-
+NeuronUnit uses the [SciUnit](http://github.com/scidash/sciunit)-framework to test models of ion channels, neurons, and neuronal networks.  
 https://github.com/rgerkin/papers/blob/master/neuronunit_frontiers/Paper.pdf
 
 # Documentation:
@@ -121,7 +119,7 @@ for model_name in model_names # Iterate through a list of models downloaded from
 score_matrix = suite.judge(models,stop_on_error=True) 
 score_matrix.view()
 ```
-###Score Matrix for Test Suite 'Neuron Tests'
+### Score Matrix for Test Suite 'Neuron Tests'
 | Model                   | Spike Width                     | Resting Potential      |
 |-------------------------|:-------------------------------:|:----------------------:|
 |                         | (InjectedCurrentSpikeWidthTest) | (RestingPotentialTest) |
@@ -142,7 +140,7 @@ ax2.set_xlim(283,284.7)
 ![png](https://raw.githubusercontent.com/scidash/assets/master/figures/spike_width_test2.png)
 
 # Tutorial:
-NeuronUnit is based on SciUnit, a discipline-agnostic framework for data-driven unit testing of scientific models.  Any test script will do the following things in sequence.  Most of these will be abstracted away in SciUnit or NeuronUnit modules that make things easier:  
+NeuronUnit is based on [SciUnit](http://github.com/scidash/sciunit), a discipline-agnostic framework for data-driven unit testing of scientific models.  Any test script will do the following things in sequence.  Most of these will be abstracted away in SciUnit or NeuronUnit modules that make things easier:  
 
 1. Instantiate a model(s) from a model class, with parameters of interest to build a specific model.    
 1. Instantiate a test(s) from a test class, with parameters of interest to build a specific test.  
