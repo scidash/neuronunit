@@ -3,11 +3,8 @@ import quantities as pq
 
 
 model_params={}
-#4*4*4*4==4^4==256
 
 model_params['vr'] = np.linspace(-75.0,-50.0,4)
-#model_params['a'] = np.linspace(0.015,0.045,5)
-#model_params['a'] = (0.015 + 0.045) / 2.0
 
 model_params['a'] = np.linspace(0.0,0.945,4)
 model_params['b'] = np.linspace(-3.5*10E-10,-0.5*10E-9,4)

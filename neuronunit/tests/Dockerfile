@@ -25,12 +25,30 @@ RUN pip install IPython \
                 notebook \
                 ipykernel \
                 ipyparallel \
-                enum34
+                enum34 \
+		pypandoc \
+		setuptools
 RUN conda install mpi4py
 ##### Scoop #####
 
 RUN easy_install gevent
 RUN easy_install greenlet
+WORKDIR $HOME/git
+ADD . $HOME/git/scoop
+WORKDIR scoop/scoop
+RUN sudo python setup.py install
+
+
+
+#RUN if [ ! -d "$HOME/git/scoop" ]; then \
+#RUN git clone -b master https://github.com/russelljjarvis/scoop.git \
+#cd scoop \
+#    sudo python setup.py install \
+#    else:
+
+
+#fi
+
 
 WORKDIR $HOME
 RUN git clone https://github.com/russelljjarvis/scoop.git
