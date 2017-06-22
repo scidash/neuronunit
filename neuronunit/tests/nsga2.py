@@ -343,6 +343,7 @@ def updatevmpop(pop,rh_value=None):
         pop,vmpop = replace_rh(pop,vmpop)
         'output value {}'.format(vmpop)
         vmpop = list(filter(lambda item: type(item.rheobase) is not type(None), vmpop))
+        'output value {}'.format(vmpop)
 
     except:
         pass
