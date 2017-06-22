@@ -299,6 +299,7 @@ class NEURONBackend(Backend):
             self.h('m_RS_RS_pop[0].%s=%s' % (h_key,h_value))
             self.h('m_%s_%s_pop[0].%s=%s' % \
                    (self.cell_name,self.cell_name,h_key,h_value))
+            'm_RS_RS_pop[0].{}={}'.format(h_key,h_value)        
         self.h(' { v_time = new Vector() } ')
         self.h(' { v_time.record(&t) } ')
         self.h(' { v_v_of0 = new Vector() } ')
