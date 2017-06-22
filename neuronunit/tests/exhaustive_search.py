@@ -1,4 +1,3 @@
-
 import numpy as np
 import matplotlib.pyplot as plt
 import quantities as pq
@@ -11,21 +10,30 @@ import get_neab
 
 import quantities as qt
 import os
-import os.path
-from scoop import utils, futures
+os.system('cat ../../../scoop/setup.py')
 
+os.system('sudo /opt/conda/bin/python ../../../scoop/setup.py install')
+import os.path
+#Over ride any scoops in the PYTHON_PATH with this one.
+#only appropriate for development.
+SECOND_DIR = os.path.dirname(os.path.realpath(__file__))
+this_scoop = os.path.join(SECOND_DIR,'../../../scoop')
+import sys
+sys.path.insert(0,this_scoop)
+
+from scoop import utils, futures
 import sciunit.scores as scores
 
-global gs
-import grid_search as gs
+global outils
+import utilities as outils
 
 
 
 
 def run_single_model(attrs,rhvalue):
     model.update_run_params(attrs)
-    gs.get_neab.suite.tests[0].params['injected_square_current']['amplitude'] = rhvalue
-    params = gs.get_neab.suite.tests[0].params
+    .get_neab.suite.tests[0].params['injected_square_current']['amplitude'] = rhvalue
+    params = outils.get_neab.suite.tests[0].params
     model.inject_square_current(params)
     return (model.results['vm'],model.results['t'])
 
@@ -90,7 +98,7 @@ import scoop
 from scoop import launcher
 #Uncomment the code below to run an exhaustive search.
 if __name__ == "__main__":
-    model=gs.model
+    model=outils.model
     import pickle
     try:
         ground_truth = pickle.load(open('big_model_list.pickle','rb'))
@@ -98,14 +106,14 @@ if __name__ == "__main__":
         '{}'.format(str('it seems the ground truth data does not yet exist, lets create it now'))
         import scoop
         import model_parameters as modelp
-        iter_list=[ (i,j,k,l,m,n,o,p,q,r) for i in modelp.model_params['a'] for j in modelp.model_params['b'] \
+        iter_list=iter( (i,j,k,l,m,n,o,p,q,r) for i in modelp.model_params['a'] for j in modelp.model_params['b'] \
         for k in modelp.model_params['vr'] for l in modelp.model_params['vpeak'] \
         for m in modelp.model_params['k'] for n in modelp.model_params['c'] \
         for o in modelp.model_params['C'] for p in modelp.model_params['d'] \
-        for q in modelp.model_params['v0'] for r in modelp.model_params['vt'] ]
+        for q in modelp.model_params['v0'] for r in modelp.model_params['vt'] )
 
-        list_of_models = list(futures.map(gs.model2map,iter_list))
-        rhstorage = list(futures.map(gs.evaluate,list_of_models))
+        list_of_models = list(futures.map(outils.model2map,iter_list,modelp.model_params))
+        rhstorage = list(futures.map(outils.evaluate,list_of_models))
         rhstorage = list(filter(lambda item: type(item) is not type(None), rhstorage))
         rhstorage = list(filter(lambda item: type(item.rheobase) is not type(None), rhstorage))
         #rhstorage = list(filter(lambda item: item.rheobase > 0.0, rhstorage))
@@ -118,7 +126,7 @@ if __name__ == "__main__":
         ground_error = pickle.load(open('big_model_evaulated.pickle','rb'))
     except:
         '{} it seems the error truth data does not yet exist, lets create it now '.format(str(False))
-        ground_error = list(futures.map(gs.func2map, ground_truth))
+        ground_error = list(futures.map(outils.func2map, ground_truth))
         pickle.dump(ground_error,open('big_model_evaulated.pickle','wb'))
 
     _ = plot_results(ground_error)

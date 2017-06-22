@@ -55,15 +55,15 @@ from itertools import repeat
 import sciunit.scores as scores
 import neuronunit.capabilities as cap
 
-def model2map(iter_arg):#This method must be pickle-able for scoop to work.
+def model2map(iter_arg,param_dict):#This method must be pickle-able for scoop to work.
     vm=VirtualModel()
     vm.attrs={}
-
-    vm.attrs['a']=iter_arg[0]
-    vm.attrs['b']=iter_arg[1]
-    vm.attrs['vr']=iter_arg[2]
-    vm.attrs['vpeak']=iter_arg[3]
-
+    for k,v in param_dict.items():
+        vm.attrs[k]=v
+    #iter_arg[0]
+    #vm.attrs['b']=iter_arg[1]
+    #vm.attrs['vr']=iter_arg[2]
+    #vm.attrs['vpeak']=iter_arg[3]
     #attrs['//izhikevich2007Cell']['b']=j
     #attrs['//izhikevich2007Cell']['vr']=k
     #attrs['//izhikevich2007Cell']['vpeak']=l
@@ -345,3 +345,114 @@ def evaluate(individual, guess_value=None):
     rh_param = (False,guess_value)
     vm = searcher(rh_param,vm)
     return vm
+
+
+def test_to_model_plot(vms,local_test_methods):
+    import get_neab
+    tests = get_neab.suite.tests
+    import matplotlib.pyplot as plt
+    import copy
+    global model
+    global nsga_matrix
+    model.local_run()
+    #model.update_run_params(vms.attrs)
+    model.re_init(vms.attrs)
+    tests = None
+    tests = get_neab.suite.tests
+    tests[0].prediction={}
+    tests[0].prediction['value']=vms.rheobase*qt.pA
+    tests[0].params['injected_square_current']['amplitude']=vms.rheobase*qt.pA
+    #score = get_neab.suite.judge(model)#pass
+    if local_test_methods in [4,5,6]:
+        tests[local_test_methods].params['injected_square_current']['amplitude']=vms.rheobase*qt.pA
+    #model.results['vm'] = [ 0 ]
+    model.re_init(vms.attrs)
+    tests[local_test_methods].generate_prediction(model)
+    injection_trace = np.zeros(len(model.results['t']))
+
+    trace_size = int(len(model.results['t']))
+    injection_trace = np.zeros(trace_size)
+
+    end = len(model.results['t'])#/delta
+    delay = int((float(get_neab.suite.tests[0].params['injected_square_current']['delay'])/1600.0 ) * end )
+    #delay = get_neab.suite.tests[0].params['injected_square_current']['delay']['value']/delta
+    duration = int((float(1100.0)/1600.0) * end ) # delta
+    injection_trace[0:int(delay)] = 0.0
+    injection_trace[int(delay):int(duration)] = vms.rheobase
+    injection_trace[int(duration):int(end)] = 0.0
+    f, axarr = plt.subplots(2, sharex=True)
+    axarr[0].plot(model.results['t'],model.results['vm'],label='$V_{m}$ (mV)')
+    axarr[0].set_xlabel(r'$V_{m} (mV)$')
+    axarr[0].set_xlabel(r'$time (ms)$')
+
+    axarr[0].legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+               ncol=2, mode="expand", borderaxespad=0.)
+    axarr[1].plot(model.results['t'],injection_trace,label='$I_{i}$(pA)')
+    if vms.rheobase > 0:
+        axarr[1].set_ylim(0, 2*vms.rheobase)
+    if vms.rheobase < 0:
+        axarr[1].set_ylim(2*vms.rheobase,0)
+    axarr[1].set_xlabel(r'$current injection (pA)$')
+    axarr[1].set_xlabel(r'$time (ms)$')
+
+    axarr[1].legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+               ncol=2, mode="expand", borderaxespad=0.)
+
+    model.re_init(vms.attrs)
+    tests = None
+    tests = get_neab.suite.tests
+    #tests[0].prediction={}
+    tests[0].prediction={}
+    tests[0].prediction['value']=vms.attrs*qt.pA
+    tests[0].params['injected_square_current']['amplitude']=vms.rheobase*qt.pA
+
+
+    if local_test_methods in [4,5,6]:
+        tests[local_test_methods].params['injected_square_current']['amplitude']=vms.rheobase*qt.pA
+
+    #model.results['vm'] = [ 0 ]
+    model.re_init(vms.attrs)
+    #tests[local_test_methods].judge(model)
+    tests[local_test_methods].generate_prediction(model)
+    injection_trace = np.zeros(len(model.results['t']))
+    delta = model.results['t'][1]-model.results['t'][0]
+
+    trace_size = int(len(model.results['t']))
+    injection_trace = np.zeros(trace_size)
+
+    end = len(model.results['t'])#/delta
+    delay = int((float(get_neab.suite.tests[0].params['injected_square_current']['delay'])/1600.0 ) * end )
+    #delay = get_neab.suite.tests[0].params['injected_square_current']['delay']['value']/delta
+    duration = int((float(1100.0)/1600.0) * end ) # delta
+    injection_trace[0:int(delay)] = 0.0
+    injection_trace[int(delay):int(duration)] = vms.rheobase
+    injection_trace[int(duration):int(end)] = 0.0
+    f, axarr = plt.subplots(2, sharex=True)
+    axarr[0].plot(model.results['t'],model.results['vm'],label='$V_{m}$ (mV)')
+    axarr[0].set_xlabel(r'$V_{m} (mV)$')
+    axarr[0].set_xlabel(r'$time (ms)$')
+
+    axarr[0].legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+               ncol=2, mode="expand", borderaxespad=0.)
+    axarr[1].plot(model.results['t'],injection_trace,label='$I_{i}$(pA)')
+    if vms.rheobase > 0:
+        axarr[1].set_ylim(0, 2*vms.rheobase)
+    if vms.rheobase < 0:
+        axarr[1].set_ylim(2*vms.rheobase,0)
+    axarr[1].set_xlabel(r'$current injection (pA)$')
+    axarr[1].set_xlabel(r'$time (ms)$')
+
+    axarr[1].legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+               ncol=2, mode="expand", borderaxespad=0.)
+
+    plt.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+               ncol=2, mode="expand", borderaxespad=0.)
+
+    plt.title(str(tests[local_test_methods]))
+    plt.savefig(str('best_solution')+str('.png'))
+    #plt.clf()
+    model.results['vm']=None
+    model.results['t']=None
+    tests[local_test_methods].related_data=None
+    local_test_methods=None
+    return 0    
