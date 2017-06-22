@@ -171,47 +171,49 @@ def evaluate(individual,tuple_params):#This method must be pickle-able for scoop
     #model.update_run_params(vms.attrs)
 
     n_spikes = model.get_spike_count()
-    assert n_spikes == 1 or n_spikes == 0  # Its possible that no rheobase was found
+    try:
+        assert n_spikes == 1 #or n_spikes == 0  # Its possible that no rheobase was found
 
-    inderr = getattr(individual, "error", None)
-    if inderr!=None:
-        if len(individual.error)!=0:
-            #the average of 10 and the previous score is chosen as a nominally high distance from zero
-            error = [ (abs(-10.0+i)/2.0) for i in individual.error ]
-    else:
-        #100 is chosen as a nominally high distance from zero
-        error = [ 100.0 for i in range(0,8) ]
+        inderr = getattr(individual, "error", None)
+        if inderr!=None:
+            if len(individual.error)!=0:
+                #the average of 10 and the previous score is chosen as a nominally high distance from zero
+                error = [ (abs(-10.0+i)/2.0) for i in individual.error ]
+        else:
+            #100 is chosen as a nominally high distance from zero
+            error = [ 100.0 for i in range(0,8) ]
 
-    sane = get_neab.suite.tests[0].sanity_check(vms.rheobase*pq.pA,model)
-    if sane == True and n_spikes == 1:
-        for i in [4,5,6]:
-            get_neab.suite.tests[i].params['injected_square_current']['amplitude'] = vms.rheobase*pq.pA
-        get_neab.suite.tests[0].prediction={}
-        if vms.rheobase == 0:
-            vms.rheobase = 1E-10
-        assert vms.rheobase != None
-        score = get_neab.suite.tests[0].prediction['value']=vms.rheobase*pq.pA
-        score = get_neab.suite.judge(model)#passing in model, changes the model
+        sane = get_neab.suite.tests[0].sanity_check(vms.rheobase*pq.pA,model)
+        if sane == True and n_spikes == 1:
+            for i in [4,5,6]:
+                get_neab.suite.tests[i].params['injected_square_current']['amplitude'] = vms.rheobase*pq.pA
+            get_neab.suite.tests[0].prediction={}
+            if vms.rheobase == 0:
+                vms.rheobase = 1E-10
+            assert vms.rheobase != None
+            score = get_neab.suite.tests[0].prediction['value']=vms.rheobase*pq.pA
+            score = get_neab.suite.judge(model)#passing in model, changes the model
 
 
-        spikes_numbers=[]
-        model.run_number+=1
-        error = score.sort_key.values.tolist()[0]
-        for x,y in enumerate(error):
-            if y != None and x == 0 :
-                error[x] = abs(vms.rheobase - get_neab.suite.tests[0].observation['value'].item())
-            elif y != None and x!=0:
-                error[x]= abs(y-0.0)+error[0]
-            elif y == None:
-                inderr = getattr(individual, "error", None)
-                if inderr!=None:
-                    error[x]= abs(inderr[x]-10)/2.0 + error[0]
-                else:
-                    error[x] = 10.0 + error[0]
+            model.run_number+=1
+            error = score.sort_key.values.tolist()[0]
+            for x,y in enumerate(error):
+                if y != None and x == 0 :
+                    error[x] = abs(vms.rheobase - get_neab.suite.tests[0].observation['value'].item())
+                elif y != None and x!=0:
+                    error[x]= abs(y-0.0)+error[0]
+                elif type(y) == type(None):
+                    inderr = getattr(individual, "error", None)
+                    if inderr!=None:
+                        error[x]= abs(inderr[x]-10)/2.0 + error[0]
+                    else:
+                        error[x] = 10.0 + error[0]
 
-    individual.error = error
-    import copy
-    individual.rheobase = copy.copy(vms.rheobase)
+        individual.error = error
+        import copy
+        individual.rheobase = copy.copy(vms.rheobase)
+    except:
+        pass
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
 
 
@@ -346,6 +348,8 @@ def updatevmpop(pop,rh_value=None):
 
         pop,vmpop = replace_rh(pop,vmpop)
         'output value {}'.format(vmpop)
+        vmpop = list(filter(lambda item: type(item.rheobase) is not type(None), vmpop))
+
     except:
         pass
     return pop,vmpop
@@ -354,16 +358,12 @@ def updatevmpop(pop,rh_value=None):
 
 
 def main():
-    fbest =[]
+    #fbest =[]
     global NGEN
     NGEN=6
     global MU
     import numpy as np
-    numpy = np
-    MU=12#Mu must be some multiple of 8, such that it can be split into even numbers over 8 CPUs
-
-    best = [ 0 for i in range(0,NGEN) ]
-
+    MU=12#Mu must be some multiple of 4, such that it can be split into even numbers over 8 CPUs
     CXPB = 0.9
     stats = tools.Statistics(lambda ind: ind.fitness.values)
     pf = tools.ParetoFront()
@@ -379,59 +379,42 @@ def main():
 
     pop = toolbox.population(n=MU)
     pop = [toolbox.clone(i) for i in pop]
-
+    history.update(pop)
+    pf.update(pop)
     #Now attempt to get the rheobase values by first trying the mean rheobase value.
     #This is not an exhaustive search that results in found all rheobase values
     #It is just a trying out an educated guess on each individual in the whole population as a first pass.
     #invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
 
     rheobase_checking=outils.evaluate
-
-
-    #list_of_models = list(futures.map(outils.model2map,iter_list))
-    pop,list_of_models = updatevmpop(pop)
-    rhstorage = list(futures.map(outils.evaluate,list_of_models))
+    pop,vmpop = updatevmpop(pop)
+    #population may also be altered in this process.
     history.update(pop)
     pf.update(pop)
+    rhstorage = [ item.rheobase for item in vmpop]
 
-    print(pf)
-
-    assert len(pop)==len(vmpop)
-    rhstorage = [i.rheobase for i in vmpop]
     from itertools import repeat
     tuple_storage = zip(repeat(0),vmpop,rhstorage)
-
-
     #Now get the fitness of genes:
     #Note the evaluate function called is different
     fitnesses = list(toolbox.map(toolbox.evaluate, pop, tuple_storage))
-
     invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
-
     for ind, fit in zip(invalid_ind, fitnesses):
         ind.fitness.values = fit
     #purge individuals for which rheobase was not found
     # This is just to assign the crowding distance to the individuals
     # no actual selection is done
     pop = tools.selNSGA2(pop, MU)
-
     assert len(pop)!=0
     record = stats.compile(pop)
     logbook.record(gen=0, evals=len(invalid_ind), **record)
     # Begin the generational process
-    rhstorage2 = 0.0
     for gen in range(1, NGEN):
-        # Vary the population
-        for i in vmpop:
-            if type(i.rheobase) is not type(None):
-                #rhstorage.append(i.rheobase)
-                rhstorage2 += i.rheobase
-        #rhstorage = [i.rheobase for i in vmpop]
-        rhmean = rhstorage2/len(vmpop)
+        rhstorage = list(filter(lambda item: type(item.rheobase) is not type(None), vmpop))
+        rhmean = np.mean([i.rheobase for i in rhstorage]) #/len(vmpop)
         pop,vmpop = updatevmpop(pop,rhmean)
         assert len(pop)!=0
         assert len(vmpop)!=0
-
 
         invalid_ind = [ ind for ind in pop if ind.fitness.valid ]
         assert len(invalid_ind)!=0
