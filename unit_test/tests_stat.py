@@ -20,7 +20,7 @@ class TestStat(unittest.TestCase):
             stats.appendleft(i)
         for i, j in enumerate(stats):
             self.assertEqual(data[i], j)
-     
+
     def test_maxlen(self):
         stats = _stat()
         data = list(range(1, 15))
