@@ -55,19 +55,12 @@ from itertools import repeat
 import sciunit.scores as scores
 import neuronunit.capabilities as cap
 
-def model2map(iter_arg,param_dict):#This method must be pickle-able for scoop to work.
+def model2map(param_dict):#This method must be pickle-able for scoop to work.
     vm=VirtualModel()
     vm.attrs={}
+    print(param_dict)
     for k,v in param_dict.items():
         vm.attrs[k]=v
-    #iter_arg[0]
-    #vm.attrs['b']=iter_arg[1]
-    #vm.attrs['vr']=iter_arg[2]
-    #vm.attrs['vpeak']=iter_arg[3]
-    #attrs['//izhikevich2007Cell']['b']=j
-    #attrs['//izhikevich2007Cell']['vr']=k
-    #attrs['//izhikevich2007Cell']['vpeak']=l
-
     return vm
 
 
@@ -206,8 +199,6 @@ def check_fix_range(vms):
         #this assertion would only be wrong if there was a bug
         print(str(bool(sub.max()>supra.min())))
         assert not sub.max()>supra.min()
-            #import pdb; pdb.set_trace()
-
     if len(sub) and len(supra):
         everything=np.concatenate((sub,supra))
 
@@ -217,7 +208,6 @@ def check_fix_range(vms):
             if i in list(everything):
                 np.delete(center,i)
                 del centerl[i]
-
         #delete the index
         #np.delete(center,np.where(everything is in center))
         #make sure that element 4 in a seven element vector
@@ -266,18 +256,10 @@ def check_current(ampl,vm):
             vm.rheobase=float(ampl)
             'current {} spikes {}'.format(vm.rheobase,n_spikes)
             return vm
-            '''
-            try:
-                assert vm.rheobase != None
-                #assert model.rheobase_memory != None
-            except:
-                pass
-            '''
         verbose = True
         if verbose:
             print(' Injected %s current and got %d spikes on model %s' % \
                     (ampl,n_spikes,vm.attrs))
-
         vm.lookup[float(ampl)] = n_spikes
         return vm
     if float(ampl) in vm.lookup:
@@ -295,9 +277,14 @@ def searcher(rh_param,vms):
     lookuplist=[]
     cnt=0
     boolean=False
+    model.update_run_params(vms.attrs)
+
     from itertools import repeat
     while boolean == False and cnt < 6:
         if len(model.params)==0:
+            print(vms.attrs)
+            assert len(vms.attrs)!=0
+            assert type(vms.attrs) is not type(None)
             model.update_run_params(vms.attrs)
         if type(rh_param[1]) is float:
             #if its a single value educated guess
@@ -352,6 +339,32 @@ def evaluate(individual, guess_value=None):
     rh_param = (False,guess_value)
     vm = searcher(rh_param,vm)
     return vm
+
+
+'''
+def hypervolume_contrib(front, **kargs):
+    """Returns the hypervolume contribution of each individual. The provided
+    *front* should be a set of non-dominated individuals having each a
+    :attr:`fitness` attribute.
+    """
+    import numpy
+    # Must use wvalues * -1 since hypervolume use implicit minimization
+    # And minimization in deap use max on -obj
+    wobj = numpy.array([ind.fitness.wvalues for ind in front]) * -1
+    ref = kargs.get("ref", None)
+    if ref is None:
+        ref = numpy.max(wobj, axis=0) + 1
+
+    total_hv = hv.hypervolume(wobj, ref)
+
+    def contribution(i):
+        # The contribution of point p_i in point set P
+        # is the hypervolume of P without p_i
+        return total_hv - hv.hypervolume(numpy.concatenate((wobj[:i], wobj[i+1:])), ref)
+
+    # Parallelization note: Cannot pickle local function
+    return map(contribution, range(len(front)))
+'''
 
 def plot_stats(pop,logbook):
     evals, gen ,std, avg, max_, min_ = logbook.select("evals","gen","avg", "max", "min", "std")
@@ -410,8 +423,8 @@ def test_to_model_plot(vms,local_test_methods):
     global model
     global nsga_matrix
     model.local_run()
-    #model.update_run_params(vms.attrs)
-    model.re_init(vms.attrs)
+    model.update_run_params(vms.attrs)
+    #model.re_init(vms.attrs)
     tests = None
     tests = get_neab.suite.tests
     tests[0].prediction={}
