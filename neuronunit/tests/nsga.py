@@ -59,40 +59,16 @@ class Individual(object):
         self.rheobase=None
 toolbox = base.Toolbox()
 try:
-    import model_parameters
+    import model_parameters as modelp
+
 except ImportError:
     from neuronunit.tests import model_parameters as params
 
-vr = np.linspace(-75.0,-50.0,1000)
-a = np.linspace(0.015,0.045,1000)
-b = np.linspace(-3.5*10E-9,-0.5*10E-9,1000)
-k = np.linspace(7.0E-4-+7.0E-5,7.0E-4+70E-5,1000)
-C = np.linspace(1.00000005E-4-1.00000005E-5,1.00000005E-4+1.00000005E-5,1000)
 
-c = np.linspace(-55,-60,1000)
-d = np.linspace(0.050,0.2,1000)
-v0 = np.linspace(-75.0,-45.0,1000)
-vt =  np.linspace(-50.0,-30.0,1000)
-vpeak= np.linspace(20.0,30.0,1000)
+BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
+BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
 
-param=['vr','a','b','C','c','d','v0','k','vt','vpeak']
-rov=[]
-rov.append(vr)
-rov.append(a)
-rov.append(b)
-rov.append(C)
-rov.append(c)
-
-rov.append(d)
-rov.append(v0)
-rov.append(k)
-rov.append(vt)
-rov.append(vpeak)
-
-BOUND_LOW=[ np.min(i) for i in rov ]
-BOUND_UP=[ np.max(i) for i in rov ]
-
-NDIM = len(param)
+NDIM = len(BOUND_UP) #= len(BOUND_LOW)
 
 import functools
 
@@ -111,30 +87,6 @@ toolbox.register("select", tools.selNSGA2)
 
 import utilities as outils
 model = outils.model
-
-
-def hypervolume_contrib(front, **kargs):
-    """Returns the hypervolume contribution of each individual. The provided
-    *front* should be a set of non-dominated individuals having each a
-    :attr:`fitness` attribute.
-    """
-    import numpy
-    # Must use wvalues * -1 since hypervolume use implicit minimization
-    # And minimization in deap use max on -obj
-    wobj = numpy.array([ind.fitness.wvalues for ind in front]) * -1
-    ref = kargs.get("ref", None)
-    if ref is None:
-        ref = numpy.max(wobj, axis=0) + 1
-
-    total_hv = hv.hypervolume(wobj, ref)
-
-    def contribution(i):
-        # The contribution of point p_i in point set P
-        # is the hypervolume of P without p_i
-        return total_hv - hv.hypervolume(numpy.concatenate((wobj[:i], wobj[i+1:])), ref)
-
-    # Parallelization note: Cannot pickle local function
-    return map(contribution, range(len(front)))
 
 import quantities as pq
 import neuronunit.capabilities as cap
@@ -155,21 +107,18 @@ def evaluate(individual,tuple_params):#This method must be pickle-able for scoop
     '''
     gen,vms,rheobase=tuple_params
     assert vms.rheobase==rheobase
-    params = utitilities.params
-    model = utitilities.model
+    params = outils.params
+    model = outils.model
 
     uc = {'amplitude':rheobase}
     current = params.copy()['injected_square_current']
     current.update(uc)
     current = {'injected_square_current':current}
     #Its very important to reset the model here. Such that its vm is new, and does not carry charge from the last simulation
-    #model.load_model()
-
-    model.re_init(vms.attrs)#purge models stored charge. by reinitializing it
+    model.update_run_params(vms.attrs)
     model.inject_square_current(current)
-
-    #model.update_run_params(vms.attrs)
-
+    #reset model, clear away charge from previous model
+    model.update_run_params(vms.attrs)
     n_spikes = model.get_spike_count()
     sane = get_neab.suite.tests[0].sanity_check(vms.rheobase*pq.pA,model)
 
@@ -183,20 +132,6 @@ def evaluate(individual,tuple_params):#This method must be pickle-able for scoop
         score = get_neab.suite.judge(model)#passing in model, changes the model
         model.run_number+=1
         error = score.sort_key.values.tolist()[0]
-        '''
-        for x,y in enumerate(error):
-            if y != None and x == 0 :
-                error[x] = abs(vms.rheobase - get_neab.suite.tests[0].observation['value'].item())
-            elif y != None and x!=0:
-                error[x]= abs(y-0.0)+error[0]
-            elif type(y) == type(None):
-                inderr = getattr(individual, "error", None)
-                if inderr!=None:
-                    error[x]= abs(inderr[x]-10)/2.0 + error[0]
-                else:
-                    error[x] = 10.0 + error[0]
-        '''
-
         individual.error = error
         individual.rheobase = vms.rheobase
     except:
@@ -237,33 +172,36 @@ def plotss(vmlist,gen):
 
 def individual_to_vm(ind,param_dict=None):
     vm = outils.VirtualModel()
+    print(ind)
+    from collections import OrderedDict
+    param_dict=OrderedDict(param_dict)
+    trans_dict = {}
+    for i,k in enumerate(list(param_dict.keys())):
+        trans_dict[i]=k
     if type(param_dict) is not type(None):
         vm.attrs={}
-        i=0
-        for k in param_dict.keys():
-            vm.attrs[k]=str(ind[i])
-        'what the updated attrs look like: {}'.format(vm.attrs)
+        for i, j in enumerate(ind):
+            vm.attrs[trans_dict[i]]=str(j)
     else:
-        i=0
-        for k in vm.atts.keys():
-            vm.attrs[k]=str(ind[i])
-        'what the updated attrs look like: {}'.format(vm.attrs)
-
+        for i,j in enumerate(ind):
+            vm.attrs[trans_dict[i]]=str(j)
     return vm
 
 
 def replace_rh(pop,vmpop):
+    '''
+    #discard models that cause None rheobase results,
+    # and create new models by mutating away from the corresponding  parameters.
+    #make sure that the old individual, and virtual model object are
+    #over written so do not use list append pattern, as this will not
+    #over write the objects in place, but instead just grow the lists inappropriately
+    #also some of the lines below may be superflous in terms of machine instructions, but
+    #they function to make the code more explicit and human readable.
+    '''
     rheobase_checking=outils.evaluate
     from itertools import repeat
     import copy
-    assert len(pop) == len(vmpop)
-
-
     for i,ind in enumerate(pop):
-
-         #discard models that cause such results,
-         # and create new models by mutating these parameters.
-
          while type(vmpop[i].rheobase) is type(None):
               print('this loop appropriately exits none mutate away from ')
               toolbox.mutate(ind)
@@ -274,21 +212,12 @@ def replace_rh(pop,vmpop):
               vmpop[i] = rheobase_checking(temp)
               'trying value {}'.format(vmpop[i].rheobase)
               if type(pop_rh.rheobase) is not type(None):
-
-                      #make sure that the old individual, and virtual model object are
-                      #over written so do not use list append pattern, as this will not
-                      #over write the objects in place, but instead just grow the lists inappropriately
-                      #also some of the lines below may be superflous in terms of machine instructions, but
-                      #they function to make the code more explicit and human readable.
-
                       ind.rheobase = vmpop[i].rheobase
                       pop[i] = copy.copy(ind)
                       'rheobase value is updating {}'.format(vmpop[i].rheobase)
                       assert ind.rheobase == vmpop[i].rheobase
                       assert vmpop[i].rheobase is not type(None)
          assert vmpop[i].rheobase is not type(None)
-    assert len(pop)!=0
-    assert len(vmpop)==len(pop)
     return pop, vmpop
 
 
@@ -302,7 +231,7 @@ def test_to_model(vms,local_test_methods):
     #global nsga_matrix
     #model.local_run()
     model.update_run_params(vms.attrs)
-    model.re_init(vms.attrs)
+    #model.re_init(vms.attrs)
     tests = None
     tests = get_neab.suite.tests
     tests[0].prediction={}
@@ -593,7 +522,6 @@ injection_trace[int(duration):int(end)] = 0.0
 #    axarr[1].set_ylim(2*rheobase,0)
 #axarr[1].set_xlabel(r'$current injection (pA)$')
 #axarr[1].set_xlabel(r'$time (ms)$')
-#pdb.set_trace()
 #print(get_neab.suite.tests[i].params['injected_square_current'].keys())
 
 
