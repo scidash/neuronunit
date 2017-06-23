@@ -58,7 +58,7 @@ import neuronunit.capabilities as cap
 def model2map(param_dict):#This method must be pickle-able for scoop to work.
     vm=VirtualModel()
     vm.attrs={}
-    print(param_dict)
+    #print(param_dict)
     for k,v in param_dict.items():
         vm.attrs[k]=v
     return vm
@@ -69,7 +69,9 @@ def pop2map(iter_arg):
     Just a sanity check an otherwise impotent method
     '''
     vm=VirtualModel()
+    ''''
     attrs={}
+
     attrs['//izhikevich2007Cell']={}
     param=['a','b','vr','vpeak']#,'vr','vpeak']
     i,j,k,l=iter_arg#,k,l
@@ -78,10 +80,11 @@ def pop2map(iter_arg):
     attrs['//izhikevich2007Cell']['b']=j
     attrs['//izhikevich2007Cell']['vr']=k
     attrs['//izhikevich2007Cell']['vpeak']=l
+    '''
     vm.attrs=attrs
     model.load_model()
     model.update_run_params(vm.attrs)
-    print(model.params,attrs,vm.attrs)
+    #print(model.params,attrs,vm.attrs)
     return (model, vm)
 
 def error2map(iter_):#This method must be pickle-able for scoop to work.
@@ -126,7 +129,7 @@ def error2map(iter_):#This method must be pickle-able for scoop to work.
                 error= [ np.abs(i) for i in skv ]
             except:
                 error = [ 10.0 for i in range(0,7) ]
-            model.name='rheobase {} parameters {}'.format(str(value),str(iter_arg.attrs))
+            model.name='rheobase {} parameters {}'.format(str(value),str(model.params))
             import neuronunit.capabilities as cap
             spikes_numbers=[]
             model.run_number+=1
@@ -180,6 +183,7 @@ def check_fix_range(vms):
     '''
     sub=[]
     supra=[]
+    steps=[]
     vms.rheobase=0.0
     for k,v in vms.lookup.items():
         if v==1:
@@ -282,7 +286,7 @@ def searcher(rh_param,vms):
     from itertools import repeat
     while boolean == False and cnt < 6:
         if len(model.params)==0:
-            print(vms.attrs)
+            #print(vms.attrs)
             assert len(vms.attrs)!=0
             assert type(vms.attrs) is not type(None)
             model.update_run_params(vms.attrs)
