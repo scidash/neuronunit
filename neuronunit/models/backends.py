@@ -294,12 +294,22 @@ class NEURONBackend(Backend):
         '''
         the argument name attributes is used, rather than parameters in order to distinguish from
         stimulus paramters.
+        #purge the HOC space, this is necessary because model recycling between runs is bad
+        #models when models are not re-initialized properly, as its common for a recycled model
+        #to retain charge from stimulation in previous simulations.
+        #Although the complete purge is and reinit is computationally expensive,
+        #and a more minimal purge is probably sufficient.
         '''
+
+        self.h=None
+        self.neuron=None
+        import neuron
+        self.reset_h(neuron)
+        #self.cond_load()
         for h_key, h_value in params.items():
             self.h('m_RS_RS_pop[0].%s=%s' % (h_key,h_value))
             self.h('m_%s_%s_pop[0].%s=%s' % \
                    (self.cell_name,self.cell_name,h_key,h_value))
-            'm_RS_RS_pop[0].{}={}'.format(h_key,h_value)        
         self.h(' { v_time = new Vector() } ')
         self.h(' { v_time.record(&t) } ')
         self.h(' { v_v_of0 = new Vector() } ')
@@ -318,7 +328,17 @@ class NEURONBackend(Backend):
          'delay':100*pq.ms,
          'duration':500*pq.ms}}
         where 'pq' is the quantities package
+        #purge the HOC space, this is necessary because model recycling between runs is bad
+        #models when models are not re-initialized properly, as its common for a recycled model
+        #to retain charge from stimulation in previous simulations.
+        #Although the complete purge is and reinit is computationally expensive,
+        #and a more minimal purge is probably sufficient.
         '''
+        self.h=None
+        self.neuron=None
+        #self.cond_load()
+        import neuron
+        self.reset_h(neuron)
         self.update_run_params(self.params)
         #self.re_init(self.attrs)
         #print(self.attrs)
