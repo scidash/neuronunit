@@ -311,7 +311,7 @@ def funcSharedConstant():
         except AssertionError:
             result = False
     return result
-''''
+'''
 from scoop import futures, _control, utils, shared
 
 
