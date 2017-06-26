@@ -69,18 +69,7 @@ def pop2map(iter_arg):
     Just a sanity check an otherwise impotent method
     '''
     vm=VirtualModel()
-    ''''
-    attrs={}
 
-    attrs['//izhikevich2007Cell']={}
-    param=['a','b','vr','vpeak']#,'vr','vpeak']
-    i,j,k,l=iter_arg#,k,l
-    model.name=str(i)+str(j)+str(k)+str(l)
-    attrs['//izhikevich2007Cell']['a']=i
-    attrs['//izhikevich2007Cell']['b']=j
-    attrs['//izhikevich2007Cell']['vr']=k
-    attrs['//izhikevich2007Cell']['vpeak']=l
-    '''
     vm.attrs=attrs
     model.load_model()
     model.update_run_params(vm.attrs)
@@ -161,6 +150,7 @@ class VirtualModel:
     '''
     def __init__(self):
         self.lookup={}
+        self.trans_dict=None
         self.rheobase=None
         self.previous=0
         self.run_number=0
@@ -336,14 +326,26 @@ def searcher(rh_param,vms):
     return vms
 
 
-def evaluate(individual, guess_value=None):
-    #This method must be pickle-able for scoop to work.
-    vm = VirtualModel()
-    import copy
-    vm.attrs = copy.copy(individual.attrs)
-    rh_param = (False,guess_value)
-    vm = searcher(rh_param,vm)
-    return vm
+def rheobase_checking(vmpop, rh_value=None):
+    from itertools import repeat
+
+    def bulk_process(vm,rh_value):
+        if type(vmpop) is not type(None):
+            'got here etc {}'.format(vm.attrs)
+            rh_param = (False,0)
+            vm = searcher(rh_param,vm)
+            return vm
+
+    if type(vmpop) is not type(list):
+        return bulk_process(vmpop,0)
+
+    elif type(vmpop) is type(list):
+        vmtemp = []
+        if type(rh_value) is type(None):
+            vmtemp = list(futures.map(bulk_process,vmpop,repeat(0)))
+        elif type(rh_value) is not type(None):
+            vmtemp = list(futures.map(bulk_process,vmpop,repeat(rh_value)))
+        return vmtemp
 
 
 '''
@@ -369,6 +371,7 @@ def hypervolume_contrib(front, **kargs):
 
     # Parallelization note: Cannot pickle local function
     return map(contribution, range(len(front)))
+
 '''
 
 def plot_stats(pop,logbook):
