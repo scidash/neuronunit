@@ -336,13 +336,12 @@ class NEURONBackend(Backend):
         '''
         self.h=None
         self.neuron=None
-        #self.cond_load()
         import neuron
         self.reset_h(neuron)
         self.update_run_params(self.params)
+        print(self.params)
         #self.re_init(self.attrs)
-        #print(self.attrs)
-        #self.h.psection()
+
         c=copy.copy(current)
         if 'injected_square_current' in c.keys():
             c=current['injected_square_current']

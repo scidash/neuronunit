@@ -114,7 +114,6 @@ def evaluate_e(individual,tuple_params):#This method must be pickle-able for sco
     current = params.copy()['injected_square_current']
     current.update(uc)
     current = {'injected_square_current':current}
-    pdb.set_trace()
     #Its very important to reset the model here. Such that its vm is new, and does not carry charge from the last simulation
     model.update_run_params(vms.attrs)
     model.inject_square_current(current)
@@ -129,7 +128,7 @@ def evaluate_e(individual,tuple_params):#This method must be pickle-able for sco
             get_neab.suite.tests[i].params['injected_square_current']['amplitude'] = vms.rheobase*pq.pA
         get_neab.suite.tests[0].prediction={}
         assert type(vms.rheobase) != type(None)
-        score = get_neab.suite.tests[0].prediction['value']=vms.rheobase*pq.pA
+        score = get_neab.suite.tests[0].prediction['value']=vms.rheobase * pq.pA
         score = get_neab.suite.judge(model)#passing in model, changes the model
         model.run_number+=1
         error = score.sort_key.values.tolist()[0]
@@ -188,7 +187,7 @@ import model_parameters
 param_dict = model_parameters.model_params
 #global trans_dict, param_dict
 
-def individual_to_vm(ind,trans_dict):
+def individual_to_vm(ind,trans_dict=None):
     '''
     This method still not a reliable mapping
     Creates vm.attrs from param_dict and a
@@ -196,12 +195,17 @@ def individual_to_vm(ind,trans_dict):
     '''
     vm = outils.VirtualModel()
     param_dict={}
+    if type(trans_dict) is not type(None):
+        for i, j in enumerate(ind):
+            param_dict[trans_dict[i]]=str(j)
+        vm.attrs = param_dict
+        vm.trans_dict = trans_dict
 
-    for i, j in enumerate(ind):
-        param_dict[trans_dict[i]]=str(j)
-    vm.attrs = param_dict
+    if type(trans_dict) is type(None):
+        for i, j in enumerate(ind):
+
+            vm.attrs[vm.trans_dict[i]]=str(j)
     return vm
-
 
 def replace_rh(pop,vmpop):
     '''
@@ -213,26 +217,26 @@ def replace_rh(pop,vmpop):
     #also some of the lines below may be superflous in terms of machine instructions, but
     #they function to make the code more explicit and human readable.
     '''
-    rheobase_checking=outils.evaluate
+    rheobase_checking=outils.rheobase_checking
     from itertools import repeat
     import copy
     for i,ind in enumerate(pop):
         while type(vmpop[i].rheobase) is type(None):
-            print('this loop appropriately exits none mutate away from ')
+            #print('this loop appropriately exits none mutate away from ')
             toolbox.mutate(ind)
             toolbox.mutate(ind)
             toolbox.mutate(ind)
             print('trying mutations: {}'.format(ind))
-            temp = individual_to_vm(ind,param_dict)
-            vmpop[i] = rheobase_checking(temp)
+            #temp = individual_to_vm(ind,param_dict)
+            vm_temp = individual_to_vm(ind,trans_dict)
+            vmpop[i] = rheobase_checking(vm_temp)
             'trying value {}'.format(vmpop[i].rheobase)
             if type(vmpop[i].rheobase) is not type(None):
                 ind.rheobase = vmpop[i].rheobase
                 pop[i] = copy.copy(ind)
                 'rheobase value is updating {}'.format(vmpop[i].rheobase)
-                assert ind.rheobase == vmpop[i].rheobase
-                assert vmpop[i].rheobase is not type(None)
-                assert vmpop[i].rheobase is not type(None)
+    assert ind.rheobase == vmpop[i].rheobase
+    assert vmpop[i].rheobase is not type(None)
     return pop, vmpop
 
 
@@ -271,13 +275,14 @@ def update_vm_pop(pop,trans_dict,rh_value=None):
     import numpy as np
     import copy
     assert len(pop)!=0
-    rheobase_checking=outils.evaluate
+    rheobase_checking=outils.rheobase_checking
     vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in pop], repeat(trans_dict) ))
+    rh_value = [ i.rheobase for i in vmpop ]
     assert type(vmpop[0].attrs) is not type(None)
     'checkpoint 1 output from parallel map {}'.format(vmpop)
     try:
         assert len(pop)!=0 and len(vmpop)!= 0
-        vmpop = list(futures.map(outils.evaluate,vmpop,repeat(rh_value)))
+        vmpop = list(futures.map(rheobase_checking,vmpop,rh_value))
         'got to checkpoint 2 from parallel map {}'.format(vmpop)
         pop,vmpop = replace_rh(pop,vmpop)
         'output value {}'.format(vmpop)
@@ -291,27 +296,6 @@ def update_vm_pop(pop,trans_dict,rh_value=None):
 
 
 
-'''
-def funcUseSharedFunction():
-    assert shared.getConst('myRemoteFunc')(5) == 5 * 5
-    assert shared.getConst('myRemoteFunc')(25) == 25 * 25
-    return True
-
-
-def funcSharedConstant():
-    shared.setConst(myVar={1: 'Example 1',
-                                2: 'Example 2',
-                                3: 'Example 3',
-                               })
-    shared.setConst(secondVar="Hello World!")
-    result = True
-    for _ in range(100):
-        try:
-            result &= futures.submit(funcUseSharedConstant).result()
-        except AssertionError:
-            result = False
-    return result
-'''
 from scoop import futures, _control, utils, shared
 
 
@@ -326,7 +310,7 @@ def main():
     pf = tools.ParetoFront()
     trans_dict = get_trans_dict(param_dict)
     shared.setConst(td = trans_dict)
-    print('fdsafdsa {}'.format(shared.getConst('td')))
+    print('the shared constant {}'.format(shared.getConst('td')))
 
     pop = toolbox.population(n = MU)
     pop = [toolbox.clone(i) for i in pop]
@@ -337,7 +321,7 @@ def main():
     #It is just a trying out an educated guess on each individual in the whole population as a first pass.
     #invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
 
-    rheobase_checking = outils.evaluate
+    rheobase_checking = outils.rheobase_checking
 
     pop,vmpop = update_vm_pop(pop,shared.getConst('td'))
     'updatevmpop returns a whole heap of nones suggesting its not working {}'.format(vmpop)
@@ -348,11 +332,9 @@ def main():
     from itertools import repeat
     #repeat 0, for generation 0
     tuple_storage = zip(repeat(0),vmpop,rhstorage)
-    print(vmpop)
     #Now get the fitness of genes:
     #Note the evaluate function called is different
     #pop is being passed attributes or it needs to create them inside evaluate.
-    pdb.set_trace()
 
     fitnesses = list(toolbox.map(toolbox.evaluate, pop, tuple_storage))
     invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
@@ -403,12 +385,11 @@ def main():
         size_delta = MU-len(offspring)
         assert size_delta == 0
         pop = toolbox.select(offspring, MU)
-        'the pareto front is: {}'.format(pf)
-
-    #pop.sort(key=lambda x: x.fitness.values)
+        print('the pareto front is: {}'.format(pf))
 
 
-    return vmpop, pop, stats, invalid_ind
+
+    return vmpop, pop, invalid_ind
 
 
 
@@ -418,7 +399,7 @@ if __name__ == "__main__":
     start_time=time.time()
     whole_initialisation = start_time-init_start
     model=outils.model
-    vmpop, pop, stats, invalid_ind = main()
+    vmpop, pop, invalid_ind = main()
 
 
 
