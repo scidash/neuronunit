@@ -92,7 +92,7 @@ import quantities as pq
 import neuronunit.capabilities as cap
 import matplotlib.pyplot as plt
 
-def evaluate(individual,tuple_params):#This method must be pickle-able for scoop to work.
+def evaluate_e(individual,tuple_params):#This method must be pickle-able for scoop to work.
     '''
     Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
     is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
@@ -114,6 +114,7 @@ def evaluate(individual,tuple_params):#This method must be pickle-able for scoop
     current = params.copy()['injected_square_current']
     current.update(uc)
     current = {'injected_square_current':current}
+    pdb.set_trace()
     #Its very important to reset the model here. Such that its vm is new, and does not carry charge from the last simulation
     model.update_run_params(vms.attrs)
     model.inject_square_current(current)
@@ -145,10 +146,10 @@ def evaluate(individual,tuple_params):#This method must be pickle-able for scoop
 
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
 
+#param_dict should be one of scoops shared constants
 
 
-
-toolbox.register("evaluate", evaluate)
+toolbox.register("evaluate", evaluate_e)
 toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
 toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
 
@@ -159,7 +160,10 @@ toolbox.register("select", tools.selNSGA2)
 toolbox.register("map", futures.map)
 
 
-def plotss(vmlist,gen):
+def plot_ss(vmlist,gen):
+    '''
+    '''
+
     import matplotlib.pyplot as plt
     plt.clf()
     for ind,j in enumerate(vmlist):
@@ -170,21 +174,32 @@ def plotss(vmlist,gen):
     plt.clf()
 
 
-def individual_to_vm(ind,param_dict=None):
-    vm = outils.VirtualModel()
-    print(ind)
-    from collections import OrderedDict
-    param_dict=OrderedDict(param_dict)
+
+
+def get_trans_dict(param_dict):
+
     trans_dict = {}
     for i,k in enumerate(list(param_dict.keys())):
         trans_dict[i]=k
-    if type(param_dict) is not type(None):
-        vm.attrs={}
-        for i, j in enumerate(ind):
-            vm.attrs[trans_dict[i]]=str(j)
-    else:
-        for i,j in enumerate(ind):
-            vm.attrs[trans_dict[i]]=str(j)
+    return trans_dict
+
+import model_parameters
+
+param_dict = model_parameters.model_params
+#global trans_dict, param_dict
+
+def individual_to_vm(ind,trans_dict):
+    '''
+    This method still not a reliable mapping
+    Creates vm.attrs from param_dict and a
+    translation dictionary
+    '''
+    vm = outils.VirtualModel()
+    param_dict={}
+
+    for i, j in enumerate(ind):
+        param_dict[trans_dict[i]]=str(j)
+    vm.attrs = param_dict
     return vm
 
 
@@ -202,22 +217,22 @@ def replace_rh(pop,vmpop):
     from itertools import repeat
     import copy
     for i,ind in enumerate(pop):
-         while type(vmpop[i].rheobase) is type(None):
-              print('this loop appropriately exits none mutate away from ')
-              toolbox.mutate(ind)
-              toolbox.mutate(ind)
-              toolbox.mutate(ind)
-              'trying mutations: {}'.format(ind)
-              temp = individual_to_vm(ind)
-              vmpop[i] = rheobase_checking(temp)
-              'trying value {}'.format(vmpop[i].rheobase)
-              if type(pop_rh.rheobase) is not type(None):
-                      ind.rheobase = vmpop[i].rheobase
-                      pop[i] = copy.copy(ind)
-                      'rheobase value is updating {}'.format(vmpop[i].rheobase)
-                      assert ind.rheobase == vmpop[i].rheobase
-                      assert vmpop[i].rheobase is not type(None)
-         assert vmpop[i].rheobase is not type(None)
+        while type(vmpop[i].rheobase) is type(None):
+            print('this loop appropriately exits none mutate away from ')
+            toolbox.mutate(ind)
+            toolbox.mutate(ind)
+            toolbox.mutate(ind)
+            print('trying mutations: {}'.format(ind))
+            temp = individual_to_vm(ind,param_dict)
+            vmpop[i] = rheobase_checking(temp)
+            'trying value {}'.format(vmpop[i].rheobase)
+            if type(vmpop[i].rheobase) is not type(None):
+                ind.rheobase = vmpop[i].rheobase
+                pop[i] = copy.copy(ind)
+                'rheobase value is updating {}'.format(vmpop[i].rheobase)
+                assert ind.rheobase == vmpop[i].rheobase
+                assert vmpop[i].rheobase is not type(None)
+                assert vmpop[i].rheobase is not type(None)
     return pop, vmpop
 
 
@@ -228,16 +243,13 @@ def test_to_model(vms,local_test_methods):
     import matplotlib.pyplot as plt
     import copy
     global model
-    #global nsga_matrix
-    #model.local_run()
     model.update_run_params(vms.attrs)
-    #model.re_init(vms.attrs)
     tests = None
     tests = get_neab.suite.tests
     tests[0].prediction={}
     tests[0].prediction['value']=vms.rheobase*qt.pA
     tests[0].params['injected_square_current']['amplitude']=vms.rheobase*qt.pA
-    #score = get_neab.suite.judge(model)#pass
+    #TODO all of the external rheobase related things need to be re-encapsulated into the NeuroUnit class.
     if local_test_methods in [4,5,6]:
         tests[local_test_methods].params['injected_square_current']['amplitude']=vms.rheobase*qt.pA
     #model.results['vm'] = [ 0 ]
@@ -245,7 +257,8 @@ def test_to_model(vms,local_test_methods):
     tests[local_test_methods].generate_prediction(model)
 
 
-def updatevmpop(pop,rh_value=None):
+
+def update_vm_pop(pop,trans_dict,rh_value=None):
     '''
     inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
     outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
@@ -259,16 +272,13 @@ def updatevmpop(pop,rh_value=None):
     import copy
     assert len(pop)!=0
     rheobase_checking=outils.evaluate
-    import model_parameters as modelp
-    paramdict = modelp.model_params
-    #print(pop)
-    vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in pop],repeat(paramdict) ))
+    vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in pop], repeat(trans_dict) ))
+    assert type(vmpop[0].attrs) is not type(None)
     'checkpoint 1 output from parallel map {}'.format(vmpop)
     try:
         assert len(pop)!=0 and len(vmpop)!= 0
         vmpop = list(futures.map(outils.evaluate,vmpop,repeat(rh_value)))
         'got to checkpoint 2 from parallel map {}'.format(vmpop)
-
         pop,vmpop = replace_rh(pop,vmpop)
         'output value {}'.format(vmpop)
         vmpop = list(filter(lambda item: type(item.rheobase) is not type(None), vmpop))
@@ -281,27 +291,44 @@ def updatevmpop(pop,rh_value=None):
 
 
 
+'''
+def funcUseSharedFunction():
+    assert shared.getConst('myRemoteFunc')(5) == 5 * 5
+    assert shared.getConst('myRemoteFunc')(25) == 25 * 25
+    return True
+
+
+def funcSharedConstant():
+    shared.setConst(myVar={1: 'Example 1',
+                                2: 'Example 2',
+                                3: 'Example 3',
+                               })
+    shared.setConst(secondVar="Hello World!")
+    result = True
+    for _ in range(100):
+        try:
+            result &= futures.submit(funcUseSharedConstant).result()
+        except AssertionError:
+            result = False
+    return result
+''''
+from scoop import futures, _control, utils, shared
+
+
 def main():
-    #fbest =[]
     global NGEN
     NGEN=6
     global MU
     import numpy as np
     MU=12#Mu must be some multiple of 4, such that it can be split into even numbers over 8 CPUs
     CXPB = 0.9
-    stats = tools.Statistics(lambda ind: ind.fitness.values)
+    #stats = tools.Statistics(lambda ind: ind.fitness.values)
     pf = tools.ParetoFront()
+    trans_dict = get_trans_dict(param_dict)
+    shared.setConst(td = trans_dict)
+    print('fdsafdsa {}'.format(shared.getConst('td')))
 
-
-    stats.register("avg", np.mean, axis=0)
-    stats.register("std", np.std, axis=0)
-    stats.register("min", np.min, axis=0)
-    stats.register("max", np.max, axis=0)
-
-    logbook = tools.Logbook()
-    logbook.header = "gen", "evals", "std", "min", "avg", "max"
-
-    pop = toolbox.population(n=MU)
+    pop = toolbox.population(n = MU)
     pop = [toolbox.clone(i) for i in pop]
     #history.update(pop)
     pf.update(pop)
@@ -310,8 +337,10 @@ def main():
     #It is just a trying out an educated guess on each individual in the whole population as a first pass.
     #invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
 
-    rheobase_checking=outils.evaluate
-    pop,vmpop = updatevmpop(pop)
+    rheobase_checking = outils.evaluate
+
+    pop,vmpop = update_vm_pop(pop,shared.getConst('td'))
+    'updatevmpop returns a whole heap of nones suggesting its not working {}'.format(vmpop)
     #population may also be altered in this process.
     pf.update(pop)
     rhstorage = [ item.rheobase for item in vmpop]
@@ -319,8 +348,12 @@ def main():
     from itertools import repeat
     #repeat 0, for generation 0
     tuple_storage = zip(repeat(0),vmpop,rhstorage)
+    print(vmpop)
     #Now get the fitness of genes:
     #Note the evaluate function called is different
+    #pop is being passed attributes or it needs to create them inside evaluate.
+    pdb.set_trace()
+
     fitnesses = list(toolbox.map(toolbox.evaluate, pop, tuple_storage))
     invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
     for ind, fit in zip(invalid_ind, fitnesses):
@@ -336,13 +369,11 @@ def main():
     for gen in range(1, NGEN):
         rhstorage = list(filter(lambda item: type(item.rheobase) is not type(None), vmpop))
         rhmean = np.mean([i.rheobase for i in rhstorage]) #/len(vmpop)
-        pop,vmpop = updatevmpop(pop,rhmean)
-        #assert len(pop)!=0
-        #assert len(vmpop)!=0
+        pop,vmpop = update_vm_pop(pop,rhmean)
 
-        #invalid_ind = [ ind for ind in pop if ind.fitness.valid ]
-        #assert len(invalid_ind)!=0
-        #offspring = tools.selTournamentDCD(pop, len(pop))
+        invalid_ind = [ ind for ind in pop if ind.fitness.valid ]
+        assert len(invalid_ind)!=0
+        offspring = tools.selTournamentDCD(invalid_ind, len(invalid_ind))
         offspring = tools.selNSGA2(pop, len(pop))
         assert len(offspring)!=0
 
@@ -355,8 +386,9 @@ def main():
             toolbox.mutate(ind1)
             toolbox.mutate(ind2)
             del ind1.fitness.values, ind2.fitness.values
+        #vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in pop],repeat(paramdict),repeat(trans_dict)  ))
 
-        vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in offspring] ))
+        vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in offspring],repeat(paramdict),repeat(trans_dict) ))
         vmpop = list(futures.map(rheobase_checking,vmpop,repeat(rhmean)))
         rhstorage = [ i.rheobase for i in vmpop ]
         tuple_storage = zip(repeat(gen),vmpop,rhstorage)
@@ -373,11 +405,10 @@ def main():
         pop = toolbox.select(offspring, MU)
         'the pareto front is: {}'.format(pf)
 
-    pop.sort(key=lambda x: x.fitness.values)
+    #pop.sort(key=lambda x: x.fitness.values)
 
 
     return vmpop, pop, stats, invalid_ind
-
 
 
 
@@ -445,10 +476,10 @@ if __name__ == "__main__":
     print(gpop)
     for j in gpop:
         print(j,'jpop')
-    vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in gpop] ))
+    vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in gpop],repeat(paramdict),repeat(trans_dict) ))
 
     #colors = list([ i.errors for i in gpop ])
-    pgop,vmpop = updatevmpop(vmpop)
+    pgop,vmpop = update_vm_pop(vmpop)
     rhstorage = [i.rheobase for i in vmpop]
     iter_ = zip(repeat(NGEN),vmpop,rhstorage)
 
