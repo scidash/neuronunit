@@ -138,6 +138,7 @@ def error2map(iter_):#This method must be pickle-able for scoop to work.
             return_list.append(iter_arg.attrs)
             return_list.append(value*pq.pA)
         elif sane == False:
+            #create a nominally high error
             error = [ 10.0 for i in range(0,7) ]
             return_list.append(np.sum(error))
             return_list.append(error)
