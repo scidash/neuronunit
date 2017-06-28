@@ -160,6 +160,7 @@ class VirtualModel:
         self.s_html=None
         self.results=None
         self.error=None
+        self.td = None
 
 def check_fix_range(vms):
     '''
@@ -330,9 +331,10 @@ def rheobase_checking(vmpop, rh_value=None):
     from itertools import repeat
 
     def bulk_process(vm,rh_value):
-        if type(vmpop) is not type(None):
+        if type(vm) is not type(None):
             'got here etc {}'.format(vm.attrs)
-            rh_param = (False,0)
+
+            rh_param = (False,rh_value)
             vm = searcher(rh_param,vm)
             return vm
 
@@ -344,7 +346,7 @@ def rheobase_checking(vmpop, rh_value=None):
         if type(rh_value) is type(None):
             vmtemp = list(futures.map(bulk_process,vmpop,repeat(0)))
         elif type(rh_value) is not type(None):
-            vmtemp = list(futures.map(bulk_process,vmpop,repeat(rh_value)))
+            vmtemp = list(futures.map(bulk_process,vmpop,rh_value))
         return vmtemp
 
 

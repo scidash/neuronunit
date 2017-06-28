@@ -80,8 +80,8 @@ RUN printenv PATH
 RUN python -c "import pyneuroml"
 RUN python -c "import neuronunit"
 RUN python -c "from neuronunit.models.reduced import ReducedModel"
-RUN conda install quantities
-RUN python -c "import quantities"
+#RUN conda install quantities
+#RUN python -c "import quantities"
 RUN python -c "import neuron"
 RUN python -c "import pyneuroml"
 RUN nrnivmodl
