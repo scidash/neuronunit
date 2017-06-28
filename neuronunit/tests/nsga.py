@@ -106,42 +106,44 @@ def evaluate_e(individual,tuple_params):#This method must be pickle-able for sco
     outputs are error components.
     '''
     gen,vms,rheobase=tuple_params
-    assert vms.rheobase==rheobase
-    params = outils.params
-    model = outils.model
+    assert vms.rheobase == rheobase
+    if type(vms.rheobase) is not type(None):
+        params = outils.params
+        model = outils.model
+        print(rheobase,model,params,tuple_params)
+        pdb.set_trace()
+        uc = {'amplitude':vms.rheobase}
+        current = params.copy()['injected_square_current']
+        current.update(uc)
+        current = {'injected_square_current':current}
+        #Its very important to reset the model here. Such that its vm is new, and does not carry charge from the last simulation
+        model.update_run_params(vms.attrs)
+        model.inject_square_current(current)
+        #reset model, clear away charge from previous model
+        model.update_run_params(vms.attrs)
+        n_spikes = model.get_spike_count()
+        sane = get_neab.suite.tests[0].sanity_check(vms.rheobase*pq.pA,model)
 
-    uc = {'amplitude':rheobase}
-    current = params.copy()['injected_square_current']
-    current.update(uc)
-    current = {'injected_square_current':current}
-    #Its very important to reset the model here. Such that its vm is new, and does not carry charge from the last simulation
-    model.update_run_params(vms.attrs)
-    model.inject_square_current(current)
-    #reset model, clear away charge from previous model
-    model.update_run_params(vms.attrs)
-    n_spikes = model.get_spike_count()
-    sane = get_neab.suite.tests[0].sanity_check(vms.rheobase*pq.pA,model)
-
-    try:
-        assert n_spikes == 1 and sane == True #or n_spikes == 0  # Its possible that no rheobase was found
-        for i in [4,5,6]:
-            get_neab.suite.tests[i].params['injected_square_current']['amplitude'] = vms.rheobase*pq.pA
-        get_neab.suite.tests[0].prediction={}
-        assert type(vms.rheobase) != type(None)
-        score = get_neab.suite.tests[0].prediction['value']=vms.rheobase * pq.pA
-        score = get_neab.suite.judge(model)#passing in model, changes the model
-        model.run_number+=1
-        error = score.sort_key.values.tolist()[0]
-        individual.error = error
-        individual.rheobase = vms.rheobase
-    except:
-        inderr = getattr(individual, "error", None)
-        if inderr!=None:
-            if len(individual.error)!=0:
-                #the average of 10 and the previous score is chosen as a nominally high distance from zero
-                error = [ (abs(-10.0+i)/2.0) for i in individual.error ]
-        else:
-            error = [ 100.0 for i in range(0,8) ]
+        try:
+            assert n_spikes == 1 and sane == True #or n_spikes == 0  # Its possible that no rheobase was found
+            for i in [4,5,6]:
+                get_neab.suite.tests[i].params['injected_square_current']['amplitude'] = vms.rheobase*pq.pA
+            get_neab.suite.tests[0].prediction={}
+            assert type(vms.rheobase) != type(None)
+            score = get_neab.suite.tests[0].prediction['value']=vms.rheobase * pq.pA
+            score = get_neab.suite.judge(model)#passing in model, changes the model
+            model.run_number+=1
+            error = score.sort_key.values.tolist()[0]
+            individual.error = error
+            individual.rheobase = vms.rheobase
+        except:
+            inderr = getattr(individual, "error", None)
+            if inderr!=None:
+                if len(individual.error)!=0:
+                    #the average of 10 and the previous score is chosen as a nominally high distance from zero
+                    error = [ (abs(-10.0+i)/2.0) for i in individual.error ]
+            else:
+                error = [ 100.0 for i in range(0,8) ]
 
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
 
@@ -298,22 +300,29 @@ def update_vm_pop(pop,trans_dict,rh_value=None):
         'got to checkpoint 2 from parallel map {}'.format(vmpop)
         #pop,vmpop = replace_rh(pop,vmpop)
         'output value {}'.format(vmpop)
-        pop = [ j for i,j in enumerate(pop) if type(vmpop[i].rheobase) is not type(None) ]
-        vmpop = list(filter(lambda item: type(item.rheobase) is not type(None), copy.copy(vmpop)))
+        pop = [ j for i,j in enumerate(copy.copy(pop)) if type(vmpop[i].rheobase) is not type(None) ]
+        vmpop = [ j for j in copy.copy(vmpop) if type(j.rheobase) is not type(None) ]
+        #vmpop = list(filter(lambda item: type(item.rheobase) is type(None), copy.copy(vmpop)))
         rh_value = [ toolbox.clone(i).rheobase for i in copy.copy(vmpop) ]
         assert type(None) not in rh_value
         assert len(pop)!=0
+        assert len(vmpop)!=0
+
         assert len(pop) == len(vmpop)
         'output value {}'.format(vmpop)
 
     except:
 
-        pop = [ j for i,j in enumerate(copy.copy(pop)) if type(copy.copy(vmpop[i]).rheobase) is not type(None) ]
+        pop = [ j for i,j in enumerate(copy.copy(pop)) if type(vmpop[i].rheobase) is not type(None) ]
+        vmpop = [ j for j in copy.copy(vmpop) if type(j.rheobase) is not type(None) ]
         print(pop)
-        vmpop = list(filter(lambda item: type(item.rheobase) is not type(None), copy.copy(vmpop)))
         print(vmpop)
+        #pop = [ j for i,j in enumerate(copy.copy(pop)) if type(copy.copy(vmpop[i]).rheobase) is type(None) ]
+        #vmpop = list(filter(lambda item: type(item.rheobase) is type(None), copy.copy(vmpop)))
     assert type(vmpop) is not type(None)
     assert type(pop) is not type(None)
+    assert len(pop)!=0
+    assert len(vmpop)!=0
     return copy.copy(pop),copy.copy(vmpop)
 
 
@@ -324,16 +333,17 @@ from scoop import futures, _control, utils, shared
 
 def main():
     global NGEN
-    NGEN=2
+    NGEN=0
     global MU
     import numpy as np
-    MU=8#Mu must be some multiple of 4, such that it can be split into even numbers over 8 CPUs
+    #MU=8#Mu must be some multiple of 4, such that it can be split into even numbers over 8 CPUs
+    MU=1
     CXPB = 0.9
     #stats = tools.Statistics(lambda ind: ind.fitness.values)
     pf = tools.ParetoFront()
     from scoop.fallbacks import NotStartedProperly
     trans_dict = get_trans_dict(param_dict)
-    if scoop.fallbacks.NotStartedProperly==False:
+    if scoop.fallbacks.NotStartedProperly()==False:
 
         shared.setConst(td = trans_dict)
         td = shared.getConst('td')
@@ -357,7 +367,6 @@ def main():
 
     pop,vmpop = update_vm_pop([toolbox.clone(i) for i in pop],td)
     print(type(pop),type(vmpop))
-    pdb.set_trace()
     assert len(pop) == len(vmpop)
     assert len(vmpop) != 0
     assert len(pop) != 0
