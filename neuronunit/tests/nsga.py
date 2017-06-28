@@ -233,9 +233,12 @@ def replace_rh(pop,vmpop):
             'trying value {}'.format(vmpop[i].rheobase)
             if type(vmpop[i].rheobase) is not type(None):
                 ind.rheobase = vmpop[i].rheobase
-                pop[i] = copy.copy(ind)
+                pop[i] = ind
                 'rheobase value is updating {}'.format(vmpop[i].rheobase)
     assert ind.rheobase == vmpop[i].rheobase
+    assert len(pop)!=0
+    assert len(vmpop)!=0
+
     assert vmpop[i].rheobase is not type(None)
     return pop, vmpop
 
@@ -277,21 +280,41 @@ def update_vm_pop(pop,trans_dict,rh_value=None):
     assert len(pop)!=0
     rheobase_checking=outils.rheobase_checking
     vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in pop], repeat(trans_dict) ))
-    rh_value = [ i.rheobase for i in vmpop ]
+    rh_value = [ toolbox.clone(i).rheobase for i in copy.copy(vmpop) ]
+    assert len(pop)!=0
+    assert type(vmpop) is not type(None)
+    assert type(pop) is not type(None)
+
+    #list_of_models = list(futures.map(outils.model2map,iter_list,modelp.model_params))
+    #rhstorage = list(futures.map(outils.evaluate,list_of_models))
+    #pop = list(filter(lambda item: type(item) is not type(None), pop))
+    #pop = list(filter(lambda item: type(item.rheobase) is not type(None), pop))
+
     assert type(vmpop[0].attrs) is not type(None)
     'checkpoint 1 output from parallel map {}'.format(vmpop)
     try:
         assert len(pop)!=0 and len(vmpop)!= 0
-        vmpop = list(futures.map(rheobase_checking,vmpop,rh_value))
+        vmpop = list(futures.map(rheobase_checking,copy.copy(vmpop),rh_value))
         'got to checkpoint 2 from parallel map {}'.format(vmpop)
-        pop,vmpop = replace_rh(pop,vmpop)
+        #pop,vmpop = replace_rh(pop,vmpop)
         'output value {}'.format(vmpop)
-        vmpop = list(filter(lambda item: type(item.rheobase) is not type(None), vmpop))
+        pop = [ j for i,j in enumerate(pop) if type(vmpop[i].rheobase) is not type(None) ]
+        vmpop = list(filter(lambda item: type(item.rheobase) is not type(None), copy.copy(vmpop)))
+        rh_value = [ toolbox.clone(i).rheobase for i in copy.copy(vmpop) ]
+        assert type(None) not in rh_value
+        assert len(pop)!=0
+        assert len(pop) == len(vmpop)
         'output value {}'.format(vmpop)
 
     except:
-        pass
-    return pop,vmpop
+
+        pop = [ j for i,j in enumerate(copy.copy(pop)) if type(copy.copy(vmpop[i]).rheobase) is not type(None) ]
+        print(pop)
+        vmpop = list(filter(lambda item: type(item.rheobase) is not type(None), copy.copy(vmpop)))
+        print(vmpop)
+    assert type(vmpop) is not type(None)
+    assert type(pop) is not type(None)
+    return copy.copy(pop),copy.copy(vmpop)
 
 
 
@@ -301,29 +324,45 @@ from scoop import futures, _control, utils, shared
 
 def main():
     global NGEN
-    NGEN=6
+    NGEN=2
     global MU
     import numpy as np
-    MU=12#Mu must be some multiple of 4, such that it can be split into even numbers over 8 CPUs
+    MU=8#Mu must be some multiple of 4, such that it can be split into even numbers over 8 CPUs
     CXPB = 0.9
     #stats = tools.Statistics(lambda ind: ind.fitness.values)
     pf = tools.ParetoFront()
+    from scoop.fallbacks import NotStartedProperly
     trans_dict = get_trans_dict(param_dict)
-    shared.setConst(td = trans_dict)
-    print('the shared constant {}'.format(shared.getConst('td')))
+    if scoop.fallbacks.NotStartedProperly==False:
 
+        shared.setConst(td = trans_dict)
+        td = shared.getConst('td')
+        print('the shared constant {}'.format(shared.getConst('td')))
+    else:
+        td = trans_dict
     pop = toolbox.population(n = MU)
     pop = [toolbox.clone(i) for i in pop]
     #history.update(pop)
-    pf.update(pop)
+    pf.update([toolbox.clone(i) for i in pop])
     #Now attempt to get the rheobase values by first trying the mean rheobase value.
     #This is not an exhaustive search that results in found all rheobase values
     #It is just a trying out an educated guess on each individual in the whole population as a first pass.
     #invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
 
     rheobase_checking = outils.rheobase_checking
+    #assert len(pop) == len(vmpop)
+    #assert len(vmpop) != 0
+    assert len(pop) != 0
+    #print(type(pop),type(vmpop))
 
-    pop,vmpop = update_vm_pop(pop,shared.getConst('td'))
+    pop,vmpop = update_vm_pop([toolbox.clone(i) for i in pop],td)
+    print(type(pop),type(vmpop))
+    pdb.set_trace()
+    assert len(pop) == len(vmpop)
+    assert len(vmpop) != 0
+    assert len(pop) != 0
+    for i in vmpop:
+        i.td=shared.getConst('td')
     'updatevmpop returns a whole heap of nones suggesting its not working {}'.format(vmpop)
     #population may also be altered in this process.
     pf.update(pop)
@@ -338,12 +377,13 @@ def main():
 
     fitnesses = list(toolbox.map(toolbox.evaluate, pop, tuple_storage))
     invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
+    #assert len(invalid_ind)!=0
     for ind, fit in zip(invalid_ind, fitnesses):
         ind.fitness.values = fit
     #purge individuals for which rheobase was not found
     # This is just to assign the crowding distance to the individuals
     # no actual selection is done
-    pop = tools.selNSGA2(pop, MU)
+    pop = tools.selNSGA2(invalid_ind, MU)
     assert len(pop)!=0
     record = stats.compile(pop)
     logbook.record(gen=0, evals=len(invalid_ind), **record)
@@ -395,9 +435,9 @@ def main():
 
 if __name__ == "__main__":
 
-    import time
-    start_time=time.time()
-    whole_initialisation = start_time-init_start
+    #import time
+    #start_time=time.time()
+    #whole_initialisation = start_time-init_start
     model=outils.model
     vmpop, pop, invalid_ind = main()
 
