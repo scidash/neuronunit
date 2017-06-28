@@ -34,7 +34,7 @@ tests = []
 
 dataset_id = 354190013  # Internal ID that AIBS uses for a particular Scnn1a-Tg2-Cre
                         # Primary visual area, layer 5 neuron.
-observation = aibs.get_observation(dataset_id,'rheobase')
+#observation = aibs.get_observation(dataset_id,'rheobase')
 
 ne_pickle = os.path.join(THIS_DIR,"neuroelectro.pickle")
 
