@@ -59,12 +59,15 @@ class Individual(object):
         self.rheobase=None
 toolbox = base.Toolbox()
 try:
-    import model_parameters as modelp
+    #import model_parameters as modelp
+    import neuronunit.tests.model_parameters as modelp
 
 except ImportError:
     from neuronunit.tests import model_parameters as params
-
-
+import model_parameters as modelp
+#import os
+#os.getcwd()
+print(modelp)
 BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
 BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
 
@@ -107,7 +110,10 @@ def evaluate_e(individual,tuple_params):#This method must be pickle-able for sco
     '''
     gen,vms,rheobase=tuple_params
     assert vms.rheobase == rheobase
-    if type(vms.rheobase) is not type(None):
+    print('{0}'.format(type(vms.rheobase)))
+    try:
+        assert type(vms.rheobase) is not type(None)
+
         params = outils.params
         model = outils.model
         print(rheobase,model,params,tuple_params)
@@ -138,12 +144,15 @@ def evaluate_e(individual,tuple_params):#This method must be pickle-able for sco
             individual.rheobase = vms.rheobase
         except:
             inderr = getattr(individual, "error", None)
-            if inderr!=None:
+            if type(inderr) is not (None):
                 if len(individual.error)!=0:
                     #the average of 10 and the previous score is chosen as a nominally high distance from zero
                     error = [ (abs(-10.0+i)/2.0) for i in individual.error ]
             else:
                 error = [ 100.0 for i in range(0,8) ]
+    except Exception as e:
+        #raise type(vms.rheobase) is type(None)
+        error = [ 100.0 for i in range(0,8) ]
 
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
 
@@ -311,8 +320,8 @@ def update_vm_pop(pop,trans_dict,rh_value=None):
     print('got to checkpoint 2 from parallel map {0}'.format(vmpop))
     #pop,vmpop = replace_rh(pop,vmpop)
     print('output value {0}'.format(vmpop))
-    pop = [ toolbox.clone(j) for i,j in enumerate(copy.copy(pop)) if type(vmpop[i].rheobase) is not type(None) ]
-    vmpop = [ toolbox.clone(j) for j in vmpop if type(j.rheobase) is not type(None) ]
+    #pop = [ toolbox.clone(j) for i,j in enumerate(copy.copy(pop)) if type(vmpop[i].rheobase) is not type(None) ]
+    #vmpop = [ toolbox.clone(j) for j in vmpop if type(j.rheobase) is not type(None) ]
     #import pdb; pdb.set_trace()
     #vmpop = list(filter(lambda item: type(item.rheobase) is type(None), copy.copy(vmpop)))
     rh_value = [ toolbox.clone(i).rheobase for i in copy.copy(vmpop) ]
