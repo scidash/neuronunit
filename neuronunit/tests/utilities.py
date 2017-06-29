@@ -173,6 +173,7 @@ def check_fix_range(vms):
     given a dictionary of rheobase search values, use that
     dictionary as input for a subsequent search.
     '''
+    import pdb
     sub=[]
     supra=[]
     steps=[]
@@ -181,6 +182,7 @@ def check_fix_range(vms):
         if v==1:
             #A logical flag is returned to indicate that rheobase was found.
             vms.rheobase=float(k)
+            print(type(vms.rheobase))
             vms.steps=0.0
             return (True,vms)
         elif v==0:
@@ -247,18 +249,14 @@ def check_current(ampl,vm):
         model.inject_square_current(current)
         vm.previous=ampl
         n_spikes = model.get_spike_count()
+        vm.lookup[float(ampl)] = n_spikes
         if n_spikes == 1:
             model.rheobase_memory=float(ampl)
             vm.rheobase=float(ampl)
+            print(type(vm.rheobase))
             print('current {0} spikes {1}'.format(vm.rheobase,n_spikes))
             return vm
-        verbose = True
-        if verbose:
-            #print(' Injected %s current and got %d spikes on model %s' % \
-            #        (ampl,n_spikes,vm.attrs))
-            print('Injected {0} current and got {1} spikes on model {2}'.format(ampl,n_spikes,vm.attrs))
 
-        vm.lookup[float(ampl)] = n_spikes
         return vm
     if float(ampl) in vm.lookup:
         return vm
@@ -332,13 +330,14 @@ def rheobase_checking(vmpop, rh_value=None):
     This method needs to be checked carefully in case it duplicates work
     '''
     from itertools import repeat
-
+    import pdb
     def bulk_process(vm,rh_value):
         if type(vm) is not type(None):
             #print('got here etc {0}'.format(vm.attrs))
 
             rh_param = (False,rh_value)
             vm = searcher(rh_param,vm)
+
             return vm
 
     if type(vmpop) is not type(list):
@@ -347,7 +346,7 @@ def rheobase_checking(vmpop, rh_value=None):
     elif type(vmpop) is type(list):
         vmtemp = []
         if type(rh_value) is type(None):
-            vmtemp = bulk_process(vmpop,0)
+            vmtemp = bulk_process(copy.copy(vmpop),0)
             #vmtemp = list(futures.map(bulk_process,vmpop,repeat(0)))
         elif type(rh_value) is not type(None):
             vmtemp = bulk_process(vmpop,rh_value)
