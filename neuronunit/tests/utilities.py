@@ -87,7 +87,7 @@ def error2map(iter_):#This method must be pickle-able for scoop to work.
     try:
         assert iter_arg.attrs is not type(None)
     except:
-        'exception occured {}'.format()
+        print('exception occured {0}'.format(type(iter_arg.attrs)))
     model.update_run_params(iter_arg.attrs)
     import quantities as qt
     score = None
@@ -118,7 +118,7 @@ def error2map(iter_):#This method must be pickle-able for scoop to work.
                 error= [ np.abs(i) for i in skv ]
             except:
                 error = [ 10.0 for i in range(0,7) ]
-            model.name='rheobase {} parameters {}'.format(str(value),str(model.params))
+            model.name='rheobase {0} parameters {1}'.format(str(value),str(model.params))
             import neuronunit.capabilities as cap
             spikes_numbers=[]
             model.run_number+=1
@@ -232,7 +232,7 @@ def check_current(ampl,vm):
     '''
     import copy
     import scoop
-    'the scoop worker id: {}'.format(scoop.utils.getWorkerQte(scoop.utils.getHosts()))
+    #print('the scoop worker id: {0}'.format(scoop.utils.getWorkerQte(scoop.utils.getHosts())))
 
 
     if float(ampl) not in vm.lookup or len(vm.lookup)==0:
@@ -250,12 +250,14 @@ def check_current(ampl,vm):
         if n_spikes == 1:
             model.rheobase_memory=float(ampl)
             vm.rheobase=float(ampl)
-            'current {} spikes {}'.format(vm.rheobase,n_spikes)
+            print('current {0} spikes {1}'.format(vm.rheobase,n_spikes))
             return vm
         verbose = True
         if verbose:
-            print(' Injected %s current and got %d spikes on model %s' % \
-                    (ampl,n_spikes,vm.attrs))
+            #print(' Injected %s current and got %d spikes on model %s' % \
+            #        (ampl,n_spikes,vm.attrs))
+            print('Injected {0} current and got {1} spikes on model {2}'.format(ampl,n_spikes,vm.attrs))
+
         vm.lookup[float(ampl)] = n_spikes
         return vm
     if float(ampl) in vm.lookup:
@@ -276,9 +278,8 @@ def searcher(rh_param,vms):
     model.update_run_params(vms.attrs)
 
     from itertools import repeat
-    while boolean == False and cnt < 6:
+    while boolean == False and cnt < 12:
         if len(model.params)==0:
-            #print(vms.attrs)
             assert len(vms.attrs)!=0
             assert type(vms.attrs) is not type(None)
             model.update_run_params(vms.attrs)
@@ -288,7 +289,6 @@ def searcher(rh_param,vms):
                 model.rheobase_memory = rh_param[1]
             vms = check_current(model.rheobase_memory,vms)
             model.update_run_params(vms.attrs)
-            #format
 
             boolean,vms = check_fix_range(vms)
             if boolean:
@@ -299,8 +299,8 @@ def searcher(rh_param,vms):
 
         elif len(vms.lookup)==0 and type(rh_param[1]) is list:
             #If the educated guess failed, or if the first attempt is parallel vector of samples
+            assert vms is not None
             returned_list = list(futures.map(check_current,rh_param[1],repeat(vms)))
-            assert vms!=None
             for v in returned_list:
                 vms.lookup.update(v.lookup)
             boolean,vms=check_fix_range(vms)
@@ -328,11 +328,14 @@ def searcher(rh_param,vms):
 
 
 def rheobase_checking(vmpop, rh_value=None):
+    '''
+    This method needs to be checked carefully in case it duplicates work
+    '''
     from itertools import repeat
 
     def bulk_process(vm,rh_value):
         if type(vm) is not type(None):
-            'got here etc {}'.format(vm.attrs)
+            #print('got here etc {0}'.format(vm.attrs))
 
             rh_param = (False,rh_value)
             vm = searcher(rh_param,vm)
@@ -344,9 +347,11 @@ def rheobase_checking(vmpop, rh_value=None):
     elif type(vmpop) is type(list):
         vmtemp = []
         if type(rh_value) is type(None):
-            vmtemp = list(futures.map(bulk_process,vmpop,repeat(0)))
+            vmtemp = bulk_process(vmpop,0)
+            #vmtemp = list(futures.map(bulk_process,vmpop,repeat(0)))
         elif type(rh_value) is not type(None):
-            vmtemp = list(futures.map(bulk_process,vmpop,rh_value))
+            vmtemp = bulk_process(vmpop,rh_value)
+            #vmtemp = list(futures.map(bulk_process,vmpop,rh_value))
         return vmtemp
 
 
