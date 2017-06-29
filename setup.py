@@ -24,10 +24,10 @@ setup(
                       'neo==0.5.1',
                       'elephant==0.4.1',
                       'sciunit==0.1.5.8',
-                      'allensdk==0.12.4.1',
-                      'pyneuroml==0.2.3',
+                      'allensdk==0.13.2',
+                      'pyneuroml==0.2.13',
                       'scoop'],
     dependency_links = ['https://github.com/scidash/sciunit/tarball/dev#egg=sciunit-0.1.5.8',
-                        'https://github.com/rgerkin/AllenSDK/tarball/python3.5#egg=allensdk-0.12.4.1',
-                        'https://github.com/rgerkin/pyNeuroML/tarball/master#egg=pyneuroml-0.2.3']
+                        'https://github.com/rgerkin/AllenSDK/tarball/master#egg=allensdk-0.13.2',
+                        'https://github.com/rgerkin/pyNeuroML/tarball/master#egg=pyneuroml-0.2.13']
 )
