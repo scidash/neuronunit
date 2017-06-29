@@ -28,8 +28,8 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
             centered at the spike peak.
 
     Returns:
-     a neo.core.AnalogSignalArray of membrane potential snippets
-     corresponding to each spike.
+     a neo.core.AnalogSignal where each column contains a membrane potential 
+     snippets corresponding to one spike.
     """
     spike_train = threshold_detection(vm,threshold=threshold)
 
@@ -41,17 +41,16 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
                                              t_stop=spike_train.t_stop,
                                              units=spike_train.units)
 
-    vm_array = neo.core.AnalogSignalArray(vm,units=vm.units,
-                                             sampling_rate=vm.sampling_rate)
     snippets = [vm_array.time_slice(t-width/2,t+width/2) for t in spike_train]
-    return neo.core.AnalogSignalArray(snippets,units=vm.units,
+    result = neo.core.AnalogSignal(np.array(snippets).T,units=vm.units,
                                                sampling_rate=vm.sampling_rate)
+    return result
 
 def spikes2amplitudes(spike_waveforms):
     """
     IN:
      spike_waveforms: Spike waveforms, e.g. from get_spike_waveforms().
-        neo.core.AnalogSignalArray
+        neo.core.AnalogSignal
     OUT:
      1D numpy array of spike amplitudes, i.e. the maxima in each waveform.
     """
@@ -67,7 +66,7 @@ def spikes2widths(spike_waveforms):
     """
     IN:
      spike_waveforms: Spike waveforms, e.g. from get_spike_waveforms().
-        neo.core.AnalogSignalArray
+        neo.core.AnalogSignal
     OUT:
      1D numpy array of spike widths, specifically the full width
      at half the maximum amplitude.
@@ -104,7 +103,7 @@ def spikes2thresholds(spike_waveforms):
     """
     IN:
      spike_waveforms: Spike waveforms, e.g. from get_spike_waveforms().
-        neo.core.AnalogSignalArray
+        neo.core.AnalogSignal
     OUT:
      1D numpy array of spike thresholds, specifically the membrane potential
      at which 1/10 the maximum slope is reached.
