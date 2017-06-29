@@ -119,8 +119,8 @@ class SingleCellModel(NeuronModel,
             
         Returns
         -------
-        Must return a neo.core.AnalogSignalArray.
-        Each neo.core.AnalogSignal in the array should be a spike waveform.
+        Must return a neo.core.AnalogSignal.
+        Each column of the AnalogSignal should be a spike waveform.
         """
         
         vm = self.get_membrane_potential()

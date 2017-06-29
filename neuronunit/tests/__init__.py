@@ -223,7 +223,7 @@ class TestPulseTest(VmTest):
         
         def func(x, a, b, c):
             vm_fit[:offset] = c
-            vm_fit[offset:] = a * np.exp(-t[offset:]/b) + c
+            vm_fit[offset:,0] = a * np.exp(-t[offset:]/b) + c
             return vm_fit
         
         popt, pcov = curve_fit(func, t, vm, p0=guesses) # Estimate starting values for better convergence
