@@ -111,7 +111,7 @@ def evaluate_e(individual,tuple_params):#This method must be pickle-able for sco
         params = outils.params
         model = outils.model
         print(rheobase,model,params,tuple_params)
-        pdb.set_trace()
+        #pdb.set_trace()
         uc = {'amplitude':vms.rheobase}
         current = params.copy()['injected_square_current']
         current.update(uc)
@@ -228,15 +228,16 @@ def replace_rh(pop,vmpop):
             toolbox.mutate(ind)
             toolbox.mutate(ind)
             toolbox.mutate(ind)
-            print('trying mutations: {}'.format(ind))
+            print('trying mutations: {0}'.format(ind))
             #temp = individual_to_vm(ind,param_dict)
+            trans_dict=vmpop[i].trans_dict
             vm_temp = individual_to_vm(ind,trans_dict)
             vmpop[i] = rheobase_checking(vm_temp)
-            'trying value {}'.format(vmpop[i].rheobase)
+            'trying value {0}'.format(vmpop[i].rheobase)
             if type(vmpop[i].rheobase) is not type(None):
                 ind.rheobase = vmpop[i].rheobase
                 pop[i] = ind
-                'rheobase value is updating {}'.format(vmpop[i].rheobase)
+                'rheobase value is updating {0}'.format(vmpop[i].rheobase)
     assert ind.rheobase == vmpop[i].rheobase
     assert len(pop)!=0
     assert len(vmpop)!=0
@@ -279,51 +280,64 @@ def update_vm_pop(pop,trans_dict,rh_value=None):
     from itertools import repeat
     import numpy as np
     import copy
+    import pdb
+    print(pop)
+    assert len(pop)!=0
     assert len(pop)!=0
     rheobase_checking=outils.rheobase_checking
     vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in pop], repeat(trans_dict) ))
+    vmpop = list(futures.map(rheobase_checking,vmpop))
+    print('checkpoint 1 output from parallel map {0}'.format(vmpop))
     rh_value = [ toolbox.clone(i).rheobase for i in copy.copy(vmpop) ]
-    assert len(pop)!=0
+
+    def rbc(rh_value):
+        boolean_r_check=False
+        for r in rh_value:
+            if type(r) is None:
+                boolean_r_check == True
+        return boolean_r_check
+
+    while rbc(rh_value) is True:
+        pop,vmpop = replace_rh(pop,vmpop)
+        rh_value = [ toolbox.clone(i).rheobase for i in vmpop ]
+        print('stuck in loop {0}'.format(type(rh_value[::-1])))
+    print('out of loop {0}'.format(type(rh_value[::-1])))
+    #pdb.set_trace()
+    assert len(vmpop)!=0
     assert type(vmpop) is not type(None)
     assert type(pop) is not type(None)
 
-    #list_of_models = list(futures.map(outils.model2map,iter_list,modelp.model_params))
-    #rhstorage = list(futures.map(outils.evaluate,list_of_models))
-    #pop = list(filter(lambda item: type(item) is not type(None), pop))
-    #pop = list(filter(lambda item: type(item.rheobase) is not type(None), pop))
+    #vmpop = list(futures.map(rheobase_checking,copy.copy(vmpop),rh_value))
+    print('got to checkpoint 2 from parallel map {0}'.format(vmpop))
+    #pop,vmpop = replace_rh(pop,vmpop)
+    print('output value {0}'.format(vmpop))
+    pop = [ toolbox.clone(j) for i,j in enumerate(copy.copy(pop)) if type(vmpop[i].rheobase) is not type(None) ]
+    vmpop = [ toolbox.clone(j) for j in vmpop if type(j.rheobase) is not type(None) ]
+    #import pdb; pdb.set_trace()
+    #vmpop = list(filter(lambda item: type(item.rheobase) is type(None), copy.copy(vmpop)))
+    rh_value = [ toolbox.clone(i).rheobase for i in copy.copy(vmpop) ]
+    print('debug stats before assertion failure {0}{1}{2}{3}'.format(len(pop),len(vmpop),rh_value,rbc(rh_value)))
+    assert rbc(rh_value) is False
+    assert len(pop)!=0
+    assert len(vmpop)!=0
 
-    assert type(vmpop[0].attrs) is not type(None)
-    'checkpoint 1 output from parallel map {}'.format(vmpop)
-    try:
-        assert len(pop)!=0 and len(vmpop)!= 0
-        vmpop = list(futures.map(rheobase_checking,copy.copy(vmpop),rh_value))
-        'got to checkpoint 2 from parallel map {}'.format(vmpop)
-        #pop,vmpop = replace_rh(pop,vmpop)
-        'output value {}'.format(vmpop)
-        pop = [ j for i,j in enumerate(copy.copy(pop)) if type(vmpop[i].rheobase) is not type(None) ]
-        vmpop = [ j for j in copy.copy(vmpop) if type(j.rheobase) is not type(None) ]
-        #vmpop = list(filter(lambda item: type(item.rheobase) is type(None), copy.copy(vmpop)))
-        rh_value = [ toolbox.clone(i).rheobase for i in copy.copy(vmpop) ]
-        assert type(None) not in rh_value
-        assert len(pop)!=0
-        assert len(vmpop)!=0
-
-        assert len(pop) == len(vmpop)
-        'output value {}'.format(vmpop)
-
+    assert len(pop) == len(vmpop)
+    print('output value {0}'.format(vmpop))
+    '''
     except:
 
-        pop = [ j for i,j in enumerate(copy.copy(pop)) if type(vmpop[i].rheobase) is not type(None) ]
-        vmpop = [ j for j in copy.copy(vmpop) if type(j.rheobase) is not type(None) ]
+        pop = [ toolbox.clone(j) for i,j in enumerate(copy.copy(pop)) if type(vmpop[i].rheobase) is not type(None) ]
+        vmpop = [ toolbox.clone(j) for j in copy.copy(vmpop) if type(j.rheobase) is not type(None) ]
         print(pop)
         print(vmpop)
         #pop = [ j for i,j in enumerate(copy.copy(pop)) if type(copy.copy(vmpop[i]).rheobase) is type(None) ]
         #vmpop = list(filter(lambda item: type(item.rheobase) is type(None), copy.copy(vmpop)))
+    '''
     assert type(vmpop) is not type(None)
     assert type(pop) is not type(None)
     assert len(pop)!=0
     assert len(vmpop)!=0
-    return copy.copy(pop),copy.copy(vmpop)
+    return pop,vmpop
 
 
 
@@ -333,11 +347,11 @@ from scoop import futures, _control, utils, shared
 
 def main():
     global NGEN
-    NGEN=0
+    NGEN=2
     global MU
     import numpy as np
     #MU=8#Mu must be some multiple of 4, such that it can be split into even numbers over 8 CPUs
-    MU=1
+    MU=8
     CXPB = 0.9
     #stats = tools.Statistics(lambda ind: ind.fitness.values)
     pf = tools.ParetoFront()
@@ -347,7 +361,7 @@ def main():
 
         shared.setConst(td = trans_dict)
         td = shared.getConst('td')
-        print('the shared constant {}'.format(shared.getConst('td')))
+        print('the shared constant {0}'.format(shared.getConst('td')))
     else:
         td = trans_dict
     pop = toolbox.population(n = MU)
@@ -360,19 +374,17 @@ def main():
     #invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
 
     rheobase_checking = outils.rheobase_checking
-    #assert len(pop) == len(vmpop)
-    #assert len(vmpop) != 0
-    assert len(pop) != 0
-    #print(type(pop),type(vmpop))
 
-    pop,vmpop = update_vm_pop([toolbox.clone(i) for i in pop],td)
+    pop,vmpop = update_vm_pop(pop,td)
+    assert len(pop) != 0
+
     print(type(pop),type(vmpop))
     assert len(pop) == len(vmpop)
     assert len(vmpop) != 0
     assert len(pop) != 0
     for i in vmpop:
         i.td=shared.getConst('td')
-    'updatevmpop returns a whole heap of nones suggesting its not working {}'.format(vmpop)
+    print('updatevmpop returns a whole heap of nones suggesting its not working {0}'.format(vmpop))
     #population may also be altered in this process.
     pf.update(pop)
     rhstorage = [ item.rheobase for item in vmpop]
@@ -434,7 +446,7 @@ def main():
         size_delta = MU-len(offspring)
         assert size_delta == 0
         pop = toolbox.select(offspring, MU)
-        print('the pareto front is: {}'.format(pf))
+        print('the pareto front is: {0}'.format(pf))
 
 
 
@@ -444,9 +456,6 @@ def main():
 
 if __name__ == "__main__":
 
-    #import time
-    #start_time=time.time()
-    #whole_initialisation = start_time-init_start
     model=outils.model
     vmpop, pop, invalid_ind = main()
 
@@ -455,7 +464,7 @@ if __name__ == "__main__":
     try:
         ground_error = pickle.load(open('big_model_evaulated.pickle','rb'))
     except:
-        '{} it seems the error truth data does not yet exist, lets create it now '.format(str(False))
+        '{0} it seems the error truth data does not yet exist, lets create it now '.format(str(False))
         ground_error = list(futures.map(util.func2map, ground_truth))
         pickle.dump(ground_error,open('big_model_evaulated.pickle','wb'))
 
