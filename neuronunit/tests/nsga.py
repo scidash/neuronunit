@@ -142,6 +142,9 @@ def evaluate_e(individual,tuple_params):#This method must be pickle-able for sco
             error = score.sort_key.values.tolist()[0]
             individual.error = error
             individual.rheobase = vms.rheobase
+            for i in error:
+                if type(i) is type(None):
+                    i = 100.0
         except:
             inderr = getattr(individual, "error", None)
             if type(inderr) is not (None):
@@ -211,10 +214,8 @@ def individual_to_vm(ind,trans_dict=None):
             param_dict[trans_dict[i]]=str(j)
         vm.attrs = param_dict
         vm.trans_dict = trans_dict
-
     if type(trans_dict) is type(None):
         for i, j in enumerate(ind):
-
             vm.attrs[vm.trans_dict[i]]=str(j)
     return vm
 
@@ -232,7 +233,10 @@ def replace_rh(pop,vmpop):
     from itertools import repeat
     import copy
     for i,ind in enumerate(pop):
+        j=0
         while type(vmpop[i].rheobase) is type(None):
+            print(j)
+            j+=1
             #print('this loop appropriately exits none mutate away from ')
             toolbox.mutate(ind)
             toolbox.mutate(ind)
@@ -243,15 +247,19 @@ def replace_rh(pop,vmpop):
             vm_temp = individual_to_vm(ind,trans_dict)
             vmpop[i] = rheobase_checking(vm_temp)
             'trying value {0}'.format(vmpop[i].rheobase)
+            ind.rheobase = vmpop[i].rheobase
+            pop[i] = ind
+
+            #if type(vmpop[i].rheobase) is not type(None):
+            print('rheobase value is updating {0}'.format(vmpop[i].rheobase))
             if type(vmpop[i].rheobase) is not type(None):
-                ind.rheobase = vmpop[i].rheobase
-                pop[i] = ind
-                'rheobase value is updating {0}'.format(vmpop[i].rheobase)
+                break
+        assert type(vmpop[i].rheobase) is not type(None)
     assert ind.rheobase == vmpop[i].rheobase
     assert len(pop)!=0
     assert len(vmpop)!=0
 
-    assert vmpop[i].rheobase is not type(None)
+
     return pop, vmpop
 
 
@@ -290,63 +298,38 @@ def update_vm_pop(pop,trans_dict,rh_value=None):
     import numpy as np
     import copy
     import pdb
-    print(pop)
-    assert len(pop)!=0
-    assert len(pop)!=0
     rheobase_checking=outils.rheobase_checking
-    vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in pop], repeat(trans_dict) ))
+    vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in copy.copy(pop)], repeat(trans_dict) ))
     vmpop = list(futures.map(rheobase_checking,vmpop))
     print('checkpoint 1 output from parallel map {0}'.format(vmpop))
-    rh_value = [ toolbox.clone(i).rheobase for i in copy.copy(vmpop) ]
+    rh_value = [ i.rheobase for i in vmpop]
+    print(rh_value)
 
     def rbc(rh_value):
         boolean_r_check=False
         for r in rh_value:
-            if type(r) is None:
+            print(r)
+            if type(r) is type(None):
+                print(type(r))
                 boolean_r_check == True
         return boolean_r_check
 
     while rbc(rh_value) is True:
-        pop,vmpop = replace_rh(pop,vmpop)
-        rh_value = [ toolbox.clone(i).rheobase for i in vmpop ]
-        print('stuck in loop {0}'.format(type(rh_value[::-1])))
-    print('out of loop {0}'.format(type(rh_value[::-1])))
-    #pdb.set_trace()
-    assert len(vmpop)!=0
-    assert type(vmpop) is not type(None)
-    assert type(pop) is not type(None)
+        pop,vmpop = replace_rh(pop,vmpop,rh_value)
+        rh_value = [ i.rheobase for i in vmpop ]
 
-    #vmpop = list(futures.map(rheobase_checking,copy.copy(vmpop),rh_value))
-    print('got to checkpoint 2 from parallel map {0}'.format(vmpop))
-    #pop,vmpop = replace_rh(pop,vmpop)
-    print('output value {0}'.format(vmpop))
-    #pop = [ toolbox.clone(j) for i,j in enumerate(copy.copy(pop)) if type(vmpop[i].rheobase) is not type(None) ]
-    #vmpop = [ toolbox.clone(j) for j in vmpop if type(j.rheobase) is not type(None) ]
-    #import pdb; pdb.set_trace()
-    #vmpop = list(filter(lambda item: type(item.rheobase) is type(None), copy.copy(vmpop)))
     rh_value = [ toolbox.clone(i).rheobase for i in copy.copy(vmpop) ]
-    print('debug stats before assertion failure {0}{1}{2}{3}'.format(len(pop),len(vmpop),rh_value,rbc(rh_value)))
-    assert rbc(rh_value) is False
-    assert len(pop)!=0
-    assert len(vmpop)!=0
+
 
     assert len(pop) == len(vmpop)
-    print('output value {0}'.format(vmpop))
-    '''
-    except:
-
-        pop = [ toolbox.clone(j) for i,j in enumerate(copy.copy(pop)) if type(vmpop[i].rheobase) is not type(None) ]
-        vmpop = [ toolbox.clone(j) for j in copy.copy(vmpop) if type(j.rheobase) is not type(None) ]
-        print(pop)
-        print(vmpop)
-        #pop = [ j for i,j in enumerate(copy.copy(pop)) if type(copy.copy(vmpop[i]).rheobase) is type(None) ]
-        #vmpop = list(filter(lambda item: type(item.rheobase) is type(None), copy.copy(vmpop)))
-    '''
-    assert type(vmpop) is not type(None)
-    assert type(pop) is not type(None)
     assert len(pop)!=0
     assert len(vmpop)!=0
-    return pop,vmpop
+    assert rbc(rh_value) is False
+    for y,x in enumerate(vmpop):
+        assert x.rheobase== rh_value[y]
+        print(x.rheobase)
+        assert type(x.rheobase) is not type(None)
+    return pop,vmpop,rh_value
 
 
 
@@ -356,7 +339,7 @@ from scoop import futures, _control, utils, shared
 
 def main():
     global NGEN
-    NGEN=2
+    NGEN=3
     global MU
     import numpy as np
     #MU=8#Mu must be some multiple of 4, such that it can be split into even numbers over 8 CPUs
@@ -366,13 +349,13 @@ def main():
     pf = tools.ParetoFront()
     from scoop.fallbacks import NotStartedProperly
     trans_dict = get_trans_dict(param_dict)
-    if scoop.fallbacks.NotStartedProperly()==False:
+    #if scoop.fallbacks.NotStartedProperly()==False:
 
-        shared.setConst(td = trans_dict)
-        td = shared.getConst('td')
-        print('the shared constant {0}'.format(shared.getConst('td')))
-    else:
-        td = trans_dict
+        #shared.setConst(td = trans_dict)
+        #td = shared.getConst('td')
+        #print('the shared constant {0}'.format(shared.getConst('td')))
+    #else:
+    td = trans_dict
     pop = toolbox.population(n = MU)
     pop = [toolbox.clone(i) for i in pop]
     #history.update(pop)
@@ -382,11 +365,14 @@ def main():
     #It is just a trying out an educated guess on each individual in the whole population as a first pass.
     #invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
 
-    rheobase_checking = outils.rheobase_checking
+    #rheobase_checking = outils.rheobase_checking
 
-    pop,vmpop = update_vm_pop(pop,td)
+    pop,vmpop,rhstorage = list(update_vm_pop(pop,td))
+    for y,x in enumerate(vmpop):
+        assert x.rheobase== rhstorage[y]
+        print(x.rheobase,rhstorage[y])
+        #assert type(x.rheobase) is not type(None)
     assert len(pop) != 0
-
     print(type(pop),type(vmpop))
     assert len(pop) == len(vmpop)
     assert len(vmpop) != 0
@@ -396,7 +382,7 @@ def main():
     print('updatevmpop returns a whole heap of nones suggesting its not working {0}'.format(vmpop))
     #population may also be altered in this process.
     pf.update(pop)
-    rhstorage = [ item.rheobase for item in vmpop]
+    #rhstorage = [ item.rheobase for item in vmpop]
 
     from itertools import repeat
     #repeat 0, for generation 0
@@ -415,7 +401,7 @@ def main():
     # no actual selection is done
     pop = tools.selNSGA2(invalid_ind, MU)
     assert len(pop)!=0
-    record = stats.compile(pop)
+    #record = stats.compile(pop)
     logbook.record(gen=0, evals=len(invalid_ind), **record)
     # Begin the generational process
     for gen in range(1, NGEN):
