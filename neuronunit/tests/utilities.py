@@ -49,11 +49,21 @@ units = pq.pA
 
 
 from scoop import futures, shared
+global map
+def set_map(map_type):
+    '''
+    map type can be either futures.map or dview.map_sync
+    '''
+    map = map_type
+    #
+    return map
+#map = set_map()
 from neuronunit import tests as nutests
 import copy
 from itertools import repeat
 import sciunit.scores as scores
 import neuronunit.capabilities as cap
+
 
 def model2map(param_dict):#This method must be pickle-able for scoop to work.
     vm=VirtualModel()
@@ -298,7 +308,7 @@ def searcher(rh_param,vms):
         elif len(vms.lookup)==0 and type(rh_param[1]) is list:
             #If the educated guess failed, or if the first attempt is parallel vector of samples
             assert vms is not None
-            returned_list = list(futures.map(check_current,rh_param[1],repeat(vms)))
+            returned_list = list(map(check_current,rh_param[1],repeat(vms)))
             for v in returned_list:
                 vms.lookup.update(v.lookup)
             boolean,vms=check_fix_range(vms)
@@ -315,7 +325,7 @@ def searcher(rh_param,vms):
                 steps_current = [ i*pq.pA for i in steps ]
                 vms.steps = steps_current
                 assert type(vms.steps) is not type(None)
-            returned_list = list(futures.map(check_current,vms.steps,repeat(vms)))
+            returned_list = list(map(check_current,vms.steps,repeat(vms)))
             for v in returned_list:
                 vms.lookup.update(v.lookup)
             boolean,vms=check_fix_range(vms)
@@ -347,10 +357,10 @@ def rheobase_checking(vmpop, rh_value=None):
         vmtemp = []
         if type(rh_value) is type(None):
             vmtemp = bulk_process(copy.copy(vmpop),0)
-            #vmtemp = list(futures.map(bulk_process,vmpop,repeat(0)))
+            #vmtemp = list(self.map(bulk_process,vmpop,repeat(0)))
         elif type(rh_value) is not type(None):
             vmtemp = bulk_process(vmpop,rh_value)
-            #vmtemp = list(futures.map(bulk_process,vmpop,rh_value))
+            #vmtemp = list(self.map(bulk_process,vmpop,rh_value))
         return vmtemp
 
 
