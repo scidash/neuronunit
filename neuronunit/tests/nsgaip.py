@@ -1,3 +1,27 @@
+
+
+import os
+os.system('ipcluster start -n 8 --engines=MPIEngineSetLauncher --profile=chase --debug &')
+
+#os.system('sleep 15 &')
+import ipyparallel as ipp
+rc = ipp.Client(profile='chase');
+rc[:].use_cloudpickle()
+
+print('hello from before cpu ');
+print(rc.ids)
+dview = rc[:]
+
+
+
+serial_result = list(map(lambda x:x**10, range(32)))
+parallel_result = list(dview.map(lambda x: x**10, range(32)))
+print(serial_result)
+print(parallel_result, 'parallel_reult')
+assert serial_result == parallel_result
+#RUN ipython run_ipp1.py && sleep 15 && ipython run_ipp2.py
+
+
 import matplotlib as mpl
 mpl.use('agg',warn=False)
 from matplotlib import pyplot as plt
@@ -28,17 +52,6 @@ import quantities as qt
 
 from scoop import utils
 from scoop import futures
-
-import os
-import os.path
-os.chdir('/home/jovyan/mnt/neuronunit/neuronunit/tests')
-os.system('ipcluster start -n 8 --engines=MPIEngineSetLauncher --profile=chase --debug &')
-import ipyparallel as ipp ;
-rc = ipp.Client(profile='chase');
-print('hello from before cpu ');
-print(rc.ids)
-print(rc.map_sync())
-
 
 import sciunit.scores as scores
 history = tools.History()
@@ -318,8 +331,11 @@ def update_vm_pop(pop,trans_dict,rh_value=None):
     import copy
     import pdb
     rheobase_checking=outils.rheobase_checking
-    vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in copy.copy(pop)], repeat(trans_dict) ))
-    vmpop = list(futures.map(rheobase_checking,vmpop))
+    #vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in copy.copy(pop)], repeat(trans_dict) ))
+    #vmpop = list(futures.map(rheobase_checking,vmpop))
+	vmpop = list(dview.map_sync(individual_to_vm,[toolbox.clone(i) for i in copy.copy(pop)], repeat(trans_dict) ))
+    vmpop = list(list(dview.map_sync(rheobase_checking,vmpop)))
+ 
     print('checkpoint 1 output from parallel map {0}'.format(vmpop))
     rh_value = [ i.rheobase for i in vmpop]
     print(rh_value)
@@ -412,7 +428,7 @@ def main():
     #Note the evaluate function called is different
     #pop is being passed attributes or it needs to create them inside evaluate.
 
-    fitnesses = list(rc.map_sync(toolbox.evaluate, pop, tuple_storage))
+    fitnesses = list(dview.map_sync(toolbox.evaluate, pop, tuple_storage))
     invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
     #assert len(invalid_ind)!=0
     for ind, fit in zip(invalid_ind, fitnesses):
@@ -447,6 +463,9 @@ def main():
             toolbox.mutate(ind1)
             toolbox.mutate(ind2)
             del ind1.fitness.values, ind2.fitness.values
+
+        #vmpop = list(dview.map(individual_to_vm,[toolbox.clone(i) for i in offspring] ))
+        #vmpop = list(dview.map(rheobase_checking,vmpop,repeat(rh_value)))
         #vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in pop],repeat(paramdict),repeat(trans_dict)  ))
 
         #vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in offspring],repeat(trans_dict) ))
@@ -454,7 +473,8 @@ def main():
         pop,vmpop,rhstorage = list(update_vm_pop(pop,td))
         rhstorage = [ i.rheobase for i in vmpop ]
         tuple_storage = zip(repeat(gen),vmpop,rhstorage)
-        fitnesses = list(toolbox.map(toolbox.evaluate, offspring , tuple_storage))
+        #fitnesses = list(toolbox.map(toolbox.evaluate, offspring , tuple_storage))
+        fitnesses = list(dview.map(toolbox.evaluate, offspring , tuple_storage))
         for i,j in enumerate(pop):
             print(i,j)
             print(type(i),type(j))
@@ -572,8 +592,8 @@ if __name__ == "__main__":
     print(gpop)
     for j in gpop:
         print(j,'jpop')
-    vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in gpop],repeat(paramdict),repeat(trans_dict) ))
-
+    #vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in gpop],repeat(paramdict),repeat(trans_dict) ))
+    vmpop = list(dview.map(individual_to_vm,[toolbox.clone(i) for i in gpop] ))
     #colors = list([ i.errors for i in gpop ])
     pgop,vmpop = update_vm_pop(vmpop)
     rhstorage = [i.rheobase for i in vmpop]
