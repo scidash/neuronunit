@@ -126,7 +126,7 @@ if __name__ == "__main__":
         ground_error = pickle.load(open('big_model_evaulated.pickle','rb'))
     except:
         '{} it seems the error truth data does not yet exist, lets create it now '.format(str(False))
-        ground_error = list(futures.map(outils.func2map, ground_truth))
+        ground_error = list(futures.map(outils.error2map, ground_truth))
         pickle.dump(ground_error,open('big_model_evaulated.pickle','wb'))
 
     _ = plot_results(ground_error)
