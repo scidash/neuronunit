@@ -140,12 +140,13 @@ def evaluate_e(individual,tuple_params):#This method must be pickle-able for sco
             score = get_neab.suite.judge(model)#passing in model, changes the model
             model.run_number+=1
             error = score.sort_key.values.tolist()[0]
-            individual.error = error
-            individual.rheobase = vms.rheobase
             for i in error:
                 if type(i) is type(None):
-                    i = 100.0
+                    i = np.mean(error)
+            #individual.error = error
+            individual.rheobase = vms.rheobase
         except:
+
             inderr = getattr(individual, "error", None)
             if type(inderr) is not (None):
                 if len(individual.error)!=0:
@@ -153,6 +154,7 @@ def evaluate_e(individual,tuple_params):#This method must be pickle-able for sco
                     error = [ (abs(-10.0+i)/2.0) for i in individual.error ]
             else:
                 error = [ 100.0 for i in range(0,8) ]
+
     except Exception as e:
         #raise type(vms.rheobase) is type(None)
         error = [ 100.0 for i in range(0,8) ]
@@ -209,15 +211,22 @@ def individual_to_vm(ind,trans_dict=None):
     '''
     vm = outils.VirtualModel()
     param_dict={}
+    #if type(trans_dict) is not type(None):
     if type(trans_dict) is not type(None):
+
+        'transdict is: {0} ind is {1}'.format(trans_dict, ind)
         for i, j in enumerate(ind):
+            print(i,j)
             param_dict[trans_dict[i]]=str(j)
         vm.attrs = param_dict
         vm.trans_dict = trans_dict
+    #return vm
+
     if type(trans_dict) is type(None):
         for i, j in enumerate(ind):
             vm.attrs[vm.trans_dict[i]]=str(j)
     return vm
+
 
 def replace_rh(pop,vmpop):
     '''
@@ -349,13 +358,15 @@ def main():
     pf = tools.ParetoFront()
     from scoop.fallbacks import NotStartedProperly
     trans_dict = get_trans_dict(param_dict)
-    #if scoop.fallbacks.NotStartedProperly()==False:
+    if scoop.fallbacks.NotStartedProperly()==False:
+        print('this never evaluates {0}'.format(scoop.fallbacks.NotStartedProperly()))
 
-        #shared.setConst(td = trans_dict)
-        #td = shared.getConst('td')
-        #print('the shared constant {0}'.format(shared.getConst('td')))
-    #else:
-    td = trans_dict
+        import pdb; pdb.set_trace()
+        shared.setConst(td = trans_dict)
+        td = shared.getConst('td')
+        print('the shared constant {0}'.format(shared.getConst('td')))
+    else:
+        td = trans_dict
     pop = toolbox.population(n = MU)
     pop = [toolbox.clone(i) for i in pop]
     #history.update(pop)
@@ -402,12 +413,14 @@ def main():
     pop = tools.selNSGA2(invalid_ind, MU)
     assert len(pop)!=0
     #record = stats.compile(pop)
-    logbook.record(gen=0, evals=len(invalid_ind), **record)
+    #logbook.record(gen=0, evals=len(invalid_ind), **record)
     # Begin the generational process
     for gen in range(1, NGEN):
         rhstorage = list(filter(lambda item: type(item.rheobase) is not type(None), vmpop))
         rhmean = np.mean([i.rheobase for i in rhstorage]) #/len(vmpop)
-        pop,vmpop = update_vm_pop(pop,rhmean)
+        pop,vmpop,rhstorage = list(update_vm_pop(pop,td))
+
+        #pop,vmpop = update_vm_pop(pop,rhmean)
 
         invalid_ind = [ ind for ind in pop if ind.fitness.valid ]
         assert len(invalid_ind)!=0
@@ -426,12 +439,16 @@ def main():
             del ind1.fitness.values, ind2.fitness.values
         #vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in pop],repeat(paramdict),repeat(trans_dict)  ))
 
-        vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in offspring],repeat(paramdict),repeat(trans_dict) ))
-        vmpop = list(futures.map(rheobase_checking,vmpop,repeat(rhmean)))
+        #vmpop = list(futures.map(individual_to_vm,[toolbox.clone(i) for i in offspring],repeat(trans_dict) ))
+        #vmpop = list(futures.map(rheobase_checking,vmpop,repeat(rhmean)))
+        pop,vmpop,rhstorage = list(update_vm_pop(pop,td))
         rhstorage = [ i.rheobase for i in vmpop ]
         tuple_storage = zip(repeat(gen),vmpop,rhstorage)
         fitnesses = list(toolbox.map(toolbox.evaluate, offspring , tuple_storage))
-
+        for i,j in enumerate(pop):
+            print(i,j)
+            print(type(i),type(j))
+        #    assert i.fitness == j
         #attr_dict = [p.attrs for p in vmpop ]
         #attr_keys = [ i.keys() for d in attr_dict for i in d.values() ][0]
         #attr_list = [ i.values() for d in attr_dict for i in d.values() ][0]
@@ -445,14 +462,16 @@ def main():
 
 
 
-    return vmpop, pop, invalid_ind
+    return vmpop, pop, invalid_ind, pf
 
 
 
 if __name__ == "__main__":
 
     model=outils.model
-    vmpop, pop, invalid_ind = main()
+    vmpop, pop, invalid_ind, pf = main()
+    print(vmpop,pop,invalid_ind,pf)
+    import pickle
 
 
 
@@ -462,8 +481,41 @@ if __name__ == "__main__":
         '{0} it seems the error truth data does not yet exist, lets create it now '.format(str(False))
         ground_error = list(futures.map(util.func2map, ground_truth))
         pickle.dump(ground_error,open('big_model_evaulated.pickle','wb'))
+    ground_error_nsga=list(zip(vmpop,pop,invalid_ind))
+    pickle.dump(ground_error_nsga,open('nsga_evaulated.pickle','wb'))
 
-    _ = plot_results(ground_error)
+    #Get the differences between values obtained via brute force, and those obtained otherwise:
+    sum_errors = [ i[0] for i in ground_error ]
+    composite_errors = [ i[1] for i in ground_error ]
+    attrs = [ i[2] for i in ground_error ]
+    rheobase = [ i[3] for i in ground_error ]
+
+    indexs = [i for i,j in enumerate(sum_errors) if j==np.min(sum_errors) ][0]
+    indexc = [i for i,j in enumerate(composite_errors) if j==np.min(composite_errors) ][0]
+    #assert indexs == indexc
+
+    df_0 = pd.DataFrame([ (k,v,vmpop[0].attrs[k],float(v)-float(vmpop[0].attrs[k])) for k,v in ground_error[indexc][2].items() ])
+    df_1 = pd.DataFrame([ (k,v,vmpop[1].attrs[k],float(v)-float(vmpop[1].attrs[k])) for k,v in ground_error[indexc][2].items() ])
+
+    for k,v in ground_error[indexc][2].items():
+        print(k,v,vmpop[0].attrs[k],float(v)-float(vmpop[0].attrs[k]))
+
+    #diff1 = [ (np.abs(float(vmpop[i].attrs[k]) - float(v)),k,v,vmpop[i].attrs.items())
+
+    #diff_print = list(zip(vmpop[0].attrs.items(), ground_error[indexc][2].items()))
+    diff0 = [ np.abs(float(vmpop[i].attrs[k]) - float(v)) for i,j in enumerate(vmpop[1:2]) for k,v in ground_error[indexc][2].items() ]
+    diff1 = [ np.abs(float(vmpop[i].attrs[k]) - float(v)) for i,j in enumerate(vmpop[1:2]) for k,v in ground_error[indexc][2].items() ]
+    diff2 = [ np.abs(float(vmpop[i].attrs[k]) - float(v)) for i,j in enumerate(vmpop[2:3]) for k,v in ground_error[indexc][2].items() ]
+
+    #diffs = [ np.abs(float(vmpop[i].attrs[k]) - float(v)) for i,j in enumerate(vmpop) for k,v in ground_error[indexc][2].items() ]
+
+    for i,j in enumerate(vmpop):
+        for k,v in ground_error[indexc][2].items():
+            np.abs(float(vmpop[i].attrs[k]) - float(v))
+
+
+    #pdb.set_trace()
+    #_ = plot_results(ground_error)
 
 
     from sklearn.decomposition import PCA as sklearnPCA

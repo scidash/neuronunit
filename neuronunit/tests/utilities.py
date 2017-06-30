@@ -118,7 +118,7 @@ def error2map(iter_):#This method must be pickle-able for scoop to work.
                 error= [ np.abs(i) for i in skv ]
             except:
                 error = [ 10.0 for i in range(0,7) ]
-            model.name='rheobase {0} parameters {1}'.format(str(value),str(model.params))
+            model.name=str('rheobase {0} parameters {1}'.format(str(value),str(model.params)))
             import neuronunit.capabilities as cap
             spikes_numbers=[]
             model.run_number+=1
