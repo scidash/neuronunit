@@ -15,9 +15,9 @@ from scoop import futures
 import sciunit.scores as scores
 import neuronunit.capabilities as cap
 
-
-import get_neab
-
+#print('hello?')
+#from neuronunit.tests import get_neab
+get_neab = None
 
 from neuronunit.models import backends
 import sciunit.scores as scores
@@ -171,6 +171,7 @@ class VirtualModel:
         self.results=None
         self.error=None
         self.td = None
+        self.score = None
 
 def check_fix_range(vms):
     '''
