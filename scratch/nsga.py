@@ -68,6 +68,18 @@ import model_parameters as modelp
 #import os
 #os.getcwd()
 print(modelp)
+
+class GAparams(object):
+    def __init__(self, *args):
+        self.NGEN=None
+        self.BOUND_LOW=None
+        self.BOUND_UP=None
+        self.NDIM = None
+        self.MU = None
+
+
+        #list.__init__(self, *args)
+
 BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
 BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
 
@@ -140,9 +152,9 @@ def evaluate_e(individual,tuple_params):#This method must be pickle-able for sco
             score = get_neab.suite.judge(model)#passing in model, changes the model
             model.run_number+=1
             error = score.sort_key.values.tolist()[0]
-            for i in error:
-                if type(i) is type(None):
-                    i = np.mean(error)
+            error = [ np.mean(error) for i in error if type(i) is type(None) ]
+                #if type(i) is type(None):
+                #    i = np.mean(error)
             #individual.error = error
             individual.rheobase = vms.rheobase
         except:
@@ -346,13 +358,13 @@ def update_vm_pop(pop,trans_dict,rh_value=None):
 from scoop import futures, _control, utils, shared
 
 
-def main():
-    global NGEN
-    NGEN=3
-    global MU
+def main(NGEN,MU):
+    #global NGEN
+    #NGEN=3
+    #global MU
     import numpy as np
     #MU=8#Mu must be some multiple of 4, such that it can be split into even numbers over 8 CPUs
-    MU=8
+    #MU=8
     CXPB = 0.9
     #stats = tools.Statistics(lambda ind: ind.fitness.values)
     pf = tools.ParetoFront()
@@ -361,7 +373,7 @@ def main():
     if scoop.fallbacks.NotStartedProperly()==False:
         print('this never evaluates {0}'.format(scoop.fallbacks.NotStartedProperly()))
 
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         shared.setConst(td = trans_dict)
         td = shared.getConst('td')
         print('the shared constant {0}'.format(shared.getConst('td')))
@@ -388,8 +400,9 @@ def main():
     assert len(pop) == len(vmpop)
     assert len(vmpop) != 0
     assert len(pop) != 0
-    for i in vmpop:
-        i.td=shared.getConst('td')
+    if scoop.fallbacks.NotStartedProperly()==False:
+        for i in vmpop:
+            i.td=shared.getConst('td')
     print('updatevmpop returns a whole heap of nones suggesting its not working {0}'.format(vmpop))
     #population may also be altered in this process.
     pf.update(pop)
