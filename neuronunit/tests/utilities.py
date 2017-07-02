@@ -15,8 +15,8 @@ from scoop import futures
 import sciunit.scores as scores
 import neuronunit.capabilities as cap
 
-
-import get_neab
+from neuronunit.tests import get_neab
+#import get_neab
 
 
 from neuronunit.models import backends
