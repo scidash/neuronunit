@@ -15,10 +15,8 @@ from scoop import futures
 import sciunit.scores as scores
 import neuronunit.capabilities as cap
 
-#print('hello?')
-#from neuronunit.tests import get_neab
-get_neab = None
 
+from neuronunit.tests import get_neab as get_neab
 from neuronunit.models import backends
 import sciunit.scores as scores
 from neuronunit.models import backends
