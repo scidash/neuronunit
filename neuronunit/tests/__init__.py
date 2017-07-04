@@ -739,6 +739,59 @@ class RheobaseTestOriginal(VmTest):
         if self.rheobase_vm is not None:
             score.related_data['vm'] = self.rheobase_vm
 
+'''
+def rheobase_checking(vmpop, rh_value=None):
+
+    from itertools import repeat
+    import pdb
+    def bulk_process(vm,rh_value):
+        #package arguments and call the parallel searcher
+        if type(vm) is not type(None):
+            rh_param = (False,rh_value)
+            vm = searcher(rh_param,vm)
+            return vm
+
+    if type(vmpop) is not type(list):
+        return bulk_process(vmpop,0)
+
+    elif type(vmpop) is type(list):
+        vmtemp = []
+        if type(rh_value) is type(None):
+            vmtemp = bulk_process(copy.copy(vmpop),0)
+            #vmtemp = list(self.map(bulk_process,vmpop,repeat(0)))
+        elif type(rh_value) is not type(None):
+            vmtemp = bulk_process(vmpop,rh_value)
+            #vmtemp = list(self.map(bulk_process,vmpop,rh_value))
+        return vmtemp
+'''
+
+class VirtualModel:
+    '''
+    This is a pickable dummy clone
+    version of the NEURON simulation model
+    It does not contain an actual model, but it can be used to
+    wrap the real model.
+    This Object class serves as a data type for storing rheobase search
+    attributes and other useful parameters,
+    with the distinction that unlike the NEURON model this class
+    can be transported across HOSTS/CPUs
+    '''
+    def __init__(self):
+        self.lookup={}
+        self.trans_dict=None
+        self.rheobase=None
+        self.previous=0
+        self.run_number=0
+        self.attrs=None
+        self.steps=None
+        self.name=None
+        self.s_html=None
+        self.results=None
+        self.error=None
+        self.td = None
+        self.score = None
+
+
 class RheobaseTest(VmTest):
      """
      A hacked version of test Rheobase.
@@ -762,7 +815,179 @@ class RheobaseTest(VmTest):
      units = pq.pA
      score_type = scores.RatioScore
 
+     def model2map(param_dict):#This method must be pickle-able for scoop to work.
+         vm=VirtualModel()
+         vm.attrs={}
+         for k,v in param_dict.items():
+             vm.attrs[k]=v
+         return vm
+
+     def check_fix_range(vms):
+         '''
+         Inputs: lookup, A dictionary of previous current injection values
+         used to search rheobase
+         Outputs: A boolean to indicate if the correct rheobase current was found
+         and a dictionary containing the range of values used.
+         If rheobase was actually found then rather returning a boolean and a dictionary,
+         instead logical True, and the rheobase current is returned.
+         given a dictionary of rheobase search values, use that
+         dictionary as input for a subsequent search.
+         '''
+         import pdb
+         sub=[]
+         supra=[]
+         steps=[]
+         vms.rheobase=0.0
+         for k,v in vms.lookup.items():
+             if v==1:
+                 #A logical flag is returned to indicate that rheobase was found.
+                 vms.rheobase=float(k)
+                 print(type(vms.rheobase))
+                 vms.steps=0.0
+                 return (True,vms)
+             elif v==0:
+                 sub.append(k)
+             elif v>0:
+                 supra.append(k)
+
+         sub=np.array(sub)
+         supra=np.array(supra)
+
+         if len(sub)!=0 and len(supra)!=0:
+             #this assertion would only be wrong if there was a bug
+             print(str(bool(sub.max()>supra.min())))
+             assert not sub.max()>supra.min()
+         if len(sub) and len(supra):
+             everything=np.concatenate((sub,supra))
+
+             center = np.linspace(sub.max(),supra.min(),7.0)
+             centerl = list(center)
+             for i,j in enumerate(centerl):
+                 if i in list(everything):
+                     np.delete(center,i)
+                     del centerl[i]
+             #delete the index
+             #np.delete(center,np.where(everything is in center))
+             #make sure that element 4 in a seven element vector
+             #is exactly half way between sub.max() and supra.min()
+             center[int(len(center)/2)+1]=(sub.max()+supra.min())/2.0
+             steps = [ i*pq.pA for i in center ]
+
+         elif len(sub):
+             steps2 = np.linspace(sub.max(),2*sub.max(),7.0)
+             np.delete(steps2,np.array(sub))
+             steps = [ i*pq.pA for i in steps2 ]
+
+         elif len(supra):
+             steps2 = np.linspace(-2*(supra.min()),supra.min(),7.0)
+             np.delete(steps2,np.array(supra))
+             steps = [ i*pq.pA for i in steps2 ]
+
+         vms.steps=steps
+         vms.rheobase=None
+         return (False,vms)
+
+     def check_current(ampl,vm):
+         '''
+         Inputs are an amplitude to test and a virtual model
+         output is an virtual model with an updated dictionary.
+         '''
+         import copy
+         import scoop
+         #print('the scoop worker id: {0}'.format(scoop.utils.getWorkerQte(scoop.utils.getHosts())))
+
+
+         if float(ampl) not in vm.lookup or len(vm.lookup)==0:
+
+             current = params.copy()['injected_square_current']
+
+             uc = {'amplitude':ampl}
+             current.update(uc)
+             current = {'injected_square_current':current}
+             vm.run_number += 1
+             model.update_run_params(vm.attrs)
+             model.inject_square_current(current)
+             vm.previous=ampl
+             n_spikes = model.get_spike_count()
+             vm.lookup[float(ampl)] = n_spikes
+             if n_spikes == 1:
+                 model.rheobase_memory=float(ampl)
+                 vm.rheobase=float(ampl)
+                 print(type(vm.rheobase))
+                 print('current {0} spikes {1}'.format(vm.rheobase,n_spikes))
+                 return vm
+
+             return vm
+         if float(ampl) in vm.lookup:
+             return vm
+
+
+
+     def searcher(rh_param,vms):
+         '''
+         inputs f a function to evaluate. rh_param a tuple with element 1 boolean, element 2 float or list
+         and a  virtual model object.
+         '''
+         if rh_param[0]==True:
+             return rh_param[1]
+         lookuplist=[]
+         cnt=0
+         boolean=False
+         model.update_run_params(vms.attrs)
+
+         from itertools import repeat
+         while boolean == False and cnt < 12:
+             if len(model.params)==0:
+                 assert len(vms.attrs)!=0
+                 assert type(vms.attrs) is not type(None)
+                 model.update_run_params(vms.attrs)
+             if type(rh_param[1]) is float:
+                 #if its a single value educated guess
+                 if model.rheobase_memory == None:
+                     model.rheobase_memory = rh_param[1]
+                 vms = check_current(model.rheobase_memory,vms)
+                 model.update_run_params(vms.attrs)
+
+                 boolean,vms = check_fix_range(vms)
+                 if boolean:
+                     return vms
+                 else:
+                     #else search returned none type, effectively false
+                     rh_param = (None,None)
+
+             elif len(vms.lookup)==0 and type(rh_param[1]) is list:
+                 #If the educated guess failed, or if the first attempt is parallel vector of samples
+                 assert vms is not None
+                 returned_list = list(map(check_current,rh_param[1],repeat(vms)))
+                 for v in returned_list:
+                     vms.lookup.update(v.lookup)
+                 boolean,vms=check_fix_range(vms)
+                 assert vms!=None
+                 if boolean:
+                     return vms
+
+             else:
+                 #Finally if a parallel vector of samples failed zoom into the
+                 #smallest relevant interval and re-sample at a higher resolution
+                 returned_list=[]
+                 if type(vms.steps) is type(None):
+                     steps = np.linspace(50,150,7.0)
+                     steps_current = [ i*pq.pA for i in steps ]
+                     vms.steps = steps_current
+                     assert type(vms.steps) is not type(None)
+                 returned_list = list(map(check_current,vms.steps,repeat(vms)))
+                 for v in returned_list:
+                     vms.lookup.update(v.lookup)
+                 boolean,vms=check_fix_range(vms)
+                 if boolean:
+                     return vms
+             cnt+=1
+         return vms
+
      def generate_prediction(self, model):
+
+         vms = searcher(rh_param,vms)
+         self.prediction = vms.rheobase
          return self.prediction
 
      def compute_score(self, observation, prediction):
