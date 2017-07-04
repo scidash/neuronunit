@@ -72,8 +72,8 @@ class ProducesActionPotentials(ProducesSpikes,
 
         Returns
         -------
-        Must return a neo.core.AnalogSignalArray.
-        Each neo.core.AnalogSignal in the array should be a spike waveform.
+        Must return a neo.core.AnalogSignal.
+        Each column of the AnalogSignal should be a spike waveform.
         """
 
         raise NotImplementedError()

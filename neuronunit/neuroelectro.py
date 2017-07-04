@@ -161,15 +161,13 @@ class NeuroElectroData(object):
             self.json_object = json.loads(html)
         return self.json_object
 
-    def get_cached_json(self, params=None):
-        pass
-
     def get_values(self, params=None, quiet=False):
         """Gets values from neuroelectro.org.
         We will use 'params' in the future to specify metadata (e.g. temperature)
         that neuroelectro.org will provide."""
         db = shelve.open('neuroelectro-cache') if self.cached else {}
-        identifier = str(hash(params))
+        identifier = str(hash((self.__class__,self.neuron,
+                               self.ephysprop,params)))
         if not quiet:
             print("Getting %s%s data values from neuroelectro.org" \
                    % ("cached " if identifier in db else "", \
@@ -230,9 +228,9 @@ class NeuroElectroDataMap(NeuroElectroData):
         data = super(NeuroElectroDataMap,self).get_values(params=params,
                                                           quiet=quiet)
         if data:
-            self.neuron_name = data['ncm']['n']['name']
+            self.neuron.name = data['ncm']['n']['name']
             # Set the neuron name from the json data.
-            self.ephysprop_name = data['ecm']['e']['name']
+            self.ephysprop.name = data['ecm']['e']['name']
             # Set the ephys property name from the json data.
             self.val = data['val']
             self.sem = data['err']
@@ -252,13 +250,13 @@ class NeuroElectroSummary(NeuroElectroData):
         data = super(NeuroElectroSummary, self).get_values(params=params,
                                                            quiet=quiet)
         if data:
-            self.neuron_name = data['n']['name']
+            self.neuron.name = data['n']['name']
             # Set the neuron name from the json data.
-            self.ephysprop_name = data['e']['name']
+            self.ephysprop.name = data['e']['name']
             # Set the ephys property name from the json data.
             self.mean = data['value_mean']
             self.std = data['value_sd']
-            self.n = data['n']
+            self.n = data['num_articles']
             self.check()
         return data
 

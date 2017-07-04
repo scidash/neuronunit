@@ -49,3 +49,7 @@ docs/*.dat
 *.bak
 *.dir
 *.omt
+*.dat
+*.db
+*.xml
+docs/chapter*.py
