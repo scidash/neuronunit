@@ -3,7 +3,6 @@
 
 FROM scidash/neuron-mpi-neuroml
 
-# Make neuronunit source directory in Travis image visible to Docker.
 USER root
 ARG MOD_DATE=0
 RUN echo $MOD_DATE
@@ -15,4 +14,4 @@ WORKDIR $HOME/neuronunit
 RUN python setup.py install
 
 # Run all unit tests.
-ENTRYPOINT python -m unittest unit_test/test_*.py
+ENTRYPOINT python -m unittest unit_test/core_tests.py
