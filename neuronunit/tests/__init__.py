@@ -6,6 +6,8 @@ from types import MethodType
 import quantities as pq
 from quantities.quantity import Quantity
 import numpy as np
+import matplotlib as mpl
+mpl.use('agg',warn=False)
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
@@ -13,9 +15,9 @@ import sciunit
 import sciunit.scores as scores
 
 import neuronunit.capabilities as cap
-#import neuronunit.capabilities.spike_functions as sf
+import neuronunit.capabilities.spike_functions as sf
 from neuronunit import neuroelectro
-#from .channel import *
+from .channel import *
 from scoop import futures
 
 AMPL = 0.0*pq.pA
@@ -36,8 +38,11 @@ class VmTest(sciunit.Test):
             cap += cls.required_capabilities
         self.required_capabilities += tuple(cap)
         self._extra()
-    
+
     required_capabilities = (cap.ProducesMembranePotential,)
+
+    score_type = scores.ZScore
+
 
     name = ''
 
@@ -98,7 +103,8 @@ class VmTest(sciunit.Test):
             ax.set_xlabel('Time (s)')
             ax.set_ylabel('Vm (mV)')
         score.plot_vm = MethodType(plot_vm, score) # Bind to the score.
-        score.unpicklable.append('plot_vm')
+        #score.unpicklable.append('plot_vm')
+        return score
 
     @classmethod
     def neuroelectro_summary_observation(cls, neuron):
@@ -131,25 +137,61 @@ class VmTest(sciunit.Test):
         return observation
 
     def sanity_check(self,rheobase,model):
-        #model.inject_square_current(self.params['injected_square_current'])
+        '''
+        check if the membrane potential and its derivative, constitute continuous differentiable
+        functions
+        If they don't output boolean false, such that the corresponding model can be discarded
+        inputs: a rheobase value and a model.
+        outputs: a boolean flag.
+        '''
         self.params['injected_square_current']['delay'] = DELAY
         self.params['injected_square_current']['duration'] = DURATION
         self.params['injected_square_current']['amplitude'] = rheobase
         model.inject_square_current(self.params['injected_square_current'])
+        import numpy as np
+        import copy
+        import math
+        def nan_test(mp):
+            for i in mp:
+                if type(i)==np.float64:
+                    if math.isnan(i):
+                        return False
+                    if (i == float('inf')) or (i == float('-inf')):
+                        return False
+                    if math.isnan(i):
+                        return False
 
+            x = np.array(mp).std()
+            if x == 0:
+                return False
+        #update run params is necessary to over write previous recording
+        #vectors
+        #Its also necessary to destroy and recreate the model in the HOC memory space
+        #As models that persist in memory, retained model charge from current injections,
+        #from past simulations.
+        model.update_run_params(model.params)
+        #mp = np.array(copy.copy(model.results['vm']))
         mp = model.results['vm']
         import math
         for i in mp:
             if math.isnan(i):
                 return False
+        boolean = True
+        boolean = nan_test(mp)
+        if boolean == False:
+            return False
+        self.params['injected_square_current']['amplitude'] = -10.0
+        model.inject_square_current(self.params['injected_square_current'])
+        model.update_run_params(model.params)
+        mp = np.array(copy.copy(model.results['vm']))
+        boolean = nan_test(mp)
+        if boolean == False:
+            return False
 
         import neuronunit.capabilities as cap
 
         sws=cap.spike_functions.get_spike_waveforms(model.get_membrane_potential())
-        #sws = model.get_spike_waveforms()
-        #print(sws)
 
-        #sws=spike_functions.get_spike_waveform(mp)
         for i,s in enumerate(sws):
             s = np.array(s)
             dvdt = np.diff(s)
@@ -158,6 +200,9 @@ class VmTest(sciunit.Test):
                 if math.isnan(j):
                     return False
         return True
+
+
+
 
 
 class TestPulseTest(VmTest):
@@ -197,9 +242,9 @@ class TestPulseTest(VmTest):
 
     @classmethod
     def get_tau(cls, vm, i):
-        # 10 ms before pulse start or halfway between sweep start 
+        # 10 ms before pulse start or halfway between sweep start
         # and pulse start, whichever is longer
-        start = max(i['delay']-10*pq.ms,i['delay']/2) 
+        start = max(i['delay']-10*pq.ms,i['delay']/2)
         stop = i['duration']+i['delay']-1*pq.ms # 1 ms before pulse end
         region = cls.get_segment(vm,start,stop)
         amplitude,tau,y0 = cls.exponential_fit(region, i['delay'])
@@ -220,24 +265,42 @@ class TestPulseTest(VmTest):
                    10, # time constant (ms)
                    vm.max()] # y0 (mV)
         vm_fit = vm.copy()
-        
+
         def func(x, a, b, c):
             vm_fit[:offset] = c
             vm_fit[offset:,0] = a * np.exp(-t[offset:]/b) + c
             return vm_fit
-        
+
         popt, pcov = curve_fit(func, t, vm, p0=guesses) # Estimate starting values for better convergence
-        #plt.plot(t,vm)
-        #plt.plot(t,func(t,*popt))
-        #print(popt)
+
         amplitude = popt[0]*pq.mV
         tau = popt[1]*pq.ms
         y0 = popt[2]*pq.mV
         return amplitude,tau,y0
+    '''
+    @classmethod
+    def compute_score(self, observation, prediction):
+        """Implementation of sciunit.Test.score_prediction."""
+        score_type = scores.ZScore
 
+        if 'n' in prediction.keys():
+            if prediction['n'] == 0:
+                score = scores.ZScore
+                score = scores.InsufficientDataScore(None)
+                print(type(score))
+
+        else:
+            prediction['value']=prediction['value']
+            score = scores.ZScore
+            score = super(InputResistanceTest,self).compute_score(observation,
+                                                          prediction)
+            print(type(score))
+        return score
+    '''
 
 class InputResistanceTest(TestPulseTest):
     """Tests the input resistance of a cell."""
+    name = "Input resistance test"
 
     name = "Input resistance test"
 
@@ -257,10 +320,30 @@ class InputResistanceTest(TestPulseTest):
         prediction = {'value':r_in}
         return prediction
 
+    def compute_score(self, observation, prediction):
+        """Implementation of sciunit.Test.score_prediction."""
+        score_type = scores.ZScore
+
+        if 'n' in prediction.keys():
+            if prediction['n'] == 0:
+                score = scores.ZScore
+                score = scores.InsufficientDataScore(None)
+                print(type(score))
+
+        else:
+
+            #prediction['value']=prediction['value']
+            score = scores.ZScore
+            score = super(InputResistanceTest,self).compute_score(observation,
+                                                          prediction)
+            print(type(score))
+        return score
+
+
 
 class TimeConstantTest(TestPulseTest):
     """Tests the input resistance of a cell."""
-
+    score_type = scores.ZScore
     name = "Time constant test"
 
     description = ("A test of membrane time constant of a cell.")
@@ -288,13 +371,12 @@ class TimeConstantTest(TestPulseTest):
             prediction['value']=prediction['value']
             score = super(TimeConstantTest,self).compute_score(observation,
                                                           prediction)
-
         return score
 
 
 class CapacitanceTest(TestPulseTest):
     """Tests the input resistance of a cell."""
-
+    score_type = scores.ZScore
     name = "Capacitance test"
 
     description = ("A test of the membrane capacitance of a cell.")
@@ -368,7 +450,7 @@ class InjectedCurrentAPWidthTest(APWidthTest):
     Tests the full widths of APs at their half-maximum
     under current injection.
     """
-
+    score_type = scores.ZScore
     required_capabilities = (cap.ReceivesSquareCurrent,)
 
     params = {'injected_square_current':
@@ -503,7 +585,7 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
     Tests the thresholds of action potentials
     under current injection.
     """
-
+    score_type = scores.ZScore
     required_capabilities = (cap.ReceivesSquareCurrent,)
 
     params = {'injected_square_current':
@@ -520,7 +602,7 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
                 generate_prediction(model)
 
 
-class RheobaseTest(VmTest):
+class RheobaseTestOriginal(VmTest):
     """
     Tests the full widths of APs at their half-maximum
     under current injection.
@@ -530,7 +612,7 @@ class RheobaseTest(VmTest):
         self.high = 300*pq.pA
         self.small = 0*pq.pA
         self.rheobase_vm = None
-    
+
     required_capabilities = (cap.ReceivesSquareCurrent,
                              cap.ProducesSpikes)
 
@@ -544,6 +626,7 @@ class RheobaseTest(VmTest):
 
     units = pq.pA
     score_type = scores.RatioScore
+
 
     def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
@@ -578,6 +661,7 @@ class RheobaseTest(VmTest):
 
         self.prediction = prediction
         return self.prediction
+
 
     def threshold_FI(self, model, units, guess=None):
         lookup = {} # A lookup table global to the function below.
@@ -648,51 +732,51 @@ class RheobaseTest(VmTest):
         return score
 
     def bind_score(self, score, model, observation, prediction):
-        super(RheobaseTest,self).bind_score(score, model, 
+        super(RheobaseTest,self).bind_score(score, model,
                                             observation, prediction)
         if self.rheobase_vm is not None:
             score.related_data['vm'] = self.rheobase_vm
 
-# class RheobaseTestHacked(VmTest):
-#     """
-#     A hacked version of test Rheobase.
-#     Tests the full widths of APs at their half-maximum
-#     under current injection.
-#     """
-#     def _extra(self):    
-#         self.prediction=None
-    
-#     required_capabilities = (cap.ReceivesSquareCurrent,
-#                              cap.ProducesSpikes)
+class RheobaseTest(VmTest):
+     """
+     A hacked version of test Rheobase.
+     Tests the full widths of APs at their half-maximum
+     under current injection.
+     """
+     def _extra(self):
+         self.prediction=None
 
-#     params = {'injected_square_current':
-#                 {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+     required_capabilities = (cap.ReceivesSquareCurrent,
+                              cap.ProducesSpikes)
 
-#     name = "Rheobase test"
+     params = {'injected_square_current':
+                 {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
-#     description = ("A test of the rheobase, i.e. the minimum injected current "
-#                    "needed to evoke at least one spike.")
+     name = "Rheobase test"
 
-#     units = pq.pA
-#     score_type = scores.RatioScore
+     description = ("A test of the rheobase, i.e. the minimum injected current "
+                    "needed to evoke at least one spike.")
 
-#     def generate_prediction(self, model):
-#         return self.prediction
+     units = pq.pA
+     score_type = scores.RatioScore
 
-#     def compute_score(self, observation, prediction):
-#         """Implementation of sciunit.Test.score_prediction."""
-#         #print("%s: Observation = %s, Prediction = %s" % \
-#         #	 (self.name,str(observation),str(prediction)))
+     def generate_prediction(self, model):
+         return self.prediction
 
-#         if self.prediction is not None:
-#             if self.prediction['value'] is None:
+     def compute_score(self, observation, prediction):
+         """Implementation of sciunit.Test.score_prediction."""
+         #print("%s: Observation = %s, Prediction = %s" % \
+         #	 (self.name,str(observation),str(prediction)))
 
-#                 score = scores.InsufficientDataScore(None)
-#             else:
-#                 score = super(RheobaseTest,self).\
-#                             compute_score(observation, self.prediction)
-#                 #self.bind_score(score,None,observation,prediction)
-#             return score
+         if self.prediction is not None:
+             if self.prediction['value'] is None:
+
+                 score = scores.InsufficientDataScore(None)
+             else:
+                 score = super(RheobaseTest,self).\
+                             compute_score(observation, self.prediction)
+                 #self.bind_score(score,None,observation,prediction)
+             return score
 
 
 class RestingPotentialTest(VmTest):
@@ -709,7 +793,6 @@ class RestingPotentialTest(VmTest):
                    "where injected current is set to zero.")
 
     score_type = scores.ZScore
-    #score_type = scores.ZScore
 
 
     units = pq.mV
@@ -741,7 +824,6 @@ class RestingPotentialTest(VmTest):
         import math
         for i in mp:
             if math.isnan(i):
-                #print(mp)
                 return None
         prediction = {'mean':median, 'std':std}
 
