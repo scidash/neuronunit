@@ -1,24 +1,15 @@
 from pyneuroml import pynml
 import os
-import platform
 import sciunit
 import time
-
+import pdb
 import neuronunit.capabilities as cap
 import neuronunit.capabilities.spike_functions as sf
-import re
-import copy
-
-from pyneuroml import pynml
-import quantities as pq
 from quantities import ms, mV, nA
 from neo.core import AnalogSignal
 
-import neuronunit.capabilities as cap
-import neuronunit.capabilities.spike_functions as sf
-
 class Backend:
-    """Base class for simulator backends that implement simulator-specific
+    """Based class for simulator backends that implement simulator-specific
     details of modifying, running, and reading results from the simulation
     """
     # Name of the backend
@@ -31,7 +22,7 @@ class Backend:
         """Set model attributes, e.g. input resistance of a cell"""
         pass
 
-    def update_run_params(self):
+    def update_run_params(self, attrs):
         """Set run-time parameters, e.g. the somatic current to inject"""
         pass
 
@@ -44,24 +35,14 @@ class jNeuroMLBackend(Backend):
     """Used for simulation with jNeuroML, a reference simulator for NeuroML"""
 
     backend = 'jNeuroML'
+    f = pynml.run_lems_with_jneuroml
 
     def set_attrs(self, attrs):
         self.set_lems_attrs(attrs)
 
-    def update_run_params(self):
-        self.update_lems_run_params()
+    def update_run_params(self, attrs):
+        self.update_lems_run_params(attrs)
 
-    def inject_square_current(self, current):
-        self.run_params['injected_square_current'] = current
-
-    def local_run(self):
-        f = pynml.run_lems_with_jneuroml
-        result = f(self.lems_file_path, skip_run=self.skip_run,
-                         nogui=self.run_params['nogui'],
-                         load_saved_data=True, plot=False,
-                         verbose=self.run_params['v']
-                         )
-        return result
 
 
 class NEURONBackend(Backend):
@@ -87,10 +68,10 @@ class NEURONBackend(Backend):
         self.f=None
         self.h=None
         self.rheobase=None
-        self.rheobase_memory=None
-
         self.invokenrn()
-
+        #self.h.cvode.active(1)
+        #pdb.set_trace()
+        #self.h.cvode.active
 
 
         return
@@ -101,8 +82,6 @@ class NEURONBackend(Backend):
         """Sets the NEURON h variable"""
         #Should check if MPI parallel neuron is supported and invoked.
         from neuron import h
-        import neuron
-        self.neuron = neuron
         self.h=h
         self.h.load_file("stdlib.hoc")
         self.h.load_file("stdgui.hoc")
@@ -146,12 +125,17 @@ class NEURONBackend(Backend):
 
 
     def get_membrane_potential(self):
+<<<<<<< HEAD
+        import copy
+        """Must return a neo.core.AnalogSignal."""
+=======
         """
         Must return a neo.core.AnalogSignal.
         And must destroy the hoc vectors that comprise it.
         """
         import copy
 
+>>>>>>> dev2
         if self.h.cvode.active() == 0:
             fixedSignal = self.vVector.to_python()
             dt = self.h.dt
@@ -161,6 +145,14 @@ class NEURONBackend(Backend):
             fixedSignal = self.get_variable_step_analog_signal()
             fixedSignalcp=copy.copy(fixedSignal)
             dt = self.fixedTimeStep
+<<<<<<< HEAD
+        tempFixedSignal=copy.copy(fixedSignal)
+        tempDt=copy.copy(dt)
+        voltate = AnalogSignal( \
+                 temp, \
+                 units = mV, \
+                 sampling_period = tempDt * ms \
+=======
             dt_py=float(copy.copy(self.fixedTimeStep))
 
 
@@ -171,8 +163,12 @@ class NEURONBackend(Backend):
                  fixedSignalcp, \
                  units = mV, \
                  sampling_period = dt_py * ms \
+>>>>>>> dev2
         )
-
+        fixedSignal=None
+        dt=None
+        return voltage
+        
     def get_variable_step_analog_signal(self):
         """ Converts variable dt array values to fixed dt array by using linear interpolation"""
 
@@ -250,15 +246,11 @@ class NEURONBackend(Backend):
             #import the default simulation protocol
             from neuronunit.tests.NeuroML2.LEMS_2007One_nrn import NeuronSimulation
             #this next step may be unnecessary: TODO delete it and check.
-            self.ns = NeuronSimulation(tstop=1600, dt=0.0025)
+            self.ns = NeuronSimulation(tstop=1600, dt=0.025)
             return self
 
-        sort_file_path, _ = self.orig_lems_file_path.split("/LEMS_2007One")
-        sort_file_path, _ = os.path.splitext(sort_file_path)
-        architecture = platform.machine()
-        NEURON_file_path = os.path.join(sort_file_path,architecture)
-        if os.path.exists(NEURON_file_path):
-            self = cond_load()
+        if os.path.exists(self.orig_lems_file_path):
+            self=cond_load()
         else:
             pynml.run_lems_with_jneuroml_neuron(self.orig_lems_file_path,
                               skip_run=False,
@@ -271,43 +263,43 @@ class NEURONBackend(Backend):
                               verbose=DEFAULTS['v'],
                               exit_on_fail = True)
 
-
             self=cond_load()
+            more_attributes=pynml.read_lems_file(self.orig_lems_file_path)
+            return self
+            self.f=pynml.run_lems_with_jneuroml_neuron
+
         #Although the above approach successfuly instantiates a LEMS/neuroml model in pyhoc
         #the resulting hoc variables for current source and cell name are idiosyncratic (not generic).
         #The resulting idiosyncracies makes it hard not have a hard coded approach make non hard coded, and generalizable code.
         #work around involves predicting the hoc variable names from pyneuroml LEMS file that was used to generate them.
-        more_attributes = pynml.read_lems_file(self.orig_lems_file_path)
-        #print("Components are %s" % more_attributes.components)
+        more_attributes=pynml.read_lems_file(self.orig_lems_file_path)
         for i in more_attributes.components:
         #This code strips out simulation parameters from the xml tree also such as duration.
         #Strip out values from something a bit like an xml tree.
             if str('pulseGenerator') in i.type:
-                self.current_src_name = i.id
+                self.current_src_name=i.id
             if str('Cell') in i.type:
-                self.cell_name = i.id
-        more_attributes = None #force garbage collection of more_attributes, its not needed anymore.
+                self.cell_name=i.id
+        more_attributes=None#force garbage collection of more_attributes, its not needed anymore.
         return self
 
-
-    def update_run_params(self, params):
-        '''
-        the argument name attributes is used, rather than parameters in order to distinguish from
-        stimulus paramters.
-        '''
-        for h_key, h_value in params.items():
-            self.h('m_RS_RS_pop[0].%s=%s' % (h_key,h_value))
-            self.h('m_%s_%s_pop[0].%s=%s' % \
-                   (self.cell_name,self.cell_name,h_key,h_value))
+    def update_run_params(self,attrs):
+        import re
+        self.attrs=None
+        self.attrs=attrs
+        for key, value in self.attrs.items():
+             h_variable=list(value.keys())
+             h_variable=h_variable[0]
+             h_assignment=list(value.values())
+             h_assignment=h_assignment[0]
+             self.h('m_RS_RS_pop[0].'+str(h_variable)+'='+str(h_assignment))
+             self.h('m_'+str(self.cell_name)+'_'+str(self.cell_name)+'_pop[0].'+str(h_variable)+'='+str(h_assignment))
         self.h(' { v_time = new Vector() } ')
         self.h(' { v_time.record(&t) } ')
         self.h(' { v_v_of0 = new Vector() } ')
         self.h(' { v_v_of0.record(&RS_pop[0].v(0.5)) } ')
         self.h(' { v_u_of0 = new Vector() } ')
         self.h(' { v_u_of0.record(&m_RS_RS_pop[0].u) } ')
-
-
-
 
     def inject_square_current(self,current):
         '''
@@ -318,10 +310,9 @@ class NEURONBackend(Backend):
          'duration':500*pq.ms}}
         where 'pq' is the quantities package
         '''
-        self.update_run_params(self.params)
-        #self.re_init(self.attrs)
-        #print(self.attrs)
-        #self.h.psection()
+        import quantities as pq
+        import re
+        import copy
         c=copy.copy(current)
         if 'injected_square_current' in c.keys():
             c=current['injected_square_current']
@@ -340,21 +331,26 @@ class NEURONBackend(Backend):
         initialized = True
         sim_start = time.time()
         #self.h.tstop=1600#))#TODO find a way to make duration changeable.
-        #print(self.h.cvode.active())
+        #self.h.dt=0.0025
+
+        print(self.h.cvode.active())
+        #pdb.set_trace()
+        print("Running a simulation of %sms (dt = %sms)" % (self.h.tstop, self.h.dt))
         self.h('run()')
         sim_end = time.time()
         sim_time = sim_end - sim_start
-        #print("Finished NEURON simulation in %f seconds (%f mins)..."%(sim_time, sim_time/60.0))
+        print("Finished NEURON simulation in %f seconds (%f mins)..."%(sim_time, sim_time/60.0))
         self.results={}
-        import copy
-        voltage_vector=self.neuron.h.v_v_of0.to_python()
-        self.results['vm'] = [ float(x/1000.0) for x in copy.copy(voltage_vector) ]  # Convert to Python list for speed, variable has dim: voltage
-        voltage_vector=None
-        #self.neuron.h.v_v_of0 = [] # Convert to Python list for speed, variable has dim: voltage
-        time_vector=self.neuron.h.v_time.to_python()
-        self.results['t'] = [ float(x) for x in copy.copy(time_vector) ]  # Convert to Python list for speed, variable has dim: voltage
-        time_vector=None
-        #self.neuron.h.v_time = []
+        self.results['vm'] = [ float(x/1000.0) for x in self.neuron.h.v_v_of0.to_python() ]  # Convert to Python list for speed, variable has dim: voltage
+        self.results['plausible']=True
+        import math
+        for i in self.results['vm']:
+            if math.isnan(i):
+                self.results['plausible']=False
+
+
+        self.results['t'] = [ float(x) for x in self.neuron.h.v_time.to_python() ]  # Convert to Python list for speed, variable has dim: voltage
+        self.results['sim_time']=sim_time
         if 'run_number' in self.results.keys():
             self.results['run_number']=self.results['run_number']+1
         else:

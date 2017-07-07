@@ -59,8 +59,8 @@ else:
         observation = cls.neuroelectro_summary_observation(neuron)
         tests += [cls(observation,params=params)]
 
-    with open(ne_pickle, 'wb') as f:
-        pickle.dump(tests, f)
+    with open('neuroelectro.pickle', 'wb') as handle:
+        pickle.dump(tests, handle)
 
 def update_amplitude(test,tests,score):
     rheobase = score.prediction['value']#first find a value for rheobase
@@ -72,9 +72,6 @@ def update_amplitude(test,tests,score):
         # Set current injection to just suprathreshold
 
         tests[i].params['injected_square_current']['amplitude'] = rheobase*1.01
-        #tests[i].proceed=tests[i].sanity_check(rh_value=rheobase*1.01)
-        #pdb.set_trace()
-
 #Don't do the rheobase test. This is a serial bottle neck that must occur before any parallel optomization.
 #Its because the optimization routine must have apriori knowledge of what suprathreshold current injection values are for each model.
 hooks = {tests[0]:{'f':update_amplitude}} #This is a trick to dynamically insert the method
