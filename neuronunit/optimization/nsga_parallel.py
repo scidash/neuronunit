@@ -93,7 +93,6 @@ with dview.sync_imports(): # Causes each of these things to be imported on the w
     from neuronunit.tests import get_neab
     from neuronunit.models import backends
     import sciunit.scores as scores
-    from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
 
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
@@ -182,7 +181,7 @@ def p_imports():
     toolbox.register("Individual", tools.initIterate, creator.Individual, toolbox.attr_float)
     toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
     toolbox.register("select", tools.selNSGA2)
-    model = outils.model
+    #model = outils.model
 dview.apply_sync(p_imports)
 
 @dview.remote(block=True)
@@ -227,13 +226,10 @@ def evaluate_e(individual,tuple_params):#This method must be pickle-able for sco
     Inputs a gene and a virtual model object.
     outputs are error components.
     '''
-    #tuple_storage = zip(repeat(0),vmpop,rhstorage)
 
-    gen,vms,rheobase = tuple_params
+    gen,vms,rheobase,outils = tuple_params
     print(gen,vms,rheobase)
     assert vms.rheobase == rheobase
-    #print('{0}'.format(type(vms.rheobase)))
-    #try:
     assert type(vms.rheobase) is not type(None)
 
     params = outils.params
@@ -303,7 +299,6 @@ toolbox.register("map", dview.map_sync)
 def plot_ss(vmlist,gen):
     '''
     '''
-
     import matplotlib.pyplot as plt
     plt.clf()
     for ind,j in enumerate(vmlist):
@@ -324,7 +319,6 @@ def get_trans_dict(param_dict):
     return trans_dict
 
 import model_parameters
-
 param_dict = model_parameters.model_params
 
 def individual_to_vm(li,trans_dict=None):
@@ -390,11 +384,9 @@ def replace_rh(pop,vmpop):
             vm_temp = individual_to_vm(local_tuple)
             init_value = (False, 0)
             vmpop[i] = searhcer(vm_temp,init_value)
-            'trying value {0}'.format(vmpop[i].rheobase)
+            print('trying value {0}'.format(vmpop[i].rheobase))
             ind.rheobase = vmpop[i].rheobase
             pop[i] = ind
-
-            #if type(vmpop[i].rheobase) is not type(None):
             print('rheobase value is updating {0}'.format(vmpop[i].rheobase))
             if type(vmpop[i].rheobase) is not type(None):
                 break
@@ -493,11 +485,12 @@ def update_vm_pop(pop,trans_dict,rh_value=None):
     return pop,vmpop,rh_value
 
 
-
-
+##
+# Start of the Genetic Algorithm
+##
 NGEN=3
 import numpy as np
-MU=12
+MU=4
 CXPB = 0.9
 pf = tools.ParetoFront()
 dview.push({'pf':pf})
@@ -519,7 +512,7 @@ assert len(vmpop) != 0
 assert len(pop) != 0
 pf.update(pop)
 from itertools import repeat
-tuple_storage = zip(repeat(0),vmpop,rhstorage)
+tuple_storage = zip(repeat(0),vmpop,rhstorage,repeat(outils))
 fitnesses = list(dview.map_sync(evaluate_e, pop, tuple_storage ))
 invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
 for gen in range(1, NGEN):
