@@ -226,8 +226,9 @@ def evaluate_e(individual,tuple_params):#This method must be pickle-able for sco
     Inputs a gene and a virtual model object.
     outputs are error components.
     '''
+    from neuronunit.tests import utilities as outils
 
-    gen,vms,rheobase,outils = tuple_params
+    gen,vms,rheobase = tuple_params
     print(gen,vms,rheobase)
     assert vms.rheobase == rheobase
     assert type(vms.rheobase) is not type(None)
@@ -254,7 +255,7 @@ def evaluate_e(individual,tuple_params):#This method must be pickle-able for sco
         get_neab.suite.tests[0].prediction={}
         assert type(vms.rheobase) != type(None)
         get_neab.suite.tests[0].prediction['value']=vms.rheobase * pq.pA
-        score = outils.map(model,get_neab.suite.judge)
+        #score = outils.map(model,get_neab.suite.judge)
         score = get_neab.suite.judge(model)#passing in model, changes the model
         vms.score = score
         print(vms.score)
@@ -437,9 +438,6 @@ def update_vm_pop(pop,trans_dict,rh_value=None):
     from neuronunit.tests import utilities as outils
     pop = [toolbox.clone(i) for i in copy.copy(pop)]
     #dview.push({'pop':pop}) # These classes need to be copied to the workers' namespaces.
-
-    from neuronunit.tests import utilities as outils
-
     vmpop = []
     for ind in pop:
         #tempop.append(i,td)
