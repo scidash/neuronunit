@@ -24,7 +24,8 @@ class VirtualModel:
         self.error=None
         self.td = None
         self.score = None
-global map
+
+#global map
 class Utilities1(object):
     def __init__(self, get_neab):
         self = self
@@ -34,7 +35,7 @@ class Utilities1(object):
 
     def set_map(self, map_arg):
         self.map = map_arg
-        map = self.map
+        #map = self.map
 
     def model2map(param_dict):#This method must be pickle-able for scoop to work.
         vm=VirtualModel()
