@@ -55,5 +55,11 @@ class NeuroElectroTestCase(unittest.TestCase):
         x.check()
         
 
+class BlueBrainTestCase(NotebookTools,unittest.TestCase):
+     
+    def test_bluebrain(self):
+        self.do_notebook('bbp')
+        
+        
 if __name__ == '__main__':
     unittest.main()
