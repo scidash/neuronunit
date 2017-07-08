@@ -5,6 +5,7 @@ import platform
 import time
 import re
 import copy
+import tempfile
 
 from pyneuroml import pynml
 from quantities import ms, mV
@@ -16,8 +17,9 @@ class Backend:
     details of modifying, running, and reading results from the simulation
     """
 
-    def __init__(self, attrs=None):
+    def init_backend(self, attrs=None):
         self.attrs = {} if attrs is None else attrs
+        self.load_model()
 
     attrs = None
 
@@ -33,6 +35,13 @@ class Backend:
 
     def set_run_params(self, **params):
         """Set run-time parameters, e.g. the somatic current to inject"""
+        self.check_run_params()
+        pass
+
+    def check_run_params(self):
+        """Check to see if the run parameters are reasonable for this model 
+        class.  Raise a sciunit.BadParameterValueError if any of them are not.
+        """
         pass
 
     def load_model(self):
@@ -50,17 +59,20 @@ class jNeuroMLBackend(Backend):
         self.set_lems_attrs(attrs)
 
     def set_run_params(self, **params):
-        self.run_params.update(params)
+        super(jNeuroMLBackend,self).set_run_params(**params)
         self.set_lems_run_params()
-
+        
     def inject_square_current(self, current):
         self.set_run_params(injected_square_current=current)
 
     def local_run(self):
         f = pynml.run_lems_with_jneuroml
+        self.exec_in_dir = tempfile.mkdtemp()
+        print(self.exec_in_dir)
         result = f(self.lems_file_path, skip_run=self.skip_run,
                     nogui=self.run_params['nogui'],
                     load_saved_data=True, plot=False,
+                    exec_in_dir=self.exec_in_dir,
                     verbose=self.run_params['v'])
         return result
 
@@ -78,8 +90,8 @@ class NEURONBackend(Backend):
     i -- nA
     """
 
-    def __init__(self, attrs=None):
-        super(NEURONBackend,self).__init__(attrs)
+    def init_backend(self, attrs=None):
+        
         self.neuron = None
         self.model_path = None
         from neuron import h
@@ -91,6 +103,7 @@ class NEURONBackend(Backend):
         #self.h.cvode.active(1)
         #pdb.set_trace()
         #self.h.cvode.active
+        super(NEURONBackend,self).init_backend(attrs)
     
     backend = 'NEURON'
 
@@ -100,7 +113,7 @@ class NEURONBackend(Backend):
         self.h = hVariable.h
         self.neuron = hVariable
 
-    def setStopTime(self, stopTime = 1000*ms):
+    def set_stop_time(self, stopTime = 1000*ms):
         """Sets the simulation duration
         stopTimeMs: duration in milliseconds
         """
@@ -109,7 +122,7 @@ class NEURONBackend(Backend):
         tstop.units = ms
         self.h.tstop = float(tstop)
 
-    def setTimeStep(self, integrationTimeStep = 1/128.0 * ms):
+    def set_time_step(self, integrationTimeStep = 1/128.0 * ms):
         """Sets the simulation itegration fixed time step
         integrationTimeStepMs: time step in milliseconds. 
         Powers of two preferred. Defaults to 1/128.0
@@ -120,14 +133,14 @@ class NEURONBackend(Backend):
 
         self.h.dt = self.fixedTimeStep = float(dt)
 
-    def setTolerance(self, tolerance = 0.001):
+    def set_tolerance(self, tolerance = 0.001):
         """Sets the variable time step integration method absolute tolerance.
         tolerance: absolute tolerance value
         """
 
         self.h.cvode.atol(tolerance)
 
-    def setIntegrationMethod(self, method = "fixed"):
+    def set_integration_method(self, method = "fixed"):
         """Sets the simulation itegration method
         method: either "fixed" or "variable". Defaults to fixed. 
         cvode is used when "variable" """
@@ -272,7 +285,7 @@ class NEURONBackend(Backend):
         return self
 
     def set_run_params(self, **params):
-        self.params.update(params)
+        super(NEURONBackend,self).set_run_params(**params)
         for value in params.values():
             h_key, h_value =list(value.items())[0]
             self.h('m_RS_RS_pop[0].%s=%s' % (h_key,h_value))
@@ -285,7 +298,7 @@ class NEURONBackend(Backend):
         self.h(' { v_u_of0 = new Vector() } ')
         self.h(' { v_u_of0.record(&m_RS_RS_pop[0].u) } ')
 
-    def inject_square_current(self,current):
+    def inject_square_current(self, current):
         '''
         Inputs: current : a dictionary
          like:

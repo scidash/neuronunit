@@ -13,7 +13,9 @@ from pyneuroml import pynml
 from . import backends
 
 
-class LEMSModel(sciunit.Model, cap.Runnable):
+class LEMSModel(backends.Backend,
+                cap.Runnable,
+                sciunit.Model):
     """A generic LEMS model"""
 
     def __init__(self, LEMS_file_path=None, name=None, 
@@ -35,12 +37,20 @@ class LEMSModel(sciunit.Model, cap.Runnable):
         self.rerun = True # Needs to be rerun since it hasn't been run yet!
         if name is None:
             name = os.path.split(self.lems_file_path)[1].split('.')[0]
-        if backend is None:
-            backend = 'jNeuroML'
-        self.set_backend(backend)
-        self.load_model()
+        self.init_backend()
 
-    #This is the part that decides if it should inherit from NEURON backend.
+    def __new__(cls, *args, **kwargs):
+        backend = 'jNeuroML' if 'backend' not in kwargs else kwargs['backend']
+        self = super().__new__(cls)
+        self.set_backend(backend)
+        return self
+
+    def __getnewargs__(self): # This method is required by pickle to know what 
+                              # arguments to pass to __new__ when instances of 
+                              # this class are eventually unpickled.  
+                              # Otherwise __new__() will have no arguments.  
+        return (self.backend,) # A tuple containing the extra arguments to 
+                               # pass to __new__. 
 
     def set_backend(self, backend):
         if isinstance(backend,str):
