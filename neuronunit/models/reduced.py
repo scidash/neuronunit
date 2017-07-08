@@ -7,10 +7,11 @@ import quantities as pq
 import neuronunit.capabilities as cap
 import neuronunit.models as mod
 import neuronunit.capabilities.spike_functions as sf
+from neuronunit.models import backends
 
-class ReducedModel(mod.LEMSModel,
-                   cap.ReceivesCurrent,
-                   cap.ProducesActionPotentials):
+class ReducedModel(cap.ReceivesCurrent,
+                   cap.ProducesActionPotentials,
+                   mod.LEMSModel):
     """Base class for reduced models, using LEMS"""
 
     def __init__(self, LEMS_file_path, name=None, backend=None, attrs=None):
@@ -18,10 +19,8 @@ class ReducedModel(mod.LEMSModel,
         LEMS_file_path: Path to LEMS file (an xml file).
         name: Optional model name.
         """
-        mod.LEMSModel.__init__(self,LEMS_file_path,name=name,
+        super(ReducedModel,self).__init__(LEMS_file_path,name=name,
                                           backend=backend,attrs=attrs)
-        #super(ReducedModel,self).__init__(LEMS_file_path,name=name,
-        #                                  backend=backend,attrs=attrs)
         self.run_number=0
         self.previous=0
         self.lookup = {}

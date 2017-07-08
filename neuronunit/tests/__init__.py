@@ -16,7 +16,6 @@ import neuronunit.capabilities as cap
 #import neuronunit.capabilities.spike_functions as sf
 from neuronunit import neuroelectro
 #from .channel import *
-from scoop import futures
 
 AMPL = 0.0*pq.pA
 DELAY = 100.0*pq.ms
