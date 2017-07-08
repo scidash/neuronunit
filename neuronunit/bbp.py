@@ -114,10 +114,3 @@ def plot_data(signal):
     plt.xlabel(signal.sampling_period.dimensionality)
     plt.ylabel(signal.dimensionality)
     plt.show()
-
-
-def test():
-    data_id = list_curated_data()[0]
-    data = get_curated_data(data_id)
-    fifth_sweep = list_sweeps(data_id)[4]
-    plot_data(data[fifth_sweep])
