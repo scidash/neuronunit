@@ -57,6 +57,8 @@ class NeuroElectroTestCase(unittest.TestCase):
 
 class BlueBrainTestCase(NotebookTools,unittest.TestCase):
      
+    path = 'unit_test'
+    
     def test_bluebrain(self):
         self.do_notebook('bbp')
         
