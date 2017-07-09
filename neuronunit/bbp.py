@@ -113,4 +113,4 @@ def plot_data(signal):
     plt.plot(signal.times,signal)
     plt.xlabel(signal.sampling_period.dimensionality)
     plt.ylabel(signal.dimensionality)
-    plt.show()
+    #plt.show()
