@@ -41,9 +41,10 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
                                              t_stop=spike_train.t_stop,
                                              units=spike_train.units)
 
-    snippets = [vm_array.time_slice(t-width/2,t+width/2) for t in spike_train]
-    result = neo.core.AnalogSignal(np.array(snippets).T,units=vm.units,
-                                               sampling_rate=vm.sampling_rate)
+    snippets = [vm.time_slice(t-width/2,t+width/2) for t in spike_train]
+    result = neo.core.AnalogSignal(np.array(snippets).T.squeeze(),
+                                   units=vm.units,
+                                   sampling_rate=vm.sampling_rate)
     return result
 
 def spikes2amplitudes(spike_waveforms):
@@ -56,7 +57,7 @@ def spikes2amplitudes(spike_waveforms):
     """
 
     if spike_waveforms is not None:
-        ampls = np.max(np.array(spike_waveforms),axis=1)
+        ampls = np.max(np.array(spike_waveforms),axis=0)
     else:
         ampls = np.array([])
 
@@ -71,9 +72,10 @@ def spikes2widths(spike_waveforms):
      1D numpy array of spike widths, specifically the full width
      at half the maximum amplitude.
     """
-    n_spikes = len(spike_waveforms)
+    n_spikes = spike_waveforms.shape[1]
     widths = []
-    for s in spike_waveforms:
+    for i in range(n_spikes):
+        s = spike_waveforms[:,i].squeeze()
         x_high = int(np.argmax(s))
         high = s[x_high]
         if x_high > 0:
@@ -92,11 +94,9 @@ def spikes2widths(spike_waveforms):
             n_samples = sum(s>mid) # Number of samples above the half-max.
             widths.append(n_samples)
     widths = np.array(widths,dtype='float')
-    #print(widths,n_spikes,len(spike_waveforms))
     if n_spikes:
-        widths = widths*s.sampling_period # Convert from samples to time.
-        #print(widths,s.sampling_period,widths*s.sampling_period)
-    #print("Spike widths are %s" % str(widths))
+        # Convert from samples to time.
+        widths = widths*spike_waveforms.sampling_period
     return widths
 
 def spikes2thresholds(spike_waveforms):
@@ -112,8 +112,11 @@ def spikes2thresholds(spike_waveforms):
     Return an empty list with the appropriate units
 
     """
+
+    n_spikes = spike_waveforms.shape[1]
     thresholds = []
-    for s in spike_waveforms:
+    for i in range(n_spikes):
+        s = spike_waveforms[:,i].squeeze()
         s = np.array(s)
         dvdt = np.diff(s)
         import math
