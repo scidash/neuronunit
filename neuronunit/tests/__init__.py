@@ -223,9 +223,9 @@ class TestPulseTest(VmTest):
         def func(x, a, b, c):
             vm_fit[:offset] = c
             vm_fit[offset:,0] = a * np.exp(-t[offset:]/b) + c
-            return vm_fit
+            return vm_fit.squeeze()
         
-        popt, pcov = curve_fit(func, t, vm, p0=guesses) # Estimate starting values for better convergence
+        popt, pcov = curve_fit(func, t, vm.squeeze(), p0=guesses) # Estimate starting values for better convergence
         #plt.plot(t,vm)
         #plt.plot(t,func(t,*popt))
         #print(popt)
