@@ -54,3 +54,5 @@ docs/*.dat
 *.xml
 docs/chapter*.py
 *#
+B95
+unit_test/bbp.py
