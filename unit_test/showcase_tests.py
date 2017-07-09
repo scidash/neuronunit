@@ -15,7 +15,7 @@ from sciunit.utils import NotebookTools
 class DocumentationTestCase(NotebookTools,unittest.TestCase):
     """Testing documentation notebooks"""
 
-    path = 'docs'
+    path = '../docs'
 
     #@unittest.skip("Skipping chapter 3")
     def test_chapter3(self):
