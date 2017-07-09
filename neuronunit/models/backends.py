@@ -35,6 +35,7 @@ class Backend:
 
     def set_run_params(self, **params):
         """Set run-time parameters, e.g. the somatic current to inject"""
+        self.run_params.update(params)
         self.check_run_params()
         pass
 
@@ -68,7 +69,6 @@ class jNeuroMLBackend(Backend):
     def local_run(self):
         f = pynml.run_lems_with_jneuroml
         self.exec_in_dir = tempfile.mkdtemp()
-        print(self.exec_in_dir)
         result = f(self.lems_file_path, skip_run=self.skip_run,
                     nogui=self.run_params['nogui'],
                     load_saved_data=True, plot=False,

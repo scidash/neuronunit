@@ -32,7 +32,7 @@ class LEMSModel(backends.Backend,
         self.run_defaults = pynml.DEFAULTS
         self.run_defaults['nogui'] = True
         self.run_params = {}
-        self.last_run_params = {}
+        self.last_run_params = None
         self.skip_run = False
         self.rerun = True # Needs to be rerun since it hasn't been run yet!
         if name is None:
@@ -113,7 +113,6 @@ class LEMSModel(backends.Backend,
         if (not rerun) and hasattr(self,'last_run_params') and \
            self.run_params == self.last_run_params:
             return
-
         #self.update_run_params(self.attrs)
 
         self.results = self.local_run()
