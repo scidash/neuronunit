@@ -17,6 +17,29 @@ from neo.core import AnalogSignal
 import neuronunit.capabilities as cap
 import neuronunit.capabilities.spike_functions as sf
 
+
+"""NeuronUnit model Capabilities for NEURON models"""
+
+import sciunit
+
+class HasSegment(sciunit.Capability):
+    """Model has a membrane segment of NEURON simulator"""
+
+    def setSegment(self, section, location = 0.5):
+        """Sets the target NEURON segment object
+        section: NEURON Section object
+        location: 0.0-1.0 value that refers to the location
+        along the section length. Defaults to 0.5
+        """
+
+        self.section = section
+        self.location = location
+
+    def getSegment(self):
+        """Returns the segment at the active section location"""
+
+        return self.section(self.location)
+
 class Backend:
     """Base class for simulator backends that implement simulator-specific
     details of modifying, running, and reading results from the simulation
@@ -294,7 +317,18 @@ class NEURONBackend(Backend):
         '''
         the argument name attributes is used, rather than parameters in order to distinguish from
         stimulus paramters.
+        #purge the HOC space, this is necessary because model recycling between runs is bad
+        #models when models are not re-initialized properly, as its common for a recycled model
+        #to retain charge from stimulation in previous simulations.
+        #Although the complete purge is and reinit is computationally expensive,
+        #and a more minimal purge is probably sufficient.
         '''
+
+        self.h=None
+        self.neuron=None
+        import neuron
+        self.reset_h(neuron)
+        #self.cond_load()
         for h_key, h_value in params.items():
             self.h('m_RS_RS_pop[0].%s=%s' % (h_key,h_value))
             self.h('m_%s_%s_pop[0].%s=%s' % \
@@ -317,11 +351,20 @@ class NEURONBackend(Backend):
          'delay':100*pq.ms,
          'duration':500*pq.ms}}
         where 'pq' is the quantities package
+        #purge the HOC space, this is necessary because model recycling between runs is bad
+        #models when models are not re-initialized properly, as its common for a recycled model
+        #to retain charge from stimulation in previous simulations.
+        #Although the complete purge is and reinit is computationally expensive,
+        #and a more minimal purge is probably sufficient.
         '''
+        self.h=None
+        self.neuron=None
+        import neuron
+        self.reset_h(neuron)
         self.update_run_params(self.params)
+        print(self.params)
         #self.re_init(self.attrs)
-        #print(self.attrs)
-        #self.h.psection()
+
         c=copy.copy(current)
         if 'injected_square_current' in c.keys():
             c=current['injected_square_current']
