@@ -38,11 +38,8 @@ class VmTest(sciunit.Test):
             cap += cls.required_capabilities
         self.required_capabilities += tuple(cap)
         self._extra()
-
+    
     required_capabilities = (cap.ProducesMembranePotential,)
-
-    score_type = scores.ZScore
-
 
     name = ''
 
@@ -103,8 +100,7 @@ class VmTest(sciunit.Test):
             ax.set_xlabel('Time (s)')
             ax.set_ylabel('Vm (mV)')
         score.plot_vm = MethodType(plot_vm, score) # Bind to the score.
-        #score.unpicklable.append('plot_vm')
-        return score
+        score.unpicklable.append('plot_vm')
 
     @classmethod
     def neuroelectro_summary_observation(cls, neuron):
@@ -152,6 +148,10 @@ class VmTest(sciunit.Test):
         import copy
         import math
         def nan_test(mp):
+            x = np.array(mp).std()
+            if x <= 0:
+                return False
+
             for i in mp:
                 if type(i)==np.float64:
                     if math.isnan(i):
@@ -161,9 +161,6 @@ class VmTest(sciunit.Test):
                     if math.isnan(i):
                         return False
 
-            x = np.array(mp).std()
-            if x == 0:
-                return False
         #update run params is necessary to over write previous recording
         #vectors
         #Its also necessary to destroy and recreate the model in the HOC memory space
@@ -191,7 +188,6 @@ class VmTest(sciunit.Test):
         import neuronunit.capabilities as cap
 
         sws=cap.spike_functions.get_spike_waveforms(model.get_membrane_potential())
-
         for i,s in enumerate(sws):
             s = np.array(s)
             dvdt = np.diff(s)
@@ -200,9 +196,6 @@ class VmTest(sciunit.Test):
                 if math.isnan(j):
                     return False
         return True
-
-
-
 
 
 class TestPulseTest(VmTest):
@@ -242,12 +235,13 @@ class TestPulseTest(VmTest):
 
     @classmethod
     def get_tau(cls, vm, i):
-        # 10 ms before pulse start or halfway between sweep start
+        # 10 ms before pulse start or halfway between sweep start 
         # and pulse start, whichever is longer
-        start = max(i['delay']-10*pq.ms,i['delay']/2)
+        start = max(i['delay']-10*pq.ms,i['delay']/2) 
         stop = i['duration']+i['delay']-1*pq.ms # 1 ms before pulse end
         region = cls.get_segment(vm,start,stop)
         amplitude,tau,y0 = cls.exponential_fit(region, i['delay'])
+        #tau = tau /100000.0
         return tau
 
     @classmethod
@@ -265,42 +259,24 @@ class TestPulseTest(VmTest):
                    10, # time constant (ms)
                    vm.max()] # y0 (mV)
         vm_fit = vm.copy()
-
+        
         def func(x, a, b, c):
             vm_fit[:offset] = c
             vm_fit[offset:,0] = a * np.exp(-t[offset:]/b) + c
             return vm_fit
-
+        
         popt, pcov = curve_fit(func, t, vm, p0=guesses) # Estimate starting values for better convergence
-
+        #plt.plot(t,vm)
+        #plt.plot(t,func(t,*popt))
+        #print(popt)
         amplitude = popt[0]*pq.mV
         tau = popt[1]*pq.ms
         y0 = popt[2]*pq.mV
         return amplitude,tau,y0
-    '''
-    @classmethod
-    def compute_score(self, observation, prediction):
-        """Implementation of sciunit.Test.score_prediction."""
-        score_type = scores.ZScore
 
-        if 'n' in prediction.keys():
-            if prediction['n'] == 0:
-                score = scores.ZScore
-                score = scores.InsufficientDataScore(None)
-                print(type(score))
-
-        else:
-            prediction['value']=prediction['value']
-            score = scores.ZScore
-            score = super(InputResistanceTest,self).compute_score(observation,
-                                                          prediction)
-            print(type(score))
-        return score
-    '''
 
 class InputResistanceTest(TestPulseTest):
     """Tests the input resistance of a cell."""
-    name = "Input resistance test"
 
     name = "Input resistance test"
 
@@ -320,30 +296,10 @@ class InputResistanceTest(TestPulseTest):
         prediction = {'value':r_in}
         return prediction
 
-    def compute_score(self, observation, prediction):
-        """Implementation of sciunit.Test.score_prediction."""
-        score_type = scores.ZScore
-
-        if 'n' in prediction.keys():
-            if prediction['n'] == 0:
-                score = scores.ZScore
-                score = scores.InsufficientDataScore(None)
-                print(type(score))
-
-        else:
-
-            #prediction['value']=prediction['value']
-            score = scores.ZScore
-            score = super(InputResistanceTest,self).compute_score(observation,
-                                                          prediction)
-            print(type(score))
-        return score
-
-
 
 class TimeConstantTest(TestPulseTest):
     """Tests the input resistance of a cell."""
-    score_type = scores.ZScore
+
     name = "Time constant test"
 
     description = ("A test of membrane time constant of a cell.")
@@ -371,12 +327,13 @@ class TimeConstantTest(TestPulseTest):
             prediction['value']=prediction['value']
             score = super(TimeConstantTest,self).compute_score(observation,
                                                           prediction)
+
         return score
 
 
 class CapacitanceTest(TestPulseTest):
     """Tests the input resistance of a cell."""
-    score_type = scores.ZScore
+
     name = "Capacitance test"
 
     description = ("A test of the membrane capacitance of a cell.")
@@ -450,7 +407,7 @@ class InjectedCurrentAPWidthTest(APWidthTest):
     Tests the full widths of APs at their half-maximum
     under current injection.
     """
-    score_type = scores.ZScore
+
     required_capabilities = (cap.ReceivesSquareCurrent,)
 
     params = {'injected_square_current':
@@ -585,7 +542,7 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
     Tests the thresholds of action potentials
     under current injection.
     """
-    score_type = scores.ZScore
+
     required_capabilities = (cap.ReceivesSquareCurrent,)
 
     params = {'injected_square_current':
@@ -612,7 +569,7 @@ class RheobaseTestOriginal(VmTest):
         self.high = 300*pq.pA
         self.small = 0*pq.pA
         self.rheobase_vm = None
-
+    
     required_capabilities = (cap.ReceivesSquareCurrent,
                              cap.ProducesSpikes)
 
@@ -626,7 +583,6 @@ class RheobaseTestOriginal(VmTest):
 
     units = pq.pA
     score_type = scores.RatioScore
-
 
     def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
@@ -661,7 +617,6 @@ class RheobaseTestOriginal(VmTest):
 
         self.prediction = prediction
         return self.prediction
-
 
     def threshold_FI(self, model, units, guess=None):
         lookup = {} # A lookup table global to the function below.
@@ -732,10 +687,63 @@ class RheobaseTestOriginal(VmTest):
         return score
 
     def bind_score(self, score, model, observation, prediction):
-        super(RheobaseTest,self).bind_score(score, model,
+        super(RheobaseTest,self).bind_score(score, model, 
                                             observation, prediction)
         if self.rheobase_vm is not None:
             score.related_data['vm'] = self.rheobase_vm
+
+'''
+def rheobase_checking(vmpop, rh_value=None):
+
+    from itertools import repeat
+    import pdb
+    def bulk_process(vm,rh_value):
+        #package arguments and call the parallel searcher
+        if type(vm) is not type(None):
+            rh_param = (False,rh_value)
+            vm = searcher(rh_param,vm)
+            return vm
+
+    if type(vmpop) is not type(list):
+        return bulk_process(vmpop,0)
+
+    elif type(vmpop) is type(list):
+        vmtemp = []
+        if type(rh_value) is type(None):
+            vmtemp = bulk_process(copy.copy(vmpop),0)
+            #vmtemp = list(self.map(bulk_process,vmpop,repeat(0)))
+        elif type(rh_value) is not type(None):
+            vmtemp = bulk_process(vmpop,rh_value)
+            #vmtemp = list(self.map(bulk_process,vmpop,rh_value))
+        return vmtemp
+'''
+
+class VirtualModel:
+    '''
+    This is a pickable dummy clone
+    version of the NEURON simulation model
+    It does not contain an actual model, but it can be used to
+    wrap the real model.
+    This Object class serves as a data type for storing rheobase search
+    attributes and other useful parameters,
+    with the distinction that unlike the NEURON model this class
+    can be transported across HOSTS/CPUs
+    '''
+    def __init__(self):
+        self.lookup={}
+        self.trans_dict=None
+        self.rheobase=None
+        self.previous=0
+        self.run_number=0
+        self.attrs=None
+        self.steps=None
+        self.name=None
+        self.s_html=None
+        self.results=None
+        self.error=None
+        self.td = None
+        self.score = None
+
 
 class RheobaseTest(VmTest):
      """
@@ -760,7 +768,179 @@ class RheobaseTest(VmTest):
      units = pq.pA
      score_type = scores.RatioScore
 
+     def model2map(param_dict):#This method must be pickle-able for scoop to work.
+         vm=VirtualModel()
+         vm.attrs={}
+         for k,v in param_dict.items():
+             vm.attrs[k]=v
+         return vm
+
+     def check_fix_range(vms):
+         '''
+         Inputs: lookup, A dictionary of previous current injection values
+         used to search rheobase
+         Outputs: A boolean to indicate if the correct rheobase current was found
+         and a dictionary containing the range of values used.
+         If rheobase was actually found then rather returning a boolean and a dictionary,
+         instead logical True, and the rheobase current is returned.
+         given a dictionary of rheobase search values, use that
+         dictionary as input for a subsequent search.
+         '''
+         import pdb
+         sub=[]
+         supra=[]
+         steps=[]
+         vms.rheobase=0.0
+         for k,v in vms.lookup.items():
+             if v==1:
+                 #A logical flag is returned to indicate that rheobase was found.
+                 vms.rheobase=float(k)
+                 print(type(vms.rheobase))
+                 vms.steps=0.0
+                 return (True,vms)
+             elif v==0:
+                 sub.append(k)
+             elif v>0:
+                 supra.append(k)
+
+         sub=np.array(sub)
+         supra=np.array(supra)
+
+         if len(sub)!=0 and len(supra)!=0:
+             #this assertion would only be wrong if there was a bug
+             print(str(bool(sub.max()>supra.min())))
+             assert not sub.max()>supra.min()
+         if len(sub) and len(supra):
+             everything=np.concatenate((sub,supra))
+
+             center = np.linspace(sub.max(),supra.min(),7.0)
+             centerl = list(center)
+             for i,j in enumerate(centerl):
+                 if i in list(everything):
+                     np.delete(center,i)
+                     del centerl[i]
+             #delete the index
+             #np.delete(center,np.where(everything is in center))
+             #make sure that element 4 in a seven element vector
+             #is exactly half way between sub.max() and supra.min()
+             center[int(len(center)/2)+1]=(sub.max()+supra.min())/2.0
+             steps = [ i*pq.pA for i in center ]
+
+         elif len(sub):
+             steps2 = np.linspace(sub.max(),2*sub.max(),7.0)
+             np.delete(steps2,np.array(sub))
+             steps = [ i*pq.pA for i in steps2 ]
+
+         elif len(supra):
+             steps2 = np.linspace(-2*(supra.min()),supra.min(),7.0)
+             np.delete(steps2,np.array(supra))
+             steps = [ i*pq.pA for i in steps2 ]
+
+         vms.steps=steps
+         vms.rheobase=None
+         return (False,vms)
+
+     def check_current(ampl,vm):
+         '''
+         Inputs are an amplitude to test and a virtual model
+         output is an virtual model with an updated dictionary.
+         '''
+         import copy
+         import scoop
+         #print('the scoop worker id: {0}'.format(scoop.utils.getWorkerQte(scoop.utils.getHosts())))
+
+
+         if float(ampl) not in vm.lookup or len(vm.lookup)==0:
+
+             current = params.copy()['injected_square_current']
+
+             uc = {'amplitude':ampl}
+             current.update(uc)
+             current = {'injected_square_current':current}
+             vm.run_number += 1
+             model.update_run_params(vm.attrs)
+             model.inject_square_current(current)
+             vm.previous=ampl
+             n_spikes = model.get_spike_count()
+             vm.lookup[float(ampl)] = n_spikes
+             if n_spikes == 1:
+                 model.rheobase_memory=float(ampl)
+                 vm.rheobase=float(ampl)
+                 print(type(vm.rheobase))
+                 print('current {0} spikes {1}'.format(vm.rheobase,n_spikes))
+                 return vm
+
+             return vm
+         if float(ampl) in vm.lookup:
+             return vm
+
+
+
+     def searcher(rh_param,vms):
+         '''
+         inputs f a function to evaluate. rh_param a tuple with element 1 boolean, element 2 float or list
+         and a  virtual model object.
+         '''
+         if rh_param[0]==True:
+             return rh_param[1]
+         lookuplist=[]
+         cnt=0
+         boolean=False
+         model.update_run_params(vms.attrs)
+
+         from itertools import repeat
+         while boolean == False and cnt < 12:
+             if len(model.params)==0:
+                 assert len(vms.attrs)!=0
+                 assert type(vms.attrs) is not type(None)
+                 model.update_run_params(vms.attrs)
+             if type(rh_param[1]) is float:
+                 #if its a single value educated guess
+                 if model.rheobase_memory == None:
+                     model.rheobase_memory = rh_param[1]
+                 vms = check_current(model.rheobase_memory,vms)
+                 model.update_run_params(vms.attrs)
+
+                 boolean,vms = check_fix_range(vms)
+                 if boolean:
+                     return vms
+                 else:
+                     #else search returned none type, effectively false
+                     rh_param = (None,None)
+
+             elif len(vms.lookup)==0 and type(rh_param[1]) is list:
+                 #If the educated guess failed, or if the first attempt is parallel vector of samples
+                 assert vms is not None
+                 returned_list = list(map(check_current,rh_param[1],repeat(vms)))
+                 for v in returned_list:
+                     vms.lookup.update(v.lookup)
+                 boolean,vms=check_fix_range(vms)
+                 assert vms!=None
+                 if boolean:
+                     return vms
+
+             else:
+                 #Finally if a parallel vector of samples failed zoom into the
+                 #smallest relevant interval and re-sample at a higher resolution
+                 returned_list=[]
+                 if type(vms.steps) is type(None):
+                     steps = np.linspace(50,150,7.0)
+                     steps_current = [ i*pq.pA for i in steps ]
+                     vms.steps = steps_current
+                     assert type(vms.steps) is not type(None)
+                 returned_list = list(map(check_current,vms.steps,repeat(vms)))
+                 for v in returned_list:
+                     vms.lookup.update(v.lookup)
+                 boolean,vms=check_fix_range(vms)
+                 if boolean:
+                     return vms
+             cnt+=1
+         return vms
+
      def generate_prediction(self, model):
+
+         vms = searcher(rh_param,vms)
+         self.prediction = vms.rheobase
          return self.prediction
 
      def compute_score(self, observation, prediction):
