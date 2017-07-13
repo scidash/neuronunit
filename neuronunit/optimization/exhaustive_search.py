@@ -12,7 +12,7 @@ import quantities as qt
 import os
 import os.path
 import sys
-sys.path.insert(0,this_scoop)
+#sys.path.insert(0,this_scoop)
 from scoop import utils, futures
 import sciunit.scores as scores
 global outils

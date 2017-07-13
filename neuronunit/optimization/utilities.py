@@ -11,31 +11,29 @@ class VirtualModel:
     can be transported across HOSTS/CPUs
     '''
     def __init__(self):
-        self.lookup={}
-        self.trans_dict=None
-        self.rheobase=None
-        self.previous=0
-        self.run_number=0
-        self.attrs=None
-        self.steps=None
-        self.name=None
-        self.s_html=None
-        self.results=None
-        self.error=None
-        self.td = None
+        self.lookup = {}
+        self.rheobase = None
+        self.previous = 0
+        self.run_number = 0
+        self.attrs = None
+        self.steps = None
+        self.name = None
+        self.results = None
+        self.error = None
         self.score = None
+        self.boolean = False
 
-#global map
-class Utilities1(object):
-    def __init__(self, get_neab):
+
+class Utilities:
+    def __init__(self):
         self = self
-        self.get_neab = get_neab
-        self.map = None
-        self.vm = VirtualModel()
+        self.get_neab = None
 
-    def set_map(self, map_arg):
-        self.map = map_arg
-        #map = self.map
+    def set_attrs(self,get_neab,dview):
+        self.get_neab = get_neab
+
+        self.dview = dview
+
 
     def model2map(param_dict):#This method must be pickle-able for scoop to work.
         vm=VirtualModel()
@@ -72,11 +70,12 @@ class Utilities1(object):
             print('exception occured {0}'.format(type(iter_arg.attrs)))
         model.update_run_params(iter_arg.attrs)
         import quantities as qt
+
         score = None
         sane = False
         if type(value) is not type(None):
             assert value >= 0
-            sane = self.get_neab.suite.tests[3].sanity_check(value*pq.pA,model)
+            sane = self.get_neab.suite.tests[3].sanity_check(value * pq.pA,model)
             uc = {'amplitude':value}
             current = params.copy()['injected_square_current']
             current.update(uc)
@@ -120,6 +119,173 @@ class Utilities1(object):
         return return_list
 
 
+    def check_fix_range2(vms):
+        '''
+        Inputs: lookup, A dictionary of previous current injection values
+        used to search rheobase
+        Outputs: A boolean to indicate if the correct rheobase current was found
+        and a dictionary containing the range of values used.
+        If rheobase was actually found then rather returning a boolean and a dictionary,
+        instead logical True, and the rheobase current is returned.
+        given a dictionary of rheobase search values, use that
+        dictionary as input for a subsequent search.
+        '''
+        import pdb
+        import copy
+        import numpy as np
+        import quantities as pq
+        sub=[]
+        supra=[]
+        steps=[]
+        vms.rheobase=0.0
+        for k,v in vms.lookup.items():
+            if v==1:
+                #A logical flag is returned to indicate that rheobase was found.
+                vms.rheobase=float(k)
+                vms.steps = 0.0
+                return (True,vms)
+            elif v==0:
+                sub.append(k)
+            elif v>0:
+                supra.append(k)
+
+        sub=np.array(sub)
+        supra=np.array(supra)
+
+        if len(sub)!=0 and len(supra)!=0:
+            #this assertion would only be wrong if there was a bug
+            print(str(bool(sub.max()>supra.min())))
+            assert not sub.max()>supra.min()
+        if len(sub) and len(supra):
+            everything=np.concatenate((sub,supra))
+
+            center = np.linspace(sub.max(),supra.min(),7.0)
+            centerl = list(center)
+            for i,j in enumerate(centerl):
+                if i in list(everything):
+                    np.delete(center,i)
+                    del centerl[i]
+            #delete the index
+            #np.delete(center,np.where(everything is in center))
+            #make sure that element 4 in a seven element vector
+            #is exactly half way between sub.max() and supra.min()
+            center[int(len(center)/2)+1]=(sub.max()+supra.min())/2.0
+            steps = [ i*pq.pA for i in center ]
+
+        elif len(sub):
+            steps2 = np.linspace(sub.max(),2*sub.max(),7.0)
+            np.delete(steps2,np.array(sub))
+            steps = [ i*pq.pA for i in steps2 ]
+
+        elif len(supra):
+            steps2 = np.linspace(-2*(supra.min()),supra.min(),7.0)
+            np.delete(steps2,np.array(supra))
+            steps = [ i*pq.pA for i in steps2 ]
+
+        vms.steps = steps
+        vms.rheobase = None
+        return (False,copy.copy(vms))
+
+    def check_current2(ampl,vm):
+        '''
+        Inputs are an amplitude to test and a virtual model
+        output is an virtual model with an updated dictionary.
+        '''
+        global model
+        import quantities as pq
+        import get_neab
+        from neuronunit.models import backends
+        from neuronunit.models.reduced import ReducedModel
+
+        DELAY = 100.0*pq.ms
+        DURATION = 1000.0*pq.ms
+        params = {'injected_square_current':
+                  {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+
+
+        model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str(vm.name),backend='NEURON')
+        model.load_model()
+        model.update_run_params(vm.attrs)
+
+        #print(type(model),type(self.model))
+        print(model)
+
+        if float(ampl) not in vm.lookup or len(vm.lookup)==0:
+
+            current = params.copy()['injected_square_current']
+
+            uc = {'amplitude':ampl}
+            current.update(uc)
+            current = {'injected_square_current':current}
+            vm.run_number += 1
+            model.update_run_params(vm.attrs)
+            model.inject_square_current(current)
+            vm.previous = ampl
+            n_spikes = model.get_spike_count()
+            vm.lookup[float(ampl)] = n_spikes
+            if n_spikes == 1:
+                #model.rheobase_memory=float(ampl)
+                vm.rheobase=float(ampl)
+                print(type(vm.rheobase))
+                print('current {0} spikes {1}'.format(vm.rheobase,n_spikes))
+                vm.name = str('rheobase {0} parameters {1}'.format(str(current),str(model.params)))
+                return vm
+
+            return vm
+        if float(ampl) in vm.lookup:
+            return vm
+
+
+    def searcher2(self,vms):
+        '''
+        inputs f a function to evaluate. rh_param a tuple with element 1 boolean, element 2 float or list
+        and a  virtual model object.
+        '''
+        import numpy as np
+        import copy
+        import get_neab
+        from neuronunit.models import backends
+        from neuronunit.models.reduced import ReducedModel
+        import quantities as pq
+        model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str(vms.name),backend='NEURON')
+        model.load_model()
+        #print(type(model),type(self.model))
+        print(model)
+        from itertools import repeat
+
+        lookuplist = []
+        cnt = 0
+
+        # boolean a switch that should turn true if rheobase is
+        # found by switching true the search is terminated.
+        boolean=False
+        model.update_run_params(vms.attrs)
+
+
+        while boolean == False and cnt < 7:
+            # commit to a loop of 6 iterations. To find the rheobase
+            if boolean:
+                return vms
+            else:
+                # Basically reset the model
+                model.update_run_params(vms.attrs)
+                if type(vms.steps) is type(None):
+                    steps = np.linspace(50,150,7.0)
+                    steps_current = [ i*pq.pA for i in steps ]
+                    vms.steps = steps_current
+                    assert type(vms.steps) is not type(None)
+                # vms.steps and range should be the same thing
+                # Basically reset the model
+                model.update_run_params(vms.attrs)
+                vml = list(map(self.check_current2,copy.copy(vms.steps),repeat(vms)))
+                #vml = list(self.dview.map(self.check_current2,copy.copy(vms.steps),repeat(vms)))
+                for v in vml:
+                    vms.lookup.update(v.lookup)
+                    print()
+                boolean,vms = self.check_fix_range2(copy.copy(vms))
+            cnt+=1 #update an iterator
+        return vms
+
     def check_fix_range(vms):
         '''
         Inputs: lookup, A dictionary of previous current injection values
@@ -132,6 +298,8 @@ class Utilities1(object):
         dictionary as input for a subsequent search.
         '''
         import pdb
+        import numpy as np
+        import quantities as pq
         sub=[]
         supra=[]
         steps=[]
@@ -140,7 +308,6 @@ class Utilities1(object):
             if v==1:
                 #A logical flag is returned to indicate that rheobase was found.
                 vms.rheobase=float(k)
-                print(type(vms.rheobase))
                 vms.steps=0.0
                 return (True,vms)
             elif v==0:
@@ -190,10 +357,13 @@ class Utilities1(object):
         Inputs are an amplitude to test and a virtual model
         output is an virtual model with an updated dictionary.
         '''
-        import copy
-        import scoop
-        #print('the scoop worker id: {0}'.format(scoop.utils.getWorkerQte(scoop.utils.getHosts())))
+        global model
+        import quantities as pq
 
+        DELAY = 100.0*pq.ms
+        DURATION = 1000.0*pq.ms
+        params = {'injected_square_current':
+                  {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
         if float(ampl) not in vm.lookup or len(vm.lookup)==0:
 
@@ -205,15 +375,15 @@ class Utilities1(object):
             vm.run_number += 1
             model.update_run_params(vm.attrs)
             model.inject_square_current(current)
-            vm.previous=ampl
+            vm.previous = ampl
             n_spikes = model.get_spike_count()
             vm.lookup[float(ampl)] = n_spikes
-            print('current {0} spikes {1}'.format(vm.rheobase,n_spikes))
             if n_spikes == 1:
                 model.rheobase_memory=float(ampl)
                 vm.rheobase=float(ampl)
                 print(type(vm.rheobase))
                 print('current {0} spikes {1}'.format(vm.rheobase,n_spikes))
+                vm.name = str('rheobase {0} parameters {1}'.format(str(current),str(model.params)))
                 return vm
 
             return vm
@@ -221,48 +391,56 @@ class Utilities1(object):
             return vm
 
 
-    #@dview.remote
-    def searcher(vms1):
+    def searcher(self,vms1):
         '''
         inputs f a function to evaluate. rh_param a tuple with element 1 boolean, element 2 float or list
         and a  virtual model object.
         '''
+        import numpy as np
+        import get_neab
+        from neuronunit.models import backends
+        from neuronunit.models.reduced import ReducedModel
+        import quantities as pq
+        model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='place_holder',backend='NEURON')
+        model.load_model()
+        print(model)
         from itertools import repeat
-
         (vms,rh_param) = vms1
-        if rh_param[0]==True:
+        #name_str = 'parameters {0}'.format(str(vms.attrs))
+        #print('{0}'.format(vms1))
+        #model.name = name_str
+        if rh_param[0] == True:
             return rh_param[1]
-        lookuplist=[]
-        cnt=0
+        lookuplist = []
+        cnt = 0
         boolean=False
+
         model.update_run_params(vms.attrs)
         while boolean == False and cnt < 12:
             if len(model.params)==0:
-                assert len(vms.attrs)!=0
-                assert type(vms.attrs) is not type(None)
                 model.update_run_params(vms.attrs)
             if type(rh_param[1]) is float:
                 #if its a single value educated guess
                 if model.rheobase_memory == None:
                     model.rheobase_memory = rh_param[1]
-                vms = check_current(model.rheobase_memory,vms)
+                vms = self.check_current(model.rheobase_memory , vms)
+                #print(vms)
                 model.update_run_params(vms.attrs)
-
-                boolean,vms = check_fix_range(vms)
+                boolean,vms = self.check_fix_range(vms)
                 if boolean:
                     return vms
                 else:
                     #else search returned none type, effectively false
                     rh_param = (None,None)
 
-            elif len(vms.lookup)==0 and type(rh_param[1]) is list:
+            elif len(vms.lookup) == 0 and type(rh_param[1]) is list:
                 #If the educated guess failed, or if the first attempt is parallel vector of samples
                 assert vms is not None
-                returned_list = list(map(check_current,rh_param[1],repeat(vms)))
+                returned_list = list(map(self.check_current,rh_param[1],repeat(vms)))
                 for v in returned_list:
                     vms.lookup.update(v.lookup)
-                boolean,vms=check_fix_range(vms)
-                assert vms!=None
+                boolean,vms = self.check_fix_range(vms)
+                assert vms != None
                 if boolean:
                     return vms
 
@@ -275,10 +453,10 @@ class Utilities1(object):
                     steps_current = [ i*pq.pA for i in steps ]
                     vms.steps = steps_current
                     assert type(vms.steps) is not type(None)
-                returned_list = list(map(check_current,vms.steps,repeat(vms)))
+                returned_list = list(map(self.check_current,vms.steps,repeat(vms)))
                 for v in returned_list:
                     vms.lookup.update(v.lookup)
-                boolean,vms=check_fix_range(vms)
+                boolean,vms = self.check_fix_range(vms)
                 if boolean:
                     return vms
             cnt+=1
@@ -399,11 +577,11 @@ class Utilities1(object):
         tests = None
         tests = self.get_neab.suite.tests
         tests[0].prediction={}
-        tests[0].prediction['value']=vms.rheobase*qt.pA
-        tests[0].params['injected_square_current']['amplitude']=vms.rheobase*qt.pA
+        tests[0].prediction['value']=vms.rheobase * qt.pA
+        tests[0].params['injected_square_current']['amplitude']=vms.rheobase * qt.pA
         #score = get_neab.suite.judge(model)#pass
         if local_test_methods in [4,5,6]:
-            tests[local_test_methods].params['injected_square_current']['amplitude']=vms.rheobase*qt.pA
+            tests[local_test_methods].params['injected_square_current']['amplitude']=vms.rheobase * qt.pA
         #model.results['vm'] = [ 0 ]
         model.re_init(vms.attrs)
         tests[local_test_methods].generate_prediction(model)
@@ -442,12 +620,12 @@ class Utilities1(object):
         tests = self.get_neab.suite.tests
         #tests[0].prediction={}
         tests[0].prediction={}
-        tests[0].prediction['value']=vms.attrs*qt.pA
-        tests[0].params['injected_square_current']['amplitude']=vms.rheobase*qt.pA
+        tests[0].prediction['value']=vms.attrs * qt.pA
+        tests[0].params['injected_square_current']['amplitude']=vms.rheobase * qt.pA
 
 
         if local_test_methods in [4,5,6]:
-            tests[local_test_methods].params['injected_square_current']['amplitude']=vms.rheobase*qt.pA
+            tests[local_test_methods].params['injected_square_current']['amplitude']=vms.rheobase * qt.pA
 
         #model.results['vm'] = [ 0 ]
         model.re_init(vms.attrs)

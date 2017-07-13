@@ -328,7 +328,7 @@ class NEURONBackend(Backend):
         self.neuron=None
         import neuron
         self.reset_h(neuron)
-        #self.cond_load()
+        self.params = params
         for h_key, h_value in params.items():
             self.h('m_RS_RS_pop[0].%s=%s' % (h_key,h_value))
             self.h('m_%s_%s_pop[0].%s=%s' % \

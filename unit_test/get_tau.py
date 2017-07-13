@@ -46,7 +46,7 @@ total_time = 100*pq.ms
 amplitude = -10*pq.mV
 offset_time = 30*pq.ms
 tau = 7*pq.ms
-    
+
 vm = make_sweep(total_time,amplitude,offset_time,tau)
 
 plt.plot(vm.times.rescale('ms'),vm)
@@ -65,4 +65,3 @@ print("Estimated tau = %s; Actual tau = %s" % (tau_estimated,tau))
 # In[6]:
 
 assert 0.95 < tau_estimated/tau < 1.05
-
