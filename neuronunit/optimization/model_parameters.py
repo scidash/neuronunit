@@ -1,5 +1,4 @@
 import numpy as np
-import quantities as pq
 
 
 model_params={}
@@ -17,12 +16,3 @@ model_params['d'] = np.linspace(0.050,0.2,2)
 model_params['v0'] = np.linspace(-75.0,-45.0,2)
 model_params['vt'] =  np.linspace(-50.0,-30.0,2)
 
-steps2 = np.linspace(50,190,4.0)
-steps = [ i*pq.pA for i in steps2 ]
-'''
-init_attrs=[]
-init_attrs.append(np.mean( [ i for i in model_params['a'] ]))
-init_attrs.append(np.mean( [ i for i in model_params['b'] ]))
-init_attrs.append(np.mean( [ i for i in model_params['vr'] ]))
-init_attrs.append(np.mean( [ i for i in model_params['vpeak'] ]))
-'''

@@ -26,11 +26,11 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
                 to be a spike.  Scalar float.
      width: the length (in ms) of the snippet extracted,
             centered at the spike peak.
-
     Returns:
-     a neo.core.AnalogSignal where each column contains a membrane potential 
+     a neo.core.AnalogSignal where each column contains a membrane potential
      snippets corresponding to one spike.
     """
+    import neo
     spike_train = threshold_detection(vm,threshold=threshold)
 
     # Fix for 0-length spike train issue in elephant.
@@ -40,10 +40,14 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
         spike_train = neo.core.SpikeTrain([],t_start=spike_train.t_start,
                                              t_stop=spike_train.t_stop,
                                              units=spike_train.units)
-
-    snippets = [vm_array.time_slice(t-width/2,t+width/2) for t in spike_train]
-    result = neo.core.AnalogSignal(np.array(snippets).T,units=vm.units,
-                                               sampling_rate=vm.sampling_rate)
+    vm = neo.AnalogSignalArray(vm,
+                                units=vm.units,
+                                sampling_rate=vm.sampling_rate)
+    snippets = [vm.time_slice(t-width/2,t+width/2) for t in spike_train]
+    #snippets = [vm[t-width/2:t+width/2] for t in spike_train]
+    result = neo.core.AnalogSignal(np.array(snippets).T.squeeze(),
+                                   units=vm.units,
+                                   sampling_rate=vm.sampling_rate)
     return result
 
 def spikes2amplitudes(spike_waveforms):
