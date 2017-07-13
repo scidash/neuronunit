@@ -1,55 +1,33 @@
 
+#Assumption that this command was called via bash: ipcluster start -n 8 --profile=default &
 import sys
 import os
-
-
-#os.system('ipcluster start -n 8 --profile=chase &')
 import ipyparallel as ipp
-import get_neab
-
-rc = ipp.Client(profile='chase');
-THIS_DIR = os.path.dirname(os.path.realpath('stuff.py'))
+rc = ipp.Client(profile='default');
+THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
 this_nu = os.path.join(THIS_DIR,'../../')
+print(os.getcwd())
 sys.path.insert(0,this_nu)
-import neuronunit
+print(this_nu)
 
+#rc[:].use_cloudpickle()
+#dview = rc[0:-2]
 dview = rc[:]
+
 with dview.sync_imports(): # Causes each of these things to be imported on the workers as well as here.
+#def p_imports():
+    import get_neab
+
     import matplotlib
-    #from neuronunit.tests import get_neab
-
-    import neuronunit.tests.model_parameters as modelp
-
-def p_imports():
-    import os
-    import sys
-    THIS_DIR = os.path.dirname(os.path.realpath('stuff.py'))
-    this_nu = os.path.join(THIS_DIR,'../')
-    sys.path.insert(0,this_nu)
-    #import neuronunit
-    #from neuronunit.tests import get_neab
-
-    import neuronunit.tests.model_parameters as modelp
+    import neuronunit
+    import model_parameters as modelp
 
     matplotlib.use('Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
                           # on the worker threads.
-dview.apply_sync(p_imports);
-with dview.sync_imports(): # Causes each of these things to be imported on the workers as well as here.
-
-    import nbformat
-    from nbconvert.preprocessors import ExecutePreprocessor
-    import socket
-
-    import os
-    import matplotlib as mpl
-    mpl.use('agg',warn=False)
-    from matplotlib import pyplot as plt
-    import time
     import pdb
     import array
     import random
     import sys
-    sys.path.insert(0,"../../../sciunit")
 
     import numpy as np
     import matplotlib.pyplot as plt
@@ -65,18 +43,15 @@ with dview.sync_imports(): # Causes each of these things to be imported on the w
     import os
     import os.path
 
-    import sciunit.scores as scores
     import deap as deap
     import functools
-    from neuronunit.tests import utilities
-    outils = utilities.Utilities1(get_neab)
-    outils.map = dview.map_sync
+    import utilities
+
 
     import quantities as pq
     import neuronunit.capabilities as cap
-    import matplotlib.pyplot as plt
     history = tools.History()
-    import neuronunit.tests.model_parameters as modelp
+    #import neuronunit.optimization.model_parameters as modelp
     import numpy as np
 
     import quantities as pq
@@ -90,60 +65,38 @@ with dview.sync_imports(): # Causes each of these things to be imported on the w
     import sciunit.scores as scores
     import neuronunit.capabilities as cap
 
-    from neuronunit.tests import get_neab
-    from neuronunit.models import backends
-    import sciunit.scores as scores
-    from neuronunit.models.reduced import ReducedModel
 
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
-    model.load_model()
-    outils.model = model
 
-    import neuronunit.capabilities as cap
-    AMPL = 0.0*pq.pA
-    DELAY = 100.0*pq.ms
-    DURATION = 1000.0*pq.ms
     from scipy.optimize import curve_fit
     required_capabilities = (cap.ReceivesSquareCurrent,
                              cap.ProducesSpikes)
-    params = {'injected_square_current':
-                {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+    #params = {'injected_square_current':
+    #            {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
     name = "Rheobase test"
     description = ("A test of the rheobase, i.e. the minimum injected current "
                    "needed to evoke at least one spike.")
     score_type = scores.RatioScore
-    guess=None
     lookup = {} # A lookup table global to the function below.
     import quantities as pq
     units = pq.pA
-
-    #map = set_map()
-    from neuronunit import tests as nutests
     import copy
     from itertools import repeat
-    import sciunit.scores as scores
-    import neuronunit.capabilities as cap
+    #from utilities import Utilities
 
 
-@dview.remote(block=True)
-def getpid():
-    import os
-    print(os.getpid(),'hello from process')
-    return os.getpid()
+def p_imports():
+    from neuronunit.models import backends
+    from neuronunit.models.reduced import ReducedModel
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
+    model.load_model()
+    utilities.get_neab = get_neab
+    utilities.model = model
 
+dview.apply_sync(p_imports)
+p_imports()
 from deap import base
 from deap import creator
 toolbox = base.Toolbox()
-
-creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0,
-                                                    -1.0, -1.0, -1.0, -1.0))
-creator.create("Individual",list, fitness=creator.FitnessMin)
-
-def p_imports():
-    creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
-    creator.create("Individual",list, fitness=creator.FitnessMin)
-
-dview.apply_sync(p_imports)
 
 class Individual(object):
     '''
@@ -159,16 +112,20 @@ class Individual(object):
         self.params=None
         self.score=None
         self.fitness=None
-        self.s_html=None
         self.lookup={}
         self.rheobase=None
         self.fitness = creator.FitnessMin
 
+with dview.sync_imports():
+    creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
+    creator.create("Individual", list, fitness=creator.FitnessMin)
+
+
 def p_imports():
     toolbox = base.Toolbox()
-    import neuronunit.tests.model_parameters as modelp
+    import model_parameters as modelp
     import numpy as np
-    from neuronunit.tests import utilities as outils
+    #from neuronunit.tests import utilities as outils
     BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
     BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
     NDIM = len(BOUND_UP)
@@ -177,6 +134,8 @@ def p_imports():
             return [random.uniform(a, b) for a, b in zip(low, up)]
         except TypeError:
             return [random.uniform(a, b) for a, b in zip([low] * size, [up] * size)]
+    creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
+    creator.create("Individual", list, fitness=creator.FitnessMin)
     toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
     toolbox.register("Individual", tools.initIterate, creator.Individual, toolbox.attr_float)
     toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
@@ -184,12 +143,6 @@ def p_imports():
     #model = outils.model
 dview.apply_sync(p_imports)
 
-@dview.remote(block=True)
-def getpid():
-    import os
-    return os.getpid()
-import os;
-print(os.getpid())
 #list_checkpoints(notebook_id)
 #create_checkpoint(notebook_id)
 #restore_checkpoint(notebook_id, checkpoint_id)
@@ -209,11 +162,8 @@ toolbox.register("Individual", tools.initIterate, creator.Individual, toolbox.at
 toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
 toolbox.register("select", tools.selNSGA2)
 
-outils.map = outils.set_map(dview.map_sync)
-map = outils.map
-global map
 
-def evaluate_e(individual,tuple_params):#This method must be pickle-able for scoop to work.
+def evaluate_e(individual,vms):#This method must be pickle-able for scoop to work.
     '''
     Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
     is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
@@ -226,18 +176,25 @@ def evaluate_e(individual,tuple_params):#This method must be pickle-able for sco
     Inputs a gene and a virtual model object.
     outputs are error components.
     '''
-    from neuronunit.tests import utilities as outils
 
-    gen,vms,rheobase = tuple_params
-    print(gen,vms,rheobase)
-    assert vms.rheobase == rheobase
+    from neuronunit.models import backends
+    from neuronunit.models.reduced import ReducedModel
+    import quantities as pq
+    import numpy as np
+    import get_neab
+
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str(vms.attrs),backend='NEURON')
+    model.load_model()
+
     assert type(vms.rheobase) is not type(None)
-
-    params = outils.params
-    model = outils.model
-    print(rheobase,model,params,tuple_params)
-    #pdb.set_trace()
     uc = {'amplitude':vms.rheobase}
+
+
+    DELAY = 100.0*pq.ms
+    DURATION = 1000.0*pq.ms
+    params = {'injected_square_current':
+              {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+
     current = params.copy()['injected_square_current']
     current.update(uc)
     current = {'injected_square_current':current}
@@ -247,23 +204,27 @@ def evaluate_e(individual,tuple_params):#This method must be pickle-able for sco
     #reset model, clear away charge from previous model
     model.update_run_params(vms.attrs)
     n_spikes = model.get_spike_count()
-    sane = get_neab.suite.tests[0].sanity_check(vms.rheobase*pq.pA,model)
-
+    sane = get_neab.suite.tests[0].sanity_check(vms.rheobase*pq.pA, model)
+    print(len(get_neab.tests))
     if (n_spikes == 1 and sane == True): #or n_spikes == 0  # Its possible that no rheobase was found
         for i in [4,5,6]:
             get_neab.suite.tests[i].params['injected_square_current']['amplitude'] = vms.rheobase*pq.pA
         get_neab.suite.tests[0].prediction={}
         assert type(vms.rheobase) != type(None)
         get_neab.suite.tests[0].prediction['value']=vms.rheobase * pq.pA
-        #score = outils.map(model,get_neab.suite.judge)
-        score = get_neab.suite.judge(model)#passing in model, changes the model
+        #try:
+        assert get_neab.suite.judge(model)#passing in model, changes the model
+        score = get_neab.suite.judge(model)
+        import pdb; pdb.set_trace()
         vms.score = score
         print(vms.score)
         model.run_number+=1
         error = score.sort_key.values.tolist()[0]
+
+        other_mean = np.mean([i for i in error if type(i) is not type(None)])
         for i in error:
             if type(i) is type(None):
-                i = np.mean(error)
+                i = other_mean
         #individual.error = error
         individual.rheobase = vms.rheobase
     else:
@@ -275,27 +236,19 @@ def evaluate_e(individual,tuple_params):#This method must be pickle-able for sco
         else:
             error = [ 100.0 for i in range(0,8) ]
 
-    #except Exception as e:
-        #raise type(vms.rheobase) is type(None)
-    #    error = [ 100.0 for i in range(0,8) ]
-    print('This is the error {0}'.format(type(error)))
+    print('This is the error {0}'.format((error)))
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
 
-#param_dict should be one of scoops shared constants
-dview.push({'evaluate_e':evaluate_e})
-
-
-toolbox.register("evaluate", evaluate_e)
+#dview.push({'evaluate_e':evaluate_e})
+#toolbox.register("evaluate", evaluate_e)
 toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
 toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
-
 toolbox.decorate("mate", history.decorator)
 toolbox.decorate("mutate", history.decorator)
-
 toolbox.register("select", tools.selNSGA2)
-toolbox.register("map", dview.map_sync)
 
-#dview.apply_sync(toolbox)
+
+
 
 def plot_ss(vmlist,gen):
     '''
@@ -309,51 +262,13 @@ def plot_ss(vmlist,gen):
     plt.savefig('snap_shot_at_gen_'+str(gen)+'.png')
     plt.clf()
 
-
-
-
 def get_trans_dict(param_dict):
-
     trans_dict = {}
     for i,k in enumerate(list(param_dict.keys())):
         trans_dict[i]=k
     return trans_dict
-
 import model_parameters
 param_dict = model_parameters.model_params
-
-def individual_to_vm(li,trans_dict=None):
-    '''
-    This method still not a reliable mapping
-    Creates vm.attrs from param_dict and a
-    translation dictionary
-    '''
-    import numpy as np
-
-    ind = [i[0] for i in li]
-    trans_dict = [i[1] for i in li]
-    ind = li[0]
-    trans_dict = li[1]
-    from neuronunit.tests import utilities as outils
-    vm = outils.vm
-    param_dict={}
-
-    if type(trans_dict) is not type(None):
-
-        'transdict is: {0} ind is {1} \n\n\n\n\n\n '.format(trans_dict, ind)
-
-        for j,i in enumerate(ind):
-            print(i,j,trans_dict, '\n\n\n\n\n\n\n got here b')
-
-            param_dict[trans_dict[i]] = str(j)
-        vm.attrs = param_dict
-        #vm.trans_dict = trans_dict
-
-    if type(trans_dict) is type(None):
-        for j,i in enumerate(ind):
-            vm.attrs[vm.trans_dict[i]]=str(j)
-    return vm
-
 
 def replace_rh(pop,vmpop):
     '''
@@ -365,7 +280,6 @@ def replace_rh(pop,vmpop):
     #also some of the lines below may be superflous in terms of machine instructions, but
     #they function to make the code more explicit and human readable.
     '''
-    from neuronunit.tests import utilities as outils
 
     from itertools import repeat
     import copy
@@ -395,8 +309,6 @@ def replace_rh(pop,vmpop):
     assert ind.rheobase == vmpop[i].rheobase
     assert len(pop)!=0
     assert len(vmpop)!=0
-
-
     return pop, vmpop
 
 
@@ -421,7 +333,7 @@ def test_to_model(vms,local_test_methods):
     tests[local_test_methods].generate_prediction(model)
 
 
-def update_vm_pop(pop,trans_dict,rh_value=None):
+def update_vm_pop(pop, trans_dict, rh_value=None):
     '''
     inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
     outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
@@ -435,52 +347,205 @@ def update_vm_pop(pop,trans_dict,rh_value=None):
     import numpy as np
     import copy
     import pdb
-    from neuronunit.tests import utilities as outils
-    pop = [toolbox.clone(i) for i in copy.copy(pop)]
-    #dview.push({'pop':pop}) # These classes need to be copied to the workers' namespaces.
+    pop = [toolbox.clone(i) for i in pop ]
     vmpop = []
-    for ind in pop:
-        #tempop.append(i,td)
-        vm = outils.VirtualModel()
+    def transform(ind):
+        vm = utilities.VirtualModel()
         param_dict={}
         for i,j in enumerate(ind):
             param_dict[trans_dict[i]] = str(j)
         vm.attrs = param_dict
-        rh_param = (False,0)
-        vmpop.append((vm,rh_param))
+        vm.name = vm.attrs
+        return vm
+    vmpop = dview.map_sync(transform, pop)
+    vmpop = list(copy.copy(vmpop))
+    return vmpop
 
-    searcher = outils.Utilities1.searcher
-    vmpop = dview.map_sync(outils.Utilities1.searcher,vmpop)
 
-    print(type(vmpop))
-    print(vmpop)
-    print('checkpoint 1 output from parallel map {0}'.format(vmpop))
-    rh_value = [ i.rheobase for i in vmpop]
-    print(rh_value)
+def check_rheobase(vmpop):
+    '''
+    inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
+    outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
+    Rationale, not every gene value will result in a model for which rheobase is found, in which case that gene is discarded, however to
+    compensate for losses in gene population size, more gene samples must be tested for a successful return from a rheobase search.
+    If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
+    corresponding virtual model objects.
+    '''
+    def check_fix_range2(vms):
+        '''
+        Inputs: lookup, A dictionary of previous current injection values
+        used to search rheobase
+        Outputs: A boolean to indicate if the correct rheobase current was found
+        and a dictionary containing the range of values used.
+        If rheobase was actually found then rather returning a boolean and a dictionary,
+        instead logical True, and the rheobase current is returned.
+        given a dictionary of rheobase search values, use that
+        dictionary as input for a subsequent search.
+        '''
+        import pdb
+        import copy
+        import numpy as np
+        import quantities as pq
+        sub=[]
+        supra=[]
+        steps=[]
+        vms.rheobase=0.0
+        for k,v in vms.lookup.items():
+            if v==1:
+                #A logical flag is returned to indicate that rheobase was found.
+                vms.rheobase=float(k)
+                vms.steps = 0.0
+                vms.boolean = True
+                return vms
+            elif v==0:
+                sub.append(k)
+            elif v>0:
+                supra.append(k)
 
-    def rbc(rh_value):
-        boolean_r_check=False
-        for r in rh_value:
-            print(r)
-            if type(r) is type(None):
-                print(type(r))
-                boolean_r_check == True
-        return boolean_r_check
+        sub=np.array(sub)
+        supra=np.array(supra)
 
-    while rbc(rh_value) is True:
-        pop,vmpop = replace_rh(pop,vmpop,rh_value)
-        rh_value = [ i.rheobase for i in vmpop ]
+        if len(sub)!=0 and len(supra)!=0:
+            #this assertion would only be wrong if there was a bug
+            print(str(bool(sub.max()>supra.min())))
+            assert not sub.max()>supra.min()
+        if len(sub) and len(supra):
+            everything=np.concatenate((sub,supra))
 
-    rh_value = [ toolbox.clone(i).rheobase for i in copy.copy(vmpop) ]
-    assert len(pop) == len(vmpop)
-    assert len(pop)!=0
-    assert len(vmpop)!=0
-    assert rbc(rh_value) is False
-    for y,x in enumerate(vmpop):
-        assert x.rheobase== rh_value[y]
-        print(x.rheobase)
-        assert type(x.rheobase) is not type(None)
-    return pop,vmpop,rh_value
+            center = np.linspace(sub.max(),supra.min(),7.0)
+            centerl = list(center)
+            for i,j in enumerate(centerl):
+                if i in list(everything):
+                    np.delete(center,i)
+                    del centerl[i]
+            #delete the index
+            #np.delete(center,np.where(everything is in center))
+            #make sure that element 4 in a seven element vector
+            #is exactly half way between sub.max() and supra.min()
+            center[int(len(center)/2)+1]=(sub.max()+supra.min())/2.0
+            steps = [ i*pq.pA for i in center ]
+
+        elif len(sub):
+            steps2 = np.linspace(sub.max(),2*sub.max(),7.0)
+            np.delete(steps2,np.array(sub))
+            steps = [ i*pq.pA for i in steps2 ]
+
+        elif len(supra):
+            steps2 = np.linspace(-2*(supra.min()),supra.min(),7.0)
+            np.delete(steps2,np.array(supra))
+            steps = [ i*pq.pA for i in steps2 ]
+
+        vms.steps = steps
+        vms.rheobase = None
+        return copy.copy(vms)
+
+
+    def check_current2(ampl,vm):
+        '''
+        Inputs are an amplitude to test and a virtual model
+        output is an virtual model with an updated dictionary.
+        '''
+
+        global model
+        import quantities as pq
+        import get_neab
+        from neuronunit.models import backends
+        from neuronunit.models.reduced import ReducedModel
+
+        DELAY = 100.0*pq.ms
+        DURATION = 1000.0*pq.ms
+        params = {'injected_square_current':
+                  {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+
+
+        model = ReducedModel(get_neab.LEMS_MODEL_PATH, name=str(vm.name), backend='NEURON')
+        model.load_model()
+        model.update_run_params(vm.attrs)
+        #print(type(model),type(self.model))
+        print('print model name {0}'.format(model.name))
+        if float(ampl) not in vm.lookup or len(vm.lookup)==0:
+
+            current = params.copy()['injected_square_current']
+
+            uc = {'amplitude':ampl}
+            current.update(uc)
+            current = {'injected_square_current':current}
+            vm.run_number += 1
+            model.update_run_params(vm.attrs)
+            model.inject_square_current(current)
+            vm.previous = ampl
+            n_spikes = model.get_spike_count()
+            vm.lookup[float(ampl)] = n_spikes
+            if n_spikes == 1:
+                vm.rheobase = float(ampl)
+                print(type(vm.rheobase))
+                print('current {0} spikes {1}'.format(vm.rheobase,n_spikes))
+                vm.name = str('rheobase {0} parameters {1}'.format(str(current),str(model.params)))
+                return vm
+
+            return vm
+        if float(ampl) in vm.lookup:
+            return vm
+
+    from itertools import repeat
+    import numpy as np
+    import copy
+    import pdb
+    import get_neab
+
+    def init_vm(vm):
+        import quantities as pq
+        import numpy as np
+        vm.boolean = False
+        steps = list(np.linspace(50,150,7.0))
+        steps_current = [ i*pq.pA for i in steps ]
+        vm.steps = steps_current
+        return vm
+
+    def find_rheobase(vms):
+        from neuronunit.models import backends
+        from neuronunit.models.reduced import ReducedModel
+        import get_neab
+        model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='place_holder',backend='NEURON')
+        model.load_model()
+        model.update_run_params(vms.attrs)
+        cnt = 0
+        while vms.boolean == False:
+            for step in vms.steps:
+                vms = check_current2(step,vms)#,repeat(vms))
+                vms = check_fix_range2(vms)
+                cnt+=1
+                print(cnt)
+        return vms
+    vmpop = dview.map_sync(init_vm,vmpop)
+    vmpop = list(vmpop)
+    vmpop = dview.map_sync(find_rheobase,vmpop)
+    vmpop = list(vmpop)
+    return vmpop
+
+
+
+'''
+rh_value = [ i.rheobase for i in vmpop ]
+def rbc(rh_value):
+    boolean_r_check=False
+    for r in rh_value:
+        print(r)
+        if type(r) is type(None):
+            print(type(r))
+            boolean_r_check == True
+    return boolean_r_check
+
+while rbc(rh_value) is True:
+    pop,vmpop = replace_rh(pop,vmpop,rh_value)
+    rh_value = [ i.rheobase for i in vmpop ]
+rh_value = [ toolbox.clone(i).rheobase for i in copy.copy(vmpop) ]
+assert len(pop) == len(vmpop)
+assert len(pop)!=0
+assert len(vmpop)!=0
+assert rbc(rh_value) is False
+'''
+    #return pop,vmpop,rh_value
 
 
 ##
@@ -496,26 +561,22 @@ trans_dict = get_trans_dict(param_dict)
 td = trans_dict
 dview.push({'trans_dict':trans_dict,'td':td})
 pop = toolbox.population(n = MU)
-print(pop)
 pop = [ toolbox.clone(i) for i in pop ]
 pf.update([toolbox.clone(i) for i in pop])
-pop,vmpop,rhstorage = list(update_vm_pop(pop,td))
-for y,x in enumerate(vmpop):
-    assert x.rheobase== rhstorage[y]
-    print(x.rheobase,rhstorage[y])
-assert len(pop) != 0
-print(type(pop),type(vmpop))
-assert len(pop) == len(vmpop)
-assert len(vmpop) != 0
-assert len(pop) != 0
-pf.update(pop)
-from itertools import repeat
-tuple_storage = zip(repeat(0),vmpop,rhstorage,repeat(outils))
-fitnesses = list(dview.map_sync(evaluate_e, pop, tuple_storage ))
+vmpop = update_vm_pop(pop, td)
+vmpop = check_rheobase(vmpop)
+fitnesses = []
+for key,value in enumerate(pop):
+    fitnesses.append(evaluate_e(value,vmpop[key]))
+    print(fitnesses[key])
+
+# eventually serial syntax above will be replaced with map, and then dview.map_sync
+
+#fitnesses = list(map(evaluate_e, pop, vmpop ))
+#fitnesses = list(dview.map_sync(evaluate_e, pop, vmpop ))
 invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
 for gen in range(1, NGEN):
 
-    #pop,vmpop,rhstorage = list(update_vm_pop(pop,td))
 
     invalid_ind = [ ind for ind in pop if ind.fitness.valid ]
     offspring = tools.selTournamentDCD(invalid_ind, len(invalid_ind))
@@ -529,16 +590,12 @@ for gen in range(1, NGEN):
         toolbox.mutate(ind1)
         toolbox.mutate(ind2)
         del ind1.fitness.values, ind2.fitness.values
-    pop,vmpop,rhstorage = list(update_vm_pop(pop,td))
 
-    rhstorage = [ i.rheobase for i in vmpop ]
-    #rhstorage = list(filter(lambda item: type(item.rheobase) is not type(None), vmpop))
-    #rhmean = np.mean([i.rheobase for i in rhstorage]) #/len(vmpop)
+    invalid_ind = [ ind for ind in offspring if ind.fitness.valid ]
 
-    invalid_ind = [ ind for ind in pop if ind.fitness.valid ]
-
-    tuple_storage = zip(repeat(gen),vmpop,rhstorage)
-    fitnesses = list(dview.map_sync(evaluate_e, offspring , tuple_storage))
+    vmpop = update_vm_pop(offspring, td)
+    vmpop = check_rheobase(vmpop)
+    fitnesses = list(dview.map_sync(evaluate_e, offspring , vmpop))
     for ind, fit in zip(offspring, fitnesses):
         ind.fitness.values = fit
     size_delta = MU-len(offspring)
@@ -546,7 +603,7 @@ for gen in range(1, NGEN):
     pop = toolbox.select(offspring, MU)
     print('the pareto front is: {0}'.format(pf))
 
-pop,vmpop,rhstorage = list(update_vm_pop(pop,td))
+pop,vmpop = list(update_vm_pop(pop,td))
 
 import pandas as pd
 scores = []
@@ -555,7 +612,6 @@ for j,i in enumerate(pf):
     scores.append(vmpop[j].score)
     print(vmpop[j].score)
 
-import pdb; pdb.set_trace()
 sc = pd.DataFrame(scores[0])
 sc
 data = [ pf[0].name ]
@@ -588,7 +644,9 @@ try:
 except:
     # The exception code is only skeletal, it would not actually work, but its the right principles.
     print('{0} it seems the error truth data does not yet exist, lets create it now '.format(str(False)))
-    ground_error = list(futures.map(outils.func2map, ground_truth))
+    ut = utilities.Utilities
+
+    ground_error = list(dview.map_sync(ut.func2map, ground_truth))
     pickle.dump(ground_error,open('big_model_evaulated.pickle','wb'))
 
 # ground_error_nsga=list(zip(vmpop,pop,invalid_ind))
