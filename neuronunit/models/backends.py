@@ -17,6 +17,8 @@ from neo.core import AnalogSignal
 import neuronunit.capabilities as cap
 import neuronunit.capabilities.spike_functions as sf
 
+import tempfile
+
 
 """NeuronUnit model Capabilities for NEURON models"""
 
@@ -78,10 +80,12 @@ class jNeuroMLBackend(Backend):
         self.run_params['injected_square_current'] = current
 
     def local_run(self):
+        self.exec_in_dir = tempfile.mkdtemp()
         f = pynml.run_lems_with_jneuroml
         result = f(self.lems_file_path, skip_run=self.skip_run,
                          nogui=self.run_params['nogui'],
-                         load_saved_data=True, plot=False,
+                         load_saved_data=False,
+                         plot=False,
                          verbose=self.run_params['v']
                          )
         return result
@@ -168,12 +172,39 @@ class NEURONBackend(Backend):
         self.h.cvode.active(1 if method == "variable" else 0)
 
 
+
+
+    def nan_inf_test(self,mp):
+        '''
+        Test if a HOC vector contains nans or infinities.
+        Check if a HOC recording vector of membrane potential contains nans or infinities.
+        Also check if it does not perturb due to stimulating current injection
+        '''
+        import math
+        if math.isnan in mp or float('inf') in mp or float('-inf') in mp:
+            return False
+
+        # The above clause asks does the MP consist of only \
+        # valid data types, where naan and inf are not valid.
+
+        for i in mp:
+            assert type(i)==np.float64
+            if math.isnan(i) or (i == float('inf')) or (i == float('-inf')):
+                return False
+
+        return True
+
+
+
     def get_membrane_potential(self):
         """
         Must return a neo.core.AnalogSignal.
         And must destroy the hoc vectors that comprise it.
         """
         import copy
+        import numpy as np
+        import math
+
 
         if self.h.cvode.active() == 0:
             fixedSignal = self.vVector.to_python()
@@ -190,11 +221,19 @@ class NEURONBackend(Backend):
         fidxedSignal=None
         self.h.dt=None
         self.fixedTimeStep=None
+
+        #boolean = self.nan_inf_test(fixedSignalcp)
+        #if boolean:
         return AnalogSignal( \
                  fixedSignalcp, \
                  units = mV, \
                  sampling_period = dt_py * ms \
         )
+        #else:
+        #    from sciunit import ErrorScore
+        #    return ErrorScore
+
+
 
     def get_variable_step_analog_signal(self):
         """ Converts variable dt array values to fixed dt array by using linear interpolation"""
@@ -362,7 +401,7 @@ class NEURONBackend(Backend):
         import neuron
         self.reset_h(neuron)
         self.update_run_params(self.params)
-        print(self.params)
+        #print(self.params)
         #self.re_init(self.attrs)
 
         c=copy.copy(current)
@@ -377,6 +416,7 @@ class NEURONBackend(Backend):
         self.h('explicitInput_'+str(self.current_src_name)+str(self.cell_name)+'_pop0.'+str('amplitude')+'='+str(amps))
         self.h('explicitInput_'+str(self.current_src_name)+str(self.cell_name)+'_pop0.'+str('duration')+'='+str(c['duration']))
         self.h('explicitInput_'+str(self.current_src_name)+str(self.cell_name)+'_pop0.'+str('delay')+'='+str(c['delay']))
+        print('explicitInput_'+str(self.current_src_name)+str(self.cell_name)+'_pop0.'+str('delay')+'='+str(c['delay']))
         self.local_run()
 
     def local_run(self):

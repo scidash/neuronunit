@@ -20,6 +20,8 @@ from neuronunit import neuroelectro
 from .channel import *
 from scoop import futures
 
+#import get_tau_module
+
 AMPL = 0.0*pq.pA
 DELAY = 100.0*pq.ms
 DURATION = 1000.0*pq.ms
@@ -82,6 +84,16 @@ class VmTest(sciunit.Test):
                                               provided.dimensionality.__str__())
                            )
                     raise sciunit.ObservationError(msg)
+    @classmethod
+    def nan_inf_test(self,mp):
+        '''
+        Check if a HOC recording vector of membrane potential contains nans or infinities.
+        Also check if it does not perturb due to stimulating current injection
+        '''
+        import math
+        if math.isnan in mp or float('inf') in mp or float('-inf') in mp:
+            return False
+        return True
 
     def bind_score(self, score, model, observation, prediction):
         score.related_data['vm'] = model.get_membrane_potential()
@@ -132,70 +144,9 @@ class VmTest(sciunit.Test):
                        'n': reference_data.n}
         return observation
 
-    def sanity_check(self,rheobase,model):
-        '''
-        check if the membrane potential and its derivative, constitute continuous differentiable
-        functions
-        If they don't output boolean false, such that the corresponding model can be discarded
-        inputs: a rheobase value and a model.
-        outputs: a boolean flag.
-        '''
-        self.params['injected_square_current']['delay'] = DELAY
-        self.params['injected_square_current']['duration'] = DURATION
-        self.params['injected_square_current']['amplitude'] = rheobase
-        model.inject_square_current(self.params['injected_square_current'])
-        import numpy as np
-        import copy
-        import math
-        def nan_test(mp):
-            x = np.array(mp).std()
-            if x <= 0:
-                return False
+    #def nan_inf_test(self,params):
 
-            for i in mp:
-                if type(i)==np.float64:
-                    if math.isnan(i):
-                        return False
-                    if (i == float('inf')) or (i == float('-inf')):
-                        return False
-                    if math.isnan(i):
-                        return False
 
-        #update run params is necessary to over write previous recording
-        #vectors
-        #Its also necessary to destroy and recreate the model in the HOC memory space
-        #As models that persist in memory, retained model charge from current injections,
-        #from past simulations.
-        model.update_run_params(model.params)
-        #mp = np.array(copy.copy(model.results['vm']))
-        mp = model.results['vm']
-        import math
-        for i in mp:
-            if math.isnan(i):
-                return False
-        boolean = True
-        boolean = nan_test(mp)
-        if boolean == False:
-            return False
-        self.params['injected_square_current']['amplitude'] = -10.0
-        model.inject_square_current(self.params['injected_square_current'])
-        model.update_run_params(model.params)
-        mp = np.array(copy.copy(model.results['vm']))
-        boolean = nan_test(mp)
-        if boolean == False:
-            return False
-
-        import neuronunit.capabilities as cap
-
-        sws=cap.spike_functions.get_spike_waveforms(model.get_membrane_potential())
-        for i,s in enumerate(sws):
-            s = np.array(s)
-            dvdt = np.diff(s)
-            import math
-            for j in dvdt:
-                if math.isnan(j):
-                    return False
-        return True
 
 
 class TestPulseTest(VmTest):
@@ -211,9 +162,6 @@ class TestPulseTest(VmTest):
     name = ''
 
     score_type = scores.ZScore
-
-    import pdb;
-    #pdb.set_trace()
 
 
 
@@ -249,9 +197,10 @@ class TestPulseTest(VmTest):
         # and pulse start, whichever is longer
         start = max(i['delay']-10*pq.ms,i['delay']/2)
         stop = i['duration']+i['delay']-1*pq.ms # 1 ms before pulse end
+        print('duration {0} delay {1}'.format(i['duration'],i['delay']))
         region = cls.get_segment(vm,start,stop)
         amplitude,tau,y0 = cls.exponential_fit(region, i['delay'])
-        #tau = tau /100000.0
+
         return tau
 
     @classmethod
@@ -272,14 +221,10 @@ class TestPulseTest(VmTest):
 
         def func(x, a, b, c):
             vm_fit[:offset] = c
-            vm_fit[offset:] = a * np.exp(-t[offset:]/b) + c
+            vm_fit[offset:,0] = a * np.exp(-t[offset:]/b) + c
             return vm_fit
-        print('length of vm_fit {0} offset number {1}'.format(len(vm_fit),offset))
-        #import pdb; pdb.set_trace()
+
         popt, pcov = curve_fit(func, t, vm, p0=guesses) # Estimate starting values for better convergence
-        #plt.plot(t,vm)
-        #plt.plot(t,func(t,*popt))
-        #print(popt)
         amplitude = popt[0]*pq.mV
         tau = popt[1]*pq.ms
         y0 = popt[2]*pq.mV
