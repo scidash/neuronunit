@@ -1,10 +1,8 @@
 
-#Assumption that this command was called via bash: ipcluster start -n 8 --profile=default &
+#Assumption that this file was executed after first executing the bash: ipcluster start -n 8 --profile=default &
 import sys
 import os
 import ipyparallel as ipp
-#[Errno 9] Bad file descriptor: '/home/jovyan/mnt/neuronunit/neuronunit/optimization/NeuroML2/LEMS_2007One.xml'
-
 from ipyparallel import depend, require, dependent
 
 rc = ipp.Client(profile='default');
