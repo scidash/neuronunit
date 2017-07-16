@@ -115,11 +115,7 @@ class NEURONBackend(Backend):
         self.h=None
         self.rheobase=None
         self.rheobase_memory=None
-
         self.invokenrn()
-
-
-
         return
     #make backend a global variable inside this class.
     backend = 'NEURON'
@@ -323,7 +319,7 @@ class NEURONBackend(Backend):
             self = cond_load()
         else:
             pynml.run_lems_with_jneuroml_neuron(self.orig_lems_file_path,
-                              skip_run=False,
+                              skip_run=True,
                               nogui=False,
                               load_saved_data=False,
                               only_generate_scripts = True,
@@ -401,8 +397,6 @@ class NEURONBackend(Backend):
         import neuron
         self.reset_h(neuron)
         self.update_run_params(self.params)
-        #print(self.params)
-        #self.re_init(self.attrs)
 
         c=copy.copy(current)
         if 'injected_square_current' in c.keys():
@@ -412,11 +406,15 @@ class NEURONBackend(Backend):
         c['duration'] = re.sub('\ ms$', '', str(c['duration']))
         c['amplitude'] = re.sub('\ pA$', '', str(c['amplitude']))
         #Todo want to convert from nano to pico amps using quantities.
-        amps=float(c['amplitude'])/1000.0 #This is the right scale.
+        amps = float(c['amplitude'])/1000.0 #This is the right scale.
+        #print('explicitInput_'+str(self.current_src_name)+str(self.cell_name)+'_pop0.'+str('delay')+'='+str(c['delay']))
+        #print('explicitInput_'+str(self.current_src_name)+str(self.cell_name)+'_pop0.'+str('amplitude')+'='+str(amps))
+
+
         self.h('explicitInput_'+str(self.current_src_name)+str(self.cell_name)+'_pop0.'+str('amplitude')+'='+str(amps))
         self.h('explicitInput_'+str(self.current_src_name)+str(self.cell_name)+'_pop0.'+str('duration')+'='+str(c['duration']))
         self.h('explicitInput_'+str(self.current_src_name)+str(self.cell_name)+'_pop0.'+str('delay')+'='+str(c['delay']))
-        print('explicitInput_'+str(self.current_src_name)+str(self.cell_name)+'_pop0.'+str('delay')+'='+str(c['delay']))
+
         self.local_run()
 
     def local_run(self):
