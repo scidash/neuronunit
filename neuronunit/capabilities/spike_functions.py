@@ -40,9 +40,8 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
         spike_train = neo.core.SpikeTrain([],t_start=spike_train.t_start,
                                              t_stop=spike_train.t_stop,
                                              units=spike_train.units)
-    vm = neo.AnalogSignalArray(vm,
-                                units=vm.units,
-                                sampling_rate=vm.sampling_rate)
+
+
     snippets = [vm.time_slice(t-width/2,t+width/2) for t in spike_train]
     #snippets = [vm[t-width/2:t+width/2] for t in spike_train]
     result = neo.core.AnalogSignal(np.array(snippets).T.squeeze(),
@@ -78,7 +77,9 @@ def spikes2widths(spike_waveforms):
     n_spikes = len(spike_waveforms)
     widths = []
     for s in spike_waveforms:
+
         x_high = int(np.argmax(s))
+        print('{0}{1}'.format(s,x_high))
         high = s[x_high]
         if x_high > 0:
             try: # Use threshold to compute half-max.
@@ -96,11 +97,16 @@ def spikes2widths(spike_waveforms):
             n_samples = sum(s>mid) # Number of samples above the half-max.
             widths.append(n_samples)
     widths = np.array(widths,dtype='float')
-    #print(widths,n_spikes,len(spike_waveforms))
+    print(widths,n_spikes,len(spike_waveforms))
     if n_spikes:
+        #dt = s[1]-s[0]
+        #print(dt)
+        T = 1.0/s.sampling_rate
+        widths = widths*T
         widths = widths*s.sampling_period # Convert from samples to time.
-        #print(widths,s.sampling_period,widths*s.sampling_period)
-    #print("Spike widths are %s" % str(widths))
+
+        print(widths,s.sampling_period,widths*s.sampling_period)
+    print("Spike widths are %s" % str(widths))
     return widths
 
 def spikes2thresholds(spike_waveforms):

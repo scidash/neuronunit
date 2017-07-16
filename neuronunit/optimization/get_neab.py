@@ -62,7 +62,7 @@ else:
 
     with open('neuroelectro.pickle', 'wb') as handle:
         pickle.dump(tests, handle)
-
+'''
 def update_amplitude(test,tests,score):
     rheobase = score.prediction['value']#first find a value for rheobase
     #then proceed with other optimizing other parameters.
@@ -76,5 +76,10 @@ def update_amplitude(test,tests,score):
 #Don't do the rheobase test. This is a serial bottle neck that must occur before any parallel optomization.
 #Its because the optimization routine must have apriori knowledge of what suprathreshold current injection values are for each model.
 hooks = {tests[0]:{'f':update_amplitude}} #This is a trick to dynamically insert the method
+'''
+
 #update amplitude at the location in sciunit thats its passed to, without any loss of generality.
-suite = sciunit.TestSuite("vm_suite",tests,hooks=hooks)
+del tests[-3]
+del tests[-2]
+del tests[-1]
+suite = sciunit.TestSuite("vm_suite",tests)#,hooks=hooks)
