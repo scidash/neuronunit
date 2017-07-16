@@ -84,15 +84,17 @@ class VmTest(sciunit.Test):
                                               provided.dimensionality.__str__())
                            )
                     raise sciunit.ObservationError(msg)
-    @classmethod
-    def nan_inf_test(self,mp):
+    #@classmethod
+    def nan_inf_test(mp):
         '''
         Check if a HOC recording vector of membrane potential contains nans or infinities.
         Also check if it does not perturb due to stimulating current injection
         '''
         import math
-        if math.isnan in mp or float('inf') in mp or float('-inf') in mp:
-            return False
+        mp = np.array(mp)
+        for i in mp:
+            if math.isnan(i) or i==float('inf') or i==float('-inf'):
+                return False
         return True
 
     def bind_score(self, score, model, observation, prediction):
@@ -166,7 +168,7 @@ class TestPulseTest(VmTest):
 
 
     params = {'injected_square_current':
-                {'amplitude':-10.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+                {'amplitude':-10.0*pq.pA, 'delay':30*pq.ms, 'duration':100*pq.ms}}
 
     def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
@@ -184,6 +186,7 @@ class TestPulseTest(VmTest):
     @classmethod
     def get_rin(cls, vm, i):
         start, stop = -11*pq.ms, -1*pq.ms
+
         before = cls.get_segment(vm,start+i['delay'],
                                      stop+i['delay'])
         after = cls.get_segment(vm,start+i['delay']+i['duration'],
@@ -197,14 +200,16 @@ class TestPulseTest(VmTest):
         # and pulse start, whichever is longer
         start = max(i['delay']-10*pq.ms,i['delay']/2)
         stop = i['duration']+i['delay']-1*pq.ms # 1 ms before pulse end
-        print('duration {0} delay {1}'.format(i['duration'],i['delay']))
+
         region = cls.get_segment(vm,start,stop)
+
         amplitude,tau,y0 = cls.exponential_fit(region, i['delay'])
 
         return tau
 
     @classmethod
     def exponential_fit(cls, segment, offset):
+
         t = segment.times.rescale('ms')
         start = t[0]
         offset = offset-start
@@ -220,11 +225,18 @@ class TestPulseTest(VmTest):
         vm_fit = vm.copy()
 
         def func(x, a, b, c):
+            '''
+            This function is simply the shape of exponential decay which must be differenced, its basically an ideal template
+            An exp decay equation derived from experiments.
+            For the model to compare against.
+            '''
             vm_fit[:offset] = c
             vm_fit[offset:,0] = a * np.exp(-t[offset:]/b) + c
-            return vm_fit
+            return vm_fit.squeeze()
 
-        popt, pcov = curve_fit(func, t, vm, p0=guesses) # Estimate starting values for better convergence
+        #popt, pcov = curve_fit(func, t, vm, p0=guesses) # Estimate starting values for better convergence
+        popt, pcov = curve_fit(func, t, vm.squeeze(), p0=guesses) # Estimate starting values for better convergence
+          #plt.plot(t,vm)
         amplitude = popt[0]*pq.mV
         tau = popt[1]*pq.ms
         y0 = popt[2]*pq.mV
@@ -246,6 +258,8 @@ class InputResistanceTest(TestPulseTest):
         """Implementation of sciunit.Test.generate_prediction."""
         i,vm = super(InputResistanceTest,self).\
                             generate_prediction(model)
+        i['duration'] = 100 * pq.ms
+
         r_in = self.__class__.get_rin(vm, i)
         r_in = r_in.simplified
         # Put prediction in a form that compute_score() can use.
@@ -268,7 +282,7 @@ class TimeConstantTest(TestPulseTest):
 
     def __init__(self):
         DURATION = 100*pq.ms
-        amplitude = -10*pq.mV
+        amplitude = -10*pq.pA
         DELAY = 30*pq.ms
         self.params['injected_square_current']['delay'] = DELAY
         self.params['injected_square_current']['duration'] = DURATION
@@ -352,6 +366,9 @@ class APWidthTest(VmTest):
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
         model.rerun = True
+
+        tvec = copy.copy(model.results['t'])
+        dt = (tvec[1]-tvec[0])*pq.ms
         widths = model.get_AP_widths()
         # Put prediction in a form that compute_score() can use.
         prediction = {'mean':np.mean(widths) if len(widths) else None,
@@ -525,6 +542,242 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
         return super(InjectedCurrentAPThresholdTest,self).\
                 generate_prediction(model)
 
+class VirtualModel:
+    '''
+    This is a pickable dummy clone
+    version of the NEURON simulation model
+    It does not contain an actual model, but it can be used to
+    wrap the real model.
+    This Object class serves as a data type for storing rheobase search
+    attributes and other useful parameters,
+    with the distinction that unlike the NEURON model this class
+    can be transported across HOSTS/CPUs
+    '''
+    def __init__(self):
+        self.lookup={}
+        self.trans_dict=None
+        self.rheobase=None
+        self.previous=0
+        self.run_number=0
+        self.attrs=None
+        self.steps=None
+        self.name=None
+        self.s_html=None
+        self.results=None
+        self.error=None
+        self.td = None
+        self.score = None
+
+
+class RheobaseTestNew(VmTest):
+    def check_rheobase(virtual_model):
+        '''
+        inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
+        outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
+        Rationale, not every gene value will result in a model for which rheobase is found, in which case that gene is discarded, however to
+        compensate for losses in gene population size, more gene samples must be tested for a successful return from a rheobase search.
+        If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
+        corresponding virtual model objects.
+        '''
+        def check_fix_range(vms):
+            '''
+            Inputs: lookup, A dictionary of previous current injection values
+            used to search rheobase
+            Outputs: A boolean to indicate if the correct rheobase current was found
+            and a dictionary containing the range of values used.
+            If rheobase was actually found then rather returning a boolean and a dictionary,
+            instead logical True, and the rheobase current is returned.
+            given a dictionary of rheobase search values, use that
+            dictionary as input for a subsequent search.
+            '''
+            import copy
+            import numpy as np
+            import quantities as pq
+            sub=[]
+            supra=[]
+            steps=[]
+            vms.rheobase=0.0
+            for k,v in vms.lookup.items():
+                if v==1:
+                    #A logical flag is returned to indicate that rheobase was found.
+                    vms.rheobase=float(k)
+                    vms.steps = 0.0
+                    vms.boolean = True
+                    return vms
+                elif v==0:
+                    sub.append(k)
+                elif v>0:
+                    supra.append(k)
+
+            sub=np.array(sub)
+            supra=np.array(supra)
+
+            if len(sub)!=0 and len(supra)!=0:
+                #this assertion would only be wrong if there was a bug
+                print(str(bool(sub.max()>supra.min())))
+                assert not sub.max()>supra.min()
+            if len(sub) and len(supra):
+                everything = np.concatenate((sub,supra))
+
+                center = np.linspace(sub.max(),supra.min(),7.0)
+                centerl = list(center)
+                for i,j in enumerate(centerl):
+                    if i in list(everything):
+                        np.delete(center,i)
+                        del centerl[i]
+                #delete the index
+                #np.delete(center,np.where(everything is in center))
+                #make sure that element 4 in a seven element vector
+                #is exactly half way between sub.max() and supra.min()
+                center[int(len(center)/2)+1]=(sub.max()+supra.min())/2.0
+                steps = [ i*pq.pA for i in center ]
+
+            elif len(sub):
+                steps2 = np.linspace(sub.max(),2*sub.max(),7.0)
+                np.delete(steps2,np.array(sub))
+                steps = [ i*pq.pA for i in steps2 ]
+
+            elif len(supra):
+                steps2 = np.linspace(-2*(supra.min()),supra.min(),7.0)
+                np.delete(steps2,np.array(supra))
+                steps = [ i*pq.pA for i in steps2 ]
+
+            vms.steps = steps
+            vms.rheobase = None
+            return copy.copy(vms)
+
+
+        def check_current(ampl,vm):
+            '''
+            Inputs are an amplitude to test and a virtual model
+            output is an virtual model with an updated dictionary.
+            '''
+
+            global model
+            import quantities as pq
+            import get_neab
+
+            from neuronunit.models import backends
+            from neuronunit.models.reduced import ReducedModel
+            #ar = rc[:].apply_async(os.getpid)
+            #pids = ar.get_dict()
+            #rc[:]['pid_map'] = pids
+            new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
+            #os.system('cp ' + str(get_neab.LEMS_MODEL_PATH)+str(' ') + new_file_path)
+            model = ReducedModel(new_file_path,name=str(vm.attrs),backend='NEURON')
+            model.load_model()
+            model.update_run_params(vm.attrs)
+
+            DELAY = 100.0*pq.ms
+            DURATION = 1000.0*pq.ms
+            params = {'injected_square_current':
+                      {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+
+
+            if float(ampl) not in vm.lookup or len(vm.lookup)==0:
+
+                current = params.copy()['injected_square_current']
+
+                uc = {'amplitude':ampl}
+                current.update(uc)
+                current = {'injected_square_current':current}
+                vm.run_number += 1
+                model.update_run_params(vm.attrs)
+                model.inject_square_current(current)
+                vm.previous = ampl
+                n_spikes = model.get_spike_count()
+                vm.lookup[float(ampl)] = n_spikes
+                if n_spikes == 1:
+                    vm.rheobase = float(ampl)
+                    print('current {0} spikes {1}'.format(vm.rheobase,n_spikes))
+                    vm.name = str('rheobase {0} parameters {1}'.format(str(current),str(model.params)))
+                    return vm
+
+                return vm
+            if float(ampl) in vm.lookup:
+                return vm
+
+        from itertools import repeat
+        import numpy as np
+        import copy
+        import pdb
+        import get_neab
+
+        def final_check(vms, pop):
+            '''
+            Not none can be drawn from.
+            '''
+            not_none = [ pop[k] for k,vm in enumerate(vms) if type(vm.rheobase) is not type(None) ]
+            for k,vm in enumerate(vms):
+                j = 0
+                ind = pop[k]
+                while type(vm.rheobase) is type(None):
+                    for key in range(0,len(pop[0])):
+                        ind[key] = np.mean([i[key] for i in pop])
+                    vm = None
+                    vm = update_vm_pop(ind)
+                    vm = init_vm(vm)
+                    vm = find_rheobase(vm)
+                    print('trying value {0}'.format(vm.rheobase))
+                    if type(vm.rheobase) is not type(None):
+                        print('rheobase value is updating {0}'.format(vm.rheobase))
+                        break
+                assert type(vm.rheobase) is not type(None)
+            return (vms, pop)
+
+        def init_vm(vm):
+            import quantities as pq
+            import numpy as np
+            vm.boolean = False
+            steps = list(np.linspace(-50,200,7.0))
+            steps_current = [ i*pq.pA for i in steps ]
+            vm.steps = steps_current
+            return vm
+
+        def find_rheobase(vm):
+            from neuronunit.models import backends
+            from neuronunit.models.reduced import ReducedModel
+            import get_neab
+            new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
+            #os.system('cp ' + str(get_neab.LEMS_MODEL_PATH)+str(' ') + new_file_path)
+            model = ReducedModel(new_file_path,name=str(vm.attrs),backend='NEURON')
+            #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str(vm.attrs),backend='NEURON')
+            model.load_model()
+            model.update_run_params(vm.attrs)
+            cnt = 0
+            while vm.boolean == False:# and cnt <21:
+                for step in vm.steps:
+                    vm = check_current(step, vm)#,repeat(vms))
+                    vm = check_fix_range(vm)
+                    cnt+=1
+            return vm
+        def generate_prediction(self, model):
+            virtual_model = utilities.VirtualModel()
+            virtual_model.attrs = model.params
+            virtual_model.name = vm.attrs
+            virtualmodel = init_vm(virtual_model)
+            virtualmodel = find_rheobase(virtual_model)
+            print('rheobase method{0}'.format(virtual_model.rheobase))
+            return virtual_model.rheobase
+
+        def compute_score(self, observation, prediction):
+            """Implementation of sciunit.Test.score_prediction."""
+            #print("%s: Observation = %s, Prediction = %s" % \
+            #	 (self.name,str(observation),str(prediction)))
+            if prediction['value'] is None:
+                score = scores.InsufficientDataScore(None)
+            else:
+                score = super(RheobaseTest,self).\
+                            compute_score(observation, prediction)
+                #self.bind_score(score,None,observation,prediction)
+            return score
+
+        def bind_score(self, score, model, observation, prediction):
+            super(RheobaseTest,self).bind_score(score, model,
+                                                observation, prediction)
+            if self.rheobase_vm is not None:
+                score.related_data['vm'] = self.rheobase_vm
+
 
 class RheobaseTestOriginal(VmTest):
     """
@@ -540,6 +793,8 @@ class RheobaseTestOriginal(VmTest):
     required_capabilities = (cap.ReceivesSquareCurrent,
                              cap.ProducesSpikes)
 
+    DELAY = 100.0*pq.ms
+    DURATION = 1000.0*pq.ms
     params = {'injected_square_current':
                 {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
@@ -674,6 +929,9 @@ class RheobaseTest(VmTest):
      required_capabilities = (cap.ReceivesSquareCurrent,
                               cap.ProducesSpikes)
 
+
+     DELAY = 100.0*pq.ms
+     DURATION = 1000.0*pq.ms
      params = {'injected_square_current':
                  {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
@@ -710,6 +968,8 @@ class RestingPotentialTest(VmTest):
 
     required_capabilities = (cap.ReceivesSquareCurrent,)
 
+    DELAY = 100.0*pq.ms
+    DURATION = 1000.0*pq.ms
     params = {'injected_square_current':
                 {'amplitude':0.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
@@ -737,7 +997,7 @@ class RestingPotentialTest(VmTest):
         """Implementation of sciunit.Test.generate_prediction."""
 
 
-        assert model!=None
+
         model.rerun = True
 
         model.inject_square_current(self.params['injected_square_current'])
