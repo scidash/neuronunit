@@ -189,14 +189,15 @@ def evaluate_e(vms):#This method must be pickle-able for scoop to work.
     Inputs a gene and a virtual model object.
     outputs are error components.
     '''
-
+    print('hello')
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
     import quantities as pq
     import numpy as np
     import get_neab
     import tempfile
-    new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
+    import copy
+    new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(pid_map[int(os.getpid())])
     model = ReducedModel(new_file_path,name=str(vms.attrs),backend='NEURON')
     model.load_model()
     assert type(vms.rheobase) is not type(None)
@@ -233,6 +234,7 @@ def evaluate_e(vms):#This method must be pickle-able for scoop to work.
 
         model.update_run_params(vms.attrs)
         score = get_neab.suite.judge(model, stop_on_error = False, deep_error = True)
+        print(score)
         vms.score = score
         model.run_number+=1
         # Run the model, then:
@@ -250,21 +252,92 @@ def evaluate_e(vms):#This method must be pickle-able for scoop to work.
                     error.append(-100.0)
                 else:
                     error.append(-1.0/np.abs((my_score)))
-        error.append(0)
-        error.append(0)
-        error.append(0)
+        #error.append(0)
+        #error.append(0)
+        #error.append(0)
     else:
         error = [ -100.0 for i in range(0,8) ]
-    score = None
-    model = None
-    get_neab.suite.tests = None
+    #score = None
+    #model = None
+    #get_neab.suite.tests = None
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
+
+
+
+def trivial(vms):#This method must be pickle-able for scoop to work.
+    '''
+    Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
+    is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
+    value, that was found in a previous rheobase search.
+
+    outputs: a tuple that is a compound error function that NSGA can act on.
+
+    Assumes rheobase for each individual virtual model object (vms) has already been found
+    there should be a check for vms.rheobase, and if not then error.
+    Inputs a gene and a virtual model object.
+    outputs are error components.
+    '''
+    print('hello')
+    from neuronunit.models import backends
+    from neuronunit.models.reduced import ReducedModel
+    import quantities as pq
+    import numpy as np
+    import get_neab
+
+    new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
+    model = ReducedModel(new_file_path,name=str(vms.attrs),backend='NEURON')
+    model.load_model()
+    assert type(vms.rheobase) is not type(None)
+    DELAY = 100.0*pq.ms
+    DURATION = 1000.0*pq.ms
+    AMPLITUDE = 100.0*pq.pA
+    params = {'injected_square_current':
+              {'amplitude':AMPLITUDE, 'delay':DELAY, 'duration':DURATION}}
+    model.update_run_params(vms.attrs)
+    tests = get_neab.suite.tests
+    for k,v in enumerate(tests):
+        if k == 0:
+            v.prediction = {}
+            v.prediction['value'] = vms.rheobase * pq.pA
+        if k == 1 or k == 2 or k == 3:
+            v.params['injected_square_current']['duration'] = 100 * pq.ms
+            v.params['injected_square_current']['amplitude'] = -10 *pq.pA
+            v.params['injected_square_current']['delay'] = 30 * pq.ms
+        if k == 4 or k == 5 or k == 7:
+            v.params['injected_square_current']['duration'] = 1000 * pq.ms
+            v.params['injected_square_current']['amplitude'] = vms.rheobase *pq.pA
+            v.params['injected_square_current']['delay'] = 100 * pq.ms
+
+
+    model.update_run_params(vms.attrs)
+    score = get_neab.suite.judge(model, stop_on_error = False)#, deep_error = True)
+    vms.score = score
+    model.run_number+=1
+    # Run the model, then:
+    error = []
+    other_mean = np.mean([i for i in score.sort_key.values.tolist()[0] if type(i) is not type(None)])
+    for my_score in score.sort_key.values.tolist()[0]:
+        if isinstance(my_score,sciunit.ErrorScore):
+            error.append(-100.0)
+        elif isinstance(my_score,type(None)):
+            error.append(other_mean)
+        else:
+            # The further away from zero the least the error.
+            # achieve this by going 1/RMS
+            if my_score == 0:
+                error.append(-100.0)
+            else:
+                error.append(-1.0/np.abs((my_score)))
+    #vms.fitness.valid = True
+    return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
+
 
 toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
 toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
 toolbox.decorate("mate", history.decorator)
 toolbox.decorate("mutate", history.decorator)
 toolbox.register("select", tools.selNSGA2)
+toolbox.register("map",dview.map_sync)
 
 
 
@@ -280,6 +353,7 @@ def plot_ss(vmlist,gen):
             #plt.xlabel(str(vmlist[j].attr))
     plt.savefig('snap_shot_at_gen_'+str(gen)+'.png')
     plt.clf()
+
 
 def get_trans_dict(param_dict):
     trans_dict = {}
@@ -483,7 +557,7 @@ def check_rheobase(vmpop,pop=None):
     vmpop = dview.map_sync(init_vm,vmpop)
     vmpop = list(vmpop)
 
-    vmpop = lview.map_sync(find_rheobase,vmpop)
+    vmpop = dview.map_sync(find_rheobase,vmpop)
     vmpop = list(vmpop)
     if type(pop) is not type(None):
         vmpop, pop = final_check(vmpop,pop)
@@ -499,7 +573,7 @@ def check_rheobase(vmpop,pop=None):
 
 NGEN = 3
 import numpy as np
-MU = 4
+MU = 12
 CXPB = 0.9
 pf = tools.ParetoFront()
 dview.push({'pf':pf})
@@ -532,26 +606,38 @@ except:
     with open(new_checkpoint_path,'wb') as handle:
         pickle.dump({'vmpop':vmpop,'pop':pop}, handle)
     cp = pickle.load(open(new_checkpoint_path,'rb'))
-#
-for i in vmpop:
-    print(i.rheobase, 'got here')
 
 # eventually serial syntax above will be replaced with map, and then dview.map_sync
 #fitnesses = list(map(evaluate_e, pop, vmpop ))
-fitnesses = list(dview.map_sync(evaluate_e, vmpop ))
-for i in fitnesses:
-    print('the fitness value is {0}'.format(i))
+##returned = list(dview.map_sync(trivial, copy.copy(vmpop) ))
+#for i in returned:
+#    print(i)
+#import copy
+toolbox.register("evaluate", trivial)
+fitnesses = toolbox.map(toolbox.evaluate, copy.copy(vmpop))
+
+for ind, fit in zip(pop, fitnesses):
+    ind.fitness.values = fit
+'''
+for k,v in enumerate(fitnesses):
+    ind = pop[k]
+    try:
+        assert ind.fitness.values
+    except:
+        ind.fitness.values = v
+        print('the fitness value is {0} {1}'.format(v , pop[k].fitness.values))
+'''
 checkpoint = {}
-checkpoint[0] = [ fitnesses, vmpop, pop ]
+checkpoint[0] = [ fitnesses, copy.copy(vmpop) ]
 import pickle
 with open('new_checkpoint_path.p','wb') as handle:
     pickle.dump(checkpoint,handle)
-invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
+checkpoint = None
+print(vmpop)
+#invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
+
 for gen in range(1, NGEN):
 
-
-    invalid_ind = [ ind for ind in pop if ind.fitness.valid ]
-    offspring = tools.selTournamentDCD(invalid_ind, len(invalid_ind))
     offspring = tools.selNSGA2(pop, len(pop))
     assert len(offspring)!=0
     offspring = [toolbox.clone(ind) for ind in offspring]
@@ -563,29 +649,15 @@ for gen in range(1, NGEN):
         toolbox.mutate(ind2)
         del ind1.fitness.values, ind2.fitness.values
 
-    invalid_ind = [ ind for ind in offspring if ind.fitness.valid ]
-    for i in fitnesses:
-        print('the fitness value is {0}'.format(i))
+    vmpop = update_vm_pop(copy.copy(offspring), td)
+    vmpop , _ = check_rheobase(copy.copy(vmpop))
 
-    vmpop = update_vm_pop(offspring, td)
-    vmpop = check_rheobase(vmpop)
-    fitnesses = list(dview.map_sync(evaluate_e, vmpop))
-
-    checkpoint[gen] = [fitnesses,vmpop,offspring]#,evaluate_e.tests.suite]
-    import pickle
-    new_checkpoint_path = str(checkpoint)+str(pid_map[int(os.getpid())])+str('.p')
-    with open('new_checkpoint_path.p','wb') as handle:
-        pickle.dump(checkpoint,handle)
-        #pickle.dump(handle,checkpoint)
-
-    for ind, fit in zip(offspring, fitnesses):
+    fitnesses = toolbox.map(toolbox.evaluate, copy.copy(vmpop))
+    for ind, fit in zip(opy.copy(offspring), fitnesses):
         ind.fitness.values = fit
-    size_delta = MU-len(offspring)
-    assert size_delta == 0
-    pop = toolbox.select(offspring, MU)
-    print('the pareto front is: {0}'.format(pf))
+    pop = offspring
 
-pop,vmpop = list(update_vm_pop(pop,td))
+vmpop = list(update_vm_pop(pop,td))
 
 import pandas as pd
 scores = []
