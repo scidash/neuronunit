@@ -607,26 +607,13 @@ except:
         pickle.dump({'vmpop':vmpop,'pop':pop}, handle)
     cp = pickle.load(open(new_checkpoint_path,'rb'))
 
-# eventually serial syntax above will be replaced with map, and then dview.map_sync
-#fitnesses = list(map(evaluate_e, pop, vmpop ))
-##returned = list(dview.map_sync(trivial, copy.copy(vmpop) ))
-#for i in returned:
-#    print(i)
-#import copy
+
 toolbox.register("evaluate", trivial)
 fitnesses = toolbox.map(toolbox.evaluate, copy.copy(vmpop))
 
 for ind, fit in zip(pop, fitnesses):
     ind.fitness.values = fit
-'''
-for k,v in enumerate(fitnesses):
-    ind = pop[k]
-    try:
-        assert ind.fitness.values
-    except:
-        ind.fitness.values = v
-        print('the fitness value is {0} {1}'.format(v , pop[k].fitness.values))
-'''
+
 checkpoint = {}
 checkpoint[0] = [ fitnesses, copy.copy(vmpop) ]
 import pickle
@@ -653,7 +640,7 @@ for gen in range(1, NGEN):
     vmpop , _ = check_rheobase(copy.copy(vmpop))
 
     fitnesses = toolbox.map(toolbox.evaluate, copy.copy(vmpop))
-    for ind, fit in zip(opy.copy(offspring), fitnesses):
+    for ind, fit in zip(copy.copy(offspring), fitnesses):
         ind.fitness.values = fit
     pop = offspring
 
