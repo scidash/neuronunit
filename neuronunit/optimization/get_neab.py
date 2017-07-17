@@ -34,8 +34,8 @@ tests = []
 
 dataset_id = 354190013  # Internal ID that AIBS uses for a particular Scnn1a-Tg2-Cre
                         # Primary visual area, layer 5 neuron.
-#observation = aibs.get_observation(dataset_id,'rheobase')
-
+observation = aibs.get_observation(dataset_id,'rheobase')
+print(observation)
 ne_pickle = os.path.join(THIS_DIR,"neuroelectro.pickle")
 
 if os.path.isfile(ne_pickle):
@@ -62,24 +62,19 @@ else:
 
     with open('neuroelectro.pickle', 'wb') as handle:
         pickle.dump(tests, handle)
-'''
 def update_amplitude(test,tests,score):
     rheobase = score.prediction['value']#first find a value for rheobase
     #then proceed with other optimizing other parameters.
     #for i in
 
 
-    for i in [4,5,6]:
+    for i in [tests[-3],tests[-2],tests[-1]]:
         # Set current injection to just suprathreshold
 
-        tests[i].params['injected_square_current']['amplitude'] = rheobase*1.01
+        i.params['injected_square_current']['amplitude'] = rheobase*1.01
 #Don't do the rheobase test. This is a serial bottle neck that must occur before any parallel optomization.
 #Its because the optimization routine must have apriori knowledge of what suprathreshold current injection values are for each model.
 hooks = {tests[0]:{'f':update_amplitude}} #This is a trick to dynamically insert the method
-'''
 
 #update amplitude at the location in sciunit thats its passed to, without any loss of generality.
-del tests[-3]
-del tests[-2]
-del tests[-1]
-suite = sciunit.TestSuite("vm_suite",tests)#,hooks=hooks)
+suite = sciunit.TestSuite("vm_suite",tests,hooks=hooks)
