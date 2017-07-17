@@ -254,6 +254,7 @@ class NEURONBackend(Backend):
         if os.path.exists(NEURON_file_path):
             self = cond_load()
         else:
+            self.exec_in_dir = tempfile.mkdtemp()
             pynml.run_lems_with_jneuroml_neuron(self.orig_lems_file_path,
                               skip_run=False,
                               nogui=False,
@@ -261,10 +262,9 @@ class NEURONBackend(Backend):
                               only_generate_scripts = True,
                               plot=False,
                               show_plot_already=False,
-                              exec_in_dir = ".",
+                              exec_in_dir = self.exec_in_dir,
                               verbose=DEFAULTS['v'],
                               exit_on_fail=True)
-
 
             self=cond_load()
             
