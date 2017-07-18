@@ -4,7 +4,7 @@ import sys
 import os
 import ipyparallel as ipp
 from ipyparallel import depend, require, dependent
-
+from ipyparallel.apps import iploggerapp
 rc = ipp.Client(profile='default');
 THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
 this_nu = os.path.join(THIS_DIR,'../../')
@@ -194,7 +194,7 @@ def trivial(vms):#This method must be pickle-able for scoop to work.
             v.params['injected_square_current']['duration'] = 100 * pq.ms
             v.params['injected_square_current']['amplitude'] = -10 *pq.pA
             v.params['injected_square_current']['delay'] = 30 * pq.ms
-        if k == 4 or k == 5 or k == 7:
+        if k == 5 or k == 6 or k == 7:
             v.params['injected_square_current']['duration'] = 1000 * pq.ms
             v.params['injected_square_current']['amplitude'] = vms.rheobase *pq.pA
             v.params['injected_square_current']['delay'] = 100 * pq.ms
@@ -202,23 +202,24 @@ def trivial(vms):#This method must be pickle-able for scoop to work.
 
     model.update_run_params(vms.attrs)
     score = get_neab.suite.judge(model, stop_on_error = False)#, deep_error = True)
-    vms.score = score
-    model.run_number+=1
+    vms.score = score.sort_key.values.tolist()[0]
+    print(vms.score)
+    model.run_number += 1
     # Run the model, then:
     error = []
     other_mean = np.mean([i for i in score.sort_key.values.tolist()[0] if type(i) is not type(None)])
     for my_score in score.sort_key.values.tolist()[0]:
         if isinstance(my_score,sciunit.ErrorScore):
-            error.append(-100.0)
+            error.append(100.0)
         elif isinstance(my_score,type(None)):
             error.append(other_mean)
         else:
             # The further away from zero the least the error.
             # achieve this by going 1/RMS
             if my_score == 0:
-                error.append(-100.0)
+                error.append(100.0)
             else:
-                error.append(-1.0/np.abs((my_score)))
+                error.append(1.0/np.abs((my_score)))
     #vms.fitness.valid = True
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
 
@@ -407,6 +408,7 @@ def check_rheobase(vmpop,pop=None):
                 print(type(vm.rheobase))
                 print('current {0} spikes {1}'.format(vm.rheobase,n_spikes))
                 vm.name = str('rheobase {0} parameters {1}'.format(str(current),str(model.params)))
+                vm.boolean = True
                 return vm
 
             return vm
@@ -420,13 +422,20 @@ def check_rheobase(vmpop,pop=None):
     import get_neab
 
     def init_vm(vm):
-        import quantities as pq
-        import numpy as np
-        vm.boolean = False
-        steps = list(np.linspace(-50,200,7.0))
-        steps_current = [ i*pq.pA for i in steps ]
-        vm.steps = steps_current
-        vm.init = True
+        if vm.init == True:
+            # expand values in the range to accomodate for mutation.
+            # but otherwise exploit memory of this range.
+            vm.steps = [ s * 1.5 for s in vm.steps ]
+            vm.init = True # logically unnecessary but included for readibility
+
+        if vm.init == False:
+            import quantities as pq
+            import numpy as np
+            vm.boolean = False
+            steps = list(np.linspace(-50,200,7.0))
+            steps_current = [ i*pq.pA for i in steps ]
+            vm.steps = steps_current
+            vm.init = True
         return vm
 
     def find_rheobase(vm):
@@ -440,6 +449,11 @@ def check_rheobase(vmpop,pop=None):
         model.load_model()
         model.update_run_params(vm.attrs)
         cnt = 0
+        # If this it not the first pass/ first generation
+        # then assume the rheobase value found before mutation still holds until proven otherwise.
+        if type(vm.rheobase) is not type(None):
+            vm = check_current(vm.rheobase,vm)
+        # If its not true enter a search, with ranges informed by memory
         while vm.boolean == False:
             for step in vm.steps:
                 vm = check_current(step, vm)
@@ -449,19 +463,14 @@ def check_rheobase(vmpop,pop=None):
 
     ## initialize where necessary.
 
-    for v in vmpop:
-        if v.init == False:
-            v = init_vm(v)
-        else:
-            # if one of the list is true, they are all true, thus skip over the iteration.
-            break
+    vmpop = list(dview.map_sync(init_vm,vmpop))
 
     # if a population has already been evaluated it may be faster to let it
     # keep its previous rheobase searching range where this
     # memory of a previous range as acts as a guess as the next mutations range.
 
-    vmpop = dview.map_sync(find_rheobase,vmpop)
-    vmpop = list(vmpop)
+    vmpop = list(dview.map_sync(find_rheobase,vmpop))
+    #vmpop = list(vmpop)
     if type(pop) is not type(None):
         vmpop, pop = final_check(vmpop,pop)
     return vmpop, pop
@@ -481,12 +490,11 @@ import numpy as np
 pf = tools.ParetoFront()
 
 stats = tools.Statistics(lambda ind: ind.fitness.values)
-stats.register("avg", np.mean, axis=0)
-stats.register("std", np.std, axis=0)
 stats.register("min", np.min, axis=0)
 stats.register("max", np.max, axis=0)
 logbook = tools.Logbook()
-logbook.header = "gen", "evals", "std", "min", "avg", "max"
+
+logbook.header = "gen", "evals", "min", "max"
 
 dview.push({'pf':pf})
 trans_dict = get_trans_dict(param_dict)
@@ -532,7 +540,7 @@ fitnesses = toolbox.map(toolbox.evaluate, copy.copy(vmpop))
 for ind, fit in zip(pop, fitnesses):
     ind.fitness.values = fit
 ### After an evaluation of error its appropriate to display error statistics
-
+#pf = tools.ParetoFront()
 pf.update([toolbox.clone(i) for i in pop])
 record = stats.compile(pop)
 logbook.record(gen=0, evals=len(pop), **record)
@@ -543,7 +551,6 @@ score_storage = [ v.score for v in vmpop ]
 
 
 for gen in range(1, NGEN):
-    print('gen {0}'.format(gen))
     offspring = tools.selNSGA2(pop, len(pop))
     assert len(offspring)!=0
     offspring = [toolbox.clone(ind) for ind in offspring]
@@ -557,12 +564,16 @@ for gen in range(1, NGEN):
 
     vmoffspring = update_vm_pop(copy.copy(offspring), td)
     vmoffspring , _ = check_rheobase(copy.copy(vmoffspring))
+    for i in vmoffspring:
+        print('the rheobase value is {0}'.format(i.rheobase))
+
     score_storage = [ v.score for v in vmoffspring ]
+    print(score_storage)
 
     fitnesses = toolbox.map(toolbox.evaluate, copy.copy(vmoffspring))
     for ind, fit in zip(copy.copy(offspring), fitnesses):
         ind.fitness.values = fit
-    pop = offspring
+    pop = copy.copy(offspring)
 
     ### After an evaluation of error its appropriate to display error statistics
 
@@ -570,27 +581,30 @@ for gen in range(1, NGEN):
     record = stats.compile([toolbox.clone(i) for i in pop])
     logbook.record(gen=gen, evals=len(pop), **record)
     print(logbook.stream)
+    assert len(vmoffspring) != 0
 
-vmpop = list(update_vm_pop(copy.copy(pop),td))
+#vmpop = list(update_vm_pop(copy.copy(pop),td))
 
-rhstorage = [ v.rheobase for v in vmpop ]
-score_storage = [ v.score for v in vmoffspring ]
-
+rhstorage = [ v.rheobase for v in copy.copy(vmoffspring) ]
+score_storage = [ v.score for v in copy.copy(vmoffspring) ]
+print(rhstorage)
+print(score_storage)
+print('unclear why vmoffspring: {0} and pareto front:  {1} of different lengths'.format(len(vmoffspring),len(pf)))
+print(pf)
 import pandas as pd
 scores = []
-for j,i in enumerate(pf):
-    i.name = vmpop[j].attrs
-    scores.append(vmpop[j].score)
-    print(vmpop[j].score)
+for vm in vmoffspring:
+    scores.append((vm.attrs,vm.score))
+    print(vm.score)
 
 sc = pd.DataFrame(scores[0])
 sc
-data = [ pf[0].attrs ]
+data = [ pf[0] ]
 model_values0 = pd.DataFrame(data)
 model_values0
 rhstorage[0]
 
-data = [ pf[1].attrs ]
+data = [ pf[1] ]
 model_values0 = pd.DataFrame(data)
 model_values0
 
@@ -605,7 +619,6 @@ data = [ pf[1].attrs ]
 model_values1 = pd.DataFrame(data)
 model_values1
 
-pf[1].name
 
 import pickle
 import pandas as pd
