@@ -50,7 +50,7 @@ with dview.sync_imports(): # Causes each of these things to be imported on the w
 
 
     import quantities as qt
-    import os
+    import os, sys
     import os.path
 
     import deap as deap
@@ -63,29 +63,11 @@ with dview.sync_imports(): # Causes each of these things to be imported on the w
     history = tools.History()
     import numpy as np
 
-    import quantities as pq
-    import numpy as np
-    import matplotlib.pyplot as plt
-    from scipy.optimize import curve_fit
     import sciunit
-    import os, sys
     thisnu = str(os.getcwd())+'/../..'
     sys.path.insert(0,thisnu)
     import sciunit.scores as scores
-    import neuronunit.capabilities as cap
-    #from scipy.optimize import curve_fit
-    required_capabilities = (cap.ReceivesSquareCurrent,
-                             cap.ProducesSpikes)
-    #params = {'injected_square_current':
-    #            {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
-    name = "Rheobase test"
-    description = ("A test of the rheobase, i.e. the minimum injected current "
-                   "needed to evoke at least one spike.")
-    score_type = scores.RatioScore
-    #lookup = {} # A lookup table global to the function below.
-    import quantities as pq
-    units = pq.pA
-    import copy
+
     #from itertools import repeat
 
 
@@ -153,12 +135,8 @@ def p_imports():
     toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
     toolbox.register("select", tools.selNSGA2)
     return
-    #model = outils.model
 dview.apply_sync(p_imports)
 
-#list_checkpoints(notebook_id)
-#create_checkpoint(notebook_id)
-#restore_checkpoint(notebook_id, checkpoint_id)
 BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
 BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
 NDIM = len(BOUND_UP)
@@ -176,93 +154,6 @@ toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
 toolbox.register("select", tools.selNSGA2)
 
 
-def evaluate_e(vms):#This method must be pickle-able for scoop to work.
-    '''
-    Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
-    is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
-    value, that was found in a previous rheobase search.
-
-    outputs: a tuple that is a compound error function that NSGA can act on.
-
-    Assumes rheobase for each individual virtual model object (vms) has already been found
-    there should be a check for vms.rheobase, and if not then error.
-    Inputs a gene and a virtual model object.
-    outputs are error components.
-    '''
-    print('hello')
-    from neuronunit.models import backends
-    from neuronunit.models.reduced import ReducedModel
-    import quantities as pq
-    import numpy as np
-    import get_neab
-    import tempfile
-    import copy
-    new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(pid_map[int(os.getpid())])
-    model = ReducedModel(new_file_path,name=str(vms.attrs),backend='NEURON')
-    model.load_model()
-    assert type(vms.rheobase) is not type(None)
-    DELAY = 100.0*pq.ms
-    DURATION = 1000.0*pq.ms
-    AMPLITUDE = 100.0*pq.pA
-    params = {'injected_square_current':
-              {'amplitude':AMPLITUDE, 'delay':DELAY, 'duration':DURATION}}
-    #get_neab.suite.tests[0].prediction = {}
-    #get_neab.suite.tests[0].prediction['value'] = vms.rheobase * pq.pA
-    sane = False
-    model.update_run_params(vms.attrs)
-    #from neuronunit import tests
-    for k,v in enumerate(get_neab.suite.tests):
-        if k == 0:
-            v.prediction = {}
-            v.prediction['value'] = vms.rheobase * pq.pA
-        if k == 1 or k == 2 or k == 3:
-            v.params['injected_square_current']['duration'] = 100 * pq.ms
-            v.params['injected_square_current']['amplitude'] = -10 *pq.pA
-            v.params['injected_square_current']['delay'] = 30 * pq.ms
-
-    model.update_run_params(vms.attrs)
-    model.inject_square_current(v.params)
-    vm = copy.copy(model.results['vm'])
-    #sane0 = tests.VmTest.nan_inf_test(vm)
-    sane = True
-
-    model.update_run_params(vms.attrs)
-    model.inject_square_current(params)
-    #sane1 = tests.VmTest.nan_inf_test(copy.copy(model.results['vm']))
-    #sane = sane0 and sane1
-    if (sane == True): #or n_spikes == 0  # Its possible that no rheobase was found
-
-        model.update_run_params(vms.attrs)
-        score = get_neab.suite.judge(model, stop_on_error = False, deep_error = True)
-        print(score)
-        vms.score = score
-        model.run_number+=1
-        # Run the model, then:
-        error = []
-        other_mean = np.mean([i for i in score.sort_key.values.tolist()[0] if type(i) is not type(None)])
-        for my_score in score.sort_key.values.tolist()[0]:
-            if isinstance(my_score,sciunit.ErrorScore):
-                error.append(-100.0)
-            elif isinstance(my_score,type(None)):
-                error.append(other_mean)
-            else:
-                # The further away from zero the least the error.
-                # achieve this by going 1/RMS
-                if my_score == 0:
-                    error.append(-100.0)
-                else:
-                    error.append(-1.0/np.abs((my_score)))
-        #error.append(0)
-        #error.append(0)
-        #error.append(0)
-    else:
-        error = [ -100.0 for i in range(0,8) ]
-    #score = None
-    #model = None
-    #get_neab.suite.tests = None
-    return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
-
-
 
 def trivial(vms):#This method must be pickle-able for scoop to work.
     '''
@@ -277,7 +168,6 @@ def trivial(vms):#This method must be pickle-able for scoop to work.
     Inputs a gene and a virtual model object.
     outputs are error components.
     '''
-    print('hello')
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
     import quantities as pq
@@ -310,7 +200,7 @@ def trivial(vms):#This method must be pickle-able for scoop to work.
 
 
     model.update_run_params(vms.attrs)
-    score = get_neab.suite.judge(model, stop_on_error = False)#, deep_error = True)
+    score = get_neab.suite.judge(model, stop_on_error = False, deep_error = True)
     vms.score = score
     model.run_number+=1
     # Run the model, then:
@@ -576,6 +466,15 @@ import numpy as np
 MU = 12
 CXPB = 0.9
 pf = tools.ParetoFront()
+
+stats = tools.Statistics(lambda ind: ind.fitness.values)
+stats.register("avg", np.mean, axis=0)
+stats.register("std", np.std, axis=0)
+stats.register("min", np.min, axis=0)
+stats.register("max", np.max, axis=0)
+logbook = tools.Logbook()
+logbook.header = "gen", "evals", "std", "min", "avg", "max"
+
 dview.push({'pf':pf})
 trans_dict = get_trans_dict(param_dict)
 td = trans_dict
@@ -593,10 +492,9 @@ try:
 except:
     pop = toolbox.population(n = MU)
     pop = [ toolbox.clone(i) for i in pop ]
-    pf.update([toolbox.clone(i) for i in pop])
     vmpop = update_vm_pop(pop, td)
     print(vmpop)
-    vmpop , _= check_rheobase(vmpop)
+    vmpop , _ = check_rheobase(vmpop)
     for i in vmpop:
         print('the rheobase value is {0}'.format(i.rheobase))
 
@@ -608,8 +506,18 @@ except:
     cp = pickle.load(open(new_checkpoint_path,'rb'))
 
 
+
 toolbox.register("evaluate", trivial)
 fitnesses = toolbox.map(toolbox.evaluate, copy.copy(vmpop))
+
+### After an evaluation of error its appropriate to display error statistics
+
+pf.update([toolbox.clone(i) for i in pop])
+record = stats.compile(pop)
+logbook.record(gen=0, evals=len(pop), **record)
+print(logbook.stream)
+
+score_storage = [ v.score for v in vmpop ]
 
 for ind, fit in zip(pop, fitnesses):
     ind.fitness.values = fit
@@ -621,10 +529,9 @@ with open('new_checkpoint_path.p','wb') as handle:
     pickle.dump(checkpoint,handle)
 checkpoint = None
 print(vmpop)
-#invalid_ind = [ ind for ind in pop if not ind.fitness.valid ]
 
 for gen in range(1, NGEN):
-
+    print('gen {0}'.format(gen))
     offspring = tools.selNSGA2(pop, len(pop))
     assert len(offspring)!=0
     offspring = [toolbox.clone(ind) for ind in offspring]
@@ -636,15 +543,25 @@ for gen in range(1, NGEN):
         toolbox.mutate(ind2)
         del ind1.fitness.values, ind2.fitness.values
 
-    vmpop = update_vm_pop(copy.copy(offspring), td)
-    vmpop , _ = check_rheobase(copy.copy(vmpop))
+    vmoffspring = update_vm_pop(copy.copy(offspring), td)
+    vmoffspring , _ = check_rheobase(copy.copy(vmoffspring))
+    score_storage = [ v.score for v in vmoffspring ]
 
-    fitnesses = toolbox.map(toolbox.evaluate, copy.copy(vmpop))
+    fitnesses = toolbox.map(toolbox.evaluate, copy.copy(vmoffspring))
     for ind, fit in zip(copy.copy(offspring), fitnesses):
         ind.fitness.values = fit
     pop = offspring
 
-vmpop = list(update_vm_pop(pop,td))
+    ### After an evaluation of error its appropriate to display error statistics
+
+    pf.update([toolbox.clone(i) for i in pop])
+    record = stats.compile([toolbox.clone(i) for i in pop])
+    logbook.record(gen=gen, evals=len(pop), **record)
+    print(logbook.stream)
+
+vmpop = list(update_vm_pop(copy.copy(pop),td))
+
+rhstorage = [ v.rheobase for v in vmpop ]
 
 import pandas as pd
 scores = []
