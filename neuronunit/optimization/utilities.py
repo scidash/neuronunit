@@ -1,5 +1,5 @@
 
-class VirtualModel:
+class VirtualModel(object):
     '''
     This is a pickable dummy clone
     version of the NEURON simulation model
@@ -23,7 +23,6 @@ class VirtualModel:
         self.score = None
         self.boolean = False
         self.init = False
-
 
 class Utilities:
     def __init__(self):
