@@ -56,6 +56,7 @@ with dview.sync_imports(): # Causes each of these things to be imported on the w
     import deap as deap
     import functools
     import utilities
+    print(utilities.__file__)
 
 
     import quantities as pq
@@ -82,8 +83,8 @@ def p_imports():
 
     #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
     model.load_model()
-    utilities.get_neab = get_neab
-    utilities.model = model
+    #utilities.get_neab = get_neab
+    #utilities.model = model
     return
 
 dview.apply_sync(p_imports)
@@ -174,7 +175,7 @@ def trivial(vms):#This method must be pickle-able for scoop to work.
     import numpy as np
     import get_neab
 
-    new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
+    new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(pid_map[os.getpid()])
     model = ReducedModel(new_file_path,name=str(vms.attrs),backend='NEURON')
     model.load_model()
     assert type(vms.rheobase) is not type(None)
@@ -200,7 +201,7 @@ def trivial(vms):#This method must be pickle-able for scoop to work.
 
 
     model.update_run_params(vms.attrs)
-    score = get_neab.suite.judge(model, stop_on_error = False, deep_error = True)
+    score = get_neab.suite.judge(model, stop_on_error = False)#, deep_error = True)
     vms.score = score
     model.run_number+=1
     # Run the model, then:
@@ -266,8 +267,11 @@ def update_vm_pop(pop, trans_dict):
     import numpy as np
     import copy
     pop = [toolbox.clone(i) for i in pop ]
+    from neuronunit.optimization import utilities
     def transform(ind):
+
         vm = utilities.VirtualModel()
+        print(vm.init)
         param_dict={}
         for i,j in enumerate(ind):
             param_dict[trans_dict[i]] = str(j)
@@ -281,7 +285,6 @@ def update_vm_pop(pop, trans_dict):
         vmpop = transform(pop)
     return vmpop
 
-#@depend(update_vm_pop,True)
 def check_rheobase(vmpop,pop=None):
     '''
     inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
@@ -423,6 +426,7 @@ def check_rheobase(vmpop,pop=None):
         steps = list(np.linspace(-50,200,7.0))
         steps_current = [ i*pq.pA for i in steps ]
         vm.steps = steps_current
+        vm.init = True
         return vm
 
     def find_rheobase(vm):
@@ -433,19 +437,28 @@ def check_rheobase(vmpop,pop=None):
 
         new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
         model = ReducedModel(new_file_path,name=str(vm.attrs),backend='NEURON')
-        #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str(vm.attrs),backend='NEURON')
         model.load_model()
         model.update_run_params(vm.attrs)
         cnt = 0
-        while vm.boolean == False:# and cnt <21:
+        while vm.boolean == False:
             for step in vm.steps:
-                vm = check_current(step, vm)#,repeat(vms))
+                vm = check_current(step, vm)
                 vm = check_fix_range(vm)
                 cnt+=1
         return vm
 
-    vmpop = dview.map_sync(init_vm,vmpop)
-    vmpop = list(vmpop)
+    ## initialize where necessary.
+
+    for v in vmpop:
+        if v.init == False:
+            v = init_vm(v)
+        else:
+            # if one of the list is true, they are all true, thus skip over the iteration.
+            break
+
+    # if a population has already been evaluated it may be faster to let it
+    # keep its previous rheobase searching range where this
+    # memory of a previous range as acts as a guess as the next mutations range.
 
     vmpop = dview.map_sync(find_rheobase,vmpop)
     vmpop = list(vmpop)
@@ -460,11 +473,11 @@ def check_rheobase(vmpop,pop=None):
 # Start of the Genetic Algorithm
 ##
 
-
+MU = 6
 NGEN = 3
-import numpy as np
-MU = 12
 CXPB = 0.9
+
+import numpy as np
 pf = tools.ParetoFront()
 
 stats = tools.Statistics(lambda ind: ind.fitness.values)
@@ -479,9 +492,13 @@ dview.push({'pf':pf})
 trans_dict = get_trans_dict(param_dict)
 td = trans_dict
 dview.push({'trans_dict':trans_dict,'td':td})
+'''
 new_checkpoint_path = str('rh_checkpoint')+str('.p')
+
 try:
+    assert 1 == 2
     assert open(new_checkpoint_path,'rb')
+    import pickle
     cp = pickle.load(open(new_checkpoint_path,'rb'))
     vmpop = cp['vmpop']
     pop = cp['pop']
@@ -490,26 +507,30 @@ try:
 
 
 except:
-    pop = toolbox.population(n = MU)
-    pop = [ toolbox.clone(i) for i in pop ]
-    vmpop = update_vm_pop(pop, td)
-    print(vmpop)
-    vmpop , _ = check_rheobase(vmpop)
-    for i in vmpop:
-        print('the rheobase value is {0}'.format(i.rheobase))
+'''
+pop = toolbox.population(n = MU)
+pop = [ toolbox.clone(i) for i in pop ]
+vmpop = update_vm_pop(pop, td)
+print(vmpop)
+vmpop , _ = check_rheobase(vmpop)
+for i in vmpop:
+    print('the rheobase value is {0}'.format(i.rheobase))
 
 
-    new_checkpoint_path = str('rh_checkpoint')+str('.p')
-    import pickle
-    with open(new_checkpoint_path,'wb') as handle:
-        pickle.dump({'vmpop':vmpop,'pop':pop}, handle)
-    cp = pickle.load(open(new_checkpoint_path,'rb'))
+new_checkpoint_path = str('rh_checkpoint')+str('.p')
+import pickle
+with open(new_checkpoint_path,'wb') as handle:
+    pickle.dump({'vmpop':vmpop,'pop':pop}, handle)
+#cp = pickle.load(open(new_checkpoint_path,'rb'))
 
 
 
 toolbox.register("evaluate", trivial)
+import copy
 fitnesses = toolbox.map(toolbox.evaluate, copy.copy(vmpop))
 
+for ind, fit in zip(pop, fitnesses):
+    ind.fitness.values = fit
 ### After an evaluation of error its appropriate to display error statistics
 
 pf.update([toolbox.clone(i) for i in pop])
@@ -519,16 +540,7 @@ print(logbook.stream)
 
 score_storage = [ v.score for v in vmpop ]
 
-for ind, fit in zip(pop, fitnesses):
-    ind.fitness.values = fit
 
-checkpoint = {}
-checkpoint[0] = [ fitnesses, copy.copy(vmpop) ]
-import pickle
-with open('new_checkpoint_path.p','wb') as handle:
-    pickle.dump(checkpoint,handle)
-checkpoint = None
-print(vmpop)
 
 for gen in range(1, NGEN):
     print('gen {0}'.format(gen))
@@ -562,6 +574,7 @@ for gen in range(1, NGEN):
 vmpop = list(update_vm_pop(copy.copy(pop),td))
 
 rhstorage = [ v.rheobase for v in vmpop ]
+score_storage = [ v.score for v in vmoffspring ]
 
 import pandas as pd
 scores = []
@@ -572,12 +585,12 @@ for j,i in enumerate(pf):
 
 sc = pd.DataFrame(scores[0])
 sc
-data = [ pf[0].name ]
+data = [ pf[0].attrs ]
 model_values0 = pd.DataFrame(data)
 model_values0
 rhstorage[0]
 
-data = [ pf[1].name ]
+data = [ pf[1].attrs ]
 model_values0 = pd.DataFrame(data)
 model_values0
 
@@ -588,7 +601,7 @@ sc1
 
 rhstorage[1]
 
-data = [ pf[1].name ]
+data = [ pf[1].attrs ]
 model_values1 = pd.DataFrame(data)
 model_values1
 

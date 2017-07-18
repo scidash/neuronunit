@@ -22,6 +22,7 @@ class VirtualModel:
         self.error = None
         self.score = None
         self.boolean = False
+        self.init = False
 
 
 class Utilities:

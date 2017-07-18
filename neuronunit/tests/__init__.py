@@ -366,9 +366,9 @@ class APWidthTest(VmTest):
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
         model.rerun = True
-
-        tvec = copy.copy(model.results['t'])
-        dt = (tvec[1]-tvec[0])*pq.ms
+        #import copy
+        #tvec = copy.copy(model.results['t'])
+        #dt = (tvec[1]-tvec[0])*pq.ms
         widths = model.get_AP_widths()
         # Put prediction in a form that compute_score() can use.
         prediction = {'mean':np.mean(widths) if len(widths) else None,
