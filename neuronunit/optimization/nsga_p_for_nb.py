@@ -1,5 +1,6 @@
 
 #Assumption that this file was executed after first executing the bash: ipcluster start -n 8 --profile=default &
+'''
 import sys
 import os
 import ipyparallel as ipp
@@ -7,8 +8,10 @@ from ipyparallel import depend, require, dependent
 #from ipyparallel.apps import iploggerapp
 rc = ipp.Client(profile='default')
 THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
+
 this_nu = os.path.join(THIS_DIR,'../../')
 sys.path.insert(0,this_nu)
+
 from neuronunit import tests
 rc[:].use_cloudpickle()
 inv_pid_map = {}
@@ -22,52 +25,11 @@ pid_map = {}
 #Map PIDs onto unique numeric global identifiers via a dedicated dictionary
 for k,v in inv_pid_map.items():
     pid_map[v] = k
+'''
 
 
 
 
-with dview.sync_imports(): # Causes each of these things to be imported on the workers as well as here.
-    import get_neab
-    import matplotlib
-    import neuronunit
-    import model_parameters as modelp
-
-    matplotlib.use('Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
-                          # on the worker threads.
-    import pdb
-    import array
-    import random
-    import sys
-
-    import numpy as np
-    import matplotlib.pyplot as plt
-    import quantities as pq
-    from deap import algorithms
-    from deap import base
-    from deap.benchmarks.tools import diversity, convergence, hypervolume
-    from deap import creator
-    from deap import tools
-
-
-    import quantities as qt
-    import os, sys
-    import os.path
-
-    import deap as deap
-    import functools
-    import utilities
-    print(utilities.__file__)
-
-
-    import quantities as pq
-    import neuronunit.capabilities as cap
-    history = tools.History()
-    import numpy as np
-
-    import sciunit
-    thisnu = str(os.getcwd())+'/../..'
-    sys.path.insert(0,thisnu)
-    import sciunit.scores as scores
 
     #from itertools import repeat
 
@@ -202,12 +164,10 @@ def trivial(vms):#This method must be pickle-able for scoop to work.
 
     model.update_run_params(vms.attrs)
     score = get_neab.suite.judge(model, stop_on_error = False)#, deep_error = True)
-    #vms.score = score.sort_key.values.tolist()[0]
-    #print(vms.score)
+    vms.score = copy.copy(score.sort_key.values.tolist()[0])
     model.run_number += 1
     # Run the model, then:
     error = []
-    vms.score = []
     other_mean = np.mean([i for i in score.sort_key.values.tolist()[0] if type(i) is not type(None)])
     for my_score in score.sort_key.values.tolist()[0]:
         if isinstance(my_score,sciunit.ErrorScore):
@@ -221,10 +181,7 @@ def trivial(vms):#This method must be pickle-able for scoop to work.
                 error.append(100.0)
             else:
                 error.append(1.0/np.abs((my_score)))
-                print(my_score)
-                vms.score.append(my_score)
     #vms.fitness.valid = True
-    vms.error = error
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
 
 
@@ -376,7 +333,7 @@ def check_rheobase(vmpop,pop=None):
 
         global model
         import quantities as pq
-        import get_neab
+        from neuronunit.optimization import get_neab
 
         from neuronunit.models import backends
         from neuronunit.models.reduced import ReducedModel
@@ -485,139 +442,122 @@ def check_rheobase(vmpop,pop=None):
 ##
 # Start of the Genetic Algorithm
 ##
+def main(NGEN,MU,model,modelp):
+	# MU = 6
+	# NGEN = 3
+	CXPB = 0.9
 
-MU = 6
-NGEN = 3
-CXPB = 0.9
+	import numpy as np
+	pf = tools.ParetoFront()
 
-import numpy as np
-pf = tools.ParetoFront()
+	stats = tools.Statistics(lambda ind: ind.fitness.values)
+	stats.register("avg", np.mean, axis=0)
+	stats.register("std", np.std, axis=0)
+	stats.register("min", np.min, axis=0)
+	stats.register("max", np.max, axis=0)
+	logbook = tools.Logbook()
+	logbook.header = "gen", "evals", "std", "min", "avg", "max"
 
-stats = tools.Statistics(lambda ind: ind.fitness.values)
-stats.register("min", np.min, axis=0)
-stats.register("max", np.max, axis=0)
-stats.register("avg", np.mean)
-stats.register("std", np.std)
+	dview.push({'pf':pf})
+	trans_dict = get_trans_dict(param_dict)
+	td = trans_dict
+	dview.push({'trans_dict':trans_dict,'td':td})
 
-logbook = tools.Logbook()
-
-logbook.header = "gen", "evals", "min", "max", "avg", "std"
-
-dview.push({'pf':pf})
-trans_dict = get_trans_dict(param_dict)
-td = trans_dict
-dview.push({'trans_dict':trans_dict,'td':td})
-
-pop = toolbox.population(n = MU)
-history.update(pop)
-pop = [ toolbox.clone(i) for i in pop ]
-vmpop = update_vm_pop(pop, td)
-print(vmpop)
-vmpop , _ = check_rheobase(vmpop)
-for i in vmpop:
-    print('the rheobase value is {0}'.format(i.rheobase))
+	pop = toolbox.population(n = MU)
+	pop = [ toolbox.clone(i) for i in pop ]
+	vmpop = update_vm_pop(pop, td)
+	print(vmpop)
+	vmpop , _ = check_rheobase(vmpop)
+	for i in vmpop:
+		print('the rheobase value is {0}'.format(i.rheobase))
 
 
-new_checkpoint_path = str('rh_checkpoint')+str('.p')
-import pickle
-with open(new_checkpoint_path,'wb') as handle:
-    pickle.dump({'vmpop':vmpop,'pop':pop}, handle)
-#cp = pickle.load(open(new_checkpoint_path,'rb'))
+	new_checkpoint_path = str('rh_checkpoint')+str('.p')
+	import pickle
+	with open(new_checkpoint_path,'wb') as handle:
+		pickle.dump({'vmpop':vmpop,'pop':pop}, handle)
+	#cp = pickle.load(open(new_checkpoint_path,'rb'))
 
 
 
-toolbox.register("evaluate", trivial)
-import copy
-fitnesses = toolbox.map(toolbox.evaluate, copy.copy(vmpop))
+	toolbox.register("evaluate", trivial)
+	import copy
+	fitnesses = toolbox.map(toolbox.evaluate, copy.copy(vmpop))
 
-for ind, fit in zip(pop, fitnesses):
-    ind.fitness.values = fit
-### After an evaluation of error its appropriate to display error statistics
-#pf = tools.ParetoFront()
-pf.update([toolbox.clone(i) for i in pop])
-record = stats.compile(pop)
-logbook.record(gen=0, evals=len(pop), **record)
-print(logbook.stream)
+	for ind, fit in zip(pop, fitnesses):
+		ind.fitness.values = fit
+	### After an evaluation of error its appropriate to display error statistics
 
-score_storage = [ v.score for v in vmpop ]
+	pf.update([toolbox.clone(i) for i in pop])
+	record = stats.compile(pop)
+	logbook.record(gen=0, evals=len(pop), **record)
+	print(logbook.stream)
 
-
-
-for gen in range(1, NGEN):
-    offspring = tools.selNSGA2(pop, len(pop))
-    assert len(offspring)!=0
-    offspring = [toolbox.clone(ind) for ind in offspring]
-    assert len(offspring)!=0
-    for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
-        if random.random() <= CXPB:
-            toolbox.mate(ind1, ind2)
-        toolbox.mutate(ind1)
-        toolbox.mutate(ind2)
-        del ind1.fitness.values, ind2.fitness.values
-
-    vmoffspring = update_vm_pop(copy.copy(offspring), td)
-    vmoffspring , _ = check_rheobase(copy.copy(vmoffspring))
-    for i in vmoffspring:
-        print('the rheobase value is {0}'.format(i.rheobase))
-
-    score_storage = [ v.score for v in vmoffspring ]
-    print(score_storage)
-
-    fitnesses = list(toolbox.map(toolbox.evaluate, copy.copy(vmoffspring)))
-
-    for ind, fit in zip(copy.copy(offspring), fitnesses):
-        ind.fitness.values = fit
-    pop = copy.copy(offspring)
-    history.update(pop)
-    ### After an evaluation of error its appropriate to display error statistics
-
-    pf.update([toolbox.clone(i) for i in pop])
-    record = stats.compile([toolbox.clone(i) for i in pop])
-    logbook.record(gen=gen, evals=len(pop), **record)
-    print(logbook.stream)
-    assert len(vmoffspring) != 0
-
-#vmpop = list(update_vm_pop(copy.copy(pop),td))
-
-    import networkx
-
-graph = networkx.DiGraph(history.genealogy_tree)
-graph = graph.reverse()     # Make the grah top-down
-
-rhstorage = [ v.rheobase for v in copy.copy(vmoffspring) ]
-score_storage = [ np.sum(v.score) for v in copy.copy(vmoffspring) ]
-
-score_storage_sum = [ np.sum(v.score) for v in copy.copy(vmoffspring) ]
-
-histories_pop = [ history.genealogy_history[i] for i in graph ]
-vm_histories = update_vm_pop(histories_pop,td)
-vm_histories , _ = check_rheobase(copy.copy(vm_histories))
-#colors = [ toolbox.evaluate(i) for i in vm_histories ]
-colors = list(toolbox.map(toolbox.evaluate, vm_histories))
+	score_storage = [ v.score for v in vmpop ]
 
 
-positions = networkx.graphviz_layout(graph, prog="dot")
-networkx.draw(graph, positions, node_color=colors)
-plt.savefig('genealogy_history.png')
 
-print(rhstorage)
-print(score_storage)
+	for gen in range(1, NGEN):
+		offspring = tools.selNSGA2(pop, len(pop))
+		assert len(offspring)!=0
+		offspring = [toolbox.clone(ind) for ind in offspring]
+		assert len(offspring)!=0
+		for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
+		    if random.random() <= CXPB:
+		        toolbox.mate(ind1, ind2)
+		    toolbox.mutate(ind1)
+		    toolbox.mutate(ind2)
+		    del ind1.fitness.values, ind2.fitness.values
+
+		vmoffspring = update_vm_pop(copy.copy(offspring), td)
+		vmoffspring , _ = check_rheobase(copy.copy(vmoffspring))
+		score_storage = [ v.score for v in vmoffspring ]
+		print(score_storage)
+
+		fitnesses = toolbox.map(toolbox.evaluate, copy.copy(vmoffspring))
+		for ind, fit in zip(copy.copy(offspring), fitnesses):
+		    ind.fitness.values = fit
+		pop = copy.copy(offspring)
+
+		### After an evaluation of error its appropriate to display error statistics
+
+		pf = pf.update([toolbox.clone(i) for i in pop])
+		record = stats.compile([toolbox.clone(i) for i in pop])
+		logbook.record(gen=gen, evals=len(pop), **record)
+		print(logbook.stream)
+	return logbook, pf, pop, vmoffspring
+
+from neuronunit.optimization import model_params
+
+
+from neuronunit.models import backends
+from neuronunit.models.reduced import ReducedModel
+from neuronunit.optimization import get_neab
+print(pid_map[int(os.getpid())])
+
+new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(pid_map[int(os.getpid())])
+this_model = ReducedModel(new_file_path,name=str(vm.attrs),backend='NEURON')
+logbook, pf, pop, vmoffspring = main(2,6,this_model,model_params)
+
+
+rhstorage = [ v.rheobase for v in vmoffspring ]
+score_storage = [ v.score for v in vmoffspring ]
 print('unclear why vmoffspring: {0} and pareto front:  {1} of different lengths'.format(len(vmoffspring),len(pf)))
-print(pf)
 import pandas as pd
 scores = []
-for vm in vmoffspring:
-    scores.append((vm.attrs,vm.score))
-    print(vm.score)
+for k,v in enumerate(pf):
+    v.name = vmoffspring[k].attrs
+    scores.append(vmoffspring[k].score)
+    print(vmoffspring[k].score)
 
 sc = pd.DataFrame(scores[0])
 sc
-data = [ pf[0] ]
+data = [ pf[0].attrs ]
 model_values0 = pd.DataFrame(data)
 model_values0
 rhstorage[0]
 
-data = [ pf[1] ]
+data = [ pf[1].attrs ]
 model_values0 = pd.DataFrame(data)
 model_values0
 
@@ -632,6 +572,7 @@ data = [ pf[1].attrs ]
 model_values1 = pd.DataFrame(data)
 model_values1
 
+pf[1].name
 
 import pickle
 import pandas as pd
