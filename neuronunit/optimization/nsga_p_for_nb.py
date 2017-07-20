@@ -1,16 +1,11 @@
 
 #Assumption that this file was executed after first executing the bash: ipcluster start -n 8 --profile=default &
-'''
+
 import sys
 import os
 import ipyparallel as ipp
-from ipyparallel import depend, require, dependent
-#from ipyparallel.apps import iploggerapp
-rc = ipp.Client(profile='default')
-THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
 
-this_nu = os.path.join(THIS_DIR,'../../')
-sys.path.insert(0,this_nu)
+rc = ipp.Client(profile='default')
 
 from neuronunit import tests
 rc[:].use_cloudpickle()
@@ -25,28 +20,14 @@ pid_map = {}
 #Map PIDs onto unique numeric global identifiers via a dedicated dictionary
 for k,v in inv_pid_map.items():
     pid_map[v] = k
-'''
-
-
-
-
-
-    #from itertools import repeat
-
-
 
 def p_imports():
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
-
     new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
     os.system('cp ' + str(get_neab.LEMS_MODEL_PATH)+str(' ') + new_file_path)
     model = ReducedModel(new_file_path,name='vanilla',backend='NEURON')
-
-    #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
     model.load_model()
-    #utilities.get_neab = get_neab
-    #utilities.model = model
     return
 
 dview.apply_sync(p_imports)
@@ -118,7 +99,7 @@ toolbox.register("select", tools.selNSGA2)
 
 
 
-def trivial(vms):#This method must be pickle-able for scoop to work.
+def evaluate(vms):#This method must be pickle-able for scoop to work.
     '''
     Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
     is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
@@ -163,11 +144,12 @@ def trivial(vms):#This method must be pickle-able for scoop to work.
 
 
     model.update_run_params(vms.attrs)
-    score = get_neab.suite.judge(model, stop_on_error = False)#, deep_error = True)
+    score = get_neab.suite.judge(model, stop_on_error = False, deep_error = True)
     vms.score = copy.copy(score.sort_key.values.tolist()[0])
     model.run_number += 1
     # Run the model, then:
     error = []
+    vms.score = []
     other_mean = np.mean([i for i in score.sort_key.values.tolist()[0] if type(i) is not type(None)])
     for my_score in score.sort_key.values.tolist()[0]:
         if isinstance(my_score,sciunit.ErrorScore):
@@ -181,7 +163,10 @@ def trivial(vms):#This method must be pickle-able for scoop to work.
                 error.append(100.0)
             else:
                 error.append(1.0/np.abs((my_score)))
+                print(my_score)
+                vms.score.append(my_score)
     #vms.fitness.valid = True
+    vms.error = error
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
 
 
@@ -191,6 +176,8 @@ toolbox.decorate("mate", history.decorator)
 toolbox.decorate("mutate", history.decorator)
 toolbox.register("select", tools.selNSGA2)
 toolbox.register("map",dview.map_sync)
+
+history = tools.History()
 
 
 
@@ -229,7 +216,8 @@ def update_vm_pop(pop, trans_dict):
     import numpy as np
     import copy
     pop = [toolbox.clone(i) for i in pop ]
-    from neuronunit.optimization import utilities
+    #from neuronunit.optimization
+    import utilities
     def transform(ind):
 
         vm = utilities.VirtualModel()
@@ -333,7 +321,7 @@ def check_rheobase(vmpop,pop=None):
 
         global model
         import quantities as pq
-        from neuronunit.optimization import get_neab
+        import get_neab
 
         from neuronunit.models import backends
         from neuronunit.models.reduced import ReducedModel
@@ -480,7 +468,7 @@ def main(NGEN,MU,model,modelp):
 
 
 
-	toolbox.register("evaluate", trivial)
+	toolbox.register("evaluate", evaluate)
 	import copy
 	fitnesses = toolbox.map(toolbox.evaluate, copy.copy(vmpop))
 
@@ -521,18 +509,25 @@ def main(NGEN,MU,model,modelp):
 
 		### After an evaluation of error its appropriate to display error statistics
 
+		history.update(pop)
+
+		### After an evaluation of error its appropriate to display error statistics
+
+
 		pf = pf.update([toolbox.clone(i) for i in pop])
 		record = stats.compile([toolbox.clone(i) for i in pop])
 		logbook.record(gen=gen, evals=len(pop), **record)
 		print(logbook.stream)
 	return logbook, pf, pop, vmoffspring
 
-from neuronunit.optimization import model_params
+#from neuronunit.optimization
+import model_params
 
 
 from neuronunit.models import backends
 from neuronunit.models.reduced import ReducedModel
-from neuronunit.optimization import get_neab
+#from neuronunit.optimization
+import get_neab
 print(pid_map[int(os.getpid())])
 
 new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(pid_map[int(os.getpid())])

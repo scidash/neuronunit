@@ -4,6 +4,11 @@ import sys
 import os
 import ipyparallel as ipp
 from ipyparallel import depend, require, dependent
+import networkx
+import graphviz
+
+from networkx.drawing.nx_agraph import graphviz_layout
+
 #from ipyparallel.apps import iploggerapp
 rc = ipp.Client(profile='default')
 THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
@@ -156,7 +161,7 @@ toolbox.register("select", tools.selNSGA2)
 
 
 
-def trivial(vms):#This method must be pickle-able for scoop to work.
+def evaluate(vms):#This method must be pickle-able for scoop to work.
     '''
     Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
     is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
@@ -201,7 +206,7 @@ def trivial(vms):#This method must be pickle-able for scoop to work.
 
 
     model.update_run_params(vms.attrs)
-    score = get_neab.suite.judge(model, stop_on_error = False)#, deep_error = True)
+    score = get_neab.suite.judge(model, stop_on_error = False, deep_error = True)
     #vms.score = score.sort_key.values.tolist()[0]
     #print(vms.score)
     model.run_number += 1
@@ -235,7 +240,12 @@ toolbox.decorate("mutate", history.decorator)
 toolbox.register("select", tools.selNSGA2)
 toolbox.register("map",dview.map_sync)
 
+toolbox.register("evaluate", evaluate)
 
+def sum_over(individual):
+    return sum(individual),
+
+toolbox.register("sum_over", sum_over)
 
 
 def plot_ss(vmlist,gen):
@@ -526,7 +536,7 @@ with open(new_checkpoint_path,'wb') as handle:
 
 
 
-toolbox.register("evaluate", trivial)
+
 import copy
 fitnesses = toolbox.map(toolbox.evaluate, copy.copy(vmpop))
 
@@ -565,11 +575,13 @@ for gen in range(1, NGEN):
 
     fitnesses = list(toolbox.map(toolbox.evaluate, copy.copy(vmoffspring)))
 
+
     for ind, fit in zip(copy.copy(offspring), fitnesses):
         ind.fitness.values = fit
+
     pop = copy.copy(offspring)
     history.update(pop)
-    ### After an evaluation of error its appropriate to display error statistics
+
 
     pf.update([toolbox.clone(i) for i in pop])
     record = stats.compile([toolbox.clone(i) for i in pop])
@@ -578,27 +590,28 @@ for gen in range(1, NGEN):
     assert len(vmoffspring) != 0
 
 #vmpop = list(update_vm_pop(copy.copy(pop),td))
+with open('complete_dump.p','wb') as handle:
+   pickle.dump([vmpop,pop,pf,history],handle)
 
-    import networkx
 
-graph = networkx.DiGraph(history.genealogy_tree)
-graph = graph.reverse()     # Make the grah top-down
+with open('complete_dump.p','rb') as handle:
+    variables = pickle.load(handle)
 
 rhstorage = [ v.rheobase for v in copy.copy(vmoffspring) ]
 score_storage = [ np.sum(v.score) for v in copy.copy(vmoffspring) ]
-
 score_storage_sum = [ np.sum(v.score) for v in copy.copy(vmoffspring) ]
 
-histories_pop = [ history.genealogy_history[i] for i in graph ]
-vm_histories = update_vm_pop(histories_pop,td)
-vm_histories , _ = check_rheobase(copy.copy(vm_histories))
-#colors = [ toolbox.evaluate(i) for i in vm_histories ]
-colors = list(toolbox.map(toolbox.evaluate, vm_histories))
-
-
-positions = networkx.graphviz_layout(graph, prog="dot")
+import networkx
+graph = networkx.DiGraph(history.genealogy_tree)
+graph = graph.reverse()
+colors = np.log([ toolbox.sum_over(history.genealogy_history[i])[0] for i in graph ])
+positions = graphviz_layout(graph, prog="dot")
+labels = [ p for p in history.genealogy_tree.keys(): print(history.genealogy_history[p])]
 networkx.draw(graph, positions, node_color=colors)
-plt.savefig('genealogy_history.png')
+plt.savefig('genealogy_history_{0}_.png'.format(gen))
+lists = [ history.genealogy_history[p] for p in history.genealogy_tree.keys() ]
+labels = []
+labels = [ v.attrs.values() for v in vmpop ]
 
 print(rhstorage)
 print(score_storage)
