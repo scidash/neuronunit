@@ -7,6 +7,11 @@ import re
 import copy
 import tempfile
 
+import neuronunit.capabilities as cap
+import neuronunit.neuron.capabilities as cap_n
+
+from quantities import ms, mV, nA
+
 from pyneuroml import pynml
 from quantities import ms, mV
 from neo.core import AnalogSignal
