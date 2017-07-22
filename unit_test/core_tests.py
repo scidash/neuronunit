@@ -28,7 +28,7 @@ class DocumentationTestCase(NotebookTools,unittest.TestCase):
 class EphysPropertiesTestCase(NotebookTools,unittest.TestCase):
     """Testing sciunit tests of ephys properties"""
 
-    path = 'unit_test'
+    path = '.'
 
     #@unittest.skip("Skipping get_tau test")
     def test_get_tau(self):
@@ -57,7 +57,7 @@ class NeuroElectroTestCase(unittest.TestCase):
 
 class BlueBrainTestCase(NotebookTools,unittest.TestCase):
      
-    path = 'unit_test'
+    path = '.'
     
     def test_bluebrain(self):
         self.do_notebook('bbp')
