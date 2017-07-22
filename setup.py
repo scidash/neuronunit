@@ -23,6 +23,7 @@ setup(
                       'matplotlib>=2.0',
                       'neo==0.5.1',
                       'elephant==0.4.1',
+                      'igor==0.3',
                       'sciunit==9999',
                       'allensdk==9999',
                       'pyneuroml==9999'],
