@@ -15,7 +15,7 @@ from quantities import ms, mV, nA
 from pyneuroml import pynml
 from quantities import ms, mV
 from neo.core import AnalogSignal
-
+import sciunit
 
 class Backend:
     """Base class for simulator backends that implement simulator-specific
@@ -112,11 +112,11 @@ class NEURONBackend(Backend):
 
     backend = 'NEURON'
 
-    def reset_h(self, hVariable):
+    def reset_neuron(self, neuronVar):
         """Sets the NEURON h variable"""
 
-        self.h = hVariable.h
-        self.neuron = hVariable
+        self.h = neuronVar.h
+        self.neuron = neuronVar
 
     def set_stop_time(self, stopTime = 1000*ms):
         """Sets the simulation duration
@@ -125,7 +125,7 @@ class NEURONBackend(Backend):
 
         tstop = stopTime
         tstop.units = ms
-        self.h.tstop = float(tstop)
+        self.tstop = float(tstop)
 
     def set_time_step(self, integrationTimeStep = 1/128.0 * ms):
         """Sets the simulation itegration fixed time step
@@ -135,7 +135,6 @@ class NEURONBackend(Backend):
 
         dt = integrationTimeStep
         dt.units = ms
-
         self.h.dt = self.fixedTimeStep = float(dt)
 
     def set_tolerance(self, tolerance = 0.001):
@@ -143,14 +142,21 @@ class NEURONBackend(Backend):
         tolerance: absolute tolerance value
         """
 
-        self.h.cvode.atol(tolerance)
+
+        self.cvode = self.h.CVode()
+        self.cvode.atol(tolerance)
+
 
     def set_integration_method(self, method = "fixed"):
         """Sets the simulation itegration method
         method: either "fixed" or "variable". Defaults to fixed.
         cvode is used when "variable" """
 
-        self.h.cvode.active(1 if method == "variable" else 0)
+        try:
+            assert self.cvode.active()
+        except:
+            self.cvode = self.h.CVode()
+            self.cvode.active(1 if method == "variable" else 0)
 
 
     def get_membrane_potential(self):
@@ -251,7 +257,7 @@ class NEURONBackend(Backend):
             #import the default simulation protocol
             from neuronunit.tests.NeuroML2.LEMS_2007One_nrn import NeuronSimulation
             #this next step may be unnecessary: TODO delete it and check.
-            self.ns = NeuronSimulation(tstop=1600, dt=0.0025)
+            self.ns = NeuronSimulation(self.tstop, dt=0.0025)
             return self
 
         architecture = platform.machine()
@@ -367,35 +373,41 @@ class HasSegment(sciunit.Capability):
 
         return self.section(self.location)
 
-class SingleCellModel(NEURONBackend, \
-                                    HasSegment, \
-                                    ProducesMembranePotential, \
-                                    ReceivesSquareCurrent, \
-                                    ProducesActionPotentials, \
-                                    ProducesSpikes):
-
-    """A NEURON simulator model for an isolated single cell membrane"""
-
+class SingleCellModel(NEURONBackend):
     def __init__(self, \
-                 hVar, \
+                 neuronVar, \
                  section, \
                  loc = 0.5, \
                  name=None):
+        super(SingleCellModel,self).__init__()#name=name, hVar=hVar)
+        hs = HasSegment()
+        hs.setSegment(section, loc)
+        self.reset_neuron(neuronVar)
+        self.section = section
+        self.loc = loc
+        self.name = name
+        #section = soma
+        #super(SingleCellModel,self).reset_neuron(self, neuronVar)
+        # Store voltage and time values
+        self.tVector = self.h.Vector()
+        self.vVector = self.h.Vector()
+        self.vVector.record(hs.getSegment()._ref_v)
+        self.tVector.record(self.h._ref_t)
+
+        return
+        ''',
+        cap_n.HasSegment,
+        cap.ProducesMembranePotential,
+        cap.ReceivesSquareCurrent,
+        cap.ProducesActionPotentials,
+        cap.ProducesSpikes):
+        A NEURON simulator model for an isolated single cell membrane
+        '''
+
+
         """
         hVar: the h variable of NEURON
         section: NEURON Section object of an isolated single cell into which current will be injected, and whose voltage will be observed.
         loc: the fraction along the Section object length that will be used for current injection and voltage observation.
         name: Optional model name.
         """
-
-        super(SingleCellModel,self).__init__(name=name, hVar=hVar)
-
-        self.setSegment(section, loc)
-
-        # Store voltage and time values
-        self.tVector = self.h.Vector()
-        self.vVector = self.h.Vector()
-        self.vVector.record(self.getSegment()._ref_v)
-        self.tVector.record(self.h._ref_t)
-
-        return
