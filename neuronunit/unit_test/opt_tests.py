@@ -5,6 +5,7 @@
 # python -m unittest core_tests.py
 # coverage run --source . core_tests.py
 
+os.system('pip install -e . --process-dependency-links .')
 import unittest
 import sys
 import os
