@@ -4,10 +4,20 @@ import sys
 import os
 import ipyparallel as ipp
 from ipyparallel import depend, require, dependent
-import networkx
-import graphviz
+#import networkx
+#import graphviz
 
-from networkx.drawing.nx_agraph import graphviz_layout
+import cProfile
+import atexit
+import os,sys
+def ProfExit(p):
+   p.disable()
+   prof_f_name = "%d"%os.getpid()
+   p.dump_stats("/root/profiles/%s"%prof_f_name)
+profile_hook = cProfile.Profile()
+atexit.register(ProfExit, profile_hook)
+profile_hook.enable()
+#from networkx.drawing.nx_agraph import graphviz_layout
 
 #from ipyparallel.apps import iploggerapp
 rc = ipp.Client(profile='default')
@@ -128,7 +138,7 @@ def p_imports():
     #from neuronunit.tests import utilities as outils
     BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
     BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
-    NDIM = len(BOUND_UP)
+    NDIM = len(BOUND_UP)+1
     def uniform(low, up, size=None):
         try:
             return [random.uniform(a, b) for a, b in zip(low, up)]
@@ -137,8 +147,11 @@ def p_imports():
     creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
     creator.create("Individual", list, fitness=creator.FitnessMin)
     toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
-    toolbox.register("Individual", tools.initIterate, creator.Individual, toolbox.attr_float)
-    toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
+    #toolbox.register("Individual", tools.initIterate, creator.Individual, toolbox.attr_float)
+    #toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
+    toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
+    toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+
     toolbox.register("select", tools.selNSGA2)
     return
 dview.apply_sync(p_imports)
@@ -158,8 +171,27 @@ toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
 toolbox.register("Individual", tools.initIterate, creator.Individual, toolbox.attr_float)
 toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
 toolbox.register("select", tools.selNSGA2)
+def prepare_tests(tests,vms):
+    for k,v in enumerate(tests):
+        if k == 0:
+            v.prediction = {}
+            v.prediction['value'] = vms.rheobase * pq.pA
+            print(v.prediction)
 
-
+        if k == 1 or k == 2 or k == 3:
+            # Negative square pulse current.
+            v.params['injected_square_current']['duration'] = 100 * pq.ms
+            v.params['injected_square_current']['amplitude'] = -10 *pq.pA
+            v.params['injected_square_current']['delay'] = 30 * pq.ms
+        if k == 0 or k == 5 or k == 6 or k == 7:
+            # Threshold current.
+            v.params['injected_square_current']['duration'] = 1000 * pq.ms
+            v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
+            v.params['injected_square_current']['delay'] = 100 * pq.ms
+            v.prediction = {}
+            v.prediction['value'] = vms.rheobase * pq.pA
+            print(v.prediction)
+        print(v.params)
 
 def evaluate(vms):#This method must be pickle-able for scoop to work.
     '''
@@ -184,51 +216,30 @@ def evaluate(vms):#This method must be pickle-able for scoop to work.
     model = ReducedModel(new_file_path,name=str(vms.attrs),backend='NEURON')
     model.load_model()
     assert type(vms.rheobase) is not type(None)
-    DELAY = 100.0*pq.ms
-    DURATION = 1000.0*pq.ms
-    AMPLITUDE = 100.0*pq.pA
-    params = {'injected_square_current':
-              {'amplitude':AMPLITUDE, 'delay':DELAY, 'duration':DURATION}}
     model.update_run_params(vms.attrs)
     tests = get_neab.suite.tests
-    for k,v in enumerate(tests):
-        if k == 0:
-            v.prediction = {}
-            v.prediction['value'] = vms.rheobase * pq.pA
-        if k == 1 or k == 2 or k == 3:
-            v.params['injected_square_current']['duration'] = 100 * pq.ms
-            v.params['injected_square_current']['amplitude'] = -10 *pq.pA
-            v.params['injected_square_current']['delay'] = 30 * pq.ms
-        if k == 5 or k == 6 or k == 7:
-            v.params['injected_square_current']['duration'] = 1000 * pq.ms
-            v.params['injected_square_current']['amplitude'] = vms.rheobase *pq.pA
-            v.params['injected_square_current']['delay'] = 100 * pq.ms
-
-
+    prepare_tests(get_neab.suite.tests,vms)
     model.update_run_params(vms.attrs)
     score = get_neab.suite.judge(model, stop_on_error = False, deep_error = True)
-    #vms.score = score.sort_key.values.tolist()[0]
-    #print(vms.score)
+    #vms.score = copy.copy(sciunit.ScoreMatrix(score))
+    print(score)
     model.run_number += 1
     # Run the model, then:
     error = []
     vms.score = []
     other_mean = np.mean([i for i in score.sort_key.values.tolist()[0] if type(i) is not type(None)])
+
     for my_score in score.sort_key.values.tolist()[0]:
+        print(my_score)
         if isinstance(my_score,sciunit.ErrorScore):
-            error.append(100.0)
+            error.append(10.0+other_mean)
+
         elif isinstance(my_score,type(None)):
             error.append(other_mean)
         else:
-            # The further away from zero the least the error.
-            # achieve this by going 1/RMS
-            if my_score == 0:
-                error.append(100.0)
-            else:
-                error.append(1.0/np.abs((my_score)))
-                print(my_score)
-                vms.score.append(my_score)
-    #vms.fitness.valid = True
+            error.append(my_score)
+    vms.evaluated = True
+    error = [ e for e in error ]
     vms.error = error
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
 
@@ -284,7 +295,6 @@ def update_vm_pop(pop, trans_dict):
     pop = [toolbox.clone(i) for i in pop ]
     from neuronunit.optimization import utilities
     def transform(ind):
-
         vm = utilities.VirtualModel()
         print(vm.init)
         param_dict={}
@@ -292,7 +302,9 @@ def update_vm_pop(pop, trans_dict):
             param_dict[trans_dict[i]] = str(j)
         vm.attrs = param_dict
         vm.name = vm.attrs
+        vm.evaluated = False
         return vm
+
     if len(pop) > 1:
         vmpop = dview.map_sync(transform, pop)
         vmpop = list(copy.copy(vmpop))
@@ -476,7 +488,7 @@ def check_rheobase(vmpop,pop=None):
         return vm
 
     ## initialize where necessary.
-
+    import time
     vmpop = list(dview.map_sync(init_vm,vmpop))
 
     # if a population has already been evaluated it may be faster to let it
@@ -496,8 +508,8 @@ def check_rheobase(vmpop,pop=None):
 # Start of the Genetic Algorithm
 ##
 
-MU = 6
-NGEN = 3
+MU = 8
+NGEN = 12
 CXPB = 0.9
 
 import numpy as np
@@ -539,9 +551,12 @@ with open(new_checkpoint_path,'wb') as handle:
 
 import copy
 fitnesses = toolbox.map(toolbox.evaluate, copy.copy(vmpop))
-
 for ind, fit in zip(pop, fitnesses):
     ind.fitness.values = fit
+
+history.update(pop)
+pop = tools.selNSGA2(pop, MU)
+
 ### After an evaluation of error its appropriate to display error statistics
 #pf = tools.ParetoFront()
 pf.update([toolbox.clone(i) for i in pop])
@@ -554,24 +569,30 @@ score_storage = [ v.score for v in vmpop ]
 
 
 for gen in range(1, NGEN):
-    offspring = tools.selNSGA2(pop, len(pop))
-    assert len(offspring)!=0
+    offspring = tools.selTournamentDCD(pop, len(pop))
+    #assert len(offspring)!=0
     offspring = [toolbox.clone(ind) for ind in offspring]
-    assert len(offspring)!=0
+    #assert len(offspring)!=0
     for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
         if random.random() <= CXPB:
             toolbox.mate(ind1, ind2)
         toolbox.mutate(ind1)
         toolbox.mutate(ind2)
+        # deleting the fitness values is what renders them invalid.
+        # The invalidness is used as a flag for recalculating them.
+        # Their fitneess needs deleting since the attributes which generated these values have been mutated
+        # and hence they need recalculating
+        # Mutation also implies breeding, if a gene is mutated it was also recently recombined.
         del ind1.fitness.values, ind2.fitness.values
-
-    vmoffspring = update_vm_pop(copy.copy(offspring), td)
+    invalid_ind = []
+    for ind in offspring:
+        if len(ind.fitness.values) == 0:
+            invalid_ind.append(ind)
+    # Need to make sure that update_vm_pop does not replace instances of the same model
+    # Thus waisting computation.
+    vmoffspring = update_vm_pop(copy.copy(invalid_ind), td)
+    not_evaluated = [ vm for vm in vmpop if vm.rheobase == False ]
     vmoffspring , _ = check_rheobase(copy.copy(vmoffspring))
-    for i in vmoffspring:
-        print('the rheobase value is {0}'.format(i.rheobase))
-
-    score_storage = [ v.score for v in vmoffspring ]
-    print(score_storage)
 
     fitnesses = list(toolbox.map(toolbox.evaluate, copy.copy(vmoffspring)))
 
@@ -579,40 +600,57 @@ for gen in range(1, NGEN):
     for ind, fit in zip(copy.copy(offspring), fitnesses):
         ind.fitness.values = fit
 
-    pop = copy.copy(offspring)
+    # Its possible that the offspring are worse than the parents of the penultimate generation
+    # Selecting from a gene pool of offspring and parents accomodates for that possibility.
+    # There are two selection stages as per the NSGA example.
+    # https://github.com/DEAP/deap/blob/master/examples/ga/nsga2.py
+    #pop = toolbox.select(pop + offspring, MU)
+    pop = tools.selNSGA2(pop + offspring, MU)
+
     history.update(pop)
 
 
     pf.update([toolbox.clone(i) for i in pop])
     record = stats.compile([toolbox.clone(i) for i in pop])
     logbook.record(gen=gen, evals=len(pop), **record)
+    means = np.array(logbook.select('avg'))
+    # if the means are not decreasing at least as an overall trend something is wrong.
+    assert means[-1] < means[-2]
     print(logbook.stream)
     assert len(vmoffspring) != 0
 
 #vmpop = list(update_vm_pop(copy.copy(pop),td))
 with open('complete_dump.p','wb') as handle:
-   pickle.dump([vmpop,pop,pf,history],handle)
+   pickle.dump([vmpop,pop,pf,history,logbook],handle)
 
 
-with open('complete_dump.p','rb') as handle:
-    variables = pickle.load(handle)
+#with open('complete_dump.p','rb') as handle:#
+#    variables = pickle.load(handle)
 
 rhstorage = [ v.rheobase for v in copy.copy(vmoffspring) ]
 score_storage = [ np.sum(v.score) for v in copy.copy(vmoffspring) ]
 score_storage_sum = [ np.sum(v.score) for v in copy.copy(vmoffspring) ]
 
+
+import net_graph
+net_graph.plot_log(logbook)
+net_graph.just_mean(logbook)
+plt.clf()
 import networkx
 graph = networkx.DiGraph(history.genealogy_tree)
 graph = graph.reverse()
-colors = np.log([ toolbox.sum_over(history.genealogy_history[i])[0] for i in graph ])
+labels ={}
+for i in graph.nodes():
+    labels[i] = i
+node_colors = [ np.sum(history.genealogy_history[i].fitness.values) for i in graph ]
 positions = graphviz_layout(graph, prog="dot")
-labels = [ p for p in history.genealogy_tree.keys(): print(history.genealogy_history[p])]
-networkx.draw(graph, positions, node_color=colors)
-plt.savefig('genealogy_history_{0}_.png'.format(gen))
-lists = [ history.genealogy_history[p] for p in history.genealogy_tree.keys() ]
-labels = []
-labels = [ v.attrs.values() for v in vmpop ]
-
+networkx.draw(graph, positions, node_color=node_colors, labels = labels)
+nodes=networkx.draw_networkx_nodes(graph,positions,node_color=node_colors)
+edges=networkx.draw_networkx_edges(graph,positions,width=0.5,edge_cmap=plt.cm.Blues)
+plt.sci(nodes)
+plt.colorbar()
+plt.sci(edges)
+plt.savefig('genealogy_history_{0}_.eps'.format('4343'))
 print(rhstorage)
 print(score_storage)
 print('unclear why vmoffspring: {0} and pareto front:  {1} of different lengths'.format(len(vmoffspring),len(pf)))
