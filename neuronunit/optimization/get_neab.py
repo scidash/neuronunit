@@ -74,7 +74,7 @@ def update_amplitude(test,tests,score):
         i.params['injected_square_current']['amplitude'] = rheobase*1.01
 #Don't do the rheobase test. This is a serial bottle neck that must occur before any parallel optomization.
 #Its because the optimization routine must have apriori knowledge of what suprathreshold current injection values are for each model.
-hooks = {tests[0]:{'f':update_amplitude}} #This is a trick to dynamically insert the method
+#hooks = {tests[0]:{'f':update_amplitude}} #This is a trick to dynamically insert the method
 
 #update amplitude at the location in sciunit thats its passed to, without any loss of generality.
-suite = sciunit.TestSuite("vm_suite",tests,hooks=hooks)
+suite = sciunit.TestSuite("vm_suite",tests)#,hooks=hooks)

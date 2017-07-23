@@ -1,4 +1,5 @@
-from pyneuroml import pynml
+"""Simulator backends for NeuronUnit models"""
+
 import os
 import platform
 import sciunit
