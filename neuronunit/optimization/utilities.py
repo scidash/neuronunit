@@ -23,6 +23,8 @@ class VirtualModel(object):
         self.score = None
         self.boolean = False
         self.init = False
+        #self.fitness.evaluated = False
+        self.evaluated = False
 
 class Utilities:
     def __init__(self):
