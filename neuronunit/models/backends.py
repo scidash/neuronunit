@@ -8,10 +8,15 @@ import copy
 import tempfile
 import pickle
 
+import neuronunit.capabilities as cap
+import neuronunit.neuron.capabilities as cap_n
+
+from quantities import ms, mV, nA
+
 from pyneuroml import pynml
 from quantities import ms, mV
 from neo.core import AnalogSignal
-
+import sciunit
 
 class Backend:
     """Base class for simulator backends that implement simulator-specific
@@ -41,7 +46,7 @@ class Backend:
         pass
 
     def check_run_params(self):
-        """Check to see if the run parameters are reasonable for this model 
+        """Check to see if the run parameters are reasonable for this model
         class.  Raise a sciunit.BadParameterValueError if any of them are not.
         """
         pass
@@ -80,7 +85,7 @@ class jNeuroMLBackend(Backend):
     def set_run_params(self, **params):
         super(jNeuroMLBackend,self).set_run_params(**params)
         self.set_lems_run_params()
-        
+
     def inject_square_current(self, current):
         self.set_run_params(injected_square_current=current)
 
@@ -98,7 +103,7 @@ class jNeuroMLBackend(Backend):
 class NEURONBackend(Backend):
     """Used for simulation with NEURON, a popular simulator
     http://www.neuron.yale.edu/neuron/
-    Units used by NEURON are sometimes different to quantities/neo 
+    Units used by NEURON are sometimes different to quantities/neo
     (note nA versus pA)
     http://neurosimlab.org/ramcd/pyhelp/modelspec/programmatic/mechanisms/mech.html#IClamp
     NEURON's units:
@@ -109,7 +114,7 @@ class NEURONBackend(Backend):
     """
 
     def init_backend(self, attrs=None):
-        
+
         self.neuron = None
         self.model_path = None
         from neuron import h
@@ -122,14 +127,14 @@ class NEURONBackend(Backend):
         #pdb.set_trace()
         #self.h.cvode.active
         super(NEURONBackend,self).init_backend(attrs)
-    
+
     backend = 'NEURON'
 
-    def reset_h(self, hVariable):
+    def reset_neuron(self, neuronVar):
         """Sets the NEURON h variable"""
 
-        self.h = hVariable.h
-        self.neuron = hVariable
+        self.h = neuronVar.h
+        self.neuron = neuronVar
 
     def set_stop_time(self, stopTime = 1000*ms):
         """Sets the simulation duration
@@ -138,17 +143,16 @@ class NEURONBackend(Backend):
 
         tstop = stopTime
         tstop.units = ms
-        self.h.tstop = float(tstop)
+        self.tstop = float(tstop)
 
     def set_time_step(self, integrationTimeStep = 1/128.0 * ms):
         """Sets the simulation itegration fixed time step
-        integrationTimeStepMs: time step in milliseconds. 
+        integrationTimeStepMs: time step in milliseconds.
         Powers of two preferred. Defaults to 1/128.0
         """
 
         dt = integrationTimeStep
         dt.units = ms
-
         self.h.dt = self.fixedTimeStep = float(dt)
 
     def set_tolerance(self, tolerance = 0.001):
@@ -156,36 +160,43 @@ class NEURONBackend(Backend):
         tolerance: absolute tolerance value
         """
 
-        self.h.cvode.atol(tolerance)
+
+        self.cvode = self.h.CVode()
+        self.cvode.atol(tolerance)
+
 
     def set_integration_method(self, method = "fixed"):
         """Sets the simulation itegration method
-        method: either "fixed" or "variable". Defaults to fixed. 
+        method: either "fixed" or "variable". Defaults to fixed.
         cvode is used when "variable" """
 
-        self.h.cvode.active(1 if method == "variable" else 0)
+        try:
+            assert self.cvode.active()
+        except:
+            self.cvode = self.h.CVode()
+            self.cvode.active(1 if method == "variable" else 0)
 
 
     def get_membrane_potential(self):
         """Must return a neo.core.AnalogSignal.
         And must destroy the hoc vectors that comprise it.
         """
-        
+
         if self.h.cvode.active() == 0:
             dt = float(copy.copy(self.h.dt))
             fixed_signal = copy.copy(self.vVector.to_python())
         else:
             dt = float(copy.copy(self.fixedTimeStep))
             fixed_signal =copy.copy(self.get_variable_step_analog_signal())
-            
+
         self.h.dt = None
         self.fixedTimeStep = None
-        return AnalogSignal(fixed_signal, 
-                            units = mV, 
+        return AnalogSignal(fixed_signal,
+                            units = mV,
                             sampling_period = dt * ms)
 
     def get_variable_step_analog_signal(self):
-        """Converts variable dt array values to fixed 
+        """Converts variable dt array values to fixed
         dt array by using linear interpolation"""
 
         # Fixed dt potential
@@ -243,11 +254,11 @@ class NEURONBackend(Backend):
         """
         Inputs: NEURONBackend instance object
         Outputs: nothing mutates input object.
-        Take a declarative model description, and convert it 
+        Take a declarative model description, and convert it
         into an implementation, stored in a pyhoc file.
-        import the pyhoc file thus dragging the neuron variables 
+        import the pyhoc file thus dragging the neuron variables
         into memory/python name space.
-        Since this only happens once outside of the optimization 
+        Since this only happens once outside of the optimization
         loop its a tolerable performance hit.
         """
 
@@ -264,7 +275,7 @@ class NEURONBackend(Backend):
             #import the default simulation protocol
             from neuronunit.tests.NeuroML2.LEMS_2007One_nrn import NeuronSimulation
             #this next step may be unnecessary: TODO delete it and check.
-            self.ns = NeuronSimulation(tstop=1600, dt=0.0025)
+            self.ns = NeuronSimulation(self.tstop, dt=0.0025)
             return self
 
         architecture = platform.machine()
@@ -272,6 +283,7 @@ class NEURONBackend(Backend):
         if os.path.exists(NEURON_file_path):
             self = cond_load()
         else:
+            self.exec_in_dir = tempfile.mkdtemp()
             pynml.run_lems_with_jneuroml_neuron(self.orig_lems_file_path,
                               skip_run=False,
                               nogui=False,
@@ -279,13 +291,12 @@ class NEURONBackend(Backend):
                               only_generate_scripts = True,
                               plot=False,
                               show_plot_already=False,
-                              exec_in_dir = ".",
+                              exec_in_dir = self.exec_in_dir,
                               verbose=DEFAULTS['v'],
                               exit_on_fail=True)
 
-
             self=cond_load()
-            
+
         #Although the above approach successfuly instantiates a LEMS/neuroml model in pyhoc
         #the resulting hoc variables for current source and cell name are idiosyncratic (not generic).
         #The resulting idiosyncracies makes it hard not have a hard coded approach make non hard coded, and generalizable code.
@@ -361,3 +372,61 @@ class NEURONBackend(Backend):
         else:
             results['run_number']=1
         return results
+
+class HasSegment(sciunit.Capability):
+    """Model has a membrane segment of NEURON simulator"""
+
+    def setSegment(self, section, location = 0.5):
+        """Sets the target NEURON segment object
+        section: NEURON Section object
+        location: 0.0-1.0 value that refers to the location
+        along the section length. Defaults to 0.5
+        """
+
+        self.section = section
+        self.location = location
+
+    def getSegment(self):
+        """Returns the segment at the active section location"""
+
+        return self.section(self.location)
+
+class SingleCellModel(NEURONBackend):
+    def __init__(self, \
+                 neuronVar, \
+                 section, \
+                 loc = 0.5, \
+                 name=None):
+        super(SingleCellModel,self).__init__()#name=name, hVar=hVar)
+        hs = HasSegment()
+        hs.setSegment(section, loc)
+        self.reset_neuron(neuronVar)
+        self.section = section
+        self.loc = loc
+        self.name = name
+        #section = soma
+        #super(SingleCellModel,self).reset_neuron(self, neuronVar)
+        # Store voltage and time values
+        self.tVector = self.h.Vector()
+        self.vVector = self.h.Vector()
+        self.vVector.record(hs.getSegment()._ref_v)
+        self.tVector.record(self.h._ref_t)
+
+        return
+        ''',
+        cap_n.HasSegment,
+        cap.ProducesMembranePotential,
+        cap.ReceivesSquareCurrent,
+        cap.ProducesActionPotentials,
+        cap.ProducesSpikes):
+        A NEURON simulator model for an isolated single cell membrane
+        '''
+
+
+        """
+        hVar: the h variable of NEURON
+        section: NEURON Section object of an isolated single cell into which current will be injected, and whose voltage will be observed.
+        loc: the fraction along the Section object length that will be used for current injection and voltage observation.
+        name: Optional model name.
+        """
+>>>>>>> 777f422d2b2c2a3453643e5a3d95079d2769a822
