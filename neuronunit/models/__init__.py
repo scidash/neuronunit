@@ -37,7 +37,6 @@ class LEMSModel(backends.Backend,
         self.rerun = True # Needs to be rerun since it hasn't been run yet!
         if name is None:
             name = os.path.split(self.lems_file_path)[1].split('.')[0]
-        self.init_backend()
 
     def __new__(cls, *args, **kwargs):
         backend = 'jNeuroML' if 'backend' not in kwargs else kwargs['backend']
@@ -58,9 +57,17 @@ class LEMSModel(backends.Backend,
             args = []
             kwargs = {}
         elif isinstance(backend,(tuple,list)):
-            name = backend[0]
-            args = backend[1]
-            kwargs = backend[2]
+            name = ''
+            args = []
+            kwargs = {}
+            for i in range(len(backend)):
+                if i==0:
+                    name = backend[i]
+                else:
+                    if isinstance(backend[i],dict):
+                        kwargs.update(backend[i])
+                    else:
+                        args += backend[i]  
         else:
             raise TypeError("Backend must be string, tuple, or list")
         options = {x.replace('Backend',''):cls for x, cls \
@@ -69,7 +76,7 @@ class LEMSModel(backends.Backend,
                    issubclass(cls, backends.Backend)}
         if name in options:
             self.backend = name
-            self._backend = options[name](*args,**kwargs)
+            self._backend = options[name]()
             # Add all of the backend's methods to the model instance
             #self.__class__.__bases__ = tuple(set((self._backend.__class__,) + \
             #                            self.__class__.__bases__))
@@ -84,6 +91,7 @@ class LEMSModel(backends.Backend,
         else:
             raise Exception("Backend %s not found in backends.py" \
                             % name)
+        self.init_backend(*args, **kwargs)
 
     def create_lems_file(self, name):
         if not hasattr(self,'temp_dir'):
@@ -112,6 +120,7 @@ class LEMSModel(backends.Backend,
                 self.set_run_params(**{key:value})
         if (not rerun) and hasattr(self,'last_run_params') and \
            self.run_params == self.last_run_params:
+            print("Same run_params; skipping...")
             return
         #self.update_run_params(self.attrs)
 

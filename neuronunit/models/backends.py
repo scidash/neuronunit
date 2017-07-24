@@ -6,6 +6,7 @@ import time
 import re
 import copy
 import tempfile
+import pickle
 
 from pyneuroml import pynml
 from quantities import ms, mV
@@ -17,8 +18,8 @@ class Backend:
     details of modifying, running, and reading results from the simulation
     """
 
-    def init_backend(self, attrs=None):
-        self.attrs = {} if attrs is None else attrs
+    def init_backend(self, *args, **kwargs):
+        #self.attrs = {} if attrs is None else attrs
         self.load_model()
 
     attrs = None
@@ -49,6 +50,23 @@ class Backend:
         """Load the model into memory"""
         pass
 
+    def save_results(self, path='.'):
+        with open(path,'wb') as f:
+            pickle.dump(self.results,f)
+
+
+class DiskBackend(Backend):
+    """A dummy backend that loads pre-computed results from disk"""
+
+    def init_backend(self, results_path='.'):
+        self.results_path = results_path
+        self.rerun = True
+        super(DiskBackend,self).init_backend()
+
+    def local_run(self, **run_params):
+        with open(self.results_path, 'rb') as f:
+            results = pickle.load(f)
+        return results
 
 class jNeuroMLBackend(Backend):
     """Used for simulation with jNeuroML, a reference simulator for NeuroML"""
@@ -69,12 +87,12 @@ class jNeuroMLBackend(Backend):
     def local_run(self):
         f = pynml.run_lems_with_jneuroml
         self.exec_in_dir = tempfile.mkdtemp()
-        result = f(self.lems_file_path, skip_run=self.skip_run,
+        results = f(self.lems_file_path, skip_run=self.skip_run,
                     nogui=self.run_params['nogui'],
                     load_saved_data=True, plot=False,
                     exec_in_dir=self.exec_in_dir,
                     verbose=self.run_params['v'])
-        return result
+        return results
 
 
 class NEURONBackend(Backend):
@@ -331,15 +349,15 @@ class NEURONBackend(Backend):
         #sim_end = time.time()
         #sim_time = sim_end - sim_start
         #print("Finished NEURON simulation in %f seconds (%f mins)..."%(sim_time, sim_time/60.0))
-        self.results={}
+        results={}
         # Convert to Python list for speed, variable has dim: voltage
-        self.results['vm'] = [float(x/1000.0) for x in copy.copy(self.neuron.h.v_v_of0.to_python())]  
+        results['vm'] = [float(x/1000.0) for x in copy.copy(self.neuron.h.v_v_of0.to_python())]  
         #self.neuron.h.v_v_of0 = None # Convert to Python list for speed, variable has dim: voltage
         # Convert to Python list for speed, variable has dim: voltage
-        self.results['t'] = [float(x) for x in copy.copy(self.neuron.h.v_time.to_python())]
+        results['t'] = [float(x) for x in copy.copy(self.neuron.h.v_time.to_python())]
         #self.neuron.h.v_time = None
         if 'run_number' in self.results.keys():
-            self.results['run_number']=self.results['run_number']+1
+            results['run_number']=self.results['run_number']+1
         else:
-            self.results['run_number']=1
-        return self.results
+            results['run_number']=1
+        return results
