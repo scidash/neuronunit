@@ -429,4 +429,3 @@ class SingleCellModel(NEURONBackend):
         loc: the fraction along the Section object length that will be used for current injection and voltage observation.
         name: Optional model name.
         """
->>>>>>> 777f422d2b2c2a3453643e5a3d95079d2769a822
