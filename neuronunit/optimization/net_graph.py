@@ -17,6 +17,7 @@ def plot_performance_profile():
 
 
     import os
+    import subprocess
     os.system('sudo /opt/conda/bin/pip install gprof2dot')
     os.system('cp /opt/conda/lib/python3.5/site-packages/gprof2dot.py .')
     prof_f_name = '{0}'.format(os.getpid())
@@ -25,7 +26,7 @@ def plot_performance_profile():
     file_name = 'NeuroML2/{0}'.format(prof_f_name)
     f.close()
 
-    os.system('python gprof2dot.py -f -n0 -e0 pstats {0}  | dot -Tsvg -o {0}.svg'.format(prof_f_name))
+    subprocess('python gprof2dot.py -f -n0 -e0 pstats {0}  | dot -Tsvg -o {0}.svg'.format(prof_f_name))
 
 def graph_s(graph):
 
