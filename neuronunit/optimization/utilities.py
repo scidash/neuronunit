@@ -23,6 +23,7 @@ class VirtualModel(object):
         self.score = None
         self.boolean = False
         self.init = False
+        self.deltas = []
         #self.fitness.evaluated = False
         self.evaluated = False
 

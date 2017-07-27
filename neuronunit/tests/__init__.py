@@ -245,6 +245,8 @@ class TestPulseTest(VmTest):
 
 class InputResistanceTest(TestPulseTest):
     """Tests the input resistance of a cell."""
+    def _extra(self):
+        self.prediction = None
 
     name = "Input resistance test"
 
@@ -263,8 +265,8 @@ class InputResistanceTest(TestPulseTest):
         r_in = self.__class__.get_rin(vm, i)
         r_in = r_in.simplified
         # Put prediction in a form that compute_score() can use.
-        prediction = {'value':r_in}
-        return prediction
+        self.prediction = {'value':r_in}
+        return self.prediction
 
 
 
@@ -279,6 +281,8 @@ class TimeConstantTest(TestPulseTest):
     units = pq.ms
 
     ephysprop_name = 'Membrane Time Constant'
+    def _extra(self):
+        self.prediction = None
 
     def __init__(self):
         DURATION = 100*pq.ms
@@ -294,9 +298,9 @@ class TimeConstantTest(TestPulseTest):
         tau = self.__class__.get_tau(vm, i)
         tau = tau.simplified
         # Put prediction in a form that compute_score() can use.
-        prediction = {'value':tau}
+        self.prediction = {'value':tau}
 
-        return prediction
+        return self.prediction
 
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
@@ -314,6 +318,8 @@ class TimeConstantTest(TestPulseTest):
 
 class CapacitanceTest(TestPulseTest):
     """Tests the input resistance of a cell."""
+    def _extra(self):
+        self.prediction = None
 
     name = "Capacitance test"
 
@@ -330,8 +336,8 @@ class CapacitanceTest(TestPulseTest):
         tau = self.__class__.get_tau(vm, i)
         c = (tau/r_in).simplified
         # Put prediction in a form that compute_score() can use.
-        prediction = {'value':c}
-        return prediction
+        self.prediction = {'value':c}
+        return self.prediction
 
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
@@ -347,7 +353,8 @@ class CapacitanceTest(TestPulseTest):
 
 class APWidthTest(VmTest):
     """Tests the full widths of action potentials at their half-maximum."""
-
+    def _extra(self):
+        self.prediction = None
     required_capabilities = (cap.ProducesActionPotentials,)
 
     name = "AP width test"
@@ -371,10 +378,10 @@ class APWidthTest(VmTest):
         #dt = (tvec[1]-tvec[0])*pq.ms
         widths = model.get_AP_widths()
         # Put prediction in a form that compute_score() can use.
-        prediction = {'mean':np.mean(widths) if len(widths) else None,
+        self.prediction = {'mean':np.mean(widths) if len(widths) else None,
                       'std':np.std(widths) if len(widths) else None,
                       'n':len(widths)}
-        return prediction
+        return self.prediction
 
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
@@ -391,7 +398,8 @@ class InjectedCurrentAPWidthTest(APWidthTest):
     Tests the full widths of APs at their half-maximum
     under current injection.
     """
-
+    def _extra(self):
+        self.prediction = None
     required_capabilities = (cap.ReceivesSquareCurrent,)
 
     params = {'injected_square_current':
@@ -405,7 +413,8 @@ class InjectedCurrentAPWidthTest(APWidthTest):
 
     def generate_prediction(self, model):
         model.inject_square_current(self.params['injected_square_current'])
-        return super(InjectedCurrentAPWidthTest,self).generate_prediction(model)
+        self.prediction = super(InjectedCurrentAPWidthTest,self).generate_prediction(model)
+        return self.prediction
 
 
 class APAmplitudeTest(VmTest):
@@ -423,7 +432,8 @@ class APAmplitudeTest(VmTest):
     units = pq.mV
 
     ephysprop_name = 'Spike Amplitude'
-
+    def _extra(self):
+        self.prediction = None
     def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
@@ -431,10 +441,10 @@ class APAmplitudeTest(VmTest):
         model.rerun = True
         heights = model.get_AP_amplitudes() - model.get_AP_thresholds()
         # Put prediction in a form that compute_score() can use.
-        prediction = {'mean':np.mean(heights) if len(heights) else None,
+        self.prediction = {'mean':np.mean(heights) if len(heights) else None,
                       'std':np.std(heights) if len(heights) else None,
                       'n':len(heights)}
-        return prediction
+        return self.prediction
 
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
@@ -476,12 +486,15 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
     description = ("A test of the heights (peak amplitudes) of "
                    "action potentials when current "
                    "is injected into cell.")
+    def _extra(self):
+        self.prediction = None
 
     def generate_prediction(self, model):
         model.inject_square_current(self.params['injected_square_current'])
-        return super(InjectedCurrentAPAmplitudeTest,self).\
+        prediction = super(InjectedCurrentAPAmplitudeTest,self).\
                 generate_prediction(model)
-
+        self.prediction = prediction
+        return prediction
 
 class APThresholdTest(VmTest):
     """Tests the full widths of action potentials at their half-maximum."""
@@ -498,6 +511,8 @@ class APThresholdTest(VmTest):
     units = pq.mV
 
     ephysprop_name = 'Spike Threshold'
+    def _extra(self):
+        self.prediction = None
 
     def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
@@ -509,6 +524,7 @@ class APThresholdTest(VmTest):
         prediction = {'mean':np.mean(threshes) if len(threshes) else None,
                       'std':np.std(threshes) if len(threshes) else None,
                       'n':len(threshes)}
+        self.prediction = prediction
         return prediction
 
     def compute_score(self, observation, prediction):
@@ -526,6 +542,8 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
     Tests the thresholds of action potentials
     under current injection.
     """
+    def _extra(self):
+        self.prediction = None
 
     required_capabilities = (cap.ReceivesSquareCurrent,)
 
@@ -539,34 +557,11 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
 
     def generate_prediction(self, model):
         model.inject_square_current(self.params['injected_square_current'])
-        return super(InjectedCurrentAPThresholdTest,self).\
+        prediction = super(InjectedCurrentAPThresholdTest,self).\
                 generate_prediction(model)
+        self.prediction = prediction
+        return prediction
 
-class VirtualModel:
-    '''
-    This is a pickable dummy clone
-    version of the NEURON simulation model
-    It does not contain an actual model, but it can be used to
-    wrap the real model.
-    This Object class serves as a data type for storing rheobase search
-    attributes and other useful parameters,
-    with the distinction that unlike the NEURON model this class
-    can be transported across HOSTS/CPUs
-    '''
-    def __init__(self):
-        self.lookup={}
-        self.trans_dict=None
-        self.rheobase=None
-        self.previous=0
-        self.run_number=0
-        self.attrs=None
-        self.steps=None
-        self.name=None
-        self.s_html=None
-        self.results=None
-        self.error=None
-        self.td = None
-        self.score = None
 
 
 class RheobaseTestNew(VmTest):
@@ -984,6 +979,9 @@ class RestingPotentialTest(VmTest):
     units = pq.mV
 
     ephysprop_name = 'Resting membrane potential'
+    def _extra(self):
+        self.prediction = None
+
 
     def validate_observation(self, observation):
         try:
@@ -1012,7 +1010,7 @@ class RestingPotentialTest(VmTest):
             if math.isnan(i):
                 return None
         prediction = {'mean':median, 'std':std}
-
+        self.prediction = prediction
         return prediction
 
 

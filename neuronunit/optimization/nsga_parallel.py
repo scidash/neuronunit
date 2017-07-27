@@ -241,6 +241,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
         plt.clf()
         matplotlib.use('Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
         matplotlib.style.use('ggplot')
+        vms.delta[vms.run_number] = []
         for iterator,returns in enumerate(pre):
             for predictions in returns.values():
                 unit_predictions = predictions
@@ -254,6 +255,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
             unit_delta = abs(unit_observations-unit_predictions)
             print('unit delta', unit_delta)
             delta = np.abs(plot_item_pre - plot_item_obs)
+            vms.delta[vms.run_number].append(delta)
             if iterator!=1:
                 plt.scatter(iterator,delta)
         labels =tuple([str(t.describe()) for t in tests ])
@@ -403,8 +405,7 @@ def update_vm_existing(pop, vmpop, trans_dict):
         is Noneifying its score attribute, and possibly causing a
         performance bottle neck.
         '''
-        #vm = utilities.VirtualModel()
-        #print(vm.init)
+
         param_dict = {}
         for i,j in enumerate(ind):
             param_dict[trans_dict[i]] = str(j)

@@ -26,7 +26,9 @@ def plot_performance_profile():
     file_name = 'NeuroML2/{0}'.format(prof_f_name)
     f.close()
 
-    subprocess('python gprof2dot.py -f -n0 -e0 pstats {0}  | dot -Tsvg -o {0}.svg'.format(prof_f_name))
+    #subprocess.Popen('python','gprof2dot.py' -f -n0 -e0 pstats {0}  | dot -Tsvg -o {0}.svg'.format(prof_f_name))
+
+    os.system('python gprof2dot.py -f -n0 -e0 pstats {0}  | dot -Tsvg -o {0}.svg'.format(prof_f_name))
 
 def graph_s(graph):
 
@@ -167,37 +169,38 @@ def plot_log(log):
             plt = list(dview.map(test_to_model,judges,repeat(model)))
     plot_test_waveforms(get_neab.tests)
 
+    '''
+    def plot_test_obpre(tests):
+        judges = [ i.judge for i in tests ]
+        from neuronunit.models import backends
+        from neuronunit.models.reduced import ReducedModel
+        from itertools import repeat
+        def test_to_model(judges,model):
+            import matplotlib.pyplot as plt
+            plt.clf()
+            matplotlib.use('Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
+            matplotlib.style.use('ggplot')
 
-        def plot_test_obpre(tests):
-            judges = [ i.judge for i in tests ]
-            from neuronunit.models import backends
-            from neuronunit.models.reduced import ReducedModel
-            from itertools import repeat
-            def test_to_model(judges,model):
-                import matplotlib.pyplot as plt
-                plt.clf()
-                matplotlib.use('Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
-                matplotlib.style.use('ggplot')
+            for j in judges:
+                j(model)
+                obs = []
+                pre = []
+                print(t.observation, t.prediction)
+                for t in j.tests:
+                    obs.append(t.observation)
+                    pre.append(t.prediction)
+                plt.plot(obs,pre)
+            plt.savefig('observation_vs_prediction.eps'.format(os.pid,j))
 
-                for j in judges:
-                    j(model)
-                    obs = []
-                    pre = []
-                    print(t.observation, t.prediction)
-                    for t in j.tests:
-                        obs.append(t.observation)
-                        pre.append(t.prediction)
-                    plt.plot(obs,pre)
-                plt.savefig('observation_vs_prediction.eps'.format(os.pid,j))
+        for v in vmpop:
+            new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
+            model = ReducedModel(new_file_path,name=str(v.attrs),backend='NEURON')
+            model.load_model()
+            model.update_run_params(v.attrs)
 
-            for v in vmpop:
-                new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-                model = ReducedModel(new_file_path,name=str(v.attrs),backend='NEURON')
-                model.load_model()
-                model.update_run_params(v.attrs)
-
-                plt = list(dview.map(test_to_model,judges,repeat(model)))
-        plot_test_obpre(get_neab.tests)
+            plt = list(dview.map(test_to_model,judges,repeat(model)))
+    plot_test_obpre(get_neab.tests)
+    '''
 
 
 
