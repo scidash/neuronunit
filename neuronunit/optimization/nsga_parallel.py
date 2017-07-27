@@ -240,8 +240,8 @@ def evaluate(vms):#This method must be pickle-able for scoop to work.
             # misleading iterating statements follow
             # They are not really iterating, they are merely unpacking single
             # values from dictionary packaging.
-            for pre in returns.values():
-                plot_item_pre = float(pre)
+            for predictions in returns.values():
+                plot_item_pre = float(predictions)
 
             if 'mean' in tests[iterator].observation.keys():
                 obs = tests[iterator].observation['mean']
