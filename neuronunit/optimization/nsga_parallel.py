@@ -217,7 +217,7 @@ def prepare_tests(tests,vms):
         #plt.ylabel('test number')
     #plt.savefig('observation_vs_prediction.eps'.format(os.pid,j,vms.run_number))
 
-def evaluate(vms):#This method must be pickle-able for scoop to work.
+def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     '''
     Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
     is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
@@ -231,35 +231,45 @@ def evaluate(vms):#This method must be pickle-able for scoop to work.
     outputs are error components.
     '''
     def plot_db(tests,pre,vms):
+        '''
+        A method to plot raw predictions
+        versus observations
+        '''
+
         import matplotlib.pyplot as plt
+        import numpy as np
         plt.clf()
         matplotlib.use('Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
         matplotlib.style.use('ggplot')
-
         for iterator,returns in enumerate(pre):
-            # misleading iterating statements follow
-            # They are not really iterating, they are merely unpacking single
-            # values from dictionary packaging.
             for predictions in returns.values():
-                plot_item_pre = float(predictions)
-
+                unit_predictions = predictions
+            print('observations: {0} predictions: {1}'.format(tests[iterator].observation, returns.values()))
             if 'mean' in tests[iterator].observation.keys():
                 obs = tests[iterator].observation['mean']
+                unit_observations = obs
             else:
-                obs = tests[iterator].observation.values()
-                plot_item_obs = float(obs)
-
-            plt.plot(k,plot_item_pre,label=str(tests[iterator].observation.values()))
-            plt.plot(k,plot_item_obs,label=str(tests[iterator].describe()))
+                for obs in tests[iterator].observation.values():
+                    unit_observations = obs
+            unit_delta = abs(unit_observations-unit_predictions)
+            print('unit delta', unit_delta)
+            delta = np.abs(plot_item_pre - plot_item_obs)
+            if iterator!=1:
+                plt.scatter(iterator,delta)
+        labels =tuple([str(t.describe()) for t in tests ])
+        tick_locations = tuple(range(0,len(tests)))
+        plt.xticks(tick_locations , labels)
         plt.xlabel('test type')
         plt.ylabel('observation versus prediction')
         plt.savefig('obsevation_versus_prediction_{0}_.eps'.format(vms.run_number))
-
+        return delta
+    plot_db(get_neab.suite.tests,pre,vms)
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
     import quantities as pq
     import numpy as np
     import get_neab
+    from itertools import repeat
 
     new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
     model = ReducedModel(new_file_path,name=str(vms.attrs),backend='NEURON')
@@ -269,10 +279,15 @@ def evaluate(vms):#This method must be pickle-able for scoop to work.
     tests = get_neab.suite.tests
     prepare_tests(get_neab.suite.tests,vms)
     # a performance hit but one that will change.
-    pre = [ t.generate_prediction(model) for t in tests ]
+    #pre = dview.map(repeat(model))
+
     model.update_run_params(vms.attrs)
     score = get_neab.suite.judge(model, stop_on_error = False, deep_error = True)
-    plot_db(get_neab.suite.tests,pre,vms)
+    pre = [ t.generate_prediction(model) for t in tests ]
+    new_preds = [ t.prediction for t in tests ]
+    #assert.equals(pre,new_preds)
+    #delta = dview.map_sync(plot_db,get_neab.suite.tests,pre,repeat(vms))
+    delta = plot_db(get_neab.suite.tests,pre,vms)
     print(score)
     model.run_number += 1
     # Run the model, then:
@@ -605,8 +620,8 @@ def check_rheobase(vmpop,pop=None):
 # Start of the Genetic Algorithm
 ##
 
-MU = 4
-NGEN = 1
+MU = 5
+NGEN = 5
 CXPB = 0.9
 
 import numpy as np
