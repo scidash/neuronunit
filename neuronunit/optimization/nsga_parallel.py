@@ -11,9 +11,23 @@ import cProfile
 import atexit
 import os,sys
 def ProfExit(p):
+   '''
+   http://seiferteric.com/?p=277
+   So what does this do? It imports the profiler and the atexit module.
+   It creates an instance of the profiler, registers with atexit to stop the profiler and dump the stats
+   to a file named with the process
+   ID of that python process, and finally starts the profiler.
+   So every python process run on the system will now be profiled! FYI,
+   the stats won’t get dumped until the process exits,
+   so make sure you stop all of them.
+   '''
    p.disable()
-   prof_f_name = "%d"%os.getpid()
-   p.dump_stats("/root/profiles/%s"%prof_f_name)
+   prof_f_name = '{0}'.format(os.getpid())
+   #Open and close the file, as a quick and dirty way to confirm that exists.
+   f = open('NeuroML2/%s'%prof_f_name,'wb')
+   f.close()
+
+   p.dump_stats('NeuroML2/%s'%prof_f_name)
 profile_hook = cProfile.Profile()
 atexit.register(ProfExit, profile_hook)
 profile_hook.enable()
@@ -91,8 +105,10 @@ with dview.sync_imports(): # Causes each of these things to be imported on the w
 def p_imports():
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
+    print(get_neab.LEMS_MODEL_PATH)
+    new_file_path = '{0}{1}'.format(str(get_neab.LEMS_MODEL_PATH),int(os.getpid()))
+    print(new_file_path)
 
-    new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
     os.system('cp ' + str(get_neab.LEMS_MODEL_PATH)+str(' ') + new_file_path)
     model = ReducedModel(new_file_path,name='vanilla',backend='NEURON')
 
@@ -171,6 +187,7 @@ toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
 toolbox.register("Individual", tools.initIterate, creator.Individual, toolbox.attr_float)
 toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
 toolbox.register("select", tools.selNSGA2)
+
 def prepare_tests(tests,vms):
     for k,v in enumerate(tests):
         if k == 0:
@@ -190,8 +207,15 @@ def prepare_tests(tests,vms):
             v.params['injected_square_current']['delay'] = 100 * pq.ms
             v.prediction = {}
             v.prediction['value'] = vms.rheobase * pq.pA
-            print(v.prediction)
+            print(v.prediction,k)
         print(v.params)
+
+
+            #plt.plot(obs,k)
+            #plt.plot(pre,k)
+        #plt.xlabel('observations vs predictions')
+        #plt.ylabel('test number')
+    #plt.savefig('observation_vs_prediction.eps'.format(os.pid,j,vms.run_number))
 
 def evaluate(vms):#This method must be pickle-able for scoop to work.
     '''
@@ -206,6 +230,31 @@ def evaluate(vms):#This method must be pickle-able for scoop to work.
     Inputs a gene and a virtual model object.
     outputs are error components.
     '''
+    def plot_db(tests,pre,vms):
+        import matplotlib.pyplot as plt
+        plt.clf()
+        matplotlib.use('Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
+        matplotlib.style.use('ggplot')
+
+        for iterator,returns in enumerate(pre):
+            # misleading iterating statements follow
+            # They are not really iterating, they are merely unpacking single
+            # values from dictionary packaging.
+            for pre in returns.values():
+                plot_item_pre = float(pre)
+
+            if 'mean' in tests[iterator].observation.keys():
+                obs = tests[iterator].observation['mean']
+            else:
+                obs = tests[iterator].observation.values()
+                plot_item_obs = float(obs)
+
+            plt.plot(k,plot_item_pre,label=str(tests[iterator].observation.values()))
+            plt.plot(k,plot_item_obs,label=str(tests[iterator].describe()))
+        plt.xlabel('test type')
+        plt.ylabel('observation versus prediction')
+        plt.savefig('obsevation_versus_prediction_{0}_.eps'.format(vms.run_number))
+
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
     import quantities as pq
@@ -219,27 +268,23 @@ def evaluate(vms):#This method must be pickle-able for scoop to work.
     model.update_run_params(vms.attrs)
     tests = get_neab.suite.tests
     prepare_tests(get_neab.suite.tests,vms)
+    # a performance hit but one that will change.
+    pre = [ t.generate_prediction(model) for t in tests ]
     model.update_run_params(vms.attrs)
     score = get_neab.suite.judge(model, stop_on_error = False, deep_error = True)
-    #vms.score = copy.copy(sciunit.ScoreMatrix(score))
+    plot_db(get_neab.suite.tests,pre,vms)
     print(score)
     model.run_number += 1
     # Run the model, then:
     error = []
     vms.score = []
-    other_mean = np.mean([i for i in score.sort_key.values.tolist()[0] if type(i) is not type(None)])
+    #other_mean = np.mean([i for i in score.sort_key.values.tolist()[0] if type(i) is not type(None)])
 
     for my_score in score.sort_key.values.tolist()[0]:
-        print(my_score)
-        if isinstance(my_score,sciunit.ErrorScore):
-            error.append(10.0+other_mean)
-
-        elif isinstance(my_score,type(None)):
-            error.append(other_mean)
-        else:
-            error.append(my_score)
+        assert type(my_score) is not type(dict)
+        error.append(my_score)
     vms.evaluated = True
-    error = [ e for e in error ]
+    error = [ -1.0 * e for e in error ]
     vms.error = error
     return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
 
@@ -293,11 +338,17 @@ def update_vm_pop(pop, trans_dict):
     import numpy as np
     import copy
     pop = [toolbox.clone(i) for i in pop ]
-    from neuronunit.optimization import utilities
+    #from neuronunit.optimization
+    import utilities
     def transform(ind):
+        '''
+        Re instanting Virtual Model at every update vmpop
+        is Noneifying its score attribute, and possibly causing a
+        performance bottle neck.
+        '''
         vm = utilities.VirtualModel()
         print(vm.init)
-        param_dict={}
+        param_dict = {}
         for i,j in enumerate(ind):
             param_dict[trans_dict[i]] = str(j)
         vm.attrs = param_dict
@@ -309,8 +360,54 @@ def update_vm_pop(pop, trans_dict):
         vmpop = dview.map_sync(transform, pop)
         vmpop = list(copy.copy(vmpop))
     else:
+        # In this case pop is not really a population but an individual
+        # but parsimony of naming variables
+        # suggests not to change the variable name to reflect this.
         vmpop = transform(pop)
     return vmpop
+
+
+def update_vm_existing(pop, vmpop, trans_dict):
+    '''
+    inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
+    outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
+    Rationale, not every gene value will result in a model for which rheobase is found, in which case that gene is discarded, however to
+    compensate for losses in gene population size, more gene samples must be tested for a successful return from a rheobase search.
+    If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
+    corresponding virtual model objects.
+    '''
+    from itertools import repeat
+    import numpy as np
+    import copy
+    pop = [toolbox.clone(i) for i in pop ]
+    #from neuronunit.optimization
+    import utilities
+    def transform(ind,vm):
+        '''
+        Re instanting Virtual Model at every update vmpop
+        is Noneifying its score attribute, and possibly causing a
+        performance bottle neck.
+        '''
+        #vm = utilities.VirtualModel()
+        #print(vm.init)
+        param_dict = {}
+        for i,j in enumerate(ind):
+            param_dict[trans_dict[i]] = str(j)
+        vm.attrs = param_dict
+        vm.name = vm.attrs
+        vm.evaluated = False
+        return vm
+
+    if len(pop) > 1:
+        vmpop = dview.map_sync(transform, pop, vmpop)
+        vmpop = list(copy.copy(vmpop))
+    else:
+        # In this case pop is not really a population but an individual
+        # but parsimony of naming variables
+        # suggests not to change the variable name to reflect this.
+        vmpop = transform(pop,vmpop)
+    return vmpop
+
 
 def check_rheobase(vmpop,pop=None):
     '''
@@ -451,7 +548,7 @@ def check_rheobase(vmpop,pop=None):
         if vm.init == True:
             # expand values in the range to accomodate for mutation.
             # but otherwise exploit memory of this range.
-            vm.steps = [ s * 1.5 for s in vm.steps ]
+            vm.steps = [ s * 1.25 for s in vm.steps ]
             vm.init = True # logically unnecessary but included for readibility
 
         if vm.init == False:
@@ -508,8 +605,8 @@ def check_rheobase(vmpop,pop=None):
 # Start of the Genetic Algorithm
 ##
 
-MU = 8
-NGEN = 12
+MU = 4
+NGEN = 1
 CXPB = 0.9
 
 import numpy as np
@@ -535,6 +632,10 @@ history.update(pop)
 pop = [ toolbox.clone(i) for i in pop ]
 vmpop = update_vm_pop(pop, td)
 print(vmpop)
+tests = get_neab.suite.tests
+for t in tests:
+    print(t.observation, t.describe())
+
 vmpop , _ = check_rheobase(vmpop)
 for i in vmpop:
     print('the rheobase value is {0}'.format(i.rheobase))
@@ -566,7 +667,7 @@ print(logbook.stream)
 
 score_storage = [ v.score for v in vmpop ]
 
-
+time_out = 0
 
 for gen in range(1, NGEN):
     offspring = tools.selTournamentDCD(pop, len(pop))
@@ -590,8 +691,7 @@ for gen in range(1, NGEN):
             invalid_ind.append(ind)
     # Need to make sure that update_vm_pop does not replace instances of the same model
     # Thus waisting computation.
-    vmoffspring = update_vm_pop(copy.copy(invalid_ind), td)
-    not_evaluated = [ vm for vm in vmpop if vm.rheobase == False ]
+    vmoffspring = update_vm_existing(copy.copy(invalid_ind), vmpop, trans_dict) #(copy.copy(invalid_ind), td)
     vmoffspring , _ = check_rheobase(copy.copy(vmoffspring))
 
     fitnesses = list(toolbox.map(toolbox.evaluate, copy.copy(vmoffspring)))
@@ -606,26 +706,34 @@ for gen in range(1, NGEN):
     # https://github.com/DEAP/deap/blob/master/examples/ga/nsga2.py
     #pop = toolbox.select(pop + offspring, MU)
     pop = tools.selNSGA2(pop + offspring, MU)
-
     history.update(pop)
-
-
     pf.update([toolbox.clone(i) for i in pop])
     record = stats.compile([toolbox.clone(i) for i in pop])
     logbook.record(gen=gen, evals=len(pop), **record)
     means = np.array(logbook.select('avg'))
     # if the means are not decreasing at least as an overall trend something is wrong.
-    assert means[-1] < means[-2]
-    print(logbook.stream)
+    print('means: {0}'.format(means))
+    if means[-1] <= means[-2] or means[-1] < means[0]:
+        time_out = 0
+
+    # if the lasest mean error is greater than second latest mean error.
+    # or if the latest mean error is greater than the initial mean error.
+    # Then the error might be growing not shrinking.
+    if means[-1] > means[-2] or means[-1] > means[1]:
+        time_out += 1
+        print('time out: {0}'.format(time_out))
+        assert time_out < 3
+    print('means: {0} std: {1} max: {2} min: {3}'.format(logbook.select('avg'), \
+                                                        logbook.select('std'), \
+                                                        logbook.select('max'), \
+                                                        logbook.select('min')))
     assert len(vmoffspring) != 0
 
-#vmpop = list(update_vm_pop(copy.copy(pop),td))
+
 with open('complete_dump.p','wb') as handle:
    pickle.dump([vmpop,pop,pf,history,logbook],handle)
 
 
-#with open('complete_dump.p','rb') as handle:#
-#    variables = pickle.load(handle)
 
 rhstorage = [ v.rheobase for v in copy.copy(vmoffspring) ]
 score_storage = [ np.sum(v.score) for v in copy.copy(vmoffspring) ]
