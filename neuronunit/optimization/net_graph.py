@@ -42,13 +42,14 @@ def graph_s(graph):
         labels[i] = i
     colors = [ np.sum(history.genealogy_history[i].fitness.values) for i in graph ]
     positions = graphviz_layout(graph, prog="dot")
-    networkx.draw(graph, positions, node_color=colors, labels = labels)#, interpolation='none')
-    plt.colorbar()
+    networkx.draw(graph, positions, node_color=colors, node_size=1.5, labels = labels)#, interpolation='none')
+    #plt.colorbar()
+    plt.colorbar(fraction=0.046, pad=0.04)
 
     plt.savefig('genealogy_history_{0}_.eps'.format(gen))
 
 
-def bpyopt():
+def bpyopt(pf):
     '''
     https://github.com/BlueBrain/BluePyOpt/blob/master/examples/graupnerbrunelstdp/graupnerbrunelstdp.ipynb
     '''
