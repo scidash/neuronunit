@@ -22,9 +22,8 @@ class VirtualModel(object):
         self.error = None
         self.score = None
         self.boolean = False
-        self.init = False
-        self.deltas = []
-        #self.fitness.evaluated = False
+        self.initiated = False
+        self.delta = {}
         self.evaluated = False
 
 class Utilities:
