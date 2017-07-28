@@ -86,6 +86,9 @@ with dview.sync_imports(): # Causes each of these things to be imported on the w
     import functools
     import utilities
     print(utilities.__file__)
+    vm = utilities.VirtualModel()
+    #print(vm.__init__())
+    print(vm.delta)
 
 
     import quantities as pq
@@ -111,11 +114,7 @@ def p_imports():
 
     os.system('cp ' + str(get_neab.LEMS_MODEL_PATH)+str(' ') + new_file_path)
     model = ReducedModel(new_file_path,name='vanilla',backend='NEURON')
-
-    #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
     model.load_model()
-    #utilities.get_neab = get_neab
-    #utilities.model = model
     return
 
 dview.apply_sync(p_imports)
@@ -151,7 +150,6 @@ def p_imports():
     toolbox = base.Toolbox()
     import model_parameters as modelp
     import numpy as np
-    #from neuronunit.tests import utilities as outils
     BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
     BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
     NDIM = len(BOUND_UP)+1
@@ -242,6 +240,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
         matplotlib.use('Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
         matplotlib.style.use('ggplot')
         vms.delta[vms.run_number] = []
+        print(pre)
         for iterator,returns in enumerate(pre):
             for predictions in returns.values():
                 unit_predictions = predictions
@@ -252,20 +251,24 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
             else:
                 for obs in tests[iterator].observation.values():
                     unit_observations = obs
-            unit_delta = abs(unit_observations-unit_predictions)
+            # make sure unit order of magnitude matches, by rescaling one to the other:
+            to_r_s = unit_observations.units
+            print(to_r_s)
+            unit_delta = np.abs(unit_observations-unit_predictions.rescale(to_r_s))
             print('unit delta', unit_delta)
-            delta = np.abs(plot_item_pre - plot_item_obs)
-            vms.delta[vms.run_number].append(delta)
-            if iterator!=1:
-                plt.scatter(iterator,delta)
-        labels =tuple([str(t.describe()) for t in tests ])
+            vms.delta[vms.run_number].append(unit_delta)
+            #if iterator!=1:
+            plt.scatter(iterator,unit_delta)
+        labels = tuple([str(t.describe()) for t in tests ])
         tick_locations = tuple(range(0,len(tests)))
         plt.xticks(tick_locations , labels)
+        plt.xticks(rotation=70)
         plt.xlabel('test type')
         plt.ylabel('observation versus prediction')
         plt.savefig('obsevation_versus_prediction_{0}_.eps'.format(vms.run_number))
-        return delta
-    plot_db(get_neab.suite.tests,pre,vms)
+        return vms
+    #vms = plot_db(get_neab.suite.tests,new_preds,vms)
+    #plot_db(get_neab.suite.tests,pre,vms)
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
     import quantities as pq
@@ -286,10 +289,11 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     model.update_run_params(vms.attrs)
     score = get_neab.suite.judge(model, stop_on_error = False, deep_error = True)
     pre = [ t.generate_prediction(model) for t in tests ]
-    new_preds = [ t.prediction for t in tests ]
+    #new_preds = [ t.prediction for t in tests ]
+    #print(new_preds)
     #assert.equals(pre,new_preds)
-    #delta = dview.map_sync(plot_db,get_neab.suite.tests,pre,repeat(vms))
-    delta = plot_db(get_neab.suite.tests,pre,vms)
+    #delta = dview.map_sync(plot_db,get_neab.suite.tests,new_preds,repeat(vms))
+    vms = plot_db(get_neab.suite.tests,pre,vms)
     print(score)
     model.run_number += 1
     # Run the model, then:
@@ -355,8 +359,7 @@ def update_vm_pop(pop, trans_dict):
     import numpy as np
     import copy
     pop = [toolbox.clone(i) for i in pop ]
-    #from neuronunit.optimization
-    import utilities
+    #import utilities
     def transform(ind):
         '''
         Re instanting Virtual Model at every update vmpop
@@ -364,7 +367,8 @@ def update_vm_pop(pop, trans_dict):
         performance bottle neck.
         '''
         vm = utilities.VirtualModel()
-        print(vm.init)
+        print(dir(vm))
+        print(vm.delta)
         param_dict = {}
         for i,j in enumerate(ind):
             param_dict[trans_dict[i]] = str(j)
@@ -397,8 +401,7 @@ def update_vm_existing(pop, vmpop, trans_dict):
     import numpy as np
     import copy
     pop = [toolbox.clone(i) for i in pop ]
-    #from neuronunit.optimization
-    import utilities
+
     def transform(ind,vm):
         '''
         Re instanting Virtual Model at every update vmpop
@@ -561,20 +564,20 @@ def check_rheobase(vmpop,pop=None):
     import get_neab
 
     def init_vm(vm):
-        if vm.init == True:
+        if vm.initiated == True:
             # expand values in the range to accomodate for mutation.
             # but otherwise exploit memory of this range.
             vm.steps = [ s * 1.25 for s in vm.steps ]
-            vm.init = True # logically unnecessary but included for readibility
+            vm.initiated = True # logically unnecessary but included for readibility
 
-        if vm.init == False:
+        if vm.initiated == False:
             import quantities as pq
             import numpy as np
             vm.boolean = False
             steps = list(np.linspace(-50,200,7.0))
             steps_current = [ i*pq.pA for i in steps ]
             vm.steps = steps_current
-            vm.init = True
+            vm.initiated = True
         return vm
 
     def find_rheobase(vm):
@@ -647,7 +650,10 @@ pop = toolbox.population(n = MU)
 history.update(pop)
 pop = [ toolbox.clone(i) for i in pop ]
 vmpop = update_vm_pop(pop, td)
-print(vmpop)
+print(type(vmpop[0]))
+print(dir(vmpop[0]))
+#print(vmpop[0].__init__())
+print(vmpop[0].delta)
 tests = get_neab.suite.tests
 for t in tests:
     print(t.observation, t.describe())
