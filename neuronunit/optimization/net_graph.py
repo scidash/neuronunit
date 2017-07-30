@@ -15,21 +15,25 @@ def plot_performance_profile():
     makes a plot about this programs performance profile
     It needs ProfExit to be called at the beggining of the program.
     https://github.com/jrfonseca/gprof2dot
+
+    No inputs and outputs only side effects.
+    Actually this probably won't work, as the performance profiler
+    Requires all the process IDs to cleanly exit due to finishing their work.
+    Instead the essence of this method should be rehashed as BASH script (which should be easy, since the origin is bash script)
+
     '''
 
 
     import os
     import subprocess
-    os.system('sudo /opt/conda/bin/pip install gprof2dot')
+    #os.system('sudo /opt/conda/bin/pip install gprof2dot')
     os.system('cp /opt/conda/lib/python3.5/site-packages/gprof2dot.py .')
     prof_f_name = '{0}'.format(os.getpid())
-    #Open and close the file, as a quick and dirty way to confirm that exists.
+    #Open and close the file, as a quick and dirty way to garuntee that an appropriate file path exists.
     f = open('NeuroML2/{0}'.format(prof_f_name),'wb')
     file_name = 'NeuroML2/{0}'.format(prof_f_name)
     f.close()
-
     #subprocess.Popen('python','gprof2dot.py' -f -n0 -e0 pstats {0}  | dot -Tsvg -o {0}.svg'.format(prof_f_name))
-
     os.system('python gprof2dot.py -f -n0 -e0 pstats {0}  | dot -Tsvg -o {0}.svg'.format(prof_f_name))
 
 def graph_s(history):
@@ -59,7 +63,13 @@ def graph_s(history):
 
 def best_worst(history):
     '''
-    https://github.com/BlueBrain/BluePyOpt/blob/master/examples/graupnerbrunelstdp/graupnerbrunelstdp.ipynb
+    Query the GA's DEAP history object to get the worst candidate ever evaluated.
+
+    inputs DEAP history object
+    best output should be the same as the first index of the ParetoFront list (pf[0]).
+    outputs best and worst candidates evaluated.
+
+
     '''
     import numpy as np
     badness = [ np.sum(ind.fitness.values) for ind in history.genealogy_history.values() if ind.fitness.valid ]
@@ -78,16 +88,17 @@ def best_worst(history):
 
 def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must be pickle-able for ipyparallel to work.
     '''
+    A method to plot the best and worst candidate solution waveforms side by side
+
+
     Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
     is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
     value, that was found in a previous rheobase search.
 
-    outputs: a tuple that is a compound error function that NSGA can act on.
+    Outputs: This method only has side effects, not datatype outputs from the method.
 
-    Assumes rheobase for each individual virtual model object (vms) has already been found
-    there should be a check for vms.rheobase, and if not then error.
-    Inputs a gene and a virtual model object.
-    outputs are error components.
+    The most important side effect being a plot in eps format.
+
     '''
 
     from neuronunit.models import backends
@@ -157,7 +168,12 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
 def just_mean(log):
     '''
     https://github.com/BlueBrain/BluePyOpt/blob/master/examples/graupnerbrunelstdp/run_fit.py
-    Plot logbook
+    Input: DEAP Plot logbook
+
+    Outputs: This method only has side effects, not datatype outputs from the method.
+
+    The most important side effect being a plot in eps format.
+
     '''
     import matplotlib.pyplot as plt
     import numpy as np
@@ -184,6 +200,11 @@ def plot_db(vms,name=None):
     '''
     A method to plot raw predictions
     versus observations
+
+    Outputs: This method only has side effects, not datatype outputs from the method.
+
+    The most important side effect being a plot in eps format.
+
     '''
     import matplotlib
 
@@ -297,7 +318,11 @@ def plot_db(vms,name=None):
 def plot_log(log):
     '''
     https://github.com/BlueBrain/BluePyOpt/blob/master/examples/graupnerbrunelstdp/run_fit.py
-    Plot logbook
+    Input: DEAP Plot logbook
+    Outputs: This method only has side effects, not datatype outputs from the method.
+
+    The most important side effect being a plot in eps format.
+
     '''
     import matplotlib.pyplot as plt
     import numpy as np
