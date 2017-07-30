@@ -19,11 +19,11 @@ class VirtualModel(object):
         self.steps = None
         self.name = None
         self.results = None
-        self.error = None
+        self.fitness = None
         self.score = None
         self.boolean = False
         self.initiated = False
-        self.delta = {}
+        self.delta = []
         self.evaluated = False
 
 class Utilities:

@@ -245,7 +245,8 @@ class TestPulseTest(VmTest):
 
 class InputResistanceTest(TestPulseTest):
     """Tests the input resistance of a cell."""
-    def _extra(self):
+    def __init__(self):
+        super(InputResistanceTest).__init__()
         self.prediction = None
 
     name = "Input resistance test"
@@ -273,6 +274,9 @@ class InputResistanceTest(TestPulseTest):
 
 class TimeConstantTest(TestPulseTest):
     """Tests the input resistance of a cell."""
+    def __init__(self):
+        super(TimeConstantTest).__init__()
+        self.prediction = None
 
     name = "Time constant test"
 
@@ -281,16 +285,6 @@ class TimeConstantTest(TestPulseTest):
     units = pq.ms
 
     ephysprop_name = 'Membrane Time Constant'
-    def _extra(self):
-        self.prediction = None
-
-    def __init__(self):
-        DURATION = 100*pq.ms
-        amplitude = -10*pq.pA
-        DELAY = 30*pq.ms
-        self.params['injected_square_current']['delay'] = DELAY
-        self.params['injected_square_current']['duration'] = DURATION
-        self.params['injected_square_current']['amplitude'] = amplitude
 
     def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
@@ -318,7 +312,8 @@ class TimeConstantTest(TestPulseTest):
 
 class CapacitanceTest(TestPulseTest):
     """Tests the input resistance of a cell."""
-    def _extra(self):
+    def __init__(self):
+        super(CapacitanceTest).__init__()
         self.prediction = None
 
     name = "Capacitance test"
@@ -353,7 +348,8 @@ class CapacitanceTest(TestPulseTest):
 
 class APWidthTest(VmTest):
     """Tests the full widths of action potentials at their half-maximum."""
-    def _extra(self):
+    def __init__(self):
+        super(APWidthTest).__init__()
         self.prediction = None
     required_capabilities = (cap.ProducesActionPotentials,)
 
@@ -377,6 +373,7 @@ class APWidthTest(VmTest):
         #tvec = copy.copy(model.results['t'])
         #dt = (tvec[1]-tvec[0])*pq.ms
         widths = model.get_AP_widths()
+        print(widths)
         # Put prediction in a form that compute_score() can use.
         self.prediction = {'mean':np.mean(widths) if len(widths) else None,
                       'std':np.std(widths) if len(widths) else None,
@@ -398,7 +395,8 @@ class InjectedCurrentAPWidthTest(APWidthTest):
     Tests the full widths of APs at their half-maximum
     under current injection.
     """
-    def _extra(self):
+    def __init__(self):
+        super(InjectedCurrentAPWidthTest).__init__()
         self.prediction = None
     required_capabilities = (cap.ReceivesSquareCurrent,)
 
@@ -420,6 +418,10 @@ class InjectedCurrentAPWidthTest(APWidthTest):
 class APAmplitudeTest(VmTest):
     """Tests the heights (peak amplitude) of action potentials."""
 
+    def __init__(self):
+        super(APAmplitudeTest).__init__()
+        self.prediction = None
+
     required_capabilities = (cap.ProducesActionPotentials,)
 
     name = "AP amplitude test"
@@ -432,8 +434,8 @@ class APAmplitudeTest(VmTest):
     units = pq.mV
 
     ephysprop_name = 'Spike Amplitude'
-    def _extra(self):
-        self.prediction = None
+    #def _extra(self):
+
     def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
@@ -475,6 +477,9 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
     Tests the heights (peak amplitude) of action potentials
     under current injection.
     """
+    def __init__(self):
+        super(InjectedCurrentAPAmplitudeTest).__init__()
+        self.prediction = None
 
     required_capabilities = (cap.ReceivesSquareCurrent,)
 
@@ -486,8 +491,7 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
     description = ("A test of the heights (peak amplitudes) of "
                    "action potentials when current "
                    "is injected into cell.")
-    def _extra(self):
-        self.prediction = None
+
 
     def generate_prediction(self, model):
         model.inject_square_current(self.params['injected_square_current'])
@@ -497,6 +501,9 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
         return prediction
 
 class APThresholdTest(VmTest):
+    def __init__(self):
+        super(APThresholdTest).__init__()
+        self.prediction = None
     """Tests the full widths of action potentials at their half-maximum."""
 
     required_capabilities = (cap.ProducesActionPotentials,)
@@ -511,8 +518,7 @@ class APThresholdTest(VmTest):
     units = pq.mV
 
     ephysprop_name = 'Spike Threshold'
-    def _extra(self):
-        self.prediction = None
+
 
     def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
@@ -542,7 +548,8 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
     Tests the thresholds of action potentials
     under current injection.
     """
-    def _extra(self):
+    def __init__(self):
+        super(InjectedCurrentAPThresholdTest).__init__()
         self.prediction = None
 
     required_capabilities = (cap.ReceivesSquareCurrent,)
@@ -564,353 +571,6 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
 
 
 
-class RheobaseTestNew(VmTest):
-    def check_rheobase(virtual_model):
-        '''
-        inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
-        outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
-        Rationale, not every gene value will result in a model for which rheobase is found, in which case that gene is discarded, however to
-        compensate for losses in gene population size, more gene samples must be tested for a successful return from a rheobase search.
-        If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
-        corresponding virtual model objects.
-        '''
-        def check_fix_range(vms):
-            '''
-            Inputs: lookup, A dictionary of previous current injection values
-            used to search rheobase
-            Outputs: A boolean to indicate if the correct rheobase current was found
-            and a dictionary containing the range of values used.
-            If rheobase was actually found then rather returning a boolean and a dictionary,
-            instead logical True, and the rheobase current is returned.
-            given a dictionary of rheobase search values, use that
-            dictionary as input for a subsequent search.
-            '''
-            import copy
-            import numpy as np
-            import quantities as pq
-            sub=[]
-            supra=[]
-            steps=[]
-            vms.rheobase=0.0
-            for k,v in vms.lookup.items():
-                if v==1:
-                    #A logical flag is returned to indicate that rheobase was found.
-                    vms.rheobase=float(k)
-                    vms.steps = 0.0
-                    vms.boolean = True
-                    return vms
-                elif v==0:
-                    sub.append(k)
-                elif v>0:
-                    supra.append(k)
-
-            sub=np.array(sub)
-            supra=np.array(supra)
-
-            if len(sub)!=0 and len(supra)!=0:
-                #this assertion would only be wrong if there was a bug
-                print(str(bool(sub.max()>supra.min())))
-                assert not sub.max()>supra.min()
-            if len(sub) and len(supra):
-                everything = np.concatenate((sub,supra))
-
-                center = np.linspace(sub.max(),supra.min(),7.0)
-                centerl = list(center)
-                for i,j in enumerate(centerl):
-                    if i in list(everything):
-                        np.delete(center,i)
-                        del centerl[i]
-                #delete the index
-                #np.delete(center,np.where(everything is in center))
-                #make sure that element 4 in a seven element vector
-                #is exactly half way between sub.max() and supra.min()
-                center[int(len(center)/2)+1]=(sub.max()+supra.min())/2.0
-                steps = [ i*pq.pA for i in center ]
-
-            elif len(sub):
-                steps2 = np.linspace(sub.max(),2*sub.max(),7.0)
-                np.delete(steps2,np.array(sub))
-                steps = [ i*pq.pA for i in steps2 ]
-
-            elif len(supra):
-                steps2 = np.linspace(-2*(supra.min()),supra.min(),7.0)
-                np.delete(steps2,np.array(supra))
-                steps = [ i*pq.pA for i in steps2 ]
-
-            vms.steps = steps
-            vms.rheobase = None
-            return copy.copy(vms)
-
-
-        def check_current(ampl,vm):
-            '''
-            Inputs are an amplitude to test and a virtual model
-            output is an virtual model with an updated dictionary.
-            '''
-
-            global model
-            import quantities as pq
-            import get_neab
-
-            from neuronunit.models import backends
-            from neuronunit.models.reduced import ReducedModel
-            #ar = rc[:].apply_async(os.getpid)
-            #pids = ar.get_dict()
-            #rc[:]['pid_map'] = pids
-            new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-            #os.system('cp ' + str(get_neab.LEMS_MODEL_PATH)+str(' ') + new_file_path)
-            model = ReducedModel(new_file_path,name=str(vm.attrs),backend='NEURON')
-            model.load_model()
-            model.update_run_params(vm.attrs)
-
-            DELAY = 100.0*pq.ms
-            DURATION = 1000.0*pq.ms
-            params = {'injected_square_current':
-                      {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
-
-
-            if float(ampl) not in vm.lookup or len(vm.lookup)==0:
-
-                current = params.copy()['injected_square_current']
-
-                uc = {'amplitude':ampl}
-                current.update(uc)
-                current = {'injected_square_current':current}
-                vm.run_number += 1
-                model.update_run_params(vm.attrs)
-                model.inject_square_current(current)
-                vm.previous = ampl
-                n_spikes = model.get_spike_count()
-                vm.lookup[float(ampl)] = n_spikes
-                if n_spikes == 1:
-                    vm.rheobase = float(ampl)
-                    print('current {0} spikes {1}'.format(vm.rheobase,n_spikes))
-                    vm.name = str('rheobase {0} parameters {1}'.format(str(current),str(model.params)))
-                    return vm
-
-                return vm
-            if float(ampl) in vm.lookup:
-                return vm
-
-        from itertools import repeat
-        import numpy as np
-        import copy
-        import pdb
-        import get_neab
-
-        def final_check(vms, pop):
-            '''
-            Not none can be drawn from.
-            '''
-            not_none = [ pop[k] for k,vm in enumerate(vms) if type(vm.rheobase) is not type(None) ]
-            for k,vm in enumerate(vms):
-                j = 0
-                ind = pop[k]
-                while type(vm.rheobase) is type(None):
-                    for key in range(0,len(pop[0])):
-                        ind[key] = np.mean([i[key] for i in pop])
-                    vm = None
-                    vm = update_vm_pop(ind)
-                    vm = init_vm(vm)
-                    vm = find_rheobase(vm)
-                    print('trying value {0}'.format(vm.rheobase))
-                    if type(vm.rheobase) is not type(None):
-                        print('rheobase value is updating {0}'.format(vm.rheobase))
-                        break
-                assert type(vm.rheobase) is not type(None)
-            return (vms, pop)
-
-        def init_vm(vm):
-            import quantities as pq
-            import numpy as np
-            vm.boolean = False
-            steps = list(np.linspace(-50,200,7.0))
-            steps_current = [ i*pq.pA for i in steps ]
-            vm.steps = steps_current
-            return vm
-
-        def find_rheobase(vm):
-            from neuronunit.models import backends
-            from neuronunit.models.reduced import ReducedModel
-            import get_neab
-            new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-            #os.system('cp ' + str(get_neab.LEMS_MODEL_PATH)+str(' ') + new_file_path)
-            model = ReducedModel(new_file_path,name=str(vm.attrs),backend='NEURON')
-            #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str(vm.attrs),backend='NEURON')
-            model.load_model()
-            model.update_run_params(vm.attrs)
-            cnt = 0
-            while vm.boolean == False:# and cnt <21:
-                for step in vm.steps:
-                    vm = check_current(step, vm)#,repeat(vms))
-                    vm = check_fix_range(vm)
-                    cnt+=1
-            return vm
-        def generate_prediction(self, model):
-            virtual_model = utilities.VirtualModel()
-            virtual_model.attrs = model.params
-            virtual_model.name = vm.attrs
-            virtualmodel = init_vm(virtual_model)
-            virtualmodel = find_rheobase(virtual_model)
-            print('rheobase method{0}'.format(virtual_model.rheobase))
-            return virtual_model.rheobase
-
-        def compute_score(self, observation, prediction):
-            """Implementation of sciunit.Test.score_prediction."""
-            #print("%s: Observation = %s, Prediction = %s" % \
-            #	 (self.name,str(observation),str(prediction)))
-            if prediction['value'] is None:
-                score = scores.InsufficientDataScore(None)
-            else:
-                score = super(RheobaseTest,self).\
-                            compute_score(observation, prediction)
-                #self.bind_score(score,None,observation,prediction)
-            return score
-
-        def bind_score(self, score, model, observation, prediction):
-            super(RheobaseTest,self).bind_score(score, model,
-                                                observation, prediction)
-            if self.rheobase_vm is not None:
-                score.related_data['vm'] = self.rheobase_vm
-
-
-class RheobaseTestOriginal(VmTest):
-    """
-    Tests the full widths of APs at their half-maximum
-    under current injection.
-    """
-    def _extra(self):
-        self.prediction = None
-        self.high = 300*pq.pA
-        self.small = 0*pq.pA
-        self.rheobase_vm = None
-
-    required_capabilities = (cap.ReceivesSquareCurrent,
-                             cap.ProducesSpikes)
-
-    DELAY = 100.0*pq.ms
-    DURATION = 1000.0*pq.ms
-    params = {'injected_square_current':
-                {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
-
-    name = "Rheobase test"
-
-    description = ("A test of the rheobase, i.e. the minimum injected current "
-                   "needed to evoke at least one spike.")
-
-    units = pq.pA
-    score_type = scores.RatioScore
-
-    def generate_prediction(self, model):
-        """Implementation of sciunit.Test.generate_prediction."""
-        # Method implementation guaranteed by
-        # ProducesActionPotentials capability.
-        prediction = {'value': None}
-        model.rerun = True
-        units = self.observation['value'].units
-        import time
-        begin_rh=time.time()
-        lookup = self.threshold_FI(model, units)
-        sub = np.array([x for x in lookup if lookup[x]==0])*units
-        supra = np.array([x for x in lookup if lookup[x]>0])*units
-        self.verbose=True
-        if self.verbose:
-            if len(sub):
-                print("Highest subthreshold current is %s" \
-                      % (float(sub.max().round(2))*units))
-            else:
-                print("No subthreshold current was tested.")
-            if len(supra):
-                print("Lowest suprathreshold current is %s" \
-                      % supra.min().round(2))
-            else:
-                print("No suprathreshold current was tested.")
-
-        if len(sub) and len(supra):
-            rheobase = supra.min()
-        else:
-            rheobase = None
-        prediction['value'] = rheobase
-
-        self.prediction = prediction
-        return self.prediction
-
-    def threshold_FI(self, model, units, guess=None):
-        lookup = {} # A lookup table global to the function below.
-
-        def f(ampl):
-            if float(ampl) not in lookup:
-                current = self.params.copy()['injected_square_current']
-                #This does not do what you would expect.
-                #due to syntax I don't understand.
-                #updating the dictionary keys with new values doesn't work.
-
-                uc = {'amplitude':ampl}
-                current.update(uc)
-                model.inject_square_current(current)
-                n_spikes = model.get_spike_count()
-                if self.verbose:
-                    print("Injected %s current and got %d spikes" % \
-                            (ampl,n_spikes))
-                lookup[float(ampl)] = n_spikes
-                spike_counts = np.array([n for x,n in lookup.items() if n>0])
-                if n_spikes and n_spikes <= spike_counts.min():
-                    self.rheobase_vm = model.get_membrane_potential()
-
-        max_iters = 10
-
-        #evaluate once with a current injection at 0pA
-        high=self.high
-        small=self.small
-
-        f(high)
-        i = 0
-
-        while True:
-            #sub means below threshold, or no spikes
-            sub = np.array([x for x in lookup if lookup[x]==0])*units
-            #supra means above threshold, but possibly too high above threshold.
-
-            supra = np.array([x for x in lookup if lookup[x]>0])*units
-            #The actual part of the Rheobase test that is
-            #computation intensive and therefore
-            #a target for parellelization.
-
-            if i >= max_iters:
-                break
-            #Its this part that should be like an evaluate function that is passed to futures map.
-            if len(sub) and len(supra):
-                f((supra.min() + sub.max())/2)
-
-            elif len(sub):
-                f(max(small,sub.max()*2))
-
-            elif len(supra):
-                f(min(-small,supra.min()*2))
-            i += 1
-
-        return lookup
-
-    def compute_score(self, observation, prediction):
-        """Implementation of sciunit.Test.score_prediction."""
-        #print("%s: Observation = %s, Prediction = %s" % \
-        #	 (self.name,str(observation),str(prediction)))
-        if prediction['value'] is None:
-            score = scores.InsufficientDataScore(None)
-        else:
-            score = super(RheobaseTest,self).\
-                        compute_score(observation, prediction)
-            #self.bind_score(score,None,observation,prediction)
-        return score
-
-    def bind_score(self, score, model, observation, prediction):
-        super(RheobaseTest,self).bind_score(score, model,
-                                            observation, prediction)
-        if self.rheobase_vm is not None:
-            score.related_data['vm'] = self.rheobase_vm
-
-
-
 
 class RheobaseTest(VmTest):
      """
@@ -918,8 +578,9 @@ class RheobaseTest(VmTest):
      Tests the full widths of APs at their half-maximum
      under current injection.
      """
-     def _extra(self):
-         self.prediction=None
+     def __init__(self):
+         super(RheobaseTest).__init__()
+         self.prediction = None
 
      required_capabilities = (cap.ReceivesSquareCurrent,
                               cap.ProducesSpikes)
@@ -979,7 +640,8 @@ class RestingPotentialTest(VmTest):
     units = pq.mV
 
     ephysprop_name = 'Resting membrane potential'
-    def _extra(self):
+    def __init__(self):
+        super(RestingPotentialTest).__init__()
         self.prediction = None
 
 
