@@ -20,10 +20,7 @@ def plot_performance_profile():
     Actually this probably won't work, as the performance profiler
     Requires all the process IDs to cleanly exit due to finishing their work.
     Instead the essence of this method should be rehashed as BASH script (which should be easy, since the origin is bash script)
-
     '''
-
-
     import os
     import subprocess
     #os.system('sudo /opt/conda/bin/pip install gprof2dot')
@@ -37,6 +34,15 @@ def plot_performance_profile():
     os.system('python gprof2dot.py -f -n0 -e0 pstats {0}  | dot -Tsvg -o {0}.svg'.format(prof_f_name))
 
 def graph_s(history):
+    '''
+    Make a directed graph (family tree) plot of the genealogy history
+    Bottom is the final generation, top is the initial population.
+    Extreme left and right nodes are terminating, ie they have no children, and
+    have been discarded from the breeding population.
+    NB: authors this should be obvious, but GA authors do not
+    necessarily that this is a model that
+    reflects actual genes and or actual breading.
+    '''
     plt.clf()
     import networkx
     graph = networkx.DiGraph(history.genealogy_tree)
@@ -51,13 +57,8 @@ def graph_s(history):
     edges=networkx.draw_networkx_edges(graph,positions,width=1.5,edge_cmap=plt.cm.Blues)
     plt.sci(nodes)
     cbar = plt.colorbar(fraction=0.046, pad=0.04, ticks=range(4))
-    #cbar = fig.colorbar(cax)
-    #cbar.ax.set_yticklabels([str(np.min(node_colors)),str(np.max(node_colors))])  # vertically oriented colorbar
-
     plt.sci(edges)
-    #plt.tight_layout()
     plt.savefig('genealogy_history_{0}_.eps'.format(len(graph)), format='eps', dpi=1200)
-    #plt.savefig(str('test_')+str(v)+'vm_versus_t.eps', format='eps', dpi=1200)
 
 
 
@@ -68,8 +69,6 @@ def best_worst(history):
     inputs DEAP history object
     best output should be the same as the first index of the ParetoFront list (pf[0]).
     outputs best and worst candidates evaluated.
-
-
     '''
     import numpy as np
     badness = [ np.sum(ind.fitness.values) for ind in history.genealogy_history.values() if ind.fitness.valid ]
