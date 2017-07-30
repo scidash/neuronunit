@@ -5,7 +5,11 @@ import os
 import ipyparallel as ipp
 from ipyparallel import depend, require, dependent
 #import networkx
-#import graphviz
+import graphviz
+from networkx.drawing.nx_agraph import graphviz_layout
+#import graphviz_layout
+#from unittest import TestCase
+#TestCase.assertEqual(1.0,1.0)
 
 import cProfile
 import atexit
@@ -87,8 +91,7 @@ with dview.sync_imports(): # Causes each of these things to be imported on the w
     import utilities
     print(utilities.__file__)
     vm = utilities.VirtualModel()
-    #print(vm.__init__())
-    print(vm.delta)
+
 
 
     import quantities as pq
@@ -142,11 +145,7 @@ class Individual(object):
         self.fitness = creator.FitnessMin
 
 with dview.sync_imports():
-    creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
-    creator.create("Individual", list, fitness=creator.FitnessMin)
 
-
-def p_imports():
     toolbox = base.Toolbox()
     import model_parameters as modelp
     import numpy as np
@@ -161,6 +160,29 @@ def p_imports():
     creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
     creator.create("Individual", list, fitness=creator.FitnessMin)
     toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
+    #toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
+    #toolbox.register("Individual", tools.initIterate, creator.Individual, toolbox.attr_float)
+    toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
+    toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+
+    toolbox.register("select", tools.selNSGA2)
+
+
+def p_imports():
+    toolbox = base.Toolbox()
+    import model_parameters as modelp
+    import numpy as np
+    BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
+    BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
+    NDIM = len(BOUND_UP)+1
+    def uniform(low, up, size=None):
+        try:
+            return [random.uniform(a, b) for a, b in zip(low, up)]
+        except TypeError:
+            return [random.uniform(a, b) for a, b in zip([low] * size, [up] * size)]
+    creator.create("FitnessMin", base.Fitness, weights=(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0))
+    creator.create("Individual", list, fitness=creator.FitnessMin)
+    toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
     #toolbox.register("Individual", tools.initIterate, creator.Individual, toolbox.attr_float)
     #toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
     toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
@@ -172,7 +194,7 @@ dview.apply_sync(p_imports)
 
 BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
 BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
-NDIM = len(BOUND_UP)
+NDIM = len(BOUND_UP)+1 #One extra to store rheobase values in.
 
 def uniform(low, up, size=None):
     try:
@@ -185,35 +207,39 @@ toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
 toolbox.register("Individual", tools.initIterate, creator.Individual, toolbox.attr_float)
 toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
 toolbox.register("select", tools.selNSGA2)
+# Obviously if this reusable code block was a method,
+# However using it as a method creates bugs in the program that
+# I don't understand.
+
+'''
 
 def prepare_tests(tests,vms):
     for k,v in enumerate(tests):
         if k == 0:
             v.prediction = {}
             v.prediction['value'] = vms.rheobase * pq.pA
+            v.params['injected_square_current']['duration'] = 1000 * pq.ms
+            v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
+            v.params['injected_square_current']['delay'] = 100 * pq.ms
             print(v.prediction)
+        if k != 0:
+            v.prediction = None
 
         if k == 1 or k == 2 or k == 3:
             # Negative square pulse current.
             v.params['injected_square_current']['duration'] = 100 * pq.ms
             v.params['injected_square_current']['amplitude'] = -10 *pq.pA
             v.params['injected_square_current']['delay'] = 30 * pq.ms
-        if k == 0 or k == 5 or k == 6 or k == 7:
+        if k == 5 or k == 6 or k == 7:
             # Threshold current.
             v.params['injected_square_current']['duration'] = 1000 * pq.ms
             v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
             v.params['injected_square_current']['delay'] = 100 * pq.ms
-            v.prediction = {}
-            v.prediction['value'] = vms.rheobase * pq.pA
+
             print(v.prediction,k)
         print(v.params)
-
-
-            #plt.plot(obs,k)
-            #plt.plot(pre,k)
-        #plt.xlabel('observations vs predictions')
-        #plt.ylabel('test number')
-    #plt.savefig('observation_vs_prediction.eps'.format(os.pid,j,vms.run_number))
+    return tests
+'''
 
 def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     '''
@@ -228,90 +254,67 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     Inputs a gene and a virtual model object.
     outputs are error components.
     '''
-    def plot_db(tests,pre,vms):
-        '''
-        A method to plot raw predictions
-        versus observations
-        '''
 
-        import matplotlib.pyplot as plt
-        import numpy as np
-        plt.clf()
-        matplotlib.use('Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
-        matplotlib.style.use('ggplot')
-        vms.delta[vms.run_number] = []
-        print(pre)
-        for iterator,returns in enumerate(pre):
-            for predictions in returns.values():
-                unit_predictions = predictions
-            print('observations: {0} predictions: {1}'.format(tests[iterator].observation, returns.values()))
-            if 'mean' in tests[iterator].observation.keys():
-                obs = tests[iterator].observation['mean']
-                unit_observations = obs
-            else:
-                for obs in tests[iterator].observation.values():
-                    unit_observations = obs
-            # make sure unit order of magnitude matches, by rescaling one to the other:
-            to_r_s = unit_observations.units
-            print(to_r_s)
-            unit_delta = np.abs(unit_observations-unit_predictions.rescale(to_r_s))
-            print('unit delta', unit_delta)
-            vms.delta[vms.run_number].append(unit_delta)
-            #if iterator!=1:
-            plt.scatter(iterator,unit_delta)
-        labels = tuple([str(t.describe()) for t in tests ])
-        tick_locations = tuple(range(0,len(tests)))
-        plt.xticks(tick_locations , labels)
-        plt.xticks(rotation=70)
-        plt.xlabel('test type')
-        plt.ylabel('observation versus prediction')
-        plt.savefig('obsevation_versus_prediction_{0}_.eps'.format(vms.run_number))
-        return vms
-    #vms = plot_db(get_neab.suite.tests,new_preds,vms)
-    #plot_db(get_neab.suite.tests,pre,vms)
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
     import quantities as pq
     import numpy as np
     import get_neab
     from itertools import repeat
+    import net_graph
+    #vms = net_graph.plot_db(vms)
 
     new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
     model = ReducedModel(new_file_path,name=str(vms.attrs),backend='NEURON')
     model.load_model()
     assert type(vms.rheobase) is not type(None)
+    #tests = get_neab.suite.tests
     model.update_run_params(vms.attrs)
-    tests = get_neab.suite.tests
-    prepare_tests(get_neab.suite.tests,vms)
-    # a performance hit but one that will change.
-    #pre = dview.map(repeat(model))
+    tests = copy.copy(get_neab.tests)
+    for k,v in enumerate(tests):
+        if k == 0:
+            v.prediction = {}
+            v.prediction['value'] = vms.rheobase * pq.pA
+            v.params['injected_square_current']['duration'] = 1000 * pq.ms
+            v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
+            v.params['injected_square_current']['delay'] = 100 * pq.ms
+            print(v.prediction)
+        if k != 0:
+            v.prediction = None
 
-    model.update_run_params(vms.attrs)
-    score = get_neab.suite.judge(model, stop_on_error = False, deep_error = True)
-    pre = [ t.generate_prediction(model) for t in tests ]
-    #new_preds = [ t.prediction for t in tests ]
-    #print(new_preds)
-    #assert.equals(pre,new_preds)
-    #delta = dview.map_sync(plot_db,get_neab.suite.tests,new_preds,repeat(vms))
-    vms = plot_db(get_neab.suite.tests,pre,vms)
+        if k == 1 or k == 2 or k == 3:
+            # Negative square pulse current.
+            v.params['injected_square_current']['duration'] = 100 * pq.ms
+            v.params['injected_square_current']['amplitude'] = -10 *pq.pA
+            v.params['injected_square_current']['delay'] = 30 * pq.ms
+        if k == 5 or k == 6 or k == 7:
+            # Threshold current.
+            v.params['injected_square_current']['duration'] = 1000 * pq.ms
+            v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
+            v.params['injected_square_current']['delay'] = 100 * pq.ms
+
+
+    score = get_neab.suite.judge(model, stop_on_error = False)#, deep_error = True)
+    vms.score = score
+
+    assert type(vms) is not type(None)
     print(score)
     model.run_number += 1
-    # Run the model, then:
-    error = []
-    vms.score = []
-    #other_mean = np.mean([i for i in score.sort_key.values.tolist()[0] if type(i) is not type(None)])
+    model.rheobase = vms.rheobase * pq.pA
+    fitness = []
 
     for my_score in score.sort_key.values.tolist()[0]:
         assert type(my_score) is not type(dict)
-        error.append(my_score)
+        fitness.append(my_score)
+
     vms.evaluated = True
-    error = [ -1.0 * e for e in error ]
-    vms.error = error
-    return error[0],error[1],error[2],error[3],error[4],error[5],error[6],error[7],
+    vms.fitness = fitness
+
+    return fitness[0],fitness[1],fitness[2],fitness[3],fitness[4],fitness[5],fitness[6],fitness[7],
 
 
-toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0)
-toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
+toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=30.0)
+toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=30.0, indpb=1.0/NDIM)
 toolbox.decorate("mate", history.decorator)
 toolbox.decorate("mutate", history.decorator)
 toolbox.register("select", tools.selNSGA2)
@@ -319,10 +322,7 @@ toolbox.register("map",dview.map_sync)
 
 toolbox.register("evaluate", evaluate)
 
-def sum_over(individual):
-    return sum(individual),
 
-toolbox.register("sum_over", sum_over)
 
 
 def plot_ss(vmlist,gen):
@@ -346,6 +346,21 @@ def get_trans_dict(param_dict):
 import model_parameters
 param_dict = model_parameters.model_params
 
+def vm_to_ind(vm,td):
+    '''
+    Re instanting Virtual Model at every update vmpop
+    is Noneifying its score attribute, and possibly causing a
+    performance bottle neck.
+    '''
+
+    ind =[]
+    for k in td.keys():
+        ind.append(vm.attrs[td[k]])
+    ind.append(vm.rheobase)
+    return ind
+
+
+
 def update_vm_pop(pop, trans_dict):
     '''
     inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
@@ -367,8 +382,7 @@ def update_vm_pop(pop, trans_dict):
         performance bottle neck.
         '''
         vm = utilities.VirtualModel()
-        print(dir(vm))
-        print(vm.delta)
+
         param_dict = {}
         for i,j in enumerate(ind):
             param_dict[trans_dict[i]] = str(j)
@@ -377,7 +391,8 @@ def update_vm_pop(pop, trans_dict):
         vm.evaluated = False
         return vm
 
-    if len(pop) > 1:
+
+    if len(pop) > 0:
         vmpop = dview.map_sync(transform, pop)
         vmpop = list(copy.copy(vmpop))
     else:
@@ -567,14 +582,19 @@ def check_rheobase(vmpop,pop=None):
         if vm.initiated == True:
             # expand values in the range to accomodate for mutation.
             # but otherwise exploit memory of this range.
-            vm.steps = [ s * 1.25 for s in vm.steps ]
+
+            if type(vm.steps) is type(float):
+                vm.steps = [ 0.75 * vm.steps, 1.25 * vm.steps ]
+            elif type(vm.steps) is type(list):
+                vm.steps = [ s * 1.25 for s in vm.steps ]
+            #assert len(vm.steps) > 1
             vm.initiated = True # logically unnecessary but included for readibility
 
         if vm.initiated == False:
             import quantities as pq
             import numpy as np
             vm.boolean = False
-            steps = list(np.linspace(-50,200,7.0))
+            steps = np.linspace(-50,200,7.0)
             steps_current = [ i*pq.pA for i in steps ]
             vm.steps = steps_current
             vm.initiated = True
@@ -604,7 +624,7 @@ def check_rheobase(vmpop,pop=None):
         return vm
 
     ## initialize where necessary.
-    import time
+    #import time
     vmpop = list(dview.map_sync(init_vm,vmpop))
 
     # if a population has already been evaluated it may be faster to let it
@@ -612,9 +632,7 @@ def check_rheobase(vmpop,pop=None):
     # memory of a previous range as acts as a guess as the next mutations range.
 
     vmpop = list(dview.map_sync(find_rheobase,vmpop))
-    #vmpop = list(vmpop)
-    if type(pop) is not type(None):
-        vmpop, pop = final_check(vmpop,pop)
+
     return vmpop, pop
 
 
@@ -624,9 +642,9 @@ def check_rheobase(vmpop,pop=None):
 # Start of the Genetic Algorithm
 ##
 
-MU = 5
-NGEN = 5
-CXPB = 0.9
+MU = 10
+NGEN = 25
+CXPB = 0.6
 
 import numpy as np
 pf = tools.ParetoFront()
@@ -650,34 +668,26 @@ pop = toolbox.population(n = MU)
 history.update(pop)
 pop = [ toolbox.clone(i) for i in pop ]
 vmpop = update_vm_pop(pop, td)
-print(type(vmpop[0]))
-print(dir(vmpop[0]))
-#print(vmpop[0].__init__())
-print(vmpop[0].delta)
-tests = get_neab.suite.tests
-for t in tests:
-    print(t.observation, t.describe())
+
 
 vmpop , _ = check_rheobase(vmpop)
-for i in vmpop:
-    print('the rheobase value is {0}'.format(i.rheobase))
+#for t in tests:
+#    print(t.observation, t.describe(), t.prediction)
+#new_checkpoint_path = str('rh_checkpoint')+str('.p')
+#import pickle
+#with open(new_checkpoint_path,'wb') as handle:#
+#    pickle.dump({'vmpop':vmpop,'pop':pop}, handle)
 
 
-new_checkpoint_path = str('rh_checkpoint')+str('.p')
-import pickle
-with open(new_checkpoint_path,'wb') as handle:
-    pickle.dump({'vmpop':vmpop,'pop':pop}, handle)
-#cp = pickle.load(open(new_checkpoint_path,'rb'))
-
-
-
-
+fitnesses = []
 import copy
-fitnesses = toolbox.map(toolbox.evaluate, copy.copy(vmpop))
+fitnesses = dview.map_sync(evaluate, copy.copy(vmpop))
+
 for ind, fit in zip(pop, fitnesses):
     ind.fitness.values = fit
 
 history.update(pop)
+
 pop = tools.selNSGA2(pop, MU)
 
 ### After an evaluation of error its appropriate to display error statistics
@@ -692,7 +702,11 @@ score_storage = [ v.score for v in vmpop ]
 time_out = 0
 
 for gen in range(1, NGEN):
-    offspring = tools.selTournamentDCD(pop, len(pop))
+    offspring = tools.selBest(pop, len(pop))
+    for ind in offspring:
+        print('what do the weights without values look like? {0}'.format(ind.fitness.weights))
+        print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues))
+        print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid))
     #assert len(offspring)!=0
     offspring = [toolbox.clone(ind) for ind in offspring]
     #assert len(offspring)!=0
@@ -707,55 +721,72 @@ for gen in range(1, NGEN):
         # and hence they need recalculating
         # Mutation also implies breeding, if a gene is mutated it was also recently recombined.
         del ind1.fitness.values, ind2.fitness.values
+
     invalid_ind = []
     for ind in offspring:
-        if len(ind.fitness.values) == 0:
+        #print('what do the weights without values look like? {0}'.format(ind.fitness.weights))
+        #print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues))
+        #print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid))
+        if ind.fitness.valid == False:
             invalid_ind.append(ind)
     # Need to make sure that update_vm_pop does not replace instances of the same model
     # Thus waisting computation.
-    vmoffspring = update_vm_existing(copy.copy(invalid_ind), vmpop, trans_dict) #(copy.copy(invalid_ind), td)
+    vmoffspring = update_vm_pop(copy.copy(invalid_ind), trans_dict) #(copy.copy(invalid_ind), td)
     vmoffspring , _ = check_rheobase(copy.copy(vmoffspring))
 
-    fitnesses = list(toolbox.map(toolbox.evaluate, copy.copy(vmoffspring)))
+    fitnesses = []
+    fitnesses = list(dview.map_sync(toolbox.evaluate, copy.copy(vmoffspring)))
+    mf = np.mean(fitnesses)
 
-
-    for ind, fit in zip(copy.copy(offspring), fitnesses):
+    for ind, fit in zip(copy.copy(invalid_ind), fitnesses):
         ind.fitness.values = fit
+        print('what do the weights without values look like? {0}'.format(ind.fitness.weights))
+        print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues))
+        print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid))
 
     # Its possible that the offspring are worse than the parents of the penultimate generation
     # Selecting from a gene pool of offspring and parents accomodates for that possibility.
     # There are two selection stages as per the NSGA example.
     # https://github.com/DEAP/deap/blob/master/examples/ga/nsga2.py
     #pop = toolbox.select(pop + offspring, MU)
-    pop = tools.selNSGA2(pop + offspring, MU)
-    history.update(pop)
-    pf.update([toolbox.clone(i) for i in pop])
-    record = stats.compile([toolbox.clone(i) for i in pop])
-    logbook.record(gen=gen, evals=len(pop), **record)
-    means = np.array(logbook.select('avg'))
-    # if the means are not decreasing at least as an overall trend something is wrong.
-    print('means: {0}'.format(means))
-    if means[-1] <= means[-2] or means[-1] < means[0]:
-        time_out = 0
 
-    # if the lasest mean error is greater than second latest mean error.
-    # or if the latest mean error is greater than the initial mean error.
-    # Then the error might be growing not shrinking.
-    if means[-1] > means[-2] or means[-1] > means[1]:
-        time_out += 1
-        print('time out: {0}'.format(time_out))
-        assert time_out < 3
-    print('means: {0} std: {1} max: {2} min: {3}'.format(logbook.select('avg'), \
-                                                        logbook.select('std'), \
+    keys = history.genealogy_tree.keys()
+    # Grab evaluated history items and chuck them into the mixture.
+    # We want to select among the best from the whole history of the GA, not just penultimate and present generations.
+    all_hist = [ history.genealogy_history[i] for i in keys if history.genealogy_history[i].fitness.valid == True ]
+
+    pop = tools.selNSGA2(offspring + all_hist, MU)
+    record = stats.compile(pop)
+    history.update(pop)
+
+    logbook.record(gen=gen, evals=len(pop), **record)
+    pf.update([toolbox.clone(i) for i in pop])
+    means = np.array(logbook.select('avg'))
+    pf_mean = np.mean([ i.fitness.values for i in pf ])
+
+
+    # if the means are not decreasing at least as an overall trend something is wrong.
+    print('means from logbook: {0} from manual meaning the fitness: {1}'.format(means,mf))
+    print('means: {0} pareto_front first: {1} pf_mean {2} max: {3} min: {4}'.format(logbook.select('avg'), \
+                                                        np.sum(np.mean(pf[0].fitness.wvalues)),\
+                                                        pf_mean,\
                                                         logbook.select('max'), \
                                                         logbook.select('min')))
-    assert len(vmoffspring) != 0
+    #assert len(vmoffspring) != 0
 
 
 with open('complete_dump.p','wb') as handle:
    pickle.dump([vmpop,pop,pf,history,logbook],handle)
+lists = pickle.load(open('complete_dump.p','rb'))
+vmpop,pop,pf,history,logbook = lists[4],lists[3],lists[2],lists[1],lists[0]
 
-
+def plot_best_worst(pf,pop):
+    for i,j in enumerate(pf[0]):
+        param_dict[trans_dict[i]] = str(j)
+        vm_best.attrs = param_dict
+    for i,j in enumerate(pop[-1]):
+        param_dict[trans_dict[i]] = str(j)
+        vm_worst.attrs = param_dict
 
 rhstorage = [ v.rheobase for v in copy.copy(vmoffspring) ]
 score_storage = [ np.sum(v.score) for v in copy.copy(vmoffspring) ]
@@ -765,24 +796,36 @@ score_storage_sum = [ np.sum(v.score) for v in copy.copy(vmoffspring) ]
 import net_graph
 net_graph.plot_log(logbook)
 net_graph.just_mean(logbook)
-plt.clf()
-import networkx
-graph = networkx.DiGraph(history.genealogy_tree)
-graph = graph.reverse()
-labels ={}
-for i in graph.nodes():
-    labels[i] = i
-node_colors = [ np.sum(history.genealogy_history[i].fitness.values) for i in graph ]
-positions = graphviz_layout(graph, prog="dot")
-networkx.draw(graph, positions, node_color=node_colors, labels = labels)
-nodes=networkx.draw_networkx_nodes(graph,positions,node_color=node_colors)
-edges=networkx.draw_networkx_edges(graph,positions,width=0.5,edge_cmap=plt.cm.Blues)
-plt.sci(nodes)
-plt.colorbar()
-plt.sci(edges)
-plt.savefig('genealogy_history_{0}_.eps'.format('4343'))
-print(rhstorage)
-print(score_storage)
+
+
+
+#Although the pareto front surely contains the best candidate it cannot contain the worst, only history can.
+best_ind_dict_vm = update_vm_pop(pf[0:2],td)
+best_ind_dict_vm , _ = check_rheobase(best_ind_dict_vm)
+
+
+
+best, worst = net_graph.best_worst(history)
+listss = [best , worst]
+best_worst = update_vm_pop(listss,td)
+best_worst , _ = check_rheobase(best_worst)
+
+print(best_worst[0].attrs,' = ', best_ind_dict_vm[0].attrs, 'should be the same (eyeball)')
+
+# This operation converts the population of virtual models back to DEAP individuals
+# Except that there is now an added 11th dimension for rheobase.
+# This is not done in the general GA algorithm, since its not known if adding an extra dimensionality
+# Will cause a bug or not.
+pop_plus_rh = list(dview.map_sync(vm_to_ind,vmpop,repeat(td)))
+
+net_graph.plot_evaluate( best_worst[0],best_worst[0])
+
+net_graph.plot_db(best_worst[0],name='best')
+net_graph.plot_db(best_worst[1],name='worst')
+net_graph.plot_performance_profile()
+#net_graph.plot_evaluate(best_ind_dict_vm[0],name='best')
+#good_solutions = net_graph.bpyopt(pf)
+
 print('unclear why vmoffspring: {0} and pareto front:  {1} of different lengths'.format(len(vmoffspring),len(pf)))
 print(pf)
 import pandas as pd
