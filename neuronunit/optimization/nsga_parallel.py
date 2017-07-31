@@ -242,7 +242,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     #vms = net_graph.plot_db(vms)
 
     new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-    model = ReducedModel(new_file_path,name=str(vms.attrs),backend='NEURON')
+    model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
     model.load_model()
     assert type(vms.rheobase) is not type(None)
     #tests = get_neab.suite.tests
@@ -521,7 +521,7 @@ def check_rheobase(vmpop,pop=None):
 
         new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
 
-        model = ReducedModel(new_file_path,name=str(vm.attrs),backend='NEURON')
+        model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
         model.load_model()
         model.update_run_params(vm.attrs)
 
@@ -592,7 +592,7 @@ def check_rheobase(vmpop,pop=None):
         #print(pid_map[int(os.getpid())])
 
         new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-        model = ReducedModel(new_file_path,name=str(vm.attrs),backend='NEURON')
+        model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
         model.load_model()
         model.update_run_params(vm.attrs)
         cnt = 0
@@ -689,16 +689,12 @@ score_storage = [ v.score for v in vmpop ]
 
 time_out = 0
 verbose = False
-for gen in range(1, NGEN):
+means = np.array(logbook.select('avg'))
 
+while gen =< NGEN and means[-1] => 0.225:
+    means = np.array(logbook.select('avg'))
     offspring = tools.selNSGA2(pop, len(pop))
-
-    for ind in offspring:
-        if verbose:
-            print('what do the weights without values look like? {0}'.format(ind.fitness.weights))
-            print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues))
-            print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid))
-    #assert len(offspring)!=0
+        #assert len(offspring)!=0
     offspring = [toolbox.clone(ind) for ind in offspring]
     #assert len(offspring)!=0
     for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
@@ -739,7 +735,7 @@ for gen in range(1, NGEN):
             print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues))
             print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid))
 
-    filtered = [ offspring[k] for k,v in enumerate(vmoffspring) if np.abs(float(get_neab.tests[0].observation['value']))-np.abs(v.rheobase) < 30.0 ]
+    filtered = [ offspring[k] for k,v in enumerate(vmoffspring) if np.abs(np.abs(float(get_neab.tests[0].observation['value']))-np.abs(v.rheobase)) < 25.0 ]
     print(len(filtered),len(offspring),len(filtered)-len(offspring))
     # Its possible that the offspring are worse than the parents of the penultimate generation
     # Selecting from a gene pool of offspring and parents accomodates for that possibility.
@@ -754,23 +750,22 @@ for gen in range(1, NGEN):
     #pop = tools.selNSGA2(offspring + all_hist, MU)
 
     pop = tools.selNSGA2(offspring + pop, MU)
+    # Hack good rheobase solutions back into the population.
+    pop.extend(filtered)
 
-    #tools.selBest(offspring + pop,MU)
     record = stats.compile(pop)
     history.update(pop)
 
     logbook.record(gen=gen, evals=len(pop), **record)
     pf.update([toolbox.clone(i) for i in pop])
-    means = np.array(logbook.select('avg'))
     pf_mean = np.mean([ i.fitness.values for i in pf ])
-
 
     # if the means are not decreasing at least as an overall trend something is wrong.
     print('means from logbook: {0} from manual meaning the fitness: {1}'.format(means,mf))
     print('means: {0} pareto_front first: {1} pf_mean {2}'.format(logbook.select('avg'), \
                                                         np.sum(np.mean(pf[0].fitness.values)),\
                                                         pf_mean))
-    #assert len(vmoffspring) != 0
+    gen += 1
 
 import pickle
 with open('complete_dump.p','wb') as handle:
