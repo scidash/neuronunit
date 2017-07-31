@@ -46,7 +46,7 @@ class Utilities:
         return vm
 
 
-    def pop2map(iter_arg):
+    def pop2map(attrs):
         '''
         Just a sanity check an otherwise impotent method
         '''
