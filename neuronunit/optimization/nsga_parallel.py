@@ -6,7 +6,7 @@ import ipyparallel as ipp
 from ipyparallel import depend, require, dependent
 #import networkx
 import graphviz
-from networkx.drawing.nx_agraph import graphviz_layout
+#from networkx.drawing.nx_agraph import graphviz_layout
 #import graphviz_layout
 #from unittest import TestCase
 #TestCase.assertEqual(1.0,1.0)
@@ -157,6 +157,9 @@ with dview.sync_imports():
             return [random.uniform(a, b) for a, b in zip(low, up)]
         except TypeError:
             return [random.uniform(a, b) for a, b in zip([low] * size, [up] * size)]
+
+    #creator.create("FitnessMin", base.Fitness, weights=(-1.0))# -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
+
     creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
     creator.create("Individual", list, fitness=creator.FitnessMin)
     toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
@@ -180,6 +183,8 @@ def p_imports():
             return [random.uniform(a, b) for a, b in zip(low, up)]
         except TypeError:
             return [random.uniform(a, b) for a, b in zip([low] * size, [up] * size)]
+    #creator.create("FitnessMin", base.Fitness, weights=(-1.0))# -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
+
     creator.create("FitnessMin", base.Fitness, weights=(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0))
     creator.create("Individual", list, fitness=creator.FitnessMin)
     toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
@@ -211,35 +216,7 @@ toolbox.register("select", tools.selNSGA2)
 # However using it as a method creates bugs in the program that
 # I don't understand.
 
-'''
 
-def prepare_tests(tests,vms):
-    for k,v in enumerate(tests):
-        if k == 0:
-            v.prediction = {}
-            v.prediction['value'] = vms.rheobase * pq.pA
-            v.params['injected_square_current']['duration'] = 1000 * pq.ms
-            v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
-            v.params['injected_square_current']['delay'] = 100 * pq.ms
-            print(v.prediction)
-        if k != 0:
-            v.prediction = None
-
-        if k == 1 or k == 2 or k == 3:
-            # Negative square pulse current.
-            v.params['injected_square_current']['duration'] = 100 * pq.ms
-            v.params['injected_square_current']['amplitude'] = -10 *pq.pA
-            v.params['injected_square_current']['delay'] = 30 * pq.ms
-        if k == 5 or k == 6 or k == 7:
-            # Threshold current.
-            v.params['injected_square_current']['duration'] = 1000 * pq.ms
-            v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
-            v.params['injected_square_current']['delay'] = 100 * pq.ms
-
-            print(v.prediction,k)
-        print(v.params)
-    return tests
-'''
 
 def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     '''
@@ -308,10 +285,18 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
         fitness.append(my_score)
 
     vms.evaluated = True
-    vms.fitness = fitness
+    #vms.fitness = fitness
+    for k,f in enumerate(fitness):
+        fitness[k] = f + 2.0 * fitness[0] # add the rheobase error to all the errors.
+        fitness[k] = f + 1.0 * fitness[1]
+    print(fitness)
 
-    return fitness[0],fitness[1],fitness[2],fitness[3],fitness[4],fitness[5],fitness[6],fitness[7],
 
+
+    return fitness[0],fitness[1],\
+           fitness[2],fitness[3],\
+           fitness[4],fitness[5],\
+           fitness[6],fitness[7],
 
 toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=30.0)
 toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=30.0, indpb=1.0/NDIM)
@@ -616,11 +601,13 @@ def check_rheobase(vmpop,pop=None):
         if type(vm.rheobase) is not type(None):
             vm = check_current(vm.rheobase,vm)
         # If its not true enter a search, with ranges informed by memory
+        cnt = 0
         while vm.boolean == False:
             for step in vm.steps:
                 vm = check_current(step, vm)
                 vm = check_fix_range(vm)
                 cnt+=1
+                print(cnt)
         return vm
 
     ## initialize where necessary.
@@ -642,9 +629,9 @@ def check_rheobase(vmpop,pop=None):
 # Start of the Genetic Algorithm
 ##
 
-MU = 10
+MU = 8
 NGEN = 25
-CXPB = 0.6
+CXPB = 0.9
 
 import numpy as np
 pf = tools.ParetoFront()
@@ -669,7 +656,7 @@ history.update(pop)
 pop = [ toolbox.clone(i) for i in pop ]
 vmpop = update_vm_pop(pop, td)
 
-
+print('possibly never returns from find rheobase')
 vmpop , _ = check_rheobase(vmpop)
 #for t in tests:
 #    print(t.observation, t.describe(), t.prediction)
@@ -686,9 +673,10 @@ fitnesses = dview.map_sync(evaluate, copy.copy(vmpop))
 for ind, fit in zip(pop, fitnesses):
     ind.fitness.values = fit
 
-history.update(pop)
 
 pop = tools.selNSGA2(pop, MU)
+history.update(pop)
+
 
 ### After an evaluation of error its appropriate to display error statistics
 #pf = tools.ParetoFront()
@@ -700,13 +688,16 @@ print(logbook.stream)
 score_storage = [ v.score for v in vmpop ]
 
 time_out = 0
-
+verbose = False
 for gen in range(1, NGEN):
-    offspring = tools.selBest(pop, len(pop))
+
+    offspring = tools.selNSGA2(pop, len(pop))
+
     for ind in offspring:
-        print('what do the weights without values look like? {0}'.format(ind.fitness.weights))
-        print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues))
-        print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid))
+        if verbose:
+            print('what do the weights without values look like? {0}'.format(ind.fitness.weights))
+            print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues))
+            print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid))
     #assert len(offspring)!=0
     offspring = [toolbox.clone(ind) for ind in offspring]
     #assert len(offspring)!=0
@@ -733,6 +724,9 @@ for gen in range(1, NGEN):
     # Thus waisting computation.
     vmoffspring = update_vm_pop(copy.copy(invalid_ind), trans_dict) #(copy.copy(invalid_ind), td)
     vmoffspring , _ = check_rheobase(copy.copy(vmoffspring))
+    #from itertools import repeat
+    #pop_plus_rh = list(dview.map_sync(vmoffspring ,vmpop,repeat(td)))
+    #print(pop_plus_rh)
 
     fitnesses = []
     fitnesses = list(dview.map_sync(toolbox.evaluate, copy.copy(vmoffspring)))
@@ -740,22 +734,28 @@ for gen in range(1, NGEN):
 
     for ind, fit in zip(copy.copy(invalid_ind), fitnesses):
         ind.fitness.values = fit
-        print('what do the weights without values look like? {0}'.format(ind.fitness.weights))
-        print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues))
-        print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid))
+        if verbose:
+            print('what do the weights without values look like? {0}'.format(ind.fitness.weights))
+            print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues))
+            print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid))
 
+    filtered = [ offspring[k] for k,v in enumerate(vmoffspring) if np.abs(float(get_neab.tests[0].observation['value']))-np.abs(v.rheobase) < 30.0 ]
+    print(len(filtered),len(offspring),len(filtered)-len(offspring))
     # Its possible that the offspring are worse than the parents of the penultimate generation
     # Selecting from a gene pool of offspring and parents accomodates for that possibility.
     # There are two selection stages as per the NSGA example.
     # https://github.com/DEAP/deap/blob/master/examples/ga/nsga2.py
     #pop = toolbox.select(pop + offspring, MU)
 
-    keys = history.genealogy_tree.keys()
+    #keys = history.genealogy_tree.keys()
     # Grab evaluated history items and chuck them into the mixture.
     # We want to select among the best from the whole history of the GA, not just penultimate and present generations.
-    all_hist = [ history.genealogy_history[i] for i in keys if history.genealogy_history[i].fitness.valid == True ]
+    #all_hist = [ history.genealogy_history[i] for i in keys if history.genealogy_history[i].fitness.valid == True ]
+    #pop = tools.selNSGA2(offspring + all_hist, MU)
 
-    pop = tools.selNSGA2(offspring + all_hist, MU)
+    pop = tools.selNSGA2(offspring + pop, MU)
+
+    #tools.selBest(offspring + pop,MU)
     record = stats.compile(pop)
     history.update(pop)
 
@@ -767,35 +767,23 @@ for gen in range(1, NGEN):
 
     # if the means are not decreasing at least as an overall trend something is wrong.
     print('means from logbook: {0} from manual meaning the fitness: {1}'.format(means,mf))
-    print('means: {0} pareto_front first: {1} pf_mean {2} max: {3} min: {4}'.format(logbook.select('avg'), \
-                                                        np.sum(np.mean(pf[0].fitness.wvalues)),\
-                                                        pf_mean,\
-                                                        logbook.select('max'), \
-                                                        logbook.select('min')))
+    print('means: {0} pareto_front first: {1} pf_mean {2}'.format(logbook.select('avg'), \
+                                                        np.sum(np.mean(pf[0].fitness.values)),\
+                                                        pf_mean))
     #assert len(vmoffspring) != 0
 
-
+import pickle
 with open('complete_dump.p','wb') as handle:
    pickle.dump([vmpop,pop,pf,history,logbook],handle)
 lists = pickle.load(open('complete_dump.p','rb'))
 vmpop,pop,pf,history,logbook = lists[4],lists[3],lists[2],lists[1],lists[0]
 
-def plot_best_worst(pf,pop):
-    for i,j in enumerate(pf[0]):
-        param_dict[trans_dict[i]] = str(j)
-        vm_best.attrs = param_dict
-    for i,j in enumerate(pop[-1]):
-        param_dict[trans_dict[i]] = str(j)
-        vm_worst.attrs = param_dict
-
-rhstorage = [ v.rheobase for v in copy.copy(vmoffspring) ]
-score_storage = [ np.sum(v.score) for v in copy.copy(vmoffspring) ]
-score_storage_sum = [ np.sum(v.score) for v in copy.copy(vmoffspring) ]
-
 
 import net_graph
+net_graph.graph_s(history)
 net_graph.plot_log(logbook)
 net_graph.just_mean(logbook)
+net_graph.plot_objectives_history(logbook)
 
 
 
@@ -816,7 +804,7 @@ print(best_worst[0].attrs,' = ', best_ind_dict_vm[0].attrs, 'should be the same 
 # Except that there is now an added 11th dimension for rheobase.
 # This is not done in the general GA algorithm, since its not known if adding an extra dimensionality
 # Will cause a bug or not.
-pop_plus_rh = list(dview.map_sync(vm_to_ind,vmpop,repeat(td)))
+
 
 net_graph.plot_evaluate( best_worst[0],best_worst[0])
 
@@ -825,14 +813,6 @@ net_graph.plot_db(best_worst[1],name='worst')
 net_graph.plot_performance_profile()
 #net_graph.plot_evaluate(best_ind_dict_vm[0],name='best')
 #good_solutions = net_graph.bpyopt(pf)
-
-print('unclear why vmoffspring: {0} and pareto front:  {1} of different lengths'.format(len(vmoffspring),len(pf)))
-print(pf)
-import pandas as pd
-scores = []
-for vm in vmoffspring:
-    scores.append((vm.attrs,vm.score))
-    print(vm.score)
 
 sc = pd.DataFrame(scores[0])
 sc

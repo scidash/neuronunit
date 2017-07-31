@@ -108,6 +108,7 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
     from itertools import repeat
     #import net_graph
     vmslist = [vms_best, vms_worst]
+    import copy
     tests = copy.copy(get_neab.tests)
     for k,v in enumerate(tests):
         import matplotlib.pyplot as plt
@@ -115,6 +116,8 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
         plt.style.use('ggplot')
         stored_min = []
         stored_max = []
+        sc_for_frame_best = []
+        sc_for_frame_worst = []
         for iterator, vms in enumerate(vmslist):
             new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
             model = ReducedModel(new_file_path,name=str(vms.attrs),backend='NEURON')
@@ -148,8 +151,14 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
             model.load_model()
             model.update_run_params(vms.attrs)
             print(v.params)
-            score = v.judge(model,stop_on_error = False)
-            vms.score = score
+            score = v.judge(model,stop_on_error = False, deep_error = True)
+            if iterator == 0:
+                sc_for_frame_best.append(score)
+            else:
+                sc_for_frame_worst.append(score)
+
+            #vms.score = score
+
 
 
             #for t in get_neab.tests:
@@ -163,6 +172,9 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
             plt.ylabel('$V_{m}$ mV')
             plt.xlabel('mS')
         plt.savefig(str('test_')+str(v)+'vm_versus_t.eps', format='eps', dpi=1200)
+        sf_best = pd.DataFrame(sc_for_frame_best)
+        sf_worst = pd.DataFrame(sc_for_frame_worst)
+
 
 def just_mean(log):
     '''
@@ -193,7 +205,7 @@ def just_mean(log):
     axes.set_ylim([0, max(mean_many)])
     axes.legend()
     fig.tight_layout()
-    fig.savefig('Izhikevich_evolution_just_mean.eps')
+    fig.savefig('Izhikevich_evolution_just_mean.eps', format='eps', dpi=1200)
 
 def plot_db(vms,name=None):
     '''
@@ -206,6 +218,7 @@ def plot_db(vms,name=None):
 
     '''
     import matplotlib
+    import pandas as pd
 
     import matplotlib.pyplot as plt
     import numpy as np
@@ -223,6 +236,7 @@ def plot_db(vms,name=None):
     from itertools import repeat
     #import net_graph
     #vmslist = [vms_best, vms_worst]
+    delta = []
     tests = copy.copy(get_neab.tests)
     for k,v in enumerate(tests):
         new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
@@ -257,7 +271,7 @@ def plot_db(vms,name=None):
         model.load_model()
         model.update_run_params(vms.attrs)
         print(v.params)
-        score = v.judge(model,stop_on_error = False)
+        score = v.judge(model,stop_on_error = False, deep_error = True)
 
 
         if 'mean' in v.observation.keys():
@@ -281,10 +295,10 @@ def plot_db(vms,name=None):
             unit_delta = np.abs(np.abs(unit_observations)-np.abs(unit_predictions))
         except:
             unit_delta = 0.0
-        vms.delta.append(unit_delta)
+        delta.append(unit_delta)
         print('observation {0} versus prediction {1}'.format(unit_observations,unit_predictions))
         print('unit delta', unit_delta)
-        if k==0:
+        if k == 0:
             axarr[k].scatter(k,float(unit_delta),label = 'difference')
             axarr[k].scatter(k,float(unit_observations),label = 'observation')
             axarr[k].scatter(k,float(unit_predictions),label = 'prediction')
@@ -300,6 +314,9 @@ def plot_db(vms,name=None):
             axarr[2].scatter(k,float(unit_observations),label = 'observation')
             axarr[2].scatter(k,float(unit_predictions),label = 'prediction')
             axarr[2].legend()
+
+    vms.delta.append(np.mean(delta))
+
     labels = [ '{0}_{1}'.format(str(t),str(t.observation['value'].units)) for t in tests if 'mean' not in t.observation.keys() ]
     labels.extend([ '{0}_{1}'.format(str(t),str(t.observation['mean'].units))  for t in tests if 'mean' in t.observation.keys() ])
     labels = tuple(labels)
@@ -309,9 +326,12 @@ def plot_db(vms,name=None):
     plt.xticks(rotation=25)
     plt.xlabel('test type')
     plt.ylabel('observation versus prediction')
-
     plt.tight_layout()
-    plt.savefig('obsevation_versus_prediction_{0}.eps'.format(name))
+    plt.savefig('obsevation_versus_prediction_{0}.eps'.format(name), format='eps', dpi=1200)
+
+    pd.DataFrame()
+    df2.plot(kind='bar', stacked=True);
+
     return vms
 
 def plot_log(log):
@@ -336,6 +356,8 @@ def plot_log(log):
     std = np.array(log.select('std'))
     minimum = log.select('min')
     # maximum = log.select('max')
+    import get_neab
+    objective_labels = [ str(t) for t in get_neab.tests ]
 
     stdminus = mean - std
     stdplus = mean + std
@@ -359,6 +381,10 @@ def plot_log(log):
         minimum,
         linewidth=2,
         label='population objectives')
+        # want objective labels to be label.
+        # problem is vector scalar mismatch.
+
+
 
     axes.set_xlim(min(gen_numbers) - 1, max(gen_numbers) + 1)
     axes.set_xlabel('Generation #')
@@ -367,14 +393,63 @@ def plot_log(log):
     axes.legend()
 
     fig.tight_layout()
-    fig.savefig('Izhikevich_evolution.eps')
-'''
-def plot_test_waveforms(tests):
-    judges = [ i.judge for i in tests ]
-    from neuronunit.models import backends
-    from neuronunit.models.reduced import ReducedModel
-    from itertools import repeat
+    fig.savefig('Izhikevich_history_evolution.eps', format='eps', dpi=1200)
+
+
+def plot_objectives_history(log):
+    '''
+    https://github.com/BlueBrain/BluePyOpt/blob/master/examples/graupnerbrunelstdp/run_fit.py
+    Input: DEAP Plot logbook
+    Outputs: This method only has side effects, not datatype outputs from the method.
+
+    The most important side effect being a plot in eps format.
+
+    '''
+    import matplotlib.pyplot as plt
+    import numpy as np
+    plt.clf()
+    plt.style.use('ggplot')
+
+
+    fig, axes = plt.subplots(figsize=(10, 10), facecolor='white')
+
+    gen_numbers = log.select('gen')
+    minimum = log.select('min')
     import get_neab
+    objective_labels = [ str(t) for t in get_neab.tests ]
+    mins_components_plot = logbook.select('min')
+    components = {}
+    for i in range(0,7):
+        components[i] = []
+        for l in mins_components_plot:
+            components[i].append(l[i])
+    maximum = 0.0
+    for keys in components:
+
+        axes.semilogy(
+            gen_numbers,
+            components[keys],
+            linewidth=2,
+            label=str(objective_labels[keys])
+            )
+        if np.max(components[keys]) > maximum:
+            maximum = np.max(components[keys])
+
+    axes.set_xlim(min(gen_numbers) - 1, max(gen_numbers) + 1)
+    axes.set_xlabel('Generation #')
+    axes.set_ylabel('Sum of objectives')
+    #axes.set_ylim([0, max(maximum[0])])
+    axes.legend()
+
+    fig.tight_layout()
+    fig.savefig('Izhikevich_evolution_components.eps', format='eps', dpi=1200)
+    '''
+    def plot_test_waveforms(tests):
+        judges = [ i.judge for i in tests ]
+        from neuronunit.models import backends
+        from neuronunit.models.reduced import ReducedModel
+        from itertools import repeat
+        import get_neab
 
     def test_to_model(judges,model):
         import matplotlib.pyplot as plt
