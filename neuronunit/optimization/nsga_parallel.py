@@ -4,10 +4,7 @@ import sys
 import os
 import ipyparallel as ipp
 from ipyparallel import depend, require, dependent
-#import networkx
-import graphviz
-#from networkx.drawing.nx_agraph import graphviz_layout
-#import graphviz_layout
+
 #from unittest import TestCase
 #TestCase.assertEqual(1.0,1.0)
 
@@ -104,7 +101,6 @@ with dview.sync_imports(): # Causes each of these things to be imported on the w
     sys.path.insert(0,thisnu)
     import sciunit.scores as scores
 
-    #from itertools import repeat
 
 
 
@@ -142,7 +138,7 @@ class Individual(object):
         self.fitness=None
         self.lookup={}
         self.rheobase=None
-        self.fitness = creator.FitnessMin
+        self.fitness = creator.FitnessMax
 
 with dview.sync_imports():
 
@@ -158,13 +154,10 @@ with dview.sync_imports():
         except TypeError:
             return [random.uniform(a, b) for a, b in zip([low] * size, [up] * size)]
 
-    #creator.create("FitnessMin", base.Fitness, weights=(-1.0))# -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
 
     creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
     creator.create("Individual", list, fitness=creator.FitnessMin)
     toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
-    #toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
-    #toolbox.register("Individual", tools.initIterate, creator.Individual, toolbox.attr_float)
     toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
@@ -183,13 +176,10 @@ def p_imports():
             return [random.uniform(a, b) for a, b in zip(low, up)]
         except TypeError:
             return [random.uniform(a, b) for a, b in zip([low] * size, [up] * size)]
-    #creator.create("FitnessMin", base.Fitness, weights=(-1.0))# -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
 
-    creator.create("FitnessMin", base.Fitness, weights=(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0))
+    creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
     creator.create("Individual", list, fitness=creator.FitnessMin)
     toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
-    #toolbox.register("Individual", tools.initIterate, creator.Individual, toolbox.attr_float)
-    #toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
     toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
@@ -212,9 +202,7 @@ toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
 toolbox.register("Individual", tools.initIterate, creator.Individual, toolbox.attr_float)
 toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
 toolbox.register("select", tools.selNSGA2)
-# Obviously if this reusable code block was a method,
-# However using it as a method creates bugs in the program that
-# I don't understand.
+
 
 
 
@@ -242,12 +230,15 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     #vms = net_graph.plot_db(vms)
 
     new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-    model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
+    model = ReducedModel(new_file_path,name=str(vms.attrs),backend='NEURON')
     model.load_model()
     assert type(vms.rheobase) is not type(None)
     #tests = get_neab.suite.tests
     model.update_run_params(vms.attrs)
+    import copy
     tests = copy.copy(get_neab.tests)
+    fitness = []
+    error = []
     for k,v in enumerate(tests):
         if k == 0:
             v.prediction = {}
@@ -255,7 +246,6 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
             v.params['injected_square_current']['duration'] = 1000 * pq.ms
             v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
             v.params['injected_square_current']['delay'] = 100 * pq.ms
-            print(v.prediction)
         if k != 0:
             v.prediction = None
 
@@ -271,26 +261,44 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
             v.params['injected_square_current']['delay'] = 100 * pq.ms
 
 
-    score = get_neab.suite.judge(model, stop_on_error = False)#, deep_error = True)
-    vms.score = score
+        score = v.judge(model,stop_on_error = False, deep_error = True)
 
-    assert type(vms) is not type(None)
-    print(score)
+        if k == 0:
+            fitness.append(1.0/np.abs(float(score.raw)))
+        else:
+            fitness.append(float(score.sort_key))
+        print(fitness)
+        if k == 0:
+            error.append(np.abs(float(score.raw)))
+        else:
+            error.append(1.0/np.abs(float(score.raw)))
+
+
+        if 'mean' in v.observation.keys():
+            unit_observations = v.observation['mean']
+
+        if 'value' in v.observation.keys():
+            unit_observations = v.observation['value']
+
+        if 'mean' in v.prediction.keys():
+            unit_predictions = v.prediction['mean']
+
+        if 'value' in v.prediction.keys():
+            unit_predictions = v.prediction['value']
+
+        to_r_s = unit_observations.units
+        unit_predictions = unit_predictions.rescale(to_r_s)
+        unit_delta = np.abs(np.abs(unit_observations)-np.abs(unit_predictions))
+        print('score: {0} unit delta: {1}'.format(score,unit_delta))
+
+
     model.run_number += 1
     model.rheobase = vms.rheobase * pq.pA
-    fitness = []
 
-    for my_score in score.sort_key.values.tolist()[0]:
-        assert type(my_score) is not type(dict)
-        fitness.append(my_score)
-
-    vms.evaluated = True
-    #vms.fitness = fitness
     for k,f in enumerate(fitness):
-        fitness[k] = f + 10.0 * fitness[0] # add the rheobase error to all the errors.
-        fitness[k] = f + 5.0 * fitness[1]
-    print(fitness)
-
+        fitness[k] = f + 1.5 * fitness[0] # add the rheobase error to all the errors.
+        fitness[k] = f + 1.25 * fitness[1]
+    print('{0}{1}'.format(fitness,error))
 
 
     return fitness[0],fitness[1],\
@@ -308,19 +316,6 @@ toolbox.register("map",dview.map_sync)
 toolbox.register("evaluate", evaluate)
 
 
-
-
-def plot_ss(vmlist,gen):
-    '''
-    '''
-    import matplotlib.pyplot as plt
-    plt.clf()
-    for ind,j in enumerate(vmlist):
-        if hasattr(ind,'results'):
-            plt.plot(ind.results['t'],ind.results['vm'],label=str(vmlist[j].attr) )
-            #plt.xlabel(str(vmlist[j].attr))
-    plt.savefig('snap_shot_at_gen_'+str(gen)+'.png')
-    plt.clf()
 
 
 def get_trans_dict(param_dict):
@@ -521,7 +516,7 @@ def check_rheobase(vmpop,pop=None):
 
         new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
 
-        model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
+        model = ReducedModel(new_file_path,name=str(vm.attrs),backend='NEURON')
         model.load_model()
         model.update_run_params(vm.attrs)
 
@@ -592,7 +587,7 @@ def check_rheobase(vmpop,pop=None):
         #print(pid_map[int(os.getpid())])
 
         new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-        model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
+        model = ReducedModel(new_file_path,name=str(vm.attrs),backend='NEURON')
         model.load_model()
         model.update_run_params(vm.attrs)
         cnt = 0
@@ -630,7 +625,7 @@ def check_rheobase(vmpop,pop=None):
 ##
 
 MU = 10
-NGEN = 8
+NGEN = 10
 CXPB = 0.9
 
 import numpy as np
@@ -652,21 +647,31 @@ td = trans_dict
 dview.push({'trans_dict':trans_dict,'td':td})
 
 pop = toolbox.population(n = MU)
-
+history.update(pop)
 pop = [ toolbox.clone(i) for i in pop ]
+'''
+try:
+    #for t in tests:
+    #    print(t.observation, t.describe(), t.prediction)
+    new_checkpoint_path = str('rh_checkpoint')+str('.p')
+    import pickle
+    with open(new_checkpoint_path,'rb') as handle:#
+        vmpop = pickle.load(handle)
+except:
+'''
 vmpop = update_vm_pop(pop, td)
 
-print('possibly never returns from find rheobase')
 vmpop , _ = check_rheobase(vmpop)
-#for t in tests:
-#    print(t.observation, t.describe(), t.prediction)
-#new_checkpoint_path = str('rh_checkpoint')+str('.p')
-#import pickle
-#with open(new_checkpoint_path,'wb') as handle:#
-#    pickle.dump({'vmpop':vmpop,'pop':pop}, handle)
+new_checkpoint_path = str('rh_checkpoint')+str('.p')
+import pickle
+with open(new_checkpoint_path,'wb') as handle:#
+    pickle.dump(vmpop, handle)
+
 
 
 fitnesses = []
+#for v in vmpop:
+#    fitnesses.append(evaluate(v))
 import copy
 fitnesses = dview.map_sync(evaluate, copy.copy(vmpop))
 
@@ -687,26 +692,26 @@ print(logbook.stream)
 
 score_storage = [ v.score for v in vmpop ]
 
-
+'''
 def evalOneMax(vms):
-	'''
-	Not actually used
-	More of an after thought
-	'''
     import get_neab
     import numpy as np
     error  = np.abs(np.abs(float(get_neab.tests[0].observation['value']))-np.abs(vms.rheobase))
     return error,
+'''
 
-
-time_out = 0
 verbose = False
 means = np.array(logbook.select('avg'))
 gen = 1
-while gen < NGEN and means[-1] > 0.15:
-    means = np.array(logbook.select('avg'))
+while gen < NGEN and means[-1]> 0.225:
+    gen += 1
     offspring = tools.selNSGA2(pop, len(pop))
-        #assert len(offspring)!=0
+    if verbose:
+        for ind in offspring:
+            print('what do the weights without values look like? {0}'.format(ind.fitness.weights))
+            print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues))
+            print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid))
+    #assert len(offspring)!=0
     offspring = [toolbox.clone(ind) for ind in offspring]
     #assert len(offspring)!=0
     for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
@@ -732,20 +737,13 @@ while gen < NGEN and means[-1] > 0.15:
     # Thus waisting computation.
     vmoffspring = update_vm_pop(copy.copy(invalid_ind), trans_dict) #(copy.copy(invalid_ind), td)
     vmoffspring , _ = check_rheobase(copy.copy(vmoffspring))
-    '''
-    filtered = iter([ offspring[k] for k,v in enumerate(vmoffspring) \
-    if np.abs(np.abs(float(get_neab.tests[0].observation['value']))-np.abs(v.rheobase)) < 20.0 ])
-    import pdb
-    pdb.set_trace()
-    filtered2 = [ next(filtered) for k,v in enumerate(vmoffspring) if np.abs(np.abs(float(get_neab.tests[0].observation['value']))-np.abs(v.rheobase)) >= 20.0 ]
-    '''
-    #unsorted_error = [  np.abs(np.abs(float(get_neab.tests[0].observation['value']))-np.abs(v.rheobase)) for v in vmoffspring ]
-
     #from itertools import repeat
     #pop_plus_rh = list(dview.map_sync(vmoffspring ,vmpop,repeat(td)))
     #print(pop_plus_rh)
 
     fitnesses = []
+    #for v in vmoffspring:
+    #    fitness.append(evaluate(v))
     fitnesses = list(dview.map_sync(toolbox.evaluate, copy.copy(vmoffspring)))
     mf = np.mean(fitnesses)
 
@@ -756,11 +754,6 @@ while gen < NGEN and means[-1] > 0.15:
             print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues))
             print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid))
 
-    filtered = [ offspring[k] for k,v in enumerate(vmoffspring) if np.abs(np.abs(float(get_neab.tests[0].observation['value']))-np.abs(v.rheobase)) < 35.0 ]
-    print(len(filtered),len(offspring),len(filtered)-len(offspring))
-    for v in vmoffspring:
-        print('emperical versus prediction')
-        print(np.abs(float(get_neab.tests[0].observation['value'])), np.abs(v.rheobase))
     # Its possible that the offspring are worse than the parents of the penultimate generation
     # Selecting from a gene pool of offspring and parents accomodates for that possibility.
     # There are two selection stages as per the NSGA example.
@@ -775,15 +768,6 @@ while gen < NGEN and means[-1] > 0.15:
 
     pop = tools.selNSGA2(offspring + pop, MU)
 
-    '''
-    This is dumb
-    filtered.extend(filtered)
-    for f in filtered:
-        toolbox.mutate(f)
-        toolbox.mutate(f)
-    pop.extend(filtered)
-    '''
-    #tools.selBest(offspring + pop,MU)
     record = stats.compile(pop)
     history.update(pop)
 
@@ -795,18 +779,25 @@ while gen < NGEN and means[-1] > 0.15:
 
     # if the means are not decreasing at least as an overall trend something is wrong.
     print('means from logbook: {0} from manual meaning the fitness: {1}'.format(means,mf))
-    print('means: {0} pareto_front first: {1} pf_mean {2}'.format(logbook.select('avg'),pf[0].fitness.values,pf_mean))
-    gen += 1
+    print('means: {0} pareto_front first: {1} pf_mean {2}'.format(logbook.select('avg'), \
+                                                        np.sum(np.mean(pf[0].fitness.values)),\
+                                                        pf_mean))
+    #assert len(vmoffspring) != 0
 
 import pickle
 with open('complete_dump.p','wb') as handle:
    pickle.dump([vmpop,pop,pf,history,logbook],handle)
-#lists = pickle.load(open('complete_dump.p','rb'))
-#vmpop,pop,pf,history,logbook = lists[4],lists[3],lists[2],lists[1],lists[0]
-
+'''
+lists = pickle.load(open('complete_dump.p','rb'))
+vmpop,pop,pf,history,logbook = lists[4],lists[3],lists[2],lists[1],lists[0]
+'''
 
 import net_graph
-net_graph.graph_s(history)
+import networkx
+graph = networkx.DiGraph(history.genealogy_tree)
+graph = graph.reverse()
+
+net_graph.graph_s(history,graph)
 net_graph.plot_log(logbook)
 net_graph.just_mean(logbook)
 net_graph.plot_objectives_history(logbook)
@@ -814,8 +805,10 @@ net_graph.plot_objectives_history(logbook)
 
 
 #Although the pareto front surely contains the best candidate it cannot contain the worst, only history can.
-#best_ind_dict_vm = update_vm_pop(pf[0:2],td)
-#best_ind_dict_vm , _ = check_rheobase(best_ind_dict_vm)
+best_ind_dict_vm = update_vm_pop(pf[0:2],td)
+best_ind_dict_vm , _ = check_rheobase(best_ind_dict_vm)
+
+
 
 best, worst = net_graph.best_worst(history)
 listss = [best , worst]
