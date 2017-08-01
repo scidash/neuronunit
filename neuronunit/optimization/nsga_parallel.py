@@ -287,8 +287,8 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     vms.evaluated = True
     #vms.fitness = fitness
     for k,f in enumerate(fitness):
-        fitness[k] = f + 2.0 * fitness[0] # add the rheobase error to all the errors.
-        fitness[k] = f + 1.0 * fitness[1]
+        fitness[k] = f + 10.0 * fitness[0] # add the rheobase error to all the errors.
+        fitness[k] = f + 5.0 * fitness[1]
     print(fitness)
 
 
@@ -629,8 +629,8 @@ def check_rheobase(vmpop,pop=None):
 # Start of the Genetic Algorithm
 ##
 
-MU = 8
-NGEN = 25
+MU = 10
+NGEN = 8
 CXPB = 0.9
 
 import numpy as np
@@ -652,7 +652,6 @@ td = trans_dict
 dview.push({'trans_dict':trans_dict,'td':td})
 
 pop = toolbox.population(n = MU)
-history.update(pop)
 pop = [ toolbox.clone(i) for i in pop ]
 vmpop = update_vm_pop(pop, td)
 
@@ -690,8 +689,8 @@ score_storage = [ v.score for v in vmpop ]
 time_out = 0
 verbose = False
 means = np.array(logbook.select('avg'))
-
-while gen =< NGEN and means[-1] => 0.225:
+gen = 1
+while gen < NGEN and means[-1] > 0.15:
     means = np.array(logbook.select('avg'))
     offspring = tools.selNSGA2(pop, len(pop))
         #assert len(offspring)!=0
@@ -720,6 +719,15 @@ while gen =< NGEN and means[-1] => 0.225:
     # Thus waisting computation.
     vmoffspring = update_vm_pop(copy.copy(invalid_ind), trans_dict) #(copy.copy(invalid_ind), td)
     vmoffspring , _ = check_rheobase(copy.copy(vmoffspring))
+    '''
+    filtered = iter([ offspring[k] for k,v in enumerate(vmoffspring) \
+    if np.abs(np.abs(float(get_neab.tests[0].observation['value']))-np.abs(v.rheobase)) < 20.0 ])
+    import pdb
+    pdb.set_trace()
+    filtered2 = [ next(filtered) for k,v in enumerate(vmoffspring) if np.abs(np.abs(float(get_neab.tests[0].observation['value']))-np.abs(v.rheobase)) >= 20.0 ]
+    '''
+    #unsorted_error = [  np.abs(np.abs(float(get_neab.tests[0].observation['value']))-np.abs(v.rheobase)) for v in vmoffspring ]
+
     #from itertools import repeat
     #pop_plus_rh = list(dview.map_sync(vmoffspring ,vmpop,repeat(td)))
     #print(pop_plus_rh)
@@ -735,8 +743,31 @@ while gen =< NGEN and means[-1] => 0.225:
             print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues))
             print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid))
 
-    filtered = [ offspring[k] for k,v in enumerate(vmoffspring) if np.abs(np.abs(float(get_neab.tests[0].observation['value']))-np.abs(v.rheobase)) < 25.0 ]
+    #sorted_error = sorted(unsorted_error, key = lambda x: x.modified, reverse = True)
+
+    # print all you really want to do is keep biasing the population towards low rheobase error.
+
+
+    '''
+    while len(filtered) < len(offspring):
+        if len(filtered) == 0:
+            filtered = sorted_error[0:2]
+        filtered2 = copy.copy(filtered)
+        for f in filtered2:
+            toolbox.mutate(f)
+        filtered_vm = update_vm_pop(copy.copy(filtered2), trans_dict) #(copy.copy(invalid_ind), td)
+        filtered_vm , _ = check_rheobase(copy.copy(filtered_vm))
+        vmoffspring.extend(filtered_vm)
+        filtered.extend(filtered2)
+        for f in filtered_vm:
+            print(f.rheobase)
+
+        #print(filtered[0])
+
     print(len(filtered),len(offspring),len(filtered)-len(offspring))
+    for v in vmoffspring:
+        print('emperical versus prediction')
+        print(np.abs(float(get_neab.tests[0].observation['value'])),np.abs(v.rheobase))
     # Its possible that the offspring are worse than the parents of the penultimate generation
     # Selecting from a gene pool of offspring and parents accomodates for that possibility.
     # There are two selection stages as per the NSGA example.
@@ -749,9 +780,10 @@ while gen =< NGEN and means[-1] => 0.225:
     #all_hist = [ history.genealogy_history[i] for i in keys if history.genealogy_history[i].fitness.valid == True ]
     #pop = tools.selNSGA2(offspring + all_hist, MU)
 
+    pop.extend(filtered)
+    '''
     pop = tools.selNSGA2(offspring + pop, MU)
     # Hack good rheobase solutions back into the population.
-    pop.extend(filtered)
 
     record = stats.compile(pop)
     history.update(pop)
@@ -762,16 +794,14 @@ while gen =< NGEN and means[-1] => 0.225:
 
     # if the means are not decreasing at least as an overall trend something is wrong.
     print('means from logbook: {0} from manual meaning the fitness: {1}'.format(means,mf))
-    print('means: {0} pareto_front first: {1} pf_mean {2}'.format(logbook.select('avg'), \
-                                                        np.sum(np.mean(pf[0].fitness.values)),\
-                                                        pf_mean))
+    print('means: {0} pareto_front first: {1} pf_mean {2}'.format(logbook.select('avg'),pf[0].fitness.values,pf_mean))
     gen += 1
 
 import pickle
 with open('complete_dump.p','wb') as handle:
    pickle.dump([vmpop,pop,pf,history,logbook],handle)
-lists = pickle.load(open('complete_dump.p','rb'))
-vmpop,pop,pf,history,logbook = lists[4],lists[3],lists[2],lists[1],lists[0]
+#lists = pickle.load(open('complete_dump.p','rb'))
+#vmpop,pop,pf,history,logbook = lists[4],lists[3],lists[2],lists[1],lists[0]
 
 
 import net_graph
@@ -783,10 +813,8 @@ net_graph.plot_objectives_history(logbook)
 
 
 #Although the pareto front surely contains the best candidate it cannot contain the worst, only history can.
-best_ind_dict_vm = update_vm_pop(pf[0:2],td)
-best_ind_dict_vm , _ = check_rheobase(best_ind_dict_vm)
-
-
+#best_ind_dict_vm = update_vm_pop(pf[0:2],td)
+#best_ind_dict_vm , _ = check_rheobase(best_ind_dict_vm)
 
 best, worst = net_graph.best_worst(history)
 listss = [best , worst]
@@ -801,7 +829,7 @@ print(best_worst[0].attrs,' = ', best_ind_dict_vm[0].attrs, 'should be the same 
 # Will cause a bug or not.
 
 
-net_graph.plot_evaluate( best_worst[0],best_worst[0])
+net_graph.plot_evaluate( best_worst[0],best_worst[1])
 
 net_graph.plot_db(best_worst[0],name='best')
 net_graph.plot_db(best_worst[1],name='worst')

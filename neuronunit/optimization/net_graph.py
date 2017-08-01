@@ -56,7 +56,7 @@ def graph_s(history):
     nodes=networkx.draw_networkx_nodes(graph,positions,node_color=node_colors, node_size=4.5, labels = labels)
     edges=networkx.draw_networkx_edges(graph,positions,width=1.5,edge_cmap=plt.cm.Blues)
     plt.sci(nodes)
-    cbar = plt.colorbar(fraction=0.046, pad=0.04, ticks=range(4))
+    cbar = plt.colorbar(nodes,fraction=0.046, pad=0.04, ticks=range(4))
     plt.sci(edges)
     plt.savefig('genealogy_history_{0}_.eps'.format(len(graph)), format='eps', dpi=1200)
 
@@ -99,7 +99,7 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
     The most important side effect being a plot in eps format.
 
     '''
-
+    import os
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
     import quantities as pq
@@ -120,7 +120,7 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
         sc_for_frame_worst = []
         for iterator, vms in enumerate(vmslist):
             new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-            model = ReducedModel(new_file_path,name=str(vms.attrs),backend='NEURON')
+            model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
             #model.load_model()
             assert type(vms.rheobase) is not type(None)
             #tests = get_neab.suite.tests
@@ -166,12 +166,14 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
             plt.xlim(0,float(v.params['injected_square_current']['duration']) )
             stored_min.append(np.min(model.results['vm']))
             stored_max.append(np.max(model.results['vm']))
-            plt.ylim(np.min(stored_min),np.max(stored_max))
-            plt.tight_layout()
-            model.results = None
-            plt.ylabel('$V_{m}$ mV')
-            plt.xlabel('mS')
+        plt.legend()
+        plt.ylim(np.min(stored_min),np.max(stored_max))
+        plt.tight_layout()
+        model.results = None
+        plt.ylabel('$V_{m}$ mV')
+        plt.xlabel('mS')
         plt.savefig(str('test_')+str(v)+'vm_versus_t.eps', format='eps', dpi=1200)
+        import pandas as pd
         sf_best = pd.DataFrame(sc_for_frame_best)
         sf_worst = pd.DataFrame(sc_for_frame_worst)
 
@@ -226,7 +228,7 @@ def plot_db(vms,name=None):
     matplotlib.use('Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
     matplotlib.style.use('ggplot')
     #f, axarr = plt.subplots(2, sharex=True)
-    fig, axarr = plt.subplots(3, sharex=True, figsize=(10, 10), facecolor='white')
+    fig, axarr = plt.subplots(4, sharex=True, figsize=(10, 10), facecolor='white')
 
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
@@ -234,13 +236,14 @@ def plot_db(vms,name=None):
     import numpy as np
     import get_neab
     from itertools import repeat
+    import copy
     #import net_graph
     #vmslist = [vms_best, vms_worst]
     delta = []
     tests = copy.copy(get_neab.tests)
     for k,v in enumerate(tests):
         new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-        model = ReducedModel(new_file_path,name=str(vms.attrs),backend='NEURON')
+        model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
         #model.load_model()
         assert type(vms.rheobase) is not type(None)
         #tests = get_neab.suite.tests
@@ -298,6 +301,10 @@ def plot_db(vms,name=None):
         delta.append(unit_delta)
         print('observation {0} versus prediction {1}'.format(unit_observations,unit_predictions))
         print('unit delta', unit_delta)
+        sv = float(score.sort_key.values.tolist()[0])
+
+        axarr[3].scatter(k,sv)
+
         if k == 0:
             axarr[k].scatter(k,float(unit_delta),label = 'difference')
             axarr[k].scatter(k,float(unit_observations),label = 'observation')
@@ -327,10 +334,11 @@ def plot_db(vms,name=None):
     plt.xlabel('test type')
     plt.ylabel('observation versus prediction')
     plt.tight_layout()
+    plt.legend()
     plt.savefig('obsevation_versus_prediction_{0}.eps'.format(name), format='eps', dpi=1200)
 
-    pd.DataFrame()
-    df2.plot(kind='bar', stacked=True);
+    #pd.DataFrame()
+    #df2.plot(kind='bar', stacked=True);
 
     return vms
 
@@ -396,7 +404,7 @@ def plot_log(log):
     fig.savefig('Izhikevich_history_evolution.eps', format='eps', dpi=1200)
 
 
-def plot_objectives_history(log):
+def plot_objectives_history(logbook):
     '''
     https://github.com/BlueBrain/BluePyOpt/blob/master/examples/graupnerbrunelstdp/run_fit.py
     Input: DEAP Plot logbook
@@ -413,8 +421,8 @@ def plot_objectives_history(log):
 
     fig, axes = plt.subplots(figsize=(10, 10), facecolor='white')
 
-    gen_numbers = log.select('gen')
-    minimum = log.select('min')
+    gen_numbers = logbook.select('gen')
+    minimum = logbook.select('min')
     import get_neab
     objective_labels = [ str(t) for t in get_neab.tests ]
     mins_components_plot = logbook.select('min')
@@ -443,193 +451,3 @@ def plot_objectives_history(log):
 
     fig.tight_layout()
     fig.savefig('Izhikevich_evolution_components.eps', format='eps', dpi=1200)
-    '''
-    def plot_test_waveforms(tests):
-        judges = [ i.judge for i in tests ]
-        from neuronunit.models import backends
-        from neuronunit.models.reduced import ReducedModel
-        from itertools import repeat
-        import get_neab
-
-    def test_to_model(judges,model):
-        import matplotlib.pyplot as plt
-        plt.clf()
-        matplotlib.use('Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
-        matplotlib.style.use('ggplot')
-        for j in judges:
-            j(model)
-
-            print(t.observation, t.prediction)
-            for t in j.tests:
-                v = t.related_data['vm'].rescale('mV')
-                time = j.tests.related_data['t']
-                plt.plot(v,time)
-        plt.savefig('voltage_tests_{0}_{1}.eps'.format(os.pid,j))
-
-    for v in vmpop:
-        new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-        model = ReducedModel(new_file_path,name=str(v.attrs),backend='NEURON')
-        model.load_model()
-        model.update_run_params(v.attrs)
-
-        plt = list(dview.map(test_to_model,judges,repeat(model)))
-    #plot_test_waveforms(get_neab.tests)
-
-
-    def plot_test_obpre(tests):
-        judges = [ i.judge for i in tests ]
-        from neuronunit.models import backends
-        from neuronunit.models.reduced import ReducedModel
-        from itertools import repeat
-        def test_to_model(judges,model):
-            import matplotlib.pyplot as plt
-            plt.clf()
-            matplotlib.use('Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
-            matplotlib.style.use('ggplot')
-
-            for j in judges:
-                j(model)
-                obs = []
-                pre = []
-                print(t.observation, t.prediction)
-                for t in j.tests:
-                    obs.append(t.observation)
-                    pre.append(t.prediction)
-                plt.plot(obs,pre)
-            plt.savefig('observation_vs_prediction.eps'.format(os.pid,j))
-
-        for v in vmpop:
-            new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-            model = ReducedModel(new_file_path,name=str(v.attrs),backend='NEURON')
-            model.load_model()
-            model.update_run_params(v.attrs)
-
-            plt = list(dview.map(test_to_model,judges,repeat(model)))
-    plot_test_obpre(get_neab.tests)
-    '''
-
-
-
-    '''
-
-    import plotly.plotly as py
-    from plotly.graph_objs import *
-    import plotly.plotly as py
-    import plotly.graph_objs as go
-
-    import igraph
-    from igraph import *
-    igraph.__version__
-    g2 = igraph.Graph.Adjacency((nx.to_numpy_matrix(G) > 0).tolist())
-    layout = g2.layout('rt')
-    pos = [ lay.coords for lay in layout ]
-    #pos = graphviz_layout(G, prog="dot")
-    print(pos)
-
-    edge_trace = Scatter(
-        x=[],
-        y=[],
-        line=Line(width=0.5,color='#888'),
-        hoverinfo='none',
-        mode='lines')
-
-    for edge in G.edges():
-        x0, y0 = G.node[edge[0]]['pos']
-        x1, y1 = G.node[edge[1]]['pos']
-        edge_trace['x'] += [x0, x1, None]
-        edge_trace['y'] += [y0, y1, None]
-
-    node_trace = Scatter(
-        x=[],
-        y=[],
-        text=[],
-        mode='markers',
-        hoverinfo='text',
-        marker=Marker(
-            showscale=True,
-            # colorscale options
-            # 'Greys' | 'Greens' | 'Bluered' | 'Hot' | 'Picnic' | 'Portland' |
-            # Jet' | 'RdBu' | 'Blackbody' | 'Earth' | 'Electric' | 'YIOrRd' | 'YIGnBu'
-            colorscale='YIGnBu',
-            reversescale=True,
-            color=[],
-            size=10,
-            colorbar=dict(
-                thickness=15,
-                title='Node Connections',
-                xanchor='left',
-                titleside='right'
-            ),
-            line=dict(width=2)))
-
-    for node in G.nodes():
-        x, y = G.node[node]['pos']
-        node_trace['x'].append(x)
-        node_trace['y'].append(y)
-
-
-    edge_trace = Scatter(
-        x=[],
-        y=[],
-        line=Line(width=0.5,color='#888'),
-        hoverinfo='none',
-        mode='lines')
-
-    for edge in G.edges():
-        x0, y0 = G.node[edge[0]]['pos']
-        x1, y1 = G.node[edge[1]]['pos']
-        edge_trace['x'] += [x0, x1, None]
-        edge_trace['y'] += [y0, y1, None]
-
-    node_trace = Scatter(
-        x=[],
-        y=[],
-        text=[],
-        mode='markers',
-        hoverinfo='text',
-        marker=Marker(
-            showscale=True,
-            # colorscale options
-            # 'Greys' | 'Greens' | 'Bluered' | 'Hot' | 'Picnic' | 'Portland' |
-            # Jet' | 'RdBu' | 'Blackbody' | 'Earth' | 'Electric' | 'YIOrRd' | 'YIGnBu'
-            colorscale='YIGnBu',
-            reversescale=True,
-            color=[],
-            size=10,
-            colorbar=dict(
-                thickness=15,
-                title='Node Connections',
-                xanchor='left',
-                titleside='right'
-            ),
-            line=dict(width=2)))
-
-    for node in G.nodes():
-        x, y = G.node[node]['pos']
-        node_trace['x'].append(x)
-        node_trace['y'].append(y)
-
-
-    for node, adjacencies in enumerate(G.adjacency_list()):
-        node_trace['marker']['color'].append(len(adjacencies))
-        node_info = '# of connections: '+str(len(adjacencies))
-        node_trace['text'].append(node_info)
-
-
-    fig = Figure(data=Data([edge_trace, node_trace]),
-                 layout=Layout(
-                    title='<br>Network graph made with Python',
-                    titlefont=dict(size=16),
-                    showlegend=False,
-                    hovermode='closest',
-                    margin=dict(b=20,l=5,r=5,t=40),
-                    annotations=[ dict(
-                        text="Python code: <a href='https://plot.ly/ipython-notebooks/network-graphs/'> https://plot.ly/ipython-notebooks/network-graphs/</a>",
-                        showarrow=False,
-                        xref="paper", yref="paper",
-                        x=0.005, y=-0.002 ) ],
-                    xaxis=XAxis(showgrid=False, zeroline=False, showticklabels=False),
-                    yaxis=YAxis(showgrid=False, zeroline=False, showticklabels=False)))
-
-    py.iplot(fig, filename='networkx')
-'''
