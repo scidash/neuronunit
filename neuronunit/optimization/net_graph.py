@@ -331,7 +331,6 @@ def plot_db(vms,name=None):
             axarr[2].scatter(k,float(unit_delta),label = 'difference')
             axarr[2].scatter(k,float(unit_observations),label = 'observation')
             axarr[2].scatter(k,float(unit_predictions),label = 'prediction')
-            #axarr[2].legend()
 
 
 
@@ -339,17 +338,14 @@ def plot_db(vms,name=None):
 
     labels = [ '{0}_{1}'.format(str(t),str(t.observation['value'].units)) for t in tests if 'mean' not in t.observation.keys() ]
     labels.extend([ '{0}_{1}'.format(str(t),str(t.observation['mean'].units))  for t in tests if 'mean' in t.observation.keys() ])
-    #labels = labels[1:-1]
     labels = tuple(labels)
-    #labels = tuple([str(t.observations.values.units) for t in tests ])
     plt.xlabel('test type')
     plt.ylabel('observation versus prediction')
     tick_locations = tuple(range(0,len(tests)))
     plt.xticks(tick_locations , labels)
-    #plt.legend()
     plt.xticks(rotation=25)
     plt.tight_layout()
-   
+
     plt.savefig('obsevation_versus_prediction_{0}.eps'.format(name), format='eps', dpi=1200)
     #import pandas as pd
     #pd.DataFrame(scores).plot(kind='bar', stacked=True)
@@ -466,4 +462,3 @@ def plot_objectives_history(log):
 
     fig.tight_layout()
     fig.savefig('Izhikevich_evolution_components.eps', format='eps', dpi=1200)
-  
