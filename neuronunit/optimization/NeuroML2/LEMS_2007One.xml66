@@ -1,0 +1,47 @@
+<Lems>
+
+<!-- Specify which component to run -->
+<Target component="sim1"/>
+
+<!-- Include core NeuroML2 ComponentType definitions -->
+<Include file="Cells.xml"/>
+<Include file="Networks.xml"/>
+<Include file="Simulation.xml"/>
+
+
+<izhikevich2007Cell id="RS" v0="-60 mV" C="100 pF" k="0.7 nS_per_mV" 
+                        vr="-60 mV" vt="-40 mV" vpeak="35 mV" 
+                        a="0.03 per_ms" b="-2 nS" c="-50 mV" d="100 pA"/>
+
+<pulseGenerator id="RS_Iext" delay="500ms" duration="1000ms" amplitude="100.0 pA"/>
+
+
+<network id="net1">
+    <population id="RS_pop" component="RS" size="1"/>
+    
+    <explicitInput target="RS_pop[0]" input="RS_Iext" destination="synapses"/>
+    
+</network>
+
+<!-- End of NeuroML2 content -->
+        
+
+<Simulation id="sim1" length="1600ms" step="0.0025ms" target="net1">
+
+    
+    <Display id="d1" title="RS v" timeScale="1ms" xmin="-50" xmax="1650" ymin="-80" ymax="50">
+        <Line id="RS v" quantity="RS_pop[0]/v" scale="1mV" color="#0000ff" timeScale="1ms"/>
+    </Display>
+    <Display id="d2" title="RS u" timeScale="1ms" xmin="-50" xmax="1650" ymin="-80" ymax="80">
+        <Line id="RS u" quantity="RS_pop[0]/u" scale="1pA" color="#ff0000" timeScale="1ms"/>
+    </Display>
+   
+
+    <OutputFile id="of0" fileName="RS_One.dat">
+        <OutputColumn id="v" quantity="RS_pop[0]/v"/>
+        <OutputColumn id="u" quantity="RS_pop[0]/u"/>
+    </OutputFile>
+      
+</Simulation>
+
+</Lems>
