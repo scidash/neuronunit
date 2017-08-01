@@ -33,7 +33,7 @@ def plot_performance_profile():
     #subprocess.Popen('python','gprof2dot.py' -f -n0 -e0 pstats {0}  | dot -Tsvg -o {0}.svg'.format(prof_f_name))
     os.system('python gprof2dot.py -f -n0 -e0 pstats {0}  | dot -Tsvg -o {0}.svg'.format(prof_f_name))
 
-def graph_s(history):
+def graph_s(history,graph):
     '''
     Make a directed graph (family tree) plot of the genealogy history
     Bottom is the final generation, top is the initial population.
@@ -44,10 +44,11 @@ def graph_s(history):
     reflects actual genes and or actual breading.
     '''
     plt.clf()
+    #try:
     import networkx
     graph = networkx.DiGraph(history.genealogy_tree)
     graph = graph.reverse()
-    labels ={}
+    labels = {}
     for i in graph.nodes():
         labels[i] = i
     node_colors = [ np.sum(history.genealogy_history[i].fitness.values) for i in graph ]
@@ -56,8 +57,9 @@ def graph_s(history):
     nodes=networkx.draw_networkx_nodes(graph,positions,node_color=node_colors, node_size=4.5, labels = labels)
     edges=networkx.draw_networkx_edges(graph,positions,width=1.5,edge_cmap=plt.cm.Blues)
     plt.sci(nodes)
-    cbar = plt.colorbar(fraction=0.046, pad=0.04, ticks=range(4))
+    cbar = plt.colorbar(nodes,fraction=0.046, pad=0.04, ticks=range(4))
     plt.sci(edges)
+    plt.axis('on')
     plt.savefig('genealogy_history_{0}_.eps'.format(len(graph)), format='eps', dpi=1200)
 
 
@@ -106,6 +108,7 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
     import numpy as np
     import get_neab
     from itertools import repeat
+    import os
     #import net_graph
     vmslist = [vms_best, vms_worst]
     import copy
@@ -172,6 +175,7 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
             plt.ylabel('$V_{m}$ mV')
             plt.xlabel('mS')
         plt.savefig(str('test_')+str(v)+'vm_versus_t.eps', format='eps', dpi=1200)
+        import pandas as pd
         sf_best = pd.DataFrame(sc_for_frame_best)
         sf_worst = pd.DataFrame(sc_for_frame_worst)
 
@@ -226,17 +230,19 @@ def plot_db(vms,name=None):
     matplotlib.use('Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
     matplotlib.style.use('ggplot')
     #f, axarr = plt.subplots(2, sharex=True)
-    fig, axarr = plt.subplots(3, sharex=True, figsize=(10, 10), facecolor='white')
+    fig, axarr = plt.subplots(5, sharex=True, figsize=(10, 10), facecolor='white')
 
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
     import quantities as pq
     import numpy as np
     import get_neab
+    import copy
     from itertools import repeat
     #import net_graph
     #vmslist = [vms_best, vms_worst]
     delta = []
+    scores = []
     tests = copy.copy(get_neab.tests)
     for k,v in enumerate(tests):
         new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
@@ -272,6 +278,7 @@ def plot_db(vms,name=None):
         model.update_run_params(vms.attrs)
         print(v.params)
         score = v.judge(model,stop_on_error = False, deep_error = True)
+        scores.append(score)
 
 
         if 'mean' in v.observation.keys():
@@ -298,39 +305,56 @@ def plot_db(vms,name=None):
         delta.append(unit_delta)
         print('observation {0} versus prediction {1}'.format(unit_observations,unit_predictions))
         print('unit delta', unit_delta)
+        sv = score.sort_key
+
+
         if k == 0:
+            axarr[3].scatter(k, sv,  c='black', label = 'the score')
+            axarr[4].scatter(k,0.0,  c='w',label ='the score')
+
             axarr[k].scatter(k,float(unit_delta),label = 'difference')
             axarr[k].scatter(k,float(unit_observations),label = 'observation')
             axarr[k].scatter(k,float(unit_predictions),label = 'prediction')
-            axarr[k].legend()
+
+            #axarr[k].legend()
         elif k ==1:
+            axarr[3].scatter(k, sv,  c='black', label = 'the score')
+            axarr[4].scatter(k,0.0,  c='w',label ='the score')
+
             axarr[k].scatter(k,float(unit_delta),label = 'difference')
             axarr[k].scatter(k,float(unit_observations),label = 'observation')
             axarr[k].scatter(k,float(unit_predictions),label = 'prediction')
-            axarr[k].legend()
+            #axarr[k].legend()
 
         else:
+            axarr[4].scatter(k, float(sv),  c='black', label = 'the score')
+
             axarr[2].scatter(k,float(unit_delta),label = 'difference')
             axarr[2].scatter(k,float(unit_observations),label = 'observation')
             axarr[2].scatter(k,float(unit_predictions),label = 'prediction')
-            axarr[2].legend()
+            #axarr[2].legend()
+
+
 
     vms.delta.append(np.mean(delta))
 
     labels = [ '{0}_{1}'.format(str(t),str(t.observation['value'].units)) for t in tests if 'mean' not in t.observation.keys() ]
     labels.extend([ '{0}_{1}'.format(str(t),str(t.observation['mean'].units))  for t in tests if 'mean' in t.observation.keys() ])
+    #labels = labels[1:-1]
     labels = tuple(labels)
     #labels = tuple([str(t.observations.values.units) for t in tests ])
-    tick_locations = tuple(range(0,len(tests)))
-    plt.xticks(tick_locations , labels)
-    plt.xticks(rotation=25)
     plt.xlabel('test type')
     plt.ylabel('observation versus prediction')
+    tick_locations = tuple(range(0,len(tests)))
+    plt.xticks(tick_locations , labels)
+    #plt.legend()
+    plt.xticks(rotation=25)
     plt.tight_layout()
-    plt.savefig('obsevation_versus_prediction_{0}.eps'.format(name), format='eps', dpi=1200)
 
-    pd.DataFrame()
-    df2.plot(kind='bar', stacked=True);
+    plt.savefig('obsevation_versus_prediction_{0}.eps'.format(name), format='eps', dpi=1200)
+    #import pandas as pd
+    #pd.DataFrame(scores).plot(kind='bar', stacked=True)
+    #df2.plot(kind='bar', stacked=True);
 
     return vms
 
@@ -417,7 +441,7 @@ def plot_objectives_history(log):
     minimum = log.select('min')
     import get_neab
     objective_labels = [ str(t) for t in get_neab.tests ]
-    mins_components_plot = logbook.select('min')
+    mins_components_plot = log.select('min')
     components = {}
     for i in range(0,7):
         components[i] = []
