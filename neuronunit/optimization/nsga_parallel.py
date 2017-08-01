@@ -296,7 +296,8 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     return fitness[0],fitness[1],\
            fitness[2],fitness[3],\
            fitness[4],fitness[5],\
-           fitness[6],fitness[7],
+           fitness[6],\
+           fitness[7],
 
 toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=30.0)
 toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=30.0, indpb=1.0/NDIM)
@@ -629,8 +630,8 @@ def check_rheobase(vmpop,pop=None):
 # Start of the Genetic Algorithm
 ##
 
-MU = 8
-NGEN = 25
+MU = 10
+NGEN = 8
 CXPB = 0.9
 
 import numpy as np
@@ -687,10 +688,20 @@ print(logbook.stream)
 
 score_storage = [ v.score for v in vmpop ]
 
+
+def evalOneMax(vms):
+    import get_neab
+    import numpy as np
+    error  = np.abs(np.abs(float(get_neab.tests[0].observation['value']))-np.abs(vms.rheobase))
+    return error,
+
+
 time_out = 0
 verbose = False
-for gen in range(1, NGEN):
-
+means = np.array(logbook.select('avg'))
+gen = 1
+while gen < NGEN and means[-1]> 0.225:
+    gen += 1
     offspring = tools.selNSGA2(pop, len(pop))
 
     for ind in offspring:
@@ -739,8 +750,11 @@ for gen in range(1, NGEN):
             print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues))
             print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid))
 
-    filtered = [ offspring[k] for k,v in enumerate(vmoffspring) if np.abs(float(get_neab.tests[0].observation['value']))-np.abs(v.rheobase) < 30.0 ]
+    filtered = [ offspring[k] for k,v in enumerate(vmoffspring) if np.abs(np.abs(float(get_neab.tests[0].observation['value']))-np.abs(v.rheobase)) < 35.0 ]
     print(len(filtered),len(offspring),len(filtered)-len(offspring))
+    for v in vmoffspring:
+        print('emperical versus prediction')
+        print(np.abs(float(get_neab.tests[0].observation['value'])), np.abs(v.rheobase))
     # Its possible that the offspring are worse than the parents of the penultimate generation
     # Selecting from a gene pool of offspring and parents accomodates for that possibility.
     # There are two selection stages as per the NSGA example.
@@ -755,6 +769,14 @@ for gen in range(1, NGEN):
 
     pop = tools.selNSGA2(offspring + pop, MU)
 
+    '''
+    This is dumb
+    filtered.extend(filtered)
+    for f in filtered:
+        toolbox.mutate(f)
+        toolbox.mutate(f)
+    pop.extend(filtered)
+    '''
     #tools.selBest(offspring + pop,MU)
     record = stats.compile(pop)
     history.update(pop)
@@ -775,12 +797,17 @@ for gen in range(1, NGEN):
 import pickle
 with open('complete_dump.p','wb') as handle:
    pickle.dump([vmpop,pop,pf,history,logbook],handle)
+'''
 lists = pickle.load(open('complete_dump.p','rb'))
 vmpop,pop,pf,history,logbook = lists[4],lists[3],lists[2],lists[1],lists[0]
-
+'''
 
 import net_graph
-net_graph.graph_s(history)
+import networkx
+graph = networkx.DiGraph(history.genealogy_tree)
+graph = graph.reverse()
+
+net_graph.graph_s(history,graph)
 net_graph.plot_log(logbook)
 net_graph.just_mean(logbook)
 net_graph.plot_objectives_history(logbook)
