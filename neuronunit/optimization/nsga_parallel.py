@@ -242,7 +242,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     #vms = net_graph.plot_db(vms)
 
     new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-    model = ReducedModel(new_file_path,name=str(vms.attrs),backend='NEURON')
+    model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
     model.load_model()
     assert type(vms.rheobase) is not type(None)
     #tests = get_neab.suite.tests
@@ -287,8 +287,8 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     vms.evaluated = True
     #vms.fitness = fitness
     for k,f in enumerate(fitness):
-        fitness[k] = f + 2.0 * fitness[0] # add the rheobase error to all the errors.
-        fitness[k] = f + 1.0 * fitness[1]
+        fitness[k] = f + 10.0 * fitness[0] # add the rheobase error to all the errors.
+        fitness[k] = f + 5.0 * fitness[1]
     print(fitness)
 
 
@@ -296,8 +296,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     return fitness[0],fitness[1],\
            fitness[2],fitness[3],\
            fitness[4],fitness[5],\
-           fitness[6],\
-           fitness[7],
+           fitness[6],fitness[7],
 
 toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=30.0)
 toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=30.0, indpb=1.0/NDIM)
@@ -522,7 +521,7 @@ def check_rheobase(vmpop,pop=None):
 
         new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
 
-        model = ReducedModel(new_file_path,name=str(vm.attrs),backend='NEURON')
+        model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
         model.load_model()
         model.update_run_params(vm.attrs)
 
@@ -593,7 +592,7 @@ def check_rheobase(vmpop,pop=None):
         #print(pid_map[int(os.getpid())])
 
         new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-        model = ReducedModel(new_file_path,name=str(vm.attrs),backend='NEURON')
+        model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
         model.load_model()
         model.update_run_params(vm.attrs)
         cnt = 0
@@ -653,7 +652,7 @@ td = trans_dict
 dview.push({'trans_dict':trans_dict,'td':td})
 
 pop = toolbox.population(n = MU)
-history.update(pop)
+
 pop = [ toolbox.clone(i) for i in pop ]
 vmpop = update_vm_pop(pop, td)
 
@@ -690,6 +689,10 @@ score_storage = [ v.score for v in vmpop ]
 
 
 def evalOneMax(vms):
+	'''
+	Not actually used
+	More of an after thought
+	'''
     import get_neab
     import numpy as np
     error  = np.abs(np.abs(float(get_neab.tests[0].observation['value']))-np.abs(vms.rheobase))
@@ -700,16 +703,10 @@ time_out = 0
 verbose = False
 means = np.array(logbook.select('avg'))
 gen = 1
-while gen < NGEN and means[-1]> 0.225:
-    gen += 1
+while gen < NGEN and means[-1] > 0.15:
+    means = np.array(logbook.select('avg'))
     offspring = tools.selNSGA2(pop, len(pop))
-
-    for ind in offspring:
-        if verbose:
-            print('what do the weights without values look like? {0}'.format(ind.fitness.weights))
-            print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues))
-            print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid))
-    #assert len(offspring)!=0
+        #assert len(offspring)!=0
     offspring = [toolbox.clone(ind) for ind in offspring]
     #assert len(offspring)!=0
     for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
@@ -735,6 +732,15 @@ while gen < NGEN and means[-1]> 0.225:
     # Thus waisting computation.
     vmoffspring = update_vm_pop(copy.copy(invalid_ind), trans_dict) #(copy.copy(invalid_ind), td)
     vmoffspring , _ = check_rheobase(copy.copy(vmoffspring))
+    '''
+    filtered = iter([ offspring[k] for k,v in enumerate(vmoffspring) \
+    if np.abs(np.abs(float(get_neab.tests[0].observation['value']))-np.abs(v.rheobase)) < 20.0 ])
+    import pdb
+    pdb.set_trace()
+    filtered2 = [ next(filtered) for k,v in enumerate(vmoffspring) if np.abs(np.abs(float(get_neab.tests[0].observation['value']))-np.abs(v.rheobase)) >= 20.0 ]
+    '''
+    #unsorted_error = [  np.abs(np.abs(float(get_neab.tests[0].observation['value']))-np.abs(v.rheobase)) for v in vmoffspring ]
+
     #from itertools import repeat
     #pop_plus_rh = list(dview.map_sync(vmoffspring ,vmpop,repeat(td)))
     #print(pop_plus_rh)
@@ -789,25 +795,18 @@ while gen < NGEN and means[-1]> 0.225:
 
     # if the means are not decreasing at least as an overall trend something is wrong.
     print('means from logbook: {0} from manual meaning the fitness: {1}'.format(means,mf))
-    print('means: {0} pareto_front first: {1} pf_mean {2}'.format(logbook.select('avg'), \
-                                                        np.sum(np.mean(pf[0].fitness.values)),\
-                                                        pf_mean))
-    #assert len(vmoffspring) != 0
+    print('means: {0} pareto_front first: {1} pf_mean {2}'.format(logbook.select('avg'),pf[0].fitness.values,pf_mean))
+    gen += 1
 
 import pickle
 with open('complete_dump.p','wb') as handle:
    pickle.dump([vmpop,pop,pf,history,logbook],handle)
-'''
-lists = pickle.load(open('complete_dump.p','rb'))
-vmpop,pop,pf,history,logbook = lists[4],lists[3],lists[2],lists[1],lists[0]
-'''
+#lists = pickle.load(open('complete_dump.p','rb'))
+#vmpop,pop,pf,history,logbook = lists[4],lists[3],lists[2],lists[1],lists[0]
+
 
 import net_graph
-import networkx
-graph = networkx.DiGraph(history.genealogy_tree)
-graph = graph.reverse()
-
-net_graph.graph_s(history,graph)
+net_graph.graph_s(history)
 net_graph.plot_log(logbook)
 net_graph.just_mean(logbook)
 net_graph.plot_objectives_history(logbook)
@@ -815,10 +814,8 @@ net_graph.plot_objectives_history(logbook)
 
 
 #Although the pareto front surely contains the best candidate it cannot contain the worst, only history can.
-best_ind_dict_vm = update_vm_pop(pf[0:2],td)
-best_ind_dict_vm , _ = check_rheobase(best_ind_dict_vm)
-
-
+#best_ind_dict_vm = update_vm_pop(pf[0:2],td)
+#best_ind_dict_vm , _ = check_rheobase(best_ind_dict_vm)
 
 best, worst = net_graph.best_worst(history)
 listss = [best , worst]
@@ -833,7 +830,7 @@ print(best_worst[0].attrs,' = ', best_ind_dict_vm[0].attrs, 'should be the same 
 # Will cause a bug or not.
 
 
-net_graph.plot_evaluate( best_worst[0],best_worst[0])
+net_graph.plot_evaluate( best_worst[0],best_worst[1])
 
 net_graph.plot_db(best_worst[0],name='best')
 net_graph.plot_db(best_worst[1],name='worst')
