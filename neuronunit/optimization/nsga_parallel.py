@@ -230,7 +230,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     #vms = net_graph.plot_db(vms)
 
     new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-    model = ReducedModel(new_file_path,name=str(vms.attrs),backend='NEURON')
+    model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
     model.load_model()
     assert type(vms.rheobase) is not type(None)
     #tests = get_neab.suite.tests
@@ -263,15 +263,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
         score = v.judge(model,stop_on_error = False, deep_error = True)
 
-        if k == 0:
-            fitness.append(1.0/np.abs(float(score.raw)))
-        else:
-            fitness.append(float(score.sort_key))
-        print(fitness)
-        if k == 0:
-            error.append(np.abs(float(score.raw)))
-        else:
-            error.append(1.0/np.abs(float(score.raw)))
+
 
 
         if 'mean' in v.observation.keys():
@@ -288,17 +280,28 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
         to_r_s = unit_observations.units
         unit_predictions = unit_predictions.rescale(to_r_s)
-        unit_delta = np.abs(np.abs(unit_observations)-np.abs(unit_predictions))
-        print('score: {0} unit delta: {1}'.format(score,unit_delta))
+        unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
+        print('observation: {0} prediction: {1}'.format(unit_observations, unit_predictions))
 
+        print('score: {0} unit delta: {1}'.format(score, unit_delta))
 
+        if k == 0:
+            fitness.append(float(unit_delta))
+        else:
+            fitness.append(float(score.sort_key))
+        print(fitness)
+        if k == 0:
+            error.append(1.0/np.abs(float(score.raw)))
+        else:
+            error.append(np.abs(float(score.raw)))
+        print(error)
     model.run_number += 1
     model.rheobase = vms.rheobase * pq.pA
 
-    for k,f in enumerate(fitness):
-        fitness[k] = f + 1.5 * fitness[0] # add the rheobase error to all the errors.
-        fitness[k] = f + 1.25 * fitness[1]
-    print('{0}{1}'.format(fitness,error))
+    #for k,f in enumerate(fitness):
+    #    fitness[k] = f + 1.5 * fitness[0] # add the rheobase error to all the errors.
+    #    fitness[k] = f + 1.25 * fitness[1]
+    print('fitness {0} error {1}'.format(fitness,error))
 
 
     return fitness[0],fitness[1],\
@@ -516,7 +519,7 @@ def check_rheobase(vmpop,pop=None):
 
         new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
 
-        model = ReducedModel(new_file_path,name=str(vm.attrs),backend='NEURON')
+        model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
         model.load_model()
         model.update_run_params(vm.attrs)
 
@@ -587,7 +590,7 @@ def check_rheobase(vmpop,pop=None):
         #print(pid_map[int(os.getpid())])
 
         new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-        model = ReducedModel(new_file_path,name=str(vm.attrs),backend='NEURON')
+        model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
         model.load_model()
         model.update_run_params(vm.attrs)
         cnt = 0
@@ -669,9 +672,10 @@ with open(new_checkpoint_path,'wb') as handle:#
 
 
 
-fitnesses = []
+#fitnesses = []
 #for v in vmpop:
 #    fitnesses.append(evaluate(v))
+
 import copy
 fitnesses = dview.map_sync(evaluate, copy.copy(vmpop))
 
@@ -692,13 +696,6 @@ print(logbook.stream)
 
 score_storage = [ v.score for v in vmpop ]
 
-'''
-def evalOneMax(vms):
-    import get_neab
-    import numpy as np
-    error  = np.abs(np.abs(float(get_neab.tests[0].observation['value']))-np.abs(vms.rheobase))
-    return error,
-'''
 
 verbose = False
 means = np.array(logbook.select('avg'))
@@ -741,7 +738,7 @@ while gen < NGEN and means[-1]> 0.225:
     #pop_plus_rh = list(dview.map_sync(vmoffspring ,vmpop,repeat(td)))
     #print(pop_plus_rh)
 
-    fitnesses = []
+    #fitnesses = []
     #for v in vmoffspring:
     #    fitness.append(evaluate(v))
     fitnesses = list(dview.map_sync(toolbox.evaluate, copy.copy(vmoffspring)))
@@ -758,13 +755,13 @@ while gen < NGEN and means[-1]> 0.225:
     # Selecting from a gene pool of offspring and parents accomodates for that possibility.
     # There are two selection stages as per the NSGA example.
     # https://github.com/DEAP/deap/blob/master/examples/ga/nsga2.py
-    #pop = toolbox.select(pop + offspring, MU)
+    # pop = toolbox.select(pop + offspring, MU)
 
-    #keys = history.genealogy_tree.keys()
+    # keys = history.genealogy_tree.keys()
     # Grab evaluated history items and chuck them into the mixture.
     # We want to select among the best from the whole history of the GA, not just penultimate and present generations.
-    #all_hist = [ history.genealogy_history[i] for i in keys if history.genealogy_history[i].fitness.valid == True ]
-    #pop = tools.selNSGA2(offspring + all_hist, MU)
+    # all_hist = [ history.genealogy_history[i] for i in keys if history.genealogy_history[i].fitness.valid == True ]
+    # pop = tools.selNSGA2(offspring + all_hist, MU)
 
     pop = tools.selNSGA2(offspring + pop, MU)
 
@@ -792,12 +789,12 @@ lists = pickle.load(open('complete_dump.p','rb'))
 vmpop,pop,pf,history,logbook = lists[4],lists[3],lists[2],lists[1],lists[0]
 '''
 
+#import networkx
+#graph = networkx.DiGraph(history.genealogy_tree)
+#graph = graph.reverse()
 import net_graph
-import networkx
-graph = networkx.DiGraph(history.genealogy_tree)
-graph = graph.reverse()
 
-net_graph.graph_s(history,graph)
+net_graph.graph_s(history)
 net_graph.plot_log(logbook)
 net_graph.just_mean(logbook)
 net_graph.plot_objectives_history(logbook)
@@ -824,7 +821,6 @@ print(best_worst[0].attrs,' = ', best_ind_dict_vm[0].attrs, 'should be the same 
 
 
 net_graph.plot_evaluate( best_worst[0],best_worst[1])
-
 net_graph.plot_db(best_worst[0],name='best')
 net_graph.plot_db(best_worst[1],name='worst')
 net_graph.plot_performance_profile()
