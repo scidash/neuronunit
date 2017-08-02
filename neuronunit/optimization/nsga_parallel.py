@@ -264,8 +264,6 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
         score = v.judge(model,stop_on_error = False, deep_error = True)
 
 
-
-
         if 'mean' in v.observation.keys():
             unit_observations = v.observation['mean']
 
@@ -290,18 +288,13 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
         else:
             fitness.append(float(score.sort_key))
         print(fitness)
-        if k == 0:
-            error.append(1.0/np.abs(float(score.raw)))
-        else:
-            error.append(np.abs(float(score.raw)))
-        print(error)
+
     model.run_number += 1
     model.rheobase = vms.rheobase * pq.pA
 
-    #for k,f in enumerate(fitness):
-    #    fitness[k] = f + 1.5 * fitness[0] # add the rheobase error to all the errors.
-    #    fitness[k] = f + 1.25 * fitness[1]
-    print('fitness {0} error {1}'.format(fitness,error))
+    for k,f in enumerate(fitness):
+        fitness[k] = f + 1.5 * fitness[0] # add the rheobase error to all the errors.
+        fitness[k] = f + 1.25 * fitness[1]
 
 
     return fitness[0],fitness[1],\
@@ -625,10 +618,13 @@ def check_rheobase(vmpop,pop=None):
 
 ##
 # Start of the Genetic Algorithm
+# For good results, MU the size of the gene pool
+# should at least be as big as number of dimensions/model parameters
+# explored.
 ##
 
 MU = 10
-NGEN = 10
+NGEN = 5
 CXPB = 0.9
 
 import numpy as np
@@ -823,7 +819,9 @@ print(best_worst[0].attrs,' = ', best_ind_dict_vm[0].attrs, 'should be the same 
 net_graph.plot_evaluate( best_worst[0],best_worst[1])
 net_graph.plot_db(best_worst[0],name='best')
 net_graph.plot_db(best_worst[1],name='worst')
-net_graph.plot_performance_profile()
+net_graph.plotly_graph(history)
+
+#net_graph.plot_performance_profile()
 #net_graph.plot_evaluate(best_ind_dict_vm[0],name='best')
 #good_solutions = net_graph.bpyopt(pf)
 
