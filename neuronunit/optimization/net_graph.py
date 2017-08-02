@@ -53,9 +53,15 @@ def graph_s(history):
     node_colors = [ np.sum(history.genealogy_history[i].fitness.values) for i in graph ]
     positions = graphviz_layout(graph, prog="dot")
     networkx.draw(graph, positions, node_color=node_colors, labels = labels)
-    nodes=networkx.draw_networkx_nodes(graph,positions,node_color=node_colors, node_size=4.5, labels = labels)
+    nodes_start = networkx.draw_networkx_nodes(graph[0:10],positions[0:10],node_color=node_colors, node_size=2.125, labels = labels)
+    nodes_middle = networkx.draw_networkx_nodes(graph[11:-12],positions[11:-12,node_color=node_colors, node_size=1.5)
+    nodes_end = networkx.draw_networkx_nodes(graph[0:10],positions[-11:-1],node_color=node_colors, node_size=2.125, labels = labels)
+
     edges=networkx.draw_networkx_edges(graph,positions,width=1.5,edge_cmap=plt.cm.Blues)
-    plt.sci(nodes)
+    plt.sci(nodes_start)
+    plt.sci(nodes_middle)
+    plt.sci(nodes_end)
+
     cbar = plt.colorbar(nodes,fraction=0.046, pad=0.04, ticks=range(4))
     plt.sci(edges)
     plt.axis('on')
@@ -219,6 +225,7 @@ def plot_db(vms,name=None):
     The most important side effect being a plot in eps format.
 
     '''
+    import os
     import matplotlib
     import pandas as pd
 
