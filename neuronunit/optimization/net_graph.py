@@ -10,6 +10,8 @@ mpl.use('Agg') # Need to do this before importing neuronunit on a Mac, because O
 import matplotlib.pyplot as plt
 import numpy as np
 
+
+
 def plot_performance_profile():
     '''
     makes a plot about this programs performance profile
@@ -469,3 +471,100 @@ def plot_objectives_history(log):
 
     fig.tight_layout()
     fig.savefig('Izhikevich_evolution_components.eps', format='eps', dpi=1200)
+                                                                        
+                                                                        
+ 
+def plotly_graph(history):
+    import plotly.plotly as py
+    from plotly.graph_objs import *
+
+    import networkx as nx
+    import networkx
+    G = networkx.DiGraph(history.genealogy_tree)
+    G = graph.reverse()
+    labels = {}
+    for i in G.nodes():
+        labels[i] = i
+    node_colors = [ np.sum(history.genealogy_history[i].fitness.values) for i in graph ]
+    positions = graphviz_layout(graph, prog="dot")
+    networkx.draw(G, positions, node_color=node_colors, labels = labels)
+    nodes_start = networkx.draw_networkx_nodes(graph[0:10],positions[0:10],node_color=node_colors, node_size=2.125, labels = labels)
+    nodes_middle = networkx.draw_networkx_nodes(graph[11:-12],positions[11:-12],node_color=node_colors, node_size=1.5)
+    nodes_end = networkx.draw_networkx_nodes(graph[0:10],positions[-11:-1],node_color=node_colors, node_size=2.125, labels = labels)
+
+    edges=networkx.draw_networkx_edges(graph,positions,width=1.5,edge_cmap=plt.cm.Blues)
+
+    #G=nx.random_geometric_graph(200,0.125)
+    pos = positions
+
+    dmin=1
+    ncenter=0
+    for n in pos:
+        x,y=pos[n]
+        d=(x-0.5)**2+(y-0.5)**2
+        if d<dmin:
+            ncenter=n
+            dmin=d
+    edge_trace = Scatter(
+    x=[],
+    y=[],
+    line=Line(width=0.5,color='#888'),
+    hoverinfo='none',
+    mode='lines')
+
+    for edge in G.edges():
+        x0, y0 = G.node[edge[0]]['pos']
+        x1, y1 = G.node[edge[1]]['pos']
+        edge_trace['x'] += [x0, x1, None]
+        edge_trace['y'] += [y0, y1, None]
+
+    node_trace = Scatter(
+        x=[],
+        y=[],
+        text=[],
+        mode='markers',
+        hoverinfo='text',
+        marker=Marker(
+            showscale=True,
+            # colorscale options
+            # 'Greys' | 'Greens' | 'Bluered' | 'Hot' | 'Picnic' | 'Portland' |
+            # Jet' | 'RdBu' | 'Blackbody' | 'Earth' | 'Electric' | 'YIOrRd' | 'YIGnBu'
+            colorscale='YIGnBu',
+            reversescale=True,
+            color=[],
+            size=10,
+            colorbar=dict(
+                thickness=15,
+                title='Node Connections',
+                xanchor='left',
+                titleside='right'
+            ),
+            line=dict(width=2)))
+
+    for node in G.nodes():
+        x, y = pos#G.node[node]['pos']
+        node_trace['x'].append(x)
+        node_trace['y'].append(y)
+
+    for node, adjacencies in enumerate(G):
+        node_trace['marker']['color'].append(node_colors[node])
+        node_info = 'chronology of gene: '+str(int(node))
+        node_trace['text'].append(node_info)
+
+    fig = Figure(data=Data([edge_trace, node_trace]),
+             layout=Layout(
+                title='<br>Network graph made with Python',
+                titlefont=dict(size=16),
+                showlegend=False,
+                hovermode='closest',
+                margin=dict(b=20,l=5,r=5,t=40),
+                annotations=[ dict(
+                    text="Python code: <a href='https://plot.ly/ipython-notebooks/network-graphs/'> https://plot.ly/ipython-notebooks/network-graphs/</a>",
+                    showarrow=False,
+                    xref="paper", yref="paper",
+                    x=0.005, y=-0.002 ) ],
+                xaxis=XAxis(showgrid=False, zeroline=False, showticklabels=False),
+                yaxis=YAxis(showgrid=False, zeroline=False, showticklabels=False)))
+
+    py.iplot(fig, filename='networkx')
+                                                                       
