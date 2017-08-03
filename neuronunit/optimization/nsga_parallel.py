@@ -293,10 +293,10 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     model.rheobase = vms.rheobase * pq.pA
 
     for k,f in enumerate(fitness):
-	if k != 0:
+    	if k != 0:
            fitness[k] = f + 1.50 * fitness[0] # add the rheobase error to all the errors.
-   	else:
-           fitness[k] = f + 1.25 * fitness[1]
+       	#if k != 1:
+         #  fitness[k] = f + 1.25 * fitness[1]
 
 
     return fitness[0],fitness[1],\
@@ -539,7 +539,7 @@ def check_rheobase(vmpop,pop=None):
             vm.lookup[float(ampl)] = n_spikes
             if n_spikes == 1:
                 vm.rheobase = float(ampl)
-              
+
                 vm.name = str('rheobase {0} parameters {1}'.format(str(current),str(model.params)))
                 vm.boolean = True
                 return vm
@@ -743,7 +743,7 @@ while gen < NGEN and means[-1]> 0.225:
 
     # Its possible that the offspring are worse than the parents of the penultimate generation
     # Its very likely for an offspring population to be less fit than their parents when the pop size
-    # is less than the number of parameters explored. However this effect should stabelize after a 
+    # is less than the number of parameters explored. However this effect should stabelize after a
     # few generations, after which the population will have explored and learned significant error gradients.
     # Selecting from a gene pool of offspring and parents accomodates for that possibility.
     # There are two selection stages as per the NSGA example.
