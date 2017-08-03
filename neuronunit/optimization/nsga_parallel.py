@@ -1,9 +1,17 @@
 
+import matplotlib # Its not that this file is responsible for doing plotting, but it calls many modules that are, such that it needs to pre-empt
+# setting of an appropriate backend.
+try:
+    matplotlib.use('Qt5Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
+except:
+    matplotlib.use('Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
+
 #Assumption that this file was executed after first executing the bash: ipcluster start -n 8 --profile=default &
 import sys
 import os
 import ipyparallel as ipp
 from ipyparallel import depend, require, dependent
+
 
 #from unittest import TestCase
 #TestCase.assertEqual(1.0,1.0)
@@ -61,8 +69,10 @@ with dview.sync_imports(): # Causes each of these things to be imported on the w
     import matplotlib
     import neuronunit
     import model_parameters as modelp
-
-    matplotlib.use('Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
+    try:
+        matplotlib.use('Qt5Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
+    except:
+        matplotlib.use('Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
                           # on the worker threads.
     import pdb
     import array
@@ -226,8 +236,6 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     import numpy as np
     import get_neab
     from itertools import repeat
-    import net_graph
-    #vms = net_graph.plot_db(vms)
 
     new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
     model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
