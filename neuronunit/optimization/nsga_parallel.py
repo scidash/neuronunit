@@ -1,17 +1,16 @@
 
-import matplotlib
-matplotlib.use('Qt5Agg')
-#matplotlib.use('Agg')
-import get_neab
-#import model_parameters
-import model_parameters as modelp
+import matplotlib # Its not that this file is responsible for doing plotting, but it calls many modules that are, such that it needs to pre-empt
+# setting of an appropriate backend.
+try:
+    matplotlib.use('Qt5Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
+except:
+    matplotlib.use('Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
 
-import utilities
 #Assumption that this file was executed after first executing the bash: ipcluster start -n 8 --profile=default &
 import sys
 import os
 import ipyparallel as ipp
-# Need to do this before importing neuronunit on a Mac, because OSX backend won't work
+from ipyparallel import depend, require, dependent
 
 
 import cProfile
@@ -38,12 +37,11 @@ def ProfExit(p):
 profile_hook = cProfile.Profile()
 atexit.register(ProfExit, profile_hook)
 profile_hook.enable()
-#from networkx.drawing.nx_agraph import graphviz_layout
-
-#from ipyparallel.apps import iploggerapp
 rc = ipp.Client(profile='default')
-
-
+THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
+this_nu = os.path.join(THIS_DIR,'../../')
+sys.path.insert(0,this_nu)
+from neuronunit import tests
 rc[:].use_cloudpickle()
 inv_pid_map = {}
 dview = rc[:]
@@ -57,29 +55,15 @@ pid_map = {}
 for k,v in inv_pid_map.items():
     pid_map[v] = k
 
-def which_dir():
-    THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
-    this_nu = os.path.join(THIS_DIR,'../../')
-    sys.path.insert(0,this_nu)
-    import neuronunit
-    print(os.getcwd())
-    print('\n\n\n\n'+str(neuronunit.__file__)+'\n\n\n\n')
-
-    #from neuronunit.neuronunit.optimization import get_neab
-    #from neuronunit.neuronunit.optimization import utilities
-
-which_dir()
-dview.apply_sync(which_dir)
-import neuronunit
-print('\n\n\n\n'+str(neuronunit.__file__)+'\n\n\n\n')
-
-
-from neuronunit import tests
-#
-
 with dview.sync_imports(): # Causes each of these things to be imported on the workers as well as here.
-    #import neuronunit
-    #
+    import get_neab
+    import matplotlib
+    import neuronunit
+    import model_parameters as modelp
+    try:
+        matplotlib.use('Qt5Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
+    except:
+        matplotlib.use('Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
                           # on the worker threads.
     import pdb
     import array
@@ -87,6 +71,7 @@ with dview.sync_imports(): # Causes each of these things to be imported on the w
     import sys
 
     import numpy as np
+    import matplotlib.pyplot as plt
     import quantities as pq
     from deap import algorithms
     from deap import base
@@ -101,6 +86,9 @@ with dview.sync_imports(): # Causes each of these things to be imported on the w
 
     import deap as deap
     import functools
+    import utilities
+    print(utilities.__file__)
+    vm = utilities.VirtualModel()
 
 
 
@@ -109,62 +97,17 @@ with dview.sync_imports(): # Causes each of these things to be imported on the w
     history = tools.History()
     import numpy as np
 
-    #import sciunit
-    #thisnu = str(os.getcwd())+'/../..'
-    #sys.path.insert(0,thisnu)
-
-    import get_neab
-    import utilities
-    import model_parameters as modelp
-    print(get_neab)
-    print(utilities)
-    print(modelp)
+    import sciunit
+    thisnu = str(os.getcwd())+'/../..'
+    sys.path.insert(0,thisnu)
     import sciunit.scores as scores
 
-print('\n\n\n\n'+str('strangely the above import does not persist')+str('\n\n\n\n'))
-print(os.getcwd())
-print(os.system('ls'))
-#from neuronunit.optimization import get_neab
-#import get_neab
-print('\n\n\n\n'+str('cleared?')+'\n\n\n\n')
-
-#import get_neab
-#dview.push({'get_neab':get_neab})
-#get_neab = dview.pull('get_neab')
-dview.apply_sync(dir)
 
 
-with dview.sync_imports():# p_imports():
-    import get_neab
-    import utilities
-    import model_parameters as modelp
-    print(get_neab)
-    print(utilities)
-    print(modelp)
 
-    #import neuronunit
-    print(neuronunit.__file__)
-    #print(get_neab)
-    #from neuronunit.optimization import get_neab
-
-    #from neuronunit optimization imp
-    #from neuronunit import get_neab
-    #import utilities
-    import get_neab
+def p_imports():
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
-    #from neuronunit.optimization import get_neab
-
-    #print(get_neab)
-    #    #import get_neab
-    #from neuronunit.optimization import utilities
-    #import get_neab
-    #import utilities
-    #print(utilities.__file__)
-
-    vm = utilities.VirtualModel()
-    print(vm)
-
     print(get_neab.LEMS_MODEL_PATH)
     new_file_path = '{0}{1}'.format(str(get_neab.LEMS_MODEL_PATH),int(os.getpid()))
     print(new_file_path)
@@ -172,10 +115,10 @@ with dview.sync_imports():# p_imports():
     os.system('cp ' + str(get_neab.LEMS_MODEL_PATH)+str(' ') + new_file_path)
     model = ReducedModel(new_file_path,name='vanilla',backend='NEURON')
     model.load_model()
-    #return 0
+    return
 
-#dview.apply_sync(p_imports)
-#p_imports()
+dview.apply_sync(p_imports)
+p_imports()
 from deap import base
 from deap import creator
 toolbox = base.Toolbox()
@@ -218,7 +161,6 @@ with dview.sync_imports():
     toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
     toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-
     toolbox.register("select", tools.selNSGA2)
 
 
@@ -240,7 +182,6 @@ def p_imports():
     toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
     toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-
     toolbox.register("select", tools.selNSGA2)
     return
 dview.apply_sync(p_imports)
@@ -285,7 +226,6 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     import get_neab
     from itertools import repeat
 
-
     new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
     model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
     model.load_model()
@@ -320,9 +260,6 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
         score = v.judge(model,stop_on_error = False, deep_error = True)
 
-
-
-
         if 'mean' in v.observation.keys():
             unit_observations = v.observation['mean']
 
@@ -356,11 +293,10 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     model.rheobase = vms.rheobase * pq.pA
 
     for k,f in enumerate(fitness):
-        fitness[k] = f + 15.0 * fitness[0] # add the rheobase error to all the errors.
-        fitness[k] = f + 12.5 * fitness[1] # Seems to cause faster convergence of population to
-        # er
-        # so worth keeping
-    print('fitness {0} error {1}'.format(fitness,error))
+	if k != 0:
+           fitness[k] = f + 1.50 * fitness[0] # add the rheobase error to all the errors.
+   	else:
+           fitness[k] = f + 1.25 * fitness[1]
 
 
     return fitness[0],fitness[1],\
@@ -588,7 +524,6 @@ def check_rheobase(vmpop,pop=None):
                   {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
 
-        print('print model name {0}'.format(model.name))
         if float(ampl) not in vm.lookup or len(vm.lookup)==0:
 
             current = params.copy()['injected_square_current']
@@ -604,8 +539,7 @@ def check_rheobase(vmpop,pop=None):
             vm.lookup[float(ampl)] = n_spikes
             if n_spikes == 1:
                 vm.rheobase = float(ampl)
-                print(type(vm.rheobase))
-                print('current {0} spikes {1}'.format(vm.rheobase,n_spikes))
+              
                 vm.name = str('rheobase {0} parameters {1}'.format(str(current),str(model.params)))
                 vm.boolean = True
                 return vm
@@ -684,6 +618,9 @@ def check_rheobase(vmpop,pop=None):
 
 ##
 # Start of the Genetic Algorithm
+# For good results, MU the size of the gene pool
+# should at least be as big as number of dimensions/model parameters
+# explored.
 ##
 
 MU = 10
@@ -700,7 +637,6 @@ stats.register("avg", np.mean)
 stats.register("std", np.std)
 
 logbook = tools.Logbook()
-
 logbook.header = "gen", "evals", "min", "max", "avg", "std"
 
 dview.push({'pf':pf})
@@ -709,7 +645,6 @@ td = trans_dict
 dview.push({'trans_dict':trans_dict,'td':td})
 
 pop = toolbox.population(n = MU)
-history.update(pop)
 pop = [ toolbox.clone(i) for i in pop ]
 '''
 try:
@@ -730,9 +665,9 @@ with open(new_checkpoint_path,'wb') as handle:#
     pickle.dump(vmpop, handle)
 
 
-
-#fitnesses = []
-#for v in vmpop:
+# sometimes done in serial in order to get access to opaque stdout/stderr
+# fitnesses = []
+# for v in vmpop:
 #    fitnesses.append(evaluate(v))
 
 import copy
@@ -743,6 +678,7 @@ for ind, fit in zip(pop, fitnesses):
 
 
 pop = tools.selNSGA2(pop, MU)
+# only update the history after crowding distance has been assigned
 history.update(pop)
 
 
@@ -767,9 +703,9 @@ while gen < NGEN and means[-1]> 0.225:
             print('what do the weights without values look like? {0}'.format(ind.fitness.weights))
             print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues))
             print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid))
-    #assert len(offspring)!=0
+
     offspring = [toolbox.clone(ind) for ind in offspring]
-    #assert len(offspring)!=0
+
     for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
         if random.random() <= CXPB:
             toolbox.mate(ind1, ind2)
@@ -784,21 +720,16 @@ while gen < NGEN and means[-1]> 0.225:
 
     invalid_ind = []
     for ind in offspring:
-        #print('what do the weights without values look like? {0}'.format(ind.fitness.weights))
-        #print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues))
-        #print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid))
         if ind.fitness.valid == False:
             invalid_ind.append(ind)
     # Need to make sure that update_vm_pop does not replace instances of the same model
     # Thus waisting computation.
     vmoffspring = update_vm_pop(copy.copy(invalid_ind), trans_dict) #(copy.copy(invalid_ind), td)
     vmoffspring , _ = check_rheobase(copy.copy(vmoffspring))
-    #from itertools import repeat
-    #pop_plus_rh = list(dview.map_sync(vmoffspring ,vmpop,repeat(td)))
-    #print(pop_plus_rh)
-
-    #fitnesses = []
-    #for v in vmoffspring:
+    # sometimes fitness is assigned in serial, although slow gives access to otherwise hidden
+    # stderr/stdout
+    # fitnesses = []
+    # for v in vmoffspring:
     #    fitness.append(evaluate(v))
     fitnesses = list(dview.map_sync(toolbox.evaluate, copy.copy(vmoffspring)))
     mf = np.mean(fitnesses)
@@ -811,6 +742,9 @@ while gen < NGEN and means[-1]> 0.225:
             print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid))
 
     # Its possible that the offspring are worse than the parents of the penultimate generation
+    # Its very likely for an offspring population to be less fit than their parents when the pop size
+    # is less than the number of parameters explored. However this effect should stabelize after a 
+    # few generations, after which the population will have explored and learned significant error gradients.
     # Selecting from a gene pool of offspring and parents accomodates for that possibility.
     # There are two selection stages as per the NSGA example.
     # https://github.com/DEAP/deap/blob/master/examples/ga/nsga2.py
@@ -838,7 +772,7 @@ while gen < NGEN and means[-1]> 0.225:
     print('means: {0} pareto_front first: {1} pf_mean {2}'.format(logbook.select('avg'), \
                                                         np.sum(np.mean(pf[0].fitness.values)),\
                                                         pf_mean))
-    #assert len(vmoffspring) != 0
+
 
 import pickle
 with open('complete_dump.p','wb') as handle:
@@ -847,7 +781,6 @@ with open('complete_dump.p','wb') as handle:
 lists = pickle.load(open('complete_dump.p','rb'))
 vmpop,pop,pf,history,logbook = lists[4],lists[3],lists[2],lists[1],lists[0]
 '''
-
 
 import net_graph
 
@@ -880,6 +813,8 @@ print(best_worst[0].attrs,' = ', best_ind_dict_vm[0].attrs, 'should be the same 
 net_graph.plot_evaluate( best_worst[0],best_worst[1])
 net_graph.plot_db(best_worst[0],name='best')
 net_graph.plot_db(best_worst[1],name='worst')
-net_graph.plot_performance_profile()
+net_graph.plotly_graph(history)
+
+#net_graph.plot_performance_profile()
 #net_graph.plot_evaluate(best_ind_dict_vm[0],name='best')
 #good_solutions = net_graph.bpyopt(pf)
