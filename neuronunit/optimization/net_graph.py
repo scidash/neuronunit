@@ -3,12 +3,16 @@ import networkx as nx
 from networkx.drawing.nx_agraph import graphviz_layout
 import graphviz
 
-#import graphviz_layout
 import matplotlib as mpl
-mpl.use('Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
+# setting of an appropriate backend.
+try:
+    mpl.use('Qt5Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
+except:
+    mpl.use('Agg')
 
 import matplotlib.pyplot as plt
 import numpy as np
+from plotly.graph_objs import *
 
 
 
@@ -91,21 +95,21 @@ def graph_s(history):
     plt.savefig('genealogy_history_{0}_.eps'.format(len(graph)), format='eps', dpi=1200)
 
 
-def plotly_graph(history):
+def plotly_graph(history,vmhistory):
+    from networkx.drawing.nx_agraph import graphviz_layout
 
 
     import plotly
-    from plotly.graph_objs import *
     import plotly.plotly as py
     import networkx as nx
     import networkx
     G = networkx.DiGraph(history.genealogy_tree)
-    G = graph.reverse()
+    G = G.reverse()
     labels = {}
     for i in G.nodes():
         labels[i] = i
-    node_colors = [ np.sum(history.genealogy_history[i].fitness.values) for i in graph ]
-    positions = graphviz_layout(graph, prog="dot")
+    node_colors = [ np.sum(history.genealogy_history[i].fitness.values) for i in G ]
+    positions = graphviz_layout(G, prog="dot")
 
     dmin=1
     ncenter=0
@@ -143,7 +147,7 @@ def plotly_graph(history):
             # 'Greys' | 'Greens' | 'Bluered' | 'Hot' | 'Picnic' | 'Portland' |
             # Jet' | 'RdBu' | 'Blackbody' | 'Earth' | 'Electric' | 'YIOrRd' | 'YIGnBu'
             #colorscale='YIGnBu',
-            colorscale='Hot',
+            colorscale='Earth',
 
             reversescale=True,
             color=[],
@@ -162,16 +166,20 @@ def plotly_graph(history):
         node_trace['x'].append(x)
         node_trace['y'].append(y)
 
-    for node, adjacencies in enumerate(G):
-        '''
-        '''
-        node_trace['marker']['color'].append(node_colors[node])
-        node_info = 'chronology of gene: '+str(int(node))
+    for k, node in enumerate(G):
+
+
+        node_trace['marker']['color'].append(node_colors[k])
+        try:
+            node_info = 'gene id: {0} model attributes {1}'.format( str(int(k)), str(vmhistory[k].attrs))
+        except:
+            node_info = 'gene id: {0} model attributes {1}'.format( str(int(k)), str(vmhistory[k].attrs))
+
         node_trace['text'].append(node_info)
 
     fig = Figure(data=Data([edge_trace, node_trace]),
              layout=Layout(
-                title='<br>geneolgy history graph made with DEAP networkx and plotly',
+                title='<br>Genesology History Graph made with NeuronUnit/DEAP optimizer outputing into networkx and plotly',
                 titlefont=dict(size=16),
                 showlegend=False,
                 hovermode='closest',
@@ -590,4 +598,3 @@ def plot_objectives_history(log):
 
     fig.tight_layout()
     fig.savefig('Izhikevich_evolution_components.eps', format='eps', dpi=1200)
-                                                                        
