@@ -13,9 +13,6 @@ import ipyparallel as ipp
 from ipyparallel import depend, require, dependent
 
 
-#from unittest import TestCase
-#TestCase.assertEqual(1.0,1.0)
-
 import cProfile
 import atexit
 import os,sys
@@ -40,9 +37,6 @@ def ProfExit(p):
 profile_hook = cProfile.Profile()
 atexit.register(ProfExit, profile_hook)
 profile_hook.enable()
-#from networkx.drawing.nx_agraph import graphviz_layout
-
-#from ipyparallel.apps import iploggerapp
 rc = ipp.Client(profile='default')
 THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
 this_nu = os.path.join(THIS_DIR,'../../')
@@ -170,7 +164,6 @@ with dview.sync_imports():
     toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
     toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-
     toolbox.register("select", tools.selNSGA2)
 
 
@@ -192,7 +185,6 @@ def p_imports():
     toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
     toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-
     toolbox.register("select", tools.selNSGA2)
     return
 dview.apply_sync(p_imports)
@@ -271,7 +263,6 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
         score = v.judge(model,stop_on_error = False, deep_error = True)
 
-
         if 'mean' in v.observation.keys():
             unit_observations = v.observation['mean']
 
@@ -301,8 +292,8 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     model.rheobase = vms.rheobase * pq.pA
 
     for k,f in enumerate(fitness):
-        fitness[k] = f + 1.5 * fitness[0] # add the rheobase error to all the errors.
-        fitness[k] = f + 1.25 * fitness[1]
+        fitness[k] = f + 15.0 * fitness[0] # add the rheobase error to all the errors.
+        fitness[k] = f + 12.5 * fitness[1]
 
 
     return fitness[0],fitness[1],\
@@ -514,12 +505,10 @@ def check_rheobase(vmpop,pop=None):
         global model
         import quantities as pq
         import get_neab
-
         from neuronunit.models import backends
         from neuronunit.models.reduced import ReducedModel
 
         new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
-
         model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
         model.load_model()
         model.update_run_params(vm.attrs)
@@ -530,7 +519,6 @@ def check_rheobase(vmpop,pop=None):
                   {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
 
-        print('print model name {0}'.format(model.name))
         if float(ampl) not in vm.lookup or len(vm.lookup)==0:
 
             current = params.copy()['injected_square_current']
@@ -546,8 +534,7 @@ def check_rheobase(vmpop,pop=None):
             vm.lookup[float(ampl)] = n_spikes
             if n_spikes == 1:
                 vm.rheobase = float(ampl)
-                print(type(vm.rheobase))
-                print('current {0} spikes {1}'.format(vm.rheobase,n_spikes))
+              
                 vm.name = str('rheobase {0} parameters {1}'.format(str(current),str(model.params)))
                 vm.boolean = True
                 return vm
@@ -632,7 +619,7 @@ def check_rheobase(vmpop,pop=None):
 ##
 
 MU = 10
-NGEN = 5
+NGEN = 6
 CXPB = 0.9
 
 import numpy as np
@@ -645,7 +632,6 @@ stats.register("avg", np.mean)
 stats.register("std", np.std)
 
 logbook = tools.Logbook()
-
 logbook.header = "gen", "evals", "min", "max", "avg", "std"
 
 dview.push({'pf':pf})
@@ -654,7 +640,7 @@ td = trans_dict
 dview.push({'trans_dict':trans_dict,'td':td})
 
 pop = toolbox.population(n = MU)
-history.update(pop)
+
 pop = [ toolbox.clone(i) for i in pop ]
 '''
 try:
@@ -675,9 +661,9 @@ with open(new_checkpoint_path,'wb') as handle:#
     pickle.dump(vmpop, handle)
 
 
-
-#fitnesses = []
-#for v in vmpop:
+# sometimes done in serial in order to get access to opaque stdout/stderr
+# fitnesses = []
+# for v in vmpop:
 #    fitnesses.append(evaluate(v))
 
 import copy
@@ -688,6 +674,7 @@ for ind, fit in zip(pop, fitnesses):
 
 
 pop = tools.selNSGA2(pop, MU)
+# only update the history after crowding distance has been assigned
 history.update(pop)
 
 
@@ -712,9 +699,9 @@ while gen < NGEN and means[-1]> 0.225:
             print('what do the weights without values look like? {0}'.format(ind.fitness.weights))
             print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues))
             print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid))
-    #assert len(offspring)!=0
+
     offspring = [toolbox.clone(ind) for ind in offspring]
-    #assert len(offspring)!=0
+
     for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
         if random.random() <= CXPB:
             toolbox.mate(ind1, ind2)
@@ -729,21 +716,17 @@ while gen < NGEN and means[-1]> 0.225:
 
     invalid_ind = []
     for ind in offspring:
-        #print('what do the weights without values look like? {0}'.format(ind.fitness.weights))
-        #print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues))
-        #print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid))
         if ind.fitness.valid == False:
             invalid_ind.append(ind)
     # Need to make sure that update_vm_pop does not replace instances of the same model
     # Thus waisting computation.
     vmoffspring = update_vm_pop(copy.copy(invalid_ind), trans_dict) #(copy.copy(invalid_ind), td)
     vmoffspring , _ = check_rheobase(copy.copy(vmoffspring))
-    #from itertools import repeat
-    #pop_plus_rh = list(dview.map_sync(vmoffspring ,vmpop,repeat(td)))
-    #print(pop_plus_rh)
 
-    #fitnesses = []
-    #for v in vmoffspring:
+    # sometimes fitness is assigned in serial, although slow gives access to otherwise hidden
+    # stderr/stdout
+    # fitnesses = []
+    # for v in vmoffspring:
     #    fitness.append(evaluate(v))
     fitnesses = list(dview.map_sync(toolbox.evaluate, copy.copy(vmoffspring)))
     mf = np.mean(fitnesses)
@@ -756,6 +739,9 @@ while gen < NGEN and means[-1]> 0.225:
             print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid))
 
     # Its possible that the offspring are worse than the parents of the penultimate generation
+    # Its very likely for an offspring population to be less fit than their parents when the pop size
+    # is less than the number of parameters explored. However this effect should stabelize after a 
+    # few generations, after which the population will have explored and learned significant error gradients.
     # Selecting from a gene pool of offspring and parents accomodates for that possibility.
     # There are two selection stages as per the NSGA example.
     # https://github.com/DEAP/deap/blob/master/examples/ga/nsga2.py
@@ -783,7 +769,7 @@ while gen < NGEN and means[-1]> 0.225:
     print('means: {0} pareto_front first: {1} pf_mean {2}'.format(logbook.select('avg'), \
                                                         np.sum(np.mean(pf[0].fitness.values)),\
                                                         pf_mean))
-    #assert len(vmoffspring) != 0
+
 
 import pickle
 with open('complete_dump.p','wb') as handle:
@@ -793,9 +779,6 @@ lists = pickle.load(open('complete_dump.p','rb'))
 vmpop,pop,pf,history,logbook = lists[4],lists[3],lists[2],lists[1],lists[0]
 '''
 
-#import networkx
-#graph = networkx.DiGraph(history.genealogy_tree)
-#graph = graph.reverse()
 import net_graph
 
 net_graph.graph_s(history)
@@ -832,58 +815,3 @@ net_graph.plotly_graph(history)
 #net_graph.plot_performance_profile()
 #net_graph.plot_evaluate(best_ind_dict_vm[0],name='best')
 #good_solutions = net_graph.bpyopt(pf)
-
-sc = pd.DataFrame(scores[0])
-sc
-data = [ pf[0] ]
-model_values0 = pd.DataFrame(data)
-model_values0
-rhstorage[0]
-
-data = [ pf[1] ]
-model_values0 = pd.DataFrame(data)
-model_values0
-
-
-
-sc1 = pd.DataFrame(scores[1])
-sc1
-
-rhstorage[1]
-
-data = [ pf[1].attrs ]
-model_values1 = pd.DataFrame(data)
-model_values1
-
-
-import pickle
-import pandas as pd
-
-try:
-    ground_error = pickle.load(open('big_model_evaulated.pickle','rb'))
-except:
-    # The exception code is only skeletal, it would not actually work, but its the right principles.
-    print('{0} it seems the error truth data does not yet exist, lets create it now '.format(str(False)))
-    ut = utilities.Utilities
-
-    ground_error = list(dview.map_sync(ut.func2map, ground_truth))
-    pickle.dump(ground_error,open('big_model_evaulated.pickle','wb'))
-
-# ground_error_nsga=list(zip(vmpop,pop,invalid_ind))
-# pickle.dump(ground_error_nsga,open('nsga_evaulated.pickle','wb'))
-
-sum_errors = [ i[0] for i in ground_error ]
-composite_errors = [ i[1] for i in ground_error ]
-attrs = [ i[2] for i in ground_error ]
-rheobase = [ i[3] for i in ground_error ]
-
-indexs = [i for i,j in enumerate(sum_errors) if j==np.min(sum_errors) ][0]
-indexc = [i for i,j in enumerate(composite_errors) if j==np.min(composite_errors) ][0]
-
-df_0 = pd.DataFrame([ (k,v,vmpop[0].attrs[k],float(v)-float(vmpop[0].attrs[k])) for k,v in ground_error[indexc][2].items() ])
-df_1 = pd.DataFrame([ (k,v,vmpop[1].attrs[k],float(v)-float(vmpop[1].attrs[k])) for k,v in ground_error[indexc][2].items() ])
-
-
-df_0
-
-df_1

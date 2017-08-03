@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+
 def plot_performance_profile():
     '''
     makes a plot about this programs performance profile
