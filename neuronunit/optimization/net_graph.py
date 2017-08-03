@@ -34,7 +34,7 @@ def plot_performance_profile():
     f.close()
     #subprocess.Popen('python','gprof2dot.py' -f -n0 -e0 pstats {0}  | dot -Tsvg -o {0}.svg'.format(prof_f_name))
     os.system('python gprof2dot.py -f -n0 -e0 pstats {0}  | dot -Tsvg -o {0}.svg'.format(prof_f_name))
-
+                       
 def graph_s(history):
     '''
     Make a directed graph (family tree) plot of the genealogy history
@@ -55,9 +55,29 @@ def graph_s(history):
     node_colors = [ np.sum(history.genealogy_history[i].fitness.values) for i in graph ]
     positions = graphviz_layout(graph, prog="dot")
     networkx.draw(graph, positions, node_color=node_colors, labels = labels)
-    nodes_start = networkx.draw_networkx_nodes(graph[0:10],positions[0:10],node_color=node_colors, node_size=2.125, labels = labels)
-    nodes_middle = networkx.draw_networkx_nodes(graph[11:-12],positions[11:-12,node_color=node_colors, node_size=1.5)
-    nodes_end = networkx.draw_networkx_nodes(graph[0:10],positions[-11:-1],node_color=node_colors, node_size=2.125, labels = labels)
+
+    start = []
+    middle = []
+    end = []
+    pos_start = []
+    pos_middle = []
+    pos_end = []
+
+    for k,n in enumerate(graph.nodes()):
+        if 0<k<10:
+            start.append(n)
+            pos_start.append()
+        elif 10<= k < int(len(graph.nodes()) -10) :
+            middle.append(n)
+        elif int(len(graph.nodes()) -10) <k < (len(graph.nodes())):
+            end.append(n)
+
+
+    nodes = networkx.draw_networkx_nodes(graph,positions,node_color=node_colors, node_size=2.125, labels = labels)
+
+    #nodes_start = networkx.draw_networkx_nodes(start,positions[0:10],node_color=node_colors, node_size=2.125, labels = labels)
+    #nodes_middle = networkx.draw_networkx_nodes(graph[11:-12],positions[11:-12],node_color=node_colors, node_size=1.5)
+    #nodes_end = networkx.draw_networkx_nodes(graph[0:10],positions[-11:-1],node_color=node_colors, node_size=2.125, labels = labels)
 
     edges=networkx.draw_networkx_edges(graph,positions,width=1.5,edge_cmap=plt.cm.Blues)
     plt.sci(nodes_start)
@@ -66,9 +86,9 @@ def graph_s(history):
 
     cbar = plt.colorbar(nodes,fraction=0.046, pad=0.04, ticks=range(4))
     plt.sci(edges)
+
     plt.axis('on')
     plt.savefig('genealogy_history_{0}_.eps'.format(len(graph)), format='eps', dpi=1200)
-
 
 
 def best_worst(history):
@@ -472,12 +492,14 @@ def plot_objectives_history(log):
     fig.tight_layout()
     fig.savefig('Izhikevich_evolution_components.eps', format='eps', dpi=1200)
                                                                         
-                                                                        
- 
-def plotly_graph(history):
-    import plotly.plotly as py
-    from plotly.graph_objs import *
 
+
+def plotly_graph(history):
+
+
+    import plotly
+    from plotly.graph_objs import *
+    import plotly.plotly as py
     import networkx as nx
     import networkx
     G = networkx.DiGraph(history.genealogy_tree)
@@ -487,20 +509,11 @@ def plotly_graph(history):
         labels[i] = i
     node_colors = [ np.sum(history.genealogy_history[i].fitness.values) for i in graph ]
     positions = graphviz_layout(graph, prog="dot")
-    networkx.draw(G, positions, node_color=node_colors, labels = labels)
-    nodes_start = networkx.draw_networkx_nodes(graph[0:10],positions[0:10],node_color=node_colors, node_size=2.125, labels = labels)
-    nodes_middle = networkx.draw_networkx_nodes(graph[11:-12],positions[11:-12],node_color=node_colors, node_size=1.5)
-    nodes_end = networkx.draw_networkx_nodes(graph[0:10],positions[-11:-1],node_color=node_colors, node_size=2.125, labels = labels)
-
-    edges=networkx.draw_networkx_edges(graph,positions,width=1.5,edge_cmap=plt.cm.Blues)
-
-    #G=nx.random_geometric_graph(200,0.125)
-    pos = positions
 
     dmin=1
     ncenter=0
-    for n in pos:
-        x,y=pos[n]
+    for n in positions:
+        x,y=positions[n]
         d=(x-0.5)**2+(y-0.5)**2
         if d<dmin:
             ncenter=n
@@ -513,8 +526,11 @@ def plotly_graph(history):
     mode='lines')
 
     for edge in G.edges():
-        x0, y0 = G.node[edge[0]]['pos']
-        x1, y1 = G.node[edge[1]]['pos']
+        source = G.nodes()[edge[0]-1]
+        target = G.nodes()[edge[1]-1]
+
+        x0, y0 = positions[source]
+        x1, y1 = positions[target]
         edge_trace['x'] += [x0, x1, None]
         edge_trace['y'] += [y0, y1, None]
 
@@ -529,42 +545,49 @@ def plotly_graph(history):
             # colorscale options
             # 'Greys' | 'Greens' | 'Bluered' | 'Hot' | 'Picnic' | 'Portland' |
             # Jet' | 'RdBu' | 'Blackbody' | 'Earth' | 'Electric' | 'YIOrRd' | 'YIGnBu'
-            colorscale='YIGnBu',
+            #colorscale='YIGnBu',
+            colorscale='Hot',
+
             reversescale=True,
             color=[],
             size=10,
             colorbar=dict(
                 thickness=15,
-                title='Node Connections',
+                title='Genes summed error (absence of fitness)',
                 xanchor='left',
                 titleside='right'
             ),
             line=dict(width=2)))
 
     for node in G.nodes():
-        x, y = pos#G.node[node]['pos']
+        #x, y = pos[G.node[node]]#['pos']
+        x,y = positions[G.nodes()[node-1]]
         node_trace['x'].append(x)
         node_trace['y'].append(y)
 
     for node, adjacencies in enumerate(G):
+        '''
+        '''
         node_trace['marker']['color'].append(node_colors[node])
         node_info = 'chronology of gene: '+str(int(node))
         node_trace['text'].append(node_info)
 
     fig = Figure(data=Data([edge_trace, node_trace]),
              layout=Layout(
-                title='<br>Network graph made with Python',
+                title='<br>geneolgy history graph made with DEAP networkx and plotly',
                 titlefont=dict(size=16),
                 showlegend=False,
                 hovermode='closest',
                 margin=dict(b=20,l=5,r=5,t=40),
                 annotations=[ dict(
-                    text="Python code: <a href='https://plot.ly/ipython-notebooks/network-graphs/'> https://plot.ly/ipython-notebooks/network-graphs/</a>",
+                    text="Python code: <a href='https://github.com/russelljjarvis/neuronunit/blob/dev/neuronunit/optimization/net_graph.py#L470-L569> \
+                    https://github.com/russelljjarvis/neuronunit/blob/dev/neuronunit/optimization/net_graph.py#L470-L569</a>",
                     showarrow=False,
                     xref="paper", yref="paper",
                     x=0.005, y=-0.002 ) ],
                 xaxis=XAxis(showgrid=False, zeroline=False, showticklabels=False),
                 yaxis=YAxis(showgrid=False, zeroline=False, showticklabels=False)))
 
-    py.iplot(fig, filename='networkx')
-                                                                       
+
+    #py.sign_in('RussellJarvis','ask me for my API key, or create your own plotly account :)')
+    py.iplot(fig, filename='networkx.svg',image='svg')
