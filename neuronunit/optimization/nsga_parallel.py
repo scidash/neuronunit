@@ -1,12 +1,18 @@
 
+import matplotlib
+matplotlib.use('Qt5Agg')
+#matplotlib.use('Agg')
+import get_neab
+#import model_parameters
+import model_parameters as modelp
+
+import utilities
 #Assumption that this file was executed after first executing the bash: ipcluster start -n 8 --profile=default &
 import sys
 import os
 import ipyparallel as ipp
-from ipyparallel import depend, require, dependent
+# Need to do this before importing neuronunit on a Mac, because OSX backend won't work
 
-#from unittest import TestCase
-#TestCase.assertEqual(1.0,1.0)
 
 import cProfile
 import atexit
@@ -36,10 +42,8 @@ profile_hook.enable()
 
 #from ipyparallel.apps import iploggerapp
 rc = ipp.Client(profile='default')
-THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
-this_nu = os.path.join(THIS_DIR,'../../')
-sys.path.insert(0,this_nu)
-from neuronunit import tests
+
+
 rc[:].use_cloudpickle()
 inv_pid_map = {}
 dview = rc[:]
@@ -53,16 +57,29 @@ pid_map = {}
 for k,v in inv_pid_map.items():
     pid_map[v] = k
 
+def which_dir():
+    THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
+    this_nu = os.path.join(THIS_DIR,'../../')
+    sys.path.insert(0,this_nu)
+    import neuronunit
+    print(os.getcwd())
+    print('\n\n\n\n'+str(neuronunit.__file__)+'\n\n\n\n')
+
+    #from neuronunit.neuronunit.optimization import get_neab
+    #from neuronunit.neuronunit.optimization import utilities
+
+which_dir()
+dview.apply_sync(which_dir)
+import neuronunit
+print('\n\n\n\n'+str(neuronunit.__file__)+'\n\n\n\n')
 
 
+from neuronunit import tests
+#
 
 with dview.sync_imports(): # Causes each of these things to be imported on the workers as well as here.
-    import get_neab
-    import matplotlib
-    import neuronunit
-    import model_parameters as modelp
-
-    matplotlib.use('Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
+    #import neuronunit
+    #
                           # on the worker threads.
     import pdb
     import array
@@ -70,7 +87,6 @@ with dview.sync_imports(): # Causes each of these things to be imported on the w
     import sys
 
     import numpy as np
-    import matplotlib.pyplot as plt
     import quantities as pq
     from deap import algorithms
     from deap import base
@@ -85,9 +101,6 @@ with dview.sync_imports(): # Causes each of these things to be imported on the w
 
     import deap as deap
     import functools
-    import utilities
-    print(utilities.__file__)
-    vm = utilities.VirtualModel()
 
 
 
@@ -96,17 +109,62 @@ with dview.sync_imports(): # Causes each of these things to be imported on the w
     history = tools.History()
     import numpy as np
 
-    import sciunit
-    thisnu = str(os.getcwd())+'/../..'
-    sys.path.insert(0,thisnu)
+    #import sciunit
+    #thisnu = str(os.getcwd())+'/../..'
+    #sys.path.insert(0,thisnu)
+
+    import get_neab
+    import utilities
+    import model_parameters as modelp
+    print(get_neab)
+    print(utilities)
+    print(modelp)
     import sciunit.scores as scores
 
+print('\n\n\n\n'+str('strangely the above import does not persist')+str('\n\n\n\n'))
+print(os.getcwd())
+print(os.system('ls'))
+#from neuronunit.optimization import get_neab
+#import get_neab
+print('\n\n\n\n'+str('cleared?')+'\n\n\n\n')
+
+#import get_neab
+#dview.push({'get_neab':get_neab})
+#get_neab = dview.pull('get_neab')
+dview.apply_sync(dir)
 
 
+with dview.sync_imports():# p_imports():
+    import get_neab
+    import utilities
+    import model_parameters as modelp
+    print(get_neab)
+    print(utilities)
+    print(modelp)
 
-def p_imports():
+    #import neuronunit
+    print(neuronunit.__file__)
+    #print(get_neab)
+    #from neuronunit.optimization import get_neab
+
+    #from neuronunit optimization imp
+    #from neuronunit import get_neab
+    #import utilities
+    import get_neab
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
+    #from neuronunit.optimization import get_neab
+
+    #print(get_neab)
+    #    #import get_neab
+    #from neuronunit.optimization import utilities
+    #import get_neab
+    #import utilities
+    #print(utilities.__file__)
+
+    vm = utilities.VirtualModel()
+    print(vm)
+
     print(get_neab.LEMS_MODEL_PATH)
     new_file_path = '{0}{1}'.format(str(get_neab.LEMS_MODEL_PATH),int(os.getpid()))
     print(new_file_path)
@@ -114,10 +172,10 @@ def p_imports():
     os.system('cp ' + str(get_neab.LEMS_MODEL_PATH)+str(' ') + new_file_path)
     model = ReducedModel(new_file_path,name='vanilla',backend='NEURON')
     model.load_model()
-    return
+    #return 0
 
-dview.apply_sync(p_imports)
-p_imports()
+#dview.apply_sync(p_imports)
+#p_imports()
 from deap import base
 from deap import creator
 toolbox = base.Toolbox()
@@ -226,8 +284,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     import numpy as np
     import get_neab
     from itertools import repeat
-    import net_graph
-    #vms = net_graph.plot_db(vms)
+
 
     new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
     model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
@@ -298,9 +355,11 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     model.run_number += 1
     model.rheobase = vms.rheobase * pq.pA
 
-    #for k,f in enumerate(fitness):
-    #    fitness[k] = f + 1.5 * fitness[0] # add the rheobase error to all the errors.
-    #    fitness[k] = f + 1.25 * fitness[1]
+    for k,f in enumerate(fitness):
+        fitness[k] = f + 15.0 * fitness[0] # add the rheobase error to all the errors.
+        fitness[k] = f + 12.5 * fitness[1] # Seems to cause faster convergence of population to
+        # er
+        # so worth keeping
     print('fitness {0} error {1}'.format(fitness,error))
 
 
@@ -789,9 +848,7 @@ lists = pickle.load(open('complete_dump.p','rb'))
 vmpop,pop,pf,history,logbook = lists[4],lists[3],lists[2],lists[1],lists[0]
 '''
 
-#import networkx
-#graph = networkx.DiGraph(history.genealogy_tree)
-#graph = graph.reverse()
+
 import net_graph
 
 net_graph.graph_s(history)
@@ -826,58 +883,3 @@ net_graph.plot_db(best_worst[1],name='worst')
 net_graph.plot_performance_profile()
 #net_graph.plot_evaluate(best_ind_dict_vm[0],name='best')
 #good_solutions = net_graph.bpyopt(pf)
-
-sc = pd.DataFrame(scores[0])
-sc
-data = [ pf[0] ]
-model_values0 = pd.DataFrame(data)
-model_values0
-rhstorage[0]
-
-data = [ pf[1] ]
-model_values0 = pd.DataFrame(data)
-model_values0
-
-
-
-sc1 = pd.DataFrame(scores[1])
-sc1
-
-rhstorage[1]
-
-data = [ pf[1].attrs ]
-model_values1 = pd.DataFrame(data)
-model_values1
-
-
-import pickle
-import pandas as pd
-
-try:
-    ground_error = pickle.load(open('big_model_evaulated.pickle','rb'))
-except:
-    # The exception code is only skeletal, it would not actually work, but its the right principles.
-    print('{0} it seems the error truth data does not yet exist, lets create it now '.format(str(False)))
-    ut = utilities.Utilities
-
-    ground_error = list(dview.map_sync(ut.func2map, ground_truth))
-    pickle.dump(ground_error,open('big_model_evaulated.pickle','wb'))
-
-# ground_error_nsga=list(zip(vmpop,pop,invalid_ind))
-# pickle.dump(ground_error_nsga,open('nsga_evaulated.pickle','wb'))
-
-sum_errors = [ i[0] for i in ground_error ]
-composite_errors = [ i[1] for i in ground_error ]
-attrs = [ i[2] for i in ground_error ]
-rheobase = [ i[3] for i in ground_error ]
-
-indexs = [i for i,j in enumerate(sum_errors) if j==np.min(sum_errors) ][0]
-indexc = [i for i,j in enumerate(composite_errors) if j==np.min(composite_errors) ][0]
-
-df_0 = pd.DataFrame([ (k,v,vmpop[0].attrs[k],float(v)-float(vmpop[0].attrs[k])) for k,v in ground_error[indexc][2].items() ])
-df_1 = pd.DataFrame([ (k,v,vmpop[1].attrs[k],float(v)-float(vmpop[1].attrs[k])) for k,v in ground_error[indexc][2].items() ])
-
-
-df_0
-
-df_1
