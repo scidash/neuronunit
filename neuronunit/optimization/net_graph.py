@@ -590,3 +590,4 @@ def plot_objectives_history(log):
 
     fig.tight_layout()
     fig.savefig('Izhikevich_evolution_components.eps', format='eps', dpi=1200)
+                                                                        
