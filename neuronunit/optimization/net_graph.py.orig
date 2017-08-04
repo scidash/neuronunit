@@ -4,15 +4,20 @@ from networkx.drawing.nx_agraph import graphviz_layout
 import graphviz
 
 import matplotlib as mpl
+<<<<<<< HEAD
+mpl.use('Qt5Agg')
+=======
 # setting of an appropriate backend.
 try:
     mpl.use('Qt5Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
 except:
     mpl.use('Agg')
+>>>>>>> 1d6ac4085fde2bd0b31f577523294ff3fd9cb648
 
 from plotly.graph_objs import *
 import matplotlib.pyplot as plt
 import numpy as np
+from plotly.graph_objs import *
 
 
 
@@ -100,6 +105,10 @@ def plotly_graph(history,vmhistory):
 
 
     import plotly
+<<<<<<< HEAD
+
+=======
+>>>>>>> 1d6ac4085fde2bd0b31f577523294ff3fd9cb648
     import plotly.plotly as py
     import networkx as nx
     import networkx
@@ -161,7 +170,7 @@ def plotly_graph(history,vmhistory):
             line=dict(width=2)))
 
     for node in G.nodes():
-
+        #x, y = pos[G.node[node]]#['pos']
         x,y = positions[G.nodes()[node-1]]
         node_trace['x'].append(x)
         node_trace['y'].append(y)
@@ -598,4 +607,3 @@ def plot_objectives_history(log):
 
     fig.tight_layout()
     fig.savefig('Izhikevich_evolution_components.eps', format='eps', dpi=1200)
-                                                                     
