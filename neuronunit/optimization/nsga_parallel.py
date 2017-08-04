@@ -1,12 +1,15 @@
+##
+# Assumption that this file was executed after first executing the bash: ipcluster start -n 8 --profile=default &
+##
+
 
 import matplotlib # Its not that this file is responsible for doing plotting, but it calls many modules that are, such that it needs to pre-empt
 # setting of an appropriate backend.
 try:
-    matplotlib.use('Qt5Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
+    matplotlib.use('Qt5Agg')
 except:
-    matplotlib.use('Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
+    matplotlib.use('Agg')
 
-#Assumption that this file was executed after first executing the bash: ipcluster start -n 8 --profile=default &
 import sys
 import os
 import ipyparallel as ipp
@@ -87,7 +90,6 @@ with dview.sync_imports(): # Causes each of these things to be imported on the w
     import deap as deap
     import functools
     import utilities
-    print(utilities.__file__)
     vm = utilities.VirtualModel()
 
 
@@ -260,44 +262,42 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
         score = v.judge(model,stop_on_error = False, deep_error = True)
 
-        if 'mean' in v.observation.keys():
-            unit_observations = v.observation['mean']
-
-        if 'value' in v.observation.keys():
-            unit_observations = v.observation['value']
-
-        if 'mean' in v.prediction.keys():
-            unit_predictions = v.prediction['mean']
-
-        if 'value' in v.prediction.keys():
-            unit_predictions = v.prediction['value']
-
-        to_r_s = unit_observations.units
-        unit_predictions = unit_predictions.rescale(to_r_s)
-        unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
-        print('observation: {0} prediction: {1}'.format(unit_observations, unit_predictions))
-
-        print('score: {0} unit delta: {1}'.format(score, unit_delta))
 
         if k == 0:
+
+
+            if 'value' in v.observation.keys():
+                unit_observations = v.observation['value']
+
+            #if 'mean' in v.prediction.keys():
+            #    unit_predictions = v.prediction['mean']
+
+            #if 'mean' in v.observation.keys():
+            #    unit_observations = v.observation['mean']
+            if 'value' in v.prediction.keys():
+                unit_predictions = v.prediction['value']
+            to_r_s = unit_observations.units
+            unit_predictions = unit_predictions.rescale(to_r_s)
+            unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
+            #print('observation: {0} prediction: {1}'.format(unit_observations, unit_predictions))
+            #print('score: {0} unit delta: {1}'.format(score, unit_delta))
+
+
             fitness.append(float(unit_delta))
         else:
             fitness.append(float(score.sort_key))
         print(fitness)
-        if k == 0:
-            error.append(1.0/np.abs(float(score.raw)))
-        else:
-            error.append(np.abs(float(score.raw)))
-        print(error)
+
     model.run_number += 1
     model.rheobase = vms.rheobase * pq.pA
 
+    bf = copy.copy(fitness)
     for k,f in enumerate(fitness):
-    	if k != 0:
-           fitness[k] = f + 1.50 * fitness[0] # add the rheobase error to all the errors.
-       	#if k != 1:
-         #  fitness[k] = f + 1.25 * fitness[1]
-
+        if k!=0:
+            fitness[k] = fitness[k] + 15.0 * fitness[0] # add the rheobase error to all the errors.
+    for k,f in enumerate(fitness):
+        if k!=0:
+            assert f != bf[k]
 
     return fitness[0],fitness[1],\
            fitness[2],fitness[3],\
@@ -473,10 +473,17 @@ def check_rheobase(vmpop,pop=None):
 
             center = np.linspace(sub.max(),supra.min(),7.0)
             centerl = list(center)
+            # The following code block probably looks counter intuitive.
+            # Its job is to delete duplicated search values.
+            # Ie everything is a list of everything already explored.
+            # It then makes a corrected center position.
             for i,j in enumerate(centerl):
                 if i in list(everything):
+
                     np.delete(center,i)
                     del centerl[i]
+                    # delete the duplicated elements element, and replace it with a corrected
+                    # center below.
             #delete the index
             #np.delete(center,np.where(everything is in center))
             #make sure that element 4 in a seven element vector
@@ -508,12 +515,10 @@ def check_rheobase(vmpop,pop=None):
         global model
         import quantities as pq
         import get_neab
-
         from neuronunit.models import backends
         from neuronunit.models.reduced import ReducedModel
 
         new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
-
         model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
         model.load_model()
         model.update_run_params(vm.attrs)
@@ -645,6 +650,7 @@ td = trans_dict
 dview.push({'trans_dict':trans_dict,'td':td})
 
 pop = toolbox.population(n = MU)
+
 pop = [ toolbox.clone(i) for i in pop ]
 '''
 try:
@@ -689,13 +695,21 @@ record = stats.compile(pop)
 logbook.record(gen=0, evals=len(pop), **record)
 print(logbook.stream)
 
-score_storage = [ v.score for v in vmpop ]
-
+def difference(unit_predictions):
+    #try 'value' in get_neab.tests[0].observation.keys():
+    unit_observations = get_neab.tests[0].observation['value']
+    to_r_s = unit_observations.units
+    unit_predictions = unit_predictions.rescale(to_r_s)
+    unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
+    return float(unit_delta)
 
 verbose = False
 means = np.array(logbook.select('avg'))
 gen = 1
-while gen < NGEN and means[-1]> 0.225:
+rh_mean_status = np.mean([ v.rheobase for v in vmpop ])
+rhdiff = difference(rh_mean_status * pq.pA)
+
+while (gen < NGEN and means[-1] > 1.0) or rhdiff > 5.0:
     gen += 1
     offspring = tools.selNSGA2(pop, len(pop))
     if verbose:
@@ -726,6 +740,9 @@ while gen < NGEN and means[-1]> 0.225:
     # Thus waisting computation.
     vmoffspring = update_vm_pop(copy.copy(invalid_ind), trans_dict) #(copy.copy(invalid_ind), td)
     vmoffspring , _ = check_rheobase(copy.copy(vmoffspring))
+    rh_mean_status = np.mean([ v.rheobase for v in vmoffspring ])
+    rhdiff = difference(rh_mean_status * pq.pA)
+    print('the difference: {0}'.format(difference(rh_mean_status * pq.pA)))
     # sometimes fitness is assigned in serial, although slow gives access to otherwise hidden
     # stderr/stdout
     # fitnesses = []
@@ -783,38 +800,31 @@ vmpop,pop,pf,history,logbook = lists[4],lists[3],lists[2],lists[1],lists[0]
 '''
 
 import net_graph
-
-net_graph.graph_s(history)
+vmhistory = update_vm_pop(history.genealogy_history.values(),td)
+net_graph.plotly_graph(history,vmhistory)
+#net_graph.graph_s(history)
 net_graph.plot_log(logbook)
 net_graph.just_mean(logbook)
 net_graph.plot_objectives_history(logbook)
 
-
-
 #Although the pareto front surely contains the best candidate it cannot contain the worst, only history can.
 best_ind_dict_vm = update_vm_pop(pf[0:2],td)
 best_ind_dict_vm , _ = check_rheobase(best_ind_dict_vm)
-
-
 
 best, worst = net_graph.best_worst(history)
 listss = [best , worst]
 best_worst = update_vm_pop(listss,td)
 best_worst , _ = check_rheobase(best_worst)
 
-print(best_worst[0].attrs,' = ', best_ind_dict_vm[0].attrs, 'should be the same (eyeball)')
+print(best_worst[0].attrs,' == ', best_ind_dict_vm[0].attrs, ' ? should be the same (eyeball)')
+print(best_worst[0].fitness.values,' == ', best_ind_dict_vm[0].fitness.values, ' ? should be the same (eyeball)')
 
 # This operation converts the population of virtual models back to DEAP individuals
 # Except that there is now an added 11th dimension for rheobase.
-# This is not done in the general GA algorithm, since its not known if adding an extra dimensionality
-# Will cause a bug or not.
-
+# This is not done in the general GA algorithm, since adding an extra dimensionality that the GA
+# doesn't utilize causes a DEAP error, which is reasonable.
 
 net_graph.plot_evaluate( best_worst[0],best_worst[1])
 net_graph.plot_db(best_worst[0],name='best')
 net_graph.plot_db(best_worst[1],name='worst')
 net_graph.plotly_graph(history)
-
-#net_graph.plot_performance_profile()
-#net_graph.plot_evaluate(best_ind_dict_vm[0],name='best')
-#good_solutions = net_graph.bpyopt(pf)
