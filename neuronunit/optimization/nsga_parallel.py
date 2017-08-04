@@ -826,4 +826,3 @@ print(best_worst[0].fitness.values,' == ', best_ind_dict_vm[0].fitness.values, '
 net_graph.plot_evaluate( best_worst[0],best_worst[1])
 net_graph.plot_db(best_worst[0],name='best')
 net_graph.plot_db(best_worst[1],name='worst')
-net_graph.plotly_graph(history)
