@@ -263,8 +263,8 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
 
         score = v.judge(model,stop_on_error = False, deep_error = True)
-
-
+        #v.descripition()
+        import pdb; pdb.set_trace()
         if k == 0 and float(vms.rheobase) > 0:# and type(score) is not scores.InsufficientDataScore(None):
             if 'value' in v.observation.keys():
                 unit_observations = v.observation['value']
