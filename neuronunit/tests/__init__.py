@@ -609,15 +609,14 @@ class RheobaseTest(VmTest):
          #print("%s: Observation = %s, Prediction = %s" % \
          #	 (self.name,str(observation),str(prediction)))
 
-         if self.prediction is not None:
-             if self.prediction['value'] is None:
+         if self.prediction['value'] is None:
 
-                 score = scores.InsufficientDataScore(None)
-             else:
-                 score = super(RheobaseTest,self).\
-                             compute_score(observation, self.prediction)
-                 #self.bind_score(score,None,observation,prediction)
-             return score
+             score = scores.InsufficientDataScore(None)
+         else:
+             score = super(RheobaseTest,self).\
+                         compute_score(observation, self.prediction)
+             #self.bind_score(score,None,observation,prediction)
+         return score
 
 class RestingPotentialTest(VmTest):
     """Tests the resting potential under zero current injection."""
