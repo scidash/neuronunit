@@ -672,9 +672,9 @@ with open(new_checkpoint_path,'wb') as handle:#
 
 
 # sometimes done in serial in order to get access to opaque stdout/stderr
-fitnesses = []
-for v in vmpop:
-   fitnesses.append(evaluate(v))
+#fitnesses = []
+#for v in vmpop:
+#   fitnesses.append(evaluate(v))
 
 import copy
 fitnesses = dview.map_sync(evaluate, copy.copy(vmpop))
@@ -715,7 +715,7 @@ while (gen < NGEN and means[-1] > 0.05):
         for ind in offspring:
             print('what do the weights without values look like? {0}'.format(ind.fitness.weights[0]))
             print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues[0]))
-            print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid[0]))
+            #print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid[0]))
             print(rhdiff)
     offspring = [toolbox.clone(ind) for ind in offspring]
 
