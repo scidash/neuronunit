@@ -227,6 +227,8 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     import numpy as np
     import get_neab
     from itertools import repeat
+    import unittest
+    tc = unittest.TestCase('__init__')
 
     new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
     model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
@@ -263,7 +265,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
         score = v.judge(model,stop_on_error = False, deep_error = True)
 
 
-        if k == 0:
+        if k == 0 and float(vms.rheobase) >0 :
             if 'value' in v.observation.keys():
                 unit_observations = v.observation['value']
 
@@ -272,8 +274,15 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
             to_r_s = unit_observations.units
             unit_predictions = unit_predictions.rescale(to_r_s)
-            unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
+
+            unit_delta = np.abs( np.abs(float(unit_observations))-np.abs(float(unit_predictions)) )
+            assert float(vms.rheobase) == float(unit_predictions)#.rescale(pq.pA)
+            diff = np.abs(np.abs(unit_delta) - np.abs(vms.rheose))
+            assert unit_delta == diff
+
             pre_fitness.append(float(unit_delta))
+        elif k == 0 and float(vms.rheobase) <=0 :
+            pre_fitness = 100.0
         else:
             pre_fitness.append(float(score.sort_key))
 
@@ -285,8 +294,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
         fitness.append(pre_fitness[k])
         if k != 0:
             fitness.append(pre_fitness[k] + 1.5 * fitness[0]) # add the rheobase error to all the errors.
-            #tc = unittest.TestCase('__init__')
-            #tc.AssertNotEqual(fitness[k],pre_fitness[k])
+            assert fitness[k] != pre_fitness[k]
 
     return fitness[0],fitness[1],\
            fitness[2],fitness[3],\
@@ -696,7 +704,7 @@ means = np.array(logbook.select('avg'))
 gen = 1
 rh_mean_status = np.mean([ v.rheobase for v in vmpop ])
 rhdiff = difference(rh_mean_status * pq.pA)
-
+verbose = True
 while (gen < NGEN and means[-1] > 0.05):
     gen += 1
     offspring = tools.selNSGA2(pop, len(pop))
