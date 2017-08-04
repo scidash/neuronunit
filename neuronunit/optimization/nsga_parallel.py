@@ -293,9 +293,10 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
 
     for k,f in enumerate(pre_fitness):
-        fitness.append(pre_fitness[k])
+        if k == 0:
+            fitness.append(unit_delta)
         if k != 0:
-            fitness.append(pre_fitness[k] + 1.5 * fitness[0]) # add the rheobase error to all the errors.
+            fitness.append(pre_fitness[k] + 1.5 *unit_delta ) # add the rheobase error to all the errors.
             assert fitness[k] != pre_fitness[k]
 
     return fitness[0],fitness[1],\
