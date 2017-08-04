@@ -265,7 +265,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
         score = v.judge(model,stop_on_error = False, deep_error = True)
 
 
-        if k == 0 and float(vms.rheobase) >0 :
+        if k == 0 and float(vms.rheobase) > 0:# and type(score) is not scores.InsufficientDataScore(None):
             if 'value' in v.observation.keys():
                 unit_observations = v.observation['value']
 
@@ -276,8 +276,10 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
             unit_predictions = unit_predictions.rescale(to_r_s)
 
             unit_delta = np.abs( np.abs(float(unit_observations))-np.abs(float(unit_predictions)) )
-            assert float(vms.rheobase) == float(unit_predictions)#.rescale(pq.pA)
-            diff = np.abs(np.abs(unit_delta) - np.abs(vms.rheobase))
+            print(float(vms.rheobase),float(unit_predictions))
+            assert float(vms.rheobase) == float(unit_predictions)
+            diff = np.abs(np.abs(float(unit_observation)) - np.abs(float(vms.rheobase)))
+            print(unit_delta, diff, float(unit_observations))
             assert unit_delta == diff
 
             pre_fitness.append(float(unit_delta))
@@ -669,9 +671,9 @@ with open(new_checkpoint_path,'wb') as handle:#
 
 
 # sometimes done in serial in order to get access to opaque stdout/stderr
-# fitnesses = []
-# for v in vmpop:
-#    fitnesses.append(evaluate(v))
+fitnesses = []
+for v in vmpop:
+   fitnesses.append(evaluate(v))
 
 import copy
 fitnesses = dview.map_sync(evaluate, copy.copy(vmpop))
