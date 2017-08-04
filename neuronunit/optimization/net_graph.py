@@ -97,8 +97,6 @@ def graph_s(history):
 
 def plotly_graph(history,vmhistory):
     from networkx.drawing.nx_agraph import graphviz_layout
-
-
     import plotly
     import plotly.plotly as py
     import networkx as nx
@@ -167,14 +165,11 @@ def plotly_graph(history,vmhistory):
         node_trace['y'].append(y)
 
     for k, node in enumerate(G):
-
-
         node_trace['marker']['color'].append(node_colors[k])
         try:
-            node_info = 'gene id: {0} model attributes {1}'.format( str(int(k)), str(vmhistory[k].attrs))
+            node_info = 'gene id: {0} threshold current {1} pA model attributes {2}'.format( str(int(k)), str(vmhistory.rheobase), str(vmhistory[k].attrs))
         except:
-            node_info = 'gene id: {0} model attributes {1}'.format( str(int(k)), str(vmhistory[k].attrs))
-
+            node_info = 'gene id: {0} threshold currrent {1} pA model attributes {2} pA '.format( str(int(k)), str(vmhistory.rheobase), str(vmhistory[k].attrs))
         node_trace['text'].append(node_info)
 
     fig = Figure(data=Data([edge_trace, node_trace]),
@@ -185,15 +180,13 @@ def plotly_graph(history,vmhistory):
                 hovermode='closest',
                 margin=dict(b=20,l=5,r=5,t=40),
                 annotations=[ dict(
-                    text="Python code: <a href='https://github.com/russelljjarvis/neuronunit/blob/dev/neuronunit/optimization/net_graph.py#L470-L569> \
+                    text="Python code: <a href='the code this derives from.' \
                     https://github.com/russelljjarvis/neuronunit/blob/dev/neuronunit/optimization/net_graph.py#L470-L569</a>",
                     showarrow=False,
                     xref="paper", yref="paper",
                     x=0.005, y=-0.002 ) ],
                 xaxis=XAxis(showgrid=False, zeroline=False, showticklabels=False),
                 yaxis=YAxis(showgrid=False, zeroline=False, showticklabels=False)))
-
-
     py.sign_in('RussellJarvis','FoyVbw7Ry3u4N2kCY4LE')
     py.iplot(fig, filename='networkx.svg',image='svg')
 
@@ -598,4 +591,3 @@ def plot_objectives_history(log):
 
     fig.tight_layout()
     fig.savefig('Izhikevich_evolution_components.eps', format='eps', dpi=1200)
-                                                                     
