@@ -277,7 +277,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
             unit_delta = np.abs( np.abs(float(unit_observations))-np.abs(float(unit_predictions)) )
             assert float(vms.rheobase) == float(unit_predictions)#.rescale(pq.pA)
-            diff = np.abs(np.abs(unit_delta) - np.abs(vms.rheose))
+            diff = np.abs(np.abs(unit_delta) - np.abs(vms.rheobase))
             assert unit_delta == diff
 
             pre_fitness.append(float(unit_delta))
