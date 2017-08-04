@@ -672,9 +672,9 @@ with open(new_checkpoint_path,'wb') as handle:#
 
 
 # sometimes done in serial in order to get access to opaque stdout/stderr
-fitnesses = []
-for v in vmpop:
-   fitnesses.append(evaluate(v))
+#fitnesses = []
+#for v in vmpop:
+#   fitnesses.append(evaluate(v))
 
 import copy
 fitnesses = dview.map_sync(evaluate, copy.copy(vmpop))
