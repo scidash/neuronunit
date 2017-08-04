@@ -236,8 +236,8 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     model.update_run_params(vms.attrs)
     import copy
     tests = copy.copy(get_neab.tests)
+    pre_fitness = []
     fitness = []
-    error = []
     for k,v in enumerate(tests):
         if k == 0:
             v.prediction = {}
@@ -264,40 +264,29 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
 
         if k == 0:
-
-
             if 'value' in v.observation.keys():
                 unit_observations = v.observation['value']
 
-            #if 'mean' in v.prediction.keys():
-            #    unit_predictions = v.prediction['mean']
-
-            #if 'mean' in v.observation.keys():
-            #    unit_observations = v.observation['mean']
             if 'value' in v.prediction.keys():
                 unit_predictions = v.prediction['value']
+
             to_r_s = unit_observations.units
             unit_predictions = unit_predictions.rescale(to_r_s)
             unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
-            #print('observation: {0} prediction: {1}'.format(unit_observations, unit_predictions))
-            #print('score: {0} unit delta: {1}'.format(score, unit_delta))
-
-
-            fitness.append(float(unit_delta))
+            pre_fitness.append(float(unit_delta))
         else:
-            fitness.append(float(score.sort_key))
-        print(fitness)
+            pre_fitness.append(float(score.sort_key))
 
     model.run_number += 1
     model.rheobase = vms.rheobase * pq.pA
 
-    bf = copy.copy(fitness)
-    for k,f in enumerate(fitness):
-        if k!=0:
-            fitness[k] = fitness[k] + 15.0 * fitness[0] # add the rheobase error to all the errors.
-    for k,f in enumerate(fitness):
-        if k!=0:
-            assert f != bf[k]
+
+    for k,f in enumerate(pre_fitness):
+        fitness.append(pre_fitness[k])
+        if k != 0:
+            fitness.append(pre_fitness[k] + 1.5 * fitness[0]) # add the rheobase error to all the errors.
+            #tc = unittest.TestCase('__init__')
+            #tc.AssertNotEqual(fitness[k],pre_fitness[k])
 
     return fitness[0],fitness[1],\
            fitness[2],fitness[3],\
@@ -629,7 +618,7 @@ def check_rheobase(vmpop,pop=None):
 ##
 
 MU = 10
-NGEN = 20
+NGEN = 7
 CXPB = 0.9
 
 import numpy as np
@@ -696,7 +685,6 @@ logbook.record(gen=0, evals=len(pop), **record)
 print(logbook.stream)
 
 def difference(unit_predictions):
-    #try 'value' in get_neab.tests[0].observation.keys():
     unit_observations = get_neab.tests[0].observation['value']
     to_r_s = unit_observations.units
     unit_predictions = unit_predictions.rescale(to_r_s)
