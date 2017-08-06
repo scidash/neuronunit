@@ -19,6 +19,11 @@ from ipyparallel import depend, require, dependent
 import cProfile
 import atexit
 import os,sys
+
+#if ipython:
+%load_ext autoreload
+%autoreload 2
+
 def ProfExit(p):
    '''
    http://seiferteric.com/?p=277
