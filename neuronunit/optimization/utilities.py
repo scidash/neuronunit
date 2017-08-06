@@ -25,6 +25,14 @@ class VirtualModel(object):
         self.initiated = False
         self.delta = []
         self.evaluated = False
+'''
+import unittest
+tc = unittest.TestCase('__init__')
+tc.assertEqual(var1, var2, msg=None)
+tc.assertNotEqual(var1, var2, msg=None)
+tc.assertTrue(expr, msg=None)
+tc.assertRaises(exception, func, para, meters, ...)
+'''
 
 class Utilities:
     def __init__(self):
