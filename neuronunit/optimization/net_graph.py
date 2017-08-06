@@ -214,6 +214,41 @@ def best_worst(history):
             best.append(v)
     return best[0], worst[0]
 
+def pca(final_population,td):
+    from plotly.graph_objs import Scatter
+    from sklearn.preprocessing import StandardScaler
+    X_std = StandardScaler().fit_transform(final_population)
+    from sklearn.decomposition import PCA as sklearnPCA
+    sklearn_pca = sklearnPCA(n_components=10)
+    Y_sklearn = sklearn_pca.fit_transform(X_std)
+    traces = []
+    #names = []
+    names = [ str(v) for v in td.values() ]
+    #for v in td.values():
+    #    names.append(str(v))
+    for name in names:
+        trace = Scatter(
+            x=Y_sklearn[y==name,0],
+            y=Y_sklearn[y==name,1],
+            mode='markers',
+            name=name,
+            marker=Marker(
+                size=12,
+                line=Line(
+                    color='rgba(217, 217, 217, 0.14)',
+                    width=0.5),
+                opacity=0.8))
+        traces.append(trace)
+
+
+    data = Data(traces)
+    layout = Layout(xaxis=XAxis(title='PC1', showline=False),
+                    yaxis=YAxis(title='PC2', showline=False))
+    fig = Figure(data=data, layout=layout)
+    py.iplot(fig)
+    py.sign_in('RussellJarvis','FoyVbw7Ry3u4N2kCY4LE')
+    py.iplot(fig, filename='pca.svg',image='svg')
+
 
 def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must be pickle-able for ipyparallel to work.
     '''
@@ -305,6 +340,33 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
         sf_best = pd.DataFrame(sc_for_frame_best)
         sf_worst = pd.DataFrame(sc_for_frame_worst)
 
+def bar_chart(history):
+    import plotly.plotly as py
+    from plotly.graph_objs import Bar
+
+    trace_women = Bar(x=df.School,
+                      y=df.Women,
+                      name='Women',
+                      marker=dict(color='#ffcdd2'))
+
+    trace_men = Bar(x=df.School,
+                    y=df.Men,
+                    name='Men',
+                    marker=dict(color='#A2D5F2'))
+
+    trace_gap = Bar(x=df.School,
+                    y=df.gap,
+                    name='Gap',
+                    marker=dict(color='#59606D'))
+
+    data = [trace_women, trace_men, trace_gap]
+    layout = Layout(title="Average Earnings for Graduates",
+                    xaxis=dict(title='School'),
+                    yaxis=dict(title='Salary (in thousands)'))
+    fig = Figure(data=data, layout=layout)
+
+    py.iplot(fig, sharing='secret', filename='jupyter/styled_bar')
+
 
 def shadow(not_optional_list):#This method must be pickle-able for ipyparallel to work.
     '''
@@ -374,8 +436,10 @@ def shadow(not_optional_list):#This method must be pickle-able for ipyparallel t
                 sc_for_frame_best.append(score)
             else:
                 sc_for_frame_worst.append(score)
+            from capabilities import spike_functions
 
-            plt.plot(model.results['t'],model.results['vm'],label=str(v)+str(names[iterator])+str(score))
+            snippets = spike_functions.get_spike_waveforms(model.results['vm'])
+            plt.plot(model.results['t'],snippets,label=str(v)+str(names[iterator])+str(score))
 
             #XLIM should be from capabilities.spike_functions
             plt.xlim(0,float(v.params['injected_square_current']['duration']) )
