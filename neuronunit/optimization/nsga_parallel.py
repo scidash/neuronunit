@@ -45,6 +45,7 @@ THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
 this_nu = os.path.join(THIS_DIR,'../../')
 sys.path.insert(0,this_nu)
 from neuronunit import tests
+from deap.benchmarks.tools import diversity, convergence, hypervolume
 rc[:].use_cloudpickle()
 inv_pid_map = {}
 dview = rc[:]
@@ -110,12 +111,12 @@ with dview.sync_imports(): # Causes each of these things to be imported on the w
 def p_imports():
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
-    print(get_neab.LEMS_MODEL_PATH)
-    new_file_path = '{0}{1}'.format(str(get_neab.LEMS_MODEL_PATH),int(os.getpid()))
-    print(new_file_path)
+    #print(get_neab.LEMS_MODEL_PATH)
+    #new_file_path = '{0}{1}'.format(str(get_neab.LEMS_MODEL_PATH),int(os.getpid()))
+    #print(new_file_path)
 
-    os.system('cp ' + str(get_neab.LEMS_MODEL_PATH)+str(' ') + new_file_path)
-    model = ReducedModel(new_file_path,name='vanilla',backend='NEURON')
+    #os.system('cp ' + str(get_neab.LEMS_MODEL_PATH)+str(' ') + new_file_path)
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
     model.load_model()
     return
 
@@ -227,11 +228,10 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     import numpy as np
     import get_neab
     from itertools import repeat
-    import unittest
-    tc = unittest.TestCase('__init__')
 
-    new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-    model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
+
+    #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.load_model()
     assert type(vms.rheobase) is not type(None)
     #tests = get_neab.suite.tests
@@ -264,7 +264,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
         score = v.judge(model,stop_on_error = False, deep_error = True)
         #v.descripition()
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         if k == 0 and float(vms.rheobase) > 0:# and type(score) is not scores.InsufficientDataScore(None):
             if 'value' in v.observation.keys():
                 unit_observations = v.observation['value']
@@ -518,8 +518,8 @@ def check_rheobase(vmpop,pop=None):
         from neuronunit.models import backends
         from neuronunit.models.reduced import ReducedModel
 
-        new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
-        model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
+        #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
+        model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
         model.load_model()
         model.update_run_params(vm.attrs)
 
@@ -586,9 +586,8 @@ def check_rheobase(vmpop,pop=None):
         from neuronunit.models.reduced import ReducedModel
         import get_neab
         #print(pid_map[int(os.getpid())])
-
-        new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-        model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
+        #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
+        model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
         model.load_model()
         model.update_run_params(vm.attrs)
         cnt = 0
@@ -661,6 +660,11 @@ try:
     with open(new_checkpoint_path,'rb') as handle:#
         vmpop = pickle.load(handle)
 except:
+
+self.assertEqual(var1, var2, msg=None)
+self.assertNotEqual(var1, var2, msg=None)
+self.assertTrue(expr, msg=None)
+
 '''
 vmpop = update_vm_pop(pop, td)
 
@@ -691,6 +695,9 @@ history.update(pop)
 ### After an evaluation of error its appropriate to display error statistics
 #pf = tools.ParetoFront()
 pf.update([toolbox.clone(i) for i in pop])
+hvolumes = []
+hvolumes.append(hypervolume(pf))
+
 record = stats.compile(pop)
 logbook.record(gen=0, evals=len(pop), **record)
 print(logbook.stream)
@@ -702,13 +709,16 @@ def difference(unit_predictions):
     unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
     return float(unit_delta)
 
-verbose = False
+verbose = True
 means = np.array(logbook.select('avg'))
 gen = 1
 rh_mean_status = np.mean([ v.rheobase for v in vmpop ])
 rhdiff = difference(rh_mean_status * pq.pA)
 verbose = True
 while (gen < NGEN and means[-1] > 0.05):
+    # Although the hypervolume is not actually used here, it can be used
+    # As a terminating condition.
+    hvolumes.append(hypervolume(pf))
     gen += 1
     offspring = tools.selNSGA2(pop, len(pop))
     if verbose:
