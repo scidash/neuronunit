@@ -108,7 +108,7 @@ def plotly_graph(history,vmhistory):
     labels = {}
     for i in G.nodes():
         labels[i] = i
-    node_colors = [ np.sum(history.genealogy_history[i].fitness.values) for i in G ]
+    node_colors = np.log([ np.sum(history.genealogy_history[i].fitness.values) for i in G ])
     positions = graphviz_layout(G, prog="dot")
 
     dmin=1
@@ -147,7 +147,7 @@ def plotly_graph(history,vmhistory):
             # 'Greys' | 'Greens' | 'Bluered' | 'Hot' | 'Picnic' | 'Portland' |
             # Jet' | 'RdBu' | 'Blackbody' | 'Earth' | 'Electric' | 'YIOrRd' | 'YIGnBu'
             #colorscale='YIGnBu',
-            colorscale='Earth',
+            colorscale='Hot',
 
             reversescale=True,
             color=[],
@@ -179,7 +179,7 @@ def plotly_graph(history,vmhistory):
 
     fig = Figure(data=Data([edge_trace, node_trace]),
              layout=Layout(
-                title='<br>Genesology History Graph made with NeuronUnit/DEAP optimizer outputing into networkx and plotly',
+                title='<br>Geneeology History made with NeuronUnit/DEAP optimizer outputing into networkx and plotly',
                 titlefont=dict(size=16),
                 showlegend=False,
                 hovermode='closest',
@@ -312,6 +312,34 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
         sf_best = pd.DataFrame(sc_for_frame_best)
         sf_worst = pd.DataFrame(sc_for_frame_worst)
 
+def surfaces(history,td):
+
+    all_inds = history.genealogy_history.values()
+    sums = numpy.array([np.sum(ind.fitness.values) for ind in all_inds])
+    for k in range(1,9):
+        for i,j in enumerate(td):
+            print(i,k)
+            if i+k < 10:
+                quads = ((td[i],td[i+k],i,i+k))
+
+        #quads = [(td[i],td[i+1],i,i+1) for i,j in enumerate(td) if i+k<len(td)-1]
+
+        #for x,y,w,z in quads:
+            (x,y,w,z) = quads
+            xs = numpy.array([ind[w] for ind in all_inds])
+            ys = numpy.array([ind[z] for ind in all_inds])
+            min_ys = ys[numpy.where(sums == numpy.min(sums))]
+            min_xs = xs[numpy.where(sums == numpy.min(sums))]
+            plt.clf()
+            fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
+            trip_axis = ax_trip.tripcolor(xs,ys,sums+1,20,norm=matplotlib.colors.LogNorm())
+            plot_axis = ax_trip.plot(list(xs), list(ys), 'o', color='lightblue')
+            fig_trip.colorbar(trip_axis, label='sum of objectives + 1')
+            ax_trip.set_xlabel('Parameter '+ str(td[w]))
+            ax_trip.set_ylabel('Parameter '+ str(td[z]))
+            plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
+            fig_trip.tight_layout()
+            fig_trip.savefig('surface'+str(td[w])+str(td[z])+'.eps')
 
 def just_mean(log):
     '''
@@ -598,4 +626,3 @@ def plot_objectives_history(log):
 
     fig.tight_layout()
     fig.savefig('Izhikevich_evolution_components.eps', format='eps', dpi=1200)
-                                                                     
