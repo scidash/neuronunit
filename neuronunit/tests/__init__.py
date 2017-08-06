@@ -680,7 +680,7 @@ class RestingPotentialTest(VmTest):
         """Implementation of sciunit.Test.score_prediction."""
         #print("%s: Observation = %s, Prediction = %s" % \
         #	 (self.name,str(observation),str(prediction)))
-        if prediction is None:
+        if prediction is None:# or float(prediction) <=0 :
             score = scores.InsufficientDataScore(None)
             #score = scores.ErrorScore(None)
 
