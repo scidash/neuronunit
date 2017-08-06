@@ -305,34 +305,122 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
         sf_best = pd.DataFrame(sc_for_frame_best)
         sf_worst = pd.DataFrame(sc_for_frame_worst)
 
+
+def shadow(not_optional_list):#This method must be pickle-able for ipyparallel to work.
+    '''
+    A method to plot the best and worst candidate solution waveforms side by side
+
+
+    Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
+    is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
+    value, that was found in a previous rheobase search.
+
+    Outputs: This method only has side effects, not datatype outputs from the method.
+
+    The most important side effect being a plot in eps format.
+
+    '''
+    import os
+    from neuronunit.models import backends
+    from neuronunit.models.reduced import ReducedModel
+    import quantities as pq
+    import numpy as np
+    import get_neab
+    from itertools import repeat
+
+
+    import copy
+    tests = copy.copy(get_neab.tests)
+    for k,v in enumerate(tests):
+        import matplotlib.pyplot as plt
+        plt.clf()
+        plt.style.use('ggplot')
+        stored_min = []
+        stored_max = []
+        sc_for_frame_best = []
+        sc_for_frame_worst = []
+
+        for iterator, vms in enumerate(not_optional_list):
+            new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
+            model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
+            assert type(vms.rheobase) is not type(None)
+            if k == 0:
+                v.prediction = {}
+                v.prediction['value'] = vms.rheobase * pq.pA
+                v.params['injected_square_current']['duration'] = 1000 * pq.ms
+                v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
+                v.params['injected_square_current']['delay'] = 100 * pq.ms
+                print(v.prediction)
+            if k != 0:
+                v.prediction = None
+
+            if k == 1 or k == 2 or k == 3:
+                # Negative square pulse current.
+                v.params['injected_square_current']['duration'] = 100 * pq.ms
+                v.params['injected_square_current']['amplitude'] = -10 *pq.pA
+                v.params['injected_square_current']['delay'] = 30 * pq.ms
+            if k == 5 or k == 6 or k == 7:
+                # Threshold current.
+                v.params['injected_square_current']['duration'] = 1000 * pq.ms
+                v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
+                v.params['injected_square_current']['delay'] = 100 * pq.ms
+            import neuron
+            model.reset_h(neuron)
+            model.load_model()
+            model.update_run_params(vms.attrs)
+            print(v.params)
+            score = v.judge(model,stop_on_error = False, deep_error = True)
+            if iterator == 0:
+                sc_for_frame_best.append(score)
+            else:
+                sc_for_frame_worst.append(score)
+
+            plt.plot(model.results['t'],model.results['vm'],label=str(v)+str(names[iterator])+str(score))
+
+            #XLIM should be from capabilities.spike_functions
+            plt.xlim(0,float(v.params['injected_square_current']['duration']) )
+            stored_min.append(np.min(model.results['vm']))
+            stored_max.append(np.max(model.results['vm']))
+            plt.ylim(np.min(stored_min),np.max(stored_max))
+            plt.tight_layout()
+            model.results = None
+            plt.ylabel('$V_{m}$ mV')
+            plt.xlabel('mS')
+        plt.savefig(str('test_')+str(v)+'vm_versus_t.eps', format='eps', dpi=1200)
+        import pandas as pd
+        sf_best = pd.DataFrame(sc_for_frame_best)
+        sf_worst = pd.DataFrame(sc_for_frame_worst)
+
 def surfaces(history,td):
 
     all_inds = history.genealogy_history.values()
     sums = numpy.array([np.sum(ind.fitness.values) for ind in all_inds])
+    keep = set()
+    quads = []
     for k in range(1,9):
         for i,j in enumerate(td):
             print(i,k)
             if i+k < 10:
-                quads = ((td[i],td[i+k],i,i+k))
+                quads.append((td[i],td[i+k],i,i+k))
 
-        #quads = [(td[i],td[i+1],i,i+1) for i,j in enumerate(td) if i+k<len(td)-1]
-
-        #for x,y,w,z in quads:
-            (x,y,w,z) = quads
-            xs = numpy.array([ind[w] for ind in all_inds])
-            ys = numpy.array([ind[z] for ind in all_inds])
-            min_ys = ys[numpy.where(sums == numpy.min(sums))]
-            min_xs = xs[numpy.where(sums == numpy.min(sums))]
-            plt.clf()
-            fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
-            trip_axis = ax_trip.tripcolor(xs,ys,sums+1,20,norm=matplotlib.colors.LogNorm())
-            plot_axis = ax_trip.plot(list(xs), list(ys), 'o', color='lightblue')
-            fig_trip.colorbar(trip_axis, label='sum of objectives + 1')
-            ax_trip.set_xlabel('Parameter '+ str(td[w]))
-            ax_trip.set_ylabel('Parameter '+ str(td[z]))
-            plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
-            fig_trip.tight_layout()
-            fig_trip.savefig('surface'+str(td[w])+str(td[z])+'.eps')
+    for q in quads:
+        print(k)
+        (x,y,w,z) = q
+        print(x,y,w,z,i)
+        xs = numpy.array([ind[w] for ind in all_inds])
+        ys = numpy.array([ind[z] for ind in all_inds])
+        min_ys = ys[numpy.where(sums == numpy.min(sums))]
+        min_xs = xs[numpy.where(sums == numpy.min(sums))]
+        plt.clf()
+        fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
+        trip_axis = ax_trip.tripcolor(xs,ys,sums+1,20,norm=matplotlib.colors.LogNorm())
+        plot_axis = ax_trip.plot(list(xs), list(ys), 'o', color='lightblue')
+        fig_trip.colorbar(trip_axis, label='sum of objectives + 1')
+        ax_trip.set_xlabel('Parameter '+ str(td[w]))
+        ax_trip.set_ylabel('Parameter '+ str(td[z]))
+        plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
+        fig_trip.tight_layout()
+        fig_trip.savefig('surface'+str(td[w])+str(td[z])+'.eps')
 
 def just_mean(log):
     '''
