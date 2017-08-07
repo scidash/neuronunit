@@ -832,14 +832,14 @@ net_graph.just_mean(logbook)
 net_graph.plot_objectives_history(logbook)
 
 #Although the pareto front surely contains the best candidate it cannot contain the worst, only history can.
-best_ind_dict_vm = update_vm_pop(pf[0:2],td)
-best_ind_dict_vm , _ = check_rheobase(best_ind_dict_vm)
+#best_ind_dict_vm = update_vm_pop(pf[0:2],td)
+#best_ind_dict_vm , _ = check_rheobase(best_ind_dict_vm)
 
 best, worst = net_graph.best_worst(history)
 listss = [best , worst]
 best_worst = update_vm_pop(listss,td)
 best_worst , _ = check_rheobase(best_worst)
-net_graph.shadow(vmhistory,best_worst[0])
+net_graph.shadow(vmpop,best_worst[0])
 
 print(best_worst[0].attrs,' == ', best_ind_dict_vm[0].attrs, ' ? should be the same (eyeball)')
 print(best_worst[0].fitness.values,' == ', best_ind_dict_vm[0].fitness.values, ' ? should be the same (eyeball)')
