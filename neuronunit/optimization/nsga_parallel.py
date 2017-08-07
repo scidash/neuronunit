@@ -263,7 +263,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
             v.params['injected_square_current']['duration'] = 100 * pq.ms
             v.params['injected_square_current']['amplitude'] = -10 *pq.pA
             v.params['injected_square_current']['delay'] = 30 * pq.ms
-        if k==0 or k == 4 or k == 5 or k == 6 or k == 7:
+        if k== 0 or k == 4 or k == 5 or k == 6 or k == 7:
             # Threshold current.
             v.params['injected_square_current']['duration'] = 1000 * pq.ms
             v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
@@ -272,6 +272,8 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
         score = v.judge(model,stop_on_error = False, deep_error = True)
 
+        # Only get the delta score for the rheobase test
+        # which is not very reliable.
         if k == 0 and float(vms.rheobase) > 0:# and type(score) is not scores.InsufficientDataScore(None):
             if 'value' in v.observation.keys():
                 unit_observations = v.observation['value']
@@ -823,7 +825,6 @@ import net_graph
 from IPython.lib.deepreload import reload
 reload(net_graph)
 vmhistory = update_vm_pop(history.genealogy_history.values(),td)
-net_graph.shadow(vmhistory)
 net_graph.plotly_graph(history,vmhistory)
 #net_graph.graph_s(history)
 net_graph.plot_log(logbook)
@@ -838,6 +839,7 @@ best, worst = net_graph.best_worst(history)
 listss = [best , worst]
 best_worst = update_vm_pop(listss,td)
 best_worst , _ = check_rheobase(best_worst)
+net_graph.shadow(vmhistory,best_worst[0])
 
 print(best_worst[0].attrs,' == ', best_ind_dict_vm[0].attrs, ' ? should be the same (eyeball)')
 print(best_worst[0].fitness.values,' == ', best_ind_dict_vm[0].fitness.values, ' ? should be the same (eyeball)')
