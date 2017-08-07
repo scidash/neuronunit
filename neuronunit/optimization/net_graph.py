@@ -472,6 +472,16 @@ def surfaces(history,td):
         fig_trip.tight_layout()
         fig_trip.savefig('surface'+str(td[w])+str(td[z])+'.eps')
 
+
+def load_data():
+    a = pickle.load(open('for_pandas.p','rb'))
+    df = pd.DataFrame(np.transpose(stacked),columns=columns1)
+    stacked = opened[0]
+    columns1 = opened[1]
+
+
+
+
 def just_mean(log):
     '''
     https://github.com/BlueBrain/BluePyOpt/blob/master/examples/graupnerbrunelstdp/run_fit.py
@@ -678,7 +688,12 @@ def prep_bar_chart(vms,name=None):
     from itertools import repeat
     os.system('conda install pandas')
     os.system('conda install cufflinks')
+
+    import plotly.tools as tls
+    tls.embed('https://plot.ly/~cufflinks/8')
+
     import cufflinks as cf
+
     import pandas as pd
     traces = []
 
@@ -766,9 +781,12 @@ def prep_bar_chart(vms,name=None):
     with open('for_pandas.p','wb') as handle:
         pickle.dump([stacked,columns1],handle)
     df = pd.DataFrame(stacked, columns=columns1)
+    df.index=['observation','prediction','difference']
+    df =df.transpose()
+
     py.sign_in('RussellJarvis','FoyVbw7Ry3u4N2kCY4LE')
 
-    df.iplot(kind='bar', filename='grouped-bar-chart',image='svg')
+    df.iplot(kind='bar', filename='grouped-bar-chart')
 
     #py.iplot(fig, filename='improved_names.svg',image='svg')
     '''
