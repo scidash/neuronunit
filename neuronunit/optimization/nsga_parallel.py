@@ -273,8 +273,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
 
         score = v.judge(model,stop_on_error = False, deep_error = True)
-        #v.descripition()
-        #import pdb; pdb.set_trace()
+
         if k == 0 and float(vms.rheobase) > 0:# and type(score) is not scores.InsufficientDataScore(None):
             if 'value' in v.observation.keys():
                 unit_observations = v.observation['value']
@@ -639,7 +638,7 @@ def check_rheobase(vmpop,pop=None):
 ##
 
 MU = 12
-NGEN = 12
+NGEN = 22
 CXPB = 0.9
 
 import numpy as np
@@ -826,6 +825,7 @@ import net_graph
 from IPython.lib.deepreload import reload
 reload(net_graph)
 vmhistory = update_vm_pop(history.genealogy_history.values(),td)
+net_graph.shadow(vmhistory)
 net_graph.plotly_graph(history,vmhistory)
 #net_graph.graph_s(history)
 net_graph.plot_log(logbook)
@@ -849,10 +849,13 @@ print(best_worst[0].fitness.values,' == ', best_ind_dict_vm[0].fitness.values, '
 # This is not done in the general GA algorithm, since adding an extra dimensionality that the GA
 # doesn't utilize causes a DEAP error, which is reasonable.
 
-test_dic = bar_chart(best_worst[0])
+net_graph.prep_bar_chart(best_worst[0])
+
+#test_dic = bar_chart(best_worst[0])
 net_graph.plot_evaluate( best_worst[0],best_worst[1])
 net_graph.plot_db(best_worst[0],name='best')
 net_graph.plot_db(best_worst[1],name='worst')
+'''
 os.system('conda install cufflinks')
 
 import plotly.tools as tls
@@ -874,7 +877,7 @@ for k,v in test_dic.items():
 stacked = np.column_stack(np.array(threed))
 df = pd.DataFrame(stacked, columns=columns1)
 df.iplot(kind='bar', filename='grouped-bar-chart')
-
+'''
 
 net_graph.plot_evaluate( best_worst[0],best_worst[1])
 net_graph.plot_db(best_worst[0],name='best')
