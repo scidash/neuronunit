@@ -16,85 +16,6 @@ import numpy as np
 
 
 
-def plot_performance_profile():
-    '''
-    makes a plot about this programs performance profile
-    It needs ProfExit to be called at the beggining of the program.
-    https://github.com/jrfonseca/gprof2dot
-
-    No inputs and outputs only side effects.
-    Actually this probably won't work, as the performance profiler
-    Requires all the process IDs to cleanly exit due to finishing their work.
-    Instead the essence of this method should be rehashed as BASH script (which should be easy, since the origin is bash script)
-    '''
-    import os
-    import subprocess
-    #os.system('sudo /opt/conda/bin/pip install gprof2dot')
-    os.system('cp /opt/conda/lib/python3.5/site-packages/gprof2dot.py .')
-    prof_f_name = '{0}'.format(os.getpid())
-    #Open and close the file, as a quick and dirty way to garuntee that an appropriate file path exists.
-    f = open('NeuroML2/{0}'.format(prof_f_name),'wb')
-    file_name = 'NeuroML2/{0}'.format(prof_f_name)
-    f.close()
-    #subprocess.Popen('python','gprof2dot.py' -f -n0 -e0 pstats {0}  | dot -Tsvg -o {0}.svg'.format(prof_f_name))
-    os.system('python gprof2dot.py -f -n0 -e0 pstats {0}  | dot -Tsvg -o {0}.svg'.format(prof_f_name))
-
-def graph_s(history):
-    '''
-    Make a directed graph (family tree) plot of the genealogy history
-    Bottom is the final generation, top is the initial population.
-    Extreme left and right nodes are terminating, ie they have no children, and
-    have been discarded from the breeding population.
-    NB: authors this should be obvious, but GA authors do not
-    necessarily that this is a model that
-    reflects actual genes and or actual breading.
-    '''
-    plt.clf()
-    import networkx
-    graph = networkx.DiGraph(history.genealogy_tree)
-    graph = graph.reverse()
-    labels = {}
-    for i in graph.nodes():
-        labels[i] = i
-    node_colors = [ np.sum(history.genealogy_history[i].fitness.values) for i in graph ]
-    positions = graphviz_layout(graph, prog="dot")
-    networkx.draw(graph, positions, node_color=node_colors, labels = labels)
-
-    start = []
-    middle = []
-    end = []
-    pos_start = []
-    pos_middle = []
-    pos_end = []
-
-    for k,n in enumerate(graph.nodes()):
-        if 0<k<10:
-            start.append(n)
-            pos_start.append()
-        elif 10<= k < int(len(graph.nodes()) -10) :
-            middle.append(n)
-        elif int(len(graph.nodes()) -10) <k < (len(graph.nodes())):
-            end.append(n)
-
-
-    nodes = networkx.draw_networkx_nodes(graph,positions,node_color=node_colors, node_size=2.125, labels = labels)
-
-    #nodes_start = networkx.draw_networkx_nodes(start,positions[0:10],node_color=node_colors, node_size=2.125, labels = labels)
-    #nodes_middle = networkx.draw_networkx_nodes(graph[11:-12],positions[11:-12],node_color=node_colors, node_size=1.5)
-    #nodes_end = networkx.draw_networkx_nodes(graph[0:10],positions[-11:-1],node_color=node_colors, node_size=2.125, labels = labels)
-
-    edges=networkx.draw_networkx_edges(graph,positions,width=1.5,edge_cmap=plt.cm.Blues)
-    plt.sci(nodes_start)
-    plt.sci(nodes_middle)
-    plt.sci(nodes_end)
-
-    cbar = plt.colorbar(nodes,fraction=0.046, pad=0.04, ticks=range(4))
-    plt.sci(edges)
-
-    plt.axis('on')
-    plt.savefig('genealogy_history_{0}_.eps'.format(len(graph)), format='eps', dpi=1200)
-
-
 def plotly_graph(history,vmhistory):
     from networkx.drawing.nx_agraph import graphviz_layout
     import plotly
@@ -207,6 +128,7 @@ def best_worst(history):
     history_dic = history.genealogy_history
     worst = []
     best = []
+    # there may be multiple best and worst candidates, just take the first ones found.
     for k,v in history_dic.items():
         if np.sum(v.fitness.values) == maximumb:
             worst.append(v)
@@ -276,7 +198,6 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
     value, that was found in a previous rheobase search.
 
     Outputs: This method only has side effects, not datatype outputs from the method.
-
     The most important side effect being a plot in eps format.
 
     '''
@@ -418,13 +339,13 @@ def shadow(not_optional_list):#This method must be pickle-able for ipyparallel t
             model.update_run_params(vms.attrs)
             print(v.params)
             score = v.judge(model,stop_on_error = False, deep_error = True)
-            if iterator == 0:
-                sc_for_frame_best.append(score)
-            else:
-                sc_for_frame_worst.append(score)
-            from capabilities import spike_functions
-
-            snippets = spike_functions.get_spike_waveforms(model.results['vm'])
+            #if iterator == 0:
+            #    sc_for_frame_best.append(score)
+            #else:
+            #    sc_for_frame_worst.append(score)
+            #from capabilities import spike_functions
+            if k == 5 or k == 6 or k == 7:
+                snippets = spike_functions.get_spike_waveforms(model.results['vm'])
             plt.plot(model.results['t'],snippets,label=str(v)+str(names[iterator])+str(score))
 
             #XLIM should be from capabilities.spike_functions
@@ -437,9 +358,10 @@ def shadow(not_optional_list):#This method must be pickle-able for ipyparallel t
             plt.ylabel('$V_{m}$ mV')
             plt.xlabel('mS')
         plt.savefig(str('test_')+str(v)+'vm_versus_t.eps', format='eps', dpi=1200)
-        import pandas as pd
-        sf_best = pd.DataFrame(sc_for_frame_best)
-        sf_worst = pd.DataFrame(sc_for_frame_worst)
+
+        #import pandas as pd
+        #sf_best = pd.DataFrame(sc_for_frame_best)
+        #sf_worst = pd.DataFrame(sc_for_frame_worst)
 
 def surfaces(history,td):
 
