@@ -110,12 +110,12 @@ with dview.sync_imports(): # Causes each of these things to be imported on the w
 def p_imports():
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
-    print(get_neab.LEMS_MODEL_PATH)
-    new_file_path = '{0}{1}'.format(str(get_neab.LEMS_MODEL_PATH),int(os.getpid()))
-    print(new_file_path)
+    #print(get_neab.LEMS_MODEL_PATH)
+    #new_file_path = '{0}{1}'.format(str(get_neab.LEMS_MODEL_PATH),int(os.getpid()))
+    #print(new_file_path)
 
-    os.system('cp ' + str(get_neab.LEMS_MODEL_PATH)+str(' ') + new_file_path)
-    model = ReducedModel(new_file_path,name='vanilla',backend='NEURON')
+    #os.system('cp ' + str(get_neab.LEMS_MODEL_PATH)+str(' ') + new_file_path)
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
     model.load_model()
     return
 
@@ -230,8 +230,8 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     import unittest
     tc = unittest.TestCase('__init__')
 
-    new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-    model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
+    #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.load_model()
     assert type(vms.rheobase) is not type(None)
     #tests = get_neab.suite.tests
@@ -264,7 +264,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
         score = v.judge(model,stop_on_error = False, deep_error = True)
         #v.descripition()
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         if k == 0 and float(vms.rheobase) > 0:# and type(score) is not scores.InsufficientDataScore(None):
             if 'value' in v.observation.keys():
                 unit_observations = v.observation['value']
@@ -518,8 +518,8 @@ def check_rheobase(vmpop,pop=None):
         from neuronunit.models import backends
         from neuronunit.models.reduced import ReducedModel
 
-        new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
-        model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
+        #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
+        model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
         model.load_model()
         model.update_run_params(vm.attrs)
 
@@ -565,9 +565,9 @@ def check_rheobase(vmpop,pop=None):
             # but otherwise exploit memory of this range.
 
             if type(vm.steps) is type(float):
-                vm.steps = [ 0.75 * vm.steps, 1.25 * vm.steps ]
+                vm.steps = [ 0.5 * vm.steps, 1.5 * vm.steps ]
             elif type(vm.steps) is type(list):
-                vm.steps = [ s * 1.25 for s in vm.steps ]
+                vm.steps = [ s * 1.5 for s in vm.steps ]
             #assert len(vm.steps) > 1
             vm.initiated = True # logically unnecessary but included for readibility
 
@@ -575,7 +575,7 @@ def check_rheobase(vmpop,pop=None):
             import quantities as pq
             import numpy as np
             vm.boolean = False
-            steps = np.linspace(-50,200,7.0)
+            steps = np.linspace(10,300,7.0)
             steps_current = [ i*pq.pA for i in steps ]
             vm.steps = steps_current
             vm.initiated = True
@@ -587,8 +587,8 @@ def check_rheobase(vmpop,pop=None):
         import get_neab
         #print(pid_map[int(os.getpid())])
 
-        new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-        model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
+        #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
+        model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
         model.load_model()
         model.update_run_params(vm.attrs)
         cnt = 0
@@ -628,8 +628,8 @@ def check_rheobase(vmpop,pop=None):
 # explored.
 ##
 
-MU = 10
-NGEN = 7
+MU = 12
+NGEN = 12
 CXPB = 0.9
 
 import numpy as np
@@ -652,6 +652,7 @@ dview.push({'trans_dict':trans_dict,'td':td})
 pop = toolbox.population(n = MU)
 
 pop = [ toolbox.clone(i) for i in pop ]
+print(pop)
 '''
 try:
     #for t in tests:
@@ -663,8 +664,9 @@ try:
 except:
 '''
 vmpop = update_vm_pop(pop, td)
-
+print(vmpop)
 vmpop , _ = check_rheobase(vmpop)
+print([v.rheobase for v in vmpop ])
 new_checkpoint_path = str('rh_checkpoint')+str('.p')
 import pickle
 with open(new_checkpoint_path,'wb') as handle:#
@@ -678,7 +680,7 @@ with open(new_checkpoint_path,'wb') as handle:#
 
 import copy
 fitnesses = dview.map_sync(evaluate, copy.copy(vmpop))
-
+print(fitnesses)
 for ind, fit in zip(pop, fitnesses):
     ind.fitness.values = fit
 
@@ -700,6 +702,7 @@ def difference(unit_predictions):
     to_r_s = unit_observations.units
     unit_predictions = unit_predictions.rescale(to_r_s)
     unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
+    print(unit_delta)
     return float(unit_delta)
 
 verbose = False
@@ -707,9 +710,11 @@ means = np.array(logbook.select('avg'))
 gen = 1
 rh_mean_status = np.mean([ v.rheobase for v in vmpop ])
 rhdiff = difference(rh_mean_status * pq.pA)
+print(rhdiff)
 verbose = True
-while (gen < NGEN and means[-1] > 0.05):
+while gen < NGEN:# and means[-1] > 0.05):
     gen += 1
+    print(gen)
     offspring = tools.selNSGA2(pop, len(pop))
     if verbose:
         for ind in offspring:
@@ -797,7 +802,7 @@ with open('complete_dump.p','wb') as handle:
 lists = pickle.load(open('complete_dump.p','rb'))
 vmpop,pop,pf,history,logbook = lists[4],lists[3],lists[2],lists[1],lists[0]
 '''
-
+'''
 import net_graph
 vmhistory = update_vm_pop(history.genealogy_history.values(),td)
 net_graph.plotly_graph(history,vmhistory)
@@ -826,3 +831,4 @@ print(best_worst[0].fitness.values,' == ', best_ind_dict_vm[0].fitness.values, '
 net_graph.plot_evaluate( best_worst[0],best_worst[1])
 net_graph.plot_db(best_worst[0],name='best')
 net_graph.plot_db(best_worst[1],name='worst')
+'''
