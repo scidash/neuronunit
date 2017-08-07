@@ -20,9 +20,12 @@ import cProfile
 import atexit
 import os,sys
 
+
+
+
 #if ipython:
-%load_ext autoreload
-%autoreload 2
+#%load_ext autoreload
+#%autoreload 2
 
 def ProfExit(p):
    '''
@@ -117,11 +120,11 @@ def p_imports():
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
     #print(get_neab.LEMS_MODEL_PATH)
-    #new_file_path = '{0}{1}'.format(str(get_neab.LEMS_MODEL_PATH),int(os.getpid()))
+    new_file_path = '{0}{1}'.format(str(get_neab.LEMS_MODEL_PATH),int(os.getpid()))
     #print(new_file_path)
 
-    #os.system('cp ' + str(get_neab.LEMS_MODEL_PATH)+str(' ') + new_file_path)
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
+    os.system('cp ' + str(get_neab.LEMS_MODEL_PATH)+str(' ') + new_file_path)
+    model = ReducedModel(new_file_path,name='vanilla',backend='NEURON')
     model.load_model()
     return
 
@@ -235,8 +238,8 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     from itertools import repeat
 
 
-    #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+    new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
+    model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
     model.load_model()
     assert type(vms.rheobase) is not type(None)
     #tests = get_neab.suite.tests
@@ -523,8 +526,8 @@ def check_rheobase(vmpop,pop=None):
         from neuronunit.models import backends
         from neuronunit.models.reduced import ReducedModel
 
-        #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
-        model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+        new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
+        model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
         model.load_model()
         model.update_run_params(vm.attrs)
 
@@ -591,8 +594,8 @@ def check_rheobase(vmpop,pop=None):
         from neuronunit.models.reduced import ReducedModel
         import get_neab
         #print(pid_map[int(os.getpid())])
-        #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-        model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+        new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
+        model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
         model.load_model()
         model.update_run_params(vm.attrs)
         cnt = 0
@@ -807,13 +810,14 @@ while (gen < NGEN and means[-1] > 0.05):
 
 import pickle
 with open('complete_dump.p','wb') as handle:
-   pickle.dump([vmpop,pop,pf,history,logbook],handle)
-'''
+   pickle.dump([vmoffspring,history,logbook],handle)
+
 lists = pickle.load(open('complete_dump.p','rb'))
-vmpop,pop,pf,history,logbook = lists[4],lists[3],lists[2],lists[1],lists[0]
-'''
+vmoffspring,history,logbook = lists[2],lists[1],lists[0]
 
 import net_graph
+from IPython.lib.deepreload import reload
+reload(net_graph)
 vmhistory = update_vm_pop(history.genealogy_history.values(),td)
 net_graph.plotly_graph(history,vmhistory)
 #net_graph.graph_s(history)
@@ -841,63 +845,3 @@ print(best_worst[0].fitness.values,' == ', best_ind_dict_vm[0].fitness.values, '
 net_graph.plot_evaluate( best_worst[0],best_worst[1])
 net_graph.plot_db(best_worst[0],name='best')
 net_graph.plot_db(best_worst[1],name='worst')
-
-##
-# Exhaustive search.
-##
-# Pick out just two parameters.
-import model_parameters as modelp
-iter_list = [ (i,j) for i in modelp.model_params['a'] for j in modelp.model_params['b'] ]
-def model2map(iter_value):#This method must be pickle-able for scoop to work.
-    vm = utilities.VirtualModel()
-    vm.attrs = {}
-    vm.attrs['a'] = iter_value[0]
-    vm.attrs['b'] = iter_value[1]
-    return vm
-vmpop1 = list(dview.map_sync(model2map,iter_list))
-vmpop1 , _ = check_rheobase(vmpop1)
-
-
-'''
-iter_list=iter( (i,j,k,l,m,n,o,p,q,r) for i in modelp.model_params['a'] for j in modelp.model_params['b'] \
-for k in modelp.model_params['vr'] for l in modelp.model_params['vpeak'] \
-for m in modelp.model_params['k'] for n in modelp.model_params['c'] \
-for o in modelp.model_params['C'] for p in modelp.model_params['d'] \
-for q in modelp.model_params['v0'] for r in modelp.model_params['vt'] )
-'''
-#list_of_models = list(dview.map_sync(outils.model2map,iter_list,modelp.model_params))
-
-#vmpop = update_vm_pop(list_of_models, td)
-new_checkpoint_path = str('rh_checkpoint_exhaustive')+str('.p')
-import pickle
-with open(new_checkpoint_path,'wb') as handle:#
-    pickle.dump(vmpop, handle)
-
-
-# sometimes done in serial in order to get access to opaque stdout/stderr
-#fitnesses = []
-#for v in vmpop:
-#   fitnesses.append(evaluate(v))
-
-import copy
-efitnesses = dview.map_sync(evaluate, copy.copy(vmpop))
-pixels = zip(iter_value,efitnesses)
-
-empty = np.array(len(pixels),len(pixels))
-
-def fitness2map(pixels,dfimshow):
-    dfimshow[pixels[0],pixels[1]]=pixels[2]
-    return dfimshow
-
-dfimshow = dview.map_sync(fitness2map, pixels, repeat(empty))
-
-def sum_matrices(dfimshow):
-    previous = np.array(len(pixels),len(pixels))
-    for d in dfimshow:
-        previous = np.sum(previous,d)
-    return previous
-
-summed = sum_matrices(dfimshow)
-plt.clf()
-plt.imshow(summed)
-#pixels
