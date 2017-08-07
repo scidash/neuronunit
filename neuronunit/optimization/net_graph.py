@@ -167,9 +167,9 @@ def plotly_graph(history,vmhistory):
     for k, node in enumerate(G):
         node_trace['marker']['color'].append(node_colors[k])
         try:
-            node_info = 'gene id: {0} threshold current {1} pA model attributes {2}'.format( str(int(k)), str(vmhistory.rheobase), str(vmhistory[k].attrs))
+            node_info = 'gene id: {0} threshold current {1} pA model attributes {2}'.format( str(int(k)), str(vmhistory[k].rheobase), str(vmhistory[k].attrs))
         except:
-            node_info = 'gene id: {0} threshold currrent {1} pA model attributes {2} pA '.format( str(int(k)), str(vmhistory.rheobase), str(vmhistory[k].attrs))
+            node_info = 'gene id: {0} threshold currrent {1} pA model attributes {2} pA '.format( str(int(k)), str(vmhistory[k].rheobase), str(vmhistory[k].attrs))
         node_trace['text'].append(node_info)
 
     fig = Figure(data=Data([edge_trace, node_trace]),
