@@ -662,9 +662,10 @@ def pair2surface(x,y):
        pickle.dump([efitnesses,iter_list,vmpop1],handle)
 
 
-    lists = pickle.load(open('complete_exhaust.p','rb'))
-    efitnesses,iter_value,vmpop1 = lists[2],lists[1],lists[0]
+    #lists = pickle.load(open('complete_exhaust.p','rb'))
+    #efitnesses,iter_value,vmpop1 = lists[2],lists[1],lists[0]
     matrix_fill = [ (i,j) for i in range(0,len(modelp.model_params[x])) for j in range(0,len(modelp.model_params[y])) ]
+
     mf = list(zip(matrix_fill,efitnesses))
 
     empty = np.zeros(shape=(int(np.sqrt(len(mf))),int(np.sqrt(len(mf)))))
@@ -674,6 +675,7 @@ def pair2surface(x,y):
 
             dfimshow[i[0][0],i[0][1]]=np.sum(i[1])
         return dfimshow
+
     dfimshow =fitness2map(mf,empty)
 
 
@@ -687,7 +689,7 @@ def pair2surface(x,y):
     plt.savefig('2d_error_surface'+x+y+'.png')
 
 # Do all of this in a big loop
-td=get_trans_dict(param_dict)
+td = get_trans_dict(param_dict)
 quads = []
 for k in range(1,9):
     for i,j in enumerate(td):
