@@ -14,87 +14,6 @@ from plotly.graph_objs import *
 import matplotlib.pyplot as plt
 import numpy as np
 
-
-
-def plot_performance_profile():
-    '''
-    makes a plot about this programs performance profile
-    It needs ProfExit to be called at the beggining of the program.
-    https://github.com/jrfonseca/gprof2dot
-
-    No inputs and outputs only side effects.
-    Actually this probably won't work, as the performance profiler
-    Requires all the process IDs to cleanly exit due to finishing their work.
-    Instead the essence of this method should be rehashed as BASH script (which should be easy, since the origin is bash script)
-    '''
-    import os
-    import subprocess
-    #os.system('sudo /opt/conda/bin/pip install gprof2dot')
-    os.system('cp /opt/conda/lib/python3.5/site-packages/gprof2dot.py .')
-    prof_f_name = '{0}'.format(os.getpid())
-    #Open and close the file, as a quick and dirty way to garuntee that an appropriate file path exists.
-    f = open('NeuroML2/{0}'.format(prof_f_name),'wb')
-    file_name = 'NeuroML2/{0}'.format(prof_f_name)
-    f.close()
-    #subprocess.Popen('python','gprof2dot.py' -f -n0 -e0 pstats {0}  | dot -Tsvg -o {0}.svg'.format(prof_f_name))
-    os.system('python gprof2dot.py -f -n0 -e0 pstats {0}  | dot -Tsvg -o {0}.svg'.format(prof_f_name))
-
-def graph_s(history):
-    '''
-    Make a directed graph (family tree) plot of the genealogy history
-    Bottom is the final generation, top is the initial population.
-    Extreme left and right nodes are terminating, ie they have no children, and
-    have been discarded from the breeding population.
-    NB: authors this should be obvious, but GA authors do not
-    necessarily that this is a model that
-    reflects actual genes and or actual breading.
-    '''
-    plt.clf()
-    import networkx
-    graph = networkx.DiGraph(history.genealogy_tree)
-    graph = graph.reverse()
-    labels = {}
-    for i in graph.nodes():
-        labels[i] = i
-    node_colors = [ np.sum(history.genealogy_history[i].fitness.values) for i in graph ]
-    positions = graphviz_layout(graph, prog="dot")
-    networkx.draw(graph, positions, node_color=node_colors, labels = labels)
-
-    start = []
-    middle = []
-    end = []
-    pos_start = []
-    pos_middle = []
-    pos_end = []
-
-    for k,n in enumerate(graph.nodes()):
-        if 0<k<10:
-            start.append(n)
-            pos_start.append()
-        elif 10<= k < int(len(graph.nodes()) -10) :
-            middle.append(n)
-        elif int(len(graph.nodes()) -10) <k < (len(graph.nodes())):
-            end.append(n)
-
-
-    nodes = networkx.draw_networkx_nodes(graph,positions,node_color=node_colors, node_size=2.125, labels = labels)
-
-    #nodes_start = networkx.draw_networkx_nodes(start,positions[0:10],node_color=node_colors, node_size=2.125, labels = labels)
-    #nodes_middle = networkx.draw_networkx_nodes(graph[11:-12],positions[11:-12],node_color=node_colors, node_size=1.5)
-    #nodes_end = networkx.draw_networkx_nodes(graph[0:10],positions[-11:-1],node_color=node_colors, node_size=2.125, labels = labels)
-
-    edges=networkx.draw_networkx_edges(graph,positions,width=1.5,edge_cmap=plt.cm.Blues)
-    plt.sci(nodes_start)
-    plt.sci(nodes_middle)
-    plt.sci(nodes_end)
-
-    cbar = plt.colorbar(nodes,fraction=0.046, pad=0.04, ticks=range(4))
-    plt.sci(edges)
-
-    plt.axis('on')
-    plt.savefig('genealogy_history_{0}_.eps'.format(len(graph)), format='eps', dpi=1200)
-
-
 def plotly_graph(history,vmhistory):
     from networkx.drawing.nx_agraph import graphviz_layout
     import plotly
@@ -309,10 +228,6 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
             if k == 0:
                 v.prediction = {}
                 v.prediction['value'] = vms.rheobase * pq.pA
-                v.params['injected_square_current']['duration'] = 1000 * pq.ms
-                v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
-                v.params['injected_square_current']['delay'] = 100 * pq.ms
-                print(v.prediction)
             if k != 0:
                 v.prediction = None
 
@@ -321,7 +236,7 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
                 v.params['injected_square_current']['duration'] = 100 * pq.ms
                 v.params['injected_square_current']['amplitude'] = -10 *pq.pA
                 v.params['injected_square_current']['delay'] = 30 * pq.ms
-            if k == 5 or k == 6 or k == 7:
+            if k==0 or k == 4 or k == 5 or k == 6 or k == 7:
                 # Threshold current.
                 v.params['injected_square_current']['duration'] = 1000 * pq.ms
                 v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
@@ -418,14 +333,15 @@ def shadow(not_optional_list):#This method must be pickle-able for ipyparallel t
             model.update_run_params(vms.attrs)
             print(v.params)
             score = v.judge(model,stop_on_error = False, deep_error = True)
-            if iterator == 0:
-                sc_for_frame_best.append(score)
-            else:
-                sc_for_frame_worst.append(score)
-            from capabilities import spike_functions
 
-            snippets = spike_functions.get_spike_waveforms(model.results['vm'])
-            plt.plot(model.results['t'],snippets,label=str(v)+str(names[iterator])+str(score))
+            from capabilities import spike_functions
+            if k == 5 or k == 6 or k == 7:
+                snippets = spike_functions.get_spike_waveforms(model.results['vm'])
+                plt.plot(model.results['t'],snippets,label=str(v)+str(names[iterator])+str(score))
+                plt.xlim(0,float(v.params['injected_square_current']['duration']) )
+            else:
+                plt.plot(model.results['t'],(model.results['vm'],label=str(v)+str(names[iterator])+str(score))
+                plt.xlim(0,float(v.params['injected_square_current']['duration']) )
 
             #XLIM should be from capabilities.spike_functions
             plt.xlim(0,float(v.params['injected_square_current']['duration']) )
@@ -464,12 +380,13 @@ def surfaces(history,td):
         plt.clf()
         fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
         trip_axis = ax_trip.tripcolor(xs,ys,sums+1,20,norm=matplotlib.colors.LogNorm())
-        plot_axis = ax_trip.plot(list(xs), list(ys), 'o', color='lightblue')
+        plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue',label='global minima')
         fig_trip.colorbar(trip_axis, label='sum of objectives + 1')
         ax_trip.set_xlabel('Parameter '+ str(td[w]))
         ax_trip.set_ylabel('Parameter '+ str(td[z]))
         plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
         fig_trip.tight_layout()
+        fig_trip.legend()
         fig_trip.savefig('surface'+str(td[w])+str(td[z])+'.eps')
 
 
@@ -513,151 +430,6 @@ def just_mean(log):
     fig.tight_layout()
     fig.savefig('Izhikevich_evolution_just_mean.eps', format='eps', dpi=1200)
 
-def plot_db(vms,name=None):
-    '''
-    A method to plot raw predictions
-    versus observations
-
-    Outputs: This method only has side effects, not datatype outputs from the method.
-
-    The most important side effect being a plot in eps format.
-
-    '''
-    import os
-    import matplotlib
-    import pandas as pd
-
-    import matplotlib.pyplot as plt
-    import numpy as np
-    plt.clf()
-    matplotlib.use('Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
-    matplotlib.style.use('ggplot')
-    #f, axarr = plt.subplots(2, sharex=True)
-    fig, axarr = plt.subplots(5, sharex=True, figsize=(10, 10), facecolor='white')
-
-    from neuronunit.models import backends
-    from neuronunit.models.reduced import ReducedModel
-    import quantities as pq
-    import numpy as np
-    import get_neab
-    from itertools import repeat
-    import copy
-    from itertools import repeat
-    #import net_graph
-    #vmslist = [vms_best, vms_worst]
-    delta = []
-    scores = []
-    tests = copy.copy(get_neab.tests)
-    for k,v in enumerate(tests):
-        new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-        model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
-        #model.load_model()
-        assert type(vms.rheobase) is not type(None)
-        #tests = get_neab.suite.tests
-        #model.update_run_params(vms.attrs)
-
-        if k == 0:
-            v.prediction = {}
-            v.prediction['value'] = vms.rheobase * pq.pA
-            v.params['injected_square_current']['duration'] = 1000 * pq.ms
-            v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
-            v.params['injected_square_current']['delay'] = 100 * pq.ms
-            print(v.prediction)
-        if k != 0:
-            v.prediction = None
-
-        if k == 1 or k == 2 or k == 3:
-            # Negative square pulse current.
-            v.params['injected_square_current']['duration'] = 100 * pq.ms
-            v.params['injected_square_current']['amplitude'] = -10 *pq.pA
-            v.params['injected_square_current']['delay'] = 30 * pq.ms
-        if k == 5 or k == 6 or k == 7:
-            # Threshold current.
-            v.params['injected_square_current']['duration'] = 1000 * pq.ms
-            v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
-            v.params['injected_square_current']['delay'] = 100 * pq.ms
-        import neuron
-        model.reset_h(neuron)
-        model.load_model()
-        model.update_run_params(vms.attrs)
-        print(v.params)
-        score = v.judge(model,stop_on_error = False, deep_error = True)
-        scores.append(score)
-
-
-        if 'mean' in v.observation.keys():
-            unit_observations = v.observation['mean']
-
-        if 'value' in v.observation.keys():
-            unit_observations = v.observation['value']
-
-        if 'mean' in v.prediction.keys():
-            unit_predictions = v.prediction['mean']
-
-        if 'value' in v.prediction.keys():
-            unit_predictions = v.prediction['value']
-
-        print('observations: {0} predictions: {1}'.format(unit_observations, unit_predictions))
-
-        #if unit_observations.units == unit_predictions.units:
-        try:
-            to_r_s = unit_observations.units
-            unit_predictions = unit_predictions.rescale(to_r_s)
-            unit_delta = np.abs(np.abs(unit_observations)-np.abs(unit_predictions))
-        except:
-            unit_delta = 0.0
-        delta.append(unit_delta)
-        print('observation {0} versus prediction {1}'.format(unit_observations,unit_predictions))
-        print('unit delta', unit_delta)
-        sv = score.sort_key
-
-
-        if k == 0:
-            axarr[3].scatter(k, sv,  c='black', label = 'the score')
-            axarr[4].scatter(k,0.0,  c='w',label ='the score')
-
-            axarr[k].scatter(k,float(unit_delta),label = 'difference')
-            axarr[k].scatter(k,float(unit_observations),label = 'observation')
-            axarr[k].scatter(k,float(unit_predictions),label = 'prediction')
-
-            #axarr[k].legend()
-        elif k ==1:
-            axarr[3].scatter(k, sv,  c='black', label = 'the score')
-            axarr[4].scatter(k,0.0,  c='w',label ='the score')
-
-            axarr[k].scatter(k,float(unit_delta),label = 'difference')
-            axarr[k].scatter(k,float(unit_observations),label = 'observation')
-            axarr[k].scatter(k,float(unit_predictions),label = 'prediction')
-            #axarr[k].legend()
-
-        else:
-            axarr[4].scatter(k, float(sv),  c='black', label = 'the score')
-
-            axarr[2].scatter(k,float(unit_delta),label = 'difference')
-            axarr[2].scatter(k,float(unit_observations),label = 'observation')
-            axarr[2].scatter(k,float(unit_predictions),label = 'prediction')
-
-
-
-    vms.delta.append(np.mean(delta))
-
-    labels = [ '{0}_{1}'.format(str(t),str(t.observation['value'].units)) for t in tests if 'mean' not in t.observation.keys() ]
-    labels.extend([ '{0}_{1}'.format(str(t),str(t.observation['mean'].units))  for t in tests if 'mean' in t.observation.keys() ])
-    labels = tuple(labels)
-    plt.xlabel('test type')
-    plt.ylabel('observation versus prediction')
-    tick_locations = tuple(range(0,len(tests)))
-    plt.xticks(tick_locations , labels)
-    plt.xticks(rotation=25)
-    plt.tight_layout()
-
-    plt.savefig('obsevation_versus_prediction_{0}.eps'.format(name), format='eps', dpi=1200)
-    #import pandas as pd
-    #pd.DataFrame(scores).plot(kind='bar', stacked=True)
-    #df2.plot(kind='bar', stacked=True);
-
-    return vms
-
 def prep_bar_chart(vms,name=None):
 
     import plotly.plotly as py
@@ -686,7 +458,7 @@ def prep_bar_chart(vms,name=None):
     from itertools import repeat
     import copy
     from itertools import repeat
-    os.system('conda install pandas')
+    #os.system('conda install pandas')
     os.system('conda install cufflinks')
 
     import plotly.tools as tls
@@ -755,7 +527,6 @@ def prep_bar_chart(vms,name=None):
 
         print('observations: {0} predictions: {1}'.format(unit_observations, unit_predictions))
 
-        #if unit_observations.units == unit_predictions.units:
         try:
             to_r_s = unit_observations.units
             unit_predictions = unit_predictions.rescale(to_r_s)
@@ -767,12 +538,11 @@ def prep_bar_chart(vms,name=None):
         print('unit delta', unit_delta)
         sv = score.sort_key
         test_dic[str(v)] = (float(unit_observations), float(unit_predictions), unit_delta)
-        #py.iplot(fig)
 
-        #df = cf.datagen.lines()
-    #columns1 = []
     labels = [ '{0}_{1}'.format(str(t),str(t.observation['value'].units)) for t in tests if 'mean' not in t.observation.keys() ]
     labels.extend([ '{0}_{1}'.format(str(t),str(t.observation['mean'].units))  for t in tests if 'mean' in t.observation.keys() ])
+
+
     for t in tests:
         if 'mean' not in t.observation.keys():
             labels[str(t)] = str(t.observation['value'].units)
@@ -784,7 +554,7 @@ def prep_bar_chart(vms,name=None):
     threed = []
     for k,v in test_dic.items():
         #columns1.append(str(k))
-        threed.append((float(v[0]),float(v[1]),float(v[2])))
+        threed.append((v[0],v[1],v[2]))
 
     trans = np.array(threed)
     stacked = np.column_stack(trans)
@@ -794,12 +564,14 @@ def prep_bar_chart(vms,name=None):
     df = pd.DataFrame(np.transpose(np.array(stacked)), columns=columns1)
     df.index = ['observation','prediction','difference']
     df = df.transpose()
-
-    df = df.drop(['InputResistanceTest1.0 ohm'])
+    df = df.loc['CapacitanceTest1.0 F'] *= 10**8.5
+    df = df.loc['CapacitanceTest1.0 F'] *= 10**-8.5
+    #df = df.drop(['InputResistanceTest1.0 ohm'])
+    #df.index(['CapacitanceTest1.0 F'])
     py.sign_in('RussellJarvis','FoyVbw7Ry3u4N2kCY4LE')
 
     #df.iplot(kind='bar', yTitle='', title='', filename='grouped-bar-chart')
-    df.iplot(kind='bar', yTitle='NeuronUnit Test Agreement', title='test agreement', filename='grouped-bar-chart')
+    df.iplot(kind='bar', barmode='stack', yTitle='NeuronUnit Test Agreement', title='test agreement', filename='grouped-bar-chart')
 
 
     #py.iplot(fig, filename='improved_names.svg',image='svg')
