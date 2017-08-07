@@ -770,23 +770,37 @@ def prep_bar_chart(vms,name=None):
         #py.iplot(fig)
 
         #df = cf.datagen.lines()
-    columns1 = []
+    #columns1 = []
+    labels = [ '{0}_{1}'.format(str(t),str(t.observation['value'].units)) for t in tests if 'mean' not in t.observation.keys() ]
+    labels.extend([ '{0}_{1}'.format(str(t),str(t.observation['mean'].units))  for t in tests if 'mean' in t.observation.keys() ])
+    for t in tests:
+        if 'mean' not in t.observation.keys():
+            labels[str(t)] = str(t.observation['value'].units)
+        if 'mean' in t.observation.keys():
+            labels[str(t)] = str(t.observation['mean'].units)
+    for k,v in enumerate(columns1):
+       columns1[k]=str(v)+labels[v]
+
     threed = []
     for k,v in test_dic.items():
-        columns1.append(str(k))
+        #columns1.append(str(k))
         threed.append((float(v[0]),float(v[1]),float(v[2])))
 
-    trans = np.transpose(np.array(threed))
+    trans = np.array(threed)
     stacked = np.column_stack(trans)
     with open('for_pandas.p','wb') as handle:
         pickle.dump([stacked,columns1],handle)
-    df = pd.DataFrame(stacked, columns=columns1)
-    df.index=['observation','prediction','difference']
-    df =df.transpose()
 
+    df = pd.DataFrame(np.transpose(np.array(stacked)), columns=columns1)
+    df.index = ['observation','prediction','difference']
+    df = df.transpose()
+
+    df = df.drop(['InputResistanceTest1.0 ohm'])
     py.sign_in('RussellJarvis','FoyVbw7Ry3u4N2kCY4LE')
 
-    df.iplot(kind='bar', filename='grouped-bar-chart')
+    #df.iplot(kind='bar', yTitle='', title='', filename='grouped-bar-chart')
+    df.iplot(kind='bar', yTitle='NeuronUnit Test Agreement', title='test agreement', filename='grouped-bar-chart')
+
 
     #py.iplot(fig, filename='improved_names.svg',image='svg')
     '''
