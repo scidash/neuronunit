@@ -633,20 +633,36 @@ def check_rheobase(vmpop,pop=None):
 # Pick out just two parameters.
 # Do all of this in a big loop
 
+for k in range(1,9):
+    quads = []
+    for i,j in enumerate(td):
+        print(i,k)
+        if i+k < 10:
+            quads.append((td[i],td[i+k],i,i+k))
 
-def pair2surface(x,y)
-    x = str(x)
-    y = str(y)
-    import model_parameters as modelp
-    iter_list = [ (i,j) for i in modelp.model_params[x] for j in modelp.model_params[y] ]
     def model2map(iter_value):#This method must be pickle-able for scoop to work.
+
         vm = utilities.VirtualModel()
+        (x,y,w,z) = iter_value
         vm.attrs = {}
-        vm.attrs[x] = iter_value[0]
-        vm.attrs[y] = iter_value[1]
+        vm.attrs[str(x)] = w
+        vm.attrs[str(y)] = z
         return vm
-    vmpop1 = list(dview.map_sync(model2map,iter_list))
+    vmpop1 = list(dview.map_sync(model2map,quads))
     vmpop1 , _ = check_rheobase(vmpop1)
+'''
+for q in quads:
+    print(k)
+    (x,y,w,z) = q
+    print(x,y,w,z,i)
+
+    import model_parameters as modelp
+
+    iter_list = [ (i,j) for i in modelp.model_params['a'] for j in modelp.model_params['b'] ]
+'''
+
+
+
     new_checkpoint_path = str('rh_checkpoint_exhaustive')+str('.p')
     import pickle
     with open(new_checkpoint_path,'wb') as handle:#
@@ -664,14 +680,17 @@ def pair2surface(x,y)
 
     lists = pickle.load(open('complete_exhaust.p','rb'))
     efitnesses,iter_value,vmpop1 = lists[2],lists[1],lists[0]
-    matrix_fill = [ (i,j) for i in range(0,len(modelp.model_params[x])) for j in range(0,len(modelp.model_params[y])) ]
+    matrix_fill = [ (i,j) for i in range(0,len(modelp.model_params['a'])) for j in range(0,len(modelp.model_params['b'])) ]
     mf = list(zip(matrix_fill,efitnesses))
+    #pixels = list(zip(iter_list,efitnesses))
 
+    #empty = np.array(len(pixels),len(pixels))
+    #empty = np.zeros(shape=(len(mf)+1,len(mf)+1))
     empty = np.zeros(shape=(int(np.sqrt(len(mf))),int(np.sqrt(len(mf)))))
 
     def fitness2map(pixels,dfimshow):
         for i in pixels:
-
+        #for i,j,k in pixels:
             dfimshow[i[0][0],i[0][1]]=np.sum(i[1])
         return dfimshow
     dfimshow =fitness2map(mf,empty)
@@ -684,17 +703,8 @@ def pair2surface(x,y)
 
     pylab.imshow(dfimshow, interpolation="nearest", origin="upper", aspect="equal", norm=LogNorm())
     cbar = pylab.colorbar()
-    plt.savefig('2d_error_surface'+x+y+'.png')
+    plt.savefig('2d_error_surface.png')
 
-# Do all of this in a big loop
-quads = []
-for k in range(1,9):
-    for i,j in enumerate(td):
-        print(i,k)
-        if i+k < 10:
-            quads.append((td[i],td[i+k],i,i+k))
-for q in quads:
-    pair2surface(q[0],q[1])
 
 import net_graph
 from IPython.lib.deepreload import reload
