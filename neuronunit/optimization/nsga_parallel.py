@@ -254,9 +254,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
         if k == 0:
             v.prediction = {}
             v.prediction['value'] = vms.rheobase * pq.pA
-            v.params['injected_square_current']['duration'] = 1000 * pq.ms
-            v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
-            v.params['injected_square_current']['delay'] = 100 * pq.ms
+            
         if k != 0:
             v.prediction = None
 
@@ -265,7 +263,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
             v.params['injected_square_current']['duration'] = 100 * pq.ms
             v.params['injected_square_current']['amplitude'] = -10 *pq.pA
             v.params['injected_square_current']['delay'] = 30 * pq.ms
-        if k == 4 or k == 5 or k == 6 or k == 7:
+        if k==0 or k == 4 or k == 5 or k == 6 or k == 7:
             # Threshold current.
             v.params['injected_square_current']['duration'] = 1000 * pq.ms
             v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
