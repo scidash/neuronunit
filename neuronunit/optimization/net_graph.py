@@ -215,9 +215,11 @@ def best_worst(history):
     return best[0], worst[0]
 
 def pca(final_population,td):
-    from plotly.graph_objs import Scatter
+    import plotly
+    import plotly.plotly as py
+    from plotly.graph_objs import Scatter, Marker, Line, Data, Layout, Figure, XAxis, YAxis
     from sklearn.preprocessing import StandardScaler
-    X_std = StandardScaler().fit_transform(final_population)
+    X_std = StandardScaler().fit_transform(pop)
     from sklearn.decomposition import PCA as sklearnPCA
     sklearn_pca = sklearnPCA(n_components=10)
     Y_sklearn = sklearn_pca.fit_transform(X_std)
@@ -228,8 +230,8 @@ def pca(final_population,td):
     #    names.append(str(v))
     for name in names:
         trace = Scatter(
-            x=Y_sklearn[y==name,0],
-            y=Y_sklearn[y==name,1],
+            x=Y_sklearn[0],
+            y=Y_sklearn[1],
             mode='markers',
             name=name,
             marker=Marker(
