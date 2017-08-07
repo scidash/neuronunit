@@ -106,7 +106,7 @@ def plotly_graph(history,vmhistory):
     labels = {}
     for i in G.nodes():
         labels[i] = i
-    node_colors = [ np.sum(history.genealogy_history[i].fitness.values) for i in G ]
+    node_colors = np.log([ np.sum(history.genealogy_history[i].fitness.values) for i in G ])
     positions = graphviz_layout(G, prog="dot")
 
     dmin=1
@@ -145,7 +145,7 @@ def plotly_graph(history,vmhistory):
             # 'Greys' | 'Greens' | 'Bluered' | 'Hot' | 'Picnic' | 'Portland' |
             # Jet' | 'RdBu' | 'Blackbody' | 'Earth' | 'Electric' | 'YIOrRd' | 'YIGnBu'
             #colorscale='YIGnBu',
-            colorscale='Earth',
+            colorscale='Hot',
 
             reversescale=True,
             color=[],
@@ -174,7 +174,7 @@ def plotly_graph(history,vmhistory):
 
     fig = Figure(data=Data([edge_trace, node_trace]),
              layout=Layout(
-                title='<br>Genesology History Graph made with NeuronUnit/DEAP optimizer outputing into networkx and plotly',
+                title='<br>Geneeology History made with NeuronUnit/DEAP optimizer outputing into networkx and plotly',
                 titlefont=dict(size=16),
                 showlegend=False,
                 hovermode='closest',
@@ -213,6 +213,41 @@ def best_worst(history):
         if np.sum(v.fitness.values) == minimumb:
             best.append(v)
     return best[0], worst[0]
+
+def pca(final_population,td):
+    from plotly.graph_objs import Scatter
+    from sklearn.preprocessing import StandardScaler
+    X_std = StandardScaler().fit_transform(final_population)
+    from sklearn.decomposition import PCA as sklearnPCA
+    sklearn_pca = sklearnPCA(n_components=10)
+    Y_sklearn = sklearn_pca.fit_transform(X_std)
+    traces = []
+    #names = []
+    names = [ str(v) for v in td.values() ]
+    #for v in td.values():
+    #    names.append(str(v))
+    for name in names:
+        trace = Scatter(
+            x=Y_sklearn[y==name,0],
+            y=Y_sklearn[y==name,1],
+            mode='markers',
+            name=name,
+            marker=Marker(
+                size=12,
+                line=Line(
+                    color='rgba(217, 217, 217, 0.14)',
+                    width=0.5),
+                opacity=0.8))
+        traces.append(trace)
+
+
+    data = Data(traces)
+    layout = Layout(xaxis=XAxis(title='PC1', showline=False),
+                    yaxis=YAxis(title='PC2', showline=False))
+    fig = Figure(data=data, layout=layout)
+    py.iplot(fig)
+    py.sign_in('RussellJarvis','FoyVbw7Ry3u4N2kCY4LE')
+    py.iplot(fig, filename='pca.svg',image='svg')
 
 
 def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must be pickle-able for ipyparallel to work.
@@ -305,6 +340,151 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
         sf_best = pd.DataFrame(sc_for_frame_best)
         sf_worst = pd.DataFrame(sc_for_frame_worst)
 
+def bar_chart(history):
+    import plotly.plotly as py
+    from plotly.graph_objs import Bar
+
+    trace_women = Bar(x=df.School,
+                      y=df.Women,
+                      name='Women',
+                      marker=dict(color='#ffcdd2'))
+
+    trace_men = Bar(x=df.School,
+                    y=df.Men,
+                    name='Men',
+                    marker=dict(color='#A2D5F2'))
+
+    trace_gap = Bar(x=df.School,
+                    y=df.gap,
+                    name='Gap',
+                    marker=dict(color='#59606D'))
+
+    data = [trace_women, trace_men, trace_gap]
+    layout = Layout(title="Average Earnings for Graduates",
+                    xaxis=dict(title='School'),
+                    yaxis=dict(title='Salary (in thousands)'))
+    fig = Figure(data=data, layout=layout)
+
+    py.iplot(fig, sharing='secret', filename='jupyter/styled_bar')
+
+
+def shadow(not_optional_list):#This method must be pickle-able for ipyparallel to work.
+    '''
+    A method to plot the best and worst candidate solution waveforms side by side
+
+
+    Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
+    is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
+    value, that was found in a previous rheobase search.
+
+    Outputs: This method only has side effects, not datatype outputs from the method.
+
+    The most important side effect being a plot in eps format.
+
+    '''
+    import os
+    from neuronunit.models import backends
+    from neuronunit.models.reduced import ReducedModel
+    import quantities as pq
+    import numpy as np
+    import get_neab
+    from itertools import repeat
+
+
+    import copy
+    tests = copy.copy(get_neab.tests)
+    for k,v in enumerate(tests):
+        import matplotlib.pyplot as plt
+        plt.clf()
+        plt.style.use('ggplot')
+        stored_min = []
+        stored_max = []
+        sc_for_frame_best = []
+        sc_for_frame_worst = []
+
+        for iterator, vms in enumerate(not_optional_list):
+            new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
+            model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
+            assert type(vms.rheobase) is not type(None)
+            if k == 0:
+                v.prediction = {}
+                v.prediction['value'] = vms.rheobase * pq.pA
+                v.params['injected_square_current']['duration'] = 1000 * pq.ms
+                v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
+                v.params['injected_square_current']['delay'] = 100 * pq.ms
+                print(v.prediction)
+            if k != 0:
+                v.prediction = None
+
+            if k == 1 or k == 2 or k == 3:
+                # Negative square pulse current.
+                v.params['injected_square_current']['duration'] = 100 * pq.ms
+                v.params['injected_square_current']['amplitude'] = -10 *pq.pA
+                v.params['injected_square_current']['delay'] = 30 * pq.ms
+            if k == 5 or k == 6 or k == 7:
+                # Threshold current.
+                v.params['injected_square_current']['duration'] = 1000 * pq.ms
+                v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
+                v.params['injected_square_current']['delay'] = 100 * pq.ms
+            import neuron
+            model.reset_h(neuron)
+            model.load_model()
+            model.update_run_params(vms.attrs)
+            print(v.params)
+            score = v.judge(model,stop_on_error = False, deep_error = True)
+            if iterator == 0:
+                sc_for_frame_best.append(score)
+            else:
+                sc_for_frame_worst.append(score)
+            from capabilities import spike_functions
+
+            snippets = spike_functions.get_spike_waveforms(model.results['vm'])
+            plt.plot(model.results['t'],snippets,label=str(v)+str(names[iterator])+str(score))
+
+            #XLIM should be from capabilities.spike_functions
+            plt.xlim(0,float(v.params['injected_square_current']['duration']) )
+            stored_min.append(np.min(model.results['vm']))
+            stored_max.append(np.max(model.results['vm']))
+            plt.ylim(np.min(stored_min),np.max(stored_max))
+            plt.tight_layout()
+            model.results = None
+            plt.ylabel('$V_{m}$ mV')
+            plt.xlabel('mS')
+        plt.savefig(str('test_')+str(v)+'vm_versus_t.eps', format='eps', dpi=1200)
+        import pandas as pd
+        sf_best = pd.DataFrame(sc_for_frame_best)
+        sf_worst = pd.DataFrame(sc_for_frame_worst)
+
+def surfaces(history,td):
+
+    all_inds = history.genealogy_history.values()
+    sums = numpy.array([np.sum(ind.fitness.values) for ind in all_inds])
+    keep = set()
+    quads = []
+    for k in range(1,9):
+        for i,j in enumerate(td):
+            print(i,k)
+            if i+k < 10:
+                quads.append((td[i],td[i+k],i,i+k))
+
+    for q in quads:
+        print(k)
+        (x,y,w,z) = q
+        print(x,y,w,z,i)
+        xs = numpy.array([ind[w] for ind in all_inds])
+        ys = numpy.array([ind[z] for ind in all_inds])
+        min_ys = ys[numpy.where(sums == numpy.min(sums))]
+        min_xs = xs[numpy.where(sums == numpy.min(sums))]
+        plt.clf()
+        fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
+        trip_axis = ax_trip.tripcolor(xs,ys,sums+1,20,norm=matplotlib.colors.LogNorm())
+        plot_axis = ax_trip.plot(list(xs), list(ys), 'o', color='lightblue')
+        fig_trip.colorbar(trip_axis, label='sum of objectives + 1')
+        ax_trip.set_xlabel('Parameter '+ str(td[w]))
+        ax_trip.set_ylabel('Parameter '+ str(td[z]))
+        plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
+        fig_trip.tight_layout()
+        fig_trip.savefig('surface'+str(td[w])+str(td[z])+'.eps')
 
 def just_mean(log):
     '''
