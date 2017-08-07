@@ -634,7 +634,7 @@ def check_rheobase(vmpop,pop=None):
 # Do all of this in a big loop
 
 
-def pair2surface(x,y)
+def pair2surface(x,y):
     x = str(x)
     y = str(y)
     import model_parameters as modelp
@@ -658,7 +658,7 @@ def pair2surface(x,y)
     efitnesses = dview.map_sync(evaluate, copy.copy(vmpop1))
 
     import pickle
-    with open('complete_exhaust.p','wb') as handle:
+    with open('complete_exhaust'+x+y+'.p','wb') as handle:
        pickle.dump([efitnesses,iter_list,vmpop1],handle)
 
 
@@ -687,6 +687,7 @@ def pair2surface(x,y)
     plt.savefig('2d_error_surface'+x+y+'.png')
 
 # Do all of this in a big loop
+td=get_trans_dict(param_dict)
 quads = []
 for k in range(1,9):
     for i,j in enumerate(td):
