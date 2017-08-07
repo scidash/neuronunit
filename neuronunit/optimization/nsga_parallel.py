@@ -19,6 +19,14 @@ from ipyparallel import depend, require, dependent
 import cProfile
 import atexit
 import os,sys
+
+
+
+
+#if ipython:
+#%load_ext autoreload
+#%autoreload 2
+
 def ProfExit(p):
    '''
    http://seiferteric.com/?p=277
@@ -230,6 +238,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     from itertools import repeat
     import unittest
     tc = unittest.TestCase('__init__')
+
 
     new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
     model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
@@ -808,13 +817,14 @@ while (gen < NGEN and means[-1] > 0.05):
 
 import pickle
 with open('complete_dump.p','wb') as handle:
-   pickle.dump([vmpop,pop,pf,history,logbook],handle)
-'''
+   pickle.dump([vmoffspring,history,logbook],handle)
+
 lists = pickle.load(open('complete_dump.p','rb'))
-vmpop,pop,pf,history,logbook = lists[4],lists[3],lists[2],lists[1],lists[0]
-'''
-'''
+vmoffspring2,history2,logbook2 = lists[0],lists[1],lists[2]
+
 import net_graph
+from IPython.lib.deepreload import reload
+reload(net_graph)
 vmhistory = update_vm_pop(history.genealogy_history.values(),td)
 net_graph.plotly_graph(history,vmhistory)
 #net_graph.graph_s(history)
@@ -839,7 +849,33 @@ print(best_worst[0].fitness.values,' == ', best_ind_dict_vm[0].fitness.values, '
 # This is not done in the general GA algorithm, since adding an extra dimensionality that the GA
 # doesn't utilize causes a DEAP error, which is reasonable.
 
+test_dic = bar_chart(best_worst[0])
 net_graph.plot_evaluate( best_worst[0],best_worst[1])
 net_graph.plot_db(best_worst[0],name='best')
 net_graph.plot_db(best_worst[1],name='worst')
-'''
+
+import plotly.tools as tls
+tls.embed('https://plot.ly/~cufflinks/8')
+#Cufflinks binds Plotly directly to pandas dataframes.
+
+import plotly.plotly as py
+os.system('conda install pandas')
+os.system('conda install cufflinks')
+import cufflinks as cf
+import pandas as pd
+#df = cf.datagen.lines()
+columns1 = []
+threed = []
+for k,v in test_dic.items():
+    columns1.append(str(k))
+    threed.append((float(v[0]),float(v[1]),float(v[2]))
+
+trans = np.transpose(np.array(threed))
+stacked = np.column_stack(trans)
+df = pd.DataFrame(stacked, columns=columns1)
+df.iplot(kind='bar', filename='grouped-bar-chart')
+
+
+net_graph.plot_evaluate( best_worst[0],best_worst[1])
+net_graph.plot_db(best_worst[0],name='best')
+net_graph.plot_db(best_worst[1],name='worst')
