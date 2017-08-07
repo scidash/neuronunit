@@ -853,14 +853,14 @@ test_dic = bar_chart(best_worst[0])
 net_graph.plot_evaluate( best_worst[0],best_worst[1])
 net_graph.plot_db(best_worst[0],name='best')
 net_graph.plot_db(best_worst[1],name='worst')
+os.system('conda install cufflinks')
 
 import plotly.tools as tls
 tls.embed('https://plot.ly/~cufflinks/8')
 #Cufflinks binds Plotly directly to pandas dataframes.
 
 import plotly.plotly as py
-os.system('conda install pandas')
-os.system('conda install cufflinks')
+#os.system('conda install pandas')
 import cufflinks as cf
 import pandas as pd
 #df = cf.datagen.lines()
@@ -870,8 +870,8 @@ for k,v in test_dic.items():
     columns1.append(str(k))
     threed.append((float(v[0]),float(v[1]),float(v[2]))
 
-trans = np.transpose(np.array(threed))
-stacked = np.column_stack(trans)
+#trans = np.transpose(np.array(threed))
+stacked = np.column_stack(np.array(threed))
 df = pd.DataFrame(stacked, columns=columns1)
 df.iplot(kind='bar', filename='grouped-bar-chart')
 
