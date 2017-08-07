@@ -119,9 +119,9 @@ with dview.sync_imports(): # Causes each of these things to be imported on the w
 def p_imports():
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
-    #print(get_neab.LEMS_MODEL_PATH)
+    print(get_neab.LEMS_MODEL_PATH)
     new_file_path = '{0}{1}'.format(str(get_neab.LEMS_MODEL_PATH),int(os.getpid()))
-    #print(new_file_path)
+    print(new_file_path)
 
     os.system('cp ' + str(get_neab.LEMS_MODEL_PATH)+str(' ') + new_file_path)
     model = ReducedModel(new_file_path,name='vanilla',backend='NEURON')
@@ -236,6 +236,8 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     import numpy as np
     import get_neab
     from itertools import repeat
+    import unittest
+    tc = unittest.TestCase('__init__')
 
 
     new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
@@ -271,8 +273,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
 
         score = v.judge(model,stop_on_error = False, deep_error = True)
-        #v.descripition()
-        #import pdb; pdb.set_trace()
+
         if k == 0 and float(vms.rheobase) > 0:# and type(score) is not scores.InsufficientDataScore(None):
             if 'value' in v.observation.keys():
                 unit_observations = v.observation['value']
@@ -583,7 +584,7 @@ def check_rheobase(vmpop,pop=None):
             import quantities as pq
             import numpy as np
             vm.boolean = False
-            steps = np.linspace(-50,200,7.0)
+            steps = np.linspace(0,250,7.0)
             steps_current = [ i*pq.pA for i in steps ]
             vm.steps = steps_current
             vm.initiated = True
@@ -594,6 +595,7 @@ def check_rheobase(vmpop,pop=None):
         from neuronunit.models.reduced import ReducedModel
         import get_neab
         #print(pid_map[int(os.getpid())])
+
         new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
         model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
         model.load_model()
@@ -635,8 +637,8 @@ def check_rheobase(vmpop,pop=None):
 # explored.
 ##
 
-MU = 10
-NGEN = 7
+MU = 12
+NGEN = 22
 CXPB = 0.9
 
 import numpy as np
@@ -677,6 +679,7 @@ self.assertTrue(expr, msg=None)
 vmpop = update_vm_pop(pop, td)
 
 vmpop , _ = check_rheobase(vmpop)
+print([v.rheobase for v in vmpop ])
 new_checkpoint_path = str('rh_checkpoint')+str('.p')
 import pickle
 with open(new_checkpoint_path,'wb') as handle:#
@@ -690,7 +693,7 @@ with open(new_checkpoint_path,'wb') as handle:#
 
 import copy
 fitnesses = dview.map_sync(evaluate, copy.copy(vmpop))
-
+print(fitnesses)
 for ind, fit in zip(pop, fitnesses):
     ind.fitness.values = fit
 
@@ -715,6 +718,7 @@ def difference(unit_predictions):
     to_r_s = unit_observations.units
     unit_predictions = unit_predictions.rescale(to_r_s)
     unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
+    print(unit_delta)
     return float(unit_delta)
 
 verbose = True
@@ -722,12 +726,14 @@ means = np.array(logbook.select('avg'))
 gen = 1
 rh_mean_status = np.mean([ v.rheobase for v in vmpop ])
 rhdiff = difference(rh_mean_status * pq.pA)
+print(rhdiff)
 verbose = True
 while (gen < NGEN and means[-1] > 0.05):
     # Although the hypervolume is not actually used here, it can be used
     # As a terminating condition.
     hvolumes.append(hypervolume(pf))
     gen += 1
+    print(gen)
     offspring = tools.selNSGA2(pop, len(pop))
     if verbose:
         for ind in offspring:
@@ -819,6 +825,7 @@ import net_graph
 from IPython.lib.deepreload import reload
 reload(net_graph)
 vmhistory = update_vm_pop(history.genealogy_history.values(),td)
+net_graph.shadow(vmhistory)
 net_graph.plotly_graph(history,vmhistory)
 #net_graph.graph_s(history)
 net_graph.plot_log(logbook)
@@ -842,15 +849,21 @@ print(best_worst[0].fitness.values,' == ', best_ind_dict_vm[0].fitness.values, '
 # This is not done in the general GA algorithm, since adding an extra dimensionality that the GA
 # doesn't utilize causes a DEAP error, which is reasonable.
 
-test_dic = bar_chart(best_worst[0])
+net_graph.prep_bar_chart(best_worst[0])
+
+#test_dic = bar_chart(best_worst[0])
+net_graph.plot_evaluate( best_worst[0],best_worst[1])
+net_graph.plot_db(best_worst[0],name='best')
+net_graph.plot_db(best_worst[1],name='worst')
+'''
+os.system('conda install cufflinks')
 
 import plotly.tools as tls
 tls.embed('https://plot.ly/~cufflinks/8')
 #Cufflinks binds Plotly directly to pandas dataframes.
 
 import plotly.plotly as py
-os.system('conda install pandas')
-os.system('conda install cufflinks')
+#os.system('conda install pandas')
 import cufflinks as cf
 import pandas as pd
 #df = cf.datagen.lines()
@@ -860,11 +873,11 @@ for k,v in test_dic.items():
     columns1.append(str(k))
     threed.append((float(v[0]),float(v[1]),float(v[2]))
 
-trans = np.transpose(np.array(threed))
-stacked = np.column_stack(trans)
+#trans = np.transpose(np.array(threed))
+stacked = np.column_stack(np.array(threed))
 df = pd.DataFrame(stacked, columns=columns1)
 df.iplot(kind='bar', filename='grouped-bar-chart')
-
+'''
 
 net_graph.plot_evaluate( best_worst[0],best_worst[1])
 net_graph.plot_db(best_worst[0],name='best')

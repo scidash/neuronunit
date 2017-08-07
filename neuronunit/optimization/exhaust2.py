@@ -633,20 +633,36 @@ def check_rheobase(vmpop,pop=None):
 # Pick out just two parameters.
 # Do all of this in a big loop
 
+for k in range(1,9):
+    quads = []
+    for i,j in enumerate(td):
+        print(i,k)
+        if i+k < 10:
+            quads.append((td[i],td[i+k],i,i+k))
 
-def pair2surface(x,y,z,w):
-    x = str(x)
-    y = str(y)
-    import model_parameters as modelp
-    iter_list = [ (i,j) for i in modelp.model_params[x] for j in modelp.model_params[y] ]
     def model2map(iter_value):#This method must be pickle-able for scoop to work.
+
         vm = utilities.VirtualModel()
+        (x,y,w,z) = iter_value
         vm.attrs = {}
-        vm.attrs[x] = iter_value[0]
-        vm.attrs[y] = iter_value[1]
+        vm.attrs[str(x)] = w
+        vm.attrs[str(y)] = z
         return vm
-    vmpop1 = list(dview.map_sync(model2map,iter_list))
+    vmpop1 = list(dview.map_sync(model2map,quads))
     vmpop1 , _ = check_rheobase(vmpop1)
+'''
+for q in quads:
+    print(k)
+    (x,y,w,z) = q
+    print(x,y,w,z,i)
+
+    import model_parameters as modelp
+
+    iter_list = [ (i,j) for i in modelp.model_params['a'] for j in modelp.model_params['b'] ]
+'''
+
+
+
     new_checkpoint_path = str('rh_checkpoint_exhaustive')+str('.p')
     import pickle
     with open(new_checkpoint_path,'wb') as handle:#
@@ -658,58 +674,37 @@ def pair2surface(x,y,z,w):
     efitnesses = dview.map_sync(evaluate, copy.copy(vmpop1))
 
     import pickle
-    with open('complete_exhaust'+x+y+'.p','wb') as handle:
+    with open('complete_exhaust.p','wb') as handle:
        pickle.dump([efitnesses,iter_list,vmpop1],handle)
 
 
-    matrix_fill = [ (i,j) for i in range(0,len(modelp.model_params[x])) for j in range(0,len(modelp.model_params[y])) ]
+    lists = pickle.load(open('complete_exhaust.p','rb'))
+    efitnesses,iter_value,vmpop1 = lists[2],lists[1],lists[0]
+    matrix_fill = [ (i,j) for i in range(0,len(modelp.model_params['a'])) for j in range(0,len(modelp.model_params['b'])) ]
     mf = list(zip(matrix_fill,efitnesses))
+    #pixels = list(zip(iter_list,efitnesses))
+
+    #empty = np.array(len(pixels),len(pixels))
+    #empty = np.zeros(shape=(len(mf)+1,len(mf)+1))
     empty = np.zeros(shape=(int(np.sqrt(len(mf))),int(np.sqrt(len(mf)))))
 
     def fitness2map(pixels,dfimshow):
         for i in pixels:
-            dfimshow[i[0][0],i[0][1]] = np.sum(i[1])
+        #for i,j,k in pixels:
+            dfimshow[i[0][0],i[0][1]]=np.sum(i[1])
         return dfimshow
     dfimshow =fitness2map(mf,empty)
 
-    summed_ef = [np.sum(f) for f in efitnesses]
 
     from matplotlib import pylab
     import numpy
     from matplotlib.colors import LogNorm
     plt.clf()
-    xs = numpy.array([ind[0] for ind in matrix_fill])
-    ys = numpy.array([ind[1] for ind in matrix_fill])
-    min_ys = ys[numpy.where(summed_ef == numpy.min(summed_ef))]
-    min_xs = xs[numpy.where(summed_ef == numpy.min(summed_ef))]
-    plt.clf()
-    fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
-    trip_axis = ax_trip.tripcolor(xs,ys,summed_ef,20,norm=matplotlib.colors.LogNorm())
-    #plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
-    plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue',label='global minima')
 
-    fig_trip.colorbar(trip_axis, label='sum of objectives + 1')
-    ax_trip.set_xlabel('Parameter '+ str(z))
-    ax_trip.set_ylabel('Parameter '+ str(w))
-    plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
-    fig_trip.tight_layout()
-    plt.legend()
-    plt.savefig('2d_error_'+str(z)+str(w)+'surface.png')
+    pylab.imshow(dfimshow, interpolation="nearest", origin="upper", aspect="equal", norm=LogNorm())
+    cbar = pylab.colorbar()
+    plt.savefig('2d_error_surface.png')
 
-    #fig_trip.savefig('surface'+str(td[w])+str(td[z])+'.eps')
-    #pylab.imshow(dfimshow, interpolation="nearest", origin="upper", aspect="equal", norm=LogNorm())
-    #cbar = pylab.colorbar()
-
-# Do all of this in a big loop
-td = get_trans_dict(param_dict)
-quads = []
-for k in range(1,9):
-    for i,j in enumerate(td):
-        print(i,k)
-        if i+k < 10:
-            quads.append((td[i],td[i+k],i,i+k))
-for q in quads:
-    pair2surface(q[0],q[1],q[2],q[3])
 
 import net_graph
 from IPython.lib.deepreload import reload
