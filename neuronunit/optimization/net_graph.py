@@ -135,6 +135,7 @@ def best_worst(history):
         if np.sum(v.fitness.values) == minimumb:
             best.append(v)
     return best[0], worst[0]
+def pca(best_worst,vmpop,fitnesses,td):
 
 def pca(final_population,vmpop,td):
 
@@ -148,14 +149,32 @@ def pca(final_population,vmpop,td):
     import plotly.plotly as py
     from plotly.graph_objs import Scatter, Marker, Line, Data, Layout, Figure, XAxis, YAxis
     from sklearn.preprocessing import StandardScaler
-    # Note final population is only the evolved gene population (a set of refined model parameters)
-    # What we really want is some way to relate final_population to error.
-    fitnesses = [ np.sum(fp.finesses) for fp in final_population ]
+    # need to standardise the data since each parameter consists of different variables.
+    #p_plus_f = [ ind.append(np.sum(fitnesses[k])) for k, ind in enumerate(final_population) ]
+    errors = np.array([ np.sum(f.fitness.values) for f in enumerate(best_worst) ])
 
-    X_std = StandardScaler().fit_transform(final_population)
+    #p_plus_f = final_population
+    #X_std = StandardScaler().fit_transform(final_population)
+    X_std = StandardScaler().fit_transform(best_worst)
+
     from sklearn.decomposition import PCA as sklearnPCA
     sklearn_pca = sklearnPCA(n_components=10)
     Y_sklearn = sklearn_pca.fit_transform(X_std)
+
+    # Make a list of (eigenvalue, eigenvector) tuples
+    cov_mat = np.cov(X_std.T)
+
+    eig_vals, eig_vecs = np.linalg.eig(cov_mat)
+
+    eig_pairs = [(np.abs(eig_vals[i]), eig_vecs[:,i]) for i in range(len(eig_vals))]
+
+    # Sort the (eigenvalue, eigenvector) tuples from high to low
+    eig_pairs.sort()
+    eig_pairs.reverse()
+
+    matrix_w = np.hstack((eig_pairs[0][1].reshape(4,1),
+                      eig_pairs[1][1].reshape(4,1)))
+    Y = X_std.dot(errors)
     '''
     points = []
     proj0 = []
@@ -165,10 +184,10 @@ def pca(final_population,vmpop,td):
         proj0.append(ind * Y_sklearn[:,0])
         proj1.append(ind * Y_sklearn[:,1])
     '''
-    x_points = [ ind * Y_sklearn[:,0] for ind in final_population ]
-    y_points = [ ind * Y_sklearn[:,1] for ind in final_population ]
+    #x_points = [ ind * Y_sklearn[:,0] for ind in final_population ]
+    #y_points = [ ind * Y_sklearn[:,1] for ind in final_population ]
 
-    iter_list = list(zip(x_points,y_points))
+    #iter_list = list(zip(x_points,y_points))
 
     #for counter,ind in enumerate(final_population):
     for k,v in enumerate(Y_sklearn):
@@ -315,10 +334,11 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
     import copy
     tests = copy.copy(get_neab.tests)
     for k,v in enumerate(tests):
+        import matplotlib.pyplot as plt
         plt.clf()
         plt.style.use('ggplot')
-
-        # probably going to become depreciated
+	# following variables possibly are
+        # going to become depreciated
         stored_min = []
         stored_max = []
         sc_for_frame_best = []
@@ -354,7 +374,7 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
             if k == 0 or k ==4 or k == 5 or k == 6 or k == 7:
                 # Threshold current.
                 v.params['injected_square_current']['duration'] = 1000 * pq.ms
-                v.params['injected_square_current']['amplitude'] = vms.rheobase  * pq.pA
+                v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
                 v.params['injected_square_current']['delay'] = 100 * pq.ms
             import neuron
             model.reset_h(neuron)
