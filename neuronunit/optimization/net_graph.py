@@ -404,8 +404,9 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
                     time_sequence = np.arange(np.min(sindexs)-5 , np.max(sindexs)+5, 1)
                     ptvec = np.array(model.results['t'])[time_sequence]
                     pvm = np.array(model.results['vm'])[time_sequence]
-                    plt.plot(ptvec, pvm,label=str(v)+str(score), color=color, linewidth=1)
-                    plt.xlim(np.min(sindexs)-11,np.min(sindexs)+11 )
+                    assert len(pvm) == len(ptvec)
+                    plt.plot(ptvec, pvm, label=str(v)+str(score), color=color, linewidth=1)
+                    #plt.xlim(np.min(sindexs)-11,np.min(sindexs)+11 )
                     plt.ylim(np.min(stored_min)-4,np.max(stored_max)+4)
 
             else:
@@ -416,7 +417,8 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
                 plt.ylim(np.min(stored_min)-4,np.max(stored_max)+4)
                 model.results = None
         #inside the tests loop but outside the model loop.
-        #plt.tight_layout()
+        plt.tight_layout()
+        plt.legend()
         plt.ylabel('$V_{m}$ mV')
         plt.xlabel('mS')
         plt.savefig(str('test_')+str(v)+'vm_versus_t.png')#, format='eps', dpi=1200)
