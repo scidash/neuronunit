@@ -5,10 +5,10 @@ import graphviz
 
 import matplotlib as mpl
 # setting of an appropriate backend.
-try:
-    mpl.use('Qt5Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
-except:
-    mpl.use('Agg')
+#try:
+#    mpl.use('Qt5Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
+#except:
+mpl.use('Agg')
 
 from plotly.graph_objs import *
 import matplotlib.pyplot as plt
@@ -525,7 +525,7 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
                 plt.ylim(np.min(stored_min)-4,np.max(stored_max)+4)
                 model.results = None
         #inside the tests loop but outside the model loop.
-        plt.tight_layout()
+        #plt.tight_layout()
         plt.legend()
         plt.ylabel('$V_{m}$ mV')
         plt.xlabel('mS')
