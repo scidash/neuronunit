@@ -835,35 +835,12 @@ print(best_worst[0].fitness.values,' == ', best_ind_dict_vm[0].fitness.values, '
 # This is not done in the general GA algorithm, since adding an extra dimensionality that the GA
 # doesn't utilize causes a DEAP error, which is reasonable.
 
-net_graph.prep_bar_chart(best_worst[0])
+net_graph.bar_chart(best_worst[0])
 net_graph.pca(final_population,vmpop,fitnesses,td)
 #test_dic = bar_chart(best_worst[0])
 net_graph.plot_evaluate( best_worst[0],best_worst[1])
 #net_graph.plot_db(best_worst[0],name='best')
 #net_graph.plot_db(best_worst[1],name='worst')
-'''
-os.system('conda install cufflinks')
-
-import plotly.tools as tls
-tls.embed('https://plot.ly/~cufflinks/8')
-#Cufflinks binds Plotly directly to pandas dataframes.
-
-import plotly.plotly as py
-#os.system('conda install pandas')
-import cufflinks as cf
-import pandas as pd
-#df = cf.datagen.lines()
-columns1 = []
-threed = []
-for k,v in test_dic.items():
-    columns1.append(str(k))
-    threed.append((float(v[0]),float(v[1]),float(v[2]))
-
-#trans = np.transpose(np.array(threed))
-stacked = np.column_stack(np.array(threed))
-df = pd.DataFrame(stacked, columns=columns1)
-df.iplot(kind='bar', filename='grouped-bar-chart')
-'''
 
 net_graph.plot_evaluate( best_worst[0],best_worst[1])
 net_graph.plot_db(best_worst[0],name='best')
