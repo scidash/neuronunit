@@ -667,16 +667,12 @@ def pair2surface(x,y,z,w):
     plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue',label='global minima')
 
     fig_trip.colorbar(trip_axis, label='sum of objectives + 1')
-    ax_trip.set_xlabel('Parameter '+ str(z))
-    ax_trip.set_ylabel('Parameter '+ str(w))
+    ax_trip.set_xlabel('Parameter '+ str(x))
+    ax_trip.set_ylabel('Parameter '+ str(y))
     plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
     fig_trip.tight_layout()
     plt.legend()
-    plt.savefig('2d_error_'+str(z)+str(w)+'surface.png')
-
-    #fig_trip.savefig('surface'+str(td[w])+str(td[z])+'.eps')
-    #pylab.imshow(dfimshow, interpolation="nearest", origin="upper", aspect="equal", norm=LogNorm())
-    #cbar = pylab.colorbar()
+    plt.savefig('2d_error_'+str(x)+str(y)+'surface.png')
 
 # Do all of this in a big loop
 td = get_trans_dict(param_dict)
@@ -684,10 +680,19 @@ quads = []
 for k in range(1,9):
     for i,j in enumerate(td):
         print(i,k)
-        if i+k < 10:
+        if i+k < 10 and i!=k:
             quads.append((td[i],td[i+k],i,i+k))
-for q in quads:
-    pair2surface(q[0],q[1],q[2],q[3])
+for k,q in enumerate(quads):
+    if k % 2 ==0:
+        # sample every second surface as this takes a while.
+        pair2surface(q[0],q[1],q[2],q[3])
+
+for k,q in enumerate(quads):
+    if k % 2 ==1:
+        # sample every second surface as this takes a while.
+        pair2surface(q[0],q[1],q[2],q[3])
+
+    #q = quads[-1]
 
 import net_graph
 from IPython.lib.deepreload import reload
