@@ -271,7 +271,7 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
 
 
 
-def shadow(not_optional_list):#This method must be pickle-able for ipyparallel to work.
+def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipyparallel to work.
     '''
     A method to plot the best and worst candidate solution waveforms side by side
 
@@ -293,6 +293,8 @@ def shadow(not_optional_list):#This method must be pickle-able for ipyparallel t
     import get_neab
     from itertools import repeat
 
+    color='lightblue'
+    not_optional_list.append(best_vm)
 
     import copy
     tests = copy.copy(get_neab.tests)
@@ -305,9 +307,16 @@ def shadow(not_optional_list):#This method must be pickle-able for ipyparallel t
         sc_for_frame_best = []
         sc_for_frame_worst = []
 
+
         for iterator, vms in enumerate(not_optional_list):
-            new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-            model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
+
+            if vms is not_optional_list[-1]:
+                color = 'blue'
+            if iterator == len(not_optional_list):
+                color = 'blue'
+
+            #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
+            model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
             assert type(vms.rheobase) is not type(None)
             if k == 0:
                 v.prediction = {}
@@ -334,16 +343,23 @@ def shadow(not_optional_list):#This method must be pickle-able for ipyparallel t
             print(v.params)
             score = v.judge(model,stop_on_error = False, deep_error = True)
 
-            from capabilities import spike_functions
-            if k == 0 or k ==4 or k == 5 or k == 6 or k == 7:
-                snippets = spike_functions.get_spike_waveforms(model.results['vm'])
-                plt.plot(model.results['t'],snippets,label=str(v)+str(names[iterator])+str(score))
-                plt.xlim(0,float(v.params['injected_square_current']['duration']) )
-            else:
-                plt.plot(model.results['t'],model.results['vm'],label=str(v)+str(names[iterator])+str(score))
-                plt.xlim(0,float(v.params['injected_square_current']['duration']) )
+            #if k==0 or k ==4 or k == 5 or k == 6 or k == 7:
+            from neuronunit.capabilities import spike_functions
+            import quantities as pq
+            dt = model.results['t'][1] - model.results['t'][0]
+            dt = dt*pq.s
+            from neo import AnalogSignal
+            vm = AnalogSignal(model.results['vm'],units=pq.V,sampling_rate=1.0/dt)
+            #import pdb; pdb.set_trace()
+            print(spike_functions.get_spike_waveforms(vm))
+            print(spike_functions.get_spike_train(vm))
+            print(model.get_spike_count())
 
-            #XLIM should be from capabilities.spike_functions
+            snippets = spike_functions.get_spike_waveforms(vm)#['vm'])
+            #plt.plot(model.results['t'],snippets,label=str(v)+str(score), color=color, linewidth=1)
+
+            plt.plot(model.results['t'],model.results['vm'],label=str(v)+str(score), color=color, linewidth=1)
+
             plt.xlim(0,float(v.params['injected_square_current']['duration']) )
             stored_min.append(np.min(model.results['vm']))
             stored_max.append(np.max(model.results['vm']))
@@ -353,6 +369,9 @@ def shadow(not_optional_list):#This method must be pickle-able for ipyparallel t
             plt.ylabel('$V_{m}$ mV')
             plt.xlabel('mS')
         plt.savefig(str('test_')+str(v)+'vm_versus_t.eps', format='eps', dpi=1200)
+
+
+
 def surfaces(history,td):
 
     all_inds = history.genealogy_history.values()
@@ -454,7 +473,7 @@ def prep_bar_chart(vms,name=None):
     from itertools import repeat
     import copy
     from itertools import repeat
-    #os.system('conda install pandas')
+    #TODO move install into docker
     os.system('conda install cufflinks')
 
     import plotly.tools as tls
@@ -563,8 +582,8 @@ def prep_bar_chart(vms,name=None):
     df = pd.DataFrame(np.transpose(np.array(stacked)), columns=columns1)
     df.index = ['observation','prediction','difference']
     df = df.transpose()
-    df = df.loc['CapacitanceTest1.0 F'] *= 10**8.5
-    df = df.loc['CapacitanceTest1.0 F'] *= 10**-8.5
+    df = df.loc['CapacitanceTest1.0 F'] *= 10**9
+    df = df.loc['CapacitanceTest1.0 F'] *= 10**-9
     #df = df.drop(['InputResistanceTest1.0 ohm'])
     #df.index(['CapacitanceTest1.0 F'])
     py.sign_in('RussellJarvis','FoyVbw7Ry3u4N2kCY4LE')
