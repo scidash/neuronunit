@@ -16,8 +16,7 @@ import ipyparallel as ipp
 from ipyparallel import depend, require, dependent
 
 
-import cProfile
-import atexit
+
 import os,sys
 
 
@@ -27,27 +26,6 @@ import os,sys
 #%load_ext autoreload
 #%autoreload 2
 
-def ProfExit(p):
-   '''
-   http://seiferteric.com/?p=277
-   So what does this do? It imports the profiler and the atexit module.
-   It creates an instance of the profiler, registers with atexit to stop the profiler and dump the stats
-   to a file named with the process
-   ID of that python process, and finally starts the profiler.
-   So every python process run on the system will now be profiled! FYI,
-   the stats won’t get dumped until the process exits,
-   so make sure you stop all of them.
-   '''
-   p.disable()
-   prof_f_name = '{0}'.format(os.getpid())
-   #Open and close the file, as a quick and dirty way to confirm that exists.
-   f = open('NeuroML2/%s'%prof_f_name,'wb')
-   f.close()
-
-   p.dump_stats('NeuroML2/%s'%prof_f_name)
-profile_hook = cProfile.Profile()
-atexit.register(ProfExit, profile_hook)
-profile_hook.enable()
 rc = ipp.Client(profile='default')
 THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
 this_nu = os.path.join(THIS_DIR,'../../')

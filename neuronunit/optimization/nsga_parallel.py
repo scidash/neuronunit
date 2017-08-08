@@ -272,6 +272,12 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
         score = v.judge(model,stop_on_error = False, deep_error = True)
 
+        # Only get the delta score as a 
+	# a substitute for the rheobase neuronunit test
+        # which is either not very reliable,
+        # or too hard to understand without digging in
+        # and trying to implement something yourself
+
         if k == 0 and float(vms.rheobase) > 0:# and type(score) is not scores.InsufficientDataScore(None):
             if 'value' in v.observation.keys():
                 unit_observations = v.observation['value']
@@ -778,7 +784,11 @@ while (gen < NGEN and means[-1] > 0.05):
             print('what do the weights without values look like? {0}'.format(ind.fitness.weights))
             print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues))
             print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid))
-
+    
+    # Very rarely the mean error will increase
+    # Instead of decreasing
+    # the explanation for this is related to the exploration vs exploitation
+    # trade off.
     # Its possible that the offspring are worse than the parents of the penultimate generation
     # Its very likely for an offspring population to be less fit than their parents when the pop size
     # is less than the number of parameters explored. However this effect should stabelize after a
