@@ -286,19 +286,25 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     # Substitute the block below with the one line:
     # fitness = pre_fitness
 
-    for k,f in enumerate(pre_fitness):
+    for k,f in enumerate(copy.copy(pre_fitness)):
         if k == 0:
             fitness.append(unit_delta)
         if k != 0:
             fitness.append(pre_fitness[k] + 1.5 * unit_delta ) # add the rheobase error to all the errors.
             assert fitness[k] != pre_fitness[k]
 
-    for k,f in enumerate(fitness):
+    pre_fitness = []
+    pre_fitness = copy.copy(fitness)
+    fitness = []
+
+    for k,f in enumerate(copy.copy(pre_fitness)):
         if k == 1:
             fitness.append(f)
         if k != 1:
             fitness.append(pre_fitness[k] + 1.25 * f ) # add the rheobase error to all the errors.
             assert fitness[k] != pre_fitness[k]
+
+    pre_fitness = []
 
 
     return fitness[0],fitness[1],\
@@ -631,7 +637,7 @@ def check_rheobase(vmpop,pop=None):
 ##
 
 MU = 12
-NGEN = 22
+NGEN = 18
 CXPB = 0.9
 
 import numpy as np
@@ -654,21 +660,7 @@ dview.push({'trans_dict':trans_dict,'td':td})
 pop = toolbox.population(n = MU)
 
 pop = [ toolbox.clone(i) for i in pop ]
-'''
-try:
-    #for t in tests:
-    #    print(t.observation, t.describe(), t.prediction)
-    new_checkpoint_path = str('rh_checkpoint')+str('.p')
-    import pickle
-    with open(new_checkpoint_path,'rb') as handle:#
-        vmpop = pickle.load(handle)
-except:
 
-self.assertEqual(var1, var2, msg=None)
-self.assertNotEqual(var1, var2, msg=None)
-self.assertTrue(expr, msg=None)
-
-'''
 vmpop = update_vm_pop(pop, td)
 
 vmpop , _ = check_rheobase(vmpop)
