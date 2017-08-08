@@ -25,6 +25,7 @@ class VirtualModel(object):
         self.initiated = False
         self.delta = []
         self.evaluated = False
+        self.results = {}
 '''
 import unittest
 tc = unittest.TestCase('__init__')
