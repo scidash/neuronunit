@@ -823,7 +823,11 @@ import net_graph
 from IPython.lib.deepreload import reload
 reload(net_graph)
 vmhistory = update_vm_pop(history.genealogy_history.values(),td)
-net_graph.shadow(vmhistory)
+best, worst = net_graph.best_worst(history)
+listss = [best , worst]
+best_worst = update_vm_pop(listss,td)
+best_worst , _ = check_rheobase(best_worst)
+net_graph.shadow(vmoffspring,best_worst[0])
 net_graph.plotly_graph(history,vmhistory)
 #net_graph.graph_s(history)
 net_graph.plot_log(logbook)
@@ -831,13 +835,10 @@ net_graph.just_mean(logbook)
 net_graph.plot_objectives_history(logbook)
 
 #Although the pareto front surely contains the best candidate it cannot contain the worst, only history can.
-best_ind_dict_vm = update_vm_pop(pf[0:2],td)
-best_ind_dict_vm , _ = check_rheobase(best_ind_dict_vm)
+#best_ind_dict_vm = update_vm_pop(pf[0:2],td)
+#best_ind_dict_vm , _ = check_rheobase(best_ind_dict_vm)
 
-best, worst = net_graph.best_worst(history)
-listss = [best , worst]
-best_worst = update_vm_pop(listss,td)
-best_worst , _ = check_rheobase(best_worst)
+
 
 print(best_worst[0].attrs,' == ', best_ind_dict_vm[0].attrs, ' ? should be the same (eyeball)')
 print(best_worst[0].fitness.values,' == ', best_ind_dict_vm[0].fitness.values, ' ? should be the same (eyeball)')
