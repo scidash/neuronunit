@@ -301,7 +301,43 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
         sf_best = pd.DataFrame(sc_for_frame_best)
         sf_worst = pd.DataFrame(sc_for_frame_worst)
 
+
+class VirtualModel(object):
+    '''
+    This is a pickable dummy clone
+    version of the NEURON simulation model
+    It does not contain an actual model, but it can be used to
+    wrap the real model.
+    This Object class serves as a data type for storing rheobase search
+    attributes and other useful parameters,
+    with the distinction that unlike the NEURON model this class
+    can be transported across HOSTS/CPUs
+    '''
+    def __init__(self):
+        self.lookup = {}
+        self.rheobase = None
+        self.previous = 0
+        self.run_number = 0
+        self.attrs = None
+        self.steps = None
+        self.name = None
+        self.results = None
+        self.fitness = None
+        self.score = None
+        self.boolean = False
+        self.initiated = False
+        self.delta = []
+        self.evaluated = False
+        self.results = {}
+
 def speed_up(not_optional_list):
+    import ipyparallel as ipp
+
+    rc = ipp.Client(profile='default')
+    rc[:].use_cloudpickle()
+    inv_pid_map = {}
+    dview = rc[:]
+
     import os
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
@@ -314,17 +350,22 @@ def speed_up(not_optional_list):
     import quantities as pq
     from neo import AnalogSignal
     import matplotlib.pyplot as plt
+    import copy
     tests = copy.copy(get_neab.tests)
     the_ks = list(np.arange(0,len(tests),1))
+    print(the_ks)
+    def nested_function(vms,k):
+        #for iterator, vms in enumerate(not_optional_list):
 
-    def nested_function(not_optional_list,k):
-        for iterator, vms in enumerate(not_optional_list):
+        #vms = not_optional_list
+        def second_nesting(k,vms):
             new_file_path = '{0}{1}'.format(str(get_neab.LEMS_MODEL_PATH),int(os.getpid()))
             print(new_file_path)
 
             os.system('cp ' + str(get_neab.LEMS_MODEL_PATH)+str(' ') + new_file_path)
             model = ReducedModel(new_file_path,name='vanilla',backend='NEURON')
             #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+
             assert type(vms.rheobase) is not type(None)
             if k == 0:
                 v.prediction = {}
@@ -358,10 +399,15 @@ def speed_up(not_optional_list):
             ts = None
             v_m = None
             model.results = None
+            return vms
+        from itertools import repeat
+        not_optional_list = second_nesting(the_ks,repeat(vms))
         return not_optional_list
-        not_optional_list = dview.map_sync(nested_function,not_optional_list,the_ks)
-        assert type(not_optional_list[0].results['v_m']) is not type(None)
-    return not_optional_list
+    from itertools import repeat
+    not_optional_list2 = nested_function(not_optional_list,the_ks)
+    assert type(not_optional_list[0].results['v_m']) is not type(None)
+    print('gets here?')
+    return not_optional_list2
 
 def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipyparallel to work.
     '''
