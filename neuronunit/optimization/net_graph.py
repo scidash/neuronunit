@@ -314,13 +314,14 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
         #if index == plot_count - 1:
 
         for iterator, vms in enumerate(not_optional_list):
-            if iterator == len(not_optional_list):
-                color = 'blue'
+
             if vms is not_optional_list[-1]:
                 color = 'blue'
+            if iterator == len(not_optional_list):
+                color = 'blue'
 
-            new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-            model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
+            #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
+            model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
             assert type(vms.rheobase) is not type(None)
             if k == 0:
                 v.prediction = {}
@@ -349,12 +350,22 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
             print(v.params)
             score = v.judge(model,stop_on_error = False, deep_error = True)
 
-            if k==0 or k ==4 or k == 5 or k == 6 or k == 7:
-                snippets = spike_functions.get_spike_waveforms(model.results['vm'])
-                import pdb; pdb.set_trace()
-                plt.plot(model.results['t'],snippets,label=str(v)+str(names[iterator])+str(score), color=color, linewidth=1)
-            else:
-                plt.plot(model.results['t'],model.results['vm'],label=str(v)+str(names[iterator])+str(score), color=color, linewidth=1)
+            #if k==0 or k ==4 or k == 5 or k == 6 or k == 7:
+            from neuronunit.capabilities import spike_functions
+            import quantities as pq
+            dt = model.results['t'][1] - model.results['t'][0]
+            dt = dt*pq.s
+            from neo import AnalogSignal
+            vm = AnalogSignal(model.results['vm'],units=pq.V,sampling_rate=1.0/dt)
+            #import pdb; pdb.set_trace()
+            print(spike_functions.get_spike_waveforms(vm))
+            print(spike_functions.get_spike_train(vm))
+            print(model.get_spike_count())
+
+            snippets = spike_functions.get_spike_waveforms(vm)#['vm'])
+            #plt.plot(model.results['t'],snippets,label=str(v)+str(score), color=color, linewidth=1)
+        #else:
+            plt.plot(model.results['t'],model.results['vm'],label=str(v)+str(score), color=color, linewidth=1)
 
             plt.xlim(0,float(v.params['injected_square_current']['duration']) )
             stored_min.append(np.min(model.results['vm']))
@@ -366,9 +377,7 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
             plt.xlabel('mS')
         plt.savefig(str('test_')+str(v)+'vm_versus_t.eps', format='eps', dpi=1200)
 
-        #import pandas as pd
-        #sf_best = pd.DataFrame(sc_for_frame_best)
-        #sf_worst = pd.DataFrame(sc_for_frame_worst)
+
 
 def surfaces(history,td):
 
