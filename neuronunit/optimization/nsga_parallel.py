@@ -129,7 +129,7 @@ class Individual(object):
         self.fitness=None
         self.lookup={}
         self.rheobase=None
-        self.fitness = creator.FitnessMax
+        self.fitness = creator.FitnessMin
 
 with dview.sync_imports():
 
@@ -285,26 +285,28 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     # To undo this step and substitute in normal NSGA function.
     # Substitute the block below with the one line:
     # fitness = pre_fitness
+    if unit_delta > 1:
+        for k,f in enumerate(copy.copy(pre_fitness)):
+            if k == 0:
+                fitness.append(unit_delta)
+            if k != 0:
+                fitness.append(pre_fitness[k] + 1.5 * unit_delta ) # add the rheobase error to all the errors.
+                assert fitness[k] != pre_fitness[k]
 
-    for k,f in enumerate(copy.copy(pre_fitness)):
-        if k == 0:
-            fitness.append(unit_delta)
-        if k != 0:
-            fitness.append(pre_fitness[k] + 1.5 * unit_delta ) # add the rheobase error to all the errors.
-            assert fitness[k] != pre_fitness[k]
+        pre_fitness = []
+        pre_fitness = copy.copy(fitness)
+        fitness = []
+    if pre_fitness[1] >1 :
+        for k,f in enumerate(copy.copy(pre_fitness)):
+            if k == 1:
+                fitness.append(f)
+            if k != 1:
+                fitness.append(pre_fitness[k] + 1.25 * f ) # add the rheobase error to all the errors.
+                assert fitness[k] != pre_fitness[k]
 
-    pre_fitness = []
-    pre_fitness = copy.copy(fitness)
-    fitness = []
-
-    for k,f in enumerate(copy.copy(pre_fitness)):
-        if k == 1:
-            fitness.append(f)
-        if k != 1:
-            fitness.append(pre_fitness[k] + 1.25 * f ) # add the rheobase error to all the errors.
-            assert fitness[k] != pre_fitness[k]
-
-    pre_fitness = []
+        pre_fitness = []
+    else:
+        fitness = pre_fitness
 
 
     return fitness[0],fitness[1],\
