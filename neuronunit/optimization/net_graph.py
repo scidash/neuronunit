@@ -301,7 +301,67 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
         sf_best = pd.DataFrame(sc_for_frame_best)
         sf_worst = pd.DataFrame(sc_for_frame_worst)
 
+def speed_up(not_optional_list):
+    import os
+    from neuronunit.models import backends
+    from neuronunit.models.reduced import ReducedModel
+    import quantities as pq
+    import numpy as np
+    import get_neab
+    from itertools import repeat
 
+    from neuronunit.capabilities import spike_functions
+    import quantities as pq
+    from neo import AnalogSignal
+    import matplotlib.pyplot as plt
+    tests = copy.copy(get_neab.tests)
+    the_ks = list(np.arange(0,len(tests),1))
+
+    def nested_function(not_optional_list,k):
+        for iterator, vms in enumerate(not_optional_list):
+            new_file_path = '{0}{1}'.format(str(get_neab.LEMS_MODEL_PATH),int(os.getpid()))
+            print(new_file_path)
+
+            os.system('cp ' + str(get_neab.LEMS_MODEL_PATH)+str(' ') + new_file_path)
+            model = ReducedModel(new_file_path,name='vanilla',backend='NEURON')
+            #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+            assert type(vms.rheobase) is not type(None)
+            if k == 0:
+                v.prediction = {}
+                v.prediction['value'] = vms.rheobase * pq.pA
+            if k != 0:
+                v.prediction = None
+
+            if k == 1 or k == 2 or k == 3:
+                # Negative square pulse current.
+                v.params['injected_square_current']['duration'] = 100 * pq.ms
+                v.params['injected_square_current']['amplitude'] = -10 *pq.pA
+                v.params['injected_square_current']['delay'] = 30 * pq.ms
+            if k == 0 or k ==4 or k == 5 or k == 6 or k == 7:
+                # Threshold current.
+                v.params['injected_square_current']['duration'] = 1000 * pq.ms
+                v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
+                v.params['injected_square_current']['delay'] = 100 * pq.ms
+            import neuron
+            model.reset_h(neuron)
+            model.load_model()
+            model.update_run_params(vms.attrs)
+            print(v.params)
+            score = v.judge(model,stop_on_error = False, deep_error = True)
+            dt = model.results['t'][1] - model.results['t'][0]
+            dt = dt*pq.s
+            v_m = AnalogSignal(copy.copy(model.results['vm'].to_python()),units=pq.V,sampling_rate=1.0/dt)
+            ts = copy.copy(model.results['t'].to_python()) # time signal
+            vms.results['ts'] = ts
+            vms.results['v_m'] = v_m
+            not_optional_list[iterator] = vms
+            ts = None
+            v_m = None
+            model.results = None
+        return not_optional_list
+        not_optional_list = dview.map_sync(nested_function,not_optional_list,the_ks)
+        assert type(not_optional_list[0].results['v_m']) is not type(None)
+    return not_optional_list
 
 def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipyparallel to work.
     '''
@@ -339,7 +399,7 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
         import matplotlib.pyplot as plt
         plt.clf()
         plt.style.use('ggplot')
-	# following variables possibly are
+     	# following variables possibly are
         # going to become depreciated
         stored_min = []
         stored_max = []
@@ -500,7 +560,7 @@ def not_just_mean(log,hypervolumes):
     fig.tight_layout()
     fig.savefig('Izhikevich_evolution_just_mean.eps', format='eps', dpi=1200)
 
-def prep_bar_chart(vms,name=None):
+def bar_chart(vms,name=None):
 
     import plotly.plotly as py
     from plotly.graph_objs import Bar
@@ -622,12 +682,14 @@ def prep_bar_chart(vms,name=None):
 
     threed = []
     for k,v in test_dic.items():
-        #columns1.append(str(k))
 		# these v[0] ... v[2], types
 		# may need to be cast to float
 		# for panda ie float(v[0]) etc.
 		# hopefuly not though.
         threed.append((v[0],v[1],v[2]))
+
+    # What if the data was normalized first?
+    X_std = StandardScaler().fit_transform(threed)
 
     trans = np.array(threed)
     stacked = np.column_stack(trans)
@@ -646,21 +708,6 @@ def prep_bar_chart(vms,name=None):
 
     df.iplot(kind='bar', barmode='stack', yTitle='NeuronUnit Test Agreement', title='test agreement', filename='grouped-bar-chart')
 
-
-    #py.iplot(fig, filename='improved_names.svg',image='svg')
-    '''
-    traces.append(Bar(x=float(unit_observations),
-                      y=float(unit_predictions),
-                      name=labels[k],
-                      marker=dict(color='#ffcdd2')))
-
-    data = traces#[trace_rheobase, trace_test1, trace_test2]
-    layout = Layout(title="Experimental Observations, Versus Model Predictions",
-                    xaxis=dict(title='Test Type'),
-                    yaxis=dict(title='Agreement'))
-    fig = Figure(data=data, layout=layout)
-    py.iplot(fig, filename='obs_pred_tests.svg')
-    '''
     return test_dic
 
 
