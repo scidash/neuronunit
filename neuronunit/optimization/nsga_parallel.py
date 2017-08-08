@@ -263,7 +263,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
             v.params['injected_square_current']['duration'] = 100 * pq.ms
             v.params['injected_square_current']['amplitude'] = -10 *pq.pA
             v.params['injected_square_current']['delay'] = 30 * pq.ms
-        if k ==0 k == 4 or k == 5 or k == 6 or k == 7:
+        if k==0 or k == 4 or k == 5 or k == 6 or k == 7:
             # Threshold current.
             v.params['injected_square_current']['duration'] = 1000 * pq.ms
             v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
@@ -299,15 +299,15 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
     model.run_number += 1
     model.rheobase = vms.rheobase * pq.pA
-
-
+    fitness = pre_fitness
+    '''
     for k,f in enumerate(pre_fitness):
         if k == 0:
             fitness.append(unit_delta)
         if k != 0:
             fitness.append(pre_fitness[k] + 1.5 *unit_delta ) # add the rheobase error to all the errors.
             assert fitness[k] != pre_fitness[k]
-
+    '''
     return fitness[0],fitness[1],\
            fitness[2],fitness[3],\
            fitness[4],fitness[5],\
