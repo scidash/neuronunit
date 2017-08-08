@@ -684,9 +684,13 @@ quads = []
 for k in range(1,9):
     for i,j in enumerate(td):
         print(i,k)
+        # The second condition that
+        # Is just to sparsify which surfaces are obtained, since this takes a long time,
+        # I only need verification that it works
         if i+k < 10:
             quads.append((td[i],td[i+k],i,i+k))
-for q in quads:
+qs = quads[-3:-1]            
+for q in qs:
     pair2surface(q[0],q[1],q[2],q[3])
 
 import net_graph
