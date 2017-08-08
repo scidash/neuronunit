@@ -135,9 +135,11 @@ def best_worst(history):
         if np.sum(v.fitness.values) == minimumb:
             best.append(v)
     return best[0], worst[0]
+
+
 def pca(best_worst,vmpop,fitnesses,td):
 
-def pca(final_population,vmpop,td):
+#def pca(final_population,vmpop,td):
 
     '''
     Principle Component Analysis.
