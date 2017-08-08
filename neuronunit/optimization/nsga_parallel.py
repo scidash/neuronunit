@@ -15,17 +15,8 @@ import os
 import ipyparallel as ipp
 from ipyparallel import depend, require, dependent
 
-
-
-
-
-#if ipython:
-#%load_ext autoreload
-#%autoreload 2
 get_ipython().magic('load_ext autoreload')
 get_ipython().magic('autoreload 2')
-
-
 
 rc = ipp.Client(profile='default')
 THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
@@ -36,7 +27,7 @@ from deap.benchmarks.tools import diversity, convergence, hypervolume
 rc[:].use_cloudpickle()
 inv_pid_map = {}
 dview = rc[:]
-lview = rc.load_balanced_view()
+#lview = rc.load_balanced_view()
 ar = rc[:].apply_async(os.getpid)
 pids = ar.get_dict()
 inv_pid_map = pids
@@ -249,9 +240,12 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
             v.params['injected_square_current']['delay'] = 100 * pq.ms
 
 
-        score = v.judge(model,stop_on_error = False, deep_error = True)
 
-        if k == 0 and float(vms.rheobase) > 0:# and type(score) is not scores.InsufficientDataScore(None):
+        if k == 0 and float(vms.rheobase) > 0.0:# and type(score) is not scores.InsufficientDataScore(None):
+            # score needs rheobase to be at least over 0pA current injection
+            # otherwise it will fail on attempt.
+            score = v.judge(model,stop_on_error = False, deep_error = True)
+
             if 'value' in v.observation.keys():
                 unit_observations = v.observation['value']
 
