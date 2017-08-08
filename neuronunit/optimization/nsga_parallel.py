@@ -16,38 +16,17 @@ import ipyparallel as ipp
 from ipyparallel import depend, require, dependent
 
 
-import cProfile
-import atexit
-import os,sys
-
 
 
 
 #if ipython:
 #%load_ext autoreload
 #%autoreload 2
+get_ipython().magic('load_ext autoreload')
+get_ipython().magic('autoreload 2')
 
-def ProfExit(p):
-   '''
-   http://seiferteric.com/?p=277
-   So what does this do? It imports the profiler and the atexit module.
-   It creates an instance of the profiler, registers with atexit to stop the profiler and dump the stats
-   to a file named with the process
-   ID of that python process, and finally starts the profiler.
-   So every python process run on the system will now be profiled! FYI,
-   the stats won’t get dumped until the process exits,
-   so make sure you stop all of them.
-   '''
-   p.disable()
-   prof_f_name = '{0}'.format(os.getpid())
-   #Open and close the file, as a quick and dirty way to confirm that exists.
-   f = open('NeuroML2/%s'%prof_f_name,'wb')
-   f.close()
 
-   p.dump_stats('NeuroML2/%s'%prof_f_name)
-profile_hook = cProfile.Profile()
-atexit.register(ProfExit, profile_hook)
-profile_hook.enable()
+
 rc = ipp.Client(profile='default')
 THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
 this_nu = os.path.join(THIS_DIR,'../../')
@@ -271,12 +250,6 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
 
         score = v.judge(model,stop_on_error = False, deep_error = True)
-
-        # Only get the delta score as a 
-	# a substitute for the rheobase neuronunit test
-        # which is either not very reliable,
-        # or too hard to understand without digging in
-        # and trying to implement something yourself
 
         if k == 0 and float(vms.rheobase) > 0:# and type(score) is not scores.InsufficientDataScore(None):
             if 'value' in v.observation.keys():
@@ -784,11 +757,7 @@ while (gen < NGEN and means[-1] > 0.05):
             print('what do the weights without values look like? {0}'.format(ind.fitness.weights))
             print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues))
             print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid))
-    
-    # Very rarely the mean error will increase
-    # Instead of decreasing
-    # the explanation for this is related to the exploration vs exploitation
-    # trade off.
+
     # Its possible that the offspring are worse than the parents of the penultimate generation
     # Its very likely for an offspring population to be less fit than their parents when the pop size
     # is less than the number of parameters explored. However this effect should stabelize after a
@@ -841,7 +810,7 @@ net_graph.shadow(vmoffspring,best_worst[0])
 net_graph.plotly_graph(history,vmhistory)
 #net_graph.graph_s(history)
 net_graph.plot_log(logbook)
-net_graph.just_mean(logbook)
+net_graph.not_just_mean(hvolumes,logbook)
 net_graph.plot_objectives_history(logbook)
 
 #Although the pareto front surely contains the best candidate it cannot contain the worst, only history can.
@@ -862,8 +831,8 @@ net_graph.prep_bar_chart(best_worst[0])
 
 #test_dic = bar_chart(best_worst[0])
 net_graph.plot_evaluate( best_worst[0],best_worst[1])
-net_graph.plot_db(best_worst[0],name='best')
-net_graph.plot_db(best_worst[1],name='worst')
+#net_graph.plot_db(best_worst[0],name='best')
+#net_graph.plot_db(best_worst[1],name='worst')
 '''
 os.system('conda install cufflinks')
 

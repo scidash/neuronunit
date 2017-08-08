@@ -115,7 +115,7 @@ def plotly_graph(history,vmhistory):
 
 def best_worst(history):
     '''
-    Query the GA's DEAP history object to get the worst candidate ever evaluated.
+    Query the GA's DEAP history object to get the  best and worst candidates ever evaluated.
 
     inputs DEAP history object
     best output should be the same as the first index of the ParetoFront list (pf[0]).
@@ -137,11 +137,22 @@ def best_worst(history):
     return best[0], worst[0]
 
 def pca(final_population,vmpop,td):
+
+    '''
+    Principle Component Analysis.
+    Use PCA to find out which of the model parameters are
+    the most resonsible for causing variations in error/fitness
+    '''
+
     import plotly
     import plotly.plotly as py
     from plotly.graph_objs import Scatter, Marker, Line, Data, Layout, Figure, XAxis, YAxis
     from sklearn.preprocessing import StandardScaler
-    X_std = StandardScaler().fit_transform(pop)
+    # Note final population is only the evolved gene population (a set of refined model parameters)
+    # What we really want is some way to relate final_population to error.
+    fitnesses = [ np.sum(fp.finesses) for fp in final_population ]
+
+    X_std = StandardScaler().fit_transform(final_population)
     from sklearn.decomposition import PCA as sklearnPCA
     sklearn_pca = sklearnPCA(n_components=10)
     Y_sklearn = sklearn_pca.fit_transform(X_std)
@@ -293,27 +304,36 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
     import get_neab
     from itertools import repeat
 
+    from neuronunit.capabilities import spike_functions
+    import quantities as pq
+    from neo import AnalogSignal
+    import matplotlib.pyplot as plt
+
     color='lightblue'
     not_optional_list.append(best_vm)
 
     import copy
     tests = copy.copy(get_neab.tests)
     for k,v in enumerate(tests):
-        import matplotlib.pyplot as plt
         plt.clf()
         plt.style.use('ggplot')
+
+        # probably going to become depreciated
         stored_min = []
         stored_max = []
         sc_for_frame_best = []
         sc_for_frame_worst = []
 
-
+        #stimes = []
+        sindexs = []
         for iterator, vms in enumerate(not_optional_list):
 
             if vms is not_optional_list[-1]:
                 color = 'blue'
-            if iterator == len(not_optional_list):
+            elif iterator == len(not_optional_list):
                 color = 'blue'
+            else:
+                color = 'lightblue'
 
             #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
             model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
@@ -334,7 +354,7 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
             if k == 0 or k ==4 or k == 5 or k == 6 or k == 7:
                 # Threshold current.
                 v.params['injected_square_current']['duration'] = 1000 * pq.ms
-                v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
+                v.params['injected_square_current']['amplitude'] = vms.rheobase  * pq.pA
                 v.params['injected_square_current']['delay'] = 100 * pq.ms
             import neuron
             model.reset_h(neuron)
@@ -343,32 +363,43 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
             print(v.params)
             score = v.judge(model,stop_on_error = False, deep_error = True)
 
-            #if k==0 or k ==4 or k == 5 or k == 6 or k == 7:
-            from neuronunit.capabilities import spike_functions
-            import quantities as pq
-            dt = model.results['t'][1] - model.results['t'][0]
-            dt = dt*pq.s
-            from neo import AnalogSignal
-            vm = AnalogSignal(model.results['vm'],units=pq.V,sampling_rate=1.0/dt)
-            #import pdb; pdb.set_trace()
-            print(spike_functions.get_spike_waveforms(vm))
-            print(spike_functions.get_spike_train(vm))
-            print(model.get_spike_count())
+            if k == 0 or k ==4 or k == 5 or k == 6 or k == 7:
 
-            snippets = spike_functions.get_spike_waveforms(vm)#['vm'])
-            #plt.plot(model.results['t'],snippets,label=str(v)+str(score), color=color, linewidth=1)
+                dt = model.results['t'][1] - model.results['t'][0]
+                dt = dt*pq.s
+                v_m = AnalogSignal(model.results['vm'],units=pq.V,sampling_rate=1.0/dt)
+                ts = model.results['t'] # time signal
+                st = spike_functions.get_spike_train(v_m) #spike times
+                if model.get_spike_count() == 1:
+                    print(st)
+                    assert len(st) == 1
+                    # st = float(st)
+                    # get the approximate integer index into the array of membrane potential corresponding to when the spike time
+                    # occurs, and store it in a list
+                    # minimums and maximums of this list will be calculated on a piecemeal basis.
 
-            plt.plot(model.results['t'],model.results['vm'],label=str(v)+str(score), color=color, linewidth=1)
+                    stored_min.append(np.min(model.results['vm']))
+                    stored_max.append(np.max(model.results['vm']))
+                    sindexs.append(int((float(st)/ts[-1])*len(ts)))
+                    time_sequence = np.arange(np.min(sindexs)-5 , np.max(sindexs)+5, 1)
+                    ptvec = np.array(model.results['t'])[time_sequence]
+                    pvm = np.array(model.results['vm'])[time_sequence]
+                    plt.plot(ptvec, pvm,label=str(v)+str(score), color=color, linewidth=1)
+                    plt.xlim(np.min(sindexs)-11,np.min(sindexs)+11 )
+                    plt.ylim(np.min(stored_min)-4,np.max(stored_max)+4)
 
-            plt.xlim(0,float(v.params['injected_square_current']['duration']) )
-            stored_min.append(np.min(model.results['vm']))
-            stored_max.append(np.max(model.results['vm']))
-            plt.ylim(np.min(stored_min),np.max(stored_max))
-            plt.tight_layout()
-            model.results = None
-            plt.ylabel('$V_{m}$ mV')
-            plt.xlabel('mS')
-        plt.savefig(str('test_')+str(v)+'vm_versus_t.eps', format='eps', dpi=1200)
+            else:
+                stored_min.append(np.min(model.results['vm']))
+                stored_max.append(np.max(model.results['vm']))
+                plt.plot(model.results['t'],model.results['vm'],label=str(v)+str(score), color=color, linewidth=1)
+                plt.xlim(0,float(v.params['injected_square_current']['duration']) )
+                plt.ylim(np.min(stored_min)-4,np.max(stored_max)+4)
+                model.results = None
+        #inside the tests loop but outside the model loop.
+        #plt.tight_layout()
+        plt.ylabel('$V_{m}$ mV')
+        plt.xlabel('mS')
+        plt.savefig(str('test_')+str(v)+'vm_versus_t.png')#, format='eps', dpi=1200)
 
 
 
@@ -414,7 +445,7 @@ def load_data():
 
 
 
-def just_mean(log):
+def not_just_mean(log,hypervolumes):
     '''
     https://github.com/BlueBrain/BluePyOpt/blob/master/examples/graupnerbrunelstdp/run_fit.py
     Input: DEAP Plot logbook
@@ -474,7 +505,7 @@ def prep_bar_chart(vms,name=None):
     import copy
     from itertools import repeat
     #TODO move install into docker
-    os.system('conda install cufflinks')
+    os.system('sudo /opt/conda/bin/pip install cufflinks')
 
     import plotly.tools as tls
     tls.embed('https://plot.ly/~cufflinks/8')
@@ -582,8 +613,8 @@ def prep_bar_chart(vms,name=None):
     df = pd.DataFrame(np.transpose(np.array(stacked)), columns=columns1)
     df.index = ['observation','prediction','difference']
     df = df.transpose()
-    df = df.loc['CapacitanceTest1.0 F'] *= 10**9
-    df = df.loc['CapacitanceTest1.0 F'] *= 10**-9
+    df.loc['CapacitanceTest1.0 F'] *= 10 ** 9
+    df.loc['InputResistanceTest1.0 ohm'] *= 10 **-9
     #df = df.drop(['InputResistanceTest1.0 ohm'])
     #df.index(['CapacitanceTest1.0 F'])
     py.sign_in('RussellJarvis','FoyVbw7Ry3u4N2kCY4LE')
