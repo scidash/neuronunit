@@ -526,11 +526,11 @@ def prep_bar_chart(vms,name=None):
     from itertools import repeat
     #TODO move install into docker
     os.system('sudo /opt/conda/bin/pip install cufflinks')
+    import cufflinks as cf
 
     import plotly.tools as tls
     tls.embed('https://plot.ly/~cufflinks/8')
 
-    import cufflinks as cf
     import pandas as pd
     traces = []
 
