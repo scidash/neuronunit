@@ -15,8 +15,9 @@ import os
 import ipyparallel as ipp
 from ipyparallel import depend, require, dependent
 
-get_ipython().magic('load_ext autoreload')
-get_ipython().magic('autoreload 2')
+# crashes import
+#get_ipython().magic('load_ext autoreload')
+#get_ipython().magic('autoreload 2')
 
 rc = ipp.Client(profile='default')
 THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
@@ -384,45 +385,6 @@ def update_vm_pop(pop, trans_dict):
         vmpop = transform(pop)
     return vmpop
 
-
-def update_vm_existing(pop, vmpop, trans_dict):
-    '''
-    inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
-    outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
-    Rationale, not every gene value will result in a model for which rheobase is found, in which case that gene is discarded, however to
-    compensate for losses in gene population size, more gene samples must be tested for a successful return from a rheobase search.
-    If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
-    corresponding virtual model objects.
-    '''
-    from itertools import repeat
-    import numpy as np
-    import copy
-    pop = [toolbox.clone(i) for i in pop ]
-
-    def transform(ind,vm):
-        '''
-        Re instanting Virtual Model at every update vmpop
-        is Noneifying its score attribute, and possibly causing a
-        performance bottle neck.
-        '''
-
-        param_dict = {}
-        for i,j in enumerate(ind):
-            param_dict[trans_dict[i]] = str(j)
-        vm.attrs = param_dict
-        vm.name = vm.attrs
-        vm.evaluated = False
-        return vm
-
-    if len(pop) > 1:
-        vmpop = dview.map_sync(transform, pop, vmpop)
-        vmpop = list(copy.copy(vmpop))
-    else:
-        # In this case pop is not really a population but an individual
-        # but parsimony of naming variables
-        # suggests not to change the variable name to reflect this.
-        vmpop = transform(pop,vmpop)
-    return vmpop
 
 
 def check_rheobase(vmpop,pop=None):
@@ -794,10 +756,16 @@ while (gen < NGEN and means[-1] > 0.05):
                                                         np.sum(np.mean(pf[0].fitness.values)),\
                                                         pf_mean))
 
+import net_graph
+best, worst = net_graph.best_worst(history)
+listss = [best , worst]
+best_worst = update_vm_pop(listss,td)
+rheobase_values = [v.rheobase for v in vmoffspring ]
+vmhistory = update_vm_pop(history.genealogy_history.values(),td)
 
 import pickle
 with open('complete_dump.p','wb') as handle:
-   pickle.dump([vmoffspring,history,logbook],handle)
+   pickle.dump([vmoffspring,history,logbook,rheobase_values,best_worst,vmhistory],handle)
 
 lists = pickle.load(open('complete_dump.p','rb'))
 vmoffspring2,history2,logbook2 = lists[0],lists[1],lists[2]
