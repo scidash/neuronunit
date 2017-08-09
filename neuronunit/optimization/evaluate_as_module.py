@@ -14,13 +14,12 @@ import sys
 import os
 import ipyparallel as ipp
 from ipyparallel import depend, require, dependent
-#
+from IPython.lib.deepreload import reload
 
 # crashes import
 #get_ipython().magic('load_ext autoreload')
 #get_ipython().magic('autoreload 2')
-# more badness
-#from IPython.lib.deepreload import reload
+
 rc = ipp.Client(profile='default')
 THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
 this_nu = os.path.join(THIS_DIR,'../../')
@@ -267,7 +266,13 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
             pre_fitness.append(float(unit_delta))
         if float(vms.rheobase) <=0 :
-            pre_fitness.append(100.0)
+            #first_entrance = True:
+            big_relative_error = np.mean(np.array(logbook.select('max')))
+            std = np.mean(np.array(logbook.select('std')))
+            big_relative_error += 2*std
+            # since this contributes to max and standard error it will mean it keeps growing each time it is called.
+            assert len(big_relative_error)==1
+            pre_fitness.append(float(big_relative_error))
         else:
             score = v.judge(model,stop_on_error = False, deep_error = True)
             pre_fitness.append(float(score.sort_key))
@@ -294,10 +299,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
         pre_fitness = []
         pre_fitness = copy.copy(fitness)
         fitness = []
-    else:
-        fitness = pre_fitness
-
-    if pre_fitness[1] > 10.0 :
+    if pre_fitness[1] >10.0 :
         for k,f in enumerate(copy.copy(pre_fitness)):
             if k == 1:
                 fitness.append(f)
@@ -628,13 +630,11 @@ pop = [ toolbox.clone(i) for i in pop ]
 vmpop = update_vm_pop(pop, td)
 
 vmpop , _ = check_rheobase(vmpop)
-
-
-rh_values_unevolved = [v.rheobase for v in vmpop ]
-new_checkpoint_path = str('un_evolved')+str('.p')
+print([v.rheobase for v in vmpop ])
+new_checkpoint_path = str('rh_checkpoint')+str('.p')
 import pickle
 with open(new_checkpoint_path,'wb') as handle:#
-    pickle.dump([vmpop,rh_values_unevolved], handle)
+    pickle.dump(vmpop, handle)
 
 
 # sometimes done in serial in order to get access to opaque stdout/stderr
@@ -643,11 +643,7 @@ with open(new_checkpoint_path,'wb') as handle:#
 #   fitnesses.append(evaluate(v))
 
 import copy
-
-import evaluate_as_module
-fitnesses = dview.map_sync(evaluate_as_module.evaluate, copy.copy(vmpop))
-
-#fitnesses = dview.map_sync(evaluate, copy.copy(vmpop))
+fitnesses = dview.map_sync(evaluate, copy.copy(vmpop))
 print(fitnesses)
 for ind, fit in zip(pop, fitnesses):
     ind.fitness.values = fit
@@ -683,149 +679,89 @@ rh_mean_status = np.mean([ v.rheobase for v in vmpop ])
 rhdiff = difference(rh_mean_status * pq.pA)
 print(rhdiff)
 verbose = True
-while (gen < NGEN and means[-1] > 0.05):
-    # Although the hypervolume is not actually used here, it can be used
-    # As a terminating condition.
-    hvolumes.append(hypervolume(pf))
-    gen += 1
-    print(gen)
-    offspring = tools.selNSGA2(pop, len(pop))
-    if verbose:
-        for ind in offspring:
-            print('what do the weights without values look like? {0}'.format(ind.fitness.weights[0]))
-            print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues[0]))
-            #print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid[0]))
-            print(rhdiff)
-    offspring = [toolbox.clone(ind) for ind in offspring]
-
-    for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
-        if random.random() <= CXPB:
-            toolbox.mate(ind1, ind2)
-        toolbox.mutate(ind1)
-        toolbox.mutate(ind2)
-        # deleting the fitness values is what renders them invalid.
-        # The invalidness is used as a flag for recalculating them.
-        # Their fitneess needs deleting since the attributes which generated these values have been mutated
-        # and hence they need recalculating
-        # Mutation also implies breeding, if a gene is mutated it was also recently recombined.
-        del ind1.fitness.values, ind2.fitness.values
-
-    invalid_ind = []
-    for ind in offspring:
-        if ind.fitness.valid == False:
-            invalid_ind.append(ind)
-    # Need to make sure that update_vm_pop does not replace instances of the same model
-    # Thus waisting computation.
-    vmoffspring = update_vm_pop(copy.copy(invalid_ind), trans_dict) #(copy.copy(invalid_ind), td)
-    vmoffspring , _ = check_rheobase(copy.copy(vmoffspring))
-    rh_mean_status = np.mean([ v.rheobase for v in vmoffspring ])
-    rhdiff = difference(rh_mean_status * pq.pA)
-    print('the difference: {0}'.format(difference(rh_mean_status * pq.pA)))
-    # sometimes fitness is assigned in serial, although slow gives access to otherwise hidden
-    # stderr/stdout
-    # fitnesses = []
-    # for v in vmoffspring:
-    #    fitness.append(evaluate(v))
-    import evaluate_as_module
-
-    fitnesses = list(dview.map_sync(evaluate_as_module.evaluate, copy.copy(vmoffspring)))
-    mf = np.mean(fitnesses)
-
-    for ind, fit in zip(copy.copy(invalid_ind), fitnesses):
-        ind.fitness.values = fit
+def evolve():
+    while (gen < NGEN and means[-1] > 0.05):
+        # Although the hypervolume is not actually used here, it can be used
+        # As a terminating condition.
+        hvolumes.append(hypervolume(pf))
+        gen += 1
+        print(gen)
+        offspring = tools.selNSGA2(pop, len(pop))
         if verbose:
-            print('what do the weights without values look like? {0}'.format(ind.fitness.weights))
-            print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues))
-            print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid))
+            for ind in offspring:
+                print('what do the weights without values look like? {0}'.format(ind.fitness.weights[0]))
+                print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues[0]))
+                #print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid[0]))
+                print(rhdiff)
+        offspring = [toolbox.clone(ind) for ind in offspring]
 
-    # Its possible that the offspring are worse than the parents of the penultimate generation
-    # Its very likely for an offspring population to be less fit than their parents when the pop size
-    # is less than the number of parameters explored. However this effect should stabelize after a
-    # few generations, after which the population will have explored and learned significant error gradients.
-    # Selecting from a gene pool of offspring and parents accomodates for that possibility.
-    # There are two selection stages as per the NSGA example.
-    # https://github.com/DEAP/deap/blob/master/examples/ga/nsga2.py
-    # pop = toolbox.select(pop + offspring, MU)
+        for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
+            if random.random() <= CXPB:
+                toolbox.mate(ind1, ind2)
+            toolbox.mutate(ind1)
+            toolbox.mutate(ind2)
+            # deleting the fitness values is what renders them invalid.
+            # The invalidness is used as a flag for recalculating them.
+            # Their fitneess needs deleting since the attributes which generated these values have been mutated
+            # and hence they need recalculating
+            # Mutation also implies breeding, if a gene is mutated it was also recently recombined.
+            del ind1.fitness.values, ind2.fitness.values
 
-    # keys = history.genealogy_tree.keys()
-    # Grab evaluated history items and chuck them into the mixture.
-    # We want to select among the best from the whole history of the GA, not just penultimate and present generations.
-    # all_hist = [ history.genealogy_history[i] for i in keys if history.genealogy_history[i].fitness.valid == True ]
-    # pop = tools.selNSGA2(offspring + all_hist, MU)
+        invalid_ind = []
+        for ind in offspring:
+            if ind.fitness.valid == False:
+                invalid_ind.append(ind)
+        # Need to make sure that update_vm_pop does not replace instances of the same model
+        # Thus waisting computation.
+        vmoffspring = update_vm_pop(copy.copy(invalid_ind), trans_dict) #(copy.copy(invalid_ind), td)
+        vmoffspring , _ = check_rheobase(copy.copy(vmoffspring))
+        rh_mean_status = np.mean([ v.rheobase for v in vmoffspring ])
+        rhdiff = difference(rh_mean_status * pq.pA)
+        print('the difference: {0}'.format(difference(rh_mean_status * pq.pA)))
+        # sometimes fitness is assigned in serial, although slow gives access to otherwise hidden
+        # stderr/stdout
+        # fitnesses = []
+        # for v in vmoffspring:
+        #    fitness.append(evaluate(v))
+        fitnesses = list(dview.map_sync(toolbox.evaluate, copy.copy(vmoffspring)))
+        mf = np.mean(fitnesses)
 
-    pop = tools.selNSGA2(offspring + pop, MU)
+        for ind, fit in zip(copy.copy(invalid_ind), fitnesses):
+            ind.fitness.values = fit
+            if verbose:
+                print('what do the weights without values look like? {0}'.format(ind.fitness.weights))
+                print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues))
+                print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid))
 
-    record = stats.compile(pop)
-    history.update(pop)
+        # Its possible that the offspring are worse than the parents of the penultimate generation
+        # Its very likely for an offspring population to be less fit than their parents when the pop size
+        # is less than the number of parameters explored. However this effect should stabelize after a
+        # few generations, after which the population will have explored and learned significant error gradients.
+        # Selecting from a gene pool of offspring and parents accomodates for that possibility.
+        # There are two selection stages as per the NSGA example.
+        # https://github.com/DEAP/deap/blob/master/examples/ga/nsga2.py
+        # pop = toolbox.select(pop + offspring, MU)
 
-    logbook.record(gen=gen, evals=len(pop), **record)
-    pf.update([toolbox.clone(i) for i in pop])
-    means = np.array(logbook.select('avg'))
-    pf_mean = np.mean([ i.fitness.values for i in pf ])
+        # keys = history.genealogy_tree.keys()
+        # Grab evaluated history items and chuck them into the mixture.
+        # We want to select among the best from the whole history of the GA, not just penultimate and present generations.
+        # all_hist = [ history.genealogy_history[i] for i in keys if history.genealogy_history[i].fitness.valid == True ]
+        # pop = tools.selNSGA2(offspring + all_hist, MU)
 
+        pop = tools.selNSGA2(offspring + pop, MU)
 
-    # if the means are not decreasing at least as an overall trend something is wrong.
-    print('means from logbook: {0} from manual meaning the fitness: {1}'.format(means,mf))
-    print('means: {0} pareto_front first: {1} pf_mean {2}'.format(logbook.select('avg'), \
-                                                        np.sum(np.mean(pf[0].fitness.values)),\
-                                                        pf_mean))
+        record = stats.compile(pop)
+        history.update(pop)
 
-import net_graph
-best, worst = net_graph.best_worst(history)
-listss = [best , worst]
-best_worst = update_vm_pop(listss,td)
-best_worst , _ = check_rheobase(best_worst)
-rheobase_values = [v.rheobase for v in vmoffspring ]
-vmhistory = update_vm_pop(history.genealogy_history.values(),td)
-
-import pickle
-with open('complete_dump.p','wb') as handle:
-   pickle.dump([vmoffspring,history,logbook,rheobase_values,best_worst,vmhistory,hvolumes],handle)
-
-#lists = pickle.load(open('complete_dump.p','rb'))
-#vmoffspring2,history2,logbook2 = lists[0],lists[1],lists[2]
-
-import net_graph
-reload(net_graph)
-#vmhistory = update_vm_pop(history.genealogy_history.values(),td)
-#best, worst = net_graph.best_worst(history)
-#listss = [best , worst]
-#best_worst = update_vm_pop(listss,td)
-#best_worst , _ = check_rheobase(best_worst)
-best = vm
-unev = pickle.load(open('un_evolved.p','rb'))
-unev, rh_values_unevolved = unev[0], unev[1]
-for x,y in enumerate(unev):
-    y.rheobase = rh_values_unevolved[x]
-vmoffpsring.append(unev)
-net_graph.shadow(vmoffspring,best_worst[0])
-net_graph.plotly_graph(history,vmhistory)
-#net_graph.graph_s(history)
-net_graph.plot_log(logbook)
-net_graph.not_just_mean(hvolumes,logbook)
-net_graph.plot_objectives_history(logbook)
-
-#Although the pareto front surely contains the best candidate it cannot contain the worst, only history can.
-#best_ind_dict_vm = update_vm_pop(pf[0:2],td)
-#best_ind_dict_vm , _ = check_rheobase(best_ind_dict_vm)
+        logbook.record(gen=gen, evals=len(pop), **record)
+        pf.update([toolbox.clone(i) for i in pop])
+        means = np.array(logbook.select('avg'))
+        pf_mean = np.mean([ i.fitness.values for i in pf ])
 
 
-
-print(best_worst[0].attrs,' == ', best_ind_dict_vm[0].attrs, ' ? should be the same (eyeball)')
-print(best_worst[0].fitness.values,' == ', best_ind_dict_vm[0].fitness.values, ' ? should be the same (eyeball)')
-
-# This operation converts the population of virtual models back to DEAP individuals
-# Except that there is now an added 11th dimension for rheobase.
-# This is not done in the general GA algorithm, since adding an extra dimensionality that the GA
-# doesn't utilize causes a DEAP error, which is reasonable.
-
-net_graph.bar_chart(best_worst[0])
-net_graph.pca(final_population,vmpop,fitnesses,td)
-#test_dic = bar_chart(best_worst[0])
-net_graph.plot_evaluate( best_worst[0],best_worst[1])
-#net_graph.plot_db(best_worst[0],name='best')
-#net_graph.plot_db(best_worst[1],name='worst')
-
-net_graph.plot_evaluate( best_worst[0],best_worst[1])
-net_graph.plot_db(best_worst[0],name='best')
-net_graph.plot_db(best_worst[1],name='worst')
+        # if the means are not decreasing at least as an overall trend something is wrong.
+        print('means from logbook: {0} from manual meaning the fitness: {1}'.format(means,mf))
+        print('means: {0} pareto_front first: {1} pf_mean {2}'.format(logbook.select('avg'), \
+                                                            np.sum(np.mean(pf[0].fitness.values)),\
+                                                            pf_mean))
+    return pf_mean,means,logbook,history,pop,vmoffspring
