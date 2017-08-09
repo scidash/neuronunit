@@ -266,7 +266,11 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
             pre_fitness.append(float(unit_delta))
         if float(vms.rheobase) <=0 :
-            pre_fitness.append(100.0)
+            big_relative_error = np.mean(np.array(logbook.select('avg')))
+            std = np.mean(np.array(logbook.select('std')))
+            big_relative_error += 2*std
+            assert len(big_relative_error)==1
+            pre_fitness.append(float(big_relative_error))
         else:
             score = v.judge(model,stop_on_error = False, deep_error = True)
             pre_fitness.append(float(score.sort_key))
