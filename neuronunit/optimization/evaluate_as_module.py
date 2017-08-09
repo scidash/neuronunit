@@ -595,74 +595,6 @@ def check_rheobase(vmpop,pop=None):
 
 
 
-##
-# Start of the Genetic Algorithm
-# For good results, MU the size of the gene pool
-# should at least be as big as number of dimensions/model parameters
-# explored.
-##
-
-MU = 12
-NGEN = 18
-CXPB = 0.9
-
-import numpy as np
-pf = tools.ParetoFront()
-
-stats = tools.Statistics(lambda ind: ind.fitness.values)
-stats.register("min", np.min, axis=0)
-stats.register("max", np.max, axis=0)
-stats.register("avg", np.mean)
-stats.register("std", np.std)
-
-logbook = tools.Logbook()
-logbook.header = "gen", "evals", "min", "max", "avg", "std"
-
-dview.push({'pf':pf})
-trans_dict = get_trans_dict(param_dict)
-td = trans_dict
-dview.push({'trans_dict':trans_dict,'td':td})
-
-pop = toolbox.population(n = MU)
-
-pop = [ toolbox.clone(i) for i in pop ]
-
-vmpop = update_vm_pop(pop, td)
-
-vmpop , _ = check_rheobase(vmpop)
-print([v.rheobase for v in vmpop ])
-new_checkpoint_path = str('rh_checkpoint')+str('.p')
-import pickle
-with open(new_checkpoint_path,'wb') as handle:#
-    pickle.dump(vmpop, handle)
-
-
-# sometimes done in serial in order to get access to opaque stdout/stderr
-#fitnesses = []
-#for v in vmpop:
-#   fitnesses.append(evaluate(v))
-
-import copy
-fitnesses = dview.map_sync(evaluate, copy.copy(vmpop))
-print(fitnesses)
-for ind, fit in zip(pop, fitnesses):
-    ind.fitness.values = fit
-
-
-pop = tools.selNSGA2(pop, MU)
-# only update the history after crowding distance has been assigned
-history.update(pop)
-
-
-### After an evaluation of error its appropriate to display error statistics
-#pf = tools.ParetoFront()
-pf.update([toolbox.clone(i) for i in pop])
-hvolumes = []
-hvolumes.append(hypervolume(pf))
-
-record = stats.compile(pop)
-logbook.record(gen=0, evals=len(pop), **record)
-print(logbook.stream)
 
 def difference(unit_predictions):
     unit_observations = get_neab.tests[0].observation['value']
@@ -672,14 +604,79 @@ def difference(unit_predictions):
     print(unit_delta)
     return float(unit_delta)
 
-verbose = True
-means = np.array(logbook.select('avg'))
-gen = 1
-rh_mean_status = np.mean([ v.rheobase for v in vmpop ])
-rhdiff = difference(rh_mean_status * pq.pA)
-print(rhdiff)
-verbose = True
+
 def evolve():
+    ##
+    # Start of the Genetic Algorithm
+    # For good results, MU the size of the gene pool
+    # should at least be as big as number of dimensions/model parameters
+    # explored.
+    ##
+
+    MU = 12
+    NGEN = 18
+    CXPB = 0.9
+
+    import numpy as np
+    pf = tools.ParetoFront()
+
+    stats = tools.Statistics(lambda ind: ind.fitness.values)
+    stats.register("min", np.min, axis=0)
+    stats.register("max", np.max, axis=0)
+    stats.register("avg", np.mean)
+    stats.register("std", np.std)
+
+    logbook = tools.Logbook()
+    logbook.header = "gen", "evals", "min", "max", "avg", "std"
+
+    dview.push({'pf':pf})
+    trans_dict = get_trans_dict(param_dict)
+    td = trans_dict
+    dview.push({'trans_dict':trans_dict,'td':td})
+
+    pop = toolbox.population(n = MU)
+
+    pop = [ toolbox.clone(i) for i in pop ]
+
+    vmpop = update_vm_pop(pop, td)
+
+    vmpop , _ = check_rheobase(vmpop)
+    print([v.rheobase for v in vmpop ])
+    new_checkpoint_path = str('rh_checkpoint')+str('.p')
+    import pickle
+    with open(new_checkpoint_path,'wb') as handle:#
+        pickle.dump(vmpop, handle)
+
+
+    import copy
+    fitnesses = dview.map_sync(evaluate, copy.copy(vmpop))
+    print(fitnesses)
+    for ind, fit in zip(pop, fitnesses):
+        ind.fitness.values = fit
+
+
+    pop = tools.selNSGA2(pop, MU)
+    # only update the history after crowding distance has been assigned
+    history.update(pop)
+
+
+    ### After an evaluation of error its appropriate to display error statistics
+    #pf = tools.ParetoFront()
+    pf.update([toolbox.clone(i) for i in pop])
+    hvolumes = []
+    hvolumes.append(hypervolume(pf))
+
+    record = stats.compile(pop)
+    logbook.record(gen=0, evals=len(pop), **record)
+    print(logbook.stream)
+
+    verbose = True
+    means = np.array(logbook.select('avg'))
+    gen = 1
+    rh_mean_status = np.mean([ v.rheobase for v in vmpop ])
+    rhdiff = difference(rh_mean_status * pq.pA)
+    print(rhdiff)
+    verbose = True
     while (gen < NGEN and means[-1] > 0.05):
         # Although the hypervolume is not actually used here, it can be used
         # As a terminating condition.
