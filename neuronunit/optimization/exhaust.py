@@ -193,7 +193,6 @@ toolbox.register("select", tools.selNSGA2)
 
 
 
-
 def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     '''
     Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
@@ -633,7 +632,8 @@ def pair2surface(x,y,z,w):
     print([ (v.rheobase,v.attrs) for v in vmpop1])
 
     import copy
-    efitnesses = dview.map_sync(evaluate, copy.copy(vmpop1))
+    import evaluate_as_module
+    efitnesses = dview.map_sync(evaluate_as_module.evaluate, copy.copy(vmpop1))
 
     import pickle
     with open('complete_exhaust'+x+y+'.p','wb') as handle:
@@ -682,17 +682,30 @@ for k in range(1,9):
         print(i,k)
         if i+k < 10 and i!=k:
             quads.append((td[i],td[i+k],i,i+k))
-for k,q in enumerate(quads):
-    if k % 2 ==0:
-        # sample every second surface as this takes a while.
-        pair2surface(q[0],q[1],q[2],q[3])
+def sparsify_list_into_lists(quads):
+    one = [];  two = []; three = []; four = []
+    for k,q in enumerate(quads):
+        # divide into lists by every 4th surface as subsequent evaluation of each list takes a long time.
+        if k % 4 ==0:
+            one.append(q)
+        if k % 4 ==1:
+            two.append(q)
+        if k % 4 ==2:
+            three.append(q)
+        if k % 4 ==3:
+            four.append(q)
+    return one,two,three,four
 
-for k,q in enumerate(quads):
-    if k % 2 ==1:
-        # sample every second surface as this takes a while.
-        pair2surface(q[0],q[1],q[2],q[3])
-
-    #q = quads[-1]
+# evaluate broken lists, to strike the right balance between bulk processing, and staying in touch with output
+one,two,three,four = sparsify_list_into_lists(quads)
+for q in one:
+    pair2surface(q[0],q[1],q[2],q[3]) #splat argument expansion might work here.
+for q in two:
+    pair2surface(q[0],q[1],q[2],q[3]) #splat argument expansion might work here.
+for q in three:
+    pair2surface(q[0],q[1],q[2],q[3]) #splat argument expansion might work here.
+for q in four:
+    pair2surface(q[0],q[1],q[2],q[3]) #splat argument expansion might work here.
 
 import net_graph
 from IPython.lib.deepreload import reload
