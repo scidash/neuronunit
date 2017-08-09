@@ -1,5 +1,6 @@
 """Simulator backends for NeuronUnit models"""
 
+import sys
 import os
 import platform
 import time
@@ -7,6 +8,7 @@ import re
 import copy
 import tempfile
 import pickle
+import importlib
 
 import neuronunit.capabilities as cap
 import neuronunit.neuron.capabilities as cap_n
@@ -73,6 +75,7 @@ class DiskBackend(Backend):
             results = pickle.load(f)
         return results
 
+
 class jNeuroMLBackend(Backend):
     """Used for simulation with jNeuroML, a reference simulator for NeuroML"""
 
@@ -126,6 +129,7 @@ class NEURONBackend(Backend):
         #self.h.cvode.active(1)
         #pdb.set_trace()
         #self.h.cvode.active
+        print(1,self.orig_lems_file_path)
         super(NEURONBackend,self).init_backend(attrs)
 
     backend = 'NEURON'
@@ -164,7 +168,6 @@ class NEURONBackend(Backend):
         self.cvode = self.h.CVode()
         self.cvode.atol(tolerance)
 
-
     def set_integration_method(self, method = "fixed"):
         """Sets the simulation itegration method
         method: either "fixed" or "variable". Defaults to fixed.
@@ -175,7 +178,6 @@ class NEURONBackend(Backend):
         except:
             self.cvode = self.h.CVode()
             self.cvode.active(1 if method == "variable" else 0)
-
 
     def get_membrane_potential(self):
         """Must return a neo.core.AnalogSignal.
@@ -267,15 +269,18 @@ class NEURONBackend(Backend):
         #Create a pyhoc file using jneuroml to convert from NeuroML to pyhoc.
         #import the contents of the file into the current names space.
         def cond_load():
-            from neuronunit.tests.NeuroML2 import LEMS_2007One_nrn
-            self.reset_h(LEMS_2007One_nrn.neuron)
+            nrn_name = os.path.splitext(self.orig_lems_file_path)[0]
+            nrn_path,nrn_name = os.path.split(nrn_name)
+            sys.path.append(nrn_path)
+            nrn = importlib.import_module(nrn_name+'_nrn')
+            self.reset_neuron(nrn.neuron)
             #make sure mechanisms are loaded
-            modeldirname=os.path.dirname(self.orig_lems_file_path)
+            modeldirname = os.path.dirname(self.orig_lems_file_path)
             self.neuron.load_mechanisms(modeldirname)
             #import the default simulation protocol
-            from neuronunit.tests.NeuroML2.LEMS_2007One_nrn import NeuronSimulation
             #this next step may be unnecessary: TODO delete it and check.
-            self.ns = NeuronSimulation(self.tstop, dt=0.0025)
+            self.set_stop_time(1600*ms)
+            self.ns = nrn.NeuronSimulation(self.tstop, dt=0.0025)
             return self
 
         architecture = platform.machine()
