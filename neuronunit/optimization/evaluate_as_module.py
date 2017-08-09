@@ -266,9 +266,11 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
             pre_fitness.append(float(unit_delta))
         if float(vms.rheobase) <=0 :
-            big_relative_error = np.mean(np.array(logbook.select('avg')))
+            #first_entrance = True:
+            big_relative_error = np.mean(np.array(logbook.select('max')))
             std = np.mean(np.array(logbook.select('std')))
             big_relative_error += 2*std
+            # since this contributes to max and standard error it will mean it keeps growing each time it is called.
             assert len(big_relative_error)==1
             pre_fitness.append(float(big_relative_error))
         else:
