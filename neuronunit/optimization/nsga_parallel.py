@@ -760,6 +760,7 @@ import net_graph
 best, worst = net_graph.best_worst(history)
 listss = [best , worst]
 best_worst = update_vm_pop(listss,td)
+best_worst , _ = check_rheobase(best_worst)
 rheobase_values = [v.rheobase for v in vmoffspring ]
 vmhistory = update_vm_pop(history.genealogy_history.values(),td)
 
