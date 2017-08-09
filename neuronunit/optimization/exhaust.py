@@ -660,7 +660,6 @@ def pair2surface(x,y,z,w):
     ys = numpy.array([ind[1] for ind in matrix_fill])
     min_ys = ys[numpy.where(summed_ef == numpy.min(summed_ef))]
     min_xs = xs[numpy.where(summed_ef == numpy.min(summed_ef))]
-    plt.clf()
     fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
     trip_axis = ax_trip.tripcolor(xs,ys,summed_ef,20,norm=matplotlib.colors.LogNorm())
     #plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
@@ -673,6 +672,16 @@ def pair2surface(x,y,z,w):
     fig_trip.tight_layout()
     plt.legend()
     plt.savefig('2d_error_'+str(x)+str(y)+'surface.png')
+    plt.clf()
+    from matplotlib.colors import LogNorm
+    # C = some matrix
+    f = figure(figsize=(6.2,5.6))
+    ax = f.add_axes([0.17, 0.02, 0.72, 0.79])
+    axcolor = f.add_axes([0.90, 0.02, 0.03, 0.79])
+    im = ax.matshow(dfimshow, cmap=cm.gray_r, norm=LogNorm(vmin=0.01, vmax=1))
+    t = [0.01, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0]
+    f.colorbar(im, cax=axcolor, ticks=t, format='$%.2f$')
+    plt.imshow(dfimshow)
 
 # Do all of this in a big loop
 td = get_trans_dict(param_dict)
