@@ -14,12 +14,13 @@ import sys
 import os
 import ipyparallel as ipp
 from ipyparallel import depend, require, dependent
-from IPython.lib.deepreload import reload
+#
 
 # crashes import
 #get_ipython().magic('load_ext autoreload')
 #get_ipython().magic('autoreload 2')
-
+# more badness
+#from IPython.lib.deepreload import reload
 rc = ipp.Client(profile='default')
 THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
 this_nu = os.path.join(THIS_DIR,'../../')
@@ -293,7 +294,10 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
         pre_fitness = []
         pre_fitness = copy.copy(fitness)
         fitness = []
-    if pre_fitness[1] >10.0 :
+    else:
+        fitness = pre_fitness
+
+    if pre_fitness[1] > 10.0 :
         for k,f in enumerate(copy.copy(pre_fitness)):
             if k == 1:
                 fitness.append(f)
@@ -771,16 +775,17 @@ import pickle
 with open('complete_dump.p','wb') as handle:
    pickle.dump([vmoffspring,history,logbook,rheobase_values,best_worst,vmhistory,hvolumes],handle)
 
-lists = pickle.load(open('complete_dump.p','rb'))
-vmoffspring2,history2,logbook2 = lists[0],lists[1],lists[2]
+#lists = pickle.load(open('complete_dump.p','rb'))
+#vmoffspring2,history2,logbook2 = lists[0],lists[1],lists[2]
 
 import net_graph
 reload(net_graph)
-vmhistory = update_vm_pop(history.genealogy_history.values(),td)
-best, worst = net_graph.best_worst(history)
-listss = [best , worst]
-best_worst = update_vm_pop(listss,td)
-best_worst , _ = check_rheobase(best_worst)
+#vmhistory = update_vm_pop(history.genealogy_history.values(),td)
+#best, worst = net_graph.best_worst(history)
+#listss = [best , worst]
+#best_worst = update_vm_pop(listss,td)
+#best_worst , _ = check_rheobase(best_worst)
+best = vm
 unev = pickle.load(open('un_evolved.p','rb'))
 unev, rh_values_unevolved = unev[0], unev[1]
 for x,y in enumerate(unev):
