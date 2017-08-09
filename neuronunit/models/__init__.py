@@ -19,13 +19,12 @@ class LEMSModel(backends.Backend,
     """A generic LEMS model"""
 
     def __init__(self, LEMS_file_path=None, name=None, 
-                 backend=None, attrs=None):
-        """
-        LEMS_file_path: Path to LEMS file (an xml file).
-        name: Optional model name.
-        """
-
-        super(LEMSModel,self).__init__(name=name)
+                    backend='jNeuroML', attrs=None):
+        #for base in cls.__bases__:
+        #    sciunit.Model.__init__()
+        if name is None:
+            name = os.path.split(self.lems_file_path)[1].split('.')[0]
+        #sciunit.Modelsuper(LEMSModel,self).__init__(name=name)
         self.attrs = attrs if attrs else {}
         self.orig_lems_file_path = LEMS_file_path
         self.create_lems_file(name)
@@ -35,21 +34,27 @@ class LEMSModel(backends.Backend,
         self.last_run_params = None
         self.skip_run = False
         self.rerun = True # Needs to be rerun since it hasn't been run yet!
-        if name is None:
-            name = os.path.split(self.lems_file_path)[1].split('.')[0]
-
-    def __new__(cls, *args, **kwargs):
-        backend = 'jNeuroML' if 'backend' not in kwargs else kwargs['backend']
-        self = super().__new__(cls)
         self.set_backend(backend)
+        
+    def __new__(cls, *args, **kwargs):
+        """
+        LEMS_file_path: Path to LEMS file (an xml file).
+        name: Optional model name.
+        """
+        print("Calling new")
+        self  = super().__new__(cls)#, *args, **kwargs)
+        if 'fresh' in kwargs and not kwargs['fresh']:
+            self.set_backend(kwargs['backend'])
         return self
 
-    def __getnewargs__(self): # This method is required by pickle to know what 
+    def __getnewargs_ex__(self): # This method is required by pickle to know what 
                               # arguments to pass to __new__ when instances of 
                               # this class are eventually unpickled.  
                               # Otherwise __new__() will have no arguments.  
-        return (self.backend,) # A tuple containing the extra arguments to 
-                               # pass to __new__. 
+        # A tuple containing the extra args and kwargs to pass to __new__. 
+        return (tuple(), # No args
+                {'fresh':False, # Not fresh, i.e. restored from pickling
+                 'backend':self.backend})  # The backend to set.  
 
     def set_backend(self, backend):
         if isinstance(backend,str):
@@ -77,12 +82,13 @@ class LEMSModel(backends.Backend,
         if name in options:
             self.backend = name
             self._backend = options[name]()
-            # Add all of the backend's methods to the model instance
-            #self.__class__.__bases__ = tuple(set((self._backend.__class__,) + \
-            #                            self.__class__.__bases__))
-            if self._backend.__class__ not in self.__class__.__bases__:
-                self.__class__.__bases__ = (self._backend.__class__,) + \
-                                        self.__class__.__bases__
+            # Add all of the backend's methods to the model instance, 
+            # but remove base classes that are pure backends first, 
+            # so that new backends replace old backends.  
+            new_bases = tuple([b for b in self.__class__.__bases__ \
+                               if issubclass(b,sciunit.Model) or \
+                               not issubclass(b,backends.Backend)])
+            self.__class__.__bases__ = (self._backend.__class__,) + new_bases
         
         elif name is None:
             # The base class should not be called.
