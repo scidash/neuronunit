@@ -639,7 +639,11 @@ with open(new_checkpoint_path,'wb') as handle:#
 #   fitnesses.append(evaluate(v))
 
 import copy
-fitnesses = dview.map_sync(evaluate, copy.copy(vmpop))
+
+import evaluate_as_module
+fitnesses = dview.map_sync(evaluate_as_module.evaluate, copy.copy(vmpop))
+
+#fitnesses = dview.map_sync(evaluate, copy.copy(vmpop))
 print(fitnesses)
 for ind, fit in zip(pop, fitnesses):
     ind.fitness.values = fit
@@ -718,7 +722,9 @@ while (gen < NGEN and means[-1] > 0.05):
     # fitnesses = []
     # for v in vmoffspring:
     #    fitness.append(evaluate(v))
-    fitnesses = list(dview.map_sync(toolbox.evaluate, copy.copy(vmoffspring)))
+    import evaluate_as_module
+
+    fitnesses = list(dview.map_sync(evaluate_as_module.evaluate, copy.copy(vmoffspring)))
     mf = np.mean(fitnesses)
 
     for ind, fit in zip(copy.copy(invalid_ind), fitnesses):
