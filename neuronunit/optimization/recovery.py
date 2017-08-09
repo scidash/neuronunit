@@ -58,6 +58,8 @@ os.system('sudo /opt/conda/bin/pip install --upgrade networkx')
 cd = pickle.load(open('complete_dump.p','rb'))
 print(len(cd))
 
+unev = pickle.load(open('un_evolved.p','rb'))
+
 #unpack = [vmoffspring,history,logbook,rheobase_values,best_worst,vmhistory,hvolumes ]
 vmoffspring,history,logbook,rheobase_values,best_worst,vmhistory,hvolumes = cd[0], cd[1], cd[2], cd[3], cd[4], cd[5], cd[6]
 #from IPython import get_ipython
@@ -67,8 +69,12 @@ vmoffspring,history,logbook,rheobase_values,best_worst,vmhistory,hvolumes = cd[0
 
 import net_graph
 vmoffspring = net_graph.speed_up(vmoffspring)
-#print(vmhistory)
-#print(history)
+#print(vmoffspring[0].results['RheobaseTest']['ts'])
+#print(vmoffspring[0].results['InjectedCurrentAPAmplitudeTest']['v_m'])
+#print(vmoffspring[1].results['RheobaseTest']['ts'])
+#print(vmoffspring[1].results['InjectedCurrentAPAmplitudeTest']['v_m'])
+net_graph.plot_evaluate(best,worst,names=['best','worst'])
+
 net_graph.plotly_graph(history,vmhistory)
 best = best_worst[0]
 worst = best_worst[1]
@@ -76,13 +82,4 @@ net_graph.plot_log(logbook)
 net_graph.plot_objectives_history(logbook)
 net_graph.bar_chart(best)
 net_graph.not_just_mean(logbook,hvolumes)
-plot_evaluate(best,worst,names=['best','worst'])
 net_graph.shadow(vmoffspring,best_worst[0])
-
-#best, worst = net_graph.best_worst(history)
-#listss = [best , worst]
-
-#from nsga_parallel import update_vm_pop, check_rheobase
-
-#best_worst = update_vm_pop(listss,td)
-#best_worst , _ = check_rheobase(best_worst)

@@ -14,6 +14,7 @@ import sys
 import os
 import ipyparallel as ipp
 from ipyparallel import depend, require, dependent
+from IPython.lib.deepreload import reload
 
 # crashes import
 #get_ipython().magic('load_ext autoreload')
@@ -264,9 +265,10 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
             assert unit_delta == diff
 
             pre_fitness.append(float(unit_delta))
-        elif k == 0 and float(vms.rheobase) <=0 :
-            pre_fitness = 100.0
+        if float(vms.rheobase) <=0 :
+            pre_fitness.append(100.0)
         else:
+            score = v.judge(model,stop_on_error = False, deep_error = True)
             pre_fitness.append(float(score.sort_key))
 
     model.run_number += 1
@@ -280,7 +282,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     # To undo this step and substitute in normal NSGA function.
     # Substitute the block below with the one line:
     # fitness = pre_fitness
-    if unit_delta > 1:
+    if unit_delta > 10.0:
         for k,f in enumerate(copy.copy(pre_fitness)):
             if k == 0:
                 fitness.append(unit_delta)
@@ -291,7 +293,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
         pre_fitness = []
         pre_fitness = copy.copy(fitness)
         fitness = []
-    if pre_fitness[1] >1 :
+    if pre_fitness[1] >10.0 :
         for k,f in enumerate(copy.copy(pre_fitness)):
             if k == 1:
                 fitness.append(f)
@@ -622,11 +624,13 @@ pop = [ toolbox.clone(i) for i in pop ]
 vmpop = update_vm_pop(pop, td)
 
 vmpop , _ = check_rheobase(vmpop)
-print([v.rheobase for v in vmpop ])
-new_checkpoint_path = str('rh_checkpoint')+str('.p')
+
+
+rh_values_unevolved = [v.rheobase for v in vmpop ]
+new_checkpoint_path = str('un_evolved')+str('.p')
 import pickle
 with open(new_checkpoint_path,'wb') as handle:#
-    pickle.dump(vmpop, handle)
+    pickle.dump([vmpop,rh_values_unevolved], handle)
 
 
 # sometimes done in serial in order to get access to opaque stdout/stderr
@@ -771,13 +775,17 @@ lists = pickle.load(open('complete_dump.p','rb'))
 vmoffspring2,history2,logbook2 = lists[0],lists[1],lists[2]
 
 import net_graph
-from IPython.lib.deepreload import reload
 reload(net_graph)
 vmhistory = update_vm_pop(history.genealogy_history.values(),td)
 best, worst = net_graph.best_worst(history)
 listss = [best , worst]
 best_worst = update_vm_pop(listss,td)
 best_worst , _ = check_rheobase(best_worst)
+unev = pickle.load(open('un_evolved.p','rb'))
+unev, rh_values_unevolved = unev[0], unev[1]
+for x,y in enumerate(unev):
+    y.rheobase = rh_values_unevolved[x]
+vmoffpsring.append(unev)
 net_graph.shadow(vmoffspring,best_worst[0])
 net_graph.plotly_graph(history,vmhistory)
 #net_graph.graph_s(history)

@@ -256,42 +256,7 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
         sc_for_frame_best = []
         sc_for_frame_worst = []
         for iterator, vms in enumerate(vmslist):
-            new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-            model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
-            #model.load_model()
-            assert type(vms.rheobase) is not type(None)
-            #tests = get_neab.suite.tests
-            #model.update_run_params(vms.attrs)
-
-            if k == 0:
-                v.prediction = {}
-                v.prediction['value'] = vms.rheobase * pq.pA
-            if k != 0:
-                v.prediction = None
-
-            if k == 1 or k == 2 or k == 3:
-                # Negative square pulse current.
-                v.params['injected_square_current']['duration'] = 100 * pq.ms
-                v.params['injected_square_current']['amplitude'] = -10 *pq.pA
-                v.params['injected_square_current']['delay'] = 30 * pq.ms
-            if k==0 or k == 4 or k == 5 or k == 6 or k == 7:
-                # Threshold current.
-                v.params['injected_square_current']['duration'] = 1000 * pq.ms
-                v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
-                v.params['injected_square_current']['delay'] = 100 * pq.ms
-            import neuron
-            model.reset_h(neuron)
-            model.load_model()
-            model.update_run_params(vms.attrs)
-            print(v.params)
-            score = v.judge(model,stop_on_error = False, deep_error = True)
-            if iterator == 0:
-                sc_for_frame_best.append(score)
-            else:
-                sc_for_frame_worst.append(score)
-
-
-            plt.plot(model.results['t'],model.results['vm'],label=str(v)+str(names[iterator])+str(score))
+            plt.plot(vms.results[str(v)]['ts'],vms.results[str(v)]['v_m'])#,label=str(v)+str(names[iterator])+str(score))
             plt.xlim(0,float(v.params['injected_square_current']['duration']) )
             stored_min.append(np.min(model.results['vm']))
             stored_max.append(np.max(model.results['vm']))
@@ -305,35 +270,7 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
         sf_best = pd.DataFrame(sc_for_frame_best)
         sf_worst = pd.DataFrame(sc_for_frame_worst)
 
-'''
-class VirtualModel(object):
 
-    # This is a pickable dummy clone
-    # version of the NEURON simulation model
-    # It does not contain an actual model, but it can be used to
-    # wrap the real model.
-    # This Object class serves as a data type for storing rheobase search
-    # attributes and other useful parameters,
-    # with the distinction that unlike the NEURON model this class
-    # can be transported across HOSTS/CPUs
-
-    def __init__(self):
-        self.lookup = {}
-        self.rheobase = None
-        self.previous = 0
-        self.run_number = 0
-        self.attrs = None
-        self.steps = None
-        self.name = None
-        self.results = None
-        self.fitness = None
-        self.score = None
-        self.boolean = False
-        self.initiated = False
-        self.delta = []
-        self.evaluated = False
-        self.results = {}
-'''
 def speed_up(not_optional_list):
     import ipyparallel as ipp
 
@@ -371,7 +308,7 @@ def speed_up(not_optional_list):
         from neuronunit.models import backends
         from neuronunit.models.reduced import ReducedModel
         #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
-        model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+        model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
         tests = get_neab.tests
 
         v = tests[k]
@@ -404,28 +341,30 @@ def speed_up(not_optional_list):
 
         v_m = model.get_membrane_potential()
         ts = model.results['t']# time signal
-        vms.results[str(v)] ={}
+        if type(vms.results[str(v)]) is type(None):
+            vms.results[str(v)] = {}
         vms.results[str(v)]['ts'] = copy.copy(ts)
         vms.results[str(v)]['v_m'] = copy.copy(v_m)
         #not_optional_list[iterator] = vms
-        ts = None
-        v_m = None
-        model.results = None
+        #ts = None
+        #v_m = None
+        #model.results = None
         return vms
 
-    def nested_function(vms,k):
+    def nested_function(vms,the_ks):
         print(vms,k)
         from itertools import repeat
-        # per virtual models
         print(type(k))
         print(k)
-        vms = second_nesting(k,vms)
-        print(vms.results)
+        #for k in the_ks:
+        vms = list(map(second_nesting,the_ks,repeat(vms)))
+        #print(vms.results)
         return vms
-    not_optional_list = list(map(nested_function,not_optional_list,the_ks))
-    print([i.results for i in not_optional_list])
 
-    return not_optional_list2
+    from itertools import repeat
+    not_optional_list = list(dview.map_sync(nested_function,not_optional_list,repeat(the_ks)))
+
+    return not_optional_list
 
 def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipyparallel to work.
     '''
@@ -453,7 +392,7 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
     from neo import AnalogSignal
     import matplotlib.pyplot as plt
 
-    color='lightblue'
+    #color='lightblue'
     not_optional_list.append(best_vm)
 
     import copy
@@ -473,12 +412,12 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
         sindexs = []
         for iterator, vms in enumerate(not_optional_list):
 
-            if vms is not_optional_list[-1]:
-                color = 'blue'
-            elif iterator == len(not_optional_list):
-                color = 'blue'
-            else:
-                color = 'lightblue'
+            #if vms is not_optional_list[-1]:
+            #    color = 'blue'
+            #elif iterator == len(not_optional_list):
+            #    color = 'blue'
+            #else:
+            #    color = 'lightblue'
             from neuronunit.models import backends
             from neuronunit.models.reduced import ReducedModel
 
@@ -539,14 +478,14 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
                     ptvec = np.array(model.results['t'])[time_sequence]
                     pvm = np.array(model.results['vm'])[time_sequence]
                     assert len(pvm) == len(ptvec)
-                    plt.plot(ptvec, pvm, label=str(v)+str(score), color=color, linewidth=1)
+                    plt.plot(ptvec, pvm, label=str(v)+str(score), linewidth=1)
                     #plt.xlim(np.min(sindexs)-11,np.min(sindexs)+11 )
                     #plt.ylim(np.min(stored_min)-4,np.max(stored_max)+4)
 
             else:
                 stored_min.append(np.min(model.results['vm']))
                 stored_max.append(np.max(model.results['vm']))
-                plt.plot(model.results['t'],model.results['vm'],label=str(v)+str(score), color=color, linewidth=1)
+                plt.plot(model.results['t'],model.results['vm'],label=str(v)+str(score), linewidth=1)
                 plt.xlim(0,float(v.params['injected_square_current']['duration']) )
                 #plt.ylim(np.min(stored_min)-4,np.max(stored_max)+4)
                 #model.results = None
@@ -624,10 +563,17 @@ def not_just_mean(log,hypervolumes):
         color='black',
         linewidth=2,
         label='population average')
+    axes.plot(
+        gen_numbers,
+        hypervolumes,
+        color='red',
+        linewidth=2,
+        label='population average')
+
     axes.set_xlim(min(gen_numbers) - 1, max(gen_numbers) + 1)
     axes.set_xlabel('Generation #')
     axes.set_ylabel('Sum of objectives')
-    axes.set_ylim([0, max(mean_many)])
+    axes.set_ylim([0, max(mean_many,hypervolumes)])
     axes.legend()
     fig.tight_layout()
     fig.savefig('Izhikevich_evolution_just_mean.eps', format='eps', dpi=1200)
@@ -740,52 +686,43 @@ def bar_chart(vms,name=None):
         sv = score.sort_key
         test_dic[str(v)] = (float(unit_observations), float(unit_predictions), unit_delta)
 
-    labels = [ '{0}_{1}'.format(str(t),str(t.observation['value'].units)) for t in tests if 'mean' not in t.observation.keys() ]
-    labels.extend([ '{0}_{1}'.format(str(t),str(t.observation['mean'].units))  for t in tests if 'mean' in t.observation.keys() ])
 
-    labels_dic = {}
+    columns1 = [] # a list of test labels to use as column labels.
+
     for t in tests:
         if 'mean' not in t.observation.keys():
-            labels_dic[str(t)] = str(t.observation['value'].units)
+            columns1.append(str(t)+str(t.observation['value'].units))
+
+            #labels_dic[str(t)] = str(t.observation['value'].units)
         if 'mean' in t.observation.keys():
-            labels_dic[str(t)] = str(t.observation['mean'].units)
-    columns1 = [] # a list of test labels to use as column labels.
-    # will become transposed and turned into row labels.
-    for t in tests:
-        columns1.append(t)
-    #import pdb; pdb.set_trace()
-    # Add units to column labels.
-    for k,v in enumerate(columns1):
-       columns1[k]=str(v)+labels_dic[str(v)]
+            #labels_dic[str(t)] = str(t.observation['mean'].units)
+            columns1.append(str(t)+str(t.observation['mean'].units))
+
 
     threed = []
+    iterator = 0
+    average = np.mean([ np.sum(v) for v in test_dic.values()])
     for k,v in test_dic.items():
 		# these v[0] ... v[2], types
 		# may need to be cast to float
 		# for panda ie float(v[0]) etc.
 		# hopefuly not though.
-        threed.append((v[0],v[1],v[2]))
+        threed.append((float(v[0]),float(v[1]),float(v[2])))
 
-    # What if the data was normalized first?
-    #from sklearn.preprocessing import StandardScaler
-
-    #X_std = StandardScaler().fit_transform(threed)
-
-    threed = np.array(threed)
-    stacked = np.column_stack(threed)
-    import pickle
-    with open('for_pandas.p','wb') as handle:
-        pickle.dump([stacked,columns1],handle)
-
+    for k,t in enumerate(threed):
+        if np.sum(t) > 3.5 * average:
+            del threed[k]
+            del columns1[k]
+    #import pdb; pdb.set_trace()
+    stacked = np.column_stack(np.array(threed))
     df = pd.DataFrame(np.array(stacked), columns=columns1)
+    #df = pd.DataFrame(np.array(stacked), columns=columns1)
     df.index = ['observation','prediction','difference']
     df = df.transpose()
-    df.loc['CapacitanceTest1.0 F'] *= 10 ** 9
-    df.loc['InputResistanceTest1.0 ohm'] *= 10 **-9
+
+    df.iplot(kind='bar', barmode='stack', yTitle='NeuronUnit Test Agreement', title='test agreement every test', filename='grouped-bar-chart')
+    #df = df.drop(['InjectedCurrentAPThresholdTest1.0 ms'])# *= 10 **-9
     #df = df.drop(['InputResistanceTest1.0 ohm'])
-    #df.index(['CapacitanceTest1.0 F'])
-    py.sign_in('RussellJarvis','FoyVbw7Ry3u4N2kCY4LE')
-    df.iplot(kind='bar', barmode='stack', yTitle='NeuronUnit Test Agreement', title='test agreement', filename='grouped-bar-chart')
 
     return test_dic
 
