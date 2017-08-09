@@ -39,6 +39,8 @@ if os.path.isfile(ne_pickle):
     print('attempting to recover from pickled file')
     with open(ne_pickle, 'rb') as f:
         tests = pickle.load(f)
+suite = sciunit.TestSuite("vm_suite",tests)#,hooks=hooks)
+        
 '''
 
 else:
@@ -80,4 +82,3 @@ def update_amplitude(test,tests,score):
 #hooks = {tests[0]:{'f':update_amplitude}} #This is a trick to dynamically insert the method
 '''
 #update amplitude at the location in sciunit thats its passed to, without any loss of generality.
-suite = sciunit.TestSuite("vm_suite",tests)#,hooks=hooks)
