@@ -14,6 +14,7 @@ import sys
 import os
 import ipyparallel as ipp
 from ipyparallel import depend, require, dependent
+from IPython.lib.deepreload import reload
 
 # crashes import
 #get_ipython().magic('load_ext autoreload')
@@ -264,9 +265,10 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
             assert unit_delta == diff
 
             pre_fitness.append(float(unit_delta))
-        elif k == 0 and float(vms.rheobase) <=0 :
-            pre_fitness = 100.0
+        if float(vms.rheobase) <=0 :
+            pre_fitness.append(100.0)
         else:
+            score = v.judge(model,stop_on_error = False, deep_error = True)
             pre_fitness.append(float(score.sort_key))
 
     model.run_number += 1
@@ -280,7 +282,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     # To undo this step and substitute in normal NSGA function.
     # Substitute the block below with the one line:
     # fitness = pre_fitness
-    if unit_delta > 1:
+    if unit_delta > 10.0:
         for k,f in enumerate(copy.copy(pre_fitness)):
             if k == 0:
                 fitness.append(unit_delta)
@@ -291,7 +293,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
         pre_fitness = []
         pre_fitness = copy.copy(fitness)
         fitness = []
-    if pre_fitness[1] >1 :
+    if pre_fitness[1] >10.0 :
         for k,f in enumerate(copy.copy(pre_fitness)):
             if k == 1:
                 fitness.append(f)
