@@ -5,16 +5,20 @@ import graphviz
 
 import matplotlib as mpl
 # setting of an appropriate backend.
-try:
-    mpl.use('Qt5Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
-except:
-    mpl.use('Agg')
+#try:
+#    mpl.use('Qt5Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
+#except:
+mpl.use('Agg')
 
 from plotly.graph_objs import *
 import matplotlib.pyplot as plt
 import numpy as np
 
-
+from IPython.lib.deepreload import reload
+import ipyparallel as ipp
+rc = ipp.Client(profile='default')
+rc[:].use_cloudpickle()
+dview = rc[:]
 
 def plotly_graph(history,vmhistory):
     from networkx.drawing.nx_agraph import graphviz_layout
@@ -73,7 +77,7 @@ def plotly_graph(history,vmhistory):
             size=10,
             colorbar=dict(
                 thickness=15,
-                title='Genes summed error (absence of fitness)',
+                title='Summed Error of the gene',
                 xanchor='left',
                 titleside='right'
             ),
@@ -95,7 +99,7 @@ def plotly_graph(history,vmhistory):
 
     fig = Figure(data=Data([edge_trace, node_trace]),
              layout=Layout(
-                title='<br>Geneeology History made with NeuronUnit/DEAP optimizer outputing into networkx and plotly',
+                title='<br>Genetic History Inheritence Tree with NeuronUnit/DEAP',
                 titlefont=dict(size=16),
                 showlegend=False,
                 hovermode='closest',
@@ -301,18 +305,18 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
         sf_best = pd.DataFrame(sc_for_frame_best)
         sf_worst = pd.DataFrame(sc_for_frame_worst)
 
-
+'''
 class VirtualModel(object):
-    '''
-    This is a pickable dummy clone
-    version of the NEURON simulation model
-    It does not contain an actual model, but it can be used to
-    wrap the real model.
-    This Object class serves as a data type for storing rheobase search
-    attributes and other useful parameters,
-    with the distinction that unlike the NEURON model this class
-    can be transported across HOSTS/CPUs
-    '''
+
+    # This is a pickable dummy clone
+    # version of the NEURON simulation model
+    # It does not contain an actual model, but it can be used to
+    # wrap the real model.
+    # This Object class serves as a data type for storing rheobase search
+    # attributes and other useful parameters,
+    # with the distinction that unlike the NEURON model this class
+    # can be transported across HOSTS/CPUs
+
     def __init__(self):
         self.lookup = {}
         self.rheobase = None
@@ -329,7 +333,7 @@ class VirtualModel(object):
         self.delta = []
         self.evaluated = False
         self.results = {}
-
+'''
 def speed_up(not_optional_list):
     import ipyparallel as ipp
 
@@ -338,8 +342,6 @@ def speed_up(not_optional_list):
     dview = rc[:]
 
     import os
-    from neuronunit.models import backends
-    from neuronunit.models.reduced import ReducedModel
     import quantities as pq
     import numpy as np
     import get_neab
@@ -350,62 +352,79 @@ def speed_up(not_optional_list):
     from neo import AnalogSignal
     import matplotlib.pyplot as plt
     import copy
-    tests = copy.copy(get_neab.tests)
+    tests = get_neab.tests
     the_ks = list(np.arange(0,len(tests),1))
     print(the_ks)
+    for i in not_optional_list:
+         for j in tests:
+            i.results[str(j)] = {}
+    tests = None
+    print([i.results for i in not_optional_list])
+    #vms = not_optional_list
+    def second_nesting(k,vms):
+        import get_neab
+
+        new_file_path = '{0}{1}'.format(str(get_neab.LEMS_MODEL_PATH),int(os.getpid()))
+        #print(new_file_path)
+        os.system('cp ' + str(get_neab.LEMS_MODEL_PATH)+str(' ') + new_file_path)
+        # These imports have to happen very locally otherwise all hell breaks loose.
+        from neuronunit.models import backends
+        from neuronunit.models.reduced import ReducedModel
+        #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
+        model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+        tests = get_neab.tests
+
+        v = tests[k]
+        assert type(vms.rheobase) is not type(None)
+        if k == 0:
+            v.prediction = {}
+            v.prediction['value'] = vms.rheobase * pq.pA
+        if k != 0:
+            v.prediction = None
+
+        if k == 1 or k == 2 or k == 3:
+            # Negative square pulse current.
+            v.params['injected_square_current']['duration'] = 100 * pq.ms
+            v.params['injected_square_current']['amplitude'] = -10 *pq.pA
+            v.params['injected_square_current']['delay'] = 30 * pq.ms
+        if k == 0 or k ==4 or k == 5 or k == 6 or k == 7:
+            # Threshold current.
+            v.params['injected_square_current']['duration'] = 1000 * pq.ms
+            v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
+            v.params['injected_square_current']['delay'] = 100 * pq.ms
+        import neuron
+        model.reset_h(neuron)
+        model.load_model()
+        model.update_run_params(vms.attrs)
+        print(v.params)
+        score = v.judge(model,stop_on_error = False, deep_error = True)
+        #dt = model.results['t'][1] - model.results['t'][0]
+        #dt = dt*pq.s
+        #v_m = AnalogSignal(copy.copy(model.results['vm'].to_python()),units=pq.V,sampling_rate=1.0/dt)
+
+        v_m = model.get_membrane_potential()
+        ts = model.results['t']# time signal
+        vms.results[str(v)] ={}
+        vms.results[str(v)]['ts'] = copy.copy(ts)
+        vms.results[str(v)]['v_m'] = copy.copy(v_m)
+        #not_optional_list[iterator] = vms
+        ts = None
+        v_m = None
+        model.results = None
+        return vms
+
     def nested_function(vms,k):
-        #for iterator, vms in enumerate(not_optional_list):
-
-        #vms = not_optional_list
-        def second_nesting(k,vms):
-            new_file_path = '{0}{1}'.format(str(get_neab.LEMS_MODEL_PATH),int(os.getpid()))
-            print(new_file_path)
-
-            os.system('cp ' + str(get_neab.LEMS_MODEL_PATH)+str(' ') + new_file_path)
-            model = ReducedModel(new_file_path,name='vanilla',backend='NEURON')
-            #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-
-            assert type(vms.rheobase) is not type(None)
-            if k == 0:
-                v.prediction = {}
-                v.prediction['value'] = vms.rheobase * pq.pA
-            if k != 0:
-                v.prediction = None
-
-            if k == 1 or k == 2 or k == 3:
-                # Negative square pulse current.
-                v.params['injected_square_current']['duration'] = 100 * pq.ms
-                v.params['injected_square_current']['amplitude'] = -10 *pq.pA
-                v.params['injected_square_current']['delay'] = 30 * pq.ms
-            if k == 0 or k ==4 or k == 5 or k == 6 or k == 7:
-                # Threshold current.
-                v.params['injected_square_current']['duration'] = 1000 * pq.ms
-                v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
-                v.params['injected_square_current']['delay'] = 100 * pq.ms
-            import neuron
-            model.reset_h(neuron)
-            model.load_model()
-            model.update_run_params(vms.attrs)
-            print(v.params)
-            score = v.judge(model,stop_on_error = False, deep_error = True)
-            dt = model.results['t'][1] - model.results['t'][0]
-            dt = dt*pq.s
-            v_m = AnalogSignal(copy.copy(model.results['vm'].to_python()),units=pq.V,sampling_rate=1.0/dt)
-            ts = copy.copy(model.results['t'].to_python()) # time signal
-            vms.results['ts'] = ts
-            vms.results['v_m'] = v_m
-            not_optional_list[iterator] = vms
-            ts = None
-            v_m = None
-            model.results = None
-            return vms
+        print(vms,k)
         from itertools import repeat
-        not_optional_list = second_nesting(the_ks,repeat(vms))
-        return not_optional_list
-    from itertools import repeat
-    not_optional_list2 = nested_function(not_optional_list,the_ks)
-    assert type(not_optional_list[0].results['v_m']) is not type(None)
-    print('gets here?')
+        # per virtual models
+        print(type(k))
+        print(k)
+        vms = second_nesting(k,vms)
+        print(vms.results)
+        return vms
+    not_optional_list = list(map(nested_function,not_optional_list,the_ks))
+    print([i.results for i in not_optional_list])
+
     return not_optional_list2
 
 def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipyparallel to work.
@@ -423,8 +442,7 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
 
     '''
     import os
-    from neuronunit.models import backends
-    from neuronunit.models.reduced import ReducedModel
+
     import quantities as pq
     import numpy as np
     import get_neab
@@ -461,9 +479,18 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
                 color = 'blue'
             else:
                 color = 'lightblue'
+            from neuronunit.models import backends
+            from neuronunit.models.reduced import ReducedModel
 
+            print(get_neab.LEMS_MODEL_PATH)
             #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
             model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+            print(dir(model))
+            print(dir(ReducedModel))
+
+            print(os.getcwd())
+
+            #import pdb; pdb.set_trace()
             assert type(vms.rheobase) is not type(None)
             if k == 0:
                 v.prediction = {}
@@ -485,7 +512,7 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
                 v.params['injected_square_current']['delay'] = 100 * pq.ms
             import neuron
             model.reset_h(neuron)
-            model.load_model()
+            #model.load_model()
             model.update_run_params(vms.attrs)
             print(v.params)
             score = v.judge(model,stop_on_error = False, deep_error = True)
@@ -514,17 +541,17 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
                     assert len(pvm) == len(ptvec)
                     plt.plot(ptvec, pvm, label=str(v)+str(score), color=color, linewidth=1)
                     #plt.xlim(np.min(sindexs)-11,np.min(sindexs)+11 )
-                    plt.ylim(np.min(stored_min)-4,np.max(stored_max)+4)
+                    #plt.ylim(np.min(stored_min)-4,np.max(stored_max)+4)
 
             else:
                 stored_min.append(np.min(model.results['vm']))
                 stored_max.append(np.max(model.results['vm']))
                 plt.plot(model.results['t'],model.results['vm'],label=str(v)+str(score), color=color, linewidth=1)
                 plt.xlim(0,float(v.params['injected_square_current']['duration']) )
-                plt.ylim(np.min(stored_min)-4,np.max(stored_max)+4)
-                model.results = None
+                #plt.ylim(np.min(stored_min)-4,np.max(stored_max)+4)
+                #model.results = None
         #inside the tests loop but outside the model loop.
-        plt.tight_layout()
+        #plt.tight_layout()
         plt.legend()
         plt.ylabel('$V_{m}$ mV')
         plt.xlabel('mS')
@@ -716,14 +743,20 @@ def bar_chart(vms,name=None):
     labels = [ '{0}_{1}'.format(str(t),str(t.observation['value'].units)) for t in tests if 'mean' not in t.observation.keys() ]
     labels.extend([ '{0}_{1}'.format(str(t),str(t.observation['mean'].units))  for t in tests if 'mean' in t.observation.keys() ])
 
-
+    labels_dic = {}
     for t in tests:
         if 'mean' not in t.observation.keys():
-            labels[str(t)] = str(t.observation['value'].units)
+            labels_dic[str(t)] = str(t.observation['value'].units)
         if 'mean' in t.observation.keys():
-            labels[str(t)] = str(t.observation['mean'].units)
+            labels_dic[str(t)] = str(t.observation['mean'].units)
+    columns1 = [] # a list of test labels to use as column labels.
+    # will become transposed and turned into row labels.
+    for t in tests:
+        columns1.append(t)
+    #import pdb; pdb.set_trace()
+    # Add units to column labels.
     for k,v in enumerate(columns1):
-       columns1[k]=str(v)+labels[v]
+       columns1[k]=str(v)+labels_dic[str(v)]
 
     threed = []
     for k,v in test_dic.items():
@@ -734,14 +767,17 @@ def bar_chart(vms,name=None):
         threed.append((v[0],v[1],v[2]))
 
     # What if the data was normalized first?
-    X_std = StandardScaler().fit_transform(threed)
+    #from sklearn.preprocessing import StandardScaler
 
-    trans = np.array(threed)
-    stacked = np.column_stack(trans)
+    #X_std = StandardScaler().fit_transform(threed)
+
+    threed = np.array(threed)
+    stacked = np.column_stack(threed)
+    import pickle
     with open('for_pandas.p','wb') as handle:
         pickle.dump([stacked,columns1],handle)
 
-    df = pd.DataFrame(np.transpose(np.array(stacked)), columns=columns1)
+    df = pd.DataFrame(np.array(stacked), columns=columns1)
     df.index = ['observation','prediction','difference']
     df = df.transpose()
     df.loc['CapacitanceTest1.0 F'] *= 10 ** 9
@@ -749,8 +785,6 @@ def bar_chart(vms,name=None):
     #df = df.drop(['InputResistanceTest1.0 ohm'])
     #df.index(['CapacitanceTest1.0 F'])
     py.sign_in('RussellJarvis','FoyVbw7Ry3u4N2kCY4LE')
-
-
     df.iplot(kind='bar', barmode='stack', yTitle='NeuronUnit Test Agreement', title='test agreement', filename='grouped-bar-chart')
 
     return test_dic
