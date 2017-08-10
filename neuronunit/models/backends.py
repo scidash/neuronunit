@@ -272,7 +272,10 @@ class NEURONBackend(Backend):
             nrn_name = os.path.splitext(self.orig_lems_file_path)[0]
             nrn_path,nrn_name = os.path.split(nrn_name)
             sys.path.append(nrn_path)
+            #raise Exception('%s %s' % (nrn_path,nrn_name+'_nrn'))
+            import importlib
             nrn = importlib.import_module(nrn_name+'_nrn')
+            #print(nrn_path)
             self.reset_neuron(nrn.neuron)
             #make sure mechanisms are loaded
             modeldirname = os.path.dirname(self.orig_lems_file_path)
@@ -320,8 +323,9 @@ class NEURONBackend(Backend):
 
     def set_run_params(self, **params):
         super(NEURONBackend,self).set_run_params(**params)
-        for value in params.values():
-            h_key, h_value =list(value.items())[0]
+        for h_key,h_value in params.items():
+            #raise Exception(params)
+            #h_key, h_value =list(value.items())[0]
             self.h('m_RS_RS_pop[0].%s=%s' % (h_key,h_value))
             self.h('m_%s_%s_pop[0].%s=%s' % \
                    (self.cell_name,self.cell_name,h_key,h_value))
