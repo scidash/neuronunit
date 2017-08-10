@@ -13,8 +13,7 @@ from pyneuroml import pynml
 from . import backends
 
 
-class LEMSModel(backends.Backend,
-                cap.Runnable,
+class LEMSModel(cap.Runnable,
                 sciunit.Model):
     """A generic LEMS model"""
 
@@ -45,6 +44,7 @@ class LEMSModel(backends.Backend,
         self  = super().__new__(cls)#, *args, **kwargs)
         if 'fresh' in kwargs and not kwargs['fresh']:
             self.set_backend(kwargs['backend'])
+        print(self)
         return self
 
     def __getnewargs_ex__(self): # This method is required by pickle to know what 
@@ -88,7 +88,18 @@ class LEMSModel(backends.Backend,
             new_bases = tuple([b for b in self.__class__.__bases__ \
                                if issubclass(b,sciunit.Model) or \
                                not issubclass(b,backends.Backend)])
-            self.__class__.__bases__ = (self._backend.__class__,) + new_bases
+            print(self._backend.__class__,new_bases)
+            #self.__class__.__bases__ = 
+            new_bases = (self._backend.__class__,) + new_bases
+            Dummy = type("%s with %s backend" % \
+                         (self.__class__.__name__,self.backend),
+                         new_bases,
+                         self.__dict__) 
+            self.__class__ = Dummy
+            #class Dummy:
+            #    pass
+            #Dummy = 
+            #self.__class__ = type(self.__class__, self._backend) 
         
         elif name is None:
             # The base class should not be called.
