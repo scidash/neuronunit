@@ -131,6 +131,7 @@ class NEURONBackend(Backend):
         #self.h.cvode.active
         print(1,self.orig_lems_file_path)
         super(NEURONBackend,self).init_backend(attrs)
+        self.unpicklable += ['h','ns','_backend']
 
     backend = 'NEURON'
 
