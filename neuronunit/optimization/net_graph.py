@@ -474,7 +474,7 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
                     stored_min.append(np.min(model.results['vm']))
                     stored_max.append(np.max(model.results['vm']))
                     sindexs.append(int((float(st)/ts[-1])*len(ts)))
-                    time_sequence = np.arange(np.min(sindexs)-5 , np.max(sindexs)+5, 1)
+                    time_sequence = np.arange(np.min(sindexs)-10 , np.max(sindexs), 1)
                     ptvec = np.array(model.results['t'])[time_sequence]
                     pvm = np.array(model.results['vm'])[time_sequence]
                     assert len(pvm) == len(ptvec)
@@ -568,12 +568,12 @@ def not_just_mean(log,hypervolumes):
         hypervolumes,
         color='red',
         linewidth=2,
-        label='population average')
+        label='Solution Hypervolume')
 
     axes.set_xlim(min(gen_numbers) - 1, max(gen_numbers) + 1)
     axes.set_xlabel('Generation #')
     axes.set_ylabel('Sum of objectives')
-    axes.set_ylim([0, max(mean_many,hypervolumes)])
+    axes.set_ylim([0, max(max(mean_many),max(hypervolumes))])
     axes.legend()
     fig.tight_layout()
     fig.savefig('Izhikevich_evolution_just_mean.eps', format='eps', dpi=1200)
@@ -622,6 +622,8 @@ def bar_chart(vms,name=None):
     labels = [ '{0}_{1}'.format(str(t),str(t.observation['value'].units)) for t in tests if 'mean' not in t.observation.keys() ]
     labels.extend([ '{0}_{1}'.format(str(t),str(t.observation['mean'].units))  for t in tests if 'mean' in t.observation.keys() ])
     test_dic = {}
+    columns1 = [] # a list of test labels to use as column labels.
+
     for k,v in enumerate(tests):
 
         new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
@@ -687,47 +689,61 @@ def bar_chart(vms,name=None):
         test_dic[str(v)] = (float(unit_observations), float(unit_predictions), unit_delta)
 
 
-    columns1 = [] # a list of test labels to use as column labels.
-
-    for t in tests:
-        if 'mean' not in t.observation.keys():
-            columns1.append(str(t)+str(t.observation['value'].units))
+        if 'value' in v.observation.keys():
+            columns1.append(str(v)+' ratio')
 
             #labels_dic[str(t)] = str(t.observation['value'].units)
-        if 'mean' in t.observation.keys():
+        if 'mean' in v.observation.keys():
             #labels_dic[str(t)] = str(t.observation['mean'].units)
-            columns1.append(str(t)+str(t.observation['mean'].units))
+            columns1.append(str(v)+' ratio')
 
 
     threed = []
+    columns2 = []
     iterator = 0
     average = np.mean([ np.sum(v) for v in test_dic.values()])
-    for k,v in test_dic.items():
+
+    #import pdb
+    #pdb.set_trace()
+    for i,t in enumerate(tests):
+        v = test_dic[str(t)]
+        # for k,v in test_dic.items():
 		# these v[0] ... v[2], types
 		# may need to be cast to float
 		# for panda ie float(v[0]) etc.
 		# hopefuly not though.
-        threed.append((float(v[0]),float(v[1]),float(v[2])))
+        if not(np.sum(v) > 3.5 * average) and not(v[2] > 25.0) :
+            threed.append((float(v[0]),float(v[1]),float(v[2])))
+            columns2.append(columns1[i])
 
-    for k,t in enumerate(threed):
-        if np.sum(t) > 3.5 * average:
-            del threed[k]
-            del columns1[k]
+
     #import pdb; pdb.set_trace()
     stacked = np.column_stack(np.array(threed))
-    df = pd.DataFrame(np.array(stacked), columns=columns1)
+    #st = np.transpose(stacked)
+    #print(stacked)
+    #print(columns2)
+    import pdb;
+    pdb.set_trace()
+    df = pd.DataFrame(np.array(stacked), columns=columns2)
+    #pdb.set_trace()
     #df = pd.DataFrame(np.array(stacked), columns=columns1)
     df.index = ['observation','prediction','difference']
-    df = df.transpose()
-
-    df.iplot(kind='bar', barmode='stack', yTitle='NeuronUnit Test Agreement', title='test agreement every test', filename='grouped-bar-chart')
+    #df = df.transpose()
+    #print(df)
+    #df2 = df.transpose()
+    #df2.iplot(kind='bar', barmode='stack', yTitle='NeuronUnit Test Agreement', title='test agreement every test', filename='grouped-bar-chart')
     #df = df.drop(['InjectedCurrentAPThresholdTest1.0 ms'])# *= 10 **-9
     #df = df.drop(['InputResistanceTest1.0 ohm'])
+    #from IPython.display import display
+    #display(df)  # OR
+    html = df2.to_html()
+    html_file= open("tests_agreement_table.html","w")
+    html_file.write(html)
+    html_file.close()
+    return df2, threed, columns1 ,stacked, html
 
-    return test_dic
 
-
-def plot_log(log):
+def plot_log(log,hypervolumes):
     '''
     https://github.com/BlueBrain/BluePyOpt/blob/master/examples/graupnerbrunelstdp/run_fit.py
     Input: DEAP Plot logbook
@@ -774,6 +790,13 @@ def plot_log(log):
         minimum,
         linewidth=2,
         label='population objectives')
+
+    axes.plot(
+        gen_numbers,
+        hypervolumes,
+        color='red',
+        linewidth=2,
+        label='Solution Hypervolume')
         # want objective labels to be label.
         # problem is vector scalar mismatch.
 
@@ -808,6 +831,8 @@ def plot_objectives_history(log):
 
     gen_numbers = log.select('gen')
     minimum = log.select('min')
+    mean = log.select('mean')
+
     import get_neab
     objective_labels = [ str(t) for t in get_neab.tests ]
     mins_components_plot = log.select('min')
@@ -827,7 +852,22 @@ def plot_objectives_history(log):
             )
         if np.max(components[keys]) > maximum:
             maximum = np.max(components[keys])
+    '''
+    axes.semilogy(
+        gen_numbers,
+        mean,
+        color='black',
+        linewidth=2,
+        label='population average')
 
+    axes.fill_between(
+        gen_numbers,
+        stdminus,
+        stdplus,
+        color='lightgray',
+        linewidth=2,
+        label='population standard deviation')
+    '''
     axes.set_xlim(min(gen_numbers) - 1, max(gen_numbers) + 1)
     axes.set_xlabel('Generation #')
     axes.set_ylabel('Sum of objectives')
