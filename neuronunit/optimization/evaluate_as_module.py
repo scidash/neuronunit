@@ -185,9 +185,6 @@ toolbox.register("Individual", tools.initIterate, creator.Individual, toolbox.at
 toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
 toolbox.register("select", tools.selNSGA2)
 
-
-
-
 def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     '''
     Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
@@ -267,12 +264,14 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
             pre_fitness.append(float(unit_delta))
         if float(vms.rheobase) <=0 :
             #first_entrance = True:
-            big_relative_error = np.mean(np.array(logbook.select('max')))
-            std = np.mean(np.array(logbook.select('std')))
-            big_relative_error += 2*std
+            #big_relative_error = np.mean(np.array(logbook.select('max')))
+            #std = np.mean(np.array(logbook.select('std')))
+            #big_relative_error += 2*std
             # since this contributes to max and standard error it will mean it keeps growing each time it is called.
-            assert len(big_relative_error)==1
-            pre_fitness.append(float(big_relative_error))
+            #assert len(big_relative_error)==1
+            #pre_fitness.append(float(big_relative_error))
+            pre_fitness.append(float(100.0))
+
         else:
             score = v.judge(model,stop_on_error = False, deep_error = True)
             pre_fitness.append(float(score.sort_key))
