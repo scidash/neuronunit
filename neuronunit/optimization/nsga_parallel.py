@@ -10,6 +10,8 @@ matplotlib.use('Agg')
 
 import sys
 import os
+import ipyparallel as ipp
+from ipyparallel import depend, require, dependent
 #
 
 # crashes import
@@ -17,13 +19,12 @@ import os
 #get_ipython().magic('autoreload 2')
 # more badness
 #from IPython.lib.deepreload import reload
+rc = ipp.Client(profile='default')
 THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
 this_nu = os.path.join(THIS_DIR,'../../')
 sys.path.insert(0,this_nu)
 from neuronunit import tests
 from deap.benchmarks.tools import diversity, convergence, hypervolume
-import ipyparallel as ipp
-rc = ipp.Client(profile='default')
 rc[:].use_cloudpickle()
 inv_pid_map = {}
 dview = rc[:]
@@ -241,7 +242,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
 
 
-        if k == 0 and float(vms.rheobase) > 0.0:# and type(score) is not scores.InsufficientDataScore(None):
+        if float(vms.rheobase) > 0.0:# and type(score) is not scores.InsufficientDataScore(None):
             # score needs rheobase to be at least over 0pA current injection
             # otherwise it will fail on attempt.
             score = v.judge(model,stop_on_error = False, deep_error = True)
@@ -265,9 +266,9 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
             pre_fitness.append(float(unit_delta))
         if float(vms.rheobase) <=0 :
             pre_fitness.append(100.0)
-        else:
-            score = v.judge(model,stop_on_error = False, deep_error = True)
-            pre_fitness.append(float(score.sort_key))
+        #else:
+        #    score = v.judge(model,stop_on_error = False, deep_error = True)
+        #    pre_fitness.append(float(unit_delta))
 
     model.run_number += 1
     model.rheobase = vms.rheobase * pq.pA
@@ -280,33 +281,31 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     # To undo this step and substitute in normal NSGA function.
     # Substitute the block below with the one line:
     # fitness = pre_fitness
-    if float(vms.rheobase) > 0:
+    if unit_delta > 10.0:
+        for k,f in enumerate(copy.copy(pre_fitness)):
+            if k == 0:
+                fitness.append(unit_delta)
+            if k != 0:
+                fitness.append(pre_fitness[k] + 1.5 * unit_delta ) # add the rheobase error to all the errors.
+                assert fitness[k] != pre_fitness[k]
 
-        if unit_delta > 10.0:
-            for k,f in enumerate(copy.copy(pre_fitness)):
-                if k == 0:
-                    fitness.append(unit_delta)
-                if k != 0:
-                    fitness.append(pre_fitness[k] + 1.5 * unit_delta ) # add the rheobase error to all the errors.
-                    assert fitness[k] != pre_fitness[k]
+        pre_fitness = []
+        pre_fitness = copy.copy(fitness)
+        fitness = []
+    else:
+        fitness = pre_fitness
 
-            pre_fitness = []
-            pre_fitness = copy.copy(fitness)
-            fitness = []
-        else:
-            fitness = pre_fitness
+    if pre_fitness[1] > 10.0 :
+        for k,f in enumerate(copy.copy(pre_fitness)):
+            if k == 1:
+                fitness.append(unit_delta)
+            if k != 1:
+                fitness.append(pre_fitness[k] + 1.25 * f ) # add the rheobase error to all the errors.
+                assert fitness[k] != pre_fitness[k]
 
-        if pre_fitness[1] > 10.0 :
-            for k,f in enumerate(copy.copy(pre_fitness)):
-                if k == 1:
-                    fitness.append(f)
-                if k != 1:
-                    fitness.append(pre_fitness[k] + 1.25 * f ) # add the rheobase error to all the errors.
-                    assert fitness[k] != pre_fitness[k]
-
-            pre_fitness = []
-        else:
-            fitness = pre_fitness
+        pre_fitness = []
+    else:
+        fitness = pre_fitness
 
 
     return fitness[0],fitness[1],\
