@@ -10,8 +10,6 @@ matplotlib.use('Agg')
 
 import sys
 import os
-import ipyparallel as ipp
-from ipyparallel import depend, require, dependent
 #
 
 # crashes import
@@ -19,12 +17,13 @@ from ipyparallel import depend, require, dependent
 #get_ipython().magic('autoreload 2')
 # more badness
 #from IPython.lib.deepreload import reload
-rc = ipp.Client(profile='default')
 THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
 this_nu = os.path.join(THIS_DIR,'../../')
 sys.path.insert(0,this_nu)
 from neuronunit import tests
 from deap.benchmarks.tools import diversity, convergence, hypervolume
+import ipyparallel as ipp
+rc = ipp.Client(profile='default')
 rc[:].use_cloudpickle()
 inv_pid_map = {}
 dview = rc[:]
@@ -242,7 +241,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
 
 
-        if float(vms.rheobase) > 0.0:# and type(score) is not scores.InsufficientDataScore(None):
+        if k == 0 and float(vms.rheobase) > 0.0:# and type(score) is not scores.InsufficientDataScore(None):
             # score needs rheobase to be at least over 0pA current injection
             # otherwise it will fail on attempt.
             score = v.judge(model,stop_on_error = False, deep_error = True)
@@ -265,10 +264,10 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
             pre_fitness.append(float(unit_delta))
         if float(vms.rheobase) <=0 :
-            pre_fitness.append(100.0)
-        #else:
-        #    score = v.judge(model,stop_on_error = False, deep_error = True)
-        #    pre_fitness.append(float(unit_delta))
+            pre_fitness.append(10.0)
+        else:
+            score = v.judge(model,stop_on_error = False, deep_error = True)
+            pre_fitness.append(float(score.sort_key))
 
     model.run_number += 1
     model.rheobase = vms.rheobase * pq.pA
@@ -281,31 +280,32 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     # To undo this step and substitute in normal NSGA function.
     # Substitute the block below with the one line:
     # fitness = pre_fitness
-    if unit_delta > 10.0:
-        for k,f in enumerate(copy.copy(pre_fitness)):
-            if k == 0:
-                fitness.append(unit_delta)
-            if k != 0:
-                fitness.append(pre_fitness[k] + 1.5 * unit_delta ) # add the rheobase error to all the errors.
-                assert fitness[k] != pre_fitness[k]
+    if float(vms.rheobase) > 0:
+        if unit_delta > 10.0:
+            for k,f in enumerate(copy.copy(pre_fitness)):
+                if k == 0:
+                    fitness.append(unit_delta)
+                if k != 0:
+                    fitness.append(pre_fitness[k] + 1.5 * unit_delta ) # add the rheobase error to all the errors.
+                    assert fitness[k] != pre_fitness[k]
 
-        pre_fitness = []
-        pre_fitness = copy.copy(fitness)
-        fitness = []
-    else:
-        fitness = pre_fitness
+            pre_fitness = []
+            pre_fitness = copy.copy(fitness)
+            fitness = []
+        else:
+            fitness = pre_fitness
 
-    if pre_fitness[1] > 10.0 :
-        for k,f in enumerate(copy.copy(pre_fitness)):
-            if k == 1:
-                fitness.append(unit_delta)
-            if k != 1:
-                fitness.append(pre_fitness[k] + 1.25 * f ) # add the rheobase error to all the errors.
-                assert fitness[k] != pre_fitness[k]
+        if pre_fitness[1] > 10.0 :
+            for k,f in enumerate(copy.copy(pre_fitness)):
+                if k == 1:
+                    fitness.append(f)
+                if k != 1:
+                    fitness.append(pre_fitness[k] + 1.25 * f ) # add the rheobase error to all the errors.
+                    assert fitness[k] != pre_fitness[k]
 
-        pre_fitness = []
-    else:
-        fitness = pre_fitness
+            pre_fitness = []
+        else:
+            fitness = pre_fitness
 
 
     return fitness[0],fitness[1],\
@@ -590,6 +590,152 @@ def check_rheobase(vmpop,pop=None):
 
 
 
+import matplotlib # Its not that this file is responsible for doing plotting, but it calls many modules that are, such that it needs to pre-empt
+# setting of an appropriate backend.
+
+matplotlib.use('Agg')
+
+import os
+
+import os,sys
+
+import utilities
+
+#p_imports()
+
+
+
+def get_trans_dict(param_dict):
+    trans_dict = {}
+    for i,k in enumerate(list(param_dict.keys())):
+        trans_dict[i]=k
+    return trans_dict
+import model_parameters
+param_dict = model_parameters.model_params
+
+#import ipyparallel as ipp
+#rc = ipp.Client(profile='default')
+#rc[:].use_cloudpickle()
+#inv_pid_map = {}
+#dview = rc[:]
+# Do all of this in a big loop
+td = get_trans_dict(param_dict)
+quads = []
+for k in range(1,9):
+    for i,j in enumerate(td):
+        print(i,k)
+        if i+k < 10 and i!=k:
+            quads.append((td[i],td[i+k],i,i+k))
+
+def sparsify_list_into_lists(quads):
+    one = [];  two = []; three = []; four = []
+    for k,q in enumerate(quads):
+        # divide into lists by every 4th surface as subsequent evaluation of each list takes a long time.
+        if k % 4 ==0:
+            one.append(q)
+        if k % 4 ==1:
+            two.append(q)
+        if k % 4 ==2:
+            three.append(q)
+        if k % 4 ==3:
+            four.append(q)
+        print(q,' pacifier')
+    return one,two,three,four
+
+# evaluate broken lists, to strike the right balance between bulk processing, and staying in touch with output
+#one,two,three,four = sparsify_list_into_lists(quads)
+#print(one,two,three,four)
+
+
+#def pair2surface(q):
+for q in quads:
+    print(q)
+    (x,y,z,w) = q
+    x = str(x)
+    y = str(y)
+    import model_parameters as modelp
+    iter_list = [ (i,j) for i in modelp.model_params[x] for j in modelp.model_params[y] ]
+    def model2map(iter_value):#This method must be pickle-able for scoop to work.
+        vm = utilities.VirtualModel()
+        vm.attrs = {}
+        vm.attrs[x] = iter_value[0]
+        vm.attrs[y] = iter_value[1]
+        return vm
+    #import evaluate_as_module as eam
+
+    vmpop1 = list(dview.map_sync(model2map,iter_list))
+    vmpop1 , _ = check_rheobase(vmpop1)
+    new_checkpoint_path = str('rh_checkpoint_exhaustive')+str('.p')
+    import pickle
+    with open(new_checkpoint_path,'wb') as handle:#
+        pickle.dump(vmpop1, handle)
+
+    print([ (v.rheobase,v.attrs) for v in vmpop1])
+
+    import copy
+    efitnesses = dview.map_sync(evaluate, copy.copy(vmpop1))
+
+    import pickle
+    with open('complete_exhaust'+x+y+'.p','wb') as handle:
+       pickle.dump([efitnesses,iter_list,vmpop1],handle)
+
+
+    matrix_fill = [ (i,j) for i in range(0,len(modelp.model_params[x])) for j in range(0,len(modelp.model_params[y])) ]
+    mf = list(zip(matrix_fill,efitnesses))
+    empty = np.zeros(shape=(int(np.sqrt(len(mf))),int(np.sqrt(len(mf)))))
+
+    def fitness2map(pixels,dfimshow):
+        for i in pixels:
+            dfimshow[i[0][0],i[0][1]] = np.sum(i[1])
+        return dfimshow
+    dfimshow =fitness2map(mf,empty)
+
+    summed_ef = [np.sum(f) for f in efitnesses]
+
+    from matplotlib import pylab
+    import numpy
+    from matplotlib.colors import LogNorm
+    plt.clf()
+    xs = numpy.array([ind[0] for ind in matrix_fill])
+    ys = numpy.array([ind[1] for ind in matrix_fill])
+    min_ys = ys[numpy.where(summed_ef == numpy.min(summed_ef))]
+    min_xs = xs[numpy.where(summed_ef == numpy.min(summed_ef))]
+    fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
+    trip_axis = ax_trip.tripcolor(xs,ys,summed_ef,20,norm=matplotlib.colors.LogNorm())
+    #plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
+    plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue',label='global minima')
+
+    fig_trip.colorbar(trip_axis, label='sum of objectives + 1')
+    ax_trip.set_xlabel('Parameter '+ str(modelp.model_params[x]))
+    ax_trip.set_ylabel('Parameter '+ str(modelp.model_params[x]))
+    plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
+    fig_trip.tight_layout()
+    plt.legend()
+    plt.savefig('2d_error_'+str(x)+str(y)+'surface.png')
+    plt.clf()
+    # C = some matrix
+    f = figure(figsize=(6.2,5.6))
+    ax = f.add_axes([0.17, 0.02, 0.72, 0.79])
+    axcolor = f.add_axes([0.90, 0.02, 0.03, 0.79])
+    im = ax.matshow(dfimshow, cmap=cm.gray_r, norm=LogNorm(vmin=0.01, vmax=1))
+    t = [0.01, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0]
+    f.colorbar(im, cax=axcolor, ticks=t, format='$%.2f$')
+    plt.imshow(dfimshow)
+    #return 0
+
+#for q in one:
+#    print(q, ' progress?')
+#    pair2surface(q)) #splat argument expansion might work here.
+
+
+print('get s here?')
+_ = list(map(pair2surface,one))
+_ = list(map(pair2surface,two))
+_ = list(map(pair2surface,three))
+_ = list(map(pair2surface,four))
+
+
+
 
 ##
 # Start of the Genetic Algorithm
@@ -597,233 +743,3 @@ def check_rheobase(vmpop,pop=None):
 # should at least be as big as number of dimensions/model parameters
 # explored.
 ##
-
-MU = 12
-NGEN = 18
-CXPB = 0.9
-
-import numpy as np
-pf = tools.ParetoFront()
-
-stats = tools.Statistics(lambda ind: ind.fitness.values)
-stats.register("min", np.min, axis=0)
-stats.register("max", np.max, axis=0)
-stats.register("avg", np.mean)
-stats.register("std", np.std)
-
-logbook = tools.Logbook()
-logbook.header = "gen", "evals", "min", "max", "avg", "std"
-
-dview.push({'pf':pf})
-trans_dict = get_trans_dict(param_dict)
-td = trans_dict
-dview.push({'trans_dict':trans_dict,'td':td})
-
-pop = toolbox.population(n = MU)
-
-pop = [ toolbox.clone(i) for i in pop ]
-
-vmpop = update_vm_pop(pop, td)
-
-vmpop , _ = check_rheobase(vmpop)
-
-
-rh_values_unevolved = [v.rheobase for v in vmpop ]
-new_checkpoint_path = str('un_evolved')+str('.p')
-import pickle
-with open(new_checkpoint_path,'wb') as handle:#
-    pickle.dump([vmpop,rh_values_unevolved], handle)
-
-
-# sometimes done in serial in order to get access to opaque stdout/stderr
-#fitnesses = []
-#for v in vmpop:
-#   fitnesses.append(evaluate(v))
-
-import copy
-
-import evaluate_as_module
-fitnesses = dview.map_sync(evaluate_as_module.evaluate, copy.copy(vmpop))
-
-#fitnesses = dview.map_sync(evaluate, copy.copy(vmpop))
-print(fitnesses)
-for ind, fit in zip(pop, fitnesses):
-    ind.fitness.values = fit
-
-
-pop = tools.selNSGA2(pop, MU)
-# only update the history after crowding distance has been assigned
-history.update(pop)
-
-
-### After an evaluation of error its appropriate to display error statistics
-#pf = tools.ParetoFront()
-pf.update([toolbox.clone(i) for i in pop])
-hvolumes = []
-hvolumes.append(hypervolume(pf))
-
-record = stats.compile(pop)
-logbook.record(gen=0, evals=len(pop), **record)
-print(logbook.stream)
-
-def difference(unit_predictions):
-    unit_observations = get_neab.tests[0].observation['value']
-    to_r_s = unit_observations.units
-    unit_predictions = unit_predictions.rescale(to_r_s)
-    unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
-    print(unit_delta)
-    return float(unit_delta)
-
-verbose = True
-means = np.array(logbook.select('avg'))
-gen = 1
-rh_mean_status = np.mean([ v.rheobase for v in vmpop ])
-rhdiff = difference(rh_mean_status * pq.pA)
-print(rhdiff)
-verbose = True
-while (gen < NGEN and means[-1] > 0.05):
-    # Although the hypervolume is not actually used here, it can be used
-    # As a terminating condition.
-    hvolumes.append(hypervolume(pf))
-    gen += 1
-    print(gen)
-    offspring = tools.selNSGA2(pop, len(pop))
-    if verbose:
-        for ind in offspring:
-            print('what do the weights without values look like? {0}'.format(ind.fitness.weights[0]))
-            print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues[0]))
-            #print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid[0]))
-            print(rhdiff)
-    offspring = [toolbox.clone(ind) for ind in offspring]
-
-    for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
-        if random.random() <= CXPB:
-            toolbox.mate(ind1, ind2)
-        toolbox.mutate(ind1)
-        toolbox.mutate(ind2)
-        # deleting the fitness values is what renders them invalid.
-        # The invalidness is used as a flag for recalculating them.
-        # Their fitneess needs deleting since the attributes which generated these values have been mutated
-        # and hence they need recalculating
-        # Mutation also implies breeding, if a gene is mutated it was also recently recombined.
-        del ind1.fitness.values, ind2.fitness.values
-
-    invalid_ind = []
-    for ind in offspring:
-        if ind.fitness.valid == False:
-            invalid_ind.append(ind)
-    # Need to make sure that update_vm_pop does not replace instances of the same model
-    # Thus waisting computation.
-    vmoffspring = update_vm_pop(copy.copy(invalid_ind), trans_dict) #(copy.copy(invalid_ind), td)
-    vmoffspring , _ = check_rheobase(copy.copy(vmoffspring))
-    rh_mean_status = np.mean([ v.rheobase for v in vmoffspring ])
-    rhdiff = difference(rh_mean_status * pq.pA)
-    print('the difference: {0}'.format(difference(rh_mean_status * pq.pA)))
-    # sometimes fitness is assigned in serial, although slow gives access to otherwise hidden
-    # stderr/stdout
-    # fitnesses = []
-    # for v in vmoffspring:
-    #    fitness.append(evaluate(v))
-    import evaluate_as_module
-
-    fitnesses = list(dview.map_sync(evaluate_as_module.evaluate, copy.copy(vmoffspring)))
-    mf = np.mean(fitnesses)
-
-    for ind, fit in zip(copy.copy(invalid_ind), fitnesses):
-        ind.fitness.values = fit
-        if verbose:
-            print('what do the weights without values look like? {0}'.format(ind.fitness.weights))
-            print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues))
-            print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid))
-
-    # Its possible that the offspring are worse than the parents of the penultimate generation
-    # Its very likely for an offspring population to be less fit than their parents when the pop size
-    # is less than the number of parameters explored. However this effect should stabelize after a
-    # few generations, after which the population will have explored and learned significant error gradients.
-    # Selecting from a gene pool of offspring and parents accomodates for that possibility.
-    # There are two selection stages as per the NSGA example.
-    # https://github.com/DEAP/deap/blob/master/examples/ga/nsga2.py
-    # pop = toolbox.select(pop + offspring, MU)
-
-    # keys = history.genealogy_tree.keys()
-    # Grab evaluated history items and chuck them into the mixture.
-    # We want to select among the best from the whole history of the GA, not just penultimate and present generations.
-    # all_hist = [ history.genealogy_history[i] for i in keys if history.genealogy_history[i].fitness.valid == True ]
-    # pop = tools.selNSGA2(offspring + all_hist, MU)
-
-    pop = tools.selNSGA2(offspring + pop, MU)
-
-    record = stats.compile(pop)
-    history.update(pop)
-
-    logbook.record(gen=gen, evals=len(pop), **record)
-    pf.update([toolbox.clone(i) for i in pop])
-    means = np.array(logbook.select('avg'))
-    pf_mean = np.mean([ i.fitness.values for i in pf ])
-
-
-    # if the means are not decreasing at least as an overall trend something is wrong.
-    print('means from logbook: {0} from manual meaning the fitness: {1}'.format(means,mf))
-    print('means: {0} pareto_front first: {1} pf_mean {2}'.format(logbook.select('avg'), \
-                                                        np.sum(np.mean(pf[0].fitness.values)),\
-                                                        pf_mean))
-
-import net_graph
-best, worst = net_graph.best_worst(history)
-listss = [best , worst]
-best_worst = update_vm_pop(listss,td)
-best_worst , _ = check_rheobase(best_worst)
-rheobase_values = [v.rheobase for v in vmoffspring ]
-vmhistory = update_vm_pop(history.genealogy_history.values(),td)
-
-import pickle
-with open('complete_dump.p','wb') as handle:
-   pickle.dump([vmoffspring,history,logbook,rheobase_values,best_worst,vmhistory,hvolumes],handle)
-
-#lists = pickle.load(open('complete_dump.p','rb'))
-#vmoffspring2,history2,logbook2 = lists[0],lists[1],lists[2]
-
-import net_graph
-reload(net_graph)
-#vmhistory = update_vm_pop(history.genealogy_history.values(),td)
-#best, worst = net_graph.best_worst(history)
-#listss = [best , worst]
-#best_worst = update_vm_pop(listss,td)
-#best_worst , _ = check_rheobase(best_worst)
-best = vm
-unev = pickle.load(open('un_evolved.p','rb'))
-unev, rh_values_unevolved = unev[0], unev[1]
-for x,y in enumerate(unev):
-    y.rheobase = rh_values_unevolved[x]
-vmoffpsring.append(unev)
-net_graph.shadow(vmoffspring,best_worst[0])
-net_graph.plotly_graph(history,vmhistory)
-#net_graph.graph_s(history)
-net_graph.plot_log(logbook)
-net_graph.not_just_mean(hvolumes,logbook)
-net_graph.plot_objectives_history(logbook)
-
-#Although the pareto front surely contains the best candidate it cannot contain the worst, only history can.
-#best_ind_dict_vm = update_vm_pop(pf[0:2],td)
-#best_ind_dict_vm , _ = check_rheobase(best_ind_dict_vm)
-
-
-
-print(best_worst[0].attrs,' == ', best_ind_dict_vm[0].attrs, ' ? should be the same (eyeball)')
-print(best_worst[0].fitness.values,' == ', best_ind_dict_vm[0].fitness.values, ' ? should be the same (eyeball)')
-
-# This operation converts the population of virtual models back to DEAP individuals
-# Except that there is now an added 11th dimension for rheobase.
-# This is not done in the general GA algorithm, since adding an extra dimensionality that the GA
-# doesn't utilize causes a DEAP error, which is reasonable.
-
-net_graph.bar_chart(best_worst[0])
-net_graph.pca(final_population,vmpop,fitnesses,td)
-#test_dic = bar_chart(best_worst[0])
-net_graph.plot_evaluate( best_worst[0],best_worst[1])
-#net_graph.plot_db(best_worst[0],name='best')
-#net_graph.plot_db(best_worst[1],name='worst')
-
-net_graph.plot_evaluate( best_worst[0],best_worst[1])
-net_graph.plot_db(best_worst[0],name='best')
-net_graph.plot_db(best_worst[1],name='worst')
