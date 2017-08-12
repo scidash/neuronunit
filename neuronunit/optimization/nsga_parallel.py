@@ -599,7 +599,7 @@ def check_rheobase(vmpop,pop=None):
 ##
 
 MU = 12
-NGEN = 18
+NGEN = 7
 CXPB = 0.9
 
 import numpy as np
