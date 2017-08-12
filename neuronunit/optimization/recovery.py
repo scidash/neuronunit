@@ -10,7 +10,26 @@ from deap import base
 from deap import creator
 
 toolbox = base.Toolbox()
+import utilities
+'''
+def p_imports():
+    from neuronunit.models import backends
+    from neuronunit.models.reduced import ReducedModel
+    import get_neab
+    import os
+    print(get_neab.LEMS_MODEL_PATH)
+    new_file_path = '{0}{1}'.format(str(get_neab.LEMS_MODEL_PATH),int(os.getpid()))
+    print(new_file_path)
 
+    os.system('cp ' + str(get_neab.LEMS_MODEL_PATH)+str(' ') + new_file_path)
+    model = ReducedModel(new_file_path,name='vanilla',backend='NEURON')
+    model.load_model()
+    return
+
+dview.apply_sync(p_imports)
+p_imports()
+'''
+'''
 def get_trans_dict(param_dict):
     trans_dict = {}
     for i,k in enumerate(list(param_dict.keys())):
@@ -18,20 +37,7 @@ def get_trans_dict(param_dict):
     return trans_dict
 import model_parameters
 param_dict = model_parameters.model_params
-
-def vm_to_ind(vm,td):
-    '''
-    Re instanting Virtual Model at every update vmpop
-    is Noneifying its score attribute, and possibly causing a
-    performance bottle neck.
-    '''
-
-    ind =[]
-    for k in td.keys():
-        ind.append(vm.attrs[td[k]])
-    ind.append(vm.rheobase)
-    return ind
-
+'''
 
 def update_vm_pop(pop, trans_dict):
     '''
@@ -172,10 +178,20 @@ def check_rheobase(vmpop,pop=None):
         import get_neab
         from neuronunit.models import backends
         from neuronunit.models.reduced import ReducedModel
+        from neuronunit.models import backends
+        from neuronunit.models.reduced import ReducedModel
+        import get_neab
+        import os
+        print(get_neab.LEMS_MODEL_PATH)
+        new_file_path = '{0}{1}'.format(str(get_neab.LEMS_MODEL_PATH),int(os.getpid()))
+        print(new_file_path)
 
-        new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
-        model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
+        os.system('cp ' + str(get_neab.LEMS_MODEL_PATH)+str(' ') + new_file_path)
+        model = ReducedModel(new_file_path,name='vanilla',backend='NEURON')
         model.load_model()
+        #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
+        #model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
+        #model.load_model()
         model.update_run_params(vm.attrs)
 
         DELAY = 100.0*pq.ms
@@ -334,20 +350,21 @@ unev, rh_values_unevolved = unev[0], unev[1]
 
 for x,y in enumerate(vmoffspring):
     y.rheobase = rheobase_values[x]
+    print(y,y.rheobase)
 best = vmoffspring[0]
 worst = vmoffspring[-1]
 
-#best_worst = net_graph.best_worst(history)
+assert type(best.rheobase) is not type(None)
 
-#best_worst = update_vm_pop(best_worst,td)
-#best_worst = check_rheobase(best_worst)
+net_graph.sp_like_shadow(unev)
+
 net_graph.plotly_graph(history,vmhistory)
 best_ = best_worst[0]
 worst_ = best_worst[1]
 
 net_graph.plot_log(logbook,hvolumes)
 net_graph.plot_objectives_history(logbook)
-df, threed, columns1 , stacked = net_graph.bar_chart(best)
+df, threed, columns1 , stacked, html = net_graph.bar_chart(best)
 #df, threed, columns1 , stacked, html = bar_chart(best)
 
 net_graph.not_just_mean(logbook,hvolumes)
@@ -359,4 +376,5 @@ vmoffspring.extend(unev)
 
 net_graph.shadow(vmoffspring,best)
 net_graph.plot_evaluate(best,worst,names=['best','worst'])
-best_worst , _ = evaluate_as_module.check_rheobase(best_worst)
+#best_worst , _ = evaluate_as_module.check_rheobase(best_worst)
+best_worst, _ = check_rheobase(best_worst)
