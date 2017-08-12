@@ -1,189 +1,29 @@
 ##
 # Assumption that this file was executed after first executing the bash: ipcluster start -n 8 --profile=default &
 ##
-
-
-import matplotlib # Its not that this file is responsible for doing plotting, but it calls many modules that are, such that it needs to pre-empt
-# setting of an appropriate backend.
-try:
-    matplotlib.use('Qt5Agg')
-except:
-    matplotlib.use('Agg')
-
-import sys
-import os
 import ipyparallel as ipp
-from ipyparallel import depend, require, dependent
-from IPython.lib.deepreload import reload
-
-# crashes import
-#get_ipython().magic('load_ext autoreload')
-#get_ipython().magic('autoreload 2')
-
 rc = ipp.Client(profile='default')
-THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
-this_nu = os.path.join(THIS_DIR,'../../')
-sys.path.insert(0,this_nu)
-from neuronunit import tests
-from deap.benchmarks.tools import diversity, convergence, hypervolume
 rc[:].use_cloudpickle()
 inv_pid_map = {}
 dview = rc[:]
-#lview = rc.load_balanced_view()
-ar = rc[:].apply_async(os.getpid)
-pids = ar.get_dict()
-inv_pid_map = pids
-pid_map = {}
 
-#Map PIDs onto unique numeric global identifiers via a dedicated dictionary
-for k,v in inv_pid_map.items():
-    pid_map[v] = k
+import os
 
-with dview.sync_imports(): # Causes each of these things to be imported on the workers as well as here.
-    import get_neab
-    import matplotlib
-    import neuronunit
-    import model_parameters as modelp
-    try:
-        matplotlib.use('Qt5Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
-    except:
-        matplotlib.use('Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
-                          # on the worker threads.
-    import pdb
-    import array
-    import random
-    import sys
+#def p_imports():
+from neuronunit.models import backends
+from neuronunit.models.reduced import ReducedModel
+import get_neab
+print(get_neab.LEMS_MODEL_PATH)
+new_file_path = '{0}{1}'.format(str(get_neab.LEMS_MODEL_PATH),int(os.getpid()))
+print(new_file_path)
 
-    import numpy as np
-    import matplotlib.pyplot as plt
-    import quantities as pq
-    from deap import algorithms
-    from deap import base
-    from deap.benchmarks.tools import diversity, convergence, hypervolume
-    from deap import creator
-    from deap import tools
+os.system('cp ' + str(get_neab.LEMS_MODEL_PATH)+str(' ') + new_file_path)
+model = ReducedModel(new_file_path,name='vanilla',backend='NEURON')
+model.load_model()
+#    return
 
-
-    import quantities as qt
-    import os, sys
-    import os.path
-
-    import deap as deap
-    import functools
-    import utilities
-    vm = utilities.VirtualModel()
-
-
-
-    import quantities as pq
-    import neuronunit.capabilities as cap
-    history = tools.History()
-    import numpy as np
-
-    import sciunit
-    thisnu = str(os.getcwd())+'/../..'
-    sys.path.insert(0,thisnu)
-    import sciunit.scores as scores
-
-
-
-
-def p_imports():
-    from neuronunit.models import backends
-    from neuronunit.models.reduced import ReducedModel
-    print(get_neab.LEMS_MODEL_PATH)
-    new_file_path = '{0}{1}'.format(str(get_neab.LEMS_MODEL_PATH),int(os.getpid()))
-    print(new_file_path)
-
-    os.system('cp ' + str(get_neab.LEMS_MODEL_PATH)+str(' ') + new_file_path)
-    model = ReducedModel(new_file_path,name='vanilla',backend='NEURON')
-    model.load_model()
-    return
-
-dview.apply_sync(p_imports)
-p_imports()
-from deap import base
-from deap import creator
-toolbox = base.Toolbox()
-
-class Individual(object):
-    '''
-    When instanced the object from this class is used as one unit of chromosome or allele by DEAP.
-    Extends list via polymorphism.
-    '''
-    def __init__(self, *args):
-        list.__init__(self, *args)
-        self.error=None
-        self.results=None
-        self.name=''
-        self.attrs = {}
-        self.params=None
-        self.score=None
-        self.fitness=None
-        self.lookup={}
-        self.rheobase=None
-        self.fitness = creator.FitnessMin
-
-with dview.sync_imports():
-
-    toolbox = base.Toolbox()
-    import model_parameters as modelp
-    import numpy as np
-    BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
-    BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
-    NDIM = len(BOUND_UP)+1
-    def uniform(low, up, size=None):
-        try:
-            return [random.uniform(a, b) for a, b in zip(low, up)]
-        except TypeError:
-            return [random.uniform(a, b) for a, b in zip([low] * size, [up] * size)]
-
-
-    creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
-    creator.create("Individual", list, fitness=creator.FitnessMin)
-    toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
-    toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
-    toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-    toolbox.register("select", tools.selNSGA2)
-
-
-def p_imports():
-    toolbox = base.Toolbox()
-    import model_parameters as modelp
-    import numpy as np
-    BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
-    BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
-    NDIM = len(BOUND_UP)+1
-    def uniform(low, up, size=None):
-        try:
-            return [random.uniform(a, b) for a, b in zip(low, up)]
-        except TypeError:
-            return [random.uniform(a, b) for a, b in zip([low] * size, [up] * size)]
-
-    creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
-    creator.create("Individual", list, fitness=creator.FitnessMin)
-    toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
-    toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
-    toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-    toolbox.register("select", tools.selNSGA2)
-    return
-dview.apply_sync(p_imports)
-
-BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
-BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
-NDIM = len(BOUND_UP)+1 #One extra to store rheobase values in.
-
-def uniform(low, up, size=None):
-    try:
-        return [random.uniform(a, b) for a, b in zip(low, up)]
-    except TypeError:
-        return [random.uniform(a, b) for a, b in zip([low] * size, [up] * size)]
-toolbox = base.Toolbox()
-
-toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
-toolbox.register("Individual", tools.initIterate, creator.Individual, toolbox.attr_float)
-toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
-toolbox.register("select", tools.selNSGA2)
+#dview.apply_sync(p_imports)
+#p_imports()
 
 def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     '''
@@ -210,6 +50,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
 
     new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
+
     model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
     model.load_model()
     assert type(vms.rheobase) is not type(None)
@@ -263,15 +104,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
             pre_fitness.append(float(unit_delta))
         if float(vms.rheobase) <=0 :
-            #first_entrance = True:
-            #big_relative_error = np.mean(np.array(logbook.select('max')))
-            #std = np.mean(np.array(logbook.select('std')))
-            #big_relative_error += 2*std
-            # since this contributes to max and standard error it will mean it keeps growing each time it is called.
-            #assert len(big_relative_error)==1
-            #pre_fitness.append(float(big_relative_error))
-            pre_fitness.append(float(100.0))
-
+            pre_fitness.append(15.0)
         else:
             score = v.judge(model,stop_on_error = False, deep_error = True)
             pre_fitness.append(float(score.sort_key))
@@ -298,7 +131,10 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
         pre_fitness = []
         pre_fitness = copy.copy(fitness)
         fitness = []
-    if pre_fitness[1] >10.0 :
+    else:
+        fitness = pre_fitness
+
+    if pre_fitness[1] > 10.0 :
         for k,f in enumerate(copy.copy(pre_fitness)):
             if k == 1:
                 fitness.append(f)
@@ -316,14 +152,6 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
            fitness[4],fitness[5],\
            fitness[6],fitness[7],
 
-toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=30.0)
-toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=30.0, indpb=1.0/NDIM)
-toolbox.decorate("mate", history.decorator)
-toolbox.decorate("mutate", history.decorator)
-toolbox.register("select", tools.selNSGA2)
-toolbox.register("map",dview.map_sync)
-
-toolbox.register("evaluate", evaluate)
 
 
 
@@ -558,9 +386,9 @@ def check_rheobase(vmpop,pop=None):
         from neuronunit.models import backends
         from neuronunit.models.reduced import ReducedModel
         import get_neab
-        #print(pid_map[int(os.getpid())])
 
         new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
+        #os.system('cp '+str(get_neab.LEMS_MODEL_PATH)+' '+new_file_path)
         model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
         model.load_model()
         model.update_run_params(vm.attrs)
@@ -590,174 +418,3 @@ def check_rheobase(vmpop,pop=None):
     vmpop = list(dview.map_sync(find_rheobase,vmpop))
 
     return vmpop, pop
-
-
-
-
-
-def difference(unit_predictions):
-    unit_observations = get_neab.tests[0].observation['value']
-    to_r_s = unit_observations.units
-    unit_predictions = unit_predictions.rescale(to_r_s)
-    unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
-    print(unit_delta)
-    return float(unit_delta)
-
-
-def evolve():
-    ##
-    # Start of the Genetic Algorithm
-    # For good results, MU the size of the gene pool
-    # should at least be as big as number of dimensions/model parameters
-    # explored.
-    ##
-
-    MU = 12
-    NGEN = 18
-    CXPB = 0.9
-
-    import numpy as np
-    pf = tools.ParetoFront()
-
-    stats = tools.Statistics(lambda ind: ind.fitness.values)
-    stats.register("min", np.min, axis=0)
-    stats.register("max", np.max, axis=0)
-    stats.register("avg", np.mean)
-    stats.register("std", np.std)
-
-    logbook = tools.Logbook()
-    logbook.header = "gen", "evals", "min", "max", "avg", "std"
-
-    dview.push({'pf':pf})
-    trans_dict = get_trans_dict(param_dict)
-    td = trans_dict
-    dview.push({'trans_dict':trans_dict,'td':td})
-
-    pop = toolbox.population(n = MU)
-
-    pop = [ toolbox.clone(i) for i in pop ]
-
-    vmpop = update_vm_pop(pop, td)
-
-    vmpop , _ = check_rheobase(vmpop)
-    print([v.rheobase for v in vmpop ])
-    new_checkpoint_path = str('rh_checkpoint')+str('.p')
-    import pickle
-    with open(new_checkpoint_path,'wb') as handle:#
-        pickle.dump(vmpop, handle)
-
-
-    import copy
-    fitnesses = dview.map_sync(evaluate, copy.copy(vmpop))
-    print(fitnesses)
-    for ind, fit in zip(pop, fitnesses):
-        ind.fitness.values = fit
-
-
-    pop = tools.selNSGA2(pop, MU)
-    # only update the history after crowding distance has been assigned
-    history.update(pop)
-
-
-    ### After an evaluation of error its appropriate to display error statistics
-    #pf = tools.ParetoFront()
-    pf.update([toolbox.clone(i) for i in pop])
-    hvolumes = []
-    hvolumes.append(hypervolume(pf))
-
-    record = stats.compile(pop)
-    logbook.record(gen=0, evals=len(pop), **record)
-    print(logbook.stream)
-
-    verbose = True
-    means = np.array(logbook.select('avg'))
-    gen = 1
-    rh_mean_status = np.mean([ v.rheobase for v in vmpop ])
-    rhdiff = difference(rh_mean_status * pq.pA)
-    print(rhdiff)
-    verbose = True
-    while (gen < NGEN and means[-1] > 0.05):
-        # Although the hypervolume is not actually used here, it can be used
-        # As a terminating condition.
-        hvolumes.append(hypervolume(pf))
-        gen += 1
-        print(gen)
-        offspring = tools.selNSGA2(pop, len(pop))
-        if verbose:
-            for ind in offspring:
-                print('what do the weights without values look like? {0}'.format(ind.fitness.weights[0]))
-                print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues[0]))
-                #print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid[0]))
-                print(rhdiff)
-        offspring = [toolbox.clone(ind) for ind in offspring]
-
-        for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
-            if random.random() <= CXPB:
-                toolbox.mate(ind1, ind2)
-            toolbox.mutate(ind1)
-            toolbox.mutate(ind2)
-            # deleting the fitness values is what renders them invalid.
-            # The invalidness is used as a flag for recalculating them.
-            # Their fitneess needs deleting since the attributes which generated these values have been mutated
-            # and hence they need recalculating
-            # Mutation also implies breeding, if a gene is mutated it was also recently recombined.
-            del ind1.fitness.values, ind2.fitness.values
-
-        invalid_ind = []
-        for ind in offspring:
-            if ind.fitness.valid == False:
-                invalid_ind.append(ind)
-        # Need to make sure that update_vm_pop does not replace instances of the same model
-        # Thus waisting computation.
-        vmoffspring = update_vm_pop(copy.copy(invalid_ind), trans_dict) #(copy.copy(invalid_ind), td)
-        vmoffspring , _ = check_rheobase(copy.copy(vmoffspring))
-        rh_mean_status = np.mean([ v.rheobase for v in vmoffspring ])
-        rhdiff = difference(rh_mean_status * pq.pA)
-        print('the difference: {0}'.format(difference(rh_mean_status * pq.pA)))
-        # sometimes fitness is assigned in serial, although slow gives access to otherwise hidden
-        # stderr/stdout
-        # fitnesses = []
-        # for v in vmoffspring:
-        #    fitness.append(evaluate(v))
-        fitnesses = list(dview.map_sync(toolbox.evaluate, copy.copy(vmoffspring)))
-        mf = np.mean(fitnesses)
-
-        for ind, fit in zip(copy.copy(invalid_ind), fitnesses):
-            ind.fitness.values = fit
-            if verbose:
-                print('what do the weights without values look like? {0}'.format(ind.fitness.weights))
-                print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues))
-                print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid))
-
-        # Its possible that the offspring are worse than the parents of the penultimate generation
-        # Its very likely for an offspring population to be less fit than their parents when the pop size
-        # is less than the number of parameters explored. However this effect should stabelize after a
-        # few generations, after which the population will have explored and learned significant error gradients.
-        # Selecting from a gene pool of offspring and parents accomodates for that possibility.
-        # There are two selection stages as per the NSGA example.
-        # https://github.com/DEAP/deap/blob/master/examples/ga/nsga2.py
-        # pop = toolbox.select(pop + offspring, MU)
-
-        # keys = history.genealogy_tree.keys()
-        # Grab evaluated history items and chuck them into the mixture.
-        # We want to select among the best from the whole history of the GA, not just penultimate and present generations.
-        # all_hist = [ history.genealogy_history[i] for i in keys if history.genealogy_history[i].fitness.valid == True ]
-        # pop = tools.selNSGA2(offspring + all_hist, MU)
-
-        pop = tools.selNSGA2(offspring + pop, MU)
-
-        record = stats.compile(pop)
-        history.update(pop)
-
-        logbook.record(gen=gen, evals=len(pop), **record)
-        pf.update([toolbox.clone(i) for i in pop])
-        means = np.array(logbook.select('avg'))
-        pf_mean = np.mean([ i.fitness.values for i in pf ])
-
-
-        # if the means are not decreasing at least as an overall trend something is wrong.
-        print('means from logbook: {0} from manual meaning the fitness: {1}'.format(means,mf))
-        print('means: {0} pareto_front first: {1} pf_mean {2}'.format(logbook.select('avg'), \
-                                                            np.sum(np.mean(pf[0].fitness.values)),\
-                                                            pf_mean))
-    return pf_mean,means,logbook,history,pop,vmoffspring
