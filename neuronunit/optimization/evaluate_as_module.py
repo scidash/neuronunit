@@ -25,6 +25,26 @@ model.load_model()
 #dview.apply_sync(p_imports)
 #p_imports()
 
+def difference(v): # v is a tesst
+    import numpy as np
+    if 'value' in v.observation.keys():
+        unit_observations = v.observation['value']
+
+    if 'value' in v.prediction.keys():
+        unit_predictions = v.prediction['value']
+
+    if 'mean' in v.observation.keys():
+        unit_observations = v.observation['mean']
+
+    if 'mean' in v.prediction.keys():
+        unit_predictions = v.prediction['mean']
+    #unit_observations = v.observation['value']
+    to_r_s = unit_observations.units
+    unit_predictions = unit_predictions.rescale(to_r_s)
+    unit_observations = unit_observations.rescale(to_r_s)
+    unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
+    print(unit_delta)
+    return float(unit_delta)
 def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     '''
     Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
@@ -56,10 +76,13 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     assert type(vms.rheobase) is not type(None)
     #tests = get_neab.suite.tests
     model.update_run_params(vms.attrs)
+    model.rheobase = vms.rheobase * pq.pA
+
     import copy
     tests = copy.copy(get_neab.tests)
     pre_fitness = []
     fitness = []
+    fitness2 = []
     for k,v in enumerate(tests):
         if k == 0:
             v.prediction = {}
@@ -73,7 +96,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
             v.params['injected_square_current']['duration'] = 100 * pq.ms
             v.params['injected_square_current']['amplitude'] = -10 *pq.pA
             v.params['injected_square_current']['delay'] = 30 * pq.ms
-        if k==0 or k == 4 or k == 5 or k == 6 or k == 7:
+        if k == 0 or k == 4 or k == 5 or k == 6 or k == 7:
             # Threshold current.
             v.params['injected_square_current']['duration'] = 1000 * pq.ms
             v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
@@ -81,43 +104,24 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
 
 
-        if k == 0 and float(vms.rheobase) > 0.0:# and type(score) is not scores.InsufficientDataScore(None):
+        if float(vms.rheobase) > 0.0:# and type(score) is not scores.InsufficientDataScore(None):
             # score needs rheobase to be at least over 0pA current injection
             # otherwise it will fail on attempt.
             score = v.judge(model,stop_on_error = False, deep_error = True)
+            unit_delta = difference(v)
+            fitness2.append(float(score.sort_key))
 
-            if 'value' in v.observation.keys():
-                unit_observations = v.observation['value']
-
-            if 'value' in v.prediction.keys():
-                unit_predictions = v.prediction['value']
-
-
-            if 'mean' in v.observation.keys():
-                unit_observations = v.observation['mean']
-
-            if 'mean' in v.prediction.keys():
-                unit_predictions = v.prediction['mean']
-
-            to_r_s = unit_observations.units
-            unit_predictions = unit_predictions.rescale(to_r_s)
-
-            unit_delta = np.abs( np.abs(float(unit_observations))-np.abs(float(unit_predictions)) )
-            print(float(vms.rheobase),float(unit_predictions))
-            assert float(vms.rheobase) == float(unit_predictions)
-            diff = np.abs(np.abs(float(unit_observations)) - np.abs(float(vms.rheobase)))
-            print(unit_delta, diff, float(unit_observations))
-            assert unit_delta == diff
+            if k == 0:
+                fitness.append(float(unit_delta)/10.0)
+            else:
+                fitness.append(float(unit_delta))
 
             pre_fitness.append(float(unit_delta))
-        if float(vms.rheobase) <=0 :
-            pre_fitness.append(15.0)
-        else:
-            score = v.judge(model,stop_on_error = False, deep_error = True)
-            pre_fitness.append(float(score.sort_key))
 
-    model.run_number += 1
-    model.rheobase = vms.rheobase * pq.pA
+        elif float(vms.rheobase) <=0 :
+            fitness.append(15.0)
+
+        model.run_number += 1
 
     # Hybrid scheme the Genetic Algorithm
     # Make it a sum of objectives as well as
@@ -127,31 +131,27 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     # To undo this step and substitute in normal NSGA function.
     # Substitute the block below with the one line:
     # fitness = pre_fitness
-    if float(vms.rheobase) > 0:
-        if unit_delta > 10.0:
-            for k,f in enumerate(copy.copy(pre_fitness)):
-                if k == 0:
-                    fitness.append(unit_delta)
-                if k != 0:
-                    fitness.append(pre_fitness[k] + 1.5 * unit_delta ) # add the rheobase error to all the errors.
-                    assert fitness[k] != pre_fitness[k]
-            pre_fitness = []
-            pre_fitness = copy.copy(fitness)
-            fitness = []
-        else:
-            fitness = pre_fitness
 
-        if pre_fitness[1] > 10.0 :
-            for k,f in enumerate(copy.copy(pre_fitness)):
-                if k == 1:
-                    fitness.append(f)
-                if k != 1:
-                    fitness.append(pre_fitness[k] + 1.25 * f ) # add the rheobase error to all the errors.
-                    assert fitness[k] != pre_fitness[k]
-            pre_fitness = []
-        else:
-            fitness = pre_fitness
+    fitness1 = []
 
+    # outside of the test iteration block.
+    if float(vms.rheobase) > 0.0:# and type(score) is not scores.InsufficientDataScore(None):
+        for k,f in enumerate(copy.copy(pre_fitness)):
+            if k == 0:
+                if unit_delta > 10.0:
+                    fitness1.append(unit_delta)
+            if k != 0:
+                fitness1.append(pre_fitness[k] + 1.5 * fitness[0] ) # add the rheobase error to all the errors.
+                assert fitness1[k] != pre_fitness[k]
+
+            if k == 1:
+                if pre_fitness[1] > 10.0 :
+                    fitness1.append(f)
+            if k != 1 and len(fitness1)>1 :
+                fitness1.append(pre_fitness[k] + 1.25 * fitness[1] ) # add the rheobase error to all the errors.
+                assert fitness1[k] != pre_fitness[k]
+    print(fitness1, fitness)
+    pre_fitness = []
 
     return fitness[0],fitness[1],\
            fitness[2],fitness[3],\
