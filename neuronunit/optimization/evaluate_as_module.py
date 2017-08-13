@@ -92,6 +92,13 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
             if 'value' in v.prediction.keys():
                 unit_predictions = v.prediction['value']
 
+
+            if 'mean' in v.observation.keys():
+                unit_observations = v.observation['mean']
+
+            if 'mean' in v.prediction.keys():
+                unit_predictions = v.prediction['mean']
+
             to_r_s = unit_observations.units
             unit_predictions = unit_predictions.rescale(to_r_s)
 

@@ -192,8 +192,6 @@ def p_imports():
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     toolbox.register("select", tools.selNSGA2)
     return
-
-#p_imports()
 dview.apply_sync(p_imports)
 
 BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
