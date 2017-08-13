@@ -309,7 +309,7 @@ os.system('sudo /opt/conda/bin/pip install --upgrade networkx')
 cd = pickle.load(open('complete_dump.p','rb'))
 print(len(cd))
 
-unev = pickle.load(open('un_evolved.p','rb'))
+#unev = pickle.load(open('un_evolved.p','rb'))
 
 #unpack = [vmoffspring,history,logbook,rheobase_values,best_worst,vmhistory,hvolumes ]
 vmoffspring,history,logbook,rheobase_values,best_worst,vmhistory,hvolumes = cd[0], cd[1], cd[2], cd[3], cd[4], cd[5], cd[6]
