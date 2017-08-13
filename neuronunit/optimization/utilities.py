@@ -26,6 +26,8 @@ class VirtualModel(object):
         self.delta = []
         self.evaluated = False
         self.results = {}
+        self.searched = []
+        self.searchedd = {}
 '''
 import unittest
 tc = unittest.TestCase('__init__')
