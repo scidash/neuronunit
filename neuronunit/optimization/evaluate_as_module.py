@@ -61,7 +61,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     pre_fitness = []
     fitness = []
 
-    if float(vms.rheobase) <= 0.0
+    if float(vms.rheobase) <= 0.0:
         fitness = [ 125.0 for i in tests ]
 
     elif float(vms.rheobase) > 0.0:
@@ -84,11 +84,6 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
                 v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
                 v.params['injected_square_current']['delay'] = 100 * pq.ms
 
-
-
-            #if k == 0 and # and type(score) is not scores.InsufficientDataScore(None):
-                # score needs rheobase to be at least over 0pA current injection
-                # otherwise it will fail on attempt.
             score = v.judge(model,stop_on_error = False, deep_error = True)
             fitness.append(float(score.sort_key))
             model.run_number += 1
