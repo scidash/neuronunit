@@ -5,20 +5,13 @@
 
 import matplotlib # Its not that this file is responsible for doing plotting, but it calls many modules that are, such that it needs to pre-empt
 # setting of an appropriate backend.
-
 matplotlib.use('Agg')
 
 import sys
 import os
 import ipyparallel as ipp
 from ipyparallel import depend, require, dependent
-#
 
-# crashes import
-#get_ipython().magic('load_ext autoreload')
-#get_ipython().magic('autoreload 2')
-# more badness
-#from IPython.lib.deepreload import reload
 rc = ipp.Client(profile='default')
 THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
 this_nu = os.path.join(THIS_DIR,'../../')
@@ -28,13 +21,14 @@ from deap.benchmarks.tools import diversity, convergence, hypervolume
 rc[:].use_cloudpickle()
 inv_pid_map = {}
 dview = rc[:]
-#lview = rc.load_balanced_view()
 ar = rc[:].apply_async(os.getpid)
 pids = ar.get_dict()
 inv_pid_map = pids
 pid_map = {}
 
-#Map PIDs onto unique numeric global identifiers via a dedicated dictionary
+# Map PIDs onto unique numeric global identifiers via a dedicated dictionary
+# this is not used here, but it could not neaten up the lack of uniqueness of file names
+# in the future.
 for k,v in inv_pid_map.items():
     pid_map[v] = k
 
@@ -43,10 +37,8 @@ with dview.sync_imports(): # Causes each of these things to be imported on the w
     import matplotlib
     import neuronunit
     import model_parameters as modelp
-    try:
-        matplotlib.use('Qt5Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
-    except:
-        matplotlib.use('Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
+
+    matplotlib.use('Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
                           # on the worker threads.
     import pdb
     import array
@@ -91,6 +83,10 @@ def p_imports():
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
     print(get_neab.LEMS_MODEL_PATH)
+    ##
+    # Necessary even with temp file.
+    # workaround might involve PID map
+    ##
     new_file_path = '{0}{1}'.format(str(get_neab.LEMS_MODEL_PATH),int(os.getpid()))
     print(new_file_path)
 
@@ -128,9 +124,24 @@ with dview.sync_imports():
     toolbox = base.Toolbox()
     import model_parameters as modelp
     import numpy as np
-    BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
-    BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
-    NDIM = len(BOUND_UP)+1
+    sub_set = []
+    sub_set.append(modelp.model_params['a'])
+    sub_set.append(modelp.model_params['b'])
+
+    # a subset of the parameter space. Can be interchanged with the whole parameter space
+    # via artful commenting and uncommenting.
+
+    whole_BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
+    whole_BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
+
+    # BOUND_LOW = [ np.min(i) for i in sub_set ]
+    # BOUND_UP = [ np.max(i) for i in sub_set ]
+
+    BOUND_LOW = whole_BOUND_LOW
+    BOUND_UP = whole_BOUND_UP
+
+
+    NDIM = len(BOUND_UP)#+1
     def uniform(low, up, size=None):
         try:
             return [random.uniform(a, b) for a, b in zip(low, up)]
@@ -150,9 +161,24 @@ def p_imports():
     toolbox = base.Toolbox()
     import model_parameters as modelp
     import numpy as np
-    BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
-    BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
-    NDIM = len(BOUND_UP)+1
+    sub_set = []
+    sub_set.append(modelp.model_params['a'])
+    sub_set.append(modelp.model_params['b'])
+
+    # a subset of the parameter space. Can be interchanged with the whole parameter space
+    # via artful commenting and uncommenting.
+
+    whole_BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
+    whole_BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
+
+    #BOUND_LOW = [ np.min(i) for i in sub_set ]
+    #BOUND_UP = [ np.max(i) for i in sub_set ]
+
+    BOUND_LOW = whole_BOUND_LOW
+    BOUND_UP = whole_BOUND_UP
+
+
+    NDIM = len(BOUND_UP)#+1
     def uniform(low, up, size=None):
         try:
             return [random.uniform(a, b) for a, b in zip(low, up)]
@@ -244,6 +270,13 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
             if 'value' in v.prediction.keys():
                 unit_predictions = v.prediction['value']
 
+
+            if 'mean' in v.observation.keys():
+                unit_observations = v.observation['mean']
+
+            if 'mean' in v.prediction.keys():
+                unit_predictions = v.prediction['mean']
+
             to_r_s = unit_observations.units
             unit_predictions = unit_predictions.rescale(to_r_s)
 
@@ -272,31 +305,32 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     # To undo this step and substitute in normal NSGA function.
     # Substitute the block below with the one line:
     # fitness = pre_fitness
-    if unit_delta > 10.0:
-        for k,f in enumerate(copy.copy(pre_fitness)):
-            if k == 0:
-                fitness.append(unit_delta)
-            if k != 0:
-                fitness.append(pre_fitness[k] + 1.5 * unit_delta ) # add the rheobase error to all the errors.
-                assert fitness[k] != pre_fitness[k]
+    if float(vms.rheobase) > 0:
+        if unit_delta > 10.0:
+            for k,f in enumerate(copy.copy(pre_fitness)):
+                if k == 0:
+                    fitness.append(unit_delta)
+                if k != 0:
+                    fitness.append(pre_fitness[k] + 1.5 * unit_delta ) # add the rheobase error to all the errors.
+                    assert fitness[k] != pre_fitness[k]
 
-        pre_fitness = []
-        pre_fitness = copy.copy(fitness)
-        fitness = []
-    else:
-        fitness = pre_fitness
+            pre_fitness = []
+            pre_fitness = copy.copy(fitness)
+            fitness = []
+        else:
+            fitness = pre_fitness
 
-    if pre_fitness[1] > 10.0 :
-        for k,f in enumerate(copy.copy(pre_fitness)):
-            if k == 1:
-                fitness.append(unit_delta)
-            if k != 1:
-                fitness.append(pre_fitness[k] + 1.25 * f ) # add the rheobase error to all the errors.
-                assert fitness[k] != pre_fitness[k]
+        if pre_fitness[1] > 10.0 :
+            for k,f in enumerate(copy.copy(pre_fitness)):
+                if k == 1:
+                    fitness.append(unit_delta)
+                if k != 1:
+                    fitness.append(pre_fitness[k] + 1.25 * f ) # add the rheobase error to all the errors.
+                    assert fitness[k] != pre_fitness[k]
 
-        pre_fitness = []
-    else:
-        fitness = pre_fitness
+            pre_fitness = []
+        else:
+            fitness = pre_fitness
 
 
     return fitness[0],fitness[1],\
@@ -409,17 +443,20 @@ def check_rheobase(vmpop,pop=None):
         sub=[]
         supra=[]
         steps=[]
-        vms.rheobase=0.0
+        vms.rheobase = 0.0
         for k,v in vms.lookup.items():
-            if v==1:
+            vm.searchedd[v]=float(k)
+
+            if v == 1:
                 #A logical flag is returned to indicate that rheobase was found.
                 vms.rheobase=float(k)
+                vm.searched.append(float(k))
                 vms.steps = 0.0
                 vms.boolean = True
                 return vms
-            elif v==0:
+            elif v == 0:
                 sub.append(k)
-            elif v>0:
+            elif v > 0:
                 supra.append(k)
 
         sub=np.array(sub)
@@ -436,14 +473,15 @@ def check_rheobase(vmpop,pop=None):
             centerl = list(center)
             # The following code block probably looks counter intuitive.
             # Its job is to delete duplicated search values.
-            # Ie everything is a list of everything already explored.
-            # It then makes a corrected center position.
+            # Ie everything is a list of 'everything' already explored.
+            # It then inserts a bias corrected center position.
             for i,j in enumerate(centerl):
                 if i in list(everything):
 
                     np.delete(center,i)
                     del centerl[i]
-                    # delete the duplicated elements element, and replace it with a corrected
+                    # delete the duplicated element(s), and replace element(s)
+                    # with a bias corrected
                     # center below.
             #delete the index
             #np.delete(center,np.where(everything is in center))
@@ -560,6 +598,8 @@ def check_rheobase(vmpop,pop=None):
         # If its not true enter a search, with ranges informed by memory
         cnt = 0
         while vm.boolean == False:
+            vm.searched.append(vm.steps)
+
             for step in vm.steps:
                 vm = check_current(step, vm)
                 vm = check_fix_range(vm)
@@ -584,14 +624,15 @@ def check_rheobase(vmpop,pop=None):
 
 ##
 # Start of the Genetic Algorithm
-# For good results, MU the size of the gene pool
+# For good results, NGEN * MU  the number of generations
+# time the size of the gene pool
 # should at least be as big as number of dimensions/model parameters
 # explored.
 ##
 
-MU = 12
-NGEN = 7
-CXPB = 0.9
+MU = 10
+NGEN = 10
+CXPB = 0.8
 
 import numpy as np
 pf = tools.ParetoFront()
@@ -611,11 +652,9 @@ td = trans_dict
 dview.push({'trans_dict':trans_dict,'td':td})
 
 pop = toolbox.population(n = MU)
-
 pop = [ toolbox.clone(i) for i in pop ]
 
 vmpop = update_vm_pop(pop, td)
-
 vmpop , _ = check_rheobase(vmpop)
 
 
@@ -627,9 +666,9 @@ with open(new_checkpoint_path,'wb') as handle:#
 
 
 # sometimes done in serial in order to get access to opaque stdout/stderr
-#fitnesses = []
-#for v in vmpop:
-#   fitnesses.append(evaluate(v))
+# fitnesses = []
+# for v in vmpop:
+#    fitnesses.append(evaluate(v))
 
 import copy
 
@@ -737,7 +776,9 @@ while (gen < NGEN and means[-1] > 0.05):
     # pop = toolbox.select(pop + offspring, MU)
 
     # keys = history.genealogy_tree.keys()
+    # Optionally
     # Grab evaluated history items and chuck them into the mixture.
+    # This may cause stagnation of evolution however.
     # We want to select among the best from the whole history of the GA, not just penultimate and present generations.
     # all_hist = [ history.genealogy_history[i] for i in keys if history.genealogy_history[i].fitness.valid == True ]
     # pop = tools.selNSGA2(offspring + all_hist, MU)
@@ -772,11 +813,11 @@ import pickle
 with open('complete_dump.p','wb') as handle:
    pickle.dump([vmoffspring,history,logbook,rheobase_values,best_worst,vmhistory,hvolumes],handle)
 
-#lists = pickle.load(open('complete_dump.p','rb'))
+lists = pickle.load(open('complete_dump.p','rb'))
 #vmoffspring2,history2,logbook2 = lists[0],lists[1],lists[2]
-
+net_graph.surfaces(history)
 import net_graph
-reload(net_graph)
+#reload(net_graph)
 #vmhistory = update_vm_pop(history.genealogy_history.values(),td)
 #best, worst = net_graph.best_worst(history)
 #listss = [best , worst]
