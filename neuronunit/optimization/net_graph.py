@@ -34,7 +34,9 @@ def plotly_graph(history,vmhistory):
     node_colors = np.log([ np.sum(history.genealogy_history[i].fitness.values) for i in G ])
     positions = graphviz_layout(G, prog="dot")
 
-    dmin=1
+    # adjust circle size was
+    # 1 now 1.5
+    dmin=1.5
     ncenter=0
     for n in positions:
         x,y=positions[n]
@@ -100,7 +102,7 @@ def plotly_graph(history,vmhistory):
     fig = Figure(data=Data([edge_trace, node_trace]),
              layout=Layout(
                 title='<br>Genetic History Inheritence Tree with NeuronUnit/DEAP',
-                titlefont=dict(size=20),
+                titlefont=dict(size=22),
                 showlegend=True,
                 hovermode='closest',
                 margin=dict(b=20,l=5,r=5,t=40),
@@ -765,7 +767,7 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
                     stored_min.append(np.min(model.results['vm']))
                     stored_max.append(np.max(model.results['vm']))
                     sindexs.append(int((float(st)/ts[-1])*len(ts)))
-                    time_sequence = np.arange(np.min(sindexs)-10 , np.max(sindexs), 1)
+                    time_sequence = np.arange(np.min(sindexs)-5 , np.max(sindexs)+5, 1)
                     ptvec = np.array(model.results['t'])[time_sequence]
                     pvm = np.array(model.results['vm'])[time_sequence]
                     assert len(pvm) == len(ptvec)
@@ -828,8 +830,13 @@ def load_data():
     stacked = opened[0]
     columns1 = opened[1]
 
-
-
+def rh_search_df(vm):
+     import pandas as pd
+     df = pd.DataFrame(np.column_stack(np.array(vmpop[0].searched)))
+     df.index = ['CPU 0','CPU 1','CPU 2','CPU 3', 'CPU 4', 'CPU 5', 'CPU 6']
+     with open('rheoframe.p','wb') as handle:
+        pickle.dump([df,vm.rheobase],handle)
+     return df
 
 def not_just_mean(log,hypervolumes):
     '''
@@ -1007,7 +1014,6 @@ def bar_chart(vms,name=None):
     html_file.write(html)
     html_file.close()
     return df, threed, columns1 ,stacked, html, test_dic
-
 
 def plot_log(log,hypervolumes):
     '''

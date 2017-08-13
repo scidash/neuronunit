@@ -45,8 +45,8 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     import numpy as np
     import get_neab
     from itertools import repeat
-    import unittest
-    tc = unittest.TestCase('__init__')
+    #import unittest
+    #tc = unittest.TestCase('__init__')
 
 
     new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
@@ -143,31 +143,30 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     # To undo this step and substitute in normal NSGA function.
     # Substitute the block below with the one line:
     # fitness = pre_fitness
-    if unit_delta > 10.0:
-        for k,f in enumerate(copy.copy(pre_fitness)):
-            if k == 0:
-                fitness.append(unit_delta)
-            if k != 0:
-                fitness.append(pre_fitness[k] + 1.5 * unit_delta ) # add the rheobase error to all the errors.
-                assert fitness[k] != pre_fitness[k]
+    if float(vms.rheobase) > 0:
+        if unit_delta > 10.0:
+            for k,f in enumerate(copy.copy(pre_fitness)):
+                if k == 0:
+                    fitness.append(unit_delta)
+                if k != 0:
+                    fitness.append(pre_fitness[k] + 1.5 * unit_delta ) # add the rheobase error to all the errors.
+                    assert fitness[k] != pre_fitness[k]
+            pre_fitness = []
+            pre_fitness = copy.copy(fitness)
+            fitness = []
+        else:
+            fitness = pre_fitness
 
-        pre_fitness = []
-        pre_fitness = copy.copy(fitness)
-        fitness = []
-    else:
-        fitness = pre_fitness
-
-    if pre_fitness[1] > 10.0 :
-        for k,f in enumerate(copy.copy(pre_fitness)):
-            if k == 1:
-                fitness.append(f)
-            if k != 1:
-                fitness.append(pre_fitness[k] + 1.25 * f ) # add the rheobase error to all the errors.
-                assert fitness[k] != pre_fitness[k]
-
-        pre_fitness = []
-    else:
-        fitness = pre_fitness
+        if pre_fitness[1] > 10.0 :
+            for k,f in enumerate(copy.copy(pre_fitness)):
+                if k == 1:
+                    fitness.append(f)
+                if k != 1:
+                    fitness.append(pre_fitness[k] + 1.25 * f ) # add the rheobase error to all the errors.
+                    assert fitness[k] != pre_fitness[k]
+            pre_fitness = []
+        else:
+            fitness = pre_fitness
 
 
 
