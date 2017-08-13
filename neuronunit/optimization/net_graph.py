@@ -6,7 +6,7 @@ import graphviz
 import matplotlib as mpl
 # setting of an appropriate backend.
 #try:
-#    mpl.use('Qt5Agg') # Need to do this before importing neuronunit olon a Mac, because OSX backend won't work
+#    mpl.use('Qt5Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
 #except:
 mpl.use('Agg')
 
@@ -34,7 +34,9 @@ def plotly_graph(history,vmhistory):
     node_colors = np.log([ np.sum(history.genealogy_history[i].fitness.values) for i in G ])
     positions = graphviz_layout(G, prog="dot")
 
-    dmin=1
+    # adjust circle size was
+    # 1 now 1.5
+    dmin=1.5
     ncenter=0
     for n in positions:
         x,y=positions[n]
@@ -100,20 +102,19 @@ def plotly_graph(history,vmhistory):
     fig = Figure(data=Data([edge_trace, node_trace]),
              layout=Layout(
                 title='<br>Genetic History Inheritence Tree with NeuronUnit/DEAP',
-                titlefont=dict(size=16),
-                showlegend=False,
+                titlefont=dict(size=22),
+                showlegend=True,
                 hovermode='closest',
                 margin=dict(b=20,l=5,r=5,t=40),
                 annotations=[ dict(
-                    text="Python code: <a href='the code this derives from.' \
-                    https://github.com/russelljjarvis/neuronunit/blob/dev/neuronunit/optimization/net_graph.py#L470-L569</a>",
-                    showarrow=False,
+                    text="</a>",
+                    showarrow=True,
                     xref="paper", yref="paper",
                     x=0.005, y=-0.002 ) ],
-                xaxis=XAxis(showgrid=False, zeroline=False, showticklabels=False),
-                yaxis=YAxis(showgrid=False, zeroline=False, showticklabels=False)))
+                xaxis=XAxis(showgrid=False, zeroline=False, showticklabels=True),
+                yaxis=YAxis(showgrid=False, zeroline=False, showticklabels=True)))
     py.sign_in('RussellJarvis','FoyVbw7Ry3u4N2kCY4LE')
-    py.iplot(fig, filename='networkx.svg',image='svg')
+    py.iplot(fig, filename='networkx_new_DEAP.svg',image='svg')
 
 
 
@@ -234,7 +235,7 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
     value, that was found in a previous rheobase search.
 
     Outputs: This method only has side effects, not datatype outputs from the method.
-    The most important side effect being a plot in eps format.
+    The most important side effect being a plot in png format.
 
     '''
     import os
@@ -264,14 +265,21 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
             plt.tight_layout()
             model.results = None
             plt.ylabel('$V_{m}$ mV')
-            plt.xlabel('mS')
-        plt.savefig(str('test_')+str(v)+'vm_versus_t.eps', format='eps', dpi=1200)
+            plt.xlabel('ms')
+        plt.savefig(str('test_')+str(v)+'vm_versus_t.png', format='png', dpi=1200)
         import pandas as pd
         sf_best = pd.DataFrame(sc_for_frame_best)
         sf_worst = pd.DataFrame(sc_for_frame_worst)
 
 
 def speed_up(not_optional_list):
+    '''
+    This will be used in conjunction with rgerkin@github 's latest unpickable method
+    To achieve a big speed up by storing sciunit scores inside models, such that they don't need to
+    be reavaluated, each time.
+
+    Also awaiting another workaround.
+    '''
     import ipyparallel as ipp
 
     rc = ipp.Client(profile='default')
@@ -366,6 +374,254 @@ def speed_up(not_optional_list):
 
     return not_optional_list
 
+
+
+
+def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel to work.
+    '''
+    A method to plot the best and worst candidate solution waveforms side by side
+    Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
+    is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
+    value, that was found in a previous rheobase search.
+    Outputs: This method only has side effects, not datatype outputs from the method.
+    The most important side effect being a plot in png format.
+    '''
+    import os
+
+    import quantities as pq
+    import numpy as np
+    import get_neab
+    from itertools import repeat
+
+    from neuronunit.capabilities import spike_functions
+    import quantities as pq
+    from neo import AnalogSignal
+    import matplotlib.pyplot as plt
+    plt.style.use('ggplot')
+
+    fig, ax = plt.subplots(len(best_worst), figsize=(10, 5), facecolor='white')
+    #fig.clf()
+    import copy
+    tests = copy.copy(get_neab.tests)
+    #for k,v in enumerate(tests):
+    #import matplotlib.pyplot as plt
+
+    	# following variables possibly are
+    # going to become depreciated
+    stored_min = []
+    stored_max = []
+    sc_for_frame_best = []
+    sc_for_frame_worst = []
+
+    sindexs = []
+    # visualize
+    # widths tests
+    v = get_neab.tests[5]
+    #if k == 5: # Only interested in InjectedCurrentAPWidthTest this time.
+    for iterator, vms in enumerate(best_worst):
+        from neuronunit.models import backends
+        from neuronunit.models.reduced import ReducedModel
+
+        print(get_neab.LEMS_MODEL_PATH)
+        model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+
+        assert type(vms.rheobase) is not type(None)
+
+        v.params['injected_square_current']['duration'] = 1000 * pq.ms
+        v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
+        v.params['injected_square_current']['delay'] = 100 * pq.ms
+        import neuron
+        model.load_model()
+
+        model.reset_h(neuron)
+        model.update_run_params(vms.attrs)
+        print(v.params)
+        score = v.judge(model,stop_on_error = False, deep_error = True)
+        dt = model.results['t'][1] - model.results['t'][0]
+        dt = dt*pq.s
+        v_m = AnalogSignal(model.results['vm'],units=pq.V,sampling_rate=1.0/dt)
+        v_m = model.get_membrane_potential()
+        ts = model.results['t'] # time signal
+        st = spike_functions.get_spike_train(v_m) #spike times
+        print(st)
+        assert len(st) == 1
+
+        start = int((float(st)/ts[-1])*len(ts)) - 250 #index offset from spike
+        stop = int((float(st)/ts[-1])*len(ts)) + 500
+        time_sequence = np.arange(start , stop, 1)
+        ptvec = np.array(model.results['t'])[time_sequence]
+        other_stop = ptvec[-1]-ptvec[0]
+        lined_up_time = np.arange(0,other_stop,float(dt))
+        pvm = np.array(model.results['vm'])[time_sequence]
+
+        print(len(pvm),len(lined_up_time))
+        updated=str(copy.copy(score))
+
+        if 'value' in v.observation.keys():
+            unit_observations = v.observation['value']
+
+        if 'value' in v.prediction.keys():
+            unit_predictions = v.prediction['value']
+
+
+        if 'mean' in v.observation.keys():
+            unit_observations = v.observation['mean']
+
+        if 'mean' in v.prediction.keys():
+            unit_predictions = v.prediction['mean']
+
+        ax[iterator].semilogx(lined_up_time , pvm, label=str(unit_predictions), linewidth=1.5)
+
+        ax[iterator].legend(loc="lower left")
+        score = None
+    plt.legend()
+    fig.text(0.5, 0.04, 'ms', ha='center', va='center')
+    fig.text(0.06, 0.5, '$V_{m}$ mV', ha='center', va='center', rotation='vertical')
+    fig.savefig(str('width_test_')+str(v)+'vm_versus_t.png', format='png', dpi=1200)#,
+
+    # visualize
+    # threshold test
+    plt.style.use('ggplot')
+    plt.clf()
+    fig, ax = plt.subplots(len(best_worst), figsize=(10, 5), facecolor='white')
+    v = get_neab.tests[7]
+    #if k == 5: # Only interested in InjectedCurrentAPWidthTest this time.
+    for iterator, vms in enumerate(best_worst):
+        from neuronunit.models import backends
+        from neuronunit.models.reduced import ReducedModel
+
+        print(get_neab.LEMS_MODEL_PATH)
+        model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+
+        assert type(vms.rheobase) is not type(None)
+
+        v.params['injected_square_current']['duration'] = 1000 * pq.ms
+        v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
+        v.params['injected_square_current']['delay'] = 100 * pq.ms
+        import neuron
+        model.load_model()
+
+        model.reset_h(neuron)
+        model.update_run_params(vms.attrs)
+        print(v.params)
+        score = v.judge(model,stop_on_error = False, deep_error = True)
+        dt = model.results['t'][1] - model.results['t'][0]
+        dt = dt*pq.s
+        v_m = AnalogSignal(model.results['vm'],units=pq.V,sampling_rate=1.0/dt)
+        v_m = model.get_membrane_potential()
+        ts = model.results['t'] # time signal
+        st = spike_functions.get_spike_train(v_m) #spike times
+        print(st)
+        assert len(st) == 1
+
+        start = int((float(st)/ts[-1])*len(ts)) - 250 #index offset from spike
+        stop = int((float(st)/ts[-1])*len(ts)) + 500
+        time_sequence = np.arange(start , stop, 1)
+        ptvec = np.array(model.results['t'])[time_sequence]
+        other_stop = ptvec[-1]-ptvec[0]
+        lined_up_time = np.arange(0,other_stop,float(dt))
+        pvm = np.array(model.results['vm'])[time_sequence]
+
+        print(len(pvm),len(lined_up_time))
+        updated=str(copy.copy(score))
+
+        if 'value' in v.observation.keys():
+            unit_observations = v.observation['value']
+
+        if 'value' in v.prediction.keys():
+            unit_predictions = v.prediction['value']
+
+
+        if 'mean' in v.observation.keys():
+            unit_observations = v.observation['mean']
+
+        if 'mean' in v.prediction.keys():
+            unit_predictions = v.prediction['mean']
+
+        to_r_s = unit_observations.units
+        unit_predictions = unit_predictions.rescale(to_r_s)
+        plt.plot(lined_up_time , pvm, label=str(unit_predictions), linewidth=1.5)
+
+        plt.legend(loc="lower left")
+        score = None
+    plt.legend()
+    fig.text(0.5, 0.04, 'ms', ha='center', va='center')
+    fig.text(0.06, 0.5, '$V_{m}$ mV', ha='center', va='center', rotation='vertical')
+    fig.savefig(str('threshold')+str(v)+'vm_versus_t.png', format='png', dpi=1200)#,
+    ##
+    # Amplitude
+    ##
+    plt.style.use('ggplot')
+    plt.clf()
+    #fig, ax = plt.subplots(1, figsize=(10, 5), facecolor='white')
+    v = get_neab.tests[6]
+
+    for iterator, vms in enumerate(best_worst):
+        from neuronunit.models import backends
+        from neuronunit.models.reduced import ReducedModel
+
+        print(get_neab.LEMS_MODEL_PATH)
+        model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+
+        assert type(vms.rheobase) is not type(None)
+
+        v.params['injected_square_current']['duration'] = 1000 * pq.ms
+        v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
+        v.params['injected_square_current']['delay'] = 100 * pq.ms
+        import neuron
+        model.load_model()
+
+        model.reset_h(neuron)
+        model.update_run_params(vms.attrs)
+        print(v.params)
+        score = v.judge(model,stop_on_error = False, deep_error = True)
+        dt = model.results['t'][1] - model.results['t'][0]
+        dt = dt*pq.s
+        v_m = AnalogSignal(model.results['vm'],units=pq.V,sampling_rate=1.0/dt)
+        v_m = model.get_membrane_potential()
+        ts = model.results['t'] # time signal
+        st = spike_functions.get_spike_train(v_m) #spike times
+        print(st)
+        assert len(st) == 1
+
+        start = int((float(st)/ts[-1])*len(ts)) - 250 #index offset from spike
+        stop = int((float(st)/ts[-1])*len(ts)) + 500
+        time_sequence = np.arange(start , stop, 1)
+        ptvec = np.array(model.results['t'])[time_sequence]
+        other_stop = ptvec[-1]-ptvec[0]
+        lined_up_time = np.arange(0,other_stop,float(dt))
+        pvm = np.array(model.results['vm'])[time_sequence]
+
+        print(len(pvm),len(lined_up_time))
+        updated=str(copy.copy(score))
+
+        if 'value' in v.observation.keys():
+            unit_observations = v.observation['value']
+
+        if 'value' in v.prediction.keys():
+            unit_predictions = v.prediction['value']
+
+
+        if 'mean' in v.observation.keys():
+            unit_observations = v.observation['mean']
+
+        if 'mean' in v.prediction.keys():
+            unit_predictions = v.prediction['mean']
+
+        to_r_s = unit_observations.units
+        unit_predictions = unit_predictions.rescale(to_r_s)
+        plt.plot(lined_up_time , pvm, label=str(unit_predictions), linewidth=1.5)
+
+        plt.legend(loc="lower left")
+        score = None
+    plt.legend()
+    fig.text(0.5, 0.04, 'ms', ha='center', va='center')
+    fig.text(0.06, 0.5, '$V_{m}$ mV', ha='center', va='center', rotation='vertical')
+    fig.savefig(str('amplitude')+str(v)+'vm_versus_t.png', format='png', dpi=1200)#,
+
+
+
+
 def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipyparallel to work.
     '''
     A method to plot the best and worst candidate solution waveforms side by side
@@ -377,7 +633,7 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
 
     Outputs: This method only has side effects, not datatype outputs from the method.
 
-    The most important side effect being a plot in eps format.
+    The most important side effect being a plot in png format.
 
     '''
     import os
@@ -408,16 +664,10 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
         sc_for_frame_best = []
         sc_for_frame_worst = []
 
-        #stimes = []
         sindexs = []
         for iterator, vms in enumerate(not_optional_list):
 
-            #if vms is not_optional_list[-1]:
-            #    color = 'blue'
-            #elif iterator == len(not_optional_list):
-            #    color = 'blue'
-            #else:
-            #    color = 'lightblue'
+
             from neuronunit.models import backends
             from neuronunit.models.reduced import ReducedModel
 
@@ -485,7 +735,7 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
             else:
                 stored_min.append(np.min(model.results['vm']))
                 stored_max.append(np.max(model.results['vm']))
-                plt.plot(model.results['t'],model.results['vm'],label=str(v)+str(score), linewidth=1)
+                plt.plot(model.results['t'],model.results['vm'],label=str(v)+str(score), linewidth=3)
                 plt.xlim(0,float(v.params['injected_square_current']['duration']) )
                 #plt.ylim(np.min(stored_min)-4,np.max(stored_max)+4)
                 #model.results = None
@@ -493,8 +743,8 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
         #plt.tight_layout()
         plt.legend()
         plt.ylabel('$V_{m}$ mV')
-        plt.xlabel('mS')
-        plt.savefig(str('test_')+str(v)+'vm_versus_t.png')#, format='eps', dpi=1200)
+        plt.xlabel('ms')
+        plt.savefig(str('test_')+str(v)+'vm_versus_t.png', format='png', dpi=1200)
 
 
 
@@ -528,7 +778,7 @@ def surfaces(history,td):
         plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
         fig_trip.tight_layout()
         fig_trip.legend()
-        fig_trip.savefig('surface'+str(td[w])+str(td[z])+'.eps')
+        fig_trip.savefig('surface'+str(td[w])+str(td[z])+'.png',format='png', dpi=1200)
 
 
 def load_data():
@@ -552,7 +802,7 @@ def not_just_mean(log,hypervolumes):
 
     Outputs: This method only has side effects, not datatype outputs from the method.
 
-    The most important side effect being a plot in eps format.
+    The most important side effect being a plot in png format.
 
     '''
     import matplotlib.pyplot as plt
@@ -573,15 +823,15 @@ def not_just_mean(log,hypervolumes):
         hypervolumes,
         color='red',
         linewidth=2,
-        label='population average')
+        label='Solution Hypervolume')
 
     axes.set_xlim(min(gen_numbers) - 1, max(gen_numbers) + 1)
     axes.set_xlabel('Generation #')
     axes.set_ylabel('Sum of objectives')
-    axes.set_ylim([0, max(mean_many,hypervolumes)])
+    axes.set_ylim([0, max(max(mean_many),max(hypervolumes))])
     axes.legend()
     fig.tight_layout()
-    fig.savefig('Izhikevich_evolution_just_mean.eps', format='eps', dpi=1200)
+    fig.savefig('Izhikevich_evolution_just_mean.png', format='png', dpi=1200)
 
 def bar_chart(vms,name=None):
 
@@ -593,7 +843,7 @@ def bar_chart(vms,name=None):
 
     Outputs: This method only has side effects, not datatype outputs from the method.
 
-    The most important side effect being a plot in eps format.
+    The most important side effect being a plot in png format.
 
     '''
     import os
@@ -627,6 +877,8 @@ def bar_chart(vms,name=None):
     labels = [ '{0}_{1}'.format(str(t),str(t.observation['value'].units)) for t in tests if 'mean' not in t.observation.keys() ]
     labels.extend([ '{0}_{1}'.format(str(t),str(t.observation['mean'].units))  for t in tests if 'mean' in t.observation.keys() ])
     test_dic = {}
+    columns1 = [] # a list of test labels to use as column labels.
+
     for k,v in enumerate(tests):
 
         new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
@@ -692,53 +944,41 @@ def bar_chart(vms,name=None):
         test_dic[str(v)] = (float(unit_observations), float(unit_predictions), unit_delta)
 
 
-    columns1 = [] # a list of test labels to use as column labels.
-
-    for t in tests:
-        if 'mean' not in t.observation.keys():
-            columns1.append(str(t)+str(t.observation['value'].units))
-
-            #labels_dic[str(t)] = str(t.observation['value'].units)
-        if 'mean' in t.observation.keys():
-            #labels_dic[str(t)] = str(t.observation['mean'].units)
-            columns1.append(str(t)+str(t.observation['mean'].units))
-
-
+        if 'value' in v.observation.keys():
+            columns1.append(str(v)+str(v.observation['value'].units))
+            #labels_dic[str(v)] = str(v.observation['value'].units)
+        if 'mean' in v.observation.keys():
+            #labels_dic[str(v)] = str(v.observation['mean'].units)
+            columns1.append(str(v)+str(v.observation['mean'].units))
     threed = []
+    columns2 = []
     iterator = 0
     average = np.mean([ np.sum(v) for v in test_dic.values()])
-    for k,v in test_dic.items():
-		# these v[0] ... v[2], types
-		# may need to be cast to float
-		# for panda ie float(v[0]) etc.
-		# hopefuly not though.
-        threed.append((float(v[0]),float(v[1]),float(v[2])))
-
-    for k,t in enumerate(threed):
-        if np.sum(t) > 3.5 * average:
-            del threed[k]
-            del columns1[k]
-    #import pdb; pdb.set_trace()
+    for i,t in enumerate(tests):
+        v = test_dic[str(t)]
+        if not(np.sum(v) > 3.5 * average) and not(v[2] > 25.0) :
+            threed.append((float(v[0]),float(v[1]),float(v[2])))
+            columns2.append(columns1[i])
     stacked = np.column_stack(np.array(threed))
-    df = pd.DataFrame(np.array(stacked), columns=columns1)
-    #df = pd.DataFrame(np.array(stacked), columns=columns1)
+    df = pd.DataFrame(np.array(stacked), columns=columns2)
     df.index = ['observation','prediction','difference']
-    df = df.transpose()
+    #import pdb;
+    #pdb.set_trace()
+    # uncoment this line to make a bar chart on plotly.
+    # df.iplot(kind='bar', barmode='stack', yTitle='NeuronUnit Test Agreement', title='test agreement every test', filename='grouped-bar-chart')
+    html = df.to_html()
+    html_file = open("tests_agreement_table.html","w")
+    html_file.write(html)
+    html_file.close()
+    return df, threed, columns1 ,stacked, html
 
-    df.iplot(kind='bar', barmode='stack', yTitle='NeuronUnit Test Agreement', title='test agreement every test', filename='grouped-bar-chart')
-    #df = df.drop(['InjectedCurrentAPThresholdTest1.0 ms'])# *= 10 **-9
-    #df = df.drop(['InputResistanceTest1.0 ohm'])
-
-    return test_dic
-
-
-def plot_log(log):
+def plot_log(log,hypervolumes):
     '''
     https://github.com/BlueBrain/BluePyOpt/blob/master/examples/graupnerbrunelstdp/run_fit.py
     Input: DEAP Plot logbook
     Outputs: This method only has side effects, not datatype outputs from the method.
 
-    The most important side effect being a plot in eps format.
+    The most important side effect being a plot in png format.
 
     '''
     import matplotlib.pyplot as plt
@@ -779,6 +1019,13 @@ def plot_log(log):
         minimum,
         linewidth=2,
         label='population objectives')
+
+    axes.plot(
+        gen_numbers,
+        hypervolumes,
+        color='red',
+        linewidth=2,
+        label='Solution Hypervolume')
         # want objective labels to be label.
         # problem is vector scalar mismatch.
 
@@ -791,7 +1038,7 @@ def plot_log(log):
     axes.legend()
 
     fig.tight_layout()
-    fig.savefig('Izhikevich_history_evolution.eps', format='eps', dpi=1200)
+    fig.savefig('Izhikevich_history_evolution.png', format='png', dpi=1200)
 
 
 def plot_objectives_history(log):
@@ -800,7 +1047,7 @@ def plot_objectives_history(log):
     Input: DEAP Plot logbook
     Outputs: This method only has side effects, not datatype outputs from the method.
 
-    The most important side effect being a plot in eps format.
+    The most important side effect being a plot in png format.
 
     '''
     import matplotlib.pyplot as plt
@@ -813,6 +1060,8 @@ def plot_objectives_history(log):
 
     gen_numbers = log.select('gen')
     minimum = log.select('min')
+    mean = log.select('mean')
+
     import get_neab
     objective_labels = [ str(t) for t in get_neab.tests ]
     mins_components_plot = log.select('min')
@@ -832,7 +1081,22 @@ def plot_objectives_history(log):
             )
         if np.max(components[keys]) > maximum:
             maximum = np.max(components[keys])
+    '''
+    axes.semilogy(
+        gen_numbers,
+        mean,
+        color='black',
+        linewidth=2,
+        label='population average')
 
+    axes.fill_between(
+        gen_numbers,
+        stdminus,
+        stdplus,
+        color='lightgray',
+        linewidth=2,
+        label='population standard deviation')
+    '''
     axes.set_xlim(min(gen_numbers) - 1, max(gen_numbers) + 1)
     axes.set_xlabel('Generation #')
     axes.set_ylabel('Sum of objectives')
@@ -840,4 +1104,4 @@ def plot_objectives_history(log):
     axes.legend()
 
     fig.tight_layout()
-    fig.savefig('Izhikevich_evolution_components.eps', format='eps', dpi=1200)
+    fig.savefig('Izhikevich_evolution_components.png', format='png', dpi=1200)
