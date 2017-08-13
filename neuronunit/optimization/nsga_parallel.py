@@ -134,11 +134,11 @@ with dview.sync_imports():
     whole_BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
     whole_BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
 
-    # BOUND_LOW = [ np.min(i) for i in sub_set ]
-    # BOUND_UP = [ np.max(i) for i in sub_set ]
+    BOUND_LOW = [ np.min(i) for i in sub_set ]
+    BOUND_UP = [ np.max(i) for i in sub_set ]
 
-    BOUND_LOW = whole_BOUND_LOW
-    BOUND_UP = whole_BOUND_UP
+    # BOUND_LOW = whole_BOUND_LOW
+    # BOUND_UP = whole_BOUND_UP
 
 
     NDIM = len(BOUND_UP)#+1
@@ -171,11 +171,11 @@ def p_imports():
     whole_BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
     whole_BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
 
-    #BOUND_LOW = [ np.min(i) for i in sub_set ]
-    #BOUND_UP = [ np.max(i) for i in sub_set ]
+    BOUND_LOW = [ np.min(i) for i in sub_set ]
+    BOUND_UP = [ np.max(i) for i in sub_set ]
 
-    BOUND_LOW = whole_BOUND_LOW
-    BOUND_UP = whole_BOUND_UP
+    # BOUND_LOW = whole_BOUND_LOW
+    # BOUND_UP = whole_BOUND_UP
 
 
     NDIM = len(BOUND_UP)#+1
@@ -194,15 +194,7 @@ def p_imports():
     return
 dview.apply_sync(p_imports)
 
-BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
-BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
-NDIM = len(BOUND_UP)+1 #One extra to store rheobase values in.
 
-def uniform(low, up, size=None):
-    try:
-        return [random.uniform(a, b) for a, b in zip(low, up)]
-    except TypeError:
-        return [random.uniform(a, b) for a, b in zip([low] * size, [up] * size)]
 toolbox = base.Toolbox()
 
 toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
@@ -705,7 +697,7 @@ record = stats.compile(pop)
 logbook.record(gen=0, evals=len(pop), **record)
 print(logbook.stream)
 
-def difference(unit_predictions):
+def rh_difference(unit_predictions):
     unit_observations = get_neab.tests[0].observation['value']
     to_r_s = unit_observations.units
     unit_predictions = unit_predictions.rescale(to_r_s)
@@ -717,7 +709,7 @@ verbose = True
 means = np.array(logbook.select('avg'))
 gen = 1
 rh_mean_status = np.mean([ v.rheobase for v in vmpop ])
-rhdiff = difference(rh_mean_status * pq.pA)
+rhdiff = rh_difference(rh_mean_status * pq.pA)
 print(rhdiff)
 verbose = True
 while (gen < NGEN and means[-1] > 0.05):
@@ -729,8 +721,8 @@ while (gen < NGEN and means[-1] > 0.05):
     offspring = tools.selNSGA2(pop, len(pop))
     if verbose:
         for ind in offspring:
-            print('what do the weights without values look like? {0}'.format(ind.fitness.weights[0]))
-            print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues[0]))
+            print('what do the weights without values look like? {0}'.format(ind.fitness.weights[:]))
+            print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues[:]))
             #print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid[0]))
             print(rhdiff)
     offspring = [toolbox.clone(ind) for ind in offspring]
@@ -756,8 +748,8 @@ while (gen < NGEN and means[-1] > 0.05):
     vmoffspring = update_vm_pop(copy.copy(invalid_ind), trans_dict) #(copy.copy(invalid_ind), td)
     vmoffspring , _ = check_rheobase(copy.copy(vmoffspring))
     rh_mean_status = np.mean([ v.rheobase for v in vmoffspring ])
-    rhdiff = difference(rh_mean_status * pq.pA)
-    print('the difference: {0}'.format(difference(rh_mean_status * pq.pA)))
+    rhdiff = rh_difference(rh_mean_status * pq.pA)
+    print('the difference: {0}'.format(rh_difference(rh_mean_status * pq.pA)))
     # sometimes fitness is assigned in serial, although slow gives access to otherwise hidden
     # stderr/stdout
     # fitnesses = []
