@@ -815,7 +815,7 @@ with open('complete_dump.p','wb') as handle:
 
 lists = pickle.load(open('complete_dump.p','rb'))
 #vmoffspring2,history2,logbook2 = lists[0],lists[1],lists[2]
-net_graph.surfaces(history)
+net_graph.surfaces(history,td)
 import net_graph
 #reload(net_graph)
 #vmhistory = update_vm_pop(history.genealogy_history.values(),td)
