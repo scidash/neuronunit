@@ -60,31 +60,49 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     tests = copy.copy(get_neab.tests)
     pre_fitness = []
     fitness = []
-    for k,v in enumerate(tests):
-        if k == 0:
-            v.prediction = {}
-            v.prediction['value'] = vms.rheobase * pq.pA
 
-        if k != 0:
-            v.prediction = None
+    if float(vms.rheobase) <= 0.0
+        fitness = [ 125.0 for i in tests ]
 
-        if k == 1 or k == 2 or k == 3:
-            # Negative square pulse current.
-            v.params['injected_square_current']['duration'] = 100 * pq.ms
-            v.params['injected_square_current']['amplitude'] = -10 *pq.pA
-            v.params['injected_square_current']['delay'] = 30 * pq.ms
-        if k==0 or k == 4 or k == 5 or k == 6 or k == 7:
-            # Threshold current.
-            v.params['injected_square_current']['duration'] = 1000 * pq.ms
-            v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
-            v.params['injected_square_current']['delay'] = 100 * pq.ms
+    elif float(vms.rheobase) > 0.0:
+        for k,v in enumerate(tests):
+            if k == 0:
+                v.prediction = {}
+                v.prediction['value'] = vms.rheobase * pq.pA
+
+            if k != 0:
+                v.prediction = None
+
+            if k == 1 or k == 2 or k == 3:
+                # Negative square pulse current.
+                v.params['injected_square_current']['duration'] = 100 * pq.ms
+                v.params['injected_square_current']['amplitude'] = -10 *pq.pA
+                v.params['injected_square_current']['delay'] = 30 * pq.ms
+            if k == 0 or k == 4 or k == 5 or k == 6 or k == 7:
+                # Threshold current.
+                v.params['injected_square_current']['duration'] = 1000 * pq.ms
+                v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
+                v.params['injected_square_current']['delay'] = 100 * pq.ms
 
 
 
-        if k == 0 and float(vms.rheobase) > 0.0:# and type(score) is not scores.InsufficientDataScore(None):
-            # score needs rheobase to be at least over 0pA current injection
-            # otherwise it will fail on attempt.
+            #if k == 0 and # and type(score) is not scores.InsufficientDataScore(None):
+                # score needs rheobase to be at least over 0pA current injection
+                # otherwise it will fail on attempt.
             score = v.judge(model,stop_on_error = False, deep_error = True)
+            fitness.append(float(score.sort_key))
+            model.run_number += 1
+
+
+    return fitness[0],fitness[1],\
+           fitness[2],fitness[3],\
+           fitness[4],fitness[5],\
+           fitness[6],fitness[7],
+
+
+
+        '''
+            #import pdb; pdb.set_trace()
 
             if 'value' in v.observation.keys():
                 unit_observations = v.observation['value']
@@ -110,14 +128,12 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
             assert unit_delta == diff
 
             pre_fitness.append(float(unit_delta))
+
         if float(vms.rheobase) <=0 :
-            pre_fitness.append(15.0)
         else:
             score = v.judge(model,stop_on_error = False, deep_error = True)
             pre_fitness.append(float(score.sort_key))
 
-    model.run_number += 1
-    model.rheobase = vms.rheobase * pq.pA
 
     # Hybrid scheme the Genetic Algorithm
     # Make it a sum of objectives as well as
@@ -152,13 +168,6 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
         pre_fitness = []
     else:
         fitness = pre_fitness
-
-
-    return fitness[0],fitness[1],\
-           fitness[2],fitness[3],\
-           fitness[4],fitness[5],\
-           fitness[6],fitness[7],
-
 
 
 

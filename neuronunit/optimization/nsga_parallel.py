@@ -168,15 +168,6 @@ def p_imports():
     return
 dview.apply_sync(p_imports)
 
-BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
-BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
-NDIM = len(BOUND_UP)+1 #One extra to store rheobase values in.
-
-def uniform(low, up, size=None):
-    try:
-        return [random.uniform(a, b) for a, b in zip(low, up)]
-    except TypeError:
-        return [random.uniform(a, b) for a, b in zip([low] * size, [up] * size)]
 toolbox = base.Toolbox()
 
 toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
@@ -769,6 +760,7 @@ while (gen < NGEN and means[-1] > 0.05):
                                                         pf_mean))
 
 import net_graph
+net_graph.surfaces(history,td)
 best, worst = net_graph.best_worst(history)
 listss = [best , worst]
 best_worst = update_vm_pop(listss,td)
