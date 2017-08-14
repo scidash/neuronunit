@@ -281,18 +281,11 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
             unit_predictions = unit_predictions.rescale(to_r_s)
 
             unit_delta = np.abs( np.abs(float(unit_observations))-np.abs(float(unit_predictions)) )
-            print(float(vms.rheobase),float(unit_predictions))
-            assert float(vms.rheobase) == float(unit_predictions)
-            diff = np.abs(np.abs(float(unit_observations)) - np.abs(float(vms.rheobase)))
-            print(unit_delta, diff, float(unit_observations))
-            assert unit_delta == diff
+
 
             pre_fitness.append(float(unit_delta))
         if float(vms.rheobase) <=0 :
             pre_fitness.append(100.0)
-        #else:
-        #    score = v.judge(model,stop_on_error = False, deep_error = True)
-        #    pre_fitness.append(float(unit_delta))
 
     model.run_number += 1
     model.rheobase = vms.rheobase * pq.pA
@@ -672,8 +665,8 @@ with open(new_checkpoint_path,'wb') as handle:#
 #   fitnesses.append(evaluate_as_module.evaluate(v))
 
 import copy
-#import evaluate_as_module
-#fitnesses = dview.map_sync(evaluate_as_module.evaluate, copy.copy(vmpop))
+import evaluate_as_module
+fitnesses = dview.map_sync(evaluate_as_module.evaluate, copy.copy(vmpop))
 
 fitnesses = dview.map_sync(evaluate, copy.copy(vmpop))
 print(fitnesses)
@@ -755,8 +748,8 @@ while (gen < NGEN and means[-1] > 0.05):
     # for v in vmoffspring:
     #    fitness.append(evaluate(v))
     #import evaluate_as_module
-    #fitnesses = list(dview.map_sync(evaluate_as_module.evaluate, copy.copy(vmoffspring)))
-    fitnesses = list(dview.map_sync(evaluate, copy.copy(vmoffspring)))
+    fitnesses = list(dview.map_sync(evaluate_as_module.evaluate, copy.copy(vmoffspring)))
+    #fitnesses = list(dview.map_sync(evaluate, copy.copy(vmoffspring)))
 
     mf = np.mean(fitnesses)
 
