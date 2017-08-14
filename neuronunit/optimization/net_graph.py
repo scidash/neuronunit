@@ -247,6 +247,14 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
     from itertools import repeat
     vmslist = [vms_best, vms_worst]
     import copy
+    ##
+    # The attribute 'get_neab.tests[0].prediction'
+    # must be declared before use can occur.
+    ##
+    get_neab.tests[0].prediction = None
+    get_neab.tests[0].prediction = {}
+    get_neab.tests[0].prediction['value'] = None
+    #vms = best_worst[0]
     tests = copy.copy(get_neab.tests)
     for k,v in enumerate(tests):
         import matplotlib.pyplot as plt
@@ -257,6 +265,8 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
         sc_for_frame_best = []
         sc_for_frame_worst = []
         for iterator, vms in enumerate(vmslist):
+            get_neab.tests[0].prediction['value'] = vms.rheobase * pq.pA
+
             plt.plot(vms.results[str(v)]['ts'],vms.results[str(v)]['v_m'])#,label=str(v)+str(names[iterator])+str(score))
             plt.xlim(0,float(v.params['injected_square_current']['duration']) )
             stored_min.append(np.min(model.results['vm']))
@@ -343,9 +353,6 @@ def speed_up(not_optional_list):
         model.update_run_params(vms.attrs)
         print(v.params)
         score = v.judge(model,stop_on_error = False, deep_error = True)
-        #dt = model.results['t'][1] - model.results['t'][0]
-        #dt = dt*pq.s
-        #v_m = AnalogSignal(copy.copy(model.results['vm'].to_python()),units=pq.V,sampling_rate=1.0/dt)
 
         v_m = model.get_membrane_potential()
         ts = model.results['t']# time signal
@@ -410,7 +417,6 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
     vms = best_worst[0]
     get_neab.tests[0].prediction['value'] = vms.rheobase * pq.pA
 
-
     stored_min = []
     stored_max = []
     sc_for_frame_best = []
@@ -420,7 +426,10 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
     # visualize
     # widths tests
     fig, ax = plt.subplots(1, figsize=(10, 5), facecolor='white')
+
     v = get_neab.tests[5]
+
+
     for iterator, vms in enumerate(best_worst):
         from neuronunit.models import backends
         from neuronunit.models.reduced import ReducedModel
@@ -438,7 +447,6 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
 
         model.reset_h(neuron)
         model.update_run_params(vms.attrs)
-        print(v.params)
         score = v.judge(model,stop_on_error = False, deep_error = True)
 
         v_m = model.get_membrane_potential()
@@ -446,11 +454,10 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
 
         ts = model.results['t'] # time signal
         st = spike_functions.get_spike_train(v_m) #spike times
-        print(st)
-        assert len(st) == 1
 
-        start = int((float(st)/ts[-1])*len(ts))-200  #index offset from spike
-        stop = int((float(st)/ts[-1])*len(ts))+100
+
+        start = int((float(st)/ts[-1])*len(ts))-750  #index offset from spike
+        stop = int((float(st)/ts[-1])*len(ts))+1500
         time_sequence = np.arange(start , stop, 1)
         ptvec = np.array(model.results['t'])[time_sequence]
 
@@ -465,6 +472,8 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         actual_width_differences = np.abs(np.abs(unit_observations) - np.abs(unit_predictions))
 
         pvm = np.array(score.related_data['vm'])[time_sequence]
+        print(len(pvm),len(lined_up_time),float(dt))
+        assert len(pvm)==len(lined_up_time)
         assert len(pvm) == len(ptvec)
 
         print(len(pvm),len(lined_up_time))
@@ -481,10 +490,19 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
 
         if 'mean' in v.prediction.keys():
             unit_predictions = v.prediction['mean']
-        try:
-            plt.plot(lined_up_time , pvm, linewidth=1.5,label=str(sw))
-        except:
-            pass
+
+        if len(lined_up_time)==len(pvm):
+            plt.plot(lined_up_time , pvm, label=str(sw), linewidth=1.5)
+#
+
+        #ax[iterator].legend(labels=str(sw) ,loc="upper right")
+
+
+        #ax[iterator].legend(loc="lower left")
+        #score = None
+    #plt.legend()
+    #fig.text(0.5, 0.04, 'ms', ha='center', va='center')
+    #fig.text(0.06, 0.5, '$V_{m}$ mV', ha='center', va='center', rotation='vertical')
     fig.savefig(str('width_test_')+str(v)+'vm_versus_t.png', format='png', dpi=1200)#,
 
     # visualize
@@ -519,16 +537,16 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         ts = model.results['t'] # time signal
         st = spike_functions.get_spike_train(v_m) #spike times
         v_m = model.get_membrane_potential()
-
-
-        start = int((float(st)/ts[-1])*len(ts))-250  #index offset from spike
-        stop = int((float(st)/ts[-1])*len(ts))+100
+        start = int((float(st)/ts[-1])*len(ts))-750  #index offset from spike
+        stop = int((float(st)/ts[-1])*len(ts))+1500
 
         time_sequence = np.arange(start , stop, 1)
         ptvec = np.array(model.results['t'])[time_sequence]
         other_stop = ptvec[-1]-ptvec[0]
         lined_up_time = np.arange(0,other_stop,float(dt))
         pvm = np.array(model.results['vm'])[time_sequence]
+        print(len(pvm),len(lined_up_time),float(dt))
+        assert len(pvm)==len(lined_up_time)
 
 
         if 'value' in v.observation.keys():
@@ -546,11 +564,10 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
 
         to_r_s = unit_observations.units
         unit_predictions = unit_predictions.rescale(to_r_s)
-        try:
-            plt.plot(lined_up_time , pvm, label=str(unit_predictions) ,linewidth=1.5)
-        except:
-            pass
-        #plt.legend(labels=str(unit_predictions),loc="lower left")
+        if len(lined_up_time)==len(pvm):
+            plt.plot(lined_up_time , pvm, label=str(unit_predictions), linewidth=1.5)
+        #    pass
+        #ax[iterator].legend(labels=str(unit_predictions),loc="upper right")
         threshold_line = []# [ float(unit_predictions)
         for i in lined_up_time:
             if i < 1000:
@@ -569,7 +586,7 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
     ##
     plt.style.use('ggplot')
     plt.clf()
-    #fig, ax = plt.subplots(1, figsize=(10, 5), facecolor='white')
+    fig, ax = plt.subplots(1, figsize=(10, 5), facecolor='white')
     v = get_neab.tests[6]
 
     for iterator, vms in enumerate(best_worst):
@@ -599,13 +616,17 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         print(st)
         assert len(st) == 1
 
-        start = int((float(st)/ts[-1])*len(ts)) - 250 #index offset from spike
-        stop = int((float(st)/ts[-1])*len(ts)) + 500
+        start = int((float(st)/ts[-1])*len(ts))-750  #index offset from spike
+        stop = int((float(st)/ts[-1])*len(ts))+1500
+
         time_sequence = np.arange(start , stop, 1)
         ptvec = np.array(model.results['t'])[time_sequence]
         other_stop = ptvec[-1]-ptvec[0]
         lined_up_time = np.arange(0,other_stop,float(dt))
+
         pvm = np.array(model.results['vm'])[time_sequence]
+        print(len(pvm),len(lined_up_time),float(dt))
+        assert len(pvm)==len(lined_up_time)
 
         print(len(pvm),len(lined_up_time))
 
@@ -625,11 +646,10 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
 
         to_r_s = unit_observations.units
         unit_predictions = unit_predictions.rescale(to_r_s)
-        try:
+        if len(lined_up_time)==len(pvm):
             plt.plot(lined_up_time , pvm, label=str(unit_predictions), linewidth=1.5)
-        except:
-            pass
-
+        #except:
+        #    pass
         #plt.legend(loc="lower left")
         #score = None
     #plt.legend()
@@ -725,10 +745,8 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
             score = v.judge(model,stop_on_error = False, deep_error = True)
 
             if k == 0 or k ==4 or k == 5 or k == 6 or k == 7:
-
-                dt = model.results['t'][1] - model.results['t'][0]
-                dt = dt*pq.s
-                v_m = AnalogSignal(model.results['vm'],units=pq.V,sampling_rate=1.0/dt)
+                v_m = model.get_membrane_potential()
+                dt = float(v_m.sampling_period)
                 ts = model.results['t'] # time signal
                 st = spike_functions.get_spike_train(v_m) #spike times
                 if model.get_spike_count() == 1:
@@ -746,14 +764,14 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
                     ptvec = np.array(model.results['t'])[time_sequence]
                     pvm = np.array(model.results['vm'])[time_sequence]
                     assert len(pvm) == len(ptvec)
-                    plt.plot(ptvec, pvm, label=str(v)+str(score), linewidth=1)
+                    plt.plot(ptvec, pvm, label=str(v)+str(score), linewidth=1.5)
                     #plt.xlim(np.min(sindexs)-11,np.min(sindexs)+11 )
                     #plt.ylim(np.min(stored_min)-4,np.max(stored_max)+4)
 
             else:
                 stored_min.append(np.min(model.results['vm']))
                 stored_max.append(np.max(model.results['vm']))
-                plt.plot(model.results['t'],model.results['vm'],label=str(v)+str(score), linewidth=3)
+                plt.plot(model.results['t'],model.results['vm'],label=str(v)+str(score), linewidth=1.5)
                 plt.xlim(0,float(v.params['injected_square_current']['duration']) )
                 #plt.ylim(np.min(stored_min)-4,np.max(stored_max)+4)
                 #model.results = None
@@ -764,6 +782,39 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
         plt.xlabel('ms')
         plt.savefig(str('test_')+str(v)+'vm_versus_t.png', format='png', dpi=1200)
 
+
+
+def surfaces(history,td):
+
+    all_inds = history.genealogy_history.values()
+    sums = numpy.array([np.sum(ind.fitness.values) for ind in all_inds])
+    keep = set()
+    quads = []
+    for k in range(1,9):
+        for i,j in enumerate(td):
+            print(i,k)
+            if i+k < 10:
+                quads.append((td[i],td[i+k],i,i+k))
+
+    for q in quads:
+        print(k)
+        (x,y,w,z) = q
+        print(x,y,w,z,i)
+        xs = numpy.array([ind[w] for ind in all_inds])
+        ys = numpy.array([ind[z] for ind in all_inds])
+        min_ys = ys[numpy.where(sums == numpy.min(sums))]
+        min_xs = xs[numpy.where(sums == numpy.min(sums))]
+        plt.clf()
+        fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
+        trip_axis = ax_trip.tripcolor(xs,ys,sums+1,20,norm=matplotlib.colors.LogNorm())
+        plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue',label='global minima')
+        fig_trip.colorbar(trip_axis, label='sum of objectives + 1')
+        ax_trip.set_xlabel('Parameter '+ str(td[w]))
+        ax_trip.set_ylabel('Parameter '+ str(td[z]))
+        plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
+        fig_trip.tight_layout()
+        fig_trip.legend()
+        fig_trip.savefig('surface'+str(td[w])+str(td[z])+'.png',format='png', dpi=1200)
 
 
 def load_data():
@@ -924,10 +975,10 @@ def bar_chart(vms,name=None):
 
         new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
         model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-        #model.load_model()
+
         assert type(vms.rheobase) is not type(None)
-        #tests = get_neab.suite.tests
-        #model.update_run_params(vms.attrs)
+
+
 
         if k == 0:
             v.prediction = {}
