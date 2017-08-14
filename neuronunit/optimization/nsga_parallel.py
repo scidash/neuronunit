@@ -668,13 +668,13 @@ with open(new_checkpoint_path,'wb') as handle:#
 # sometimes done in serial in order to get access to opaque stdout/stderr
 import evaluate_as_module
 
-#fitnesses = []
-#for v in vmpop:
-#   fitnesses.append(evaluate_as_module.evaluate(v))
+fitnesses = []
+for v in vmpop:
+   fitnesses.append(evaluate_as_module.evaluate(v))
 
 import copy
 
-fitnesses = dview.map_sync(evaluate_as_module.evaluate, copy.copy(vmpop))
+#fitnesses = dview.map_sync(evaluate_as_module.evaluate, copy.copy(vmpop))
 
 #fitnesses = dview.map_sync(evaluate, copy.copy(vmpop))
 print(fitnesses)

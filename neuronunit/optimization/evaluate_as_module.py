@@ -31,13 +31,16 @@ def difference(v): # v is a tesst
     from reading it.
 
     rescaling is the culprit. I suspect I do not
-    understand how to rescale one unit with another 
+    understand how to rescale one unit with another
     compatible unit.
     '''
 
     import numpy as np
     print(v.prediction.keys())
     print(v.prediction.values())
+
+    import pdb; pdb.set_trace()
+
     #for k,v in v.prediction.items():
     #    print(k,v,'debugging key value in difference')
     #import pdb; pdb.set_trace()
@@ -55,7 +58,6 @@ def difference(v): # v is a tesst
     unit_predictions = unit_predictions.rescale(to_r_s)
     unit_observations = unit_observations.rescale(to_r_s)
     unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
-    import pdb; pdb.set_trace()
     print(unit_delta)
     return float(unit_delta)
 
