@@ -490,12 +490,12 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
             unit_predictions = v.prediction['mean']
 
         ax[iterator].plot(lined_up_time , pvm, linewidth=1.5)
-        ax[iterator].legend(str(sw) ,loc="top right")
+        ax[iterator].legend(labels=str(sw) ,loc="top right")
 
 
         #ax[iterator].legend(loc="lower left")
-        score = None
-    plt.legend()
+        #score = None
+    #plt.legend()
     fig.text(0.5, 0.04, 'ms', ha='center', va='center')
     fig.text(0.06, 0.5, '$V_{m}$ mV', ha='center', va='center', rotation='vertical')
     fig.savefig(str('width_test_')+str(v)+'vm_versus_t.png', format='png', dpi=1200)#,
@@ -559,7 +559,7 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         to_r_s = unit_observations.units
         unit_predictions = unit_predictions.rescale(to_r_s)
         ax[iterator].plot(lined_up_time , pvm, linewidth=1.5)
-        ax[iterator].legend(str(unit_predictions),loc="lower left")
+        ax[iterator].legend(labels=str(unit_predictions),loc="lower left")
         threshold_line = []# [ float(unit_predictions)
         for i in lined_up_time:
             if i < 1000:
@@ -567,9 +567,9 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
             else:
                 append(0.0)
         ax[iterator].plot(lined_up_time ,threshold_line)
-        plt.legend(loc="lower left")
+        #plt.legend(loc="lower left")
         score = None
-    plt.legend()
+    #plt.legend()
     fig.text(0.5, 0.04, 'ms', ha='center', va='center')
     fig.text(0.06, 0.5, '$V_{m}$ mV', ha='center', va='center', rotation='vertical')
     fig.savefig(str('threshold')+str(v)+'vm_versus_t.png', format='png', dpi=1200)#,
@@ -636,9 +636,9 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         unit_predictions = unit_predictions.rescale(to_r_s)
         plt.plot(lined_up_time , pvm, label=str(unit_predictions), linewidth=1.5)
 
-        plt.legend(loc="lower left")
+        #plt.legend(loc="lower left")
         score = None
-    plt.legend()
+    #plt.legend()
     fig.text(0.5, 0.04, 'ms', ha='center', va='center')
     fig.text(0.06, 0.5, '$V_{m}$ mV', ha='center', va='center', rotation='vertical')
     fig.savefig(str('amplitude')+str(v)+'vm_versus_t.png', format='png', dpi=1200)#,

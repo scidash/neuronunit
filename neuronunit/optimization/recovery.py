@@ -347,7 +347,7 @@ worst_ = best_worst[1]
 
 net_graph.plot_log(logbook,hvolumes)
 net_graph.plot_objectives_history(logbook)
-df, threed, columns1 , stacked, html = net_graph.bar_chart(best)
+df, threed, columns1 ,stacked, html, test_dic = net_graph.bar_chart(best)
 #df, threed, columns1 , stacked, html = bar_chart(best)
 
 net_graph.not_just_mean(logbook,hvolumes)
