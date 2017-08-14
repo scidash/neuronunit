@@ -264,7 +264,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
             pre_fitness.append(float(unit_delta))
         if float(vms.rheobase) <=0 :
-            pre_fitness.append(10.0)
+            pre_fitness.append(100.0)
         else:
             score = v.judge(model,stop_on_error = False, deep_error = True)
             pre_fitness.append(float(score.sort_key))
@@ -627,6 +627,7 @@ for k in range(1,9):
         if i+k < 10 and i!=k:
             quads.append((td[i],td[i+k],i,i+k))
 
+'''
 def sparsify_list_into_lists(quads):
     one = [];  two = []; three = []; four = []
     for k,q in enumerate(quads):
@@ -641,92 +642,109 @@ def sparsify_list_into_lists(quads):
             four.append(q)
         print(q,' pacifier')
     return one,two,three,four
-
+'''
 # evaluate broken lists, to strike the right balance between bulk processing, and staying in touch with output
 #one,two,three,four = sparsify_list_into_lists(quads)
 #print(one,two,three,four)
 
 
 #def pair2surface(q):
-for q in quads:
-    print(q)
-    (x,y,z,w) = q
-    x = str(x)
-    y = str(y)
-    import model_parameters as modelp
-    iter_list = [ (i,j) for i in modelp.model_params[x] for j in modelp.model_params[y] ]
-    def model2map(iter_value):#This method must be pickle-able for scoop to work.
-        vm = utilities.VirtualModel()
-        vm.attrs = {}
-        vm.attrs[x] = iter_value[0]
-        vm.attrs[y] = iter_value[1]
-        return vm
-    #import evaluate_as_module as eam
+#for q in quads:
+    #print(q)
+    #(x,y,z,w) = q
+    #x = str(x)
+    #y = str(y)
+import model_parameters as modelp
+#iter_list = [ (i,j, x, y ) for i in modelp.model_params['a'] for j in modelp.model_params['b'] ]
 
-    vmpop1 = list(dview.map_sync(model2map,iter_list))
-    vmpop1 , _ = check_rheobase(vmpop1)
-    new_checkpoint_path = str('rh_checkpoint_exhaustive')+str('.p')
-    import pickle
-    with open(new_checkpoint_path,'wb') as handle:#
-        pickle.dump(vmpop1, handle)
+iter_list = [ (i,j) for i in modelp.model_params['a'] for j in modelp.model_params['b'] ]
+#pdb.set_trace()
+def model2map(iter_value):#This method must be pickle-able for scoop to work.
+    vm = utilities.VirtualModel()
+    vm.attrs = {}
+    #vm.attrs[iter_valu4[3]] = iter_value[0]
+    #vm.attrs[iter_value[4]] = iter_value[1]
 
-    print([ (v.rheobase,v.attrs) for v in vmpop1])
+    vm.attrs['a'] = iter_value[0]
+    vm.attrs['b'] = iter_value[1]
+    return vm
+#import evaluate_as_module as eam
 
-    import copy
-    efitnesses = dview.map_sync(evaluate, copy.copy(vmpop1))
-    summed = [ np.sum(e) for e in efitnesses ]
+vmpop1 = list(dview.map_sync(model2map,iter_list))
+#pdb.set_trace()
+vmpop1 , _ = check_rheobase(vmpop1)
+the_attributes = [ i.attrs for i in vmpop1 ]
+print(the_attributes)
+new_checkpoint_path = str('rh_checkpoint_exhaustive')+str('.p')
+import pickle
+with open(new_checkpoint_path,'wb') as handle:#
+    pickle.dump(vmpop1, handle)
 
-    import pickle
-    with open('complete_exhaust'+x+y+'.p','wb') as handle:
-       pickle.dump([efitnesses,iter_list,vmpop1],handle)
+print([ (v.rheobase,v.attrs) for v in vmpop1])
 
 
-    matrix_fill = [ (i,j) for i in range(0,len(modelp.model_params[x])) for j in range(0,len(modelp.model_params[y])) ]
-    mf = list(zip(matrix_fill,summed))
-    empty = np.zeros(shape=(int(np.sqrt(len(mf))),int(np.sqrt(len(mf)))))
+import copy
+efitnesses = dview.map_sync(evaluate, copy.copy(vmpop1))
+summed = [ np.sum(e) for e in efitnesses ]
+#import pdb; pdb.set_trace()
+#pdb.set_trace()
 
-    def fitness2map(pixels,dfimshow):
-        # something is wrong here, as the result is block uniforing coloring on
-        # matrix row and column elements.
-        for i in pixels:
-            dfimshow[i[0][0],i[0][1]] = i[1]
-        return dfimshow
-    dfimshow = fitness2map(mf,empty)
+import pickle
+#with open('complete_exhaust'+x+y+'.p','wb') as handle:
+with open('complete_exhaust'+'a'+'b'+'.p','wb') as handle:
+   pickle.dump([efitnesses,iter_list,vmpop1],handle)
 
-    summed_ef = [np.sum(f) for f in efitnesses]
 
-    from matplotlib import pylab
-    import numpy
-    from matplotlib.colors import LogNorm
-    plt.clf()
-    xs = numpy.array([ind[0] for ind in matrix_fill])
-    ys = numpy.array([ind[1] for ind in matrix_fill])
-    min_ys = ys[numpy.where(summed_ef == numpy.min(summed_ef))]
-    min_xs = xs[numpy.where(summed_ef == numpy.min(summed_ef))]
-    fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
-    trip_axis = ax_trip.tripcolor(xs,ys,summed_ef,20,norm=matplotlib.colors.LogNorm())
-    #plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
-    plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue',label='global minima')
+matrix_fill = [ (i,j) for i in range(0,len(modelp.model_params['a'])) for j in range(0,len(modelp.model_params['b'])) ]
+mf = list(zip(matrix_fill,summed))
+empty = np.zeros(shape=(int(np.sqrt(len(mf))),int(np.sqrt(len(mf)))))
 
-    fig_trip.colorbar(trip_axis, label='sum of objectives + 1')
-    ax_trip.set_xlabel('Parameter '+ str(modelp.model_params[x]))
-    ax_trip.set_ylabel('Parameter '+ str(modelp.model_params[x]))
-    plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
-    fig_trip.tight_layout()
-    plt.legend()
-    plt.savefig('2d_error_'+str(x)+str(y)+'surface.png')
+def fitness2map(pixels,dfimshow):
+    # something is wrong here, as the result is block uniforing coloring on
+    # matrix row and column elements.
+    for i in pixels:
+        dfimshow[i[0][0],i[0][1]] = i[1]
+    return dfimshow
 
-    plt.clf()
+dfimshow = fitness2map(mf2,empty)
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    cax = ax.matshow(dfimshow, interpolation='nearest')
-    fig.colorbar(cax)
+summed_ef = [np.sum(f) for f in efitnesses]
 
-    ax.set_xticklabels(modelp.model_params[x])
-    ax.set_yticklabels(modelp.model_params[y])
-    plt.title(str(x)+' versus '+str(y))
-    plt.savefig('2nd_approach_d_error_'+str(x)+str(y)+'surface.png')
+from matplotlib import pylab
+import numpy
+from matplotlib.colors import LogNorm
+plt.clf()
+xs = numpy.array([ind[0] for ind in matrix_fill])
+ys = numpy.array([ind[1] for ind in matrix_fill])
+min_ys = ys[numpy.where(summed_ef == numpy.min(summed_ef))]
+min_xs = xs[numpy.where(summed_ef == numpy.min(summed_ef))]
+fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
+trip_axis = ax_trip.tripcolor(xs,ys,summed_ef,20,norm=matplotlib.colors.LogNorm())
+#plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
+plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue',label='global minima')
+
+fig_trip.colorbar(trip_axis, label='sum of objectives + 1')
+ax_trip.set_xlabel('Parameter '+ str(modelp.model_params['a']))
+ax_trip.set_ylabel('Parameter '+ str(modelp.model_params['b']))
+plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
+fig_trip.tight_layout()
+plt.legend()
+plt.savefig('2d_error_'+str('a')+str('b')+'surface.png')
+
+plt.clf()
+
+fig = plt.figure()
+ax = fig.add_subplot(111)
+vmin = np.min(mf2)
+vmax = np.max(mf2)
+from matplotlib.colors import LogNorm
+cax = ax.matshow(dfimshow, interpolation='nearest',norm=LogNorm(vmin=vmin,vmax=vmax))
+fig.colorbar(cax)
+
+ax.set_xticklabels(modelp.model_params['a'])
+ax.set_yticklabels(modelp.model_params['b'])
+plt.title(str('a')+' versus '+str('b'))
+plt.savefig('2nd_approach_d_error_'+str('a')+str('b')+'surface.png')
 
 
     #return 0
@@ -738,9 +756,9 @@ for q in quads:
 
 print('get s here?')
 _ = list(map(pair2surface,one))
-_ = list(map(pair2surface,two))
-_ = list(map(pair2surface,three))
-_ = list(map(pair2surface,four))
+#_ = list(map(pair2surface,two))
+#_ = list(map(pair2surface,three))
+#_ = list(map(pair2surface,four))
 
 
 
