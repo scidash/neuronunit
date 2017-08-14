@@ -356,7 +356,7 @@ worst = vmoffspring[-1]
 
 assert type(best.rheobase) is not type(None)
 
-net_graph.sp_like_shadow(unev)
+net_graph.sp_spike_width(unev)
 
 net_graph.plotly_graph(history,vmhistory)
 best_ = best_worst[0]
