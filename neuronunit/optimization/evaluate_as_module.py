@@ -31,7 +31,7 @@ def difference(v): # v is a tesst
     from reading it.
 
     rescaling is the culprit. I suspect I do not
-    understand how to rescale one unit with another 
+    understand how to rescale one unit with another
     compatible unit.
     '''
 
@@ -40,7 +40,7 @@ def difference(v): # v is a tesst
     print(v.prediction.values())
     #for k,v in v.prediction.items():
     #    print(k,v,'debugging key value in difference')
-    #import pdb; pdb.set_trace()
+    import pdb; pdb.set_trace()
 
     if 'value' in v.prediction.keys():
         unit_predictions = v.prediction['value']
