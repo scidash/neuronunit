@@ -338,11 +338,6 @@ worst = vmoffspring[-1]
 
 assert type(best.rheobase) is not type(None)
 
-import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
-from mpl_toolkits.axes_grid1 import AxesGrid
-
 net_graph.sp_spike_width(unev)
 
 net_graph.plotly_graph(history,vmhistory)
@@ -351,9 +346,7 @@ worst_ = best_worst[1]
 
 net_graph.plot_log(logbook,hvolumes)
 net_graph.plot_objectives_history(logbook)
-#df, threed, columns1 , stacked, html = net_graph.bar_chart(best)
 df, threed, columns1 ,stacked, html, test_dic = net_graph.bar_chart(best)
-
 #df, threed, columns1 , stacked, html = bar_chart(best)
 
 net_graph.not_just_mean(logbook,hvolumes)
@@ -364,6 +357,6 @@ for x,y in enumerate(unev):
 vmoffspring.extend(unev)
 
 net_graph.shadow(vmoffspring,best)
-net_graph.plot_evaluate(best,worst,names=['best','worst'])
+#net_graph.plot_evaluate(best,worst,names=['best','worst'])
 #best_worst , _ = evaluate_as_module.check_rheobase(best_worst)
 best_worst, _ = check_rheobase(best_worst)
