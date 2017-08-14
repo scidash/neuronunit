@@ -83,8 +83,8 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     pre_fitness = []
     fitness = []
     fitness2 = []
- 
-    if float(vms.rheobase) <= 0.0
+
+    if float(vms.rheobase) <= 0.0:
         fitness = [ 125.0 for i in tests ]
 
     elif float(vms.rheobase) > 0.0:
@@ -114,7 +114,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
                 # otherwise it will fail on attempt.
             score = v.judge(model,stop_on_error = False, deep_error = True)
             fitness2.append(difference(v))
-	    fitness.append(float(score.sort_key))
+            fitness.append(float(score.sort_key))
             model.run_number += 1
 
 
@@ -122,45 +122,6 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
            fitness[2],fitness[3],\
            fitness[4],fitness[5],\
            fitness[6],fitness[7],
-
-
-
-        '''
-
-    # Hybrid scheme the Genetic Algorithm
-    # Make it a sum of objectives as well as
-    # a Non dominated sort by summing
-    # prioritized weights onto all the other weights.
-
-    # To undo this step and substitute in normal NSGA function.
-    # Substitute the block below with the one line:
-    # fitness = pre_fitness
-
-    # outside of the test iteration block.
-    if float(vms.rheobase) > 0.0:# and type(score) is not scores.InsufficientDataScore(None):
-        for k,f in enumerate(copy.copy(pre_fitness)):
-            if k == 0:
-                if unit_delta > 10.0:
-                    fitness1.append(unit_delta)
-            if k != 0:
-                fitness1.append(pre_fitness[k] + 1.5 * fitness[0] ) # add the rheobase error to all the errors.
-                assert fitness1[k] != pre_fitness[k]
-
-            if k == 1:
-                if pre_fitness[1] > 10.0 :
-                    fitness1.append(f)
-            if k != 1 and len(fitness1)>1 :
-                fitness1.append(pre_fitness[k] + 1.25 * fitness[1] ) # add the rheobase error to all the errors.
-                assert fitness1[k] != pre_fitness[k]
-    print(fitness1, fitness)
-    pre_fitness = []
-
-    return fitness[0],fitness[1],\
-           fitness[2],fitness[3],\
-           fitness[4],fitness[5],\
-           fitness[6],fitness[7],
-
-
 
 
 
@@ -327,7 +288,7 @@ def check_rheobase(vmpop,pop=None):
         from neuronunit.models import backends
         from neuronunit.models.reduced import ReducedModel
 
-        new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
+        new_file_path = str(get_neab.LEMS_MODEL_PATH)#)+str(int(os.getpid()))
         model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
         model.load_model()
         model.update_run_params(vm.attrs)
