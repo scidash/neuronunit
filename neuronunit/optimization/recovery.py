@@ -325,26 +325,9 @@ os.system('sudo /opt/conda/bin/pip install --upgrade networkx')
 cd = pickle.load(open('complete_dump.p','rb'))
 print(len(cd))
 
-#unev = pickle.load(open('un_evolved.p','rb'))
-
-#unpack = [vmoffspring,history,logbook,rheobase_values,best_worst,vmhistory,hvolumes ]
 vmoffspring,history,logbook,rheobase_values,best_worst,vmhistory,hvolumes = cd[0], cd[1], cd[2], cd[3], cd[4], cd[5], cd[6]
-#from IPython import get_ipython
-#ipython = get_ipython()
-#ipython.magic("load_ext autoreload")
-#ipython.magic("autoreload 2")
-#import evaluate_as_module
 
 import net_graph
-#vmoffspring = net_graph.speed_up(vmoffspring)
-#print(vmoffspring[0].results['RheobaseTest']['ts'])
-#print(vmoffspring[0].results['InjectedCurrentAPAmplitudeTest']['v_m'])
-#print(vmoffspring[1].results['RheobaseTest']['ts'])
-#print(vmoffspring[1].results['InjectedCurrentAPAmplitudeTest']['v_m'])
-#def p_imports():
-#import get_neab
-#import evaluate_as_module
-#dview.apply_sync(p_imports)
 unev = pickle.load(open('un_evolved.p','rb'))
 unev, rh_values_unevolved = unev[0], unev[1]
 

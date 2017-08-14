@@ -26,6 +26,15 @@ model.load_model()
 #p_imports()
 
 def difference(v): # v is a tesst
+    '''
+    This method does not do what you would think
+    from reading it.
+
+    rescaling is the culprit. I suspect I do not
+    understand how to rescale one unit with another 
+    compatible unit.
+    '''
+
     import numpy as np
     print(v.prediction.keys())
     print(v.prediction.values())
@@ -46,9 +55,8 @@ def difference(v): # v is a tesst
     unit_predictions = unit_predictions.rescale(to_r_s)
     unit_observations = unit_observations.rescale(to_r_s)
     unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
-    #import pdb; pdb.set_trace()
+    import pdb; pdb.set_trace()
     print(unit_delta)
-    v = None
     return float(unit_delta)
 
 def evaluate(vms):#This method must be pickle-able for ipyparallel to work.

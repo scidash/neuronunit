@@ -411,6 +411,9 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
     vms = best_worst[0]
     get_neab.tests[0].prediction['value'] = vms.rheobase * pq.pA
     for k,v in enumerate(get_neab.tests):
+        vms = best_worst[0]
+
+
         #for iterator, vms in enumerate(best_worst):
         from neuronunit.models import backends
         from neuronunit.models.reduced import ReducedModel
@@ -419,7 +422,6 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
 
         assert type(vms.rheobase) is not type(None)
-        #import pdb; pdb.set_trace()
 
         v.params['injected_square_current']['duration'] = 1000 * pq.ms
         v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
@@ -463,6 +465,14 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
     fig, ax = plt.subplots(len(best_worst), figsize=(10, 5), facecolor='white')
 
     v = get_neab.tests[5]
+    from neuronunit import capabilities
+    ans = model.get_membrane_potential()
+    sw = capabilities.spikes2widths(ans)
+    unit_observations = v.observation['mean']
+    to_r_s = unit_observations.units
+    unit_predictions = sw.rescale(to_r_s)
+    actual_width_differences = np.abs(np.abs(unit_observations) - np.abs(unit_predictions))
+
     for iterator, vms in enumerate(best_worst):
         from neuronunit.models import backends
         from neuronunit.models.reduced import ReducedModel
@@ -517,7 +527,7 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         if 'mean' in v.prediction.keys():
             unit_predictions = v.prediction['mean']
 
-        ax[iterator].plot(lined_up_time , pvm, linewidth=1.5)
+        ax[iterator].plot(lined_up_time , pvm, label=str(sw) , linewidth=1.5)
 
         #ax[iterator].legend(loc="lower left")
         score = None
@@ -840,13 +850,69 @@ def load_data():
     stacked = opened[0]
     columns1 = opened[1]
 
-def rh_search_df(vm):
-     import pandas as pd
-     df = pd.DataFrame(np.column_stack(np.array(vmpop[0].searched)))
-     df.index = ['CPU 0','CPU 1','CPU 2','CPU 3', 'CPU 4', 'CPU 5', 'CPU 6']
-     with open('rheoframe.p','wb') as handle:
-        pickle.dump([df,vm.rheobase],handle)
-     return df
+
+def pandas_rh_search(vmoffspring):
+    searchedd = {}
+    from get_neab import tests
+    v = tests[0]
+    from neuronunit.models import backends
+    from neuronunit.models.reduced import ReducedModel
+    import quantities as pq
+    import pandas as pd
+    import quantities as qt
+
+    new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+    for x, i in enumerate(vmoffspring[0].searched):
+       searchedd[x]={}
+       for j in i:
+          v.params['injected_square_current']['amplitude'] = j
+          model.inject_square_current(v.params)
+          searchedd[x][float(j)] = model.get_spike_count()
+    with open('rheoframe.p','wb') as handle:
+        pickle.dump([df0,df1,df2,df3,df4,vmoffspring],handle)
+	##
+  	# Obviously the four variables should be made as 
+    # dictionary keys, rather than repitious code below
+    # however, no time.
+    ##
+    to_stack0 = [ (k,v) for k,v in searchedd[0].items() ]
+    to_stack1 = [ (k,v) for k,v in searchedd[1].items() ]
+    to_stack2 = [ (k,v) for k,v in searchedd[2].items() ]
+    to_stack3 = [ (k,v) for k,v in searchedd[3].items() ]
+    to_stack4 = [ (k,v) for k,v in searchedd[4].items() ]
+    stacked0 = np.column_stack(np.array(to_stack0))
+    df0 = pd.DataFrame(np.transpose(stacked0),columns=['pA Injection','Spike Count'])
+    stacked1 = np.column_stack(np.array(to_stack1))
+    df1 = pd.DataFrame(np.transpose(stacked1),columns=['pA Injection','Spike Count'])
+    stacked2 = np.column_stack(np.array(to_stack2))
+    df2 = pd.DataFrame(np.transpose(stacked2),columns=['pA Injection','Spike Count'])
+    stacked3 = np.column_stack(np.array(to_stack3))
+    df3 = pd.DataFrame(np.transpose(stacked3),columns=['pA Injection','Spike Count'])
+    stacked4 = np.column_stack(np.array(to_stack4))
+    df4 = pd.DataFrame(np.transpose(stacked4),columns=['pA Injection','Spike Count'])
+    dfs = [df0,df1,df2,df3,df4]
+    #for i in dfs:
+    df0 = df0.sort(['pA Injection','Spike Count'],ascending=[1,0])
+    df1 = df1.sort(['pA Injection','Spike Count'],ascending=[1,0])
+    df2 = df2.sort(['pA Injection','Spike Count'],ascending=[1,0])
+    df3 = df3.sort(['pA Injection','Spike Count'],ascending=[1,0])
+    df4 = df4.sort(['pA Injection','Spike Count'],ascending=[1,0])
+    df0.index = ['CPU 0','CPU 1','CPU 2','CPU 3', 'CPU 4', 'CPU 5', 'CPU 6']
+    df1.index = ['CPU 0','CPU 1','CPU 2','CPU 3', 'CPU 4', 'CPU 5']
+    df2.index = ['CPU 0','CPU 1','CPU 2','CPU 3', 'CPU 4', 'CPU 5']
+    df3.index = ['CPU 0','CPU 1','CPU 2','CPU 3', 'CPU 4', 'CPU 5']
+    df4.index = ['CPU 0','CPU 1','CPU 2','CPU 3', 'CPU 4', 'CPU 5']
+
+    orig_cmap = sns.light_palette("red",as_cmap=True)
+    shrunk_cmap = shiftedColorMap(orig_cmap, start=np.min(vmoffspring[0].searched), midpoint=vmoffspring[0].rheobase, stop=np.max(vmoffspring[0].searched), name='shrunk')
+    s0 = df0.style.background_gradient(cmap = shrunk_cmap)
+    s1 = df1.style.background_gradient(cmap = shrunk_cmap)
+    s2 = df2.style.background_gradient(cmap = shrunk_cmap)
+    s3 = df3.style.background_gradient(cmap = shrunk_cmap)
+    s4 = df4.style.background_gradient(cmap = shrunk_cmap)
+
+    return df0,df1,df2,df3,df4
 
 def not_just_mean(log,hypervolumes):
     '''
