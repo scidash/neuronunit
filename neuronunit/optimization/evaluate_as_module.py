@@ -25,6 +25,32 @@ model.load_model()
 #dview.apply_sync(p_imports)
 #p_imports()
 
+def difference(v): # v is a tesst
+    import numpy as np
+    print(v.prediction.keys())
+    print(v.prediction.values())
+    #for k,v in v.prediction.items():
+    #    print(k,v,'debugging key value in difference')
+    #import pdb; pdb.set_trace()
+
+    if 'value' in v.prediction.keys():
+        unit_predictions = v.prediction['value']
+        unit_observations = v.observation['value']
+
+    if 'mean' in v.prediction.keys():
+        unit_predictions = v.prediction['mean']
+        unit_observations = v.observation['mean']
+
+    #unit_observations = v.observation['value']
+    to_r_s = unit_observations.units
+    unit_predictions = unit_predictions.rescale(to_r_s)
+    unit_observations = unit_observations.rescale(to_r_s)
+    unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
+    #import pdb; pdb.set_trace()
+    print(unit_delta)
+    v = None
+    return float(unit_delta)
+
 def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     '''
     Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
@@ -50,16 +76,18 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
 
     new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-
     model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
     model.load_model()
     assert type(vms.rheobase) is not type(None)
     #tests = get_neab.suite.tests
     model.update_run_params(vms.attrs)
+    model.rheobase = vms.rheobase * pq.pA
+
     import copy
     tests = copy.copy(get_neab.tests)
     pre_fitness = []
     fitness = []
+    differences = []
 
     if float(vms.rheobase) <= 0.0:
         fitness = [ 125.0 for i in tests ]
@@ -85,84 +113,46 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
                 v.params['injected_square_current']['delay'] = 100 * pq.ms
 
             score = v.judge(model,stop_on_error = False, deep_error = True)
-            fitness.append(float(score.sort_key))
+            differences.append(difference(v))
+            pre_fitness.append(float(score.sort_key))
             model.run_number += 1
 
+    # outside of the test iteration block.
+    if float(vms.rheobase) > 0.0:# and type(score) is not scores.InsufficientDataScore(None):
+        for k,f in enumerate(copy.copy(pre_fitness)):
 
-    return fitness[0],fitness[1],\
-           fitness[2],fitness[3],\
-           fitness[4],fitness[5],\
-           fitness[6],fitness[7],
+            if k == 5:
+                from neuronunit import capabilities
+                ans = model.get_membrane_potential()
+                sw = capabilities.spikes2widths(ans)
+                unit_observations = tests[5].observation['mean']
 
-
-
-        '''
-            #import pdb; pdb.set_trace()
-
-            if 'value' in v.observation.keys():
-                unit_observations = v.observation['value']
-
-            if 'value' in v.prediction.keys():
-                unit_predictions = v.prediction['value']
-
-
-            if 'mean' in v.observation.keys():
-                unit_observations = v.observation['mean']
-
-            if 'mean' in v.prediction.keys():
-                unit_predictions = v.prediction['mean']
-
-            to_r_s = unit_observations.units
-            unit_predictions = unit_predictions.rescale(to_r_s)
-
-            unit_delta = np.abs( np.abs(float(unit_observations))-np.abs(float(unit_predictions)) )
-            print(float(vms.rheobase),float(unit_predictions))
-            assert float(vms.rheobase) == float(unit_predictions)
-            diff = np.abs(np.abs(float(unit_observations)) - np.abs(float(vms.rheobase)))
-            print(unit_delta, diff, float(unit_observations))
-            assert unit_delta == diff
-
-            pre_fitness.append(float(unit_delta))
-
-        if float(vms.rheobase) <=0 :
-        else:
-            score = v.judge(model,stop_on_error = False, deep_error = True)
-            pre_fitness.append(float(score.sort_key))
-
-
-    # Hybrid scheme the Genetic Algorithm
-    # Make it a sum of objectives as well as
-    # a Non dominated sort by summing
-    # prioritized weights onto all the other weights.
-
-    # To undo this step and substitute in normal NSGA function.
-    # Substitute the block below with the one line:
-    # fitness = pre_fitness
-    if float(vms.rheobase) > 0:
-        if unit_delta > 10.0:
-            for k,f in enumerate(copy.copy(pre_fitness)):
-                if k == 0:
-                    fitness.append(unit_delta)
+                #unit_observations = v.observation['value']
+                to_r_s = unit_observations.units
+                unit_predictions = unit_predictions.rescale(sw)
+                unit_predictions  = sw.rescale(to_r_s)
+                fitness1[5] = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
+                #fitness1[5] = unit_delta
+            if k == 0:
+                fitness1.append(differences[0])
+            if differences[0] > 10.0:
                 if k != 0:
-                    fitness.append(pre_fitness[k] + 1.5 * unit_delta ) # add the rheobase error to all the errors.
-                    assert fitness[k] != pre_fitness[k]
-            pre_fitness = []
-            pre_fitness = copy.copy(fitness)
-            fitness = []
-        else:
-            fitness = pre_fitness
-
-        if pre_fitness[1] > 10.0 :
-            for k,f in enumerate(copy.copy(pre_fitness)):
-                if k == 1:
-                    fitness.append(f)
-                if k != 1:
-                    fitness.append(pre_fitness[k] + 1.25 * f ) # add the rheobase error to all the errors.
-                    assert fitness[k] != pre_fitness[k]
-            pre_fitness = []
-        else:
-            fitness = pre_fitness
-
+                    fitness1.append(pre_fitness[k] + 1.5 * differences[0] ) # add the rheobase error to all the errors.
+                    assert fitness1[k] != pre_fitness[k]
+            else:
+                fitness1.append(pre_fitness[k])
+            if k == 1:
+                fitness1.append(differences[1])
+            if differences[1] > 10.0 :
+                if k != 1 and len(fitness1)>1 :
+                    fitness1.append(pre_fitness[k] + 1.25 * differences[1] ) # add the rheobase error to all the errors.
+                    assert fitness1[k] != pre_fitness[k]
+        print(fitness1, fitness)
+    pre_fitness = []
+    return fitness1[0],fitness1[1],\
+           fitness1[2],fitness1[3],\
+           fitness1[4],fitness1[5],\
+           fitness1[6],fitness1[7],
 
 
 

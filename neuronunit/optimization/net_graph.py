@@ -400,7 +400,7 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
 
     import matplotlib.pyplot as plt
     plt.style.use('ggplot')
-    for k,v get_neab.tests:
+    for k,v in enumerate(get_neab.tests):
         vms = best_worst[0]
         #for iterator, vms in enumerate(best_worst):
         from neuronunit.models import backends
