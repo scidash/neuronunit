@@ -400,8 +400,17 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
 
     import matplotlib.pyplot as plt
     plt.style.use('ggplot')
+    ##
+    # The attribute 'get_neab.tests[0].prediction'
+    # must be declared before use can occur.
+    #
+    ##
+    get_neab.tests[0].prediction = None
+    get_neab.tests[0].prediction = {}
+    get_neab.tests[0].prediction['value'] = None
+    vms = best_worst[0]
+    get_neab.tests[0].prediction['value'] = vms.rheobase * pq.pA
     for k,v in enumerate(get_neab.tests):
-        vms = best_worst[0]
         #for iterator, vms in enumerate(best_worst):
         from neuronunit.models import backends
         from neuronunit.models.reduced import ReducedModel
@@ -410,6 +419,7 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
 
         assert type(vms.rheobase) is not type(None)
+        #import pdb; pdb.set_trace()
 
         v.params['injected_square_current']['duration'] = 1000 * pq.ms
         v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
@@ -423,7 +433,7 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         score = v.judge(model,stop_on_error = False, deep_error = True)
 
         dt = model.results['t'][1] - model.results['t'][0]
-        dt = dt*pq.s
+        dt = dt * pq.ms
         v_m = AnalogSignal(model.results['vm'],units=pq.V,sampling_rate=1.0/dt)
         v_m = model.get_membrane_potential()
         ts = model.results['t'] # time signal
