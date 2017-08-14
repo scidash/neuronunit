@@ -319,7 +319,7 @@ import model_parameters
 param_dict = model_parameters.model_params
 td = get_trans_dict(param_dict)
 
-os.system('sudo /opt/conda/bin/pip install --upgrade networkx')
+#os.system('sudo /opt/conda/bin/pip install --upgrade networkx')
 
 cd = pickle.load(open('complete_dump.p','rb'))
 print(len(cd))
@@ -343,7 +343,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import AxesGrid
 
-net_graph.sp_spike_width(vmoffspring)
+net_graph.sp_spike_width(unev)
 
 net_graph.plotly_graph(history,vmhistory)
 best_ = best_worst[0]
@@ -351,7 +351,9 @@ worst_ = best_worst[1]
 
 net_graph.plot_log(logbook,hvolumes)
 net_graph.plot_objectives_history(logbook)
+#df, threed, columns1 , stacked, html = net_graph.bar_chart(best)
 df, threed, columns1 ,stacked, html, test_dic = net_graph.bar_chart(best)
+
 #df, threed, columns1 , stacked, html = bar_chart(best)
 
 net_graph.not_just_mean(logbook,hvolumes)
