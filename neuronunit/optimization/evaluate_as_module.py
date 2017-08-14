@@ -38,24 +38,30 @@ def difference(v): # v is a tesst
     import numpy as np
     print(v.prediction.keys())
     print(v.prediction.values())
-    #for k,v in v.prediction.items():
-    #    print(k,v,'debugging key value in difference')
-    import pdb; pdb.set_trace()
+
+    # The trick is.
+    # prediction always has value. but observation 7 out of 8 times has mean.
 
     if 'value' in v.prediction.keys():
         unit_predictions = v.prediction['value']
-        unit_observations = v.observation['value']
+        if 'mean' in v.observation.keys():
+            unit_observations = v.observation['mean']
+        elif 'value' in v.observation.keys():
+            unit_observations = v.observation['value']
+
+
 
     if 'mean' in v.prediction.keys():
         unit_predictions = v.prediction['mean']
-        unit_observations = v.observation['mean']
+        if 'mean' in v.observation.keys():
+            unit_observations = v.observation['mean']
+        elif 'value' in v.observation.keys():
+            unit_observations = v.observation['value']
 
-    #unit_observations = v.observation['value']
     to_r_s = unit_observations.units
     unit_predictions = unit_predictions.rescale(to_r_s)
     unit_observations = unit_observations.rescale(to_r_s)
     unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
-    import pdb; pdb.set_trace()
     print(unit_delta)
     return float(unit_delta)
 
