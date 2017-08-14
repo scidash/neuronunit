@@ -11,7 +11,7 @@ from deap import creator
 
 toolbox = base.Toolbox()
 import utilities
-
+'''
 def p_imports():
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
@@ -27,7 +27,8 @@ def p_imports():
     return
 
 dview.apply_sync(p_imports)
-#p_imports()
+p_imports()
+'''
 '''
 def get_trans_dict(param_dict):
     trans_dict = {}
@@ -337,11 +338,6 @@ best = vmoffspring[0]
 worst = vmoffspring[-1]
 
 assert type(best.rheobase) is not type(None)
-
-import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
-from mpl_toolkits.axes_grid1 import AxesGrid
 
 net_graph.sp_spike_width(unev)
 
