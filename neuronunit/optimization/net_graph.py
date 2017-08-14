@@ -403,7 +403,6 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
     ##
     # The attribute 'get_neab.tests[0].prediction'
     # must be declared before use can occur.
-    #
     ##
     get_neab.tests[0].prediction = None
     get_neab.tests[0].prediction = {}
@@ -412,9 +411,6 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
     get_neab.tests[0].prediction['value'] = vms.rheobase * pq.pA
     for k,v in enumerate(get_neab.tests):
         vms = best_worst[0]
-
-
-        #for iterator, vms in enumerate(best_worst):
         from neuronunit.models import backends
         from neuronunit.models.reduced import ReducedModel
 
@@ -433,14 +429,11 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         model.update_run_params(vms.attrs)
         print(v.params)
         score = v.judge(model,stop_on_error = False, deep_error = True)
+        v_m = model.get_membrane_potential()
+        dt = float(v_m.sampling_period)
 
-        dt = model.results['t'][1] - model.results['t'][0]
-        dt = dt * pq.ms
-        v_m = AnalogSignal(model.results['vm'],units=pq.V,sampling_rate=1.0/dt)
         v_m = model.get_membrane_potential()
         ts = model.results['t'] # time signal
-
-    #plt.clf()
         plt.plot(ts,score.related_data['vm'])
         plt.plot(ts,v_m)
 
@@ -493,26 +486,30 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         print(v.params)
         score = v.judge(model,stop_on_error = False, deep_error = True)
 
-        dt = model.results['t'][1] - model.results['t'][0]
-        dt = dt*pq.s
-        v_m = AnalogSignal(model.results['vm'],units=pq.V,sampling_rate=1.0/dt)
         v_m = model.get_membrane_potential()
+        dt = float(v_m.sampling_period)
+
         ts = model.results['t'] # time signal
         st = spike_functions.get_spike_train(v_m) #spike times
         print(st)
         assert len(st) == 1
 
-        start = int((float(st)/ts[-1])*len(ts)) - 250 #index offset from spike
-        stop = int((float(st)/ts[-1])*len(ts)) + 500
+        start = int((float(st)/ts[-1])*len(ts)) - 1000 #index offset from spike
+        stop = int((float(st)/ts[-1])*len(ts)) + 1000
         time_sequence = np.arange(start , stop, 1)
         ptvec = np.array(model.results['t'])[time_sequence]
         other_stop = ptvec[-1]-ptvec[0]
         lined_up_time = np.arange(0,other_stop,float(dt))
-        pvm = np.array(model.results['vm'])[time_sequence]
 
+        for q,r in enumerate(model.results['vm']):
+            #assert r == score.related_data['vm'][k]
+            print(q,score.related_data['vm'][k],model.get_membrane_potential()[k])
+
+        #pvm2 = np.array(model.results['vm'])[time_sequence]
+        pvm = np.array(score.related_data['vm'])[time_sequence]
 
         print(len(pvm),len(lined_up_time))
-        updated=str(copy.copy(score))
+        #updated=str(copy.copy(score))
 
         if 'value' in v.observation.keys():
             unit_observations = v.observation['value']
@@ -528,6 +525,8 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
             unit_predictions = v.prediction['mean']
 
         ax[iterator].plot(lined_up_time , pvm, label=str(sw) , linewidth=1.5)
+        ax[iterator].legend(str(sw) ,loc="lower left")
+
 
         #ax[iterator].legend(loc="lower left")
         score = None
@@ -562,17 +561,23 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         model.update_run_params(vms.attrs)
         print(v.params)
         score = v.judge(model,stop_on_error = False, deep_error = True)
-        dt = model.results['t'][1] - model.results['t'][0]
-        dt = dt*pq.s
-        v_m = AnalogSignal(model.results['vm'],units=pq.V,sampling_rate=1.0/dt)
+        v_m = model.get_membrane_potential()
+        dt = float(v_m.sampling_period)
+
         v_m = model.get_membrane_potential()
         ts = model.results['t'] # time signal
         st = spike_functions.get_spike_train(v_m) #spike times
+        v_m = model.get_membrane_potential()
+
+        for q,r in enumerate(model.results['vm']):
+            assert r == score.related_data['vm'][k]
+            print(q,score.related_data['vm'][k],model.get_membrane_potential()[k])
+
         print(st)
         assert len(st) == 1
 
-        start = int((float(st)/ts[-1])*len(ts)) - 750    #index offset from spike
-        stop = int((float(st)/ts[-1])*len(ts)) + 500
+        start = int((float(st)/ts[-1])*len(ts)) - 1000    #index offset from spike
+        stop = int((float(st)/ts[-1])*len(ts)) + 1000
         time_sequence = np.arange(start , stop, 1)
         ptvec = np.array(model.results['t'])[time_sequence]
         other_stop = ptvec[-1]-ptvec[0]
@@ -597,7 +602,8 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
 
         to_r_s = unit_observations.units
         unit_predictions = unit_predictions.rescale(to_r_s)
-        ax[iterator].plot(lined_up_time , pvm, label=str(unit_predictions), linewidth=1.5)
+        ax[iterator].plot(lined_up_time , pvm, linewidth=1.5)
+        ax[iterator].legend(str(unit_predictions),loc="lower left")
         threshold_line = []# [ float(unit_predictions)
         for i in lined_up_time:
             if i < 1000:
@@ -638,10 +644,9 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         model.update_run_params(vms.attrs)
         print(v.params)
         score = v.judge(model,stop_on_error = False, deep_error = True)
-        dt = model.results['t'][1] - model.results['t'][0]
-        dt = dt*pq.s
-        v_m = AnalogSignal(model.results['vm'],units=pq.V,sampling_rate=1.0/dt)
         v_m = model.get_membrane_potential()
+        dt = float(v_m.sampling_period)
+
         ts = model.results['t'] # time signal
         st = spike_functions.get_spike_train(v_m) #spike times
         print(st)
@@ -872,7 +877,7 @@ def pandas_rh_search(vmoffspring):
     with open('rheoframe.p','wb') as handle:
         pickle.dump([df0,df1,df2,df3,df4,vmoffspring],handle)
 	##
-  	# Obviously the four variables should be made as 
+  	# Obviously the four variables should be made as
     # dictionary keys, rather than repitious code below
     # however, no time.
     ##
