@@ -410,11 +410,7 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
     vms = best_worst[0]
     get_neab.tests[0].prediction['value'] = vms.rheobase * pq.pA
 
-    #for k,v in enumerate(tests):
-    #import matplotlib.pyplot as plt
 
-    	# following variables possibly are
-    # going to become depreciated
     stored_min = []
     stored_max = []
     sc_for_frame_best = []
@@ -423,11 +419,8 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
     sindexs = []
     # visualize
     # widths tests
-    fig, ax = plt.subplots(len(best_worst), figsize=(10, 5), facecolor='white')
-
+    fig, ax = plt.subplots(1, figsize=(10, 5), facecolor='white')
     v = get_neab.tests[5]
-
-
     for iterator, vms in enumerate(best_worst):
         from neuronunit.models import backends
         from neuronunit.models.reduced import ReducedModel
@@ -456,8 +449,8 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         print(st)
         assert len(st) == 1
 
-        start = int((float(st)/ts[-1])*len(ts))  #index offset from spike
-        stop = int((float(st)/ts[-1])*len(ts))
+        start = int((float(st)/ts[-1])*len(ts))-200  #index offset from spike
+        stop = int((float(st)/ts[-1])*len(ts))+100
         time_sequence = np.arange(start , stop, 1)
         ptvec = np.array(model.results['t'])[time_sequence]
 
@@ -488,23 +481,17 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
 
         if 'mean' in v.prediction.keys():
             unit_predictions = v.prediction['mean']
-
-        ax[iterator].plot(lined_up_time , pvm, linewidth=1.5)
-        ax[iterator].legend(labels=str(sw) ,loc="top right")
-
-
-        #ax[iterator].legend(loc="lower left")
-        #score = None
-    #plt.legend()
-    fig.text(0.5, 0.04, 'ms', ha='center', va='center')
-    fig.text(0.06, 0.5, '$V_{m}$ mV', ha='center', va='center', rotation='vertical')
+        try:
+            plt.plot(lined_up_time , pvm, linewidth=1.5,label=str(sw))
+        except:
+            pass
     fig.savefig(str('width_test_')+str(v)+'vm_versus_t.png', format='png', dpi=1200)#,
 
     # visualize
     # threshold test
     plt.style.use('ggplot')
     plt.clf()
-    fig, ax = plt.subplots(len(best_worst), figsize=(10, 5), facecolor='white')
+    fig, ax = plt.subplots(1, figsize=(10, 5), facecolor='white')
     v = get_neab.tests[7]
     #if k == 5: # Only interested in InjectedCurrentAPWidthTest this time.
     for iterator, vms in enumerate(best_worst):
@@ -534,8 +521,9 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         v_m = model.get_membrane_potential()
 
 
-        start = int((float(st)/ts[-1])*len(ts))    #index offset from spike
-        stop = int((float(st)/ts[-1])*len(ts))
+        start = int((float(st)/ts[-1])*len(ts))-250  #index offset from spike
+        stop = int((float(st)/ts[-1])*len(ts))+100
+
         time_sequence = np.arange(start , stop, 1)
         ptvec = np.array(model.results['t'])[time_sequence]
         other_stop = ptvec[-1]-ptvec[0]
@@ -558,20 +546,23 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
 
         to_r_s = unit_observations.units
         unit_predictions = unit_predictions.rescale(to_r_s)
-        ax[iterator].plot(lined_up_time , pvm, linewidth=1.5)
-        ax[iterator].legend(labels=str(unit_predictions),loc="lower left")
+        try:
+            plt.plot(lined_up_time , pvm, label=str(unit_predictions) ,linewidth=1.5)
+        except:
+            pass
+        #plt.legend(labels=str(unit_predictions),loc="lower left")
         threshold_line = []# [ float(unit_predictions)
         for i in lined_up_time:
             if i < 1000:
                 threshold_line.append(float(unit_predictions))
             else:
                 append(0.0)
-        ax[iterator].plot(lined_up_time ,threshold_line)
+        plt.plot(lined_up_time ,threshold_line)
         #plt.legend(loc="lower left")
-        score = None
+        #score = None
     #plt.legend()
-    fig.text(0.5, 0.04, 'ms', ha='center', va='center')
-    fig.text(0.06, 0.5, '$V_{m}$ mV', ha='center', va='center', rotation='vertical')
+    #fig.text(0.5, 0.04, 'ms', ha='center', va='center')
+    #fig.text(0.06, 0.5, '$V_{m}$ mV', ha='center', va='center', rotation='vertical')
     fig.savefig(str('threshold')+str(v)+'vm_versus_t.png', format='png', dpi=1200)#,
     ##
     # Amplitude
@@ -634,13 +625,16 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
 
         to_r_s = unit_observations.units
         unit_predictions = unit_predictions.rescale(to_r_s)
-        plt.plot(lined_up_time , pvm, label=str(unit_predictions), linewidth=1.5)
+        try:
+            plt.plot(lined_up_time , pvm, label=str(unit_predictions), linewidth=1.5)
+        except:
+            pass
 
         #plt.legend(loc="lower left")
-        score = None
+        #score = None
     #plt.legend()
-    fig.text(0.5, 0.04, 'ms', ha='center', va='center')
-    fig.text(0.06, 0.5, '$V_{m}$ mV', ha='center', va='center', rotation='vertical')
+    #fig.text(0.5, 0.04, 'ms', ha='center', va='center')
+    #fig.text(0.06, 0.5, '$V_{m}$ mV', ha='center', va='center', rotation='vertical')
     fig.savefig(str('amplitude')+str(v)+'vm_versus_t.png', format='png', dpi=1200)#,
 
 
@@ -770,39 +764,6 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
         plt.xlabel('ms')
         plt.savefig(str('test_')+str(v)+'vm_versus_t.png', format='png', dpi=1200)
 
-
-
-def surfaces(history,td):
-
-    all_inds = history.genealogy_history.values()
-    sums = numpy.array([np.sum(ind.fitness.values) for ind in all_inds])
-    keep = set()
-    quads = []
-    for k in range(1,9):
-        for i,j in enumerate(td):
-            print(i,k)
-            if i+k < 10:
-                quads.append((td[i],td[i+k],i,i+k))
-
-    for q in quads:
-        print(k)
-        (x,y,w,z) = q
-        print(x,y,w,z,i)
-        xs = numpy.array([ind[w] for ind in all_inds])
-        ys = numpy.array([ind[z] for ind in all_inds])
-        min_ys = ys[numpy.where(sums == numpy.min(sums))]
-        min_xs = xs[numpy.where(sums == numpy.min(sums))]
-        plt.clf()
-        fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
-        trip_axis = ax_trip.tripcolor(xs,ys,sums+1,20,norm=matplotlib.colors.LogNorm())
-        plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue',label='global minima')
-        fig_trip.colorbar(trip_axis, label='sum of objectives + 1')
-        ax_trip.set_xlabel('Parameter '+ str(td[w]))
-        ax_trip.set_ylabel('Parameter '+ str(td[z]))
-        plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
-        fig_trip.tight_layout()
-        fig_trip.legend()
-        fig_trip.savefig('surface'+str(td[w])+str(td[z])+'.png',format='png', dpi=1200)
 
 
 def load_data():
