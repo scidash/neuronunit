@@ -11,7 +11,7 @@ from deap import creator
 
 toolbox = base.Toolbox()
 import utilities
-'''
+
 def p_imports():
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
@@ -28,7 +28,7 @@ def p_imports():
 
 dview.apply_sync(p_imports)
 p_imports()
-'''
+
 '''
 def get_trans_dict(param_dict):
     trans_dict = {}
@@ -358,6 +358,6 @@ for x,y in enumerate(unev):
 vmoffspring.extend(unev)
 
 net_graph.shadow(vmoffspring,best)
-net_graph.plot_evaluate(best,worst,names=['best','worst'])
+#net_graph.plot_evaluate(best,worst,names=['best','worst'])
 #best_worst , _ = evaluate_as_module.check_rheobase(best_worst)
 best_worst, _ = check_rheobase(best_worst)
