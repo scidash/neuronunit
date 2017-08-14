@@ -666,17 +666,16 @@ with open(new_checkpoint_path,'wb') as handle:#
 
 
 # sometimes done in serial in order to get access to opaque stdout/stderr
-import evaluate_as_module
 
 #fitnesses = []
 #for v in vmpop:
 #   fitnesses.append(evaluate_as_module.evaluate(v))
 
 import copy
+#import evaluate_as_module
+#fitnesses = dview.map_sync(evaluate_as_module.evaluate, copy.copy(vmpop))
 
-fitnesses = dview.map_sync(evaluate_as_module.evaluate, copy.copy(vmpop))
-
-#fitnesses = dview.map_sync(evaluate, copy.copy(vmpop))
+fitnesses = dview.map_sync(evaluate, copy.copy(vmpop))
 print(fitnesses)
 for ind, fit in zip(pop, fitnesses):
     ind.fitness.values = fit
@@ -755,9 +754,10 @@ while (gen < NGEN and means[-1] > 0.05):
     # fitnesses = []
     # for v in vmoffspring:
     #    fitness.append(evaluate(v))
-    import evaluate_as_module
+    #import evaluate_as_module
+    #fitnesses = list(dview.map_sync(evaluate_as_module.evaluate, copy.copy(vmoffspring)))
+    fitnesses = list(dview.map_sync(evaluate, copy.copy(vmoffspring)))
 
-    fitnesses = list(dview.map_sync(evaluate_as_module.evaluate, copy.copy(vmoffspring)))
     mf = np.mean(fitnesses)
 
     for ind, fit in zip(copy.copy(invalid_ind), fitnesses):

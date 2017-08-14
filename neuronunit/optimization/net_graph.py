@@ -343,9 +343,6 @@ def speed_up(not_optional_list):
         model.update_run_params(vms.attrs)
         print(v.params)
         score = v.judge(model,stop_on_error = False, deep_error = True)
-        #dt = model.results['t'][1] - model.results['t'][0]
-        #dt = dt*pq.s
-        #v_m = AnalogSignal(copy.copy(model.results['vm'].to_python()),units=pq.V,sampling_rate=1.0/dt)
 
         v_m = model.get_membrane_potential()
         ts = model.results['t']# time signal
@@ -423,7 +420,7 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
     sindexs = []
     # visualize
     # widths tests
-    fig, ax = plt.subplots(len(best_worst), figsize=(10, 5), facecolor='white')
+    fig, ax = plt.subplots(1, figsize=(10, 5), facecolor='white')
 
     v = get_neab.tests[5]
 
@@ -445,7 +442,6 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
 
         model.reset_h(neuron)
         model.update_run_params(vms.attrs)
-        print(v.params)
         score = v.judge(model,stop_on_error = False, deep_error = True)
 
         v_m = model.get_membrane_potential()
@@ -453,11 +449,9 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
 
         ts = model.results['t'] # time signal
         st = spike_functions.get_spike_train(v_m) #spike times
-        print(st)
-        assert len(st) == 1
 
-        start = int((float(st)/ts[-1])*len(ts))  #index offset from spike
-        stop = int((float(st)/ts[-1])*len(ts))
+        start = int((float(st)/ts[-1])*len(ts))-900  #index offset from spike
+        stop = int((float(st)/ts[-1])*len(ts))+50
         time_sequence = np.arange(start , stop, 1)
         ptvec = np.array(model.results['t'])[time_sequence]
 
@@ -489,22 +483,22 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         if 'mean' in v.prediction.keys():
             unit_predictions = v.prediction['mean']
 
-        ax[iterator].plot(lined_up_time , pvm, linewidth=1.5)
-        ax[iterator].legend(labels=str(sw) ,loc="top right")
+        plt.plot(lined_up_time , pvm, linewidth=1.5)#,labels=str(sw))
+        #ax[iterator].legend(labels=str(sw) ,loc="upper right")
 
 
         #ax[iterator].legend(loc="lower left")
         #score = None
     #plt.legend()
-    fig.text(0.5, 0.04, 'ms', ha='center', va='center')
-    fig.text(0.06, 0.5, '$V_{m}$ mV', ha='center', va='center', rotation='vertical')
+    #fig.text(0.5, 0.04, 'ms', ha='center', va='center')
+    #fig.text(0.06, 0.5, '$V_{m}$ mV', ha='center', va='center', rotation='vertical')
     fig.savefig(str('width_test_')+str(v)+'vm_versus_t.png', format='png', dpi=1200)#,
 
     # visualize
     # threshold test
     plt.style.use('ggplot')
     plt.clf()
-    fig, ax = plt.subplots(len(best_worst), figsize=(10, 5), facecolor='white')
+    fig, ax = plt.subplots(1, figsize=(10, 5), facecolor='white')
     v = get_neab.tests[7]
     #if k == 5: # Only interested in InjectedCurrentAPWidthTest this time.
     for iterator, vms in enumerate(best_worst):
@@ -534,8 +528,8 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         v_m = model.get_membrane_potential()
 
 
-        start = int((float(st)/ts[-1])*len(ts))    #index offset from spike
-        stop = int((float(st)/ts[-1])*len(ts))
+        start = int((float(st)/ts[-1])*len(ts))-200  #index offset from spike
+        stop = int((float(st)/ts[-1])*len(ts))+200
         time_sequence = np.arange(start , stop, 1)
         ptvec = np.array(model.results['t'])[time_sequence]
         other_stop = ptvec[-1]-ptvec[0]
@@ -558,8 +552,8 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
 
         to_r_s = unit_observations.units
         unit_predictions = unit_predictions.rescale(to_r_s)
-        ax[iterator].plot(lined_up_time , pvm, linewidth=1.5)
-        ax[iterator].legend(labels=str(unit_predictions),loc="lower left")
+        plt.plot(lined_up_time , pvm, linewidth=1.5)
+        #ax[iterator].legend(labels=str(unit_predictions),loc="upper right")
         threshold_line = []# [ float(unit_predictions)
         for i in lined_up_time:
             if i < 1000:
@@ -578,7 +572,7 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
     ##
     plt.style.use('ggplot')
     plt.clf()
-    #fig, ax = plt.subplots(1, figsize=(10, 5), facecolor='white')
+    fig, ax = plt.subplots(1, figsize=(10, 5), facecolor='white')
     v = get_neab.tests[6]
 
     for iterator, vms in enumerate(best_worst):
@@ -638,10 +632,10 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
 
         #plt.legend(loc="lower left")
         score = None
-    #plt.legend()
-    fig.text(0.5, 0.04, 'ms', ha='center', va='center')
-    fig.text(0.06, 0.5, '$V_{m}$ mV', ha='center', va='center', rotation='vertical')
-    fig.savefig(str('amplitude')+str(v)+'vm_versus_t.png', format='png', dpi=1200)#,
+    plt.legend()
+    #fig.text(0.5, 0.04, 'ms', ha='center', va='center')
+    #fig.text(0.06, 0.5, '$V_{m}$ mV', ha='center', va='center', rotation='vertical')
+    #fig.savefig(str('amplitude')+str(v)+'vm_versus_t.png', format='png', dpi=1200)#,
 
 
 
