@@ -33,8 +33,7 @@ def p_imports():
     return
 
 dview.apply_sync(p_imports)
-p_imports()
-
+#p_imports()
 '''
 def get_trans_dict(param_dict):
     trans_dict = {}
@@ -325,7 +324,7 @@ import model_parameters
 param_dict = model_parameters.model_params
 td = get_trans_dict(param_dict)
 
-os.system('sudo /opt/conda/bin/pip install --upgrade networkx')
+#os.system('sudo /opt/conda/bin/pip install --upgrade networkx')
 
 cd = pickle.load(open('complete_dump.p','rb'))
 print(len(cd))

@@ -143,14 +143,14 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
                 #unit_observations = v.observation['value']
                 to_r_s = unit_observations.units
-                #unit_predictions = unit_predictions.rescale(sw)
-                unit_predictions  = sw.rescale(to_r_s)
-                fitness1[5] = float(np.abs( np.abs(float(unit_observations)) - np.abs(float(unit_predictions) )))
+                unit_predictions  = float(sw.rescale(to_r_s))
+                fitness1[5] = float(np.abs( np.abs(float(unit_observations))-np.abs(float(unit_predictions))))
                 #fitness1[5] = unit_delta
             if k == 0:
                 fitness1.append(differences[0])
             if differences[0] > 10.0:
                 if k != 0:
+                    #fitness1.append(pre_fitness[k])
                     fitness1.append(pre_fitness[k] + 1.5 * differences[0] ) # add the rheobase error to all the errors.
                     assert fitness1[k] != pre_fitness[k]
             else:
@@ -159,6 +159,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
                 fitness1.append(differences[1])
             if differences[1] > 10.0 :
                 if k != 1 and len(fitness1)>1 :
+                    #fitness1.append(pre_fitness[k])
                     fitness1.append(pre_fitness[k] + 1.25 * differences[1] ) # add the rheobase error to all the errors.
                     assert fitness1[k] != pre_fitness[k]
         print(fitness1, fitness)
@@ -289,7 +290,6 @@ def check_rheobase(vmpop,pop=None):
             everything = np.concatenate((sub,supra))
 
             center = np.linspace(sub.max(),supra.min(),7.0)
-            centerl = list(center)
             # The following code block probably looks counter intuitive.
             # Its job is to delete duplicated search values.
             # Ie everything is a list of 'everything' already explored.
