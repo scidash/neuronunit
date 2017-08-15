@@ -33,38 +33,6 @@ def plotly_graph(history,vmhistory):
         labels[i] = i
     node_colors = np.log([ np.sum(history.genealogy_history[i].fitness.values) for i in G ])
 
-    import networkx as nx
-
-    def hierarchy_pos(G, root, width=1., vert_gap = 0.2, vert_loc = 0, xcenter = 0.5,
-                      pos = None, parent = None):
-        '''If there is a cycle that is reachable from root, then this will see infinite recursion.
-           G: the graph
-           root: the root node of current branch
-           width: horizontal space allocated for this branch - avoids overlap with other branches
-           vert_gap: gap between levels of hierarchy
-           vert_loc: vertical location of root
-           xcenter: horizontal location of root
-           pos: a dict saying where all nodes go if they have been assigned
-           parent: parent of this branch.'''
-        if pos == None:
-            pos = {root:(xcenter,vert_loc)}
-        else:
-            pos[root] = (xcenter, vert_loc)
-        print(pos)
-        neighbors = G.neighbors(root)
-        if parent != None:
-            neighbors.remove(parent)
-        if len(neighbors)!=0:
-            dx = width/len(neighbors)
-            nextx = xcenter - width/2 - dx/2
-            for neighbor in neighbors:
-                nextx += dx
-                pos = hierarchy_pos(G,neighbor, width = dx, vert_gap = vert_gap,
-                                    vert_loc = vert_loc-vert_gap, xcenter=nextx, pos=pos,
-                                    parent = root)
-        return pos
-    root = history.genealogy_history[0]
-    positions hierarchy_pos(G,root)
     #positions = graphviz_layout(G, prog="dot")
 
     # adjust circle size was
@@ -461,7 +429,7 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
     sindexs = []
     # visualize
     # widths tests
-    fig, ax = plt.subplots(1, figsize=(10, 5), facecolor='white')
+    fig, ax = plt.subplots(len(best_worst), figsize=(10, 5), facecolor='white')
 
     v = get_neab.tests[5]
 
@@ -486,13 +454,21 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         score = v.judge(model,stop_on_error = False, deep_error = True)
 
         v_m = model.get_membrane_potential()
+        threshold = spikes2thresholds(v_m)
+        ts = model.results['t'] # time signal
+
+        for index,v in enumerate(v_m):
+            if v == float(threshold):
+                threshold_time = ts[index]
+
+
         dt = float(v_m.sampling_period)
 
-        ts = model.results['t'] # time signal
         st = spike_functions.get_spike_train(v_m) #spike times
 
-        start = int((float(st)/ts[-1])*len(ts))-750  #index offset from spike
-        stop = int((float(st)/ts[-1])*len(ts))+1500
+        start = int((float(threshold_time)/ts[-1])*len(ts))  #index offset from spike
+        stop = start + int(1000)
+        #stop = int((float(st)/ts[-1])*len(ts))+1500
         time_sequence = np.arange(start , stop, 1)
         ptvec = np.array(model.results['t'])[time_sequence]
 
@@ -527,18 +503,19 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
             unit_predictions = v.prediction['mean']
 
         if len(lined_up_time)==len(pvm):
-            plt.plot(lined_up_time , pvm, label=str(sw), linewidth=1.5)
+
+            ax[iterator].plot(lined_up_time , pvm, label=str(sw), linewidth=1.5)
 #
 
-        #ax[iterator].legend(labels=str(sw) ,loc="upper right")
+            #ax[iterator].legend(labels=str(sw) ,loc="upper right")
 
 
-        #ax[iterator].legend(loc="lower left")
+        ax[iterator].legend(loc="lower left")
         #score = None
     #plt.legend()
-    #fig.text(0.5, 0.04, 'ms', ha='center', va='center')
-    #fig.text(0.06, 0.5, '$V_{m}$ mV', ha='center', va='center', rotation='vertical')
-    fig.savefig(str('width_test_')+str(v)+'vm_versus_t.png', format='png', dpi=1200)#,
+    fig.text(0.5, 0.04, 'ms', ha='center', va='center')
+    fig.text(0.06, 0.5, '$V_{m}$ mV', ha='center', va='center', rotation='vertical')
+    fig.savefig(str('from_threshold_test_')+str(v)+'vm_versus_t.png', format='png', dpi=1200)#,
 
     # visualize
     # threshold test
