@@ -102,9 +102,9 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     pre_fitness = []
     fitness = []
     differences = []
-
+    fitness1 = []
     if float(vms.rheobase) <= 0.0:
-        fitness = [ 125.0 for i in tests ]
+        fitness1 = [ 125.0 for i in tests ]
 
     elif float(vms.rheobase) > 0.0:
         for k,v in enumerate(tests):
@@ -143,9 +143,9 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
 
                 #unit_observations = v.observation['value']
                 to_r_s = unit_observations.units
-                unit_predictions = unit_predictions.rescale(sw)
+                #unit_predictions = unit_predictions.rescale(sw)
                 unit_predictions  = sw.rescale(to_r_s)
-                fitness1[5] = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
+                fitness1[5] = float(np.abs( np.abs(float(unit_observations)) - np.abs(float(unit_predictions) )))
                 #fitness1[5] = unit_delta
             if k == 0:
                 fitness1.append(differences[0])
@@ -263,17 +263,20 @@ def check_rheobase(vmpop,pop=None):
         sub=[]
         supra=[]
         steps=[]
-        vms.rheobase=0.0
+        vms.rheobase = 0.0
         for k,v in vms.lookup.items():
-            if v==1:
+            vm.searchedd[v]=float(k)
+
+            if v == 1:
                 #A logical flag is returned to indicate that rheobase was found.
                 vms.rheobase=float(k)
+                vm.searched.append(float(k))
                 vms.steps = 0.0
                 vms.boolean = True
                 return vms
-            elif v==0:
+            elif v == 0:
                 sub.append(k)
-            elif v>0:
+            elif v > 0:
                 supra.append(k)
 
         sub=np.array(sub)
@@ -289,13 +292,12 @@ def check_rheobase(vmpop,pop=None):
             centerl = list(center)
             # The following code block probably looks counter intuitive.
             # Its job is to delete duplicated search values.
-            # Ie everything is a list of everything already explored.
-            # It then makes a corrected center position.
+            # Ie everything is a list of 'everything' already explored.
+            # It then inserts a bias corrected center position.
             for i,j in enumerate(centerl):
                 if j in list(everything):
 
                     np.delete(center,i)
-                    del centerl[i]
                     # delete the duplicated elements element, and replace it with a corrected
                     # center below.
             #delete the index

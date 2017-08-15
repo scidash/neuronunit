@@ -1,8 +1,14 @@
 from IPython.lib.deepreload import reload
 import ipyparallel as ipp
 rc = ipp.Client(profile='default')
-rc[:].use_cloudpickle()
+#rc[:].use_cloudpickle()
 dview = rc[:]
+import matplotlib as mpl
+# setting of an appropriate backend.
+#try:#
+#    mpl.use('Qt5Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
+#except:
+mpl.use('Agg')
 
 import pickle
 import deap
@@ -139,10 +145,9 @@ def check_rheobase(vmpop,pop=None):
             # Ie everything is a list of everything already explored.
             # It then makes a corrected center position.
             for i,j in enumerate(centerl):
-                if i in list(everything):
+                if j in list(everything):
 
                     np.delete(center,i)
-                    del centerl[i]
                     # delete the duplicated elements element, and replace it with a corrected
                     # center below.
             #delete the index
@@ -326,8 +331,10 @@ cd = pickle.load(open('complete_dump.p','rb'))
 print(len(cd))
 
 vmoffspring,history,logbook,rheobase_values,best_worst,vmhistory,hvolumes = cd[0], cd[1], cd[2], cd[3], cd[4], cd[5], cd[6]
-
+print(cd)
 import net_graph
+net_graph.plotly_graph(history,vmhistory)
+
 unev = pickle.load(open('un_evolved.p','rb'))
 unev, rh_values_unevolved = unev[0], unev[1]
 
@@ -341,7 +348,6 @@ assert type(best.rheobase) is not type(None)
 
 net_graph.sp_spike_width(unev)
 
-net_graph.plotly_graph(history,vmhistory)
 best_ = best_worst[0]
 worst_ = best_worst[1]
 
