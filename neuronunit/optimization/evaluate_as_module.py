@@ -151,18 +151,18 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
                 fitness1.append(differences[0])
             if differences[0] > 10.0:
                 if k != 0:
-                    fitness1.append(pre_fitness[k])
-                    #fitness1.append(pre_fitness[k] + 1.5 * differences[0] ) # add the rheobase error to all the errors.
-                    #assert fitness1[k] != pre_fitness[k]
+                    #fitness1.append(pre_fitness[k])
+                    fitness1.append(pre_fitness[k] + 1.5 * differences[0] ) # add the rheobase error to all the errors.
+                    assert fitness1[k] != pre_fitness[k]
             else:
                 fitness1.append(pre_fitness[k])
             if k == 1:
                 fitness1.append(differences[1])
             if differences[1] > 10.0 :
                 if k != 1 and len(fitness1)>1 :
-                    fitness1.append(pre_fitness[k])
-                    #fitness1.append(pre_fitness[k] + 1.25 * differences[1] ) # add the rheobase error to all the errors.
-                    #assert fitness1[k] != pre_fitness[k]
+                    #fitness1.append(pre_fitness[k])
+                    fitness1.append(pre_fitness[k] + 1.25 * differences[1] ) # add the rheobase error to all the errors.
+                    assert fitness1[k] != pre_fitness[k]
         print(fitness1, fitness)
     pre_fitness = []
     return fitness1[0],fitness1[1],\
