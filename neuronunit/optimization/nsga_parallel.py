@@ -460,34 +460,31 @@ def check_rheobase(vmpop,pop=None):
             assert sub.max()<=supra.min()
         if len(sub) and len(supra):
             everything = np.concatenate((sub,supra))
-
-            center = np.linspace(sub.max(),supra.min(),7.0)
-            centerl = list(center)
-            # The following code block probably looks counter intuitive.
-            # Its job is to delete duplicated search values.
-            # Ie everything is a list of 'everything' already explored.
-            # It then inserts a bias corrected center position.
-            for i,j in enumerate(centerl):
+            center = np.linspace(sub.max(),supra.min(),9.0)
+            for i,j in enumerate(center):
                 if j in list(everything):
+                    #center.delete(i)
 
-                    np.delete(center,i)
+                    center = np.delete(center,i)
                     # delete the duplicated elements element, and replace it with a corrected
                     # center below.
             #delete the index
-            #np.delete(center,np.where(everything is in center))
             #make sure that element 4 in a seven element vector
             #is exactly half way between sub.max() and supra.min()
+            # correcting the center is important to avoid straddling the midpoint.
             center[int(len(center)/2)+1]=(sub.max()+supra.min())/2.0
             steps = [ i*pq.pA for i in center ]
 
         elif len(sub):
-            steps = np.linspace(sub.max(),2*sub.max(),7.0)
-            np.delete(steps,np.array(sub))
+
+
+            steps = np.linspace(sub.max(),2*sub.max(),9.0)
+            steps = np.delete(steps,np.array(sub))
             steps = [ i*pq.pA for i in steps ]
 
         elif len(supra):
-            steps = np.linspace(-2*(supra.min()),supra.min(),7.0)
-            np.delete(steps,np.array(supra))
+            steps = np.linspace(-2*(supra.min()),supra.min(),9.0)
+            steps = np.delete(steps,np.array(supra))
             steps = [ i*pq.pA for i in steps ]
 
         vms.steps = steps
@@ -589,12 +586,13 @@ def check_rheobase(vmpop,pop=None):
         cnt = 0
         while vm.boolean == False:
             vm.searched.append(vm.steps)
-
-            for step in vm.steps:
-                vm = check_current(step, vm)
-                vm = check_fix_range(vm)
-                cnt+=1
-                print(cnt)
+            vmpop = dview.map_sync(check_current,vm.steps)
+            for vm in vmpop:
+                for step in vm.steps:
+                    vm = check_current(step, vm)
+                    vm = check_fix_range(vm)
+            cnt+=1
+            print(cnt)
         return vm
 
     ## initialize where necessary.
@@ -737,8 +735,8 @@ while (gen < NGEN and means[-1] > 0.05):
     # Thus waisting computation.
     vmoffspring = update_vm_pop(copy.copy(invalid_ind), trans_dict) #(copy.copy(invalid_ind), td)
     #import evaluate_as_module as em
-    vmpop , _ = check_rheobase(vmpop)
-    vmoffspring , _ =  em.check_rheobase(copy.copy(vmoffspring))
+    #vmpop , _ = check_rheobase(vmpop)
+    vmoffspring , _ =  check_rheobase(copy.copy(vmoffspring))
     rh_mean_status = np.mean([ v.rheobase for v in vmoffspring ])
     rhdiff = rh_difference(rh_mean_status * pq.pA)
     print('the difference: {0}'.format(rh_difference(rh_mean_status * pq.pA)))
@@ -771,7 +769,7 @@ while (gen < NGEN and means[-1] > 0.05):
 
     # keys = history.genealogy_tree.keys()
     # Optionally
-    # Grab evaluated history items and chuck them into the mixture.
+    # Grab evaluated history its and chuck them into the mixture.
     # This may cause stagnation of evolution however.
     # We want to select among the best from the whole history of the GA, not just penultimate and present generations.
     # all_hist = [ history.genealogy_history[i] for i in keys if history.genealogy_history[i].fitness.valid == True ]
