@@ -103,7 +103,6 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     fitness = []
     differences = []
     fitness1 = []
-
     if float(vms.rheobase) <= 0.0:
         fitness1 = [ 125.0 for i in tests ]
 
@@ -265,40 +264,40 @@ def check_rheobase(vmpop,pop=None):
         sub=[]
         supra=[]
         steps=[]
-        vms.rheobase=0.0
+        vms.rheobase = 0.0
         for k,v in vms.lookup.items():
-            if v==1:
+            vm.searchedd[v]=float(k)
+
+            if v == 1:
                 #A logical flag is returned to indicate that rheobase was found.
                 vms.rheobase=float(k)
+                vm.searched.append(float(k))
                 vms.steps = 0.0
                 vms.boolean = True
                 return vms
-            elif v==0:
+            elif v == 0:
                 sub.append(k)
-            elif v>0:
+            elif v > 0:
                 supra.append(k)
 
         sub=np.array(sub)
         supra=np.array(supra)
 
         if len(sub)!=0 and len(supra)!=0:
-            #this assertion would only be wrong if there was a bug
-            print(str(bool(sub.max()>supra.min())))
-            assert not sub.max()>supra.min()
+            #this assertion would only be occur if there was a bug
+            assert sub.max()<=supra.min()
         if len(sub) and len(supra):
             everything = np.concatenate((sub,supra))
 
             center = np.linspace(sub.max(),supra.min(),7.0)
-            centerl = list(center)
             # The following code block probably looks counter intuitive.
             # Its job is to delete duplicated search values.
-            # Ie everything is a list of everything already explored.
-            # It then makes a corrected center position.
+            # Ie everything is a list of 'everything' already explored.
+            # It then inserts a bias corrected center position.
             for i,j in enumerate(centerl):
-                if i in list(everything):
+                if j in list(everything):
 
                     np.delete(center,i)
-                    del centerl[i]
                     # delete the duplicated elements element, and replace it with a corrected
                     # center below.
             #delete the index
