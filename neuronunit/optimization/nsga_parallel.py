@@ -134,11 +134,11 @@ with dview.sync_imports():
     whole_BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
     whole_BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
 
-    BOUND_LOW = [ np.min(i) for i in sub_set ]
-    BOUND_UP = [ np.max(i) for i in sub_set ]
+    #BOUND_LOW = [ np.min(i) for i in sub_set ]
+    #BOUND_UP = [ np.max(i) for i in sub_set ]
 
-    # BOUND_LOW = whole_BOUND_LOW
-    # BOUND_UP = whole_BOUND_UP
+    BOUND_LOW = whole_BOUND_LOW
+    BOUND_UP = whole_BOUND_UP
 
 
     NDIM = len(BOUND_UP)#+1
@@ -171,11 +171,11 @@ def p_imports():
     whole_BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
     whole_BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
 
-    BOUND_LOW = [ np.min(i) for i in sub_set ]
-    BOUND_UP = [ np.max(i) for i in sub_set ]
+    #BOUND_LOW = [ np.min(i) for i in sub_set ]
+    #BOUND_UP = [ np.max(i) for i in sub_set ]
 
-    # BOUND_LOW = whole_BOUND_LOW
-    # BOUND_UP = whole_BOUND_UP
+    BOUND_LOW = whole_BOUND_LOW
+    BOUND_UP = whole_BOUND_UP
 
 
     NDIM = len(BOUND_UP)#+1
@@ -456,9 +456,8 @@ def check_rheobase(vmpop,pop=None):
         supra=np.array(supra)
 
         if len(sub)!=0 and len(supra)!=0:
-            #this assertion would only be wrong if there was a bug
-            print(str(bool(sub.max()>supra.min())))
-            assert not sub.max()>supra.min()
+            #this assertion would only be occur if there was a bug
+            assert sub.max()<=supra.min()
         if len(sub) and len(supra):
             everything = np.concatenate((sub,supra))
 
@@ -469,12 +468,10 @@ def check_rheobase(vmpop,pop=None):
             # Ie everything is a list of 'everything' already explored.
             # It then inserts a bias corrected center position.
             for i,j in enumerate(centerl):
-                if i in list(everything):
+                if j in list(everything):
 
                     np.delete(center,i)
-                    del centerl[i]
-                    # delete the duplicated element(s), and replace element(s)
-                    # with a bias corrected
+                    # delete the duplicated elements element, and replace it with a corrected
                     # center below.
             #delete the index
             #np.delete(center,np.where(everything is in center))
@@ -648,6 +645,7 @@ pop = toolbox.population(n = MU)
 pop = [ toolbox.clone(i) for i in pop ]
 
 vmpop = update_vm_pop(pop, td)
+#import evaluate_as_module as em
 vmpop , _ = check_rheobase(vmpop)
 
 
@@ -668,7 +666,7 @@ import copy
 import evaluate_as_module
 fitnesses = dview.map_sync(evaluate_as_module.evaluate, copy.copy(vmpop))
 
-fitnesses = dview.map_sync(evaluate, copy.copy(vmpop))
+#fitnesses = dview.map_sync(evaluate, copy.copy(vmpop))
 print(fitnesses)
 for ind, fit in zip(pop, fitnesses):
     ind.fitness.values = fit
@@ -738,7 +736,9 @@ while (gen < NGEN and means[-1] > 0.05):
     # Need to make sure that update_vm_pop does not replace instances of the same model
     # Thus waisting computation.
     vmoffspring = update_vm_pop(copy.copy(invalid_ind), trans_dict) #(copy.copy(invalid_ind), td)
-    vmoffspring , _ = check_rheobase(copy.copy(vmoffspring))
+    #import evaluate_as_module as em
+    vmpop , _ = check_rheobase(vmpop)
+    vmoffspring , _ =  em.check_rheobase(copy.copy(vmoffspring))
     rh_mean_status = np.mean([ v.rheobase for v in vmoffspring ])
     rhdiff = rh_difference(rh_mean_status * pq.pA)
     print('the difference: {0}'.format(rh_difference(rh_mean_status * pq.pA)))
@@ -799,6 +799,8 @@ net_graph.surfaces(history,td)
 best, worst = net_graph.best_worst(history)
 listss = [best , worst]
 best_worst = update_vm_pop(listss,td)
+#import evaluate_as_module as em
+
 best_worst , _ = check_rheobase(best_worst)
 rheobase_values = [v.rheobase for v in vmoffspring ]
 vmhistory = update_vm_pop(history.genealogy_history.values(),td)
