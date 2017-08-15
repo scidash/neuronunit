@@ -280,9 +280,8 @@ def check_rheobase(vmpop,pop=None):
         supra=np.array(supra)
 
         if len(sub)!=0 and len(supra)!=0:
-            #this assertion would only be wrong if there was a bug
-            print(str(bool(sub.max()>supra.min())))
-            assert not sub.max()>supra.min()
+            #this assertion would only be occur if there was a bug
+            assert sub.max()<=supra.min()
         if len(sub) and len(supra):
             everything = np.concatenate((sub,supra))
 
@@ -293,7 +292,7 @@ def check_rheobase(vmpop,pop=None):
             # Ie everything is a list of everything already explored.
             # It then makes a corrected center position.
             for i,j in enumerate(centerl):
-                if i in list(everything):
+                if j in list(everything):
 
                     np.delete(center,i)
                     del centerl[i]
