@@ -28,8 +28,6 @@ def plotly_graph(history,vmhistory):
     import networkx
     G = networkx.DiGraph(history.genealogy_tree)
     G = G.reverse()
-
-
     labels = {}
     for i in G.nodes():
         labels[i] = i
@@ -39,6 +37,8 @@ def plotly_graph(history,vmhistory):
 
     positions = graphviz_layout(G, prog="dot")
 
+    # adjust circle size was
+    # 1 now 1.5
     dmin=1.5
     ncenter=0
     for n in positions:
@@ -57,7 +57,7 @@ def plotly_graph(history,vmhistory):
     for edge in G.edges():
         source = G.nodes()[edge[0]-1]
         target = G.nodes()[edge[1]-1]
-        #if source < len(positions) and target < len(positions):
+
         x0, y0 = positions[source]
         x1, y1 = positions[target]
         edge_trace['x'] += [x0, x1, None]
@@ -89,7 +89,7 @@ def plotly_graph(history,vmhistory):
             line=dict(width=2)))
 
     for node in G.nodes():
-        #if node < len(positions) :
+
         x,y = positions[G.nodes()[node-1]]
         node_trace['x'].append(x)
         node_trace['y'].append(y)
@@ -428,7 +428,7 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
     sindexs = []
     # visualize
     # widths tests
-    fig, ax = plt.subplots(1, figsize=(10, 5), facecolor='white')
+    fig, ax = plt.subplots(len(best_worst), figsize=(10, 5), facecolor='white')
 
     v = get_neab.tests[5]
 
@@ -453,14 +453,23 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         score = v.judge(model,stop_on_error = False, deep_error = True)
 
         v_m = model.get_membrane_potential()
+        threshold = spikes2thresholds(v_m)
+        ts = model.results['t'] # time signal
+
+        for index,v in enumerate(v_m):
+            if v == float(threshold):
+                threshold_time = ts[index]
+				break
+
+
         dt = float(v_m.sampling_period)
 
         ts = model.results['t'] # time signal
         st = spike_functions.get_spike_train(v_m) #spike times
 
-
-        start = int((float(st)/ts[-1])*len(ts))-750  #index offset from spike
-        stop = int((float(st)/ts[-1])*len(ts))+1500
+        start = int((float(threshold_time)/ts[-1])*len(ts))  #index offset from spike
+        stop = start + int(1000)
+        #stop = int((float(st)/ts[-1])*len(ts))+1500
         time_sequence = np.arange(start , stop, 1)
         ptvec = np.array(model.results['t'])[time_sequence]
 
@@ -495,18 +504,19 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
             unit_predictions = v.prediction['mean']
 
         if len(lined_up_time)==len(pvm):
-            plt.plot(lined_up_time , pvm, label=str(sw), linewidth=1.5)
+
+            ax[iterator].plot(lined_up_time , pvm, label=str(sw), linewidth=1.5)
 #
 
         #ax[iterator].legend(labels=str(sw) ,loc="upper right")
 
 
-        #ax[iterator].legend(loc="lower left")
+        ax[iterator].legend(loc="lower left")
         #score = None
     #plt.legend()
-    #fig.text(0.5, 0.04, 'ms', ha='center', va='center')
-    #fig.text(0.06, 0.5, '$V_{m}$ mV', ha='center', va='center', rotation='vertical')
-    fig.savefig(str('width_test_')+str(v)+'vm_versus_t.png', format='png', dpi=1200)#,
+    fig.text(0.5, 0.04, 'ms', ha='center', va='center')
+    fig.text(0.06, 0.5, '$V_{m}$ mV', ha='center', va='center', rotation='vertical')
+    fig.savefig(str('from_threshold_test_')+str(v)+'vm_versus_t.png', format='png', dpi=1200)#,
 
     # visualize
     # threshold test
@@ -978,7 +988,7 @@ def bar_chart(vms,name=None):
 
         new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
         model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-
+        model.load_model()
         assert type(vms.rheobase) is not type(None)
 
 
