@@ -28,47 +28,17 @@ def plotly_graph(history,vmhistory):
     import networkx
     G = networkx.DiGraph(history.genealogy_tree)
     G = G.reverse()
+
+
     labels = {}
     for i in G.nodes():
         labels[i] = i
     node_colors = np.log([ np.sum(history.genealogy_history[i].fitness.values) for i in G ])
-
     import networkx as nx
 
-    def hierarchy_pos(G, root, width=1., vert_gap = 0.2, vert_loc = 0, xcenter = 0.5,
-                      pos = None, parent = None):
-        '''If there is a cycle that is reachable from root, then this will see infinite recursion.
-           G: the graph
-           root: the root node of current branch
-           width: horizontal space allocated for this branch - avoids overlap with other branches
-           vert_gap: gap between levels of hierarchy
-           vert_loc: vertical location of root
-           xcenter: horizontal location of root
-           pos: a dict saying where all nodes go if they have been assigned
-           parent: parent of this branch.'''
-        if pos == None:
-            pos = {root:(xcenter,vert_loc)}
-        else:
-            pos[root] = (xcenter, vert_loc)
-        print(pos)
-        neighbors = G.neighbors(root)
-        if parent != None:
-            neighbors.remove(parent)
-        if len(neighbors)!=0:
-            dx = width/len(neighbors)
-            nextx = xcenter - width/2 - dx/2
-            for neighbor in neighbors:
-                nextx += dx
-                pos = hierarchy_pos(G,neighbor, width = dx, vert_gap = vert_gap,
-                                    vert_loc = vert_loc-vert_gap, xcenter=nextx, pos=pos,
-                                    parent = root)
-        return pos
-    root = history.genealogy_history[0]
-    positions hierarchy_pos(G,root)
-    #positions = graphviz_layout(G, prog="dot")
 
-    # adjust circle size was
-    # 1 now 1.5
+    positions = graphviz_layout(G, prog="dot")
+
     dmin=1.5
     ncenter=0
     for n in positions:
@@ -87,7 +57,7 @@ def plotly_graph(history,vmhistory):
     for edge in G.edges():
         source = G.nodes()[edge[0]-1]
         target = G.nodes()[edge[1]-1]
-
+        #if source < len(positions) and target < len(positions):
         x0, y0 = positions[source]
         x1, y1 = positions[target]
         edge_trace['x'] += [x0, x1, None]
@@ -119,7 +89,7 @@ def plotly_graph(history,vmhistory):
             line=dict(width=2)))
 
     for node in G.nodes():
-
+        #if node < len(positions) :
         x,y = positions[G.nodes()[node-1]]
         node_trace['x'].append(x)
         node_trace['y'].append(y)
@@ -842,8 +812,8 @@ def surfaces(history,td):
         trip_axis = ax_trip.tripcolor(xs,ys,sums+1,20,norm=matplotlib.colors.LogNorm())
         plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue',label='global minima')
         fig_trip.colorbar(trip_axis, label='sum of objectives')
-        ax_trip.set_xlabel('Parameter '+ str('a')
-        ax_trip.set_ylabel('Parameter '+ str('b')
+        ax_trip.set_xlabel('Parameter '+ str('a'))
+        ax_trip.set_ylabel('Parameter '+ str('b'))
         plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
         fig_trip.tight_layout()
         fig_trip.legend()
