@@ -5,7 +5,7 @@ import graphviz
 
 import matplotlib as mpl
 # setting of an appropriate backend.
-#try:
+#try:#
 #    mpl.use('Qt5Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
 #except:
 mpl.use('Agg')
@@ -32,7 +32,40 @@ def plotly_graph(history,vmhistory):
     for i in G.nodes():
         labels[i] = i
     node_colors = np.log([ np.sum(history.genealogy_history[i].fitness.values) for i in G ])
-    positions = graphviz_layout(G, prog="dot")
+
+    import networkx as nx
+
+    def hierarchy_pos(G, root, width=1., vert_gap = 0.2, vert_loc = 0, xcenter = 0.5,
+                      pos = None, parent = None):
+        '''If there is a cycle that is reachable from root, then this will see infinite recursion.
+           G: the graph
+           root: the root node of current branch
+           width: horizontal space allocated for this branch - avoids overlap with other branches
+           vert_gap: gap between levels of hierarchy
+           vert_loc: vertical location of root
+           xcenter: horizontal location of root
+           pos: a dict saying where all nodes go if they have been assigned
+           parent: parent of this branch.'''
+        if pos == None:
+            pos = {root:(xcenter,vert_loc)}
+        else:
+            pos[root] = (xcenter, vert_loc)
+        print(pos)
+        neighbors = G.neighbors(root)
+        if parent != None:
+            neighbors.remove(parent)
+        if len(neighbors)!=0:
+            dx = width/len(neighbors)
+            nextx = xcenter - width/2 - dx/2
+            for neighbor in neighbors:
+                nextx += dx
+                pos = hierarchy_pos(G,neighbor, width = dx, vert_gap = vert_gap,
+                                    vert_loc = vert_loc-vert_gap, xcenter=nextx, pos=pos,
+                                    parent = root)
+        return pos
+    root = history.genealogy_history[0]
+    positions hierarchy_pos(G,root)
+    #positions = graphviz_layout(G, prog="dot")
 
     # adjust circle size was
     # 1 now 1.5
@@ -809,13 +842,13 @@ def surfaces(history,td):
         fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
         trip_axis = ax_trip.tripcolor(xs,ys,sums+1,20,norm=matplotlib.colors.LogNorm())
         plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue',label='global minima')
-        fig_trip.colorbar(trip_axis, label='sum of objectives + 1')
-        ax_trip.set_xlabel('Parameter '+ str(td[w]))
-        ax_trip.set_ylabel('Parameter '+ str(td[z]))
+        fig_trip.colorbar(trip_axis, label='sum of objectives')
+        ax_trip.set_xlabel('Parameter '+ str('a')
+        ax_trip.set_ylabel('Parameter '+ str('b')
         plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
         fig_trip.tight_layout()
         fig_trip.legend()
-        fig_trip.savefig('surface'+str(td[w])+str(td[z])+'.png',format='png', dpi=1200)
+        fig_trip.savefig('surface'+str('a')+str('b')+'.png',format='png', dpi=1200)
 
 
 def load_data():
