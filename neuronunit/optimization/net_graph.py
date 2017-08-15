@@ -33,7 +33,7 @@ def plotly_graph(history,vmhistory):
         labels[i] = i
     node_colors = np.log([ np.sum(history.genealogy_history[i].fitness.values) for i in G ])
 
-    #positions = graphviz_layout(G, prog="dot")
+    positions = graphviz_layout(G, prog="dot")
 
     # adjust circle size was
     # 1 now 1.5
@@ -239,8 +239,6 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
     The most important side effect being a plot in png format.
 
     '''
-
-
     import os
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
@@ -420,7 +418,6 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
     vms = best_worst[0]
     get_neab.tests[0].prediction['value'] = vms.rheobase * pq.pA
 
-
     stored_min = []
     stored_max = []
     sc_for_frame_best = []
@@ -460,6 +457,7 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         for index,v in enumerate(v_m):
             if v == float(threshold):
                 threshold_time = ts[index]
+				break
 
 
         dt = float(v_m.sampling_period)
@@ -507,7 +505,7 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
             ax[iterator].plot(lined_up_time , pvm, label=str(sw), linewidth=1.5)
 #
 
-            #ax[iterator].legend(labels=str(sw) ,loc="upper right")
+        #ax[iterator].legend(labels=str(sw) ,loc="upper right")
 
 
         ax[iterator].legend(loc="lower left")
@@ -640,6 +638,7 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         print(len(pvm),len(lined_up_time),float(dt))
         assert len(pvm)==len(lined_up_time)
 
+        print(len(pvm),len(lined_up_time))
 
 
         if 'value' in v.observation.keys():
@@ -662,11 +661,11 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         #except:
         #    pass
         #plt.legend(loc="lower left")
-        score = None
-    plt.legend()
+        #score = None
+    #plt.legend()
     #fig.text(0.5, 0.04, 'ms', ha='center', va='center')
     #fig.text(0.06, 0.5, '$V_{m}$ mV', ha='center', va='center', rotation='vertical')
-    #fig.savefig(str('amplitude')+str(v)+'vm_versus_t.png', format='png', dpi=1200)#,
+    fig.savefig(str('amplitude')+str(v)+'vm_versus_t.png', format='png', dpi=1200)#,
 
 
 
@@ -988,6 +987,8 @@ def bar_chart(vms,name=None):
         model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
         model.load_model()
         assert type(vms.rheobase) is not type(None)
+
+
 
         if k == 0:
             v.prediction = {}

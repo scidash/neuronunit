@@ -618,9 +618,9 @@ def check_rheobase(vmpop,pop=None):
 # explored.
 ##
 
-MU = 10
-NGEN = 10
-CXPB = 0.8
+MU = 20
+NGEN = 20
+CXPB = 0.9
 
 import numpy as np
 pf = tools.ParetoFront()
@@ -656,10 +656,10 @@ with open(new_checkpoint_path,'wb') as handle:#
 
 # sometimes done in serial in order to get access to opaque stdout/stderr
 
-#fitnesses = []
+fitnesses = []
 #for v in vmpop:
 #   fitnesses.append(evaluate_as_module.evaluate(v))
-
+   #pdb.set_trace()
 import copy
 import evaluate_as_module
 fitnesses = dview.map_sync(evaluate_as_module.evaluate, copy.copy(vmpop))
