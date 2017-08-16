@@ -460,6 +460,15 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         if iterator == 0:
             waves.append(ts)
         waves.append(v_m)
+	##
+	# since the threshold value derived from 
+	# capabilities, spike functions, spikes2thresholds 
+	# has a different precision to
+	# the neo analogue signal v_m, 
+	# there is no: v in v_m that exactly equals 
+	# threshold, so an approximately equals will have to do
+	# 1e-4 is a nominally low tolerance for the approximation.
+	##
         threshold_time = [ ts[index] for index,v in enumerate(v_m) if np.abs(float(threshold)-float(v)) < 1e-4 ]
         threshold_time = threshold_time[0]
 
@@ -468,8 +477,11 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         ts = model.results['t'] # time signal
         st = spike_functions.get_spike_train(v_m) #spike times
 
-        start = int((float(threshold_time)/ts[-1])*len(ts))  #index offset from spike
-        stop = start + int(2500)
+        start = int((float(threshold_time)/ts[-1])*len(ts))  # The index corresponding to the time offset, for 
+	
+	# when the models v_m crosses its threshold.
+        
+	stop = start + int(2500)
         time_sequence = np.arange(start , stop, 1)
         ptvec = np.array(model.results['t'])[time_sequence]
 
