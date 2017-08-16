@@ -427,11 +427,12 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
 
     sindexs = []
     # visualize
-    # widths tests
-    fig, ax = plt.subplots(len(best_worst), figsize=(10, 5), facecolor='white')
+    # amplitude tests
+    fig, ax = plt.subplots(1, figsize=(10, 5), facecolor='white')
 
     v = get_neab.tests[5]
 
+    waves = []
 
     for iterator, vms in enumerate(best_worst):
         from neuronunit.models import backends
@@ -453,14 +454,14 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         score = v.judge(model,stop_on_error = False, deep_error = True)
 
         v_m = model.get_membrane_potential()
-        threshold = spikes2thresholds(v_m)
+        from neuronunit import capabilities as cap
+        threshold = cap.spikes2thresholds(v_m)
         ts = model.results['t'] # time signal
-
-        for index,v in enumerate(v_m):
-            if v == float(threshold):
-                threshold_time = ts[index]
-				break
-
+        if iterator == 0:
+            waves.append(ts)
+        waves.append(v_m)
+        threshold_time = [ ts[index] for index,v in enumerate(v_m) if np.abs(float(threshold)-float(v)) < 1e-4 ]
+        threshold_time = threshold_time[0]
 
         dt = float(v_m.sampling_period)
 
@@ -468,13 +469,35 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         st = spike_functions.get_spike_train(v_m) #spike times
 
         start = int((float(threshold_time)/ts[-1])*len(ts))  #index offset from spike
-        stop = start + int(1000)
+        stop = start + int(2500)
         #stop = int((float(st)/ts[-1])*len(ts))+1500
         time_sequence = np.arange(start , stop, 1)
         ptvec = np.array(model.results['t'])[time_sequence]
 
         other_stop = ptvec[-1]-ptvec[0]
         lined_up_time = np.arange(0,other_stop,float(dt))
+        pvm = np.array(model.results['vm'])[time_sequence]
+        ans = model.get_membrane_potential()
+        #get_spike_waveforms
+        sw = cap.spike_functions.get_spike_waveforms(ans)
+        sa = cap.spike_functions.spikes2amplitudes(sw)
+        #sw = cap.spikes2widths(ans)
+
+        plt.plot(lined_up_time , pvm, label=str(sa), linewidth=1.5)
+
+        #ax[iterator].legend(loc="lower left")
+        #score = None
+        #plt.legend()
+        #fig.text(0.5, 0.04, 'ms', ha='center', va='center')
+        #fig.text(0.06, 0.5, '$V_{m}$ V', ha='center', va='center', rotation='vertical')
+    plt.savefig(str('from_threshold_test_')+str(v)+'vm_versus_t.png', format='png', dpi=1200)#
+    import pickle
+    with open('waveforms.p','wb') as handle:
+        pickle.dump(waves,handle)
+
+        #from neuronunit import capabilities as cap
+
+        '''
         from neuronunit import capabilities
         ans = model.get_membrane_potential()
         sw = capabilities.spikes2widths(ans)
@@ -504,19 +527,7 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
             unit_predictions = v.prediction['mean']
 
         if len(lined_up_time)==len(pvm):
-
-            ax[iterator].plot(lined_up_time , pvm, label=str(sw), linewidth=1.5)
-#
-
-        #ax[iterator].legend(labels=str(sw) ,loc="upper right")
-
-
-        ax[iterator].legend(loc="lower left")
-        #score = None
-    #plt.legend()
-    fig.text(0.5, 0.04, 'ms', ha='center', va='center')
-    fig.text(0.06, 0.5, '$V_{m}$ mV', ha='center', va='center', rotation='vertical')
-    fig.savefig(str('from_threshold_test_')+str(v)+'vm_versus_t.png', format='png', dpi=1200)#,
+        '''
 
     # visualize
     # threshold test
@@ -967,11 +978,11 @@ def bar_chart(vms,name=None):
     import copy
     from itertools import repeat
     #TODO move install into docker
-    os.system('sudo /opt/conda/bin/pip install cufflinks')
-    import cufflinks as cf
+    #os.system('sudo /opt/conda/bin/pip install cufflinks')
+    #import cufflinks as cf
 
-    import plotly.tools as tls
-    tls.embed('https://plot.ly/~cufflinks/8')
+    #import plotly.tools as tls
+    #tls.embed('https://plot.ly/~cufflinks/8')
 
     import pandas as pd
     traces = []
