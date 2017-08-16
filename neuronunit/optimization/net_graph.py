@@ -5,9 +5,7 @@ import graphviz
 
 import matplotlib as mpl
 # setting of an appropriate backend.
-#try:#
-#    mpl.use('Qt5Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
-#except:
+
 mpl.use('Agg')
 
 from plotly.graph_objs import *
