@@ -332,20 +332,27 @@ print(len(cd))
 vmoffspring,history,logbook,rheobase_values,best_worst,vmhistory,hvolumes = cd[0], cd[1], cd[2], cd[3], cd[4], cd[5], cd[6]
 print(cd)
 import net_graph
-net_graph.plotly_graph(history,vmhistory)
+#net_graph.plotly_graph(history,vmhistory)
+
 
 unev = pickle.load(open('un_evolved.p','rb'))
 unev, rh_values_unevolved = unev[0], unev[1]
+mixtures = []
+mixtures.append(unev[0])
+
+mixtures.extend(unev[-3:-1])
+
 
 for x,y in enumerate(vmoffspring):
     y.rheobase = rheobase_values[x]
     print(y,y.rheobase)
 best = vmoffspring[0]
 worst = vmoffspring[-1]
+mixtures.extend(vmoffspring[0:3])
+net_graph.sp_spike_width(mixtures)
 
 assert type(best.rheobase) is not type(None)
 
-net_graph.sp_spike_width(unev)
 
 best_ = best_worst[0]
 worst_ = best_worst[1]
