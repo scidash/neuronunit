@@ -170,6 +170,40 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
            fitness1[6],fitness1[7],
 
 
+def pre_evaluate(vms):#This method must be pickle-able for ipyparallel to work.
+    '''
+    Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
+    is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
+    value, that was found in a previous rheobase search.
+
+    outputs: a tuple that is a compound error function that NSGA can act on.
+
+    Assumes rheobase for each individual virtual model object (vms) has already been found
+    there should be a check for vms.rheobase, and if not then error.
+    Inputs a gene and a virtual model object.
+    outputs are error components.
+    '''
+
+    from neuronunit.models import backends
+    from neuronunit.models.reduced import ReducedModel
+    import quantities as pq
+    import numpy as np
+    import get_neab
+    from itertools import repeat
+    import unittest
+    tc = unittest.TestCase('__init__')
+    new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
+    model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
+    model.load_model()
+    assert type(vms.rheobase) is not type(None)
+    #tests = get_neab.suite.tests
+    model.update_run_params(vms.attrs)
+    model.rheobase = vms.rheobase * pq.pA
+    score = v.judge(model,stop_on_error = False, deep_error = True)
+    vm.results = model.results
+    return vm
+
+
 
 def get_trans_dict(param_dict):
     trans_dict = {}

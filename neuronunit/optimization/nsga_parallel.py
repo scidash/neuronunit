@@ -131,14 +131,14 @@ with dview.sync_imports():
     # a subset of the parameter space. Can be interchanged with the whole parameter space
     # via artful commenting and uncommenting.
 
-    whole_BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
-    whole_BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
+    #whole_BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
+    #whole_BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
 
-    #BOUND_LOW = [ np.min(i) for i in sub_set ]
-    #BOUND_UP = [ np.max(i) for i in sub_set ]
+    BOUND_LOW = [ np.min(i) for i in sub_set ]
+    BOUND_UP = [ np.max(i) for i in sub_set ]
 
-    BOUND_LOW = whole_BOUND_LOW
-    BOUND_UP = whole_BOUND_UP
+    #BOUND_LOW = whole_BOUND_LOW
+    #BOUND_UP = whole_BOUND_UP
 
 
     NDIM = len(BOUND_UP)#+1
@@ -168,14 +168,14 @@ def p_imports():
     # a subset of the parameter space. Can be interchanged with the whole parameter space
     # via artful commenting and uncommenting.
 
-    whole_BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
-    whole_BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
+    #whole_BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
+    #whole_BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
 
-    #BOUND_LOW = [ np.min(i) for i in sub_set ]
-    #BOUND_UP = [ np.max(i) for i in sub_set ]
+    BOUND_LOW = [ np.min(i) for i in sub_set ]
+    BOUND_UP = [ np.max(i) for i in sub_set ]
 
-    BOUND_LOW = whole_BOUND_LOW
-    BOUND_UP = whole_BOUND_UP
+    #BOUND_LOW = whole_BOUND_LOW
+    #BOUND_UP = whole_BOUND_UP
 
 
     NDIM = len(BOUND_UP)#+1
@@ -381,18 +381,13 @@ def update_vm_pop(pop, trans_dict):
     pop = [toolbox.clone(i) for i in pop ]
     #import utilities
     def transform(ind):
-        '''
-        Re instanting Virtual Model at every update vmpop
-        is Noneifying its score attribute, and possibly causing a
-        performance bottle neck.
-        '''
         vm = utilities.VirtualModel()
 
         param_dict = {}
         for i,j in enumerate(ind):
             param_dict[trans_dict[i]] = str(j)
         vm.attrs = param_dict
-        vm.name = vm.attrs
+        #vm.name = vm.attrs
         vm.evaluated = False
         return vm
 
@@ -584,13 +579,15 @@ def check_rheobase(vmpop,pop=None):
             vm = check_current(vm.rheobase,vm)
         # If its not true enter a search, with ranges informed by memory
         cnt = 0
+        from itertools import repeat
         while vm.boolean == False:
             vm.searched.append(vm.steps)
-            vmpop = dview.map_sync(check_current,vm.steps)
-            for vm in vmpop:
-                for step in vm.steps:
-                    vm = check_current(step, vm)
-                    vm = check_fix_range(vm)
+            vmpop = dview.map_sync(check_current,vm.steps,repeat(vm))
+            for vms in vmpop:
+                vm.lookup.extend(vms.lookup)
+                #for step in vm.steps:
+                    #vm = check_current(step, vm)
+            vm = check_fix_range(vm)
             cnt+=1
             print(cnt)
         return vm
@@ -602,8 +599,8 @@ def check_rheobase(vmpop,pop=None):
     # if a population has already been evaluated it may be faster to let it
     # keep its previous rheobase searching range where this
     # memory of a previous range as acts as a guess as the next mutations range.
-
-    vmpop = list(dview.map_sync(find_rheobase,vmpop))
+    vmpop = list(map(find_rheobase,vmpop))
+    #vmpop = list(dview.map_sync(find_rheobase,vmpop))
 
     return vmpop, pop
 
@@ -618,8 +615,8 @@ def check_rheobase(vmpop,pop=None):
 # explored.
 ##
 
-MU = 20
-NGEN = 20
+MU = 15
+NGEN = 10
 CXPB = 0.9
 
 import numpy as np
@@ -662,6 +659,8 @@ fitnesses = []
    #pdb.set_trace()
 import copy
 import evaluate_as_module
+vmpop = dview.map_sync(evaluate_as_module.pre_evaluate, copy.copy(vmpop))
+import pdb; pdb.set_trace()
 fitnesses = dview.map_sync(evaluate_as_module.evaluate, copy.copy(vmpop))
 
 #fitnesses = dview.map_sync(evaluate, copy.copy(vmpop))
@@ -805,7 +804,7 @@ vmhistory = update_vm_pop(history.genealogy_history.values(),td)
 
 import pickle
 with open('complete_dump.p','wb') as handle:
-   pickle.dump([vmoffspring,history,logbook,rheobase_values,best_worst,vmhistory,hvolumes],handle)
+   pickle.dump([pf,vmoffspring,history,logbook,rheobase_values,best_worst,vmhistory,hvolumes],handle)
 
 lists = pickle.load(open('complete_dump.p','rb'))
 #vmoffspring2,history2,logbook2 = lists[0],lists[1],lists[2]
