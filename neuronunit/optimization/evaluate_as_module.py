@@ -65,6 +65,37 @@ def difference(v): # v is a tesst
     print(unit_delta)
     return float(unit_delta)
 
+def pre_format(vms):
+    import quantities as pq
+    import copy
+    vtest = {}
+    import get_neab
+    tests = get_neab.tests
+    params = {}
+    params['injected_square_current'] = {}
+    for k,v in enumerate(tests):
+        if k == 0:
+            prediction = {}
+            prediction['value'] = vms.rheobase * pq.pA
+
+        if k != 0:
+            prediction = None
+
+        if k == 1 or k == 2 or k == 3:
+            # Negative square pulse current.
+            params['injected_square_current']['duration'] = 100 * pq.ms
+            params['injected_square_current']['amplitude'] = -10 *pq.pA
+            params['injected_square_current']['delay'] = 30 * pq.ms
+        if k == 0 or k == 4 or k == 5 or k == 6 or k == 7:
+            # Threshold current.
+            params['injected_square_current']['duration'] = 1000 * pq.ms
+            params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
+            params['injected_square_current']['delay'] = 100 * pq.ms
+
+        vtest[k] = params
+        v = None
+    return vtest
+
 def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     '''
     Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
@@ -135,6 +166,8 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     if float(vms.rheobase) > 0.0:# and type(score) is not scores.InsufficientDataScore(None):
         for k,f in enumerate(copy.copy(pre_fitness)):
 
+            fitness1.append(difference(v))
+
             if k == 5:
                 from neuronunit import capabilities
                 ans = model.get_membrane_potential()
@@ -170,28 +203,14 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
            fitness1[6],fitness1[7],
 
 
-def pre_evaluate(vms):#This method must be pickle-able for ipyparallel to work.
-    '''
-    Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
-    is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
-    value, that was found in a previous rheobase search.
 
-    outputs: a tuple that is a compound error function that NSGA can act on.
-
-    Assumes rheobase for each individual virtual model object (vms) has already been found
-    there should be a check for vms.rheobase, and if not then error.
-    Inputs a gene and a virtual model object.
-    outputs are error components.
-    '''
-
+def pre_evaluate(vms):
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
     import quantities as pq
     import numpy as np
     import get_neab
-    from itertools import repeat
-    import unittest
-    tc = unittest.TestCase('__init__')
+
     new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
     model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
     model.load_model()
@@ -199,10 +218,45 @@ def pre_evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     #tests = get_neab.suite.tests
     model.update_run_params(vms.attrs)
     model.rheobase = vms.rheobase * pq.pA
-    score = v.judge(model,stop_on_error = False, deep_error = True)
-    vm.results = model.results
-    return vm
+    import get_neab
+    #get_neab.
 
+    import copy
+    # copying here is critical for get_neab
+    tests = copy.copy(get_neab.tests)
+    from itertools import repeat
+    vtests = pre_format(copy.copy(vms))
+
+    tests[0].prediction = {}
+    tests[0].prediction['value'] = vms.rheobase * pq.pA
+
+    if float(vms.rheobase) > 0.0:
+        for k,t in enumerate(tests):
+            '''
+            can tests be re written such that it is more closure compatible?
+            '''
+            #if k == 0:
+            #    t.prediction = #vtests[k].prediction
+            t.params = vtests[k]
+            if k == 0:
+                tests[k].prediction = {}
+                tests[k].prediction['value'] = vms.rheobase * pq.pA
+
+
+            import neuron
+            model.load_model()
+            model.reset_h(neuron)
+            model.update_run_params(vms.attrs)
+            score = t.judge(model,stop_on_error = False, deep_error = True)
+            v_m = model.get_membrane_potential()
+            if 't' not in vms.results.keys():
+                vms.results[t] = {}
+                vms.results[t]['v_m'] = v_m
+            elif 't' in vms.results.keys():
+                vms.results[t]['v_m'] = v_m
+        return vms
+
+#from scoop import futures
 
 
 def get_trans_dict(param_dict):
