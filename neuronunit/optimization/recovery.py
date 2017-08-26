@@ -329,11 +329,12 @@ td = get_trans_dict(param_dict)
 cd = pickle.load(open('complete_dump.p','rb'))
 print(len(cd))
 
-vmoffspring,history,logbook,rheobase_values,best_worst,vmhistory,hvolumes = cd[0], cd[1], cd[2], cd[3], cd[4], cd[5], cd[6]
+pf,vmoffspring,history,logbook,rheobase_values,best_worst,vmhistory,hvolumes = cd[0], cd[1], cd[2], cd[3], cd[4], cd[5], cd[6]
 print(cd)
 import net_graph
 #net_graph.plotly_graph(history,vmhistory)
 
+net_graph.surfaces(history,td)
 
 unev = pickle.load(open('un_evolved.p','rb'))
 unev, rh_values_unevolved = unev[0], unev[1]

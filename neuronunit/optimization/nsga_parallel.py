@@ -124,21 +124,21 @@ with dview.sync_imports():
     toolbox = base.Toolbox()
     import model_parameters as modelp
     import numpy as np
-    sub_set = []
-    sub_set.append(modelp.model_params['a'])
-    sub_set.append(modelp.model_params['b'])
+    #sub_set = []
+    #sub_set.append(modelp.model_params['a'])
+    #sub_set.append(modelp.model_params['b'])
 
     # a subset of the parameter space. Can be interchanged with the whole parameter space
     # via artful commenting and uncommenting.
 
-    #whole_BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
-    #whole_BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
+    whole_BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
+    whole_BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
 
-    BOUND_LOW = [ np.min(i) for i in sub_set ]
-    BOUND_UP = [ np.max(i) for i in sub_set ]
+    #BOUND_LOW = [ np.min(i) for i in sub_set ]
+    #BOUND_UP = [ np.max(i) for i in sub_set ]
 
-    #BOUND_LOW = whole_BOUND_LOW
-    #BOUND_UP = whole_BOUND_UP
+    BOUND_LOW = whole_BOUND_LOW
+    BOUND_UP = whole_BOUND_UP
 
 
     NDIM = len(BOUND_UP)#+1
@@ -162,20 +162,20 @@ def p_imports():
     import model_parameters as modelp
     import numpy as np
     sub_set = []
-    sub_set.append(modelp.model_params['a'])
-    sub_set.append(modelp.model_params['b'])
+    #sub_set.append(modelp.model_params['a'])
+    #sub_set.append(modelp.model_params['b'])
 
     # a subset of the parameter space. Can be interchanged with the whole parameter space
     # via artful commenting and uncommenting.
 
-    #whole_BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
-    #whole_BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
+    whole_BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
+    whole_BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
 
-    BOUND_LOW = [ np.min(i) for i in sub_set ]
-    BOUND_UP = [ np.max(i) for i in sub_set ]
+    #BOUND_LOW = [ np.min(i) for i in sub_set ]
+    #BOUND_UP = [ np.max(i) for i in sub_set ]
 
-    #BOUND_LOW = whole_BOUND_LOW
-    #BOUND_UP = whole_BOUND_UP
+    BOUND_LOW = whole_BOUND_LOW
+    BOUND_UP = whole_BOUND_UP
 
 
     NDIM = len(BOUND_UP)#+1
@@ -447,39 +447,31 @@ def check_rheobase(vmpop,pop=None):
             elif v > 0:
                 supra.append(k)
 
-        sub=np.array(sub)
-        supra=np.array(supra)
+        sub = np.array(sub)
+        supra = np.array(supra)
 
         if len(sub)!=0 and len(supra)!=0:
             #this assertion would only be occur if there was a bug
             assert sub.max()<=supra.min()
         if len(sub) and len(supra):
-            everything = np.concatenate((sub,supra))
-            center = np.linspace(sub.max(),supra.min(),9.0)
-            for i,j in enumerate(center):
-                if j in list(everything):
-                    #center.delete(i)
-
-                    center = np.delete(center,i)
-                    # delete the duplicated elements element, and replace it with a corrected
-                    # center below.
-            #delete the index
-            #make sure that element 4 in a seven element vector
-            #is exactly half way between sub.max() and supra.min()
-            # correcting the center is important to avoid straddling the midpoint.
+            center = list(np.linspace(sub.max(),supra.min(),9.0))
+            center = [ i for i in center if not i == sub.max() ]
+            center = [ i for i in center if not i == supra.min() ]
             center[int(len(center)/2)+1]=(sub.max()+supra.min())/2.0
             steps = [ i*pq.pA for i in center ]
 
         elif len(sub):
 
 
-            steps = np.linspace(sub.max(),2*sub.max(),9.0)
-            steps = np.delete(steps,np.array(sub))
+            steps = list(np.linspace(sub.max(),2*sub.max(),9.0))
+            steps = [ i for i in steps if not i == sub.max() ]
+            #steps = np.delete(steps,np.array(sub))
             steps = [ i*pq.pA for i in steps ]
 
         elif len(supra):
-            steps = np.linspace(-2*(supra.min()),supra.min(),9.0)
-            steps = np.delete(steps,np.array(supra))
+            #steps = [i in range(-2*supra.min(),supra.min())]
+            step = list(np.linspace(-2*(supra.min()),supra.min(),9.0))
+            steps = [ i for i in steps if not i == supra.min() ]
             steps = [ i*pq.pA for i in steps ]
 
         vms.steps = steps
@@ -582,13 +574,14 @@ def check_rheobase(vmpop,pop=None):
         from itertools import repeat
         while vm.boolean == False:
             vm.searched.append(vm.steps)
-            vmpop = dview.map_sync(check_current,vm.steps,repeat(vm))
-            for vms in vmpop:
-                vm.lookup.extend(vms.lookup)
-                #for step in vm.steps:
-                    #vm = check_current(step, vm)
-            vm = check_fix_range(vm)
-            cnt+=1
+            # These three lines are a memory killer.
+            #vmpop = dview.map_sync(check_current,vm.steps,repeat(vm))
+            #for vms in vmpop:
+            #    vm.lookup.extend(vms.lookup)
+            for step in vm.steps:
+                vm = check_current(step, vm)
+                vm = check_fix_range(vm)
+            cnt += 1
             print(cnt)
         return vm
 
@@ -599,8 +592,11 @@ def check_rheobase(vmpop,pop=None):
     # if a population has already been evaluated it may be faster to let it
     # keep its previous rheobase searching range where this
     # memory of a previous range as acts as a guess as the next mutations range.
-    vmpop = list(map(find_rheobase,vmpop))
-    #vmpop = list(dview.map_sync(find_rheobase,vmpop))
+    #vmpop1 = []
+    #for v in vmpop:
+        #vmpop1.append(find_rheobase(v))
+    #vmpop = vmpop1  #list(map(find_rheobase,vmpop))
+    vmpop = list(dview.map_sync(find_rheobase,vmpop))
 
     return vmpop, pop
 
@@ -653,15 +649,22 @@ with open(new_checkpoint_path,'wb') as handle:#
 
 # sometimes done in serial in order to get access to opaque stdout/stderr
 
-fitnesses = []
+#fitnesses = []
 #for v in vmpop:
 #   fitnesses.append(evaluate_as_module.evaluate(v))
    #pdb.set_trace()
 import copy
 import evaluate_as_module
-vmpop = dview.map_sync(evaluate_as_module.pre_evaluate, copy.copy(vmpop))
+#vmpop = dview.map_sync(evaluate_as_module.pre_evaluate, copy.copy(vmpop))
+from itertools import repeat
+vmpop = list(dview.map_sync(evaluate_as_module.pre_evaluate,copy.copy(vmpop)))
+for v in vmpop:
+    print(v)
+    print(vm.results)
+    vm.results.update(v)
+
 import pdb; pdb.set_trace()
-fitnesses = dview.map_sync(evaluate_as_module.evaluate, copy.copy(vmpop))
+fitnesses = list(dview.map_sync(evaluate_as_module.evaluate, copy.copy(vmpop)))
 
 #fitnesses = dview.map_sync(evaluate, copy.copy(vmpop))
 print(fitnesses)

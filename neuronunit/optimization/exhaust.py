@@ -685,7 +685,10 @@ print([ (v.rheobase,v.attrs) for v in vmpop1])
 
 import copy
 efitnesses = dview.map_sync(evaluate, copy.copy(vmpop1))
-summed = [ np.sum(e) for e in efitnesses ]
+from sklearn.preprocessing import StandardScaler
+X_std = StandardScaler().fit_transform(efitnesses)
+
+summed = [ np.sum(e) for e in X_std ]
 #import pdb; pdb.set_trace()
 #pdb.set_trace()
 
@@ -714,8 +717,8 @@ from matplotlib import pylab
 import numpy
 from matplotlib.colors import LogNorm
 plt.clf()
-xs = numpy.array([ind[0] for ind in matrix_fill])
-ys = numpy.array([ind[1] for ind in matrix_fill])
+#xs = numpy.array([ind[0] for ind in matrix_fill])
+#ys = numpy.array([ind[1] for ind in matrix_fill])
 min_ys = ys[numpy.where(summed_ef == numpy.min(summed_ef))]
 min_xs = xs[numpy.where(summed_ef == numpy.min(summed_ef))]
 fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
@@ -743,7 +746,7 @@ fig.colorbar(cax)
 
 ax.set_xticklabels(modelp.model_params['a'])
 ax.set_yticklabels(modelp.model_params['b'])
-plt.title(str('a')+' versus '+str('b'))
+plt.title(str('$a$')+' versus '+str('$b$'))
 plt.savefig('2nd_approach_d_error_'+str('a')+str('b')+'surface.png')
 
 
