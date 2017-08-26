@@ -809,9 +809,14 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
 
 
 def surfaces(history,td):
+    import numpy as np
+    import matplotlib
+    matplotlib.rcParams.update({'font.size':16})
+
+    import matplotlib.pyplot as plt
 
     all_inds = history.genealogy_history.values()
-    sums = numpy.array([np.sum(ind.fitness.values) for ind in all_inds])
+    sums = np.array([np.sum(ind.fitness.values) for ind in all_inds])
     keep = set()
     quads = []
     for k in range(1,9):
@@ -820,26 +825,57 @@ def surfaces(history,td):
             if i+k < 10:
                 quads.append((td[i],td[i+k],i,i+k))
 
-    for q in quads:
-        print(k)
-        (x,y,w,z) = q
-        print(x,y,w,z,i)
-        xs = numpy.array([ind[w] for ind in all_inds])
-        ys = numpy.array([ind[z] for ind in all_inds])
-        min_ys = ys[numpy.where(sums == numpy.min(sums))]
-        min_xs = xs[numpy.where(sums == numpy.min(sums))]
-        plt.clf()
-        fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
-        trip_axis = ax_trip.tripcolor(xs,ys,sums+1,20,norm=matplotlib.colors.LogNorm())
-        plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue',label='global minima')
-        fig_trip.colorbar(trip_axis, label='sum of objectives')
-        ax_trip.set_xlabel('Parameter '+ str('a'))
-        ax_trip.set_ylabel('Parameter '+ str('b'))
-        plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
-        fig_trip.tight_layout()
-        fig_trip.legend()
-        fig_trip.savefig('surface'+str('a')+str('b')+'.png',format='png', dpi=1200)
+    #for q in quads:
+        #print(k)
+        #(x,y,w,z) = q
+        #print(x,y,w,z,i)
+    all_inds1 = history.genealogy_history.values()
 
+    ab = [ (all_inds1[y][4],all_inds1[y][-3]) for y in all_inds1 ]
+
+    xs = np.array([ind[4] for ind in all_inds])
+    ys = np.array([ind[-3] for ind in all_inds])
+    min_ys = ys[np.where(sums == np.min(sums))]
+    min_xs = xs[np.where(sums == np.min(sums))]
+    plt.clf()
+    fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
+    trip_axis = ax_trip.tripcolor(xs,ys,sums,20,norm=matplotlib.colors.LogNorm())
+    plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue',label='global minima')
+    fig_trip.colorbar(trip_axis, label='Sum of Objective Errors ')
+    ax_trip.set_xlabel('Parameter $ b$')
+    ax_trip.set_ylabel('Parameter $ a$')
+    plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
+    fig_trip.tight_layout()
+    #fig_trip.legend()
+    fig_trip.savefig('surface'+str('a')+str('b')+'.pdf',format='pdf', dpi=1200)
+
+
+    matrix_fill = [ (i,j) for i in range(0,len(modelp.model_params['a'])) for j in range(0,len(modelp.model_params['b'])) ]
+    mf = list(zip(matrix_fill,summed))
+    empty = np.zeros(shape=(int(len(modelp.model_params['a'])),int(len(modelp.model_params['a']))))
+    max_x = np.max(modelp.model_params['a'])
+    max_y = np.min(modelp.model_params['b'])
+    x_mapped_ind = [int((ind[4]/max_x)*len(modelp.model_params['a'])) for ind in all_inds1]
+    y_mapped_ind = [int((np.abs(ind[-3])/max_y)*len(modelp.model_params['a'])) for ind in all_inds1]
+
+    #y_mapped_ind = np.array([int(ind[-3]/max_y) for ind in all_inds1])
+    #int((all_inds1[1][4]/max_x)*len(modelp.model_params['a']))
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    vmin = np.min(mf2)
+    vmax = np.max(mf2)
+    from matplotlib.colors import LogNorm
+    cax = ax.matshow(dfimshow, interpolation='nearest',norm=LogNorm(vmin=vmin,vmax=vmax))
+    fig.colorbar(cax)
+
+    ax.set_xticklabels(modelp.model_params['a'])
+    ax.set_yticklabels(modelp.model_params['b'])
+    plt.title(str('$a$')+' versus '+str('$b$'))
+    plt.savefig('2nd_approach_d_error_'+str('a')+str('b')+'surface.png')
+
+
+    return ab
 
 def load_data():
     a = pickle.load(open('for_pandas.p','rb'))
