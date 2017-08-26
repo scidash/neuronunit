@@ -5,9 +5,7 @@ import graphviz
 
 import matplotlib as mpl
 # setting of an appropriate backend.
-#try:#
-#    mpl.use('Qt5Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
-#except:
+
 mpl.use('Agg')
 
 from plotly.graph_objs import *
@@ -460,6 +458,15 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         if iterator == 0:
             waves.append(ts)
         waves.append(v_m)
+	##
+	# since the threshold value derived from 
+	# capabilities, spike functions, spikes2thresholds 
+	# has a different precision to
+	# the neo analogue signal v_m, 
+	# there is no: v in v_m that exactly equals 
+	# threshold, so an approximately equals will have to do
+	# 1e-4 is a nominally low tolerance for the approximation.
+	##
         threshold_time = [ ts[index] for index,v in enumerate(v_m) if np.abs(float(threshold)-float(v)) < 1e-4 ]
         threshold_time = threshold_time[0]
 
@@ -468,9 +475,11 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         ts = model.results['t'] # time signal
         st = spike_functions.get_spike_train(v_m) #spike times
 
-        start = int((float(threshold_time)/ts[-1])*len(ts))  #index offset from spike
-        stop = start + int(2500)
-        #stop = int((float(st)/ts[-1])*len(ts))+1500
+        start = int((float(threshold_time)/ts[-1])*len(ts))  # The index corresponding to the time offset, for 
+	
+	# when the models v_m crosses its threshold.
+        
+	stop = start + int(2500)
         time_sequence = np.arange(start , stop, 1)
         ptvec = np.array(model.results['t'])[time_sequence]
 
@@ -478,56 +487,16 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         lined_up_time = np.arange(0,other_stop,float(dt))
         pvm = np.array(model.results['vm'])[time_sequence]
         ans = model.get_membrane_potential()
-        #get_spike_waveforms
+
         sw = cap.spike_functions.get_spike_waveforms(ans)
         sa = cap.spike_functions.spikes2amplitudes(sw)
-        #sw = cap.spikes2widths(ans)
 
         plt.plot(lined_up_time , pvm, label=str(sa), linewidth=1.5)
 
-        #ax[iterator].legend(loc="lower left")
-        #score = None
-        #plt.legend()
-        #fig.text(0.5, 0.04, 'ms', ha='center', va='center')
-        #fig.text(0.06, 0.5, '$V_{m}$ V', ha='center', va='center', rotation='vertical')
     plt.savefig(str('from_threshold_test_')+str(v)+'vm_versus_t.png', format='png', dpi=1200)#
     import pickle
     with open('waveforms.p','wb') as handle:
         pickle.dump(waves,handle)
-
-        #from neuronunit import capabilities as cap
-
-        '''
-        from neuronunit import capabilities
-        ans = model.get_membrane_potential()
-        sw = capabilities.spikes2widths(ans)
-        unit_observations = v.observation['mean']
-        to_r_s = unit_observations.units
-        unit_predictions = sw.rescale(to_r_s)
-        actual_width_differences = np.abs(np.abs(unit_observations) - np.abs(unit_predictions))
-
-        pvm = np.array(score.related_data['vm'])[time_sequence]
-        print(len(pvm),len(lined_up_time),float(dt))
-        assert len(pvm)==len(lined_up_time)
-        assert len(pvm) == len(ptvec)
-
-        print(len(pvm),len(lined_up_time))
-
-        if 'value' in v.observation.keys():
-            unit_observations = v.observation['value']
-
-        if 'value' in v.prediction.keys():
-            unit_predictions = v.prediction['value']
-
-
-        if 'mean' in v.observation.keys():
-            unit_observations = v.observation['mean']
-
-        if 'mean' in v.prediction.keys():
-            unit_predictions = v.prediction['mean']
-
-        if len(lined_up_time)==len(pvm):
-        '''
 
     # visualize
     # threshold test
