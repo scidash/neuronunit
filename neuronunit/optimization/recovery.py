@@ -137,16 +137,16 @@ def check_rheobase(vmpop,pop=None):
         if len(sub) and len(supra):
             everything = np.concatenate((sub,supra))
 
-            center = np.linspace(sub.max(),supra.min(),8.0)
+            center = np.linspace(sub.max(),supra.min(),7.0)
             centerl = list(center)
             # The following code block probably looks counter intuitive.
             # Its job is to delete duplicated search values.
             # Ie everything is a list of everything already explored.
             # It then makes a corrected center position.
-            #for i,j in enumerate(centerl):
-                #if j in list(everything):
+            for i,j in enumerate(centerl):
+                if j in list(everything):
 
-                    #np.delete(center,i)
+                    np.delete(center,i)
                     # delete the duplicated elements element, and replace it with a corrected
                     # center below.
             #delete the index
@@ -157,12 +157,12 @@ def check_rheobase(vmpop,pop=None):
             steps = [ i*pq.pA for i in center ]
 
         elif len(sub):
-            steps = np.linspace(sub.max(),2*sub.max(),8.0)
+            steps = np.linspace(sub.max(),2*sub.max(),7.0)
             np.delete(steps,np.array(sub))
             steps = [ i*pq.pA for i in steps ]
 
         elif len(supra):
-            steps = np.linspace(-2*(supra.min()),supra.min(),8.0)
+            steps = np.linspace(-2*(supra.min()),supra.min(),7.0)
             np.delete(steps,np.array(supra))
             steps = [ i*pq.pA for i in steps ]
 
@@ -274,19 +274,12 @@ def check_rheobase(vmpop,pop=None):
         # If its not true enter a search, with ranges informed by memory
         cnt = 0
         while vm.boolean == False:
-            steps = vm.steps
-
-            vmpop = list(dview.map_sync(check_current,steps,repeat(vm)))
-            for v in vmpop:
-                vm.lookup.extend(v.lookup)
-            vm = check_fix_range(vm)
+            for step in vm.steps:
+                vm = check_current(step, vm)
+                vm = check_fix_range(vm)
+                cnt+=1
+                print(cnt)
         return vm
-
-            #for index,v in enumerate(vmpop):
-            #    #vm = check_current(step, vm)
-            #    vmpop[index] = check_fix_range(v)
-            #    cnt+=1
-            #    print(cnt)
 
     ## initialize where necessary.
     #import time
@@ -295,11 +288,8 @@ def check_rheobase(vmpop,pop=None):
     # if a population has already been evaluated it may be faster to let it
     # keep its previous rheobase searching range where this
     # memory of a previous range as acts as a guess as the next mutations range.
-    vmpop1 = []
-    for v in vmpop:
-        vmpop1.append(find_rheobase(v))
-    vmpop = vmpop1
-    #vmpop = list(dview.map_sync(find_rheobase,vmpop))
+
+    vmpop = list(dview.map_sync(find_rheobase,vmpop))
 
     return vmpop, pop
 
@@ -339,20 +329,29 @@ td = get_trans_dict(param_dict)
 cd = pickle.load(open('complete_dump.p','rb'))
 print(len(cd))
 
-vmoffspring,history,logbook,rheobase_values,best_worst,vmhistory,hvolumes = cd[0], cd[1], cd[2], cd[3], cd[4], cd[5], cd[6]
+pf,vmoffspring,history,logbook,rheobase_values,best_worst,vmhistory,hvolumes = cd[0], cd[1], cd[2], cd[3], cd[4], cd[5], cd[6]
 print(cd)
 import net_graph
+#net_graph.plotly_graph(history,vmhistory)
+
 net_graph.surfaces(history,td)
 net_graph.plotly_graph(history,vmhistory)
 
 unev = pickle.load(open('un_evolved.p','rb'))
 unev, rh_values_unevolved = unev[0], unev[1]
+mixtures = []
+mixtures.append(unev[0])
+
+mixtures.extend(unev[-3:-1])
+
 
 for x,y in enumerate(vmoffspring):
     y.rheobase = rheobase_values[x]
     print(y,y.rheobase)
 best = vmoffspring[0]
 worst = vmoffspring[-1]
+mixtures.extend(vmoffspring[0:3])
+net_graph.sp_spike_width(mixtures)
 
 assert type(best.rheobase) is not type(None)
 
