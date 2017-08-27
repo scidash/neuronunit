@@ -65,7 +65,38 @@ def difference(v): # v is a tesst
     print(unit_delta)
     return float(unit_delta)
 
-def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
+def pre_format(vms):
+    import quantities as pq
+    import copy
+    vtest = {}
+    import get_neab
+    tests = get_neab.tests
+
+    for k,v in enumerate(tests):
+        vtest[k] = {}
+        if k == 0:
+            prediction = {}
+            prediction['value'] = vms.rheobase * pq.pA
+
+        if k != 0:
+            prediction = None
+
+        if k == 1 or k == 2 or k == 3:
+            # Negative square pulse current.
+            vtest[k]['duration'] = 100 * pq.ms
+            vtest[k]['amplitude'] = -10 *pq.pA
+            vtest[k]['delay'] = 30 * pq.ms
+
+        if k == 0 or k == 4 or k == 5 or k == 6 or k == 7:
+            # Threshold current.
+            vtest[k]['duration'] = 1000 * pq.ms
+            vtest[k]['amplitude'] = vms.rheobase * pq.pA
+            vtest[k]['delay'] = 100 * pq.ms
+
+        v = None
+    return vtest
+
+def evaluate(vms,weight_matrix = None):#This method must be pickle-able for ipyparallel to work.
     '''
     Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
     is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
@@ -135,6 +166,8 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     if float(vms.rheobase) > 0.0:# and type(score) is not scores.InsufficientDataScore(None):
         for k,f in enumerate(copy.copy(pre_fitness)):
 
+            fitness1.append(difference(v))
+
             if k == 5:
                 from neuronunit import capabilities
                 ans = model.get_membrane_potential()
@@ -169,6 +202,57 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
            fitness1[4],fitness1[5],\
            fitness1[6],fitness1[7],
 
+
+
+def pre_evaluate(vms):
+    from neuronunit.models import backends
+    from neuronunit.models.reduced import ReducedModel
+    import quantities as pq
+    import numpy as np
+    import get_neab
+
+
+    import get_neab
+
+    import copy
+    # copying here is critical for get_neab
+    tests = copy.copy(get_neab.tests)
+    from itertools import repeat
+    vtests = pre_format(copy.copy(vms))
+
+    tests[0].prediction = {}
+    tests[0].prediction['value'] = vms.rheobase * pq.pA
+
+    if float(vms.rheobase) > 0.0:
+        for k,t in enumerate(tests):
+            '''
+            can tests be re written such that it is more closure compatible?
+            '''
+            t.params = vtests[k]
+
+            for key, value in vtests[k].items():
+                t.params['injected_square_current'][key] = value
+            if k == 0:
+                tests[k].prediction = {}
+                tests[k].prediction['value'] = vms.rheobase * pq.pA
+
+            new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
+            model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
+            model.load_model()
+            model.update_run_params(vms.attrs)
+            score = t.judge(model,stop_on_error = False, deep_error = True)
+            print(model.get_spike_count())
+            v_m = model.get_membrane_potential()
+            if 't' not in vms.results.keys():
+                vms.results[t] = {}
+                vms.results[t]['v_m'] = v_m
+            elif 't' in vms.results.keys():
+                vms.results[t]['v_m'] = v_m
+        #else:
+
+    return vms
+
+#from scoop import futures
 
 
 def get_trans_dict(param_dict):

@@ -25,11 +25,6 @@ ar = rc[:].apply_async(os.getpid)
 pids = ar.get_dict()
 inv_pid_map = pids
 pid_map = {}
-print('gets here? a')
-
-#import socket
-
-#dview.apply_sync(print(socket.gethostname))
 
 # Map PIDs onto unique numeric global identifiers via a dedicated dictionary
 # this is not used here, but it could not neaten up the lack of uniqueness of file names
@@ -101,11 +96,10 @@ def p_imports():
     return
 
 dview.apply_sync(p_imports)
-#p_imports()
+p_imports()
 from deap import base
 from deap import creator
 toolbox = base.Toolbox()
-print('gets here? b')
 
 class Individual(object):
     '''
@@ -130,18 +124,18 @@ with dview.sync_imports():
     toolbox = base.Toolbox()
     import model_parameters as modelp
     import numpy as np
-    sub_set = []
-    sub_set.append(modelp.model_params['a'])
-    sub_set.append(modelp.model_params['b'])
+    #sub_set = []
+    #sub_set.append(modelp.model_params['a'])
+    #sub_set.append(modelp.model_params['b'])
 
     # a subset of the parameter space. Can be interchanged with the whole parameter space
     # via artful commenting and uncommenting.
 
-    #whole_BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
-    #whole_BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
+    whole_BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
+    whole_BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
 
-    BOUND_LOW = [ np.min(i) for i in sub_set ]
-    BOUND_UP = [ np.max(i) for i in sub_set ]
+    #BOUND_LOW = [ np.min(i) for i in sub_set ]
+    #BOUND_UP = [ np.max(i) for i in sub_set ]
 
     BOUND_LOW = whole_BOUND_LOW
     BOUND_UP = whole_BOUND_UP
@@ -168,20 +162,20 @@ def p_imports():
     import model_parameters as modelp
     import numpy as np
     sub_set = []
-    sub_set.append(modelp.model_params['a'])
-    sub_set.append(modelp.model_params['b'])
+    #sub_set.append(modelp.model_params['a'])
+    #sub_set.append(modelp.model_params['b'])
 
     # a subset of the parameter space. Can be interchanged with the whole parameter space
     # via artful commenting and uncommenting.
 
-    #whole_BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
-    #whole_BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
+    whole_BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
+    whole_BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
 
-    BOUND_LOW = [ np.min(i) for i in sub_set ]
-    BOUND_UP = [ np.max(i) for i in sub_set ]
+    #BOUND_LOW = [ np.min(i) for i in sub_set ]
+    #BOUND_UP = [ np.max(i) for i in sub_set ]
 
-    #BOUND_LOW = whole_BOUND_LOW
-    #BOUND_UP = whole_BOUND_UP
+    BOUND_LOW = whole_BOUND_LOW
+    BOUND_UP = whole_BOUND_UP
 
 
     NDIM = len(BOUND_UP)#+1
@@ -199,8 +193,6 @@ def p_imports():
     toolbox.register("select", tools.selNSGA2)
     return
 dview.apply_sync(p_imports)
-
-print('gets here? c')
 
 toolbox = base.Toolbox()
 
@@ -349,7 +341,6 @@ toolbox.register("map",dview.map_sync)
 toolbox.register("evaluate", evaluate)
 
 
-print('gets here? d')
 
 
 def get_trans_dict(param_dict):
@@ -373,7 +364,6 @@ def vm_to_ind(vm,td):
     ind.append(vm.rheobase)
     return ind
 
-print('gets here? e')
 
 
 def update_vm_pop(pop, trans_dict):
@@ -391,18 +381,13 @@ def update_vm_pop(pop, trans_dict):
     pop = [toolbox.clone(i) for i in pop ]
     #import utilities
     def transform(ind):
-        '''
-        Re instanting Virtual Model at every update vmpop
-        is Noneifying its score attribute, and possibly causing a
-        performance bottle neck.
-        '''
         vm = utilities.VirtualModel()
 
         param_dict = {}
         for i,j in enumerate(ind):
             param_dict[trans_dict[i]] = str(j)
         vm.attrs = param_dict
-        vm.name = vm.attrs
+        #vm.name = vm.attrs
         vm.evaluated = False
         return vm
 
@@ -418,7 +403,6 @@ def update_vm_pop(pop, trans_dict):
     return vmpop
 
 
-print('gets here? f')
 
 def check_rheobase(vmpop,pop=None):
     '''
@@ -463,33 +447,31 @@ def check_rheobase(vmpop,pop=None):
             elif v > 0:
                 supra.append(k)
 
-        sub=np.array(sub)
-        supra=np.array(supra)
+        sub = np.array(sub)
+        supra = np.array(supra)
 
         if len(sub)!=0 and len(supra)!=0:
             #this assertion would only be occur if there was a bug
             assert sub.max()<=supra.min()
         if len(sub) and len(supra):
-            everything = np.concatenate((sub,supra))
-            center = np.linspace(sub.max(),supra.min(),9.0)
+            center = list(np.linspace(sub.max(),supra.min(),9.0))
+            center = [ i for i in center if not i == sub.max() ]
+            center = [ i for i in center if not i == supra.min() ]
             center[int(len(center)/2)+1]=(sub.max()+supra.min())/2.0
-
-            del center[0]
-            del center[-1]
             steps = [ i*pq.pA for i in center ]
 
         elif len(sub):
 
 
-            steps = np.linspace(sub.max(),2*sub.max(),9.0)
-            del steps[0]
+            steps = list(np.linspace(sub.max(),2*sub.max(),9.0))
+            steps = [ i for i in steps if not i == sub.max() ]
             #steps = np.delete(steps,np.array(sub))
             steps = [ i*pq.pA for i in steps ]
 
         elif len(supra):
-            steps = np.linspace(-2*(supra.min()),supra.min(),9.0)
-            del steps[-1]
-            #steps = np.delete(steps,np.array(supra))
+            #steps = [i in range(-2*supra.min(),supra.min())]
+            step = list(np.linspace(-2*(supra.min()),supra.min(),9.0))
+            steps = [ i for i in steps if not i == supra.min() ]
             steps = [ i*pq.pA for i in steps ]
 
         vms.steps = steps
@@ -589,38 +571,32 @@ def check_rheobase(vmpop,pop=None):
             vm = check_current(vm.rheobase,vm)
         # If its not true enter a search, with ranges informed by memory
         cnt = 0
-
-        '''
+        from itertools import repeat
         while vm.boolean == False:
             vm.searched.append(vm.steps)
+            # These three lines are a memory killer.
+            #vmpop = dview.map_sync(check_current,vm.steps,repeat(vm))
+            #for vms in vmpop:
+            #    vm.lookup.extend(vms.lookup)
             for step in vm.steps:
                 vm = check_current(step, vm)
                 vm = check_fix_range(vm)
-            cnt+=1
+            cnt += 1
             print(cnt)
         return vm
-        '''
-        from itertools import repeat
-        while vm.boolean == False:
-            steps = vm.steps
 
-            vmpop = list(dview.map_sync(check_current,steps,repeat(vm)))
-            for v in vmpop:
-                print(v,vm,vmpop)
-                vm.lookup.extend(v.lookup)
-            vm = check_fix_range(vm)
-        return vm
-
+    ## initialize where necessary.
+    #import time
     vmpop = list(dview.map_sync(init_vm,vmpop))
 
     # if a population has already been evaluated it may be faster to let it
     # keep its previous rheobase searching range where this
     # memory of a previous range as acts as a guess as the next mutations range.
-    vmpop1 = []
-    for v in vmpop:
-        vmpop1.append(find_rheobase(v))
-    vmpop = vmpop1
-    #vmpop = list(dview.map_sync(find_rheobase,vmpop))
+    #vmpop1 = []
+    #for v in vmpop:
+        #vmpop1.append(find_rheobase(v))
+    #vmpop = vmpop1  #list(map(find_rheobase,vmpop))
+    vmpop = list(dview.map_sync(find_rheobase,vmpop))
 
     return vmpop, pop
 
@@ -634,8 +610,8 @@ def check_rheobase(vmpop,pop=None):
 # should at least be as big as number of dimensions/model parameters
 # explored.
 ##
-print('gets here g')
-MU = 10
+
+MU = 15
 NGEN = 10
 CXPB = 0.9
 
@@ -661,7 +637,6 @@ pop = [ toolbox.clone(i) for i in pop ]
 
 vmpop = update_vm_pop(pop, td)
 #import evaluate_as_module as em
-print('crashes here!')
 vmpop , _ = check_rheobase(vmpop)
 
 
@@ -674,14 +649,20 @@ with open(new_checkpoint_path,'wb') as handle:#
 
 # sometimes done in serial in order to get access to opaque stdout/stderr
 
-fitnesses = []
+#fitnesses = []
 #for v in vmpop:
 #   fitnesses.append(evaluate_as_module.evaluate(v))
    #pdb.set_trace()
 import copy
 import evaluate_as_module
+#vmpop = dview.map_sync(evaluate_as_module.pre_evaluate, copy.copy(vmpop))
+from itertools import repeat
+vmpop = [ v for v in vmpop if v.rheobase > 0.0 ]
+vmpop = list(dview.map_sync(evaluate_as_module.pre_evaluate,copy.copy(vmpop)))
 
-fitnesses = dview.map_sync(evaluate_as_module.evaluate, copy.copy(vmpop))
+
+import pdb; pdb.set_trace()
+fitnesses = list(dview.map_sync(evaluate_as_module.evaluate, copy.copy(vmpop)))
 
 #fitnesses = dview.map_sync(evaluate, copy.copy(vmpop))
 print(fitnesses)
@@ -824,7 +805,7 @@ vmhistory = update_vm_pop(history.genealogy_history.values(),td)
 
 import pickle
 with open('complete_dump.p','wb') as handle:
-   pickle.dump([vmoffspring,history,logbook,rheobase_values,best_worst,vmhistory,hvolumes],handle)
+   pickle.dump([pf,vmoffspring,history,logbook,rheobase_values,best_worst,vmhistory,hvolumes],handle)
 
 lists = pickle.load(open('complete_dump.p','rb'))
 #vmoffspring2,history2,logbook2 = lists[0],lists[1],lists[2]

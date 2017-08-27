@@ -5,9 +5,7 @@ import graphviz
 
 import matplotlib as mpl
 # setting of an appropriate backend.
-#try:#
-#    mpl.use('Qt5Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
-#except:
+
 mpl.use('Agg')
 
 from plotly.graph_objs import *
@@ -21,6 +19,8 @@ rc[:].use_cloudpickle()
 dview = rc[:]
 
 def plotly_graph(history,vmhistory):
+	# TODO experiment with making the plot output style a dendro 
+	# dendrograms
     from networkx.drawing.nx_agraph import graphviz_layout
     import plotly
     import plotly.plotly as py
@@ -32,6 +32,8 @@ def plotly_graph(history,vmhistory):
     for i in G.nodes():
         labels[i] = i
     node_colors = np.log([ np.sum(history.genealogy_history[i].fitness.values) for i in G ])
+    import networkx as nx
+
 
     positions = graphviz_layout(G, prog="dot")
 
@@ -425,11 +427,12 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
 
     sindexs = []
     # visualize
-    # widths tests
-    fig, ax = plt.subplots(len(best_worst), figsize=(10, 5), facecolor='white')
+    # amplitude tests
+    fig, ax = plt.subplots(1, figsize=(10, 5), facecolor='white')
 
     v = get_neab.tests[5]
 
+    waves = []
 
     for iterator, vms in enumerate(best_worst):
         from neuronunit.models import backends
@@ -451,66 +454,51 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         score = v.judge(model,stop_on_error = False, deep_error = True)
 
         v_m = model.get_membrane_potential()
-        threshold = spikes2thresholds(v_m)
+        from neuronunit import capabilities as cap
+        threshold = cap.spikes2thresholds(v_m)
         ts = model.results['t'] # time signal
-
-
-
+        if iterator == 0:
+            waves.append(ts)
+        waves.append(v_m)
+		##
+		# since the threshold value derived from 
+		# capabilities, spike functions, spikes2thresholds 
+		# has a different precision to
+		# the neo analogue signal v_m, 
+		# there is no: v in v_m that exactly equals 
+		# threshold, so an approximately equals will have to do
+		# 1e-4 is a nominally low tolerance for the approximation.
+		##
+        threshold_time = [ ts[index] for index,v in enumerate(v_m) if np.abs(float(threshold)-float(v)) < 1e-4 ]
+        threshold_time = threshold_time[0]
 
         dt = float(v_m.sampling_period)
 
+        ts = model.results['t'] # time signal
         st = spike_functions.get_spike_train(v_m) #spike times
 
-        start = int((float(threshold_time)/ts[-1])*len(ts))  #index offset from spike
-        stop = start + int(1000)
-        #stop = int((float(st)/ts[-1])*len(ts))+1500
+        start = int((float(threshold_time)/ts[-1])*len(ts))  # The index corresponding to the time offset, for 
+	
+	    # when the models v_m crosses its threshold.
+        
+	    stop = start + int(2500)
         time_sequence = np.arange(start , stop, 1)
         ptvec = np.array(model.results['t'])[time_sequence]
 
         other_stop = ptvec[-1]-ptvec[0]
         lined_up_time = np.arange(0,other_stop,float(dt))
-        from neuronunit import capabilities
+        pvm = np.array(model.results['vm'])[time_sequence]
         ans = model.get_membrane_potential()
-        sw = capabilities.spikes2widths(ans)
-        unit_observations = v.observation['mean']
-        to_r_s = unit_observations.units
-        unit_predictions = sw.rescale(to_r_s)
-        actual_width_differences = np.abs(np.abs(unit_observations) - np.abs(unit_predictions))
 
-        pvm = np.array(score.related_data['vm'])[time_sequence]
-        print(len(pvm),len(lined_up_time),float(dt))
-        assert len(pvm)==len(lined_up_time)
-        assert len(pvm) == len(ptvec)
+        sw = cap.spike_functions.get_spike_waveforms(ans)
+        sa = cap.spike_functions.spikes2amplitudes(sw)
 
-        print(len(pvm),len(lined_up_time))
+        plt.plot(lined_up_time , pvm, label=str(sa), linewidth=1.5)
 
-        if 'value' in v.observation.keys():
-            unit_observations = v.observation['value']
-
-        if 'value' in v.prediction.keys():
-            unit_predictions = v.prediction['value']
-
-
-        if 'mean' in v.observation.keys():
-            unit_observations = v.observation['mean']
-
-        if 'mean' in v.prediction.keys():
-            unit_predictions = v.prediction['mean']
-
-        if len(lined_up_time)==len(pvm):
-
-            ax[iterator].plot(lined_up_time , pvm, label=str(sw), linewidth=1.5)
-#
-
-        #ax[iterator].legend(labels=str(sw) ,loc="upper right")
-
-
-        ax[iterator].legend(loc="lower left")
-        #score = None
-    #plt.legend()
-    fig.text(0.5, 0.04, 'ms', ha='center', va='center')
-    fig.text(0.06, 0.5, '$V_{m}$ mV', ha='center', va='center', rotation='vertical')
-    fig.savefig(str('from_threshold_test_')+str(v)+'vm_versus_t.png', format='png', dpi=1200)#,
+    plt.savefig(str('from_threshold_test_')+str(v)+'vm_versus_t.png', format='png', dpi=1200)#
+    import pickle
+    with open('waveforms.p','wb') as handle:
+        pickle.dump(waves,handle)
 
     # visualize
     # threshold test
@@ -792,10 +780,14 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
 
 
 def surfaces(history,td):
-    import numpy
+    import numpy as np
     import matplotlib
+    matplotlib.rcParams.update({'font.size':16})
+
+    import matplotlib.pyplot as plt
+
     all_inds = history.genealogy_history.values()
-    sums = numpy.array([np.sum(ind.fitness.values) for ind in all_inds])
+    sums = np.array([np.sum(ind.fitness.values) for ind in all_inds])
     keep = set()
     quads = []
     for k in range(1,9):
@@ -804,27 +796,57 @@ def surfaces(history,td):
             if i+k < 10:
                 quads.append((td[i],td[i+k],i,i+k))
 
-    for q in quads:
-        print(k)
-        (x,y,w,z) = q
-        print(x,y,w,z,i)
-        xs = numpy.array([ind[w] for ind in all_inds])
-        ys = numpy.array([ind[z] for ind in all_inds])
-        min_ys = ys[numpy.where(sums == numpy.min(sums))]
-        min_xs = xs[numpy.where(sums == numpy.min(sums))]
-        plt.clf()
-        fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
-        trip_axis = ax_trip.tripcolor(xs,ys,sums+1,20,norm=matplotlib.colors.LogNorm())
-        plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue',label='global minima')
-        fig_trip.colorbar(trip_axis, label='sum of objectives')
-        ax_trip.set_xlabel('Parameter '+ str('a'))
-        ax_trip.set_ylabel('Parameter '+ str('b'))
-        plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
-        fig_trip.tight_layout()
-        #fig_trip.legend()
-        fig_trip.savefig('surface'+str(x)+str(y)+str(w)+str(z)+'.pdf',format='pdf', dpi=1200)
+    #for q in quads:
+        #print(k)
+        #(x,y,w,z) = q
+        #print(x,y,w,z,i)
+    all_inds1 = history.genealogy_history.values()
+
+    ab = [ (all_inds1[y][4],all_inds1[y][-3]) for y in all_inds1 ]
+
+    xs = np.array([ind[4] for ind in all_inds])
+    ys = np.array([ind[-3] for ind in all_inds])
+    min_ys = ys[np.where(sums == np.min(sums))]
+    min_xs = xs[np.where(sums == np.min(sums))]
+    plt.clf()
+    fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
+    trip_axis = ax_trip.tripcolor(xs,ys,sums,20,norm=matplotlib.colors.LogNorm())
+    plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue',label='global minima')
+    fig_trip.colorbar(trip_axis, label='Sum of Objective Errors ')
+    ax_trip.set_xlabel('Parameter $ b$')
+    ax_trip.set_ylabel('Parameter $ a$')
+    plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
+    fig_trip.tight_layout()
+    #fig_trip.legend()
+    fig_trip.savefig('surface'+str('a')+str('b')+'.pdf',format='pdf', dpi=1200)
 
 
+    matrix_fill = [ (i,j) for i in range(0,len(modelp.model_params['a'])) for j in range(0,len(modelp.model_params['b'])) ]
+    mf = list(zip(matrix_fill,summed))
+    empty = np.zeros(shape=(int(len(modelp.model_params['a'])),int(len(modelp.model_params['a']))))
+    max_x = np.max(modelp.model_params['a'])
+    max_y = np.min(modelp.model_params['b'])
+    x_mapped_ind = [int((ind[4]/max_x)*len(modelp.model_params['a'])) for ind in all_inds1]
+    y_mapped_ind = [int((np.abs(ind[-3])/max_y)*len(modelp.model_params['a'])) for ind in all_inds1]
+
+    #y_mapped_ind = np.array([int(ind[-3]/max_y) for ind in all_inds1])
+    #int((all_inds1[1][4]/max_x)*len(modelp.model_params['a']))
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    vmin = np.min(mf2)
+    vmax = np.max(mf2)
+    from matplotlib.colors import LogNorm
+    cax = ax.matshow(dfimshow, interpolation='nearest',norm=LogNorm(vmin=vmin,vmax=vmax))
+    fig.colorbar(cax)
+
+    ax.set_xticklabels(modelp.model_params['a'])
+    ax.set_yticklabels(modelp.model_params['b'])
+    plt.title(str('$a$')+' versus '+str('$b$'))
+    plt.savefig('2nd_approach_d_error_'+str('a')+str('b')+'surface.png')
+
+
+    return ab
 
 def load_data():
     a = pickle.load(open('for_pandas.p','rb'))
@@ -963,8 +985,8 @@ def bar_chart(vms,name=None):
     import copy
     from itertools import repeat
     #TODO move install into docker
-    os.system('sudo /opt/conda/bin/pip install cufflinks')
-    import cufflinks as cf
+    #os.system('sudo /opt/conda/bin/pip install cufflinks')
+    #import cufflinks as cf
 
     import plotly.tools as tls
     tls.embed('https://plot.ly/~cufflinks/8')
