@@ -71,9 +71,9 @@ def pre_format(vms):
     vtest = {}
     import get_neab
     tests = get_neab.tests
-    params = {}
-    params['injected_square_current'] = {}
+
     for k,v in enumerate(tests):
+        vtest[k] = {}
         if k == 0:
             prediction = {}
             prediction['value'] = vms.rheobase * pq.pA
@@ -83,20 +83,20 @@ def pre_format(vms):
 
         if k == 1 or k == 2 or k == 3:
             # Negative square pulse current.
-            params['injected_square_current']['duration'] = 100 * pq.ms
-            params['injected_square_current']['amplitude'] = -10 *pq.pA
-            params['injected_square_current']['delay'] = 30 * pq.ms
+            vtest[k]['duration'] = 100 * pq.ms
+            vtest[k]['amplitude'] = -10 *pq.pA
+            vtest[k]['delay'] = 30 * pq.ms
+
         if k == 0 or k == 4 or k == 5 or k == 6 or k == 7:
             # Threshold current.
-            params['injected_square_current']['duration'] = 1000 * pq.ms
-            params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
-            params['injected_square_current']['delay'] = 100 * pq.ms
+            vtest[k]['duration'] = 1000 * pq.ms
+            vtest[k]['amplitude'] = vms.rheobase * pq.pA
+            vtest[k]['delay'] = 100 * pq.ms
 
-        vtest[k] = params
         v = None
     return vtest
 
-def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
+def evaluate(vms,weight_matrix = None):#This method must be pickle-able for ipyparallel to work.
     '''
     Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
     is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
@@ -211,15 +211,8 @@ def pre_evaluate(vms):
     import numpy as np
     import get_neab
 
-    new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-    model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
-    model.load_model()
-    assert type(vms.rheobase) is not type(None)
-    #tests = get_neab.suite.tests
-    model.update_run_params(vms.attrs)
-    model.rheobase = vms.rheobase * pq.pA
+
     import get_neab
-    #get_neab.
 
     import copy
     # copying here is critical for get_neab
@@ -235,26 +228,29 @@ def pre_evaluate(vms):
             '''
             can tests be re written such that it is more closure compatible?
             '''
-            #if k == 0:
-            #    t.prediction = #vtests[k].prediction
             t.params = vtests[k]
+
+            for key, value in vtests[k].items():
+                t.params['injected_square_current'][key] = value
             if k == 0:
                 tests[k].prediction = {}
                 tests[k].prediction['value'] = vms.rheobase * pq.pA
 
-
-            import neuron
+            new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
+            model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
             model.load_model()
-            model.reset_h(neuron)
             model.update_run_params(vms.attrs)
             score = t.judge(model,stop_on_error = False, deep_error = True)
+            print(model.get_spike_count())
             v_m = model.get_membrane_potential()
             if 't' not in vms.results.keys():
                 vms.results[t] = {}
                 vms.results[t]['v_m'] = v_m
             elif 't' in vms.results.keys():
                 vms.results[t]['v_m'] = v_m
-        return vms
+        #else:
+
+    return vms
 
 #from scoop import futures
 

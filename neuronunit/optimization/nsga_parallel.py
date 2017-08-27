@@ -657,11 +657,9 @@ import copy
 import evaluate_as_module
 #vmpop = dview.map_sync(evaluate_as_module.pre_evaluate, copy.copy(vmpop))
 from itertools import repeat
+vmpop = [ v for v in vmpop if v.rheobase > 0.0 ]
 vmpop = list(dview.map_sync(evaluate_as_module.pre_evaluate,copy.copy(vmpop)))
-for v in vmpop:
-    print(v)
-    print(vm.results)
-    vm.results.update(v)
+
 
 import pdb; pdb.set_trace()
 fitnesses = list(dview.map_sync(evaluate_as_module.evaluate, copy.copy(vmpop)))
