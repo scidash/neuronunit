@@ -685,7 +685,6 @@ print([ (v.rheobase,v.attrs) for v in vmpop1])
 
 import copy
 efitnesses = dview.map_sync(evaluate, copy.copy(vmpop1))
-summed = [ np.sum(e) for e in efitnesses ]
 #import pdb; pdb.set_trace()
 #pdb.set_trace()
 
@@ -694,6 +693,16 @@ import pickle
 with open('complete_exhaust'+'a'+'b'+'.p','wb') as handle:
    pickle.dump([efitnesses,iter_list,vmpop1],handle)
 
+from sklearn.preprocessing import StandardScaler
+# need to standardise the data since each parameter consists of different variables.
+#p_plus_f = [ ind.append(np.sum(fitnesses[k])) for k, ind in enumerate(final_population) ]
+errors = np.array([ np.sum(f.fitness.values) for f in enumerate(best_worst) ])
+
+#p_plus_f = final_population
+#X_std = StandardScaler().fit_transform(final_population)
+X_std = StandardScaler().fit_transform(efitnesses)
+
+summed = [ np.sum(e) for e in efitnesses ]
 
 matrix_fill = [ (i,j) for i in range(0,len(modelp.model_params['a'])) for j in range(0,len(modelp.model_params['b'])) ]
 mf = list(zip(matrix_fill,summed))

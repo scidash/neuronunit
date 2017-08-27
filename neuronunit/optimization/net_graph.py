@@ -454,10 +454,7 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         threshold = spikes2thresholds(v_m)
         ts = model.results['t'] # time signal
 
-        for index,v in enumerate(v_m):
-            if v == float(threshold):
-                threshold_time = ts[index]
-				break
+
 
 
         dt = float(v_m.sampling_period)
@@ -795,7 +792,8 @@ def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipypa
 
 
 def surfaces(history,td):
-
+    import numpy
+    import matplotlib
     all_inds = history.genealogy_history.values()
     sums = numpy.array([np.sum(ind.fitness.values) for ind in all_inds])
     keep = set()
@@ -819,12 +817,13 @@ def surfaces(history,td):
         trip_axis = ax_trip.tripcolor(xs,ys,sums+1,20,norm=matplotlib.colors.LogNorm())
         plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue',label='global minima')
         fig_trip.colorbar(trip_axis, label='sum of objectives')
-        ax_trip.set_xlabel('Parameter '+ str('a')
-        ax_trip.set_ylabel('Parameter '+ str('b')
+        ax_trip.set_xlabel('Parameter '+ str('a'))
+        ax_trip.set_ylabel('Parameter '+ str('b'))
         plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
         fig_trip.tight_layout()
-        fig_trip.legend()
-        fig_trip.savefig('surface'+str('a')+str('b')+'.png',format='png', dpi=1200)
+        #fig_trip.legend()
+        fig_trip.savefig('surface'+str(x)+str(y)+str(w)+str(z)+'.pdf',format='pdf', dpi=1200)
+
 
 
 def load_data():
