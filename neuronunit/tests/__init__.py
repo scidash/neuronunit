@@ -6,8 +6,6 @@ from types import MethodType
 import quantities as pq
 from quantities.quantity import Quantity
 import numpy as np
-import matplotlib as mpl
-mpl.use('agg',warn=False)
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
@@ -15,12 +13,9 @@ import sciunit
 import sciunit.scores as scores
 
 import neuronunit.capabilities as cap
-import neuronunit.capabilities.spike_functions as sf
+#import neuronunit.capabilities.spike_functions as sf
 from neuronunit import neuroelectro
-from .channel import *
-from scoop import futures
-
-#import get_tau_module
+#from .channel import *
 
 AMPL = 0.0*pq.pA
 DELAY = 100.0*pq.ms
@@ -40,7 +35,7 @@ class VmTest(sciunit.Test):
             cap += cls.required_capabilities
         self.required_capabilities += tuple(cap)
         self._extra()
-
+    
     required_capabilities = (cap.ProducesMembranePotential,)
 
     name = ''
@@ -84,18 +79,6 @@ class VmTest(sciunit.Test):
                                               provided.dimensionality.__str__())
                            )
                     raise sciunit.ObservationError(msg)
-    #@classmethod
-    def nan_inf_test(mp):
-        '''
-        Check if a HOC recording vector of membrane potential contains nans or infinities.
-        Also check if it does not perturb due to stimulating current injection
-        '''
-        import math
-        mp = np.array(mp)
-        for i in mp:
-            if math.isnan(i) or i==float('inf') or i==float('-inf'):
-                return False
-        return True
 
     def bind_score(self, score, model, observation, prediction):
         score.related_data['vm'] = model.get_membrane_potential()
@@ -146,18 +129,38 @@ class VmTest(sciunit.Test):
                        'n': reference_data.n}
         return observation
 
-    #def nan_inf_test(self,params):
+    def sanity_check(self,rheobase,model):
+        #model.inject_square_current(self.params['injected_square_current'])
+        self.params['injected_square_current']['delay'] = DELAY
+        self.params['injected_square_current']['duration'] = DURATION
+        self.params['injected_square_current']['amplitude'] = rheobase
+        model.inject_square_current(self.params['injected_square_current'])
 
+        mp = model.results['vm']
+        import math
+        for i in mp:
+            if math.isnan(i):
+                return False
 
+        import neuronunit.capabilities as cap
+
+        sws=cap.spike_functions.get_spike_waveforms(model.get_membrane_potential())
+        #sws = model.get_spike_waveforms()
+        #print(sws)
+
+        #sws=spike_functions.get_spike_waveform(mp)
+        for i,s in enumerate(sws):
+            s = np.array(s)
+            dvdt = np.diff(s)
+            import math
+            for j in dvdt:
+                if math.isnan(j):
+                    return False
+        return True
 
 
 class TestPulseTest(VmTest):
-    """
-    A base class for tests that use a square test pulse
-    Needs elaboration because DELAY and DURATION are inappropriately standard
-    as compared to other tests, however they should not be.
-
-    """
+    """A base class for tests that use a square test pulse"""
 
     required_capabilities = (cap.ReceivesSquareCurrent,)
 
@@ -165,10 +168,8 @@ class TestPulseTest(VmTest):
 
     score_type = scores.ZScore
 
-
-
     params = {'injected_square_current':
-                {'amplitude':-10.0*pq.pA, 'delay':30*pq.ms, 'duration':100*pq.ms}}
+                {'amplitude':-10.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
     def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
@@ -186,7 +187,6 @@ class TestPulseTest(VmTest):
     @classmethod
     def get_rin(cls, vm, i):
         start, stop = -11*pq.ms, -1*pq.ms
-
         before = cls.get_segment(vm,start+i['delay'],
                                      stop+i['delay'])
         after = cls.get_segment(vm,start+i['delay']+i['duration'],
@@ -196,20 +196,16 @@ class TestPulseTest(VmTest):
 
     @classmethod
     def get_tau(cls, vm, i):
-        # 10 ms before pulse start or halfway between sweep start
+        # 10 ms before pulse start or halfway between sweep start 
         # and pulse start, whichever is longer
-        start = max(i['delay']-10*pq.ms,i['delay']/2)
+        start = max(i['delay']-10*pq.ms,i['delay']/2) 
         stop = i['duration']+i['delay']-1*pq.ms # 1 ms before pulse end
-
         region = cls.get_segment(vm,start,stop)
-
         amplitude,tau,y0 = cls.exponential_fit(region, i['delay'])
-
         return tau
 
     @classmethod
     def exponential_fit(cls, segment, offset):
-
         t = segment.times.rescale('ms')
         start = t[0]
         offset = offset-start
@@ -223,7 +219,7 @@ class TestPulseTest(VmTest):
                    10, # time constant (ms)
                    vm.max()] # y0 (mV)
         vm_fit = vm.copy()
-
+        
         def func(x, a, b, c):
             '''
             This function is simply the shape of exponential decay which must be differenced, its basically an ideal template
@@ -233,10 +229,11 @@ class TestPulseTest(VmTest):
             vm_fit[:offset] = c
             vm_fit[offset:,0] = a * np.exp(-t[offset:]/b) + c
             return vm_fit.squeeze()
-
-        #popt, pcov = curve_fit(func, t, vm, p0=guesses) # Estimate starting values for better convergence
+        
         popt, pcov = curve_fit(func, t, vm.squeeze(), p0=guesses) # Estimate starting values for better convergence
-          #plt.plot(t,vm)
+        #plt.plot(t,vm)
+        #plt.plot(t,func(t,*popt))
+        #print(popt)
         amplitude = popt[0]*pq.mV
         tau = popt[1]*pq.ms
         y0 = popt[2]*pq.mV
@@ -245,9 +242,6 @@ class TestPulseTest(VmTest):
 
 class InputResistanceTest(TestPulseTest):
     """Tests the input resistance of a cell."""
-    def __init__(self):
-        super(InputResistanceTest).__init__()
-        self.prediction = None
 
     name = "Input resistance test"
 
@@ -266,10 +260,8 @@ class InputResistanceTest(TestPulseTest):
         r_in = self.__class__.get_rin(vm, i)
         r_in = r_in.simplified
         # Put prediction in a form that compute_score() can use.
-        self.prediction = {'value':r_in}
-        return self.prediction
-
-
+        prediction = {'value':r_in}
+        return prediction
 
 
 class TimeConstantTest(TestPulseTest):
@@ -292,9 +284,8 @@ class TimeConstantTest(TestPulseTest):
         tau = self.__class__.get_tau(vm, i)
         tau = tau.simplified
         # Put prediction in a form that compute_score() can use.
-        self.prediction = {'value':tau}
-
-        return self.prediction
+        prediction = {'value':tau}
+        return prediction
 
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
@@ -312,9 +303,6 @@ class TimeConstantTest(TestPulseTest):
 
 class CapacitanceTest(TestPulseTest):
     """Tests the input resistance of a cell."""
-    def __init__(self):
-        super(CapacitanceTest).__init__()
-        self.prediction = None
 
     name = "Capacitance test"
 
@@ -331,8 +319,8 @@ class CapacitanceTest(TestPulseTest):
         tau = self.__class__.get_tau(vm, i)
         c = (tau/r_in).simplified
         # Put prediction in a form that compute_score() can use.
-        self.prediction = {'value':c}
-        return self.prediction
+        prediction = {'value':c}
+        return prediction
 
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
@@ -348,9 +336,7 @@ class CapacitanceTest(TestPulseTest):
 
 class APWidthTest(VmTest):
     """Tests the full widths of action potentials at their half-maximum."""
-    def __init__(self):
-        super(APWidthTest).__init__()
-        self.prediction = None
+
     required_capabilities = (cap.ProducesActionPotentials,)
 
     name = "AP width test"
@@ -369,16 +355,12 @@ class APWidthTest(VmTest):
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
         model.rerun = True
-        #import copy
-        #tvec = copy.copy(model.results['t'])
-        #dt = (tvec[1]-tvec[0])*pq.ms
         widths = model.get_AP_widths()
-        print(widths)
         # Put prediction in a form that compute_score() can use.
-        self.prediction = {'mean':np.mean(widths) if len(widths) else None,
+        prediction = {'mean':np.mean(widths) if len(widths) else None,
                       'std':np.std(widths) if len(widths) else None,
                       'n':len(widths)}
-        return self.prediction
+        return prediction
 
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
@@ -395,9 +377,7 @@ class InjectedCurrentAPWidthTest(APWidthTest):
     Tests the full widths of APs at their half-maximum
     under current injection.
     """
-    def __init__(self):
-        super(InjectedCurrentAPWidthTest).__init__()
-        self.prediction = None
+
     required_capabilities = (cap.ReceivesSquareCurrent,)
 
     params = {'injected_square_current':
@@ -411,16 +391,11 @@ class InjectedCurrentAPWidthTest(APWidthTest):
 
     def generate_prediction(self, model):
         model.inject_square_current(self.params['injected_square_current'])
-        self.prediction = super(InjectedCurrentAPWidthTest,self).generate_prediction(model)
-        return self.prediction
+        return super(InjectedCurrentAPWidthTest,self).generate_prediction(model)
 
 
 class APAmplitudeTest(VmTest):
     """Tests the heights (peak amplitude) of action potentials."""
-
-    def __init__(self):
-        super(APAmplitudeTest).__init__()
-        self.prediction = None
 
     required_capabilities = (cap.ProducesActionPotentials,)
 
@@ -434,7 +409,6 @@ class APAmplitudeTest(VmTest):
     units = pq.mV
 
     ephysprop_name = 'Spike Amplitude'
-    #def _extra(self):
 
     def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
@@ -443,10 +417,10 @@ class APAmplitudeTest(VmTest):
         model.rerun = True
         heights = model.get_AP_amplitudes() - model.get_AP_thresholds()
         # Put prediction in a form that compute_score() can use.
-        self.prediction = {'mean':np.mean(heights) if len(heights) else None,
+        prediction = {'mean':np.mean(heights) if len(heights) else None,
                       'std':np.std(heights) if len(heights) else None,
                       'n':len(heights)}
-        return self.prediction
+        return prediction
 
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
@@ -477,9 +451,6 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
     Tests the heights (peak amplitude) of action potentials
     under current injection.
     """
-    def __init__(self):
-        super(InjectedCurrentAPAmplitudeTest).__init__()
-        self.prediction = None
 
     required_capabilities = (cap.ReceivesSquareCurrent,)
 
@@ -492,18 +463,13 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
                    "action potentials when current "
                    "is injected into cell.")
 
-
     def generate_prediction(self, model):
         model.inject_square_current(self.params['injected_square_current'])
-        prediction = super(InjectedCurrentAPAmplitudeTest,self).\
+        return super(InjectedCurrentAPAmplitudeTest,self).\
                 generate_prediction(model)
-        self.prediction = prediction
-        return prediction
+
 
 class APThresholdTest(VmTest):
-    def __init__(self):
-        super(APThresholdTest).__init__()
-        self.prediction = None
     """Tests the full widths of action potentials at their half-maximum."""
 
     required_capabilities = (cap.ProducesActionPotentials,)
@@ -519,7 +485,6 @@ class APThresholdTest(VmTest):
 
     ephysprop_name = 'Spike Threshold'
 
-
     def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
@@ -530,7 +495,6 @@ class APThresholdTest(VmTest):
         prediction = {'mean':np.mean(threshes) if len(threshes) else None,
                       'std':np.std(threshes) if len(threshes) else None,
                       'n':len(threshes)}
-        self.prediction = prediction
         return prediction
 
     def compute_score(self, observation, prediction):
@@ -548,9 +512,6 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
     Tests the thresholds of action potentials
     under current injection.
     """
-    def __init__(self):
-        super(InjectedCurrentAPThresholdTest).__init__()
-        self.prediction = None
 
     required_capabilities = (cap.ReceivesSquareCurrent,)
 
@@ -564,7 +525,7 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
 
     def generate_prediction(self, model):
         model.inject_square_current(self.params['injected_square_current'])
-        prediction = super(InjectedCurrentAPThresholdTest,self).\
+        return super(InjectedCurrentAPThresholdTest,self).\
                 generate_prediction(model)
         self.prediction = prediction
         return prediction
@@ -623,8 +584,6 @@ class RestingPotentialTest(VmTest):
 
     required_capabilities = (cap.ReceivesSquareCurrent,)
 
-    DELAY = 100.0*pq.ms
-    DURATION = 1000.0*pq.ms
     params = {'injected_square_current':
                 {'amplitude':0.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
@@ -639,10 +598,6 @@ class RestingPotentialTest(VmTest):
     units = pq.mV
 
     ephysprop_name = 'Resting membrane potential'
-    def __init__(self):
-        super(RestingPotentialTest).__init__()
-        self.prediction = None
-
 
     def validate_observation(self, observation):
         try:
@@ -671,7 +626,6 @@ class RestingPotentialTest(VmTest):
             if math.isnan(i):
                 return None
         prediction = {'mean':median, 'std':std}
-        self.prediction = prediction
         return prediction
 
 
@@ -680,7 +634,7 @@ class RestingPotentialTest(VmTest):
         """Implementation of sciunit.Test.score_prediction."""
         #print("%s: Observation = %s, Prediction = %s" % \
         #	 (self.name,str(observation),str(prediction)))
-        if prediction is None:# or float(prediction) <=0 :
+        if prediction is None:
             score = scores.InsufficientDataScore(None)
             #score = scores.ErrorScore(None)
 

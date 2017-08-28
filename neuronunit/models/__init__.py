@@ -1,89 +1,121 @@
+"""Model classes for NeuronUnit"""
+
 import os
 from copy import deepcopy
 import tempfile
 import shutil
 import inspect
-import types
 
-import numpy as np
 import sciunit
 import neuronunit.capabilities as cap
 from pyneuroml import pynml
-from neo.core import AnalogSignal
-from quantities import ms,mV,Hz
-
-from .channel import *
 from . import backends
 
 
-
-class LEMSModel(sciunit.Model):
+class LEMSModel(cap.Runnable,
+                sciunit.Model):
     """A generic LEMS model"""
 
-    def __init__(self,LEMS_file_path=None, name=None, backend=None, attrs={}):
+    def __init__(self, LEMS_file_path=None, name=None, 
+                    backend='jNeuroML', attrs=None):
+        #for base in cls.__bases__:
+        #    sciunit.Model.__init__()
+        if name is None:
+            name = os.path.split(self.lems_file_path)[1].split('.')[0]
+        #sciunit.Modelsuper(LEMSModel,self).__init__(name=name)
+        self.attrs = attrs if attrs else {}
+        self.orig_lems_file_path = LEMS_file_path
+        self.create_lems_file(name)
+        self.run_defaults = pynml.DEFAULTS
+        self.run_defaults['nogui'] = True
+        self.run_params = {}
+        self.last_run_params = None
+        self.skip_run = False
+        self.rerun = True # Needs to be rerun since it hasn't been run yet!
+        self.set_backend(backend)
+        
+    def __new__(cls, *args, **kwargs):
         """
         LEMS_file_path: Path to LEMS file (an xml file).
         name: Optional model name.
         """
+        print("Calling new")
+        self  = super().__new__(cls)#, *args, **kwargs)
+        if 'fresh' in kwargs and not kwargs['fresh']:
+            self.set_backend(kwargs['backend'])
+        print(self)
+        return self
 
-        super(LEMSModel,self).__init__(name=name)
-
-
-        self.orig_lems_file_path = LEMS_file_path
-        self.create_lems_file(name,attrs)
-        self.run_defaults = pynml.DEFAULTS
-        self.run_defaults['nogui'] = True
-        self.run_params = {}
-        self.last_run_params = {}
-        self.skip_run = False
-        self.rerun = True # Needs to be rerun since it hasn't been run yet!
-        if name is None:
-            name = os.path.split(self.lems_file_path)[1].split('.')[0]
-        self.set_backend(backend)
-        self.load_model()
-
-    #This is the part that decides if it should inherit from NEURON backend.
+    def __getnewargs_ex__(self): # This method is required by pickle to know what 
+                              # arguments to pass to __new__ when instances of 
+                              # this class are eventually unpickled.  
+                              # Otherwise __new__() will have no arguments.  
+        # A tuple containing the extra args and kwargs to pass to __new__. 
+        return (tuple(), # No args
+                {'fresh':False, # Not fresh, i.e. restored from pickling
+                 'backend':self.backend})  # The backend to set.  
 
     def set_backend(self, backend):
-        if type(backend) is str:
+        if isinstance(backend,str):
             name = backend
             args = []
             kwargs = {}
-        elif type(backend) in (tuple,list):
-            name = backend[0]
-            args = backend[1]
-            kwargs = backend[2]
+        elif isinstance(backend,(tuple,list)):
+            name = ''
+            args = []
+            kwargs = {}
+            for i in range(len(backend)):
+                if i==0:
+                    name = backend[i]
+                else:
+                    if isinstance(backend[i],dict):
+                        kwargs.update(backend[i])
+                    else:
+                        args += backend[i]  
         else:
-            raise "Backend must be string, tuple, or list"
+            raise TypeError("Backend must be string, tuple, or list")
         options = {x.replace('Backend',''):cls for x, cls \
                    in backends.__dict__.items() \
                    if inspect.isclass(cls) and \
                    issubclass(cls, backends.Backend)}
         if name in options:
             self.backend = name
-            self._backend = options[name](*args,**kwargs)
-            # Add all of the backend's methods to the model instance
-            #self.__class__.__bases__ = tuple(set((self._backend.__class__,) + \
-            #                            self.__class__.__bases__))
-            if self._backend.__class__ not in self.__class__.__bases__:
-                self.__class__.__bases__ = (self._backend.__class__,) + \
-                                        self.__class__.__bases__
-
+            self._backend = options[name]()
+            # Add all of the backend's methods to the model instance, 
+            # but remove base classes that are pure backends first, 
+            # so that new backends replace old backends.  
+            new_bases = tuple([b for b in self.__class__.__bases__ \
+                               if issubclass(b,sciunit.Model) or \
+                               not issubclass(b,backends.Backend)])
+            print(self._backend.__class__,new_bases)
+            #self.__class__.__bases__ = 
+            new_bases = (self._backend.__class__,) + new_bases
+            Dummy = type("%s with %s backend" % \
+                         (self.__class__.__name__,self.backend),
+                         new_bases,
+                         self.__dict__) 
+            self.__class__ = Dummy
+            #class Dummy:
+            #    pass
+            #Dummy = 
+            #self.__class__ = type(self.__class__, self._backend) 
+        
         elif name is None:
             # The base class should not be called.
             raise Exception(("A backend (e.g. 'jNeuroML' or 'NEURON') "
                              "must be selected"))
         else:
             raise Exception("Backend %s not found in backends.py" \
-                            % backend_name)
+                            % name)
+        self.init_backend(*args, **kwargs)
 
-    def create_lems_file(self, name, attrs):
+    def create_lems_file(self, name):
         if not hasattr(self,'temp_dir'):
             self.temp_dir = tempfile.gettempdir()
         self.lems_file_path  = os.path.join(self.temp_dir, '%s.xml' % name)
         shutil.copy2(self.orig_lems_file_path, self.lems_file_path)
-        if attrs:
-            self.set_lems_attrs(attrs)
+        if self.attrs:
+            self.set_lems_attrs(self.attrs)
 
     def set_lems_attrs(self, attrs):
         from lxml import etree
@@ -98,12 +130,13 @@ class LEMSModel(sciunit.Model):
     def run(self, rerun=None, **run_params):
         if rerun is None:
             rerun = self.rerun
-        self.run_params.update(run_params)
+        self.set_run_params(**run_params)
         for key,value in self.run_defaults.items():
             if key not in self.run_params:
-                self.run_params[key] = value
+                self.set_run_params(**{key:value})
         if (not rerun) and hasattr(self,'last_run_params') and \
            self.run_params == self.last_run_params:
+            print("Same run_params; skipping...")
             return
 
         self.update_run_params(params=run_params)
@@ -112,10 +145,11 @@ class LEMSModel(sciunit.Model):
         self.results = self.local_run()
         self.last_run_params = deepcopy(self.run_params)
         self.rerun = False
-        self.run_params = {} # Reset run parameters so the next test has to pass
-                             # its own run parameters and not use the same ones
+        # Reset run parameters so the next test has to pass its own 
+        # run parameters and not use the same ones
+        self.run_params = {}    
 
-    def update_lems_run_params(self):
+    def set_lems_run_params(self):
         from lxml import etree
         from neuroml import nml
         lems_tree = etree.parse(self.lems_file_path)
@@ -133,7 +167,7 @@ class LEMSModel(sciunit.Model):
             for key,value in self.run_params.items():
                 if key == 'injected_square_current':
                     pulse_generators = tree.findall('pulseGenerator')
-                    for i,pg in enumerate(pulse_generators):
+                    for pg in pulse_generators:
                         for attr in ['delay', 'duration', 'amplitude']:
                             if attr in value:
                                 #print('Setting %s to %f' % (attr,value[attr]))

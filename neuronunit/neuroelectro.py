@@ -32,6 +32,8 @@
 import json
 from pprint import pprint
 import shelve
+import hashlib
+import pickle
 try: # Python 2
     from urllib import urlencode
     from urllib2 import urlopen,URLError
@@ -166,13 +168,16 @@ class NeuroElectroData(object):
         We will use 'params' in the future to specify metadata (e.g. temperature)
         that neuroelectro.org will provide."""
         db = shelve.open('neuroelectro-cache') if self.cached else {}
-        identifier = str(hash((self.__class__,self.neuron,
-                               self.ephysprop,params)))
+        contents = (self.__class__,self.neuron,self.ephysprop,params)
+        #identifier = str(hash(contents))
+        pickled = pickle.dumps(contents)
+        identifier = hashlib.sha224(pickled).hexdigest()
         if not quiet:
             print("Getting %s%s data values from neuroelectro.org" \
                    % ("cached " if identifier in db else "", \
                       self.ephysprop.name))
         if identifier in db:
+            print("Using cached value.")
             self.json_object = json.loads(db[identifier])
         else:
             self.get_json(params=params, quiet=quiet)
