@@ -185,6 +185,7 @@ def p_imports():
         except TypeError:
             return [random.uniform(a, b) for a, b in zip([low] * size, [up] * size)]
 
+    # weights vector should compliment a numpy matrix of eigenvalues and other values
     creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
     creator.create("Individual", list, fitness=creator.FitnessMin)
     toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
