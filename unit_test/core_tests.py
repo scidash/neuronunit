@@ -19,7 +19,7 @@ from sciunit.utils import NotebookTools
 class DocumentationTestCase(NotebookTools,unittest.TestCase):
     """Testing documentation notebooks"""
 
-    path = 'docs'
+    path = '../docs'
 
     #@unittest.skip("Skipping chapter 1")
     def test_chapter1(self):
@@ -28,7 +28,7 @@ class DocumentationTestCase(NotebookTools,unittest.TestCase):
 class EphysPropertiesTestCase(NotebookTools,unittest.TestCase):
     """Testing sciunit tests of ephys properties"""
 
-    path = 'unit_test'
+    path = '.'
 
     #@unittest.skip("Skipping get_tau test")
     def test_get_tau(self):
@@ -55,5 +55,13 @@ class NeuroElectroTestCase(unittest.TestCase):
         x.check()
         
 
+class BlueBrainTestCase(NotebookTools,unittest.TestCase):
+     
+    path = '.'
+    
+    def test_bluebrain(self):
+        self.do_notebook('bbp')
+        
+        
 if __name__ == '__main__':
     unittest.main()

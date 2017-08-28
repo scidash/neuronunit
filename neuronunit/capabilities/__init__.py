@@ -111,7 +111,6 @@ class ReceivesSquareCurrent(sciunit.Capability):
                   where 'pq' is the quantities package
         This describes the current to be injected.
         """
-
         raise NotImplementedError()
 
 
