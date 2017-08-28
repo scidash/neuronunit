@@ -19,6 +19,8 @@ rc[:].use_cloudpickle()
 dview = rc[:]
 
 def plotly_graph(history,vmhistory):
+	# TODO experiment with making the plot output style a dendro 
+	# dendrograms
     from networkx.drawing.nx_agraph import graphviz_layout
     import plotly
     import plotly.plotly as py
@@ -458,15 +460,15 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         if iterator == 0:
             waves.append(ts)
         waves.append(v_m)
-	##
-	# since the threshold value derived from 
-	# capabilities, spike functions, spikes2thresholds 
-	# has a different precision to
-	# the neo analogue signal v_m, 
-	# there is no: v in v_m that exactly equals 
-	# threshold, so an approximately equals will have to do
-	# 1e-4 is a nominally low tolerance for the approximation.
-	##
+		##
+		# since the threshold value derived from 
+		# capabilities, spike functions, spikes2thresholds 
+		# has a different precision to
+		# the neo analogue signal v_m, 
+		# there is no: v in v_m that exactly equals 
+		# threshold, so an approximately equals will have to do
+		# 1e-4 is a nominally low tolerance for the approximation.
+		##
         threshold_time = [ ts[index] for index,v in enumerate(v_m) if np.abs(float(threshold)-float(v)) < 1e-4 ]
         threshold_time = threshold_time[0]
 
@@ -477,9 +479,9 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
 
         start = int((float(threshold_time)/ts[-1])*len(ts))  # The index corresponding to the time offset, for 
 	
-	# when the models v_m crosses its threshold.
+	    # when the models v_m crosses its threshold.
         
-	stop = start + int(2500)
+	    stop = start + int(2500)
         time_sequence = np.arange(start , stop, 1)
         ptvec = np.array(model.results['t'])[time_sequence]
 
@@ -986,8 +988,8 @@ def bar_chart(vms,name=None):
     #os.system('sudo /opt/conda/bin/pip install cufflinks')
     #import cufflinks as cf
 
-    #import plotly.tools as tls
-    #tls.embed('https://plot.ly/~cufflinks/8')
+    import plotly.tools as tls
+    tls.embed('https://plot.ly/~cufflinks/8')
 
     import pandas as pd
     traces = []

@@ -335,6 +335,7 @@ import net_graph
 #net_graph.plotly_graph(history,vmhistory)
 
 net_graph.surfaces(history,td)
+net_graph.plotly_graph(history,vmhistory)
 
 unev = pickle.load(open('un_evolved.p','rb'))
 unev, rh_values_unevolved = unev[0], unev[1]
@@ -354,6 +355,7 @@ net_graph.sp_spike_width(mixtures)
 
 assert type(best.rheobase) is not type(None)
 
+net_graph.sp_spike_width(unev)
 
 best_ = best_worst[0]
 worst_ = best_worst[1]

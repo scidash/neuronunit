@@ -11,7 +11,7 @@ import sys
 import os
 import ipyparallel as ipp
 from ipyparallel import depend, require, dependent
-
+import get_neab
 rc = ipp.Client(profile='default')
 THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
 this_nu = os.path.join(THIS_DIR,'../../')
