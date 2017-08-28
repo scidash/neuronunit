@@ -228,7 +228,11 @@ def pre_evaluate(vms):
             '''
             can tests be re written such that it is more closure compatible?
             '''
-            t.params = vtests[k]
+            t.params = {}
+            t.params['injected_square_current'] = {}
+            t.params['injected_square_current']['duration'] = None
+            t.params['injected_square_current']['amplitude'] = None
+            t.params['injected_square_current']['delay'] = None
 
             for key, value in vtests[k].items():
                 t.params['injected_square_current'][key] = value
