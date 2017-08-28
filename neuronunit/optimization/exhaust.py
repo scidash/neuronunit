@@ -685,6 +685,16 @@ print([ (v.rheobase,v.attrs) for v in vmpop1])
 
 import copy
 efitnesses = dview.map_sync(evaluate, copy.copy(vmpop1))
+
+
+#
+# Desired effect is to normalize
+
+from sklearn.preprocessing import StandardScaler
+errors = np.array([ np.sum(f.fitness.values) for f in enumerate(best_worst) ])
+X_std = StandardScaler().fit_transform(efitnesses)
+summed = [ np.sum(e) for e in efitnesses ]
+
 from sklearn.preprocessing import StandardScaler
 X_std = StandardScaler().fit_transform(efitnesses)
 
@@ -717,8 +727,8 @@ from matplotlib import pylab
 import numpy
 from matplotlib.colors import LogNorm
 plt.clf()
-#xs = numpy.array([ind[0] for ind in matrix_fill])
-#ys = numpy.array([ind[1] for ind in matrix_fill])
+xs = numpy.array([ind[0] for ind in matrix_fill])
+ys = numpy.array([ind[1] for ind in matrix_fill])
 min_ys = ys[numpy.where(summed_ef == numpy.min(summed_ef))]
 min_xs = xs[numpy.where(summed_ef == numpy.min(summed_ef))]
 fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
