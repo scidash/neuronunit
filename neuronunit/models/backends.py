@@ -10,7 +10,7 @@ import pickle
 import importlib
 
 import neuronunit.capabilities as cap
-import neuronunit.neuron.capabilities as cap_n
+#import neuronunit.neuron.capabilities as cap_n
 
 from quantities import ms, mV, nA
 
@@ -42,10 +42,12 @@ class Backend:
     """Base class for simulator backends that implement simulator-specific
     details of modifying, running, and reading results from the simulation
     """
-
+    #self.tstop = None
     def init_backend(self, *args, **kwargs):
         #self.attrs = {} if attrs is None else attrs
         self.load_model()
+        self.unpicklable = []
+
 
     attrs = None
 
@@ -78,6 +80,21 @@ class Backend:
     def save_results(self, path='.'):
         with open(path,'wb') as f:
             pickle.dump(self.results,f)
+
+
+class RAMBackend(Backend):
+    """A dummy backend that loads pre-computed results from disk"""
+
+    def init_backend(self, results_path='.'):
+        self.rerun = True
+        self.results = None
+
+        super(RAMBackend,self).init_backend()
+    def set_results(results):
+        self.results = results
+    def local_run(self, **run_params):
+        self.results = self.set_results()
+        return self.results
 
 
 class DiskBackend(Backend):
@@ -159,7 +176,7 @@ class NEURONBackend(Backend):
         self.h = neuronVar.h
         self.neuron = neuronVar
 
-    def set_stop_time(self, stopTime = 1000*ms):
+    def set_stop_time(self, stopTime = 1600*ms):
         """Sets the simulation duration
         stopTimeMs: duration in milliseconds
         """
@@ -192,7 +209,7 @@ class NEURONBackend(Backend):
         """Sets the simulation itegration method
         method: either "fixed" or "variable". Defaults to fixed.
         cvode is used when "variable" """
-	
+
 	# This line is compatible with the above cvodes
 	# statements.
         self.h.cvode.active(1 if method == "variable" else 0)
@@ -306,8 +323,10 @@ class NEURONBackend(Backend):
             self.neuron.load_mechanisms(modeldirname)
             #import the default simulation protocol
             #this next step may be unnecessary: TODO delete it and check.
+            #set_stop_time(
             self.set_stop_time(1600*ms)
-            self.ns = nrn.NeuronSimulation(self.tstop, dt=0.0025)
+            self.h.tstop
+            self.ns = nrn.NeuronSimulation(self.h.tstop, dt=0.0025)
             return self
 
         architecture = platform.machine()
@@ -347,7 +366,12 @@ class NEURONBackend(Backend):
 
     def set_run_params(self, **params):
         super(NEURONBackend,self).set_run_params(**params)
+        #import pdb
         for h_key,h_value in params.items():
+            print(h_key,h_value)
+            print('m_%s_%s_pop[0].%s=%s' % \
+                   (self.cell_name,self.cell_name,h_key,h_value))
+            #pdb.set_trace()
             #raise Exception(params)
             #h_key, h_value =list(value.items())[0]
             self.h('m_RS_RS_pop[0].%s=%s' % (h_key,h_value))
@@ -374,11 +398,14 @@ class NEURONBackend(Backend):
         #Although the complete purge is and reinit is computationally expensive,
         #and a more minimal purge is probably sufficient.
         '''
-        self.h=None
-        self.neuron=None
+        self.h = None
+        self.neuron = None
         import neuron
-        self.reset_h(neuron)
-        self.update_run_params(self.params)
+        self.reset_neuron(neuron)
+        #self.reset_h(neuron)
+        self.set_run_params(params = self.params)
+                #model.update_run_params(vm.attrs)
+        #self.update_run_params(self.params)
 
         c = copy.copy(current)
         if 'injected_square_current' in c.keys():
@@ -405,15 +432,15 @@ class NEURONBackend(Backend):
         #print("Finished NEURON simulation in %f seconds (%f mins)..."%(sim_time, sim_time/60.0))
         results={}
         # Convert to Python list for speed, variable has dim: voltage
-        results['vm'] = [float(x/1000.0) for x in copy.copy(self.neuron.h.v_v_of0.to_python())]  
+        results['vm'] = [float(x/1000.0) for x in copy.copy(self.neuron.h.v_v_of0.to_python())]
         #self.neuron.h.v_v_of0 = None # Convert to Python list for speed, variable has dim: voltage
         # Convert to Python list for speed, variable has dim: voltage
         results['t'] = [float(x) for x in copy.copy(self.neuron.h.v_time.to_python())]
         #self.neuron.h.v_time = None
-        if 'run_number' in self.results.keys():
-            results['run_number']=self.results['run_number']+1
+        if 'run_number' in results.keys():
+            results['run_number'] = results['run_number']+1
         else:
-            results['run_number']=1
+            results['run_number'] = 1
         return results
 
 class HasSegment(sciunit.Capability):
