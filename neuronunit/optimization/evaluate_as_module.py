@@ -146,22 +146,12 @@ def evaluate(vms,weight_matrix = None):#This method must be pickle-able for ipyp
             if k != 0:
                 v.prediction = None
 
-            if k == 1 or k == 2 or k == 3:
-                # Negative square pulse current.
-                v.params['injected_square_current']['duration'] = 100 * pq.ms
-                v.params['injected_square_current']['amplitude'] = -10 *pq.pA
-                v.params['injected_square_current']['delay'] = 30 * pq.ms
-            if k == 0 or k == 4 or k == 5 or k == 6 or k == 7:
-                # Threshold current.
-                v.params['injected_square_current']['duration'] = 1000 * pq.ms
-                v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
-                v.params['injected_square_current']['delay'] = 100 * pq.ms
 
             score = v.judge(model,stop_on_error = False, deep_error = True)
             differences.append(difference(v))
             pre_fitness.append(float(score.sort_key))
             model.run_number += 1
-
+            #vms.results[t]
     # outside of the test iteration block.
     if float(vms.rheobase) > 0.0:# and type(score) is not scores.InsufficientDataScore(None):
         for k,f in enumerate(copy.copy(pre_fitness)):
@@ -252,8 +242,6 @@ def pre_evaluate(vms):
                 vms.results[t]['v_m'] = v_m
             elif 't' in vms.results.keys():
                 vms.results[t]['v_m'] = v_m
-        #else:
-
     return vms
 
 #from scoop import futures
