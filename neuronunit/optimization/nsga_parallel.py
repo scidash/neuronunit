@@ -234,7 +234,8 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     model.load_model()
     assert type(vms.rheobase) is not type(None)
     #tests = get_neab.suite.tests
-    model.update_run_params(vms.attrs)
+    model.set_run_params(params = vms.attrs)
+    #model.update_run_params(vms.attrs)
     import copy
     tests = copy.copy(get_neab.tests)
     pre_fitness = []
@@ -495,7 +496,8 @@ def check_rheobase(vmpop,pop=None):
         new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
         model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
         model.load_model()
-        model.update_run_params(vm.attrs)
+        model.set_run_params(params = vm.attrs)
+        #model.update_run_params(vm.attrs)
 
         DELAY = 100.0*pq.ms
         DURATION = 1000.0*pq.ms
@@ -511,7 +513,9 @@ def check_rheobase(vmpop,pop=None):
             current.update(uc)
             current = {'injected_square_current':current}
             vm.run_number += 1
-            model.update_run_params(vm.attrs)
+            model.set_run_params(params = vm.attrs)
+            #model.update_run_params(vm.attrs)
+            #model.update_run_params(vm.attrs)
             model.inject_square_current(current)
             vm.previous = ampl
             n_spikes = model.get_spike_count()
@@ -564,7 +568,8 @@ def check_rheobase(vmpop,pop=None):
         new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
         model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
         model.load_model()
-        model.update_run_params(vm.attrs)
+        model.set_run_params(params = vm.attrs)
+        #model.update_run_params(vm.attrs)
         cnt = 0
         # If this it not the first pass/ first generation
         # then assume the rheobase value found before mutation still holds until proven otherwise.
@@ -663,6 +668,15 @@ vmpop = list(dview.map_sync(evaluate_as_module.pre_evaluate,copy.copy(vmpop)))
 
 
 import pdb; pdb.set_trace()
+'''
+Eventually want to use DiskBackend to save time.
+from neuronunit.models import backends
+from neuronunit.models.reduced import ReducedModel
+new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
+model = ReducedModel(new_file_path,name=str('vanilla'),backend='DiskBackend')
+model.load_model()
+model.update_run_params(vms.attrs)
+'''
 fitnesses = list(dview.map_sync(evaluate_as_module.evaluate, copy.copy(vmpop)))
 
 #fitnesses = dview.map_sync(evaluate, copy.copy(vmpop))
