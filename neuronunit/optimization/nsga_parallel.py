@@ -234,7 +234,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     model.load_model()
     assert type(vms.rheobase) is not type(None)
     #tests = get_neab.suite.tests
-    model.set_run_params(params = vms.attrs)
+    model.set_attrs(params = vms.attrs)
     #model.update_run_params(vms.attrs)
     import copy
     tests = copy.copy(get_neab.tests)
@@ -496,7 +496,7 @@ def check_rheobase(vmpop,pop=None):
         new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
         model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
         model.load_model()
-        model.set_run_params(params = vm.attrs)
+        model.set_attrs(params = vm.attrs)
         #model.update_run_params(vm.attrs)
 
         DELAY = 100.0*pq.ms
@@ -513,7 +513,8 @@ def check_rheobase(vmpop,pop=None):
             current.update(uc)
             current = {'injected_square_current':current}
             vm.run_number += 1
-            model.set_run_params(params = vm.attrs)
+            model.set_attrs(params = vm.attrs)
+            model.name = vm.attrs
             #model.update_run_params(vm.attrs)
             #model.update_run_params(vm.attrs)
             model.inject_square_current(current)
@@ -568,7 +569,7 @@ def check_rheobase(vmpop,pop=None):
         new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
         model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
         model.load_model()
-        model.set_run_params(params = vm.attrs)
+        model.set_attrs(params = vm.attrs)
         #model.update_run_params(vm.attrs)
         cnt = 0
         # If this it not the first pass/ first generation
@@ -585,6 +586,7 @@ def check_rheobase(vmpop,pop=None):
             #for vms in vmpop:
             #    vm.lookup.extend(vms.lookup)
             for step in vm.steps:
+                print(vm.attrs)
                 vm = check_current(step, vm)
                 vm = check_fix_range(vm)
             cnt += 1
@@ -642,7 +644,7 @@ pop = toolbox.population(n = MU)
 pop = [ toolbox.clone(i) for i in pop ]
 
 vmpop = update_vm_pop(pop, td)
-#import evaluate_as_module as em
+#import evaluate_as_module as
 vmpop , _ = check_rheobase(vmpop)
 
 
@@ -669,7 +671,7 @@ vmpop = list(dview.map_sync(evaluate_as_module.pre_evaluate,copy.copy(vmpop)))
 
 import pdb; pdb.set_trace()
 '''
-Eventually want to use DiskBackend to save time.
+Eventually want to use RAMBackend to save time.
 from neuronunit.models import backends
 from neuronunit.models.reduced import ReducedModel
 new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())

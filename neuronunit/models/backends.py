@@ -20,23 +20,7 @@ from neo.core import AnalogSignal
 import neuronunit.capabilities.spike_functions as sf
 import sciunit
 
-class HasSegment(sciunit.Capability):
-    """Model has a membrane segment of NEURON simulator"""
 
-    def setSegment(self, section, location = 0.5):
-        """Sets the target NEURON segment object
-        section: NEURON Section object
-        location: 0.0-1.0 value that refers to the location
-        along the section length. Defaults to 0.5
-        """
-
-        self.section = section
-        self.location = location
-
-    def getSegment(self):
-        """Returns the segment at the active section location"""
-
-        return self.section(self.location)
 
 class Backend:
     """Base class for simulator backends that implement simulator-specific
@@ -47,9 +31,10 @@ class Backend:
         #self.attrs = {} if attrs is None else attrs
         self.load_model()
         self.unpicklable = []
+        self.attrs = {}
 
 
-    attrs = None
+    #attrs = None
 
     # Name of the backend
     backend = None
@@ -58,8 +43,12 @@ class Backend:
     f = None
 
     def set_attrs(self, **attrs):
+        print(type(attrs))
+        print(type(self.attrs))
         """Set model attributes, e.g. input resistance of a cell"""
-        pass
+        #If the key is in the dictionary, it updates the key with the new value.
+        self.attrs.update(list(attrs.values())[0])
+        #pass
 
     def set_run_params(self, **params):
         """Set run-time parameters, e.g. the somatic current to inject"""
@@ -232,8 +221,8 @@ class NEURONBackend(Backend):
             dt = float(copy.copy(self.fixedTimeStep))
             fixed_signal =copy.copy(self.get_variable_step_analog_signal())
 
-        self.h.dt = None
-        self.fixedTimeStep = None
+        self.h.dt = dt
+        self.fixedTimeStep = float(1.0/dt)
         return AnalogSignal(fixed_signal,
                             units = mV,
                             sampling_period = dt * ms)
@@ -315,7 +304,7 @@ class NEURONBackend(Backend):
             sys.path.append(nrn_path)
             #raise Exception('%s %s' % (nrn_path,nrn_name+'_nrn'))
             import importlib
-            nrn = importlib.import_module(nrn_name+'_nrn')
+            nrn = importlib.import_module(nrn_name + '_nrn')
             #print(nrn_path)
             self.reset_neuron(nrn.neuron)
             #make sure mechanisms are loaded
@@ -327,12 +316,19 @@ class NEURONBackend(Backend):
             self.set_stop_time(1600*ms)
             self.h.tstop
             self.ns = nrn.NeuronSimulation(self.h.tstop, dt=0.0025)
+            print('this never executes')
             return self
 
+        self = cond_load()
+
+        '''
+        The code block below does not actually function:
         architecture = platform.machine()
         NEURON_file_path = os.path.join(self.orig_lems_file_path,architecture)
         if os.path.exists(NEURON_file_path):
-            self = cond_load()
+
+            print('this never executes')
+
         else:
             self.exec_in_dir = tempfile.mkdtemp()
             pynml.run_lems_with_jneuroml_neuron(self.orig_lems_file_path,
@@ -346,7 +342,8 @@ class NEURONBackend(Backend):
                               verbose=DEFAULTS['v'],
                               exit_on_fail = True)
 
-            self=cond_load()
+            self = cond_load()
+        '''
 
         #Although the above approach successfuly instantiates a LEMS/neuroml model in pyhoc
         #the resulting hoc variables for current source and cell name are idiosyncratic (not generic).
@@ -364,25 +361,48 @@ class NEURONBackend(Backend):
         more_attributes = None #force garbage collection of more_attributes, its not needed anymore.
         return self
 
-    def set_run_params(self, **params):
-        super(NEURONBackend,self).set_run_params(**params)
-        #import pdb
-        for h_key,h_value in params.items():
-            print(h_key,h_value)
-            print('m_%s_%s_pop[0].%s=%s' % \
-                   (self.cell_name,self.cell_name,h_key,h_value))
-            #pdb.set_trace()
-            #raise Exception(params)
-            #h_key, h_value =list(value.items())[0]
-            self.h('m_RS_RS_pop[0].%s=%s' % (h_key,h_value))
-            self.h('m_%s_%s_pop[0].%s=%s' % \
-                   (self.cell_name,self.cell_name,h_key,h_value))
+    def set_attrs(self,**attrs):
+        '''
+        set model attributes in HOC memory space.
+        over riding a stub of the parent class.
+        '''
+        super(NEURONBackend,self).set_attrs(attrs = attrs)
+        assert type(self.attrs) is not type(None)
+        # NEURON does not support dictionaries.
+        # is it stands **params is a dictionary of dictionaries
+        unpack_splat = list(attrs.values())[0]
+        for h_key,h_value in unpack_splat.items():
+            self.h('m_RS_RS_pop[0].{0} = {1}'.format(h_key,h_value))
+            self.h('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
+        print('printing the output from neuron \
+         psections to standard out \
+         is the closest thing to \
+        a unit test at this point \
+        if psection does not match \
+        model attrs then its safe to \
+        show_plot_already that the code \
+        for assigning from splat to dictionary \
+        to hoc variables is not updating properly ')
+
+
+        self.h('psection()')
+
+        '''
+        Below are experimental rig recording parameters.
+        These can possibly go in a seperate method.
+        '''
+
         self.h(' { v_time = new Vector() } ')
         self.h(' { v_time.record(&t) } ')
         self.h(' { v_v_of0 = new Vector() } ')
         self.h(' { v_v_of0.record(&RS_pop[0].v(0.5)) } ')
         self.h(' { v_u_of0 = new Vector() } ')
         self.h(' { v_u_of0.record(&m_RS_RS_pop[0].u) } ')
+
+        self.tVector = self.h.v_time
+        self.vVector = self.h.v_v_of0
+
+        return self
 
     def inject_square_current(self, current):
         '''
@@ -403,7 +423,7 @@ class NEURONBackend(Backend):
         import neuron
         self.reset_neuron(neuron)
         #self.reset_h(neuron)
-        self.set_run_params(params = self.params)
+        self.set_attrs(attrs = self.attrs)
                 #model.update_run_params(vm.attrs)
         #self.update_run_params(self.params)
 
@@ -442,6 +462,15 @@ class NEURONBackend(Backend):
         else:
             results['run_number'] = 1
         return results
+
+
+    def get_spike_count(self):
+        import neuronunit.capabilities.spike_functions as sf
+
+        spike_train  = sf.get_spike_train(self.get_membrane_potential())
+        #spike_train = sf.get_spike_count(st)
+        return len(spike_train)
+
 
 class HasSegment(sciunit.Capability):
     """Model has a membrane segment of NEURON simulator"""
@@ -483,19 +512,3 @@ class SingleCellModel(NEURONBackend):
         self.tVector.record(self.h._ref_t)
 
         return
-        ''',
-        cap_n.HasSegment,
-        cap.ProducesMembranePotential,
-        cap.ReceivesSquareCurrent,
-        cap.ProducesActionPotentials,
-        cap.ProducesSpikes):
-        A NEURON simulator model for an isolated single cell membrane
-        '''
-
-
-        """
-        hVar: the h variable of NEURON
-        section: NEURON Section object of an isolated single cell into which current will be injected, and whose voltage will be observed.
-        loc: the fraction along the Section object length that will be used for current injection and voltage observation.
-        name: Optional model name.
-        """
