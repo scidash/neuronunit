@@ -125,7 +125,8 @@ def evaluate(vms,weight_matrix = None):#This method must be pickle-able for ipyp
     model.load_model()
     assert type(vms.rheobase) is not type(None)
     #tests = get_neab.suite.tests
-    model.update_run_params(vms.attrs)
+    model.set_attrs(attrs = vms.attrs)
+
     model.rheobase = vms.rheobase * pq.pA
 
     import copy
@@ -201,9 +202,6 @@ def pre_evaluate(vms):
     import numpy as np
     import get_neab
 
-
-    import get_neab
-
     import copy
     # copying here is critical for get_neab
     tests = copy.copy(get_neab.tests)
@@ -226,6 +224,8 @@ def pre_evaluate(vms):
 
             for key, value in vtests[k].items():
                 t.params['injected_square_current'][key] = value
+
+
             if k == 0:
                 tests[k].prediction = {}
                 tests[k].prediction['value'] = vms.rheobase * pq.pA
@@ -233,7 +233,8 @@ def pre_evaluate(vms):
             new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
             model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
             model.load_model()
-            model.update_run_params(vms.attrs)
+            model.set_attrs(attrs = vms.attrs)
+            print(t,model)
             score = t.judge(model,stop_on_error = False, deep_error = True)
             print(model.get_spike_count())
             v_m = model.get_membrane_potential()
@@ -413,7 +414,8 @@ def check_rheobase(vmpop,pop=None):
         new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
         model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
         model.load_model()
-        model.update_run_params(vm.attrs)
+        model.set_attrs(attrs = vms.attrs)
+
 
         DELAY = 100.0*pq.ms
         DURATION = 1000.0*pq.ms
@@ -429,7 +431,8 @@ def check_rheobase(vmpop,pop=None):
             current.update(uc)
             current = {'injected_square_current':current}
             vm.run_number += 1
-            model.update_run_params(vm.attrs)
+            model.set_attrs(attrs = vm.attrs)
+
             model.inject_square_current(current)
             vm.previous = ampl
             n_spikes = model.get_spike_count()
@@ -482,7 +485,8 @@ def check_rheobase(vmpop,pop=None):
         #os.system('cp '+str(get_neab.LEMS_MODEL_PATH)+' '+new_file_path)
         model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
         model.load_model()
-        model.update_run_params(vm.attrs)
+        model.set_attrs(attrs = vm.attrs)
+
         cnt = 0
         # If this it not the first pass/ first generation
         # then assume the rheobase value found before mutation still holds until proven otherwise.
