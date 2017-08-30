@@ -40,11 +40,11 @@ class LEMSModel(cap.Runnable,
         LEMS_file_path: Path to LEMS file (an xml file).
         name: Optional model name.
         """
-        print("Calling new")
+        #print("Calling new")
         self  = super().__new__(cls)#, *args, **kwargs)
         if 'fresh' in kwargs and not kwargs['fresh']:
             self.set_backend(kwargs['backend'])
-        print(self)
+        #print(self)
         return self
 
     def __getnewargs_ex__(self): # This method is required by pickle to know what 
@@ -88,7 +88,7 @@ class LEMSModel(cap.Runnable,
             new_bases = tuple([b for b in self.__class__.__bases__ \
                                if issubclass(b,sciunit.Model) or \
                                not issubclass(b,backends.Backend)])
-            print(self._backend.__class__,new_bases)
+            #print(self._backend.__class__,new_bases)
             #self.__class__.__bases__ = 
             new_bases = (self._backend.__class__,) + new_bases
             Dummy = type("%s with %s backend" % \
