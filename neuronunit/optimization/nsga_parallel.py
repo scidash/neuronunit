@@ -1,11 +1,11 @@
 ##
 # Assumption that this file was executed after first executing the bash: ipcluster start -n 8 --profile=default &
 ##
-
+import matplotlib; matplotlib.use('agg')
 
 import matplotlib # Its not that this file is responsible for doing plotting, but it calls many modules that are, such that it needs to pre-empt
 # setting of an appropriate backend.
-matplotlib.use('Agg')
+matplotlib.use('agg')
 
 import sys
 import os
@@ -234,7 +234,7 @@ def evaluate(vms):#This method must be pickle-able for ipyparallel to work.
     model.load_model()
     assert type(vms.rheobase) is not type(None)
     #tests = get_neab.suite.tests
-    model.set_attrs(params = vms.attrs)
+    model.set_attrs(**vms.attrs)
     #model.update_run_params(vms.attrs)
     import copy
     tests = copy.copy(get_neab.tests)
@@ -496,7 +496,7 @@ def check_rheobase(vmpop,pop=None):
         new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
         model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
         model.load_model()
-        model.set_attrs(params = vm.attrs)
+        model.set_attrs(**vm.attrs)
         #model.update_run_params(vm.attrs)
 
         DELAY = 100.0*pq.ms
@@ -513,7 +513,7 @@ def check_rheobase(vmpop,pop=None):
             current.update(uc)
             current = {'injected_square_current':current}
             vm.run_number += 1
-            model.set_attrs(params = vm.attrs)
+            model.set_attrs(** vm.attrs)
             model.name = vm.attrs
             #model.update_run_params(vm.attrs)
             #model.update_run_params(vm.attrs)
@@ -569,7 +569,7 @@ def check_rheobase(vmpop,pop=None):
         new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
         model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
         model.load_model()
-        model.set_attrs(params = vm.attrs)
+        model.set_attrs(**vm.attrs)
         #model.update_run_params(vm.attrs)
         cnt = 0
         # If this it not the first pass/ first generation
