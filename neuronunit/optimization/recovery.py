@@ -5,9 +5,7 @@ rc = ipp.Client(profile='default')
 dview = rc[:]
 import matplotlib as mpl
 # setting of an appropriate backend.
-#try:#
-#    mpl.use('Qt5Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
-#except:
+
 mpl.use('Agg')
 
 import pickle
