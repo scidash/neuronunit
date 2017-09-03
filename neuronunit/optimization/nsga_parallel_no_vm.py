@@ -4,11 +4,8 @@
 
 
 import matplotlib # Its not that this file is responsible for doing plotting, but it calls many modules that are, such that it needs to pre-empt
-# setting of an appropriate backend.
-try:
-    matplotlib.use('Qt5Agg')
-except:
-    matplotlib.use('Agg')
+
+matplotlib.use('Agg')
 
 import sys
 import os
@@ -41,10 +38,8 @@ with dview.sync_imports(): # Causes each of these things to be imported on the w
     import matplotlib
     import neuronunit
     import model_parameters as modelp
-    try:
-        matplotlib.use('Qt5Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
-    except:
-        matplotlib.use('Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
+
+    matplotlib.use('Agg') # Need to do this before importing neuronunit on a Mac, because OSX backend won't work
                           # on the worker threads.
     import pdb
     import array
