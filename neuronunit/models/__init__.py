@@ -17,15 +17,16 @@ class LEMSModel(cap.Runnable,
                 sciunit.Model):
     """A generic LEMS model"""
 
-    def __init__(self, LEMS_file_path=None, name=None, 
+    def __init__(self, LEMS_file_path, name=None, 
                     backend='jNeuroML', attrs=None):
         #for base in cls.__bases__:
         #    sciunit.Model.__init__()
         if name is None:
-            name = os.path.split(self.lems_file_path)[1].split('.')[0]
+            name = os.path.split(LEMS_file_path)[1].split('.')[0]
         #sciunit.Modelsuper(LEMSModel,self).__init__(name=name)
         self.attrs = attrs if attrs else {}
-        self.orig_lems_file_path = LEMS_file_path
+        self.orig_lems_file_path = os.path.abspath(LEMS_file_path)
+        assert os.path.isfile(self.orig_lems_file_path)
         self.create_lems_file(name)
         self.run_defaults = pynml.DEFAULTS
         self.run_defaults['nogui'] = True
@@ -41,9 +42,12 @@ class LEMSModel(cap.Runnable,
         name: Optional model name.
         """
         #print("Calling new")
+        #print(cls.__bases__)
+        #print("args",args)
+        #print("kwargs",kwargs)
         self  = super().__new__(cls)#, *args, **kwargs)
-        if 'fresh' in kwargs and not kwargs['fresh']:
-            self.set_backend(kwargs['backend'])
+        #if 'fresh' in kwargs and not kwargs['fresh']:
+        #    self.set_backend(kwargs['backend'])
         #print(self)
         return self
 
@@ -52,6 +56,7 @@ class LEMSModel(cap.Runnable,
                               # this class are eventually unpickled.  
                               # Otherwise __new__() will have no arguments.  
         # A tuple containing the extra args and kwargs to pass to __new__. 
+        #print("Calling __getnewargs_ex__")
         return (tuple(), # No args
                 {'fresh':False, # Not fresh, i.e. restored from pickling
                  'backend':self.backend})  # The backend to set.  
@@ -85,21 +90,16 @@ class LEMSModel(cap.Runnable,
             # Add all of the backend's methods to the model instance, 
             # but remove base classes that are pure backends first, 
             # so that new backends replace old backends.  
-            new_bases = tuple([b for b in self.__class__.__bases__ \
-                               if issubclass(b,sciunit.Model) or \
-                               not issubclass(b,backends.Backend)])
-            #print(self._backend.__class__,new_bases)
-            #self.__class__.__bases__ = 
-            new_bases = (self._backend.__class__,) + new_bases
+            new_bases = [b for b in self.__class__.__bases__ \
+                         if not issubclass(b,sciunit.Model) \
+                         and not issubclass(b,backends.Backend)]
+            new_bases = [self._backend.__class__,self.__class__,] + new_bases
+            new_bases = tuple(new_bases)
             Dummy = type("%s with %s backend" % \
                          (self.__class__.__name__,self.backend),
                          new_bases,
                          self.__dict__) 
             self.__class__ = Dummy
-            #class Dummy:
-            #    pass
-            #Dummy = 
-            #self.__class__ = type(self.__class__, self._backend) 
         
         elif name is None:
             # The base class should not be called.
@@ -114,7 +114,16 @@ class LEMSModel(cap.Runnable,
         if not hasattr(self,'temp_dir'):
             self.temp_dir = tempfile.gettempdir()
         self.lems_file_path  = os.path.join(self.temp_dir, '%s.xml' % name)
-        shutil.copy2(self.orig_lems_file_path, self.lems_file_path)
+        parent,file = os.path.split(self.orig_lems_file_path)
+        #print(parent,file)
+        protected = ['Cells.xml','Networks.xml','Simulation.xml']
+        with open(self.orig_lems_file_path,'r') as f_orig:
+            f = open(self.lems_file_path,'w')
+            for line in f_orig:
+                if 'file=\"' in line and not any([x in line for x in protected]):
+                    line = line.replace('file=\"', 'file=\"%s/' % parent)
+                f.write(line)        
+            f.close()
         if self.attrs:
             self.set_lems_attrs(self.attrs)
 
@@ -157,8 +166,9 @@ class LEMSModel(cap.Runnable,
         # Edit LEMS files.
         nml_file_rel_paths = [x.attrib['file'] for x in \
                               lems_tree.xpath("Include[contains(@file, '.nml')]")]
-        nml_file_paths = [os.path.join(os.path.split(self.lems_file_path)[0],x) \
+        nml_file_paths = [os.path.join(os.path.split(self.orig_lems_file_path)[0],x) \
                           for x in nml_file_rel_paths]
+        #print(nml_file_paths)
         trees.update({x:nml.nml.parsexml_(x) for x in nml_file_paths})
 
         # Edit NML files.
