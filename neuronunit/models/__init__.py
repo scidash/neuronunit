@@ -87,20 +87,6 @@ class LEMSModel(cap.Runnable,
         if name in options:
             self.backend = name
             self._backend = options[name]()
-            # Add all of the backend's methods to the model instance, 
-            # but remove base classes that are pure backends first, 
-            # so that new backends replace old backends.  
-            new_bases = [b for b in self.__class__.__bases__ \
-                         if not issubclass(b,sciunit.Model) \
-                         and not issubclass(b,backends.Backend)]
-            new_bases = [self._backend.__class__,self.__class__,] + new_bases
-            new_bases = tuple(new_bases)
-            Dummy = type("%s with %s backend" % \
-                         (self.__class__.__name__,self.backend),
-                         new_bases,
-                         self.__dict__) 
-            self.__class__ = Dummy
-        
         elif name is None:
             # The base class should not be called.
             raise Exception(("A backend (e.g. 'jNeuroML' or 'NEURON') "
@@ -108,7 +94,7 @@ class LEMSModel(cap.Runnable,
         else:
             raise Exception("Backend %s not found in backends.py" \
                             % name)
-        self.init_backend(*args, **kwargs)
+        self._backend.init_backend(*args, **kwargs)
 
     def create_lems_file(self, name):
         if not hasattr(self,'temp_dir'):
@@ -150,7 +136,7 @@ class LEMSModel(cap.Runnable,
             return
         #self.update_run_params(self.attrs)
 
-        self.results = self.local_run()
+        self.results = self._backend.local_run()
         self.last_run_params = deepcopy(self.run_params)
         self.rerun = False
         # Reset run parameters so the next test has to pass its own 
