@@ -243,6 +243,9 @@ class TestPulseTest(VmTest):
 
 class InputResistanceTest(TestPulseTest):
     """Tests the input resistance of a cell."""
+    def __init__(self):
+        super(InputResistanceTest).__init__()
+        self.prediction = None
 
     name = "Input resistance test"
 
@@ -307,6 +310,9 @@ class TimeConstantTest(TestPulseTest):
 
 class CapacitanceTest(TestPulseTest):
     """Tests the input resistance of a cell."""
+    def __init__(self):
+        super(CapacitanceTest).__init__()
+        self.prediction = None
 
     name = "Capacitance test"
 
@@ -342,7 +348,9 @@ class CapacitanceTest(TestPulseTest):
 
 class APWidthTest(VmTest):
     """Tests the full widths of action potentials at their half-maximum."""
-
+    def __init__(self):
+        super(APWidthTest).__init__()
+        self.prediction = None
     required_capabilities = (cap.ProducesActionPotentials,)
 
     name = "AP width test"
@@ -361,12 +369,16 @@ class APWidthTest(VmTest):
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
         model.rerun = True
-        widths = model.get_AP_widths()
+        if len(model.get_spike_train):
+           widths = model.get_AP_widths()
         # Put prediction in a form that compute_score() can use.
-        prediction = {'mean':np.mean(widths) if len(widths) else None,
-                      'std':np.std(widths) if len(widths) else None,
-                      'n':len(widths)}
-        self.prediction = prediction
+           prediction = {'mean':np.mean(widths) if len(widths) else None,
+                        'std':np.std(widths) if len(widths) else None,
+                        'n':len(widths)}
+        
+           self.prediction = prediction
+        else:
+           self.prediction = None
         return prediction
 
     def compute_score(self, observation, prediction):
@@ -384,7 +396,9 @@ class InjectedCurrentAPWidthTest(APWidthTest):
     Tests the full widths of APs at their half-maximum
     under current injection.
     """
-
+    def __init__(self):
+        super(InjectedCurrentAPWidthTest).__init__()
+        self.prediction = None
     required_capabilities = (cap.ReceivesSquareCurrent,)
 
     params = {'injected_square_current':
@@ -405,7 +419,9 @@ class InjectedCurrentAPWidthTest(APWidthTest):
 
 class APAmplitudeTest(VmTest):
     """Tests the heights (peak amplitude) of action potentials."""
-
+    def __init__(self):
+        super(APAmplitudeTest).__init__()
+        self.prediction = None
     required_capabilities = (cap.ProducesActionPotentials,)
 
     name = "AP amplitude test"
@@ -461,6 +477,9 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
     Tests the heights (peak amplitude) of action potentials
     under current injection.
     """
+    def __init__(self):
+        super(InjectedCurrentAPAmplitudeTest).__init__()
+        self.prediction = None
 
     required_capabilities = (cap.ReceivesSquareCurrent,)
 
@@ -495,6 +514,9 @@ class APThresholdTest(VmTest):
     units = pq.mV
 
     ephysprop_name = 'Spike Threshold'
+    def __init__(self):
+        super(APThresholdTest).__init__()
+        self.prediction = None
 
     def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
@@ -524,7 +546,9 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
     Tests the thresholds of action potentials
     under current injection.
     """
-
+    def __init__(self):
+        super(InjectedCurrentAPThresholdTest).__init__()
+        self.prediction = None
     required_capabilities = (cap.ReceivesSquareCurrent,)
 
     params = {'injected_square_current':

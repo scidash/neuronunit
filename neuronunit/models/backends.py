@@ -150,6 +150,7 @@ class NEURONBackend(Backend):
         #Should check if MPI parallel neuron is supported and invoked.
         self.h.load_file("stdlib.hoc")
         self.h.load_file("stdgui.hoc")
+        self.lookup = {}
         #self.h.cvode.active(1)
         #pdb.set_trace()
         #self.h.cvode.active
@@ -468,7 +469,7 @@ class NEURONBackend(Backend):
 
     def get_AP_widths(self):
         import neuronunit.capabilities.spike_functions as sf
-    
+
         action_potentials = sf.get_spike_waveforms(self.get_membrane_potential())
         if len(action_potentials):
             sw  = sf.spikes2widths(action_potentials)
