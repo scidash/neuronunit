@@ -17,7 +17,7 @@ class LEMSModel(cap.Runnable,
     """A generic LEMS model"""
 
     def __init__(self, LEMS_file_path=None, name=None, 
-                    backend='jNeuroML', attrs=None):
+                    backend='NEURON', attrs=None):
         #for base in cls.__bases__:
         #    sciunit.Model.__init__()
         if name is None:

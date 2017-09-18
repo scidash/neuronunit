@@ -1,27 +1,48 @@
 ##
 # Assumption that this file was executed after first executing the bash: ipcluster start -n 8 --profile=default &
 ##
-import ipyparallel as ipp
-rc = ipp.Client(profile='default')
-rc[:].use_cloudpickle()
-inv_pid_map = {}
-dview = rc[:]
+
+
+
 
 import os
-
-#def p_imports():
 from neuronunit.models import backends
+import neuronunit
+print(neuronunit.models.__file__)
 from neuronunit.models.reduced import ReducedModel
 import get_neab
-print(get_neab.LEMS_MODEL_PATH)
-new_file_path = '{0}{1}'.format(str(get_neab.LEMS_MODEL_PATH),int(os.getpid()))
-print(new_file_path)
+from ipyparallel import depend, require, dependent
 
-os.system('cp ' + str(get_neab.LEMS_MODEL_PATH)+str(' ') + new_file_path)
-model = ReducedModel(new_file_path,name='vanilla',backend='NEURON')
+model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
 model.load_model()
-#    return
 
+class DataTC(object):
+    '''
+    Data Transport Vessel
+
+    This Object class serves as a data type for storing rheobase search
+    attributes and other useful parameters,
+    with the distinction that unlike the NEURON model this class
+    can be transported across HOSTS/CPUs
+    '''
+    def __init__(self):
+        self.lookup = {}
+        self.rheobase = None
+        self.previous = 0
+        self.run_number = 0
+        self.attrs = None
+        self.steps = None
+        self.name = None
+        self.results = None
+        self.fitness = None
+        self.score = None
+        self.boolean = False
+        self.initiated = False
+        self.delta = []
+        self.evaluated = False
+        self.results = {}
+        self.searched = []
+        self.searchedd = {}
 #dview.apply_sync(p_imports)
 #p_imports()
 
@@ -34,7 +55,7 @@ def difference(v): # v is a tesst
     understand how to rescale one unit with another
     compatible unit.
     '''
-
+    assert type(v) is not type(None)
     import numpy as np
     print(v.prediction.keys())
     print(v.prediction.values())
@@ -65,7 +86,7 @@ def difference(v): # v is a tesst
     print(unit_delta)
     return float(unit_delta)
 
-def pre_format(vms):
+def pre_format(dtc):
     import quantities as pq
     import copy
     vtest = {}
@@ -73,13 +94,8 @@ def pre_format(vms):
     tests = get_neab.tests
 
     for k,v in enumerate(tests):
-        vtest[k] = {}
-        if k == 0:
-            prediction = {}
-            prediction['value'] = vms.rheobase * pq.pA
-
-        if k != 0:
-            prediction = None
+        #if k != 0:
+        #    prediction = None
 
         if k == 1 or k == 2 or k == 3:
             # Negative square pulse current.
@@ -90,13 +106,14 @@ def pre_format(vms):
         if k == 0 or k == 4 or k == 5 or k == 6 or k == 7:
             # Threshold current.
             vtest[k]['duration'] = 1000 * pq.ms
-            vtest[k]['amplitude'] = vms.rheobase * pq.pA
+            vtest[k]['amplitude'] = dtc.rheobase * pq.pA
             vtest[k]['delay'] = 100 * pq.ms
 
         v = None
     return vtest
-
-def evaluate(vms,weight_matrix = None):#This method must be pickle-able for ipyparallel to work.
+#@require('quantities','numpy','get_neab','quanitites')
+@require('get_neab')
+def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyparallel to work.
     '''
     Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
     is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
@@ -104,8 +121,8 @@ def evaluate(vms,weight_matrix = None):#This method must be pickle-able for ipyp
 
     outputs: a tuple that is a compound error function that NSGA can act on.
 
-    Assumes rheobase for each individual virtual model object (vms) has already been found
-    there should be a check for vms.rheobase, and if not then error.
+    Assumes rheobase for each individual virtual model object (dtc) has already been found
+    there should be a check for dtc.rheobase, and if not then error.
     Inputs a gene and a virtual model object.
     outputs are error components.
     '''
@@ -114,47 +131,50 @@ def evaluate(vms,weight_matrix = None):#This method must be pickle-able for ipyp
     from neuronunit.models.reduced import ReducedModel
     import quantities as pq
     import numpy as np
-    import get_neab
-    from itertools import repeat
     #import unittest
     #tc = unittest.TestCase('__init__')
-
-
-    new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-    model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.load_model()
-    assert type(vms.rheobase) is not type(None)
+    assert type(dtc.rheobase) is not type(None)
     #tests = get_neab.suite.tests
-    model.set_attrs(attrs = vms.attrs)
-
-    model.rheobase = vms.rheobase * pq.pA
-
+    model.set_attrs(attrs = dtc.attrs)
+    model.rheobase = dtc.rheobase * pq.pA
     import copy
     tests = copy.copy(get_neab.tests)
     pre_fitness = []
     fitness = []
     differences = []
     fitness1 = []
-    if float(vms.rheobase) <= 0.0:
+    if float(dtc.rheobase) <= 0.0:
         fitness1 = [ 125.0 for i in tests ]
 
-    elif float(vms.rheobase) > 0.0:
+
+
+    elif float(dtc.rheobase) > 0.0:
         for k,v in enumerate(tests):
+
+            vtests = pre_format(copy.copy(dtc))
+            for key, value in vtests[k].items():
+                v.params['injected_square_current'][key] = value
+
+            #vtest[k] = {}
             if k == 0:
-                v.prediction = {}
-                v.prediction['value'] = vms.rheobase * pq.pA
-
-            if k != 0:
                 v.prediction = None
+                v.prediction = {}
+                v.prediction['value'] = dtc.rheobase * pq.pA
 
 
-            score = v.judge(model,stop_on_error = False, deep_error = True)
+            score = v.judge(model,stop_on_error = True, deep_error = True)
+            print(score)
+            #if type(v.prediction) is type(None):
+            #    import pdb; pdb.set_trace()
+            assert type(v.prediction) is not type(None)
             differences.append(difference(v))
             pre_fitness.append(float(score.sort_key))
             model.run_number += 1
-            #vms.results[t]
+            #dtc.results[t]
     # outside of the test iteration block.
-    if float(vms.rheobase) > 0.0:# and type(score) is not scores.InsufficientDataScore(None):
+    if float(dtc.rheobase) > 0.0:# and type(score) is not scores.InsufficientDataScore(None):
         for k,f in enumerate(copy.copy(pre_fitness)):
 
             fitness1.append(difference(v))
@@ -195,7 +215,7 @@ def evaluate(vms,weight_matrix = None):#This method must be pickle-able for ipyp
 
 
 
-def pre_evaluate(vms):
+def pre_evaluate(dtc):
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
     import quantities as pq
@@ -205,13 +225,13 @@ def pre_evaluate(vms):
     import copy
     # copying here is critical for get_neab
     tests = copy.copy(get_neab.tests)
-    from itertools import repeat
-    vtests = pre_format(copy.copy(vms))
-
+    #from itertools import repeat
+    vtests = pre_format(copy.copy(dtc))
+    print(vtests)
     tests[0].prediction = {}
-    tests[0].prediction['value'] = vms.rheobase * pq.pA
+    tests[0].prediction['value'] = dtc.rheobase * pq.pA
 
-    if float(vms.rheobase) > 0.0:
+    if float(dtc.rheobase) > 0.0:
         for k,t in enumerate(tests):
             '''
             can tests be re written such that it is more closure compatible?
@@ -228,22 +248,28 @@ def pre_evaluate(vms):
 
             if k == 0:
                 tests[k].prediction = {}
-                tests[k].prediction['value'] = vms.rheobase * pq.pA
+                tests[k].prediction['value'] = dtc.rheobase * pq.pA
 
-            new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-            model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
+            #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
+            model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
             model.load_model()
-            model.set_attrs(attrs = vms.attrs)
-            print(t,model)
+            model.set_attrs(attrs = dtc.attrs)
+            print(t,model,'within pre evaluate, eam')
+
             score = t.judge(model,stop_on_error = False, deep_error = True)
+            print(score,'within pre evaluate, eam')
+
             print(model.get_spike_count())
+            print(type(v_m),'within pre evaluate, eam')
+
             v_m = model.get_membrane_potential()
-            if 't' not in vms.results.keys():
-                vms.results[t] = {}
-                vms.results[t]['v_m'] = v_m
-            elif 't' in vms.results.keys():
-                vms.results[t]['v_m'] = v_m
-    return vms
+            print(type(v_m),'within pre evaluate, eam')
+            if 't' not in dtc.results.keys():
+                dtc.results[t] = {}
+                dtc.results[t]['v_m'] = v_m
+            elif 't' in dtc.results.keys():
+                dtc.results[t]['v_m'] = v_m
+    return dtc
 
 #from scoop import futures
 
@@ -256,22 +282,22 @@ def get_trans_dict(param_dict):
 import model_parameters
 param_dict = model_parameters.model_params
 
-def vm_to_ind(vm,td):
+def dtc_to_ind(dtc,td):
     '''
-    Re instanting Virtual Model at every update vmpop
+    Re instanting Virtual Model at every update dtcpop
     is Noneifying its score attribute, and possibly causing a
     performance bottle neck.
     '''
 
     ind =[]
     for k in td.keys():
-        ind.append(vm.attrs[td[k]])
-    ind.append(vm.rheobase)
+        ind.append(dtc.attrs[td[k]])
+    ind.append(dtc.rheobase)
     return ind
 
 
 
-def update_vm_pop(pop, trans_dict):
+def update_dtc_pop(pop, trans_dict):
     '''
     inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
     outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
@@ -280,41 +306,41 @@ def update_vm_pop(pop, trans_dict):
     If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
     corresponding virtual model objects.
     '''
-    from itertools import repeat
+    #from itertools import repeat
     import numpy as np
     import copy
     pop = [toolbox.clone(i) for i in pop ]
     #import utilities
     def transform(ind):
         '''
-        Re instanting Virtual Model at every update vmpop
+        Re instanting Virtual Model at every update dtcpop
         is Noneifying its score attribute, and possibly causing a
         performance bottle neck.
         '''
-        vm = utilities.VirtualModel()
+        dtc = DataTC()
 
         param_dict = {}
         for i,j in enumerate(ind):
             param_dict[trans_dict[i]] = str(j)
-        vm.attrs = param_dict
-        vm.name = vm.attrs
-        vm.evaluated = False
-        return vm
+        dtc.attrs = param_dict
+        dtc.name = dtc.attrs
+        dtc.evaluated = False
+        return dtc
 
 
     if len(pop) > 0:
-        vmpop = dview.map_sync(transform, pop)
-        vmpop = list(copy.copy(vmpop))
+        dtcpop = dview.map_sync(transform, pop)
+        dtcpop = list(copy.copy(dtcpop))
     else:
         # In this case pop is not really a population but an individual
         # but parsimony of naming variables
         # suggests not to change the variable name to reflect this.
-        vmpop = transform(pop)
-    return vmpop
+        dtcpop = transform(pop)
+    return dtcpop
 
 
 
-def check_rheobase(vmpop,pop=None):
+def check_rheobase(dtcpop,pop=None):
     '''
     inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
     outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
@@ -323,7 +349,7 @@ def check_rheobase(vmpop,pop=None):
     If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
     corresponding virtual model objects.
     '''
-    def check_fix_range(vms):
+    def check_fix_range(dtc):
         '''
         Inputs: lookup, A dictionary of previous current injection values
         used to search rheobase
@@ -341,17 +367,17 @@ def check_rheobase(vmpop,pop=None):
         sub=[]
         supra=[]
         steps=[]
-        vms.rheobase = 0.0
-        for k,v in vms.lookup.items():
-            vm.searchedd[v]=float(k)
+        dtc.rheobase = 0.0
+        for k,v in dtc.lookup.items():
+            dtc.searchedd[v]=float(k)
 
             if v == 1:
                 #A logical flag is returned to indicate that rheobase was found.
-                vms.rheobase=float(k)
-                vm.searched.append(float(k))
-                vms.steps = 0.0
-                vms.boolean = True
-                return vms
+                dtc.rheobase=float(k)
+                dtc.searched.append(float(k))
+                dtc.steps = 0.0
+                dtc.boolean = True
+                return dtc
             elif v == 0:
                 sub.append(k)
             elif v > 0:
@@ -394,12 +420,12 @@ def check_rheobase(vmpop,pop=None):
             np.delete(steps,np.array(supra))
             steps = [ i*pq.pA for i in steps ]
 
-        vms.steps = steps
-        vms.rheobase = None
-        return copy.copy(vms)
+        dtc.steps = steps
+        dtc.rheobase = None
+        return copy.copy(dtc)
 
 
-    def check_current(ampl,vm):
+    def check_current(ampl,dtc):
         '''
         Inputs are an amplitude to test and a virtual model
         output is an virtual model with an updated dictionary.
@@ -411,10 +437,10 @@ def check_rheobase(vmpop,pop=None):
         from neuronunit.models import backends
         from neuronunit.models.reduced import ReducedModel
 
-        new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
-        model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
+        #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
+        model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
         model.load_model()
-        model.set_attrs(attrs = vms.attrs)
+        model.set_attrs(attrs = dtc.attrs)
 
 
         DELAY = 100.0*pq.ms
@@ -423,93 +449,93 @@ def check_rheobase(vmpop,pop=None):
                   {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
 
-        if float(ampl) not in vm.lookup or len(vm.lookup)==0:
+        if float(ampl) not in dtc.lookup or len(dtc.lookup)==0:
 
             current = params.copy()['injected_square_current']
 
             uc = {'amplitude':ampl}
             current.update(uc)
             current = {'injected_square_current':current}
-            vm.run_number += 1
-            model.set_attrs(attrs = vm.attrs)
+            dtc.run_number += 1
+            model.set_attrs(attrs = dtc.attrs)
 
             model.inject_square_current(current)
-            vm.previous = ampl
+            dtc.previous = ampl
             n_spikes = model.get_spike_count()
-            vm.lookup[float(ampl)] = n_spikes
+            dtc.lookup[float(ampl)] = n_spikes
             if n_spikes == 1:
-                vm.rheobase = float(ampl)
+                dtc.rheobase = float(ampl)
 
-                vm.name = str('rheobase {0} parameters {1}'.format(str(current),str(model.params)))
-                vm.boolean = True
-                return vm
+                dtc.name = str('rheobase {0} parameters {1}'.format(str(current),str(model.params)))
+                dtc.boolean = True
+                return dtc
 
-            return vm
-        if float(ampl) in vm.lookup:
-            return vm
+            return dtc
+        if float(ampl) in dtc.lookup:
+            return dtc
 
-    from itertools import repeat
+    #from itertools import repeat
     import numpy as np
     import copy
     import pdb
     import get_neab
 
-    def init_vm(vm):
-        if vm.initiated == True:
+    def init_dtc(dtc):
+        if dtc.initiated == True:
             # expand values in the range to accomodate for mutation.
             # but otherwise exploit memory of this range.
 
-            if type(vm.steps) is type(float):
-                vm.steps = [ 0.75 * vm.steps, 1.25 * vm.steps ]
-            elif type(vm.steps) is type(list):
-                vm.steps = [ s * 1.25 for s in vm.steps ]
-            #assert len(vm.steps) > 1
-            vm.initiated = True # logically unnecessary but included for readibility
+            if type(dtc.steps) is type(float):
+                dtc.steps = [ 0.75 * dtc.steps, 1.25 * dtc.steps ]
+            elif type(dtc.steps) is type(list):
+                dtc.steps = [ s * 1.25 for s in dtc.steps ]
+            #assert len(dtc.steps) > 1
+            dtc.initiated = True # logically unnecessary but included for readibility
 
-        if vm.initiated == False:
+        if dtc.initiated == False:
             import quantities as pq
             import numpy as np
-            vm.boolean = False
+            dtc.boolean = False
             steps = np.linspace(0,250,7.0)
             steps_current = [ i*pq.pA for i in steps ]
-            vm.steps = steps_current
-            vm.initiated = True
-        return vm
+            dtc.steps = steps_current
+            dtc.initiated = True
+        return dtc
 
-    def find_rheobase(vm):
+    def find_rheobase(dtc):
         from neuronunit.models import backends
         from neuronunit.models.reduced import ReducedModel
         import get_neab
 
-        new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
+        #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
         #os.system('cp '+str(get_neab.LEMS_MODEL_PATH)+' '+new_file_path)
-        model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
+        model = ReducedModel(get_neab.LEMS_MODEL_PATHh,name=str('vanilla'),backend='NEURON')
         model.load_model()
-        model.set_attrs(attrs = vm.attrs)
+        model.set_attrs(attrs = dtc.attrs)
 
         cnt = 0
         # If this it not the first pass/ first generation
         # then assume the rheobase value found before mutation still holds until proven otherwise.
-        if type(vm.rheobase) is not type(None):
-            vm = check_current(vm.rheobase,vm)
+        if type(dtc.rheobase) is not type(None):
+            dtc = check_current(dtc.rheobase,dtc)
         # If its not true enter a search, with ranges informed by memory
         cnt = 0
-        while vm.boolean == False:
-            for step in vm.steps:
-                vm = check_current(step, vm)
-                vm = check_fix_range(vm)
+        while dtc.boolean == False:
+            for step in dtc.steps:
+                dtc = check_current(step, dtc)
+                dtc = check_fix_range(dtc)
                 cnt+=1
                 print(cnt)
-        return vm
+        return dtc
 
     ## initialize where necessary.
     #import time
-    vmpop = list(dview.map_sync(init_vm,vmpop))
+    dtcpop = list(dview.map_sync(init_dtc,dtcpop))
 
     # if a population has already been evaluated it may be faster to let it
     # keep its previous rheobase searching range where this
     # memory of a previous range as acts as a guess as the next mutations range.
 
-    vmpop = list(dview.map_sync(find_rheobase,vmpop))
+    dtcpop = list(dview.map_sync(find_rheobase,dtcpop))
 
-    return vmpop, pop
+    return dtcpop, pop
