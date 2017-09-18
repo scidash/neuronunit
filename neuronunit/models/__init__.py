@@ -110,10 +110,11 @@ class LEMSModel(cap.Runnable,
         self.init_backend(*args, **kwargs)
 
     def create_lems_file(self, name):
-        if not hasattr(self,'temp_dir'):
-            self.temp_dir = tempfile.gettempdir()
-        self.lems_file_path  = os.path.join(self.temp_dir, '%s.xml' % name)
-        shutil.copy2(self.orig_lems_file_path, self.lems_file_path)
+        # leads to bugs
+        #if not hasattr(self,'temp_dir'):
+        #    self.temp_dir = tempfile.gettempdir()
+        #self.lems_file_path  = os.path.join(self.temp_dir, '%s.xml' % name)
+        #shutil.copy2(self.orig_lems_file_path, self.lems_file_path)
         if self.attrs:
             self.set_lems_attrs(self.attrs)
 
