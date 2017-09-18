@@ -47,7 +47,7 @@ class Backend:
         print(type(self.attrs))
         """Set model attributes, e.g. input resistance of a cell"""
         #If the key is in the dictionary, it updates the key with the new value.
-        self.attrs.update(list(attrs.values())[0])
+        self.attrs.update(attrs)
         #pass
 
     def set_run_params(self, **params):
@@ -366,26 +366,12 @@ class NEURONBackend(Backend):
         set model attributes in HOC memory space.
         over riding a stub of the parent class.
         '''
-        super(NEURONBackend,self).set_attrs(attrs = attrs)
+        super(NEURONBackend,self).set_attrs(**attrs)
         assert type(self.attrs) is not type(None)
-        # NEURON does not support dictionaries.
-        # is it stands **params is a dictionary of dictionaries
-        unpack_splat = list(attrs.values())[0]
-        for h_key,h_value in unpack_splat.items():
+        for h_key,h_value in attrs.items():
             self.h('m_RS_RS_pop[0].{0} = {1}'.format(h_key,h_value))
             self.h('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
-        print('printing the output from neuron \
-         psections to standard out \
-         is the closest thing to \
-        a unit test at this point \
-        if psection does not match \
-        model attrs then its safe to \
-        show_plot_already that the code \
-        for assigning from splat to dictionary \
-        to hoc variables is not updating properly ')
-
-
-        self.h('psection()')
+            self.h('psection()')
 
         '''
         Below are experimental rig recording parameters.
@@ -423,7 +409,7 @@ class NEURONBackend(Backend):
         import neuron
         self.reset_neuron(neuron)
         #self.reset_h(neuron)
-        self.set_attrs(attrs = self.attrs)
+        self.set_attrs(**self.attrs)
                 #model.update_run_params(vm.attrs)
         #self.update_run_params(self.params)
 
@@ -471,6 +457,25 @@ class NEURONBackend(Backend):
         #spike_train = sf.get_spike_count(st)
         return len(spike_train)
 
+
+    def get_APs(self):
+        import neuronunit.capabilities.spike_functions as sf
+
+        #spike_train  = sf.get_spike_train(self.get_membrane_potential())
+        #spike_train = sf.get_spike_count(st)
+        return sf.get_spike_waveforms(self.get_membrane_potential())
+
+
+    def get_AP_widths(self):
+        import neuronunit.capabilities.spike_functions as sf
+    
+        action_potentials = sf.get_spike_waveforms(self.get_membrane_potential())
+        if len(action_potentials):
+            sw  = sf.spikes2widths(action_potentials)
+        else:
+            sw = None
+        #spike_train = sf.get_spike_count(st)
+        return sw
 
 class HasSegment(sciunit.Capability):
     """Model has a membrane segment of NEURON simulator"""

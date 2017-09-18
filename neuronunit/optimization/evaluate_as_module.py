@@ -165,7 +165,8 @@ def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyp
 
 
             score = v.judge(model,stop_on_error = True, deep_error = True)
-            print(score)
+            print(dir(score))
+            
             #if type(v.prediction) is type(None):
             #    import pdb; pdb.set_trace()
             assert type(v.prediction) is not type(None)
@@ -174,7 +175,6 @@ def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyp
             model.run_number += 1
             #dtc.results[t]
     # outside of the test iteration block.
-    if float(dtc.rheobase) > 0.0:# and type(score) is not scores.InsufficientDataScore(None):
         for k,f in enumerate(copy.copy(pre_fitness)):
 
             fitness1.append(difference(v))

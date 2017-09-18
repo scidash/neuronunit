@@ -8,7 +8,7 @@ import inspect
 import numpy as np
 
 import sciunit
-from .spike_functions import spikes2amplitudes,spikes2widths,spikes2thresholds
+from .spike_functions import spikes2amplitudes,spikes2widths,spikes2thresholds, get_spike_train
 
 
 class ProducesMembranePotential(sciunit.Capability):
@@ -48,16 +48,16 @@ class ProducesSpikes(sciunit.Capability):
     """
 
     def get_spike_train(self):
+        st = self.get_spike_train(self.get_membrane_potential())
+        return st
         """Gets computed spike times from the model.
 
         Arguments: None.
         Returns: a neo.core.SpikeTrain object.
         """
-
-        raise NotImplementedError()
-
     def get_spike_count(self):
         spike_train = self.get_spike_train()
+        
         return len(spike_train)
 
 
@@ -68,15 +68,8 @@ class ProducesActionPotentials(ProducesSpikes,
     """
 
     def get_APs(self):
-        """Gets action potential waveform chunks from the model.
-
-        Returns
-        -------
-        Must return a neo.core.AnalogSignal.
-        Each column of the AnalogSignal should be a spike waveform.
-        """
-
-        raise NotImplementedError()
+        action_potentials = self.get_spike_train(self.get_membrane_potential())
+        return action_potentials
 
     def get_AP_widths(self):
         action_potentials = self.get_APs()

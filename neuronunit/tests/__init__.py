@@ -35,7 +35,7 @@ class VmTest(sciunit.Test):
             cap += cls.required_capabilities
         self.required_capabilities += tuple(cap)
         self._extra()
-    
+
     required_capabilities = (cap.ProducesMembranePotential,)
 
     name = ''
@@ -48,7 +48,8 @@ class VmTest(sciunit.Test):
     united_observation_keys = ['value','mean','std']
 
     def _extra(self):
-        pass
+        self.prediction = None
+        #pass
 
     def validate_observation(self, observation,
                              united_keys=['value','mean'], nonunited_keys=[]):
@@ -196,9 +197,9 @@ class TestPulseTest(VmTest):
 
     @classmethod
     def get_tau(cls, vm, i):
-        # 10 ms before pulse start or halfway between sweep start 
+        # 10 ms before pulse start or halfway between sweep start
         # and pulse start, whichever is longer
-        start = max(i['delay']-10*pq.ms,i['delay']/2) 
+        start = max(i['delay']-10*pq.ms,i['delay']/2)
         stop = i['duration']+i['delay']-1*pq.ms # 1 ms before pulse end
         region = cls.get_segment(vm,start,stop)
         amplitude,tau,y0 = cls.exponential_fit(region, i['delay'])
@@ -219,7 +220,7 @@ class TestPulseTest(VmTest):
                    10, # time constant (ms)
                    vm.max()] # y0 (mV)
         vm_fit = vm.copy()
-        
+
         def func(x, a, b, c):
             '''
             This function is simply the shape of exponential decay which must be differenced, its basically an ideal template
@@ -229,7 +230,7 @@ class TestPulseTest(VmTest):
             vm_fit[:offset] = c
             vm_fit[offset:,0] = a * np.exp(-t[offset:]/b) + c
             return vm_fit.squeeze()
-        
+
         popt, pcov = curve_fit(func, t, vm.squeeze(), p0=guesses) # Estimate starting values for better convergence
         #plt.plot(t,vm)
         #plt.plot(t,func(t,*popt))
@@ -261,6 +262,8 @@ class InputResistanceTest(TestPulseTest):
         r_in = r_in.simplified
         # Put prediction in a form that compute_score() can use.
         prediction = {'value':r_in}
+        self.prediction = prediction
+
         return prediction
 
 
@@ -285,6 +288,7 @@ class TimeConstantTest(TestPulseTest):
         tau = tau.simplified
         # Put prediction in a form that compute_score() can use.
         prediction = {'value':tau}
+        self.prediction = prediction
         return prediction
 
     def compute_score(self, observation, prediction):
@@ -320,6 +324,8 @@ class CapacitanceTest(TestPulseTest):
         c = (tau/r_in).simplified
         # Put prediction in a form that compute_score() can use.
         prediction = {'value':c}
+        self.prediction = prediction
+
         return prediction
 
     def compute_score(self, observation, prediction):
@@ -360,6 +366,7 @@ class APWidthTest(VmTest):
         prediction = {'mean':np.mean(widths) if len(widths) else None,
                       'std':np.std(widths) if len(widths) else None,
                       'n':len(widths)}
+        self.prediction = prediction
         return prediction
 
     def compute_score(self, observation, prediction):
@@ -391,7 +398,9 @@ class InjectedCurrentAPWidthTest(APWidthTest):
 
     def generate_prediction(self, model):
         model.inject_square_current(self.params['injected_square_current'])
-        return super(InjectedCurrentAPWidthTest,self).generate_prediction(model)
+        self.prediction = super(InjectedCurrentAPWidthTest,self).generate_prediction(model)
+
+        return self.prediction
 
 
 class APAmplitudeTest(VmTest):
@@ -420,6 +429,7 @@ class APAmplitudeTest(VmTest):
         prediction = {'mean':np.mean(heights) if len(heights) else None,
                       'std':np.std(heights) if len(heights) else None,
                       'n':len(heights)}
+        self.prediction = prediction
         return prediction
 
     def compute_score(self, observation, prediction):
@@ -465,8 +475,9 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
 
     def generate_prediction(self, model):
         model.inject_square_current(self.params['injected_square_current'])
-        return super(InjectedCurrentAPAmplitudeTest,self).\
+        self.prediction = super(InjectedCurrentAPAmplitudeTest,self).\
                 generate_prediction(model)
+        return self.prediction
 
 
 class APThresholdTest(VmTest):
@@ -495,6 +506,7 @@ class APThresholdTest(VmTest):
         prediction = {'mean':np.mean(threshes) if len(threshes) else None,
                       'std':np.std(threshes) if len(threshes) else None,
                       'n':len(threshes)}
+        self.prediction = prediction
         return prediction
 
     def compute_score(self, observation, prediction):
@@ -626,6 +638,7 @@ class RestingPotentialTest(VmTest):
             if math.isnan(i):
                 return None
         prediction = {'mean':median, 'std':std}
+        self.prediction = prediction
         return prediction
 
 
