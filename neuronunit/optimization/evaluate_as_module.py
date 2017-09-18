@@ -4,7 +4,6 @@
 
 
 
-
 import os
 from neuronunit.models import backends
 import neuronunit
@@ -168,7 +167,7 @@ def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyp
                 v.prediction['value'] = dtc.rheobase * pq.pA
 
 
-            score = v.judge(model,stop_on_error = True, deep_error = True)
+            score = v.judge(model,stop_on_error = False, deep_error = True)
             print(dir(score))
 
             #if type(v.prediction) is type(None):
@@ -278,7 +277,7 @@ def cache_sim_runs(dtc):
                     dtc.results[t]['v_m'] = v_m
                 elif 't' in dtc.results.keys():
                     dtc.results[t]['v_m'] = v_m
-                dtc.lookup[str(dtc.attrs)] = dtc.results    
+                dtc.lookup[str(dtc.attrs)] = dtc.results
     return dtc
 
 #from scoop import futures
