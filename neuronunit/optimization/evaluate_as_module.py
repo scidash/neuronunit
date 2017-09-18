@@ -92,8 +92,12 @@ def pre_format(dtc):
     vtest = {}
     import get_neab
     tests = get_neab.tests
-
     for k,v in enumerate(tests):
+        print(k)
+        vtest[k] = {}
+        print(vtest[k])
+    for k,v in enumerate(tests):
+        print(k,v,vtest[k])
         #if k != 0:
         #    prediction = None
 
@@ -109,7 +113,7 @@ def pre_format(dtc):
             vtest[k]['amplitude'] = dtc.rheobase * pq.pA
             vtest[k]['delay'] = 100 * pq.ms
 
-        v = None
+        #v = None
     return vtest
 #@require('quantities','numpy','get_neab','quanitites')
 @require('get_neab')
@@ -166,7 +170,7 @@ def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyp
 
             score = v.judge(model,stop_on_error = True, deep_error = True)
             print(dir(score))
-            
+
             #if type(v.prediction) is type(None):
             #    import pdb; pdb.set_trace()
             assert type(v.prediction) is not type(None)
@@ -215,7 +219,7 @@ def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyp
 
 
 
-def pre_evaluate(dtc):
+def cache_sim_runs(dtc):
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
     import quantities as pq
@@ -254,21 +258,27 @@ def pre_evaluate(dtc):
             model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
             model.load_model()
             model.set_attrs(attrs = dtc.attrs)
-            print(t,model,'within pre evaluate, eam')
+            # check if these attributes have been evaluated before.
+            if str(dtc.attrs) in model.lookup.keys:
+                return dtc
+            else:
 
-            score = t.judge(model,stop_on_error = False, deep_error = True)
-            print(score,'within pre evaluate, eam')
+                print(t,model,'within pre evaluate, eam')
 
-            print(model.get_spike_count())
-            print(type(v_m),'within pre evaluate, eam')
+                score = t.judge(model,stop_on_error = False, deep_error = True)
+                print(score,'within pre evaluate, eam')
 
-            v_m = model.get_membrane_potential()
-            print(type(v_m),'within pre evaluate, eam')
-            if 't' not in dtc.results.keys():
-                dtc.results[t] = {}
-                dtc.results[t]['v_m'] = v_m
-            elif 't' in dtc.results.keys():
-                dtc.results[t]['v_m'] = v_m
+                print(model.get_spike_count())
+                print(type(v_m),'within pre evaluate, eam')
+
+                v_m = model.get_membrane_potential()
+                print(type(v_m),'within pre evaluate, eam')
+                if 't' not in dtc.results.keys():
+                    dtc.results[t] = {}
+                    dtc.results[t]['v_m'] = v_m
+                elif 't' in dtc.results.keys():
+                    dtc.results[t]['v_m'] = v_m
+                dtc.lookup[str(dtc.attrs)] = dtc.results    
     return dtc
 
 #from scoop import futures

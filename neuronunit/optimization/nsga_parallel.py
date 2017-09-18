@@ -5,6 +5,7 @@
 import matplotlib # Its not that this file is responsible for doing plotting, but it calls many modules that are, such that it needs to pre-empt
 # setting of an appropriate backend.
 matplotlib.use('agg')
+import quantities as pq
 
 import sys
 import os
@@ -16,6 +17,8 @@ THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
 this_nu = os.path.join(THIS_DIR,'../../')
 sys.path.insert(0,this_nu)
 from neuronunit import tests
+#from deap import hypervolume
+import deap
 #from deap.benchmarks.tools import diversity, convergence, hypervolume
 rc[:].use_cloudpickle()
 inv_pid_map = {}
@@ -394,10 +397,10 @@ dview.scatter('Individual',pop)
 
 
 def check_paths():
-    import os
-    #from neuronunit.models import backends
+    '''
+    import paths and test for consistancy
+    '''
     import neuronunit
-
     from neuronunit.models.reduced import ReducedModel
     import get_neab
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
@@ -407,14 +410,12 @@ def check_paths():
 path_serial = check_paths()
 paths_parallel = dview.apply_async(check_paths).get_dict()
 assert path_serial == paths_parallel[0]
-#import pdb; pdb.set_trace()
 
 dtcpop = update_dtc_pop(pop, td)
 print(dtcpop)
 dtcpop , _ = check_rheobase(dtcpop)
 for ind in dtcpop:
     print(ind.rheobase)
-#import pdb; pdb.set_trace()
 
 rh_values_unevolved = [v.rheobase for v in dtcpop ]
 new_checkpoint_path = str('un_evolved')+str('.p')
@@ -437,7 +438,6 @@ dtcpop = [ v for v in dtcpop if v.rheobase > 0.0 ]
 #dtcpop = list(dview.map_sync(evaluate_as_module.pre_evaluate,copy.copy(dtcpop)))
 fitnesses = list(dview.map_sync(evaluate_as_module.evaluate, copy.copy(dtcpop)))
 
-import pdb; pdb.set_trace()
 
 
 '''
@@ -451,12 +451,12 @@ model.update_run_params(dtc.attrs)
 '''
 
 #fitnesses = dview.map_sync(evaluate, copy.copy(dtcpop))
-print(fitnesses)
 for ind, fit in zip(pop, fitnesses):
     ind.fitness.values = fit
 
 
 pop = tools.selNSGA2(pop, MU)
+
 # only update the history after crowding distance has been assigned
 deap.tools.History().update(pop)
 
@@ -464,8 +464,8 @@ deap.tools.History().update(pop)
 ### After an evaluation of error its appropriate to display error statistics
 #pf = tools.ParetoFront()
 pf.update([toolbox.clone(i) for i in pop])
-hvolumes = []
-hvolumes.append(hypervolume(pf))
+#hvolumes = []
+#hvolumes.append(hypervolume(pf))
 
 record = stats.compile(pop)
 logbook.record(gen=0, evals=len(pop), **record)
@@ -489,7 +489,7 @@ verbose = True
 while (gen < NGEN and means[-1] > 0.05):
     # Although the hypervolume is not actually used here, it can be used
     # As a terminating condition.
-    hvolumes.append(hypervolume(pf))
+    # hvolumes.append(hypervolume(pf))
     gen += 1
     print(gen)
     offspring = tools.selNSGA2(pop, len(pop))
