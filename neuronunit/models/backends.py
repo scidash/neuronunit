@@ -43,8 +43,6 @@ class Backend:
     f = None
 
     def set_attrs(self, **attrs):
-        print(type(attrs))
-        print(type(self.attrs))
         """Set model attributes, e.g. input resistance of a cell"""
         #If the key is in the dictionary, it updates the key with the new value.
         self.attrs.update(attrs)
@@ -469,13 +467,15 @@ class NEURONBackend(Backend):
 
     def get_AP_widths(self):
         import neuronunit.capabilities.spike_functions as sf
-
-        action_potentials = sf.get_spike_waveforms(self.get_membrane_potential())
-        if len(action_potentials):
-            sw  = sf.spikes2widths(action_potentials)
+        #assert type(self) is not type(None)
+        #try type(mp) is not type(None):
+        spike_count = self.get_spike_count()
+        if spike_count >= 1:
+            mp = self.get_membrane_potential()
+            action_potentials = sf.get_spike_waveforms(mp)
+            sw = sf.spikes2widths(action_potentials)
         else:
             sw = None
-        #spike_train = sf.get_spike_count(st)
         return sw
 
 class HasSegment(sciunit.Capability):
