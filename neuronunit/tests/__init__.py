@@ -368,23 +368,35 @@ class APWidthTest(VmTest):
         """Implementation of sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
+        # if get_spike_count is zero, then widths will be None
+        # len of None returns an exception that is not handled
         model.rerun = True
-        if len(model.get_spike_train):
+
+        prediction = None
+
+       
+        if model.get_spike_count() >= 1:
+           
            widths = model.get_AP_widths()
         # Put prediction in a form that compute_score() can use.
            prediction = {'mean':np.mean(widths) if len(widths) else None,
                         'std':np.std(widths) if len(widths) else None,
                         'n':len(widths)}
-        
+
            self.prediction = prediction
         else:
-           self.prediction = None
+           self.prediction = prediction
         return prediction
 
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
-        if prediction['n'] == 0:
+        if type(prediction) is type(None):
             score = scores.InsufficientDataScore(None)
+
+        elif prediction['n'] == 0:
+            #sciunit.NoneScore:
+            score = scores.InsufficientDataScore(None)
+
         else:
             score = super(APWidthTest,self).compute_score(observation,
                                                           prediction)

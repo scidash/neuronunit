@@ -20,9 +20,9 @@ class DataTC(object):
     Data Transport Vessel
 
     This Object class serves as a data type for storing rheobase search
-    attributes and other useful parameters,
+    attributes and apriori model parameters,
     with the distinction that unlike the NEURON model this class
-    can be transported across HOSTS/CPUs
+    can be cheaply transported across HOSTS/CPUs
     '''
     def __init__(self):
         self.lookup = {}
@@ -82,7 +82,6 @@ def difference(v): # v is a tesst
     unit_predictions = unit_predictions.rescale(to_r_s)
     unit_observations = unit_observations.rescale(to_r_s)
     unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
-    print(unit_delta)
     return float(unit_delta)
 
 def pre_format(dtc):
@@ -92,14 +91,8 @@ def pre_format(dtc):
     import get_neab
     tests = get_neab.tests
     for k,v in enumerate(tests):
-        print(k)
         vtest[k] = {}
-        print(vtest[k])
     for k,v in enumerate(tests):
-        print(k,v,vtest[k])
-        #if k != 0:
-        #    prediction = None
-
         if k == 1 or k == 2 or k == 3:
             # Negative square pulse current.
             vtest[k]['duration'] = 100 * pq.ms
@@ -111,8 +104,6 @@ def pre_format(dtc):
             vtest[k]['duration'] = 1000 * pq.ms
             vtest[k]['amplitude'] = dtc.rheobase * pq.pA
             vtest[k]['delay'] = 100 * pq.ms
-
-        #v = None
     return vtest
 #@require('quantities','numpy','get_neab','quanitites')
 @require('get_neab')
@@ -166,15 +157,18 @@ def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyp
                 v.prediction = {}
                 v.prediction['value'] = dtc.rheobase * pq.pA
 
-
+            assert type(model) is not type(None)
             score = v.judge(model,stop_on_error = False, deep_error = True)
-            print(dir(score))
 
             #if type(v.prediction) is type(None):
             #    import pdb; pdb.set_trace()
-            assert type(v.prediction) is not type(None)
-            differences.append(difference(v))
-            pre_fitness.append(float(score.sort_key))
+            if type(v.prediction) is not type(None):
+                differences.append(difference(v))
+                pre_fitness.append(float(score.sort_key))
+            else:
+                differences.append(None)
+                pre_fitness.append(125.0)
+
             model.run_number += 1
             #dtc.results[t]
     # outside of the test iteration block.
@@ -209,7 +203,6 @@ def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyp
                     #fitness1.append(pre_fitness[k])
                     fitness1.append(pre_fitness[k] + 1.25 * differences[1] ) # add the rheobase error to all the errors.
                     assert fitness1[k] != pre_fitness[k]
-        print(fitness1, fitness)
     pre_fitness = []
     return fitness1[0],fitness1[1],\
            fitness1[2],fitness1[3],\
@@ -219,6 +212,11 @@ def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyp
 
 
 def cache_sim_runs(dtc):
+    '''
+    This could be used to stop neuronunit tests
+    from rerunning the same current injection set on the same
+    set of parameters
+    '''
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
     import quantities as pq
@@ -230,7 +228,6 @@ def cache_sim_runs(dtc):
     tests = copy.copy(get_neab.tests)
     #from itertools import repeat
     vtests = pre_format(copy.copy(dtc))
-    print(vtests)
     tests[0].prediction = {}
     tests[0].prediction['value'] = dtc.rheobase * pq.pA
 
@@ -534,17 +531,32 @@ def check_rheobase(dtcpop,pop=None):
                 dtc = check_current(step, dtc)
                 dtc = check_fix_range(dtc)
                 cnt+=1
-                print(cnt)
         return dtc
 
     ## initialize where necessary.
     #import time
+
+
+    '''
+    want to convert these to synchronous calls to event driven asynchronous calls.
+    Turning synchronous (blocking) calls into asynchronous (non-blocking) calls using even-driven programming paradigm.
+    Converting nested (vertical) method calls (threads) into flat method calls
+    '''
+
+    ##
+    #
+    ##
+    #rc[4:7]
     dtcpop = list(dview.map_sync(init_dtc,dtcpop))
+    #production = rc[4:7].map(init_dtc,dtcpop).get()
+
 
     # if a population has already been evaluated it may be faster to let it
     # keep its previous rheobase searching range where this
     # memory of a previous range as acts as a guess as the next mutations range.
 
     dtcpop = list(dview.map_sync(find_rheobase,dtcpop))
+    #dtcpop = rc[0:3].map(find_rheobase,consumption).get()
+
 
     return dtcpop, pop

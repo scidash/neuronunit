@@ -48,7 +48,8 @@ class ProducesSpikes(sciunit.Capability):
     """
 
     def get_spike_train(self):
-        st = self.get_spike_train(self.get_membrane_potential())
+        mp = self.get_membrane_potential()
+        st = get_spike_train(mp)
         return st
         """Gets computed spike times from the model.
 

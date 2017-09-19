@@ -80,10 +80,10 @@ def light_palette(color, n_colors=6, reverse=False, lumlight=0.8, light=None):
     return palette
 
 
-def tiled_figure(figname='', frames=1, columns=2, 
-                 figs=collections.OrderedDict(), axs=None, orientation='page', 
-                 width_ratios=None, height_ratios=None, top=0.97, 
-                 bottom=0.05, left=0.07, right=0.97, hspace=0.6, 
+def tiled_figure(figname='', frames=1, columns=2,
+                 figs=collections.OrderedDict(), axs=None, orientation='page',
+                 width_ratios=None, height_ratios=None, top=0.97,
+                 bottom=0.05, left=0.07, right=0.97, hspace=0.6,
                  wspace=0.2, dirname=''):
 
     if figname not in figs:
@@ -97,7 +97,7 @@ def tiled_figure(figname='', frames=1, columns=2,
             figsize=(210/25.4, 297/25.4)
 
         # Some of these are not valid params in the current version
-        # of matplotlib so I've commented them out.   
+        # of matplotlib so I've commented them out.
         params = {'backend': 'ps',
                   'axes.labelsize': 6,
                   'axes.linewidth' : 0.5,
@@ -109,9 +109,9 @@ def tiled_figure(figname='', frames=1, columns=2,
                   'xtick.labelsize': 6,
                   'ytick.labelsize': 6,
                   'legend.borderpad': 0.2,
-                  #'legend.linewidth': 0.1, 
+                  #'legend.linewidth': 0.1,
                   'legend.loc': 'best',
-                  #'legend.ncol': 4, 
+                  #'legend.ncol': 4,
                   'text.usetex': False,
                   'pdf.fonttype': 42,
                   'figure.figsize': figsize}
@@ -163,7 +163,7 @@ rc[:].use_cloudpickle()
 dview = rc[:]
 
 def plotly_graph(history,vmhistory):
-	# TODO experiment with making the plot output style a dendro 
+	# TODO experiment with making the plot output style a dendro
 	# dendrograms
     from networkx.drawing.nx_agraph import graphviz_layout
     import plotly
@@ -605,11 +605,11 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
             waves.append(ts)
         waves.append(v_m)
 		##
-		# since the threshold value derived from 
-		# capabilities, spike functions, spikes2thresholds 
+		# since the threshold value derived from
+		# capabilities, spike functions, spikes2thresholds
 		# has a different precision to
-		# the neo analogue signal v_m, 
-		# there is no: v in v_m that exactly equals 
+		# the neo analogue signal v_m,
+		# there is no: v in v_m that exactly equals
 		# threshold, so an approximately equals will have to do
 		# 1e-4 is a nominally low tolerance for the approximation.
 		##
@@ -621,11 +621,11 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
         ts = model.results['t'] # time signal
         st = spike_functions.get_spike_train(v_m) #spike times
 
-        start = int((float(threshold_time)/ts[-1])*len(ts))  # The index corresponding to the time offset, for 
-	
+        start = int((float(threshold_time)/ts[-1])*len(ts))  # The index corresponding to the time offset, for
+
 	    # when the models v_m crosses its threshold.
-        
-	    stop = start + int(2500)
+
+        stop = start + int(2500)
         time_sequence = np.arange(start , stop, 1)
         ptvec = np.array(model.results['t'])[time_sequence]
 
