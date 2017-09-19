@@ -5,12 +5,46 @@
 import matplotlib # Its not that this file is responsible for doing plotting, but it calls many modules that are, such that it needs to pre-empt
 # setting of an appropriate backend.
 matplotlib.use('agg')
+import os
+os.system('')
 import quantities as pq
+from numpy import random
+
+#from dask.distributed import Client
+#client = Client('scheduler-address:8786')
+'''
+http://distributed.readthedocs.io/en/latest/queues.html
+And we set up an input Queue and map our functions across it.
+
+>>> from queue import Queue
+>>> input_q = Queue()
+>>> remote_q = client.scatter(input_q)
+>>> inc_q = client.map(inc, remote_q)
+>>> double_q = client.map(double, inc_q)
+We will fill the input_q with local data from some stream, and then remote_q, inc_q and double_q will fill with Future objects as data gets moved around.
+
+We gather the futures from the double_q back to a queue holding local data in the local process.
+'''
+
+from numba import autojit#, prange
+@autojit
+def parallel_sum(A):
+    sum = 0.0
+    for i in prange(A.shape[0]):
+        sum += A[i]
+
+    return sum
+
 
 import sys
-import os
 import ipyparallel as ipp
+from ipyparallel import Client
+c = Client()  # connect to IPyParallel cluster
+e = c.become_dask()  # start dask on top of IPyParallel
+#print(e)
+
 from ipyparallel import depend, require, dependent
+
 import get_neab
 rc = ipp.Client(profile='default')
 THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
@@ -19,15 +53,12 @@ sys.path.insert(0,this_nu)
 from neuronunit import tests
 #from deap import hypervolume
 import deap
+# hypervolume is in master
+# not dev.
 #from deap.benchmarks.tools import diversity, convergence, hypervolume
 rc[:].use_cloudpickle()
-inv_pid_map = {}
 dview = rc[:]
 
-
-ar = rc[:].apply_async(os.getpid)
-pids = ar.get_dict()
-print(pids)
 
 
 
@@ -50,8 +81,7 @@ class Individual(object):
         self.fitness = creator.FitnessMin
 
 @require('numpy, model_parameters, deap','random')
-def import_this():
-    #from deap import tools
+def import_list():
     Individual = ipp.Reference('Individual')
     from deap import base, creator, tools
     import deap
@@ -75,23 +105,15 @@ def import_this():
     creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
     creator.create("Individual", list, fitness=creator.FitnessMin)
     toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
-
     toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
-
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     toolbox.register("select", tools.selNSGA2)
     toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=30.0)
     toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
-
-    #toolbox.decorate("mutate", history,decorator)
-    #toolbox = base.Toolbox()
     return toolbox, tools, history, creator, base
-(toolbox, tools, history, creator, base) = import_this()
+(toolbox, tools, history, creator, base) = import_list()
 dview.push({'Individual':Individual})
-
-dview.apply_sync(import_this)
-
-
+dview.apply_sync(import_list)
 
 def get_trans_dict(param_dict):
     trans_dict = {}
@@ -107,13 +129,11 @@ def dt_to_ind(dtc,td):
     is Noneifying its score attribute, and possibly causing a
     performance bottle neck.
     '''
-
     ind =[]
     for k in td.keys():
         ind.append(dtc.attrs[td[k]])
     ind.append(dtc.rheobase)
     return ind
-
 
 @require('numpy as np', 'copy','evaluate_as_module')
 def update_dtc_pop(pop, trans_dict):
@@ -126,19 +146,16 @@ def update_dtc_pop(pop, trans_dict):
     corresponding virtual model objects.
     '''
     import copy
-    #from itertools import repeat
     import numpy as np
     pop = [toolbox.clone(i) for i in pop ]
     import evaluate_as_module
 
     def transform(ind):
         dtc = evaluate_as_module.DataTC()
-        print(dtc)
         param_dict = {}
         for i,j in enumerate(ind):
             param_dict[trans_dict[i]] = str(j)
         dtc.attrs = param_dict
-        #dtc.name = dtc.attrs
         dtc.evaluated = False
         return dtc
 
@@ -212,15 +229,11 @@ def check_rheobase(dtcpop,pop=None):
             steps = [ i*pq.pA for i in center ]
 
         elif len(sub):
-
-
             steps = list(np.linspace(sub.max(),2*sub.max(),9.0))
             steps = [ i for i in steps if not i == sub.max() ]
-            #steps = np.delete(steps,np.array(sub))
             steps = [ i*pq.pA for i in steps ]
 
         elif len(supra):
-            #steps = [i in range(-2*supra.min(),supra.min())]
             step = list(np.linspace(-2*(supra.min()),supra.min(),9.0))
             steps = [ i for i in steps if not i == supra.min() ]
             steps = [ i*pq.pA for i in steps ]
@@ -336,11 +349,9 @@ def check_rheobase(dtcpop,pop=None):
             #for dtc in dtcpop:
             #    dtc.lookup.extend(dtc.lookup)
             for step in dtc.steps:
-                print(dtc.attrs)
                 dtc = check_current(step, dtc)
                 dtc = check_fix_range(dtc)
             cnt += 1
-            print(cnt)
         return dtc
 
     ## initialize where necessary.
@@ -370,7 +381,7 @@ def check_rheobase(dtcpop,pop=None):
 ##
 
 MU = 4
-NGEN = 10
+NGEN = 2
 CXPB = 0.9
 
 import numpy as np
@@ -398,7 +409,7 @@ dview.scatter('Individual',pop)
 
 def check_paths():
     '''
-    import paths and test for consistancy
+    import paths and test for consistency
     '''
     import neuronunit
     from neuronunit.models.reduced import ReducedModel
@@ -434,9 +445,12 @@ import copy
 import evaluate_as_module
 #dtcpop = dview.map_sync(evaluate_as_module.pre_evaluate, copy.copy(dtcpop))
 #from itertools import repeat
-dtcpop = [ v for v in dtcpop if v.rheobase > 0.0 ]
+producer = [ v for v in dtcpop if v.rheobase > 0.0 ]
 #dtcpop = list(dview.map_sync(evaluate_as_module.pre_evaluate,copy.copy(dtcpop)))
-fitnesses = list(dview.map_sync(evaluate_as_module.evaluate, copy.copy(dtcpop)))
+fitnesses = list(dview.map_sync(evaluate_as_module.evaluate, copy.copy(producer)))
+
+#fitnesses = dview.map(evaluate_as_module.evaluate, copy.copy(producer)).get()
+
 
 
 
@@ -577,10 +591,10 @@ while (gen < NGEN and means[-1] > 0.05):
     print('means: {0} pareto_front first: {1} pf_mean {2}'.format(logbook.select('avg'), \
                                                         np.sum(np.mean(pf[0].fitness.values)),\
                                                         pf_mean))
-
-import net_graph
-net_graph.surfaces(history,td)
-best, worst = net_graph.best_worst(history)
+os.system('conda install graphviz plotly cufflinks')
+from neuronunit import plottools
+plottools.surfaces(history,td)
+best, worst = plottools.best_worst(history)
 listss = [best , worst]
 best_worst = update_dtc_pop(listss,td)
 #import evaluate_as_module as em
@@ -595,11 +609,11 @@ with open('complete_dump.p','wb') as handle:
 
 lists = pickle.load(open('complete_dump.p','rb'))
 #dtcoffspring2,history2,logbook2 = lists[0],lists[1],lists[2]
-net_graph.surfaces(history,td)
-import net_graph
-#reload(net_graph)
+plottools.surfaces(history,td)
+import plottools
+#reload(plottools)
 #dtchistory = _pop(history.genealogy_history.values(),td)
-#best, worst = net_graph.best_worst(history)
+#best, worst = plottools.best_worst(history)
 #listss = [best , worst]
 #best_worst = _pop(listss,td)
 #best_worst , _ = check_rheobase(best_worst)
@@ -609,12 +623,12 @@ unev, rh_values_unevolved = unev[0], unev[1]
 for x,y in enumerate(unev):
     y.rheobase = rh_values_unevolved[x]
 dtcoffpsring.append(unev)
-net_graph.shadow(dtcoffspring,best_worst[0])
-net_graph.plotly_graph(history,dtchistory)
-#net_graph.graph_s(history)
-net_graph.plot_log(logbook)
-net_graph.not_just_mean(hvolumes,logbook)
-net_graph.plot_objectives_history(logbook)
+plottools.shadow(dtcoffspring,best_worst[0])
+plottools.plotly_graph(history,dtchistory)
+#plottools.graph_s(history)
+plottools.plot_log(logbook)
+plottools.not_just_mean(hvolumes,logbook)
+plottools.plot_objectives_history(logbook)
 
 #Although the pareto front surely contains the best candidate it cannot contain the worst, only history can.
 #best_ind_dict_dtc = _pop(pf[0:2],td)
@@ -630,13 +644,13 @@ print(best_worst[0].fitness.values,' == ', best_ind_dict_dtc[0].fitness.values, 
 # This is not done in the general GA algorithm, since adding an extra dimensionality that the GA
 # doesn't utilize causes a DEAP error, which is reasonable.
 
-net_graph.bar_chart(best_worst[0])
-net_graph.pca(final_population,dtcpop,fitnesses,td)
+plottools.bar_chart(best_worst[0])
+plottools.pca(final_population,dtcpop,fitnesses,td)
 #test_dic = bar_chart(best_worst[0])
-net_graph.plot_evaluate( best_worst[0],best_worst[1])
-#net_graph.plot_db(best_worst[0],name='best')
-#net_graph.plot_db(best_worst[1],name='worst')
+plottools.plot_evaluate( best_worst[0],best_worst[1])
+#plottools.plot_db(best_worst[0],name='best')
+#plottools.plot_db(best_worst[1],name='worst')
 
-net_graph.plot_evaluate( best_worst[0],best_worst[1])
-net_graph.plot_db(best_worst[0],name='best')
-net_graph.plot_db(best_worst[1],name='worst')
+plottools.plot_evaluate( best_worst[0],best_worst[1])
+plottools.plot_db(best_worst[0],name='best')
+plottools.plot_db(best_worst[1],name='worst')
