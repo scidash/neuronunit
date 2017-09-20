@@ -107,6 +107,61 @@ def pre_format(dtc):
     return vtest
 #@require('quantities','numpy','get_neab','quanitites')
 @require('get_neab')
+
+
+def check_current(ampl,dtc):
+    '''
+    Inputs are an amplitude to test and a virtual model
+    output is an virtual model with an updated dictionary.
+    '''
+
+    #global model
+    import quantities as pq
+    import get_neab
+    from neuronunit.models import backends
+    from neuronunit.models.reduced import ReducedModel
+
+    #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+    model.load_model()
+    model.set_attrs(**dtc.attrs)
+    #model.update_run_params(dtc.attrs)
+
+    DELAY = 100.0*pq.ms
+    DURATION = 1000.0*pq.ms
+    params = {'injected_square_current':
+              {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+
+
+    if float(ampl) not in dtc.lookup or len(dtc.lookup)==0:
+
+        current = params.copy()['injected_square_current']
+
+        uc = {'amplitude':ampl}
+        current.update(uc)
+        current = {'injected_square_current':current}
+        dtc.run_number += 1
+        model.set_attrs(** dtc.attrs)
+        model.name = dtc.attrs
+        #model.update_run_params(dtc.attrs)
+        #model.update_run_params(dtc.attrs)
+        model.inject_square_current(current)
+        dtc.previous = ampl
+        n_spikes = model.get_spike_count()
+        print(n_spikes,dtc.rheobase,ampl,dtc.attrs)
+        dtc.lookup[float(ampl)] = n_spikes
+        if n_spikes == 1:
+            dtc.rheobase = float(ampl)
+
+            dtc.name = str('rheobase {0} parameters {1}'.format(str(current),str(model.params)))
+            dtc.boolean = True
+            return dtc
+
+        return dtc
+    if float(ampl) in dtc.lookup:
+        return dtc
+
+
 def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyparallel to work.
     '''
     Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
@@ -139,6 +194,9 @@ def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyp
     fitness = []
     differences = []
     fitness1 = []
+
+    dtc = check_current(dtc.rheobase, dtc)
+
     if float(dtc.rheobase) <= 0.0:
         fitness1 = [ 125.0 for i in tests ]
 
@@ -167,6 +225,8 @@ def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyp
             for key, value in vtests[k].items():
                 print('broken')
                 print(key,value,v.params)
+
+
                 #v.params['injected_square_current'][key] = value
 
 

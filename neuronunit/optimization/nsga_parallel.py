@@ -380,6 +380,59 @@ def check_rheobase(dtcpop,pop=None):
 # explored.
 ##
 
+def check_current(ampl,dtc):
+    '''
+    Inputs are an amplitude to test and a virtual model
+    output is an virtual model with an updated dictionary.
+    '''
+
+    #global model
+    import quantities as pq
+    import get_neab
+    from neuronunit.models import backends
+    from neuronunit.models.reduced import ReducedModel
+
+    #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+    model.load_model()
+    model.set_attrs(**dtc.attrs)
+    #model.update_run_params(dtc.attrs)
+
+    DELAY = 100.0*pq.ms
+    DURATION = 1000.0*pq.ms
+    params = {'injected_square_current':
+              {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+
+
+    if float(ampl) not in dtc.lookup or len(dtc.lookup)==0:
+
+        current = params.copy()['injected_square_current']
+
+        uc = {'amplitude':ampl}
+        current.update(uc)
+        current = {'injected_square_current':current}
+        dtc.run_number += 1
+        model.set_attrs(** dtc.attrs)
+        model.name = dtc.attrs
+        #model.update_run_params(dtc.attrs)
+        #model.update_run_params(dtc.attrs)
+        model.inject_square_current(current)
+        dtc.previous = ampl
+        n_spikes = model.get_spike_count()
+        print(n_spikes,dtc.rheobase,ampl,dtc.attrs)
+        dtc.lookup[float(ampl)] = n_spikes
+        if n_spikes == 1:
+            dtc.rheobase = float(ampl)
+
+            dtc.name = str('rheobase {0} parameters {1}'.format(str(current),str(model.params)))
+            dtc.boolean = True
+            return dtc
+
+        return dtc
+    if float(ampl) in dtc.lookup:
+        return dtc
+
+
 MU = 4
 NGEN = 2
 CXPB = 0.9
@@ -445,9 +498,12 @@ import copy
 import evaluate_as_module
 #dtcpop = dview.map_sync(evaluate_as_module.pre_evaluate, copy.copy(dtcpop))
 #from itertools import repeat
-producer = [ v for v in dtcpop if v.rheobase > 0.0 ]
+dtcpop = [ v for v in dtcpop if v.rheobase > 0.0 ]
+for d in dtcpop:
+    print('testing dubious rheobase values \n\n\n')
+    dtc = check_current(d.rheobase, d)
 #dtcpop = list(dview.map_sync(evaluate_as_module.pre_evaluate,copy.copy(dtcpop)))
-fitnesses = list(dview.map_sync(evaluate_as_module.evaluate, copy.copy(producer)))
+fitnesses = list(dview.map_sync(evaluate_as_module.evaluate, copy.copy(dtcpop)))
 
 #fitnesses = dview.map(evaluate_as_module.evaluate, copy.copy(producer)).get()
 
@@ -546,6 +602,10 @@ while (gen < NGEN and means[-1] > 0.05):
     # for v in dtcoffspring:
     #    fitness.append(evaluate(v))
     #import evaluate_as_module
+    dtcpop = [ v for v in dtcpop if v.rheobase > 0.0 ]
+    for d in dtcpop:
+        print('testing dubious rheobase values \n\n\n')
+        d = check_current(d.rheobase, d)
     fitnesses = list(dview.map_sync(evaluate_as_module.evaluate, copy.copy(dtcoffspring)))
     #fitnesses = list(dview.map_sync(evaluate, copy.copy(dtcoffspring)))
 
