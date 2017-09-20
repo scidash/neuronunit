@@ -147,9 +147,29 @@ def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyp
     elif float(dtc.rheobase) > 0.0:
         for k,v in enumerate(tests):
 
+            '''
+            Spike width tests and amplitude tests assume a rheobase current injection which does not seem
+            to be happening.
+            '''
+            if k == 1 or k == 2 or k == 3:
+                # Negative square pulse current.
+                v.params['injected_square_current']['duration'] = 100 * pq.ms
+                v.params['injected_square_current']['amplitude'] = -10 *pq.pA
+                v.params['injected_square_current']['delay'] = 30 * pq.ms
+
+            if k == 0 or k == 4 or k == 5 or k == 6 or k == 7:
+                # Threshold current.
+                v.params['injected_square_current']['duration'] = 1000 * pq.ms
+                v.params['injected_square_current']['amplitude'] = dtc.rheobase * pq.pA
+                v.params['injected_square_current']['delay'] = 100 * pq.ms
+
             vtests = pre_format(copy.copy(dtc))
             for key, value in vtests[k].items():
-                v.params['injected_square_current'][key] = value
+                print('broken')
+                print(key,value,v.params)
+                #v.params['injected_square_current'][key] = value
+
+
 
             #vtest[k] = {}
             if k == 0:
