@@ -10,41 +10,11 @@ os.system('')
 import quantities as pq
 from numpy import random
 
-#from dask.distributed import Client
-#client = Client('scheduler-address:8786')
-'''
-http://distributed.readthedocs.io/en/latest/queues.html
-And we set up an input Queue and map our functions across it.
-
->>> from queue import Queue
->>> input_q = Queue()
->>> remote_q = client.scatter(input_q)
->>> inc_q = client.map(inc, remote_q)
->>> double_q = client.map(double, inc_q)
-We will fill the input_q with local data from some stream, and then remote_q, inc_q and double_q will fill with Future objects as data gets moved around.
-
-We gather the futures from the double_q back to a queue holding local data in the local process.
-'''
-
-from numba import autojit#, prange
-@autojit
-def parallel_sum(A):
-    sum = 0.0
-    for i in prange(A.shape[0]):
-        sum += A[i]
-
-    return sum
-
-
 import sys
 import ipyparallel as ipp
 from ipyparallel import Client
-c = Client()  # connect to IPyParallel cluster
-e = c.become_dask()  # start dask on top of IPyParallel
-#print(e)
-
+#c = Client()  # connect to IPyParallel cluster
 from ipyparallel import depend, require, dependent
-
 import get_neab
 rc = ipp.Client(profile='default')
 THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
@@ -170,208 +140,6 @@ def update_dtc_pop(pop, trans_dict):
         dtcpop = transform(pop)
     return dtcpop
 
-
-
-def check_rheobase(dtcpop,pop=None):
-    '''
-    inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
-    outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
-    Rationale, not every gene value will result in a model for which rheobase is found, in which case that gene is discarded, however to
-    compensate for losses in gene population size, more gene samples must be tested for a successful return from a rheobase search.
-    If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
-    corresponding virtual model objects.
-    '''
-    def check_fix_range(dtc):
-        '''
-        Inputs: lookup, A dictionary of previous current injection values
-        used to search rheobase
-        Outputs: A boolean to indicate if the correct rheobase current was found
-        and a dictionary containing the range of values used.
-        If rheobase was actually found then rather returning a boolean and a dictionary,
-        instead logical True, and the rheobase current is returned.
-        given a dictionary of rheobase search values, use that
-        dictionary as input for a subsequent search.
-        '''
-        import pdb
-        import copy
-        import numpy as np
-        import quantities as pq
-        sub=[]
-        supra=[]
-        steps=[]
-        dtc.rheobase = 0.0
-        for k,v in dtc.lookup.items():
-            dtc.searchedd[v]=float(k)
-
-            if v == 1:
-                #A logical flag is returned to indicate that rheobase was found.
-                dtc.rheobase=float(k)
-                dtc.searched.append(float(k))
-                dtc.steps = 0.0
-                dtc.boolean = True
-                return dtc
-            elif v == 0:
-                sub.append(k)
-            elif v > 0:
-                supra.append(k)
-
-        sub = np.array(sub)
-        supra = np.array(supra)
-
-        if len(sub)!=0 and len(supra)!=0:
-            #this assertion would only be occur if there was a bug
-            assert sub.max()<=supra.min()
-        if len(sub) and len(supra):
-            center = list(np.linspace(sub.max(),supra.min(),9.0))
-            center = [ i for i in center if not i == sub.max() ]
-            center = [ i for i in center if not i == supra.min() ]
-            center[int(len(center)/2)+1]=(sub.max()+supra.min())/2.0
-            steps = [ i*pq.pA for i in center ]
-
-        elif len(sub):
-            steps = list(np.linspace(sub.max(),2*sub.max(),9.0))
-            steps = [ i for i in steps if not i == sub.max() ]
-            steps = [ i*pq.pA for i in steps ]
-
-        elif len(supra):
-            step = list(np.linspace(-2*(supra.min()),supra.min(),9.0))
-            steps = [ i for i in steps if not i == supra.min() ]
-            steps = [ i*pq.pA for i in steps ]
-
-        dtc.steps = steps
-        dtc.rheobase = None
-        return copy.copy(dtc)
-
-    @require('quantities', 'get_neab', 'neuronunit')
-    def check_current(ampl,dtc):
-        '''
-        Inputs are an amplitude to test and a virtual model
-        output is an virtual model with an updated dictionary.
-        '''
-
-        #global model
-        import quantities as pq
-        import get_neab
-        from neuronunit.models import backends
-        from neuronunit.models.reduced import ReducedModel
-
-        #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
-        model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-        model.load_model()
-        model.set_attrs(**dtc.attrs)
-        #model.update_run_params(dtc.attrs)
-
-        DELAY = 100.0*pq.ms
-        DURATION = 1000.0*pq.ms
-        params = {'injected_square_current':
-                  {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
-
-
-        if float(ampl) not in dtc.lookup or len(dtc.lookup)==0:
-
-            current = params.copy()['injected_square_current']
-
-            uc = {'amplitude':ampl}
-            current.update(uc)
-            current = {'injected_square_current':current}
-            dtc.run_number += 1
-            model.set_attrs(** dtc.attrs)
-            model.name = dtc.attrs
-            #model.update_run_params(dtc.attrs)
-            #model.update_run_params(dtc.attrs)
-            model.inject_square_current(current)
-            dtc.previous = ampl
-            n_spikes = model.get_spike_count()
-            dtc.lookup[float(ampl)] = n_spikes
-            if n_spikes == 1:
-                dtc.rheobase = float(ampl)
-
-                dtc.name = str('rheobase {0} parameters {1}'.format(str(current),str(model.params)))
-                dtc.boolean = True
-                return dtc
-
-            return dtc
-        if float(ampl) in dtc.lookup:
-            return dtc
-
-    #from itertools import repeat
-    import numpy as np
-    import copy
-    import pdb
-    import get_neab
-
-    @require('itertools','numpy','copy','pdb','get_neab')
-    def init_dtc(dtc):
-        if dtc.initiated == True:
-            # expand values in the range to accomodate for mutation.
-            # but otherwise exploit memory of this range.
-
-            if type(dtc.steps) is type(float):
-                dtc.steps = [ 0.75 * dtc.steps, 1.25 * dtc.steps ]
-            elif type(dtc.steps) is type(list):
-                dtc.steps = [ s * 1.25 for s in dtc.steps ]
-            #assert len(dtc.steps) > 1
-            dtc.initiated = True # logically unnecessary but included for readibility
-
-        if dtc.initiated == False:
-            import quantities as pq
-            import numpy as np
-            dtc.boolean = False
-            steps = np.linspace(0,250,7.0)
-            steps_current = [ i*pq.pA for i in steps ]
-            dtc.steps = steps_current
-            dtc.initiated = True
-        return dtc
-    @require('neuronunit','get_neab','itertools')
-    def find_rheobase(dtc):
-        from neuronunit.models import backends
-        from neuronunit.models.reduced import ReducedModel
-        import get_neab
-        #print(pid_map[int(os.getpid())])
-
-        #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-        model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-        model.load_model()
-        model.set_attrs(**dtc.attrs)
-        #model.update_run_params(dtc.attrs)
-        cnt = 0
-        # If this it not the first pass/ first generation
-        # then assume the rheobase value found before mutation still holds until proven otherwise.
-        if type(dtc.rheobase) is not type(None):
-            dtc = check_current(dtc.rheobase,dtc)
-        # If its not true enter a search, with ranges informed by memory
-        cnt = 0
-        #from itertools import repeat
-        while dtc.boolean == False:
-            dtc.searched.append(dtc.steps)
-            # These three lines are a memory killer.
-            #dtcpop = dview.map_sync(check_current,dtc.steps,repeat(dtc))
-            #for dtc in dtcpop:
-            #    dtc.lookup.extend(dtc.lookup)
-            for step in dtc.steps:
-                dtc = check_current(step, dtc)
-                dtc = check_fix_range(dtc)
-            cnt += 1
-        return dtc
-
-    ## initialize where necessary.
-    #import time
-    dtcpop = list(dview.map_sync(init_dtc,dtcpop))
-
-    # if a population has already been evaluated it may be faster to let it
-    # keep its previous rheobase searching range where this
-    # memory of a previous range as acts as a guess as the next mutations range.
-    #dtcpop1 = []
-    #for v in dtcpop:
-        #dtcpop1.append(find_rheobase(v))
-    #dtcpop = dtcpop1  #list(map(find_rheobase,dtcpop))
-    dtcpop = list(dview.map_sync(find_rheobase,dtcpop))
-
-    return dtcpop, pop
-
-
-
-
 ##
 # Start of the Genetic Algorithm
 # For good results, NGEN * MU  the number of generations
@@ -477,11 +245,38 @@ assert path_serial == paths_parallel[0]
 
 dtcpop = update_dtc_pop(pop, td)
 print(dtcpop)
-dtcpop , _ = check_rheobase(dtcpop)
+
+#for k,v in enumerate(tests):
+for dtc in dtcpop:
+    from neuronunit.models import backends
+    from neuronunit.models.reduced import ReducedModel
+    import quantities as pq
+    import numpy as np
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+    model.load_model()
+    model.set_attrs(**dtc.attrs)
+    print(model)
+    import get_neab
+    print(model.attrs)
+    get_neab.tests[0].dview = dview
+    score = get_neab.tests[0].judge(model,stop_on_error = False, deep_error = True)
+    dtc.rheobase = score.prediction
+
 for ind in dtcpop:
     print(ind.rheobase)
 
-rh_values_unevolved = [v.rheobase for v in dtcpop ]
+suite = [ t for t in get_neab.tests[1:-1] ]
+scores = dview.map(suite.judge,dtcpop)
+if scores.get():
+    rh_values_unevolved = [v.rheobase for v in dtcpop ]
+
+#for dtc in dtcpop:
+
+#        v.judge(model,stop_on_error = False, deep_error = True)
+#        score = v.judge()
+#    assert type(dtc.rheobase) is not type(None)
+#dtcpop , _ = check_rheobase(dtcpop)
+
 new_checkpoint_path = str('un_evolved')+str('.p')
 import pickle
 with open(new_checkpoint_path,'wb') as handle:#
