@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 import colorsys
 import numpy
 import collections
-
+import os
+os.system('conda install -c anaconda python-graphviz')
 
 def adjust_spines(ax, spines, color='k', d_out=10, d_down=None):
 
