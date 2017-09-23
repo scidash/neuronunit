@@ -13,7 +13,10 @@ from numpy import random
 import sys
 import ipyparallel as ipp
 from ipyparallel import Client
-#c = Client()  # connect to IPyParallel cluster
+c = Client()  # connect to IPyParallel cluster
+e = c.become_dask()
+e.start_ipython_scheduler()
+
 from ipyparallel import depend, require, dependent
 import get_neab
 rc = ipp.Client(profile='default')
@@ -23,12 +26,9 @@ sys.path.insert(0,this_nu)
 from neuronunit import tests
 #from deap import hypervolume
 import deap
-# hypervolume is in master
-# not dev.
-#from deap.benchmarks.tools import diversity, convergence, hypervolume
+
 rc[:].use_cloudpickle()
 dview = rc[:]
-
 
 
 
@@ -147,59 +147,6 @@ def update_dtc_pop(pop, trans_dict):
 # should at least be as big as number of dimensions/model parameters
 # explored.
 ##
-
-def check_current(ampl,dtc):
-    '''
-    Inputs are an amplitude to test and a virtual model
-    output is an virtual model with an updated dictionary.
-    '''
-
-    #global model
-    import quantities as pq
-    import get_neab
-    from neuronunit.models import backends
-    from neuronunit.models.reduced import ReducedModel
-
-    #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-    model.load_model()
-    model.set_attrs(**dtc.attrs)
-    #model.update_run_params(dtc.attrs)
-
-    DELAY = 100.0*pq.ms
-    DURATION = 1000.0*pq.ms
-    params = {'injected_square_current':
-              {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
-
-
-    if float(ampl) not in dtc.lookup or len(dtc.lookup)==0:
-
-        current = params.copy()['injected_square_current']
-
-        uc = {'amplitude':ampl}
-        current.update(uc)
-        current = {'injected_square_current':current}
-        dtc.run_number += 1
-        model.set_attrs(** dtc.attrs)
-        model.name = dtc.attrs
-        #model.update_run_params(dtc.attrs)
-        #model.update_run_params(dtc.attrs)
-        model.inject_square_current(current)
-        dtc.previous = ampl
-        n_spikes = model.get_spike_count()
-        print(n_spikes,dtc.rheobase,ampl,dtc.attrs)
-        dtc.lookup[float(ampl)] = n_spikes
-        if n_spikes == 1:
-            dtc.rheobase = float(ampl)
-
-            dtc.name = str('rheobase {0} parameters {1}'.format(str(current),str(model.params)))
-            dtc.boolean = True
-            return dtc
-
-        return dtc
-    if float(ampl) in dtc.lookup:
-        return dtc
-
 
 MU = 4
 NGEN = 2
