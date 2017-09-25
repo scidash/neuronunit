@@ -94,6 +94,7 @@ class LEMSModel(cap.Runnable,
         else:
             raise Exception("Backend %s not found in backends.py" \
                             % name)
+        self._backend.model = self
         self._backend.init_backend(*args, **kwargs)
 
     def create_lems_file(self, name):
