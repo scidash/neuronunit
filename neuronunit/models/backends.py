@@ -129,7 +129,7 @@ class NEURONBackend(Backend):
         #self.h.cvode.active(1)
         #pdb.set_trace()
         #self.h.cvode.active
-        print(1,self.orig_lems_file_path)
+        print(1,self.model.orig_lems_file_path)
         super(NEURONBackend,self).init_backend(attrs)
         self.unpicklable += ['h','ns','_backend']
 
@@ -270,7 +270,7 @@ class NEURONBackend(Backend):
         #Create a pyhoc file using jneuroml to convert from NeuroML to pyhoc.
         #import the contents of the file into the current names space.
         def cond_load():
-            nrn_name = os.path.splitext(self.orig_lems_file_path)[0]
+            nrn_name = os.path.splitext(self.model.orig_lems_file_path)[0]
             nrn_path,nrn_name = os.path.split(nrn_name)
             sys.path.append(nrn_path)
             #raise Exception('%s %s' % (nrn_path,nrn_name+'_nrn'))
@@ -279,7 +279,7 @@ class NEURONBackend(Backend):
             #print(nrn_path)
             self.reset_neuron(nrn.neuron)
             #make sure mechanisms are loaded
-            modeldirname = os.path.dirname(self.orig_lems_file_path)
+            modeldirname = os.path.dirname(self.model.orig_lems_file_path)
             self.neuron.load_mechanisms(modeldirname)
             #import the default simulation protocol
             #this next step may be unnecessary: TODO delete it and check.
@@ -288,12 +288,12 @@ class NEURONBackend(Backend):
             return self
 
         architecture = platform.machine()
-        NEURON_file_path = os.path.join(self.orig_lems_file_path,architecture)
+        NEURON_file_path = os.path.join(self.model.orig_lems_file_path,architecture)
         if os.path.exists(NEURON_file_path):
             self = cond_load()
         else:
             self.exec_in_dir = tempfile.mkdtemp()
-            pynml.run_lems_with_jneuroml_neuron(self.orig_lems_file_path,
+            pynml.run_lems_with_jneuroml_neuron(self.model.orig_lems_file_path,
                               skip_run=False,
                               nogui=False,
                               load_saved_data=False,
@@ -310,7 +310,7 @@ class NEURONBackend(Backend):
         #the resulting hoc variables for current source and cell name are idiosyncratic (not generic).
         #The resulting idiosyncracies makes it hard not have a hard coded approach make non hard coded, and generalizable code.
         #work around involves predicting the hoc variable names from pyneuroml LEMS file that was used to generate them.
-        more_attributes = pynml.read_lems_file(self.orig_lems_file_path)
+        more_attributes = pynml.read_lems_file(self.model.orig_lems_file_path)
         #print("Components are %s" % more_attributes.components)
         for i in more_attributes.components:
             #This code strips out simulation parameters from the xml tree also such as duration.
