@@ -15,6 +15,76 @@ from ipyparallel import depend, require, dependent
 model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
 model.load_model()
 
+
+class Individual(object):
+    '''
+    When instanced the object from this class is used as one unit of chromosome or allele by DEAP.
+    Extends list via polymorphism.
+    '''
+    def __init__(self, *args):
+        list.__init__(self, *args)
+        self.error=None
+        self.results=None
+        self.name=''
+        self.attrs = {}
+        self.params=None
+        self.score=None
+        self.fitness=None
+        self.lookup={}
+        self.rheobase=None
+        self.fitness = creator.FitnessMin
+@require('numpy, model_parameters, deap','random')
+def import_list(ipp):
+    Individual = ipp.Reference('Individual')
+    from deap import base, creator, tools
+    import deap
+    import random
+    history = deap.tools.History()
+    toolbox = base.Toolbox()
+    import model_parameters as modelp
+    import numpy as np
+    sub_set = []
+    whole_BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
+    whole_BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
+    BOUND_LOW = whole_BOUND_LOW
+    BOUND_UP = whole_BOUND_UP
+    NDIM = len(BOUND_UP)#+1
+    def uniform(low, up, size=None):
+        try:
+            return [random.uniform(a, b) for a, b in zip(low, up)]
+        except TypeError:
+            return [random.uniform(a, b) for a, b in zip([low] * size, [up] * size)]
+    # weights vector should compliment a numpy matrix of eigenvalues and other values
+    creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
+    creator.create("Individual", list, fitness=creator.FitnessMin)
+    toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
+    toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
+    toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+    toolbox.register("select", tools.selNSGA2)
+    toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=30.0)
+    toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
+    return toolbox, tools, history, creator, base
+
+def get_trans_dict(param_dict):
+    trans_dict = {}
+    for i,k in enumerate(list(param_dict.keys())):
+        trans_dict[i]=k
+    return trans_dict
+
+
+def dt_to_ind(dtc,td):
+    '''
+    Re instanting data transport container at every update dtcpop
+    is Noneifying its score attribute, and possibly causing a
+    performance bottle neck.
+    '''
+    ind =[]
+    for k in td.keys():
+        ind.append(dtc.attrs[td[k]])
+    ind.append(dtc.rheobase)
+    return ind
+
+
 class DataTC(object):
     '''
     Data Transport Vessel
@@ -42,10 +112,48 @@ class DataTC(object):
         self.results = {}
         self.searched = []
         self.searchedd = {}
+
+#@require('numpy', 'copy')
+def update_dtc_pop(pop, toolbox, dview, td):
+    '''
+    inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
+    outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
+    Rationale, not every gene value will result in a model for which rheobase is found, in which case that gene is discarded, however to
+    compensate for losses in gene population size, more gene samples must be tested for a successful return from a rheobase search.
+    If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
+    corresponding virtual model objects.
+    '''
+    import copy
+    import numpy as np
+    pop = [toolbox.clone(i) for i in pop ]
+    #import evaluate_as_module
+
+    def transform(ind):
+        #dtc = evaluate_as_module.DataTC()
+        dtc = DataTC()
+        print(dtc)
+        param_dict = {}
+        for i,j in enumerate(ind):
+            param_dict[trans_dict[i]] = str(j)
+        dtc.attrs = param_dict
+        dtc.evaluated = False
+        return dtc
+
+
+    if len(pop) > 0:
+        dtcpop = list(dview.map_sync(transform, pop))
+        #dtcpop = list(copy.copy(dtcpop))
+    else:
+        # In this case pop is not really a population but an individual
+        # but parsimony of naming variables
+        # suggests not to change the variable name to reflect this.
+        dtcpop = transform(pop)
+    return dtcpop
+
 #dview.apply_sync(p_imports)
 #p_imports()
 
-def difference(v): # v is a tesst
+def difference(observation,prediction): # v is a tesst
     '''
     This method does not do what you would think
     from reading it.
@@ -54,29 +162,29 @@ def difference(v): # v is a tesst
     understand how to rescale one unit with another
     compatible unit.
     '''
-    assert type(v) is not type(None)
+    #assert type(score) is not type(None)
     import numpy as np
-    print(v.prediction.keys())
-    print(v.prediction.values())
+    print(prediction.keys())
+    print(prediction.values())
 
     # The trick is.
     # prediction always has value. but observation 7 out of 8 times has mean.
 
-    if 'value' in v.prediction.keys():
-        unit_predictions = v.prediction['value']
-        if 'mean' in v.observation.keys():
-            unit_observations = v.observation['mean']
-        elif 'value' in v.observation.keys():
-            unit_observations = v.observation['value']
+    if 'value' in prediction.keys():
+        unit_predictions = prediction['value']
+        if 'mean' in observation.keys():
+            unit_observations = observation['mean']
+        elif 'value' in observation.keys():
+            unit_observations = observation['value']
 
 
 
-    if 'mean' in v.prediction.keys():
-        unit_predictions = v.prediction['mean']
-        if 'mean' in v.observation.keys():
-            unit_observations = v.observation['mean']
-        elif 'value' in v.observation.keys():
-            unit_observations = v.observation['value']
+    if 'mean' in prediction.keys():
+        unit_predictions = score.prediction['mean']
+        if 'mean' in observation.keys():
+            unit_observations = observation['mean']
+        elif 'value' in observation.keys():
+            unit_observations = observation['value']
 
     to_r_s = unit_observations.units
     unit_predictions = unit_predictions.rescale(to_r_s)
@@ -106,60 +214,33 @@ def pre_format(dtc):
             vtest[k]['delay'] = 100 * pq.ms
     return vtest
 #@require('quantities','numpy','get_neab','quanitites')
-@require('get_neab')
 
 
-def check_current(ampl,dtc):
-    '''
-    Inputs are an amplitude to test and a virtual model
-    output is an virtual model with an updated dictionary.
-    '''
 
-    #global model
+def pre_format(dtc):
     import quantities as pq
+    import copy
+    dtc.vtest = None
+    dtc.vtest = {}
     import get_neab
-    from neuronunit.models import backends
-    from neuronunit.models.reduced import ReducedModel
+    tests = get_neab.tests
+    for k,v in enumerate(tests):
+        dtc.vtest[k] = {}
+        dtc.vtest[k]['injected_square_current'] = {}
+    for k,v in enumerate(tests):
+        if k == 1 or k == 2 or k == 3:
+            # Negative square pulse current.
+            dtc.vtest[k]['injected_square_current']['duration'] = 100 * pq.ms
+            dtc.vtest[k]['injected_square_current']['amplitude'] = -10 *pq.pA
+            dtc.vtest[k]['injected_square_current']['delay'] = 30 * pq.ms
 
-    #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-    model.load_model()
-    model.set_attrs(**dtc.attrs)
-    #model.update_run_params(dtc.attrs)
+        if k == 0 or k == 4 or k == 5 or k == 6 or k == 7:
+            # Threshold current.
+            dtc.vtest[k]['injected_square_current']['duration'] = 1000 * pq.ms
+            dtc.vtest[k]['injected_square_current']['amplitude'] = dtc.rheobase['value']
+            dtc.vtest[k]['injected_square_current']['delay'] = 100 * pq.ms
+    return dtc
 
-    DELAY = 100.0*pq.ms
-    DURATION = 1000.0*pq.ms
-    params = {'injected_square_current':
-              {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
-
-
-    if float(ampl) not in dtc.lookup or len(dtc.lookup)==0:
-
-        current = params.copy()['injected_square_current']
-
-        uc = {'amplitude':ampl}
-        current.update(uc)
-        current = {'injected_square_current':current}
-        dtc.run_number += 1
-        model.set_attrs(** dtc.attrs)
-        model.name = dtc.attrs
-        #model.update_run_params(dtc.attrs)
-        #model.update_run_params(dtc.attrs)
-        model.inject_square_current(current)
-        dtc.previous = ampl
-        n_spikes = model.get_spike_count()
-        print(n_spikes,dtc.rheobase,ampl,dtc.attrs)
-        dtc.lookup[float(ampl)] = n_spikes
-        if n_spikes == 1:
-            dtc.rheobase = float(ampl)
-
-            dtc.name = str('rheobase {0} parameters {1}'.format(str(current),str(model.params)))
-            dtc.boolean = True
-            return dtc
-
-        return dtc
-    if float(ampl) in dtc.lookup:
-        return dtc
 
 
 def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyparallel to work.
@@ -187,15 +268,15 @@ def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyp
     assert type(dtc.rheobase) is not type(None)
     #tests = get_neab.suite.tests
     model.set_attrs(attrs = dtc.attrs)
-    model.rheobase = dtc.rheobase * pq.pA
+    model.rheobase = dtc.rheobase['value']
+    #get_neab.tests[0].prediction = dtc.rheobase
+
     import copy
     tests = copy.copy(get_neab.tests)
     pre_fitness = []
     fitness = []
     differences = []
     fitness1 = []
-
-    dtc = check_current(dtc.rheobase, dtc)
 
     if float(dtc.rheobase) <= 0.0:
         fitness1 = [ 125.0 for i in tests ]
@@ -218,7 +299,7 @@ def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyp
             if k == 0 or k == 4 or k == 5 or k == 6 or k == 7:
                 # Threshold current.
                 v.params['injected_square_current']['duration'] = 1000 * pq.ms
-                v.params['injected_square_current']['amplitude'] = dtc.rheobase * pq.pA
+                v.params['injected_square_current']['amplitude'] = dtc.rheobase['value']
                 v.params['injected_square_current']['delay'] = 100 * pq.ms
 
             vtests = pre_format(copy.copy(dtc))
@@ -230,7 +311,7 @@ def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyp
             if k == 0:
                 v.prediction = None
                 v.prediction = {}
-                v.prediction['value'] = dtc.rheobase * pq.pA
+                v.prediction['value'] = dtc.rheobase['value']
 
             assert type(model) is not type(None)
             score = v.judge(model,stop_on_error = False, deep_error = True)
@@ -377,8 +458,9 @@ def dtc_to_ind(dtc,td):
     return ind
 
 
+#dtcpop = evaluate_as_module.update_dtc_pop(pop, toolbox, dview, td)
 
-def update_dtc_pop(pop, trans_dict):
+def update_dtc_pop(pop, toolbox, dview, trans_dict):
     '''
     inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
     outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
