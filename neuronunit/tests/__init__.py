@@ -551,7 +551,7 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
 
 
 
-class RheobaseTestS(VmTest):
+class RheobaseTest(VmTest):
     """
     Tests the full widths of APs at their half-maximum
     under current injection.
@@ -685,7 +685,7 @@ class RheobaseTestS(VmTest):
             score.related_data['vm'] = self.rheobase_vm
 
 
-class RheobaseTest(VmTest):
+class RheobaseTestP(VmTest):
      """
      A parallel version of test Rheobase.
      Tests the full widths of APs at their half-maximum
