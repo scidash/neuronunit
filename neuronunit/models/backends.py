@@ -10,10 +10,7 @@ import pickle
 import importlib
 
 import neuronunit.capabilities as cap
-#import neuronunit.neuron.capabilities as cap_n
-
 from quantities import ms, mV, nA
-
 from pyneuroml import pynml
 from quantities import ms, mV
 from neo.core import AnalogSignal
@@ -428,35 +425,10 @@ class NEURONBackend(Backend):
             results['run_number'] = 1
         return results
 
-
-    def get_spike_count(self):
-        import neuronunit.capabilities.spike_functions as sf
-
-        spike_train  = sf.get_spike_train(self.get_membrane_potential())
-        #spike_train = sf.get_spike_count(st)
-        return len(spike_train)
-
-
     def get_APs(self):
         import neuronunit.capabilities.spike_functions as sf
-
-        #spike_train  = sf.get_spike_train(self.get_membrane_potential())
-        #spike_train = sf.get_spike_count(st)
         return sf.get_spike_waveforms(self.get_membrane_potential())
 
-
-    def get_AP_widths(self):
-        import neuronunit.capabilities.spike_functions as sf
-        #assert type(self) is not type(None)
-        #try type(mp) is not type(None):
-        spike_count = self.get_spike_count()
-        if spike_count >= 1:
-            mp = self.get_membrane_potential()
-            action_potentials = sf.get_spike_waveforms(mp)
-            sw = sf.spikes2widths(action_potentials)
-        else:
-            sw = None
-        return sw
 
 class HasSegment(sciunit.Capability):
     """Model has a membrane segment of NEURON simulator"""
