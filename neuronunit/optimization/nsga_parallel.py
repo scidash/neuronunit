@@ -1,178 +1,28 @@
 ##
 # Assumption that this file was executed after first executing the bash: ipcluster start -n 8 --profile=default &
 ##
-
 import matplotlib # Its not that this file is responsible for doing plotting, but it calls many modules that are, such that it needs to pre-empt
 # setting of an appropriate backend.
 matplotlib.use('agg')
 import os
-os.system('')
 import quantities as pq
 from numpy import random
 
 import sys
 import ipyparallel as ipp
-from ipyparallel import Client
-c = Client()  # connect to IPyParallel cluster
-e = c.become_dask()
-e.start_ipython_scheduler()
-
 from ipyparallel import depend, require, dependent
 import get_neab
 rc = ipp.Client(profile='default')
+rc[:].use_cloudpickle()
+dview = rc[:]
+
+#rc = ipp.Client(profile='default')
 THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
 this_nu = os.path.join(THIS_DIR,'../../')
 sys.path.insert(0,this_nu)
 from neuronunit import tests
 #from deap import hypervolume
 import deap
-
-rc[:].use_cloudpickle()
-dview = rc[:]
-
-
-
-class Individual(object):
-    '''
-    When instanced the object from this class is used as one unit of chromosome or allele by DEAP.
-    Extends list via polymorphism.
-    '''
-    def __init__(self, *args):
-        list.__init__(self, *args)
-        self.error=None
-        self.results=None
-        self.name=''
-        self.attrs = {}
-        self.params=None
-        self.score=None
-        self.fitness=None
-        self.lookup={}
-        self.rheobase=None
-        self.fitness = creator.FitnessMin
-
-@require('numpy, model_parameters, deap','random')
-def import_list():
-    Individual = ipp.Reference('Individual')
-    from deap import base, creator, tools
-    import deap
-    import random
-    history = deap.tools.History()
-    toolbox = base.Toolbox()
-    import model_parameters as modelp
-    import numpy as np
-    sub_set = []
-    whole_BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
-    whole_BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
-    BOUND_LOW = whole_BOUND_LOW
-    BOUND_UP = whole_BOUND_UP
-    NDIM = len(BOUND_UP)#+1
-    def uniform(low, up, size=None):
-        try:
-            return [random.uniform(a, b) for a, b in zip(low, up)]
-        except TypeError:
-            return [random.uniform(a, b) for a, b in zip([low] * size, [up] * size)]
-    # weights vector should compliment a numpy matrix of eigenvalues and other values
-    creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
-    creator.create("Individual", list, fitness=creator.FitnessMin)
-    toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
-    toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
-    toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-    toolbox.register("select", tools.selNSGA2)
-    toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=30.0)
-    toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
-    return toolbox, tools, history, creator, base
-(toolbox, tools, history, creator, base) = import_list()
-dview.push({'Individual':Individual})
-dview.apply_sync(import_list)
-
-def get_trans_dict(param_dict):
-    trans_dict = {}
-    for i,k in enumerate(list(param_dict.keys())):
-        trans_dict[i]=k
-    return trans_dict
-import model_parameters
-param_dict = model_parameters.model_params
-
-def dt_to_ind(dtc,td):
-    '''
-    Re instanting data transport container at every update dtcpop
-    is Noneifying its score attribute, and possibly causing a
-    performance bottle neck.
-    '''
-    ind =[]
-    for k in td.keys():
-        ind.append(dtc.attrs[td[k]])
-    ind.append(dtc.rheobase)
-    return ind
-
-@require('numpy as np', 'copy','evaluate_as_module')
-def update_dtc_pop(pop, trans_dict):
-    '''
-    inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
-    outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
-    Rationale, not every gene value will result in a model for which rheobase is found, in which case that gene is discarded, however to
-    compensate for losses in gene population size, more gene samples must be tested for a successful return from a rheobase search.
-    If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
-    corresponding virtual model objects.
-    '''
-    import copy
-    import numpy as np
-    pop = [toolbox.clone(i) for i in pop ]
-    import evaluate_as_module
-
-    def transform(ind):
-        dtc = evaluate_as_module.DataTC()
-        param_dict = {}
-        for i,j in enumerate(ind):
-            param_dict[trans_dict[i]] = str(j)
-        dtc.attrs = param_dict
-        dtc.evaluated = False
-        return dtc
-
-
-    if len(pop) > 0:
-        dtcpop = dview.map_sync(transform, pop)
-        dtcpop = list(copy.copy(dtcpop))
-    else:
-        # In this case pop is not really a population but an individual
-        # but parsimony of naming variables
-        # suggests not to change the variable name to reflect this.
-        dtcpop = transform(pop)
-    return dtcpop
-
-##
-# Start of the Genetic Algorithm
-# For good results, NGEN * MU  the number of generations
-# time the size of the gene pool
-# should at least be as big as number of dimensions/model parameters
-# explored.
-##
-
-MU = 4
-NGEN = 2
-CXPB = 0.9
-
-import numpy as np
-pf = tools.ParetoFront()
-
-stats = tools.Statistics(lambda ind: ind.fitness.values)
-stats.register("min", np.min, axis=0)
-stats.register("max", np.max, axis=0)
-stats.register("avg", np.mean)
-stats.register("std", np.std)
-
-logbook = tools.Logbook()
-logbook.header = "gen", "evals", "min", "max", "avg", "std"
-
-dview.push({'pf':pf})
-trans_dict = get_trans_dict(param_dict)
-td = trans_dict
-dview.push({'trans_dict':trans_dict,'td':td})
-
-pop = toolbox.population(n = MU)
-pop = [ toolbox.clone(i) for i in pop ]
-dview.scatter('Individual',pop)
-
 
 
 def check_paths():
@@ -190,39 +40,177 @@ path_serial = check_paths()
 paths_parallel = dview.apply_async(check_paths).get_dict()
 assert path_serial == paths_parallel[0]
 
-dtcpop = update_dtc_pop(pop, td)
-print(dtcpop)
+import evaluate_as_module
+toolbox, tools, history, creator, base = evaluate_as_module.import_list(ipp)
+dview.push({'Individual':evaluate_as_module.Individual})
+dview.apply(evaluate_as_module.import_list,ipp)
+#print(returns.get())
 
-#for k,v in enumerate(tests):
-for dtc in dtcpop:
+MU = 4
+NGEN = 2
+CXPB = 0.9
+
+import numpy as np
+pf = tools.ParetoFront()
+
+stats = tools.Statistics(lambda ind: ind.fitness.values)
+stats.register("min", np.min, axis=0)
+stats.register("max", np.max, axis=0)
+stats.register("avg", np.mean)
+stats.register("std", np.std)
+print('a')
+logbook = tools.Logbook()
+logbook.header = "gen", "evals", "min", "max", "avg", "std"
+
+dview.push({'pf':pf})
+
+
+
+import model_parameters
+param_dict = model_parameters.model_params
+
+
+def get_trans_dict(param_dict):
+    trans_dict = {}
+    for i,k in enumerate(list(param_dict.keys())):
+        trans_dict[i]=k
+    return trans_dict
+
+
+def dt_to_ind(dtc,td):
+    '''
+    Re instanting data transport container at every update dtcpop
+    is Noneifying its score attribute, and possibly causing a
+    performance bottle neck.
+    '''
+    ind =[]
+    for k in td.keys():
+        ind.append(dtc.attrs[td[k]])
+    ind.append(dtc.rheobase)
+    return ind
+@require('copy')
+def update_dtc_pop(pop, td):
+    '''
+    inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
+    outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
+    Rationale, not every gene value will result in a model for which rheobase is found, in which case that gene is discarded, however to
+    compensate for losses in gene population size, more gene samples must be tested for a successful return from a rheobase search.
+    If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
+    corresponding virtual model objects.
+    '''
+    import copy
+    #import numpy as np
+    #pop = [toolbox.clone(i) for i in pop ]
+    import evaluate_as_module
+
+    def transform(ind):
+        dtc = evaluate_as_module.DataTC()
+        print(dtc)
+        #dtc = DataTC()
+        #print(dtc)
+        param_dict = {}
+        for i,j in enumerate(ind):
+            param_dict[td[i]] = str(j)
+        dtc.attrs = param_dict
+        dtc.evaluated = False
+        return dtc
+
+
+    if len(pop) > 0:
+        dtcpop = list(map(transform,copy.copy(pop)))
+        #dtcpop = list(dview.map_sync(transform, copy.copy(pop)))
+        #dtcpop = list(copy.copy(dtcpop))
+    else:
+        # In this case pop is not really a population but an individual
+        # but parsimony of naming variables
+        # suggests not to change the variable name to reflect this.
+        dtcpop = transform(pop)
+    return dtcpop
+td = get_trans_dict(param_dict)
+#td = trans_dict
+print('b')
+
+dview.push({'td':td })
+
+pop = toolbox.population(n = MU)
+pop = [ toolbox.clone(i) for i in pop ]
+dview.scatter('Individual',pop)
+print('c')
+print(pop,td)
+print(dview)
+dtcpop = update_dtc_pop(pop, td)
+
+#dtcpop = evaluate_as_module.update_dtc_pop(pop, toolbox, dview, td)
+print(dtcpop)
+print('d')
+
+def dtc_to_rheo(dtc):
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
     import quantities as pq
     import numpy as np
+    import get_neab
+    import evaluate_as_module
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.load_model()
     model.set_attrs(**dtc.attrs)
     print(model)
-    import get_neab
     print(model.attrs)
+    dtc.scores = None
+    dtc.scores = {}
     get_neab.tests[0].dview = dview
+    dtc.differences = None
+    dtc.differences = {}
     score = get_neab.tests[0].judge(model,stop_on_error = False, deep_error = True)
+    observation = score.observation
+    prediction = score.prediction
+    delta = evaluate_as_module.difference(observation,prediction)
+    #dtc.differences[str(get_neab.tests[0])] = delta
+    #dtc.scores[str(get_neab.tests[0])] = score.sort_key
     dtc.rheobase = score.prediction
+    return dtc
 
-for ind in dtcpop:
-    print(ind.rheobase)
+def map_wrapper(dtc):
+    from neuronunit.models import backends
+    from neuronunit.models.reduced import ReducedModel
+    import quantities as pq
+    import numpy as np
+    import get_neab
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+    model.load_model()
+    model.set_attrs(**dtc.attrs)
+    print(model)
+    print(model.attrs)
+    get_neab.tests[0].prediction = dtc.rheobase
+    model.rheobase = dtc.rheobase['value']
+    #differences = []
+    for k,t in enumerate(get_neab.tests):
+        if k>1:
+            t.params = dtc.vtest[k]
+            score = t.judge(model,stop_on_error = False, deep_error = True)
+            dtc.scores[str(t)] = score.sort_key
+            observation = score.observation
+            prediction = score.prediction
+            delta = np.abs(observation-prediction)
+            dtc.differences[str(t)] = delta
 
-suite = [ t for t in get_neab.tests[1:-1] ]
-scores = dview.map(suite.judge,dtcpop)
-if scores.get():
-    rh_values_unevolved = [v.rheobase for v in dtcpop ]
+    return dtc
 
-#for dtc in dtcpop:
+    #delta = difference(observation,prediction)
+    #dtc.differences.append(delta)
+print(dtcpop)
+print('got here e')
+dtcpop = list(map(dtc_to_rheo,dtcpop))
 
-#        v.judge(model,stop_on_error = False, deep_error = True)
-#        score = v.judge()
-#    assert type(dtc.rheobase) is not type(None)
-#dtcpop , _ = check_rheobase(dtcpop)
+dtcpop = list(map(evaluate_as_module.pre_format,dtcpop))
+dtcpop = list(dview.map(map_wrapper,dtcpop).get())
+#dtcpop = list(map(evaluate_as_module.map_wrapper,dtcpop))#.get())
+
+pdb.set_trace()
+
+print(scores)
+rh_values_unevolved = [v.rheobase for v in dtcpop ]
+
 
 new_checkpoint_path = str('un_evolved')+str('.p')
 import pickle
@@ -230,39 +218,7 @@ with open(new_checkpoint_path,'wb') as handle:#
     pickle.dump([dtcpop,rh_values_unevolved], handle)
 
 
-# sometimes done in serial in order to get access to opaque stdout/stderr
 
-#fitnesses = []
-#for v in dtcpop:
-#   fitnesses.append(evaluate_as_module.evaluate(v))
-   #pdb.set_trace()
-import copy
-import evaluate_as_module
-#dtcpop = dview.map_sync(evaluate_as_module.pre_evaluate, copy.copy(dtcpop))
-#from itertools import repeat
-dtcpop = [ v for v in dtcpop if v.rheobase > 0.0 ]
-for d in dtcpop:
-    print('testing dubious rheobase values \n\n\n')
-    dtc = check_current(d.rheobase, d)
-#dtcpop = list(dview.map_sync(evaluate_as_module.pre_evaluate,copy.copy(dtcpop)))
-fitnesses = list(dview.map_sync(evaluate_as_module.evaluate, copy.copy(dtcpop)))
-
-#fitnesses = dview.map(evaluate_as_module.evaluate, copy.copy(producer)).get()
-
-
-
-
-'''
-Eventually want to use RAMBackend to save time.
-from neuronunit.models import backends
-from neuronunit.models.reduced import ReducedModel
-new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-model = ReducedModel(new_file_path,name=str('vanilla'),backend='DiskBackend')
-model.load_model()
-model.update_run_params(dtc.attrs)
-'''
-
-#fitnesses = dview.map_sync(evaluate, copy.copy(dtcpop))
 for ind, fit in zip(pop, fitnesses):
     ind.fitness.values = fit
 
