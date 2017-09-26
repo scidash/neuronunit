@@ -69,8 +69,8 @@ class Backend:
             pickle.dump(self.results,f)
 
 
-class RAMBackend(Backend):
-    """A dummy backend that loads pre-computed results from disk"""
+class MemoryBackend(Backend):
+    """A dummy backend that loads pre-computed results from RAM/heap"""
 
     def init_backend(self, results_path='.'):
         self.rerun = True
@@ -301,21 +301,15 @@ class NEURONBackend(Backend):
             nrn_name = os.path.splitext(self.orig_lems_file_path)[0]
             nrn_path,nrn_name = os.path.split(nrn_name)
             sys.path.append(nrn_path)
-            #raise Exception('%s %s' % (nrn_path,nrn_name+'_nrn'))
             import importlib
             nrn = importlib.import_module(nrn_name + '_nrn')
-            #print(nrn_path)
             self.reset_neuron(nrn.neuron)
-            #make sure mechanisms are loaded
             modeldirname = os.path.dirname(self.orig_lems_file_path)
             self.neuron.load_mechanisms(modeldirname)
-            #import the default simulation protocol
-            #this next step may be unnecessary: TODO delete it and check.
-            #set_stop_time(
+
             self.set_stop_time(1600*ms)
             self.h.tstop
             self.ns = nrn.NeuronSimulation(self.h.tstop, dt=0.0025)
-            print('this never executes')
             return self
 
         self = cond_load()
@@ -372,10 +366,9 @@ class NEURONBackend(Backend):
             self.h('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
             self.h('psection()')
 
-        '''
-        Below are experimental rig recording parameters.
-        These can possibly go in a seperate method.
-        '''
+
+        # Below are experimental rig recording parameters.
+        # These can possibly go in a seperate method.
 
         self.h(' { v_time = new Vector() } ')
         self.h(' { v_time.record(&t) } ')
@@ -407,10 +400,7 @@ class NEURONBackend(Backend):
         self.neuron = None
         import neuron
         self.reset_neuron(neuron)
-        #self.reset_h(neuron)
         self.set_attrs(**self.attrs)
-                #model.update_run_params(vm.attrs)
-        #self.update_run_params(self.params)
 
         c = copy.copy(current)
         if 'injected_square_current' in c.keys():
@@ -428,20 +418,10 @@ class NEURONBackend(Backend):
         self.local_run()
 
     def local_run(self):
-        #sim_start = time.time()
-        #self.h.tstop=1600#))#TODO find a way to make duration changeable.
-        #print(self.h.cvode.active())
         self.h('run()')
-        #sim_end = time.time()
-        #sim_time = sim_end - sim_start
-        #print("Finished NEURON simulation in %f seconds (%f mins)..."%(sim_time, sim_time/60.0))
         results={}
-        # Convert to Python list for speed, variable has dim: voltage
         results['vm'] = [float(x/1000.0) for x in copy.copy(self.neuron.h.v_v_of0.to_python())]
-        #self.neuron.h.v_v_of0 = None # Convert to Python list for speed, variable has dim: voltage
-        # Convert to Python list for speed, variable has dim: voltage
         results['t'] = [float(x) for x in copy.copy(self.neuron.h.v_time.to_python())]
-        #self.neuron.h.v_time = None
         if 'run_number' in results.keys():
             results['run_number'] = results['run_number']+1
         else:
