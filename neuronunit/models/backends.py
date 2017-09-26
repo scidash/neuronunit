@@ -27,6 +27,7 @@ class Backend:
 
     def init_backend(self, *args, **kwargs):
         #self.attrs = {} if attrs is None else attrs
+        self.model.create_lems_file(model.name)
         self.load_model()
 
     attrs = None
@@ -130,7 +131,8 @@ class NEURONBackend(Backend):
         #pdb.set_trace()
         #self.h.cvode.active
         print(1,self.model.orig_lems_file_path)
-        super(NEURONBackend,self).init_backend(attrs)
+        #super(NEURONBackend,self).init_backend(attrs)
+        self.load_model()
         self.unpicklable += ['h','ns','_backend']
 
     backend = 'NEURON'

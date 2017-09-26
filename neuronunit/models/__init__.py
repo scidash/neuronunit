@@ -3,8 +3,8 @@
 import os
 from copy import deepcopy
 import tempfile
-import shutil
 import inspect
+import shutil
 
 import sciunit
 import neuronunit.capabilities as cap
@@ -27,7 +27,6 @@ class LEMSModel(cap.Runnable,
         self.attrs = attrs if attrs else {}
         self.orig_lems_file_path = os.path.abspath(LEMS_file_path)
         assert os.path.isfile(self.orig_lems_file_path)
-        self.create_lems_file(name)
         self.run_defaults = pynml.DEFAULTS
         self.run_defaults['nogui'] = True
         self.run_params = {}
@@ -51,15 +50,15 @@ class LEMSModel(cap.Runnable,
         #print(self)
         return self
 
-    def __getnewargs_ex__(self): # This method is required by pickle to know what 
+    #def __getnewargs_ex__(self): # This method is required by pickle to know what 
                               # arguments to pass to __new__ when instances of 
                               # this class are eventually unpickled.  
                               # Otherwise __new__() will have no arguments.  
         # A tuple containing the extra args and kwargs to pass to __new__. 
         #print("Calling __getnewargs_ex__")
-        return (tuple(), # No args
-                {'fresh':False, # Not fresh, i.e. restored from pickling
-                 'backend':self.backend})  # The backend to set.  
+    #    return (tuple(), # No args
+    #            {'fresh':False, # Not fresh, i.e. restored from pickling
+    #             'backend':self.backend})  # The backend to set.  
 
     def set_backend(self, backend):
         if isinstance(backend,str):
@@ -101,16 +100,7 @@ class LEMSModel(cap.Runnable,
         if not hasattr(self,'temp_dir'):
             self.temp_dir = tempfile.gettempdir()
         self.lems_file_path  = os.path.join(self.temp_dir, '%s.xml' % name)
-        parent,file = os.path.split(self.orig_lems_file_path)
-        #print(parent,file)
-        protected = ['Cells.xml','Networks.xml','Simulation.xml']
-        with open(self.orig_lems_file_path,'r') as f_orig:
-            f = open(self.lems_file_path,'w')
-            for line in f_orig:
-                if 'file=\"' in line and not any([x in line for x in protected]):
-                    line = line.replace('file=\"', 'file=\"%s/' % parent)
-                f.write(line)        
-            f.close()
+        shutil.copy2(self.orig_lems_file_path,self.lems_file_path)
         if self.attrs:
             self.set_lems_attrs(self.attrs)
 
