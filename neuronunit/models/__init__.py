@@ -16,7 +16,7 @@ class LEMSModel(cap.Runnable,
                 sciunit.Model):
     """A generic LEMS model"""
 
-    def __init__(self, LEMS_file_path=None, name=None, 
+    def __init__(self, LEMS_file_path=None, name=None,
                     backend='NEURON', attrs=None):
         #for base in cls.__bases__:
         #    sciunit.Model.__init__()
@@ -33,7 +33,7 @@ class LEMSModel(cap.Runnable,
         self.skip_run = False
         self.rerun = True # Needs to be rerun since it hasn't been run yet!
         self.set_backend(backend)
-        
+
     def __new__(cls, *args, **kwargs):
         """
         LEMS_file_path: Path to LEMS file (an xml file).
@@ -46,14 +46,14 @@ class LEMSModel(cap.Runnable,
         print(self)
         return self
 
-    def __getnewargs_ex__(self): # This method is required by pickle to know what 
-                              # arguments to pass to __new__ when instances of 
-                              # this class are eventually unpickled.  
-                              # Otherwise __new__() will have no arguments.  
-        # A tuple containing the extra args and kwargs to pass to __new__. 
+    def __getnewargs_ex__(self): # This method is required by pickle to know what
+                              # arguments to pass to __new__ when instances of
+                              # this class are eventually unpickled.
+                              # Otherwise __new__() will have no arguments.
+        # A tuple containing the extra args and kwargs to pass to __new__.
         return (tuple(), # No args
                 {'fresh':False, # Not fresh, i.e. restored from pickling
-                 'backend':self.backend})  # The backend to set.  
+                 'backend':self.backend})  # The backend to set.
 
     def set_backend(self, backend):
         if isinstance(backend,str):
@@ -71,7 +71,7 @@ class LEMSModel(cap.Runnable,
                     if isinstance(backend[i],dict):
                         kwargs.update(backend[i])
                     else:
-                        args += backend[i]  
+                        args += backend[i]
         else:
             raise TypeError("Backend must be string, tuple, or list")
         options = {x.replace('Backend',''):cls for x, cls \
@@ -81,25 +81,25 @@ class LEMSModel(cap.Runnable,
         if name in options:
             self.backend = name
             self._backend = options[name]()
-            # Add all of the backend's methods to the model instance, 
-            # but remove base classes that are pure backends first, 
-            # so that new backends replace old backends.  
+            # Add all of the backend's methods to the model instance,
+            # but remove base classes that are pure backends first,
+            # so that new backends replace old backends.
             new_bases = tuple([b for b in self.__class__.__bases__ \
                                if issubclass(b,sciunit.Model) or \
                                not issubclass(b,backends.Backend)])
             print(self._backend.__class__,new_bases)
-            #self.__class__.__bases__ = 
+            #self.__class__.__bases__ =
             new_bases = (self._backend.__class__,) + new_bases
             Dummy = type("%s with %s backend" % \
                          (self.__class__.__name__,self.backend),
                          new_bases,
-                         self.__dict__) 
+                         self.__dict__)
             self.__class__ = Dummy
             #class Dummy:
             #    pass
-            #Dummy = 
-            #self.__class__ = type(self.__class__, self._backend) 
-        
+            #Dummy =
+            #self.__class__ = type(self.__class__, self._backend)
+
         elif name is None:
             # The base class should not be called.
             raise Exception(("A backend (e.g. 'jNeuroML' or 'NEURON') "
@@ -140,15 +140,12 @@ class LEMSModel(cap.Runnable,
             print("Same run_params; skipping...")
             return
 
-        self.update_run_params(params=run_params)
-        #self.update_run_params(self.attrs)
-
         self.results = self.local_run()
         self.last_run_params = deepcopy(self.run_params)
         self.rerun = False
-        # Reset run parameters so the next test has to pass its own 
+        # Reset run parameters so the next test has to pass its own
         # run parameters and not use the same ones
-        self.run_params = {}    
+        self.run_params = {}
 
     def set_lems_run_params(self):
         from lxml import etree
