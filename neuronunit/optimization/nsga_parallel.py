@@ -13,9 +13,9 @@ from numpy import random
 import sys
 import ipyparallel as ipp
 from ipyparallel import Client
-c = Client()  # connect to IPyParallel cluster
-e = c.become_dask()
-e.start_ipython_scheduler()
+#c = Client()  # connect to IPyParallel cluster
+#e = c.become_dask()
+#e.start_ipython_scheduler()
 
 from ipyparallel import depend, require, dependent
 import get_neab
