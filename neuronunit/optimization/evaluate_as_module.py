@@ -9,7 +9,7 @@ from neuronunit.models import backends
 import neuronunit
 print(neuronunit.models.__file__)
 from neuronunit.models.reduced import ReducedModel
-import get_neab
+from neuronunit.tests import get_neab
 from ipyparallel import depend, require, dependent
 
 model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
@@ -196,7 +196,7 @@ def pre_format(dtc):
     import quantities as pq
     import copy
     vtest = {}
-    import get_neab
+    from neuronunit.tests import get_neab
     tests = get_neab.tests
     for k,v in enumerate(tests):
         vtest[k] = {}
@@ -222,7 +222,7 @@ def pre_format(dtc):
     import copy
     dtc.vtest = None
     dtc.vtest = {}
-    import get_neab
+    from neuronunit.tests import get_neab
     tests = get_neab.tests
     for k,v in enumerate(tests):
         dtc.vtest[k] = {}
@@ -261,15 +261,13 @@ def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyp
     from neuronunit.models.reduced import ReducedModel
     import quantities as pq
     import numpy as np
-    #import unittest
-    #tc = unittest.TestCase('__init__')
+    from neuronunit.tests import get_neab
+
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.load_model()
     assert type(dtc.rheobase) is not type(None)
-    #tests = get_neab.suite.tests
     model.set_attrs(attrs = dtc.attrs)
     model.rheobase = dtc.rheobase['value']
-    #get_neab.tests[0].prediction = dtc.rheobase
 
     import copy
     tests = copy.copy(get_neab.tests)
@@ -377,7 +375,8 @@ def cache_sim_runs(dtc):
     from neuronunit.models.reduced import ReducedModel
     import quantities as pq
     import numpy as np
-    import get_neab
+    from neuronunit.tests import get_neab
+
 
     import copy
     # copying here is critical for get_neab

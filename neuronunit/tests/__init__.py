@@ -837,9 +837,9 @@ class RheobaseTestP(VmTest):
         import numpy as np
         import copy
         import pdb
-        import get_neab
+        from neuronunit.tests import get_neab
 
-        @require('itertools','numpy','copy','pdb','get_neab')
+        @require('itertools','numpy','copy','get_neab')
         def init_dtc(dtc):
             if dtc.initiated == True:
                 # expand values in the range to accomodate for mutation.
@@ -871,7 +871,7 @@ class RheobaseTestP(VmTest):
             dview = rc[:]
             from neuronunit.models import backends
             from neuronunit.models.reduced import ReducedModel
-            import get_neab
+            from neuronunit.tests import get_neab
             from itertools import repeat
             model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
             model.load_model()
@@ -888,7 +888,7 @@ class RheobaseTestP(VmTest):
                 smaller = dtc.steps
                 ds = [ dtc for s in smaller ]
                 print(ds,smaller)
-                dtcpop = self.dview.map(check_current,smaller,ds)
+                dtcpop = dview.map(check_current,smaller,ds)
                 for dtc2 in dtcpop.get():
                     dtc.lookup.update(dtc2.lookup)
                 dtc = check_fix_range(dtc)

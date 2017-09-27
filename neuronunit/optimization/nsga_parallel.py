@@ -10,14 +10,13 @@ from numpy import random
 
 import sys
 import ipyparallel as ipp
-from ipyparallel import Client
-#c = Client()  # connect to IPyParallel cluster
-#e = c.become_dask()
-#e.start_ipython_scheduler()
+#from ipyparallel import Client
+rc = ipp.Client(profile='default')
+rc[:].use_cloudpickle()
+dview = rc[:]
 
 from ipyparallel import depend, require, dependent
-import get_neab
-rc = ipp.Client(profile='default')
+from neuronunit.tests import get_neab
 THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
 this_nu = os.path.join(THIS_DIR,'../../')
 sys.path.insert(0,this_nu)
@@ -25,8 +24,14 @@ from neuronunit import tests
 #from deap import hypervolume
 import deap
 
-rc[:].use_cloudpickle()
-dview = rc[:]
+
+
+###
+# GA parameters
+MU = 4
+NGEN = 3
+###
+
 
 def check_paths():
     '''
@@ -34,7 +39,7 @@ def check_paths():
     '''
     import neuronunit
     from neuronunit.models.reduced import ReducedModel
-    import get_neab
+    from neuronunit.tests import get_neab
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
     model.load_model()
     return neuronunit.models.__file__
@@ -48,41 +53,6 @@ toolbox, tools, history, creator, base = evaluate_as_module.import_list(ipp)
 dview.push({'Individual':evaluate_as_module.Individual})
 dview.apply(evaluate_as_module.import_list,ipp)
 #print(returns.get())
-
-@require('numpy, model_parameters, deap','random')
-def import_list():
-    Individual = ipp.Reference('Individual')
-    from deap import base, creator, tools
-    import deap
-    import random
-    history = deap.tools.History()
-    toolbox = base.Toolbox()
-    import model_parameters as modelp
-    import numpy as np
-    sub_set = []
-    whole_BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
-    whole_BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
-    BOUND_LOW = whole_BOUND_LOW
-    BOUND_UP = whole_BOUND_UP
-    NDIM = len(BOUND_UP)#+1
-    def uniform(low, up, size=None):
-        try:
-            return [random.uniform(a, b) for a, b in zip(low, up)]
-        except TypeError:
-            return [random.uniform(a, b) for a, b in zip([low] * size, [up] * size)]
-    # weights vector should compliment a numpy matrix of eigenvalues and other values
-    creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
-    creator.create("Individual", list, fitness=creator.FitnessMin)
-    toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
-    toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
-    toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-    toolbox.register("select", tools.selNSGA2)
-    toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=30.0)
-    toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
-    return toolbox, tools, history, creator, base
-(toolbox, tools, history, creator, base) = import_list()
-dview.push({'Individual':Individual})
-dview.apply_sync(import_list)
 
 def get_trans_dict(param_dict):
     trans_dict = {}
@@ -163,7 +133,7 @@ def dtc_to_rheo(dtc):
     from neuronunit.models.reduced import ReducedModel
     import quantities as pq
     import numpy as np
-    import get_neab
+    from neuronunit.tests import get_neab
     import evaluate_as_module
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.load_model()
@@ -172,7 +142,7 @@ def dtc_to_rheo(dtc):
     print(model.attrs)
     dtc.scores = None
     dtc.scores = {}
-    get_neab.tests[0].dview = dview
+    #get_neab.tests[0].dview = dview
     dtc.differences = None
     dtc.differences = {}
     score = get_neab.tests[0].judge(model,stop_on_error = False, deep_error = True)
@@ -189,7 +159,7 @@ def map_wrapper(dtc):
     from neuronunit.models.reduced import ReducedModel
     import quantities as pq
     import numpy as np
-    import get_neab
+    from neuronunit.tests import get_neab
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.load_model()
     model.set_attrs(**dtc.attrs)
@@ -220,7 +190,7 @@ dtcpop = list(map(evaluate_as_module.pre_format,dtcpop))
 dtcpop = list(dview.map(map_wrapper,dtcpop).get())
 #dtcpop = list(map(evaluate_as_module.map_wrapper,dtcpop))#.get())
 
-pdb.set_trace()
+#pdb.set_trace()
 
 print(scores)
 rh_values_unevolved = [v.rheobase for v in dtcpop ]
@@ -251,18 +221,6 @@ fitnesses = list(dview.map_sync(evaluate_as_module.evaluate, copy.copy(dtcpop)))
 
 #fitnesses = dview.map(evaluate_as_module.evaluate, copy.copy(producer)).get()
 
-
-
-
-'''
-Eventually want to use RAMBackend to save time.
-from neuronunit.models import backends
-from neuronunit.models.reduced import ReducedModel
-new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-model = ReducedModel(new_file_path,name=str('vanilla'),backend='DiskBackend')
-model.load_model()
-model.update_run_params(dtc.attrs)
-'''
 
 #fitnesses = dview.map_sync(evaluate, copy.copy(dtcpop))
 for ind, fit in zip(pop, fitnesses):
