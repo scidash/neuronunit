@@ -27,7 +27,6 @@ class VmTest(sciunit.Test):
     def __init__(self,
                  observation={'mean':None,'std':None},
                  name=None,
-                 dview = None,
                  **params):
 
         super(VmTest,self).__init__(observation,name,**params)
@@ -49,8 +48,7 @@ class VmTest(sciunit.Test):
     united_observation_keys = ['value','mean','std']
 
     def _extra(self):
-        self.dview = dview
-        #pass
+        pass
 
     def validate_observation(self, observation,
                              united_keys=['value','mean'], nonunited_keys=[]):
@@ -338,9 +336,7 @@ class CapacitanceTest(TestPulseTest):
 
 class APWidthTest(VmTest):
     """Tests the full widths of action potentials at their half-maximum."""
-    def __init__(self):
-        super(APWidthTest).__init__()
-        self.prediction = None
+
     required_capabilities = (cap.ProducesActionPotentials,)
 
     name = "AP width test"
@@ -795,7 +791,7 @@ class RheobaseTestP(VmTest):
             ampl = float(ampl)
             #global model
             import quantities as pq
-            import get_neab
+            from neuronunit.tests import get_neab
             from neuronunit.models import backends
             from neuronunit.models.reduced import ReducedModel
 
@@ -868,6 +864,11 @@ class RheobaseTestP(VmTest):
         @require('neuronunit','get_neab','itertools')
 
         def find_rheobase(self,dtc):
+            import ipyparallel as ipp
+            #from ipyparallel import Client
+            rc = ipp.Client(profile='default')
+            rc[:].use_cloudpickle()
+            dview = rc[:]
             from neuronunit.models import backends
             from neuronunit.models.reduced import ReducedModel
             import get_neab
