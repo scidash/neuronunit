@@ -10,11 +10,14 @@ from numpy import random
 
 import sys
 import ipyparallel as ipp
-from ipyparallel import depend, require, dependent
-import get_neab
+from ipyparallel import Client
+#rc = ipp.Client(profile='default')
 rc = ipp.Client(profile='default')
+
 rc[:].use_cloudpickle()
 dview = rc[:]
+from ipyparallel import depend, require, dependent
+import get_neab
 
 #rc = ipp.Client(profile='default')
 THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
