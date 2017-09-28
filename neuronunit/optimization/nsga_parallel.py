@@ -10,16 +10,13 @@ from numpy import random
 
 import sys
 import ipyparallel as ipp
-from ipyparallel import Client
-#rc = ipp.Client(profile='default')
+#from ipyparallel import Client
 rc = ipp.Client(profile='default')
-
 rc[:].use_cloudpickle()
 dview = rc[:]
-from ipyparallel import depend, require, dependent
-import get_neab
 
-#rc = ipp.Client(profile='default')
+from ipyparallel import depend, require, dependent
+from neuronunit.tests import get_neab
 THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
 this_nu = os.path.join(THIS_DIR,'../../')
 sys.path.insert(0,this_nu)
@@ -28,13 +25,22 @@ from neuronunit import tests
 import deap
 
 
+
+###
+# GA parameters
+MU = 4
+NGEN = 3
+CXPB = 0.9
+###
+
+
 def check_paths():
     '''
     import paths and test for consistency
     '''
     import neuronunit
     from neuronunit.models.reduced import ReducedModel
-    import get_neab
+    from neuronunit.tests import get_neab
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
     model.load_model()
     return neuronunit.models.__file__
@@ -49,36 +55,13 @@ dview.push({'Individual':evaluate_as_module.Individual})
 dview.apply(evaluate_as_module.import_list,ipp)
 #print(returns.get())
 
-MU = 4
-NGEN = 2
-CXPB = 0.9
-
-import numpy as np
-pf = tools.ParetoFront()
-
-stats = tools.Statistics(lambda ind: ind.fitness.values)
-stats.register("min", np.min, axis=0)
-stats.register("max", np.max, axis=0)
-stats.register("avg", np.mean)
-stats.register("std", np.std)
-print('a')
-logbook = tools.Logbook()
-logbook.header = "gen", "evals", "min", "max", "avg", "std"
-
-dview.push({'pf':pf})
-
-
-
-import model_parameters
-param_dict = model_parameters.model_params
-
-
 def get_trans_dict(param_dict):
     trans_dict = {}
     for i,k in enumerate(list(param_dict.keys())):
         trans_dict[i]=k
     return trans_dict
-
+import model_parameters
+param_dict = model_parameters.model_params
 
 def dt_to_ind(dtc,td):
     '''
@@ -102,8 +85,8 @@ def update_dtc_pop(pop, td):
     corresponding virtual model objects.
     '''
     import copy
-    #import numpy as np
-    #pop = [toolbox.clone(i) for i in pop ]
+    import numpy as np
+    pop = [toolbox.clone(i) for i in pop ]
     import evaluate_as_module
 
     def transform(ind):
@@ -120,9 +103,8 @@ def update_dtc_pop(pop, td):
 
 
     if len(pop) > 0:
-        dtcpop = list(map(transform,copy.copy(pop)))
-        #dtcpop = list(dview.map_sync(transform, copy.copy(pop)))
-        #dtcpop = list(copy.copy(dtcpop))
+        dtcpop = dview.map_sync(transform, pop)
+        dtcpop = list(copy.copy(dtcpop))
     else:
         # In this case pop is not really a population but an individual
         # but parsimony of naming variables
@@ -152,7 +134,7 @@ def dtc_to_rheo(dtc):
     from neuronunit.models.reduced import ReducedModel
     import quantities as pq
     import numpy as np
-    import get_neab
+    from neuronunit.tests import get_neab
     import evaluate_as_module
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.load_model()
@@ -161,7 +143,7 @@ def dtc_to_rheo(dtc):
     print(model.attrs)
     dtc.scores = None
     dtc.scores = {}
-    get_neab.tests[0].dview = dview
+    #get_neab.tests[0].dview = dview
     dtc.differences = None
     dtc.differences = {}
     score = get_neab.tests[0].judge(model,stop_on_error = False, deep_error = True)
@@ -178,7 +160,7 @@ def map_wrapper(dtc):
     from neuronunit.models.reduced import ReducedModel
     import quantities as pq
     import numpy as np
-    import get_neab
+    from neuronunit.tests import get_neab
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.load_model()
     model.set_attrs(**dtc.attrs)
@@ -209,7 +191,7 @@ dtcpop = list(map(evaluate_as_module.pre_format,dtcpop))
 dtcpop = list(dview.map(map_wrapper,dtcpop).get())
 #dtcpop = list(map(evaluate_as_module.map_wrapper,dtcpop))#.get())
 
-pdb.set_trace()
+
 
 print(scores)
 rh_values_unevolved = [v.rheobase for v in dtcpop ]
@@ -219,7 +201,6 @@ new_checkpoint_path = str('un_evolved')+str('.p')
 import pickle
 with open(new_checkpoint_path,'wb') as handle:#
     pickle.dump([dtcpop,rh_values_unevolved], handle)
-
 
 
 for ind, fit in zip(pop, fitnesses):

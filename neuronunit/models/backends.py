@@ -425,6 +425,10 @@ class NEURONBackend(Backend):
             results['run_number'] = 1
         return results
 
+    def get_spike_train(self):
+        import neuronunit.capabilities.spike_functions as sf
+        return sf.get_spike_train(self.get_membrane_potential())
+
     def get_APs(self):
         import neuronunit.capabilities.spike_functions as sf
         return sf.get_spike_waveforms(self.get_membrane_potential())
