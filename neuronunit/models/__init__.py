@@ -9,7 +9,6 @@ import shutil
 import sciunit
 import neuronunit.capabilities as cap
 from pyneuroml import pynml
-
 from . import backends
 
 
@@ -19,6 +18,7 @@ class LEMSModel(cap.Runnable,
 
     def __init__(self, LEMS_file_path, name=None, 
                     backend='jNeuroML', attrs=None):
+
         #for base in cls.__bases__:
         #    sciunit.Model.__init__()
         if name is None:
@@ -34,7 +34,7 @@ class LEMSModel(cap.Runnable,
         self.skip_run = False
         self.rerun = True # Needs to be rerun since it hasn't been run yet!
         self.set_backend(backend)
-        
+
     def __new__(cls, *args, **kwargs):
         """
         LEMS_file_path: Path to LEMS file (an xml file).
@@ -49,16 +49,6 @@ class LEMSModel(cap.Runnable,
         #    self.set_backend(kwargs['backend'])
         #print(self)
         return self
-
-    #def __getnewargs_ex__(self): # This method is required by pickle to know what 
-                              # arguments to pass to __new__ when instances of 
-                              # this class are eventually unpickled.  
-                              # Otherwise __new__() will have no arguments.  
-        # A tuple containing the extra args and kwargs to pass to __new__. 
-        #print("Calling __getnewargs_ex__")
-    #    return (tuple(), # No args
-    #            {'fresh':False, # Not fresh, i.e. restored from pickling
-    #             'backend':self.backend})  # The backend to set.  
 
     def set_backend(self, backend):
         if isinstance(backend,str):
@@ -76,7 +66,7 @@ class LEMSModel(cap.Runnable,
                     if isinstance(backend[i],dict):
                         kwargs.update(backend[i])
                     else:
-                        args += backend[i]  
+                        args += backend[i]
         else:
             raise TypeError("Backend must be string, tuple, or list")
         options = {x.replace('Backend',''):cls for x, cls \
@@ -128,14 +118,13 @@ class LEMSModel(cap.Runnable,
            self.run_params == self.last_run_params:
             print("Same run_params; skipping...")
             return
-        #self.update_run_params(self.attrs)
 
         self.results = self._backend.local_run()
         self.last_run_params = deepcopy(self.run_params)
         self.rerun = False
-        # Reset run parameters so the next test has to pass its own 
+        # Reset run parameters so the next test has to pass its own
         # run parameters and not use the same ones
-        self.run_params = {}    
+        self.run_params = {}
 
     def set_lems_run_params(self):
         from lxml import etree
