@@ -21,10 +21,13 @@ class ReducedModel(cap.ReceivesCurrent,
         """
         super(ReducedModel,self).__init__(LEMS_file_path,name=name,
                                           backend=backend,attrs=attrs)
-        self.run_number=0
-        self.previous=0
-        self.lookup = {}
+        self.run_number = 0
+        self.tstop = None
+        self.unpicklable = []
 
+        #self.previous=0
+        #self.lookup = {}
+        #self.rheobase_memory = None
     def get_membrane_potential(self, rerun=None, **run_params):
         if rerun is None:
             rerun = self.rerun
@@ -47,7 +50,7 @@ class ReducedModel(cap.ReceivesCurrent,
         spike_train = sf.get_spike_train(vm)
         return spike_train
 
-    #This method must be overwritten in the child class or Derived class 
+    #This method must be overwritten in the child class or Derived class
     # NEURONbackend but I don't understand how to do that.
     #def inject_square_current(self,current):
     #    self.run_params['injected_square_current'] = current

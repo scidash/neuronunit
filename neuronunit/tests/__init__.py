@@ -35,7 +35,7 @@ class VmTest(sciunit.Test):
             cap += cls.required_capabilities
         self.required_capabilities += tuple(cap)
         self._extra()
-    
+
     required_capabilities = (cap.ProducesMembranePotential,)
 
     name = ''
@@ -196,9 +196,9 @@ class TestPulseTest(VmTest):
 
     @classmethod
     def get_tau(cls, vm, i):
-        # 10 ms before pulse start or halfway between sweep start 
+        # 10 ms before pulse start or halfway between sweep start
         # and pulse start, whichever is longer
-        start = max(i['delay']-10*pq.ms,i['delay']/2) 
+        start = max(i['delay']-10*pq.ms,i['delay']/2)
         stop = i['duration']+i['delay']-1*pq.ms # 1 ms before pulse end
         region = cls.get_segment(vm,start,stop)
         amplitude,tau,y0 = cls.exponential_fit(region, i['delay'])
@@ -219,12 +219,17 @@ class TestPulseTest(VmTest):
                    10, # time constant (ms)
                    vm.max()] # y0 (mV)
         vm_fit = vm.copy()
-        
+
         def func(x, a, b, c):
+            '''
+            This function is simply the shape of exponential decay which must be differenced, its basically an ideal template
+            An exp decay equation derived from experiments.
+            For the model to compare against.
+            '''
             vm_fit[:offset] = c
             vm_fit[offset:,0] = a * np.exp(-t[offset:]/b) + c
             return vm_fit.squeeze()
-        
+
         popt, pcov = curve_fit(func, t, vm.squeeze(), p0=guesses) # Estimate starting values for better convergence
         #plt.plot(t,vm)
         #plt.plot(t,func(t,*popt))
@@ -250,15 +255,19 @@ class InputResistanceTest(TestPulseTest):
         """Implementation of sciunit.Test.generate_prediction."""
         i,vm = super(InputResistanceTest,self).\
                             generate_prediction(model)
+        i['duration'] = 100 * pq.ms
+
         r_in = self.__class__.get_rin(vm, i)
         r_in = r_in.simplified
         # Put prediction in a form that compute_score() can use.
         prediction = {'value':r_in}
+
         return prediction
 
 
 class TimeConstantTest(TestPulseTest):
     """Tests the input resistance of a cell."""
+
 
     name = "Time constant test"
 
@@ -310,6 +319,7 @@ class CapacitanceTest(TestPulseTest):
         c = (tau/r_in).simplified
         # Put prediction in a form that compute_score() can use.
         prediction = {'value':c}
+
         return prediction
 
     def compute_score(self, observation, prediction):
@@ -344,18 +354,31 @@ class APWidthTest(VmTest):
         """Implementation of sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
+        # if get_spike_count is zero, then widths will be None
+        # len of None returns an exception that is not handled
         model.rerun = True
+
+
+
+
+
         widths = model.get_AP_widths()
         # Put prediction in a form that compute_score() can use.
         prediction = {'mean':np.mean(widths) if len(widths) else None,
-                      'std':np.std(widths) if len(widths) else None,
-                      'n':len(widths)}
+                    'std':np.std(widths) if len(widths) else None,
+                    'n':len(widths)}
+
         return prediction
 
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
-        if prediction['n'] == 0:
+        if type(prediction) is type(None):
             score = scores.InsufficientDataScore(None)
+
+        elif prediction['n'] == 0:
+            #sciunit.NoneScore:
+            score = scores.InsufficientDataScore(None)
+
         else:
             score = super(APWidthTest,self).compute_score(observation,
                                                           prediction)
@@ -367,7 +390,6 @@ class InjectedCurrentAPWidthTest(APWidthTest):
     Tests the full widths of APs at their half-maximum
     under current injection.
     """
-
     required_capabilities = (cap.ReceivesSquareCurrent,)
 
     params = {'injected_square_current':
@@ -381,7 +403,9 @@ class InjectedCurrentAPWidthTest(APWidthTest):
 
     def generate_prediction(self, model):
         model.inject_square_current(self.params['injected_square_current'])
-        return super(InjectedCurrentAPWidthTest,self).generate_prediction(model)
+        prediction = super(InjectedCurrentAPWidthTest,self).generate_prediction(model)
+
+        return prediction
 
 
 class APAmplitudeTest(VmTest):
@@ -442,6 +466,7 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
     under current injection.
     """
 
+
     required_capabilities = (cap.ReceivesSquareCurrent,)
 
     params = {'injected_square_current':
@@ -455,8 +480,9 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
 
     def generate_prediction(self, model):
         model.inject_square_current(self.params['injected_square_current'])
-        return super(InjectedCurrentAPAmplitudeTest,self).\
+        prediction = super(InjectedCurrentAPAmplitudeTest,self).\
                 generate_prediction(model)
+        return prediction
 
 
 class APThresholdTest(VmTest):
@@ -474,6 +500,7 @@ class APThresholdTest(VmTest):
     units = pq.mV
 
     ephysprop_name = 'Spike Threshold'
+
 
     def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
@@ -519,6 +546,7 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
                 generate_prediction(model)
 
 
+
 class RheobaseTest(VmTest):
     """
     Tests the full widths of APs at their half-maximum
@@ -529,7 +557,7 @@ class RheobaseTest(VmTest):
         self.high = 300*pq.pA
         self.small = 0*pq.pA
         self.rheobase_vm = None
-    
+
     required_capabilities = (cap.ReceivesSquareCurrent,
                              cap.ProducesSpikes)
 
@@ -647,52 +675,250 @@ class RheobaseTest(VmTest):
         return score
 
     def bind_score(self, score, model, observation, prediction):
-        super(RheobaseTest,self).bind_score(score, model, 
+        super(RheobaseTest,self).bind_score(score, model,
                                             observation, prediction)
         if self.rheobase_vm is not None:
             score.related_data['vm'] = self.rheobase_vm
 
-# class RheobaseTestHacked(VmTest):
-#     """
-#     A hacked version of test Rheobase.
-#     Tests the full widths of APs at their half-maximum
-#     under current injection.
-#     """
-#     def _extra(self):    
-#         self.prediction=None
-    
-#     required_capabilities = (cap.ReceivesSquareCurrent,
-#                              cap.ProducesSpikes)
 
-#     params = {'injected_square_current':
-#                 {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+class RheobaseTestP(VmTest):
+     """
+     A parallel version of test Rheobase.
+     Tests the full widths of APs at their half-maximum
+     under current injection.
 
-#     name = "Rheobase test"
+     """
 
-#     description = ("A test of the rheobase, i.e. the minimum injected current "
-#                    "needed to evoke at least one spike.")
+     required_capabilities = (cap.ReceivesSquareCurrent,
+                              cap.ProducesSpikes)
 
-#     units = pq.pA
-#     score_type = scores.RatioScore
 
-#     def generate_prediction(self, model):
-#         return self.prediction
+     DELAY = 100.0*pq.ms
+     DURATION = 1000.0*pq.ms
+     params = {'injected_square_current':
+                 {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
-#     def compute_score(self, observation, prediction):
-#         """Implementation of sciunit.Test.score_prediction."""
-#         #print("%s: Observation = %s, Prediction = %s" % \
-#         #	 (self.name,str(observation),str(prediction)))
+     name = "Rheobase test"
 
-#         if self.prediction is not None:
-#             if self.prediction['value'] is None:
+     description = ("A test of the rheobase, i.e. the minimum injected current "
+                    "needed to evoke at least one spike.")
 
-#                 score = scores.InsufficientDataScore(None)
-#             else:
-#                 score = super(RheobaseTest,self).\
-#                             compute_score(observation, self.prediction)
-#                 #self.bind_score(score,None,observation,prediction)
-#             return score
+     units = pq.pA
+     score_type = scores.RatioScore
 
+     def generate_prediction(self, model):
+
+        '''
+        inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
+        outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
+        Rationale, not every gene value will result in a model for which rheobase is found, in which case that gene is discarded, however to
+        compensate for losses in gene population size, more gene samples must be tested for a successful return from a rheobase search.
+        If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
+        corresponding virtual model objects.
+        '''
+        from ipyparallel import depend, require, dependent
+
+        def check_fix_range(dtc):
+            '''
+            Inputs: lookup, A dictionary of previous current injection values
+            used to search rheobase
+            Outputs: A boolean to indicate if the correct rheobase current was found
+            and a dictionary containing the range of values used.
+            If rheobase was actually found then rather returning a boolean and a dictionary,
+            instead logical True, and the rheobase current is returned.
+            given a dictionary of rheobase search values, use that
+            dictionary as input for a subsequent search.
+            '''
+            import pdb
+            import copy
+            import numpy as np
+            import quantities as pq
+            from ipyparallel import depend, require, dependent
+
+            sub=[]
+            supra=[]
+            steps=[]
+
+            dtc.rheobase = 0.0
+            for k,v in dtc.lookup.items():
+                dtc.searchedd[v]=float(k)
+
+                if v == 1:
+                    #A logical flag is returned to indicate that rheobase was found.
+                    dtc.rheobase=float(k)
+                    dtc.searched.append(float(k))
+                    dtc.steps = 0.0
+                    dtc.boolean = True
+                    return dtc
+                elif v == 0:
+                    sub.append(k)
+                elif v > 0:
+                    supra.append(k)
+
+            sub = np.array(sub)
+            supra = np.array(supra)
+
+            if len(sub)!=0 and len(supra)!=0:
+                #this assertion would only be occur if there was a bug
+                assert sub.max()<=supra.min()
+            if len(sub) and len(supra):
+                center = list(np.linspace(sub.max(),supra.min(),9.0))
+                center = [ i for i in center if not i == sub.max() ]
+                center = [ i for i in center if not i == supra.min() ]
+                center[int(len(center)/2)+1]=(sub.max()+supra.min())/2.0
+                steps = [ i*pq.pA for i in center ]
+
+            elif len(sub):
+                steps = list(np.linspace(sub.max(),2*sub.max(),9.0))
+                steps = [ i for i in steps if not i == sub.max() ]
+                steps = [ i*pq.pA for i in steps ]
+
+            elif len(supra):
+                step = list(np.linspace(-2*(supra.min()),supra.min(),9.0))
+                steps = [ i for i in steps if not i == supra.min() ]
+                steps = [ i*pq.pA for i in steps ]
+
+            dtc.steps = steps
+            dtc.rheobase = None
+            return copy.copy(dtc)
+
+        @require('quantities', 'get_neab', 'neuronunit')
+        def check_current(ampl,dtc):
+            '''
+            Inputs are an amplitude to test and a virtual model
+            output is an virtual model with an updated dictionary.
+            '''
+            ampl = float(ampl)
+            #global model
+            import quantities as pq
+            from neuronunit.tests import get_neab
+            from neuronunit.models import backends
+            from neuronunit.models.reduced import ReducedModel
+
+            #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
+            model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+            model.load_model()
+            model.set_attrs(**dtc.attrs)
+            #model.update_run_params(dtc.attrs)
+
+            DELAY = 100.0*pq.ms
+            DURATION = 1000.0*pq.ms
+            params = {'injected_square_current':
+                      {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+
+
+            if ampl not in dtc.lookup or len(dtc.lookup)==0:
+                current = params.copy()['injected_square_current']
+                uc = {'amplitude':ampl}
+                current.update(uc)
+                current = {'injected_square_current':current}
+                #print(current)
+                dtc.run_number += 1
+                model.set_attrs(**dtc.attrs)
+                model.name = dtc.attrs
+                model.inject_square_current(current)
+                dtc.previous = ampl
+                n_spikes = model.get_spike_count()
+                dtc.lookup[float(ampl)] = n_spikes
+                name = str('rheobase {0} parameters {1}'.format(str(current),str(model.params)))
+                #print(dtc.lookup)
+                #print(name)
+
+                if n_spikes == 1:
+                    dtc.rheobase = float(ampl)
+                    dtc.boolean = True
+                    return dtc
+
+                return dtc
+            if float(ampl) in dtc.lookup:
+                return dtc
+
+        #from itertools import repeat
+        import numpy as np
+        import copy
+        import pdb
+        from neuronunit.tests import get_neab
+
+        @require('itertools','numpy','copy','get_neab')
+        def init_dtc(dtc):
+            if dtc.initiated == True:
+                # expand values in the range to accomodate for mutation.
+                # but otherwise exploit memory of this range.
+
+                if type(dtc.steps) is type(float):
+                    dtc.steps = [ 0.75 * dtc.steps, 1.25 * dtc.steps ]
+                elif type(dtc.steps) is type(list):
+                    dtc.steps = [ s * 1.25 for s in dtc.steps ]
+                #assert len(dtc.steps) > 1
+                dtc.initiated = True # logically unnecessary but included for readibility
+
+            if dtc.initiated == False:
+                import quantities as pq
+                import numpy as np
+                dtc.boolean = False
+                steps = np.linspace(0,250,7.0)
+                steps_current = [ i*pq.pA for i in steps ]
+                dtc.steps = steps_current
+                dtc.initiated = True
+            return dtc
+        @require('neuronunit','get_neab','itertools')
+
+        def find_rheobase(self,dtc):
+            import ipyparallel as ipp
+            #from ipyparallel import Client
+            rc = ipp.Client(profile='default')
+            rc[:].use_cloudpickle()
+            dview = rc[:]
+            from neuronunit.models import backends
+            from neuronunit.models.reduced import ReducedModel
+            from neuronunit.tests import get_neab
+            from itertools import repeat
+            model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+            model.load_model()
+            model.set_attrs(**dtc.attrs)
+            cnt = 0
+            # If this it not the first pass/ first generation
+            # then assume the rheobase value found before mutation still holds until proven otherwise.
+            if type(dtc.rheobase) is not type(None):
+                dtc = check_current(dtc.rheobase,dtc)
+            # If its not true enter a search, with ranges informed by memory
+            cnt = 0
+            while dtc.boolean == False:
+                dtc.searched.append(dtc.steps)
+                smaller = dtc.steps
+                ds = [ dtc for s in smaller ]
+                print(ds,smaller)
+                dtcpop = dview.map(check_current,smaller,ds)
+                for dtc2 in dtcpop.get():
+                    dtc.lookup.update(dtc2.lookup)
+                dtc = check_fix_range(dtc)
+                cnt += 1
+            return dtc
+
+        from neuronunit.optimization import evaluate_as_module
+        dtc = evaluate_as_module.DataTC()
+        dtc.attrs = {}
+        for k,v in model.attrs.items():
+            dtc.attrs[k]=v
+        dtc = init_dtc(dtc)
+        self.prediction = {}
+        self.prediction['value'] = find_rheobase(self,dtc).rheobase * pq.pA
+        return self.prediction
+
+
+     def compute_score(self, observation, prediction):
+         """Implementation of sciunit.Test.score_prediction."""
+         #print("%s: Observation = %s, Prediction = %s" % \
+         #	 (self.name,str(observation),str(prediction)))
+
+         if self.prediction['value'] is None:
+
+             score = scores.InsufficientDataScore(None)
+         else:
+             score = super(RheobaseTest,self).\
+                         compute_score(observation, self.prediction)
+             #self.bind_score(score,None,observation,prediction)
+         return score
 
 class RestingPotentialTest(VmTest):
     """Tests the resting potential under zero current injection."""
@@ -708,7 +934,6 @@ class RestingPotentialTest(VmTest):
                    "where injected current is set to zero.")
 
     score_type = scores.ZScore
-    #score_type = scores.ZScore
 
 
     units = pq.mV
@@ -727,7 +952,7 @@ class RestingPotentialTest(VmTest):
         """Implementation of sciunit.Test.generate_prediction."""
 
 
-        assert model!=None
+
         model.rerun = True
 
         model.inject_square_current(self.params['injected_square_current'])
@@ -740,10 +965,9 @@ class RestingPotentialTest(VmTest):
         import math
         for i in mp:
             if math.isnan(i):
-                #print(mp)
                 return None
         prediction = {'mean':median, 'std':std}
-
+        self.prediction = prediction
         return prediction
 
 
