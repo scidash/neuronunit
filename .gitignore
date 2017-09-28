@@ -56,3 +56,4 @@ docs/chapter*.py
 *#
 B95
 unit_test/bbp.py
+neuronunit/tests/NeuroML2/*.xml*
