@@ -3,7 +3,6 @@
 import sys
 import os
 import platform
-import time
 import re
 import copy
 import tempfile
@@ -11,26 +10,29 @@ import pickle
 import importlib
 
 import neuronunit.capabilities as cap
-import neuronunit.neuron.capabilities as cap_n
-
 from quantities import ms, mV, nA
-
 from pyneuroml import pynml
 from quantities import ms, mV
 from neo.core import AnalogSignal
+import neuronunit.capabilities.spike_functions as sf
 import sciunit
+
+
 
 class Backend:
     """Base class for simulator backends that implement simulator-specific
     details of modifying, running, and reading results from the simulation
     """
-
+    #self.tstop = None
     def init_backend(self, *args, **kwargs):
         #self.attrs = {} if attrs is None else attrs
         self.model.create_lems_file(model.name)
         self.load_model()
+        self.unpicklable = []
+        self.attrs = {}
 
-    attrs = None
+
+    #attrs = None
 
     # Name of the backend
     backend = None
@@ -40,7 +42,9 @@ class Backend:
 
     def set_attrs(self, **attrs):
         """Set model attributes, e.g. input resistance of a cell"""
-        pass
+        #If the key is in the dictionary, it updates the key with the new value.
+        self.attrs.update(attrs)
+        #pass
 
     def set_run_params(self, **params):
         """Set run-time parameters, e.g. the somatic current to inject"""
@@ -61,6 +65,21 @@ class Backend:
     def save_results(self, path='.'):
         with open(path,'wb') as f:
             pickle.dump(self.results,f)
+
+
+class MemoryBackend(Backend):
+    """A dummy backend that loads pre-computed results from RAM/heap"""
+
+    def init_backend(self, results_path='.'):
+        self.rerun = True
+        self.results = None
+
+        super(RAMBackend,self).init_backend()
+    def set_results(results):
+        self.results = results
+    def local_run(self, **run_params):
+        self.results = self.set_results()
+        return self.results
 
 
 class DiskBackend(Backend):
@@ -127,6 +146,7 @@ class NEURONBackend(Backend):
         #Should check if MPI parallel neuron is supported and invoked.
         self.h.load_file("stdlib.hoc")
         self.h.load_file("stdgui.hoc")
+        self.lookup = {}
         #self.h.cvode.active(1)
         #pdb.set_trace()
         #self.h.cvode.active
@@ -143,14 +163,14 @@ class NEURONBackend(Backend):
         self.h = neuronVar.h
         self.neuron = neuronVar
 
-    def set_stop_time(self, stopTime = 1000*ms):
+    def set_stop_time(self, stopTime = 1600*ms):
         """Sets the simulation duration
         stopTimeMs: duration in milliseconds
         """
 
         tstop = stopTime
         tstop.units = ms
-        self.tstop = float(tstop)
+        self.h.tstop = float(tstop)
 
     def set_time_step(self, integrationTimeStep = 1/128.0 * ms):
         """Sets the simulation itegration fixed time step
@@ -167,14 +187,19 @@ class NEURONBackend(Backend):
         tolerance: absolute tolerance value
         """
 
-
-        self.cvode = self.h.CVode()
-        self.cvode.atol(tolerance)
+        self.h.cvode.atol(tolerance)
+	# Unsure if these lines actually work:
+        # self.cvode = self.h.CVode()
+        # self.cvode.atol(tolerance)
 
     def set_integration_method(self, method = "fixed"):
         """Sets the simulation itegration method
         method: either "fixed" or "variable". Defaults to fixed.
         cvode is used when "variable" """
+
+	# This line is compatible with the above cvodes
+	# statements.
+        self.h.cvode.active(1 if method == "variable" else 0)
 
         try:
             assert self.cvode.active()
@@ -194,8 +219,8 @@ class NEURONBackend(Backend):
             dt = float(copy.copy(self.fixedTimeStep))
             fixed_signal =copy.copy(self.get_variable_step_analog_signal())
 
-        self.h.dt = None
-        self.fixedTimeStep = None
+        self.h.dt = dt
+        self.fixedTimeStep = float(1.0/dt)
         return AnalogSignal(fixed_signal,
                             units = mV,
                             sampling_period = dt * ms)
@@ -275,24 +300,28 @@ class NEURONBackend(Backend):
             nrn_name = os.path.splitext(self.model.orig_lems_file_path)[0]
             nrn_path,nrn_name = os.path.split(nrn_name)
             sys.path.append(nrn_path)
-            #raise Exception('%s %s' % (nrn_path,nrn_name+'_nrn'))
             import importlib
-            nrn = importlib.import_module(nrn_name+'_nrn')
-            #print(nrn_path)
+            nrn = importlib.import_module(nrn_name + '_nrn')
             self.reset_neuron(nrn.neuron)
             #make sure mechanisms are loaded
             modeldirname = os.path.dirname(self.model.orig_lems_file_path)
             self.neuron.load_mechanisms(modeldirname)
-            #import the default simulation protocol
-            #this next step may be unnecessary: TODO delete it and check.
+
             self.set_stop_time(1600*ms)
-            self.ns = nrn.NeuronSimulation(self.tstop, dt=0.0025)
+            self.h.tstop
+            self.ns = nrn.NeuronSimulation(self.h.tstop, dt=0.0025)
             return self
 
+        self = cond_load()
+
+        '''
+        The code block below does not actually function:
         architecture = platform.machine()
         NEURON_file_path = os.path.join(self.model.orig_lems_file_path,architecture)
         if os.path.exists(NEURON_file_path):
-            self = cond_load()
+
+            print('this never executes')
+
         else:
             self.exec_in_dir = tempfile.mkdtemp()
             pynml.run_lems_with_jneuroml_neuron(self.model.orig_lems_file_path,
@@ -304,9 +333,10 @@ class NEURONBackend(Backend):
                               show_plot_already=False,
                               exec_in_dir = self.exec_in_dir,
                               verbose=DEFAULTS['v'],
-                              exit_on_fail=True)
+                              exit_on_fail = True)
 
-            self=cond_load()
+            self = cond_load()
+        '''
 
         #Although the above approach successfuly instantiates a LEMS/neuroml model in pyhoc
         #the resulting hoc variables for current source and cell name are idiosyncratic (not generic).
@@ -324,20 +354,33 @@ class NEURONBackend(Backend):
         more_attributes = None #force garbage collection of more_attributes, its not needed anymore.
         return self
 
-    def set_run_params(self, **params):
-        super(NEURONBackend,self).set_run_params(**params)
-        for h_key,h_value in params.items():
-            #raise Exception(params)
-            #h_key, h_value =list(value.items())[0]
-            self.h('m_RS_RS_pop[0].%s=%s' % (h_key,h_value))
-            self.h('m_%s_%s_pop[0].%s=%s' % \
-                   (self.cell_name,self.cell_name,h_key,h_value))
+    def set_attrs(self,**attrs):
+        '''
+        set model attributes in HOC memory space.
+        over riding a stub of the parent class.
+        '''
+        super(NEURONBackend,self).set_attrs(**attrs)
+        assert type(self.attrs) is not type(None)
+        for h_key,h_value in attrs.items():
+            self.h('m_RS_RS_pop[0].{0} = {1}'.format(h_key,h_value))
+            self.h('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
+            self.h('psection()')
+
+
+        # Below are experimental rig recording parameters.
+        # These can possibly go in a seperate method.
+
         self.h(' { v_time = new Vector() } ')
         self.h(' { v_time.record(&t) } ')
         self.h(' { v_v_of0 = new Vector() } ')
         self.h(' { v_v_of0.record(&RS_pop[0].v(0.5)) } ')
         self.h(' { v_u_of0 = new Vector() } ')
         self.h(' { v_u_of0.record(&m_RS_RS_pop[0].u) } ')
+
+        self.tVector = self.h.v_time
+        self.vVector = self.h.v_v_of0
+
+        return self
 
     def inject_square_current(self, current):
         '''
@@ -347,7 +390,17 @@ class NEURONBackend(Backend):
          'delay':100*pq.ms,
          'duration':500*pq.ms}}
         where 'pq' is the quantities package
+        #purge the HOC space, this is necessary because model recycling between runs is bad
+        #models when models are not re-initialized properly, as its common for a recycled model
+        #to retain charge from stimulation in previous simulations.
+        #Although the complete purge is and reinit is computationally expensive,
+        #and a more minimal purge is probably sufficient.
         '''
+        self.h = None
+        self.neuron = None
+        import neuron
+        self.reset_neuron(neuron)
+        self.set_attrs(**self.attrs)
 
         c = copy.copy(current)
         if 'injected_square_current' in c.keys():
@@ -365,25 +418,24 @@ class NEURONBackend(Backend):
         self.local_run()
 
     def local_run(self):
-        #sim_start = time.time()
-        #self.h.tstop=1600#))#TODO find a way to make duration changeable.
-        #print(self.h.cvode.active())
         self.h('run()')
-        #sim_end = time.time()
-        #sim_time = sim_end - sim_start
-        #print("Finished NEURON simulation in %f seconds (%f mins)..."%(sim_time, sim_time/60.0))
         results={}
-        # Convert to Python list for speed, variable has dim: voltage
-        results['vm'] = [float(x/1000.0) for x in copy.copy(self.neuron.h.v_v_of0.to_python())]  
-        #self.neuron.h.v_v_of0 = None # Convert to Python list for speed, variable has dim: voltage
-        # Convert to Python list for speed, variable has dim: voltage
+        results['vm'] = [float(x/1000.0) for x in copy.copy(self.neuron.h.v_v_of0.to_python())]
         results['t'] = [float(x) for x in copy.copy(self.neuron.h.v_time.to_python())]
-        #self.neuron.h.v_time = None
-        if 'run_number' in self.results.keys():
-            results['run_number']=self.results['run_number']+1
+        if 'run_number' in results.keys():
+            results['run_number'] = results['run_number']+1
         else:
-            results['run_number']=1
+            results['run_number'] = 1
         return results
+
+    def get_spike_train(self):
+        import neuronunit.capabilities.spike_functions as sf
+        return sf.get_spike_train(self.get_membrane_potential())
+
+    def get_APs(self):
+        import neuronunit.capabilities.spike_functions as sf
+        return sf.get_spike_waveforms(self.get_membrane_potential())
+
 
 class HasSegment(sciunit.Capability):
     """Model has a membrane segment of NEURON simulator"""
@@ -425,19 +477,3 @@ class SingleCellModel(NEURONBackend):
         self.tVector.record(self.h._ref_t)
 
         return
-        ''',
-        cap_n.HasSegment,
-        cap.ProducesMembranePotential,
-        cap.ReceivesSquareCurrent,
-        cap.ProducesActionPotentials,
-        cap.ProducesSpikes):
-        A NEURON simulator model for an isolated single cell membrane
-        '''
-
-
-        """
-        hVar: the h variable of NEURON
-        section: NEURON Section object of an isolated single cell into which current will be injected, and whose voltage will be observed.
-        loc: the fraction along the Section object length that will be used for current injection and voltage observation.
-        name: Optional model name.
-        """
