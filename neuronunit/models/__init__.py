@@ -104,6 +104,9 @@ class LEMSModel(cap.Runnable,
         if self.attrs:
             self.set_lems_attrs(self.attrs)
 
+    def set_attrs(self, attrs):
+        self.backend.set_attrs(attrs)
+
     def set_lems_attrs(self, attrs):
         from lxml import etree
         tree = etree.parse(self.lems_file_path)
