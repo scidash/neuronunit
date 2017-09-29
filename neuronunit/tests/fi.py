@@ -256,17 +256,13 @@ class RheobaseTestP(VmTest):
             output is an virtual model with an updated dictionary.
             '''
             ampl = float(ampl)
-            #global model
             import quantities as pq
             from neuronunit.tests import get_neab
             from neuronunit.models import backends
             from neuronunit.models.reduced import ReducedModel
 
-            #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
             model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-            model.load_model()
-            model.set_attrs(**dtc.attrs)
-            #model.update_run_params(dtc.attrs)
+            model.set_attrs(dtc.attrs)
 
             DELAY = 100.0*pq.ms
             DURATION = 1000.0*pq.ms
@@ -281,7 +277,7 @@ class RheobaseTestP(VmTest):
                 current = {'injected_square_current':current}
                 #print(current)
                 dtc.run_number += 1
-                model.set_attrs(**dtc.attrs)
+                model.set_attrs(dtc.attrs)
                 model.name = dtc.attrs
                 model.inject_square_current(current)
                 dtc.previous = ampl
@@ -341,8 +337,7 @@ class RheobaseTestP(VmTest):
             from neuronunit.tests import get_neab
             from itertools import repeat
             model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-            model.load_model()
-            model.set_attrs(**dtc.attrs)
+            model.set_attrs(dtc.attrs)
             cnt = 0
             # If this it not the first pass/ first generation
             # then assume the rheobase value found before mutation still holds until proven otherwise.
