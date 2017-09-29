@@ -9,9 +9,10 @@ import neuronunit.models as mod
 import neuronunit.capabilities.spike_functions as sf
 from neuronunit.models import backends
 
-class ReducedModel(cap.ReceivesCurrent,
+class ReducedModel(mod.LEMSModel,
+                   cap.ReceivesCurrent,
                    cap.ProducesActionPotentials,
-                   mod.LEMSModel):
+                   ):
     """Base class for reduced models, using LEMS"""
 
     def __init__(self, LEMS_file_path, name=None, backend=None, attrs=None):
