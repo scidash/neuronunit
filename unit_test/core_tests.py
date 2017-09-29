@@ -16,9 +16,8 @@ try: # Python 2
 except ImportError: # Python 3
     from urllib.request import urlretrieve
 
-if sys.platform == 'darwin':
-    import matplotlib as mpl
-    mpl.use('Agg')
+import matplotlib as mpl
+mpl.use('Agg') # Avoid any problems with Macs or headless displays.
 
 from sciunit.utils import NotebookTools
 from neuronunit import neuroelectro,bbp
