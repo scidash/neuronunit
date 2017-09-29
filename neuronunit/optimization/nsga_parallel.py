@@ -43,7 +43,6 @@ def check_paths():
     from neuronunit.tests import get_neab
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
     model.backend = 'NEURON'
-    #model.load_model()
     return neuronunit.models.__file__
 
 path_serial = check_paths()
@@ -113,22 +112,16 @@ def update_dtc_pop(pop, td):
         dtcpop = transform(pop)
     return dtcpop
 td = get_trans_dict(param_dict)
-#td = trans_dict
-print('b')
 
 dview.push({'td':td })
 
 pop = toolbox.population(n = MU)
 pop = [ toolbox.clone(i) for i in pop ]
 dview.scatter('Individual',pop)
-print('c')
-print(pop,td)
-print(dview)
+
 dtcpop = update_dtc_pop(pop, td)
 
-#dtcpop = evaluate_as_module.update_dtc_pop(pop, toolbox, dview, td)
-print(dtcpop)
-print('d')
+
 
 def dtc_to_rheo(dtc):
     from neuronunit.models import backends
@@ -164,7 +157,7 @@ def map_wrapper(dtc):
     from neuronunit.tests import get_neab
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     #model.load_model()
-    model.set_attrs(**dtc.attrs)
+    model.set_attrs(dtc.attrs)
     print(model)
     print(model.attrs)
     get_neab.tests[0].prediction = dtc.rheobase
@@ -182,15 +175,9 @@ def map_wrapper(dtc):
 
     return dtc
 
-    #delta = difference(observation,prediction)
-    #dtc.differences.append(delta)
-print(dtcpop)
-print('got here e')
 dtcpop = list(map(dtc_to_rheo,dtcpop))
-
 dtcpop = list(map(evaluate_as_module.pre_format,dtcpop))
 dtcpop = list(dview.map(map_wrapper,dtcpop).get())
-#dtcpop = list(map(evaluate_as_module.map_wrapper,dtcpop))#.get())
 
 
 

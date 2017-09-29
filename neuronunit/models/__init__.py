@@ -97,6 +97,15 @@ class LEMSModel(cap.Runnable,
     def set_attrs(self,attrs):
         self._backend.set_attrs(**attrs)
 
+    def inject_square_current(self,current):
+        self._backend.inject_square_current(current)
+    #    
+    #def inject_square_current(self,current):
+    #    self._backend.inject_square_current(current)
+    #
+    #def local_run(self):
+        
+    '''
     def set_lems_attrs(self, attrs):
         from lxml import etree
         tree = etree.parse(self.lems_file_path)
@@ -106,26 +115,29 @@ class LEMSModel(cap.Runnable,
                 for key2,value2 in value1.items():
                     node.attrib[key2] = value2
         tree.write(self.lems_file_path)
-
+    '''
+    
     def run(self, rerun=None, **run_params):
+        self.results = self._backend.local_run()
+        '''
         if rerun is None:
             rerun = self.rerun
-        self.set_run_params(**run_params)
+        
+        self._backend.set_run_params(**run_params)
         for key,value in self.run_defaults.items():
             if key not in self.run_params:
-                self.set_run_params(**{key:value})
+                self._backend.set_run_params(**{key:value})
         if (not rerun) and hasattr(self,'last_run_params') and \
            self.run_params == self.last_run_params:
             print("Same run_params; skipping...")
             return
 
-        self.results = self._backend.local_run()
         self.last_run_params = deepcopy(self.run_params)
         self.rerun = False
         # Reset run parameters so the next test has to pass its own
         # run parameters and not use the same ones
         self.run_params = {}
-
+        '''
     def set_lems_run_params(self):
         from lxml import etree
         from neuroml import nml

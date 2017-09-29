@@ -50,6 +50,7 @@ class Backend:
         """Set run-time parameters, e.g. the somatic current to inject"""
         self.run_params.update(params)
         self.check_run_params()
+
         pass
 
     def check_run_params(self):
@@ -352,28 +353,20 @@ class NEURONBackend(Backend):
         more_attributes = None #force garbage collection of more_attributes, its not needed anymore.
         return self
 
-    #def set_attrs(self,**attrs):
-    #    '''
-    #    set model attributes in HOC memory space.
-    #    over riding a stub of the parent class.
-    #    '''
+    
+    def set_run_params(self, **params):
+        super(NEURONBackend,self).set_run_params(**params)
+        self.set_lems_run_params()
+
+
 
     def set_attrs(self, **attrs):
         self.attrs.update(attrs)
-        #self.set_lems_attrs(attrs)
-
-        #def set_attrs(self, **attrs):                                                                               
-        #self.attrs.update(attrs)                                                                                
-        #self.set_lems_attrs(attrs)                                                                                    
-                                                                   
-
-        #super(NEURONBackend,self).set_attrs(attrs)
         assert type(self.attrs) is not type(None)
         for h_key,h_value in attrs.items():
             self.h('m_RS_RS_pop[0].{0} = {1}'.format(h_key,h_value))
             self.h('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
-            self.h('psection()')
-
+      
 
         # Below are experimental rig recording parameters.
         # These can possibly go in a seperate method.
