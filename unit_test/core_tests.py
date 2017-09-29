@@ -19,8 +19,16 @@ except ImportError: # Python 3
 import matplotlib as mpl
 mpl.use('Agg') # Avoid any problems with Macs or headless displays.
 
-from sciunit.utils import NotebookTools
+from sciunit.utils import NotebookTools,import_all_modules
 from neuronunit import neuroelectro,bbp,aibs
+
+class ImportTestCase(unittest.TestCase):
+    """Testing imports of modules and packages"""
+
+    def test_import_everything(self):
+        import neuronunit
+        # Recursively import all submodules
+        import_all_modules(neuronunit)
 
 
 class DocumentationTestCase(NotebookTools, 
@@ -83,6 +91,10 @@ class AIBSTestCase(unittest.TestCase):
         dataset_id = 354190013  # Internal ID that AIBS uses for a particular Scnn1a-Tg2-Cre 
                                 # Primary visual area, layer 5 neuron.
         observation = aibs.get_observation(dataset_id,'rheobase')
+
+
+class TestPassiveTestCase(unittest.TestCase):
+    pass
         
 
 if __name__ == '__main__':
