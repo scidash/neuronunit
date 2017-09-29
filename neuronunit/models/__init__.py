@@ -12,8 +12,9 @@ from pyneuroml import pynml
 from . import backends
 
 
-class LEMSModel(cap.Runnable,
-                sciunit.Model):
+class LEMSModel(sciunit.Model,
+                cap.Runnable,
+                ):
     """A generic LEMS model"""
 
     def __init__(self, LEMS_file_path, name=None, 
@@ -49,6 +50,9 @@ class LEMSModel(cap.Runnable,
         #    self.set_backend(kwargs['backend'])
         #print(self)
         return self
+
+    def get_backend(self):
+        return self._backend
 
     def set_backend(self, backend):
         if isinstance(backend,str):
@@ -86,6 +90,16 @@ class LEMSModel(cap.Runnable,
         self._backend.model = self
         self._backend.init_backend(*args, **kwargs)
 
+#    def __getattr__(self, attr):
+#        try:
+#            result = getattr(self._backend,attr)
+#        except AttributeError:
+#            try:
+#                result = super(LEMSModel,self).__getattr(self, attr)
+#            except:
+#                raise AttributeError("Neither model nor backend have attribute '%s'" % attr)
+#        return result
+
     def create_lems_file(self, name):
         if not hasattr(self,'temp_dir'):
             self.temp_dir = tempfile.gettempdir()
@@ -115,29 +129,32 @@ class LEMSModel(cap.Runnable,
                 for key2,value2 in value1.items():
                     node.attrib[key2] = value2
         tree.write(self.lems_file_path)
-    '''
+    #'''
     
     def run(self, rerun=None, **run_params):
-        self.results = self._backend.local_run()
+        #self.results = self._backend.local_run()
         '''
         if rerun is None:
             rerun = self.rerun
-        
-        self._backend.set_run_params(**run_params)
+        self.set_run_params(**run_params)
         for key,value in self.run_defaults.items():
             if key not in self.run_params:
-                self._backend.set_run_params(**{key:value})
+                self.set_run_params(**{key:value})
         if (not rerun) and hasattr(self,'last_run_params') and \
            self.run_params == self.last_run_params:
             print("Same run_params; skipping...")
             return
 
+        self.results = self._backend.local_run()
         self.last_run_params = deepcopy(self.run_params)
         self.rerun = False
         # Reset run parameters so the next test has to pass its own
         # run parameters and not use the same ones
         self.run_params = {}
-        '''
+	#'''
+    def set_run_params(self, **params):
+        self._backend.set_run_params(**params)
+
     def set_lems_run_params(self):
         from lxml import etree
         from neuroml import nml
@@ -164,3 +181,6 @@ class LEMSModel(cap.Runnable,
                                 pg.attrib[attr] = '%s' % value[attr]
 
             tree.write(file_path)
+
+    def inject_square_current(self, current):
+        self._backend.inject_square_current(current)

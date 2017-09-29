@@ -26,10 +26,10 @@ class Backend:
     #self.tstop = None
     def init_backend(self, *args, **kwargs):
         #self.attrs = {} if attrs is None else attrs
-        self.model.create_lems_file(model.name)
+        self.model.create_lems_file(self.model.name)
         self.load_model()
-        self.unpicklable = []
-        self.attrs = {}
+        self.model.unpicklable = []
+        self.model.attrs = {}
 
 
     #attrs = None
@@ -43,14 +43,13 @@ class Backend:
     def set_attrs(self, **attrs):
         """Set model attributes, e.g. input resistance of a cell"""
         #If the key is in the dictionary, it updates the key with the new value.
-        self.attrs.update(attrs)
+        self.model.attrs.update(attrs)
         pass
 
     def set_run_params(self, **params):
         """Set run-time parameters, e.g. the somatic current to inject"""
-        self.run_params.update(params)
+        self.model.run_params.update(params)
         self.check_run_params()
-
         pass
 
     def check_run_params(self):
@@ -72,15 +71,15 @@ class MemoryBackend(Backend):
     """A dummy backend that loads pre-computed results from RAM/heap"""
 
     def init_backend(self, results_path='.'):
-        self.rerun = True
-        self.results = None
+        self.model.rerun = True
+        self.model.results = None
 
-        super(RAMBackend,self).init_backend()
+        super(MemoryBackend,self).init_backend()
     def set_results(results):
-        self.results = results
+        self.model.results = results
     def local_run(self, **run_params):
-        self.results = self.set_results()
-        return self.results
+        self.model.results = self.set_results()
+        return self.model.results
 
 
 class DiskBackend(Backend):
@@ -88,7 +87,7 @@ class DiskBackend(Backend):
 
     def init_backend(self, results_path='.'):
         self.results_path = results_path
-        self.rerun = True
+        self.model.rerun = True
         super(DiskBackend,self).init_backend()
 
     def local_run(self, **run_params):
@@ -103,12 +102,12 @@ class jNeuroMLBackend(Backend):
     backend = 'jNeuroML'
 
     def set_attrs(self, **attrs):
-        self.attrs.update(attrs)
+        self.model.attrs.update(attrs)
         self.set_lems_attrs(attrs)
 
     def set_run_params(self, **params):
         super(jNeuroMLBackend,self).set_run_params(**params)
-        self.set_lems_run_params()
+        self.model.set_lems_run_params()
 
     def inject_square_current(self, current):
         self.set_run_params(injected_square_current=current)
@@ -116,11 +115,11 @@ class jNeuroMLBackend(Backend):
     def local_run(self):
         f = pynml.run_lems_with_jneuroml
         self.exec_in_dir = tempfile.mkdtemp()
-        results = f(self.lems_file_path, skip_run=self.skip_run,
-                    nogui=self.run_params['nogui'],
+        results = f(self.model.lems_file_path, skip_run=self.model.skip_run,
+                    nogui=self.model.run_params['nogui'],
                     load_saved_data=True, plot=False,
                     exec_in_dir=self.exec_in_dir,
-                    verbose=self.run_params['v'])
+                    verbose=self.model.run_params['v'])
         return results
 
 
@@ -354,19 +353,19 @@ class NEURONBackend(Backend):
         return self
 
     
-    def set_run_params(self, **params):
-        super(NEURONBackend,self).set_run_params(**params)
-        self.set_lems_run_params()
+#    def set_run_params(self, **params):
+#        super(NEURONBackend,self).set_run_params(**params)
+#        self.set_lems_run_params()
 
 
 
     def set_attrs(self, **attrs):
-        self.attrs.update(attrs)
-        assert type(self.attrs) is not type(None)
+        self.model.attrs.update(attrs)
+
+        assert type(self.model.attrs) is not type(None)
         for h_key,h_value in attrs.items():
             self.h('m_RS_RS_pop[0].{0} = {1}'.format(h_key,h_value))
             self.h('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
-      
 
         # Below are experimental rig recording parameters.
         # These can possibly go in a seperate method.
