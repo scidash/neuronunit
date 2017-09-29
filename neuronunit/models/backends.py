@@ -74,7 +74,7 @@ class MemoryBackend(Backend):
         self.model.rerun = True
         self.model.results = None
 
-        super(RAMBackend,self).init_backend()
+        super(MemoryBackend,self).init_backend()
     def set_results(results):
         self.model.results = results
     def local_run(self, **run_params):
