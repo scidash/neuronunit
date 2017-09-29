@@ -22,6 +22,8 @@ mpl.use('Agg') # Avoid any problems with Macs or headless displays.
 from sciunit.utils import NotebookTools,import_all_modules
 from neuronunit import neuroelectro,bbp,aibs
 
+OSX = sys.platform == 'darwin'
+
 class ImportTestCase(unittest.TestCase):
     """Testing imports of modules and packages"""
 
@@ -93,9 +95,71 @@ class AIBSTestCase(unittest.TestCase):
         observation = aibs.get_observation(dataset_id,'rheobase')
 
 
-class TestPassiveTestCase(unittest.TestCase):
-    pass
+class ReducedModelTestCase(unittest.TestCase):
+    """Test instantiation of the reduced model"""
+
+    def setUp(self):
+        from neuronunit.models.reduced import ReducedModel
+        self.ReducedModel = ReducedModel
+
+    @property
+    def path(self):
+            import neuronunit.models
+            return os.path.join(neuronunit.models.__path__[0],
+                                'NeuroML2','LEMS_2007One.xml') 
+
+    def test_reducedmodel_jneuroml(self):
+        model = self.ReducedModel(self.path, backend='jNeuroML')
+
+    @unittest.skipIf(OSX,"NEURON unreliable on OSX")
+    def test_reducedmodel_neuron(self):
+        model = self.ReducedModel(self.path, backend='NEURON')
+
+
+class TestsTestCase(object):
+    """Abstract base class for testing tests"""
+
+    def setUp(self):
+        from neuronunit import neuroelectro
+        from neuronunit.models.reduced import ReducedModel
+        path = ReducedModelTestCase().path
+        self.model = ReducedModel(path, backend='jNeuroML')
+
+    def get_observation(self, cls):
+        print(cls.__name__)
+        neuron = {'nlex_id': 'nifext_50'} # Layer V pyramidal cell
+        return cls.neuroelectro_summary_observation(neuron)
+
+    def run_test(self, cls):
+        observation = self.get_observation(cls)
+        test = cls(observation=observation)
+        score = test.judge(self.model)
+        score.summarize()
+        return score.score
+
+
+class TestsPassiveTestCase(TestsTestCase, unittest.TestCase):
+    """Test passive validation tests"""
+
+    def test_inputresistance(self):
+        from neuronunit.tests.passive import InputResistanceTest
+        score = self.run_test(InputResistanceTest)
+        self.assertTrue(-0.6 < score < -0.5)
+
+    def test_restingpotential(self):
+        from neuronunit.tests.passive import RestingPotentialTest
+        score = self.run_test(RestingPotentialTest)
+        self.assertTrue(1.2 < score < 1.3)
         
+
+class TestsFITestCase(TestsTestCase, unittest.TestCase):
+    """Test F/I validation tests"""
+
+    def test_rheobase_serial(self):
+        from neuronunit.tests.fi import RheobaseTest
+        score = self.run_test(RheobaseTest)
+        self.assertTrue(0.2 < score < 0.3)
+
 
 if __name__ == '__main__':
     unittest.main()
