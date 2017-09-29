@@ -1,13 +1,13 @@
-"""NeuronUnit test classes for testing model dynamics"""
+"""Dynamic neuronunit tests, e.g. investigating dynamical systems properties"""
 
-import numpy as np
-import quantities as pq
+
 from elephant.statistics import isi
 
-import sciunit
-from sciunit.scores import BooleanScore,FloatScore,RatioScore
 from neuronunit.capabilities.channel import * 
-from .__init__ import RheobaseTest,InjectedCurrentAPWidthTest
+from .base import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
+from .waveform import InjectedCurrentAPWidthTest
+from .fi import RheobaseTest
+
 
 class TFRTypeTest(RheobaseTest):
     """Tests whether a model has particular threshold firing rate dynamics, 
@@ -18,7 +18,7 @@ class TFRTypeTest(RheobaseTest):
     description = (("A test of the instantaneous firing rate dynamics, i.e. "
                     "type 1 or type 2"))
 
-    score_type = BooleanScore
+    score_type = scores.BooleanScore
 
     def __init__(self, *args, **kwargs):
         super(TFRTypeTest,self).__init__(*args,**kwargs)
@@ -91,7 +91,7 @@ class BurstinessTest(InjectedCurrentAPWidthTest):
 
     description = (("A test of AP bursting at the provided current"))
 
-    score_type = RatioScore
+    score_type = scores.RatioScore
 
     units = pq.Dimensionless
 
