@@ -42,7 +42,8 @@ def check_paths():
     from neuronunit.models.reduced import ReducedModel
     from neuronunit.tests import get_neab
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
-    model.load_model()
+    model.backend = 'NEURON'
+    #model.load_model()
     return neuronunit.models.__file__
 
 path_serial = check_paths()
@@ -103,8 +104,8 @@ def update_dtc_pop(pop, td):
 
 
     if len(pop) > 0:
-        dtcpop = dview.map_sync(transform, pop)
-        dtcpop = list(copy.copy(dtcpop))
+        dtcpop = list(dview.map_sync(transform, pop))
+        #dtcpop = list(copy.copy(dtcpop))
     else:
         # In this case pop is not really a population but an individual
         # but parsimony of naming variables
@@ -137,8 +138,8 @@ def dtc_to_rheo(dtc):
     from neuronunit.tests import get_neab
     import evaluate_as_module
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-    model.load_model()
-    model.set_attrs(**dtc.attrs)
+    #model.load_model()
+    model.set_attrs(dtc.attrs)
     print(model)
     print(model.attrs)
     dtc.scores = None
@@ -162,7 +163,7 @@ def map_wrapper(dtc):
     import numpy as np
     from neuronunit.tests import get_neab
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-    model.load_model()
+    #model.load_model()
     model.set_attrs(**dtc.attrs)
     print(model)
     print(model.attrs)

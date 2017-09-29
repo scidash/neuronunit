@@ -13,7 +13,7 @@ from neuronunit.tests import get_neab
 from ipyparallel import depend, require, dependent
 
 model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
-model.load_model()
+#model.load_model()
 
 
 class Individual(object):
