@@ -5,6 +5,7 @@ import os
 import sys
 import shelve
 import zipfile
+import requests
 
 import numpy as np
 
@@ -19,15 +20,12 @@ except ImportError: # Python 3
     from urllib.parse import urlencode
     from urllib.request import urlopen, urlretrieve, URLError, HTTPError
 
+
 def is_bbp_up():
     url = "http://microcircuits.epfl.ch/released_data/B95_folder.zip"
-    try:
-        urlretrieve(url)
-    except HTTPError:
-        result = False
-    else:
-        result = True
-    return result
+    request = requests.get(url)
+    return request.status_code == 200
+
 
 def list_curated_data():
     """
