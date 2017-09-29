@@ -55,10 +55,10 @@ class VmTest(sciunit.Test):
                 or len(nonunited_keys)
             for key in united_keys:
                 if key in observation:
-                    assert type(observation[key]) is Quantity
+                    assert type(observation[key]) is pq.quantity.Quantity
             for key in nonunited_keys:
                 if key in observation:
-                    assert type(observation[key]) is not Quantity \
+                    assert type(observation[key]) is not pq.quantity.Quantity \
                         or observation[key].units == pq.Dimensionless
         except Exception as e:
             key_str = 'and/or a '.join(['%s key' % key for key in united_keys])
