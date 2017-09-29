@@ -20,7 +20,7 @@ import matplotlib as mpl
 mpl.use('Agg') # Avoid any problems with Macs or headless displays.
 
 from sciunit.utils import NotebookTools
-from neuronunit import neuroelectro,bbp
+from neuronunit import neuroelectro,bbp,aibs
 
 
 class DocumentationTestCase(NotebookTools, 
@@ -73,6 +73,16 @@ class BlueBrainTestCase(NotebookTools,
                          "Blue Brain URL is not responsive")
     def test_bluebrain(self):
         self.do_notebook('bbp')
+
+
+class AIBSTestCase(unittest.TestCase):
+
+    @unittest.skipUnless(aibs.is_aibs_up(), 
+                         "AIBS URL is not responsive")
+    def test_aibs(self):
+        dataset_id = 354190013  # Internal ID that AIBS uses for a particular Scnn1a-Tg2-Cre 
+                                # Primary visual area, layer 5 neuron.
+        observation = aibs.get_observation(dataset_id,'rheobase')
         
 
 if __name__ == '__main__':
