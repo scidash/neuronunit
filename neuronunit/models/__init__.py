@@ -89,6 +89,16 @@ class LEMSModel(cap.Runnable,
         self._backend.model = self
         self._backend.init_backend(*args, **kwargs)
 
+    def __getattr__(self, attr):
+        try:
+            result = super(LEMSModel,self).__getattr(self, attr)
+        except AttributeError:
+            try:
+                result = getattr(self._backend,attr)
+            except:
+                raise AttributeError("Neither model nor backend have attribute '%s'" % attr)
+        return result
+
     def create_lems_file(self, name):
         if not hasattr(self,'temp_dir'):
             self.temp_dir = tempfile.gettempdir()
