@@ -50,6 +50,9 @@ class LEMSModel(cap.Runnable,
         #print(self)
         return self
 
+    def get_backend(self):
+        return self._backend
+
     def set_backend(self, backend):
         if isinstance(backend,str):
             name = backend
