@@ -4,7 +4,6 @@ for direct use in testing"""
 from types import MethodType
 
 import quantities as pq
-import matplotlib.pyplot as plt
 import numpy as np
 
 import sciunit
@@ -83,6 +82,7 @@ class VmTest(sciunit.Test):
 
         def plot_vm(self, ax=None, ylim=(None,None)):
             """A plot method the score can use for convenience."""
+            import matplotlib.pyplot as plt
             if ax is None:
                 ax = plt.gca()
             vm = score.related_data['vm'].rescale('mV')

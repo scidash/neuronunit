@@ -12,8 +12,9 @@ from pyneuroml import pynml
 from . import backends
 
 
-class LEMSModel(cap.Runnable,
-                sciunit.Model):
+class LEMSModel(sciunit.Model,
+                cap.Runnable,
+                ):
     """A generic LEMS model"""
 
     def __init__(self, LEMS_file_path, name=None, 
@@ -89,15 +90,15 @@ class LEMSModel(cap.Runnable,
         self._backend.model = self
         self._backend.init_backend(*args, **kwargs)
 
-    def __getattr__(self, attr):
-        try:
-            result = super(LEMSModel,self).__getattr(self, attr)
-        except AttributeError:
-            try:
-                result = getattr(self._backend,attr)
-            except:
-                raise AttributeError("Neither model nor backend have attribute '%s'" % attr)
-        return result
+#    def __getattr__(self, attr):
+#        try:
+#            result = getattr(self._backend,attr)
+#        except AttributeError:
+#            try:
+#                result = super(LEMSModel,self).__getattr(self, attr)
+#            except:
+#                raise AttributeError("Neither model nor backend have attribute '%s'" % attr)
+#        return result
 
     def create_lems_file(self, name):
         if not hasattr(self,'temp_dir'):
@@ -139,6 +140,9 @@ class LEMSModel(cap.Runnable,
         # run parameters and not use the same ones
         self.run_params = {}
 
+    def set_run_params(self, **params):
+        self._backend.set_run_params(**params)
+
     def set_lems_run_params(self):
         from lxml import etree
         from neuroml import nml
@@ -165,3 +169,6 @@ class LEMSModel(cap.Runnable,
                                 pg.attrib[attr] = '%s' % value[attr]
 
             tree.write(file_path)
+
+    def inject_square_current(self, current):
+        self._backend.inject_square_current(current)

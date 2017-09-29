@@ -1,6 +1,6 @@
 """Passive neuronunit tests, e.g. requiring no active conductances or spiking"""
 
-from .base import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
+from .base import np, pq, sciunit, cap, VmTest, scores, AMPL, DELAY, DURATION
 from scipy.optimize import curve_fit
 
 
@@ -113,7 +113,6 @@ class InputResistanceTest(TestPulseTest):
 class TimeConstantTest(TestPulseTest):
     """Tests the input resistance of a cell."""
 
-
     name = "Time constant test"
 
     description = ("A test of membrane time constant of a cell.")
@@ -179,8 +178,6 @@ class CapacitanceTest(TestPulseTest):
         return score
 
 
-
-
 class RestingPotentialTest(VmTest):
     """Tests the resting potential under zero current injection."""
 
@@ -201,18 +198,8 @@ class RestingPotentialTest(VmTest):
 
     ephysprop_name = 'Resting membrane potential'
 
-    def validate_observation(self, observation):
-        try:
-            assert type(observation['mean']) is Quantity
-            assert type(observation['std']) is Quantity
-        except Exception as e:
-            raise sciunit.ObservationError(("Observation must be of the form "
-                                    "{'mean':float*mV,'std':float*mV}"))
-
     def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
-
-
 
         model.rerun = True
 
@@ -230,8 +217,6 @@ class RestingPotentialTest(VmTest):
         prediction = {'mean':median, 'std':std}
         self.prediction = prediction
         return prediction
-
-
 
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
