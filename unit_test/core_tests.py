@@ -155,6 +155,7 @@ class TestsPassiveTestCase(TestsTestCase, unittest.TestCase):
 class TestsFITestCase(TestsTestCase, unittest.TestCase):
     """Test F/I validation tests"""
 
+    @unittest.skip("This test takes a long time")
     def test_rheobase_serial(self):
         from neuronunit.tests.fi import RheobaseTest
         score = self.run_test(RheobaseTest)
