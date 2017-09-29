@@ -34,6 +34,7 @@ from pprint import pprint
 import shelve
 import hashlib
 import pickle
+import requests
 try: # Python 2
     from urllib import urlencode, urlretrieve
     from urllib2 import urlopen, URLError, HTTPError
