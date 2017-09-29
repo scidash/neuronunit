@@ -795,12 +795,9 @@ class RheobaseTestP(VmTest):
             from neuronunit.models import backends
             from neuronunit.models.reduced import ReducedModel
 
-            #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
             model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-            model.load_model()
-            model.set_attrs(**dtc.attrs)
-            #model.update_run_params(dtc.attrs)
-
+            model.set_attrs(dtc.attrs)
+ 
             DELAY = 100.0*pq.ms
             DURATION = 1000.0*pq.ms
             params = {'injected_square_current':
@@ -814,9 +811,9 @@ class RheobaseTestP(VmTest):
                 current = {'injected_square_current':current}
                 #print(current)
                 dtc.run_number += 1
-                model.set_attrs(**dtc.attrs)
+                model.set_attrs(dtc.attrs)
                 model.name = dtc.attrs
-                model.inject_square_current(current)
+                model._backend.inject_square_current(current)
                 dtc.previous = ampl
                 n_spikes = model.get_spike_count()
                 dtc.lookup[float(ampl)] = n_spikes
@@ -874,8 +871,7 @@ class RheobaseTestP(VmTest):
             from neuronunit.tests import get_neab
             from itertools import repeat
             model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-            model.load_model()
-            model.set_attrs(**dtc.attrs)
+            model.set_attrs(dtc.attrs)
             cnt = 0
             # If this it not the first pass/ first generation
             # then assume the rheobase value found before mutation still holds until proven otherwise.
@@ -915,7 +911,7 @@ class RheobaseTestP(VmTest):
 
              score = scores.InsufficientDataScore(None)
          else:
-             score = super(RheobaseTest,self).\
+             score = super(RheobaseTestP,self).\
                          compute_score(observation, self.prediction)
              #self.bind_score(score,None,observation,prediction)
          return score
