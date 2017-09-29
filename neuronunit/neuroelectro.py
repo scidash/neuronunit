@@ -35,11 +35,11 @@ import shelve
 import hashlib
 import pickle
 try: # Python 2
-    from urllib import urlencode
-    from urllib2 import urlopen,URLError
+    from urllib import urlencode, urlretrieve
+    from urllib2 import urlopen, URLError, HTTPError
 except ImportError: # Python 3
     from urllib.parse import urlencode
-    from urllib.request import urlopen,URLError
+    from urllib.request import urlopen, urlretrieve, URLError, HTTPError
 
 import numpy as np
 
@@ -52,6 +52,17 @@ if DEVELOPER:
 else:
     DOMAIN = 'http://www.neuroelectro.org'
 API_URL = DOMAIN+API_SUFFIX
+
+
+def is_neuroelectro_up():
+    url = "http://neuroelectro.org"
+    try:
+        urlretrieve(url)
+    except HTTPError:
+        result = False
+    else:
+        result = True
+    return result
 
 
 class NeuroElectroError(Exception):
