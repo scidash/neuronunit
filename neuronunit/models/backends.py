@@ -26,7 +26,7 @@ class Backend:
     #self.tstop = None
     def init_backend(self, *args, **kwargs):
         #self.attrs = {} if attrs is None else attrs
-        self.model.create_lems_file(model.name)
+        self.model.create_lems_file(self.model.name)
         self.load_model()
         self.unpicklable = []
         self.attrs = {}
