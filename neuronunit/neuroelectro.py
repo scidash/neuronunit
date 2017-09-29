@@ -86,23 +86,22 @@ class NeuroElectroData(object):
     """Abstract class based on neuroelectro.org data using that site's API."""
     def __init__(self, neuron=None, ephysprop=None, \
                        get_values=False, cached=True):
+        self.neuron = Neuron()
         if neuron:
             for key,value in neuron.items():
                 setattr(self.neuron,key,value)
+        self.ephysprop = EphysProp()
         if ephysprop:
             for key,value in ephysprop.items():
                 setattr(self.ephysprop,key,value)
+        self.require_attrs = None
+        self.get_one_match = True # By default only get the first match
         self.cached = cached
         if get_values:
             self.get_values()
 
     url = API_URL # Base URL.
-    neuron = Neuron()
-    ephysprop = EphysProp()
-    require_attrs = None
-
-    get_one_match = True # By default only get the first match
-
+    
     def set_names(self, neuron_name, ephysprop_name):
         self.set_neuron(name=neuron_name)
         self.set_ephysprop(name=ephysprop_name)
@@ -129,6 +128,7 @@ class NeuroElectroData(object):
         query['n__name'] = self.neuron.name
         query['e'] = self.ephysprop.id
         query['e__name'] = self.ephysprop.name
+        print(query)
         query = {key:value for key,value in query.items() if value is not None}
 
         if params is not None:

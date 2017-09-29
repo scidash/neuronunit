@@ -28,6 +28,9 @@ class RheobaseTest(VmTest):
                    "needed to evoke at least one spike.")
 
     units = pq.pA
+
+    ephysprop_name = 'Rheobase'
+
     score_type = scores.RatioScore
 
     def generate_prediction(self, model):
@@ -36,7 +39,10 @@ class RheobaseTest(VmTest):
         # ProducesActionPotentials capability.
         prediction = {'value': None}
         model.rerun = True
-        units = self.observation['value'].units
+        try:
+            units = self.observation['value'].units
+        except KeyError:
+            units = self.observation['mean'].units
         import time
         begin_rh=time.time()
         lookup = self.threshold_FI(model, units)
@@ -162,6 +168,9 @@ class RheobaseTestP(VmTest):
                     "needed to evoke at least one spike.")
 
      units = pq.pA
+
+     ephysprop_name = 'Rheobase'
+
      score_type = scores.RatioScore
 
      def generate_prediction(self, model):
