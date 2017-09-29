@@ -44,7 +44,7 @@ class Backend:
         """Set model attributes, e.g. input resistance of a cell"""
         #If the key is in the dictionary, it updates the key with the new value.
         self.attrs.update(attrs)
-        #pass
+        pass
 
     def set_run_params(self, **params):
         """Set run-time parameters, e.g. the somatic current to inject"""
@@ -147,14 +147,11 @@ class NEURONBackend(Backend):
         self.h.load_file("stdlib.hoc")
         self.h.load_file("stdgui.hoc")
         self.lookup = {}
-        #self.h.cvode.active(1)
-        #pdb.set_trace()
-        #self.h.cvode.active
         print(1,self.model.orig_lems_file_path)
-        #super(NEURONBackend,self).init_backend(attrs)
         self.load_model()
+        self.unpicklable = []
         self.unpicklable += ['h','ns','_backend']
-
+        self.attrs = {}
     backend = 'NEURON'
 
     def reset_neuron(self, neuronVar):
@@ -291,6 +288,7 @@ class NEURONBackend(Backend):
         Since this only happens once outside of the optimization
         loop its a tolerable performance hit.
         """
+        import os
 
         DEFAULTS={}
         DEFAULTS['v']=True
@@ -312,15 +310,16 @@ class NEURONBackend(Backend):
             self.ns = nrn.NeuronSimulation(self.h.tstop, dt=0.0025)
             return self
 
-        self = cond_load()
+        
+        #The code block below does not actually function:
+        #architecture = platform.machine()
+        base_name = os.path.splitext(self.model.orig_lems_file_path)[0]
+        NEURON_file_path ='{0}_nrn.py'.format(base_name)
 
-        '''
-        The code block below does not actually function:
-        architecture = platform.machine()
-        NEURON_file_path = os.path.join(self.model.orig_lems_file_path,architecture)
         if os.path.exists(NEURON_file_path):
+            
+            self = cond_load()
 
-            print('this never executes')
 
         else:
             self.exec_in_dir = tempfile.mkdtemp()
@@ -336,7 +335,6 @@ class NEURONBackend(Backend):
                               exit_on_fail = True)
 
             self = cond_load()
-        '''
 
         #Although the above approach successfuly instantiates a LEMS/neuroml model in pyhoc
         #the resulting hoc variables for current source and cell name are idiosyncratic (not generic).
@@ -354,12 +352,22 @@ class NEURONBackend(Backend):
         more_attributes = None #force garbage collection of more_attributes, its not needed anymore.
         return self
 
-    def set_attrs(self,**attrs):
-        '''
-        set model attributes in HOC memory space.
-        over riding a stub of the parent class.
-        '''
-        super(NEURONBackend,self).set_attrs(**attrs)
+    #def set_attrs(self,**attrs):
+    #    '''
+    #    set model attributes in HOC memory space.
+    #    over riding a stub of the parent class.
+    #    '''
+
+    def set_attrs(self, **attrs):
+        self.attrs.update(attrs)
+        #self.set_lems_attrs(attrs)
+
+        #def set_attrs(self, **attrs):                                                                               
+        #self.attrs.update(attrs)                                                                                
+        #self.set_lems_attrs(attrs)                                                                                    
+                                                                   
+
+        #super(NEURONBackend,self).set_attrs(attrs)
         assert type(self.attrs) is not type(None)
         for h_key,h_value in attrs.items():
             self.h('m_RS_RS_pop[0].{0} = {1}'.format(h_key,h_value))

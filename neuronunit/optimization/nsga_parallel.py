@@ -30,6 +30,7 @@ import deap
 # GA parameters
 MU = 4
 NGEN = 3
+CXPB = 0.9
 ###
 
 
@@ -190,7 +191,7 @@ dtcpop = list(map(evaluate_as_module.pre_format,dtcpop))
 dtcpop = list(dview.map(map_wrapper,dtcpop).get())
 #dtcpop = list(map(evaluate_as_module.map_wrapper,dtcpop))#.get())
 
-#pdb.set_trace()
+
 
 print(scores)
 rh_values_unevolved = [v.rheobase for v in dtcpop ]
@@ -202,27 +203,6 @@ with open(new_checkpoint_path,'wb') as handle:#
     pickle.dump([dtcpop,rh_values_unevolved], handle)
 
 
-# sometimes done in serial in order to get access to opaque stdout/stderr
-
-#fitnesses = []
-#for v in dtcpop:
-#   fitnesses.append(evaluate_as_module.evaluate(v))
-   #pdb.set_trace()
-import copy
-import evaluate_as_module
-#dtcpop = dview.map_sync(evaluate_as_module.pre_evaluate, copy.copy(dtcpop))
-#from itertools import repeat
-dtcpop = [ v for v in dtcpop if v.rheobase > 0.0 ]
-for d in dtcpop:
-    print('testing dubious rheobase values \n\n\n')
-    dtc = check_current(d.rheobase, d)
-#dtcpop = list(dview.map_sync(evaluate_as_module.pre_evaluate,copy.copy(dtcpop)))
-fitnesses = list(dview.map_sync(evaluate_as_module.evaluate, copy.copy(dtcpop)))
-
-#fitnesses = dview.map(evaluate_as_module.evaluate, copy.copy(producer)).get()
-
-
-#fitnesses = dview.map_sync(evaluate, copy.copy(dtcpop))
 for ind, fit in zip(pop, fitnesses):
     ind.fitness.values = fit
 
