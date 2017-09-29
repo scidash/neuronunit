@@ -56,14 +56,9 @@ API_URL = DOMAIN+API_SUFFIX
 
 def is_neuroelectro_up():
     url = "http://neuroelectro.org"
-    try:
-        urlretrieve(url)
-    except HTTPError:
-        result = False
-    else:
-        result = True
-    return result
-
+    request = requests.get(url)
+    return request.status_code == 200
+    
 
 class NeuroElectroError(Exception):
     pass
