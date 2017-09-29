@@ -2,22 +2,33 @@
 Cell Types database"""
 
 import os
+import sys
 import shelve
 import zipfile
 
 import numpy as np
+
 import matplotlib.pyplot as plt
 import quantities as pq
 from neo.io import IgorIO
 
 try: # Python 2
     from urllib import urlencode, urlretrieve
-    from urllib2 import urlopen, URLError
+    from urllib2 import urlopen, URLError, HTTPError
 except ImportError: # Python 3
     from urllib.parse import urlencode
-    from urllib.request import urlopen, urlretrieve, URLError 
+    from urllib.request import urlopen, urlretrieve, URLError, HTTPError
 
-    
+def is_bbp_up():
+    url = "http://microcircuits.epfl.ch/released_data/B95_folder.zip"
+    try:
+        urlretrieve(url)
+    except HTTPError:
+        result = False
+    else:
+        result = True
+    return result
+
 def list_curated_data():
     """
     List of all curated datasets as of July 1st, 2017 found at
