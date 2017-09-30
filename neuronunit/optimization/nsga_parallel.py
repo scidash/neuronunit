@@ -32,11 +32,8 @@ MU = 4
 NGEN = 3
 ###
 
-
+'''
 def check_paths():
-    '''
-    import paths and test for consistency
-    '''
     import neuronunit
     from neuronunit.models.reduced import ReducedModel
     from neuronunit.tests import get_neab
@@ -47,7 +44,7 @@ def check_paths():
 path_serial = check_paths()
 paths_parallel = dview.apply_async(check_paths).get_dict()
 assert path_serial == paths_parallel[0]
-
+'''
 import evaluate_as_module
 toolbox, tools, history, creator, base = evaluate_as_module.import_list(ipp)
 dview.push({'Individual':evaluate_as_module.Individual})
