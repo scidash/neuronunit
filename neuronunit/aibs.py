@@ -2,11 +2,21 @@
 Cell Types database"""
 
 import shelve
+import requests
+
 import numpy as np
 import quantities as pq
 from allensdk.api.queries.cell_types_api import CellTypesApi
 
+
+def is_aibs_up():
+    url = ("http://api.brain-map.org/api/v2/data/query.xml?criteria=model"
+           "::Specimen,rma::criteria,[id$eq320654829],rma::include,ephys_result"
+           "(well_known_files(well_known_file_type[name$eqNWBDownload]))")
+    request = requests.get(url)
+    return request.status_code == 200
     
+
 def get_sweep_params(dataset_id, sweep_id):
     """
     Gets sweep parameters corresponding to the sweep with id 'sweep_id' from

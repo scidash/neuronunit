@@ -3,8 +3,8 @@
 import os
 from copy import deepcopy
 import tempfile
-import shutil
 import inspect
+import shutil
 
 import sciunit
 import neuronunit.capabilities as cap
@@ -12,20 +12,22 @@ from pyneuroml import pynml
 from . import backends
 
 
-class LEMSModel(cap.Runnable,
-                sciunit.Model):
+class LEMSModel(sciunit.Model,
+                cap.Runnable,
+                ):
     """A generic LEMS model"""
 
-    def __init__(self, LEMS_file_path=None, name=None,
-                    backend='NEURON', attrs=None):
+    def __init__(self, LEMS_file_path, name=None, 
+                    backend='jNeuroML', attrs=None):
+
         #for base in cls.__bases__:
         #    sciunit.Model.__init__()
         if name is None:
-            name = os.path.split(self.lems_file_path)[1].split('.')[0]
+            name = os.path.split(LEMS_file_path)[1].split('.')[0]
         #sciunit.Modelsuper(LEMSModel,self).__init__(name=name)
         self.attrs = attrs if attrs else {}
-        self.orig_lems_file_path = LEMS_file_path
-        self.create_lems_file(name)
+        self.orig_lems_file_path = os.path.abspath(LEMS_file_path)
+        assert os.path.isfile(self.orig_lems_file_path)
         self.run_defaults = pynml.DEFAULTS
         self.run_defaults['nogui'] = True
         self.run_params = {}
@@ -39,21 +41,18 @@ class LEMSModel(cap.Runnable,
         LEMS_file_path: Path to LEMS file (an xml file).
         name: Optional model name.
         """
-        print("Calling new")
+        #print("Calling new")
+        #print(cls.__bases__)
+        #print("args",args)
+        #print("kwargs",kwargs)
         self  = super().__new__(cls)#, *args, **kwargs)
-        if 'fresh' in kwargs and not kwargs['fresh']:
-            self.set_backend(kwargs['backend'])
-        print(self)
+        #if 'fresh' in kwargs and not kwargs['fresh']:
+        #    self.set_backend(kwargs['backend'])
+        #print(self)
         return self
 
-    def __getnewargs_ex__(self): # This method is required by pickle to know what
-                              # arguments to pass to __new__ when instances of
-                              # this class are eventually unpickled.
-                              # Otherwise __new__() will have no arguments.
-        # A tuple containing the extra args and kwargs to pass to __new__.
-        return (tuple(), # No args
-                {'fresh':False, # Not fresh, i.e. restored from pickling
-                 'backend':self.backend})  # The backend to set.
+    def get_backend(self):
+        return self._backend
 
     def set_backend(self, backend):
         if isinstance(backend,str):
@@ -81,25 +80,6 @@ class LEMSModel(cap.Runnable,
         if name in options:
             self.backend = name
             self._backend = options[name]()
-            # Add all of the backend's methods to the model instance,
-            # but remove base classes that are pure backends first,
-            # so that new backends replace old backends.
-            new_bases = tuple([b for b in self.__class__.__bases__ \
-                               if issubclass(b,sciunit.Model) or \
-                               not issubclass(b,backends.Backend)])
-            print(self._backend.__class__,new_bases)
-            #self.__class__.__bases__ =
-            new_bases = (self._backend.__class__,) + new_bases
-            Dummy = type("%s with %s backend" % \
-                         (self.__class__.__name__,self.backend),
-                         new_bases,
-                         self.__dict__)
-            self.__class__ = Dummy
-            #class Dummy:
-            #    pass
-            #Dummy =
-            #self.__class__ = type(self.__class__, self._backend)
-
         elif name is None:
             # The base class should not be called.
             raise Exception(("A backend (e.g. 'jNeuroML' or 'NEURON') "
@@ -107,17 +87,38 @@ class LEMSModel(cap.Runnable,
         else:
             raise Exception("Backend %s not found in backends.py" \
                             % name)
-        self.init_backend(*args, **kwargs)
+        self._backend.model = self
+        self._backend.init_backend(*args, **kwargs)
+
+#    def __getattr__(self, attr):
+#        try:
+#            result = getattr(self._backend,attr)
+#        except AttributeError:
+#            try:
+#                result = super(LEMSModel,self).__getattr(self, attr)
+#            except:
+#                raise AttributeError("Neither model nor backend have attribute '%s'" % attr)
+#        return result
 
     def create_lems_file(self, name):
-        # leads to bugs
-        #if not hasattr(self,'temp_dir'):
-        #    self.temp_dir = tempfile.gettempdir()
-        #self.lems_file_path  = os.path.join(self.temp_dir, '%s.xml' % name)
-        #shutil.copy2(self.orig_lems_file_path, self.lems_file_path)
+        if not hasattr(self,'temp_dir'):
+            self.temp_dir = tempfile.gettempdir()
+        self.lems_file_path  = os.path.join(self.temp_dir, '%s.xml' % name)
+        shutil.copy2(self.orig_lems_file_path,self.lems_file_path)
         if self.attrs:
             self.set_lems_attrs(self.attrs)
 
+    def set_attrs(self,attrs):
+        self._backend.set_attrs(**attrs)
+
+    def inject_square_current(self,current):
+        self._backend.inject_square_current(current)
+    #    
+    #def inject_square_current(self,current):
+    #    self._backend.inject_square_current(current)
+    #
+    #def local_run(self):
+        
     def set_lems_attrs(self, attrs):
         from lxml import etree
         tree = etree.parse(self.lems_file_path)
@@ -127,8 +128,10 @@ class LEMSModel(cap.Runnable,
                 for key2,value2 in value1.items():
                     node.attrib[key2] = value2
         tree.write(self.lems_file_path)
-
+    
     def run(self, rerun=None, **run_params):
+        self.results = self._backend.local_run()
+        '''
         if rerun is None:
             rerun = self.rerun
         self.set_run_params(**run_params)
@@ -140,12 +143,15 @@ class LEMSModel(cap.Runnable,
             print("Same run_params; skipping...")
             return
 
-        self.results = self.local_run()
+        self.results = self._backend.local_run()
         self.last_run_params = deepcopy(self.run_params)
         self.rerun = False
         # Reset run parameters so the next test has to pass its own
         # run parameters and not use the same ones
         self.run_params = {}
+	'''
+    def set_run_params(self, **params):
+        self._backend.set_run_params(**params)
 
     def set_lems_run_params(self):
         from lxml import etree
@@ -156,8 +162,9 @@ class LEMSModel(cap.Runnable,
         # Edit LEMS files.
         nml_file_rel_paths = [x.attrib['file'] for x in \
                               lems_tree.xpath("Include[contains(@file, '.nml')]")]
-        nml_file_paths = [os.path.join(os.path.split(self.lems_file_path)[0],x) \
+        nml_file_paths = [os.path.join(os.path.split(self.orig_lems_file_path)[0],x) \
                           for x in nml_file_rel_paths]
+        #print(nml_file_paths)
         trees.update({x:nml.nml.parsexml_(x) for x in nml_file_paths})
 
         # Edit NML files.
@@ -172,3 +179,6 @@ class LEMSModel(cap.Runnable,
                                 pg.attrib[attr] = '%s' % value[attr]
 
             tree.write(file_path)
+
+    def inject_square_current(self, current):
+        self._backend.inject_square_current(current)
