@@ -334,12 +334,14 @@ class RheobaseTestP(VmTest):
             rc = ipp.Client(profile='default')
             rc[:].use_cloudpickle()
             dview = rc[:]
+            '''
             from neuronunit.models import backends
             from neuronunit.models.reduced import ReducedModel
             from neuronunit.tests import get_neab
             from itertools import repeat
             model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
             model.set_attrs(dtc.attrs)
+            '''
             cnt = 0
             # If this it not the first pass/ first generation
             # then assume the rheobase value found before mutation still holds until proven otherwise.
@@ -349,10 +351,9 @@ class RheobaseTestP(VmTest):
             cnt = 0
             while dtc.boolean == False:
                 dtc.searched.append(dtc.steps)
-                smaller = dtc.steps
-                ds = [ dtc for s in smaller ]
-                print(ds,smaller)
-                dtcpop = dview.map(check_current,smaller,ds)
+                #smaller = dtc.steps
+                ds = [ dtc for s in dtc.steps ]
+                dtcpop = dview.map(check_current,dtc.steps,ds)
                 for dtc_clone in dtcpop.get():
                     dtc.lookup.update(dtc_clone.lookup)
                 dtc = check_fix_range(dtc)
@@ -365,23 +366,29 @@ class RheobaseTestP(VmTest):
         for k,v in model.attrs.items():
             dtc.attrs[k]=v
         dtc = init_dtc(dtc)
-        self.prediction = {}
-        self.prediction['value'] = find_rheobase(self,dtc).rheobase * pq.pA
-        return self.prediction
+        prediction = {}
+        prediction['value'] = find_rheobase(self,dtc).rheobase * pq.pA
+        return prediction
+
+     def bind_score(self, score, model, observation, prediction):
+         super(RheobaseTestP,self).bind_score(score, model,
+                                            observation, prediction)
+         #if self.rheobase_vm is not None:
+        #     score.related_data['vm'] = self.rheobase_vm
 
 
      def compute_score(self, observation, prediction):
          """Implementation of sciunit.Test.score_prediction."""
-         #print("%s: Observation = %s, Prediction = %s" % \
-         #	 (self.name,str(observation),str(prediction)))
 
-         if self.prediction['value'] is None:
+         score = None
+         if prediction['value'] is None:
 
             score = scores.InsufficientDataScore(None)
-         elif self.prediction['value'] < 0:
+         elif prediction['value'] < 0:
             # if rheobase is negative discard the model essentially.
             score = scores.InsufficientDataScore(None)
          else:
              score = super(RheobaseTestP,self).\
-                         compute_score(observation, self.prediction)
+                         compute_score(observation, prediction)
+         assert type(score) is not None
          return score
