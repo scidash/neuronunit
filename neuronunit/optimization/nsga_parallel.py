@@ -168,10 +168,10 @@ def map_wrapper(dtc):
             t.params = dtc.vtest[k]
             score = t.judge(model,stop_on_error = False, deep_error = True)
             dtc.scores[str(t)] = score.sort_key
-            observation = score.observation
-            prediction = score.prediction
-            delta = np.abs(observation-prediction)
-            dtc.differences[str(t)] = delta
+            #observation = score.observation
+            #prediction = score.prediction
+            #delta = np.abs(observation-prediction)
+            #dtc.differences[str(t)] = delta
 
     return dtc
 

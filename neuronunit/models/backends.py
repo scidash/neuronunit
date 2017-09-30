@@ -432,6 +432,10 @@ class NEURONBackend(Backend):
         import neuronunit.capabilities.spike_functions as sf
         return sf.get_spike_train(self.get_membrane_potential())
 
+    def get_spike_count(self):
+        import neuronunit.capabilities.spike_functions as sf
+        return len(sf.get_spike_train(self.get_membrane_potential()))
+
     def get_APs(self):
         import neuronunit.capabilities.spike_functions as sf
         return sf.get_spike_waveforms(self.get_membrane_potential())
