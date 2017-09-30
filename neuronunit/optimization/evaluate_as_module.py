@@ -13,7 +13,7 @@ from neuronunit.tests import get_neab
 from ipyparallel import depend, require, dependent
 
 model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
-model.load_model()
+#model.load_model()
 
 
 class Individual(object):
@@ -162,10 +162,7 @@ def difference(observation,prediction): # v is a tesst
     understand how to rescale one unit with another
     compatible unit.
     '''
-    #assert type(score) is not type(None)
     import numpy as np
-    print(prediction.keys())
-    print(prediction.values())
 
     # The trick is.
     # prediction always has value. but observation 7 out of 8 times has mean.
@@ -177,10 +174,8 @@ def difference(observation,prediction): # v is a tesst
         elif 'value' in observation.keys():
             unit_observations = observation['value']
 
-
-
     if 'mean' in prediction.keys():
-        unit_predictions = score.prediction['mean']
+        unit_predictions = prediction['mean']
         if 'mean' in observation.keys():
             unit_observations = observation['mean']
         elif 'value' in observation.keys():

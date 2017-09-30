@@ -26,9 +26,10 @@ class Backend:
     #self.tstop = None
     def init_backend(self, *args, **kwargs):
         #self.attrs = {} if attrs is None else attrs
+        self.model.create_lems_file(self.model.name)
         self.load_model()
-        self.unpicklable = []
-        self.attrs = {}
+        self.model.unpicklable = []
+        self.model.attrs = {}
 
 
     #attrs = None
@@ -42,12 +43,12 @@ class Backend:
     def set_attrs(self, **attrs):
         """Set model attributes, e.g. input resistance of a cell"""
         #If the key is in the dictionary, it updates the key with the new value.
-        self.attrs.update(attrs)
-        #pass
+        self.model.attrs.update(attrs)
+        pass
 
     def set_run_params(self, **params):
         """Set run-time parameters, e.g. the somatic current to inject"""
-        self.run_params.update(params)
+        self.model.run_params.update(params)
         self.check_run_params()
         pass
 
@@ -70,15 +71,15 @@ class MemoryBackend(Backend):
     """A dummy backend that loads pre-computed results from RAM/heap"""
 
     def init_backend(self, results_path='.'):
-        self.rerun = True
-        self.results = None
+        self.model.rerun = True
+        self.model.results = None
 
-        super(RAMBackend,self).init_backend()
+        super(MemoryBackend,self).init_backend()
     def set_results(results):
-        self.results = results
+        self.model.results = results
     def local_run(self, **run_params):
-        self.results = self.set_results()
-        return self.results
+        self.model.results = self.set_results()
+        return self.model.results
 
 
 class DiskBackend(Backend):
@@ -86,7 +87,7 @@ class DiskBackend(Backend):
 
     def init_backend(self, results_path='.'):
         self.results_path = results_path
-        self.rerun = True
+        self.model.rerun = True
         super(DiskBackend,self).init_backend()
 
     def local_run(self, **run_params):
@@ -101,12 +102,12 @@ class jNeuroMLBackend(Backend):
     backend = 'jNeuroML'
 
     def set_attrs(self, **attrs):
-        self.attrs.update(attrs)
+        self.model.attrs.update(attrs)
         self.set_lems_attrs(attrs)
 
     def set_run_params(self, **params):
         super(jNeuroMLBackend,self).set_run_params(**params)
-        self.set_lems_run_params()
+        self.model.set_lems_run_params()
 
     def inject_square_current(self, current):
         self.set_run_params(injected_square_current=current)
@@ -114,11 +115,11 @@ class jNeuroMLBackend(Backend):
     def local_run(self):
         f = pynml.run_lems_with_jneuroml
         self.exec_in_dir = tempfile.mkdtemp()
-        results = f(self.lems_file_path, skip_run=self.skip_run,
-                    nogui=self.run_params['nogui'],
+        results = f(self.model.lems_file_path, skip_run=self.model.skip_run,
+                    nogui=self.model.run_params['nogui'],
                     load_saved_data=True, plot=False,
                     exec_in_dir=self.exec_in_dir,
-                    verbose=self.run_params['v'])
+                    verbose=self.model.run_params['v'])
         return results
 
 
@@ -146,13 +147,11 @@ class NEURONBackend(Backend):
         self.h.load_file("stdlib.hoc")
         self.h.load_file("stdgui.hoc")
         self.lookup = {}
-        #self.h.cvode.active(1)
-        #pdb.set_trace()
-        #self.h.cvode.active
-        print(1,self.orig_lems_file_path)
-        super(NEURONBackend,self).init_backend(attrs)
+        print(1,self.model.orig_lems_file_path)
+        self.load_model()
+        self.unpicklable = []
         self.unpicklable += ['h','ns','_backend']
-
+        self.attrs = {}
     backend = 'NEURON'
 
     def reset_neuron(self, neuronVar):
@@ -289,19 +288,21 @@ class NEURONBackend(Backend):
         Since this only happens once outside of the optimization
         loop its a tolerable performance hit.
         """
+        import os
 
         DEFAULTS={}
         DEFAULTS['v']=True
         #Create a pyhoc file using jneuroml to convert from NeuroML to pyhoc.
         #import the contents of the file into the current names space.
         def cond_load():
-            nrn_name = os.path.splitext(self.orig_lems_file_path)[0]
+            nrn_name = os.path.splitext(self.model.orig_lems_file_path)[0]
             nrn_path,nrn_name = os.path.split(nrn_name)
             sys.path.append(nrn_path)
             import importlib
             nrn = importlib.import_module(nrn_name + '_nrn')
             self.reset_neuron(nrn.neuron)
-            modeldirname = os.path.dirname(self.orig_lems_file_path)
+            #make sure mechanisms are loaded
+            modeldirname = os.path.dirname(self.model.orig_lems_file_path)
             self.neuron.load_mechanisms(modeldirname)
 
             self.set_stop_time(1600*ms)
@@ -309,19 +310,20 @@ class NEURONBackend(Backend):
             self.ns = nrn.NeuronSimulation(self.h.tstop, dt=0.0025)
             return self
 
-        self = cond_load()
+        
+        #The code block below does not actually function:
+        #architecture = platform.machine()
+        base_name = os.path.splitext(self.model.orig_lems_file_path)[0]
+        NEURON_file_path ='{0}_nrn.py'.format(base_name)
 
-        '''
-        The code block below does not actually function:
-        architecture = platform.machine()
-        NEURON_file_path = os.path.join(self.orig_lems_file_path,architecture)
         if os.path.exists(NEURON_file_path):
+            
+            self = cond_load()
 
-            print('this never executes')
 
         else:
             self.exec_in_dir = tempfile.mkdtemp()
-            pynml.run_lems_with_jneuroml_neuron(self.orig_lems_file_path,
+            pynml.run_lems_with_jneuroml_neuron(self.model.orig_lems_file_path,
                               skip_run=False,
                               nogui=False,
                               load_saved_data=False,
@@ -333,13 +335,12 @@ class NEURONBackend(Backend):
                               exit_on_fail = True)
 
             self = cond_load()
-        '''
 
         #Although the above approach successfuly instantiates a LEMS/neuroml model in pyhoc
         #the resulting hoc variables for current source and cell name are idiosyncratic (not generic).
         #The resulting idiosyncracies makes it hard not have a hard coded approach make non hard coded, and generalizable code.
         #work around involves predicting the hoc variable names from pyneuroml LEMS file that was used to generate them.
-        more_attributes = pynml.read_lems_file(self.orig_lems_file_path)
+        more_attributes = pynml.read_lems_file(self.model.orig_lems_file_path)
         #print("Components are %s" % more_attributes.components)
         for i in more_attributes.components:
             #This code strips out simulation parameters from the xml tree also such as duration.
@@ -351,18 +352,20 @@ class NEURONBackend(Backend):
         more_attributes = None #force garbage collection of more_attributes, its not needed anymore.
         return self
 
-    def set_attrs(self,**attrs):
-        '''
-        set model attributes in HOC memory space.
-        over riding a stub of the parent class.
-        '''
-        super(NEURONBackend,self).set_attrs(**attrs)
-        assert type(self.attrs) is not type(None)
+    
+#    def set_run_params(self, **params):
+#        super(NEURONBackend,self).set_run_params(**params)
+#        self.set_lems_run_params()
+
+
+
+    def set_attrs(self, **attrs):
+        self.model.attrs.update(attrs)
+
+        assert type(self.model.attrs) is not type(None)
         for h_key,h_value in attrs.items():
             self.h('m_RS_RS_pop[0].{0} = {1}'.format(h_key,h_value))
             self.h('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
-            self.h('psection()')
-
 
         # Below are experimental rig recording parameters.
         # These can possibly go in a seperate method.
@@ -428,6 +431,10 @@ class NEURONBackend(Backend):
     def get_spike_train(self):
         import neuronunit.capabilities.spike_functions as sf
         return sf.get_spike_train(self.get_membrane_potential())
+
+    def get_spike_count(self):
+        import neuronunit.capabilities.spike_functions as sf
+        return len(sf.get_spike_train(self.get_membrane_potential()))
 
     def get_APs(self):
         import neuronunit.capabilities.spike_functions as sf

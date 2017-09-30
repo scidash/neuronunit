@@ -30,6 +30,7 @@ import deap
 # GA parameters
 MU = 4
 NGEN = 3
+CXPB = 0.9
 ###
 
 '''
@@ -38,7 +39,7 @@ def check_paths():
     from neuronunit.models.reduced import ReducedModel
     from neuronunit.tests import get_neab
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
-    model.load_model()
+    model.backend = 'NEURON'
     return neuronunit.models.__file__
 
 path_serial = check_paths()
@@ -99,8 +100,8 @@ def update_dtc_pop(pop, td):
 
 
     if len(pop) > 0:
-        dtcpop = dview.map_sync(transform, pop)
-        dtcpop = list(copy.copy(dtcpop))
+        dtcpop = list(dview.map_sync(transform, pop))
+        #dtcpop = list(copy.copy(dtcpop))
     else:
         # In this case pop is not really a population but an individual
         # but parsimony of naming variables
@@ -108,22 +109,16 @@ def update_dtc_pop(pop, td):
         dtcpop = transform(pop)
     return dtcpop
 td = get_trans_dict(param_dict)
-#td = trans_dict
-print('b')
 
 dview.push({'td':td })
 
 pop = toolbox.population(n = MU)
 pop = [ toolbox.clone(i) for i in pop ]
 dview.scatter('Individual',pop)
-print('c')
-print(pop,td)
-print(dview)
+
 dtcpop = update_dtc_pop(pop, td)
 
-#dtcpop = evaluate_as_module.update_dtc_pop(pop, toolbox, dview, td)
-print(dtcpop)
-print('d')
+
 
 def dtc_to_rheo(dtc):
     from neuronunit.models import backends
@@ -133,8 +128,8 @@ def dtc_to_rheo(dtc):
     from neuronunit.tests import get_neab
     import evaluate_as_module
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-    model.load_model()
-    model.set_attrs(**dtc.attrs)
+    #model.load_model()
+    model.set_attrs(dtc.attrs)
     print(model)
     print(model.attrs)
     dtc.scores = None
@@ -147,7 +142,7 @@ def dtc_to_rheo(dtc):
     prediction = score.prediction
     delta = evaluate_as_module.difference(observation,prediction)
     #dtc.differences[str(get_neab.tests[0])] = delta
-    #dtc.scores[str(get_neab.tests[0])] = score.sort_key
+    dtc.scores[str(get_neab.tests[0])] = score.sort_key
     dtc.rheobase = score.prediction
     return dtc
 
@@ -158,8 +153,8 @@ def map_wrapper(dtc):
     import numpy as np
     from neuronunit.tests import get_neab
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-    model.load_model()
-    model.set_attrs(**dtc.attrs)
+    #model.load_model()
+    model.set_attrs(dtc.attrs)
     print(model)
     print(model.attrs)
     get_neab.tests[0].prediction = dtc.rheobase
@@ -172,25 +167,24 @@ def map_wrapper(dtc):
             dtc.scores[str(t)] = score.sort_key
             observation = score.observation
             prediction = score.prediction
-            delta = np.abs(observation-prediction)
+            #observation = score.observation
+            #prediction = score.prediction
+            #delta = np.abs(observation-prediction)
+            delta = evaluate_as_module.difference(observation,prediction)
+
             dtc.differences[str(t)] = delta
 
     return dtc
 
-    #delta = difference(observation,prediction)
-    #dtc.differences.append(delta)
-print(dtcpop)
-print('got here e')
 dtcpop = list(map(dtc_to_rheo,dtcpop))
-
 dtcpop = list(map(evaluate_as_module.pre_format,dtcpop))
 dtcpop = list(dview.map(map_wrapper,dtcpop).get())
-#dtcpop = list(map(evaluate_as_module.map_wrapper,dtcpop))#.get())
 
-#pdb.set_trace()
+for d in dtcpop:
+    print(d.scores)
 
-print(scores)
-rh_values_unevolved = [v.rheobase for v in dtcpop ]
+#print(scores)
+#rh_values_unevolved = [v.rheobase for v in dtcpop ]
 
 
 new_checkpoint_path = str('un_evolved')+str('.p')
@@ -199,27 +193,6 @@ with open(new_checkpoint_path,'wb') as handle:#
     pickle.dump([dtcpop,rh_values_unevolved], handle)
 
 
-# sometimes done in serial in order to get access to opaque stdout/stderr
-
-#fitnesses = []
-#for v in dtcpop:
-#   fitnesses.append(evaluate_as_module.evaluate(v))
-   #pdb.set_trace()
-import copy
-import evaluate_as_module
-#dtcpop = dview.map_sync(evaluate_as_module.pre_evaluate, copy.copy(dtcpop))
-#from itertools import repeat
-dtcpop = [ v for v in dtcpop if v.rheobase > 0.0 ]
-for d in dtcpop:
-    print('testing dubious rheobase values \n\n\n')
-    dtc = check_current(d.rheobase, d)
-#dtcpop = list(dview.map_sync(evaluate_as_module.pre_evaluate,copy.copy(dtcpop)))
-fitnesses = list(dview.map_sync(evaluate_as_module.evaluate, copy.copy(dtcpop)))
-
-#fitnesses = dview.map(evaluate_as_module.evaluate, copy.copy(producer)).get()
-
-
-#fitnesses = dview.map_sync(evaluate, copy.copy(dtcpop))
 for ind, fit in zip(pop, fitnesses):
     ind.fitness.values = fit
 
