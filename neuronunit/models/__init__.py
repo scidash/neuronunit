@@ -119,7 +119,6 @@ class LEMSModel(sciunit.Model,
     #
     #def local_run(self):
         
-    '''
     def set_lems_attrs(self, attrs):
         from lxml import etree
         tree = etree.parse(self.lems_file_path)
@@ -129,10 +128,9 @@ class LEMSModel(sciunit.Model,
                 for key2,value2 in value1.items():
                     node.attrib[key2] = value2
         tree.write(self.lems_file_path)
-    #'''
     
     def run(self, rerun=None, **run_params):
-        #self.results = self._backend.local_run()
+        self.results = self._backend.local_run()
         '''
         if rerun is None:
             rerun = self.rerun
@@ -151,7 +149,7 @@ class LEMSModel(sciunit.Model,
         # Reset run parameters so the next test has to pass its own
         # run parameters and not use the same ones
         self.run_params = {}
-	#'''
+	'''
     def set_run_params(self, **params):
         self._backend.set_run_params(**params)
 
