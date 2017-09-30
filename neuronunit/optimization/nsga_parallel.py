@@ -145,7 +145,7 @@ def dtc_to_rheo(dtc):
     prediction = score.prediction
     delta = evaluate_as_module.difference(observation,prediction)
     #dtc.differences[str(get_neab.tests[0])] = delta
-    #dtc.scores[str(get_neab.tests[0])] = score.sort_key
+    dtc.scores[str(get_neab.tests[0])] = score.sort_key
     dtc.rheobase = score.prediction
     return dtc
 
@@ -168,10 +168,14 @@ def map_wrapper(dtc):
             t.params = dtc.vtest[k]
             score = t.judge(model,stop_on_error = False, deep_error = True)
             dtc.scores[str(t)] = score.sort_key
+            observation = score.observation
+            prediction = score.prediction
             #observation = score.observation
             #prediction = score.prediction
             #delta = np.abs(observation-prediction)
-            #dtc.differences[str(t)] = delta
+            delta = evaluate_as_module.difference(observation,prediction)
+
+            dtc.differences[str(t)] = delta
 
     return dtc
 
@@ -179,10 +183,11 @@ dtcpop = list(map(dtc_to_rheo,dtcpop))
 dtcpop = list(map(evaluate_as_module.pre_format,dtcpop))
 dtcpop = list(dview.map(map_wrapper,dtcpop).get())
 
+for d in dtcpop:
+    print(d.scores)
 
-
-print(scores)
-rh_values_unevolved = [v.rheobase for v in dtcpop ]
+#print(scores)
+#rh_values_unevolved = [v.rheobase for v in dtcpop ]
 
 
 new_checkpoint_path = str('un_evolved')+str('.p')
