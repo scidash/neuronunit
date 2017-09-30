@@ -1,4 +1,4 @@
-"""F/I neuronunit tests, e.g. investigating firing rates and patterns as a 
+"""F/I neuronunit tests, e.g. investigating firing rates and patterns as a
 function of input current"""
 
 
@@ -83,7 +83,7 @@ class RheobaseTest(VmTest):
                 uc = {'amplitude':ampl}
                 current.update(uc)
                 model.inject_square_current(current)
-                n_spikes = model.get_spike_count()
+                n_spikes = model._backend.get_spike_count()
                 if self.verbose:
                     print("Injected %s current and got %d spikes" % \
                             (ampl,n_spikes))
@@ -264,8 +264,7 @@ class RheobaseTestP(VmTest):
 
             #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
             model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-            model.load_model()
-            model.set_attrs(**dtc.attrs)
+            model.set_attrs(dtc.attrs)
             #model.update_run_params(dtc.attrs)
 
             DELAY = 100.0*pq.ms
@@ -281,11 +280,11 @@ class RheobaseTestP(VmTest):
                 current = {'injected_square_current':current}
                 #print(current)
                 dtc.run_number += 1
-                model.set_attrs(**dtc.attrs)
+                model.set_attrs(dtc.attrs)
                 model.name = dtc.attrs
                 model.inject_square_current(current)
                 dtc.previous = ampl
-                n_spikes = model.get_spike_count()
+                n_spikes = model._backend.get_spike_count()
                 dtc.lookup[float(ampl)] = n_spikes
                 name = str('rheobase {0} parameters {1}'.format(str(current),str(model.params)))
                 #print(dtc.lookup)
@@ -332,7 +331,6 @@ class RheobaseTestP(VmTest):
 
         def find_rheobase(self,dtc):
             import ipyparallel as ipp
-            #from ipyparallel import Client
             rc = ipp.Client(profile='default')
             rc[:].use_cloudpickle()
             dview = rc[:]
@@ -341,8 +339,7 @@ class RheobaseTestP(VmTest):
             from neuronunit.tests import get_neab
             from itertools import repeat
             model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-            model.load_model()
-            model.set_attrs(**dtc.attrs)
+            model.set_attrs(dtc.attrs)
             cnt = 0
             # If this it not the first pass/ first generation
             # then assume the rheobase value found before mutation still holds until proven otherwise.
@@ -356,8 +353,8 @@ class RheobaseTestP(VmTest):
                 ds = [ dtc for s in smaller ]
                 print(ds,smaller)
                 dtcpop = dview.map(check_current,smaller,ds)
-                for dtc2 in dtcpop.get():
-                    dtc.lookup.update(dtc2.lookup)
+                for dtc_clone in dtcpop.get():
+                    dtc.lookup.update(dtc_clone.lookup)
                 dtc = check_fix_range(dtc)
                 cnt += 1
             return dtc
@@ -380,9 +377,11 @@ class RheobaseTestP(VmTest):
 
          if self.prediction['value'] is None:
 
-             score = scores.InsufficientDataScore(None)
+            score = scores.InsufficientDataScore(None)
+         elif self.prediction['value'] < 0:
+            # if rheobase is negative discard the model essentially.
+            score = scores.InsufficientDataScore(None)
          else:
-             score = super(RheobaseTest,self).\
+             score = super(RheobaseTestP,self).\
                          compute_score(observation, self.prediction)
-             #self.bind_score(score,None,observation,prediction)
          return score
