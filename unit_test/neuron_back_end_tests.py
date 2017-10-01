@@ -93,8 +93,19 @@ class OptimizationTestCase(unittest.TestCase):
 
     (score_s, score_p, timed_s, timed_p,  predictionp, predictions) = rheobase_check()
 
+    '''
+    def test_rheobase_scores(self, score_s, score_p):
+        unittest.assertEqual(score_s, score_p)
+
+    def test_rheobase_times(self, timed_s, timed_p):
+        assert(timed_s > timed_p)
 
 
+    def test_rheobase_predictions(self, predictionp, predictions):
+        # since methods are associated with different precision.
+        # its indictative enough that the numbers are different.
+        unittest.assertEqual(int(predictionp), int(predictions))
+    '''
 
 if __name__ == '__main__':
     unittest.main()
