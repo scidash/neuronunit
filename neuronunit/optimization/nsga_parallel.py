@@ -9,6 +9,9 @@ import quantities as pq
 from numpy import random
 
 import sys
+os.system('ipcluster start -n 8 --profile=default & sleep 15 ; python stdout_worker.py &')
+
+
 import ipyparallel as ipp
 rc = ipp.Client(profile='default')
 rc[:].use_cloudpickle()
@@ -33,13 +36,22 @@ CXPB = 0.9
 ###
 
 
+def check_paths():
+    '''
+    import paths and test for consistency
+    '''
+    import neuronunit
+    from neuronunit.models.reduced import ReducedModel
+    from neuronunit.tests import get_neab
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
+    model.backend = 'NEURON'
+    return neuronunit.models.__file__
 
 
 import evaluate_as_module
 toolbox, tools, history, creator, base = evaluate_as_module.import_list(ipp)
 dview.push({'Individual':evaluate_as_module.Individual})
 dview.apply(evaluate_as_module.import_list,ipp)
-#print(returns.get())
 
 def get_trans_dict(param_dict):
     trans_dict = {}
@@ -78,8 +90,6 @@ def update_dtc_pop(pop, td):
     def transform(ind):
         dtc = evaluate_as_module.DataTC()
         print(dtc)
-        #dtc = DataTC()
-        #print(dtc)
         param_dict = {}
         for i,j in enumerate(ind):
             param_dict[td[i]] = str(j)
@@ -90,7 +100,6 @@ def update_dtc_pop(pop, td):
 
     if len(pop) > 0:
         dtcpop = list(dview.map_sync(transform, pop))
-        #dtcpop = list(copy.copy(dtcpop))
     else:
         # In this case pop is not really a population but an individual
         # but parsimony of naming variables
@@ -104,7 +113,6 @@ dview.push({'td':td })
 pop = toolbox.population(n = MU)
 pop = [ toolbox.clone(i) for i in pop ]
 dview.scatter('Individual',pop)
-
 dtcpop = update_dtc_pop(pop, td)
 
 
@@ -117,20 +125,15 @@ def dtc_to_rheo(dtc):
     from neuronunit.tests import get_neab
     import evaluate_as_module
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-    #model.load_model()
     model.set_attrs(dtc.attrs)
-    print(model)
-    print(model.attrs)
     dtc.scores = None
     dtc.scores = {}
-    #get_neab.tests[0].dview = dview
     dtc.differences = None
     dtc.differences = {}
     score = get_neab.tests[0].judge(model,stop_on_error = False, deep_error = True)
     observation = score.observation
     prediction = score.prediction
     delta = evaluate_as_module.difference(observation,prediction)
-    #dtc.differences[str(get_neab.tests[0])] = delta
     dtc.scores[str(get_neab.tests[0])] = score.sort_key
     dtc.rheobase = score.prediction
     return dtc
@@ -142,13 +145,9 @@ def map_wrapper(dtc):
     import numpy as np
     from neuronunit.tests import get_neab
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-    #model.load_model()
     model.set_attrs(dtc.attrs)
-    print(model)
-    print(model.attrs)
     get_neab.tests[0].prediction = dtc.rheobase
     model.rheobase = dtc.rheobase['value']
-    #differences = []
     for k,t in enumerate(get_neab.tests):
         if k>1:
             t.params = dtc.vtest[k]
@@ -156,24 +155,27 @@ def map_wrapper(dtc):
             dtc.scores[str(t)] = score.sort_key
             observation = score.observation
             prediction = score.prediction
-            #observation = score.observation
-            #prediction = score.prediction
-            #delta = np.abs(observation-prediction)
             delta = evaluate_as_module.difference(observation,prediction)
-
             dtc.differences[str(t)] = delta
-
     return dtc
 
-dtcpop = list(map(dtc_to_rheo,dtcpop))
-dtcpop = list(map(evaluate_as_module.pre_format,dtcpop))
-dtcpop = list(dview.map(map_wrapper,dtcpop).get())
+def evaluate(dtc):
+    from neuronunit.tests import get_neab
+    fitness = []
+    for k,t in enumerate(get_neab.tests):
+        fitness.append(dtc.scores[k])
 
-for d in dtcpop:
-    print(d.scores)
+    return fitness[0],fitness[1],\
+           fitness[2],fitness[3],\
+           fitness[4],fitness[5],\
+           fitness[6],fitness[7],
 
-#print(scores)
-#rh_values_unevolved = [v.rheobase for v in dtcpop ]
+
+def update_pop(dtcpop):
+    dtcpop = list(map(dtc_to_rheo,dtcpop))
+    dtcpop = list(map(evaluate_as_module.pre_format,dtcpop))
+    dtcpop = list(dview.map(map_wrapper,dtcpop).get())
+    return dtcpop
 
 
 new_checkpoint_path = str('un_evolved')+str('.p')
@@ -193,7 +195,7 @@ deap.tools.History().update(pop)
 
 
 ### After an evaluation of error its appropriate to display error statistics
-#pf = tools.ParetoFront()
+pf = tools.ParetoFront()
 pf.update([toolbox.clone(i) for i in pop])
 #hvolumes = []
 #hvolumes.append(hypervolume(pf))
@@ -206,9 +208,6 @@ print(logbook.stream)
 verbose = True
 means = np.array(logbook.select('avg'))
 gen = 1
-rh_mean_status = np.mean([ v.rheobase for v in dtcpop ])
-rhdiff = rh_difference(rh_mean_status * pq.pA)
-print(rhdiff)
 verbose = True
 while (gen < NGEN and means[-1] > 0.05):
     # Although the hypervolume is not actually used here, it can be used
@@ -217,9 +216,6 @@ while (gen < NGEN and means[-1] > 0.05):
     gen += 1
     print(gen)
     offspring = tools.selNSGA2(pop, len(pop))
-    if verbose:
-        for ind in offspring:
-
     offspring = [toolbox.clone(ind) for ind in offspring]
 
     for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
@@ -240,26 +236,8 @@ while (gen < NGEN and means[-1] > 0.05):
             invalid_ind.append(ind)
     # Need to make sure that _pop does not replace instances of the same model
     # Thus waisting computation.
-    dtcoffspring = update_dtc_pop(copy.copy(invalid_ind), trans_dict) #(copy.copy(invalid_ind), td)
-    #import evaluate_as_module as em
-    #dtcpop , _ = check_rheobase(dtcpop)
-    dtcoffspring , _ =  check_rheobase(copy.copy(dtcoffspring))
-    rh_mean_status = np.mean([ v.rheobase for v in dtcoffspring ])
-    rhdiff = rh_difference(rh_mean_status * pq.pA)
-    print('the difference: {0}'.format(rh_difference(rh_mean_status * pq.pA)))
-    # sometimes fitness is assigned in serial, although slow gives access to otherwise hidden
-    # stderr/stdout
-    # fitnesses = []
-    # for v in dtcoffspring:
-    #    fitness.append(evaluate(v))
-    #import evaluate_as_module
-    dtcpop = [ v for v in dtcpop if v.rheobase > 0.0 ]
-    for d in dtcpop:
-        print('testing dubious rheobase values \n\n\n')
-        d = check_current(d.rheobase, d)
-    fitnesses = list(dview.map_sync(evaluate_as_module.evaluate, copy.copy(dtcoffspring)))
-    #fitnesses = list(dview.map_sync(evaluate, copy.copy(dtcoffspring)))
-
+    dtcpop = update_pop(dtcpop)
+    fitnesses = list(dview.map_sync(evaluate, dtcpop))
     mf = np.mean(fitnesses)
 
     for ind, fit in zip(copy.copy(invalid_ind), fitnesses):
