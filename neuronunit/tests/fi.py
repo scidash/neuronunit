@@ -249,23 +249,22 @@ class RheobaseTestP(VmTest):
             dtc.rheobase = None
             return copy.copy(dtc)
 
-        @require('quantities', 'get_neab', 'neuronunit')
+        #@require('quantities', 'get_neab', 'neuronunit')
         def check_current(ampl,dtc):
             '''
             Inputs are an amplitude to test and a virtual model
             output is an virtual model with an updated dictionary.
             '''
             ampl = float(ampl)
-            #global model
             import quantities as pq
             from neuronunit.tests import get_neab
+            get_neab.LEMS_MODEL_PATH = '/home/jovyan/neuronunit/neuronunit/optimization/NeuroML2/LEMS_2007One.xml'
+
             from neuronunit.models import backends
             from neuronunit.models.reduced import ReducedModel
 
-            #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(int(os.getpid()))
             model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
             model.set_attrs(dtc.attrs)
-            #model.update_run_params(dtc.attrs)
 
             DELAY = 100.0*pq.ms
             DURATION = 1000.0*pq.ms
@@ -287,8 +286,7 @@ class RheobaseTestP(VmTest):
                 n_spikes = model._backend.get_spike_count()
                 dtc.lookup[float(ampl)] = n_spikes
                 name = str('rheobase {0} parameters {1}'.format(str(current),str(model.params)))
-                #print(dtc.lookup)
-                #print(name)
+
 
                 if n_spikes == 1:
                     dtc.rheobase = float(ampl)
@@ -305,7 +303,7 @@ class RheobaseTestP(VmTest):
         import pdb
         from neuronunit.tests import get_neab
 
-        @require('itertools','numpy','copy','get_neab')
+        @require('itertools','numpy','copy')
         def init_dtc(dtc):
             if dtc.initiated == True:
                 # expand values in the range to accomodate for mutation.
@@ -334,14 +332,7 @@ class RheobaseTestP(VmTest):
             rc = ipp.Client(profile='default')
             rc[:].use_cloudpickle()
             dview = rc[:]
-            '''
-            from neuronunit.models import backends
-            from neuronunit.models.reduced import ReducedModel
-            from neuronunit.tests import get_neab
-            from itertools import repeat
-            model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-            model.set_attrs(dtc.attrs)
-            '''
+
             cnt = 0
             # If this it not the first pass/ first generation
             # then assume the rheobase value found before mutation still holds until proven otherwise.
@@ -360,8 +351,9 @@ class RheobaseTestP(VmTest):
                 cnt += 1
             return dtc
 
-        from neuronunit.optimization import evaluate_as_module
-        dtc = evaluate_as_module.DataTC()
+        from neuronunit.optimization import data_transport_container
+        dtc = data_transport_container.DataTC()
+        #dtc = DataTC()
         dtc.attrs = {}
         for k,v in model.attrs.items():
             dtc.attrs[k]=v

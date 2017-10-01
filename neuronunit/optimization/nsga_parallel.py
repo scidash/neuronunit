@@ -10,7 +10,6 @@ from numpy import random
 
 import sys
 import ipyparallel as ipp
-#from ipyparallel import Client
 rc = ipp.Client(profile='default')
 rc[:].use_cloudpickle()
 dview = rc[:]
@@ -34,20 +33,7 @@ CXPB = 0.9
 ###
 
 
-def check_paths():
-    '''
-    import paths and test for consistency
-    '''
-    import neuronunit
-    from neuronunit.models.reduced import ReducedModel
-    from neuronunit.tests import get_neab
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
-    model.backend = 'NEURON'
-    return neuronunit.models.__file__
 
-path_serial = check_paths()
-paths_parallel = dview.apply_async(check_paths).get_dict()
-assert path_serial == paths_parallel[0]
 
 import evaluate_as_module
 toolbox, tools, history, creator, base = evaluate_as_module.import_list(ipp)
@@ -193,7 +179,7 @@ for d in dtcpop:
 new_checkpoint_path = str('un_evolved')+str('.p')
 import pickle
 with open(new_checkpoint_path,'wb') as handle:#
-    pickle.dump([dtcpop,rh_values_unevolved], handle)
+    pickle.dump(dtcpop, handle)
 
 
 for ind, fit in zip(pop, fitnesses):
@@ -216,13 +202,6 @@ record = stats.compile(pop)
 logbook.record(gen=0, evals=len(pop), **record)
 print(logbook.stream)
 
-def rh_difference(unit_predictions):
-    unit_observations = get_neab.tests[0].observation['value']
-    to_r_s = unit_observations.units
-    unit_predictions = unit_predictions.rescale(to_r_s)
-    unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
-    print(unit_delta)
-    return float(unit_delta)
 
 verbose = True
 means = np.array(logbook.select('avg'))
@@ -240,10 +219,7 @@ while (gen < NGEN and means[-1] > 0.05):
     offspring = tools.selNSGA2(pop, len(pop))
     if verbose:
         for ind in offspring:
-            print('what do the weights without values look like? {0}'.format(ind.fitness.weights[:]))
-            print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues[:]))
-            #print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid[0]))
-            print(rhdiff)
+
     offspring = [toolbox.clone(ind) for ind in offspring]
 
     for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
