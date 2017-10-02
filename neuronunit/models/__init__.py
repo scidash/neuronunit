@@ -130,8 +130,8 @@ class LEMSModel(sciunit.Model,
         tree.write(self.lems_file_path)
     
     def run(self, rerun=None, **run_params):
-        self.results = self._backend.local_run()
-        '''
+        #self.results = self._backend.local_run()
+        #This breaks NEURON backend
         if rerun is None:
             rerun = self.rerun
         self.set_run_params(**run_params)
@@ -149,7 +149,6 @@ class LEMSModel(sciunit.Model,
         # Reset run parameters so the next test has to pass its own
         # run parameters and not use the same ones
         self.run_params = {}
-	'''
     def set_run_params(self, **params):
         self._backend.set_run_params(**params)
 
