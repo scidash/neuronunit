@@ -11,7 +11,10 @@ print(neuronunit.models.__file__)
 from neuronunit.models.reduced import ReducedModel
 from neuronunit.tests import get_neab
 from ipyparallel import depend, require, dependent
-
+import ipyparallel as ipp
+rc = ipp.Client(profile='default')
+rc[:].use_cloudpickle()
+dview = rc[:]
 model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
 #model.load_model()
 
@@ -64,13 +67,49 @@ def import_list(ipp):
     toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=30.0)
     toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
     return toolbox, tools, history, creator, base
+def update_dtc_pop(pop, td):
+    '''
+    inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
+    outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
+    Rationale, not every gene value will result in a model for which rheobase is found, in which case that gene is discarded, however to
+    compensate for losses in gene population size, more gene samples must be tested for a successful return from a rheobase search.
+    If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
+    corresponding virtual model objects.
+    '''
+    import copy
+    import numpy as np
+    from deap import base
+    toolbox = base.Toolbox()
+
+    pop = [toolbox.clone(i) for i in pop ]
+
+
+    def transform(ind):
+        from data_transport_container import DataTC
+        dtc = DataTC()
+        print(dtc)
+        param_dict = {}
+        for i,j in enumerate(ind):
+            param_dict[td[i]] = str(j)
+        dtc.attrs = param_dict
+        dtc.evaluated = False
+        return dtc
+
+
+    if len(pop) > 0:
+        dtcpop = list(dview.map_sync(transform, pop))
+    else:
+        # In this case pop is not really a population but an individual
+        # but parsimony of naming variables
+        # suggests not to change the variable name to reflect this.
+        dtcpop = transform(pop)
+    return dtcpop
 
 def get_trans_dict(param_dict):
     trans_dict = {}
     for i,k in enumerate(list(param_dict.keys())):
         trans_dict[i]=k
     return trans_dict
-
 
 def dt_to_ind(dtc,td):
     '''
@@ -85,73 +124,6 @@ def dt_to_ind(dtc,td):
     return ind
 
 
-class DataTC(object):
-    '''
-    Data Transport Vessel
-
-    This Object class serves as a data type for storing rheobase search
-    attributes and apriori model parameters,
-    with the distinction that unlike the NEURON model this class
-    can be cheaply transported across HOSTS/CPUs
-    '''
-    def __init__(self):
-        self.lookup = {}
-        self.rheobase = None
-        self.previous = 0
-        self.run_number = 0
-        self.attrs = None
-        self.steps = None
-        self.name = None
-        self.results = None
-        self.fitness = None
-        self.score = None
-        self.boolean = False
-        self.initiated = False
-        self.delta = []
-        self.evaluated = False
-        self.results = {}
-        self.searched = []
-        self.searchedd = {}
-
-#@require('numpy', 'copy')
-def update_dtc_pop(pop, toolbox, dview, td):
-    '''
-    inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
-    outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
-    Rationale, not every gene value will result in a model for which rheobase is found, in which case that gene is discarded, however to
-    compensate for losses in gene population size, more gene samples must be tested for a successful return from a rheobase search.
-    If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
-    corresponding virtual model objects.
-    '''
-    import copy
-    import numpy as np
-    pop = [toolbox.clone(i) for i in pop ]
-    #import evaluate_as_module
-
-    def transform(ind):
-        #dtc = evaluate_as_module.DataTC()
-        dtc = DataTC()
-        print(dtc)
-        param_dict = {}
-        for i,j in enumerate(ind):
-            param_dict[trans_dict[i]] = str(j)
-        dtc.attrs = param_dict
-        dtc.evaluated = False
-        return dtc
-
-
-    if len(pop) > 0:
-        dtcpop = list(dview.map_sync(transform, pop))
-        #dtcpop = list(copy.copy(dtcpop))
-    else:
-        # In this case pop is not really a population but an individual
-        # but parsimony of naming variables
-        # suggests not to change the variable name to reflect this.
-        dtcpop = transform(pop)
-    return dtcpop
-
-#dview.apply_sync(p_imports)
-#p_imports()
 
 def difference(observation,prediction): # v is a tesst
     '''
@@ -187,30 +159,6 @@ def difference(observation,prediction): # v is a tesst
     unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
     return float(unit_delta)
 
-def pre_format(dtc):
-    import quantities as pq
-    import copy
-    vtest = {}
-    from neuronunit.tests import get_neab
-    tests = get_neab.tests
-    for k,v in enumerate(tests):
-        vtest[k] = {}
-    for k,v in enumerate(tests):
-        if k == 1 or k == 2 or k == 3:
-            # Negative square pulse current.
-            vtest[k]['duration'] = 100 * pq.ms
-            vtest[k]['amplitude'] = -10 *pq.pA
-            vtest[k]['delay'] = 30 * pq.ms
-
-        if k == 0 or k == 4 or k == 5 or k == 6 or k == 7:
-            # Threshold current.
-            vtest[k]['duration'] = 1000 * pq.ms
-            vtest[k]['amplitude'] = dtc.rheobase * pq.pA
-            vtest[k]['delay'] = 100 * pq.ms
-    return vtest
-#@require('quantities','numpy','get_neab','quanitites')
-
-
 
 def pre_format(dtc):
     import quantities as pq
@@ -237,20 +185,20 @@ def pre_format(dtc):
     return dtc
 
 
-
+'''
 def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyparallel to work.
-    '''
-    Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
-    is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
-    value, that was found in a previous rheobase search.
 
-    outputs: a tuple that is a compound error function that NSGA can act on.
+    # Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
+    # is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
+    # value, that was found in a previous rheobase search.
 
-    Assumes rheobase for each individual virtual model object (dtc) has already been found
-    there should be a check for dtc.rheobase, and if not then error.
-    Inputs a gene and a virtual model object.
-    outputs are error components.
-    '''
+    # outputs: a tuple that is a compound error function that NSGA can act on.
+
+    # Assumes rheobase for each individual virtual model object (dtc) has already been found
+    # there should be a check for dtc.rheobase, and if not then error.
+    # Inputs a gene and a virtual model object.
+    # outputs are error components.
+
 
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
@@ -279,10 +227,10 @@ def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyp
     elif float(dtc.rheobase) > 0.0:
         for k,v in enumerate(tests):
 
-            '''
-            Spike width tests and amplitude tests assume a rheobase current injection which does not seem
-            to be happening.
-            '''
+
+            # Spike width tests and amplitude tests assume a rheobase current injection which does not seem
+            # to be happening.
+
             if k == 1 or k == 2 or k == 3:
                 # Negative square pulse current.
                 v.params['injected_square_current']['duration'] = 100 * pq.ms
@@ -358,7 +306,7 @@ def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyp
            fitness1[4],fitness1[5],\
            fitness1[6],fitness1[7],
 
-
+'''
 
 def cache_sim_runs(dtc):
     '''
@@ -426,71 +374,3 @@ def cache_sim_runs(dtc):
                     dtc.results[t]['v_m'] = v_m
                 dtc.lookup[str(dtc.attrs)] = dtc.results
     return dtc
-
-#from scoop import futures
-
-
-def get_trans_dict(param_dict):
-    trans_dict = {}
-    for i,k in enumerate(list(param_dict.keys())):
-        trans_dict[i]=k
-    return trans_dict
-import model_parameters
-param_dict = model_parameters.model_params
-
-def dtc_to_ind(dtc,td):
-    '''
-    Re instanting Virtual Model at every update dtcpop
-    is Noneifying its score attribute, and possibly causing a
-    performance bottle neck.
-    '''
-
-    ind =[]
-    for k in td.keys():
-        ind.append(dtc.attrs[td[k]])
-    ind.append(dtc.rheobase)
-    return ind
-
-
-#dtcpop = evaluate_as_module.update_dtc_pop(pop, toolbox, dview, td)
-
-def update_dtc_pop(pop, toolbox, dview, trans_dict):
-    '''
-    inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
-    outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
-    Rationale, not every gene value will result in a model for which rheobase is found, in which case that gene is discarded, however to
-    compensate for losses in gene population size, more gene samples must be tested for a successful return from a rheobase search.
-    If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
-    corresponding virtual model objects.
-    '''
-    #from itertools import repeat
-    import numpy as np
-    import copy
-    pop = [toolbox.clone(i) for i in pop ]
-    #import utilities
-    def transform(ind):
-        '''
-        Re instanting Virtual Model at every update dtcpop
-        is Noneifying its score attribute, and possibly causing a
-        performance bottle neck.
-        '''
-        dtc = DataTC()
-
-        param_dict = {}
-        for i,j in enumerate(ind):
-            param_dict[trans_dict[i]] = str(j)
-        dtc.attrs = param_dict
-        dtc.name = dtc.attrs
-        dtc.evaluated = False
-        return dtc
-
-
-    if len(pop) > 0:
-        dtcpop = dview.map_sync(transform, pop)
-        dtcpop = list(copy.copy(dtcpop))
-    else:
-        # In this case pop is not really a population but an individual
-        # but parsimony of naming variables
-        # suggests not to change the variable name to reflect this.
-        dtcpop = transform(pop)
-    return dtcpop

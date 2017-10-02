@@ -7,6 +7,7 @@ matplotlib.use('agg')
 import os
 import quantities as pq
 from numpy import random
+import numpy as np
 
 import sys
 os.system('ipcluster start -n 8 --profile=default & sleep 15 ; python stdout_worker.py &')
@@ -30,22 +31,11 @@ import deap
 
 ###
 # GA parameters
-MU = 4
-NGEN = 3
+MU = 12
+NGEN = 4
 CXPB = 0.9
 ###
 
-
-def check_paths():
-    '''
-    import paths and test for consistency
-    '''
-    import neuronunit
-    from neuronunit.models.reduced import ReducedModel
-    from neuronunit.tests import get_neab
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
-    model.backend = 'NEURON'
-    return neuronunit.models.__file__
 
 
 import evaluate_as_module
@@ -53,59 +43,10 @@ toolbox, tools, history, creator, base = evaluate_as_module.import_list(ipp)
 dview.push({'Individual':evaluate_as_module.Individual})
 dview.apply(evaluate_as_module.import_list,ipp)
 
-def get_trans_dict(param_dict):
-    trans_dict = {}
-    for i,k in enumerate(list(param_dict.keys())):
-        trans_dict[i]=k
-    return trans_dict
+
 import model_parameters
 param_dict = model_parameters.model_params
-
-def dt_to_ind(dtc,td):
-    '''
-    Re instanting data transport container at every update dtcpop
-    is Noneifying its score attribute, and possibly causing a
-    performance bottle neck.
-    '''
-    ind =[]
-    for k in td.keys():
-        ind.append(dtc.attrs[td[k]])
-    ind.append(dtc.rheobase)
-    return ind
-@require('copy')
-def update_dtc_pop(pop, td):
-    '''
-    inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
-    outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
-    Rationale, not every gene value will result in a model for which rheobase is found, in which case that gene is discarded, however to
-    compensate for losses in gene population size, more gene samples must be tested for a successful return from a rheobase search.
-    If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
-    corresponding virtual model objects.
-    '''
-    import copy
-    import numpy as np
-    pop = [toolbox.clone(i) for i in pop ]
-    import evaluate_as_module
-
-    def transform(ind):
-        dtc = evaluate_as_module.DataTC()
-        print(dtc)
-        param_dict = {}
-        for i,j in enumerate(ind):
-            param_dict[td[i]] = str(j)
-        dtc.attrs = param_dict
-        dtc.evaluated = False
-        return dtc
-
-
-    if len(pop) > 0:
-        dtcpop = list(dview.map_sync(transform, pop))
-    else:
-        # In this case pop is not really a population but an individual
-        # but parsimony of naming variables
-        # suggests not to change the variable name to reflect this.
-        dtcpop = transform(pop)
-    return dtcpop
+get_trans_dict = evaluate_as_module.get_trans_dict
 td = get_trans_dict(param_dict)
 
 dview.push({'td':td })
@@ -113,6 +54,7 @@ dview.push({'td':td })
 pop = toolbox.population(n = MU)
 pop = [ toolbox.clone(i) for i in pop ]
 dview.scatter('Individual',pop)
+update_dtc_pop = evaluate_as_module.update_dtc_pop
 dtcpop = update_dtc_pop(pop, td)
 
 
@@ -161,10 +103,15 @@ def map_wrapper(dtc):
 
 def evaluate(dtc):
     from neuronunit.tests import get_neab
-    fitness = []
+    fitness = [-100.0 for i in range(0,8)]
     for k,t in enumerate(get_neab.tests):
-        fitness.append(dtc.scores[k])
+        try:
+            assert type(dtc.scores[str(t)]) is not type(None)
+            fitness[k] = dtc.scores[str(t)]
+        except:
+            fitness[k] = -100.0
 
+    print(fitness)
     return fitness[0],fitness[1],\
            fitness[2],fitness[3],\
            fitness[4],fitness[5],\
@@ -173,32 +120,33 @@ def evaluate(dtc):
 
 def update_pop(dtcpop):
     dtcpop = list(map(dtc_to_rheo,dtcpop))
+    dtcpop = [ dtc for dtc in dtcpop if type(dtc.scores[str(get_neab.tests[0])]) is not type(None) ]
+
     dtcpop = list(map(evaluate_as_module.pre_format,dtcpop))
     dtcpop = list(dview.map(map_wrapper,dtcpop).get())
     return dtcpop
 
+dtcpop = update_pop(dtcpop)
 
-new_checkpoint_path = str('un_evolved')+str('.p')
-import pickle
-with open(new_checkpoint_path,'wb') as handle:#
-    pickle.dump(dtcpop, handle)
-
-
+fitnesses = list(dview.map(evaluate,dtcpop).get())
+print(dtcpop,fitnesses)
 for ind, fit in zip(pop, fitnesses):
     ind.fitness.values = fit
-
-
 pop = tools.selNSGA2(pop, MU)
 
 # only update the history after crowding distance has been assigned
 deap.tools.History().update(pop)
-
-
 ### After an evaluation of error its appropriate to display error statistics
 pf = tools.ParetoFront()
 pf.update([toolbox.clone(i) for i in pop])
 #hvolumes = []
 #hvolumes.append(hypervolume(pf))
+
+stats = tools.Statistics(lambda ind: ind.fitness.values)
+stats.register("min", np.min, axis=0)
+stats.register("max", np.max, axis=0)
+logbook = tools.Logbook()
+logbook.header = "gen", "evals", "std", "min", "avg", "max"
 
 record = stats.compile(pop)
 logbook.record(gen=0, evals=len(pop), **record)
@@ -209,7 +157,7 @@ verbose = True
 means = np.array(logbook.select('avg'))
 gen = 1
 verbose = True
-while (gen < NGEN and means[-1] > 0.05):
+while (gen < NGEN):# and means[-1] > 0.05):
     # Although the hypervolume is not actually used here, it can be used
     # As a terminating condition.
     # hvolumes.append(hypervolume(pf))
@@ -237,15 +185,14 @@ while (gen < NGEN and means[-1] > 0.05):
     # Need to make sure that _pop does not replace instances of the same model
     # Thus waisting computation.
     dtcpop = update_pop(dtcpop)
-    fitnesses = list(dview.map_sync(evaluate, dtcpop))
+    fitnesses = list(dview.map(evaluate,dtcpop).get())
+    print(dtcpop,fitnesses)
+    print(gen)
     mf = np.mean(fitnesses)
-
+    print(mf)
+    import copy
     for ind, fit in zip(copy.copy(invalid_ind), fitnesses):
         ind.fitness.values = fit
-        if verbose:
-            print('what do the weights without values look like? {0}'.format(ind.fitness.weights))
-            print('what do the weighted values look like? {0}'.format(ind.fitness.wvalues))
-            print('has this individual been evaluated yet? {0}'.format(ind.fitness.valid))
 
     # Its possible that the offspring are worse than the parents of the penultimate generation
     # Its very likely for an offspring population to be less fit than their parents when the pop size
@@ -256,13 +203,6 @@ while (gen < NGEN and means[-1] > 0.05):
     # https://github.com/DEAP/deap/blob/master/examples/ga/nsga2.py
     # pop = toolbox.select(pop + offspring, MU)
 
-    # keys = history.genealogy_tree.keys()
-    # Optionally
-    # Grab evaluated history its and chuck them into the mixture.
-    # This may cause stagnation of evolution however.
-    # We want to select among the best from the whole history of the GA, not just penultimate and present generations.
-    # all_hist = [ history.genealogy_history[i] for i in keys if history.genealogy_history[i].fitness.valid == True ]
-    # pop = tools.selNSGA2(offspring + all_hist, MU)
 
     pop = tools.selNSGA2(offspring + pop, MU)
 
