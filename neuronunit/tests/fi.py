@@ -365,8 +365,7 @@ class RheobaseTestP(VmTest):
      def bind_score(self, score, model, observation, prediction):
          super(RheobaseTestP,self).bind_score(score, model,
                                             observation, prediction)
-         #if self.rheobase_vm is not None:
-        #     score.related_data['vm'] = self.rheobase_vm
+
 
 
      def compute_score(self, observation, prediction):
@@ -382,5 +381,5 @@ class RheobaseTestP(VmTest):
          else:
              score = super(RheobaseTestP,self).\
                          compute_score(observation, prediction)
-         assert type(score) is not None
+         #assert type(score) is not None
          return score
