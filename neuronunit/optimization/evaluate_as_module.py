@@ -80,6 +80,8 @@ def update_dtc_pop(pop, td):
     import numpy as np
     from deap import base
     toolbox = base.Toolbox()
+    Individual = ipp.Reference('Individual')
+
 
     pop = [toolbox.clone(i) for i in pop ]
 
