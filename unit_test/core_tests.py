@@ -104,9 +104,10 @@ class ReducedModelTestCase(unittest.TestCase):
 
     @property
     def path(self):
-            import neuronunit.models
-            return os.path.join(neuronunit.models.__path__[0],
-                                'NeuroML2','LEMS_2007One.xml') 
+        result = os.path.join(__file__,'..','..','neuronunit',
+                              'models','NeuroML2','LEMS_2007One.xml')
+        result = os.path.realpath(result)
+        return result
 
     def test_reducedmodel_jneuroml(self):
         model = self.ReducedModel(self.path, backend='jNeuroML')
