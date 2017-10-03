@@ -21,48 +21,20 @@ class ReducedModelTestCase(unittest.TestCase):
 
     """Testing model optimization"""
 
-    def setUp(self):
-        from neuronunit.models.reduced import ReducedModel
-        self.ReducedModel = ReducedModel
-
-    @property
-    def path(self):
-            import neuronunit.models
-            return os.path.join(neuronunit.models.__path__[0],
-                                'NeuroML2','LEMS_2007One.xml')
-
-    def test_reducedmodel_jneuroml(self):
-        model = self.ReducedModel(self.path, backend='jNeuroML')
-
-    #@unittest.skipIf(OSX,"NEURON unreliable on OSX")
-    def test_reducedmodel_neuron(self):
-        #compile_path = str(self.path)
-        import os
-        compile_path = os.path.join(neuronunit.models.__path__[0],'NeuroML2')
-        os.system('nrnivmodl '+compile_path)
-        model = self.ReducedModel(self.path, backend='NEURON')
-
-
-class TestsTestCase(object):
-    """Abstract base class for testing tests"""
 
     def setUp(self):
         from neuronunit.models.reduced import ReducedModel
-        self.ReducedModel = ReducedModel
-        path = ReducedModelTestCase().path
-        self.model = self.ReducedModel(path, backend='NEURON')
+        #self.ReducedModel = ReducedModel
+        #path = ReducedModelTestCase().path
+        #self.model = self.ReducedModel(path, backend='NEURON')
         self.predictions = None
         self.predictionp = None
         self.score_p = None
         self.score_s = None
-        self.timedp = None
-        self.timeds = None
+        self.timed_p = None
+        self.timed_s = None
+        print(self.assertEqual,self.assertTrue)
 
-
-    def get_observation(self, cls):
-        print(cls.__name__)
-        neuron = {'nlex_id': 'nifext_50'} # Layer V pyramidal cell
-        return cls.neuroelectro_summary_observation(neuron)
 
     def run_test(self, cls):
         observation = self.get_observation(cls)
@@ -98,8 +70,14 @@ class TestsTestCase(object):
     def test_check_paths(self):
         self.nrn_backend_works()
 
-    def rheobase_check(self):
 
+    def test_optimizer(self):
+        from neuronunit.optimization import nsga_parallel
+        difference_progress, fitnesses, pf, logbook, pop, dtcpop, stats = nsga_parallel.main(MU=12, NGEN=4, CXPB=0.9)
+
+
+    def test_rheobase_check(self):
+        self.setUp()
         from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
         from neuronunit.tests import get_neab
         from neuronunit.models import backends
@@ -119,47 +97,30 @@ class TestsTestCase(object):
         model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
         ticks = time.time()
         self.score_p = rtp.judge(model,stop_on_error = False, deep_error = True)
+        self.predictionp = self.score_p.prediction
+
         self.score_p = self.score_p.sort_key
         tickp = time.time()
         self.timed_p = tickp - ticks
         self.score_s = rt.judge(model,stop_on_error = False, deep_error = True)
+        self.predictions = self.score_s.prediction
+
         self.score_s = self.score_s.sort_key
         self.timed_s = time.time() - tickp
 
 
-        self.predictions = score_s.prediction
-        self.predictionp = score_p.prediction
+        print(' serial score {0} parallel score {1}'.format(self.score_s,self.score_p))
+        print(' serial time {0} parallel time {1}'.format(self.timed_s,self.timed_p))
+
+        self.assertEqual(int(self.score_s*1000), int(self.score_p*1000))
+        self.assertGreater(self.timed_s,self.timed_p)
+
+        # its indictative enough if the numbers are different.
+        self.assertAlmostEqual(self.predictionp,self.predictions)
+        self.assertEqual(int(self.predictionp), int(self.predictions))
         return self.score_s, self.score_p, self.timed_s, self.timed_p, self.predictionp, self.predictions
 
 
-    def test_rheobase_scores(self):
-        print(' serial score {0} parallel score {1}'.format(self.score_s,self.score_p))
-
-        #scores only need to be approximately equal to a reasonable level of precision.
-        unittest.assertEqual(int(self.score_s*100), int(self.score_p*100))
-
-    def test_rheobase_times(self):
-        print(' serial time {0} parallel time {1}'.format(self.timed_s,self.timed_p))
-
-        assert(self.timed_s > self.timed_p)
-
-
-    def test_rheobase_predictions(self):
-        # since methods are associated with different precision.
-        # its indictative enough that the numbers are different.
-        unittest.assertEqual(int(self.predictionp), int(self.predictions))
-
-
-
-    def test_update_pop(dtcpop):
-        dtcpop = list(map(dtc_to_rheo,dtcpop))
-        dtcpop = [ dtc for dtc in dtcpop if type(dtc) is not type(None) ]
-        dtcpop = list(map(evaluate_as_module.pre_format,dtcpop))
-        dtcpop = list(dview.map(map_wrapper,dtcpop).get())
-        return dtcpop
-        dtcpop = update_pop(dtcpop)
-        for d in dtcpop:
-            assert type(d.rheobase['value']) is not type(None)
 
 if __name__ == '__main__':
     unittest.main()
