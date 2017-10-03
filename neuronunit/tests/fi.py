@@ -152,6 +152,8 @@ class RheobaseTestP(VmTest):
      under current injection.
 
      """
+     def _extra(self):
+         self.prediction = None
 
      required_capabilities = (cap.ReceivesSquareCurrent,
                               cap.ProducesSpikes)
@@ -175,6 +177,8 @@ class RheobaseTestP(VmTest):
 
      def generate_prediction(self, model):
 
+
+
         '''
         inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
         outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
@@ -183,6 +187,7 @@ class RheobaseTestP(VmTest):
         If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
         corresponding virtual model objects.
         '''
+
         from ipyparallel import depend, require, dependent
 
         def check_fix_range(dtc):
@@ -350,7 +355,14 @@ class RheobaseTestP(VmTest):
                 dtc = check_fix_range(dtc)
                 cnt += 1
             return dtc
-
+        '''
+        if type(self.prediction) is not type(None):
+            # This is a time consuming test,
+            # allow for the possibility that rheobase
+            # prediction may be pre computed.
+            return self.prediction
+        else:
+        '''
         from neuronunit.optimization import data_transport_container
         dtc = data_transport_container.DataTC()
         #dtc = DataTC()
