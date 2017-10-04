@@ -112,7 +112,7 @@ class ReducedModelTestCase(unittest.TestCase):
     def test_reducedmodel_jneuroml(self):
         model = self.ReducedModel(self.path, backend='jNeuroML')
 
-    @unittest.skipIf(OSX,"NEURON unreliable on OSX")
+    @unittest.skip("Ignoring NEURON until we make it an install requirement")#If(OSX,"NEURON unreliable on OSX")
     def test_reducedmodel_neuron(self):
         model = self.ReducedModel(self.path, backend='NEURON')
 
