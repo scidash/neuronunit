@@ -87,8 +87,10 @@ def evaluate(dtc):
            fitness[6],fitness[7],
 
 
-def update_pop(dtcpop):
+def update_pop(pop):
     import evaluate_as_module
+    update_dtc_pop = evaluate_as_module.update_dtc_pop
+    dtcpop = update_dtc_pop(pop)
     # find per model rheobase values.
     dtcpop = list(map(dtc_to_rheo,dtcpop))
     # filter out rheobase tests that returned None score
@@ -122,12 +124,9 @@ def main(MU=12, NGEN=4, CXPB=0.9):
     pop = toolbox.population(n = MU)
     pop = [ toolbox.clone(i) for i in pop ]
     dview.scatter('Individual',pop)
-    update_dtc_pop = evaluate_as_module.update_dtc_pop
-    dtcpop = update_dtc_pop(pop, td)
 
+    dtcpop = update_pop(pop)
 
-
-    dtcpop = update_pop(dtcpop)
     fitnesses = list(dview.map(evaluate,dtcpop).get())
     print(dtcpop,fitnesses)
     for ind, fit in zip(pop, fitnesses):
@@ -136,11 +135,9 @@ def main(MU=12, NGEN=4, CXPB=0.9):
 
     # only update the history after crowding distance has been assigned
     deap.tools.History().update(pop)
-    ### After an evaluation of error its appropriate to display error statistics
+    # After an evaluation of error its appropriate to display error statistics
     pf = tools.ParetoFront()
     pf.update([toolbox.clone(i) for i in pop])
-    #hvolumes = []
-    #hvolumes.append(hypervolume(pf))
 
     stats = tools.Statistics(lambda ind: ind.fitness.values)
     stats.register("min", np.min, axis=0)
@@ -159,7 +156,7 @@ def main(MU=12, NGEN=4, CXPB=0.9):
     means = np.array(logbook.select('avg'))
     difference_progress = []
     gen = 1
-    difference_progress[gen] = np.mean([v for dtc in dtcpop for v in dtc.differences.values()  ])
+    difference_progress.append(np.mean([v for dtc in dtcpop for v in dtc.differences.values()  ]))
 
     verbose = True
     difference_progress = []
@@ -190,10 +187,11 @@ def main(MU=12, NGEN=4, CXPB=0.9):
                 invalid_ind.append(ind)
         # Need to make sure that _pop does not replace instances of the same model
         # Thus waisting computation.
-        dtcpop = update_pop(dtcpop)
+
+        dtcpop = update_pop(pop)
         fitnesses = list(dview.map(evaluate,dtcpop).get())
 
-        difference_progress[gen] = np.mean([v for dtc in dtcpop for v in dtc.differences.values()  ])
+        difference_progress.append(np.mean([v for dtc in dtcpop for v in dtc.differences.values()  ]))
         print(dtcpop,fitnesses)
         print(gen)
         mf = np.mean(fitnesses)
@@ -236,6 +234,8 @@ MU = 12
 NGEN = 4
 CXPB = 0.9
 ###
+difference_progress, fitnesses, pf, logbook, pop, dtcpop, stats = main(MU=12, NGEN=4 , CXPB=0.9)
+
 '''
 os.system('conda install graphviz plotly cufflinks')
 from neuronunit import plottools
