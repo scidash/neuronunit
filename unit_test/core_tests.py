@@ -10,7 +10,6 @@ import sys
 import os
 import warnings
 import pdb
-
 try: # Python 2
     from urllib import urlretrieve
 except ImportError: # Python 3
@@ -124,7 +123,7 @@ class TestsTestCase(object):
     """Abstract base class for testing tests"""
 
     def setUp(self):
-        from neuronunit import neuroelectro
+        #from neuronunit import neuroelectro
         from neuronunit.models.reduced import ReducedModel
         path = ReducedModelTestCase().path
         self.model = ReducedModel(path, backend='jNeuroML')
