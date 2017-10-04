@@ -19,7 +19,7 @@ import sciunit
 
 
 
-class Backend:
+class Backend(object):
     """Base class for simulator backends that implement simulator-specific
     details of modifying, running, and reading results from the simulation
     """
