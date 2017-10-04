@@ -71,10 +71,6 @@ class ReducedModelTestCase(unittest.TestCase):
         self.nrn_backend_works()
 
 
-    def test_optimizer(self):
-        from neuronunit.optimization import nsga_parallel
-        difference_progress, fitnesses, pf, logbook, pop, dtcpop, stats = nsga_parallel.main(MU=12, NGEN=4, CXPB=0.9)
-
 
     def test_rheobase_check(self):
         self.setUp()
@@ -116,9 +112,14 @@ class ReducedModelTestCase(unittest.TestCase):
         self.assertGreater(self.timed_s,self.timed_p)
 
         # its indictative enough if the numbers are different.
-        self.assertAlmostEqual(self.predictionp,self.predictions)
-        self.assertEqual(int(self.predictionp), int(self.predictions))
+        #self.assertAlmostEqual(self.predictionp,self.predictions)
+        self.assertEqual(int(self.predictionp['value']), int(self.predictions['value']))
         return self.score_s, self.score_p, self.timed_s, self.timed_p, self.predictionp, self.predictions
+
+    # def test_optimizer(self):
+    #    from neuronunit.optimization import nsga_parallel
+    #    difference_progress, fitnesses, pf, logbook, pop, dtcpop, stats = nsga_parallel.main(MU=12, NGEN=4, CXPB=0.9)
+
 
 
 

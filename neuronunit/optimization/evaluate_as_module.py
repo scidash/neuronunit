@@ -155,11 +155,44 @@ def difference(observation,prediction): # v is a tesst
         elif 'value' in observation.keys():
             unit_observations = observation['value']
 
-    to_r_s = unit_observations.units
-    unit_predictions = unit_predictions.rescale(to_r_s)
-    unit_observations = unit_observations.rescale(to_r_s)
+    ##
+    # Repurposed from from sciunit/sciunit/scores.py
+    # line 156
+    ##
+    assert type(observation) in [dict,float,int,pq.Quantity]
+    assert type(prediction) in [dict,float,int,pq.Quantity]
+
+    def extract_mean_or_value(observation, prediction):
+        values = {}
+        for name,data in [('observation',observation),
+                          ('prediction',prediction)]:
+            if type(data) is not dict:
+                values[name] = data
+            elif key is not None:
+                values[name] = data[key]
+            else:
+                try:
+                    values[name] = data['mean'] # Use the mean.
+                except KeyError: # If there isn't a mean...
+                    try:
+                        values[name] = data['value'] # Use the value.
+                    except KeyError:
+                        raise KeyError(("%s has neither a mean nor a single "
+                                        "value" % name))
+        return values['observation'], values['prediction']
+
+    obs, pred = extract_mean_or_value(observation, prediction)
+    ratio = pred / obs
+    ratio = utils.assert_dimensionless(value)
+
+
+    #to_r_s = unit_observations.units
+    #unit_predictions = unit_predictions.rescale(to_r_s)
+    #unit_observations = unit_observations.rescale(to_r_s)
     unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
-    return float(unit_delta)
+
+
+    return float(unit_delta), ratio
 
 
 def pre_format(dtc):
@@ -186,6 +219,43 @@ def pre_format(dtc):
             dtc.vtest[k]['injected_square_current']['delay'] = 100 * pq.ms
     return dtc
 
+
+def cache_sim_runs(dtc):
+    '''
+    This could be used to stop neuronunit tests
+    from rerunning the same current injection set on the same
+    set of parameters
+    '''
+    from neuronunit.models import backends
+    from neuronunit.models.reduced import ReducedModel
+    import quantities as pq
+    import numpy as np
+    from neuronunit.tests import get_neab
+
+
+    import copy
+    # copying here is critical for get_neab
+    tests = copy.copy(get_neab.tests)
+    vtests = pre_format(dtc)
+    if float(dtc.rheobase) > 0.0:
+        for k,t in enumerate(tests):
+            if k > 0:
+                model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+                model.set_attrs(attrs = dtc.attrs)
+                # check if these attributes have been evaluated before.
+                if str(dtc.attrs) in model.lookup.keys:
+                    return dtc
+                else:
+                    score = t.judge(model,stop_on_error = False, deep_error = True)
+                    v_m = model.get_membrane_potential()
+                    print(type(v_m),'within pre evaluate, eam')
+                    if 't' not in dtc.results:
+                        dtc.results[t] = {}
+                        dtc.results[t]['v_m'] = v_m
+                    elif 't' in dtc.results:
+                        dtc.results[t]['v_m'] = v_m
+                    dtc.cached[str(dtc.attrs)] = dtc.results
+    return dtc
 
 '''
 def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyparallel to work.
@@ -309,70 +379,3 @@ def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyp
            fitness1[6],fitness1[7],
 
 '''
-
-def cache_sim_runs(dtc):
-    '''
-    This could be used to stop neuronunit tests
-    from rerunning the same current injection set on the same
-    set of parameters
-    '''
-    from neuronunit.models import backends
-    from neuronunit.models.reduced import ReducedModel
-    import quantities as pq
-    import numpy as np
-    from neuronunit.tests import get_neab
-
-
-    import copy
-    # copying here is critical for get_neab
-    tests = copy.copy(get_neab.tests)
-    #from itertools import repeat
-    vtests = pre_format(copy.copy(dtc))
-    tests[0].prediction = {}
-    tests[0].prediction['value'] = dtc.rheobase * pq.pA
-
-    if float(dtc.rheobase) > 0.0:
-        for k,t in enumerate(tests):
-            '''
-            can tests be re written such that it is more closure compatible?
-            '''
-            t.params = {}
-            t.params['injected_square_current'] = {}
-            t.params['injected_square_current']['duration'] = None
-            t.params['injected_square_current']['amplitude'] = None
-            t.params['injected_square_current']['delay'] = None
-
-            for key, value in vtests[k].items():
-                t.params['injected_square_current'][key] = value
-
-
-            if k == 0:
-                tests[k].prediction = {}
-                tests[k].prediction['value'] = dtc.rheobase * pq.pA
-
-            #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-            model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-            model.load_model()
-            model.set_attrs(attrs = dtc.attrs)
-            # check if these attributes have been evaluated before.
-            if str(dtc.attrs) in model.lookup.keys:
-                return dtc
-            else:
-
-                print(t,model,'within pre evaluate, eam')
-
-                score = t.judge(model,stop_on_error = False, deep_error = True)
-                print(score,'within pre evaluate, eam')
-
-                print(model.get_spike_count())
-                print(type(v_m),'within pre evaluate, eam')
-
-                v_m = model.get_membrane_potential()
-                print(type(v_m),'within pre evaluate, eam')
-                if 't' not in dtc.results.keys():
-                    dtc.results[t] = {}
-                    dtc.results[t]['v_m'] = v_m
-                elif 't' in dtc.results.keys():
-                    dtc.results[t]['v_m'] = v_m
-                dtc.lookup[str(dtc.attrs)] = dtc.results
-    return dtc
