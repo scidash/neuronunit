@@ -101,6 +101,9 @@ class ReducedModelTestCase(unittest.TestCase):
     def setUp(self):
         from neuronunit.models.reduced import ReducedModel
         self.ReducedModel = ReducedModel
+        
+    def runTest(self):
+        pass # Needed so that Python<3 can access the path attribute.  
 
     @property
     def path(self):
