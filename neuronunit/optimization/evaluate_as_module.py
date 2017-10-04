@@ -128,14 +128,7 @@ def dt_to_ind(dtc,td):
 
 
 def difference(observation,prediction): # v is a tesst
-    '''
-    This method does not do what you would think
-    from reading it.
 
-    rescaling is the culprit. I suspect I do not
-    understand how to rescale one unit with another
-    compatible unit.
-    '''
     import numpy as np
 
     # The trick is.
