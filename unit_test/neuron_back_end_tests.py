@@ -110,9 +110,6 @@ class ReducedModelTestCase(unittest.TestCase):
 
         self.assertEqual(int(self.score_s*1000), int(self.score_p*1000))
         self.assertGreater(self.timed_s,self.timed_p)
-
-        # its indictative enough if the numbers are different.
-        #self.assertAlmostEqual(self.predictionp,self.predictions)
         self.assertEqual(int(self.predictionp['value']), int(self.predictions['value']))
         return self.score_s, self.score_p, self.timed_s, self.timed_p, self.predictionp, self.predictions
 
