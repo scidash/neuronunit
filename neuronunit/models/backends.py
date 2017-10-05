@@ -67,19 +67,6 @@ class Backend:
             pickle.dump(self.results,f)
 
 
-class MemoryBackend(Backend):
-    """A dummy backend that loads pre-computed results from RAM/heap"""
-
-    def init_backend(self, results_path='.'):
-        self.model.rerun = True
-        self.model.results = None
-
-        super(MemoryBackend,self).init_backend()
-    def set_results(results):
-        self.model.results = results
-    def local_run(self, **run_params):
-        self.model.results = self.set_results()
-        return self.model.results
 
 
 class DiskBackend(Backend):
@@ -310,14 +297,14 @@ class NEURONBackend(Backend):
             self.ns = nrn.NeuronSimulation(self.h.tstop, dt=0.0025)
             return self
 
-        
+
         #The code block below does not actually function:
         #architecture = platform.machine()
         base_name = os.path.splitext(self.model.orig_lems_file_path)[0]
         NEURON_file_path ='{0}_nrn.py'.format(base_name)
 
         if os.path.exists(NEURON_file_path):
-            
+
             self = cond_load()
 
 
@@ -352,7 +339,7 @@ class NEURONBackend(Backend):
         more_attributes = None #force garbage collection of more_attributes, its not needed anymore.
         return self
 
-    
+
 #    def set_run_params(self, **params):
 #        super(NEURONBackend,self).set_run_params(**params)
 #        self.set_lems_run_params()
@@ -415,8 +402,11 @@ class NEURONBackend(Backend):
         self.h(prefix+'amplitude=%s'%amps)
         self.h(prefix+'duration=%s'%c['duration'])
         self.h(prefix+'delay=%s'%c['delay'])
-        self.local_run()
 
+        ##
+        # Duplicated call to run?
+        self.local_run()
+        ##
     def local_run(self):
         self.h('run()')
         results={}
@@ -440,6 +430,87 @@ class NEURONBackend(Backend):
         import neuronunit.capabilities.spike_functions as sf
         return sf.get_spike_waveforms(self.get_membrane_potential())
 
+
+class MemoryBackend(NEURONBackend):
+    """A dummy backend that loads pre-computed results from RAM/heap"""
+
+    def init_backend(self, results_path='.'):
+        self.model.rerun = True
+        self.model.results = None
+        self.model.cached_params = {}
+        self.model.cached_attrs = {}
+        self.current = {}
+
+        super(MemoryBackend,self).init_backend()
+
+    def set_attrs(self, **attrs):
+        #super(MemoryBackend,self).set_attrs(attrs)
+        #print(dir(super(MemoryBackend,self)))
+        self.model.attrs.update(attrs)
+
+        assert type(self.model.attrs) is not type(None)
+        for h_key,h_value in attrs.items():
+            self.h('m_RS_RS_pop[0].{0} = {1}'.format(h_key,h_value))
+            self.h('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
+
+        # Below are experimental rig recording parameters.
+        # These can possibly go in a seperate method.
+
+        self.h(' { v_time = new Vector() } ')
+        self.h(' { v_time.record(&t) } ')
+        self.h(' { v_v_of0 = new Vector() } ')
+        self.h(' { v_v_of0.record(&RS_pop[0].v(0.5)) } ')
+        self.h(' { v_u_of0 = new Vector() } ')
+        self.h(' { v_u_of0.record(&m_RS_RS_pop[0].u) } ')
+
+        self.tVector = self.h.v_time
+        self.vVector = self.h.v_v_of0
+
+        ##
+        # Empty the cache when redefining the model
+        ##
+        self.model.cached_params = {}
+        self.model.cached_attrs = {}
+        self.current = {}
+        #print('the cache emptied: {0}'.format(str(self.model.cached_params)))
+        #print('As the attributes are updated: {0}'.format(str(self.model.attrs)))
+        return self
+
+    def inject_square_current(self, current):
+        #self.set_attrs(**self.attrs)
+        super(MemoryBackend,self).inject_square_current(current)#
+        #
+        # make this current injection value a class attribute, such that its remembered.
+        #
+        if 'injected_square_current' in current:
+            self.current = current['injected_square_current']
+        else:
+            self.current = current
+        if str(self.current) not in self.model.cached_params:
+
+            results = super(MemoryBackend,self).local_run()#
+            self.model.cached_params[str(self.current)] = {}
+            self.model.cached_params[str(self.current)]=results
+            #print('the cache: {0}'.format(str(self.model.cached_params.keys())))
+
+            return self.model.cached_params[str(self.current)]
+        else:
+            return self.model.cached_params[str(self.current)]
+
+
+    def local_run(self):
+        #
+        # Logic for choosing whether a injection value, has already been tested.
+        #
+        if str(self.current) not in self.model.cached_params:
+            results = super(MemoryBackend,self).local_run()
+            self.model.cached_params[str(self.current)] = {}
+            self.model.cached_params[str(self.current)]=results
+            #print('the cache: {0}'.format(str(self.model.cached_params)))
+
+            return self.model.cached_params[str(self.current)]
+        else:
+            return self.model.cached_params[str(self.current)]
 
 class HasSegment(sciunit.Capability):
     """Model has a membrane segment of NEURON simulator"""

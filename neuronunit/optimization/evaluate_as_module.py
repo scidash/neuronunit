@@ -128,7 +128,7 @@ def dt_to_ind(dtc,td):
 
 
 def difference(observation,prediction): # v is a tesst
-
+    import quantities as pq
     import numpy as np
 
     # The trick is.
@@ -154,34 +154,7 @@ def difference(observation,prediction): # v is a tesst
     ##
     assert type(observation) in [dict,float,int,pq.Quantity]
     assert type(prediction) in [dict,float,int,pq.Quantity]
-
-    def extract_mean_or_value(observation, prediction):
-        values = {}
-        for name,data in [('observation',observation),
-                          ('prediction',prediction)]:
-            if type(data) is not dict:
-                values[name] = data
-            elif key is not None:
-                values[name] = data[key]
-            else:
-                try:
-                    values[name] = data['mean'] # Use the mean.
-                except KeyError: # If there isn't a mean...
-                    try:
-                        values[name] = data['value'] # Use the value.
-                    except KeyError:
-                        raise KeyError(("%s has neither a mean nor a single "
-                                        "value" % name))
-        return values['observation'], values['prediction']
-
-    obs, pred = extract_mean_or_value(observation, prediction)
-    ratio = pred / obs
-    ratio = utils.assert_dimensionless(value)
-
-
-    #to_r_s = unit_observations.units
-    #unit_predictions = unit_predictions.rescale(to_r_s)
-    #unit_observations = unit_observations.rescale(to_r_s)
+    ratio = unit_predictions / unit_observations
     unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
 
 
@@ -233,7 +206,7 @@ def cache_sim_runs(dtc):
     if float(dtc.rheobase) > 0.0:
         for k,t in enumerate(tests):
             if k > 0:
-                model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+                model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='Memory')
                 model.set_attrs(attrs = dtc.attrs)
                 # check if these attributes have been evaluated before.
                 if str(dtc.attrs) in model.lookup.keys:
@@ -248,6 +221,46 @@ def cache_sim_runs(dtc):
                     elif 't' in dtc.results:
                         dtc.results[t]['v_m'] = v_m
                     dtc.cached[str(dtc.attrs)] = dtc.results
+    return dtc
+
+
+def map_wrapper_caching(dtc):
+    import evaluate_as_module
+    from neuronunit.models import backends
+    from neuronunit.models.reduced import ReducedModel
+    import quantities as pq
+    import numpy as np
+    from neuronunit.tests import get_neab
+    #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='Memory')
+    model.set_attrs(dtc.attrs)
+    get_neab.tests[0].prediction = dtc.rheobase
+    model.rheobase = dtc.rheobase['value']
+    if not hasattr(dtc,'cached'):
+        dtc.cached = None
+    else:
+        if str(dtc.attrs) in dtc.cached:
+            return dtc
+
+        elif str(dtc.attrs) not in dtc.cached:
+            for k,t in enumerate(get_neab.tests):
+                if k>1:
+                    t.params = dtc.vtest[k]
+                    score = t.judge(model,stop_on_error = False, deep_error = True)
+                    dtc.scores[str(t)] = score.sort_key
+                    observation = score.observation
+                    prediction = score.prediction
+                    delta = evaluate_as_module.difference(observation,prediction)
+                    dtc.differences[str(t)] = delta
+
+                    v_m = model.get_membrane_potential()
+                    print(type(v_m),'within pre evaluate, eam')
+                    if 't' not in dtc.results:
+                        dtc.results[str(t)] = {}
+                        dtc.results[str(t)]['v_m'] = v_m
+                    elif 't' in dtc.results:
+                        dtc.results[str(t)]['v_m'] = v_m
+                    dtc.cached[str(dtc.attrs)] = [ dtc.results, dtc.score.sort_key ]
     return dtc
 
 '''
