@@ -1,3 +1,4 @@
+from .base import *
 
 from scoop import futures, _control, utils, shared
 from scoop._types import FutureQueue
