@@ -264,6 +264,7 @@ class RheobaseTestP(VmTest):
             import quantities as pq
             from neuronunit.tests import get_neab
             get_neab.LEMS_MODEL_PATH = '/home/jovyan/neuronunit/neuronunit/optimization/NeuroML2/LEMS_2007One.xml'
+            import os
             assert os.path.isfile(get_neab.LEMS_MODEL_PATH)
             from neuronunit.models import backends
             from neuronunit.models.reduced import ReducedModel
@@ -356,20 +357,16 @@ class RheobaseTestP(VmTest):
                 cnt += 1
             return dtc
 
-        if type(model.prediction) is type(None):
-            return model.prediction
-
-        else:
-            from neuronunit.optimization import data_transport_container
-            dtc = data_transport_container.DataTC()
-            #dtc = DataTC()
-            dtc.attrs = {}
-            for k,v in model.attrs.items():
-                dtc.attrs[k]=v
-            dtc = init_dtc(dtc)
-            prediction = {}
-            prediction['value'] = find_rheobase(self,dtc).rheobase * pq.pA
-            return prediction
+        from neuronunit.optimization import data_transport_container
+        dtc = data_transport_container.DataTC()
+        #dtc = DataTC()
+        dtc.attrs = {}
+        for k,v in model.attrs.items():
+            dtc.attrs[k]=v
+        dtc = init_dtc(dtc)
+        prediction = {}
+        prediction['value'] = find_rheobase(self,dtc).rheobase * pq.pA
+        return prediction
 
      def bind_score(self, score, model, observation, prediction):
          super(RheobaseTestP,self).bind_score(score, model,
@@ -384,7 +381,7 @@ class RheobaseTestP(VmTest):
          if prediction['value'] is None:
 
             score = scores.InsufficientDataScore(None)
-        elif prediction['value'] <= 0:
+         elif prediction['value'] <= 0:
             # if rheobase is negative discard the model essentially.
             score = scores.InsufficientDataScore(None)
          else:
