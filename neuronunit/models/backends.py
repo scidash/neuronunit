@@ -418,6 +418,7 @@ class NEURONBackend(Backend):
             results['run_number'] = 1
         return results
 
+    '''
     def get_spike_train(self):
         import neuronunit.capabilities.spike_functions as sf
         return sf.get_spike_train(self.get_membrane_potential())
@@ -429,9 +430,9 @@ class NEURONBackend(Backend):
     def get_APs(self):
         import neuronunit.capabilities.spike_functions as sf
         return sf.get_spike_waveforms(self.get_membrane_potential())
+    '''
 
-
-class MemoryBackend(NEURONBackend):
+class NEURONMemoryBackend(NEURONBackend):
     """A dummy backend that loads pre-computed results from RAM/heap"""
 
     def init_backend(self, results_path='.'):
@@ -444,8 +445,12 @@ class MemoryBackend(NEURONBackend):
         super(MemoryBackend,self).init_backend()
 
     def set_attrs(self, **attrs):
-        #super(MemoryBackend,self).set_attrs(attrs)
+
+
+
+        super(MemoryBackend,self).set_attrs(**attrs)
         #print(dir(super(MemoryBackend,self)))
+        '''
         self.model.attrs.update(attrs)
 
         assert type(self.model.attrs) is not type(None)
@@ -465,7 +470,7 @@ class MemoryBackend(NEURONBackend):
 
         self.tVector = self.h.v_time
         self.vVector = self.h.v_v_of0
-
+        '''
         ##
         # Empty the cache when redefining the model
         ##
@@ -477,11 +482,22 @@ class MemoryBackend(NEURONBackend):
         return self
 
     def inject_square_current(self, current):
-        #self.set_attrs(**self.attrs)
+        def dict_hash(d):
+            return hash(pickle.dumps([(key,x[key]) for key in sorted(d)]))
+
+
+        if str(self.model.attrs) not in self.cached_attrs:
+            results = super(MemoryBackend,self).local_run()#
+            self.model.cached_attrs[dict_hash(self.model.attrs)] = 1
+        else:
+            self.model.cached_attrs[dict_hash(self.model.attrs)] += 1
+
         super(MemoryBackend,self).inject_square_current(current)#
         #
         # make this current injection value a class attribute, such that its remembered.
         #
+        #from sciunit.utils import dict_hash
+
         if 'injected_square_current' in current:
             self.current = current['injected_square_current']
         else:
@@ -493,9 +509,7 @@ class MemoryBackend(NEURONBackend):
             self.model.cached_params[str(self.current)]=results
             #print('the cache: {0}'.format(str(self.model.cached_params.keys())))
 
-            return self.model.cached_params[str(self.current)]
-        else:
-            return self.model.cached_params[str(self.current)]
+        return self.model.cached_params[str(self.current)]
 
 
     def local_run(self):
