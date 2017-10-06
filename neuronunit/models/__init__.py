@@ -28,7 +28,8 @@ class LEMSModel(sciunit.Model,
         #sciunit.Modelsuper(LEMSModel,self).__init__(name=name)
         self.attrs = attrs if attrs else {}
         self.orig_lems_file_path = os.path.abspath(LEMS_file_path)
-        assert os.path.isfile(self.orig_lems_file_path)
+        assert os.path.isfile(self.orig_lems_file_path),\
+            "'%s' is not a file" % self.orig_lems_file_path
         self.run_defaults = pynml.DEFAULTS
         self.run_defaults['nogui'] = True
         self.run_params = {}
@@ -76,16 +77,6 @@ class LEMSModel(sciunit.Model,
         self._backend.model = self
         self._backend.init_backend(*args, **kwargs)
 
-#    def __getattr__(self, attr):
-#        try:
-#            result = getattr(self._backend,attr)
-#        except AttributeError:
-#            try:
-#                result = super(LEMSModel,self).__getattr(self, attr)
-#            except:
-#                raise AttributeError("Neither model nor backend have attribute '%s'" % attr)
-#        return result
-
     def create_lems_file(self, name):
         if not hasattr(self,'temp_dir'):
             self.temp_dir = tempfile.gettempdir()
@@ -107,9 +98,9 @@ class LEMSModel(sciunit.Model,
                     node.attrib[key2] = value2
         tree.write(self.lems_file_path)
 
-    def run(self, rerun=None, **run_params):
-        if rerun is None:
-            rerun = self.rerun
+    def run(self, **run_params):
+        #if rerun is None:
+        #    rerun = self.rerun
         self.set_run_params(**run_params)
         for key,value in self.run_defaults.items():
             if key not in self.run_params:
@@ -121,7 +112,7 @@ class LEMSModel(sciunit.Model,
 
         self.results = self._backend.local_run()
         self.last_run_params = deepcopy(self.run_params)
-        self.rerun = False
+        #self.rerun = False
         # Reset run parameters so the next test has to pass its own
         # run parameters and not use the same ones
         self.run_params = {}
