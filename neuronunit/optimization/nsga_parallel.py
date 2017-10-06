@@ -51,7 +51,7 @@ def map_wrapper(dtc):
     import quantities as pq
     import numpy as np
     from neuronunit.tests import get_neab
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='Memory')
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURONMemory')
     model.set_attrs(dtc.attrs)
     get_neab.tests[0].prediction = dtc.rheobase
     model.rheobase = dtc.rheobase['value']
@@ -88,7 +88,7 @@ def federate_cache(dtcpop):
     # add all elments into the dictionary thats the 1st element of the list
     for dtci in dtcpop:
         dtc.cached_attrs.update(dtci.cached_attrs)
-        
+
     # add all elments into every dictionary belonging to every element in the element of the list
     for dtcj in dtcpop:
         dtcj.cached_attrs.update(dtc.cached_attrs)
