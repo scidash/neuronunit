@@ -163,7 +163,9 @@ class jNeuroMLBackend(Backend):
     def _local_run(self):
         f = pynml.run_lems_with_jneuroml
         self.exec_in_dir = tempfile.mkdtemp()
-        results = f(self.model.lems_file_path, skip_run=self.model.skip_run,
+        results = f(self.model.lems_file_path, 
+                    include=[os.path.dirname(self.model.orig_lems_file_path)],
+                    skip_run=self.model.skip_run,
                     nogui=self.model.run_params['nogui'],
                     load_saved_data=True, plot=False,
                     exec_in_dir=self.exec_in_dir,
@@ -184,8 +186,7 @@ class NEURONBackend(Backend):
     i -- nA
     """
 
-    def init_backend(self, attrs=None):
-
+    def init_backend(self, attrs=None):    
         self.neuron = None
         self.model_path = None
         from neuron import h
@@ -195,7 +196,6 @@ class NEURONBackend(Backend):
         self.h.load_file("stdlib.hoc")
         self.h.load_file("stdgui.hoc")
         self.lookup = {}
-        print(1,self.model.orig_lems_file_path)
         self.load_model()
         self.unpicklable = []
         self.unpicklable += ['h','ns','_backend']
@@ -337,7 +337,6 @@ class NEURONBackend(Backend):
         loop its a tolerable performance hit.
         """
         import os
-
         DEFAULTS={}
         DEFAULTS['v']=True
         #Create a pyhoc file using jneuroml to convert from NeuroML to pyhoc.
@@ -352,7 +351,6 @@ class NEURONBackend(Backend):
             #make sure mechanisms are loaded
             modeldirname = os.path.dirname(self.model.orig_lems_file_path)
             self.neuron.load_mechanisms(modeldirname)
-
             self.set_stop_time(1600*ms)
             self.h.tstop
             self.ns = nrn.NeuronSimulation(self.h.tstop, dt=0.0025)
@@ -364,12 +362,7 @@ class NEURONBackend(Backend):
         base_name = os.path.splitext(self.model.orig_lems_file_path)[0]
         NEURON_file_path ='{0}_nrn.py'.format(base_name)
 
-        if os.path.exists(NEURON_file_path):
-            
-            self = cond_load()
-
-
-        else:
+        if not os.path.exists(NEURON_file_path):
             self.exec_in_dir = tempfile.mkdtemp()
             pynml.run_lems_with_jneuroml_neuron(self.model.orig_lems_file_path,
                               skip_run=False,
@@ -382,7 +375,7 @@ class NEURONBackend(Backend):
                               verbose=DEFAULTS['v'],
                               exit_on_fail = True)
 
-            self = cond_load()
+        self = cond_load()
 
         #Although the above approach successfuly instantiates a LEMS/neuroml model in pyhoc
         #the resulting hoc variables for current source and cell name are idiosyncratic (not generic).
