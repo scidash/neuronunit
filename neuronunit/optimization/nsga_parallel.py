@@ -83,6 +83,21 @@ def evaluate(dtc):
            fitness[4],fitness[5],\
            fitness[6],fitness[7],
 
+def federate_cache(dtcpop):
+    dtc = dtcpop[0]
+    # add all elments into the dictionary thats the 1st element of the list
+    for dtci in dtcpop:
+        dtc.cached_attrs.update(dtci.cached_attrs)
+        
+    # add all elments into every dictionary belonging to every element in the element of the list
+    for dtcj in dtcpop:
+        dtcj.cached_attrs.update(dtc.cached_attrs)
+
+    for k, dtck in enumerate(dtcpop):
+        current = len(dtck.cached_attrs)
+        assert current == previous
+        previous = current
+    return dtcpop
 
 def update_pop(pop):
     '''
@@ -111,17 +126,18 @@ def update_pop(pop):
     #print('stuck in a loop?')
     #import pdb; pdb.set_trace()
     # filter out rheobase tests that returned None score
-    dtcpop = [ dtc for dtc in dtcpop if type(dtc.scores[str(get_neab.tests[0])]) is not type(None) ]
+    #dtcpop = [ dtc for dtc in dtcpop if type(dtc.scores[str(get_neab.tests[0])]) is not type(None) ]
     # format the stimulation protocal, as I find its self update to be unreliable.
     dtcpop = list(map(evaluate_as_module.pre_format,dtcpop))
     # run sciunit testsin
     dtcpop = list(dview.map(map_wrapper,dtcpop).get())
+    dtcpop = federate_cache(dtcpop)
     return dtcpop
 #dtc_pf = dtc_pf[0:4]
 #dtc_pf = update_pop(dtc_pf)
 #fitnesses = list(dview.map(evaluate,dtc_pf)).get())
 
-MU=12; NGEN=4; CXPB=0.9
+MU = 6; NGEN = 4; CXPB = 0.9
 #def main(MU=12, NGEN=4, CXPB=0.9):
 import deap
 import evaluate_as_module
@@ -206,7 +222,7 @@ while (gen < NGEN):# and means[-1] > 0.05):
 
     #dtcpop = evaluate_as_module.update_dtc_pop(pop, td)
     #update_dtc_pop
-    dtcpop = update_pop(pop)
+    dtcpop = update_pop(invalid_ind)
     fitnesses = list(dview.map(evaluate,dtcpop).get())
 
     difference_progress.append(np.mean([v for dtc in dtcpop for v in dtc.differences.values()  ]))
