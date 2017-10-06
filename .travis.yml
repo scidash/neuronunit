@@ -25,7 +25,6 @@ install:
 ######################################################
 
 script: 
-  - cd unit_test
   - export NC_HOME='.' # NeuroConstruct isn't used but tests need this
                        # variable set to pass.  
-  - python -m unittest -bv core_tests
+  - python -m unittest -bv unit_test.core_tests

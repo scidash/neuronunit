@@ -18,31 +18,13 @@ rc[:].use_cloudpickle()
 dview = rc[:]
 
 from ipyparallel import depend, require, dependent
+from neuronunit.optimization import get_neab
 THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
 this_nu = os.path.join(THIS_DIR,'../../')
 sys.path.insert(0,this_nu)
-
-import neuronunit
-
-#@require('get_neab','evaluate_as_module')
-def fix_paths():
-    import sys, os
-    THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
-    this_nu = os.path.join(THIS_DIR,'../../')
-    sys.path.insert(0,this_nu)
-    import neuronunit
-    from neuronunit.optimization import get_neab
-    from neuronunit.optimization import evaluate_as_module
-
-    print(os.getcwd())
-    print(get_neab,evaluate_as_module)
-
-dview.apply_sync(fix_paths)
-
-
-
+from neuronunit import tests
 #from deap import hypervolume
-#@require('get_neab','evaluate_as_module')
+
 def dtc_to_rheo(dtc):
     from neuronunit.models.reduced import ReducedModel
     from neuronunit.optimization import get_neab
@@ -57,8 +39,11 @@ def dtc_to_rheo(dtc):
     score = get_neab.tests[0].judge(model,stop_on_error = False, deep_error = True)
     observation = score.observation
     prediction = score.prediction
-    delta = evaluate_as_module.difference(observation,prediction)
-    dtc.differences[str(get_neab.tests[0])] = delta
+    delta, ratio = evaluate_as_module.difference(observation,prediction)
+    if type(dtc.differences[str(get_neab.tests[0])]) is type(None):
+        dtc.differences[str(get_neab.tests[0])] = []
+    dtc.differences[str(get_neab.tests[0])].append(delta,ratio)
+    #dtc.differences[str(get_neab.tests[0])].append(delta,delta)
     dtc.scores[str(get_neab.tests[0])] = score.sort_key
     dtc.rheobase = score.prediction
     return dtc
@@ -81,8 +66,10 @@ def map_wrapper(dtc):
                 dtc.scores[str(t)] = score.sort_key
                 observation = score.observation
                 prediction = score.prediction
-                delta = evaluate_as_module.difference(observation,prediction)
+                delta, ratio = evaluate_as_module.difference(observation,prediction)
                 dtc.differences[str(t)] = delta
+                dtc.differences[str(t)] = ratios
+
             except:
                 pass
     return dtc
@@ -103,6 +90,21 @@ def evaluate(dtc):
            fitness[4],fitness[5],\
            fitness[6],fitness[7],
 
+def federate_cache(dtcpop):
+    dtc = dtcpop[0]
+    # add all elments into the dictionary thats the 1st element of the list
+    for dtci in dtcpop:
+        dtc.cached_attrs.update(dtci.cached_attrs)
+
+    # add all elments into every dictionary belonging to every element in the element of the list
+    for dtcj in dtcpop:
+        dtcj.cached_attrs.update(dtc.cached_attrs)
+
+    for k, dtck in enumerate(dtcpop):
+        current = len(dtck.cached_attrs)
+        assert current == previous
+        previous = current
+    return dtcpop
 
 def update_pop(pop):
     '''
@@ -122,6 +124,8 @@ def update_pop(pop):
     update_dtc_pop = evaluate_as_module.update_dtc_pop
     param_dict = model_parameters.model_params
     get_trans_dict = evaluate_as_module.get_trans_dict
+    # get trans dict
+    # just imposes order on the dictionary
     td = get_trans_dict(param_dict)
 
     dtcpop = update_dtc_pop(pop, td)
@@ -132,17 +136,18 @@ def update_pop(pop):
     #print('stuck in a loop?')
     #import pdb; pdb.set_trace()
     # filter out rheobase tests that returned None score
-    dtcpop = [ dtc for dtc in dtcpop if type(dtc.scores[str(get_neab.tests[0])]) is not type(None) ]
+    #dtcpop = [ dtc for dtc in dtcpop if type(dtc.scores[str(get_neab.tests[0])]) is not type(None) ]
     # format the stimulation protocal, as I find its self update to be unreliable.
     dtcpop = list(map(evaluate_as_module.pre_format,dtcpop))
     # run sciunit testsin
     dtcpop = list(dview.map(map_wrapper,dtcpop).get())
+    dtcpop = federate_cache(dtcpop)
     return dtcpop
 #dtc_pf = dtc_pf[0:4]
 #dtc_pf = update_pop(dtc_pf)
 #fitnesses = list(dview.map(evaluate,dtc_pf)).get())
 
-MU=6; NGEN=4; CXPB=0.9
+MU = 6; NGEN = 4; CXPB = 0.9
 #def main(MU=12, NGEN=4, CXPB=0.9):
 import deap
 import evaluate_as_module
