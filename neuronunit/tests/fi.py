@@ -262,7 +262,7 @@ class RheobaseTestP(VmTest):
             '''
             ampl = float(ampl)
             import quantities as pq
-            from neuronunit.tests import get_neab
+            from neuronunit.optimization import get_neab
             get_neab.LEMS_MODEL_PATH = '/home/jovyan/neuronunit/neuronunit/optimization/NeuroML2/LEMS_2007One.xml'
             import os
             assert os.path.isfile(get_neab.LEMS_MODEL_PATH)
@@ -307,7 +307,7 @@ class RheobaseTestP(VmTest):
         import numpy as np
         import copy
         import pdb
-        from neuronunit.tests import get_neab
+        from neuronunit.optimization import get_neab
 
         @require('itertools','numpy','copy')
         def init_dtc(dtc):

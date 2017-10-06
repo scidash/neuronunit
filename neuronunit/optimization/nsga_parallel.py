@@ -18,17 +18,36 @@ rc[:].use_cloudpickle()
 dview = rc[:]
 
 from ipyparallel import depend, require, dependent
-from neuronunit.tests import get_neab
 THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
 this_nu = os.path.join(THIS_DIR,'../../')
 sys.path.insert(0,this_nu)
-from neuronunit import tests
-#from deap import hypervolume
 
+import neuronunit
+
+#@require('get_neab','evaluate_as_module')
+def fix_paths():
+    import sys, os
+    THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
+    this_nu = os.path.join(THIS_DIR,'../../')
+    sys.path.insert(0,this_nu)
+    import neuronunit
+    from neuronunit.optimization import get_neab
+    from neuronunit.optimization import evaluate_as_module
+
+    print(os.getcwd())
+    print(get_neab,evaluate_as_module)
+
+dview.apply_sync(fix_paths)
+
+
+
+#from deap import hypervolume
+#@require('get_neab','evaluate_as_module')
 def dtc_to_rheo(dtc):
     from neuronunit.models.reduced import ReducedModel
-    from neuronunit.tests import get_neab
-    import evaluate_as_module
+    from neuronunit.optimization import get_neab
+    from neuronunit.optimization import evaluate_as_module
+
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.set_attrs(dtc.attrs)
     dtc.scores = None
@@ -46,11 +65,8 @@ def dtc_to_rheo(dtc):
 
 def map_wrapper(dtc):
     import evaluate_as_module
-    from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
-    import quantities as pq
-    import numpy as np
-    from neuronunit.tests import get_neab
+    import get_neab
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='Memory')
     model.set_attrs(dtc.attrs)
     get_neab.tests[0].prediction = dtc.rheobase
@@ -58,17 +74,21 @@ def map_wrapper(dtc):
     for k,t in enumerate(get_neab.tests):
         if k>1:
             t.params = dtc.vtest[k]
-            score = t.judge(model,stop_on_error = False, deep_error = True)
-            #print(model._backend.cached_params)
-            dtc.scores[str(t)] = score.sort_key
-            observation = score.observation
-            prediction = score.prediction
-            delta = evaluate_as_module.difference(observation,prediction)
-            dtc.differences[str(t)] = delta
+            score = t.judge(model,stop_on_error = False, deep_error = False)
+            try:
+                assert type(score) is not type(None)
+                #print(model._backend.cached_params)
+                dtc.scores[str(t)] = score.sort_key
+                observation = score.observation
+                prediction = score.prediction
+                delta = evaluate_as_module.difference(observation,prediction)
+                dtc.differences[str(t)] = delta
+            except:
+                pass
     return dtc
 
 def evaluate(dtc):
-    from neuronunit.tests import get_neab
+    from neuronunit.optimization import get_neab
     fitness = [ 100.0 for i in range(0,8)]
     for k,t in enumerate(get_neab.tests):
         try:
@@ -97,6 +117,7 @@ def update_pop(pop):
 
     import evaluate_as_module
     import model_parameters
+    from neuronunit.optimization import get_neab
 
     update_dtc_pop = evaluate_as_module.update_dtc_pop
     param_dict = model_parameters.model_params
@@ -121,7 +142,7 @@ def update_pop(pop):
 #dtc_pf = update_pop(dtc_pf)
 #fitnesses = list(dview.map(evaluate,dtc_pf)).get())
 
-MU=12; NGEN=4; CXPB=0.9
+MU=6; NGEN=4; CXPB=0.9
 #def main(MU=12, NGEN=4, CXPB=0.9):
 import deap
 import evaluate_as_module
@@ -192,6 +213,7 @@ while (gen < NGEN):# and means[-1] > 0.05):
         toolbox.mutate(ind2)
         # deleting the fitness values is what renders them invalid.
         # The invalidness is used as a flag for recalculating them.
+        # so invalid_ind is now the list of the genes that need updating
         # Their fitneess needs deleting since the attributes which generated these values have been mutated
         # and hence they need recalculating
         # Mutation also implies breeding, if a gene is mutated it was also recently recombined.
@@ -206,7 +228,7 @@ while (gen < NGEN):# and means[-1] > 0.05):
 
     #dtcpop = evaluate_as_module.update_dtc_pop(pop, td)
     #update_dtc_pop
-    dtcpop = update_pop(pop)
+    dtcpop = update_pop(invalid_ind)
     fitnesses = list(dview.map(evaluate,dtcpop).get())
 
     difference_progress.append(np.mean([v for dtc in dtcpop for v in dtc.differences.values()  ]))
