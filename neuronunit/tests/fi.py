@@ -1,4 +1,4 @@
-"""F/I neuronunit tests, e.g. investigating firing rates and patterns as a
+"""F/I neuronunit tests, e.g. investigating firing rates and patterns as a 
 function of input current"""
 
 
@@ -177,8 +177,6 @@ class RheobaseTestP(VmTest):
 
      def generate_prediction(self, model):
 
-
-
         '''
         inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
         outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
@@ -187,7 +185,6 @@ class RheobaseTestP(VmTest):
         If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
         corresponding virtual model objects.
         '''
-
         from ipyparallel import depend, require, dependent
 
         def check_fix_range(dtc):
@@ -348,7 +345,7 @@ class RheobaseTestP(VmTest):
             cnt = 0
             while dtc.boolean == False:
                 dtc.searched.append(dtc.steps)
-                #smaller = dtc.steps
+
                 ds = [ dtc for s in dtc.steps ]
                 dtcpop = dview.map(check_current,dtc.steps,ds)
                 for dtc_clone in dtcpop.get():
@@ -376,6 +373,8 @@ class RheobaseTestP(VmTest):
 
      def compute_score(self, observation, prediction):
          """Implementation of sciunit.Test.score_prediction."""
+         #print("%s: Observation = %s, Prediction = %s" % \
+         #	 (self.name,str(observation),str(prediction)))
 
          score = None
          if prediction['value'] is None:
