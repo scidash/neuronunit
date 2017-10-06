@@ -1,4 +1,4 @@
-##
+`##
 # Assumption that this file was executed after first executing the bash: ipcluster start -n 8 --profile=default &
 ##
 
@@ -206,7 +206,7 @@ def cache_sim_runs(dtc):
     if float(dtc.rheobase) > 0.0:
         for k,t in enumerate(tests):
             if k > 0:
-                model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='Memory')
+                model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURONMemory')
                 model.set_attrs(attrs = dtc.attrs)
                 # check if these attributes have been evaluated before.
                 if str(dtc.attrs) in model.lookup.keys:
