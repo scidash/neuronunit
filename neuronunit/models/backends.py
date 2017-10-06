@@ -8,6 +8,7 @@ import copy
 import tempfile
 import pickle
 import importlib
+import shelve
 
 import neuronunit.capabilities as cap
 from quantities import ms, mV, nA
@@ -16,6 +17,7 @@ from quantities import ms, mV
 from neo.core import AnalogSignal
 import neuronunit.capabilities.spike_functions as sf
 import sciunit
+from sciunit.utils import dict_hash
 
 
 
@@ -26,11 +28,15 @@ class Backend(object):
     #self.tstop = None
     def init_backend(self, *args, **kwargs):
         #self.attrs = {} if attrs is None else attrs
-        self.model.create_lems_file(self.model.name)
         self.load_model()
         self.model.unpicklable = []
         self.model.attrs = {}
-
+        self.use_memory_cache = kwargs.get('use_memory_cache', True)
+        if self.use_memory_cache:
+            self.init_memory_cache()
+        self.use_disk_cache = kwargs.get('use_disk_cache', False)
+        if self.use_disk_cache:
+            self.init_disk_cache()
 
     #attrs = None
 
@@ -39,6 +45,54 @@ class Backend(object):
 
     #The function (e.g. from pynml) that handles running the simulation
     f = None
+
+    def init_cache(self):
+        self.init_memory_cache()
+        self.init_disk_cache()
+
+    def init_memory_cache(self):
+        self.memory_cache = {}
+
+    def init_disk_cache(self):
+        try:
+            # Cleanup old disk cache files
+            path = self.disk_cache_location
+            os.remove(path)
+        except:
+            pass
+        self.disk_cache_location = os.path.join(tempfile.mkdtemp(),'cache')
+
+    def get_memory_cache(self, state):
+        """Returns result in memory cache for key 'state' or None if it 
+        is not found"""
+        self._results = self.memory_cache.get(state)
+        return self._results
+
+    def get_disk_cache(self, state):
+        """Returns result in disk cache for key 'state' or None if it 
+        is not found"""
+        if not getattr(self,'disk_cache_location',False):
+            self.init_disk_cache()
+        disk_cache = shelve.open(self.disk_cache_location)
+        self._results = disk_cache.get(state)
+        disk_cache.close()
+        return self._results
+
+    def set_memory_cache(self, results, state=None):
+        """Stores result in memory cache with key 
+        corresponding to model state"""
+        state = self.model.state if state is None else state
+        self.memory_cache[state] = results
+
+    def set_disk_cache(self, results, state=None):
+        """Stores result in disk cache with key 
+        corresponding to model state"""
+        if not getattr(self,'disk_cache_location',False):
+            self.init_disk_cache()
+        disk_cache = shelve.open(self.disk_cache_location)
+        state = self.model.state if state is None else state
+        disk_cache[state] = results
+        disk_cache.close()
 
     def set_attrs(self, **attrs):
         """Set model attributes, e.g. input resistance of a cell"""
@@ -62,44 +116,38 @@ class Backend(object):
         """Load the model into memory"""
         pass
 
+    def local_run(self):
+        """Checks for cached results in memory and on disk, then runs the model
+        if needed"""
+        state = self.model.state
+        if self.use_memory_cache and self.get_memory_cache(state):
+            return self._results
+        if self.use_disk_cache and self.get_disk_cache(state):
+            return self._results
+        results = self._local_run()
+        if self.use_memory_cache:
+            self.set_memory_cache(results, state)
+        if self.use_disk_cache:
+            self.set_disk_cache(results, state)
+        return results
+
+    def _local_run(self):
+        """Runs the model via the backend"""
+        raise NotImplementedError("Each backend must implement '_local_run'")
+
     def save_results(self, path='.'):
         with open(path,'wb') as f:
             pickle.dump(self.results,f)
-
-
-class MemoryBackend(Backend):
-    """A dummy backend that loads pre-computed results from RAM/heap"""
-
-    def init_backend(self, results_path='.'):
-        self.model.rerun = True
-        self.model.results = None
-
-        super(MemoryBackend,self).init_backend()
-    def set_results(results):
-        self.model.results = results
-    def local_run(self, **run_params):
-        self.model.results = self.set_results()
-        return self.model.results
-
-
-class DiskBackend(Backend):
-    """A dummy backend that loads pre-computed results from disk"""
-
-    def init_backend(self, results_path='.'):
-        self.results_path = results_path
-        self.model.rerun = True
-        super(DiskBackend,self).init_backend()
-
-    def local_run(self, **run_params):
-        with open(self.results_path, 'rb') as f:
-            results = pickle.load(f)
-        return results
 
 
 class jNeuroMLBackend(Backend):
     """Used for simulation with jNeuroML, a reference simulator for NeuroML"""
 
     backend = 'jNeuroML'
+
+    def init_backend(self, *args, **kwargs):
+        self.model.create_lems_file(self.model.name)
+        super(jNeuroMLBackend,self).init_backend(*args, **kwargs)
 
     def set_attrs(self, **attrs):
         self.model.attrs.update(attrs)
@@ -112,7 +160,7 @@ class jNeuroMLBackend(Backend):
     def inject_square_current(self, current):
         self.set_run_params(injected_square_current=current)
 
-    def local_run(self):
+    def _local_run(self):
         f = pynml.run_lems_with_jneuroml
         self.exec_in_dir = tempfile.mkdtemp()
         results = f(self.model.lems_file_path, skip_run=self.model.skip_run,
@@ -425,7 +473,7 @@ class NEURONBackend(Backend):
         self.h(prefix+'delay=%s'%c['delay'])
         self.local_run()
 
-    def local_run(self):
+    def _local_run(self):
         self.h('run()')
         results={}
         results['vm'] = [float(x/1000.0) for x in copy.copy(self.neuron.h.v_v_of0.to_python())]

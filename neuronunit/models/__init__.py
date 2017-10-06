@@ -7,6 +7,7 @@ import inspect
 import shutil
 
 import sciunit
+from sciunit.utils import dict_hash
 import neuronunit.capabilities as cap
 from pyneuroml import pynml
 from . import backends
@@ -113,10 +114,10 @@ class LEMSModel(sciunit.Model,
         for key,value in self.run_defaults.items():
             if key not in self.run_params:
                 self.set_run_params(**{key:value})
-        if (not rerun) and hasattr(self,'last_run_params') and \
-           self.run_params == self.last_run_params:
-            print("Same run_params; skipping...")
-            return
+        #if (not rerun) and hasattr(self,'last_run_params') and \
+        #   self.run_params == self.last_run_params:
+        #    print("Same run_params; skipping...")
+        #    return
 
         self.results = self._backend.local_run()
         self.last_run_params = deepcopy(self.run_params)
@@ -157,3 +158,9 @@ class LEMSModel(sciunit.Model,
 
     def inject_square_current(self, current):
         self._backend.inject_square_current(current)
+
+    @property
+    def state(self):
+        keys = ['attrs','run_params']
+        d = {key:getattr(self,key) for key in keys}
+        return dict_hash(d)
