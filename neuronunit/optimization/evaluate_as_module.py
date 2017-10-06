@@ -9,15 +9,15 @@ from neuronunit.models import backends
 import neuronunit
 print(neuronunit.models.__file__)
 from neuronunit.models.reduced import ReducedModel
-from neuronunit.tests import get_neab
-from ipyparallel import depend, require, dependent
+import get_neab
+#from ipyparallel import depend, require, dependent
 import ipyparallel as ipp
 rc = ipp.Client(profile='default')
 rc[:].use_cloudpickle()
 dview = rc[:]
 model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
 #model.load_model()
-
+import model_parameters
 
 class Individual(object):
     '''
@@ -36,7 +36,8 @@ class Individual(object):
         self.lookup={}
         self.rheobase=None
         self.fitness = creator.FitnessMin
-@require('numpy, model_parameters, deap','random')
+        
+#@require('numpy, model_parameters, deap','random')
 def import_list(ipp):
     Individual = ipp.Reference('Individual')
     from deap import base, creator, tools
@@ -166,7 +167,7 @@ def pre_format(dtc):
     import copy
     dtc.vtest = None
     dtc.vtest = {}
-    from neuronunit.tests import get_neab
+    import get_neab
     tests = get_neab.tests
     for k,v in enumerate(tests):
         dtc.vtest[k] = {}
@@ -194,9 +195,8 @@ def cache_sim_runs(dtc):
     '''
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
-    import quantities as pq
     import numpy as np
-    from neuronunit.tests import get_neab
+    import get_neab
 
 
     import copy
@@ -226,11 +226,9 @@ def cache_sim_runs(dtc):
 
 def map_wrapper_caching(dtc):
     import evaluate_as_module
-    from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
-    import quantities as pq
     import numpy as np
-    from neuronunit.tests import get_neab
+    import get_neab
     #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='Memory')
     model.set_attrs(dtc.attrs)
