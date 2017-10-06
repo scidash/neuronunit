@@ -36,21 +36,6 @@ class LEMSModel(sciunit.Model,
         self.rerun = True # Needs to be rerun since it hasn't been run yet!
         self.set_backend(backend)
 
-    def __new__(cls, *args, **kwargs):
-        """
-        LEMS_file_path: Path to LEMS file (an xml file).
-        name: Optional model name.
-        """
-        #print("Calling new")
-        #print(cls.__bases__)
-        #print("args",args)
-        #print("kwargs",kwargs)
-        self  = super().__new__(cls)#, *args, **kwargs)
-        #if 'fresh' in kwargs and not kwargs['fresh']:
-        #    self.set_backend(kwargs['backend'])
-        #print(self)
-        return self
-
     def get_backend(self):
         return self._backend
 
