@@ -27,12 +27,12 @@ setup(
                       'sciunit==9999',
                       'allensdk==0.14.2',
                       #'allensdk==9999',
-                      #'pyneuroml==0.3.1',
-                      'pyneuroml==9999'
+                      'pyneuroml==0.3.1',
+                      #'pyneuroml==9999'
                       ],
     dependency_links = ['git+https://github.com/scidash/sciunit@dev#egg=sciunit-9999',
                         #'git+https://github.com/rgerkin/AllenSDK@master#egg=allensdk-9999',
-                        'git+https://github.com/rgerkin/pyNeuroML@master#egg=pyneuroml-9999',
+                        #'git+https://github.com/rgerkin/pyNeuroML@master#egg=pyneuroml-9999',
                         #'git+https://github.com/rgerkin/python-neo@master#egg=neo-9999',
                         ]
 )
