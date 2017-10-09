@@ -14,14 +14,17 @@ os.system('ipcluster start -n 8 --profile=default & sleep 15 ; python stdout_wor
 
 import ipyparallel as ipp
 rc = ipp.Client(profile='default')
+#rc.Client.become_dask()
+
 rc[:].use_cloudpickle()
 dview = rc[:]
 
 from ipyparallel import depend, require, dependent
-from neuronunit.tests import get_neab
 THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
 this_nu = os.path.join(THIS_DIR,'../../')
 sys.path.insert(0,this_nu)
+from neuronunit.tests import get_neab
+
 from neuronunit import tests
 #from deap import hypervolume
 
