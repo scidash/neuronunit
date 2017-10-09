@@ -16,7 +16,6 @@ rc = ipp.Client(profile='default')
 rc[:].use_cloudpickle()
 dview = rc[:]
 
-
 class ReducedModelTestCase(unittest.TestCase):
     """Test instantiation of the reduced model"""
 
@@ -24,6 +23,10 @@ class ReducedModelTestCase(unittest.TestCase):
 
 
     def setUp(self):
+        import sys
+        sys.path.append('../')
+        import neuronunit
+
         from neuronunit.models.reduced import ReducedModel
         #self.ReducedModel = ReducedModel
         #path = ReducedModelTestCase().path
@@ -34,7 +37,7 @@ class ReducedModelTestCase(unittest.TestCase):
         self.score_s = None
         self.timed_p = None
         self.timed_s = None
-
+        self.attrs_list = None
 
     def run_test(self, cls):
         observation = self.get_observation(cls)
@@ -60,15 +63,18 @@ class ReducedModelTestCase(unittest.TestCase):
         from neuronunit import models
         return models.__file__
 
-    def test_0check_paths(self):
+    # def test_0check_paths(self):
 
-        path_serial = check_paths()
-        paths_parallel = dview.apply_async(check_paths).get_dict()
-        self.assertEqual(path_serial, paths_parallel[0])
+    #    path_serial = check_paths()
+    #    paths_parallel = dview.apply_async(check_parallel_path_consistency).get_dict()
+    #    self.assertEqual(path_serial, paths_parallel[0])
 
-    def test_2_run_opt(self):
-        import nsga_parallel
-
+    def test_1_run_opt(self):
+        from neuronunit.optimization import nsga_parallel
+        with open('opt_run_data.p','rb') as handle:
+            attrs = pickle.load(handle)
+        self.attrs_list = attrs
+    '''
     def test_1_run_exhaust(self):
         import model_parameters as modelp
         iter_list=iter( (i,j,k,l,m,n,o,p,q,r) for i in modelp.model_params['a'][0:-1] for j in modelp.model_params['b'][0:-1] \
@@ -77,6 +83,7 @@ class ReducedModelTestCase(unittest.TestCase):
         for o in modelp.model_params['C'][0:-1] for p in modelp.model_params['d'][0:-1] \
         for q in modelp.model_params['v0'][0:-1] for r in modelp.model_params['vt'][0:-1] )
 
+    '''
     def test_3check_paths(self):
         self.nrn_backend_works()
 
@@ -84,7 +91,7 @@ class ReducedModelTestCase(unittest.TestCase):
 
     def test_4rheobase_setup(self):
         from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
-        from neuronunit.tests import get_neab
+        from neuronunit.optimization import get_neab
         from neuronunit.models import backends
         from neuronunit.models.reduced import ReducedModel
         import time
@@ -127,8 +134,6 @@ class ReducedModelTestCase(unittest.TestCase):
         self.assertEqual(int(self.predictionp['value']), int(self.predictions['value']))
         # return self.score_s, self.score_p, self.timed_s, self.timed_p, self.predictionp, self.predictions
 
-    # def test_optimizer(self):
-    #    from neuronunit.optimization import nsga_parallel
     #    difference_progress, fitnesses, pf, logbook, pop, dtcpop, stats = nsga_parallel.main(MU=12, NGEN=4, CXPB=0.9)
 
 
