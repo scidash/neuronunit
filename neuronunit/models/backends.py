@@ -411,7 +411,7 @@ class NEURONBackend(Backend):
         self.h('run()')
         results={}
         results['vm'] = [float(x/1000.0) for x in copy.copy(self.neuron.h.v_v_of0.to_python())]
-        results['t'] = [float(x) for x in copy.copy(self.neuron.h.v_time.to_python())]
+        results['t'] = [float(x/1000.0) for x in copy.copy(self.neuron.h.v_time.to_python())]
         if 'run_number' in results.keys():
             results['run_number'] = results['run_number']+1
         else:
@@ -427,7 +427,7 @@ class NEURONBackend(Backend):
     def get_APs(self):
         import neuronunit.capabilities.spike_functions as sf
         return sf.get_spike_waveforms(self.get_membrane_potential())
-    
+
 
 class NEURONMemoryBackend(NEURONBackend):
     """A dummy backend that loads pre-computed results from RAM/heap"""
