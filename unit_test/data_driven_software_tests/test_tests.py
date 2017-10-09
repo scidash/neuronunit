@@ -68,6 +68,9 @@ class TestsTestCase(object):
         #rheobase = {'value': array(106.4453125) * pA}
         return params1
 
+
+
+
     def difference(self,observation,prediction): # v is a tesst
         import quantities as pq
         import numpy as np
@@ -98,7 +101,7 @@ class TestsTestCase(object):
         unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
         return float(unit_delta), ratio
 
-    def bar_char_out(self,score):
+    def bar_char_out(self,score,test):
         import pandas as pd
         import numpy as np
         unit_delta, ratio = self.difference(score.observation,score.prediction)
@@ -121,14 +124,13 @@ class TestsTestCase(object):
         columns1.append(0)
         four = [ float(unit_observations),float(unit_predictions),float(unit_delta), float(ratio) ]
         stacked = np.column_stack(np.array(four))
+
         df = pd.DataFrame(np.array(stacked))
         df = pd.DataFrame(stacked,columns=columns1)
-
         df = df.transpose()
-        #, columns=columns1)
         df.index = ['observation','prediction','difference','ratios']
         html = df.to_html()
-        html_file = open("tests_agreement_table_{0}.html".format(score.summary),"w")
+        html_file = open("tests_agreement_table_{0}.html".format(str(test)),"w")
         html_file.write(html)
         html_file.close()
         import os
@@ -139,13 +141,17 @@ class TestsTestCase(object):
 
         tls.embed('https://plot.ly/~cufflinks/8')
         py.sign_in('RussellJarvis','FoyVbw7Ry3u4N2kCY4LE')
-        df.iplot(kind='bar', barmode='stack', yTitle='NeuronUnit Test Agreement', title='tests_agreement_table_{0}'.format(score), filename='grouped-bar-chart-{0}'.format(score))
+        df.iplot(kind='bar', barmode='stack', yTitle='NeuronUnit Test Agreement', title='tests_agreement_table_{0}'.format(test), filename='grouped-bar-chart-{0}'.format(test))
         return df, html
 
     def run_test(self, cls):
         observation = self.get_observation(cls)
         test = cls(observation=observation)
+
+        #attrs = pickle.load(open('opt_run_data.p','rb'))
+
         #from neuronunit.optimization import nsga_parallel
+
         #self.dtcpop = dtcpop
         #self.pop = pop
         #self.pf = pf
@@ -158,7 +164,7 @@ class TestsTestCase(object):
         for par in params:
             self.model.set_attrs(par)
             score = test.judge(self.model,stop_on_error = True, deep_error = True)
-            df, html = self.bar_char_out(score)
+            df, html = self.bar_char_out(score,str(test))
             print(df)
         score.summarize()
         return score.score
