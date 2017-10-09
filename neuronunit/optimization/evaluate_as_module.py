@@ -1,4 +1,4 @@
-`##
+##
 # Assumption that this file was executed after first executing the bash: ipcluster start -n 8 --profile=default &
 ##
 
@@ -9,15 +9,15 @@ from neuronunit.models import backends
 import neuronunit
 print(neuronunit.models.__file__)
 from neuronunit.models.reduced import ReducedModel
-import get_neab
-#from ipyparallel import depend, require, dependent
+from neuronunit.tests import get_neab
+from ipyparallel import depend, require, dependent
 import ipyparallel as ipp
 rc = ipp.Client(profile='default')
 rc[:].use_cloudpickle()
 dview = rc[:]
 model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
 #model.load_model()
-import model_parameters
+
 
 class Individual(object):
     '''
@@ -36,8 +36,7 @@ class Individual(object):
         self.lookup={}
         self.rheobase=None
         self.fitness = creator.FitnessMin
-        
-#@require('numpy, model_parameters, deap','random')
+@require('numpy, model_parameters, deap','random')
 def import_list(ipp):
     Individual = ipp.Reference('Individual')
     from deap import base, creator, tools
@@ -149,6 +148,12 @@ def difference(observation,prediction): # v is a tesst
         elif 'value' in observation.keys():
             unit_observations = observation['value']
 
+
+    to_r_s = unit_observations.units
+    unit_predictions = unit_predictions.rescale(to_r_s)
+    #unit_observations = unit_observations.rescale(to_r_s)
+    unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
+
     ##
     # Repurposed from from sciunit/sciunit/scores.py
     # line 156
@@ -167,7 +172,7 @@ def pre_format(dtc):
     import copy
     dtc.vtest = None
     dtc.vtest = {}
-    import get_neab
+    from neuronunit.tests import get_neab
     tests = get_neab.tests
     for k,v in enumerate(tests):
         dtc.vtest[k] = {}
@@ -195,8 +200,9 @@ def cache_sim_runs(dtc):
     '''
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
+    import quantities as pq
     import numpy as np
-    import get_neab
+    from neuronunit.tests import get_neab
 
 
     import copy
@@ -223,14 +229,16 @@ def cache_sim_runs(dtc):
                     dtc.cached[str(dtc.attrs)] = dtc.results
     return dtc
 
-
+'''
 def map_wrapper_caching(dtc):
     import evaluate_as_module
+    from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
+    import quantities as pq
     import numpy as np
-    import get_neab
+    from neuronunit.tests import get_neab
     #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='Memory')
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURONMemory')
     model.set_attrs(dtc.attrs)
     get_neab.tests[0].prediction = dtc.rheobase
     model.rheobase = dtc.rheobase['value']
@@ -260,7 +268,7 @@ def map_wrapper_caching(dtc):
                         dtc.results[str(t)]['v_m'] = v_m
                     dtc.cached[str(dtc.attrs)] = [ dtc.results, dtc.score.sort_key ]
     return dtc
-
+'''
 '''
 def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyparallel to work.
 

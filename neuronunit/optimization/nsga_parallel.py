@@ -14,22 +14,26 @@ os.system('ipcluster start -n 8 --profile=default & sleep 15 ; python stdout_wor
 
 import ipyparallel as ipp
 rc = ipp.Client(profile='default')
+#rc.Client.become_dask()
+
 rc[:].use_cloudpickle()
 dview = rc[:]
 
 from ipyparallel import depend, require, dependent
-from neuronunit.optimization import get_neab
 THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
 this_nu = os.path.join(THIS_DIR,'../../')
 sys.path.insert(0,this_nu)
+# Import get_neab has to happen exactly here. It has to be called only on
+# controller (rank0, it has)
+from neuronunit.tests import get_neab
+
 from neuronunit import tests
 #from deap import hypervolume
 
 def dtc_to_rheo(dtc):
     from neuronunit.models.reduced import ReducedModel
-    from neuronunit.optimization import get_neab
-    from neuronunit.optimization import evaluate_as_module
-
+    from neuronunit.tests import get_neab
+    import evaluate_as_module
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.set_attrs(dtc.attrs)
     dtc.scores = None
@@ -39,43 +43,37 @@ def dtc_to_rheo(dtc):
     score = get_neab.tests[0].judge(model,stop_on_error = False, deep_error = True)
     observation = score.observation
     prediction = score.prediction
-    delta, ratio = evaluate_as_module.difference(observation,prediction)
-    if type(dtc.differences[str(get_neab.tests[0])]) is type(None):
-        dtc.differences[str(get_neab.tests[0])] = []
-    dtc.differences[str(get_neab.tests[0])].append(delta,ratio)
-    #dtc.differences[str(get_neab.tests[0])].append(delta,delta)
+    delta = evaluate_as_module.difference(observation,prediction)
+    dtc.differences[str(get_neab.tests[0])] = delta
     dtc.scores[str(get_neab.tests[0])] = score.sort_key
     dtc.rheobase = score.prediction
     return dtc
 
 def map_wrapper(dtc):
     import evaluate_as_module
+    from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
-    import get_neab
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='Memory')
+    import quantities as pq
+    import numpy as np
+    from neuronunit.tests import get_neab
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURONMemory')
     model.set_attrs(dtc.attrs)
     get_neab.tests[0].prediction = dtc.rheobase
     model.rheobase = dtc.rheobase['value']
     for k,t in enumerate(get_neab.tests):
         if k>1:
             t.params = dtc.vtest[k]
-            score = t.judge(model,stop_on_error = False, deep_error = False)
-            try:
-                assert type(score) is not type(None)
-                #print(model._backend.cached_params)
-                dtc.scores[str(t)] = score.sort_key
-                observation = score.observation
-                prediction = score.prediction
-                delta, ratio = evaluate_as_module.difference(observation,prediction)
-                dtc.differences[str(t)] = delta
-                dtc.differences[str(t)] = ratios
-
-            except:
-                pass
+            score = t.judge(model,stop_on_error = False, deep_error = True)
+            #print(model._backend.cached_params)
+            dtc.scores[str(t)] = score.sort_key
+            observation = score.observation
+            prediction = score.prediction
+            delta = evaluate_as_module.difference(observation,prediction)
+            dtc.differences[str(t)] = delta
     return dtc
 
 def evaluate(dtc):
-    from neuronunit.optimization import get_neab
+    from neuronunit.tests import get_neab
     fitness = [ 100.0 for i in range(0,8)]
     for k,t in enumerate(get_neab.tests):
         try:
@@ -119,13 +117,10 @@ def update_pop(pop):
 
     import evaluate_as_module
     import model_parameters
-    from neuronunit.optimization import get_neab
 
     update_dtc_pop = evaluate_as_module.update_dtc_pop
     param_dict = model_parameters.model_params
     get_trans_dict = evaluate_as_module.get_trans_dict
-    # get trans dict
-    # just imposes order on the dictionary
     td = get_trans_dict(param_dict)
 
     dtcpop = update_dtc_pop(pop, td)
@@ -218,7 +213,6 @@ while (gen < NGEN):# and means[-1] > 0.05):
         toolbox.mutate(ind2)
         # deleting the fitness values is what renders them invalid.
         # The invalidness is used as a flag for recalculating them.
-        # so invalid_ind is now the list of the genes that need updating
         # Their fitneess needs deleting since the attributes which generated these values have been mutated
         # and hence they need recalculating
         # Mutation also implies breeding, if a gene is mutated it was also recently recombined.
