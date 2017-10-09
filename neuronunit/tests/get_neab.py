@@ -4,19 +4,16 @@ import matplotlib as matplotlib
 matplotlib.use('agg',warn=False)
 import quantities as pq
 import sciunit
-
+import os
 #Over ride any neuron units in the PYTHON_PATH with this one.
 #only appropriate for development.
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
-this_nu = os.path.join(THIS_DIR,'../..')
-sys.path.insert(0,this_nu)
+#this_nu = os.path.join(os.getcwd(),'../..')
+#sys.path.insert(0,this_nu)
 
 import neuronunit
 from neuronunit import aibs
-import pdb
 import pickle
-from scoop import futures
-from scoop import utils
 try:
     IZHIKEVICH_PATH = os.path.join(os.getcwd(),'NeuroML2')
     assert os.path.isdir(IZHIKEVICH_PATH)
@@ -26,16 +23,20 @@ except AssertionError:
 
 LEMS_MODEL_PATH = os.path.join(IZHIKEVICH_PATH,'LEMS_2007One.xml')
 import time
-from pyneuroml import pynml
-import quantities as pq
+#from pyneuroml import pynml
+#import quantities as pq
 from neuronunit import tests as nu_tests, neuroelectro
 neuron = {'nlex_id': 'nifext_50'} # Layer V pyramidal cell
-tests = []
+#tests = []
 
 dataset_id = 354190013  # Internal ID that AIBS uses for a particular Scnn1a-Tg2-Cre
                         # Primary visual area, layer 5 neuron.
+
 observation = aibs.get_observation(dataset_id,'rheobase')
-ne_pickle = os.path.join(THIS_DIR,"neuroelectro.pickle")
+
+#print(observation)
+ne_pickle = os.path.join(os.getcwd(),"neuroelectro.pickle")
+
 if os.path.isfile(ne_pickle):
     print('attempting to recover from pickled file')
     with open(ne_pickle, 'rb') as f:
