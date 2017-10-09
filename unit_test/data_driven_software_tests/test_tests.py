@@ -139,7 +139,7 @@ class TestsTestCase(object):
 
         tls.embed('https://plot.ly/~cufflinks/8')
         py.sign_in('RussellJarvis','FoyVbw7Ry3u4N2kCY4LE')
-        df.iplot(kind='bar', barmode='stack', yTitle='NeuronUnit Test Agreement', title='tests_agreement_table_{0}'.format(score), filename='grouped-bar-chart-tests_agreement_table_{0}'.format(score.summary))
+        df.iplot(kind='bar', barmode='stack', yTitle='NeuronUnit Test Agreement', title='tests_agreement_table_{0}'.format(score), filename='grouped-bar-chart-{0}'.format(score))
         return df, html
 
     def run_test(self, cls):
