@@ -1,4 +1,4 @@
-`##
+##
 # Assumption that this file was executed after first executing the bash: ipcluster start -n 8 --profile=default &
 ##
 
@@ -9,7 +9,7 @@ from neuronunit.models import backends
 import neuronunit
 print(neuronunit.models.__file__)
 from neuronunit.models.reduced import ReducedModel
-import get_neab
+from neuronunit.optimization import get_neab
 #from ipyparallel import depend, require, dependent
 import ipyparallel as ipp
 rc = ipp.Client(profile='default')
@@ -17,7 +17,7 @@ rc[:].use_cloudpickle()
 dview = rc[:]
 model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
 #model.load_model()
-import model_parameters
+#from neuronunit.optimization import model_parameters
 
 class Individual(object):
     '''
@@ -36,7 +36,7 @@ class Individual(object):
         self.lookup={}
         self.rheobase=None
         self.fitness = creator.FitnessMin
-        
+
 #@require('numpy, model_parameters, deap','random')
 def import_list(ipp):
     Individual = ipp.Reference('Individual')
@@ -45,11 +45,13 @@ def import_list(ipp):
     import random
     history = deap.tools.History()
     toolbox = base.Toolbox()
-    import model_parameters as modelp
+    from neuronunit.optimization import model_parameters
+    #from neuronunit.optimziation import model_parameters as modelp
+    #import model_parameters as modelp
     import numpy as np
     sub_set = []
-    whole_BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
-    whole_BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
+    whole_BOUND_LOW = [ np.min(i) for i in model_parameters.model_params.values() ]
+    whole_BOUND_UP = [ np.max(i) for i in model_parameters.model_params.values() ]
     BOUND_LOW = whole_BOUND_LOW
     BOUND_UP = whole_BOUND_UP
     NDIM = len(BOUND_UP)#+1
@@ -68,6 +70,12 @@ def import_list(ipp):
     toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=30.0)
     toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
     return toolbox, tools, history, creator, base
+
+        #if str(self.model.attrs) not in self.cached_attrs:
+        #    results = super(NEURONMemoryBackend,self).local_run()#
+        #    self.model.cached_attrs[dict_hash(self.model.attrs)] = 1
+        #else:
+        #    self.model.cached_attrs[dict_hash(self.model.attrs)] += 1
 def update_dtc_pop(pop, td):
     '''
     inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
@@ -95,6 +103,10 @@ def update_dtc_pop(pop, td):
         for i,j in enumerate(ind):
             param_dict[td[i]] = str(j)
         dtc.attrs = param_dict
+        if str(ind) not in dtc.cached_attrs:
+            dtc.cached_attrs[str(ind)] = 1
+        else:
+            dtc.cached_attrs[str(ind)] += 1
         dtc.evaluated = False
         return dtc
 
@@ -148,7 +160,6 @@ def difference(observation,prediction): # v is a tesst
             unit_observations = observation['mean']
         elif 'value' in observation.keys():
             unit_observations = observation['value']
-
     ##
     # Repurposed from from sciunit/sciunit/scores.py
     # line 156
@@ -157,8 +168,6 @@ def difference(observation,prediction): # v is a tesst
     assert type(prediction) in [dict,float,int,pq.Quantity]
     ratio = unit_predictions / unit_observations
     unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
-
-
     return float(unit_delta), ratio
 
 
@@ -230,7 +239,7 @@ def map_wrapper_caching(dtc):
     import numpy as np
     import get_neab
     #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='Memory')
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURONMemory')
     model.set_attrs(dtc.attrs)
     get_neab.tests[0].prediction = dtc.rheobase
     model.rheobase = dtc.rheobase['value']
