@@ -31,7 +31,6 @@ fix_path()
 dview.wait()
 dview.apply_sync(fix_path)
 from neuronunit.optimization import get_neab
-
 from neuronunit import tests
 #from deap import hypervolume
 
@@ -62,15 +61,13 @@ def dtc_to_rheo(dtc):
     dtc.rheobase = score.prediction
     return dtc
 
-
 def map_wrapper(dtc):
     from neuronunit.optimization import evaluate_as_module
 
     from neuronunit.models.reduced import ReducedModel
-    import get_neab
+    from neuronunit.optimization import get_neab
 
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURONMemory')
-
     model.set_attrs(dtc.attrs)
     dtc.cached_attrs.update(model.cached_attrs)
     get_neab.tests[0].prediction = dtc.rheobase
@@ -116,7 +113,6 @@ def evaluate(dtc):
            fitness[2],fitness[3],\
            fitness[4],fitness[5],\
            fitness[6],fitness[7],
-
 
 def federate_cache(dtcpop):
     dtc = dtcpop[0]
