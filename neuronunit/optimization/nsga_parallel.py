@@ -18,10 +18,20 @@ rc[:].use_cloudpickle()
 dview = rc[:]
 
 from ipyparallel import depend, require, dependent
+
+def fix_path():
+    import sys
+    THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
+    this_nu = os.path.join(THIS_DIR,'../../')
+    sys.path.insert(0,this_nu)
+    #from neuronunit.optimization import get_neab
+    #first call to get_neab has to be synchronous
+fix_path()
+
+dview.wait()
+dview.apply_sync(fix_path)
 from neuronunit.optimization import get_neab
-THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
-this_nu = os.path.join(THIS_DIR,'../../')
-sys.path.insert(0,this_nu)
+
 from neuronunit import tests
 #from deap import hypervolume
 
@@ -32,28 +42,37 @@ def dtc_to_rheo(dtc):
 
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.set_attrs(dtc.attrs)
-    dtc.scores = None
-    dtc.scores = {}
-    dtc.differences = None
-    dtc.differences = {}
+    #dtc.scores = None
+    #dtc.scores = {}
+    #dtc.differences = None
+    #dtc.differences = {}
     score = get_neab.tests[0].judge(model,stop_on_error = False, deep_error = True)
     observation = score.observation
     prediction = score.prediction
     delta, ratio = evaluate_as_module.difference(observation,prediction)
-    if type(dtc.differences[str(get_neab.tests[0])]) is type(None):
+    if str(get_neab.tests[0]) not in dtc.differences:
         dtc.differences[str(get_neab.tests[0])] = []
-    dtc.differences[str(get_neab.tests[0])].append(delta,ratio)
+        dtc.ratios[str(get_neab.tests[0])] = []
+
+    dtc.differences[str(get_neab.tests[0])].append(delta)
+    dtc.ratios[str(get_neab.tests[0])].append(ratio)
+    #dtc.differences[str(get_neab.tests[0])].append((delta,ratio))
     #dtc.differences[str(get_neab.tests[0])].append(delta,delta)
     dtc.scores[str(get_neab.tests[0])] = score.sort_key
     dtc.rheobase = score.prediction
     return dtc
 
+
 def map_wrapper(dtc):
-    import evaluate_as_module
+    from neuronunit.optimization import evaluate_as_module
+
     from neuronunit.models.reduced import ReducedModel
     import get_neab
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='Memory')
+
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURONMemory')
+
     model.set_attrs(dtc.attrs)
+    dtc.cached_attrs.update(model.cached_attrs)
     get_neab.tests[0].prediction = dtc.rheobase
     model.rheobase = dtc.rheobase['value']
     for k,t in enumerate(get_neab.tests):
@@ -67,11 +86,19 @@ def map_wrapper(dtc):
                 observation = score.observation
                 prediction = score.prediction
                 delta, ratio = evaluate_as_module.difference(observation,prediction)
-                dtc.differences[str(t)] = delta
-                dtc.differences[str(t)] = ratios
+                if str(t) not in dtc.differences:
+                    dtc.differences[str(t)] = []
+                    dtc.ratios[str(t)] = []
+
+                dtc.differences[str(t)].append(delta)
+                dtc.ratios[str(t)].append(ratios)
+
+                #dtc.differences[str(t)] = delta
+                #dtc.differences[str(t)] = ratios
 
             except:
-                pass
+                dtc.pickle_stream.append(dtc.attrs)
+
     return dtc
 
 def evaluate(dtc):
@@ -90,20 +117,17 @@ def evaluate(dtc):
            fitness[4],fitness[5],\
            fitness[6],fitness[7],
 
+
 def federate_cache(dtcpop):
     dtc = dtcpop[0]
     # add all elments into the dictionary thats the 1st element of the list
-    for dtci in dtcpop:
-        dtc.cached_attrs.update(dtci.cached_attrs)
-
-    # add all elments into every dictionary belonging to every element in the element of the list
-    for dtcj in dtcpop:
-        dtcj.cached_attrs.update(dtc.cached_attrs)
-
-    for k, dtck in enumerate(dtcpop):
-        current = len(dtck.cached_attrs)
-        assert current == previous
-        previous = current
+    for k,v in dtc.cached_attrs.items():
+        for i, dtci in enumerate(dtcpop):
+            if i !=0:
+                if k in dtci.cached_attrs:
+                    dtci.cached_attrs[k] += 1
+                else:
+                    dtci.cached_attrs[k] = v
     return dtcpop
 
 def update_pop(pop):
@@ -117,7 +141,7 @@ def update_pop(pop):
     # DTCs for which a rheobase value of x (pA)<=0 are filtered out
     # DTCs are then scored by neuronunit, using neuronunit models that act in place.
 
-    import evaluate_as_module
+    from neuronunit.optimization import evaluate_as_module
     import model_parameters
     from neuronunit.optimization import get_neab
 
@@ -133,14 +157,17 @@ def update_pop(pop):
     dtcpop = list(map(dtc_to_rheo,dtcpop))
     for d in dtcpop:
         print(d.rheobase)
-    #print('stuck in a loop?')
-    #import pdb; pdb.set_trace()
-    # filter out rheobase tests that returned None score
-    #dtcpop = [ dtc for dtc in dtcpop if type(dtc.scores[str(get_neab.tests[0])]) is not type(None) ]
-    # format the stimulation protocal, as I find its self update to be unreliable.
+
     dtcpop = list(map(evaluate_as_module.pre_format,dtcpop))
     # run sciunit testsin
     dtcpop = list(dview.map(map_wrapper,dtcpop).get())
+    pickle_stream = []
+    for d in dtcpop:
+        pickle_stream.extend(d.pickle_stream)
+    import pickle
+    with open('opt_run_data.p','wb') as handle:
+        pickle.dump(pickle_stream ,handle)
+
     dtcpop = federate_cache(dtcpop)
     return dtcpop
 #dtc_pf = dtc_pf[0:4]
@@ -150,8 +177,11 @@ def update_pop(pop):
 MU = 6; NGEN = 4; CXPB = 0.9
 #def main(MU=12, NGEN=4, CXPB=0.9):
 import deap
-import evaluate_as_module
-import model_parameters
+from neuronunit.optimization import model_parameters
+
+from neuronunit.optimization import evaluate_as_module
+
+#import model_parameters
 
 toolbox, tools, history, creator, base = evaluate_as_module.import_list(ipp)
 dview.push({'Individual':evaluate_as_module.Individual})
@@ -196,9 +226,9 @@ print(logbook.stream)
 
 verbose = True
 means = np.array(logbook.select('avg'))
-difference_progress = []
+#difference_progress = []
 gen = 1
-difference_progress.append(np.mean([v for dtc in dtcpop for v in dtc.differences.values()  ]))
+#difference_progress.append(np.mean([v for dtc in dtcpop for v in dtc.differences.values()  ]))
 
 verbose = True
 difference_progress = []
@@ -236,7 +266,7 @@ while (gen < NGEN):# and means[-1] > 0.05):
     dtcpop = update_pop(invalid_ind)
     fitnesses = list(dview.map(evaluate,dtcpop).get())
 
-    difference_progress.append(np.mean([v for dtc in dtcpop for v in dtc.differences.values()  ]))
+    #difference_progress.append(np.mean([v for dtc in dtcpop for v in dtc.differences.values()  ]))
     print(dtcpop,fitnesses)
     print(gen)
     mf = np.mean(fitnesses)
@@ -271,6 +301,19 @@ while (gen < NGEN):# and means[-1] > 0.05):
     print('means: {0} pareto_front first: {1} pf_mean {2}'.format(logbook.select('avg'), \
                                                         np.sum(np.mean(pf[0].fitness.values)),\
                                                         pf_mean))
+import pickle
+attrs = []
+for d in dtcpop:
+    attrs.append(d.attrs)
+with open('../../unit_test/data_driven_software_tests/opt_run_data.p','wb') as handle:
+    valued = attrs
+    pickle.dump(valued,handle)
+#import pickle
+
+
+with open('opt_run_data.p','rb') as handle:
+    #valued = [dtcpop,pop,pf]
+    valued = pickle.load(handle)
 
 '''
 ###
