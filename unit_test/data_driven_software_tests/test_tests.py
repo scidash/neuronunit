@@ -25,12 +25,15 @@ class TestsTestCase(object):
         self.pf = None
         self.logbook = None
         self.params = {}
+        self.prediction = None
         from neuronunit.models.reduced import ReducedModel
         #from neuronunit.model_tests import ReducedModelTestCase
         #path = ReducedModelTestCase().path
         path = os.getcwd()+str('/NeuroML2/LEMS_2007One.xml')
         print(path)
-        self.model = ReducedModel(path, backend='jNeuroML')
+        #self.model = ReducedModel(path, backend='jNeuroML')
+        self.model = ReducedModel(path, backend='NEURON')
+
 
     def get_observation(self, cls):
         print(cls.__name__)
@@ -65,7 +68,7 @@ class TestsTestCase(object):
         'vpeak': '36.6769758895',
         'vr': '-63.4080852004',
         'vt': '-44.1074682812'}
-        #rheobase = {'value': array(106.4453125) * pA}
+        #rheobase = {'value': array(106.4453125) * pA}131.34765625
         return params1
 
 
@@ -91,6 +94,13 @@ class TestsTestCase(object):
                 unit_observations = observation['mean']
             elif 'value' in observation.keys():
                 unit_observations = observation['value']
+
+
+        to_r_s = unit_observations.units
+        unit_predictions = unit_predictions.rescale(to_r_s)
+        #unit_observations = unit_observations.rescale(to_r_s)
+        unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
+
         ##
         # Repurposed from from sciunit/sciunit/scores.py
         # line 156
@@ -99,59 +109,58 @@ class TestsTestCase(object):
         assert type(prediction) in [dict,float,int,pq.Quantity]
         ratio = unit_predictions / unit_observations
         unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
-        return float(unit_delta), ratio
+        return unit_delta, ratio
 
-    def bar_char_out(self,score,test):
+    def bar_char_out(self,score,test,par):
         import pandas as pd
         import numpy as np
         unit_delta, ratio = self.difference(score.observation,score.prediction)
-
         columns1 = []
         if 'mean' in score.observation.keys():
             unit_observations = score.observation['mean']
+            to_r_s = unit_observations.units
             columns1.append(str(score.observation['mean'].units))
         if 'value' in score.observation.keys():
             unit_observations = score.observation['value']
+            to_r_s = unit_observations.units
             columns1.append(str(score.observation['value'].units))
         if 'mean' in score.prediction.keys():
             unit_predictions = score.prediction['mean']
-            columns1.append(str(score.prediction['mean'].units))
+            unit_predictions = unit_predictions.rescale(to_r_s)
+            columns1.append(str(unit_predictions.units))
         if 'value' in score.prediction.keys():
             unit_predictions = score.prediction['value']
-            columns1.append(str(score.prediction['value'].units))
+            unit_predictions = unit_predictions.rescale(to_r_s)
+            columns1.append(str(unit_predictions.units))
 
-        columns1.append(0)
-        columns1.append(0)
-        four = [ float(unit_observations),float(unit_predictions),float(unit_delta), float(ratio) ]
-        stacked = np.column_stack(np.array(four))
+
+        annotations = ['observation'+str(columns1[0]),'prediction'+str(columns1[1]),'difference','ratio','score.sort_key']
+        five = [ unit_observations,unit_predictions,unit_delta,ratio,score.sort_key]
+        stacked = np.column_stack(np.array(five))
 
         df = pd.DataFrame(np.array(stacked))
-        df = pd.DataFrame(stacked,columns=columns1)
+        df = pd.DataFrame(stacked,columns = annotations)
         df = df.transpose()
-        df.index = ['observation','prediction','difference','ratios']
         html = df.to_html()
         html_file = open("tests_agreement_table_{0}.html".format(str(test)),"w")
         html_file.write(html)
         html_file.close()
         import os
-        os.system('sudo /opt/conda/bin/pip install cufflinks')
+        #os.system('sudo /opt/conda/bin/pip install cufflinks')
         import cufflinks as cf
         import plotly.tools as tls
         import plotly.plotly as py
 
         tls.embed('https://plot.ly/~cufflinks/8')
         py.sign_in('RussellJarvis','FoyVbw7Ry3u4N2kCY4LE')
-        df.iplot(kind='bar', barmode='stack', yTitle='NeuronUnit Test Agreement', title='tests_agreement_table_{0}'.format(test), filename='grouped-bar-chart-{0}'.format(test))
+        df.iplot(kind='bar', barmode='stack', yTitle=str(test)+str(' ')+str(score.sort_key), title='tests_agreement_table_{0}{1}'.format(test,score.sort_key), filename='grouped-bar-chart-{0}'.format(str(par['C'])))
         return df, html
 
     def run_test(self, cls):
         observation = self.get_observation(cls)
         test = cls(observation=observation)
-
         #attrs = pickle.load(open('opt_run_data.p','rb'))
-
         #from neuronunit.optimization import nsga_parallel
-
         #self.dtcpop = dtcpop
         #self.pop = pop
         #self.pf = pf
@@ -163,8 +172,13 @@ class TestsTestCase(object):
 
         for par in params:
             self.model.set_attrs(par)
+
             score = test.judge(self.model,stop_on_error = True, deep_error = True)
-            df, html = self.bar_char_out(score,str(test))
+            df, html = self.bar_char_out(score,str(test),par)
+            print(score.related_data['vm'])
+            print(self.model.get_AP_thresholds())
+            print(self.model.get_AP_amplitudes())
+            print(self.model.get_AP_widths())
             print(df)
         score.summarize()
         return score.score
@@ -172,6 +186,7 @@ class TestsTestCase(object):
 class TestsPassiveTestCase(TestsTestCase, unittest.TestCase):
     """Test passive validation tests"""
     #def test_0optimizer(self):
+
 
     def test_1inputresistance(self):
         #from neuronunit.optimization import data_transport_container
@@ -205,24 +220,49 @@ class TestsPassiveTestCase(TestsTestCase, unittest.TestCase):
 class TestsWaveformTestCase(TestsTestCase, unittest.TestCase):
     """Test passive validation tests"""
 
-    def test_ap_width(self):
+    def test_0rheobase_parallel(self):
+        import os
+        os.system('ipcluster start -n 8 --profile=default & sleep 55 ')
+
+        #from neuronunit.optimization import data_transport_container
+
+        from neuronunit.tests.fi import RheobaseTestP as T
+        score = self.run_test(T)
+        self.prediction = score.prediction
+        self.assertTrue( score.prediction['value'] == 106.4453125 or score.prediction['value'] ==131.34765625)
+
+    def update_amplitude(test):
+        rheobase = self.prediction['value']#first find a value for rheobase
+        test.params['injected_square_current']['amplitude'] = rheobase*1.01
+
+    def test_missing(self):
+        print(dir(self.model))
+        print(self.model.get_AP_thresholds())
+        print(self.model.get_AP_amplitudes())
+        print(self.model.get_AP_widths())
+
+    def test_5ap_width(self):
         #from neuronunit.optimization import data_transport_container
 
         from neuronunit.tests.waveform import InjectedCurrentAPWidthTest as T
+        self.update_amplitude(T)
         score = self.run_test(T)
         #self.assertTrue(-0.6 < score < -0.5)
 
-    def test_ap_amplitude(self):
+    def test_6ap_amplitude(self):
         #from neuronunit.optimization import data_transport_container
         from neuronunit.tests.waveform import InjectedCurrentAPAmplitudeTest as T
+        self.update_amplitude(T)
 
         score = self.run_test(T)
         #self.assertTrue(-1.7 < score < -1.6)
 
-    def test_ap_threshold(self):
+    def test_7ap_threshold(self):
         #from neuronunit.optimization import data_transport_container
 
         from neuronunit.tests.waveform import InjectedCurrentAPThresholdTest as T
+        self.update_amplitude(T)
+
         score = self.run_test(T)
         #self.assertTrue(2.25 < score < 2.35)
 
@@ -231,25 +271,27 @@ class TestsFITestCase(TestsTestCase, unittest.TestCase):
     """Test F/I validation tests"""
 
     #@unittest.skip("This test takes a long time")
-    def test_rheobase_serial(self):
+    # def test_rheobase_serial(self):
         #from neuronunit.optimization import data_transport_container
 
-        from neuronunit.tests.fi import RheobaseTest as T
-        score = self.run_test(T)
+    #    from neuronunit.tests.fi import RheobaseTest as T
+    #    score = self.run_test(T)
         #self.assertTrue(0.2 < score < 0.3)
 
     #@unittest.skip("This test takes a long time")
-    '''
-    def test_rheobase_parallel(self):
+
+    def test_0rheobase_parallel(self):
         import os
-        os.system('ipcluster start -n 8 --profile=default & sleep 15 ; python stdout_worker.py &')
+        os.system('ipcluster start -n 8 --profile=default & sleep 35 ')
 
         #from neuronunit.optimization import data_transport_container
 
         from neuronunit.tests.fi import RheobaseTestP as T
         score = self.run_test(T)
-        #self.assertTrue(0.2 < score < 0.3)
-    '''
+        #score.prediction
+        self.prediction = score.prediction
+        self.assertTrue( score.prediction['value'] == 106.4453125 or score.prediction['value'] ==131.34765625)
+
 
 class TestsDynamicsTestCase(TestsTestCase, unittest.TestCase):
     """Tests dynamical systems properties tests"""
