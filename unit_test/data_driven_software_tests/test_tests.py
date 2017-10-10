@@ -66,7 +66,7 @@ class TestsTestCase(object):
         'vpeak': '36.6769758895',
         'vr': '-63.4080852004',
         'vt': '-44.1074682812'}
-        #rheobase = {'value': array(106.4453125) * pA}
+        #rheobase = {'value': array(106.4453125) * pA}131.34765625
         return params1
 
 
@@ -113,45 +113,29 @@ class TestsTestCase(object):
         import pandas as pd
         import numpy as np
         unit_delta, ratio = self.difference(score.observation,score.prediction)
-
-
-
         columns1 = []
         if 'mean' in score.observation.keys():
             unit_observations = score.observation['mean']
             to_r_s = unit_observations.units
-
             columns1.append(str(score.observation['mean'].units))
-
         if 'value' in score.observation.keys():
             unit_observations = score.observation['value']
             to_r_s = unit_observations.units
-
             columns1.append(str(score.observation['value'].units))
-
         if 'mean' in score.prediction.keys():
             unit_predictions = score.prediction['mean']
             unit_predictions = unit_predictions.rescale(to_r_s)
-
-            columns1.append(str(score.prediction['mean'].units))
+            columns1.append(str(unit_predictions.units))
         if 'value' in score.prediction.keys():
-
             unit_predictions = score.prediction['value']
             unit_predictions = unit_predictions.rescale(to_r_s)
+            columns1.append(str(unit_predictions.units))
 
 
-            columns1.append(str(score.prediction['value'].units))
+        annotations = ['observation'+str(columns1[0]),'prediction'+str(columns1[1]),'difference','ratio','score.sort_key']
+        five = [ unit_observations,unit_predictions,unit_delta,ratio,score.sort_key]
+        stacked = np.column_stack(np.array(five))
 
-
-
-        #columns1.append(0)
-        #columns1.append(0)
-        annotations = ['observation'+str(columns1[0]),'prediction'+str(columns1[1]),'difference']
-        four = [ unit_observations,unit_predictions,unit_delta ]
-        stacked = np.column_stack(np.array(four))
-        #mouse_over = []
-        #for k,v in par.items():
-        #    mouse_over.append((str(k)+str(v))
         df = pd.DataFrame(np.array(stacked))
         df = pd.DataFrame(stacked,columns = annotations)
         df = df.transpose()
@@ -160,24 +144,21 @@ class TestsTestCase(object):
         html_file.write(html)
         html_file.close()
         import os
-        os.system('sudo /opt/conda/bin/pip install cufflinks')
+        #os.system('sudo /opt/conda/bin/pip install cufflinks')
         import cufflinks as cf
         import plotly.tools as tls
         import plotly.plotly as py
 
         tls.embed('https://plot.ly/~cufflinks/8')
         py.sign_in('RussellJarvis','FoyVbw7Ry3u4N2kCY4LE')
-        df.iplot(kind='bar', barmode='stack', yTitle=str(test), title='tests_agreement_table_{0}'.format(test), filename='grouped-bar-chart-{0}'.format(str(par['C'])))
+        df.iplot(kind='bar', barmode='stack', yTitle=str(test)+str(' ')+str(score.sort_key), title='tests_agreement_table_{0}{1}'.format(test,score.sort_key), filename='grouped-bar-chart-{0}'.format(str(par['C'])))
         return df, html
 
     def run_test(self, cls):
         observation = self.get_observation(cls)
         test = cls(observation=observation)
-
         #attrs = pickle.load(open('opt_run_data.p','rb'))
-
         #from neuronunit.optimization import nsga_parallel
-
         #self.dtcpop = dtcpop
         #self.pop = pop
         #self.pf = pf
@@ -231,21 +212,21 @@ class TestsPassiveTestCase(TestsTestCase, unittest.TestCase):
 class TestsWaveformTestCase(TestsTestCase, unittest.TestCase):
     """Test passive validation tests"""
 
-    def test_ap_width(self):
+    def test_5ap_width(self):
         #from neuronunit.optimization import data_transport_container
 
         from neuronunit.tests.waveform import InjectedCurrentAPWidthTest as T
         score = self.run_test(T)
         #self.assertTrue(-0.6 < score < -0.5)
 
-    def test_ap_amplitude(self):
+    def test_6ap_amplitude(self):
         #from neuronunit.optimization import data_transport_container
         from neuronunit.tests.waveform import InjectedCurrentAPAmplitudeTest as T
 
         score = self.run_test(T)
         #self.assertTrue(-1.7 < score < -1.6)
 
-    def test_ap_threshold(self):
+    def test_7ap_threshold(self):
         #from neuronunit.optimization import data_transport_container
 
         from neuronunit.tests.waveform import InjectedCurrentAPThresholdTest as T
@@ -274,7 +255,8 @@ class TestsFITestCase(TestsTestCase, unittest.TestCase):
 
         from neuronunit.tests.fi import RheobaseTestP as T
         score = self.run_test(T)
-        #self.assertTrue(0.2 < score < 0.3)
+        #106.4453125) * pA}
+        self.assertTrue( score.prediction['value'] == 106.4453125 or score.prediction['value'] ==131.34765625)
 
 
 class TestsDynamicsTestCase(TestsTestCase, unittest.TestCase):
