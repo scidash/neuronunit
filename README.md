@@ -2,7 +2,7 @@
 | ------------- | ------------- |
 | [![Travis](https://travis-ci.org/scidash/neuronunit.svg?branch=master)](https://travis-ci.org/scidash/neuronunit) | [![Travis](https://travis-ci.org/scidash/neuronunit.svg?branch=dev)](https://travis-ci.org/scidash/neuronunit)  |
 | N/A | [![RTFD](https://readthedocs.org/projects/neuronunit/badge/?version=latest)](http://neuronunit.readthedocs.io/en/latest/?badge=latest) |
-| N/A | ![Coveralls](https://coveralls.io/repos/github/scidash/neuronunit/badge.svg?branch=dev) |
+| N/A | [![Coveralls](https://coveralls.io/repos/github/scidash/neuronunit/badge.svg?branch=dev)](https://coveralls.io/github/scidash/neuronunit) |
 
 
 
