@@ -28,7 +28,6 @@ class Backend(object):
     #self.tstop = None
     def init_backend(self, *args, **kwargs):
         #self.attrs = {} if attrs is None else attrs
-        self.load_model()
         self.model.unpicklable = []
         self.model.attrs = {}
         self.use_memory_cache = kwargs.get('use_memory_cache', True)
@@ -37,7 +36,8 @@ class Backend(object):
         self.use_disk_cache = kwargs.get('use_disk_cache', False)
         if self.use_disk_cache:
             self.init_disk_cache()
-
+        self.load_model()
+        
     #attrs = None
 
     # Name of the backend
@@ -191,15 +191,13 @@ class NEURONBackend(Backend):
         self.model_path = None
         from neuron import h
         self.h = h
-        self.related_data = {}
         #Should check if MPI parallel neuron is supported and invoked.
         self.h.load_file("stdlib.hoc")
         self.h.load_file("stdgui.hoc")
         self.lookup = {}
-        self.load_model()
-        self.unpicklable = []
-        self.unpicklable += ['h','ns','_backend']
-        self.attrs = {}
+        super(NEURONBackend,self).init_backend()
+        self.model.unpicklable += ['h','ns','_backend']
+    
     backend = 'NEURON'
 
     def reset_neuron(self, neuronVar):
@@ -336,12 +334,12 @@ class NEURONBackend(Backend):
         Since this only happens once outside of the optimization
         loop its a tolerable performance hit.
         """
-        import os
+        
         DEFAULTS={}
         DEFAULTS['v']=True
         #Create a pyhoc file using jneuroml to convert from NeuroML to pyhoc.
         #import the contents of the file into the current names space.
-        def cond_load():
+        def cond_load(load_mechanisms=True):
             nrn_name = os.path.splitext(self.model.orig_lems_file_path)[0]
             nrn_path,nrn_name = os.path.split(nrn_name)
             sys.path.append(nrn_path)
@@ -350,12 +348,12 @@ class NEURONBackend(Backend):
             self.reset_neuron(nrn.neuron)
             #make sure mechanisms are loaded
             modeldirname = os.path.dirname(self.model.orig_lems_file_path)
-            self.neuron.load_mechanisms(modeldirname)
+            if load_mechanisms:
+                self.neuron.load_mechanisms(modeldirname)
             self.set_stop_time(1600*ms)
             self.h.tstop
             self.ns = nrn.NeuronSimulation(self.h.tstop, dt=0.0025)
             return self
-
         
         #The code block below does not actually function:
         #architecture = platform.machine()
@@ -374,8 +372,9 @@ class NEURONBackend(Backend):
                               exec_in_dir = self.exec_in_dir,
                               verbose=DEFAULTS['v'],
                               exit_on_fail = True)
-
-        self = cond_load()
+            self = cond_load(load_mechanisms=False)
+        else:
+            self = cond_load(load_mechanisms=False)
 
         #Although the above approach successfuly instantiates a LEMS/neuroml model in pyhoc
         #the resulting hoc variables for current source and cell name are idiosyncratic (not generic).

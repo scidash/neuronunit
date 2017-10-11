@@ -8,7 +8,7 @@ class DocumentationTestCase(NotebookTools,
                             unittest.TestCase):
     """Testing documentation notebooks"""
 
-    path = '../docs'
+    path = '../../docs'
 
     #@unittest.skip("Skipping chapter 1")
     def test_chapter1(self):
