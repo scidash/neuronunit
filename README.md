@@ -1,6 +1,10 @@
-[![Build Status](https://travis-ci.org/scidash/neuronunit.svg?branch=dev)](https://travis-ci.org/scidash/neuronunit)
+| Master  | Dev |
+| ------------- | ------------- |
+| [![Travis](https://travis-ci.org/scidash/neuronunit.svg?branch=master)](https://travis-ci.org/scidash/neuronunit) | [![Travis](https://travis-ci.org/scidash/neuronunit.svg?branch=dev)](https://travis-ci.org/scidash/neuronunit)  |
+| N/A | [![RTFD](https://readthedocs.org/projects/neuronunit/badge/?version=latest)](http://neuronunit.readthedocs.io/en/latest/?badge=latest) |
+| N/A | ![Coveralls](https://coveralls.io/repos/github/scidash/neuronunit/badge.svg?branch=dev) |
 
-[![Documentation Status](https://readthedocs.org/projects/neuronunit/badge/?version=latest)](http://neuronunit.readthedocs.io/en/latest/?badge=latest)
+
 
 ![NeuronUnit Logo](https://raw.githubusercontent.com/scidash/assets/master/logos/neuronunit/NeuronUnitBlack2.png)
 
