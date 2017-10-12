@@ -1,4 +1,4 @@
-"""F/I neuronunit tests, e.g. investigating firing rates and patterns as a 
+"""F/I neuronunit tests, e.g. investigating firing rates and patterns as a
 function of input current"""
 
 

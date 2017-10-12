@@ -4,7 +4,7 @@ import quantities as pq
 import numpy as np
 
 
-os.system('ipcluster start -n 8 --profile=default & sleep 5;')
+os.system('ipcluster start -n 8 --profile=default & sleep 55;')
 import ipyparallel as ipp
 rc = ipp.Client(profile='default')
 rc[:].use_cloudpickle()
