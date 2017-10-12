@@ -136,7 +136,7 @@ def update_pop(pop):
     dtcpop = list(map(evaluate_as_module.pre_format,dtcpop))
     # run sciunit testsin
     dtcpop = list(dview.map(map_wrapper,dtcpop).get())
-    dtcpop = federate_cache(dtcpop)
+    #dtcpop = federate_cache(dtcpop)
     return dtcpop
 #dtc_pf = dtc_pf[0:4]
 #dtc_pf = update_pop(dtc_pf)

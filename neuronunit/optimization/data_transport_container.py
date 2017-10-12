@@ -26,3 +26,4 @@ class DataTC(object):
         self.results = {}
         self.searched = []
         self.searchedd = {}
+        self.cached_attrs = {}
