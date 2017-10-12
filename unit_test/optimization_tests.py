@@ -7,10 +7,66 @@
 
 import unittest
 import os
-
-os.system('ipcluster start -n 8 --profile=default & sleep 25;')
-
 import quantities as pq
+import numpy as np
+
+
+def create_list():
+    from neuronunit.optimization import model_parameters as modelp
+
+    mp = modelp.model_params
+    all_keys = [ key for key in mp.keys() ]
+    smaller = {}
+    # First create a smaller subet of the larger parameter dictionary.
+    #
+    for k in all_keys:
+        subset = {}
+        subset[k] = (mp[k][0] , mp[k][int(len(mp[k])/2.0)], mp[k][-1] )
+        smaller.update(subset)
+
+
+    iter_list=[ {'a':i,'b':j,'vr':k,'vpeak':l,'k':m,'c':n,'C':o,'d':p,'v0':q,'vt':r} for i in smaller['a'] for j in smaller['b'] \
+    for k in smaller['vr'] for l in smaller['vpeak'] \
+    for m in smaller['k'] for n in smaller['c'] \
+    for o in smaller['C'] for p in smaller['d'] \
+    for q in smaller['v0'] for r in smaller['vt'] ]
+    # the size of this list is 59,049 approx 60,000 calls after rheobase is found.
+    # assert 3**10 == 59049
+    return iter_list
+
+def parallel_method(item_of_iter_list):
+
+    from neuronunit.optimization import get_neab
+    get_neab.LEMS_MODEL_PATH = '/home/jovyan/neuronunit/neuronunit/optimization/NeuroML2/LEMS_2007One.xml'
+    #from neuronunit.models import backends
+    from neuronunit.models.reduced import ReducedModel
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+    model.set_attrs(item_of_iter_list)
+    get_neab.tests[0].prediction = dtc.rheobase
+    model.rheobase = dtc.rheobase['value']
+    scores = []
+    for k,t in enumerate(get_neab.tests):
+        if k>1:
+            t.params = dtc.vtest[k]
+            score = t.judge(model,stop_on_error = False, deep_error = True)
+            scores.append(score.sort_key,score)
+    return scores
+
+def exhaustive_search(self):
+    iter_list = create_list()
+    scores = list(dview.map(parallel_method,iter_list).get())
+    #score_parameter_pairs = zip(scores,iter_list)
+
+    #print(iter_list)
+
+
+from neuronunit import tests
+#from deap import hypervolume
+
+
+#test_0_run_exhaust()
+
+os.system('ipcluster start -n 8 --profile=default & sleep 5;')
 import ipyparallel as ipp
 rc = ipp.Client(profile='default')
 rc[:].use_cloudpickle()
@@ -51,7 +107,7 @@ class ReducedModelTestCase(unittest.TestCase):
         from neuronunit.optimization import get_neab
         get_neab.LEMS_MODEL_PATH = '/home/jovyan/neuronunit/neuronunit/optimization/NeuroML2/LEMS_2007One.xml'
 
-        from neuronunit.models import backends
+        #from neuronunit.models import backends
         from neuronunit.models.reduced import ReducedModel
         model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
         #import pdb; pdb.set_trace()
@@ -68,22 +124,16 @@ class ReducedModelTestCase(unittest.TestCase):
     #    path_serial = check_paths()
     #    paths_parallel = dview.apply_async(check_parallel_path_consistency).get_dict()
     #    self.assertEqual(path_serial, paths_parallel[0])
+    @unittest.skip("This times out")
 
     def test_1_run_opt(self):
         from neuronunit.optimization import nsga_parallel
         with open('opt_run_data.p','rb') as handle:
             attrs = pickle.load(handle)
         self.attrs_list = attrs
-    '''
-    def test_1_run_exhaust(self):
-        import model_parameters as modelp
-        iter_list=iter( (i,j,k,l,m,n,o,p,q,r) for i in modelp.model_params['a'][0:-1] for j in modelp.model_params['b'][0:-1] \
-        for k in modelp.model_params['vr'][0:-1] for l in modelp.model_params['vpeak'][0:-1] \
-        for m in modelp.model_params['k'][0:-1] for n in modelp.model_params['c'][0:-1] \
-        for o in modelp.model_params['C'][0:-1] for p in modelp.model_params['d'][0:-1] \
-        for q in modelp.model_params['v0'][0:-1] for r in modelp.model_params['vt'][0:-1] )
 
-    '''
+
+        #for i in iter_list
     def test_3check_paths(self):
         self.nrn_backend_works()
 
@@ -140,4 +190,6 @@ class ReducedModelTestCase(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    #a = ReducedModelTestCase()
+    #a.test_0_run_exhaust()
     unittest.main()
