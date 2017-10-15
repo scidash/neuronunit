@@ -3,13 +3,11 @@ import os
 import quantities as pq
 import numpy as np
 
-
 os.system('ipcluster start -n 8 --profile=default & sleep 25; python stdout_worker.py &')
 import ipyparallel as ipp
 rc = ipp.Client(profile='default')
 rc[:].use_cloudpickle()
 dview = rc[:]
-
 
 def sample_points(iter_dict, npoints=3):
     import numpy as np
@@ -18,8 +16,6 @@ def sample_points(iter_dict, npoints=3):
         sample_points = list(np.linspace(v.max(),v.min(),npoints))
         replacement[k] = sample_points
     return replacement
-
-
 
 def create_list(npoints=3):
     from neuronunit.optimization import model_parameters as modelp
@@ -52,7 +48,6 @@ def parallel_method(dtc):
     return scores
 
 def dtc_to_rheo(dtc):
-    print(dtc)
     from neuronunit.models.reduced import ReducedModel
     from neuronunit.optimization import get_neab
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
@@ -63,14 +58,6 @@ def dtc_to_rheo(dtc):
     return dtc
 
 def update_dtc_pop(item_of_iter_list):
-    '''
-    inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
-    outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
-    Rationale, not every gene value will result in a model for which rheobase is found, in which case that gene is discarded, however to
-    compensate for losses in gene population size, more gene samples must be tested for a successful return from a rheobase search.
-    If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
-    corresponding virtual model objects.
-    '''
     from neuronunit.optimization import data_transport_container
     dtc = data_transport_container.DataTC()
     dtc.attrs = item_of_iter_list
