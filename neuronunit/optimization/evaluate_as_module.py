@@ -9,7 +9,7 @@ from neuronunit.models import backends
 import neuronunit
 print(neuronunit.models.__file__)
 from neuronunit.models.reduced import ReducedModel
-from neuronunit.tests import get_neab
+from neuronunit.optimization import get_neab
 from ipyparallel import depend, require, dependent
 import ipyparallel as ipp
 rc = ipp.Client(profile='default')
@@ -172,7 +172,7 @@ def pre_format(dtc):
     import copy
     dtc.vtest = None
     dtc.vtest = {}
-    from neuronunit.tests import get_neab
+    from neuronunit.optimization import get_neab
     tests = get_neab.tests
     for k,v in enumerate(tests):
         dtc.vtest[k] = {}
@@ -202,7 +202,9 @@ def cache_sim_runs(dtc):
     from neuronunit.models.reduced import ReducedModel
     import quantities as pq
     import numpy as np
-    from neuronunit.tests import get_neab
+    from neuronunit.optimization import get_neab
+
+    #from neuronunit.tests import get_neab
 
 
     import copy
