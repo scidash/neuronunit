@@ -4,7 +4,7 @@ import quantities as pq
 import numpy as np
 
 
-os.system('ipcluster start -n 8 --profile=default & sleep 25;')
+os.system('ipcluster start -n 8 --profile=default & sleep 25; python stdout_worker.py &')
 import ipyparallel as ipp
 rc = ipp.Client(profile='default')
 rc[:].use_cloudpickle()
@@ -28,19 +28,13 @@ def create_list(npoints=3):
     all_keys = [ key for key in mp.keys() ]
     smaller = {}
     smaller = sample_points(mp, npoints=npoints)
-    #return iter_list
-    # First create a smaller subet of the larger parameter dictionary.
-    #
-
-
 
     iter_list=[ {'a':i,'b':j,'vr':k,'vpeak':l,'k':m,'c':n,'C':o,'d':p,'v0':q,'vt':r} for i in smaller['a'] for j in smaller['b'] \
     for k in smaller['vr'] for l in smaller['vpeak'] \
     for m in smaller['k'] for n in smaller['c'] \
     for o in smaller['C'] for p in smaller['d'] \
     for q in smaller['v0'] for r in smaller['vt'] ]
-    # the size of this list is 59,049 approx 60,000 calls after rheobase is found.
-    # assert 3**10 == 59049
+
     return iter_list
 
 def parallel_method(dtc):
@@ -99,6 +93,9 @@ returned_list = create_list(npoints = npoints)
 assert len(returned_list) == (npoints ** 10)
 dtcpop = list(dview.map_sync(update_dtc_pop,returned_list))
 print(dtcpop)
+# The mapping of rheobase search needs to be serial mapping for now, since embedded in it's functionality is a 
+# a call to dview map.
+# probably this can be bypassed in the future by using zeromq's Client (by using ipyparallel's core module/code base more directly)
 dtcpop = list(map(dtc_to_rheo,dtcpop))
 print([i.rheobase for i in dtcpop])
 scores = list(dview.map(parallel_method,dtcpop).get())
