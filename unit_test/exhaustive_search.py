@@ -23,36 +23,27 @@ def sample_points(iter_dict, npoints=3):
 
 def create_list(npoints=3):
     from neuronunit.optimization import model_parameters as modelp
-
     mp = modelp.model_params
-    all_keys = [ key for key in mp.keys() ]
     smaller = {}
     smaller = sample_points(mp, npoints=npoints)
-
     iter_list=[ {'a':i,'b':j,'vr':k,'vpeak':l,'k':m,'c':n,'C':o,'d':p,'v0':q,'vt':r} for i in smaller['a'] for j in smaller['b'] \
     for k in smaller['vr'] for l in smaller['vpeak'] \
     for m in smaller['k'] for n in smaller['c'] \
     for o in smaller['C'] for p in smaller['d'] \
     for q in smaller['v0'] for r in smaller['vt'] ]
-
     return iter_list
 
 def parallel_method(dtc):
     from neuronunit.optimization import get_neab
     get_neab.LEMS_MODEL_PATH = '/home/jovyan/neuronunit/neuronunit/optimization/NeuroML2/LEMS_2007One.xml'
-    #from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.set_attrs(dtc.attrs)
     get_neab.tests[0].prediction = dtc.rheobase
     model.rheobase = dtc.rheobase['value']
     scores = []
-
-    #scores.append(score.sort_key,score)
     from neuronunit.optimization import evaluate_as_module
     dtc = evaluate_as_module.pre_format(dtc)
-    #for k,t in dtc.
-    #get_neab.tests.parameters = dtc.vtests
     for k,t in enumerate(get_neab.tests):
         if k>1:
             t.params=dtc.vtest[k]
