@@ -18,11 +18,15 @@ class DataTC(object):
         self.name = None
         self.results = None
         self.fitness = None
-        self.score = None
+        self.scores = {}
         self.boolean = False
         self.initiated = False
-        self.delta = []
         self.evaluated = False
         self.results = {}
         self.searched = []
         self.searchedd = {}
+        self.cached_attrs = {}
+        self.differences = {}
+        self.ratios = {}
+        self.delta = []
+        self.pickle_stream = []
