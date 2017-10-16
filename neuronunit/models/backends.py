@@ -441,13 +441,35 @@ class NEURONMemoryBackend(NEURONBackend):
         self.model.cached_attrs = {}
         self.current = {}
 
+        super(MemoryBackend,self).init_backend()
 
     def set_attrs(self, **attrs):
 
 
 
-        super(NEURONMemoryBackend,self).set_attrs(**attrs)
+        super(MemoryBackend,self).set_attrs(**attrs)
+        #print(dir(super(MemoryBackend,self)))
+        '''
+        self.model.attrs.update(attrs)
 
+        assert type(self.model.attrs) is not type(None)
+        for h_key,h_value in attrs.items():
+            self.h('m_RS_RS_pop[0].{0} = {1}'.format(h_key,h_value))
+            self.h('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
+
+        # Below are experimental rig recording parameters.
+        # These can possibly go in a seperate method.
+
+        self.h(' { v_time = new Vector() } ')
+        self.h(' { v_time.record(&t) } ')
+        self.h(' { v_v_of0 = new Vector() } ')
+        self.h(' { v_v_of0.record(&RS_pop[0].v(0.5)) } ')
+        self.h(' { v_u_of0 = new Vector() } ')
+        self.h(' { v_u_of0.record(&m_RS_RS_pop[0].u) } ')
+
+        self.tVector = self.h.v_time
+        self.vVector = self.h.v_v_of0
+        '''
         ##
         # Empty the cache when redefining the model
         ##
@@ -460,8 +482,14 @@ class NEURONMemoryBackend(NEURONBackend):
 
     def inject_square_current(self, current):
 
-        
-        super(NEURONMemoryBackend,self).inject_square_current(current)#
+
+        if str(self.model.attrs) not in self.cached_attrs:
+            results = super(MemoryBackend,self).local_run()#
+            self.model.cached_attrs[dict_hash(self.model.attrs)] = 1
+        else:
+            self.model.cached_attrs[dict_hash(self.model.attrs)] += 1
+
+        super(MemoryBackend,self).inject_square_current(current)#
         #
         # make this current injection value a class attribute, such that its remembered.
         #

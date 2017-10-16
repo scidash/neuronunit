@@ -2,14 +2,15 @@ import unittest
 import os
 import quantities as pq
 import numpy as np
-
-
-os.system('ipcluster start -n 8 --profile=default & sleep 25;')
+import importlib
+#importlib.machinery
+#import os
+#importlib.machinery.SourceFileLoader('neuronunit', os.getcwd()+str('../'))
+#os.system('ipcluster start -n 8 --profile=default & sleep 25; python stdout_worker.py &')
 import ipyparallel as ipp
 rc = ipp.Client(profile='default')
 rc[:].use_cloudpickle()
 dview = rc[:]
-
 
 def sample_points(iter_dict, npoints=3):
     import numpy as np
@@ -19,43 +20,30 @@ def sample_points(iter_dict, npoints=3):
         replacement[k] = sample_points
     return replacement
 
-
-
 def create_list(npoints=3):
     from neuronunit.optimization import model_parameters as modelp
-
     mp = modelp.model_params
-    all_keys = [ key for key in mp.keys() ]
     smaller = {}
     smaller = sample_points(mp, npoints=npoints)
-
-
-
+    # First create a smaller subet of the larger parameter diction
     iter_list=[ {'a':i,'b':j,'vr':k,'vpeak':l,'k':m,'c':n,'C':o,'d':p,'v0':q,'vt':r} for i in smaller['a'] for j in smaller['b'] \
     for k in smaller['vr'] for l in smaller['vpeak'] \
     for m in smaller['k'] for n in smaller['c'] \
     for o in smaller['C'] for p in smaller['d'] \
     for q in smaller['v0'] for r in smaller['vt'] ]
-    # the size of this list is 59,049 approx 60,000 calls after rheobase is found.
-    # assert 3**10 == 59049
     return iter_list
 
 def parallel_method(dtc):
     from neuronunit.optimization import get_neab
-    get_neab.LEMS_MODEL_PATH = '/home/jovyan/neuronunit/neuronunit/optimization/NeuroML2/LEMS_2007One.xml'
-    #from neuronunit.models import backends
+
     from neuronunit.models.reduced import ReducedModel
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.set_attrs(dtc.attrs)
     get_neab.tests[0].prediction = dtc.rheobase
     model.rheobase = dtc.rheobase['value']
     scores = []
-
-    #scores.append(score.sort_key,score)
     from neuronunit.optimization import evaluate_as_module
     dtc = evaluate_as_module.pre_format(dtc)
-    #for k,t in dtc.
-    #get_neab.tests.parameters = dtc.vtests
     for k,t in enumerate(get_neab.tests):
         if k>1:
             t.params=dtc.vtest[k]
@@ -64,7 +52,6 @@ def parallel_method(dtc):
     return scores
 
 def dtc_to_rheo(dtc):
-    print(dtc)
     from neuronunit.models.reduced import ReducedModel
     from neuronunit.optimization import get_neab
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
@@ -75,7 +62,6 @@ def dtc_to_rheo(dtc):
     return dtc
 
 def update_dtc_pop(item_of_iter_list):
-
     from neuronunit.optimization import data_transport_container
     dtc = data_transport_container.DataTC()
     dtc.attrs = item_of_iter_list
@@ -86,21 +72,15 @@ def update_dtc_pop(item_of_iter_list):
 
 npoints = 3
 returned_list = create_list(npoints = npoints)
-assert len(returned_list) == (npoints ** 10)
-dtcpop = list(dview.map_sync(update_dtc_pop,returned_list[0:15]))
-print(dtcpop)
-scores = []
-for dtc in dtcpop:
-    dtc = dtc_to_rheo(dtc)
-    if float(dtc.rheobase['value']) > 0.0:
-        scores.append(parallel_method(dtc))
-        print(scores)
-    else:
-        print('excluded: ',dtc.attrs)
 
+dtcpop = list(dview.map_sync(update_dtc_pop,returned_list))
+print(dtcpop)
+# The mapping of rheobase search needs to be serial mapping for now, since embedded in it's functionality is a
+# a call to dview map.
+# probably this can be bypassed in the future by using zeromq's Client (by using ipyparallel's core module/code base more directly)
 dtcpop = list(map(dtc_to_rheo,dtcpop))
 print([i.rheobase for i in dtcpop])
 
-dtcpop = [i for i in dtcpop if i.rheobase > 0 ]
+dtcpop = [i for i in dtcpop if float(i.rheobase['value']) > 0.0 ]
 
 scores = list(dview.map(parallel_method,dtcpop).get())
