@@ -3,22 +3,21 @@
 ##
 
 
-#from . import get_neab
 
 import os
 from neuronunit.models import backends
 import neuronunit
 print(neuronunit.models.__file__)
 from neuronunit.models.reduced import ReducedModel
-#from ipyparallel import depend, require, dependent
+from neuronunit.optimization import get_neab
+from ipyparallel import depend, require, dependent
 import ipyparallel as ipp
 rc = ipp.Client(profile='default')
 rc[:].use_cloudpickle()
 dview = rc[:]
-LEMS_MODEL_PATH = str(os.getcwd())+'/NeuroML2/LEMS_2007One.xml'
-model = ReducedModel(LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
+model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
 #model.load_model()
-#from neuronunit.optimization import model_parameters
+
 
 class Individual(object):
     '''
@@ -37,8 +36,7 @@ class Individual(object):
         self.lookup={}
         self.rheobase=None
         self.fitness = creator.FitnessMin
-
-#@require('numpy, model_parameters, deap','random')
+@require('numpy, model_parameters, deap','random')
 def import_list(ipp):
     Individual = ipp.Reference('Individual')
     from deap import base, creator, tools
@@ -46,13 +44,11 @@ def import_list(ipp):
     import random
     history = deap.tools.History()
     toolbox = base.Toolbox()
-    from . import model_parameters
-    #from neuronunit.optimziation import model_parameters as modelp
-    #import model_parameters as modelp
+    import model_parameters as modelp
     import numpy as np
     sub_set = []
-    whole_BOUND_LOW = [ np.min(i) for i in model_parameters.model_params.values() ]
-    whole_BOUND_UP = [ np.max(i) for i in model_parameters.model_params.values() ]
+    whole_BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
+    whole_BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
     BOUND_LOW = whole_BOUND_LOW
     BOUND_UP = whole_BOUND_UP
     NDIM = len(BOUND_UP)#+1
@@ -98,10 +94,6 @@ def update_dtc_pop(pop, td):
         for i,j in enumerate(ind):
             param_dict[td[i]] = str(j)
         dtc.attrs = param_dict
-        if str(ind) not in dtc.cached_attrs:
-            dtc.cached_attrs[str(ind)] = 1
-        else:
-            dtc.cached_attrs[str(ind)] += 1
         dtc.evaluated = False
         return dtc
 
@@ -170,6 +162,8 @@ def difference(observation,prediction): # v is a tesst
     assert type(prediction) in [dict,float,int,pq.Quantity]
     ratio = unit_predictions / unit_observations
     unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
+
+
     return float(unit_delta), ratio
 
 
@@ -178,7 +172,7 @@ def pre_format(dtc):
     import copy
     dtc.vtest = None
     dtc.vtest = {}
-    from . import get_neab
+    from neuronunit.optimization import get_neab
     tests = get_neab.tests
     for k,v in enumerate(tests):
         dtc.vtest[k] = {}
@@ -197,6 +191,87 @@ def pre_format(dtc):
             dtc.vtest[k]['injected_square_current']['delay'] = 100 * pq.ms
     return dtc
 
+
+def cache_sim_runs(dtc):
+    '''
+    This could be used to stop neuronunit tests
+    from rerunning the same current injection set on the same
+    set of parameters
+    '''
+    from neuronunit.models import backends
+    from neuronunit.models.reduced import ReducedModel
+    import quantities as pq
+    import numpy as np
+    from neuronunit.optimization import get_neab
+
+    #from neuronunit.tests import get_neab
+
+
+    import copy
+    # copying here is critical for get_neab
+    tests = copy.copy(get_neab.tests)
+    vtests = pre_format(dtc)
+    if float(dtc.rheobase) > 0.0:
+        for k,t in enumerate(tests):
+            if k > 0:
+                model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURONMemory')
+                model.set_attrs(attrs = dtc.attrs)
+                # check if these attributes have been evaluated before.
+                if str(dtc.attrs) in model.lookup.keys:
+                    return dtc
+                else:
+                    score = t.judge(model,stop_on_error = False, deep_error = True)
+                    v_m = model.get_membrane_potential()
+                    print(type(v_m),'within pre evaluate, eam')
+                    if 't' not in dtc.results:
+                        dtc.results[t] = {}
+                        dtc.results[t]['v_m'] = v_m
+                    elif 't' in dtc.results:
+                        dtc.results[t]['v_m'] = v_m
+                    dtc.cached[str(dtc.attrs)] = dtc.results
+    return dtc
+
+'''
+def map_wrapper_caching(dtc):
+    import evaluate_as_module
+    from neuronunit.models import backends
+    from neuronunit.models.reduced import ReducedModel
+    import quantities as pq
+    import numpy as np
+    from neuronunit.tests import get_neab
+    #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURONMemory')
+    model.set_attrs(dtc.attrs)
+    get_neab.tests[0].prediction = dtc.rheobase
+    model.rheobase = dtc.rheobase['value']
+    if not hasattr(dtc,'cached'):
+        dtc.cached = None
+    else:
+        if str(dtc.attrs) in dtc.cached:
+            return dtc
+
+        elif str(dtc.attrs) not in dtc.cached:
+            for k,t in enumerate(get_neab.tests):
+                if k>1:
+                    t.params = dtc.vtest[k]
+                    score = t.judge(model,stop_on_error = False, deep_error = True)
+                    dtc.scores[str(t)] = score.sort_key
+                    observation = score.observation
+                    prediction = score.prediction
+                    delta = evaluate_as_module.difference(observation,prediction)
+                    dtc.differences[str(t)] = delta
+
+                    v_m = model.get_membrane_potential()
+                    print(type(v_m),'within pre evaluate, eam')
+                    if 't' not in dtc.results:
+                        dtc.results[str(t)] = {}
+                        dtc.results[str(t)]['v_m'] = v_m
+                    elif 't' in dtc.results:
+                        dtc.results[str(t)]['v_m'] = v_m
+                    dtc.cached[str(dtc.attrs)] = [ dtc.results, dtc.score.sort_key ]
+    return dtc
+'''
+'''
 def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyparallel to work.
 
     # Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
@@ -215,11 +290,9 @@ def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyp
     from neuronunit.models.reduced import ReducedModel
     import quantities as pq
     import numpy as np
-    #from neuronunit.tests import get_neab
-    LEMS_MODEL_PATH = str(os.getcwd())+'/NeuroML2/LEMS_2007One.xml'
-    model = ReducedModel(LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
+    from neuronunit.tests import get_neab
 
-    #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.load_model()
     assert type(dtc.rheobase) is not type(None)
     model.set_attrs(attrs = dtc.attrs)
@@ -318,3 +391,5 @@ def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyp
            fitness1[2],fitness1[3],\
            fitness1[4],fitness1[5],\
            fitness1[6],fitness1[7],
+
+'''

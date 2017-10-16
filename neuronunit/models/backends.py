@@ -90,28 +90,7 @@ class jNeuroMLBackend(Backend):
 
     def set_attrs(self, **attrs):
         self.model.attrs.update(attrs)
-
-    def get_membrane_potential(self):
-        self.model.run_params['nogui'] = None
-        self.model.run_params['v'] = None
-        self.model.run_params['nogui'] = True
-        self.model.run_params['v'] = True
-        results = self.local_run()
-        results['times'] = results['t']
-        results['vm'] = results['RS_pop[0]/v']
-        print(results.keys())
-        return results#['RS_pop[0]/v']#['vm']
-
-    def get_spike_count(self):
-        import neuronunit.capabilities.spike_functions as sf
-        return len(sf.get_spike_train(self.get_membrane_potential()))
-
-    def get_APs(self):
-        import neuronunit.capabilities.spike_functions as sf
-        return sf.get_spike_waveforms(self.get_membrane_potential())
-
-        #self.create_lems_model()
-        #self.set_lems_attrs(attrs)
+        self.set_lems_attrs(attrs)
 
     def set_run_params(self, **params):
         super(jNeuroMLBackend,self).set_run_params(**params)
@@ -121,9 +100,8 @@ class jNeuroMLBackend(Backend):
         self.set_run_params(injected_square_current=current)
 
     def local_run(self):
-        import os
         f = pynml.run_lems_with_jneuroml
-        self.exec_in_dir = os.getcwd()
+        self.exec_in_dir = tempfile.mkdtemp()
         results = f(self.model.lems_file_path, skip_run=self.model.skip_run,
                     nogui=self.model.run_params['nogui'],
                     load_saved_data=True, plot=False,
@@ -159,7 +137,7 @@ class NEURONBackend(Backend):
         print(1,self.model.orig_lems_file_path)
         self.load_model()
         self.unpicklable = []
-        self.unpicklable += ['h','ns','backend']
+        self.unpicklable += ['h','ns','_backend']
         self.attrs = {}
     backend = 'NEURON'
 
@@ -450,21 +428,48 @@ class NEURONBackend(Backend):
         import neuronunit.capabilities.spike_functions as sf
         return sf.get_spike_waveforms(self.get_membrane_potential())
 
+    #def get_AP_thresholds(self)
 
 class NEURONMemoryBackend(NEURONBackend):
     """A dummy backend that loads pre-computed results from RAM/heap"""
 
     def init_backend(self, results_path='.'):
+        super(NEURONMemoryBackend,self).init_backend()
         self.model.rerun = True
         self.model.results = None
         self.model.cached_params = {}
         self.model.cached_attrs = {}
         self.current = {}
 
-        super(NEURONMemoryBackend,self).init_backend()
+        super(MemoryBackend,self).init_backend()
 
     def set_attrs(self, **attrs):
-        super(NEURONMemoryBackend,self).set_attrs(**attrs)
+
+
+
+        super(MemoryBackend,self).set_attrs(**attrs)
+        #print(dir(super(MemoryBackend,self)))
+        '''
+        self.model.attrs.update(attrs)
+
+        assert type(self.model.attrs) is not type(None)
+        for h_key,h_value in attrs.items():
+            self.h('m_RS_RS_pop[0].{0} = {1}'.format(h_key,h_value))
+            self.h('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
+
+        # Below are experimental rig recording parameters.
+        # These can possibly go in a seperate method.
+
+        self.h(' { v_time = new Vector() } ')
+        self.h(' { v_time.record(&t) } ')
+        self.h(' { v_v_of0 = new Vector() } ')
+        self.h(' { v_v_of0.record(&RS_pop[0].v(0.5)) } ')
+        self.h(' { v_u_of0 = new Vector() } ')
+        self.h(' { v_u_of0.record(&m_RS_RS_pop[0].u) } ')
+
+        self.tVector = self.h.v_time
+        self.vVector = self.h.v_v_of0
+        '''
         ##
         # Empty the cache when redefining the model
         ##
@@ -477,7 +482,14 @@ class NEURONMemoryBackend(NEURONBackend):
 
     def inject_square_current(self, current):
 
-        super(NEURONMemoryBackend,self).inject_square_current(current)#
+
+        if str(self.model.attrs) not in self.cached_attrs:
+            results = super(MemoryBackend,self).local_run()#
+            self.model.cached_attrs[dict_hash(self.model.attrs)] = 1
+        else:
+            self.model.cached_attrs[dict_hash(self.model.attrs)] += 1
+
+        super(MemoryBackend,self).inject_square_current(current)#
         #
         # make this current injection value a class attribute, such that its remembered.
         #
@@ -507,9 +519,9 @@ class NEURONMemoryBackend(NEURONBackend):
             self.model.cached_params[str(self.current)]=results
             #print('the cache: {0}'.format(str(self.model.cached_params)))
 
-        #    return self.model.cached_params[str(self.current)]
-        #else:
-        return self.model.cached_params[str(self.current)]
+            return self.model.cached_params[str(self.current)]
+        else:
+            return self.model.cached_params[str(self.current)]
 
 class HasSegment(sciunit.Capability):
     """Model has a membrane segment of NEURON simulator"""
