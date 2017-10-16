@@ -1,9 +1,14 @@
-"""F/I neuronunit tests, e.g. investigating firing rates and patterns as a 
+"""F/I neuronunit tests, e.g. investigating firing rates and patterns as a
 function of input current"""
 
 
 from .base import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
-
+#from .base.optimization import get_neab
+from .. import optimization
+#print(dir(optimization))
+#from ..optimization import get_neab
+#print(get_neab)
+#get_neab = optimization.get_neab
 
 class RheobaseTest(VmTest):
     """
@@ -144,6 +149,37 @@ class RheobaseTest(VmTest):
         if self.rheobase_vm is not None:
             score.related_data['vm'] = self.rheobase_vm
 
+class DataTC(object):
+    '''
+    Data Transport Vessel
+
+    This Object class serves as a data type for storing rheobase search
+    attributes and apriori model parameters,
+    with the distinction that unlike the NEURON model this class
+    can be cheaply transported across HOSTS/CPUs
+    '''
+    def __init__(self):
+        self.lookup = {}
+        self.rheobase = None
+        self.previous = 0
+        self.run_number = 0
+        self.attrs = None
+        self.steps = None
+        self.name = None
+        self.fitness = None
+        self.scores = {}
+        self.boolean = False
+        self.initiated = False
+        self.evaluated = False
+        self.results = {}
+        self.searched = []
+        self.searchedd = {}
+        self.cached_attrs = {}
+        self.differences = {}
+        self.ratios = {}
+        self.delta = []
+        self.pickle_stream = []
+
 
 class RheobaseTestP(VmTest):
      """
@@ -174,7 +210,6 @@ class RheobaseTestP(VmTest):
      ephysprop_name = 'Rheobase'
 
      score_type = scores.RatioScore
-
      def generate_prediction(self, model):
 
         '''
@@ -186,6 +221,7 @@ class RheobaseTestP(VmTest):
         corresponding virtual model objects.
         '''
         from ipyparallel import depend, require, dependent
+        import ipyparallel as ipp
 
         def check_fix_range(dtc):
             '''
@@ -251,24 +287,19 @@ class RheobaseTestP(VmTest):
             dtc.rheobase = None
             return copy.copy(dtc)
 
-        #@require('quantities', 'get_neab', 'neuronunit')
+        @require('quantities')
         def check_current(ampl,dtc):
             '''
             Inputs are an amplitude to test and a virtual model
             output is an virtual model with an updated dictionary.
             '''
             ampl = float(ampl)
-            import quantities as pq
-            from neuronunit.optimization import get_neab
-            get_neab.LEMS_MODEL_PATH = '/home/jovyan/neuronunit/neuronunit/optimization/NeuroML2/LEMS_2007One.xml'
-            import os
-            assert os.path.isfile(get_neab.LEMS_MODEL_PATH)
-            from neuronunit.models import backends
-            from neuronunit.models.reduced import ReducedModel
-
-            model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-            model.set_attrs(dtc.attrs)
-
+            LEMS_MODEL_PATH = str(os.getcwd())+'/NeuroML2/LEMS_2007One.xml'
+            from ..models import reduced
+            from reduced import ReducedModel
+            model = ReducedModel(LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
+            print(model)
+            import pdb; pdb.set_trace()
             DELAY = 100.0*pq.ms
             DURATION = 1000.0*pq.ms
             params = {'injected_square_current':
@@ -280,15 +311,16 @@ class RheobaseTestP(VmTest):
                 uc = {'amplitude':ampl}
                 current.update(uc)
                 current = {'injected_square_current':current}
-                #print(current)
                 dtc.run_number += 1
+                #import ipyparallel as ipp
+                #model = ipp.Reference('model')
                 model.set_attrs(dtc.attrs)
                 model.name = dtc.attrs
                 model.inject_square_current(current)
                 dtc.previous = ampl
                 n_spikes = model._backend.get_spike_count()
                 dtc.lookup[float(ampl)] = n_spikes
-                name = str('rheobase {0} parameters {1}'.format(str(current),str(model.params)))
+                #name = str('rheobase {0} parameters {1}'.format(str(current),str(model.params)))
 
 
                 if n_spikes == 1:
@@ -300,11 +332,10 @@ class RheobaseTestP(VmTest):
             if float(ampl) in dtc.lookup:
                 return dtc
 
-        #from itertools import repeat
         import numpy as np
         import copy
-        import pdb
-        from neuronunit.optimization import get_neab
+        #import pdb
+        #import get_neab
 
         @require('itertools','numpy','copy')
         def init_dtc(dtc):
@@ -316,7 +347,6 @@ class RheobaseTestP(VmTest):
                     dtc.steps = [ 0.75 * dtc.steps, 1.25 * dtc.steps ]
                 elif type(dtc.steps) is type(list):
                     dtc.steps = [ s * 1.25 for s in dtc.steps ]
-                #assert len(dtc.steps) > 1
                 dtc.initiated = True # logically unnecessary but included for readibility
 
             if dtc.initiated == False:
@@ -328,8 +358,8 @@ class RheobaseTestP(VmTest):
                 dtc.steps = steps_current
                 dtc.initiated = True
             return dtc
-        @require('neuronunit','get_neab','itertools')
 
+        @require('itertools')
         def find_rheobase(self,dtc):
             import ipyparallel as ipp
             rc = ipp.Client(profile='default')
@@ -354,9 +384,8 @@ class RheobaseTestP(VmTest):
                 cnt += 1
             return dtc
 
-        from neuronunit.optimization import data_transport_container
-        dtc = data_transport_container.DataTC()
-        #dtc = DataTC()
+
+        dtc = DataTC()
         dtc.attrs = {}
         for k,v in model.attrs.items():
             dtc.attrs[k]=v
