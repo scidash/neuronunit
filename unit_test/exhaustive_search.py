@@ -2,8 +2,11 @@ import unittest
 import os
 import quantities as pq
 import numpy as np
-
-os.system('ipcluster start -n 8 --profile=default & sleep 25; python stdout_worker.py &')
+import importlib
+#importlib.machinery
+#import os
+#importlib.machinery.SourceFileLoader('neuronunit', os.getcwd()+str('../'))
+#os.system('ipcluster start -n 8 --profile=default & sleep 25; python stdout_worker.py &')
 import ipyparallel as ipp
 rc = ipp.Client(profile='default')
 rc[:].use_cloudpickle()
@@ -31,7 +34,7 @@ def create_list(npoints=3):
 
 def parallel_method(dtc):
     from neuronunit.optimization import get_neab
-    get_neab.LEMS_MODEL_PATH = '/home/jovyan/neuronunit/neuronunit/optimization/NeuroML2/LEMS_2007One.xml'
+    #get_neab.LEMS_MODEL_PATH = '/home/jovyan/neuronunit/neuronunit/optimization/NeuroML2/LEMS_2007One.xml'
     from neuronunit.models.reduced import ReducedModel
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.set_attrs(dtc.attrs)
@@ -69,11 +72,11 @@ def update_dtc_pop(item_of_iter_list):
 npoints = 5
 returned_list = create_list(npoints = npoints)
 assert len(returned_list) == (npoints ** 10)
-dtcpop = list(dview.map_sync(update_dtc_pop,returned_list))
+dtcpop = list(dview.map_sync(update_dtc_pop,returned_list[0:2]))
 print(dtcpop)
-# The mapping of rheobase search needs to be serial mapping for now, since embedded in it's functionality is a 
+# The mapping of rheobase search needs to be serial mapping for now, since embedded in it's functionality is a
 # a call to dview map.
 # probably this can be bypassed in the future by using zeromq's Client (by using ipyparallel's core module/code base more directly)
 dtcpop = list(map(dtc_to_rheo,dtcpop))
 print([i.rheobase for i in dtcpop])
-scores = list(dview.map(parallel_method,dtcpop).get())
+scores = list(dview.map_sync(parallel_method,dtcpop))
