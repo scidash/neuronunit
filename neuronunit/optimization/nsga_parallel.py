@@ -9,7 +9,7 @@ from numpy import random
 import numpy as np
 
 import sys
-os.system('ipcluster start -n 8 --profile=default & sleep 15 ; python stdout_worker.py &')
+os.system('ipcluster start -n 8 --profile=default & sleep 35 ; python stdout_worker.py &')
 
 
 import ipyparallel as ipp
@@ -21,25 +21,33 @@ from ipyparallel import depend, require, dependent
 
 def fix_path():
     import sys
+    import os
     THIS_DIR = os.path.dirname(os.path.realpath('nsga_parallel.py'))
     this_nu = os.path.join(THIS_DIR,'../../')
     sys.path.insert(0,this_nu)
     #from neuronunit.optimization import get_neab
     #first call to get_neab has to be synchronous
-fix_path()
-
-dview.wait()
 dview.apply_sync(fix_path)
+print('a0 hmmm')
+fix_path()
+dview.wait()
+print('a wtfish?')
+
 from neuronunit.optimization import get_neab
-from neuronunit import tests
+print('a1')
+
+#from neuronunit import tests
+print('a2')
+
 #from deap import hypervolume
 
 def dtc_to_rheo(dtc):
     from neuronunit.models.reduced import ReducedModel
     from neuronunit.optimization import get_neab
     from neuronunit.optimization import evaluate_as_module
+    LEMS_MODEL_PATH = str(os.getcwd())+'/NeuroML2/LEMS_2007One.xml'
+    model = ReducedModel(LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
 
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.set_attrs(dtc.attrs)
     #dtc.scores = None
     #dtc.scores = {}
@@ -66,8 +74,10 @@ def map_wrapper(dtc):
 
     from neuronunit.models.reduced import ReducedModel
     from neuronunit.optimization import get_neab
+    LEMS_MODEL_PATH = str(os.getcwd())+'/NeuroML2/LEMS_2007One.xml'
+    model = ReducedModel(LEMS_MODEL_PATH,name='vanilla',backend='NEURONMemory')
 
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURONMemory')
+    #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURONMemory')
     model.set_attrs(dtc.attrs)
     dtc.cached_attrs.update(model.cached_attrs)
     get_neab.tests[0].prediction = dtc.rheobase
@@ -173,9 +183,14 @@ def update_pop(pop):
 MU = 6; NGEN = 4; CXPB = 0.9
 #def main(MU=12, NGEN=4, CXPB=0.9):
 import deap
+
+print('b')
+import pdb; pdb.set_trace()
 from neuronunit.optimization import model_parameters
+print('c')
 
 from neuronunit.optimization import evaluate_as_module
+print('d')
 
 #import model_parameters
 
@@ -186,12 +201,14 @@ update_dtc_pop = evaluate_as_module.update_dtc_pop
 param_dict = model_parameters.model_params
 get_trans_dict = evaluate_as_module.get_trans_dict
 td = get_trans_dict(param_dict)
+print('e')
 
 dview.push({'td':td })
 
 pop = toolbox.population(n = MU)
 pop = [ toolbox.clone(i) for i in pop ]
 dview.scatter('Individual',pop)
+print('f')
 
 dtcpop = update_pop(pop)
 
@@ -200,6 +217,7 @@ print(dtcpop,fitnesses)
 for ind, fit in zip(pop, fitnesses):
     ind.fitness.values = fit
 pop = tools.selNSGA2(pop, MU)
+print('g')
 
 # only update the history after crowding distance has been assigned
 deap.tools.History().update(pop)
@@ -211,6 +229,7 @@ stats = tools.Statistics(lambda ind: ind.fitness.values)
 stats.register("min", np.min, axis=0)
 stats.register("max", np.max, axis=0)
 stats.register("avg", np.mean, axis=0)
+print('h')
 
 logbook = tools.Logbook()
 logbook.header = "gen", "evals", "std", "min", "avg", "max"
@@ -218,6 +237,7 @@ logbook.header = "gen", "evals", "std", "min", "avg", "max"
 record = stats.compile(pop)
 logbook.record(gen=0, evals=len(pop), **record)
 print(logbook.stream)
+print('i')
 
 
 verbose = True
@@ -225,6 +245,7 @@ means = np.array(logbook.select('avg'))
 #difference_progress = []
 gen = 1
 #difference_progress.append(np.mean([v for dtc in dtcpop for v in dtc.differences.values()  ]))
+print('j')
 
 verbose = True
 difference_progress = []

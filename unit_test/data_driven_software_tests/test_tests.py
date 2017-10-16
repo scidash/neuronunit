@@ -5,19 +5,10 @@ import os,sys
 old = str(os.getcwd())
 this_nu = os.path.join(str(os.getcwd()),'../../')
 sys.path.insert(0,this_nu)
-#from neuronunit.optimization import data_transport_container
-#dtc = data_transport_container.DataTC
-#import pickle
-#with open('opt_run_data.p','rb') as handle:
-#    valued = pickle.load(handle)
-
 
 class TestsTestCase(object):
     """Abstract base class for testing tests"""
-    #import pdb;
-    #pdb.set_trace()
 
-    #DataTC = data_transport_container.DataTC()
 
     def setUp(self):
         self.dtcpop = None
@@ -25,13 +16,9 @@ class TestsTestCase(object):
         self.pf = None
         self.logbook = None
         self.params = {}
-        self.prediction = None
+        self.prediction = {}
         from neuronunit.models.reduced import ReducedModel
-        #from neuronunit.model_tests import ReducedModelTestCase
-        #path = ReducedModelTestCase().path
         path = os.getcwd()+str('/NeuroML2/LEMS_2007One.xml')
-        print(path)
-        #self.model = ReducedModel(path, backend='jNeuroML')
         self.model = ReducedModel(path, backend='NEURON')
 
 
@@ -98,7 +85,6 @@ class TestsTestCase(object):
 
         to_r_s = unit_observations.units
         unit_predictions = unit_predictions.rescale(to_r_s)
-        #unit_observations = unit_observations.rescale(to_r_s)
         unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
 
         ##
@@ -147,13 +133,13 @@ class TestsTestCase(object):
         html_file.close()
         import os
         #os.system('sudo /opt/conda/bin/pip install cufflinks')
-        import cufflinks as cf
-        import plotly.tools as tls
-        import plotly.plotly as py
+        #import cufflinks as cf
+        #import plotly.tools as tls
+        #import plotly.plotly as py
 
-        tls.embed('https://plot.ly/~cufflinks/8')
-        py.sign_in('RussellJarvis','FoyVbw7Ry3u4N2kCY4LE')
-        df.iplot(kind='bar', barmode='stack', yTitle=str(test)+str(' ')+str(score.sort_key), title='tests_agreement_table_{0}{1}'.format(test,score.sort_key), filename='grouped-bar-chart-{0}'.format(str(par['C'])))
+        #tls.embed('https://plot.ly/~cufflinks/8')
+        #py.sign_in('RussellJarvis','FoyVbw7Ry3u4N2kCY4LE')
+        #df.iplot(kind='bar', barmode='stack', yTitle=str(test)+str(' ')+str(score.sort_key), title='tests_agreement_table_{0}{1}'.format(test,score.sort_key), filename='grouped-bar-chart-{0}'.format(str(par['C'])))
         return df, html
 
     def run_test(self, cls):
@@ -175,10 +161,7 @@ class TestsTestCase(object):
 
             score = test.judge(self.model,stop_on_error = True, deep_error = True)
             df, html = self.bar_char_out(score,str(test),par)
-            print(score.related_data['vm'])
-            print(self.model.get_AP_thresholds())
-            print(self.model.get_AP_amplitudes())
-            print(self.model.get_AP_widths())
+
             print(df)
         score.summarize()
         return score.score
@@ -187,7 +170,20 @@ class TestsPassiveTestCase(TestsTestCase, unittest.TestCase):
     """Test passive validation tests"""
     #def test_0optimizer(self):
 
+    def test_0rheobase_parallel(self):
+        import os
+        os.system('ipcluster start -n 8 --profile=default & sleep 25; ')
 
+        #from neuronunit.optimization import data_transport_container
+        from neuronunit.tests import fi
+        T = fi.RheobaseTestP()
+
+        #from neuronunit.tests.fi import RheobaseTestP as T
+        score = self.run_test(T)
+        self.prediction = score.prediction['value']
+        self.assertTrue( score.prediction['value'] == 106.4453125 or score.prediction['value'] ==131.34765625)
+        return score.prediction
+    '''
     def test_1inputresistance(self):
         #from neuronunit.optimization import data_transport_container
 
@@ -215,10 +211,20 @@ class TestsPassiveTestCase(TestsTestCase, unittest.TestCase):
         from neuronunit.tests.passive import TimeConstantTest as T
         score = self.run_test(T)
         #self.assertTrue(-1.45 < score < -1.35)
-
+    '''
 
 class TestsWaveformTestCase(TestsTestCase, unittest.TestCase):
     """Test passive validation tests"""
+    '''
+    def setUp(self):
+        self.params = {}
+        self.prediction = {}
+        self.score = None
+        from neuronunit.models.reduced import ReducedModel
+        path = os.getcwd()+str('/NeuroML2/LEMS_2007One.xml')
+        self.model = ReducedModel(path, backend='NEURON')
+    '''
+
 
     def test_0rheobase_parallel(self):
         import os
@@ -228,23 +234,24 @@ class TestsWaveformTestCase(TestsTestCase, unittest.TestCase):
 
         from neuronunit.tests.fi import RheobaseTestP as T
         score = self.run_test(T)
-        self.prediction = score.prediction
+        self.prediction = score.prediction['value']
         self.assertTrue( score.prediction['value'] == 106.4453125 or score.prediction['value'] ==131.34765625)
+        return score.prediction
 
-    def update_amplitude(test):
-        rheobase = self.prediction['value']#first find a value for rheobase
-        test.params['injected_square_current']['amplitude'] = rheobase*1.01
+    def update_amplitude(self,test):
+        #print(self.prediction)
+        #import pdb; pdb.set_trace()
+        #print(self.prediction)
+        #rheobase = float(self.prediction['value'])#first find a value for rheobase
+        test.params['injected_square_current']['amplitude'] = self.prediction['value']
+        # self.test_0rheobase_parallel()*1.01
 
-    def test_missing(self):
-        print(dir(self.model))
-        print(self.model.get_AP_thresholds())
-        print(self.model.get_AP_amplitudes())
-        print(self.model.get_AP_widths())
 
     def test_5ap_width(self):
         #from neuronunit.optimization import data_transport_container
 
         from neuronunit.tests.waveform import InjectedCurrentAPWidthTest as T
+        print(self.prediction)
         self.update_amplitude(T)
         score = self.run_test(T)
         #self.assertTrue(-0.6 < score < -0.5)
@@ -282,14 +289,15 @@ class TestsFITestCase(TestsTestCase, unittest.TestCase):
 
     def test_0rheobase_parallel(self):
         import os
-        os.system('ipcluster start -n 8 --profile=default & sleep 35 ')
+        os.system('ipcluster start -n 8 --profile=default & sleep 15 ')
 
         #from neuronunit.optimization import data_transport_container
 
         from neuronunit.tests.fi import RheobaseTestP as T
         score = self.run_test(T)
         #score.prediction
-        self.prediction = score.prediction
+        super(TestsFITestCase,self).prediction = score.prediction
+        #super()
         self.assertTrue( score.prediction['value'] == 106.4453125 or score.prediction['value'] ==131.34765625)
 
 

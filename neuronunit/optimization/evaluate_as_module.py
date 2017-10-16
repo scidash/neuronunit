@@ -3,19 +3,20 @@
 ##
 
 
+#from . import get_neab
 
 import os
 from neuronunit.models import backends
 import neuronunit
 print(neuronunit.models.__file__)
 from neuronunit.models.reduced import ReducedModel
-from neuronunit.optimization import get_neab
 #from ipyparallel import depend, require, dependent
 import ipyparallel as ipp
 rc = ipp.Client(profile='default')
 rc[:].use_cloudpickle()
 dview = rc[:]
-model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
+LEMS_MODEL_PATH = str(os.getcwd())+'/NeuroML2/LEMS_2007One.xml'
+model = ReducedModel(LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
 #model.load_model()
 #from neuronunit.optimization import model_parameters
 
@@ -45,7 +46,7 @@ def import_list(ipp):
     import random
     history = deap.tools.History()
     toolbox = base.Toolbox()
-    from neuronunit.optimization import model_parameters
+    from . import model_parameters
     #from neuronunit.optimziation import model_parameters as modelp
     #import model_parameters as modelp
     import numpy as np
@@ -177,7 +178,7 @@ def pre_format(dtc):
     import copy
     dtc.vtest = None
     dtc.vtest = {}
-    from neuronunit.optimization import get_neab
+    from . import get_neab
     tests = get_neab.tests
     for k,v in enumerate(tests):
         dtc.vtest[k] = {}
@@ -214,9 +215,11 @@ def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyp
     from neuronunit.models.reduced import ReducedModel
     import quantities as pq
     import numpy as np
-    from neuronunit.tests import get_neab
+    #from neuronunit.tests import get_neab
+    LEMS_MODEL_PATH = str(os.getcwd())+'/NeuroML2/LEMS_2007One.xml'
+    model = ReducedModel(LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
 
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+    #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.load_model()
     assert type(dtc.rheobase) is not type(None)
     model.set_attrs(attrs = dtc.attrs)
@@ -315,5 +318,3 @@ def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyp
            fitness1[2],fitness1[3],\
            fitness1[4],fitness1[5],\
            fitness1[6],fitness1[7],
-
-'''
