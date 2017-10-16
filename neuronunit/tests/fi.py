@@ -294,12 +294,13 @@ class RheobaseTestP(VmTest):
             output is an virtual model with an updated dictionary.
             '''
             ampl = float(ampl)
+            import os
             LEMS_MODEL_PATH = str(os.getcwd())+'/NeuroML2/LEMS_2007One.xml'
-            from ..models import reduced
+            from neuronunit.models import reduced
             from reduced import ReducedModel
             model = ReducedModel(LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
-            print(model)
-            import pdb; pdb.set_trace()
+            #print(model)
+            #import pdb; pdb.set_trace()
             DELAY = 100.0*pq.ms
             DURATION = 1000.0*pq.ms
             params = {'injected_square_current':
