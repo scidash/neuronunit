@@ -28,9 +28,6 @@ def create_list(npoints=3):
     all_keys = [ key for key in mp.keys() ]
     smaller = {}
     smaller = sample_points(mp, npoints=npoints)
-    #return iter_list
-    # First create a smaller subet of the larger parameter dictionary.
-    #
 
 
 
@@ -78,14 +75,7 @@ def dtc_to_rheo(dtc):
     return dtc
 
 def update_dtc_pop(item_of_iter_list):
-    '''
-    inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
-    outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
-    Rationale, not every gene value will result in a model for which rheobase is found, in which case that gene is discarded, however to
-    compensate for losses in gene population size, more gene samples must be tested for a successful return from a rheobase search.
-    If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
-    corresponding virtual model objects.
-    '''
+
     from neuronunit.optimization import data_transport_container
     dtc = data_transport_container.DataTC()
     dtc.attrs = item_of_iter_list
@@ -94,11 +84,23 @@ def update_dtc_pop(item_of_iter_list):
     dtc.evaluated = False
     return dtc
 
-npoints = 5
+npoints = 3
 returned_list = create_list(npoints = npoints)
 assert len(returned_list) == (npoints ** 10)
-dtcpop = list(dview.map_sync(update_dtc_pop,returned_list))
+dtcpop = list(dview.map_sync(update_dtc_pop,returned_list[0:15]))
 print(dtcpop)
+scores = []
+for dtc in dtcpop:
+    dtc = dtc_to_rheo(dtc)
+    if float(dtc.rheobase['value']) > 0.0:
+        scores.append(parallel_method(dtc))
+        print(scores)
+    else:
+        print('excluded: ',dtc.attrs)
+
 dtcpop = list(map(dtc_to_rheo,dtcpop))
 print([i.rheobase for i in dtcpop])
+
+dtcpop = [i for i in dtcpop if i.rheobase > 0 ]
+
 scores = list(dview.map(parallel_method,dtcpop).get())
