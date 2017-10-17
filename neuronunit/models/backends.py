@@ -9,6 +9,7 @@ import tempfile
 import pickle
 import importlib
 import shelve
+import subprocess
 
 import neuronunit.capabilities as cap
 from quantities import ms, mV, nA
@@ -17,8 +18,13 @@ from quantities import ms, mV
 from neo.core import AnalogSignal
 import neuronunit.capabilities.spike_functions as sf
 import sciunit
-from sciunit.utils import dict_hash
-
+from sciunit.utils import dict_hash, import_module_from_path
+try:
+    import neuron
+    from neuron import h
+    NEURON_SUPPORT = True
+except:
+    NEURON_SUPPORT = False
 
 
 class Backend(object):
@@ -36,6 +42,7 @@ class Backend(object):
         self.use_disk_cache = kwargs.get('use_disk_cache', False)
         if self.use_disk_cache:
             self.init_disk_cache()
+        #print(2)
         self.load_model()
         
     #attrs = None
@@ -140,6 +147,10 @@ class Backend(object):
             pickle.dump(self.results,f)
 
 
+class BackendException(Exception):
+    pass
+
+
 class jNeuroMLBackend(Backend):
     """Used for simulation with jNeuroML, a reference simulator for NeuroML"""
 
@@ -187,14 +198,16 @@ class NEURONBackend(Backend):
     """
 
     def init_backend(self, attrs=None):    
+        if not NEURON_SUPPORT:
+            raise BackendException("The neuron module was not successfully imported")
         self.neuron = None
         self.model_path = None
-        from neuron import h
         self.h = h
         #Should check if MPI parallel neuron is supported and invoked.
         self.h.load_file("stdlib.hoc")
         self.h.load_file("stdgui.hoc")
         self.lookup = {}
+        #print(1)
         super(NEURONBackend,self).init_backend()
         self.model.unpicklable += ['h','ns','_backend']
     
@@ -322,8 +335,32 @@ class NEURONBackend(Backend):
 
         return vTarget
 
+    def load(self):
+        nrn_path = os.path.splitext(self.model.orig_lems_file_path)[0]+'_nrn.py'
+        #import neuron # This is necessary to avoid a segmentation fault
+        nrn = import_module_from_path(nrn_path)
+        #print(4)
+        self.reset_neuron(nrn.neuron)
+        #print(5)#make sure mechanisms are loaded
+        modeldirname = os.path.dirname(self.model.orig_lems_file_path)
+        #if load_mechanisms:
+        #    self.neuron.load_mechanisms(modeldirname)
+        self.set_stop_time(1600*ms)
+        self.h.tstop
+        #print(6)
+        #curr_dir = os.getcwd()
+        # Set to the directory with the module because this will also have
+        # the compiled files that NEURON needs to run the simulatuon.   
+        #os.chdir(self.exec_in_dir)
+        #print(os.getcwd())
+        self.ns = nrn.NeuronSimulation(self.h.tstop, dt=0.0025)
+        #os.chdir(curr_dir)
+        #print(7)
 
-    def load_model(self):
+    def load_mechanisms(self):
+        neuron.load_mechanisms(self.neuron_model_dir)
+
+    def load_model(self, verbose=True):
         """
         Inputs: NEURONBackend instance object
         Outputs: nothing mutates input object.
@@ -335,46 +372,37 @@ class NEURONBackend(Backend):
         loop its a tolerable performance hit.
         """
         
-        DEFAULTS={}
-        DEFAULTS['v']=True
         #Create a pyhoc file using jneuroml to convert from NeuroML to pyhoc.
         #import the contents of the file into the current names space.
-        def cond_load(load_mechanisms=True):
-            nrn_name = os.path.splitext(self.model.orig_lems_file_path)[0]
-            nrn_path,nrn_name = os.path.split(nrn_name)
-            sys.path.append(nrn_path)
-            import importlib
-            nrn = importlib.import_module(nrn_name + '_nrn')
-            self.reset_neuron(nrn.neuron)
-            #make sure mechanisms are loaded
-            modeldirname = os.path.dirname(self.model.orig_lems_file_path)
-            if load_mechanisms:
-                self.neuron.load_mechanisms(modeldirname)
-            self.set_stop_time(1600*ms)
-            self.h.tstop
-            self.ns = nrn.NeuronSimulation(self.h.tstop, dt=0.0025)
-            return self
+        
         
         #The code block below does not actually function:
         #architecture = platform.machine()
         base_name = os.path.splitext(self.model.orig_lems_file_path)[0]
         NEURON_file_path ='{0}_nrn.py'.format(base_name)
 
+        self.neuron_model_dir = os.path.dirname(self.model.orig_lems_file_path)
         if not os.path.exists(NEURON_file_path):
-            self.exec_in_dir = tempfile.mkdtemp()
+            #print(2.5)
+            # Generate NEURON scripts.  
             pynml.run_lems_with_jneuroml_neuron(self.model.orig_lems_file_path,
                               skip_run=False,
-                              nogui=False,
+                              nogui=True,
                               load_saved_data=False,
-                              only_generate_scripts = True,
+                              only_generate_scripts=True,
                               plot=False,
                               show_plot_already=False,
-                              exec_in_dir = self.exec_in_dir,
-                              verbose=DEFAULTS['v'],
+                              exec_in_dir = self.neuron_model_dir,
+                              verbose=verbose,
                               exit_on_fail = True)
-            self = cond_load(load_mechanisms=False)
-        else:
-            self = cond_load(load_mechanisms=False)
+            subprocess.run(["cd %s; nrnivmodl" % self.neuron_model_dir],shell=True)
+            self.load_mechanisms()
+        elif os.path.realpath(os.getcwd()) != os.path.realpath(self.neuron_model_dir):
+            # Load mechanisms unless they've already been loaded
+            self.load_mechanisms()
+
+        #print(3)
+        self.load()
 
         #Although the above approach successfuly instantiates a LEMS/neuroml model in pyhoc
         #the resulting hoc variables for current source and cell name are idiosyncratic (not generic).
