@@ -20,21 +20,26 @@ def sample_points(iter_dict, npoints=3):
         replacement[k] = sample_points
     return replacement
 
-def create_list(npoints=3):
+def create_grid(npoints=3,nparams=7):
     from neuronunit.optimization import model_parameters as modelp
+    from sklearn.grid_search import ParameterGrid
     mp = modelp.model_params
+    # smaller is a dictionary thats not necessarily as big
+    # as the grid defined in the model_params file. Its not necessarily
+    # a smaller dictionary, if it is smaller it is reduced by reducing sampling
+    # points.
     smaller = {}
     smaller = sample_points(mp, npoints=npoints)
-    iter_list=[ {'a':i,'b':j,'vr':k,'vpeak':l,'k':m,'c':n,'C':o,'d':p,'v0':q,'vt':r} for i in smaller['a'] for j in smaller['b'] \
-    for k in smaller['vr'] for l in smaller['vpeak'] \
-    for m in smaller['k'] for n in smaller['c'] \
-    for o in smaller['C'] for p in smaller['d'] \
-    for q in smaller['v0'] for r in smaller['vt'] ]
-    return iter_list
+    key_list = list(smaller.keys())
+    reduced_key_list = key_list[0:nparams]
+    # subset is reduced, by reducing parameter keys.
+    subset = { k:smaller[k] for k in reduced_key_list }
+    grid = list(ParameterGrid(subset))
+    return grid
 
 def parallel_method(dtc):
     from neuronunit.optimization import get_neab
-    #get_neab.LEMS_MODEL_PATH = '/home/jovyan/neuronunit/neuronunit/optimization/NeuroML2/LEMS_2007One.xml'
+
     from neuronunit.models.reduced import ReducedModel
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.set_attrs(dtc.attrs)
@@ -69,16 +74,17 @@ def update_dtc_pop(item_of_iter_list):
     dtc.evaluated = False
     return dtc
 
-npoints = 5
-returned_list = create_list(npoints = npoints)
-assert len(returned_list) == (npoints ** 10)
-dtcpop = list(dview.map_sync(update_dtc_pop,returned_list[0:2]))
+npoints = 2
+nparams = 2
+returned_list = create_grid(npoints = npoints,nparams=nparams)
+
+dtcpop = list(dview.map_sync(update_dtc_pop,returned_list))
 print(dtcpop)
 # The mapping of rheobase search needs to be serial mapping for now, since embedded in it's functionality is a
 # a call to dview map.
 # probably this can be bypassed in the future by using zeromq's Client (by using ipyparallel's core module/code base more directly)
 dtcpop = list(map(dtc_to_rheo,dtcpop))
-
-dtcpop = list(filter(lambda dtc:if dtc.rheobase['value'] > 0.0 , dtcpop))
+#dtcpop = [i for i in dtcpop if float(i.rheobase['value']) > 0.0 ]
+filtered_dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] <= 0.0 , dtcpop))
 #print([i.rheobase for i in dtcpop])
-scores = list(dview.map_sync(parallel_method,dtcpop))
+scores = list(dview.map_sync(parallel_method,filtered_dtcpop))
