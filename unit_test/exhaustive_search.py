@@ -20,18 +20,26 @@ def sample_points(iter_dict, npoints=3):
         replacement[k] = sample_points
     return replacement
 
-def create_list(npoints=3):
+def create_grid(npoints=3,nparams=7):
     from neuronunit.optimization import model_parameters as modelp
     mp = modelp.model_params
     smaller = {}
     smaller = sample_points(mp, npoints=npoints)
+    key_list = list(mp.keys())
+    reduced_key_list = key_list[0:nparams]
+    subset = { k:mp[k] for k in reduced_key_list }
+    from sklearn.grid_search import ParameterGrid
+    grid = list(ParameterGrid(subset))
+
+    '''
     # First create a smaller subet of the larger parameter diction
     iter_list=[ {'a':i,'b':j,'vr':k,'vpeak':l,'k':m,'c':n,'C':o,'d':p,'v0':q,'vt':r} for i in smaller['a'] for j in smaller['b'] \
     for k in smaller['vr'] for l in smaller['vpeak'] \
     for m in smaller['k'] for n in smaller['c'] \
     for o in smaller['C'] for p in smaller['d'] \
     for q in smaller['v0'] for r in smaller['vt'] ]
-    return iter_list
+    '''
+    return grid
 
 def parallel_method(dtc):
     from neuronunit.optimization import get_neab
@@ -71,7 +79,8 @@ def update_dtc_pop(item_of_iter_list):
     return dtc
 
 npoints = 3
-returned_list = create_list(npoints = npoints)
+nparams = 5
+returned_list = create_grid(npoints = npoints,nparams=nparams)
 
 dtcpop = list(dview.map_sync(update_dtc_pop,returned_list))
 print(dtcpop)
