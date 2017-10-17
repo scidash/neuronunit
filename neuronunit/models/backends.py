@@ -281,7 +281,7 @@ class NEURONBackend(Backend):
         DEFAULTS['v']=True
         #Create a pyhoc file using jneuroml to convert from NeuroML to pyhoc.
         #import the contents of the file into the current names space.
-        def cond_load():
+        def load():
             nrn_name = os.path.splitext(self.model.orig_lems_file_path)[0]
             nrn_path,nrn_name = os.path.split(nrn_name)
             sys.path.append(nrn_path)
@@ -295,7 +295,7 @@ class NEURONBackend(Backend):
             self.set_stop_time(1600*ms)
             self.h.tstop
             self.ns = nrn.NeuronSimulation(self.h.tstop, dt=0.0025)
-            return self
+            #return self
 
 
         #The code block below does not actually function:
@@ -304,12 +304,10 @@ class NEURONBackend(Backend):
         NEURON_file_path ='{0}_nrn.py'.format(base_name)
 
         if os.path.exists(NEURON_file_path):
-
-            self = cond_load()
-
+            load()
 
         else:
-            self.exec_in_dir = tempfile.mkdtemp()
+            #self.exec_in_dir = tempfile.mkdtemp()
             pynml.run_lems_with_jneuroml_neuron(self.model.orig_lems_file_path,
                               skip_run=False,
                               nogui=False,
@@ -320,8 +318,9 @@ class NEURONBackend(Backend):
                               exec_in_dir = self.exec_in_dir,
                               verbose=DEFAULTS['v'],
                               exit_on_fail = True)
-
-            self = cond_load()
+            import os
+            os.system('nrnivmodl')
+            load()
 
         #Although the above approach successfuly instantiates a LEMS/neuroml model in pyhoc
         #the resulting hoc variables for current source and cell name are idiosyncratic (not generic).
@@ -448,28 +447,6 @@ class NEURONMemoryBackend(NEURONBackend):
 
 
         super(MemoryBackend,self).set_attrs(**attrs)
-        #print(dir(super(MemoryBackend,self)))
-        '''
-        self.model.attrs.update(attrs)
-
-        assert type(self.model.attrs) is not type(None)
-        for h_key,h_value in attrs.items():
-            self.h('m_RS_RS_pop[0].{0} = {1}'.format(h_key,h_value))
-            self.h('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
-
-        # Below are experimental rig recording parameters.
-        # These can possibly go in a seperate method.
-
-        self.h(' { v_time = new Vector() } ')
-        self.h(' { v_time.record(&t) } ')
-        self.h(' { v_v_of0 = new Vector() } ')
-        self.h(' { v_v_of0.record(&RS_pop[0].v(0.5)) } ')
-        self.h(' { v_u_of0 = new Vector() } ')
-        self.h(' { v_u_of0.record(&m_RS_RS_pop[0].u) } ')
-
-        self.tVector = self.h.v_time
-        self.vVector = self.h.v_v_of0
-        '''
         ##
         # Empty the cache when redefining the model
         ##
