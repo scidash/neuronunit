@@ -76,9 +76,9 @@ def update_dtc_pop(item_of_iter_list):
 
 npoints = 2
 nparams = 2
-returned_list = create_grid(npoints = npoints,nparams=nparams)
+grid_points = create_grid(npoints = npoints,nparams=nparams)
 
-dtcpop = list(dview.map_sync(update_dtc_pop,returned_list))
+dtcpop = list(dview.map_sync(update_dtc_pop,grid_points))
 print(dtcpop)
 # The mapping of rheobase search needs to be serial mapping for now, since embedded in it's functionality is a
 # a call to dview map.
