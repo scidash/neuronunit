@@ -74,17 +74,21 @@ def update_dtc_pop(item_of_iter_list):
     dtc.evaluated = False
     return dtc
 
-npoints = 2
-nparams = 2
-grid_points = create_grid(npoints = npoints,nparams=nparams)
+#npoints = 2
+#nparams = 2
 
-dtcpop = list(dview.map_sync(update_dtc_pop,grid_points))
-print(dtcpop)
-# The mapping of rheobase search needs to be serial mapping for now, since embedded in it's functionality is a
-# a call to dview map.
-# probably this can be bypassed in the future by using zeromq's Client (by using ipyparallel's core module/code base more directly)
-dtcpop = list(map(dtc_to_rheo,dtcpop))
-#dtcpop = [i for i in dtcpop if float(i.rheobase['value']) > 0.0 ]
-filtered_dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] <= 0.0 , dtcpop))
-#print([i.rheobase for i in dtcpop])
-scores = list(dview.map_sync(parallel_method,filtered_dtcpop))
+def run_grid(npoints=npoints,nparams=nparams):
+    # not all models will produce scores, since models with rheobase <0 are filtered out.
+    
+    grid_points = create_grid(npoints = npoints,nparams=nparams)
+    dtcpop = list(dview.map_sync(update_dtc_pop,grid_points))
+    print(dtcpop)
+    # The mapping of rheobase search needs to be serial mapping for now, since embedded in it's functionality is a
+    # a call to dview map.
+    # probably this can be bypassed in the future by using zeromq's Client (by using ipyparallel's core module/code base more directly)
+    dtcpop = list(map(dtc_to_rheo,dtcpop))
+    #dtcpop = [i for i in dtcpop if float(i.rheobase['value']) > 0.0 ]
+    filtered_dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] <= 0.0 , dtcpop))
+    #print([i.rheobase for i in dtcpop])
+    scores = list(dview.map_sync(parallel_method,filtered_dtcpop))
+    return scores
