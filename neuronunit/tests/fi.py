@@ -296,8 +296,8 @@ class RheobaseTestP(VmTest):
             ampl = float(ampl)
             import os
             LEMS_MODEL_PATH = str(os.getcwd())+'/NeuroML2/LEMS_2007One.xml'
-            from neuronunit.models import reduced
-            from reduced import ReducedModel
+            #from neuronunit.models import reduced
+            from neuronunit.models.reduced import ReducedModel
             model = ReducedModel(LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
             #print(model)
             #import pdb; pdb.set_trace()
