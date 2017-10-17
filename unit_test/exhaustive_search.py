@@ -78,5 +78,7 @@ print(dtcpop)
 # a call to dview map.
 # probably this can be bypassed in the future by using zeromq's Client (by using ipyparallel's core module/code base more directly)
 dtcpop = list(map(dtc_to_rheo,dtcpop))
-print([i.rheobase for i in dtcpop])
+
+dtcpop = list(filter(lambda dtc:if dtc.rheobase['value'] > 0.0 , dtcpop))
+#print([i.rheobase for i in dtcpop])
 scores = list(dview.map_sync(parallel_method,dtcpop))
