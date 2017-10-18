@@ -36,29 +36,35 @@ class Individual(object):
         self.lookup={}
         self.rheobase=None
         self.fitness = creator.FitnessMin
-@require('numpy, model_parameters, deap','random')
-def import_list(ipp):
+
+
+@require('numpy, deap','random')
+def import_list(ipp,subset):
     Individual = ipp.Reference('Individual')
     from deap import base, creator, tools
     import deap
     import random
     history = deap.tools.History()
     toolbox = base.Toolbox()
-    import model_parameters as modelp
     import numpy as np
-    sub_set = []
-    whole_BOUND_LOW = [ np.min(i) for i in modelp.model_params.values() ]
-    whole_BOUND_UP = [ np.max(i) for i in modelp.model_params.values() ]
-    BOUND_LOW = whole_BOUND_LOW
-    BOUND_UP = whole_BOUND_UP
-    NDIM = len(BOUND_UP)#+1
+    ##
+    # Range of the genes:
+    ##
+    BOUND_LOW = [ np.min(i) for i in subset.values() ]
+    BOUND_UP = [ np.max(i) for i in subset.values() ]
+    ##
+    # number of objectives/error functions
+    ##
+    NDIM = len(BOUND_UP)
     def uniform(low, up, size=None):
         try:
             return [random.uniform(a, b) for a, b in zip(low, up)]
         except TypeError:
             return [random.uniform(a, b) for a, b in zip([low] * size, [up] * size)]
     # weights vector should compliment a numpy matrix of eigenvalues and other values
-    creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
+    #creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
+    weights = tuple([-1.0 for i in range(0,NDIM)])
+    creator.create("FitnessMin", base.Fitness, weights=weights)
     creator.create("Individual", list, fitness=creator.FitnessMin)
     toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
     toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
@@ -67,6 +73,7 @@ def import_list(ipp):
     toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=30.0)
     toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
     return toolbox, tools, history, creator, base
+
 def update_dtc_pop(pop, td):
     '''
     inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
@@ -81,13 +88,9 @@ def update_dtc_pop(pop, td):
     from deap import base
     toolbox = base.Toolbox()
     Individual = ipp.Reference('Individual')
-
-
     pop = [toolbox.clone(i) for i in pop ]
-
-
     def transform(ind):
-        from data_transport_container import DataTC
+        from neuronunit.optimization.data_transport_container import DataTC
         dtc = DataTC()
         print(dtc)
         param_dict = {}
@@ -168,6 +171,11 @@ def difference(observation,prediction): # v is a tesst
 
 
 def pre_format(dtc):
+    '''
+    pre format the current injection dictionary based on pre computed
+    rheobase values of current injection.
+    This is much like the hooked method from the old get neab file.
+    '''
     import quantities as pq
     import copy
     dtc.vtest = None
