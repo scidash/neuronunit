@@ -50,8 +50,10 @@ def parallel_method(dtc):
     dtc = evaluate_as_module.pre_format(dtc)
     for k,t in enumerate(get_neab.tests):
         if k>1:
-            t.params=dtc.vtest[k]
+            t.params =dtc.vtest[k]
             score = t.judge(model,stop_on_error = False, deep_error = True)
+            dtc.scores[str(t)] = score.sort_key
+
             scores.append(score.sort_key)
     return scores
 
@@ -60,7 +62,11 @@ def dtc_to_rheo(dtc):
     from neuronunit.optimization import get_neab
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.set_attrs(dtc.attrs)
+    dtc.scores = {}
+
     score = get_neab.tests[0].judge(model,stop_on_error = False, deep_error = True)
+    dtc.scores[str(get_neab.tests[0])] = score.sort_key
+
     observation = score.observation
     dtc.rheobase =  score.prediction
     return dtc
@@ -77,9 +83,9 @@ def update_dtc_pop(item_of_iter_list):
 #npoints = 2
 #nparams = 2
 
-def run_grid(npoints=npoints,nparams=nparams):
+def run_grid(npoints,nparams):
     # not all models will produce scores, since models with rheobase <0 are filtered out.
-    
+
     grid_points = create_grid(npoints = npoints,nparams=nparams)
     dtcpop = list(dview.map_sync(update_dtc_pop,grid_points))
     print(dtcpop)
@@ -91,4 +97,4 @@ def run_grid(npoints=npoints,nparams=nparams):
     filtered_dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] <= 0.0 , dtcpop))
     #print([i.rheobase for i in dtcpop])
     scores = list(dview.map_sync(parallel_method,filtered_dtcpop))
-    return scores
+    return scores, dtcpop
