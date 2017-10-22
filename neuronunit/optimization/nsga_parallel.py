@@ -30,6 +30,13 @@ def dtc_to_rheo(dtc):
     from neuronunit.optimization import get_neab
     from neuronunit.optimization import evaluate_as_module
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+    #print(dtc.attrs)
+    #
+    value = dtc.attrs['b']
+    print(float(value))
+    if np.isnan(float(value)):
+        print('in rheobase')
+        import pdb; pdb.set_trace()
     model.set_attrs(dtc.attrs)
     dtc.scores = None
     dtc.scores = {}
@@ -45,13 +52,22 @@ def dtc_to_rheo(dtc):
     return dtc
 
 def map_wrapper(dtc):
-    import evaluate_as_module
+    #import evaluate_as_module
+    from neuronunit.optimization import evaluate_as_module
+
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
     import quantities as pq
     import numpy as np
     from neuronunit.optimization import get_neab
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURONMemory')
+    value = dtc.attrs['b']
+    print(value)
+
+    if np.isnan(np.float(value)):
+        print('in map wrapper')
+        import pdb; pdb.set_trace()
+
     model.set_attrs(dtc.attrs)
     get_neab.tests[0].prediction = dtc.rheobase
     model.rheobase = dtc.rheobase['value']
@@ -68,11 +84,15 @@ def map_wrapper(dtc):
     return dtc
 
 def evaluate(dtc):
-    from neuronunit.tests import get_neab
+    from neuronunit.optimization import get_neab
+    import numpy as np
     fitness = [ 100.0 for i in range(0,8)]
     for k,t in enumerate(get_neab.tests):
         try:
             assert type(dtc.scores[str(t)]) is not type(None)
+            assert not np.isnan(dtc.scores[str(t)])
+            assert dtc.rheobase['value'] <= 0.0
+
             fitness[k] = dtc.scores[str(t)]
         except:
             fitness[k] = 100.0
@@ -104,41 +124,38 @@ def update_pop(pop,td):
     Inputs a population of genes (pop).
     Returned neuronunit scored DTCs (dtcpop).
     '''
-    # It converts the population of genes to Data Transport Containers,
+    # this method converts a population of genes to a population of Data Transport Containers,
     # Which act as communicatable data types for storing model attributes.
     # Rheobase values are found on the DTCs
     # DTCs for which a rheobase value of x (pA)<=0 are filtered out
     # DTCs are then scored by neuronunit, using neuronunit models that act in place.
 
     from neuronunit.optimization import model_parameters as modelp
-    #import model_parameters
     from neuronunit.optimization import evaluate_as_module
-
     update_dtc_pop = evaluate_as_module.update_dtc_pop
     pre_format = evaluate_as_module.pre_format
-
-    #param_dict = modelp.model_params
-    #get_trans_dict = evaluate_as_module.get_trans_dict
-    #td = get_trans_dict(param_dict)
-
     dtcpop = update_dtc_pop(pop, td)
     dtcpop = list(map(dtc_to_rheo,dtcpop))
-    filtered_dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] <= 0.0 , dtcpop))
-
-    dtcpop = list(map(pre_format,filtered_dtcpop))
-    # run sciunit testsin
+    dtcpop = list(map(pre_format,dtcpop))
     dtcpop = list(dview.map_sync(map_wrapper,dtcpop))
+    assert len(dtcpop) == len(pop)
     return dtcpop
 
 
 def create_subset(nparams=10):
     from neuronunit.optimization import model_parameters as modelp
+    import numpy as np
     # modelp is a module containing a dictionary
     # model_parameters
     mp = modelp.model_params
     key_list = list(mp.keys())
     reduced_key_list = key_list[0:nparams]
     subset = { k:mp[k] for k in reduced_key_list }
+    for k,v in subset.items():
+        for t in v:
+            if np.isnan(t) == True:
+                print(t,k,v)
+                import pdb; pdb.set_trace()
     return subset
 
 def main(MU=12, NGEN=4, CXPB=0.9, nparams=10):
@@ -151,9 +168,11 @@ def main(MU=12, NGEN=4, CXPB=0.9, nparams=10):
     scores = []
 
     subset = create_subset(nparams=10)
-    toolbox, tools, history, creator, base = evaluate_as_module.import_list(ipp,subset)
+    numb_err_f = 8
+    toolbox, tools, history, creator, base = evaluate_as_module.import_list(ipp,subset,numb_err_f)
+
     dview.push({'Individual':evaluate_as_module.Individual})
-    dview.apply_sync(evaluate_as_module.import_list,ipp,subset)
+    dview.apply_sync(evaluate_as_module.import_list,ipp,subset,numb_err_f)
     get_trans_dict = evaluate_as_module.get_trans_dict
     td = get_trans_dict(subset)
     dview.push({'td':td })
@@ -163,12 +182,17 @@ def main(MU=12, NGEN=4, CXPB=0.9, nparams=10):
     dview.scatter('Individual',pop)
 
     dtcpop = update_pop(pop,td)
-    for dtc in dtcpop:
-        scores.append(dtc.scores)
+    assert len(dtcpop) == len(pop)
+
+    #for dtc in dtcpop:
+    #    scores.append(dtc.scores)
     fitnesses = list(dview.map_sync(evaluate,dtcpop))
+    assert len(fitnesses) == len(pop)
+
     print(dtcpop,fitnesses)
     for ind, fit in zip(pop, fitnesses):
         ind.fitness.values = fit
+
     pop = tools.selNSGA2(pop, MU)
 
     # only update the history after crowding distance has been assigned
@@ -223,11 +247,16 @@ def main(MU=12, NGEN=4, CXPB=0.9, nparams=10):
         # Thus waisting computation.
 
         dtcpop = update_pop(invalid_ind,td)
+        assert len(dtcpop) == len(invalid_ind)
+
         for dtc in dtcpop:
             scores.append(dtc.scores)
         fitnesses = list(dview.map_sync(evaluate,dtcpop))
+        assert len(dtcpop) == len(fitnesses)
+
         difference_progress.append(np.mean([v for dtc in dtcpop for v in dtc.differences.values()  ]))
         mf = np.mean(fitnesses)
+
 
         for ind, fit in zip(copy.copy(invalid_ind), fitnesses):
             ind.fitness.values = fit
@@ -239,10 +268,13 @@ def main(MU=12, NGEN=4, CXPB=0.9, nparams=10):
         # Selecting from a gene pool of offspring and parents accomodates for that possibility.
         # There are two selection stages as per the NSGA example.
         # https://github.com/DEAP/deap/blob/master/examples/ga/nsga2.py
-        # pop = toolbox.select(pop + offspring, MU)
+
+        #pop = toolbox.select(pop + offspring, MU)
 
 
         pop = tools.selNSGA2(offspring + pop, MU)
+        #assert len(dtcpop) == len(pop)
+
         record = stats.compile(pop)
         history.update(pop)
         logbook.record(gen=gen, evals=len(pop), **record)
@@ -256,4 +288,5 @@ def main(MU=12, NGEN=4, CXPB=0.9, nparams=10):
         print('means: {0} pareto_front first: {1} pf_mean {2}'.format(logbook.select('avg'), \
                                                             np.sum(np.mean(pf[0].fitness.values)),\
                                                             pf_mean))
-    return difference_progress, fitnesses, pf, logbook, pop, dtcpop, stats, scores
+        if gen==NGEN:
+            return difference_progress, fitnesses, pf, logbook, pop, dtcpop, stats, scores

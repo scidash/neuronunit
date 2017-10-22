@@ -88,7 +88,7 @@ class RheobaseTest(VmTest):
                 uc = {'amplitude':ampl}
                 current.update(uc)
                 model.inject_square_current(current)
-                n_spikes = model._backend.get_spike_count()
+                n_spikes = model.get_spike_count()
                 if self.verbose:
                     print("Injected %s current and got %d spikes" % \
                             (ampl,n_spikes))
@@ -319,7 +319,7 @@ class RheobaseTestP(VmTest):
                 model.name = dtc.attrs
                 model.inject_square_current(current)
                 dtc.previous = ampl
-                n_spikes = model._backend.get_spike_count()
+                n_spikes = model.get_spike_count()
                 dtc.lookup[float(ampl)] = n_spikes
                 #name = str('rheobase {0} parameters {1}'.format(str(current),str(model.params)))
 
