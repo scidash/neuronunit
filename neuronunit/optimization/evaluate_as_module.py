@@ -39,7 +39,7 @@ class Individual(object):
 
 
 @require('numpy, deap','random')
-def import_list(ipp,subset):
+def import_list(ipp,subset,NDIM):
     Individual = ipp.Reference('Individual')
     from deap import base, creator, tools
     import deap
@@ -55,7 +55,7 @@ def import_list(ipp,subset):
     ##
     # number of objectives/error functions
     ##
-    NDIM = len(BOUND_UP)
+    #NDIM = numb_err_f
     def uniform(low, up, size=None):
         try:
             return [random.uniform(a, b) for a, b in zip(low, up)]
@@ -66,7 +66,7 @@ def import_list(ipp,subset):
     weights = tuple([-1.0 for i in range(0,NDIM)])
     creator.create("FitnessMin", base.Fitness, weights=weights)
     creator.create("Individual", list, fitness=creator.FitnessMin)
-    toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
+    toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, len(BOUND_UP))
     toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     toolbox.register("select", tools.selNSGA2)
