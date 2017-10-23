@@ -10,7 +10,7 @@ import sciunit
 from sciunit.utils import dict_hash
 import neuronunit.capabilities as cap
 from pyneuroml import pynml
-from . import backends
+from neuronunit.models import backends
 
 
 class LEMSModel(sciunit.Model,
@@ -19,13 +19,15 @@ class LEMSModel(sciunit.Model,
     """A generic LEMS model"""
 
     def __init__(self, LEMS_file_path, name=None, 
-                    backend='jNeuroML', attrs=None):
+                    backend=None, attrs=None):
 
         #for base in cls.__bases__:
         #    sciunit.Model.__init__()
         if name is None:
             name = os.path.split(LEMS_file_path)[1].split('.')[0]
         #sciunit.Modelsuper(LEMSModel,self).__init__(name=name)
+        if backend is None:
+            backend = 'jNeuroML'
         self.attrs = attrs if attrs else {}
         self.orig_lems_file_path = os.path.abspath(LEMS_file_path)
         assert os.path.isfile(self.orig_lems_file_path),\
@@ -36,6 +38,7 @@ class LEMSModel(sciunit.Model,
         self.last_run_params = None
         self.skip_run = False
         self.rerun = True # Needs to be rerun since it hasn't been run yet!
+        self.unpicklable = []
         self.set_backend(backend)
 
     def get_backend(self):
@@ -76,6 +79,7 @@ class LEMSModel(sciunit.Model,
                             % name)
         self._backend.model = self
         self._backend.init_backend(*args, **kwargs)
+        self.unpicklable.append('_backend')
 
     def create_lems_file(self, name):
         if not hasattr(self,'temp_dir'):
