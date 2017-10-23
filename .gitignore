@@ -61,5 +61,8 @@ unit_test/get_tau.py
 .eggs
 htmlcov
 
-*/NeuroML2/*.py
+neuronunit/models/NeuroML2/*.py
 *.mod
+neuronunit/unit_test/bbp.py
+neuronunit/unit_test/get_tau.py
+scratch
