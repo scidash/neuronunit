@@ -16,8 +16,6 @@ rc = ipp.Client(profile='default')
 rc[:].use_cloudpickle()
 dview = rc[:]
 model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
-#model.load_model()
-
 
 class Individual(object):
     '''
@@ -36,7 +34,6 @@ class Individual(object):
         self.lookup={}
         self.rheobase=None
         self.fitness = creator.FitnessMin
-
 
 @require('numpy, deap','random')
 def import_list(ipp,subset,NDIM):
@@ -99,8 +96,6 @@ def update_dtc_pop(pop, td):
         dtc.attrs = param_dict
         dtc.evaluated = False
         return dtc
-
-
     if len(pop) > 0:
         dtcpop = list(dview.map_sync(transform, pop))
     else:
@@ -127,8 +122,6 @@ def dt_to_ind(dtc,td):
         ind.append(dtc.attrs[td[k]])
     ind.append(dtc.rheobase)
     return ind
-
-
 
 def difference(observation,prediction): # v is a tesst
     import quantities as pq
@@ -165,10 +158,7 @@ def difference(observation,prediction): # v is a tesst
     assert type(prediction) in [dict,float,int,pq.Quantity]
     ratio = unit_predictions / unit_observations
     unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
-
-
     return float(unit_delta), ratio
-
 
 def pre_format(dtc):
     '''
@@ -198,206 +188,3 @@ def pre_format(dtc):
             dtc.vtest[k]['injected_square_current']['amplitude'] = dtc.rheobase['value']
             dtc.vtest[k]['injected_square_current']['delay'] = 100 * pq.ms
     return dtc
-
-
-def cache_sim_runs(dtc):
-    '''
-    This could be used to stop neuronunit tests
-    from rerunning the same current injection set on the same
-    set of parameters
-    '''
-    from neuronunit.models import backends
-    from neuronunit.models.reduced import ReducedModel
-    import quantities as pq
-    import numpy as np
-    from neuronunit.optimization import get_neab
-
-    #from neuronunit.tests import get_neab
-
-
-    import copy
-    # copying here is critical for get_neab
-    tests = copy.copy(get_neab.tests)
-    vtests = pre_format(dtc)
-    if float(dtc.rheobase) > 0.0:
-        for k,t in enumerate(tests):
-            if k > 0:
-                model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-                model.set_attrs(attrs = dtc.attrs)
-                # check if these attributes have been evaluated before.
-                if str(dtc.attrs) in model.lookup.keys:
-                    return dtc
-                else:
-                    score = t.judge(model,stop_on_error = False, deep_error = True)
-                    v_m = model.get_membrane_potential()
-                    print(type(v_m),'within pre evaluate, eam')
-                    if 't' not in dtc.results:
-                        dtc.results[t] = {}
-                        dtc.results[t]['v_m'] = v_m
-                    elif 't' in dtc.results:
-                        dtc.results[t]['v_m'] = v_m
-                    dtc.cached[str(dtc.attrs)] = dtc.results
-    return dtc
-
-'''
-def map_wrapper_caching(dtc):
-    import evaluate_as_module
-    from neuronunit.models import backends
-    from neuronunit.models.reduced import ReducedModel
-    import quantities as pq
-    import numpy as np
-    from neuronunit.tests import get_neab
-    #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURONMemory')
-    model.set_attrs(dtc.attrs)
-    get_neab.tests[0].prediction = dtc.rheobase
-    model.rheobase = dtc.rheobase['value']
-    if not hasattr(dtc,'cached'):
-        dtc.cached = None
-    else:
-        if str(dtc.attrs) in dtc.cached:
-            return dtc
-
-        elif str(dtc.attrs) not in dtc.cached:
-            for k,t in enumerate(get_neab.tests):
-                if k>1:
-                    t.params = dtc.vtest[k]
-                    score = t.judge(model,stop_on_error = False, deep_error = True)
-                    dtc.scores[str(t)] = score.sort_key
-                    observation = score.observation
-                    prediction = score.prediction
-                    delta = evaluate_as_module.difference(observation,prediction)
-                    dtc.differences[str(t)] = delta
-
-                    v_m = model.get_membrane_potential()
-                    print(type(v_m),'within pre evaluate, eam')
-                    if 't' not in dtc.results:
-                        dtc.results[str(t)] = {}
-                        dtc.results[str(t)]['v_m'] = v_m
-                    elif 't' in dtc.results:
-                        dtc.results[str(t)]['v_m'] = v_m
-                    dtc.cached[str(dtc.attrs)] = [ dtc.results, dtc.score.sort_key ]
-    return dtc
-'''
-'''
-def evaluate(dtc,weight_matrix = None):#This method must be pickle-able for ipyparallel to work.
-
-    # Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
-    # is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
-    # value, that was found in a previous rheobase search.
-
-    # outputs: a tuple that is a compound error function that NSGA can act on.
-
-    # Assumes rheobase for each individual virtual model object (dtc) has already been found
-    # there should be a check for dtc.rheobase, and if not then error.
-    # Inputs a gene and a virtual model object.
-    # outputs are error components.
-
-
-    from neuronunit.models import backends
-    from neuronunit.models.reduced import ReducedModel
-    import quantities as pq
-    import numpy as np
-    from neuronunit.tests import get_neab
-
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-    model.load_model()
-    assert type(dtc.rheobase) is not type(None)
-    model.set_attrs(attrs = dtc.attrs)
-    model.rheobase = dtc.rheobase['value']
-
-    import copy
-    tests = copy.copy(get_neab.tests)
-    pre_fitness = []
-    fitness = []
-    differences = []
-    fitness1 = []
-
-    if float(dtc.rheobase) <= 0.0:
-        fitness1 = [ 125.0 for i in tests ]
-
-
-
-    elif float(dtc.rheobase) > 0.0:
-        for k,v in enumerate(tests):
-
-
-            # Spike width tests and amplitude tests assume a rheobase current injection which does not seem
-            # to be happening.
-
-            if k == 1 or k == 2 or k == 3:
-                # Negative square pulse current.
-                v.params['injected_square_current']['duration'] = 100 * pq.ms
-                v.params['injected_square_current']['amplitude'] = -10 *pq.pA
-                v.params['injected_square_current']['delay'] = 30 * pq.ms
-
-            if k == 0 or k == 4 or k == 5 or k == 6 or k == 7:
-                # Threshold current.
-                v.params['injected_square_current']['duration'] = 1000 * pq.ms
-                v.params['injected_square_current']['amplitude'] = dtc.rheobase['value']
-                v.params['injected_square_current']['delay'] = 100 * pq.ms
-
-            vtests = pre_format(copy.copy(dtc))
-            for key, value in vtests[k].items():
-                print('broken')
-                print(key,value,v.params)
-                #v.params['injected_square_current'][key] = value
-            #vtest[k] = {}
-            if k == 0:
-                v.prediction = None
-                v.prediction = {}
-                v.prediction['value'] = dtc.rheobase['value']
-
-            assert type(model) is not type(None)
-            score = v.judge(model,stop_on_error = False, deep_error = True)
-
-            #if type(v.prediction) is type(None):
-            #    import pdb; pdb.set_trace()
-            if type(v.prediction) is not type(None):
-                differences.append(difference(v))
-                pre_fitness.append(float(score.sort_key))
-            else:
-                differences.append(None)
-                pre_fitness.append(125.0)
-
-            model.run_number += 1
-            #dtc.results[t]
-    # outside of the test iteration block.
-        for k,f in enumerate(copy.copy(pre_fitness)):
-
-            fitness1.append(difference(v))
-
-            if k == 5:
-                from neuronunit import capabilities
-                ans = model.get_membrane_potential()
-                sw = capabilities.spikes2widths(ans)
-                unit_observations = tests[5].observation['mean']
-
-                #unit_observations = v.observation['value']
-                to_r_s = unit_observations.units
-                unit_predictions  = float(sw.rescale(to_r_s))
-                fitness1[5] = float(np.abs( np.abs(float(unit_observations))-np.abs(float(unit_predictions))))
-                #fitness1[5] = unit_delta
-            if k == 0:
-                fitness1.append(differences[0])
-            if differences[0] > 10.0:
-                if k != 0:
-                    #fitness1.append(pre_fitness[k])
-                    fitness1.append(pre_fitness[k] + 1.5 * differences[0] ) # add the rheobase error to all the errors.
-                    assert fitness1[k] != pre_fitness[k]
-            else:
-                fitness1.append(pre_fitness[k])
-            if k == 1:
-                fitness1.append(differences[1])
-            if differences[1] > 10.0 :
-                if k != 1 and len(fitness1)>1 :
-                    #fitness1.append(pre_fitness[k])
-                    fitness1.append(pre_fitness[k] + 1.25 * differences[1] ) # add the rheobase error to all the errors.
-                    assert fitness1[k] != pre_fitness[k]
-    pre_fitness = []
-    return fitness1[0],fitness1[1],\
-           fitness1[2],fitness1[3],\
-           fitness1[4],fitness1[5],\
-           fitness1[6],fitness1[7],
-
-'''
