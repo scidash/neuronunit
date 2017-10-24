@@ -60,9 +60,7 @@ class TestBackend(unittest.TestCase):
 
     def test_4_backend_inheritance_parallel(self):
         booleans = self.backend_inheritance()
-
-        booleanp = dview.apply_sync(self.backend_inheritance)#.get()#.get_dict()
-        #print(len(booleans))
+        booleanp = dview.apply_sync(self.backend_inheritance)
         self.assertEqual(booleans, booleanp[0])
 
 
@@ -95,11 +93,8 @@ class TestBackend(unittest.TestCase):
         import numpy as np
         import copy
         from neuronunit.optimization import evaluate_as_module
-        #from neuronunit.optimization import model_parameters
         from neuronunit.optimization import model_parameters as modelp
-
-        #import pdb; pdb.set_trace()
-        scores = []
+        #scores = []
         from neuronunit.optimization import nsga_parallel
         subset = nsga_parallel.create_subset(nparams=10)
         numb_err_f = 8
@@ -110,6 +105,11 @@ class TestBackend(unittest.TestCase):
         td = get_trans_dict(subset)
         dview.push({'td':td })
         pop = toolbox.population(n = MU)
+
+        self.assertEqual(len(pop),MU)
+        # test if the models correspond to unique parameters.
+        self.assertEqual(len(set(pop)),MU)
+        
         pop = [ toolbox.clone(i) for i in pop ]
         dview.scatter('Individual',pop)
         update_dtc_pop = evaluate_as_module.update_dtc_pop
