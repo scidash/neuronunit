@@ -69,8 +69,6 @@ class TestBackend(unittest.TestCase):
     def test_5ngsa(self):
         from neuronunit.optimization import nsga_object
 
-        #N = nsga_object.NSGA(10,10,10)
-        #invalid_dtc, pop, logbook, fitnesses = N.main(4,2)
         import numpy as np
         N = nsga_object.NSGA()
         NGEN = 3
@@ -183,9 +181,7 @@ class TestBackend(unittest.TestCase):
         dtcpop, pop = self.test_6_data_transport_containers_on_bulk()
         dtcpop = dtcpop[0:9]#.extend(dtcpop[-5:-1])
         pop = pop[0:9]#.extend(pop[-5:-1])
-        #dtcpop =
-        #pop = pop[-5:-1]
-        #dtcpop = nsga_parallel.dtc_to_rheo(dtcpop)
+
         from neuronunit.optimization import model_parameters as modelp
         from neuronunit.optimization import evaluate_as_module
         from neuronunit.optimization import nsga_parallel
@@ -211,7 +207,7 @@ class TestBackend(unittest.TestCase):
 
 
     def test_10ngsa(self):
-        pop,dtcpop = self.test_8ngsa_setup()
+        pop,dtcpop = self.test_9ngsa_setup()
 
     def test_11(self):
         from neuronunit.optimization import nsga_parallel
@@ -231,111 +227,3 @@ class TestBackend(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-    '''
-    #import pickle
-    #with open('opt_run_data','rb') as handle:
-    #    valued = pickle.load(handle)
-    #dtcpop, _, _ = valued
-    #self.dtcpop = dtcpop
-    def run_test(self, cls):
-        observation = self.get_observation(cls)
-        test = cls(observation=observation)
-        #for d in dtcpop:
-        #    print(d,d.attrs)
-        #    self.model.set_attrs(d.attrs)
-        score = test.judge(self.model,stop_on_error = True, deep_error = True)
-
-        score.summarize()
-        return score.score
-    '''
-
-
-'''
-class TestsPassiveTestCase(TestsTestCase, unittest.TestCase):
-    """Test passive validation tests"""
-
-    def test_inputresistance(self):
-        from neuronunit.tests.passive import InputResistanceTest as T
-        score = self.run_test(T)
-        #self.assertTrue(-0.6 < score < -0.5)
-
-    def test_restingpotential(self):
-        from neuronunit.tests.passive import RestingPotentialTest as T
-        score = self.run_test(T)
-        #self.assertTrue(1.2 < score < 1.3)
-
-    def test_capacitance(self):
-        from neuronunit.tests.passive import CapacitanceTest as T
-        score = self.run_test(T)
-        #self.assertTrue(-0.15 < score < -0.05)
-
-    def test_timeconstant(self):
-        from neuronunit.tests.passive import TimeConstantTest as T
-        score = self.run_test(T)
-        #self.assertTrue(-1.45 < score < -1.35)
-
-
-class TestsWaveformTestCase(TestsTestCase, unittest.TestCase):
-    """Test passive validation tests"""
-
-    def test_ap_width(self):
-        from neuronunit.tests.waveform import InjectedCurrentAPWidthTest as T
-        score = self.run_test(T)
-        #self.assertTrue(-0.6 < score < -0.5)
-
-    def test_ap_amplitude(self):
-        from neuronunit.tests.waveform import InjectedCurrentAPAmplitudeTest as T
-        score = self.run_test(T)
-        #self.assertTrue(-1.7 < score < -1.6)
-
-    def test_ap_threshold(self):
-        from neuronunit.tests.waveform import InjectedCurrentAPThresholdTest as T
-        score = self.run_test(T)
-        #self.assertTrue(2.25 < score < 2.35)
-
-
-class TestsFITestCase(TestsTestCase, unittest.TestCase):
-    """Test F/I validation tests"""
-
-    #@unittest.skip("This test takes a long time")
-    def test_rheobase_serial(self):
-        from neuronunit.tests.fi import T
-        score = self.run_test(T)
-        #self.assertTrue(0.2 < score < 0.3)
-
-    #@unittest.skip("This test takes a long time")
-    def test_rheobase_parallel(self):
-        from neuronunit.tests.fi import T
-        score = self.run_test(T)
-        #self.assertTrue(0.2 < score < 0.3)
-
-
-class TestsDynamicsTestCase(TestsTestCase, unittest.TestCase):
-    """Tests dynamical systems properties tests"""
-
-    @unittest.skip("This test is not yet implemented")
-    def test_threshold_firing(self):
-        from neuronunit.tests.dynamics import TFRTypeTest as T
-        #score = self.run_test(T)
-        #self.assertTrue(0.2 < score < 0.3)
-
-    @unittest.skip("This test is not yet implemented")
-    def test_rheobase_parallel(self):
-        from neuronunit.tests.dynamics import BurstinessTest as T
-        #score = self.run_test(T)
-        #self.assertTrue(0.2 < score < 0.3)
-
-
-class TestsChannelTestCase(unittest.TestCase):
-    @unittest.skip("This test is not yet implemented")
-    def test_iv_curve_ss(self):
-        from neuronunit.tests.channel import IVCurveSSTest as T
-        #score = self.run_test(T)
-        #self.assertTrue(0.2 < score < 0.3)
-
-    @unittest.skip("This test is not yet implemented")
-    def test_iv_curve_peak(self):
-        from neuronunit.tests.channel import IVCurvePeakTest as T
-        #score = self.run_test(T)
-        #self.assertTrue(0.2 < score < 0.3)
-'''
