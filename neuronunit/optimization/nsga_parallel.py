@@ -36,7 +36,7 @@ def dtc_to_rheo(dtc):
     print(float(value))
     if np.isnan(float(value)):
         print('in rheobase')
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
     model.set_attrs(dtc.attrs)
     dtc.scores = None
     dtc.scores = {}
@@ -60,7 +60,9 @@ def map_wrapper(dtc):
     import quantities as pq
     import numpy as np
     from neuronunit.optimization import get_neab
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURONMemory')
+
+
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     value = dtc.attrs['b']
     print(value)
 
@@ -71,19 +73,27 @@ def map_wrapper(dtc):
     model.set_attrs(dtc.attrs)
     get_neab.tests[0].prediction = dtc.rheobase
     model.rheobase = dtc.rheobase['value']
+    if dtc.rheobase['value'] <= 0.0:
+        return dtc
+
     for k,t in enumerate(get_neab.tests):
         if k>1:
+            #import pdb; pdb.set_trace()
             t.params = dtc.vtest[k]
-            score = t.judge(model,stop_on_error = False, deep_error = True)
+            try:
+                score = t.judge(model,stop_on_error = False, deep_error = False)
             #print(model._backend.cached_params)
-            dtc.scores[str(t)] = score.sort_key
-            observation = score.observation
-            prediction = score.prediction
-            delta = evaluate_as_module.difference(observation,prediction)
-            dtc.differences[str(t)] = delta
+                dtc.scores[str(t)] = score.sort_key
+                observation = score.observation
+                prediction = score.prediction
+                delta = evaluate_as_module.difference(observation,prediction)
+                dtc.differences[str(t)] = delta
+            except:
+                pass
     return dtc
 
 def evaluate(dtc):
+
     from neuronunit.optimization import get_neab
     import numpy as np
     fitness = [ 100.0 for i in range(0,8)]
@@ -137,8 +147,10 @@ def update_pop(pop,td):
     dtcpop = update_dtc_pop(pop, td)
     dtcpop = list(map(dtc_to_rheo,dtcpop))
     dtcpop = list(map(pre_format,dtcpop))
+
+    dtcpop = list(filter(lambda dtc: float(dtc.rheobase['value']) <= 0.0, dtcpop))
     dtcpop = list(dview.map_sync(map_wrapper,dtcpop))
-    assert len(dtcpop) == len(pop)
+    #assert len(dtcpop) == len(pop)
     return dtcpop
 
 
