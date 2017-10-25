@@ -30,13 +30,7 @@ def dtc_to_rheo(dtc):
     from neuronunit.optimization import get_neab
     from neuronunit.optimization import evaluate_as_module
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-    #print(dtc.attrs)
-    #
-    value = dtc.attrs['b']
-    print(float(value))
-    if np.isnan(float(value)):
-        print('in rheobase')
-        #import pdb; pdb.set_trace()
+
     model.set_attrs(dtc.attrs)
     dtc.scores = None
     dtc.scores = {}
@@ -51,24 +45,19 @@ def dtc_to_rheo(dtc):
     dtc.rheobase = score.prediction
     return dtc
 
-def map_wrapper(dtc):
+def bind_score_to_dtc(dtc):
     #import evaluate_as_module
     from neuronunit.optimization import evaluate_as_module
 
-    from neuronunit.models import backends
+    #from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
     import quantities as pq
     import numpy as np
     from neuronunit.optimization import get_neab
 
 
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-    value = dtc.attrs['b']
-    print(value)
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURONMemory')
 
-    if np.isnan(np.float(value)):
-        print('in map wrapper')
-        import pdb; pdb.set_trace()
 
     model.set_attrs(dtc.attrs)
     get_neab.tests[0].prediction = dtc.rheobase
@@ -78,11 +67,9 @@ def map_wrapper(dtc):
 
     for k,t in enumerate(get_neab.tests):
         if k>1:
-            #import pdb; pdb.set_trace()
             t.params = dtc.vtest[k]
             try:
                 score = t.judge(model,stop_on_error = False, deep_error = False)
-            #print(model._backend.cached_params)
                 dtc.scores[str(t)] = score.sort_key
                 observation = score.observation
                 prediction = score.prediction
@@ -112,9 +99,12 @@ def evaluate(dtc):
            fitness[2],fitness[3],\
            fitness[4],fitness[5],\
            fitness[6],fitness[7],
-
-def federate_cache(dtcpop):
+'''
+def federate_attribute(dtcpop,attribute):
     dtc = dtcpop[0]
+    for dtc in dtcpop:
+        dtc.cached_attrs = None
+        dtc.cached_attrs = attribute
     # add all elments into the dictionary thats the 1st element of the list
     for dtci in dtcpop:
         dtc.cached_attrs.update(dtci.cached_attrs)
@@ -128,7 +118,7 @@ def federate_cache(dtcpop):
         assert current == previous
         previous = current
     return dtcpop
-
+'''
 def update_pop(pop,td):
     '''
     Inputs a population of genes (pop).
@@ -144,12 +134,11 @@ def update_pop(pop,td):
     from neuronunit.optimization import evaluate_as_module
     update_dtc_pop = evaluate_as_module.update_dtc_pop
     pre_format = evaluate_as_module.pre_format
-    dtcpop = update_dtc_pop(pop, td)
+    dtcpop = list(update_dtc_pop(pop, td))
     dtcpop = list(map(dtc_to_rheo,dtcpop))
     dtcpop = list(map(pre_format,dtcpop))
-
     dtcpop = list(filter(lambda dtc: float(dtc.rheobase['value']) <= 0.0, dtcpop))
-    dtcpop = list(dview.map_sync(map_wrapper,dtcpop))
+    dtcpop = list(dview.map_sync(bind_score_to_dtc,dtcpop))
     #assert len(dtcpop) == len(pop)
     return dtcpop
 
@@ -157,17 +146,10 @@ def update_pop(pop,td):
 def create_subset(nparams=10):
     from neuronunit.optimization import model_parameters as modelp
     import numpy as np
-    # modelp is a module containing a dictionary
-    # model_parameters
     mp = modelp.model_params
     key_list = list(mp.keys())
     reduced_key_list = key_list[0:nparams]
     subset = { k:mp[k] for k in reduced_key_list }
-    for k,v in subset.items():
-        for t in v:
-            if np.isnan(t) == True:
-                print(t,k,v)
-                import pdb; pdb.set_trace()
     return subset
 
 def main(MU=12, NGEN=4, CXPB=0.9, nparams=10):
