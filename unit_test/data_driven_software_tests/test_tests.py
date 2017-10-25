@@ -5,19 +5,11 @@ import os,sys
 old = str(os.getcwd())
 this_nu = os.path.join(str(os.getcwd()),'../../')
 sys.path.insert(0,this_nu)
-#from neuronunit.optimization import data_transport_container
-#dtc = data_transport_container.DataTC
-#import pickle
-#with open('opt_run_data.p','rb') as handle:
-#    valued = pickle.load(handle)
 
 
 class TestsTestCase(object):
     """Abstract base class for testing tests"""
-    #import pdb;
-    #pdb.set_trace()
 
-    #DataTC = data_transport_container.DataTC()
 
     def setUp(self):
         self.dtcpop = None
