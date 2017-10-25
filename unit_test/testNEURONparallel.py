@@ -1,23 +1,4 @@
 """Tests of NeuronUnit test classes"""
-
-
-
-
-from dateutil.tz import tzlocal
-
-try:
-    import datetime.timezone
-    utc = datetime.timezone.utc
-except ImportError:
-    from dateutil.tz import tzutc
-    utc = tzutc()
-
-import warnings
-warnings.filterwarnings("ignore", message="Interpreting naïve datetime as local %s. Please add timezone info to timestamps." % utc)
-
-
-
-#from .base import *
 import unittest
 #import os
 #os.system('ipcluster start -n 8 --profile=default & sleep 5;')
