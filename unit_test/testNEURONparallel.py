@@ -1,11 +1,30 @@
 """Tests of NeuronUnit test classes"""
 
 
+
+
+from dateutil.tz import tzlocal
+
+try:
+    import datetime.timezone
+    utc = datetime.timezone.utc
+except ImportError:
+    from dateutil.tz import tzutc
+    utc = tzutc()
+
+import warnings
+warnings.filterwarnings("ignore", message="Interpreting naïve datetime as local %s. Please add timezone info to timestamps." % utc)
+
+
+
 #from .base import *
 import unittest
 #import os
 #os.system('ipcluster start -n 8 --profile=default & sleep 5;')
 import ipyparallel as ipp
+
+#ipp.util._ensure_tzinfo(utc)
+
 rc = ipp.Client(profile='default')
 rc[:].use_cloudpickle()
 dview = rc[:]
@@ -47,8 +66,8 @@ class TestBackend(unittest.TestCase):
         print(get_neab.LEMS_MODEL_PATH)
         model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend='NEURON')
         method_methods_avail = list(dir(model))
-        self.assertTrue('get_spike_train' in method_methods_avail)
-        if bool('get_spike_train' in method_methods_avail) == True:
+        #self.assertTrue('get_spike_train' in method_methods_avail)
+        if 'get_spike_train' in method_methods_avail:
             return True
         else:
             return False
@@ -70,11 +89,23 @@ class TestBackend(unittest.TestCase):
         from neuronunit.optimization import nsga_object
 
         import numpy as np
-        N = nsga_object.NSGA()
-        NGEN = 3
-        MU = 4
+        number = 2
+        N = nsga_object.NSGA(nparams=number)
+        self.assertEqual(N.nparams,number)
+        number = 2
+        N.setnparams(nparams=number)
+        self.assertEqual(N.nparams,number)
+
+        NGEN = 2
+        MU = 6
 
         invalid_dtc, pop, logbook, fitnesses = N.main(MU,NGEN)
+        import pdb; pdb.set_trace()
+        #assert type(invalid_dtc) is type(list)
+        self.assertEqual(type(invalid_dtc),type(list))
+        self.assertEqual(type(N.invalid_dtc),type(list))
+
+
         pf = np.mean(fitnesses)
         NGEN = 3
         MU = len(pop)
@@ -188,7 +219,7 @@ class TestBackend(unittest.TestCase):
         update_dtc_pop = evaluate_as_module.update_dtc_pop
         pre_format = evaluate_as_module.pre_format
         dtc_to_rheo = nsga_parallel.dtc_to_rheo
-        map_wrapper = nsga_parallel.map_wrapper
+        bind_score_to_dtc= nsga_parallel.bind_score_to_dtc
         pre_size = len(dtcpop)
         #dtcpop = update_dtc_pop(pop, td)
         dtcpop = list(map(dtc_to_rheo,dtcpop))
@@ -199,7 +230,7 @@ class TestBackend(unittest.TestCase):
         post_size = len(dtcpop)
         self.assertEqual(pre_size,post_size)
 
-        dtcpop = list(dview.map_sync(map_wrapper,dtcpop))
+        dtcpop = list(dview.map_sync(bind_score_to_dtc,dtcpop))
         post_size = len(dtcpop)
         self.assertEqual(pre_size,post_size)
 
@@ -218,7 +249,16 @@ class TestBackend(unittest.TestCase):
             numb_err_f = 8
             toolbox, tools, history, creator, base = evaluate_as_module.import_list(ipp,subset,numb_err_f)
             ind = toolbox.population(n = 1)
-            self.assertEqual(len(ind)+1,i)
+            print(len(ind),i)
+            import pdb;
+            pdb.set_trace()
+            number = i
+            N = nsga_object.NSGA(nparams=number)
+            self.assertEqual(N.nparams,number)
+            number = 1
+            N.setnparams(nparams=number)
+            self.assertEqual(N.nparams,number)
+
             #pop = [ toolbox.clone(i) for i in pop ]
 
 
