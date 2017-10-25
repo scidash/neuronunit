@@ -13,16 +13,16 @@
 #    You should have received a copy of the GNU Lesser General Public
 #    License along with DEAP. If not, see <http://www.gnu.org/licenses/>.
 class NSGA(object):
-    def __init__(self):
-        #import array
-        #import random
-        #import numpy
-        #from deap import algorithms
+    def __init__(self,nparams=10):
+        self.nparams = nparams
+
         from deap import base
         toolbox = base.Toolbox()
         from deap import tools
         toolbox.register("select", tools.selNSGA2)
         self.toolbox = toolbox
+
+
 
     def set_map(self):
         import ipyparallel as ipp
@@ -55,6 +55,8 @@ class NSGA(object):
         logbook = self.logbook
         offspring = tools.selTournamentDCD(pop, len(pop))
         offspring = [toolbox.clone(ind) for ind in offspring]
+        if len(offspring)!=0:
+            import pdb; pdb.set_trace()
         CXPB = 0.9
 
         for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
@@ -67,11 +69,15 @@ class NSGA(object):
 
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-        #dtcpop = nsga_parallel.update_pop(pop,td)
+        if len(invalid_ind)!=0:
+            import pdb; pdb.set_trace()
 
-        invalid_dtc = nsga_parallel.update_pop(invalid_ind,self.td)
+
+        #dtcpop = nsga_parallel.update_pop(pop,td)
         import copy
-        fitnesses = toolbox.map(toolbox.evaluate, copy.copy(invalid_dtc))
+        invalid_dtc = list(nsga_parallel.update_pop(invalid_ind,self.td))
+        fitnesses = list(toolbox.map(toolbox.evaluate, copy.copy(invalid_dtc)))
+
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
 
@@ -82,7 +88,13 @@ class NSGA(object):
         #self.logbook
         #print(self.logbook.stream)
         #return dtcpop, pop, self.logbook, fitnesses
-        return copy.copy(invalid_dtc), copy.copy(pop), copy.copy(self.logbook), copy.copy(fitnesses)
+        self.invalid_dtc = list(copy.copy(invalid_dtc))
+        self.fitnesses = list(fitnesses)
+        return copy.copy(self.invalid_dtc), copy.copy(pop), copy.copy(self.logbook), copy.copy(self.fitnesses)
+
+    def setnparams(self,nparams=10):
+        self.nparams = nparams
+
 
     def main(self, MU, NGEN, seed=None):
 
@@ -96,7 +108,9 @@ class NSGA(object):
         from deap import algorithms
         from deap import base
 
-        subset = nsga_parallel.create_subset(nparams=10)
+        subset = nsga_parallel.create_subset(nparams=self.nparams)
+
+        #subset = nsga_parallel.create_subset(nparams=10)
         numb_err_f = 8
         toolbox, tools, history, creator, base = evaluate_as_module.import_list(self.ipp,subset,numb_err_f)
         self.toolbox = toolbox
@@ -137,10 +151,13 @@ class NSGA(object):
 
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in pop if not ind.fitness.valid]
-        invalid_dtc = nsga_parallel.update_pop(invalid_ind,self.td)
-        #import pdb; pdb.set_trace()
+        if len(invalid_ind)!=0:
+            import pdb; pdb.set_trace()
+        invalid_dtc = list(nsga_parallel.update_pop(invalid_ind,self.td))
+        print(invalid_dtc)
+        import pdb; pdb.set_trace()
 
-        fitnesses = toolbox.map(toolbox.evaluate, invalid_dtc)
+        fitnesses = list(toolbox.map(toolbox.evaluate, invalid_dtc))
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
 
@@ -156,10 +173,17 @@ class NSGA(object):
 
         for gen in range(1, NGEN):
             invalid_dtc, pop, logbook, fitnesses = self.evolve(pop,MU,gen)
-            df = zip(invalid_dtc,fitnesses)
-            #for d in df:
-            #    print(d)
-        return invalid_dtc, pop, self.logbook, fitnesses
+
+        self.logbook.record(gen=gen, evals=len(invalid_ind), **record)
+        import copy
+
+        self.invalid_dtc = list(copy.copy(invalid_dtc))
+
+        #assert type(self.invalid_dtc) is type(list)
+        self.fitnesses = fitnesses
+        #assert type(self.fitnesses) is type(list)
+
+        return copy.copy(self.invalid_dtc), copy.copy(pop), copy.copy(self.logbook), copy.copy(self.fitnesses)
 
 
 
