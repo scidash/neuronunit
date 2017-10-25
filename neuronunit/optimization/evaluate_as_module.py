@@ -107,7 +107,7 @@ def update_dtc_pop(pop, td):
         # In this case pop is not really a population but an individual
         # but parsimony of naming variables
         # suggests not to change the variable name to reflect this.
-        dtcpop = transform(pop)
+        dtcpop = list(transform(pop))
     return dtcpop
 
 def get_trans_dict(param_dict):
