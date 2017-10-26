@@ -32,9 +32,7 @@ pip-log.txt
 *sublime*
 *~
 *scratch.py
-*.xml
 *.ipynb_checkpoints
-*.dat
 
 x86_64
 temp_data/
@@ -44,3 +42,21 @@ neuronunit.xcworkspace/contents.xcworkspacedata
 
 .idea/
 *.pyproj
+
+hippounit_bak*
+scratch.ipynb
+docs/*.dat
+*.bak
+*.dir
+*.omt
+*.dat
+*.db
+*.xml
+docs/chapter*.py
+*#
+B95
+unit_test/bbp.py
+neuronunit/tests/NeuroML2/*.xml*
+unit_test/get_tau.py
+.eggs
+htmlcov
