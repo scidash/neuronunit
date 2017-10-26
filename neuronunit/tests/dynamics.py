@@ -1,11 +1,13 @@
-import numpy as np
-import quantities as pq
+"""Dynamic neuronunit tests, e.g. investigating dynamical systems properties"""
+
+
 from elephant.statistics import isi
 
-import sciunit
-from sciunit.scores import BooleanScore,FloatScore,RatioScore
 from neuronunit.capabilities.channel import * 
-from .__init__ import RheobaseTest,InjectedCurrentAPWidthTest
+from .base import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
+from .waveform import InjectedCurrentAPWidthTest
+from .fi import RheobaseTest
+
 
 class TFRTypeTest(RheobaseTest):
     """Tests whether a model has particular threshold firing rate dynamics, 
@@ -16,7 +18,7 @@ class TFRTypeTest(RheobaseTest):
     description = (("A test of the instantaneous firing rate dynamics, i.e. "
                     "type 1 or type 2"))
 
-    score_type = BooleanScore
+    score_type = scores.BooleanScore
 
     def __init__(self, *args, **kwargs):
         super(TFRTypeTest,self).__init__(*args,**kwargs)
@@ -31,7 +33,7 @@ class TFRTypeTest(RheobaseTest):
             ("observation['type'] must be either 1 or 2, corresponding to "
              "type 1 or type 2 threshold firing rate dynamics.")
         
-    def generate_prediction(self, model, verbose=False):
+    def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
         
         model.rerun = True
@@ -42,7 +44,7 @@ class TFRTypeTest(RheobaseTest):
         lookup = self.threshold_FI(model, self.units, guess=guess)
         sub = np.array([x for x in lookup if lookup[x]==0])*self.units
         supra = np.array([x for x in lookup if lookup[x]>0])*self.units
-        if verbose:
+        if self.verbose:
             if len(sub):
                 print("Highest subthreshold current is %s" \
                       % float(sub.max().round(2)))
@@ -66,7 +68,7 @@ class TFRTypeTest(RheobaseTest):
         
         return prediction
 
-    def compute_score(self, observation, prediction, verbose=False):
+    def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
         #print("%s: Observation = %s, Prediction = %s" % \
         #    (self.name,str(observation),str(prediction)))
@@ -83,12 +85,13 @@ class BurstinessTest(InjectedCurrentAPWidthTest):
     def __init__(self, observation={'cv_mean':None,'cv_std':None},
                  name=None,
                  params=None):
+        pass
 
     name = "Burstiness test"
 
     description = (("A test of AP bursting at the provided current"))
 
-    score_type = RatioScore
+    score_type = scores.RatioScore
 
     units = pq.Dimensionless
 
@@ -98,7 +101,7 @@ class BurstinessTest(InjectedCurrentAPWidthTest):
         super(TFRTypeTest,self).validate_observation(observation, 
                                                      nonunited_keys=['cv'])
         
-    def generate_prediction(self, model, verbose=False):
+    def generate_prediction(self, model):
         model.inject_square_current(observation['current']) 
         spike_train = model.get_spike_train()
         if len(spike_train) >= 3:
@@ -108,7 +111,7 @@ class BurstinessTest(InjectedCurrentAPWidthTest):
             cv = None
         return {'cv':cv}
 
-    def compute_score(self, observation, prediction, verbose=False):
+    def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
         #print("%s: Observation = %s, Prediction = %s" % \
         #    (self.name,str(observation),str(prediction)))

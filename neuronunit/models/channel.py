@@ -1,11 +1,14 @@
+"""NeuronUnit model class for ion channels models"""
+
 import os
 
 import sciunit
-from neuronunit.capabilities.channel import *
+import neuronunit.capabilities.channel as cap
 from pyneuroml.analysis import NML2ChannelAnalysis as ca
 import quantities as pq
 
-class ChannelModel(sciunit.Model, NML2_Channel_Runnable, ProducesIVCurve):
+class ChannelModel(sciunit.Model, cap.NML2_Channel_Runnable, 
+                                  cap.ProducesIVCurve):
     """A model for ion channels"""
     
     def __init__(self, channel_file_path, channel_index=0, name=None):
@@ -26,14 +29,16 @@ class ChannelModel(sciunit.Model, NML2_Channel_Runnable, ProducesIVCurve):
             name = os.path.split()[1].split('.')[0]
         super(ChannelModel,self).__init__(name=name)
     
-    def NML2_run(self, rerun=False, a=None, **run_params):
-        if not len(run_params):
+    def NML2_run(self, rerun=False, a=None, verbose=None, **run_params):
+        if not run_params:
             run_params = self.run_defaults
-        a = ca.build_namespace(a=a,**run_params) # Convert keyword args to a namespace.  
+        a = ca.build_namespace(a=a,**run_params) # Convert keyword args to a namespace. 
+        if verbose is None:
+            verbose = a.v
         if self.a is None or a.__dict__ != self.a.__dict__ or rerun: # Only rerun if params have changed.  
             self.a = a
-            self.lems_file_path = ca.make_lems_file(self.channel,self.a) # Create a lems file.
-            self.results = ca.run_lems_file(self.lems_file_path,self.a) # Writes data to disk.  
+            self.lems_file_path = ca.make_lems_file(self.channel,self.a) # Create a lems file. 
+            self.results = ca.run_lems_file(self.lems_file_path,verbose) # Writes data to disk.  
     
     def produce_iv_curve(self, **run_params):
         run_params['ivCurve'] = True
@@ -58,5 +63,5 @@ class ChannelModel(sciunit.Model, NML2_Channel_Runnable, ProducesIVCurve):
         return {'v':self.iv_data['hold_v'], 
                 'i':self.iv_data['i_peak']}
         
-    def plot_iv_curve(self, v, i, **plot_args):
-        ca.plot_iv_curve(self.a, v, i, **plot_args)
+    def plot_iv_curve(self, v, i, *plt_args, **plt_kwargs):
+        ca.plot_iv_curve(self.a, v, i, *plt_args, **plt_kwargs)
