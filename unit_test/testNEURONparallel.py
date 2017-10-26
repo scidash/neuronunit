@@ -1,30 +1,9 @@
 """Tests of NeuronUnit test classes"""
 
-
-
-
-from dateutil.tz import tzlocal
-
-try:
-    import datetime.timezone
-    utc = datetime.timezone.utc
-except ImportError:
-    from dateutil.tz import tzutc
-    utc = tzutc()
-
-import warnings
-warnings.filterwarnings("ignore", message="Interpreting naïve datetime as local %s. Please add timezone info to timestamps." % utc)
-
-
-
-#from .base import *
 import unittest
 #import os
 #os.system('ipcluster start -n 8 --profile=default & sleep 5;')
 import ipyparallel as ipp
-
-#ipp.util._ensure_tzinfo(utc)
-
 rc = ipp.Client(profile='default')
 rc[:].use_cloudpickle()
 dview = rc[:]
@@ -85,7 +64,7 @@ class TestBackend(unittest.TestCase):
         #print(len(booleans))
         self.assertEqual(booleans, booleanp[0])
 
-    def test_5(self):
+    def agreement(self):
         from neuronunit.optimization import nsga_object
         from neuronunit.optimization import nsga_parallel
         from neuronunit.optimization import evaluate_as_module
@@ -110,7 +89,7 @@ class TestBackend(unittest.TestCase):
             nparams = i
             scores_exh, dtcpop = es.run_grid(npoints,nparams)
 
-            minima_attr = dtcpop[np.where[ np.max(scores_exh) == scores_exh ]]
+            minima_attr = dtcpop[np.where[ np.min(scores_exh) == scores_exh ][0]]
             NGEN = 2
             MU = 4
             invalid_dtc, pop, logbook, fitnesses = N.main(MU,NGEN)
@@ -119,9 +98,11 @@ class TestBackend(unittest.TestCase):
             for k in keys:
                 dis.append(invalid_dtc[0].attrs[k] - minima_attr.attrs[k])
             disagreement.append(np.mean(dis))
+            import pdb; pdb.set_trace()
         return disagreement, dis
 
-
+    def test_5agreement(self):
+        disagreement, dis = self.agreement()
 
 
     def test_6ngsa(self):
@@ -179,10 +160,11 @@ class TestBackend(unittest.TestCase):
         pop = toolbox.population(n = MU)
         pop = [ toolbox.clone(i) for i in pop ]
 
-
-        self.assertEqual(len(list(pop)),MU)
+        lists = len(list(pop))
+        self.assertEqual(lists,MU)
         # test if the models correspond to unique parameters.
-        self.assertEqual(len(set(list(pop))),MU)
+        sets = len(set(list(pop))
+        self.assertEqual(sets),MU)
 
 
         dview.scatter('Individual',pop)
