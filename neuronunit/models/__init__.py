@@ -10,7 +10,7 @@ import sciunit
 from sciunit.utils import dict_hash
 import neuronunit.capabilities as cap
 from pyneuroml import pynml
-from neuronunit.models import backends
+from . import backends
 
 
 class LEMSModel(sciunit.Model,
@@ -19,15 +19,13 @@ class LEMSModel(sciunit.Model,
     """A generic LEMS model"""
 
     def __init__(self, LEMS_file_path, name=None, 
-                    backend=None, attrs=None):
+                    backend='jNeuroML', attrs=None):
 
         #for base in cls.__bases__:
         #    sciunit.Model.__init__()
         if name is None:
             name = os.path.split(LEMS_file_path)[1].split('.')[0]
         #sciunit.Modelsuper(LEMSModel,self).__init__(name=name)
-        if backend is None:
-            backend = 'jNeuroML'
         self.attrs = attrs if attrs else {}
         self.orig_lems_file_path = os.path.abspath(LEMS_file_path)
         assert os.path.isfile(self.orig_lems_file_path),\
@@ -38,7 +36,6 @@ class LEMSModel(sciunit.Model,
         self.last_run_params = None
         self.skip_run = False
         self.rerun = True # Needs to be rerun since it hasn't been run yet!
-        self.unpicklable = []
         self.set_backend(backend)
 
     def get_backend(self):
@@ -79,7 +76,6 @@ class LEMSModel(sciunit.Model,
                             % name)
         self._backend.model = self
         self._backend.init_backend(*args, **kwargs)
-        self.unpicklable.append('_backend')
 
     def create_lems_file(self, name):
         if not hasattr(self,'temp_dir'):
@@ -92,6 +88,14 @@ class LEMSModel(sciunit.Model,
     def set_attrs(self,attrs):
         self._backend.set_attrs(**attrs)
 
+    def inject_square_current(self,current):
+        self._backend.inject_square_current(current)
+    #    
+    #def inject_square_current(self,current):
+    #    self._backend.inject_square_current(current)
+    #
+    #def local_run(self):
+        
     def set_lems_attrs(self, attrs):
         from lxml import etree
         tree = etree.parse(self.lems_file_path)
@@ -101,10 +105,10 @@ class LEMSModel(sciunit.Model,
                 for key2,value2 in value1.items():
                     node.attrib[key2] = value2
         tree.write(self.lems_file_path)
-
-    def run(self, **run_params):
-        #if rerun is None:
-        #    rerun = self.rerun
+    
+    def run(self, rerun=None, **run_params):
+        if rerun is None:
+            rerun = self.rerun
         self.set_run_params(**run_params)
         for key,value in self.run_defaults.items():
             if key not in self.run_params:
@@ -120,7 +124,7 @@ class LEMSModel(sciunit.Model,
         # Reset run parameters so the next test has to pass its own
         # run parameters and not use the same ones
         self.run_params = {}
-
+        
     def set_run_params(self, **params):
         self._backend.set_run_params(**params)
 
