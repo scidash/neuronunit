@@ -406,7 +406,7 @@ class NEURONBackend(Backend):
 
         ##
         # Duplicated call to run?
-        self.local_run()
+        #self.local_run()
         ##
     def local_run(self):
         self.h('run()')
