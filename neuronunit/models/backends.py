@@ -24,14 +24,14 @@ class Backend(object):
     details of modifying, running, and reading results from the simulation
     """
     #self.tstop = None
+
     def init_backend(self, *args, **kwargs):
         #self.attrs = {} if attrs is None else attrs
         self.model.create_lems_file(self.model.name)
         self.load_model()
         self.model.unpicklable = []
         self.model.attrs = {}
-
-
+    
     #attrs = None
 
     # Name of the backend
@@ -44,13 +44,13 @@ class Backend(object):
         """Set model attributes, e.g. input resistance of a cell"""
         #If the key is in the dictionary, it updates the key with the new value.
         self.model.attrs.update(attrs)
-        pass
+        #pass
 
     def set_run_params(self, **params):
         """Set run-time parameters, e.g. the somatic current to inject"""
         self.model.run_params.update(params)
         self.check_run_params()
-        pass
+        #pass
 
     def check_run_params(self):
         """Check to see if the run parameters are reasonable for this model
@@ -124,7 +124,7 @@ class NEURONBackend(Backend):
     """
 
     def init_backend(self, attrs=None):
-
+        #super(Backend,self).__init__()
         self.neuron = None
         self.model_path = None
         from neuron import h
@@ -134,11 +134,13 @@ class NEURONBackend(Backend):
         self.h.load_file("stdlib.hoc")
         self.h.load_file("stdgui.hoc")
         self.lookup = {}
+        self.model.rheobase = None
         print(1,self.model.orig_lems_file_path)
         self.load_model()
         self.unpicklable = []
         self.unpicklable += ['h','ns','_backend']
         self.attrs = {}
+
     backend = 'NEURON'
 
     def reset_neuron(self, neuronVar):
@@ -411,23 +413,15 @@ class NEURONBackend(Backend):
         results={}
         results['vm'] = [float(x/1000.0) for x in copy.copy(self.neuron.h.v_v_of0.to_python())]
         results['t'] = [float(x/1000.0) for x in copy.copy(self.neuron.h.v_time.to_python())]
+        #n_samples = self.h.tstop/self.fixedTimeStep
+        ndynamic_samples = self.h.tstop/self.h.dt
+
         if 'run_number' in results.keys():
             results['run_number'] = results['run_number']+1
         else:
             results['run_number'] = 1
         return results
 
-
-
-    def get_spike_count(self):
-        import neuronunit.capabilities.spike_functions as sf
-        return len(sf.get_spike_train(self.get_membrane_potential()))
-
-    def get_APs(self):
-        import neuronunit.capabilities.spike_functions as sf
-        return sf.get_spike_waveforms(self.get_membrane_potential())
-
-    #def get_AP_thresholds(self)
 
 class NEURONMemoryBackend(NEURONBackend):
     """A dummy backend that loads pre-computed results from RAM/heap"""
@@ -440,13 +434,13 @@ class NEURONMemoryBackend(NEURONBackend):
         self.model.cached_attrs = {}
         self.current = {}
 
-        super(MemoryBackend,self).init_backend()
+        super(NEURONMemoryBackend,self).init_backend()
 
     def set_attrs(self, **attrs):
 
 
 
-        super(MemoryBackend,self).set_attrs(**attrs)
+        super(NEURONMemoryBackend,self).set_attrs(**attrs)
         ##
         # Empty the cache when redefining the model
         ##
@@ -461,12 +455,12 @@ class NEURONMemoryBackend(NEURONBackend):
 
 
         if str(self.model.attrs) not in self.cached_attrs:
-            results = super(MemoryBackend,self).local_run()#
+            results = super(NEURONMemoryBackend,self).local_run()#
             self.model.cached_attrs[dict_hash(self.model.attrs)] = 1
         else:
             self.model.cached_attrs[dict_hash(self.model.attrs)] += 1
 
-        super(MemoryBackend,self).inject_square_current(current)#
+        super(NEURONMemoryBackend,self).inject_square_current(current)#
         #
         # make this current injection value a class attribute, such that its remembered.
         #

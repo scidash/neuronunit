@@ -55,7 +55,7 @@ class NSGA(object):
         logbook = self.logbook
         offspring = tools.selTournamentDCD(pop, len(pop))
         offspring = [toolbox.clone(ind) for ind in offspring]
-        if len(offspring)!=0:
+        if len(offspring)==0:
             import pdb; pdb.set_trace()
         CXPB = 0.9
 
@@ -69,7 +69,7 @@ class NSGA(object):
 
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-        if len(invalid_ind)!=0:
+        if len(invalid_ind)==0:
             import pdb; pdb.set_trace()
 
 
@@ -151,11 +151,16 @@ class NSGA(object):
 
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in pop if not ind.fitness.valid]
-        if len(invalid_ind)!=0:
-            import pdb; pdb.set_trace()
+        #if len(invalid_ind)!=0:
+        #    import pdb; pdb.set_trace()
         invalid_dtc = list(nsga_parallel.update_pop(invalid_ind,self.td))
-        print(invalid_dtc)
-        import pdb; pdb.set_trace()
+        #print(invalid_dtc)
+        #import pdb; pdb.set_trace()
+
+        invalid_dtc = list(filter(lambda dtc: float(dtc.rheobase['value']) > 0.0, invalid_dtc))
+        #print(invalid_dtc)
+        #import pdb; pdb.set_trace()
+
 
         fitnesses = list(toolbox.map(toolbox.evaluate, invalid_dtc))
         for ind, fit in zip(invalid_ind, fitnesses):
