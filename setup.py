@@ -14,6 +14,7 @@ setup(
             'neuronunit.neuroconstruct',
             'neuronunit.models',
             'neuronunit.tests',
+            'neuronunit.optimization'],
             'neuronunit.unit_test'],
     url='http://github.com/scidash/neuronunit',
     license='MIT',
@@ -37,4 +38,4 @@ setup(
                         'git+https://github.com/rgerkin/pyNeuroML@master#egg=pyneuroml-0.3.1.1',
                         #'git+https://github.com/rgerkin/python-neo@master#egg=neo-9999',
                         ]
-)
+    )

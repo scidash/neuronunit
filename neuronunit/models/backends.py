@@ -32,10 +32,12 @@ class Backend(object):
     details of modifying, running, and reading results from the simulation
     """
     #self.tstop = None
+
     def init_backend(self, *args, **kwargs):
         #self.attrs = {} if attrs is None else attrs
         self.model.unpicklable = []
         self.model.attrs = {}
+
         self.use_memory_cache = kwargs.get('use_memory_cache', True)
         if self.use_memory_cache:
             self.init_memory_cache()
@@ -44,7 +46,7 @@ class Backend(object):
             self.init_disk_cache()
         #print(2)
         self.load_model()
-        
+
     #attrs = None
 
     # Name of the backend
@@ -105,13 +107,13 @@ class Backend(object):
         """Set model attributes, e.g. input resistance of a cell"""
         #If the key is in the dictionary, it updates the key with the new value.
         self.model.attrs.update(attrs)
-        pass
+        #pass
 
     def set_run_params(self, **params):
         """Set run-time parameters, e.g. the somatic current to inject"""
         self.model.run_params.update(params)
         self.check_run_params()
-        pass
+        #pass
 
     def check_run_params(self):
         """Check to see if the run parameters are reasonable for this model
@@ -145,11 +147,9 @@ class Backend(object):
     def save_results(self, path='.'):
         with open(path,'wb') as f:
             pickle.dump(self.results,f)
-
-
+            
 class BackendException(Exception):
     pass
-
 
 class jNeuroMLBackend(Backend):
     """Used for simulation with jNeuroML, a reference simulator for NeuroML"""
@@ -207,7 +207,7 @@ class NEURONBackend(Backend):
         self.h.load_file("stdlib.hoc")
         self.h.load_file("stdgui.hoc")
         self.lookup = {}
-        #print(1)
+
         super(NEURONBackend,self).init_backend()
         self.model.unpicklable += ['h','ns','_backend']
     
@@ -374,17 +374,14 @@ class NEURONBackend(Backend):
         
         #Create a pyhoc file using jneuroml to convert from NeuroML to pyhoc.
         #import the contents of the file into the current names space.
-        
-        
+
         #The code block below does not actually function:
         #architecture = platform.machine()
         base_name = os.path.splitext(self.model.orig_lems_file_path)[0]
         NEURON_file_path ='{0}_nrn.py'.format(base_name)
-
         self.neuron_model_dir = os.path.dirname(self.model.orig_lems_file_path)
+        
         if not os.path.exists(NEURON_file_path):
-            #print(2.5)
-            # Generate NEURON scripts.  
             pynml.run_lems_with_jneuroml_neuron(self.model.orig_lems_file_path,
                               skip_run=False,
                               nogui=True,
@@ -395,6 +392,7 @@ class NEURONBackend(Backend):
                               exec_in_dir = self.neuron_model_dir,
                               verbose=verbose,
                               exit_on_fail = True)
+
             subprocess.run(["cd %s; nrnivmodl" % self.neuron_model_dir],shell=True)
             self.load_mechanisms()
         elif os.path.realpath(os.getcwd()) != os.path.realpath(self.neuron_model_dir):
@@ -403,6 +401,7 @@ class NEURONBackend(Backend):
 
         #print(3)
         self.load()
+
 
         #Although the above approach successfuly instantiates a LEMS/neuroml model in pyhoc
         #the resulting hoc variables for current source and cell name are idiosyncratic (not generic).
@@ -420,28 +419,20 @@ class NEURONBackend(Backend):
         more_attributes = None #force garbage collection of more_attributes, its not needed anymore.
         return self
 
-    #def set_attrs(self,**attrs):
-    #    '''
-    #    set model attributes in HOC memory space.
-    #    over riding a stub of the parent class.
-    #    '''
+
+#    def set_run_params(self, **params):
+#        super(NEURONBackend,self).set_run_params(**params)
+#        self.set_lems_run_params()
+
+
 
     def set_attrs(self, **attrs):
         self.model.attrs.update(attrs)
-        #self.set_lems_attrs(attrs)
 
-        #def set_attrs(self, **attrs):                                                                               
-        #self.attrs.update(attrs)                                                                                
-        #self.set_lems_attrs(attrs)                                                                                    
-                                                                   
-
-        #super(NEURONBackend,self).set_attrs(attrs)
         assert type(self.model.attrs) is not type(None)
         for h_key,h_value in attrs.items():
             self.h('m_RS_RS_pop[0].{0} = {1}'.format(h_key,h_value))
             self.h('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
-            self.h('psection()')
-
 
         # Below are experimental rig recording parameters.
         # These can possibly go in a seperate method.
@@ -491,7 +482,6 @@ class NEURONBackend(Backend):
         self.h(prefix+'amplitude=%s'%amps)
         self.h(prefix+'duration=%s'%c['duration'])
         self.h(prefix+'delay=%s'%c['delay'])
-        self.local_run()
 
     def _local_run(self):
         self.h('run()')
@@ -500,21 +490,85 @@ class NEURONBackend(Backend):
         # By rescaling voltage to milli volts, and time to milli seconds.
         results['vm'] = [float(x/1000.0) for x in copy.copy(self.neuron.h.v_v_of0.to_python())]
         results['t'] = [float(x/1000.0) for x in copy.copy(self.neuron.h.v_time.to_python())]
-        if 'run_number' in results.keys():
-            results['run_number'] = results['run_number']+1
-        else:
-            results['run_number'] = 1
+        results['run_number'] = results.get('run_number',0) + 1
+        
         return results
 
-    def get_spike_train(self):
-        import neuronunit.capabilities.spike_functions as sf
-        return sf.get_spike_train(self.get_membrane_potential())
 
-    def get_APs(self):
-        import neuronunit.capabilities.spike_functions as sf
-        return sf.get_spike_waveforms(self.get_membrane_potential())
+class NEURONMemoryBackend(NEURONBackend):
+    """A dummy backend that loads pre-computed results from RAM/heap"""
+    """Deprecated"""
+
+    def init_backend(self, results_path='.'):
+        super(NEURONMemoryBackend,self).init_backend()
+        self.model.rerun = True
+        self.model.results = None
+        self.model.cached_params = {}
+        self.model.cached_attrs = {}
+        self.current = {}
+
+        super(NEURONMemoryBackend,self).init_backend()
+
+    def set_attrs(self, **attrs):
 
 
+
+        super(NEURONMemoryBackend,self).set_attrs(**attrs)
+        ##
+        # Empty the cache when redefining the model
+        ##
+        self.model.cached_params = {}
+        self.model.cached_attrs = {}
+        self.current = {}
+        #print('the cache emptied: {0}'.format(str(self.model.cached_params)))
+        #print('As the attributes are updated: {0}'.format(str(self.model.attrs)))
+        return self
+
+    def inject_square_current(self, current):
+
+
+        if str(self.model.attrs) not in self.cached_attrs:
+            results = super(NEURONMemoryBackend,self).local_run()#
+            self.model.cached_attrs[dict_hash(self.model.attrs)] = 1
+        else:
+            self.model.cached_attrs[dict_hash(self.model.attrs)] += 1
+
+        super(NEURONMemoryBackend,self).inject_square_current(current)#
+        #
+        # make this current injection value a class attribute, such that its remembered.
+        #
+        #from sciunit.utils import dict_hash
+
+        if 'injected_square_current' in current:
+            self.current = current['injected_square_current']
+        else:
+            self.current = current
+        if str(self.current) not in self.model.cached_params:
+
+            results = super(NEURONMemoryBackend,self).local_run()#
+            self.model.cached_params[str(self.current)] = {}
+            self.model.cached_params[str(self.current)]=results
+            #print('the cache: {0}'.format(str(self.model.cached_params.keys())))
+
+        return self.model.cached_params[str(self.current)]
+
+
+    def local_run(self):
+        #
+        # Logic for choosing whether a injection value, has already been tested.
+        #
+        if str(self.current) not in self.model.cached_params:
+            results = super(NEURONMemoryBackend,self).local_run()
+            self.model.cached_params[str(self.current)] = {}
+            self.model.cached_params[str(self.current)]=results
+            #print('the cache: {0}'.format(str(self.model.cached_params)))
+
+            return self.model.cached_params[str(self.current)]
+        else:
+            return self.model.cached_params[str(self.current)]
+
+# The classes exist for compatibility with the old neuronunit.neuron module.  
+          
 class HasSegment(sciunit.Capability):
     """Model has a membrane segment of NEURON simulator"""
 
