@@ -24,8 +24,7 @@ class ReducedModel(mod.LEMSModel,
                                           backend=backend,attrs=attrs)
         self.run_number = 0
         self.tstop = None
-        self.unpicklable = []
-
+        
         #self.previous=0
         #self.lookup = {}
         #self.rheobase_memory = None
