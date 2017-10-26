@@ -1,5 +1,4 @@
 """Tests of NeuronUnit test classes"""
-
 import unittest
 #import os
 #os.system('ipcluster start -n 8 --profile=default & sleep 5;')
@@ -59,9 +58,7 @@ class TestBackend(unittest.TestCase):
 
     def test_4_backend_inheritance_parallel(self):
         booleans = self.backend_inheritance()
-
-        booleanp = dview.apply_sync(self.backend_inheritance)#.get()#.get_dict()
-        #print(len(booleans))
+        booleanp = dview.apply_sync(self.backend_inheritance)
         self.assertEqual(booleans, booleanp[0])
 
     def agreement(self):
@@ -133,6 +130,8 @@ class TestBackend(unittest.TestCase):
             final_dtc, pop, final_logbook, final_fitnesses = N.evolve(pop,MU,gen)
         final_pop = pop
         ff = np.mean(final_fitnesses)
+        import pdb; pdb.set_trace()
+
         self.assertNotEqual(ff,pf)
         self.assertGreater(ff,pf)
 
@@ -179,11 +178,6 @@ class TestBackend(unittest.TestCase):
                 print(old_attrs,dtc.attrs)
             old_attrs = dtc.attrs
 
-        #for index, dtc in enumerate(dtcpop):
-            #value = dtc.attrs['b']
-            #boolean = np.isnan(float(value))
-            #self.assertEqual(boolean, False)
-            #print(boolean)
         # use set to verify the set of attrs is unique.
         self.assertEqual(len(dtcpop), len(pop))
         return dtcpop, pop
@@ -262,13 +256,6 @@ class TestBackend(unittest.TestCase):
 
     def test_11ngsa(self):
         pop,dtcpop = self.test_10ngsa_setup()
-
-
-            #pop = [ toolbox.clone(i) for i in pop ]
-
-
-
-
 
 if __name__ == '__main__':
     unittest.main()
