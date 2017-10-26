@@ -83,7 +83,7 @@ def evaluate(dtc):
 
     from neuronunit.optimization import get_neab
     import numpy as np
-    fitness = [ 100.0 for i in range(0,8)]
+    fitness = [ -100.0 for i in range(0,8)]
     for k,t in enumerate(get_neab.tests):
         try:
             assert type(dtc.scores[str(t)]) is not type(None)
@@ -92,7 +92,7 @@ def evaluate(dtc):
 
             fitness[k] = dtc.scores[str(t)]
         except:
-            fitness[k] = 100.0
+            fitness[k] = -100.0
 
     print(fitness)
     return fitness[0],fitness[1],\
@@ -135,12 +135,28 @@ def update_pop(pop,td):
     update_dtc_pop = evaluate_as_module.update_dtc_pop
     pre_format = evaluate_as_module.pre_format
     dtcpop = list(update_dtc_pop(pop, td))
+    print('a')
+    assert len(dtcpop) != 0
+
     dtcpop = list(map(dtc_to_rheo,dtcpop))
+    print('b')
+
+    assert len(dtcpop) != 0
+
     dtcpop = list(map(pre_format,dtcpop))
-    dtcpop = list(filter(lambda dtc: float(dtc.rheobase['value']) <= 0.0, dtcpop))
+    print('c')
+
+    assert len(dtcpop) != 0
+
+    #assert len(dtcpop) != 0
+    #print('d')
+
     dtcpop = list(dview.map_sync(bind_score_to_dtc,dtcpop))
-    #assert len(dtcpop) == len(pop)
-    return dtcpop
+    import copy
+    print('e')
+
+    assert len(dtcpop) != 0
+    return copy.copy(dtcpop)
 
 
 def create_subset(nparams=10):

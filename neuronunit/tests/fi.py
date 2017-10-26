@@ -370,8 +370,8 @@ class RheobaseTestP(VmTest):
             cnt = 0
             # If this it not the first pass/ first generation
             # then assume the rheobase value found before mutation still holds until proven otherwise.
-            if type(dtc.rheobase) is not type(None):
-                dtc = check_current(dtc.rheobase,dtc)
+            if type(model.rheobase) is not type(None):
+                dtc = check_current(model.rheobase,dtc)
             # If its not true enter a search, with ranges informed by memory
             cnt = 0
             while dtc.boolean == False:

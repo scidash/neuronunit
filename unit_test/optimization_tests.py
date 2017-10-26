@@ -79,9 +79,9 @@ class ReducedModelTestCase(unittest.TestCase):
 
 
     def setUp(self):
-        import sys
-        sys.path.append('../')
-        import neuronunit
+        #import sys
+        #sys.path.append('../')
+        #import neuronunit
 
         from neuronunit.models.reduced import ReducedModel
         #self.ReducedModel = ReducedModel
