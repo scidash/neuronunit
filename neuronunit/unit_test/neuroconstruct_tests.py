@@ -5,7 +5,7 @@ from .base import *
 class DocumentationTestCase(NotebookTools,unittest.TestCase):
     """Testing documentation notebooks"""
 
-    path = '../docs'
+    path = '../../docs'
 
     @unittest.skip("Skipping chapter 4")
     def test_chapter4(self):
