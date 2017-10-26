@@ -61,7 +61,7 @@ class TestBackend(unittest.TestCase):
         booleanp = dview.apply_sync(self.backend_inheritance)
         self.assertEqual(booleans, booleanp[0])
 
-    def agreement(self):
+    def test5_agreement(self):
         from neuronunit.optimization import nsga_object
         from neuronunit.optimization import nsga_parallel
         from neuronunit.optimization import evaluate_as_module
@@ -85,6 +85,7 @@ class TestBackend(unittest.TestCase):
             npoints = 2
             nparams = i
             scores_exh, dtcpop = es.run_grid(npoints,nparams)
+            import pdb; pdb.set_trace()
 
             minima_attr = dtcpop[np.where[ np.min(scores_exh) == scores_exh ][0]]
             NGEN = 2
@@ -98,11 +99,11 @@ class TestBackend(unittest.TestCase):
             import pdb; pdb.set_trace()
         return disagreement, dis
 
-    def test_5agreement(self):
-        disagreement, dis = self.agreement()
+    def test_6agreement(self):
+        disagreement, dis = self.test5_agreement()
 
 
-    def test_6ngsa(self):
+    def test_7ngsa(self):
         from neuronunit.optimization import nsga_object
 
         import numpy as np
@@ -117,10 +118,6 @@ class TestBackend(unittest.TestCase):
         MU = 4
 
         invalid_dtc, pop, logbook, fitnesses = N.main(MU,NGEN)
-
-        #self.assertEqual(type(invalid_dtc),type(list))
-        #self.assertEqual(type(N.invalid_dtc),type(list))
-
 
         pf = np.mean(fitnesses)
         NGEN = 4
@@ -139,7 +136,7 @@ class TestBackend(unittest.TestCase):
 
 
 
-    def test_7_data_transport_containers_on_bulk(self):
+    def test_8_data_transport_containers_on_bulk(self):
         MU = 10000
         import deap
         import numpy as np
@@ -162,8 +159,8 @@ class TestBackend(unittest.TestCase):
         lists = len(list(pop))
         self.assertEqual(lists,MU)
         # test if the models correspond to unique parameters.
-        sets = len(set(list(pop))
-        self.assertEqual(sets),MU)
+        sets = len(set(list(pop)))
+        self.assertEqual(sets,MU)
 
 
         dview.scatter('Individual',pop)
@@ -182,7 +179,7 @@ class TestBackend(unittest.TestCase):
         self.assertEqual(len(dtcpop), len(pop))
         return dtcpop, pop
 
-    def serial_8rheobase(self):
+    def serial_9rheobase(self):
         from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
         from neuronunit.optimization import get_neab
         from neuronunit.models.reduced import ReducedModel
@@ -203,7 +200,7 @@ class TestBackend(unittest.TestCase):
         #self.assertEqual(int(self.predictionp['value']), int(self.predictions['value']))
 
 
-    def test_9rheobase_setup(self):
+    def test_10rheobase_setup(self):
         from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
         from neuronunit.optimization import get_neab
         from neuronunit.models.reduced import ReducedModel
@@ -225,8 +222,8 @@ class TestBackend(unittest.TestCase):
         self.assertEqual(int(self.score_s*1000), int(self.score_p*1000))
         self.assertEqual(int(self.predictionp['value']), int(self.predictions['value']))
 
-    def test_10ngsa_setup(self):
-        dtcpop, pop = self.test_7_data_transport_containers_on_bulk()
+    def test_11ngsa_setup(self):
+        dtcpop, pop = self.test_8_data_transport_containers_on_bulk()
         dtcpop = dtcpop[0:9]#.extend(dtcpop[-5:-1])
         pop = pop[0:9]#.extend(pop[-5:-1])
 
@@ -254,8 +251,180 @@ class TestBackend(unittest.TestCase):
         return pop,dtcpop
 
 
-    def test_11ngsa(self):
+    def test_12ngsa(self):
         pop,dtcpop = self.test_10ngsa_setup()
+
+
+
+    def try_hard_coded0(self):
+        params0 = {'C': '0.000107322241995',
+        'a': '0.177922330376',
+        'b': '-5e-09',
+        'c': '-59.5280130394',
+        'd': '0.153178745992',
+        'k': '0.000879131572692',
+        'v0': '-73.3255584633',
+        'vpeak': '34.5214177196',
+        'vr': '-71.0211905343',
+        'vt': '-46.6016774842'}
+        #rheobase = {'value': array(131.34765625) * pA}
+        return params0
+
+
+
+    def try_hard_coded1(self):
+        params1 = {'C': '0.000106983591242',
+        'a': '0.480856799107',
+        'b': '-5e-09',
+        'c': '-57.4022276619',
+        'd': '0.0818117582621',
+        'k': '0.00114004749537',
+        'v0': '-58.4899756601',
+        'vpeak': '36.6769758895',
+        'vr': '-63.4080852004',
+        'vt': '-44.1074682812'}
+        #rheobase = {'value': array(106.4453125) * pA}131.34765625
+        return params1
+
+
+
+
+    def difference(self,observation,prediction): # v is a tesst
+        import quantities as pq
+        import numpy as np
+
+        # The trick is.
+        # prediction always has value. but observation 7 out of 8 times has mean.
+
+        if 'value' in prediction.keys():
+            unit_predictions = prediction['value']
+            if 'mean' in observation.keys():
+                unit_observations = observation['mean']
+            elif 'value' in observation.keys():
+                unit_observations = observation['value']
+
+        if 'mean' in prediction.keys():
+            unit_predictions = prediction['mean']
+            if 'mean' in observation.keys():
+                unit_observations = observation['mean']
+            elif 'value' in observation.keys():
+                unit_observations = observation['value']
+
+
+        to_r_s = unit_observations.units
+        unit_predictions = unit_predictions.rescale(to_r_s)
+        #unit_observations = unit_observations.rescale(to_r_s)
+        unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
+
+        ##
+        # Repurposed from from sciunit/sciunit/scores.py
+        # line 156
+        ##
+        assert type(observation) in [dict,float,int,pq.Quantity]
+        assert type(prediction) in [dict,float,int,pq.Quantity]
+        ratio = unit_predictions / unit_observations
+        unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
+        return unit_delta, ratio
+
+    def run_test(self, cls):
+        observation = self.get_observation(cls)
+        test = cls(observation=observation)
+        params0 = self.try_hard_coded0()
+        #params1 = self.try_hard_coded1()
+        #params = [params0,params1]
+        self.model.set_attrs(params0)
+
+        score0 = test.judge(self.model,stop_on_error = True, deep_error = True)
+        #df, html = self.bar_char_out(score,str(test),params0)
+        #self.model.set_attrs(params1)
+        #score1 = test.judge(self.model,stop_on_error = True, deep_error = True)
+        #score.summarize()
+        return [score0,score1]
+
+    def test_13inputresistance(self):
+        #from neuronunit.optimization import data_transport_container
+
+        from neuronunit.tests.passive import InputResistanceTest as T
+        score = self.run_test(T)
+        #self.assertTrue(-0.6 < score < -0.5)
+
+    def test_14restingpotential(self):
+        #from neuronunit.optimization import data_transport_container
+
+        from neuronunit.tests.passive import RestingPotentialTest as T
+        score = self.run_test(T)
+        #self.assertTrue(1.2 < score < 1.3)
+
+    def test_15capacitance(self):
+        #from neuronunit.optimization import data_transport_container
+
+        from neuronunit.tests.passive import CapacitanceTest as T
+        score = self.run_test(T)
+        #self.assertTrue(-0.15 < score < -0.05)
+
+    def test_16timeconstant(self):
+        #from neuronunit.optimization import data_transport_container
+
+        from neuronunit.tests.passive import TimeConstantTest as T
+        score = self.run_test(T)
+        #self.assertTrue(-1.45 < score < -1.35)
+
+
+    def test_17rheobase_parallel(self):
+        #from neuronunit.optimization import data_transport_container
+
+        from neuronunit.tests.fi import RheobaseTest as T
+        score = self.run_test(T)
+        self.prediction = score.prediction
+        #super(TestsWaveformTestCase,self).prediction = score.prediction
+        #self.prediction = score.prediction
+        print(self.prediction, 'is prediction being updated properly?')
+
+        self.assertTrue( score.prediction['value'] == 106.4453125 or score.prediction['value'] ==131.34765625)
+
+    def test_18rheobase_serial(self):
+        from neuronunit.optimization import data_transport_container
+
+        from neuronunit.tests.fi import RheobaseTest as T
+        score = self.run_test(T)
+        super(TestsWaveformTestCase,self).prediction = score.prediction
+        #self.prediction = score.prediction
+        self.assertTrue( int(score.prediction['value']) == int(106) or int(score.prediction['value']) == int(131))
+
+
+    def update_amplitude(self,test):
+        rheobase = self.prediction['value']#first find a value for rheobase
+        test.params['injected_square_current']['amplitude'] = rheobase * 1.01
+
+
+
+    def test_19ap_width(self):
+        #from neuronunit.optimization import data_transport_container
+
+        from neuronunit.tests.waveform import InjectedCurrentAPWidthTest as T
+        self.update_amplitude(T)
+        score = self.run_test(T)
+        #self.assertTrue(-0.6 < score < -0.5)
+
+    def test_20ap_amplitude(self):
+        #from neuronunit.optimization import data_transport_container
+        from neuronunit.tests.waveform import InjectedCurrentAPAmplitudeTest as T
+
+        self.update_amplitude(T)
+
+        score = self.run_test(T)
+        #self.assertTrue(-1.7 < score < -1.6)
+
+    def test_21ap_threshold(self):
+        #from neuronunit.optimization import data_transport_container
+
+        from neuronunit.tests.waveform import InjectedCurrentAPThresholdTest as T
+
+        self.update_amplitude(T)
+
+        score = self.run_test(T)
+        #self.assertTrue(2.25 < score < 2.35)
+
 
 if __name__ == '__main__':
     unittest.main()
