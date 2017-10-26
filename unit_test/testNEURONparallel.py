@@ -65,9 +65,10 @@ class TestBackend(unittest.TestCase):
         from neuronunit.optimization import get_neab
         print(get_neab.LEMS_MODEL_PATH)
         model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend='NEURON')
-        method_methods_avail = list(dir(model))
+        ma = list(dir(model))
+
         #self.assertTrue('get_spike_train' in method_methods_avail)
-        if 'get_spike_train' in method_methods_avail:
+        if 'get_spike_train' in ma and 'rheobase' in ma:
             return True
         else:
             return False
@@ -79,11 +80,51 @@ class TestBackend(unittest.TestCase):
 
     def test_4_backend_inheritance_parallel(self):
         booleans = self.backend_inheritance()
-        booleanp = dview.apply_sync(self.backend_inheritance)
+
+        booleanp = dview.apply_sync(self.backend_inheritance)#.get()#.get_dict()
+        #print(len(booleans))
         self.assertEqual(booleans, booleanp[0])
 
+    def test_5(self):
+        from neuronunit.optimization import nsga_object
+        from neuronunit.optimization import nsga_parallel
+        from neuronunit.optimization import evaluate_as_module
+        import numpy as np
+        disagreement = []
+        for i in range(1,10):
+        #i = 1 #later this will be a loop as comment above.
+            subset = nsga_parallel.create_subset(nparams=i)
+            numb_err_f = 8
+            toolbox, tools, history, creator, base = evaluate_as_module.import_list(ipp,subset,numb_err_f)
+            ind = toolbox.population(n = 1)
+            print(len(ind),i)
 
-    def test_5ngsa(self):
+            N = nsga_object.NSGA(nparams=i)
+            self.assertEqual(N.nparams,i)
+            N.setnparams(nparams=i)
+            self.assertEqual(N.nparams,i)
+
+
+            from neuronunit.optimization import exhaustive_search as es
+            npoints = 2
+            nparams = i
+            scores_exh, dtcpop = es.run_grid(npoints,nparams)
+
+            minima_attr = dtcpop[np.where[ np.max(scores_exh) == scores_exh ]]
+            NGEN = 2
+            MU = 4
+            invalid_dtc, pop, logbook, fitnesses = N.main(MU,NGEN)
+            keys = invalid_dtc[0].keys()
+            dis = []
+            for k in keys:
+                dis.append(invalid_dtc[0].attrs[k] - minima_attr.attrs[k])
+            disagreement.append(np.mean(dis))
+        return disagreement, dis
+
+
+
+
+    def test_6ngsa(self):
         from neuronunit.optimization import nsga_object
 
         import numpy as np
@@ -95,30 +136,30 @@ class TestBackend(unittest.TestCase):
         self.assertEqual(N.nparams,number)
 
         NGEN = 2
-        MU = 6
+        MU = 4
 
         invalid_dtc, pop, logbook, fitnesses = N.main(MU,NGEN)
-        import pdb; pdb.set_trace()
-        #assert type(invalid_dtc) is type(list)
-        self.assertEqual(type(invalid_dtc),type(list))
-        self.assertEqual(type(N.invalid_dtc),type(list))
+
+        #self.assertEqual(type(invalid_dtc),type(list))
+        #self.assertEqual(type(N.invalid_dtc),type(list))
 
 
         pf = np.mean(fitnesses)
-        NGEN = 3
+        NGEN = 4
         MU = len(pop)
 
         for gen in range(1, NGEN):
             final_dtc, pop, final_logbook, final_fitnesses = N.evolve(pop,MU,gen)
         final_pop = pop
         ff = np.mean(final_fitnesses)
-        import pdb; pdb.set_trace()
-
         self.assertNotEqual(ff,pf)
         self.assertGreater(ff,pf)
 
 
-    def test_6_data_transport_containers_on_bulk(self):
+
+
+
+    def test_7_data_transport_containers_on_bulk(self):
         MU = 10000
         import deap
         import numpy as np
@@ -136,12 +177,14 @@ class TestBackend(unittest.TestCase):
         td = get_trans_dict(subset)
         dview.push({'td':td })
         pop = toolbox.population(n = MU)
-
-        self.assertEqual(len(pop),MU)
-        # test if the models correspond to unique parameters.
-        self.assertEqual(len(set(pop)),MU)
-        
         pop = [ toolbox.clone(i) for i in pop ]
+
+
+        self.assertEqual(len(list(pop)),MU)
+        # test if the models correspond to unique parameters.
+        self.assertEqual(len(set(list(pop))),MU)
+
+
         dview.scatter('Individual',pop)
         update_dtc_pop = evaluate_as_module.update_dtc_pop
         pre_format = evaluate_as_module.pre_format
@@ -154,18 +197,16 @@ class TestBackend(unittest.TestCase):
                 print(old_attrs,dtc.attrs)
             old_attrs = dtc.attrs
 
-        for index, dtc in enumerate(dtcpop):
-            value = dtc.attrs['b']
-            boolean = np.isnan(float(value))
-            self.assertEqual(boolean, False)
-            print(boolean)
-
-            #import pdb; pdb.set_trace()
+        #for index, dtc in enumerate(dtcpop):
+            #value = dtc.attrs['b']
+            #boolean = np.isnan(float(value))
+            #self.assertEqual(boolean, False)
+            #print(boolean)
         # use set to verify the set of attrs is unique.
         self.assertEqual(len(dtcpop), len(pop))
         return dtcpop, pop
 
-    def serial_7rheobase(self):
+    def serial_8rheobase(self):
         from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
         from neuronunit.optimization import get_neab
         from neuronunit.models.reduced import ReducedModel
@@ -186,7 +227,7 @@ class TestBackend(unittest.TestCase):
         #self.assertEqual(int(self.predictionp['value']), int(self.predictions['value']))
 
 
-    def test_8rheobase_setup(self):
+    def test_9rheobase_setup(self):
         from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
         from neuronunit.optimization import get_neab
         from neuronunit.models.reduced import ReducedModel
@@ -208,8 +249,8 @@ class TestBackend(unittest.TestCase):
         self.assertEqual(int(self.score_s*1000), int(self.score_p*1000))
         self.assertEqual(int(self.predictionp['value']), int(self.predictions['value']))
 
-    def test_9ngsa_setup(self):
-        dtcpop, pop = self.test_6_data_transport_containers_on_bulk()
+    def test_10ngsa_setup(self):
+        dtcpop, pop = self.test_7_data_transport_containers_on_bulk()
         dtcpop = dtcpop[0:9]#.extend(dtcpop[-5:-1])
         pop = pop[0:9]#.extend(pop[-5:-1])
 
@@ -237,27 +278,9 @@ class TestBackend(unittest.TestCase):
         return pop,dtcpop
 
 
-    def test_10ngsa(self):
-        pop,dtcpop = self.test_9ngsa_setup()
+    def test_11ngsa(self):
+        pop,dtcpop = self.test_10ngsa_setup()
 
-    def test_11(self):
-        from neuronunit.optimization import nsga_parallel
-        from neuronunit.optimization import evaluate_as_module
-
-        for i in range(0,10):
-            subset = nsga_parallel.create_subset(nparams=i)
-            numb_err_f = 8
-            toolbox, tools, history, creator, base = evaluate_as_module.import_list(ipp,subset,numb_err_f)
-            ind = toolbox.population(n = 1)
-            print(len(ind),i)
-            import pdb;
-            pdb.set_trace()
-            number = i
-            N = nsga_object.NSGA(nparams=number)
-            self.assertEqual(N.nparams,number)
-            number = 1
-            N.setnparams(nparams=number)
-            self.assertEqual(N.nparams,number)
 
             #pop = [ toolbox.clone(i) for i in pop ]
 
