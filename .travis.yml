@@ -10,5 +10,5 @@ services:
 before_script:
   - docker pull russelljarvis/neuronunit
 script: 
-  - docker run -it russelljarvis/neuronunit bash
+  - docker run -it russelljarvis/neuronunit /bin/bash cd ../unit_test; ipython -m unittest testNEURONparallel.py
 
