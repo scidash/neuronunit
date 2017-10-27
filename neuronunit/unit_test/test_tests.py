@@ -1,8 +1,9 @@
 """Tests of NeuronUnit test classes"""
 
+import socket
 
 from .base import *
-
+from neuronunit.neuroelectro import is_neuroelectro_up
 
 class TestsTestCase(object):
     """Abstract base class for testing tests"""
@@ -13,6 +14,8 @@ class TestsTestCase(object):
         from .model_tests import ReducedModelTestCase
         path = ReducedModelTestCase().path
         self.model = ReducedModel(path, backend='jNeuroML')
+        if not is_neuroelectro_up():
+            return self.skipTest("Neuroelectro is down")
 
     def get_observation(self, cls):
         print(cls.__name__)
@@ -22,7 +25,10 @@ class TestsTestCase(object):
     def run_test(self, cls):
         observation = self.get_observation(cls)
         test = cls(observation=observation)
-        score = test.judge(self.model)
+        try:
+            score = test.judge(self.model)
+        except socket.timeout:
+            return self.skipTest("Neuroelectro timed out")
         score.summarize()
         return score.score
 
@@ -79,7 +85,7 @@ class TestsFITestCase(TestsTestCase, unittest.TestCase):
         score = self.run_test(T)
         self.assertTrue(0.2 < score < 0.3)
 
-    @unittest.skip("This test takes a long time")
+    @unittest.skip(SLOW,"This test takes a long time")
     def test_rheobase_parallel(self):
         from neuronunit.tests.fi import T
         score = self.run_test(T)
