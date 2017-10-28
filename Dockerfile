@@ -1,17 +1,18 @@
-# neuronunit
-# author Rick Gerkin rgerkin@asu.edu
-
-FROM scidash/neuron-mpi-neuroml
-
-USER root
-ARG MOD_DATE=0
-RUN echo $MOD_DATE
-ADD . $HOME/neuronunit
-RUN chown -R $NB_USER $HOME 
-WORKDIR $HOME/neuronunit 
-
-# Install neuronunit and dependencies.
-RUN python setup.py install
-
-# Run all unit tests.
-ENTRYPOINT python -m unittest unit_test/core_tests.py
+FROM russelljarvis/neuronunit
+USER jovyan
+RUN sudo /opt/conda/bin/pip install psutil
+ENV QT_QPA_PLATFORM offscreen
+RUN sudo rm -rf /opt/conda/lib/python3.5/site-packages/neuronunit-0.1.8.8-py3.5.egg/neuronunit
+RUN sudo rm -rf $HOME/neuronunit
+COPY neuronunit $HOME/neuronunit
+RUN sudo /opt/conda/bin/pip3 install -e $HOME/neuronunit
+COPY util.py /opt/conda/lib/python3.5/site-packages/ipyparallel/util.py
+RUN sudo /opt/conda/bin/pip3 install coveralls
+COPY func2rc.sh .
+RUN sudo chown -R jovyan $HOME
+COPY . $HOME/neuronunit
+RUN cat $HOME/neuronunit/setup.py
+WORKDIR $HOME/neuronunit/unit_test
+#RUN cat $HOME/neuronunit/unit_test/testNEURONparallel.py
+RUN sudo chown -R jovyan $HOME
+ENTRYPOINT ipcluster start -n 8 --profile=default & sleep 10; ipython -m unittest testNEURONparallel.py
