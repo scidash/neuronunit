@@ -8,7 +8,7 @@ services:
   - python
   
 before_script:
-  - docker pull scidash/neuronunit-optimization 
+  - docker pull russelljarvis/neuronunit
   - docker build -t neuronunit-optimization-unittest .
 script: 
   - docker run -it russelljarvis/neuronunit-optimization-unittest /bin/bash
