@@ -7,6 +7,7 @@ import inspect
 import shutil
 
 import sciunit
+from sciunit.utils import dict_hash
 import neuronunit.capabilities as cap
 from pyneuroml import pynml
 from . import backends
@@ -27,7 +28,8 @@ class LEMSModel(sciunit.Model,
         #sciunit.Modelsuper(LEMSModel,self).__init__(name=name)
         self.attrs = attrs if attrs else {}
         self.orig_lems_file_path = os.path.abspath(LEMS_file_path)
-        assert os.path.isfile(self.orig_lems_file_path)
+        assert os.path.isfile(self.orig_lems_file_path),\
+            "'%s' is not a file" % self.orig_lems_file_path
         self.run_defaults = pynml.DEFAULTS
         self.run_defaults['nogui'] = True
         self.run_params = {}
@@ -75,16 +77,6 @@ class LEMSModel(sciunit.Model,
         self._backend.model = self
         self._backend.init_backend(*args, **kwargs)
 
-#    def __getattr__(self, attr):
-#        try:
-#            result = getattr(self._backend,attr)
-#        except AttributeError:
-#            try:
-#                result = super(LEMSModel,self).__getattr(self, attr)
-#            except:
-#                raise AttributeError("Neither model nor backend have attribute '%s'" % attr)
-#        return result
-
     def create_lems_file(self, name):
         if not hasattr(self,'temp_dir'):
             self.temp_dir = tempfile.gettempdir()
@@ -115,25 +107,24 @@ class LEMSModel(sciunit.Model,
         tree.write(self.lems_file_path)
     
     def run(self, rerun=None, **run_params):
-        #self.results = self._backend.local_run()
-        #This breaks NEURON backend
         if rerun is None:
             rerun = self.rerun
         self.set_run_params(**run_params)
         for key,value in self.run_defaults.items():
             if key not in self.run_params:
                 self.set_run_params(**{key:value})
-        if (not rerun) and hasattr(self,'last_run_params') and \
-           self.run_params == self.last_run_params:
-            print("Same run_params; skipping...")
-            return
+        #if (not rerun) and hasattr(self,'last_run_params') and \
+        #   self.run_params == self.last_run_params:
+        #    print("Same run_params; skipping...")
+        #    return
 
         self.results = self._backend.local_run()
         self.last_run_params = deepcopy(self.run_params)
-        self.rerun = False
+        #self.rerun = False
         # Reset run parameters so the next test has to pass its own
         # run parameters and not use the same ones
         self.run_params = {}
+        
     def set_run_params(self, **params):
         self._backend.set_run_params(**params)
 
@@ -166,3 +157,9 @@ class LEMSModel(sciunit.Model,
 
     def inject_square_current(self, current):
         self._backend.inject_square_current(current)
+
+    @property
+    def state(self):
+        keys = ['attrs','run_params']
+        d = {key:getattr(self,key) for key in keys}
+        return dict_hash(d)

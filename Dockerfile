@@ -14,4 +14,7 @@ RUN sudo chown -R jovyan $HOME
 WORKDIR $HOME/neuronunit/unit_test
 RUN cat $HOME/neuronunit/unit_test/testNEURONparallel.py
 RUN sudo chown -R jovyan $HOME
+RUN sudo /opt/conda/bin/pip3 install quantities
+RUN sudo git clone -b dev https://github.com/scidash/sciunit
+RUN sudo /opt/conda/bin/pip3 install -e sciunit
 ENTRYPOINT ipcluster start -n 8 --profile=default & sleep 25; ipython -m unittest testNEURONparallel.py

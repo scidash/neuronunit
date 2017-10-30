@@ -16,8 +16,8 @@ class ReducedModelTestCase(unittest.TestCase):
 
     @property
     def path(self):
-        result = os.path.join(__file__,'..','..','neuronunit',
-                              'models','NeuroML2','LEMS_2007One.xml')
+        result = os.path.join(__file__,'..','..','models',
+                              'NeuroML2','LEMS_2007One.xml')
         result = os.path.realpath(result)
         return result
 
