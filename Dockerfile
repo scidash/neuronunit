@@ -8,7 +8,7 @@ RUN sudo chown -R jovyan $HOME
 COPY . $HOME/neuronunit
 RUN sudo /opt/conda/bin/pip3 install -e $HOME/neuronunit
 COPY util.py /opt/conda/lib/python3.5/site-packages/ipyparallel/util.py
-#RUN sudo /opt/conda/bin/pip3 install coveralls
+RUN sudo /opt/conda/bin/pip3 install coveralls
 #COPY func2rc.sh .
 RUN sudo chown -R jovyan $HOME
 WORKDIR $HOME/neuronunit/unit_test

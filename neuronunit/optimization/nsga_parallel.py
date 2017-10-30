@@ -86,7 +86,7 @@ def evaluate(dtc):
     for k,t in enumerate(get_neab.tests):
         if dtc.rheobase['value'] > 0.0:
             fitness[k] = dtc.scores[str(t)]
-        except:
+        else:
             fitness[k] = -100.0
 
     print(fitness)
