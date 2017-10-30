@@ -127,7 +127,7 @@ class TestBackend(unittest.TestCase):
             final_dtc, pop, final_logbook, final_fitnesses = N.evolve(pop,MU,gen)
         final_pop = pop
         ff = np.mean(final_fitnesses)
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
 
         self.assertNotEqual(ff,pf)
         self.assertGreater(ff,pf)
