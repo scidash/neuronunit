@@ -309,7 +309,7 @@ class NEURONBackend(Backend):
             load()
 
         else:
-            #self.exec_in_dir = tempfile.mkdtemp()
+            self.exec_in_dir = tempfile.mkdtemp()
             pynml.run_lems_with_jneuroml_neuron(self.model.orig_lems_file_path,
                               skip_run=False,
                               nogui=False,
