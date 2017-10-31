@@ -60,3 +60,5 @@ neuronunit/tests/NeuroML2/*.xml*
 unit_test/get_tau.py
 .eggs
 htmlcov
+*.mod
+*_nrn.py
