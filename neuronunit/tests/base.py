@@ -152,3 +152,8 @@ class VmTest(sciunit.Test):
                 if math.isnan(j):
                     return False
         return True
+
+    @property
+    def state(self):
+        state = super(VmTest,self).state
+        return self._state(state=state, exclude=['unpicklable','verbose'])
