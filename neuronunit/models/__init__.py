@@ -5,6 +5,7 @@ from copy import deepcopy
 import tempfile
 import inspect
 import shutil
+import random
 
 import sciunit
 from sciunit.utils import dict_hash
@@ -25,6 +26,7 @@ class LEMSModel(sciunit.Model,
         #    sciunit.Model.__init__()
         if name is None:
             name = os.path.split(LEMS_file_path)[1].split('.')[0]
+        self.name = name
         #sciunit.Modelsuper(LEMSModel,self).__init__(name=name)
         self.attrs = attrs if attrs else {}
         self.orig_lems_file_path = os.path.abspath(LEMS_file_path)
@@ -80,7 +82,8 @@ class LEMSModel(sciunit.Model,
     def create_lems_file(self, name):
         if not hasattr(self,'temp_dir'):
             self.temp_dir = tempfile.gettempdir()
-        self.lems_file_path  = os.path.join(self.temp_dir, '%s.xml' % name)
+        rand = random.randint(0,1e15)
+        self.lems_file_path  = os.path.join(self.temp_dir, '%s+%d.xml' % (name,rand))
         shutil.copy2(self.orig_lems_file_path,self.lems_file_path)
         if self.attrs:
             self.set_lems_attrs(self.attrs)
