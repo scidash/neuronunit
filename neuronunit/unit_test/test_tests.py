@@ -23,12 +23,12 @@ class TestsTestCase(object):
         return cls.neuroelectro_summary_observation(neuron)
 
     def run_test(self, cls):
-        observation = self.get_observation(cls)
-        test = cls(observation=observation)
         try:
-            score = test.judge(self.model)
+            observation = self.get_observation(cls)
         except socket.timeout:
             return self.skipTest("Neuroelectro timed out")
+        test = cls(observation=observation)
+        score = test.judge(self.model)
         score.summarize()
         return score.score
 
