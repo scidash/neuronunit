@@ -38,6 +38,7 @@ class LEMSModel(sciunit.Model,
         self.last_run_params = None
         self.skip_run = False
         self.rerun = True # Needs to be rerun since it hasn't been run yet!
+        self.unpicklable = []
         self.set_backend(backend)
 
     def get_backend(self):
@@ -83,7 +84,7 @@ class LEMSModel(sciunit.Model,
         if not hasattr(self,'temp_dir'):
             self.temp_dir = tempfile.gettempdir()
         rand = random.randint(0,1e15)
-        self.lems_file_path  = os.path.join(self.temp_dir, '%s+%d.xml' % (name,rand))
+        self.lems_file_path  = os.path.join(self.temp_dir, '%s_%d.xml' % (name,rand))
         shutil.copy2(self.orig_lems_file_path,self.lems_file_path)
         if self.attrs:
             self.set_lems_attrs(self.attrs)
@@ -155,6 +156,4 @@ class LEMSModel(sciunit.Model,
 
     @property
     def state(self):
-        keys = ['attrs','run_params']
-        d = {key:getattr(self,key) for key in keys}
-        return dict_hash(d)
+        return self._state(keys=['name','url', 'attrs','run_params'])
