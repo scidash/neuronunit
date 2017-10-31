@@ -162,7 +162,7 @@ class jNeuroMLBackend(Backend):
 
     def set_attrs(self, **attrs):
         self.model.attrs.update(attrs)
-        self.set_lems_attrs(attrs)
+        self.model.set_lems_attrs(attrs)
 
     def set_run_params(self, **params):
         super(jNeuroMLBackend,self).set_run_params(**params)
