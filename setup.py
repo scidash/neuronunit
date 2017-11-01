@@ -14,7 +14,7 @@ setup(
             'neuronunit.neuroconstruct',
             'neuronunit.models',
             'neuronunit.tests',
-            'neuronunit.optimization'],
+            'neuronunit.optimization',
             'neuronunit.unit_test'],
     url='http://github.com/scidash/neuronunit',
     license='MIT',
