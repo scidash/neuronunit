@@ -78,7 +78,7 @@ class TestsFITestCase(TestsTestCase, unittest.TestCase):
         score = self.run_test(T)
         self.assertTrue(0.2 < score < 0.3)
 
-    @unittest.skip(SLOW,"This test takes a long time")
+    @unittest.skip("This test takes a long time")
     def test_rheobase_parallel(self):
         from neuronunit.tests.fi import T
         score = self.run_test(T)
