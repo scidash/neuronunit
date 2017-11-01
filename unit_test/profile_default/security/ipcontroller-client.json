@@ -1,0 +1,16 @@
+{
+  "key": "224b42c1-7d9c-4533-a911-8613a36db15e",
+  "signature_scheme": "hmac-sha256",
+  "notification": 55409,
+  "location": "172.17.0.2",
+  "registration": 45049,
+  "mux": 37186,
+  "iopub": 38155,
+  "unpack": "json",
+  "ssh": "",
+  "control": 43018,
+  "interface": "tcp://127.0.0.1",
+  "task_scheme": "leastload",
+  "pack": "json",
+  "task": 54250
+}

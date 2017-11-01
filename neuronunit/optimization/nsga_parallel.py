@@ -69,13 +69,15 @@ def bind_score_to_dtc(dtc):
         if k!=0 and k!=2:
             t.params = dtc.vtest[k]
             score = t.judge(model,stop_on_error = False, deep_error = False)
+            import pdb; pdb.set_trace()
             dtc.scores[str(t)] = score.sort_key
-            observation = score.observation
-            prediction = score.prediction
-            delta = evaluate_as_module.difference(observation,prediction)
-            dtc.differences[str(t)] = delta
-            #except:
-            #    pass
+            try:
+                observation = score.observation
+                prediction = score.prediction
+                delta = evaluate_as_module.difference(observation,prediction)
+                dtc.differences[str(t)] = delta
+            except:
+                pass
     return dtc
 
 def evaluate(dtc):

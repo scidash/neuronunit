@@ -49,7 +49,7 @@ def parallel_method(dtc):
     from neuronunit.optimization import evaluate_as_module
     dtc = evaluate_as_module.pre_format(dtc)
     for k,t in enumerate(get_neab.tests):
-        if k>1:
+        if k!=0 and k!=2:
             t.params = dtc.vtest[k]
             score = t.judge(model,stop_on_error = False, deep_error = True)
             dtc.scores[str(t)] = score.sort_key

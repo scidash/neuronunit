@@ -1,0 +1,16 @@
+{
+  "signature_scheme": "hmac-sha256",
+  "key": "224b42c1-7d9c-4533-a911-8613a36db15e",
+  "hb_ping": 33200,
+  "hb_pong": 37500,
+  "location": "172.17.0.2",
+  "pack": "json",
+  "mux": 44960,
+  "iopub": 45096,
+  "unpack": "json",
+  "ssh": "",
+  "control": 36547,
+  "interface": "tcp://127.0.0.1",
+  "task": 51773,
+  "registration": 45049
+}
