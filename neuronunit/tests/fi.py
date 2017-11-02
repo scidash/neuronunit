@@ -1,7 +1,8 @@
 """F/I neuronunit tests, e.g. investigating firing rates and patterns as a
 function of input current"""
 
-
+import os
+import neuronunit
 from .base import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
 #from .base.optimization import get_neab
 from .. import optimization
@@ -294,8 +295,8 @@ class RheobaseTestP(VmTest):
             output is an virtual model with an updated dictionary.
             '''
             ampl = float(ampl)
-            import os
-            LEMS_MODEL_PATH = str(os.getcwd())+'/NeuroML2/LEMS_2007One.xml'
+            LEMS_MODEL_PATH = os.path.join(neuronunit.__path__[0],
+                                           'models/NeuroML2/LEMS_2007One.xml')
             #from neuronunit.models import reduced
             from neuronunit.models.reduced import ReducedModel
             model = ReducedModel(LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
@@ -363,9 +364,10 @@ class RheobaseTestP(VmTest):
         @require('itertools')
         def find_rheobase(self,dtc):
             import ipyparallel as ipp
-            rc = ipp.Client(profile='default')
-            rc[:].use_cloudpickle()
-            dview = rc[:]
+            if not hasattr(self,'dview'):
+                self.rc = ipp.Client(profile='default')
+                self.rc[:].use_cloudpickle()
+                self.dview = self.rc[:]
 
             cnt = 0
             # If this it not the first pass/ first generation
@@ -378,7 +380,7 @@ class RheobaseTestP(VmTest):
                 dtc.searched.append(dtc.steps)
 
                 ds = [ dtc for s in dtc.steps ]
-                dtcpop = dview.map(check_current,dtc.steps,ds)
+                dtcpop = self.dview.map(check_current,dtc.steps,ds)
                 for dtc_clone in dtcpop.get():
                     dtc.lookup.update(dtc_clone.lookup)
                 dtc = check_fix_range(dtc)

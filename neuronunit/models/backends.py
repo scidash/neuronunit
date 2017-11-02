@@ -18,13 +18,8 @@ from quantities import ms, mV
 from neo.core import AnalogSignal
 import neuronunit.capabilities.spike_functions as sf
 import sciunit
-from sciunit.utils import dict_hash, import_module_from_path
-try:
-    import neuron
-    from neuron import h
-    NEURON_SUPPORT = True
-except:
-    NEURON_SUPPORT = False
+from sciunit.utils import dict_hash
+
 
 
 class Backend(object):
@@ -35,6 +30,8 @@ class Backend(object):
 
     def init_backend(self, *args, **kwargs):
         #self.attrs = {} if attrs is None else attrs
+        self.model.create_lems_file(self.model.name)
+        self.load_model()
         self.model.unpicklable = []
         self.model.attrs = {}
         self.rheobase = None
@@ -149,8 +146,24 @@ class Backend(object):
         with open(path,'wb') as f:
             pickle.dump(self.results,f)
 
-class BackendException(Exception):
-    pass
+    def get_attrs(self):
+        return self.model.attrs
+    attrs = property(get_attrs)
+
+
+class DiskBackend(Backend):
+    """A dummy backend that loads pre-computed results from disk"""
+
+    def init_backend(self, results_path='.'):
+        self.results_path = results_path
+        self.model.rerun = True
+        super(DiskBackend,self).init_backend()
+
+    def local_run(self, **run_params):
+        with open(self.results_path, 'rb') as f:
+            results = pickle.load(f)
+        return results
+
 
 class jNeuroMLBackend(Backend):
     """Used for simulation with jNeuroML, a reference simulator for NeuroML"""
@@ -203,14 +216,19 @@ class NEURONBackend(Backend):
             raise BackendException("The neuron module was not successfully imported")
         self.neuron = None
         self.model_path = None
+        from neuron import h
         self.h = h
+        self.related_data = {}
         #Should check if MPI parallel neuron is supported and invoked.
         self.h.load_file("stdlib.hoc")
         self.h.load_file("stdgui.hoc")
         self.lookup = {}
-        self.rheobase = None
-        super(NEURONBackend,self).init_backend()
-        self.model.unpicklable += ['h','ns','_backend']
+        self.model.rheobase = None
+        print(1,self.model.orig_lems_file_path)
+        self.load_model()
+        self.unpicklable = []
+        self.unpicklable += ['h','ns','_backend']
+        self.model.attrs = {}
 
     backend = 'NEURON'
 
@@ -372,10 +390,8 @@ class NEURONBackend(Backend):
         Since this only happens once outside of the optimization
         loop its a tolerable performance hit.
         """
-
         #Create a pyhoc file using jneuroml to convert from NeuroML to pyhoc.
         #import the contents of the file into the current names space.
-
         #The code block below does not actually function:
         #architecture = platform.machine()
         base_name = os.path.splitext(self.model.orig_lems_file_path)[0]
@@ -491,7 +507,8 @@ class NEURONBackend(Backend):
         # By rescaling voltage to milli volts, and time to milli seconds.
         results['vm'] = [float(x/1000.0) for x in copy.copy(self.neuron.h.v_v_of0.to_python())]
         results['t'] = [float(x/1000.0) for x in copy.copy(self.neuron.h.v_time.to_python())]
-        results['run_number'] = results.get('run_number',0) + 1
+        #n_samples = self.h.tstop/self.fixedTimeStep
+        ndynamic_samples = self.h.tstop/self.h.dt
 
         return results
 
@@ -528,11 +545,11 @@ class NEURONMemoryBackend(NEURONBackend):
     def inject_square_current(self, current):
 
 
-        if str(self.model.attrs) not in self.cached_attrs:
+        if str(self.model.attrs) not in self.model.cached_attrs:
             results = super(NEURONMemoryBackend,self).local_run()#
-            self.model.cached_attrs[self.model.attrs] = 1
+            self.model.cached_attrs[dict_hash(self.model.attrs)] = 1
         else:
-            self.model.cached_attrs[self.model.attrs] += 1
+            self.model.cached_attrs[dict_hash(self.model.attrs)] += 1
 
         super(NEURONMemoryBackend,self).inject_square_current(current)#
         #
