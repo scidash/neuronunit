@@ -1,16 +1,16 @@
 {
-  "key": "224b42c1-7d9c-4533-a911-8613a36db15e",
-  "signature_scheme": "hmac-sha256",
-  "notification": 55409,
+  "iopub": 51781,
   "location": "172.17.0.2",
-  "registration": 45049,
-  "mux": 37186,
-  "iopub": 38155,
-  "unpack": "json",
-  "ssh": "",
-  "control": 43018,
   "interface": "tcp://127.0.0.1",
+  "mux": 56089,
+  "notification": 37327,
+  "ssh": "",
+  "key": "e9451e96-7419-42a4-96a5-cc90185d50c6",
+  "task": 58625,
+  "registration": 36751,
+  "signature_scheme": "hmac-sha256",
   "task_scheme": "leastload",
+  "control": 47663,
   "pack": "json",
-  "task": 54250
+  "unpack": "json"
 }

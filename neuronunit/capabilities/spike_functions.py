@@ -28,7 +28,7 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
             centered at the spike peak.
 
     Returns:
-     a neo.core.AnalogSignal where each column contains a membrane potential 
+     a neo.core.AnalogSignal where each column contains a membrane potential
      snippets corresponding to one spike.
     """
     spike_train = threshold_detection(vm,threshold=threshold)
@@ -41,7 +41,11 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
                                              t_stop=spike_train.t_stop,
                                              units=spike_train.units)
 
-    snippets = [vm.time_slice(t-width/2,t+width/2) for t in spike_train]
+    #import pdb;
+    #pdb.set_trace()
+    #snippets = [ vm[t-width/2:t+width/2] for t in spike_train ]
+    snippets = [ vm[int(t)-int(width/2):int(t)+int(width/2)] for t in spike_train ]
+
     result = neo.core.AnalogSignal(np.array(snippets).T.squeeze(),
                                    units=vm.units,
                                    sampling_rate=vm.sampling_rate)
@@ -72,7 +76,8 @@ def spikes2widths(spike_waveforms):
      1D numpy array of spike widths, specifically the full width
      at half the maximum amplitude.
     """
-    n_spikes = spike_waveforms.shape[1]
+    n_spikes = spike_waveforms.shape[0]
+    import pdb; pdb.set_trace()
     widths = []
     for i in range(n_spikes):
         s = spike_waveforms[:,i].squeeze()

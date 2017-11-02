@@ -23,9 +23,17 @@ from neo.core import AnalogSignal
 from neuronunit.tests import TimeConstantTest
 
 
+import numpy as np
+import neo
+from elephant.spike_train_generation import threshold_detection
+from quantities import mV, ms
+
+import sciunit
+
+
 # In[3]:
 
-def make_sweep(total_time,amplitude,offset_time,tau):
+def make_snippet(total_time,amplitude,offset_time,tau):
     # Construct x and y without an exponential signal
     sampling_rate = 10000*pq.Hz # samples per ms
     total_samples = (total_time * sampling_rate).simplified
@@ -52,7 +60,27 @@ def make_sweep(total_time,amplitude,offset_time,tau):
 
     vm[samples_until_offset:] += exponential
 
-    return vm
+    from elephant.spike_train_generation import threshold_detection
+    threshold=0.0*mV
+    width=10*ms
+    spike_train = threshold_detection(vm,threshold=threshold)
+
+    # Fix for 0-length spike train issue in elephant.
+    try:
+        len(spike_train)
+    except TypeError:
+        spike_train = neo.core.SpikeTrain([],t_start=spike_train.t_start,
+                                             t_stop=spike_train.t_stop,
+                                             units=spike_train.units)
+
+    #import pdb;
+    #pdb.set_trace()
+    snippets = [ vm[int(t)-int(width/2):int(t)+int(width/2)] for t in spike_train ]
+    #result = neo.core.AnalogSignal(np.array(snippets).T.squeeze(),
+    #                               units=vm.units,
+    #                               sampling_rate=vm.sampling_rate)
+
+    return snippets
 
 
 # In[4]:
@@ -62,7 +90,8 @@ amplitude = -10*pq.mV
 offset_time = 30*pq.ms
 tau = 7*pq.ms
 
-vm = make_sweep(total_time,amplitude,offset_time,tau)
+snippets = make_snippet(total_time,amplitude,offset_time,tau)
+print(snippets)
 plt.plot(vm.times.rescale('ms'),vm)
 plt.xlabel(pq.ms.symbol)
 plt.ylabel(pq.mV.symbol);

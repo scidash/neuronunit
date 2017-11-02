@@ -12,6 +12,6 @@ before_script:
   - docker build -t neuronunit-optimization-unittest .
 script: 
   - docker run -it neuronunit-optimization-unittest /bin/bash
-  - coverage run --source=. --omit=*unit_test*,setup.py,*.eggs* setup.py test  
+  - coverage run testNEURONparallel.py
 after_success:
   - coveralls

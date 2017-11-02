@@ -67,10 +67,13 @@ def bind_score_to_dtc(dtc):
 
     for k,t in enumerate(get_neab.tests):
         if k!=0 and k!=2:
+            if 'passive' not in type(t):
+                print(t)
             t.params = dtc.vtest[k]
             score = t.judge(model,stop_on_error = False, deep_error = False)
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
             dtc.scores[str(t)] = score.sort_key
+            '''
             try:
                 observation = score.observation
                 prediction = score.prediction
@@ -78,6 +81,7 @@ def bind_score_to_dtc(dtc):
                 dtc.differences[str(t)] = delta
             except:
                 pass
+            '''
     return dtc
 
 def evaluate(dtc):
