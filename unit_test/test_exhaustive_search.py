@@ -6,6 +6,12 @@ CXPB = 0.9
 MU = 6; NGEN = 4; CXPB = 0.9
 nparam = 10
 
+from neuronunit.optimization import exhaustive_search as es
+npoints = 3
+nparams = 3
+scores_exh, dtcpop = es.run_grid(npoints,nparams)
+
+
 from neuronunit.optimization import nsga_parallel as nsgap
 
 ###
@@ -20,7 +26,3 @@ with open('complete_dump.p','wb') as handle:
 
 lists = pickle.load(open('complete_dump.p','rb'))
 #dtcoffspring2,history2,logbook2 = lists[0],lists[1],lists[2]
-from neuronunit.optimization import exhaustive_search as es
-npoints = 3
-nparams = 10
-scores_exh, dtcpop = es.run_grid(npoints,nparams)
