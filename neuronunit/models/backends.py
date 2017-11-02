@@ -16,6 +16,7 @@ from quantities import ms, mV
 from neo.core import AnalogSignal
 import neuronunit.capabilities.spike_functions as sf
 import sciunit
+from sciunit.utils import dict_hash
 
 
 
@@ -66,7 +67,9 @@ class Backend(object):
         with open(path,'wb') as f:
             pickle.dump(self.results,f)
 
-
+    def get_attrs(self):
+        return self.model.attrs
+    attrs = property(get_attrs)
 
 
 class DiskBackend(Backend):
@@ -139,7 +142,7 @@ class NEURONBackend(Backend):
         self.load_model()
         self.unpicklable = []
         self.unpicklable += ['h','ns','_backend']
-        self.attrs = {}
+        self.model.attrs = {}
 
     backend = 'NEURON'
 
@@ -454,7 +457,7 @@ class NEURONMemoryBackend(NEURONBackend):
     def inject_square_current(self, current):
 
 
-        if str(self.model.attrs) not in self.cached_attrs:
+        if str(self.model.attrs) not in self.model.cached_attrs:
             results = super(NEURONMemoryBackend,self).local_run()#
             self.model.cached_attrs[dict_hash(self.model.attrs)] = 1
         else:

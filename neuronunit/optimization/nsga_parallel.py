@@ -66,14 +66,14 @@ def bind_score_to_dtc(dtc):
         return dtc
 
     for k,t in enumerate(get_neab.tests):
-        if k!=0 and k!=2:
+        if k!=0:# and k!=2:
             t.params = dtc.vtest[k]
-            score = t.judge(model,stop_on_error = False, deep_error = False)
+            score = t.judge(model,stop_on_error = True, deep_error = False)
             dtc.scores[str(t)] = score.sort_key
-            observation = score.observation
-            prediction = score.prediction
-            delta = evaluate_as_module.difference(observation,prediction)
-            dtc.differences[str(t)] = delta
+            #observation = score.observation
+            #prediction = score.prediction
+            #delta = evaluate_as_module.difference(observation,prediction)
+            #dtc.differences[str(t)] = delta
             #except:
             #    pass
     return dtc
@@ -86,7 +86,7 @@ def evaluate(dtc):
     for k,t in enumerate(get_neab.tests):
         if dtc.rheobase['value'] > 0.0:
             fitness[k] = dtc.scores[str(t)]
-        except:
+        else:
             fitness[k] = -100.0
 
     print(fitness)

@@ -49,12 +49,15 @@ def parallel_method(dtc):
     from neuronunit.optimization import evaluate_as_module
     dtc = evaluate_as_module.pre_format(dtc)
     for k,t in enumerate(get_neab.tests):
-        if k>1:
+        if k>0:
+            print(k,t.name,'Start')
             t.params = dtc.vtest[k]
             score = t.judge(model,stop_on_error = False, deep_error = True)
+            print(k,t.name,'Finished')
             dtc.scores[str(t)] = score.sort_key
 
             scores.append(score.sort_key)
+    print(scores)
     return scores
 
 def dtc_to_rheo(dtc):
@@ -69,6 +72,7 @@ def dtc_to_rheo(dtc):
 
     observation = score.observation
     dtc.rheobase =  score.prediction
+    print('Rheobase finished with value %s' % dtc.rheobase)
     return dtc
 
 def update_dtc_pop(item_of_iter_list):
@@ -93,6 +97,8 @@ def run_grid(npoints,nparams):
     # a call to dview map.
     # probably this can be bypassed in the future by using zeromq's Client (by using ipyparallel's core module/code base more directly)
     dtcpop = list(map(dtc_to_rheo,dtcpop))
-    filtered_dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] > 0.0 , dtcpop))
-    scores = list(dview.map_sync(parallel_method,filtered_dtcpop))
+    #filtered_dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] > 0.0 , dtcpop))
+    scores = list(map(parallel_method,dtcpop))
+    scores = list(dview.map_sync(parallel_method,dtcpop))
+    #scores = list(dview.map_sync(parallel_method,filtered_dtcpop))
     return scores, dtcpop
