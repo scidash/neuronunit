@@ -530,9 +530,9 @@ class NEURONMemoryBackend(NEURONBackend):
 
         if str(self.model.attrs) not in self.cached_attrs:
             results = super(NEURONMemoryBackend,self).local_run()#
-            self.model.cached_attrs[dict_hash(self.model.attrs)] = 1
+            self.model.cached_attrs[self.model.attrs] = 1
         else:
-            self.model.cached_attrs[dict_hash(self.model.attrs)] += 1
+            self.model.cached_attrs[self.model.attrs] += 1
 
         super(NEURONMemoryBackend,self).inject_square_current(current)#
         #

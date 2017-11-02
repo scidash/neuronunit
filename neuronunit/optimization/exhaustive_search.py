@@ -48,14 +48,14 @@ def parallel_method(dtc):
     scores = []
     from neuronunit.optimization import evaluate_as_module
     dtc = evaluate_as_module.pre_format(dtc)
+
     for k,t in enumerate(get_neab.tests):
-        if k>1:
+        if k>0:
             t.params = dtc.vtest[k]
             score = t.judge(model,stop_on_error = False, deep_error = True)
-            dtc.scores[str(t)] = score.sort_key
-
+            dtc.scores[str(t)].append(score.sort_key)
             scores.append(score.sort_key)
-    return scores
+    return dtc
 
 def dtc_to_rheo(dtc):
     from neuronunit.models.reduced import ReducedModel
