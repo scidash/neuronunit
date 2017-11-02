@@ -16,7 +16,7 @@ RUN sudo /opt/conda/bin/python3 setup.py install
 RUN sudo git clone -b dev https://github.com/scidash/sciunit
 RUN sudo /opt/conda/bin/pip3 install -e sciunit
 COPY . $HOME/neuronunit
-RUN sudo /opt/conda/bin/pip3 install -e $HOME/neuronunit
+RUN sudo /opt/conda/bin/pip3 install -e $HOME/neuronunit --process-dependency-links
 
 COPY util.py /opt/conda/lib/python3.5/site-packages/ipyparallel/util.py
 RUN sudo /opt/conda/bin/pip3 install coveralls

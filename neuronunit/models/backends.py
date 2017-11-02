@@ -18,7 +18,7 @@ from quantities import ms, mV
 from neo.core import AnalogSignal
 import neuronunit.capabilities.spike_functions as sf
 import sciunit
-from sciunit.utils import dict_hash
+#from sciunit.utils import dict_hash
 
 
 
@@ -212,8 +212,8 @@ class NEURONBackend(Backend):
     """
 
     def init_backend(self, attrs=None):
-        if not NEURON_SUPPORT:
-            raise BackendException("The neuron module was not successfully imported")
+        #if not NEURON_SUPPORT:
+        #    raise BackendException("The neuron module was not successfully imported")
         self.neuron = None
         self.model_path = None
         from neuron import h
@@ -354,16 +354,21 @@ class NEURONBackend(Backend):
 
         return vTarget
 
+    def reset_neuron(self):
+        import neuron
+        self.neuron = neuron
+        
     def load(self):
         nrn_path = os.path.splitext(self.model.orig_lems_file_path)[0]+'_nrn.py'
         #import neuron # This is necessary to avoid a segmentation fault
-        nrn = import_module_from_path(nrn_path)
+
+        #nrn = self.neuron.h.import_module_from_path(nrn_path)
         #print(4)
-        self.reset_neuron(nrn.neuron)
+        self.reset_neuron()
         #print(5)#make sure mechanisms are loaded
-        modeldirname = os.path.dirname(self.model.orig_lems_file_path)
+        #modeldirname = os.path.dirname(self.model.orig_lems_file_path)
         #if load_mechanisms:
-        #    self.neuron.load_mechanisms(modeldirname)
+        nrn = self.neuron.load_mechanisms(nrn_path)
         self.set_stop_time(1600*ms)
         self.h.tstop
         #print(6)
@@ -372,12 +377,14 @@ class NEURONBackend(Backend):
         # the compiled files that NEURON needs to run the simulatuon.
         #os.chdir(self.exec_in_dir)
         #print(os.getcwd())
+
         self.ns = nrn.NeuronSimulation(self.h.tstop, dt=0.0025)
         #os.chdir(curr_dir)
         #print(7)
 
     def load_mechanisms(self):
-        neuron.load_mechanisms(self.neuron_model_dir)
+        self.reset_neuron()
+        self.neuron.load_mechanisms(self.neuron_model_dir)
 
     def load_model(self, verbose=True):
         """
@@ -547,9 +554,9 @@ class NEURONMemoryBackend(NEURONBackend):
 
         if str(self.model.attrs) not in self.model.cached_attrs:
             results = super(NEURONMemoryBackend,self).local_run()#
-            self.model.cached_attrs[dict_hash(self.model.attrs)] = 1
+            self.model.cached_attrs[self.model.attrs] = 1
         else:
-            self.model.cached_attrs[dict_hash(self.model.attrs)] += 1
+            self.model.cached_attrs[self.model.attrs] += 1
 
         super(NEURONMemoryBackend,self).inject_square_current(current)#
         #

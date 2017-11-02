@@ -7,7 +7,7 @@ import inspect
 import shutil
 
 import sciunit
-from sciunit.utils import dict_hash
+#from sciunit.utils import dict_hash
 import neuronunit.capabilities as cap
 from pyneuroml import pynml
 from . import backends
