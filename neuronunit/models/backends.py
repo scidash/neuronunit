@@ -16,7 +16,7 @@ from quantities import ms, mV
 from neo.core import AnalogSignal
 import neuronunit.capabilities.spike_functions as sf
 import sciunit
-from sciunit.utils import dict_hash
+#from sciunit.utils import dict_hash
 
 
 
@@ -32,7 +32,7 @@ class Backend(object):
         self.load_model()
         self.model.unpicklable = []
         self.model.attrs = {}
-    
+
     #attrs = None
 
     # Name of the backend
@@ -459,9 +459,9 @@ class NEURONMemoryBackend(NEURONBackend):
 
         if str(self.model.attrs) not in self.model.cached_attrs:
             results = super(NEURONMemoryBackend,self).local_run()#
-            self.model.cached_attrs[dict_hash(self.model.attrs)] = 1
+            self.model.cached_attrs[str(self.model.attrs)] = 1
         else:
-            self.model.cached_attrs[dict_hash(self.model.attrs)] += 1
+            self.model.cached_attrs[str(self.model.attrs)] += 1
 
         super(NEURONMemoryBackend,self).inject_square_current(current)#
         #
@@ -485,7 +485,7 @@ class NEURONMemoryBackend(NEURONBackend):
 
     def local_run(self):
         #
-        # Logic for choosing whether a injection value, has already been tested.
+        # Logic for choosing whether a i    njection value, has already been tested.
         #
         if str(self.current) not in self.model.cached_params:
             results = super(NEURONMemoryBackend,self).local_run()

@@ -37,6 +37,10 @@ def create_grid(npoints=3,nparams=7):
     grid = list(ParameterGrid(subset))
     return grid
 
+
+    #pre_format = evaluate_as_module.pre_format
+
+
 def parallel_method(dtc):
     from neuronunit.optimization import get_neab
 
@@ -46,19 +50,22 @@ def parallel_method(dtc):
     get_neab.tests[0].prediction = dtc.rheobase
     model.rheobase = dtc.rheobase['value']
     scores = []
-    from neuronunit.optimization import evaluate_as_module
-    dtc = evaluate_as_module.pre_format(dtc)
+
+    print(dtc)
     for k,t in enumerate(get_neab.tests):
         if k>0:
             print(k,t.name,'Start')
             t.params = dtc.vtest[k]
+            print(t.params)
             score = t.judge(model,stop_on_error = False, deep_error = True)
-            print(k,t.name,'Finished')
-            dtc.scores[str(t)] = score.sort_key
-
-            scores.append(score.sort_key)
-    print(scores)
-    return scores
+            print(k,t.name,' not Finished')
+            if str(t) not in dtc.scores.keys():
+                dtc.scores[str(t)]=[]
+                dtc.scores[str(t)].append(score.sort_key)
+            else:
+                dtc.scores[str(t)].append(score.sort_key)
+                print(dtc.scores[str(t)])
+    return dtc
 
 def dtc_to_rheo(dtc):
     from neuronunit.models.reduced import ReducedModel
@@ -89,6 +96,7 @@ def update_dtc_pop(item_of_iter_list):
 
 def run_grid(npoints,nparams):
     # not all models will produce scores, since models with rheobase <0 are filtered out.
+    from neuronunit.optimization import nsga_parallel
 
     grid_points = create_grid(npoints = npoints,nparams=nparams)
     dtcpop = list(dview.map_sync(update_dtc_pop,grid_points))
@@ -97,8 +105,18 @@ def run_grid(npoints,nparams):
     # a call to dview map.
     # probably this can be bypassed in the future by using zeromq's Client (by using ipyparallel's core module/code base more directly)
     dtcpop = list(map(dtc_to_rheo,dtcpop))
-    #filtered_dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] > 0.0 , dtcpop))
-    scores = list(map(parallel_method,dtcpop))
-    scores = list(dview.map_sync(parallel_method,dtcpop))
-    #scores = list(dview.map_sync(parallel_method,filtered_dtcpop))
-    return scores, dtcpop
+    dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] > 0.0 , dtcpop))
+    #scores = list(map(parallel_method,dtcpop))
+    from neuronunit.optimization import evaluate_as_module
+    #dtc = evaluate_as_module.pre_format(dtc)
+    pre_format = evaluate_as_module.pre_format
+    dtcpop = list(map(pre_format,dtcpop))
+    bind_score_to_dtc = nsga_parallel.bind_score_to_dtc
+    dtcpop = list(map(bind_score_to_dtc,dtcpop))
+
+    #dtcpop = list(dview.map_sync(bind_score_to_dtc,dtcpop))
+    print(dtcpop)
+    return dtcpop
+
+#dtcpop = list(dview.map(parallel_method,dtcpop).get())
+#print(dtcpop)
