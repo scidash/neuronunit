@@ -49,17 +49,10 @@ def parallel_method(dtc):
     from neuronunit.optimization import evaluate_as_module
     dtc = evaluate_as_module.pre_format(dtc)
     for k,t in enumerate(get_neab.tests):
-        if k!=0:
-            print(t.params)
-            print('model',dtc.attrs)
-            print('fails on ...',k,t)
+        if k!=0 and float(dtc.rheobase['value']) > 0:
             t.params = dtc.vtest[k]
             score = t.judge(model,stop_on_error = False, deep_error = True)
-            if str(t) not in dtc.scores.keys():
-                dtc.scores[str(t)]=[]
-                dtc.scores[str(t)].append(score.sort_key)
-            else:
-                dtc.scores[str(t)].append(score.sort_key)
+            dtc.scores[str(t)] = score.sort_key
             #import pdb; pdb.set_trace()
             #scores.append(score.sort_key)
     return dtc
