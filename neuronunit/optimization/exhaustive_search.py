@@ -50,11 +50,19 @@ def parallel_method(dtc):
     dtc = evaluate_as_module.pre_format(dtc)
     for k,t in enumerate(get_neab.tests):
         if k!=0:
+            print(t.params)
+            print('model',dtc.attrs)
+            print('fails on ...',k,t)
             t.params = dtc.vtest[k]
             score = t.judge(model,stop_on_error = False, deep_error = True)
-            dtc.scores[str(t)] = score.sort_key
-            scores.append(score.sort_key)
-    return scores
+            if str(t) not in dtc.scores.keys():
+                dtc.scores[str(t)]=[]
+                dtc.scores[str(t)].append(score.sort_key)
+            else:
+                dtc.scores[str(t)].append(score.sort_key)
+            #import pdb; pdb.set_trace()
+            #scores.append(score.sort_key)
+    return dtc
 
 def dtc_to_rheo(dtc):
     from neuronunit.models.reduced import ReducedModel
@@ -92,6 +100,12 @@ def run_grid(npoints,nparams):
     # a call to dview map.
     # probably this can be bypassed in the future by using zeromq's Client (by using ipyparallel's core module/code base more directly)
     dtcpop = list(map(dtc_to_rheo,dtcpop))
+    print(dtcpop)
+
     filtered_dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] > 0.0 , dtcpop))
-    scores = list(dview.map_sync(parallel_method,filtered_dtcpop))
+    print(filtered_dtcpop)
+    dtcpop = list(map(parallel_method,filtered_dtcpop))
+
+
+    dtcpop = list(dview.map_sync(parallel_method,filtered_dtcpop))
     return scores, dtcpop

@@ -378,8 +378,8 @@ class RheobaseTestP(VmTest):
                 dtc.searched.append(dtc.steps)
 
                 ds = [ dtc for s in dtc.steps ]
-                dtcpop = dview.map(check_current,dtc.steps,ds)
-                for dtc_clone in dtcpop.get():
+                dtcpop = list(dview.map_sync(check_current,dtc.steps,ds))
+                for dtc_clone in dtcpop:
                     dtc.lookup.update(dtc_clone.lookup)
                 dtc = check_fix_range(dtc)
                 cnt += 1
