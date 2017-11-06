@@ -28,7 +28,7 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
             centered at the spike peak.
 
     Returns:
-     a neo.core.AnalogSignal where each column contains a membrane potential 
+     a neo.core.AnalogSignal where each column contains a membrane potential
      snippets corresponding to one spike.
     """
     spike_train = threshold_detection(vm,threshold=threshold)

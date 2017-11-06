@@ -1,3 +1,4 @@
+
 try:
     from setuptools import setup
 except ImportError:
@@ -5,7 +6,6 @@ except ImportError:
 
 setup(
     name='neuronunit',
-    version='0.19',
     author='Rick Gerkin',
     author_email='rgerkin@asu.edu',
         packages=[
@@ -14,7 +14,7 @@ setup(
             'neuronunit.neuroconstruct',
             'neuronunit.models',
             'neuronunit.tests',
-            'neuronunit.unit_test'],
+            'neuronunit.optimization'],
     url='http://github.com/scidash/neuronunit',
     license='MIT',
     description='A SciUnit library for data-driven testing of single-neuron physiology models.',
@@ -25,16 +25,16 @@ setup(
                       'neo==0.5.2',
                       #'neo==9999',
                       'elephant==0.4.1',
-                      'igor==0.3',
-                      'sciunit==0.19',
-                      'allensdk==0.14.2',
+                      'igor==0.3'
+                      #'sciunit==0.19',
+                      #'allensdk==0.14.2',
                       #'allensdk==9999',
-                      'pyneuroml==0.3.1.1',
+                      #'pyneuroml==0.3.1.1',
                       #'pyneuroml==9999'
                       ],
-    dependency_links = ['git+https://github.com/scidash/sciunit@master#egg=sciunit-0.19',
+    dependency_links = [#'git+https://github.com/scidash/sciunit@master#egg=sciunit-0.19',
                         #'git+https://github.com/rgerkin/AllenSDK@master#egg=allensdk-9999',
-                        'git+https://github.com/rgerkin/pyNeuroML@master#egg=pyneuroml-0.3.1.1',
+                        #'git+https://github.com/rgerkin/pyNeuroML@master#egg=pyneuroml-0.3.1.1',
                         #'git+https://github.com/rgerkin/python-neo@master#egg=neo-9999',
                         ]
 )

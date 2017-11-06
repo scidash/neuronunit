@@ -158,6 +158,7 @@ class NSGA(object):
         #import pdb; pdb.set_trace()
 
         invalid_dtc = list(filter(lambda dtc: float(dtc.rheobase['value']) > 0.0, invalid_dtc))
+        assert len(invalid_dtc)>0
         #print(invalid_dtc)
         #import pdb; pdb.set_trace()
 
