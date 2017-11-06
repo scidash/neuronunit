@@ -295,11 +295,11 @@ class RheobaseTestP(VmTest):
             '''
             ampl = float(ampl)
             LEMS_MODEL_PATH1 = os.path.join(neuronunit.__path__[0],
-                                           'models/NeuroML2/LEMS_2007One.xml')
+                                           '../models/NeuroML2/LEMS_2007One.xml')
             #from neuronunit.models import reduced
             from neuronunit.models.reduced import ReducedModel
             LEMS_MODEL_PATH0 = str(os.getcwd())+str('/NeuroML2/LEMS_2007One.xml')
-            LEMS_MODEL_PATH = str('/home/jovyan/neuronunit/unit_test/NeuroML2')
+            LEMS_MODEL_PATH = str('/home/jovyan/neuronunit/unit_test/NeuroML2/LEMS_2007One.xml')
             print(LEMS_MODEL_PATH, LEMS_MODEL_PATH0, LEMS_MODEL_PATH1)
             model = ReducedModel(LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
             #print(model)
