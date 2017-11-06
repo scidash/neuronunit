@@ -104,8 +104,8 @@ def run_grid(npoints,nparams):
 
     filtered_dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] > 0.0 , dtcpop))
     print(filtered_dtcpop)
-    dtcpop = list(map(parallel_method,filtered_dtcpop))
+    #dtcpop = list(map(parallel_method,filtered_dtcpop))
 
 
     dtcpop = list(dview.map_sync(parallel_method,filtered_dtcpop))
-    return scores, dtcpop
+    return dtcpop
