@@ -73,8 +73,8 @@ for cls,params in test_class_params:
     observation = cls.neuroelectro_summary_observation(neuron)
     tests += [cls(observation)]
 
-with open(ne_pickle, 'wb') as f:
-    pickle.dump(tests, f)
+#with open(ne_pickle, 'wb') as f:
+#    pickle.dump(tests, f)
 
 def update_amplitude(test,tests,score):
     rheoXbase = score.prediction['value']#first find a value for rheobase

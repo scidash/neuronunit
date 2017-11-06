@@ -38,34 +38,38 @@ def create_grid(npoints=3,nparams=7):
     return grid
 
 def parallel_method(dtc):
-    from neuronunit.optimization import get_neab
 
     from neuronunit.models.reduced import ReducedModel
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-    model.set_attrs(dtc.attrs)
-    get_neab.tests[0].prediction = dtc.rheobase
-    model.rheobase = dtc.rheobase['value']
-    scores = []
-    from neuronunit.optimization import evaluate_as_module
-    dtc = evaluate_as_module.pre_format(dtc)
-    for k,t in enumerate(get_neab.tests):
-        if k!=0 and float(dtc.rheobase['value']) > 0:
-            t.params = dtc.vtest[k]
-            score = t.judge(model,stop_on_error = False, deep_error = True)
-            dtc.scores[str(t)] = score.sort_key
-            #import pdb; pdb.set_trace()
-            #scores.append(score.sort_key)
-    return dtc
+    try:
+        from neuronunit.optimization import get_neab
+        tests = get_neab.tests
+        model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+        model.set_attrs(dtc.attrs)
+        tests[0].prediction = dtc.rheobase
+        model.rheobase = dtc.rheobase['value']
+        scores = []
+        from neuronunit.optimization import evaluate_as_module
+        dtc = evaluate_as_module.pre_format(dtc)
+        for k,t in enumerate(tests):
+            if k>0 and float(dtc.rheobase['value']) > 0:
+                print('failed at:')
+                print(dtc.rheobase,t,k,dtc.vtest[k])
+                t.params = dtc.vtest[k]
+                score = t.judge(model,stop_on_error = False, deep_error = False)
+                dtc.scores[str(t)] = score.sort_key
+        return dtc
+    except:
+        return dtc
 
 def dtc_to_rheo(dtc):
-    from neuronunit.models.reduced import ReducedModel
+    dtc.scores = {}
     from neuronunit.optimization import get_neab
+
+    from neuronunit.models.reduced import ReducedModel
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.set_attrs(dtc.attrs)
-    dtc.scores = {}
 
     score = get_neab.tests[0].judge(model,stop_on_error = False, deep_error = True)
-    #dtc.scores[str(get_neab.tests[0])] = score.sort_key
 
     observation = score.observation
     dtc.rheobase =  score.prediction
