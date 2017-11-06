@@ -24,7 +24,6 @@ class RheobaseTest(VmTest):
 
     required_capabilities = (cap.ReceivesSquareCurrent,
                              cap.ProducesSpikes)
-
     params = {'injected_square_current':
                 {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
@@ -295,10 +294,13 @@ class RheobaseTestP(VmTest):
             output is an virtual model with an updated dictionary.
             '''
             ampl = float(ampl)
-            LEMS_MODEL_PATH = os.path.join(neuronunit.__path__[0],
+            LEMS_MODEL_PATH1 = os.path.join(neuronunit.__path__[0],
                                            'models/NeuroML2/LEMS_2007One.xml')
             #from neuronunit.models import reduced
             from neuronunit.models.reduced import ReducedModel
+            LEMS_MODEL_PATH0 = str(os.getcwd())+str('/NeuroML2/LEMS_2007One.xml')
+            LEMS_MODEL_PATH = str('/home/jovyan/neuronunit/unit_test/NeuroML2')
+            print(LEMS_MODEL_PATH, LEMS_MODEL_PATH0, LEMS_MODEL_PATH1)
             model = ReducedModel(LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
             #print(model)
             #import pdb; pdb.set_trace()
