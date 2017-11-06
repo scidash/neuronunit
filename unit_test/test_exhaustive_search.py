@@ -25,4 +25,4 @@ npoints = 1
 nparams = 2
 dtcpop = es.run_grid(npoints,nparams)
 print(dtcpop)
-print(scores_exh)
+#print(scores_exh)
