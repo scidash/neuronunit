@@ -11,7 +11,8 @@ import ipyparallel as ipp
 rc = ipp.Client(profile='default')
 rc[:].use_cloudpickle()
 dview = rc[:]
-
+from neuronunit.optimization import get_neab
+tests = get_neab.tests
 def sample_points(iter_dict, npoints=3):
     import numpy as np
     replacement={}

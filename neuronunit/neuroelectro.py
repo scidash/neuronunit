@@ -176,9 +176,9 @@ class NeuroElectroData(object):
         that neuroelectro.org will provide."""
         db = shelve.open('neuroelectro-cache') if self.cached else {}
         contents = (self.__class__,self.neuron,self.ephysprop,params)
-        #identifier = str(hash(contents))
-        pickled = pickle.dumps(contents)
-        identifier = hashlib.sha224(pickled).hexdigest()
+        identifier = str(hash(contents))
+        #pickled = pickle.dumps(contents)
+        #identifier = hashlib.sha224(pickled).hexdigest()
         if not quiet:
             print("Getting %s%s data values from neuroelectro.org" \
                    % ("cached " if identifier in db else "", \
@@ -188,7 +188,7 @@ class NeuroElectroData(object):
             self.json_object = json.loads(db[identifier])
         else:
             self.get_json(params=params, quiet=quiet)
-            db[identifier] = json.dumps(self.json_object)
+            #db[identifier] = json.dumps(self.json_object)
         if 'objects' in self.json_object:
             data = self.json_object['objects']
         else:
