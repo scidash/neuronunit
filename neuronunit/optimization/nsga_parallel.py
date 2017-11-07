@@ -46,25 +46,16 @@ def dtc_to_rheo(dtc):
     return dtc
 
 def bind_score_to_dtc(dtc):
-    #import evaluate_as_module
-    from neuronunit.optimization import evaluate_as_module
-
-    #from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
     import quantities as pq
     import numpy as np
     from neuronunit.optimization import get_neab
-
-
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURONMemory')
-
-
     model.set_attrs(dtc.attrs)
     get_neab.tests[0].prediction = dtc.rheobase
     model.rheobase = dtc.rheobase['value']
     if dtc.rheobase['value'] <= 0.0:
         return dtc
-
     for k,t in enumerate(get_neab.tests):
         if k!=0 and k!=2:
             if 'passive' not in type(t):
@@ -73,19 +64,9 @@ def bind_score_to_dtc(dtc):
             score = t.judge(model,stop_on_error = False, deep_error = False)
             #import pdb; pdb.set_trace()
             dtc.scores[str(t)] = score.sort_key
-            '''
-            try:
-                observation = score.observation
-                prediction = score.prediction
-                delta = evaluate_as_module.difference(observation,prediction)
-                dtc.differences[str(t)] = delta
-            except:
-                pass
-            '''
     return dtc
 
 def evaluate(dtc):
-
     from neuronunit.optimization import get_neab
     import numpy as np
     fitness = [ -100.0 for i in range(0,8)]
@@ -94,7 +75,6 @@ def evaluate(dtc):
             fitness[k] = dtc.scores[str(t)]
         else:
             fitness[k] = -100.0
-
     print(fitness)
     return fitness[0],fitness[1],\
            fitness[2],fitness[3],\
@@ -136,26 +116,10 @@ def update_pop(pop,td):
     update_dtc_pop = evaluate_as_module.update_dtc_pop
     pre_format = evaluate_as_module.pre_format
     dtcpop = list(update_dtc_pop(pop, td))
-    print('a')
-    assert len(dtcpop) != 0
-
     dtcpop = list(map(dtc_to_rheo,dtcpop))
-    print('b')
-
-    assert len(dtcpop) != 0
-
     dtcpop = list(map(pre_format,dtcpop))
-    print('c')
-
-    assert len(dtcpop) != 0
-
-    #assert len(dtcpop) != 0
-    #print('d')
-
     dtcpop = list(dview.map_sync(bind_score_to_dtc,dtcpop))
     import copy
-    print('e')
-
     assert len(dtcpop) != 0
     return copy.copy(dtcpop)
 

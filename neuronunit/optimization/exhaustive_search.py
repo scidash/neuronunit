@@ -38,6 +38,10 @@ def create_grid(npoints=3,nparams=7):
     grid = list(ParameterGrid(subset))
     return grid
 
+
+    #pre_format = evaluate_as_module.pre_format
+
+
 def parallel_method(dtc):
 
     from neuronunit.models.reduced import ReducedModel
@@ -91,6 +95,7 @@ def update_dtc_pop(item_of_iter_list):
 
 def run_grid(npoints,nparams):
     # not all models will produce scores, since models with rheobase <0 are filtered out.
+    from neuronunit.optimization import nsga_parallel
 
     grid_points = create_grid(npoints = npoints,nparams=nparams)
     dtcpop = list(dview.map_sync(update_dtc_pop,grid_points))
@@ -110,3 +115,6 @@ def run_grid(npoints,nparams):
     dtcpop=list(dtcpop)
 
     return dtcpop
+
+#dtcpop = list(dview.map(parallel_method,dtcpop).get())
+#print(dtcpop)

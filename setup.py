@@ -6,6 +6,7 @@ except ImportError:
 
 setup(
     name='neuronunit',
+    version='0.19',
     author='Rick Gerkin',
     author_email='rgerkin@asu.edu',
         packages=[
@@ -13,8 +14,7 @@ setup(
             'neuronunit.capabilities',
             'neuronunit.neuroconstruct',
             'neuronunit.models',
-            'neuronunit.tests',
-            'neuronunit.optimization'],
+            'neuronunit.tests'],
     url='http://github.com/scidash/neuronunit',
     license='MIT',
     description='A SciUnit library for data-driven testing of single-neuron physiology models.',
@@ -32,9 +32,9 @@ setup(
                       #'pyneuroml==0.3.1.1',
                       #'pyneuroml==9999'
                       ],
-    dependency_links = [#'git+https://github.com/scidash/sciunit@master#egg=sciunit-0.19',
+    dependency_links = ['git+https://github.com/scidash/sciunit@master#egg=sciunit-0.19',
                         #'git+https://github.com/rgerkin/AllenSDK@master#egg=allensdk-9999',
-                        #'git+https://github.com/rgerkin/pyNeuroML@master#egg=pyneuroml-0.3.1.1',
+                        'git+https://github.com/rgerkin/pyNeuroML@master#egg=pyneuroml-0.3.1.1',
                         #'git+https://github.com/rgerkin/python-neo@master#egg=neo-9999',
                         ]
 )

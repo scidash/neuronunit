@@ -189,4 +189,5 @@ def pre_format(dtc):
             dtc.vtest[k]['injected_square_current']['duration'] = 1000 * pq.ms
             dtc.vtest[k]['injected_square_current']['amplitude'] = dtc.rheobase['value']
             dtc.vtest[k]['injected_square_current']['delay'] = 100 * pq.ms
+    print(dtc.vtest[k]['injected_square_current'])        
     return dtc

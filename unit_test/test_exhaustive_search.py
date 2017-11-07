@@ -4,9 +4,12 @@
 NGEN = 3
 CXPB = 0.9
 MU = 6; NGEN = 4; CXPB = 0.9
+nparams = 3
+npoints = 3
+NSGA = True
 
-#from neuronunit.optimization import nsga_parallel as nsgap
 from neuronunit.optimization import exhaustive_search as es
+
 '''
 ###
 # less than 10 params currently unsupported.
@@ -20,14 +23,9 @@ with open('complete_dump.p','wb') as handle:
 lists = pickle.load(open('complete_dump.p','rb'))
 '''
 
-#dtcoffspring2,history2,logbook2 = lists[0],lists[1],lists[2]
-npoints = 3
-nparams = 3
 dtcpop = es.run_grid(npoints,nparams)
 for d in dtcpop:
     print(d.scores)
 print(dtcpop)
 print('job completed, gracefuly quiting')
 exit()
-
-#print(scores_exh)
