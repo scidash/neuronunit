@@ -40,26 +40,26 @@ def create_grid(npoints=3,nparams=7):
 def parallel_method(dtc):
 
     from neuronunit.models.reduced import ReducedModel
-    try:
-        from neuronunit.optimization import get_neab
-        tests = get_neab.tests
-        model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-        model.set_attrs(dtc.attrs)
-        tests[0].prediction = dtc.rheobase
-        model.rheobase = dtc.rheobase['value']
-        scores = []
-        from neuronunit.optimization import evaluate_as_module
-        dtc = evaluate_as_module.pre_format(dtc)
-        for k,t in enumerate(tests):
-            if k>0 and float(dtc.rheobase['value']) > 0:
-                print('failed at:')
-                print(dtc.rheobase,t,k,dtc.vtest[k])
-                t.params = dtc.vtest[k]
-                score = t.judge(model,stop_on_error = False, deep_error = False)
-                dtc.scores[str(t)] = score.sort_key
-        return dtc
-    except:
-        return dtc
+    #try:
+    from neuronunit.optimization import get_neab
+    tests = get_neab.tests
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+    model.set_attrs(dtc.attrs)
+    tests[0].prediction = dtc.rheobase
+    model.rheobase = dtc.rheobase['value']
+    scores = []
+    from neuronunit.optimization import evaluate_as_module
+    dtc = evaluate_as_module.pre_format(dtc)
+    for k,t in enumerate(tests):
+        if k>0 and float(dtc.rheobase['value']) > 0:
+            print('failed at:')
+            print(dtc.rheobase,t,k,dtc.vtest[k])
+            t.params = dtc.vtest[k]
+            score = t.judge(model,stop_on_error = False, deep_error = False)
+            dtc.scores[str(t)] = score.sort_key
+    return dtc
+    #except:
+    #    return dtc
 
 def dtc_to_rheo(dtc):
     dtc.scores = {}
@@ -103,7 +103,9 @@ def run_grid(npoints,nparams):
     filtered_dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] > 0.0 , dtcpop))
     print(filtered_dtcpop)
     #dtcpop = list(map(parallel_method,filtered_dtcpop))
+    dtcpop = dview.map(parallel_method,filtered_dtcpop).get()
 
+    rc.wait(dtcpop)
+    dtcpop=list(dtcpop)
 
-    dtcpop = list(dview.map_sync(parallel_method,filtered_dtcpop))
     return dtcpop

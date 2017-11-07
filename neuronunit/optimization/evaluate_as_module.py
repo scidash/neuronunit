@@ -9,9 +9,10 @@ from neuronunit.models import backends
 import neuronunit
 print(neuronunit.models.__file__)
 from neuronunit.models.reduced import ReducedModel
+from ipyparallel import depend, require, dependent
+
 '''
 from neuronunit.optimization import get_neab
-from ipyparallel import depend, require, dependent
 import ipyparallel as ipp
 rc = ipp.Client(profile='default')
 rc[:].use_cloudpickle()

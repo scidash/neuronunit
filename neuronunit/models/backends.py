@@ -61,9 +61,10 @@ class Backend(object):
         """Load the model into memory"""
         pass
 
-    def save_results(self, path='.'):
-        with open(path,'wb') as f:
-            pickle.dump(self.results,f)
+    # could lead to deadlock if done in parallel
+    # def save_results(self, path='.'):
+    #    with open(path,'wb') as f:
+    #        pickle.dump(self.results,f)
 
 
 
