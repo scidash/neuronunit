@@ -52,8 +52,8 @@ def parallel_method(dtc):
     dtc = evaluate_as_module.pre_format(dtc)
     for k,t in enumerate(tests):
         if k>0 and float(dtc.rheobase['value']) > 0:
-            print('failed at:')
-            print(dtc.rheobase,t,k,dtc.vtest[k])
+            #print('failed at:')
+            #print(dtc.rheobase,t,k,dtc.vtest[k])
             t.params = dtc.vtest[k]
             score = t.judge(model,stop_on_error = False, deep_error = False)
             dtc.scores[str(t)] = score.sort_key

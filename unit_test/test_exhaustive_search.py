@@ -22,7 +22,9 @@ lists = pickle.load(open('complete_dump.p','rb'))
 
 #dtcoffspring2,history2,logbook2 = lists[0],lists[1],lists[2]
 npoints = 2
-nparams = 3
+nparams = 2
 dtcpop = es.run_grid(npoints,nparams)
+for d in dtcpop:
+    print(d.scores)
 print(dtcpop)
 #print(scores_exh)
