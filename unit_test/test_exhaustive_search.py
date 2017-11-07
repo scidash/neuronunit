@@ -27,4 +27,7 @@ dtcpop = es.run_grid(npoints,nparams)
 for d in dtcpop:
     print(d.scores)
 print(dtcpop)
+print('job completed, gracefuly quiting')
+exit()
+
 #print(scores_exh)
