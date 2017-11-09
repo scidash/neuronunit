@@ -7,7 +7,7 @@ import inspect
 import shutil
 
 import sciunit
-from sciunit.utils import dict_hash
+#from sciunit.utils import dict_hash
 import neuronunit.capabilities as cap
 from pyneuroml import pynml
 from . import backends
@@ -160,6 +160,4 @@ class LEMSModel(sciunit.Model,
 
     @property
     def state(self):
-        keys = ['attrs','run_params']
-        d = {key:getattr(self,key) for key in keys}
-        return dict_hash(d)
+        return self._state(keys=['attrs','run_params'])
