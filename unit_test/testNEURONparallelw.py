@@ -51,16 +51,6 @@ class TestBackend(unittest.TestCase):
         else:
             return False
 
-    def test_2_backend_pyNN(self):
-        from neuronunit.models.reduced import ReducedModel
-        from neuronunit.optimization import get_neab
-        print(get_neab.LEMS_MODEL_PATH)
-        model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend='pyNN')
-        print(model)
-        import pdb; pdb.set_trace()
-
-
-
 
     def test_3_backend_inheritance(self):
         boolean = self.backend_inheritance()
@@ -71,82 +61,20 @@ class TestBackend(unittest.TestCase):
         booleanp = dview.apply_sync(self.backend_inheritance)
         self.assertEqual(booleans, booleanp[0])
 
-    def test_5_agreement(self):
-        from neuronunit.optimization import nsga_object
-        from neuronunit.optimization import nsga_parallel
-        from neuronunit.optimization import evaluate_as_module
-        import numpy as np
-        disagreement = []
-        #import pdb; pdb.set_trace()
-        print('gets here')
-        for i in range(1,10):
-        #i = 1 #later this will be a loop as comment above.
-            subset = nsga_parallel.create_subset(nparams=i)
-            numb_err_f = 8
-            toolbox, tools, history, creator, base = evaluate_as_module.import_list(ipp,subset,numb_err_f)
-            ind = toolbox.population(n = 1)
-            print(len(ind),i)
+    def reduce_to_simple_dt(self,pop):
+        '''
+        reduce to simple data type
+        ie deap individuals are not simply a list
+        of tuples, but sometimes we want a list of tuples.
+        '''
 
-            N = nsga_object.NSGA(nparams=i)
-            self.assertEqual(N.nparams,i)
-            N.setnparams(nparams=i)
-            self.assertEqual(N.nparams,i)
-
-
-            from neuronunit.optimization import exhaustive_search as es
-            npoints = 2
-            nparams = i
-            scores_exh, dtcpop = es.run_grid(npoints,nparams)
-            #import pdb; pdb.set_trace()
-
-            minima_attr = dtcpop[np.where[ np.min(scores_exh) == scores_exh ][0]]
-            NGEN = 2
-            MU = 4
-            invalid_dtc, pop, logbook, fitnesses = N.main(MU,NGEN)
-            keys = invalid_dtc[0].keys()
-            dis = []
-            for k in keys:
-                dis.append(invalid_dtc[0].attrs[k] - minima_attr.attrs[k])
-            disagreement.append(np.mean(dis))
-            import pdb; pdb.set_trace()
-        return disagreement, dis
-
-    def test_6_agreement(self):
-        disagreement, dis = self.test_5_agreement()
-
-    '''
-    def test_7_ngsa(self):
-        from neuronunit.optimization import nsga_object
-
-        import numpy as np
-        number = 2
-        N = nsga_object.NSGA(nparams=number)
-        #self.assertEqual(N.nparams,number)
-        number = 2
-        N.setnparams(nparams=number)
-        #self.assertEqual(N.nparams,number)
-
-        NGEN = 2
-        MU = 4
-
-        invalid_dtc, pop, logbook, fitnesses = N.main(MU,NGEN)
-
-        pf = np.mean(fitnesses)
-        NGEN = 4
-        MU = len(pop)
-
-        for gen in range(1, NGEN):
-            final_dtc, pop, final_logbook, final_fitnesses = N.evolve(pop,MU,gen)
-        final_pop = pop
-        ff = np.mean(final_fitnesses)
-        import pdb; pdb.set_trace()
-
-        self.assertNotEqual(ff,pf)
-        self.assertGreater(ff,pf)
-
-
-
-
+        striped_data_type = []
+        for ind in pop:
+            disp = []
+            for i in ind:
+                disp.append(float(i))
+            striped_data_type.append(tuple(disp))
+        return striped_data_type
 
     def test_8_data_transport_containers_on_bulk(self):
         MU = 10000
@@ -168,19 +96,37 @@ class TestBackend(unittest.TestCase):
         pop = toolbox.population(n = MU)
         pop = [ toolbox.clone(i) for i in pop ]
 
-        lists = len(list(pop))
-        self.assertEqual(lists,MU)
+        pop_simple_list = self.reduce_to_simple_dt(pop)
+        sets = len(set(pop_simple_list))
         # test if the models correspond to unique parameters.
-        striped_data_type = []
-        for ind in pop:
-            disp = []
-            for i in ind:
-                disp.append(float(i))
-            striped_data_type.append(tuple(disp))
-
-        lists = len(list(pop))
-        sets = len(set(striped_data_type))
         self.assertEqual(sets,MU)
+        from neuronunit.optimization import nsga_object
+
+        import numpy as np
+        number = 2
+        N = nsga_object.NSGA(nparams=number)
+        #self.assertEqual(N.nparams,number)
+        number = 2
+        N.setnparams(nparams=number)
+        #self.assertEqual(N.nparams,number)
+
+        NGEN = 2
+        MU = 4
+
+        invalid_dtc, pop, logbook, fitnesses = N.main(MU,NGEN)
+
+        pf = np.mean(fitnesses)
+        NGEN = 4
+        MU = len(pop)
+
+        for gen in range(1, NGEN):
+            final_dtc, pop, final_logbook, final_fitnesses = N.evolve(pop,MU,gen)
+            # keep checking during evolution
+            # that the GA is generating unique parameter sets.
+            pop_simple_list = self.reduce_to_simple_dt(pop)
+            sets = len(set(pop_simple_list))
+            # test if the models correspond to unique parameters.
+            self.assertEqual(sets,MU)
 
 
         dview.scatter('Individual',pop)
@@ -199,62 +145,6 @@ class TestBackend(unittest.TestCase):
         self.assertEqual(len(dtcpop), len(pop))
         return dtcpop, pop
 
-    def serial_9rheobase(self):
-        from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
-        from neuronunit.optimization import get_neab
-        from neuronunit.models.reduced import ReducedModel
-        from neuronunit import aibs
-        import os
-        dataset_id = 354190013  # Internal ID that AIBS uses for a particular Scnn1a-Tg2-Cre
-                                # Primary visual area, layer 5 neuron.
-        observation = aibs.get_observation(dataset_id,'rheobase')
-        rt = RheobaseTest(observation = observation)
-        model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-        self.score_s = rt.judge(model,stop_on_error = True, deep_error = True)
-        self.predictions = self.score_s.prediction
-        self.score_s = self.score_s.sort_key
-        #print(' serial score {0} parallel score {1}'.format(self.score_s,self.score_p))
-
-        self.assertNotEqual(type(self.scores_s),type(None))
-        #self.assertEqual(int(self.score_s*1000), int(self.score_p*1000))
-        self.score_s.round(3)
-
-        #self.assertEqual(int(self.predictionp['value']), int(self.predictions['value']))
-    def test_10ngsa_setup(self):
-        dtcpop, pop = self.test_8_data_transport_containers_on_bulk()
-        dtcpop = dtcpop[0:9]#.extend(dtcpop[-5:-1])
-        pop = pop[0:9]#.extend(pop[-5:-1])
-
-        from neuronunit.optimization import model_parameters as modelp
-        from neuronunit.optimization import evaluate_as_module
-        from neuronunit.optimization import nsga_parallel
-        update_dtc_pop = evaluate_as_module.update_dtc_pop
-        pre_format = evaluate_as_module.pre_format
-        dtc_to_rheo = nsga_parallel.dtc_to_rheo
-        bind_score_to_dtc= nsga_parallel.bind_score_to_dtc
-        pre_size = len(dtcpop)
-        #dtcpop = update_dtc_pop(pop, td)
-        dtcpop = list(map(dtc_to_rheo,dtcpop))
-        post_size = len(dtcpop)
-        self.assertEqual(pre_size,post_size)
-
-        dtcpop = list(map(pre_format,dtcpop))
-        post_size = len(dtcpop)
-        self.assertEqual(pre_size,post_size)
-
-
-        from neuronunit.optimization import get_neab
-
-        for d in dtcpop:
-            assert len(d.vtest) == len(get_neab.tests)
-
-        import pdb; pdb.set_trace()
-
-        dtcpop = list(dview.map_sync(bind_score_to_dtc,dtcpop))
-        post_size = len(dtcpop)
-        self.assertEqual(pre_size,post_size)
-
-        return pop,dtcpop
 
     def test_10rheobase_setup(self):
         from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
@@ -457,8 +347,3 @@ class TestBackend(unittest.TestCase):
 
         score = self.run_test(T)
         #self.assertTrue(2.25 < score < 2.35)
-    '''
-
-if __name__ == '__main__':
-    unittest.main()
-    unittest.test_5_agreement()
