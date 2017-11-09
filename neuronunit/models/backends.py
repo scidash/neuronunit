@@ -447,16 +447,17 @@ class NEURONBackend(Backend):
         #the resulting hoc variables for current source and cell name are idiosyncratic (not generic).
         #The resulting idiosyncracies makes it hard not have a hard coded approach make non hard coded, and generalizable code.
         #work around involves predicting the hoc variable names from pyneuroml LEMS file that was used to generate them.
-        more_attributes = pynml.read_lems_file(self.model.orig_lems_file_path)
-        #print("Components are %s" % more_attributes.components)
-        for i in more_attributes.components:
-            #This code strips out simulation parameters from the xml tree also such as duration.
-            #Strip out values from something a bit like an xml tree.
-            if str('pulseGenerator') in i.type:
-                self.current_src_name = i.id
-            if str('Cell') in i.type:
-                self.cell_name = i.id
-        more_attributes = None #force garbage collection of more_attributes, its not needed anymore.
+        if type(self.current_src_name) is type(None):
+            more_attributes = pynml.read_lems_file(self.model.orig_lems_file_path)
+            #print("Components are %s" % more_attributes.components)                                                                                                    
+            for i in more_attributes.components:
+                #This code strips out simulation parameters from the xml tree also such as duration.                                                                    
+                #Strip out values from something a bit like an xml tree.                                                                                                
+                if str('pulseGenerator') in i.type:
+                    self.current_src_name = i.id
+                if str('Cell') in i.type:
+                    self.cell_name = i.id
+            more_attributes = None #force garbage collection of more_attributes, its not needed anymore. 
         return self
 
 
