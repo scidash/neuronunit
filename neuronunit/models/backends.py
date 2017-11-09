@@ -183,6 +183,46 @@ class jNeuroMLBackend(Backend):
                     verbose=self.model.run_params['v'])
         return results
 
+class pyNNNEURON(Backend):
+    backend = 'pyNN'
+
+    def init_backend(self, attrs=None):
+        from pyNN.utility import get_simulator
+        import pyNN
+        self.sim = pyNN.neuron
+        self.neuron = None
+        self.model_path = None
+        self.related_data = {}
+        self.lookup = {}
+        self.attrs = {}
+        from numpy import arange
+        self.sim.setup(timestep=0.01, min_delay=1.0)
+        self.neuron = sim.Population(1, sim.Izhikevich(a=0.02, b=0.2, c=-65, d=6, i_offset=[0.014, 0.0, 0.0]))
+
+    def get_membrane_potential(self):
+        data = self.neuron.get_data().segments[0]
+        v = data.filter(name="v")[0]
+
+    def local_run(self):
+        self.neuron.record(['v'])  # , 'u'])                                                                                                                            
+        self.neuron.initialize(v=-70.0, u=-14.0)
+        self.sim.run(100.0)
+
+    def set_attrs(self, **attrs):
+        #super(pyNNNEURON,self).set_run_params(**params)                                                                                                                
+        super(pyNNNEURON,self).set_run_params(attrs)
+
+        self.model.attrs.update(attrs)
+        assert type(self.model.attrs) is not type(None)
+        self.neuron = sim.Population(1, sim.Izhikevich(a=attrs['a'], b=attrs['b'], c=attrs['c'], d=attrs['d'], i_offset=[0.014, 0.0, 0.0]))
+        return self
+
+    def inject_square_current(self, current):
+        c = current['injected_square_current']
+        stop = c['delay']+c['duration']
+        electrode = self.sim.DCSource(start=c['delay'], stop=stop, amplitude=c['amplitude'])
+        electrode.inject_into(self.neuron[1])
+
 
 class NEURONBackend(Backend):
     """Used for simulation with NEURON, a popular simulator
@@ -244,7 +284,7 @@ class NEURONBackend(Backend):
         """
 
         self.h.cvode.atol(tolerance)
-	# Unsure if these lines actually work:
+        # Unsure if these lines actually work:
         # self.cvode = self.h.CVode()
         # self.cvode.atol(tolerance)
 
@@ -253,8 +293,8 @@ class NEURONBackend(Backend):
         method: either "fixed" or "variable". Defaults to fixed.
         cvode is used when "variable" """
 
-	# This line is compatible with the above cvodes
-	# statements.
+        # This line is compatible with the above cvodes
+        # statements.
         self.h.cvode.active(1 if method == "variable" else 0)
 
         try:
