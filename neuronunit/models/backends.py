@@ -71,36 +71,36 @@ class Backend(object):
             pass
         self.disk_cache_location = os.path.join(tempfile.mkdtemp(),'cache')
 
-    def get_memory_cache(self, state):
-        """Returns result in memory cache for key 'state' or None if it 
+    def get_memory_cache(self, key):
+        """Returns result in memory cache for key 'key' or None if it 
         is not found"""
-        self._results = self.memory_cache.get(state)
+        self._results = self.memory_cache.get(key)
         return self._results
 
-    def get_disk_cache(self, state):
-        """Returns result in disk cache for key 'state' or None if it 
+    def get_disk_cache(self, key):
+        """Returns result in disk cache for key 'key' or None if it 
         is not found"""
         if not getattr(self,'disk_cache_location',False):
             self.init_disk_cache()
         disk_cache = shelve.open(self.disk_cache_location)
-        self._results = disk_cache.get(state)
+        self._results = disk_cache.get(key)
         disk_cache.close()
         return self._results
 
-    def set_memory_cache(self, results, state=None):
+    def set_memory_cache(self, results, key=None):
         """Stores result in memory cache with key 
         corresponding to model state"""
-        state = self.model.state if state is None else state
-        self.memory_cache[state] = results
+        key = self.model.hash if key is None else key
+        self.memory_cache[key] = results
 
-    def set_disk_cache(self, results, state=None):
+    def set_disk_cache(self, results, key=None):
         """Stores result in disk cache with key 
         corresponding to model state"""
         if not getattr(self,'disk_cache_location',False):
             self.init_disk_cache()
         disk_cache = shelve.open(self.disk_cache_location)
-        state = self.model.state if state is None else state
-        disk_cache[state] = results
+        key = self.model.hash if key is None else key
+        disk_cache[key] = results
         disk_cache.close()
 
     def set_attrs(self, **attrs):
@@ -128,16 +128,16 @@ class Backend(object):
     def local_run(self):
         """Checks for cached results in memory and on disk, then runs the model
         if needed"""
-        state = self.model.state
-        if self.use_memory_cache and self.get_memory_cache(state):
+        key = self.model.hash
+        if self.use_memory_cache and self.get_memory_cache(key):
             return self._results
-        if self.use_disk_cache and self.get_disk_cache(state):
+        if self.use_disk_cache and self.get_disk_cache(key):
             return self._results
         results = self._local_run()
         if self.use_memory_cache:
-            self.set_memory_cache(results, state)
+            self.set_memory_cache(results, key)
         if self.use_disk_cache:
-            self.set_disk_cache(results, state)
+            self.set_disk_cache(results, key)
         return results
 
     def _local_run(self):
