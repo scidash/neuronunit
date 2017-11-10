@@ -147,9 +147,11 @@ class Backend(object):
     def save_results(self, path='.'):
         with open(path,'wb') as f:
             pickle.dump(self.results,f)
-            
+        
+
 class BackendException(Exception):
     pass
+
 
 class jNeuroMLBackend(Backend):
     """Used for simulation with jNeuroML, a reference simulator for NeuroML"""
@@ -182,6 +184,7 @@ class jNeuroMLBackend(Backend):
                     exec_in_dir=self.exec_in_dir,
                     verbose=self.model.run_params['v'])
         return results
+
 
 class pyNNNEURON(Backend):
     backend = 'pyNN'
@@ -237,9 +240,13 @@ class NEURONBackend(Backend):
     i -- nA
     """
 
-    def init_backend(self, attrs=None):    
+    def init_backend(self, attrs=None, cell_name=None, current_src_name=None):    
         if not NEURON_SUPPORT:
             raise BackendException("The neuron module was not successfully imported")
+        if cell_name:
+            self._cell_name = cell_name
+        if current_src_name:
+            self._current_src_name = current_src_name
         self.neuron = None
         self.model_path = None
         self.h = h
@@ -247,6 +254,7 @@ class NEURONBackend(Backend):
         self.h.load_file("stdlib.hoc")
         self.h.load_file("stdgui.hoc")
         self.lookup = {}
+        self.model.rheobase = None
 
         super(NEURONBackend,self).init_backend()
         self.model.unpicklable += ['h','ns','_backend']
@@ -417,10 +425,12 @@ class NEURONBackend(Backend):
 
         #The code block below does not actually function:
         #architecture = platform.machine()
+        assert os.path.isfile(self.model.orig_lems_file_path)
         base_name = os.path.splitext(self.model.orig_lems_file_path)[0]
         NEURON_file_path ='{0}_nrn.py'.format(base_name)
         self.neuron_model_dir = os.path.dirname(self.model.orig_lems_file_path)
-        
+        assert os.path.isdir(self.neuron_model_dir)
+
         if not os.path.exists(NEURON_file_path):
             pynml.run_lems_with_jneuroml_neuron(self.model.orig_lems_file_path,
                               skip_run=False,
@@ -447,16 +457,16 @@ class NEURONBackend(Backend):
         #the resulting hoc variables for current source and cell name are idiosyncratic (not generic).
         #The resulting idiosyncracies makes it hard not have a hard coded approach make non hard coded, and generalizable code.
         #work around involves predicting the hoc variable names from pyneuroml LEMS file that was used to generate them.
-        if type(self.current_src_name) is type(None):
+        if True:#type(self.current_src_name) is type(None):
             more_attributes = pynml.read_lems_file(self.model.orig_lems_file_path)
             #print("Components are %s" % more_attributes.components)                                                                                                    
             for i in more_attributes.components:
                 #This code strips out simulation parameters from the xml tree also such as duration.                                                                    
                 #Strip out values from something a bit like an xml tree.                                                                                                
                 if str('pulseGenerator') in i.type:
-                    self.current_src_name = i.id
+                    self._current_src_name = i.id
                 if str('Cell') in i.type:
-                    self.cell_name = i.id
+                    self._cell_name = i.id
             more_attributes = None #force garbage collection of more_attributes, its not needed anymore. 
         return self
 
@@ -465,15 +475,21 @@ class NEURONBackend(Backend):
 #        super(NEURONBackend,self).set_run_params(**params)
 #        self.set_lems_run_params()
 
+    @property
+    def cell_name(self):
+        return getattr(self,'_cell_name','RS')
 
+    @property
+    def current_src_name(self):
+        return getattr(self,'_current_src_name','RS')
 
     def set_attrs(self, **attrs):
         self.model.attrs.update(attrs)
 
         assert type(self.model.attrs) is not type(None)
         for h_key,h_value in attrs.items():
-            self.h('m_RS_RS_pop[0].{0} = {1}'.format(h_key,h_value))
-            self.h('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
+            self.h('m_{0}_{1}_pop[0].{2} = {3}'\
+                .format(self.cell_name,self.cell_name,h_key,h_value))
 
         # Below are experimental rig recording parameters.
         # These can possibly go in a seperate method.
@@ -508,7 +524,7 @@ class NEURONBackend(Backend):
         self.neuron = None
         import neuron
         self.reset_neuron(neuron)
-        self.set_attrs(**self.attrs)
+        #self.set_attrs(**self.attrs)
 
         c = copy.copy(current)
         if 'injected_square_current' in c.keys():
@@ -535,10 +551,10 @@ class NEURONBackend(Backend):
         
         return results
 
-
+"""
 class NEURONMemoryBackend(NEURONBackend):
-    """A dummy backend that loads pre-computed results from RAM/heap"""
-    """Deprecated"""
+    # A dummy backend that loads pre-computed results from RAM/heap
+    # Deprecated
 
     def init_backend(self, results_path='.'):
         super(NEURONMemoryBackend,self).init_backend()
@@ -607,6 +623,7 @@ class NEURONMemoryBackend(NEURONBackend):
             return self.model.cached_params[str(self.current)]
         else:
             return self.model.cached_params[str(self.current)]
+"""
 
 # The classes exist for compatibility with the old neuronunit.neuron module.  
           
