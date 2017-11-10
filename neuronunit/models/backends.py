@@ -186,25 +186,31 @@ class jNeuroMLBackend(Backend):
         return results
 
 
-class pyNNNEURON(Backend):
+class pyNNBackend(Backend):
+    """Used for generation of code for PyNN, with simulation using NEURON"""
+    
     backend = 'pyNN'
 
-    def init_backend(self, attrs=None):
+    def init_backend(self, attrs=None, simulator='neuron'):
         from pyNN.utility import get_simulator
         import pyNN
-        self.sim = pyNN.neuron
+        self.sim = getattr(pyNN,simulator) 
         self.neuron = None
         self.model_path = None
         self.related_data = {}
         self.lookup = {}
         self.attrs = {}
-        from numpy import arange
-        self.sim.setup(timestep=0.01, min_delay=1.0)
-        self.neuron = sim.Population(1, sim.Izhikevich(a=0.02, b=0.2, c=-65, d=6, i_offset=[0.014, 0.0, 0.0]))
+        super(pyNNBackend,self).init_backend(*args, **kwargs)
 
     def get_membrane_potential(self):
         data = self.neuron.get_data().segments[0]
         v = data.filter(name="v")[0]
+
+    def load_model(self):
+        self.sim.setup(timestep=0.01, min_delay=1.0)
+        neuron = sim.Izhikevich(a=0.02, b=0.2, c=-65, d=6, 
+                                i_offset=[0.014, 0.0, 0.0])
+        self.neuron = sim.Population(1, neuron)
 
     def local_run(self):
         self.neuron.record(['v'])  # , 'u'])                                                                                                                            
@@ -213,11 +219,13 @@ class pyNNNEURON(Backend):
 
     def set_attrs(self, **attrs):
         #super(pyNNNEURON,self).set_run_params(**params)                                                                                                                
-        super(pyNNNEURON,self).set_run_params(attrs)
+        super(pyNNBackend,self).set_run_params(attrs)
 
         self.model.attrs.update(attrs)
         assert type(self.model.attrs) is not type(None)
-        self.neuron = sim.Population(1, sim.Izhikevich(a=attrs['a'], b=attrs['b'], c=attrs['c'], d=attrs['d'], i_offset=[0.014, 0.0, 0.0]))
+        attrs_ = {x:attrs[x] for x in 'abcd'}
+        neuron = sim.Izhikevich(i_offset=[0.014, 0.0, 0.0], **attrs_)
+        self.neuron = sim.Population(1, neuron)
         return self
 
     def inject_square_current(self, current):
