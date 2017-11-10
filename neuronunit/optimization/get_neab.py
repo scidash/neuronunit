@@ -1,28 +1,16 @@
-import os,sys
+import os
+import sys
 import numpy as np
 import matplotlib as matplotlib
 matplotlib.use('agg',warn=False)
 import quantities as pq
 import sciunit
-
-#Over ride any neuron units in the PYTHON_PATH with this one.
-#only appropriate for development.
-THIS_DIR = os.path.dirname(os.path.realpath(__file__))
-this_nu = os.path.join(THIS_DIR,'../..')
-sys.path.insert(0,this_nu)
-
 import neuronunit
 from neuronunit import aibs
 import pdb
 import pickle
-try:
-    IZHIKEVICH_PATH = os.path.join(os.getcwd(),'NeuroML2')
-    assert os.path.isdir(IZHIKEVICH_PATH)
-except AssertionError:
-    # Replace this with the path to your Izhikevich NeuroML2 directory.
-    IZHIKEVICH_PATH = os.path.join(THIS_DIR,'NeuroML2')
-
-LEMS_MODEL_PATH = os.path.join(IZHIKEVICH_PATH,'LEMS_2007One.xml')
+THIS_DIR = os.path.dirname(os.path.realpath(__file__))
+LEMS_MODEL_PATH = os.path.realpath(os.path.join(THIS_DIR,'..','models','NeuroML2','LEMS_2007One.xml'))
 import time
 from pyneuroml import pynml
 import quantities as pq
