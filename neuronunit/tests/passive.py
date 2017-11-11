@@ -76,9 +76,6 @@ class TestPulseTest(VmTest):
             return vm_fit.squeeze()
 
         popt, pcov = curve_fit(func, t, vm.squeeze(), p0=guesses) # Estimate starting values for better convergence
-        #plt.plot(t,vm)
-        #plt.plot(t,func(t,*popt))
-        #print(popt)
         amplitude = popt[0]*pq.mV
         tau = popt[1]*pq.ms
         y0 = popt[2]*pq.mV
