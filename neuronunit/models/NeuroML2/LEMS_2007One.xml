@@ -23,7 +23,7 @@
     </Display>
    
 
-    <OutputFile id="of0" fileName="results/RS_One.dat">
+    <OutputFile id="of0" fileName="RS_One.dat">
         <OutputColumn id="v" quantity="RS_pop[0]/v" />
         <OutputColumn id="u" quantity="RS_pop[0]/u" />
     </OutputFile>
