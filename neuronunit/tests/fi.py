@@ -4,12 +4,7 @@ function of input current"""
 import os
 
 from .base import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
-#from .base.optimization import get_neab
 from .. import optimization
-#print(dir(optimization))
-#from ..optimization import get_neab
-#print(get_neab)
-#get_neab = optimization.get_neab
 
 class RheobaseTest(VmTest):
     """
@@ -212,6 +207,7 @@ class RheobaseTestP(VmTest):
      ephysprop_name = 'Rheobase'
 
      score_type = scores.RatioScore
+     
      def generate_prediction(self, model):
 
         '''
@@ -402,8 +398,6 @@ class RheobaseTestP(VmTest):
      def bind_score(self, score, model, observation, prediction):
          super(RheobaseTestP,self).bind_score(score, model,
                                             observation, prediction)
-
-
 
      def compute_score(self, observation, prediction):
          """Implementation of sciunit.Test.score_prediction."""
