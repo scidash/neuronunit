@@ -44,7 +44,6 @@ class Backend(object):
         self.use_disk_cache = kwargs.get('use_disk_cache', False)
         if self.use_disk_cache:
             self.init_disk_cache()
-        #print(2)
         self.load_model()
 
     #attrs = None
@@ -275,7 +274,7 @@ class NEURONBackend(Backend):
         self.h = neuronVar.h
         self.neuron = neuronVar
 
-    def set_stop_time(self, stopTime = 1600*ms):
+    def set_stop_time(self, stopTime = 500*ms):
         """Sets the simulation duration
         stopTimeMs: duration in milliseconds
         """
@@ -393,26 +392,13 @@ class NEURONBackend(Backend):
 
     def load(self):
         nrn_path = os.path.splitext(self.model.orig_lems_file_path)[0]+'_nrn.py'
-        #import neuron # This is necessary to avoid a segmentation fault
         nrn = import_module_from_path(nrn_path)
-        #print(4)
         self.reset_neuron(nrn.neuron)
-        #print(5)#make sure mechanisms are loaded
         modeldirname = os.path.dirname(self.model.orig_lems_file_path)
-        #if load_mechanisms:
-        #    self.neuron.load_mechanisms(modeldirname)
-        self.set_stop_time(1600*ms)
+        self.set_stop_time(500*ms)
         self.h.tstop
-        #print(6)
-        #curr_dir = os.getcwd()
-        # Set to the directory with the module because this will also have
-        # the compiled files that NEURON needs to run the simulatuon.   
-        #os.chdir(self.exec_in_dir)
-        #print(os.getcwd())
         self.ns = nrn.NeuronSimulation(self.h.tstop, dt=0.0025)
-        #os.chdir(curr_dir)
-        #print(7)
-
+        
     def load_mechanisms(self):
         neuron.load_mechanisms(self.neuron_model_dir)
 
@@ -457,7 +443,6 @@ class NEURONBackend(Backend):
             # Load mechanisms unless they've already been loaded
             self.load_mechanisms()
 
-        #print(3)
         self.load()
 
 
@@ -465,23 +450,18 @@ class NEURONBackend(Backend):
         #the resulting hoc variables for current source and cell name are idiosyncratic (not generic).
         #The resulting idiosyncracies makes it hard not have a hard coded approach make non hard coded, and generalizable code.
         #work around involves predicting the hoc variable names from pyneuroml LEMS file that was used to generate them.
-        if True:#type(self.current_src_name) is type(None):
-            more_attributes = pynml.read_lems_file(self.model.orig_lems_file_path)
-            #print("Components are %s" % more_attributes.components)                                                                                                    
-            for i in more_attributes.components:
-                #This code strips out simulation parameters from the xml tree also such as duration.                                                                    
-                #Strip out values from something a bit like an xml tree.                                                                                                
-                if str('pulseGenerator') in i.type:
-                    self._current_src_name = i.id
-                if str('Cell') in i.type:
-                    self._cell_name = i.id
-            more_attributes = None #force garbage collection of more_attributes, its not needed anymore. 
+        more_attributes = pynml.read_lems_file(self.model.orig_lems_file_path,
+                                               include_includes=True, 
+                                               debug=False)
+        for i in more_attributes.components:
+            #This code strips out simulation parameters from the xml tree also such as duration.                                                                    
+            #Strip out values from something a bit like an xml tree.                                                                                                
+            if str('pulseGenerator') in i.type:
+                self._current_src_name = i.id
+            if str('Cell') in i.type:
+                self._cell_name = i.id
+        more_attributes = None #force garbage collection of more_attributes, its not needed anymore. 
         return self
-
-
-#    def set_run_params(self, **params):
-#        super(NEURONBackend,self).set_run_params(**params)
-#        self.set_lems_run_params()
 
     @property
     def cell_name(self):
@@ -559,81 +539,8 @@ class NEURONBackend(Backend):
         
         return results
 
-"""
-class NEURONMemoryBackend(NEURONBackend):
-    # A dummy backend that loads pre-computed results from RAM/heap
-    # Deprecated
 
-    def init_backend(self, results_path='.'):
-        super(NEURONMemoryBackend,self).init_backend()
-        self.model.rerun = True
-        self.model.results = None
-        self.model.cached_params = {}
-        self.model.cached_attrs = {}
-        self.current = {}
-
-        super(NEURONMemoryBackend,self).init_backend()
-
-    def set_attrs(self, **attrs):
-
-
-
-        super(NEURONMemoryBackend,self).set_attrs(**attrs)
-        ##
-        # Empty the cache when redefining the model
-        ##
-        self.model.cached_params = {}
-        self.model.cached_attrs = {}
-        self.current = {}
-        #print('the cache emptied: {0}'.format(str(self.model.cached_params)))
-        #print('As the attributes are updated: {0}'.format(str(self.model.attrs)))
-        return self
-
-    def inject_square_current(self, current):
-
-
-        if str(self.model.attrs) not in self.cached_attrs:
-            results = super(NEURONMemoryBackend,self).local_run()#
-            self.model.cached_attrs[dict_hash(self.model.attrs)] = 1
-        else:
-            self.model.cached_attrs[dict_hash(self.model.attrs)] += 1
-
-        super(NEURONMemoryBackend,self).inject_square_current(current)#
-        #
-        # make this current injection value a class attribute, such that its remembered.
-        #
-        #from sciunit.utils import dict_hash
-
-        if 'injected_square_current' in current:
-            self.current = current['injected_square_current']
-        else:
-            self.current = current
-        if str(self.current) not in self.model.cached_params:
-
-            results = super(NEURONMemoryBackend,self).local_run()#
-            self.model.cached_params[str(self.current)] = {}
-            self.model.cached_params[str(self.current)]=results
-            #print('the cache: {0}'.format(str(self.model.cached_params.keys())))
-
-        return self.model.cached_params[str(self.current)]
-
-
-    def local_run(self):
-        #
-        # Logic for choosing whether a injection value, has already been tested.
-        #
-        if str(self.current) not in self.model.cached_params:
-            results = super(NEURONMemoryBackend,self).local_run()
-            self.model.cached_params[str(self.current)] = {}
-            self.model.cached_params[str(self.current)]=results
-            #print('the cache: {0}'.format(str(self.model.cached_params)))
-
-            return self.model.cached_params[str(self.current)]
-        else:
-            return self.model.cached_params[str(self.current)]
-"""
-
-# The classes exist for compatibility with the old neuronunit.neuron module.  
+# These classes exist for compatibility with the old neuronunit.neuron module.  
           
 class HasSegment(sciunit.Capability):
     """Model has a membrane segment of NEURON simulator"""
