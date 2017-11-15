@@ -42,7 +42,7 @@ with open('grid_dump.p','wb') as handle:
 grid_lists = pickle.load(open('grid_dump.p','rb'))
 #invalid_dtc, pop, logbook, fitnesses = lists[0],lists[1],lists[2], lists[3]
 
-def find_opt(dtcpop,min=True):
+def find_opt(dtcpop,mini=True):
     # This function searches virtual model data containers to find the values with the best scores.
 
     from numpy import sqrt, mean, square
@@ -52,7 +52,7 @@ def find_opt(dtcpop,min=True):
         rt = 0 # running total
         rt = sqrt(mean(square(list(i.scores.values()))))
         sovg.append(rt)
-	if min==True:
+	if mini==True:
 	    dtc = dtcpop[np.where(sovg==np.min(sovg))[0][0]]
 	else 
 	    dtc = dtcpop[np.where(sovg==np.max(sovg))[0][0]]
@@ -60,21 +60,18 @@ def find_opt(dtcpop,min=True):
 
 minimaga, min_ga = find_opt(invalid_dtc)
 minimagr,min_gr = find_opt(dtcpopg)
-maximagr, max_ga = find_opt(dtcpopg,min=False)
+maximagr, max_ga = find_opt(dtcpopg,mini=False)
 import numpy as np
 
 # quantize distance between minimimum error and maximum error.
 quantize_distance = list(np.linspace(minimagr,maximagr,10))
-# check that the nsga error is in the bottom 1/10th of the entire error range.
+# check that the nsga error is in the bottom 1/5th of the entire error range.
 print('Report: ')
 
 print(' the nsga error is in the bottom 1/10th of the entire error range',minimaga,quantize_distance[1])
 
 print(bool(minimaga < quantize_distance[1]))
-print(' the nsga error is even lowerf than the bottom of the grid the error range',minimaga,quantize_distance[0])
-
-
-print(bool(minimaga < quantize_distance[0]))
+print(' the nsga error is in the bottom 1/5th of the entire error range',minimaga,quantize_distance[1])
 
 print('maximum error:', maximagr)
 
