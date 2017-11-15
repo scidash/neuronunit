@@ -42,7 +42,7 @@ with open('grid_dump.p','wb') as handle:
 grid_lists = pickle.load(open('grid_dump.p','rb'))
 #invalid_dtc, pop, logbook, fitnesses = lists[0],lists[1],lists[2], lists[3]
 
-def min_find(dtcpop):
+def find_opt(dtcpop,min=True):
     # This function searches virtual model data containers to find the values with the best scores.
 
     from numpy import sqrt, mean, square
@@ -50,35 +50,31 @@ def min_find(dtcpop):
     sovg = []
     for i in dtcpop:
         rt = 0 # running total
-        #for values in i.scores.values():
         rt = sqrt(mean(square(list(i.scores.values()))))
         sovg.append(rt)
-    dtc = invalid_dtc[np.where(sovg==np.min(sovg))[0][0]]
-    return dtc
-def min_max(dtcpop):
-    # This function searches virtual model data containers to find the values with the worst scores.
+	if min==True:
+	    dtc = dtcpop[np.where(sovg==np.min(sovg))[0][0]]
+	else 
+	    dtc = dtcpop[np.where(sovg==np.max(sovg))[0][0]]
+	return dtc, rt
 
-    from numpy import sqrt, mean, square
-    import numpy as np
-    sovg = []
-    for i in dtcpop:
-        rt = 0 # running total
-        #for values in i.scores.values():
-        rt = sqrt(mean(square(list(i.scores.values()))))
-        sovg.append(rt)
-    dtc = invalid_dtc[np.where(sovg==np.max(sovg))[0][0]]
-    return dtc
+minimaga, min_ga = find_opt(invalid_dtc)
+minimagr,min_gr = find_opt(dtcpopg)
+maximagr, max_ga = find_opt(dtcpopg,min=False)
+import numpy as np
 
-minimaga = min_find(invalid_dtc)
-minimagr = min_find(dtcpopg)
-maximagr = min_max(dtcpopg)
 # quantize distance between minimimum error and maximum error.
 quantize_distance = list(np.linspace(minimagr,maximagr,10))
-# check that the nsga error is in the bottom 1/5th of the entire error range.
+# check that the nsga error is in the bottom 1/10th of the entire error range.
 print('Report: ')
 
+print(' the nsga error is in the bottom 1/10th of the entire error range',minimaga,quantize_distance[1])
+
 print(bool(minimaga < quantize_distance[1]))
-print(' the nsga error is in the bottom 1/5th of the entire error range',minimaga,quantize_distance[1])
+print(' the nsga error is even lowerf than the bottom of the grid the error range',minimaga,quantize_distance[0])
+
+
+print(bool(minimaga < quantize_distance[0]))
 
 print('maximum error:', maximagr)
 
