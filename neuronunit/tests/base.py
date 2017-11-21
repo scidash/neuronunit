@@ -14,7 +14,7 @@ from neuronunit import neuroelectro
 
 AMPL = 0.0*pq.pA
 DELAY = 100.0*pq.ms
-DURATION = 1000.0*pq.ms
+DURATION = 300.0*pq.ms
 
 
 class VmTest(sciunit.Test):
@@ -140,10 +140,7 @@ class VmTest(sciunit.Test):
                 return False
 
         sws=cap.spike_functions.get_spike_waveforms(model.get_membrane_potential())
-        #sws = model.get_spike_waveforms()
-        #print(sws)
-
-        #sws=spike_functions.get_spike_waveform(mp)
+        
         for i,s in enumerate(sws):
             s = np.array(s)
             dvdt = np.diff(s)

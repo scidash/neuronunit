@@ -18,17 +18,17 @@ class TestsTestCase(object):
             return self.skipTest("Neuroelectro is down")
 
     def get_observation(self, cls):
-        print(cls.__name__)
         neuron = {'nlex_id': 'nifext_50'} # Layer V pyramidal cell
         return cls.neuroelectro_summary_observation(neuron)
 
+    def make_test(self, cls):
+        observation = self.get_observation(cls)
+        self.test = cls(observation=observation)
+        return self.test
+
     def run_test(self, cls):
-        try:
-            observation = self.get_observation(cls)
-        except socket.timeout:
-            return self.skipTest("Neuroelectro timed out")
-        test = cls(observation=observation)
-        score = test.judge(self.model)
+        self.make_test(cls)
+        score = self.test.judge(self.model)
         score.summarize()
         return score.score
 
@@ -39,22 +39,22 @@ class TestsPassiveTestCase(TestsTestCase, unittest.TestCase):
     def test_inputresistance(self):
         from neuronunit.tests.passive import InputResistanceTest as T
         score = self.run_test(T)
-        self.assertTrue(-0.6 < score < -0.5)
+        self.assertTrue(-0.6 < score < -0.5, "Score was %.2f" % score)
 
     def test_restingpotential(self):
         from neuronunit.tests.passive import RestingPotentialTest as T
         score = self.run_test(T)
-        self.assertTrue(1.2 < score < 1.3)
+        self.assertTrue(1.2 < score < 1.3, "Score was %.2f" % score)
 
     def test_capacitance(self):
         from neuronunit.tests.passive import CapacitanceTest as T
         score = self.run_test(T)
-        self.assertTrue(-0.15 < score < -0.05)
+        self.assertTrue(-0.3 < score < -0.2, "Score was %.2f" % score)
 
     def test_timeconstant(self):
         from neuronunit.tests.passive import TimeConstantTest as T
         score = self.run_test(T)
-        self.assertTrue(-1.45 < score < -1.35)
+        self.assertTrue(-1.45 < score < -1.35, "Score was %.2f" % score)
 
 
 class TestsWaveformTestCase(TestsTestCase, unittest.TestCase):
