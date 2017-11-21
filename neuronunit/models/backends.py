@@ -71,13 +71,13 @@ class Backend(object):
         self.disk_cache_location = os.path.join(tempfile.mkdtemp(),'cache')
 
     def get_memory_cache(self, key):
-        """Returns result in memory cache for key 'key' or None if it 
+        """Returns result in memory cache for key 'key' or None if it
         is not found"""
         self._results = self.memory_cache.get(key)
         return self._results
 
     def get_disk_cache(self, key):
-        """Returns result in disk cache for key 'key' or None if it 
+        """Returns result in disk cache for key 'key' or None if it
         is not found"""
         if not getattr(self,'disk_cache_location',False):
             self.init_disk_cache()
@@ -87,13 +87,13 @@ class Backend(object):
         return self._results
 
     def set_memory_cache(self, results, key=None):
-        """Stores result in memory cache with key 
+        """Stores result in memory cache with key
         corresponding to model state"""
         key = self.model.hash if key is None else key
         self.memory_cache[key] = results
 
     def set_disk_cache(self, results, key=None):
-        """Stores result in disk cache with key 
+        """Stores result in disk cache with key
         corresponding to model state"""
         if not getattr(self,'disk_cache_location',False):
             self.init_disk_cache()
@@ -146,7 +146,7 @@ class Backend(object):
     def save_results(self, path='.'):
         with open(path,'wb') as f:
             pickle.dump(self.results,f)
-        
+
 
 class BackendException(Exception):
     pass
@@ -175,7 +175,7 @@ class jNeuroMLBackend(Backend):
     def _local_run(self):
         f = pynml.run_lems_with_jneuroml
         self.exec_in_dir = tempfile.mkdtemp()
-        results = f(self.model.lems_file_path, 
+        results = f(self.model.lems_file_path,
                     include=[os.path.dirname(self.model.orig_lems_file_path)],
                     skip_run=self.model.skip_run,
                     nogui=self.model.run_params['nogui'],
@@ -187,50 +187,77 @@ class jNeuroMLBackend(Backend):
 
 class pyNNBackend(Backend):
     """Used for generation of code for PyNN, with simulation using NEURON"""
-    
+
     backend = 'pyNN'
+    try:
+        import pyNN, lazyarray
+        from pyNN import neuron
+    except:
+        import os
+        os.system('pip install lazyarray pyNN')
+        from pyNN import neuron
+
+
 
     def init_backend(self, attrs=None, simulator='neuron'):
-        from pyNN.utility import get_simulator
-        import pyNN
-        self.sim = getattr(pyNN,simulator) 
-        self.neuron = None
+        from pyNN import neuron
+        from pyNN.neuron import simulator as sim
+        from pyNN.neuron import setup as setup
+        from pyNN.neuron import Izhikevich
+        from pyNN.neuron import Population
+        from pyNN.neuron import DCSource
+
+        self.Izhikevich = Izhikevich
+        self.Population = Population
+        self.DCSource = DCSource
+
+        #from pyNN.utility import get_simulator
+        #import pyNN as pyNN
+        self.sim = sim
+        self.setup = setup
+        #self.sim.mech_path = self.LEMS_MODEL_PATH
+
+        self.neuron = neuron
         self.model_path = None
         self.related_data = {}
         self.lookup = {}
         self.attrs = {}
-        super(pyNNBackend,self).init_backend(*args, **kwargs)
+        super(pyNNBackend,self).init_backend()#*args, **kwargs)
+        #super(NEURONBackend,self).init_backend()
 
     def get_membrane_potential(self):
         data = self.neuron.get_data().segments[0]
         v = data.filter(name="v")[0]
 
     def load_model(self):
-        self.sim.setup(timestep=0.01, min_delay=1.0)
-        neuron = sim.Izhikevich(a=0.02, b=0.2, c=-65, d=6, 
+        self.setup(timestep=0.01, min_delay=1.0)
+        self.neuron = self.Izhikevich(a=0.02, b=0.2, c=-65, d=6,
                                 i_offset=[0.014, 0.0, 0.0])
-        self.neuron = sim.Population(1, neuron)
+        #self.neuron = self.Population(1, neuron)
 
     def local_run(self):
-        self.neuron.record(['v'])  # , 'u'])                                                                                                                            
+        self.neuron.record(['v'])  # , 'u'])
         self.neuron.initialize(v=-70.0, u=-14.0)
-        self.sim.run(100.0)
+        self.sim.run(1600.0)
+
+
 
     def set_attrs(self, **attrs):
-        #super(pyNNNEURON,self).set_run_params(**params)                                                                                                                
-        super(pyNNBackend,self).set_run_params(attrs)
+        #super(pyNNNEURON,self).set_run_params(**params)
+        #super(pyNNBackend,self).set_run_params(attrs)
 
         self.model.attrs.update(attrs)
         assert type(self.model.attrs) is not type(None)
-        attrs_ = {x:attrs[x] for x in 'abcd'}
-        neuron = sim.Izhikevich(i_offset=[0.014, 0.0, 0.0], **attrs_)
-        self.neuron = sim.Population(1, neuron)
+        #This assumes that a,b,c and d are in the attributes wich may be wrong.
+        attrs_ = {x:attrs[x] for x in ['a','b','c','d']}
+        self.neuron = self.Izhikevich(i_offset=[0.014, 0.0, 0.0], **attrs_)
+        #self.neuron = self.Population(1, neuron)
         return self
 
     def inject_square_current(self, current):
         c = current['injected_square_current']
         stop = c['delay']+c['duration']
-        electrode = self.sim.DCSource(start=c['delay'], stop=stop, amplitude=c['amplitude'])
+        electrode = self.DCSource(start=c['delay'], stop=stop, amplitude=c['amplitude'])
         electrode.inject_into(self.neuron[1])
 
 
@@ -247,13 +274,20 @@ class NEURONBackend(Backend):
     i -- nA
     """
 
-    def init_backend(self, attrs=None, cell_name=None, current_src_name=None):    
+    def init_backend(self, attrs=None, cell_name=None, current_src_name=None, DTC = None):
         if not NEURON_SUPPORT:
             raise BackendException("The neuron module was not successfully imported")
         if cell_name:
             self._cell_name = cell_name
         if current_src_name:
             self._current_src_name = current_src_name
+        if type(DTC) is not type(None):
+            self.set_attrs(DTC.attrs)
+            if type(DTC.rheobase) is not type(None):
+                self.model.rheobase = DTC.rheobase
+            else:
+                self.model.rheobase = None
+
         self.neuron = None
         self.model_path = None
         self.h = h
@@ -261,11 +295,10 @@ class NEURONBackend(Backend):
         self.h.load_file("stdlib.hoc")
         self.h.load_file("stdgui.hoc")
         self.lookup = {}
-        self.model.rheobase = None
 
         super(NEURONBackend,self).init_backend()
         self.model.unpicklable += ['h','ns','_backend']
-    
+
     backend = 'NEURON'
 
     def reset_neuron(self, neuronVar):
@@ -398,7 +431,7 @@ class NEURONBackend(Backend):
         self.set_stop_time(500*ms)
         self.h.tstop
         self.ns = nrn.NeuronSimulation(self.h.tstop, dt=0.0025)
-        
+
     def load_mechanisms(self):
         neuron.load_mechanisms(self.neuron_model_dir)
 
@@ -413,7 +446,7 @@ class NEURONBackend(Backend):
         Since this only happens once outside of the optimization
         loop its a tolerable performance hit.
         """
-        
+
         #Create a pyhoc file using jneuroml to convert from NeuroML to pyhoc.
         #import the contents of the file into the current names space.
 
@@ -451,16 +484,16 @@ class NEURONBackend(Backend):
         #The resulting idiosyncracies makes it hard not have a hard coded approach make non hard coded, and generalizable code.
         #work around involves predicting the hoc variable names from pyneuroml LEMS file that was used to generate them.
         more_attributes = pynml.read_lems_file(self.model.orig_lems_file_path,
-                                               include_includes=True, 
+                                               include_includes=True,
                                                debug=False)
         for i in more_attributes.components:
-            #This code strips out simulation parameters from the xml tree also such as duration.                                                                    
-            #Strip out values from something a bit like an xml tree.                                                                                                
+            #This code strips out simulation parameters from the xml tree also such as duration.
+            #Strip out values from something a bit like an xml tree.
             if str('pulseGenerator') in i.type:
                 self._current_src_name = i.id
             if str('Cell') in i.type:
                 self._cell_name = i.id
-        more_attributes = None #force garbage collection of more_attributes, its not needed anymore. 
+        more_attributes = None #force garbage collection of more_attributes, its not needed anymore.
         return self
 
     @property
@@ -531,17 +564,17 @@ class NEURONBackend(Backend):
     def _local_run(self):
         self.h('run()')
         results={}
-        # Prepare NEURON vectors for quantities/sciunit 
+        # Prepare NEURON vectors for quantities/sciunit
         # By rescaling voltage to milli volts, and time to milli seconds.
         results['vm'] = [float(x/1000.0) for x in copy.copy(self.neuron.h.v_v_of0.to_python())]
         results['t'] = [float(x/1000.0) for x in copy.copy(self.neuron.h.v_time.to_python())]
         results['run_number'] = results.get('run_number',0) + 1
-        
+
         return results
 
 
-# These classes exist for compatibility with the old neuronunit.neuron module.  
-          
+# These classes exist for compatibility with the old neuronunit.neuron module.
+
 class HasSegment(sciunit.Capability):
     """Model has a membrane segment of NEURON simulator"""
 

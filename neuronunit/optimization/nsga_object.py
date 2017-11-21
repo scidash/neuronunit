@@ -15,12 +15,15 @@
 class NSGA(object):
     def __init__(self,nparams=10):
         self.nparams = nparams
+        self.subset = None
 
         from deap import base
         toolbox = base.Toolbox()
         from deap import tools
         toolbox.register("select", tools.selNSGA2)
         self.toolbox = toolbox
+        self.history = None #to be initiated elsewhere
+        self.pf = None
 
 
 
@@ -72,11 +75,6 @@ class NSGA(object):
 
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-        if len(invalid_ind)==0:
-            import pdb; pdb.set_trace()
-
-
-        #dtcpop = nsga_parallel.update_pop(pop,td)
         import copy
         invalid_dtc = list(nsga_parallel.update_pop(invalid_ind,self.td))
         from neuronunit.optimization.nsga_parallel import evaluate
@@ -90,15 +88,15 @@ class NSGA(object):
         pop = toolbox.select(pop + offspring, MU)
         record = self.stats.compile(pop)
         self.logbook.record(gen=gen, evals=len(invalid_ind), **record)
-        #self.logbook
-        #print(self.logbook.stream)
-        #return dtcpop, pop, self.logbook, fitnesses
+
         self.invalid_dtc = list(copy.copy(invalid_dtc))
         self.fitnesses = list(fitnesses)
         return copy.copy(self.invalid_dtc), copy.copy(pop), copy.copy(self.logbook), copy.copy(self.fitnesses)
 
-    def setnparams(self,nparams=10):
+    def setnparams(self,nparams=10, provided_keys=None):
+        from neuronunit.optimization import nsga_parallel
         self.nparams = nparams
+        self.subset = nsga_parallel.create_subset(nparams=self.nparams,provided_keys=provided_keys)
 
 
     def main(self, MU, NGEN, seed=None):
@@ -107,29 +105,34 @@ class NSGA(object):
         #dview = self.set_evaluate()
         from neuronunit.optimization import evaluate_as_module
         from neuronunit.optimization import nsga_parallel
+        from deap.benchmarks.tools import diversity, convergence
+
         import array
         import random
         import numpy
         from deap import algorithms
         from deap import base
 
-        subset = nsga_parallel.create_subset(nparams=self.nparams)
+        import numpy
+        from numpy import random
+        from neuronunit.optimization.nsga_parallel import evaluate
 
-        #subset = nsga_parallel.create_subset(nparams=10)
         numb_err_f = 8
-        toolbox, tools, history, creator, base = evaluate_as_module.import_list(self.ipp,subset,numb_err_f)
+        toolbox, tools, self.history, creator, base, self.pf = evaluate_as_module.import_list(self.ipp,self.subset,numb_err_f)
         self.toolbox = toolbox
         self.creator = creator
         self.tools = tools
 
         self.dview.push({'Individual':evaluate_as_module.Individual})
-        self.dview.apply_sync(evaluate_as_module.import_list,self.ipp,subset,numb_err_f)
+        self.dview.apply_sync(evaluate_as_module.import_list,self.ipp,self.subset,numb_err_f)
         get_trans_dict = evaluate_as_module.get_trans_dict
-        self.td = get_trans_dict(subset)
+        self.td = get_trans_dict(self.subset)
         self.dview.push({'td':self.td })
 
         pop = toolbox.population(n = MU)
         pop = [ toolbox.clone(i) for i in pop ]
+        self.history.update(pop)
+
         self.dview.scatter('Individual',pop)
 
         #from neuronunit.optimization import nsga_parallel
@@ -137,8 +140,7 @@ class NSGA(object):
         toolbox = self.toolbox
         dview = self.set_map()
         self.set_evaluate()
-        import numpy
-        from numpy import random
+
         random.seed(seed)
 
 
@@ -152,32 +154,14 @@ class NSGA(object):
         logbook.header = "gen", "evals", "std", "min", "avg", "max"
 
         pop = toolbox.population(n=MU)
-        #import pdb; pdb.set_trace()
+        self.pf.update(pop)
 
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in pop if not ind.fitness.valid]
-        #if len(invalid_ind)!=0:
-        #    import pdb; pdb.set_trace()
         invalid_dtc = list(nsga_parallel.update_pop(invalid_ind,self.td))
-        print(invalid_dtc)
-        #import pdb; pdb.set_trace()
-
-        invalid_dtc = list(filter(lambda dtc: float(dtc.rheobase['value']) > 0.0, invalid_dtc))
-        assert len(invalid_dtc)>0
-        #print(invalid_dtc)
-        #import pdb; pdb.set_trace()
-
-        #import pdb; pdb.set_trace()
-        from neuronunit.optimization.nsga_parallel import evaluate
         fitnesses = list(map(evaluate,invalid_dtc))
-
-        #import pdb; pdb.set_trace()
-
-        #fitnesses = list(self.dview.map_sync(evaluate, invalid_dtc))
-        #import pdb; pdb.set_trace()
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
-
         # This is just to assign the crowding distance to the individuals
         # no actual selection is done
         pop = toolbox.select(pop, len(pop))
@@ -190,17 +174,16 @@ class NSGA(object):
 
         for gen in range(1, NGEN):
             invalid_dtc, pop, logbook, fitnesses = self.evolve(pop,MU,gen)
+            self.history.update(pop)
+            self.pf.update(pop)
+
+
 
         self.logbook.record(gen=gen, evals=len(invalid_ind), **record)
         import copy
-
         self.invalid_dtc = list(copy.copy(invalid_dtc))
-
-        #assert type(self.invalid_dtc) is type(list)
         self.fitnesses = fitnesses
-        #assert type(self.fitnesses) is type(list)
-
-        return copy.copy(self.invalid_dtc), copy.copy(pop), copy.copy(self.logbook), copy.copy(self.fitnesses)
+        return self.invalid_dtc, pop, self.logbook, self.fitnesses, self.history, self.pf
 
 
 
