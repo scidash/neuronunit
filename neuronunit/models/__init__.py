@@ -5,6 +5,7 @@ from copy import deepcopy
 import tempfile
 import inspect
 import shutil
+import random
 
 from lxml import etree
 
@@ -27,6 +28,7 @@ class LEMSModel(sciunit.Model,
         #    sciunit.Model.__init__()
         if name is None:
             name = os.path.split(LEMS_file_path)[1].split('.')[0]
+        self.name = name
         #sciunit.Modelsuper(LEMSModel,self).__init__(name=name)
         self.attrs = attrs if attrs else {}
         self.orig_lems_file_path = os.path.abspath(LEMS_file_path)
@@ -38,6 +40,7 @@ class LEMSModel(sciunit.Model,
         self.last_run_params = None
         self.skip_run = False
         self.rerun = True # Needs to be rerun since it hasn't been run yet!
+        self.unpicklable = []
         self.set_backend(backend)
 
     def get_backend(self):
@@ -94,7 +97,8 @@ class LEMSModel(sciunit.Model,
     def create_lems_file(self, name):
         if not hasattr(self,'temp_dir'):
             self.temp_dir = tempfile.gettempdir()
-        self.lems_file_path  = os.path.join(self.temp_dir, '%s.xml' % name)
+        rand = random.randint(0,1e15)
+        self.lems_file_path  = os.path.join(self.temp_dir, '%s_%d.xml' % (name,rand))
         shutil.copy2(self.orig_lems_file_path,self.lems_file_path)
         nml_paths = self.get_nml_paths(original=True)
         for orig_nml_path in nml_paths:
@@ -175,4 +179,4 @@ class LEMSModel(sciunit.Model,
 
     @property
     def state(self):
-        return self._state(keys=['attrs','run_params'])
+        return self._state(keys=['name','url', 'attrs','run_params'])
