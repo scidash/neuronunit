@@ -14,6 +14,7 @@ setup(
             'neuronunit.neuroconstruct',
             'neuronunit.models',
             'neuronunit.tests',
+            'neuronunit.optimization',
             'neuronunit.unit_test'],
     url='http://github.com/scidash/neuronunit',
     license='MIT',
@@ -29,12 +30,12 @@ setup(
                       'sciunit==0.19',
                       'allensdk==0.14.2',
                       #'allensdk==9999',
-                      'pyneuroml==0.3.1.1',
+                      'pyneuroml==0.3.1.2',
                       #'pyneuroml==9999'
                       ],
     dependency_links = ['git+https://github.com/scidash/sciunit@master#egg=sciunit-0.19',
                         #'git+https://github.com/rgerkin/AllenSDK@master#egg=allensdk-9999',
-                        'git+https://github.com/rgerkin/pyNeuroML@master#egg=pyneuroml-0.3.1.1',
+                        'git+https://github.com/rgerkin/pyNeuroML@master#egg=pyneuroml-0.3.1.2',
                         #'git+https://github.com/rgerkin/python-neo@master#egg=neo-9999',
                         ]
-)
+    )
