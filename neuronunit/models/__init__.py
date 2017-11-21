@@ -6,8 +6,10 @@ import tempfile
 import inspect
 import shutil
 
+from lxml import etree
+
 import sciunit
-from sciunit.utils import dict_hash
+#from sciunit.utils import dict_hash
 import neuronunit.capabilities as cap
 from pyneuroml import pynml
 from . import backends
@@ -77,11 +79,28 @@ class LEMSModel(sciunit.Model,
         self._backend.model = self
         self._backend.init_backend(*args, **kwargs)
 
+    def get_nml_paths(self, lems_tree=None, absolute=True, original=False):
+        if not lems_tree:
+            lems_tree = etree.parse(self.lems_file_path)
+        nml_paths = [x.attrib['file'] for x in \
+                     lems_tree.xpath("Include[contains(@file, '.nml')]")]
+        if absolute: # Turn into absolute paths
+            lems_file_path = self.orig_lems_file_path if original \
+                                                      else self.lems_file_path
+            nml_paths = [os.path.join(os.path.dirname(lems_file_path),x) \
+                         for x in nml_paths]
+        return nml_paths
+
     def create_lems_file(self, name):
         if not hasattr(self,'temp_dir'):
             self.temp_dir = tempfile.gettempdir()
         self.lems_file_path  = os.path.join(self.temp_dir, '%s.xml' % name)
         shutil.copy2(self.orig_lems_file_path,self.lems_file_path)
+        nml_paths = self.get_nml_paths(original=True)
+        for orig_nml_path in nml_paths:
+            new_nml_path = os.path.join(self.temp_dir,
+                                        os.path.basename(orig_nml_path))
+            shutil.copy2(orig_nml_path,new_nml_path)
         if self.attrs:
             self.set_lems_attrs(self.attrs)
 
@@ -97,7 +116,6 @@ class LEMSModel(sciunit.Model,
     #def local_run(self):
         
     def set_lems_attrs(self, attrs):
-        from lxml import etree
         tree = etree.parse(self.lems_file_path)
         for key1,value1 in attrs.items():
             nodes = tree.findall(key1)
@@ -128,19 +146,15 @@ class LEMSModel(sciunit.Model,
     def set_run_params(self, **params):
         self._backend.set_run_params(**params)
 
-    def set_lems_run_params(self):
+    def set_lems_run_params(self, verbose=False):
         from lxml import etree
         from neuroml import nml
         lems_tree = etree.parse(self.lems_file_path)
         trees = {self.lems_file_path:lems_tree}
 
         # Edit LEMS files.
-        nml_file_rel_paths = [x.attrib['file'] for x in \
-                              lems_tree.xpath("Include[contains(@file, '.nml')]")]
-        nml_file_paths = [os.path.join(os.path.split(self.orig_lems_file_path)[0],x) \
-                          for x in nml_file_rel_paths]
-        #print(nml_file_paths)
-        trees.update({x:nml.nml.parsexml_(x) for x in nml_file_paths})
+        nml_paths = self.get_nml_paths(lems_tree=lems_tree)
+        trees.update({x:nml.nml.parsexml_(x) for x in nml_paths})
 
         # Edit NML files.
         for file_path,tree in trees.items():
@@ -150,7 +164,8 @@ class LEMSModel(sciunit.Model,
                     for pg in pulse_generators:
                         for attr in ['delay', 'duration', 'amplitude']:
                             if attr in value:
-                                #print('Setting %s to %f' % (attr,value[attr]))
+                                if verbose:
+                                    print('Setting %s to %f' % (attr,value[attr]))
                                 pg.attrib[attr] = '%s' % value[attr]
 
             tree.write(file_path)
@@ -160,6 +175,4 @@ class LEMSModel(sciunit.Model,
 
     @property
     def state(self):
-        keys = ['attrs','run_params']
-        d = {key:getattr(self,key) for key in keys}
-        return dict_hash(d)
+        return self._state(keys=['attrs','run_params'])

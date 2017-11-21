@@ -53,7 +53,10 @@ class NSGA(object):
         creator = self.creator# = creator
         tools = self.tools# = tools
         logbook = self.logbook
-        offspring = tools.selTournamentDCD(pop, len(pop))
+        #tournament select is buggy and population size dependent.
+        #offspring = tools.selTournamentDCD(pop, len(pop))
+        offspring = toolbox.select(pop, len(pop))
+
         offspring = [toolbox.clone(ind) for ind in offspring]
         if len(offspring)==0:
             import pdb; pdb.set_trace()
@@ -76,7 +79,9 @@ class NSGA(object):
         #dtcpop = nsga_parallel.update_pop(pop,td)
         import copy
         invalid_dtc = list(nsga_parallel.update_pop(invalid_ind,self.td))
-        fitnesses = list(toolbox.map(toolbox.evaluate, copy.copy(invalid_dtc)))
+        from neuronunit.optimization.nsga_parallel import evaluate
+        fitnesses = list(map(evaluate,invalid_dtc))
+        #fitnesses = list(toolbox.map(toolbox.evaluate, copy.copy(invalid_dtc)))
 
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
@@ -154,15 +159,22 @@ class NSGA(object):
         #if len(invalid_ind)!=0:
         #    import pdb; pdb.set_trace()
         invalid_dtc = list(nsga_parallel.update_pop(invalid_ind,self.td))
-        #print(invalid_dtc)
+        print(invalid_dtc)
         #import pdb; pdb.set_trace()
 
         invalid_dtc = list(filter(lambda dtc: float(dtc.rheobase['value']) > 0.0, invalid_dtc))
+        assert len(invalid_dtc)>0
         #print(invalid_dtc)
         #import pdb; pdb.set_trace()
 
+        #import pdb; pdb.set_trace()
+        from neuronunit.optimization.nsga_parallel import evaluate
+        fitnesses = list(map(evaluate,invalid_dtc))
 
-        fitnesses = list(toolbox.map(toolbox.evaluate, invalid_dtc))
+        #import pdb; pdb.set_trace()
+
+        #fitnesses = list(self.dview.map_sync(evaluate, invalid_dtc))
+        #import pdb; pdb.set_trace()
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
 

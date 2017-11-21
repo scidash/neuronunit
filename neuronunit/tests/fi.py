@@ -1,14 +1,10 @@
 """F/I neuronunit tests, e.g. investigating firing rates and patterns as a
 function of input current"""
 
+import os
 
 from .base import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
-#from .base.optimization import get_neab
 from .. import optimization
-#print(dir(optimization))
-#from ..optimization import get_neab
-#print(get_neab)
-#get_neab = optimization.get_neab
 
 class RheobaseTest(VmTest):
     """
@@ -154,7 +150,7 @@ class DataTC(object):
     Data Transport Vessel
 
     This Object class serves as a data type for storing rheobase search
-    attributes and apriori model parameters,
+    attributes and a priori model parameters,
     with the distinction that unlike the NEURON model this class
     can be cheaply transported across HOSTS/CPUs
     '''
@@ -179,6 +175,7 @@ class DataTC(object):
         self.ratios = {}
         self.delta = []
         self.pickle_stream = []
+        self.model_path = ""
 
 
 class RheobaseTestP(VmTest):
@@ -210,6 +207,7 @@ class RheobaseTestP(VmTest):
      ephysprop_name = 'Rheobase'
 
      score_type = scores.RatioScore
+     
      def generate_prediction(self, model):
 
         '''
@@ -295,10 +293,10 @@ class RheobaseTestP(VmTest):
             '''
             ampl = float(ampl)
             import os
-            LEMS_MODEL_PATH = str(os.getcwd())+'/NeuroML2/LEMS_2007One.xml'
             #from neuronunit.models import reduced
             from neuronunit.models.reduced import ReducedModel
-            model = ReducedModel(LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
+            #assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
+            model = ReducedModel(dtc.model_path,name='vanilla',backend='NEURON')
             #print(model)
             #import pdb; pdb.set_trace()
             DELAY = 100.0*pq.ms
@@ -361,13 +359,13 @@ class RheobaseTestP(VmTest):
             return dtc
 
         @require('itertools')
-        def find_rheobase(self,dtc):
+        def find_rheobase(self, dtc):
             import ipyparallel as ipp
             rc = ipp.Client(profile='default')
             rc[:].use_cloudpickle()
             dview = rc[:]
-
             cnt = 0
+            assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
             # If this it not the first pass/ first generation
             # then assume the rheobase value found before mutation still holds until proven otherwise.
             if type(model.rheobase) is not type(None):
@@ -377,9 +375,9 @@ class RheobaseTestP(VmTest):
             while dtc.boolean == False:
                 dtc.searched.append(dtc.steps)
 
-                ds = [ dtc for s in dtc.steps ]
-                dtcpop = dview.map(check_current,dtc.steps,ds)
-                for dtc_clone in dtcpop.get():
+                dtcs = [ dtc for s in dtc.steps ]
+                dtcpop = dview.map(check_current,dtc.steps,dtcs)
+                for dtc_clone in dtcpop:#.get():
                     dtc.lookup.update(dtc_clone.lookup)
                 dtc = check_fix_range(dtc)
                 cnt += 1
@@ -391,6 +389,8 @@ class RheobaseTestP(VmTest):
         for k,v in model.attrs.items():
             dtc.attrs[k]=v
         dtc = init_dtc(dtc)
+        dtc.model_path = model.orig_lems_file_path
+        assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
         prediction = {}
         prediction['value'] = find_rheobase(self,dtc).rheobase * pq.pA
         return prediction
@@ -398,8 +398,6 @@ class RheobaseTestP(VmTest):
      def bind_score(self, score, model, observation, prediction):
          super(RheobaseTestP,self).bind_score(score, model,
                                             observation, prediction)
-
-
 
      def compute_score(self, observation, prediction):
          """Implementation of sciunit.Test.score_prediction."""
