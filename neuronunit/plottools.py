@@ -348,18 +348,18 @@ def use_dtc_to_plotting(dtcpop):
     plt.clf()
     plt.style.use('ggplot')
     fig, axes = plt.subplots(figsize=(10, 10), facecolor='white')
-
+    stored_min = []
+    stored_max = []
     for dtc in dtcpop:
-        st = spike_functions.get_spike_train(dtc.vm0)
-        sindexs.append(int((float(st)/ts[-1])*len(ts)))
-        time_sequence = np.arange(np.min(sindexs)-5 , np.max(sindexs)+5, 1)
+        #st = spike_functions.get_spike_train(dtc.vm0)
+        #sindexs.append(int((float(st)/ts[-1])*len(ts)))
+        #time_sequence = np.arange(np.min(sindexs)-5 , np.max(sindexs)+5, 1)
+        #stored_min.append(np.min(dtc.vm0))
+        ##stored_max.append(np.max(dtc.vm0))
+        #pvm = np.array(dtc.vm0)[time_sequence]
+        plt.plot(dtc.tvec, dtc.vm0, color='grey')
         stored_min.append(np.min(dtc.vm0))
         stored_max.append(np.max(dtc.vm0))
-        pvm = np.array(dtc.vm0)[time_sequence]
-        plt.plot(dtc.tvec, dtc.vm0, color='grey')
-
-    stored_min.append(np.min(dtc.vm0))
-    stored_max.append(np.max(dtc.vm0))
     plt.plot(dtc.tvec,dtc.vm0,linewidth=1.5, color='grey')
     plt.legend()
     plt.ylabel('$V_{m}$ mV')
@@ -369,7 +369,7 @@ def use_dtc_to_plotting(dtcpop):
 
 
 
-def plot_log(logbook):
+def plot_log(log): #logbook
     '''
     https://github.com/BlueBrain/BluePyOpt/blob/master/examples/graupnerbrunelstdp/run_fit.py
     Input: DEAP Plot logbook
@@ -378,21 +378,14 @@ def plot_log(logbook):
     The most important side effect being a plot in png format.
 
     '''
-    log = logbook
     import matplotlib.pyplot as plt
     import numpy as np
     plt.clf()
     plt.style.use('ggplot')
     fig, axes = plt.subplots(figsize=(10, 10), facecolor='white')
-
-    gen_numbers = log.select('gen')
-    mean = log.select('avg')
-    std = log.select('std')
-    minimum = log.select('min')
-    # maximum = log.select('max')
-    #from neuronunit.optimization import get_neab
-    #objective_labels = [ str(t) for t in get_neab.tests ]
-
+    gen_numbers =[ i for i in range(0,len(log.select('gen'))) ]
+    mean = np.array([ np.sum(i) for i in log.select('avg')])
+    std = np.array([ np.sum(i) for i in log.select('std')])
     stdminus = mean - std
     stdplus = mean + std
     try:
