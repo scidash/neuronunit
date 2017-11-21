@@ -1,7 +1,9 @@
 """Tests of NeuronUnit test classes"""
 
+import socket
 
 from .base import *
+from neuronunit.neuroelectro import is_neuroelectro_up
 
 class TestsTestCase(object):
     """Abstract base class for testing tests"""
@@ -12,6 +14,8 @@ class TestsTestCase(object):
         from .model_tests import ReducedModelTestCase
         path = ReducedModelTestCase().path
         self.model = ReducedModel(path, backend='jNeuroML')
+        if not is_neuroelectro_up():
+            return self.skipTest("Neuroelectro is down")
 
     def get_observation(self, cls):
         neuron = {'nlex_id': 'nifext_50'} # Layer V pyramidal cell

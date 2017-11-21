@@ -35,7 +35,6 @@ class Backend(object):
 
     def init_backend(self, *args, **kwargs):
         #self.attrs = {} if attrs is None else attrs
-        self.model.unpicklable = []
         self.model.attrs = {}
 
         self.use_memory_cache = kwargs.get('use_memory_cache', True)
@@ -45,8 +44,7 @@ class Backend(object):
         if self.use_disk_cache:
             self.init_disk_cache()
         self.load_model()
-
-    #attrs = None
+        self.model.unpicklable += ['_backend']
 
     # Name of the backend
     backend = None
@@ -71,13 +69,13 @@ class Backend(object):
         self.disk_cache_location = os.path.join(tempfile.mkdtemp(),'cache')
 
     def get_memory_cache(self, key):
-        """Returns result in memory cache for key 'key' or None if it
+        """Returns result in memory cache for key 'key' or None if it 
         is not found"""
         self._results = self.memory_cache.get(key)
         return self._results
 
     def get_disk_cache(self, key):
-        """Returns result in disk cache for key 'key' or None if it
+        """Returns result in disk cache for key 'key' or None if it 
         is not found"""
         if not getattr(self,'disk_cache_location',False):
             self.init_disk_cache()
@@ -87,13 +85,13 @@ class Backend(object):
         return self._results
 
     def set_memory_cache(self, results, key=None):
-        """Stores result in memory cache with key
+        """Stores result in memory cache with key 
         corresponding to model state"""
         key = self.model.hash if key is None else key
         self.memory_cache[key] = results
 
     def set_disk_cache(self, results, key=None):
-        """Stores result in disk cache with key
+        """Stores result in disk cache with key 
         corresponding to model state"""
         if not getattr(self,'disk_cache_location',False):
             self.init_disk_cache()
@@ -163,7 +161,7 @@ class jNeuroMLBackend(Backend):
 
     def set_attrs(self, **attrs):
         self.model.attrs.update(attrs)
-        self.set_lems_attrs(attrs)
+        self.model.set_lems_attrs(attrs)
 
     def set_run_params(self, **params):
         super(jNeuroMLBackend,self).set_run_params(**params)
