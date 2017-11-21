@@ -18,18 +18,13 @@ rc = ipp.Client(profile='default')
 rc[:].use_cloudpickle()
 dview = rc[:]
 
-# scatter 'id', so id=0,1,2 on engines 0,1,2
-dview.scatter('id', rc.ids, flatten=True)
-print("Engine IDs: ", dview['id'])
-# create a Reference to `id`. This will be a different value on each engine
-ref = ipp.Reference('id')
+
 
 
 from ipyparallel import depend, require, dependent
 # Import get_neab has to happen exactly here. It has to be called only on
 # controller (rank0, it has)
 from neuronunit.optimization import get_neab
-
 from neuronunit import tests
 
 def dtc_to_rheo(dtc):
@@ -54,40 +49,21 @@ def dtc_to_rheo(dtc):
     dtc.rheobase = score.prediction
     return dtc
 
-def bind_score_to_dtc(dtc):
-    #import evaluate_as_module
-    from neuronunit.optimization import evaluate_as_module
-
-    #from neuronunit.models import backends
+def dtc_to_plotting(dtc):
+    dtc.t = None
     from neuronunit.models.reduced import ReducedModel
-    import quantities as pq
-    import numpy as np
     from neuronunit.optimization import get_neab
-
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURONMemory')
-
-
+    from neuronunit.optimization import evaluate_as_module
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.set_attrs(dtc.attrs)
-    get_neab.tests[0].prediction = dtc.rheobase
     model.rheobase = dtc.rheobase['value']
-    if dtc.rheobase['value'] <= 0.0:
-        return dtc
-
-    for k,t in enumerate(get_neab.tests):
-        if k>0:
-
-            t.params = dtc.vtest[k]
-            score = t.judge(model,stop_on_error = False, deep_error = False)
-            #import pdb; pdb.set_trace()
-            dtc.scores[str(t)] = score.sort_key
-            try:
-                observation = score.observation
-                prediction = score.prediction
-                delta = evaluate_as_module.difference(observation,prediction)
-                dtc.differences[str(t)] = delta
-            except:
-                pass
+    score = get_neab.tests[-1].judge(model,stop_on_error = False, deep_error = True)
+    dtc.vm = list(model.results['vm'])
+    dtc.t = list(model.results['time'])
     return dtc
+
+def make_files(dtc):
+    return ref
 
 def evaluate(dtc):
 
@@ -105,26 +81,7 @@ def evaluate(dtc):
            fitness[2],fitness[3],\
            fitness[4],fitness[5],\
            fitness[6],fitness[7],
-'''
-def federate_attribute(dtcpop,attribute):
-    dtc = dtcpop[0]
-    for dtc in dtcpop:
-        dtc.cached_attrs = None
-        dtc.cached_attrs = attribute
-    # add all elments into the dictionary thats the 1st element of the list
-    for dtci in dtcpop:
-        dtc.cached_attrs.update(dtci.cached_attrs)
 
-    # add all elments into every dictionary belonging to every element in the element of the list
-    for dtcj in dtcpop:
-        dtcj.cached_attrs.update(dtc.cached_attrs)
-
-    for k, dtck in enumerate(dtcpop):
-        current = len(dtck.cached_attrs)
-        assert current == previous
-        previous = current
-    return dtcpop
-'''
 def update_pop(pop,td):
     '''
     Inputs a population of genes (pop).
@@ -138,40 +95,39 @@ def update_pop(pop,td):
 
     from neuronunit.optimization import model_parameters as modelp
     from neuronunit.optimization import evaluate_as_module
+    from neuronunit.optimization.exhaustive_search import parallel_method
+
     update_dtc_pop = evaluate_as_module.update_dtc_pop
     pre_format = evaluate_as_module.pre_format
     dtcpop = list(update_dtc_pop(pop, td))
-    for d in dtcpop:
-        assert type(d) is not type(None)
-    assert len(dtcpop) != 0
     dtcpop = list(map(dtc_to_rheo,dtcpop))
-    print('\n\n\n\n\n rheobase complete \n\n\n\n')
-    for d in dtcpop:
-        assert type(d) is not type(None)
-    assert len(dtcpop) != 0
+
+    print('\n\n\n\n rheobase complete \n\n\n\n')
     dtcpop = list(map(pre_format,dtcpop))
-    print('\n\n\n\n\n preformat complete \n\n\n\n')
-    for d in dtcpop:
-        assert type(d) is not type(None)
-    assert len(dtcpop) != 0
-    from neuronunit.optimization.exhaustive_search import parallel_method
-    dtcpop = list(dview.map_sync(parallel_method,dtcpop))
-    print('\n\n\n\n\n score calculation complete \n\n\n\n')
-    #import pdb; pdb.set_trace()
-
-    import copy
-    for d in dtcpop:
-        assert type(d) is not type(None)
-    assert len(dtcpop) != 0
-    return copy.copy(dtcpop)
+    print('\n\n\n\n preformat complete \n\n\n\n')
+    dtcpop = dview.map(parallel_method,dtcpop).get()
+    rc.wait(dtcpop)
+    #dtcpop=list(dtcpop)
+    #dtcpop = list(dview.map_sync(parallel_method,dtcpop))
+    print('\n\n\n\n score calculation complete \n\n\n\n')
+    return list(dtcpop)
+    #import copy
+    #return copy.copy(dtcpop)
 
 
-def create_subset(nparams=10):
+def create_subset(nparams=10,provided_keys=None):
     from neuronunit.optimization import model_parameters as modelp
     import numpy as np
     mp = modelp.model_params
+
     key_list = list(mp.keys())
-    reduced_key_list = key_list[0:nparams]
+
+    if type(provided_keys) is type(None):
+        key_list = list(mp.keys())
+        reduced_key_list = key_list[0:nparams]
+    else:
+        reduced_key_list = provided_keys
+
     subset = { k:mp[k] for k in reduced_key_list }
     return subset
 '''
