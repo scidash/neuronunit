@@ -195,4 +195,3 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
         model.inject_square_current(self.params['injected_square_current'])
         return super(InjectedCurrentAPThresholdTest,self).\
                 generate_prediction(model)
-
