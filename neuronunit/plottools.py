@@ -6,8 +6,6 @@ import matplotlib.pyplot as plt
 import colorsys
 import numpy
 import collections
-import os
-os.system('conda install -c anaconda python-graphviz')
 
 def adjust_spines(ax, spines, color='k', d_out=10, d_down=None):
 
@@ -144,28 +142,396 @@ def tiled_figure(figname='', frames=1, columns=2,
 
     return axs
 
-import networkx as nx
-from networkx.drawing.nx_agraph import graphviz_layout
-import graphviz
+def shadow(dtcpop,best_vm):#This method must be pickle-able for ipyparallel to work.
+    '''
+    A method to plot the best and worst candidate solution waveforms side by side
 
-import matplotlib as mpl
-# setting of an appropriate backend.
 
-mpl.use('Agg')
+    Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
+    is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
+    value, that was found in a previous rheobase search.
 
-from plotly.graph_objs import *
-import matplotlib.pyplot as plt
-import numpy as np
+    Outputs: This method only has side effects, not datatype outputs from the method.
 
-from IPython.lib.deepreload import reload
-import ipyparallel as ipp
-rc = ipp.Client(profile='default')
-rc[:].use_cloudpickle()
-dview = rc[:]
+    The most important side effect being a plot in png format.
 
+    '''
+    from neuronunit.optimization.nsga_parallel import dtc_to_plotting
+    mpl.use('Agg')
+    import matplotlib.pyplot as plt
+
+    import os
+
+    import quantities as pq
+    import numpy as np
+    from itertools import repeat
+
+    from neuronunit.capabilities import spike_functions
+    import quantities as pq
+    from neo import AnalogSignal
+    import matplotlib as mpl
+    # setting of an appropriate backend.
+
+
+    #color='lightblue'
+    dtcpop.append(best_vm)
+
+    import copy
+    from neuronunit.optimization import get_neab
+    tests = copy.copy(get_neab.tests)
+    for k,v in enumerate(tests):
+        import matplotlib.pyplot as plt
+
+        plt.clf()
+        plt.style.use('ggplot')
+     	# following variables possibly are
+        # going to become depreciated
+        stored_min = []
+        stored_max = []
+        sc_for_frame_best = []
+        sc_for_frame_worst = []
+
+        sindexs = []
+        for iterator, vms in enumerate(dtcpop):
+
+
+            from neuronunit.models import backends
+            from neuronunit.models.reduced import ReducedModel
+
+            print(get_neab.LEMS_MODEL_PATH)
+            #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
+            model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+
+            #import pdb; pdb.set_trace()
+            assert type(vms.rheobase) is not type(None)
+            if k == 0:
+                v.prediction = {}
+                v.prediction['value'] = vms.rheobase * pq.pA
+
+                print(v.prediction)
+            if k != 0:
+                v.prediction = None
+
+            if k == 1 or k == 2 or k == 3:
+                # Negative square pulse current.
+                v.params['injected_square_current']['duration'] = 100 * pq.ms
+                v.params['injected_square_current']['amplitude'] = -10 *pq.pA
+                v.params['injected_square_current']['delay'] = 30 * pq.ms
+            if k == 0 or k ==4 or k == 5 or k == 6 or k == 7:
+                # Threshold current.
+                v.params['injected_square_current']['duration'] = 1000 * pq.ms
+                v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
+                v.params['injected_square_current']['delay'] = 100 * pq.ms
+            import neuron
+            model.reset_h(neuron)
+            #model.load_model()
+            model.update_run_params(vms.attrs)
+            print(v.params)
+            score = v.judge(model,stop_on_error = False, deep_error = True)
+
+            if k == 0 or k ==4 or k == 5 or k == 6 or k == 7:
+                v_m = model.get_membrane_potential()
+                dt = float(v_m.sampling_period)
+                ts = model.results['t'] # time signal
+                st = spike_functions.get_spike_train(v_m) #spike times
+                if model.get_spike_count() == 1:
+                    print(st)
+                    assert len(st) == 1
+                    # st = float(st)
+                    # get the approximate integer index into the array of membrane potential corresponding to when the spike time
+                    # occurs, and store it in a list
+                    # minimums and maximums of this list will be calculated on a piecemeal basis.
+
+                    stored_min.append(np.min(model.results['vm']))
+                    stored_max.append(np.max(model.results['vm']))
+                    sindexs.append(int((float(st)/ts[-1])*len(ts)))
+                    time_sequence = np.arange(np.min(sindexs)-5 , np.max(sindexs)+5, 1)
+                    ptvec = np.array(model.results['t'])[time_sequence]
+                    pvm = np.array(model.results['vm'])[time_sequence]
+                    assert len(pvm) == len(ptvec)
+                    plt.plot(ptvec, pvm, label=str(v)+str(score), linewidth=1.5)
+                    #plt.xlim(np.min(sindexs)-11,np.min(sindexs)+11 )
+                    #plt.ylim(np.min(stored_min)-4,np.max(stored_max)+4)
+
+            else:
+                stored_min.append(np.min(model.results['vm']))
+                stored_max.append(np.max(model.results['vm']))
+                plt.plot(model.results['t'],model.results['vm'],label=str(v)+str(score), linewidth=1.5)
+                plt.xlim(0,float(v.params['injected_square_current']['duration']) )
+                #plt.ylim(np.min(stored_min)-4,np.max(stored_max)+4)
+                #model.results = None
+        #inside the tests loop but outside the model loop.
+        #plt.tight_layout()
+        plt.legend()
+        plt.ylabel('$V_{m}$ mV')
+        plt.xlabel('ms')
+        plt.savefig(str('test_')+str(v)+'vm_versus_t.png', format='png', dpi=1200)
+
+
+
+def surfaces(history,td):
+    import numpy as np
+    import matplotlib
+    matplotlib.rcParams.update({'font.size':16})
+
+    import matplotlib.pyplot as plt
+
+    all_inds = history.genealogy_history.values()
+    sums = np.array([np.sum(ind.fitness.values) for ind in all_inds])
+    keep = set()
+    quads = []
+    for k in range(1,9):
+        for i,j in enumerate(td):
+            print(i,k)
+            if i+k < 10:
+                quads.append((td[i],td[i+k],i,i+k))
+
+    #for q in quads:
+        #print(k)
+        #(x,y,w,z) = q
+        #print(x,y,w,z,i)
+    all_inds1 = history.genealogy_history.values()
+
+    ab = [ (all_inds1[y][4],all_inds1[y][-3]) for y in all_inds1 ]
+
+    xs = np.array([ind[4] for ind in all_inds])
+    ys = np.array([ind[-3] for ind in all_inds])
+    min_ys = ys[np.where(sums == np.min(sums))]
+    min_xs = xs[np.where(sums == np.min(sums))]
+    plt.clf()
+    fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
+    trip_axis = ax_trip.tripcolor(xs,ys,sums,20,norm=matplotlib.colors.LogNorm())
+    plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue',label='global minima')
+    fig_trip.colorbar(trip_axis, label='Sum of Objective Errors ')
+    ax_trip.set_xlabel('Parameter $ b$')
+    ax_trip.set_ylabel('Parameter $ a$')
+    plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
+    fig_trip.tight_layout()
+    #fig_trip.legend()
+    fig_trip.savefig('surface'+str('a')+str('b')+'.pdf',format='pdf', dpi=1200)
+
+
+    matrix_fill = [ (i,j) for i in range(0,len(modelp.model_params['a'])) for j in range(0,len(modelp.model_params['b'])) ]
+    mf = list(zip(matrix_fill,summed))
+    empty = np.zeros(shape=(int(len(modelp.model_params['a'])),int(len(modelp.model_params['a']))))
+    max_x = np.max(modelp.model_params['a'])
+    max_y = np.min(modelp.model_params['b'])
+    x_mapped_ind = [int((ind[4]/max_x)*len(modelp.model_params['a'])) for ind in all_inds1]
+    y_mapped_ind = [int((np.abs(ind[-3])/max_y)*len(modelp.model_params['a'])) for ind in all_inds1]
+
+    #y_mapped_ind = np.array([int(ind[-3]/max_y) for ind in all_inds1])
+    #int((all_inds1[1][4]/max_x)*len(modelp.model_params['a']))
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    vmin = np.min(mf2)
+    vmax = np.max(mf2)
+    from matplotlib.colors import LogNorm
+    cax = ax.matshow(dfimshow, interpolation='nearest',norm=LogNorm(vmin=vmin,vmax=vmax))
+    fig.colorbar(cax)
+
+    ax.set_xticklabels(modelp.model_params['a'])
+    ax.set_yticklabels(modelp.model_params['b'])
+    plt.title(str('$a$')+' versus '+str('$b$'))
+    plt.savefig('2nd_approach_d_error_'+str('a')+str('b')+'surface.png')
+
+
+    return ab
+
+
+
+
+def use_dtc_to_plotting(dtcpop):
+    from neuronunit.capabilities import spike_functions
+    import matplotlib.pyplot as plt
+    import numpy as np
+    plt.clf()
+    plt.style.use('ggplot')
+    fig, axes = plt.subplots(figsize=(10, 10), facecolor='white')
+
+    for dtc in dtcpop:
+        st = spike_functions.get_spike_train(dtc.vm0)
+        sindexs.append(int((float(st)/ts[-1])*len(ts)))
+        time_sequence = np.arange(np.min(sindexs)-5 , np.max(sindexs)+5, 1)
+        stored_min.append(np.min(dtc.vm0))
+        stored_max.append(np.max(dtc.vm0))
+        pvm = np.array(dtc.vm0)[time_sequence]
+        plt.plot(dtc.tvec, dtc.vm0, color='grey')
+
+    stored_min.append(np.min(dtc.vm0))
+    stored_max.append(np.max(dtc.vm0))
+    plt.plot(dtc.tvec,dtc.vm0,linewidth=1.5, color='grey')
+    plt.legend()
+    plt.ylabel('$V_{m}$ mV')
+    plt.xlabel('ms')
+    plt.savefig(str('test_')+'vm_versus_t.png', format='png', dpi=1200)
+
+
+
+
+def plot_log(logbook):
+    '''
+    https://github.com/BlueBrain/BluePyOpt/blob/master/examples/graupnerbrunelstdp/run_fit.py
+    Input: DEAP Plot logbook
+    Outputs: This method only has side effects, not datatype outputs from the method.
+
+    The most important side effect being a plot in png format.
+
+    '''
+    log = logbook
+    import matplotlib.pyplot as plt
+    import numpy as np
+    plt.clf()
+    plt.style.use('ggplot')
+    fig, axes = plt.subplots(figsize=(10, 10), facecolor='white')
+
+    gen_numbers = log.select('gen')
+    mean = log.select('avg')
+    std = log.select('std')
+    minimum = log.select('min')
+    # maximum = log.select('max')
+    #from neuronunit.optimization import get_neab
+    #objective_labels = [ str(t) for t in get_neab.tests ]
+
+    stdminus = mean - std
+    stdplus = mean + std
+    try:
+        assert len(gen_numbers) == len(stdminus) == len(stdplus)
+    except:
+        pass
+        #raise Exception
+
+    axes.plot(
+        gen_numbers,
+        mean,
+        color='black',
+        linewidth=2,
+        label='population average')
+    try:
+        axes.fill_between([ i for i in range(0,len(stdminus)) ], stdminus, stdplus)
+    except:
+        pass
+        #raise Exception
+
+    axes.plot(
+        gen_numbers,
+        minimum,
+        linewidth=2,
+        label='minimum')
+
+    axes.set_xlim(np.min(gen_numbers) - 1, np.max(gen_numbers) + 1)
+    axes.set_xlabel('Generation #')
+    axes.set_ylabel('Sum of objectives')
+    axes.set_ylim([0, np.max(stdplus)])
+    axes.legend()
+
+    fig.tight_layout()
+    fig.savefig('Izhikevich_history_evolution.png', format='png', dpi=1200)
+
+
+def dtc_to_plotting(dtc):
+    dtc.vm0 = None
+    dtc.vm1 = None
+
+    from neuronunit.models.reduced import ReducedModel
+    from neuronunit.optimization.get_neab import tests as T
+    from neuronunit.optimization import get_neab
+
+    from neuronunit.optimization import evaluate_as_module
+    from neo import AnalogSignal
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+    model.set_attrs(dtc.attrs)
+    model.rheobase = dtc.rheobase['value']
+    #model2 = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON',DTC=dtc)
+    score = T[-1].judge(model,stop_on_error = False, deep_error = True)
+    #dtc.vm1 = list(model.get_membrane_potential())
+    dtc.vm0 = list(model.results['vm'])
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+    model.set_attrs(dtc.attrs)
+    model.rheobase = dtc.rheobase['value']
+    score = T[1].judge(model,stop_on_error = False, deep_error = True)
+    #dtc.vm0 = list(model.get_membrane_potential())
+    dtc.vm1 = list(model.results['vm'])
+
+    dtc.tvec = list(model.results['t'])
+    return dtc
+
+def plot_objectives_history(log):
+    '''
+    https://github.com/BlueBrain/BluePyOpt/blob/master/examples/graupnerbrunelstdp/run_fit.py
+    Input: DEAP Plot logbook
+    Outputs: This method only has side effects, not datatype outputs from the method.
+
+    The most important side effect being a plot in png format.
+
+    '''
+    import matplotlib.pyplot as plt
+    import numpy as np
+    from neuronunit.optimization import get_neab
+    plt.clf()
+    plt.style.use('ggplot')
+
+
+    fig, axes = plt.subplots(figsize=(10, 10), facecolor='white')
+
+    gen_numbers = log.select('gen')
+    minimum = log.select('min')
+    mean = log.select('mean')
+
+    objective_labels = [ str(t) for t in get_neab.tests ]
+    mins_components_plot = log.select('min')
+    components = {}
+    for i in range(0,7):
+        components[i] = []
+        for l in mins_components_plot:
+            components[i].append(l[i])
+    maximum = 0.0
+    for keys in components:
+
+        axes.semilogy(
+            gen_numbers,
+            components[keys],
+            linewidth=2,
+            label=str(objective_labels[keys])
+            )
+        if np.max(components[keys]) > maximum:
+            maximum = np.max(components[keys])
+
+    axes.set_xlim(min(gen_numbers) - 1, max(gen_numbers) + 1)
+    axes.set_xlabel('Generation #')
+    axes.set_ylabel('Sum of objectives')
+    #axes.set_ylim([0, max(maximum[0])])
+    axes.legend()
+
+    fig.tight_layout()
+    fig.savefig('Izhikevich_evolution_components.png', format='png', dpi=1200)
+
+
+'''
 def plotly_graph(history,vmhistory):
 	# TODO experiment with making the plot output style a dendro
 	# dendrograms
+    import os
+    os.system('conda install -c anaconda python-graphviz plotly')
+    import networkx as nx
+    from networkx.drawing.nx_agraph import graphviz_layout
+    import graphviz
+
+    import matplotlib as mpl
+    # setting of an appropriate backend.
+
+    mpl.use('Agg')
+
+    from plotly.graph_objs import *
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    from IPython.lib.deepreload import reload
+    import ipyparallel as ipp
+    rc = ipp.Client(profile='default')
+    rc[:].use_cloudpickle()
+    dview = rc[:]
+
     from networkx.drawing.nx_agraph import graphviz_layout
     import plotly
     import plotly.plotly as py
@@ -263,7 +629,7 @@ def plotly_graph(history,vmhistory):
                 yaxis=YAxis(showgrid=False, zeroline=False, showticklabels=True)))
     py.sign_in('RussellJarvis','FoyVbw7Ry3u4N2kCY4LE')
     py.iplot(fig, filename='networkx_new_DEAP.svg',image='svg')
-
+'''
 
 
 def best_worst(history):
@@ -428,106 +794,6 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
         import pandas as pd
         sf_best = pd.DataFrame(sc_for_frame_best)
         sf_worst = pd.DataFrame(sc_for_frame_worst)
-
-
-def speed_up(not_optional_list):
-    '''
-    This will be used in conjunction with rgerkin@github 's latest unpickable method
-    To achieve a big speed up by storing sciunit scores inside models, such that they don't need to
-    be reavaluated, each time.
-
-    Also awaiting another workaround.
-    '''
-    import ipyparallel as ipp
-
-    rc = ipp.Client(profile='default')
-    rc[:].use_cloudpickle()
-    dview = rc[:]
-
-    import os
-    import quantities as pq
-    import numpy as np
-    import get_neab
-    from itertools import repeat
-
-    from neuronunit.capabilities import spike_functions
-    import quantities as pq
-    from neo import AnalogSignal
-    import matplotlib.pyplot as plt
-    import copy
-    tests = get_neab.tests
-    the_ks = list(np.arange(0,len(tests),1))
-    print(the_ks)
-    for i in not_optional_list:
-         for j in tests:
-            i.results[str(j)] = {}
-    tests = None
-    print([i.results for i in not_optional_list])
-    #vms = not_optional_list
-    def second_nesting(k,vms):
-        import get_neab
-
-        new_file_path = '{0}{1}'.format(str(get_neab.LEMS_MODEL_PATH),int(os.getpid()))
-        #print(new_file_path)
-        os.system('cp ' + str(get_neab.LEMS_MODEL_PATH)+str(' ') + new_file_path)
-        # These imports have to happen very locally otherwise all hell breaks loose.
-        from neuronunit.models import backends
-        from neuronunit.models.reduced import ReducedModel
-        #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
-        model = ReducedModel(new_file_path,name=str('vanilla'),backend='NEURON')
-        tests = get_neab.tests
-
-        v = tests[k]
-        assert type(vms.rheobase) is not type(None)
-        if k == 0:
-            v.prediction = {}
-            v.prediction['value'] = vms.rheobase * pq.pA
-        if k != 0:
-            v.prediction = None
-
-        if k == 1 or k == 2 or k == 3:
-            # Negative square pulse current.
-            v.params['injected_square_current']['duration'] = 100 * pq.ms
-            v.params['injected_square_current']['amplitude'] = -10 *pq.pA
-            v.params['injected_square_current']['delay'] = 30 * pq.ms
-        if k == 0 or k ==4 or k == 5 or k == 6 or k == 7:
-            # Threshold current.
-            v.params['injected_square_current']['duration'] = 1000 * pq.ms
-            v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
-            v.params['injected_square_current']['delay'] = 100 * pq.ms
-        import neuron
-        model.reset_h(neuron)
-        model.load_model()
-        model.update_run_params(vms.attrs)
-        print(v.params)
-        score = v.judge(model,stop_on_error = False, deep_error = True)
-
-        v_m = model.get_membrane_potential()
-        ts = model.results['t']# time signal
-        if type(vms.results[str(v)]) is type(None):
-            vms.results[str(v)] = {}
-        vms.results[str(v)]['ts'] = copy.copy(ts)
-        vms.results[str(v)]['v_m'] = copy.copy(v_m)
-        #not_optional_list[iterator] = vms
-        #ts = None
-        #v_m = None
-        #model.results = None
-        return vms
-
-    def nested_function(vms,the_ks):
-        print(vms,k)
-        from itertools import repeat
-        print(type(k))
-        print(k)
-        #for k in the_ks:
-        vms = list(map(second_nesting,the_ks,repeat(vms)))
-        #print(vms.results)
-        return vms
-
-    from itertools import repeat
-    not_optional_list = list(dview.map_sync(nested_function,not_optional_list,repeat(the_ks)))
-
-    return not_optional_list
 
 
 
@@ -797,202 +1063,6 @@ def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel 
     #fig.text(0.06, 0.5, '$V_{m}$ mV', ha='center', va='center', rotation='vertical')
     fig.savefig(str('amplitude')+str(v)+'vm_versus_t.png', format='png', dpi=1200)#,
 
-
-
-
-def shadow(not_optional_list,best_vm):#This method must be pickle-able for ipyparallel to work.
-    '''
-    A method to plot the best and worst candidate solution waveforms side by side
-
-
-    Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
-    is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
-    value, that was found in a previous rheobase search.
-
-    Outputs: This method only has side effects, not datatype outputs from the method.
-
-    The most important side effect being a plot in png format.
-
-    '''
-    import os
-
-    import quantities as pq
-    import numpy as np
-    import get_neab
-    from itertools import repeat
-
-    from neuronunit.capabilities import spike_functions
-    import quantities as pq
-    from neo import AnalogSignal
-    import matplotlib.pyplot as plt
-
-    #color='lightblue'
-    not_optional_list.append(best_vm)
-
-    import copy
-    tests = copy.copy(get_neab.tests)
-    for k,v in enumerate(tests):
-        import matplotlib.pyplot as plt
-        plt.clf()
-        plt.style.use('ggplot')
-     	# following variables possibly are
-        # going to become depreciated
-        stored_min = []
-        stored_max = []
-        sc_for_frame_best = []
-        sc_for_frame_worst = []
-
-        sindexs = []
-        for iterator, vms in enumerate(not_optional_list):
-
-
-            from neuronunit.models import backends
-            from neuronunit.models.reduced import ReducedModel
-
-            print(get_neab.LEMS_MODEL_PATH)
-            #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
-            model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-            print(dir(model))
-            print(dir(ReducedModel))
-
-            print(os.getcwd())
-
-            #import pdb; pdb.set_trace()
-            assert type(vms.rheobase) is not type(None)
-            if k == 0:
-                v.prediction = {}
-                v.prediction['value'] = vms.rheobase * pq.pA
-
-                print(v.prediction)
-            if k != 0:
-                v.prediction = None
-
-            if k == 1 or k == 2 or k == 3:
-                # Negative square pulse current.
-                v.params['injected_square_current']['duration'] = 100 * pq.ms
-                v.params['injected_square_current']['amplitude'] = -10 *pq.pA
-                v.params['injected_square_current']['delay'] = 30 * pq.ms
-            if k == 0 or k ==4 or k == 5 or k == 6 or k == 7:
-                # Threshold current.
-                v.params['injected_square_current']['duration'] = 1000 * pq.ms
-                v.params['injected_square_current']['amplitude'] = vms.rheobase * pq.pA
-                v.params['injected_square_current']['delay'] = 100 * pq.ms
-            import neuron
-            model.reset_h(neuron)
-            #model.load_model()
-            model.update_run_params(vms.attrs)
-            print(v.params)
-            score = v.judge(model,stop_on_error = False, deep_error = True)
-
-            if k == 0 or k ==4 or k == 5 or k == 6 or k == 7:
-                v_m = model.get_membrane_potential()
-                dt = float(v_m.sampling_period)
-                ts = model.results['t'] # time signal
-                st = spike_functions.get_spike_train(v_m) #spike times
-                if model.get_spike_count() == 1:
-                    print(st)
-                    assert len(st) == 1
-                    # st = float(st)
-                    # get the approximate integer index into the array of membrane potential corresponding to when the spike time
-                    # occurs, and store it in a list
-                    # minimums and maximums of this list will be calculated on a piecemeal basis.
-
-                    stored_min.append(np.min(model.results['vm']))
-                    stored_max.append(np.max(model.results['vm']))
-                    sindexs.append(int((float(st)/ts[-1])*len(ts)))
-                    time_sequence = np.arange(np.min(sindexs)-5 , np.max(sindexs)+5, 1)
-                    ptvec = np.array(model.results['t'])[time_sequence]
-                    pvm = np.array(model.results['vm'])[time_sequence]
-                    assert len(pvm) == len(ptvec)
-                    plt.plot(ptvec, pvm, label=str(v)+str(score), linewidth=1.5)
-                    #plt.xlim(np.min(sindexs)-11,np.min(sindexs)+11 )
-                    #plt.ylim(np.min(stored_min)-4,np.max(stored_max)+4)
-
-            else:
-                stored_min.append(np.min(model.results['vm']))
-                stored_max.append(np.max(model.results['vm']))
-                plt.plot(model.results['t'],model.results['vm'],label=str(v)+str(score), linewidth=1.5)
-                plt.xlim(0,float(v.params['injected_square_current']['duration']) )
-                #plt.ylim(np.min(stored_min)-4,np.max(stored_max)+4)
-                #model.results = None
-        #inside the tests loop but outside the model loop.
-        #plt.tight_layout()
-        plt.legend()
-        plt.ylabel('$V_{m}$ mV')
-        plt.xlabel('ms')
-        plt.savefig(str('test_')+str(v)+'vm_versus_t.png', format='png', dpi=1200)
-
-
-
-def surfaces(history,td):
-    import numpy as np
-    import matplotlib
-    matplotlib.rcParams.update({'font.size':16})
-
-    import matplotlib.pyplot as plt
-
-    all_inds = history.genealogy_history.values()
-    sums = np.array([np.sum(ind.fitness.values) for ind in all_inds])
-    keep = set()
-    quads = []
-    for k in range(1,9):
-        for i,j in enumerate(td):
-            print(i,k)
-            if i+k < 10:
-                quads.append((td[i],td[i+k],i,i+k))
-
-    #for q in quads:
-        #print(k)
-        #(x,y,w,z) = q
-        #print(x,y,w,z,i)
-    all_inds1 = history.genealogy_history.values()
-
-    ab = [ (all_inds1[y][4],all_inds1[y][-3]) for y in all_inds1 ]
-
-    xs = np.array([ind[4] for ind in all_inds])
-    ys = np.array([ind[-3] for ind in all_inds])
-    min_ys = ys[np.where(sums == np.min(sums))]
-    min_xs = xs[np.where(sums == np.min(sums))]
-    plt.clf()
-    fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
-    trip_axis = ax_trip.tripcolor(xs,ys,sums,20,norm=matplotlib.colors.LogNorm())
-    plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue',label='global minima')
-    fig_trip.colorbar(trip_axis, label='Sum of Objective Errors ')
-    ax_trip.set_xlabel('Parameter $ b$')
-    ax_trip.set_ylabel('Parameter $ a$')
-    plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
-    fig_trip.tight_layout()
-    #fig_trip.legend()
-    fig_trip.savefig('surface'+str('a')+str('b')+'.pdf',format='pdf', dpi=1200)
-
-
-    matrix_fill = [ (i,j) for i in range(0,len(modelp.model_params['a'])) for j in range(0,len(modelp.model_params['b'])) ]
-    mf = list(zip(matrix_fill,summed))
-    empty = np.zeros(shape=(int(len(modelp.model_params['a'])),int(len(modelp.model_params['a']))))
-    max_x = np.max(modelp.model_params['a'])
-    max_y = np.min(modelp.model_params['b'])
-    x_mapped_ind = [int((ind[4]/max_x)*len(modelp.model_params['a'])) for ind in all_inds1]
-    y_mapped_ind = [int((np.abs(ind[-3])/max_y)*len(modelp.model_params['a'])) for ind in all_inds1]
-
-    #y_mapped_ind = np.array([int(ind[-3]/max_y) for ind in all_inds1])
-    #int((all_inds1[1][4]/max_x)*len(modelp.model_params['a']))
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    vmin = np.min(mf2)
-    vmax = np.max(mf2)
-    from matplotlib.colors import LogNorm
-    cax = ax.matshow(dfimshow, interpolation='nearest',norm=LogNorm(vmin=vmin,vmax=vmax))
-    fig.colorbar(cax)
-
-    ax.set_xticklabels(modelp.model_params['a'])
-    ax.set_yticklabels(modelp.model_params['b'])
-    plt.title(str('$a$')+' versus '+str('$b$'))
-    plt.savefig('2nd_approach_d_error_'+str('a')+str('b')+'surface.png')
-
-
-    return ab
-
 def load_data():
     a = pickle.load(open('for_pandas.p','rb'))
     df = pd.DataFrame(np.transpose(stacked),columns=columns1)
@@ -1239,137 +1309,3 @@ def bar_chart(vms,name=None):
     html_file.write(html)
     html_file.close()
     return df, threed, columns1 ,stacked, html, test_dic
-
-def plot_log(log,hypervolumes):
-    '''
-    https://github.com/BlueBrain/BluePyOpt/blob/master/examples/graupnerbrunelstdp/run_fit.py
-    Input: DEAP Plot logbook
-    Outputs: This method only has side effects, not datatype outputs from the method.
-
-    The most important side effect being a plot in png format.
-
-    '''
-    import matplotlib.pyplot as plt
-    import numpy as np
-    plt.clf()
-    plt.style.use('ggplot')
-
-
-    fig, axes = plt.subplots(figsize=(10, 10), facecolor='white')
-
-    gen_numbers = log.select('gen')
-    mean = np.array(log.select('avg'))
-    std = np.array(log.select('std'))
-    minimum = log.select('min')
-    # maximum = log.select('max')
-    import get_neab
-    objective_labels = [ str(t) for t in get_neab.tests ]
-
-    stdminus = mean - std
-    stdplus = mean + std
-    axes.plot(
-        gen_numbers,
-        mean,
-        color='black',
-        linewidth=2,
-        label='population average')
-
-    axes.fill_between(
-        gen_numbers,
-        stdminus,
-        stdplus,
-        color='lightgray',
-        linewidth=2,
-        label='population standard deviation')
-
-    axes.plot(
-        gen_numbers,
-        minimum,
-        linewidth=2,
-        label='population objectives')
-
-    axes.plot(
-        gen_numbers,
-        hypervolumes,
-        color='red',
-        linewidth=2,
-        label='Solution Hypervolume')
-        # want objective labels to be label.
-        # problem is vector scalar mismatch.
-
-
-
-    axes.set_xlim(min(gen_numbers) - 1, max(gen_numbers) + 1)
-    axes.set_xlabel('Generation #')
-    axes.set_ylabel('Sum of objectives')
-    axes.set_ylim([0, max(stdplus)])
-    axes.legend()
-
-    fig.tight_layout()
-    fig.savefig('Izhikevich_history_evolution.png', format='png', dpi=1200)
-
-
-def plot_objectives_history(log):
-    '''
-    https://github.com/BlueBrain/BluePyOpt/blob/master/examples/graupnerbrunelstdp/run_fit.py
-    Input: DEAP Plot logbook
-    Outputs: This method only has side effects, not datatype outputs from the method.
-
-    The most important side effect being a plot in png format.
-
-    '''
-    import matplotlib.pyplot as plt
-    import numpy as np
-    plt.clf()
-    plt.style.use('ggplot')
-
-
-    fig, axes = plt.subplots(figsize=(10, 10), facecolor='white')
-
-    gen_numbers = log.select('gen')
-    minimum = log.select('min')
-    mean = log.select('mean')
-
-    import get_neab
-    objective_labels = [ str(t) for t in get_neab.tests ]
-    mins_components_plot = log.select('min')
-    components = {}
-    for i in range(0,7):
-        components[i] = []
-        for l in mins_components_plot:
-            components[i].append(l[i])
-    maximum = 0.0
-    for keys in components:
-
-        axes.semilogy(
-            gen_numbers,
-            components[keys],
-            linewidth=2,
-            label=str(objective_labels[keys])
-            )
-        if np.max(components[keys]) > maximum:
-            maximum = np.max(components[keys])
-    '''
-    axes.semilogy(
-        gen_numbers,
-        mean,
-        color='black',
-        linewidth=2,
-        label='population average')
-
-    axes.fill_between(
-        gen_numbers,
-        stdminus,
-        stdplus,
-        color='lightgray',
-        linewidth=2,
-        label='population standard deviation')
-    '''
-    axes.set_xlim(min(gen_numbers) - 1, max(gen_numbers) + 1)
-    axes.set_xlabel('Generation #')
-    axes.set_ylabel('Sum of objectives')
-    #axes.set_ylim([0, max(maximum[0])])
-    axes.legend()
-
-    fig.tight_layout()
-    fig.savefig('Izhikevich_evolution_components.png', format='png', dpi=1200)

@@ -9,6 +9,7 @@ rc[:].use_cloudpickle()
 dview = rc[:]
 from neuronunit.optimization import get_neab
 tests = get_neab.tests
+
 def sample_points(iter_dict, npoints=3):
     import numpy as np
     replacement={}
@@ -17,7 +18,8 @@ def sample_points(iter_dict, npoints=3):
         replacement[k] = sample_points
     return replacement
 
-def create_grid(npoints=3,nparams=7):
+def create_grid(npoints=3,nparams=7,provided_keys=None):
+
     from neuronunit.optimization import model_parameters as modelp
     from sklearn.grid_search import ParameterGrid
     mp = modelp.model_params
@@ -27,23 +29,23 @@ def create_grid(npoints=3,nparams=7):
     # points.
     smaller = {}
     smaller = sample_points(mp, npoints=npoints)
-    key_list = list(smaller.keys())
-    reduced_key_list = key_list[0:nparams]
+
+    if type(provided_keys) is type(None):
+
+        key_list = list(smaller.keys())
+        reduced_key_list = key_list[0:nparams]
+    else:
+        reduced_key_list = list(provided_keys)
+
     # subset is reduced, by reducing parameter keys.
     subset = { k:smaller[k] for k in reduced_key_list }
     grid = list(ParameterGrid(subset))
     return grid
 
 def parallel_method(dtc):
-
     from neuronunit.models.reduced import ReducedModel
-    #try:
     from neuronunit.optimization import get_neab
     tests = get_neab.tests
-    #dtc.cell_name
-    #dtc.current_src_name
-    #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON',cell_name = dtc.cell_name, current_src_name = dtc.current_src_name)
-
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.set_attrs(dtc.attrs)
     tests[0].prediction = dtc.rheobase
@@ -51,6 +53,7 @@ def parallel_method(dtc):
     from neuronunit.optimization import evaluate_as_module
     dtc = evaluate_as_module.pre_format(dtc)
     for k,t in enumerate(tests):
+        dtc.scores[str(t)] = (dtc.scores[str(t)]-10.0)/2.0
         if k>0 and float(dtc.rheobase['value']) > 0:
             t.params = dtc.vtest[k]
             score = t.judge(model,stop_on_error = False, deep_error = False)
@@ -79,10 +82,10 @@ def update_dtc_pop(item_of_iter_list):
     dtc.evaluated = False
     return dtc
 
-def run_grid(npoints,nparams):
+def run_grid(npoints,nparams,provided_keys=None):
     # not all models will produce scores, since models with rheobase <0 are filtered out.
 
-    grid_points = create_grid(npoints = npoints,nparams=nparams)
+    grid_points = create_grid(npoints = npoints,nparams = nparams,provided_keys = provided_keys )
     dtcpop = list(dview.map_sync(update_dtc_pop,grid_points))
     print(dtcpop)
     # The mapping of rheobase search needs to be serial mapping for now, since embedded in it's functionality is a
@@ -92,10 +95,7 @@ def run_grid(npoints,nparams):
     print(dtcpop)
 
     filtered_dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] > 0.0 , dtcpop))
-    print(filtered_dtcpop)
     dtcpop = dview.map(parallel_method,filtered_dtcpop).get()
-
     rc.wait(dtcpop)
     dtcpop=list(dtcpop)
-
     return dtcpop
