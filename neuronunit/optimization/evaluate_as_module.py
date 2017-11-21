@@ -15,11 +15,7 @@ import ipyparallel as ipp
 rc = ipp.Client(profile='default')
 rc[:].use_cloudpickle()
 dview = rc[:]
-'''
-from neuronunit.optimization import get_neab
-import ipyparallel as ipp
-model = ReducedModel(get_neab.LEMS_MODEL_PATH,name='vanilla',backend='NEURON')
-'''
+
 class Individual(object):
     '''
     When instanced the object from this class is used as one unit of chromosome or allele by DEAP.
@@ -72,7 +68,23 @@ def import_list(ipp,subset,NDIM):
     toolbox.register("select", tools.selNSGA2)
     toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=30.0)
     toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
-    return toolbox, tools, history, creator, base
+    from deap.benchmarks.tools import diversity, convergence
+    #from deap.benchmarks.tools.diversity
+    #import deap.benchmarks.tools as tools
+    from deap import tools
+    pf = tools.ParetoFront()
+    return toolbox, tools, history, creator, base, pf
+
+
+
+
+def get_trans_dict(param_dict):
+    trans_dict = {}
+    for i,k in enumerate(list(param_dict.keys())):
+        trans_dict[i]=k
+    return trans_dict
+
+
 
 def update_dtc_pop(pop, td):
     '''
@@ -99,7 +111,7 @@ def update_dtc_pop(pop, td):
         dtc.attrs = param_dict
         dtc.evaluated = False
         return dtc
-    if len(pop) > 0:
+    if len(pop) > 1:
         dtcpop = list(dview.map_sync(transform, pop))
     else:
         # In this case pop is not really a population but an individual
@@ -108,11 +120,6 @@ def update_dtc_pop(pop, td):
         dtcpop = list(transform(pop))
     return dtcpop
 
-def get_trans_dict(param_dict):
-    trans_dict = {}
-    for i,k in enumerate(list(param_dict.keys())):
-        trans_dict[i]=k
-    return trans_dict
 
 def dt_to_ind(dtc,td):
     '''
