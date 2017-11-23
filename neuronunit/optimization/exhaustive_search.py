@@ -71,6 +71,7 @@ def dtc_to_rheo(dtc):
     from neuronunit.models.reduced import ReducedModel
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.set_attrs(dtc.attrs)
+    model.rheobase = None
     rbt = get_neab.tests[0]
     score = rbt.judge(model,stop_on_error = False, deep_error = True)
     dtc.scores[str(rbt)] = score.sort_key
