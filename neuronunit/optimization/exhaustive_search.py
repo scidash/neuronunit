@@ -52,12 +52,17 @@ def parallel_method(dtc):
     model.rheobase = dtc.rheobase['value']
     from neuronunit.optimization import evaluate_as_module
     dtc = evaluate_as_module.pre_format(dtc)
-    for k,t in enumerate(tests):
-        dtc.scores[str(t)] = (dtc.scores[str(t)]-10.0)/2.0
-        if k>0 and float(dtc.rheobase['value']) > 0:
+    for k,t in enumerate(tests[1:-1]):
+        if float(dtc.rheobase['value']) > 0:
             t.params = dtc.vtest[k]
             score = t.judge(model,stop_on_error = False, deep_error = False)
+            assert bool(model.get_spike_count() == 1 or model.get_spike_count() == 0)
             dtc.scores[str(t)] = score.sort_key
+        else:
+            if str(t) in dtc.scores.keys():
+                dtc.scores[str(t)] = (dtc.scores[str(t)]-10.0)/2.0
+            else:
+                dtc.scores[str(t)] = -10.0
     return dtc
 
 def dtc_to_rheo(dtc):
