@@ -6,19 +6,19 @@
 ################
 # GA parameters:
 ################
-MU = 5; NGEN = 3; CXPB = 0.7
-USE_CACHED_GA = True
+MU = 5; NGEN = 10; CXPB = 0.7
+USE_CACHED_GA = False
 # about 8 models will be made, excluding rheobase search.
 
 ################
 # Grid search parameters:
 # only 5 models, will be made excluding rheobase search
 ################
-npoints = 5
-nparams = 3
-provided_keys = ['b','a','vpeak'] #implied number parameters is 2
+npoints = 2
+nparams = 5
+provided_keys = ['b','a','vpeak','v0','vt'] #implied number parameters is 2
 
-USE_CACHED_GS = True
+USE_CACHED_GS = False
 
 # !ulimit -n 2048
 # There is on issue on the Mac with the number of open file handles.
@@ -168,15 +168,11 @@ from deap.benchmarks.tools import hypot
 
 mp = modelp.model_params
 for k,v in minimagr.attrs.items():
-    #hvgrid = np.linspace(np.min(mp[k]),np.max(mp[k]),10)
-    dimension_length = np.max(mp[k]) - np.min(mp[k])
-    print(minimaga.attrs[k],v)
+    dimension_length = hypot(float(np.max(mp[k])),float(np.min(mp[k])))
     sdi1D = hypot(float(minimaga.attrs[k]),float(v))
-    #minimaga
-    #solution_distance_in_1D = np.abs(np.sqrt(float(minimaga.attrs[k])**2)-np.abs(float(v)**2))
     relative_distance = sdi1D/dimension_length
     print('the difference between brute force candidates model parameters and the GA\'s model parameters:')
-    print(float(minimaga.attrs[k])-float(v),minimaga.attrs[k],v,k)
+    print('parameter values: ',float(v),float(minimaga.attrs[k]),'parameter names: ',v,k)
     print('the relative distance scaled by the length of the parameter dimension of interest:')
     print(relative_distance)
 
@@ -205,6 +201,9 @@ invalid_dtc = dview.map_sync(dtc_to_plotting,invalid_dtc)
 plottools.use_dtc_to_plotting(invalid_dtc)
 plottools.plot_log(logbook)
 plottools.plot_objectives_history(logbook)
+import copy
+dtc = copy.copy(invalid_dtc[0])
+plottools.plot_suspicious(dtc)
 
 
 # scatter 'id', so id=0,1,2 on engines 0,1,2
