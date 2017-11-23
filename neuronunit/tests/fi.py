@@ -207,7 +207,7 @@ class RheobaseTestP(VmTest):
      ephysprop_name = 'Rheobase'
 
      score_type = scores.RatioScore
-     
+
      def generate_prediction(self, model):
 
         '''
