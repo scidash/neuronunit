@@ -480,8 +480,6 @@ def try_hard_coded1():
 
 
 def plot_suspicious(dtc):
-    #tparams0 = try_hard_coded0()
-    #tparams1 = try_hard_coded1()
     import matplotlib.pyplot as plt
     import numpy as np
     plt.clf()
@@ -492,22 +490,17 @@ def plot_suspicious(dtc):
 
     from neuronunit.optimization import evaluate_as_module
     from neuronunit.optimization.evaluate_as_module import pre_format
-    #import quantities as pq
 
     param_list = [try_hard_coded0(), try_hard_coded1()]
     dtc.vm0 = None
     dtc.vm1 = None
     for p in param_list:
         dtc.attrs = p
-        #from neo import AnalogSignal
         model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
         model.set_attrs(dtc.attrs)
         model.rheobase = None
-        #model2 = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON',DTC=dtc)
         score = T[0].judge(model,stop_on_error = False, deep_error = True)
         dtc.rheobase = score.prediction
-
-        #dtc.vm1 = list(model.get_membrane_potential())
         dtc.vm0 = list(model.results['vm'])
 
         model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
@@ -526,73 +519,53 @@ def plot_suspicious(dtc):
         model = None
         model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
         model.set_attrs(dtc.attrs)
-        #model.rheobase = dtc.rheobase['value']
         model.inject_square_current(dtc.vtest[-1])
-
-        #score = T[-1].judge(model,stop_on_error = False, deep_error = True)
-        #dtc.vm0 = list(model.get_membrane_potential())
         dtc.vm1 = list(model.results['vm'])
-
         dtc.tvec = list(model.results['t'])
 
         plt.clf()
         plt.style.use('ggplot')
         fig, axes = plt.subplots(figsize=(10, 10), facecolor='white')
-
         plt.plot(dtc.tvec,dtc.vm0,linewidth=1, color='red',label='suspc rheobase')
         plt.plot(dtc.tvec,dtc.vm1,linewidth=1, color='blue',label='suspc spike width')
-
         plt.legend()
         plt.ylabel('$V_{m}$ mV')
         plt.xlabel('ms')
         plt.savefig(str('suspicious_rheobase')+str(p)+'vm_versus_t.png', format='png', dpi=1200)
 
-    #return dtc
 
 
 def dtc_to_plotting(dtc):
     dtc.vm0 = None
     dtc.vm1 = None
-
     from neuronunit.models.reduced import ReducedModel
     from neuronunit.optimization.get_neab import tests as T
     from neuronunit.optimization import get_neab
-
     from neuronunit.optimization import evaluate_as_module
-    #from neo import AnalogSignal
     from neuronunit.optimization.evaluate_as_module import pre_format
-
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-    model.reset_neuron()
-
+    import neuron
+    model._backend.reset_neuron(neuron)
     model.set_attrs(dtc.attrs)
     model.rheobase = dtc.rheobase['value']
     dtc = pre_format(dtc)
-
-    #model2 = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON',DTC=dtc)
-    #score = T[-1].judge(model,stop_on_error = False, deep_error = True)
-    #model.inject_square_current(dtc.vtest[0])
-    model.inject_square_current(dtc.vtest[0])
-
+    parameter_list = list(dtc.vtest.values())
+    print(parameter_list[0])
+    model.inject_square_current(parameter_list[0])
     model._backend.local_run()
     assert model.get_spike_count() == 1
     print(model.get_spike_count(),bool(model.get_spike_count() == 1))
-
-    #dtc.vm1 = list(model.get_membrane_potential())
     dtc.vm0 = list(model.results['vm'])
     model = None
 
-    model.reset_neuron()
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+    import neuron
+    model._backend.reset_neuron(neuron)
     model.set_attrs(dtc.attrs)
-    model.inject_square_current(dtc.vtest[-1])
-
-    #model.rheobase = dtc.rheobase['value']
-    #score = T[-1].judge(model,stop_on_error = False, deep_error = True)
+    print(parameter_list[-1])
+    model.inject_square_current(parameter_list[-1])
     print(model.get_spike_count())
-    #dtc.vm0 = list(model.get_membrane_potential())
     dtc.vm1 = list(model.results['vm'])
-
     dtc.tvec = list(model.results['t'])
     return dtc
 
