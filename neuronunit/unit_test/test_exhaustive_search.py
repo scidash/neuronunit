@@ -6,7 +6,7 @@
 ################
 # GA parameters:
 ################
-MU = 5; NGEN = 10; CXPB = 0.7
+MU = 10; NGEN = 20; CXPB = 0.7
 USE_CACHED_GA = False
 # about 8 models will be made, excluding rheobase search.
 
@@ -15,8 +15,10 @@ USE_CACHED_GA = False
 # only 5 models, will be made excluding rheobase search
 ################
 npoints = 2
-nparams = 5
-provided_keys = ['b','a','vpeak','v0','vt'] #implied number parameters is 2
+nparams = 10
+from neuronunit.optimization.model_parameters import model_params
+provided_keys = list(model_params.keys())
+#provided_keys = ['b','a','vpeak','v0','vt'] #implied number parameters is 2
 
 USE_CACHED_GS = False
 
@@ -42,7 +44,7 @@ import numpy as np
 from neuronunit.optimization.nsga_object import NSGA
 from neuronunit.optimization import exhaustive_search as es
 from neuronunit.optimization import evaluate_as_module as eam
-from neuronunit import plottools
+#from neuronunit import plottools
 
 if USE_CACHED_GA:
     from deap import creator
@@ -112,7 +114,7 @@ def pop2dtc(pop,NSGAO):
     Individual = ipp.Reference('Individual')
     pop = [toolbox.clone(i) for i in pop ]
     '''
-    from deap import base
+    from deap import base, creator
     toolbox = base.Toolbox()
     NDIM = 10
     weights = tuple([-1.0 for i in range(0,NDIM)])
@@ -154,12 +156,6 @@ print("Minimum = %f; 20th percentile = %f; Maximum = %f" % (miniga,quantize_dist
 #print("Solution Space Error Distribution well explored?" if bool(maxiga > quantize_distance[-2]) else "Failure")
 
 
-"""Tests of NeuronUnit test classes"""
-import unittest
-#import os
-#os.system('ipcluster start -n 8 --profile=default & sleep 5;')
-
-
 # In[8]:
 
 # This function reports on the deltas brute force obtained versus the GA found attributes.
@@ -195,6 +191,12 @@ except:
 
 print(rmsga)
 print('maximum error:', maximagr)
+#dtc = invalid_dtc[0]
+#from neuronunit.optimization.evaluate_as_module import pre_format
+#dtc = pre_format(dtc)
+#import pdb; pdb.set_trace()
+#parameter_list = list(dtc.vtest.values())
+#print(parameter_list[0])
 from neuronunit.plottools import dtc_to_plotting
 from neuronunit import plottools
 invalid_dtc = dview.map_sync(dtc_to_plotting,invalid_dtc)
@@ -202,18 +204,16 @@ plottools.use_dtc_to_plotting(invalid_dtc)
 plottools.plot_log(logbook)
 plottools.plot_objectives_history(logbook)
 import copy
-dtc = copy.copy(invalid_dtc[0])
-plottools.plot_suspicious(dtc)
+#dtc = copy.copy(invalid_dtc[0])
+#plottools.plot_suspicious(dtc)
 
 
-# scatter 'id', so id=0,1,2 on engines 0,1,2
-dview.scatter('id', rc.ids, flatten=True)
-print("Engine IDs: ", dview['id'])
-# create a Reference to `id`. This will be a different value on each engine
-ref = ipp.Reference('id')
-def make_files():
-    return ref
-files = dview.apply(make_files)
+"""Tests of NeuronUnit test classes"""
+import unittest
+#import os
+#os.system('ipcluster start -n 8 --profile=default & sleep 5;')
+
+
 
 class TestBackend(unittest.TestCase):
     def setup(self):
