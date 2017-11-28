@@ -64,7 +64,7 @@ else:
 #    pickle.dump(tests, f)
 
 def update_amplitude(test,tests,score):
-    rheoXbase = score.prediction['value']#first find a value for rheobase
+    rheobase = score.prediction['value']#first find a value for rheobase
     #then proceed with other optimizing other parameters.
     #for i in
 
@@ -72,7 +72,7 @@ def update_amplitude(test,tests,score):
     for i in [4,5,6]:
         # Set current injection to just suprathreshold
 
-        tests[i].params['injected_square_current']['amplitude'] = rheobase*1.01
+        tests[i].params['injected_square_current']['amplitude'] = rheobase*1.0
         #tests[i].proceed=tests[i].sanity_check(rh_value=rheobase*1.01)
         #pdb.set_trace()
 
