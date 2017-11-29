@@ -49,6 +49,7 @@ def parallel_method(dtc):
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.set_attrs(dtc.attrs)
     tests[0].prediction = dtc.rheobase
+    get_neab.tests[0].dview = dview
     model.rheobase = dtc.rheobase['value']
     from neuronunit.optimization import evaluate_as_module
     dtc = evaluate_as_module.pre_format(dtc)
