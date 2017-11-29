@@ -42,6 +42,8 @@ def dtc_to_rheo(dtc):
     dtc.scores = {}
     dtc.differences = None
     dtc.differences = {}
+    #get_neab.tests[0]
+    get_neab.tests[0].dview = dview
     score = get_neab.tests[0].judge(model,stop_on_error = False, deep_error = True)
     observation = score.observation
     prediction = score.prediction

@@ -7,7 +7,7 @@
 # GA parameters:
 ################
 MU = 10; NGEN = 20; CXPB = 0.7
-USE_CACHED_GA = False
+USE_CACHED_GA = True
 # about 8 models will be made, excluding rheobase search.
 
 ################
@@ -65,7 +65,12 @@ else:
     invalid_dtc, pop, logbook, fitnesses, history, pf = NSGAO.main(MU, NGEN)
     with open('ga_dump.p','wb') as f:
        pickle.dump([invalid_dtc, pop, logbook, fitnesses, history, pf],f)
-
+from neuronunit.plottools import dtc_to_plotting
+from neuronunit import plottools
+invalid_dtc = dview.map_sync(dtc_to_plotting,invalid_dtc)
+plottools.use_dtc_to_plotting(invalid_dtc)
+plottools.plot_log(logbook)
+plottools.plot_objectives_history(logbook)
 
 
 
@@ -197,12 +202,7 @@ print('maximum error:', maximagr)
 #import pdb; pdb.set_trace()
 #parameter_list = list(dtc.vtest.values())
 #print(parameter_list[0])
-from neuronunit.plottools import dtc_to_plotting
-from neuronunit import plottools
-invalid_dtc = dview.map_sync(dtc_to_plotting,invalid_dtc)
-plottools.use_dtc_to_plotting(invalid_dtc)
-plottools.plot_log(logbook)
-plottools.plot_objectives_history(logbook)
+
 import copy
 #dtc = copy.copy(invalid_dtc[0])
 #plottools.plot_suspicious(dtc)
