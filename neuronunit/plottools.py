@@ -426,10 +426,14 @@ def plot_log(log): #logbook
         linewidth=2,
         label='population average')
     try:
-        axes.fill_between([ i for i in range(0,len(stdminus)) ], stdminus, stdplus)
+        axes.fill_between(gen_numbers, stdminus, stdplus)
     except:
-        pass
+        print('cant plot between still')
+        #pass
         #raise Exception
+    axes.plot(gen_numbers, stdminus)
+    axes.plot(gen_numbers, stdplus)
+    axes.plot(gen_numbers, std)
 
     axes.plot(
         gen_numbers,
