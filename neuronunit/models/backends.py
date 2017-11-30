@@ -295,6 +295,8 @@ class NEURONBackend(Backend):
         self.lookup = {}
 
         super(NEURONBackend,self).init_backend()
+        if DTC is not None:
+            self.model.set_attrs(DTC.attrs)
         self.model.unpicklable += ['h','ns','_backend']
 
     backend = 'NEURON'
