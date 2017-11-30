@@ -97,11 +97,12 @@ class VmTest(sciunit.Test):
         score.unpicklable.append('plot_vm')
 
     @classmethod
-    def neuroelectro_summary_observation(cls, neuron):
+    def neuroelectro_summary_observation(cls, neuron, cached=False):
         reference_data = neuroelectro.NeuroElectroSummary(
             neuron = neuron, # Neuron type lookup using the NeuroLex ID.
-            ephysprop = {'name': cls.ephysprop_name} # Ephys property name in
-                                                     # NeuroElectro ontology.
+            ephysprop = {'name': cls.ephysprop_name}, # Ephys property name in
+                                                      # NeuroElectro ontology.
+            cached = cached
             )
         reference_data.get_values(quiet=not cls.verbose) # Get and verify summary data
                                     # from neuroelectro.org.
@@ -113,11 +114,12 @@ class VmTest(sciunit.Test):
         return observation
 
     @classmethod
-    def neuroelectro_pooled_observation(cls, neuron, quiet=True):
+    def neuroelectro_pooled_observation(cls, neuron, cached=False, quiet=True):
         reference_data = neuroelectro.NeuroElectroPooledSummary(
             neuron = neuron, # Neuron type lookup using the NeuroLex ID.
-            ephysprop = {'name': cls.ephysprop_name} # Ephys property name in
-                                                     # NeuroElectro ontology.
+            ephysprop = {'name': cls.ephysprop_name}, # Ephys property name in
+                                                      # NeuroElectro ontology.
+            cached = cached
             )
         reference_data.get_values(quiet=quiet) # Get and verify summary data
                                     # from neuroelectro.org.
