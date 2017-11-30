@@ -31,8 +31,8 @@ import ipyparallel as ipp
 rc = ipp.Client(profile='default')
 from ipyparallel import depend, require, dependent
 dview = rc[:]
-import matplotlib as mpl
-mpl.use('Agg')
+#import matplotlib as mpl
+#mpl.use('Agg')
 # setting of an appropriate backend.
 
 import pickle

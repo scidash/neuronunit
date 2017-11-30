@@ -5,11 +5,33 @@ import numpy as np
 import importlib
 import ipyparallel as ipp
 rc = ipp.Client(profile='default')
-rc[:].use_cloudpickle()
 dview = rc[:]
 from neuronunit.optimization import get_neab
 tests = get_neab.tests
 
+print('gets here a')
+
+with dview.sync_imports():
+    import pickle
+
+def file_write(tests):
+    import pickle
+    with open('ne_pickle', 'wb') as f:
+        pickle.dump(tests, f)
+print('gets here b')
+
+print('gets here c')
+
+# serial file write.
+rc[0].apply_sync(file_write, tests)
+#Broadcast the tests to workers
+test_dic = {}
+for t in tests:
+    test_dic[str(t.name)] = t
+dview.push(test_dic)
+print('gets here e')
+
+print('gets here f')
 def sample_points(iter_dict, npoints=3):
     import numpy as np
     replacement={}
@@ -42,18 +64,30 @@ def create_grid(npoints=3,nparams=7,provided_keys=None):
     grid = list(ParameterGrid(subset))
     return grid
 
+def get_tests():
+    '''
+    Pull tests
+    '''
+    tests = []
+    tests.append(dview.pull('InputResistanceTest',targets=0).get())
+    tests.append(dview.pull('TimeConstantTest',targets=0).get())
+    tests.append(dview.pull('CapacitanceTest',targets=0).get())
+    tests.append(dview.pull('RestingPotentialTest',targets=0).get())
+    tests.append(dview.pull('InjectedCurrentAPWidthTest',targets=0).get())
+    tests.append(dview.pull('InjectedCurrentAPAmplitudeTest',targets=0).get())
+    tests.append(dview.pull('InjectedCurrentAPThresholdTest',targets=0).get())
+    return tests
 def parallel_method(dtc):
     from neuronunit.models.reduced import ReducedModel
-    from neuronunit.optimization import get_neab
-    tests = get_neab.tests
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+    tests = get_tests()
+
+    model = ReducedModel(dtc.LEMS_MODEL_PATH,name=str('vanilla'),backend=('NEURON',{'DTC':dtc}))
     model.set_attrs(dtc.attrs)
-    tests[0].prediction = dtc.rheobase
-    get_neab.tests[0].dview = dview
+
     model.rheobase = dtc.rheobase['value']
     from neuronunit.optimization import evaluate_as_module
     dtc = evaluate_as_module.pre_format(dtc)
-    for k,t in enumerate(tests[1:-1]):
+    for k,t in enumerate(tests):
         if float(dtc.rheobase['value']) > 0:
             t.params = dtc.vtest[k]
             score = t.judge(model,stop_on_error = False, deep_error = False)
@@ -67,13 +101,14 @@ def parallel_method(dtc):
     return dtc
 
 def dtc_to_rheo(dtc):
-    from neuronunit.optimization import get_neab
+    #from neuronunit.optimization import get_neab
     dtc.scores = {}
     from neuronunit.models.reduced import ReducedModel
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-    model.set_attrs(dtc.attrs)
+    model = ReducedModel(dtc.LEMS_MODEL_PATH,name=str('vanilla'),backend=('NEURON',{'DTC':dtc}))
     model.rheobase = None
-    rbt = get_neab.tests[0]
+    rbt = dview.pull('RheobaseTestP',targets=0)
+    print(rbt)
+    rbt.dview = dview
     score = rbt.judge(model,stop_on_error = False, deep_error = True)
     dtc.scores[str(rbt)] = score.sort_key
     observation = score.observation

@@ -292,25 +292,20 @@ class RheobaseTestP(VmTest):
             Inputs are an amplitude to test and a virtual model
             output is an virtual model with an updated dictionary.
             '''
-            ampl = float(ampl)
             import os
-            #from neuronunit.models import reduced
             from neuronunit.models.reduced import ReducedModel
-            #assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
-            if type(dtc.model_path) is type(None):
-                #from neuronunit.models import get_neab
-                dtc.model_path = 'neuronunit/models/NeuroML2/LEMS_2007One.xml'
-                import pdb; pdb.set_trace()
-            else:
-                model = ReducedModel(dtc.model_path,name='vanilla',backend='NEURON')
-            #print(model)
-            #import pdb; pdb.set_trace()
+            import neuronunit
+            #LEMS_MODEL_PATH = os.path.join(neuronunit.__path__[0],
+            LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
+            dtc.model_path = LEMS_MODEL_PATH
+            model = ReducedModel(dtc.model_path,name='vanilla',backend='NEURON')
+
             DELAY = 100.0*pq.ms
             DURATION = 1000.0*pq.ms
             params = {'injected_square_current':
                       {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
-
+            ampl = float(ampl)
             if ampl not in dtc.lookup or len(dtc.lookup)==0:
                 current = params.copy()['injected_square_current']
                 uc = {'amplitude':ampl}
@@ -369,7 +364,6 @@ class RheobaseTestP(VmTest):
             if type(self.dview) is type(None):
                 import ipyparallel as ipp
                 rc = ipp.Client(profile='default')
-                rc[:].use_cloudpickle()
                 self.dview = rc[:]
             cnt = 0
             assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
