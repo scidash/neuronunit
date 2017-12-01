@@ -9,12 +9,15 @@ from neuronunit.models import backends
 import neuronunit
 print(neuronunit.models.__file__)
 from neuronunit.models.reduced import ReducedModel
-from ipyparallel import depend, require, dependent
+from ipyparallel import require
 import ipyparallel as ipp
 
 rc = ipp.Client(profile='default')
-dview = rc[:]
+rc[:].use_cloudpickle()
 
+'''
+rc.Client.become_dask()
+'''
 class Individual(object):
     '''
     When instanced the object from this class is used as one unit of chromosome or allele by DEAP.
@@ -33,8 +36,13 @@ class Individual(object):
         self.rheobase=None
         self.fitness = creator.FitnessMin
 
-@require('numpy, deap','random')
+
+#@require('numpy, deap','random')
 def import_list(ipp,subset,NDIM):
+    #ipp = ipp
+    #import ipyparallel as ipp
+    #rc = ipp.Client(profile='default')
+    #dview = rc[:]
     Individual = ipp.Reference('Individual')
     from deap import base, creator, tools
     import deap
@@ -42,6 +50,7 @@ def import_list(ipp,subset,NDIM):
     history = deap.tools.History()
     toolbox = base.Toolbox()
     import numpy as np
+    print('1A')
     ##
     # Range of the genes:
     ##
@@ -56,22 +65,31 @@ def import_list(ipp,subset,NDIM):
             return [random.uniform(a, b) for a, b in zip(low, up)]
         except TypeError:
             return [random.uniform(a, b) for a, b in zip([low] * size, [up] * size)]
+
+    print('2A')
+
     # weights vector should compliment a numpy matrix of eigenvalues and other values
     #creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
     weights = tuple([-1.0 for i in range(0,NDIM)])
     creator.create("FitnessMin", base.Fitness, weights=weights)
     creator.create("Individual", list, fitness=creator.FitnessMin)
     toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, len(BOUND_UP))
+    print('3B')
+
     toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     toolbox.register("select", tools.selNSGA2)
     toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=30.0)
     toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
-    from deap.benchmarks.tools import diversity, convergence
+    print('4A')
+
+    #From deap.benchmarks.tools import diversity, convergence
     #from deap.benchmarks.tools.diversity
     #import deap.benchmarks.tools as tools
     from deap import tools
     pf = tools.ParetoFront()
+    print('4C')
+
     return toolbox, tools, history, creator, base, pf
 
 
@@ -94,16 +112,30 @@ def update_dtc_pop(pop, td):
     If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
     corresponding virtual model objects.
     '''
+    #Individual = dview.pull('Individual',targets=0)#ipp.Reference('Individual')
+    #print(Individual)
+    #import pdb; pdb.set_trace()
     import copy
     import numpy as np
     from deap import base
     toolbox = base.Toolbox()
-    Individual = ipp.Reference('Individual')
-    import get_neab
-    get_neab.LEMS_MODEL_PATH
+    from neuronunit.optimization import get_neab
+    #get_neab.LEMS_MODEL_PATH
     dview.push({'paths':get_neab.LEMS_MODEL_PATH})
+    print('gets here C')
     pop = [toolbox.clone(i) for i in pop ]
+    print('gets here D')
+    #Individual = dview.pull('Individual', targets=0).result()
+    #from neuronunit.optimization import get_neab
+    #Individual = dview.push({'Individual':Individual})
+
     def transform(ind):
+        print('gets here F')
+
+
+        #Individual = dview.pull('Individual', targets=0).result()
+        print(Individual)
+        print('gets here E')
         from neuronunit.optimization.data_transport_container import DataTC
         dtc = DataTC()
         print(dtc)
@@ -112,10 +144,17 @@ def update_dtc_pop(pop, td):
             param_dict[td[i]] = str(j)
         dtc.attrs = param_dict
         dtc.evaluated = False
-        dtc.LEMS_MODEL_PATH = dview.pull('paths',target=0)
+        #dtc.LEMS_MODEL_PATH = dview.pull('paths',targets=0)
         return dtc
+
     if len(pop) > 1:
-        dtcpop = list(dview.map_sync(transform, pop))
+        print('god')
+        print(len(pop))
+        dtcpop = list(map(transform,pop))
+        #dtcpop = list(dview.map_sync(transform, pop))
+        for d in dtcpop:
+            d.LEMS_MODEL_PATH = str(get_neab.LEMS_MODEL_PATH)
+
     else:
         # In this case pop is not really a population but an individual
         # but parsimony of naming variables
