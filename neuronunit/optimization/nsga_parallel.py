@@ -13,6 +13,7 @@ import numpy as np
 
 import ipyparallel as ipp
 rc = ipp.Client(profile='default')
+rc[:].use_cloudpickle()
 #rc.Client.become_dask()
 dview = rc[:]
 
@@ -33,16 +34,15 @@ def file_write(tests):
     with open('ne_pickle', 'wb') as f:
         pickle.dump(tests, f)
 
-dview.block = True
+#dview.block = True
 test_container = { 'tests':tests }
 dview.push(test_container)
 dview.execute('print(tests)')
 dview.execute("import pickle")
-with dview.sync_imports():
-    import pickle
+
 
 # serial file write.
-rc[0].apply_sync(file_write, tests)
+rc[0].apply(file_write, tests)
 #Broadcast the tests to workers
 test_dic = {}
 for t in tests:
@@ -65,12 +65,9 @@ def get_tests():
 
 def dtc_to_rheo(dtc):
     from neuronunit.models.reduced import ReducedModel
-    #from neuronunit.optimization import get_neab
     from neuronunit.optimization import evaluate_as_module
-    model = ReducedModel(dtc.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-
+    model = ReducedModel(dtc.LEMS_MODEL_PATH,name=str('vanilla'),backend=('NEURON',{'DTC':dtc}))
     model.set_attrs(dtc.attrs)
-    #if not hasattr(model,'rheobase'):
     model.rheobase = None
     #dtc.cell_name = model._backend.cell_name
     #dtc.current_src_name = model._backend.current_src_name
@@ -79,7 +76,8 @@ def dtc_to_rheo(dtc):
     dtc.differences = None
     dtc.differences = {}
     tests = get_tests()
-    get_neab.tests[0].dview = dview
+    print(tests)
+    tests[0].dview = dview
     score = get_neab.tests[0].judge(model,stop_on_error = False, deep_error = True)
     observation = score.observation
     prediction = score.prediction
@@ -115,7 +113,6 @@ def evaluate(dtc):
             fitness[k] = dtc.scores[str(t)]
         else:
             fitness[k] = -100.0
-
     return fitness[0],fitness[1],\
            fitness[2],fitness[3],\
            fitness[4],fitness[5],\
@@ -139,20 +136,16 @@ def update_pop(pop,td):
     update_dtc_pop = evaluate_as_module.update_dtc_pop
     pre_format = evaluate_as_module.pre_format
     dtcpop = list(update_dtc_pop(pop, td))
+    #import pdb; pdb.set_trace()
     dtcpop = list(map(dtc_to_rheo,dtcpop))
-
-    print('\n\n\n\n rheobase complete \n\n\n\n')
     dtcpop = list(map(pre_format,dtcpop))
-    print('\n\n\n\n preformat complete \n\n\n\n')
     dtcpop = dview.map(parallel_method,dtcpop).get()
     rc.wait(dtcpop)
-
-    print('\n\n\n\n score calculation complete \n\n\n\n')
     return list(dtcpop)
 
 
 
-def create_subset(nparams=10,provided_keys=None):
+def create_subset(nparams=10, provided_keys=None):
     from neuronunit.optimization import model_parameters as modelp
     import numpy as np
     mp = modelp.model_params

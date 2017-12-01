@@ -7,7 +7,7 @@
 # GA parameters:
 ################
 MU = 10; NGEN = 20; CXPB = 0.7
-USE_CACHED_GA = True
+USE_CACHED_GA = False
 # about 8 models will be made, excluding rheobase search.
 
 ################
@@ -28,9 +28,17 @@ USE_CACHED_GS = False
 # in the shell that spawned this notebook before this code can be run to completion.
 
 import ipyparallel as ipp
-rc = ipp.Client(profile='default')
-from ipyparallel import depend, require, dependent
-dview = rc[:]
+c = ipp.Client(profile='default')
+#c = Client()  # connect to IPyParallel cluster
+#e = c.become_dask()  #
+#print(e,'gets here')
+
+
+#e.start_ipython_scheduler()
+#info = e.start_ipython_workers()
+#rc = ipp.Client(profile='default')
+#from ipyparallel import depend, require, dependent
+#dview = rc[:]
 #import matplotlib as mpl
 #mpl.use('Agg')
 # setting of an appropriate backend.
@@ -62,6 +70,7 @@ if USE_CACHED_GA:
 else:
     NSGAO = NSGA()
     NSGAO.setnparams(nparams=nparams,provided_keys=provided_keys)
+    #import pdb; pdb.set_trace()
     invalid_dtc, pop, logbook, fitnesses, history, pf = NSGAO.main(MU, NGEN)
     with open('ga_dump.p','wb') as f:
        pickle.dump([invalid_dtc, pop, logbook, fitnesses, history, pf],f)

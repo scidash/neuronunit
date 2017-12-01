@@ -11,25 +11,20 @@ tests = get_neab.tests
 
 print('gets here a')
 
-with dview.sync_imports():
-    import pickle
-
 def file_write(tests):
     import pickle
     with open('ne_pickle', 'wb') as f:
         pickle.dump(tests, f)
 print('gets here b')
 
-print('gets here c')
 
 # serial file write.
-rc[0].apply_sync(file_write, tests)
+rc[0].apply(file_write, tests)
 #Broadcast the tests to workers
 test_dic = {}
 for t in tests:
     test_dic[str(t.name)] = t
 dview.push(test_dic)
-print('gets here e')
 
 print('gets here f')
 def sample_points(iter_dict, npoints=3):

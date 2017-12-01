@@ -32,6 +32,8 @@ class NSGA(object):
         self.ipp = ipp
         rc = ipp.Client(profile='default')
         dview = rc[:]
+        rc[:].use_cloudpickle()
+        #rc.Client.become_dask()
         self.dview = rc[:]
         self.toolbox.register("map", dview.map_sync)
         return dview
@@ -114,24 +116,38 @@ class NSGA(object):
         import numpy
         from numpy import random
         from neuronunit.optimization.nsga_parallel import evaluate
+        Individual = evaluate_as_module.Individual
+        self.dview.push({'Individual':Individual})
 
         numb_err_f = 8
-        toolbox, tools, self.history, creator, base, self.pf = evaluate_as_module.import_list(self.ipp,self.subset,numb_err_f)
+        import pdb
+        import_list = evaluate_as_module.import_list
+
+
+        toolbox, tools, self.history, creator, base, self.pf = evaluate_as_module.import_list(self.subset,numb_err_f)
+        pdb.set_trace()
+        print(import_list,self.subset,numb_err_f)
+        self.dview.apply(import_list,self.subset,numb_err_f)
+        pdb.set_trace()
+
+
+        pf = self.pf
+
         self.toolbox = toolbox
         self.creator = creator
         self.tools = tools
+        import pdb; pdb.set_trace()
 
-        self.dview.push({'Individual':evaluate_as_module.Individual})
-        self.dview.apply_sync(evaluate_as_module.import_list,self.ipp,self.subset,numb_err_f)
         get_trans_dict = evaluate_as_module.get_trans_dict
         self.td = get_trans_dict(self.subset)
-        self.dview.push({'td':self.td })
+        self.dview.push({'td':self.td,'pf':pf,'Individual':creator.Individual,'FitnessMin':creator.FitnessMin})
 
         pop = toolbox.population(n = MU)
         pop = [ toolbox.clone(i) for i in pop ]
         self.history.update(pop)
 
-        self.dview.scatter('Individual',pop)
+        #self.dview.scatter('Individual',pop)
+        #import pdb; pdb.set_trace()
 
         #from neuronunit.optimization import nsga_parallel
 
@@ -156,7 +172,19 @@ class NSGA(object):
 
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in pop if not ind.fitness.valid]
+        #self.dview.block = True
+        #print(Individual, 'got here 1')
+        #self.dview.push({'Individual':Individual})
+        #Individual = self.dview.pull('Individual', targets=0).result() #ipp.Reference('Individual')
+        #print(Individual, 'got here 2')
+
+        #ipp.Reference('Individual')
+
+        #import pdb; pdb.set_trace()
+
         invalid_dtc = list(nsga_parallel.update_pop(invalid_ind,self.td))
+        #import pdb; pdb.set_trace()
+
         fitnesses = list(map(evaluate,invalid_dtc))
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
