@@ -24,18 +24,10 @@ setup(
     install_requires=['scipy>=0.17',
                       'matplotlib>=2.0',
                       'neo==0.5.2',
-                      #'neo==9999',
                       'elephant==0.4.1',
                       'igor==0.3',
                       'sciunit==0.19',
                       'allensdk==0.14.2',
-                      #'allensdk==9999',
                       'pyneuroml==0.3.1.2',
-                      #'pyneuroml==9999'
                       ],
-    dependency_links = ['git+https://github.com/scidash/sciunit@master#egg=sciunit-0.19',
-                        #'git+https://github.com/rgerkin/AllenSDK@master#egg=allensdk-9999',
-                        'git+https://github.com/rgerkin/pyNeuroML@master#egg=pyneuroml-0.3.1.2',
-                        #'git+https://github.com/rgerkin/python-neo@master#egg=neo-9999',
-                        ]
     )

@@ -1,1 +1,3 @@
-.
+-e git+git@github.com:scidash/sciunit.git@dev#egg=sciunit
+-e git+git@github.com:rgerkin/pyLEMS.git@master#egg=pyLEMS
+-e git+git@github.com:rgerkin/pyNeuroML.git@pip#egg=pyneuroml
