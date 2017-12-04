@@ -7,7 +7,7 @@
 # GA parameters:
 ################
 MU = 10; NGEN = 20; CXPB = 0.7
-USE_CACHED_GA = True
+USE_CACHED_GA = False
 # about 8 models will be made, excluding rheobase search.
 
 ################
@@ -44,6 +44,7 @@ import numpy as np
 from neuronunit.optimization.nsga_object import NSGA
 from neuronunit.optimization import exhaustive_search as es
 from neuronunit.optimization import evaluate_as_module as eam
+#import pdb; pdb.set_trace()
 #from neuronunit import plottools
 
 if USE_CACHED_GA:
@@ -52,6 +53,8 @@ if USE_CACHED_GA:
     from neuronunit.optimization import evaluate_as_module as eam
 
     NSGAO = NSGA()
+
+    # This line hangs
     NSGAO.setnparams(nparams=nparams,provided_keys=provided_keys)
     td = eam.get_trans_dict(NSGAO.subset)
 

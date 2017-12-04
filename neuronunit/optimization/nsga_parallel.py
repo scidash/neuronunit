@@ -33,16 +33,16 @@ def file_write(tests):
     with open('ne_pickle', 'wb') as f:
         pickle.dump(tests, f)
 
-dview.block = True
+#dview.block = True
 test_container = { 'tests':tests }
-dview.push(test_container)
+dview.push(test_container, targets=0)
 dview.execute('print(tests)')
 dview.execute("import pickle")
-with dview.sync_imports():
-    import pickle
+#with dview.sync_imports():
+#    import pickle
 
 # serial file write.
-rc[0].apply_sync(file_write, tests)
+rc[0].apply(file_write, tests)
 #Broadcast the tests to workers
 test_dic = {}
 for t in tests:
