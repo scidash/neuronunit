@@ -9,29 +9,21 @@ dview = rc[:]
 from neuronunit.optimization import get_neab
 tests = get_neab.tests
 
-print('gets here a')
-
-with dview.sync_imports():
-    import pickle
-
+#with dview.sync_imports():
+#    import pickle
 def file_write(tests):
     import pickle
     with open('ne_pickle', 'wb') as f:
         pickle.dump(tests, f)
-print('gets here b')
-
-print('gets here c')
 
 # serial file write.
-rc[0].apply_sync(file_write, tests)
+rc[0].apply(file_write, tests)
 #Broadcast the tests to workers
 test_dic = {}
 for t in tests:
     test_dic[str(t.name)] = t
-dview.push(test_dic)
-print('gets here e')
-
-print('gets here f')
+dview.push(test_dic,targets=0)
+#import pdb; pdb.set_trace()
 def sample_points(iter_dict, npoints=3):
     import numpy as np
     replacement={}
@@ -62,6 +54,7 @@ def create_grid(npoints=3,nparams=7,provided_keys=None):
     # subset is reduced, by reducing parameter keys.
     subset = { k:smaller[k] for k in reduced_key_list }
     grid = list(ParameterGrid(subset))
+    print('grid',grid)
     return grid
 
 def get_tests():
@@ -79,10 +72,22 @@ def get_tests():
     return tests
 def parallel_method(dtc):
     from neuronunit.models.reduced import ReducedModel
-    tests = get_tests()
 
+    tests = get_tests()
+    '''
+    tests = []
+    tests.append(dview.pull('InputResistanceTest',targets=0).get())
+    tests.append(dview.pull('TimeConstantTest',targets=0).get())
+    tests.append(dview.pull('CapacitanceTest',targets=0).get())
+    tests.append(dview.pull('RestingPotentialTest',targets=0).get())
+    tests.append(dview.pull('InjectedCurrentAPWidthTest',targets=0).get())
+    tests.append(dview.pull('InjectedCurrentAPAmplitudeTest',targets=0).get())
+    tests.append(dview.pull('InjectedCurrentAPThresholdTest',targets=0).get())
+    #from neuronunit.optimization import get_neab
+    '''
     model = ReducedModel(dtc.LEMS_MODEL_PATH,name=str('vanilla'),backend=('NEURON',{'DTC':dtc}))
-    model.set_attrs(dtc.attrs)
+    #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+    #model.set_attrs(dtc.attrs)
 
     model.rheobase = dtc.rheobase['value']
     from neuronunit.optimization import evaluate_as_module
@@ -103,9 +108,11 @@ def parallel_method(dtc):
 def dtc_to_rheo(dtc):
     #from neuronunit.optimization import get_neab
     dtc.scores = {}
+    print('model, backend the problem')
     from neuronunit.models.reduced import ReducedModel
     model = ReducedModel(dtc.LEMS_MODEL_PATH,name=str('vanilla'),backend=('NEURON',{'DTC':dtc}))
     model.rheobase = None
+    print('hangs before pull rheobase')
     rbt = dview.pull('RheobaseTestP',targets=0)
     print(rbt)
     rbt.dview = dview
@@ -128,8 +135,10 @@ def run_grid(npoints,nparams,provided_keys=None):
     # not all models will produce scores, since models with rheobase <0 are filtered out.
 
     grid_points = create_grid(npoints = npoints,nparams = nparams,provided_keys = provided_keys )
+    print('grid_points',grid_points)
     dtcpop = list(dview.map_sync(update_dtc_pop,grid_points))
     print(dtcpop)
+    print('gets to grid')
     # The mapping of rheobase search needs to be serial mapping for now, since embedded in it's functionality is a
     # a call to dview map.
     # probably this can be bypassed in the future by using zeromq's Client (by using ipyparallel's core module/code base more directly)

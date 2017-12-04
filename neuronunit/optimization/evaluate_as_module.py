@@ -34,8 +34,9 @@ class Individual(object):
         self.fitness = creator.FitnessMin
 
 @require('numpy, deap','random')
-def import_list(ipp,subset,NDIM):
-    Individual = ipp.Reference('Individual')
+def import_list(ind,subset,NDIM):
+    #Individual = ipp.Reference('Individual')
+
     from deap import base, creator, tools
     import deap
     import random
@@ -99,7 +100,7 @@ def update_dtc_pop(pop, td):
     from deap import base
     toolbox = base.Toolbox()
     Individual = ipp.Reference('Individual')
-    import get_neab
+    from neuronunit.optimization import get_neab
     get_neab.LEMS_MODEL_PATH
     dview.push({'paths':get_neab.LEMS_MODEL_PATH})
     pop = [toolbox.clone(i) for i in pop ]
