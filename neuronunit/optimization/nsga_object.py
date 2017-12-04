@@ -102,6 +102,7 @@ class NSGA(object):
         self.set_map()
         #dview = self.set_evaluate()
         from neuronunit.optimization import evaluate_as_module
+        from neuronunit.optimization.evaluate_as_module import import_list
         from neuronunit.optimization import nsga_parallel
         from deap.benchmarks.tools import diversity, convergence
 
@@ -116,13 +117,17 @@ class NSGA(object):
         from neuronunit.optimization.nsga_parallel import evaluate
 
         numb_err_f = 8
-        toolbox, tools, self.history, creator, base, self.pf = evaluate_as_module.import_list(self.ipp,self.subset,numb_err_f)
+        ind = self.ipp.Reference('Individual')
+        subset = self.subset
+
+        toolbox, tools, self.history, creator, base, self.pf = evaluate_as_module.import_list(ind, subset,numb_err_f)
         self.toolbox = toolbox
         self.creator = creator
         self.tools = tools
-
-        self.dview.push({'Individual':evaluate_as_module.Individual})
-        self.dview.apply_sync(evaluate_as_module.import_list,self.ipp,self.subset,numb_err_f)
+        Individual = evaluate_as_module.Individual
+        self.dview.push({'Individual':Individual})
+        print(import_list,subset,numb_err_f)
+        self.dview.apply_sync(import_list,ind,subset,numb_err_f)
         get_trans_dict = evaluate_as_module.get_trans_dict
         self.td = get_trans_dict(self.subset)
         self.dview.push({'td':self.td })
