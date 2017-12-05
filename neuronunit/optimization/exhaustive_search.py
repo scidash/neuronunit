@@ -9,12 +9,14 @@ dview = rc[:]
 from neuronunit.optimization import get_neab
 tests = get_neab.tests
 
-#with dview.sync_imports():
-#    import pickle
+print('gets here a')
+
 def file_write(tests):
     import pickle
     with open('ne_pickle', 'wb') as f:
         pickle.dump(tests, f)
+print('gets here b')
+
 
 # serial file write.
 rc[0].apply(file_write, tests)
@@ -74,20 +76,9 @@ def parallel_method(dtc):
     from neuronunit.models.reduced import ReducedModel
 
     tests = get_tests()
-    '''
-    tests = []
-    tests.append(dview.pull('InputResistanceTest',targets=0).get())
-    tests.append(dview.pull('TimeConstantTest',targets=0).get())
-    tests.append(dview.pull('CapacitanceTest',targets=0).get())
-    tests.append(dview.pull('RestingPotentialTest',targets=0).get())
-    tests.append(dview.pull('InjectedCurrentAPWidthTest',targets=0).get())
-    tests.append(dview.pull('InjectedCurrentAPAmplitudeTest',targets=0).get())
-    tests.append(dview.pull('InjectedCurrentAPThresholdTest',targets=0).get())
-    #from neuronunit.optimization import get_neab
-    '''
+
     model = ReducedModel(dtc.LEMS_MODEL_PATH,name=str('vanilla'),backend=('NEURON',{'DTC':dtc}))
-    #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-    #model.set_attrs(dtc.attrs)
+    model.set_attrs(dtc.attrs)
 
     model.rheobase = dtc.rheobase['value']
     from neuronunit.optimization import evaluate_as_module
