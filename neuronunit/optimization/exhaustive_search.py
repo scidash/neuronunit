@@ -42,6 +42,21 @@ def create_grid(npoints=3,nparams=7,provided_keys=None):
     grid = list(ParameterGrid(subset))
     return grid
 
+def get_tests():
+    '''
+	This method cannot be used as is since its not compatible 
+	with cloud pickle.
+    Pull tests
+    '''
+    tests = []
+    tests.append(dview.pull('InputResistanceTest',targets=0).get())
+    tests.append(dview.pull('TimeConstantTest',targets=0).get())
+    tests.append(dview.pull('CapacitanceTest',targets=0).get())
+    tests.append(dview.pull('RestingPotentialTest',targets=0).get())
+    tests.append(dview.pull('InjectedCurrentAPWidthTest',targets=0).get())
+    tests.append(dview.pull('InjectedCurrentAPAmplitudeTest',targets=0).get())
+    tests.append(dview.pull('InjectedCurrentAPThresholdTest',targets=0).get())
+    return tests
 def parallel_method(dtc):
     from neuronunit.models.reduced import ReducedModel
     from neuronunit.optimization import get_neab
@@ -74,6 +89,10 @@ def dtc_to_rheo(dtc):
     model.set_attrs(dtc.attrs)
     model.rheobase = None
     rbt = get_neab.tests[0]
+	# Preferred flow of data movement: but not compatible with cloud pickle
+    # rbt = dview.pull('RheobaseTestP',targets=0)
+    # print(rbt)
+    # rbt.dview = dview
     score = rbt.judge(model,stop_on_error = False, deep_error = True)
     dtc.scores[str(rbt)] = score.sort_key
     observation = score.observation

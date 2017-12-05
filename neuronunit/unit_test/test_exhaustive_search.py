@@ -257,6 +257,11 @@ plottools.plot_log(logbook)
 plottools.plot_objectives_history(logbook)
 
 
+"""Tests of NeuronUnit test classes"""
+import unittest
+#import os
+#os.system('ipcluster start -n 8 --profile=default & sleep 5;')
+
 
 
 class TestBackend(unittest.TestCase):
