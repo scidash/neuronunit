@@ -61,7 +61,12 @@ def parallel_method(dtc):
     from neuronunit.models.reduced import ReducedModel
     from neuronunit.optimization import get_neab
     tests = get_neab.tests
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend=('NEURON',{'DTC':dtc}))
+    before = list(model.attrs.items())
+    model.set_attrs(dtc.attrs)
+    print(before, model.attrs)
+ 
+    #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.set_attrs(dtc.attrs)
     tests[0].prediction = dtc.rheobase
     get_neab.tests[0].dview = dview
@@ -85,8 +90,12 @@ def dtc_to_rheo(dtc):
     from neuronunit.optimization import get_neab
     dtc.scores = {}
     from neuronunit.models.reduced import ReducedModel
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend=('NEURON',{'DTC':dtc}))
+    before = list(model.attrs.items())
     model.set_attrs(dtc.attrs)
+    print(before, model.attrs)
+ 
+    #assert before.items() in model.attrs
     model.rheobase = None
     rbt = get_neab.tests[0]
 	# Preferred flow of data movement: but not compatible with cloud pickle
