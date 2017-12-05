@@ -199,10 +199,8 @@ class brianBackend(Backend):
         #from brian2.library.IF import Izhikevich, ms
         #eqs=Izhikevich(a=0.02/ms,b=0.2/ms)
         #print(eqs)
-'''
 
 class pyNNBackend(Backend):
-    """Used for generation of code for PyNN, with simulation using NEURON"""
 
     backend = 'pyNN'
     try:
@@ -275,6 +273,7 @@ class pyNNBackend(Backend):
         stop = c['delay']+c['duration']
         electrode = self.DCSource(start=c['delay'], stop=stop, amplitude=c['amplitude'])
         electrode.inject_into(self.neuron[1])
+'''
 
 
 class NEURONBackend(Backend):
