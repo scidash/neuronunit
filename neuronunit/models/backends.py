@@ -1,4 +1,6 @@
 """Simulator backends for NeuronUnit models"""
+import matplotlib as mpl
+mpl.use('Agg')
 
 import sys
 import os
@@ -69,13 +71,13 @@ class Backend(object):
         self.disk_cache_location = os.path.join(tempfile.mkdtemp(),'cache')
 
     def get_memory_cache(self, key):
-        """Returns result in memory cache for key 'key' or None if it 
+        """Returns result in memory cache for key 'key' or None if it
         is not found"""
         self._results = self.memory_cache.get(key)
         return self._results
 
     def get_disk_cache(self, key):
-        """Returns result in disk cache for key 'key' or None if it 
+        """Returns result in disk cache for key 'key' or None if it
         is not found"""
         if not getattr(self,'disk_cache_location',False):
             self.init_disk_cache()
@@ -85,13 +87,13 @@ class Backend(object):
         return self._results
 
     def set_memory_cache(self, results, key=None):
-        """Stores result in memory cache with key 
+        """Stores result in memory cache with key
         corresponding to model state"""
         key = self.model.hash if key is None else key
         self.memory_cache[key] = results
 
     def set_disk_cache(self, results, key=None):
-        """Stores result in disk cache with key 
+        """Stores result in disk cache with key
         corresponding to model state"""
         if not getattr(self,'disk_cache_location',False):
             self.init_disk_cache()
@@ -181,7 +183,23 @@ class jNeuroMLBackend(Backend):
                     exec_in_dir=self.exec_in_dir,
                     verbose=self.model.run_params['v'])
         return results
+'''
+class brianBackend(Backend):
+    """Used for generation of code for PyNN, with simulation using NEURON"""
 
+    backend = 'brian'
+    try:
+        from brian2.library.IF import Izhikevich, ms
+        eqs=Izhikevich(a=0.02/ms,b=0.2/ms)
+        print(eqs)
+
+    except:
+        import os
+        os.system('pip install brian2')
+        #from brian2.library.IF import Izhikevich, ms
+        #eqs=Izhikevich(a=0.02/ms,b=0.2/ms)
+        #print(eqs)
+'''
 
 class pyNNBackend(Backend):
     """Used for generation of code for PyNN, with simulation using NEURON"""
@@ -275,16 +293,7 @@ class NEURONBackend(Backend):
     def init_backend(self, attrs=None, cell_name=None, current_src_name=None, DTC = None):
         if not NEURON_SUPPORT:
             raise BackendException("The neuron module was not successfully imported")
-        if cell_name:
-            self._cell_name = cell_name
-        if current_src_name:
-            self._current_src_name = current_src_name
-        if type(DTC) is not type(None):
-            self.set_attrs(DTC.attrs)
-            if type(DTC.rheobase) is not type(None):
-                self.model.rheobase = DTC.rheobase
-            else:
-                self.model.rheobase = None
+
 
         self.neuron = None
         self.model_path = None
@@ -298,7 +307,16 @@ class NEURONBackend(Backend):
         if DTC is not None:
             self.model.set_attrs(DTC.attrs)
         self.model.unpicklable += ['h','ns','_backend']
-
+        if cell_name:
+            self._cell_name = cell_name
+        if current_src_name:
+            self._current_src_name = current_src_name
+        if type(DTC) is not type(None):
+            self.set_attrs(**DTC.attrs)
+            if type(DTC.rheobase) is not type(None):
+                self.model.rheobase = DTC.rheobase
+            else:
+                self.model.rheobase = None
     backend = 'NEURON'
 
     def reset_neuron(self, neuronVar):
