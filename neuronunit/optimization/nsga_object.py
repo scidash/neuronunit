@@ -32,6 +32,8 @@ class NSGA(object):
         self.ipp = ipp
         rc = ipp.Client(profile='default')
         dview = rc[:]
+        rc[:].use_cloudpickle()
+        #rc.Client.become_dask()
         self.dview = rc[:]
         self.toolbox.register("map", dview.map_sync)
         return dview
@@ -115,6 +117,8 @@ class NSGA(object):
         import numpy
         from numpy import random
         from neuronunit.optimization.nsga_parallel import evaluate
+        Individual = evaluate_as_module.Individual
+        self.dview.push({'Individual':Individual})
 
         numb_err_f = 8
         ind = self.ipp.Reference('Individual')

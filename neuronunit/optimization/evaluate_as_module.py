@@ -9,12 +9,15 @@ from neuronunit.models import backends
 import neuronunit
 print(neuronunit.models.__file__)
 from neuronunit.models.reduced import ReducedModel
-from ipyparallel import depend, require, dependent
+from ipyparallel import require
 import ipyparallel as ipp
 
 rc = ipp.Client(profile='default')
-dview = rc[:]
+rc[:].use_cloudpickle()
 
+'''
+rc.Client.become_dask()
+'''
 class Individual(object):
     '''
     When instanced the object from this class is used as one unit of chromosome or allele by DEAP.
@@ -34,9 +37,12 @@ class Individual(object):
         self.fitness = creator.FitnessMin
 
 @require('numpy, deap','random')
-def import_list(ind,subset,NDIM):
-    #Individual = ipp.Reference('Individual')
-
+def import_list(ipp,subset,NDIM):
+    #ipp = ipp
+    #import ipyparallel as ipp
+    #rc = ipp.Client(profile='default')
+    #dview = rc[:]
+    Individual = ipp.Reference('Individual')
     from deap import base, creator, tools
     import deap
     import random
