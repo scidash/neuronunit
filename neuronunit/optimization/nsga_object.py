@@ -31,7 +31,6 @@ class NSGA(object):
         import ipyparallel as ipp
         self.ipp = ipp
         rc = ipp.Client(profile='default')
-        rc[:].use_cloudpickle()
         dview = rc[:]
         self.dview = rc[:]
         self.toolbox.register("map", dview.map_sync)
@@ -56,8 +55,7 @@ class NSGA(object):
         creator = self.creator# = creator
         tools = self.tools# = tools
         logbook = self.logbook
-        #tournament select is buggy and population size dependent.
-        #offspring = tools.selTournamentDCD(pop, len(pop))
+
         offspring = toolbox.select(pop, len(pop))
 
         offspring = [toolbox.clone(ind) for ind in offspring]
@@ -184,16 +182,3 @@ class NSGA(object):
         self.invalid_dtc = list(copy.copy(invalid_dtc))
         self.fitnesses = fitnesses
         return self.invalid_dtc, pop, self.logbook, self.fitnesses, self.history, self.pf
-
-
-
-#import pdb; pdb.set_trace()
-
-'''
-NGEN = 2
-for gen in range(1, NGEN):
-    dtcpop, pop, logbook, fitnesses = N.evolve()
-    df = zip(dtcpop,fitnesses)
-    for d in df:
-        print(d)
-'''
