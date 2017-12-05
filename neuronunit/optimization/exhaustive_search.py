@@ -49,15 +49,21 @@ def parallel_method(dtc):
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.set_attrs(dtc.attrs)
     tests[0].prediction = dtc.rheobase
+    get_neab.tests[0].dview = dview
     model.rheobase = dtc.rheobase['value']
     from neuronunit.optimization import evaluate_as_module
     dtc = evaluate_as_module.pre_format(dtc)
-    for k,t in enumerate(tests):
-        dtc.scores[str(t)] = (dtc.scores[str(t)]-10.0)/2.0
-        if k>0 and float(dtc.rheobase['value']) > 0:
+    for k,t in enumerate(tests[1:-1]):
+        if float(dtc.rheobase['value']) > 0:
             t.params = dtc.vtest[k]
             score = t.judge(model,stop_on_error = False, deep_error = False)
+            assert bool(model.get_spike_count() == 1 or model.get_spike_count() == 0)
             dtc.scores[str(t)] = score.sort_key
+        else:
+            if str(t) in dtc.scores.keys():
+                dtc.scores[str(t)] = (dtc.scores[str(t)]-10.0)/2.0
+            else:
+                dtc.scores[str(t)] = -10.0
     return dtc
 
 def dtc_to_rheo(dtc):
@@ -66,6 +72,7 @@ def dtc_to_rheo(dtc):
     from neuronunit.models.reduced import ReducedModel
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.set_attrs(dtc.attrs)
+    model.rheobase = None
     rbt = get_neab.tests[0]
     score = rbt.judge(model,stop_on_error = False, deep_error = True)
     dtc.scores[str(rbt)] = score.sort_key
@@ -86,6 +93,7 @@ def run_grid(npoints,nparams,provided_keys=None):
     # not all models will produce scores, since models with rheobase <0 are filtered out.
 
     grid_points = create_grid(npoints = npoints,nparams = nparams,provided_keys = provided_keys )
+
     dtcpop = list(dview.map_sync(update_dtc_pop,grid_points))
     print(dtcpop)
     # The mapping of rheobase search needs to be serial mapping for now, since embedded in it's functionality is a
@@ -97,5 +105,5 @@ def run_grid(npoints,nparams,provided_keys=None):
     filtered_dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] > 0.0 , dtcpop))
     dtcpop = dview.map(parallel_method,filtered_dtcpop).get()
     rc.wait(dtcpop)
-    dtcpop=list(dtcpop)
+    dtcpop = list(dtcpop)
     return dtcpop
