@@ -334,8 +334,6 @@ class RheobaseTestP(VmTest):
 
         import numpy as np
         import copy
-        #import pdb
-        #import get_neab
 
         @require('itertools','numpy','copy')
         def init_dtc(dtc):

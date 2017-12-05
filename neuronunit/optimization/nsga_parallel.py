@@ -13,6 +13,7 @@ import numpy as np
 
 import ipyparallel as ipp
 rc = ipp.Client(profile='default')
+rc[:].use_cloudpickle()
 #rc.Client.become_dask()
 dview = rc[:]
 
@@ -35,7 +36,7 @@ def file_write(tests):
 
 #dview.block = True
 test_container = { 'tests':tests }
-dview.push(test_container, targets=0)
+dview.push(test_container)
 dview.execute('print(tests)')
 dview.execute("import pickle")
 #with dview.sync_imports():
@@ -139,11 +140,10 @@ def update_pop(pop,td):
     update_dtc_pop = evaluate_as_module.update_dtc_pop
     pre_format = evaluate_as_module.pre_format
     dtcpop = list(update_dtc_pop(pop, td))
+    #import pdb; pdb.set_trace()
     dtcpop = list(map(dtc_to_rheo,dtcpop))
-
-    print('\n\n\n\n rheobase complete \n\n\n\n')
     dtcpop = list(map(pre_format,dtcpop))
-    print('\n\n\n\n preformat complete \n\n\n\n')
+
     dtcpop = dview.map(parallel_method,dtcpop).get()
     rc.wait(dtcpop)
 
@@ -152,7 +152,7 @@ def update_pop(pop,td):
 
 
 
-def create_subset(nparams=10,provided_keys=None):
+def create_subset(nparams=10, provided_keys=None):
     from neuronunit.optimization import model_parameters as modelp
     import numpy as np
     mp = modelp.model_params
