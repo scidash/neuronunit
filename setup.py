@@ -30,7 +30,7 @@ setup(
                       'sciunit==0.19',
                       'allensdk==0.14.2',
                       #'allensdk==9999',
-                      'pyneuroml==0.3.1.2',
+                      'pyneuroml==0.3.1.2'
                       #'pyneuroml==9999'
                       ],
     dependency_links = ['git+https://github.com/scidash/sciunit@master#egg=sciunit-0.19',
