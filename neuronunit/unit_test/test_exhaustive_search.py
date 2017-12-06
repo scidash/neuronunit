@@ -6,7 +6,7 @@
 ################
 # GA parameters:
 ################
-MU = 5; NGEN = 3; CXPB = 0.7
+MU = 10; NGEN = 20; CXPB = 0.7
 USE_CACHED_GA = True
 # about 8 models will be made, excluding rheobase search.
 
@@ -14,11 +14,13 @@ USE_CACHED_GA = True
 # Grid search parameters:
 # only 5 models, will be made excluding rheobase search
 ################
-npoints = 5
-nparams = 3
-provided_keys = ['b','a','vpeak'] #implied number parameters is 2
+npoints = 2
+nparams = 10
+from neuronunit.optimization.model_parameters import model_params
+provided_keys = list(model_params.keys())
+#provided_keys = ['b','a','vpeak','v0','vt'] #implied number parameters is 2
 
-USE_CACHED_GS = True
+USE_CACHED_GS = False
 
 # !ulimit -n 2048
 # There is on issue on the Mac with the number of open file handles.
@@ -73,12 +75,64 @@ else:
 if USE_CACHED_GS:
     dtcpopg = pickle.load(open('grid_dump.p','rb'))
 else:
-    dtcpopg = es.run_grid(npoints,nparams,provided_keys=provided_keys)
+    #from dask.distributed import Client
+    #client = Client()  # start local workers as processes
+
+    from neuronunit.optimization import exhaustive_search
+    grid_points = exhaustive_search.create_grid(npoints = npoints,nparams = nparams,provided_keys = provided_keys )
+    dtcpopg = list(dview.map_sync(exhaustive_search.update_dtc_pop,grid_points))
+    from neuronunit.optimization import get_neab
+    for d in dtcpopg:
+        d.model_path = get_neab.LEMS_MODEL_PATH
+        d.LEMS_MODEL_PATH = get_neab.LEMS_MODEL_PATH
+        print(d.model_path)
     with open('grid_dump.p','wb') as f:
        pickle.dump(dtcpopg,f)
+    dtcpopg0 = dtcpopg[0:int(len(dtcpopg)/10)]
+    dtcpopg1 = dtcpopg[1*int(len(dtcpopg)/10):2*int(len(dtcpopg)/10)]
+    dtcpopg2 = dtcpopg[2*int(len(dtcpopg)/10):3*int(len(dtcpopg)/10)]
+    dtcpopg3 = dtcpopg[3*int(len(dtcpopg)/10):4*int(len(dtcpopg)/10)]
+    dtcpopg4 = dtcpopg[4*int(len(dtcpopg)/10):5*int(len(dtcpopg)/10)]
+    dtcpopg5 = dtcpopg[5*int(len(dtcpopg)/10):6*int(len(dtcpopg)/10)]
+    dtcpopg6 = dtcpopg[6*int(len(dtcpopg)/10):7*int(len(dtcpopg)/10)]
+    dtcpopg7 = dtcpopg[7*int(len(dtcpopg)/10):8*int(len(dtcpopg)/10)]
+    dtcpopg8 = dtcpopg[9*int(len(dtcpopg)/10):-1]
+    dlist = [dtcpopg0, dtcpopg1, dtcpopg2, dtcpopg3, dtcpopg4, dtcpopg5, dtcpopg6, dtcpopg7, dtcpopg8 ]
+    dlist_first_half = dlist[0:int(len(dlist)/2)]
+    dlist_second_half = dlist[int(len(dlist)/2):-1]
+
+    from neuronunit.optimization.exhaustive_search import dtc_to_rheo
+    from neuronunit.optimization.exhaustive_search import parallel_method
+    def compute_half(dlist_half):
+        for i,d in enumerate(dlist_half):
+            dlist[i] = list(map(dtc_to_rheo,d))
+            filtered_dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] > 0.0 , dlist[i]))
+            dlist[i] = dview.map_sync(parallel_method,filtered_dtcpop)
+            print(i,dlist[i], 'got here i: \n\n',i)
+        return dlist_half
+
+
+    dlist_first_half = compute_half(dlist_first_half)
+    pdb.set_trace()
+    with open('grid_dump_first_half.p','wb') as f:
+       pickle.dump(dlist_first_half,f)
+    # Garbage collect a big memory burden.   
+    dlist_first_half = None
+
+    dlist_second_half = compute_half(dlist_second_half)
+    #first_half_dtcpop = list(dtcpop)
+    pdb.set_trace()
+    with open('grid_dump_second_half.p','wb') as f:
+       pickle.dump(dlist_second_half,f)
 
 
 
+from neuronunit.plottools import dtc_to_plotting
+from neuronunit import plottools
+invalid_dtc = dview.map_sync(dtc_to_plotting,invalid_dtc)
+plottools.use_dtc_to_plotting(invalid_dtc)
+plottools.plot_log(logbook)
+plottools.plot_objectives_history(logbook)
 
 # In[6]:
 
@@ -112,7 +166,7 @@ def pop2dtc(pop,NSGAO):
     Individual = ipp.Reference('Individual')
     pop = [toolbox.clone(i) for i in pop ]
     '''
-    from deap import base
+    from deap import base, creator
     toolbox = base.Toolbox()
     NDIM = 10
     weights = tuple([-1.0 for i in range(0,NDIM)])
@@ -168,15 +222,11 @@ from deap.benchmarks.tools import hypot
 
 mp = modelp.model_params
 for k,v in minimagr.attrs.items():
-    #hvgrid = np.linspace(np.min(mp[k]),np.max(mp[k]),10)
-    dimension_length = np.max(mp[k]) - np.min(mp[k])
-    print(minimaga.attrs[k],v)
+    dimension_length = hypot(float(np.max(mp[k])),float(np.min(mp[k])))
     sdi1D = hypot(float(minimaga.attrs[k]),float(v))
-    #minimaga
-    #solution_distance_in_1D = np.abs(np.sqrt(float(minimaga.attrs[k])**2)-np.abs(float(v)**2))
     relative_distance = sdi1D/dimension_length
     print('the difference between brute force candidates model parameters and the GA\'s model parameters:')
-    print(float(minimaga.attrs[k])-float(v),minimaga.attrs[k],v,k)
+    print('parameter values: ',float(v),float(minimaga.attrs[k]),'parameter names: ',v,k)
     print('the relative distance scaled by the length of the parameter dimension of interest:')
     print(relative_distance)
 
@@ -207,14 +257,12 @@ plottools.plot_log(logbook)
 plottools.plot_objectives_history(logbook)
 
 
-# scatter 'id', so id=0,1,2 on engines 0,1,2
-dview.scatter('id', rc.ids, flatten=True)
-print("Engine IDs: ", dview['id'])
-# create a Reference to `id`. This will be a different value on each engine
-ref = ipp.Reference('id')
-def make_files():
-    return ref
-files = dview.apply(make_files)
+"""Tests of NeuronUnit test classes"""
+import unittest
+#import os
+#os.system('ipcluster start -n 8 --profile=default & sleep 5;')
+
+
 
 class TestBackend(unittest.TestCase):
     def setup(self):
