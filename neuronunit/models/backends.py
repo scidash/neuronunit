@@ -482,7 +482,7 @@ class NEURONBackend(Backend):
                               nogui=True,
                               load_saved_data=False,
                               only_generate_scripts=True,
-s                              plot=False,
+                              plot=False,
                               show_plot_already=False,
                               exec_in_dir = self.neuron_model_dir,
                               verbose=verbose,
