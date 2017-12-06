@@ -168,14 +168,14 @@ class DataTC(object):
         self.initiated = False
         self.evaluated = False
         self.results = {}
-        self.searched = []
+        #self.searched = []
         self.searchedd = {}
         self.cached_attrs = {}
         self.differences = {}
         self.ratios = {}
         self.delta = []
-        self.pickle_stream = []
-        self.model_path = ""
+        #self.pickle_stream = []
+        #self.model_path = ""
 
 
 class RheobaseTestP(VmTest):
@@ -185,8 +185,9 @@ class RheobaseTestP(VmTest):
      under current injection.
 
      """
-     def _extra(self):
+     def _extra(self,dview=None):
          self.prediction = None
+         self.dview = dview
 
      required_capabilities = (cap.ReceivesSquareCurrent,
                               cap.ProducesSpikes)
@@ -207,7 +208,7 @@ class RheobaseTestP(VmTest):
      ephysprop_name = 'Rheobase'
 
      score_type = scores.RatioScore
-     
+
      def generate_prediction(self, model):
 
         '''
@@ -249,7 +250,7 @@ class RheobaseTestP(VmTest):
                 if v == 1:
                     #A logical flag is returned to indicate that rheobase was found.
                     dtc.rheobase=float(k)
-                    dtc.searched.append(float(k))
+                    #dtc.searched.append(float(k))
                     dtc.steps = 0.0
                     dtc.boolean = True
                     return dtc
@@ -291,20 +292,20 @@ class RheobaseTestP(VmTest):
             Inputs are an amplitude to test and a virtual model
             output is an virtual model with an updated dictionary.
             '''
-            ampl = float(ampl)
             import os
-            #from neuronunit.models import reduced
             from neuronunit.models.reduced import ReducedModel
-            #assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
+            import neuronunit
+            #LEMS_MODEL_PATH = os.path.join(neuronunit.__path__[0],
+            LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
+            dtc.model_path = LEMS_MODEL_PATH
             model = ReducedModel(dtc.model_path,name='vanilla',backend='NEURON')
-            #print(model)
-            #import pdb; pdb.set_trace()
+
             DELAY = 100.0*pq.ms
             DURATION = 1000.0*pq.ms
             params = {'injected_square_current':
                       {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
-
+            ampl = float(ampl)
             if ampl not in dtc.lookup or len(dtc.lookup)==0:
                 current = params.copy()['injected_square_current']
                 uc = {'amplitude':ampl}
@@ -360,10 +361,10 @@ class RheobaseTestP(VmTest):
 
         @require('itertools')
         def find_rheobase(self, dtc):
-            import ipyparallel as ipp
-            rc = ipp.Client(profile='default')
-            rc[:].use_cloudpickle()
-            dview = rc[:]
+            if type(self.dview) is type(None):
+                import ipyparallel as ipp
+                rc = ipp.Client(profile='default')
+                self.dview = rc[:]
             cnt = 0
             assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
             # If this it not the first pass/ first generation
@@ -373,10 +374,10 @@ class RheobaseTestP(VmTest):
             # If its not true enter a search, with ranges informed by memory
             cnt = 0
             while dtc.boolean == False:
-                dtc.searched.append(dtc.steps)
+                #dtc.searched.append(dtc.steps)
 
                 dtcs = [ dtc for s in dtc.steps ]
-                dtcpop = dview.map(check_current,dtc.steps,dtcs)
+                dtcpop = self.dview.map(check_current,dtc.steps,dtcs)
                 for dtc_clone in dtcpop:#.get():
                     dtc.lookup.update(dtc_clone.lookup)
                 dtc = check_fix_range(dtc)
