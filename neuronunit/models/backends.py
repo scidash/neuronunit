@@ -502,7 +502,7 @@ class NEURONBackend(Backend):
         #The resulting idiosyncracies makes it hard not have a hard coded approach make non hard coded, and generalizable code.
         #work around involves predicting the hoc variable names from pyneuroml LEMS file that was used to generate them.
         more_attributes = pynml.read_lems_file(self.model.orig_lems_file_path,
-                                               include_includes=False,
+                                               include_includes=True,
                                                debug=False)
         for i in more_attributes.components:
             #This code strips out simulation parameters from the xml tree also such as duration.
