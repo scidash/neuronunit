@@ -419,27 +419,27 @@ def plot_log(log): #logbook
         pass
         #raise Exception
 
-    axes.plot(
+    axes.semilogy(
         gen_numbers,
         mean,
         color='black',
         linewidth=2,
         label='population average')
-    try:
-        axes.fill_between(gen_numbers, stdminus, stdplus)
-    except:
-        print('cant plot between still')
+    #try:
+    #    axes.fill_between(gen_numbers, stdminus, stdplus)
+    #except:
+    #    print('cant plot between still')
         #pass
         #raise Exception
-    axes.plot(gen_numbers, stdminus)
-    axes.plot(gen_numbers, stdplus)
-    axes.plot(gen_numbers, std)
+    axes.semilogy(gen_numbers, stdminus)
+    axes.semilogy(gen_numbers, stdplus)
+    axes.semilogy(gen_numbers, std)
 
-    axes.plot(
-        gen_numbers,
-        minimum,
-        linewidth=2,
-        label='minimum')
+    #axes.semilogy(
+    #    gen_numbers,
+    #    minimum,
+    #    linewidth=2,
+    #    label='minimum')
 
     axes.set_xlim(np.min(gen_numbers) - 1, np.max(gen_numbers) + 1)
     axes.set_xlabel('Generation #')
