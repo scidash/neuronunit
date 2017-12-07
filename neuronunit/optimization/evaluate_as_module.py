@@ -14,7 +14,7 @@ import ipyparallel as ipp
 
 rc = ipp.Client(profile='default')
 rc[:].use_cloudpickle()
-
+dview = rc[:]
 '''
 rc.Client.become_dask()
 '''
@@ -108,7 +108,7 @@ def update_dtc_pop(pop, td):
     Individual = ipp.Reference('Individual')
     from neuronunit.optimization import get_neab
     get_neab.LEMS_MODEL_PATH
-    dview.push({'paths':get_neab.LEMS_MODEL_PATH})
+    #dview.push({'paths':get_neab.LEMS_MODEL_PATH})
     pop = [toolbox.clone(i) for i in pop ]
     def transform(ind):
         from neuronunit.optimization.data_transport_container import DataTC
@@ -119,7 +119,7 @@ def update_dtc_pop(pop, td):
             param_dict[td[i]] = str(j)
         dtc.attrs = param_dict
         dtc.evaluated = False
-        dtc.LEMS_MODEL_PATH = dview.pull('paths',target=0)
+        #dtc.LEMS_MODEL_PATH = dview.pull('paths',target=0)
         return dtc
     if len(pop) > 1:
         dtcpop = list(dview.map_sync(transform, pop))

@@ -121,17 +121,17 @@ class NSGA(object):
         self.dview.push({'Individual':Individual})
 
         numb_err_f = 8
-        ind = self.ipp.Reference('Individual')
+        #ind = self.ipp.Reference('Individual')
         subset = self.subset
 
-        toolbox, tools, self.history, creator, base, self.pf = evaluate_as_module.import_list(ind, subset,numb_err_f)
+        toolbox, tools, self.history, creator, base, self.pf = evaluate_as_module.import_list(self.ipp, subset,numb_err_f)
         self.toolbox = toolbox
         self.creator = creator
         self.tools = tools
         Individual = evaluate_as_module.Individual
         self.dview.push({'Individual':Individual})
         print(import_list,subset,numb_err_f)
-        self.dview.apply_sync(import_list,ind,subset,numb_err_f)
+        self.dview.apply_sync(import_list,self.ipp,subset,numb_err_f)
         get_trans_dict = evaluate_as_module.get_trans_dict
         self.td = get_trans_dict(self.subset)
         self.dview.push({'td':self.td })
