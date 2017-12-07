@@ -123,6 +123,7 @@ else:
         print(d.model_path)
     #with open('grid_dump.p','wb') as f:
      #  pickle.dump(dlist,f)
+    # this is a big load on memory so divide it into thirds.
 
     dlist_first_third = dlist[0:int(len(dlist)/3)]
     dlist_second_third = dlist[int(len(dlist)/3):int(2*len(dlist)/3)]
@@ -181,9 +182,9 @@ def sorted_history(pop):
 
 minimagr_dtc, mini = sorted_dtcs(dtcpopg)[0]
 maximagr_dtc, maxi = sorted_dtcs(dtcpopg)[-1]
-'''
 
-def pop2dtc(pop,NSGAO):
+
+def pop2dtc(pop1,NSGAO):
     #Missing rheobase
     #dview.push({'Individual':eam.Individual})
     #Individual = ipp.Reference('Individual')
@@ -196,9 +197,11 @@ def pop2dtc(pop,NSGAO):
     creator.create("Individual", list, fitness=creator.FitnessMin)
     from neuronunit.optimization import evaluate_as_module as eam
     td = eam.get_trans_dict(NSGAO.subset)
-    dtc_pop = eam.update_dtc_pop(pop,td)
+    dtc_pop = eam.update_dtc_pop(pop1,td)
+    from neuronunit.optimization.exhaustive_search import dtc_to_rheo
+
     from neuronunit.optimization import model_parameters as modelp
-    dtcpop = list(map(eam.dtc_to_rheo,dtcpop))
+    dtcpop = list(map(dtc_to_rheo,dtc_pop))
     for i,p in enumerate(pop):
         for val in list(p.fitness.values):
             if val==-100:
@@ -213,14 +216,13 @@ sorted_list_pf, pareto_dtc = pop2dtc(pf,NSGAO)
 
 h = list(history.genealogy_history.values())
 sorted_list_h, dtc_pop = pop2dtc(h,NSGAO)
-broken
 minimaga_dtc = sorted_list_pf[0][0]
 maximaga_dtc = sorted_list_pf[-1][0]
 
 #history_fitness = sorted_history(h)
 miniga = sorted_list_pf[0][1]
 maxiga = sorted_list_pf[-1][1]
-'''
+
 # In[7]:
 sdtc = sorted_dtcs(invalid_dtc)
 miniga = sdtc[0][1]
@@ -236,11 +238,6 @@ print("The nsga error %f is in the bottom 1/5th of the entire error range" % min
 print("Minimum = %f; 20th percentile = %f; Maximum = %f" % (miniga,quantize_distance[2],maxiga))
 #print("Solution Space Error Distribution well explored?" if bool(maxiga > quantize_distance[-2]) else "Failure")
 
-
-"""Tests of NeuronUnit test classes"""
-import unittest
-#import os
-#os.system('ipcluster start -n 8 --profile=default & sleep 5;')
 
 
 # In[8]:
@@ -281,11 +278,11 @@ print(rmsga)
     #rmsga = sqrt(mean(square(list(minimaga_dtc.scores))))
     #unittest.test_5_agreement()
 
+
 """Tests of NeuronUnit test classes"""
 import unittest
 #import os
 #os.system('ipcluster start -n 8 --profile=default & sleep 5;')
-
 
 
 class TestBackend(unittest.TestCase):
