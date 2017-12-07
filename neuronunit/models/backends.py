@@ -303,6 +303,8 @@ class NEURONBackend(Backend):
         self.lookup = {}
 
         super(NEURONBackend,self).init_backend()
+        if DTC is not None:
+            self.model.set_attrs(DTC.attrs)
         self.model.unpicklable += ['h','ns','_backend']
         if cell_name:
             self._cell_name = cell_name
@@ -472,7 +474,6 @@ class NEURONBackend(Backend):
         NEURON_file_path ='{0}_nrn.py'.format(base_name)
         self.neuron_model_dir = os.path.dirname(self.model.orig_lems_file_path)
         assert os.path.isdir(self.neuron_model_dir)
-
         if not os.path.exists(NEURON_file_path):
             pynml.run_lems_with_jneuroml_neuron(self.model.orig_lems_file_path,
                               skip_run=False,
@@ -482,7 +483,7 @@ class NEURONBackend(Backend):
                               plot=False,
                               show_plot_already=False,
                               exec_in_dir = self.neuron_model_dir,
-                              verbose=verbose,
+                              verbose=True,
                               exit_on_fail = True)
 
             subprocess.run(["cd %s; nrnivmodl" % self.neuron_model_dir],shell=True)

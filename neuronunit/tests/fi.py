@@ -359,7 +359,7 @@ class RheobaseTestP(VmTest):
 
         @require('itertools')
         def find_rheobase(self, dtc):
-            if type(self.dview) is type(None):
+            if not hasattr(self,'dview'):
                 import ipyparallel as ipp
                 rc = ipp.Client(profile='default')
                 self.dview = rc[:]
@@ -375,7 +375,7 @@ class RheobaseTestP(VmTest):
                 #dtc.searched.append(dtc.steps)
 
                 dtcs = [ dtc for s in dtc.steps ]
-                dtcpop = self.dview.map(check_current,dtc.steps,dtcs)
+                dtcpop = self.dview.map_sync(check_current,dtc.steps,dtcs)
                 for dtc_clone in dtcpop:#.get():
                     dtc.lookup.update(dtc_clone.lookup)
                 dtc = check_fix_range(dtc)
