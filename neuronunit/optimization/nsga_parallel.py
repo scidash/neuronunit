@@ -13,8 +13,9 @@ import numpy as np
 
 import ipyparallel as ipp
 rc = ipp.Client(profile='default')
-rc[:].use_cloudpickle()
 #rc.Client.become_dask()
+
+rc[:].use_cloudpickle()
 dview = rc[:]
 
 
@@ -25,10 +26,10 @@ from ipyparallel import depend, require, dependent
 # controller (rank0, it has)
 from neuronunit import tests
 from neuronunit.optimization import get_neab
+'''
+Not compatible with cloud pickle, except, probably
+compatible under dask
 tests = get_neab.tests
-
-
-
 def file_write(tests):
     import pickle
     with open('ne_pickle', 'wb') as f:
@@ -49,10 +50,11 @@ test_dic = {}
 for t in tests:
     test_dic[str(t.name)] = t
 dview.push(test_dic)
-
+'''
 def get_tests():
     '''
-    Pull tests
+    # Not compatible with cloud pickle
+    # Pull tests
     '''
     tests = []
     tests.append(dview.pull('InputResistanceTest',targets=0).get())
@@ -66,7 +68,10 @@ def get_tests():
 
 def dtc_to_rheo(dtc):
     from neuronunit.models.reduced import ReducedModel
-    #from neuronunit.optimization import get_neab
+    from neuronunit.optimization import get_neab
+    dtc.model_path = get_neab.LEMS_MODEL_PATH
+    dtc.LEMS_MODEL_PATH = get_neab.LEMS_MODEL_PATH
+
     from neuronunit.optimization import evaluate_as_module
     model = ReducedModel(dtc.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
 
@@ -79,7 +84,8 @@ def dtc_to_rheo(dtc):
     dtc.scores = {}
     dtc.differences = None
     dtc.differences = {}
-    tests = get_tests()
+    #not compatible with cloud pickle
+	#tests = get_tests()
     get_neab.tests[0].dview = dview
     score = get_neab.tests[0].judge(model,stop_on_error = False, deep_error = True)
     observation = score.observation
@@ -110,12 +116,12 @@ def evaluate(dtc):
 
     from neuronunit.optimization import get_neab
     import numpy as np
-    fitness = [ -100.0 for i in range(0,8)]
+    fitness = [ 100.0 for i in range(0,8)]
     for k,t in enumerate(dtc.scores.keys()):
         if dtc.rheobase['value'] > 0.0:
             fitness[k] = dtc.scores[str(t)]
         else:
-            fitness[k] = -100.0
+            fitness[k] = 100.0
 
     return fitness[0],fitness[1],\
            fitness[2],fitness[3],\
@@ -143,11 +149,8 @@ def update_pop(pop,td):
     #import pdb; pdb.set_trace()
     dtcpop = list(map(dtc_to_rheo,dtcpop))
     dtcpop = list(map(pre_format,dtcpop))
-
     dtcpop = dview.map(parallel_method,dtcpop).get()
     rc.wait(dtcpop)
-
-    print('\n\n\n\n score calculation complete \n\n\n\n')
     return list(dtcpop)
 
 
