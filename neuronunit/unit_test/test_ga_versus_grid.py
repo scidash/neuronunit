@@ -155,7 +155,7 @@ else:
 
 for d in dtcpopg:
     if d.scores['RheobaseTestP'] == None:
-        d.scores['RheobaseTestP'] = 100
+        d.scores['RheobaseTestP'] = 10
 
 
 def error(dtc):
