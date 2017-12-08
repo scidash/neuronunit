@@ -91,7 +91,7 @@ class NSGA(object):
 
         self.invalid_dtc = list(copy.copy(invalid_dtc))
         self.fitnesses = list(fitnesses)
-        return copy.copy(self.invalid_dtc), copy.copy(pop), copy.copy(self.logbook), copy.copy(self.fitnesses)
+        return self.invalid_dtc, pop, self.logbook, self.fitnesses
 
     def setnparams(self,nparams=10, provided_keys=None):
         from neuronunit.optimization import nsga_parallel
@@ -185,8 +185,8 @@ class NSGA(object):
             self.pf.update(pop)
 
 
-
-        self.logbook.record(gen=gen, evals=len(invalid_ind), **record)
+        #removed spurious logbook entry.
+        #self.logbook.record(gen=gen, evals=len(invalid_ind), **record)
         import copy
         self.invalid_dtc = list(copy.copy(invalid_dtc))
         self.fitnesses = fitnesses
