@@ -6,7 +6,7 @@
 ################
 # GA parameters:
 ################
-MU = 12; NGEN = 25; CXPB = 0.7555
+MU = 12; NGEN = 25; CXPB = 0.9
 USE_CACHED_GA = False
 # about 8 models will be made, excluding rheobase search.
 
@@ -73,22 +73,15 @@ else:
     with open('ga_dump.p','wb') as f:
        pickle.dump([invalid_dtc, pop, logbook, fitnesses, history, pf],f)
 
-#from neuronunit.plottools import dtc_to_plotting
-#from neuronunit import plottools
 #print(rmsga)
 #print('maximum error:', maximagr)
-from neuronunit.plottools import dtc_to_plotting
 from neuronunit import plottools
+
+from neuronunit.plottools import dtc_to_plotting
 invalid_dtc = dview.map_sync(dtc_to_plotting,invalid_dtc)
 plottools.use_dtc_to_plotting(invalid_dtc)
 plottools.plot_log(logbook)
 plottools.plot_objectives_history(logbook)
-
-
-#invalid_dtc = dview.map_sync(dtc_to_plotting,invalid_dtc)
-#plottools.use_dtc_to_plotting(invalid_dtc)
-#plottools.plot_log(logbook)
-#plottools.plot_objectives_history(logbook)
 
 
 
@@ -198,17 +191,22 @@ def pop2dtc(pop1,NSGAO):
     from neuronunit.optimization import evaluate_as_module as eam
     td = eam.get_trans_dict(NSGAO.subset)
     dtc_pop = eam.update_dtc_pop(pop1,td)
+    assert len(pop1) == len(dtc_pop)
+
     from neuronunit.optimization.exhaustive_search import dtc_to_rheo
 
     from neuronunit.optimization import model_parameters as modelp
     dtcpop = list(map(dtc_to_rheo,dtc_pop))
-    for i,p in enumerate(pop):
+    for i,p in enumerate(pop1):
         for val in list(p.fitness.values):
             if val==-100:
                 val = 100
         dtc_pop[i].scores = p.fitness.values
         dtc_pop[i].error = None
         dtc_pop[i].error = np.sqrt(np.mean(np.square(list(p.fitness.values))))
+    for i,p in enumerate(dtc_pop):
+        print(i,p,dir(p))
+
     sorted_list  = sorted([(dtc,dtc.error) for dtc in dtc_pop],key=lambda x:x[1])
     return sorted_list, dtc_pop
 
