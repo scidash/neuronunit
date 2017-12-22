@@ -265,7 +265,7 @@ def shadow(dtcpop,best_vm):#This method must be pickle-able for ipyparallel to w
         plt.legend()
         plt.ylabel('$V_{m}$ mV')
         plt.xlabel('ms')
-        plt.savefig(str('test_')+str(v)+'vm_versus_t.png', format='png', dpi=1200)
+        plt.savefig(str('test_')+str(v)+'vm_versus_t.png', format='png')#, dpi=1200)
 
 
 
@@ -308,7 +308,7 @@ def surfaces(history,td):
     plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
     fig_trip.tight_layout()
     #fig_trip.legend()
-    fig_trip.savefig('surface'+str('a')+str('b')+'.pdf',format='pdf', dpi=1200)
+    fig_trip.savefig('surface'+str('a')+str('b')+'.pdf',format='pdf')#', dpi=1200)
 
 
     matrix_fill = [ (i,j) for i in range(0,len(modelp.model_params['a'])) for j in range(0,len(modelp.model_params['b'])) ]
@@ -365,7 +365,7 @@ def use_dtc_to_plotting(dtcpop):
     plt.legend()
     plt.ylabel('$V_{m}$ mV')
     plt.xlabel('ms')
-    plt.savefig(str('rheobase')+'vm_versus_t.png', format='png', dpi=1200)
+    plt.savefig(str('rheobase')+'vm_versus_t.png', format='png')#, dpi=1200)
 
     plt.clf()
     plt.style.use('ggplot')
@@ -387,7 +387,7 @@ def use_dtc_to_plotting(dtcpop):
     plt.legend()
     plt.ylabel('$V_{m}$ mV')
     plt.xlabel('ms')
-    plt.savefig(str('AP_width_test')+'vm_versus_t.png', format='png', dpi=1200)
+    plt.savefig(str('AP_width_test')+'vm_versus_t.png', format='png')#, dpi=1200)
 
 
 
@@ -419,22 +419,22 @@ def plot_log(log): #logbook
         pass
         #raise Exception
 
-    axes.semilogy(
+    axes.plot(
         gen_numbers,
         mean,
         color='black',
         linewidth=2,
         label='population average')
     #try:
-    #    axes.fill_between(gen_numbers, stdminus, stdplus)
+    axes.fill_between(gen_numbers, stdminus, stdplus)
     #except:
     #    print('cant plot between still')
         #pass
         #raise Exception
-    axes.semilogy(gen_numbers, stdminus)
-    axes.semilogy(gen_numbers, stdplus)
-    axes.semilogy(gen_numbers, std)
-
+    axes.plot(gen_numbers, stdminus)
+    axes.plot(gen_numbers, stdplus)
+    #axes.plot(gen_numbers, std)
+    #axes.plot(gen_numbers,minimum)
     #axes.semilogy(
     #    gen_numbers,
     #    minimum,
@@ -444,11 +444,11 @@ def plot_log(log): #logbook
     axes.set_xlim(np.min(gen_numbers) - 1, np.max(gen_numbers) + 1)
     axes.set_xlabel('Generation #')
     axes.set_ylabel('Sum of objectives')
-    axes.set_ylim([0, np.max(stdplus)])
+    axes.set_ylim([np.min(stdminus), np.max(stdplus)])
     axes.legend()
 
     fig.tight_layout()
-    fig.savefig('Izhikevich_history_evolution.png', format='png', dpi=1200)
+    fig.savefig('Izhikevich_history_evolution.png', format='png')#, dpi=1200)
 
 
 def try_hard_coded0():
@@ -603,9 +603,10 @@ def plot_objectives_history(log):
         for l in mins_components_plot:
             components[i].append(l[i])
     maximum = 0.0
+    import pdb; pdb.set_trace()
     for keys in components:
 
-        axes.semilogy(
+        axes.plot(
             gen_numbers,
             components[keys],
             linewidth=2,
@@ -621,7 +622,7 @@ def plot_objectives_history(log):
     axes.legend()
 
     fig.tight_layout()
-    fig.savefig('Izhikevich_evolution_components.png', format='png', dpi=1200)
+    fig.savefig('Izhikevich_evolution_components.png', format='png')#, dpi=1200)
 
 
 '''
@@ -1285,7 +1286,7 @@ def not_just_mean(log,hypervolumes):
     axes.set_ylim([0, max(max(mean_many),max(hypervolumes))])
     axes.legend()
     fig.tight_layout()
-    fig.savefig('Izhikevich_evolution_just_mean.png', format='png', dpi=1200)
+    fig.savefig('Izhikevich_evolution_just_mean.png', format='png')#, dpi=1200)
 
 def bar_chart(vms,name=None):
 
