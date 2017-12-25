@@ -7,7 +7,7 @@
 # GA parameters:
 ################
 MU = 12; NGEN = 25; CXPB = 0.9
-USE_CACHED_GA = False
+USE_CACHED_GA = True
 # about 8 models will be made, excluding rheobase search.
 
 ################
@@ -55,7 +55,6 @@ if USE_CACHED_GA:
 
     NSGAO = NSGA()
 
-    # This line hangs
     NSGAO.setnparams(nparams=nparams,provided_keys=provided_keys)
     td = eam.get_trans_dict(NSGAO.subset)
 
@@ -178,10 +177,7 @@ maximagr_dtc, maxi = sorted_dtcs(dtcpopg)[-1]
 
 
 def pop2dtc(pop1,NSGAO):
-    #Missing rheobase
-    #dview.push({'Individual':eam.Individual})
-    #Individual = ipp.Reference('Individual')
-    #pop = [toolbox.clone(i) for i in pop ]
+
     from deap import base, creator
     toolbox = base.Toolbox()
     NDIM = 10
