@@ -37,11 +37,11 @@ def create_refined_grid(point1,point2):
     # This function reports on the deltas brute force obtained versus the GA found attributes.
     from neuronunit.optimization import model_parameters as modelp
     from sklearn.grid_search import ParameterGrid
-    mp = modelp.model_params
+    #mp = modelp.model_params
     new_search_interval = {}
     for k,v in point1.attrs.items():
-        higher =  np.max(float(point2.attrs[k]),float(v))
-        lower = np.min(float(point2.attrs[k]),float(v))
+        higher =  max(float(point2.attrs[k]),float(v))
+        lower = min(float(point2.attrs[k]),float(v))
         new_search_interval[k] = np.linspace(lower,higher,3)
     grid = list(ParameterGrid(new_search_interval))
     return grid
