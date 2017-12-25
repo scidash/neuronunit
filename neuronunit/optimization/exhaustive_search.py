@@ -30,6 +30,9 @@ def sample_points(iter_dict, npoints=3):
 
 
 def create_refined_grid(point1,point2):
+    '''
+    Can be used for creating an second pass, fine grained grid
+    '''
 
     # This function reports on the deltas brute force obtained versus the GA found attributes.
     from neuronunit.optimization import model_parameters as modelp
@@ -45,6 +48,9 @@ def create_refined_grid(point1,point2):
 
 
 def create_grid(npoints=3,nparams=7,provided_keys=None):
+    '''
+    Can be used for creating an initial first pass, coarse grained grid
+    '''
 
     from neuronunit.optimization import model_parameters as modelp
     from sklearn.grid_search import ParameterGrid
