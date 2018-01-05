@@ -25,19 +25,19 @@ class Individual(object):
     '''
     def __init__(self, *args):
         list.__init__(self, *args)
-        self.error=None
-        self.results=None
+        self.error = None
+        self.results = None
         self.name=''
         self.attrs = {}
-        self.params=None
-        self.score=None
-        self.fitness=None
-        self.lookup={}
-        self.rheobase=None
+        self.params = None
+        self.score = None
+        self.fitness = None
+        self.lookup = {}
+        self.rheobase = None
         self.fitness = creator.FitnessMin
 
 @require('numpy, deap','random')
-def import_list(ipp,subset,NDIM):
+def import_list(ipp,subset,numb_err_f,NDIM):
     #ipp = ipp
     #import ipyparallel as ipp
     #rc = ipp.Client(profile='default')
@@ -65,15 +65,16 @@ def import_list(ipp,subset,NDIM):
             return [random.uniform(a, b) for a, b in zip([low] * size, [up] * size)]
     # weights vector should compliment a numpy matrix of eigenvalues and other values
     #creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0))
-    weights = tuple([-1.0 for i in range(0,NDIM)])
-    creator.create("FitnessMin", base.Fitness, weights=weights)
-    creator.create("Individual", list, fitness=creator.FitnessMin)
+    weights = tuple([1.0 for i in range(0,numb_err_f)])
+    #weights = tuple([-1.0 for i in range(0,NDIM)])
+    creator.create("FitnessMin", base.Fitness, weights = weights)
+    creator.create("Individual", list, fitness = creator.FitnessMin)
     toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, len(BOUND_UP))
     toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.attr_float)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     toolbox.register("select", tools.selNSGA2)
     toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=BOUND_LOW, up=BOUND_UP, eta=30.0)
-    toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=20.0, indpb=1.0/NDIM)
+    toolbox.register("mutate", tools.mutPolynomialBounded, low=BOUND_LOW, up=BOUND_UP, eta=30.0, indpb=1.0/NDIM)
     from deap.benchmarks.tools import diversity, convergence
     #from deap.benchmarks.tools.diversity
     #import deap.benchmarks.tools as tools
@@ -106,18 +107,21 @@ def update_dtc_pop(pop, td):
     from deap import base
     toolbox = base.Toolbox()
     Individual = ipp.Reference('Individual')
-    from neuronunit.optimization import get_neab
-    get_neab.LEMS_MODEL_PATH
+    #from neuronunit.optimization import get_neab
+    #get_neab.LEMS_MODEL_PATH
     #dview.push({'paths':get_neab.LEMS_MODEL_PATH})
     pop = [toolbox.clone(i) for i in pop ]
     def transform(ind):
         from neuronunit.optimization.data_transport_container import DataTC
         dtc = DataTC()
-        print(dtc)
         param_dict = {}
+        dtc.attrs = {}
         for i,j in enumerate(ind):
-            param_dict[td[i]] = str(j)
-        dtc.attrs = param_dict
+            param_dict[td[i]] = j
+            dtc.attrs[td[i]] = j
+            print(td[i],str(j), param_dict)
+
+        print(dtc.attrs)
         dtc.evaluated = False
         #dtc.LEMS_MODEL_PATH = dview.pull('paths',target=0)
         return dtc
@@ -140,7 +144,7 @@ def dt_to_ind(dtc,td):
     ind =[]
     for k in td.keys():
         ind.append(dtc.attrs[td[k]])
-    ind.append(dtc.rheobase)
+    ind.rheobase = dtc.rheobase
     return ind
 
 def difference(observation,prediction): # v is a tesst
