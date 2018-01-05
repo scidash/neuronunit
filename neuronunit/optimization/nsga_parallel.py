@@ -26,31 +26,7 @@ from ipyparallel import depend, require, dependent
 # controller (rank0, it has)
 from neuronunit import tests
 from neuronunit.optimization import get_neab
-'''
-Not compatible with cloud pickle, except, probably
-compatible under dask
-tests = get_neab.tests
-def file_write(tests):
-    import pickle
-    with open('ne_pickle', 'wb') as f:
-        pickle.dump(tests, f)
 
-#dview.block = True
-test_container = { 'tests':tests }
-dview.push(test_container)
-dview.execute('print(tests)')
-dview.execute("import pickle")
-#with dview.sync_imports():
-#    import pickle
-
-# serial file write.
-rc[0].apply(file_write, tests)
-#Broadcast the tests to workers
-test_dic = {}
-for t in tests:
-    test_dic[str(t.name)] = t
-dview.push(test_dic)
-'''
 def get_tests():
     '''
     # Not compatible with cloud pickle
@@ -76,24 +52,25 @@ def dtc_to_rheo(dtc):
     model = ReducedModel(dtc.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
 
     model.set_attrs(dtc.attrs)
-    #if not hasattr(model,'rheobase'):
     model.rheobase = None
-    #dtc.cell_name = model._backend.cell_name
-    #dtc.current_src_name = model._backend.current_src_name
     dtc.scores = None
     dtc.scores = {}
     dtc.differences = None
     dtc.differences = {}
-    #not compatible with cloud pickle
-	#tests = get_tests()
     get_neab.tests[0].dview = dview
     score = get_neab.tests[0].judge(model,stop_on_error = False, deep_error = True)
+    print(score)
+    print(type(score))
+    print(model.attrs,dtc.attrs)
+    #print('sometime')
     observation = score.observation
-    prediction = score.prediction
-    delta = evaluate_as_module.difference(observation,prediction)
+    dtc.rheobase = score.prediction
+    delta = evaluate_as_module.difference(observation,dtc.rheobase)
     dtc.differences[str(get_neab.tests[0])] = delta
     dtc.scores[str(get_neab.tests[0])] = score.sort_key
-    dtc.rheobase = score.prediction
+    print(dtc.scores)
+    print(dtc.rheobase, 'recalculation')
+    #import pdb; pdb.set_trace()
     return dtc
 
 def dtc_to_plotting(dtc):
@@ -109,24 +86,21 @@ def dtc_to_plotting(dtc):
     dtc.t = list(model.results['time'])
     return dtc
 
-def make_files(dtc):
-    return ref
 
 def evaluate(dtc):
 
     from neuronunit.optimization import get_neab
     import numpy as np
-    fitness = [ 100.0 for i in range(0,8)]
-    for k,t in enumerate(dtc.scores.keys()):
-        if dtc.rheobase['value'] > 0.0:
-            fitness[k] = dtc.scores[str(t)]
-        else:
-            fitness[k] = 100.0
+    fitness = [ 1.0 for i in range(0,7) ]
 
+    for k,t in enumerate(dtc.scores.keys()):
+        fitness[k] = dtc.scores[str(t)]
+    #fitness[7] = np.sum(list(fitness[0:6]))
+    print(fitness)
     return fitness[0],fitness[1],\
            fitness[2],fitness[3],\
            fitness[4],fitness[5],\
-           fitness[6],fitness[7],
+           fitness[6],#fitness[7]
 
 def update_pop(pop,td):
     '''
@@ -145,14 +119,56 @@ def update_pop(pop,td):
 
     update_dtc_pop = evaluate_as_module.update_dtc_pop
     pre_format = evaluate_as_module.pre_format
+    # given the wrong attributes, and they don't have rheobase values.
     dtcpop = list(update_dtc_pop(pop, td))
     #import pdb; pdb.set_trace()
     dtcpop = list(map(dtc_to_rheo,dtcpop))
-    dtcpop = list(map(pre_format,dtcpop))
-    dtcpop = dview.map(parallel_method,dtcpop).get()
-    rc.wait(dtcpop)
-    return list(dtcpop)
+    print(len(dtcpop), dtcpop)
+    for dtc in dtcpop:
+        print(dtc.rheobase['value'])
+    #import pdb; pdb.set_trace()
 
+    dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] > 0.0 , dtcpop))
+    print(len(dtcpop),len(pop),dtcpop, 'hangs here?')
+    print(len(dtcpop), dtcpop)
+
+    while len(dtcpop) < len(pop):
+        print('stuck here c.1.1?')
+        dtcpop.append(dtcpop[0])
+
+    dtcpop = list(map(pre_format,dtcpop))
+    print('stuck here d.1.2?')
+
+    dtcpop = dview.map(parallel_method,dtcpop).get()
+    print('stuck here d.1.3?')
+
+    rc.wait(dtcpop)
+    print(len(dtcpop),'stuck broken 0.a')
+
+    dtcpop = list(filter(lambda dtc: type(dtc.scores['RheobaseTestP']) is not type(None), dtcpop))
+    print(len(dtcpop),'stuck broken a')
+
+    dtcpop = list(filter(lambda dtc: not type(None) in (list(dtc.scores.values())), dtcpop))
+    print(len(dtcpop),'stuck broken b')
+    dtc_temp = []
+    for dtc in dtcpop:
+        temp = list(dtc.scores.values())
+        if None not in temp:
+            dtc_temp.append(dtc)
+        print('stuck broken c?')
+    dtcpop = dtc_temp
+    #dtcpop = [ dtc for dtc in dtcpop for v in list(dtc.scores.values()) if type(v) is not type(None) ]
+    #dtcpop = list(filter(lambda dtc: for v in list(dtc.scores.values()) is not type(None), dtcpop))
+
+    while len(dtcpop) < len(pop):
+        dtcpop.append(dtcpop[0])
+
+    #pop = [pop[i]
+    for i,d in enumerate(dtcpop):
+        pop[i].rheobase = d.rheobase
+    #return
+    return_package = zip(dtcpop, pop)
+    return return_package
 
 
 def create_subset(nparams=10, provided_keys=None):

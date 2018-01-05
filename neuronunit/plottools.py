@@ -307,8 +307,9 @@ def surfaces(history,td):
     ax_trip.set_ylabel('Parameter $ a$')
     plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
     fig_trip.tight_layout()
+    fig_trip.show()
     #fig_trip.legend()
-    fig_trip.savefig('surface'+str('a')+str('b')+'.pdf',format='pdf')#', dpi=1200)
+    #fig_trip.savefig('surface'+str('a')+str('b')+'.pdf',format='pdf')#', dpi=1200)
 
 
     matrix_fill = [ (i,j) for i in range(0,len(modelp.model_params['a'])) for j in range(0,len(modelp.model_params['b'])) ]
@@ -351,16 +352,9 @@ def use_dtc_to_plotting(dtcpop):
     stored_min = []
     stored_max = []
     for dtc in dtcpop[1:-1]:
-        #st = spike_functions.get_spike_train(dtc.vm0)
-        #sindexs.append(int((float(st)/ts[-1])*len(ts)))
-        #time_sequence = np.arange(np.min(sindexs)-5 , np.max(sindexs)+5, 1)
-        #stored_min.append(np.min(dtc.vm0))
-        ##stored_max.append(np.max(dtc.vm0))
-        #pvm = np.array(dtc.vm0)[time_sequence]
         plt.plot(dtc.tvec, dtc.vm0,linewidth=3.5, color='grey')
         stored_min.append(np.min(dtc.vm0))
         stored_max.append(np.max(dtc.vm0))
-
     plt.plot(dtcpop[0].tvec,dtcpop[0].vm0,linewidth=1, color='red',label='best candidate')
     plt.legend()
     plt.ylabel('$V_{m}$ mV')
@@ -373,12 +367,6 @@ def use_dtc_to_plotting(dtcpop):
     stored_min = []
     stored_max = []
     for dtc in dtcpop[1:-1]:
-        #st = spike_functions.get_spike_train(dtc.vm0)
-        #sindexs.append(int((float(st)/ts[-1])*len(ts)))
-        #time_sequence = np.arange(np.min(sindexs)-5 , np.max(sindexs)+5, 1)
-        #stored_min.append(np.min(dtc.vm0))
-        ##stored_max.append(np.max(dtc.vm0))
-        #pvm = np.array(dtc.vm0)[time_sequence]
         plt.plot(dtc.tvec, dtc.vm1,linewidth=3.5, color='grey')
         stored_min.append(np.min(dtc.vm1))
         stored_max.append(np.max(dtc.vm1))
@@ -425,22 +413,9 @@ def plot_log(log): #logbook
         color='black',
         linewidth=2,
         label='population average')
-    #try:
     axes.fill_between(gen_numbers, stdminus, stdplus)
-    #except:
-    #    print('cant plot between still')
-        #pass
-        #raise Exception
     axes.plot(gen_numbers, stdminus)
     axes.plot(gen_numbers, stdplus)
-    #axes.plot(gen_numbers, std)
-    #axes.plot(gen_numbers,minimum)
-    #axes.semilogy(
-    #    gen_numbers,
-    #    minimum,
-    #    linewidth=2,
-    #    label='minimum')
-
     axes.set_xlim(np.min(gen_numbers) - 1, np.max(gen_numbers) + 1)
     axes.set_xlabel('Generation #')
     axes.set_ylabel('Sum of objectives')
@@ -551,17 +526,30 @@ def dtc_to_plotting(dtc):
     import neuron
     model._backend.reset_neuron(neuron)
     model.set_attrs(dtc.attrs)
-    model.rheobase = dtc.rheobase['value']
+    #model.rheobase = dtc.rheobase#['value']
     dtc = pre_format(dtc)
     parameter_list = list(dtc.vtest.values())
     print(parameter_list[0])
+    #print(dtc.rheobase)
+    #print(dtc.rheobase['value'])
+
+    #import pdb; pdb.set_trace()
+
     model.inject_square_current(parameter_list[0])
     model._backend.local_run()
-    assert model.get_spike_count() == 1
+    print('\n\n\n\n\n\n')
+    print(type(model.get_spike_count()), ' < type')
     print(model.get_spike_count(),bool(model.get_spike_count() == 1))
-    dtc.vm0 = list(model.results['vm'])
-    model = None
+    print('\n\n\n\n\n\n')
 
+    assert model.get_spike_count() == 1 or model.get_spike_count() == 0
+
+    dtc.vm0 = list(model.results['vm'])
+    dtc.tvec = list(model.results['t'])
+    return dtc
+
+    #model = None
+    '''
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     import neuron
     model._backend.reset_neuron(neuron)
@@ -570,8 +558,7 @@ def dtc_to_plotting(dtc):
     model.inject_square_current(parameter_list[-1])
     print(model.get_spike_count())
     dtc.vm1 = list(model.results['vm'])
-    dtc.tvec = list(model.results['t'])
-    return dtc
+    '''
 
 def plot_objectives_history(log):
     '''
@@ -603,7 +590,7 @@ def plot_objectives_history(log):
         for l in mins_components_plot:
             components[i].append(l[i])
     maximum = 0.0
-    import pdb; pdb.set_trace()
+    #import pdb; pdb.set_trace()
     for keys in components:
 
         axes.plot(
@@ -618,7 +605,7 @@ def plot_objectives_history(log):
     axes.set_xlim(min(gen_numbers) - 1, max(gen_numbers) + 1)
     axes.set_xlabel('Generation #')
     axes.set_ylabel('Sum of objectives')
-    #axes.set_ylim([0, max(maximum[0])])
+    axes.set_ylim([-0.1, maximum])
     axes.legend()
 
     fig.tight_layout()
