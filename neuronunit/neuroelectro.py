@@ -51,7 +51,7 @@ DEVELOPER = False
 if DEVELOPER:
     DOMAIN = 'http://localhost:8000'
 else:
-    DOMAIN = 'http://www.neuroelectro.org'
+    DOMAIN = 'http://neuroelectro.org'
 API_URL = DOMAIN+API_SUFFIX
 
 
