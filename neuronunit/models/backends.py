@@ -199,10 +199,8 @@ class brianBackend(Backend):
         #from brian2.library.IF import Izhikevich, ms
         #eqs=Izhikevich(a=0.02/ms,b=0.2/ms)
         #print(eqs)
-'''
 
 class pyNNBackend(Backend):
-    """Used for generation of code for PyNN, with simulation using NEURON"""
 
     backend = 'pyNN'
     try:
@@ -275,6 +273,7 @@ class pyNNBackend(Backend):
         stop = c['delay']+c['duration']
         electrode = self.DCSource(start=c['delay'], stop=stop, amplitude=c['amplitude'])
         electrode.inject_into(self.neuron[1])
+'''
 
 
 class NEURONBackend(Backend):
@@ -475,7 +474,6 @@ class NEURONBackend(Backend):
         NEURON_file_path ='{0}_nrn.py'.format(base_name)
         self.neuron_model_dir = os.path.dirname(self.model.orig_lems_file_path)
         assert os.path.isdir(self.neuron_model_dir)
-
         if not os.path.exists(NEURON_file_path):
             pynml.run_lems_with_jneuroml_neuron(self.model.orig_lems_file_path,
                               skip_run=False,
@@ -485,7 +483,7 @@ class NEURONBackend(Backend):
                               plot=False,
                               show_plot_already=False,
                               exec_in_dir = self.neuron_model_dir,
-                              verbose=verbose,
+                              verbose=True,
                               exit_on_fail = True)
 
             subprocess.run(["cd %s; nrnivmodl" % self.neuron_model_dir],shell=True)
