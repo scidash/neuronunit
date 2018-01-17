@@ -91,32 +91,7 @@ def get_tests():
     tests.append(dview.pull('InjectedCurrentAPAmplitudeTest',targets=0).get())
     tests.append(dview.pull('InjectedCurrentAPThresholdTest',targets=0).get())
     return tests
-def parallel_method(dtc):
-    #tests = get_tests()
-    from neuronunit.models.reduced import ReducedModel
-    from neuronunit.optimization import get_neab
-    tests = get_neab.tests
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend=('NEURON',{'DTC':dtc}))
-    #before = list(model.attrs.items())
-    #model.set_attrs(dtc.attrs)
-    #print(before, model.attrs)
 
-    #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-    model.set_attrs(dtc.attrs)
-    tests[0].prediction = dtc.rheobase
-    get_neab.tests[0].dview = dview
-    model.rheobase = dtc.rheobase['value']
-    from neuronunit.optimization import evaluate_as_module
-    dtc = evaluate_as_module.pre_format(dtc)
-    for k,t in enumerate(tests[1:-1]):
-        #if float(dtc.rheobase['value']) > 0:
-        t.params = dtc.vtest[k]
-        score = t.judge(model,stop_on_error = False, deep_error = False)
-        assert bool(model.get_spike_count() == 1 or model.get_spike_count() == 0)
-        dtc.scores[str(t)] = score.sort_key
-
-        print(dtc.scores)#, 'get\'s here')
-    return dtc
 
 def dtc_to_rheo(dtc):
     from neuronunit.optimization import get_neab
@@ -151,7 +126,7 @@ def update_dtc_pop(item_of_iter_list):
 
 def run_grid(npoints,nparams,provided_keys=None):
     # not all models will produce scores, since models with rheobase <0 are filtered out.
-
+    from neuronunit.optimization.nsga_parallel import nunit_evaluation
     grid_points = create_grid(npoints = npoints,nparams = nparams,vprovided_keys = provided_keys )
 
     dtcpop = list(dview.map_sync(update_dtc_pop,grid_points))
@@ -163,7 +138,7 @@ def run_grid(npoints,nparams,provided_keys=None):
     print(dtcpop)
 
     filtered_dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] > 0.0 , dtcpop))
-    dtcpop = dview.map(parallel_method,filtered_dtcpop).get()
+    dtcpop = dview.map(nunit_evaluation,filtered_dtcpop).get()
     rc.wait(dtcpop)
     dtcpop = list(dtcpop)
     dtcpop = list(filter(lambda dtc: type(dtc.scores['RheobaseTestP']) is not type(None), dtcpop))
