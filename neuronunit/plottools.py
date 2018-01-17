@@ -6,6 +6,33 @@ import matplotlib.pyplot as plt
 import colorsys
 import numpy
 import collections
+KERNEL = ('ipykernel' in sys.modules)
+try:
+    from io import StringIO
+except ImportError:
+    from StringIO import StringIO
+
+import numpy as np
+import pandas as pd
+import bs4
+from IPython.display import HTML,Javascript,display
+
+KERNEL = ('ipykernel' in sys.modules)
+if not KERNEL:
+    args = [bs4.BeautifulSoup(x,"lxml").text for x in args]
+    try:
+        print(*args, **kwargs)
+    except SyntaxError: # Python 2
+        print(args)
+else:
+    with StringIO() as f:
+        kwargs['file'] = f
+        try:
+            print(*args, **kwargs)
+        except SyntaxError: # Python 2
+            print(args)
+        output = f.getvalue()
+        display(HTML(output))
 
 def adjust_spines(ax, spines, color='k', d_out=10, d_down=None):
 
@@ -141,6 +168,48 @@ def tiled_figure(figname='', frames=1, columns=2,
         axs = figs[figname]['axs']
 
     return axs
+
+def plot_surface(model_param0,model_param1,td):
+    '''
+
+    Move this method back to plottools
+    Inputs should be keys, that are parameters see new function definition below
+    '''
+
+    import numpy as np
+    import matplotlib
+    matplotlib.rcParams.update({'font.size':16})
+    import matplotlib.pyplot as plt
+
+
+    ind_x = [ i for i,j in enumerate(td) if str(model_param0) == j ]
+    ind_y = [ i for i,j in enumerate(td) if str(model_param1) == j ]
+    all_inds = history.genealogy_history.values()
+    sums = np.array([np.sum(ind.fitness.values) for ind in all_inds])
+    quads = []
+
+    for k in range(1,9):
+        for i,j in enumerate(td):
+            if i+k < 10:
+                quads.append((td[i],td[i+k],i,i+k))
+    all_inds1 = list(history.genealogy_history.values())
+
+
+    ab = [ (all_inds1[x],all_inds1[z]) for y in all_inds1 ]
+    xs = np.array([ind[x] for ind in all_inds])
+    ys = np.array([ind[z] for ind in all_inds])
+    min_ys = ys[np.where(sums == np.min(sums))]
+    min_xs = xs[np.where(sums == np.min(sums))]
+    plt.clf()
+    fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
+    trip_axis = ax_trip.tripcolor(xs,ys,sums,20,norm=matplotlib.colors.LogNorm())
+    plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue',label='global minima')
+    fig_trip.colorbar(trip_axis, label='Sum of Objective Errors ')
+    ax_trip.set_xlabel('Parameter '+str((td[x])))
+    ax_trip.set_ylabel('Parameter '+str((td[z])))
+    plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
+    fig_trip.tight_layout()
+    plt.savefig('surface'+str((td[z])+str('.png')))
 
 def shadow(dtcpop,best_vm):#This method must be pickle-able for ipyparallel to work.
     '''
