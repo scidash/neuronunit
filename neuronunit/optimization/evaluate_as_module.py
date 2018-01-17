@@ -1,4 +1,7 @@
 ##
+# This module has been depreciated.
+# Any functional contents, that it has are being moved into 
+# nsga_parallel and BluePyOpt/deapExt/algorithms
 # Assumption that this file was executed after first executing the bash: ipcluster start -n 8 --profile=default &
 ##
 
@@ -85,54 +88,6 @@ def import_list(ipp,subset,numb_err_f,NDIM):
 
 
 
-def get_trans_dict(param_dict):
-    trans_dict = {}
-    for i,k in enumerate(list(param_dict.keys())):
-        trans_dict[i]=k
-    return trans_dict
-
-
-
-def update_dtc_pop(pop, td):
-    '''
-    inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
-    outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
-    Rationale, not every gene value will result in a model for which rheobase is found, in which case that gene is discarded, however to
-    compensate for losses in gene population size, more gene samples must be tested for a successful return from a rheobase search.
-    If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
-    corresponding virtual model objects.
-    '''
-    import copy
-    import numpy as np
-    from deap import base
-    toolbox = base.Toolbox()
-    Individual = ipp.Reference('Individual')
-    #from neuronunit.optimization import get_neab
-    #get_neab.LEMS_MODEL_PATH
-    #dview.push({'paths':get_neab.LEMS_MODEL_PATH})
-    pop = [toolbox.clone(i) for i in pop ]
-    def transform(ind):
-        from neuronunit.optimization.data_transport_container import DataTC
-        dtc = DataTC()
-        param_dict = {}
-        dtc.attrs = {}
-        for i,j in enumerate(ind):
-            param_dict[td[i]] = j
-            dtc.attrs[td[i]] = j
-            print(td[i],str(j), param_dict)
-
-        print(dtc.attrs)
-        dtc.evaluated = False
-        #dtc.LEMS_MODEL_PATH = dview.pull('paths',target=0)
-        return dtc
-    if len(pop) > 1:
-        dtcpop = list(dview.map_sync(transform, pop))
-    else:
-        # In this case pop is not really a population but an individual
-        # but parsimony of naming variables
-        # suggests not to change the variable name to reflect this.
-        dtcpop = list(transform(pop))
-    return dtcpop
 
 
 def dt_to_ind(dtc,td):
@@ -183,32 +138,3 @@ def difference(observation,prediction): # v is a tesst
     ratio = unit_predictions / unit_observations
     unit_delta = np.abs( np.abs(unit_observations)-np.abs(unit_predictions) )
     return float(unit_delta), ratio
-
-def pre_format(dtc):
-    '''
-    pre format the current injection dictionary based on pre computed
-    rheobase values of current injection.
-    This is much like the hooked method from the old get neab file.
-    '''
-    import quantities as pq
-    import copy
-    dtc.vtest = None
-    dtc.vtest = {}
-    from neuronunit.optimization import get_neab
-    tests = get_neab.tests
-    for k,v in enumerate(tests):
-        dtc.vtest[k] = {}
-        dtc.vtest[k]['injected_square_current'] = {}
-    for k,v in enumerate(tests):
-        if k == 1 or k == 2 or k == 3:
-            # Negative square pulse current.
-            dtc.vtest[k]['injected_square_current']['duration'] = 100 * pq.ms
-            dtc.vtest[k]['injected_square_current']['amplitude'] = -10 *pq.pA
-            dtc.vtest[k]['injected_square_current']['delay'] = 30 * pq.ms
-
-        if k == 0 or k == 4 or k == 5 or k == 6 or k == 7:
-            # Threshold current.
-            dtc.vtest[k]['injected_square_current']['duration'] = 1000 * pq.ms
-            dtc.vtest[k]['injected_square_current']['amplitude'] = dtc.rheobase['value']
-            dtc.vtest[k]['injected_square_current']['delay'] = 100 * pq.ms
-    return dtc
