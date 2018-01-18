@@ -367,15 +367,34 @@ class RheobaseTestP(VmTest):
             assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
             # If this it not the first pass/ first generation
             # then assume the rheobase value found before mutation still holds until proven otherwise.
-            if type(model.rheobase) is not type(None):
-                dtc = check_current(model.rheobase,dtc)
+            '''
+            if type(model.rheobase) is not type(None) or type(dtc.rheobase) is not type(None):
+                dtc.boolean = False
+                if type(model.rheobase) is not type(None):
+                    dtc.steps.append(model.rheobase['value']*pq.pA)
+                if type(dtc.rheobase) is not type(None):
+                    dtc.steps.append(dtc.rheobase['value']*pq.pA)
+                print('gets here eeee \n\n\n\n\n')
+                dtcpop = self.dview.map_sync(check_current,dtc.steps,dtcs)
+                for dtc_clone in dtcpop:#.get():
+                    dtc.lookup.update(dtc_clone.lookup)
+                dtc = check_fix_range(dtc)
+                print(dtc.steps, 'stuck here', dtc.boolean)
+            '''
+                #dtc = check_current(model.rheobase,dtc)
             # If its not true enter a search, with ranges informed by memory
+
+
             cnt = 0
             while dtc.boolean == False:
                 #dtc.searched.append(dtc.steps)
 
                 dtcs = [ dtc for s in dtc.steps ]
-                dtcpop = self.dview.map_sync(check_current,dtc.steps,dtcs)
+                #dtcpop = self.dview.map_sync(check_current,dtc.steps,dtcs)
+                import dask.bag as db
+                b0 = db.from_sequence(dtc.steps, npartitions=8)
+                b1 = db.from_sequence(dtcs, npartitions=8)
+                dtcpop = list(db.map(check_current,b0,b1).compute())
                 for dtc_clone in dtcpop:#.get():
                     dtc.lookup.update(dtc_clone.lookup)
                 dtc = check_fix_range(dtc)
