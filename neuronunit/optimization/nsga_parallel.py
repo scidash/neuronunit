@@ -49,25 +49,20 @@ def dtc_to_rheo(dtc):
     model = ReducedModel(dtc.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
 
     model.set_attrs(dtc.attrs)
+    #if not hasattr(model,'rheobase'):
     model.rheobase = None
+    #dtc.cell_name = model._backend.cell_name
+    #dtc.current_src_name = model._backend.current_src_name
     dtc.scores = None
     dtc.scores = {}
     dtc.differences = None
     dtc.differences = {}
     get_neab.tests[0].dview = dview
     score = get_neab.tests[0].judge(model,stop_on_error = False, deep_error = True)
-    print(score)
-    print(type(score))
-    print(model.attrs,dtc.attrs)
-    #print('sometime')
     observation = score.observation
     dtc.rheobase = score.prediction
-    #delta = evaluate_as_module.difference(observation,dtc.rheobase)
-    #dtc.differences[str(get_neab.tests[0])] = delta
     dtc.scores[str(get_neab.tests[0])] = score.sort_key
     print(dtc.scores)
-    print(dtc.rheobase, 'recalculation')
-    #import pdb; pdb.set_trace()
     return dtc
 
 def dtc_to_plotting(dtc):
