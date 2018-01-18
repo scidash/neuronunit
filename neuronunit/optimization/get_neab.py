@@ -20,10 +20,6 @@ from neuronunit.tests import passive
 from neuronunit.tests import waveform
 
 
-#print(RheobaseTestP)
-#fi = tests.fi
-#print(dir(fi))
-#pr = fi.RheobaseTestP()
 neuron = {'nlex_id': 'nifext_50'} # Layer V pyramidal cell
 tests = []
 
@@ -34,8 +30,7 @@ dataset_id = 354190013  # Internal ID that AIBS uses for a particular Scnn1a-Tg2
 # this file writing operation needs to be threadlocked
 observation = aibs.get_observation(dataset_id,'rheobase')
 ne_pickle = os.path.join(THIS_DIR,"neuroelectro.pickle")
-print(ne_pickle,'got here')
-print(THIS_DIR)
+
 if os.path.isfile(ne_pickle):
     print('attempting to recover from pickled file')
     with open(ne_pickle, 'rb') as f:

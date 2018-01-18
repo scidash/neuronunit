@@ -480,7 +480,7 @@ class NEURONBackend(Backend):
                               nogui=True,
                               load_saved_data=False,
                               only_generate_scripts=True,
-                              plot=False,
+s                              plot=False,
                               show_plot_already=False,
                               exec_in_dir = self.neuron_model_dir,
                               verbose=True,
@@ -500,7 +500,7 @@ class NEURONBackend(Backend):
         #The resulting idiosyncracies makes it hard not have a hard coded approach make non hard coded, and generalizable code.
         #work around involves predicting the hoc variable names from pyneuroml LEMS file that was used to generate them.
         more_attributes = pynml.read_lems_file(self.model.orig_lems_file_path,
-                                               include_includes=True,
+                                               include_includes=False,
                                                debug=False)
         for i in more_attributes.components:
             #This code strips out simulation parameters from the xml tree also such as duration.
