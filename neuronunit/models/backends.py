@@ -445,7 +445,7 @@ class NEURONBackend(Backend):
         nrn = import_module_from_path(nrn_path)
         self.reset_neuron(nrn.neuron)
         modeldirname = os.path.dirname(self.model.orig_lems_file_path)
-        self.set_stop_time(500*ms)
+        self.set_stop_time(650*ms) # previously 500ms add on 150ms of recovery 
         self.h.tstop
         self.ns = nrn.NeuronSimulation(self.h.tstop, dt=0.0025)
 
