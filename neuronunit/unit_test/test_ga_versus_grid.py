@@ -83,12 +83,12 @@ else:
     dlist_second_third = dlist[int(len(dlist)/3):int(2*len(dlist)/3)]
     dlist_final_third = dlist[int(2*len(dlist)/3):-1]
     from neuronunit.optimization.exhaustive_search import dtc_to_rheo
-    from neuronunit.optimization.exhaustive_search import parallel_method
+    from neuronunit.optimization.nsga_parallel import nunit_evaluation
 
 
     def compute_half(dlist_half):
         dlist_half = list(map(dtc_to_rheo,dlist_half))
-        dlist_half = dview.map_sync(parallel_method,dlist_half)
+        dlist_half = dview.map_sync(nunit_evaluation,dlist_half)
         return dlist_half
 
     dlist_first_3rd = compute_half(dlist_first_third)
@@ -148,7 +148,7 @@ import numpy as np
 
 from neuronunit.optimization.nsga_object import NSGA
 from neuronunit.optimization import exhaustive_search as es
-from neuronunit.optimization import evaluate_as_module as eam
+#from neuronunit.optimization import evaluate_as_module as eam
 
 
 # In[8]:
@@ -158,7 +158,7 @@ from neuronunit.optimization import evaluate_as_module as eam
 if USE_CACHED_GA:
     from deap import creator
     from deap import base
-    from neuronunit.optimization import evaluate_as_module as eam
+    #from neuronunit.optimization import evaluate_as_module as eam
     #NSGAO = NSGA(CXPB)
     #NSGAO.setnparams(nparams=nparams,provided_keys=provided_keys)
 
@@ -193,7 +193,7 @@ def pop2dtc(pop1,DO):
     This a wasteful, recompute, which is in part necessitated because
     deaps pareto front object, only returns gene individual objects (elements of population)
     '''
-    from neuronunit.optimization import evaluate_as_module as eam
+    #from neuronunit.optimization import evaluate_as_module as eam
     from neuronunit.optimization import nsga_parallel
     return_package = nsga_parallel.update_pop(pop1,DO.td)
     dtc_pop = []
@@ -225,8 +225,8 @@ import matplotlib.pyplot as plt
 all_inds = history.genealogy_history.values()
 sums = np.array([np.sum(ind.fitness.values) for ind in all_inds])
 quads = []
-from neuronunit.optimization import evaluate_as_module as eam
-td = eam.get_trans_dict(DO.params)
+#from neuronunit.optimization import evaluate_as_module as eam
+#td = eam.get_trans_dict(DO.params)
 
 #td = eam.get_trans_dict(NSGAO.subset)
 for k in range(1,9):
@@ -428,8 +428,8 @@ def use_dtc_to_plotting(dtcpop,minimagr):
     from neuronunit.models.reduced import ReducedModel
     from neuronunit.optimization.get_neab import tests as T
     from neuronunit.optimization import get_neab
-    from neuronunit.optimization import evaluate_as_module
-    from neuronunit.optimization.evaluate_as_module import pre_format
+    #from neuronunit.optimization import evaluate_as_module
+    from neuronunit.optimization.nsga_object import pre_format
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     import neuron
     model._backend.reset_neuron(neuron)
@@ -561,12 +561,12 @@ if REFINE_GRID:
     dlist_second_third = dlist[int(len(dlist)/3):int(2*len(dlist)/3)]
     dlist_final_third = dlist[int(2*len(dlist)/3):-1]
     from neuronunit.optimization.exhaustive_search import dtc_to_rheo
-    from neuronunit.optimization.exhaustive_search import parallel_method
+    from neuronunit.optimization.nsga_parallel import nunit_evaluation
 
 
     def compute_half(dlist_half):
         dlist_half = list(map(dtc_to_rheo,dlist_half))
-        dlist_half = dview.map_sync(parallel_method,dlist_half)
+        dlist_half = dview.map_sync(nunit_evaluation,dlist_half)
         return dlist_half
 
     dlist_first_3rd = compute_half(dlist_first_third)
