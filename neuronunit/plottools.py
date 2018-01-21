@@ -6,6 +6,9 @@ import matplotlib.pyplot as plt
 import colorsys
 import numpy
 import collections
+
+
+import sys
 KERNEL = ('ipykernel' in sys.modules)
 try:
     from io import StringIO
@@ -18,21 +21,6 @@ import bs4
 from IPython.display import HTML,Javascript,display
 
 KERNEL = ('ipykernel' in sys.modules)
-if not KERNEL:
-    args = [bs4.BeautifulSoup(x,"lxml").text for x in args]
-    try:
-        print(*args, **kwargs)
-    except SyntaxError: # Python 2
-        print(args)
-else:
-    with StringIO() as f:
-        kwargs['file'] = f
-        try:
-            print(*args, **kwargs)
-        except SyntaxError: # Python 2
-            print(args)
-        output = f.getvalue()
-        display(HTML(output))
 
 def adjust_spines(ax, spines, color='k', d_out=10, d_down=None):
 
@@ -169,7 +157,7 @@ def tiled_figure(figname='', frames=1, columns=2,
 
     return axs
 
-def plot_surface(model_param0,model_param1,td):
+def plot_surface(model_param0,model_param1,td,history):
     '''
 
     Move this method back to plottools
@@ -182,22 +170,25 @@ def plot_surface(model_param0,model_param1,td):
     import matplotlib.pyplot as plt
 
 
-    ind_x = [ i for i,j in enumerate(td) if str(model_param0) == j ]
-    ind_y = [ i for i,j in enumerate(td) if str(model_param1) == j ]
+    x = [ i for i,j in enumerate(td) if str(model_param0) == j ][0]
+    y = [ i for i,j in enumerate(td) if str(model_param1) == j ][0]
     all_inds = history.genealogy_history.values()
     sums = np.array([np.sum(ind.fitness.values) for ind in all_inds])
-    quads = []
-
+    #quads = []
+    '''
     for k in range(1,9):
         for i,j in enumerate(td):
             if i+k < 10:
                 quads.append((td[i],td[i+k],i,i+k))
     all_inds1 = list(history.genealogy_history.values())
+    '''
+    #import pdb; pdb.set_trace()
+    #print(all_inds1[x])
 
+    #ab = [ (all_inds1[x],all_inds1[y]) for y in all_inds1 ]
 
-    ab = [ (all_inds1[x],all_inds1[z]) for y in all_inds1 ]
     xs = np.array([ind[x] for ind in all_inds])
-    ys = np.array([ind[z] for ind in all_inds])
+    ys = np.array([ind[y] for ind in all_inds])
     min_ys = ys[np.where(sums == np.min(sums))]
     min_xs = xs[np.where(sums == np.min(sums))]
     plt.clf()
@@ -206,10 +197,13 @@ def plot_surface(model_param0,model_param1,td):
     plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue',label='global minima')
     fig_trip.colorbar(trip_axis, label='Sum of Objective Errors ')
     ax_trip.set_xlabel('Parameter '+str((td[x])))
-    ax_trip.set_ylabel('Parameter '+str((td[z])))
+    ax_trip.set_ylabel('Parameter '+str((td[y])))
     plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
     fig_trip.tight_layout()
-    plt.savefig('surface'+str((td[z])+str('.png')))
+    if not KERNEL:
+        plt.savefig('surface'+str((td[z])+str('.png')))
+    else:
+        plt.show()
 
 def shadow(dtcpop,best_vm):#This method must be pickle-able for ipyparallel to work.
     '''
@@ -334,7 +328,10 @@ def shadow(dtcpop,best_vm):#This method must be pickle-able for ipyparallel to w
         plt.legend()
         plt.ylabel('$V_{m}$ mV')
         plt.xlabel('ms')
-        plt.savefig(str('test_')+str(v)+'vm_versus_t.png', format='png')#, dpi=1200)
+        if not KERNEL:
+            plt.savefig(str('test_')+str(v)+'vm_versus_t.png', format='png')#, dpi=1200)
+        else:
+            plt.show()
 
 
 
@@ -403,8 +400,10 @@ def surfaces(history,td):
     ax.set_xticklabels(modelp.model_params['a'])
     ax.set_yticklabels(modelp.model_params['b'])
     plt.title(str('$a$')+' versus '+str('$b$'))
-    plt.savefig('2nd_approach_d_error_'+str('a')+str('b')+'surface.png')
-
+    if not KERNEL:
+        plt.savefig('2nd_approach_d_error_'+str('a')+str('b')+'surface.png')
+    else:
+        plt.show()
 
     return ab
 
@@ -428,7 +427,12 @@ def use_dtc_to_plotting(dtcpop):
     plt.legend()
     plt.ylabel('$V_{m}$ mV')
     plt.xlabel('ms')
-    plt.savefig(str('rheobase')+'vm_versus_t.png', format='png')#, dpi=1200)
+
+    if not KERNEL:
+        plt.savefig(str('rheobase')+'vm_versus_t.png', format='png')#, dpi=1200)
+    else:
+        plt.show()
+
 
     plt.clf()
     plt.style.use('ggplot')
@@ -444,7 +448,10 @@ def use_dtc_to_plotting(dtcpop):
     plt.legend()
     plt.ylabel('$V_{m}$ mV')
     plt.xlabel('ms')
-    plt.savefig(str('AP_width_test')+'vm_versus_t.png', format='png')#, dpi=1200)
+    if not KERNEL:
+        plt.savefig(str('AP_width_test')+'vm_versus_t.png', format='png')#, dpi=1200)
+    else:
+        plt.show()
 
 
 
@@ -492,8 +499,10 @@ def plot_log(log): #logbook
     axes.legend()
 
     fig.tight_layout()
-    fig.savefig('Izhikevich_history_evolution.png', format='png')#, dpi=1200)
-
+    if not KERNEL:
+        fig.savefig('Izhikevich_history_evolution.png', format='png')#, dpi=1200)
+    else:
+        fig.show()
 
 def try_hard_coded0():
     params0 = {'C': '0.000107322241995',
@@ -579,8 +588,10 @@ def plot_suspicious(dtc):
         plt.legend()
         plt.ylabel('$V_{m}$ mV')
         plt.xlabel('ms')
-        plt.savefig(str('suspicious_rheobase')+str(p)+'vm_versus_t.png', format='png', dpi=1200)
-
+        if not KERNEL:
+            plt.savefig(str('suspicious_rheobase')+str(p)+'vm_versus_t.png', format='png', dpi=1200)
+        else:
+            plt.show()
 
 
 def dtc_to_plotting(dtc):
@@ -678,8 +689,10 @@ def plot_objectives_history(log):
     axes.legend()
 
     fig.tight_layout()
-    fig.savefig('Izhikevich_evolution_components.png', format='png')#, dpi=1200)
-
+    if not KERNEL:
+        fig.savefig('Izhikevich_evolution_components.png', format='png')#, dpi=1200)
+    else:
+        fig.show()
 
 '''
 def plotly_graph(history,vmhistory):
