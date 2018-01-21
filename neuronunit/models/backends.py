@@ -1,7 +1,4 @@
 """Simulator backends for NeuronUnit models"""
-import matplotlib as mpl
-mpl.use('Agg')
-
 import sys
 import os
 import platform
@@ -158,7 +155,7 @@ class jNeuroMLBackend(Backend):
     backend = 'jNeuroML'
 
     def init_backend(self, *args, **kwargs):
-        self.model.create_lems_file(self.model.name)
+        self.model.create_lems_file_copy()
         super(jNeuroMLBackend,self).init_backend(*args, **kwargs)
 
     def set_attrs(self, **attrs):
