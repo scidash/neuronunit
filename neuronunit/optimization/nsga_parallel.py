@@ -49,20 +49,25 @@ def dtc_to_rheo(dtc):
     model = ReducedModel(dtc.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
 
     model.set_attrs(dtc.attrs)
-    #if not hasattr(model,'rheobase'):
     model.rheobase = None
-    #dtc.cell_name = model._backend.cell_name
-    #dtc.current_src_name = model._backend.current_src_name
     dtc.scores = None
     dtc.scores = {}
     dtc.differences = None
     dtc.differences = {}
     get_neab.tests[0].dview = dview
     score = get_neab.tests[0].judge(model,stop_on_error = False, deep_error = True)
+    print(score)
+    print(type(score))
+    print(model.attrs,dtc.attrs)
+    #print('sometime')
     observation = score.observation
     dtc.rheobase = score.prediction
+    #delta = evaluate_as_module.difference(observation,dtc.rheobase)
+    #dtc.differences[str(get_neab.tests[0])] = delta
     dtc.scores[str(get_neab.tests[0])] = score.sort_key
     print(dtc.scores)
+    print(dtc.rheobase, 'recalculation')
+    #import pdb; pdb.set_trace()
     return dtc
 
 def dtc_to_plotting(dtc):
@@ -92,12 +97,17 @@ def nunit_evaluation(dtc):
     get_neab.tests[0].dview = dview
     model.rheobase = dtc.rheobase['value']
     dtc = pre_format(dtc)
+
+    if not hasattr(dtc,'score'):
+        dtc.score = {}
+
     for k,t in enumerate(tests[1:-1]):
         t.params = dtc.vtest[k]
         score = t.judge(model,stop_on_error = False, deep_error = False)
         assert bool(model.get_spike_count() == 1 or model.get_spike_count() == 0)
-        dtc.scores[str(t)] = 1 - score.sort_key #.sort_key
-        print(dtc.scores)#, 'get\'s here')
+        dtc.scores[str(t)] = 1 - score.sort_key
+        #dtc.score[str(t)] = score
+        #print(dtc.scores)
     return dtc
 
 
@@ -170,9 +180,9 @@ def update_dtc_pop(pop, td):
     import numpy as np
     from deap import base
     toolbox = base.Toolbox()
-    Individual = ipp.Reference('Individual')
+    #Individual = ipp.Reference('Individual')
     pop = [toolbox.clone(i) for i in pop ]
-    
+
     #sl = [ (i, val) for i, val in enumerate(t_analysis.searchList) ]
     #df = pd.DataFrame(data=obj_arrs)
     #df
@@ -191,7 +201,7 @@ def update_dtc_pop(pop, td):
     if len(pop) > 1:
         b = db.from_sequence(pop, npartitions=8)
         dtcpop = list(db.map(transform,b).compute())
-    
+
         #dtcpop = list(dview.map_sync(transform, pop))
     else:
         # In this case pop is not really a population but an individual
@@ -224,6 +234,9 @@ def update_pop(pop,td):
         dtcpop.append(dtcpop[0])
     dtcpop = list(map(pre_format,dtcpop))
 
+
+    b = db.from_sequence(dtcpop, npartitions=8)
+    dtcpop = list(db.map(nunit_evaluation,b).compute())
     b = db.from_sequence(dtcpop, npartitions=8)
     dtcpop = list(db.map(nunit_evaluation,b).compute())
 
@@ -232,7 +245,7 @@ def update_pop(pop,td):
     dtcpop = list(filter(lambda dtc: not type(None) in (list(dtc.scores.values())), dtcpop))
     ##
     # get rid of transport containers for genes that are responsible for returning None scores
-    ## 
+    ##
     dtc_temp = []
     for dtc in dtcpop:
         temp = list(dtc.scores.values())
