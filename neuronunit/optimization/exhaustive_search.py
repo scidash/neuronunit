@@ -10,6 +10,16 @@ dview = rc[:]
 from neuronunit.optimization import get_neab
 tests = get_neab.tests
 
+
+'''
+# serial file write.
+rc[0].apply(file_write, tests)
+#Broadcast the tests to workers
+test_dic = {}
+for t in tests:
+    test_dic[str(t.name)] = t
+dview.push(test_dic,targets=0)
+'''
 def sample_points(iter_dict, npoints=3):
     import numpy as np
     replacement={}
@@ -32,7 +42,7 @@ def create_refined_grid(best_point,point1,point2):
     for k,v in point1.attrs.items():
         higher =  max(float(point2.attrs[k]),float(v), best_point.attrs[k])
         lower = min(float(point2.attrs[k]),float(v), best_point.attrs[k])
-        temp = list(np.linspace(lower,higher,6))
+        temp = list(np.linspace(lower,higher,4))
         new_search_interval[k] = temp[1:-2] # take only the middle two points
         # discard edge points, as they are already well searched/represented.
     grid = list(ParameterGrid(new_search_interval))
@@ -88,10 +98,11 @@ def dtc_to_rheo(dtc):
     dtc.scores = {}
     from neuronunit.models.reduced import ReducedModel
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend=('NEURON',{'DTC':dtc}))
+    before = list(model.attrs.items())
     model.set_attrs(dtc.attrs)
+    print(before, model.attrs)
 
-
-
+    #assert before.items() in model.attrs
     model.rheobase = None
     rbt = get_neab.tests[0]
 	# Preferred flow of data movement: but not compatible with cloud pickle
@@ -117,7 +128,6 @@ def run_grid(npoints,nparams,provided_keys=None):
     # not all models will produce scores, since models with rheobase <0 are filtered out.
     from neuronunit.optimization.nsga_parallel import nunit_evaluation
     grid_points = create_grid(npoints = npoints,nparams = nparams,vprovided_keys = provided_keys )
-
 
     dtcpop = list(dview.map_sync(update_dtc_pop,grid_points))
     print(dtcpop)
