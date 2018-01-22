@@ -25,16 +25,13 @@ try:
 except:
     NEURON_SUPPORT = False
 
-import section_extension
 
 class Backend(object):
     """Base class for simulator backends that implement simulator-specific
     details of modifying, running, and reading results from the simulation
     """
-    #self.tstop = None
 
     def init_backend(self, *args, **kwargs):
-        #self.attrs = {} if attrs is None else attrs
         self.model.attrs = {}
 
         self.use_memory_cache = kwargs.get('use_memory_cache', True)
@@ -493,7 +490,7 @@ class NEURONBackend(Backend):
         self.neuron = None
         import neuron
         self.reset_neuron(neuron)
-        self.set_attrs(**self.attrs)
+        self.set_attrs(**self.model.attrs)
 
         c = copy.copy(current)
         if 'injected_square_current' in c.keys():
@@ -526,3 +523,5 @@ class NEURONBackend(Backend):
         results['run_number'] = results.get('run_number',0) + 1
 
         return results
+
+from neuronunit.models import section_extension
