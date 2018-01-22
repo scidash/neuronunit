@@ -1,6 +1,8 @@
 
 # These classes exist for compatibility with the old neuronunit.neuron module.
-
+import sciunit
+#
+from neuronunit.models.backends import NEURONBackend
 class HasSegment(sciunit.Capability):
     """Model has a membrane segment of NEURON simulator"""
 
