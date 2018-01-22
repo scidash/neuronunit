@@ -51,7 +51,18 @@ def create_refined_grid(best_point,point1,point2):
 
 def create_grid(npoints=3,nparams=7,provided_keys=None):
     '''
-    Can be used for creating an initial first pass coarse grained grid
+    Description, create a grid of evenly spaced samples in model parameters to search over.
+    Inputs: npoints, type: Integer: number of sample points per parameter
+    nparams, type: Integer: number of parameters to use, conflicts, with next argument.
+    nparams, iterates through a list of parameters, and assigns the nparams to use via stupid counting.
+    provided keys: explicitly define state the model parameters that are used to create the grid of samples, by
+    keying into an existing of parameters.
+
+    This method needs the user of the method to declare a dictionary of model parameters in a path:
+    neuronunit.optimization.model_parameters.
+
+    Miscallenous, once grid created by this function
+    has been evaluated using neuronunit it can be used for informing a more refined second pass fine grained grid
     '''
 
     from neuronunit.optimization import model_parameters as modelp
@@ -76,22 +87,6 @@ def create_grid(npoints=3,nparams=7,provided_keys=None):
     grid = list(ParameterGrid(subset))
     return grid
 
-def get_tests():
-    '''
-    This method cannot be used as is since its not compatible
-    with cloud pickle.
-    Pull tests
-    '''
-    tests = []
-    tests.append(dview.pull('InputResistanceTest',targets=0).get())
-    tests.append(dview.pull('TimeConstantTest',targets=0).get())
-    tests.append(dview.pull('CapacitanceTest',targets=0).get())
-    tests.append(dview.pull('RestingPotentialTest',targets=0).get())
-    tests.append(dview.pull('InjectedCurrentAPWidthTest',targets=0).get())
-    tests.append(dview.pull('InjectedCurrentAPAmplitudeTest',targets=0).get())
-    tests.append(dview.pull('InjectedCurrentAPThresholdTest',targets=0).get())
-    return tests
-
 
 def dtc_to_rheo(dtc):
     from neuronunit.optimization import get_neab
@@ -100,9 +95,6 @@ def dtc_to_rheo(dtc):
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend=('NEURON',{'DTC':dtc}))
     before = list(model.attrs.items())
     model.set_attrs(dtc.attrs)
-    print(before, model.attrs)
-
-    #assert before.items() in model.attrs
     model.rheobase = None
     rbt = get_neab.tests[0]
 	# Preferred flow of data movement: but not compatible with cloud pickle
