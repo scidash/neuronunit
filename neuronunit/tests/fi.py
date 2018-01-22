@@ -332,11 +332,12 @@ class RheobaseTestP(VmTest):
             if float(ampl) in dtc.lookup:
                 return dtc
 
-        import numpy as np
-        import copy
 
         @require('itertools','numpy','copy')
         def init_dtc(dtc):
+            import numpy as np
+            import copy
+
             if dtc.initiated == True:
                 # expand values in the range to accomodate for mutation.
                 # but otherwise exploit memory of this range.
@@ -359,6 +360,8 @@ class RheobaseTestP(VmTest):
 
         @require('itertools')
         def find_rheobase(self, dtc):
+            import dask.bag as db
+
             if not hasattr(self,'dview'):
                 import ipyparallel as ipp
                 rc = ipp.Client(profile='default')
@@ -376,10 +379,15 @@ class RheobaseTestP(VmTest):
                 #dtc.searched.append(dtc.steps)
 
                 dtcs = [ dtc for s in dtc.steps ]
+
+
                 #dtcpop = self.dview.map_sync(check_current,dtc.steps,dtcs)
-                import dask.bag as db
+                # create two dask bags for
+                # a sequence gathered data type, that is partitioned into eight partition sizes.
+
                 b0 = db.from_sequence(dtc.steps, npartitions=8)
                 b1 = db.from_sequence(dtcs, npartitions=8)
+
                 dtcpop = list(db.map(check_current,b0,b1).compute())
                 for dtc_clone in dtcpop:
                     dtc.lookup.update(dtc_clone.lookup)
