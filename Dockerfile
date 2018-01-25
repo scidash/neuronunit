@@ -30,7 +30,7 @@ COPY BluePyOpt ~/HOME/BluePyOpt
 RUN pip install -e $HOME/BluePyOpt
 WORKDIR $HOME
 
-RUN sed -i.bak '41d' /opt/conda/lib/python3.5/site-packages/lems/model/model.py
+# RUN sed -i.bak '41d' /opt/conda/lib/python3.5/site-packages/lems/model/model.py
 
 
 #RUN sudo /opt/conda/bin/pip3 install coveralls
