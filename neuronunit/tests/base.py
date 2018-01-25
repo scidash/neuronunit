@@ -75,6 +75,13 @@ class VmTest(sciunit.Test):
                                               provided.dimensionality.__str__())
                            )
                     raise sciunit.ObservationError(msg)
+        if 'std' not in observation:
+            if all([x in observation for x in ['sem','n']]):
+                observation['std'] = observation['sem'] * np.sqrt(observation['n'])
+            else:
+                raise sciunit.ObservationError(("Observation must have an 'std' key "
+                                                "or both 'sem' and 'n' keys."))
+        return observation
 
     def bind_score(self, score, model, observation, prediction):
         score.related_data['vm'] = model.get_membrane_potential()
