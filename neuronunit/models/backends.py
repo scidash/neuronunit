@@ -556,12 +556,9 @@ class NEURONBackend(Backend):
         #Although the complete purge is and reinit is computationally expensive,
         #and a more minimal purge is probably sufficient.
         '''
-        self.h = None
-        self.neuron = None
-        import neuron
-        self.reset_neuron(neuron)
-        #self.set_attrs(**self.attrs)
 
+        self.init_backend()
+        self.set_attrs(**self.model.attrs)
         c = copy.copy(current)
         if 'injected_square_current' in c.keys():
             c = current['injected_square_current']
