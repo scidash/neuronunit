@@ -213,10 +213,6 @@ class NEURONBackend(Backend):
         self.model_path = None
         self.h = h
         # Should check if a legitimately parallel MPI based NEURON is supported.
-
-        # Are these NEURON imports really necessary?
-        # self.h.load_file("stdlib.hoc")
-        # self.h.load_file("stdgui.hoc")
         self.lookup = {}
 
         super(NEURONBackend,self).init_backend()
@@ -225,17 +221,7 @@ class NEURONBackend(Backend):
             self._cell_name = cell_name
         if current_src_name:
             self._current_src_name = current_src_name
-        '''
-        if DTC is not None:
-            self.model.set_attrs(DTC.attrs)
 
-        if type(DTC) is not type(None):
-            self.set_attrs(**DTC.attrs)
-            if type(DTC.rheobase) is not type(None):
-                self.model.rheobase = DTC.rheobase
-            else:
-                self.model.rheobase = None
-        '''
     backend = 'NEURON'
 
     def reset_neuron(self, neuronVar):
@@ -499,10 +485,16 @@ class NEURONBackend(Backend):
         nrn_path = os.path.splitext(self.model.orig_lems_file_path)[0]+'_nrn.py'
         nrn = import_module_from_path(nrn_path)
         import copy
-        cache_attrs = copy.copy(self.model.attrs)
+
+        ##
+        # init_backend is the most reliable way to purge existing NEURON simulations.
+        # however we don't want to purge the model attributes, we only want to purge
+        # the NEURON model code.
+        # store the model attributes, in a temp buffer such that they persist throughout the model reinitialization.
+        ##
+        temp_attrs = copy.copy(self.model.attrs)
         self.init_backend()
-        self.set_attrs(**cache_attrs)
-        #print(len(self.results))
+        self.set_attrs(**temp_attrs)
 
         c = copy.copy(current)
         if 'injected_square_current' in c.keys():
