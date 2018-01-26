@@ -34,8 +34,8 @@ dataset_id = 354190013  # Internal ID that AIBS uses for a particular Scnn1a-Tg2
 # this file writing operation needs to be threadlocked
 observation = aibs.get_observation(dataset_id,'rheobase')
 ne_pickle = os.path.join(THIS_DIR,"neuroelectro.pickle")
-print(ne_pickle,'got here')
-print(THIS_DIR)
+#print(ne_pickle,'got here')
+#print(THIS_DIR)
 if os.path.isfile(ne_pickle):
     print('attempting to recover from pickled file')
     with open(ne_pickle, 'rb') as f:
@@ -51,7 +51,8 @@ else:
                      (passive.RestingPotentialTest,None),
                      (waveform.InjectedCurrentAPWidthTest,None),
                      (waveform.InjectedCurrentAPAmplitudeTest,None),
-                     (waveform.InjectedCurrentAPThresholdTest,None)]
+                     (waveform.InjectedCurrentAPThresholdTest,None)]#,
+                     #q(fi.RheobaseTestP,None)]
 
 
     for cls,params in test_class_params:
@@ -61,8 +62,8 @@ else:
         observation = cls.neuroelectro_summary_observation(neuron)
         tests += [cls(observation)]
 
-#with open(ne_pickle, 'wb') as f:
-#    pickle.dump(tests, f)
+    with open(ne_pickle, 'wb') as f:
+        pickle.dump(tests, f)
 
 def update_amplitude(test,tests,score):
     rheobase = score.prediction['value']#first find a value for rheobase
