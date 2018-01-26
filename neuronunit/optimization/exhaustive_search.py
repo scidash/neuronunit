@@ -3,10 +3,10 @@ import os
 import quantities as pq
 import numpy as np
 import importlib
-import ipyparallel as ipp
-rc = ipp.Client(profile='default')
-rc[:].use_cloudpickle()
-dview = rc[:]
+#import ipyparallel as ipp
+#rc = ipp.Client(profile='default')
+#rc[:].use_cloudpickle()
+#dview = rc[:]
 from neuronunit.optimization import get_neab
 tests = get_neab.tests
 
@@ -90,6 +90,8 @@ def create_grid(npoints=3,nparams=7,provided_keys=None):
 
 def dtc_to_rheo(dtc):
     from neuronunit.optimization import get_neab
+    import copy
+    dtc = copy.copy(dtc)
     dtc.scores = {}
     from neuronunit.models.reduced import ReducedModel
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend=('NEURON',{'DTC':dtc}))

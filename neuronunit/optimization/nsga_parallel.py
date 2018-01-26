@@ -8,13 +8,6 @@ import os
 from numpy import random
 import numpy as np
 
-import ipyparallel as ipp
-rc = ipp.Client(profile='default')
-#rc.Client.become_dask()
-
-rc[:].use_cloudpickle()
-dview = rc[:]
-
 import dask.bag as db
 import pandas as pd
 
@@ -42,35 +35,26 @@ def get_tests():
 def dtc_to_rheo(dtc):
     from neuronunit.models.reduced import ReducedModel
     from neuronunit.optimization import get_neab
+    import dask.dataframe as dd
     dtc.model_path = get_neab.LEMS_MODEL_PATH
     dtc.LEMS_MODEL_PATH = get_neab.LEMS_MODEL_PATH
-
-    #from neuronunit.optimization import evaluate_as_module
     model = ReducedModel(dtc.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-
     model.set_attrs(dtc.attrs)
     model.rheobase = None
     dtc.scores = None
     dtc.scores = {}
-    dtc.differences = None
-    dtc.differences = {}
-    get_neab.tests[0].dview = dview
+    dtc.score = None
+    dtc.score = {}
     score = get_neab.tests[0].judge(model,stop_on_error = False, deep_error = True)
-    print(score)
-    print(type(score))
-    print(model.attrs,dtc.attrs)
-    #print('sometime')
     observation = score.observation
     dtc.rheobase = score.prediction
-    #delta = evaluate_as_module.difference(observation,dtc.rheobase)
-    #dtc.differences[str(get_neab.tests[0])] = delta
     dtc.scores[str(get_neab.tests[0])] = score.sort_key
-    print(dtc.scores)
-    print(dtc.rheobase, 'recalculation')
-    #import pdb; pdb.set_trace()
+    dtc.score[str(get_neab.tests[0])] = pd.DataFrame([ score.sort_key ])
     return dtc
 
 def dtc_to_plotting(dtc):
+    import copy
+    dtc = copy.copy(dtc)
     dtc.t = None
     from neuronunit.models.reduced import ReducedModel
     from neuronunit.optimization import get_neab
@@ -91,27 +75,40 @@ def nunit_evaluation(dtc):
     from neuronunit.models.reduced import ReducedModel
     from neuronunit.optimization import get_neab
     tests = get_neab.tests
+    model = None
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend=('NEURON',{'DTC':dtc}))
     model.set_attrs(dtc.attrs)
     tests[0].prediction = dtc.rheobase
-    get_neab.tests[0].dview = dview
     model.rheobase = dtc.rheobase['value']
-    dtc = pre_format(dtc)
+    #import copy
+    #dtc2 = copy.copy(dtc)
 
     if not hasattr(dtc,'score'):
+        dtc.score = {}
+    if type(dtc.score) is type(None):
         dtc.score = {}
 
     for k,t in enumerate(tests[1:-1]):
         t.params = dtc.vtest[k]
+        score = None
         score = t.judge(model,stop_on_error = False, deep_error = False)
         assert bool(model.get_spike_count() == 1 or model.get_spike_count() == 0)
         dtc.scores[str(t)] = 1 - score.sort_key
-        #dtc.score[str(t)] = score
-        #print(dtc.scores)
+        if not hasattr(dtc,'score') :
+            dtc.score = {}
+            dtc.score[str(t)] = pd.DataFrame([ score.sort_key ])
+        else:
+            dtc.score[str(t)] = pd.DataFrame([ score.sort_key ])
+
+    #import copy
+    #dtc2 = copy.copy(dtc2)
+
     return dtc
 
 
 def evaluate(dtc):
+    import copy
+    dtc = copy.copy(dtc)
 
     from neuronunit.optimization import get_neab
     import numpy as np
@@ -140,6 +137,8 @@ def pre_format(dtc):
     rheobase values of current injection.
     This is much like the hooked method from the old get neab file.
     '''
+    import copy
+    dtc = copy.copy(dtc)
     import quantities as pq
     import copy
     dtc.vtest = None
@@ -202,6 +201,8 @@ def update_dtc_pop(pop, td):
         b = db.from_sequence(pop, npartitions=8)
         dtcpop = list(db.map(transform,b).compute())
 
+        #import pdb; pdb.set_trace()
+
         #dtcpop = list(dview.map_sync(transform, pop))
     else:
         # In this case pop is not really a population but an individual
@@ -228,7 +229,10 @@ def update_pop(pop,td):
     from neuronunit.optimization import model_parameters as modelp
     # given the wrong attributes, and they don't have rheobase values.
     dtcpop = list(update_dtc_pop(pop, td))
+
     dtcpop = list(map(dtc_to_rheo,dtcpop))
+    #print('broken all rheobase are the same')
+    #import pdb; pdb.set_trace()
     dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] > 0.0 , dtcpop))
     while len(dtcpop) < len(pop):
         dtcpop.append(dtcpop[0])
@@ -237,8 +241,8 @@ def update_pop(pop,td):
 
     b = db.from_sequence(dtcpop, npartitions=8)
     dtcpop = list(db.map(nunit_evaluation,b).compute())
-    b = db.from_sequence(dtcpop, npartitions=8)
-    dtcpop = list(db.map(nunit_evaluation,b).compute())
+    #b = db.from_sequence(dtcpop, npartitions=8)
+    #dtcpop = list(db.map(nunit_evaluation,b).compute())
 
 
     dtcpop = list(filter(lambda dtc: type(dtc.scores['RheobaseTestP']) is not type(None), dtcpop))

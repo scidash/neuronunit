@@ -49,7 +49,7 @@ class RheobaseTest(VmTest):
         lookup = self.threshold_FI(model, units)
         sub = np.array([x for x in lookup if lookup[x]==0])*units
         supra = np.array([x for x in lookup if lookup[x]>0])*units
-        self.verbose=True
+        #self.verbose=True
         if self.verbose:
             if len(sub):
                 print("Highest subthreshold current is %s" \
@@ -83,8 +83,12 @@ class RheobaseTest(VmTest):
 
                 uc = {'amplitude':ampl}
                 current.update(uc)
+                ampl = float(ampl)
+
                 model.inject_square_current(current)
+
                 n_spikes = model.get_spike_count()
+                self.verbose = True
                 if self.verbose:
                     print("Injected %s current and got %d spikes" % \
                             (ampl,n_spikes))
@@ -103,7 +107,7 @@ class RheobaseTest(VmTest):
         i = 0
 
         while True:
-            #sub means below threshold, or no spikes
+
             sub = np.array([x for x in lookup if lookup[x]==0])*units
             #supra means above threshold, but possibly too high above threshold.
 
@@ -295,6 +299,7 @@ class RheobaseTestP(VmTest):
             import os
             from neuronunit.models.reduced import ReducedModel
             import neuronunit
+            import copy
             #LEMS_MODEL_PATH = os.path.join(neuronunit.__path__[0],
             LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
             dtc.model_path = LEMS_MODEL_PATH
@@ -305,22 +310,20 @@ class RheobaseTestP(VmTest):
             params = {'injected_square_current':
                       {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
+            dtc = copy.copy(dtc)
             ampl = float(ampl)
             if ampl not in dtc.lookup or len(dtc.lookup)==0:
                 current = params.copy()['injected_square_current']
                 uc = {'amplitude':ampl}
                 current.update(uc)
                 current = {'injected_square_current':current}
+
                 dtc.run_number += 1
-                #import ipyparallel as ipp
-                #model = ipp.Reference('model')
                 model.set_attrs(dtc.attrs)
-                model.name = dtc.attrs
                 model.inject_square_current(current)
                 dtc.previous = ampl
                 n_spikes = model.get_spike_count()
                 dtc.lookup[float(ampl)] = n_spikes
-                #name = str('rheobase {0} parameters {1}'.format(str(current),str(model.params)))
 
 
                 if n_spikes == 1:
@@ -362,10 +365,10 @@ class RheobaseTestP(VmTest):
         def find_rheobase(self, dtc):
             import dask.bag as db
 
-            if not hasattr(self,'dview'):
-                import ipyparallel as ipp
-                rc = ipp.Client(profile='default')
-                self.dview = rc[:]
+            #if not hasattr(self,'dview'):
+            #    import ipyparallel as ipp
+            #    rc = ipp.Client(profile='default')
+            #        self.dview = rc[:]
             cnt = 0
             assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
             # If this it not the first pass/ first generation
@@ -381,14 +384,21 @@ class RheobaseTestP(VmTest):
                 dtcs = [ dtc for s in dtc.steps ]
 
 
-                #dtcpop = self.dview.map_sync(check_current,dtc.steps,dtcs)
                 # create two dask bags for
                 # a sequence gathered data type, that is partitioned into eight partition sizes.
 
                 b0 = db.from_sequence(dtc.steps, npartitions=8)
                 b1 = db.from_sequence(dtcs, npartitions=8)
 
+
+                # By default they rely on the multiprocessing scheduler, which has its own set of known limitations (see Shared Memory)
+                # Bags are immutable and so you can not change individual elements
+                # Bag operations tend to be slower than array/dataframe computations in the same way that standard Python containers tend to be slower than NumPy arrays and Pandas dataframes.
+                # Bag.groupby is slow. You should try to use Bag.foldby if possible. Using Bag.foldby requires more thought.
+
+
                 dtcpop = list(db.map(check_current,b0,b1).compute())
+                #dtcpop = list(map(check_current,b0,b1))
                 for dtc_clone in dtcpop:
                     dtc.lookup.update(dtc_clone.lookup)
                 dtc = check_fix_range(dtc)
