@@ -220,19 +220,22 @@ class NEURONBackend(Backend):
         self.lookup = {}
 
         super(NEURONBackend,self).init_backend()
-        if DTC is not None:
-            self.model.set_attrs(DTC.attrs)
         self.model.unpicklable += ['h','ns','_backend']
         if cell_name:
             self._cell_name = cell_name
         if current_src_name:
             self._current_src_name = current_src_name
+        '''
+        if DTC is not None:
+            self.model.set_attrs(DTC.attrs)
+
         if type(DTC) is not type(None):
             self.set_attrs(**DTC.attrs)
             if type(DTC.rheobase) is not type(None):
                 self.model.rheobase = DTC.rheobase
             else:
                 self.model.rheobase = None
+        '''
     backend = 'NEURON'
 
     def reset_neuron(self, neuronVar):
@@ -245,9 +248,12 @@ class NEURONBackend(Backend):
         the reset_neuron method is used to prevent a situation where a new models
         initial conditions are erroneously updated from a stale models final state.
         """
+        #self.h = None
 
         self.h = neuronVar.h
         self.neuron = neuronVar
+
+
 
     def set_stop_time(self, stopTime = 500*ms):
         """Sets the simulation duration
@@ -444,8 +450,8 @@ class NEURONBackend(Backend):
 
     def set_attrs(self, **attrs):
         self.model.attrs.update(attrs)
-
         assert type(self.model.attrs) is not type(None)
+        assert len(list(self.model.attrs.values())) > 0
         for h_key,h_value in attrs.items():
             self.h('m_{0}_{1}_pop[0].{2} = {3}'\
                 .format(self.cell_name,self.cell_name,h_key,h_value))
@@ -488,9 +494,15 @@ class NEURONBackend(Backend):
         """
         self.h = None
         self.neuron = None
-        import neuron
-        self.reset_neuron(neuron)
-        self.set_attrs(**self.model.attrs)
+
+        #import neuron
+        nrn_path = os.path.splitext(self.model.orig_lems_file_path)[0]+'_nrn.py'
+        nrn = import_module_from_path(nrn_path)
+        import copy
+        cache_attrs = copy.copy(self.model.attrs)
+        self.init_backend()
+        self.set_attrs(**cache_attrs)
+        #print(len(self.results))
 
         c = copy.copy(current)
         if 'injected_square_current' in c.keys():
@@ -515,7 +527,9 @@ class NEURONBackend(Backend):
 
     def _local_run(self):
         self.h('run()')
+
         results={}
+
         # Prepare NEURON vectors for quantities/sciunit
         # By rescaling voltage to milli volts, and time to milli seconds.
         results['vm'] = [float(x/1000.0) for x in copy.copy(self.neuron.h.v_v_of0.to_python())]
