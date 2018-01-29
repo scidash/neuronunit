@@ -21,7 +21,7 @@ class LEMSModel(sciunit.Model,
                 ):
     """A generic LEMS model"""
 
-    def __init__(self, LEMS_file_path, name=None, 
+    def __init__(self, LEMS_file_path, name=None,
                     backend='jNeuroML', attrs=None):
 
         #for base in cls.__bases__:
@@ -35,7 +35,7 @@ class LEMSModel(sciunit.Model,
         assert os.path.isfile(self.orig_lems_file_path),\
             "'%s' is not a file" % self.orig_lems_file_path
         # Use original path unless create_lems_file is called
-        self.lems_file_path = self.orig_lems_file_path 
+        self.lems_file_path = self.orig_lems_file_path
         self.run_defaults = pynml.DEFAULTS
         self.run_defaults['nogui'] = True
         self.run_params = {}
@@ -122,7 +122,7 @@ class LEMSModel(sciunit.Model,
 
     def inject_square_current(self,current):
         self._backend.inject_square_current(current)
-        
+
     def set_lems_attrs(self, attrs, path=None):
         if path is None:
             path = self.lems_file_path
@@ -135,7 +135,7 @@ class LEMSModel(sciunit.Model,
                     for key2,value2 in value1.items():
                         node.attrib[key2] = value2
             tree.write(p)
-        
+
     def run(self, rerun=None, **run_params):
         if rerun is None:
             rerun = self.rerun
@@ -154,7 +154,7 @@ class LEMSModel(sciunit.Model,
         # Reset run parameters so the next test has to pass its own
         # run parameters and not use the same ones
         self.run_params = {}
-        
+
     def set_run_params(self, **params):
         self._backend.set_run_params(**params)
 
@@ -190,5 +190,6 @@ class LEMSModel(sciunit.Model,
         return self._state(keys=['name','url', 'attrs','run_params'])
 
     def __del__(self):
-        self.temp_dir.cleanup() # Delete the temporary directory
-        super(LEMSModel,self).__del__()
+        if hasattr(self,'temp_dir'):# is not type(None):
+            self.temp_dir.cleanup() # Delete the temporary directory
+            super(LEMSModel,self).__del__()

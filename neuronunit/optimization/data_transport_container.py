@@ -27,3 +27,4 @@ class DataTC(object):
         self.searched = []
         self.searchedd = {}
         self.cached_attrs = {}
+        self.backend = None
