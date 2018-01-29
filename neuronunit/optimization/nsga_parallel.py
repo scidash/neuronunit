@@ -38,7 +38,7 @@ def dtc_to_rheo(dtc):
     import dask.dataframe as dd
     dtc.model_path = get_neab.LEMS_MODEL_PATH
     dtc.LEMS_MODEL_PATH = get_neab.LEMS_MODEL_PATH
-    model = ReducedModel(dtc.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+    model = ReducedModel(dtc.LEMS_MODEL_PATH,name=str('vanilla'),backend=dtc.backend)
     model.set_attrs(dtc.attrs)
     model.rheobase = None
     dtc.scores = None
@@ -76,10 +76,14 @@ def nunit_evaluation(dtc):
     from neuronunit.optimization import get_neab
     tests = get_neab.tests
     model = None
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend=('NEURON',{'DTC':dtc}))
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend=dtc.backend)
+    #,{'DTC':dtc}))
+
+    #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend=('NEURON',{'DTC':dtc}))
     model.set_attrs(dtc.attrs)
     tests[0].prediction = dtc.rheobase
     model.rheobase = dtc.rheobase['value']
+    print(model.rheobase)
     #import copy
     #dtc2 = copy.copy(dtc)
 
@@ -192,6 +196,7 @@ def update_dtc_pop(pop, td):
         import dask.bag as db
         from neuronunit.optimization.data_transport_container import DataTC
         dtc = DataTC()
+        dtc.backend = 'pyNN'
         dtc.attrs = {}
         for i,j in enumerate(ind):
             dtc.attrs[str(td[i])] = j
