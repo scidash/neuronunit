@@ -49,7 +49,7 @@ class RheobaseTest(VmTest):
         lookup = self.threshold_FI(model, units)
         sub = np.array([x for x in lookup if lookup[x]==0])*units
         supra = np.array([x for x in lookup if lookup[x]>0])*units
-        self.verbose=True
+        #self.verbose=True
         if self.verbose:
             if len(sub):
                 print("Highest subthreshold current is %s" \
@@ -83,8 +83,12 @@ class RheobaseTest(VmTest):
 
                 uc = {'amplitude':ampl}
                 current.update(uc)
+                ampl = float(ampl)
+
                 model.inject_square_current(current)
+
                 n_spikes = model.get_spike_count()
+                self.verbose = True
                 if self.verbose:
                     print("Injected %s current and got %d spikes" % \
                             (ampl,n_spikes))
@@ -103,7 +107,7 @@ class RheobaseTest(VmTest):
         i = 0
 
         while True:
-            #sub means below threshold, or no spikes
+
             sub = np.array([x for x in lookup if lookup[x]==0])*units
             #supra means above threshold, but possibly too high above threshold.
 
@@ -145,40 +149,13 @@ class RheobaseTest(VmTest):
         if self.rheobase_vm is not None:
             score.related_data['vm'] = self.rheobase_vm
 
-class DataTC(object):
-    '''
-    Data Transport Vessel
-
-    This Object class serves as a data type for storing rheobase search
-    attributes and a priori model parameters,
-    with the distinction that unlike the NEURON model this class
-    can be cheaply transported across HOSTS/CPUs
-    '''
-    def __init__(self):
-        self.lookup = {}
-        self.rheobase = None
-        self.previous = 0
-        self.run_number = 0
-        self.attrs = None
-        self.steps = None
-        self.name = None
-        self.fitness = None
-        self.scores = {}
-        self.boolean = False
-        self.initiated = False
-        self.evaluated = False
-        self.results = {}
-        #self.searched = []
-        self.searchedd = {}
-        self.cached_attrs = {}
-        self.differences = {}
-        self.ratios = {}
-        self.delta = []
-        #self.pickle_stream = []
-        #self.model_path = ""
+from neuronunit.optimization.data_transport_container import DataTC
 
 
 class RheobaseTestP(VmTest):
+
+
+
      """
      A parallel version of test Rheobase.
      Tests the full widths of APs at their half-maximum
@@ -187,7 +164,7 @@ class RheobaseTestP(VmTest):
      """
      def _extra(self,dview=None):
          self.prediction = None
-         self.dview = dview
+         #self.dview = dview
 
      required_capabilities = (cap.ReceivesSquareCurrent,
                               cap.ProducesSpikes)
@@ -238,7 +215,7 @@ class RheobaseTestP(VmTest):
             import numpy as np
             import quantities as pq
             from ipyparallel import depend, require, dependent
-
+            print('stuck here')
             sub=[]
             supra=[]
             steps=[]
@@ -249,7 +226,7 @@ class RheobaseTestP(VmTest):
 
                 if v == 1:
                     #A logical flag is returned to indicate that rheobase was found.
-                    dtc.rheobase=float(k)
+                    dtc.rheobase = float(k)
                     #dtc.searched.append(float(k))
                     dtc.steps = 0.0
                     dtc.boolean = True
@@ -261,6 +238,16 @@ class RheobaseTestP(VmTest):
 
             sub = np.array(sub)
             supra = np.array(supra)
+            print(sub,'sub')
+            print(supra,'supra')
+
+            if 0. in supra and len(sub) == 0:
+                dtc.boolean = True
+                dtc.rheobase = -1
+                #score = scores.InsufficientDataScore(None)
+
+                return dtc
+
 
             if len(sub)!=0 and len(supra)!=0:
                 #this assertion would only be occur if there was a bug
@@ -295,32 +282,33 @@ class RheobaseTestP(VmTest):
             import os
             from neuronunit.models.reduced import ReducedModel
             import neuronunit
+            import copy
             #LEMS_MODEL_PATH = os.path.join(neuronunit.__path__[0],
             LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
             dtc.model_path = LEMS_MODEL_PATH
-            model = ReducedModel(dtc.model_path,name='vanilla',backend='NEURON')
+            model = ReducedModel(dtc.model_path,name='vanilla',backend = dtc.backend)
+
 
             DELAY = 100.0*pq.ms
             DURATION = 1000.0*pq.ms
             params = {'injected_square_current':
                       {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
+            dtc = copy.copy(dtc)
             ampl = float(ampl)
             if ampl not in dtc.lookup or len(dtc.lookup)==0:
                 current = params.copy()['injected_square_current']
                 uc = {'amplitude':ampl}
                 current.update(uc)
                 current = {'injected_square_current':current}
+
                 dtc.run_number += 1
-                #import ipyparallel as ipp
-                #model = ipp.Reference('model')
                 model.set_attrs(dtc.attrs)
-                model.name = dtc.attrs
                 model.inject_square_current(current)
                 dtc.previous = ampl
                 n_spikes = model.get_spike_count()
+                print(n_spikes, 'n_spikes')
                 dtc.lookup[float(ampl)] = n_spikes
-                #name = str('rheobase {0} parameters {1}'.format(str(current),str(model.params)))
 
 
                 if n_spikes == 1:
@@ -332,13 +320,12 @@ class RheobaseTestP(VmTest):
             if float(ampl) in dtc.lookup:
                 return dtc
 
-        import numpy as np
-        import copy
-        #import pdb
-        #import get_neab
 
         @require('itertools','numpy','copy')
         def init_dtc(dtc):
+            import numpy as np
+            import copy
+
             if dtc.initiated == True:
                 # expand values in the range to accomodate for mutation.
                 # but otherwise exploit memory of this range.
@@ -361,29 +348,48 @@ class RheobaseTestP(VmTest):
 
         @require('itertools')
         def find_rheobase(self, dtc):
-            if type(self.dview) is type(None):
-                import ipyparallel as ipp
-                rc = ipp.Client(profile='default')
-                self.dview = rc[:]
+            import dask.bag as db
+
+            #if not hasattr(self,'dview'):
+            #    import ipyparallel as ipp
+            #    rc = ipp.Client(profile='default')
+            #        self.dview = rc[:]
             cnt = 0
             assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
             # If this it not the first pass/ first generation
             # then assume the rheobase value found before mutation still holds until proven otherwise.
-            if type(model.rheobase) is not type(None):
-                dtc = check_current(model.rheobase,dtc)
+            # dtc = check_current(model.rheobase,dtc)
             # If its not true enter a search, with ranges informed by memory
+
+
             cnt = 0
             while dtc.boolean == False:
                 #dtc.searched.append(dtc.steps)
 
                 dtcs = [ dtc for s in dtc.steps ]
-                dtcpop = self.dview.map(check_current,dtc.steps,dtcs)
-                for dtc_clone in dtcpop:#.get():
+
+                #from dask.distributed import Client
+                #client = Client()
+                # create two dask bags for
+                # a sequence gathered data type, that is partitioned into eight partition sizes.
+                #ncores = client.ncores()
+                #partitions = len(list(ncores.values()))
+                b0 = db.from_sequence(dtc.steps, npartitions=8)
+                b1 = db.from_sequence(dtcs, npartitions=8)
+
+
+                # By default they rely on the multiprocessing scheduler, which has its own set of known limitations (see Shared Memory)
+                # Bags are immutable and so you can not change individual elements
+                # Bag operations tend to be slower than array/dataframe computations in the same way that standard Python containers tend to be slower than NumPy arrays and Pandas dataframes.
+                # Bag.groupby is slow. You should try to use Bag.foldby if possible. Using Bag.foldby requires more thought.
+
+
+                dtcpop = list(db.map(check_current,b0,b1).compute())
+                for dtc_clone in dtcpop:
                     dtc.lookup.update(dtc_clone.lookup)
                 dtc = check_fix_range(dtc)
                 cnt += 1
             return dtc
-
 
         dtc = DataTC()
         dtc.attrs = {}
@@ -391,9 +397,15 @@ class RheobaseTestP(VmTest):
             dtc.attrs[k]=v
         dtc = init_dtc(dtc)
         dtc.model_path = model.orig_lems_file_path
+        dtc.backend = model.backend
         assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
         prediction = {}
         prediction['value'] = find_rheobase(self,dtc).rheobase * pq.pA
+        print('weird arse prediction',prediction, type(prediction))
+        if type(prediction['value']) is type(None):
+            prediction['value'] = -1 * pq.pA
+        if type(prediction['value']) is type(float) and prediction['value'] <= 0.0:
+            prediction['value'] = -1 * pq.pA
         return prediction
 
      def bind_score(self, score, model, observation, prediction):
@@ -402,18 +414,18 @@ class RheobaseTestP(VmTest):
 
      def compute_score(self, observation, prediction):
          """Implementation of sciunit.Test.score_prediction."""
-         #print("%s: Observation = %s, Prediction = %s" % \
-         #	 (self.name,str(observation),str(prediction)))
 
          score = None
-         if prediction['value'] is None:
+         if type(prediction['value']) is type(None):
+            prediction['value'] = -1 * pq.pA
+            return scores.InsufficientDataScore(None)
 
-            score = scores.InsufficientDataScore(None)
-         elif prediction['value'] <= 0:
+         if float(prediction['value']) <= 0.0:
+            print('gets here')
             # if rheobase is negative discard the model essentially.
-            score = scores.InsufficientDataScore(None)
-         else:
-             score = super(RheobaseTestP,self).\
-                         compute_score(observation, prediction)
-         #assert type(score) is not None
+            prediction['value'] = -1 * pq.pA
+            return scores.InsufficientDataScore(None)
+
+         score = super(RheobaseTestP,self).\
+                     compute_score(observation, prediction)
          return score
