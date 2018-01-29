@@ -183,6 +183,9 @@ class DataTC(object):
 
 
 class RheobaseTestP(VmTest):
+
+
+
      """
      A parallel version of test Rheobase.
      Tests the full widths of APs at their half-maximum
@@ -191,7 +194,7 @@ class RheobaseTestP(VmTest):
      """
      def _extra(self,dview=None):
          self.prediction = None
-         self.dview = dview
+         #self.dview = dview
 
      required_capabilities = (cap.ReceivesSquareCurrent,
                               cap.ProducesSpikes)
@@ -242,7 +245,7 @@ class RheobaseTestP(VmTest):
             import numpy as np
             import quantities as pq
             from ipyparallel import depend, require, dependent
-
+            print('stuck here')
             sub=[]
             supra=[]
             steps=[]
@@ -253,7 +256,7 @@ class RheobaseTestP(VmTest):
 
                 if v == 1:
                     #A logical flag is returned to indicate that rheobase was found.
-                    dtc.rheobase=float(k)
+                    dtc.rheobase = float(k)
                     #dtc.searched.append(float(k))
                     dtc.steps = 0.0
                     dtc.boolean = True
@@ -265,6 +268,16 @@ class RheobaseTestP(VmTest):
 
             sub = np.array(sub)
             supra = np.array(supra)
+            print(sub,'sub')
+            print(supra,'supra')
+
+            if 0. in supra and len(sub) == 0:
+                dtc.boolean = True
+                dtc.rheobase = -1
+                #score = scores.InsufficientDataScore(None)
+
+                return dtc
+
 
             if len(sub)!=0 and len(supra)!=0:
                 #this assertion would only be occur if there was a bug
@@ -303,7 +316,9 @@ class RheobaseTestP(VmTest):
             #LEMS_MODEL_PATH = os.path.join(neuronunit.__path__[0],
             LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
             dtc.model_path = LEMS_MODEL_PATH
-            model = ReducedModel(dtc.model_path,name='vanilla',backend='NEURON')
+
+            model = ReducedModel(dtc.model_path,name='vanilla',backend=dtc.backend)
+
 
             DELAY = 100.0*pq.ms
             DURATION = 1000.0*pq.ms
@@ -323,6 +338,7 @@ class RheobaseTestP(VmTest):
                 model.inject_square_current(current)
                 dtc.previous = ampl
                 n_spikes = model.get_spike_count()
+                print(n_spikes, 'n_spikes')
                 dtc.lookup[float(ampl)] = n_spikes
 
 
@@ -383,10 +399,12 @@ class RheobaseTestP(VmTest):
 
                 dtcs = [ dtc for s in dtc.steps ]
 
-
+                #from dask.distributed import Client
+                #client = Client()
                 # create two dask bags for
                 # a sequence gathered data type, that is partitioned into eight partition sizes.
-
+                #ncores = client.ncores()
+                #partitions = len(list(ncores.values()))
                 b0 = db.from_sequence(dtc.steps, npartitions=8)
                 b1 = db.from_sequence(dtcs, npartitions=8)
 
@@ -398,13 +416,11 @@ class RheobaseTestP(VmTest):
 
 
                 dtcpop = list(db.map(check_current,b0,b1).compute())
-                #dtcpop = list(map(check_current,b0,b1))
                 for dtc_clone in dtcpop:
                     dtc.lookup.update(dtc_clone.lookup)
                 dtc = check_fix_range(dtc)
                 cnt += 1
             return dtc
-
 
         dtc = DataTC()
         dtc.attrs = {}
@@ -415,6 +431,11 @@ class RheobaseTestP(VmTest):
         assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
         prediction = {}
         prediction['value'] = find_rheobase(self,dtc).rheobase * pq.pA
+        print('weird arse prediction',prediction, type(prediction))
+        if type(prediction['value']) is type(None):
+            prediction['value'] = -1 * pq.pA
+        if type(prediction['value']) is type(float) and prediction['value'] <= 0.0:
+            prediction['value'] = -1 * pq.pA
         return prediction
 
      def bind_score(self, score, model, observation, prediction):
@@ -423,18 +444,18 @@ class RheobaseTestP(VmTest):
 
      def compute_score(self, observation, prediction):
          """Implementation of sciunit.Test.score_prediction."""
-         #print("%s: Observation = %s, Prediction = %s" % \
-         #	 (self.name,str(observation),str(prediction)))
 
          score = None
-         if prediction['value'] is None:
+         if type(prediction['value']) is type(None):
+            prediction['value'] = -1 * pq.pA
+            return scores.InsufficientDataScore(None)
 
-            score = scores.InsufficientDataScore(None)
-         elif prediction['value'] <= 0:
+         if float(prediction['value']) <= 0.0:
+            print('gets here')
             # if rheobase is negative discard the model essentially.
-            score = scores.InsufficientDataScore(None)
-         else:
-             score = super(RheobaseTestP,self).\
-                         compute_score(observation, prediction)
-         #assert type(score) is not None
+            prediction['value'] = -1 * pq.pA
+            return scores.InsufficientDataScore(None)
+
+         score = super(RheobaseTestP,self).\
+                     compute_score(observation, prediction)
          return score
