@@ -94,9 +94,11 @@ def dtc_to_rheo(dtc):
     dtc = copy.copy(dtc)
     dtc.scores = {}
     from neuronunit.models.reduced import ReducedModel
+
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend=('NEURON',{'DTC':dtc}))
     before = list(model.attrs.items())
     model.set_attrs(dtc.attrs)
+    model.backend = dtc.backend
     model.rheobase = None
     rbt = get_neab.tests[0]
 	# Preferred flow of data movement: but not compatible with cloud pickle
@@ -111,11 +113,16 @@ def dtc_to_rheo(dtc):
 
 def update_dtc_pop(item_of_iter_list):
     from neuronunit.optimization import data_transport_container
+    import copy
     dtc = data_transport_container.DataTC()
     dtc.attrs = item_of_iter_list
     dtc.scores = {}
     dtc.rheobase = None
     dtc.evaluated = False
+    dtc.backend = 'pyNN'
+    #print(dtc.backend)
+    dtc = copy.copy(dtc)
+
     return dtc
 
 def run_grid(npoints,nparams,provided_keys=None):
