@@ -196,7 +196,9 @@ def update_dtc_pop(pop, td):
         import dask.bag as db
         from neuronunit.optimization.data_transport_container import DataTC
         dtc = DataTC()
+        dtc.backend = None
         dtc.backend = 'pyNN'
+        print(dtc.backend)
         dtc.attrs = {}
         for i,j in enumerate(ind):
             dtc.attrs[str(td[i])] = j
