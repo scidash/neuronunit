@@ -149,37 +149,7 @@ class RheobaseTest(VmTest):
         if self.rheobase_vm is not None:
             score.related_data['vm'] = self.rheobase_vm
 
-class DataTC(object):
-    '''
-    Data Transport Vessel
-
-    This Object class serves as a data type for storing rheobase search
-    attributes and a priori model parameters,
-    with the distinction that unlike the NEURON model this class
-    can be cheaply transported across HOSTS/CPUs
-    '''
-    def __init__(self):
-        self.lookup = {}
-        self.rheobase = None
-        self.previous = 0
-        self.run_number = 0
-        self.attrs = None
-        self.steps = None
-        self.name = None
-        self.fitness = None
-        self.scores = {}
-        self.boolean = False
-        self.initiated = False
-        self.evaluated = False
-        self.results = {}
-        #self.searched = []
-        self.searchedd = {}
-        self.cached_attrs = {}
-        self.differences = {}
-        self.ratios = {}
-        self.delta = []
-        #self.pickle_stream = []
-        #self.model_path = ""
+from neuronunit.optimization.data_transport_container import DataTC
 
 
 class RheobaseTestP(VmTest):
@@ -316,8 +286,7 @@ class RheobaseTestP(VmTest):
             #LEMS_MODEL_PATH = os.path.join(neuronunit.__path__[0],
             LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
             dtc.model_path = LEMS_MODEL_PATH
-
-            model = ReducedModel(dtc.model_path,name='vanilla',backend=dtc.backend)
+            model = ReducedModel(dtc.model_path,name='vanilla',backend = dtc.backend)
 
 
             DELAY = 100.0*pq.ms
@@ -428,6 +397,7 @@ class RheobaseTestP(VmTest):
             dtc.attrs[k]=v
         dtc = init_dtc(dtc)
         dtc.model_path = model.orig_lems_file_path
+        dtc.backend = model.backend
         assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
         prediction = {}
         prediction['value'] = find_rheobase(self,dtc).rheobase * pq.pA
