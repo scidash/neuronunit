@@ -631,7 +631,7 @@ class pyNNBackend(Backend):
         c['amplitude'] = re.sub('\ pA$', '', str(c['amplitude']))
         stop = float(c['delay'])+float(c['duration'])
         start = float(c['delay'])
-        amplitude = float(c['amplitude'])/1000000.0
+        amplitude = float(c['amplitude'])/1000.0
         print('amplitude',amplitude)
         electrode = self.neuron.DCSource(start=start, stop=stop, amplitude=amplitude)
         electrode.inject_into([self.population[0]])
