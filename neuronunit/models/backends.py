@@ -30,8 +30,10 @@ class Backend(object):
     """Base class for simulator backends that implement simulator-specific
     details of modifying, running, and reading results from the simulation
     """
+    #self.tstop = None
 
     def init_backend(self, *args, **kwargs):
+        #self.attrs = {} if attrs is None else attrs
         self.model.attrs = {}
 
         self.use_memory_cache = kwargs.get('use_memory_cache', True)
@@ -178,9 +180,23 @@ class jNeuroMLBackend(Backend):
                     exec_in_dir=self.exec_in_dir,
                     verbose=self.model.run_params['v'])
         return results
+'''
+class brianBackend(Backend):
+    """Used for generation of code for PyNN, with simulation using NEURON"""
 
+    backend = 'brian'
+    try:
+        from brian2.library.IF import Izhikevich, ms
+        eqs=Izhikevich(a=0.02/ms,b=0.2/ms)
+        print(eqs)
 
-#from backends import Backend
+    except:
+        import os
+        os.system('pip install brian2')
+        #from brian2.library.IF import Izhikevich, ms
+        #eqs=Izhikevich(a=0.02/ms,b=0.2/ms)
+        #print(eqs)
+'''
 
 class NEURONBackend(Backend):
     """Used for simulation with NEURON, a popular simulator
@@ -268,6 +284,9 @@ class NEURONBackend(Backend):
         """
 
         self.h.cvode.atol(tolerance)
+        # Unsure if these lines actually work:
+        # self.cvode = self.h.CVode()
+        # self.cvode.atol(tolerance)
 
     def set_integration_method(self, method = "fixed"):
         """Sets the simulation itegration method
@@ -389,6 +408,7 @@ class NEURONBackend(Backend):
         NEURON_file_path ='{0}_nrn.py'.format(base_name)
         self.neuron_model_dir = os.path.dirname(self.model.orig_lems_file_path)
         assert os.path.isdir(self.neuron_model_dir)
+
         if not os.path.exists(NEURON_file_path):
             pynml.run_lems_with_jneuroml_neuron(self.model.orig_lems_file_path,
                               skip_run=False,
@@ -398,7 +418,7 @@ class NEURONBackend(Backend):
                               plot=False,
                               show_plot_already=False,
                               exec_in_dir = self.neuron_model_dir,
-                              verbose=True,
+                              verbose=verbose,
                               exit_on_fail = True)
             # use a different process to call NEURONS compiler nrnivmodl in the
             # background if the NEURON_file_path does not yet exist.
@@ -438,6 +458,7 @@ class NEURONBackend(Backend):
 
     def set_attrs(self, **attrs):
         self.model.attrs.update(attrs)
+
         assert type(self.model.attrs) is not type(None)
         assert len(list(self.model.attrs.values())) > 0
         for h_key,h_value in attrs.items():
@@ -523,9 +544,7 @@ class NEURONBackend(Backend):
 
     def _local_run(self):
         self.h('run()')
-
         results={}
-
         # Prepare NEURON vectors for quantities/sciunit
         # By rescaling voltage to milli volts, and time to milli seconds.
         results['vm'] = [float(x/1000.0) for x in copy.copy(self.neuron.h.v_v_of0.to_python())]
