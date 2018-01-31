@@ -13,7 +13,7 @@ import sciunit
 #from sciunit.utils import dict_hash
 import neuronunit.capabilities as cap
 from pyneuroml import pynml
-from . import backends
+from .backends import available_backends
 
 
 class LEMSModel(sciunit.Model,
@@ -22,7 +22,7 @@ class LEMSModel(sciunit.Model,
     """A generic LEMS model"""
 
     def __init__(self, LEMS_file_path, name=None,
-                    backend='jNeuroML', attrs=None):
+                    backend=None, attrs=None):
 
         #for base in cls.__bases__:
         #    sciunit.Model.__init__()
@@ -43,6 +43,8 @@ class LEMSModel(sciunit.Model,
         self.skip_run = False
         self.rerun = True # Needs to be rerun since it hasn't been run yet!
         self.unpicklable = []
+        if backend is None:
+            backend = 'jNeuroML'
         self.set_backend(backend)
 
     def get_backend(self):
@@ -67,13 +69,9 @@ class LEMSModel(sciunit.Model,
                         args += backend[i]
         else:
             raise TypeError("Backend must be string, tuple, or list")
-        options = {x.replace('Backend',''):cls for x, cls \
-                   in backends.__dict__.items() \
-                   if inspect.isclass(cls) and \
-                   issubclass(cls, backends.Backend)}
-        if name in options:
+        if name in available_backends:
             self.backend = name
-            self._backend = options[name]()
+            self._backend = available_backends[name]()
         elif name is None:
             # The base class should not be called.
             raise Exception(("A backend (e.g. 'jNeuroML' or 'NEURON') "

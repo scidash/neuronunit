@@ -1,32 +1,5 @@
-"""Simulator backends for NeuronUnit models"""
-import sys
-import os
-import platform
-import re
-import copy
-import tempfile
-import pickle
-import importlib
-import shelve
-import subprocess
+from .base import *
 
-import neuronunit.capabilities as cap
-from quantities import ms, mV, nA
-from pyneuroml import pynml
-from quantities import ms, mV
-from neo.core import AnalogSignal
-import neuronunit.capabilities.spike_functions as sf
-import sciunit
-from sciunit.utils import dict_hash, import_module_from_path
-try:
-    import neuron
-    from neuron import h
-    NEURON_SUPPORT = True
-except:
-    NEURON_SUPPORT = False
-
-
-from neuronunit.models.backends import Backend
 class NEURONBackend(Backend):
     """Used for simulation with NEURON, a popular simulator
     http://www.neuron.yale.edu/neuron/
@@ -113,9 +86,6 @@ class NEURONBackend(Backend):
         """
 
         self.h.cvode.atol(tolerance)
-        # Unsure if these lines actually work:
-        # self.cvode = self.h.CVode()
-        # self.cvode.atol(tolerance)
 
     def set_integration_method(self, method = "fixed"):
         """Sets the simulation itegration method
@@ -237,7 +207,6 @@ class NEURONBackend(Backend):
         NEURON_file_path ='{0}_nrn.py'.format(base_name)
         self.neuron_model_dir = os.path.dirname(self.model.orig_lems_file_path)
         assert os.path.isdir(self.neuron_model_dir)
-
         if not os.path.exists(NEURON_file_path):
             pynml.run_lems_with_jneuroml_neuron(self.model.orig_lems_file_path,
                               skip_run=False,
@@ -287,7 +256,6 @@ class NEURONBackend(Backend):
 
     def set_attrs(self, **attrs):
         self.model.attrs.update(attrs)
-
         assert type(self.model.attrs) is not type(None)
         assert len(list(self.model.attrs.values())) > 0
         for h_key,h_value in attrs.items():
@@ -336,8 +304,6 @@ class NEURONBackend(Backend):
         #import neuron
         nrn_path = os.path.splitext(self.model.orig_lems_file_path)[0]+'_nrn.py'
         nrn = import_module_from_path(nrn_path)
-
-
         import copy
 
         ##
@@ -381,6 +347,5 @@ class NEURONBackend(Backend):
         results['run_number'] = results.get('run_number',0) + 1
 
         return results
-
 
 from neuronunit.models import section_extension
