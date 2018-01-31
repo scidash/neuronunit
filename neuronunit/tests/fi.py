@@ -215,7 +215,7 @@ class RheobaseTestP(VmTest):
             import numpy as np
             import quantities as pq
             from ipyparallel import depend, require, dependent
-            print('stuck here')
+            #print('stuck here')
             sub=[]
             supra=[]
             steps=[]
@@ -238,8 +238,6 @@ class RheobaseTestP(VmTest):
 
             sub = np.array(sub)
             supra = np.array(supra)
-            print(sub,'sub')
-            print(supra,'supra')
 
             if 0. in supra and len(sub) == 0:
                 dtc.boolean = True
@@ -401,7 +399,7 @@ class RheobaseTestP(VmTest):
         assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
         prediction = {}
         prediction['value'] = find_rheobase(self,dtc).rheobase * pq.pA
-        print('weird arse prediction',prediction, type(prediction))
+        #print('weird arse prediction',prediction, type(prediction))
         if type(prediction['value']) is type(None):
             prediction['value'] = -1 * pq.pA
         if type(prediction['value']) is type(float) and prediction['value'] <= 0.0:
@@ -421,7 +419,7 @@ class RheobaseTestP(VmTest):
             return scores.InsufficientDataScore(None)
 
          if float(prediction['value']) <= 0.0:
-            print('gets here')
+            #print('gets here')
             # if rheobase is negative discard the model essentially.
             prediction['value'] = -1 * pq.pA
             return scores.InsufficientDataScore(None)
