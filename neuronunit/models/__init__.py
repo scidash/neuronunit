@@ -191,4 +191,6 @@ class LEMSModel(sciunit.Model,
 
     def __del__(self):
         self.temp_dir.cleanup() # Delete the temporary directory
-        super(LEMSModel,self).__del__()
+        parent = super(LEMSModel,self)
+        if hasattr(parent,'__del__'):
+            parent.__del__()
