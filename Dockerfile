@@ -26,9 +26,11 @@ RUN sudo apt-get install -y python-setuptools
 RUN sudo python setup.py install
 WORKDIR $HOME
 
-COPY BluePyOpt ~/HOME/BluePyOpt
+COPY $HOME/git/BluePyOpt ~/HOME/BluePyOpt
 RUN pip install -e $HOME/BluePyOpt
 WORKDIR $HOME
+RUN pip install prospector
+RUN pip install pyosf
 
 # RUN sed -i.bak '41d' /opt/conda/lib/python3.5/site-packages/lems/model/model.py
 

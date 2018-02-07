@@ -48,6 +48,9 @@ class pyNNBackend(Backend):
         results={}
         self.population.record('v')
         self.population.record('spikes')
+        # For ome reason you need to record from all three neurons in a population
+        # In order to get the membrane potential from only the stimulated neuron.
+
         self.population[0:2].record(('v', 'spikes','u'))
         self.neuron.run(650.0)
         data = self.population.get_data().segments[0]
@@ -82,12 +85,8 @@ class pyNNBackend(Backend):
 
     def inject_square_current(self, current):
         attrs = self.model.attrs
-        attrs_ = {x:attrs[x] for x in ['a','b','c','d']}
-        self.Iz = None
-        self.population = None
-        self.Iz = self.Izhikevich(i_offset=[0.014, 0.0, 0.0], **attrs_)
-        self.population = self.Population(3, self.Iz)
-
+        self.init_backend()
+        self.set_attrs(**attrs)
         c = copy.copy(current)
         if 'injected_square_current' in c.keys():
             c = current['injected_square_current']
@@ -101,21 +100,3 @@ class pyNNBackend(Backend):
         print('amplitude',amplitude)
         electrode = self.neuron.DCSource(start=start, stop=stop, amplitude=amplitude)
         electrode.inject_into([self.population[0]])
-
-'''
-class brianBackend(Backend):
-    """Used for generation of code for PyNN, with simulation using NEURON"""
-
-    backend = 'brian'
-    try:
-        from brian2.library.IF import Izhikevich, ms
-        eqs=Izhikevich(a=0.02/ms,b=0.2/ms)
-        print(eqs)
-
-    except:
-        import os
-        os.system('pip install brian2')
-        #from brian2.library.IF import Izhikevich, ms
-        #eqs=Izhikevich(a=0.02/ms,b=0.2/ms)
-        #print(eqs)
-'''

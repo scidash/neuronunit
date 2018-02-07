@@ -347,5 +347,3 @@ class NEURONBackend(Backend):
         results['run_number'] = results.get('run_number',0) + 1
 
         return results
-
-from neuronunit.models import section_extension

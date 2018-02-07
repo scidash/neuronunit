@@ -3,23 +3,11 @@ import os
 import quantities as pq
 import numpy as np
 import importlib
-#import ipyparallel as ipp
-#rc = ipp.Client(profile='default')
-#rc[:].use_cloudpickle()
-#dview = rc[:]
+
 from neuronunit.optimization import get_neab
 tests = get_neab.tests
 
 
-'''
-# serial file write.
-rc[0].apply(file_write, tests)
-#Broadcast the tests to workers
-test_dic = {}
-for t in tests:
-    test_dic[str(t.name)] = t
-dview.push(test_dic,targets=0)
-'''
 def sample_points(iter_dict, npoints=3):
     import numpy as np
     replacement={}
@@ -101,10 +89,7 @@ def dtc_to_rheo(dtc):
     model.backend = dtc.backend
     model.rheobase = None
     rbt = get_neab.tests[0]
-	# Preferred flow of data movement: but not compatible with cloud pickle
-    # rbt = dview.pull('RheobaseTestP',targets=0)
-    # print(rbt)
-    # rbt.dview = dview
+
     score = rbt.judge(model,stop_on_error = False, deep_error = True)
     dtc.scores[str(rbt)] = score.sort_key
     observation = score.observation
