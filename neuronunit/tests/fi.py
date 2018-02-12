@@ -150,8 +150,6 @@ class RheobaseTest(VmTest):
             score.related_data['vm'] = self.rheobase_vm
 
 from neuronunit.optimization.data_transport_container import DataTC
-
-
 class RheobaseTestP(VmTest):
 
 
@@ -196,8 +194,8 @@ class RheobaseTestP(VmTest):
         If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
         corresponding virtual model objects.
         '''
-        from ipyparallel import depend, require, dependent
-        import ipyparallel as ipp
+        #from ipyparallel import depend, require, dependent
+        #import ipyparallel as ipp
 
         def check_fix_range(dtc):
             '''
@@ -214,7 +212,7 @@ class RheobaseTestP(VmTest):
             import copy
             import numpy as np
             import quantities as pq
-            from ipyparallel import depend, require, dependent
+            #from ipyparallel import depend, require, dependent
             #print('stuck here')
             sub=[]
             supra=[]
@@ -222,13 +220,12 @@ class RheobaseTestP(VmTest):
 
             dtc.rheobase = 0.0
             for k,v in dtc.lookup.items():
-                dtc.searchedd[v]=float(k)
+                #dtc.searchedd[v]=float(k)
 
                 if v == 1:
                     #A logical flag is returned to indicate that rheobase was found.
                     dtc.rheobase = float(k)
-                    #dtc.searched.append(float(k))
-                    dtc.steps = 0.0
+                    dtc.current_steps = 0.0
                     dtc.boolean = True
                     return dtc
                 elif v == 0:
@@ -267,47 +264,45 @@ class RheobaseTestP(VmTest):
                 steps = [ i for i in steps if not i == supra.min() ]
                 steps = [ i*pq.pA for i in steps ]
 
-            dtc.steps = steps
+            dtc.current_steps = steps
             dtc.rheobase = None
             return copy.copy(dtc)
 
-        @require('quantities')
         def check_current(ampl,dtc):
             '''
             Inputs are an amplitude to test and a virtual model
             output is an virtual model with an updated dictionary.
             '''
+            import copy
             import os
+            import quantities
             from neuronunit.models.reduced import ReducedModel
             import neuronunit
-            import copy
-            #LEMS_MODEL_PATH = os.path.join(neuronunit.__path__[0],
             LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
             dtc.model_path = LEMS_MODEL_PATH
-            model = ReducedModel(dtc.model_path,name='vanilla',backend = dtc.backend)
+            #model = ReducedModel(dtc.model_path,name='vanilla',backend = dtc.backend)
+            import copy
+            model = ReducedModel(dtc.model_path, name=str('vanilla'), backend = 'NEURON')
+            model.set_attrs(dtc.attrs)
 
+            #(str(dtc.backend),{'DTC':copy.copy(dtc)}))
 
             DELAY = 100.0*pq.ms
             DURATION = 1000.0*pq.ms
             params = {'injected_square_current':
                       {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
-
-            dtc = copy.copy(dtc)
             ampl = float(ampl)
-            if ampl not in dtc.lookup or len(dtc.lookup)==0:
+            if ampl not in dtc.lookup or len(dtc.lookup) == 0:
                 current = params.copy()['injected_square_current']
                 uc = {'amplitude':ampl}
                 current.update(uc)
                 current = {'injected_square_current':current}
 
                 dtc.run_number += 1
-                model.set_attrs(dtc.attrs)
                 model.inject_square_current(current)
                 dtc.previous = ampl
                 n_spikes = model.get_spike_count()
-                print(n_spikes, 'n_spikes')
                 dtc.lookup[float(ampl)] = n_spikes
-
 
                 if n_spikes == 1:
                     dtc.rheobase = float(ampl)
@@ -318,8 +313,6 @@ class RheobaseTestP(VmTest):
             if float(ampl) in dtc.lookup:
                 return dtc
 
-
-        @require('itertools','numpy','copy')
         def init_dtc(dtc):
             import numpy as np
             import copy
@@ -328,10 +321,10 @@ class RheobaseTestP(VmTest):
                 # expand values in the range to accomodate for mutation.
                 # but otherwise exploit memory of this range.
 
-                if type(dtc.steps) is type(float):
-                    dtc.steps = [ 0.75 * dtc.steps, 1.25 * dtc.steps ]
-                elif type(dtc.steps) is type(list):
-                    dtc.steps = [ s * 1.25 for s in dtc.steps ]
+                if type(dtc.current_steps) is type(float):
+                    dtc.current_steps = [ 0.75 * dtc.current_steps, 1.25 * dtc.current_steps ]
+                elif type(dtc.current_steps) is type(list):
+                    dtc.current_steps = [ s * 1.25 for s in dtc.current_steps ]
                 dtc.initiated = True # logically unnecessary but included for readibility
 
             if dtc.initiated == False:
@@ -340,48 +333,23 @@ class RheobaseTestP(VmTest):
                 dtc.boolean = False
                 steps = np.linspace(0,250,7.0)
                 steps_current = [ i*pq.pA for i in steps ]
-                dtc.steps = steps_current
+                dtc.current_steps = steps_current
                 dtc.initiated = True
             return dtc
 
-        @require('itertools')
         def find_rheobase(self, dtc):
             import dask.bag as db
-
-            #if not hasattr(self,'dview'):
-            #    import ipyparallel as ipp
-            #    rc = ipp.Client(profile='default')
-            #        self.dview = rc[:]
             cnt = 0
             assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
             # If this it not the first pass/ first generation
             # then assume the rheobase value found before mutation still holds until proven otherwise.
             # dtc = check_current(model.rheobase,dtc)
             # If its not true enter a search, with ranges informed by memory
-
-
             cnt = 0
             while dtc.boolean == False:
-                #dtc.searched.append(dtc.steps)
-
-                dtcs = [ dtc for s in dtc.steps ]
-
-                #from dask.distributed import Client
-                #client = Client()
-                # create two dask bags for
-                # a sequence gathered data type, that is partitioned into eight partition sizes.
-                #ncores = client.ncores()
-                #partitions = len(list(ncores.values()))
-                b0 = db.from_sequence(dtc.steps, npartitions=8)
-                b1 = db.from_sequence(dtcs, npartitions=8)
-
-
-                # By default they rely on the multiprocessing scheduler, which has its own set of known limitations (see Shared Memory)
-                # Bags are immutable and so you can not change individual elements
-                # Bag operations tend to be slower than array/dataframe computations in the same way that standard Python containers tend to be slower than NumPy arrays and Pandas dataframes.
-                # Bag.groupby is slow. You should try to use Bag.foldby if possible. Using Bag.foldby requires more thought.
-
-
+                dtc_clones = [ dtc for s in dtc.current_steps ]
+                b0 = db.from_sequence(dtc.current_steps, npartitions=8)
+                b1 = db.from_sequence(dtc_clones, npartitions=8)
                 dtcpop = list(db.map(check_current,b0,b1).compute())
                 for dtc_clone in dtcpop:
                     dtc.lookup.update(dtc_clone.lookup)
@@ -392,14 +360,13 @@ class RheobaseTestP(VmTest):
         dtc = DataTC()
         dtc.attrs = {}
         for k,v in model.attrs.items():
-            dtc.attrs[k]=v
+            dtc.attrs[k] = v
         dtc = init_dtc(dtc)
         dtc.model_path = model.orig_lems_file_path
         dtc.backend = model.backend
         assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
         prediction = {}
         prediction['value'] = find_rheobase(self,dtc).rheobase * pq.pA
-        #print('weird arse prediction',prediction, type(prediction))
         if type(prediction['value']) is type(None):
             prediction['value'] = -1 * pq.pA
         if type(prediction['value']) is type(float) and prediction['value'] <= 0.0:

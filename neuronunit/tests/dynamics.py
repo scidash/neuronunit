@@ -2,15 +2,15 @@
 
 
 from elephant.statistics import isi
-
-from neuronunit.capabilities.channel import * 
+from elephant.statistics import cv
+from elephant.statistics import lv
+from neuronunit.capabilities.channel import *
 from .base import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
 from .waveform import InjectedCurrentAPWidthTest
 from .fi import RheobaseTest
 
-
 class TFRTypeTest(RheobaseTest):
-    """Tests whether a model has particular threshold firing rate dynamics, 
+    """Tests whether a model has particular threshold firing rate dynamics,
     i.e. type 1 or type 2."""
 
     name = "Firing Rate Type test"
@@ -26,16 +26,16 @@ class TFRTypeTest(RheobaseTest):
             self.name = "Firing Rate Type %d test" % self.observation['type']
 
     def validate_observation(self, observation):
-        super(TFRTypeTest,self).validate_observation(observation, 
+        super(TFRTypeTest,self).validate_observation(observation,
                                                      united_keys=['rheobase'],
                                                      nonunited_keys=['type'])
         assert ('type' in observation) and (observation['type'] in [1,2]), \
             ("observation['type'] must be either 1 or 2, corresponding to "
              "type 1 or type 2 threshold firing rate dynamics.")
-        
+
     def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
-        
+
         model.rerun = True
         if 'rheobase' in self.observation:
             guess = self.observation['rheobase']
@@ -55,7 +55,7 @@ class TFRTypeTest(RheobaseTest):
                       % supra.min().round(2))
             else:
                 print("No suprathreshold current was tested.")
-                
+
         prediction = None
         if len(sub) and len(supra):
             supra = np.array([x for x in lookup if lookup[x]>0]) # No units
@@ -65,7 +65,7 @@ class TFRTypeTest(RheobaseTest):
                 prediction = 1 # Type 1 dynamics.
             elif n_spikes_at_thresh > 1:
                 prediction = 2 # Type 2 dynamics.
-        
+
         return prediction
 
     def compute_score(self, observation, prediction):
@@ -77,7 +77,6 @@ class TFRTypeTest(RheobaseTest):
         else:
             score = self.score_type(prediction == observation)
         return score
-
 
 class BurstinessTest(InjectedCurrentAPWidthTest):
     """Tests whether a model exhibits the observed burstiness"""
@@ -98,18 +97,97 @@ class BurstinessTest(InjectedCurrentAPWidthTest):
     cv_threshold = 1.0
 
     def validate_observation(self, observation):
-        super(TFRTypeTest,self).validate_observation(observation, 
+        super(TFRTypeTest,self).validate_observation(observation,
                                                      nonunited_keys=['cv'])
-        
+
     def generate_prediction(self, model):
-        model.inject_square_current(observation['current']) 
+        model.inject_square_current(observation['current'])
         spike_train = model.get_spike_train()
         if len(spike_train) >= 3:
+            cv = cv2(spike_train)
             isis = isi(spike_train)
-            cv = np.std(isis) / np.mean(isis)
+            cv_old = np.std(isis) / np.mean(isis)
+            print(cv,cv_old)
         else:
             cv = None
         return {'cv':cv}
+
+    def compute_score(self, observation, prediction):
+        """Implementation of sciunit.Test.score_prediction."""
+        #print("%s: Observation = %s, Prediction = %s" % \
+        #    (self.name,str(observation),str(prediction)))
+        if prediction is None:
+            score = scores.InsufficientDataScore(None)
+        else:
+            score = self.score_type.compute(observation,prediction,key='cv')
+        return score
+
+
+class LocalVariationTest(RheobaseTest):
+    """Tests whether a model exhibits the observed burstiness"""
+
+    def __init__(self, observation={'cv_mean':None,'cv_std':None},
+                 name=None,
+                 params=None):
+        pass
+
+    name = "Local Variation test"
+    description = (("For neurons and muscle cells with slower non firing dynamics like CElegans neurons check to see how much \
+    varition is in the continuous membrane potential."))
+    score_type = scores.RatioScore
+    units = pq.Dimensionless
+    local_variation = 0.0 # 1.0
+
+    def __init__(self, *args, **kwargs):
+        super(LocalVariationTest,self).__init__(*args,**kwargs)
+        if self.name == self.__class__.name:
+            self.name = "Firing Rate Type %d test" % self.observation['type']
+
+    '''
+    def validate_observation(self, observation):
+        super(LocalVariationTest,self).validate_observation(observation,
+                                                     united_keys=['rheobase'],
+                                                     nonunited_keys=['type'])
+
+        assert ('type' in observation) and (observation['type'] in [1,2]), \
+            ("observation['type'] must be either 1 or 2, corresponding to "
+             "type 1 or type 2 threshold firing rate dynamics.")
+    '''
+    
+    def generate_prediction(self, model):
+        """Implementation of sciunit.Test.generate_prediction."""
+
+        model.rerun = True
+        if 'rheobase' in self.observation:
+            guess = self.observation['rheobase']
+        else:
+            guess = 100.0*pq.pA
+        lookup = self.threshold_FI(model, self.units, guess=guess)
+        sub = np.array([x for x in lookup if lookup[x]==0])*self.units
+        supra = np.array([x for x in lookup if lookup[x]>0])*self.units
+        if self.verbose:
+            if len(sub):
+                print("Highest subthreshold current is %s" \
+                      % float(sub.max().round(2)))
+            else:
+                print("No subthreshold current was tested.")
+            if len(supra):
+                print("Lowest suprathreshold current is %s" \
+                      % supra.min().round(2))
+            else:
+                print("No suprathreshold current was tested.")
+
+        prediction = None
+        if len(sub) and len(supra):
+            sub = np.array([x for x in lookup if lookup[x]<0]) # No units
+            below_thresh_i = sub.max()
+            _ = self.threshold_FI(model, self.units, guess = below_thresh_i)
+            prediction = lv(model.get_membrane_potential())
+
+        return prediction
+
+
+
 
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
