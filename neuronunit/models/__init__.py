@@ -190,4 +190,6 @@ class LEMSModel(sciunit.Model,
     def __del__(self):
         if hasattr(self,'temp_dir'):# is not type(None):
             self.temp_dir.cleanup() # Delete the temporary directory
-            super(LEMSModel,self).__del__()
+            s = super(LEMSModel,self)
+            if hasattr(s,'__del__'):
+                s.__del__()
