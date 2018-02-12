@@ -10,11 +10,29 @@ COPY . $HOME/neuronunit
 
 RUN sudo chown -R jovyan $HOME
 RUN pip uninstall -y pyneuroml
-RUN pip uninstall -y pylems
+#RUN pip uninstall -y pylems
 RUN pip install -e $HOME/neuronunit --ignore-installed --process-dependency-links
 RUN pip install lazyarray pyNN
+RUN pip install dask
+RUN pip install distributed
 
 COPY util.py /opt/conda/lib/python3.5/site-packages/ipyparallel/util.py
+RUN pip install tensorflow
+WORKDIR $HOME
+RUN git clone https://github.com/calvinschmdt/EasyTensorflow.git easy_tensorflow
+WORKDIR easy_tensorflow
+
+RUN sudo apt-get install -y python-setuptools
+RUN sudo python setup.py install
+WORKDIR $HOME
+
+COPY BluePyOpt ~/HOME/BluePyOpt
+RUN pip install -e $HOME/BluePyOpt
+WORKDIR $HOME
+
+# RUN sed -i.bak '41d' /opt/conda/lib/python3.5/site-packages/lems/model/model.py
+
+
 #RUN sudo /opt/conda/bin/pip3 install coveralls
 #RUN sudo rm /opt/conda/lib/python3.5/site-packages/PyLEMS-0.4.9-py3.5.egg
 
