@@ -14,6 +14,7 @@ import sciunit
 import neuronunit.capabilities as cap
 from pyneuroml import pynml
 from .backends import available_backends
+#from . import backends
 
 
 class LEMSModel(sciunit.Model,
@@ -35,7 +36,7 @@ class LEMSModel(sciunit.Model,
         assert os.path.isfile(self.orig_lems_file_path),\
             "'%s' is not a file" % self.orig_lems_file_path
         # Use original path unless create_lems_file is called
-        self.lems_file_path = self.orig_lems_file_path
+        self.lems_file_path = self.orig_lems_file_path 
         self.run_defaults = pynml.DEFAULTS
         self.run_defaults['nogui'] = True
         self.run_params = {}
@@ -69,9 +70,13 @@ class LEMSModel(sciunit.Model,
                         args += backend[i]
         else:
             raise TypeError("Backend must be string, tuple, or list")
-        if name in available_backends:
+        options = {x.replace('Backend',''):cls for x, cls \
+                   in backends.__dict__.items() \
+                   if inspect.isclass(cls) and \
+                   issubclass(cls, backends.Backend)}
+        if name in options:
             self.backend = name
-            self._backend = available_backends[name]()
+            self._backend = options[name]()
         elif name is None:
             # The base class should not be called.
             raise Exception(("A backend (e.g. 'jNeuroML' or 'NEURON') "
@@ -188,6 +193,7 @@ class LEMSModel(sciunit.Model,
         return self._state(keys=['name','url', 'attrs','run_params'])
 
     def __del__(self):
-        if hasattr(self,'temp_dir'):# is not type(None):
-            self.temp_dir.cleanup() # Delete the temporary directory
-            super(LEMSModel,self).__del__()
+        self.temp_dir.cleanup() # Delete the temporary directory
+        parent = super(LEMSModel,self)
+        if hasattr(parent,'__del__'):
+            parent.__del__()
