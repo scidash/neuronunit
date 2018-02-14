@@ -282,3 +282,6 @@ score.describe()
 The score was computed according to 'the difference of the predicted and observed means divided by the observed standard deviation' with raw value 1.0
 '''
 ```
+
+## Reproducible Research ID
+RRID:[SCR_015634](https://scicrunch.org/scicrunch/Resources/record/nlx_144509-1/c70f9dfd-0fc6-5052-9d90-a571c2ebea2e/search)
