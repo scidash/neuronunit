@@ -1,7 +1,19 @@
+import os
+
+from pip.req import parse_requirements
+from pip.download import PipSession
+
 try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
+
+def read_requirements():
+    '''parses requirements from requirements.txt'''
+    reqs_path = os.path.join('.', 'requirements.txt')
+    install_reqs = parse_requirements(reqs_path, session=PipSession())
+    reqs = [str(ir.req) for ir in install_reqs]
+    return reqs
 
 setup(
     name='neuronunit',
@@ -21,13 +33,5 @@ setup(
     description='A SciUnit library for data-driven testing of single-neuron physiology models.',
     long_description="",
     test_suite="neuronunit.unit_test.core_tests",    
-    install_requires=['scipy>=0.17',
-                      'matplotlib>=2.0',
-                      'neo==0.5.2',
-                      'elephant==0.4.1',
-                      'igor==0.3',
-                      'sciunit==0.19',
-                      'allensdk==0.14.2',
-                      'pyneuroml==0.3.1.2',
-                      ],
+    install_requires=read_requirements(),
     )
