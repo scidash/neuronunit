@@ -3,7 +3,6 @@ matplotlib>=2.0
 neo==0.5.2
 elephant==0.4.1
 igor==0.3
-sciunit==0.19
 allensdk==0.14.2
 -e git+git@github.com:scidash/sciunit.git@dev#egg=sciunit
 -e git+git@github.com:rgerkin/pyLEMS.git@master#egg=pyLEMS
