@@ -208,12 +208,10 @@ class RheobaseTestP(VmTest):
             given a dictionary of rheobase search values, use that
             dictionary as input for a subsequent search.
             '''
-            import pdb
-            import copy
             import numpy as np
             import quantities as pq
-            #from ipyparallel import depend, require, dependent
-            #print('stuck here')
+            import copy
+
             sub=[]
             supra=[]
             steps=[]
@@ -280,18 +278,17 @@ class RheobaseTestP(VmTest):
             import neuronunit
             LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
             dtc.model_path = LEMS_MODEL_PATH
-            #model = ReducedModel(dtc.model_path,name='vanilla',backend = dtc.backend)
-            import copy
-            model = ReducedModel(dtc.model_path, name=str('vanilla'), backend = 'NEURON')
-            model.set_attrs(dtc.attrs)
+            model = ReducedModel(dtc.model_path,name='vanilla', backend=(str(dtc.backend), {'DTC':dtc}))
 
-            #(str(dtc.backend),{'DTC':copy.copy(dtc)}))
+            import copy
+            model.set_attrs(dtc.attrs)
 
             DELAY = 100.0*pq.ms
             DURATION = 1000.0*pq.ms
             params = {'injected_square_current':
                       {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
             ampl = float(ampl)
+            #print(dtc.lookup)
             if ampl not in dtc.lookup or len(dtc.lookup) == 0:
                 current = params.copy()['injected_square_current']
                 uc = {'amplitude':ampl}
@@ -301,8 +298,14 @@ class RheobaseTestP(VmTest):
                 dtc.run_number += 1
                 model.inject_square_current(current)
                 dtc.previous = ampl
+                #print(n_spikes, ' n_spikes',ampl, 'amps')
+
                 n_spikes = model.get_spike_count()
+                print(n_spikes, ' n_spikes',ampl, 'amps')
+                print(model.attrs, ' attributes')
                 dtc.lookup[float(ampl)] = n_spikes
+                print(dtc.lookup)
+
 
                 if n_spikes == 1:
                     dtc.rheobase = float(ampl)
@@ -367,10 +370,12 @@ class RheobaseTestP(VmTest):
         assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
         prediction = {}
         prediction['value'] = find_rheobase(self,dtc).rheobase * pq.pA
+        '''
         if type(prediction['value']) is type(None):
             prediction['value'] = -1 * pq.pA
         if type(prediction['value']) is type(float) and prediction['value'] <= 0.0:
             prediction['value'] = -1 * pq.pA
+        '''
         return prediction
 
      def bind_score(self, score, model, observation, prediction):
@@ -381,9 +386,9 @@ class RheobaseTestP(VmTest):
          """Implementation of sciunit.Test.score_prediction."""
 
          score = None
-         if type(prediction['value']) is type(None):
-            prediction['value'] = -1 * pq.pA
-            return scores.InsufficientDataScore(None)
+         #if type(prediction['value']) is type(None):
+         #    prediction['value'] = -1 * pq.pA
+         #    return scores.InsufficientDataScore(None)
 
          if float(prediction['value']) <= 0.0:
             #print('gets here')

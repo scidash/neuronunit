@@ -36,7 +36,7 @@ class LEMSModel(sciunit.Model,
         assert os.path.isfile(self.orig_lems_file_path),\
             "'%s' is not a file" % self.orig_lems_file_path
         # Use original path unless create_lems_file is called
-        self.lems_file_path = self.orig_lems_file_path 
+        self.lems_file_path = self.orig_lems_file_path
         self.run_defaults = pynml.DEFAULTS
         self.run_defaults['nogui'] = True
         self.run_params = {}
@@ -193,7 +193,8 @@ class LEMSModel(sciunit.Model,
         return self._state(keys=['name','url', 'attrs','run_params'])
 
     def __del__(self):
-        self.temp_dir.cleanup() # Delete the temporary directory
+        if hasattr(self,'temp_dir'):
+            self.temp_dir.cleanup() # Delete the temporary directory
         parent = super(LEMSModel,self)
         if hasattr(parent,'__del__'):
             parent.__del__()

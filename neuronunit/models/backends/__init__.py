@@ -2,7 +2,7 @@ import inspect
 
 from .base import Backend
 from .jNeuroML import jNeuroMLBackend
-from .neuronbe import NEURONBackend
+from .neuron import NEURONBackend
 from .pyNN import pyNNBackend
 #from .section_extension import section_extension
 

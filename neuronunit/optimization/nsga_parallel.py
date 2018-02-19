@@ -14,13 +14,14 @@ def dtc_to_rheo(dtc):
     from neuronunit.optimization import get_neab
     dtc.model_path = get_neab.LEMS_MODEL_PATH
     dtc.LEMS_MODEL_PATH = get_neab.LEMS_MODEL_PATH
-    model = ReducedModel(dtc.LEMS_MODEL_PATH,name=str('vanilla'),backend=dtc.backend)
+    model = ReducedModel(dtc.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.set_attrs(dtc.attrs)
     dtc.scores = {}
     dtc.score = {}
     score = get_neab.tests[0].judge(model,stop_on_error = False, deep_error = True)
     dtc.rheobase = score.prediction
-    dtc.score[str(get_neab.tests[0])] = pd.DataFrame([ score.sort_key ])
+    assert dtc.rheobase is not None
+    dtc.scores[str(get_neab.tests[0])] = 1 - score.sort_key #pd.DataFrame([ ])
     return dtc
 
 def dtc_to_plotting(dtc):
@@ -48,33 +49,45 @@ def nunit_evaluation(dtc):
     Outputs
     Neuron Unit evaluation
     '''
+    assert dtc.rheobase is not None
+
     from neuronunit.models.reduced import ReducedModel
     from neuronunit.optimization import get_neab
     tests = get_neab.tests
     model = None
-    #model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend=dtc.backend)
-    #,{'DTC':dtc}))
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend=('NEURON',{'DTC':dtc}))
-    #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend=(str(dtc.backend),{'DTC':dtc}))
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')#('pyNN',{'DTC':dtc}))
     model.set_attrs(dtc.attrs)
     tests[0].prediction = dtc.rheobase
     model.rheobase = dtc.rheobase['value']
     print(model.rheobase)
 
+
+    from dask import dataframe as dd
+    #sd = dd.from_pandas(df, npartitions=3)
     if dtc.score is None:
         dtc.score = {}
 
     for k,t in enumerate(tests[1:-1]):
         t.params = dtc.vtest[k]
+        print(t.params)
         score = None
         score = t.judge(model,stop_on_error = False, deep_error = False)
-        assert bool(model.get_spike_count() == 1 or model.get_spike_count() == 0)
-        dtc.scores[str(t)] = 1 - score.sort_key
-        if not hasattr(dtc,'score') :
-            dtc.score = {}
-            dtc.score[str(t)] = pd.DataFrame([ score.sort_key ])
-        else:
-            dtc.score[str(t)] = pd.DataFrame([ score.sort_key ])
+        try:
+            bool(model.get_spike_count() == 1 or model.get_spike_count() == 0)
+            dtc.scores.get(str(t), score.sort_key)
+            dtc.score.get(str(t), score.sort_key-1)
+            '''
+            dtc.get("scores",)
+            scores = {}
+            dtc.scores[str(t)] = 1 - score.sort_key
+            if not hasattr(dtc,'score') :
+                dtc.score = {}
+                dtc.score[str(t)] = score.sort_key
+            else:
+                dtc.score[str(t)] = score.sort_key
+            '''
+        except:
+            pass
 
     return dtc
 
@@ -157,7 +170,7 @@ def update_dtc_pop(pop, td, backend = None):
         import dask.bag as db
         from neuronunit.optimization.data_transport_container import DataTC
         dtc = DataTC()
-        dtc.backend = None
+        #dtc.backend = None
 
         ##
         # set the backend
@@ -165,7 +178,7 @@ def update_dtc_pop(pop, td, backend = None):
 
         import neuronunit
         LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
-
+        dtc.backend = 'NEURON'
         if backend is not None:
             dtc.backend = backend
         #print(dtc.backend)
@@ -209,7 +222,7 @@ def update_deap_pop(pop,td):
     dtcpop = list(db.map(nunit_evaluation,b).compute())
 
 
-    dtcpop = list(filter(lambda dtc: not isinstance(dtc.scores['RheobaseTestP'],None), dtcpop))
+    dtcpop = list(filter(lambda dtc: not isinstance(dtc.scores['RheobaseTestP'],type(None)), dtcpop))
     dtcpop = list(filter(lambda dtc: not type(None) in (list(dtc.scores.values())), dtcpop))
 
 

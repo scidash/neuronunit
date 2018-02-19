@@ -34,13 +34,14 @@ class NEURONBackend(Backend):
         self.h = h
         # Should check if a legitimately parallel MPI based NEURON is supported.
         self.lookup = {}
-
         super(NEURONBackend,self).init_backend()
         self.model.unpicklable += ['h','ns','_backend']
         if cell_name:
             self._cell_name = cell_name
         if current_src_name:
             self._current_src_name = current_src_name
+        if DTC is not None:
+            self.set_attrs(**DTC.attrs)
 
     backend = 'NEURON'
 
@@ -179,7 +180,7 @@ class NEURONBackend(Backend):
         nrn = import_module_from_path(nrn_path)
         self.reset_neuron(nrn.neuron)
         modeldirname = os.path.dirname(self.model.orig_lems_file_path)
-        self.set_stop_time(650*ms) # previously 500ms add on 150ms of recovery
+        self.set_stop_time(1000*ms) # previously 650 500ms add on 150ms of recovery
         self.h.tstop
         self.ns = nrn.NeuronSimulation(self.h.tstop, dt=0.0025)
 
@@ -255,9 +256,11 @@ class NEURONBackend(Backend):
         return getattr(self,'_current_src_name','RS')
 
     def set_attrs(self, **attrs):
+
         self.model.attrs.update(attrs)
         assert type(self.model.attrs) is not type(None)
         assert len(list(self.model.attrs.values())) > 0
+        #attrs_ = {x:attrs[x] for x in ['a','b','c','d']}
         for h_key,h_value in attrs.items():
             self.h('m_{0}_{1}_pop[0].{2} = {3}'\
                 .format(self.cell_name,self.cell_name,h_key,h_value))
@@ -280,6 +283,7 @@ class NEURONBackend(Backend):
         # These two variables have been aliased in the code below:
         self.tVector = self.h.v_time
         self.vVector = self.h.v_v_of0
+        self.h.psection()
 
         return self
 
