@@ -3,13 +3,23 @@ import os
 import quantities as pq
 import numpy as np
 import importlib
-import ipyparallel as ipp
-rc = ipp.Client(profile='default')
-rc[:].use_cloudpickle()
-dview = rc[:]
+#import ipyparallel as ipp
+#rc = ipp.Client(profile='default')
+#rc[:].use_cloudpickle()
+#dview = rc[:]
 from neuronunit.optimization import get_neab
 tests = get_neab.tests
 
+
+'''
+# serial file write.
+rc[0].apply(file_write, tests)
+#Broadcast the tests to workers
+test_dic = {}
+for t in tests:
+    test_dic[str(t.name)] = t
+dview.push(test_dic,targets=0)
+'''
 def sample_points(iter_dict, npoints=3):
     import numpy as np
     replacement={}
@@ -18,7 +28,42 @@ def sample_points(iter_dict, npoints=3):
         replacement[k] = sample_points
     return replacement
 
+
+def create_refined_grid(best_point,point1,point2):
+    '''
+    Can be used for creating a second pass fine grained grid
+    '''
+
+    # This function reports on the deltas brute force obtained versus the GA found attributes.
+    from neuronunit.optimization import model_parameters as modelp
+    from sklearn.grid_search import ParameterGrid
+    #mp = modelp.model_params
+    new_search_interval = {}
+    for k,v in point1.attrs.items():
+        higher =  max(float(point2.attrs[k]),float(v), best_point.attrs[k])
+        lower = min(float(point2.attrs[k]),float(v), best_point.attrs[k])
+        temp = list(np.linspace(lower,higher,4))
+        new_search_interval[k] = temp[1:-2] # take only the middle two points
+        # discard edge points, as they are already well searched/represented.
+    grid = list(ParameterGrid(new_search_interval))
+    return grid
+
+
 def create_grid(npoints=3,nparams=7,provided_keys=None):
+    '''
+    Description, create a grid of evenly spaced samples in model parameters to search over.
+    Inputs: npoints, type: Integer: number of sample points per parameter
+    nparams, type: Integer: number of parameters to use, conflicts, with next argument.
+    nparams, iterates through a list of parameters, and assigns the nparams to use via stupid counting.
+    provided keys: explicitly define state the model parameters that are used to create the grid of samples, by
+    keying into an existing of parameters.
+
+    This method needs the user of the method to declare a dictionary of model parameters in a path:
+    neuronunit.optimization.model_parameters.
+
+    Miscallenous, once grid created by this function
+    has been evaluated using neuronunit it can be used for informing a more refined second pass fine grained grid
+    '''
 
     from neuronunit.optimization import model_parameters as modelp
     from sklearn.grid_search import ParameterGrid
@@ -42,31 +87,24 @@ def create_grid(npoints=3,nparams=7,provided_keys=None):
     grid = list(ParameterGrid(subset))
     return grid
 
-def parallel_method(dtc):
-    from neuronunit.models.reduced import ReducedModel
-    from neuronunit.optimization import get_neab
-    tests = get_neab.tests
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-    model.set_attrs(dtc.attrs)
-    tests[0].prediction = dtc.rheobase
-    model.rheobase = dtc.rheobase['value']
-    from neuronunit.optimization import evaluate_as_module
-    dtc = evaluate_as_module.pre_format(dtc)
-    for k,t in enumerate(tests):
-        dtc.scores[str(t)] = (dtc.scores[str(t)]-10.0)/2.0
-        if k>0 and float(dtc.rheobase['value']) > 0:
-            t.params = dtc.vtest[k]
-            score = t.judge(model,stop_on_error = False, deep_error = False)
-            dtc.scores[str(t)] = score.sort_key
-    return dtc
 
 def dtc_to_rheo(dtc):
     from neuronunit.optimization import get_neab
+    import copy
+    dtc = copy.copy(dtc)
     dtc.scores = {}
     from neuronunit.models.reduced import ReducedModel
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend=('NEURON',{'DTC':dtc}))
+    before = list(model.attrs.items())
     model.set_attrs(dtc.attrs)
+    model.backend = dtc.backend
+    model.rheobase = None
     rbt = get_neab.tests[0]
+	# Preferred flow of data movement: but not compatible with cloud pickle
+    # rbt = dview.pull('RheobaseTestP',targets=0)
+    # print(rbt)
+    # rbt.dview = dview
     score = rbt.judge(model,stop_on_error = False, deep_error = True)
     dtc.scores[str(rbt)] = score.sort_key
     observation = score.observation
@@ -75,17 +113,23 @@ def dtc_to_rheo(dtc):
 
 def update_dtc_pop(item_of_iter_list):
     from neuronunit.optimization import data_transport_container
+    import copy
     dtc = data_transport_container.DataTC()
     dtc.attrs = item_of_iter_list
     dtc.scores = {}
     dtc.rheobase = None
     dtc.evaluated = False
+    dtc.backend = 'pyNN'
+    #print(dtc.backend)
+    dtc = copy.copy(dtc)
+
     return dtc
 
 def run_grid(npoints,nparams,provided_keys=None):
     # not all models will produce scores, since models with rheobase <0 are filtered out.
+    from neuronunit.optimization.nsga_parallel import nunit_evaluation
+    grid_points = create_grid(npoints = npoints,nparams = nparams,vprovided_keys = provided_keys )
 
-    grid_points = create_grid(npoints = npoints,nparams = nparams,provided_keys = provided_keys )
     dtcpop = list(dview.map_sync(update_dtc_pop,grid_points))
     print(dtcpop)
     # The mapping of rheobase search needs to be serial mapping for now, since embedded in it's functionality is a
@@ -95,7 +139,9 @@ def run_grid(npoints,nparams,provided_keys=None):
     print(dtcpop)
 
     filtered_dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] > 0.0 , dtcpop))
-    dtcpop = dview.map(parallel_method,filtered_dtcpop).get()
+    dtcpop = dview.map(nunit_evaluation,filtered_dtcpop).get()
     rc.wait(dtcpop)
-    dtcpop=list(dtcpop)
+    dtcpop = list(dtcpop)
+    dtcpop = list(filter(lambda dtc: type(dtc.scores['RheobaseTestP']) is not type(None), dtcpop))
+
     return dtcpop

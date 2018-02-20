@@ -34,7 +34,8 @@ dataset_id = 354190013  # Internal ID that AIBS uses for a particular Scnn1a-Tg2
 # this file writing operation needs to be threadlocked
 observation = aibs.get_observation(dataset_id,'rheobase')
 ne_pickle = os.path.join(THIS_DIR,"neuroelectro.pickle")
-
+#print(ne_pickle,'got here')
+#print(THIS_DIR)
 if os.path.isfile(ne_pickle):
     print('attempting to recover from pickled file')
     with open(ne_pickle, 'rb') as f:
@@ -50,7 +51,8 @@ else:
                      (passive.RestingPotentialTest,None),
                      (waveform.InjectedCurrentAPWidthTest,None),
                      (waveform.InjectedCurrentAPAmplitudeTest,None),
-                     (waveform.InjectedCurrentAPThresholdTest,None)]
+                     (waveform.InjectedCurrentAPThresholdTest,None)]#,
+                     #q(fi.RheobaseTestP,None)]
 
 
     for cls,params in test_class_params:
@@ -60,8 +62,8 @@ else:
         observation = cls.neuroelectro_summary_observation(neuron)
         tests += [cls(observation)]
 
-#with open(ne_pickle, 'wb') as f:
-#    pickle.dump(tests, f)
+    with open(ne_pickle, 'wb') as f:
+        pickle.dump(tests, f)
 
 def update_amplitude(test,tests,score):
     rheobase = score.prediction['value']#first find a value for rheobase
@@ -70,7 +72,7 @@ def update_amplitude(test,tests,score):
     for i in [4,5,6]:
         # Set current injection to just suprathreshold
 
-        tests[i].params['injected_square_current']['amplitude'] = rheobase*1.01 # I feel that 1.01 may lead to more than one spike 
+        tests[i].params['injected_square_current']['amplitude'] = rheobase*1.01 # I feel that 1.01 may lead to more than one spike
         # in marginal cases.
 
 #Don't do the rheobase test. This is a serial bottle neck that must occur before any parallel optomization.

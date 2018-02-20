@@ -1,8 +1,6 @@
 """Tests of NeuronUnit documentation notebooks"""
 
-
 from .base import *
-
 
 class DocumentationTestCase(NotebookTools, 
                             unittest.TestCase):
