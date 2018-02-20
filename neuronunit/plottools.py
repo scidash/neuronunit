@@ -7,6 +7,21 @@ import colorsys
 import numpy
 import collections
 
+
+import sys
+KERNEL = ('ipykernel' in sys.modules)
+try:
+    from io import StringIO
+except ImportError:
+    from StringIO import StringIO
+
+import numpy as np
+import pandas as pd
+import bs4
+from IPython.display import HTML,Javascript,display
+
+KERNEL = ('ipykernel' in sys.modules)
+
 def adjust_spines(ax, spines, color='k', d_out=10, d_down=None):
 
     if d_down in [None,[]]:
@@ -142,6 +157,54 @@ def tiled_figure(figname='', frames=1, columns=2,
 
     return axs
 
+def plot_surface(model_param0,model_param1,td,history):
+    '''
+
+    Move this method back to plottools
+    Inputs should be keys, that are parameters see new function definition below
+    '''
+
+    import numpy as np
+    import matplotlib
+    matplotlib.rcParams.update({'font.size':16})
+    import matplotlib.pyplot as plt
+
+
+    x = [ i for i,j in enumerate(td) if str(model_param0) == j ][0]
+    y = [ i for i,j in enumerate(td) if str(model_param1) == j ][0]
+    all_inds = history.genealogy_history.values()
+    sums = np.array([np.sum(ind.fitness.values) for ind in all_inds])
+    #quads = []
+    '''
+    for k in range(1,9):
+        for i,j in enumerate(td):
+            if i+k < 10:
+                quads.append((td[i],td[i+k],i,i+k))
+    all_inds1 = list(history.genealogy_history.values())
+    '''
+    #import pdb; pdb.set_trace()
+    #print(all_inds1[x])
+
+    #ab = [ (all_inds1[x],all_inds1[y]) for y in all_inds1 ]
+
+    xs = np.array([ind[x] for ind in all_inds])
+    ys = np.array([ind[y] for ind in all_inds])
+    min_ys = ys[np.where(sums == np.min(sums))]
+    min_xs = xs[np.where(sums == np.min(sums))]
+    plt.clf()
+    fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
+    trip_axis = ax_trip.tripcolor(xs,ys,sums,20,norm=matplotlib.colors.LogNorm())
+    plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue',label='global minima')
+    fig_trip.colorbar(trip_axis, label='Sum of Objective Errors ')
+    ax_trip.set_xlabel('Parameter '+str((td[x])))
+    ax_trip.set_ylabel('Parameter '+str((td[y])))
+    plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
+    fig_trip.tight_layout()
+    if not KERNEL:
+        plt.savefig('surface'+str((td[z])+str('.png')))
+    else:
+        plt.show()
+
 def shadow(dtcpop,best_vm):#This method must be pickle-able for ipyparallel to work.
     '''
     A method to plot the best and worst candidate solution waveforms side by side
@@ -265,7 +328,10 @@ def shadow(dtcpop,best_vm):#This method must be pickle-able for ipyparallel to w
         plt.legend()
         plt.ylabel('$V_{m}$ mV')
         plt.xlabel('ms')
-        plt.savefig(str('test_')+str(v)+'vm_versus_t.png', format='png', dpi=1200)
+        if not KERNEL:
+            plt.savefig(str('test_')+str(v)+'vm_versus_t.png', format='png')#, dpi=1200)
+        else:
+            plt.show()
 
 
 
@@ -307,8 +373,9 @@ def surfaces(history,td):
     ax_trip.set_ylabel('Parameter $ a$')
     plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
     fig_trip.tight_layout()
+    fig_trip.show()
     #fig_trip.legend()
-    fig_trip.savefig('surface'+str('a')+str('b')+'.pdf',format='pdf', dpi=1200)
+    #fig_trip.savefig('surface'+str('a')+str('b')+'.pdf',format='pdf')#', dpi=1200)
 
 
     matrix_fill = [ (i,j) for i in range(0,len(modelp.model_params['a'])) for j in range(0,len(modelp.model_params['b'])) ]
@@ -333,8 +400,10 @@ def surfaces(history,td):
     ax.set_xticklabels(modelp.model_params['a'])
     ax.set_yticklabels(modelp.model_params['b'])
     plt.title(str('$a$')+' versus '+str('$b$'))
-    plt.savefig('2nd_approach_d_error_'+str('a')+str('b')+'surface.png')
-
+    if not KERNEL:
+        plt.savefig('2nd_approach_d_error_'+str('a')+str('b')+'surface.png')
+    else:
+        plt.show()
 
     return ab
 
@@ -348,28 +417,46 @@ def use_dtc_to_plotting(dtcpop):
     plt.clf()
     plt.style.use('ggplot')
     fig, axes = plt.subplots(figsize=(10, 10), facecolor='white')
-
-    for dtc in dtcpop:
-        st = spike_functions.get_spike_train(dtc.vm0)
-        sindexs.append(int((float(st)/ts[-1])*len(ts)))
-        time_sequence = np.arange(np.min(sindexs)-5 , np.max(sindexs)+5, 1)
+    stored_min = []
+    stored_max = []
+    for dtc in dtcpop[1:-1]:
+        plt.plot(dtc.tvec, dtc.vm0,linewidth=3.5, color='grey')
         stored_min.append(np.min(dtc.vm0))
         stored_max.append(np.max(dtc.vm0))
-        pvm = np.array(dtc.vm0)[time_sequence]
-        plt.plot(dtc.tvec, dtc.vm0, color='grey')
-
-    stored_min.append(np.min(dtc.vm0))
-    stored_max.append(np.max(dtc.vm0))
-    plt.plot(dtc.tvec,dtc.vm0,linewidth=1.5, color='grey')
+    plt.plot(dtcpop[0].tvec,dtcpop[0].vm0,linewidth=1, color='red',label='best candidate')
     plt.legend()
     plt.ylabel('$V_{m}$ mV')
     plt.xlabel('ms')
-    plt.savefig(str('test_')+'vm_versus_t.png', format='png', dpi=1200)
+
+    if not KERNEL:
+        plt.savefig(str('rheobase')+'vm_versus_t.png', format='png')#, dpi=1200)
+    else:
+        plt.show()
+
+
+    plt.clf()
+    plt.style.use('ggplot')
+    fig, axes = plt.subplots(figsize=(10, 10), facecolor='white')
+    stored_min = []
+    stored_max = []
+    for dtc in dtcpop[1:-1]:
+        plt.plot(dtc.tvec, dtc.vm1,linewidth=3.5, color='grey')
+        stored_min.append(np.min(dtc.vm1))
+        stored_max.append(np.max(dtc.vm1))
+
+    plt.plot(dtcpop[0].tvec,dtcpop[0].vm1,linewidth=1, color='red',label='best candidate')
+    plt.legend()
+    plt.ylabel('$V_{m}$ mV')
+    plt.xlabel('ms')
+    if not KERNEL:
+        plt.savefig(str('AP_width_test')+'vm_versus_t.png', format='png')#, dpi=1200)
+    else:
+        plt.show()
 
 
 
 
-def plot_log(logbook):
+def plot_log(log): #logbook
     '''
     https://github.com/BlueBrain/BluePyOpt/blob/master/examples/graupnerbrunelstdp/run_fit.py
     Input: DEAP Plot logbook
@@ -378,20 +465,15 @@ def plot_log(logbook):
     The most important side effect being a plot in png format.
 
     '''
-    log = logbook
     import matplotlib.pyplot as plt
     import numpy as np
     plt.clf()
     plt.style.use('ggplot')
     fig, axes = plt.subplots(figsize=(10, 10), facecolor='white')
-
-    gen_numbers = log.select('gen')
-    mean = log.select('avg')
-    std = log.select('std')
-    minimum = log.select('min')
-    # maximum = log.select('max')
-    #from neuronunit.optimization import get_neab
-    #objective_labels = [ str(t) for t in get_neab.tests ]
+    gen_numbers =[ i for i in range(0,len(log.select('gen'))) ]
+    mean = np.array([ np.sum(i) for i in log.select('avg')])
+    std = np.array([ np.sum(i) for i in log.select('std')])
+    minimum = np.array([ np.sum(i) for i in log.select('min')])
 
     stdminus = mean - std
     stdplus = mean + std
@@ -407,54 +489,156 @@ def plot_log(logbook):
         color='black',
         linewidth=2,
         label='population average')
-    try:
-        axes.fill_between([ i for i in range(0,len(stdminus)) ], stdminus, stdplus)
-    except:
-        pass
-        #raise Exception
-
-    axes.plot(
-        gen_numbers,
-        minimum,
-        linewidth=2,
-        label='minimum')
-
+    axes.fill_between(gen_numbers, stdminus, stdplus)
+    axes.plot(gen_numbers, stdminus)
+    axes.plot(gen_numbers, stdplus)
     axes.set_xlim(np.min(gen_numbers) - 1, np.max(gen_numbers) + 1)
     axes.set_xlabel('Generation #')
     axes.set_ylabel('Sum of objectives')
-    axes.set_ylim([0, np.max(stdplus)])
+    axes.set_ylim([np.min(stdminus), np.max(stdplus)])
     axes.legend()
 
     fig.tight_layout()
-    fig.savefig('Izhikevich_history_evolution.png', format='png', dpi=1200)
+    if not KERNEL:
+        fig.savefig('Izhikevich_history_evolution.png', format='png')#, dpi=1200)
+    else:
+        fig.show()
+
+def try_hard_coded0():
+    params0 = {'C': '0.000107322241995',
+    'a': '0.177922330376',
+    'b': '-5e-09',
+    'c': '-59.5280130394',
+    'd': '0.153178745992',
+    'k': '0.000879131572692',
+    'v0': '-73.3255584633',
+    'vpeak': '34.5214177196',
+    'vr': '-71.0211905343',
+    'vt': '-46.6016774842'}
+    #rheobase = {'value': array(131.34765625) * pA}
+    return params0
 
 
-def dtc_to_plotting(dtc):
-    dtc.vm0 = None
-    dtc.vm1 = None
 
+def try_hard_coded1():
+    params1 = {'C': '0.000106983591242',
+    'a': '0.480856799107',
+    'b': '-5e-09',
+    'c': '-57.4022276619',
+    'd': '0.0818117582621',
+    'k': '0.00114004749537',
+    'v0': '-58.4899756601',
+    'vpeak': '36.6769758895',
+    'vr': '-63.4080852004',
+    'vt': '-44.1074682812'}
+    #rheobase = {'value': array(106.4453125) * pA}131.34765625
+    return params1
+
+
+
+def plot_suspicious(dtc):
+    import matplotlib.pyplot as plt
+    import numpy as np
+    plt.clf()
+    plt.style.use('ggplot')
     from neuronunit.models.reduced import ReducedModel
     from neuronunit.optimization.get_neab import tests as T
     from neuronunit.optimization import get_neab
 
     from neuronunit.optimization import evaluate_as_module
-    from neo import AnalogSignal
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-    model.set_attrs(dtc.attrs)
-    model.rheobase = dtc.rheobase['value']
-    #model2 = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON',DTC=dtc)
-    score = T[-1].judge(model,stop_on_error = False, deep_error = True)
-    #dtc.vm1 = list(model.get_membrane_potential())
-    dtc.vm0 = list(model.results['vm'])
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-    model.set_attrs(dtc.attrs)
-    model.rheobase = dtc.rheobase['value']
-    score = T[1].judge(model,stop_on_error = False, deep_error = True)
-    #dtc.vm0 = list(model.get_membrane_potential())
-    dtc.vm1 = list(model.results['vm'])
+    from neuronunit.optimization.evaluate_as_module import pre_format
 
+    param_list = [try_hard_coded0(), try_hard_coded1()]
+    dtc.vm0 = None
+    dtc.vm1 = None
+    for p in param_list:
+        dtc.attrs = p
+        model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+        model.set_attrs(dtc.attrs)
+        model.rheobase = None
+        score = T[0].judge(model,stop_on_error = False, deep_error = True)
+        dtc.rheobase = score.prediction
+        dtc.vm0 = list(model.results['vm'])
+
+        model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+        model.set_attrs(dtc.attrs)
+        dtc.rheobase = score.prediction
+        dtc = pre_format(dtc)
+        model.rheobase = dtc.rheobase
+        print(model)
+        print(model.rheobase)
+
+        model.inject_square_current(dtc.vtest[0])
+        model._backend.local_run()
+        assert model.get_spike_count() == 1
+        print(model.get_spike_count(),bool(model.get_spike_count() == 1))
+
+        model = None
+        model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+        model.set_attrs(dtc.attrs)
+        model.inject_square_current(dtc.vtest[-1])
+        dtc.vm1 = list(model.results['vm'])
+        dtc.tvec = list(model.results['t'])
+
+        plt.clf()
+        plt.style.use('ggplot')
+        fig, axes = plt.subplots(figsize=(10, 10), facecolor='white')
+        plt.plot(dtc.tvec,dtc.vm0,linewidth=1, color='red',label='suspc rheobase')
+        plt.plot(dtc.tvec,dtc.vm1,linewidth=1, color='blue',label='suspc spike width')
+        plt.legend()
+        plt.ylabel('$V_{m}$ mV')
+        plt.xlabel('ms')
+        if not KERNEL:
+            plt.savefig(str('suspicious_rheobase')+str(p)+'vm_versus_t.png', format='png', dpi=1200)
+        else:
+            plt.show()
+
+
+def dtc_to_plotting(dtc):
+    dtc.vm0 = None
+    dtc.vm1 = None
+    from neuronunit.models.reduced import ReducedModel
+    from neuronunit.optimization.get_neab import tests as T
+    from neuronunit.optimization import get_neab
+    from neuronunit.optimization import evaluate_as_module
+    from neuronunit.optimization.evaluate_as_module import pre_format
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+    import neuron
+    model._backend.reset_neuron(neuron)
+    model.set_attrs(dtc.attrs)
+    #model.rheobase = dtc.rheobase#['value']
+    dtc = pre_format(dtc)
+    parameter_list = list(dtc.vtest.values())
+    print(parameter_list[0])
+    #print(dtc.rheobase)
+    #print(dtc.rheobase['value'])
+
+    #import pdb; pdb.set_trace()
+
+    model.inject_square_current(parameter_list[0])
+    model._backend.local_run()
+    print('\n\n\n\n\n\n')
+    print(type(model.get_spike_count()), ' < type')
+    print(model.get_spike_count(),bool(model.get_spike_count() == 1))
+    print('\n\n\n\n\n\n')
+
+    assert model.get_spike_count() == 1 or model.get_spike_count() == 0
+
+    dtc.vm0 = list(model.results['vm'])
     dtc.tvec = list(model.results['t'])
     return dtc
+
+    #model = None
+    '''
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+    import neuron
+    model._backend.reset_neuron(neuron)
+    model.set_attrs(dtc.attrs)
+    print(parameter_list[-1])
+    model.inject_square_current(parameter_list[-1])
+    print(model.get_spike_count())
+    dtc.vm1 = list(model.results['vm'])
+    '''
 
 def plot_objectives_history(log):
     '''
@@ -486,9 +670,10 @@ def plot_objectives_history(log):
         for l in mins_components_plot:
             components[i].append(l[i])
     maximum = 0.0
+    #import pdb; pdb.set_trace()
     for keys in components:
 
-        axes.semilogy(
+        axes.plot(
             gen_numbers,
             components[keys],
             linewidth=2,
@@ -500,12 +685,14 @@ def plot_objectives_history(log):
     axes.set_xlim(min(gen_numbers) - 1, max(gen_numbers) + 1)
     axes.set_xlabel('Generation #')
     axes.set_ylabel('Sum of objectives')
-    #axes.set_ylim([0, max(maximum[0])])
+    axes.set_ylim([-0.1, maximum])
     axes.legend()
 
     fig.tight_layout()
-    fig.savefig('Izhikevich_evolution_components.png', format='png', dpi=1200)
-
+    if not KERNEL:
+        fig.savefig('Izhikevich_evolution_components.png', format='png')#, dpi=1200)
+    else:
+        fig.show()
 
 '''
 def plotly_graph(history,vmhistory):
@@ -738,20 +925,19 @@ def pca(best_worst,vmpop,fitnesses,td):
     py.sign_in('RussellJarvis','FoyVbw7Ry3u4N2kCY4LE')
     py.iplot(fig, filename='improved_names.svg',image='svg')
 
+'''
 
 def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must be pickle-able for ipyparallel to work.
-    '''
-    A method to plot the best and worst candidate solution waveforms side by side
+    #A method to plot the best and worst candidate solution waveforms side by side
 
 
-    Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
-    is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
-    value, that was found in a previous rheobase search.
+    #Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
+    #is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
+    #value, that was found in a previous rheobase search.
 
-    Outputs: This method only has side effects, not datatype outputs from the method.
-    The most important side effect being a plot in png format.
+    #Outputs: This method only has side effects, not datatype outputs from the method.
+    #The most important side effect being a plot in png format.
 
-    '''
     import os
     from neuronunit.models import backends
     from neuronunit.models.reduced import ReducedModel
@@ -795,18 +981,18 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
         sf_best = pd.DataFrame(sc_for_frame_best)
         sf_worst = pd.DataFrame(sc_for_frame_worst)
 
+'''
 
-
-
+'''
 def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel to work.
-    '''
-    A method to plot the best and worst candidate solution waveforms side by side
-    Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
-    is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
-    value, that was found in a previous rheobase search.
-    Outputs: This method only has side effects, not datatype outputs from the method.
-    The most important side effect being a plot in png format.
-    '''
+
+    #A method to plot the best and worst candidate solution waveforms side by side
+    #Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
+    #is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
+    #value, that was found in a previous rheobase search.
+    #Outputs: This method only has side effects, not datatype outputs from the method.
+    #The most important side effect being a plot in png format.
+
     import os
 
     import quantities as pq
@@ -1132,7 +1318,7 @@ def pandas_rh_search(vmoffspring):
     s4 = df4.style.background_gradient(cmap = shrunk_cmap)
 
     return df0,df1,df2,df3,df4
-
+'''
 def not_just_mean(log,hypervolumes):
     '''
     https://github.com/BlueBrain/BluePyOpt/blob/master/examples/graupnerbrunelstdp/run_fit.py
@@ -1169,7 +1355,7 @@ def not_just_mean(log,hypervolumes):
     axes.set_ylim([0, max(max(mean_many),max(hypervolumes))])
     axes.legend()
     fig.tight_layout()
-    fig.savefig('Izhikevich_evolution_just_mean.png', format='png', dpi=1200)
+    fig.savefig('Izhikevich_evolution_just_mean.png', format='png')#, dpi=1200)
 
 def bar_chart(vms,name=None):
 
