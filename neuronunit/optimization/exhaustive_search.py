@@ -31,6 +31,17 @@ def create_refined_grid(best_point,point1,point2):
     grid = list(ParameterGrid(new_search_interval))
     return grid
 
+def update_dtc_grid(item_of_iter_list):
+    from neuronunit.optimization import data_transport_container
+    import copy
+    dtc = data_transport_container.DataTC()
+    from copy import deepcopy
+    dtc.attrs = deepcopy(item_of_iter_list)
+    dtc.scores = {}
+    dtc.rheobase = None
+    dtc.evaluated = False
+    dtc.backend = 'NEURON'
+    return dtc
 
 def create_grid(npoints=3,nparams=7,provided_keys=None):
     '''
@@ -70,7 +81,7 @@ def create_grid(npoints=3,nparams=7,provided_keys=None):
     grid = list(ParameterGrid(subset))
     return grid
 
-
+'''
 def dtc_to_rheo(dtc):
     from neuronunit.optimization import get_neab
     import copy
@@ -96,13 +107,14 @@ def update_dtc_pop(item_of_iter_list):
     dtc.scores = {}
     dtc.rheobase = None
     dtc.evaluated = False
-    dtc.backend = 'pyNN'
-    
+    dtc.backend = 'NEURON'
     return dtc
-
+'''
 def run_grid(npoints,nparams,provided_keys=None):
     # not all models will produce scores, since models with rheobase <0 are filtered out.
-    from neuronunit.optimization.nsga_parallel import nunit_evaluation
+    from neuronunit.optimization.optimization_management import nunit_evaluation
+    from neuronunit.optimization.optimization_management import update_dtc_pop
+
     grid_points = create_grid(npoints = npoints,nparams = nparams,vprovided_keys = provided_keys )
     import dask.bag as db
     b = db.bag(grid_points)

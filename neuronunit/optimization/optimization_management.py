@@ -9,6 +9,7 @@ import pandas as pd
 from neuronunit import tests
 from neuronunit.optimization import get_neab
 
+
 def dtc_to_rheo(dtc):
     from neuronunit.models.reduced import ReducedModel
     from neuronunit.optimization import get_neab
@@ -19,9 +20,11 @@ def dtc_to_rheo(dtc):
     dtc.scores = {}
     dtc.score = {}
     score = get_neab.tests[0].judge(model,stop_on_error = False, deep_error = True)
+    #if bool(model.get_spike_count() == 1 or model.get_spike_count() == 0)
+    if score.sort_key is not None:
+        dtc.scores[str(get_neab.tests[0])] = 1 - score.sort_key #pd.DataFrame([ ])
     dtc.rheobase = score.prediction
-    assert dtc.rheobase is not None
-    dtc.scores[str(get_neab.tests[0])] = 1 - score.sort_key #pd.DataFrame([ ])
+    #assert dtc.rheobase is not None
     return dtc
 
 def dtc_to_plotting(dtc):
@@ -35,7 +38,7 @@ def dtc_to_plotting(dtc):
     dtc.t = None
     from neuronunit.models.reduced import ReducedModel
     from neuronunit.optimization import get_neab
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend=('NEURON',{'DTC':dtc}))
     model.set_attrs(dtc.attrs)
     model.rheobase = dtc.rheobase['value']
     score = get_neab.tests[-1].judge(model,stop_on_error = False, deep_error = True)
@@ -54,16 +57,12 @@ def nunit_evaluation(dtc):
     from neuronunit.models.reduced import ReducedModel
     from neuronunit.optimization import get_neab
     tests = get_neab.tests
-    model = None
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')#('pyNN',{'DTC':dtc}))
+    #model = None
+    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend=('NEURON',{'DTC':dtc}))
     model.set_attrs(dtc.attrs)
     tests[0].prediction = dtc.rheobase
     model.rheobase = dtc.rheobase['value']
-    print(model.rheobase)
-
-
     from dask import dataframe as dd
-    #sd = dd.from_pandas(df, npartitions=3)
     if dtc.score is None:
         dtc.score = {}
 
@@ -72,8 +71,8 @@ def nunit_evaluation(dtc):
         print(t.params)
         score = None
         score = t.judge(model,stop_on_error = False, deep_error = False)
-        try:
-            bool(model.get_spike_count() == 1 or model.get_spike_count() == 0)
+        if score.sort_key is not None:
+        #if bool(model.get_spike_count() == 1 or model.get_spike_count() == 0)
             dtc.scores.get(str(t), score.sort_key)
             dtc.score.get(str(t), score.sort_key-1)
             '''
@@ -86,7 +85,7 @@ def nunit_evaluation(dtc):
             else:
                 dtc.score[str(t)] = score.sort_key
             '''
-        except:
+        else:
             pass
 
     return dtc
@@ -95,15 +94,11 @@ def nunit_evaluation(dtc):
 def evaluate(dtc):
     import copy
     dtc = copy.copy(dtc)
-
     from neuronunit.optimization import get_neab
     import numpy as np
     fitness = [ 1.0 for i in range(0,7) ]
-
     for k,t in enumerate(dtc.scores.keys()):
         fitness[k] = dtc.scores[str(t)]#.sort_key
-    #fitness[7] = np.sum(list(fitness[0:6]))
-    print(fitness)
     return fitness[0],fitness[1],\
            fitness[2],fitness[3],\
            fitness[4],fitness[5],\
@@ -117,14 +112,14 @@ def get_trans_list(param_dict):
         trans_list.append(k)
     return trans_list
 
-def pre_format(dtc):
+def format_test(dtc):
     '''
     pre format the current injection dictionary based on pre computed
     rheobase values of current injection.
     This is much like the hooked method from the old get neab file.
     '''
     import copy
-    dtc = copy.copy(dtc)
+    #dtc = copy.copy(dtc)
     import quantities as pq
     import copy
     dtc.vtest = None
@@ -133,6 +128,7 @@ def pre_format(dtc):
     tests = get_neab.tests
     for k,v in enumerate(tests):
         dtc.vtest[k] = {}
+        #dtc.vtest.get(k,{})
         dtc.vtest[k]['injected_square_current'] = {}
     for k,v in enumerate(tests):
         if k == 1 or k == 2 or k == 3:
@@ -150,7 +146,7 @@ def pre_format(dtc):
 
 
 
-def update_dtc_pop(pop, td, backend = None):
+def update_dtc_pop(pop, td = None, backend = None):
 
     '''
     inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
@@ -170,18 +166,13 @@ def update_dtc_pop(pop, td, backend = None):
         import dask.bag as db
         from neuronunit.optimization.data_transport_container import DataTC
         dtc = DataTC()
-        #dtc.backend = None
-
-        ##
-        # set the backend
-        ##
-
         import neuronunit
         LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
-        dtc.backend = 'NEURON'
         if backend is not None:
             dtc.backend = backend
-        #print(dtc.backend)
+        else:
+            dtc.backend = 'NEURON'
+
         dtc.attrs = {}
         for i,j in enumerate(ind):
             dtc.attrs[str(td[i])] = j
@@ -217,7 +208,7 @@ def update_deap_pop(pop,td):
     dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] > 0.0 , dtcpop))
     while len(dtcpop) < len(pop):
         dtcpop.append(dtcpop[0])
-    dtcpop = list(map(pre_format,dtcpop))
+    dtcpop = list(map(format_test,dtcpop))
     b = db.from_sequence(dtcpop, npartitions=8)
     dtcpop = list(db.map(nunit_evaluation,b).compute())
 
@@ -225,12 +216,6 @@ def update_deap_pop(pop,td):
     dtcpop = list(filter(lambda dtc: not isinstance(dtc.scores['RheobaseTestP'],type(None)), dtcpop))
     dtcpop = list(filter(lambda dtc: not type(None) in (list(dtc.scores.values())), dtcpop))
 
-
-    #dtcpop = list(filter(lambda dtc: type(dtc.scores['RheobaseTestP']) is not type(None), dtcpop))
-    #dtcpop = list(filter(lambda dtc: not type(None) in (list(dtc.scores.values())), dtcpop))
-    ##
-    # get rid of transport containers for genes that are responsible for returning None scores
-    ##
     dtc_temp = []
     for dtc in dtcpop:
         temp = list(dtc.scores.values())
