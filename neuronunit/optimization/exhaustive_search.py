@@ -93,9 +93,6 @@ def update_dtc_pop(item_of_iter_list):
     dtc = data_transport_container.DataTC()
     from copy import deepcopy
     dtc.attrs = deepcopy(item_of_iter_list)
-    print(dtc.attrs, 'dtc.attrs ')
-
-
     dtc.scores = {}
     dtc.rheobase = None
     dtc.evaluated = False

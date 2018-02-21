@@ -9,6 +9,7 @@ from .base import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
 from .waveform import InjectedCurrentAPWidthTest
 from .fi import RheobaseTest
 
+
 class TFRTypeTest(RheobaseTest):
     """Tests whether a model has particular threshold firing rate dynamics,
     i.e. type 1 or type 2."""
@@ -55,7 +56,7 @@ class TFRTypeTest(RheobaseTest):
                       % supra.min().round(2))
             else:
                 print("No suprathreshold current was tested.")
-
+                
         prediction = None
         if len(sub) and len(supra):
             supra = np.array([x for x in lookup if lookup[x]>0]) # No units
@@ -65,7 +66,7 @@ class TFRTypeTest(RheobaseTest):
                 prediction = 1 # Type 1 dynamics.
             elif n_spikes_at_thresh > 1:
                 prediction = 2 # Type 2 dynamics.
-
+        
         return prediction
 
     def compute_score(self, observation, prediction):
@@ -77,6 +78,7 @@ class TFRTypeTest(RheobaseTest):
         else:
             score = self.score_type(prediction == observation)
         return score
+
 
 class BurstinessTest(InjectedCurrentAPWidthTest):
     """Tests whether a model exhibits the observed burstiness"""

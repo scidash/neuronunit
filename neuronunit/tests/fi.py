@@ -287,6 +287,8 @@ class RheobaseTestP(VmTest):
             DURATION = 1000.0*pq.ms
             params = {'injected_square_current':
                       {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+
+            dtc = copy.copy(dtc)
             ampl = float(ampl)
             #print(dtc.lookup)
             if ampl not in dtc.lookup or len(dtc.lookup) == 0:
@@ -296,17 +298,11 @@ class RheobaseTestP(VmTest):
                 current = {'injected_square_current':current}
 
                 dtc.run_number += 1
+                model.set_attrs(dtc.attrs)
                 model.inject_square_current(current)
                 dtc.previous = ampl
-                #print(n_spikes, ' n_spikes',ampl, 'amps')
-
                 n_spikes = model.get_spike_count()
-                print(n_spikes, ' n_spikes',ampl, 'amps')
-                print(model.attrs, ' attributes')
                 dtc.lookup[float(ampl)] = n_spikes
-                print(dtc.lookup)
-
-
                 if n_spikes == 1:
                     dtc.rheobase = float(ampl)
                     dtc.boolean = True
@@ -391,7 +387,6 @@ class RheobaseTestP(VmTest):
          #    return scores.InsufficientDataScore(None)
 
          if float(prediction['value']) <= 0.0:
-            #print('gets here')
             # if rheobase is negative discard the model essentially.
             prediction['value'] = -1 * pq.pA
             return scores.InsufficientDataScore(None)

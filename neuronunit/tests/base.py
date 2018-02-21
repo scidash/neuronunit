@@ -8,6 +8,7 @@ import numpy as np
 
 import sciunit
 import sciunit.scores as scores
+from sciunit.errors import ObservationError
 import neuronunit.capabilities as cap
 from neuronunit import neuroelectro
 
@@ -63,7 +64,7 @@ class VmTest(sciunit.Test):
             key_str = 'and/or a '.join(['%s key' % key for key in united_keys])
             msg = ("Observation must be a dictionary with a %s and each key "
                    "must have units from the quantities package." % key_str)
-            raise sciunit.ObservationError(msg)
+            raise ObservationError(msg)
         for key in united_keys:
             if key in observation:
                 provided = observation[key].simplified.units
@@ -74,12 +75,12 @@ class VmTest(sciunit.Test):
                                               key,
                                               provided.dimensionality.__str__())
                            )
-                    raise sciunit.ObservationError(msg)
+                    raise ObservationError(msg)
         if 'std' not in observation:
             if all([x in observation for x in ['sem','n']]):
                 observation['std'] = observation['sem'] * np.sqrt(observation['n'])
-            else:
-                raise sciunit.ObservationError(("Observation must have an 'std' key "
+            elif 'mean' in observation:
+                raise ObservationError(("Observation must have an 'std' key "
                                                 "or both 'sem' and 'n' keys."))
         return observation
 

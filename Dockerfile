@@ -26,7 +26,7 @@ RUN sudo apt-get install -y python-setuptools
 RUN sudo python setup.py install
 WORKDIR $HOME
 
-COPY $HOME/git/BluePyOpt ~/HOME/BluePyOpt
+COPY BluePyOpt ~/HOME/BluePyOpt
 RUN pip install -e $HOME/BluePyOpt
 WORKDIR $HOME
 RUN pip install prospector

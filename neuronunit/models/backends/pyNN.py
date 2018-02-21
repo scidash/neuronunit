@@ -25,22 +25,16 @@ class pyNNBackend(Backend):
         self.Population = Population
         self.DCSource = DCSource
         self.setup = setup
-        #self.neuron = neuron
         self.model_path = None
         self.related_data = {}
         self.lookup = {}
         self.attrs = {}
         super(pyNNBackend,self).init_backend()#*args, **kwargs)
         if DTC is not None:
-            #print(DTC.attrs)
+
             self.set_attrs(**DTC.attrs)
-            #print(DTC.attrs)
-            #print(self.model.attrs)
 
         backend = 'pyNN'
-
-
-            #print(self._backend.attrs)
 
 
     def get_membrane_potential(self):
