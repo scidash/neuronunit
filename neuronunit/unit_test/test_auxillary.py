@@ -130,16 +130,12 @@ class TestBackend(NotebookTools,unittest.TestCase):
         three_points = [grid_points[0],second_point,grid_points[-1]]
         self.assertEqual(len(three_points),3)
         dtcpop = list(map(exhaustive_search.update_dtc_grid,three_points))
-        for d in dtcpop:
-            print(type(d))
-            print(type(d.attrs))
 
-            import pdb; pdb.set_trace()
+        #TODO dtcpop is not self.dtcpop for reasons that are unclear.
 
+        for d in self.dtcpop:
             assert len(list(d.attrs.values())) > 0
-
-        #for i, dtc in enumerate(dtcpop):
-        dtcpop = self.test_01a_compute_score(dtcpop)
+        dtcpop = self.test_01a_compute_score(self.dtcpop)
         self.dtcpop = dtcpop
         return dtcpop
 
@@ -172,6 +168,8 @@ class TestBackend(NotebookTools,unittest.TestCase):
         score = self.run_test(T)
         self.rheobase = score.prediction
         self.assertNotEqual(self.rheobase,None)
+        self.dtc.attrs = self.model.attrs
+
         #print(score)
 
 
@@ -196,19 +194,22 @@ class TestBackend(NotebookTools,unittest.TestCase):
         self.assertTrue(-1.45 < score < -1.35)
 
 
+
     def test_ap_width(self):
         from neuronunit.models.reduced import ReducedModel
         from neuronunit.optimization import get_neab
         from neuronunit.tests.waveform import InjectedCurrentAPWidthTest as T
         from neuronunit.optimization.optimization_management import format_test
-        from neuronunit.optimization import data_transport_container
-        dtc = data_transport_container.DataTC()
+        #from neuronunit.optimization import data_transport_container
+        #dtc = data_transport_container.DataTC()
+        dtc = self.dtc
+        assert len(list(dtc.attrs)) != 0
         dtc.rheobase = self.rheobase
         dtc = format_test(dtc)
         self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend=('NEURON',{'DTC':dtc}))
 
         #self.update_amplitude(T)
-        score = self.run_test(T)
+        score = self.run_test(T,pred=self.rheobase)
         self.assertTrue(-0.6 < score < -0.5)
 
     def test_ap_amplitude(self):
@@ -224,7 +225,8 @@ class TestBackend(NotebookTools,unittest.TestCase):
         self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend=('NEURON',{'DTC':dtc}))
 
         #self.update_amplitude(T)
-        score = self.run_test(T,pred = dtc.rheobase)
+        #score = self.run_test(T,pred = dtc.rheobase)
+        score = self.run_test(T,pred=self.rheobase)
         self.assertTrue(-1.7 < score < -1.6)
 
     def test_ap_threshold(self):
@@ -237,7 +239,8 @@ class TestBackend(NotebookTools,unittest.TestCase):
         dtc.rheobase = self.rheobase
         dtc = format_test(dtc)
         self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend=('NEURON',{'DTC':dtc}))
-        score = self.run_test(T)
+        #score = self.run_test(T)
+        score = self.run_test(T,pred=self.rheobase)
 
 
 
