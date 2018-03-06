@@ -1,7 +1,6 @@
 """Tests of NeuronUnit model classes"""
 
-
-
+import unittest
 
 class ReducedModelTestCase(unittest.TestCase):
     """Test instantiation of the reduced model"""

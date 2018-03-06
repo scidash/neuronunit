@@ -6,14 +6,36 @@ import tempfile
 import inspect
 import shutil
 import random
+import pickle
 
 from lxml import etree
+from neo.core import AnalogSignal
 
 import sciunit
 #from sciunit.utils import dict_hash
 import neuronunit.capabilities as cap
 from pyneuroml import pynml
 from .backends import available_backends
+
+
+class StaticModel(sciunit.Model,
+                  cap.ProducesMembranePotential):
+    """A model which produces a frozen membrane potential waveform"""
+
+    def __init__(self, vm):
+        """vm is either a neo.core.AnalogSignal or a path to a 
+        pickled neo.core.AnalogSignal"""
+
+        if isinstance(vm,str):
+            with open(vm,'r') as f:
+                vm = pickle.load(f)
+        if not isinstance(vm,AnalogSignal):
+            raise TypeError('vm must be a neo.core.AnalogSignal')
+
+        self.vm = vm
+
+    def get_membrane_potential(self,**kwargs):
+        return self.vm
 
 
 class LEMSModel(sciunit.Model,

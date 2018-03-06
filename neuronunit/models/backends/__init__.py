@@ -1,9 +1,21 @@
 import inspect
 
 from .base import Backend
-from .jNeuroML import jNeuroMLBackend
-from .neuron import NEURONBackend
-from .pyNN import pyNNBackend
+
+try:
+    from .jNeuroML import jNeuroMLBackend
+except:
+    pass
+
+try:
+    from .neuron import NEURONBackend
+except:
+    pass
+
+try:
+    from .pyNN import pyNNBackend
+except:
+    pass
 
 available_backends = {x.replace('Backend',''):cls for x, cls \
                    in locals().items() \
