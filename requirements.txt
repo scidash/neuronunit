@@ -4,6 +4,7 @@ neo==0.5.2
 elephant==0.4.1
 igor==0.3
 allensdk==0.14.2
+pyNeuroML>-0.3.10
+pyNN>=0.9
+execnet
 -e git+https://github.com/scidash/sciunit.git@dev#egg=sciunit
--e git+https://github.com/rgerkin/pyLEMS.git@master#egg=pyLEMS
--e git+https://github.com/rgerkin/pyNeuroML.git@pip#egg=pyneuroml
