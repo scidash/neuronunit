@@ -19,6 +19,7 @@ setup(
                       'sciunit==0.19',
                       'allensdk==0.14.2',
                       'pyneuroml==0.3.10',
+                      'pyNN',
                       'execnet',
                       ],
     dependency_links = ['git+https://github.com/scidash/sciunit@dev#egg=sciunit-0.19',
