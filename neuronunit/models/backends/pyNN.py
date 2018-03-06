@@ -1,17 +1,9 @@
 from .base import *
+import pyNN
 
 class pyNNBackend(Backend):
 
     backend = 'pyNN'
-    try:
-        import pyNN, lazyarray
-        from pyNN import neuron
-    except:
-        import os
-        os.system('pip install lazyarray pyNN')
-        from pyNN import neuron
-
-
 
     def init_backend(self, attrs=None, simulator='neuron'):
         from pyNN import neuron

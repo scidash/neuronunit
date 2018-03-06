@@ -128,7 +128,7 @@ class NeuroElectroData(object):
         query['n__name'] = self.neuron.name
         query['e'] = self.ephysprop.id
         query['e__name'] = self.ephysprop.name
-        print(query)
+        #print(query)
         query = {key:value for key,value in query.items() if value is not None}
 
         if params is not None:

@@ -24,7 +24,7 @@ class jNeuroMLBackend(Backend):
         f = pynml.run_lems_with_jneuroml
         self.exec_in_dir = tempfile.mkdtemp()
         results = f(self.model.lems_file_path,
-                    include=[os.path.dirname(self.model.orig_lems_file_path)],
+                    paths_to_include=[os.path.dirname(self.model.orig_lems_file_path)],
                     skip_run=self.model.skip_run,
                     nogui=self.model.run_params['nogui'],
                     load_saved_data=True, plot=False,
