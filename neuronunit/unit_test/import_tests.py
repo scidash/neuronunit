@@ -1,6 +1,5 @@
 """Tests of imports of neuronunit submodules and other dependencies"""
 
-
 from .base import *
 
 
@@ -14,6 +13,7 @@ class ImportTestCase(unittest.TestCase):
                            skip=['neuroconstruct','optimization',
                                  'backends','unit_test'],
                            verbose=True)
+
 
 
 if __name__ == '__main__':
