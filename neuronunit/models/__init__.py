@@ -2,7 +2,10 @@
 
 import os
 from copy import deepcopy
-import tempfile
+try:
+    from tempfile import TemporaryDirectory
+except:
+    from backports.tempfile import TemporaryDirectory
 import inspect
 import shutil
 import random
@@ -123,7 +126,7 @@ class LEMSModel(sciunit.Model,
         if name is None:
             name = self.name
         if not hasattr(self,'temp_dir'):
-            self.temp_dir = tempfile.TemporaryDirectory()
+            self.temp_dir = TemporaryDirectory()
         lems_copy_path  = os.path.join(self.temp_dir.name, '%s.xml' % name)
         shutil.copy2(self.orig_lems_file_path,lems_copy_path)
         nml_paths = self.get_nml_paths(original=True)
