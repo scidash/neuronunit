@@ -29,7 +29,6 @@ install:
 script: 
   - export NC_HOME='.' # NeuroConstruct isn't used but tests need this
                        # variable set to pass.  
-  - coverage run --source=. --omit=*unit_test*,setup.py,*.eggs* setup.py test  
+  - sh test.sh  
 after_success:
   - coveralls
-
