@@ -192,29 +192,20 @@ class ISITest(VmTest):
     description = (("For neurons and muscle cells with slower non firing dynamics like CElegans neurons check to see how much \
     varition is in the continuous membrane potential."))
     score_type = scores.RatioScore
-    units = pq.ms
-    #local_variation = 0.0 # 1.0
+    units = pq.S
 
     def __init__(self, *args, **kwargs):
         super(ISITest,self).__init__(*args,**kwargs)
-        #super(TFRTypeTest,self).__init__(*args,**kwargs)
 
         if self.name == self.__class__.name:
-            self.name = "Firing Rate Type %d test" % self.observation['type']
+            self.name = "Inter Spike Interval Test %d test" % self.observation['type']
 
-    '''
-    def validate_observation(self, observation):
-        super(CVTest,self).validate_observation(observation,
-                                                     united_keys=['rheobase'],
-                                                     nonunited_keys=['type'])
-
-        assert ('type' in observation) and (observation['type'] in [1,2]), \
-            ("observation['type'] must be either 1 or 2, corresponding to "
-             "type 1 or type 2 threshold firing rate dynamics.")
-    '''
 
     def generate_prediction(self, model = None):
-        prediction = np.mean(isi(model.get_membrane_potential()))
+        prediction = {}
+        st = model.get_spike_train()
+        isis = isi(st)
+        prediction['isi'] = float(np.mean(isis))*pq.ms#1000.0 * pq.ms * 100.0
         return prediction
 
 
@@ -222,11 +213,10 @@ class ISITest(VmTest):
 
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
-        #print("%s: Observation = %s, Prediction = %s" % \
-        #    (self.name,str(observation),str(prediction)))
         if prediction is None:
             score = scores.InsufficientDataScore(None)
         else:
+            print(observation,prediction)
             score = self.score_type.compute(observation,prediction,key='isi')
         return score
 
@@ -244,28 +234,17 @@ class CVTest(VmTest):
     varition is in the continuous membrane potential."))
     score_type = scores.RatioScore
     units = pq.Dimensionless
-    #local_variation = 0.0 # 1.0
 
     def __init__(self, *args, **kwargs):
         super(CVTest,self).__init__(*args,**kwargs)
-        #super(TFRTypeTest,self).__init__(*args,**kwargs)
 
         if self.name == self.__class__.name:
             self.name = "Firing Rate Type %d test" % self.observation['type']
 
-    '''
-    def validate_observation(self, observation):
-        super(CVTest,self).validate_observation(observation,
-                                                     united_keys=['rheobase'],
-                                                     nonunited_keys=['type'])
-
-        assert ('type' in observation) and (observation['type'] in [1,2]), \
-            ("observation['type'] must be either 1 or 2, corresponding to "
-             "type 1 or type 2 threshold firing rate dynamics.")
-    '''
 
     def generate_prediction(self, model = None):
-        prediction = abs(cv(model.get_membrane_potential()))
+        st = model.get_spike_train()
+        prediction = abs(cv(st))
         return prediction
 
 
@@ -273,8 +252,7 @@ class CVTest(VmTest):
 
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
-        #print("%s: Observation = %s, Prediction = %s" % \
-        #    (self.name,str(observation),str(prediction)))
+
         if prediction is None:
             score = scores.InsufficientDataScore(None)
         else:
@@ -304,16 +282,6 @@ class LocalVariationTest(VmTest):
         if self.name == self.__class__.name:
             self.name = "Firing Rate Type %d test" % self.observation['type']
 
-    '''
-    def validate_observation(self, observation):
-        super(LocalVariationTest,self).validate_observation(observation,
-                                                     united_keys=['rheobase'],
-                                                     nonunited_keys=['type'])
-
-        assert ('type' in observation) and (observation['type'] in [1,2]), \
-            ("observation['type'] must be either 1 or 2, corresponding to "
-             "type 1 or type 2 threshold firing rate dynamics.")
-    '''
 
 
     def generate_prediction(self, model = None):
