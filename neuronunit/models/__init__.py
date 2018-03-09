@@ -210,7 +210,7 @@ class LEMSModel(sciunit.Model,
 
     @property
     def state(self):
-        return self._state(keys=['name','url', 'attrs','run_params'])
+        return self._state(keys=['name','url', 'attrs','run_params','backend'])
 
     def __del__(self):
         if hasattr(self,'temp_dir'):# is not type(None):
