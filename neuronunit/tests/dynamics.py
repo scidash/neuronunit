@@ -106,10 +106,9 @@ class BurstinessTest(InjectedCurrentAPWidthTest):
         model.inject_square_current(observation['current'])
         spike_train = model.get_spike_train()
         if len(spike_train) >= 3:
-            cv = cv2(spike_train)
-            isis = isi(spike_train)
-            cv_old = np.std(isis) / np.mean(isis)
-            print(cv,cv_old)
+            cv(spike_train)#*pq.Dimensionless
+            #isis = isi(spike_train)
+            #cv_old = np.std(isis) / np.mean(isis)
         else:
             cv = None
         return {'cv':cv}
@@ -124,6 +123,90 @@ class BurstinessTest(InjectedCurrentAPWidthTest):
             score = self.score_type.compute(observation,prediction,key='cv')
         return score
 
+class CVTest(VmTest):
+    """Tests whether a model exhibits the observed burstiness"""
+
+    def __init__(self, observation={'cv_mean':None,'cv_std':None},
+                 name=None,
+                 params=None):
+        pass
+
+    name = "Coefficient of Variation Test"
+    description = (("For neurons and muscle cells check the Coefficient of Variation on a list of Interval Between Spikes given a spike train recording."))
+
+    score_type = scores.RatioScore
+    units = pq.Dimensionless
+
+    def __init__(self, *args, **kwargs):
+        super(CVTest,self).__init__(*args,**kwargs)
+
+        if self.name == self.__class__.name:
+            self.name = "Firing Rate Type %d test" % self.observation['type']
+
+
+    def validate_observation(self, observation):
+        super(CVTest,self).validate_observation(observation,
+                                                     united_keys=['cv'],
+                                                     nonunited_keys=['type'])
+        #assert ('type' in observation) and (observation['type'] in [1,2]), \
+        #    ("observation['type'] must be either 1 or 2, corresponding to "
+        #     "type 1 or type 2 threshold firing rate dynamics.")
+
+
+    def generate_prediction(self, model = None):
+        st = model.get_spike_train()
+        #prediction = abs(cv(st))
+
+        prediction['cv'] = abs(cv(st))*pq.Dimensionless
+        return prediction
+
+    def compute_score(self, observation, prediction):
+        """Implementation of sciunit.Test.score_prediction."""
+
+        if prediction is None:
+            score = scores.InsufficientDataScore(None)
+        else:
+            score = self.score_type.compute(observation,prediction,key='cv')
+        return score
+
+
+class ISITest(VmTest):
+    """Tests whether a model exhibits the observed Inter Spike Intervals"""
+
+    def __init__(self, observation={'isi_mean':None,'isi_std':None},
+                 name=None,
+                 params=None):
+        pass
+
+
+    name = "Inter Spike Interval Tests"
+    description = (("For neurons and muscle cells check the mean Interval Between Spikes given a spike train recording."))
+    score_type = scores.RatioScore
+    units = pq.ms
+
+    def __init__(self, *args, **kwargs):
+        super(ISITest,self).__init__(*args,**kwargs)
+
+        if self.name == self.__class__.name:
+            self.name = "Inter Spike Interval Test %d test" % self.observation['type']
+
+
+    def generate_prediction(self, model = None):
+        prediction = {}
+        st = model.get_spike_train()
+        isis = isi(st)
+
+        prediction['isi'] = float(np.mean(isis))*1000.0*pq.ms
+        return prediction
+
+    def compute_score(self, observation, prediction):
+        """Implementation of sciunit.Test.score_prediction."""
+        if prediction is None:
+            score = scores.InsufficientDataScore(None)
+        else:
+            print(observation,prediction)
+            score = self.score_type.compute(observation,prediction,key='isi')
+        return score
 
 class FiringRateTest(RheobaseTest):
     """Tests whether a model exhibits the observed burstiness"""
@@ -133,12 +216,10 @@ class FiringRateTest(RheobaseTest):
                  params=None):
         pass
 
-    name = "Local Variation test"
-    description = (("For neurons and muscle cells with slower non firing dynamics like CElegans neurons check to see how much \
-    varition is in the continuous membrane potential."))
+    name = "Firing Rate Test"
+    description = (("Spikes Per Second."))
     score_type = scores.RatioScore
     units = pq.Dimensionless
-    local_variation = 0.0 # 1.0
 
     def __init__(self, *args, **kwargs):
         super(LocalVariationTest,self).__init__(*args,**kwargs)
@@ -177,86 +258,6 @@ class FiringRateTest(RheobaseTest):
             score = scores.InsufficientDataScore(None)
         else:
             score = self.score_type.compute(observation,prediction,key='f_rate')
-        return score
-
-
-class ISITest(VmTest):
-    """Tests whether a model exhibits the observed burstiness"""
-
-    def __init__(self, observation={'isi_mean':None,'isi_std':None},
-                 name=None,
-                 params=None):
-        pass
-
-    name = "Local Variation test"
-    description = (("For neurons and muscle cells with slower non firing dynamics like CElegans neurons check to see how much \
-    varition is in the continuous membrane potential."))
-    score_type = scores.RatioScore
-    units = pq.S
-
-    def __init__(self, *args, **kwargs):
-        super(ISITest,self).__init__(*args,**kwargs)
-
-        if self.name == self.__class__.name:
-            self.name = "Inter Spike Interval Test %d test" % self.observation['type']
-
-
-    def generate_prediction(self, model = None):
-        prediction = {}
-        st = model.get_spike_train()
-        isis = isi(st)
-        prediction['isi'] = float(np.mean(isis))*pq.ms#1000.0 * pq.ms * 100.0
-        return prediction
-
-
-
-
-    def compute_score(self, observation, prediction):
-        """Implementation of sciunit.Test.score_prediction."""
-        if prediction is None:
-            score = scores.InsufficientDataScore(None)
-        else:
-            print(observation,prediction)
-            score = self.score_type.compute(observation,prediction,key='isi')
-        return score
-
-
-class CVTest(VmTest):
-    """Tests whether a model exhibits the observed burstiness"""
-
-    def __init__(self, observation={'cv_mean':None,'cv_std':None},
-                 name=None,
-                 params=None):
-        pass
-
-    name = "Local Variation test"
-    description = (("For neurons and muscle cells with slower non firing dynamics like CElegans neurons check to see how much \
-    varition is in the continuous membrane potential."))
-    score_type = scores.RatioScore
-    units = pq.Dimensionless
-
-    def __init__(self, *args, **kwargs):
-        super(CVTest,self).__init__(*args,**kwargs)
-
-        if self.name == self.__class__.name:
-            self.name = "Firing Rate Type %d test" % self.observation['type']
-
-
-    def generate_prediction(self, model = None):
-        st = model.get_spike_train()
-        prediction = abs(cv(st))
-        return prediction
-
-
-
-
-    def compute_score(self, observation, prediction):
-        """Implementation of sciunit.Test.score_prediction."""
-
-        if prediction is None:
-            score = scores.InsufficientDataScore(None)
-        else:
-            score = self.score_type.compute(observation,prediction,key='cv')
         return score
 
 class LocalVariationTest(VmTest):
