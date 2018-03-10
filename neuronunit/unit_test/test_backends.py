@@ -23,7 +23,6 @@ nparams = 10
 provided_keys = list(model_params.keys())
 USE_CACHED_GS = False
 grid_points = exhaustive_search.create_grid(npoints = npoints,nparams = nparams)
-#dtcpop = list(update_dtc_pop(grid_points,td = td))
 b0 = db.from_sequence(grid_points, npartitions=8)
 dtcpop = list(db.map(update_dtc_grid,b0).compute())
 print(dtcpop)
@@ -96,14 +95,13 @@ def serial_equals_parallel():
     #print('serial', serial_length, 'parallel length', parallel_length)
     return dtcp, dtcs
 
-#dtcp, dtcs = serial_equals_parallel()
 import unittest
 
 class TestBackend(unittest.TestCase):#,serial_equals_parallel):
     def setUp(self):
-        dtcp, dtcs = serial_equals_parallel()
-        self.dtcp = dtcp # 5
-        self.dtcs = dtcs # 4
+        #dtcp, dtcs = serial_equals_parallel()
+        #self.dtcp = dtcp # 5
+        #self.dtcs = dtcs # 4
 
     def test(self):
         dtcp, dtcs = serial_equals_parallel()
@@ -111,6 +109,10 @@ class TestBackend(unittest.TestCase):#,serial_equals_parallel):
         for i,d0 in enumerate(dtcp):
             for k, v in d0.scores.items():
                 print('serial scores equal parallel scores')
-                assert dtcs[i].scores[k] == v
+
+                self.assertEqual(dtcs[i].scores[k],v)
                 self.assertEquals(dtcs[i].scores[k],v)
-        return 0
+        return True        
+
+import sys
+sys.exit()
