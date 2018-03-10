@@ -94,7 +94,7 @@ class BurstinessTest(InjectedCurrentAPWidthTest):
 
     score_type = scores.RatioScore
 
-    units = pq.Dimensionless
+    units = pq.dimensionless
 
     cv_threshold = 1.0
 
@@ -106,7 +106,7 @@ class BurstinessTest(InjectedCurrentAPWidthTest):
         model.inject_square_current(observation['current'])
         spike_train = model.get_spike_train()
         if len(spike_train) >= 3:
-            cv(spike_train)#*pq.Dimensionless
+            cv(spike_train)*pq.dimensionless
             #isis = isi(spike_train)
             #cv_old = np.std(isis) / np.mean(isis)
         else:
@@ -135,7 +135,7 @@ class CVTest(VmTest):
     description = (("For neurons and muscle cells check the Coefficient of Variation on a list of Interval Between Spikes given a spike train recording."))
 
     score_type = scores.RatioScore
-    units = pq.Dimensionless
+    units = pq.dimensionless
 
     def __init__(self, *args, **kwargs):
         super(CVTest,self).__init__(*args,**kwargs)
@@ -143,11 +143,12 @@ class CVTest(VmTest):
         if self.name == self.__class__.name:
             self.name = "Firing Rate Type %d test" % self.observation['type']
 
-
-    def validate_observation(self, observation):
-        super(CVTest,self).validate_observation(observation,
-                                                     united_keys=['cv'],
-                                                     nonunited_keys=['type'])
+    def validate_observation(self,observation):
+        pass
+    #def validate_observation(self, observation):
+    #    super(CVTest,self).validate_observation(observation,
+    #                                                 united_keys=['cv'],
+    #                                                 nonunited_keys=['type'])
         #assert ('type' in observation) and (observation['type'] in [1,2]), \
         #    ("observation['type'] must be either 1 or 2, corresponding to "
         #     "type 1 or type 2 threshold firing rate dynamics.")
@@ -156,8 +157,9 @@ class CVTest(VmTest):
     def generate_prediction(self, model = None):
         st = model.get_spike_train()
         #prediction = abs(cv(st))
-
-        prediction['cv'] = abs(cv(st))*pq.Dimensionless
+        prediction = {}
+        prediction['cv'] = abs(cv(st))*pq.dimensionless
+        prediction['mean'] = abs(cv(st))*pq.dimensionless
         return prediction
 
     def compute_score(self, observation, prediction):
@@ -195,7 +197,6 @@ class ISITest(VmTest):
         prediction = {}
         st = model.get_spike_train()
         isis = isi(st)
-
         prediction['isi'] = float(np.mean(isis))*1000.0*pq.ms
         return prediction
 
@@ -211,7 +212,7 @@ class ISITest(VmTest):
 class FiringRateTest(RheobaseTest):
     """Tests whether a model exhibits the observed burstiness"""
 
-    def __init__(self, observation={'cv_mean':None,'cv_std':None},
+    def __init__(self, observation={'sps_mean':None,'sps_std':None},
                  name=None,
                  params=None):
         pass
@@ -219,7 +220,7 @@ class FiringRateTest(RheobaseTest):
     name = "Firing Rate Test"
     description = (("Spikes Per Second."))
     score_type = scores.RatioScore
-    units = pq.Dimensionless
+    units = pq.dimensionless
 
     def __init__(self, *args, **kwargs):
         super(LocalVariationTest,self).__init__(*args,**kwargs)
@@ -244,7 +245,7 @@ class FiringRateTest(RheobaseTest):
         spike_count = model.get_spike_count()
 
         window = ass.t_stop-ass.t_start
-        predicted_rate = float(spike_count/window)
+        prediction['sps_mean'] = float(spike_count/window)
         # prediction should be number of spikes divided by time.
         return predicted_rate
 
@@ -257,7 +258,7 @@ class FiringRateTest(RheobaseTest):
         if prediction is None:
             score = scores.InsufficientDataScore(None)
         else:
-            score = self.score_type.compute(observation,prediction,key='f_rate')
+            score = self.score_type.compute(observation,prediction,key='sps_mean')
         return score
 
 class LocalVariationTest(VmTest):
@@ -275,7 +276,7 @@ class LocalVariationTest(VmTest):
     description = (("For neurons and muscle cells with slower non firing dynamics like CElegans neurons check to see how much \
     varition is in the continuous membrane potential."))
     score_type = scores.RatioScore
-    units = pq.Dimensionless
+    units = pq.dimensionless
     local_variation = 0.0 # 1.0
 
     def __init__(self, *args, **kwargs):
