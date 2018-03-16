@@ -22,7 +22,7 @@ def grid_points():
     assert dtcpop is not None
     return dtcpop
 
-def test_01a_compute_score(dtcpop):
+def test_compute_score(dtcpop):
     from neuronunit.optimization import get_neab
     from neuronunit.optimization.optimization_management import dtc_to_rheo
     from neuronunit.optimization.optimization_management import nunit_evaluation
@@ -48,8 +48,8 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         self.score_s = None
         self.grid_points = grid_points()
         dtcpop = self.grid_points
-        self.test_01a_compute_score = test_01a_compute_score
-        self.dtcpop = test_01a_compute_score(dtcpop)
+        self.test_compute_score = test_compute_score
+        self.dtcpop = test_compute_score(dtcpop)
         self.dtc = self.dtcpop[0]
         self.rheobase = self.dtc.rheobase
         from neuronunit.models.reduced import ReducedModel
@@ -69,40 +69,46 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         return score
 
 
-    # Get experimental electro physology bservations for a dentate gyrus baskett cell
-    # An inhibitory neuron
-    @unittest.skip("Not fully developed yet")
+
+
+    #@unittest.skip("Not fully developed yet")
     def test_get_rate_CV(self):
-        # Dictionary of observations, in this case two ephys properties from one paper
         from neuronunit.tests import dynamics
-        import quantities as pq
         doi = 'doi:10.1113/jphysiol.2010.200683'
-        observations={doi:{'ap_amplitude':{'mean':45.1*pq.mV,
-                                           'sem':0.7*pq.mV,
-                                           'n':25},
-                           'ap_width':{'mean':19.7*pq.ms,
-                                       'sem':1.0*pq.ms,
-                                       'n':25}}}
-
-        # Instantiate two tests based on these properties
-        ap_width_test = APWidthTest(observation=observations[doi]['ap_width'])
-        ap_amplitude_test = APAmplitudeTest(observation=observations[doi]['ap_amplitude'])
-
-        from neuronunit import tests as nu_tests, neuroelectro
-        from neuronunit.tests import passive, waveform, fi
-        cholinergic = {'neuron':'115'}
         observation = {}
-
-        observation[doi] = {}
+        observation[doi] = {}doi = 'doi:10.1113/jphysiol.2010.200683'
         observation[doi]['isi'] = 598.0*pq.ms
         observation[doi]['mean'] = 598.0*pq.ms
         observation[doi]['std'] = 37.0*pq.ms
-        isi_test = dynamics.ISITest(observation=observation[doi])
+        isi_test = dynamics.ISITest(observation = observation[doi])
+        # Put them together in a test suite
+
         observation = {}
         observation[doi] = {}
-        observation[doi]['isi'] = 16.1
-        observation[doi]['mean'] = 16.1*pq.ms
-        observation[doi]['std'] = 2.1*pq.ms
+        observation[doi]['cv'] = 0.210526*pq.dimensionless
+        observation[doi]['mean'] = 0.210526*pq.dimensionless
+        observation[doi]['std'] = 0.105263*pq.dimensionless
+        #si_test = dynamics.ISITest(observation = observation[doi])
+
+        cv_test = dynamics.CVTest(observation = observation[doi])
+        ap_tests = sciunit.TestSuite([isi_test,cv_test], name="AP CV and ISI Tests")
+
+        from neuronunit.models import static_model
+        true_model = self.model
+        params = {}
+        params['injected_square_current'] = {}
+        params['injected_square_current']['amplitude'] = self.rheobase*2.01
+        model.inject_square_current(params)
+        vm = model.get_membrane_potential()
+        proxy_model = static_model.StaticModel(vm = vm, st = None)
+        score_matrix = ap_tests.judge(proxy_model)
+        for score in score_matrix:
+            self.assertNotEqual(score,None)
+
+
+        # Put them together in a test suite
+        #ap_tests = sciunit.TestSuite([ap_width_test,ap_amplitude_test], name="AP Tests")
+
 
 
     @unittest.skip("Not fully developed yet")
@@ -110,7 +116,7 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         from neuronunit import tests as nu_tests, neuroelectro
         from neuronunit.tests import passive, waveform, fi
         fi_basket = {'nlex_id':'NLXCELL:100201'}
-        #observation =  cls.neuroelectro_summary_observation(fi_basket)
+        observation =  cls.neuroelectro_summary_observation(fi_basket)
         test_class_params = [(fi.RheobaseTest,None),
 
                          (passive.InputResistanceTest,None),
@@ -160,7 +166,7 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         dtcpop = list(map(exhaustive_search.update_dtc_grid,three_points))
         for d in self.dtcpop:
             assert len(list(d.attrs.values())) > 0
-        dtcpop = self.test_01a_compute_score(self.dtcpop)
+        dtcpop = self.test_compute_score(self.dtcpop)
         self.dtcpop = dtcpop
         return dtcpop
 
