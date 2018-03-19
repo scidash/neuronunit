@@ -5,24 +5,34 @@ import sys
 from sciunit.utils import NotebookTools#,import_all_modules
 import dask
 from dask import bag
+import dask.bag as db
+
 from base import *
 
 
 def grid_points():
+    from neuronunit.optimization.optimization_management import map_wrapper
+
     npoints = 2
     nparams = 10
     from neuronunit.optimization.model_parameters import model_params
     provided_keys = list(model_params.keys())
     USE_CACHED_GS = False
     from neuronunit.optimization import exhaustive_search
+    from neuronunit.optimization.optimization_management import map_wrapper
+    ## exhaustive_search
+
     grid_points = exhaustive_search.create_grid(npoints = npoints,nparams = nparams)
-    import dask.bag as db
     b0 = db.from_sequence(grid_points[0:2], npartitions=8)
+
     dtcpop = list(db.map(exhaustive_search.update_dtc_grid,b0).compute())
+
     assert dtcpop is not None
     return dtcpop
 
 def test_compute_score(dtcpop):
+    from neuronunit.optimization.optimization_management import map_wrapper
+
     from neuronunit.optimization import get_neab
     from neuronunit.optimization.optimization_management import dtc_to_rheo
     from neuronunit.optimization.optimization_management import nunit_evaluation
@@ -31,12 +41,15 @@ def test_compute_score(dtcpop):
     dtclist = list(map(dtc_to_rheo,dtcpop))
     for d in dtclist:
         assert len(list(d.attrs.values())) > 0
-    import dask.bag as db
-    b0 = db.from_sequence(dtclist, npartitions=8)
-    dtclist = list(db.map(format_test,b0).compute())
+    #import dask.bag as db
+    #b0 = db.from_sequence(dtclist, npartitions=8)
+    #dtclist = list(db.map(format_test,b0).compute())
+    dtclist = map_wrapper(format_test, dtclist)
 
-    b0 = db.from_sequence(dtclist, npartitions=8)
-    dtclist = list(db.map(nunit_evaluation,b0).compute())
+    #b0 = db.from_sequence(dtclist, npartitions=8)
+    dtclist = map_wrapper(nunit_evaluation, dtclist)
+
+    #dtclist = list(db.map(nunit_evaluation,b0).compute())
     return dtclist
 
 class testOptimizationBackend(NotebookTools,unittest.TestCase):
@@ -69,14 +82,52 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         return score
 
 
+    def test_map_wrapper():
+        npoints = 2
+        nparams = 3
+        from neuronunit.optimization.model_parameters import model_params
+        provided_keys = list(model_params.keys())
+        USE_CACHED_GS = False
+        from neuronunit.optimization import exhaustive_search
+        from neuronunit.optimization.optimization_management import map_wrapper
+        grid_points = exhaustive_search.create_grid(npoints = npoints,nparams = nparams)
+        import dask.bag as db
+        b0 = db.from_sequence(grid_points[0:2], npartitions=8)
+        dtcpop = list(db.map(exhaustive_search.update_dtc_grid,b0).compute())
+        assert dtcpop is not None
+        dtcpop_compare = map_wrapper(exhaustive_search.update_dtc_grid,grid_points[0:2])
+        return dtcpop
+
+
+    def test_grid_dimensions(self):
+        from neuronunit.optimization.model_parameters import model_params
+        provided_keys = list(model_params.keys())
+        USE_CACHED_GS = False
+        from neuronunit.optimization import exhaustive_search
+        from neuronunit.optimization.optimization_management import map_wrapper
+        import dask.bag as db
+        npoints = 2
+        nparams = 3
+        for i in range(1,10):
+            for j in range(1,10):
+                grid_points = exhaustive_search.create_grid(npoints = i, nparams = j)
+                b0 = db.from_sequence(grid_points[0:2], npartitions=8)
+                dtcpop = list(db.map(exhaustive_search.update_dtc_grid,b0).compute())
+                self.assertEqual(i*j,len(dtcpop))
+                self.assertNotEqual(dtcpop,None)
+                dtcpop_compare = map_wrapper(exhaustive_search.update_dtc_grid,grid_points[0:2])
+                self.assertNotEqual(dtcpop_compare,None)
+                self.assertEqual(len(dtcpop_compare),len(dtcpop))
+        return True
 
 
     #@unittest.skip("Not fully developed yet")
     def test_get_rate_CV(self):
         from neuronunit.tests import dynamics
+        import quantities as pq
         doi = 'doi:10.1113/jphysiol.2010.200683'
         observation = {}
-        observation[doi] = {}doi = 'doi:10.1113/jphysiol.2010.200683'
+        observation[doi] = {}
         observation[doi]['isi'] = 598.0*pq.ms
         observation[doi]['mean'] = 598.0*pq.ms
         observation[doi]['std'] = 37.0*pq.ms
@@ -110,15 +161,13 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         #ap_tests = sciunit.TestSuite([ap_width_test,ap_amplitude_test], name="AP Tests")
 
 
-
-    @unittest.skip("Not fully developed yet")
+    #@unittest.skip("Not fully developed yet")
     def test_get_inhibitory_neuron(self):
         from neuronunit import tests as nu_tests, neuroelectro
         from neuronunit.tests import passive, waveform, fi
         fi_basket = {'nlex_id':'NLXCELL:100201'}
-        observation =  cls.neuroelectro_summary_observation(fi_basket)
+        observation =  fi.neuroelectro_summary_observation(fi_basket)
         test_class_params = [(fi.RheobaseTest,None),
-
                          (passive.InputResistanceTest,None),
                          (passive.TimeConstantTest,None),
                          (passive.CapacitanceTest,None),
@@ -137,7 +186,6 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         from neuronunit.optimization import get_neab
         import copy
         import unittest
-
         dtc = copy.copy(self.dtc)
         self.assertNotEqual(self.dtc,None)
         dtc.scores = {}
