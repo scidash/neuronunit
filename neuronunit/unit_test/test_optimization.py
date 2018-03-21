@@ -2,7 +2,7 @@
 import unittest
 import os
 import sys
-from sciunit.utils import NotebookTools#,import_all_modules
+from sciunit.utils import NotebookTools
 import dask
 from dask import bag
 import dask.bag as db
@@ -37,19 +37,11 @@ def test_compute_score(dtcpop):
     from neuronunit.optimization.optimization_management import dtc_to_rheo
     from neuronunit.optimization.optimization_management import nunit_evaluation
     from neuronunit.optimization.optimization_management import format_test
-    #dtcpop = grid_points()
     dtclist = list(map(dtc_to_rheo,dtcpop))
     for d in dtclist:
         assert len(list(d.attrs.values())) > 0
-    #import dask.bag as db
-    #b0 = db.from_sequence(dtclist, npartitions=8)
-    #dtclist = list(db.map(format_test,b0).compute())
     dtclist = map_wrapper(format_test, dtclist)
-
-    #b0 = db.from_sequence(dtclist, npartitions=8)
     dtclist = map_wrapper(nunit_evaluation, dtclist)
-
-    #dtclist = list(db.map(nunit_evaluation,b0).compute())
     return dtclist
 
 class testOptimizationBackend(NotebookTools,unittest.TestCase):
@@ -91,7 +83,7 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         from neuronunit.optimization import exhaustive_search
         from neuronunit.optimization.optimization_management import map_wrapper
         grid_points = exhaustive_search.create_grid(npoints = npoints,nparams = nparams)
-        import dask.bag as db
+        #import dask.bag as db
         b0 = db.from_sequence(grid_points[0:2], npartitions=8)
         dtcpop = list(db.map(exhaustive_search.update_dtc_grid,b0).compute())
         assert dtcpop is not None
@@ -244,7 +236,7 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         assert score.sort_key is not None
         self.assertTrue(score.sort_key is not None)
 
-        #self.assertTrue(-0.6 < score < -0.5)
+        self.assertTrue(-0.6 < score < -0.5)
 
     def test_restingpotential(self):
         from neuronunit.tests.passive import RestingPotentialTest as T
@@ -253,7 +245,7 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         print(score.sort_key)
         assert score.sort_key is not None
         self.assertTrue(score.sort_key is not None)
-        #self.assertTrue(1.2 < score < 1.3)
+        self.assertTrue(1.2 < score < 1.3)
 
 
     def test_capacitance(self):
@@ -264,7 +256,7 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         assert score.sort_key is not None
         self.assertTrue(score.sort_key is not None)
 
-        #self.assertTrue(-0.15 < score < -0.05)
+        self.assertTrue(-0.15 < score < -0.05)
 
     def test_timeconstant(self):
         from neuronunit.tests.passive import TimeConstantTest as T
@@ -275,7 +267,7 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         assert score.sort_key is not None
         self.assertTrue(score.sort_key is not None)
 
-        #self.assertTrue(-1.45 < score < -1.35)
+        self.assertTrue(-1.45 < score < -1.35)
 
 
 
@@ -288,25 +280,16 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         score = self.run_test(T,pred=self.rheobase)
         assert score.sort_key is not None
         self.assertTrue(score.sort_key is not None)
-        #self.assertTrue(-0.6 < score < -0.5)
+        self.assertTrue(-0.6 < score < -0.5)
 
     def test_ap_amplitude(self):
         from neuronunit.models.reduced import ReducedModel
         from neuronunit.optimization import get_neab
         from neuronunit.tests.waveform import InjectedCurrentAPAmplitudeTest as T
-        #from neuronunit.optimization.optimization_management import format_test
-        #from neuronunit.optimization import data_transport_container
-        #dtc = data_transport_container.DataTC()
-        #dtc.rheobase = self.rheobase
-        #def run_test(self, cls, pred =None):
-        #dtc = format_test(dtc)
-        #self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend=('NEURON',{'DTC':dtc}))
-
         score = self.run_test(T,pred=self.rheobase)
         assert score.sort_key is not None
         self.assertTrue(score.sort_key is not None)
-
-        #self.assertTrue(-1.7 < score < -1.6)
+        self.assertTrue(-1.7 < score < -1.6)
 
     def test_ap_threshold(self):
         from neuronunit.models.reduced import ReducedModel
@@ -353,13 +336,37 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         check_less_thresh = float(np.abs(self.predictionp['value'] - self.predictions['value']))
         self.assertLessEqual(check_less_thresh, 2.0)
 
-    """Testing  notebooks"""
-    @unittest.skip("takes too long")
-    def test_parallelnb_15(self):
+    def test_set_model_attrs(self):
+        from neuronunit.optimization.model_parameters import model_params
+        provided_keys = list(model_params.keys())
+        from bluepyopt.deapext.optimisations import DEAPOptimisation
+        DO = DEAPOptimisation()
+        for i in range(1,10):
+            for j in range(1,10):
+                provided_keys = list(model_params.keys())[j]
+                DO.setnparams(nparams = i, provided_keys = provided_keys)
+
+    def test_opt_set_GA_params(self):
+        from neuronunit.optimization.model_parameters import model_params
+        provided_keys = list(model_params.keys())
+        from bluepyopt.deapext.optimisations import DEAPOptimisation
+        DO = DEAPOptimisation()
+        provided_keys = list(model_params.keys())[5]
+        DO.setnparams(nparams = 5, provided_keys = provided_keys)
+        for NGEN in range(1,30):
+            for MU in range(10,30):
+                pop, hof, log, history, td, gen_vs_hof = DO.run(offspring_size = MU, max_ngen = NGEN, cp_frequency=4,cp_filename='checkpointedGA.p')
+
+
+    def test_parallelnb(self):
         '''
         Lastly test the notebook
         '''
         self.do_notebook('test_ga_versus_grid')
+
+
+    """Testing  notebooks"""
+    @unittest.skip("takes too long")
 
     @unittest.skip("Not implemented")
     def test_subset(self):
