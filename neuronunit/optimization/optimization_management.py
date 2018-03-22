@@ -10,6 +10,16 @@ from neuronunit import tests
 from neuronunit.optimization import get_neab
 
 
+
+def map_wrapper(function_item,list_items):
+    from dask.distributed import Client
+    import dask.bag as db
+    c = Client()
+    NCORES = len(c.ncores().values())
+    b0 = db.from_sequence(list_items, npartitions=NCORES)
+    list_items = list(db.map(function_item,b0).compute())
+    return list_items
+
 def dtc_to_rheo(dtc):
     from neuronunit.models.reduced import ReducedModel
     from neuronunit.optimization import get_neab
@@ -72,22 +82,16 @@ def nunit_evaluation(dtc):
         score = None
         score = t.judge(model,stop_on_error = False, deep_error = False)
         if score.sort_key is not None:
-        #if bool(model.get_spike_count() == 1 or model.get_spike_count() == 0)
-            dtc.scores.get(str(t), score.sort_key)
-            dtc.score.get(str(t), score.sort_key-1)
-            '''
-            dtc.get("scores",)
-            scores = {}
+            # dtc.scores.get(str(t), score.sort_key)
+            # dtc.score.get(str(t), score.sort_key-1)
             dtc.scores[str(t)] = 1 - score.sort_key
             if not hasattr(dtc,'score') :
                 dtc.score = {}
                 dtc.score[str(t)] = score.sort_key
             else:
                 dtc.score[str(t)] = score.sort_key
-            '''
         else:
             pass
-
     return dtc
 
 
@@ -211,8 +215,6 @@ def update_deap_pop(pop,td):
     dtcpop = list(map(format_test,dtcpop))
     b = db.from_sequence(dtcpop, npartitions=8)
     dtcpop = list(db.map(nunit_evaluation,b).compute())
-
-
     dtcpop = list(filter(lambda dtc: not isinstance(dtc.scores['RheobaseTestP'],type(None)), dtcpop))
     dtcpop = list(filter(lambda dtc: not type(None) in (list(dtc.scores.values())), dtcpop))
 
