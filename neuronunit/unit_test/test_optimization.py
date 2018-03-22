@@ -347,15 +347,48 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
                 DO.setnparams(nparams = i, provided_keys = provided_keys)
 
     def test_opt_set_GA_params(self):
+        '''
+        Test to check if making the population size bigger, or increasing the run_number
+        of generations the GA consumes actually increases the fitness.
+
+        Note only test for better fitness every 3rd count, because GAs are stochastic,
+        and by chance occassionally fitness may not increase, just because the GA has
+        more genes to sample with.
+
+        A fairer test of the GA would probably test if the mean of mean fitness is improving
+        or use a sliding window.
+        '''
         from neuronunit.optimization.model_parameters import model_params
         provided_keys = list(model_params.keys())
         from bluepyopt.deapext.optimisations import DEAPOptimisation
         DO = DEAPOptimisation()
-        provided_keys = list(model_params.keys())[5]
-        DO.setnparams(nparams = 5, provided_keys = provided_keys)
+        nparams = 5
+        cnt = 0
+        provided_keys = list(model_params.keys())[nparams]
+        DO.setnparams(nparams = nparams, provided_keys = provided_keys)
+        list_check_increase = []
         for NGEN in range(1,30):
-            for MU in range(10,30):
+            for MU in range(5,40):
                 pop, hof, log, history, td, gen_vs_hof = DO.run(offspring_size = MU, max_ngen = NGEN, cp_frequency=4,cp_filename='checkpointedGA.p')
+                avgf = np.mean([ h.fitness for h in hof ])
+                list_check_increase.append(avgf)
+
+                if cnt % 3 == 0:
+                    avgf = np.mean([ h.fitness for h in hof ])
+                    old_avg = np.mean(list_check_increase)
+                    self.assertGreater(np.mean(list_check_increase),old_avg)
+                    self.assertGreater(avgf,old)
+
+                    old = avgf
+                elif cnt == 0:
+                    avgf = np.mean([ h.fitness for h in hof ])
+                    old = avgf
+                    old_avg = np.mean(list_check_increase)
+
+
+
+                cnt += 1
+                print(old,cnt)
 
 
     def test_parallelnb(self):
