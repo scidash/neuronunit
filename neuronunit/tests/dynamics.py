@@ -14,18 +14,18 @@ class TFRTypeTest(RheobaseTest):
     """Tests whether a model has particular threshold firing rate dynamics,
     i.e. type 1 or type 2."""
 
+    def __init__(self, *args, **kwargs):
+        super(TFRTypeTest,self).__init__(*args,**kwargs)
+        if self.name == self.__class__.name:
+            self.name = "Firing Rate Type %d test" % self.observation['type']
+
     name = "Firing Rate Type test"
 
     description = (("A test of the instantaneous firing rate dynamics, i.e. "
                     "type 1 or type 2"))
 
     score_type = scores.BooleanScore
-
-    def __init__(self, *args, **kwargs):
-        super(TFRTypeTest,self).__init__(*args,**kwargs)
-        if self.name == self.__class__.name:
-            self.name = "Firing Rate Type %d test" % self.observation['type']
-
+    
     def validate_observation(self, observation):
         super(TFRTypeTest,self).validate_observation(observation,
                                                      united_keys=['rheobase'],
@@ -71,8 +71,6 @@ class TFRTypeTest(RheobaseTest):
 
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
-        #print("%s: Observation = %s, Prediction = %s" % \
-        #    (self.name,str(observation),str(prediction)))
         if prediction is None:
             score = scores.InsufficientDataScore(None)
         else:
@@ -83,11 +81,6 @@ class TFRTypeTest(RheobaseTest):
 class BurstinessTest(InjectedCurrentAPWidthTest):
     """Tests whether a model exhibits the observed burstiness"""
 
-    def __init__(self, observation={'cv_mean':None,'cv_std':None},
-                 name=None,
-                 params=None):
-        pass
-
     name = "Burstiness test"
 
     description = (("A test of AP bursting at the provided current"))
@@ -96,11 +89,9 @@ class BurstinessTest(InjectedCurrentAPWidthTest):
 
     units = pq.dimensionless
 
-    cv_threshold = 1.0
+    nonunited_observation_keys = ['cv']
 
-    def validate_observation(self, observation):
-        super(TFRTypeTest,self).validate_observation(observation,
-                                                     nonunited_keys=['cv'])
+    cv_threshold = 1.0
 
     def generate_prediction(self, model):
         model.inject_square_current(observation['current'])
@@ -115,51 +106,33 @@ class BurstinessTest(InjectedCurrentAPWidthTest):
 
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
-        #print("%s: Observation = %s, Prediction = %s" % \
-        #    (self.name,str(observation),str(prediction)))
         if prediction is None:
             score = scores.InsufficientDataScore(None)
         else:
             score = self.score_type.compute(observation,prediction,key='cv')
         return score
 
-class CVTest(VmTest):
+
+class ISICVTest(VmTest):
     """Tests whether a model exhibits the observed burstiness"""
 
-    def __init__(self, observation={'cv_mean':None,'cv_std':None},
-                 name=None,
-                 params=None):
-        pass
-
-    name = "Coefficient of Variation Test"
-    description = (("For neurons and muscle cells check the Coefficient of Variation on a list of Interval Between Spikes given a spike train recording."))
-
+    name = "ISI Coefficient of Variation Test"
+    description = (("For neurons and muscle cells check the Coefficient of "
+                    "Variation on a list of Interval Between Spikes given a "
+                    "spike train recording."))
     score_type = scores.RatioScore
     units = pq.dimensionless
-
-    def __init__(self, *args, **kwargs):
-        super(CVTest,self).__init__(*args,**kwargs)
-
-        if self.name == self.__class__.name:
-            self.name = "Firing Rate Type %d test" % self.observation['type']
-
-    def validate_observation(self,observation):
-        pass
-    #def validate_observation(self, observation):
-    #    super(CVTest,self).validate_observation(observation,
-    #                                                 united_keys=['cv'],
-    #                                                 nonunited_keys=['type'])
-        #assert ('type' in observation) and (observation['type'] in [1,2]), \
-        #    ("observation['type'] must be either 1 or 2, corresponding to "
-        #     "type 1 or type 2 threshold firing rate dynamics.")
-
-
+    united_observation_keys = []
+    nonunited_observation_keys = ['cv']
+    
     def generate_prediction(self, model = None):
         st = model.get_spike_train()
         #prediction = abs(cv(st))
-        prediction = {}
-        prediction['cv'] = abs(cv(st))*pq.dimensionless
-        prediction['mean'] = abs(cv(st))*pq.dimensionless
+        if len(st) >= 3:
+            value = abs(cv(st))*pq.dimensionless
+        else:
+            value = None
+        prediction = {'cv':value}
         return prediction
 
     def compute_score(self, observation, prediction):
@@ -168,6 +141,7 @@ class CVTest(VmTest):
         if prediction is None:
             score = scores.InsufficientDataScore(None)
         else:
+            print(observation,prediction)
             score = self.score_type.compute(observation,prediction,key='cv')
         return score
 
@@ -180,24 +154,24 @@ class ISITest(VmTest):
                  params=None):
         pass
 
-
     name = "Inter Spike Interval Tests"
-    description = (("For neurons and muscle cells check the mean Interval Between Spikes given a spike train recording."))
-    score_type = scores.RatioScore
+    description = (("For neurons and muscle cells check the mean Interval "
+                     "Between Spikes given a spike train recording."))
+    score_type = scores.ZScore
     units = pq.ms
 
     def __init__(self, *args, **kwargs):
         super(ISITest,self).__init__(*args,**kwargs)
 
         if self.name == self.__class__.name:
-            self.name = "Inter Spike Interval Test %d test" % self.observation['type']
-
+            self.name = "Inter Spike Interval Test %d test" % \
+                        self.observation['type']
 
     def generate_prediction(self, model = None):
-        prediction = {}
         st = model.get_spike_train()
         isis = isi(st)
-        prediction['isi'] = float(np.mean(isis))*1000.0*pq.ms
+        value = float(np.mean(isis))*1000.0*pq.ms
+        prediction = {'value':value} 
         return prediction
 
     def compute_score(self, observation, prediction):
@@ -205,38 +179,22 @@ class ISITest(VmTest):
         if prediction is None:
             score = scores.InsufficientDataScore(None)
         else:
-            print(observation,prediction)
-            score = self.score_type.compute(observation,prediction,key='isi')
+            score = self.score_type.compute(observation,prediction)
         return score
+
 
 class FiringRateTest(RheobaseTest):
     """Tests whether a model exhibits the observed burstiness"""
-
-    def __init__(self, observation={'sps_mean':None,'sps_std':None},
-                 name=None,
-                 params=None):
-        pass
-
-    name = "Firing Rate Test"
-    description = (("Spikes Per Second."))
-    score_type = scores.RatioScore
-    units = pq.dimensionless
 
     def __init__(self, *args, **kwargs):
         super(LocalVariationTest,self).__init__(*args,**kwargs)
         if self.name == self.__class__.name:
             self.name = "Firing Rate Type %d test" % self.observation['type']
 
-    '''
-    def validate_observation(self, observation):
-        super(LocalVariationTest,self).validate_observation(observation,
-                                                     united_keys=['rheobase'],
-                                                     nonunited_keys=['type'])
-
-        assert ('type' in observation) and (observation['type'] in [1,2]), \
-            ("observation['type'] must be either 1 or 2, corresponding to "
-             "type 1 or type 2 threshold firing rate dynamics.")
-    '''
+    name = "Firing Rate Test"
+    description = (("Spikes Per Second."))
+    score_type = scores.RatioScore
+    units = pq.dimensionless
 
     def generate_prediction(self, model = None):
         """Implementation of sciunit.Test.generate_prediction."""
@@ -249,17 +207,14 @@ class FiringRateTest(RheobaseTest):
         # prediction should be number of spikes divided by time.
         return predicted_rate
 
-
-
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
-        #print("%s: Observation = %s, Prediction = %s" % \
-        #    (self.name,str(observation),str(prediction)))
         if prediction is None:
             score = scores.InsufficientDataScore(None)
         else:
             score = self.score_type.compute(observation,prediction,key='sps_mean')
         return score
+
 
 class LocalVariationTest(VmTest):
     """Tests whether a model exhibits the observed burstiness"""
@@ -273,8 +228,9 @@ class LocalVariationTest(VmTest):
                              cap.ProducesSpikes)
 
     name = "Local Variation test"
-    description = (("For neurons and muscle cells with slower non firing dynamics like CElegans neurons check to see how much \
-    varition is in the continuous membrane potential."))
+    description = (("For neurons and muscle cells with slower non firing "
+                    "dynamics like CElegans neurons check to see how much "
+                    "variation is in the continuous membrane potential."))
     score_type = scores.RatioScore
     units = pq.dimensionless
     local_variation = 0.0 # 1.0
@@ -284,21 +240,14 @@ class LocalVariationTest(VmTest):
         if self.name == self.__class__.name:
             self.name = "Firing Rate Type %d test" % self.observation['type']
 
-
-
     def generate_prediction(self, model = None):
         prediction = lv(model.get_membrane_potential())
         return prediction
 
         return prediction
 
-
-
-
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
-        #print("%s: Observation = %s, Prediction = %s" % \
-        #    (self.name,str(observation),str(prediction)))
         if prediction is None:
             score = scores.InsufficientDataScore(None)
         else:

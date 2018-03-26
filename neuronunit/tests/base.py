@@ -44,11 +44,19 @@ class VmTest(sciunit.Test):
     # Observation values with units.
     united_observation_keys = ['value','mean','std']
 
+    # Observation values without units.
+    nonunited_observation_keys = []
+
     def _extra(self):
         pass
 
     def validate_observation(self, observation,
-                             united_keys=['value','mean'], nonunited_keys=[]):
+                             united_keys=None, 
+                             nonunited_keys=None):
+        if united_keys is None:
+            united_keys = self.united_observation_keys
+        if nonunited_keys is None:
+            nonunited_keys = self.nonunited_observation_keys
         try:
             assert type(observation) is dict
             assert any([key in observation for key in united_keys]) \
@@ -68,7 +76,10 @@ class VmTest(sciunit.Test):
         for key in united_keys:
             if key in observation:
                 provided = observation[key].simplified.units
-                required = self.units.simplified.units
+                if not isinstance(self.units,pq.Dimensionless):
+                    required = self.units.simplified.units
+                else:
+                    required = self.units
                 if provided != required: # Units don't match spec.
                     msg = ("Units of %s are required for %s but units of %s "
                            "were provided" % (required.dimensionality.__str__(),
