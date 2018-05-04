@@ -8,6 +8,8 @@ COPY . $HOME/neuronunit
 
 RUN pip install dask
 RUN pip install distributed
+RUN sudo pip uninstall -y sciunit
+RUN sudo pip install git+https://github.com/scidash/sciunit@dev
 #COPY BluePyOpt ~/HOME/BluePyOpt
 #RUN pip install -e $HOME/BluePyOpt
 WORKDIR $HOME
