@@ -147,17 +147,12 @@ class RheobaseTest(VmTest):
 
 
 class RheobaseTestP(VmTest):
-
-
-
      """
      A parallel version of test Rheobase.
      Tests the full widths of APs at their half-maximum
      under current injection.
 
      """
-     def _extra(self,dview=None):
-         self.prediction = None
 
      required_capabilities = (cap.ReceivesSquareCurrent,
                               cap.ProducesSpikes)
@@ -203,6 +198,7 @@ class RheobaseTestP(VmTest):
             '''
             import numpy as np
             import quantities as pq
+            import copy
             sub=[]
             supra=[]
             steps=[]

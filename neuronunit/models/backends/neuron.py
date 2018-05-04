@@ -32,15 +32,15 @@ class NEURONBackend(Backend):
         self.neuron = None
         self.model_path = None
         self.h = h
-        # Should check if a legitimately parallel MPI based NEURON is supported.
-        self.lookup = {}
-
         super(NEURONBackend,self).init_backend()
         self.model.unpicklable += ['h','ns','_backend']
         if cell_name:
             self._cell_name = cell_name
         if current_src_name:
             self._current_src_name = current_src_name
+        if DTC is not None:
+            if DTC.attrs is not None:
+                self.set_attrs(**DTC.attrs)
 
     backend = 'NEURON'
 
@@ -54,21 +54,22 @@ class NEURONBackend(Backend):
         the reset_neuron method is used to prevent a situation where a new models
         initial conditions are erroneously updated from a stale models final state.
         """
-        #self.h = None
-
         self.h = neuronVar.h
         self.neuron = neuronVar
+    #
+    # TODO it is desirable to over ride set_run_params
+    # def set_run_params(self, **params):
+    #    super(NEURONBackend,self).set_run_params(**params)
+    #    self.model.set_lems_run_params()
+    #    self.h.dt = params['dt']
+    #    self.h.tstop = params['stop_time']
 
 
-
-    def set_stop_time(self, stopTime = 500*ms):
+    def set_stop_time(self, stop_time = 650*ms):
         """Sets the simulation duration
         stopTimeMs: duration in milliseconds
         """
-
-        tstop = stopTime
-        tstop.units = ms
-        self.h.tstop = float(tstop)
+        self.h.tstop = float(stop_time)
 
     def set_time_step(self, integrationTimeStep = 1/128.0 * ms):
         """Sets the simulation itegration fixed time step
@@ -77,8 +78,8 @@ class NEURONBackend(Backend):
         """
 
         dt = integrationTimeStep
-        dt.units = ms
-        self.h.dt = self.fixedTimeStep = float(dt)
+        #dt.units = ms
+        self.h.dt = float(dt)
 
     def set_tolerance(self, tolerance = 0.001):
         """Sets the variable time step integration method absolute tolerance.
@@ -174,13 +175,14 @@ class NEURONBackend(Backend):
 
         return vTarget
 
-    def load(self):
+    def load(self,tstop=650*ms):
         nrn_path = os.path.splitext(self.model.orig_lems_file_path)[0]+'_nrn.py'
         nrn = import_module_from_path(nrn_path)
         self.reset_neuron(nrn.neuron)
         modeldirname = os.path.dirname(self.model.orig_lems_file_path)
-        self.set_stop_time(650*ms) # previously 500ms add on 150ms of recovery
-        self.h.tstop
+        self.h.tstop = tstop
+        self.set_stop_time(self.h.tstop) # previously 500ms add on 150ms of recovery
+        #self.h.tstop
         self.ns = nrn.NeuronSimulation(self.h.tstop, dt=0.0025)
 
     def load_mechanisms(self):
@@ -216,7 +218,7 @@ class NEURONBackend(Backend):
                               plot=False,
                               show_plot_already=False,
                               exec_in_dir = self.neuron_model_dir,
-                              verbose=True,
+                              verbose=verbose,
                               exit_on_fail = True)
             # use a different process to call NEURONS compiler nrnivmodl in the
             # background if the NEURON_file_path does not yet exist.
@@ -256,8 +258,8 @@ class NEURONBackend(Backend):
 
     def set_attrs(self, **attrs):
         self.model.attrs.update(attrs)
-        assert type(self.model.attrs) is not type(None)
-        assert len(list(self.model.attrs.values())) > 0
+        #assert type(self.model.attrs) is not type(None)
+        #assert len(list(self.model.attrs.values())) > 0
         for h_key,h_value in attrs.items():
             self.h('m_{0}_{1}_pop[0].{2} = {3}'\
                 .format(self.cell_name,self.cell_name,h_key,h_value))
@@ -280,7 +282,6 @@ class NEURONBackend(Backend):
         # These two variables have been aliased in the code below:
         self.tVector = self.h.v_time
         self.vVector = self.h.v_v_of0
-
         return self
 
     def inject_square_current(self, current, section = None):
@@ -336,12 +337,9 @@ class NEURONBackend(Backend):
             # execute hoc code strings in the python interface to neuron.
             self.h(string)
 
-
     def _local_run(self):
         self.h('run()')
-
         results={}
-
         # Prepare NEURON vectors for quantities/sciunit
         # By rescaling voltage to milli volts, and time to milli seconds.
         results['vm'] = [float(x/1000.0) for x in copy.copy(self.neuron.h.v_v_of0.to_python())]
