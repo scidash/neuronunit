@@ -1,9 +1,10 @@
-from .base import *
+import subprocess
 
 from scoop import futures, _control, utils, shared
 from scoop._types import FutureQueue
 from scoop.broker.structs import BrokerInfo
 
+from .base import *
 
 #def multiworker_set(self):
 global subprocesses

@@ -8,6 +8,7 @@ import numpy as np
 
 import sciunit
 import sciunit.scores as scores
+from sciunit.errors import ObservationError
 import neuronunit.capabilities as cap
 from neuronunit import neuroelectro
 
@@ -43,11 +44,19 @@ class VmTest(sciunit.Test):
     # Observation values with units.
     united_observation_keys = ['value','mean','std']
 
+    # Observation values without units.
+    nonunited_observation_keys = []
+
     def _extra(self):
         pass
 
     def validate_observation(self, observation,
-                             united_keys=['value','mean'], nonunited_keys=[]):
+                             united_keys=None, 
+                             nonunited_keys=None):
+        if united_keys is None:
+            united_keys = self.united_observation_keys
+        if nonunited_keys is None:
+            nonunited_keys = self.nonunited_observation_keys
         try:
             assert type(observation) is dict
             assert any([key in observation for key in united_keys]) \
@@ -63,18 +72,28 @@ class VmTest(sciunit.Test):
             key_str = 'and/or a '.join(['%s key' % key for key in united_keys])
             msg = ("Observation must be a dictionary with a %s and each key "
                    "must have units from the quantities package." % key_str)
-            raise sciunit.ObservationError(msg)
+            raise ObservationError(msg)
         for key in united_keys:
             if key in observation:
                 provided = observation[key].simplified.units
-                required = self.units.simplified.units
+                if not isinstance(self.units,pq.Dimensionless):
+                    required = self.units.simplified.units
+                else:
+                    required = self.units
                 if provided != required: # Units don't match spec.
                     msg = ("Units of %s are required for %s but units of %s "
                            "were provided" % (required.dimensionality.__str__(),
                                               key,
                                               provided.dimensionality.__str__())
                            )
-                    raise sciunit.ObservationError(msg)
+                    raise ObservationError(msg)
+        if 'std' not in observation:
+            if all([x in observation for x in ['sem','n']]):
+                observation['std'] = observation['sem'] * np.sqrt(observation['n'])
+            elif 'mean' in observation:
+                raise ObservationError(("Observation must have an 'std' key "
+                                                "or both 'sem' and 'n' keys."))
+        return observation
 
     def bind_score(self, score, model, observation, prediction):
         score.related_data['vm'] = model.get_membrane_potential()
@@ -97,11 +116,12 @@ class VmTest(sciunit.Test):
         score.unpicklable.append('plot_vm')
 
     @classmethod
-    def neuroelectro_summary_observation(cls, neuron):
+    def neuroelectro_summary_observation(cls, neuron, cached=False):
         reference_data = neuroelectro.NeuroElectroSummary(
             neuron = neuron, # Neuron type lookup using the NeuroLex ID.
-            ephysprop = {'name': cls.ephysprop_name} # Ephys property name in
-                                                     # NeuroElectro ontology.
+            ephysprop = {'name': cls.ephysprop_name}, # Ephys property name in
+                                                      # NeuroElectro ontology.
+            cached = cached
             )
         reference_data.get_values(quiet=not cls.verbose) # Get and verify summary data
                                     # from neuroelectro.org.
@@ -113,11 +133,12 @@ class VmTest(sciunit.Test):
         return observation
 
     @classmethod
-    def neuroelectro_pooled_observation(cls, neuron, quiet=True):
+    def neuroelectro_pooled_observation(cls, neuron, cached=False, quiet=True):
         reference_data = neuroelectro.NeuroElectroPooledSummary(
             neuron = neuron, # Neuron type lookup using the NeuroLex ID.
-            ephysprop = {'name': cls.ephysprop_name} # Ephys property name in
-                                                     # NeuroElectro ontology.
+            ephysprop = {'name': cls.ephysprop_name}, # Ephys property name in
+                                                      # NeuroElectro ontology.
+            cached = cached
             )
         reference_data.get_values(quiet=quiet) # Get and verify summary data
                                     # from neuroelectro.org.
@@ -149,3 +170,8 @@ class VmTest(sciunit.Test):
                 if math.isnan(j):
                     return False
         return True
+
+    @property
+    def state(self):
+        state = super(VmTest,self).state
+        return self._state(state=state, exclude=['unpicklable','verbose'])
