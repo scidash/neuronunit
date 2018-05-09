@@ -2,17 +2,43 @@
 
 import os
 from copy import deepcopy
-import tempfile
+try:
+    from tempfile import TemporaryDirectory
+except:
+    from backports.tempfile import TemporaryDirectory
 import inspect
 import shutil
+import random
+import pickle
 
 from lxml import etree
+from neo.core import AnalogSignal
 
 import sciunit
 #from sciunit.utils import dict_hash
 import neuronunit.capabilities as cap
 from pyneuroml import pynml
-from . import backends
+from .backends import available_backends
+
+
+class StaticModel(sciunit.Model,
+                  cap.ProducesMembranePotential):
+    """A model which produces a frozen membrane potential waveform"""
+
+    def __init__(self, vm):
+        """vm is either a neo.core.AnalogSignal or a path to a 
+        pickled neo.core.AnalogSignal"""
+
+        if isinstance(vm,str):
+            with open(vm,'r') as f:
+                vm = pickle.load(f)
+        if not isinstance(vm,AnalogSignal):
+            raise TypeError('vm must be a neo.core.AnalogSignal')
+
+        self.vm = vm
+
+    def get_membrane_potential(self,**kwargs):
+        return self.vm
 
 
 class LEMSModel(sciunit.Model,
@@ -20,24 +46,30 @@ class LEMSModel(sciunit.Model,
                 ):
     """A generic LEMS model"""
 
-    def __init__(self, LEMS_file_path, name=None, 
-                    backend='jNeuroML', attrs=None):
+    def __init__(self, LEMS_file_path, name=None,
+                    backend=None, attrs=None):
 
         #for base in cls.__bases__:
         #    sciunit.Model.__init__()
         if name is None:
             name = os.path.split(LEMS_file_path)[1].split('.')[0]
+        self.name = name
         #sciunit.Modelsuper(LEMSModel,self).__init__(name=name)
         self.attrs = attrs if attrs else {}
         self.orig_lems_file_path = os.path.abspath(LEMS_file_path)
         assert os.path.isfile(self.orig_lems_file_path),\
             "'%s' is not a file" % self.orig_lems_file_path
+        # Use original path unless create_lems_file is called
+        self.lems_file_path = self.orig_lems_file_path
         self.run_defaults = pynml.DEFAULTS
         self.run_defaults['nogui'] = True
         self.run_params = {}
         self.last_run_params = None
         self.skip_run = False
         self.rerun = True # Needs to be rerun since it hasn't been run yet!
+        self.unpicklable = []
+        if backend is None:
+            backend = 'jNeuroML'
         self.set_backend(backend)
 
     def get_backend(self):
@@ -62,13 +94,9 @@ class LEMSModel(sciunit.Model,
                         args += backend[i]
         else:
             raise TypeError("Backend must be string, tuple, or list")
-        options = {x.replace('Backend',''):cls for x, cls \
-                   in backends.__dict__.items() \
-                   if inspect.isclass(cls) and \
-                   issubclass(cls, backends.Backend)}
-        if name in options:
+        if name in available_backends:
             self.backend = name
-            self._backend = options[name]()
+            self._backend = available_backends[name]()
         elif name is None:
             # The base class should not be called.
             raise Exception(("A backend (e.g. 'jNeuroML' or 'NEURON') "
@@ -91,39 +119,46 @@ class LEMSModel(sciunit.Model,
                          for x in nml_paths]
         return nml_paths
 
-    def create_lems_file(self, name):
+    def create_lems_file_copy(self, name=None, use=True):
+        """Creates a temporary, writable copy of the original LEMS file so that
+        e.g. edits can be made to it programatically before simulation
+        """
+        if name is None:
+            name = self.name
         if not hasattr(self,'temp_dir'):
-            self.temp_dir = tempfile.gettempdir()
-        self.lems_file_path  = os.path.join(self.temp_dir, '%s.xml' % name)
-        shutil.copy2(self.orig_lems_file_path,self.lems_file_path)
+            self.temp_dir = TemporaryDirectory()
+        lems_copy_path  = os.path.join(self.temp_dir.name, '%s.xml' % name)
+        shutil.copy2(self.orig_lems_file_path,lems_copy_path)
         nml_paths = self.get_nml_paths(original=True)
         for orig_nml_path in nml_paths:
-            new_nml_path = os.path.join(self.temp_dir,
+            new_nml_path = os.path.join(self.temp_dir.name,
                                         os.path.basename(orig_nml_path))
             shutil.copy2(orig_nml_path,new_nml_path)
         if self.attrs:
-            self.set_lems_attrs(self.attrs)
+            self.set_lems_attrs(self.attrs, path=lems_copy_path)
+        if use:
+            self.lems_file_path = lems_copy_path
+        return lems_copy_path
 
     def set_attrs(self,attrs):
         self._backend.set_attrs(**attrs)
 
     def inject_square_current(self,current):
         self._backend.inject_square_current(current)
-    #    
-    #def inject_square_current(self,current):
-    #    self._backend.inject_square_current(current)
-    #
-    #def local_run(self):
-        
-    def set_lems_attrs(self, attrs):
-        tree = etree.parse(self.lems_file_path)
-        for key1,value1 in attrs.items():
-            nodes = tree.findall(key1)
-            for node in nodes:
-                for key2,value2 in value1.items():
-                    node.attrib[key2] = value2
-        tree.write(self.lems_file_path)
-    
+
+    def set_lems_attrs(self, attrs, path=None):
+        if path is None:
+            path = self.lems_file_path
+        paths = [path] + self.get_nml_paths()
+        for p in paths:
+            tree = etree.parse(p)
+            for key1,value1 in attrs.items():
+                nodes = tree.findall(key1)
+                for node in nodes:
+                    for key2,value2 in value1.items():
+                        node.attrib[key2] = value2
+            tree.write(p)
+
     def run(self, rerun=None, **run_params):
         if rerun is None:
             rerun = self.rerun
@@ -142,7 +177,7 @@ class LEMSModel(sciunit.Model,
         # Reset run parameters so the next test has to pass its own
         # run parameters and not use the same ones
         self.run_params = {}
-        
+
     def set_run_params(self, **params):
         self._backend.set_run_params(**params)
 
@@ -175,4 +210,11 @@ class LEMSModel(sciunit.Model,
 
     @property
     def state(self):
-        return self._state(keys=['attrs','run_params'])
+        return self._state(keys=['name','url', 'attrs','run_params','backend'])
+
+    def __del__(self):
+        if hasattr(self,'temp_dir'):# is not type(None):
+            self.temp_dir.cleanup() # Delete the temporary directory
+            s = super(LEMSModel,self)
+            if hasattr(s,'__del__'):
+                s.__del__()

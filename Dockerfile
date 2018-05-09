@@ -1,17 +1,18 @@
-# neuronunit
-# author Rick Gerkin rgerkin@asu.edu
+FROM russelljarvis/neuronunit
+USER jovyan
+RUN sudo /opt/conda/bin/pip install psutil
+ENV QT_QPA_PLATFORM offscreen
+RUN sudo rm -rf /opt/conda/lib/python3.5/site-packages/neuronunit-0.1.8.8-py3.5.egg/neuronunit
+RUN sudo rm -rf $HOME/neuronunit
+COPY . $HOME/neuronunit
 
-FROM scidash/neuron-mpi-neuroml
+RUN pip install dask
+RUN pip install distributed
+RUN sudo pip uninstall -y sciunit
+RUN sudo pip install git+https://github.com/scidash/sciunit@dev
+#COPY BluePyOpt ~/HOME/BluePyOpt
+#RUN pip install -e $HOME/BluePyOpt
+WORKDIR $HOME
 
-USER root
-ARG MOD_DATE=0
-RUN echo $MOD_DATE
-ADD . $HOME/neuronunit
-RUN chown -R $NB_USER $HOME 
-WORKDIR $HOME/neuronunit 
 
-# Install neuronunit and dependencies.
-RUN python setup.py install
 
-# Run all unit tests.
-ENTRYPOINT python -m unittest unit_test/core_tests.py

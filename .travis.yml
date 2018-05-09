@@ -22,14 +22,13 @@ install:
   - conda update -q conda
   # Useful for debugging any issues with conda
   - conda info -a
-  - pip install --no-cache-dir --process-dependency-links . 
+  - pip install --no-cache-dir -r requirements.txt . 
   - pip install coveralls
 ######################################################
 
 script: 
   - export NC_HOME='.' # NeuroConstruct isn't used but tests need this
                        # variable set to pass.  
-  - coverage run --source=. --omit=*unit_test*,setup.py,*.eggs* setup.py test  
+  - sh test.sh  
 after_success:
   - coveralls
-
