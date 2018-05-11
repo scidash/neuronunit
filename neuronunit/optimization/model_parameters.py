@@ -1,8 +1,12 @@
 import numpy as np
+import os
+THIS_DIR = os.path.dirname(os.path.realpath(__file__))
+
+path_params = {}
+path_params['model_path'] = os.path.realpath(os.path.join(THIS_DIR,'..','models','NeuroML2','LEMS_2007One.xml'))
 
 
-model_params={}
-
+model_params = {}
 model_params['vr'] = np.linspace(-75.0,-50.0,9)
 
 
