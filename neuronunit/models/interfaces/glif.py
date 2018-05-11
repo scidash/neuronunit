@@ -60,8 +60,14 @@ class GC(sciunit.Model, cap.ReceivesSquareCurrent, cap.ProducesSpikes, cap.Produ
         self.stimulus = self.get_stimulus(n)
 
     def get_spike_train(self):
-        import numpy as np
+        #vms = self.get_membrane_potential()
+        #from neuronunit.capabilities.spike_functions import get_spike_train
+        #import numpy as np
         spike_times = self.results['interpolated_spike_times']
+        #print(get_spike_train(vms),spike_times)
+
+        #return get_spike_train(vms)
+
         return np.array(spike_times)
 
     def get_membrane_potential(self):
@@ -94,19 +100,22 @@ class GC(sciunit.Model, cap.ReceivesSquareCurrent, cap.ProducesSpikes, cap.Produ
         return self.results
 
 
-    def set_attrs(self):
+    def set_attrs(self, **attrs):
+        '''
         ctc.get_ephys_data(nm['specimen_id'], file_name='stimulus.nwb')
         ctc.get_ephys_sweeps(nm['specimen_id'], file_name='ephys_sweeps.json')
         self.ctc = ctc
         nc = glif_api.get_neuron_configs([neuronal_model_id])[neuronal_model_id]
         neuron_config = glif_api.get_neuron_configs([neuronal_model_id])
         neuron_config = neuron_config['566302806']
-        self.glif = GlifNeuron.from_dict(neuron_config)
+        '''
+        self.model.attrs.update(attrs)
+        self.glif = GlifNeuron.from_dict(attrs)
         return self.glif
 
     def inject_square_current(self, current):
         import re
-        dt = 0.001
+        #dt = 0.001
         if 'injected_square_current' in current.keys():
             c = current['injected_square_current']
         else:
@@ -118,10 +127,10 @@ class GC(sciunit.Model, cap.ReceivesSquareCurrent, cap.ProducesSpikes, cap.Produ
         start = float(c['delay'])
         duration = float(c['duration'])
         amplitude = float(c['amplitude'])/1000.0
-        self.glif.dt = 0.01
+        self.glif.dt = 0.001
         dt =  self.glif.dt
         stim = [ 0.0 ] * int(start) + [ amplitude ] * int(duration) + [ 0.0 ] * int(stop)
-        self.glif.init_voltage = -0.0065
+        #self.glif.init_voltage = -0.0065
         self.results = self.glif.run(stim)
         vm = self.results['voltage']
         if len(self.results['interpolated_spike_voltage']) > 0:
