@@ -1,154 +1,132 @@
-from .base import *
+#import sciunit
+from quantities import mV, ms, s, V
+import sciunit
 
-class glifBackend(Backend):
 
-    backend = 'glif'
-    try:
-        from allensdk.api.queries.glif_api import GlifApi
-        from allensdk.core.cell_types_cache import CellTypesCache
-        import allensdk.core.json_utilities as json_utilities
-    except:
-        import os
-        os.system('pip install allensdk')
-        from allensdk.api.queries.glif_api import GlifApi
-        from allensdk.core.cell_types_cache import CellTypesCache
-        import allensdk.core.json_utilities as json_utilities
-
-    neuronal_model_id = 566302806
-    # download model metadata
-    glif_api = GlifApi()
-    nm = glif_api.get_neuronal_models_by_id([neuronal_model_id])[0]
-    # download the model configuration file
-    nc = glif_api.get_neuron_configs([neuronal_model_id])[neuronal_model_id]
-    neuron_config = glif_api.get_neuron_configs([neuronal_model_id])
-    json_utilities.write('neuron_config.json', neuron_config)
-
-    # download information about the cell
-    ctc = CellTypesCache()
-    ctc.get_ephys_data(nm['specimen_id'], file_name='stimulus.nwb')
-    ctc.get_ephys_sweeps(nm['specimen_id'], file_name='ephys_sweeps.json')
+import allensdk.core.json_utilities as json_utilities
+from allensdk.model.glif.glif_neuron import GlifNeuron
+try:
+    from allensdk.api.queries.glif_api import GlifApi
+    from allensdk.core.cell_types_cache import CellTypesCache
     import allensdk.core.json_utilities as json_utilities
-    from allensdk.model.glif.glif_neuron import GlifNeuron
+    import sciunit
+except:
+    import os
+    os.system('pip install allensdk')
+    from allensdk.api.queries.glif_api import GlifApi
+    from allensdk.core.cell_types_cache import CellTypesCache
+    import allensdk.core.json_utilities as json_utilities
+    os.system('pip install git+https://github.com/scidash/sciunit@dev')
 
-    # initialize the neuron
-    neuron_config = json_utilities.read('neuron_config.json')
-    neuron_config = neuron_config['566302806']
 
-    neuron = GlifNeuron.from_dict(neuron_config)
+from neo import AnalogSignal
+import neuronunit.capabilities as cap
+import numpy as np
+class GC(sciunit.Model, cap.ReceivesSquareCurrent, cap.ProducesSpikes, cap.ProducesMembranePotential):
+    def __init__(self, allen_id = None):
+        self = self
+        if allen_id == None:
+            neuronal_model_id = 566302806
+            glif_api = GlifApi()
+            self.nc = glif_api.get_neuron_configs([neuronal_model_id])[neuronal_model_id]
+            self.glif = GlifNeuron.from_dict(self.nc)
+        else:
+            self.allen_id = allen_id
+            self.glif = glif_api.get_neuronal_models_by_id([allen_id])[0]
+            self.nc = glif_api.get_neuron_configs([allen_id])[allen_id]
+            self.glif = GlifNeuron.from_dict(self.nc)
 
+    def as_lems_model(self, backend=None):
+        import parseglif
+        parseglif.generate_lems(self.nc)
+        #First do Padraig's translation stuff
+        return ReducedModel(lems_file_path, backend=backend)
 
-    def init_backend(self, attrs=None, simulator='neuron', DTC = None):
-        from pyNN import neuron
-        self.neuron = neuron
-        from pyNN.neuron import simulator as sim
-        from pyNN.neuron import setup as setup
-        from pyNN.neuron import Izhikevich
-        from pyNN.neuron import Population
-        from pyNN.neuron import DCSource
-        self.Izhikevich = Izhikevich
-        self.Population = Population
-        self.DCSource = DCSource
-        self.setup = setup
-        self.model_path = None
-        self.related_data = {}
-        self.lookup = {}
-        self.attrs = {}
-        super(pyNNBackend,self).init_backend()#*args, **kwargs)
-        if DTC is not None:
+    def get_sweeps(self):
+        self.sweeps = ctc.get_ephys_sweeps(self.glif['specimen_id'], \
+        file_name='%d_ephys_sweeps.json' % self.allen_id)
 
-            self.set_attrs(**DTC.attrs)
+    def get_sweep(self, n):
+        sweep_info = sweeps[n]
+        sweep_number = sweep_info['sweep_number']
+        sweep = ds.get_sweep(sweep_number)
+        return sweep
 
-        backend = 'pyNN'
+    def get_stimulus(self, n):
+        sweep = self.get_sweep(n)
+        return sweep['stimulus']
 
+    def apply_stimulus(self, n):
+        self.stimulus = self.get_stimulus(n)
+
+    def get_spike_train(self):
+        import numpy as np
+        spike_times = self.results['interpolated_spike_times']
+        return np.array(spike_times)
 
     def get_membrane_potential(self):
         """Must return a neo.core.AnalogSignal.
         And must destroy the hoc vectors that comprise it.
         """
-        dt = float(copy.copy(self.neuron.dt))
-        data = self.population.get_data().segments[0]
-        return data.filter(name="v")[0]
+        threshold = self.results['threshold']
+        interpolated_spike_times = self.results['interpolated_spike_times']
+
+        interpolated_spike_thresholds = self.results['interpolated_spike_threshold']
+        grid_spike_indices = self.results['spike_time_steps']
+        grid_spike_times = self.results['grid_spike_times']
+        after_spike_currents = self.results['AScurrents']
+
+        vm = self.results['voltage']
+        if len(self.results['interpolated_spike_voltage']) > 0:
+            isv = self.results['interpolated_spike_voltage'].tolist()[0]
+            vm = list(map(lambda x: isv if np.isnan(x) else x, vm))
+        dt =  self.glif.dt
+        vms = AnalogSignal(vm,units = mV,sampling_period =  dt * ms)
+
+        return vms
 
     def _local_run(self):
         '''
         pyNN lazy array demands a minimum population size of 3. Why is that.
         '''
-        import numpy as np
-        results={}
-        #self.population.record('v')
-        #self.population.record('spikes')
-        # For ome reason you need to record from all three neurons in a population
-        # In order to get the membrane potential from only the stimulated neuron.
 
-        self.population[0:2].record(('v', 'spikes','u'))
-        '''
-        self.Iz.record('v')
-        self.Iz.record('spikes')
-        # For ome reason you need to record from all three neurons in a population
-        # In order to get the membrane potential from only the stimulated neuron.
-
-        self.Iz.record(('v', 'spikes','u'))
-        '''
-        #self.neuron.run(650.0)
-        DURATION = 1000.0
-        self.neuron.run(DURATION)
-
-        data = self.population.get_data().segments[0]
-        vm = data.filter(name="v")[0]#/10.0
-        results['vm'] = vm
-        #print(vm)
-        sample_freq = DURATION/len(vm)
-        results['t'] = np.arange(0,len(vm),DURATION/len(vm))
-        results['run_number'] = results.get('run_number',0) + 1
-        return results
+        self.results = np.array(self.glif.run(self.stim))
+        return self.results
 
 
-    def load_model(self):
-        self.Iz = None
-        self.population = None
-        self.setup(timestep=0.01, min_delay=1.0)
-        import pyNN
-        #i_offset=[0.014, 0.0, 0.0]
-        pop = self.neuron.Population(3, pyNN.neuron.Izhikevich(a=0.02, b=0.2, c=-65, d=6, i_offset=[0.014, -65.0, 0.0]))#,v=-65))
-        self.population = pop
-
-
-
-    def set_attrs(self, **attrs):
-        #attrs = copy.copy(self.model.attrs)
-        self.init_backend()
-        #self.set_attrs(**attrs)
-        self.model.attrs.update(attrs)
-        assert type(self.model.attrs) is not type(None)
-        attrs['i_offset']=None
-        attrs_ = {x:attrs[x] for x in ['a','b','c','d','i_offset']}
-        attrs_['i_offset']=0.014#[0.014,-attrs_['v0'],0.0]
-        #self.population[0].initialize()
-        self.population[0].set_parameters(**attrs_)
-
-        print(self.population[0].get_parameters())
-        self.neuron.h.psection()
-        return self
+    def set_attrs(self):
+        ctc.get_ephys_data(nm['specimen_id'], file_name='stimulus.nwb')
+        ctc.get_ephys_sweeps(nm['specimen_id'], file_name='ephys_sweeps.json')
+        self.ctc = ctc
+        nc = glif_api.get_neuron_configs([neuronal_model_id])[neuronal_model_id]
+        neuron_config = glif_api.get_neuron_configs([neuronal_model_id])
+        neuron_config = neuron_config['566302806']
+        self.glif = GlifNeuron.from_dict(neuron_config)
+        return self.glif
 
     def inject_square_current(self, current):
-        import copy
-        attrs = copy.copy(self.model.attrs)
-        self.init_backend()
-        self.set_attrs(**attrs)
-        c = copy.copy(current)
-        if 'injected_square_current' in c.keys():
+        import re
+        dt = 0.001
+        if 'injected_square_current' in current.keys():
             c = current['injected_square_current']
-
+        else:
+            c = current
         c['delay'] = re.sub('\ ms$', '', str(c['delay'])) # take delay
         c['duration'] = re.sub('\ ms$', '', str(c['duration']))
         c['amplitude'] = re.sub('\ pA$', '', str(c['amplitude']))
         stop = float(c['delay'])+float(c['duration'])
         start = float(c['delay'])
+        duration = float(c['duration'])
         amplitude = float(c['amplitude'])/1000.0
-        #print('amplitude',amplitude)
-        electrode = self.neuron.DCSource(start=start, stop=stop, amplitude=amplitude)
-        print(self.population[0])
-        print(type(self.population[0]))
-        print(self.population[0].get_parameters())
+        self.glif.dt = 0.01
+        dt =  self.glif.dt
+        stim = [ 0.0 ] * int(start) + [ amplitude ] * int(duration) + [ 0.0 ] * int(stop)
+        self.glif.init_voltage = -0.0065
+        self.results = self.glif.run(stim)
+        vm = self.results['voltage']
+        if len(self.results['interpolated_spike_voltage']) > 0:
+            isv = self.results['interpolated_spike_voltage'].tolist()[0]
+            vm = list(map(lambda x: isv if np.isnan(x) else x, vm))
 
-        electrode.inject_into(self.population[0:1])
+        vms = AnalogSignal(vm,units = V,sampling_period =  dt * s)
+        return vms

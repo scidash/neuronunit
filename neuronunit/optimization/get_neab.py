@@ -13,16 +13,15 @@ def update_amplitude(test,tests,score):
         tests[i].params['injected_square_current']['amplitude'] = rheobase*1.01 # I feel that 1.01 may lead to more than one spike
     return
 
-def impute_criteria(observations_donar,observations_acceptor):
-    #
-    #
-
+def substitute_criteria(observations_donar,observations_acceptor):
+    # Inputs an observation donar
+    # and an observation acceptor
+    # Many neuroelectro data sources have std 0 values
     for index,oa in observations_acceptor.items():
         for k,v in oa.items():
             if k == 'std' and v == 0.0:
                 oa[k] = observations_donar[index][k]
     return observations_acceptor
-
 
 def get_neuron_criteria(cell_id,file_name = None,observation = None):
     # Use neuroelectro experimental obsevations to find test
@@ -33,7 +32,7 @@ def get_neuron_criteria(cell_id,file_name = None,observation = None):
     # to this method, and provided as a method argument.
     tests = []
     observations = {}
-    test_classes = [fi.RheobaseTestP,
+    test_classes = [fi.RheobaseTest,
                      passive.InputResistanceTest,
                      passive.TimeConstantTest,
                      passive.CapacitanceTest,

@@ -7,7 +7,6 @@ import dask
 from dask import bag
 from base import *
 
-
 def grid_points():
     npoints = 2
     nparams = 10
@@ -68,7 +67,6 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         score = test.judge(self.standard_model, stop_on_error = True, deep_error = True)
         return score
 
-
     # Get experimental electro physology bservations for a dentate gyrus baskett cell
     # An inhibitory neuron
     @unittest.skip("Not fully developed yet")
@@ -87,12 +85,10 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         # Instantiate two tests based on these properties
         ap_width_test = APWidthTest(observation=observations[doi]['ap_width'])
         ap_amplitude_test = APAmplitudeTest(observation=observations[doi]['ap_amplitude'])
-
         from neuronunit import tests as nu_tests, neuroelectro
         from neuronunit.tests import passive, waveform, fi
         cholinergic = {'neuron':'115'}
         observation = {}
-
         observation[doi] = {}
         observation[doi]['isi'] = 598.0*pq.ms
         observation[doi]['mean'] = 598.0*pq.ms
@@ -112,7 +108,6 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         fi_basket = {'nlex_id':'NLXCELL:100201'}
         #observation =  cls.neuroelectro_summary_observation(fi_basket)
         test_class_params = [(fi.RheobaseTest,None),
-
                          (passive.InputResistanceTest,None),
                          (passive.TimeConstantTest,None),
                          (passive.CapacitanceTest,None),

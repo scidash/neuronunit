@@ -9,12 +9,16 @@ import pandas as pd
 from neuronunit import tests
 from neuronunit.optimization import get_neab
 from neuronunit.models.reduced import ReducedModel
-from neuronunit.optimization.model_parameters import model_params
-from neuronunit.optimization.model_parameters import path_params
-
+from neuronunit.optimization.model_parameters import model_params, path_params
+import numpy
+import dask.bag as db
+from neuronunit.optimization import model_parameters as modelp
+from itertools import repeat
+import copy
 from neuronunit.optimization import get_neab
 from pyneuroml import pynml
-
+from dask.distributed import Client
+import dask.bag as db
 def write_opt_to_nml(path,param_dict):
     '''
     Write optimimal simulation parameters back to NeuroML.
@@ -38,49 +42,66 @@ def write_opt_to_nml(path,param_dict):
     return
 
 def map_wrapper(function_item,list_items,other_args=None):
-    from dask.distributed import Client
-    import dask.bag as db
-    c = Client()
-    NCORES = len(c.ncores().values())-2
-    b0 = db.from_sequence(list_items, npartitions=NCORES)
+    from dask import distributed
+    c = distributed.Client()
+    NCORES = len(C.ncores().values())-2
+    b0 = db.from_sequence(list_items, npartitions = NCORES)
+    init = len(list_items)
     if other_args is not None:
-        list_items = list(db.map(function_item,b0,other_args).compute())
+        processed_list = list(db.map(function_item,b0,other_args).compute())
     else:
-        list_items = list(db.map(function_item,b0).compute())
-    return list_items
+        processed_list = db.map(function_item,b0)
+        processed_list = list(processed_list.compute())
+
+    assert len(processed_list) == init
+    # https://distributed.readthedocs.io/en/latest/memory.html
+    return processed_list
 
 def dtc_to_rheo(xargs):
-    dtc,rtest = xargs
+    dtc,rtest,backend = xargs
     dtc.model_path = path_params['model_path']
     LEMS_MODEL_PATH = path_params['model_path']
-    model = ReducedModel(LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-    model.set_attrs(dtc.attrs)
-    dtc.scores = {}
-    dtc.score = {}
+    if backend != 'glif':
+        model = ReducedModel(LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+        model.set_attrs(dtc.attrs)
+        dtc.scores = {}
+        dtc.score = {}
+    else:
+        from neuronunit.models.interfaces import glif
+        model = glif.GC()
+
     score = rtest.judge(model,stop_on_error = False, deep_error = True)
-    #if bool(model.get_spike_count() == 1 or model.get_spike_count() == 0)
     if score.sort_key is not None:
-        dtc.scores[str(rtest)] = 1 - score.sort_key #pd.DataFrame([ ])
+        if hasattr(dtc,'scores'):
+            dtc.scores[str(rtest)] = 1 - score.sort_key
+        else:
+            dtc.scores = {}
+            dtc.scores[str(rtest)] = 1 - score.sort_key
     dtc.rheobase = score.prediction
-    #assert dtc.rheobase is not None
+
     return dtc
 
-def nunit_evaluation(dtc,error_criterion):
+def nunit_evaluation(dtc,tests,backend=None):
     # Inputs single data transport container modules, and neuroelectro observations that
     # inform test error error_criterion
     # Outputs Neuron Unit evaluation scores over error criterion
+    assert (len(tests) == 7 or len(tests) == 8)
 
     dtc.model_path = path_params['model_path']
     LEMS_MODEL_PATH = path_params['model_path']
     assert dtc.rheobase is not None
-    from neuronunit.models.reduced import ReducedModel
-    #from neuronunit.optimization import get_neab
-    tests = error_criterion
-    model = ReducedModel(LEMS_MODEL_PATH,name=str('vanilla'),backend=('NEURON',{'DTC':dtc}))
-    model.set_attrs(dtc.attrs)
-    tests[0].prediction = dtc.rheobase
-    model.rheobase = dtc.rheobase['value']
-    from dask import dataframe as dd
+    if backend == None:
+        from neuronunit.models.reduced import ReducedModel
+        model = ReducedModel(LEMS_MODEL_PATH,name=str('vanilla'),backend=('NEURON',{'DTC':dtc}))
+        model.set_attrs(dtc.attrs)
+        tests[0].prediction = dtc.rheobase
+        model.rheobase = dtc.rheobase['value']
+    else:
+        from neuronunit.models.interfaces import glif
+        model = glif.GC()#ReducedModel(LEMS_MODEL_PATH,name=str('vanilla'),backend=('NEURON',{'DTC':dtc}))
+        tests[0].prediction = dtc.rheobase
+        model.rheobase = dtc.rheobase['value']
+    #from dask import dataframe as dd
     if dtc.score is None:
         dtc.score = {}
 
@@ -106,6 +127,7 @@ def evaluate(dtc):
     fitness = [ 1.0 for i in range(0,len(dtc.scores.keys())) ]
     for k,t in enumerate(dtc.scores.keys()):
         fitness[k] = dtc.scores[str(t)]#.sort_key
+    import pdb; pdb.set_trace()    
     return fitness[0],fitness[1],\
            fitness[2],fitness[3],\
            fitness[4],fitness[5],\
@@ -195,7 +217,7 @@ def update_dtc_pop(pop, td = None, backend = None):
     return dtcpop
 
 
-def update_deap_pop(pop,error_criterion,td):
+def update_deap_pop(pop, tests, td, backend = None):
     '''
     Inputs a population of genes (pop).
     Returned neuronunit scored DTCs (dtcpop).
@@ -206,55 +228,41 @@ def update_deap_pop(pop,error_criterion,td):
     DTCs are then scored by neuronunit, using neuronunit models that act in place.
     '''
     orig_MU = len(pop)
-    import numpy
-    import dask.bag as db
-    from neuronunit.optimization import model_parameters as modelp
-    from itertools import repeat
-    # given the wrong attributes, and they don't have rheobase values.
-    def proc(pop):
-        dtcpop = list(update_dtc_pop(pop, td))
-        rheobase_test = error_criterion[0]
-        xargs = zip(dtcpop,repeat(rheobase_test))
-        dtcpop = list(map(dtc_to_rheo,xargs))
-        dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] > 0.0 , dtcpop))
-        #while len(dtcpop) < len(pop):
-        #    dtcpop.append(dtcpop[0])
-        xargs = zip(dtcpop,repeat(error_criterion))
-        dtcpop = list(map(format_test,xargs))
-        #b = db.from_sequence(dtcpop, npartitions=8)
-        dtcpop = map_wrapper(nunit_evaluation,dtcpop,other_args = error_criterion)
-        #dtcpop = list(db.map(nunit_evaluation,b,error_criterion).compute())
-        return dtcpop
+    dtcpop = list(update_dtc_pop(pop, td))
+    rheobase_test = tests[0]
+    xargs = zip(dtcpop,repeat(rheobase_test),repeat('glif'))
+    dtcpop = list(map(dtc_to_rheo,xargs))
 
-    def kull(dtcpop):
-        dtcpop = list(filter(lambda dtc: not isinstance(dtc.scores['RheobaseTestP'],type(None)), dtcpop))
-        dtcpop = list(filter(lambda dtc: not type(None) in (list(dtc.scores.values())), dtcpop))
-        # This call deletes everything
-        #dtcpop = list(filter(lambda dtc: not (numpy.isinf(x) for x in list(dtc.scores.values())), dtcpop))
-
-        return dtcpop, len(dtcpop)
-    dtcpop = proc(pop)
-    dtcpop,length = kull(dtcpop)
-    while len(dtcpop) < len(pop):
-        dtcpop.append(dtcpop[0])
+    dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] > 0.0 , dtcpop))
+    xargs = zip(dtcpop,repeat(tests))
+    dtcpop = list(map(format_test,xargs))
+    # https://distributed.readthedocs.io/en/latest/memory.html
+    #dtcpop = map_wrapper(nunit_evaluation,dtcpop,other_args=tests)
+    for d in dtcpop:
+        d = nunit_evaluation(d,tests,backend='glif')
+    import copy
+    dtcpop_ = copy.copy(dtcpop)
+    #dtcpop_ = map_wrapper(nunit_evaluation,dtcpop,other_args=tests)
+    del dtcpop
+    #del dtcpop
+    #dtcpop = list(filter(lambda dtc: not isinstance(dtc.scores['RheobaseTestP'],type(None)),dtcpop_))
+    dtcpop = list(filter(lambda dtc: not type(None) in (list(dtc.scores.values())), dtcpop_))
+    # This call deletes everything
+    #dtcpop = list(filter(lambda dtc: not (numpy.isinf(x) for x in list(dtc.scores.values())), dtcpop))
     for i,d in enumerate(dtcpop):
         pop[i].rheobase = d.rheobase
-    return_package = zip(dtcpop, pop)
-    return return_package
+    return zip(dtcpop, pop)
 
 
 def create_subset(nparams=10, provided_keys=None):
     from neuronunit.optimization import model_parameters as modelp
     import numpy as np
     mp = modelp.model_params
-
     key_list = list(mp.keys())
-
     if type(provided_keys) is type(None):
         key_list = list(mp.keys())
         reduced_key_list = key_list[0:nparams]
     else:
         reduced_key_list = provided_keys
-
     subset = { k:mp[k] for k in reduced_key_list }
     return subset
