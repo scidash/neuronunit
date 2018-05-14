@@ -119,7 +119,7 @@ def nunit_evaluation(dtc,tests,backend=None):
                 dtc.score = {}
             dtc.score[str(t)] = score.sort_key
         else:
-            pass
+            dtc.scores[str(t)] = 0.0
     return dtc
 
 
@@ -127,11 +127,7 @@ def evaluate(dtc):
     fitness = [ 1.0 for i in range(0,len(dtc.scores.keys())) ]
     for k,t in enumerate(dtc.scores.keys()):
         fitness[k] = dtc.scores[str(t)]#.sort_key
-    import pdb; pdb.set_trace()    
-    return fitness[0],fitness[1],\
-           fitness[2],fitness[3],\
-           fitness[4],fitness[5],\
-           fitness[6],#fitness[7],
+    return tuple(fitness,)
 
 def get_trans_list(param_dict):
     trans_list = []
@@ -251,18 +247,21 @@ def update_deap_pop(pop, tests, td, backend = None):
     #dtcpop = list(filter(lambda dtc: not (numpy.isinf(x) for x in list(dtc.scores.values())), dtcpop))
     for i,d in enumerate(dtcpop):
         pop[i].rheobase = d.rheobase
+
     return zip(dtcpop, pop)
 
 
-def create_subset(nparams=10, provided_keys=None):
-    from neuronunit.optimization import model_parameters as modelp
+def create_subset(nparams = 10, provided_dict = None):
     import numpy as np
-    mp = modelp.model_params
-    key_list = list(mp.keys())
-    if type(provided_keys) is type(None):
+    if type(provided_dict) is type(None):
+        from neuronunit.optimization import model_parameters as modelp
+        mp = modelp.model_params
         key_list = list(mp.keys())
         reduced_key_list = key_list[0:nparams]
+
     else:
-        reduced_key_list = provided_keys
-    subset = { k:mp[k] for k in reduced_key_list }
+        key_list = list(provided_dict.keys())
+        reduced_key_list = key_list[0:nparams]
+
+    subset = { k:provided_dict[k] for k in reduced_key_list }
     return subset
