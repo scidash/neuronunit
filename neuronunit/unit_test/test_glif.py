@@ -2,7 +2,6 @@ import os
 import sys
 import matplotlib
 matplotlib.use('Agg')
-
 import matplotlib.pyplot as plt
 
 from neuronunit.optimization import get_neab #import get_neuron_criteria, impute_criteria
@@ -21,19 +20,17 @@ USE_CACHED_GA = False
 
 from neuronunit.models.interfaces import glif
 gc = glif.GC()
+gc.as_lems_model()
+import pdb; pdb.set_trace()
+#gc.as_lems()
 
-#provided_keys = list(model_params.keys())
+#import pdb; pdb.set_trace()
+#glif_package[2] = gc.
 USE_CACHED_GS = False
 from bluepyopt.deapext.optimisations import DEAPOptimisation
-npoints = 10
-#nparams = len(gc.nc.keys())
-
 
 from dask import distributed
 test = electro_tests[0][0]
-print(gc.nc)
-#import pdb; pdb.set_trace()
-#for test, observation in electro_tests:
 
 paramd0 = {k:v for k,v in gc.nc.items() if type(v) is type(0.01) }
 paramd1 = {k:v for k,v in gc.nc.items() if type(v) is type(1) }
