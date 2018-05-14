@@ -12,7 +12,7 @@ class RheobaseTest(VmTest):
     under current injection.
     """
     def _extra(self):
-        self.prediction = None
+        self.prediction = {}
         self.high = 300*pq.pA
         self.small = 0*pq.pA
         self.rheobase_vm = None
@@ -24,14 +24,10 @@ class RheobaseTest(VmTest):
                 {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
     name = "Rheobase test"
-
     description = ("A test of the rheobase, i.e. the minimum injected current "
                    "needed to evoke at least one spike.")
-
     units = pq.pA
-
     ephysprop_name = 'Rheobase'
-
     score_type = scores.RatioScore
 
     def generate_prediction(self, model):
@@ -45,31 +41,28 @@ class RheobaseTest(VmTest):
         except KeyError:
             units = self.observation['mean'].units
         import time
-        begin_rh=time.time()
+        begin_rh = time.time()
         lookup = self.threshold_FI(model, units)
         sub = np.array([x for x in lookup if lookup[x]==0])*units
         supra = np.array([x for x in lookup if lookup[x]>0])*units
-        #self.verbose=True
         if self.verbose:
             if len(sub):
                 print("Highest subthreshold current is %s" \
-                      % (float(sub.max().round(2))*units))
+                      % (float(sub.max())*units))
             else:
                 print("No subthreshold current was tested.")
             if len(supra):
                 print("Lowest suprathreshold current is %s" \
-                      % supra.min().round(2))
+                      % supra.min())
             else:
                 print("No suprathreshold current was tested.")
-
         if len(sub) and len(supra):
             rheobase = supra.min()
         else:
             rheobase = None
+        #prediction['value'] = rheobase
         prediction['value'] = rheobase
-
-        self.prediction = prediction
-        return self.prediction
+        return prediction
 
     def threshold_FI(self, model, units, guess=None):
         lookup = {} # A lookup table global to the function below.
@@ -93,7 +86,7 @@ class RheobaseTest(VmTest):
                 if n_spikes and n_spikes <= spike_counts.min():
                     self.rheobase_vm = model.get_membrane_potential()
 
-        max_iters = 10
+        max_iters = 45
 
         #evaluate once with a current injection at 0pA
         high=self.high
@@ -144,7 +137,12 @@ class RheobaseTest(VmTest):
                                             observation, prediction)
         if self.rheobase_vm is not None:
             score.related_data['vm'] = self.rheobase_vm
-
+        #import matplotlib.pyplot as plt
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
+        plt.plot(score.related_data['vm'].times,score.related_data['vm'])
+        plt.savefig('rheobase.png')
 
 class RheobaseTestP(VmTest):
      """
@@ -153,29 +151,20 @@ class RheobaseTestP(VmTest):
      under current injection.
 
      """
-
      required_capabilities = (cap.ReceivesSquareCurrent,
                               cap.ProducesSpikes)
-
-
      DELAY = 100.0*pq.ms
      DURATION = 1000.0*pq.ms
      params = {'injected_square_current':
                  {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
-
      name = "Rheobase test"
-
      description = ("A test of the rheobase, i.e. the minimum injected current "
                     "needed to evoke at least one spike.")
-
      units = pq.pA
-
      ephysprop_name = 'Rheobase'
-
      score_type = scores.RatioScore
 
      def generate_prediction(self, model):
-
         '''
         inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
         outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
@@ -236,7 +225,6 @@ class RheobaseTestP(VmTest):
                 center = [ i for i in center if not i == supra.min() ]
                 center[int(len(center)/2)+1]=(sub.max()+supra.min())/2.0
                 steps = [ i*pq.pA for i in center ]
-
             elif len(sub):
                 steps = list(np.linspace(sub.max(),2*sub.max(),9.0))
                 steps = [ i for i in steps if not i == sub.max() ]
@@ -249,23 +237,21 @@ class RheobaseTestP(VmTest):
 
             dtc.current_steps = steps
             dtc.rheobase = None
-            return copy.copy(dtc)
+            return dtc
 
         def check_current(ampl,dtc):
             '''
             Inputs are an amplitude to test and a virtual model
             output is an virtual model with an updated dictionary.
             '''
-            import copy
             import os
             import quantities
-            from neuronunit.models.reduced import ReducedModel
             import neuronunit
             LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
             dtc.model_path = LEMS_MODEL_PATH
-            model = ReducedModel(dtc.model_path,name='vanilla', backend=(str(dtc.backend), {'DTC':dtc}))
 
-            import copy
+            from neuronunit.models.reduced import ReducedModel
+            model = ReducedModel(dtc.model_path,name='vanilla', backend=(str(dtc.backend), {'DTC':dtc}))
             model.set_attrs(dtc.attrs)
 
             DELAY = 100.0*pq.ms
@@ -273,9 +259,7 @@ class RheobaseTestP(VmTest):
             params = {'injected_square_current':
                       {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
-            dtc = copy.copy(dtc)
             ampl = float(ampl)
-            #print(dtc.lookup)
             if ampl not in dtc.lookup or len(dtc.lookup) == 0:
                 current = params.copy()['injected_square_current']
                 uc = {'amplitude':ampl}
@@ -322,6 +306,10 @@ class RheobaseTestP(VmTest):
 
         def find_rheobase(self, dtc):
             import dask.bag as db
+            import dask.array as da
+            from distributed import client
+            c = client.Client()
+            from dask.diagnostics import Profiler, ResourceProfiler, CacheProfiler
             cnt = 0
             assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
             # If this it not the first pass/ first generation
@@ -333,11 +321,18 @@ class RheobaseTestP(VmTest):
                 dtc_clones = [ dtc for s in dtc.current_steps ]
                 b0 = db.from_sequence(dtc.current_steps, npartitions=8)
                 b1 = db.from_sequence(dtc_clones, npartitions=8)
+                #b0.visualize(filename='rheobase_graph0.svg')
+                #b1.visualize(filename='rheobase_graph1.svg')
                 dtcpop = list(db.map(check_current,b0,b1).compute())
                 for dtc_clone in dtcpop:
                     dtc.lookup.update(dtc_clone.lookup)
                 dtc = check_fix_range(dtc)
                 cnt += 1
+                #del b0
+                #del b1
+            #del dtc_clones
+            #del dtc.current_steps
+
             return dtc
 
         dtc = DataTC()
@@ -348,8 +343,14 @@ class RheobaseTestP(VmTest):
         dtc.model_path = model.orig_lems_file_path
         dtc.backend = model.backend
         assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
+
+        import dask.array as da
+        from dask.diagnostics import Profiler, ResourceProfiler, CacheProfiler
+
+
         prediction = {}
         prediction['value'] = find_rheobase(self,dtc).rheobase * pq.pA
+
         return prediction
 
      def bind_score(self, score, model, observation, prediction):
