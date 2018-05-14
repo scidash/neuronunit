@@ -1,10 +1,16 @@
-#import sciunit
 from quantities import mV, ms, s, V
 import sciunit
+from neo import AnalogSignal
+import neuronunit.capabilities as cap
+import numpy as np
+import parse_glif
 
 
 import allensdk.core.json_utilities as json_utilities
 from allensdk.model.glif.glif_neuron import GlifNeuron
+from allensdk.api.queries.cell_types_api import CellTypesApi
+from neuronunit.models.reduced import ReducedModel
+
 try:
     from allensdk.api.queries.glif_api import GlifApi
     from allensdk.core.cell_types_cache import CellTypesCache
@@ -16,38 +22,52 @@ except:
     from allensdk.api.queries.glif_api import GlifApi
     from allensdk.core.cell_types_cache import CellTypesCache
     import allensdk.core.json_utilities as json_utilities
+
     os.system('pip install git+https://github.com/scidash/sciunit@dev')
 
 
-from neo import AnalogSignal
-import neuronunit.capabilities as cap
-import numpy as np
 class GC(sciunit.Model, cap.ReceivesSquareCurrent, cap.ProducesSpikes, cap.ProducesMembranePotential):
     def __init__(self, allen_id = None):
         self = self
         if allen_id == None:
-            neuronal_model_id = 566302806
+            self.allen_id = 566302806
             glif_api = GlifApi()
-            self.nc = glif_api.get_neuron_configs([neuronal_model_id])[neuronal_model_id]
+            self.nc = glif_api.get_neuron_configs([self.allen_id])[self.allen_id]
             self.glif = GlifNeuron.from_dict(self.nc)
+
+            # download model metadata
+            self.metad = glif_api.get_neuronal_models_by_id([self.allen_id])[0]
+
+            #ct = CellTypesApi()
+            # use the SDK API to get a list of single cells and corresponding metadata
+            #cell_metadata_list = ct.list_cells(require_reconstruction=False)
+            # convert that list of cells' metadata to a python dictionary for easy access
         else:
+            glif_api = GlifApi()
             self.allen_id = allen_id
             self.glif = glif_api.get_neuronal_models_by_id([allen_id])[0]
             self.nc = glif_api.get_neuron_configs([allen_id])[allen_id]
             self.glif = GlifNeuron.from_dict(self.nc)
+            self.metad = glif_api.get_neuronal_models_by_id([self.allen_id])[0]
 
     def as_lems_model(self, backend=None):
-        import parseglif
-        parseglif.generate_lems(self.nc)
-        #First do Padraig's translation stuff
+        glif_package = []
+        glif_package.append(self.metad)
+        glif_package.append(self.nc)
+        glif_package.append(self.get_sweeps)
+        lems_file_path = parse_glif.generate_lems(glif_package)
         return ReducedModel(lems_file_path, backend=backend)
 
-    def get_sweeps(self):
-        self.sweeps = ctc.get_ephys_sweeps(self.glif['specimen_id'], \
-        file_name='%d_ephys_sweeps.json' % self.allen_id)
+    def get_sweeps(self,specimen_id = None):
+        if specimen_id == None:
+            self.sweeps = ctc.get_ephys_sweeps(self.glif[self.allen_id], \
+            file_name='%d_ephys_sweeps.json' % self.allen_id)
 
-    def get_sweep(self, n):
-        sweep_info = sweeps[n]
+    def get_sweep(self, n,specimen_id = None):
+        if specimen_id == None:
+            self.sweeps = ctc.get_ephys_sweeps(self.glif[self.allen_id], \
+            file_name='%d_ephys_sweeps.json' % self.allen_id)
+        sweep_info = self.sweeps[n]
         sweep_number = sweep_info['sweep_number']
         sweep = ds.get_sweep(sweep_number)
         return sweep
