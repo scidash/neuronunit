@@ -84,10 +84,6 @@ class GC(sciunit.Model, cap.ReceivesSquareCurrent, cap.ProducesSpikes, cap.Produ
         #from neuronunit.capabilities.spike_functions import get_spike_train
         #import numpy as np
         spike_times = self.results['interpolated_spike_times']
-        #print(get_spike_train(vms),spike_times)
-
-        #return get_spike_train(vms)
-
         return np.array(spike_times)
 
     def get_membrane_potential(self):
@@ -108,34 +104,20 @@ class GC(sciunit.Model, cap.ReceivesSquareCurrent, cap.ProducesSpikes, cap.Produ
             vm = list(map(lambda x: isv if np.isnan(x) else x, vm))
         dt =  self.glif.dt
         vms = AnalogSignal(vm,units = mV,sampling_period =  dt * ms)
-
         return vms
 
     def _local_run(self):
-        '''
-        pyNN lazy array demands a minimum population size of 3. Why is that.
-        '''
-
         self.results = np.array(self.glif.run(self.stim))
         return self.results
 
 
     def set_attrs(self, **attrs):
-        '''
-        ctc.get_ephys_data(nm['specimen_id'], file_name='stimulus.nwb')
-        ctc.get_ephys_sweeps(nm['specimen_id'], file_name='ephys_sweeps.json')
-        self.ctc = ctc
-        nc = glif_api.get_neuron_configs([neuronal_model_id])[neuronal_model_id]
-        neuron_config = glif_api.get_neuron_configs([neuronal_model_id])
-        neuron_config = neuron_config['566302806']
-        '''
         self.model.attrs.update(attrs)
         self.glif = GlifNeuron.from_dict(attrs)
         return self.glif
 
     def inject_square_current(self, current):
         import re
-        #dt = 0.001
         if 'injected_square_current' in current.keys():
             c = current['injected_square_current']
         else:
