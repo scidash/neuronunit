@@ -137,12 +137,6 @@ class RheobaseTest(VmTest):
                                             observation, prediction)
         if self.rheobase_vm is not None:
             score.related_data['vm'] = self.rheobase_vm
-        #import matplotlib.pyplot as plt
-        import matplotlib
-        matplotlib.use('Agg')
-        import matplotlib.pyplot as plt
-        plt.plot(score.related_data['vm'].times,score.related_data['vm'])
-        plt.savefig('rheobase.png')
 
 class RheobaseTestP(VmTest):
      """
@@ -306,10 +300,10 @@ class RheobaseTestP(VmTest):
 
         def find_rheobase(self, dtc):
             import dask.bag as db
-            import dask.array as da
-            from distributed import client
-            c = client.Client()
-            from dask.diagnostics import Profiler, ResourceProfiler, CacheProfiler
+            #import dask.array as da
+            #from distributed import client
+            #c = client.Client()
+            #from dask.diagnostics import Profiler, ResourceProfiler, CacheProfiler
             cnt = 0
             assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
             # If this it not the first pass/ first generation
