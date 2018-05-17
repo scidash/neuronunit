@@ -67,23 +67,27 @@ def map_wrapper(function_item,list_items,other_args=None):
 
 from neuronunit.models.interfaces import glif
 
+def update_model(xargs):
+    dtc,rtest,backend = xargs
+    LEMS_MODEL_PATH = path_params['model_path']
+    model = ReducedModel(LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+    model.set_attrs(dtc.attrs)
+    print('after \n\n\n\n\n',model.attrs)
+    score = rtest.judge(model,stop_on_error = False, deep_error = True)
+    print(score, '\n\n\n\n\n scores different ')
+    return score
+
+
 def dtc_to_rheo(xargs):
     dtc,rtest,backend = xargs
-    dtc.model_path = path_params['model_path']
     LEMS_MODEL_PATH = path_params['model_path']
-
-    if backend == 'glif':
-        model = glif.GC()
-    else:
-        model = ReducedModel(LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-        #print('before',model.attrs)
-        model.set_attrs(dtc.attrs)
-        #print('after',model.attrs)
-
-        dtc.scores = {}
-        dtc.score = {}
+    model = ReducedModel(LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+    model.set_attrs(dtc.attrs)
+    #print('after \n\n\n\n\n',model.attrs)
+    dtc.scores = {}
+    dtc.score = {}
     score = rtest.judge(model,stop_on_error = False, deep_error = True)
-    print(score)
+    print(score, '\n\n\n\n\n scores different ')
     if score.sort_key is not None:
         if hasattr(dtc,'scores'):
             dtc.scores[str(rtest)] = 1 - score.sort_key
@@ -91,7 +95,6 @@ def dtc_to_rheo(xargs):
             dtc.scores = {}
             dtc.scores[str(rtest)] = 1 - score.sort_key
     dtc.rheobase = score.prediction
-
     return dtc
 
 def nunit_evaluation(dtc,tests,backend=None):
@@ -234,41 +237,29 @@ def update_deap_pop(pop, tests, td, backend = None):
     dtcpop = list(update_dtc_pop(pop, td))
     rheobase_test = tests[0]
     xargs = list(zip(dtcpop,repeat(rheobase_test),repeat('NEURON')))
+
+    dtcpop = list(map(update_model,xargs))
+    keys = [ d.sort_key for d in dtcpop ]
+
     dtcpop = list(map(dtc_to_rheo,xargs))
     rheobase = [ d.rheobase for d in dtcpop ]
-    print(rheobase)
-    #import pdb; pdb.set_trace()
+
     #assert rheobase[0]['value'] !=  rheobase[1]['value']
     attrs = [ d.attrs for d in dtcpop ]
-    #attrs
 
     dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] > 0.0 , dtcpop))
     xargs = zip(dtcpop,repeat(tests))
     dtcpop = list(map(format_test,xargs))
     # https://distributed.readthedocs.io/en/latest/memory.html
-    #dtcpop_ = map_wrapper(nunit_evaluation,copy.copy(dtcpop),other_args=tests)
-    for d in dtcpop:
-        d = nunit_evaluation(d,tests,backend='neuron')
-    #import copy
-    #dtcpop_ = copy.copy(dtcpop)
-    #dtcpop_ = map_wrapper(nunit_evaluation,dtcpop,other_args=tests)
-    #del dtcpop
-    #del dtcpop
-    #dtcpop = list(filter(lambda dtc: not isinstance(dtc.scores['RheobaseTestP'],type(None)),dtcpop))
-    #dtcpop = list(filter(lambda dtc: not type(None) in (list(dtc.scores.values())), dtcpop))
-    # This call deletes everything
-    #dtcpop = list(filter(lambda dtc: not (numpy.isinf(x) for x in list(dtc.scores.values())), dtcpop))
-    for i,d in enumerate(dtcpop_):
+    dtcpop = map_wrapper(nunit_evaluation,copy.copy(dtcpop),other_args=tests)
+
+    for i,d in enumerate(dtcpop):
         pop[i].dtc = None
-        pop[i].dtc = dtcpop_[i]
+        pop[i].dtc = dtcpop[i]
         pop[i].rheobase = d.rheobase
-    print('the uniform problem')
-    #import pdb; pdb.set_trace()
-    #assert len(dtcpop) != 0
     assert len(pop) != 0
     import copy
     return copy.copy(pop)
-    #pop
 
 
 def create_subset(nparams = 10, provided_dict = None):

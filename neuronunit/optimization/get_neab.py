@@ -8,15 +8,7 @@ from neuronunit import tests as _, neuroelectro
 from neuronunit.tests import passive, waveform, fi
 from neuronunit.tests.fi import RheobaseTestP
 
-def replace_zero_std(electro_tests):
-    for test,obs in electro_tests:
-        #test[0] = RheobaseTestP(obs['Rheobase'])
-        for k,v in obs.items():
-            if v['std'] == 0:
-                print(electro_tests[1][1],obs)
-                obs = get_neab.substitute_criteria(electro_tests[1][1],obs)
-                print(obs)
-    return electro_tests
+
 
 def update_amplitude(test,tests,score):
     rheobase = score.prediction['value']
@@ -33,6 +25,16 @@ def substitute_criteria(observations_donar,observations_acceptor):
             if k == 'std' and v == 0.0:
                 oa[k] = observations_donar[index][k]
     return observations_acceptor
+
+def replace_zero_std(electro_tests):
+    for test,obs in electro_tests:
+        test[0] = RheobaseTestP(obs['Rheobase'])
+        for k,v in obs.items():
+            if v['std'] == 0:
+                print(electro_tests[1][1],obs)
+                obs = substitute_criteria(electro_tests[1][1],obs)
+                print(obs)
+    return electro_tests
 
 def get_neuron_criteria(cell_id,file_name = None):#,observation = None):
     # Use neuroelectro experimental obsevations to find test

@@ -18,8 +18,7 @@ purkinje = { 'nlex_id':'NLXWIKI:sao471801888'}#'NLXWIKI:sao471801888'} # purkinj
 '''
 
 electro_path = 'pipe_tests.p'
-purkinje = { 'nlex_id':'NLXWIKI:sao471801888'}#'NLXWIKI:sao471801888'} # purkinje
-
+purkinje = { 'nlex_id':'sao471801888'}#'NLXWIKI:sao471801888'} # purkinje
 fi_basket = {'nlex_id':'100201'}
 pvis_cortex = {'nlex_id':'nifext_50'} # Layer V pyramidal cell
 olf_mitral = { 'nlex_id':'nifext_120'}
@@ -49,7 +48,6 @@ except:
     with open('pipe_tests.p','wb') as f:
        pickle.dump(electro_tests,f)
 
-import pdb; pdb.set_trace()
 MU = 6; NGEN = 6; CXPB = 0.9
 
 USE_CACHED_GA = False
@@ -73,7 +71,6 @@ def check_dif(pipe_old,pipe_new):
 
     return bool
 
-import pdb; pdb.set_trace()
 
 for test, observation in electro_tests:
     dic_key = str(list(pipe[cnt].values())[0])
@@ -81,7 +78,6 @@ for test, observation in electro_tests:
     DO = DEAPOptimisation(error_criterion = test, selection = 'selIBEA', provided_dict = model_params)
     pop, hof_py, log, history, td_py, gen_vs_hof = DO.run(offspring_size = MU, max_ngen = NGEN, cp_frequency=1,cp_filename=str(dic_key)+'.p')
 
-    import pdb; pdb.set_trace()
 
     #with open(str(dic_key)+'.p','rb') as f:
 
@@ -94,7 +90,6 @@ for test, observation in electro_tests:
     pipe_results[dic_key]['td_py'] = td_py
     pipe_results[dic_key]['gen_vs_hof'] = gen_vs_hof
     if cnt > 1:
-        import pdb; pdb.set_trace()
         assert check_dif(pipe_old,pipe_results) == True
         assert np.mean(pipe_results[dic_key]['gen_vs_hof']) != np.mean(pipe_results[previous]['gen_vs_hof'])
         assert np.mean(pipe_results[dic_key]['history']) != np.mean(pipe_results[previous]['history'])

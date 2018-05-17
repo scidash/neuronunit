@@ -246,7 +246,7 @@ class RheobaseTestP(VmTest):
 
             from neuronunit.models.reduced import ReducedModel
             model = ReducedModel(dtc.model_path,name='vanilla', backend=(str(dtc.backend), {'DTC':dtc}))
-            #model.set_attrs(dtc.attrs)
+            model.set_attrs(dtc.attrs)
 
             DELAY = 100.0*pq.ms
             DURATION = 1000.0*pq.ms
@@ -338,8 +338,8 @@ class RheobaseTestP(VmTest):
         dtc.backend = model.backend
         assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
 
-        import dask.array as da
-        from dask.diagnostics import Profiler, ResourceProfiler, CacheProfiler
+        #import dask.array as da
+        #from dask.diagnostics import Profiler, ResourceProfiler, CacheProfiler
 
 
         prediction = {}
