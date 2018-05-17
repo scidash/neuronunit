@@ -19,6 +19,14 @@ from neuronunit.optimization import get_neab
 from pyneuroml import pynml
 from dask.distributed import Client
 import dask.bag as db
+
+import copy
+import numpy as np
+from deap import base
+import dask.bag as db
+from neuronunit.optimization.data_transport_container import DataTC
+import neuronunit
+
 def write_opt_to_nml(path,param_dict):
     '''
     Write optimimal simulation parameters back to NeuroML.
@@ -68,11 +76,14 @@ def dtc_to_rheo(xargs):
         model = glif.GC()
     else:
         model = ReducedModel(LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+        #print('before',model.attrs)
         model.set_attrs(dtc.attrs)
+        #print('after',model.attrs)
+
         dtc.scores = {}
         dtc.score = {}
-
     score = rtest.judge(model,stop_on_error = False, deep_error = True)
+    print(score)
     if score.sort_key is not None:
         if hasattr(dtc,'scores'):
             dtc.scores[str(rtest)] = 1 - score.sort_key
@@ -87,7 +98,7 @@ def nunit_evaluation(dtc,tests,backend=None):
     # Inputs single data transport container modules, and neuroelectro observations that
     # inform test error error_criterion
     # Outputs Neuron Unit evaluation scores over error criterion
-    assert (len(tests) == 7 or len(tests) == 8)
+    #assert (len(tests) == 7 or len(tests) == 8)
 
     dtc.model_path = path_params['model_path']
     LEMS_MODEL_PATH = path_params['model_path']
@@ -114,8 +125,6 @@ def nunit_evaluation(dtc,tests,backend=None):
         score = None
         score = t.judge(model,stop_on_error = False, deep_error = False)
         if score.sort_key is not None:
-            # dtc.scores.get(str(t), score.sort_key)
-            # dtc.score.get(str(t), score.sort_key-1)
             dtc.scores[str(t)] = 1.0 - score.sort_key
             print(str(t),score.sort_key)
             if not hasattr(dtc,'score'):
@@ -183,16 +192,11 @@ def update_dtc_pop(pop, td = None, backend = None):
     corresponding virtual model objects.
     '''
 
-    import copy
-    import numpy as np
-    from deap import base
     toolbox = base.Toolbox()
     pop = [toolbox.clone(i) for i in pop ]
     def transform(ind):
-        import dask.bag as db
-        from neuronunit.optimization.data_transport_container import DataTC
+
         dtc = DataTC()
-        import neuronunit
         LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
         if backend is not None:
             dtc.backend = backend
@@ -215,7 +219,6 @@ def update_dtc_pop(pop, td = None, backend = None):
         dtcpop = list(transform(pop))
     return dtcpop
 
-
 def update_deap_pop(pop, tests, td, backend = None):
     '''
     Inputs a population of genes (pop).
@@ -226,19 +229,26 @@ def update_deap_pop(pop, tests, td, backend = None):
     DTCs for which a rheobase value of x (pA)<=0 are filtered out
     DTCs are then scored by neuronunit, using neuronunit models that act in place.
     '''
+    import copy
     orig_MU = len(pop)
     dtcpop = list(update_dtc_pop(pop, td))
     rheobase_test = tests[0]
-    xargs = zip(dtcpop,repeat(rheobase_test),repeat('NEURON'))
+    xargs = list(zip(dtcpop,repeat(rheobase_test),repeat('NEURON')))
     dtcpop = list(map(dtc_to_rheo,xargs))
+    rheobase = [ d.rheobase for d in dtcpop ]
+    print(rheobase)
+    #import pdb; pdb.set_trace()
+    #assert rheobase[0]['value'] !=  rheobase[1]['value']
+    attrs = [ d.attrs for d in dtcpop ]
+    #attrs
 
     dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] > 0.0 , dtcpop))
     xargs = zip(dtcpop,repeat(tests))
     dtcpop = list(map(format_test,xargs))
     # https://distributed.readthedocs.io/en/latest/memory.html
-    dtcpop = map_wrapper(nunit_evaluation,dtcpop,other_args=tests)
-    #for d in dtcpop:
-    #    d = nunit_evaluation(d,tests,backend='neuron')
+    #dtcpop_ = map_wrapper(nunit_evaluation,copy.copy(dtcpop),other_args=tests)
+    for d in dtcpop:
+        d = nunit_evaluation(d,tests,backend='neuron')
     #import copy
     #dtcpop_ = copy.copy(dtcpop)
     #dtcpop_ = map_wrapper(nunit_evaluation,dtcpop,other_args=tests)
@@ -248,10 +258,12 @@ def update_deap_pop(pop, tests, td, backend = None):
     #dtcpop = list(filter(lambda dtc: not type(None) in (list(dtc.scores.values())), dtcpop))
     # This call deletes everything
     #dtcpop = list(filter(lambda dtc: not (numpy.isinf(x) for x in list(dtc.scores.values())), dtcpop))
-    for i,d in enumerate(dtcpop):
+    for i,d in enumerate(dtcpop_):
         pop[i].dtc = None
-        pop[i].dtc = dtcpop[i]
+        pop[i].dtc = dtcpop_[i]
         pop[i].rheobase = d.rheobase
+    print('the uniform problem')
+    #import pdb; pdb.set_trace()
     #assert len(dtcpop) != 0
     assert len(pop) != 0
     import copy

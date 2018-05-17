@@ -3,52 +3,53 @@ import os
 import pickle
 from neuronunit.optimization.model_parameters import model_params
 from bluepyopt.deapext.optimisations import DEAPOptimisation
-from neuronunit.tests.fi import RheobaseTestP
 from dask import distributed
 import pickle
 
-electro_path = 'pipe_tests.p'
-fi_basket = {'nlex_id':'NLXCELL:100201'}
-# https://scicrunch.org/scicrunch/interlex/view/ilx_0107386
-pvis_cortex = {'nlex_id': 'nifext_50'} # Layer V pyramidal cell
-#Hippocampal CA1 Pyramidal Neuron
-#ca1_pyr = {'nlex_id': 'ILX:0105031' }
-#NLXWIKI:sao830368389
-# https://scicrunch.org/scicrunch/interlex/view/ilx_0101974
-purkinje = { 'nlex_id':'NLXWIKI:sao471801888'} # purkinje
-#https://scicrunch.org/scicrunch/interlex/view/ilx_0107933
-olf_mitral = { 'nlex_id':'NLXWIKI:nifext_120'}
-#https://scicrunch.org/scicrunch/interlex/view/ilx_0107386
-ca1_pyr = { 'nlex_id':'SAO:830368389'}
-pipe = [ fi_basket, pvis_cortex, ca1_pyr, purkinje, ca1_pyr ]
+'''
+import requests
+url = "https://www.neuroelectro.org/api/1/nes/?nlex=NLXCELL%253A100201&e__name=Spike+Amplitude"
+page = requests.get(url)
+from bs4 import BeautifulSoup
+soup = BeautifulSoup(page.text, 'html.parser')
+data = soup.text.split("name") # then split it into lines
+purkinje = { 'nlex_id':'NLXWIKI:sao471801888'}#'NLXWIKI:sao471801888'} # purkinje
 
-def replace_zero_std(electro_tests):
-    for test,obs in electro_tests:
-        test[0] = RheobaseTestP(obs['Rheobase'])
-        for k,v in obs.items():
-            if v['std'] == 0:
-                obs = get_neab.substitute_criteria(electro_tests[1][1],obs)
-    return electro_tests
+'''
+
+electro_path = 'pipe_tests.p'
+purkinje = { 'nlex_id':'NLXWIKI:sao471801888'}#'NLXWIKI:sao471801888'} # purkinje
+
+fi_basket = {'nlex_id':'100201'}
+pvis_cortex = {'nlex_id':'nifext_50'} # Layer V pyramidal cell
+olf_mitral = { 'nlex_id':'nifext_120'}
+ca1_pyr = { 'nlex_id':'830368389'}
+
+pipe = [ fi_basket, pvis_cortex, olf_mitral, ca1_pyr ]
+
+
+electro_path = 'pipe_tests.p'
 
 try:
     assert os.path.isfile(electro_path) == True
     with open(electro_path,'rb') as f:
         electro_tests = pickle.load(f)
-    electro_tests = replace_zero_std(electro_tests)
+    electro_tests = get_neab.replace_zero_std(electro_tests)
 except:
 
     electro_tests = []
-    contents[0][0].observation
     for p in pipe:
+       print(p)
        p_tests, p_observations = get_neab.get_neuron_criteria(p)
        electro_tests.append((p_tests, p_observations))
-    '''
-    Add in the parallel rheobase test.
-    '''
-    electro_tests = replace_zero_std(electro_tests)
+    for i in electro_tests: print(str(i[1].items()) +str('\n'))
+    for i in electro_tests: print(i[1]['Rheobase'])
+    for i in electro_tests: print(i[1]['Spike Half-Width'])
+    electro_tests = get_neab.replace_zero_std(electro_tests)
     with open('pipe_tests.p','wb') as f:
        pickle.dump(electro_tests,f)
 
+import pdb; pdb.set_trace()
 MU = 6; NGEN = 6; CXPB = 0.9
 
 USE_CACHED_GA = False
@@ -69,14 +70,7 @@ def check_dif(pipe_old,pipe_new):
         if value != pipe_new[key]:
             bool = True
         print(value,pipe_new[key])
-    '''
-    for index, val in enumerate(pipe_results.values()):
-        if index == 0:
-            attrs = pd.DataFrame(list(val['pop'][0].dtc.attrs.values())).T
-        else:
-            attrs = attrs.append(pd.DataFrame(list(val['pop'][0].dtc.attrs.values())).T)
-    attrs.columns = val['pop'][0].dtc.attrs.keys()
-    '''
+
     return bool
 
 import pdb; pdb.set_trace()
@@ -86,6 +80,7 @@ for test, observation in electro_tests:
     DO = None
     DO = DEAPOptimisation(error_criterion = test, selection = 'selIBEA', provided_dict = model_params)
     pop, hof_py, log, history, td_py, gen_vs_hof = DO.run(offspring_size = MU, max_ngen = NGEN, cp_frequency=1,cp_filename=str(dic_key)+'.p')
+
     import pdb; pdb.set_trace()
 
     #with open(str(dic_key)+'.p','rb') as f:

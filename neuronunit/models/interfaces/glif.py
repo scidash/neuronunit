@@ -34,14 +34,7 @@ class GC(sciunit.Model, cap.ReceivesSquareCurrent, cap.ProducesSpikes, cap.Produ
             glif_api = GlifApi()
             self.nc = glif_api.get_neuron_configs([self.allen_id])[self.allen_id]
             self.glif = GlifNeuron.from_dict(self.nc)
-
-            # download model metadata
             self.metad = glif_api.get_neuronal_models_by_id([self.allen_id])[0]
-
-            #ct = CellTypesApi()
-            # use the SDK API to get a list of single cells and corresponding metadata
-            #cell_metadata_list = ct.list_cells(require_reconstruction=False)
-            # convert that list of cells' metadata to a python dictionary for easy access
         else:
             glif_api = GlifApi()
             self.allen_id = allen_id
