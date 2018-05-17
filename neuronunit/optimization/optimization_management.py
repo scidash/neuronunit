@@ -67,27 +67,14 @@ def map_wrapper(function_item,list_items,other_args=None):
 
 from neuronunit.models.interfaces import glif
 
-def update_model(xargs):
-    dtc,rtest,backend = xargs
-    LEMS_MODEL_PATH = path_params['model_path']
-    model = ReducedModel(LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-    model.set_attrs(dtc.attrs)
-    print('after \n\n\n\n\n',model.attrs)
-    score = rtest.judge(model,stop_on_error = False, deep_error = True)
-    print(score, '\n\n\n\n\n scores different ')
-    return score
-
-
 def dtc_to_rheo(xargs):
     dtc,rtest,backend = xargs
     LEMS_MODEL_PATH = path_params['model_path']
     model = ReducedModel(LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.set_attrs(dtc.attrs)
-    #print('after \n\n\n\n\n',model.attrs)
     dtc.scores = {}
     dtc.score = {}
     score = rtest.judge(model,stop_on_error = False, deep_error = True)
-    print(score, '\n\n\n\n\n scores different ')
     if score.sort_key is not None:
         if hasattr(dtc,'scores'):
             dtc.scores[str(rtest)] = 1 - score.sort_key
@@ -101,7 +88,6 @@ def nunit_evaluation(dtc,tests,backend=None):
     # Inputs single data transport container modules, and neuroelectro observations that
     # inform test error error_criterion
     # Outputs Neuron Unit evaluation scores over error criterion
-    #assert (len(tests) == 7 or len(tests) == 8)
 
     dtc.model_path = path_params['model_path']
     LEMS_MODEL_PATH = path_params['model_path']
@@ -122,14 +108,15 @@ def nunit_evaluation(dtc,tests,backend=None):
     if dtc.score is None:
         dtc.score = {}
 
+    #if dtc.scores is None:
+    #    dtc.scores = {}
+
     for k,t in enumerate(tests[1:-1]):
         t.params = dtc.vtest[k]
-        print(t.params)
         score = None
         score = t.judge(model,stop_on_error = False, deep_error = False)
         if score.sort_key is not None:
             dtc.scores[str(t)] = 1.0 - score.sort_key
-            print(str(t),score.sort_key)
             if not hasattr(dtc,'score'):
                 dtc.score = {}
             dtc.score[str(t)] = score.sort_key
@@ -141,7 +128,7 @@ def nunit_evaluation(dtc,tests,backend=None):
 def evaluate(dtc):
     fitness = [ 1.0 for i in range(0,len(dtc.scores.keys())) ]
     for k,t in enumerate(dtc.scores.keys()):
-        fitness[k] = dtc.scores[str(t)]#.sort_key
+        fitness[k] = dtc.scores[str(t)]
     return tuple(fitness,)
 
 def get_trans_list(param_dict):
@@ -238,14 +225,7 @@ def update_deap_pop(pop, tests, td, backend = None):
     rheobase_test = tests[0]
     xargs = list(zip(dtcpop,repeat(rheobase_test),repeat('NEURON')))
 
-    dtcpop = list(map(update_model,xargs))
-    keys = [ d.sort_key for d in dtcpop ]
-
     dtcpop = list(map(dtc_to_rheo,xargs))
-    rheobase = [ d.rheobase for d in dtcpop ]
-
-    #assert rheobase[0]['value'] !=  rheobase[1]['value']
-    attrs = [ d.attrs for d in dtcpop ]
 
     dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] > 0.0 , dtcpop))
     xargs = zip(dtcpop,repeat(tests))
