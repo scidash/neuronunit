@@ -260,13 +260,12 @@ class NEURONBackend(Backend):
         #if len(attrs) == len(self.model.attrs):
         self.model.attrs = {}
         self.model.attrs.update(attrs)
-        #assert type(self.model.attrs) is not type(None)
-        #assert len(list(self.model.attrs.values())) > 0
+
         for h_key,h_value in attrs.items():
             self.h('m_{0}_{1}_pop[0].{2} = {3}'\
                 .format(self.cell_name,self.cell_name,h_key,h_value))
             #print('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
-        print(self.model.attrs)
+        #print(self.model.attrs)
         # Below create a list of NEURON experimental recording rig parameters.
         # This is where parameters of the artificial neuron experiment are initiated.
         # Code is sent to the python interface to neuron by executing strings:
@@ -316,9 +315,12 @@ class NEURONBackend(Backend):
         # the NEURON model code.
         # store the model attributes, in a temp buffer such that they persist throughout the model reinitialization.
         ##
-        #temp_attrs = copy.copy(self.model.attrs)
+
+        # These lines are crucial.
+        temp_attrs = copy.copy(self.model.attrs)
         self.init_backend()
-        self.set_attrs(**self.model.attrs)
+        #if len(temp_attrs)>0:
+        self.set_attrs(**temp_attrs)
 
         c = copy.copy(current)
         if 'injected_square_current' in c.keys():
