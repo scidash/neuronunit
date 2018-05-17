@@ -6,6 +6,17 @@ import pickle
 from neuronunit import tests as _, neuroelectro
 #from neuronunit import tests as nu_tests, neuroelectro
 from neuronunit.tests import passive, waveform, fi
+from neuronunit.tests.fi import RheobaseTestP
+
+def replace_zero_std(electro_tests):
+    for test,obs in electro_tests:
+        #test[0] = RheobaseTestP(obs['Rheobase'])
+        for k,v in obs.items():
+            if v['std'] == 0:
+                print(electro_tests[1][1],obs)
+                obs = get_neab.substitute_criteria(electro_tests[1][1],obs)
+                print(obs)
+    return electro_tests
 
 def update_amplitude(test,tests,score):
     rheobase = score.prediction['value']
@@ -23,7 +34,7 @@ def substitute_criteria(observations_donar,observations_acceptor):
                 oa[k] = observations_donar[index][k]
     return observations_acceptor
 
-def get_neuron_criteria(cell_id,file_name = None,observation = None):
+def get_neuron_criteria(cell_id,file_name = None):#,observation = None):
     # Use neuroelectro experimental obsevations to find test
     # criterion that will be used to inform scientific unit testing.
     # some times observations are not sourced from neuroelectro,
@@ -31,7 +42,8 @@ def get_neuron_criteria(cell_id,file_name = None,observation = None):
     # if that happens make test objections using observations external
     # to this method, and provided as a method argument.
     tests = []
-    observations = {}
+    observations = None
+    test_classes = None
     test_classes = [fi.RheobaseTest,
                      passive.InputResistanceTest,
                      passive.TimeConstantTest,
@@ -40,18 +52,13 @@ def get_neuron_criteria(cell_id,file_name = None,observation = None):
                      waveform.InjectedCurrentAPWidthTest,
                      waveform.InjectedCurrentAPAmplitudeTest,
                      waveform.InjectedCurrentAPThresholdTest]#,
-    if observation is not None:
-       for index, t in enumerate(test_classes):
-           obs = observation[t.ephysprop_name]
-           tests.append(t(obs))
-           observations[t.ephysprop_name] = obs
-    else:
-        for index, t in enumerate(test_classes):
-            obs = t.neuroelectro_summary_observation(cell_id)
-            tests.append(t(obs))
-            observations[t.ephysprop_name] = obs
+    observations = {}
+    for index, t in enumerate(test_classes):
+        obs = t.neuroelectro_summary_observation(cell_id)
+        tests.append(t(obs))
+        observations[t.ephysprop_name] = obs
 
-    hooks = {tests[0]:{'f':update_amplitude}} #This is a trick to dynamically insert the method
+    #hooks = {tests[0]:{'f':update_amplitude}} #This is a trick to dynamically insert the method
     #update amplitude at the location in sciunit thats its passed to, without any loss of generality.
     #suite = sciunit.TestSuite("vm_suite",tests)
 

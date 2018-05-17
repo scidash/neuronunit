@@ -1,4 +1,8 @@
 usage='''
+Provenance: This file is originally from
+https://github.com/vrhaynes/AllenInstituteNeuroML
+https://github.com/OpenSourceBrain/AllenInstituteNeuroML
+It is authored by pgleeson@github.com, vrhaynes@github.com and russelljjarvis@github.com
 
 This file can be used to generate LEMS components for each of a number of GLIF models
 

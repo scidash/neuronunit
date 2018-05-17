@@ -246,7 +246,7 @@ class RheobaseTestP(VmTest):
 
             from neuronunit.models.reduced import ReducedModel
             model = ReducedModel(dtc.model_path,name='vanilla', backend=(str(dtc.backend), {'DTC':dtc}))
-            model.set_attrs(dtc.attrs)
+            #model.set_attrs(dtc.attrs)
 
             DELAY = 100.0*pq.ms
             DURATION = 1000.0*pq.ms
