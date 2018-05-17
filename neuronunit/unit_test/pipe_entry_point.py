@@ -22,6 +22,7 @@ pipe = [ fi_basket, pvis_cortex, olf_mitral, ca1_pyr ]
 electro_path = 'pipe_tests.p'
 
 try:
+    assert 1==2
     assert os.path.isfile(electro_path) == True
     with open(electro_path,'rb') as f:
         electro_tests = pickle.load(f)
@@ -33,11 +34,15 @@ except:
        p_tests, p_observations = get_neab.get_neuron_criteria(p)
        electro_tests.append((p_tests, p_observations))
 
+    for i, j in enumerate(electro_tests):
+       assert electro_tests[-i][1]['Rheobase'] != electro_tests[-i-1][1]['Rheobase']
+
+
     electro_tests = get_neab.replace_zero_std(electro_tests)
     with open('pipe_tests.p','wb') as f:
        pickle.dump(electro_tests,f)
 
-MU = 5; NGEN = 5; CXPB = 0.9
+MU = 7; NGEN = 7; CXPB = 0.9
 
 USE_CACHED_GA = False
 #provided_keys = list(model_params.keys())
@@ -82,29 +87,16 @@ for test, observation in electro_tests:
     pipe_results[dic_key]['history'] = history
     pipe_results[dic_key]['td_py'] = td_py
     pipe_results[dic_key]['gen_vs_hof'] = gen_vs_hof
-    #if cnt > 1:
-    #    assert check_dif(pipe_old,pipe_results) == True
-    #    assert np.mean(pipe_results[dic_key]['gen_vs_hof']) != np.mean(pipe_results[previous]['gen_vs_hof'])
-    #    assert np.mean(pipe_results[dic_key]['history']) != np.mean(pipe_results[previous]['history'])
-    #    pipe_old = pipe_results[dic_key]#['pop'][0].attrs
-    #previous = dic_key
+
     cnt += 1
 
 elapsed = timeit.default_timer() - start_time
 
+times_list = list(pipe_results.values())
+ts = [ t['duration']/60.0 for t in times_list ]
+mean_time = np.mean(ts)
+total_time = np.sum(ts)
 
 print('entire duration', elapsed)
 with open('dump_all_cells','wb') as f:
    pickle.dump(pipe_results,f)
-
-
-
-    #except:
-    #pvis_criterion, pvis_observations = get_neab.get_neuron_criteria(p)
-
-    #inh_criterion, inh_observations = get_neab.get_neuron_criteria(p)
-#print(type(inh_observations),inh_observations)
-
-#inh_observations = get_neab.substitute_criteria(pvis_observations,inh_observations)
-
-#inh_criterion, inh_observations = get_neab.get_neuron_criteria(fi_basket,observation = inh_observations)
