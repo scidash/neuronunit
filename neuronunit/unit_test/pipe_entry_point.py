@@ -5,9 +5,11 @@ import pickle
 import pandas as pd
 import timeit
 
-from neuronunit.optimization import get_neab #import get_neuron_criteria, impute_criteria
+from neuronunit.optimization import get_neab
 from neuronunit.optimization.model_parameters import model_params
 from bluepyopt.deapext.optimisations import DEAPOptimisation
+from neuronunit.optimization.optimization_management import write_opt_to_nml
+from neuronunit.optimization import optimization_management
 
 electro_path = 'pipe_tests.p'
 purkinje = { 'nlex_id':'sao471801888'}#'NLXWIKI:sao471801888'} # purkinje
@@ -16,17 +18,19 @@ pvis_cortex = {'nlex_id':'nifext_50'} # Layer V pyramidal cell
 olf_mitral = { 'nlex_id':'nifext_120'}
 ca1_pyr = { 'nlex_id':'830368389'}
 
-pipe = [ fi_basket, pvis_cortex, olf_mitral, ca1_pyr ]
+pipe = [ fi_basket, pvis_cortex, olf_mitral, ca1_pyr, purkinje ]
 
 
 electro_path = 'pipe_tests.p'
 
 try:
-    assert 1==2
+    #assert 1==2
     assert os.path.isfile(electro_path) == True
     with open(electro_path,'rb') as f:
         electro_tests = pickle.load(f)
     electro_tests = get_neab.replace_zero_std(electro_tests)
+    electro_tests = get_neab.substitute_parallel_for_serial(electro_tests)
+
 except:
 
     electro_tests = []
@@ -34,11 +38,8 @@ except:
        p_tests, p_observations = get_neab.get_neuron_criteria(p)
        electro_tests.append((p_tests, p_observations))
 
-    for i, j in enumerate(electro_tests):
-       assert electro_tests[-i][1]['Rheobase'] != electro_tests[-i-1][1]['Rheobase']
-
-
     electro_tests = get_neab.replace_zero_std(electro_tests)
+    electro_tests = get_neab.substitute_parallel_for_serial(electro_tests)
     with open('pipe_tests.p','wb') as f:
        pickle.dump(electro_tests,f)
 
@@ -75,9 +76,7 @@ for test, observation in electro_tests:
     pop, hof_py, log, history, td_py, gen_vs_hof = DO.run(offspring_size = MU, max_ngen = NGEN, cp_frequency=0,cp_filename=str(dic_key)+'.p')
     finished_time = timeit.default_timer()
 
-
     #with open(str(dic_key)+'.p','rb') as f:
-
     #    check_point = pickle.load(f)
     pipe_results[dic_key] = {}
     pipe_results[dic_key]['duration'] = finished_time - init_time
@@ -87,10 +86,16 @@ for test, observation in electro_tests:
     pipe_results[dic_key]['history'] = history
     pipe_results[dic_key]['td_py'] = td_py
     pipe_results[dic_key]['gen_vs_hof'] = gen_vs_hof
+    #import pdb; pdb.set_trace()
+    dtcpop = optimization_management.update_dtc_pop(hof_py,td_py)
+    file_name = str('nlex_id_')+dic_key
+    optimization_management.write_opt_to_nml(file_name,dtcpop[0].attrs)
+
 
     cnt += 1
 
 elapsed = timeit.default_timer() - start_time
+
 
 times_list = list(pipe_results.values())
 ts = [ t['duration']/60.0 for t in times_list ]
