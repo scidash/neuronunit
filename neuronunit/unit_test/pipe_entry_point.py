@@ -17,14 +17,10 @@ fi_basket = {'nlex_id':'100201'}
 pvis_cortex = {'nlex_id':'nifext_50'} # Layer V pyramidal cell
 olf_mitral = { 'nlex_id':'nifext_120'}
 ca1_pyr = { 'nlex_id':'830368389'}
-
 pipe = [ fi_basket, pvis_cortex, olf_mitral, ca1_pyr, purkinje ]
-
-
 electro_path = 'pipe_tests.p'
 
 try:
-    #assert 1==2
     assert os.path.isfile(electro_path) == True
     with open(electro_path,'rb') as f:
         electro_tests = pickle.load(f)
@@ -75,19 +71,28 @@ for test, observation in electro_tests:
     DO = DEAPOptimisation(error_criterion = test, selection = 'selIBEA', provided_dict = model_params)
     pop, hof_py, log, history, td_py, gen_vs_hof = DO.run(offspring_size = MU, max_ngen = NGEN, cp_frequency=0,cp_filename=str(dic_key)+'.p')
     finished_time = timeit.default_timer()
-
-    #with open(str(dic_key)+'.p','rb') as f:
-    #    check_point = pickle.load(f)
+    import optimization_management as om
     pipe_results[dic_key] = {}
     pipe_results[dic_key]['duration'] = finished_time - init_time
     pipe_results[dic_key]['pop'] = pop
+
     pipe_results[dic_key]['hof_py'] = hof_py
     pipe_results[dic_key]['log'] = log
     pipe_results[dic_key]['history'] = history
     pipe_results[dic_key]['td_py'] = td_py
     pipe_results[dic_key]['gen_vs_hof'] = gen_vs_hof
-    #import pdb; pdb.set_trace()
-    dtcpop = optimization_management.update_dtc_pop(hof_py,td_py)
+    pipe_results[dic_key]['scored_hof'] = om.update_deap_pop(hof_py ,test, td_py, backend = None)
+    old = 0
+    # reverse this list somehow
+    for p in pipe_results[dic_key]['scored_hof']:
+        temp = sum(p.dtc.scores.values())
+        print(temp>=old)
+        old = temp
+
+
+    #dtcpop = optimization_management.update_dtc_pop(hof_py,td_py)
+
+
     file_name = str('nlex_id_')+dic_key
     optimization_management.write_opt_to_nml(file_name,dtcpop[0].attrs)
 
