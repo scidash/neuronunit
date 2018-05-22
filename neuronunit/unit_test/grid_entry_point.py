@@ -60,7 +60,7 @@ else:
     tds = [list(g.keys()) for g in grid_points ]
     td = tds[0]
     N = 3
-    cnt=0
+    cnt = 0
     from neuronunit.optimization import optimization_management
     for test, observation in electro_tests:
         pop = optimization_management.update_deap_pop(pop, test, td)
