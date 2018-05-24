@@ -22,32 +22,20 @@ ca1_pyr = { 'nlex_id':'830368389'}
 
 pipe = [ fi_basket, pvis_cortex, olf_mitral, ca1_pyr, purkinje ]
 
-try:
-    pass
 
-except:
-    pass
-    '''
-    for p in pipe:
-       p_tests, p_observations = get_neab.get_neuron_criteria(p)
-       electro_tests.append((p_tests, p_observations))
+'''
+for p in pipe:
+   p_tests, p_observations = get_neab.get_neuron_criteria(p)
+   electro_tests.append((p_tests, p_observations))
 
-    electro_tests = get_neab.replace_zero_std(electro_tests)
-    electro_tests = get_neab.substitute_parallel_for_serial(electro_tests)
-    with open('pipe_tests.p','wb') as f:
-       pickle.dump(electro_tests,f)
-    '''
+electro_tests = get_neab.replace_zero_std(electro_tests)
+electro_tests = get_neab.substitute_parallel_for_serial(electro_tests)
+with open('pipe_tests.p','wb') as f:
+   pickle.dump(electro_tests,f)
+'''
 
 if USE_CACHED_GS:
-    import pickle
-    # shelve cache
-    first_third = pickle.load(open('/home/jovyan/neuronunit/neuronunit/unit_test/grid_dump_first_3rd.p','rb'))
-    second_third = pickle.load(open('/home/jovyan/neuronunit/neuronunit/unit_test/grid_dump_second_3rd.p','rb'))
-    final_third = pickle.load(open('/home/jovyan/neuronunit/neuronunit/unit_test/grid_dump_final_3rd.p','rb'))
-
-    second_third.extend(first_third)
-    second_third.extend(final_third)
-    dtcpopg = second_third
+    pass
 
 else:
     from neuronunit.optimization import exhaustive_search
