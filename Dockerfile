@@ -34,10 +34,12 @@ RUN echo "sudo /opt/conda/bin/pip install -e git+https://github.com/NeuroML/pyNe
 WORKDIR $HOME
 RUN rm -r scoop
 RUN rm -r work
-RUN sudo /opt/conda/bin/conda update conda
+# RUN sudo /opt/conda/bin/conda update -y conda
 
-#RUN sudo /bin/bash post_install.sh
+# RUN sudo /bin/bash post_install.sh
 RUN sudo apt-get -y install ipython ipython-notebook
 RUN sudo -H /opt/conda/bin/pip install jupyter
 RUN sudo /opt/conda/bin/pip install pyzmq --upgrade
-# ENTRYPOINT /bin/bash
+ADD neuronunit/unit_test/post_install.sh .
+
+ENTRYPOINT /bin/bash post_install.sh
