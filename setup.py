@@ -1,7 +1,7 @@
 import os
 
-from pip.req import parse_requirements
-from pip.download import PipSession
+#from pip.req import parse_requirements
+#from pip.download import PipSession
 
 from setuptools import setup, find_packages
 
@@ -23,5 +23,17 @@ setup(
     description='A SciUnit library for data-driven testing of single-neuron physiology models.',
     long_description="",
     test_suite="neuronunit.unit_test.core_tests",    
-    install_requires=read_requirements(),
+    install_requires = ['scipy>=0.17',
+                        'matplotlib>=2.0',
+                        'neo==0.5.2',
+                        'elephant==0.4.1',
+                        'igor==0.3',
+                        'allensdk==0.14.2',
+                        #pyNeuroML>-0.3.10
+                        'pyNN>=0.9',
+                        'execnet',
+                        'backports.tempfile',]
+                        #'-e git+https://github.com/scidash/sciunit.git@dev',]
+
+    
     )
