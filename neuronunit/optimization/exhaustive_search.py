@@ -1,6 +1,6 @@
 
-from neuronunit.optimization import get_neab
-tests = get_neab.tests
+#from neuronunit.optimization import get_neab
+#tests = get_neab.tests
 
 
 def sample_points(iter_dict, npoints=3):
@@ -81,41 +81,12 @@ def create_grid(npoints=3,nparams=7,provided_keys=None):
     grid = list(ParameterGrid(subset))
     return grid
 
-'''
-def dtc_to_rheo(dtc):
-    from neuronunit.optimization import get_neab
-    import copy
-    dtc = copy.copy(dtc)
-    dtc.scores = {}
-    from neuronunit.models.reduced import ReducedModel
-    model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend=('NEURON',{'DTC':dtc}))
-    model.set_attrs(dtc.attrs)
-    model.backend = dtc.backend
-    model.rheobase = None
-    rbt = get_neab.tests[0]
-    score = rbt.judge(model,stop_on_error = False, deep_error = True)
-    dtc.scores[str(rbt)] = score.sort_key
-    dtc.rheobase =  score.prediction
-    return dtc
-
-def update_dtc_pop(item_of_iter_list):
-    from neuronunit.optimization import data_transport_container
-    import copy
-    dtc = data_transport_container.DataTC()
-    from copy import deepcopy
-    dtc.attrs = deepcopy(item_of_iter_list)
-    dtc.scores = {}
-    dtc.rheobase = None
-    dtc.evaluated = False
-    dtc.backend = 'NEURON'
-    return dtc
-'''
-def run_grid(npoints,nparams,provided_keys=None):
+def run_grid(npoints,nparams,provided_keys=None,tests = None):
     # not all models will produce scores, since models with rheobase <0 are filtered out.
     from neuronunit.optimization.optimization_management import nunit_evaluation
     from neuronunit.optimization.optimization_management import update_dtc_pop
 
-    grid_points = create_grid(npoints = npoints,nparams = nparams,vprovided_keys = provided_keys )
+    grid_points = create_grid(npoints = npoints,nparams = nparams,provided_keys = provided_keys )
     import dask.bag as db
     b = db.bag(grid_points)
     dtcpop = list(db.map(update_dtc_pop,b).compute())

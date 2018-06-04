@@ -257,13 +257,15 @@ class NEURONBackend(Backend):
         return getattr(self,'_current_src_name','RS')
 
     def set_attrs(self, **attrs):
+        #if len(attrs) == len(self.model.attrs):
+        self.model.attrs = {}
         self.model.attrs.update(attrs)
-        #assert type(self.model.attrs) is not type(None)
-        #assert len(list(self.model.attrs.values())) > 0
+
         for h_key,h_value in attrs.items():
             self.h('m_{0}_{1}_pop[0].{2} = {3}'\
                 .format(self.cell_name,self.cell_name,h_key,h_value))
-
+            #print('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
+        #print(self.model.attrs)
         # Below create a list of NEURON experimental recording rig parameters.
         # This is where parameters of the artificial neuron experiment are initiated.
         # Code is sent to the python interface to neuron by executing strings:
@@ -305,7 +307,7 @@ class NEURONBackend(Backend):
         #import neuron
         nrn_path = os.path.splitext(self.model.orig_lems_file_path)[0]+'_nrn.py'
         nrn = import_module_from_path(nrn_path)
-        import copy
+        #import copy
 
         ##
         # init_backend is the most reliable way to purge existing NEURON simulations.
@@ -313,14 +315,16 @@ class NEURONBackend(Backend):
         # the NEURON model code.
         # store the model attributes, in a temp buffer such that they persist throughout the model reinitialization.
         ##
+
+        # These lines are crucial.
         temp_attrs = copy.copy(self.model.attrs)
         self.init_backend()
+        #if len(temp_attrs)>0:
         self.set_attrs(**temp_attrs)
 
         c = copy.copy(current)
         if 'injected_square_current' in c.keys():
             c = current['injected_square_current']
-
         c['delay'] = re.sub('\ ms$', '', str(c['delay'])) # take delay
         c['duration'] = re.sub('\ ms$', '', str(c['duration']))
         c['amplitude'] = re.sub('\ pA$', '', str(c['amplitude']))
@@ -339,7 +343,7 @@ class NEURONBackend(Backend):
 
     def _local_run(self):
         self.h('run()')
-        results={}
+        results = {}
         # Prepare NEURON vectors for quantities/sciunit
         # By rescaling voltage to milli volts, and time to milli seconds.
         results['vm'] = [float(x/1000.0) for x in copy.copy(self.neuron.h.v_v_of0.to_python())]
