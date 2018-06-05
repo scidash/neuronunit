@@ -23,17 +23,6 @@ ca1_pyr = { 'nlex_id':'830368389'}
 pipe = [ fi_basket, pvis_cortex, olf_mitral, ca1_pyr, purkinje ]
 
 
-'''
-for p in pipe:
-   p_tests, p_observations = get_neab.get_neuron_criteria(p)
-   electro_tests.append((p_tests, p_observations))
-
-electro_tests = get_neab.replace_zero_std(electro_tests)
-electro_tests = get_neab.substitute_parallel_for_serial(electro_tests)
-with open('pipe_tests.p','wb') as f:
-   pickle.dump(electro_tests,f)
-'''
-
 if USE_CACHED_GS:
     pass
 
