@@ -26,14 +26,20 @@ def substitute_criteria(observations_donar,observations_acceptor):
                 oa[k] = observations_donar[index][k]
     return observations_acceptor
 
+def substitute_parallel_for_serial(electro_tests):
+    for test,obs in electro_tests:
+        test[0] = RheobaseTestP(obs['Rheobase'])
+
+    return electro_tests
+
 def replace_zero_std(electro_tests):
     for test,obs in electro_tests:
         test[0] = RheobaseTestP(obs['Rheobase'])
         for k,v in obs.items():
             if v['std'] == 0:
-                print(electro_tests[1][1],obs)
+                #print(electro_tests[1][1],obs)
                 obs = substitute_criteria(electro_tests[1][1],obs)
-                print(obs)
+                #print(obs)
     return electro_tests
 
 def get_neuron_criteria(cell_id,file_name = None):#,observation = None):
@@ -57,12 +63,14 @@ def get_neuron_criteria(cell_id,file_name = None):#,observation = None):
     observations = {}
     for index, t in enumerate(test_classes):
         obs = t.neuroelectro_summary_observation(cell_id)
-        tests.append(t(obs))
-        observations[t.ephysprop_name] = obs
+        if obs is not None:
+            if 'mean' in obs.keys():
+                tests.append(t(obs))
+                observations[t.ephysprop_name] = obs
 
     #hooks = {tests[0]:{'f':update_amplitude}} #This is a trick to dynamically insert the method
     #update amplitude at the location in sciunit thats its passed to, without any loss of generality.
-    #suite = sciunit.TestSuite("vm_suite",tests)
+    suite = sciunit.TestSuite(tests,name="vm_suite")
 
     if file_name is not None:
         file_name = file_name +'.p'
