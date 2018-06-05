@@ -25,6 +25,8 @@ import numpy as np
 from deap import base
 import dask.bag as db
 from neuronunit.optimization.data_transport_container import DataTC
+from neuronunit.models.interfaces import glif
+
 import neuronunit
 
 def write_opt_to_nml(path,param_dict):
@@ -46,13 +48,13 @@ def write_opt_to_nml(path,param_dict):
                     units = 'mV'
                 new[k] = str(param_dict[k]) + str(' ') + str(units)
             i.parameters = new
-    more_attributes.export_to_file(path+'.nml')
+    # fopen = open(path+'.nml','w')
+    # more_attributes.export_to_file(fopen)
+    # fopen.close()
     return
 
 def map_wrapper(function_item,list_items,other_args=None):
-    #from dask import distributed
-    #c = distributed.Client()
-    #NCORES = len(C.ncores().values())-2
+
     b0 = db.from_sequence(list_items, npartitions = 8)
     init = len(list_items)
     if other_args is not None:
@@ -65,7 +67,7 @@ def map_wrapper(function_item,list_items,other_args=None):
     # https://distributed.readthedocs.io/en/latest/memory.html
     return processed_list
 
-from neuronunit.models.interfaces import glif
+
 
 def dtc_to_rheo(xargs):
     dtc,rtest,backend = xargs
@@ -107,9 +109,6 @@ def nunit_evaluation(dtc,tests,backend=None):
     #from dask import dataframe as dd
     if dtc.score is None:
         dtc.score = {}
-
-    #if dtc.scores is None:
-    #    dtc.scores = {}
 
     for k,t in enumerate(tests[1:-1]):
         t.params = dtc.vtest[k]
@@ -171,7 +170,7 @@ def format_test(xargs):
 
 
 
-def update_dtc_pop(pop, td = None, backend = None):
+def update_dtc_pop(pop, td, backend = None):
 
     '''
     inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
@@ -209,6 +208,29 @@ def update_dtc_pop(pop, td = None, backend = None):
         dtcpop = list(transform(pop))
     return dtcpop
 
+import copy
+#from deap.tools import toolbox
+'''
+def seed_popultion(population,delta):
+    from deap import base
+    from deap import creator
+
+    creator.create("FitnessMax", base.Fitness, weights=(1.0, 1.0))
+    creator.create("Individual", list, fitness=creator.FitnessMax)
+
+    def initIndividual(icls, content):
+        return icls(content)
+
+    def initPopulation(pcls, ind_init, population):
+        contents = population
+        return pcls(ind_init(c) for c in contents)
+
+    toolbox = base.Toolbox()
+    toolbox.register("individual_guess", initIndividual, creator.Individual)
+    toolbox.register("population_guess", initPopulation, list, toolbox.individual_guess, "my_guess.json")
+    population = toolbox.population_guess()[0:delta]
+'''
+
 def update_deap_pop(pop, tests, td, backend = None):
     '''
     Inputs a population of genes (pop).
@@ -219,27 +241,50 @@ def update_deap_pop(pop, tests, td, backend = None):
     DTCs for which a rheobase value of x (pA)<=0 are filtered out
     DTCs are then scored by neuronunit, using neuronunit models that act in place.
     '''
-    import copy
+
+    # Rheobase value obtainment.
     orig_MU = len(pop)
     dtcpop = list(update_dtc_pop(pop, td))
     rheobase_test = tests[0]
     xargs = list(zip(dtcpop,repeat(rheobase_test),repeat('NEURON')))
-
     dtcpop = list(map(dtc_to_rheo,xargs))
+    for i,d in enumerate(dtcpop):
+        assert pop[i][0] in list(d.attrs.values())
+        pop[i].rheobase = None
+        pop[i].rheobase = d.rheobase
 
     dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] > 0.0 , dtcpop))
+    pop = list(filter(lambda pop: pop.rheobase['value'] > 0.0 , pop))
+
+    delta = orig_MU-len(pop)
+    if delta:
+
+        # making new genes here introduces too much code complexity,
+        # instead make up differences by extending existing lists with duplicates
+        # from itself.
+        # This will decrease diversity.
+        far_back = -delta-1
+        pop.extend(pop[far_back:-1])
+        dtcpop.extend(dtcpop[far_back:-1])
+    # NeuronUnit testing
     xargs = zip(dtcpop,repeat(tests))
     dtcpop = list(map(format_test,xargs))
-    # https://distributed.readthedocs.io/en/latest/memory.html
-    dtcpop = map_wrapper(nunit_evaluation,copy.copy(dtcpop),other_args=tests)
-
+    dtcpop = map_wrapper(nunit_evaluation,dtcpop,other_args=tests)
     for i,d in enumerate(dtcpop):
+        assert pop[i][0] in list(d.attrs.values())
         pop[i].dtc = None
-        pop[i].dtc = dtcpop[i]
-        pop[i].rheobase = d.rheobase
-    assert len(pop) != 0
-    import copy
-    return copy.copy(pop)
+        pop[i].dtc = copy.copy(dtcpop[i])
+        assert hasattr(pop[i],'dtc')
+
+
+    invalid_dtc_not = [ i for i in pop if not hasattr(i,'dtc') ]
+    if len(invalid_dtc_not)>0:
+        print('problems')
+        import pdb
+        pdb.set_trace()
+
+    # https://distributed.readthedocs.io/en/latest/memory.html
+    return pop
 
 
 def create_subset(nparams = 10, provided_dict = None):
