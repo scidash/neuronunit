@@ -1,3 +1,4 @@
+
 import os
 import pickle
 from dask import distributed
@@ -10,6 +11,8 @@ from neuronunit.optimization.model_parameters import model_params
 from bluepyopt.deapext.optimisations import DEAPOptimisation
 from neuronunit.optimization.optimization_management import write_opt_to_nml
 from neuronunit.optimization import optimization_management
+from neuronunit.optimization import optimization_management as om
+
 
 electro_path = 'pipe_tests.p'
 purkinje = { 'nlex_id':'sao471801888'}#'NLXWIKI:sao471801888'} # purkinje
@@ -71,7 +74,6 @@ for test, observation in electro_tests:
     DO = DEAPOptimisation(error_criterion = test, selection = 'selIBEA', provided_dict = model_params)
     pop, hof_py, log, history, td_py, gen_vs_hof = DO.run(offspring_size = MU, max_ngen = NGEN, cp_frequency=0,cp_filename=str(dic_key)+'.p')
     finished_time = timeit.default_timer()
-    import optimization_management as om
     pipe_results[dic_key] = {}
     pipe_results[dic_key]['duration'] = finished_time - init_time
     pipe_results[dic_key]['pop'] = pop
@@ -83,21 +85,21 @@ for test, observation in electro_tests:
     pipe_results[dic_key]['gen_vs_hof'] = gen_vs_hof
     pipe_results[dic_key]['scored_hof'] = om.update_deap_pop(hof_py ,test, td_py, backend = None)
     old = 0
-    # reverse this list somehow
+    alist = pipe_results[dic_key]['scored_hof'][::-1] # reverse the list.
+    pipe_results[dic_key]['scored_hof'] = sorted(alist,key=lambda sum_val: sum(sum_val.dtc.scores.values()))
+
     for p in pipe_results[dic_key]['scored_hof']:
         temp = sum(p.dtc.scores.values())
         print(temp>=old)
         old = temp
-
-
-    #dtcpop = optimization_management.update_dtc_pop(hof_py,td_py)
-
-
     file_name = str('nlex_id_')+dic_key
-    optimization_management.write_opt_to_nml(file_name,dtcpop[0].attrs)
-
-
+    model_to_write = pipe_results[dic_key]['scored_hof'][0].dtc.attrs
+    #import pdb; pdb.set_trace()
+    #optimization_management.write_opt_to_nml(file_name,model_to_write)
     cnt += 1
+    print('entire duration', elapsed)
+    with open('dump_all_cells','wb') as f:
+        pickle.dump(pipe_results,f)
 
 elapsed = timeit.default_timer() - start_time
 
@@ -107,6 +109,3 @@ ts = [ t['duration']/60.0 for t in times_list ]
 mean_time = np.mean(ts)
 total_time = np.sum(ts)
 
-print('entire duration', elapsed)
-with open('dump_all_cells','wb') as f:
-   pickle.dump(pipe_results,f)

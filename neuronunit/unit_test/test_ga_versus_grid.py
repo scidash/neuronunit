@@ -3,27 +3,25 @@
 
 # In[2]:
 
+import matplotlib as mpl
+mpl.backend('Agg')
+get_ipython().system('%matplotlib tk')
 get_ipython().system('jupyter kernelspec install /tmp/share/jupyter/kernels/python3')
 
-#!bash sciunit_fix.sh
-
-#!conda update conda
-#!conda update jupyter
-#!jupyter notebook
 
 
-# 
+#
 # # Assumptions about this code:
-# The NB was launched with a command that mounts two volumes inside a docker container. 
-# In the future invocation of this script will be simplified greatly. NU is from a specific fork and branch -b results https://github.com/russelljjarvis/neuronunit 
+# The NB was launched with a command that mounts two volumes inside a docker container.
+# In the future invocation of this script will be simplified greatly. NU is from a specific fork and branch -b results https://github.com/russelljjarvis/neuronunit
 # BluePyOpt is also from a specific fork and branch: -b elitism https://github.com/russelljjarvis/BluePyOpt
-# 
+#
 # Below BASH code for Ubuntu host:
-# 
+#
 # ``` bash
 # cd ~/git/neuronunit; sudo docker run -it -v `pwd`:/home/jovyan/neuronunit -v ~/git/BluePyOpt:/home/jovyan/BluePyOpt neuronunit-optimization /bin/bash'
 # ```
-# 
+#
 # ## Parallel Environment.
 # Parallelisation module: dask distributed.
 
@@ -67,10 +65,10 @@ import pandas as pd
 for index, val in enumerate(pipe_results.values()):
     if index == 0:
         sci = pd.DataFrame(list(val['pop'][0].dtc.scores.values())).T
-    else:    
+    else:
         sci = sci.append(pd.DataFrame(list(val['pop'][0].dtc.scores.values())).T)
-        
-#sci.columns = val['pop'][0].dtc.scores.keys()    
+
+#sci.columns = val['pop'][0].dtc.scores.keys()
 #print(sci)
 sci
 
@@ -81,10 +79,10 @@ import pandas as pd
 for index, val in enumerate(pipe_results.values()):
     if index == 0:
         attrs = pd.DataFrame(list(val['pop'][0].dtc.attrs.values())).T
-    else:    
+    else:
         attrs = attrs.append(pd.DataFrame(list(val['pop'][0].dtc.attrs.values())).T)
-        
-attrs.columns = val['pop'][0].dtc.attrs.keys()    
+
+attrs.columns = val['pop'][0].dtc.attrs.keys()
 #print(attrs)
 attrs
 
@@ -98,9 +96,9 @@ for index, val in enumerate(pipe_results.values()):
     if index == 0:
         #,columns=['Dice number','value'],index=[1,2,3,4])
         rheobase = pd.DataFrame([i.dtc.rheobase for i in val['pop']]).T
-    else:    
+    else:
         rheobase = rheobase.append(pd.DataFrame([i.dtc.rheobase for i in val['pop']]).T)
-        
+
 rheobase
 
 names = [ str('generation: ')+str(i) for i in range(0,len(rheobase)) ]
@@ -118,15 +116,15 @@ get_ipython().magic('matplotlib inline')
 # # GA parameters:
 # about $10^{3}=30$ models will be made, excluding rheobase search.
 # ################
-# 
-# 
-# # Choice of selection criteria is important. 
+#
+#
+# # Choice of selection criteria is important.
 # Here we use BluepyOpts IBEA, such that it can be compared to NSGA2.
-# 
+#
 # https://link.springer.com/article/10.1007/s00500-005-0027-5
-# 
-# 
-# 
+#
+#
+#
 
 # In[ ]:
 
@@ -168,7 +166,7 @@ for index, val in enumerate(pipe_results.values()):
     history = val['history']
 
     plot_surface('v0','vt',td,history)
-    
+
 
 
 # In[ ]:
@@ -204,7 +202,7 @@ plt.style.use('ggplot')
 fig, axes = plt.subplots(figsize=(10, 10), facecolor='white')
 
 for index, val in enumerate(pipe_results.values()):
-    
+
     log = val['log']
     gen_numbers =[ i for i in range(0,len(log.select('gen'))) ]
     hof = val['hof_py']
@@ -214,13 +212,13 @@ for index, val in enumerate(pipe_results.values()):
     best_line = np.array([ np.sqrt(np.mean(np.square(list(p.fitness.values))))  for p in hof])
     blg = [ best_line[h] for i, h in enumerate(gen_numbers) ]
 
-    
+
     mean_ = np.mean(val['gen_vs_hof'])
     #std_ = np.std(val['gen_vs_hof'])
    # print(gvh)
     #import pdb
     #pdb.set_trace()
-    
+
     stdminus = mean - std
     stdplus = mean + std
     try:
@@ -235,7 +233,7 @@ for index, val in enumerate(pipe_results.values()):
         linewidth=2,
         label='population average')
     axes.fill_between(gen_numbers, stdminus, stdplus)
-    
+
     #axes.plot([i for i in range(0,len(gvh))], gvh,'y--', linewidth=2,  label='grid search error')
     #axes.plot(gen_numbers, bl, 'go', linewidth=2, label='hall of fame error')
 
@@ -325,12 +323,12 @@ if CACHE_PF == False:
 
     with open('pf_dump.p','wb') as f:
        pickle.dump([ sorted_list, evaluated_history ],f)
-else: 
-     
+else:
+
      unpack = pickle.load(open('pf_dump.p','rb'))
      print(unpack)
      sorted_list_pf = unpack[0]
-     pareto_dtc = unpack[1] 
+     pareto_dtc = unpack[1]
 
 minimaga_ind = sorted_list[0][0]
 maximaga_ind = sorted_list[-1][0]
@@ -369,7 +367,7 @@ def use_dtc_to_plotting(dtcpop,minimagr):
         plt.plot(dtc.tvec, dtc.vm0,linewidth=3.5, color='grey')
         stored_min.append(np.min(dtc.vm0))
         stored_max.append(np.max(dtc.vm0))
-        
+
     from neuronunit.models.reduced import ReducedModel
     from neuronunit.optimization.get_neab import tests as T
     from neuronunit.optimization import get_neab
@@ -402,11 +400,11 @@ if CACHE_PLOTTING == False:
     dtc_pop = dview.map_sync(dtc_to_plotting,dtc_pop )
     with open('plotting_dump.p','wb') as f:
        pickle.dump(dtc_pop,f)
-else: 
+else:
      dtc_pop  = pickle.load(open('plotting_dump.p','rb'))
 
 use_dtc_to_plotting(dtc_pop,minimagr_dtc)
-            
+
 
 
 # # Comment on plot
@@ -426,7 +424,7 @@ print(miniga)
 
 # # Quantize distance between minimimum error and maximum error.
 # This step will allow the GA's performance to be located within or below the range of error found by grid search.
-# 
+#
 
 # In[ ]:
 
@@ -443,7 +441,7 @@ print("Minimum = %f; 20th percentile = %f; Maximum = %f" % (mini,quantize_distan
 
 
 # The code below reports on the differences between between attributes of best models found via grid versus attributes of best models found via GA search:
-# 
+#
 
 # In[ ]:
 
@@ -462,7 +460,7 @@ for k,v in minimagr_dtc.attrs.items():
     #hvgrid = np.linspace(np.min(mp[k]),np.max(mp[k]),10)
     dimension_length = np.max(mp[k]) - np.min(mp[k])
     solution_distance_in_1D = np.abs(float(hof[0][td[k]]))-np.abs(float(v))
-        
+
     #solution_distance_in_1D = np.abs(float(minimaga.attrs[k]))-np.abs(float(v))
     relative_distance = dimension_length/solution_distance_in_1D
     print('the difference between brute force candidates model parameters and the GA\'s model parameters:')
@@ -470,8 +468,8 @@ for k,v in minimagr_dtc.attrs.items():
     print('the relative distance scaled by the length of the parameter dimension of interest:')
     print(relative_distance)
 
-    
-    
+
+
 
 
 # In[ ]:
@@ -501,7 +499,7 @@ print(miniga)
 
 from neuronunit.optimization import get_neab
 #fi_basket = {'nlex_id':'NLXCELL:100201'}
-neuron = {'nlex_id': 'nifext_50'} 
+neuron = {'nlex_id': 'nifext_50'}
 
 error_criterion, inh_observations = get_neab.get_neuron_criteria(fi_basket)
 print(error_criterion)
@@ -561,6 +559,3 @@ with open('ga_dump.p','wb') as f:
 
 
 # In[ ]:
-
-
-
