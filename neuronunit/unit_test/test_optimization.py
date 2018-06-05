@@ -6,6 +6,11 @@ from sciunit.utils import NotebookTools
 import dask
 from dask import bag
 import dask.bag as db
+import matplotlib as mpl
+mpl.use('Agg') # Avoid any problems with Macs or headless displays.
+
+from sciunit.utils import NotebookTools,import_all_modules
+from neuronunit import neuroelectro,bbp,aibs
 
 from base import *
 
