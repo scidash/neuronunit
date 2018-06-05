@@ -16,6 +16,12 @@ def update_amplitude(test,tests,score):
         tests[i].params['injected_square_current']['amplitude'] = rheobase*1.01 # I feel that 1.01 may lead to more than one spike
     return
 
+def substitute_parallel_for_serial(electro_tests):
+    for test,obs in electro_tests:
+        test[0] = RheobaseTestP(obs['Rheobase'])
+
+    return electro_tests
+
 def substitute_criteria(observations_donar,observations_acceptor):
     # Inputs an observation donar
     # and an observation acceptor
