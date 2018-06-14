@@ -208,28 +208,7 @@ def update_dtc_pop(pop, td, backend = None):
         dtcpop = list(transform(pop))
     return dtcpop
 
-import copy
-#from deap.tools import toolbox
-'''
-def seed_popultion(population,delta):
-    from deap import base
-    from deap import creator
 
-    creator.create("FitnessMax", base.Fitness, weights=(1.0, 1.0))
-    creator.create("Individual", list, fitness=creator.FitnessMax)
-
-    def initIndividual(icls, content):
-        return icls(content)
-
-    def initPopulation(pcls, ind_init, population):
-        contents = population
-        return pcls(ind_init(c) for c in contents)
-
-    toolbox = base.Toolbox()
-    toolbox.register("individual_guess", initIndividual, creator.Individual)
-    toolbox.register("population_guess", initPopulation, list, toolbox.individual_guess, "my_guess.json")
-    population = toolbox.population_guess()[0:delta]
-'''
 
 def update_deap_pop(pop, tests, td, backend = None):
     '''
@@ -252,6 +231,8 @@ def update_deap_pop(pop, tests, td, backend = None):
         assert pop[i][0] in list(d.attrs.values())
         pop[i].rheobase = None
         pop[i].rheobase = d.rheobase
+
+
 
     dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] > 0.0 , dtcpop))
     pop = list(filter(lambda pop: pop.rheobase['value'] > 0.0 , pop))
@@ -278,11 +259,11 @@ def update_deap_pop(pop, tests, td, backend = None):
 
 
     invalid_dtc_not = [ i for i in pop if not hasattr(i,'dtc') ]
-    if len(invalid_dtc_not)>0:
-        print('problems')
-        import pdb
-        pdb.set_trace()
-
+    try:
+        assert len(invalid_dtc_not) == 0
+    except:
+        print(len(invalid_dtc_not)>0)
+        raise
     # https://distributed.readthedocs.io/en/latest/memory.html
     return pop
 
