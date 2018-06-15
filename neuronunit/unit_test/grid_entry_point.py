@@ -1,6 +1,6 @@
 USE_CACHED_GS = False
-npoints = 2
-nparams = 3
+npoints = 3
+nparams = 10
 from neuronunit.optimization import get_neab
 import os
 electro_path = str(os.getcwd())+'/pipe_tests.p'
@@ -29,10 +29,23 @@ from neuronunit.optimization import optimization_management
 from neuronunit.optimization import optimization_management
 import pickle
 import dask.bag as db
+#from deap import base
+#toolbox = base.Toolbox()
+#pop = toolbox.population(n=len(grid_points))
 
+
+class WSListIndividual(list):
+    """Individual consisting of list with weighted sum field"""
+    def __init__(self, *args, **kwargs):
+        """Constructor"""
+        self.rheobase = None
+        super(WSListIndividual, self).__init__(*args, **kwargs)
+    
 grid_points = exhaustive_search.create_grid(npoints = npoints,nparams = nparams)
-pop = [list(g.values()) for g in grid_points ]
-tds = [list(g.keys()) for g in grid_points ]
+pre_pop = [ list(g.values()) for g in grid_points ]
+pop = [ WSListIndividual(p) for p in pre_pop ]
+
+tds = [ list(g.keys()) for g in grid_points ]
 td = tds[0]
 N = 3
 cnt = 0
