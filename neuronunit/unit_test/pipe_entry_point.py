@@ -67,18 +67,17 @@ def check_dif(pipe_old,pipe_new):
 
 start_time = timeit.default_timer()
 # code you want to evaluate
-debug = False
-
+'''
 dic_key = str(list(pipe[0].values())[0])
 cp_filename = str(dic_key)+'.p'
 contents = pickle.load(open(cp_filename,'rb'))
 print(contents, 'fail safe')
-
+'''
 
 for test, observation in electro_tests:
     dic_key = str(list(pipe[cnt].values())[0])
     init_time = timeit.default_timer()
-    print(cnt,len(electro_tests))
+    #print(cnt,len(electro_tests))
     DO = DEAPOptimisation(error_criterion = test, selection = 'selIBEA', provided_dict = model_params)
     package = DO.run(offspring_size = MU, max_ngen = 4, cp_frequency=1,cp_filename=str(dic_key)+'.p')
     pop, hof_py, log, history, td_py, gen_vs_hof = package
