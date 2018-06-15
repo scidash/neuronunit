@@ -36,7 +36,7 @@ try:
 except:
 
     electro_tests = []
-    for p in pipe:
+    for p in pipe[0:-2]:
        p_tests, p_observations = get_neab.get_neuron_criteria(p)
        electro_tests.append((p_tests, p_observations))
 

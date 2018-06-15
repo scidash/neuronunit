@@ -23,25 +23,34 @@ ca1_pyr = { 'nlex_id':'830368389'}
 pipe = [ fi_basket, pvis_cortex, olf_mitral, ca1_pyr, purkinje ]
 
 
-if USE_CACHED_GS:
-    pass
+from neuronunit.optimization import exhaustive_search
+from neuronunit.optimization import get_neab
+from neuronunit.optimization import optimization_management
+from neuronunit.optimization import optimization_management
+import pickle
+import dask.bag as db
+#from deap import base
+#toolbox = base.Toolbox()
+#pop = toolbox.population(n=len(grid_points))
 
-else:
-    from neuronunit.optimization import exhaustive_search
-    from neuronunit.optimization import get_neab
-    from neuronunit.optimization import optimization_management
 
-    import dask.bag as db
-    grid_points = exhaustive_search.create_grid(npoints = npoints,nparams = nparams)
-    pop = [list(g.values()) for g in grid_points ]
-    tds = [list(g.keys()) for g in grid_points ]
-    td = tds[0]
-    N = 3
-    cnt = 0
-    from neuronunit.optimization import optimization_management
-    for test, observation in electro_tests:
-        pop = optimization_management.update_deap_pop(pop, test, td)
-        import pickle
-        with open('grid_cell'+str(pipe[cnt])+'.p','wb') as f:
-           pickle.dump(pop,f)
+class WSListIndividual(list):
+    """Individual consisting of list with weighted sum field"""
+    def __init__(self, *args, **kwargs):
+        """Constructor"""
+        self.rheobase = None
+        super(WSListIndividual, self).__init__(*args, **kwargs)
+    
+grid_points = exhaustive_search.create_grid(npoints = npoints,nparams = nparams)
+pre_pop = [ list(g.values()) for g in grid_points ]
+pop = [ WSListIndividual(p) for p in pre_pop ]
+
+tds = [ list(g.keys()) for g in grid_points ]
+td = tds[0]
+N = 3
+cnt = 0
+for test, observation in electro_tests:
+    pop = optimization_management.update_deap_pop(pop, test, td)
+    with open('grid_cell'+str(pipe[cnt])+'.p','wb') as f:
+        pickle.dump(pop,f)
         cnt+=1
