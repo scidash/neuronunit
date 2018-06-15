@@ -6,6 +6,11 @@ from sciunit.utils import NotebookTools
 import dask
 from dask import bag
 import dask.bag as db
+import matplotlib as mpl
+mpl.use('Agg') # Avoid any problems with Macs or headless displays.
+
+from sciunit.utils import NotebookTools,import_all_modules
+from neuronunit import neuroelectro,bbp,aibs
 
 from base import *
 
@@ -24,15 +29,12 @@ def grid_points():
 
     grid_points = exhaustive_search.create_grid(npoints = npoints,nparams = nparams)
     b0 = db.from_sequence(grid_points[0:2], npartitions=8)
-
     dtcpop = list(db.map(exhaustive_search.update_dtc_grid,b0).compute())
-
     assert dtcpop is not None
     return dtcpop
 
 def test_compute_score(dtcpop):
     from neuronunit.optimization.optimization_management import map_wrapper
-
     from neuronunit.optimization import get_neab
     from neuronunit.optimization.optimization_management import dtc_to_rheo
     from neuronunit.optimization.optimization_management import nunit_evaluation
