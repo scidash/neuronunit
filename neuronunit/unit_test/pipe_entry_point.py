@@ -45,17 +45,14 @@ except:
     with open('pipe_tests.p','wb') as f:
        pickle.dump(electro_tests,f)
 
-MU = 7; NGEN = 7; CXPB = 0.9
-
+MU = 4; NGEN = 3; CXPB = 0.9
 USE_CACHED_GA = False
-#provided_keys = list(model_params.keys())
-#npoints = 2
-#nparams = 10
-
 
 cnt = 0
 pipe_results = {}
-
+##
+# TODO move to unit testing
+##
 def check_dif(pipe_old,pipe_new):
     bool = False
     for key, value in pipe_results.items():
@@ -67,12 +64,7 @@ def check_dif(pipe_old,pipe_new):
 
 start_time = timeit.default_timer()
 # code you want to evaluate
-'''
-dic_key = str(list(pipe[0].values())[0])
-cp_filename = str(dic_key)+'.p'
-contents = pickle.load(open(cp_filename,'rb'))
-print(contents, 'fail safe')
-'''
+
 
 for test, observation in electro_tests:
     dic_key = str(list(pipe[cnt].values())[0])
