@@ -17,7 +17,6 @@ from itertools import repeat
 import copy
 from neuronunit.optimization import get_neab
 from pyneuroml import pynml
-from dask.distributed import Client
 import dask.bag as db
 
 import copy
@@ -27,7 +26,18 @@ import dask.bag as db
 from neuronunit.optimization.data_transport_container import DataTC
 from neuronunit.models.interfaces import glif
 
+from itertools import repeat
 import neuronunit
+
+'''
+def __deepcopy__(self, _):
+    """Override deepcopy"""
+
+    cls = self.__class__
+    result = cls.__new__(cls)
+    result.__dict__.update(self.__dict__)
+    return result
+'''
 
 def write_opt_to_nml(path,param_dict):
     '''
@@ -53,25 +63,10 @@ def write_opt_to_nml(path,param_dict):
     # fopen.close()
     return
 
-def map_wrapper(function_item,list_items,other_args=None):
-
-    b0 = db.from_sequence(list_items, npartitions = 8)
-    init = len(list_items)
-    if other_args is not None:
-        processed_list = list(db.map(function_item,b0,other_args).compute())
-    else:
-        processed_list = db.map(function_item,b0)
-        processed_list = list(processed_list.compute())
-
-    assert len(processed_list) == init
-    # https://distributed.readthedocs.io/en/latest/memory.html
-    return processed_list
-
-
-
 def dtc_to_rheo(xargs):
     dtc,rtest,backend = xargs
     LEMS_MODEL_PATH = path_params['model_path']
+
     model = ReducedModel(LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.set_attrs(dtc.attrs)
     dtc.scores = {}
@@ -86,14 +81,15 @@ def dtc_to_rheo(xargs):
     dtc.rheobase = score.prediction
     return dtc
 
-def nunit_evaluation(dtc,tests,backend=None):
+def nunit_evaluation(tuple_object):#,backend=None):
     # Inputs single data transport container modules, and neuroelectro observations that
     # inform test error error_criterion
     # Outputs Neuron Unit evaluation scores over error criterion
-
+    dtc,tests = tuple_object
     dtc.model_path = path_params['model_path']
     LEMS_MODEL_PATH = path_params['model_path']
     assert dtc.rheobase is not None
+    backend = dtc.backend
     if backend == 'glif':
         from neuronunit.models.interfaces import glif
         model = glif.GC()#ReducedModel(LEMS_MODEL_PATH,name=str('vanilla'),backend=('NEURON',{'DTC':dtc}))
@@ -101,7 +97,7 @@ def nunit_evaluation(dtc,tests,backend=None):
         model.rheobase = dtc.rheobase['value']
     else:
         from neuronunit.models.reduced import ReducedModel
-        model = ReducedModel(LEMS_MODEL_PATH,name=str('vanilla'),backend=('NEURON',{'DTC':dtc}))
+        model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = ('NEURON',{'DTC':dtc}))
         model.set_attrs(dtc.attrs)
         tests[0].prediction = dtc.rheobase
         model.rheobase = dtc.rheobase['value']
@@ -199,7 +195,8 @@ def update_dtc_pop(pop, td, backend = None):
         return dtc
     if len(pop) > 1:
         b = db.from_sequence(pop, npartitions=8)
-        dtcpop = list(db.map(transform,b).compute())
+        #map_d = b.map
+        dtcpop = list(b.map(transform).compute())
 
     else:
         # In this case pop is not really a population but an individual
@@ -220,7 +217,6 @@ def update_deap_pop(pop, tests, td, backend = None):
     DTCs for which a rheobase value of x (pA)<=0 are filtered out
     DTCs are then scored by neuronunit, using neuronunit models that act in place.
     '''
-
     # Rheobase value obtainment.
     orig_MU = len(pop)
     dtcpop = list(update_dtc_pop(pop, td))
@@ -232,14 +228,11 @@ def update_deap_pop(pop, tests, td, backend = None):
         pop[i].rheobase = None
         pop[i].rheobase = d.rheobase
 
-
-
     dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] > 0.0 , dtcpop))
     pop = list(filter(lambda pop: pop.rheobase['value'] > 0.0 , pop))
 
     delta = orig_MU-len(pop)
     if delta:
-
         # making new genes here introduces too much code complexity,
         # instead make up differences by extending existing lists with duplicates
         # from itself.
@@ -250,13 +243,13 @@ def update_deap_pop(pop, tests, td, backend = None):
     # NeuronUnit testing
     xargs = zip(dtcpop,repeat(tests))
     dtcpop = list(map(format_test,xargs))
-    dtcpop = map_wrapper(nunit_evaluation,dtcpop,other_args=tests)
+    dtcbag = db.from_sequence(list(zip(dtcpop,repeat(tests))), npartitions = 8)
+    dtcpop = list(dtcbag.map(nunit_evaluation).compute())#,dtcpop)#,other_args=tests)
     for i,d in enumerate(dtcpop):
         assert pop[i][0] in list(d.attrs.values())
         pop[i].dtc = None
         pop[i].dtc = copy.copy(dtcpop[i])
         assert hasattr(pop[i],'dtc')
-
 
     invalid_dtc_not = [ i for i in pop if not hasattr(i,'dtc') ]
     try:
