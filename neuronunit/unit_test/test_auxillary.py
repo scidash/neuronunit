@@ -2,11 +2,10 @@
 import unittest
 import os
 import sys
-from sciunit.utils import NotebookTools#,import_all_modules
+#from sciunit.utils import NotebookTools#,import_all_modules
 import dask
 from dask import bag
 from base import *
-
 
 def grid_points():
     npoints = 2
@@ -14,6 +13,11 @@ def grid_points():
     from neuronunit.optimization.model_parameters import model_params
     provided_keys = list(model_params.keys())
     USE_CACHED_GS = False
+    electro_path = 'pipe_tests.p'
+    import pickle
+    assert os.path.isfile(electro_path) == True
+    with open(electro_path,'rb') as f:
+        electro_tests = pickle.load(f)
     from neuronunit.optimization import exhaustive_search
     grid_points = exhaustive_search.create_grid(npoints = npoints,nparams = nparams)
     import dask.bag as db
@@ -22,13 +26,19 @@ def grid_points():
     assert dtcpop is not None
     return dtcpop
 
-def test_01a_compute_score(dtcpop):
+def test_01a_compute_score(dtcpop, tests):
     from neuronunit.optimization import get_neab
     from neuronunit.optimization.optimization_management import dtc_to_rheo
     from neuronunit.optimization.optimization_management import nunit_evaluation
     from neuronunit.optimization.optimization_management import format_test
+    from itertools import repeat
     #dtcpop = grid_points()
-    dtclist = list(map(dtc_to_rheo,dtcpop))
+    rheobase_test = tests[0][0][0]
+
+    xargs = list(zip(dtcpop,repeat(rheobase_test),repeat('NEURON')))
+    dtclist = list(map(dtc_to_rheo,xargs))
+
+    #dtclist = list(map(dtc_to_rheo,dtcpop))
     for d in dtclist:
         assert len(list(d.attrs.values())) > 0
     import dask.bag as db
@@ -48,8 +58,15 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         self.score_s = None
         self.grid_points = grid_points()
         dtcpop = self.grid_points
+        import pickle
+        electro_path = 'pipe_tests.p'
+        assert os.path.isfile(electro_path) == True
+        with open(electro_path,'rb') as f:
+            self.electro_tests = pickle.load(f)
+        #self.electro_tests = get_neab.replace_zero_std(self.electro_tests)
+
         self.test_01a_compute_score = test_01a_compute_score
-        self.dtcpop = test_01a_compute_score(dtcpop)
+        self.dtcpop = test_01a_compute_score(dtcpop,self.electro_tests)
         self.dtc = self.dtcpop[0]
         self.rheobase = self.dtc.rheobase
         from neuronunit.models.reduced import ReducedModel
@@ -67,7 +84,6 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         test = cls(observation=observation)
         score = test.judge(self.standard_model, stop_on_error = True, deep_error = True)
         return score
-
 
     # Get experimental electro physology bservations for a dentate gyrus baskett cell
     # An inhibitory neuron
@@ -87,12 +103,10 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         # Instantiate two tests based on these properties
         ap_width_test = APWidthTest(observation=observations[doi]['ap_width'])
         ap_amplitude_test = APAmplitudeTest(observation=observations[doi]['ap_amplitude'])
-
         from neuronunit import tests as nu_tests, neuroelectro
         from neuronunit.tests import passive, waveform, fi
         cholinergic = {'neuron':'115'}
         observation = {}
-
         observation[doi] = {}
         observation[doi]['isi'] = 598.0*pq.ms
         observation[doi]['mean'] = 598.0*pq.ms
@@ -105,14 +119,13 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         observation[doi]['std'] = 2.1*pq.ms
 
 
-    @unittest.skip("Not fully developed yet")
+    #@unittest.skip("Not fully developed yet")
     def test_get_inhibitory_neuron(self):
         from neuronunit import tests as nu_tests, neuroelectro
         from neuronunit.tests import passive, waveform, fi
         fi_basket = {'nlex_id':'NLXCELL:100201'}
         #observation =  cls.neuroelectro_summary_observation(fi_basket)
         test_class_params = [(fi.RheobaseTest,None),
-
                          (passive.InputResistanceTest,None),
                          (passive.TimeConstantTest,None),
                          (passive.CapacitanceTest,None),
@@ -131,7 +144,6 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         from neuronunit.optimization import get_neab
         import copy
         import unittest
-
         dtc = copy.copy(self.dtc)
         self.assertNotEqual(self.dtc,None)
         dtc.scores = {}

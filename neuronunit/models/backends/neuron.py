@@ -25,24 +25,33 @@ class NEURONBackend(Backend):
         DTC: An object of type Data Transport Container. The data transport container contains a dictionary of model attributes
         When the DTC object is provided, it\'s attribute dictionary can be used to update the NEURONBackends model attribute dictionary.
         '''
+        print(self, attrs, cell_name, current_src_name, DTC)
         if not NEURON_SUPPORT:
             raise BackendException("The neuron module was not successfully imported")
+
 
 
         self.neuron = None
         self.model_path = None
         self.h = h
+
+        backend = 'NEURON'
+
         super(NEURONBackend,self).init_backend()
         self.model.unpicklable += ['h','ns','_backend']
-        if cell_name:
-            self._cell_name = cell_name
-        if current_src_name:
-            self._current_src_name = current_src_name
-        if DTC is not None:
-            if DTC.attrs is not None:
-                self.set_attrs(**DTC.attrs)
 
-    backend = 'NEURON'
+        if type(DTC) is not type(None):
+            if type(DTC.attrs) is not type(None):
+                self.set_attrs(**DTC.attrs)
+                assert len(self.model.attrs.keys()) > 4
+
+            if hasattr(DTC,'current_src_name'):
+                self._current_src_name = DTC.current_src_name
+
+            if hasattr(DTC,'cell_name'):
+                self.cell_name = DTC.current_src_name
+
+
 
     def reset_neuron(self, neuronVar):
         """Arguments: neuronVar, the neuronmodules path in the current python namespace.
@@ -203,8 +212,8 @@ class NEURONBackend(Backend):
         #import the contents of the file into the current names space.
 
         #The code block below does not actually function:
-        #architecture = platform.machine()
-        assert os.path.isfile(self.model.orig_lems_file_path)
+        architecture = platform.machine()
+
         base_name = os.path.splitext(self.model.orig_lems_file_path)[0]
         NEURON_file_path ='{0}_nrn.py'.format(base_name)
         self.neuron_model_dir = os.path.dirname(self.model.orig_lems_file_path)
@@ -224,28 +233,28 @@ class NEURONBackend(Backend):
             # background if the NEURON_file_path does not yet exist.
             subprocess.run(["cd %s; nrnivmodl" % self.neuron_model_dir],shell=True)
             self.load_mechanisms()
+
         elif os.path.realpath(os.getcwd()) != os.path.realpath(self.neuron_model_dir):
             # Load mechanisms unless they've already been loaded
             self.load_mechanisms()
-
-        self.load()
+            self.load()
 
 
         # Although the above approach successfuly instantiates a LEMS/neuroml model in pyhoc
         # the resulting hoc variables for current source and cell name are idiosyncratic (not generic).
         # the non generic approach described above makes it hard to create a generalizable code.
         # work around involves predicting the hoc variable names from pyneuroml LEMS file that was used to generate them.
-        more_attributes = pynml.read_lems_file(self.model.orig_lems_file_path,
-                                               include_includes=True,
-                                               debug=False)
-        for i in more_attributes.components:
-            # This code strips out simulation parameters from the xml tree also such as current source name.
-            # and cell_name
-            if str('pulseGenerator') in i.type:
-                self._current_src_name = i.id
-            if str('Cell') in i.type:
-                self._cell_name = i.id
-        more_attributes = None # explitly perform garbage collection on more_attributes since its not needed anymore.
+        if not hasattr(self,'_current_src_name') or not hasattr(self,'_cell_name'):
+            more_attributes = pynml.read_lems_file(self.model.orig_lems_file_path, include_includes=True,
+                                                   debug=False)
+            for i in more_attributes.components:
+                # This code strips out simulation parameters from the xml tree also such as current source name.
+                # and cell_name
+                if str('pulseGenerator') in i.type:
+                    self._current_src_name = i.id
+                if str('Cell') in i.type:
+                    self._cell_name = i.id
+            more_attributes = None # explitly perform garbage collection on more_attributes since its not needed anymore.
         return self
 
     @property
@@ -257,13 +266,15 @@ class NEURONBackend(Backend):
         return getattr(self,'_current_src_name','RS')
 
     def set_attrs(self, **attrs):
+        #if len(attrs) == len(self.model.attrs):
+        self.model.attrs = {}
         self.model.attrs.update(attrs)
-        #assert type(self.model.attrs) is not type(None)
-        #assert len(list(self.model.attrs.values())) > 0
+
         for h_key,h_value in attrs.items():
             self.h('m_{0}_{1}_pop[0].{2} = {3}'\
                 .format(self.cell_name,self.cell_name,h_key,h_value))
-
+            #print('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
+        #print(self.model.attrs)
         # Below create a list of NEURON experimental recording rig parameters.
         # This is where parameters of the artificial neuron experiment are initiated.
         # Code is sent to the python interface to neuron by executing strings:
@@ -305,7 +316,7 @@ class NEURONBackend(Backend):
         #import neuron
         nrn_path = os.path.splitext(self.model.orig_lems_file_path)[0]+'_nrn.py'
         nrn = import_module_from_path(nrn_path)
-        import copy
+        #import copy
 
         ##
         # init_backend is the most reliable way to purge existing NEURON simulations.
@@ -313,6 +324,8 @@ class NEURONBackend(Backend):
         # the NEURON model code.
         # store the model attributes, in a temp buffer such that they persist throughout the model reinitialization.
         ##
+
+        # These lines are crucial.
         temp_attrs = copy.copy(self.model.attrs)
         self.init_backend()
         self.set_attrs(**temp_attrs)
@@ -320,7 +333,6 @@ class NEURONBackend(Backend):
         c = copy.copy(current)
         if 'injected_square_current' in c.keys():
             c = current['injected_square_current']
-
         c['delay'] = re.sub('\ ms$', '', str(c['delay'])) # take delay
         c['duration'] = re.sub('\ ms$', '', str(c['duration']))
         c['amplitude'] = re.sub('\ pA$', '', str(c['amplitude']))
@@ -339,7 +351,7 @@ class NEURONBackend(Backend):
 
     def _local_run(self):
         self.h('run()')
-        results={}
+        results = {}
         # Prepare NEURON vectors for quantities/sciunit
         # By rescaling voltage to milli volts, and time to milli seconds.
         results['vm'] = [float(x/1000.0) for x in copy.copy(self.neuron.h.v_v_of0.to_python())]
