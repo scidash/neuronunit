@@ -30,9 +30,13 @@ class NEURONBackend(Backend):
             raise BackendException("The neuron module was not successfully imported")
 
 
+
         self.neuron = None
         self.model_path = None
         self.h = h
+
+        backend = 'NEURON'
+
         super(NEURONBackend,self).init_backend()
         self.model.unpicklable += ['h','ns','_backend']
 
@@ -48,7 +52,6 @@ class NEURONBackend(Backend):
                 self.cell_name = DTC.current_src_name
 
 
-    backend = 'NEURON'
 
     def reset_neuron(self, neuronVar):
         """Arguments: neuronVar, the neuronmodules path in the current python namespace.
@@ -233,10 +236,8 @@ class NEURONBackend(Backend):
 
         elif os.path.realpath(os.getcwd()) != os.path.realpath(self.neuron_model_dir):
             # Load mechanisms unless they've already been loaded
-            #lm = bool(self.load_mechanisms())
-            #print(lm)
-
-        self.load()
+            self.load_mechanisms()
+            self.load()
 
 
         # Although the above approach successfuly instantiates a LEMS/neuroml model in pyhoc
