@@ -30,15 +30,6 @@ from itertools import repeat
 import neuronunit
 import multiprocessing
 multiprocessing.cpu_count()
-'''
-def __deepcopy__(self, _):
-    """Override deepcopy"""
-
-    cls = self.__class__
-    result = cls.__new__(cls)
-    result.__dict__.update(self.__dict__)
-    return result
-'''
 
 def write_opt_to_nml(path,param_dict):
     '''
@@ -196,7 +187,6 @@ def update_dtc_pop(pop, td, backend = None):
         return dtc
     if len(pop) > 1:
         b = db.from_sequence(pop, npartitions=multiprocessing.cpu_count())
-        #map_d = b.map
         dtcpop = list(b.map(transform).compute())
 
     else:
