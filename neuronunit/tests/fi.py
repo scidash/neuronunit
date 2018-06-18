@@ -2,7 +2,7 @@
 function of input current"""
 
 import os
-
+import multiprocessing
 from .base import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
 from .. import optimization
 from neuronunit.optimization.data_transport_container import DataTC
@@ -285,7 +285,6 @@ class RheobaseTestP(VmTest):
                 return dtc
 
         def init_dtc(dtc):
-
             if dtc.initiated == True:
                 # expand values in the range to accomodate for mutation.
                 # but otherwise exploit memory of this range.
