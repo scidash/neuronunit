@@ -239,6 +239,8 @@ class NEURONBackend(Backend):
             self.load_mechanisms()
             self.load()
 
+            # I broke this somehow.
+            # As in nrnivmodl compiling has stopped working given a blank slate initiatilized install environment.
 
         # Although the above approach successfuly instantiates a LEMS/neuroml model in pyhoc
         # the resulting hoc variables for current source and cell name are idiosyncratic (not generic).
