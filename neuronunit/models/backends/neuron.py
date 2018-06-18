@@ -43,7 +43,7 @@ class NEURONBackend(Backend):
         if type(DTC) is not type(None):
             if type(DTC.attrs) is not type(None):
                 self.set_attrs(**DTC.attrs)
-                assert len(self.model.attrs.keys()) > 4
+                assert len(self.model.attrs.keys()) > 0
 
             if hasattr(DTC,'current_src_name'):
                 self._current_src_name = DTC.current_src_name
