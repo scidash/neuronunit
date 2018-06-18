@@ -53,47 +53,35 @@ pipe_results = {}
 ##
 # TODO move to unit testing
 ##
-def check_dif(pipe_old,pipe_new):
-    bool = False
-    for key, value in pipe_results.items():
-        if value != pipe_new[key]:
-            bool = True
-        print(value,pipe_new[key])
-
-    return bool
 
 start_time = timeit.default_timer()
-# code you want to evaluate
+sel = [str('selNSGA2'),str('selIBEA')]
 
+flat_iter = [ (s,test, observation) for test, observation in electro_tests for s in sel ]
+print(flat_iter)
 
-for test, observation in electro_tests:
+for (s,test, observation) in flat_iter:
     dic_key = str(list(pipe[cnt].values())[0])
     init_time = timeit.default_timer()
-    #print(cnt,len(electro_tests))
-    DO = DEAPOptimisation(error_criterion = test, selection = 'selIBEA', provided_dict = model_params)
-    package = DO.run(offspring_size = MU, max_ngen = 4, cp_frequency=1,cp_filename=str(dic_key)+'.p')
-    pop, hof_py, log, history, td_py, gen_vs_hof = package
+    DO = DEAPOptimisation(error_criterion = test, selection = sel, provided_dict = model_params, elite_size = 3)
+    package = DO.run(offspring_size = MU, max_ngen = 6, cp_frequency=1,cp_filename=str(dic_key)+'.p')
+    pop, hof_py, pf, log, history, td_py, gen_vs_hof = package
     finished_time = timeit.default_timer()
     pipe_results[dic_key] = {}
     pipe_results[dic_key]['duration'] = finished_time - init_time
     pipe_results[dic_key]['pop'] = copy.copy(pop)
-
-    pipe_results[dic_key]['hof_py'] = copy.copy(hof_py)
+    pipe_results[dic_key]['sel'] = sel
+    pipe_results[dic_key]['hof'] = copy.copy(hof[::-1])
+    pipe_results[dic_key]['pf'] = copy.copy(pf[::-1])
     pipe_results[dic_key]['log'] = copy.copy(log)
     pipe_results[dic_key]['history'] = copy.copy(history)
     pipe_results[dic_key]['td_py'] = copy.copy(td_py)
     pipe_results[dic_key]['gen_vs_hof'] = copy.copy(gen_vs_hof)
-    pipe_results[dic_key]['scored_hof'] = copy.copy(om.update_deap_pop(hof_py,test, td_py))
-    old = 0
-    alist = pipe_results[dic_key]['scored_hof'][::-1] # reverse the list.
-    pipe_results[dic_key]['scored_hof'] = sorted(alist,key=lambda sum_val: sum(sum_val.dtc.scores.values()))
-
-    for p in pipe_results[dic_key]['scored_hof']:
-        temp = sum(p.dtc.scores.values())
-        print(temp>=old)
-        old = temp
+    pipe_results[dic_key]['sum_ranked_hof'] = [sum(i.dtc.scores.values()) for i in pipe_results[dic_key]['gen_vs_hof'][1:-1]]
+    pipe_results[dic_key]['componentsh'] = [list(i.dtc.scores.values()) for i in pipe_results[dic_key]['gen_vs_hof'][1:-1]]
+    pipe_results[dic_key]['componentsp'] = [list(i.dtc.scores.values()) for i in pipe_results[dic_key]['pf'][1:-1]]
     file_name = str('nlex_id_')+dic_key
-    model_to_write = pipe_results[dic_key]['scored_hof'][0].dtc.attrs
+    model_to_write = pipe_results[dic_key]['gen_vs_hof'][-1].dtc.attrs
 
     optimization_management.write_opt_to_nml(file_name,model_to_write)
 
@@ -103,8 +91,9 @@ for test, observation in electro_tests:
     elapsed = timeit.default_timer() - start_time
     print('entire duration', elapsed)
 
-
     times_list = list(pipe_results.values())
     ts = [ t['duration']/60.0 for t in times_list ]
     mean_time = np.mean(ts)
     total_time = np.sum(ts)
+#    return pipe_results
+#pipe_results = main_proc(flat_iter)

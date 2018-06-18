@@ -28,7 +28,8 @@ from neuronunit.models.interfaces import glif
 
 from itertools import repeat
 import neuronunit
-
+import multiprocessing
+multiprocessing.cpu_count()
 '''
 def __deepcopy__(self, _):
     """Override deepcopy"""
@@ -194,7 +195,7 @@ def update_dtc_pop(pop, td, backend = None):
         dtc.evaluated = False
         return dtc
     if len(pop) > 1:
-        b = db.from_sequence(pop, npartitions=8)
+        b = db.from_sequence(pop, npartitions=multiprocessing.cpu_count())
         #map_d = b.map
         dtcpop = list(b.map(transform).compute())
 
@@ -243,7 +244,7 @@ def update_deap_pop(pop, tests, td, backend = None):
     # NeuronUnit testing
     xargs = zip(dtcpop,repeat(tests))
     dtcpop = list(map(format_test,xargs))
-    dtcbag = db.from_sequence(list(zip(dtcpop,repeat(tests))), npartitions = 8)
+    dtcbag = db.from_sequence(list(zip(dtcpop,repeat(tests))), npartitions = multiprocessing.cpu_count())
     dtcpop = list(dtcbag.map(nunit_evaluation).compute())#,dtcpop)#,other_args=tests)
     for i,d in enumerate(dtcpop):
         assert pop[i][0] in list(d.attrs.values())
