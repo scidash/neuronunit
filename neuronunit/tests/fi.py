@@ -2,7 +2,7 @@
 function of input current"""
 
 import os
-
+import multiprocessing
 from .base import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
 from .. import optimization
 from neuronunit.optimization.data_transport_container import DataTC
@@ -313,8 +313,8 @@ class RheobaseTestP(VmTest):
             cnt = 0
             while dtc.boolean == False:
                 dtc_clones = [ dtc for s in dtc.current_steps ]
-                b0 = db.from_sequence(dtc.current_steps, npartitions=8)
-                b1 = db.from_sequence(dtc_clones, npartitions=8)
+                b0 = db.from_sequence(dtc.current_steps, npartitions=32)
+                b1 = db.from_sequence(dtc_clones, npartitions=32)
                 #b0.visualize(filename='rheobase_graph0.svg')
                 #b1.visualize(filename='rheobase_graph1.svg')
                 dtcpop = list(db.map(check_current,b0,b1).compute())

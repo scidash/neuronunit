@@ -55,7 +55,7 @@ def write_opt_to_nml(path,param_dict):
 
 def map_wrapper(function_item,list_items,other_args=None):
 
-    b0 = db.from_sequence(list_items, npartitions = 8)
+    b0 = db.from_sequence(list_items, npartitions = 32)
     init = len(list_items)
     if other_args is not None:
         processed_list = list(db.map(function_item,b0,other_args).compute())
@@ -84,6 +84,7 @@ def dtc_to_rheo(xargs):
             dtc.scores = {}
             dtc.scores[str(rtest)] = 1 - score.sort_key
     dtc.rheobase = score.prediction
+    print(dtc.rheobase)
     return dtc
 
 def nunit_evaluation(dtc,tests,backend=None):
@@ -198,7 +199,7 @@ def update_dtc_pop(pop, td, backend = None):
         dtc.evaluated = False
         return dtc
     if len(pop) > 1:
-        b = db.from_sequence(pop, npartitions=8)
+        b = db.from_sequence(pop, npartitions=32)
         dtcpop = list(db.map(transform,b).compute())
 
     else:
@@ -226,9 +227,12 @@ def update_deap_pop(pop, tests, td, backend = None):
     dtcpop = list(update_dtc_pop(pop, td))
     rheobase_test = tests[0]
     xargs = list(zip(dtcpop,repeat(rheobase_test),repeat('NEURON')))
+    print('pacifier 1')
     dtcpop = list(map(dtc_to_rheo,xargs))
+    print('pacifier 2')    
     for i,d in enumerate(dtcpop):
         assert pop[i][0] in list(d.attrs.values())
+
         pop[i].rheobase = None
         pop[i].rheobase = d.rheobase
 
