@@ -6,16 +6,6 @@ import os
 from .base import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
 from .. import optimization
 from neuronunit.optimization.data_transport_container import DataTC
-import os
-import quantities
-import neuronunit
-from neuronunit.models.reduced import ReducedModel
-import dask.bag as db
-import quantities as pq
-import numpy as np
-import copy
-import pdb
-
 class RheobaseTest(VmTest):
     """
     Tests the full widths of APs at their half-maximum
@@ -189,7 +179,9 @@ class RheobaseTestP(VmTest):
             given a dictionary of rheobase search values, use that
             dictionary as input for a subsequent search.
             '''
-
+            import numpy as np
+            import quantities as pq
+            import copy
             sub=[]
             supra=[]
             steps=[]
@@ -200,6 +192,7 @@ class RheobaseTestP(VmTest):
                 if v == 1:
                     #A logical flag is returned to indicate that rheobase was found.
                     dtc.rheobase = float(k)
+                    dtc.current_steps = 0.0
                     dtc.boolean = True
                     return dtc
                 elif v == 0:
@@ -213,6 +206,7 @@ class RheobaseTestP(VmTest):
                 dtc.boolean = True
                 dtc.rheobase = -1
                 #score = scores.InsufficientDataScore(None)
+
                 return dtc
 
 
@@ -236,32 +230,30 @@ class RheobaseTestP(VmTest):
                 steps = [ i*pq.pA for i in steps ]
 
             dtc.current_steps = steps
-
             dtc.rheobase = None
             return dtc
 
-        def check_current(dtc):
+        def check_current(ampl,dtc):
             '''
             Inputs are an amplitude to test and a virtual model
             output is an virtual model with an updated dictionary.
             '''
-
+            import os
+            import quantities
+            import neuronunit
             LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
             dtc.model_path = LEMS_MODEL_PATH
 
-            model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
-
-            dtc.current_src_name = model._backend.current_src_name
-            assert type(dtc.current_src_name) is not type(None)
-            dtc.cell_name = model._backend._cell_name
-            #model.set_attrs(dtc.attrs)
+            from neuronunit.models.reduced import ReducedModel
+            model = ReducedModel(dtc.model_path,name='vanilla', backend=(str(dtc.backend), {'DTC':dtc}))
+            model.set_attrs(dtc.attrs)
 
             DELAY = 100.0*pq.ms
             DURATION = 1000.0*pq.ms
             params = {'injected_square_current':
                       {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
-            ampl = float(dtc.ampl)
+            ampl = float(ampl)
             if ampl not in dtc.lookup or len(dtc.lookup) == 0:
                 current = params.copy()['injected_square_current']
                 uc = {'amplitude':ampl}
@@ -270,7 +262,7 @@ class RheobaseTestP(VmTest):
                 dtc.run_number += 1
                 model.set_attrs(dtc.attrs)
                 model.inject_square_current(current)
-                #dtc.previous = ampl
+                dtc.previous = ampl
                 n_spikes = model.get_spike_count()
                 dtc.lookup[float(ampl)] = n_spikes
                 if n_spikes == 1:
@@ -278,13 +270,13 @@ class RheobaseTestP(VmTest):
                     dtc.boolean = True
                     return dtc
 
-
-
                 return dtc
             if float(ampl) in dtc.lookup:
                 return dtc
 
         def init_dtc(dtc):
+            import numpy as np
+            import copy
 
             if dtc.initiated == True:
                 # expand values in the range to accomodate for mutation.
@@ -297,7 +289,8 @@ class RheobaseTestP(VmTest):
                 dtc.initiated = True # logically unnecessary but included for readibility
 
             if dtc.initiated == False:
-
+                import quantities as pq
+                import numpy as np
                 dtc.boolean = False
                 steps = np.linspace(0,250,7.0)
                 steps_current = [ i*pq.pA for i in steps ]
@@ -306,7 +299,12 @@ class RheobaseTestP(VmTest):
             return dtc
 
         def find_rheobase(self, dtc):
-
+            import dask.bag as db
+            #import dask.array as da
+            #from distributed import client
+            #c = client.Client()
+            #from dask.diagnostics import Profiler, ResourceProfiler, CacheProfiler
+            cnt = 0
             assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
             # If this it not the first pass/ first generation
             # then assume the rheobase value found before mutation still holds until proven otherwise.
@@ -314,19 +312,21 @@ class RheobaseTestP(VmTest):
             # If its not true enter a search, with ranges informed by memory
             cnt = 0
             while dtc.boolean == False:
-
-                #dtc.current_steps = list(filter(lambda cs: cs !=0.0 , dtc.current_steps))
-                dtc_clones = [ copy.copy(dtc) for i in range(0,len(dtc.current_steps)) ]
-                for i,s in enumerate(dtc.current_steps):
-                    dtc_clones[i].ampl = None
-                    dtc_clones[i].ampl = dtc.current_steps[i]
-                b0 = db.from_sequence(dtc_clones, npartitions=8)
-                dtc_clone = list(b0.map(check_current).compute())
-
-                for d in dtc_clone:
-                    dtc.lookup.update(d.lookup)
+                dtc_clones = [ dtc for s in dtc.current_steps ]
+                b0 = db.from_sequence(dtc.current_steps, npartitions=8)
+                b1 = db.from_sequence(dtc_clones, npartitions=8)
+                #b0.visualize(filename='rheobase_graph0.svg')
+                #b1.visualize(filename='rheobase_graph1.svg')
+                dtcpop = list(db.map(check_current,b0,b1).compute())
+                for dtc_clone in dtcpop:
+                    dtc.lookup.update(dtc_clone.lookup)
                 dtc = check_fix_range(dtc)
                 cnt += 1
+                #del b0
+                #del b1
+            #del dtc_clones
+            #del dtc.current_steps
+
             return dtc
 
         dtc = DataTC()
