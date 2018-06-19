@@ -74,6 +74,15 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         self.standard_model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend='NEURON')
         self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend='NEURON')
 
+    def check_dif(pipe_old,pipe_new):
+        bool = False
+        for key, value in pipe_results.items():
+            if value != pipe_new[key]:
+                bool = True
+            print(value,pipe_new[key])
+
+        return bool
+
     def get_observation(self, cls):
         print(cls.__name__)
         neuron = {'nlex_id': 'nifext_50'} # Layer V pyramidal cell
