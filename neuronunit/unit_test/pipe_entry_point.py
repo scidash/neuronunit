@@ -55,8 +55,7 @@ pipe_results = {}
 ##
 
 start_time = timeit.default_timer()
-sel = [str('selNSGA2'),str('selIBEA')]
-
+sel = [str('selNSGA2'),str('selIBEA'),str('')]
 flat_iter = [ (s,test, observation) for test, observation in electro_tests for s in sel ]
 print(flat_iter)
 
