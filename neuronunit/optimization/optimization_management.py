@@ -127,7 +127,7 @@ def nunit_evaluation(tuple_object):#,backend=None):
             if not hasattr(dtc,'score'):
                 dtc.score = {}
         else:
-            dtc.scores[str(t)] = 0.0
+            dtc.scores[str(t)] = 1.0
     return dtc
 
 
