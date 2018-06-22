@@ -1,9 +1,7 @@
 
-nparams = 2
-MU = 7
 
 import multiprocessing
-multiprocessing.cpu_count()
+npartitions = multiprocessing.cpu_count()
 
 import pickle
 import os
@@ -20,22 +18,10 @@ electro_tests = get_neab.substitute_parallel_for_serial(electro_tests)
 from neuronunit.optimization import get_neab
 from neuronunit.optimization.model_parameters import model_params
 from bluepyopt.deapext.optimisations import DEAPOptimisation
-from bluepyopt.deapext import optimisations
-from bluepyopt.deapext import algorithms
+#from bluepyopt.deapext import optimisations
+#from bluepyopt.deapext import algorithms
 
 from neuronunit.optimization.optimization_management import write_opt_to_nml
-from neuronunit.optimization import optimization_management
-from neuronunit.optimization import optimization_management as om
-key_list = list(model_params.keys())
-reduced_key_list = key_list[0:nparams]
-subset = { k:model_params[k] for k in reduced_key_list }
-DO = DEAPOptimisation(error_criterion = electro_tests[0][0], selection = str('selNSGA'), provided_dict = subset, elite_size = 3)
-package = DO.run(offspring_size = MU, max_ngen = 6, cp_frequency=1,cp_filename=str('regular.p'))
-pop, hof_py, pf, log, history, td_py, gen_vs_hof = package
-
-with open('all_ga_cell.p','wb') as f:
-    pickle.dump(package,f)
-
 
 from neuronunit.optimization import exhaustive_search
 from neuronunit.optimization import optimization_management
@@ -46,26 +32,30 @@ from sklearn.grid_search import ParameterGrid
 import scipy
 import pdb
 
+import numpy as np
 
 class WSListIndividual(list):
     """Individual consisting of list with weighted sum field"""
     def __init__(self, *args, **kwargs):
         """Constructor"""
         self.rheobase = None
+        self.dtc = None
+
         super(WSListIndividual, self).__init__(*args, **kwargs)
 
 
+def min_max(pop):
+    garanked = [ (r.dtc.attrs , sum(r.dtc.scores.values()), r.dtc) for r in pop ]
+    garanked = sorted(garanked, key=lambda w: w[1])
+    miniga = garanked[0]
+    maxiga = garanked[-1]
+    return miniga, maxiga
 
-grid_points = exhaustive_search.create_grid(npoints = 10,nparams = nparams)
-tds = [ list(g.keys()) for g in grid_points ]
-td = tds[0]
-
-
-pops = []
-for g in grid_points:
-    pre_pop = list(g.values())
-    pop = [ WSListIndividual(pre_pop) ]
-    pops.extend(pop)
+def reduce_params(model_params,nparams):
+    key_list = list(model_params.keys())
+    reduced_key_list = key_list[0:nparams]
+    subset = { k:model_params[k] for k in reduced_key_list }
+    return subset
 
 
 def chunks(l, n):
@@ -76,41 +66,200 @@ def chunks(l, n):
         ch.append(l[:][i:i+n])
     return ch
 
-npartitions = multiprocessing.cpu_count()
-# divide population into chunks that reflect the number of CPUs.
-pops_ =  chunks(pops,npartitions)
+def build_chunk_grid(npoints,nparams):
+    grid_points = exhaustive_search.create_grid(npoints = npoints,nparams = nparams)
+    tds = [ list(g.keys()) for g in grid_points ]
+    td = tds[0]
 
-##
-# Create a
-# Consumble iterator.
-# That promotes memory friendly lazy evaluation.
-##
+    pops = []
+    for g in grid_points:
+        pre_pop = list(g.values())
+        pops.extend(pre_pop)
+        pop = WSListIndividual(pops)
 
-consumble = [(sub_pop, test, observation ) for test, observation in electro_tests for sub_pop in pops_ ]
-try:
-    with open('grid_cell_results.p','rb') as f:
-        results  = pickle.load(f)
-    with open('iterator_state.p','rb') as f:
-        consumble_ = [(sub_pop, test, observation ) for test, observation in electro_tests for sub_pop in pops_ ][cnt]
-        sub_pop, test, observation, cnt = pickle.load(f)
-        if len(consumble_) < len(consumble) and len(consumble_) !=0 :
-            consumble = iter(consumble_)
-except:
-    consumble = iter(consumble)
+    # divide population into chunks that reflect the number of CPUs.
+    if len(pops) % npartitions != 1:
+        pops_ = chunks(pops,npartitions)
+    else:
+        pops_ = chunks(pops,npartitions-2)
+    return pops_, td
 
-cnt = 0
-pipes = {}
-results = []
 
-for sub_pop, test, observation in consumble:
-    if len(sub_pop) == 1:
-        sub_pop.extend(sub_pop)
-    print('{0}, out of {1}'.format(cnt,len(pops_)))
-    results.append(optimization_management.update_exhaust_pop(sub_pop, test, td))
-    with open('grid_cell_results.p','wb') as f:
-        pickle.dump(results,f)
-    with open('iterator_state.p','wb') as f:
-        pickle.dump([sub_pop, test, observation, cnt],f)
-    cnt += 1
-    print('done cell: ',cnt)
-print('done all')
+
+def run_ga(model_params,nparams):
+    grid_points = exhaustive_search.create_grid(npoints = 1,nparams = nparams)
+    td = list(grid_points[0].keys())
+    subset = reduce_params(model_params,nparams)
+    DO = DEAPOptimisation(error_criterion = electro_tests[0][0], selection = str('selNSGA'), provided_dict = subset, elite_size = 3)
+    MU = int(np.floor(npoints/2.0))
+    max_ngen = int(np.floor(nparams/2.0))
+    assert (MU * max_ngen) < (npoints * nparams)
+    ga_out = DO.run(offspring_size = MU, max_ngen = 6, cp_frequency=1,cp_filename=str('regular.p'))
+    # pop, hof_py, pf, log, history, td_py, gen_vs_hof = ga_out
+    with open('all_ga_cell.p','wb') as f:
+        pickle.dump(ga_out,f)
+    return ga_out
+
+def float_to_list(sub_pop):
+    if type(sub_pop) is not type(list()):
+        if not hasattr(sub_pop,'rheobase'):
+            sp = WSListIndividual()
+            sp.append(sub_pop)
+            sub_pop = sp
+    return sub_pop
+
+
+reports = {}
+npoints = 10
+
+def param_distance(dtc_ga_attrs,dtc_grid_attrs,td):
+    distances = {}
+    mp = reduce_params(model_params,nparams)
+    for k,v in dtc_ga_attrs.items():
+        dimension_length = np.max(mp[k]) - np.min(mp[k])
+        solution_distance_in_1D = np.abs(float(dtc_grid_attrs[k]))-np.abs(float(v))
+        try:
+            relative_distance = dimension_length/solution_distance_in_1D
+        except:
+            relative_distance = None
+        distances[k] = relative_distance
+        print('the difference between brute force candidates model parameters and the GA\'s model parameters:')
+        print(float(dtc_grid_attrs[k])-float(v),dtc_grid_attrs[k],v,k)
+        print('the relative distance scaled by the length of the parameter dimension of interest:')
+        print(relative_distance)
+    return distances
+
+def error_domination(dtc_ga,dtc_grid):
+    distances = {}
+    errors_ga = list(dtc_ga.scores.values())
+    print(errors_ga)
+    me_ga = np.mean(errors_ga)
+    std_ga = np.std(errors_ga)
+
+    errors_grid = list(dtc_grid.scores.values())
+    print(errors_grid)
+    me_grid = np.mean(errors_grid)
+    std_grid = np.std(errors_grid)
+
+    dom_grid = False
+    dom_ga = False
+
+    for e in errors_ga:
+        if e <= me_ga + std_ga:
+            dom_ga = True
+
+    for e in errors_grid:
+        if e <= me_grid + std_grid:
+            dom_grid= True
+
+    return dom_grid, dom_ga
+
+def run_grid(npoints,nparams):
+    consumable_ ,td = build_chunk_grid(npoints,nparams)
+
+    #consumble = [(sub_pop, test, observation ) for test, _ in electro_tests for sub_pop in pops_ ]
+    # Create a consumble iterator, that facilitates memory friendly lazy evaluation.
+    test, observation = electro_tests[0]
+    try:
+        assert 1==2
+
+        with open('grid_cell_results'+str(nparams)+str('.p'),'rb') as f:
+            results  = pickle.load(f)
+        with open('iterator_state'+str(nparams)+str('.p'),'rb') as f:
+            sub_pop, test, observation, cnt = pickle.load(f)
+            # consumble_ = [(sub_pop, test, observation ) for test, _ in electro_tests for sub_pop in pops_ ][cnt]
+            consumable_ = consumable_[cnt]
+            if len(consumable_) < len(consumable) and len(consumable_) !=0 :
+                consumbale = iter(consumbale_)
+    except:
+        consumable = iter(consumable_)
+    cnt = 0
+    old_maxi = 0
+    last = 0
+
+    grid_results = []
+    for sub_pop in consumable:
+        if type(sub_pop) is type(list()):
+            pass
+        else:
+            mp = reduce_params(model_params,nparams)
+            #dimension_length = np.max(mp[k]) - np.min(mp[k])
+            dtc = copy.copy(sub_pop)
+            for k,v in dtc.attrs.items():
+                if dtc.attrs[k]-np.max(mp[k]) != 0:
+                    dtc.attrs[k] = (dtc.attrs[k]+np.max(mp[k]))/2
+                else:
+                    dtc.attrs[k] = (dtc.attrs[k]+np.min(mp[k]))/2
+            sub_pop = [sub_pop]
+            sub_pop.extend(dtc)
+        for d in sub_pop:
+            temp = d
+            print(last != temp);
+            if last==temp:
+                import pdb; pdb.set_trace()
+            print(last,temp) ;
+            last = temp
+
+
+        print('{0}, out of {1}'.format(cnt,len(sub_pop)))
+        temp = optimization_management.update_exhaust_pop(sub_pop, test, td)
+        grid_results.extend(temp)
+        #import pdb; pdb.set_trace()
+
+        #assert old_maxi != min_max(grid_results)[0][1]
+        old_maxi = min_max(grid_results)[0][1]
+
+        with open('grid_cell_results'+str(nparams)+str('.p'),'wb') as f:
+            pickle.dump(grid_results,f)
+        with open('iterator_state'+str(nparams)+str('.p'),'wb') as f:
+            pickle.dump([sub_pop, test, observation, cnt],f)
+        cnt += 1
+        print('done_block_of_eight_cells: ',cnt)
+    return grid_results
+
+for nparams in range(1,3):
+    grid_results = run_grid(npoints,nparams)
+    ga_out = run_ga(model_params,nparams)
+    miniga = ga_out[-1][0][0]
+
+    mini = min_max(grid_results)[0][1]
+    maxi = min_max(grid_results)[-1][1]
+    quantize_distance = list(np.linspace(mini,maxi,21))
+    worked = bool(miniga < quantize_distance[3])
+    print('Report: ')
+    print('did it work? {0}'.format(worked))
+    print('if it didnt work, perhaps the exhaustive search is dominated')
+    print('to check for how non dominated the error was')
+    print('to check for how non dominated the error was, I can get the mean and standard deviation of all the errors')
+    print('if any one solution is more than one standard, below the mean I can conclude that domination was present')
+
+    reports[nparams] = {}
+    reports[nparams]['success'] = bool(miniga < quantize_distance[3])
+
+    dtc_ga = min_max(ga_out[0])[0][0]
+    attrs_grid = min_max(grid_results[0])[0][0]
+    attrs_ga = min_max(ga_out[0])[0][0]
+
+    grid_points = exhaustive_search.create_grid(npoints = 1,nparams = nparams)#td = list(grid_points[0].keys())
+    td = list(grid_points[0].keys())
+
+    reports[nparams]['p_dist'] = param_distance(attrs_ga,attrs_grid,td)
+    dtc_grid = dtc_ga = min_max(ga_out[0])[0][2]
+
+    dom_grid, dom_ga = error_domination(dtc_ga,dtc_grid)
+
+    # Was there vindicating domination in grid search but not GA?
+    if dom_grid == True and dom_ga == False:
+        reports[nparams]['domination'] = True
+    elif dom_grid == False and dom_ga == False:
+        reports[nparams]['domination'] = True
+    # Was there incriminating domination in GA but not the grid, or in GA and Grid
+    elif dom_grid == True and dom_ga == True:
+        reports[nparams]['domination'] = False
+    elif dom_grid == False and dom_ga == True:
+        reports[nparams]['domination'] = False
+
+    # check that the nsga error is in the bottom 1/5th of the entire error range.
+    print("Success" if bool(miniga < quantize_distance[3]) else "Failure")
+    print("The nsga error %f is in the bottom 1/5th of the entire error range" % miniga)
+    print("Minimum = %f; 20th percentile = %f; Maximum = %f" % (mini,quantize_distance[0],maxi))
