@@ -123,9 +123,8 @@ def nunit_evaluation(tuple_object):#,backend=None):
         score = None
         score = t.judge(model,stop_on_error = False, deep_error = False)
         if score.sort_key is not None:
-            dtc.scores[str(t)] = 1.0 - score.sort_key
-            if not hasattr(dtc,'score'):
-                dtc.score = {}
+            if not hasattr(dtc,'score'):dtc.score = {}
+            dtc.scores.get(str(t), 1.0 - score.sort_key)
         else:
             dtc.scores[str(t)] = 1.0
     return dtc
