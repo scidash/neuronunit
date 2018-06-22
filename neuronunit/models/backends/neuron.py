@@ -25,7 +25,6 @@ class NEURONBackend(Backend):
         DTC: An object of type Data Transport Container. The data transport container contains a dictionary of model attributes
         When the DTC object is provided, it\'s attribute dictionary can be used to update the NEURONBackends model attribute dictionary.
         '''
-        print(self, attrs, cell_name, current_src_name, DTC)
         if not NEURON_SUPPORT:
             raise BackendException("The neuron module was not successfully imported")
 
@@ -49,7 +48,10 @@ class NEURONBackend(Backend):
                 self._current_src_name = DTC.current_src_name
 
             if hasattr(DTC,'cell_name'):
-                self.cell_name = DTC.current_src_name
+                self.cell_name = DTC.cell_name
+
+                print(self, attrs, DTC.cell_name,  DTC.current_src_name, DTC)
+
 
 
 
@@ -236,8 +238,12 @@ class NEURONBackend(Backend):
 
         elif os.path.realpath(os.getcwd()) != os.path.realpath(self.neuron_model_dir):
             # Load mechanisms unless they've already been loaded
+            #subprocess.run(["cd %s; nrnivmodl" % self.neuron_model_dir],shell=True)
+
             self.load_mechanisms()
             self.load()
+            #except:
+
 
             # I broke this somehow.
             # As in nrnivmodl compiling has stopped working given a blank slate initiatilized install environment.
