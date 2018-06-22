@@ -29,7 +29,27 @@ from neuronunit.models.interfaces import glif
 from itertools import repeat
 import neuronunit
 import multiprocessing
-multiprocessing.cpu_count()
+npartitions = multiprocessing.cpu_count()
+from collections import Iterable
+
+
+class WSListIndividual(list):
+    """Individual consisting of list with weighted sum field"""
+    def __init__(self, *args, **kwargs):
+        """Constructor"""
+        self.rheobase = None
+
+        super(WSListIndividual, self).__init__(*args, **kwargs)
+
+
+
+class WSFloatIndividual(float):
+    """Individual consisting of list with weighted sum field"""
+    def __init__(self, *args, **kwargs):
+        """Constructor"""
+        self.rheobase = None
+
+        super(WSFloatIndividual, self).__init__()
 
 def write_opt_to_nml(path,param_dict):
     '''
@@ -106,7 +126,6 @@ def nunit_evaluation(tuple_object):#,backend=None):
             dtc.scores[str(t)] = 1.0 - score.sort_key
             if not hasattr(dtc,'score'):
                 dtc.score = {}
-            dtc.score[str(t)] = score.sort_key
         else:
             dtc.scores[str(t)] = 0.0
     return dtc
@@ -171,8 +190,11 @@ def update_dtc_pop(pop, td, backend = None):
 
     toolbox = base.Toolbox()
     pop = [toolbox.clone(i) for i in pop ]
-    def transform(ind):
 
+    def transform(ind):
+        # The merits of defining a function in a function
+        # is that it yields a semi global scoped variables.
+        #
         dtc = DataTC()
         LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
         if backend is not None:
@@ -181,13 +203,19 @@ def update_dtc_pop(pop, td, backend = None):
             dtc.backend = 'NEURON'
 
         dtc.attrs = {}
-        for i,j in enumerate(ind):
-            dtc.attrs[str(td[i])] = j
+        if isinstance(ind, Iterable):
+            for i,j in enumerate(ind):
+                dtc.attrs[str(td[i])] = j
+        else:
+            dtc.attrs[str(td[0])] = ind
         dtc.evaluated = False
         return dtc
+
     if len(pop) > 1:
-        b = db.from_sequence(pop, npartitions=multiprocessing.cpu_count())
-        dtcpop = list(b.map(transform).compute())
+
+        npart = np.min([multiprocessing.cpu_count(),len(pop)])
+        bag = db.from_sequence(pop, npartitions = npart)
+        dtcpop = list(bag.map(transform).compute())
 
     else:
         # In this case pop is not really a population but an individual
@@ -196,6 +224,97 @@ def update_dtc_pop(pop, td, backend = None):
         dtcpop = list(transform(pop))
     return dtcpop
 
+def rheobase(pop, td, rt):
+    if len(pop) > 1 and not hasattr(pop[0],'rheobase'):
+        pop = [ WSFloatIndividual(ind) for ind in pop if type(ind) is not type(list) ]
+    dtcpop = update_dtc_pop(pop, td)
+    if isinstance(dtcpop, Iterable):
+        dtcpop = iter(dtcpop)
+        xargs = iter(zip(dtcpop,repeat(rt),repeat('NEURON')))
+        dtcpop = list(map(dtc_to_rheo,xargs))
+        for ind,d in zip(pop,dtcpop):
+            ind.rheobase = d.rheobase
+        dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] > 0.0 , dtcpop))
+        pop = list(filter(lambda p: p.rheobase['value'] > 0.0 , pop))
+    else:
+        xargs = [ dtcpop, repeat(rt), repeat('NEURON') ]
+        dtcpop = list(dtc_to_rheo(xargs))
+        for ind,d in zip(pop,dtcpop):
+            ind.rheobase = d.rheobase
+        dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] > 0.0 , dtcpop))
+        pop = list(filter(lambda p: p.rheobase['value'] > 0.0 , pop))
+        # Move to unit testing
+        ###
+        #    if type(ind) is not type(list()):
+        #        assert ind in d.attrs.values()
+        #    else:
+        #        for j in ind:
+        #            assert j in list(d.attrs.values()) #should be in a unit test.
+        #
+        ###
+
+
+
+    return pop, dtcpop
+
+def sense_non_viable_impute(pop, td, tests):
+    orig_MU = len(pop)
+    pop, dtcpop = rheobase(pop, td, tests[0])
+    delta = orig_MU-len(pop)
+    if delta:
+        # making new genes here introduces too much code complexity,
+        # instead make up differences by extending existing lists with duplicates
+        # from itself.
+        # This will decrease diversity.
+        far_back = -delta-1
+        pop.extend(pop[far_back:-1])
+        dtcpop.extend(dtcpop[far_back:-1])
+    return pop,dtcpop
+
+def update_exhaust_pop(pop, tests, td, backend = None):
+    '''
+    # This is different to the GA in two ways.
+    Inputs a population of genes (pop).
+    Returned neuronunit scored DTCs (dtcpop).
+    This method converts a population of genes to a population of Data Transport Containers,
+    Which act as communicatable data types for storing model attributes.
+    Rheobase values are found on the DTCs
+    DTCs for which a rheobase value of x (pA)<=0 are filtered out
+    DTCs are then scored by neuronunit, using neuronunit models that act in place.
+
+    Assumptions, DTC pop is massiveself. The state of the iterator should be saved, such as to interupt tolerant.
+    The sampling should occur at coarse resolution first, then finer resolutions later.
+
+    Both the search, and the iterator should routinely save to disk.
+
+    '''
+
+    pop, dtcpop = rheobase(pop, td, tests[0])
+    xargs = zip(dtcpop,repeat(tests))
+    dtcpop = list(map(format_test,xargs))
+    npart = np.min([multiprocessing.cpu_count(),len(pop)])
+    dtcbag = db.from_sequence(list(zip(dtcpop,repeat(tests))), npartitions = npart)
+
+    # NeuronUnit testing
+    dtcpop = list(dtcbag.map(nunit_evaluation).compute())
+    last = 0
+    for d in dtcpop: temp = sum(d.scores.values()); print(last != temp); print(last,temp) ;last = temp
+
+    for d in dtcpop: temp = sum(d.scores.values()); assert last != temp ;last = temp
+    for i,d in enumerate(dtcpop):
+        pop[i].dtc = copy.copy(dtcpop[i])
+        assert hasattr(pop[i],'dtc')
+    invalid_dtc_not = [ i for i in pop if not hasattr(i,'dtc') ]
+    try:
+        assert len(invalid_dtc_not) == 0
+    except:
+        print(len(invalid_dtc_not)>0)
+        raise ValueError('value error invalid_dtc_not')
+    for d in pop: temp = sum(d.dtc.scores.values()); assert last != temp ;print(temp,last) ; last = temp
+
+    # https://distributed.readthedocs.io/en/latest/memory.html
+
+    return pop
 
 
 def update_deap_pop(pop, tests, td, backend = None):
@@ -209,45 +328,24 @@ def update_deap_pop(pop, tests, td, backend = None):
     DTCs are then scored by neuronunit, using neuronunit models that act in place.
     '''
     # Rheobase value obtainment.
-    orig_MU = len(pop)
-    dtcpop = list(update_dtc_pop(pop, td))
-    rheobase_test = tests[0]
-    xargs = list(zip(dtcpop,repeat(rheobase_test),repeat('NEURON')))
-    dtcpop = list(map(dtc_to_rheo,xargs))
-    for i,d in enumerate(dtcpop):
-        assert pop[i][0] in list(d.attrs.values())
-        pop[i].rheobase = None
-        pop[i].rheobase = d.rheobase
 
-    dtcpop = list(filter(lambda dtc: dtc.rheobase['value'] > 0.0 , dtcpop))
-    pop = list(filter(lambda pop: pop.rheobase['value'] > 0.0 , pop))
-
-    delta = orig_MU-len(pop)
-    if delta:
-        # making new genes here introduces too much code complexity,
-        # instead make up differences by extending existing lists with duplicates
-        # from itself.
-        # This will decrease diversity.
-        far_back = -delta-1
-        pop.extend(pop[far_back:-1])
-        dtcpop.extend(dtcpop[far_back:-1])
+    pop,dtcpop = sense_non_viable_impute(pop, td, tests)
     # NeuronUnit testing
     xargs = zip(dtcpop,repeat(tests))
     dtcpop = list(map(format_test,xargs))
-    dtcbag = db.from_sequence(list(zip(dtcpop,repeat(tests))), npartitions = multiprocessing.cpu_count())
-    dtcpop = list(dtcbag.map(nunit_evaluation).compute())#,dtcpop)#,other_args=tests)
+    npart = np.min([multiprocessing.cpu_count(),len(pop)])
+    dtcbag = db.from_sequence(list(zip(dtcpop,repeat(tests))), npartitions = npart)
+    dtcpop = list(dtcbag.map(nunit_evaluation).compute())
     for i,d in enumerate(dtcpop):
         assert pop[i][0] in list(d.attrs.values())
         pop[i].dtc = None
         pop[i].dtc = copy.copy(dtcpop[i])
-        assert hasattr(pop[i],'dtc')
-
     invalid_dtc_not = [ i for i in pop if not hasattr(i,'dtc') ]
     try:
         assert len(invalid_dtc_not) == 0
     except:
         print(len(invalid_dtc_not)>0)
-        raise
+        raise ValueError('value error invalid_dtc_not')
     # https://distributed.readthedocs.io/en/latest/memory.html
     return pop
 
