@@ -5,7 +5,7 @@
 
 def sample_points(iter_dict, npoints=3):
     import numpy as np
-    replacement={}
+    replacement = {}
     for k,v in iter_dict.items():
         sample_points = list(np.linspace(v.max(),v.min(),npoints))
         replacement[k] = sample_points
