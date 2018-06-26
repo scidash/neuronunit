@@ -15,11 +15,16 @@ import dask.bag as db
 from neuronunit.optimization import model_parameters as modelp
 from itertools import repeat
 import copy
-from neuronunit.optimization import get_neab
+#from neuronunit.optimization import exhaustive_search
+import math
+
+import quantities as pq
+
+#from neuronunit.optimization import get_neab
+
 from pyneuroml import pynml
 import dask.bag as db
 
-import copy
 import numpy as np
 from deap import base
 import dask.bag as db
@@ -30,6 +35,8 @@ from neuronunit.optimization import model_parameters as modelp
 from neuronunit.models.interfaces import glif
 from neuronunit.models.reduced import ReducedModel
 
+import os
+import pickle
 from itertools import repeat
 import neuronunit
 import multiprocessing
@@ -122,30 +129,24 @@ def nunit_evaluation(tuple_object):#,backend=None):
         score = t.judge(model,stop_on_error = False, deep_error = False)
         dtc.score[str(t)] = {}
         dtc.score[str(t)]['value'] = copy.copy(score.sort_key)
-
         if hasattr(score,'prediction'):
-
-            dtc.score[str(t)][str('prediction')] = score.prediction
-            dtc.score[str(t)][str('observation')] = score.observation
-            if 'mean' in score.observation.keys() and 'mean' in score.prediction.keys():
-                print(score.observation.keys())
-                dtc.score[str(t)][str('agreement')] = np.abs(score.observation['mean'] - score.prediction['mean'])
+            if type(score.prediction) is not type(None):
+                dtc.score[str(t)][str('prediction')] = score.prediction
+                dtc.score[str(t)][str('observation')] = score.observation
+                if 'mean' in score.observation.keys() and 'mean' in score.prediction.keys():
+                    print(score.observation.keys())
+                    dtc.score[str(t)][str('agreement')] = np.abs(score.observation['mean'] - score.prediction['mean'])
         else:
             print(score,type(score))
         if score.sort_key is not None:
-    	    ##
-    	    # This probably does something different to what I thought.
-    	    ##
-            #dtc.scores.get(str(t), 1.0 - score.sort_key)
-
             dtc.scores[str(t)] = 1.0 - score.sort_key
         else:
             dtc.scores[str(t)] = 1.0
     return dtc
 
-
 def evaluate(dtc):
     fitness = [ 1.0 for i in range(0,len(dtc.scores.keys())) ]
+    print(len(fitness))
     for k,t in enumerate(dtc.scores.keys()):
         fitness[k] = dtc.scores[str(t)]
     return tuple(fitness,)
@@ -163,18 +164,13 @@ def format_test(xargs):
     This is much like the hooked method from the old get neab file.
     '''
     dtc,tests = xargs
-    #import copy
-    import quantities as pq
-    #import copy
     dtc.vtest = None
     dtc.vtest = {}
-    #from neuronunit.optimization import get_neab
-    #tests = get_neab.tests
+
     for k,v in enumerate(tests):
         dtc.vtest[k] = {}
         #dtc.vtest.get(k,{})
         dtc.vtest[k]['injected_square_current'] = {}
-    for k,v in enumerate(tests):
         if k == 1 or k == 2 or k == 3:
             # Negative square pulse current.
             dtc.vtest[k]['injected_square_current']['duration'] = 100 * pq.ms
@@ -235,12 +231,36 @@ def update_dtc_pop(pop, td, backend = None):
         # but parsimony of naming variables
         # suggests not to change the variable name to reflect this.
         dtcpop = list(transform(pop))
+        assert len(dtcpop) == len(pop)
     return dtcpop
+
+
+def run_ga(model_params,nparams,npoints,test):
+
+    # https://stackoverflow.com/questions/744373/circular-or-cyclic-imports-in-python
+    # These imports need to be defined with local scope to avoid circular importing problems
+    # Try to fix local imports later.
+    from bluepyopt.deapext.optimisations import DEAPOptimisation
+    from neuronunit.optimization.exhaustive_search import create_grid
+    from neuronunit.optimization.exhaustive_search import reduce_params
+    dummy = create_grid(npoints = 1,nparams = nparams)
+    td = list(dummy[0].keys())
+    subset = reduce_params(model_params,nparams)
+
+    MU = int(np.floor(npoints/3.0))
+    max_ngen = int(np.floor(nparams/3.0))
+    assert (MU * max_ngen) < (npoints * nparams)
+
+    DO = DEAPOptimisation(offspring_size = MU, error_criterion = test, selection = str('selNSGA'), provided_dict = subset, elite_size = 3)
+    ga_out = DO.run(offspring_size = MU, max_ngen = 6, cp_frequency=1,cp_filename=str('regular.p'))
+    # pop, hof_py, pf, log, history, td_py, gen_vs_hof = ga_out
+    with open('all_ga_cell.p','wb') as f:
+        pickle.dump(ga_out,f)
+    return ga_out
 
 def rheobase(pop, td, rt):
     if not hasattr(pop[0],'rheobase'):
         pop = [ WSFloatIndividual(ind) for ind in pop if type(ind) is not type(list) ]
-    print(pop)
     dtcpop = update_dtc_pop(pop, td)
     #if isinstance(dtcpop, Iterable):
     dtcpop = iter(dtcpop)
@@ -250,78 +270,6 @@ def rheobase(pop, td, rt):
         ind.rheobase = d.rheobase
     # Done changed the score away from Ratio to Z.
     return pop, dtcpop
-
-
-def sense_non_viable_impute(pop, td, tests):
-    orig_MU = len(pop)
-    pop, dtcpop = rheobase(pop, td, tests[0])
-    delta = orig_MU-len(pop)
-    if delta:
-        # making new genes here introduces too much code complexity,
-        # instead make up differences by extending existing lists with duplicates
-        # from itself.
-        # This will decrease diversity.
-        far_back = -delta-1
-        pop.extend(pop[far_back:-1])
-        dtcpop.extend(dtcpop[far_back:-1])
-    return pop,dtcpop
-
-def update_exhaust_pop(pop, tests, td, backend = None):
-    '''
-    # This is different to the GA in two ways.
-    Inputs a population of genes (pop).
-    Returned neuronunit scored DTCs (dtcpop).
-    This method converts a population of genes to a population of Data Transport Containers,
-    Which act as communicatable data types for storing model attributes.
-    Rheobase values are found on the DTCs
-    DTCs for which a rheobase value of x (pA)<=0 are filtered out
-    DTCs are then scored by neuronunit, using neuronunit models that act in place.
-
-    Assumptions, DTC pop is massiveself. The state of the iterator should be saved, such as to interupt tolerant.
-    The sampling should occur at coarse resolution first, then finer resolutions later.
-
-    Both the search, and the iterator should routinely save to disk.
-    '''
-    pop, dtcpop = rheobase(pop, td, tests[0])
-    dtcpop = copy.copy(dtcpop)
-    xargs = zip(dtcpop,repeat(tests))
-    dtcpop = iter(map(format_test,xargs))
-    npart = np.min([multiprocessing.cpu_count(),len(pop)])
-    dtcbag = db.from_sequence(list(zip(dtcpop,repeat(tests))), npartitions = npart)
-
-    # NeuronUnit testing
-    dtcpop = list(dtcbag.map(nunit_evaluation).compute())
-    #import pdb; pdb.set_trace()
-    last = 0
-
-    for d in dtcpop:
-        print(d.attrs.values(),'values different')
-
-    for d in dtcpop: temp = sum(d.attrs.values()); assert last != temp; print(last,temp) ;last = temp
-    for d in dtcpop: temp = d.scores.values();  print(last,temp) ;last = temp
-    for d in dtcpop: temp = d.scores.values();  print(last,temp) ;last = temp
-
-    for d in dtcpop:
-        temp = sum(d.scores.values());
-        if last==temp:
-            print(len(d.scores.values()))
-            import pdb; pdb.set_trace()
-        assert last != temp ;last = temp
-
-    for i,d in enumerate(copy.copy(dtcpop)):
-        pop[i].dtc = copy.copy(dtcpop[i])
-        assert hasattr(pop[i],'dtc')
-    invalid_dtc_not = [ i for i in pop if not hasattr(i,'dtc') ]
-    try:
-        assert len(invalid_dtc_not) == 0
-    except:
-        print(len(invalid_dtc_not)>0)
-        raise ValueError('value error invalid_dtc_not')
-    for d in pop: temp = sum(d.dtc.scores.values()); assert last != temp ;print(temp,last) ; last = temp
-
-    # https://distributed.readthedocs.io/en/latest/memory.html
-
-    return pop
 
 
 def update_deap_pop(pop, tests, td, backend = None):
@@ -335,26 +283,25 @@ def update_deap_pop(pop, tests, td, backend = None):
     DTCs are then scored by neuronunit, using neuronunit models that act in place.
     '''
     # Rheobase value obtainment.
+    print('what ever is called before nans things')
+    assert pop[0]!=pop[1]
 
-    pop,dtcpop = sense_non_viable_impute(pop, td, tests)
+
+    dtcpop = None
+    pop, dtcpop = rheobase(copy.copy(pop), td, tests[0])
+    dtcpop = copy.copy(dtcpop)
     # NeuronUnit testing
     xargs = zip(dtcpop,repeat(tests))
     dtcpop = list(map(format_test,xargs))
     npart = np.min([multiprocessing.cpu_count(),len(pop)])
     dtcbag = db.from_sequence(list(zip(dtcpop,repeat(tests))), npartitions = npart)
     dtcpop = list(dtcbag.map(nunit_evaluation).compute())
-
     for i,d in enumerate(dtcpop):
-        #assert pop[i][0] in list(d.attrs.values())
         pop[i].dtc = None
         pop[i].dtc = copy.copy(dtcpop[i])
     invalid_dtc_not = [ i for i in pop if not hasattr(i,'dtc') ]
-    try:
-        assert len(invalid_dtc_not) == 0
-    except:
-        print(len(invalid_dtc_not)>0)
-        raise ValueError('value error invalid_dtc_not')
-    # https://distributed.readthedocs.io/en/latest/memory.html
+    if len(invalid_dtc_not) !=0:
+        import pdb; pdb.set_trace()
     return pop
 
 
