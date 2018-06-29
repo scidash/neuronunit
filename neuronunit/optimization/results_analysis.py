@@ -3,13 +3,9 @@ import pickle
 
 def param_distance(dtc_ga_attrs,dtc_grid_attrs,td):
     distances = {}
-
-    #from neuronunit.optimization.exhaustive_search import run_grid, reduce_params, create_grid
     from neuronunit.optimization.optimization_management import model_params
     from neuronunit.optimization.exhaustive_search import reduce_params
-    #nparams = len(list(dtc_ga_attrs.values()))
     ranges = { k:model_params[k] for k,v in dtc_ga_attrs.items() }
-    #mp = reduce_params(model_params,nparams)
     for k,v in dtc_ga_attrs.items():
         dimension_length = np.max(ranges[k]) - np.min(ranges[k])
         solution_distance_in_1D = np.abs(float(dtc_grid_attrs[k]))-np.abs(float(v))
@@ -18,9 +14,7 @@ def param_distance(dtc_ga_attrs,dtc_grid_attrs,td):
         except:
             relative_distance = None
         distances.get(k, relative_distance)
-
         distances[k] = (relative_distance)
-
         print('the difference between brute force candidates model parameters and the GA\'s model parameters:')
         print(float(dtc_grid_attrs[k])-float(v),dtc_grid_attrs[k],v,k)
         print('the relative distance scaled by the length of the parameter dimension of interest:')
