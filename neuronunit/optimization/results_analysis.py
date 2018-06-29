@@ -7,10 +7,11 @@ def param_distance(dtc_ga_attrs,dtc_grid_attrs,td):
     #from neuronunit.optimization.exhaustive_search import run_grid, reduce_params, create_grid
     from neuronunit.optimization.optimization_management import model_params
     from neuronunit.optimization.exhaustive_search import reduce_params
-    nparams = len(list(dtc_ga_attrs.values()))
-    mp = reduce_params(model_params,nparams)
+    #nparams = len(list(dtc_ga_attrs.values()))
+    ranges = { k:model_params[k] for k,v in dtc_ga_attrs.items() }
+    #mp = reduce_params(model_params,nparams)
     for k,v in dtc_ga_attrs.items():
-        dimension_length = np.max(mp[k]) - np.min(mp[k])
+        dimension_length = np.max(ranges[k]) - np.min(ranges[k])
         solution_distance_in_1D = np.abs(float(dtc_grid_attrs[k]))-np.abs(float(v))
         try:
             relative_distance = np.abs(solution_distance_in_1D/dimension_length)
@@ -60,7 +61,11 @@ def error_domination(dtc_ga,dtc_grid):
     return dom_grid, dom_ga
 
 
-def make_report(grid_results, ga_out, nparams):
+def make_report(grid_results, ga_out, nparams, pop = None):
+    from neuronunit.optimization.exhaustive_search import create_grid
+    grid_points = create_grid(npoints = 1,nparams = nparams)#td = list(grid_points[0].keys())
+    td = list(grid_points[0].keys())
+
     reports = {}
     reports[nparams] = {}
 
@@ -69,7 +74,11 @@ def make_report(grid_results, ga_out, nparams):
 
     mini = min_max(grid_results)[0][1]
     maxi = min_max(grid_results)[1][1]
-    miniga = min_max(ga_out[0])[0][1]
+    if type(pop) is not type(None):
+        miniga = min_max(pop)[0][1]
+    else:
+        miniga = min_max(ga_out)[0][1]
+
     reports[nparams]['miniga'] = miniga
     reports[nparams]['minigrid'] = mini
     quantize_distance = list(np.linspace(mini,maxi,21))
@@ -82,21 +91,19 @@ def make_report(grid_results, ga_out, nparams):
 
     reports[nparams]['success'] = success
     reports[nparams]['better'] = better
-    dtc_ga = min_max(ga_out[0])[0][0]
+    dtc_ga = min_max(ga_out)[0][0]
     attrs_grid = min_max(grid_results)[0][0]
-    attrs_ga = min_max(ga_out[0])[0][0]
+    attrs_ga = min_max(ga_out)[0][0]
     reports[nparams]['attrs_ga'] = attrs_ga
     reports[nparams]['attrs_grid'] = attrs_grid
-    from neuronunit.optimization.exhaustive_search import create_grid
 
-    grid_points = create_grid(npoints = 1,nparams = nparams)#td = list(grid_points[0].keys())
-    td = list(grid_points[0].keys())
+
 
     reports[nparams]['p_dist'] = param_distance(attrs_ga,attrs_grid,td)
     ##
     # mistake here
     ##
-    dtc_grid = dtc_ga = min_max(ga_out[0])[0][2]
+    dtc_grid = dtc_ga = min_max(ga_out)[0][2]
     dom_grid, dom_ga = error_domination(dtc_ga,dtc_grid)
     reports[nparams]['vind_domination'] = False
     # Was there vindicating domination in grid search but not GA?
@@ -112,15 +119,15 @@ def make_report(grid_results, ga_out, nparams):
 
 
     #reports[nparams]['success'] = bool(miniga < quantize_distance[2])
-    dtc_ga = min_max(ga_out[0])[0][0]
+    dtc_ga = min_max(ga_out)[0][0]
     attrs_grid = min_max(grid_results)[0][0]
-    attrs_ga = min_max(ga_out[0])[0][0]
+    attrs_ga = min_max(ga_out)[0][0]
 
     grid_points = create_grid(npoints = 1,nparams = nparams)#td = list(grid_points[0].keys())
     td = list(grid_points[0].keys())
 
     reports[nparams]['p_dist'] = param_distance(attrs_ga,attrs_grid,td)
-    dtc_grid = dtc_ga = min_max(ga_out[0])[0][2]
+    dtc_grid = dtc_ga = min_max(ga_out)[0][2]
     dom_grid, dom_ga = error_domination(dtc_ga,dtc_grid)
     reports[nparams]['vind_domination'] = False
     # Was there vindicating domination in grid search but not GA?
