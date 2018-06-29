@@ -3,6 +3,8 @@ import pickle
 
 def param_distance(dtc_ga_attrs,dtc_grid_attrs,td):
     distances = {}
+    # These imports are defined here to avoid cyclic importing, as the function provides a limited scope of the imports.
+    #
     from neuronunit.optimization.optimization_management import model_params
     from neuronunit.optimization.exhaustive_search import reduce_params
     ranges = { k:model_params[k] for k,v in dtc_ga_attrs.items() }
