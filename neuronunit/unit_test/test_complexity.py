@@ -49,9 +49,9 @@ def rank_all_sub_module_functions(provided_module):
         if is_function(sc):
             ranks.append(ccomplexity_rater(sc))
     return ranks
-from neuronunit.optimization import optimization_management
-from neuronunit.optimization import exhaustive_search
-ranks = rank_all_sub_module_functions(optimization_management)
-ranks.extend(rank_all_sub_module_functions(exhaustive_search))
+#from neuronunit.optimization import optimization_management
+#from neuronunit.optimization import exhaustive_search
+#ranks = rank_all_sub_module_functions(optimization_management)
+#ranks.extend(rank_all_sub_module_functions(exhaustive_search))
 
-print(ranks)
+#print(ranks)
