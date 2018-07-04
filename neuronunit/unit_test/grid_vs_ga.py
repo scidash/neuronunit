@@ -23,7 +23,6 @@ from neuronunit.optimization.results_analysis import min_max, error_domination, 
 from neuronunit.optimization.results_analysis import make_report
 import copy
 reports = {}
-npoints = 10
 
 
 electro_path = str(os.getcwd())+'/pipe_tests.p'
@@ -36,8 +35,8 @@ electro_tests = get_neab.replace_zero_std(electro_tests)
 electro_tests = get_neab.substitute_parallel_for_serial(electro_tests)
 test, observation = electro_tests[0]
 
-
-nparams = 2
+npoints = 6
+nparams = 3
 tests = copy.copy(electro_tests[0][0][0:2])
 
 
@@ -46,24 +45,30 @@ tests = copy.copy(electro_tests[0][0][0:2])
 
 #grid_results = None
 
-nparams = 2
+nparams = 3
 #tests = electro_tests[0][0][0:2]
-'''
-grid_results = run_grid(nparams,npoints,tests)
-'''
+opt_keys = [str('a'),str('vr'),str('b')]
 
-#with open('pre_grid_reports.p','wb') as f:#
-#    pickle.dump([grid_results,nparams],f)
+grid_results = run_grid(nparams,npoints,tests,provided_keys = opt_keys)
+print('what the hell is going wrong here a')
 
+import pdb; pdb.set_trace()
+
+with open('pre_grid_reports.p','wb') as f:#
+    pickle.dump(grid_results,f)
+print('what the hell is going wrong here b')
+import pdb; pdb.set_trace()
 #opt_keys = list(copy.copy(grid_results)[0].dtc.attrs.keys())
-opt_keys = [str('a'),str('vr')]
 ga_out = run_ga(model_params,nparams,npoints,tests,provided_keys = opt_keys)
+with open('pre_ga_reports.p','wb') as f:
+    pickle.dump(ga_out,f)
+print('what the hell is going wrong here c')
+import pdb; pdb.set_trace()
 #pop = ga_out[0]
 #new_report = make_report(grid_results, pop, nparams)
-reports.update(new_report)
-with open('pre_ga_reports.p','wb') as f:
-    pickle.dump([ga_out,nparams],f)
+#reports.update(new_report)
+with open('pre_grid_reports.p','rb') as f:#
+    grid_results = pickle.load(f)
 
-
-with open('pre_ga_reports.p','rb') as f:
-    package = pickle.load(f)
+#with open('pre_ga_reports.p','rb') as f:
+#    package = pickle.load(f)
