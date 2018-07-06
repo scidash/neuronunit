@@ -1,17 +1,21 @@
 import numpy as np
 import os
+from collections import OrderedDict
+
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 
 path_params = {}
 path_params['model_path'] = os.path.realpath(os.path.join(THIS_DIR,'..','models','NeuroML2','LEMS_2007One.xml'))
 
 
-model_params = {}
-model_params['vr'] = np.linspace(-75.0,-50.0,9)
-
-
+model_params = OrderedDict()
+model_params['vr'] = np.linspace(-100.0,-40.0,9)
+#model_params['a'] = np.linspace(-1.0,2.0,9)
+model_params['b'] = np.linspace(-5*10E-10,-0.25*10E-9,9)
+#model_params['vr'] = np.linspace(-75.0,-50.0,9)
 model_params['a'] = np.linspace(0.0,0.945,9)
 model_params['b'] = np.linspace(-5*10E-10,-0.25*10E-9,9)
+
 model_params['vpeak'] =np.linspace(30.0,40.0,9)
 
 

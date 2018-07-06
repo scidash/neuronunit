@@ -26,7 +26,7 @@ class StaticModel(sciunit.Model,
     """A model which produces a frozen membrane potential waveform"""
 
     def __init__(self, vm):
-        """vm is either a neo.core.AnalogSignal or a path to a 
+        """vm is either a neo.core.AnalogSignal or a path to a
         pickled neo.core.AnalogSignal"""
 
         if isinstance(vm,str):
@@ -102,6 +102,8 @@ class LEMSModel(sciunit.Model,
             raise Exception(("A backend (e.g. 'jNeuroML' or 'NEURON') "
                              "must be selected"))
         else:
+            print(name,available_backends)
+            import pdb; pdb.set_trace()
             raise Exception("Backend %s not found in backends.py" \
                             % name)
         self._backend.model = self

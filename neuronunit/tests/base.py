@@ -126,10 +126,12 @@ class VmTest(sciunit.Test):
         reference_data.get_values(quiet=not cls.verbose) # Get and verify summary data
                                     # from neuroelectro.org.
 
-
-        observation = {'mean': reference_data.mean*cls.units,
-                       'std': reference_data.std*cls.units,
-                       'n': reference_data.n}
+        if hasattr(reference_data,'mean'):
+            observation = {'mean': reference_data.mean*cls.units,
+                           'std': reference_data.std*cls.units,
+                           'n': reference_data.n}
+        else:
+            observation = None
         return observation
 
     @classmethod
