@@ -3,7 +3,7 @@ import sciunit
 from neo import AnalogSignal
 import neuronunit.capabilities as cap
 import numpy as np
-import parse_glif
+from . import parse_glif
 
 
 import allensdk.core.json_utilities as json_utilities

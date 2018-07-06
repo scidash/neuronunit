@@ -11,28 +11,20 @@ from neuronunit.optimization import get_neab
 from neuronunit.models.reduced import ReducedModel
 from neuronunit.optimization.model_parameters import model_params, path_params
 import numpy
-import dask.bag as db
 from neuronunit.optimization import model_parameters as modelp
 from itertools import repeat
 import copy
-#from neuronunit.optimization import exhaustive_search
 import math
 
 import quantities as pq
-
-#from neuronunit.optimization import get_neab
-
-from pyneuroml import pynml
-import dask.bag as db
-
 import numpy as np
+from pyneuroml import pynml
+
 from deap import base
-import dask.bag as db
 from neuronunit.optimization.data_transport_container import DataTC
 from neuronunit.models.interfaces import glif
 from neuronunit.optimization import model_parameters as modelp
 
-from neuronunit.models.interfaces import glif
 from neuronunit.models.reduced import ReducedModel
 
 import os
@@ -89,7 +81,6 @@ def write_opt_to_nml(path,param_dict):
 def dtc_to_rheo(xargs):
     dtc,rtest,backend = xargs
     LEMS_MODEL_PATH = path_params['model_path']
-
     model = ReducedModel(LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     model.set_attrs(dtc.attrs)
     dtc.scores = {}
@@ -98,7 +89,24 @@ def dtc_to_rheo(xargs):
     if score.sort_key is not None:
         dtc.scores.get(str(rtest), 1 - score.sort_key)
         dtc.scores[str(rtest)] = 1 - score.sort_key
+        dtc = score_proc(dtc,rtest,score)
     dtc.rheobase = score.prediction
+    return dtc
+
+def score_proc(dtc,t,score):
+    dtc.score[str(t)] = {}
+    dtc.score[str(t)]['value'] = copy.copy(score.sort_key)
+    if hasattr(score,'prediction'):
+        if type(score.prediction) is not type(None):
+            dtc.score[str(t)][str('prediction')] = score.prediction
+            dtc.score[str(t)][str('observation')] = score.observation
+            if 'mean' in score.observation.keys() and 'mean' in score.prediction.keys():
+                print(score.observation.keys())
+                dtc.score[str(t)][str('agreement')] = np.abs(score.observation['mean'] - score.prediction['mean'])
+    if score.sort_key is not None:
+        dtc.scores[str(t)] = 1.0 - score.sort_key
+    else:
+        dtc.scores[str(t)] = 1.0
     return dtc
 
 def nunit_evaluation(tuple_object):#,backend=None):
@@ -112,7 +120,6 @@ def nunit_evaluation(tuple_object):#,backend=None):
     assert dtc.rheobase is not None
     backend = dtc.backend
     if backend == 'glif':
-
         model = glif.GC()#ReducedModel(LEMS_MODEL_PATH,name=str('vanilla'),backend=('NEURON',{'DTC':dtc}))
         tests[0].prediction = dtc.rheobase
         model.rheobase = dtc.rheobase['value']
@@ -122,26 +129,18 @@ def nunit_evaluation(tuple_object):#,backend=None):
         tests[0].prediction = dtc.rheobase
         model.rheobase = dtc.rheobase['value']
 
-
-    for k,t in enumerate(tests[1:-1]):
+    for k,t in enumerate(tests):
         t.params = dtc.vtest[k]
         score = None
         score = t.judge(model,stop_on_error = False, deep_error = False)
-        dtc.score[str(t)] = {}
-        dtc.score[str(t)]['value'] = copy.copy(score.sort_key)
-        if hasattr(score,'prediction'):
-            if type(score.prediction) is not type(None):
-                dtc.score[str(t)][str('prediction')] = score.prediction
-                dtc.score[str(t)][str('observation')] = score.observation
-                if 'mean' in score.observation.keys() and 'mean' in score.prediction.keys():
-                    print(score.observation.keys())
-                    dtc.score[str(t)][str('agreement')] = np.abs(score.observation['mean'] - score.prediction['mean'])
-        else:
-            print(score,type(score))
         if score.sort_key is not None:
-            dtc.scores[str(t)] = 1.0 - score.sort_key
+            dtc.scores.get(str(t), 1 - score.sort_key)
+            dtc.scores[str(t)] = 1 - score.sort_key
+            dtc = score_proc(dtc,t,score)
         else:
             dtc.scores[str(t)] = 1.0
+        print(dtc.scores)
+    assert len(dtc.scores.keys()) >= 2
     return dtc
 
 def evaluate(dtc):
@@ -184,10 +183,7 @@ def format_test(xargs):
             dtc.vtest[k]['injected_square_current']['delay'] = 250 * pq.ms # + 150
     return dtc
 
-
-
 def update_dtc_pop(pop, td, backend = None):
-
     '''
     inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
     outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
@@ -196,7 +192,6 @@ def update_dtc_pop(pop, td, backend = None):
     If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
     corresponding virtual model objects.
     '''
-
     toolbox = base.Toolbox()
     pop = [toolbox.clone(i) for i in pop ]
 
@@ -221,7 +216,6 @@ def update_dtc_pop(pop, td, backend = None):
         return dtc
 
     if len(pop) > 1:
-
         npart = np.min([multiprocessing.cpu_count(),len(pop)])
         bag = db.from_sequence(pop, npartitions = npart)
         dtcpop = list(bag.map(transform).compute())
@@ -235,25 +229,22 @@ def update_dtc_pop(pop, td, backend = None):
     return dtcpop
 
 
-def run_ga(model_params,nparams,npoints,test):
-
+def run_ga(model_params,nparams,npoints,test, provided_keys = None):
     # https://stackoverflow.com/questions/744373/circular-or-cyclic-imports-in-python
     # These imports need to be defined with local scope to avoid circular importing problems
     # Try to fix local imports later.
     from bluepyopt.deapext.optimisations import DEAPOptimisation
     from neuronunit.optimization.exhaustive_search import create_grid
     from neuronunit.optimization.exhaustive_search import reduce_params
-    dummy = create_grid(npoints = 1,nparams = nparams)
-    td = list(dummy[0].keys())
+    if type(provided_keys) is not type(None):
+        model_params = { k:model_params[k] for k in provided_keys }
     subset = reduce_params(model_params,nparams)
-
-    MU = int(np.floor(npoints/3.0))
-    max_ngen = int(np.floor(nparams/3.0))
-    assert (MU * max_ngen) < (npoints * nparams)
-
-    DO = DEAPOptimisation(offspring_size = MU, error_criterion = test, selection = str('selNSGA'), provided_dict = subset, elite_size = 3)
-    ga_out = DO.run(offspring_size = MU, max_ngen = 6, cp_frequency=1,cp_filename=str('regular.p'))
-    # pop, hof_py, pf, log, history, td_py, gen_vs_hof = ga_out
+    MU = int(np.floor(npoints))
+    max_ngen = int(np.floor(nparams))
+    #assert (MU * max_ngen) < (npoints * nparams)
+    DO = DEAPOptimisation(offspring_size = MU, error_criterion = test, selection = str('selNSGA'), provided_dict = subset, elite_size = 2)
+    assert len(DO.params.items()) == 3
+    ga_out = DO.run(offspring_size = MU, max_ngen = 15)
     with open('all_ga_cell.p','wb') as f:
         pickle.dump(ga_out,f)
     return ga_out
@@ -265,6 +256,7 @@ def rheobase(pop, td, rt):
     #if isinstance(dtcpop, Iterable):
     dtcpop = iter(dtcpop)
     xargs = iter(zip(dtcpop,repeat(rt),repeat('NEURON')))
+
     dtcpop = list(map(dtc_to_rheo,xargs))
     for ind,d in zip(pop,dtcpop):
         ind.rheobase = d.rheobase
@@ -283,18 +275,17 @@ def update_deap_pop(pop, tests, td, backend = None):
     DTCs are then scored by neuronunit, using neuronunit models that act in place.
     '''
     # Rheobase value obtainment.
-    print('what ever is called before nans things')
-    assert pop[0]!=pop[1]
-
 
     dtcpop = None
     pop, dtcpop = rheobase(copy.copy(pop), td, tests[0])
     dtcpop = copy.copy(dtcpop)
     # NeuronUnit testing
+
     xargs = zip(dtcpop,repeat(tests))
     dtcpop = list(map(format_test,xargs))
     npart = np.min([multiprocessing.cpu_count(),len(pop)])
     dtcbag = db.from_sequence(list(zip(dtcpop,repeat(tests))), npartitions = npart)
+
     dtcpop = list(dtcbag.map(nunit_evaluation).compute())
     for i,d in enumerate(dtcpop):
         pop[i].dtc = None
@@ -306,7 +297,6 @@ def update_deap_pop(pop, tests, td, backend = None):
 
 
 def create_subset(nparams = 10, provided_dict = None):
-    import numpy as np
     if type(provided_dict) is type(None):
         mp = modelp.model_params
         key_list = list(mp.keys())

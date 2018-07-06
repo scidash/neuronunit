@@ -1,5 +1,5 @@
 from .base import *
-
+import math
 class NEURONBackend(Backend):
     """Used for simulation with NEURON, a popular simulator
     http://www.neuron.yale.edu/neuron/
@@ -41,6 +41,7 @@ class NEURONBackend(Backend):
 
         if type(DTC) is not type(None):
             if type(DTC.attrs) is not type(None):
+
                 self.set_attrs(**DTC.attrs)
                 assert len(self.model.attrs.keys()) > 0
 
@@ -234,14 +235,22 @@ class NEURONBackend(Backend):
             # use a different process to call NEURONS compiler nrnivmodl in the
             # background if the NEURON_file_path does not yet exist.
             subprocess.run(["cd %s; nrnivmodl" % self.neuron_model_dir],shell=True)
-            self.load_mechanisms()
-
+            #self.load_mechanisms()
         elif os.path.realpath(os.getcwd()) != os.path.realpath(self.neuron_model_dir):
             # Load mechanisms unless they've already been loaded
             #subprocess.run(["cd %s; nrnivmodl" % self.neuron_model_dir],shell=True)
+            #try:
+
+            #    self.load()
+            #except:
+            #    print('gets to except')
+            #    os.system("cd %s; nrnivmodl" % self.neuron_model_dir)
+                #self.load_mechanisms()
 
             self.load_mechanisms()
             self.load()
+
+
             #except:
 
 
@@ -273,12 +282,17 @@ class NEURONBackend(Backend):
     def current_src_name(self):
         return getattr(self,'_current_src_name','RS')
 
+
     def set_attrs(self, **attrs):
         #if len(attrs) == len(self.model.attrs):
         self.model.attrs = {}
         self.model.attrs.update(attrs)
 
+
         for h_key,h_value in attrs.items():
+            if math.isnan(h_value):
+                import pdb; pdb.set_trace()
+
             self.h('m_{0}_{1}_pop[0].{2} = {3}'\
                 .format(self.cell_name,self.cell_name,h_key,h_value))
             #print('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
