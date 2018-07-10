@@ -13,7 +13,7 @@ model_params['vr'] = np.linspace(-100.0,-40.0,9)
 #model_params['a'] = np.linspace(-1.0,2.0,9)
 model_params['b'] = np.linspace(-5*10E-10,-0.25*10E-9,9)
 #model_params['vr'] = np.linspace(-75.0,-50.0,9)
-model_params['a'] = np.linspace(0.0,0.945,9)
+model_params['a'] = np.linspace(0.02,0.945,9)
 model_params['b'] = np.linspace(-5*10E-10,-0.25*10E-9,9)
 
 model_params['vpeak'] =np.linspace(30.0,40.0,9)

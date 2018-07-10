@@ -10,6 +10,7 @@ except:
 try:
     from .neuron import NEURONBackend
 except:
+    import pdb; pdb.set_trace()
     pass
 
 try:

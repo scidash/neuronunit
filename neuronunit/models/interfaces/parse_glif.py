@@ -1,4 +1,8 @@
 usage='''
+Provenance: This file is originally from
+https://github.com/vrhaynes/AllenInstituteNeuroML
+https://github.com/OpenSourceBrain/AllenInstituteNeuroML
+It is authored by pgleeson@github.com, vrhaynes@github.com and russelljjarvis@github.com
 
 This file can be used to generate LEMS components for each of a number of GLIF models
 
@@ -15,15 +19,11 @@ import json
 from pyneuroml import pynml
 
 def generate_lems(glif_package, curr_pA=None, show_plot=False):
+    if curr_pA == None:
+        curr_pA = 10
+    glif_dir = os.getcwd()
 
-    #with open('model_metadata.json', "r") as json_file:
-    model_metadata = 
-
-    #with open('neuron_config.json', "r") as json_file:
-    neuron_config = glif_package[-2]
-
-    #with open('ephys_sweeps.json', "r") as json_file:
-    ephys_sweeps = glif_package[-1]
+    model_metadata,neuron_config,ephys_sweeps = glif_package
 
     template_cell = '''<Lems>
 
@@ -46,6 +46,8 @@ def generate_lems(glif_package, curr_pA=None, show_plot=False):
         type = 'glifRAscATCell'
 
     cell_id = 'GLIF_%s'%glif_dir
+
+    #model_metadata['name']
 
     attributes = ""
 
@@ -77,13 +79,16 @@ def generate_lems(glif_package, curr_pA=None, show_plot=False):
 
     print(file_contents)
 
-    cell_file_name = '%s.xml'%(cell_id)
+    #cell_file_name = '%s.xml'%(cell_id)
+    cell_file_name = '{0}{1}.xml'.format(os.getcwd(),str(model_metadata['name']))
     cell_file = open(cell_file_name,'w')
     cell_file.write(file_contents)
     cell_file.close()
+    return cell_file_name
 
-
+    '''
     import opencortex.build as oc
+
 
     nml_doc, network = oc.generate_network("Test_%s"%glif_dir)
 
@@ -176,120 +181,5 @@ def generate_lems(glif_package, curr_pA=None, show_plot=False):
                         show_plot_already=show_plot,
                         save_figure_to='Comparison_Threshold_%ipA.png'%(curr_pA))
 
-    readme = '''
-## Model: %(id)s
-
-### Original model
-
-%(name)s
-
-[Allen Cell Types DB electrophysiology page for specimen](http://celltypes.brain-map.org/mouse/experiment/electrophysiology/%(spec)s)
-
-[Neuron configuration](neuron_config.json); [model metadata](model_metadata.json); [electrophysiology summary](ephys_sweeps.json)
-
-#### Original traces:
-
-**Membrane potential**
-
-Current injection of %(curr)s pA
-
-![Original](MembranePotential_%(curr)spA.png)
-
-**Threshold**
-
-![Threshold](Threshold_%(curr)spA.png)
-
-### Conversion to NeuroML 2
-
-LEMS version of this model: [GLIF_%(id)s.xml](GLIF_%(id)s.xml)
-
-[Definitions of LEMS Component Types](../GLIFs.xml) for GLIFs.
-
-This model can be run locally by installing [jNeuroML](https://github.com/NeuroML/jNeuroML) and running:
-
-    jnml LEMS_Test_%(id)s.xml
-
-#### Comparison:
-
-**Membrane potential**
-
-Current injection of %(curr)s pA
-
-![Comparison](Comparison_%(curr)spA.png)
-
-**Threshold**
-
-![Comparison](Comparison_Threshold_%(curr)spA.png)'''
-
-    readme_file = open('README.md','w')
-    curr_str = str(curr_pA)
-    # @type curr_str str
-    if curr_str.endswith('.0'):
-        curr_str = curr_str[:-2]
-    readme_file.write(readme%{"id":glif_dir,"name":model_metadata['name'],"spec":model_metadata["specimen_id"],"curr":curr_str})
-    readme_file.close()
-
-    os.chdir('..')
-
-    return model_metadata, neuron_config, ephys_sweeps
-
-if __name__ == '__main__':
-
-    if '-all' in sys.argv:
-        readme = '''
-## Conversion of Allen Cell Types Database GLIF models to NeuroML 2
-
-**Note: work in progress!**
-
-
-### Examples:
-
-        '''
-        models_stims = {'473875489': 120,
-                        '480629471': 50,
-                        '480629475': 50,
-                        '480633674': 120,
-                        '486557295': 160,
-                        '472451425': 180,
-                        '472308324': 150,
-                        '472455459': 120}
-
-        #models_stims = {'473875489': 120,
-        #                '480629471': 50}
-
-        for model in models_stims.keys():
-
-            model_metadata, neuron_config, ephys_sweeps = generate_lems(model, models_stims[model], show_plot=False)
-
-            curr_str = str(models_stims[model])
-            # @type curr_str str
-            if curr_str.endswith('.0'):
-                curr_str = curr_str[:-2]
-            readme += '''
-#### Model: %(id)s
-
-Model summary: %(name)s
-
-[Original electrophysiological data](http://celltypes.brain-map.org/mouse/experiment/electrophysiology/%(spec)s)
-
-[Full details of conversion](%(id)s/README.md)
-
-<a href="%(id)s/README.md"><img alt="%(id)s" src="%(id)s/Comparison_%(curr)spA.png" height="300"/></a>
-
-            ''' % {"id":model,"name":model_metadata['name'],"spec":model_metadata["specimen_id"],"curr":curr_str}
-
-        readme_file = open('README.md','w')
-        readme_file.write(readme)
-        readme_file.close()
-
-        exit()
-
-    elif len(sys.argv)==3:
-
-        glif_dir = sys.argv[1]
-        curr_pA = float(sys.argv[2])
-        show_plot = '-nogui' not in sys.argv
-        generate_lems(glif_dir, curr_pA, show_plot=show_plot)
-
-    else:
-        print(usage)
+    readme =
+    '''

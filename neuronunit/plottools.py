@@ -925,7 +925,7 @@ def pca(best_worst,vmpop,fitnesses,td):
     py.sign_in('RussellJarvis','FoyVbw7Ry3u4N2kCY4LE')
     py.iplot(fig, filename='improved_names.svg',image='svg')
 
-'''
+
 
 def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must be pickle-able for ipyparallel to work.
     #A method to plot the best and worst candidate solution waveforms side by side
@@ -981,11 +981,7 @@ def plot_evaluate(vms_best,vms_worst,names=['best','worst']):#This method must b
         sf_best = pd.DataFrame(sc_for_frame_best)
         sf_worst = pd.DataFrame(sc_for_frame_worst)
 
-'''
-
-'''
-def sp_spike_width(best_worst):#This method must be pickle-able for ipyparallel to work.
-
+def sp_spike_width(best_worst):
     #A method to plot the best and worst candidate solution waveforms side by side
     #Inputs: An individual gene from the population that has compound parameters, and a tuple iterator that
     #is a virtual model object containing an appropriate parameter set, zipped togethor with an appropriate rheobase
@@ -1318,7 +1314,7 @@ def pandas_rh_search(vmoffspring):
     s4 = df4.style.background_gradient(cmap = shrunk_cmap)
 
     return df0,df1,df2,df3,df4
-'''
+
 def not_just_mean(log,hypervolumes):
     '''
     https://github.com/BlueBrain/BluePyOpt/blob/master/examples/graupnerbrunelstdp/run_fit.py
