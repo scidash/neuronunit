@@ -166,7 +166,8 @@ class RheobaseTestP(VmTest):
                     "needed to evoke at least one spike.")
      units = pq.pA
      ephysprop_name = 'Rheobase'
-     score_type = scores.RatioScore
+     score_type = scores.ZScore
+     #score_type = scores.RatioScore
 
      def generate_prediction(self, model):
         '''
@@ -356,12 +357,12 @@ class RheobaseTestP(VmTest):
          #if type(prediction['value']) is type(None):
          #    prediction['value'] = -1 * pq.pA
          #    return scores.InsufficientDataScore(None)
-
+         '''
          if float(prediction['value']) <= 0.0:
             # if rheobase is negative discard the model essentially.
             prediction['value'] = -1 * pq.pA
             return scores.InsufficientDataScore(None)
-
+         '''
          score = super(RheobaseTestP,self).\
                      compute_score(observation, prediction)
          return score

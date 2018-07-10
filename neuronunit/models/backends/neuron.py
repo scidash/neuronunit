@@ -187,7 +187,7 @@ class NEURONBackend(Backend):
 
         return vTarget
 
-    def load(self,tstop=650*ms):
+    def load(self,tstop = 650*ms):
         nrn_path = os.path.splitext(self.model.orig_lems_file_path)[0]+'_nrn.py'
         nrn = import_module_from_path(nrn_path)
         self.reset_neuron(nrn.neuron)
@@ -352,21 +352,44 @@ class NEURONBackend(Backend):
         self.init_backend()
         self.set_attrs(**temp_attrs)
 
-        c = copy.copy(current)
-        if 'injected_square_current' in c.keys():
+        current = copy.copy(current)
+        if 'injected_square_current' in current.keys():
             c = current['injected_square_current']
+        else:
+            c = current    
+        delay = float(c['delay'])
+        duration = float(c['duration'])
+        ##
+        # critical code:
+        ##
         c['delay'] = re.sub('\ ms$', '', str(c['delay'])) # take delay
+        #print(delay,c['delay'],duration,c['duration'],type(delay),type(c['delay']),type(duration),type(c['duration']))
+        #assert delay == float(c['delay'])
         c['duration'] = re.sub('\ ms$', '', str(c['duration']))
+        self.set_stop_time(duration)
+
         c['amplitude'] = re.sub('\ pA$', '', str(c['amplitude']))
+
+
         # NEURONs default unit multiplier for current injection values is nano amps.
         # to make sure that pico amps are not erroneously interpreted as a larger nano amp.
         # current injection value, the value is divided by 1000.
-        amps=float(c['amplitude'])/1000.0 #This is the right scale.
+        amps = float(c['amplitude'])/1000.0 #This is the right scale.
         prefix = 'explicitInput_%s%s_pop0.' % (self.current_src_name,self.cell_name)
         define_current = []
-        define_current.append(prefix+'amplitude=%s'%amps)
-        define_current.append(prefix+'duration=%s'%c['duration'])
-        define_current.append(prefix+'delay=%s'%c['delay'])
+        '''
+        define_current1 = []
+        define_current1.append(prefix+'amplitude=%s'%amps)
+        define_current1.append(prefix+'duration=%s'%duration)
+        define_current1.append(prefix+'delay=%s'%delay)
+        print(define_current, 'my new')
+        #print(define_current1, 'old')
+        '''
+        define_current.append('{0}amplitude={1}'.format(prefix,amps))
+        define_current.append('{0}duration={1}'.format(prefix,duration))
+        define_current.append('{0}delay={1}'.format(prefix,delay))
+
+
         for string in define_current:
             # execute hoc code strings in the python interface to neuron.
             self.h(string)

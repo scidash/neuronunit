@@ -117,6 +117,15 @@ def update_dtc_grid(item_of_iter_list):
     dtc.backend = 'NEURON'
     return dtc
 
+def create_a_map(subset):
+    maps = {}
+    for k,v in subset.items():
+        maps[k] = {}
+        for ind,j in enumerate(subset[k]):
+            maps[k][j] = ind
+    return maps
+
+
 def create_grid(npoints=3,nparams=7,provided_keys=None):
     '''
     Description, create a grid of evenly spaced samples in model parameters to search over.
@@ -140,14 +149,8 @@ def create_grid(npoints=3,nparams=7,provided_keys=None):
     # a smaller dictionary, if it is smaller it is reduced by reducing sampling
     # points.
     smaller = {}
-
-    #temp = OrderedDict(grid_points[0]).keys()
-    #tds = list(temp) #for g in grid_points
-
     smaller = OrderedDict(sample_points(mp, npoints=npoints))
-
     if type(provided_keys) is type(None):
-
         key_list = list(smaller.keys())
         reduced_key_list = key_list[0:nparams]
     else:
@@ -155,18 +158,22 @@ def create_grid(npoints=3,nparams=7,provided_keys=None):
 
     # subset is reduced, by reducing parameter keys.
     subset = OrderedDict( {k:smaller[k] for k in reduced_key_list})
-    maps = {}
-    for k,v in subset.items():
-        maps[k] = {}
-        for ind,j in enumerate(subset[k]):
-            maps[k][j] = ind
 
+    maps = create_a_map(subset)
+    if npoints > 1:
+        for k,v in subset.items():
+            v[0] = v[0]*1.0/3.0
+            v[1] = v[1]*2.0/3.0
+
+    # The function of maps is to map floating point sample spaces onto a  monochromataic matrix indicies.
 
     grid = list(ParameterGrid(subset))
+
     return grid, maps
 
-def make_grid(x, y, z):
+def tfg2i(x, y, z):
     '''
+    translate_float_grid_to_index
     Takes x, y, z values as lists and returns a 2D numpy array
     '''
     dx = abs(np.sort(list(set(x)))[1] - np.sort(list(set(x)))[0])
@@ -177,8 +184,10 @@ def make_grid(x, y, z):
     grid[j, i] = z # if using latitude and longitude (for WGS/West)
     return grid
 
-def make_hyper_cube(x, y, z,err):
+def tfc2i(x, y, z,err):
     '''
+    translate_float_cube_to_index
+
     Takes x, y, z values as lists and returns a 2D numpy array
     '''
     dx = abs(np.sort(list(set(x)))[1] - np.sort(list(set(x)))[0])
@@ -195,17 +204,7 @@ def make_hyper_cube(x, y, z,err):
     grid[i,j,k] = err # if using latitude and longitude (for WGS/West)
     return
 
-def remap_point(x,y,z,other_points):
-    '''
-    Takes x, y, z values to make a grid, then takes a single cartesian coordinate
-    and remaps it as an index on the grid
-     as lists and returns a 2D numpy array
-    '''
-    dx = abs(np.sort(list(set(x)))[1] - np.sort(list(set(x)))[0])
-    dy = abs(np.sort(list(set(y)))[1] - np.sort(list(set(y)))[0])
-    i = ((other_points[0] - min(x)) / dx).astype(int) # Longitudes
-    j = abs((other_points[1] - max(y)) / dy).astype(int) # Latitudes
-    return i,j,z
+
 
 def transdict(dictionaries):
     from collections import OrderedDict
@@ -238,7 +237,7 @@ def run_grid(nparams,npoints,tests,provided_keys = None):
 
     for sub_pop in consumable:
         grid_results.extend(update_deap_pop(sub_pop, tests, td))
-        assert len(grid_results[0].dtc.attrs.keys()) == 3
+        #assert len(grid_results[0].dtc.attrs.keys()) == 3
         assert len(grid_results[0].dtc.scores.keys()) >= 2
 
         with open('grid_cell_results'+str(nparams)+str('.p'),'wb') as f:

@@ -59,14 +59,11 @@ def error_domination(dtc_ga,dtc_grid):
 
 def make_report(grid_results, ga_out, nparams, pop = None):
     from neuronunit.optimization.exhaustive_search import create_grid
-    grid_points = create_grid(npoints = 1,nparams = nparams)#td = list(grid_points[0].keys())
-    td = list(grid_points[0].keys())
+    grid_points = create_grid(npoints = 2,nparams = nparams)
+    td = list(grid_points[0][0].keys())
 
     reports = {}
     reports[nparams] = {}
-
-    reports[nparams]['ga_out'] = ga_out
-    reports[nparams]['grid_results'] = grid_results
 
     mini = min_max(grid_results)[0][1]
     maxi = min_max(grid_results)[1][1]
@@ -120,7 +117,7 @@ def make_report(grid_results, ga_out, nparams, pop = None):
     attrs_ga = min_max(ga_out)[0][0]
 
     grid_points = create_grid(npoints = 1,nparams = nparams)#td = list(grid_points[0].keys())
-    td = list(grid_points[0].keys())
+    td = list(grid_points[0][0].keys())
 
     reports[nparams]['p_dist'] = param_distance(attrs_ga,attrs_grid,td)
     dtc_grid = dtc_ga = min_max(ga_out)[0][2]

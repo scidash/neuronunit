@@ -36,34 +36,23 @@ electro_tests = get_neab.substitute_parallel_for_serial(electro_tests)
 test, observation = electro_tests[0]
 
 npoints = 6
-nparams = 3
 tests = copy.copy(electro_tests[0][0][0:2])
 
-
-#with open('pre_grid_reports.p','rb') as f:
-#    [grid_results,nparams] = pickle.load(f)
-
-#grid_results = None
-
-nparams = 3
-#tests = electro_tests[0][0][0:2]
 opt_keys = [str('a'),str('vr'),str('b')]
+nparams = 3
+#opt_keys = list(copy.copy(grid_results)[0].dtc.attrs.keys())
+#ga_out = run_ga(model_params,nparams,npoints,tests,provided_keys = opt_keys)
+#ga_out = run_ga(model_params,10,npoints,tests)#,provided_keys = opt_keys)
+ga_out = run_ga(model_params,nparams,npoints,tests,provided_keys = opt_keys)
+
+with open('pre_ga_reports.p','wb') as f:
+   pickle.dump(ga_out,f)
 
 grid_results = run_grid(nparams,npoints,tests,provided_keys = opt_keys)
-print('what the hell is going wrong here a')
-
-import pdb; pdb.set_trace()
-
 with open('pre_grid_reports.p','wb') as f:#
     pickle.dump(grid_results,f)
-print('what the hell is going wrong here b')
-import pdb; pdb.set_trace()
-#opt_keys = list(copy.copy(grid_results)[0].dtc.attrs.keys())
-ga_out = run_ga(model_params,nparams,npoints,tests,provided_keys = opt_keys)
-with open('pre_ga_reports.p','wb') as f:
-    pickle.dump(ga_out,f)
-print('what the hell is going wrong here c')
-import pdb; pdb.set_trace()
+
+#import pdb; pdb.set_trace()
 #pop = ga_out[0]
 #new_report = make_report(grid_results, pop, nparams)
 #reports.update(new_report)

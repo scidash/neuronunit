@@ -23,9 +23,7 @@ from pyneuroml import pynml
 from deap import base
 from neuronunit.optimization.data_transport_container import DataTC
 from neuronunit.models.interfaces import glif
-from neuronunit.optimization import model_parameters as modelp
 
-from neuronunit.models.reduced import ReducedModel
 
 import os
 import pickle
@@ -85,7 +83,7 @@ def dtc_to_rheo(xargs):
     model.set_attrs(dtc.attrs)
     dtc.scores = {}
     dtc.score = {}
-    score = rtest.judge(model,stop_on_error = False, deep_error = True)
+    score = rtest.judge(model,stop_on_error = False, deep_error = False)
     if score.sort_key is not None:
         dtc.scores.get(str(rtest), 1 - score.sort_key)
         dtc.scores[str(rtest)] = 1 - score.sort_key
@@ -103,11 +101,12 @@ def score_proc(dtc,t,score):
             if 'mean' in score.observation.keys() and 'mean' in score.prediction.keys():
                 print(score.observation.keys())
                 dtc.score[str(t)][str('agreement')] = np.abs(score.observation['mean'] - score.prediction['mean'])
-    if score.sort_key is not None:
-        dtc.scores[str(t)] = 1.0 - score.sort_key
-    else:
-        dtc.scores[str(t)] = 1.0
     return dtc
+
+    #if score.sort_key is not None:
+    #    dtc.scores[str(t)] = 1.0 - score.sort_key
+    #else:
+    #    dtc.scores[str(t)] = 1.0
 
 def nunit_evaluation(tuple_object):#,backend=None):
     # Inputs single data transport container modules, and neuroelectro observations that
@@ -128,17 +127,24 @@ def nunit_evaluation(tuple_object):#,backend=None):
         model.set_attrs(dtc.attrs)
         tests[0].prediction = dtc.rheobase
         model.rheobase = dtc.rheobase['value']
-
+    tests = [t for t in tests if str('RheobaseTestP') not in str(t) ]
     for k,t in enumerate(tests):
         t.params = dtc.vtest[k]
         score = None
-        score = t.judge(model,stop_on_error = False, deep_error = False)
+        #model = None
+        #model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = ('NEURON',{'DTC':dtc}))
+        model.set_attrs(dtc.attrs)
+        score = t.judge(model,stop_on_error = True, deep_error = True)
+        print(score)
+        dtc.scores.get(str(t), 1 - score.sort_key)
+        dtc.scores[str(t)] = 1 - score.sort_key
         if score.sort_key is not None:
             dtc.scores.get(str(t), 1 - score.sort_key)
             dtc.scores[str(t)] = 1 - score.sort_key
-            dtc = score_proc(dtc,t,score)
+            dtc = score_proc(dtc,t,copy.copy(score))
         else:
             dtc.scores[str(t)] = 1.0
+        #import pdb; pdb.set_trace()
         print(dtc.scores)
     assert len(dtc.scores.keys()) >= 2
     return dtc
@@ -243,7 +249,7 @@ def run_ga(model_params,nparams,npoints,test, provided_keys = None):
     max_ngen = int(np.floor(nparams))
     #assert (MU * max_ngen) < (npoints * nparams)
     DO = DEAPOptimisation(offspring_size = MU, error_criterion = test, selection = str('selNSGA'), provided_dict = subset, elite_size = 2)
-    assert len(DO.params.items()) == 3
+    #assert len(DO.params.items()) == 3
     ga_out = DO.run(offspring_size = MU, max_ngen = 15)
     with open('all_ga_cell.p','wb') as f:
         pickle.dump(ga_out,f)
@@ -287,6 +293,7 @@ def update_deap_pop(pop, tests, td, backend = None):
     dtcbag = db.from_sequence(list(zip(dtcpop,repeat(tests))), npartitions = npart)
 
     dtcpop = list(dtcbag.map(nunit_evaluation).compute())
+
     for i,d in enumerate(dtcpop):
         pop[i].dtc = None
         pop[i].dtc = copy.copy(dtcpop[i])
