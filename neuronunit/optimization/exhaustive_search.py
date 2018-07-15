@@ -58,7 +58,7 @@ def chunks(l, n):
         ch.append(l[:][i:i+n])
     return ch
 
-def build_chunk_grid(npoints,nparams,provided_keys):
+def build_chunk_grid(npoints, nparams, provided_keys):
     grid_points, maps = create_grid(npoints = npoints,nparams = nparams, provided_keys = provided_keys)
     temp = OrderedDict(grid_points[0]).keys()
     tds = list(temp)
@@ -69,9 +69,13 @@ def build_chunk_grid(npoints,nparams,provided_keys):
         pops.append(pop)
 
     # divide population into chunks that reflect the number of CPUs.
+    # don't want lists of lengths 1 that are awkward to iterate over.
+    # so check if there would be a chunk of list length 1, and if so divide by a different numberself.
+    # that is still dependant on CPU number.
     if len(pops) % npartitions != 1:
         pops_ = chunks(pops,npartitions)
     else:
+
         pops_ = chunks(pops,npartitions-2)
     try:
         assert pops_[0] != pops_[1]
@@ -214,13 +218,13 @@ def transdict(dictionaries):
         mps[k] = dictionaries[k]
     return mps
 
-def run_grid(nparams,npoints,tests,provided_keys = None):
+def run_grid(nparams,npoints,tests,provided_keys = None, hold_constant = None):
 
     consumable_ ,td = build_chunk_grid(npoints,nparams,provided_keys)
-    #consumble = [(sub_pop, test, observation ) for test, _ in electro_tests for sub_pop in pops_ ]
-    # Create a consumble iterator, that facilitates memory friendly lazy evaluation.
+    #import pdb; pdb.set_trace()
+    #make an argument to specify if you want to cache the iterator, use shelve to do it.
+    '''
     try:
-        assert 1==2
 
         with open('grid_cell_results'+str(nparams)+str('.p'),'rb') as f:
             results  = pickle.load(f)
@@ -231,9 +235,16 @@ def run_grid(nparams,npoints,tests,provided_keys = None):
             if len(consumable_) < len(consumable) and len(consumable_) !=0 :
                 consumbale = iter(consumbale_)
     except:
-        consumable = iter(consumable_)
+    '''
+    consumable = iter(consumable_)
     cnt = 0
     grid_results = []
+    if type(hold_constant) is not type(None):
+        hc = list(hold_constant.values())[0]
+        for c in consumable_:
+            for i in c:
+                i.append(hc)
+        td.append(list(hold_constant.keys())[0])
 
     for sub_pop in consumable:
         grid_results.extend(update_deap_pop(sub_pop, tests, td))
