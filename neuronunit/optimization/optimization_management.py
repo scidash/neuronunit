@@ -88,7 +88,7 @@ def dtc_to_rheo(xargs):
         dtc.scores.get(str(rtest), 1 - score.sort_key)
         dtc.scores[str(rtest)] = 1 - score.sort_key
         dtc = score_proc(dtc,rtest,score)
-    dtc.rheobase = score.prediction
+        dtc.rheobase = score.prediction
     return dtc
 
 def score_proc(dtc,t,score):
@@ -98,9 +98,13 @@ def score_proc(dtc,t,score):
         if type(score.prediction) is not type(None):
             dtc.score[str(t)][str('prediction')] = score.prediction
             dtc.score[str(t)][str('observation')] = score.observation
-            if 'mean' in score.observation.keys() and 'mean' in score.prediction.keys():
-                print(score.observation.keys())
+            boolean_means = bool('mean' in score.observation.keys() and 'mean' in score.prediction.keys())
+            boolean_value = bool('value' in score.observation.keys() and 'value' in score.prediction.keys())
+            if boolean_means:
                 dtc.score[str(t)][str('agreement')] = np.abs(score.observation['mean'] - score.prediction['mean'])
+            if boolean_value:
+                dtc.score[str(t)][str('agreement')] = np.abs(score.observation['value'] - score.prediction['value'])
+
     return dtc
 
     #if score.sort_key is not None:
@@ -134,13 +138,12 @@ def nunit_evaluation(tuple_object):#,backend=None):
         #model = None
         #model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = ('NEURON',{'DTC':dtc}))
         model.set_attrs(dtc.attrs)
-        score = t.judge(model,stop_on_error = True, deep_error = True)
-        print(score)
-        dtc.scores.get(str(t), 1 - score.sort_key)
-        dtc.scores[str(t)] = 1 - score.sort_key
+        score = t.judge(model,stop_on_error = False, deep_error = False)
+        #print(score)
         if score.sort_key is not None:
             dtc.scores.get(str(t), 1 - score.sort_key)
             dtc.scores[str(t)] = 1 - score.sort_key
+
             dtc = score_proc(dtc,t,copy.copy(score))
         else:
             dtc.scores[str(t)] = 1.0

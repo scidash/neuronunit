@@ -156,54 +156,39 @@ def tiled_figure(figname='', frames=1, columns=2,
         axs = figs[figname]['axs']
 
     return axs
+import numpy as np
+import matplotlib
+matplotlib.rcParams.update({'font.size':16})
+import matplotlib.pyplot as plt
 
-def plot_surface(model_param0,model_param1,td,history):
+def plot_surface(fig_trip,ax_trip,model_param0,model_param1,history):
     '''
 
     Move this method back to plottools
     Inputs should be keys, that are parameters see new function definition below
     '''
-
-    import numpy as np
-    import matplotlib
-    matplotlib.rcParams.update({'font.size':16})
-    import matplotlib.pyplot as plt
-
-
+    td = list(history.genealogy_history[1].dtc.attrs.keys())
     x = [ i for i,j in enumerate(td) if str(model_param0) == j ][0]
     y = [ i for i,j in enumerate(td) if str(model_param1) == j ][0]
+
     all_inds = history.genealogy_history.values()
     sums = np.array([np.sum(ind.fitness.values) for ind in all_inds])
-    #quads = []
-    '''
-    for k in range(1,9):
-        for i,j in enumerate(td):
-            if i+k < 10:
-                quads.append((td[i],td[i+k],i,i+k))
-    all_inds1 = list(history.genealogy_history.values())
-    '''
-    #import pdb; pdb.set_trace()
-    #print(all_inds1[x])
-
-    #ab = [ (all_inds1[x],all_inds1[y]) for y in all_inds1 ]
 
     xs = np.array([ind[x] for ind in all_inds])
     ys = np.array([ind[y] for ind in all_inds])
     min_ys = ys[np.where(sums == np.min(sums))]
     min_xs = xs[np.where(sums == np.min(sums))]
-    plt.clf()
-    fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
+
+    #fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
     trip_axis = ax_trip.tripcolor(xs,ys,sums,20,norm=matplotlib.colors.LogNorm())
     plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue',label='global minima')
-    fig_trip.colorbar(trip_axis, label='Sum of Objective Errors ')
-    ax_trip.set_xlabel('Parameter '+str((td[x])))
-    ax_trip.set_ylabel('Parameter '+str((td[y])))
+    #plot_axis.colorbar(trip_axis, label='Sum of Objective Errors ')
+    if type(td) is not type(None):
+        ax_trip.set_xlabel('Parameter '+str((td[x])))
+        ax_trip.set_ylabel('Parameter '+str((td[y])))
     plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
-    fig_trip.tight_layout()
-    if not KERNEL:
-        plt.savefig('surface'+str((td[z])+str('.png')))
-    else:
-        plt.show()
+    #plot_axis.tight_layout()
+    return ax_trip,plot_axis
 
 def shadow(dtcpop,best_vm):#This method must be pickle-able for ipyparallel to work.
     '''
