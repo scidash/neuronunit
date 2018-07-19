@@ -28,6 +28,7 @@ import os
 import numpy as np
 npartitions = multiprocessing.cpu_count()
 npart = multiprocessing.cpu_count()
+import shelve
 
 import os
 
@@ -59,7 +60,7 @@ def chunks(l, n):
     return ch
 
 def build_chunk_grid(npoints, nparams, provided_keys):
-    grid_points, maps = create_grid(npoints = npoints,nparams = nparams, provided_keys = provided_keys)
+    grid_points, maps = create_grid(npoints = npoints, provided_keys = provided_keys)
     temp = OrderedDict(grid_points[0]).keys()
     tds = list(temp)
     pops = []
@@ -77,10 +78,9 @@ def build_chunk_grid(npoints, nparams, provided_keys):
     else:
 
         pops_ = chunks(pops,npartitions-2)
-    try:
-        assert pops_[0] != pops_[1]
-    except:
-        pdb.set_trace()
+
+    assert pops_[0] != pops_[1]
+
     return pops_, tds
 
 
@@ -92,11 +92,10 @@ def sample_points(iter_dict, npoints=3):
         replacement[k] = sample_points
     return replacement
 
-
+'''depreciated
 def create_refined_grid(best_point,point1,point2):
-    '''
-    Can be used for creating a second pass fine grained grid
-    '''
+
+    # Can be used for creating a second pass fine grained grid
 
     # This function reports on the deltas brute force obtained versus the GA found attributes.
     #from neuronunit.optimization import model_parameters as modelp
@@ -110,6 +109,7 @@ def create_refined_grid(best_point,point1,point2):
         # discard edge points, as they are already well searched/represented.
     grid = list(ParameterGrid(new_search_interval))
     return grid
+'''
 
 def update_dtc_grid(item_of_iter_list):
 
@@ -130,7 +130,7 @@ def create_a_map(subset):
     return maps
 
 
-def create_grid(npoints=3,nparams=7,provided_keys=None):
+def create_grid(npoints=3,nparams=7,provided_keys=None,ga=None):
     '''
     Description, create a grid of evenly spaced samples in model parameters to search over.
     Inputs: npoints, type: Integer: number of sample points per parameter
@@ -164,10 +164,12 @@ def create_grid(npoints=3,nparams=7,provided_keys=None):
     subset = OrderedDict( {k:smaller[k] for k in reduced_key_list})
 
     maps = create_a_map(subset)
-    if npoints > 1:
-        for k,v in subset.items():
-            v[0] = v[0]*1.0/3.0
-            v[1] = v[1]*2.0/3.0
+    if type(ga) is not type(None):
+
+        if npoints > 1:
+            for k,v in subset.items():
+                v[0] = v[0]*1.0/3.0
+                v[1] = v[1]*2.0/3.0
 
     # The function of maps is to map floating point sample spaces onto a  monochromataic matrix indicies.
 
@@ -203,8 +205,7 @@ def tfc2i(x, y, z,err):
     k = ((z - max(z)) / dz).astype(int) # Latitudes
 
     grid = np.nan * np.empty((len(set(i)),len(set(j)), len(set(k)) ))
-    print(len(set(i)),len(set(j)), len(set(k)) )
-    print(np.shape(grid))
+
     grid[i,j,k] = err # if using latitude and longitude (for WGS/West)
     return
 
@@ -218,25 +219,23 @@ def transdict(dictionaries):
         mps[k] = dictionaries[k]
     return mps
 
-def run_grid(nparams,npoints,tests,provided_keys = None, hold_constant = None):
 
-    consumable_ ,td = build_chunk_grid(npoints,nparams,provided_keys)
-    #import pdb; pdb.set_trace()
-    #make an argument to specify if you want to cache the iterator, use shelve to do it.
-    '''
-    try:
+def run_grid(nparams,npoints,tests,provided_keys = None, hold_constant = None, use_cache = False):
+    s = shelve.open('iterator.db')
+    if use_cache:
+        try:
+            grid_results = s['grid_results']
+            consumable = s['consumable'] #=
 
-        with open('grid_cell_results'+str(nparams)+str('.p'),'rb') as f:
-            results  = pickle.load(f)
-        with open('iterator_state'+str(nparams)+str('.p'),'rb') as f:
-            sub_pop, test, observation, cnt = pickle.load(f)
-            # consumble_ = [(sub_pop, test, observation ) for test, _ in electro_tests for sub_pop in pops_ ][cnt]
-            consumable_ = consumable_[cnt]
-            if len(consumable_) < len(consumable) and len(consumable_) !=0 :
-                consumbale = iter(consumbale_)
-    except:
-    '''
-    consumable = iter(consumable_)
+            #if len(consumable_) < len(consumable) and len(consumable_) !=0 :
+            #    consumbale = iter(consumbale_)
+        except:
+            raise Exception('no file')
+
+    else:
+        consumable_ ,td = build_chunk_grid(npoints,nparams,provided_keys)
+        consumable = iter(consumable_)
+
     cnt = 0
     grid_results = []
     if type(hold_constant) is not type(None):
@@ -248,13 +247,13 @@ def run_grid(nparams,npoints,tests,provided_keys = None, hold_constant = None):
 
     for sub_pop in consumable:
         grid_results.extend(update_deap_pop(sub_pop, tests, td))
-        #assert len(grid_results[0].dtc.attrs.keys()) == 3
-        assert len(grid_results[0].dtc.scores.keys()) >= 2
-
-        with open('grid_cell_results'+str(nparams)+str('.p'),'wb') as f:
-            pickle.dump(grid_results,f)
-        with open('iterator_state'+str(nparams)+str('.p'),'wb') as f:
-            pickle.dump([sub_pop, tests, cnt],f)
+        if type(s) is not type(None):
+            s['consumable'] = consumable
+            s['cnt'] = cnt
+            s['grid_results'] = grid_results
+            s['sub_pop'] = sub_pop
         cnt += 1
         print('done_block_of_N_cells: ',cnt)
+    if type(s) is not type(None):
+        s.close()
     return grid_results
