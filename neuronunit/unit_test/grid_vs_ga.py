@@ -79,7 +79,7 @@ def run_and_save(opt_keys,tests):
 
 
 
-opt_keys = [str('a'),str('vr'),str('b'),str('c')]
+opt_keys = [str('a'),str('vr'),str('b'),str('c'),str('C')]
 
 #for i in range(1,4):
 #opt_keys = opt_keys[0:i]

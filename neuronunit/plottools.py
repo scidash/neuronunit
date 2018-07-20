@@ -190,6 +190,25 @@ def plot_surface(fig_trip,ax_trip,model_param0,model_param1,history):
     #plot_axis.tight_layout()
     return ax_trip,plot_axis
 
+
+def scatter_surface(fig_trip,ax_trip,model_param0,model_param1,history):
+    '''
+
+    Move this method back to plottools
+    Inputs should be keys, that are parameters see new function definition below
+    '''
+    td = list(history.genealogy_history[1].dtc.attrs.keys())
+    x = [ i for i,j in enumerate(td) if str(model_param0) == j ][0]
+    y = [ i for i,j in enumerate(td) if str(model_param1) == j ][0]
+
+    all_inds = history.genealogy_history.values()
+    z = np.array([np.sum(ind.fitness.values) for ind in all_inds])
+
+    xs = np.array([ind[x] for ind in all_inds])
+    ys = np.array([ind[y] for ind in all_inds])
+
+    return xs,ys,z
+
 def shadow(dtcpop,best_vm):#This method must be pickle-able for ipyparallel to work.
     '''
     A method to plot the best and worst candidate solution waveforms side by side
