@@ -237,7 +237,7 @@ def update_dtc_pop(pop, td, backend = None):
     return dtcpop
 
 
-def run_ga(model_params,nparams,npoints,test, provided_keys = None):
+def run_ga(model_params,nparams,npoints,test, provided_keys = None, use_cache = None, cache_name = None):
     # https://stackoverflow.com/questions/744373/circular-or-cyclic-imports-in-python
     # These imports need to be defined with local scope to avoid circular importing problems
     # Try to fix local imports later.
