@@ -83,6 +83,7 @@ def dtc_to_rheo(xargs):
     model.set_attrs(dtc.attrs)
     dtc.scores = {}
     dtc.score = {}
+    print()
     score = rtest.judge(model,stop_on_error = False, deep_error = False)
     if score.sort_key is not None:
         dtc.scores.get(str(rtest), 1 - score.sort_key)
@@ -135,11 +136,10 @@ def nunit_evaluation(tuple_object):#,backend=None):
     for k,t in enumerate(tests):
         t.params = dtc.vtest[k]
         score = None
-        #model = None
-        #model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = ('NEURON',{'DTC':dtc}))
+        model = None
+        model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = ('NEURON',{'DTC':dtc}))
         model.set_attrs(dtc.attrs)
         score = t.judge(model,stop_on_error = False, deep_error = False)
-        #print(score)
         if score.sort_key is not None:
             dtc.scores.get(str(t), 1 - score.sort_key)
             dtc.scores[str(t)] = 1 - score.sort_key
@@ -147,7 +147,6 @@ def nunit_evaluation(tuple_object):#,backend=None):
             dtc = score_proc(dtc,t,copy.copy(score))
         else:
             dtc.scores[str(t)] = 1.0
-        #import pdb; pdb.set_trace()
         print(dtc.scores)
     assert len(dtc.scores.keys()) >= 2
     return dtc
