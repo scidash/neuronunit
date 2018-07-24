@@ -70,7 +70,7 @@ def run_and_save(opt_keys,tests):
         pickle.dump([grid_results,opt_keys,tests,elapsed_grid],f)
 
     it = timeit.default_timer()
-    ga_out = run_ga(model_params,nparams,npoints,tests,provided_keys = opt_keys)
+    ga_out = run_ga(model_params,nparams,npoints,tests,provided_keys = opt_keys, use_cache = True, cache_name='simple')
     ft = timeit.default_timer()
     elapsed_ga = ft - it
     with open('dim_{0}_errs{1}_ga.p'.format(len(opt_keys),len(tests)),'wb') as f:

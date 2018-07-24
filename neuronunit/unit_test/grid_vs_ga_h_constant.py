@@ -99,7 +99,7 @@ for i in range(len(attrs_list)):
 
             provided_keys.append(attrs_list[i])
             provided_keys.append(attrs_list[j])
-            gr = es.run_grid(2,10,tests,provided_keys = provided_keys ,hold_constant = bd)
+            gr = es.run_grid(2,10,tests,provided_keys = provided_keys ,hold_constant = bd, use_cache = True, cache_name='complex')
             key = str(attrs_list[i])+str(attrs_list[j])
             grid_results[key] = gr
 
