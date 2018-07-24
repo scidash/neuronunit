@@ -57,6 +57,12 @@ with open('pre_ga_reports.p','rb') as f:
 
 
 start_time = timeit.default_timer()
+#sel = [str('selNSGA2'),str('selIBEA'),str('')]
+flat_iter = [ (test, observation) for test, observation in electro_tests ] #for s in sel ]
+print(flat_iter)
+
+
+
 
 import nbformat
 import os
@@ -89,12 +95,15 @@ def run_and_save(opt_keys,tests):
     ep.preprocess(nb, {'metadata': {'path': os.getcwd()}})
     with open(file_name, 'wt') as f:
         nbformat(nb, f)
+    return ga_out
 
 
+for (s,test, observation) in flat_iter:
+    opt_keys = [str('a'),str('vr'),str('b')]# ,str('c')]#,str('C')]
+    ga_out = run_and_save(opt_keys,test)
+    pipe_results[dic_key] = ga_out
 
 
-
-opt_keys = [str('a'),str('vr'),str('b'),str('c')]#,str('C')]
 
 #for i in range(1,4):
 #opt_keys = opt_keys[0:i]
