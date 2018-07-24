@@ -59,7 +59,7 @@ def chunks(l, n):
         ch.append(l[:][i:i+n])
     return ch
 
-def build_chunk_grid(npoints, nparams, provided_keys):
+def build_chunk_grid(npoints, provided_keys):
     grid_points, maps = create_grid(npoints = npoints, provided_keys = provided_keys)
     temp = OrderedDict(grid_points[0]).keys()
     tds = list(temp)
@@ -220,8 +220,8 @@ def transdict(dictionaries):
     return mps
 
 
-def run_grid(nparams,npoints,tests,provided_keys = None, hold_constant = None, use_cache = False):
-    s = shelve.open('iterator.db')
+def run_grid(nparams,npoints,tests,provided_keys = None, hold_constant = None, use_cache = False, cache_name=None):
+    s = shelve.open(str(cache_name)+'iterator.db')
     if use_cache:
         try:
             grid_results = s['grid_results']
@@ -233,8 +233,7 @@ def run_grid(nparams,npoints,tests,provided_keys = None, hold_constant = None, u
             raise Exception('no file')
 
     else:
-        consumable_ ,td = build_chunk_grid(npoints,nparams,provided_keys)
-        consumable = iter(consumable_)
+        consumable_ ,td = build_chunk_grid(npoints,provided_keys)
 
     cnt = 0
     grid_results = []
@@ -245,8 +244,10 @@ def run_grid(nparams,npoints,tests,provided_keys = None, hold_constant = None, u
                 i.append(hc)
         td.append(list(hold_constant.keys())[0])
 
+    consumable = iter(consumable_)
     for sub_pop in consumable:
         grid_results.extend(update_deap_pop(sub_pop, tests, td))
+
         if type(s) is not type(None):
             s['consumable'] = consumable
             s['cnt'] = cnt
