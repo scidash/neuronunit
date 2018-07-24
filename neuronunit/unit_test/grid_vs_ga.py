@@ -21,6 +21,7 @@ from neuronunit.optimization.results_analysis import min_max, error_domination, 
 
 from neuronunit.optimization.results_analysis import make_report
 from neuronunit.optimization import get_neab
+import time
 
 import copy
 reports = {}
@@ -54,12 +55,13 @@ with open('pre_ga_reports.p','rb') as f:
 #ga_out = run_ga(model_params,nparams,npoints,tests,provided_keys = opt_keys)
 #ga_out = run_ga(model_params,10,npoints,tests)#,provided_keys = opt_keys)
 
-import time
+
 start_time = timeit.default_timer()
 
+import nbformat
+import os
+from nbconvert.preprocessors import ExecutePreprocessor
 def run_and_save(opt_keys,tests):
-
-
     nparams = len(opt_keys)
 
     it = timeit.default_timer()
@@ -75,15 +77,29 @@ def run_and_save(opt_keys,tests):
     elapsed_ga = ft - it
     with open('dim_{0}_errs{1}_ga.p'.format(len(opt_keys),len(tests)),'wb') as f:
        pickle.dump([ga_out,opt_keys,tests,elapsed_ga],f)
+    file_name ='dim_{0}_errs{1}_ga.ipynb'.format(len(opt_keys),len(tests))
+    #os.system("cp agreement_df.ipynb "+file_name)
+    #os.system("ipython nbconvert --to html --execute "+file_name)
+
+
+    with open('agreement_df.ipynb') as f:
+        nb = nbformat.read(f, as_version=4)
+    ep = ExecutePreprocessor()
+    #ep = ExecutePreprocessor(timeout=5600, kernel_name='python3')
+    ep.preprocess(nb, {'metadata': {'path': os.getcwd()}})
+    with open(file_name, 'wt') as f:
+        nbformat(nb, f)
 
 
 
 
-opt_keys = [str('a'),str('vr'),str('b'),str('c'),str('C')]
+
+opt_keys = [str('a'),str('vr'),str('b'),str('c')]#,str('C')]
 
 #for i in range(1,4):
 #opt_keys = opt_keys[0:i]
 _ = run_and_save(opt_keys,tests)
+import grid_vs_ga_h_constant
 #import pdb; pdb.set_trace()
 #pop = ga_out[0]
 #new_report = make_report(grid_results, pop, nparams)
