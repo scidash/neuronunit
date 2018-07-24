@@ -42,9 +42,10 @@ electro_tests = get_neab.replace_zero_std(electro_tests)
 electro_tests = get_neab.substitute_parallel_for_serial(electro_tests)
 test, observation = electro_tests[0]
 
-npoints = 10
-#tests = electro_tests[0][0]
+
 tests = copy.copy(electro_tests[0][0][0:2])
+
+#tests = copy.copy(electro_tests[0][0])
 
 
 
@@ -55,6 +56,7 @@ with open('pre_ga_reports.p','rb') as f:
 
 
 
+import time
 start_time = timeit.default_timer()
 
 try:
@@ -62,9 +64,10 @@ try:
 except:
     import matplotlib.pyplot as plt
 from neuronunit.optimization import get_neab
+import copy
 
 electro_path = str(os.getcwd())+'/pipe_tests.p'
-
+print(os.getcwd())
 assert os.path.isfile(electro_path) == True
 with open(electro_path,'rb') as f:
     electro_tests = pickle.load(f)
@@ -75,9 +78,14 @@ test, observation = electro_tests[0]
 
 npoints = 10
 
+opt_keys = [str('a'),str('vr'),str('b'),str('c'),str('C')]
 
+ga_out = run_ga(model_params,nparams,npoints,tests,provided_keys = opt_keys, use_cache = True, cache_name='simple')
+fname = 'dim_{0}_errs{1}_ga.p'.format(len(opt_keys),len(tests))
 
-with open('pre_ga_reports.p','rb') as f:
+with open(fname,'wb') as f:
+   pickle.dump([ga_out,opt_keys,tests,elapsed_ga],f)
+with open(fname,'rb') as f:
     package = pickle.load(f)
 
 pop = package[0]
@@ -95,11 +103,12 @@ for i in range(len(attrs_list)):
             # this finds the parameter that you do not have the explicit index for:
             diff = bs.difference(ss)
             bd =  {}
-            bd[list(diff)[0]] = hof[0].dtc.attrs[list(diff)[0]]
+            for i in range(0,len(diff)):
+                bd[list(diff)[i]] = hof[0].dtc.attrs[list(diff)[i]]
 
             provided_keys.append(attrs_list[i])
             provided_keys.append(attrs_list[j])
-            gr = es.run_grid(2,10,tests,provided_keys = provided_keys ,hold_constant = bd, use_cache = True, cache_name='complex')
+            gr = run_grid(2,10,tests,provided_keys = provided_keys ,hold_constant = bd, use_cache = True, cache_name='complex')
             key = str(attrs_list[i])+str(attrs_list[j])
             grid_results[key] = gr
 
@@ -108,7 +117,7 @@ for i in range(len(attrs_list)):
 
             #with open('held_constant_grid'+str('.p'),'wb') as f:
             #    pickle.dump(grid_results,f)
-import grid_vs_ga
+#import grid_vs_ga
 
             #print(best)
 
