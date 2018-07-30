@@ -39,34 +39,17 @@ test, observation = electro_tests[0]
 
 npoints = 6
 tests = copy.copy(electro_tests[0][0][0:2])
-#tests+= electro_tests[0][0][4:-1]
-#tests = copy.copy(electro_tests[0][0])
-
-
-
-
-with open('pre_ga_reports.p','rb') as f:
-    package = pickle.load(f)
-
-
-
-
-#opt_keys = list(copy.copy(grid_results)[0].dtc.attrs.keys())
-#ga_out = run_ga(model_params,nparams,npoints,tests,provided_keys = opt_keys)
-#ga_out = run_ga(model_params,10,npoints,tests)#,provided_keys = opt_keys)
 
 
 start_time = timeit.default_timer()
-#sel = [str('selNSGA2'),str('selIBEA'),str('')]
-flat_iter = [ (test, observation) for test, observation in electro_tests ] #for s in sel ]
-print(flat_iter)
-
+flat_iter = [ (tests[0:2], observation) for tests[0:2], observation in electro_tests ] #for s in se
 
 
 
 import nbformat
 import os
 from nbconvert.preprocessors import ExecutePreprocessor
+import shutil
 def run_and_save(opt_keys,tests):
     nparams = len(opt_keys)
 
@@ -84,37 +67,42 @@ def run_and_save(opt_keys,tests):
     with open('dim_{0}_errs{1}_ga.p'.format(len(opt_keys),len(tests)),'wb') as f:
        pickle.dump([ga_out,opt_keys,tests,elapsed_ga],f)
     file_name ='dim_{0}_errs{1}_ga.ipynb'.format(len(opt_keys),len(tests))
-    #os.system("cp agreement_df.ipynb "+file_name)
-    #os.system("ipython nbconvert --to html --execute "+file_name)
 
+    os.system("ipython nbconvert --to html --execute agreement.ipynb")
 
-    with open('agreement_df.ipynb') as f:
-        nb = nbformat.read(f, as_version=4)
-    ep = ExecutePreprocessor()
-    #ep = ExecutePreprocessor(timeout=5600, kernel_name='python3')
+    os.system("cp agreement_df.ipynb "+file_name)
+    os.system("ipython nbconvert --to html --execute "+file_name)
+
+    #shutil.chown('dim_{0}_errs{1}_ga.p', user='jovyan', group='user')
+    
+    with open('dim_{0}_errs{1}_ga.p'.format(len(opt_keys),len(tests)),'wb') as f:
+       pickle.dump([ga_out,opt_keys,tests,elapsed_ga],f)
+    file_name ='dim_{0}_errs{1}_ga.ipynb'.format(len(opt_keys),len(tests))
+
+    #shutil.chown(file_name, user='jovyan', group=None)
+
+    os.system("cp agreement_df.ipynb "+file_name)
+    os.system("ipython nbconvert --to html --execute "+file_name)
+
+    '''
+    #ep = ExecutePreprocessor()
+    ep = ExecutePreprocessor(timeout=5600, kernel_name='python3')
     ep.preprocess(nb, {'metadata': {'path': os.getcwd()}})
     with open(file_name, 'wt') as f:
         nbformat(nb, f)
+    '''    
     return ga_out
 
-
-for (s,test, observation) in flat_iter:
+pipe_results = {}
+dic_key = 0# TODO dic_key key, must be replaced with a cell names later
+for test, observation in flat_iter:
     opt_keys = [str('a'),str('vr'),str('b')]# ,str('c')]#,str('C')]
     ga_out = run_and_save(opt_keys,test)
     pipe_results[dic_key] = ga_out
+    dic_key += 1
 
 
-
-#for i in range(1,4):
-#opt_keys = opt_keys[0:i]
-_ = run_and_save(opt_keys,tests)
+with open('agreement_df.p') as f:
+    pickle.dump(pipe_results,p)
+    
 import grid_vs_ga_h_constant
-#import pdb; pdb.set_trace()
-#pop = ga_out[0]
-#new_report = make_report(grid_results, pop, nparams)
-#reports.update(new_report)
-#with open('pre_grid_reports.p','rb') as f:#
-#    grid_results = pickle.load(f)
-
-#with open('pre_ga_reports.p','rb') as f:
-#    package = pickle.load(f)
