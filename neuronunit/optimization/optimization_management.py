@@ -85,7 +85,9 @@ def dtc_to_rheo(xargs):
     dtc.score = {}
     print()
     score = rtest.judge(model,stop_on_error = False, deep_error = False)
-    if score.sort_key is not None:
+    has_pred = bool(type(score.prediction) is not type(None))
+    has_zf = bool(type(score.sort_key) is not type(None))
+    if has_zf and has_pred:
         dtc.scores.get(str(rtest), 1 - score.sort_key)
         dtc.scores[str(rtest)] = 1 - score.sort_key
         dtc = score_proc(dtc,rtest,score)
@@ -237,7 +239,7 @@ def update_dtc_pop(pop, td, backend = None):
     return dtcpop
 
 
-def run_ga(model_params,nparams,npoints,test, provided_keys = None):
+def run_ga(model_params,nparams,npoints,test, provided_keys = None, use_cache = None, cache_name = None):
     # https://stackoverflow.com/questions/744373/circular-or-cyclic-imports-in-python
     # These imports need to be defined with local scope to avoid circular importing problems
     # Try to fix local imports later.
