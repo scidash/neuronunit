@@ -79,19 +79,14 @@ def run_and_save(opt_keys,tests):
        pickle.dump([ga_out,opt_keys,tests,elapsed_ga],f)
     file_name ='dim_{0}_errs{1}_ga.ipynb'.format(len(opt_keys),len(tests))
 
-    #shutil.chown(file_name, user='jovyan', group=None)
 
     os.system("cp agreement_df.ipynb "+file_name)
     os.system("ipython nbconvert --to html --execute "+file_name)
 
-    '''
-    #ep = ExecutePreprocessor()
-    ep = ExecutePreprocessor(timeout=5600, kernel_name='python3')
-    ep.preprocess(nb, {'metadata': {'path': os.getcwd()}})
-    with open(file_name, 'wt') as f:
-        nbformat(nb, f)
-    '''    
     return ga_out
+
+import grid_vs_ga_h_constant
+
 
 pipe_results = {}
 dic_key = 0# TODO dic_key key, must be replaced with a cell names later
@@ -102,7 +97,6 @@ for test, observation in flat_iter:
     dic_key += 1
 
 
-with open('agreement_df.p') as f:
+with open('agreement_df.p','wb') as f:
     pickle.dump(pipe_results,p)
     
-import grid_vs_ga_h_constant
