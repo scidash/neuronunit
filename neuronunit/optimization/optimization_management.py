@@ -85,7 +85,9 @@ def dtc_to_rheo(xargs):
     dtc.score = {}
     print()
     score = rtest.judge(model,stop_on_error = False, deep_error = False)
-    if score.sort_key is not None:
+    has_pred = bool(type(score.prediction) is not type(None))
+    has_zf = bool(type(score.sort_key) is not type(None))
+    if has_zf and has_pred:
         dtc.scores.get(str(rtest), 1 - score.sort_key)
         dtc.scores[str(rtest)] = 1 - score.sort_key
         dtc = score_proc(dtc,rtest,score)

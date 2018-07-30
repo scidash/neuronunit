@@ -49,8 +49,7 @@ tests = copy.copy(electro_tests[0][0][0:2])
 
 
 
-
-with open('pre_ga_reports.p','rb') as f:
+with open('dim_3_errs8_ga.p','rb') as f:
     package = pickle.load(f)
 
 
@@ -78,7 +77,7 @@ test, observation = electro_tests[0]
 
 npoints = 10
 
-opt_keys = [str('a'),str('vr'),str('b')]#,str('c'),str('C')]
+opt_keys = [str('a'),str('vr'),str('b')]
 nparams = len(opt_keys)
 ga_out = run_ga(model_params,nparams,npoints,tests,provided_keys = opt_keys, use_cache = True, cache_name='simple')
 fname = 'dim_{0}_errs{1}_ga.p'.format(len(opt_keys),len(tests))
