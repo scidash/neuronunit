@@ -92,6 +92,13 @@ ga_keys = list(pop[0].dtc.attrs)
 
 grid_results = {}
 hof = package[1]
+
+with shelve.open('hcg.p') as db:
+    db['grid_results'] = None
+
+import os
+assert os.path.isfile('hcg.p') is True
+
 for i in range(len(ga_keys)):
     for j in range(len(ga_keys)):
 
@@ -128,16 +135,7 @@ for i in range(len(ga_keys)):
             provided_keys.append(attrs_list[j])
             gr = run_grid(2,10,tests,provided_keys = provided_keys ,hold_constant = bd, use_cache = True, cache_name='complex')
             key = str(attrs_list[i])+str(attrs_list[j])
-            grid_results[key] = gr
+        grid_results[key] = gr
+        with shelve.open('hcg.p') as db:
+            db['grid_results'] = grid_results
 
-            with shelve.open('hcg.p') as db:
-                db['grid_results'] = grid_results
-
-            #with open('held_constant_grid'+str('.p'),'wb') as f:
-            #    pickle.dump(grid_results,f)
-#import grid_vs_ga
-
-            #print(best)
-
-            # here access the GA's optimum for that parameter
-            #ax[i,j].pcolormesh(Z)
