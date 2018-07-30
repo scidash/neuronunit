@@ -78,8 +78,8 @@ test, observation = electro_tests[0]
 
 npoints = 10
 
-opt_keys = [str('a'),str('vr'),str('b'),str('c'),str('C')]
-
+opt_keys = [str('a'),str('vr'),str('b')]#,str('c'),str('C')]
+nparams = len(opt_keys)
 ga_out = run_ga(model_params,nparams,npoints,tests,provided_keys = opt_keys, use_cache = True, cache_name='simple')
 fname = 'dim_{0}_errs{1}_ga.p'.format(len(opt_keys),len(tests))
 
@@ -89,15 +89,34 @@ with open(fname,'rb') as f:
     package = pickle.load(f)
 
 pop = package[0]
-attrs_list = list(pop[0].dtc.attrs)
+ga_keys = list(pop[0].dtc.attrs)
 
 grid_results = {}
 hof = package[1]
-for i in range(len(attrs_list)):
-    for j in range(len(attrs_list)):
+for i in range(len(ga_keys)):
+    for j in range(len(ga_keys)):
+
+        if i == j:
+            provided_keys = [ ga_keys[i] ]
+            ss = set(provided_keys)
+            bs = set(ga_keys)
+            # this finds the parameter that you do not have the explicit index for:
+            diff = bs.difference(ss)
+            bd =  {}
+            for i in range(0,len(diff)):
+                bd[list(diff)[i]] = hof[0].dtc.attrs[list(diff)[i]]
+
+            provided_keys.append(attrs_list[i])
+            assert len(bd) > len(provided_keys)
+            assert len(bd) == 2 and len(provided_keys) == 1
+
+            gr = run_grid(1,10,tests,provided_keys = provided_keys ,hold_constant = bd, use_cache = True, cache_name='complex')
+
+            # do a 1D exhaustive search where everything except parameter i is held constant.
+
         if i>j:
 
-            provided_keys = [attrs_list[j],attrs_list[i]]
+            provided_keys = [ga_keys[j],ga_keys[i]]
             ss = set(provided_keys)
             bs = set(attrs_list)
             # this finds the parameter that you do not have the explicit index for:
