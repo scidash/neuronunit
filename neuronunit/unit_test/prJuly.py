@@ -74,10 +74,11 @@ mp = modelp.model_params
 for i,ki in enumerate(pop[0].dtc.attrs.keys()):
     for j,kj in enumerate(pop[0].dtc.attrs.keys()):
 
-        free_param = set([ki,kj]) # construct a small-set out of the indexed keys 2.
+        free_param = set([ki,kj]) # construct a small-set out of the indexed keys 2. If both keys are
+        # are the same, this set will only contain one index
         fp = { k:None for k in list(free_param) }
 
-        bs = set(attrs_list) # construct a full set out of all of the keys available 3.
+        bs = set(attrs_list) # construct a full set out of all of the keys available, including ones not indexed here.
 
         diff = bs.difference(free_param) # diff is simply the key that is not indexed.
         visited.append(diff)
@@ -95,17 +96,21 @@ for i,ki in enumerate(pop[0].dtc.attrs.keys()):
 
         if ki == kj:
             #pass
-            assert len(fp) == len(bd) - 1
-            assert len(bd) == len(fp) + 1
+            #assert len(fp) == len(bd) - 1
+            #assert len(bd) == len(fp) + 1
             gr = run_grid(10,tests,provided_keys = fp ,hold_constant = bd)#, use_cache = True, cache_name='complex')
+            z = np.array([ np.sum(list(p.dtc.scores.values())) for p in gr[0] ])
+            x = set([ p.dtc.attrs[ki] for p in gr[0] ])
             one_d[str(fp.keys())] = gr
-            ax[i,j].plt()
+            ax[i,j].plt(x,z)
 
         if ki != kj:
             reduced = { k:mp[k] for k in fp.keys() }
             gr = None
-            assert len(reduced) == 2
-            assert len(bd) == 1
+
+            #assert len(fp) == len(bd) + 1
+            #assert len(bd) == len(fp) - 1
+
             gr = run_grid(6,tests,provided_keys = reduced ,hold_constant = bd)
             if str('kj') not in two_d[ki].keys():
                 two_d[ki] = {}
