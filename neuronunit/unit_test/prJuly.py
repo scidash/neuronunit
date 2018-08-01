@@ -40,7 +40,7 @@ from neuronunit.optimization.exhaustive_search import run_grid, reduce_params, c
 from neuronunit.optimization import model_parameters as modelp
 mp = modelp.model_params
 
-opt_keys = ['C','b','a']
+opt_keys = ['C','b']
 
 
 electro_tests = get_neab.replace_zero_std(electro_tests)
@@ -69,8 +69,6 @@ one_d = {}
 two_d = {}
 cnt = 0
 
-#from neuronunit.optimization.model_parameters import model_params
-
 from neuronunit.optimization import model_parameters as modelp
 mp = modelp.model_params
 for i,ki in enumerate(pop[0].dtc.attrs.keys()):
@@ -97,14 +95,13 @@ for i,ki in enumerate(pop[0].dtc.attrs.keys()):
 
         if ki == kj:
             #pass
-            assert len(fp) == 1
-            assert len(bd) == 2
+            assert len(fp) == len(bd) - 1
+            assert len(bd) == len(fp) + 1
             gr = run_grid(10,tests,provided_keys = fp ,hold_constant = bd)#, use_cache = True, cache_name='complex')
             one_d[str(fp.keys())] = gr
             ax[i,j].plt()
+
         if ki != kj:
-
-
             reduced = { k:mp[k] for k in fp.keys() }
             gr = None
             assert len(reduced) == 2
