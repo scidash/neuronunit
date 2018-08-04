@@ -53,8 +53,6 @@ class NEURONBackend(Backend):
             if hasattr(DTC,'cell_name'):
                 self.cell_name = DTC.cell_name
 
-                print(self, attrs, DTC.cell_name,  DTC.current_src_name, DTC)
-
 
 
 
@@ -348,7 +346,6 @@ class NEURONBackend(Backend):
         # the NEURON model code.
         # store the model attributes, in a temp buffer such that they persist throughout the model reinitialization.
         ##
-
         # These lines are crucial.
         temp_attrs = copy.copy(self.model.attrs)
         self.init_backend()
@@ -364,29 +361,13 @@ class NEURONBackend(Backend):
         ##
         # critical code:
         ##
-        c['delay'] = re.sub('\ ms$', '', str(c['delay'])) # take delay
-        #print(delay,c['delay'],duration,c['duration'],type(delay),type(c['delay']),type(duration),type(c['duration']))
-        #assert delay == float(c['delay'])
-        c['duration'] = re.sub('\ ms$', '', str(c['duration']))
         self.set_stop_time(duration)
-
-        c['amplitude'] = re.sub('\ pA$', '', str(c['amplitude']))
-
-
         # NEURONs default unit multiplier for current injection values is nano amps.
         # to make sure that pico amps are not erroneously interpreted as a larger nano amp.
         # current injection value, the value is divided by 1000.
-        amps = float(c['amplitude'])/1000.0 #This is the right scale.
+        amps = float(c['amplitude'])#/1000.0 #This is the right scale.
         prefix = 'explicitInput_%s%s_pop0.' % (self.current_src_name,self.cell_name)
         define_current = []
-        '''
-        define_current1 = []
-        define_current1.append(prefix+'amplitude=%s'%amps)
-        define_current1.append(prefix+'duration=%s'%duration)
-        define_current1.append(prefix+'delay=%s'%delay)
-        print(define_current, 'my new')
-        #print(define_current1, 'old')
-        '''
         define_current.append('{0}amplitude={1}'.format(prefix,amps))
         define_current.append('{0}duration={1}'.format(prefix,duration))
         define_current.append('{0}delay={1}'.format(prefix,delay))
