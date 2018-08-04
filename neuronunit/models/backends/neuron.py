@@ -1,5 +1,6 @@
 from .base import *
 import math
+import pdb
 class NEURONBackend(Backend):
     """Used for simulation with NEURON, a popular simulator
     http://www.neuron.yale.edu/neuron/
@@ -37,6 +38,7 @@ class NEURONBackend(Backend):
         backend = 'NEURON'
 
         super(NEURONBackend,self).init_backend()
+        self.model._backend.use_memory_cache = False
         self.model.unpicklable += ['h','ns','_backend']
 
         if type(DTC) is not type(None):
@@ -291,7 +293,7 @@ class NEURONBackend(Backend):
 
         for h_key,h_value in attrs.items():
             if math.isnan(h_value):
-                import pdb; pdb.set_trace()
+                pdb.set_trace()
 
             self.h('m_{0}_{1}_pop[0].{2} = {3}'\
                 .format(self.cell_name,self.cell_name,h_key,h_value))
@@ -356,7 +358,7 @@ class NEURONBackend(Backend):
         if 'injected_square_current' in current.keys():
             c = current['injected_square_current']
         else:
-            c = current    
+            c = current
         delay = float(c['delay'])
         duration = float(c['duration'])
         ##

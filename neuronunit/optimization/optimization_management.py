@@ -83,7 +83,7 @@ def dtc_to_rheo(xargs):
     model.set_attrs(dtc.attrs)
     dtc.scores = {}
     dtc.score = {}
-    print()
+
     score = rtest.judge(model,stop_on_error = False, deep_error = False)
     has_pred = bool(type(score.prediction) is not type(None))
     has_zf = bool(type(score.sort_key) is not type(None))
@@ -92,6 +92,7 @@ def dtc_to_rheo(xargs):
         dtc.scores[str(rtest)] = 1 - score.sort_key
         dtc = score_proc(dtc,rtest,score)
         dtc.rheobase = score.prediction
+
     return dtc
 
 def score_proc(dtc,t,score):
@@ -134,7 +135,7 @@ def nunit_evaluation(tuple_object):#,backend=None):
         model.set_attrs(dtc.attrs)
         tests[0].prediction = dtc.rheobase
         model.rheobase = dtc.rheobase['value']
-    tests = [t for t in tests if str('RheobaseTestP') not in str(t) ]
+    tests = [ t for t in tests if str('RheobaseTestP') not in str(t) ]
     for k,t in enumerate(tests):
         t.params = dtc.vtest[k]
         score = None
@@ -149,11 +150,11 @@ def nunit_evaluation(tuple_object):#,backend=None):
             dtc = score_proc(dtc,t,copy.copy(score))
         else:
             dtc.scores[str(t)] = 1.0
-        print(dtc.scores)
-    assert len(dtc.scores.keys()) >= 2
+
     return dtc
 
-def evaluate(dtc):
+def evaluate(dtc):#,exclude = None):
+    print(dtc.scores)
     fitness = [ 1.0 for i in range(0,len(dtc.scores.keys())) ]
     print(len(fitness))
     for k,t in enumerate(dtc.scores.keys()):
@@ -248,13 +249,18 @@ def run_ga(model_params,nparams,npoints,test, provided_keys = None, use_cache = 
     from neuronunit.optimization.exhaustive_search import reduce_params
     if type(provided_keys) is not type(None):
         model_params = { k:model_params[k] for k in provided_keys }
+        nparams = len(provided_keys)
+
     subset = reduce_params(model_params,nparams)
+
     MU = int(np.floor(npoints))
-    max_ngen = int(np.floor(nparams))
+    max_ngen = int(np.floor(npoints))
     #assert (MU * max_ngen) < (npoints * nparams)
-    DO = DEAPOptimisation(offspring_size = MU, error_criterion = test, selection = str('selNSGA'), provided_dict = subset, elite_size = 2)
+    selection = str('selNSGA')
+    #10
+    DO = DEAPOptimisation(offspring_size = 10, error_criterion = test, selection = selection, provided_dict = subset, elite_size = 2)
     #assert len(DO.params.items()) == 3
-    ga_out = DO.run(offspring_size = MU, max_ngen = 15)
+    ga_out = DO.run(offspring_size = MU, max_ngen = max_ngen)
     with open('all_ga_cell.p','wb') as f:
         pickle.dump(ga_out,f)
     return ga_out
@@ -286,22 +292,54 @@ def update_deap_pop(pop, tests, td, backend = None):
     '''
     # Rheobase value obtainment.
 
-    dtcpop = None
-    pop, dtcpop = rheobase(copy.copy(pop), td, tests[0])
-    dtcpop = copy.copy(dtcpop)
-    # NeuronUnit testing
+    def sanity_check_score(pop,td):
+        '''
+        Used for debugging with fake models
+        '''
+        dtcpop = update_dtc_pop(pop,td)
+        #import pdb; pdb.set_trace()
+        for dtc in dtcpop:
+            dtc.scores = None
+            dtc.scores = {}
 
-    xargs = zip(dtcpop,repeat(tests))
-    dtcpop = list(map(format_test,xargs))
-    npart = np.min([multiprocessing.cpu_count(),len(pop)])
-    dtcbag = db.from_sequence(list(zip(dtcpop,repeat(tests))), npartitions = npart)
+        for t in tests:
+            for dtc in dtcpop:
+                LEMS_MODEL_PATH = path_params['model_path']
+                model = ReducedModel(LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+                model.set_attrs(dtc.attrs)
+                score = t.judge(model)
+                #dtc.scores[str(t)] = score.sort_key
+                #score = t.judge(model,stop_on_error = False, deep_error = False)
+                if score.sort_key is not None:
+                    dtc.scores.get(str(t), 1 - score.sort_key)
+                    dtc.scores[str(t)] = 1 - score.sort_key
 
-    dtcpop = list(dtcbag.map(nunit_evaluation).compute())
+                    #dtc = score_proc(dtc,t,copy.copy(score))
+                else:
+                    dtc.scores[str(t)] = 1.0
+        return dtcpop
 
+    def standard_code(pop,td):
+        dtcpop = None
+        pop, dtcpop = rheobase(copy.copy(pop), td, tests[0])
+        dtcpop = copy.copy(dtcpop)
+        # NeuronUnit testing
+
+        xargs = zip(dtcpop,repeat(tests))
+        dtcpop = list(map(format_test,xargs))
+        npart = np.min([multiprocessing.cpu_count(),len(pop)])
+        dtcbag = db.from_sequence(list(zip(dtcpop,repeat(tests))), npartitions = npart)
+
+        dtcpop = list(dtcbag.map(nunit_evaluation).compute())
+        return dtcpop
+
+    dtcpop = standard_code(pop,td)
+    #dtcpop = sanity_check_score(pop,td)
     for i,d in enumerate(dtcpop):
         pop[i].dtc = None
         pop[i].dtc = copy.copy(dtcpop[i])
     invalid_dtc_not = [ i for i in pop if not hasattr(i,'dtc') ]
+
     if len(invalid_dtc_not) !=0:
         import pdb; pdb.set_trace()
     return pop
