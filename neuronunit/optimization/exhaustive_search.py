@@ -59,8 +59,16 @@ def chunks(l, n):
         ch.append(l[:][i:i+n])
     return ch
 
-def build_chunk_grid(npoints, provided_keys):
+def build_chunk_grid(npoints, provided_keys , hold_constant=None):
     grid_points, maps = create_grid(npoints = npoints, provided_keys = provided_keys)
+    #
+    '''
+    if type(hold_constant) is not type(None):
+        hc = list(hold_constant.values())
+        for i in grid_points:
+            for h in hc:
+                i.append(h)
+    '''
     temp = OrderedDict(grid_points[0]).keys()
     tds = list(temp)
     pops = []
@@ -78,8 +86,8 @@ def build_chunk_grid(npoints, provided_keys):
     else:
 
         pops_ = chunks(pops,npartitions-2)
-
-    assert pops_[0] != pops_[1]
+    if len(pops_) > 1:
+        assert pops_[0] != pops_[1]
 
     return pops_, tds
 
@@ -130,7 +138,7 @@ def create_a_map(subset):
     return maps
 
 
-def create_grid(npoints=3,nparams=7,provided_keys=None,ga=None):
+def create_grid(npoints=3,provided_keys=None,ga=None,nparams=None):
     '''
     Description, create a grid of evenly spaced samples in model parameters to search over.
     Inputs: npoints, type: Integer: number of sample points per parameter
@@ -152,20 +160,24 @@ def create_grid(npoints=3,nparams=7,provided_keys=None,ga=None):
     # as the grid defined in the model_params file. Its not necessarily
     # a smaller dictionary, if it is smaller it is reduced by reducing sampling
     # points.
-    smaller = {}
-    smaller = OrderedDict(sample_points(mp, npoints=npoints))
-    if type(provided_keys) is type(None):
-        key_list = list(smaller.keys())
+    #if type(provided_keys) is not type(None):
+    #if type(provided_keys) is type(None) or nparams is not type(None):
+    #nparams = len(provided_keys)
+    whole_p_set = {}
+    whole_p_set = OrderedDict(sample_points(mp, npoints=npoints))
+
+
+    if nparams is not None:
+        key_list = list(whole_p_set.keys())
         reduced_key_list = key_list[0:nparams]
     else:
-        reduced_key_list = list(provided_keys)
-
+        reduced_key_list =  provided_keys
+    #else:
+    #    reduced_key_list = list(provided_keys)
     # subset is reduced, by reducing parameter keys.
-    subset = OrderedDict( {k:smaller[k] for k in reduced_key_list})
-
+    subset = OrderedDict( {k:whole_p_set[k] for k in reduced_key_list})
     maps = create_a_map(subset)
     if type(ga) is not type(None):
-
         if npoints > 1:
             for k,v in subset.items():
                 v[0] = v[0]*1.0/3.0
@@ -209,6 +221,15 @@ def tfc2i(x, y, z,err):
     grid[i,j,k] = err # if using latitude and longitude (for WGS/West)
     return
 
+def add_constant(hold_constant,consumable_,td):
+    hc = list(hold_constant.values())
+    for c in consumable_:
+        for i in c:
+            for h in hc:
+                i.append(h)
+    for k in hold_constant.keys():
+        td.append(k)
+    return td, hc
 
 
 def transdict(dictionaries):
@@ -219,16 +240,40 @@ def transdict(dictionaries):
         mps[k] = dictionaries[k]
     return mps
 
-
-def run_grid(nparams,npoints,tests,provided_keys = None, hold_constant = None, use_cache = False, cache_name=None):
+def mock_grid(npoints,tests, provided_keys = None, hold_constant = None, use_cache = False, cache_name=None):
     s = shelve.open(str(cache_name)+'iterator.db')
     if use_cache:
         try:
             grid_results = s['grid_results']
-            consumable = s['consumable'] #=
+            consumable = s['consumable']
+        except:
+            raise Exception('no file')
 
-            #if len(consumable_) < len(consumable) and len(consumable_) !=0 :
-            #    consumbale = iter(consumbale_)
+    else:
+        # break the grid into chunks that fit inside memory easierself.
+        # consumable in this form is a memory friendly iterator, it can run out.
+        consumable_ ,td = build_chunk_grid(npoints,provided_keys)
+    cnt = 0
+    grid_results = []
+
+    if type(hold_constant) is not type(None):
+        td, hc = add_constant(hold_constant,consumable_,td)
+
+    assert len(td) == len(provided_keys) + len(hold_constant)
+
+    grid_results = []
+    for sub_pop in consumable_:
+        grid_results.extend(sub_pop)
+    assert len(grid_results[0]) == len(provided_keys) + len(hold_constant)
+    return grid_results
+
+
+def run_grid(npoints,tests, provided_keys = None, hold_constant = None, use_cache = False, cache_name=None):
+    s = shelve.open(str(cache_name)+'iterator.db')
+    if use_cache:
+        try:
+            grid_results = s['grid_results']
+            consumable = s['consumable']
         except:
             raise Exception('no file')
 
@@ -238,15 +283,14 @@ def run_grid(nparams,npoints,tests,provided_keys = None, hold_constant = None, u
     cnt = 0
     grid_results = []
     if type(hold_constant) is not type(None):
-        hc = list(hold_constant.values())[0]
-        for c in consumable_:
-            for i in c:
-                i.append(hc)
-        td.append(list(hold_constant.keys())[0])
+        td, hc = add_constant(hold_constant,consumable_,td)
+
+    assert len(td) == len(provided_keys) + len(hold_constant)
 
     consumable = iter(consumable_)
     for sub_pop in consumable:
         grid_results.extend(update_deap_pop(sub_pop, tests, td))
+        assert len(grid_results[0]) == len(provided_keys) + len(hold_constant)
 
         if type(s) is not type(None):
             s['consumable'] = consumable
