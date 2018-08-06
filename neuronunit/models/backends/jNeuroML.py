@@ -10,17 +10,15 @@ class jNeuroMLBackend(Backend):
         super(jNeuroMLBackend,self).init_backend(*args, **kwargs)
 
     def set_attrs(self, **attrs):
-        self.model.attrs.update(attrs)
-        self.model.set_lems_attrs(attrs)
+        self.model.set_lems_attrs()
 
-    def set_run_params(self, **params):
-        super(jNeuroMLBackend,self).set_run_params(**params)
+    def set_run_params(self, **run_params):
         self.model.set_lems_run_params()
 
     def inject_square_current(self, current):
-        self.set_run_params(injected_square_current=current)
+        pass
 
-    def _local_run(self):
+    def _backend_run(self):
         f = pynml.run_lems_with_jneuroml
         self.exec_in_dir = tempfile.mkdtemp()
         results = f(self.model.lems_file_path,

@@ -97,29 +97,19 @@ class Backend(object):
         disk_cache[key] = results
         disk_cache.close()
 
-    def set_attrs(self, **attrs):
-        """Set model attributes, e.g. input resistance of a cell"""
-        #If the key is in the dictionary, it updates the key with the new value.
-        self.model.attrs.update(attrs)
-        #pass
-
-    def set_run_params(self, **params):
-        """Set run-time parameters, e.g. the somatic current to inject"""
-        self.model.run_params.update(params)
-        self.check_run_params()
-        #pass
-
-    def check_run_params(self):
-        """Check to see if the run parameters are reasonable for this model
-        class.  Raise a sciunit.BadParameterValueError if any of them are not.
-        """
-        pass
-
     def load_model(self):
         """Load the model into memory"""
         pass
 
-    def local_run(self):
+    def set_attrs(self, **attrs):
+        """Set model attributes on the backend."""
+        pass
+
+    def set_run_params(self, **run_params):
+        """Set run parameters on the backend."""
+        pass
+
+    def backend_run(self):
         """Checks for cached results in memory and on disk, then runs the model
         if needed"""
         key = self.model.hash
@@ -127,16 +117,16 @@ class Backend(object):
             return self._results
         if self.use_disk_cache and self.get_disk_cache(key):
             return self._results
-        results = self._local_run()
+        results = self._backend_run()
         if self.use_memory_cache:
             self.set_memory_cache(results, key)
         if self.use_disk_cache:
             self.set_disk_cache(results, key)
         return results
 
-    def _local_run(self):
+    def _backend_run(self):
         """Runs the model via the backend"""
-        raise NotImplementedError("Each backend must implement '_local_run'")
+        raise NotImplementedError("Each backend must implement '_backend_run'")
 
     def save_results(self, path='.'):
         with open(path,'wb') as f:
