@@ -238,24 +238,10 @@ class NEURONBackend(Backend):
             #self.load_mechanisms()
         elif os.path.realpath(os.getcwd()) != os.path.realpath(self.neuron_model_dir):
             # Load mechanisms unless they've already been loaded
-            #subprocess.run(["cd %s; nrnivmodl" % self.neuron_model_dir],shell=True)
-            #try:
-
-            #    self.load()
-            #except:
-            #    print('gets to except')
-            #    os.system("cd %s; nrnivmodl" % self.neuron_model_dir)
-                #self.load_mechanisms()
+            #   subprocess.run(["cd %s; nrnivmodl" % self.neuron_model_dir],shell=True)
 
             self.load_mechanisms()
             self.load()
-
-
-            #except:
-
-
-            # I broke this somehow.
-            # As in nrnivmodl compiling has stopped working given a blank slate initiatilized install environment.
 
         # Although the above approach successfuly instantiates a LEMS/neuroml model in pyhoc
         # the resulting hoc variables for current source and cell name are idiosyncratic (not generic).
