@@ -156,10 +156,16 @@ def tiled_figure(figname='', frames=1, columns=2,
         axs = figs[figname]['axs']
 
     return axs
+
+
+
 import numpy as np
 import matplotlib
 matplotlib.rcParams.update({'font.size':16})
 import matplotlib.pyplot as plt
+import numpy as np
+import scipy.spatial
+import pylab
 
 def plot_surface(fig_trip,ax_trip,model_param0,model_param1,history):
     '''
@@ -170,14 +176,30 @@ def plot_surface(fig_trip,ax_trip,model_param0,model_param1,history):
     td = list(history.genealogy_history[1].dtc.attrs.keys())
     x = [ i for i,j in enumerate(td) if str(model_param0) == j ][0]
     y = [ i for i,j in enumerate(td) if str(model_param1) == j ][0]
+    z = [ i for i,j in enumerate(td) if str(model_param1) == j ][0]
 
     all_inds = history.genealogy_history.values()
     sums = np.array([np.sum(ind.fitness.values) for ind in all_inds])
 
     xs = np.array([ind[x] for ind in all_inds])
     ys = np.array([ind[y] for ind in all_inds])
+    zs = np.array([ind[z] for ind in all_inds])
+
     min_ys = ys[np.where(sums == np.min(sums))]
     min_xs = xs[np.where(sums == np.min(sums))]
+    min_zs = xs[np.where(sums == np.min(sums))]
+
+    data = np.zeros((len(xs),3))
+    data[:,0] = xs
+    data[:,1] = ys
+    data[:,2] = zs
+
+
+    #data = np.random.random((12,3))            # arbitrary 3D data set
+    tri = scipy.spatial.Delaunay( data[:,:2] ) # take the first two dimensions
+
+    pylab.triplot( data[:,0], data[:,1], tri.simplices.copy() )
+    pylab.plot( data[:,0], data[:,1], 'ro' ) ;
 
     #fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
     trip_axis = ax_trip.tripcolor(xs,ys,sums,20,norm=matplotlib.colors.LogNorm())
@@ -621,11 +643,6 @@ def dtc_to_plotting(dtc):
 
     model.inject_square_current(parameter_list[0])
     model._backend.local_run()
-    print('\n\n\n\n\n\n')
-    print(type(model.get_spike_count()), ' < type')
-    print(model.get_spike_count(),bool(model.get_spike_count() == 1))
-    print('\n\n\n\n\n\n')
-
     assert model.get_spike_count() == 1 or model.get_spike_count() == 0
 
     dtc.vm0 = list(model.results['vm'])

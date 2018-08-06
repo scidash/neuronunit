@@ -253,12 +253,12 @@ def run_ga(model_params,nparams,npoints,test, provided_keys = None, use_cache = 
 
     subset = reduce_params(model_params,nparams)
 
-    MU = int(np.floor(npoints))
-    max_ngen = int(np.floor(npoints))
+    MU = int(np.floor(nparams))
+    max_ngen = int(np.floor(nparams))
     #assert (MU * max_ngen) < (npoints * nparams)
     selection = str('selNSGA')
     #10
-    DO = DEAPOptimisation(offspring_size = 10, error_criterion = test, selection = selection, provided_dict = subset, elite_size = 2)
+    DO = DEAPOptimisation(offspring_size = MU, error_criterion = test, selection = selection, provided_dict = subset, elite_size = 2)
     #assert len(DO.params.items()) == 3
     ga_out = DO.run(offspring_size = MU, max_ngen = max_ngen)
     with open('all_ga_cell.p','wb') as f:
