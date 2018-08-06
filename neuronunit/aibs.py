@@ -74,10 +74,9 @@ def get_observation(dataset_id, kind, cached=True, quiet=False):
         ct = CellTypesApi()
         cmd = ct.get_cell(dataset_id)  # Cell metadata
         if kind == 'rheobase':
-            sweep_id = cmd['ephys_features'][0]['rheobase_sweep_id']
-        sp = get_sweep_params(dataset_id, sweep_id)
-        if kind == 'rheobase':
-            value = sp['stimulus_absolute_amplitude']
+            kind = 'ef__threshold_i_long_square'
+        value = cmd[kind]
+        if kind in ['ef__threshold_i_long_square']: # A current
             value = np.round(value, 2)  # Round to nearest hundredth of a pA.
             value *= pq.pA  # Apply units.
         db[identifier] = value
