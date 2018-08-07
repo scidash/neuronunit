@@ -13,3 +13,4 @@ from .test_tests import TestsPassiveTestCase, TestsWaveformTestCase,\
                         TestsChannelTestCase
 from .misc_tests import EphysPropertiesTestCase
 from .sciunit_tests import SciUnitTestCase
+from .cache_tests import BackendCacheTestCase
