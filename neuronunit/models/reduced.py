@@ -24,7 +24,7 @@ class ReducedModel(LEMSModel,
                                           backend=backend,attrs=attrs)
         self.run_number = 0
         self.tstop = None
-
+        
     def get_membrane_potential(self, **run_params):
         self.run(**run_params)
         for rkey in self.results.keys():

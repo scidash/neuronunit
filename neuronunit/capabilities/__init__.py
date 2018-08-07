@@ -6,8 +6,9 @@
 import inspect
 
 import numpy as np
-
+import quantities as pq
 import sciunit
+import matplotlib.pyplot as plt
 from .spike_functions import spikes2amplitudes, spikes2widths,\
                              spikes2thresholds
 
@@ -41,6 +42,19 @@ class ProducesMembranePotential(sciunit.Capability):
         vm = self.get_membrane_potential(**kwargs)
         # A neo.core.AnalogSignal object
         return vm[0]
+
+    def plot_membrane_potential(self, ax=None, ylim=(None,None), **kwargs):
+        vm = self.get_membrane_potential(**kwargs)
+        if ax is None:
+            ax = plt.gca()
+        vm = vm.rescale('mV')
+        ax.plot(vm.times, vm)
+        y_min = float(vm.min()-5.0*pq.mV) if ylim[0] is None else ylim[0]
+        y_max = float(vm.max()+5.0*pq.mV) if ylim[1] is None else ylim[1]
+        ax.set_xlim(vm.times.min(), vm.times.max())
+        ax.set_ylim(y_min, y_max)
+        ax.set_xlabel('Time (s)')
+        ax.set_ylabel('Vm (mV)')
 
 
 class ProducesSpikes(sciunit.Capability):
