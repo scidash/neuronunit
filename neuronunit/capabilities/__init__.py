@@ -1,5 +1,5 @@
-"""NeuronUnit abstract Capabilities"""
-# The goal is to enumerate all possible capabilities of a model 
+"""NeuronUnit abstract Capabilities."""
+# The goal is to enumerate all possible capabilities of a model
 # that would be tested using NeuronUnit.
 # These capabilities exchange 'neo' objects.
 
@@ -8,7 +8,8 @@ import inspect
 import numpy as np
 
 import sciunit
-from .spike_functions import spikes2amplitudes,spikes2widths,spikes2thresholds
+from .spike_functions import spikes2amplitudes, spikes2widths,\
+                             spikes2thresholds
 
 
 class ProducesMembranePotential(sciunit.Capability):
@@ -32,9 +33,9 @@ class ProducesMembranePotential(sciunit.Capability):
 
     def get_iqr_vm(self, **kwargs):
         vm = self.get_membrane_potential(**kwargs)
-        return (np.percentile(vm,75) - np.percentile(vm,25))*vm.units
+        return (np.percentile(vm, 75) - np.percentile(vm, 25))*vm.units
 
-    def get_initial_vm(self,**kwargs):
+    def get_initial_vm(self, **kwargs):
         """Returns a quantity corresponding to the starting membrane potential.
         This will in some cases be the resting potential."""
         vm = self.get_membrane_potential(**kwargs)
@@ -61,7 +62,7 @@ class ProducesSpikes(sciunit.Capability):
         return len(spike_train)
 
 
-class ProducesActionPotentials(ProducesSpikes, 
+class ProducesActionPotentials(ProducesSpikes,
                                ProducesMembranePotential):
     """Indicates the model produces action potential waveforms.
     Waveforms must have a temporal extent.
@@ -133,12 +134,15 @@ class ReceivesCurrent(ReceivesSquareCurrent):
 
 class Runnable(sciunit.Capability):
     """Capability for models that can be run."""
-    
+
     def run(self, **run_params):
-        return NotImplementedError("%s not implemented" % inspect.stack()[0][3])
+        return NotImplementedError("%s not implemented" %
+                                   inspect.stack()[0][3])
 
     def set_run_params(self, **run_params):
-        return NotImplementedError("%s not implemented" % inspect.stack()[0][3])
+        return NotImplementedError("%s not implemented" %
+                                   inspect.stack()[0][3])
 
     def set_default_run_params(self, **default_run_params):
-        return NotImplementedError("%s not implemented" % inspect.stack()[0][3])
+        return NotImplementedError("%s not implemented" %
+                                   inspect.stack()[0][3])

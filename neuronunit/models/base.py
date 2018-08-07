@@ -10,17 +10,17 @@ class RunnableModel(sciunit.Model,
     """A model which can be run to produce simulation results"""
 
     def __init__(self,
-                 name, # Name of the model
-                 backend=None, # Backend to run the models
-                 attrs=None, # Optional dictionary of model attributes
+                 name,  # Name of the model
+                 backend=None,  # Backend to run the models
+                 attrs=None,  # Optional dictionary of model attributes
                  ):
-        self.name = name
-        self.skip_run = False # Backend can use this to skip simulation
-        self.run_params = {} # Should be reset between tests
-        self.print_run_params = False # Print the run parameters with each run
-        self.default_run_params = {} # Should be applied to all tests
-        self.unpicklable = [] # Model attributes which cannot be pickled
-        if attrs and not isinstance(attrs,dict):
+        super(RunnableModel, self).__init__(name=name)
+        self.skip_run = False  # Backend can use this to skip simulation
+        self.run_params = {}  # Should be reset between tests
+        self.print_run_params = False  # Print the run parameters with each run
+        self.default_run_params = {}  # Should be applied to all tests
+        self.unpicklable = []  # Model attributes which cannot be pickled
+        if attrs and not isinstance(attrs, dict):
             raise TypeError("Model 'attrs' must be a dictionary.")
         self.attrs = attrs if attrs else {}
         self.set_backend(backend)
@@ -29,19 +29,19 @@ class RunnableModel(sciunit.Model,
         return self._backend
 
     def set_backend(self, backend):
-        if isinstance(backend,str):
+        if isinstance(backend, str):
             name = backend
             args = []
             kwargs = {}
-        elif isinstance(backend,(tuple,list)):
+        elif isinstance(backend, (tuple, list)):
             name = ''
             args = []
             kwargs = {}
             for i in range(len(backend)):
-                if i==0:
+                if i == 0:
                     name = backend[i]
                 else:
-                    if isinstance(backend[i],dict):
+                    if isinstance(backend[i], dict):
                         kwargs.update(backend[i])
                     else:
                         args += backend[i]
@@ -55,18 +55,18 @@ class RunnableModel(sciunit.Model,
             raise Exception(("A backend (e.g. 'jNeuroML' or 'NEURON') "
                              "must be selected"))
         else:
-            raise Exception("Backend %s not found in backends.py" \
+            raise Exception("Backend %s not found in backends.py"
                             % name)
         self._backend.model = self
         self._backend.init_backend(*args, **kwargs)
 
     def run(self, **run_params):
         self.set_run_params(**run_params)
-        for key,value in self.default_run_params.items():
+        for key, value in self.default_run_params.items():
             if key not in self.run_params:
-                self.set_run_params(**{key:value})
+                self.set_run_params(**{key: value})
         if self.print_run_params:
-            print("Run Params:",self.run_params)
+            print("Run Params:", self.run_params)
         self.results = self._backend.backend_run()
 
     def set_attrs(self, **attrs):
@@ -98,11 +98,12 @@ class RunnableModel(sciunit.Model,
 
     @property
     def state(self):
-        return self._state(keys=['name','url', 'attrs','run_params','backend'])
+        return self._state(keys=['name', 'url', 'attrs', 'run_params',
+                                 'backend'])
 
     def __del__(self):
-        if hasattr(self,'temp_dir'):# is not type(None):
-            self.temp_dir.cleanup() # Delete the temporary directory
-            s = super(RunnableModel,self)
-            if hasattr(s,'__del__'):
+        if hasattr(self, 'temp_dir'):
+            self.temp_dir.cleanup()   # Delete the temporary directory
+            s = super(RunnableModel, self)
+            if hasattr(s, '__del__'):
                 s.__del__()
