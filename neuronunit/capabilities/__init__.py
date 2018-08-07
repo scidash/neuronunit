@@ -136,3 +136,9 @@ class Runnable(sciunit.Capability):
     
     def run(self, **run_params):
         return NotImplementedError("%s not implemented" % inspect.stack()[0][3])
+
+    def set_run_params(self, **run_params):
+        return NotImplementedError("%s not implemented" % inspect.stack()[0][3])
+
+    def set_default_run_params(self, **default_run_params):
+        return NotImplementedError("%s not implemented" % inspect.stack()[0][3])

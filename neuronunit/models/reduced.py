@@ -5,11 +5,11 @@ from neo.core import AnalogSignal
 import quantities as pq
 
 import neuronunit.capabilities as cap
-import neuronunit.models as mod
+from .lems import LEMSModel
 import neuronunit.capabilities.spike_functions as sf
 from neuronunit.models import backends
 
-class ReducedModel(mod.LEMSModel,
+class ReducedModel(LEMSModel,
                    cap.ReceivesCurrent,
                    cap.ProducesActionPotentials,
                    ):
@@ -25,10 +25,8 @@ class ReducedModel(mod.LEMSModel,
         self.run_number = 0
         self.tstop = None
 
-    def get_membrane_potential(self, rerun=None, **run_params):
-        if rerun is None:
-            rerun = self.rerun
-        self.run(rerun=rerun, **run_params)
+    def get_membrane_potential(self, **run_params):
+        self.run(**run_params)
         for rkey in self.results.keys():
             if 'v' in rkey or 'vm' in rkey:
                 v = np.array(self.results[rkey])
@@ -37,17 +35,16 @@ class ReducedModel(mod.LEMSModel,
         vm = AnalogSignal(v,units=pq.V,sampling_rate=1.0/dt)
         return vm
 
-    def get_APs(self, rerun=False, **run_params):
-        vm = self.get_membrane_potential(rerun=rerun, **run_params)
+    def get_APs(self, **run_params):
+        vm = self.get_membrane_potential(**run_params)
         waveforms = sf.get_spike_waveforms(vm)
         return waveforms
 
-    def get_spike_train(self, rerun=False, **run_params):
-        vm = self.get_membrane_potential(rerun=rerun, **run_params)
+    def get_spike_train(self, **run_params):
+        vm = self.get_membrane_potential(**run_params)
         spike_train = sf.get_spike_train(vm)
         return spike_train
 
-    #This method must be overwritten in the child class or Derived class
-    # NEURONbackend but I don't understand how to do that.
-    #def inject_square_current(self,current):
-    #    self.run_params['injected_square_current'] = current
+    def inject_square_current(self, current):
+        self.set_run_params(injected_square_current=current)
+        self._backend.inject_square_current(current)

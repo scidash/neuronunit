@@ -1,10 +1,14 @@
-"""NeuronUnit: Testing for neuron and ion channel models 
-using the SciUnit framework."""
+"""NeuronUnit.
+
+Testing for neuron and ion channel models
+using the SciUnit framework.
+"""
 
 import platform
 
 try:
     import sciunit
+    assert sciunit
 except ImportError as e:
     print("NeuronUnit requires SciUnit: http://github.com/scidash/sciunit")
     raise e
