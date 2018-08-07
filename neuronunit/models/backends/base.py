@@ -65,15 +65,17 @@ class Backend(object):
             pass
         self.disk_cache_location = os.path.join(tempfile.mkdtemp(),'cache')
 
-    def get_memory_cache(self, key):
+    def get_memory_cache(self, key=None):
         """Returns result in memory cache for key 'key' or None if it
         is not found"""
+        key = self.model.hash if key is None else key
         self._results = self.memory_cache.get(key)
         return self._results
 
-    def get_disk_cache(self, key):
+    def get_disk_cache(self, key=None):
         """Returns result in disk cache for key 'key' or None if it
         is not found"""
+        key = self.model.hash if key is None else key
         if not getattr(self,'disk_cache_location',False):
             self.init_disk_cache()
         disk_cache = shelve.open(self.disk_cache_location)
