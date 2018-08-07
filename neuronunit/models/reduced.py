@@ -10,7 +10,7 @@ import neuronunit.capabilities.spike_functions as sf
 from neuronunit.models import backends
 
 class ReducedModel(LEMSModel,
-                   cap.ReceivesCurrent,
+                   cap.ReceivesSquareCurrent,
                    cap.ProducesActionPotentials,
                    ):
     """Base class for reduced models, using LEMS"""
