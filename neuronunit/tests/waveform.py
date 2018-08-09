@@ -20,7 +20,7 @@ class APWidthTest(VmTest):
     ephysprop_name = 'Spike Half-Width'
 
     def generate_prediction(self, model):
-        """Implementation of sciunit.Test.generate_prediction."""
+        """Implement sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
         # if get_spike_count is zero, then widths will be None
@@ -29,24 +29,21 @@ class APWidthTest(VmTest):
 
         widths = model.get_AP_widths()
         # Put prediction in a form that compute_score() can use.
-        prediction = {'mean':np.mean(widths) if len(widths) else None,
-                    'std':np.std(widths) if len(widths) else None,
-                    'n':len(widths)}
+        prediction = {'mean': np.mean(widths) if len(widths) else None,
+                      'std': np.std(widths) if len(widths) else None,
+                      'n': len(widths)}
 
         return prediction
 
     def compute_score(self, observation, prediction):
-        """Implementation of sciunit.Test.score_prediction."""
-        if type(prediction) is type(None):
+        """Implement sciunit.Test.score_prediction."""
+        if isinstance(prediction, type(None)):
             score = scores.InsufficientDataScore(None)
-
         elif prediction['n'] == 0:
-            #sciunit.NoneScore:
             score = scores.InsufficientDataScore(None)
-
         else:
-            score = super(APWidthTest,self).compute_score(observation,
-                                                          prediction)
+            score = super(APWidthTest, self).compute_score(observation,
+                                                           prediction)
         return score
 
 

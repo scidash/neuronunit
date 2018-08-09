@@ -25,7 +25,7 @@ class TFRTypeTest(RheobaseTest):
                     "type 1 or type 2"))
 
     score_type = scores.BooleanScore
-    
+
     def validate_observation(self, observation):
         super(TFRTypeTest,self).validate_observation(observation,
                                                      united_keys=['rheobase'],
@@ -98,8 +98,6 @@ class BurstinessTest(InjectedCurrentAPWidthTest):
         spike_train = model.get_spike_train()
         if len(spike_train) >= 3:
             cv(spike_train)*pq.dimensionless
-            #isis = isi(spike_train)
-            #cv_old = np.std(isis) / np.mean(isis)
         else:
             cv = None
         return {'cv':cv}
@@ -109,7 +107,7 @@ class BurstinessTest(InjectedCurrentAPWidthTest):
         if prediction is None:
             score = scores.InsufficientDataScore(None)
         else:
-            score = self.score_type.compute(observation,prediction,key='cv')
+            score = self.score_type.compute(observation, prediction, key='cv')
         return score
 
 
@@ -124,7 +122,7 @@ class ISICVTest(VmTest):
     units = pq.dimensionless
     united_observation_keys = []
     nonunited_observation_keys = ['cv']
-    
+
     def generate_prediction(self, model = None):
         st = model.get_spike_train()
         #prediction = abs(cv(st))
@@ -171,7 +169,7 @@ class ISITest(VmTest):
         st = model.get_spike_train()
         isis = isi(st)
         value = float(np.mean(isis))*1000.0*pq.ms
-        prediction = {'value':value} 
+        prediction = {'value':value}
         return prediction
 
     def compute_score(self, observation, prediction):
@@ -179,7 +177,7 @@ class ISITest(VmTest):
         if prediction is None:
             score = scores.InsufficientDataScore(None)
         else:
-            score = self.score_type.compute(observation,prediction)
+            score = self.score_type.compute(observation, prediction)
         return score
 
 
