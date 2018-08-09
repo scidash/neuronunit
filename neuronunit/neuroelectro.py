@@ -317,7 +317,7 @@ class NeuroElectroSummary(NeuroElectroData):
 class NeuroElectroPooledSummary(NeuroElectroDataMap):
     """Class for getting summary values from neuroelectro.org.
 
-    Values are computed by pooling each report's mean and SD across reports.
+    Values are computed by pooling each report's mean and std across reports.
     """
 
     def get_values(self, params=None, quiet=False):
@@ -348,7 +348,7 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
             self.neuron_name = data[0]['ncm']['n']['name']
             self.ephysprop_name = data[0]['ecm']['e']['name']
 
-            # Pool each paper by weighing each mean by the paper's N and SD
+            # Pool each paper by weighing each mean by the paper's N and std
             stats = self.get_pooled_stats(data, quiet)
 
             self.mean = stats['mean']
@@ -383,7 +383,7 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
         lines = []
         means = []
         sems = []
-        sds = []
+        stds = []
         ns = []
         sources = []
 
@@ -393,12 +393,12 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
         # Collect raw values for each paper from NeuroElectro
         for item in data:
 
-            err_is_sem = item['error_type'] == "sem"  # SEM or SD
+            err_is_sem = item['error_type'] == "sem"  # SEM or std
             err = (item['err_norm'] if item['err_norm'] is not None
                    else item['err'])
 
             sem = err if err_is_sem else None
-            sd = err if not err_is_sem else None
+            std = err if not err_is_sem else None
             mean = (item['val_norm'] if item['val_norm'] is not None
                     else item['val'])
             n = item['n']
@@ -406,41 +406,41 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
 
             means.append(mean)
             sems.append(sem)
-            sds.append(sd)
+            stds.append(std)
             ns.append(n)
             sources.append(source)
 
             if not quiet:
-                print({'mean': mean, 'std': sd, 'sem': sem, 'n': n})
+                print({'mean': mean, 'std': std, 'sem': sem, 'n': n})
 
         # Fill in missing values
         self.fill_missing_ns(ns)
-        self.fill_missing_sems_sds(sems, sds, ns)
+        self.fill_missing_sems_stds(sems, stds, ns)
 
         if not quiet:
             print("---------------------------------------------------")
             print("Filled in Values (computed or median where missing)")
 
             for i, _ in enumerate(means):
-                line = {'mean': means[i], 'sd': sds[i], 'sem': sems[i],
+                line = {'mean': means[i], 'std': stds[i], 'sem': sems[i],
                         'n': ns[i], "source": sources[i]}
                 lines.append(line)
                 print(line)
 
         # Compute the weighted grand_mean
         # grand_mean  = SUM( N[i]*Mean[i] ) / SUM(N[i])
-        # grand_sd = SQRT( SUM( (N[i]-1)*SD[i]^2 ) / SUM(N[i]-1) )
+        # grand_std = SQRT( SUM( (N[i]-1)*std[i]^2 ) / SUM(N[i]-1) )
 
         ns_np = np.array(ns)
         means_np = np.array(means)
-        sds_np = np.array(sds)
+        stds_np = np.array(stds)
         n_sum = ns_np.sum()
 
         grand_mean = np.sum(ns_np * means_np) / n_sum
-        grand_sd = np.sqrt(np.sum((ns_np-1)*(sds_np**2))/np.sum(ns_np-1))
-        grand_sem = grand_sd / np.sqrt(n_sum)
+        grand_std = np.sqrt(np.sum((ns_np-1)*(stds_np**2))/np.sum(ns_np-1))
+        grand_sem = grand_std / np.sqrt(n_sum)
 
-        return {'mean': grand_mean, 'sem': grand_sem, 'std': grand_sd,
+        return {'mean': grand_mean, 'sem': grand_sem, 'std': grand_std,
                 'n': n_sum, 'items': lines}
 
     def fill_missing_ns(self, ns):
@@ -456,33 +456,33 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
             if ns[i] is None:
                 ns[i] = n_median
 
-    def fill_missing_sems_sds(self, sems, sds, ns):
-        """Fill in computable sems/sds."""
+    def fill_missing_sems_stds(self, sems, stds, ns):
+        """Fill in computable sems/stds."""
         for i, _ in enumerate(sems):
 
-            # Check if sem or sd is computable
-            if sems[i] is None and sds[i] is not None:
-                sems[i] = sds[i] / np.sqrt(ns[i])
+            # Check if sem or std is computable
+            if sems[i] is None and stds[i] is not None:
+                sems[i] = stds[i] / np.sqrt(ns[i])
 
-            if sds[i] is None and sems[i] is not None:
-                sds[i] = sems[i] * np.sqrt(ns[i])
+            if stds[i] is None and sems[i] is not None:
+                stds[i] = sems[i] * np.sqrt(ns[i])
 
-        # Fill in the remaining missing using median sd
-        none_free_sds = np.array(sds)[sds != np.array(None)]
+        # Fill in the remaining missing using median std
+        none_free_stds = np.array(stds)[stds != np.array(None)]
 
-        if none_free_sds:
-            sd_median = np.median(none_free_sds)
+        if none_free_stds:
+            std_median = np.median(none_free_stds)
 
-        else:  # If no SDs or SEMs reported at all, raise error
+        else:  # If no stds or SEMs reported at all, raise error
 
-            # Perhaps the median SD of all cells for this property could
+            # Perhaps the median std of all cells for this property could
             # be used. However, NE API nes interface does not support summary
             # prop values without specifying the neuron id
             msg = 'No StDevs or SEMs reported for "%s" property "%s"'
             msg = msg % (self.neuron_name, self.ephysprop_name)
             raise NotImplementedError(msg)
 
-        for i, _ in enumerate(sds):
-            if sds[i] is None:
-                sds[i] = sd_median
-                sems[i] = sd_median / np.sqrt(ns[i])
+        for i, _ in enumerate(stds):
+            if stds[i] is None:
+                stds[i] = std_median
+                sems[i] = std_median / np.sqrt(ns[i])

@@ -164,14 +164,14 @@ class CapacitanceTest(TestPulseTest):
         return prediction
 
     def compute_score(self, observation, prediction):
-        """Implementation of sciunit.Test.score_prediction."""
+        """Implement sciunit.Test.score_prediction."""
 
         if 'n' in prediction.keys():
             if prediction['n'] == 0:
                 score = scores.InsufficientDataScore(None)
         else:
-            score = super(CapacitanceTest,self).compute_score(observation,
-                                                          prediction)
+            score = super(CapacitanceTest, self).compute_score(observation,
+                                                               prediction)
         return score
 
 
@@ -181,7 +181,7 @@ class RestingPotentialTest(VmTest):
     required_capabilities = (cap.ReceivesSquareCurrent,)
 
     params = {'injected_square_current':
-                {'amplitude':0.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+              {'amplitude': 0.0*pq.pA, 'delay': DELAY, 'duration': DURATION}}
 
     name = "Resting potential test"
 
@@ -190,41 +190,36 @@ class RestingPotentialTest(VmTest):
 
     score_type = scores.ZScore
 
-
     units = pq.mV
 
     ephysprop_name = 'Resting membrane potential'
 
     def generate_prediction(self, model):
-        """Implementation of sciunit.Test.generate_prediction."""
+        """Implement sciunit.Test.generate_prediction."""
 
         model.rerun = True
 
         model.inject_square_current(self.params['injected_square_current'])
 
-        median = model.get_median_vm() # Use median for robustness.
+        median = model.get_median_vm()  # Use median for robustness.
         std = model.get_std_vm()
-        prediction = {'mean':median, 'std':std}
+        prediction = {'mean': median, 'std': std}
 
-        mp=model.get_membrane_potential()
+        vm = model.get_membrane_potential()
         import math
-        for i in mp:
+        for i in vm:
             if math.isnan(i):
                 return None
-        prediction = {'mean':median, 'std':std}
+        prediction = {'mean': median, 'std': std}
         self.prediction = prediction
         return prediction
 
     def compute_score(self, observation, prediction):
-        """Implementation of sciunit.Test.score_prediction."""
-        #print("%s: Observation = %s, Prediction = %s" % \
-        #	 (self.name,str(observation),str(prediction)))
+        """Implement sciunit.Test.score_prediction."""
         if prediction is None:
             score = scores.InsufficientDataScore(None)
-            #score = scores.ErrorScore(None)
-
         else:
-            score = super(RestingPotentialTest,self).\
-                        compute_score(observation, prediction)
-            #self.bind_score(score,None,observation,prediction)
+            score = super(RestingPotentialTest, self).\
+                          compute_score(observation, prediction)
+            # self.bind_score(score,None,observation,prediction)
         return score

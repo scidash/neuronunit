@@ -27,7 +27,6 @@ class VmTest(sciunit.Test):
                  observation={'mean': None, 'std': None},
                  name=None,
                  **params):
-
         super(VmTest, self).__init__(observation, name, **params)
         cap = []
         for cls in self.__class__.__bases__:
@@ -43,59 +42,22 @@ class VmTest(sciunit.Test):
 
     ephysprop_name = ''
 
-    # Observation values with units.
-    united_observation_keys = ['value', 'mean', 'std']
-
-    # Observation values without units.
-    nonunited_observation_keys = []
+    observation_schema = [{'mean': {'units': True, 'required': True},
+                           'std': {'units': True, 'min': 0, 'required': True},
+                           'n': {'type': 'integer', 'min': 1}},
+                          {'mean': {'units': True, 'required': True},
+                           'sem': {'units': True, 'min': 0, 'required': True},
+                           'n': {'type': 'integer', 'min': 1,
+                                 'required': True}}]
 
     def _extra(self):
         pass
 
-    def validate_observation(self, observation,
-                             united_keys=None,
-                             nonunited_keys=None):
-        if united_keys is None:
-            united_keys = self.united_observation_keys
-        if nonunited_keys is None:
-            nonunited_keys = self.nonunited_observation_keys
-        try:
-            assert type(observation) is dict
-            assert any([key in observation for key in united_keys]) \
-                or len(nonunited_keys)
-            for key in united_keys:
-                if key in observation:
-                    assert type(observation[key]) is pq.quantity.Quantity
-            for key in nonunited_keys:
-                if key in observation:
-                    assert type(observation[key]) is not pq.quantity.Quantity \
-                        or observation[key].units == pq.Dimensionless
-        except Exception as e:
-            key_str = 'and/or a '.join(['%s key' % key for key in united_keys])
-            msg = ("Observation must be a dictionary with a %s and each key "
-                   "must have units from the quantities package." % key_str)
-            raise ObservationError(msg)
-        for key in united_keys:
-            if key in observation:
-                provided = observation[key].simplified.units
-                if not isinstance(self.units, pq.Dimensionless):
-                    required = self.units.simplified.units
-                else:
-                    required = self.units
-                if provided != required:  # Units don't match spec.
-                    msg = ("Units of %s are required for %s but units of %s "
-                           "were provided" % (required.dimensionality.__str__(),
-                                              key,
-                                              provided.dimensionality.__str__())
-                           )
-                    raise ObservationError(msg)
+    def validate_observation(self, observation):
+        super(VmTest, self).validate_observation(observation)
+        # Catch another case that is trickier
         if 'std' not in observation:
-            if all([x in observation for x in ['sem', 'n']]):
-                observation['std'] = observation['sem'] * \
-                                     np.sqrt(observation['n'])
-            elif 'mean' in observation:
-                raise ObservationError(("Observation must have an 'std' key "
-                                        "or both 'sem' and 'n' keys."))
+            observation['std'] = observation['sem'] * np.sqrt(observation['n'])
         return observation
 
     def bind_score(self, score, model, observation, prediction):
