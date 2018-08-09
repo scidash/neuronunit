@@ -77,12 +77,12 @@ def dtc_to_rheo(xargs):
     dtc.scores = {}
     dtc.score = {}
     score = rtest.judge(model,stop_on_error = False, deep_error = True)
-    if score.sort_key is not None:
+    if score.norm_score is not None:
         if hasattr(dtc,'scores'):
-            dtc.scores[str(rtest)] = 1 - score.sort_key
+            dtc.scores[str(rtest)] = 1 - score.norm_score
         else:
             dtc.scores = {}
-            dtc.scores[str(rtest)] = 1 - score.sort_key
+            dtc.scores[str(rtest)] = 1 - score.norm_score
     dtc.rheobase = score.prediction
     return dtc
 
@@ -114,11 +114,11 @@ def nunit_evaluation(dtc,tests,backend=None):
         t.params = dtc.vtest[k]
         score = None
         score = t.judge(model,stop_on_error = False, deep_error = False)
-        if score.sort_key is not None:
-            dtc.scores[str(t)] = 1.0 - score.sort_key
+        if score.norm_score is not None:
+            dtc.scores[str(t)] = 1.0 - score.norm_score
             if not hasattr(dtc,'score'):
                 dtc.score = {}
-            dtc.score[str(t)] = score.sort_key
+            dtc.score[str(t)] = score.norm_score
         else:
             dtc.scores[str(t)] = 0.0
     return dtc

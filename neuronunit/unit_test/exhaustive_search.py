@@ -94,7 +94,7 @@ def dtc_to_rheo(dtc):
     model.rheobase = None
     rbt = get_neab.tests[0]
     score = rbt.judge(model,stop_on_error = False, deep_error = True)
-    dtc.scores[str(rbt)] = score.sort_key
+    dtc.scores[str(rbt)] = score.norm_score
     dtc.rheobase =  score.prediction
     return dtc
 

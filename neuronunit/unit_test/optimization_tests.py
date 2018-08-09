@@ -49,7 +49,7 @@ def parallel_method(item_of_iter_list):
         if k>1:
             t.params = dtc.vtest[k]
             score = t.judge(model,stop_on_error = False, deep_error = True)
-            scores.append(score.sort_key,score)
+            scores.append(score.norm_score,score)
     return scores
 
 def exhaustive_search(self):
@@ -161,13 +161,13 @@ class ReducedModelTestCase(unittest.TestCase):
         self.score_p = rtp.judge(model,stop_on_error = False, deep_error = True)
         self.predictionp = self.score_p.prediction
 
-        self.score_p = self.score_p.sort_key
+        self.score_p = self.score_p.norm_score
         tickp = time.time()
         self.timed_p = tickp - ticks
         self.score_s = rt.judge(model,stop_on_error = False, deep_error = True)
         self.predictions = self.score_s.prediction
 
-        self.score_s = self.score_s.sort_key
+        self.score_s = self.score_s.norm_score
         self.timed_s = time.time() - tickp
 
 
