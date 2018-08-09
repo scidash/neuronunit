@@ -199,9 +199,9 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         rbt = get_neab.tests[0]
         scoreN = rbt.judge(model,stop_on_error = False, deep_error = True)
         import copy
-        dtc.scores[str(rbt)] = copy.copy(scoreN.sort_key)
-        assert scoreN.sort_key is not None
-        self.assertTrue(scoreN.sort_key is not None)
+        dtc.scores[str(rbt)] = copy.copy(scoreN.norm_score)
+        assert scoreN.norm_score is not None
+        self.assertTrue(scoreN.norm_score is not None)
         dtc.rheobase = copy.copy(scoreN.prediction)
         return dtc
 
@@ -240,9 +240,9 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         from neuronunit.tests.passive import InputResistanceTest as T
         score = self.run_test(T)
         print(score)
-        print(score.sort_key)
-        assert score.sort_key is not None
-        self.assertTrue(score.sort_key is not None)
+        print(score.norm_score)
+        assert score.norm_score is not None
+        self.assertTrue(score.norm_score is not None)
 
         self.assertTrue(-0.6 < score < -0.5)
 
@@ -250,9 +250,9 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         from neuronunit.tests.passive import RestingPotentialTest as T
         score = self.run_test(T)
         print(score)
-        print(score.sort_key)
-        assert score.sort_key is not None
-        self.assertTrue(score.sort_key is not None)
+        print(score.norm_score)
+        assert score.norm_score is not None
+        self.assertTrue(score.norm_score is not None)
         self.assertTrue(1.2 < score < 1.3)
 
 
@@ -260,9 +260,9 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         from neuronunit.tests.passive import CapacitanceTest as T
         score = self.run_test(T)
         print(score)
-        print(score.sort_key)
-        assert score.sort_key is not None
-        self.assertTrue(score.sort_key is not None)
+        print(score.norm_score)
+        assert score.norm_score is not None
+        self.assertTrue(score.norm_score is not None)
 
         self.assertTrue(-0.15 < score < -0.05)
 
@@ -270,10 +270,10 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         from neuronunit.tests.passive import TimeConstantTest as T
         score = self.run_test(T)
         print(score)
-        print(score.sort_key)
+        print(score.norm_score)
         print(score)
-        assert score.sort_key is not None
-        self.assertTrue(score.sort_key is not None)
+        assert score.norm_score is not None
+        self.assertTrue(score.norm_score is not None)
 
         self.assertTrue(-1.45 < score < -1.35)
 
@@ -286,8 +286,8 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
 
         #self.update_amplitude(T)
         score = self.run_test(T,pred=self.rheobase)
-        assert score.sort_key is not None
-        self.assertTrue(score.sort_key is not None)
+        assert score.norm_score is not None
+        self.assertTrue(score.norm_score is not None)
         self.assertTrue(-0.6 < score < -0.5)
 
     def test_ap_amplitude(self):
@@ -295,8 +295,8 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         from neuronunit.optimization import get_neab
         from neuronunit.tests.waveform import InjectedCurrentAPAmplitudeTest as T
         score = self.run_test(T,pred=self.rheobase)
-        assert score.sort_key is not None
-        self.assertTrue(score.sort_key is not None)
+        assert score.norm_score is not None
+        self.assertTrue(score.norm_score is not None)
         self.assertTrue(-1.7 < score < -1.6)
 
     def test_ap_threshold(self):
@@ -311,8 +311,8 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend=('NEURON',{'DTC':dtc}))
         #score = self.run_test(T)
         score = self.run_test(T,pred=self.rheobase)
-        assert score.sort_key is not None
-        self.assertTrue(score.sort_key is not None)
+        assert score.norm_score is not None
+        self.assertTrue(score.norm_score is not None)
 
 
 
@@ -333,13 +333,13 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
         self.score_p = rtp.judge(model,stop_on_error = False, deep_error = True)
         self.predictionp = self.score_p.prediction
-        self.score_p = self.score_p.sort_key
+        self.score_p = self.score_p.norm_score
         #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
 
         serial_model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
         self.score_s = rt.judge(serial_model,stop_on_error = False, deep_error = True)
         self.predictions = self.score_s.prediction
-        self.score_s = self.score_s.sort_key
+        self.score_s = self.score_s.norm_score
         import numpy as np
         check_less_thresh = float(np.abs(self.predictionp['value'] - self.predictions['value']))
         self.assertLessEqual(check_less_thresh, 2.0)
