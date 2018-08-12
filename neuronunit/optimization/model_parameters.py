@@ -9,13 +9,6 @@ path_params['model_path'] = os.path.realpath(os.path.join(THIS_DIR,'..','models'
 # Which Parameters
 # https://www.izhikevich.org/publications/spikes.htm
 
-
-
-
-#import collections
-#from neuron import h
-#dummy = h.Section()
-#
 import collections
 import numpy as np
 
@@ -33,6 +26,8 @@ type2007 = collections.OrderedDict([
 
 
 
+
+
 temp = {k:[] for k in ['C','k','vr','vt','vpeak','a','b','c','d']  }
 for i,k in enumerate(temp.keys()):
     for v in type2007.values():
@@ -40,6 +35,9 @@ for i,k in enumerate(temp.keys()):
 
 explore_param = {k:(np.min(v),np.max(v)) for k,v in temp.items()}
 model_params = OrderedDict(explore_param)
+
+# page 1
+# http://www.rctn.org/vs265/izhikevich-nn03.pdf
 
 
 remap = ['C','k','a','b','d' ]
