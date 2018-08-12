@@ -1,6 +1,8 @@
 import numpy as np
 import os
 from collections import OrderedDict
+import collections
+import numpy as np
 
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -9,8 +11,6 @@ path_params['model_path'] = os.path.realpath(os.path.join(THIS_DIR,'..','models'
 # Which Parameters
 # https://www.izhikevich.org/publications/spikes.htm
 
-import collections
-import numpy as np
 
 type2007 = collections.OrderedDict([
   #              C    k     vr  vt vpeak   a      b   c    d  celltype
@@ -24,30 +24,43 @@ type2007 = collections.OrderedDict([
   ('RTN',       (40,  0.25, -65, -45,  0, 0.015, 10, -55,   50,   7)),
   ('RTN_burst', (40,  0.25, -65, -45,  0, 0.015, 10, -55,   50,   7))])
 
+temp = collections.OrderedDict()
+temp['C'] =[]
+temp['k'] = []
+temp['vr'] = []
+temp['vt'] = []
+temp['vpeak'] = []
+temp['a'] = []
+temp['b'] = []
+temp['c'] = []
+temp['d'] = [] 
 
+temp_list = list(temp.keys())
 
-
-
-temp = {k:[] for k in ['C','k','vr','vt','vpeak','a','b','c','d']  }
-for i,k in enumerate(temp.keys()):
+for i,k in enumerate(temp_list):
     for v in type2007.values():
         temp[k].append(v[i])
 
-explore_param = {k:(np.min(v),np.max(v)) for k,v in temp.items()}
-model_params = OrderedDict(explore_param)
 
-# page 1
-# http://www.rctn.org/vs265/izhikevich-nn03.pdf
+model_params = OrderedDict()
+for k,v in temp.items():
+    model_params[k] = (np.min(v),np.max(v)) 
 
 
-remap = ['C','k','a','b','d' ]
+remap = ['C','k','b','d' ]
 for k in model_params.keys():
     if k in remap:
         model_params[k] = np.linspace(float(model_params[k][0])*(10**-4),float(model_params[k][1])*(10**-4),9)
     else:
         model_params[k] = np.linspace(float(model_params[k][0]),float(model_params[k][1]),9)
+    if str('vr') in remap:
+        model_params['vr'] = np.linspace(float(model_params[k][0]-30.0), 0.0,9)
+    if str('b') in remap:
+        model_params['b'] = np.linspace(float(-1.0*0.02),float(np.abs(model_params[k][1]))*(10),9)
+    if str('a') in remap:
+        model_params['a'] = np.linspace(float(-1.0*np.abs(model_params[k][1]))*(10**-1),float(model_params[k][1])*(10**-2),9)
 
-print(model_params)
+
 '''
 
 https://www.izhikevich.org/publications/izhikevich.m

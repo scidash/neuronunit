@@ -291,12 +291,12 @@ def run_grid(npoints,tests, provided_keys = None, hold_constant = None, use_cach
     for sub_pop in consumable:
         grid_results.extend(update_deap_pop(sub_pop, tests, td))
         assert len(grid_results[0]) == len(provided_keys) + len(hold_constant)
-
-        if type(s) is not type(None):
-            s['consumable'] = consumable
-            s['cnt'] = cnt
-            s['grid_results'] = grid_results
-            s['sub_pop'] = sub_pop
+        if type(use_cache) is not type(None):
+            if type(s) is not type(None):
+                s['consumable'] = consumable
+                s['cnt'] = cnt
+                s['grid_results'] = grid_results
+                s['sub_pop'] = sub_pop
         cnt += 1
         print('done_block_of_N_cells: ',cnt)
     if type(s) is not type(None):
