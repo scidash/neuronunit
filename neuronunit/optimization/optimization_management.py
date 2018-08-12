@@ -85,14 +85,17 @@ def dtc_to_rheo(xargs):
     dtc.score = {}
 
     score = rtest.judge(model,stop_on_error = False, deep_error = False)
-    has_pred = bool(type(score.prediction) is not type(None))
-    has_zf = bool(type(score.sort_key) is not type(None))
-    if has_zf and has_pred:
-        dtc.scores.get(str(rtest), 1 - score.sort_key)
-        dtc.scores[str(rtest)] = 1 - score.sort_key
-        dtc = score_proc(dtc,rtest,score)
-        dtc.rheobase = score.prediction
-
+    if hasattr(score,'prediction'):
+        has_pred = bool(type(score.prediction) is not type(None))
+        has_zf = bool(type(score.sort_key) is not type(None))
+        if has_zf and has_pred:
+            #dtc.scores.get(str(rtest), 1 - score.sort_key)
+            dtc.scores[str(rtest)] = 1 - score.sort_key
+            
+            dtc = score_proc(dtc,rtest,score)
+            dtc.rheobase = score.prediction
+    else:
+        print(score,'error score')
     return dtc
 
 def score_proc(dtc,t,score):
@@ -110,11 +113,6 @@ def score_proc(dtc,t,score):
                 dtc.score[str(t)][str('agreement')] = np.abs(score.observation['value'] - score.prediction['value'])
 
     return dtc
-
-    #if score.sort_key is not None:
-    #    dtc.scores[str(t)] = 1.0 - score.sort_key
-    #else:
-    #    dtc.scores[str(t)] = 1.0
 
 def nunit_evaluation(tuple_object):#,backend=None):
     # Inputs single data transport container modules, and neuroelectro observations that
@@ -135,7 +133,11 @@ def nunit_evaluation(tuple_object):#,backend=None):
         model.set_attrs(dtc.attrs)
         tests[0].prediction = dtc.rheobase
         model.rheobase = dtc.rheobase['value']
+
+
     tests = [ t for t in tests if str('RheobaseTestP') not in str(t) ]
+
+
     for k,t in enumerate(tests):
         t.params = dtc.vtest[k]
         score = None
@@ -153,10 +155,10 @@ def nunit_evaluation(tuple_object):#,backend=None):
 
     return dtc
 
-def evaluate(dtc):#,exclude = None):
-    print(dtc.scores)
-    fitness = [ 1.0 for i in range(0,len(dtc.scores.keys())) ]
-    print(len(fitness))
+def evaluate(dtc):
+    error_length = len(dtc.scores.keys())
+    fitness = [ 1.0 for i in range(0,error_length) ]
+    
     for k,t in enumerate(dtc.scores.keys()):
         fitness[k] = dtc.scores[str(t)]
     return tuple(fitness,)
@@ -253,11 +255,10 @@ def run_ga(model_params,nparams,npoints,test, provided_keys = None, use_cache = 
 
     subset = reduce_params(model_params,nparams)
 
-    MU = int(np.floor(nparams))
-    max_ngen = int(np.floor(nparams))
-    #assert (MU * max_ngen) < (npoints * nparams)
+    MU = int(np.floor(npoints))
+    max_ngen = int(np.floor(npoints))
     selection = str('selNSGA')
-    #10
+    
     DO = DEAPOptimisation(offspring_size = MU, error_criterion = test, selection = selection, provided_dict = subset, elite_size = 2)
     #assert len(DO.params.items()) == 3
     ga_out = DO.run(offspring_size = MU, max_ngen = max_ngen)
@@ -312,6 +313,15 @@ def standard_code(pop,td,tests):
     dtcpop = copy.copy(dtcpop)
     # NeuronUnit testing
 
+
+	dtcpop = [ d for d in dtcpop if type(d.rheobase) is not -1.0 ]
+	dtcpop = [ d for d in dtcpop if type(d.rheobase['value']) is not type(None) ]
+	delta = len(pop) - len(dtcpop)
+	if delta != 0:
+		for d in range(0,len(delta)):
+		    dtcpop.append(copy.copy(dtcpop[0]))
+		            
+	  
     xargs = zip(dtcpop,repeat(tests))
     dtcpop = list(map(format_test,xargs))
     npart = np.min([multiprocessing.cpu_count(),len(pop)])

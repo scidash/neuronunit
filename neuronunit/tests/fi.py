@@ -5,6 +5,7 @@ import os
 import multiprocessing
 from .base import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
 from .. import optimization
+
 from neuronunit.optimization.data_transport_container import DataTC
 import os
 import quantities
