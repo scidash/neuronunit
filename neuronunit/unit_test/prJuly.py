@@ -1,14 +1,13 @@
 import pickle
-
-
 from neuronunit.optimization import get_neab
 import copy
 import os
 from neuronunit.optimization.optimization_management import run_ga
+from neuronunit.optimization.model_parameters import model_params, path_params
+from neuronunit.tests import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
 
 import matplotlib as mpl
 mpl.use('Agg')
-#mpl.switch_backend('Agg')
 
 
 electro_path = str(os.getcwd())+'/pipe_tests.p'
@@ -51,9 +50,7 @@ mp = modelp.model_params
 electro_tests = get_neab.replace_zero_std(electro_tests)
 electro_tests = get_neab.substitute_parallel_for_serial(electro_tests)
 test, observation = electro_tests[0]
-'''
 
-'''
 
 from neuronunit.tests import FakeTest
 import quantities as pq
@@ -68,14 +65,6 @@ nparams = len(opt_keys)
 
 observation = {'a':[np.median(mp['a']),np.std(mp['a'])], 'b':[np.median(mp['b']),np.std(mp['b'])], 'vr':[np.median(mp['vr']),np.std(mp['vr'])]}
 
-
-fake_test_a = FakeTest(observation['a'],name = str("test_a"))
-fake_test_b = FakeTest(observation['b'],name = str("test_b"))
-fake_test_vr = FakeTest(observation['vr'],name = str("test_vr"))
-tests_ = []
-tests_.append(fake_test_a)
-tests_.append(fake_test_b)
-tests_.append(fake_test_vr)
 
 tests = copy.copy(electro_tests[0][0])
 tests_ = []
@@ -164,16 +153,20 @@ def plot_surface(gr,ax,keys):
     if len(keys) != 1:
         yy = np.array([ p.dtc.attrs[str(keys[1])] for p in gr ])
     dim = len(xx)
+    '''
 
-
-    zi, yi, xi = np.histogram2d(yy, xx, bins=(dim/2,dim/2), weights=zz, normed=True)
-    counts, _, _ = np.histogram2d(yy, xx, bins=(dim/2,dim/2))
+    zi, yi, xi = np.histogram2d(yy, xx, bins=(6,6), weights=zz, normed=True)
+    counts, _, _ = np.histogram2d(yy, xx, bins=(6,6))
     zi = zi / counts
     zi = np.ma.masked_invalid(zi)
     print(zi)
+    '''
+    N = int(np.sqrt(len(x)))
+    X = xx.reshape((N, N))
+    Y = yy.reshape((N, N))
+    Z = zz.reshape((N, N))
 
-
-    ax.pcolormesh(xi, yi, zi, edgecolors='black')
+    ax.pcolormesh(X, Y, Z, edgecolors='black')
     ax.set_title(' {0} vs {1} '.format(keys[0],keys[1]))
     return ax
 
@@ -325,6 +318,39 @@ def grids(hof,tests):
 
 import matplotlib.pyplot as plt
 
+from neuronunit.models.reduced import ReducedModel
+from neuronunit.optimization.model_parameters import model_params, path_params
+from neuronunit.tests import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
+
+def plot_vm(hof,ax,key):
+    ax.cla()
+    ax.set_title(' {0} vs  $V_{M}$'.format(key[0]))
+    best_dtc = hof[0].dtc
+    best_rh = hof[0].dtc.rheobase
+
+    dtc.attrs = attrs
+
+    neuron = None
+
+    modelrs = ReducedModel(path_params['model_path'],name = str('regular_spiking'),backend =('NEURON',{'DTC':best_dtc}))
+
+    params = {'injected_square_current':
+            {'amplitude': best_rh, 'delay':DELAY, 'duration':DURATION}}
+
+    modelrs.inject_square_current(params)
+
+    #z = np.array([ np.sum(list(p.dtc.scores.values())) for p in gr ])
+    #x = np.array([ p.dtc.attrs[key[0]] for p in gr ])
+    times = vm.times
+
+    ax.plot(times,vm)
+    ax.xlabel('ms')
+    ax.ylabel('mV')
+    ax.set_xlim(np.min(x),np.max(x))
+    ax.set_ylim(np.min(z),np.max(z))
+    return ax
+
+
 def plotss(matrix):
     #dim = len(two_d.keys())
     dim = np.shape(matrix)[0]
@@ -358,5 +384,10 @@ with open('surfaces.p','wb') as f:
     pickle.dump(matrix,f)
 with open('surfaces.p','rb') as f:
     matrix = pickle.load(f)
+
+
+
+
+
 #plotss(matrix)
 #except:

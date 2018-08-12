@@ -80,9 +80,6 @@ class RheobaseTest(VmTest):
         def f(ampl):
             if float(ampl) not in lookup:
                 current = self.params.copy()['injected_square_current']
-                #This does not do what you would expect.
-                #due to syntax I don't understand.
-                #updating the dictionary keys with new values doesn't work.
 
                 uc = {'amplitude':ampl}
                 current.update(uc)

@@ -279,6 +279,47 @@ def rheobase(pop, td, rt):
     # Done changed the score away from Ratio to Z.
     return pop, dtcpop
 
+def sanity_check_score(pop,td,tests):
+    '''
+    Used for debugging with fake models
+    '''
+    dtcpop = update_dtc_pop(pop,td)
+    #import pdb; pdb.set_trace()
+    for dtc in dtcpop:
+        dtc.scores = None
+        dtc.scores = {}
+
+    for t in tests:
+        for dtc in dtcpop:
+            LEMS_MODEL_PATH = path_params['model_path']
+            model = ReducedModel(LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+            model.set_attrs(dtc.attrs)
+            score = t.judge(model)
+            #dtc.scores[str(t)] = score.sort_key
+            #score = t.judge(model,stop_on_error = False, deep_error = False)
+            if score.sort_key is not None:
+                dtc.scores.get(str(t), 1 - score.sort_key)
+                dtc.scores[str(t)] = 1 - score.sort_key
+
+                #dtc = score_proc(dtc,t,copy.copy(score))
+            else:
+                dtc.scores[str(t)] = 1.0
+    return dtcpop
+
+def standard_code(pop,td,tests):
+    dtcpop = None
+    pop, dtcpop = rheobase(copy.copy(pop), td, tests[0])
+    dtcpop = copy.copy(dtcpop)
+    # NeuronUnit testing
+
+    xargs = zip(dtcpop,repeat(tests))
+    dtcpop = list(map(format_test,xargs))
+    npart = np.min([multiprocessing.cpu_count(),len(pop)])
+    dtcbag = db.from_sequence(list(zip(dtcpop,repeat(tests))), npartitions = npart)
+
+    dtcpop = list(dtcbag.map(nunit_evaluation).compute())
+    return dtcpop
+
 
 def update_deap_pop(pop, tests, td, backend = None):
     '''
@@ -291,50 +332,7 @@ def update_deap_pop(pop, tests, td, backend = None):
     DTCs are then scored by neuronunit, using neuronunit models that act in place.
     '''
     # Rheobase value obtainment.
-
-    def sanity_check_score(pop,td):
-        '''
-        Used for debugging with fake models
-        '''
-        dtcpop = update_dtc_pop(pop,td)
-        #import pdb; pdb.set_trace()
-        for dtc in dtcpop:
-            dtc.scores = None
-            dtc.scores = {}
-
-        for t in tests:
-            for dtc in dtcpop:
-                LEMS_MODEL_PATH = path_params['model_path']
-                model = ReducedModel(LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-                model.set_attrs(dtc.attrs)
-                score = t.judge(model)
-                #dtc.scores[str(t)] = score.sort_key
-                #score = t.judge(model,stop_on_error = False, deep_error = False)
-                if score.sort_key is not None:
-                    dtc.scores.get(str(t), 1 - score.sort_key)
-                    dtc.scores[str(t)] = 1 - score.sort_key
-
-                    #dtc = score_proc(dtc,t,copy.copy(score))
-                else:
-                    dtc.scores[str(t)] = 1.0
-        return dtcpop
-
-    def standard_code(pop,td):
-        dtcpop = None
-        pop, dtcpop = rheobase(copy.copy(pop), td, tests[0])
-        dtcpop = copy.copy(dtcpop)
-        # NeuronUnit testing
-
-        xargs = zip(dtcpop,repeat(tests))
-        dtcpop = list(map(format_test,xargs))
-        npart = np.min([multiprocessing.cpu_count(),len(pop)])
-        dtcbag = db.from_sequence(list(zip(dtcpop,repeat(tests))), npartitions = npart)
-
-        dtcpop = list(dtcbag.map(nunit_evaluation).compute())
-        return dtcpop
-
-    dtcpop = standard_code(pop,td)
-    #dtcpop = sanity_check_score(pop,td)
+    dtcpop = standard_code(pop,td,tests)
     for i,d in enumerate(dtcpop):
         pop[i].dtc = None
         pop[i].dtc = copy.copy(dtcpop[i])
