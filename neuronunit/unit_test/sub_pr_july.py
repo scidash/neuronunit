@@ -1,6 +1,6 @@
 import pickle
-
 from neuronunit.tests import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
+
 
 from neuronunit.optimization import get_neab
 import copy
@@ -8,7 +8,7 @@ import os
 from neuronunit.optimization.optimization_management import run_ga
 
 import matplotlib as mpl
-mpl.use('Agg')
+mpl.use('agg')
 
 
 electro_path = str(os.getcwd())+'/pipe_tests.p'
@@ -65,9 +65,10 @@ tests = copy.copy(electro_tests[0][0])
 tests_ = []
 tests_ += [tests[0]]
 tests_ += tests[4:7]
-
+#import pdb
+#pdb.set_trace()
 try:
-    assert 1 == 2
+    #assert 1 == 2
     with open('ga_run.p','rb') as f:
         package = pickle.load(f)
     pop = package[0]
@@ -196,24 +197,7 @@ def grids(hof,tests):
             gr = run_grid(10,tests,provided_keys = free_param ,hold_constant = hc)
             # make a psuedo test, that still depends on input Parametersself.
             # each test evaluates a normal PDP.
-            '''
-            free_param = free_param[0]
-            min_ = np.min( [ np.sum(list(g.dtc.scores.values())) for g in gr ] )
- 
-            if np.sum(list(gr[0].dtc.scores.values())) == min_:
-                attrs = gr[0].dtc.attrs[free_param]
-                if -1 == np.sign(attrs):
-                    remin = attrs*10
-                else:
-                    remin = - attrs*10
-                newrange = np.linspace(remin,gr[-1].dtc.attrs[free_param],10)
-        
-            if np.sum(list(gr[-1].dtc.scores.values())) == min_:
-                attrs = gr[-1].dtc.attrs[free_param]
-                remin = attrs*10
-                
-                newrange = np.linspace(remin,gr[-1].dtc.attrs[free_param],10)
-            '''       
+                    
                     
 
                 
@@ -251,13 +235,17 @@ from neuronunit.models.reduced import ReducedModel
 
 def plot_vm(hof,ax,key):
     ax.cla()
-    best_dtc = hof[0].dtc
-    best_rh = hof[0].dtc.rheobase
+    best_dtc = hof[1].dtc
+    best_rh = hof[1].dtc.rheobase
+    print( [ h.dtc.rheobase for h in hof ])
+    
     neuron = None
     model = ReducedModel(path_params['model_path'],name = str('regular_spiking'),backend =('NEURON',{'DTC':best_dtc}))
     params = {'injected_square_current':
-            {'amplitude': best_rh, 'delay':DELAY, 'duration':DURATION}}
-    results = modelrs.inject_square_current(params)
+            {'amplitude': best_rh['value'], 'delay':DELAY, 'duration':DURATION}}
+    model.set_attrs(hof[0].dtc.attrs)
+    results = model.inject_square_current(params)
+    print(model.attrs,best_dtc.attrs,best_rh)
     vm = model.get_membrane_potential()
     times = vm.times
     ax.plot(times,vm)
@@ -289,12 +277,57 @@ def plotss(matrix,hof):
 
 
         print(i,j)
-    plt.savefig(str('surfaces.png'))
-    return None
-matrix = grids(hof,tests=tests_)
-with open('surfaces.p','wb') as f:
-    pickle.dump(matrix,f)
+    plt.savefig(str('other_surfaces.png'))
+    return None    
+
+
+def evidence(matrix,hof):
+    dim = np.shape(matrix)[0]
+    print(dim)
+    cnt = 0
+    fig,ax = plt.subplots(dim,dim,figsize=(10,10))
+    flat_iter = []
+    newrange = {}
+    for i,k in enumerate(matrix):
+        for j,r in enumerate(k):
+
+            keys = list(r[0])
+            gr = r[1]
+            line = [ np.sum(list(g.dtc.scores.values())) for g in gr]
+            print(line)
+            if i==j:
+                keys = keys[0]
+                min_ = np.min(line)
+                print(min_,line[0],line[1],'diff?')
+                if line[0] == min_:
+                    print('hit')
+                    attrs = gr[0].dtc.attrs[keys]
+                    remin = - np.abs(attrs)*10
+                    remax = np.abs(gr[-1].dtc.attrs[keys])*10
+                    nr = np.linspace(remin,remax,10)
+                    newrange[keys] = nr
+
+                if line[-1] == min_:
+                    print('hit')
+                    attrs = gr[-1].dtc.attrs[keys]
+                    remin = - np.abs(attrs)*10
+                    remax = np.abs(gr[-1].dtc.attrs[keys])*10
+                    nr = np.linspace(remin,remax,10)
+                    newrange[keys] = nr
+
+                print(newrange,'newrange')
+    return newrange
+#matrix = grids(hof,tests=tests_)
+#surfaces.p
+#with open('surfaces.p','wb') as f:
+#    pickle.dump(matrix,f)
 with open('surfaces.p','rb') as f:
     matrix = pickle.load(f)
-plotss(matrix,hof)
+import pdb
+
+newrange = evidence(matrix,hof)
+#_ = plotss(matrix,hof)
 #except:
+print('finished')
+print(newrange)
+exit
