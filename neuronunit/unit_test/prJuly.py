@@ -134,7 +134,7 @@ def plot_surface(gr,ax,keys,imshow=False):
            gr_.append(g)
        else:
            index = i
-         
+
     z = [ np.sum(list(p.dtc.scores.values())) for p in gr ]
     x = [ p.dtc.attrs[str(keys[0])] for p in gr ]
     y = [ p.dtc.attrs[str(keys[1])] for p in gr ]
@@ -149,9 +149,9 @@ def plot_surface(gr,ax,keys,imshow=False):
     xx = np.array(x)
     yy = np.array(y)
     zz = np.array(z)
-                 
+
     dim = len(xx)
-                 
+
 
     N = int(np.sqrt(len(xx)))
     X = xx.reshape((N, N))
@@ -162,7 +162,7 @@ def plot_surface(gr,ax,keys,imshow=False):
     else:
         import seaborn as sns; sns.set()
         ax = sns.heatmap(Z)
-    
+
         #ax.imshow(Z)
     #ax.pcolormesh(xi, yi, zi, edgecolors='black')
     ax.set_title(' {0} vs {1} '.format(keys[0],keys[1]))
@@ -178,6 +178,49 @@ def plot_line(gr,ax,key):
     ax.set_xlim(np.min(x),np.max(x))
     ax.set_ylim(np.min(z),np.max(z))
     return ax
+'''
+Depricated
+def check_range(matrix,hof):
+    dim = np.shape(matrix)[0]
+    print(dim)
+    cnt = 0
+    fig,ax = plt.subplots(dim,dim,figsize=(10,10))
+    flat_iter = []
+    newrange = {}
+    for i,k in enumerate(matrix):
+        for j,r in enumerate(k):
+            keys = list(r[0])
+            gr = r[1]
+            print(line)
+            if i==j:
+                line = [ np.sum(list(g.dtc.scores.values())) for g in gr]
+                (newrange, range_adj) = check_line(line,newrange)
+                print(newrange,'newrange')
+    return (newrange, range_adj)
+'''
+def check_line(line,newrange):
+    range_adj = False
+    keys = keys[0]
+    min_ = np.min(line)
+    print(min_,line[0],line[1],'diff?')
+    if line[0] == min_:
+        #print('hit')
+        attrs = gr[0].dtc.attrs[keys]
+        remin = - np.abs(attrs)*10
+        remax = np.abs(gr[-1].dtc.attrs[keys])*10
+        nr = np.linspace(remin,remax,10)
+        newrange[keys] = nr
+        range_adj = True
+
+    if line[-1] == min_:
+        #print('hit')
+        attrs = gr[-1].dtc.attrs[keys]
+        remin = - np.abs(attrs)*10
+        remax = np.abs(gr[-1].dtc.attrs[keys])*10
+        nr = np.linspace(remin,remax,10)
+        newrange[keys] = nr
+        range_adj = True
+    return (newrange, range_adj)
 
 def grids(hof,tests):
     dim = len(hof[0].dtc.attrs.keys())
@@ -202,30 +245,18 @@ def grids(hof,tests):
         if i == j:
             assert len(free_param) == len(hc) - 1
             assert len(hc) == len(free_param) + 1
-            gr = run_grid(10,tests,provided_keys = free_param ,hold_constant = hc)
+            gr = run_grid(3,tests,provided_keys = free_param ,hold_constant = hc)
             # make a psuedo test, that still depends on input Parametersself.
             # each test evaluates a normal PDP.
-            '''
-            free_param = free_param[0]
-            min_ = np.min( [ np.sum(list(g.dtc.scores.values())) for g in gr ] )
- 
-            if np.sum(list(gr[0].dtc.scores.values())) == min_:
-                attrs = gr[0].dtc.attrs[free_param]
-                if -1 == np.sign(attrs):
-                    remin = attrs*10
-                else:
-                    remin = - attrs*10
-                newrange = np.linspace(remin,gr[-1].dtc.attrs[free_param],10)
-        
-            if np.sum(list(gr[-1].dtc.scores.values())) == min_:
-                attrs = gr[-1].dtc.attrs[free_param]
-                remin = attrs*10
-                
-                newrange = np.linspace(remin,gr[-1].dtc.attrs[free_param],10)
-            '''       
-                    
+            line = [ np.sum(list(g.dtc.scores.values())) for g in gr]
+            newrange, range_adj = check_range(line,hof)
+            while range_adj == True:
+                gr = run_grid(3,tests,provided_keys = free_param ,hold_constant = hc, nr=newrange)
+                # make a psuedo test, that still depends on input Parametersself.
+                # each test evaluates a normal PDP.
+                line = [ np.sum(list(g.dtc.scores.values())) for g in gr]
+                newrange, range_adj = check_range(matrix,hof)
 
-                
             matrix[i][j] = ( free_param,gr )
 
             fp = list(copy.copy(free_param))
@@ -238,7 +269,7 @@ def grids(hof,tests):
             # I want the range of the plot shown to be bigger than than the grid lines.
 
             gr = run_grid(10,tests,provided_keys = free_param ,hold_constant = hc)
-            
+
             fp = list(copy.copy(free_param))
             #if len(gr) == 100:
             ax[i,j] = plot_surface(gr,ax[i,j],fp,imshow=False)
@@ -254,6 +285,11 @@ def grids(hof,tests):
 
     plt.savefig(str('cross_section_and_surfaces.png'))
     return matrix
+
+matrix = grids(hof,tests=tests_)
+with open('surfaces.p','wb') as f:
+    pickle.dump(matrix,f)
+
 
 import matplotlib.pyplot as plt
 
@@ -280,7 +316,7 @@ def plot_vm(hof,ax,key):
     #ax.set_ylim(np.min(z),np.max(z))
     return ax
 
-    
+
 def plotss(matrix,hof):
     dim = np.shape(matrix)[0]
     print(dim)
@@ -304,9 +340,7 @@ def plotss(matrix,hof):
         print(i,j)
     plt.savefig(str('surface_and_vm.png'))
     return None
-matrix = grids(hof,tests=tests_)
-with open('surfaces.p','wb') as f:
-    pickle.dump(matrix,f)
+
 with open('surfaces.p','rb') as f:
     matrix = pickle.load(f)
 
