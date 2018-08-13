@@ -24,6 +24,7 @@ class RunnableModel(sciunit.Model,
             raise TypeError("Model 'attrs' must be a dictionary.")
         self.attrs = attrs if attrs else {}
         self.set_backend(backend)
+        self.use_default_run_params()
 
     def get_backend(self):
         return self._backend
@@ -61,10 +62,8 @@ class RunnableModel(sciunit.Model,
         self._backend.init_backend(*args, **kwargs)
 
     def run(self, **run_params):
+        self.use_default_run_params()
         self.set_run_params(**run_params)
-        for key, value in self.default_run_params.items():
-            if key not in self.run_params:
-                self.set_run_params(**{key: value})
         if self.print_run_params:
             print("Run Params:", self.run_params)
         self.results = self._backend.backend_run()
@@ -92,6 +91,11 @@ class RunnableModel(sciunit.Model,
 
     def set_default_run_params(self, **params):
         self.default_run_params.update(params)
+
+    def use_default_run_params(self):
+        for key, value in self.default_run_params.items():
+            if key not in self.run_params:
+                self.set_run_params(**{key: value})
 
     def reset_default_run_params(self):
         self.default_run_params = {}
