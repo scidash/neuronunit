@@ -1,11 +1,23 @@
 """NEURON simulator backend for use with NeuronUnit models."""
 
+import copy
+import os
 import re
-from .base import Backend, BackendException, NEURON_SUPPORT, ms, mV, copy, \
-                  AnalogSignal, os, import_module_from_path, pynml, subprocess
-if NEURON_SUPPORT:
+import subprocess
+
+from pyneuroml import pynml
+from neo.core import AnalogSignal
+from quantities import ms, mV
+
+from sciunit.models.backends import Backend, BackendException
+from sciunit.utils import import_module_from_path
+
+try:
     import neuron
     from neuron import h
+    NEURON_SUPPORT = True
+except:
+    NEURON_SUPPORT = False
 
 
 class NEURONBackend(Backend):

@@ -1,27 +1,28 @@
-"""Passive neuronunit tests, e.g. requiring no active conductances or spiking"""
+"""Passive neuronunit tests, requiring no active conductances or spiking."""
 
-from .base import np, pq, sciunit, cap, VmTest, scores, AMPL, DELAY, DURATION
+from .base import np, pq, sciunit, ncap, VmTest, scores, AMPL, DELAY, DURATION
 from scipy.optimize import curve_fit
 
 
 class TestPulseTest(VmTest):
     """A base class for tests that use a square test pulse"""
 
-    required_capabilities = (cap.ReceivesSquareCurrent,)
+    required_capabilities = (ncap.ReceivesSquareCurrent,)
 
     name = ''
 
     score_type = scores.ZScore
 
     params = {'injected_square_current':
-                {'amplitude':-10.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+                {'amplitude': -10.0*pq.pA, 'delay': DELAY,
+                 'duration': DURATION}}
 
     def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
         model.inject_square_current(self.params['injected_square_current'])
         vm = model.get_membrane_potential()
         i = self.params['injected_square_current']
-        return (i,vm)
+        return (i, vm)
 
     @classmethod
     def get_segment(cls, vm, start, finish):
@@ -32,10 +33,9 @@ class TestPulseTest(VmTest):
     @classmethod
     def get_rin(cls, vm, i):
         start, stop = -11*pq.ms, -1*pq.ms
-        before = cls.get_segment(vm,start+i['delay'],
-                                     stop+i['delay'])
-        after = cls.get_segment(vm,start+i['delay']+i['duration'],
-                                    stop+i['delay']+i['duration'])
+        before = cls.get_segment(vm, start+i['delay'], stop+i['delay'])
+        after = cls.get_segment(vm, start+i['delay']+i['duration'],
+                                stop+i['delay']+i['duration'])
         r_in = (after.mean()-before.mean())/i['amplitude']
         return r_in.simplified
 
@@ -43,10 +43,10 @@ class TestPulseTest(VmTest):
     def get_tau(cls, vm, i):
         # 10 ms before pulse start or halfway between sweep start
         # and pulse start, whichever is longer
-        start = max(i['delay']-10*pq.ms,i['delay']/2)
-        stop = i['duration']+i['delay']-1*pq.ms # 1 ms before pulse end
-        region = cls.get_segment(vm,start,stop)
-        amplitude,tau,y0 = cls.exponential_fit(region, i['delay'])
+        start = max(i['delay'] - 10*pq.ms, i['delay']/2)
+        stop = i['duration']+i['delay'] - 1*pq.ms  # 1 ms before pulse end
+        region = cls.get_segment(vm, start, stop)
+        amplitude, tau, y0 = cls.exponential_fit(region, i['delay'])
         return tau
 
     @classmethod
@@ -60,26 +60,26 @@ class TestPulseTest(VmTest):
         offset = (offset * segment.sampling_rate).simplified
         assert offset.dimensionality == pq.dimensionless
         offset = int(offset)
-        guesses = [vm.min(), # amplitude (mV)
-                   10, # time constant (ms)
-                   vm.max()] # y0 (mV)
+        guesses = [vm.min(),  # amplitude (mV)
+                   10,  # time constant (ms)
+                   vm.max()]  # y0 (mV)
         vm_fit = vm.copy()
 
         def func(x, a, b, c):
-            '''
-            This function is simply the shape of exponential decay which must be differenced, its basically an ideal template
-            An exp decay equation derived from experiments.
-            For the model to compare against.
-            '''
-            vm_fit[:offset] = c
-            vm_fit[offset:,0] = a * np.exp(-t[offset:]/b) + c
-            return vm_fit.squeeze()
+            """Produce an exponential function.
 
-        popt, pcov = curve_fit(func, t, vm.squeeze(), p0=guesses) # Estimate starting values for better convergence
+            Given function parameters a, b, and c, returns the exponential
+            decay function for those parameters.
+            """
+            vm_fit[:offset] = c
+            vm_fit[offset:, 0] = a * np.exp(-t[offset:]/b) + c
+            return vm_fit.squeeze()
+        # Estimate starting values for better convergence
+        popt, pcov = curve_fit(func, t, vm.squeeze(), p0=guesses)
         amplitude = popt[0]*pq.mV
         tau = popt[1]*pq.ms
         y0 = popt[2]*pq.mV
-        return amplitude,tau,y0
+        return amplitude, tau, y0
 
 
 class InputResistanceTest(TestPulseTest):
@@ -95,14 +95,13 @@ class InputResistanceTest(TestPulseTest):
 
     def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
-        i,vm = super(InputResistanceTest,self).\
-                            generate_prediction(model)
+        i, vm = super(InputResistanceTest,self).generate_prediction(model)
         i['duration'] = 100 * pq.ms
 
         r_in = self.__class__.get_rin(vm, i)
         r_in = r_in.simplified
         # Put prediction in a form that compute_score() can use.
-        prediction = {'value':r_in}
+        prediction = {'value': r_in}
 
         return prediction
 
@@ -119,24 +118,24 @@ class TimeConstantTest(TestPulseTest):
     ephysprop_name = 'Membrane Time Constant'
 
     def generate_prediction(self, model):
-        """Implementation of sciunit.Test.generate_prediction."""
-        i,vm = super(TimeConstantTest,self).generate_prediction(model)
+        """Implementat sciunit.Test.generate_prediction."""
+        i, vm = super(TimeConstantTest, self).generate_prediction(model)
         tau = self.__class__.get_tau(vm, i)
         tau = tau.simplified
         # Put prediction in a form that compute_score() can use.
-        prediction = {'value':tau}
+        prediction = {'value': tau}
         return prediction
 
     def compute_score(self, observation, prediction):
-        """Implementation of sciunit.Test.score_prediction."""
+        """Implement sciunit.Test.score_prediction."""
 
         if 'n' in prediction.keys():
             if prediction['n'] == 0:
                 score = scores.InsufficientDataScore(None)
         else:
-            prediction['value']=prediction['value']
-            score = super(TimeConstantTest,self).compute_score(observation,
-                                                          prediction)
+            prediction['value'] = prediction['value']
+            score = super(TimeConstantTest, self).compute_score(observation,
+                                                                prediction)
 
         return score
 
@@ -178,7 +177,7 @@ class CapacitanceTest(TestPulseTest):
 class RestingPotentialTest(VmTest):
     """Tests the resting potential under zero current injection."""
 
-    required_capabilities = (cap.ReceivesSquareCurrent,)
+    required_capabilities = (ncap.ReceivesSquareCurrent,)
 
     params = {'injected_square_current':
               {'amplitude': 0.0*pq.pA, 'delay': DELAY, 'duration': DURATION}}

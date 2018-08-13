@@ -12,12 +12,10 @@ from neuroml import nml
 
 import neuronunit.capabilities as cap
 from pyneuroml import pynml
-from .base import RunnableModel
+from sciunit.models.runnable import RunnableModel
 
 
-class LEMSModel(RunnableModel,
-                cap.Runnable,
-                ):
+class LEMSModel(RunnableModel):
     """A generic LEMS model."""
 
     def __init__(self, LEMS_file_path, name=None,
