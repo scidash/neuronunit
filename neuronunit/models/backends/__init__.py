@@ -1,23 +1,21 @@
-import inspect
+"""Neuronunit-specific model backends."""
 
-from .base import Backend
+import sciunit.models.backends as su_backends
 
 try:
     from .jNeuroML import jNeuroMLBackend
-except:
+except Exception as e:
+    raise e
     pass
 
 try:
     from .neuron import NEURONBackend
-except:
+except Exception:
     pass
 
 try:
     from .pyNN import pyNNBackend
-except:
+except Exception:
     pass
 
-available_backends = {x.replace('Backend',''):cls for x, cls \
-                   in locals().items() \
-                   if inspect.isclass(cls) and \
-                   issubclass(cls, Backend)}
+su_backends.register_backends(locals())

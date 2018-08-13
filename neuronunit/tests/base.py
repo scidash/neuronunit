@@ -11,7 +11,8 @@ import numpy as np
 import sciunit
 import sciunit.scores as scores
 from sciunit.errors import ObservationError
-import neuronunit.capabilities as cap
+import sciunit.capabilities as scap
+import neuronunit.capabilities as ncap
 from neuronunit import neuroelectro
 
 
@@ -34,7 +35,7 @@ class VmTest(sciunit.Test):
         self.required_capabilities += tuple(cap)
         self._extra()
 
-    required_capabilities = (cap.Runnable, cap.ProducesMembranePotential,)
+    required_capabilities = (scap.Runnable, ncap.ProducesMembranePotential,)
 
     name = ''
 
