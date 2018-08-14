@@ -21,6 +21,26 @@ from pyneuroml import pynml
 from .backends import available_backends
 
 
+class ExternalModel(sciunit.Model,
+                  cap.ProducesMembranePotential,cap.Runnable):
+    """A model which produces a frozen membrane potential waveform"""
+
+    def __init__(self):
+        """vm is either a neo.core.AnalogSignal or a path to a
+        pickled neo.core.AnalogSignal"""
+
+        #self.model = model
+
+    def set_membrane_potential(self,vm):
+        self.vm = vm
+
+    def set_model_attrs(self,attrs):
+        self.attrs = attrs
+
+    def get_membrane_potential(self):
+        return self.vm
+
+
 class StaticModel(sciunit.Model,
                   cap.ProducesMembranePotential):
     """A model which produces a frozen membrane potential waveform"""
@@ -103,7 +123,7 @@ class LEMSModel(sciunit.Model,
                              "must be selected"))
         else:
             print(name,available_backends)
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
             raise Exception("Backend %s not found in backends.py" \
                             % name)
         self._backend.model = self
