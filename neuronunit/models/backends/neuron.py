@@ -194,7 +194,6 @@ class NEURONBackend(Backend):
         modeldirname = os.path.dirname(self.model.orig_lems_file_path)
         self.h.tstop = tstop
         self.set_stop_time(self.h.tstop) # previously 500ms add on 150ms of recovery
-        #self.h.tstop
         self.ns = nrn.NeuronSimulation(self.h.tstop, dt=0.0025)
 
     def load_mechanisms(self):
@@ -238,7 +237,7 @@ class NEURONBackend(Backend):
             #self.load_mechanisms()
         elif os.path.realpath(os.getcwd()) != os.path.realpath(self.neuron_model_dir):
             # Load mechanisms unless they've already been loaded
-            #   subprocess.run(["cd %s; nrnivmodl" % self.neuron_model_dir],shell=True)
+            #       subprocess.run(["cd %s; nrnivmodl" % self.neuron_model_dir],shell=True)
 
             self.load_mechanisms()
             self.load()
@@ -351,7 +350,7 @@ class NEURONBackend(Backend):
         # NEURONs default unit multiplier for current injection values is nano amps.
         # to make sure that pico amps are not erroneously interpreted as a larger nano amp.
         # current injection value, the value is divided by 1000.
-        amps = float(c['amplitude'])#/1000.0 #This is the right scale.
+        amps = float(c['amplitude'])/1000.0# #This is the right scale.
         prefix = 'explicitInput_%s%s_pop0.' % (self.current_src_name,self.cell_name)
         define_current = []
         define_current.append('{0}amplitude={1}'.format(prefix,amps))
@@ -362,14 +361,15 @@ class NEURONBackend(Backend):
         for string in define_current:
             # execute hoc code strings in the python interface to neuron.
             self.h(string)
+        self.neuron.h.psection()
 
     def _local_run(self):
         self.h('run()')
         results = {}
         # Prepare NEURON vectors for quantities/sciunit
         # By rescaling voltage to milli volts, and time to milli seconds.
-        results['vm'] = [float(x/1000.0) for x in copy.copy(self.neuron.h.v_v_of0.to_python())]
-        results['t'] = [float(x/1000.0) for x in copy.copy(self.neuron.h.v_time.to_python())]
+        results['vm'] = [float(x) for x in copy.copy(self.neuron.h.v_v_of0.to_python())]
+        results['t'] = [float(x) for x in copy.copy(self.neuron.h.v_time.to_python())]
         results['run_number'] = results.get('run_number',0) + 1
 
         return results

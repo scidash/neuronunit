@@ -7,7 +7,6 @@ import multiprocessing
 from collections import OrderedDict
 
 from neuronunit.optimization.model_parameters import model_params
-from neuronunit.optimization import model_parameters as modelp
 from neuronunit.optimization import data_transport_container
 from neuronunit.optimization.optimization_management import nunit_evaluation, update_deap_pop
 from neuronunit.optimization.optimization_management import update_dtc_pop
@@ -59,8 +58,8 @@ def chunks(l, n):
         ch.append(l[:][i:i+n])
     return ch
 
-def build_chunk_grid(npoints, provided_keys , hold_constant=None):
-    grid_points, maps = create_grid(npoints = npoints, provided_keys = provided_keys)
+def build_chunk_grid(npoints, provided_keys, hold_constant=None, mp_in = None):
+    grid_points, maps = create_grid(mp_in, npoints = npoints, provided_keys = provided_keys)
     #
     '''
     if type(hold_constant) is not type(None):
@@ -96,7 +95,10 @@ def sample_points(iter_dict, npoints=3):
     replacement = {}
     for p in range(0,len(iter_dict)):
         k,v = iter_dict.popitem(last=False)
-        sample_points = list(np.linspace(v.max(),v.min(),npoints))
+        if len(v) == 2:
+            sample_points = list(np.linspace(v[0],v[1],npoints))
+        else:
+            sample_points = list(np.linspace(v.max(),v.min(),npoints))
         replacement[k] = sample_points
     return replacement
 
@@ -138,7 +140,7 @@ def create_a_map(subset):
     return maps
 
 
-def create_grid(npoints=3,provided_keys=None,ga=None,nparams=None):
+def create_grid(mp_in,npoints=3,provided_keys=None,ga=None,nparams=None):
     '''
     Description, create a grid of evenly spaced samples in model parameters to search over.
     Inputs: npoints, type: Integer: number of sample points per parameter
@@ -154,28 +156,32 @@ def create_grid(npoints=3,provided_keys=None,ga=None,nparams=None):
     has been evaluated using neuronunit it can be used for informing a more refined second pass fine grained grid
     '''
 
-
-    mp = OrderedDict(modelp.model_params)
+    if mp_in == None:
+        from neuronunit.models.NeuroML2 import model_parameters as modelp
+        mp_in = OrderedDict(modelp.model_params)
+    else:
+        pass
     # smaller is a dictionary thats not necessarily as big
     # as the grid defined in the model_params file. Its not necessarily
     # a smaller dictionary, if it is smaller it is reduced by reducing sampling
     # points.
-    #if type(provided_keys) is not type(None):
-    #if type(provided_keys) is type(None) or nparams is not type(None):
-    #nparams = len(provided_keys)
+
     whole_p_set = {}
-    whole_p_set = OrderedDict(sample_points(mp, npoints=npoints))
+    print(mp_in, 'at this point, I expect mp_in to be really massive, but it isn\'t')
+    print('at that point, I expect mp_in to be all of the parameters and there ranges.')
+    whole_p_set = OrderedDict(sample_points(copy.copy(mp_in), npoints=npoints))
 
 
-    if nparams is not None:
+    if type(nparams) is not type(None) and nparams != 0:
         key_list = list(whole_p_set.keys())
         reduced_key_list = key_list[0:nparams]
     else:
         reduced_key_list =  provided_keys
-    #else:
-    #    reduced_key_list = list(provided_keys)
+    #import pdb; pdb.set_trace()
     # subset is reduced, by reducing parameter keys.
-    subset = OrderedDict( {k:whole_p_set[k] for k in reduced_key_list})
+    subset = OrderedDict( {k:whole_p_set[k] for k in provided_keys})
+
+
     maps = create_a_map(subset)
     if type(ga) is not type(None):
         if npoints > 1:
@@ -240,19 +246,8 @@ def transdict(dictionaries):
         mps[k] = dictionaries[k]
     return mps
 
-def mock_grid(npoints,tests, provided_keys = None, hold_constant = None, use_cache = False, cache_name=None):
-    s = shelve.open(str(cache_name)+'iterator.db')
-    if use_cache:
-        try:
-            grid_results = s['grid_results']
-            consumable = s['consumable']
-        except:
-            raise Exception('no file')
-
-    else:
-        # break the grid into chunks that fit inside memory easierself.
-        # consumable in this form is a memory friendly iterator, it can run out.
-        consumable_ ,td = build_chunk_grid(npoints,provided_keys)
+def mock_grid(npoints,tests, provided_keys = None, hold_constant = None, use_cache = False, cache_name = None):
+    consumable_ ,td = build_chunk_grid(npoints,provided_keys,mp_in=mp_in)
     cnt = 0
     grid_results = []
 
@@ -268,17 +263,8 @@ def mock_grid(npoints,tests, provided_keys = None, hold_constant = None, use_cac
     return grid_results
 
 
-def run_grid(npoints,tests, provided_keys = None, hold_constant = None, use_cache = False, cache_name=None):
-    s = shelve.open(str(cache_name)+'iterator.db')
-    if use_cache:
-        try:
-            grid_results = s['grid_results']
-            consumable = s['consumable']
-        except:
-            raise Exception('no file')
-
-    else:
-        consumable_ ,td = build_chunk_grid(npoints,provided_keys)
+def run_grid(npoints, tests, provided_keys = None, hold_constant = None, mp_in=None):
+    consumable_ ,td = build_chunk_grid(npoints,provided_keys,mp_in=mp_in)
 
     cnt = 0
     grid_results = []
@@ -286,11 +272,14 @@ def run_grid(npoints,tests, provided_keys = None, hold_constant = None, use_cach
         td, hc = add_constant(hold_constant,consumable_,td)
 
     assert len(td) == len(provided_keys) + len(hold_constant)
-
     consumable = iter(consumable_)
+    use_cache = None
+    s = None
+
     for sub_pop in consumable:
         grid_results.extend(update_deap_pop(sub_pop, tests, td))
         assert len(grid_results[0]) == len(provided_keys) + len(hold_constant)
+
         if type(use_cache) is not type(None):
             if type(s) is not type(None):
                 s['consumable'] = consumable

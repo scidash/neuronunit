@@ -22,9 +22,23 @@ class pyNNBackend(Backend):
         self.lookup = {}
         self.attrs = {}
         super(pyNNBackend,self).init_backend()#*args, **kwargs)
-        if DTC is not None:
 
-            self.set_attrs(**DTC.attrs)
+        self.model._backend.use_memory_cache = False
+        self.model.unpicklable += ['h','ns','_backend']
+
+        if type(DTC) is not type(None):
+            if type(DTC.attrs) is not type(None):
+
+                self.set_attrs(**DTC.attrs)
+                assert len(self.model.attrs.keys()) > 0
+
+            if hasattr(DTC,'current_src_name'):
+                self._current_src_name = DTC.current_src_name
+
+            if hasattr(DTC,'cell_name'):
+                self.cell_name = DTC.cell_name
+        #if DTC is not None:
+        #    self.set_attrs(**DTC.attrs)
 
 
 
@@ -76,7 +90,6 @@ class pyNNBackend(Backend):
         self.population = None
         self.setup(timestep=0.01, min_delay=1.0)
         import pyNN
-        #i_offset=[0.014, 0.0, 0.0]
         pop = self.neuron.Population(3, pyNN.neuron.Izhikevich(a=0.02, b=0.2, c=-65, d=6, i_offset=[0.014, -65.0, 0.0]))#,v=-65))
         self.population = pop
 
@@ -107,12 +120,9 @@ class pyNNBackend(Backend):
         if 'injected_square_current' in c.keys():
             c = current['injected_square_current']
 
-        c['delay'] = re.sub('\ ms$', '', str(c['delay'])) # take delay
-        c['duration'] = re.sub('\ ms$', '', str(c['duration']))
-        c['amplitude'] = re.sub('\ pA$', '', str(c['amplitude']))
         stop = float(c['delay'])+float(c['duration'])
         start = float(c['delay'])
-        amplitude = float(c['amplitude'])/1000.0
+        amplitude = float(c['amplitude'])
         #print('amplitude',amplitude)
         electrode = self.neuron.DCSource(start=start, stop=stop, amplitude=amplitude)
         print(self.population[0])
