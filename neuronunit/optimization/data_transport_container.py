@@ -1,3 +1,4 @@
+import numpy as np
 
 class DataTC(object):
     '''
@@ -19,6 +20,8 @@ class DataTC(object):
         self.results = None
         self.fitness = None
         self.score = None
+        self.scores = None
+
         self.boolean = False
         self.initiated = False
         self.delta = []
@@ -28,3 +31,13 @@ class DataTC(object):
         self.searchedd = {}
         self.cached_attrs = {}
         self.backend = None
+        self.summed = None
+
+
+    def get_ss(self):
+        # get summed score
+        if self.scores is not type(None):
+            self.summed = np.sum(list(self.scores.values()))
+        else:
+            self.summed = None
+        return self.summed

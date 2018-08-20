@@ -91,7 +91,7 @@ def dtc_to_rheo(xargs):
         if has_zf and has_pred:
             #dtc.scores.get(str(rtest), 1 - score.sort_key)
             dtc.scores[str(rtest)] = 1 - score.sort_key
-            
+
             dtc = score_proc(dtc,rtest,score)
             dtc.rheobase = score.prediction
     else:
@@ -152,13 +152,13 @@ def nunit_evaluation(tuple_object):#,backend=None):
             dtc = score_proc(dtc,t,copy.copy(score))
         else:
             dtc.scores[str(t)] = 1.0
-
+        dtc.get_ss()
     return dtc
 
 def evaluate(dtc):
     error_length = len(dtc.scores.keys())
     fitness = [ 1.0 for i in range(0,error_length) ]
-    
+
     for k,t in enumerate(dtc.scores.keys()):
         fitness[k] = dtc.scores[str(t)]
     return tuple(fitness,)
@@ -252,13 +252,15 @@ def run_ga(model_params,nparams,npoints,test, provided_keys = None, use_cache = 
     if type(provided_keys) is not type(None):
         model_params = { k:model_params[k] for k in provided_keys }
         nparams = len(provided_keys)
-
-    subset = reduce_params(model_params,nparams)
+    if type(nr) is not type(None):
+        subset = reduce_params(updated_params,nparams)
+    else:
+        subset = reduce_params(model_params,nparams)
 
     MU = int(np.floor(npoints))
     max_ngen = int(np.floor(npoints))
     selection = str('selNSGA')
-    
+
     DO = DEAPOptimisation(offspring_size = MU, error_criterion = test, selection = selection, provided_dict = subset, elite_size = 2)
     #assert len(DO.params.items()) == 3
     ga_out = DO.run(offspring_size = MU, max_ngen = max_ngen)
@@ -285,7 +287,6 @@ def sanity_check_score(pop,td,tests):
     Used for debugging with fake models
     '''
     dtcpop = update_dtc_pop(pop,td)
-    #import pdb; pdb.set_trace()
     for dtc in dtcpop:
         dtc.scores = None
         dtc.scores = {}
@@ -296,13 +297,11 @@ def sanity_check_score(pop,td,tests):
             model = ReducedModel(LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
             model.set_attrs(dtc.attrs)
             score = t.judge(model)
-            #dtc.scores[str(t)] = score.sort_key
-            #score = t.judge(model,stop_on_error = False, deep_error = False)
+
             if score.sort_key is not None:
                 dtc.scores.get(str(t), 1 - score.sort_key)
                 dtc.scores[str(t)] = 1 - score.sort_key
 
-                #dtc = score_proc(dtc,t,copy.copy(score))
             else:
                 dtc.scores[str(t)] = 1.0
     return dtcpop
@@ -314,14 +313,28 @@ def standard_code(pop,td,tests):
     # NeuronUnit testing
 
 
-	dtcpop = [ d for d in dtcpop if type(d.rheobase) is not -1.0 ]
-	dtcpop = [ d for d in dtcpop if type(d.rheobase['value']) is not type(None) ]
-	delta = len(pop) - len(dtcpop)
-	if delta != 0:
-		for d in range(0,len(delta)):
-		    dtcpop.append(copy.copy(dtcpop[0]))
-		            
-	  
+    dtcpop = [ d for d in dtcpop if type(d.rheobase) is not type(None) ]
+    dtcpop = [ d for d in dtcpop if str('value') in list(d.rheobase.keys()) ]
+
+    dtcpop = [ d for d in dtcpop if type(d.rheobase['value']) is not type(None) ]
+    dtcpop = [ d for d in dtcpop if float(d.rheobase['value']) != float(-1.0) ]
+
+    delta = len(pop) - len(dtcpop)
+    # if a rheobase value cannot be found for a given set of dtc model more_attributes
+    # delete that model, or rather, filter it out above, and impute
+    # a new model from the mean of the pre-existing model attributes.
+    impute_pop = []
+    if delta != 0:
+        impute = []
+        for i in range(0,len(pop[0])):
+            impute.append(np.mean([ p[i] for p in pop ]))
+        for d in range(0,delta):
+            temp = copy.copy(dtcpop[0])
+            for i,k in enumerate(temp.attrs.keys()):
+                temp.attrs[k] = impute[i]
+            dtcpop.append(temp)
+
+
     xargs = zip(dtcpop,repeat(tests))
     dtcpop = list(map(format_test,xargs))
     npart = np.min([multiprocessing.cpu_count(),len(pop)])
