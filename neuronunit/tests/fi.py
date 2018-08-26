@@ -261,6 +261,7 @@ class RheobaseTestP(VmTest):
                       {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
             ampl = float(dtc.ampl)
+            
             if ampl not in dtc.lookup or len(dtc.lookup) == 0:
                 current = params.copy()['injected_square_current']
                 uc = {'amplitude':ampl}
@@ -316,8 +317,9 @@ class RheobaseTestP(VmTest):
                 #dtc.current_steps = list(filter(lambda cs: cs !=0.0 , dtc.current_steps))
                 dtc_clones = [ copy.copy(dtc) for i in range(0,len(dtc.current_steps)) ]
                 for i,s in enumerate(dtc.current_steps):
-                    dtc_clones[i].ampl = None
+                
                     dtc_clones[i].ampl = dtc.current_steps[i]
+                dtc_clones = [ d for d in dtc_clones if not np.isnan(d.ampl) ]
                 b0 = db.from_sequence(dtc_clones, npartitions=8)
                 dtc_clone = list(b0.map(check_current).compute())
 

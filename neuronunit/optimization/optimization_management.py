@@ -242,7 +242,7 @@ def update_dtc_pop(pop, td, backend = None):
     return dtcpop
 
 
-def run_ga(model_params,nparams,npoints,test, provided_keys = None, use_cache = None, cache_name = None):
+def run_ga(model_params,nparams,npoints,test, provided_keys = None, nr = None):
     # https://stackoverflow.com/questions/744373/circular-or-cyclic-imports-in-python
     # These imports need to be defined with local scope to avoid circular importing problems
     # Try to fix local imports later.
@@ -314,12 +314,14 @@ def standard_code(pop,td,tests):
 
 
     dtcpop = [ d for d in dtcpop if type(d.rheobase) is not type(None) ]
-    dtcpop = [ d for d in dtcpop if str('value') in list(d.rheobase.keys()) ]
+    #dtcpop = [ d for d in dtcpop if str('value') in list(d.rheobase.keys()) ]
 
-    dtcpop = [ d for d in dtcpop if type(d.rheobase['value']) is not type(None) ]
-    dtcpop = [ d for d in dtcpop if float(d.rheobase['value']) != float(-1.0) ]
-
+    #dtcpop = [ d for d in dtcpop if type(d.rheobase['value']) is not type(None) ]
+    #dtcpop = [ d for d in dtcpop if float(d.rheobase['value']) != float(-1.0) ]
+    #import pdb
+    #pdb.set_trace()
     delta = len(pop) - len(dtcpop)
+    print('difference is {0} dtcpop is {1} len population is {2}'.format(delta,len(dtcpop),len(pop))
     # if a rheobase value cannot be found for a given set of dtc model more_attributes
     # delete that model, or rather, filter it out above, and impute
     # a new model from the mean of the pre-existing model attributes.
@@ -333,13 +335,10 @@ def standard_code(pop,td,tests):
             for i,k in enumerate(temp.attrs.keys()):
                 temp.attrs[k] = impute[i]
             dtcpop.append(temp)
-
-
     xargs = zip(dtcpop,repeat(tests))
     dtcpop = list(map(format_test,xargs))
     npart = np.min([multiprocessing.cpu_count(),len(pop)])
     dtcbag = db.from_sequence(list(zip(dtcpop,repeat(tests))), npartitions = npart)
-
     dtcpop = list(dtcbag.map(nunit_evaluation).compute())
     return dtcpop
 
