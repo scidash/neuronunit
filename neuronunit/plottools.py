@@ -196,10 +196,10 @@ def plot_surface(fig_trip,ax_trip,model_param0,model_param1,history):
 
 
     #data = np.random.random((12,3))            # arbitrary 3D data set
-    tri = scipy.spatial.Delaunay( data[:,:2] ) # take the first two dimensions
+    #tri = scipy.spatial.Delaunay( data[:,:2] ) # take the first two dimensions
 
-    pylab.triplot( data[:,0], data[:,1], tri.simplices.copy() )
-    pylab.plot( data[:,0], data[:,1], 'ro' ) ;
+    #pylab.triplot( data[:,0], data[:,1], tri.simplices.copy() )
+    #pylab.plot( data[:,0], data[:,1], 'ro' ) ;
 
     #fig_trip, ax_trip = plt.subplots(1, figsize=(10, 5), facecolor='white')
     trip_axis = ax_trip.tripcolor(xs,ys,sums,20,norm=matplotlib.colors.LogNorm())

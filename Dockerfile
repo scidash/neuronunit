@@ -4,10 +4,8 @@ RUN pip install psutil
 ENV QT_QPA_PLATFORM offscreen
 RUN pip install dask
 RUN pip install distributed
-# RUN pip install tornado deap 
 RUN sudo apt-get update
 RUN pip install ioloop
-#RUN pip install pyzmq
 RUN sudo chown -R jovyan /home/jovyan
 RUN pip install git+https://github.com/OpenSourceBrain/OpenCortex
 RUN git clone https://github.com/vrhaynes/AllenInstituteNeuroML.git
@@ -27,7 +25,7 @@ RUN pip install git+https://github.com/OpenSourceBrain/OpenCortex
 RUN git clone https://github.com/OpenSourceBrain/osb-model-validation.git
 WORKDIR osb-model-validation
 RUN python setup.py install 
-RUN pip3 --no-cache-dir install \
+RUN pip --no-cache-dir install \
         ipykernel \
         jupyter \
         matplotlib \
@@ -39,9 +37,8 @@ RUN pip3 --no-cache-dir install \
 
 RUN sudo /opt/conda/bin/python3 -m ipykernel.kernelspec
 
-RUN pip3 install --upgrade pip
 # Then install the Jupyter Notebook using:
-RUN pip3 install jupyter
+RUN pip install jupyter
 
 RUN sudo /opt/conda/bin/pip uninstall -y tornado
 RUN pip install tornado==4.5.3
@@ -49,9 +46,9 @@ RUN /opt/conda/bin/python3 -m pip install ipykernel
 RUN /opt/conda/bin/python3 -m ipykernel install --user
 RUN pip install deap
 WORKDIR $HOME
-ADD . neuronunit
-WORKDIR neuronunit
-RUN sudo /opt/conda/bin/pip install -e .
+# ADD . neuronunit
+# WORKDIR neuronunit
+# RUN sudo /opt/conda/bin/pip install -e .
 #RUN bash post_install.sh
 ENTRYPOINT /bin/bash
 
