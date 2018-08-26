@@ -13,11 +13,6 @@ except:
     print('sytactic error in NEURON')
 
 
-try:
-    from .pyNN import pyNNBackend
-
-except:
-    print('sytactic error in pyNN')
 
 
 
@@ -26,4 +21,3 @@ available_backends = {x.replace('Backend',''):cls for x, cls \
                    if inspect.isclass(cls) and \
                    issubclass(cls, Backend)}
 print(available_backends)
-print(pyNNBackend)
