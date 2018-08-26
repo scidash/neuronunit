@@ -60,14 +60,7 @@ def chunks(l, n):
 
 def build_chunk_grid(npoints, provided_keys, hold_constant=None, mp_in = None):
     grid_points, maps = create_grid(mp_in, npoints = npoints, provided_keys = provided_keys)
-    #
-    '''
-    if type(hold_constant) is not type(None):
-        hc = list(hold_constant.values())
-        for i in grid_points:
-            for h in hc:
-                i.append(h)
-    '''
+
     temp = OrderedDict(grid_points[0]).keys()
     tds = list(temp)
     pops = []
@@ -102,25 +95,6 @@ def sample_points(iter_dict, npoints=3):
         replacement[k] = sample_points
     return replacement
 
-'''depreciated
-def create_refined_grid(best_point,point1,point2):
-
-    # Can be used for creating a second pass fine grained grid
-
-    # This function reports on the deltas brute force obtained versus the GA found attributes.
-    #from neuronunit.optimization import model_parameters as modelp
-    #mp = modelp.model_params
-    new_search_interval = {}
-    for k,v in point1.attrs.items():
-        higher =  max(float(point1.attrs[k]),float(v), point2.attrs[k])
-        lower = min(float(point1.attrs[k]),float(v), point2.attrs[k])
-        temp = list(np.linspace(lower,higher,10))
-        new_search_interval[k] = temp[1:-2] # take only the middle two points
-        # discard edge points, as they are already well searched/represented.
-    grid = list(ParameterGrid(new_search_interval))
-    return grid
-'''
-
 def update_dtc_grid(item_of_iter_list):
 
     dtc = data_transport_container.DataTC()
@@ -140,7 +114,7 @@ def create_a_map(subset):
     return maps
 
 
-def create_grid(mp_in,npoints=3,provided_keys=None,ga=None,nparams=None):
+def create_grid(mp_in=None,npoints=3,provided_keys=None,ga=None,nparams=None):
     '''
     Description, create a grid of evenly spaced samples in model parameters to search over.
     Inputs: npoints, type: Integer: number of sample points per parameter
@@ -155,12 +129,14 @@ def create_grid(mp_in,npoints=3,provided_keys=None,ga=None,nparams=None):
     Miscallenous, once grid created by this function
     has been evaluated using neuronunit it can be used for informing a more refined second pass fine grained grid
     '''
-
-    if mp_in == None:
+    print(provided_keys, 'why is pk none')
+    if type(mp_in) is type(None):
         from neuronunit.models.NeuroML2 import model_parameters as modelp
         mp_in = OrderedDict(modelp.model_params)
-    else:
-        pass
+    # if type(provided_keys) is type(None):
+    #    from neuronunit.models.NeuroML2 import model_parameters as modelp
+    #    mp_in = OrderedDict(modelp.model_params)
+
     # smaller is a dictionary thats not necessarily as big
     # as the grid defined in the model_params file. Its not necessarily
     # a smaller dictionary, if it is smaller it is reduced by reducing sampling
@@ -177,8 +153,11 @@ def create_grid(mp_in,npoints=3,provided_keys=None,ga=None,nparams=None):
         reduced_key_list = key_list[0:nparams]
     else:
         reduced_key_list =  provided_keys
-    #import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
+
     # subset is reduced, by reducing parameter keys.
+    # if type(provided_keys) is not type(None):
+
     subset = OrderedDict( {k:whole_p_set[k] for k in provided_keys})
 
 
