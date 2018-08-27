@@ -237,31 +237,28 @@ def update_dtc_pop(pop, td, backend = None):
         # In this case pop is not really a population but an individual
         # but parsimony of naming variables
         # suggests not to change the variable name to reflect this.
-        dtcpop = list(transform(pop))
+        dtcpop = [ transform(pop) ]
         assert len(dtcpop) == len(pop)
     return dtcpop
 
 
-def run_ga(model_params,nparams,npoints,test, provided_keys = None, nr = None):
+def run_ga(model_params,npoints,test, provided_keys = None, nr = None):
     # https://stackoverflow.com/questions/744373/circular-or-cyclic-imports-in-python
     # These imports need to be defined with local scope to avoid circular importing problems
     # Try to fix local imports later.
     from bluepyopt.deapext.optimisations import DEAPOptimisation
     from neuronunit.optimization.exhaustive_search import create_grid
     from neuronunit.optimization.exhaustive_search import reduce_params
-    if type(provided_keys) is not type(None):
-        model_params = { k:model_params[k] for k in provided_keys }
-        nparams = len(provided_keys)
-    if type(nr) is not type(None):
-        subset = reduce_params(updated_params,nparams)
-    else:
-        subset = reduce_params(model_params,nparams)
+
+    ss = {}
+    for k in provided_keys:
+        ss[k] = model_params[k]
 
     MU = int(np.floor(npoints))
     max_ngen = int(np.floor(npoints))
     selection = str('selNSGA')
-
-    DO = DEAPOptimisation(offspring_size = MU, error_criterion = test, selection = selection, provided_dict = subset, elite_size = 2)
+    DO = DEAPOptimisation(offspring_size = MU, error_criterion = test, selection = selection, provided_dict = ss, elite_size = 2)
+    import pdb; pdb.set_trace()
     #assert len(DO.params.items()) == 3
     ga_out = DO.run(offspring_size = MU, max_ngen = max_ngen)
     with open('all_ga_cell.p','wb') as f:
@@ -318,10 +315,8 @@ def standard_code(pop,td,tests):
 
     #dtcpop = [ d for d in dtcpop if type(d.rheobase['value']) is not type(None) ]
     #dtcpop = [ d for d in dtcpop if float(d.rheobase['value']) != float(-1.0) ]
-    #import pdb
-    #pdb.set_trace()
     delta = len(pop) - len(dtcpop)
-    print('difference is {0} dtcpop is {1} len population is {2}'.format(delta,len(dtcpop),len(pop))
+    print('difference is {0} dtcpop is {1} len population is {2}'.format(delta,len(dtcpop),len(pop)))
     # if a rheobase value cannot be found for a given set of dtc model more_attributes
     # delete that model, or rather, filter it out above, and impute
     # a new model from the mean of the pre-existing model attributes.
@@ -355,15 +350,15 @@ def update_deap_pop(pop, tests, td, backend = None):
     '''
     # Rheobase value obtainment.
     dtcpop = standard_code(pop,td,tests)
-    for i,d in enumerate(dtcpop):
-        pop[i].dtc = None
-        pop[i].dtc = copy.copy(dtcpop[i])
-    invalid_dtc_not = [ i for i in pop if not hasattr(i,'dtc') ]
+    if len(dtcpop) > 1:
+        for i,d in enumerate(dtcpop):
+            pop[i].dtc = None
+            pop[i].dtc = copy.copy(dtcpop[i])
+        invalid_dtc_not = [ i for i in pop if not hasattr(i,'dtc') ]
 
-    if len(invalid_dtc_not) !=0:
-        import pdb; pdb.set_trace()
+    else:
+        pop.dtc = dtcpop[0]
     return pop
-
 
 def create_subset(nparams = 10, provided_dict = None):
     if type(provided_dict) is type(None):

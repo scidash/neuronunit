@@ -88,9 +88,11 @@ def sample_points(iter_dict, npoints=3):
     replacement = {}
     for p in range(0,len(iter_dict)):
         k,v = iter_dict.popitem(last=False)
+        #import pdb; pdb.set_trace()
         if len(v) == 2:
             sample_points = list(np.linspace(v[0],v[1],npoints))
         else:
+            v = np.array(v)
             sample_points = list(np.linspace(v.max(),v.min(),npoints))
         replacement[k] = sample_points
     return replacement
@@ -114,7 +116,7 @@ def create_a_map(subset):
     return maps
 
 
-def create_grid(mp_in=None,npoints=3,provided_keys=None,ga=None,nparams=None):
+def create_grid(mp_in=None,npoints=3,provided_keys=None,ga=None):
     '''
     Description, create a grid of evenly spaced samples in model parameters to search over.
     Inputs: npoints, type: Integer: number of sample points per parameter
@@ -128,38 +130,21 @@ def create_grid(mp_in=None,npoints=3,provided_keys=None,ga=None,nparams=None):
 
     Miscallenous, once grid created by this function
     has been evaluated using neuronunit it can be used for informing a more refined second pass fine grained grid
-    '''
-    print(provided_keys, 'why is pk none')
-    if type(mp_in) is type(None):
-        from neuronunit.models.NeuroML2 import model_parameters as modelp
-        mp_in = OrderedDict(modelp.model_params)
-    # if type(provided_keys) is type(None):
-    #    from neuronunit.models.NeuroML2 import model_parameters as modelp
-    #    mp_in = OrderedDict(modelp.model_params)
 
     # smaller is a dictionary thats not necessarily as big
     # as the grid defined in the model_params file. Its not necessarily
     # a smaller dictionary, if it is smaller it is reduced by reducing sampling
     # points.
 
+    '''
+    if type(mp_in) is type(None):
+        from neuronunit.models.NeuroML2 import model_parameters as modelp
+        mp_in = OrderedDict(modelp.model_params)
+
+
     whole_p_set = {}
-    print(mp_in, 'at this point, I expect mp_in to be really massive, but it isn\'t')
-    print('at that point, I expect mp_in to be all of the parameters and there ranges.')
     whole_p_set = OrderedDict(sample_points(copy.copy(mp_in), npoints=npoints))
-
-
-    if type(nparams) is not type(None) and nparams != 0:
-        key_list = list(whole_p_set.keys())
-        reduced_key_list = key_list[0:nparams]
-    else:
-        reduced_key_list =  provided_keys
-    # import pdb; pdb.set_trace()
-
-    # subset is reduced, by reducing parameter keys.
-    # if type(provided_keys) is not type(None):
-
     subset = OrderedDict( {k:whole_p_set[k] for k in provided_keys})
-
 
     maps = create_a_map(subset)
     if type(ga) is not type(None):
@@ -169,9 +154,7 @@ def create_grid(mp_in=None,npoints=3,provided_keys=None,ga=None,nparams=None):
                 v[1] = v[1]*2.0/3.0
 
     # The function of maps is to map floating point sample spaces onto a  monochromataic matrix indicies.
-
     grid = list(ParameterGrid(subset))
-
     return grid, maps
 
 def tfg2i(x, y, z):
@@ -249,15 +232,17 @@ def run_grid(npoints, tests, provided_keys = None, hold_constant = None, mp_in=N
     grid_results = []
     if type(hold_constant) is not type(None):
         td, hc = add_constant(hold_constant,consumable_,td)
-
-    assert len(td) == len(provided_keys) + len(hold_constant)
+        assert len(td) == len(provided_keys) + len(hold_constant)
     consumable = iter(consumable_)
     use_cache = None
     s = None
 
     for sub_pop in consumable:
-        grid_results.extend(update_deap_pop(sub_pop, tests, td))
-        assert len(grid_results[0]) == len(provided_keys) + len(hold_constant)
+        results = update_deap_pop(sub_pop, tests, td)
+        if type(results) is not None:
+            grid_results.extend(results)
+        if type(hold_constant) is not type(None):
+            assert len(grid_results[0]) == len(provided_keys) + len(hold_constant)
 
         if type(use_cache) is not type(None):
             if type(s) is not type(None):
