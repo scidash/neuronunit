@@ -321,7 +321,7 @@ def standard_code(pop,td,tests):
     #import pdb
     #pdb.set_trace()
     delta = len(pop) - len(dtcpop)
-    print('difference is {0} dtcpop is {1} len population is {2}'.format(delta,len(dtcpop),len(pop))
+    print('difference is {0} dtcpop is {1} len population is {2}'.format(delta,len(dtcpop),len(pop)))
     # if a rheobase value cannot be found for a given set of dtc model more_attributes
     # delete that model, or rather, filter it out above, and impute
     # a new model from the mean of the pre-existing model attributes.
