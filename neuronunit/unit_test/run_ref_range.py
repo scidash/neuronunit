@@ -10,8 +10,8 @@ from matplotlib.colors import LogNorm
 from neuronunit.optimization.exhaustive_search import run_grid, reduce_params, create_grid
 from neuronunit.optimization import model_parameters as modelp
 from neuronunit.optimization import exhaustive_search as es
-from neuronunit.models.NeuroML2 import model_parameters as modelp                                                    
-from neuronunit.models.NeuroML2 .model_parameters import path_params                                                 
+from neuronunit.models.NeuroML2 import model_parameters as modelp
+from neuronunit.models.NeuroML2 .model_parameters import path_params
 
 from neuronunit.optimization.optimization_management import run_ga
 from neuronunit.tests import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
@@ -23,36 +23,34 @@ import matplotlib as mpl
 mpl.use('Agg')
 import quantities as pq
 
-                                                                     
-electro_path = str(os.getcwd())+'/pipe_tests.p'
-print(os.getcwd())
-assert os.path.isfile(electro_path) == True
-with open(electro_path,'rb') as f:
-    electro_tests = pickle.load(f)
-
-electro_tests = get_neab.replace_zero_std(electro_tests)
-electro_tests = get_neab.substitute_parallel_for_serial(electro_tests)
-test, observation = electro_tests[0]
-
-electro_path = str(os.getcwd())+'/pipe_tests.p'
 from neuronunit import plottools
 ax = None
 
 plot_surface = plottools.plot_surface
 scatter_surface = plottools.plot_surface
 
-with open(electro_path,'rb') as f:
-    electro_tests = pickle.load(f)
-
-tests = copy.copy(electro_tests[0][0])
-tests_ = []
-tests_ += [tests[0]]
-tests_ += tests[4:7]
 
 
-    
+def get_tests():
+    from neuronunit.optimization import get_neab
+    electro_path = str(os.getcwd())+'/pipe_tests.p'
+    assert os.path.isfile(electro_path) == True
+    with open(electro_path,'rb') as f:
+        electro_tests = pickle.load(f)
+    #import pdb; pdb.set_trace()
+    electro_tests = get_neab.replace_zero_std(electro_tests)
+    electro_tests = get_neab.substitute_parallel_for_serial(electro_tests)
+    test, observation = electro_tests[0]
+    tests = copy.copy(electro_tests[0][0])
+    tests_ = []
+    tests_ += [tests[0]]
+    tests_ += tests[4:7]
+    return tests_, test, observation
+
+tests_,test, observation = get_tests()
+
 grid_results = {}
-  
+
 def plot_scatter(hof,ax,keys):
     z = np.array([ np.sum(list(p.dtc.scores.values())) for p in hof ])
     x = np.array([ p.dtc.attrs[str(keys[0])] for p in hof ])
@@ -105,8 +103,6 @@ def plot_surface(gr,ax,keys,imshow=False):
         import seaborn as sns; sns.set()
         ax = sns.heatmap(Z)
 
-        #ax.imshow(Z)
-    #ax.pcolormesh(xi, yi, zi, edgecolors='black')
     ax.set_title(' {0} vs {1} '.format(keys[0],keys[1]))
     return ax
 
@@ -181,34 +177,46 @@ def grids(hof,tests,params):
 opt_keys = ['a','b','vr']
 nparams = len(opt_keys)
 
-import explore_ranges
-fc, mp = explore_ranges.pre_run(tests_,opt_keys) 
-lines = [ v['line'] for v in fc.values() ]
-param_ranges = { k:v['range'] for k,v in fc.items() }
-cnts = [ v['cnt'] for v in fc.values() ]
-print('cnts ',cnts)
-print('param_ranges ',param_ranges)
-print('lines ', lines)
-with open('ranges.p','wb') as f:
-    pickle.dump([fc,mp],f)
+try:
+    assert 1==2
+    with open('ranges.p','rb') as f:
+        [fc,mp] = pickle.load(f)
 
+except:
+    import explore_ranges
+    fc, mp = explore_ranges.pre_run_two(tests_,opt_keys)
+    with open('ranges.p','wb') as f:
+        pickle.dump([fc,mp],f)
+    lines = [ v['line'] for v in fc.values() ]
+    cnts = [ v['cnt'] for v in fc.values() ]
+    print('cnts ',cnts)
+    print('lines ', lines)
+
+
+#import pdb; pdb.set_trace()
 #
 # Rick wants this to be a data frame
-# 
-mat, matrix = grids(hof,tests_,param_ranges)
-with open('surfaces.p','wb') as f:
-    pickle.dump([mat,matrix],f)
+#
+# def run_ga(model_params,nparams,npoints,test, provided_keys = None, nr = None):
+#import pdb; pdb.set_trace()
+#def run_ga(model_params,npoints,test, provided_keys = None, nr = None):
 
-    
-print('cnts ',cnts)
-print('param_ranges ',param_ranges)
-print('lines ', lines)
-
-package = run_ga(param_ranges,nparams*2,12,tests_,provided_keys = opt_keys)
+package = run_ga(mp,6,tests_,provided_keys = opt_keys)
 pop = package[0]
 history = package[4]
 gen_vs_pop =  package[6]
 hof = package[1]
+
+import pdb; pdb.set_trace()
+mat, matrix = grids(hof,tests_,param_ranges)
+with open('surfaces.p','wb') as f:
+    pickle.dump([mat,matrix],f)
+
+
+print('cnts ',cnts)
+print('param_ranges ',param_ranges)
+print('lines ', lines)
+import pdb; pdb.set_trace()
 
 #with open('ga_run.p','wb') as f:
 #    pickle.dump(package,f)
@@ -238,22 +246,17 @@ def plotss(matrix,hof):
     flat_iter = []
     for i,k in enumerate(matrix):
         for j,r in enumerate(k):
-
             keys = list(r[0])
             gr = r[1]
-
             if i==j:
                 ax[i,j] = plot_vm(hof,ax[i,j],keys)
             if i>j:
                 ax[i,j] = plot_surface(gr,ax[i,j],keys,imshow=False)
             if i < j:
                 ax[i,j] = plot_scatter(hof,ax[i,j],keys)
-
-
         print(i,j)
     plt.savefig(str('surface_and_vm.png'))
     return None
 
 with open('surfaces.p','rb') as f:
     matrix = pickle.load(f)
-
