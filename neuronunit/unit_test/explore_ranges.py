@@ -52,7 +52,7 @@ ax = None
 
 from numba import jit
 
-
+#@jit
 def check_line(line,gr,newrange,key):
     # Is this a concave down shape (optima in the middle)
     # Or is the most negative value on an edge?
@@ -94,6 +94,9 @@ from collections import OrderedDict
 # numba jit does not work on nested list iteration
 #@jit
 def pre_run(tests,opt_keys):
+    # algorithmically find the the edges of parameter ranges, via a course grained
+    # sampling of extreme parameter values
+    # to find solvable instances of Izhi-model, (models with a rheobase value).
     nparams = len(opt_keys)
     from neuronunit.models.NeuroML2 import model_parameters as modelp
     mp = copy.copy(modelp.model_params)
