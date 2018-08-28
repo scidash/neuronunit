@@ -212,6 +212,40 @@ def plot_surface(fig_trip,ax_trip,model_param0,model_param1,history):
     #plot_axis.tight_layout()
     return ax_trip,plot_axis
 
+def plot_vm(hof,ax,key):
+    ax.cla()
+    ax.set_title(' {0} vs  $V_{M}$'.format(key[0]))
+    best_dtc = hof[0].dtc
+    best_rh = hof[0].dtc.rheobase
+    neuron = None
+    model = ReducedModel(path_params['model_path'],name = str('regular_spiking'),backend =('NEURON',{'DTC':best_dtc}))
+    params = {'injected_square_current':
+            {'amplitude': best_rh, 'delay':DELAY, 'duration':DURATION}}
+    results = modelrs.inject_square_current(params)
+    vm = model.get_membrane_potential()
+    times = vm.times
+    ax.plot(times,vm)
+    return ax
+
+def plotss(matrix,hof):
+    dim = np.shape(matrix)[0]
+    print(dim)
+    cnt = 0
+    fig,ax = plt.subplots(dim,dim,figsize=(10,10))
+    flat_iter = []
+    for i,k in enumerate(matrix):
+        for j,r in enumerate(k):
+            keys = list(r[0])
+            gr = r[1]
+            if i==j:
+                ax[i,j] = plot_vm(hof,ax[i,j],keys)
+            if i>j:
+                ax[i,j] = plot_surface(gr,ax[i,j],keys,imshow=False)
+            if i < j:
+                ax[i,j] = plot_scatter(hof,ax[i,j],keys)
+        print(i,j)
+    plt.savefig(str('surface_and_vm.png'))
+    return None
 
 def scatter_surface(fig_trip,ax_trip,model_param0,model_param1,history):
     '''
