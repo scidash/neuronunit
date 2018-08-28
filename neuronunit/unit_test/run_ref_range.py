@@ -29,8 +29,8 @@ from numba import jit
 from neuronunit import plottools
 ax = None
 
-plot_surface = plottools.plot_surface
-scatter_surface = plottools.plot_surface
+#plot_surface = plottools.plot_surface
+#scatter_surface = plottools.plot_surface
 
 
 from neuronunit.optimization import get_neab
