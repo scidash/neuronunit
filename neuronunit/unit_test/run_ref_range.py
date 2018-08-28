@@ -112,6 +112,86 @@ def plot_line(gr,ax,key):
 
 
 
+def mock_grids(params):
+    with open('package.p','rb') as f:
+        package = pickle.load(f)
+    hof = package[1]
+    with open('ranges.p','rb') as f:
+        _,params = pickle.load(f)
+    dim = len(hof[0].dtc.attrs.keys())
+    flat_iter = iter([(i,ki,j,kj) for i,ki in enumerate(hof[0].dtc.attrs.keys()) for j,kj in enumerate(hof[0].dtc.attrs.keys())])
+    matrix = [[0 for x in range(dim)] for y in range(dim)]
+    plt.clf()
+
+    fig,ax = plt.subplots(dim,dim,figsize=(10,10))
+    cnt = 0
+    mat = np.zeros((dim,dim))
+    df = pd.DataFrame(mat)
+
+    for i,freei,j,freej in flat_iter:
+        free_param = set([freei,freej]) # construct a small-set out of the indexed keys 2. If both keys are
+        # are the same, this set will only contain one index
+        bs = set(hof[0].dtc.attrs.keys()) # construct a full set out of all of the keys available, including ones not indexed here.
+        diff = bs.difference(free_param) # diff is simply the key that is not indexed.
+        # hc is the dictionary of parameters to be held constant
+        # if the plot is 1D then two parameters should be held constant.
+        hc =  {}
+        for d in diff:
+            hc[d] = hof[0].dtc.attrs[d]
+
+        cpparams = {}
+        if i == j:
+            assert len(free_param) == len(hc) - 1
+            assert len(hc) == len(free_param) + 1
+            # zoom in on optima
+            cpparams['freei'] = (np.min(params[freei]), np.max(params[freei]))
+            
+            ##
+            # gr = run_grid(10,tests,provided_keys = freei, hold_constant = hc,mp_in = params)
+            ##
+            gr = np.random(10)
+            #W = np.random.random((dim, dim))
+            # make a psuedo test, that still depends on input Parametersself.
+            # each test evaluates a normal PDP.
+            fp = list(copy.copy(free_param))
+            ax[i,j] = plot_line(gr,ax[i,j],fp)
+        if i >j:
+            assert len(free_param) == len(hc) + 1
+            assert len(hc) == len(free_param) - 1
+            cpparams['freei'] = (np.min(params[freei]), np.max(params[freei]))
+            cpparams['freej'] = (np.min(params[freej]), np.max(params[freej]))
+            gr = np.random(100)
+
+            #gr = run_grid(10,tests,provided_keys = list((freei,freej)), hold_constant = hc, mp_in = params)
+            fp = list(copy.copy(free_param))
+            ax[i,j] = plot_surface(gr,ax[i,j],fp,imshow=False)
+
+        if i < j:
+            free_param = list(copy.copy(list(free_param)))
+            if len(free_param) == 2:
+                ax[i,j] = plot_scatter(hof,ax[i,j],free_param)
+        # To Pandas:
+        k = 0
+        df.insert(i, j, k, free_param)
+        k = 1
+        df.insert(i, j, k, hc)
+        k = 2
+        df.insert(i, j, k, cpparams)
+        k = 3
+        df.insert(i, j, k, gr)
+        '''
+        where, i and j are indexs to the 3 by 3 (9 element) subplot matrix,
+        and `k`-dim-0 is the parameter(s) that were free to vary (this can be two free in the case for i<j,
+        or one free to vary for i==j).
+        `k`-dim-1, is the parameter(s) that were held constant.
+        `k`-dim-2 `cpparams` is a per parameter dictionary, whose values are tuples that mark the edges of (free)
+        parameter ranges. `k`-dim-3 is the the grid that results from varying those parameters
+        (the grid results can either be square (if len(free_param)==2), or a line (if len(free_param==1)).
+        '''
+    plt.savefig(str('cross_section_and_surfaces.png'))
+    return matrix, df
+
+
 def grids(hof,tests,params):
     dim = len(hof[0].dtc.attrs.keys())
     flat_iter = iter([(i,ki,j,kj) for i,ki in enumerate(hof[0].dtc.attrs.keys()) for j,kj in enumerate(hof[0].dtc.attrs.keys())])
