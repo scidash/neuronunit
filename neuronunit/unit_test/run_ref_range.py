@@ -69,14 +69,11 @@ def plot_scatter(hof,ax,keys):
     return ax
 
 def plot_surface(gr,ax,keys,imshow=False):
-    # from
-    # https://github.com/russelljjarvis/neuronunit/blob/dev/neuronunit/unit_test/progress_report_4thJuly.ipynb
-    # Not rendered
-    # https://github.com/russelljjarvis/neuronunit/blob/dev/neuronunit/unit_test/progress_report_.ipynb
+    # from https://github.com/russelljjarvis/neuronunit/blob/dev/neuronunit/unit_test/progress_report_4thJuly.ipynb
+    # Not rendered https://github.com/russelljjarvis/neuronunit/blob/dev/neuronunit/unit_test/progress_report_.ipynb
     gr = [ g for g in gr if type(g.dtc) is not type(None) ]
     gr = [ g for g in gr if type(g.dtc.scores) is not type(None) ]
     ax.cla()
-    #gr = [ g
     gr_ = []
     index = 0
     for i,g in enumerate(gr):
@@ -84,12 +81,10 @@ def plot_surface(gr,ax,keys,imshow=False):
            gr_.append(g)
        else:
            index = i
-    z = [ np.sum(list(p.dtc.scores.values())) for p in gr ]
-    x = [ p.dtc.attrs[str(keys[0])] for p in gr ]
-    y = [ p.dtc.attrs[str(keys[1])] for p in gr ]
-    xx = np.array(x)
-    yy = np.array(y)
-    zz = np.array(z)
+
+    xx = np.array([ p.dtc.attrs[str(keys[0])] for p in gr ])
+    yy = np.array([ p.dtc.attrs[str(keys[1])] for p in gr ])
+    zz = np.array([ np.sum(list(p.dtc.scores.values())) for p in gr ])
     dim = len(xx)
     N = int(np.sqrt(len(xx)))
     X = xx.reshape((N, N))
@@ -178,7 +173,7 @@ def grids(hof,tests,params):
         where, i and j are indexs to the 3 by 3 (9 element) subplot matrix, 
         and `k`-dim-0 is the parameter(s) that were free to vary (this can be two free in the case for i<j, 
         or one free to vary for i==j).  
-        `k`-dim-1, is the parameter(s) that where held constant. 
+        `k`-dim-1, is the parameter(s) that were held constant. 
         `k`-dim-2 `cpparams` is a per parameter dictionary, whose values are tuples that mark the edges of (free)
         parameter ranges. `k`-dim-3 is the the grid that results from varying those parameters 
         (the grid results can either be square (if len(free_param)==2), or a line (if len(free_param==1)).
@@ -191,6 +186,7 @@ opt_keys = [str('vr'),str('a'),str('b')]
 nparams = len(opt_keys)
 
 try:
+    assert 1==2
     with open('ranges.p','rb') as f:
         [fc,mp] = pickle.load(f)
 
@@ -205,16 +201,21 @@ except:
     
 
 
-
+# update and simplify model parameter dictionary.
+# this is probably unnecessary
 for k,v in mp.items():
     if type(v) is type(tuple((0,0))):
         mp[k] = np.linspace(v[0],v[1],7) 
 
+        
+# get a genetic algorithm that operates on this new parameter range.        
 try:
+    assert 1==2
     with open('package.p','rb') as f:
         package = pickle.load(f)
 
 except:    
+    
     package = run_ga(mp,6,tests_,provided_keys = opt_keys)
     with open('package.p','wb') as f:
         pickle.dump(package,f)
@@ -230,7 +231,8 @@ with open('surfaces.p','wb') as f:
     pickle.dump([df,matrix],f)
 
 
-
+'''
+move somewhere else
 def plot_vm(hof,ax,key):
     ax.cla()
     ax.set_title(' {0} vs  $V_{M}$'.format(key[0]))
@@ -245,7 +247,7 @@ def plot_vm(hof,ax,key):
     times = vm.times
     ax.plot(times,vm)
     return ax
-
+'''
 
 def plotss(matrix,hof):
     dim = np.shape(matrix)[0]
