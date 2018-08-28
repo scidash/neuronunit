@@ -138,12 +138,12 @@ def grids(hof,tests,params):
         hc =  {}
         for d in diff:
             hc[d] = hof[0].dtc.attrs[d]
-
+        
+        cpparams = {}
         if i == j:
             assert len(free_param) == len(hc) - 1
             assert len(hc) == len(free_param) + 1
             # zoom in on optima
-            cpparams = copy.copy(params)
             cpparams['freei'] = (np.min(params[freei]), np.max(params[freei]))
 
             gr = run_grid(10,tests,provided_keys = freei, hold_constant = hc,mp_in = params)
