@@ -61,7 +61,6 @@ def check_line(line,gr,newrange):
     min_ = np.min(line)
     cl = [ g.dtc.attrs[key] for g in gr ]
     new = None
-    #import pdb; pdb.set_trace()
     if line[0] == min_:
         attrs = gr[0].dtc.attrs[key]
         remin = - 2*np.abs(attrs)*2
@@ -78,7 +77,6 @@ def check_line(line,gr,newrange):
         newrange[key] = cl
         range_adj = True
         new = remax
-    #import pdb; pdb.set_trace()
 
     return (newrange, range_adj, new)
 
@@ -109,7 +107,6 @@ def pre_run_two(tests,opt_keys):
     for key in opt_keys:
         # from neuronunit.models.NeuroML2 import model_parameters as modelp
         print(key,mp)
-        #import pdb; pdb.set_trace()
         gr = run_grid(3,tests,provided_keys = key, mp_in = mp)
         # make a psuedo test, that still depends on input Parametersself.
         # each test evaluates a normal PDP.
@@ -134,16 +131,10 @@ def pre_run_two(tests,opt_keys):
             line = [ np.sum(list(g.dtc.scores.values())) for g in gr]
             newrange, range_adj, new = check_line(line,gr,newrange)
             mp = mp_process(newrange)
-            #import pdb; pdb.set_trace()
             cnt+=1
 
         fc[key] = {}
         fc[key]['line'] = line
         fc[key]['range'] = newrange
         fc[key]['cnt'] = cnt
-    #import pdb; pdb.set_trace()
     return fc, mp
-
-#opt_keys = ['a']
-#fc, mp = pre_run_two(tests_,opt_keys)
-#import pdb; pdb.set_trace()
