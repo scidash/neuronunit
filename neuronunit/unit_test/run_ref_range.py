@@ -117,7 +117,7 @@ def grids(hof,tests,params):
     flat_iter = iter([(i,ki,j,kj) for i,ki in enumerate(hof[0].dtc.attrs.keys()) for j,kj in enumerate(hof[0].dtc.attrs.keys())])
     matrix = [[0 for x in range(dim)] for y in range(dim)]
     plt.clf()
-    
+
     fig,ax = plt.subplots(dim,dim,figsize=(10,10))
     cnt = 0
     mat = np.zeros((dim,dim))
@@ -133,7 +133,7 @@ def grids(hof,tests,params):
         hc =  {}
         for d in diff:
             hc[d] = hof[0].dtc.attrs[d]
-        
+
         cpparams = {}
         if i == j:
             assert len(free_param) == len(hc) - 1
@@ -170,14 +170,14 @@ def grids(hof,tests,params):
         k = 3
         df.insert(i, j, k, gr)
         '''
-        where, i and j are indexs to the 3 by 3 (9 element) subplot matrix, 
-        and `k`-dim-0 is the parameter(s) that were free to vary (this can be two free in the case for i<j, 
-        or one free to vary for i==j).  
-        `k`-dim-1, is the parameter(s) that were held constant. 
+        where, i and j are indexs to the 3 by 3 (9 element) subplot matrix,
+        and `k`-dim-0 is the parameter(s) that were free to vary (this can be two free in the case for i<j,
+        or one free to vary for i==j).
+        `k`-dim-1, is the parameter(s) that were held constant.
         `k`-dim-2 `cpparams` is a per parameter dictionary, whose values are tuples that mark the edges of (free)
-        parameter ranges. `k`-dim-3 is the the grid that results from varying those parameters 
+        parameter ranges. `k`-dim-3 is the the grid that results from varying those parameters
         (the grid results can either be square (if len(free_param)==2), or a line (if len(free_param==1)).
-        '''        
+        '''
     plt.savefig(str('cross_section_and_surfaces.png'))
     return matrix, df
 
@@ -198,24 +198,24 @@ except:
     fc, mp = explore_ranges.pre_run(tests_,opt_keys)
     with open('ranges.p','wb') as f:
         pickle.dump([fc,mp],f)
-    
+
 
 
 # update and simplify model parameter dictionary.
 # this is probably unnecessary
 for k,v in mp.items():
     if type(v) is type(tuple((0,0))):
-        mp[k] = np.linspace(v[0],v[1],7) 
+        mp[k] = np.linspace(v[0],v[1],7)
 
-        
-# get a genetic algorithm that operates on this new parameter range.        
+
+# get a genetic algorithm that operates on this new parameter range.
 try:
     assert 1==2
     with open('package.p','rb') as f:
         package = pickle.load(f)
 
-except:    
-    
+except:
+
     package = run_ga(mp,6,tests_,provided_keys = opt_keys)
     with open('package.p','wb') as f:
         pickle.dump(package,f)
@@ -229,45 +229,3 @@ hof = package[1]
 df, matrix = grids(hof,tests_,mp)
 with open('surfaces.p','wb') as f:
     pickle.dump([df,matrix],f)
-
-
-'''
-move somewhere else
-def plot_vm(hof,ax,key):
-    ax.cla()
-    ax.set_title(' {0} vs  $V_{M}$'.format(key[0]))
-    best_dtc = hof[0].dtc
-    best_rh = hof[0].dtc.rheobase
-    neuron = None
-    model = ReducedModel(path_params['model_path'],name = str('regular_spiking'),backend =('NEURON',{'DTC':best_dtc}))
-    params = {'injected_square_current':
-            {'amplitude': best_rh, 'delay':DELAY, 'duration':DURATION}}
-    results = modelrs.inject_square_current(params)
-    vm = model.get_membrane_potential()
-    times = vm.times
-    ax.plot(times,vm)
-    return ax
-'''
-
-def plotss(matrix,hof):
-    dim = np.shape(matrix)[0]
-    print(dim)
-    cnt = 0
-    fig,ax = plt.subplots(dim,dim,figsize=(10,10))
-    flat_iter = []
-    for i,k in enumerate(matrix):
-        for j,r in enumerate(k):
-            keys = list(r[0])
-            gr = r[1]
-            if i==j:
-                ax[i,j] = plot_vm(hof,ax[i,j],keys)
-            if i>j:
-                ax[i,j] = plot_surface(gr,ax[i,j],keys,imshow=False)
-            if i < j:
-                ax[i,j] = plot_scatter(hof,ax[i,j],keys)
-        print(i,j)
-    plt.savefig(str('surface_and_vm.png'))
-    return None
-
-with open('surfaces.p','rb') as f:
-    matrix = pickle.load(f)
