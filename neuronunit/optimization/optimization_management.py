@@ -373,7 +373,7 @@ def serial_route(pop,td,tests):
             dtc.get_ss()
             
     else:
-        dtc = format_test((dtcpop,tests))
+        dtc = format_test((dtc,tests))
         dtc = nunit_evaluation((dtc,tests))
         dtc.get_ss()
     return pop, dtc
