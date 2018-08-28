@@ -191,6 +191,9 @@ try:
         [fc,mp] = pickle.load(f)
 
 except:
+    # algorithmically find the the edges of parameter ranges, via a course grained
+    # sampling of extreme parameter values
+    # to find solvable instances of Izhi-model, (models with a rheobase value).
     import explore_ranges
     fc, mp = explore_ranges.pre_run_two(tests_,opt_keys)
     with open('ranges.p','wb') as f:
@@ -203,7 +206,6 @@ for k,v in mp.items():
     if type(v) is type(tuple((0,0))):
         mp[k] = np.linspace(v[0],v[1],7) 
 
-#print(mp['vr'])
 try:
     with open('package.p','rb') as f:
         package = pickle.load(f)
@@ -219,14 +221,9 @@ gen_vs_pop =  package[6]
 hof = package[1]
 
 
-try:
-    assert 1==2
-    with open('surfaces.p','rb') as f:
-        df, matrix = pickle.load(f)
-except:
-    df, matrix = grids(hof,tests_,mp)
-    with open('surfaces.p','wb') as f:
-        pickle.dump([df,matrix],f)
+df, matrix = grids(hof,tests_,mp)
+with open('surfaces.p','wb') as f:
+    pickle.dump([df,matrix],f)
 
 
 
