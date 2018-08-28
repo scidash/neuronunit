@@ -141,9 +141,7 @@ def grids(hof,tests,params):
             assert len(free_param) == len(hc) - 1
             assert len(hc) == len(free_param) + 1
             # zoom in on optima
-            centrei = hof[0].dtc.attrs[freei]
             cpparams = copy.copy(params)
-            #cpparams[freei] = np.linspace(centrei-centrei/10.0,centrei+centrei/10.0,10)
             cpparams['freei'] = (np.min(params[freei]), np.max(params[freei]))
 
             gr = run_grid(10,tests,provided_keys = freei, hold_constant = hc,mp_in = params)
@@ -154,11 +152,6 @@ def grids(hof,tests,params):
         if i >j:
             assert len(free_param) == len(hc) + 1
             assert len(hc) == len(free_param) - 1
-            centrei = hof[0].dtc.attrs[freei]
-            centrej = hof[0].dtc.attrs[freej]
-            # zoom in on optima
-            #cpparams[freei] = np.linspace(centrei-centrei/10.0,centrei+centrei/10.0,10)
-            #cpparams[freej] = np.linspace(centrej-centrej/10.0,centrej+centrej/10.0,10)
             cpparams['freei'] = (np.min(params[freei]), np.max(params[freei]))
             cpparams['freej'] = (np.min(params[freej]), np.max(params[freej]))
 
@@ -174,9 +167,12 @@ def grids(hof,tests,params):
         k = 0
         df.insert(i, j, k, free_param)
         k = 1
-        df.insert(i, j, k, gr)
+        df.insert(i, j, k, hc)
         k = 2
         df.insert(i, j, k, cpparams)
+        k = 3
+        df.insert(i, j, k, gr)
+        
         
         
     plt.savefig(str('cross_section_and_surfaces.png'))
@@ -195,7 +191,7 @@ except:
     # sampling of extreme parameter values
     # to find solvable instances of Izhi-model, (models with a rheobase value).
     import explore_ranges
-    fc, mp = explore_ranges.pre_run_two(tests_,opt_keys)
+    fc, mp = explore_ranges.pre_run(tests_,opt_keys)
     with open('ranges.p','wb') as f:
         pickle.dump([fc,mp],f)
     

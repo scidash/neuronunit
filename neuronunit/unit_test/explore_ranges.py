@@ -96,7 +96,7 @@ from collections import OrderedDict
 # https://stackoverflow.com/questions/33467738/numba-cell-vars-are-not-supported
 # numba jit does not work on nested list iteration
 #@jit
-def pre_run_two(tests,opt_keys):
+def pre_run(tests,opt_keys):
     # algorithmically find the the edges of parameter ranges, via a course grained
     # sampling of extreme parameter values
     # to find solvable instances of Izhi-model, (models with a rheobase value).
