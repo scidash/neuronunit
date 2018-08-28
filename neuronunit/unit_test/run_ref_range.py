@@ -193,6 +193,25 @@ def mock_grids(params):
 
 
 def grids(hof,tests,params):
+    '''                                                                                 
+    Obtain using the best candidate Gene (HOF, NU-tests, and expanded parameter ranges 
+found via                                                                               
+    exploring extreme edge cases of parameters                                          
+                                                                                        
+    plot a error surfaces, and cross sections, about the optima.                        
+                                                                                        
+    where, i and j are indexs to the 3 by 3 (9 element) subplot matrix,                 
+    and `k`-dim-0 is the parameter(s) that were free to vary (this can be two free in t\
+he case for i<j,                                                                        
+    or one free to vary for i==j).                                                      
+    `k`-dim-1, is the parameter(s) that were held constant.                             
+    `k`-dim-2 `cpparams` is a per parameter dictionary, whose values are tuples that ma\
+rk the edges of (free)                                                                  
+    parameter ranges. `k`-dim-3 is the the grid that results from varying those paramet\
+ers                                                                                     
+    (the grid results can either be square (if len(free_param)==2), or a line (if len(f\
+ree_param==1)).                                                                         
+    '''               
     dim = len(hof[0].dtc.attrs.keys())
     flat_iter = iter([(i,ki,j,kj) for i,ki in enumerate(hof[0].dtc.attrs.keys()) for j,kj in enumerate(hof[0].dtc.attrs.keys())])
     matrix = [[0 for x in range(dim)] for y in range(dim)]
