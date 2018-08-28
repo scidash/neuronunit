@@ -207,7 +207,7 @@ history = package[4]
 gen_vs_pop =  package[6]
 hof = package[1]
 
-import pdb; pdb.set_trace()
+#import pdb; pdb.set_trace()
 mat, matrix = grids(hof,tests_,param_ranges)
 with open('surfaces.p','wb') as f:
     pickle.dump([mat,matrix],f)
