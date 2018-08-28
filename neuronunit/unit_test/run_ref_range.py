@@ -1,7 +1,14 @@
+import matplotlib as mpl
+mpl.use('Agg')
+
+import matplotlib.pyplot as plt
+plt.clf()
+    
 
 from neuronunit.optimization import get_neab
 import copy
 import os
+import pandas as pd
 
 import pickle
 from neuronunit.tests import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
@@ -18,11 +25,9 @@ from neuronunit.tests import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
 import matplotlib.pyplot as plt
 from neuronunit.models.reduced import ReducedModel
 from itertools import product
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-mpl.use('Agg')
-import quantities as pq
 
+import quantities as pq
+from numba import jit
 from neuronunit import plottools
 ax = None
 
@@ -30,14 +35,15 @@ plot_surface = plottools.plot_surface
 scatter_surface = plottools.plot_surface
 
 
+from neuronunit.optimization import get_neab
 
 def get_tests():
-    from neuronunit.optimization import get_neab
+    # get neuronunit tests
     electro_path = str(os.getcwd())+'/pipe_tests.p'
     assert os.path.isfile(electro_path) == True
     with open(electro_path,'rb') as f:
         electro_tests = pickle.load(f)
-    #import pdb; pdb.set_trace()
+
     electro_tests = get_neab.replace_zero_std(electro_tests)
     electro_tests = get_neab.substitute_parallel_for_serial(electro_tests)
     test, observation = electro_tests[0]
@@ -81,14 +87,14 @@ def plot_surface(gr,ax,keys,imshow=False):
     z = [ np.sum(list(p.dtc.scores.values())) for p in gr ]
     x = [ p.dtc.attrs[str(keys[0])] for p in gr ]
     y = [ p.dtc.attrs[str(keys[1])] for p in gr ]
-
+    '''
     if len(x) != 100:
         delta = 100-len(x)
         for i in range(0,delta):
             x.append(np.mean(x))
             y.append(np.mean(y))
             z.append(np.mean(z))
-
+    '''
     xx = np.array(x)
     yy = np.array(y)
     zz = np.array(z)
@@ -117,7 +123,6 @@ def plot_line(gr,ax,key):
     ax.set_ylim(np.min(z),np.max(z))
     return ax
 
-import pandas as pd
 
 
 def grids(hof,tests,params):
@@ -125,11 +130,14 @@ def grids(hof,tests,params):
     flat_iter = [ (i,ki,j,kj) for i,ki in enumerate(hof[0].dtc.attrs.keys()) for j,kj in enumerate(hof[0].dtc.attrs.keys()) ]
     matrix = [[0 for x in range(dim)] for y in range(dim)]
     plt.clf()
+    
     fig,ax = plt.subplots(dim,dim,figsize=(10,10))
-    mat = np.array((dim,dim))
+    mat = np.zeros((dim,dim))
     cnt = 0
-    for i,ki,j,kj in flat_iter:
-        free_param = set([ki,kj]) # construct a small-set out of the indexed keys 2. If both keys are
+    df = pd.DataFrame(mat)
+
+    for i,freei,j,freej in flat_iter:
+        free_param = set([freei,freej]) # construct a small-set out of the indexed keys 2. If both keys are
         # are the same, this set will only contain one index
         bs = set(hof[0].dtc.attrs.keys()) # construct a full set out of all of the keys available, including ones not indexed here.
         diff = bs.difference(free_param) # diff is simply the key that is not indexed.
@@ -142,43 +150,53 @@ def grids(hof,tests,params):
         if i == j:
             assert len(free_param) == len(hc) - 1
             assert len(hc) == len(free_param) + 1
-            min_ = np.min(params[free_param])
-            max_ = np.max(params[free_param])
-            limited = params[free_param]
-            gr = run_grid(10,tests,provided_keys = free_param ,hold_constant = hc,mp_in = limited)
+            # zoom in on optima
+            centrei = hof[0].dtc.attrs[freei]
+            cpparams = copy.copy(params)
+            #cpparams[freei] = np.linspace(centrei-centrei/10.0,centrei+centrei/10.0,10)
+            cpparams['freei'] = (np.min(params[freei]), np.max(params[freei]))
+
+            gr = run_grid(10,tests,provided_keys = freei, hold_constant = hc,mp_in = params)
             # make a psuedo test, that still depends on input Parametersself.
             # each test evaluates a normal PDP.
-            matrix[i][j] = ( free_param,gr )
             fp = list(copy.copy(free_param))
             ax[i,j] = plot_line(gr,ax[i,j],fp)
         if i >j:
             assert len(free_param) == len(hc) + 1
             assert len(hc) == len(free_param) - 1
-            # what I want to do, I want to plot grid lines not a heat map.
-            # I want to plot bd.attrs is cross hairs,
-            # I want the range of the plot shown to be bigger than than the grid lines.
-            limited = {i:params[i] for i in list(free_param) }
-            gr = run_grid(10,tests,provided_keys = free_param ,hold_constant = hc, mp_in = limited)
+            centrei = hof[0].dtc.attrs[freei]
+            centrej = hof[0].dtc.attrs[freej]
+            # zoom in on optima
+            #cpparams[freei] = np.linspace(centrei-centrei/10.0,centrei+centrei/10.0,10)
+            #cpparams[freej] = np.linspace(centrej-centrej/10.0,centrej+centrej/10.0,10)
+            cpparams['freei'] = (np.min(params[freei]), np.max(params[freei]))
+            cpparams['freej'] = (np.min(params[freej]), np.max(params[freej]))
+
+            gr = run_grid(10,tests,provided_keys = list((freei,freej)), hold_constant = hc, mp_in = params)
             fp = list(copy.copy(free_param))
             ax[i,j] = plot_surface(gr,ax[i,j],fp,imshow=False)
-            matrix[i][j] = ( free_param,gr )
 
         if i < j:
-            matrix[i][j] = ( free_param,gr )
-            fp = list(copy.copy(free_param))
-            if len(fp) == 2:
-                ax[i,j] = plot_scatter(hof,ax[i,j],fp)
-
-        mat[i,j] = ( free_param,gr )
+            free_param = list(copy.copy(list(free_param)))
+            if len(free_param) == 2:
+                ax[i,j] = plot_scatter(hof,ax[i,j],free_param)
+           #to_pandas = {}
+        k = 0
+        df.insert(i, j, k, free_param)
+        k = 1
+        df.insert(i, j, k, gr)
+        k = 2
+        df.insert(i, j, k, cpparams)
+        
+        
     plt.savefig(str('cross_section_and_surfaces.png'))
-    return matrix, mat
+    return matrix, df
 
 
-opt_keys = ['a','b','vr']
+opt_keys = [str('vr'),str('a'),str('b')]
 nparams = len(opt_keys)
 
 try:
-    assert 1==2
     with open('ranges.p','rb') as f:
         [fc,mp] = pickle.load(f)
 
@@ -193,30 +211,42 @@ except:
     print('lines ', lines)
 
 
-#import pdb; pdb.set_trace()
-#
 # Rick wants this to be a data frame
-#
-# def run_ga(model_params,nparams,npoints,test, provided_keys = None, nr = None):
-#import pdb; pdb.set_trace()
-#def run_ga(model_params,npoints,test, provided_keys = None, nr = None):
 
-package = run_ga(mp,6,tests_,provided_keys = opt_keys)
+print(opt_keys, mp)
+
+
+for k,v in mp.items():
+    if type(v) is type(tuple((0,0))):
+        mp[k] = np.linspace(v[0],v[1],7) 
+
+#print(mp['vr'])
+try:
+    with open('package.p','rb') as f:
+        package = pickle.load(f)
+
+except:    
+    package = run_ga(mp,6,tests_,provided_keys = opt_keys)
+    with open('package.p','wb') as f:
+        pickle.dump(package,f)
+
 pop = package[0]
 history = package[4]
 gen_vs_pop =  package[6]
 hof = package[1]
 
-#import pdb; pdb.set_trace()
-mat, matrix = grids(hof,tests_,param_ranges)
-with open('surfaces.p','wb') as f:
-    pickle.dump([mat,matrix],f)
+
+try:
+    assert 1==2
+    with open('surfaces.p','rb') as f:
+        df, matrix = pickle.load(f)
+except:
+    df, matrix = grids(hof,tests_,mp)
+    with open('surfaces.p','wb') as f:
+        pickle.dump([df,matrix],f)
 
 
-print('cnts ',cnts)
-print('param_ranges ',param_ranges)
-print('lines ', lines)
-import pdb; pdb.set_trace()
+# import pdb; pdb.set_trace()
 
 #with open('ga_run.p','wb') as f:
 #    pickle.dump(package,f)
