@@ -32,9 +32,6 @@ import quantities as pq
 from itertools import product
 import matplotlib.pyplot as plt
 
-# electro_tests = get_neab.replace_zero_std(electro_tests)
-# electro_tests = get_neab.substitute_parallel_for_serial(electro_tests)
-# test, observation = electro_tests[0]
 
 def get_tests():
     from neuronunit.optimization import get_neab
@@ -53,32 +50,34 @@ tests_,test, observation = get_tests()
 
 ax = None
 
+from numba import jit
 
-
-def check_line(line,gr,newrange):
+#@jit
+def check_line(line,gr,newrange,key):
     range_adj = False
-    key = list(newrange.keys())[0]
     min_ = np.min(line)
+    
+    [ print(g.dtc.attrs.keys()) for g in gr ]
+    for g in gr:
+        print(g.dtc.attrs.keys())
     cl = [ g.dtc.attrs[key] for g in gr ]
+    
     new = None
-    #import pdb; pdb.set_trace()
+
     if line[0] == min_:
         attrs = gr[0].dtc.attrs[key]
         remin = - 2*np.abs(attrs)*2
-        #same_max = gr[-1].dtc.attrs[key]
         cl.insert(0,remin)
         newrange[key] = cl
         range_adj = True
         new = remin
     if line[-1] == min_:
         attrs = gr[-1].dtc.attrs[key]
-        #same_min = gr[0].dtc.attrs[key]
         remax = np.abs(attrs)*2
         cl.append(remax)
         newrange[key] = cl
         range_adj = True
         new = remax
-    #import pdb; pdb.set_trace()
 
     return (newrange, range_adj, new)
 
@@ -86,43 +85,40 @@ def mp_process(newrange):
     from neuronunit.models.NeuroML2 import model_parameters as modelp
     mp = copy.copy(modelp.model_params)
     for k,v in newrange.items():
-
         if type(v) is not type(None):
             mp[k] = (np.min(v),np.max(v))
-
     return mp
 
 from neuronunit.models.NeuroML2 import model_parameters as modelp
 from neuronunit.optimization.optimization_management import nunit_evaluation, update_deap_pop
 from collections import OrderedDict
 
+# https://stackoverflow.com/questions/33467738/numba-cell-vars-are-not-supported
+# numba jit does not work on nested list iteration
+#@jit
 def pre_run_two(tests,opt_keys):
     nparams = len(opt_keys)
     from neuronunit.models.NeuroML2 import model_parameters as modelp
     mp = copy.copy(modelp.model_params)
-    mp['b'] = (0.25,6554)
-    mp['a'] = (-220.0, 150.0)
-    mp['vr'] =  (-75, -55)
-    dim = len(opt_keys)
+    #mp['b'] = (0.25,6554)
+    #mp['a'] = (-220.0, 150.0)
+    #mp['vr'] =  (-150, 0)
     cnt = 0
     fc = {} # final container
     for key in opt_keys:
-        # from neuronunit.models.NeuroML2 import model_parameters as modelp
         print(key,mp)
-        #import pdb; pdb.set_trace()
         gr = run_grid(3,tests,provided_keys = key, mp_in = mp)
         # make a psuedo test, that still depends on input Parametersself.
-        # each test evaluates a normal PDP.
-        line = [ np.sum(list(g.dtc.scores.values())) for g in gr]
-        nr = {str(list(key)[0]):None}
-        newrange, range_adj, new = check_line(line,gr,nr)
+        # each test evaluates a normal PDP.'
+        line = [ g.dtc.get_ss() for g in gr]        
+        nr = {key:None}
+        newrange, range_adj, new = check_line(line,gr,nr,key)
         cnt = 0
         while range_adj == True:
             mp = mp_process(newrange)
-            #temp = OrderedDict(key)
-            tds = list(key)
-            ind = WSListIndividual([new])
-            gr_ = update_deap_pop(ind, tests, tds)
+            gr_ = update_deap_pop(new, tests, key)
+            print(type(gr_))
+            print(gr_.dtc.attrs.items())
             if new < 0.0:
                 gr.insert(0,gr_)
             else:
@@ -130,20 +126,13 @@ def pre_run_two(tests,opt_keys):
             print('gr, gr_ ', gr,gr_)
             # make a psuedo test, that still depends on input Parametersself.
             # each test evaluates a normal PDP.
-
-            line = [ np.sum(list(g.dtc.scores.values())) for g in gr]
-            newrange, range_adj, new = check_line(line,gr,newrange)
+            line = [ g.dtc.get_ss() for g in gr]
+            newrange, range_adj, new = check_line(line,gr,newrange,key)
             mp = mp_process(newrange)
-            #import pdb; pdb.set_trace()
-            cnt+=1
+            cnt += 1
 
         fc[key] = {}
         fc[key]['line'] = line
         fc[key]['range'] = newrange
         fc[key]['cnt'] = cnt
-    #import pdb; pdb.set_trace()
     return fc, mp
-
-#opt_keys = ['a']
-#fc, mp = pre_run_two(tests_,opt_keys)
-#import pdb; pdb.set_trace()
