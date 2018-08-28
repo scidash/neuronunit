@@ -97,12 +97,12 @@ from collections import OrderedDict
 # numba jit does not work on nested list iteration
 #@jit
 def pre_run_two(tests,opt_keys):
+    # algorithmically find the the edges of parameter ranges, via a course grained
+    # sampling of extreme parameter values
+    # to find solvable instances of Izhi-model, (models with a rheobase value).
     nparams = len(opt_keys)
     from neuronunit.models.NeuroML2 import model_parameters as modelp
     mp = copy.copy(modelp.model_params)
-    #mp['b'] = (0.25,6554)
-    #mp['a'] = (-220.0, 150.0)
-    #mp['vr'] =  (-150, 0)
     cnt = 0
     fc = {} # final container
     for key in opt_keys:
