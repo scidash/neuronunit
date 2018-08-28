@@ -3,9 +3,7 @@ mpl.use('Agg')
 import matplotlib.pyplot as plt
 # verify that backend is appropriate before compute job:
 plt.clf()
-    
 
-from neuronunit.optimization import get_neab
 import copy
 import os
 import pandas as pd
@@ -39,6 +37,9 @@ from neuronunit.optimization import get_neab
 
 def get_tests():
     # get neuronunit tests
+    # and select out the tests that are more about waveform shape
+    # and less about electrophysiology of the membrane.
+    # We are more interested in phenomonogical properties.
     electro_path = str(os.getcwd())+'/pipe_tests.p'
     assert os.path.isfile(electro_path) == True
     with open(electro_path,'rb') as f:
@@ -118,7 +119,7 @@ def plot_line(gr,ax,key):
 
 def grids(hof,tests,params):
     dim = len(hof[0].dtc.attrs.keys())
-    flat_iter = [ (i,ki,j,kj) for i,ki in enumerate(hof[0].dtc.attrs.keys()) for j,kj in enumerate(hof[0].dtc.attrs.keys()) ]
+    flat_iter = iter([(i,ki,j,kj) for i,ki in enumerate(hof[0].dtc.attrs.keys()) for j,kj in enumerate(hof[0].dtc.attrs.keys())])
     matrix = [[0 for x in range(dim)] for y in range(dim)]
     plt.clf()
     
@@ -132,7 +133,7 @@ def grids(hof,tests,params):
         # are the same, this set will only contain one index
         bs = set(hof[0].dtc.attrs.keys()) # construct a full set out of all of the keys available, including ones not indexed here.
         diff = bs.difference(free_param) # diff is simply the key that is not indexed.
-        # BD is the dictionary of parameters to be held constant
+        # hc is the dictionary of parameters to be held constant
         # if the plot is 1D then two parameters should be held constant.
         hc =  {}
         for d in diff:
@@ -173,9 +174,15 @@ def grids(hof,tests,params):
         df.insert(i, j, k, cpparams)
         k = 3
         df.insert(i, j, k, gr)
-        
-        
-        
+        '''
+        where, i and j are indexs to the 3 by 3 (9 element) subplot matrix, 
+        and `k`-dim-0 is the parameter(s) that were free to vary (this can be two free in the case for i<j, 
+        or one free to vary for i==j).  
+        `k`-dim-1, is the parameter(s) that where held constant. 
+        `k`-dim-2 `cpparams` is a per parameter dictionary, whose values are tuples that mark the edges of (free)
+        parameter ranges. `k`-dim-3 is the the grid that results from varying those parameters 
+        (the grid results can either be square (if len(free_param)==2), or a line (if len(free_param==1)).
+        '''        
     plt.savefig(str('cross_section_and_surfaces.png'))
     return matrix, df
 
