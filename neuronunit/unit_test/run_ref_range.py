@@ -1,7 +1,7 @@
 import matplotlib as mpl
 mpl.use('Agg')
-
 import matplotlib.pyplot as plt
+# verify that backend is appropriate before compute job:
 plt.clf()
     
 
@@ -82,18 +82,9 @@ def plot_surface(gr,ax,keys,imshow=False):
            gr_.append(g)
        else:
            index = i
-
     z = [ np.sum(list(p.dtc.scores.values())) for p in gr ]
     x = [ p.dtc.attrs[str(keys[0])] for p in gr ]
     y = [ p.dtc.attrs[str(keys[1])] for p in gr ]
-    '''
-    if len(x) != 100:
-        delta = 100-len(x)
-        for i in range(0,delta):
-            x.append(np.mean(x))
-            y.append(np.mean(y))
-            z.append(np.mean(z))
-    '''
     xx = np.array(x)
     yy = np.array(y)
     zz = np.array(z)
@@ -131,8 +122,8 @@ def grids(hof,tests,params):
     plt.clf()
     
     fig,ax = plt.subplots(dim,dim,figsize=(10,10))
-    mat = np.zeros((dim,dim))
     cnt = 0
+    mat = np.zeros((dim,dim))
     df = pd.DataFrame(mat)
 
     for i,freei,j,freej in flat_iter:
@@ -179,7 +170,7 @@ def grids(hof,tests,params):
             free_param = list(copy.copy(list(free_param)))
             if len(free_param) == 2:
                 ax[i,j] = plot_scatter(hof,ax[i,j],free_param)
-           #to_pandas = {}
+        # To Pandas:
         k = 0
         df.insert(i, j, k, free_param)
         k = 1
@@ -204,15 +195,8 @@ except:
     fc, mp = explore_ranges.pre_run_two(tests_,opt_keys)
     with open('ranges.p','wb') as f:
         pickle.dump([fc,mp],f)
-    lines = [ v['line'] for v in fc.values() ]
-    cnts = [ v['cnt'] for v in fc.values() ]
-    print('cnts ',cnts)
-    print('lines ', lines)
+    
 
-
-# Rick wants this to be a data frame
-
-print(opt_keys, mp)
 
 
 for k,v in mp.items():
@@ -244,11 +228,6 @@ except:
     with open('surfaces.p','wb') as f:
         pickle.dump([df,matrix],f)
 
-
-# import pdb; pdb.set_trace()
-
-#with open('ga_run.p','wb') as f:
-#    pickle.dump(package,f)
 
 
 def plot_vm(hof,ax,key):
