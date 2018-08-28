@@ -1,7 +1,7 @@
 import matplotlib as mpl
 mpl.use('Agg')
-
 import matplotlib.pyplot as plt
+# verify that backend is appropriate before compute job:
 plt.clf()
     
 
@@ -83,18 +83,9 @@ def plot_surface(gr,ax,keys,imshow=False):
            gr_.append(g)
        else:
            index = i
-
     z = [ np.sum(list(p.dtc.scores.values())) for p in gr ]
     x = [ p.dtc.attrs[str(keys[0])] for p in gr ]
     y = [ p.dtc.attrs[str(keys[1])] for p in gr ]
-    '''
-    if len(x) != 100:
-        delta = 100-len(x)
-        for i in range(0,delta):
-            x.append(np.mean(x))
-            y.append(np.mean(y))
-            z.append(np.mean(z))
-    '''
     xx = np.array(x)
     yy = np.array(y)
     zz = np.array(z)
@@ -132,8 +123,8 @@ def grids(hof,tests,params):
     plt.clf()
     
     fig,ax = plt.subplots(dim,dim,figsize=(10,10))
-    mat = np.zeros((dim,dim))
     cnt = 0
+    mat = np.zeros((dim,dim))
     df = pd.DataFrame(mat)
 
     for i,freei,j,freej in flat_iter:
@@ -151,9 +142,7 @@ def grids(hof,tests,params):
             assert len(free_param) == len(hc) - 1
             assert len(hc) == len(free_param) + 1
             # zoom in on optima
-            centrei = hof[0].dtc.attrs[freei]
             cpparams = copy.copy(params)
-            #cpparams[freei] = np.linspace(centrei-centrei/10.0,centrei+centrei/10.0,10)
             cpparams['freei'] = (np.min(params[freei]), np.max(params[freei]))
 
             gr = run_grid(10,tests,provided_keys = freei, hold_constant = hc,mp_in = params)
@@ -164,11 +153,6 @@ def grids(hof,tests,params):
         if i >j:
             assert len(free_param) == len(hc) + 1
             assert len(hc) == len(free_param) - 1
-            centrei = hof[0].dtc.attrs[freei]
-            centrej = hof[0].dtc.attrs[freej]
-            # zoom in on optima
-            #cpparams[freei] = np.linspace(centrei-centrei/10.0,centrei+centrei/10.0,10)
-            #cpparams[freej] = np.linspace(centrej-centrej/10.0,centrej+centrej/10.0,10)
             cpparams['freei'] = (np.min(params[freei]), np.max(params[freei]))
             cpparams['freej'] = (np.min(params[freej]), np.max(params[freej]))
 
@@ -180,13 +164,16 @@ def grids(hof,tests,params):
             free_param = list(copy.copy(list(free_param)))
             if len(free_param) == 2:
                 ax[i,j] = plot_scatter(hof,ax[i,j],free_param)
-           #to_pandas = {}
+        # To Pandas:
         k = 0
         df.insert(i, j, k, free_param)
         k = 1
-        df.insert(i, j, k, gr)
+        df.insert(i, j, k, hc)
         k = 2
         df.insert(i, j, k, cpparams)
+        k = 3
+        df.insert(i, j, k, gr)
+        
         
         
     plt.savefig(str('cross_section_and_surfaces.png'))
@@ -201,26 +188,21 @@ try:
         [fc,mp] = pickle.load(f)
 
 except:
+    # algorithmically find the the edges of parameter ranges, via a course grained
+    # sampling of extreme parameter values
+    # to find solvable instances of Izhi-model, (models with a rheobase value).
     import explore_ranges
-    fc, mp = explore_ranges.pre_run_two(tests_,opt_keys)
+    fc, mp = explore_ranges.pre_run(tests_,opt_keys)
     with open('ranges.p','wb') as f:
         pickle.dump([fc,mp],f)
-    lines = [ v['line'] for v in fc.values() ]
-    cnts = [ v['cnt'] for v in fc.values() ]
-    print('cnts ',cnts)
-    print('lines ', lines)
+    
 
-
-# Rick wants this to be a data frame
-
-print(opt_keys, mp)
 
 
 for k,v in mp.items():
     if type(v) is type(tuple((0,0))):
         mp[k] = np.linspace(v[0],v[1],7) 
 
-#print(mp['vr'])
 try:
     with open('package.p','rb') as f:
         package = pickle.load(f)
@@ -236,20 +218,10 @@ gen_vs_pop =  package[6]
 hof = package[1]
 
 
-try:
-    assert 1==2
-    with open('surfaces.p','rb') as f:
-        df, matrix = pickle.load(f)
-except:
-    df, matrix = grids(hof,tests_,mp)
-    with open('surfaces.p','wb') as f:
-        pickle.dump([df,matrix],f)
+df, matrix = grids(hof,tests_,mp)
+with open('surfaces.p','wb') as f:
+    pickle.dump([df,matrix],f)
 
-
-# import pdb; pdb.set_trace()
-
-#with open('ga_run.p','wb') as f:
-#    pickle.dump(package,f)
 
 
 def plot_vm(hof,ax,key):
