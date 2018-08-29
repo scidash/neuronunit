@@ -383,15 +383,17 @@ def parallel_route(pop,dtcpop,tests):
     return pop, dtcpop
 
 def test_runner(pop,td,tests):
+    
     # NeuronUnit testing
     pop, dtcpop = rheobase(pop, td, tests[0])
     # parallel route:
     if isinstance(pop, Iterable) and isinstance(dtcpop,Iterable):
         pop,dtcpop = parallel_route(pop,dtcpop,tests)
-
+    #serial route:
     if not isinstance(pop, Iterable):# and not isinstance(dtcpop,Iterable):
-        pop,dtc = serial_route(pop,td,tests)
-        return pop,dtc    
+        pop,dtcpop = serial_route(pop,td,tests)
+    return pop,dtcpop    
+
     
 def update_deap_pop(pop, tests, td, backend = None):
     '''
@@ -403,7 +405,8 @@ def update_deap_pop(pop, tests, td, backend = None):
     DTCs for which a rheobase value of x (pA)<=0 are filtered out
     DTCs are then scored by neuronunit, using neuronunit models that act in place.
     '''
-    pop, dtcpop = test_runner(copy.copy(pop),td,tests)
+    pop = copy.copy(pop)
+    pop, dtcpop = test_runner(pop,td,tests)
     if not isinstance(pop, Iterable) or not isinstance(dtcpop,Iterable):
         pop.dtc = dtcpop
         if type(pop.dtc.rheobase) is type(None):

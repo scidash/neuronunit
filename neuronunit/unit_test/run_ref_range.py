@@ -146,11 +146,7 @@ def mock_grids(params):
             # zoom in on optima
             cpparams['freei'] = (np.min(params[freei]), np.max(params[freei]))
             
-            ##
-            # gr = run_grid(10,tests,provided_keys = freei, hold_constant = hc,mp_in = params)
-            ##
             gr = np.random(10)
-            #W = np.random.random((dim, dim))
             # make a psuedo test, that still depends on input Parametersself.
             # each test evaluates a normal PDP.
             fp = list(copy.copy(free_param))
@@ -172,24 +168,23 @@ def mock_grids(params):
                 ax[i,j] = plot_scatter(hof,ax[i,j],free_param)
         # To Pandas:
         k = 0
-        df.insert(i, j, k, free_param)
+        mat[i,j,k] = free_param
+
+        #df.insert(i, j, k, free_param)
         k = 1
-        df.insert(i, j, k, hc)
+        mat[i,j,k] = hc
+
+        #df.insert(i, j, k, hc)
         k = 2
-        df.insert(i, j, k, cpparams)
+        mat[i,j,k] = cpparams
+
+        #df.insert(i, j, k, cpparams)
         k = 3
-        df.insert(i, j, k, gr)
-        '''
-        where, i and j are indexs to the 3 by 3 (9 element) subplot matrix,
-        and `k`-dim-0 is the parameter(s) that were free to vary (this can be two free in the case for i<j,
-        or one free to vary for i==j).
-        `k`-dim-1, is the parameter(s) that were held constant.
-        `k`-dim-2 `cpparams` is a per parameter dictionary, whose values are tuples that mark the edges of (free)
-        parameter ranges. `k`-dim-3 is the the grid that results from varying those parameters
-        (the grid results can either be square (if len(free_param)==2), or a line (if len(free_param==1)).
-        '''
+        mat[i,j,k] = gr
+
+        #df.insert(i, j, k, gr)
     plt.savefig(str('cross_section_and_surfaces.png'))
-    return matrix, df
+    return matrix, mat
 
 
 def grids(hof,tests,params):
@@ -209,14 +204,14 @@ def grids(hof,tests,params):
     '''
     dim = len(hof[0].dtc.attrs.keys())
     flat_iter = iter([(i,ki,j,kj) for i,ki in enumerate(hof[0].dtc.attrs.keys()) for j,kj in enumerate(hof[0].dtc.attrs.keys())])
-    matrix = [[0 for x in range(dim)] for y in range(dim)]
+    matrix = [[[0 for z in range(dim)] for x in range(dim)] for y in range(dim)]
     plt.clf()
 
     fig,ax = plt.subplots(dim,dim,figsize=(10,10))
     cnt = 0
-    mat = np.zeros((dim,dim))
-    df = pd.DataFrame(mat)
-
+    mat = np.zeros((dim,dim,dim))
+    #df = pd.DataFrame(mat)
+    temp = []
     for i,freei,j,freej in flat_iter:
         free_param = set([freei,freej]) # construct a small-set out of the indexed keys 2. If both keys are
         # are the same, this set will only contain one index
@@ -255,23 +250,18 @@ def grids(hof,tests,params):
             if len(free_param) == 2:
                 ax[i,j] = plot_scatter(hof,ax[i,j],free_param)
         # To Pandas:
-        k = 0
-        df.insert(i, j, k, free_param)
-        k = 1
-        df.insert(i, j, k, hc)
-        k = 2
-        df.insert(i, j, k, cpparams)
-        k = 3
-        df.insert(i, j, k, gr)
+        # https://stackoverflow.com/questions/28056171/how-to-build-and-fill-pandas-dataframe-from-for-loop#28058264
+        temp.append({'i':i,'j':j,'free_param':free_param,'hold_constant':hc,'param_boundaries':cpparams})
+
+    df = pd.DataFrame(temp)
     plt.savefig(str('cross_section_and_surfaces.png'))
-    return matrix, df
+    return matrix, mat, df
 
 
 opt_keys = [str('vr'),str('a'),str('b')]
 nparams = len(opt_keys)
 
 try:
-    assert 1==2
     with open('ranges.p','rb') as f:
         [fc,mp] = pickle.load(f)
 
@@ -286,16 +276,8 @@ except:
 
 
 
-# update and simplify model parameter dictionary.
-# this is probably unnecessary
-# for k,v in mp.items():
-#   if type(v) is type(tuple((0,0))):
-#        mp[k] = np.linspace(v[0],v[1],7)
-
-
 # get a genetic algorithm that operates on this new parameter range.
 try:
-    assert 1==2
     with open('package.p','rb') as f:
         package = pickle.load(f)
 
@@ -305,12 +287,9 @@ except:
     with open('package.p','wb') as f:
         pickle.dump(package,f)
 
-pop = package[0]
-history = package[4]
-gen_vs_pop =  package[6]
 hof = package[1]
 
 
-matrix,df = grids(hof,tests_,mp)
+matrix,mat,df = grids(hof,tests_,mp)
 with open('surfaces.p','wb') as f:
     pickle.dump([matrix,df],f)

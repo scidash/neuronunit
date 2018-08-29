@@ -239,6 +239,7 @@ def mock_grid(npoints,tests, provided_keys = None, hold_constant = None, use_cac
     assert len(grid_results[0]) == len(provided_keys) + len(hold_constant)
     return grid_results
 
+import pdb
 def run_grid(npoints, tests, provided_keys = None, hold_constant = None, mp_in=None):
     consumable_ ,td = build_chunk_grid(npoints,provided_keys,mp_in=mp_in)
 

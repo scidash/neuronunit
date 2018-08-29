@@ -60,6 +60,7 @@ def check_line(line,gr,newrange,key):
     cl = [ g.dtc.attrs[key] for g in gr ]
     new = None
     index = None
+    new_param_val = None
     if line[0] == min_:
         attrs = gr[0].dtc.attrs[key]
         remin = - 2*np.abs(attrs)*2
@@ -78,9 +79,9 @@ def check_line(line,gr,newrange,key):
         index = -1
     return (newrange, range_adj, new_param_val, index)
 
-def mp_process(newrange):
-    from neuronunit.models.NeuroML2 import model_parameters as modelp
-    mp = copy.copy(modelp.model_params)
+def mp_process(newrange,mp):
+    #from neuronunit.models.NeuroML2 import model_parameters as modelp
+    #mp = copy.copy(modelp.model_params)
     for k,v in newrange.items():
         if type(v) is not type(None):
             mp[k] = (np.min(v),np.max(v))
@@ -104,39 +105,37 @@ def pre_run(tests,opt_keys):
 
     cnt = 0
     fc = {} # final container
+    
     for key in opt_keys:
+        cnt = 0
         print(key,mp)
         gr = run_grid(3,tests,provided_keys = key, mp_in = mp)
         line = [ g.dtc.get_ss() for g in gr]
         nr = {key:None}
-        newrange, range_adj, new, index = check_line(line,gr,nr,key)
-        cnt = 0
+        _, range_adj, new, index = check_line(line,gr,nr,key)
         while range_adj == True:
             # while the sampled line is not concave (when minimas are at the edges)
             # sample a point to a greater extreme
-            mp = mp_process(newrange)
+            #mp = mp_process(newrange,mp)
             gr_ = update_deap_pop(new, tests, key)
             param_line = [ g.dtc.attrs[key] for g in gr ]
-
-            # take the new sample 'gr_' and insert it to the start or end of the list
-            # appropriately obeying item order:
-            # start smaller values, end larger values.
-            less = bool(new < np.min(param_line))
-            gr.insert(index,gr_)
-            
-            if less:
-                gr.insert(0,gr_)
+            temp = list(mp[key])
+                
+            if index == 0:
+                gr.insert(index,gr_)
+                temp.insert(index,new)
             else:
                 gr.append(gr_)
-
-            # make a line out of the sum of error components.
+                temp.append(gr_)
+                
+            mp[key] = np.array(temp)
             line = [ g.dtc.get_ss() for g in gr]
-            newrange, range_adj, new,index = check_line(line,gr,newrange,key)
-            mp = mp_process(newrange)
+            _, range_adj, new,index = check_line(line,gr,mp,key)
             cnt += 1
-
+            with open('temp.p','wb') as f:
+                pickle.dump(mp,f)
         fc[key] = {}
         fc[key]['line'] = line
-        fc[key]['range'] = newrange
+        fc[key]['range'] = mp
         fc[key]['cnt'] = cnt
     return fc, mp
