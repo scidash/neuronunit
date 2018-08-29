@@ -113,6 +113,21 @@ def plot_line(gr,ax,key):
 
 
 def grids(hof,tests,params):
+    '''
+    Obtain using the best candidate Gene (HOF, NU-tests, and expanded parameter ranges found via
+    exploring extreme edge cases of parameters
+
+    plot a error surfaces, and cross sections, about the optima in a 3by3 subplot matrix.
+   
+    where, i and j are indexs to the 3 by 3 (9 element) subplot matrix,
+    and `k`-dim-0 is the parameter(s) that were free to vary (this can be two free in the case for i<j,
+    or one free to vary for i==j).
+    `k`-dim-1, is the parameter(s) that were held constant.
+    `k`-dim-2 `cpparams` is a per parameter dictionary, whose values are tuples that mark the edges of (free)
+    parameter ranges. `k`-dim-3 is the the grid that results from varying those parameters
+    (the grid results can either be square (if len(free_param)==2), or a line (if len(free_param==1)).
+    '''
+ 
     dim = len(hof[0].dtc.attrs.keys())
     flat_iter = iter([(i,ki,j,kj) for i,ki in enumerate(hof[0].dtc.attrs.keys()) for j,kj in enumerate(hof[0].dtc.attrs.keys())])
     matrix = [[0 for x in range(dim)] for y in range(dim)]
@@ -169,15 +184,6 @@ def grids(hof,tests,params):
         df.insert(i, j, k, cpparams)
         k = 3
         df.insert(i, j, k, gr)
-        '''
-        where, i and j are indexs to the 3 by 3 (9 element) subplot matrix,
-        and `k`-dim-0 is the parameter(s) that were free to vary (this can be two free in the case for i<j,
-        or one free to vary for i==j).
-        `k`-dim-1, is the parameter(s) that were held constant.
-        `k`-dim-2 `cpparams` is a per parameter dictionary, whose values are tuples that mark the edges of (free)
-        parameter ranges. `k`-dim-3 is the the grid that results from varying those parameters
-        (the grid results can either be square (if len(free_param)==2), or a line (if len(free_param==1)).
-        '''
     plt.savefig(str('cross_section_and_surfaces.png'))
     return matrix, df
 
@@ -203,9 +209,9 @@ except:
 
 # update and simplify model parameter dictionary.
 # this is probably unnecessary
-for k,v in mp.items():
-    if type(v) is type(tuple((0,0))):
-        mp[k] = np.linspace(v[0],v[1],7)
+# for k,v in mp.items():
+#   if type(v) is type(tuple((0,0))):
+#        mp[k] = np.linspace(v[0],v[1],7)
 
 
 # get a genetic algorithm that operates on this new parameter range.
@@ -226,6 +232,6 @@ gen_vs_pop =  package[6]
 hof = package[1]
 
 
-df, matrix = grids(hof,tests_,mp)
+matrix,df = grids(hof,tests_,mp)
 with open('surfaces.p','wb') as f:
-    pickle.dump([df,matrix],f)
+    pickle.dump([matrix,df],f)

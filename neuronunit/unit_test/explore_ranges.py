@@ -7,12 +7,11 @@ from neuronunit.optimization import get_neab
 from neuronunit.optimization.optimization_management import run_ga
 from neuronunit.models.NeuroML2 import model_parameters as modelp
 from neuronunit.models.NeuroML2 .model_parameters import path_params
-
 from neuronunit.tests import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
 
-import matplotlib as mpl
-mpl.use('Agg')
-from matplotlib.colors import LogNorm
+#import matplotlib as mpl#
+#mpl.use('Agg')
+#from matplotlib.colors import LogNorm
 from neuronunit.optimization.exhaustive_search import run_grid, reduce_params, create_grid, WSListIndividual
 import matplotlib.pyplot as plt
 
@@ -50,7 +49,6 @@ tests_,test, observation = get_tests()
 
 ax = None
 
-from numba import jit
 
 #@jit
 def check_line(line,gr,newrange,key):
@@ -61,6 +59,7 @@ def check_line(line,gr,newrange,key):
     min_ = np.min(line)
     cl = [ g.dtc.attrs[key] for g in gr ]
     new = None
+    index = None
     if line[0] == min_:
         attrs = gr[0].dtc.attrs[key]
         remin = - 2*np.abs(attrs)*2
@@ -68,6 +67,7 @@ def check_line(line,gr,newrange,key):
         newrange[key] = cl
         range_adj = True
         new_param_val = remin
+        index = 0
     if line[-1] == min_:
         attrs = gr[-1].dtc.attrs[key]
         remax = np.abs(attrs)*2
@@ -75,8 +75,8 @@ def check_line(line,gr,newrange,key):
         newrange[key] = cl
         range_adj = True
         new_param_val = remax
-
-    return (newrange, range_adj, new_param_val)
+        index = -1
+    return (newrange, range_adj, new_param_val, index)
 
 def mp_process(newrange):
     from neuronunit.models.NeuroML2 import model_parameters as modelp
@@ -100,6 +100,7 @@ def pre_run(tests,opt_keys):
     nparams = len(opt_keys)
     from neuronunit.models.NeuroML2 import model_parameters as modelp
     mp = copy.copy(modelp.model_params)
+    mp['b'] = [ -0.002, 50 ]
 
     cnt = 0
     fc = {} # final container
@@ -108,7 +109,7 @@ def pre_run(tests,opt_keys):
         gr = run_grid(3,tests,provided_keys = key, mp_in = mp)
         line = [ g.dtc.get_ss() for g in gr]
         nr = {key:None}
-        newrange, range_adj, new = check_line(line,gr,nr,key)
+        newrange, range_adj, new, index = check_line(line,gr,nr,key)
         cnt = 0
         while range_adj == True:
             # while the sampled line is not concave (when minimas are at the edges)
@@ -121,6 +122,8 @@ def pre_run(tests,opt_keys):
             # appropriately obeying item order:
             # start smaller values, end larger values.
             less = bool(new < np.min(param_line))
+            gr.insert(index,gr_)
+            
             if less:
                 gr.insert(0,gr_)
             else:
@@ -128,7 +131,7 @@ def pre_run(tests,opt_keys):
 
             # make a line out of the sum of error components.
             line = [ g.dtc.get_ss() for g in gr]
-            newrange, range_adj, new = check_line(line,gr,newrange,key)
+            newrange, range_adj, new,index = check_line(line,gr,newrange,key)
             mp = mp_process(newrange)
             cnt += 1
 

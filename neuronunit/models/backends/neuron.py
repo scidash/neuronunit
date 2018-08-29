@@ -1,6 +1,7 @@
 from .base import *
 import math
 import pdb
+from numba import jit
 class NEURONBackend(Backend):
     """Used for simulation with NEURON, a popular simulator
     http://www.neuron.yale.edu/neuron/
@@ -114,7 +115,7 @@ class NEURONBackend(Backend):
         except:
             self.cvode = self.h.CVode()
             self.cvode.active(1 if method == "variable" else 0)
-
+    @jit
     def get_membrane_potential(self):
         """Must return a neo.core.AnalogSignal.
         And must destroy the hoc vectors that comprise it.
@@ -132,7 +133,7 @@ class NEURONBackend(Backend):
         return AnalogSignal(fixed_signal,
                             units = mV,
                             sampling_period = dt * ms)
-
+    @jit
     def get_variable_step_analog_signal(self):
         """Converts variable dt array values to fixed
         dt array by using linear interpolation"""
@@ -178,7 +179,7 @@ class NEURONBackend(Backend):
             fTime += fDt
 
         return fPots
-
+    @jit
     def linearInterpolate(self, tStart, tEnd, vStart, vEnd, tTarget):
         tRange = float(tEnd - tStart)
         tFractionAlong = (tTarget - tStart)/tRange
@@ -267,7 +268,7 @@ class NEURONBackend(Backend):
     def current_src_name(self):
         return getattr(self,'_current_src_name','RS')
 
-
+    #@jit
     def set_attrs(self, **attrs):
         #if len(attrs) == len(self.model.attrs):
         self.model.attrs = {}
@@ -275,6 +276,10 @@ class NEURONBackend(Backend):
 
 
         for h_key,h_value in attrs.items():
+            h_value = float(h_value)
+            if type(h_value) is not type(float(0.0)):
+                pdb.set_trace()
+                
             if math.isnan(h_value):
                 pdb.set_trace()
 
@@ -302,7 +307,7 @@ class NEURONBackend(Backend):
         self.vVector = self.h.v_v_of0
         return self
 
-    def inject_square_current(self, current, section = None):
+    def inject_square_current(self, current, section = None, debug=False):
         """Inputs: current : a dictionary with exactly three items, whose keys are: 'amplitude', 'delay', 'duration'
         Example: current = {'amplitude':float*pq.pA, 'delay':float*pq.ms, 'duration':float*pq.ms}}
         where \'pq\' is a physical unit representation, implemented by casting float values to the quanitities \'type\'.
@@ -361,7 +366,8 @@ class NEURONBackend(Backend):
         for string in define_current:
             # execute hoc code strings in the python interface to neuron.
             self.h(string)
-        self.neuron.h.psection()
+        if debug == True:
+            self.neuron.h.psection()
 
     def _local_run(self):
         self.h('run()')
