@@ -65,6 +65,9 @@ def check_line(line,gr,newrange,key):
         # quantity may not be negative yet
         # don't force it to be straight away
         remin =  attrs - 10*np.abs(attrs)
+        if remax == 0.0:
+            remax = -1.0
+
         cl.insert(0,remin)
         newrange[key] = cl
         range_adj = True
@@ -75,6 +78,9 @@ def check_line(line,gr,newrange,key):
         # quantity might not be positve yet
         # don't force it to be straight away
         remax = attrs + np.abs(attrs)*10
+        if remax == 0.0:
+            remax = 1.0
+
         cl.append(remax)
         newrange[key] = cl
         range_adj = True
