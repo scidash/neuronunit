@@ -252,7 +252,7 @@ def run_ga(model_params,npoints,test, provided_keys = None, nr = None):
     # https://stackoverflow.com/questions/744373/circular-or-cyclic-imports-in-python
     # These imports need to be defined with local scope to avoid circular importing problems
     # Try to fix local imports later.
-    from bluepyopt.deapext.optimisations import DEAPOptimisation
+    from bluepyopt.deapext.optimisations import SciUnitOptimization
     from neuronunit.optimization.exhaustive_search import create_grid
     from neuronunit.optimization.exhaustive_search import reduce_params
 
@@ -262,7 +262,7 @@ def run_ga(model_params,npoints,test, provided_keys = None, nr = None):
     MU = int(np.floor(npoints))
     max_ngen = int(np.floor(npoints))
     selection = str('selNSGA')
-    DO = DEAPOptimisation(offspring_size = MU, error_criterion = test, selection = selection, provided_dict = ss, elite_size = 2)
+    DO = SciUnitOptimization(offspring_size = MU, error_criterion = test, selection = selection, provided_dict = ss, elite_size = 2)
     ga_out = DO.run(offspring_size = MU, max_ngen = max_ngen)
     #with open('all_ga_cell.p','wb') as f:
     #    pickle.dump(ga_out,f)
