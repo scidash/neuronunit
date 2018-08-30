@@ -49,7 +49,6 @@ tests_,test, observation = get_tests()
 
 ax = None
 
-
 #@jit
 def check_line(line,gr,newrange,key):
     # Is this a concave down shape (optima in the middle)
@@ -63,7 +62,9 @@ def check_line(line,gr,newrange,key):
     new_param_val = None
     if line[0] == min_:
         attrs = gr[0].dtc.attrs[key]
-        remin = - 2*np.abs(attrs)*2
+        # quantity may not be negative yet
+        # don't force it to be straight away
+        remin =  attrs - 10*np.abs(attrs)
         cl.insert(0,remin)
         newrange[key] = cl
         range_adj = True
@@ -71,21 +72,15 @@ def check_line(line,gr,newrange,key):
         index = 0
     if line[-1] == min_:
         attrs = gr[-1].dtc.attrs[key]
-        remax = np.abs(attrs)*2
+        # quantity might not be positve yet
+        # don't force it to be straight away
+        remax = attrs + np.abs(attrs)*10
         cl.append(remax)
         newrange[key] = cl
         range_adj = True
         new_param_val = remax
         index = -1
     return (newrange, range_adj, new_param_val, index)
-
-def mp_process(newrange,mp):
-    #from neuronunit.models.NeuroML2 import model_parameters as modelp
-    #mp = copy.copy(modelp.model_params)
-    for k,v in newrange.items():
-        if type(v) is not type(None):
-            mp[k] = (np.min(v),np.max(v))
-    return mp
 
 from neuronunit.models.NeuroML2 import model_parameters as modelp
 from neuronunit.optimization.optimization_management import nunit_evaluation, update_deap_pop
@@ -101,7 +96,8 @@ def pre_run(tests,opt_keys):
     nparams = len(opt_keys)
     from neuronunit.models.NeuroML2 import model_parameters as modelp
     mp = copy.copy(modelp.model_params)
-    mp['b'] = [ -0.002, 50 ]
+    mp['b'] = [ -0.002, 50.0 ]
+    mp['vr'] = [ -200.0, 0.0 ]
 
     cnt = 0
     fc = {} # final container
@@ -116,7 +112,6 @@ def pre_run(tests,opt_keys):
         while range_adj == True:
             # while the sampled line is not concave (when minimas are at the edges)
             # sample a point to a greater extreme
-            #mp = mp_process(newrange,mp)
             gr_ = update_deap_pop(new, tests, key)
             param_line = [ g.dtc.attrs[key] for g in gr ]
             temp = list(mp[key])

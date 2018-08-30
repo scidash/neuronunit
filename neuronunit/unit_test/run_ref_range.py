@@ -112,82 +112,9 @@ def plot_line(gr,ax,key):
 
 
 
-def mock_grids(params):
-    with open('package.p','rb') as f:
-        package = pickle.load(f)
-    hof = package[1]
-    with open('ranges.p','rb') as f:
-        _,params = pickle.load(f)
-    dim = len(hof[0].dtc.attrs.keys())
-    flat_iter = iter([(i,ki,j,kj) for i,ki in enumerate(hof[0].dtc.attrs.keys()) for j,kj in enumerate(hof[0].dtc.attrs.keys())])
-    matrix = [[0 for x in range(dim)] for y in range(dim)]
-    plt.clf()
-
-    fig,ax = plt.subplots(dim,dim,figsize=(10,10))
-    cnt = 0
-    mat = np.zeros((dim,dim))
-    df = pd.DataFrame(mat)
-
-    for i,freei,j,freej in flat_iter:
-        free_param = set([freei,freej]) # construct a small-set out of the indexed keys 2. If both keys are
-        # are the same, this set will only contain one index
-        bs = set(hof[0].dtc.attrs.keys()) # construct a full set out of all of the keys available, including ones not indexed here.
-        diff = bs.difference(free_param) # diff is simply the key that is not indexed.
-        # hc is the dictionary of parameters to be held constant
-        # if the plot is 1D then two parameters should be held constant.
-        hc =  {}
-        for d in diff:
-            hc[d] = hof[0].dtc.attrs[d]
-
-        cpparams = {}
-        if i == j:
-            assert len(free_param) == len(hc) - 1
-            assert len(hc) == len(free_param) + 1
-            # zoom in on optima
-            cpparams['freei'] = (np.min(params[freei]), np.max(params[freei]))
-            
-            gr = np.random(10)
-            # make a psuedo test, that still depends on input Parametersself.
-            # each test evaluates a normal PDP.
-            fp = list(copy.copy(free_param))
-            ax[i,j] = plot_line(gr,ax[i,j],fp)
-        if i >j:
-            assert len(free_param) == len(hc) + 1
-            assert len(hc) == len(free_param) - 1
-            cpparams['freei'] = (np.min(params[freei]), np.max(params[freei]))
-            cpparams['freej'] = (np.min(params[freej]), np.max(params[freej]))
-            gr = np.random(100)
-
-            #gr = run_grid(10,tests,provided_keys = list((freei,freej)), hold_constant = hc, mp_in = params)
-            fp = list(copy.copy(free_param))
-            ax[i,j] = plot_surface(gr,ax[i,j],fp,imshow=False)
-
-        if i < j:
-            free_param = list(copy.copy(list(free_param)))
-            if len(free_param) == 2:
-                ax[i,j] = plot_scatter(hof,ax[i,j],free_param)
-        # To Pandas:
-        k = 0
-        mat[i,j,k] = free_param
-
-        #df.insert(i, j, k, free_param)
-        k = 1
-        mat[i,j,k] = hc
-
-        #df.insert(i, j, k, hc)
-        k = 2
-        mat[i,j,k] = cpparams
-
-        #df.insert(i, j, k, cpparams)
-        k = 3
-        mat[i,j,k] = gr
-
-        #df.insert(i, j, k, gr)
-    plt.savefig(str('cross_section_and_surfaces.png'))
-    return matrix, mat
 
 
-def grids(hof,tests,params):
+def grids(hof,tests,params,us):
     '''
     Obtain using the best candidate Gene (HOF, NU-tests, and expanded parameter ranges found via
     exploring extreme edge cases of parameters
@@ -206,11 +133,9 @@ def grids(hof,tests,params):
     flat_iter = iter([(i,ki,j,kj) for i,ki in enumerate(hof[0].dtc.attrs.keys()) for j,kj in enumerate(hof[0].dtc.attrs.keys())])
     matrix = [[[0 for z in range(dim)] for x in range(dim)] for y in range(dim)]
     plt.clf()
-
+    params['vr'] = np.linspace(-190.0,0.0,10)
     fig,ax = plt.subplots(dim,dim,figsize=(10,10))
     cnt = 0
-    mat = np.zeros((dim,dim,dim))
-    #df = pd.DataFrame(mat)
     temp = []
     for i,freei,j,freej in flat_iter:
         free_param = set([freei,freej]) # construct a small-set out of the indexed keys 2. If both keys are
@@ -249,10 +174,20 @@ def grids(hof,tests,params):
             free_param = list(copy.copy(list(free_param)))
             if len(free_param) == 2:
                 ax[i,j] = plot_scatter(hof,ax[i,j],free_param)
+
+            cpparams['freei'] = (np.min(params[freei]), np.max(params[freei]))
+            cpparams['freej'] = (np.min(params[freej]), np.max(params[freej]))
+            gr = hof
+
+        limits_used = (us[ki],us[kj])
+        
         # To Pandas:
         # https://stackoverflow.com/questions/28056171/how-to-build-and-fill-pandas-dataframe-from-for-loop#28058264
-        temp.append({'i':i,'j':j,'free_param':free_param,'hold_constant':hc,'param_boundaries':cpparams})
-
+        temp.append({'i':i,'j':j,'free_param':free_param,'hold_constant':hc,'param_boundaries':cpparams,'grid':gr,'ga_used':limits_used})
+        intermediate = pd.DataFrame(temp)
+        with open('intermediate.p','wb') as f:
+            pickle.dump(intermediate,f)
+                
     df = pd.DataFrame(temp)
     plt.savefig(str('cross_section_and_surfaces.png'))
     return matrix, mat, df
@@ -262,6 +197,7 @@ opt_keys = [str('vr'),str('a'),str('b')]
 nparams = len(opt_keys)
 
 try:
+    assert 1==2 
     with open('ranges.p','rb') as f:
         [fc,mp] = pickle.load(f)
 
@@ -278,18 +214,26 @@ except:
 
 # get a genetic algorithm that operates on this new parameter range.
 try:
+    assert 1==2 
     with open('package.p','rb') as f:
         package = pickle.load(f)
 
 except:
-
+    # assert 1==2 
     package = run_ga(mp,6,tests_,provided_keys = opt_keys)
     with open('package.p','wb') as f:
         pickle.dump(package,f)
 
 hof = package[1]
+history = package[4]
+attr_keys = list(hof[0].dtc.attrs.keys())
+us = {} # GA utilized_space
+for key in attr_keys:
+    temp = [ v.dtc.attrs[key] for k,v in history.genealogy_history.items() ]
+    us[key] = ( np.min(temp), np.max(temp))
 
+        
 
-matrix,mat,df = grids(hof,tests_,mp)
+matrix,mat,df = grids(hof,tests_,mp,us)
 with open('surfaces.p','wb') as f:
     pickle.dump([matrix,df],f)
