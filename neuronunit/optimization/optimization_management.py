@@ -252,13 +252,16 @@ def run_ga(model_params,npoints,test, provided_keys = None, nr = None):
     # https://stackoverflow.com/questions/744373/circular-or-cyclic-imports-in-python
     # These imports need to be defined with local scope to avoid circular importing problems
     # Try to fix local imports later.
-    from bluepyopt.deapext.optimisations import SciUnitOptimization
+    # from bluepyopt.deapext.optimisations import SciUnitOptimization
+    from neuronunit.optimization.bp_opt import SciUnitOptimization
     from neuronunit.optimization.exhaustive_search import create_grid
     from neuronunit.optimization.exhaustive_search import reduce_params
 
     ss = {}
     for k in provided_keys:
         ss[k] = model_params[k]
+    import pdb
+    pdb.set_trace()
     MU = int(np.floor(npoints))
     max_ngen = int(np.floor(npoints))
     selection = str('selNSGA')
@@ -419,6 +422,8 @@ def update_deap_pop(pop, tests, td, backend = None):
 def create_subset(nparams = 10, provided_dict = None):
     # used by GA to find subsets in parameter space.
     if type(provided_dict) is type(None):
+        raise ValueError('A dictionary was not not supplied and a specific bad thing happened.')
+    
         mp = modelp.model_params
         key_list = list(mp.keys())
         reduced_key_list = key_list[0:nparams]
