@@ -163,9 +163,7 @@ class SciUnitOptimization(bluepyopt.optimisations.Optimisation):
     def setnparams(self, nparams = 10, provided_dict = None):
         self.params = optimization_management.create_subset(nparams = nparams,provided_dict = provided_dict)
         self.nparams = len(self.params)
-        not_list , self.td = self.transdict(self.params)
-        import pdb
-        pdb.set_trace()
+        self.params , self.td = self.transdict(self.params)
         return self.params, self.td
 
 

@@ -390,7 +390,14 @@ def test_runner(pop,td,tests):
     # NeuronUnit testing
     pop, dtcpop = rheobase(pop, td, tests[0])
     # parallel route:
+
     if isinstance(pop, Iterable) and isinstance(dtcpop,Iterable):
+
+        for p,d in zip(pop,dtcpop):
+            if type(p) is type(None) or type(d) is type(None):
+                import pdb
+                pdb.set_trace()
+
         pop,dtcpop = parallel_route(pop,dtcpop,tests)
     #serial route:
     if not isinstance(pop, Iterable):# and not isinstance(dtcpop,Iterable):
