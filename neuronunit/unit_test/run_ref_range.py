@@ -6,7 +6,6 @@ plt.clf()
 
 import copy
 import os
-import pandas as pd
 
 import pickle
 from neuronunit.tests import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
@@ -28,9 +27,8 @@ import quantities as pq
 from numba import jit
 from neuronunit import plottools
 ax = None
-
-#plot_surface = plottools.plot_surface
-#scatter_surface = plottools.plot_surface
+import sys
+        
 
 
 from neuronunit.optimization import get_neab
@@ -99,22 +97,47 @@ def plot_surface(gr,ax,keys,imshow=False):
     ax.set_title(' {0} vs {1} '.format(keys[0],keys[1]))
     return ax
 
-def plot_line(gr,ax,key):
+def plot_line_ss(gr,ax,key,hof):
     ax.cla()
     ax.set_title(' {0} vs  score'.format(key[0]))
     z = np.array([ np.sum(list(p.dtc.scores.values())) for p in gr ])
     x = np.array([ p.dtc.attrs[key[0]] for p in gr ])
-
+    y = hof[0].dtc.attrs[key[0]]
+    i = hof[0].dtc.get_ss()
+    ax.scatter(x,z)
+    ax.scatter(y,i)
     ax.plot(x,z)
     ax.set_xlim(np.min(x),np.max(x))
     ax.set_ylim(np.min(z),np.max(z))
     return ax
 
+def plot_agreement(ax,gr,key,hof):
+    dtcpop = [ g.dtc for g in gr ]
+    for dtc in dtcpop:
+        if hasattr(score,'prediction'):
+            if type(score.prediction) is not type(None):
+                dtc.score[str(t)][str('prediction')] = score.prediction
+                dtc.score[str(t)][str('observation')] = score.observation
+                boolean_means = bool('mean' in score.observation.keys() and 'mean' in score.prediction.keys())       
+                boolean_value = bool('value' in score.observation.keys() and 'value' in score.prediction.keys())
+                                                            
+            if boolean_means:                                                                                         
+                dtc.score[str(t)][str('agreement')] = np.abs(score.observation['mean'] - score.prediction['mean'])
+                                                                
+            if boolean_value:                                                                                         
+                dtc.score[str(t)][str('agreement')] = np.abs(score.observation['value'] - score.prediction['value'])
 
+    ss = hof[0].dtc.score
+    #for v in ss:
+    if str('agreement') in ss.keys():                
+        ax.plot( [ v['agreement'] for v in list(ss.values()) ], [ i for i in range(0,len(ss.values())) ] )
+        ax.plot( [ v['prediction'] for v in list(ss.values()) ], [ i for i in range(0,len(ss.values())) ] )
+        ax.plot( [ v['observation'] for v in list(ss.values()) ], [ i for i in range(0,len(ss.values())) ] )
+    return ax                                                                                                        
+                                                                                                                                                                                                                  
+from neuronunit.plottools import plot_surface as ps
 
-
-
-def grids(hof,tests,params,us):
+def grids(hof,tests,params,us,history):
     '''
     Obtain using the best candidate Gene (HOF, NU-tests, and expanded parameter ranges found via
     exploring extreme edge cases of parameters
@@ -130,13 +153,20 @@ def grids(hof,tests,params,us):
     (the grid results can either be square (if len(free_param)==2), or a line (if len(free_param==1)).
     '''
     dim = len(hof[0].dtc.attrs.keys())
-    flat_iter = iter([(i,ki,j,kj) for i,ki in enumerate(hof[0].dtc.attrs.keys()) for j,kj in enumerate(hof[0].dtc.attrs.keys())])
-    matrix = [[[0 for z in range(dim)] for x in range(dim)] for y in range(dim)]
+    flat_iter = iter([(i,freei,j,freej) for i,freei in enumerate(hof[0].dtc.attrs.keys()) for j,freej in enumerate(hof[0].dtc.attrs.keys())])
+    #matrix = [[[0 for z in range(dim)] for x in range(dim)] for y in range(dim)]
     plt.clf()
-    params['vr'] = np.linspace(-190.0,0.0,10)
-    fig,ax = plt.subplots(dim,dim,figsize=(10,10))
+    fig0,ax0 = plt.subplots(dim,dim,figsize=(10,10))
+    fig1,ax1 = plt.subplots(dim,dim,figsize=(10,10))
+    
     cnt = 0
     temp = []
+    loc_key = {}
+    for k,v in hof[0].dtc.attrs.items():
+        loc_key[k] = hof[0].dtc.attrs[k]
+        params[k] = ( loc_key[k]- 3*np.abs(loc_key[k]), loc_key[k]+2*np.abs(loc_key[k]) )   
+    
+                                   
     for i,freei,j,freej in flat_iter:
         free_param = set([freei,freej]) # construct a small-set out of the indexed keys 2. If both keys are
         # are the same, this set will only contain one index
@@ -153,13 +183,16 @@ def grids(hof,tests,params,us):
             assert len(free_param) == len(hc) - 1
             assert len(hc) == len(free_param) + 1
             # zoom in on optima
-            cpparams['freei'] = (np.min(params[freei]), np.max(params[freei]))
 
+
+            cpparams['freei'] = (np.min(params[freei]), np.max(params[freei]))
+            
             gr = run_grid(10,tests,provided_keys = freei, hold_constant = hc,mp_in = params)
             # make a psuedo test, that still depends on input Parametersself.
             # each test evaluates a normal PDP.
             fp = list(copy.copy(free_param))
-            ax[i,j] = plot_line(gr,ax[i,j],fp)
+            #ax0[i,j] = plot_line_ss(gr,ax[i,j],fp,hof)
+            ax1[i,j] = plot_line_ss(gr,ax[i,j],fp,hof)
         if i >j:
             assert len(free_param) == len(hc) + 1
             assert len(hc) == len(free_param) - 1
@@ -168,29 +201,34 @@ def grids(hof,tests,params,us):
 
             gr = run_grid(10,tests,provided_keys = list((freei,freej)), hold_constant = hc, mp_in = params)
             fp = list(copy.copy(free_param))
-            ax[i,j] = plot_surface(gr,ax[i,j],fp,imshow=False)
+            ax0[i,j] = plot_surface(gr,ax[i,j],fp,imshow=False)
+            ax1[i,j] = plot_surface(gr,ax[i,j],fp,imshow=False)
 
         if i < j:
             free_param = list(copy.copy(list(free_param)))
             if len(free_param) == 2:
-                ax[i,j] = plot_scatter(hof,ax[i,j],free_param)
+                ax0[i,j] = plot_scatter(hof,ax[i,j],free_param)
+                ax1[i,j] = ps(fig1,ax[i,j],freei,freej,history)   
 
             cpparams['freei'] = (np.min(params[freei]), np.max(params[freei]))
             cpparams['freej'] = (np.min(params[freej]), np.max(params[freej]))
             gr = hof
 
-        limits_used = (us[ki],us[kj])
-        
+        limits_used = (us[str(freei)],us[str(freej)])
+        scores = [ g.dtc.get_ss() for g in gr ]
+        params_ = [ g.dtc.attrs for g in gr ]
+   
         # To Pandas:
         # https://stackoverflow.com/questions/28056171/how-to-build-and-fill-pandas-dataframe-from-for-loop#28058264
-        temp.append({'i':i,'j':j,'free_param':free_param,'hold_constant':hc,'param_boundaries':cpparams,'grid':gr,'ga_used':limits_used})
-        intermediate = pd.DataFrame(temp)
+        temp.append({'i':i,'j':j,'free_param':free_param,'hold_constant':hc,'param_boundaries':cpparams,'scores':scores,'params':params_,'ga_used':limits_used})
+        print(temp)
+        #intermediate = pd.DataFrame(temp)
         with open('intermediate.p','wb') as f:
-            pickle.dump(intermediate,f)
+            pickle.dump(temp,f)
                 
-    df = pd.DataFrame(temp)
+    #df = pd.DataFrame(temp)
     plt.savefig(str('cross_section_and_surfaces.png'))
-    return matrix, mat, df
+    return temp
 
 
 opt_keys = [str('vr'),str('a'),str('b')]
@@ -209,6 +247,9 @@ except:
     fc, mp = explore_ranges.pre_run(tests_,opt_keys)
     with open('ranges.p','wb') as f:
         pickle.dump([fc,mp],f)
+    mp['b'] = [ -10, 500.0 ]                                                                                      
+    mp['vr'] = [ -100.0, -40.0 ]                                                                                     
+    mp['a'] = [-10, 2]                                                                                             
 
 
 
@@ -219,13 +260,16 @@ try:
         package = pickle.load(f)
 
 except:
-    # assert 1==2 
-    package = run_ga(mp,6,tests_,provided_keys = opt_keys)
+
+    package, DO = run_ga(mp,12,tests_,provided_keys = opt_keys)
     with open('package.p','wb') as f:
         pickle.dump(package,f)
 
-hof = package[1]
-history = package[4]
+hof = package['hof']
+history = package['history']
+# import pdb
+# pdb.set_trace()
+
 attr_keys = list(hof[0].dtc.attrs.keys())
 us = {} # GA utilized_space
 for key in attr_keys:
@@ -233,7 +277,16 @@ for key in attr_keys:
     us[key] = ( np.min(temp), np.max(temp))
 
         
+try:
+    assert 1==2 
+    with open('surfaces.p','rb') as f:
+        temp = pickle.load(f)
 
-matrix,mat,df = grids(hof,tests_,mp,us)
-with open('surfaces.p','wb') as f:
-    pickle.dump([matrix,df],f)
+except:
+
+    temp = grids(hof,tests_,mp,us,history)
+    with open('surfaces.p','wb') as f:
+        pickle.dump(temp,f)
+
+sys.exit()
+        
