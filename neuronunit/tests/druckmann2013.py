@@ -8,18 +8,20 @@ The beginning of a spike was then determined by a crossing of a threshold on the
 The end of the spike was determined by the minimum value of the afterhyperpolarization (AHP) following the spike.
 The peak point of the spike is the maximum in between these two points.
 The amplitude of a spike is given by the difference between the voltage at the beginning and peak of the spike.
+
+Numbers in class names refer to the numbers in the publication table
 """
 
 from .base import np, pq, ncap, VmTest, scores, AMPL, DELAY, DURATION
 
-class AP12AmplitudeDrop(VmTest):
+class AP12AmplitudeDropTest(VmTest):
     """
     1. Drop in AP amplitude (amp.) from first to second spike (mV)
 
     Difference in the voltage value between the amplitude of the first and second AP.
     """
 
-class AP1SSAmplitudeChange(VmTest):
+class AP1SSAmplitudeChangeTest(VmTest):
     """
     2. AP amplitude change from first spike to steady-state (mV)
 
@@ -27,14 +29,14 @@ class AP1SSAmplitudeChange(VmTest):
     that occurred during the latter third of the current step.
     """
 
-class AP1Amplitude(VmTest):
+class AP1AmplitudeTest(VmTest):
     """
     3. AP 1 amplitude (mV)
 
     Amplitude of the first AP.
     """
 
-class AP1WidthHalfHeight(VmTest):
+class AP1WidthHalfHeightTest(VmTest):
     """
     4. AP 1 width at half height (ms)
 
@@ -44,7 +46,7 @@ class AP1WidthHalfHeight(VmTest):
     the AP plus half the AP amplitude.
     """
 
-class AP1WidthPeakToTrough(VmTest):
+class AP1WidthPeakToTroughTest(VmTest):
     """
     5. AP 1 peak to trough time (ms)
 
@@ -52,7 +54,7 @@ class AP1WidthPeakToTrough(VmTest):
     minimum of the AHP.
     """
 
-class AP1RateOfChangePeakToTrough(VmTest):
+class AP1RateOfChangePeakToTroughTest(VmTest):
     """
     6. AP 1 peak to trough rate of change (mV/ms)
 
@@ -60,7 +62,7 @@ class AP1RateOfChangePeakToTrough(VmTest):
     between the peak and trough.
     """
 
-class AP1AHPdepth(VmTest):
+class AP1AHPDepthTest(VmTest):
     """
     7. AP 1 Fast AHP depth (mV)
 
@@ -68,261 +70,243 @@ class AP1AHPdepth(VmTest):
     the beginning of the AP.
     """
 
-class AP2Amplitude(VmTest):
+class AP2AmplitudeTest(VmTest):
     """
     8. AP 1 amplitude (mV)
 
-    Same as :any:`AP1Amplitude` but for second AP
+    Same as :any:`AP1AmplitudeTest` but for second AP
     """
 
-class AP2WidthHalfHeight(VmTest):
+class AP2WidthHalfHeightTest(VmTest):
     """
     9. AP 1 width at half height (ms)
 
-    Same as :any:`AP1WidthHalfHeight` but for second AP
+    Same as :any:`AP1WidthHalfHeightTest` but for second AP
     """
 
-class AP2WidthPeakToTrough(VmTest):
+class AP2WidthPeakToTroughTest(VmTest):
     """
     10. AP 1 peak to trough time (ms)
 
-    Same as :any:`AP1WidthPeakToTrough` but for second AP
+    Same as :any:`AP1WidthPeakToTroughTest` but for second AP
     """
 
-class AP2RateOfChangePeakToTrough(VmTest):
+class AP2RateOfChangePeakToTroughTest(VmTest):
     """
     11. AP 1 peak to trough rate of change (mV/ms)
 
-    Same as :any:`AP1WidthPeakToTrough` but for second AP
+    Same as :any:`AP1RateOfChangePeakToTroughTest` but for second AP
     """
 
-class AP2AHPdepth(VmTest):
+class AP2AHPDepthTest(VmTest):
     """
     12. AP 1 Fast AHP depth (mV)
 
-    Same as :any:`AP1AHPdepth` but for second AP
+    Same as :any:`AP1AHPDepthTest` but for second AP
+    """
+
+class AP12AmplitudeChangePercentTest(VmTest):
+    """
+    13.	Percent change in AP amplitude, first to second spike (%)
+
+    Difference in AP amplitude between first and second AP divided by the first AP
+    amplitude.
+    """
+
+class AP12HalfWidthChangePercentTest(VmTest):
+    """
+    14. Percent change in AP width at half height, first to second spike (%)
+
+    Difference in AP width at half-height between first and second AP divided by the
+    first AP width at half-height.
+    """
+
+class AP12PercentChangeInRateOfChangePeakToTroughTest(VmTest):
+    """
+    15. Percent change in AP peak to trough rate of change, first to second spike (%)
+
+    Difference in peak to trough rate of change between first and second AP divided
+    by the first AP peak to trough rate of change.
+    """
+
+class AP12PercentChangeInAHPDepthTest(VmTest):
+    """
+    16 	Percent change in AP fast AHP depth, first to second spike (%)
+
+    Difference in depth of fast AHP between first and second AP divided by the first
+    AP depth of fast AHP.
+    """
+
+class InputResistanceTest(VmTest):
+    """
+    17 	Input resistance for steady-state current (Ohm)
+
+    Input resistance calculated by injecting weak subthreshold hyperpolarizing and
+    depolarizing step currents. Input resistance was taken as linear fit of current to
+    voltage difference.
+    """
+
+class AP1DelayMeanTest(VmTest):
+    """
+    18 	Average delay to AP 1 (ms)
+
+    Mean of the delay to beginning of first AP over experimental repetitions of step
+    currents.
+    """
+
+class AP1DelaySDTest(VmTest):
+    """
+    19 	SD of delay to AP 1 (ms)
+
+    Standard deviation of the delay to beginning of first AP over experimental
+    repetitions of step currents.
+    """
+
+class AP2DelayMeanTest(VmTest):
+    """
+    20 	Average delay to AP 2 (ms)
+
+    Same as :any:`AP1DelayMeanTest` but for 2nd AP
+    """
+
+class AP2DelaySDTest(VmTest):
+    """
+    21 	SD of delay to AP 2 (ms)
+
+    Same as :any:`AP1DelaySDTest` but for 2nd AP
+
+    Only stochastic models will have a non-zero value for this test
+    """
+
+class Burst1ISIMeanTest(VmTest):
+    """
+    22 	Average initial burst interval (ms)
+
+    Initial burst interval is defined as the average of the first two ISIs, i.e., the average
+    of the time differences between the first and second AP and the second and third
+    AP. This feature is the average the initial burst interval across experimental
+    repetitions.
+    """
+
+class Burst1ISISDTest(VmTest):
+    """
+    23 	SD of average initial burst interval (ms)
+
+    The standard deviation of the initial burst interval across experimental repetitions.
+    """
+
+class AccommodationMeanInitialTest(VmTest):
+    """
+    24 	Average initial accommodation (%)
+
+    Initial accommodation is defined as the percent difference between the spiking rate of the
+    first fifth of the step current and the *third* fifth of the step current.
     """
 
 
-
-
-"""
-
-
-9 	AP 2 width at half height (ms)
-10 	AP 2 peak to trough time (ms)
-11 	AP 2 peak to trough rate of change (mV/ms)
-12 	AP 2 Fast AHP depth (mV)
-13 	Percent change in AP amplitude, first to second spike (%)
-14 	Percent change in AP width at half height, first to second spike (%)
-15 	Percent change in AP peak to trough rate of change, first to second spike (%)
-16 	Percent change in AP fast AHP depth, first to second spike (%)
-17 	Input resistance for steady-state current (Ohm)
-18 	Average delay to AP 1 (ms)
-19 	SD of delay to AP 1 (ms)
-20 	Average delay to AP 2 (ms)
-21 	SD of delay to AP 2 (ms)
-22 	Average initial burst interval (ms)
-23 	SD of average initial burst interval (ms)
-24 	Average initial accommodation (%)
-25 	Average steady-state accommodation (%)
-26 	Rate of accommodation to steady-state (1/ms)
-27 	Average accommodation at steady-state (%)
-28 	Average rate of accommodation during steady-state
-29 	Average inter-spike interval (ISI) coefficient of variation (CV) (unit less)
-30 	Median of the distribution of ISIs (ms)
-31 	Average change in ISIs during a burst (%)
-32 	Average rate, strong stimulus (Hz)
-33 	Average delay to AP 1, strong stimulus (ms)
-34 	SD of delay to AP 1, strong stimulus (ms)
-35 	Average delay to AP 2, strong stimulus (ms)
-36 	SD of delay to AP 2, strong stimulus (ms)
-37 	Average initial burst ISI, strong stimulus (ms)
-38 	SD of average initial burst ISI, strong stimulus (ms)
-"""
-
-class APWidthTest(VmTest):
-    """Test the full widths of action potentials at their half-maximum."""
-
-    required_capabilities = (ncap.ProducesActionPotentials,)
-
-    name = "AP width test"
-
-    description = ("A test of the widths of action potentials "
-                   "at half of their maximum height.")
-
-    score_type = scores.ZScore
-
-    units = pq.ms
-
-    ephysprop_name = 'Spike Half-Width'
-
-    def generate_prediction(self, model):
-        """Implement sciunit.Test.generate_prediction."""
-        # Method implementation guaranteed by
-        # ProducesActionPotentials capability.
-        # if get_spike_count is zero, then widths will be None
-        # len of None returns an exception that is not handled
-        model.rerun = True
-
-        widths = model.get_AP_widths()
-        # Put prediction in a form that compute_score() can use.
-        prediction = {'mean': np.mean(widths) if len(widths) else None,
-                      'std': np.std(widths) if len(widths) else None,
-                      'n': len(widths)}
-
-        return prediction
-
-    def compute_score(self, observation, prediction):
-        """Implement sciunit.Test.score_prediction."""
-        if isinstance(prediction, type(None)):
-            score = scores.InsufficientDataScore(None)
-        elif prediction['n'] == 0:
-            score = scores.InsufficientDataScore(None)
-        else:
-            score = super(APWidthTest, self).compute_score(observation,
-                                                           prediction)
-        return score
-
-
-class InjectedCurrentAPWidthTest(APWidthTest):
+class AccommodationMeanSSTest(VmTest):
     """
-    Tests the full widths of APs at their half-maximum
-    under current injection.
-    """
-    required_capabilities = (ncap.ReceivesSquareCurrent,)
+    25 	Average steady-state accommodation (%)
 
-    params = {'injected_square_current':
-              {'amplitude': 100.0*pq.pA, 'delay': DELAY, 'duration': DURATION}}
-
-    name = "Injected current AP width test"
-
-    description = ("A test of the widths of action potentials "
-                   "at half of their maximum height when current "
-                   "is injected into cell.")
-
-    def generate_prediction(self, model):
-        model.inject_square_current(self.params['injected_square_current'])
-        prediction = super(InjectedCurrentAPWidthTest, self).\
-         generate_prediction(model)
-
-        return prediction
-
-
-class APAmplitudeTest(VmTest):
-    """Test the heights (peak amplitude) of action potentials."""
-
-    required_capabilities = (ncap.ProducesActionPotentials,)
-
-    name = "AP amplitude test"
-
-    description = ("A test of the amplitude (peak minus threshold) of "
-                   "action potentials.")
-
-    score_type = scores.ZScore
-
-    units = pq.mV
-
-    ephysprop_name = 'Spike Amplitude'
-
-    def generate_prediction(self, model):
-        """Implement sciunit.Test.generate_prediction."""
-        # Method implementation guaranteed by
-        # ProducesActionPotentials capability.
-        model.rerun = True
-        heights = model.get_AP_amplitudes() - model.get_AP_thresholds()
-        # Put prediction in a form that compute_score() can use.
-        prediction = {'mean': np.mean(heights) if len(heights) else None,
-                      'std': np.std(heights) if len(heights) else None,
-                      'n': len(heights)}
-        return prediction
-
-    def compute_score(self, observation, prediction):
-        """Implementation of sciunit.Test.score_prediction."""
-        if prediction['n'] == 0:
-            score = scores.InsufficientDataScore(None)
-        else:
-            score = super(APAmplitudeTest, self).compute_score(observation,
-                                                               prediction)
-        return score
-
-
-class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
-    """
-    Tests the heights (peak amplitude) of action potentials
-    under current injection.
+    Steady-state accommodation is defined as the percent difference between the spiking rate
+    of the first fifth of the step current and the last *fifth* of the step current.
     """
 
-    required_capabilities = (ncap.ReceivesSquareCurrent,)
 
-    params = {'injected_square_current':
-              {'amplitude': 100.0*pq.pA, 'delay': DELAY, 'duration': DURATION}}
+class AccommodationRateToSSTest(VmTest):
+    """
+    26 	Rate of accommodation to steady-state (1/ms)
 
-    name = "Injected current AP amplitude test"
+    The percent difference between the spiking rate of the first fifth of the step current and
+    final fifth of the step current divided by the time taken to first reach the rate of
+    steady state accommodation.
+    """
 
-    description = ("A test of the heights (peak amplitudes) of "
-                   "action potentials when current "
-                   "is injected into cell.")
+class AccommodationMeanAtSSTest(VmTest):
+    """
+    27 	Average accommodation at steady-state (%)
 
-    def generate_prediction(self, model):
-        model.inject_square_current(self.params['injected_square_current'])
-        prediction = super(InjectedCurrentAPAmplitudeTest, self).\
-            generate_prediction(model)
-        return prediction
+    Accommodation analysis based on a fit of the ISIs to an exponential function:
+    ISI = A+B*exp(-t/tau). This feature gives the relative size of the constant term (A) to
+    the term before the exponent (B).
+    """
+
+class AccommodationRateMeanAtSSTest(VmTest):
+    """
+    28 	Average rate of accommodation during steady-state
+
+    Accommodation analysis based on a fit of the ISIs to an exponential function.
+    This feature is the time constant of the exponent.
+    """
+
+class ISICVTest(VmTest):
+    """
+    29 	Average inter-spike interval (ISI) coefficient of variation (CV) (unit less)
+
+    Coefficient of variation (mean divided by standard deviation) of the distribution
+    of ISIs.
+    """
+
+class ISIMedianTest(VmTest):
+    """
+    30 	Median of the distribution of ISIs (ms)
+
+    Median of the distribution of ISIs.
+    """
+
+class ISIBurstMeanChangeTest(VmTest):
+    """
+    31 	Average change in ISIs during a burst (%)
+
+    Difference between the first and second ISI divided by the value of the first ISI.
+    """
+
+class SpikeRateStrongStimTest(VmTest):
+    """
+    32 	Average rate, strong stimulus (Hz)
+
+    Firing rate of strong stimulus.
+    """
+
+class AP1DelayMeanStrongStimTest(VmTest):
+    """
+    33 	Average delay to AP 1, strong stimulus (ms)
+
+    Same as :any:`AP1DelayMeanTest` but for strong stimulus
+    """
+
+class AP1DelaySDStrongStimTest(VmTest):
+    """
+    34 	SD of delay to AP 1, strong stimulus (ms)
+
+    Same as :any:`AP1DelaySDTest` but for strong stimulus
+    """
+
+class AP2DelayMeanStrongStimTest(VmTest):
+    """
+    35 	Average delay to AP 2, strong stimulus (ms)
 
 
-class APThresholdTest(VmTest):
-    """Tests the full widths of action potentials at their half-maximum."""
+    Same as :any:`AP2DelayMeanTest` but for strong stimulus
+    """
 
-    required_capabilities = (ncap.ProducesActionPotentials,)
+class AP2DelaySDStrongStimTest(VmTest):
+    """
+    36 	SD of delay to AP 2, strong stimulus (ms)
 
-    name = "AP threshold test"
+    Same as :any:`AP2DelaySDTest` but for strong stimulus
+    """
 
-    description = ("A test of the membrane potential threshold at which "
-                   "action potentials are produced.")
+class Burst1ISIMeanStrongStimTest(VmTest):
+    """
+    37 	Average initial burst ISI, strong stimulus (ms)
 
-    score_type = scores.ZScore
+    Same as :any:`Burst1ISIMeanTest` but for strong stimulus
+    """
 
-    units = pq.mV
+class Burst1ISISDStrongStimTest(VmTest):
+    """
+    38 	SD of average initial burst ISI, strong stimulus (ms)
 
-    ephysprop_name = 'Spike Threshold'
-
-    def generate_prediction(self, model):
-        """Implement sciunit.Test.generate_prediction."""
-        # Method implementation guaranteed by
-        # ProducesActionPotentials capability.
-        model.rerun = True
-        threshes = model.get_AP_thresholds()
-        # Put prediction in a form that compute_score() can use.
-        prediction = {'mean': np.mean(threshes) if len(threshes) else None,
-                      'std': np.std(threshes) if len(threshes) else None,
-                      'n': len(threshes)}
-        return prediction
-
-    def compute_score(self, observation, prediction):
-        """Implementation of sciunit.Test.score_prediction."""
-        if prediction['n'] == 0:
-            score = scores.InsufficientDataScore(None)
-        else:
-            score = super(APThresholdTest, self).compute_score(observation,
-                                                               prediction)
-        return score
-
-
-class InjectedCurrentAPThresholdTest(APThresholdTest):
-    """Test the thresholds of action potentials under current injection."""
-
-    required_capabilities = (ncap.ReceivesSquareCurrent,)
-
-    params = {'injected_square_current':
-              {'amplitude': 100.0*pq.pA, 'delay': DELAY, 'duration': DURATION}}
-
-    name = "Injected current AP threshold test"
-
-    description = ("A test of the membrane potential threshold at which "
-                   "action potentials are produced under current injection.")
-
-    def generate_prediction(self, model):
-        model.inject_square_current(self.params['injected_square_current'])
-        return super(InjectedCurrentAPThresholdTest, self).\
-            generate_prediction(model)
+    Same as :any:`Burst1ISISDTest` but for strong stimulus
+    """
