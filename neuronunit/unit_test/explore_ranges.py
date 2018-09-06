@@ -64,31 +64,52 @@ def check_line(line,gr,newrange,key):
         attrs = gr[0].dtc.attrs[key]
         # quantity may not be negative yet
         # don't force it to be straight away
+        # avoided forcing rapid sign reversal by keeping old value as an offset
+
         remin =  attrs - 10*np.abs(attrs)
-        if remax == 0.0:
-            remax = -1.0
+        if remin == 0.0:
+            remin = -1.0
 
         cl.insert(0,remin)
+        cl = sorted(cl)
         newrange[key] = cl
         range_adj = True
-        new_param_val = remin
+        new_param_val = cl[0]
         index = 0
     if line[-1] == min_:
         attrs = gr[-1].dtc.attrs[key]
         # quantity might not be positve yet
         # don't force it to be straight away
+        # avoided forcing rapid sign reversal by keeping old value as an offset
+
         remax = attrs + np.abs(attrs)*10
         if remax == 0.0:
             remax = 1.0
 
         cl.append(remax)
+        cl = sorted(cl)
         newrange[key] = cl
         range_adj = True
-        new_param_val = remax
+        new_param_val = cl[-1]
         index = -1
+
+
     return (newrange, range_adj, new_param_val, index)
 
-from neuronunit.models.NeuroML2 import model_parameters as modelp
+def interpolate(p0,p1):
+    attrs0, score0 = p0
+    attrs1, score1 = p1
+    scores = [score0,score1]
+    first = bool(scores[0] == 4.0 and scores[1] !=4.0)
+    second = bool(scores[1] == 4.0 and scores[0] !=4.0)
+    if first or second:
+        new = (attrs0 + attrs1)/2.0
+    else:
+        new = None
+    return new
+        
+
+#from neuronunit.models.NeuroML2 import model_parameters as modelp
 from neuronunit.optimization.optimization_management import nunit_evaluation, update_deap_pop
 from collections import OrderedDict
 
@@ -102,9 +123,9 @@ def pre_run(tests,opt_keys):
     nparams = len(opt_keys)
     from neuronunit.models.NeuroML2 import model_parameters as modelp
     mp = copy.copy(modelp.model_params)
-    mp['b'] = [ -0.002, 50.0 ]
-    mp['vr'] = [ -200.0, 0.0 ]
-
+    mp['b'] = [ -0.5, 500.0 ]
+    mp['vr'] = [ -100.0, 10.0 ]
+    mp['a'] = [-10, 5]
     cnt = 0
     fc = {} # final container
     
@@ -120,21 +141,46 @@ def pre_run(tests,opt_keys):
             # sample a point to a greater extreme
             gr_ = update_deap_pop(new, tests, key)
             param_line = [ g.dtc.attrs[key] for g in gr ]
+
             temp = list(mp[key])
-                
+            inter = None
+            
             if index == 0:
+                p0 = ( gr_.dtc.attrs[key], gr_.dtc.get_ss() )
+                p1 = ( gr[0].dtc.attrs[key], gr[0].dtc.get_ss())
+                inter = interpolate(p0,p1)
+                print(inter)
+
                 gr.insert(index,gr_)
                 temp.insert(index,new)
-            else:
+            elif index == -1:
+                p0 = ( gr_.dtc.attrs[key], gr_.dtc.get_ss() )
+                
+                p1 = ( gr[-1].dtc.attrs[key], gr[-1].dtc.get_ss())
+                inter = interpolate(p0,p1) 
+                print(inter)
+
                 gr.append(gr_)
                 temp.append(gr_)
-                
+
+            
             mp[key] = np.array(temp)
             line = [ g.dtc.get_ss() for g in gr]
+            
             _, range_adj, new,index = check_line(line,gr,mp,key)
             cnt += 1
-            with open('temp.p','wb') as f:
+            with open('temp_range.p','wb') as f:
                 pickle.dump(mp,f)
+            if type(inter) is not type(None):    
+                with open('temp_inter.p','wb') as f:
+                    pickle.dump([mp,inter],f)
+
+        param_line = [ g.dtc.attrs[key] for g in gr ]
+        line = [ g.dtc.get_ss() for g in gr]            
+        plt.clf()
+        plt.plot(param_line,line)
+        plt.savefig('check_'+str(key)+'.png')                            
+
         fc[key] = {}
         fc[key]['line'] = line
         fc[key]['range'] = mp
