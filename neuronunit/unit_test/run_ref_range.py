@@ -56,11 +56,12 @@ tests_,test, observation = get_tests()
 
 grid_results = {}
 
-def plot_scatter(hof,ax,keys):
-    z = np.array([ np.sum(list(p.dtc.scores.values())) for p in hof ])
-    x = np.array([ p.dtc.attrs[str(keys[0])] for p in hof ])
+def plot_scatter(history,ax,keys):
+    pop = [ v for v in history.genealogy_history.values() ]   
+    z = np.array([ np.sum(list(p.dtc.scores.values())) for p in pop ])
+    x = np.array([ p.dtc.attrs[str(keys[0])] for p in pop ])
     if len(keys) != 1:
-        y = np.array([ p.dtc.attrs[str(keys[1])] for p in hof ])
+        y = np.array([ p.dtc.attrs[str(keys[1])] for p in pop ])
         ax.cla()
         ax.set_title(' {0} vs {1} '.format(keys[0],keys[1]))
         ax.scatter(x, y, c=y, s=125)#, cmap='gray')
@@ -136,6 +137,7 @@ def plot_agreement(ax,gr,key,hof):
     return ax                                                                                                        
                                                                                                                                                                                                                   
 from neuronunit.plottools import plot_surface as ps
+from collections import OrderedDict                                   
 
 def grids(hof,tests,params,us,history):
     '''
@@ -152,6 +154,7 @@ def grids(hof,tests,params,us,history):
     parameter ranges. `k`-dim-3 is the the grid that results from varying those parameters
     (the grid results can either be square (if len(free_param)==2), or a line (if len(free_param==1)).
     '''
+    
     dim = len(hof[0].dtc.attrs.keys())
     flat_iter = iter([(i,freei,j,freej) for i,freei in enumerate(hof[0].dtc.attrs.keys()) for j,freej in enumerate(hof[0].dtc.attrs.keys())])
     #matrix = [[[0 for z in range(dim)] for x in range(dim)] for y in range(dim)]
@@ -162,16 +165,18 @@ def grids(hof,tests,params,us,history):
     cnt = 0
     temp = []
     loc_key = {}
+    
+    #free_param = 
     for k,v in hof[0].dtc.attrs.items():
         loc_key[k] = hof[0].dtc.attrs[k]
         params[k] = ( loc_key[k]- 3*np.abs(loc_key[k]), loc_key[k]+2*np.abs(loc_key[k]) )   
     
-                                   
     for i,freei,j,freej in flat_iter:
-        free_param = set([freei,freej]) # construct a small-set out of the indexed keys 2. If both keys are
+        free_param = [freei,freej]
+        free_param_set = set(free_param) # construct a small-set out of the indexed keys 2. If both keys are
         # are the same, this set will only contain one index
         bs = set(hof[0].dtc.attrs.keys()) # construct a full set out of all of the keys available, including ones not indexed here.
-        diff = bs.difference(free_param) # diff is simply the key that is not indexed.
+        diff = bs.difference(free_param_set) # diff is simply the key that is not indexed.
         # hc is the dictionary of parameters to be held constant
         # if the plot is 1D then two parameters should be held constant.
         hc =  {}
@@ -207,7 +212,7 @@ def grids(hof,tests,params,us,history):
         if i < j:
             free_param = list(copy.copy(list(free_param)))
             if len(free_param) == 2:
-                ax0[i,j] = plot_scatter(hof,ax[i,j],free_param)
+                ax0[i,j] = plot_scatter(history,ax[i,j],free_param)
                 ax1[i,j] = ps(fig1,ax[i,j],freei,freej,history)   
 
             cpparams['freei'] = (np.min(params[freei]), np.max(params[freei]))
