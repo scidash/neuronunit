@@ -115,7 +115,7 @@ class NEURONBackend(Backend):
         except:
             self.cvode = self.h.CVode()
             self.cvode.active(1 if method == "variable" else 0)
-    @jit
+    #@jit
     def get_membrane_potential(self):
         """Must return a neo.core.AnalogSignal.
         And must destroy the hoc vectors that comprise it.
@@ -133,7 +133,7 @@ class NEURONBackend(Backend):
         return AnalogSignal(fixed_signal,
                             units = mV,
                             sampling_period = dt * ms)
-    @jit
+    #@jit
     def get_variable_step_analog_signal(self):
         """Converts variable dt array values to fixed
         dt array by using linear interpolation"""
@@ -179,7 +179,7 @@ class NEURONBackend(Backend):
             fTime += fDt
 
         return fPots
-    @jit
+    #@jit
     def linearInterpolate(self, tStart, tEnd, vStart, vEnd, tTarget):
         tRange = float(tEnd - tStart)
         tFractionAlong = (tTarget - tStart)/tRange
@@ -366,16 +366,35 @@ class NEURONBackend(Backend):
         for string in define_current:
             # execute hoc code strings in the python interface to neuron.
             self.h(string)
+        print('got here a')
+                    
         if debug == True:
             self.neuron.h.psection()
-
+        _local_run()
     def _local_run(self):
         self.h('run()')
         results = {}
         # Prepare NEURON vectors for quantities/sciunit
         # By rescaling voltage to milli volts, and time to milli seconds.
-        results['vm'] = [float(x) for x in copy.copy(self.neuron.h.v_v_of0.to_python())]
-        results['t'] = [float(x) for x in copy.copy(self.neuron.h.v_time.to_python())]
+        # the original PyLems generated file includes this
+        # divide by 1000
+        
+        # py_v_v_of0 = [ float(x  / 1000.0) for x in h.v_v_of0.to_python() ]  # Convert to Python list for speed, variable has dim: voltage
+        # py_v_u_of0 = [ float(x  / 1.0E9) for x in h.v_u_of0.to_python() ]  # Convert to Python list for speed, variable has dim: current
+
+        self.gain_factor = 1000.0
+
+        trec = h.Vector()
+        trec.record(h._ref_t)
+        h.tstop = tstop
+        h.dt = dt
+        h.steps_per_ms = 1/h.dt
+
+
+        results['vm'] = [ float(x)/1000.0 for x in copy.copy(self.neuron.h.v_v_of0.to_python())]
+        print(results['vm'])
+        results['t'] = [ float(x) for x in copy.copy(self.neuron.h.v_time.to_python())]
         results['run_number'] = results.get('run_number',0) + 1
+        print('got here b')
 
         return results
