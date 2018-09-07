@@ -19,10 +19,11 @@ def grid_points():
     with open(electro_path,'rb') as f:
         electro_tests = pickle.load(f)
     from neuronunit.optimization import exhaustive_search
-    grid_points = exhaustive_search.create_grid(npoints = npoints,nparams = nparams)
+    grid_points = exhaustive_search.create_grid(npoints = npoints,provided_keys=['a','b','vr'])
     import dask.bag as db
     b0 = db.from_sequence(grid_points[0:2], npartitions=8)
-    dtcpop = list(db.map(exhaustive_search.update_dtc_grid,b0).compute())
+    es = exhaustive_search.update_dtc_grid
+    dtcpop = list(b0.map(es).compute())
     assert dtcpop is not None
     return dtcpop
 

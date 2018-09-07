@@ -94,7 +94,7 @@ class RheobaseTest(VmTest):
                 if n_spikes and n_spikes <= spike_counts.min():
                     self.rheobase_vm = model.get_membrane_potential()
 
-        max_iters = 45
+        max_iters = 145
 
         #evaluate once with a current injection at 0pA
         high=self.high
@@ -261,7 +261,7 @@ class RheobaseTestP(VmTest):
                       {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
             ampl = float(dtc.ampl)
-            
+            print(dtc.ampl,ampl,dtc)
             if ampl not in dtc.lookup or len(dtc.lookup) == 0:
                 current = params.copy()['injected_square_current']
                 uc = {'amplitude':ampl}
@@ -327,6 +327,7 @@ class RheobaseTestP(VmTest):
                     dtc.lookup.update(d.lookup)
                 dtc = check_fix_range(dtc)
                 cnt += 1
+                print(cnt)
             return dtc
 
         dtc = DataTC()

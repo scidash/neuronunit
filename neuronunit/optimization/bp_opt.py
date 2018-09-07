@@ -296,7 +296,8 @@ class SciUnitOptimization(bluepyopt.optimisations.Optimisation):
         IND_SIZE = len(list(self.params.values()))
         OBJ_SIZE = len(self.error_criterion)
         if IND_SIZE == 1:
-            pop = [ WSListIndividual([g],obj_size=OBJ_SIZE) for g in self.grid_init ]
+            # I changed this too.
+            pop = [ WSFloatIndividual(g,obj_size=OBJ_SIZE) for g in self.grid_init ]
         else:
             pop = [ WSListIndividual(g, obj_size=OBJ_SIZE) for g in self.grid_init ]
         return pop
@@ -343,5 +344,14 @@ class SciUnitOptimization(bluepyopt.optimisations.Optimisation):
 
         # insert the initial HOF value back in.
         td = self.td
-        return pop, hof, pf, log, history, td, gen_vs_pop
+
+        attr_keys = list(hof[0].dtc.attrs.keys())
+        us = {} # GA utilized_space
+        for key in attr_keys:
+            temp = [ v.dtc.attrs[key] for k,v in history.genealogy_history.items() ]
+            us[key] = ( np.min(temp), np.max(temp))
+        self.us = us                 
+        self.results = {'pop':pop,'hof':hof,'pf':pf,'log':log,'history':history,'td':td,'gen_vs_pop':gen_vs_pop}
+        return self.results
+        #pop, hof, pf, log, history, td, gen_vs_pop
 
