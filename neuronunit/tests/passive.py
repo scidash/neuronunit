@@ -18,6 +18,10 @@ class TestPulseTest(VmTest):
 
     def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
+        t_stop = self.params['injected_square_current']['delay'] + \
+                   self.params['injected_square_current']['duration'] + \
+                   100.0 * pq.ms
+        model.get_backend().set_stop_time(t_stop)
         model.inject_square_current(self.params['injected_square_current'])
         vm = model.get_membrane_potential()
         i = self.params['injected_square_current']
@@ -89,7 +93,7 @@ class InputResistanceTest(TestPulseTest):
 
     description = ("A test of the input resistance of a cell.")
 
-    units = pq.ohm*1e6
+    units = pq.UnitQuantity('megaohm', pq.ohm*1e6, symbol='Mohm')  # Megaohms
 
     ephysprop_name = 'Input Resistance'
 
@@ -97,8 +101,8 @@ class InputResistanceTest(TestPulseTest):
         """Implementation of sciunit.Test.generate_prediction."""
         i,vm = super(InputResistanceTest,self).\
                             generate_prediction(model)
-        i['duration'] = 100 * pq.ms
-
+        for param in ['delay', 'duration', 'amplitude']:
+            i[param] = self.params['injected_square_current'][param]
         r_in = self.__class__.get_rin(vm, i)
         r_in = r_in.simplified
         # Put prediction in a form that compute_score() can use.

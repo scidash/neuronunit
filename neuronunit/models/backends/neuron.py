@@ -1,7 +1,11 @@
-from .base import *
+import io
 import math
 import pdb
 from numba import jit
+from contextlib import redirect_stdout
+
+from .base import *
+
 class NEURONBackend(Backend):
     """Used for simulation with NEURON, a popular simulator
     http://www.neuron.yale.edu/neuron/
@@ -30,8 +34,7 @@ class NEURONBackend(Backend):
         if not NEURON_SUPPORT:
             raise BackendException("The neuron module was not successfully imported")
 
-
-
+        self.stdout = io.StringIO()
         self.neuron = None
         self.model_path = None
         self.h = h
@@ -78,13 +81,13 @@ class NEURONBackend(Backend):
     #    self.h.tstop = params['stop_time']
 
 
-    def set_stop_time(self, stop_time = 650*ms):
+    def set_stop_time(self, stop_time = 650*pq.ms):
         """Sets the simulation duration
         stopTimeMs: duration in milliseconds
         """
-        self.h.tstop = float(stop_time)
+        self.h.tstop = float(stop_time.rescale(pq.ms))
 
-    def set_time_step(self, integrationTimeStep = 1/128.0 * ms):
+    def set_time_step(self, integrationTimeStep = 1/128.0 * pq.ms):
         """Sets the simulation itegration fixed time step
         integrationTimeStepMs: time step in milliseconds.
         Powers of two preferred. Defaults to 1/128.0
@@ -188,17 +191,19 @@ class NEURONBackend(Backend):
 
         return vTarget
 
-    def load(self,tstop = 650*ms):
+    def load(self, tstop=650*pq.ms):
         nrn_path = os.path.splitext(self.model.orig_lems_file_path)[0]+'_nrn.py'
         nrn = import_module_from_path(nrn_path)
         self.reset_neuron(nrn.neuron)
         modeldirname = os.path.dirname(self.model.orig_lems_file_path)
         self.h.tstop = tstop
-        self.set_stop_time(self.h.tstop) # previously 500ms add on 150ms of recovery
-        self.ns = nrn.NeuronSimulation(self.h.tstop, dt=0.0025)
+        self.set_stop_time(tstop) # previously 500ms add on 150ms of recovery
+        with redirect_stdout(self.stdout):
+            self.ns = nrn.NeuronSimulation(self.h.tstop, dt=0.0025)
 
     def load_mechanisms(self):
-        neuron.load_mechanisms(self.neuron_model_dir)
+        with redirect_stdout(self.stdout):
+            neuron.load_mechanisms(self.neuron_model_dir)
 
     def load_model(self, verbose=True):
         """Inputs: NEURONBackend instance object
@@ -234,12 +239,11 @@ class NEURONBackend(Backend):
                               exit_on_fail = True)
             # use a different process to call NEURONS compiler nrnivmodl in the
             # background if the NEURON_file_path does not yet exist.
-            subprocess.run(["cd %s; nrnivmodl" % self.neuron_model_dir],shell=True)
-            #self.load_mechanisms()
+            #subprocess.run(["cd %s; nrnivmodl" % self.neuron_model_dir],shell=True)
+            self.load_mechanisms()
         elif os.path.realpath(os.getcwd()) != os.path.realpath(self.neuron_model_dir):
             # Load mechanisms unless they've already been loaded
             #       subprocess.run(["cd %s; nrnivmodl" % self.neuron_model_dir],shell=True)
-
             self.load_mechanisms()
             self.load()
 
@@ -279,7 +283,7 @@ class NEURONBackend(Backend):
             h_value = float(h_value)
             if type(h_value) is not type(float(0.0)):
                 pdb.set_trace()
-                
+
             if math.isnan(h_value):
                 pdb.set_trace()
 
@@ -346,12 +350,10 @@ class NEURONBackend(Backend):
             c = current['injected_square_current']
         else:
             c = current
-        delay = float(c['delay'])
-        duration = float(c['duration'])
         ##
         # critical code:
         ##
-        self.set_stop_time(duration)
+        self.set_stop_time(c['delay']+c['duration']+100.0*pq.ms)
         # NEURONs default unit multiplier for current injection values is nano amps.
         # to make sure that pico amps are not erroneously interpreted as a larger nano amp.
         # current injection value, the value is divided by 1000.
@@ -359,6 +361,8 @@ class NEURONBackend(Backend):
         prefix = 'explicitInput_%s%s_pop0.' % (self.current_src_name,self.cell_name)
         define_current = []
         define_current.append('{0}amplitude={1}'.format(prefix,amps))
+        duration = float(c['duration'].rescale('ms'))
+        delay = float(c['delay'].rescale('ms'))
         define_current.append('{0}duration={1}'.format(prefix,duration))
         define_current.append('{0}delay={1}'.format(prefix,delay))
 
@@ -366,11 +370,12 @@ class NEURONBackend(Backend):
         for string in define_current:
             # execute hoc code strings in the python interface to neuron.
             self.h(string)
-        print('got here a')
-                    
+        #print('got here a')
+
         if debug == True:
             self.neuron.h.psection()
-        _local_run()
+        self._local_run()
+
     def _local_run(self):
         self.h('run()')
         results = {}
@@ -378,7 +383,7 @@ class NEURONBackend(Backend):
         # By rescaling voltage to milli volts, and time to milli seconds.
         # the original PyLems generated file includes this
         # divide by 1000
-        
+
         # py_v_v_of0 = [ float(x  / 1000.0) for x in h.v_v_of0.to_python() ]  # Convert to Python list for speed, variable has dim: voltage
         # py_v_u_of0 = [ float(x  / 1.0E9) for x in h.v_u_of0.to_python() ]  # Convert to Python list for speed, variable has dim: current
 
@@ -386,15 +391,15 @@ class NEURONBackend(Backend):
 
         trec = h.Vector()
         trec.record(h._ref_t)
-        h.tstop = tstop
-        h.dt = dt
+        #h.tstop = tstop
+        #h.dt = dt
         h.steps_per_ms = 1/h.dt
 
 
         results['vm'] = [ float(x)/1000.0 for x in copy.copy(self.neuron.h.v_v_of0.to_python())]
-        print(results['vm'])
-        results['t'] = [ float(x) for x in copy.copy(self.neuron.h.v_time.to_python())]
+        #print(results['vm'])
+        results['t'] = [ float(x)/1000.0 for x in copy.copy(self.neuron.h.v_time.to_python())]
         results['run_number'] = results.get('run_number',0) + 1
-        print('got here b')
+        #print('got here b')
 
         return results
