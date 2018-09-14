@@ -69,8 +69,7 @@ class LEMSModel(sciunit.Model,
     def __init__(self, LEMS_file_path, name=None,
                     backend=None, attrs=None):
 
-        #for base in cls.__bases__:
-        #    sciunit.Model.__init__()
+        super(LEMSModel,self).__init__(name=name)
         if name is None:
             name = os.path.split(LEMS_file_path)[1].split('.')[0]
         self.name = name
