@@ -11,9 +11,8 @@ import shelve
 import subprocess
 
 import neuronunit.capabilities as cap
-from quantities import ms, mV, nA
+import quantities as pq
 from pyneuroml import pynml
-from quantities import ms, mV
 from neo.core import AnalogSignal
 import neuronunit.capabilities.spike_functions as sf
 import sciunit
