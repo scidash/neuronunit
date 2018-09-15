@@ -119,9 +119,6 @@ def score_proc(dtc,t,score):
     return dtc
 
 
-
-#def nu_(tuple_object):
-
 def nunit_evaluation(tuple_object):
     # Inputs single data transport container modules, and neuroelectro observations that
     # inform test error error_criterion
@@ -191,26 +188,24 @@ def format_test(xargs):
     '''
     dtc,tests = xargs
     dtc.vtest = {}
-    print('broken here why?')
     for k,v in enumerate(tests):
-        print('rheobase type {0}'.format(dtc.rheobase))
-        print('rheobase type {0}'.format(type(dtc.rheobase)))
-            
         dtc.vtest[k] = {}
         dtc.vtest[k]['injected_square_current'] = {}
-        
-        if k == 1 or k == 2 or k == 3:
-            # Negative square pulse current.
-            dtc.vtest[k]['injected_square_current']['duration'] = 100 * pq.ms
-            dtc.vtest[k]['injected_square_current']['amplitude'] = -10 *pq.pA
-            dtc.vtest[k]['injected_square_current']['delay'] = 30 * pq.ms
-
         if k == 0 or k == 4 or k == 5 or k == 6 or k == 7:
-            # Threshold current.
-            dtc.vtest[k]['injected_square_current']['duration'] = 1000 * pq.ms
             dtc.vtest[k]['injected_square_current']['amplitude'] = dtc.rheobase['value']
-            dtc.vtest[k]['injected_square_current']['delay'] = 250 * pq.ms # + 150
+
+            # Threshold current.
+            #dtc.vtest[k]['injected_square_current']['duration'] = 1000 * pq.ms
+            #dtc.vtest[k]['injected_square_current']['delay'] = 250 * pq.ms # + 150
     return dtc
+
+'''
+if k == 1 or k == 2 or k == 3:
+    # Negative square pulse current.
+    dtc.vtest[k]['injected_square_current']['duration'] = 100 * pq.ms
+    dtc.vtest[k]['injected_square_current']['amplitude'] = -10 *pq.pA
+    dtc.vtest[k]['injected_square_current']['delay'] = 30 * pq.ms
+'''
 
 from itertools import repeat
 
