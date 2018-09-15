@@ -17,7 +17,7 @@ Copyright (c) 2016, EPFL/Blue Brain Project
  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 """
 
-# pylint: disable=R0914, R0912
+
 
 
 import random
@@ -28,8 +28,18 @@ import deap.tools
 import pickle
 import numpy
 
+import copy
+from neuronunit.optimization import optimization_management as om
+
+import pdb
+import math
+from bluepyopt.deapext.optimisations import tools
+#from bluepyopt import tools
+import numpy as np
+
 logger = logging.getLogger('__main__')
 
+from deap.tools import selNSGA2
 
 def _evaluate_invalid_fitness(toolbox, population):
     '''Evaluate the individuals with an invalid fitness
@@ -37,13 +47,13 @@ def _evaluate_invalid_fitness(toolbox, population):
     Returns the count of individuals with invalid fitness
     '''
     invalid_ind = [ind for ind in population if not ind.fitness.valid]
-    fitnesses = toolbox.evaluate(invalid_ind)
-    for ind, fit in zip(invalid_ind, fitnesses):
+    invalid_pop,fitnesses = toolbox.evaluate(invalid_ind)
+    for ind, fit in zip(invalid_pop,fitnesses):
         ind.fitness.values = fit
-    return len(invalid_ind)
+    return invalid_pop
 
 
-def _update_history_and_hof(halloffame, history, population):
+def _update_history_and_hof(halloffame,pf, history, population,td):
     '''Update the hall of fame with the generated individuals
 
     Note: History and Hall-of-Fame behave like dictionaries
@@ -51,29 +61,48 @@ def _update_history_and_hof(halloffame, history, population):
 
     if halloffame is not None:
         halloffame.update(population)
-
+    if pf is not None:
+        try:
+            pf.update(population)
+        except:
+            print(population)
     history.update(population)
+
+    return (halloffame,pf)
+
 
 def _record_stats(stats, logbook, gen, population, invalid_count):
     '''Update the statistics with the new population'''
     record = stats.compile(population) if stats is not None else {}
     logbook.record(gen=gen, nevals=invalid_count, **record)
 
+def gene_bad(offspring):
+    gene_bad = False
+    for o in offspring:
+        for gene in o:
+            if math.isnan(gene):
+                gene_bad = True
+    return gene_bad
 
 def _get_offspring(parents, toolbox, cxpb, mutpb):
     '''return the offsprint, use toolbox.variate if possible'''
     if hasattr(toolbox, 'variate'):
-        return toolbox.variate(parents, toolbox, cxpb, mutpb)
-    return deap.algorithms.varAnd(parents, toolbox, cxpb, mutpb)
+        offspring = toolbox.variate(parents, toolbox, cxpb, mutpb)
+        # This suppresses errors that need to be handled
+	# while gene_bad(offspring) == True:
+        #    offspring = deap.algorithms.varAnd(parents, toolbox, cxpb, mutpb)
+    return offspring
 
 
 def _get_elite(halloffame, nelite):
+
     if nelite > 0 and halloffame is not None:
         normsorted_idx = numpy.argsort([ind.fitness.norm for ind in halloffame])
-        # Return nelite best individuals
+        #hofst = [(sum(h.dtc.scores.values()),h.dtc) for h in halloffame ]
+        #ranked = sorted(hofst, key=lambda w: w[0],reverse = True)
         return [halloffame[idx] for idx in normsorted_idx[:nelite]]
-    return list()
-
+    else:
+        return list()
 
 def eaAlphaMuPlusLambdaCheckpoint(
         population,
@@ -84,28 +113,15 @@ def eaAlphaMuPlusLambdaCheckpoint(
         ngen,
         stats = None,
         halloffame = None,
-        nelite = 0,
+        pf=None,
+        nelite = 3,
         cp_frequency = 1,
         cp_filename = None,
         continue_cp = False,
-        selection = 'nsga'):
-    r"""This is the :math:`(~\alpha,\mu~,~\lambda)` evolutionary algorithm
-
-    Args:
-        population(list of deap Individuals)
-        toolbox(deap Toolbox)
-        mu(int): Total parent population size of EA
-        cxpb(float): Crossover probability
-        mutpb(float): Mutation probability
-        ngen(int): Total number of generation to run
-        stats(deap.tools.Statistics): generation of statistics
-        halloffame(deap.tools.HallOfFame): hall of fame
-        nelite(int): Total number of individuals added to population at every
-                     generation from hall of fame
-        cp_frequency(int): generations between checkpoints
-        cp_filename(string): path to checkpoint filename
-        continue_cp(bool): whether to continue
-    """
+        selection = 'selNSGA2',
+        td=None):
+    print(halloffame,pf)
+    gen_vs_pop = []
 
     if continue_cp:
         # A file name has been given, then load the data from the file
@@ -121,39 +137,49 @@ def eaAlphaMuPlusLambdaCheckpoint(
         # Start a new evolution
         start_gen = 1
         parents = population[:]
+        gen_vs_pop.append(population)
         logbook = deap.tools.Logbook()
         logbook.header = ['gen', 'nevals'] + (stats.fields if stats else [])
         history = deap.tools.History()
 
         # TODO this first loop should be not be repeated !
-        invalid_count = _evaluate_invalid_fitness(toolbox, population)
+        invalid_ind = _evaluate_invalid_fitness(toolbox, population)
+        invalid_count = len(invalid_ind)
         gen_vs_hof = []
-        _update_history_and_hof(halloffame, history, population)
-        gen_vs_hof.append(halloffame[-1])
+        halloffame, pf = _update_history_and_hof(halloffame, pf, history, population, td)
+
+        gen_vs_hof.append(halloffame)
         _record_stats(stats, logbook, start_gen, population, invalid_count)
     # Begin the generational process
     for gen in range(start_gen + 1, ngen + 1):
         offspring = _get_offspring(parents, toolbox, cxpb, mutpb)
-        gen_vs_hof.append(halloffame[-1])
+
+
+        assert len(offspring)>0
         population = parents + offspring
+        gen_vs_pop.append(population)
 
         invalid_count = _evaluate_invalid_fitness(toolbox, offspring)
-        _update_history_and_hof(halloffame, history, population)
+        halloffame, pf = _update_history_and_hof(halloffame,pf, history, population, td)
         _record_stats(stats, logbook, gen, population, invalid_count)
-        #import deap.tools
+        set_ = False
 
-        # Select the next generation parents
-        if selection == str('ngsa'):
-           from . import tools
-           toolbox.register("select", tools.selNSGA2)
-           #parents = toolbox.select(population + _get_elite(halloffame, nelite), mu)
+        if str('selIBEA') == selection:
+            toolbox.register("select",tools.selIBEA)
+            set_ = True
+        if str('selNSGA') == selection:
+            toolbox.register("select",selNSGA2)
+            set_ = True
+        assert set_ == True
 
-           parents = toolbox.select(population, mu)
+        elite = _get_elite(halloffame, nelite)
+        gen_vs_pop.append(copy.copy(population))
+        parents = toolbox.select(population, mu)
 
-        elif selection == str('selIBEA'):
-           from . import tools
-           toolbox.register("select", tools.selIBEA)
-           parents = toolbox.select(population + _get_elite(halloffame, nelite), mu)
+        #elif selection == str('selIBEA'):
+        #   from . import tools
+        #  toolbox.register("select", tools.selIBEA)
+        #   parents = toolbox.select(population + _get_elite(halloffame, nelite), mu)
 
         logger.info(logbook.stream)
 
@@ -167,6 +193,14 @@ def eaAlphaMuPlusLambdaCheckpoint(
                       logbook=logbook,
                       rndstate=random.getstate())
             pickle.dump(cp, open(cp_filename, "wb"))
+            print('Wrote checkpoint to %s', cp_filename)
             logger.debug('Wrote checkpoint to %s', cp_filename)
 
-    return population, logbook, history, gen_vs_hof
+        unique_values = [ p.dtc.attrs.values() for p in population ]
+
+        print(len(unique_values) == len(set(unique_values)))
+
+        #print(set(gen_vs_pop[-1][0].dtc.attrs.values()) in set(population[0].dtc.attrs.values()))
+
+
+    return population, halloffame, pf, logbook, history, gen_vs_pop

@@ -94,7 +94,7 @@ class RheobaseTest(VmTest):
                 if n_spikes and n_spikes <= spike_counts.min():
                     self.rheobase_vm = model.get_membrane_potential()
 
-        max_iters = 45
+        max_iters = 145
 
         #evaluate once with a current injection at 0pA
         high=self.high
@@ -194,41 +194,32 @@ class RheobaseTestP(VmTest):
             steps=[]
 
             dtc.rheobase = 0.0
-            for k,v in dtc.lookup.items():
+            sub, supra = get_sub_supra(dtc.lookup)
+            #print("Sub",sub)
+            #print("Supra",supra)
 
-                if v == 1:
-                    #A logical flag is returned to indicate that rheobase was found.
-                    dtc.rheobase = float(k)
-                    dtc.boolean = True
-                    return dtc
-                elif v == 0:
-                    sub.append(k)
-                elif v > 0:
-                    supra.append(k)
-
-            sub = np.array(sub)
-            supra = np.array(supra)
             if 0. in supra and len(sub) == 0:
                 dtc.boolean = True
                 dtc.rheobase = -1
                 #score = scores.InsufficientDataScore(None)
                 return dtc
 
-
-            if len(sub)!=0 and len(supra)!=0:
+            if (len(sub) + len(supra)) == 0:
                 #this assertion would only be occur if there was a bug
                 assert sub.max()<=supra.min()
-            if len(sub) and len(supra):
-                center = list(np.linspace(sub.max(),supra.min(),9.0))
-                center = [ i for i in center if not i == sub.max() ]
-                center = [ i for i in center if not i == supra.min() ]
-                center[int(len(center)/2)+1]=(sub.max()+supra.min())/2.0
-                steps = [ i*pq.pA for i in center ]
+            elif len(sub) and len(supra):
+                if supra.min() - sub.max() < 5: # Less than 5 pA
+                    dtc.rheobase = float(supra.min())
+                    dtc.boolean = True
+                    return dtc
+                n = 7
+                steps = np.linspace(sub.max(),supra.min(),n+2)
+                steps = steps[1:-1]*pq.pA
+                #print("Here are the steps: ",steps)
             elif len(sub):
                 steps = list(np.linspace(sub.max(),2*sub.max(),9.0))
                 steps = [ i for i in steps if not i == sub.max() ]
                 steps = [ i*pq.pA for i in steps ]
-
             elif len(supra):
                 step = list(np.linspace(-2*(supra.min()),supra.min(),9.0))
                 steps = [ i for i in steps if not i == supra.min() ]
@@ -238,6 +229,18 @@ class RheobaseTestP(VmTest):
 
             dtc.rheobase = None
             return dtc
+
+        def get_sub_supra(lookup):
+            sub, supra = [], []
+            for current, n_spikes in lookup.items():
+                if n_spikes == 0:
+                    sub.append(current)
+                elif n_spikes > 0:
+                    supra.append(current)
+
+            sub = np.array(sorted(list(set(sub))))
+            supra = np.array(sorted(list(set(supra))))
+            return sub, supra
 
         def check_current(dtc):
             '''
@@ -261,7 +264,7 @@ class RheobaseTestP(VmTest):
                       {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
             ampl = float(dtc.ampl)
-            
+            #print(dtc.ampl,ampl,dtc)
             if ampl not in dtc.lookup or len(dtc.lookup) == 0:
                 current = params.copy()['injected_square_current']
                 uc = {'amplitude':ampl}
@@ -317,7 +320,7 @@ class RheobaseTestP(VmTest):
                 #dtc.current_steps = list(filter(lambda cs: cs !=0.0 , dtc.current_steps))
                 dtc_clones = [ copy.copy(dtc) for i in range(0,len(dtc.current_steps)) ]
                 for i,s in enumerate(dtc.current_steps):
-                
+
                     dtc_clones[i].ampl = dtc.current_steps[i]
                 dtc_clones = [ d for d in dtc_clones if not np.isnan(d.ampl) ]
                 b0 = db.from_sequence(dtc_clones, npartitions=8)
@@ -327,6 +330,10 @@ class RheobaseTestP(VmTest):
                     dtc.lookup.update(d.lookup)
                 dtc = check_fix_range(dtc)
                 cnt += 1
+                sub, supra = get_sub_supra(dtc.lookup)
+                print("Try %d: SubMax = %s; SupraMin = %s" % \
+                (cnt, sub.max().round(1) if len(sub) else None,
+                 supra.min().round(1) if len(supra) else None))
             return dtc
 
         dtc = DataTC()
