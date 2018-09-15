@@ -47,7 +47,7 @@ for k in model_params.keys():
     else:
         model_params[k] = np.linspace(float(model_params[k][0]),float(model_params[k][1]),9)
 
-print(model_params)
+#print(model_params)
 '''
 
 https://www.izhikevich.org/publications/izhikevich.m
@@ -71,4 +71,4 @@ d                 outward minus inward currents activated during the spike and a
 vpeak          spike cutoff value     [mV]
 +model_params['vr'] = np.linspace(-95.0,-30.0,9)
 
-'''
+''';

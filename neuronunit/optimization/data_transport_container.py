@@ -1,8 +1,8 @@
 import numpy as np
-
+from numba import jit
 class DataTC(object):
     '''
-    Data Transport Vessel
+    Data Transport Container
 
     This Object class serves as a data type for storing rheobase search
     attributes and apriori model parameters,
@@ -33,7 +33,7 @@ class DataTC(object):
         self.backend = None
         self.summed = None
 
-
+    @jit
     def get_ss(self):
         # get summed score
         if self.scores is not type(None):
