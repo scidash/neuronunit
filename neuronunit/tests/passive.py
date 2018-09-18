@@ -3,6 +3,8 @@
 from .base import np, pq, sciunit, cap, VmTest, scores, AMPL, DELAY, DURATION
 from scipy.optimize import curve_fit
 
+DURATION = 500.0*pq.ms
+DELAY = 200.0*pq.ms
 
 class TestPulseTest(VmTest):
     """A base class for tests that use a square test pulse"""
@@ -15,6 +17,7 @@ class TestPulseTest(VmTest):
 
     params = {'injected_square_current':
                 {'amplitude':-10.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+    print(params)
 
     def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
@@ -103,12 +106,32 @@ class InputResistanceTest(TestPulseTest):
                             generate_prediction(model)
         for param in ['delay', 'duration', 'amplitude']:
             i[param] = self.params['injected_square_current'][param]
+
+        # i['amplitude'] = -10*pq.pA*1000
+        # self.params['injected_square_current'][param] = -10*pq.pA*1000
+
         r_in = self.__class__.get_rin(vm, i)
         r_in = r_in.simplified
         # Put prediction in a form that compute_score() can use.
         prediction = {'value':r_in}
 
         return prediction
+
+
+    def compute_score(self, observation, prediction):
+        """Implementation of sciunit.Test.score_prediction."""
+        #print("%s: Observation = %s, Prediction = %s" % \
+        #	 (self.name,str(observation),str(prediction)))
+        if prediction is None:
+            score = scores.InsufficientDataScore(None)
+            #score = scores.ErrorScore(None)
+
+        else:
+            score = super(InputResistanceTest,self).\
+                        compute_score(observation, prediction)
+            print('input resistance score: {0}'.format(score))
+            #self.bind_score(score,None,observation,prediction)
+        return score
 
 
 class TimeConstantTest(TestPulseTest):
