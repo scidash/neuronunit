@@ -52,30 +52,30 @@ def reduce_params(model_params,nparams):
 #@jit
 def chunks(l, n):
     # For item i in a range that is a length of l,
-    assigned = [ l[:][i:i+n] for i in range(0, len(l), n) ]
-    #print(assigned)
-    #import pdb
-    #pdb.set_trace()
-    return assigned
-    # Create an index range for l of n items:
-    # ch = []
-    #for i in range(0, len(l), n):
-        # Create an index range for l of n items:
-    #    ch.append(l[:][i:i+n])
-    #return ch
+    return [ l[:][i:i+n] for i in range(0, len(l), n) ]
+
 
 #@jit
-def build_chunk_grid(npoints, provided_keys, hold_constant=None, mp_in = None):
-    grid_points, maps = create_grid(mp_in, npoints = npoints, provided_keys = provided_keys)
+def build_chunk_grid(npoints, free_params, hold_constant=None, mp_in = None):
+    grid_points, maps = create_grid(mp_in, npoints = npoints, free_params = provided_keys)
 
     temp = OrderedDict(grid_points[0]).keys()
     tds = list(temp)
+    # old stable approach
     if len(grid_points[0].keys())>1:
         pops = [ WSListIndividual(g.values()) for g in grid_points ]
     else:
         pops = [ val for g in grid_points for val in g.values() ]
-        
-            
+    return pops,tds
+
+    # new approach, merited? Older works better
+    '''
+
+    pops = []
+    for g in grid_points:
+        pre_pop = list(g.values())
+        pop = WSListIndividual(pre_pop)
+        pops.append(pop)
     # divide population into chunks that reflect the number of CPUs.
     # don't want lists of lengths 1 that are awkward to iterate over.
     # so check if there would be a chunk of list length 1, and if so divide by a different numberself.
@@ -89,6 +89,7 @@ def build_chunk_grid(npoints, provided_keys, hold_constant=None, mp_in = None):
         assert pops_[0] != pops_[1]
 
     return pops_, tds
+    '''
 
 @jit
 def sample_points(iter_dict, npoints=3):
@@ -102,6 +103,22 @@ def sample_points(iter_dict, npoints=3):
             sample_points = list(np.linspace(v.max(),v.min(),npoints))
         replacement[k] = sample_points
     return replacement
+'''
+@jit
+def sample_points(iter_dict, npoints=2):
+    replacement = {}
+    for p in range(0,len(iter_dict)):
+        k,v = iter_dict.popitem(last=False)
+        v[0] = v[0]*1.0/3.0
+        v[1] = v[1]*2.0/3.0
+        #if len(v) == 2:
+        #    sample_points = list(np.linspace(v[0],v[1],npoints))
+        #else:
+        #    v = np.array(v)
+        sample_points = list(np.linspace(v.max(),v.min(),npoints))
+        replacement[k] = sample_points
+    return replacement
+'''
 
 @jit
 def update_dtc_grid(item_of_iter_list):
@@ -123,7 +140,7 @@ def create_a_map(subset):
     return maps
 
 #@jit
-def create_grid(mp_in=None,npoints=3,provided_keys=None,ga=None):
+#def create_grid(mp_in=None,npoints=3,free_params=None,ga=None):
     '''
     Description, create a grid of evenly spaced samples in model parameters to search over.
     Inputs: npoints, type: Integer: number of sample points per parameter
@@ -143,24 +160,29 @@ def create_grid(mp_in=None,npoints=3,provided_keys=None,ga=None):
     # a smaller dictionary, if it is smaller it is reduced by reducing sampling
     # points.
 
-    '''
     if type(mp_in) is type(None):
         from neuronunit.models.NeuroML2 import model_parameters as modelp
         mp_in = OrderedDict(modelp.model_params)
 
+    pdb.set_trace()
 
     whole_p_set = {}
-    whole_p_set = OrderedDict(sample_points(copy.copy(mp_in), npoints=npoints))
-    
-    if type(provided_keys) is type(dict):        
-        subset = OrderedDict( {k:whole_p_set[k] for k in list(provided_keys.keys())})
+    sp = sample_points(copy.copy(mp_in), npoints=2)
+    whole_p_set = OrderedDict(sp)
 
-    elif len(provided_keys) == 1 or type(provided_keys) is type(str('')):
-        subset = OrderedDict( {provided_keys: whole_p_set[provided_keys] } )
-    
+    print(type(free_params), 'free_params')
+    if type(free_params) is type(dict):
+        subset = OrderedDict( {k:whole_p_set[k] for k in list(free_params.keys())})
+
+    elif len(free_params) == 1 or type(free_params) is type(str('')):
+        subset = OrderedDict( {free_params: whole_p_set[free_params] } )
+
     else:
-        subset = OrderedDict( {k:whole_p_set[k] for k in provided_keys})
-    
+        subset = OrderedDict( {k:whole_p_set[k] for k in free_params})
+
+    print('subset is wrong')
+    pdb.set_trace()
+
     maps = create_a_map(subset)
     if type(ga) is not type(None):
         if npoints > 1:
@@ -169,9 +191,19 @@ def create_grid(mp_in=None,npoints=3,provided_keys=None,ga=None):
                 v[1] = v[1]*2.0/3.0
 
 
+    '''
+def create_grid(mp_in=None,npoints=3,free_params=None,ga=None):
+    subset = OrderedDict(free_params)
+    if type(mp_in) is not type(None):
+        for k,v in mp_in.items():
+            if k in free_params.keys():
+                subset[k] = ( np.min(free_params[k]),np.max(free_params[k]) )
+            else:
+                subset[k] = v
     # The function of maps is to map floating point sample spaces onto a  monochromataic matrix indicies.
     grid = list(ParameterGrid(subset))
-    return grid, maps
+    #pdb.set_trace()
+    return grid
 
 @jit
 def tfg2i(x, y, z):
@@ -216,6 +248,8 @@ def add_constant(hold_constant,consumable_,td):
         td.append(k)
     return td, hc
 
+
+
 @jit
 def transdict(dictionaries):
     from collections import OrderedDict
@@ -223,10 +257,21 @@ def transdict(dictionaries):
     sk = sorted(list(dictionaries.keys()))
     for k in sk:
         mps[k] = dictionaries[k]
-    return mps
+    tl = [ k for k in mps.keys() ]
+    return mps, tl
 
 
-import pdb
+def run_rick_grid(rick_grid, tests,td):
+    consumable = iter(rick_grid)
+    grid_results = []
+    results = update_deap_pop(consumable, tests, td)
+    #import pdb
+    #pdb.set_trace()
+
+    if type(results) is not None:
+        grid_results.extend(results)
+    return grid_results
+
 def run_grid(npoints, tests, provided_keys = None, hold_constant = None, mp_in=None):
     consumable_ ,td = build_chunk_grid(npoints,provided_keys,mp_in=mp_in)
     cnt = 0
@@ -255,21 +300,4 @@ def run_grid(npoints, tests, provided_keys = None, hold_constant = None, mp_in=N
         print('done_block_of_N_cells: ',cnt)
     if type(s) is not type(None):
         s.close()
-    return grid_results
-
-
-def mock_grid(npoints,tests, provided_keys = None, hold_constant = None, use_cache = False, cache_name = None):
-    consumable_ ,td = build_chunk_grid(npoints,provided_keys,mp_in=mp_in)
-    cnt = 0
-    grid_results = []
-
-    if type(hold_constant) is not type(None):
-        td, hc = add_constant(hold_constant,consumable_,td)
-
-    assert len(td) == len(provided_keys) + len(hold_constant)
-
-    grid_results = []
-    for sub_pop in consumable_:
-        grid_results.extend(sub_pop)
-    assert len(grid_results[0]) == len(provided_keys) + len(hold_constant)
     return grid_results
