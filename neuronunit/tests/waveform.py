@@ -18,7 +18,7 @@ class APWidthTest(VmTest):
     units = pq.ms
 
     ephysprop_name = 'Spike Half-Width'
-
+    #self.params
     def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
@@ -26,6 +26,9 @@ class APWidthTest(VmTest):
         # if get_spike_count is zero, then widths will be None
         # len of None returns an exception that is not handled
         model.rerun = True
+        #import pdb; pdb.set_trace()
+        model.inject_square_current(model.params['injected_square_current'])
+
 
         widths = model.get_AP_widths()
         # Put prediction in a form that compute_score() can use.
@@ -57,8 +60,8 @@ class InjectedCurrentAPWidthTest(APWidthTest):
     """
     required_capabilities = (cap.ReceivesSquareCurrent,)
 
-    params = {'injected_square_current':
-                {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+    #params = {'injected_square_current':
+    #            {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
     name = "Injected current AP width test"
 
@@ -67,7 +70,10 @@ class InjectedCurrentAPWidthTest(APWidthTest):
                    "is injected into cell.")
 
     def generate_prediction(self, model):
-        model.inject_square_current(self.params['injected_square_current'])
+        #model._backend.reset_vm()
+        #import pdb; pdb.set_trace()
+        model.inject_square_current(model.params['injected_square_current'])
+
         prediction = super(InjectedCurrentAPWidthTest,self).generate_prediction(model)
 
         return prediction
@@ -94,6 +100,8 @@ class APAmplitudeTest(VmTest):
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
         model.rerun = True
+        model.inject_square_current(model.params['injected_square_current'])
+
         heights = model.get_AP_amplitudes() - model.get_AP_thresholds()
         # Put prediction in a form that compute_score() can use.
         prediction = {'mean':np.mean(heights) if len(heights) else None,
@@ -130,7 +138,7 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
                    "is injected into cell.")
 
     def generate_prediction(self, model):
-        model.inject_square_current(self.params['injected_square_current'])
+        model.inject_square_current(model.params['injected_square_current'])
         prediction = super(InjectedCurrentAPAmplitudeTest,self).\
                 generate_prediction(model)
         return prediction
@@ -158,6 +166,8 @@ class APThresholdTest(VmTest):
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
         model.rerun = True
+        model.inject_square_current(model.params['injected_square_current'])
+
         threshes = model.get_AP_thresholds()
         # Put prediction in a form that compute_score() can use.
         prediction = {'mean':np.mean(threshes) if len(threshes) else None,
@@ -183,8 +193,8 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
 
     required_capabilities = (cap.ReceivesSquareCurrent,)
 
-    params = {'injected_square_current':
-                {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+    #params = {'injected_square_current':
+    #            {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
     name = "Injected current AP threshold test"
 
@@ -192,6 +202,15 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
                    "action potentials are produced under current injection.")
 
     def generate_prediction(self, model):
-        model.inject_square_current(self.params['injected_square_current'])
+        model.inject_square_current(model.params['injected_square_current'])
         return super(InjectedCurrentAPThresholdTest,self).\
                 generate_prediction(model)
+
+    def compute_score(self, observation, prediction):
+        """Implementation of sciunit.Test.score_prediction."""
+        if prediction['n'] == 0:
+            score = scores.InsufficientDataScore(None)
+        else:
+            score = super(InjectedCurrentAPThresholdTest,self).compute_score(observation,
+                                                              prediction)
+        return score

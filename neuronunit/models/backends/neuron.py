@@ -272,7 +272,39 @@ class NEURONBackend(Backend):
     def current_src_name(self):
         return getattr(self,'_current_src_name','RS')
 
-    #@jit
+    def reset_vm(self):
+        #import pdb; pdb.set_trace()
+        ass_vr = self.h.m_RS_RS_pop[0].vr
+        ass_v0 = self.h.m_RS_RS_pop[0].v0
+
+
+        self.h('m_{0}_{1}_pop[0].{2} = {3}'\
+                .format(self.cell_name,self.cell_name,'v0',ass_vr))
+
+        self.h('psection()')
+        #print('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
+        #print(self.model.attrs)
+        # Below create a list of NEURON experimental recording rig parameters.
+        # This is where parameters of the artificial neuron experiment are initiated.
+        # Code is sent to the python interface to neuron by executing strings:
+        neuron_sim_rig = []
+        neuron_sim_rig.append(' { v_time = new Vector() } ')
+        neuron_sim_rig.append(' { v_time.record(&t) } ')
+        neuron_sim_rig.append(' { v_v_of0 = new Vector() } ')
+        neuron_sim_rig.append(' { v_v_of0.record(&RS_pop[0].v(0.5)) } ')
+        neuron_sim_rig.append(' { v_u_of0 = new Vector() } ')
+        neuron_sim_rig.append(' { v_u_of0.record(&m_RS_RS_pop[0].u) } ')
+
+        for string in neuron_sim_rig:
+            # execute hoc code strings in the python interface to neuron.
+            self.h(string)
+
+        # These two variables have been aliased in the code below:
+        self.tVector = self.h.v_time
+        self.vVector = self.h.v_v_of0
+        return self
+
+
     def set_attrs(self, **attrs):
         #if len(attrs) == len(self.model.attrs):
         self.model.attrs = {}
@@ -287,9 +319,7 @@ class NEURONBackend(Backend):
             if math.isnan(h_value):
                 pdb.set_trace()
 
-            self.h('m_{0}_{1}_pop[0].{2} = {3}'\
-                .format(self.cell_name,self.cell_name,h_key,h_value))
-            #print('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
+            self.h('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
         #print(self.model.attrs)
         # Below create a list of NEURON experimental recording rig parameters.
         # This is where parameters of the artificial neuron experiment are initiated.
@@ -379,22 +409,10 @@ class NEURONBackend(Backend):
     def _local_run(self):
         self.h('run()')
         results = {}
-        # Prepare NEURON vectors for quantities/sciunit
-        # By rescaling voltage to milli volts, and time to milli seconds.
-        # the original PyLems generated file includes this
-        # divide by 1000
-
-        # py_v_v_of0 = [ float(x  / 1000.0) for x in h.v_v_of0.to_python() ]  # Convert to Python list for speed, variable has dim: voltage
-        # py_v_u_of0 = [ float(x  / 1.0E9) for x in h.v_u_of0.to_python() ]  # Convert to Python list for speed, variable has dim: current
-
-        self.gain_factor = 1000.0
-
-        trec = h.Vector()
-        trec.record(h._ref_t)
-        #h.tstop = tstop
-        #h.dt = dt
-        h.steps_per_ms = 1/h.dt
-
+        #trec = h.Vector()
+        #trec.record(h._ref_t)
+        #results['u'] = [ float(x)/1000.0 for x in copy.copy(self.neuron.h.v_v_of0.to_python())]
+        results['u'] = [ float(x/ 1.0E9) for x in h.v_u_of0.to_python() ]
 
         results['vm'] = [ float(x)/1000.0 for x in copy.copy(self.neuron.h.v_v_of0.to_python())]
         #print(results['vm'])

@@ -3,6 +3,8 @@ function of input current"""
 
 import os
 import multiprocessing
+global cpucount
+npartitions = cpucount = multiprocessing.cpu_count()
 from .base import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
 from .. import optimization
 
@@ -94,7 +96,7 @@ class RheobaseTest(VmTest):
                 if n_spikes and n_spikes <= spike_counts.min():
                     self.rheobase_vm = model.get_membrane_potential()
 
-        max_iters = 145
+        max_iters = 5
 
         #evaluate once with a current injection at 0pA
         high=self.high
@@ -165,6 +167,8 @@ class RheobaseTestP(VmTest):
      units = pq.pA
      ephysprop_name = 'Rheobase'
      score_type = scores.ZScore
+
+
      #score_type = scores.RatioScore
 
      def generate_prediction(self, model):
@@ -176,7 +180,10 @@ class RheobaseTestP(VmTest):
         If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
         corresponding virtual model objects.
         '''
-
+        #if type(model.rmemory) is not type(None):
+            #import pdb; pdb.set_trace()
+            #dtc.ampl = model.rmemory
+        #    print(model.rmemory)
         def check_fix_range(dtc):
             '''
             Inputs: lookup, A dictionary of previous current injection values
@@ -189,18 +196,15 @@ class RheobaseTestP(VmTest):
             dictionary as input for a subsequent search.
             '''
 
-            sub=[]
-            supra=[]
-            steps=[]
-
-            dtc.rheobase = 0.0
+            steps = []
+            dtc.rheobase = None
             sub, supra = get_sub_supra(dtc.lookup)
-            #print("Sub",sub)
-            #print("Supra",supra)
 
             if 0. in supra and len(sub) == 0:
                 dtc.boolean = True
-                dtc.rheobase = -1
+                #dtc.rheobase = None # should be None
+
+                dtc.rheobase = -1 # should be None
                 #score = scores.InsufficientDataScore(None)
                 return dtc
 
@@ -212,22 +216,28 @@ class RheobaseTestP(VmTest):
                     dtc.rheobase = float(supra.min())
                     dtc.boolean = True
                     return dtc
-                n = 7
-                steps = np.linspace(sub.max(),supra.min(),n+2)
-                steps = steps[1:-1]*pq.pA
+                steps = np.linspace(sub.max(),supra.min(),cpucount-1)
+                steps = steps[1:-2]*pq.pA
                 #print("Here are the steps: ",steps)
+                #print(steps)
             elif len(sub):
-                steps = list(np.linspace(sub.max(),2*sub.max(),9.0))
-                steps = [ i for i in steps if not i == sub.max() ]
-                steps = [ i*pq.pA for i in steps ]
+                steps = list(np.linspace(sub.max(),2*sub.max(),cpucount-1))
+                steps = steps[1::]*pq.pA
+                #[ i for i in steps if not i == sub.max() ]
+                #print(steps)
+                #steps = [ i*pq.pA for i in steps ]
             elif len(supra):
-                step = list(np.linspace(-2*(supra.min()),supra.min(),9.0))
-                steps = [ i for i in steps if not i == supra.min() ]
-                steps = [ i*pq.pA for i in steps ]
+                steps = list(np.linspace(-2*(supra.min()),supra.min(),cpucount-1))
+                # There is a misconception that -1 refers to the second last element, and -0 refers to the last element
+                # https://stackoverflow.com/questions/39838900/getting-second-to-last-element-in-list#39838913
+                steps = steps[::-2]*pq.pA
+                #print(steps)
+                #steps = [ i for i in steps if not i == supra.min() ]
+                #steps = [ i*pq.pA for i in steps ]
 
             dtc.current_steps = steps
 
-            dtc.rheobase = None
+            #dtc.rheobase = None
             return dtc
 
         def get_sub_supra(lookup):
@@ -247,7 +257,7 @@ class RheobaseTestP(VmTest):
             Inputs are an amplitude to test and a virtual model
             output is an virtual model with an updated dictionary.
             '''
-
+            dtc.boolean = False
             LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
             dtc.model_path = LEMS_MODEL_PATH
 
@@ -264,7 +274,6 @@ class RheobaseTestP(VmTest):
                       {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
             ampl = float(dtc.ampl)
-            #print(dtc.ampl,ampl,dtc)
             if ampl not in dtc.lookup or len(dtc.lookup) == 0:
                 current = params.copy()['injected_square_current']
                 uc = {'amplitude':ampl}
@@ -273,35 +282,39 @@ class RheobaseTestP(VmTest):
                 dtc.run_number += 1
                 model.set_attrs(dtc.attrs)
                 model.inject_square_current(current)
-                #dtc.previous = ampl
+                dtc.previous = ampl
                 n_spikes = model.get_spike_count()
                 dtc.lookup[float(ampl)] = n_spikes
                 if n_spikes == 1:
                     dtc.rheobase = float(ampl)
+                    print(dtc.rheobase)
                     dtc.boolean = True
                     return dtc
-
-
-
-                return dtc
-            if float(ampl) in dtc.lookup:
-                return dtc
+            return dtc
 
         def init_dtc(dtc):
-            if dtc.initiated == True:
-                # expand values in the range to accomodate for mutation.
-                # but otherwise exploit memory of this range.
 
-                if type(dtc.current_steps) is type(float):
-                    dtc.current_steps = [ 0.75 * dtc.current_steps, 1.25 * dtc.current_steps ]
-                elif type(dtc.current_steps) is type(list):
-                    dtc.current_steps = [ s * 1.25 for s in dtc.current_steps ]
-                dtc.initiated = True # logically unnecessary but included for readibility
+            # check for memory and exploit it.
+            if dtc.initiated == True:
+                #dtc.ampl = dtc.rheobase
+
+                dtc = check_current(dtc)
+                if dtc.boolean:
+                    return dtc
+                else:
+                    # expand values in the range to accomodate for mutation.
+                    # but otherwise exploit memory of the genes to inform searchable range.
+
+                    if type(dtc.current_steps) is type(float):
+                        dtc.current_steps = [ 0.75 * dtc.current_steps, 1.25 * dtc.current_steps ]
+                    elif type(dtc.current_steps) is type(list):
+                        dtc.current_steps = [ s * 1.25 for s in dtc.current_steps ]
+                    dtc.initiated = True # logically unnecessary but included for readibility
 
             if dtc.initiated == False:
 
                 dtc.boolean = False
-                steps = np.linspace(0,250,7.0)
+                steps = np.linspace(0.01,250,7.0)
                 steps_current = [ i*pq.pA for i in steps ]
                 dtc.current_steps = steps_current
                 dtc.initiated = True
@@ -315,7 +328,7 @@ class RheobaseTestP(VmTest):
             # dtc = check_current(model.rheobase,dtc)
             # If its not true enter a search, with ranges informed by memory
             cnt = 0
-            while dtc.boolean == False:
+            while dtc.boolean == False and cnt< 10:
 
                 #dtc.current_steps = list(filter(lambda cs: cs !=0.0 , dtc.current_steps))
                 dtc_clones = [ copy.copy(dtc) for i in range(0,len(dtc.current_steps)) ]
@@ -323,7 +336,7 @@ class RheobaseTestP(VmTest):
 
                     dtc_clones[i].ampl = dtc.current_steps[i]
                 dtc_clones = [ d for d in dtc_clones if not np.isnan(d.ampl) ]
-                b0 = db.from_sequence(dtc_clones, npartitions=8)
+                b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
                 dtc_clone = list(b0.map(check_current).compute())
 
                 for d in dtc_clone:
@@ -340,6 +353,10 @@ class RheobaseTestP(VmTest):
         dtc.attrs = {}
         for k,v in model.attrs.items():
             dtc.attrs[k] = v
+
+        # this is not a perservering assignment, of value,
+        # but rather a multi statement assertion that will be checked.
+
         dtc = init_dtc(dtc)
         dtc.model_path = model.orig_lems_file_path
         dtc.backend = model.backend
@@ -361,15 +378,7 @@ class RheobaseTestP(VmTest):
      def compute_score(self, observation, prediction):
          """Implementation of sciunit.Test.score_prediction."""
          score = None
-         #if type(prediction['value']) is type(None):
-         #    prediction['value'] = -1 * pq.pA
-         #    return scores.InsufficientDataScore(None)
-         '''
-         if float(prediction['value']) <= 0.0:
-            # if rheobase is negative discard the model essentially.
-            prediction['value'] = -1 * pq.pA
-            return scores.InsufficientDataScore(None)
-         '''
+
          score = super(RheobaseTestP,self).\
                      compute_score(observation, prediction)
          return score
