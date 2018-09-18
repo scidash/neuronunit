@@ -15,9 +15,10 @@ class TestPulseTest(VmTest):
 
     score_type = scores.ZScore
 
-    params = {'injected_square_current':
+    self.params = {'injected_square_current':
                 {'amplitude':-10.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
-    print(params)
+    #self.params = params
+    #print(params)
 
     def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
