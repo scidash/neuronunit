@@ -103,15 +103,6 @@ class Druckman2013AP:
 
         return value, time
 
-    def get_peak_trough_width(self, peak, trough):
-        _, peak_time = self.get_peak()
-        _, trough_time = self.get_trough()
-
-        width = trough_time - peak_time
-
-        return width
-
-
 class Druckmann2013Test(VmTest):
     """
     All tests inheriting from this class assume that the subject model:
@@ -121,19 +112,23 @@ class Druckmann2013Test(VmTest):
     required_capabilities = (ncap.ProducesActionPotentials,)
     score_type = scores.ZScore
 
-    def __init__(self, observation, name=None, **params):
+    def __init__(self, name=None, **params):
         super(Druckmann2013Test, self).__init__(observation, name, **params)
 
-        self.current_start = 0*q.s
-        self.current_end = 2*q.s
-
-        self.threshold = -20*q.mV
-        self.ap_window = 10*q.ms
+        self.params = {
+            'injected_square_current': {
+                'delay': 0 * q.ms,
+                'duration': 2 * q.s,
+                'amplitude': 0 * q.pA
+            },
+            'threshold': -20 * q.mV,
+            'ap_window': 10 * q.ms,
+        }
 
         self.APs = None
 
     def current_length(self):
-        return self.current_end - self.current_start
+        return self.params['injected_square_current']['duration']
 
     def get_APs(self, model):
         """
@@ -143,9 +138,16 @@ class Druckmann2013Test(VmTest):
         :return: a list of Druckman2013APs
         """
         vm = model.get_membrane_potential()
-        waveforms = sf.get_spike_waveforms(vm, threshold=self.threshold, width=self.ap_window)
-        times = sf.get_spike_train(vm, self.threshold)
 
+        waveforms = sf.get_spike_waveforms(
+            vm,
+            threshold=self.params['threshold'],
+            width=self.params['ap_window']
+        )
+
+        times = sf.get_spike_train(vm, self.params['threshold'])
+
+        # Pass in the AP waveforms and the times when they occured
         self.APs = []
         for i in range(waveforms.shape[1]):
             self.APs.append(Druckman2013AP(waveforms[:,i], times[i]))
@@ -195,8 +197,10 @@ class AP1SSAmplitudeChangeTest(Druckmann2013Test):
     units = pq.mV
 
     def generate_prediction(self, model):
-        start_latter_3rd = self.current_start + self.current_length() * 2.0 / 3.0
-        end_latter_3rd = self.current_end
+        current_start = self.params['injected_square_current']['delay']
+
+        start_latter_3rd = current_start + self.current_length() * 2.0 / 3.0
+        end_latter_3rd = current_start + self.current_length()
 
         aps = self.get_APs(model)
         amps = np.array([ap.get_amplitude() for ap in aps])
@@ -228,12 +232,12 @@ class AP1AmplitudeTest(Druckmann2013Test):
 
     units = pq.mV
 
-    def generate_prediction(self, model):
+    def generate_prediction(self, model, ap_index=0):
         aps = self.get_APs(model)
 
-        if len(aps) > 0:
+        if len(aps) > ap_index:
             return {
-                'mean': aps[0].get_amplitude(),
+                'mean': aps[ap_index].get_amplitude(),
                 'std': 0,
                 'n': 1
             }
@@ -254,12 +258,12 @@ class AP1WidthHalfHeightTest(Druckmann2013Test):
 
     units = pq.ms
 
-    def generate_prediction(self, model):
+    def generate_prediction(self, model, ap_index=0):
         aps = self.get_APs(model)
 
-        if len(aps) > 0:
+        if len(aps) > ap_index:
             return {
-                'mean': aps[0].get_halfwidth(),
+                'mean': aps[ap_index].get_halfwidth(),
                 'std': 0,
                 'n': 1
             }
@@ -280,11 +284,11 @@ class AP1WidthPeakToTroughTest(Druckmann2013Test):
 
     units = pq.ms
 
-    def generate_prediction(self, model):
+    def generate_prediction(self, model, ap_index=0):
         aps = self.get_APs(model)
 
-        if len(aps) > 0:
-            ap = aps[0]
+        if len(aps) > ap_index:
+            ap = aps[ap_index]
 
             _, peak_t = ap.get_peak()
             _, trough_t = ap.get_trough()
@@ -314,11 +318,11 @@ class AP1RateOfChangePeakToTroughTest(Druckmann2013Test):
 
     units = pq.mV/pq.ms
 
-    def generate_prediction(self, model):
+    def generate_prediction(self, model, ap_index=0):
         aps = self.get_APs(model)
 
-        if len(aps) > 0:
-            ap = aps[0]
+        if len(aps) > ap_index:
+            ap = aps[ap_index]
 
             peak_v,   peak_t   = ap.get_peak()
             trough_v, trough_t = ap.get_trough()
@@ -342,40 +346,98 @@ class AP1AHPDepthTest(Druckmann2013Test):
     the beginning of the AP.
     """
 
-class AP2AmplitudeTest(Druckmann2013Test):
+    name = "AP 1 Fast AHP depth"
+    description = """Difference between the minimum of voltage at the trough and the voltage value at
+    the beginning of the AP."""
+
+    units = pq.mV
+
+    def generate_prediction(self, model, ap_index=0):
+        aps = self.get_APs(model)
+
+        if len(aps) > ap_index:
+            ap = aps[ap_index]
+
+            begin_v,   _ = ap.get_beginning()
+            trough_v, _  = ap.get_trough()
+
+            change = begin_v - trough_v
+
+            return {
+                'mean': change,
+                'std': 0,
+                'n': 1
+            }
+
+        else:
+            return none_score
+
+
+
+class AP2AmplitudeTest(AP1AmplitudeTest):
     """
-    8. AP 1 amplitude (mV)
+    8. AP 2 amplitude (mV)
 
     Same as :any:`AP1AmplitudeTest` but for second AP
     """
 
-class AP2WidthHalfHeightTest(Druckmann2013Test):
+    name = "AP 2 amplitude"
+    description = """Same as :any:`AP1AmplitudeTest` but for second AP"""
+
+    def generate_prediction(self, model):
+        return super(AP2AmplitudeTest, self).generate_prediction(model, ap_index=1)
+
+class AP2WidthHalfHeightTest(AP1WidthHalfHeightTest):
     """
-    9. AP 1 width at half height (ms)
+    9. AP 2 width at half height (ms)
 
     Same as :any:`AP1WidthHalfHeightTest` but for second AP
     """
 
-class AP2WidthPeakToTroughTest(Druckmann2013Test):
+    name = "AP 2 width at half height"
+    description = """Same as :any:`AP1WidthHalfHeightTest` but for second AP"""
+
+    def generate_prediction(self, model):
+        return super(AP2WidthHalfHeightTest, self).generate_prediction(model, ap_index=1)
+
+class AP2WidthPeakToTroughTest(AP1WidthPeakToTroughTest):
     """
-    10. AP 1 peak to trough time (ms)
+    10. AP 2 peak to trough time (ms)
 
     Same as :any:`AP1WidthPeakToTroughTest` but for second AP
     """
 
-class AP2RateOfChangePeakToTroughTest(Druckmann2013Test):
+    name = "AP 2 peak to trough time"
+    description = """Same as :any:`AP1WidthPeakToTroughTest` but for second AP"""
+
+    def generate_prediction(self, model):
+        return super(AP2WidthPeakToTroughTest, self).generate_prediction(model, ap_index=1)
+
+class AP2RateOfChangePeakToTroughTest(AP1RateOfChangePeakToTroughTest):
     """
-    11. AP 1 peak to trough rate of change (mV/ms)
+    11. AP 2 peak to trough rate of change (mV/ms)
 
     Same as :any:`AP1RateOfChangePeakToTroughTest` but for second AP
     """
 
-class AP2AHPDepthTest(Druckmann2013Test):
+    name = "AP 2 peak to trough rate of change"
+    description = """Same as :any:`AP1RateOfChangePeakToTroughTest` but for second AP"""
+
+    def generate_prediction(self, model):
+        return super(AP2RateOfChangePeakToTroughTest, self).generate_prediction(model, ap_index=1)
+
+class AP2AHPDepthTest(AP1AHPDepthTest):
     """
-    12. AP 1 Fast AHP depth (mV)
+    12. AP 2 Fast AHP depth (mV)
 
     Same as :any:`AP1AHPDepthTest` but for second AP
     """
+
+    name = "AP 2 Fast AHP depth"
+    description = """Same as :any:`AP1AHPDepthTest` but for second AP"""
+
+    def generate_prediction(self, model):
+        return super(AP2AHPDepthTest, self).generate_prediction(model, ap_index=1)
 
 class AP12AmplitudeChangePercentTest(Druckmann2013Test):
     """
@@ -385,6 +447,31 @@ class AP12AmplitudeChangePercentTest(Druckmann2013Test):
     amplitude.
     """
 
+    name = "Percent change in AP amplitude, first to second spike "
+    description = """Difference in AP amplitude between first and second AP divided by the first AP
+    amplitude."""
+
+    units = pq.dimensionless
+
+    def generate_prediction(self, model):
+        aps = self.get_APs(model)
+
+        if len(aps) >= 2:
+
+            amp1 = AP1AmplitudeTest().generate_prediction(model)["mean"]
+            amp2 = AP2AmplitudeTest().generate_prediction(model)["mean"]
+
+            change = (amp2-amp1)/amp1 * 100.0;
+
+            return {
+                'mean': change,
+                'std': 0,
+                'n': 1
+            }
+
+        else:
+            return none_score
+
 class AP12HalfWidthChangePercentTest(Druckmann2013Test):
     """
     14. Percent change in AP width at half height, first to second spike (%)
@@ -393,7 +480,32 @@ class AP12HalfWidthChangePercentTest(Druckmann2013Test):
     first AP width at half-height.
     """
 
-class AP12PercentChangeInRateOfChangePeakToTroughTest(Druckmann2013Test):
+    name = "Percent change in AP width at half height, first to second spike"
+    description = """Difference in AP width at half-height between first and second AP divided by the
+    first AP width at half-height."""
+
+    units = pq.dimensionless
+
+    def generate_prediction(self, model):
+        aps = self.get_APs(model)
+
+        if len(aps) >= 2:
+
+            width1 = AP1WidthHalfHeightTest().generate_prediction(model)["mean"]
+            width2 = AP2WidthHalfHeightTest().generate_prediction(model)["mean"]
+
+            change = (width2-width1)/width1 * 100.0;
+
+            return {
+                'mean': change,
+                'std': 0,
+                'n': 1
+            }
+
+        else:
+            return none_score
+
+class AP12RateOfChangePeakToTroughPercentChangeTest(Druckmann2013Test):
     """
     15. Percent change in AP peak to trough rate of change, first to second spike (%)
 
@@ -401,13 +513,63 @@ class AP12PercentChangeInRateOfChangePeakToTroughTest(Druckmann2013Test):
     by the first AP peak to trough rate of change.
     """
 
-class AP12PercentChangeInAHPDepthTest(Druckmann2013Test):
+    name = "Percent change in AP peak to trough rate of change, first to second spike"
+    description = """Difference in peak to trough rate of change between first and second AP divided
+    by the first AP peak to trough rate of change."""
+
+    units = pq.dimensionless
+
+    def generate_prediction(self, model):
+        aps = self.get_APs(model)
+
+        if len(aps) >= 2:
+
+            roc1 = AP1RateOfChangePeakToTroughTest().generate_prediction(model)["mean"]
+            roc2 = AP2RateOfChangePeakToTroughTest().generate_prediction(model)["mean"]
+
+            change = (roc2-roc1)/roc1 * 100.0;
+
+            return {
+                'mean': change,
+                'std': 0,
+                'n': 1
+            }
+
+        else:
+            return none_score
+
+class AP12AHPDepthPercentChangeTest(Druckmann2013Test):
     """
     16 	Percent change in AP fast AHP depth, first to second spike (%)
 
     Difference in depth of fast AHP between first and second AP divided by the first
     AP depth of fast AHP.
     """
+
+    name = "Percent change in AP fast AHP depth, first to second spike"
+    description = """Difference in depth of fast AHP between first and second AP divided by the first
+    AP depth of fast AHP."""
+
+    units = pq.dimensionless
+
+    def generate_prediction(self, model):
+        aps = self.get_APs(model)
+
+        if len(aps) >= 2:
+
+            ap1 = AP1AHPDepthTest().generate_prediction(model)["mean"]
+            ap2 = AP2AHPDepthTest().generate_prediction(model)["mean"]
+
+            change = (ap2-ap1)/ap1 * 100.0;
+
+            return {
+                'mean': change,
+                'std': 0,
+                'n': 1
+            }
+
+        else:
+            return none_score
 
 class InputResistanceTest(Druckmann2013Test):
     """
