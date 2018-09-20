@@ -75,7 +75,11 @@ def get_observation(dataset_id, kind, cached=True, quiet=False):
         cmd = ct.get_cell(dataset_id)  # Cell metadata
 
         if kind == 'rheobase':
-            value = cmd['ephys_features'][0]['threshold_i_long_square']
+            if 'ephys_features' in cmd:
+                value = cmd['ephys_features'][0]['threshold_i_long_square'] # newer API
+            else:
+                value = cmd['ef__threshold_i_long_square'] # older API
+
             value = np.round(value, 2)  # Round to nearest hundredth of a pA.
             value *= pq.pA  # Apply units.
 
