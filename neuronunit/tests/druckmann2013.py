@@ -112,8 +112,8 @@ class Druckmann2013Test(VmTest):
     required_capabilities = (ncap.ProducesActionPotentials,)
     score_type = scores.ZScore
 
-    def __init__(self, name=None, **params):
-        super(Druckmann2013Test, self).__init__(observation, name, **params)
+    def __init__(self, **params):
+        super(Druckmann2013Test, self).__init__(**params)
 
         self.params = {
             'injected_square_current': {
@@ -579,6 +579,63 @@ class InputResistanceTest(Druckmann2013Test):
     depolarizing step currents. Input resistance was taken as linear fit of current to
     voltage difference.
     """
+
+    name = "Input resistance for steady-state current"
+    description = """Input resistance calculated by injecting weak subthreshold hyperpolarizing and
+    depolarizing step currents. Input resistance was taken as linear fit of current to
+    voltage difference"""
+
+    units = pq.dimensionless
+
+    def __init__(self, injection_currents=np.array([])*q.nA, **params):
+        super(InputResistanceTest, self).__init__(**params)
+
+        if not injection_currents or len(injection_currents) < 2:
+            raise Exception("Test requires at least two current injections")
+
+        for i in injection_currents:
+            if i.units != q.nA:
+                raise Exception("Injection current must be specified in nanoamps (nA)")
+
+        self.injection_currents = injection_currents
+
+    def generate_prediction(self, model):
+        voltages = []
+
+        # Loop through the injection currents
+        for i in self.injection_currents:
+
+            # Set the current amplitude
+            self.params['injected_square_current']['amplitude'] = i
+
+            # Inject current
+            model.inject_square_current(self.params['injected_square_current'])
+
+            # Get the voltage waveform
+            vm = model.get_membrane_potential()
+
+            # The voltage at final 1ms of current step is assumed to be steady state
+            ss_voltage = np.median(vm.magnitude[np.where((vm.times >= 999*q.ms) & (vm.times <= 1000*q.ms))]) * q.mV
+
+            voltages.append(ss_voltage)
+
+        # Rescale units
+        amps = [i.rescale('A') for i in self.injection_currents]
+        volts = [v.rescale('V') for v in voltages]
+
+
+
+        # v = ir -> r is slope of v(i) curve
+        slope, _ = np.polyfit(amps, volts, 1)
+        slope *= q.Ohm
+
+        return {
+            'mean': slope,
+            'std': 0,
+            'n': 1
+        }
+
+
 
 class AP1DelayMeanTest(Druckmann2013Test):
     """
