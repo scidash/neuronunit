@@ -2,11 +2,13 @@ import urllib, json, quantities
 from scipy.interpolate import interp1d
 import numpy as np
 from neo import AnalogSignal
+from neuronunit.models.static import StaticModel
+import quantities as q
 
 class NeuroMLDBModel:
     def __init__(self, model_id = "NMLCL000086"):
         self.model_id = model_id
-        self.api_url = "https://neuroml-db.org/api/"
+        self.api_url = "https://neuroml-db.org/api/" # See docs at: https://neuroml-db.org/api
 
         self.waveforms = None
 
@@ -26,7 +28,7 @@ class NeuroMLDBModel:
 
         return self.waveforms
 
-    def fetch_waveform_as_AnalogSignal(self, waveform_id, resolution_ms = 0.05, units = "mV"):
+    def fetch_waveform_as_AnalogSignal(self, waveform_id, resolution_ms = 0.01, units = "mV"):
 
         # If signal not in cache
         if waveform_id not in self.waveform_signals:
@@ -47,3 +49,62 @@ class NeuroMLDBModel:
             self.waveform_signals[waveform_id] = signal
 
         return self.waveform_signals[waveform_id]
+
+    def get_waveform_by_protocol_and_current(self, protocol_id, amplitude_nA):
+        for w in self.waveforms:
+            if w["Protocol_ID"] == protocol_id and w["Variable_Name"] == "Voltage":
+                wave_amp = self.get_waveform_current_amplitude(w)
+                if amplitude_nA == wave_amp:
+                    return self.fetch_waveform_as_AnalogSignal(w["ID"])
+
+        raise Exception("Did not find " + protocol_id + " Voltage waveform with injected " + str(amplitude_nA) +
+                        ". See " + self.api_url + "model?id=" + self.model_id +
+                        " for list of available waveforms.")
+
+    def get_druckmann2013_standard_current(self):
+        currents = []
+        for w in self.waveforms:
+            if w["Protocol_ID"] == "LONG_SQUARE" and w["Variable_Name"] == "Voltage":
+                currents.append(self.get_waveform_current_amplitude(w))
+
+        return [currents[-2]] # 2nd to last one is RBx1.25 waveform
+
+    def get_druckmann2013_strong_current(self):
+        currents = []
+        for w in self.waveforms:
+            if w["Protocol_ID"] == "LONG_SQUARE" and w["Variable_Name"] == "Voltage":
+                currents.append(self.get_waveform_current_amplitude(w))
+
+        return [currents[-1]] # The last one is RBx1.50 waveform
+
+    def get_druckmann2013_input_resistance_currents(self):
+        currents = []
+
+        # Find and return negative current injections
+        for w in self.waveforms:
+            if w["Protocol_ID"] == "SQUARE" and w["Variable_Name"] == "Voltage":
+                amp = self.get_waveform_current_amplitude(w)
+                if amp < 0:
+                    currents.append(amp)
+
+        return currents
+
+    def get_waveform_current_amplitude(self, waveform):
+        return float(waveform["Waveform_Label"].replace(" nA", "")) * q.nA
+
+
+class NeuroMLDBStaticModel(StaticModel):
+    def __init__(self, model_id, protocol_to_fetch="LONG_SQUARE", **params):
+        self.nmldb_model = NeuroMLDBModel(model_id)
+        self.nmldb_model.fetch_waveform_list()
+        self.protocol = protocol_to_fetch
+
+    def inject_square_current(self, current):
+        self.vm = self.nmldb_model.get_waveform_by_protocol_and_current(self.protocol, current["amplitude"])
+
+
+
+
+
+
+
