@@ -8,9 +8,9 @@ from .base import *
 import quantities as qt
 from quantities import mV, ms, s
 import matplotlib.pyplot as plt
-#@jit
+
+@jit
 def get_improved_vm(params_arg):
-    #print(params_arg)
     a = params_arg['a']
     b = params_arg['b']
     C = params_arg['C']
@@ -22,16 +22,11 @@ def get_improved_vm(params_arg):
     d = params_arg['d']
     dt = params_arg['dt']
     Iext = params_arg['Iext']
-    #pdb.set_trace()
-    #dt = 1.2/len(Iext)
-    #dt = 1000*dt
-    #print('dt',dt)
 
     N = len(Iext)
     v = np.zeros(N)
     u = np.zeros(N)
     v[0] = vr
-    #time_steps = [m for m in range(0,N-1) ]
     for m in range(0,N-1):
         vT = v[m]+ (dt/2) * (k*(v[m] - vr)*(v[m] - vt)-u[m] + Iext[m])/C;
         v[m+1] = vT + (dt/2)  * (k*(v[m] - vr)*(v[m] - vt)-u[m] + Iext[m])/C;
@@ -131,14 +126,11 @@ class RAWBackend(Backend):
         Iext = None
         Iext = np.zeros(N)
 
-        #stim_time = np.linspace(0.0,stop_time,nsamples-1)
-        #(stim_time[1]-stim_time[0])
         delay_ind = int((delay/tMax)*N)
         duration_ind = int((duration/tMax)*N)
 
         Iext[0:delay_ind-1] = 0.0
         Iext[delay_ind:delay_ind+duration_ind-1] = amplitude
-        #print(np.sum(Iext),amplitude*len(Iext[delay_ind:delay_ind+duration_ind-1]))
         Iext[delay_ind+duration_ind::] = 0.0
         temp_attrs['Iext'] = Iext
         self.temp_attrs = temp_attrs
