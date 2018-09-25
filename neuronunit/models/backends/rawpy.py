@@ -27,7 +27,6 @@ def get_improved_vm(params_arg):
     dt = params_arg['dt']
     Iext = params_arg['Iext']
 
-
     N = len(Iext)
     v = np.zeros(N)
     u = np.zeros(N)
