@@ -15,9 +15,8 @@ class TestPulseTest(VmTest):
 
     score_type = scores.ZScore
 
-    self.params = {'injected_square_current':
-                {'amplitude':-10.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
-    #self.params = params
+    #params = {'injected_square_current':
+    #            {'amplitude':-10.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
     #print(params)
 
     def generate_prediction(self, model):
@@ -26,6 +25,7 @@ class TestPulseTest(VmTest):
                    self.params['injected_square_current']['duration'] + \
                    100.0 * pq.ms
         model.get_backend().set_stop_time(t_stop)
+        print('injected current seen: ',self.params['injected_square_current'])
         model.inject_square_current(self.params['injected_square_current'])
         vm = model.get_membrane_potential()
         i = self.params['injected_square_current']

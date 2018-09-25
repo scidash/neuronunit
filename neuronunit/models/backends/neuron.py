@@ -275,7 +275,7 @@ class NEURONBackend(Backend):
     def reset_vm(self):
         #import pdb; pdb.set_trace()
         ass_vr = self.h.m_RS_RS_pop[0].vr
-        ass_v0 = self.h.m_RS_RS_pop[0].v0
+        self.h.m_RS_RS_pop[0].v0 = ass_vr
 
 
         self.h('m_{0}_{1}_pop[0].{2} = {3}'\
@@ -320,6 +320,11 @@ class NEURONBackend(Backend):
                 pdb.set_trace()
 
             self.h('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
+
+
+        ass_vr = self.h.m_RS_RS_pop[0].vr
+        self.h.m_RS_RS_pop[0].v0 = ass_vr
+
         #print(self.model.attrs)
         # Below create a list of NEURON experimental recording rig parameters.
         # This is where parameters of the artificial neuron experiment are initiated.
@@ -384,15 +389,19 @@ class NEURONBackend(Backend):
         # critical code:
         ##
         self.set_stop_time(c['delay']+c['duration']+100.0*pq.ms)
+        # translate pico amps to nano amps
         # NEURONs default unit multiplier for current injection values is nano amps.
         # to make sure that pico amps are not erroneously interpreted as a larger nano amp.
         # current injection value, the value is divided by 1000.
-        amps = float(c['amplitude'])/1000.0# #This is the right scale.
+        #amps = float(c['amplitude'].rescale('nA')) #float(c['amplitude'])#/1000.0# #This is the right scale.
+        amps = float(c['amplitude']/1000.0)
         prefix = 'explicitInput_%s%s_pop0.' % (self.current_src_name,self.cell_name)
         define_current = []
         define_current.append('{0}amplitude={1}'.format(prefix,amps))
-        duration = float(c['duration'].rescale('ms'))
-        delay = float(c['delay'].rescale('ms'))
+
+        duration = float(c['duration'])#.rescale('ms'))
+        delay = float(c['delay'])#.rescale('ms'))
+        print(duration,delay)
         define_current.append('{0}duration={1}'.format(prefix,duration))
         define_current.append('{0}delay={1}'.format(prefix,delay))
 
@@ -401,7 +410,7 @@ class NEURONBackend(Backend):
             # execute hoc code strings in the python interface to neuron.
             self.h(string)
         #print('got here a')
-
+        debug = True
         if debug == True:
             self.neuron.h.psection()
         self._local_run()

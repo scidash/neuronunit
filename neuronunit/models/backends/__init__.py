@@ -10,7 +10,12 @@ except:
 try:
     from .neuron import NEURONBackend
 except Exception as e:
-    print('Error in NEURON')
+    print('Silent Error eminating from NEURON syntax')
+
+try:
+    from .rawpy import RAWBackend
+except Exception as e:
+    print('raw python Error')
 
 available_backends = {x.replace('Backend',''):cls for x, cls \
                    in locals().items() \
