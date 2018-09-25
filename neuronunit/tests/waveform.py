@@ -13,7 +13,8 @@ class APWidthTest(VmTest):
     description = ("A test of the widths of action potentials "
                    "at half of their maximum height.")
 
-    score_type = scores.ZScore
+    #score_type = scores.ZScore
+    score_type = scores.RatioScore
 
     units = pq.ms
 
@@ -68,6 +69,17 @@ class InjectedCurrentAPWidthTest(APWidthTest):
     description = ("A test of the widths of action potentials "
                    "at half of their maximum height when current "
                    "is injected into cell.")
+
+
+    def compute_score(self, observation, prediction):
+        """Implementation of sciunit.Test.score_prediction."""
+        if prediction['n'] == 0:
+            score = scores.InsufficientDataScore(None)
+        else:
+            score = super(InjectedCurrentAPWidthTest,self).compute_score(observation,
+                                                              prediction)
+        return score
+
 
     def generate_prediction(self, model):
         #model._backend.reset_vm()
@@ -143,6 +155,14 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
                 generate_prediction(model)
         return prediction
 
+    def compute_score(self, observation, prediction):
+        """Implementation of sciunit.Test.score_prediction."""
+        if prediction['n'] == 0:
+            score = scores.InsufficientDataScore(None)
+        else:
+            score = super(InjectedCurrentAPAmplitudeTest,self).compute_score(observation,
+                                                              prediction)
+        return score
 
 class APThresholdTest(VmTest):
     """Tests the full widths of action potentials at their half-maximum."""
