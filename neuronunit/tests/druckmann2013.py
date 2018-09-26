@@ -26,7 +26,7 @@ class Druckman2013AP:
 
         self.beginning_threshold = 12.0 # mV/ms
 
-        self.waveform.t_start = 0*q.ms
+        self.waveform.t_start = 0*pq.ms
 
     def get_beginning(self):
         """
@@ -35,7 +35,7 @@ class Druckman2013AP:
         :return: the voltage and time of the AP beginning
         """
         # Compute the discrete difference of the vm
-        dvdt = np.array(np.diff(self.waveform, axis=0)) * q.mV / self.waveform.sampling_period
+        dvdt = np.array(np.diff(self.waveform, axis=0)) * pq.mV / self.waveform.sampling_period
 
         # Get the first time it crosses the threshold
         dvdt_over_th_first = np.where(dvdt > self.beginning_threshold)[0][0]
@@ -117,12 +117,12 @@ class Druckmann2013Test(VmTest):
 
         self.params = {
             'injected_square_current': {
-                'delay': 0 * q.ms,
-                'duration': 2 * q.s,
-                'amplitude': 0 * q.pA
+                'delay': 0 * pq.ms,
+                'duration': 2 * pq.s,
+                'amplitude': 0 * pq.pA
             },
-            'threshold': -20 * q.mV,
-            'ap_window': 10 * q.ms,
+            'threshold': -20 * pq.mV,
+            'ap_window': 10 * pq.ms,
         }
 
         self.APs = None
@@ -212,8 +212,8 @@ class AP1SSAmplitudeChangeTest(Druckmann2013Test):
 
         if len(ss_amps) > 0:
             return {
-                'mean': ss_amps.mean() * q.mV,
-                'std': ss_amps.std() * q.mV,
+                'mean': ss_amps.mean() * pq.mV,
+                'std': ss_amps.std() * pq.mV,
                 'n': len(ss_amps)
             }
 
@@ -587,14 +587,14 @@ class InputResistanceTest(Druckmann2013Test):
 
     units = pq.dimensionless
 
-    def __init__(self, injection_currents=np.array([])*q.nA, **params):
+    def __init__(self, injection_currents=np.array([])*pq.nA, **params):
         super(InputResistanceTest, self).__init__(**params)
 
         if not injection_currents or len(injection_currents) < 2:
             raise Exception("Test requires at least two current injections")
 
         for i in injection_currents:
-            if i.units != q.nA:
+            if i.units != pq.nA:
                 raise Exception("Injection current must be specified in nanoamps (nA)")
 
         self.injection_currents = injection_currents
@@ -615,7 +615,7 @@ class InputResistanceTest(Druckmann2013Test):
             vm = model.get_membrane_potential()
 
             # The voltage at final 1ms of current step is assumed to be steady state
-            ss_voltage = np.median(vm.magnitude[np.where((vm.times >= 999*q.ms) & (vm.times <= 1000*q.ms))]) * q.mV
+            ss_voltage = np.median(vm.magnitude[np.where((vm.times >= 999*pq.ms) & (vm.times <= 1000*pq.ms))]) * pq.mV
 
             voltages.append(ss_voltage)
 
@@ -627,7 +627,7 @@ class InputResistanceTest(Druckmann2013Test):
 
         # v = ir -> r is slope of v(i) curve
         slope, _ = np.polyfit(amps, volts, 1)
-        slope *= q.Ohm
+        slope *= pq.Ohm
 
         return {
             'mean': slope,
