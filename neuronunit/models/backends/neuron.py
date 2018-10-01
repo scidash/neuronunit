@@ -273,53 +273,29 @@ class NEURONBackend(Backend):
         return getattr(self,'_current_src_name','RS')
 
     def reset_vm(self):
-        #import pdb; pdb.set_trace()
         ass_vr = self.h.m_RS_RS_pop[0].vr
         self.h.m_RS_RS_pop[0].v0 = ass_vr
+        self.h.m_RS_RS_pop[0].u = ass_vr
 
 
         self.h('m_{0}_{1}_pop[0].{2} = {3}'\
                 .format(self.cell_name,self.cell_name,'v0',ass_vr))
 
-        self.h('psection()')
-        #print('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
-        #print(self.model.attrs)
-        # Below create a list of NEURON experimental recording rig parameters.
-        # This is where parameters of the artificial neuron experiment are initiated.
-        # Code is sent to the python interface to neuron by executing strings:
-        neuron_sim_rig = []
-        neuron_sim_rig.append(' { v_time = new Vector() } ')
-        neuron_sim_rig.append(' { v_time.record(&t) } ')
-        neuron_sim_rig.append(' { v_v_of0 = new Vector() } ')
-        neuron_sim_rig.append(' { v_v_of0.record(&RS_pop[0].v(0.5)) } ')
-        neuron_sim_rig.append(' { v_u_of0 = new Vector() } ')
-        neuron_sim_rig.append(' { v_u_of0.record(&m_RS_RS_pop[0].u) } ')
-
-        for string in neuron_sim_rig:
-            # execute hoc code strings in the python interface to neuron.
-            self.h(string)
-
-        # These two variables have been aliased in the code below:
-        self.tVector = self.h.v_time
-        self.vVector = self.h.v_v_of0
-        return self
-
 
     def set_attrs(self, **attrs):
-        #if len(attrs) == len(self.model.attrs):
         self.model.attrs = {}
         self.model.attrs.update(attrs)
 
 
         for h_key,h_value in attrs.items():
             h_value = float(h_value)
-            if type(h_value) is not type(float(0.0)):
-                pdb.set_trace()
-
-            if math.isnan(h_value):
-                pdb.set_trace()
-
-            self.h('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
+            if h_key is str('C'):
+                sec = self.h.Section(self.h.m_RS_RS_pop[0])
+                #sec.L, sec.diam = 6.3, 5 # empirically tuned
+                sec.cm = h_value
+                print(sec.cm)
+            else:
+                self.h('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
 
 
         ass_vr = self.h.m_RS_RS_pop[0].vr
