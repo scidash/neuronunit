@@ -18,6 +18,7 @@ import quantities as pq
 import numpy as np
 import copy
 import pdb
+from numba import jit
 
 class RheobaseTest(VmTest):
     """
@@ -148,6 +149,15 @@ class RheobaseTest(VmTest):
         if self.rheobase_vm is not None:
             score.related_data['vm'] = self.rheobase_vm
 
+
+
+
+@jit
+def get_diff(vm):
+    differentiated = np.diff(vm)
+    spikes = len([np.any(differentiated) > 0.000143667327364])
+    return spikes
+
 class RheobaseTestP(VmTest):
      """
      A parallel version of test Rheobase.
@@ -168,9 +178,6 @@ class RheobaseTestP(VmTest):
      ephysprop_name = 'Rheobase'
      score_type = scores.ZScore
 
-
-     #score_type = scores.RatioScore
-
      def generate_prediction(self, model):
         '''
         inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
@@ -180,10 +187,7 @@ class RheobaseTestP(VmTest):
         If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
         corresponding virtual model objects.
         '''
-        #if type(model.rmemory) is not type(None):
-            #import pdb; pdb.set_trace()
-            #dtc.ampl = model.rmemory
-        #    print(model.rmemory)
+
         def check_fix_range(dtc):
             '''
             Inputs: lookup, A dictionary of previous current injection values
@@ -212,31 +216,27 @@ class RheobaseTestP(VmTest):
                 #this assertion would only be occur if there was a bug
                 assert sub.max()<=supra.min()
             elif len(sub) and len(supra):
-                if supra.min() - sub.max() < 5: # Less than 5 pA
+                if supra.min() - sub.max() < 2.5: # Less than 5 pA
                     dtc.rheobase = float(supra.min())
                     dtc.boolean = True
                     return dtc
-                steps = np.linspace(sub.max(),supra.min(),cpucount-1)
+                steps = np.linspace(sub.max(),supra.min(),cpucount-2)*pq.pA
                 steps = steps[1:-2]*pq.pA
-                #print("Here are the steps: ",steps)
-                #print(steps)
+
             elif len(sub):
-                steps = list(np.linspace(sub.max(),2*sub.max(),cpucount-1))
-                steps = steps[1::]*pq.pA
-                #[ i for i in steps if not i == sub.max() ]
-                #print(steps)
-                #steps = [ i*pq.pA for i in steps ]
+                steps = list(np.linspace(sub.max(),2*sub.max(),cpucount-1))*pq.pA
+                steps = steps[1:-1]*pq.pA
+
+
             elif len(supra):
-                steps = list(np.linspace(-2*(supra.min()),supra.min(),cpucount-1))
+                steps = list(np.linspace(-2*(supra.min()),supra.min(),cpucount-1))*pq.pA
                 # There is a misconception that -1 refers to the second last element, and -0 refers to the last element
                 # https://stackoverflow.com/questions/39838900/getting-second-to-last-element-in-list#39838913
-                steps = steps[::-2]*pq.pA
-                #print(steps)
-                #steps = [ i for i in steps if not i == supra.min() ]
-                #steps = [ i*pq.pA for i in steps ]
+                steps = steps[0:-2]*pq.pA
+
 
             dtc.current_steps = steps
-
+            print(dtc.attrs, 'failed on')
             #dtc.rheobase = None
             return dtc
 
@@ -276,30 +276,36 @@ class RheobaseTestP(VmTest):
             ampl = float(dtc.ampl)
             if ampl not in dtc.lookup or len(dtc.lookup) == 0:
                 current = params.copy()['injected_square_current']
-                uc = {'amplitude':ampl}
+                uc = {'amplitude':ampl*pq.pA}
                 current.update(uc)
                 current = {'injected_square_current':current}
                 dtc.run_number += 1
                 model.set_attrs(dtc.attrs)
                 model.inject_square_current(current)
+                #vm =
+                #other_spikes = get_diff(model.get_membrane_potential())
                 dtc.previous = ampl
                 n_spikes = model.get_spike_count()
-                dtc.lookup[float(ampl)] = n_spikes
-                if n_spikes == 1:
+                #print(n_spikes,other_spikes, 'n_spikes versus other spikes ')
+
+                if n_spikes == 1:# or other_spikes == 1:
+                    dtc.lookup[float(ampl)] = 1
                     dtc.rheobase = float(ampl)
-                    print(dtc.rheobase)
                     dtc.boolean = True
                     return dtc
+
+                dtc.lookup[float(ampl)] = n_spikes
             return dtc
 
         def init_dtc(dtc):
-
+            #dtc.initiated = False
             # check for memory and exploit it.
             if dtc.initiated == True:
-                #dtc.ampl = dtc.rheobase
 
                 dtc = check_current(dtc)
+                print(dtc.boolean, 'strange')
                 if dtc.boolean:
+
                     return dtc
                 else:
                     # expand values in the range to accomodate for mutation.
@@ -314,7 +320,7 @@ class RheobaseTestP(VmTest):
             if dtc.initiated == False:
 
                 dtc.boolean = False
-                steps = np.linspace(0.01,250,7.0)
+                steps = np.linspace(1,250,7.0)
                 steps_current = [ i*pq.pA for i in steps ]
                 dtc.current_steps = steps_current
                 dtc.initiated = True

@@ -28,7 +28,7 @@ class APWidthTest(VmTest):
         # len of None returns an exception that is not handled
         model.rerun = True
         #import pdb; pdb.set_trace()
-        model.inject_square_current(model.params['injected_square_current'])
+        model.inject_square_current(self.params['injected_square_current'])
 
 
         widths = model.get_AP_widths()
@@ -64,6 +64,10 @@ class InjectedCurrentAPWidthTest(APWidthTest):
     #params = {'injected_square_current':
     #            {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
+    score_type = scores.ZScore
+
+    units = pq.ms
+    
     name = "Injected current AP width test"
 
     description = ("A test of the widths of action potentials "
@@ -82,10 +86,8 @@ class InjectedCurrentAPWidthTest(APWidthTest):
 
 
     def generate_prediction(self, model):
-        #model._backend.reset_vm()
-        #import pdb; pdb.set_trace()
-        model.inject_square_current(model.params['injected_square_current'])
-
+        model.inject_square_current(self.params['injected_square_current'])
+        #print(model.get_spike_count())
         prediction = super(InjectedCurrentAPWidthTest,self).generate_prediction(model)
 
         return prediction
@@ -112,7 +114,7 @@ class APAmplitudeTest(VmTest):
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
         model.rerun = True
-        model.inject_square_current(model.params['injected_square_current'])
+        model.inject_square_current(self.params['injected_square_current'])
 
         heights = model.get_AP_amplitudes() - model.get_AP_thresholds()
         # Put prediction in a form that compute_score() can use.
@@ -150,7 +152,7 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
                    "is injected into cell.")
 
     def generate_prediction(self, model):
-        model.inject_square_current(model.params['injected_square_current'])
+        model.inject_square_current(self.params['injected_square_current'])
         prediction = super(InjectedCurrentAPAmplitudeTest,self).\
                 generate_prediction(model)
         return prediction
@@ -186,7 +188,7 @@ class APThresholdTest(VmTest):
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
         model.rerun = True
-        model.inject_square_current(model.params['injected_square_current'])
+        model.inject_square_current(self.params['injected_square_current'])
 
         threshes = model.get_AP_thresholds()
         # Put prediction in a form that compute_score() can use.
@@ -222,7 +224,7 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
                    "action potentials are produced under current injection.")
 
     def generate_prediction(self, model):
-        model.inject_square_current(model.params['injected_square_current'])
+        model.inject_square_current(self.params['injected_square_current'])
         return super(InjectedCurrentAPThresholdTest,self).\
                 generate_prediction(model)
 

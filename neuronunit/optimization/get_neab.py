@@ -84,3 +84,22 @@ def get_neuron_criteria(cell_id,file_name = None):#,observation = None):
             pickle.dump(tests, f)
 
     return tests,observations
+
+import copy
+import sciunit
+def get_tests():
+    # get neuronunit tests
+    # and select out Rheobase test and input resistance test
+    # and less about electrophysiology of the membrane.
+    # We are more interested in phenomonogical properties.
+    electro_path = str(os.getcwd())+'/pipe_tests.p'
+    assert os.path.isfile(electro_path) == True
+    with open(electro_path,'rb') as f:
+        electro_tests = pickle.load(f)
+    electro_tests = replace_zero_std(electro_tests)
+    electro_tests = substitute_parallel_for_serial(electro_tests)
+    test, observation = electro_tests[0]
+    tests = copy.copy(electro_tests[0][0])
+    suite = sciunit.TestSuite(tests)
+    #tests_ = tests[0:2]
+    return tests, test, observation, suite
