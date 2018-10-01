@@ -202,7 +202,6 @@ def create_grid(mp_in=None,npoints=3,free_params=None,ga=None):
                 subset[k] = v
     # The function of maps is to map floating point sample spaces onto a  monochromataic matrix indicies.
     grid = list(ParameterGrid(subset))
-    #pdb.set_trace()
     return grid
 
 @jit
@@ -239,10 +238,12 @@ def tfc2i(x, y, z,err):
     return
 @jit
 def add_constant(hold_constant,consumable_,td):
+
     hc = list(hold_constant.values())
     for c in consumable_:
         for i in c:
             for h in hc:
+                print(type(i),i)
                 i.append(h)
     for k in hold_constant.keys():
         td.append(k)
