@@ -25,7 +25,7 @@ class TestPulseTest(VmTest):
                    self.params['injected_square_current']['duration'] + \
                    100.0 * pq.ms
         model.get_backend().set_stop_time(t_stop)
-        print('injected current seen: ',self.params['injected_square_current'])
+        #print('injected current seen: ',self.params['injected_square_current'])
         model.inject_square_current(self.params['injected_square_current'])
         vm = model.get_membrane_potential()
         i = self.params['injected_square_current']
@@ -130,7 +130,7 @@ class InputResistanceTest(TestPulseTest):
         else:
             score = super(InputResistanceTest,self).\
                         compute_score(observation, prediction)
-            print('input resistance score: {0}'.format(score))
+            #print('input resistance score: {0}'.format(score))
             #self.bind_score(score,None,observation,prediction)
         return score
 
@@ -176,7 +176,7 @@ class CapacitanceTest(TestPulseTest):
 
     description = ("A test of the membrane capacitance of a cell.")
 
-    units = pq.F*1e-12
+    units = pq.pF
 
     ephysprop_name = 'Cell Capacitance'
 

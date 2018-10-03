@@ -89,7 +89,7 @@ class RheobaseTest(VmTest):
                 current.update(uc)
                 model.inject_square_current(current)
                 n_spikes = model.get_spike_count()
-                if self.verbose:
+                if self.verbose >= 2:
                     print("Injected %s current and got %d spikes" % \
                             (ampl,n_spikes))
                 lookup[float(ampl)] = n_spikes
@@ -175,6 +175,7 @@ class RheobaseTestP(VmTest):
      description = ("A test of the rheobase, i.e. the minimum injected current "
                     "needed to evoke at least one spike.")
      units = pq.pA
+     tolerance = 5 # Rheobase search tolerance in `self.units`.
      ephysprop_name = 'Rheobase'
      score_type = scores.ZScore
 
@@ -206,37 +207,27 @@ class RheobaseTestP(VmTest):
 
             if 0. in supra and len(sub) == 0:
                 dtc.boolean = True
-                #dtc.rheobase = None # should be None
-
-                dtc.rheobase = 1 # should be None
-                #score = scores.InsufficientDataScore(None)
+                dtc.rheobase = -1
                 return dtc
-
-            if (len(sub) + len(supra)) == 0:
-                #this assertion would only be occur if there was a bug
-                assert sub.max()<=supra.min()
+            elif (len(sub) + len(supra)) == 0:
+                # This assertion would only be occur if there was a bug
+                assert sub.max() <= supra.min()
             elif len(sub) and len(supra):
-                if supra.min() - sub.max() < 2.5: # Less than 5 pA
+                # Termination criterion
+                if supra.min() - sub.max() < self.tolerance:
                     dtc.rheobase = float(supra.min())
                     dtc.boolean = True
                     return dtc
-                steps = np.linspace(sub.max(),supra.min(),cpucount)*pq.pA
+                steps = np.linspace(sub.max(),supra.min(),cpucount+1)*pq.pA
                 steps = steps[1:-1]*pq.pA
-
             elif len(sub):
-                steps = list(np.linspace(sub.max(),2*sub.max(),cpucount))*pq.pA
+                steps = np.linspace(sub.max(),2*sub.max(),cpucount+1)*pq.pA
                 steps = steps[1:-1]*pq.pA
-
-
             elif len(supra):
-                steps = list(np.linspace(-100,supra.min(),cpucount))*pq.pA
-                # There is a misconception that -1 refers to the second last element, and -0 refers to the last element
-                # https://stackoverflow.com/questions/39838900/getting-second-to-last-element-in-list#39838913
-                steps = steps[0:-1]*pq.pA
-
+                steps = np.linspace(supra.min()-100,supra.min(),cpucount+1)*pq.pA
+                steps = steps[1:-1]*pq.pA
 
             dtc.current_steps = steps
-
             return dtc
 
         def get_sub_supra(lookup):
@@ -281,8 +272,6 @@ class RheobaseTestP(VmTest):
                 dtc.run_number += 1
                 model.set_attrs(dtc.attrs)
                 model.inject_square_current(current)
-                #vm =
-                #other_spikes = get_diff(model.get_membrane_potential())
                 dtc.previous = ampl
                 n_spikes = model.get_spike_count()
 
@@ -332,7 +321,6 @@ class RheobaseTestP(VmTest):
             # If its not true enter a search, with ranges informed by memory
             cnt = 0
             while dtc.boolean == False and cnt< 10:
-
                 #dtc.current_steps = list(filter(lambda cs: cs !=0.0 , dtc.current_steps))
                 dtc_clones = [ copy.copy(dtc) for i in range(0,len(dtc.current_steps)) ]
                 for i,s in enumerate(dtc.current_steps):
@@ -341,14 +329,12 @@ class RheobaseTestP(VmTest):
                 dtc_clones = [ d for d in dtc_clones if not np.isnan(d.ampl) ]
                 b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
                 dtc_clone = list(b0.map(check_current).compute())
-
                 for d in dtc_clone:
                     dtc.lookup.update(d.lookup)
                 dtc = check_fix_range(dtc)
                 cnt += 1
                 sub, supra = get_sub_supra(dtc.lookup)
-                self.verbose = 0
-                if self.verbose:
+                if self.verbose >= 2:
                     print("Try %d: SubMax = %s; SupraMin = %s" % \
                     (cnt, sub.max().round(1) if len(sub) else None,
                      supra.min().round(1) if len(supra) else None))
