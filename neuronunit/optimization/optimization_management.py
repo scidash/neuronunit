@@ -305,7 +305,7 @@ def update_dtc_pop(pop, td, backend = None):
     return dtcpop
 
 #@jit
-def run_ga(model_params,npoints,test, free_params = None, hc = None):
+def run_ga(model_params, max_ngen, test, free_params = None, hc = None):
     # https://stackoverflow.com/questions/744373/circular-or-cyclic-imports-in-python
     # These imports need to be defined with local scope to avoid circular importing problems
     # Try to fix local imports later.
@@ -313,14 +313,11 @@ def run_ga(model_params,npoints,test, free_params = None, hc = None):
     ss = {}
     for k in free_params:
         ss[k] = model_params[k]
-    print(ss)
-    #import pdb; pdb.set_trace()
+
     MU = 2**len(list(free_params))
-    max_ngen = int(np.floor(npoints))
+    max_ngen = int(np.floor(max_ngen))
     selection = str('selNSGA')
-    #import pdb; pdb.set_trace()
-    DO = SciUnitOptimization(offspring_size = MU, error_criterion = test, selection = selection, boundary_dict = ss, elite_size = 2)#, hc = hc)
-    #import pdb; pdb.set_trace()
+    DO = SciUnitOptimization(offspring_size = MU, error_criterion = test, selection = selection, boundary_dict = ss, elite_size = 2)
 
     ga_out = DO.run(offspring_size = MU, max_ngen = max_ngen)
     ga_out['dhof'] = [ h.dtc for h in ga_out['hof'] ]
@@ -484,8 +481,6 @@ def update_deap_pop(pop, tests, td, backend = None):
     pop, dtcpop = test_runner(pop,td,tests)
     for p,d in zip(pop,dtcpop):
         p.dtc = d
-    print([p.dtc for p in pop])
-    #import pdb; pdb.set_trace()
     if not isinstance(pop, Iterable) and not isinstance(dtcpop,Iterable):
         pop.dtc = dtcpop
         if type(pop.dtc.rheobase) is type(None):
