@@ -146,7 +146,7 @@ def dtc_to_rheo(dtc):
     dtc.rheobase = rtest.generate_prediction(model)
     obs = rtest.observation
     score = rtest.compute_score(obs,dtc.rheobase)
-    dtc.scores[str(rtest)] = score.sort_key
+    dtc.scores[str(rtest)] = 1- score.sort_key
     return dtc
 
 
@@ -301,7 +301,7 @@ def update_dtc_pop(pop, td, backend = None):
         # suggests not to change the variable name to reflect this.
         dtcpop = [ transform(xargs) ]
         assert dtcpop[0].backend is 'RAW'
-    print(dtcpop)
+    #print(dtcpop)
     return dtcpop
 
 #@jit
@@ -380,7 +380,7 @@ def impute_check(pop,dtcpop,td,tests):
         dtc.backend = str('RAW')
         dtc = dtc_to_rheo(dtc)
         ind.rheobase = dtc.rheobase
-        print(dtc.attrs,dtc.rheobase,'still failing')
+        #print(dtc.attrs,dtc.rheobase,'still failing')
         if type(ind.rheobase) != 1.0:
             #pop.append(ind)
             dtcpop.append(dtc)
@@ -401,12 +401,12 @@ def serial_route(pop,td,tests):
     else:
         dtc = format_test((dtc,tests))
         dtc = nunit_evaluation((dtc,tests))
-        print(dtc.get_ss())
+        #print(dtc.get_ss())
     return pop, dtc
 
 def parallel_route(pop,dtcpop,tests,td):
-    print([type(d) for d in dtcpop])
-    print([d for d in dtcpop])
+    #print([type(d) for d in dtcpop])
+    #print([d for d in dtcpop])
     for d in dtcpop:
         d.tests = tests
 

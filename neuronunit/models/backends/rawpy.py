@@ -9,23 +9,17 @@ import quantities as qt
 from quantities import mV, ms, s
 import matplotlib.pyplot as plt
 @jit
-def get_improved_vm(params_arg):
+def get_improved_vm():
     '''
     Apply izhikevich equation as model
     This function can't get too pythonic (functional), it needs to be a simple loop for
     numba/jit to understand it.
     '''
 
-    default = {}
-    default['C'] = 100
-    default['k'] = 0.7
-    default['vr'] = -60
-    default['vt'] = -40
-    default['vPeak'] = 35
-    default['a'] = 0.03
-    default['b'] = -2
-    default['c'] = -50
-    default['d'] = 100
+     # ('TC',        (200, 1.6,  -60, -50, 35, 0.01,  15, -60,   10,   6)),
+     #              C    k     vr  vt vpeak   a      b   c    d  celltype
+
+
 
     # if the keys into the dict are extensive
     # potentially overwrite the whole dictionary.
@@ -116,7 +110,7 @@ class RAWBackend(Backend):
         #                    sampling_period =dt * ms)
 
     def set_attrs(self, **attrs):
-        self.model.attrs = {}
+        #self.model.attrs = {}
         self.model.attrs.update(attrs)
 
 
