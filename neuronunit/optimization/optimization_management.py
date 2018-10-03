@@ -146,14 +146,14 @@ def dtc_to_rheo(dtc):
     dtc.rheobase = rtest.generate_prediction(model)
     obs = rtest.observation
     score = rtest.compute_score(obs,dtc.rheobase)
-    dtc.scores[str(rtest)] = score.sort_key
+    dtc.scores[str(rtest)] = 1-score.norm_score
     return dtc
 
 
 #@jit
 def score_proc(dtc,t,score):
     dtc.score[str(t)] = {}
-    dtc.score[str(t)]['value'] = copy.copy(score.sort_key)
+    dtc.score[str(t)]['value'] = copy.copy(score.norm_score)
     if hasattr(score,'prediction'):
         if type(score.prediction) is not type(None):
             dtc.score[str(t)][str('prediction')] = score.prediction
@@ -221,8 +221,8 @@ def nunit_evaluation(dtc):
         t.params = dtc.vtest[k]
         score,_ = hack_judge((t,dtc))
         #score = t.judge(model,stop_on_error = False, deep_error = True)
-        if type(score.sort_key) is not type(None):
-            dtc.scores[str(t)] = 1 - score.sort_key
+        if type(score.norm_score) is not type(None):
+            dtc.scores[str(t)] = 1 - score.norm_score
         else:
             dtc.scores[str(t)] = 1.0
         dtc = score_proc(dtc,t,copy.copy(score))
@@ -301,7 +301,7 @@ def update_dtc_pop(pop, td, backend = None):
         # suggests not to change the variable name to reflect this.
         dtcpop = [ transform(xargs) ]
         assert dtcpop[0].backend is 'RAW'
-    print(dtcpop)
+    #print(dtcpop)
     return dtcpop
 
 #@jit
@@ -378,7 +378,7 @@ def impute_check(pop,dtcpop,td,tests):
         dtc.backend = str('RAW')
         dtc = dtc_to_rheo(dtc)
         ind.rheobase = dtc.rheobase
-        print(dtc.attrs,dtc.rheobase,'still failing')
+        #print(dtc.attrs,dtc.rheobase,'still failing')
         if type(ind.rheobase) != 1.0:
             #pop.append(ind)
             dtcpop.append(dtc)
@@ -403,8 +403,8 @@ def serial_route(pop,td,tests):
     return pop, dtc
 
 def parallel_route(pop,dtcpop,tests,td):
-    print([type(d) for d in dtcpop])
-    print([d for d in dtcpop])
+    #print([type(d) for d in dtcpop])
+    #print([d for d in dtcpop])
     for d in dtcpop:
         d.tests = tests
 
@@ -437,7 +437,7 @@ def test_runner(pop,td,tests):
     pop = [ p for p in pop if p.rheobase!=1.0 ]
     after = len(pop)
 
-    print([dtc.rheobase for dtc in dtcpop])
+    #print([dtc.rheobase for dtc in dtcpop])
 
     while before>after:
         dtcpop,pop = impute_check(pop,dtcpop,td,tests)
@@ -447,7 +447,7 @@ def test_runner(pop,td,tests):
     pop,dtcpop = parallel_route(pop,dtcpop,tests,td)
     for p,d in zip(pop,dtcpop):
         p.dtc = d
-    print([p.dtc for p in pop])
+    #print([p.dtc for p in pop])
 
     if isinstance(pop, Iterable) and isinstance(dtcpop,Iterable):
 
@@ -462,7 +462,7 @@ def test_runner(pop,td,tests):
         pop,dtcpop = serial_route(pop,td,tests)
         print('serial badness')
 
-    print('tests, completed, now gene computations')
+    #print('tests, completed, now gene computations')
     return pop,dtcpop
 
 
@@ -477,7 +477,7 @@ def update_deap_pop(pop, tests, td, backend = None):
     DTCs are then scored by neuronunit, using neuronunit models that act in place.
     '''
     pop = copy.copy(pop)
-    print('not even to test runner getting')
+    #print('not even to test runner getting')
     pop, dtcpop = test_runner(pop,td,tests)
     for p,d in zip(pop,dtcpop):
         p.dtc = d
@@ -487,7 +487,7 @@ def update_deap_pop(pop, tests, td, backend = None):
             pop.dtc.scores = {}
             for t in tests:
                 pop.dtc.scores[str(t)] = 1.0
-        print(pop.dtc.get_ss())
+        #print(pop.dtc.get_ss())
     else:
         pass
     return pop
