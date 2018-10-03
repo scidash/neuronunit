@@ -208,7 +208,7 @@ class RheobaseTestP(VmTest):
                 dtc.boolean = True
                 #dtc.rheobase = None # should be None
 
-                dtc.rheobase = -1 # should be None
+                dtc.rheobase = 1 # should be None
                 #score = scores.InsufficientDataScore(None)
                 return dtc
 
@@ -220,24 +220,23 @@ class RheobaseTestP(VmTest):
                     dtc.rheobase = float(supra.min())
                     dtc.boolean = True
                     return dtc
-                steps = np.linspace(sub.max(),supra.min(),cpucount-2)*pq.pA
-                steps = steps[1:-2]*pq.pA
+                steps = np.linspace(sub.max(),supra.min(),cpucount)*pq.pA
+                steps = steps[1:-1]*pq.pA
 
             elif len(sub):
-                steps = list(np.linspace(sub.max(),2*sub.max(),cpucount-1))*pq.pA
+                steps = list(np.linspace(sub.max(),2*sub.max(),cpucount))*pq.pA
                 steps = steps[1:-1]*pq.pA
 
 
             elif len(supra):
-                steps = list(np.linspace(-2*(supra.min()),supra.min(),cpucount-1))*pq.pA
+                steps = list(np.linspace(-100,supra.min(),cpucount))*pq.pA
                 # There is a misconception that -1 refers to the second last element, and -0 refers to the last element
                 # https://stackoverflow.com/questions/39838900/getting-second-to-last-element-in-list#39838913
-                steps = steps[0:-2]*pq.pA
+                steps = steps[0:-1]*pq.pA
 
 
             dtc.current_steps = steps
-            print(dtc.attrs, 'failed on')
-            #dtc.rheobase = None
+
             return dtc
 
         def get_sub_supra(lookup):
@@ -286,7 +285,6 @@ class RheobaseTestP(VmTest):
                 #other_spikes = get_diff(model.get_membrane_potential())
                 dtc.previous = ampl
                 n_spikes = model.get_spike_count()
-                #print(n_spikes,other_spikes, 'n_spikes versus other spikes ')
 
                 if n_spikes == 1:# or other_spikes == 1:
                     dtc.lookup[float(ampl)] = 1
@@ -303,7 +301,6 @@ class RheobaseTestP(VmTest):
             if dtc.initiated == True:
 
                 dtc = check_current(dtc)
-                print(dtc.boolean, 'strange')
                 if dtc.boolean:
 
                     return dtc
@@ -350,9 +347,11 @@ class RheobaseTestP(VmTest):
                 dtc = check_fix_range(dtc)
                 cnt += 1
                 sub, supra = get_sub_supra(dtc.lookup)
-                print("Try %d: SubMax = %s; SupraMin = %s" % \
-                (cnt, sub.max().round(1) if len(sub) else None,
-                 supra.min().round(1) if len(supra) else None))
+                self.verbose = 0
+                if self.verbose:
+                    print("Try %d: SubMax = %s; SupraMin = %s" % \
+                    (cnt, sub.max().round(1) if len(sub) else None,
+                     supra.min().round(1) if len(supra) else None))
             return dtc
 
         dtc = DataTC()
