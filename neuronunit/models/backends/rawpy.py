@@ -15,17 +15,34 @@ def get_improved_vm(params_arg):
     This function can't get too pythonic (functional), it needs to be a simple loop for
     numba/jit to understand it.
     '''
-    a = params_arg['a']
-    b = params_arg['b']
-    C = params_arg['C']
-    c = params_arg['c']
-    vr = params_arg['vr']
-    vt = params_arg['vt']
-    vPeak = params_arg['vPeak']
-    k = params_arg['k']
-    d = params_arg['d']
-    dt = params_arg['dt']
-    Iext = params_arg['Iext']
+
+    default = {}
+    default['C'] = 100
+    default['k'] = 0.7
+    default['vr'] = -60
+    default['vt'] = -40
+    default['vPeak'] = 35
+    default['a'] = 0.03
+    default['b'] = -2
+    default['c'] = -50
+    default['d'] = 100
+
+    # if the keys into the dict are extensive
+    # potentially overwrite the whole dictionary.
+    for k,v in params_arg.items():
+        default[k] = v
+
+    a = default['a']
+    b = default['b']
+    C = default['C']
+    c = default['c']
+    vr = default['vr']
+    vt = default['vt']
+    vPeak = default['vPeak']
+    k = default['k']
+    d = default['d']
+    dt = default['dt']
+    Iext = default['Iext']
 
     N = len(Iext)
     v = np.zeros(N)
@@ -40,7 +57,6 @@ def get_improved_vm(params_arg):
             v[m] = vPeak;# % padding the spike amplitude
             v[m+1] = c;# % membrane voltage reset
             u[m+1] = u[m+1] + d;# % recovery variable update
-    #print(np.mean(v), 'from internal!')
     v = np.divide(v, 1000.0)
     vm = AnalogSignal(v,
                  units = mV,
@@ -144,7 +160,7 @@ class RAWBackend(Backend):
         self.temp_attrs = temp_attrs
 
         self.vM  = get_improved_vm(temp_attrs)
-        
+
 
         return self.vM
 
