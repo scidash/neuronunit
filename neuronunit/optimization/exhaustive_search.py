@@ -19,7 +19,7 @@ from copy import deepcopy
 import math
 
 import dask.bag as db
-from sklearn.grid_search import ParameterGrid
+from sklearn.model_selection import ParameterGrid
 import scipy
 
 import pickle

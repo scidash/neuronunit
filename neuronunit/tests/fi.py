@@ -89,7 +89,7 @@ class RheobaseTest(VmTest):
                 current.update(uc)
                 model.inject_square_current(current)
                 n_spikes = model.get_spike_count()
-                if self.verbose:
+                if self.verbose >= 2:
                     print("Injected %s current and got %d spikes" % \
                             (ampl,n_spikes))
                 lookup[float(ampl)] = n_spikes
@@ -218,7 +218,6 @@ class RheobaseTestP(VmTest):
                     dtc.rheobase = float(supra.min())
                     dtc.boolean = True
                     return dtc
-                print(cpucount)
                 steps = np.linspace(sub.max(),supra.min(),cpucount+1)*pq.pA
                 steps = steps[1:-1]*pq.pA
             elif len(sub):
@@ -335,9 +334,10 @@ class RheobaseTestP(VmTest):
                 dtc = check_fix_range(dtc)
                 cnt += 1
                 sub, supra = get_sub_supra(dtc.lookup)
-                print("Try %d: SubMax = %s; SupraMin = %s" % \
-                (cnt, sub.max().round(1) if len(sub) else None,
-                 supra.min().round(1) if len(supra) else None))
+                if self.verbose >= 2:
+                    print("Try %d: SubMax = %s; SupraMin = %s" % \
+                    (cnt, sub.max().round(1) if len(sub) else None,
+                     supra.min().round(1) if len(supra) else None))
             return dtc
 
         dtc = DataTC()
