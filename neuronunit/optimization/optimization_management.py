@@ -146,14 +146,14 @@ def dtc_to_rheo(dtc):
     dtc.rheobase = rtest.generate_prediction(model)
     obs = rtest.observation
     score = rtest.compute_score(obs,dtc.rheobase)
-    dtc.scores[str(rtest)] = 1- score.sort_key
+    dtc.scores[str(rtest)] = 1.0 - score.norm_score
     return dtc
 
 
 #@jit
 def score_proc(dtc,t,score):
     dtc.score[str(t)] = {}
-    dtc.score[str(t)]['value'] = copy.copy(score.sort_key)
+    dtc.score[str(t)]['value'] = copy.copy(score.norm_score)
     if hasattr(score,'prediction'):
         if type(score.prediction) is not type(None):
             dtc.score[str(t)][str('prediction')] = score.prediction
@@ -221,8 +221,8 @@ def nunit_evaluation(dtc):
         t.params = dtc.vtest[k]
         score,_ = hack_judge((t,dtc))
         #score = t.judge(model,stop_on_error = False, deep_error = True)
-        if type(score.sort_key) is not type(None):
-            dtc.scores[str(t)] = 1 - score.sort_key
+        if type(score.norm_score) is not type(None):
+            dtc.scores[str(t)] = 1 - score.norm_score
         else:
             dtc.scores[str(t)] = 1.0
         dtc = score_proc(dtc,t,copy.copy(score))
@@ -301,7 +301,7 @@ def update_dtc_pop(pop, td, backend = None):
         # suggests not to change the variable name to reflect this.
         dtcpop = [ transform(xargs) ]
         assert dtcpop[0].backend is 'RAW'
-    #print(dtcpop)
+
     return dtcpop
 
 #@jit
@@ -315,7 +315,7 @@ def run_ga(model_params, max_ngen, test, free_params = None, hc = None):
         ss[k] = model_params[k]
 
     MU = 2**len(list(free_params))
-    MU = int(np.floor(MU/2))
+    #MU = int(np.floor(MU/2))
     #MU = 20
     max_ngen = int(np.floor(max_ngen))
     selection = str('selNSGA')
@@ -349,6 +349,23 @@ def rheobase_old(pop, td, rt):
 
 #@jit
 def impute_check(pop,dtcpop,td,tests):
+    '''
+    some times genes explored will not return
+    usable simulation parameters
+    genes who have no rheobase score
+    will be discarded.
+    
+    BluePyOpt needs a stable 
+    gene number however
+    
+    This method finds how many genes have 
+    been discarded, and tries to build new genes
+    from mean gene values.
+
+    Ultimately this will cause regression towards the mean 
+    in gene parameter values, but this should not happen too often, 
+    so the effect should be tolerable.
+    '''
     delta = len(pop) - len(dtcpop)
     # at this point we want to take means of all the genes that are not deleted.
 
@@ -380,7 +397,7 @@ def impute_check(pop,dtcpop,td,tests):
         dtc.backend = str('RAW')
         dtc = dtc_to_rheo(dtc)
         ind.rheobase = dtc.rheobase
-        #print(dtc.attrs,dtc.rheobase,'still failing')
+
         if type(ind.rheobase) != 1.0:
             #pop.append(ind)
             dtcpop.append(dtc)
@@ -417,7 +434,7 @@ def parallel_route(pop,dtcpop,tests,td):
     dtcpop = list(dtcbag.map(nunit_evaluation).compute())
     #for zipped in zip(dtcpop,repeat(tests)):
     #    junk = nunit_evaluation(zipped)
-    #import pdb; pdb.set_trace()
+
     for i,d in enumerate(dtcpop):
         if not hasattr(pop[i],'dtc'):
             pop[i] = WSListIndividual(pop[i])
@@ -439,7 +456,6 @@ def test_runner(pop,td,tests):
     pop = [ p for p in pop if p.rheobase!=1.0 ]
     after = len(pop)
 
-    print([dtc.rheobase for dtc in dtcpop])
 
     while before>after:
         dtcpop,pop = impute_check(pop,dtcpop,td,tests)
@@ -449,7 +465,7 @@ def test_runner(pop,td,tests):
     pop,dtcpop = parallel_route(pop,dtcpop,tests,td)
     for p,d in zip(pop,dtcpop):
         p.dtc = d
-    print([p.dtc for p in pop])
+
 
     if isinstance(pop, Iterable) and isinstance(dtcpop,Iterable):
 
@@ -464,7 +480,7 @@ def test_runner(pop,td,tests):
         pop,dtcpop = serial_route(pop,td,tests)
         print('serial badness')
 
-    print('tests, completed, now gene computations')
+
     return pop,dtcpop
 
 
@@ -479,7 +495,7 @@ def update_deap_pop(pop, tests, td, backend = None):
     DTCs are then scored by neuronunit, using neuronunit models that act in place.
     '''
     pop = copy.copy(pop)
-    print('not even to test runner getting')
+
     pop, dtcpop = test_runner(pop,td,tests)
     for p,d in zip(pop,dtcpop):
         p.dtc = d
@@ -489,7 +505,7 @@ def update_deap_pop(pop, tests, td, backend = None):
             pop.dtc.scores = {}
             for t in tests:
                 pop.dtc.scores[str(t)] = 1.0
-        print(pop.dtc.get_ss())
+        #print(pop.dtc.get_ss())
     else:
         pass
     return pop

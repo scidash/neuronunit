@@ -8,35 +8,15 @@ from .base import *
 import quantities as qt
 from quantities import mV, ms, s
 import matplotlib.pyplot as plt
+
 @jit
-def get_improved_vm():
+def get_improved_vm(C=200, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=35, vr=-60, vt=-50, dt=0.0025, Iext=[]):
     '''
     Apply izhikevich equation as model
     This function can't get too pythonic (functional), it needs to be a simple loop for
     numba/jit to understand it.
     '''
 
-     # ('TC',        (200, 1.6,  -60, -50, 35, 0.01,  15, -60,   10,   6)),
-     #              C    k     vr  vt vpeak   a      b   c    d  celltype
-
-
-
-    # if the keys into the dict are extensive
-    # potentially overwrite the whole dictionary.
-    for k,v in params_arg.items():
-        default[k] = v
-
-    a = default['a']
-    b = default['b']
-    C = default['C']
-    c = default['c']
-    vr = default['vr']
-    vt = default['vt']
-    vPeak = default['vPeak']
-    k = default['k']
-    d = default['d']
-    dt = default['dt']
-    Iext = default['Iext']
 
     N = len(Iext)
     v = np.zeros(N)
@@ -103,14 +83,14 @@ class RAWBackend(Backend):
         And must destroy the hoc vectors that comprise it.
         """
         #dt = self.vM.times[1] - self.vM.times[0]
-        print('got here, what is wrong input impedance test')
+
         return self.vM
         #return AnalogSignal(,
         #                    units = mV,
         #                    sampling_period =dt * ms)
 
     def set_attrs(self, **attrs):
-        #self.model.attrs = {}
+
         self.model.attrs.update(attrs)
 
 
@@ -122,9 +102,8 @@ class RAWBackend(Backend):
         Currently only single section neuronal models are supported, the neurite section is understood to be simply the soma.
 
         """
-        temp_attrs = copy.copy(self.model.attrs)
-        temp_attrs['current'] = current
-
+        attrs = copy.copy(self.model.attrs)
+        
         if 'injected_square_current' in current.keys():
             c = current['injected_square_current']
         else:
@@ -136,13 +115,10 @@ class RAWBackend(Backend):
         self.set_stop_time(tMax*pq.ms)
         tMax = self.tstop
 
-        temp_attrs['dt'] = 0.025
-        N = int(tMax/temp_attrs['dt'])
+        dt = 0.025
+        N = int(tMax/dt)
         Iext = None
         Iext = np.zeros(N)
-
-        #stim_time = np.linspace(0.0,stop_time,nsamples-1)
-        #(stim_time[1]-stim_time[0])
         delay_ind = int((delay/tMax)*N)
         duration_ind = int((duration/tMax)*N)
 
@@ -150,17 +126,14 @@ class RAWBackend(Backend):
         Iext[delay_ind:delay_ind+duration_ind-1] = amplitude
         #print(np.sum(Iext),amplitude*len(Iext[delay_ind:delay_ind+duration_ind-1]))
         Iext[delay_ind+duration_ind::] = 0.0
-        temp_attrs['Iext'] = Iext
-        self.temp_attrs = temp_attrs
-
-        self.vM  = get_improved_vm(temp_attrs)
-
+        
+        attrs['Iext'] = Iext
+        attrs['dt'] = dt
+        self.vM  = get_improved_vm(**attrs)
 
         return self.vM
 
-
     def _local_run(self):
-
         results = {}
         results['vm'] = self.vM
         results['t'] = self.vM.times
