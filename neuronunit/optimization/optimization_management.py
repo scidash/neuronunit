@@ -315,6 +315,8 @@ def run_ga(model_params, max_ngen, test, free_params = None, hc = None):
         ss[k] = model_params[k]
 
     MU = 2**len(list(free_params))
+    MU = int(np.floor(MU/2))
+    #MU = 20
     max_ngen = int(np.floor(max_ngen))
     selection = str('selNSGA')
     DO = SciUnitOptimization(offspring_size = MU, error_criterion = test, selection = selection, boundary_dict = ss, elite_size = 2)
