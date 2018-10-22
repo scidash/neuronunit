@@ -35,6 +35,11 @@ npartitions = multiprocessing.cpu_count()
 from collections import Iterable
 from numba import jit
 from sklearn.model_selection import ParameterGrid
+
+
+import logging
+logger = logging.getLogger('__main__')
+
 # DEAP mutation strategies:
 # https://deap.readthedocs.io/en/master/api/tools.html#deap.tools.mutESLogNormal
 class WSListIndividual(list):
@@ -138,6 +143,7 @@ def hack_judge(test_and_models):
 
 def dtc_to_rheo(dtc):
     rtest = dtc.rtest
+    #print(rtest, 'gets here')
     dtc.scores = {}
     dtc.score = {}
     LEMS_MODEL_PATH = path_params['model_path']
@@ -146,14 +152,20 @@ def dtc_to_rheo(dtc):
     dtc.rheobase = rtest.generate_prediction(model)
     obs = rtest.observation
     score = rtest.compute_score(obs,dtc.rheobase)
-    dtc.scores[str(rtest)] = 1.0 - score.norm_score
+    #try:
+    #    assert hasattr(score,'norm_score')
+    #    dtc.scores[str(dtc.rtest)] = 1.0 - score.norm_score
+    #except:
+    #print(dtc,'gets here b')
+    dtc.scores[str(dtc.rtest)] = 1.0 - score.sort_key
+
     return dtc
 
 
 #@jit
 def score_proc(dtc,t,score):
     dtc.score[str(t)] = {}
-    dtc.score[str(t)]['value'] = copy.copy(score.norm_score)
+    dtc.score[str(t)]['value'] = copy.copy(score.sort_key)
     if hasattr(score,'prediction'):
         if type(score.prediction) is not type(None):
             dtc.score[str(t)][str('prediction')] = score.prediction
@@ -221,8 +233,12 @@ def nunit_evaluation(dtc):
         t.params = dtc.vtest[k]
         score,_ = hack_judge((t,dtc))
         #score = t.judge(model,stop_on_error = False, deep_error = True)
-        if type(score.norm_score) is not type(None):
-            dtc.scores[str(t)] = 1 - score.norm_score
+        if type(score) is not type(None):
+            #try:
+            #    assert hasattr(score,'norm_score')
+            #    dtc.scores[str(rtest)] = 1.0 - score.norm_score
+            #except:
+            dtc.scores[str(t)] = 1.0 - score.sort_key
         else:
             dtc.scores[str(t)] = 1.0
         dtc = score_proc(dtc,t,copy.copy(score))
@@ -305,20 +321,30 @@ def update_dtc_pop(pop, td, backend = None):
     return dtcpop
 
 #@jit
-def run_ga(model_params, max_ngen, test, free_params = None, hc = None):
+def run_ga(model_params, max_ngen, test, free_params = None, hc = None, NSGA = None):
     # https://stackoverflow.com/questions/744373/circular-or-cyclic-imports-in-python
     # These imports need to be defined with local scope to avoid circular importing problems
     # Try to fix local imports later.
+
+
     from bluepyopt.deapext.optimisations import SciUnitOptimization
     ss = {}
     for k in free_params:
         ss[k] = model_params[k]
 
     MU = 2**len(list(free_params))
+
+    # make sure that the gene population size is divisible by 4.
+    if NSGA == True:
+        # force NSGA to 
+        selection = str('selNSGA')
+        if MU % 4 !=0:
+            MU = MU + int(MU%4)
+            assert MU % 4 == 0
     #MU = int(np.floor(MU/2))
     #MU = 20
     max_ngen = int(np.floor(max_ngen))
-    selection = str('selNSGA')
+
     DO = SciUnitOptimization(offspring_size = MU, error_criterion = test, selection = selection, boundary_dict = ss, elite_size = 2)
 
     ga_out = DO.run(offspring_size = MU, max_ngen = max_ngen)
@@ -338,6 +364,8 @@ def rheobase_old(pop, td, rt):
     for d in dtcpop:
         d.rtest = rt
         d.backend = str('RAW')
+        print(d.rtest, 'gets here')
+    #import pdb; pdb.set_trace()
 
     dtcpop = list(map(dtc_to_rheo,dtcpop))
     for ind,d in zip(pop,dtcpop):
@@ -354,16 +382,16 @@ def impute_check(pop,dtcpop,td,tests):
     usable simulation parameters
     genes who have no rheobase score
     will be discarded.
-    
-    BluePyOpt needs a stable 
+
+    BluePyOpt needs a stable
     gene number however
-    
-    This method finds how many genes have 
+
+    This method finds how many genes have
     been discarded, and tries to build new genes
     from mean gene values.
 
-    Ultimately this will cause regression towards the mean 
-    in gene parameter values, but this should not happen too often, 
+    Ultimately this will cause regression towards the mean
+    in gene parameter values, but this should not happen too often,
     so the effect should be tolerable.
     '''
     delta = len(pop) - len(dtcpop)
@@ -392,8 +420,9 @@ def impute_check(pop,dtcpop,td,tests):
             dtc.attrs[str(td[i])] = j
 
         ## end function transform
-
         dtc.rtest = tests[0]
+
+        assert type(dtc.rtest) is not type(None)
         dtc.backend = str('RAW')
         dtc = dtc_to_rheo(dtc)
         ind.rheobase = dtc.rheobase
@@ -408,6 +437,10 @@ def impute_check(pop,dtcpop,td,tests):
 
 
 def serial_route(pop,td,tests):
+    '''
+    parallel list mapping only works with an iterable collection.
+    Serial route is intended for single items.
+    '''
     #pop, dtc = rheobase_old(copy.copy(pop), td, tests[0])
     if type(dtc.rheobase) is type(None):
         print('Error Score bad model')
@@ -422,8 +455,7 @@ def serial_route(pop,td,tests):
     return pop, dtc
 
 def parallel_route(pop,dtcpop,tests,td):
-    #print([type(d) for d in dtcpop])
-    #print([d for d in dtcpop])
+
     for d in dtcpop:
         d.tests = tests
 
