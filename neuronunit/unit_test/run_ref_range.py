@@ -11,11 +11,8 @@ import pickle
 from neuronunit.tests import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
-from neuronunit.optimization.exhaustive_search import run_grid, reduce_params, create_grid
-from neuronunit.optimization import model_parameters as modelp
-from neuronunit.optimization import exhaustive_search as es
-from neuronunit.models.NeuroML2 import model_parameters as modelp
-from neuronunit.models.NeuroML2 .model_parameters import path_params
+from neuronunit.optimization.exhaustive_search import run_grid, reduce_params, create_grid, run_simple_grid
+#from neuronunit.optimization import exhaustive_search as es
 
 from neuronunit.optimization.optimization_management import run_ga
 from neuronunit.tests import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
@@ -28,46 +25,27 @@ from numba import jit
 from neuronunit import plottools
 ax = None
 import sys
+import pickle
 
 
 
 from neuronunit.optimization import get_neab
 
-def get_tests():
-    # get neuronunit tests
-    # and select out the tests that are more about waveform shape
-    # and less about electrophysiology of the membrane.
-    # We are more interested in phenomonogical properties.
-    electro_path = str(os.getcwd())+'/pipe_tests.p'
-    assert os.path.isfile(electro_path) == True
-    with open(electro_path,'rb') as f:
-        electro_tests = pickle.load(f)
-
-    electro_tests = get_neab.replace_zero_std(electro_tests)
-    electro_tests = get_neab.substitute_parallel_for_serial(electro_tests)
-    test, observation = electro_tests[0]
-    tests = copy.copy(electro_tests[0][0])
-    tests_ = []
-    tests_ += [tests[0]]
-    tests_ += tests[4:7]
-    return tests_, test, observation
-
-tests_,test, observation = get_tests()
-
 grid_results = {}
 
-def plot_scatter(history,ax,keys):
+def plot_scatter(history,ax,keys,constant):
     pop = [ v for v in history.genealogy_history.values() ]
-    z = np.array([ np.sum(list(p.dtc.scores.values())) for p in pop ])
+    z = np.array([ p.dtc.get_ss() for p in pop ])
     x = np.array([ p.dtc.attrs[str(keys[0])] for p in pop ])
-    if len(keys) != 1:
-        y = np.array([ p.dtc.attrs[str(keys[1])] for p in pop ])
-        ax.cla()
-        ax.set_title(' {0} vs {1} '.format(keys[0],keys[1]))
-        ax.scatter(x, y, c=y, s=125)#, cmap='gray')
+    y = np.array([ p.dtc.attrs[str(keys[1])] for p in pop ])
+    ax.cla()
+    ax.set_title('held constant: '+str(constant))
+    ax.scatter(x, y, c=y, s=125)#, cmap='gray')
+    ax.set_xlabel('free: '+str(keys[0]))
+    ax.set_ylabel('free: '+str(keys[1]))
     return ax
 
-def plot_surface(gr,ax,keys,imshow=False):
+def plot_surface(gr,ax,keys,constant,imshow=True):
     # from https://github.com/russelljjarvis/neuronunit/blob/dev/neuronunit/unit_test/progress_report_4thJuly.ipynb
     # Not rendered https://github.com/russelljjarvis/neuronunit/blob/dev/neuronunit/unit_test/progress_report_.ipynb
     gr = [ g for g in gr if type(g.dtc) is not type(None) ]
@@ -83,33 +61,51 @@ def plot_surface(gr,ax,keys,imshow=False):
 
     xx = np.array([ p.dtc.attrs[str(keys[0])] for p in gr ])
     yy = np.array([ p.dtc.attrs[str(keys[1])] for p in gr ])
-    zz = np.array([ np.sum(list(p.dtc.scores.values())) for p in gr ])
+    zz = np.array([ p.dtc.get_ss() for p in gr ])
     dim = len(xx)
     N = int(np.sqrt(len(xx)))
     X = xx.reshape((N, N))
     Y = yy.reshape((N, N))
     Z = zz.reshape((N, N))
-    if imshow==False:
-        ax.pcolormesh(X, Y, Z, edgecolors='black')
+    if imshow==True:
+        img = ax.pcolormesh(X, Y, Z, edgecolors='black')
+        #ax.colorbar()
+
     else:
-        import seaborn as sns; sns.set()
-        ax = sns.heatmap(Z)
+
+
+        import seaborn as sns;
+        sns.set()
+
+        current_palette = sns.color_palette()
+        sns.palplot(current_palette)
+
+        #df = pd.DataFrame(Z, columns=xx)
+
+        img = sns.heatmap(Z)#,cm=current_palette)
+        #ax.colorbar()
 
     ax.set_title(' {0} vs {1} '.format(keys[0],keys[1]))
-    return ax
+    return ax, img
 
-def plot_line_ss(gr,ax,key,hof):
+def plot_line_ss(gr,ax,free,hof,constant):
     ax.cla()
-    ax.set_title(' {0} vs  score'.format(key[0]))
-    z = np.array([ np.sum(list(p.dtc.scores.values())) for p in gr ])
-    x = np.array([ p.dtc.attrs[key[0]] for p in gr ])
-    y = hof[0].dtc.attrs[key[0]]
+
+    ax.set_title(' {0} vs  score'.format(free))
+    z = np.array([ p.dtc.get_ss() for p in gr ])
+    print(str(free))
+    print(free)
+    x = np.array([ p.dtc.attrs[str(free)] for p in gr ])
+
+    y = hof[0].dtc.attrs[free]
     i = hof[0].dtc.get_ss()
+    #ax.hold(True)
     ax.scatter(x,z)
     ax.scatter(y,i)
     ax.plot(x,z)
-    ax.set_xlim(np.min(x),np.max(x))
-    ax.set_ylim(np.min(z),np.max(z))
+
+    ax.set_xlabel(str(key[0]))
+    ax.set_ylabel(str('Sum of Errors'))
     return ax
 
 def plot_agreement(ax,gr,key,hof):
@@ -136,10 +132,9 @@ def plot_agreement(ax,gr,key,hof):
         ax.plot( [ v['observation'] for v in list(ss.values()) ], [ i for i in range(0,len(ss.values())) ] )
     return ax
 
-from neuronunit.plottools import plot_surface as ps
 from collections import OrderedDict
 
-def grids(hof,tests,params,us,history):
+def grids(hof,tests,ranges,us,history):
     '''
     Obtain using the best candidate Gene (HOF, NU-tests, and expanded parameter ranges found via
     exploring extreme edge cases of parameters
@@ -154,28 +149,33 @@ def grids(hof,tests,params,us,history):
     parameter ranges. `k`-dim-3 is the the grid that results from varying those parameters
     (the grid results can either be square (if len(free_param)==2), or a line (if len(free_param==1)).
     '''
-
+    #scores = hof[0].dtc.scores = OrderedDict(hof[0].dtc.scores)
+    hof[0].dtc.attrs = OrderedDict(hof[0].dtc.attrs)
+    attrs = hof[0].dtc.attrs
     dim = len(hof[0].dtc.attrs.keys())
-    flat_iter = iter([(i,freei,j,freej) for i,freei in enumerate(hof[0].dtc.attrs.keys()) for j,freej in enumerate(hof[0].dtc.attrs.keys())])
-    #matrix = [[[0 for z in range(dim)] for x in range(dim)] for y in range(dim)]
+    best_param_keys = hof[0].dtc.attrs.keys()
+    flat_iter = iter([(i,freei,j,freej) for i,freei in enumerate(best_param_keys) for j,freej in enumerate(best_param_keys)])
+
     plt.clf()
     fig0,ax0 = plt.subplots(dim,dim,figsize=(10,10))
-    fig1,ax1 = plt.subplots(dim,dim,figsize=(10,10))
+    #fig1,ax1 = plt.subplots(dim,dim,figsize=(10,10))
 
     cnt = 0
     temp = []
     loc_key = {}
 
-    #free_param =
-    for k,v in hof[0].dtc.attrs.items():
-        loc_key[k] = hof[0].dtc.attrs[k]
-        params[k] = ( loc_key[k]- 3*np.abs(loc_key[k]), loc_key[k]+2*np.abs(loc_key[k]) )
+    for k,v in attrs.items():
+        loc_key[k] = attrs[k]
+        ranges[k] = ( loc_key[k]- 1*np.abs(ranges[k]), loc_key[k]+1*np.abs(ranges[k]) )
 
     for i,freei,j,freej in flat_iter:
-        free_param = [freei,freej]
+        if i == j:
+            free_param = freei
+        else:
+            free_param = [freei,freej]
         free_param_set = set(free_param) # construct a small-set out of the indexed keys 2. If both keys are
         # are the same, this set will only contain one index
-        bs = set(hof[0].dtc.attrs.keys()) # construct a full set out of all of the keys available, including ones not indexed here.
+        bs = set(best_param_keys) # construct a full set out of all of the keys available, including ones not indexed here.
         diff = bs.difference(free_param_set) # diff is simply the key that is not indexed.
         # hc is the dictionary of parameters to be held constant
         # if the plot is 1D then two parameters should be held constant.
@@ -184,39 +184,43 @@ def grids(hof,tests,params,us,history):
             hc[d] = hof[0].dtc.attrs[d]
 
         cpparams = {}
+
+
+        cpparams['freei'] = (np.min(ranges[freei]), np.max(ranges[freei]))
+
+                # make a psuedo test, that still depends on input Parametersself.
+        # each test evaluates a normal PDP.
+        fp = list(copy.copy(free_param))
+                   #plot_line_ss(gr,ax,key,hof,free,constant)
         if i == j:
-            assert len(free_param) == len(hc) - 1
-            assert len(hc) == len(free_param) + 1
-            # zoom in on optima
+            gr = run_simple_grid(10, tests, ranges, freei, hold_constant = hc)
 
+            ax0[i,j] = plot_line_ss(gr,ax0[i,j],freei,hof,hc)
 
-            cpparams['freei'] = (np.min(params[freei]), np.max(params[freei]))
-
-            gr = run_grid(10,tests,provided_keys = freei, hold_constant = hc,mp_in = params)
-            # make a psuedo test, that still depends on input Parametersself.
-            # each test evaluates a normal PDP.
-            fp = list(copy.copy(free_param))
-            #ax0[i,j] = plot_line_ss(gr,ax[i,j],fp,hof)
-            ax1[i,j] = plot_line_ss(gr,ax[i,j],fp,hof)
         if i >j:
-            assert len(free_param) == len(hc) + 1
-            assert len(hc) == len(free_param) - 1
-            cpparams['freei'] = (np.min(params[freei]), np.max(params[freei]))
-            cpparams['freej'] = (np.min(params[freej]), np.max(params[freej]))
-
-            gr = run_grid(10,tests,provided_keys = list((freei,freej)), hold_constant = hc, mp_in = params)
+            #assert len(free_param) == len(hc) + 1
+            #assert len(hc) == len(free_param) - 1
+            cpparams['freei'] = (np.min(ranges[freei]), np.max(ranges[freei]))
+            cpparams['freej'] = (np.min(ranges[freej]), np.max(ranges[freej]))
+            free_params = [freei, freej]
+            gr = run_simple_grid(10, tests, ranges, free_params, hold_constant = hc)
+            #gr = run_grid(10,tests,, hold_constant = hc, mp_in = params)
             fp = list(copy.copy(free_param))
-            ax0[i,j] = plot_surface(gr,ax[i,j],fp,imshow=False)
-            ax1[i,j] = plot_surface(gr,ax[i,j],fp,imshow=False)
+            #ax0[i,j],img = plot_surface(gr,ax0[i,j],fp,hc,imshow=True)
+            ax0[i,j],img = plot_surface(gr,ax0[i,j],fp,hc,imshow=True)
+
+            #plt.colorbar(img, ax = ax0[i,j])
+            #ax1[i,j] = plot_surface(gr,ax1[i,j],fp,imshow=False)
 
         if i < j:
             free_param = list(copy.copy(list(free_param)))
-            if len(free_param) == 2:
-                ax0[i,j] = plot_scatter(history,ax[i,j],free_param)
-                ax1[i,j] = ps(fig1,ax[i,j],freei,freej,history)
+            #if len(free_param) == 2:
 
-            cpparams['freei'] = (np.min(params[freei]), np.max(params[freei]))
-            cpparams['freej'] = (np.min(params[freej]), np.max(params[freej]))
+            ax0[i,j] = plot_scatter(history,ax0[i,j],free_param,hc)
+                #ax0[i,j] = ps(fig0,ax1[i,j],freei,freej,history)
+
+            cpparams['freei'] = (np.min(ranges[freei]), np.max(ranges[freei]))
+            cpparams['freej'] = (np.min(ranges[freej]), np.max(ranges[freej]))
             gr = hof
 
         limits_used = (us[str(freei)],us[str(freej)])
@@ -225,9 +229,9 @@ def grids(hof,tests,params,us,history):
 
         # To Pandas:
         # https://stackoverflow.com/questions/28056171/how-to-build-and-fill-pandas-dataframe-from-for-loop#28058264
-        temp.append({'i':i,'j':j,'free_param':free_param,'hold_constant':hc,'param_boundaries':cpparams,'scores':scores,'params':params_,'ga_used':limits_used})
+        temp.append({'i':i,'j':j,'free_param':free_param,'hold_constant':hc,'param_boundaries':cpparams,'scores':scores,'params':params_,'ga_used':limits_used,'grid':gr})
         #print(temp)
-        #intermediate = pd.DataFrame(temp)
+        #intermediate = pd.DataFrame(temp)blah
         with open('intermediate.p','wb') as f:
             pickle.dump(temp,f)
 
@@ -236,44 +240,82 @@ def grids(hof,tests,params,us,history):
     return temp
 
 
+# http://www.physics.usyd.edu.au/teach_res/mp/mscripts/
+# ns_izh002.m
+import collections
+from collections import OrderedDict
+
+# Fast spiking cannot be reproduced as it requires modifications to the standard Izhi equation,
+# which are expressed in this mod file.
+# https://github.com/OpenSourceBrain/IzhikevichModel/blob/master/NEURON/izhi2007b.mod
+
+reduced2007 = collections.OrderedDict([
+  #              C    k     vr  vt vpeak   a      b   c    d  celltype
+  ('RS',        (100, 0.7,  -60, -40, 35, 0.03,   -2, -50,  100,  1)),
+  ('IB',        (150, 1.2,  -75, -45, 50, 0.01,   5, -56,  130,   2)),
+  ('LTS',       (100, 1.0,  -56, -42, 40, 0.03,   8, -53,   20,   4)),
+  ('TC',        (200, 1.6,  -60, -50, 35, 0.01,  15, -60,   10,   6)),
+  ('TC_burst',  (200, 1.6,  -60, -50, 35, 0.01,  15, -60,   10,   6)),
+  ('RTN',       (40,  0.25, -65, -45,  0, 0.015, 10, -55,   50,   7)),
+  ('RTN_burst', (40,  0.25, -65, -45,  0, 0.015, 10, -55,   50,   7))])
+
+import numpy as np
+reduced_dict = OrderedDict([(k,[]) for k in ['C','k','vr','vt','vPeak','a','b','c','d']])
+
+#OrderedDict
+for i,k in enumerate(reduced_dict.keys()):
+    for v in reduced2007.values():
+        reduced_dict[k].append(v[i])
+
+explore_param = {k:(np.min(v),np.max(v)) for k,v in reduced_dict.items()}
+
 opt_keys = [str('vr'),str('a'),str('b')]
 nparams = len(opt_keys)
 
+
+##
+# find an optima copy and paste reverse search here.
+##
+
+#IB = mparams[param_dict['IB']]
+RS = {}
+IB = {}
+TC = {}
+CH = {}
+RTN_burst = {}
+cells = OrderedDict([(k,[]) for k in ['RS','IB','CH','LTS','FS','TC','TC_burst','RTN','RTN_busrt']])
+reduced_cells = OrderedDict([(k,[]) for k in ['RS','IB','LTS','TC','TC_burst']])
+
+for index,key in enumerate(reduced_cells.keys()):
+    reduced_cells[key] = {}
+    for k,v in reduced_dict.items():
+        reduced_cells[key][k] = v[index]
+
+print(reduced_cells)
+cells = reduced_cells
+from neuronunit.optimization import optimization_management as om
+free_params = ['a','b','vr','k'] # this can only be odd numbers.
+#2**3
+hc = {}
+for k,v in cells['TC'].items():
+    if k not in free_params:
+        hc[k] = v
+#print(hc)
+TC_tests = pickle.load(open('thalamo_cortical_tests.p','rb'))
+                #run_ga(model_params, max_ngen, test, free_params = None, hc = None)
+
+#ga_out, DO = om.run_ga(explore_param,10,TC_tests,free_params=free_params,hc = hc, NSGA = False, MU = 10)
 try:
-    assert 1==2
-    with open('ranges.p','rb') as f:
-        [fc,mp] = pickle.load(f)
-
-except:
-    # algorithmically find the the edges of parameter ranges, via a course grained
-    # sampling of extreme parameter values
-    # to find solvable instances of Izhi-model, (models with a rheobase value).
-    import explore_ranges
-    fc, mp = explore_ranges.pre_run(tests_,opt_keys)
-    with open('ranges.p','wb') as f:
-        pickle.dump([fc,mp],f)
-    mp['b'] = [ -10, 500.0 ]
-    mp['vr'] = [ -100.0, -40.0 ]
-    mp['a'] = [-10, 2]
-
-
-
-# get a genetic algorithm that operates on this new parameter range.
-try:
-    assert 1==2
-    with open('package.p','rb') as f:
-        package = pickle.load(f)
-
+    #assert 1==2
+    ga_out_nsga = pickle.load(open('contents.p','rb'))
 except:
 
-    package, DO = run_ga(mp,12,tests_,provided_keys = opt_keys)
-    with open('package.p','wb') as f:
-        pickle.dump(package,f)
+    ga_out_nsga, _ = om.run_ga(explore_param,25,TC_tests,free_params=free_params,hc = hc, NSGA = True)
+    pickle.dump(ga_out_nsga, open('contents.p','wb'))
 
-hof = package['hof']
-history = package['history']
-# import pdb
-# pdb.set_trace()
+hof = ga_out_nsga['hof']
+history = ga_out_nsga['history']
+
 
 attr_keys = list(hof[0].dtc.attrs.keys())
 us = {} # GA utilized_space
@@ -282,15 +324,126 @@ for key in attr_keys:
     us[key] = ( np.min(temp), np.max(temp))
 
 
-try:
-    assert 1==2
+
+
+if 1==2:
     with open('surfaces.p','rb') as f:
         temp = pickle.load(f)
+    from neuronunit.plottools import plot_surface as ps
+    #get_justas_plot(history)
 
-except:
+    plt.clf()
+    dim = len(hof[0].dtc.attrs.keys())
+    fig0,ax0 = plt.subplots(dim,dim,figsize=(10,10))
+    list_axis = []
+    for t in temp:
+        fp = t['free_param']
+        i = t['i']
+        j = t['j']
+        scores = t['scores']
+        params = t['params']
+        gr = t['grid']
+        hc = t['hold_constant']
+        #print(t.keys())
+        if i==j:
+            #ax0[i,j] = plot_surface(gr,ax0[i,j],fp,imshow=False)
+            #ax0[i,j] = plot_line_ss(gr,ax0[i,j],fp,hof)
+            ax0[i,j] = plot_line_ss(gr,ax0[i,j],fp,hof,hc)
 
-    temp = grids(hof,tests_,mp,us,history)
+        if i < j:
+            #ax0[i,j] ,plot_axis = ps(fig0,ax0[i,j],fp[0],fp[1],history)
+            ax0[i,j] = plot_scatter(history,ax0[i,j],fp,hc)
+
+        if i > j:
+
+            ax0[i,j],img = plot_surface(gr,ax0[i,j],fp,hc,imshow=True)
+            list_axis.append(ax0[i,j])
+
+            #plt.colorbar(img)#,ax = ax0[i,j])
+
+    plt.savefig(str('cross_section_and_surfaces_new.png'))
+
+else:
+
+    temp = grids(hof,TC_tests,explore_param,us,history)
     with open('surfaces.p','wb') as f:
         pickle.dump(temp,f)
+
+
+def get_justas_plot(history):
+
+    # try:
+    import plotly.plotly as py
+    from plotly.offline import download_plotlyjs, init_notebook_mode, plot#, iplot
+    import plotly.graph_objs as go
+    import cufflinks as cf
+    cf.go_offline()
+    gr = [ v for v in history.genealogy_history.values() ]
+    gr = [ g for g in gr if type(g.dtc) is not type(None) ]
+    gr = [ g for g in gr if type(g.dtc.scores) is not type(None) ]
+    keys = list(gr[0].dtc.attrs.keys())
+    xx = np.array([ p.dtc.attrs[str(keys[0])] for p in gr ])
+    yy = np.array([ p.dtc.attrs[str(keys[1])] for p in gr ])
+    zz = np.array([ p.dtc.attrs[str(keys[2])] for p in gr ])
+    ee = np.array([ np.sum(list(p.dtc.scores.values())) for p in gr ])
+    #pdb.set_trace()
+    # z_data = np.array((xx,yy,zz,ee))
+    list_of_dicts = []
+    for x,y,z,e in zip(list(xx),list(yy),list(zz),list(ee)):
+        list_of_dicts.append({ keys[0]:x,keys[1]:y,keys[2]:z,str('error'):e})
+
+    z_data = pd.DataFrame(list_of_dicts)
+    data = [
+            go.Surface(
+                        z=z_data.as_matrix()
+                    )
+        ]
+
+
+
+    layout = go.Layout(
+            width=1000,
+            height=1000,
+            autosize=False,
+            title='Sciunit Errors',
+            scene=dict(
+                xaxis=dict(
+                    title=str(keys[0]),
+
+                    #gridcolor='rgb(255, 255, 255)',
+                    #zerolinecolor='rgb(255, 255, 255)',
+                    #showbackground=True,
+                    #backgroundcolor='rgb(230, 230,230)'
+                ),
+                yaxis=dict(
+                    title=str(keys[1]),
+
+                    #gridcolor='rgb(255, 255, 255)',
+                    #zerolinecolor='rgb(255, 255, 255)',
+                    #showbackground=True,
+                    #backgroundcolor='rgb(230, 230,230)'
+                ),
+                zaxis=dict(
+                    title=str(keys[2]),
+
+                    #gridcolor='rgb(255, 255, 255)',
+                    #zerolinecolor='rgb(255, 255, 255)',
+                    #showbackground=True,
+                    #backgroundcolor='rgb(230, 230,230)'
+                ),
+                aspectratio = dict( x=1, y=1, z=0.7 ),
+                aspectmode = 'manual'
+            ),margin=dict(
+                l=65,
+                r=50,
+                b=65,
+                t=90
+            )
+        )
+
+    fig = go.Figure(data=data, layout=layout)#,xTitle=str(keys[0]),yTitle=str(keys[1]),title='SciUnitOptimization')
+    plot(fig, filename='sciunit-score-3d-surface.html')
+
+
 
 sys.exit()
