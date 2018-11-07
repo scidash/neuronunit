@@ -56,8 +56,10 @@ def chunks(l, n):
 
 
 #@jit
-def build_chunk_grid(npoints, free_params, hold_constant=None, mp_in = None):
-    grid_points, maps = create_grid(mp_in, npoints = npoints, free_params = provided_keys)
+def build_chunk_grid(npoints, free_params, hold_constant = None, mp_in = None):
+
+
+    #grid_points, maps = create_grid(mp_in, npoints = npoints, free_params = free_params)
 
     temp = OrderedDict(grid_points[0]).keys()
     tds = list(temp)
@@ -91,17 +93,17 @@ def build_chunk_grid(npoints, free_params, hold_constant=None, mp_in = None):
     return pops_, tds
     '''
 
-@jit
+#@jit
 def sample_points(iter_dict, npoints=3):
     replacement = {}
     for p in range(0,len(iter_dict)):
-        k,v = iter_dict.popitem(last=False)
-        if len(v) == 2:
-            sample_points = list(np.linspace(v[0],v[1],npoints))
-        else:
-            v = np.array(v)
-            sample_points = list(np.linspace(v.max(),v.min(),npoints))
-        replacement[k] = sample_points
+        for k,v in iter_dict.items():#popitem(last=False)
+            if len(v) == 2:
+                sample_points = list(np.linspace(v[0],v[1],npoints))
+            else:
+                v = np.array(v)
+                sample_points = list(np.linspace(v.max(),v.min(),npoints))
+            replacement[k] = sample_points
     return replacement
 '''
 @jit
@@ -192,11 +194,20 @@ def create_a_map(subset):
 
 
     '''
-def create_grid(mp_in=None,npoints=3,free_params=None,ga=None):
-    subset = OrderedDict(free_params)
+def create_grid(mp_in = None, npoints = 3, free_params = None, ga = None):
+    '''
+    check for overlap in parameter space.
+    '''
+    if len(free_params)> 1:
+        subset = OrderedDict(free_params)
+    else:
+        subset = {free_params[0]:None}
+
     if type(mp_in) is not type(None):
         for k,v in mp_in.items():
-            if k in free_params.keys():
+            #if type(free_params) is type({})
+            if k in free_params:
+            #if k in free_params.keys():
                 subset[k] = ( np.min(free_params[k]),np.max(free_params[k]) )
             else:
                 subset[k] = v
@@ -236,18 +247,16 @@ def tfc2i(x, y, z,err):
 
     grid[i,j,k] = err # if using latitude and longitude (for WGS/West)
     return
-@jit
-def add_constant(hold_constant,consumable_,td):
-
-    hc = list(hold_constant.values())
-    for c in consumable_:
-        for i in c:
-            for h in hc:
-                print(type(i),i)
-                i.append(h)
-    for k in hold_constant.keys():
-        td.append(k)
-    return td, hc
+#@jit
+def add_constant(hold_constant,pop):
+    hold_constant = OrderedDict(hold_constant)
+    for p in pop:
+        for k,v in hold_constant.items():
+            p[k] = v
+    #td = OrderedDict(td)
+    #for k in hold_constant.keys():
+    #    td[k] = None
+    return pop#td, hc
 
 
 
@@ -273,13 +282,50 @@ def run_rick_grid(rick_grid, tests,td):
         grid_results.extend(results)
     return grid_results
 
-def run_grid(npoints, tests, provided_keys = None, hold_constant = None, mp_in=None):
-    consumable_ ,td = build_chunk_grid(npoints,provided_keys,mp_in=mp_in)
+def run_simple_grid(npoints, tests, ranges, free_params, hold_constant = None):
+    subset = OrderedDict()
+    for k,v in ranges.items():
+        if k in free_params:
+            subset[k] = ( np.min(ranges[k]),np.max(ranges[k]) )
+    # The function of maps is to map floating point sample spaces onto a  monochromataic matrix indicies.
+    subset = OrderedDict(subset)
+    subset = sample_points(subset, npoints = npoints)
+    grid_points = list(ParameterGrid(subset))
+    td = grid_points[0].keys()
+    if type(hold_constant) is not type(None):
+        grid_points = add_constant(hold_constant,grid_points)
+
+    if len(td) > 1:
+        consumable = [ WSListIndividual(g.values()) for g in grid_points ]
+    else:
+        consumable = [ val for g in grid_points for val in g.values() ]
+    grid_results = []
+    td = list(td)
+    if len(consumable) <= 16:
+        consumable = consumable
+        results = update_deap_pop(consumable, tests, td)
+        if type(results) is not None:
+            grid_results.extend(results)
+
+    if len(consumable) > 16:
+        consumable = chunks(consumable,8)
+        for sub_pop in consumable:
+            sub_pop = sub_pop
+            #sub_pop = [[i] for i in sub_pop ]
+            #sub_pop = WSListIndividual(sub_pop)
+            results = update_deap_pop(sub_pop, tests, td)
+            if type(results) is not None:
+                grid_results.extend(results)
+    return grid_results
+
+def run_grid(npoints, tests, provided_keys = None, hold_constant = None, ranges=None):
+    subset = mp_in[provided_keys]
+
+    consumable_ ,td = build_chunk_grid(npoints,provided_keys)
     cnt = 0
     grid_results = []
     if type(hold_constant) is not type(None):
         td, hc = add_constant(hold_constant,consumable_,td)
-        #assert len(td) == len(provided_keys) + len(hold_constant)
     consumable = iter(consumable_)
     use_cache = None
     s = None
@@ -288,8 +334,6 @@ def run_grid(npoints, tests, provided_keys = None, hold_constant = None, mp_in=N
         results = update_deap_pop(sub_pop, tests, td)
         if type(results) is not None:
             grid_results.extend(results)
-        #if type(hold_constant) is not type(None):
-        #    assert len(grid_results[0]) == len(provided_keys) + len(hold_constant)
 
         if type(use_cache) is not type(None):
             if type(s) is not type(None):
