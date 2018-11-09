@@ -39,7 +39,7 @@ class NeuroMLDBModel:
             t = np.array(data["Times"].decode('UTF-8').split(','),float)
             signal = np.array(data["Variable_Values"].decode('UTF-8').split(','),float)
 
-            # Interpolate to regularly sampled series (API returns irregular)
+            # Interpolate to regularly sampled series (API returns irregularly sampled)
             sig = interp1d(t,signal,fill_value="extrapolate")
             signal = sig(np.arange(min(t),max(t),resolution_ms))
 
@@ -50,16 +50,18 @@ class NeuroMLDBModel:
 
         return self.waveform_signals[waveform_id]
 
-    def get_waveform_by_protocol_and_current(self, protocol_id, amplitude_nA):
+
+
+    def get_waveform_by_current(self, amplitude_nA):
         for w in self.waveforms:
-            if w["Protocol_ID"] == protocol_id and w["Variable_Name"] == "Voltage":
+            if w["Variable_Name"] == "Voltage":
                 wave_amp = self.get_waveform_current_amplitude(w)
                 if amplitude_nA == wave_amp:
                     return self.fetch_waveform_as_AnalogSignal(w["ID"])
 
-        raise Exception("Did not find " + protocol_id + " Voltage waveform with injected " + str(amplitude_nA) +
+        raise Exception("Did not find a Voltage waveform with injected " + str(amplitude_nA) +
                         ". See " + self.api_url + "model?id=" + self.model_id +
-                        " for list of available waveforms.")
+                        " for the list of available model waveforms.")
 
     def get_druckmann2013_standard_current(self):
         currents = []
@@ -80,7 +82,7 @@ class NeuroMLDBModel:
     def get_druckmann2013_input_resistance_currents(self):
         currents = []
 
-        # Find and return negative current injections
+        # Find and return negative square current injections
         for w in self.waveforms:
             if w["Protocol_ID"] == "SQUARE" and w["Variable_Name"] == "Voltage":
                 amp = self.get_waveform_current_amplitude(w)
@@ -100,7 +102,7 @@ class NeuroMLDBStaticModel(StaticModel):
         self.protocol = protocol_to_fetch
 
     def inject_square_current(self, current):
-        self.vm = self.nmldb_model.get_waveform_by_protocol_and_current(self.protocol, current["amplitude"])
+        self.vm = self.nmldb_model.get_waveform_by_current(current["amplitude"])
 
 
 

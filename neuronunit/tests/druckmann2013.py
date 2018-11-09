@@ -6,10 +6,9 @@ AP analysis details (from suplementary info): https://github.com/scidash/neuronu
 Numbers in class names refer to the numbers in the publication table
 """
 
-import quantities as q
-
 import neuronunit.capabilities.spike_functions as sf
 from .base import np, pq, ncap, VmTest, scores
+from scipy.optimize import curve_fit
 
 none_score = {
                 'mean': None,
@@ -17,7 +16,10 @@ none_score = {
                 'n': 0
              }
 
-class Druckman2013AP:
+class Druckmann2013AP:
+    """
+    This is a helper class that computes/finds aspects of APs as defined in Druckmann 2013
+    """
 
     def __init__(self, waveform, threshold_time):
         self.waveform = waveform
@@ -106,26 +108,54 @@ class Druckman2013AP:
 class Druckmann2013Test(VmTest):
     """
     All tests inheriting from this class assume that the subject model:
-     1. Was at steady state before time 0
-     2. Starting at t=0, had a 2s step current injected into soma
+     1. Is at steady state at time 0 (i.e. resume from SS)
+     2. Starting at t=0, will have a 2s step current injected into soma, at least once
     """
     required_capabilities = (ncap.ProducesActionPotentials,)
     score_type = scores.ZScore
 
-    def __init__(self, **params):
+    def __init__(self, current_amplitude, **params):
         super(Druckmann2013Test, self).__init__(**params)
 
         self.params = {
             'injected_square_current': {
                 'delay': 0 * pq.ms,
                 'duration': 2 * pq.s,
-                'amplitude': 0 * pq.pA
+                'amplitude': current_amplitude
             },
             'threshold': -20 * pq.mV,
             'ap_window': 10 * pq.ms,
+            'repetitions': 1,
         }
 
+        # This will be an array that stores DruckmannAPs
         self.APs = None
+
+    def generate_prediction(self, model):
+        results = []
+
+        reps = self.params['repetitions']
+
+        for rep in range(reps):
+            pred = self.generate_repetition_prediction(model)
+            results.append(pred)
+
+        if reps > 1:
+            return self.aggregate_repetitions(results)
+        else:
+            return results[0]
+
+    def generate_repetition_prediction(self, model):
+        raise NotImplementedError()
+
+    def aggregate_repetitions(self, results):
+        values = [rep['mean'] for rep in results]
+
+        return {
+            'mean': np.mean(values),
+            'std': np.sd(values),
+            'n': len(results)
+        }
 
     def current_length(self):
         return self.params['injected_square_current']['duration']
@@ -150,7 +180,7 @@ class Druckmann2013Test(VmTest):
         # Pass in the AP waveforms and the times when they occured
         self.APs = []
         for i in range(waveforms.shape[1]):
-            self.APs.append(Druckman2013AP(waveforms[:,i], times[i]))
+            self.APs.append(Druckmann2013AP(waveforms[:, i], times[i]))
 
         return self.APs
 
@@ -169,6 +199,8 @@ class AP12AmplitudeDropTest(Druckmann2013Test):
     units = pq.mV
 
     def generate_prediction(self, model):
+        model.inject_square_current(self.params['injected_square_current'])
+
         aps = self.get_APs(model)
 
         if len(aps) >= 2:
@@ -197,6 +229,8 @@ class AP1SSAmplitudeChangeTest(Druckmann2013Test):
     units = pq.mV
 
     def generate_prediction(self, model):
+        model.inject_square_current(self.params['injected_square_current'])
+
         current_start = self.params['injected_square_current']['delay']
 
         start_latter_3rd = current_start + self.current_length() * 2.0 / 3.0
@@ -233,6 +267,9 @@ class AP1AmplitudeTest(Druckmann2013Test):
     units = pq.mV
 
     def generate_prediction(self, model, ap_index=0):
+
+        model.inject_square_current(self.params['injected_square_current'])
+
         aps = self.get_APs(model)
 
         if len(aps) > ap_index:
@@ -259,6 +296,9 @@ class AP1WidthHalfHeightTest(Druckmann2013Test):
     units = pq.ms
 
     def generate_prediction(self, model, ap_index=0):
+
+        model.inject_square_current(self.params['injected_square_current'])
+
         aps = self.get_APs(model)
 
         if len(aps) > ap_index:
@@ -285,6 +325,9 @@ class AP1WidthPeakToTroughTest(Druckmann2013Test):
     units = pq.ms
 
     def generate_prediction(self, model, ap_index=0):
+
+        model.inject_square_current(self.params['injected_square_current'])
+
         aps = self.get_APs(model)
 
         if len(aps) > ap_index:
@@ -319,6 +362,9 @@ class AP1RateOfChangePeakToTroughTest(Druckmann2013Test):
     units = pq.mV/pq.ms
 
     def generate_prediction(self, model, ap_index=0):
+
+        model.inject_square_current(self.params['injected_square_current'])
+
         aps = self.get_APs(model)
 
         if len(aps) > ap_index:
@@ -353,6 +399,9 @@ class AP1AHPDepthTest(Druckmann2013Test):
     units = pq.mV
 
     def generate_prediction(self, model, ap_index=0):
+
+        model.inject_square_current(self.params['injected_square_current'])
+
         aps = self.get_APs(model)
 
         if len(aps) > ap_index:
@@ -454,12 +503,17 @@ class AP12AmplitudeChangePercentTest(Druckmann2013Test):
     units = pq.dimensionless
 
     def generate_prediction(self, model):
+
+        model.inject_square_current(self.params['injected_square_current'])
+
         aps = self.get_APs(model)
 
         if len(aps) >= 2:
 
-            amp1 = AP1AmplitudeTest().generate_prediction(model)["mean"]
-            amp2 = AP2AmplitudeTest().generate_prediction(model)["mean"]
+            amp = self.params['injected_square_current']['amplitude']
+
+            amp1 = AP1AmplitudeTest(amp).generate_prediction(model)["mean"]
+            amp2 = AP2AmplitudeTest(amp).generate_prediction(model)["mean"]
 
             change = (amp2-amp1)/amp1 * 100.0;
 
@@ -487,12 +541,17 @@ class AP12HalfWidthChangePercentTest(Druckmann2013Test):
     units = pq.dimensionless
 
     def generate_prediction(self, model):
+
+        model.inject_square_current(self.params['injected_square_current'])
+
         aps = self.get_APs(model)
 
         if len(aps) >= 2:
 
-            width1 = AP1WidthHalfHeightTest().generate_prediction(model)["mean"]
-            width2 = AP2WidthHalfHeightTest().generate_prediction(model)["mean"]
+            amp = self.params['injected_square_current']['amplitude']
+
+            width1 = AP1WidthHalfHeightTest(amp).generate_prediction(model)["mean"]
+            width2 = AP2WidthHalfHeightTest(amp).generate_prediction(model)["mean"]
 
             change = (width2-width1)/width1 * 100.0;
 
@@ -520,12 +579,17 @@ class AP12RateOfChangePeakToTroughPercentChangeTest(Druckmann2013Test):
     units = pq.dimensionless
 
     def generate_prediction(self, model):
+
+        model.inject_square_current(self.params['injected_square_current'])
+
         aps = self.get_APs(model)
 
         if len(aps) >= 2:
 
-            roc1 = AP1RateOfChangePeakToTroughTest().generate_prediction(model)["mean"]
-            roc2 = AP2RateOfChangePeakToTroughTest().generate_prediction(model)["mean"]
+            amp = self.params['injected_square_current']['amplitude']
+
+            roc1 = AP1RateOfChangePeakToTroughTest(amp).generate_prediction(model)["mean"]
+            roc2 = AP2RateOfChangePeakToTroughTest(amp).generate_prediction(model)["mean"]
 
             change = (roc2-roc1)/roc1 * 100.0;
 
@@ -553,12 +617,17 @@ class AP12AHPDepthPercentChangeTest(Druckmann2013Test):
     units = pq.dimensionless
 
     def generate_prediction(self, model):
+
+        model.inject_square_current(self.params['injected_square_current'])
+
         aps = self.get_APs(model)
 
         if len(aps) >= 2:
 
-            ap1 = AP1AHPDepthTest().generate_prediction(model)["mean"]
-            ap2 = AP2AHPDepthTest().generate_prediction(model)["mean"]
+            amp = self.params['injected_square_current']['amplitude']
+
+            ap1 = AP1AHPDepthTest(amp).generate_prediction(model)["mean"]
+            ap2 = AP2AHPDepthTest(amp).generate_prediction(model)["mean"]
 
             change = (ap2-ap1)/ap1 * 100.0;
 
@@ -588,7 +657,7 @@ class InputResistanceTest(Druckmann2013Test):
     units = pq.dimensionless
 
     def __init__(self, injection_currents=np.array([])*pq.nA, **params):
-        super(InputResistanceTest, self).__init__(**params)
+        super(InputResistanceTest, self).__init__(current_amplitude=None, **params)
 
         if not injection_currents or len(injection_currents) < 2:
             raise Exception("Test requires at least two current injections")
@@ -623,8 +692,6 @@ class InputResistanceTest(Druckmann2013Test):
         amps = [i.rescale('A') for i in self.injection_currents]
         volts = [v.rescale('V') for v in voltages]
 
-
-
         # v = ir -> r is slope of v(i) curve
         slope, _ = np.polyfit(amps, volts, 1)
         slope *= pq.Ohm
@@ -645,7 +712,33 @@ class AP1DelayMeanTest(Druckmann2013Test):
     currents.
     """
 
-class AP1DelaySDTest(Druckmann2013Test):
+    name = "First AP delay mean"
+    description = "Mean delay to the first AP"
+
+    units = pq.ms
+
+    def __init__(self, repetitions=7, **params):
+        super(AP1DelayMeanTest, self).__init__(**params)
+
+        self.params['repetitions'] = repetitions
+
+    def generate_repetition_prediction(self, model, ap_index=0):
+
+        model.inject_square_current(self.params['injected_square_current'])
+
+        aps = self.get_APs(model)
+
+        if len(aps) > ap_index:
+            return {
+                'mean': aps[ap_index].get_beginning()[1] - 2000.0*pq.ms,
+                'std': 0,
+                'n': 1
+            }
+
+        else:
+            return none_score
+
+class AP1DelaySDTest(AP1DelayMeanTest):
     """
     19 	SD of delay to AP 1 (ms)
 
@@ -653,14 +746,32 @@ class AP1DelaySDTest(Druckmann2013Test):
     repetitions of step currents.
     """
 
-class AP2DelayMeanTest(Druckmann2013Test):
+    name = "First AP delay standard deviation"
+    description = "Standard deviation of delay to the first AP"
+
+    units = pq.ms
+
+    def aggregate_repetitions(self, results):
+        return {
+            'mean': np.std([rep['mean'] for rep in results]),
+            'std': 0,
+            'n': len(results)
+        }
+
+class AP2DelayMeanTest(AP1DelayMeanTest):
     """
     20 	Average delay to AP 2 (ms)
 
     Same as :any:`AP1DelayMeanTest` but for 2nd AP
     """
 
-class AP2DelaySDTest(Druckmann2013Test):
+    name = "Second AP delay mean"
+    description = "Mean of delay to the second AP"
+
+    def generate_repetition_prediction(self, model, ap_index=0):
+        return super(AP2DelayMeanTest, self).generate_repetition_prediction(self, model, ap_index=1)
+
+class AP2DelaySDTest(AP1DelaySDTest):
     """
     21 	SD of delay to AP 2 (ms)
 
@@ -668,6 +779,12 @@ class AP2DelaySDTest(Druckmann2013Test):
 
     Only stochastic models will have a non-zero value for this test
     """
+
+    name = "Second AP delay standard deviation"
+    description = "Standard deviation of delay to the second AP"
+
+    def generate_repetition_prediction(self, model, ap_index=0):
+        return super(AP2DelaySDTest, self).generate_repetition_prediction(self, model, ap_index=1)
 
 class Burst1ISIMeanTest(Druckmann2013Test):
     """
@@ -679,41 +796,186 @@ class Burst1ISIMeanTest(Druckmann2013Test):
     repetitions.
     """
 
-class Burst1ISISDTest(Druckmann2013Test):
+    name = "Initial burst interval mean"
+    description = "Mean of the initial burst interval"
+
+    units = pq.ms
+
+    def __init__(self, repetitions=7, **params):
+        super(AP1DelayMeanTest, self).__init__(**params)
+
+        self.params['repetitions'] = repetitions
+
+    def generate_repetition_prediction(self, model):
+
+        model.inject_square_current(self.params['injected_square_current'])
+
+        aps = self.get_APs(model)
+
+        if len(aps) >= 3:
+            t1 = aps[0].get_beginning()[1]
+            t2 = aps[1].get_beginning()[1]
+            t3 = aps[2].get_beginning()[1]
+
+            isi1 = t2 - t1
+            isi2 = t3 - t2
+
+            return {
+                'mean': (isi1 + isi2) / 2.0,
+                'std': 0,
+                'n': 1
+            }
+
+        else:
+            return none_score
+
+class Burst1ISISDTest(Burst1ISIMeanTest):
     """
     23 	SD of average initial burst interval (ms)
 
     The standard deviation of the initial burst interval across experimental repetitions.
     """
 
-class AccommodationMeanInitialTest(Druckmann2013Test):
+    name = "Initial burst interval std"
+    description = "StDev of the initial burst interval"
+
+    def aggregate_repetitions(self, results):
+        return {
+            'mean': np.std([rep['mean'] for rep in results]),
+            'std': 0,
+            'n': len(results)
+        }
+
+class InitialAccommodationMeanTest(Druckmann2013Test):
     """
     24 	Average initial accommodation (%)
 
     Initial accommodation is defined as the percent difference between the spiking rate of the
-    first fifth of the step current and the *third* fifth of the step current.
+    *first* fifth of the step current and the *third* fifth of the step current.
     """
 
+    name = "Initial accomodation mean"
+    description = "Mean of the initial accomodation"
 
-class AccommodationMeanSSTest(Druckmann2013Test):
+    units = pq.dimensionless
+
+    def generate_prediction(self, model):
+
+        model.inject_square_current(self.params['injected_square_current'])
+
+        start_1st_5th = current_start
+        end_1st_5th   = current_start + self.current_length() * 1/5.0
+
+        start_3rd_5th = current_start + self.current_length() * 2/5.0
+        end_3rd_5th   = current_start + self.current_length() * 3/5.0
+
+        aps = self.get_APs(model)
+        ap_times = np.array([ap.get_beginning()[1] for ap in aps])
+
+        ap_count15 = np.where((ap_times >= start_1st_5th) & (ap_times <= end_1st_5th))
+        ap_count35 = np.where((ap_times >= start_3rd_5th) & (ap_times <= end_3rd_5th))
+
+        if len(ap_count15) > 0:
+            percent_diff = (ap_count_35 - ap_count15) / ap_count15 * 100.0
+
+            return {
+                'mean': percent_diff,
+                'std': 0,
+                'n': 1
+            }
+
+        else:
+            return none_score
+
+class SSAccommodationMeanTest(Druckmann2013Test):
     """
     25 	Average steady-state accommodation (%)
 
     Steady-state accommodation is defined as the percent difference between the spiking rate
-    of the first fifth of the step current and the last *fifth* of the step current.
+    of the *first* fifth of the step current and the *last* fifth of the step current.
     """
+
+    name = "Steady state accomodation mean"
+    description = "Mean of the steady state accomodation"
+
+    units = pq.dimensionless
+
+    def generate_prediction(self, model):
+
+        model.inject_square_current(self.params['injected_square_current'])
+
+        start_1st_5th = current_start
+        end_1st_5th   = current_start + self.current_length() * 1/5.0
+
+        start_last_5th = current_start + self.current_length() * 4/5.0
+        end_last_5th   = current_start + self.current_length()
+
+        aps = self.get_APs(model)
+        ap_times = np.array([ap.get_beginning()[1] for ap in aps])
+
+        ap_count15 = np.where((ap_times >= start_1st_5th)  & (ap_times <= end_1st_5th))
+        ap_count45 = np.where((ap_times >= start_last_5th) & (ap_times <= end_last_5th))
+
+        if len(ap_count15) > 0:
+            percent_diff = (ap_count_45 - ap_count15) / ap_count15 * 100.0
+
+            return {
+                'mean': percent_diff,
+                'std': 0,
+                'n': 1
+            }
+
+        else:
+            return none_score
 
 
 class AccommodationRateToSSTest(Druckmann2013Test):
     """
     26 	Rate of accommodation to steady-state (1/ms)
 
-    The percent difference between the spiking rate of the first fifth of the step current and
-    final fifth of the step current divided by the time taken to first reach the rate of
+    The percent difference between the spiking rate of the *first* fifth of the step current and
+    *final* fifth of the step current divided by the time taken to first reach the rate of
     steady state accommodation.
+
+    Note: It's not clear what is meant by "time taken to first reach the rate of steady state
+    accommodation". Here, it's computed as smallest t of an ISI which is longer than 0.95 of the
+    mean ISIs in the final fifth of the current step.
     """
 
-class AccommodationMeanAtSSTest(Druckmann2013Test):
+    name = "ISI Accomodation Rate"
+    description = "Rate of ISI Accomodation"
+
+    units = pq.per_ms
+
+    def generate_prediction(self, model):
+
+        model.inject_square_current(self.params['injected_square_current'])
+
+        start_1st_5th = current_start
+        end_1st_5th   = current_start + self.current_length() * 1/5.0
+
+        start_last_5th = current_start + self.current_length() * 4/5.0
+        end_last_5th   = current_start + self.current_length()
+
+        aps = self.get_APs(model)
+        ap_times = np.array([ap.get_beginning()[1] for ap in aps])
+
+        ap_count15 = np.where((ap_times >= start_1st_5th)  & (ap_times <= end_1st_5th))
+        ap_count45 = np.where((ap_times >= start_last_5th) & (ap_times <= end_last_5th))
+
+        if len(ap_count15) > 0 and len(ap_count45) > 0:
+            percent_diff = (ap_count_45 - ap_count15) / ap_count15 * 100.0
+
+            return {
+                'mean': percent_diff,
+                'std': 0,
+                'n': 1
+            }
+
+        else:
+            return none_score
+
+class AccommodationAtSSMeanTest(Druckmann2013Test):
     """
     27 	Average accommodation at steady-state (%)
 
@@ -722,13 +984,55 @@ class AccommodationMeanAtSSTest(Druckmann2013Test):
     the term before the exponent (B).
     """
 
-class AccommodationRateMeanAtSSTest(Druckmann2013Test):
+    name = "ISI Steady state accomodation mean"
+    description = "Mean of the ISI steady state accomodation"
+
+    units = pq.dimensionless
+
+    def generate_prediction(self, model):
+
+        model.inject_square_current(self.params['injected_square_current'])
+
+        aps = self.get_APs(model)
+        ap_times = np.array([ap.get_beginning()[1] for ap in aps])
+
+        isis = np.diff(ap_times)
+        isi_times = ap_times[1:]
+
+        if len(isis) >= 2:
+
+            def isi_func(t, A, B, tau):
+                return A + B * np.exp(-t/tau)
+
+            [A, B, tau] = curve_fit(isi_func, isi_times, isis)[0]
+
+            return {
+                'mean': self.get_final_result(A, B, tau),
+                'std': 0,
+                'n': 1
+            }
+
+        else:
+            return none_score
+
+    def get_final_result(self, A, B, tau):
+        return A / B * 100.0
+
+class AccommodationRateMeanAtSSTest(AccommodationAtSSMeanTest):
     """
     28 	Average rate of accommodation during steady-state
 
     Accommodation analysis based on a fit of the ISIs to an exponential function.
-    This feature is the time constant of the exponent.
+    This feature is the time constant (tau) of the exponent.
     """
+
+    name = "ISI accomodation time constant"
+    description = "Time constant of the ISI accomodation"
+
+    units = pq.ms
+
+    def get_final_result(self, A, B, tau):
+        return tau * pq.ms
 
 class ISICVTest(Druckmann2013Test):
     """
@@ -738,12 +1042,62 @@ class ISICVTest(Druckmann2013Test):
     of ISIs.
     """
 
+    name = "ISI CV"
+    description = "ISI Coefficient of Variation"
+
+    units = pq.dimensionless
+
+    def generate_prediction(self, model):
+
+        model.inject_square_current(self.params['injected_square_current'])
+
+        aps = self.get_APs(model)
+        ap_times = np.array([ap.get_beginning()[1] for ap in aps])
+
+        isis = np.diff(ap_times)
+
+        if len(isis) >= 2:
+
+            return {
+                'mean': np.mean(isis) / np.sd(isis),
+                'std': 0,
+                'n': 1
+            }
+
+        else:
+            return none_score
+
 class ISIMedianTest(Druckmann2013Test):
     """
     30 	Median of the distribution of ISIs (ms)
 
     Median of the distribution of ISIs.
     """
+
+    name = "ISI Median"
+    description = "ISI Median"
+
+    units = pq.ms
+
+    def generate_prediction(self, model):
+
+        model.inject_square_current(self.params['injected_square_current'])
+
+        aps = self.get_APs(model)
+        ap_times = np.array([ap.get_beginning()[1] for ap in aps])
+
+        isis = np.diff(ap_times)
+
+        if len(isis) >= 1:
+
+            return {
+                'mean': np.median(isis),
+                'std': 0,
+                'n': 1
+            }
+
+        else:
+            return none_score
 
 class ISIBurstMeanChangeTest(Druckmann2013Test):
     """
@@ -752,6 +1106,31 @@ class ISIBurstMeanChangeTest(Druckmann2013Test):
     Difference between the first and second ISI divided by the value of the first ISI.
     """
 
+    name = "ISI Burst Mean Change"
+    description = "ISI Burst Mean Change"
+
+    units = pq.dimensionless
+
+    def generate_prediction(self, model):
+
+        model.inject_square_current(self.params['injected_square_current'])
+
+        aps = self.get_APs(model)
+        ap_times = np.array([ap.get_beginning()[1] for ap in aps])
+
+        isis = np.diff(ap_times)
+
+        if len(isis) >= 2:
+
+            return {
+                'mean': (isis[1] - isis[0])/isis[0] * 100.0,
+                'std': 0,
+                'n': 1
+            }
+
+        else:
+            return none_score
+
 class SpikeRateStrongStimTest(Druckmann2013Test):
     """
     32 	Average rate, strong stimulus (Hz)
@@ -759,21 +1138,43 @@ class SpikeRateStrongStimTest(Druckmann2013Test):
     Firing rate of strong stimulus.
     """
 
-class AP1DelayMeanStrongStimTest(Druckmann2013Test):
+    name = "Strong Stimulus Firing Rate"
+    description = "Strong Stimulus Firing Rate"
+
+    units = pq.Hz
+
+    def generate_prediction(self, model):
+
+        model.inject_square_current(self.params['injected_square_current'])
+
+        aps = self.get_APs(model)
+
+        duration = self.current_length()
+
+        spike_rate = len(aps) / duration
+        spike_rate.units = pq.Hz
+
+        return {
+            'mean': spike_rate,
+            'std': 0,
+            'n': 1
+        }
+
+class AP1DelayMeanStrongStimTest(AP1DelayMeanTest):
     """
     33 	Average delay to AP 1, strong stimulus (ms)
 
     Same as :any:`AP1DelayMeanTest` but for strong stimulus
     """
 
-class AP1DelaySDStrongStimTest(Druckmann2013Test):
+class AP1DelaySDStrongStimTest(AP1DelaySDTest):
     """
     34 	SD of delay to AP 1, strong stimulus (ms)
 
     Same as :any:`AP1DelaySDTest` but for strong stimulus
     """
 
-class AP2DelayMeanStrongStimTest(Druckmann2013Test):
+class AP2DelayMeanStrongStimTest(AP2DelayMeanTest):
     """
     35 	Average delay to AP 2, strong stimulus (ms)
 
@@ -781,21 +1182,21 @@ class AP2DelayMeanStrongStimTest(Druckmann2013Test):
     Same as :any:`AP2DelayMeanTest` but for strong stimulus
     """
 
-class AP2DelaySDStrongStimTest(Druckmann2013Test):
+class AP2DelaySDStrongStimTest(AP2DelaySDTest):
     """
     36 	SD of delay to AP 2, strong stimulus (ms)
 
     Same as :any:`AP2DelaySDTest` but for strong stimulus
     """
 
-class Burst1ISIMeanStrongStimTest(Druckmann2013Test):
+class Burst1ISIMeanStrongStimTest(Burst1ISIMeanTest):
     """
     37 	Average initial burst ISI, strong stimulus (ms)
 
     Same as :any:`Burst1ISIMeanTest` but for strong stimulus
     """
 
-class Burst1ISISDStrongStimTest(Druckmann2013Test):
+class Burst1ISISDStrongStimTest(Burst1ISISDTest):
     """
     38 	SD of average initial burst ISI, strong stimulus (ms)
 
