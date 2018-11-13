@@ -46,11 +46,32 @@ class NeuroMLDBModel:
             # Convert to neo.AnalogSignal
             signal = AnalogSignal(signal,units=units, sampling_period=resolution_ms*quantities.ms)
 
+            starts_from_ss = next(w for w in self.waveforms if w["ID"] == waveform_id)["Starts_From_Steady_State"] == 1
+
+            if starts_from_ss:
+                rest_wave = self.get_steady_state_waveform()
+
+                t = np.concatenate((rest_wave.times, signal.times + rest_wave.t_stop)) * quantities.s
+                v = np.concatenate((np.array(rest_wave), np.array(signal))) * quantities.mV
+
+                signal = AnalogSignal(v, units=units, sampling_period=resolution_ms * quantities.ms)
+
             self.waveform_signals[waveform_id] = signal
 
         return self.waveform_signals[waveform_id]
 
+    def get_steady_state_waveform(self):
+        if not hasattr(self, "steady_state_waveform"):
+            for w in self.waveforms:
+                if w["Protocol_ID"] == "STEADY_STATE" and w["Variable_Name"] == "Voltage":
+                    self.steady_state_waveform = self.fetch_waveform_as_AnalogSignal(w["ID"])
+                    return self.steady_state_waveform
 
+            raise Exception("Did not find the resting waveform." +
+                            " See " + self.api_url + "model?id=" + self.model_id +
+                            " for the list of available model waveforms.")
+
+        return self.steady_state_waveform
 
     def get_waveform_by_current(self, amplitude_nA):
         for w in self.waveforms:
