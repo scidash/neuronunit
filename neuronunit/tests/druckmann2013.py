@@ -6,11 +6,10 @@ AP analysis details (from suplementary info): https://github.com/scidash/neuronu
 Numbers in class names refer to the numbers in the publication table
 """
 
-import neuronunit.capabilities.spike_functions as sf
-from .base import np, pq, ncap, VmTest, scores
-from scipy.optimize import curve_fit
 from elephant.spike_train_generation import threshold_detection
 from neo import AnalogSignal
+
+from .base import np, pq, ncap, VmTest, scores
 
 per_ms = pq.UnitQuantity('per_ms',1.0/pq.ms,symbol='per_ms')
 
@@ -203,6 +202,16 @@ class Druckmann2013Test(VmTest):
             self.APs.append(Druckmann2013AP(ap_waveforms[i], ap_beginnings[i]))
 
         return self.APs
+
+    def get_ISIs(self, model=None):
+        aps = self.get_APs(model)
+
+        ap_times = np.array([ap.get_beginning()[1] for ap in aps])
+
+        isis = np.diff(ap_times)
+
+        return isis
+
 
 class AP12AmplitudeDropTest(Druckmann2013Test):
     """
@@ -1162,7 +1171,7 @@ class AccommodationRateMeanAtSSTest(AccommodationAtSSMeanTest):
 
 class ISICVTest(Druckmann2013Test):
     """
-    29 	Average inter-spike interval (ISI) coefficient of variation (CV) (unit less)
+    29 	Average inter-spike interval (ISI) coefficient of variation (CV) (unitless)
 
     Coefficient of variation (mean divided by standard deviation) of the distribution
     of ISIs.
@@ -1177,21 +1186,25 @@ class ISICVTest(Druckmann2013Test):
 
         model.inject_square_current(self.params['injected_square_current'])
 
-        aps = self.get_APs(model)
-        ap_times = np.array([ap.get_beginning()[1] for ap in aps])
-
-        isis = np.diff(ap_times)
+        isis = self.get_ISIs(model)
 
         if len(isis) >= 2:
 
-            return {
-                'mean': np.mean(isis) / np.std(isis),
-                'std': 0,
-                'n': 1
-            }
+            mean = np.mean(isis)
+            std = np.std(isis)
 
-        else:
-            return none_score
+            if debug:
+                print("isi mean: %s std: %s"%(mean, std))
+
+            if std > 1e-5:
+                return {
+                    'mean': mean / std,
+                    'std': 0,
+                    'n': 1
+                }
+
+        return none_score
+
 
 class ISIMedianTest(Druckmann2013Test):
     """
@@ -1209,15 +1222,12 @@ class ISIMedianTest(Druckmann2013Test):
 
         model.inject_square_current(self.params['injected_square_current'])
 
-        aps = self.get_APs(model)
-        ap_times = np.array([ap.get_beginning()[1] for ap in aps])
-
-        isis = np.diff(ap_times)
+        isis = self.get_ISIs(model)
 
         if len(isis) >= 1:
 
             return {
-                'mean': np.median(isis),
+                'mean': np.median(isis) * self.units,
                 'std': 0,
                 'n': 1
             }
@@ -1241,21 +1251,21 @@ class ISIBurstMeanChangeTest(Druckmann2013Test):
 
         model.inject_square_current(self.params['injected_square_current'])
 
-        aps = self.get_APs(model)
-        ap_times = np.array([ap.get_beginning()[1] for ap in aps])
-
-        isis = np.diff(ap_times)
+        isis = self.get_ISIs(model)
 
         if len(isis) >= 2:
 
-            return {
-                'mean': (isis[1] - isis[0])/isis[0] * 100.0,
-                'std': 0,
-                'n': 1
-            }
+            if debug:
+                print("ISI1: %s ISI2: %s Change: %s"%(isis[0],isis[1],isis[1] - isis[0]))
 
-        else:
-            return none_score
+            if isis[0] > 1e-5:
+                return {
+                    'mean': (isis[1] - isis[0])/isis[0] * 100.0,
+                    'std': 0,
+                    'n': 1
+                }
+
+        return none_score
 
 class SpikeRateStrongStimTest(Druckmann2013Test):
     """
@@ -1279,6 +1289,9 @@ class SpikeRateStrongStimTest(Druckmann2013Test):
 
         spike_rate = len(aps) / duration
         spike_rate.units = pq.Hz
+
+        if debug:
+            print("APs: %s Duration: %s"%(len(aps), duration))
 
         return {
             'mean': spike_rate,
