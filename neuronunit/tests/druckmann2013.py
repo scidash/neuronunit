@@ -1122,7 +1122,10 @@ class AccommodationAtSSMeanTest(Druckmann2013Test):
 
             result = model.fit(isis, t=isi_delays, params=params)
 
-            [A, tau, B] = result.best_values.values()
+            A = result.best_values["A"]
+            B = result.best_values["B"]
+            tau = result.best_values["tau"]
+
 
             if debug:
                 from matplotlib import pyplot as plt
