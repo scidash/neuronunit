@@ -19,7 +19,7 @@ none_score = {
                 'n': 0
              }
 
-debug = True
+debug = False #True
 
 class Druckmann2013AP:
     """
