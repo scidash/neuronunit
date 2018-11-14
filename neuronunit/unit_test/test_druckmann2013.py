@@ -18,7 +18,10 @@ class Druckmann2013TestCase(unittest.TestCase):
             pickle_file = os.path.join('neuronunit','unit_test',pickle_file)
 
         with open(pickle_file, 'rb') as f:
-            model = pickle.load(f)
+            if sys.version_info[0] >= 3:
+                model = pickle.load(f, encoding='Latin-1')
+            else:
+                model = pickle.load(f)
 
         #print('Succesfully unpickled NML-DB model for use in Druckmann 2013 tests...')
 

@@ -43,15 +43,6 @@ class Druckmann2013AP:
 
         return beginning_voltage, begining_time
 
-    def get_end(self):
-        """
-        The end of the spike was determined by the minimum value of the afterhyperpolarization (AHP) following the spike.
-
-        :return: The voltage and time at the AP end
-        """
-
-        return self.get_trough()
-
     def get_amplitude(self):
         """
         The amplitude of a spike is given by the difference between the voltage at the beginning and peak of the spike.

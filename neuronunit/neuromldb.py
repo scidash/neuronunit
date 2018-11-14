@@ -1,9 +1,14 @@
-import urllib, json, quantities
+import sys, json, quantities
 from scipy.interpolate import interp1d
 import numpy as np
 from neo import AnalogSignal
 from neuronunit.models.static import StaticModel
 import quantities as q
+
+if sys.version_info[0] >= 3:
+    import urllib.request as urllib
+else:
+    import urllib
 
 class NeuroMLDBModel:
     def __init__(self, model_id = "NMLCL000086"):
@@ -17,8 +22,12 @@ class NeuroMLDBModel:
 
     def read_api_url(self, url):
         if url not in self.url_responses:
-            response = urllib.urlopen(url)
-            self.url_responses[url] = json.loads(response.read())
+            response = urllib.urlopen(url).read()
+
+            if sys.version_info[0] >= 3:
+                response = response.decode("utf-8")
+
+            self.url_responses[url] = json.loads(response)
 
         return self.url_responses[url]
 
@@ -39,8 +48,8 @@ class NeuroMLDBModel:
             data = self.read_api_url(self.api_url + "waveform?id=" + str(waveform_id))
 
             # Get time and signal values (from CSV format)
-            t = np.array(data["Times"].decode('UTF-8').split(','),float)
-            signal = np.array(data["Variable_Values"].decode('UTF-8').split(','),float)
+            t = np.array(data["Times"].split(','),float)
+            signal = np.array(data["Variable_Values"].split(','),float)
 
             # Interpolate to regularly sampled series (API returns irregularly sampled)
             sig = interp1d(t,signal,fill_value="extrapolate")
