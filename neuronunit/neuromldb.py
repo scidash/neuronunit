@@ -13,11 +13,14 @@ class NeuroMLDBModel:
         self.waveforms = None
 
         self.waveform_signals = {}
+        self.url_responses = {}
 
     def read_api_url(self, url):
-        response = urllib.urlopen(url)
-        data = json.loads(response.read())
-        return data
+        if url not in self.url_responses:
+            response = urllib.urlopen(url)
+            self.url_responses[url] = json.loads(response.read())
+
+        return self.url_responses[url]
 
     def fetch_waveform_list(self):
 
@@ -117,10 +120,9 @@ class NeuroMLDBModel:
 
 
 class NeuroMLDBStaticModel(StaticModel):
-    def __init__(self, model_id, protocol_to_fetch="LONG_SQUARE", **params):
+    def __init__(self, model_id, **params):
         self.nmldb_model = NeuroMLDBModel(model_id)
         self.nmldb_model.fetch_waveform_list()
-        self.protocol = protocol_to_fetch
 
     def inject_square_current(self, current):
         self.vm = self.nmldb_model.get_waveform_by_current(current["amplitude"])
