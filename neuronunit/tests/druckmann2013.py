@@ -122,7 +122,7 @@ class Druckmann2013Test(VmTest):
         self.params = {
             'injected_square_current': {
                 'delay': 1000 * pq.ms,
-                'duration': 2 * pq.s,
+                'duration': 2000 * pq.ms,
                 'amplitude': current_amplitude
             },
             'threshold': -20 * pq.mV,
@@ -154,9 +154,11 @@ class Druckmann2013Test(VmTest):
     def aggregate_repetitions(self, results):
         values = [rep['mean'] for rep in results]
 
+        units = values[0].units if len(values) > 0 else self.units
+
         return {
-            'mean': np.mean(values),
-            'std': np.std(values),
+            'mean': np.mean(values) * units,
+            'std': np.std(values) * units,
             'n': len(results)
         }
 
@@ -271,7 +273,7 @@ class AP1SSAmplitudeChangeTest(Druckmann2013Test):
 
         ss_amps = amps[ss_aps]
 
-        if len(aps) > 0 and len(ss_amps) > 0:
+        if len(aps) > 0 and len(ss_amps[0]) > 0:
 
             if debug:
                 from matplotlib import pyplot as plt
@@ -689,7 +691,7 @@ class AP12AHPDepthPercentChangeTest(Druckmann2013Test):
 
 class InputResistanceTest(Druckmann2013Test):
     """
-    17 	Input resistance for steady-state current (Ohm)
+    17 	Input resistance for steady-state current (MOhm)
 
     Input resistance calculated by injecting weak subthreshold hyperpolarizing and
     depolarizing step currents. Input resistance was taken as linear fit of current to
@@ -701,7 +703,7 @@ class InputResistanceTest(Druckmann2013Test):
     depolarizing step currents. Input resistance was taken as linear fit of current to
     voltage difference"""
 
-    units = pq.dimensionless
+    units = pq.Quantity(1,'MOhm')
 
     def __init__(self, injection_currents=np.array([])*pq.nA, **params):
         super(InputResistanceTest, self).__init__(current_amplitude=None, **params)
@@ -711,7 +713,7 @@ class InputResistanceTest(Druckmann2013Test):
 
         for i in injection_currents:
             if i.units != pq.nA:
-                raise Exception("Injection current must be specified in nanoamps (nA)")
+                i.units = pq.nA
 
         self.injection_currents = injection_currents
 
@@ -731,9 +733,16 @@ class InputResistanceTest(Druckmann2013Test):
             vm = model.get_membrane_potential()
 
             # The voltage at final 1ms of current step is assumed to be steady state
-            ss_voltage = np.median(vm.magnitude[np.where((vm.times >= 999*pq.ms) & (vm.times <= 1000*pq.ms))]) * pq.mV
+            ss_voltage = np.median(vm.magnitude[np.where((vm.times >= 1999*pq.ms) & (vm.times <= 2000*pq.ms))]) * pq.mV
 
             voltages.append(ss_voltage)
+
+            if debug:
+                from matplotlib import pyplot as plt
+                plt.plot(vm)
+
+        if debug:
+            plt.show()
 
         # Rescale units
         amps = [i.rescale('A') for i in self.injection_currents]
@@ -742,6 +751,12 @@ class InputResistanceTest(Druckmann2013Test):
         # v = ir -> r is slope of v(i) curve
         slope, _ = np.polyfit(amps, volts, 1)
         slope *= pq.Ohm
+        slope.units = pq.Quantity(1,'MOhm')
+
+        if debug:
+            from matplotlib import pyplot as plt
+            plt.plot(amps, volts)
+            plt.show()
 
         return {
             'mean': slope,
@@ -776,14 +791,22 @@ class AP1DelayMeanTest(Druckmann2013Test):
         aps = self.get_APs(model)
 
         if len(aps) > ap_index:
+            delay = self.params['injected_square_current']['delay']
+
+            if debug:
+                from matplotlib import pyplot as plt
+                vm = model.get_membrane_potential()
+                plt.plot(vm.times.magnitude, vm.magnitude)
+                plt.xlim(1, aps[ap_index].get_beginning()[1].rescale('sec').magnitude + 0.1)
+                plt.show()
+
             return {
-                'mean': aps[ap_index].get_beginning()[1] - 2000.0*pq.ms,
+                'mean': aps[ap_index].get_beginning()[1] - delay,
                 'std': 0,
                 'n': 1
             }
 
-        else:
-            return none_score
+        return none_score
 
 class AP1DelaySDTest(AP1DelayMeanTest):
     """
@@ -800,8 +823,8 @@ class AP1DelaySDTest(AP1DelayMeanTest):
 
     def aggregate_repetitions(self, results):
         return {
-            'mean': np.std([rep['mean'] for rep in results]),
-            'std': 0,
+            'mean': np.std([rep['mean'] for rep in results]) * self.units,
+            'std': 0 * self.units,
             'n': len(results)
         }
 
@@ -867,14 +890,17 @@ class Burst1ISIMeanTest(Druckmann2013Test):
             isi1 = t2 - t1
             isi2 = t3 - t2
 
+            if debug:
+                print("first 3 aps: %s, %s, %s"%(t1,t2,t3))
+                print("2 isis: %s, %s" % (isi1, isi2))
+
             return {
                 'mean': (isi1 + isi2) / 2.0,
                 'std': 0,
                 'n': 1
             }
 
-        else:
-            return none_score
+        return none_score
 
 class Burst1ISISDTest(Burst1ISIMeanTest):
     """
@@ -888,8 +914,8 @@ class Burst1ISISDTest(Burst1ISIMeanTest):
 
     def aggregate_repetitions(self, results):
         return {
-            'mean': np.std([rep['mean'] for rep in results]),
-            'std': 0,
+            'mean': np.std([rep['mean'] for rep in results]) * self.units,
+            'std': 0 * self.units,
             'n': len(results)
         }
 
@@ -921,11 +947,15 @@ class InitialAccommodationMeanTest(Druckmann2013Test):
         aps = self.get_APs(model)
         ap_times = np.array([ap.get_beginning()[1] for ap in aps])
 
-        ap_count15 = np.where((ap_times >= start_1st_5th) & (ap_times <= end_1st_5th))
-        ap_count35 = np.where((ap_times >= start_3rd_5th) & (ap_times <= end_3rd_5th))
+        ap_count15 = np.where((ap_times >= start_1st_5th) & (ap_times <= end_1st_5th))[0]
+        ap_count35 = np.where((ap_times >= start_3rd_5th) & (ap_times <= end_3rd_5th))[0]
+
+        if debug:
+            print("aps in 1st 5th: %s" % (len(ap_count15)))
+            print("aps in 3rd 5th: %s" % (len(ap_count35)))
 
         if len(ap_count15) > 0:
-            percent_diff = (len(ap_count35) - len(ap_count15)) / len(ap_count15) * 100.0
+            percent_diff = (len(ap_count35) - len(ap_count15)) / float(len(ap_count15)) * 100.0
 
             return {
                 'mean': percent_diff,
@@ -933,8 +963,7 @@ class InitialAccommodationMeanTest(Druckmann2013Test):
                 'n': 1
             }
 
-        else:
-            return none_score
+        return none_score
 
 class SSAccommodationMeanTest(Druckmann2013Test):
     """
@@ -964,11 +993,15 @@ class SSAccommodationMeanTest(Druckmann2013Test):
         aps = self.get_APs(model)
         ap_times = np.array([ap.get_beginning()[1] for ap in aps])
 
-        ap_count15 = np.where((ap_times >= start_1st_5th)  & (ap_times <= end_1st_5th))
-        ap_count45 = np.where((ap_times >= start_last_5th) & (ap_times <= end_last_5th))
+        ap_count15 = np.where((ap_times >= start_1st_5th)  & (ap_times <= end_1st_5th))[0]
+        ap_count55 = np.where((ap_times >= start_last_5th) & (ap_times <= end_last_5th))[0]
 
         if len(ap_count15) > 0:
-            percent_diff = (len(ap_count45) - len(ap_count15)) / len(ap_count15) * 100.0
+            percent_diff = (len(ap_count55) - len(ap_count15)) / float(len(ap_count15)) * 100.0
+
+            if debug:
+                print("aps in 1st 5th: %s" % (len(ap_count15)))
+                print("aps in last 5th: %s" % (len(ap_count55)))
 
             return {
                 'mean': percent_diff,
@@ -976,13 +1009,12 @@ class SSAccommodationMeanTest(Druckmann2013Test):
                 'n': 1
             }
 
-        else:
-            return none_score
+        return none_score
 
 
 class AccommodationRateToSSTest(Druckmann2013Test):
     """
-    26 	Rate of accommodation to steady-state (1/ms)
+    26 	Rate of accommodation to steady-state (percent/ms)
 
     The percent difference between the spiking rate of the *first* fifth of the step current and
     *final* fifth of the step current divided by the time taken to first reach the rate of
@@ -1013,28 +1045,37 @@ class AccommodationRateToSSTest(Druckmann2013Test):
         aps = self.get_APs(model)
         ap_times = np.array([ap.get_beginning()[1] for ap in aps])
 
-        aps_15 = np.where((ap_times >= start_1st_5th)  & (ap_times <= end_1st_5th))
-        aps_45 = np.where((ap_times >= start_last_5th) & (ap_times <= end_last_5th))
+        aps_15 = np.where((ap_times >= start_1st_5th)  & (ap_times <= end_1st_5th))[0]
+        aps_55 = np.where((ap_times >= start_last_5th) & (ap_times <= end_last_5th))[0]
 
-        if len(aps_15) > 0 and len(aps_45) > 2:
-            percent_diff = (len(aps_45) - len(aps_15)) / len(aps_15) * 100.0
+        if len(aps_15) > 0 and len(aps_55) > 2:
+            percent_diff = (len(aps_55) - len(aps_15)) / float(len(aps_15)) * 100.0
+
+            if debug:
+                print("aps in 1st 5th vs last 5th, percent change: %s" % (percent_diff))
 
             isis = np.diff(ap_times)
             isi_times = ap_times[1:]
 
-            isis_45 = isis[np.where((isi_times >= start_last_5th) & (isi_times <= end_last_5th))]
+            isis_55 = isis[np.where((isi_times >= start_last_5th) & (isi_times <= end_last_5th))]
 
-            ss_isi = np.mean(isis_45)
+            ss_isi = np.mean(isis_55)
 
-            nearly_ss_isi = np.where(isis >= 0.95*ss_isi)
+            if debug:
+                print("mean ISI at SS: %s" % (ss_isi))
 
-            if len(nearly_ss_isi) > 0:
+            nearly_ss_isis = np.where(isis >= 0.95*ss_isi)[0]
 
-                first_nearly_ss_isi_time = isi_times[nearly_ss_isi[0]]
+            if len(nearly_ss_isis) > 0:
+
+                first_nearly_ss_isi_time = isi_times[nearly_ss_isis[0]] * pq.ms
+
+                if debug:
+                    print("time of first nearly mean SS ISI: %s" % (first_nearly_ss_isi_time))
 
                 if first_nearly_ss_isi_time > 0:
                     return {
-                        'mean': percent_diff / first_nearly_ss_isi_time,
+                        'mean': percent_diff / (first_nearly_ss_isi_time - self.params['injected_square_current']['delay']),
                         'std': 0,
                         'n': 1
                     }
@@ -1063,14 +1104,33 @@ class AccommodationAtSSMeanTest(Druckmann2013Test):
         ap_times = np.array([ap.get_beginning()[1] for ap in aps])
 
         isis = np.diff(ap_times)
-        isi_times = ap_times[1:]
+        isi_delays = ap_times[1:] - self.params['injected_square_current']['delay'].rescale('ms').magnitude
+        isi_delays = isi_delays - isi_delays[0]
 
         if len(isis) >= 2:
 
             def isi_func(t, A, B, tau):
-                return A + B * np.exp(-t/tau)
+                return A + B * np.exp(-t/(1.0*tau))
 
-            [A, B, tau] = curve_fit(isi_func, isi_times, isis)[0]
+            from lmfit import Model
+
+            model = Model(isi_func)
+            params = model.make_params(A=isis[-1], B=-1.0, tau=10.0)
+            params['A'].min = 0
+            params['B'].max = 0
+            params['tau'].min = 0
+
+            result = model.fit(isis, t=isi_delays, params=params)
+
+            [A, tau, B] = result.best_values.values()
+
+            if debug:
+                from matplotlib import pyplot as plt
+                print(result.fit_report())
+
+                plt.plot(isi_delays, isis, 'bo')
+                plt.plot(isi_delays, result.best_fit, 'r-')
+                plt.show()
 
             return {
                 'mean': self.get_final_result(A, B, tau),
@@ -1082,7 +1142,7 @@ class AccommodationAtSSMeanTest(Druckmann2013Test):
             return none_score
 
     def get_final_result(self, A, B, tau):
-        return A / B * 100.0
+        return B / float(A) * 100.0
 
 class AccommodationRateMeanAtSSTest(AccommodationAtSSMeanTest):
     """

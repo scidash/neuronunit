@@ -9,3 +9,4 @@ pyNN>=0.9
 execnet
 backports.tempfile
 git+http://github.com/scidash/sciunit@dev#egg=sciunit-9999
+lmfit
