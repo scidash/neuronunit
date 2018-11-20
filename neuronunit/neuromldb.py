@@ -73,7 +73,7 @@ class NeuroMLDBModel:
         return self.waveform_signals[waveform_id]
 
     def get_steady_state_waveform(self):
-        if not hasattr(self, "steady_state_waveform"):
+        if not hasattr(self, "steady_state_waveform") or self.steady_state_waveform is None:
             for w in self.waveforms:
                 if w["Protocol_ID"] == "STEADY_STATE" and w["Variable_Name"] == "Voltage":
                     self.steady_state_waveform = self.fetch_waveform_as_AnalogSignal(w["ID"])
@@ -89,7 +89,9 @@ class NeuroMLDBModel:
         for w in self.waveforms:
             if w["Variable_Name"] == "Voltage":
                 wave_amp = self.get_waveform_current_amplitude(w)
-                if amplitude_nA == wave_amp:
+                if ((amplitude_nA < 0 and w["Protocol_ID"] == "SQUARE") or
+                    (amplitude_nA >= 0 and w["Protocol_ID"] == "LONG_SQUARE")) \
+                        and amplitude_nA == wave_amp:
                     return self.fetch_waveform_as_AnalogSignal(w["ID"])
 
         raise Exception("Did not find a Voltage waveform with injected " + str(amplitude_nA) +
@@ -102,15 +104,22 @@ class NeuroMLDBModel:
             if w["Protocol_ID"] == "LONG_SQUARE" and w["Variable_Name"] == "Voltage":
                 currents.append(self.get_waveform_current_amplitude(w))
 
-        return [currents[-2]] # 2nd to last one is RBx1.25 waveform
+        if len(currents) != 4:
+            raise Exception("The LONG_SQUARE protocol for the model should have 4 waveforms")
+
+        return [currents[-2]] # 2nd to last one is RBx1.5 waveform
 
     def get_druckmann2013_strong_current(self):
         currents = []
+
         for w in self.waveforms:
             if w["Protocol_ID"] == "LONG_SQUARE" and w["Variable_Name"] == "Voltage":
                 currents.append(self.get_waveform_current_amplitude(w))
 
-        return [currents[-1]] # The last one is RBx1.50 waveform
+        if len(currents) != 4:
+            raise Exception("The LONG_SQUARE protocol for the model should have 4 waveforms")
+
+        return [currents[-1]] # The last one is RBx3 waveform
 
     def get_druckmann2013_input_resistance_currents(self):
         currents = []
