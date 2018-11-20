@@ -19,6 +19,7 @@ import numpy as np
 import copy
 import pdb
 from numba import jit
+import time
 
 class RheobaseTest(VmTest):
     """
@@ -54,7 +55,6 @@ class RheobaseTest(VmTest):
             units = self.observation['value'].units
         except KeyError:
             units = self.observation['mean'].units
-        import time
         begin_rh = time.time()
         lookup = self.threshold_FI(model, units)
         sub = np.array([x for x in lookup if lookup[x]==0])*units
@@ -207,7 +207,7 @@ class RheobaseTestP(VmTest):
 
             if 0. in supra and len(sub) == 0:
                 dtc.boolean = True
-                dtc.rheobase = -1
+                dtc.rheobase = -1.0
                 return dtc
             elif (len(sub) + len(supra)) == 0:
                 # This assertion would only be occur if there was a bug
@@ -334,6 +334,7 @@ class RheobaseTestP(VmTest):
                 dtc = check_fix_range(dtc)
                 cnt += 1
                 sub, supra = get_sub_supra(dtc.lookup)
+                self.verbose == 2
                 if self.verbose >= 2:
                     print("Try %d: SubMax = %s; SupraMin = %s" % \
                     (cnt, sub.max().round(1) if len(sub) else None,
@@ -353,13 +354,14 @@ class RheobaseTestP(VmTest):
         dtc.backend = model.backend
         assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
 
-        #import dask.array as da
-        #from dask.diagnostics import Profiler, ResourceProfiler, CacheProfiler
-
-
         prediction = {}
-        prediction['value'] = find_rheobase(self,dtc).rheobase * pq.pA
-
+        #print(find_rheobase(self,dtc).rheobase)
+        #try:
+        temp = find_rheobase(self,dtc).rheobase
+        if type(temp) is not type(None):
+            prediction['value'] =  temp* pq.pA
+        else:
+            prediction = None
         return prediction
 
      def bind_score(self, score, model, observation, prediction):

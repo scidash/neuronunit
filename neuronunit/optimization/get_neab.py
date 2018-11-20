@@ -68,7 +68,9 @@ def get_neuron_criteria(cell_id,file_name = None):#,observation = None):
                      waveform.InjectedCurrentAPThresholdTest]#,
     observations = {}
     for index, t in enumerate(test_classes):
+        #import pdb; pdb.set_trace()
         obs = t.neuroelectro_summary_observation(cell_id)
+
         if obs is not None:
             if 'mean' in obs.keys():
                 tests.append(t(obs))
