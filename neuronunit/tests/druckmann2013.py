@@ -84,15 +84,24 @@ class Druckmann2013AP:
 
         :return: the voltage and time of the peak
         """
-        value = self.waveform.max()
-        time = self.begin_time + self.waveform.times[np.where(self.waveform.magnitude == value)[0]]
-        time.units = pq.ms
+        if not hasattr(self, 'peak'):
+            value = self.waveform.max()
+            time = self.begin_time + self.waveform.times[np.where(self.waveform.magnitude == value)[0]]
+            time.units = pq.ms
+            self.peak = { 'value': value, 'time': time }
 
-        return value, time
+        return self.peak['value'], self.peak['time']
 
     def get_trough(self):
-        value = self.waveform.min()
-        time = self.begin_time + self.waveform.times[np.where(self.waveform.magnitude == value)[0]]
+        peak_v, peak_t = self.get_peak()
+
+        post_peak_waveform = self.waveform.magnitude[np.where(self.waveform.times > (peak_t - self.begin_time))]
+        post_peak_waveform = AnalogSignal(post_peak_waveform, units=self.waveform.units, sampling_period=self.waveform.sampling_period)
+
+
+        value = post_peak_waveform.min()
+        time = peak_t + post_peak_waveform.times[np.where(post_peak_waveform.magnitude == value)[0]]
+        time = time[0]
         time.units = pq.ms
 
         return value, time
@@ -142,19 +151,23 @@ class Druckmann2013Test(VmTest):
         raise NotImplementedError()
 
     def aggregate_repetitions(self, results):
-        values = [rep['mean'] for rep in results]
+        values = [rep['mean'] for rep in results if rep['mean'] is not None]
 
         units = values[0].units if len(values) > 0 else self.units
 
-        return {
-            'mean': np.mean(values) * units,
-            'std': np.std(values) * units,
-            'n': len(results)
-        }
+        if len(values) > 0:
+            return {
+                'mean': np.mean(values) * units,
+                'std': np.std(values) * units,
+                'n': len(results)
+            }
+
+        return none_score
 
     def current_length(self):
         return self.params['injected_square_current']['duration']
 
+    #@profile
     def get_APs(self, model):
         """
         Spikes were detected by a crossing of a voltage threshold (-20 mV).
@@ -162,26 +175,85 @@ class Druckmann2013Test(VmTest):
         :param model: model which provides the waveform to analyse
         :return: a list of Druckman2013APs
         """
+
         vm = model.get_membrane_potential()
 
-        dvdt = np.array(np.diff(vm, axis=0)) * pq.mV / vm.sampling_period
+        vm_times = vm.times
+        start_time = self.params['injected_square_current']['delay'].rescale('sec')
+        end_time = start_time + self.params['injected_square_current']['duration'].rescale('sec')
+        vm = AnalogSignal(vm.magnitude[np.where(vm_times <= end_time)], sampling_period=vm.sampling_period, units=vm.units)
+
+        dvdt = np.array(np.append([0], np.diff(vm, axis=0))) * pq.mV / vm.sampling_period
         dvdt = AnalogSignal(dvdt, sampling_period=vm.sampling_period)
 
         threshold_crosses = threshold_detection(vm,threshold=self.params['threshold'])
         dvdt_threshold_crosses = threshold_detection(dvdt,threshold=self.params['beginning_threshold'])
+        dvdt_zero_crosses = threshold_detection(dvdt, threshold=0 * pq.mV/pq.ms)
+
+        threshold_crosses = threshold_crosses[np.where(threshold_crosses > start_time)]
+        dvdt_threshold_crosses = dvdt_threshold_crosses[np.where(dvdt_threshold_crosses > start_time)]
+        dvdt_zero_crosses = dvdt_zero_crosses[np.where(dvdt_zero_crosses > start_time)]
+
+        # Normally, there should be at least as many dvdt threshold crosses as there are v threshold crosses
+        if len(dvdt_threshold_crosses) < len(threshold_crosses):
+            dvdt_threshold_crosses = threshold_crosses # for slowly rising APs (e.g. muscle) use the vm threshold as the beginning
 
         ap_beginnings = []
-        for t in threshold_crosses:
-            closest_beginning = dvdt_threshold_crosses[np.where(dvdt_threshold_crosses < t)][-1]
-            closest_beginning.units = pq.ms
-            ap_beginnings.append(closest_beginning)
+        prev_beginning = start_time
+        prev_threshold = start_time
+
+        for ti, curr_thresh in enumerate(threshold_crosses):
+            prev_dvdt_zero = dvdt_zero_crosses[np.where(dvdt_zero_crosses < curr_thresh)]
+
+            if len(prev_dvdt_zero) == 0:
+                prev_dvdt_zero = start_time
+            else:
+                prev_dvdt_zero = prev_dvdt_zero[-1]
+
+            earliest_dvdt_thresh_since_prev_ap = dvdt_threshold_crosses[
+                np.where((dvdt_threshold_crosses > prev_beginning) & (dvdt_threshold_crosses > prev_threshold) & (dvdt_threshold_crosses > prev_dvdt_zero))
+            ]
+
+            if len(earliest_dvdt_thresh_since_prev_ap) != 0:
+                earliest_dvdt_thresh_since_prev_ap = earliest_dvdt_thresh_since_prev_ap[0]
+            else:
+                if ti == 0:
+                    earliest_dvdt_thresh_since_prev_ap = prev_beginning
+                else:
+                    raise Exception("Did not find a dvdt threshold crossing since previous AP")
+
+            ap_beginnings.append(earliest_dvdt_thresh_since_prev_ap)
+
+            prev_beginning = earliest_dvdt_thresh_since_prev_ap
+            prev_threshold = curr_thresh
+
+        # The number of ap beginnings should match the number aps detected
+        assert len(np.unique(ap_beginnings)) == len(threshold_crosses)
 
         ap_waveforms = []
+        vm_mag = vm.magnitude
+        vm_times = vm.times
+
+        vm_chopped = np.split(vm_mag, np.isin(vm_times, ap_beginnings).nonzero()[0])
+
+        #if debug:
+            # from matplotlib import pyplot as plt
+            # plt.plot(vm.times, vm.magnitude)
+            # plt.plot(threshold_crosses, len(threshold_crosses) * [-20], "ro")
+            # plt.plot(dvdt.times, dvdt.magnitude)
+            # plt.plot(dvdt_threshold_crosses, len(dvdt_threshold_crosses) * [12], "bo")
+            # plt.plot(ap_beginnings, [13] * len(ap_beginnings), 'go')
+            # plt.show()
+
+        # The waveform should be cut into APs+1 pieces (1st waveform is steady state)
+        assert len(vm_chopped) == len(threshold_crosses)+1
+
         for i, b in enumerate(ap_beginnings):
             if i != len(ap_beginnings)-1:
-                waveform = vm.magnitude[np.where((vm.times >= b) & (vm.times < ap_beginnings[i + 1]))]
+                waveform = vm_chopped[i+1]
             else:
-                waveform = vm.magnitude[np.where((vm.times >= b) & (vm.times < b + 100.0*pq.ms))]
+                # Keep up to 100ms of the last AP
+                waveform = vm_mag[np.where((vm_times >= b) & (vm_times < b + 100.0*pq.ms))]
 
             waveform = AnalogSignal(waveform, units=vm.units, sampling_rate=vm.sampling_rate)
 
@@ -219,6 +291,7 @@ class AP12AmplitudeDropTest(Druckmann2013Test):
     units = pq.mV
 
     def generate_prediction(self, model):
+
         model.inject_square_current(self.params['injected_square_current'])
 
         aps = self.get_APs(model)
@@ -256,8 +329,6 @@ class AP1SSAmplitudeChangeTest(Druckmann2013Test):
     units = pq.mV
 
     def generate_prediction(self, model):
-        model.inject_square_current(self.params['injected_square_current'])
-
         current_start = self.params['injected_square_current']['delay']
 
         start_latter_3rd = current_start + self.current_length() * 2.0 / 3.0
@@ -273,7 +344,7 @@ class AP1SSAmplitudeChangeTest(Druckmann2013Test):
 
         ss_amps = amps[ss_aps]
 
-        if len(aps) > 0 and len(ss_amps[0]) > 0:
+        if len(aps) > 0 and len(ss_amps) > 0:
 
             if debug:
                 from matplotlib import pyplot as plt
@@ -309,8 +380,12 @@ class AP1AmplitudeTest(Druckmann2013Test):
         aps = self.get_APs(model)
 
         if len(aps) > ap_index:
+            amp = aps[ap_index].get_amplitude()
+
+            assert 0 * self.units < amp < 200 * self.units
+
             return {
-                'mean': aps[ap_index].get_amplitude(),
+                'mean': amp,
                 'std': 0,
                 'n': 1
             }
@@ -339,8 +414,12 @@ class AP1WidthHalfHeightTest(Druckmann2013Test):
 
         if len(aps) > ap_index:
 
+            hw = aps[ap_index].get_halfwidth()
+
+            assert 0 * self.units < hw < 100 * self.units
+
             return {
-                'mean': aps[ap_index].get_halfwidth(),
+                'mean': hw,
                 'std': 0,
                 'n': 1
             }
@@ -380,14 +459,15 @@ class AP1WidthPeakToTroughTest(Druckmann2013Test):
                 plt.xlim(0, 1000)
                 plt.show()
 
+            assert 0 * self.units <= width < 100 * self.units
+
             return {
                 'mean': width,
                 'std': 0,
                 'n': 1
             }
 
-        else:
-            return none_score
+        return none_score
 
 
 class AP1RateOfChangePeakToTroughTest(Druckmann2013Test):
@@ -415,7 +495,14 @@ class AP1RateOfChangePeakToTroughTest(Druckmann2013Test):
             peak_v,   peak_t   = ap.get_peak()
             trough_v, trough_t = ap.get_trough()
 
-            change = (trough_v - peak_v) / (trough_t - peak_t)
+            width = trough_t - peak_t
+
+            if width == 0 * pq.ms:
+                width = ap.waveform.sampling_period
+
+            change = (trough_v - peak_v) / width
+
+            assert change < 0 * self.units
 
             return {
                 'mean': change,
@@ -423,8 +510,7 @@ class AP1RateOfChangePeakToTroughTest(Druckmann2013Test):
                 'n': 1
             }
 
-        else:
-            return none_score
+        return none_score
 
 class AP1AHPDepthTest(Druckmann2013Test):
     """
@@ -708,8 +794,8 @@ class InputResistanceTest(Druckmann2013Test):
     def __init__(self, injection_currents=np.array([])*pq.nA, **params):
         super(InputResistanceTest, self).__init__(current_amplitude=None, **params)
 
-        if not injection_currents or len(injection_currents) < 2:
-            raise Exception("Test requires at least two current injections")
+        if not injection_currents or len(injection_currents) < 1:
+            raise Exception("Test requires at least one current injection")
 
         for i in injection_currents:
             if i.units != pq.nA:
@@ -748,6 +834,15 @@ class InputResistanceTest(Druckmann2013Test):
         amps = [i.rescale('A') for i in self.injection_currents]
         volts = [v.rescale('V') for v in voltages]
 
+        # If there is only one injection current available, use the resting voltage as 0 Amp current response
+        if len(self.injection_currents) < 2:
+            amps.append(0 * pq.A)
+
+            resting_voltage = np.median(vm.magnitude[np.where((vm.times >= 999*pq.ms) & (vm.times <= 1000*pq.ms))]) * pq.mV
+            resting_voltage.units = pq.V
+            volts.append(resting_voltage)
+
+
         # v = ir -> r is slope of v(i) curve
         slope, _ = np.polyfit(amps, volts, 1)
         slope *= pq.Ohm
@@ -757,6 +852,8 @@ class InputResistanceTest(Druckmann2013Test):
             from matplotlib import pyplot as plt
             plt.plot(amps, volts)
             plt.show()
+
+        assert slope > -0.001 * self.units
 
         return {
             'mean': slope,
@@ -800,8 +897,12 @@ class AP1DelayMeanTest(Druckmann2013Test):
                 plt.xlim(1, aps[ap_index].get_beginning()[1].rescale('sec').magnitude + 0.1)
                 plt.show()
 
+            ap_delay = aps[ap_index].get_beginning()[1] - delay
+
+            assert ap_delay > -1 * self.units
+
             return {
-                'mean': aps[ap_index].get_beginning()[1] - delay,
+                'mean': ap_delay,
                 'std': 0,
                 'n': 1
             }
@@ -822,11 +923,17 @@ class AP1DelaySDTest(AP1DelayMeanTest):
     units = pq.ms
 
     def aggregate_repetitions(self, results):
-        return {
-            'mean': np.std([rep['mean'] for rep in results]) * self.units,
-            'std': 0 * self.units,
-            'n': len(results)
-        }
+        aggregate = super(AP1DelaySDTest, self).aggregate_repetitions(results)
+
+        if aggregate['mean'] is not None:
+            aggregate['mean'] = aggregate['std']
+            aggregate['std'] = 0 * self.units
+
+            assert aggregate['mean'] >= 0  * self.units
+
+            return aggregate
+
+        return none_score
 
 class AP2DelayMeanTest(AP1DelayMeanTest):
     """
@@ -894,8 +1001,12 @@ class Burst1ISIMeanTest(Druckmann2013Test):
                 print("first 3 aps: %s, %s, %s"%(t1,t2,t3))
                 print("2 isis: %s, %s" % (isi1, isi2))
 
+            isi_mean = (isi1 + isi2) / 2.0
+
+            assert isi_mean > 0 * self.units
+
             return {
-                'mean': (isi1 + isi2) / 2.0,
+                'mean': isi_mean,
                 'std': 0,
                 'n': 1
             }
@@ -913,11 +1024,17 @@ class Burst1ISISDTest(Burst1ISIMeanTest):
     description = "StDev of the initial burst interval"
 
     def aggregate_repetitions(self, results):
-        return {
-            'mean': np.std([rep['mean'] for rep in results]) * self.units,
-            'std': 0 * self.units,
-            'n': len(results)
-        }
+        aggregate = super(Burst1ISISDTest, self).aggregate_repetitions(results)
+
+        if aggregate['mean'] is not None:
+            aggregate['mean'] = aggregate['std']
+            aggregate['std'] = 0 * self.units
+
+            assert aggregate['mean'] >= 0 * self.units
+
+            return aggregate
+
+        return none_score
 
 class InitialAccommodationMeanTest(Druckmann2013Test):
     """
@@ -1031,7 +1148,6 @@ class AccommodationRateToSSTest(Druckmann2013Test):
     units = per_ms
 
     def generate_prediction(self, model):
-
         model.inject_square_current(self.params['injected_square_current'])
 
         current_start = self.params['injected_square_current']['delay']
@@ -1048,7 +1164,7 @@ class AccommodationRateToSSTest(Druckmann2013Test):
         aps_15 = np.where((ap_times >= start_1st_5th)  & (ap_times <= end_1st_5th))[0]
         aps_55 = np.where((ap_times >= start_last_5th) & (ap_times <= end_last_5th))[0]
 
-        if len(aps_15) > 0 and len(aps_55) > 2:
+        if len(aps_15) > 0 and len(aps_55) >= 2:
             percent_diff = (len(aps_55) - len(aps_15)) / float(len(aps_15)) * 100.0
 
             if debug:
@@ -1103,11 +1219,10 @@ class AccommodationAtSSMeanTest(Druckmann2013Test):
         aps = self.get_APs(model)
         ap_times = np.array([ap.get_beginning()[1] for ap in aps])
 
-        isis = np.diff(ap_times)
-        isi_delays = ap_times[1:] - self.params['injected_square_current']['delay'].rescale('ms').magnitude
-        isi_delays = isi_delays - isi_delays[0]
-
-        if len(isis) >= 2:
+        if len(aps) >= 4:
+            isis = np.diff(ap_times)
+            isi_delays = ap_times[1:] - self.params['injected_square_current']['delay'].rescale('ms').magnitude
+            isi_delays = isi_delays - isi_delays[0]
 
             def isi_func(t, A, B, tau):
                 return A + B * np.exp(-t/(1.0*tau))
@@ -1141,8 +1256,7 @@ class AccommodationAtSSMeanTest(Druckmann2013Test):
                 'n': 1
             }
 
-        else:
-            return none_score
+        return none_score
 
     def get_final_result(self, A, B, tau):
         return B / float(A) * 100.0
@@ -1191,6 +1305,9 @@ class ISICVTest(Druckmann2013Test):
                 print("isi mean: %s std: %s"%(mean, std))
 
             if std > 1e-5:
+
+                assert mean > 0  * self.units
+
                 return {
                     'mean': mean / std,
                     'std': 0,
@@ -1220,8 +1337,12 @@ class ISIMedianTest(Druckmann2013Test):
 
         if len(isis) >= 1:
 
+            med = np.median(isis) * self.units
+
+            assert med > 0  * self.units
+
             return {
-                'mean': np.median(isis) * self.units,
+                'mean': med,
                 'std': 0,
                 'n': 1
             }
@@ -1286,6 +1407,8 @@ class SpikeRateStrongStimTest(Druckmann2013Test):
 
         if debug:
             print("APs: %s Duration: %s"%(len(aps), duration))
+
+        assert 400 * self.units > spike_rate > 0  * self.units
 
         return {
             'mean': spike_rate,
