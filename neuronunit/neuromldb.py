@@ -3,7 +3,7 @@ from scipy.interpolate import interp1d
 import numpy as np
 from neo import AnalogSignal
 from neuronunit.models.static import StaticModel
-import quantities as q
+import quantities as pq
 
 if sys.version_info[0] >= 3:
     import urllib.request as urllib
@@ -89,8 +89,8 @@ class NeuroMLDBModel:
         for w in self.waveforms:
             if w["Variable_Name"] == "Voltage":
                 wave_amp = self.get_waveform_current_amplitude(w)
-                if ((amplitude_nA < 0 and w["Protocol_ID"] == "SQUARE") or
-                    (amplitude_nA >= 0 and w["Protocol_ID"] == "LONG_SQUARE")) \
+                if ((amplitude_nA < 0 * pq.nA and w["Protocol_ID"] == "SQUARE") or
+                    (amplitude_nA >= 0 * pq.nA and w["Protocol_ID"] == "LONG_SQUARE")) \
                         and amplitude_nA == wave_amp:
                     return self.fetch_waveform_as_AnalogSignal(w["ID"])
 
@@ -128,13 +128,13 @@ class NeuroMLDBModel:
         for w in self.waveforms:
             if w["Protocol_ID"] == "SQUARE" and w["Variable_Name"] == "Voltage":
                 amp = self.get_waveform_current_amplitude(w)
-                if amp < 0:
+                if amp < 0 * pq.nA:
                     currents.append(amp)
 
         return currents
 
     def get_waveform_current_amplitude(self, waveform):
-        return float(waveform["Waveform_Label"].replace(" nA", "")) * q.nA
+        return float(waveform["Waveform_Label"].replace(" nA", "")) * pq.nA
 
 
 class NeuroMLDBStaticModel(StaticModel):
