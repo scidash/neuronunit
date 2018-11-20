@@ -1,4 +1,4 @@
-"""NeuronUnit: Testing for neuron and ion channel models 
+"""NeuronUnit: Testing for neuron and ion channel models
 using the SciUnit framework."""
 
 import platform
@@ -12,3 +12,4 @@ except ImportError as e:
 IMPLEMENTATION = platform.python_implementation()
 JYTHON = IMPLEMENTATION == 'Jython'
 CPYTHON = IMPLEMENTATION == 'CPython'
+#neuronunit-russell == bool(True)

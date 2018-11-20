@@ -194,6 +194,17 @@ def create_a_map(subset):
 
 
     '''
+#@jit
+def add_constant(hold_constant,pop):
+    hold_constant = OrderedDict(hold_constant)
+    for p in pop:
+        for k,v in hold_constant.items():
+            p[k] = v
+
+    for k in hold_constant.keys():
+        td.append(k)
+    return pop,td
+
 def create_grid(mp_in = None, npoints = 3, free_params = None, ga = None):
     '''
     check for overlap in parameter space.
@@ -205,9 +216,7 @@ def create_grid(mp_in = None, npoints = 3, free_params = None, ga = None):
 
     if type(mp_in) is not type(None):
         for k,v in mp_in.items():
-            #if type(free_params) is type({})
             if k in free_params:
-            #if k in free_params.keys():
                 subset[k] = ( np.min(free_params[k]),np.max(free_params[k]) )
             else:
                 subset[k] = v
@@ -247,16 +256,6 @@ def tfc2i(x, y, z,err):
 
     grid[i,j,k] = err # if using latitude and longitude (for WGS/West)
     return
-#@jit
-def add_constant(hold_constant,pop):
-    hold_constant = OrderedDict(hold_constant)
-    for p in pop:
-        for k,v in hold_constant.items():
-            p[k] = v
-    #td = OrderedDict(td)
-    #for k in hold_constant.keys():
-    #    td[k] = None
-    return pop#td, hc
 
 
 

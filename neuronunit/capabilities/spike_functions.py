@@ -41,13 +41,39 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
                                              t_stop=spike_train.t_stop,
                                              units=spike_train.units)
 
-    snippets = [vm.time_slice(t-width/2,t+width/2) for t in spike_train]
+    #snippets = [vm.time_slice(t-width/2,t+width/2) for t in spike_train]
+    too_short = True
+    too_long = True
+
+    t = spike_train[0]
+    if t-width/2.0 > 0.0*ms:
+        too_short = False
+
+    t = spike_train[-1]
+    if t+width/2.0 < vm.times[-1]:
+        too_long = False
+    print(too_long,too_short,'too long, too short')
+    print(len(spike_train))
+    if len(spike_train)> 1:
+        import pdb; pdb.set_trace()
+    if too_short == False and too_long == False:
+
+        snippets = [vm.time_slice(t-width/2,t+width/2) for t in spike_train]
+    elif too_long:
+
+        snippets = [vm.time_slice(t-width/2,vm.times[-2]) for t in spike_train]
+    elif too_short:
+
+        snippets = [vm.time_slice(vm.times[1],t+width/2) for t in spike_train]
+
+
     result = neo.core.AnalogSignal(np.array(snippets).T.squeeze(),
                                    units=vm.units,
                                    sampling_rate=vm.sampling_rate)
 
     return result
 
+import matplotlib.pyplot as plt
 def spikes2amplitudes(spike_waveforms):
     """
     IN:
@@ -58,10 +84,22 @@ def spikes2amplitudes(spike_waveforms):
     """
 
     if spike_waveforms is not None:
-        ampls = np.max(np.array(spike_waveforms),axis=0)
-    else:
-        ampls = np.array([])
+        try:
+            ampls = np.max(np.array(spike_waveforms))
+        except:
 
+            print('gets here, ie rheobase failed')
+            pre_ampls = []
+            for mp in spike_waveforms:
+                pre_ampls.append(np.max(np.array(mp)))
+            for mp in spike_waveforms:
+                plt.plot(np.array(mp),mp.times)
+            plt.savefig('offending_waveform.png')
+        ampls = np.max(pre_ampls)
+
+    else:
+        print('gets here, ie rheobase failed')
+        ampls = np.array([])
     return ampls * spike_waveforms.units
 
 def spikes2widths(spike_waveforms):
