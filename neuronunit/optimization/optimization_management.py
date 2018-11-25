@@ -98,7 +98,11 @@ def bridge_judge(test_and_models):
     obs = test.observation
     model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = ('RAW'))
     model.set_attrs(dtc.attrs)
+
     pred = test.generate_prediction(model)
+    n_spikes = model.get_spike_count()
+    #if n_spikes > 1:
+    #    import pdb; pdb.set_trace()
     score = test.compute_score(obs,pred)
     return score, pred#, amp, polarity
 
@@ -117,11 +121,22 @@ def dtc_to_rheo(dtc):
     if len(rtest):
         rtest = rtest[0]
         dtc.rheobase = rtest.generate_prediction(model)
-        if dtc.rheobase is not None:
+        #print(dtc.rheobase)
+        if dtc.rheobase is not None and dtc.rheobase !=-1.0:
+            dtc.rheobase = dtc.rheobase['value']
+
             obs = rtest.observation
             score = rtest.compute_score(obs,dtc.rheobase)
             dtc.scores[str('RheobaseTestP')] = 1.0 - score.sort_key
 
+            rtest.params['injected_square_current']['amplitude'] = dtc.rheobase
+            '''
+            model.inject_square_current(rtest.params['injected_square_current'])
+            n_spikes = model.get_spike_count()
+
+            if n_spikes > 1:
+                print('wrong: ',n_spikes)
+            '''
         else:
             dtc.rheobase = - 1.0
             dtc.scores[str('RheobaseTestP')] = 1.0
@@ -135,11 +150,37 @@ def dtc_to_rheo(dtc):
         place_holder['mean'] = 10*pq.pA
         place_holder['std'] = 10*pq.pA
         place_holder['value'] = 10*pq.pA
-        discovery = RheobaseTestP(observation=place_holder,name='Rheobase')
-        dtc.rheobase = discovery.generate_prediction(model)
+        rtest = RheobaseTestP(observation=place_holder,name='a Rheobase test')
+        dtc.rheobase = None
+        dtc.rheobase = rtest.generate_prediction(model)#['value']
         if dtc.rheobase is None:
             dtc.rheobase = - 1.0
+
     return dtc
+    #dtc.rheobase
+    '''
+    if dtc.rheobase is not None:
+    #print({k:v for k,v in dtc.rheobase.items()})
+    if dtc.rheobase['value'] > 0:
+        dtc.rheobase = dtc.rheobase['value']
+
+        rtest.params['injected_square_current']['amplitude'] = dtc.rheobase['value']
+        #print(rtest.params,dtc.rheobase)
+        model = None
+        LEMS_MODEL_PATH = path_params['model_path']
+        model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = ('RAW'))
+        model.set_attrs(dtc.attrs)
+        model.inject_square_current(rtest.params['injected_square_current'])
+
+        n_spikes = model.get_spike_count()
+        #print(rtest.params,dtc.rheobase, 'got here b')
+
+        if n_spikes > 1:
+            #print('wrong',n_spikes)
+            #import pdb; pdb.set_trace(
+
+            )
+    '''
 
 
 
@@ -226,7 +267,6 @@ def format_test(dtc):
         dtc.vtest[k] = {}
         if v.passive == False and v.active == True:
             keyed = dtc.vtest[k]
-            print(dtc.rheobase)
             dtc.vtest[k] = active_values(keyed,dtc.rheobase)
 
         elif v.passive == True and v.active == False:
@@ -261,7 +301,7 @@ def nunit_evaluation(dtc):
             t.params = dtc.vtest[k]
             dtc.scores[str(t)] = 1.0
             score,_= bridge_judge((t,dtc))
-
+            #print(t)#,dtc.attrs)
             if type(score.sort_key) is not type(None):
                 dtc.scores[str(t)] = 1.0 - score.sort_key
 
@@ -279,7 +319,6 @@ def evaluate(dtc):
     fitness = [ 1.0 for i in range(0,error_length) ]
     for k,t in enumerate(dtc.scores.keys()):
         fitness[k] = dtc.scores[str(t)]
-    fitness = [ i for i in fitness ]
     return tuple(fitness,)
 
 def get_trans_list(param_dict):
@@ -332,13 +371,14 @@ def update_dtc_pop(pop, td, backend = None):
     '''
     if isinstance(pop, Iterable):# and type(pop[0]) is not type(str('')):
         xargs = zip(pop,repeat(td),repeat(backend))
-        #npart = np.min([multiprocessing.cpu_count(),len(pop)])
-        #bag = db.from_sequence(xargs, npartitions = npart)
-        #dtcpop = list(bag.map(transform).compute())
+        npart = np.min([multiprocessing.cpu_count(),len(pop)])
+        bag = db.from_sequence(xargs, npartitions = npart)
+        dtcpop = list(bag.map(transform).compute())
         #dtcpop = list(map(transform,xargs))
-        dtcpop = []
-        for x in xargs:
-            dtcpop.append(transform(x))
+
+        #dtcpop = []
+        #for x in xargs:
+        #    dtcpop.append(transform(x))
         assert len(dtcpop) == len(pop)
     else:
         # TODO
@@ -405,27 +445,25 @@ def rheobase_old(pop, td, tests):
     dtcpop = list(update_dtc_pop(pop, td))
     constant = pop[0].hc
     for d in dtcpop:
-        if len(constant):
-            d.constants = constant
-            d.add_constant()
+        if constant is not None:
+            if len(constant):
+                d.constants = constant
+                d.add_constant()
         d.tests = tests
         d.backend = str('RAW')
 
     dtcpop = list(map(dtc_to_rheo,dtcpop))
     for ind,d in zip(pop,dtcpop):
         if type(d.rheobase) is not type(1.0):
-            ind.rheobase = d.rheobase['value']
-            d.rheobase = d.rheobase['value']
+            ind.rheobase = d.rheobase#['value']
+            d.rheobase = d.rheobase#['value']
         else:
             ind.rheobase = -1.0
             d.rheobase = -1.0
 
     return pop, dtcpop
 
-
-
-#@jit
-def impute_check(pop,dtcpop,td,tests):
+def impute_check(pop,dtcpop,td):
     '''
     some times genes explored will not return
     usable simulation parameters
@@ -443,41 +481,36 @@ def impute_check(pop,dtcpop,td,tests):
     in gene parameter values, but this should not happen too often,
     so the effect should be tolerable.
     '''
-    delta = len(pop) - len(dtcpop)
+    #delta = len(pop) - len(dtcpop)
     # at this point we want to take means of all the genes that are not deleted.
 
     # if a rheobase value cannot be found for a given set of dtc model more_attributes
     # delete that model, or rather, filter it out above, and impute
     # a new model from the mean of the pre-existing model attributes.
-    impute_pop = []
-    if delta != 0:
-        impute = []
-        impute_gene = [] # impute individual, not impute index
-        for t in td:
-             impute_gene.append(np.mean([ d.attrs[t] for d in dtcpop ]))
+    impute_gene = [] # impute individual, not impute index
+    ind = WSListIndividual()
+    for t in td:
+        mean = np.mean([ d.attrs[t] for d in dtcpop ])
+        std = np.std([ d.attrs[t] for d in dtcpop ])
+        sample = numpy.random.normal(loc=mean, scale=std, size=1)[0]
+        ind.append(sample)
 
-        ind = WSListIndividual(impute_gene)
-        # newest functioning code.
-        # other broken transform should be modelled on this.
-        ## what function transform should consist of.
-        dtc = DataTC()
-        LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
-        dtc.backend = 'RAW'
-        dtc.attrs = {}
 
-        for i,j in enumerate(ind):
-            dtc.attrs[str(td[i])] = j
+    dtc = DataTC()
+    LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
+    dtc.backend = 'RAW'
+    dtc.attrs = {}
 
-        ## end function transform
-        dtc.rtest = tests[0]
+    for i,j in enumerate(ind):
+        dtc.attrs[str(td[i])] = j
 
-        assert type(dtc.rtest) is not type(None)
-        dtc.backend = str('RAW')
-        dtc = dtc_to_rheo(dtc)
-        ind.rheobase = dtc.rheobase
-        if type(ind.rheobase) != -1.0:
-            dtcpop.append(dtc)
-    return dtcpop,pop
+    ## end function transform
+    dtc.tests = dtcpop[0].tests
+    dtc.backend = str('RAW')
+    dtc = dtc_to_rheo(dtc)
+    ind.rheobase = dtc.rheobase
+
+    return ind,dtc
 
 
 
@@ -502,31 +535,29 @@ def serial_route(pop,td,tests):
 def filtered(pop,dtcpop):
     dtcpop = [ dtc for dtc in dtcpop if dtc.rheobase!=-1.0 ]
     pop = [ p for p in pop if p.rheobase!=-1.0 ]
+    dtcpop = [ dtc for dtc in dtcpop if dtc.rheobase is not None ]
+    pop = [ p for p in pop if p.rheobase is not None ]
+    assert len(pop) == len(dtcpop)
     return (pop,dtcpop)
 
 
 def parallel_route(pop,dtcpop,tests,td):
 
     for d in dtcpop:
-        d.tests = tests
+        d.tests = copy.copy(tests)
 
     dtcpop = list(map(format_test,dtcpop))
     npart = np.min([multiprocessing.cpu_count(),len(dtcpop)])
     dtcbag = db.from_sequence(dtcpop, npartitions = npart)
     dtcpop = list(dtcbag.map(nunit_evaluation).compute())
-    '''
-    new_dtc_pop = []
-    for dtc in dtcpop:
-        new_dtc_pop.append(nunit_evaluation(dtc))
-    dtcpop = new_dtc_pop
-    '''
     for i,d in enumerate(dtcpop):
         if not hasattr(pop[i],'dtc'):
             pop[i] = WSListIndividual(pop[i])
             pop[i].dtc = None
 
-        pop[i].dtc = copy.copy(dtcpop[i])
-        pop[i].dtc.get_ss()
+        d.get_ss()
+        pop[i].dtc = copy.copy(d)
+
     invalid_dtc_not = [ i for i in pop if not hasattr(i,'dtc') ]
 
     return pop, dtcpop
@@ -534,18 +565,33 @@ def parallel_route(pop,dtcpop,tests,td):
 
 def test_runner(pop,td,tests):
     pop, dtcpop = rheobase_old(pop, td, tests)
-    # parallel route:
+
     before = len(pop)
     (pop,dtcpop) = filtered(pop,dtcpop)
     after = len(pop)
+    assert after>0
+
+    delta = before-after
+
+    if delta:
+        for i in range(0,delta):
+            ind,dtc = impute_check(pop,dtcpop,td)
+            if dtc.rheobase != -1.0:
+                pop.append(ind)
+                dtcpop.append(dtc)
+            else:
+                pop.append(copy.copy(pop[0]))
+                dtcpop.append(copy.copy(dtcpop[0]))
 
     pop,dtcpop = parallel_route(pop,dtcpop,tests,td)
+
+    for ind in pop:
+        if not hasattr(ind,'fitness'):
+            ind.fitness = copy.copy(pop[0].fitness)
+
+
     for p,d in zip(pop,dtcpop):
         p.dtc = d
-    delta = before-after
-    for i in range(0,delta):
-        pop.append(copy.copy(pop[0]))
-        dtcpop.append(copy.copy(dtcpop[0]))
 
     if isinstance(pop, Iterable) and isinstance(dtcpop,Iterable):
         for p,d in zip(pop,dtcpop):

@@ -74,7 +74,6 @@ class RheobaseTest(VmTest):
             rheobase = supra.min()
         else:
             rheobase = None
-        #prediction['value'] = rheobase
         prediction['value'] = rheobase
         return prediction
 
@@ -89,6 +88,7 @@ class RheobaseTest(VmTest):
                 current.update(uc)
                 model.inject_square_current(current)
                 n_spikes = model.get_spike_count()
+                #print(n_spikes)
                 if self.verbose >= 2:
                     print("Injected %s current and got %d spikes" % \
                             (ampl,n_spikes))
@@ -207,17 +207,14 @@ class RheobaseTestP(VmTest):
 
             if 0. in supra and len(sub) == 0:
                 dtc.boolean = True
-                dtc.rheobase = -1.0
+                dtc.rheobase = -1
                 return dtc
             elif (len(sub) + len(supra)) == 0:
                 # This assertion would only be occur if there was a bug
                 assert sub.max() <= supra.min()
             elif len(sub) and len(supra):
                 # Termination criterion
-                if supra.min() - sub.max() < self.tolerance:
-                    dtc.rheobase = float(supra.min())
-                    dtc.boolean = True
-                    return dtc
+
                 steps = np.linspace(sub.max(),supra.min(),cpucount+1)*pq.pA
                 steps = steps[1:-1]*pq.pA
             elif len(sub):
@@ -274,8 +271,7 @@ class RheobaseTestP(VmTest):
                 model.inject_square_current(current)
                 dtc.previous = ampl
                 n_spikes = model.get_spike_count()
-
-                if n_spikes == 1:# or other_spikes == 1:
+                if n_spikes == 1:
                     dtc.lookup[float(ampl)] = 1
                     dtc.rheobase = float(ampl)
                     dtc.boolean = True
@@ -320,7 +316,8 @@ class RheobaseTestP(VmTest):
             # dtc = check_current(model.rheobase,dtc)
             # If its not true enter a search, with ranges informed by memory
             cnt = 0
-            while dtc.boolean == False and cnt< 10:
+            sub = np.array([0,0])
+            while dtc.boolean == False and cnt< 40 and sub.max()<1500.0:
                 #dtc.current_steps = list(filter(lambda cs: cs !=0.0 , dtc.current_steps))
                 dtc_clones = [ copy.copy(dtc) for i in range(0,len(dtc.current_steps)) ]
                 for i,s in enumerate(dtc.current_steps):
@@ -329,16 +326,29 @@ class RheobaseTestP(VmTest):
                 dtc_clones = [ d for d in dtc_clones if not np.isnan(d.ampl) ]
                 b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
                 dtc_clone = list(b0.map(check_current).compute())
+                for dtc in dtc_clone:
+                    if dtc.boolean == True:
+                        return dtc
+
                 for d in dtc_clone:
                     dtc.lookup.update(d.lookup)
                 dtc = check_fix_range(dtc)
+
                 cnt += 1
                 sub, supra = get_sub_supra(dtc.lookup)
+                if len(supra) and len(sub):
+                    delta = float(supra.min()) - float(sub.max())
+                    if delta == 0 or (str(supra.min()) == str(sub.max())):
+                        #print('gets into paradox')
+                        dtc.rheobase = None #float(supra.min())
+                        dtc.boolean = False
+                        return dtc
+
                 self.verbose == 2
                 if self.verbose >= 2:
                     print("Try %d: SubMax = %s; SupraMin = %s" % \
-                    (cnt, sub.max().round(1) if len(sub) else None,
-                     supra.min().round(1) if len(supra) else None))
+                    (cnt, sub.max() if len(sub) else None,
+                    supra.min() if len(supra) else None))
             return dtc
 
         dtc = DataTC()
@@ -355,8 +365,7 @@ class RheobaseTestP(VmTest):
         assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
 
         prediction = {}
-        #print(find_rheobase(self,dtc).rheobase)
-        #try:
+
         temp = find_rheobase(self,dtc).rheobase
         if type(temp) is not type(None):
             prediction['value'] =  temp* pq.pA
