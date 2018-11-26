@@ -98,13 +98,14 @@ def bridge_judge(test_and_models):
     obs = test.observation
     model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = ('RAW'))
     model.set_attrs(dtc.attrs)
-
     pred = test.generate_prediction(model)
-    n_spikes = model.get_spike_count()
-    #if n_spikes > 1:
-    #    import pdb; pdb.set_trace()
-    score = test.compute_score(obs,pred)
-    return score, pred#, amp, polarity
+    if pred is not None:
+        score = test.compute_score(obs,pred)
+    else:
+        score = None
+    #else:
+        #score = test.compute_score(obs,pred)
+    return score, pred
 
 from neuronunit.tests.fi import RheobaseTestP# as discovery
 
@@ -121,22 +122,13 @@ def dtc_to_rheo(dtc):
     if len(rtest):
         rtest = rtest[0]
         dtc.rheobase = rtest.generate_prediction(model)
-        #print(dtc.rheobase)
         if dtc.rheobase is not None and dtc.rheobase !=-1.0:
             dtc.rheobase = dtc.rheobase['value']
-
             obs = rtest.observation
             score = rtest.compute_score(obs,dtc.rheobase)
             dtc.scores[str('RheobaseTestP')] = 1.0 - score.sort_key
-
             rtest.params['injected_square_current']['amplitude'] = dtc.rheobase
-            '''
-            model.inject_square_current(rtest.params['injected_square_current'])
-            n_spikes = model.get_spike_count()
 
-            if n_spikes > 1:
-                print('wrong: ',n_spikes)
-            '''
         else:
             dtc.rheobase = - 1.0
             dtc.scores[str('RheobaseTestP')] = 1.0
@@ -157,31 +149,6 @@ def dtc_to_rheo(dtc):
             dtc.rheobase = - 1.0
 
     return dtc
-    #dtc.rheobase
-    '''
-    if dtc.rheobase is not None:
-    #print({k:v for k,v in dtc.rheobase.items()})
-    if dtc.rheobase['value'] > 0:
-        dtc.rheobase = dtc.rheobase['value']
-
-        rtest.params['injected_square_current']['amplitude'] = dtc.rheobase['value']
-        #print(rtest.params,dtc.rheobase)
-        model = None
-        LEMS_MODEL_PATH = path_params['model_path']
-        model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = ('RAW'))
-        model.set_attrs(dtc.attrs)
-        model.inject_square_current(rtest.params['injected_square_current'])
-
-        n_spikes = model.get_spike_count()
-        #print(rtest.params,dtc.rheobase, 'got here b')
-
-        if n_spikes > 1:
-            #print('wrong',n_spikes)
-            #import pdb; pdb.set_trace(
-
-            )
-    '''
-
 
 
 def score_proc(dtc,t,score):
@@ -244,7 +211,11 @@ def active_values(keyed,rheobase):
     keyed['injected_square_current'] = {}
     keyed['injected_square_current']['delay']= DELAY
     keyed['injected_square_current']['duration'] = DURATION
-    keyed['injected_square_current']['amplitude'] = rheobase
+    if type(rheobase) is type({str('k'):str('v')}):
+        keyed['injected_square_current']['amplitude'] = rheobase['value']
+    else:
+        keyed['injected_square_current']['amplitude'] = rheobase
+
     return keyed
 
 def passive_values(keyed):
@@ -301,13 +272,13 @@ def nunit_evaluation(dtc):
             t.params = dtc.vtest[k]
             dtc.scores[str(t)] = 1.0
             score,_= bridge_judge((t,dtc))
-            #print(t)#,dtc.attrs)
-            if type(score.sort_key) is not type(None):
-                dtc.scores[str(t)] = 1.0 - score.sort_key
-
-                dtc = score_proc(dtc,t,copy.copy(score))
+            if score is not None:
+                if score.sort_key is not None:
+                    dtc.scores[str(t)] = 1.0 - score.sort_key
             else:
                 print('gets to None score type')
+            dtc = score_proc(dtc,t,copy.copy(score))
+
     dtc.get_ss() # compute the sum of sciunit score components.
     return dtc
 
@@ -481,7 +452,6 @@ def impute_check(pop,dtcpop,td):
     in gene parameter values, but this should not happen too often,
     so the effect should be tolerable.
     '''
-    #delta = len(pop) - len(dtcpop)
     # at this point we want to take means of all the genes that are not deleted.
 
     # if a rheobase value cannot be found for a given set of dtc model more_attributes
@@ -492,7 +462,7 @@ def impute_check(pop,dtcpop,td):
     for t in td:
         mean = np.mean([ d.attrs[t] for d in dtcpop ])
         std = np.std([ d.attrs[t] for d in dtcpop ])
-        sample = numpy.random.normal(loc=mean, scale=std, size=1)[0]
+        sample = numpy.random.normal(loc=mean, scale=2*std, size=1)[0]
         ind.append(sample)
 
 
@@ -570,19 +540,19 @@ def test_runner(pop,td,tests):
     (pop,dtcpop) = filtered(pop,dtcpop)
     after = len(pop)
     assert after>0
-
     delta = before-after
-
     if delta:
-        for i in range(0,delta):
+        cnt = 0
+        while cnt < delta:
             ind,dtc = impute_check(pop,dtcpop,td)
             if dtc.rheobase != -1.0:
                 pop.append(ind)
                 dtcpop.append(dtc)
-            else:
-                pop.append(copy.copy(pop[0]))
-                dtcpop.append(copy.copy(dtcpop[0]))
+                cnt += 1
 
+                #else:
+                    #pop.append(copy.copy(pop[0]))
+                    #dtcpop.append(copy.copy(dtcpop[0]))
     pop,dtcpop = parallel_route(pop,dtcpop,tests,td)
 
     for ind in pop:
