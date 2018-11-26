@@ -88,7 +88,6 @@ class RheobaseTest(VmTest):
                 current.update(uc)
                 model.inject_square_current(current)
                 n_spikes = model.get_spike_count()
-                #print(n_spikes)
                 if self.verbose >= 2:
                     print("Injected %s current and got %d spikes" % \
                             (ampl,n_spikes))
@@ -317,7 +316,12 @@ class RheobaseTestP(VmTest):
             # If its not true enter a search, with ranges informed by memory
             cnt = 0
             sub = np.array([0,0])
-            while dtc.boolean == False and cnt< 40 and sub.max()<1500.0:
+            while dtc.boolean == False and cnt< 40:
+                if len(sub):
+                    if sub.max()> 1500.0:
+                        dtc.rheobase = None #float(supra.min())
+                        dtc.boolean = False
+                        return dtc
                 #dtc.current_steps = list(filter(lambda cs: cs !=0.0 , dtc.current_steps))
                 dtc_clones = [ copy.copy(dtc) for i in range(0,len(dtc.current_steps)) ]
                 for i,s in enumerate(dtc.current_steps):
@@ -339,7 +343,6 @@ class RheobaseTestP(VmTest):
                 if len(supra) and len(sub):
                     delta = float(supra.min()) - float(sub.max())
                     if delta == 0 or (str(supra.min()) == str(sub.max())):
-                        #print('gets into paradox')
                         dtc.rheobase = None #float(supra.min())
                         dtc.boolean = False
                         return dtc
