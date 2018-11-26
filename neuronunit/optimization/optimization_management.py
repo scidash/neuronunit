@@ -43,6 +43,8 @@ logger = logging.getLogger('__main__')
 
 
 
+from collections import OrderedDict
+
 import dask.bag as db
 # The rheobase has been obtained seperately and cannot be db mapped.
 # Nested DB mappings dont work.
@@ -303,20 +305,12 @@ from itertools import repeat
 
 def transform(xargs):
     (ind,td,backend) = xargs
-
-
-    # The merits of defining a function in a function
-    # is that it yields a semi global scoped variables.
-    # conisider refactoring outer function as a decorator.
     dtc = DataTC()
-
     LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
     dtc.backend = 'RAW'
     dtc.attrs = {}
-
     for i,j in enumerate(ind):
         dtc.attrs[str(td[i])] = j
-
     dtc.evaluated = False
     return dtc
 
@@ -328,7 +322,6 @@ def add_constant(hold_constant, pop, td):
     for p in pop:
         for v in hold_constant.values():
             p.append(v)
-
     return pop,td
 
 def update_dtc_pop(pop, td, backend = None):
@@ -345,23 +338,13 @@ def update_dtc_pop(pop, td, backend = None):
         npart = np.min([multiprocessing.cpu_count(),len(pop)])
         bag = db.from_sequence(xargs, npartitions = npart)
         dtcpop = list(bag.map(transform).compute())
-        #dtcpop = list(map(transform,xargs))
-
-        #dtcpop = []
-        #for x in xargs:
-        #    dtcpop.append(transform(x))
         assert len(dtcpop) == len(pop)
     else:
-        # TODO
-        # erradicate xargs.
-        # everything can be stored in the DTC,
-        # so stop making complicated tuple xargs patterns.
         for p in pop:
             p.td = td
             p.backend = str('RAW')
         # above replaces need for this line:
         xargs = (pop,td,repeat(backend))
-
         # In this case pop is not really a population but an individual
         # but parsimony of naming variables
         # suggests not to change the variable name to reflect this.
@@ -397,16 +380,9 @@ def run_ga(explore_edges, max_ngen, test, free_params = None, hc = None, NSGA = 
         DO.setup_deap()
     # This run condition should not need same arguments as above.
     ga_out = DO.run(max_ngen = max_ngen)#offspring_size = MU, )
-    try:
-        ga_out['dhof'] = [ h.dtc for h in ga_out['hof'] ]
-        #ga_out['dhof'] = [ h.dtc for h in ga_out['hof'] ]
-
-        ga_out['dbest'] = ga_out['hof'][0].dtc
-    except:
-        pass
     return ga_out, DO
 
-def rheobase_old(pop, td, tests):
+def rheobase(pop, td, tests):
     '''
     Calculate rheobase for a given population pop
     Ordered parameter dictionary td
@@ -434,7 +410,7 @@ def rheobase_old(pop, td, tests):
 
     return pop, dtcpop
 
-def impute_check(pop,dtcpop,td):
+def new_genes(pop,dtcpop,td):
     '''
     some times genes explored will not return
     usable simulation parameters
@@ -453,7 +429,6 @@ def impute_check(pop,dtcpop,td):
     so the effect should be tolerable.
     '''
     # at this point we want to take means of all the genes that are not deleted.
-
     # if a rheobase value cannot be found for a given set of dtc model more_attributes
     # delete that model, or rather, filter it out above, and impute
     # a new model from the mean of the pre-existing model attributes.
@@ -479,11 +454,7 @@ def impute_check(pop,dtcpop,td):
     dtc.backend = str('RAW')
     dtc = dtc_to_rheo(dtc)
     ind.rheobase = dtc.rheobase
-
     return ind,dtc
-
-
-
 
 
 def serial_route(pop,td,tests):
@@ -496,7 +467,6 @@ def serial_route(pop,td,tests):
         for t in tests:
             dtc.scores = {}
             dtc.get_ss()
-
     else:
         dtc = format_test((dtc,tests))
         dtc = nunit_evaluation((dtc,tests))
@@ -512,10 +482,8 @@ def filtered(pop,dtcpop):
 
 
 def parallel_route(pop,dtcpop,tests,td):
-
     for d in dtcpop:
         d.tests = copy.copy(tests)
-
     dtcpop = list(map(format_test,dtcpop))
     npart = np.min([multiprocessing.cpu_count(),len(dtcpop)])
     dtcbag = db.from_sequence(dtcpop, npartitions = npart)
@@ -524,18 +492,17 @@ def parallel_route(pop,dtcpop,tests,td):
         if not hasattr(pop[i],'dtc'):
             pop[i] = WSListIndividual(pop[i])
             pop[i].dtc = None
-
         d.get_ss()
         pop[i].dtc = copy.copy(d)
-
     invalid_dtc_not = [ i for i in pop if not hasattr(i,'dtc') ]
-
     return pop, dtcpop
 
 
 def test_runner(pop,td,tests):
-    pop, dtcpop = rheobase_old(pop, td, tests)
-
+    pop, dtcpop = rheobase(pop, td, tests)
+    # there are many models, which have no actual rheobase current injection value.
+    # filter, filters out such models,
+    # gew genes, add genes to make up for missing values.
     before = len(pop)
     (pop,dtcpop) = filtered(pop,dtcpop)
     after = len(pop)
@@ -544,25 +511,18 @@ def test_runner(pop,td,tests):
     if delta:
         cnt = 0
         while cnt < delta:
-            ind,dtc = impute_check(pop,dtcpop,td)
+            ind,dtc = new_genes(pop,dtcpop,td)
             if dtc.rheobase != -1.0:
                 pop.append(ind)
                 dtcpop.append(dtc)
                 cnt += 1
-
-                #else:
-                    #pop.append(copy.copy(pop[0]))
-                    #dtcpop.append(copy.copy(dtcpop[0]))
     pop,dtcpop = parallel_route(pop,dtcpop,tests,td)
-
-    for ind in pop:
+    for ind,d in zip(pop,dtcpop):
+        ind.dtc = d
         if not hasattr(ind,'fitness'):
             ind.fitness = copy.copy(pop[0].fitness)
-
-
-    for p,d in zip(pop,dtcpop):
-        p.dtc = d
-
+    return pop,dtcpop
+    '''
     if isinstance(pop, Iterable) and isinstance(dtcpop,Iterable):
         for p,d in zip(pop,dtcpop):
             if type(p) is type(None) or type(d) is type(None):
@@ -573,15 +533,11 @@ def test_runner(pop,td,tests):
     if not isinstance(pop, Iterable):# and not isinstance(dtcpop,Iterable):
         pop,dtcpop = serial_route(pop,td,tests)
         print('serial badness')
-
-
-    return pop,dtcpop
-
-from collections import OrderedDict
+    '''
 
 def update_deap_pop(pop, tests, td, backend = None,hc = None):
     '''
-    # Inputs a population of genes (pop).
+    Inputs a population of genes (pop).
     Returned neuronunit scored DataTransportContainers (dtcpop).
     This method converts a population of genes to a population of Data Transport Containers,
     Which act as communicatable data types for storing model attributes.
@@ -598,6 +554,8 @@ def update_deap_pop(pop, tests, td, backend = None,hc = None):
     pop, dtcpop = test_runner(pop,td,tests)
     for p,d in zip(pop,dtcpop):
         p.dtc = d
+    return pop
+    '''
     if not isinstance(pop, Iterable) and not isinstance(dtcpop,Iterable):
         pop.dtc = dtcpop
         if type(pop.dtc.rheobase) is type(None):
@@ -606,13 +564,12 @@ def update_deap_pop(pop, tests, td, backend = None,hc = None):
                 pop.dtc.scores[str(t)] = 1.0
     else:
         pass
-    return pop
-
+    '''
 def create_subset(nparams = 10, boundary_dict = None):
     # used by GA to find subsets in parameter space.
     if type(boundary_dict) is type(None):
-        raise ValueError('A dictionary was not not supplied and a specific bad thing happened.')
-
+        raise ValueError('A parameter range dictionary was not supplied \
+        and the program doesnt know what value to explore.')
         mp = modelp.model_params
         key_list = list(mp.keys())
         reduced_key_list = key_list[0:nparams]
