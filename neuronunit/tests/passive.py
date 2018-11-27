@@ -231,18 +231,24 @@ class RestingPotentialTest(VmTest):
         """Implementation of sciunit.Test.generate_prediction."""
         model.rerun = True
         model.inject_square_current(self.params['injected_square_current'])
-        median = model.get_median_vm() # Use median for robustness.
-        std = model.get_std_vm()
-        prediction = {'mean':median, 'std':std}
-        self.prediction = prediction
-        return prediction
+        vm = model.get_membrane_potential()
+        if np.any(np.isnan(vm)) or np.any(np.isinf(vm)):
+            return None
+        else:
+            median = model.get_median_vm() # Use median for robustness.
+            std = model.get_std_vm()
+            #print('std: ',std,'median: ',median)
+            prediction = {'mean':median, 'std':std}
+            self.prediction = prediction
+            return prediction
 
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
         if prediction is None:
             return None#scores.InsufficientDataScore(None)
-
         else:
+            #print(observation,prediction)
+            #print(type(observation),type(prediction))
             score = super(RestingPotentialTest,self).\
                         compute_score(observation, prediction)
         return score
