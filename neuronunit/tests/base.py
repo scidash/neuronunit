@@ -51,6 +51,9 @@ class VmTest(sciunit.Test):
                            'n': {'type': 'integer', 'min': 1,
                                  'required': True}}]
 
+    params_schema = {'dt': {'type': 'time', 'required': False},
+                     'tmax': {'type': 'time', 'min': 0, 'required': False}}
+
     def _extra(self):
         pass
 
