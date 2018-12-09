@@ -35,15 +35,14 @@ npartitions = multiprocessing.cpu_count()
 from collections import Iterable
 from numba import jit
 from sklearn.model_selection import ParameterGrid
+from itertools import repeat
+from collections import OrderedDict
 
 
 import logging
 logger = logging.getLogger('__main__')
 
-
-
-
-from collections import OrderedDict
+from neuronunit.tests.fi import RheobaseTestP# as discovery
 
 import dask.bag as db
 # The rheobase has been obtained seperately and cannot be db mapped.
@@ -91,10 +90,21 @@ def write_opt_to_nml(path,param_dict):
     return
 
 
-def bridge_judge(test_and_models):
+def bridge_judge(test_and_models,dont_patch=False):
     # Temporarily patch sciunit judge code, which seems to be broken.
     #
     #
+    '''
+    if dont_patch:
+        LEMS_MODEL_PATH = path_params['model_path']
+        (test, dtc) = test_and_models
+        obs = test.observation
+        model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = ('RAW'))
+        model.set_attrs(dtc.attrs)
+        score = test.judge(model)
+        print(score.sort_key)
+    else:
+    '''
     LEMS_MODEL_PATH = path_params['model_path']
     (test, dtc) = test_and_models
     obs = test.observation
@@ -103,16 +113,17 @@ def bridge_judge(test_and_models):
     pred = test.generate_prediction(model)
     if pred is not None:
         score = test.compute_score(obs,pred)
+        print(score.sort_key)
+
     else:
         score = None
+
     #else:
         #score = test.compute_score(obs,pred)
     return score, pred
 
-from neuronunit.tests.fi import RheobaseTestP# as discovery
 
 def dtc_to_rheo(dtc):
-
     # If  test taking data, and objects are present (observations etc).
     # Take the rheobase test and store it in the data transport container.
     dtc.scores = {}
@@ -170,15 +181,13 @@ def score_proc(dtc,t,score):
     return dtc
 
 def switch_logic(tests):
-
+    # move this logic into sciunit tests
     for t in tests:
         t.passive = None
         t.active = None
         active = False
         passive = False
-        ##
-        # except rheobase
-        ##
+
         if str('RheobaseTestP') == t.name:
             active = True
             passive = False
@@ -266,22 +275,21 @@ def nunit_evaluation(dtc):
     LEMS_MODEL_PATH = path_params['model_path']
 
 
-    if dtc.rheobase == -1.0 or type(dtc.rheobase) is type(None):
-        dtc = allocate_worst(tests,dtc)
+    #if dtc.rheobase == -1.0 or type(dtc.rheobase) is type(None):
+    #    dtc = allocate_worst(tests,dtc)
 
     for k,t in enumerate(tests):
         if str('RheobaseTestP') != t.name:
             t.params = dtc.vtest[k]
-            dtc.scores[str(t)] = 1.0
             score,_= bridge_judge((t,dtc))
             if score is not None:
                 if score.sort_key is not None:
                     dtc.scores[str(t)] = 1.0 - score.sort_key
+                    dtc = score_proc(dtc,t,copy.copy(score))
             else:
                 print('gets to None score type')
-            dtc = score_proc(dtc,t,copy.copy(score))
-
     dtc.get_ss() # compute the sum of sciunit score components.
+    print(dtc.get_ss())
     return dtc
 
 
@@ -292,6 +300,7 @@ def evaluate(dtc):
     fitness = [ 1.0 for i in range(0,error_length) ]
     for k,t in enumerate(dtc.scores.keys()):
         fitness[k] = dtc.scores[str(t)]
+    print(fitness)
     return tuple(fitness,)
 
 def get_trans_list(param_dict):
@@ -301,7 +310,6 @@ def get_trans_list(param_dict):
     return trans_list
 
 
-from itertools import repeat
 
 def transform(xargs):
     (ind,td,backend) = xargs
@@ -357,10 +365,13 @@ def update_dtc_pop(pop, td, backend = None):
 
 
 def run_ga(explore_edges, max_ngen, test, free_params = None, hc = None, NSGA = None, MU = None, seed_pop = None):
+    # seed_pop can be used to
+    # to use existing models, that are good guesses at optima, as starting points for optimization.
     # https://stackoverflow.com/questions/744373/circular-or-cyclic-imports-in-python
     # These imports need to be defined with local scope to avoid circular importing problems
     # Try to fix local imports later.
     from bluepyopt.deapext.optimisations import SciUnitOptimization
+
     ss = {}
     for k in free_params:
         ss[k] = explore_edges[k]
@@ -373,6 +384,7 @@ def run_ga(explore_edges, max_ngen, test, free_params = None, hc = None, NSGA = 
         selection = str('selIBEA')
     max_ngen = int(np.floor(max_ngen))
     DO = SciUnitOptimization(offspring_size = MU, error_criterion = test, selection = selection, boundary_dict = ss, elite_size = 2, hc=hc)
+
     if seed_pop is not None:
         # This is a re-run condition.
         DO.setnparams(nparams = len(free_params), boundary_dict = ss)
@@ -382,28 +394,37 @@ def run_ga(explore_edges, max_ngen, test, free_params = None, hc = None, NSGA = 
     ga_out = DO.run(max_ngen = max_ngen)#offspring_size = MU, )
     return ga_out, DO
 
-def rheobase(pop, td, tests):
+
+def init_pop(pop, td, tests):
+
+    from neuronunit.optimization.exhaustive_search import update_dtc_grid
+    dtcpop = list(update_dtc_pop(pop, td))
+    for d in dtcpop:
+        d.tests = tests
+        d.backend = str('RAW')
+
+    if hasattr(pop[0],'hc'):
+        constant = pop[0].hc
+        for d in dtcpop:
+            if constant is not None:
+                if len(constant):
+                    d.constants = constant
+                    d.add_constant()
+
+    return pop, dtcpop
+
+def obtain_rheobase(pop, td, tests):
     '''
     Calculate rheobase for a given population pop
     Ordered parameter dictionary td
     and rheobase test rt
     '''
-    from neuronunit.optimization.exhaustive_search import update_dtc_grid
-    dtcpop = list(update_dtc_pop(pop, td))
-    constant = pop[0].hc
-    for d in dtcpop:
-        if constant is not None:
-            if len(constant):
-                d.constants = constant
-                d.add_constant()
-        d.tests = tests
-        d.backend = str('RAW')
-
+    pop, dtcpop = init_pop(pop, td, tests)
     dtcpop = list(map(dtc_to_rheo,dtcpop))
     for ind,d in zip(pop,dtcpop):
         if type(d.rheobase) is not type(1.0):
-            ind.rheobase = d.rheobase#['value']
-            d.rheobase = d.rheobase#['value']
+            ind.rheobase = d.rheobase
+            d.rheobase = d.rheobase
         else:
             ind.rheobase = -1.0
             d.rheobase = -1.0
@@ -427,11 +448,13 @@ def new_genes(pop,dtcpop,td):
     Ultimately this will cause regression towards the mean
     in gene parameter values, but this should not happen too often,
     so the effect should be tolerable.
-    '''
-    # at this point we want to take means of all the genes that are not deleted.
+    # at this point we want to mimic a normal random distribution of genes that are not deleted.
     # if a rheobase value cannot be found for a given set of dtc model more_attributes
-    # delete that model, or rather, filter it out above, and impute
+    # delete that model, or rather, filter it out above, and make new genes based on
+    # the statistics of remaining genes.
+    # it's possible that they wont be good models either, so keep trying in that event.
     # a new model from the mean of the pre-existing model attributes.
+    '''
     impute_gene = [] # impute individual, not impute index
     ind = WSListIndividual()
     for t in td:
@@ -439,17 +462,12 @@ def new_genes(pop,dtcpop,td):
         std = np.std([ d.attrs[t] for d in dtcpop ])
         sample = numpy.random.normal(loc=mean, scale=2*std, size=1)[0]
         ind.append(sample)
-
-
     dtc = DataTC()
     LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
     dtc.backend = 'RAW'
     dtc.attrs = {}
-
     for i,j in enumerate(ind):
         dtc.attrs[str(td[i])] = j
-
-    ## end function transform
     dtc.tests = dtcpop[0].tests
     dtc.backend = str('RAW')
     dtc = dtc_to_rheo(dtc)
@@ -497,12 +515,7 @@ def parallel_route(pop,dtcpop,tests,td):
     invalid_dtc_not = [ i for i in pop if not hasattr(i,'dtc') ]
     return pop, dtcpop
 
-
-def test_runner(pop,td,tests):
-    pop, dtcpop = rheobase(pop, td, tests)
-    # there are many models, which have no actual rheobase current injection value.
-    # filter, filters out such models,
-    # gew genes, add genes to make up for missing values.
+def make_up_lost(pop,dtcpop,td):
     before = len(pop)
     (pop,dtcpop) = filtered(pop,dtcpop)
     after = len(pop)
@@ -516,6 +529,20 @@ def test_runner(pop,td,tests):
                 pop.append(ind)
                 dtcpop.append(dtc)
                 cnt += 1
+    return pop, dtcpop
+
+def test_runner(pop,td,tests,single_spike=True):
+    if single_spike:
+        pop, dtcpop = obtain_rheobase(pop, td, tests)
+        pop, dtcpop = make_up_lost(pop,dtcpop,td)
+        # there are many models, which have no actual rheobase current injection value.
+        # filter, filters out such models,
+        # gew genes, add genes to make up for missing values.
+        # delta is the number of genes to replace.
+
+    else:
+        pop, dtcpop = init_pop(pop, td, tests)
+
     pop,dtcpop = parallel_route(pop,dtcpop,tests,td)
     for ind,d in zip(pop,dtcpop):
         ind.dtc = d
@@ -547,24 +574,14 @@ def update_deap_pop(pop, tests, td, backend = None,hc = None):
     '''
 
     pop = copy.copy(pop)
-
-    pop[0].hc = None
-    pop[0].hc = hc
-
+    if hc is not None:
+        pop[0].hc = None
+        pop[0].hc = hc
     pop, dtcpop = test_runner(pop,td,tests)
     for p,d in zip(pop,dtcpop):
         p.dtc = d
     return pop
-    '''
-    if not isinstance(pop, Iterable) and not isinstance(dtcpop,Iterable):
-        pop.dtc = dtcpop
-        if type(pop.dtc.rheobase) is type(None):
-            pop.dtc.scores = {}
-            for t in tests:
-                pop.dtc.scores[str(t)] = 1.0
-    else:
-        pass
-    '''
+
 def create_subset(nparams = 10, boundary_dict = None):
     # used by GA to find subsets in parameter space.
     if type(boundary_dict) is type(None):
