@@ -86,17 +86,20 @@ class RheobaseTest(VmTest):
 
                 uc = {'amplitude':ampl}
                 current.update(uc)
+
                 model.inject_square_current(current)
                 n_spikes = model.get_spike_count()
+
                 if self.verbose >= 2:
                     print("Injected %s current and got %d spikes" % \
                             (ampl,n_spikes))
                 lookup[float(ampl)] = n_spikes
                 spike_counts = np.array([n for x,n in lookup.items() if n>0])
+
                 if n_spikes and n_spikes <= spike_counts.min():
                     self.rheobase_vm = model.get_membrane_potential()
 
-        max_iters = 5
+        max_iters = 25
 
         #evaluate once with a current injection at 0pA
         high=self.high
@@ -248,6 +251,7 @@ class RheobaseTestP(VmTest):
             dtc.model_path = LEMS_MODEL_PATH
 
             model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
+            #print(model._backend)
 
             dtc.current_src_name = model._backend.current_src_name
             assert type(dtc.current_src_name) is not type(None)
@@ -267,9 +271,13 @@ class RheobaseTestP(VmTest):
                 current = {'injected_square_current':current}
                 dtc.run_number += 1
                 model.set_attrs(dtc.attrs)
+                #print(dtc.attrs,model.attrs, 'attrs')
+                #print(current,'current update, not wrong')
                 model.inject_square_current(current)
                 dtc.previous = ampl
                 n_spikes = model.get_spike_count()
+                #print(n_spikes, 'nspikes')
+
                 if n_spikes == 1:
                     dtc.lookup[float(ampl)] = 1
                     dtc.rheobase = float(ampl)

@@ -40,12 +40,49 @@ model_params = OrderedDict(explore_param)
 # http://www.rctn.org/vs265/izhikevich-nn03.pdf
 
 
-remap = ['C','k','a','b','d' ]
-for k in model_params.keys():
-    if k in remap:
-        model_params[k] = np.linspace(float(model_params[k][0])*(10**-4),float(model_params[k][1])*(10**-4),9)
-    else:
-        model_params[k] = np.linspace(float(model_params[k][0]),float(model_params[k][1]),9)
+
+
+def translate(input_dic):
+    '''
+    Move between OSB unit conventions and NEURON unit conventions.
+    '''
+    # From OSB models
+    mparams = {}
+    mparams['a'] = 0.03
+    mparams['b'] = -2
+    mparams['C'] = 100
+    mparams['c'] = -50
+    mparams['vr'] = -60
+    mparams['vt'] = -40
+    mparams['vpeak'] = 35
+    mparams['k'] = 0.7
+    mparams['d'] = 100
+
+
+    # FROM the MOD file.
+    vanilla_NRN = {}
+    #vanilla_NRN['v0'] = -60# (mV)
+    vanilla_NRN['k'] = 7.0E-4# (uS / mV)
+    vanilla_NRN['vr'] = -60# (mV)
+    vanilla_NRN['vt'] = -40# (mV)
+    vanilla_NRN['vpeak'] = 35# (mV)
+    vanilla_NRN['a'] = 0.03# (kHz)
+    vanilla_NRN['b'] = -0.002# (uS)
+    vanilla_NRN['c'] = -50# (mV)
+    vanilla_NRN['d'] = 0.1# (nA)
+    vanilla_NRN['C'] = 1.0E-4# (microfarads)
+
+    m2m = {}
+    for k,v in vanilla_NRN.items():
+        m2m[k] = vanilla_NRN[k]/mparams[k]
+
+    input_dic['vpeak'] = input_dic['vPeak']
+    input_dic.pop('vPeak', None)
+    input_dic.pop('dt', None)
+    for k,v in input_dic.items():
+        input_dic[k] = v * m2m[k]
+    return input_dic
+
 
 #print(model_params)
 '''

@@ -9,7 +9,9 @@ import numpy as np
 import sciunit
 import sciunit.scores as scores
 from sciunit.errors import ObservationError
+import neuronunit.capabilities as ncap
 import neuronunit.capabilities as cap
+
 from neuronunit import neuroelectro
 
 
@@ -51,7 +53,7 @@ class VmTest(sciunit.Test):
         pass
 
     def validate_observation(self, observation,
-                             united_keys=None, 
+                             united_keys=None,
                              nonunited_keys=None):
         if united_keys is None:
             united_keys = self.united_observation_keys
@@ -157,19 +159,17 @@ class VmTest(sciunit.Test):
         model.inject_square_current(self.params['injected_square_current'])
 
         mp = model.results['vm']
-        import math
-        for i in mp:
-            if math.isnan(i):
-                return False
 
-        sws=cap.spike_functions.get_spike_waveforms(model.get_membrane_potential())
-        
+        if np.any(np.isnan(vm)) or np.any(np.isinf(vm)):
+            return False
+
+        sws = cap.spike_functions.get_spike_waveforms(model.get_membrane_potential())
+
         for i,s in enumerate(sws):
             s = np.array(s)
             dvdt = np.diff(s)
-            import math
             for j in dvdt:
-                if math.isnan(j):
+                if np.isnan(j):
                     return False
         return True
 
