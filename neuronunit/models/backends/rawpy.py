@@ -7,17 +7,22 @@ import numpy as np
 from .base import *
 import quantities as qt
 from quantities import mV, ms, s
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
+
+
+hc = {}
+hc['vr'] = -65.2261863636364
+hc['vPeak'] = hc['vr'] + 86.364525297619
+hc['C'] = 89.7960714285714
 
 @jit
-def get_improved_vm(C=200, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=35, vr=-60, vt=-50, dt=0.0025, Iext=[]):
+def get_vm(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.364525297619-65.2261863636364), vr=-65.2261863636364, vt=-50, dt=0.030, Iext=[]):
     '''
+    dt determined by
     Apply izhikevich equation as model
     This function can't get too pythonic (functional), it needs to be a simple loop for
     numba/jit to understand it.
     '''
-
-
     N = len(Iext)
     v = np.zeros(N)
     u = np.zeros(N)
@@ -35,8 +40,6 @@ def get_improved_vm(C=200, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=35, vr=-60, v
     vm = AnalogSignal(v,
                  units = mV,
                  sampling_period = dt * ms)
-    #vm.times.rescale(pq.ms)
-    #vm = vm.rescale(pq.ms)
     return vm
 
 
@@ -47,7 +50,7 @@ class RAWBackend(Backend):
         super(RAWBackend,self).init_backend()
         self.model._backend.use_memory_cache = False
         self.current_src_name = current_src_name
-        self._cell_name = cell_name
+        self.cell_name = cell_name
         self.vM = None
         self.attrs = attrs
 
@@ -82,12 +85,7 @@ class RAWBackend(Backend):
         """Must return a neo.core.AnalogSignal.
         And must destroy the hoc vectors that comprise it.
         """
-        #dt = self.vM.times[1] - self.vM.times[0]
-
         return self.vM
-        #return AnalogSignal(,
-        #                    units = mV,
-        #                    sampling_period =dt * ms)
 
     def set_attrs(self, **attrs):
 
@@ -103,7 +101,7 @@ class RAWBackend(Backend):
 
         """
         attrs = copy.copy(self.model.attrs)
-        
+
         if 'injected_square_current' in current.keys():
             c = current['injected_square_current']
         else:
@@ -117,7 +115,6 @@ class RAWBackend(Backend):
 
         dt = 0.025
         N = int(tMax/dt)
-        Iext = None
         Iext = np.zeros(N)
         delay_ind = int((delay/tMax)*N)
         duration_ind = int((duration/tMax)*N)
@@ -126,10 +123,10 @@ class RAWBackend(Backend):
         Iext[delay_ind:delay_ind+duration_ind-1] = amplitude
         #print(np.sum(Iext),amplitude*len(Iext[delay_ind:delay_ind+duration_ind-1]))
         Iext[delay_ind+duration_ind::] = 0.0
-        
+
         attrs['Iext'] = Iext
         attrs['dt'] = dt
-        self.vM  = get_improved_vm(**attrs)
+        self.vM  = get_vm(**attrs)
 
         return self.vM
 
