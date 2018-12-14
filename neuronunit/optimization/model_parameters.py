@@ -42,7 +42,7 @@ model_params = OrderedDict(explore_param)
 
 
 
-def translate(input_dic):
+def transcribe_units(input_dic):
     '''
     Move between OSB unit conventions and NEURON unit conventions.
     '''

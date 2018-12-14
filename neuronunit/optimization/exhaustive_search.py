@@ -214,10 +214,13 @@ def create_grid(mp_in = None, npoints = 3, free_params = None, ga = None):
     else:
         subset = {free_params[0]:None}
 
+    ndim = len(subset)
+    nsteps = np.floor(npoints/ndim)
     if type(mp_in) is not type(None):
         for k,v in mp_in.items():
             if k in free_params:
-                subset[k] = ( np.min(free_params[k]),np.max(free_params[k]) )
+                subset[k] = np.arange(np.min(free_params[k]),np.max(free_params[k]), nsteps)
+                #subset[k] = ( np.min(free_params[k]),np.max(free_params[k]) )
             else:
                 subset[k] = v
     # The function of maps is to map floating point sample spaces onto a  monochromataic matrix indicies.
