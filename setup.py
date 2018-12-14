@@ -28,5 +28,5 @@ setup(
     long_description="",
     test_suite="neuronunit.unit_test.core_tests",    
     install_requires=read_requirements(),
-    dependency_links=['git+https://github.com/scidash/neuronunit@dev#egg=sciunit-9999']
+    dependency_links=['git+https://github.com/scidash/sciunit@dev#egg=sciunit-9999']
     )
