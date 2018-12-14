@@ -8,5 +8,5 @@ pyNeuroML>-0.3.10
 pyNN>=0.9
 execnet
 backports.tempfile
-git+http://github.com/scidash/sciunit@dev#egg=sciunit-0.2.0.2
+git+http://github.com/scidash/sciunit@dev
 lmfit
