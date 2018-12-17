@@ -21,7 +21,7 @@ def Id(t,delay,duration,tmax,amplitude):
     if 0.0 < t < delay:
         return 0.0
     elif delay < t < delay+duration:
-        return amplitude
+        return amplitude#(100.0)
     elif delay+duration < t < tmax:
         return 0.0
     return 0.0
@@ -89,7 +89,9 @@ def dALLdt(X, t, attrs):
     #  Leak
     I_L = g_L * (V - E_L)
 
-
+    print(attrs)
+    print(C_m)
+    print('before mistake')
     dVdt = (Iext - I_Na - I_K - I_L) / C_m
     dmdt = alpha_m(V)*(1.0-m) - beta_m(V)*m
     dhdt = alpha_h(V)*(1.0-h) - beta_h(V)*h

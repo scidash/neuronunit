@@ -19,10 +19,15 @@ import copy
 
 electro_path = 'pipe_tests.p'
 purkinje = { 'nlex_id':'sao471801888'}#'NLXWIKI:sao471801888'} # purkinje
-fi_basket = {'nlex_id':'100201'}
+#fi_basket = {'nlex_id':'100201'}
+purkinje ={"id": 17, "name": "Cerebellum Lugaro cell", "neuron_db_id": null, "nlex_id": "nifext_133"}, {"id": 18, "name": "Cerebellum Purkinje cell", "neuron_db_id": 271, "nlex_id": "sao471801888"}
+fi_basket = {"id": 65, "name": "Dentate gyrus basket cell", "neuron_db_id": null, "nlex_id": "nlx_cell_100201"}
 #pvis_cortex = {'nlex_id':'nifext_50'} # Layer V pyramidal cell
-olf_mitral = { 'nlex_id':'nifext_120'}
-ca1_pyr = { 'nlex_id':'830368389'}
+pvis_cortex = {"id": 111, "name": "Neocortex pyramidal cell layer 5-6", "neuron_db_id": 265, "nlex_id": "nifext_50"}
+#olf_mitral = { 'nlex_id':'nifext_120'}
+olf_mitral = {"id": 129, "name": "Olfactory bulb (main) mitral cell", "neuron_db_id": 267, "nlex_id": "nlx_anat_100201"}
+#ca1_pyr = { 'nlex_id':'830368389'}
+ca1_pyr = {"id": 85, "name": "Hippocampus CA1 pyramidal cell", "neuron_db_id": 258, "nlex_id": "sao830368389"}
 pipe = [ fi_basket, olf_mitral, ca1_pyr, purkinje ]
 
 
