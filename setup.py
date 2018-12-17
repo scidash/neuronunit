@@ -17,18 +17,18 @@ def read_requirements():
     reqs_path = os.path.join('.', 'requirements.txt')
     with open(reqs_path, 'r') as f:
         requirements = [line.rstrip() for line in f]
-    install_requires = []
-    dependency_links = []
-    for i, r in enumerate(requirements):
-        if "#egg=" in r:
-            name = r.split('#egg=')[1].split('-')[0]
-            install_requires += ['%s @ %s' % (name, r)]
-        else:
-            install_requires += [r]
-    return install_requires, dependency_links
+    #install_requires = []
+    #dependency_links = []
+    #for i, r in enumerate(requirements):
+    #if "#egg=" in r:
+    #        name = r.split('#egg=')[1].split('-')[0]
+    #        install_requires += ['%s @ %s' % (name, r)]
+    #    else:
+    #        install_requires += [r]
+    return requirements
 
 
-install_requires, dependency_links = read_requirements()
+#install_requires, dependency_links = read_requirements()
 
 setup(
     name='neuronunit',
@@ -42,6 +42,6 @@ setup(
                  "single-neuron physiology models."),
     long_description="",
     test_suite="neuronunit.unit_test.core_tests",
-    install_requires=install_requires,
-    dependency_links=dependency_links
+    install_requires=read_requirements(),
+    #dependency_links=dependency_links
     )
