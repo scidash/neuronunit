@@ -23,7 +23,7 @@ install:
   # Useful for debugging any issues with conda
   - conda info -a
   - pip install -U pip
-  - pip install --no-cache-dir -r requirements.txt .
+  - pip install --no-cache-dir .
   - pip install coveralls
 ######################################################
 
