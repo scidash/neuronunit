@@ -9,6 +9,8 @@ import os
 
 from setuptools import setup, find_packages
 
+import sys
+
 
 def read_requirements():
     """Parse requirements from requirements.txt."""
@@ -19,10 +21,8 @@ def read_requirements():
     dependency_links = []
     for i, r in enumerate(requirements):
         if "#egg=" in r:
-            name = r.split('#egg=')[1]
-            # e.g. sciunit-9999 to sciunit==9999
-            install_requires += [name.replace('-', '==')]
-            dependency_links += [r]
+            name = r.split('#egg=')[1].split('-')[0]
+            install_requires += ['%s @ %s' % (name, r)]
         else:
             install_requires += [r]
     return install_requires, dependency_links
