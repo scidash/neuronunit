@@ -150,13 +150,14 @@ def dtc_to_rheo(dtc):
 
     if len(rtest):
         rtest = rtest[0]
-        print(rtest)
+        #print(rtest)
 
         dtc.rheobase = rtest.generate_prediction(model)
-        print(dtc.rheobase)
+        #print(dtc.rheobase)
         if dtc.rheobase is not None and dtc.rheobase !=-1.0:
             dtc.rheobase = dtc.rheobase['value']
             obs = rtest.observation
+            #print(obs,dtc.rheobase)
             score = rtest.compute_score(obs,dtc.rheobase)
             dtc.scores[str('RheobaseTestP')] = 1.0 - score.sort_key
 
@@ -243,7 +244,7 @@ def active_values(keyed,rheobase):
     keyed['injected_square_current']['delay']= DELAY
     keyed['injected_square_current']['duration'] = DURATION
     if type(rheobase) is type({str('k'):str('v')}):
-        keyed['injected_square_current']['amplitude'] = rheobase['value']
+        keyed['injected_square_current']['amplitude'] = float(rheobase['value'])*pq.pA
     else:
         keyed['injected_square_current']['amplitude'] = rheobase
 
@@ -283,6 +284,7 @@ def allocate_worst(dtc,tests):
     # Allocate the worst score available.
     for t in tests:
         dtc.scores[str(t)] = 1.0
+        dtc.score[str(t)] = 1.0
     return dtc
 
 def nunit_evaluation(dtc):
@@ -309,7 +311,8 @@ def nunit_evaluation(dtc):
                 else:
                     print('gets to None score type')
     dtc.get_ss() # compute the sum of sciunit score components.
-    print(dtc.get_ss())
+    #print(dtc.get_ss())
+    dtc.summed = dtc.get_ss()
     return dtc
 
 
@@ -320,7 +323,7 @@ def evaluate(dtc):
     fitness = [ 1.0 for i in range(0,error_length) ]
     for k,t in enumerate(dtc.scores.keys()):
         fitness[k] = dtc.scores[str(t)]
-    print(fitness)
+    #print(fitness)
     return tuple(fitness,)
 
 def get_trans_list(param_dict):
@@ -385,7 +388,7 @@ def update_dtc_pop(pop, td, backend = None):
 
 
 
-def run_ga(explore_edges, max_ngen, test, free_params = None, hc = None, NSGA = None, MU = None, seed_pop = None, model_type = None):
+def run_ga(explore_edges, max_ngen, test, free_params = None, hc = None, NSGA = None, MU = None, seed_pop = None, model_type = str('RAW')):
     # seed_pop can be used to
     # to use existing models, that are good guesses at optima, as starting points for optimization.
     # https://stackoverflow.com/questions/744373/circular-or-cyclic-imports-in-python
@@ -486,6 +489,7 @@ def new_genes(pop,dtcpop,td):
     dtc.attrs = {}
     for i,j in enumerate(ind):
         dtc.attrs[str(td[i])] = j
+    dtc.backend = dtcpop[0].backend
     dtc.tests = dtcpop[0].tests
     #dtc.backend = str('RAW')
     dtc = dtc_to_rheo(dtc)
@@ -521,7 +525,7 @@ def parallel_route(pop,dtcpop,tests,td):
     for d in dtcpop:
         d.tests = copy.copy(tests)
     dtcpop = list(map(format_test,dtcpop))
-    import pdb; pdb.set_trace()
+    #import pdb; pdb.set_trace()
     npart = np.min([multiprocessing.cpu_count(),len(dtcpop)])
     dtcbag = db.from_sequence(dtcpop, npartitions = npart)
     dtcpop = list(dtcbag.map(nunit_evaluation).compute())

@@ -215,11 +215,12 @@ def create_grid(mp_in = None, npoints = 3, free_params = None, ga = None):
         subset = {free_params[0]:None}
 
     ndim = len(subset)
-    nsteps = np.floor(npoints/ndim)
+    #nsteps = np.floor(float(npoints)/float(ndim))
     if type(mp_in) is not type(None):
         for k,v in mp_in.items():
             if k in free_params:
-                subset[k] = np.arange(np.min(free_params[k]),np.max(free_params[k]), nsteps)
+                subset[k] = np.linspace(np.min(free_params[k]),np.max(free_params[k]), npoints)
+                #import pdb; pdb.set_trace()
                 #subset[k] = ( np.min(free_params[k]),np.max(free_params[k]) )
             else:
                 subset[k] = v

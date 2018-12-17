@@ -24,6 +24,11 @@ try:
 except:
     NEURON_SUPPORT = False
 
+try:
+    import pyNN
+    pyNN_SUPPORT = True
+except:
+    pyNN_SUPPORT = False
 
 class Backend(object):
     """Base class for simulator backends that implement simulator-specific

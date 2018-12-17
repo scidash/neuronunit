@@ -9,6 +9,36 @@ from neuronunit.tests import passive, waveform, fi
 from neuronunit.tests.fi import RheobaseTestP
 
 
+import urllib.request, json
+
+#print(obs_frame)
+from neuronunit import neuroelectro
+
+def neuroelectro_summary_observation(neuron,ontology):
+    ephysprop_name = ''
+    verbose = False
+
+    reference_data = neuroelectro.NeuroElectroSummary(
+        neuron = neuron, # Neuron type lookup using the NeuroLex ID.
+        ephysprop = {'name': ontology['name']}, # Ephys property name in
+        # NeuroElectro ontology.
+    )
+    reference_data.get_values() # Get and verify summary data
+                                # from neuroelectro.org.
+    return reference_data
+import urllib.request, json
+
+def get_obs(pipe):
+    with urllib.request.urlopen("https://neuroelectro.org/api/1/e/") as url:
+        ontologies = json.loads(url.read().decode())
+        #print(ontologies)
+    #with urllib.request.urlopen("https://neuroelectro.org/api/1/e/") as url:
+    #    ontologies = json.loads(url.read().decode())
+    obs = []
+    for p in pipe:
+        for l in ontologies['objects']:
+            obs.append(neuroelectro_summary_observation(p,l))
+    return obs
 
 def update_amplitude(test,tests,score):
     rheobase = score.prediction['value']
