@@ -1,5 +1,5 @@
 
-import os
+ç√ç√ç√import os
 import pickle
 from dask import distributed
 import pickle
@@ -130,6 +130,7 @@ for (test, observation) in flat_iter:
     '''
 #    return pipe_results
 #pipe_results = main_proc(flat_iter)
+
 '''
 pipe_results[dic_key] = {}
 pipe_results[dic_key]['duration'] = finished_time - init_time
@@ -146,3 +147,4 @@ pipe_results[dic_key]['componentsh'] = [list(i.dtc.scores.values()) for i in pip
 pipe_results[dic_key]['componentsp'] = [list(i.dtc.scores.values()) for i in pipe_results[dic_key]['pf'][1:-1]]
 file_name = str('nlex_id_')+dic_key
 '''
+exit

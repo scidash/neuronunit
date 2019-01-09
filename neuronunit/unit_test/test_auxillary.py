@@ -72,8 +72,8 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         self.rheobase = self.dtc.rheobase
         from neuronunit.models.reduced import ReducedModel
         from neuronunit.optimization import get_neab
-        self.standard_model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend='NEURON')
-        self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend='NEURON')
+        self.standard_model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend='RAW')
+        self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend='RAW')
 
     def check_dif(pipe_old,pipe_new):
         bool = False

@@ -54,8 +54,8 @@ class NEURONBackend(Backend):
             if hasattr(DTC,'current_src_name'):
                 self._current_src_name = DTC.current_src_name
 
-            if hasattr(DTC,'cell_name'):
-                self.cell_name = DTC.cell_name
+            #if hasattr(DTC,'cell_name'):
+            #    self.cell_name = DTC.cell_name
 
 
 
@@ -133,6 +133,7 @@ class NEURONBackend(Backend):
 
         self.h.dt = dt
         self.fixedTimeStep = float(1.0/dt)
+        #print(len(fixed_signal),len(self.neuron.h.v_v_of0),'len memb pot')
         return AnalogSignal(fixed_signal,
                             units = mV,
                             sampling_period = dt * ms)
@@ -293,10 +294,10 @@ class NEURONBackend(Backend):
                 sec = self.h.Section(self.h.m_RS_RS_pop[0])
                 #sec.L, sec.diam = 6.3, 5 # empirically tuned
                 sec.cm = h_value
-                print(sec.cm)
+                #print(sec.cm)
             else:
                 self.h('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
-
+            #print('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
 
         ass_vr = self.h.m_RS_RS_pop[0].vr
         self.h.m_RS_RS_pop[0].v0 = ass_vr
@@ -316,6 +317,7 @@ class NEURONBackend(Backend):
         for string in neuron_sim_rig:
             # execute hoc code strings in the python interface to neuron.
             self.h(string)
+            #print(string)
 
         # These two variables have been aliased in the code below:
         self.tVector = self.h.v_time
@@ -374,35 +376,31 @@ class NEURONBackend(Backend):
         prefix = 'explicitInput_%s%s_pop0.' % (self.current_src_name,self.cell_name)
         define_current = []
         define_current.append('{0}amplitude={1}'.format(prefix,amps))
-
         duration = float(c['duration'])#.rescale('ms'))
         delay = float(c['delay'])#.rescale('ms'))
-        print(duration,delay)
         define_current.append('{0}duration={1}'.format(prefix,duration))
         define_current.append('{0}delay={1}'.format(prefix,delay))
 
 
         for string in define_current:
+            #print(string)
             # execute hoc code strings in the python interface to neuron.
             self.h(string)
+        self.neuron.h.psection()
+        #print(dir())
         #print('got here a')
         debug = True
         if debug == True:
             self.neuron.h.psection()
         self._local_run()
-
+    #@jit
     def _local_run(self):
         self.h('run()')
         results = {}
-        #trec = h.Vector()
-        #trec.record(h._ref_t)
-        #results['u'] = [ float(x)/1000.0 for x in copy.copy(self.neuron.h.v_v_of0.to_python())]
-        results['u'] = [ float(x/ 1.0E9) for x in h.v_u_of0.to_python() ]
 
         results['vm'] = [ float(x)/1000.0 for x in copy.copy(self.neuron.h.v_v_of0.to_python())]
-        #print(results['vm'])
         results['t'] = [ float(x)/1000.0 for x in copy.copy(self.neuron.h.v_time.to_python())]
         results['run_number'] = results.get('run_number',0) + 1
-        #print('got here b')
+        #print(results['vm'])
 
         return results

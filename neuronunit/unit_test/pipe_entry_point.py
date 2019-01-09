@@ -24,6 +24,8 @@ fi_basket = {'nlex_id':'100201'}
 olf_mitral = { 'nlex_id':'nifext_120'}
 ca1_pyr = { 'nlex_id':'830368389'}
 pipe = [ fi_basket, olf_mitral, ca1_pyr, purkinje ]
+
+
 electro_path = 'pipe_tests.p'
 try:
     assert os.path.isfile(electro_path) == True

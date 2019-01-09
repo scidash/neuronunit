@@ -9,6 +9,36 @@ from neuronunit.tests import passive, waveform, fi
 from neuronunit.tests.fi import RheobaseTestP
 
 
+import urllib.request, json
+
+#print(obs_frame)
+from neuronunit import neuroelectro
+
+def neuroelectro_summary_observation(neuron,ontology):
+    ephysprop_name = ''
+    verbose = False
+
+    reference_data = neuroelectro.NeuroElectroSummary(
+        neuron = neuron, # Neuron type lookup using the NeuroLex ID.
+        ephysprop = {'name': ontology['name']}, # Ephys property name in
+        # NeuroElectro ontology.
+    )
+    reference_data.get_values() # Get and verify summary data
+                                # from neuroelectro.org.
+    return reference_data
+import urllib.request, json
+
+def get_obs(pipe):
+    with urllib.request.urlopen("https://neuroelectro.org/api/1/e/") as url:
+        ontologies = json.loads(url.read().decode())
+        #print(ontologies)
+    #with urllib.request.urlopen("https://neuroelectro.org/api/1/e/") as url:
+    #    ontologies = json.loads(url.read().decode())
+    obs = []
+    for p in pipe:
+        for l in ontologies['objects']:
+            obs.append(neuroelectro_summary_observation(p,l))
+    return obs
 
 def update_amplitude(test,tests,score):
     rheobase = score.prediction['value']
@@ -29,23 +59,27 @@ def substitute_criteria(observations_donar,observations_acceptor):
     for index,oa in observations_acceptor.items():
         for k,v in oa.items():
             if k == 'std' and v == 0.0:
-                oa[k] = observations_donar[index][k]
+                if k in observations_donar.keys():
+                    oa[k] = observations_donar[index][k]
     return observations_acceptor
 
 def substitute_parallel_for_serial(electro_tests):
     for test,obs in electro_tests:
-        test[0] = RheobaseTestP(obs['Rheobase'])
+        if str('Rheobase') in obs.keys():
+            
+            test[0] = RheobaseTestP(obs['Rheobase'])
 
     return electro_tests
 
 def replace_zero_std(electro_tests):
     for test,obs in electro_tests:
-        test[0] = RheobaseTestP(obs['Rheobase'])
-        for k,v in obs.items():
-            if v['std'] == 0:
-                #print(electro_tests[1][1],obs)
-                obs = substitute_criteria(electro_tests[1][1],obs)
-                #print(obs)
+        if str('Rheobase') in obs.keys():
+            test[0] = RheobaseTestP(obs['Rheobase'])
+            for k,v in obs.items():
+                if v['std'] == 0:
+                    #print(electro_tests[1][1],obs)
+                    obs = substitute_criteria(electro_tests[1][1],obs)
+                    #print(obs)
     return electro_tests
 
 def get_neuron_criteria(cell_id,file_name = None):#,observation = None):
@@ -68,14 +102,15 @@ def get_neuron_criteria(cell_id,file_name = None):#,observation = None):
                      waveform.InjectedCurrentAPThresholdTest]#,
     observations = {}
     for index, t in enumerate(test_classes):
-        #import pdb; pdb.set_trace()
-        obs = t.neuroelectro_summary_observation(cell_id)
-
-        if obs is not None:
-            if 'mean' in obs.keys():
-                tests.append(t(obs))
-                observations[t.ephysprop_name] = obs
-
+        try:
+            obs = t.neuroelectro_summary_observation(cell_id)
+            
+            if obs is not None:
+                if 'mean' in obs.keys():
+                    tests.append(t(obs))
+                    observations[t.ephysprop_name] = obs
+        except:
+            pass
     #hooks = {tests[0]:{'f':update_amplitude}} #This is a trick to dynamically insert the method
     #update amplitude at the location in sciunit thats its passed to, without any loss of generality.
     suite = sciunit.TestSuite(tests,name="vm_suite")
