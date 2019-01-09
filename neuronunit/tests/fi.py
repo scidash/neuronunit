@@ -12,7 +12,7 @@ from neuronunit.optimization.data_transport_container import DataTC
 import os
 import quantities
 import neuronunit
-from neuronunit.models.reduced import ReducedModel
+from neuronunit.models.reduced import ReducedModel# , VeryReducedModel
 import dask.bag as db
 import quantities as pq
 import numpy as np
@@ -20,6 +20,18 @@ import copy
 import pdb
 from numba import jit
 import time
+import numba
+import copy
+
+@jit
+def get_diff(vm):
+    differentiated = np.diff(vm)
+    spikes = len([np.any(differentiated) > 0.000143667327364])
+    return spikes
+
+tolerance = 0.001
+#1125
+
 
 class RheobaseTest(VmTest):
     """
@@ -90,6 +102,7 @@ class RheobaseTest(VmTest):
                 model.inject_square_current(current)
                 n_spikes = model.get_spike_count()
 
+                self.verbose = 1
                 if self.verbose >= 2:
                     print("Injected %s current and got %d spikes" % \
                             (ampl,n_spikes))
@@ -118,6 +131,11 @@ class RheobaseTest(VmTest):
             #computation intensive and therefore
             #a target for parellelization.
 
+            if len(supra) and len(sub):
+                delta = float(supra.min()) - float(sub.max())
+                if delta < tolerance or (str(supra.min()) == str(sub.max())):
+                    break
+
             if i >= max_iters:
                 break
             #Its this part that should be like an evaluate function that is passed to futures map.
@@ -137,7 +155,7 @@ class RheobaseTest(VmTest):
         """Implementation of sciunit.Test.score_prediction."""
         #print("%s: Observation = %s, Prediction = %s" % \
         #	 (self.name,str(observation),str(prediction)))
-        if prediction['value'] is None:
+        if prediction is None:
             score = scores.InsufficientDataScore(None)
         else:
             score = super(RheobaseTest,self).\
@@ -154,12 +172,6 @@ class RheobaseTest(VmTest):
 
 
 
-@jit
-def get_diff(vm):
-    differentiated = np.diff(vm)
-    spikes = len([np.any(differentiated) > 0.000143667327364])
-    return spikes
-
 class RheobaseTestP(VmTest):
      """
      A parallel version of test Rheobase.
@@ -167,6 +179,7 @@ class RheobaseTestP(VmTest):
      under current injection.
 
      """
+
      required_capabilities = (cap.ReceivesSquareCurrent,
                               cap.ProducesSpikes)
      DELAY = 100.0*pq.ms
@@ -177,20 +190,11 @@ class RheobaseTestP(VmTest):
      description = ("A test of the rheobase, i.e. the minimum injected current "
                     "needed to evoke at least one spike.")
      units = pq.pA
-     tolerance = 5 # Rheobase search tolerance in `self.units`.
+     #tolerance  # Rheobase search tolerance in `self.units`.
      ephysprop_name = 'Rheobase'
      score_type = scores.ZScore
 
      def generate_prediction(self, model):
-        '''
-        inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
-        outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
-        Rationale, not every gene value will result in a model for which rheobase is found, in which case that gene is discarded, however to
-        compensate for losses in gene population size, more gene samples must be tested for a successful return from a rheobase search.
-        If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
-        corresponding virtual model objects.
-        '''
-
         def check_fix_range(dtc):
             '''
             Inputs: lookup, A dictionary of previous current injection values
@@ -247,15 +251,17 @@ class RheobaseTestP(VmTest):
             output is an virtual model with an updated dictionary.
             '''
             dtc.boolean = False
+            # if dtc.backend is str('NEURON') or dtc.backend is str('jNEUROML'):
+            #     model = VeryReducedModel(backend=(dtc.backend, {'DTC':dtc}))
+
+            # else:
             LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
             dtc.model_path = LEMS_MODEL_PATH
-
             model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
-            #print(model._backend)
-
             dtc.current_src_name = model._backend.current_src_name
             assert type(dtc.current_src_name) is not type(None)
-            dtc.cell_name = model._backend._cell_name
+            dtc.cell_name = model._backend.cell_name
+
             #model.set_attrs(dtc.attrs)
 
             DELAY = 100.0*pq.ms
@@ -271,13 +277,9 @@ class RheobaseTestP(VmTest):
                 current = {'injected_square_current':current}
                 dtc.run_number += 1
                 model.set_attrs(dtc.attrs)
-                #print(dtc.attrs,model.attrs, 'attrs')
-                #print(current,'current update, not wrong')
                 model.inject_square_current(current)
                 dtc.previous = ampl
                 n_spikes = model.get_spike_count()
-                #print(n_spikes, 'nspikes')
-
                 if n_spikes == 1:
                     dtc.lookup[float(ampl)] = 1
                     dtc.rheobase = float(ampl)
@@ -288,7 +290,9 @@ class RheobaseTestP(VmTest):
             return dtc
 
         def init_dtc(dtc):
-            #dtc.initiated = False
+            '''
+            Exploit memory of last model in genes.
+            '''
             # check for memory and exploit it.
             if dtc.initiated == True:
 
@@ -333,11 +337,22 @@ class RheobaseTestP(VmTest):
                 #dtc.current_steps = list(filter(lambda cs: cs !=0.0 , dtc.current_steps))
                 dtc_clones = [ copy.copy(dtc) for i in range(0,len(dtc.current_steps)) ]
                 for i,s in enumerate(dtc.current_steps):
-
                     dtc_clones[i].ampl = dtc.current_steps[i]
                 dtc_clones = [ d for d in dtc_clones if not np.isnan(d.ampl) ]
+
                 b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
                 dtc_clone = list(b0.map(check_current).compute())
+                '''
+                Slow don't do this
+                @numba.jit(parallel=True)
+                def get_clones(x):
+                    ret = []
+                    for i in numba.prange(len(x)):
+                        ret.append(check_current(x[i]))
+                        #print(check_current(x[i]))
+                    return ret
+                dtc_clone = get_clones(dtc_clones)
+                '''
                 for dtc in dtc_clone:
                     if dtc.boolean == True:
                         return dtc
@@ -350,12 +365,15 @@ class RheobaseTestP(VmTest):
                 sub, supra = get_sub_supra(dtc.lookup)
                 if len(supra) and len(sub):
                     delta = float(supra.min()) - float(sub.max())
-                    if delta == 0 or (str(supra.min()) == str(sub.max())):
-                        dtc.rheobase = None #float(supra.min())
-                        dtc.boolean = False
+                    #if delta == 0 or (str(supra.min()) == str(sub.max())):
+                    if delta < tolerance or (str(supra.min()) == str(sub.max())):
+                        dtc.rheobase = supra.min()*pq.pA #float(supra.min())
+                        dtc.boolean = True
+                        #dtc.rheobase = None
+                        #dtc.boolean = False
                         return dtc
 
-                self.verbose == 2
+                self.verbose == 1
                 if self.verbose >= 2:
                     print("Try %d: SubMax = %s; SupraMin = %s" % \
                     (cnt, sub.max() if len(sub) else None,
@@ -371,15 +389,17 @@ class RheobaseTestP(VmTest):
         # but rather a multi statement assertion that will be checked.
 
         dtc = init_dtc(dtc)
-        dtc.model_path = model.orig_lems_file_path
-        dtc.backend = model.backend
-        assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
+
+        if model.orig_lems_file_path:
+            dtc.model_path = model.orig_lems_file_path
+            dtc.backend = model.backend
+            assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
 
         prediction = {}
 
         temp = find_rheobase(self,dtc).rheobase
         if type(temp) is not type(None):
-            prediction['value'] =  temp* pq.pA
+            prediction['value'] =  float(temp)* pq.pA
         else:
             prediction = None
         return prediction

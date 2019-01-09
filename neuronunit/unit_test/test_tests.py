@@ -79,15 +79,10 @@ class TestsWaveformTestCase(TestsTestCase, unittest.TestCase):
 class TestsFITestCase(TestsTestCase, unittest.TestCase):
     """Test F/I validation tests"""
 
-    @unittest.skip("This test takes a long time")
-    def test_rheobase_serial(self):
-        from neuronunit.tests.fi import T
-        score = self.run_test(T)
-        self.assertTrue(0.2 < score < 0.3)
 
-    @unittest.skip("This test takes a long time")
+    #@unittest.skip("This test takes a long time")
     def test_rheobase_parallel(self):
-        from neuronunit.tests.fi import T
+        from neuronunit.tests.fi import RheobaseP
         score = self.run_test(T)
         self.assertTrue(0.2 < score < 0.3)
 
