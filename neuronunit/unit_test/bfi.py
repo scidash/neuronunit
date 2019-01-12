@@ -2,9 +2,9 @@
 # coding: utf-8
 
 # Assumptions, the environment for running this notebook was arrived at by building a dedicated docker file.
-# 
+#
 # https://cloud.docker.com/repository/registry-1.docker.io/russelljarvis/nuo
-# 
+#
 # You can run use dockerhub to get the appropriate file, and launch this notebook using Kitematic.
 
 # In[ ]:
@@ -25,9 +25,9 @@ import os
 import pickle
 import pandas as pd
 from neuronunit.tests.fi import RheobaseTestP
-from neuronunit.optimization.model_parameters import reduced_dict, reduced_cells  
+from neuronunit.optimization.model_parameters import reduced_dict, reduced_cells
 from neuronunit.optimization import optimization_management as om
-from sciunit import scores# score_type 
+from sciunit import scores# score_type
 
 from neuronunit.optimization.data_transport_container import DataTC
 from neuronunit.tests.fi import RheobaseTestP# as discovery
@@ -39,7 +39,7 @@ LEMS_MODEL_PATH = path_params['model_path']
 list_to_frame = []
 from neuronunit.tests.fi import RheobaseTestP
 
-    
+
 # from IPython.display import HTML, display
 # import seaborn as sns
 
@@ -48,7 +48,7 @@ from neuronunit.tests.fi import RheobaseTestP
 
 
 # # The Izhiketich model is instanced using some well researched parameter sets.
-# 
+#
 
 # First lets get the points in parameter space, that Izhikich himself has published about. These points are often used by the open source brain project to establish between model reproducibility. The itial motivating factor for choosing these points as constellations, of all possible parameter space subsets, is that these points where initially tuned and used as best guesses for matching real observed experimental recordings.
 
@@ -58,13 +58,13 @@ explore_param = {k:(np.min(v),np.max(v)) for k,v in reduced_dict.items()}
 
 
 # ## Get the experimental Data pertaining to four different classes or neurons, that can constrain models.
-# Next we get some electro physiology data for four different classes of cells that are very common targets of scientific neuronal modelling. We are interested in finding out what are the most minimal, and detail reduced, low complexity model equations, that are able to satisfy 
+# Next we get some electro physiology data for four different classes of cells that are very common targets of scientific neuronal modelling. We are interested in finding out what are the most minimal, and detail reduced, low complexity model equations, that are able to satisfy
 
 # Below are some of the data set ID's I used to query neuroelectro.
 # To save time for the reader, I prepared some data earlier to save time, and saved the data as a pickle, pythons preferred serialisation format.
-# 
-# The interested reader can find some methods for getting cell specific ephys data from neuroelectro in a code file (neuronunit/optimization/get_neab.py) 
-# 
+#
+# The interested reader can find some methods for getting cell specific ephys data from neuroelectro in a code file (neuronunit/optimization/get_neab.py)
+#
 
 # In[ ]:
 
@@ -83,7 +83,7 @@ electro_tests = []
 obs_frame = {}
 test_frame = {}
 
-try: 
+try:
 
     electro_path = str(os.getcwd())+'all_tests.p'
 
@@ -120,9 +120,9 @@ df['Hippocampus CA1 pyramidal cell']
 
 # # Tweak Izhikitich equations
 # with educated guesses based on information that is already encoded in the predefined experimental observations.
-# 
-# In otherwords use information that is readily amenable into hardcoding into equations 
-# 
+#
+# In otherwords use information that is readily amenable into hardcoding into equations
+#
 # Select out the 'Neocortex pyramidal cell layer 5-6' below, as a target for optimization
 
 
@@ -170,7 +170,7 @@ for k,v in reduced_cells.items():
     temp[str(v)] = {}
     dtc = DataTC()
     dtc.tests = use_test
-    dtc.attrs = v        
+    dtc.attrs = v
     dtc.backend = 'RAW'
     dtc.cell_name = 'vanilla'
 
@@ -187,36 +187,16 @@ for k,v in reduced_cells.items():
 
         df[k][key] = int(dtc.get_ss())
 
-
+import pdb; pdb.set_trace()
 # A sparse grid sampling over the parameter space, using the published and well corrobarated parameter points, from Izhikitch publications, and the Open Source brain, shows that without optimization, using off the shelf parameter sets to fit real-life biological cell data, does not work so well.
 
 
-
-
-MU = 10
-NGEN = 200
-
-import pickle
-import numpy as np
-#print(free_params) 
-print('fails here a')    
-   
-index, DO = om.run_ga(explore_param,NGEN,use_test,free_params=free_params, NSGA = False, MU = MU)
-print('fails here b')    
-
-
-# In[ ]:
-
-
-
 MU = 6
-NGEN = 200
+NGEN = 150
 
-import pickle
-import numpy as np
 #print(free_params)
-print('fails here c')    
-index, DO = om.run_ga(explore_param,NGEN,use_test,free_params=free_params, NSGA = False, MU = MU)
+for key, use_test in test_frame.items():
+    index, DO = om.run_ga(explore_param,NGEN,use_test,free_params=free_params, NSGA = True, MU = MU)
 print('fails here d ')
 '''
 MU = 6
@@ -264,9 +244,9 @@ test_opt.keys()
 for value in test_opt.values():
     value['stds']
     value['ranges']
-    print(value['ranges'])    
+    print(value['ranges'])
     print(value['stds'])
-    
+
     #fig = pl.figure()
     #ax = pl.subplot(111)
     #ax.bar(range(len(value.keys())), values)
@@ -286,7 +266,7 @@ test_opt
 # In[ ]:
 
 #errorbar
-#for 
+#for
 import seaborn as sns
 from matplotlib.pyplot import errorbar
 import matplotlib.pyplot as plt
@@ -298,7 +278,7 @@ for v in test_opt.values():
     x = 0
     labels = []
     plt.clf()
-    for k_,v_ in v['ranges'].items(): 
+    for k_,v_ in v['ranges'].items():
         #print(k_)
         value = v_
 
@@ -366,9 +346,9 @@ fig.savefig('3dCluster.png')
 # # C does not have to be too precise within a range.
 
 # I consider the final gene populations for each of the eight tests. I compute the variance in each of the converged populations, I see that variance is low in many of the gene populations.
-# 
+#
 # When all variables are used to optomize only against one set of parameters, you expect their would be high variance in parameters, that don't matter much with respect to that error criteria (you expect redundancy of solutions).
-# 
+#
 # I compute std on errors over all the tests in order to estimate how amenable the problem is to multiobjective optimization.
 
 # In[ ]:
@@ -379,7 +359,7 @@ LEMS_MODEL_PATH = path_params['model_path']
 import quantities as pq
 plt.figure(num=None, figsize=(11, 11), dpi=80, facecolor='w', edgecolor='k')
 
-for k,v in test_opt.items():    
+for k,v in test_opt.items():
     model = ReducedModel(LEMS_MODEL_PATH, name= str('vanilla'), backend=('RAW'))
     model.attrs = v['out']['pf'][1].dtc.attrs
     print(str(k), v['out']['pf'][1].dtc.get_ss())#fitness)
@@ -417,10 +397,10 @@ test_opt['t'][0]['pop'][0].dtc.attrs
 
 
 #values = { k:v for v in npcl['pop'][i].dtc.attrs.items() for i in npcl['pop'] }
-#print(values)    
+#print(values)
 #print(stds.keys())
 #stds
-#dtc.variances[k] for k in dtc.attrs.keys() 
+#dtc.variances[k] for k in dtc.attrs.keys()
 
 
 # In[ ]:
@@ -475,25 +455,25 @@ print(npcl['hof'][0].dtc.scores)
 
 #for t in use_test:
 #    print(t.name)
-    
-    
+
+
 pop
 
 
 # # From the scores printed above, it looks like certain error criteria, are in conflict with each other.
-# 
+#
 # Tests, that are amenable to co-optimization appear to be:
 # * Width test
 # * Input resistance tets
 # * Resting Potential Test,
 # * Capicitance test.
 # * Time constant
-# 
-# Tests/criteria that seem in compatible with the above include: 
-# * Rheobase, 
+#
+# Tests/criteria that seem in compatible with the above include:
+# * Rheobase,
 # * InjectedCurrentAPThresholdTest
 # * InjectedCurrentAPAmplitudeTest
-# 
+#
 # Therefore a reduced set of lists is made to check if the bottom three are at least amenable to optimization togethor.
 
 # In[ ]:
@@ -562,7 +542,7 @@ for i in npcl['pf'][0:2]:
         plt.legend()
 
 #gca().set_axis_off()
-#subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, 
+#subplots_adjust(top = 1, bottom = 0, right = 1, left = 0,
 #            hspace = 0, wspace = 0)
 #margins(0,0)
 #gca().xaxis.set_major_locator(NullLocator())
@@ -617,7 +597,7 @@ for i in npcl['hardened']:
         plt.legend()
 
 #gca().set_axis_off()
-#subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, 
+#subplots_adjust(top = 1, bottom = 0, right = 1, left = 0,
 #            hspace = 0, wspace = 0)
 #margins(0,0)
 #gca().xaxis.set_major_locator(NullLocator())
@@ -639,7 +619,7 @@ for k,v in explore_param.items():
     if k not in free_params:
         hc[k] = v
 constants = npcl['hardened'][0][0].attrs
-hc.update(constants) 
+hc.update(constants)
 npcl, _ = om.run_ga(explore_param,20,test_frame["Neocortex pyramidal cell layer 5-6"],free_params=free_params,hc = hc, NSGA = True)
 '''
 
@@ -663,7 +643,7 @@ hc.pop('b',0)
 hc.pop('k',0)
 hc.pop('c',0)
 hc.pop('d',0)
-        
+
 use_test = test_frame["Neocortex pyramidal cell layer 5-6"]
 DO.seed_pop = npcl['pf']
 ga_out = DO.run(max_ngen = 15)
@@ -677,7 +657,7 @@ for k,v in explore_param.items():
         hc[k] = v
 #,'vt','k','c','C']#,'C'] # this can only be odd numbers
 constants = npcl['hardened'][0][0].attrs
-hc.update(constants) 
+hc.update(constants)
 npcl, _ = om.run_ga(explore_param,20,test_frame["Neocortex pyramidal cell layer 5-6"],free_params=free_params,hc = hc, NSGA = True)
 '''
 
@@ -686,7 +666,7 @@ npcl, _ = om.run_ga(explore_param,20,test_frame["Neocortex pyramidal cell layer 
 
 '''
 import pandas
-    
+
 try:
     ne_raw = pandas.read_csv('article_ephys_metadata_curated.csv', delimiter='\t')
     !ls -ltr *.csv
@@ -725,20 +705,20 @@ ca1['rheo']
 # In[ ]:
 
 
-    
+
 test_frame["Dentate gyrus basket cell"][0].observation['std'] = test_frame["Dentate gyrus basket cell"][0].observation['mean']
 for t in test_frame["Dentate gyrus basket cell"]:
     print(t.name)
 
     print(t.observation)
-    
 
 
-# 
+
+#
 # '''
 # Inibitory Neuron
 # This can't pass the Rheobase test
-# '''    
+# '''
 
 # In[ ]:
 
@@ -757,7 +737,7 @@ bcell, _ = om.run_ga(explore_param,20,use_test,free_params=free_params,hc = hc, 
 # In[ ]:
 
 
-    
+
 #test_frame["Dentate gyrus basket cell"][0].observation['std'] = test_frame["Dentate gyrus basket cell"][0].observation['mean']
 for t in test_frame["Hippocampus CA1 pyramidal cell"]:
     print(t.name)
@@ -811,7 +791,7 @@ for i in bcell['hardened'][0:6]:
         plt.legend()
 
 #gca().set_axis_off()
-#subplots_adjust(top = 1, bottom = 0, right = 1, left = 0, 
+#subplots_adjust(top = 1, bottom = 0, right = 1, left = 0,
 #            hspace = 0, wspace = 0)
 #margins(0,0)
 #gca().xaxis.set_major_locator(NullLocator())
@@ -838,7 +818,7 @@ bcell, _ = om.run_ga(explore_param,20,use_test,free_params=free_params,hc = hc, 
 
 # # This cell is in markdown, but it won't be later.
 # Later optimize a whole heap of cells in a loop.
-# 
+#
 # try:
 #     import pickle
 #     with open('data_dump.p','rb') as f:
@@ -847,44 +827,41 @@ bcell, _ = om.run_ga(explore_param,20,use_test,free_params=free_params,hc = hc, 
 #     MU = 12
 #     NGEN = 25
 #     cnt = 1
-#     for t in use_test:        
+#     for t in use_test:
 #         if cnt==len(use_test):
 #             MU = 12
 #             NGEN = 20
-# 
+#
 #             npcl, DO = om.run_ga(explore_param,NGEN,[t],free_params=free_params, NSGA = True, MU = MU)
 #         else:
-# 
+#
 #             npcl, DO = om.run_ga(explore_param,NGEN,[t],free_params=free_params, NSGA = True, MU = MU)
-# 
+#
 #         test_opt[str(t)] =  {'out':npcl}
-# 
+#
 #         ranges = {}
 #         stds = npcl['pop'][0].dtc.attrs
-#         for k in npcl['pop'][0].dtc.attrs.keys():    
+#         for k in npcl['pop'][0].dtc.attrs.keys():
 #             stds[k] = []
 #             ranges[k] = []
-# 
-# 
+#
+#
 #         for i in npcl['pop'][::5]:
 #             for k,v in i.dtc.attrs.items():
 #                 stds[k].append(v)
 #                 ranges[k].append(v)
-# 
+#
 #         for k in npcl['pop'][0].dtc.attrs.keys():
 #             ranges[k] = (np.min(ranges[k][1::]),np.max(ranges[k][1::]))
-# 
+#
 #             stds[k] = np.std(stds[k][1::])
-#         test_opt[str(t)]['stds'] = stds 
-#         test_opt[str(t)]['ranges'] = ranges 
-# 
+#         test_opt[str(t)]['stds'] = stds
+#         test_opt[str(t)]['ranges'] = ranges
+#
 #         cnt+=1
-#     
+#
 #     with open('data_dump.p','wb') as f:
 #         pickle.dump(test_opt,f)
-#        
+#
 
 # In[ ]:
-
-
-
