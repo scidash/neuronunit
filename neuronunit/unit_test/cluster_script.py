@@ -165,7 +165,7 @@ with open('seeds.p','rb') as f:
 try:
     assert seeds is not None
 except:
-    print('exceptional circumstances badness, rebuilding sparse grid')
+    print('exceptional circumstances pickle file does not exist, rebuilding sparse grid')
     # Below we perform a sparse grid sampling over the parameter space, using the published and well corrobarated parameter points, from Izhikitch publications, and the Open Source brain, shows that without optimization, using off the shelf parameter sets to fit real-life biological cell data, does not work so well.
 
     for k,v in reduced_cells.items():
