@@ -163,7 +163,9 @@ with open('seeds.p','rb') as f:
     seeds = pickle.load(f)
 
 try:
+    #assert 1==2
     assert seeds is not None
+
 except:
     print('exceptional circumstances pickle file does not exist, rebuilding sparse grid')
     # Below we perform a sparse grid sampling over the parameter space, using the published and well corrobarated parameter points, from Izhikitch publications, and the Open Source brain, shows that without optimization, using off the shelf parameter sets to fit real-life biological cell data, does not work so well.
@@ -213,6 +215,7 @@ for key, use_test in test_frame.items():
     # of the GA.
 
     seed = seeds[key]
+    print(seed)
     ga_out, _ = om.run_ga(explore_param,NGEN,use_test,free_params=free_params, NSGA = True, MU = MU,seed_pop = seed, model_type = str('RAW'))
 
     test_opt =  {str('multi_objective_izhi')+str(ga_out):ga_out}
