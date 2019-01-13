@@ -43,6 +43,7 @@ except:
     electro_tests = []
     for p in pipe:
        p_tests, p_observations = get_neab.get_neuron_criteria(p)
+       
        electro_tests.append((p_tests, p_observations))
     electro_tests = get_neab.replace_zero_std(electro_tests)
     electro_tests = get_neab.substitute_parallel_for_serial(electro_tests)
@@ -129,6 +130,7 @@ for (test, observation) in flat_iter:
     '''
 #    return pipe_results
 #pipe_results = main_proc(flat_iter)
+
 '''
 pipe_results[dic_key] = {}
 pipe_results[dic_key]['duration'] = finished_time - init_time
@@ -145,3 +147,4 @@ pipe_results[dic_key]['componentsh'] = [list(i.dtc.scores.values()) for i in pip
 pipe_results[dic_key]['componentsp'] = [list(i.dtc.scores.values()) for i in pipe_results[dic_key]['pf'][1:-1]]
 file_name = str('nlex_id_')+dic_key
 '''
+exit

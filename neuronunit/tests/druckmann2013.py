@@ -8,10 +8,8 @@ Numbers in class names refer to the numbers in the publication table
 
 from elephant.spike_train_generation import threshold_detection
 from neo import AnalogSignal
-
-from .base import np, pq, ncap, VmTest, scores
 from numba import jit
-import numba
+from .base import np, pq, ncap, VmTest, scores
 
 per_ms = pq.UnitQuantity('per_ms',1.0/pq.ms,symbol='per_ms')
 
@@ -24,18 +22,7 @@ none_score = {
 debug = False #True
 
 
-#if float(np.__version__)<1.13:
-try:
-    np.isin = None
-    def isin(element, test_elements, assume_unique=False, invert=False):
-        "..."
-        element = np.asarray(element)
-        return np.in1d(element, test_elements, assume_unique=assume_unique,
-                    invert=invert).reshape(element.shape)
-    np.isin = isin
-    assert np.isin
-except:
-    pass
+
 
 @jit
 def get_diff_spikes(vm):
@@ -44,7 +31,6 @@ def get_diff_spikes(vm):
     return spikes
 
 
-#@numba.jit(nopython=True, parallel=True)
 @jit
 def get_diff(vm,axis=None):
     if axis is not None:
@@ -109,6 +95,7 @@ class Druckmann2013AP:
         half_width.units = pq.ms
 
         return half_width
+
 
     def get_peak(self):
         """
@@ -195,7 +182,7 @@ class Druckmann2013Test(VmTest):
     """
     required_capabilities = (ncap.ProducesActionPotentials,)
     score_type = scores.ZScore
-    #print('hello')
+
     def __init__(self, current_amplitude, **params):
         #super(Druckmann2013Test, self).__init__(**params)
 
@@ -210,7 +197,6 @@ class Druckmann2013Test(VmTest):
             'ap_window': 10 * pq.ms,
             'repetitions': 1,
         }
-        #import pdb; pdb.set_trace()
 
         # This will be an array that stores DruckmannAPs
         self.APs = None
@@ -249,8 +235,6 @@ class Druckmann2013Test(VmTest):
     def current_length(self):
         return self.params['injected_square_current']['duration']
 
-    #@profile
-    #@jit
     def get_APs(self, model):
         """
         Spikes were detected by a crossing of a voltage threshold (-20 mV).
@@ -295,8 +279,7 @@ class Druckmann2013Test(VmTest):
         self.APs = []
         for i, b in enumerate(ap_beginnings):
             self.APs.append(Druckmann2013AP(ap_waveforms[i], ap_beginnings[i]))
-            #print(self.APs)
-        #import pdb; pdb.set_trace()
+
         return self.APs
 
     #@jit
@@ -321,7 +304,6 @@ class AP12AmplitudeDropTest(Druckmann2013Test):
 
     name = "Drop in AP amplitude from 1st to 2nd AP"
     description = "Difference in the voltage value between the amplitude of the first and second AP"
-    #print('hello')
 
     units = pq.mV
     #@jit
@@ -329,7 +311,6 @@ class AP12AmplitudeDropTest(Druckmann2013Test):
         model.inject_square_current(self.params['injected_square_current'])
 
         aps = self.get_APs(model)
-        #print(aps)
 
         if len(aps) >= 2:
 
@@ -1239,7 +1220,7 @@ class AccommodationRateToSSTest(Druckmann2013Test):
             if debug:
                 print("aps in 1st 5th vs last 5th, percent change: %s" % (percent_diff))
 
-            isis = get_diff(ap_times)#(ap_times)
+            isis = get_diff(ap_times)
             isi_times = ap_times[1:]
 
             isis_55 = isis[np.where((isi_times >= start_last_5th) & (isi_times <= end_last_5th))]
@@ -1289,7 +1270,7 @@ class AccommodationAtSSMeanTest(Druckmann2013Test):
         ap_times = np.array([ap.get_beginning()[1] for ap in aps])
 
         if len(aps) >= 4:
-            isis = get_diff(ap_times)#(ap_times)
+            isis = get_diff(ap_times)
             isi_delays = ap_times[1:] - self.params['injected_square_current']['delay'].rescale('ms').magnitude
             isi_delays = isi_delays - isi_delays[0]
 
@@ -1313,7 +1294,7 @@ class AccommodationAtSSMeanTest(Druckmann2013Test):
 
             if debug:
                 from matplotlib import pyplot as plt
-                #print(result.fit_report())
+                print(result.fit_report())
 
                 plt.plot(isi_delays, isis, 'bo')
                 plt.plot(isi_delays, result.best_fit, 'r-')
