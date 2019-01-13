@@ -205,14 +205,6 @@ except:
 
 MU = 6
 NGEN = 150
-model_type = str('HH')
-
-explore_ranges = {'E_Na' : (40,70), 'E_K': (-90.0,-75.0)}
-
-attrs = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3, \
-         'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -77.0, 'E_Na' : 50.0, 'vr':-65.0 }
-
-model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = ('HH'))
 
 
 for key, use_test in test_frame.items():
@@ -233,6 +225,15 @@ for key, use_test in test_frame.items():
 Next HH, model and Adaptive Exp.
 MU = 6
 NGEN = 2
+model_type = str('HH')
+
+explore_ranges = {'E_Na' : (40,70), 'E_K': (-90.0,-75.0)}
+
+attrs = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3, \
+         'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -77.0, 'E_Na' : 50.0, 'vr':-65.0 }
+
+model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = ('HH'))
+
 
 explore_ranges = {'E_Na' : (40,70), 'E_K': (-90.0,-75.0)}
 attrs = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3, \
