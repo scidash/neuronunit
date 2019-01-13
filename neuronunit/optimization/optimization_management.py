@@ -113,7 +113,7 @@ def bridge_judge(test_and_models):
     pred = test.generate_prediction(model)
     if pred is not None:
         score = test.compute_score(obs,pred)
-        #print(score.sort_key)
+        #print(score.norm_score)
     else:
         score = None
     return score, pred
@@ -159,7 +159,7 @@ def dtc_to_rheo(dtc):
             obs = rtest.observation
             #print(obs,dtc.rheobase)
             score = rtest.compute_score(obs,dtc.rheobase)
-            dtc.scores[str('RheobaseTestP')] = 1.0 - score.sort_key
+            dtc.scores[str('RheobaseTestP')] = 1.0 - score.norm_score
 
             if dtc.score is not None:
                 dtc = score_proc(dtc,rtest,copy.copy(score))
@@ -183,8 +183,8 @@ def dtc_to_rheo(dtc):
 def score_proc(dtc,t,score):
     dtc.score[str(t)] = {}
     #print(score.keys())
-    if hasattr(score,'sort_key'):
-        dtc.score[str(t)]['value'] = copy.copy(score.sort_key)
+    if hasattr(score,'norm_score'):
+        dtc.score[str(t)]['value'] = copy.copy(score.norm_score)
         if hasattr(score,'prediction'):
             if type(score.prediction) is not type(None):
                 dtc.score[str(t)][str('prediction')] = score.prediction
@@ -305,8 +305,8 @@ def nunit_evaluation(dtc):
                 t.params = dtc.vtest[k]
                 score,_= bridge_judge((t,dtc))
                 if score is not None:
-                    if score.sort_key is not None:
-                        dtc.scores[str(t)] = 1.0 - score.sort_key
+                    if score.norm_score is not None:
+                        dtc.scores[str(t)] = 1.0 - score.norm_score
                         dtc = score_proc(dtc,t,copy.copy(score))
                 else:
                     print('gets to None score type')
