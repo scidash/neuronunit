@@ -7,8 +7,6 @@
 #
 # You can run use dockerhub to get the appropriate file, and launch this notebook using Kitematic.
 
-# In[ ]:
-
 # This is code, change cell type to markdown.
 # ![alt text](plan.jpg "Pub plan")
 
@@ -16,7 +14,6 @@
 # # Import libraries
 # To keep the standard running version of minimal and memory efficient, not all available packages are loaded by default. In the cell below I import a mixture common python modules, and custom developed modules associated with NeuronUnit (NU) development
 
-# In[ ]:
 
 #!pip install dask distributed seaborn
 #!bash after_install.sh
@@ -52,7 +49,6 @@ from neuronunit.tests.fi import RheobaseTestP
 
 # First lets get the points in parameter space, that Izhikich himself has published about. These points are often used by the open source brain project to establish between model reproducibility. The itial motivating factor for choosing these points as constellations, of all possible parameter space subsets, is that these points where initially tuned and used as best guesses for matching real observed experimental recordings.
 
-# In[ ]:
 
 explore_param = {k:(np.min(v),np.max(v)) for k,v in reduced_dict.items()}
 
@@ -66,7 +62,6 @@ explore_param = {k:(np.min(v),np.max(v)) for k,v in reduced_dict.items()}
 # The interested reader can find some methods for getting cell specific ephys data from neuroelectro in a code file (neuronunit/optimization/get_neab.py)
 #
 
-# In[ ]:
 
 purkinje ={"id": 18, "name": "Cerebellum Purkinje cell", "neuron_db_id": 271, "nlex_id": "sao471801888"}
 fi_basket = {"id": 65, "name": "Dentate gyrus basket cell", "neuron_db_id": None, "nlex_id": "nlx_cell_100201"}
@@ -126,7 +121,7 @@ df['Hippocampus CA1 pyramidal cell']
 # Select out the 'Neocortex pyramidal cell layer 5-6' below, as a target for optimization
 
 
-free_params = ['a','b','k','c','C','d','vPeak','vr']
+free_params = ['a','b','k','c','C','d','vPeak','vr','vt']
 hc_ = reduced_cells['RS']
 hc_['vr'] = -65.2261863636364
 hc_['vPeak'] = hc_['vr'] + 86.364525297619
@@ -140,9 +135,6 @@ test_opt = {}
 
 with open('data_dump.p','wb') as f:
     pickle.dump(test_opt,f)
-
-
-# In[ ]:
 
 
 use_test[0].observation
@@ -164,37 +156,90 @@ test_frame
 
 df = pd.DataFrame(index=list(test_frame.keys()),columns=list(reduced_cells.keys()))
 
-for k,v in reduced_cells.items():
-    temp = {}
-    temp[str(v)] = {}
-    dtc = DataTC()
-    dtc.tests = use_test
-    dtc.attrs = v
-    dtc.backend = 'RAW'
-    dtc.cell_name = 'vanilla'
 
 
-    for key, use_test in test_frame.items():
+
+with open('seeds.p','rb') as f:
+    seeds = pickle.load(f)
+
+try:
+    assert seeds is not None
+except:
+    print('exceptional circumstances badness, rebuilding sparse grid')
+    # Below we perform a sparse grid sampling over the parameter space, using the published and well corrobarated parameter points, from Izhikitch publications, and the Open Source brain, shows that without optimization, using off the shelf parameter sets to fit real-life biological cell data, does not work so well.
+
+    for k,v in reduced_cells.items():
+        temp = {}
+        temp[str(v)] = {}
+        dtc = DataTC()
         dtc.tests = use_test
-        dtc = dtc_to_rheo(dtc)
-        dtc = format_test(dtc)
+        dtc.attrs = v
+        dtc.backend = 'RAW'
+        dtc.cell_name = 'vanilla'
+        for key, use_test in test_frame.items():
+            dtc.tests = use_test
+            dtc = dtc_to_rheo(dtc)
+            dtc = format_test(dtc)
+            if dtc.rheobase is not None:
+                if dtc.rheobase!=-1.0:
+                    dtc = nunit_evaluation(dtc)
+            df[k][key] = dtc.get_ss()
 
-        if dtc.rheobase is not None:
-            if dtc.rheobase!=-1.0:
+    best_params = {}
+    for index, row in df.iterrows():
+        best_params[index] = row == row.min()
+        best_params[index] = best_params[index].to_dict()
 
-                dtc = nunit_evaluation(dtc)
 
-        df[k][key] = int(dtc.get_ss())
+    seeds = {}
+    for k,v in best_params.items():
+        for nested_key,nested_val in v.items():
+            if True == nested_val:
+                seed = reduced_cells[nested_key]
+                seeds[k] = seed
+    with open('seeds.p','wb') as f:
+        pickle.dump(seeds,f)
 
-# A sparse grid sampling over the parameter space, using the published and well corrobarated parameter points, from Izhikitch publications, and the Open Source brain, shows that without optimization, using off the shelf parameter sets to fit real-life biological cell data, does not work so well.
+
 
 
 MU = 6
 NGEN = 150
+model_type = str('HH')
+
+explore_ranges = {'E_Na' : (40,70), 'E_K': (-90.0,-75.0)}
+
+attrs = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3, \
+         'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -77.0, 'E_Na' : 50.0, 'vr':-65.0 }
+
+model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = ('HH'))
+
 
 for key, use_test in test_frame.items():
-    ga_out, _ = om.run_ga(explore_param,NGEN,use_test,free_params=free_params, NSGA = True, MU = MU)
 
-    test_opt =  {str('multi_objective')+str(ga_out):ga_out}
-    with open('multi_objective.p','wb') as f:
+    # use the best parameters found via the sparse grid search above, to inform the first generation
+    # of the GA.
+
+    seed = seeds[key]
+    ga_out, _ = om.run_ga(explore_param,NGEN,use_test,free_params=free_params, NSGA = True, MU = MU,seed_pop = seed, model_type = str('RAW'))
+
+    test_opt =  {str('multi_objective_izhi')+str(ga_out):ga_out}
+    with open('multi_objective_izhi.p','wb') as f:
         pickle.dump(test_opt,f)
+
+
+
+'''
+Next HH, model and Adaptive Exp.
+MU = 6
+NGEN = 2
+
+explore_ranges = {'E_Na' : (40,70), 'E_K': (-90.0,-75.0)}
+attrs = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3, \
+         'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -77.0, 'E_Na' : 50.0, 'vr':-65.0 }
+import pdb; pdb.set_trace()
+ga_out, _ = om.run_ga(attrs,NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU, model_type = str('HH'))
+'''
+
+#\
+#model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = ('HH'))
