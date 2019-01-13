@@ -1,20 +1,34 @@
 import os
 
-try:
-    from pip.req import parse_requirements
-    from pip.download import PipSession
-except:
-    from pip._internal.req import parse_requirements
-    from pip._internal.download import PipSession
+# try:
+#     from pip.req import parse_requirements
+#     from pip.download import PipSession
+# except:
+#     from pip._internal.req import parse_requirements
+#     from pip._internal.download import PipSession
 
 from setuptools import setup, find_packages
 
+import sys
+
+
 def read_requirements():
-    '''parses requirements from requirements.txt'''
+    """Parse requirements from requirements.txt."""
     reqs_path = os.path.join('.', 'requirements.txt')
-    install_reqs = parse_requirements(reqs_path, session=PipSession())
-    reqs = [str(ir.req) for ir in install_reqs]
-    return reqs
+    with open(reqs_path, 'r') as f:
+        requirements = [line.rstrip() for line in f]
+    #install_requires = []
+    #dependency_links = []
+    #for i, r in enumerate(requirements):
+    #if "#egg=" in r:
+    #        name = r.split('#egg=')[1].split('-')[0]
+    #        install_requires += ['%s @ %s' % (name, r)]
+    #    else:
+    #        install_requires += [r]
+    return requirements
+
+
+#install_requires, dependency_links = read_requirements()
 
 setup(
     name='neuronunit',
@@ -24,8 +38,10 @@ setup(
     packages=find_packages(),
     url='http://github.com/scidash/neuronunit',
     license='MIT',
-    description='A SciUnit library for data-driven testing of single-neuron physiology models.',
+    description=("A SciUnit library for data-driven testing of "
+                 "single-neuron physiology models."),
     long_description="",
-    test_suite="neuronunit.unit_test.core_tests",    
+    test_suite="neuronunit.unit_test.core_tests",
     install_requires=read_requirements(),
+    #dependency_links=dependency_links
     )
