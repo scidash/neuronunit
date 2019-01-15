@@ -7,11 +7,12 @@ try:
 except:
     print('Error in jNeuroMLBackend')
 
+'''
 try:
     from .neuron import NEURONBackend
 except Exception as e:
     print('Silent Error eminating from NEURON syntax')
-
+'''
 try:
     from .rawpy import RAWBackend
 except Exception as e:
