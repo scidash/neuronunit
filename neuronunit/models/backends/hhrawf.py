@@ -5,7 +5,7 @@ from numba import jit
 import numpy as np
 
 # Set random seed (for reproducibility)
-np.random.seed(1000)
+#np.random.seed(1000)
 
 import io
 import math
@@ -70,8 +70,11 @@ def dALLdt(X, t, attrs):
     |  :param t:
     |  :return: calculate membrane potential & activation variables
     """
+    defaults = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3, \
+             'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -77.0, 'E_Na' : 50.0, 'vr':-65.0 }
 
     V, m, h, n = X
+    #print(attrs)
 
     C_m = attrs['C_m']
     E_L = attrs['E_L']
@@ -89,9 +92,6 @@ def dALLdt(X, t, attrs):
     #  Leak
     I_L = g_L * (V - E_L)
 
-    print(attrs)
-    print(C_m)
-    print('before mistake')
     dVdt = (Iext - I_Na - I_K - I_L) / C_m
     dmdt = alpha_m(V)*(1.0-m) - beta_m(V)*m
     dhdt = alpha_h(V)*(1.0-h) - beta_h(V)*h
@@ -99,12 +99,10 @@ def dALLdt(X, t, attrs):
     return dVdt, dmdt, dhdt, dndt
 
 
-#C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.364525297619-65.2261863636364), vr=-65.2261863636364, vt=-50, dt=0.030, Iext=[]
-#@jit
 def get_vm(attrs):
     '''
     dt determined by
-    Apply izhikevich equation as model
+    Apply Hodgkin Huxley equation corresponding to point as model
     This function can't get too pythonic (functional), it needs to be a simple loop for
     numba/jit to understand it.
     '''
@@ -171,9 +169,7 @@ class HHBackend(Backend):
         return self.vM
 
     def set_attrs(self, **attrs):
-
         self.model.attrs.update(attrs)
-        #import pdb; pdb.set_trace()
 
     def _local_run(self):
         results = {}

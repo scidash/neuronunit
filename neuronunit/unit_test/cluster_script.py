@@ -155,11 +155,109 @@ test_frame
 
 
 df = pd.DataFrame(index=list(test_frame.keys()),columns=list(reduced_cells.keys()))
+MU = 6
+NGEN = 200
+
+
+model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = (str('HH')))
+
+
+explore_ranges = {'E_Na' : (40,70), 'g_Na':(100.0,140.0), 'C_m':(0.5,1.5)}
+
+
+
+attrs_hh = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3, \
+         'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -77.0, 'E_Na' : 50.0, 'vr':-65.0 }
 
 
 
 
-with open('seeds.p','rb') as f:
+import copy
+from sklearn.model_selection import ParameterGrid
+
+
+
+try:
+    with open('HH_seeds.p','rb') as f:
+        seeds = pickle.load(f)
+    assert seeds is not None
+
+except:
+
+    grid = ParameterGrid(explore_ranges)
+    store_hh_results = {}
+    for local_attrs in grid:
+        store_hh_results[str(local_attrs.values())] = {}
+        dtc = DataTC()
+        dtc.tests = use_test
+        updatable_attrs = copy.copy(attrs_hh)
+        updatable_attrs.update(local_attrs)
+        dtc.attrs = updatable_attrs
+        print(updatable_attrs)
+
+        dtc.backend = 'HH'
+        dtc.cell_name = 'Point Hodgkin Huxley'
+        for key, use_test in test_frame.items():
+            dtc.tests = use_test
+            dtc = dtc_to_rheo(dtc)
+            dtc = format_test(dtc)
+            if dtc.rheobase is not None:
+                if dtc.rheobase!=-1.0:
+                    dtc = nunit_evaluation(dtc)
+            print(dtc.get_ss())
+            store_hh_results[str(local_attrs.values())][key] = dtc.get_ss()
+    df = pd.DataFrame(store_hh_results)
+    best_params = {}
+    for index, row in df.iterrows():
+        best_params[index] = row == row.min()
+        best_params[index] = best_params[index].to_dict()
+
+
+    seeds = {}
+    for k,v in best_params.items():
+        for nested_key,nested_val in v.items():
+            if True == nested_val:
+                seed = nested_key
+                seeds[k] = seed
+    with open('HH_seeds.p','wb') as f:
+        pickle.dump(seeds,f)
+
+
+
+attrs_hh = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3, \
+         'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -77.0, \
+         'E_Na' : 50.0, 'vr':-65.0 }
+
+
+explore_hh_ranges = {'E_Na' : (30,80), 'E_K': (-90.0,-75.0), 'g_K': (30.0,42.0),\
+                    'C_m':(0.5,1.5), 'g_Na':(100.0,140.0),'g_L':(0.1,0.5), \
+                    'E_L' : (-64.387,-44.387), 'vr':(-85.0,45.0)}
+
+
+
+hold_constant_hh = {}
+for k,v in attrs_hh.items():
+    if k not in explore_ranges.keys():
+        hold_constant_hh[k] = v
+
+
+MU = 6
+NGEN = 150
+
+
+for key, use_test in test_frame.items():
+    seed = seeds[key]
+    print(seed)
+    ga_out, _ = om.run_ga(explore_hh_ranges,NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU, model_type = str('HH'),hc = hold_constant_hh)
+    test_opt =  {str('multi_objective_HH')+str(ga_out):ga_out}
+    with open('multi_objective_HH.p','wb') as f:
+        pickle.dump(test_opt,f)
+
+
+
+
+
+with open('Izh_seeds.p','rb') as f:
     seeds = pickle.load(f)
 
 try:
@@ -167,7 +265,7 @@ try:
     assert seeds is not None
 
 except:
-    print('exceptional circumstances pickle file does not exist, rebuilding sparse grid')
+    print('exceptional circumstances pickle file does not exist, rebuilding sparse grid for Izhikich')
     # Below we perform a sparse grid sampling over the parameter space, using the published and well corrobarated parameter points, from Izhikitch publications, and the Open Source brain, shows that without optimization, using off the shelf parameter sets to fit real-life biological cell data, does not work so well.
 
     for k,v in reduced_cells.items():
@@ -199,7 +297,7 @@ except:
             if True == nested_val:
                 seed = reduced_cells[nested_key]
                 seeds[k] = seed
-    with open('seeds.p','wb') as f:
+    with open('Izh_seeds.p','wb') as f:
         pickle.dump(seeds,f)
 
 
@@ -224,26 +322,6 @@ for key, use_test in test_frame.items():
 
 
 
-'''
-Next HH, model and Adaptive Exp.
-MU = 6
-NGEN = 2
-model_type = str('HH')
 
-explore_ranges = {'E_Na' : (40,70), 'E_K': (-90.0,-75.0)}
-
-attrs = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3, \
-         'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -77.0, 'E_Na' : 50.0, 'vr':-65.0 }
-
-model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = ('HH'))
-
-
-explore_ranges = {'E_Na' : (40,70), 'E_K': (-90.0,-75.0)}
-attrs = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3, \
-         'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -77.0, 'E_Na' : 50.0, 'vr':-65.0 }
-import pdb; pdb.set_trace()
-ga_out, _ = om.run_ga(attrs,NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU, model_type = str('HH'))
-'''
-
-#\
+#Next HH, model and Adaptive Exp.
 #model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = ('HH'))
