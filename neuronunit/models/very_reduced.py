@@ -13,7 +13,7 @@ class VeryReducedModel(mod.ExternalModel,
                    cap.ReceivesCurrent,
                    cap.ProducesActionPotentials,
                    ):
-    """Base class for reduced models, using LEMS"""
+    """Base class for reduced models, not using LEMS, and not requiring file paths this is to wrap pyNN models, brian models, and other self contained models+model descriptions"""
 
     def __init__(self, name=None, backend=None, attrs=None):
         """Instantiate a reduced model.
