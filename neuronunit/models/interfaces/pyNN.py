@@ -1,7 +1,8 @@
 from .base import *
 import pyNN
-
+#import pyNN
 class pyNNBackend(Backend):
+
 
     backend = 'pyNN'
 
@@ -89,7 +90,6 @@ class pyNNBackend(Backend):
         self.Iz = None
         self.population = None
         self.setup(timestep=0.01, min_delay=1.0)
-        import pyNN
         pop = self.neuron.Population(3, pyNN.neuron.Izhikevich(a=0.02, b=0.2, c=-65, d=6, i_offset=[0.014, -65.0, 0.0]))#,v=-65))
         self.population = pop
 
@@ -103,7 +103,7 @@ class pyNNBackend(Backend):
         assert type(self.model.attrs) is not type(None)
         attrs['i_offset']=None
         attrs_ = {x:attrs[x] for x in ['a','b','c','d','i_offset']}
-        attrs_['i_offset']=0.014#[0.014,-attrs_['v0'],0.0]
+        attrs_['i_offset'] = [0.014,attrs_['vr'],0.0]
         #self.population[0].initialize()
         self.population[0].set_parameters(**attrs_)
 
