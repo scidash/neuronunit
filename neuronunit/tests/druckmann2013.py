@@ -111,7 +111,6 @@ class Druckmann2013AP:
 
         return self.peak['value'], self.peak['time']
 
-    #@jit
     def get_trough(self):
         peak_v, peak_t = self.get_peak()
 
@@ -184,7 +183,7 @@ class Druckmann2013Test(VmTest):
     score_type = scores.ZScore
 
     def __init__(self, current_amplitude, **params):
-        #super(Druckmann2013Test, self).__init__(**params)
+        super(Druckmann2013Test, self).__init__(**params)
 
         self.params = {
             'injected_square_current': {
@@ -215,8 +214,8 @@ class Druckmann2013Test(VmTest):
         else:
             return results[0]
 
-    #def generate_repetition_prediction(self, model):
-    #    raise NotImplementedError()
+    def generate_repetition_prediction(self, model):
+        raise NotImplementedError()
 
     def aggregate_repetitions(self, results):
         values = [rep['mean'] for rep in results if rep['mean'] is not None]
@@ -282,7 +281,6 @@ class Druckmann2013Test(VmTest):
 
         return self.APs
 
-    #@jit
     def get_ISIs(self, model=None):
         aps = self.get_APs(model)
 
@@ -306,7 +304,6 @@ class AP12AmplitudeDropTest(Druckmann2013Test):
     description = "Difference in the voltage value between the amplitude of the first and second AP"
 
     units = pq.mV
-    #@jit
     def generate_prediction(self, model):
         model.inject_square_current(self.params['injected_square_current'])
 
@@ -343,7 +340,6 @@ class AP1SSAmplitudeChangeTest(Druckmann2013Test):
     that occurred during the latter third of the current step."""
 
     units = pq.mV
-    #@jit
     def generate_prediction(self, model):
         current_start = self.params['injected_square_current']['delay']
 
@@ -409,18 +405,6 @@ class AP1AmplitudeTest(Druckmann2013Test):
         else:
             return none_score
 
-    def bind_score(self, score, model, observation, prediction):
-        super(AP1AmplitudeTest,self).bind_score(score, model,
-                                        observation, prediction)
-
-    def compute_score(self, observation, prediction):
-        """Implementation of sciunit.Test.score_prediction."""
-        score = None
-
-        score = super(AP1AmplitudeTest,self).\
-                 compute_score(observation, prediction)
-        return score
-
 class AP1WidthHalfHeightTest(Druckmann2013Test):
     """
     4. AP 1 width at half height (ms)
@@ -453,18 +437,6 @@ class AP1WidthHalfHeightTest(Druckmann2013Test):
             }
 
         return none_score
-
-    def bind_score(self, score, model, observation, prediction):
-        super(AP1WidthHalfHeightTest,self).bind_score(score, model,
-            observation, prediction)
-
-    def compute_score(self, observation, prediction):
-        """Implementation of sciunit.Test.score_prediction."""
-        score = None
-
-        score = super(AP1WidthHalfHeightTest,self).\
-        compute_score(observation, prediction)
-        return score
 
 class AP1WidthPeakToTroughTest(Druckmann2013Test):
     """
@@ -900,16 +872,6 @@ class InputResistanceTest(Druckmann2013Test):
             'std': 0,
             'n': 1
         }
-    def bind_score(self, score, model, observation, prediction):
-        super(InputResistanceTest,self).bind_score(score, model,
-                    observation, prediction)
-
-    def compute_score(self, observation, prediction):
-        """Implementation of sciunit.Test.score_prediction."""
-        score = None
-
-        score = super(InputResistanceTest,self).compute_score(observation, prediction)
-        return score
 
 
 
@@ -1032,7 +994,6 @@ class Burst1ISIMeanTest(Druckmann2013Test):
         super(Burst1ISIMeanTest, self).__init__(current_amplitude, **params)
 
         self.params['repetitions'] = repetitions
-    #@jit
     def generate_repetition_prediction(self, model):
 
         model.inject_square_current(self.params['injected_square_current'])

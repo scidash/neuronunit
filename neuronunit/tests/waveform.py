@@ -1,12 +1,12 @@
 """Waveform neuronunit tests, e.g. testing AP waveform properties"""
 
-from .base import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
+from .base import np, pq, ncap, VmTest, scores, AMPL, DELAY, DURATION
 
 
 class APWidthTest(VmTest):
-    """Tests the full widths of action potentials at their half-maximum."""
+    """Test the full widths of action potentials at their half-maximum."""
 
-    required_capabilities = (cap.ProducesActionPotentials,)
+    required_capabilities = (ncap.ProducesActionPotentials,)
 
     name = "AP width test"
 
@@ -21,7 +21,7 @@ class APWidthTest(VmTest):
     ephysprop_name = 'Spike Half-Width'
     #self.params
     def generate_prediction(self, model):
-        """Implementation of sciunit.Test.generate_prediction."""
+        """Implement sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
         # if get_spike_count is zero, then widths will be None
@@ -33,24 +33,21 @@ class APWidthTest(VmTest):
 
         widths = model.get_AP_widths()
         # Put prediction in a form that compute_score() can use.
-        prediction = {'mean':np.mean(widths) if len(widths) else None,
-                    'std':np.std(widths) if len(widths) else None,
-                    'n':len(widths)}
+        prediction = {'mean': np.mean(widths) if len(widths) else None,
+                      'std': np.std(widths) if len(widths) else None,
+                      'n': len(widths)}
 
         return prediction
 
     def compute_score(self, observation, prediction):
-        """Implementation of sciunit.Test.score_prediction."""
-        if type(prediction) is type(None):
+        """Implement sciunit.Test.score_prediction."""
+        if isinstance(prediction, type(None)):
             score = scores.InsufficientDataScore(None)
-
         elif prediction['n'] == 0:
-            #sciunit.NoneScore:
             score = scores.InsufficientDataScore(None)
-
         else:
-            score = super(APWidthTest,self).compute_score(observation,
-                                                          prediction)
+            score = super(APWidthTest, self).compute_score(observation,
+                                                           prediction)
         return score
 
 
@@ -59,7 +56,7 @@ class InjectedCurrentAPWidthTest(APWidthTest):
     Tests the full widths of APs at their half-maximum
     under current injection.
     """
-    required_capabilities = (cap.ReceivesSquareCurrent,)
+    required_capabilities = (ncap.ReceivesSquareCurrent,)
 
     #params = {'injected_square_current':
     #            {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
@@ -87,16 +84,16 @@ class InjectedCurrentAPWidthTest(APWidthTest):
 
     def generate_prediction(self, model):
         model.inject_square_current(self.params['injected_square_current'])
-        #print(model.get_spike_count())
-        prediction = super(InjectedCurrentAPWidthTest,self).generate_prediction(model)
+        prediction = super(InjectedCurrentAPWidthTest, self).\
+         generate_prediction(model)
 
         return prediction
 
 
 class APAmplitudeTest(VmTest):
-    """Tests the heights (peak amplitude) of action potentials."""
+    """Test the heights (peak amplitude) of action potentials."""
 
-    required_capabilities = (cap.ProducesActionPotentials,)
+    required_capabilities = (ncap.ProducesActionPotentials,)
 
     name = "AP amplitude test"
 
@@ -110,7 +107,7 @@ class APAmplitudeTest(VmTest):
     ephysprop_name = 'Spike Amplitude'
 
     def generate_prediction(self, model):
-        """Implementation of sciunit.Test.generate_prediction."""
+        """Implement sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
         model.rerun = True
@@ -118,9 +115,9 @@ class APAmplitudeTest(VmTest):
 
         heights = model.get_AP_amplitudes() - model.get_AP_thresholds()
         # Put prediction in a form that compute_score() can use.
-        prediction = {'mean':np.mean(heights) if len(heights) else None,
-                      'std':np.std(heights) if len(heights) else None,
-                      'n':len(heights)}
+        prediction = {'mean': np.mean(heights) if len(heights) else None,
+                      'std': np.std(heights) if len(heights) else None,
+                      'n': len(heights)}
         return prediction
 
     def compute_score(self, observation, prediction):
@@ -128,8 +125,8 @@ class APAmplitudeTest(VmTest):
         if prediction['n'] == 0:
             score = scores.InsufficientDataScore(None)
         else:
-            score = super(APAmplitudeTest,self).compute_score(observation,
-                                                              prediction)
+            score = super(APAmplitudeTest, self).compute_score(observation,
+                                                               prediction)
         return score
 
 
@@ -139,11 +136,10 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
     under current injection.
     """
 
-
-    required_capabilities = (cap.ReceivesSquareCurrent,)
+    required_capabilities = (ncap.ReceivesSquareCurrent,)
 
     params = {'injected_square_current':
-                {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+              {'amplitude': 100.0*pq.pA, 'delay': DELAY, 'duration': DURATION}}
 
     name = "Injected current AP amplitude test"
 
@@ -153,8 +149,8 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
 
     def generate_prediction(self, model):
         model.inject_square_current(self.params['injected_square_current'])
-        prediction = super(InjectedCurrentAPAmplitudeTest,self).\
-                generate_prediction(model)
+        prediction = super(InjectedCurrentAPAmplitudeTest, self).\
+            generate_prediction(model)
         return prediction
 
     def compute_score(self, observation, prediction):
@@ -169,7 +165,7 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
 class APThresholdTest(VmTest):
     """Tests the full widths of action potentials at their half-maximum."""
 
-    required_capabilities = (cap.ProducesActionPotentials,)
+    required_capabilities = (ncap.ProducesActionPotentials,)
 
     name = "AP threshold test"
 
@@ -182,9 +178,8 @@ class APThresholdTest(VmTest):
 
     ephysprop_name = 'Spike Threshold'
 
-
     def generate_prediction(self, model):
-        """Implementation of sciunit.Test.generate_prediction."""
+        """Implement sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
         model.rerun = True
@@ -192,9 +187,9 @@ class APThresholdTest(VmTest):
 
         threshes = model.get_AP_thresholds()
         # Put prediction in a form that compute_score() can use.
-        prediction = {'mean':np.mean(threshes) if len(threshes) else None,
-                      'std':np.std(threshes) if len(threshes) else None,
-                      'n':len(threshes)}
+        prediction = {'mean': np.mean(threshes) if len(threshes) else None,
+                      'std': np.std(threshes) if len(threshes) else None,
+                      'n': len(threshes)}
         return prediction
 
     def compute_score(self, observation, prediction):
@@ -202,18 +197,15 @@ class APThresholdTest(VmTest):
         if prediction['n'] == 0:
             score = scores.InsufficientDataScore(None)
         else:
-            score = super(APThresholdTest,self).compute_score(observation,
-                                                              prediction)
+            score = super(APThresholdTest, self).compute_score(observation,
+                                                               prediction)
         return score
 
 
 class InjectedCurrentAPThresholdTest(APThresholdTest):
-    """
-    Tests the thresholds of action potentials
-    under current injection.
-    """
+    """Test the thresholds of action potentials under current injection."""
 
-    required_capabilities = (cap.ReceivesSquareCurrent,)
+    required_capabilities = (ncap.ReceivesSquareCurrent,)
 
     #params = {'injected_square_current':
     #            {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
@@ -225,14 +217,5 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
 
     def generate_prediction(self, model):
         model.inject_square_current(self.params['injected_square_current'])
-        return super(InjectedCurrentAPThresholdTest,self).\
-                generate_prediction(model)
-
-    def compute_score(self, observation, prediction):
-        """Implementation of sciunit.Test.score_prediction."""
-        if prediction['n'] == 0:
-            score = scores.InsufficientDataScore(None)
-        else:
-            score = super(InjectedCurrentAPThresholdTest,self).compute_score(observation,
-                                                              prediction)
-        return score
+        return super(InjectedCurrentAPThresholdTest, self).\
+            generate_prediction(model)

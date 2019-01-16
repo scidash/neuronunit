@@ -128,7 +128,6 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         observation[doi]['mean'] = 16.1*pq.ms
         observation[doi]['std'] = 2.1*pq.ms
 
-
     #@unittest.skip("Not fully developed yet")
     def test_get_inhibitory_neuron(self):
         from neuronunit import tests as nu_tests, neuroelectro
@@ -160,16 +159,17 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         size = len([ v for v in dtc.attrs.values()])
         assert size > 0
         self.assertGreater(size,0)
-        model = ReducedModel(get_neab.LEMS_MODEL_PATH, name= str('vanilla'), backend=('NEURON', {'DTC':dtc}))
-        temp = [ v for v in model.attrs.values() ]
+        model = ReducedModel(get_neab.LEMS_MODEL_PATH, name= str('vanilla'),
+                             backend=('NEURON', {'DTC':dtc}))
+        temp = [v for v in model.attrs.values()]
         assert len(temp) > 0
-        self.assertGreater(len(temp),0)
+        self.assertGreater(len(temp), 0)
         rbt = get_neab.tests[0]
-        scoreN = rbt.judge(model,stop_on_error = False, deep_error = True)
+        scoreN = rbt.judge(model, stop_on_error = False, deep_error = True)
         import copy
-        dtc.scores[str(rbt)] = copy.copy(scoreN.sort_key)
-        assert scoreN.sort_key is not None
-        self.assertTrue(scoreN.sort_key is not None)
+        dtc.scores[str(rbt)] = copy.copy(scoreN.norm_score)
+        assert scoreN.norm_score is not None
+        self.assertTrue(scoreN.norm_score is not None)
         dtc.rheobase = copy.copy(scoreN.prediction)
         return dtc
 
@@ -177,9 +177,9 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         from neuronunit.optimization import exhaustive_search
         grid_points = self.grid_points
         second_point = grid_points[int(len(grid_points)/2)]
-        three_points = [grid_points[0],second_point,grid_points[-1]]
+        three_points = [grid_points[0], second_point, grid_points[-1]]
         self.assertEqual(len(three_points),3)
-        dtcpop = list(map(exhaustive_search.update_dtc_grid,three_points))
+        dtcpop = list(map(exhaustive_search.update_dtc_grid, three_points))
         for d in self.dtcpop:
             assert len(list(d.attrs.values())) > 0
         dtcpop = self.test_01a_compute_score(self.dtcpop)
@@ -191,7 +191,8 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         from neuronunit.optimization import get_neab
         self.assertNotEqual(self.dtcpop,None)
         dtc = self.dtcpop[0]
-        self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend=('NEURON',{'DTC':dtc}))
+        self.model = ReducedModel(get_neab.LEMS_MODEL_PATH,
+                                  backend=('NEURON',{'DTC':dtc}))
         temp = [ v for v in self.model.attrs.values() ]
         assert len(temp) > 0
         self.AssertGreater(temp,0)
@@ -212,8 +213,8 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         from neuronunit.tests.passive import InputResistanceTest as T
         score = self.run_test(T)
         print(score)
-        print(score.sort_key)
-        self.assertTrue(-0.6 < float(score.sort_key) < -0.5)
+        print(score.norm_score)
+        self.assertTrue(-0.6 < float(score.norm_score) < -0.5)
 
     def test_restingpotential(self):
         from neuronunit.tests.passive import RestingPotentialTest as T
@@ -288,13 +289,13 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
         self.score_p = rtp.judge(model,stop_on_error = False, deep_error = True)
         self.predictionp = self.score_p.prediction
-        self.score_p = self.score_p.sort_key
+        self.score_p = self.score_p.norm_score
         #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
 
         serial_model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
         self.score_s = rt.judge(serial_model,stop_on_error = False, deep_error = True)
         self.predictions = self.score_s.prediction
-        self.score_s = self.score_s.sort_key
+        self.score_s = self.score_s.norm_score
         import numpy as np
         check_less_thresh = float(np.abs(self.predictionp['value'] - self.predictions['value']))
         self.assertLessEqual(check_less_thresh, 2.0)
