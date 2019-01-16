@@ -1425,7 +1425,7 @@ def bar_chart(vms,name=None):
         delta.append(unit_delta)
         print('observation {0} versus prediction {1}'.format(unit_observations,unit_predictions))
         print('unit delta', unit_delta)
-        sv = score.sort_key
+        sv = score.norm_score
         test_dic[str(v)] = (float(unit_observations), float(unit_predictions), unit_delta)
 
 

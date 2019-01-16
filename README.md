@@ -3,7 +3,8 @@
 | [![Travis](https://travis-ci.org/scidash/neuronunit.svg?branch=master)](https://travis-ci.org/scidash/neuronunit) | [![Travis](https://travis-ci.org/scidash/neuronunit.svg?branch=dev)](https://travis-ci.org/scidash/neuronunit)  |
 | [![RTFD](https://readthedocs.org/projects/neuronunit/badge/?version=master)](http://neuronunit.readthedocs.io/en/latest/?badge=master) | [![RTFD](https://readthedocs.org/projects/neuronunit/badge/?version=dev)](http://neuronunit.readthedocs.io/en/latest/?badge=dev) |
 | [![Coveralls](https://coveralls.io/repos/github/scidash/neuronunit/badge.svg?branch=master)](https://coveralls.io/github/scidash/neuronunit?branch=master) | [![Coveralls](https://coveralls.io/repos/github/scidash/neuronunit/badge.svg?branch=dev)](https://coveralls.io/github/scidash/neuronunit?branch=dev) |
-| [![Requirements](https://requires.io/github/scidash/neuronunit/requirements.svg?branch=master)](https://requires.io/github/scidash/neuronunit/requirements/?branch=master) |  [![Requirements](https://requires.io/github/scidash/neuronunit/requirements.svg?branch=dev)](https://requires.io/github/scidash/neuronunit/requirements/?branch=dev) | 
+| [![Requirements](https://requires.io/github/scidash/neuronunit/requirements.svg?branch=master)](https://requires.io/github/scidash/neuronunit/requirements/?branch=master) |  [![Requirements](https://requires.io/github/scidash/neuronunit/requirements.svg?branch=dev)](https://requires.io/github/scidash/neuronunit/requirements/?branch=dev) |
+| [![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/scidash/neuronunit/master) |
 
 
 
@@ -43,13 +44,13 @@ model = ChannelModel(channel_file_path, channel_index=0, name=channel_model_name
 # Get the experiment data from ChannelWorm and instantiate the test
 doi = '10.1083/jcb.200203055'
 fig = '2B'
-sample_data = GraphData.objects.get(graph__experiment__reference__doi=doi, 
+sample_data = GraphData.objects.get(graph__experiment__reference__doi=doi,
                                     graph__figure_ref_address=fig)
 voltage, current_per_farad = sample_data.asunitedarray()
-patch_capacitance = pq.Quantity(1e-13,'F') # Assume recorded patch had this capacitance; 
+patch_capacitance = pq.Quantity(1e-13,'F') # Assume recorded patch had this capacitance;
                                            # an arbitrary scaling factor.  
 current = current_per_farad * patch_capacitance
-observation = {'v':voltage, 
+observation = {'v':voltage,
                'i':current}
 test = IVCurvePeakTest(observation)
 
@@ -62,7 +63,7 @@ score.plot(rd['v'],rd['i_pred'],same_fig=True,color='r',label='Predicted (model)
 ![png](https://raw.githubusercontent.com/scidash/assets/master/figures/SCU_IVCurve_Model_6_0.png)
 
 ```
-score.summarize() 
+score.summarize()
 """ OUTPUT:
 Model EGL-19.channel (ChannelModel) achieved score Fail on test 'IV Curve Test (IVCurvePeakTest)'. ===
 """
@@ -89,27 +90,27 @@ neurolex_id = 'nifext_128' # Cerebellar Granule Cell
 # Specify reference data for a test of resting potential for a granule cell.  
 reference_data = neuroelectro.NeuroElectroSummary(
     neuron = {'nlex_id':neurolex_id}, # Neuron type.  
-    ephysprop = {'name':'Resting Membrane Potential'}) # Electrophysiological property name. 
-# Get and verify summary data for the combination above from neuroelectro.org. 
+    ephysprop = {'name':'Resting Membrane Potential'}) # Electrophysiological property name.
+# Get and verify summary data for the combination above from neuroelectro.org.
 reference_data.get_values()
 vm_test = tests.RestingPotentialTest(
                 observation = {'mean':reference_data.mean,
-                               'std':reference_data.std},
+                               'sd':reference_data.std},
                 name = 'Resting Potential')
 
 # Specify reference data for a test of action potential width.  
 reference_data = neuroelectro.NeuroElectroSummary(
     neuron = {'nlex_id':neurolex_id}, # Neuron type.  
-    ephysprop = {'name':'Spike Half-Width'}) # Electrophysiological property name. 
-# Get and verify summary data for the combination above from neuroelectro.org. 
+    ephysprop = {'name':'Spike Half-Width'}) # Electrophysiological property name.
+# Get and verify summary data for the combination above from neuroelectro.org.
 reference_data.get_values()
 spikewidth_test = tests.InjectedCurrentAPWidthTest(
                 observation = {'mean':reference_data.mean,
-                               'std':reference_data.std},
+                               'sd':reference_data.std},
                 name = 'Spike Width',
                 params={'injected_square_current':{'amplitude':5.3*pq.pA,
                                                    'delay':50.0*pq.ms,
-                                                   'duration':500.0*pq.ms}}) 
+                                                   'duration':500.0*pq.ms}})
                 # 5.3 pA of injected current in a 500 ms square pulse.  
 
 # Create a test suite from these two tests.  
@@ -121,7 +122,7 @@ for model_name in model_names # Iterate through a list of models downloaded from
     model = nc_models.OSBModel(*model_info)
     models.append(model) # Add to the list of models to be tested.  
 
-score_matrix = suite.judge(models,stop_on_error=True) 
+score_matrix = suite.judge(models,stop_on_error=True)
 score_matrix.view()
 ```
 ### Score Matrix for Test Suite 'Neuron Tests'
@@ -152,7 +153,7 @@ NeuronUnit is based on [SciUnit](http://github.com/scidash/sciunit), a disciplin
 2. Check that the model has the capabilities required to take the test.     
 1. Make the model take the test.  
 2. Generate a score from that test run.  
-1. Bind the score to the specific model/test combination and any related data from test execution. 
+1. Bind the score to the specific model/test combination and any related data from test execution.
 1. Visualize the score (i.e. print or display the result of the test).  
 
 Here, we will break down how this is accomplished in NeuronUnit.  Although NeuronUnit contains several model and test classes that make it easy to work with standards in neuron modeling and electrophysiology data reporting, here we will use toy model and test classes constructed on-the-fly so the process of model and test construction is fully transparent.  
@@ -179,7 +180,7 @@ Let's see what the `neuronunit.capabilities.ProducesMembranePotential` capabilit
 ```python
 class ProducesMembranePotential(Capability):
 	"""Indicates that the model produces a somatic membrane potential."""
-	
+
 	def get_membrane_potential(self):
 		"""Must return a neo.core.AnalogSignal."""
 		raise NotImplementedError()
@@ -205,12 +206,12 @@ Now we can then construct a simple test to use on this model or any other test t
 ```python
 class ToyAveragePotentialTest(sciunit.Test):
 	"""Tests the average membrane potential of a neuron."""
-	
+
 	def __init__(self,
-			     observation={'mean':None,'std':None},
+			     observation={'mean':None,'sd':None},
 			     name="Average potential test"):
 		"""Takes the mean and standard deviation of reference membrane potentials."""
-		
+
 		sciunit.Test.__init__(self,observation,name) # Call the base constructor.  
 		self.required_capabilities += (neuronunit.capabilities.ProducesMembranePotential,)
 							  		   # This test will require a model to express the above capabilities
@@ -219,18 +220,18 @@ class ToyAveragePotentialTest(sciunit.Test):
 	score_type = sciunit.scores.ZScore # The test will return this kind of score.  
 
 	def validate_observation(self, observation):
-	    """An optional method that makes sure an observation to be used as 
+	    """An optional method that makes sure an observation to be used as
 	    reference data has the right form"""
 		try:
 			assert type(observation['mean']) is quantities.Quantity # From the 'quantities' package
-			assert type(observation['std']) is quantities.Quantity
+			assert type(observation['sd']) is quantities.Quantity
 		except Exception as e:
 			raise sciunit.ObservationError(("Observation must be of the form "
-									"{'mean':float*mV,'std':float*mV}")) 
+									"{'mean':float*mV,'sd':float*mV}"))
 
 	def generate_prediction(self, model):
 		"""Implementation of sciunit.Test.generate_prediction."""
-		vm = model.get_median_vm() # If the model has the capability 'ProducesMembranePotential', 
+		vm = model.get_median_vm() # If the model has the capability 'ProducesMembranePotential',
 		                           # then it implements this method
 		prediction = {'mean':vm}
 		return prediction
@@ -247,8 +248,8 @@ The test constructor takes an observation to parameterize the test, e.g.:
 
 ```python
 from quantities import mV
-my_observation = {'mean':-60.0*mV, 
-                  'std':3.5*mV}
+my_observation = {'mean':-60.0*mV,
+                  'sd':3.5*mV}
 my_average_potential_test = ToyAveragePotentialTest(my_observation, name='my_average_potential_test')
 ```
 
@@ -283,3 +284,6 @@ score.describe()
 The score was computed according to 'the difference of the predicted and observed means divided by the observed standard deviation' with raw value 1.0
 '''
 ```
+
+## Reproducible Research ID
+RRID:[SCR_015634](https://scicrunch.org/scicrunch/Resources/record/nlx_144509-1/c70f9dfd-0fc6-5052-9d90-a571c2ebea2e/search)

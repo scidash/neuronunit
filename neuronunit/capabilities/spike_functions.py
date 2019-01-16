@@ -52,20 +52,12 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
     t = spike_train[-1]
     if t+width/2.0 < vm.times[-1]:
         too_long = False
-    print(too_long,too_short,'too long, too short')
-    print(len(spike_train))
-    if len(spike_train)> 1:
-        import pdb; pdb.set_trace()
     if too_short == False and too_long == False:
-
         snippets = [vm.time_slice(t-width/2,t+width/2) for t in spike_train]
     elif too_long:
-
-        snippets = [vm.time_slice(t-width/2,vm.times[-2]) for t in spike_train]
+        snippets = [vm.time_slice(t-width/2,t) for t in spike_train]
     elif too_short:
-
-        snippets = [vm.time_slice(vm.times[1],t+width/2) for t in spike_train]
-
+        snippets = [vm.time_slice(t,t+width/2) for t in spike_train]
 
     result = neo.core.AnalogSignal(np.array(snippets).T.squeeze(),
                                    units=vm.units,
