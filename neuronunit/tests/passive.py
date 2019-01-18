@@ -79,7 +79,13 @@ class TestPulseTest(VmTest):
             For the model to compare against.
             '''
             vm_fit[:offset] = c
-            vm_fit[offset:,0] = a * np.exp(-t[offset:]/b) + c
+            shaped = len(np.shape(vm_fit))
+            #print(shaped)
+            if shaped > 1:
+                vm_fit[offset:,0] = a * np.exp(-t[offset:]/b) + c
+            elif shaped == 1:
+                vm_fit[offset:] = a * np.exp(-t[offset:]/b) + c
+
             return vm_fit.squeeze()
 
         popt, pcov = curve_fit(func, t, vm.squeeze(), p0=guesses) # Estimate starting values for better convergence

@@ -17,6 +17,7 @@ from neo.core import AnalogSignal
 import neuronunit.capabilities.spike_functions as sf
 import sciunit
 from sciunit.utils import dict_hash, import_module_from_path
+'''
 try:
     import neuron
     from neuron import h
@@ -24,6 +25,7 @@ try:
 except:
     NEURON_SUPPORT = False
 
+'''
 try:
     import pyNN
     pyNN_SUPPORT = True
