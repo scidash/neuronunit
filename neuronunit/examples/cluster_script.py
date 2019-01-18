@@ -322,11 +322,6 @@ for key, use_test in test_frame.items():
 
 
 
-'''
-Next  Adaptive Exp.
-MU = 6
-NGEN = 2
-model_type = str('HH')
 
-#Next  Adaptive Exp.
+#Next HH, model and Adaptive Exp.
 #model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = ('HH'))

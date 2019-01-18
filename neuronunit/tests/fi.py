@@ -251,16 +251,17 @@ class RheobaseTestP(VmTest):
             output is an virtual model with an updated dictionary.
             '''
             dtc.boolean = False
-            # if dtc.backend is str('NEURON') or dtc.backend is str('jNEUROML'):
             #     model = VeryReducedModel(backend=(dtc.backend, {'DTC':dtc}))
 
             # else:
             LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
             dtc.model_path = LEMS_MODEL_PATH
             model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
-            dtc.current_src_name = model._backend.current_src_name
-            assert type(dtc.current_src_name) is not type(None)
-            dtc.cell_name = model._backend.cell_name
+            #print(dtc.backend)
+            if dtc.backend is str('NEURON') or dtc.backend is str('jNEUROML'):
+                dtc.current_src_name = model._backend.current_src_name
+                assert type(dtc.current_src_name) is not type(None)
+                dtc.cell_name = model._backend.cell_name
 
             #model.set_attrs(dtc.attrs)
 
@@ -276,6 +277,7 @@ class RheobaseTestP(VmTest):
                 current.update(uc)
                 current = {'injected_square_current':current}
                 dtc.run_number += 1
+                #print(dtc.attrs)
                 model.set_attrs(dtc.attrs)
                 model.inject_square_current(current)
                 dtc.previous = ampl

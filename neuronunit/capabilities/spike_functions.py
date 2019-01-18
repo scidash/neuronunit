@@ -6,6 +6,7 @@ from elephant.spike_train_generation import threshold_detection
 from quantities import mV, ms
 from numba import jit
 import sciunit
+import math
 
 def get_spike_train(vm, threshold=0.0*mV):
     """
@@ -31,9 +32,7 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
      a neo.core.AnalogSignal where each column contains a membrane potential
      snippets corresponding to one spike.
     """
-    #print(vm)
     spike_train = threshold_detection(vm,threshold=threshold)
-    #print(spike_train)
     # Fix for 0-length spike train issue in elephant.
     try:
         assert len(spike_train) != 0
@@ -41,7 +40,6 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
         spike_train = neo.core.SpikeTrain([],t_start=spike_train.t_start,
                                              t_stop=spike_train.t_stop,
                                              units=spike_train.units)
-
     too_short = True
     too_long = True
 
@@ -88,7 +86,6 @@ def spikes2amplitudes(spike_waveforms):
         ampls = np.array([])
     return ampls * spike_waveforms.units
 
-#@jit
 def spikes2widths(spike_waveforms):
     """
     IN:
@@ -135,7 +132,6 @@ def spikes2widths(spike_waveforms):
         widths = widths*spike_waveforms.sampling_period
     return widths
 
-import math
 def spikes2thresholds(spike_waveforms):
     """
     IN:

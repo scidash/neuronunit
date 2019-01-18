@@ -7,7 +7,6 @@
 #
 # You can run use dockerhub to get the appropriate file, and launch this notebook using Kitematic.
 
-# In[ ]:
 
 # This is code, change cell type to markdown.
 # ![alt text](plan.jpg "Pub plan")
@@ -16,7 +15,6 @@
 # # Import libraries
 # To keep the standard running version of minimal and memory efficient, not all available packages are loaded by default. In the cell below I import a mixture common python modules, and custom developed modules associated with NeuronUnit (NU) development
 
-# In[ ]:
 
 #!pip install dask distributed seaborn
 #!bash after_install.sh
@@ -187,17 +185,18 @@ for k,v in reduced_cells.items():
 
         df[k][key] = int(dtc.get_ss())
 
-import pdb; pdb.set_trace()
 # A sparse grid sampling over the parameter space, using the published and well corrobarated parameter points, from Izhikitch publications, and the Open Source brain, shows that without optimization, using off the shelf parameter sets to fit real-life biological cell data, does not work so well.
 
 
 MU = 6
 NGEN = 150
 
-#print(free_params)
 for key, use_test in test_frame.items():
-    index, DO = om.run_ga(explore_param,NGEN,use_test,free_params=free_params, NSGA = True, MU = MU)
-print('fails here d ')
+    ga_out, _ = om.run_ga(explore_param,NGEN,use_test,free_params=free_params, NSGA = True, MU = MU)
+
+    test_opt =  {str('multi_objective')+str(ga_out):ga_out}
+    with open('multi_objective.p','wb') as f:
+        pickle.dump(test_opt,f)
 '''
 MU = 6
 NGEN = 200
@@ -335,9 +334,9 @@ ax.set_zlabel('sentiment polarity')
 fignum = fignum + 1
 for x,i in enumerate(zip(y_kmeans,dfs['clue_words'])):
     try:
-        print(i[0],i[1],dfs['link'][x],dfs['publication'][x],dfs['clue_links'][x],dfs['sp_norm'][x],dfs['ss_norm'][x],dfs['uniqueness'][x])
+        #print(i[0],i[1],dfs['link'][x],dfs['publication'][x],dfs['clue_links'][x],dfs['sp_norm'][x],dfs['ss_norm'][x],dfs['uniqueness'][x])
     except:
-        print(i)
+            #print(i)
 
 fig.savefig('3dCluster.png')
 
