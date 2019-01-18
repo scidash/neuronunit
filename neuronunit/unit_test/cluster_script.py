@@ -159,11 +159,11 @@ df = pd.DataFrame(index=list(test_frame.keys()),columns=list(reduced_cells.keys(
 
 
 
-with open('seeds.p','rb') as f:
-    seeds = pickle.load(f)
 
 try:
-    #assert 1==2
+    with open('seeds.p','rb') as f:
+        seeds = pickle.load(f)
+
     assert seeds is not None
 
 except:
