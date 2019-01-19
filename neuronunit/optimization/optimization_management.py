@@ -107,9 +107,6 @@ def bridge_judge(test_and_models):
     backend_ = dtc.backend
     model = mint_generic_model(backend_)
     model.set_attrs(dtc.attrs)
-    #model.inject_square_current(dtc.vtests)
-    #n_spikes = len(model.get_spike_train())
-    #print(n_spikes)
     pred = test.generate_prediction(model)
     if pred is not None:
         score = test.compute_score(obs,pred)
@@ -145,19 +142,15 @@ def dtc_to_rheo(dtc):
     model.set_attrs(dtc.attrs)
     rtest = [ t for t in dtc.tests if str('RheobaseTestP') == t.name ]
 
-    #if not len(rtest)==1:
-    #    rtest = [ t for t in dtc.tests if str('RheobaseTest') == t.name ]
 
     if len(rtest):
         rtest = rtest[0]
-        #print(rtest)
 
         dtc.rheobase = rtest.generate_prediction(model)
         #print(dtc.rheobase)
         if dtc.rheobase is not None and dtc.rheobase !=-1.0:
             dtc.rheobase = dtc.rheobase['value']
             obs = rtest.observation
-            #print(obs,dtc.rheobase)
             score = rtest.compute_score(obs,dtc.rheobase)
             dtc.scores[str('RheobaseTestP')] = 1.0 - score.norm_score
 
@@ -310,8 +303,7 @@ def nunit_evaluation(dtc):
                         dtc = score_proc(dtc,t,copy.copy(score))
                 else:
                     print('gets to None score type')
-    dtc.get_ss() # compute the sum of sciunit score components.
-    #print(dtc.get_ss())
+    # compute the sum of sciunit score components.
     dtc.summed = dtc.get_ss()
     return dtc
 
@@ -320,10 +312,10 @@ def nunit_evaluation(dtc):
 
 def evaluate(dtc):
     error_length = len(dtc.scores.keys())
+    # assign worst case errors, and then over write them with situation informed errors as they become available.
     fitness = [ 1.0 for i in range(0,error_length) ]
     for k,t in enumerate(dtc.scores.keys()):
         fitness[k] = dtc.scores[str(t)]
-    #print(fitness)
     return tuple(fitness,)
 
 def get_trans_list(param_dict):
@@ -338,7 +330,6 @@ def transform(xargs):
     (ind,td,backend) = xargs
     dtc = DataTC()
     LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
-    dtc.backend = 'RAW'
     dtc.attrs = {}
     for i,j in enumerate(ind):
         dtc.attrs[str(td[i])] = j
@@ -355,7 +346,7 @@ def add_constant(hold_constant, pop, td):
             p.append(v)
     return pop,td
 
-def update_dtc_pop(pop, td, backend = None):
+def update_dtc_pop(pop, td):
     '''
     inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
     outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
@@ -367,7 +358,7 @@ def update_dtc_pop(pop, td, backend = None):
     if pop[0].backend is not None:
         _backend = pop[0].backend
     if isinstance(pop, Iterable):# and type(pop[0]) is not type(str('')):
-        xargs = zip(pop,repeat(td),repeat(backend))
+        xargs = zip(pop,repeat(td),repeat(_backend))
         npart = np.min([multiprocessing.cpu_count(),len(pop)])
         bag = db.from_sequence(xargs, npartitions = npart)
         dtcpop = list(bag.map(transform).compute())
@@ -407,13 +398,15 @@ def run_ga(explore_edges, max_ngen, test, free_params = None, hc = None, NSGA = 
     else:
         selection = str('selIBEA')
     max_ngen = int(np.floor(max_ngen))
-    DO = SciUnitOptimization(offspring_size = MU, error_criterion = test, boundary_dict = ss, backend = model_type,hc = hc)#, selection = selection, boundary_dict = ss, elite_size = 2, hc=hc)
+    DO = SciUnitOptimization(offspring_size = MU, error_criterion = test, boundary_dict = ss, backend = model_type, hc = hc)#, selection = selection, boundary_dict = ss, elite_size = 2, hc=hc)
 
     if seed_pop is not None:
         # This is a re-run condition.
         DO.setnparams(nparams = len(free_params), boundary_dict = ss)
+
         DO.seed_pop = seed_pop
         DO.setup_deap()
+
     # This run condition should not need same arguments as above.
     ga_out = DO.run(max_ngen = max_ngen)#offspring_size = MU, )
     return ga_out, DO
@@ -435,7 +428,6 @@ def init_pop(pop, td, tests):
                 if len(constant):
                     d.constants = constant
                     d.add_constant()
-    #import pdb; pdb.set_trace()
 
     return pop, dtcpop
 
@@ -485,13 +477,11 @@ def new_genes(pop,dtcpop,td):
         ind.append(sample)
     dtc = DataTC()
     LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
-    #dtc.backend = 'RAW'
     dtc.attrs = {}
     for i,j in enumerate(ind):
         dtc.attrs[str(td[i])] = j
     dtc.backend = dtcpop[0].backend
     dtc.tests = dtcpop[0].tests
-    #dtc.backend = str('RAW')
     dtc = dtc_to_rheo(dtc)
     ind.rheobase = dtc.rheobase
     return ind,dtc

@@ -18,6 +18,7 @@ import neuronunit.capabilities.spike_functions as sf
 import sciunit
 from sciunit.models.backends import Backend
 from sciunit.utils import dict_hash, import_module_from_path
+'''
 try:
     import neuron
     from neuron import h
@@ -27,6 +28,7 @@ except:
     h = None
     NEURON_SUPPORT = False
 
+'''
 try:
     import pyNN
     pyNN_SUPPORT = True

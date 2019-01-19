@@ -1,12 +1,12 @@
-"""Auxiliary helper functions for analysis of spiking"""
+"""Auxiliary helper functions for analysis of spiking."""
 
 import numpy as np
-import matplotlib.pyplot as plt
 import neo
 from elephant.spike_train_generation import threshold_detection
 from quantities import mV, ms
-
+from numba import jit
 import sciunit
+import math
 
 
 def get_spike_train(vm, threshold=0.0*mV):
@@ -52,6 +52,8 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
     too_short = True
     too_long = True
 
+    # This code checks that you are not asking for a window into an array,
+    # with out of bounds indicies.
     t = spike_train[0]
     if t-width/2.0 > 0.0*ms:
         too_short = False
@@ -83,19 +85,14 @@ def spikes2amplitudes(spike_waveforms):
     """
 
     if spike_waveforms is not None:
-        try:
+        if len(spike_waveforms) == 1:
             ampls = np.max(np.array(spike_waveforms))
-        except:
-            print('gets here, ie rheobase failed')
+        else:
             pre_ampls = []
             for mp in spike_waveforms:
                 pre_ampls.append(np.max(np.array(mp)))
-            for mp in spike_waveforms:
-                plt.plot(np.array(mp), mp.times)
-            plt.savefig('offending_waveform.png')
-            ampls = np.max(pre_ampls)
+            ampls = pre_ampls[0]
     else:
-        print('gets here, ie rheobase failed')
         ampls = np.array([])
     return ampls * spike_waveforms.units
 
@@ -113,8 +110,17 @@ def spikes2widths(spike_waveforms):
     widths = []
     for i in range(n_spikes):
         s = spike_waveforms[:, i].squeeze()
-        x_high = int(np.argmax(s))
-        high = s[x_high]
+        try:
+            x_high = int(np.argmax(s))
+            high = s[x_high]
+        except:
+            high = 0
+            for k in s:
+                for i, j in enumerate(k):
+                    if j > high:
+                        high = j
+                        x_high = i
+
         if x_high > 0:
             try:  # Use threshold to compute half-max.
                 y = np.array(s)
@@ -157,7 +163,6 @@ def spikes2thresholds(spike_waveforms):
         s = spike_waveforms[:, i].squeeze()
         s = np.array(s)
         dvdt = np.diff(s)
-        import math
         for j in dvdt:
             if math.isnan(j):
                 return thresholds * spike_waveforms.units

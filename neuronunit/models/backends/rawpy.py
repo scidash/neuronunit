@@ -121,7 +121,6 @@ class RAWBackend(Backend):
 
         Iext[0:delay_ind-1] = 0.0
         Iext[delay_ind:delay_ind+duration_ind-1] = amplitude
-        #print(np.sum(Iext),amplitude*len(Iext[delay_ind:delay_ind+duration_ind-1]))
         Iext[delay_ind+duration_ind::] = 0.0
 
         attrs['Iext'] = Iext

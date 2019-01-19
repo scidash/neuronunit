@@ -11,6 +11,12 @@ from neo import AnalogSignal
 from numba import jit
 from .base import np, pq, ncap, VmTest, scores
 
+
+# How this file is different to the original.
+# Some big functions broken into smaller ones, for greater modularity
+# use of numba jit where possible.
+# Different inheritance designed to work with optimizer.
+
 per_ms = pq.UnitQuantity('per_ms',1.0/pq.ms,symbol='per_ms')
 
 none_score = {
