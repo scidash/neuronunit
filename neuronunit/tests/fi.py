@@ -35,8 +35,15 @@ tolerance = 0.001
 
 class RheobaseTest(VmTest):
     """
-    Tests the full widths of APs at their half-maximum
-    under current injection.
+    A serial Implementation of a Binary search algorithm,
+    which finds a rheobase prediction
+
+    Strengths: this algorithm is faster than the parallel class, present in this file under important and
+    limited circumstances: this serial algorithm is faster than parallel for model backends that are able to
+    implement numba jit optimization
+
+    Weaknesses this serial class is significantly slower, for many backend implementations including raw NEURON
+    NEURON via PyNN, and possibly GLIF.
     """
     def _extra(self):
         self.prediction = {}
@@ -173,12 +180,18 @@ class RheobaseTest(VmTest):
 
 
 class RheobaseTestP(VmTest):
-     """
-     A parallel version of test Rheobase.
-     Tests the full widths of APs at their half-maximum
-     under current injection.
+    """
+    A parallel Implementation of a Binary search algorithm,
+    which finds a rheobase prediction.
 
-     """
+    Strengths: this algorithm is faster than the serial class, present in this file for model backends that are not able to
+    implement numba jit optimization, which actually happens to be typical of a signifcant number of backends
+
+    Weaknesses this serial class is significantly slower, for many backend implementations including raw NEURON
+    NEURON via PyNN, and possibly GLIF.
+
+    """
+
 
      required_capabilities = (cap.ReceivesSquareCurrent,
                               cap.ProducesSpikes)
@@ -302,9 +315,14 @@ class RheobaseTestP(VmTest):
                 if dtc.boolean:
 
                     return dtc
+
                 else:
-                    # expand values in the range to accomodate for mutation.
-                    # but otherwise exploit memory of the genes to inform searchable range.
+                    # Exploit memory of the genes to inform searchable range.
+
+                    # if this model has lineage, assume it didn't mutate that far away from it's ancestor.
+                    # using that assumption, on first pass, consult a very narrow range, of test current injection samples:
+                    # only slightly displaced away from the ancestors rheobase value.
+
 
                     if type(dtc.current_steps) is type(float):
                         dtc.current_steps = [ 0.75 * dtc.current_steps, 1.25 * dtc.current_steps ]
