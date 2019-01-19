@@ -84,7 +84,12 @@ class TestPulseTest(VmTest):
             decay function for those parameters.
             """
             vm_fit[:offset] = c
-            vm_fit[offset:, 0] = a * np.exp(-t[offset:]/b) + c
+            shaped = len(np.shape(vm_fit))
+            if shaped > 1:
+                vm_fit[offset:, 0] = a * np.exp(-t[offset:]/b) + c
+            elif shaped == 1:
+                vm_fit[offset:] = a * np.exp(-t[offset:]/b) + c
+
             return vm_fit.squeeze()
         # Estimate starting values for better convergence
         popt, pcov = curve_fit(func, t, vm.squeeze(), p0=guesses)
@@ -120,9 +125,6 @@ class InputResistanceTest(TestPulseTest):
         result = super(InputResistanceTest, self).generate_prediction(model)
         if result is not None:
             i, vm = result
-            #for param in ['delay', 'duration', 'amplitude']:
-            #   i[param] = self.params['injected_square_current'][param]
-
             r_in = self.__class__.get_rin(vm, i)
             r_in = r_in.simplified
             # Put prediction in a form that compute_score() can use.
@@ -145,7 +147,7 @@ class TimeConstantTest(TestPulseTest):
 
     def generate_prediction(self, model):
         """Implement sciunit.Test.generate_prediction."""
-        result = super(TimeConstantTest,self).generate_prediction(model)
+        result = super(TimeConstantTest, self).generate_prediction(model)
         if result is not None:
             i, vm = result
             tau = self.__class__.get_tau(vm, i)
