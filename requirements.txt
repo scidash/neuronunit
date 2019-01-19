@@ -10,3 +10,5 @@ execnet
 backports.tempfile
 sciunit @ git+https://github.com/scidash/sciunit@dev#egg=sciunit-9999
 lmfit
+numba
+dask

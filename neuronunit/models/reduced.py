@@ -6,6 +6,7 @@ import quantities as pq
 
 import neuronunit.capabilities as cap
 from .lems import LEMSModel
+from .static import ExternalModel
 import neuronunit.capabilities.spike_functions as sf
 
 
@@ -52,7 +53,7 @@ class ReducedModel(LEMSModel,
         self._backend.inject_square_current(current)
 
 
-class VeryReducedModel(mod.ExternalModel,
+class VeryReducedModel(ExternalModel,
                    cap.ReceivesCurrent,
                    cap.ProducesActionPotentials,
                    ):

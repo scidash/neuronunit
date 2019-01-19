@@ -1,6 +1,7 @@
 import pickle
 from neo.core import AnalogSignal
 import sciunit
+import sciunit.capabilities as scap
 import neuronunit.capabilities as cap
 import neuronunit.capabilities.spike_functions as sf
 
@@ -44,7 +45,7 @@ class StaticModel(sciunit.Model,
 
 class ExternalModel(sciunit.Model,
                     cap.ProducesMembranePotential,
-                    cap.Runnable):
+                    scap.Runnable):
     """A model which produces a frozen membrane potential waveform."""
 
     def __init__(self):

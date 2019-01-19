@@ -49,12 +49,12 @@ class TestsPassiveTestCase(TestsTestCase, unittest.TestCase):
     def test_capacitance(self):
         from neuronunit.tests.passive import CapacitanceTest as T
         score = self.run_test(T)
-        self.assertTrue(-0.3 < score < -0.2, "Score was %.2f" % score)
+        self.assertTrue(-0.25 < score < -0.15, "Score was %.2f" % score)
 
     def test_timeconstant(self):
         from neuronunit.tests.passive import TimeConstantTest as T
         score = self.run_test(T)
-        self.assertTrue(-1.45 < score < -1.35, "Score was %.2f" % score)
+        self.assertTrue(-0.85 < score < -0.75, "Score was %.2f" % score)
 
 
 class TestsWaveformTestCase(TestsTestCase, unittest.TestCase):
@@ -74,15 +74,14 @@ class TestsWaveformTestCase(TestsTestCase, unittest.TestCase):
         from neuronunit.tests.waveform import InjectedCurrentAPThresholdTest as T
         score = self.run_test(T)
         self.assertTrue(2.25 < score < 2.35)
-        
+
 
 class TestsFITestCase(TestsTestCase, unittest.TestCase):
     """Test F/I validation tests"""
 
-
     #@unittest.skip("This test takes a long time")
     def test_rheobase_parallel(self):
-        from neuronunit.tests.fi import RheobaseP
+        from neuronunit.tests.fi import RheobaseTestP as T
         score = self.run_test(T)
         self.assertTrue(0.2 < score < 0.3)
 

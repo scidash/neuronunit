@@ -18,7 +18,7 @@ import dask.bag as db
 global cpucount
 npartitions = cpucount = multiprocessing.cpu_count()
 
-from .base import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
+from .base import np, pq, ncap, VmTest, scores, AMPL, DELAY, DURATION
 from .. import optimization
 
 from neuronunit.optimization.data_transport_container import DataTC
@@ -170,14 +170,14 @@ class RheobaseTest(VmTest):
             score.related_data['vm'] = self.rheobase_vm
 
 
-class RheobaseTestP(VmTest):
+class RheobaseTestP(RheobaseTest):
     """A parallel version of test Rheobase.
 
     Tests the full widths of APs at their half-maximum
     under current injection.
     """
 
-     def generate_prediction(self, model):
+    def generate_prediction(self, model):
         def check_fix_range(dtc):
             """Check for the rheobase value.
 
@@ -190,6 +190,7 @@ class RheobaseTestP(VmTest):
             returned.
             given a dictionary of rheobase search values, use that
             dictionary as input for a subsequent search.
+            """
 
             steps = []
             dtc.rheobase = None
@@ -240,14 +241,14 @@ class RheobaseTestP(VmTest):
 
             # else:
             LEMS_MODEL_PATH = str(neuronunit.__path__[0])+\
-		str('/models/NeuroML2/LEMS_2007One.xml')
+		          str('/models/NeuroML2/LEMS_2007One.xml')
             dtc.model_path = LEMS_MODEL_PATH
             model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
-            dtc.current_src_name = model._backend.current_src_name
-            assert type(dtc.current_src_name) is not type(None)
-            dtc.cell_name = model._backend.cell_name
 
-            #model.set_attrs(dtc.attrs)
+            if hasattr(model._backend, 'current_src_name'):
+                dtc.current_src_name = model._backend.current_src_name
+                assert type(dtc.current_src_name) is not type(None)
+                dtc.cell_name = model._backend.cell_name
 
             DELAY = 100.0*pq.ms
             DURATION = 1000.0*pq.ms
@@ -258,11 +259,11 @@ class RheobaseTestP(VmTest):
             ampl = float(dtc.ampl)
             if ampl not in dtc.lookup or len(dtc.lookup) == 0:
                 current = params.copy()['injected_square_current']
-                uc = {'amplitude':ampl*pq.pA}
+                uc = {'amplitude': ampl*pq.pA}
                 current.update(uc)
-                current = {'injected_square_current': current}
+                #current = {'injected_square_current': current}
                 dtc.run_number += 1
-                model.set_attrs(dtc.attrs)
+                model.set_attrs(**dtc.attrs)
                 model.inject_square_current(current)
                 dtc.previous = ampl
                 n_spikes = model.get_spike_count()
@@ -308,7 +309,7 @@ class RheobaseTestP(VmTest):
         def find_rheobase(self, dtc):
 
             assert os.path.isfile(dtc.model_path), \
-		"%s is not a file" % dtc.model_path
+		          "%s is not a file" % dtc.model_path
             # If this it not the first pass/ first generation
             # then assume the rheobase value found before mutation still holds
             # until proven otherwise.
@@ -361,7 +362,6 @@ class RheobaseTestP(VmTest):
                         #dtc.boolean = False
                         return dtc
 
-                self.verbose == 1
                 if self.verbose >= 2:
                     print("Try %d: SubMax = %s; SupraMin = %s" % \
                     (cnt, sub.max() if len(sub) else None,

@@ -4,7 +4,10 @@ import pdb
 from numba import jit
 from contextlib import redirect_stdout
 
-from .base import *
+from .base import os, copy, subprocess
+from .base import pq, AnalogSignal, NEURON_SUPPORT, neuron, h, pynml
+from .base import Backend, BackendException, import_module_from_path
+
 
 class NEURONBackend(Backend):
     """Use for simulation with NEURON, a popular simulator.
@@ -52,9 +55,9 @@ class NEURONBackend(Backend):
 
         backend = 'NEURON'
 
-        super(NEURONBackend,self).init_backend()
+        super(NEURONBackend, self).init_backend()
         self.model._backend.use_memory_cache = False
-        self.model.unpicklable += ['h','ns','_backend']
+        self.model.unpicklable += ['h', 'ns', '_backend']
 
         if type(DTC) is not type(None):
             if type(DTC.attrs) is not type(None):
@@ -65,11 +68,8 @@ class NEURONBackend(Backend):
             if hasattr(DTC, 'current_src_name'):
                 self._current_src_name = DTC.current_src_name
 
-            #if hasattr(DTC,'cell_name'):
-            #    self.cell_name = DTC.cell_name
-
-
-
+            if hasattr(DTC, 'cell_name'):
+                self.cell_name = DTC.cell_name
 
     def reset_neuron(self, neuronVar):
         """Reset the neuron simulation.
@@ -91,14 +91,14 @@ class NEURONBackend(Backend):
     def set_run_params(self, **run_params):
         pass
 
-    def set_stop_time(self, stop_time = 650*pq.ms):
-        """Sets the simulation duration
+    def set_stop_time(self, stop_time=650*pq.ms):
+        """Set the simulation duration
         stopTimeMs: duration in milliseconds
         """
         self.h.tstop = float(stop_time.rescale(pq.ms))
 
-    def set_time_step(self, integrationTimeStep = 1/128.0 * pq.ms):
-        """Sets the simulation itegration fixed time step
+    def set_time_step(self, integrationTimeStep=(pq.ms/128.0)):
+        """Set the simulation itegration fixed time step
         integrationTimeStepMs: time step in milliseconds.
         Powers of two preferred. Defaults to 1/128.0
 
@@ -118,7 +118,7 @@ class NEURONBackend(Backend):
         self.h.cvode.atol(tolerance)
 
     def set_integration_method(self, method="fixed"):
-        """Set. the simulation itegration method.
+        """Set the simulation itegration method.
 
         cvode is used when method is "variable"
 
@@ -133,7 +133,7 @@ class NEURONBackend(Backend):
         except AssertionError:
             self.cvode = self.h.CVode()
             self.cvode.active(1 if method == "variable" else 0)
-    #@jit
+
     def get_membrane_potential(self):
         """Get a membrane potential traces from the simulation.
 
@@ -151,10 +151,9 @@ class NEURONBackend(Backend):
 
         self.h.dt = dt
         self.fixedTimeStep = float(1.0/dt)
-        #print(len(fixed_signal),len(self.neuron.h.v_v_of0),'len memb pot')
         return AnalogSignal(fixed_signal,
-                            units = mV,
-                            sampling_period = dt * ms)
+                            units=pq.mV,
+                            sampling_period=dt*pq.ms)
 
     def get_variable_step_analog_signal(self):
         """Convert variable dt array values to fixed dt array.
@@ -203,7 +202,7 @@ class NEURONBackend(Backend):
             fTime += fDt
 
         return fPots
-    #@jit
+
     def linearInterpolate(self, tStart, tEnd, vStart, vEnd, tTarget):
         """Perform linear interpolation."""
         tRange = float(tEnd - tStart)
@@ -214,11 +213,12 @@ class NEURONBackend(Backend):
         return vTarget
 
     def load(self, tstop=650*pq.ms):
-        nrn_path = os.path.splitext(self.model.orig_lems_file_path)[0]+'_nrn.py'
+        nrn_path = (os.path.splitext(self.model.orig_lems_file_path)[0] +
+                    '_nrn.py')
         nrn = import_module_from_path(nrn_path)
         self.reset_neuron(nrn.neuron)
         self.h.tstop = tstop
-        self.set_stop_time(tstop) # previously 500ms add on 150ms of recovery
+        self.set_stop_time(tstop)  # previously 500ms add on 150ms of recovery
         with redirect_stdout(self.stdout):
             self.ns = nrn.NeuronSimulation(self.h.tstop, dt=0.0025)
 

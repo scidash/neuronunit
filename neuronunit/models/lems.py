@@ -7,6 +7,7 @@ except ImportError:
     from backports.tempfile import TemporaryDirectory
 import shutil
 
+import quantities as pq
 from lxml import etree
 from neuroml import nml
 
@@ -98,10 +99,17 @@ class LEMSModel(RunnableModel):
         """Set run_param equivalents in the LEMS file and write it to disk."""
         trees = self.get_parsed_trees()
 
+        # NeuronUnit->LEMS attribute mapping
+        mapping = {'t_stop': 'length', 'dt': 'step'}
         # Edit NML files.
         for file_path, tree in trees.items():
             for key, value in self.run_params.items():
-                if key == 'injected_square_current':
+                if key in ['t_stop', 'dt']:
+                    simulations = tree.findall('Simulation')
+                    for sim in simulations:
+                        value_in_ms = float(value.rescale(pq.ms))
+                        sim.attrib[mapping[key]] = '%fms' % value_in_ms
+                elif key == 'injected_square_current':
                     pulse_generators = tree.findall('pulseGenerator')
                     for pg in pulse_generators:
                         for attr in ['delay', 'duration', 'amplitude']:
