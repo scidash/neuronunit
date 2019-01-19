@@ -9,7 +9,6 @@ class TestsTestCase(object):
     """Abstract base class for testing tests"""
 
     def setUp(self):
-        #from neuronunit import neuroelectro
         from neuronunit.models.reduced import ReducedModel
         from .model_tests import ReducedModelTestCase
         path = ReducedModelTestCase().path
