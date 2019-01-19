@@ -13,13 +13,12 @@ class APWidthTest(VmTest):
     description = ("A test of the widths of action potentials "
                    "at half of their maximum height.")
 
-    #score_type = scores.ZScore
     score_type = scores.RatioScore
 
     units = pq.ms
 
     ephysprop_name = 'Spike Half-Width'
-    #self.params
+
     def generate_prediction(self, model):
         """Implement sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
@@ -27,9 +26,7 @@ class APWidthTest(VmTest):
         # if get_spike_count is zero, then widths will be None
         # len of None returns an exception that is not handled
         model.rerun = True
-        #import pdb; pdb.set_trace()
         model.inject_square_current(self.params['injected_square_current'])
-
 
         widths = model.get_AP_widths()
         # Put prediction in a form that compute_score() can use.
@@ -52,40 +49,41 @@ class APWidthTest(VmTest):
 
 
 class InjectedCurrentAPWidthTest(APWidthTest):
-    """
-    Tests the full widths of APs at their half-maximum
+    """Tests the full widths of APs at their half-maximum
     under current injection.
     """
-    required_capabilities = (ncap.ReceivesSquareCurrent,)
 
-    #params = {'injected_square_current':
-    #            {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+    def __init__(self, *args, **kwargs):
+        super(InjectedCurrentAPWidthTest, self).__init__(*args, **kwargs)
+        self.params['injected_square_current'] = {'amplitude': 100.0*pq.pA,
+                                                  'delay': DELAY,
+                                                  'duration': DURATION}
+
+    required_capabilities = (ncap.ReceivesSquareCurrent,)
 
     score_type = scores.ZScore
 
     units = pq.ms
-    
+
     name = "Injected current AP width test"
 
     description = ("A test of the widths of action potentials "
                    "at half of their maximum height when current "
                    "is injected into cell.")
 
-
     def compute_score(self, observation, prediction):
-        """Implementation of sciunit.Test.score_prediction."""
+        """Implementat sciunit.Test.score_prediction."""
         if prediction['n'] == 0:
             score = scores.InsufficientDataScore(None)
         else:
-            score = super(InjectedCurrentAPWidthTest,self).compute_score(observation,
-                                                              prediction)
+            score = super(InjectedCurrentAPWidthTest, self).\
+                compute_score(observation, prediction)
         return score
-
 
     def generate_prediction(self, model):
         model.inject_square_current(self.params['injected_square_current'])
         prediction = super(InjectedCurrentAPWidthTest, self).\
-         generate_prediction(model)
+            generate_prediction(model)
 
         return prediction
 
@@ -121,7 +119,7 @@ class APAmplitudeTest(VmTest):
         return prediction
 
     def compute_score(self, observation, prediction):
-        """Implementation of sciunit.Test.score_prediction."""
+        """Implementat sciunit.Test.score_prediction."""
         if prediction['n'] == 0:
             score = scores.InsufficientDataScore(None)
         else:
@@ -131,15 +129,17 @@ class APAmplitudeTest(VmTest):
 
 
 class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
-    """
-    Tests the heights (peak amplitude) of action potentials
+    """Tests the heights (peak amplitude) of action potentials
     under current injection.
     """
 
-    required_capabilities = (ncap.ReceivesSquareCurrent,)
+    def __init__(self, *args, **kwargs):
+        super(InjectedCurrentAPAmplitudeTest, self).__init__(*args, **kwargs)
+        self.params['injected_square_current'] = {'amplitude': 100.0*pq.pA,
+                                                  'delay': DELAY,
+                                                  'duration': DURATION}
 
-    params = {'injected_square_current':
-              {'amplitude': 100.0*pq.pA, 'delay': DELAY, 'duration': DURATION}}
+    required_capabilities = (ncap.ReceivesSquareCurrent,)
 
     name = "Injected current AP amplitude test"
 
@@ -154,16 +154,17 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
         return prediction
 
     def compute_score(self, observation, prediction):
-        """Implementation of sciunit.Test.score_prediction."""
+        """Implementat sciunit.Test.score_prediction."""
         if prediction['n'] == 0:
             score = scores.InsufficientDataScore(None)
         else:
-            score = super(InjectedCurrentAPAmplitudeTest,self).compute_score(observation,
-                                                              prediction)
+            score = super(InjectedCurrentAPAmplitudeTest, self).\
+                compute_score(observation, prediction)
         return score
 
+
 class APThresholdTest(VmTest):
-    """Tests the full widths of action potentials at their half-maximum."""
+    """Test the full widths of action potentials at their half-maximum."""
 
     required_capabilities = (ncap.ProducesActionPotentials,)
 
@@ -193,7 +194,7 @@ class APThresholdTest(VmTest):
         return prediction
 
     def compute_score(self, observation, prediction):
-        """Implementation of sciunit.Test.score_prediction."""
+        """Implementat sciunit.Test.score_prediction."""
         if prediction['n'] == 0:
             score = scores.InsufficientDataScore(None)
         else:
@@ -205,10 +206,13 @@ class APThresholdTest(VmTest):
 class InjectedCurrentAPThresholdTest(APThresholdTest):
     """Test the thresholds of action potentials under current injection."""
 
-    required_capabilities = (ncap.ReceivesSquareCurrent,)
+    def __init__(self, *args, **kwargs):
+        super(InjectedCurrentAPThresholdTest, self).__init__(*args, **kwargs)
+        self.params['injected_square_current'] = {'amplitude': 100.0*pq.pA,
+                                                  'delay': DELAY,
+                                                  'duration': DURATION}
 
-    #params = {'injected_square_current':
-    #            {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+    required_capabilities = (ncap.ReceivesSquareCurrent,)
 
     name = "Injected current AP threshold test"
 
