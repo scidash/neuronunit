@@ -3,10 +3,11 @@
 import os
 import io
 import tempfile
-from contextlib import redirect_stdout
 
-from .base import Backend
 from pyneuroml import pynml
+
+from sciunit.utils import redirect_stdout
+from .base import Backend
 
 
 class jNeuroMLBackend(Backend):

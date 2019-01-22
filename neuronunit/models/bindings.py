@@ -3,7 +3,7 @@ import math
 import pdb
 import copy
 from types import MethodType
-from contextlib import redirect_stdout
+
 
 import numpy as np
 import quantities as pq
@@ -23,7 +23,8 @@ try:
 except ImportError:
     print("Error loading pyNN.neuron")
     pyNN_NEURON = False
-    
+
+from sciunit.utils import redirect_stdout
 import neuronunit.capabilities.spike_functions as sf
 import neuronunit.capabilities as cap
 

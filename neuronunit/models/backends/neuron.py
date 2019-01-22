@@ -2,8 +2,8 @@ import io
 import math
 import pdb
 from numba import jit
-from contextlib import redirect_stdout
 
+from sciunit.utils import redirect_stdout
 from .base import os, copy, subprocess
 from .base import pq, AnalogSignal, NEURON_SUPPORT, neuron, h, pynml
 from .base import Backend, BackendException, import_module_from_path

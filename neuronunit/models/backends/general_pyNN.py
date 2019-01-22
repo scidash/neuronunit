@@ -1,31 +1,26 @@
-#from .base import *
-import pyNN
-#import pyNN
-
 import io
+import copy
 import math
 import pdb
+
 from numba import jit
-from contextlib import redirect_stdout
 import numpy as np
-from .base import *
 import quantities as qt
 from quantities import mV, ms, s
 import matplotlib.pyplot as plt
+import pyNN
 from pyNN.neuron import *
 from pyNN.neuron import HH_cond_exp
 from pyNN.neuron import EIF_cond_exp_isfa_ista
 from pyNN.neuron import Izhikevich
-
 from pyNN import neuron
-#
 from pyNN.neuron import simulator as sim
 from pyNN.neuron import setup as setup
-#from pyNN.neuron import Izhikevich
-#from pyNN.neuron import Population
 from pyNN.neuron import DCSource
-import numpy as np
-import copy
+
+from sciunit.utils import redirect_stdout
+from .base import *
+
 
 # Potassium ion-channel rate functions
 class HHpyNNBackend(Backend):
