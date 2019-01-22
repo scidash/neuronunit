@@ -4,7 +4,7 @@ neo==0.5.2
 elephant==0.4.1
 igor==0.3
 allensdk==0.14.5
-pyNeuroML>-0.3.10
+pyNeuroML @ git+https://github.com/rgerkin/pyneuroml@master#egg=pyneuroml-9999
 pyNN>=0.9
 execnet
 backports.tempfile
@@ -12,3 +12,5 @@ sciunit @ git+https://github.com/scidash/sciunit@dev#egg=sciunit-9999
 lmfit
 numba
 dask[complete]
+deap
+bluepyopt @ git+https://github.com/russelljjarvis/BluePyOpt@scidash#egg=bluepyopt-9999
