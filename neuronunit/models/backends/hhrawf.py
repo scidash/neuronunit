@@ -174,7 +174,7 @@ class HHBackend(Backend):
     def set_attrs(self, **attrs):
         self.model.attrs.update(attrs)
 
-    def _local_run(self):
+    def _backend_run(self):
         results = {}
         results['vm'] = self.vM
         results['t'] = self.vM.times
