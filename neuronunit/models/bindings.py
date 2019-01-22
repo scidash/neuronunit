@@ -19,8 +19,10 @@ try:
     from pyNN import neuron
     from pyNN.neuron import setup as setup
     from pyNN.neuron import DCSource
+    pyNN_NEURON = True
 except ImportError:
     print("Error loading pyNN.neuron")
+    pyNN_NEURON = False
     
 import neuronunit.capabilities.spike_functions as sf
 import neuronunit.capabilities as cap
@@ -176,5 +178,6 @@ def bind_NU_interface(model):
     #model.load_model() #= MethodType(load_model, model) # Bind to the score.
 
     return model
-HH_cond_exp = bind_NU_interface(HH_cond_exp)
-#HH_cond_exp
+
+if pyNN_NEURON:
+    HH_cond_exp = bind_NU_interface(HH_cond_exp)
