@@ -14,6 +14,7 @@ import matplotlib as mpl
 mpl.use('Agg') # Avoid any problems with Macs or headless displays.
 
 from sciunit.utils import NotebookTools,import_all_modules
+import neuronunit
 from neuronunit import neuroelectro,bbp,aibs
 
 OSX = sys.platform == 'darwin'
