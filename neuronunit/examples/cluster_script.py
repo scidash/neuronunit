@@ -13,8 +13,6 @@
 
 # # Import libraries
 # To keep the standard running version of minimal and memory efficient, not all available packages are loaded by default. In the cell below I import a mixture common python modules, and custom developed modules associated with NeuronUnit (NU) development
-
-
 #!pip install dask distributed seaborn
 #!bash after_install.sh
 import numpy as np
@@ -82,6 +80,9 @@ except:
 # # Cast the tabulatable data to pandas data frame
 # There are many among us who prefer potentially tabulatable data to be encoded in pandas data frame.
 
+# idea something like:
+# test_frame['Olfactory bulb (main) mitral cell'].insert(0,test_frame['Cerebellum Purkinje cell'][0])
+
 for k,v in test_frame.items():
    if "Olfactory bulb (main) mitral cell" not in k:
        pass
@@ -107,8 +108,6 @@ explore_param['C'] = (hc_['C']-20,hc_['C']+20)
 explore_param['vr'] = (hc_['vr']-5,hc_['vr']+5)
 use_test = test_frame["Neocortex pyramidal cell layer 5-6"]
 
-#for t in use_test[::-1]:
-#    t.score_type = scores.RatioScore
 test_opt = {}
 
 with open('data_dump.p','wb') as f:
@@ -116,61 +115,50 @@ with open('data_dump.p','wb') as f:
 
 
 use_test[0].observation
-print(use_test[0].name)
 
 rtp = RheobaseTestP(use_test[0].observation)
 use_test[0] = rtp
-print(use_test[0].observation)
 
 
 reduced_cells.keys()
-#test_frame.keys()
-#test_frame.keys()
-#test_frame['Olfactory bulb (main) mitral cell'].insert(0,test_frame['Cerebellum Purkinje cell'][0])
-test_frame
+
 
 
 
 
 df = pd.DataFrame(index=list(test_frame.keys()),columns=list(reduced_cells.keys()))
 MU = 6
-NGEN = 200
-
-
-model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = (str('HH')))
-
-
-explore_ranges = {'E_Na' : (40,70), 'g_Na':(100.0,140.0), 'C_m':(0.5,1.5)}
-
-
-
-attrs_hh = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3, \
-         'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -77.0, 'E_Na' : 50.0, 'vr':-65.0 }
+NGEN = 90
 
 gc = glif.GC()
-explore_params = gc.glif.to_dict()
-explore_params['El'] = (explore_params['El'],explore_params['El']+10.0)
-explore_params['R_input'] = (explore_params['R_input']-explore_params['R_input']/2.0,explore_params['R_input']+explore_params['R_input']/2.0)
-explore_params['C'] = (explore_params['C']-explore_params['C']/2.0,explore_params['C']+explore_params['C']/2.0)
-explore_params['th_inf'] = (explore_params['th_inf']-explore_params['th_inf']/4.0,explore_params['th_inf']+explore_params['th_inf']/4.0)
+glif_dic = gc.glif.to_dict()
+explore_params = {}
+#for k, v in
+
+gd = glif_dic
+explore_params['El'] = (glif_dic['El'],glif_dic['El']+10.0)
+explore_params['R_input'] = (glif_dic['R_input']-glif_dic['R_input']/2.0,glif_dic['R_input']+glif_dic['R_input']/2.0)
+explore_params['C'] = (glif_dic['C']-glif_dic['C']/2.0,glif_dic['C']+glif_dic['C']/2.0)
+explore_params['th_inf'] = (glif_dic['th_inf']-glif_dic['th_inf']/4.0,glif_dic['th_inf']+glif_dic['th_inf']/4.0)
+model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = (str('GLIF')))
 
 store_glif_results = {}
 params = gc.glif.to_dict()
-grid = ParameterGrid(explore_ranges)
+grid = ParameterGrid(explore_params)
 store_glif_results = {}
 
-from neuronunit.models.backends import glif
-gbe = glif.GLIFBackend()
+#from neuronunit.models.backends import glif
+#gbe = glif.GLIFBackend()
+#dtc = DataTC()
+#dtc.backend = str('GLIF')
 
-dtc = DataTC()
-
-(test, dtc) = test_and_models
-obs = test.observation
-backend_ = dtc.backend
-model = mint_generic_model(backend_)
-model.set_attrs(dtc.attrs)
-print(gbe)
-import pdb; pdb.set_trace()
+#obs = test.observation
+#backend_ = dtc.backend
+#from neuronunit.optimization_management import mint_generic_model
+#model = mint_generic_model(backend_)
+#model.set_attrs(dtc.attrs)
+#print(gbe)
+#import pdb; pdb.set_trace()
 
 try:
     with open('glif_seeds.p','rb') as f:
@@ -178,11 +166,16 @@ try:
     assert seeds is not None
 
 except:
+    #import pdb; pdb.set_trace()
+
     for local_attrs in grid:
+        print(local_attrs)
         store_glif_results[str(local_attrs.values())] = {}
         dtc = DataTC()
         dtc.tests = use_test
-        print(dtc.attrs)
+        dtc.attrs = local_attrs
+
+        #print(dtc.attrs)
 
         dtc.backend = 'GLIF'
         dtc.cell_name = 'GLIF'
@@ -235,6 +228,11 @@ except:
 
 
 
+
+model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = (str('HH')))
+explore_ranges = {'E_Na' : (40,70), 'g_Na':(100.0,140.0), 'C_m':(0.5,1.5)}
+attrs_hh = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3, \
+         'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -77.0, 'E_Na' : 50.0, 'vr':-65.0 }
 
 try:
     with open('HH_seeds.p','rb') as f:

@@ -3,8 +3,8 @@ import sciunit
 from neo import AnalogSignal
 import neuronunit.capabilities as cap
 import numpy as np
-from . import parse_glif
-from .base import *
+from neuronunit.models.backends import parse_glif
+from neuronunit.models.backends.base import Backend
 import quantities as qt
 from quantities import mV, ms, s
 
@@ -12,7 +12,7 @@ from quantities import mV, ms, s
 import allensdk.core.json_utilities as json_utilities
 from allensdk.model.glif.glif_neuron import GlifNeuron
 from allensdk.api.queries.cell_types_api import CellTypesApi
-from neuronunit.models.reduced import ReducedModel
+# from neuronunit.models.reduced import ReducedModel
 
 try:
     from allensdk.api.queries.glif_api import GlifApi
@@ -29,17 +29,17 @@ except:
     os.system('pip install git+https://github.com/scidash/sciunit@dev')
 
 
-#class GC(sciunit.Model, cap.ReceivesSquareCurrent, cap.ProducesSpikes, cap.ProducesMembranePotential):
+
 class GLIFBackend(Backend):
     def init_backend(self, attrs = None, cell_name = 'alice', current_src_name = 'hannah', DTC = None):
         backend = 'GLIF'
         super(GLIFBackend,self).init_backend()
-        #self.model = None
 
         self.model._backend.use_memory_cache = False
         self.current_src_name = current_src_name
         self.cell_name = cell_name
         self.vM = None
+        self.allen_id = None
         self.attrs = attrs
 
         self.temp_attrs = None
@@ -60,7 +60,7 @@ class GLIFBackend(Backend):
             if hasattr(DTC,'cell_name'):
                 self.cell_name = DTC.cell_name
 
-        if allen_id == None:
+        if self.allen_id == None:
             self.allen_id = 566302806
             glif_api = GlifApi()
             self.nc = glif_api.get_neuron_configs([self.allen_id])[self.allen_id]
