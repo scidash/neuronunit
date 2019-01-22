@@ -155,7 +155,8 @@ class RheobaseTest(VmTest):
 
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
-        if prediction is None or prediction['value'] is None:
+        if prediction is None or \
+           (isinstance(prediction, dict) and prediction['value'] is None):
             score = scores.InsufficientDataScore(None)
         else:
             score = super(RheobaseTest, self).\

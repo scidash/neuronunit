@@ -106,7 +106,7 @@ def bridge_judge(test_and_models):
     obs = test.observation
     backend_ = dtc.backend
     model = mint_generic_model(backend_)
-    model.set_attrs(dtc.attrs)
+    model.set_attrs(**dtc.attrs)
     pred = test.generate_prediction(model)
     if pred is not None:
         score = test.compute_score(obs,pred)
@@ -139,7 +139,7 @@ def dtc_to_rheo(dtc):
     dtc.score = {}
     backend_ = dtc.backend
     model = mint_generic_model(backend_)
-    model.set_attrs(dtc.attrs)
+    model.set_attrs(**dtc.attrs)
     rtest = [ t for t in dtc.tests if str('RheobaseTestP') == t.name ]
 
 
