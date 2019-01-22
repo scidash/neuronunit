@@ -35,32 +35,20 @@ from neuronunit.optimization.model_parameters import model_params, path_params
 LEMS_MODEL_PATH = path_params['model_path']
 list_to_frame = []
 from neuronunit.tests.fi import RheobaseTestP
-
-
-# from IPython.display import HTML, display
-# import seaborn as sns
-
-
-
-
-
+import copy
+from sklearn.model_selection import ParameterGrid
+from neuronunit.models.interfaces import glif
+from neuronunit.optimization.data_transport_container import DataTC
 # # The Izhiketich model is instanced using some well researched parameter sets.
-#
-
 # First lets get the points in parameter space, that Izhikich himself has published about. These points are often used by the open source brain project to establish between model reproducibility. The itial motivating factor for choosing these points as constellations, of all possible parameter space subsets, is that these points where initially tuned and used as best guesses for matching real observed experimental recordings.
-
 
 explore_param = {k:(np.min(v),np.max(v)) for k,v in reduced_dict.items()}
 
-
 # ## Get the experimental Data pertaining to four different classes or neurons, that can constrain models.
 # Next we get some electro physiology data for four different classes of cells that are very common targets of scientific neuronal modelling. We are interested in finding out what are the most minimal, and detail reduced, low complexity model equations, that are able to satisfy
-
 # Below are some of the data set ID's I used to query neuroelectro.
 # To save time for the reader, I prepared some data earlier to save time, and saved the data as a pickle, pythons preferred serialisation format.
-#
 # The interested reader can find some methods for getting cell specific ephys data from neuroelectro in a code file (neuronunit/optimization/get_neab.py)
-#
 
 
 purkinje ={"id": 18, "name": "Cerebellum Purkinje cell", "neuron_db_id": 271, "nlex_id": "sao471801888"}
@@ -71,17 +59,12 @@ olf_mitral = {"id": 129, "name": "Olfactory bulb (main) mitral cell", "neuron_db
 ca1_pyr = {"id": 85, "name": "Hippocampus CA1 pyramidal cell", "neuron_db_id": 258, "nlex_id": "sao830368389"}
 pipe = [ fi_basket, ca1_pyr, purkinje,  pvis_cortex]
 
-
-# In[ ]:
-
 electro_tests = []
 obs_frame = {}
 test_frame = {}
 
 try:
-
     electro_path = str(os.getcwd())+'all_tests.p'
-
     assert os.path.isfile(electro_path) == True
     with open(electro_path,'rb') as f:
         (obs_frame,test_frame) = pickle.load(f)
@@ -100,28 +83,21 @@ except:
 # There are many among us who prefer potentially tabulatable data to be encoded in pandas data frame.
 
 for k,v in test_frame.items():
-   if "olf_mitral" not in k:
+   if "Olfactory bulb (main) mitral cell" not in k:
        pass
-       #obs = obs_frame[k]
-   if "olf_mitral" in k:
+   if "Olfactory bulb (main) mitral cell" in k:
+       import pdb; pdb.set_trace()
        v[0] = RheobaseTestP(obs['Rheobase'])
 df = pd.DataFrame.from_dict(obs_frame)
 print(test_frame.keys())
 
 
 # In the data frame below, you can see many different cell types
-
 df['Hippocampus CA1 pyramidal cell']
-
-
-
 # # Tweak Izhikitich equations
 # with educated guesses based on information that is already encoded in the predefined experimental observations.
-#
 # In otherwords use information that is readily amenable into hardcoding into equations
-#
 # Select out the 'Neocortex pyramidal cell layer 5-6' below, as a target for optimization
-
 
 free_params = ['a','b','k','c','C','d','vPeak','vr','vt']
 hc_ = reduced_cells['RS']
@@ -171,17 +147,6 @@ explore_ranges = {'E_Na' : (40,70), 'g_Na':(100.0,140.0), 'C_m':(0.5,1.5)}
 attrs_hh = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3, \
          'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -77.0, 'E_Na' : 50.0, 'vr':-65.0 }
 
-
-
-
-import copy
-from sklearn.model_selection import ParameterGrid
-
-
-
-
-
-from neuronunit.models.interfaces import glif
 gc = glif.GC()
 explore_params = gc.glif.to_dict()
 explore_params['El'] = (explore_params['El'],explore_params['El']+10.0)
@@ -196,6 +161,14 @@ store_glif_results = {}
 
 from neuronunit.models.backends import glif
 gbe = glif.GLIFBackend()
+
+dtc = DataTC()
+
+(test, dtc) = test_and_models
+obs = test.observation
+backend_ = dtc.backend
+model = mint_generic_model(backend_)
+model.set_attrs(dtc.attrs)
 print(gbe)
 import pdb; pdb.set_trace()
 
