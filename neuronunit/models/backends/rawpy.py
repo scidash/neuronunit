@@ -131,7 +131,7 @@ class RAWBackend(Backend):
 
         return self.vM
 
-    def _local_run(self):
+    def _backend_run(self):
         results = {}
         results['vm'] = self.vM
         results['t'] = self.vM.times

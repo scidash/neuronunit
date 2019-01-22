@@ -83,7 +83,7 @@ class HHpyNNBackend(Backend):
 
         return vm
 
-    def _local_run(self):
+    def _backend_run(self):
         '''
         pyNN lazy array demands a minimum population size of 3. Why is that.
         '''
