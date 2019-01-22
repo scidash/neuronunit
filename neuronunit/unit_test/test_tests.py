@@ -1,12 +1,11 @@
-"""Tests of NeuronUnit test classes"""
-
-import socket
+"""Tests of NeuronUnit test classes."""
 
 from .base import *
 from neuronunit.neuroelectro import is_neuroelectro_up
 
+
 class TestsTestCase(object):
-    """Abstract base class for testing tests"""
+    """Abstract base class for testing tests."""
 
     def setUp(self):
         from neuronunit.models.reduced import ReducedModel
@@ -17,7 +16,7 @@ class TestsTestCase(object):
             return self.skipTest("Neuroelectro is down")
 
     def get_observation(self, cls):
-        neuron = {'nlex_id': 'nifext_50'} # Layer V pyramidal cell
+        neuron = {'nlex_id': 'nifext_50'}  # Layer V pyramidal cell
         return cls.neuroelectro_summary_observation(neuron)
 
     def make_test(self, cls):
@@ -33,7 +32,7 @@ class TestsTestCase(object):
 
 
 class TestsPassiveTestCase(TestsTestCase, unittest.TestCase):
-    """Test passive validation tests"""
+    """Test passive validation tests."""
 
     def test_inputresistance(self):
         from neuronunit.tests.passive import InputResistanceTest as T

@@ -2,12 +2,14 @@ import io
 import math
 import pdb
 from numba import jit
-from contextlib import redirect_stdout
 import numpy as np
 from .base import *
 import quantities as qt
 from quantities import mV, ms, s
 #import matplotlib.pyplot as plt
+
+from pyneuroml import pynml
+
 
 
 hc = {}
