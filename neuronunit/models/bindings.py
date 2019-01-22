@@ -1,26 +1,28 @@
 import io
 import math
 import pdb
+import copy
 from types import MethodType
 from contextlib import redirect_stdout
 
 import numpy as np
 import quantities as pq
 import matplotlib.pyplot as plt
-from pyNN.neuron import *
-from pyNN.neuron import HH_cond_exp
-from pyNN.neuron import EIF_cond_exp_isfa_ista
-from pyNN.neuron import Izhikevich
+
 from elephant.spike_train_generation import threshold_detection
-
-from pyNN import neuron
-from pyNN.neuron import setup as setup
-from pyNN.neuron import DCSource
-import numpy as np
-import copy
 from neo import AnalogSignal
+try:
+    from pyNN.neuron import *
+    from pyNN.neuron import HH_cond_exp
+    from pyNN.neuron import EIF_cond_exp_isfa_ista
+    from pyNN.neuron import Izhikevich
+    from pyNN import neuron
+    from pyNN.neuron import setup as setup
+    from pyNN.neuron import DCSource
+except ImportError:
+    print("Error loading pyNN.neuron")
+    
 import neuronunit.capabilities.spike_functions as sf
-
 import neuronunit.capabilities as cap
 
 
