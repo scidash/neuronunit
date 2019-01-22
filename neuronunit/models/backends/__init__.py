@@ -36,9 +36,11 @@ try:
 except ImportError:
     HHpyNNBackend = None
     print('Could not load HHpyNNBackend.')
-except AttributeError as e:
-    if PLATFORM == 'darwin' and PYTHON_MAJOR_VERSION == 2:
+except (AttributeError, IOError) as e:
+    if PYTHON_MAJOR_VERSION == 2:
         # Likely a NEURON mod file compilation error.
+        # Not worth trying to support mod files compiled
+        # against Python 2 and 3 on the same system.
         pass
     else:
         raise e
