@@ -100,9 +100,11 @@ except:
 # There are many among us who prefer potentially tabulatable data to be encoded in pandas data frame.
 
 for k,v in test_frame.items():
-    if "olf_mit" not in k:
-        obs = obs_frame[k]
-        v[0] = RheobaseTestP(obs['Rheobase'])
+   if "olf_mitral" not in k:
+       pass
+       #obs = obs_frame[k]
+   if "olf_mitral" in k:
+       v[0] = RheobaseTestP(obs['Rheobase'])
 df = pd.DataFrame.from_dict(obs_frame)
 print(test_frame.keys())
 
@@ -146,9 +148,9 @@ print(use_test[0].observation)
 
 
 reduced_cells.keys()
-test_frame.keys()
-test_frame.keys()
-test_frame['olf_mit'].insert(0,test_frame['Cerebellum Purkinje cell'][0])
+#test_frame.keys()
+#test_frame.keys()
+#test_frame['Olfactory bulb (main) mitral cell'].insert(0,test_frame['Cerebellum Purkinje cell'][0])
 test_frame
 
 
@@ -174,6 +176,90 @@ attrs_hh = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3, \
 
 import copy
 from sklearn.model_selection import ParameterGrid
+
+
+
+
+
+from neuronunit.models.interfaces import glif
+gc = glif.GC()
+explore_params = gc.glif.to_dict()
+explore_params['El'] = (explore_params['El'],explore_params['El']+10.0)
+explore_params['R_input'] = (explore_params['R_input']-explore_params['R_input']/2.0,explore_params['R_input']+explore_params['R_input']/2.0)
+explore_params['C'] = (explore_params['C']-explore_params['C']/2.0,explore_params['C']+explore_params['C']/2.0)
+explore_params['th_inf'] = (explore_params['th_inf']-explore_params['th_inf']/4.0,explore_params['th_inf']+explore_params['th_inf']/4.0)
+
+store_glif_results = {}
+params = gc.glif.to_dict()
+grid = ParameterGrid(explore_ranges)
+store_glif_results = {}
+
+from neuronunit.models.backends import glif
+gbe = glif.GLIFBackend()
+print(gbe)
+import pdb; pdb.set_trace()
+
+try:
+    with open('glif_seeds.p','rb') as f:
+        seeds = pickle.load(f)
+    assert seeds is not None
+
+except:
+    for local_attrs in grid:
+        store_glif_results[str(local_attrs.values())] = {}
+        dtc = DataTC()
+        dtc.tests = use_test
+        print(dtc.attrs)
+
+        dtc.backend = 'GLIF'
+        dtc.cell_name = 'GLIF'
+        for key, use_test in test_frame.items():
+            dtc.tests = use_test
+            dtc = dtc_to_rheo(dtc)
+            dtc = format_test(dtc)
+            if dtc.rheobase is not None:
+                if dtc.rheobase!=-1.0:
+                    dtc = nunit_evaluation(dtc)
+            print(dtc.get_ss())
+            store_glif_results[str(local_attrs.values())][key] = dtc.get_ss()
+        df = pd.DataFrame(store_hh_results)
+        best_params = {}
+        for index, row in df.iterrows():
+            best_params[index] = row == row.min()
+            best_params[index] = best_params[index].to_dict()
+
+
+        seeds = {}
+        for k,v in best_params.items():
+            for nested_key,nested_val in v.items():
+                if True == nested_val:
+                    seed = nested_key
+                    seeds[k] = seed
+        with open('glif_seeds.p','wb') as f:
+            pickle.dump(seeds,f)
+
+
+
+
+
+
+MU = 6
+NGEN = 150
+
+
+try:
+    with open('multi_objective_glif.p','rb') as f:
+        test_opt = pickle.load(f)
+
+except:
+    for key, use_test in test_frame.items():
+        seed = seeds[key]
+        print(seed)
+        ga_out, _ = om.run_ga(explore_params,NGEN,use_test,free_params=explore_params.keys(), NSGA = True, MU = MU, model_type = str('glif'),seed_pop=seed)#,hc = hold_constant_hh)
+        test_opt =  {str('multi_objective_glif')+str(seed):ga_out}
+        with open('multi_objective_glif.p','wb') as f:
+            pickle.dump(test_opt,f)
+
 
 
 
@@ -245,14 +331,18 @@ MU = 6
 NGEN = 150
 
 
-for key, use_test in test_frame.items():
-    seed = seeds[key]
-    print(seed)
-    ga_out, _ = om.run_ga(explore_hh_ranges,NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU, model_type = str('HH'),hc = hold_constant_hh)
-    test_opt =  {str('multi_objective_HH')+str(ga_out):ga_out}
-    with open('multi_objective_HH.p','wb') as f:
-        pickle.dump(test_opt,f)
+try:
+    with open('multi_objective_HH.p','rb') as f:
+        test_opt = pickle.load(f)
 
+except:
+    for key, use_test in test_frame.items():
+        seed = seeds[key]
+        print(seed)
+        ga_out, _ = om.run_ga(explore_hh_ranges,NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU, model_type = str('HH'),hc = hold_constant_hh,seed_pop=seed)
+        test_opt =  {str('multi_objective_HH')+str(ga_out):ga_out}
+        with open('multi_objective_HH.p','wb') as f:
+            pickle.dump(test_opt,f)
 
 
 
