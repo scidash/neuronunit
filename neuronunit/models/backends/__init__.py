@@ -21,7 +21,11 @@ try:
     from .hhrawf import HHBackend
 except Exception as e:
     print('HH python Error')
+try:
+    from .glif import GLIFBackend
 
+except Exception as e:
+    print('glif python Error')
 
 available_backends = {x.replace('Backend',''):cls for x, cls \
                    in locals().items() \
