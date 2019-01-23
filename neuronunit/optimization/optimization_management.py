@@ -124,10 +124,19 @@ def bridge_judge(test_and_models):
 
         #dtc.prediction = pred
         score = test.compute_score(obs,pred)
+        if not hasattr(dtc,'agreement'):
+            dtc.agreement = None
+            dtc.agreement = {}
         try:
-            dtc.agreement[str(test)] = np.abs(test.observation['mean'] - pred['mean'])            
+            dtc.agreement[str(test)] = np.abs(test.observation['mean'] - pred['mean'])
         except:
-            dtc.agreement[str(test)] = np.abs(test.observation['value'] - pred['value'])
+            try:
+                dtc.agreement[str(test)] = np.abs(test.observation['value'] - pred['value'])
+            except:
+                try:
+                    dtc.agreement[str(test)] = np.abs(test.observation['mean'] - pred['value'])
+                except:
+                    pass
         #print(score.norm_score)
     else:
         score = None
@@ -143,6 +152,7 @@ def get_rh(dtc,rtest):
     dtc.rheobase = None
     backend_ = dtc.backend
     model = mint_generic_model(backend_)
+    model.set_attrs(dtc.attrs)
     #model = mint_generic_model()
     dtc.rheobase = rtest.generate_prediction(model)#['value']
     if dtc.rheobase is None:
@@ -157,6 +167,8 @@ def dtc_to_rheo(dtc):
     dtc.score = {}
     backend_ = dtc.backend
     model = mint_generic_model(backend_)
+    print(dtc.attrs)
+    #import pdb; pdb.set_trace()
     model.set_attrs(dtc.attrs)
     rtest = [ t for t in dtc.tests if str('RheobaseTestP') == t.name ]
 
