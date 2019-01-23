@@ -37,15 +37,7 @@ list_to_frame = []
 from neuronunit.tests.fi import RheobaseTestP
 
 
-# from IPython.display import HTML, display
-# import seaborn as sns
-
-
-
-
-
-# # The Izhiketich model is instanced using some well researched parameter sets.
-#
+# # The Izhiketich model is instanced using some well researched parameter sets.#
 
 # First lets get the points in parameter space, that Izhikich himself has published about. These points are often used by the open source brain project to establish between model reproducibility. The itial motivating factor for choosing these points as constellations, of all possible parameter space subsets, is that these points where initially tuned and used as best guesses for matching real observed experimental recordings.
 
@@ -69,7 +61,9 @@ pvis_cortex = {"id": 111, "name": "Neocortex pyramidal cell layer 5-6", "neuron_
 #does not have rheobase
 olf_mitral = {"id": 129, "name": "Olfactory bulb (main) mitral cell", "neuron_db_id": 267, "nlex_id": "nlx_anat_100201"}
 ca1_pyr = {"id": 85, "name": "Hippocampus CA1 pyramidal cell", "neuron_db_id": 258, "nlex_id": "sao830368389"}
-pipe = [ fi_basket, ca1_pyr, purkinje,  pvis_cortex]
+pipe = [ fi_basket, ca1_pyr, purkinje,  pvis_cortex, olf_mitral ]
+
+from neuronunit.optimization import get_neab
 
 
 # In[ ]:
@@ -79,7 +73,7 @@ obs_frame = {}
 test_frame = {}
 
 try:
-
+    #assert 1==2
     electro_path = str(os.getcwd())+'all_tests.p'
 
     assert os.path.isfile(electro_path) == True
@@ -100,9 +94,11 @@ except:
 # There are many among us who prefer potentially tabulatable data to be encoded in pandas data frame.
 
 for k,v in test_frame.items():
-    if "olf_mit" not in k:
+    if "olf_mitral" not in k:    
         obs = obs_frame[k]
+    if "olf_mitral" in k:
         v[0] = RheobaseTestP(obs['Rheobase'])
+        print('gets here?')
 df = pd.DataFrame.from_dict(obs_frame)
 print(test_frame.keys())
 
@@ -146,9 +142,9 @@ print(use_test[0].observation)
 
 
 reduced_cells.keys()
-test_frame.keys()
-test_frame.keys()
-test_frame['olf_mit'].insert(0,test_frame['Cerebellum Purkinje cell'][0])
+#test_frame.keys()
+#test_frame.keys()
+test_frame['Olfactory bulb (main) mitral cell'].insert(0,test_frame['Cerebellum Purkinje cell'][0])
 test_frame
 
 
@@ -178,6 +174,7 @@ from sklearn.model_selection import ParameterGrid
 
 
 try:
+    assert 1==2
     with open('HH_seeds.p','rb') as f:
         seeds = pickle.load(f)
     assert seeds is not None
@@ -193,7 +190,8 @@ except:
         updatable_attrs = copy.copy(attrs_hh)
         updatable_attrs.update(local_attrs)
         dtc.attrs = updatable_attrs
-        print(updatable_attrs)
+        print(dtc.attrs)
+        #print(updatable_attrs)
 
         dtc.backend = 'HH'
         dtc.cell_name = 'Point Hodgkin Huxley'

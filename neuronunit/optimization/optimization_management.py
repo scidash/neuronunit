@@ -125,6 +125,8 @@ def get_rh(dtc,rtest):
     dtc.rheobase = None
     backend_ = dtc.backend
     model = mint_generic_model(backend_)
+    model.set_attrs(dtc.attrs)
+
     #model = mint_generic_model()
     dtc.rheobase = rtest.generate_prediction(model)#['value']
     if dtc.rheobase is None:
@@ -140,6 +142,7 @@ def dtc_to_rheo(dtc):
     backend_ = dtc.backend
     model = mint_generic_model(backend_)
     model.set_attrs(dtc.attrs)
+
     rtest = [ t for t in dtc.tests if str('RheobaseTestP') == t.name ]
 
 
@@ -253,9 +256,9 @@ def passive_values(keyed):
     return keyed
 
 def format_test(dtc):
-    #pre format the current injection dictionary based on pre computed
-    #rheobase values of current injection.
-    #This is much like the hooked method from the old get neab file.
+    # pre format the current injection dictionary based on pre computed
+    # rheobase values of current injection.
+    # This is much like the hooked method from the old get neab file.
     dtc.vtest = {}
     dtc.tests = switch_logic(dtc.tests)
 
@@ -450,13 +453,14 @@ def obtain_rheobase(pop, td, tests):
 
 def new_genes(pop,dtcpop,td):
     '''
-    some times genes explored will not return
-    un-usable simulation parameters
-    genes who have no rheobase score
-    will be discarded.
 
     BluePyOpt needs a stable
     gene number however
+
+    some times genes explored will not return
+    parameters corresponding to usable models
+    genes who have no rheobase score
+    will be discarded.
 
     This method finds how many genes have
     been discarded, and tries to build new genes
@@ -476,6 +480,9 @@ def new_genes(pop,dtcpop,td):
         sample = numpy.random.normal(loc=mean, scale=2*std, size=1)[0]
         ind.append(sample)
     dtc = DataTC()
+    # PyNN models should not have to read from a file.
+    # This line satifies an older NU design flaw, that all models evaluated must have
+    # a disk readable path.
     LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
     dtc.attrs = {}
     for i,j in enumerate(ind):
