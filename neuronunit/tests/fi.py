@@ -262,8 +262,9 @@ class RheobaseTestP(VmTest):
                 dtc.current_src_name = model._backend.current_src_name
                 assert type(dtc.current_src_name) is not type(None)
                 dtc.cell_name = model._backend.cell_name
-
-            #model.set_attrs(dtc.attrs)
+            print(dtc.attrs)
+            model.set_attrs(dtc.attrs)
+            print(model.attrs)
 
             DELAY = 100.0*pq.ms
             DURATION = 1000.0*pq.ms
@@ -277,7 +278,7 @@ class RheobaseTestP(VmTest):
                 current.update(uc)
                 current = {'injected_square_current':current}
                 dtc.run_number += 1
-                #print(dtc.attrs)
+                print(dtc.attrs)
                 model.set_attrs(dtc.attrs)
                 model.inject_square_current(current)
                 dtc.previous = ampl
