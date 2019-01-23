@@ -107,76 +107,50 @@ hc_['vPeak'] = hc_['vr'] + 86.364525297619
 explore_param['C'] = (hc_['C']-20,hc_['C']+20)
 explore_param['vr'] = (hc_['vr']-5,hc_['vr']+5)
 use_test = test_frame["Neocortex pyramidal cell layer 5-6"]
-
 test_opt = {}
-
 with open('data_dump.p','wb') as f:
     pickle.dump(test_opt,f)
-
-
 use_test[0].observation
-
 rtp = RheobaseTestP(use_test[0].observation)
 use_test[0] = rtp
-
-
 reduced_cells.keys()
-
-
-
-
-
 df = pd.DataFrame(index=list(test_frame.keys()),columns=list(reduced_cells.keys()))
+
 MU = 6
 NGEN = 90
-
 gc = glif.GC()
 glif_dic = gc.glif.to_dict()
-explore_params = {}
-#for k, v in
-
+explore_ranges = {}
 gd = glif_dic
-explore_params['El'] = (glif_dic['El'],glif_dic['El']+10.0)
-explore_params['R_input'] = (glif_dic['R_input']-glif_dic['R_input']/2.0,glif_dic['R_input']+glif_dic['R_input']/2.0)
-explore_params['C'] = (glif_dic['C']-glif_dic['C']/2.0,glif_dic['C']+glif_dic['C']/2.0)
-explore_params['th_inf'] = (glif_dic['th_inf']-glif_dic['th_inf']/4.0,glif_dic['th_inf']+glif_dic['th_inf']/4.0)
+explore_ranges['El'] = (glif_dic['El'],glif_dic['El']+10.0)
+explore_ranges['R_input'] = (glif_dic['R_input']-glif_dic['R_input']/2.0,glif_dic['R_input']+glif_dic['R_input']/2.0)
+explore_ranges['C'] = (glif_dic['C']-glif_dic['C']/2.0,glif_dic['C']+glif_dic['C']/2.0)
+explore_ranges['th_inf'] = (glif_dic['th_inf']-glif_dic['th_inf']/4.0,glif_dic['th_inf']+glif_dic['th_inf']/4.0)
 model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = (str('GLIF')))
 
 store_glif_results = {}
 params = gc.glif.to_dict()
-grid = ParameterGrid(explore_params)
+grid = ParameterGrid(explore_ranges)
+print()
 store_glif_results = {}
+hold_constant_glif = {}
 
-#from neuronunit.models.backends import glif
-#gbe = glif.GLIFBackend()
-#dtc = DataTC()
-#dtc.backend = str('GLIF')
-
-#obs = test.observation
-#backend_ = dtc.backend
-#from neuronunit.optimization_management import mint_generic_model
-#model = mint_generic_model(backend_)
-#model.set_attrs(dtc.attrs)
-#print(gbe)
-#import pdb; pdb.set_trace()
-
+for k,v in gd.items():
+    if k not in explore_ranges:
+        hold_constant_glif[k] = v
 try:
     with open('glif_seeds.p','rb') as f:
         seeds = pickle.load(f)
     assert seeds is not None
 
 except:
-    #import pdb; pdb.set_trace()
 
     for local_attrs in grid:
-        print(local_attrs)
         store_glif_results[str(local_attrs.values())] = {}
         dtc = DataTC()
         dtc.tests = use_test
+        complete_params = {}
         dtc.attrs = local_attrs
-
-        #print(dtc.attrs)
-
         dtc.backend = 'GLIF'
         dtc.cell_name = 'GLIF'
         for key, use_test in test_frame.items():
@@ -188,7 +162,7 @@ except:
                     dtc = nunit_evaluation(dtc)
             print(dtc.get_ss())
             store_glif_results[str(local_attrs.values())][key] = dtc.get_ss()
-        df = pd.DataFrame(store_hh_results)
+        df = pd.DataFrame(store_glif_results)
         best_params = {}
         for index, row in df.iterrows():
             best_params[index] = row == row.min()
@@ -221,7 +195,7 @@ except:
     for key, use_test in test_frame.items():
         seed = seeds[key]
         print(seed)
-        ga_out, _ = om.run_ga(explore_params,NGEN,use_test,free_params=explore_params.keys(), NSGA = True, MU = MU, model_type = str('glif'),seed_pop=seed)#,hc = hold_constant_hh)
+        ga_out, _ = om.run_ga(explore_ranges,NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU, model_type = str('GLIF'),seed_pop=seed)
         test_opt =  {str('multi_objective_glif')+str(seed):ga_out}
         with open('multi_objective_glif.p','wb') as f:
             pickle.dump(test_opt,f)

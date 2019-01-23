@@ -6,7 +6,12 @@ import numpy as np
 from neuronunit.models.backends import parse_glif
 from neuronunit.models.backends.base import Backend
 import quantities as qt
+import quantities as pq
+
 from quantities import mV, ms, s
+import pickle
+import copy
+import re
 
 
 import allensdk.core.json_utilities as json_utilities
@@ -41,8 +46,34 @@ class GLIFBackend(Backend):
         self.vM = None
         self.allen_id = None
         self.attrs = attrs
+        self.nc = None
 
         self.temp_attrs = None
+
+
+        if self.allen_id == None:
+            self.allen_id = 566302806
+            glif_api = GlifApi()
+            try:
+                self.nc = pickle.load(open(str('allen_id.p'),'rb'))
+            except:
+                self.nc = glif_api.get_neuron_configs([self.allen_id])[self.allen_id]
+                pickle.dump(copy.copy(self.nc),open(str('allen_id.p'),'wb'))
+
+
+        else:
+            glif_api = GlifApi()
+            self.allen_id = allen_id
+            self.glif = glif_api.get_neuronal_models_by_id([allen_id])[0]
+            try:
+                self.nc = pickle.load(open(str('allen_id.p'),'rb'))
+            except:
+                self.nc = glif_api.get_neuron_configs([self.allen_id])[self.allen_id]
+                pickle.dump(self.nc,open(str('allen_id.p'),'wb'))
+
+
+        self.glif = GlifNeuron.from_dict(self.nc)
+
 
         if type(attrs) is not type(None):
             self.set_attrs(**attrs)
@@ -52,7 +83,7 @@ class GLIFBackend(Backend):
             if type(DTC.attrs) is not type(None):
 
                 self.set_attrs(**DTC.attrs)
-                #print('gets here to DTC attrs',DTC.attrs)
+
 
             if hasattr(DTC,'current_src_name'):
                 self._current_src_name = DTC.current_src_name
@@ -60,20 +91,7 @@ class GLIFBackend(Backend):
             if hasattr(DTC,'cell_name'):
                 self.cell_name = DTC.cell_name
 
-        if self.allen_id == None:
-            self.allen_id = 566302806
-            glif_api = GlifApi()
-            self.nc = glif_api.get_neuron_configs([self.allen_id])[self.allen_id]
-            self.glif = GlifNeuron.from_dict(self.nc)
-            self.metad = glif_api.get_neuronal_models_by_id([self.allen_id])[0]
-        else:
-            glif_api = GlifApi()
-            self.allen_id = allen_id
-            self.glif = glif_api.get_neuronal_models_by_id([allen_id])[0]
-            self.nc = glif_api.get_neuron_configs([allen_id])[allen_id]
-            self.glif = GlifNeuron.from_dict(self.nc)
-            self.metad = glif_api.get_neuronal_models_by_id([self.allen_id])[0]
-
+        #print(self.internal_params)
     def as_lems_model(self, backend=None):
         glif_package = []
         glif_package.append(self.metad)
@@ -127,41 +145,57 @@ class GLIFBackend(Backend):
             isv = self.results['interpolated_spike_voltage'].tolist()[0]
             vm = list(map(lambda x: isv if np.isnan(x) else x, vm))
         dt =  self.glif.dt
-        vms = AnalogSignal(vm,units = mV,sampling_period =  dt * ms)
+        self.vM = AnalogSignal(vm,units = mV,sampling_period =  dt * ms)
         return vms
 
     def _local_run(self):
-        self.results = np.array(self.glif.run(self.stim))
+        #self.results = np.array(self.glif.run(self.stim))
+        results = {}
+        results['vm'] = self.vM
+        results['t'] = self.vM.times
+        results['run_number'] = results.get('run_number',0) + 1
+        return results
+
         return self.results
 
 
     def set_attrs(self, **attrs):
         self.model.attrs.update(attrs)
-        self.glif = GlifNeuron.from_dict(attrs)
+        #self.nc.update(attrs)
+        for k,v in attrs.items():
+            self.nc[k] = v
+        self.glif = GlifNeuron.from_dict(self.nc)
         return self.glif
 
+
+    def set_stop_time(self, stop_time = 650*pq.ms):
+        """Sets the simulation duration
+        stopTimeMs: duration in milliseconds
+        """
+        self.tstop = float(stop_time.rescale(pq.ms))
+
     def inject_square_current(self, current):
-        import re
         if 'injected_square_current' in current.keys():
             c = current['injected_square_current']
         else:
             c = current
-        c['delay'] = re.sub('\ ms$', '', str(c['delay'])) # take delay
-        c['duration'] = re.sub('\ ms$', '', str(c['duration']))
-        c['amplitude'] = re.sub('\ pA$', '', str(c['amplitude']))
+        #c['delay'] = re.sub('\ ms$', '', str(c['delay'])) # take delay
+        #c['duration'] = re.sub('\ ms$', '', str(c['duration']))
+        #c['amplitude'] = re.sub('\ pA$', '', str(c['amplitude']))
         stop = float(c['delay'])+float(c['duration'])
         start = float(c['delay'])
         duration = float(c['duration'])
         amplitude = float(c['amplitude'])/1000.0
         self.glif.dt = 0.001
         dt =  self.glif.dt
-        stim = [ 0.0 ] * int(start) + [ amplitude ] * int(duration) + [ 0.0 ] * int(stop)
+        self.stim = [ 0.0 ] * int(start) + [ amplitude ] * int(duration) + [ 0.0 ] * int(stop)
         #self.glif.init_voltage = -0.0065
-        self.results = self.glif.run(stim)
+        self.results = self.glif.run(self.stim)
         vm = self.results['voltage']
         if len(self.results['interpolated_spike_voltage']) > 0:
             isv = self.results['interpolated_spike_voltage'].tolist()[0]
             vm = list(map(lambda x: isv if np.isnan(x) else x, vm))
 
         vms = AnalogSignal(vm,units = V,sampling_period =  dt * s)
+        self.vM = vms
         return vms
