@@ -200,6 +200,8 @@ except:
         with open('multi_objective_glif.p','wb') as f:
             pickle.dump(test_opt,f)
 
+import pdb; pdb.set_trace()            
+
 
 
 
