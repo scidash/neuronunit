@@ -52,22 +52,24 @@ class GLIFBackend(Backend):
 
 
         if self.allen_id == None:
-            self.allen_id = 566302806
-            glif_api = GlifApi()
             try:
                 self.nc = pickle.load(open(str('allen_id.p'),'rb'))
             except:
+                self.allen_id = 566302806
+                glif_api = GlifApi()
+
                 self.nc = glif_api.get_neuron_configs([self.allen_id])[self.allen_id]
                 pickle.dump(copy.copy(self.nc),open(str('allen_id.p'),'wb'))
 
 
         else:
-            glif_api = GlifApi()
-            self.allen_id = allen_id
-            self.glif = glif_api.get_neuronal_models_by_id([allen_id])[0]
+
             try:
                 self.nc = pickle.load(open(str('allen_id.p'),'rb'))
             except:
+                glif_api = GlifApi()
+                self.allen_id = allen_id
+                self.glif = glif_api.get_neuronal_models_by_id([allen_id])[0]
                 self.nc = glif_api.get_neuron_configs([self.allen_id])[self.allen_id]
                 pickle.dump(self.nc,open(str('allen_id.p'),'wb'))
 
@@ -179,9 +181,6 @@ class GLIFBackend(Backend):
             c = current['injected_square_current']
         else:
             c = current
-        #c['delay'] = re.sub('\ ms$', '', str(c['delay'])) # take delay
-        #c['duration'] = re.sub('\ ms$', '', str(c['duration']))
-        #c['amplitude'] = re.sub('\ pA$', '', str(c['amplitude']))
         stop = float(c['delay'])+float(c['duration'])
         start = float(c['delay'])
         duration = float(c['duration'])

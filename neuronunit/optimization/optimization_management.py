@@ -467,7 +467,7 @@ def run_ga(explore_edges, max_ngen, test, free_params = None, hc = None, NSGA = 
     else:
         selection = str('selIBEA')
     max_ngen = int(np.floor(max_ngen))
-    DO = SciUnitOptimization(offspring_size = MU, error_criterion = test, boundary_dict = ss, backend = model_type, hc = hc)#, selection = selection, boundary_dict = ss, elite_size = 2, hc=hc)
+    DO = SciUnitOptimization(offspring_size = MU, error_criterion = test, boundary_dict = ss, backend = model_type, hc = hc,selection = selection, seed_pop= seed_pop)#, selection = selection, boundary_dict = ss, elite_size = 2, hc=hc)
 
     if seed_pop is not None:
         # This is a re-run condition.
