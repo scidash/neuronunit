@@ -44,7 +44,10 @@ except (AttributeError, IOError) as e:
         pass
     else:
         raise e
-
+try:
+    from .glif import GLIFBackend
+except Exception as e:
+    print('Could not load GLIFBackend')
 
 available_backends = {x.replace('Backend', ''): cls for x, cls
                       in locals().items()
