@@ -1,5 +1,7 @@
 *.py[co]
 *.pkl
+*.p
+*do-not-add*
 
 # Packages
 *.egg

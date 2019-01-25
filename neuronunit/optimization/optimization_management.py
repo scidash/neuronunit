@@ -109,11 +109,38 @@ def bridge_judge(test_and_models):
     model.set_attrs(**dtc.attrs)
     pred = test.generate_prediction(model)
     if pred is not None:
+        if hasattr(dtc,'prediction'):# is not None:
+            dtc.prediction[test] = pred
+            dtc.observation[test] = test.observation['mean']
+
+        else:
+            dtc.prediction = None
+            dtc.observation = None
+            dtc.prediction = {}
+            dtc.prediction[test] = pred
+            dtc.observation = {}
+            dtc.observation[test] = test.observation['mean']
+
+
+        #dtc.prediction = pred
         score = test.compute_score(obs,pred)
+        if not hasattr(dtc,'agreement'):
+            dtc.agreement = None
+            dtc.agreement = {}
+        try:
+            dtc.agreement[str(test)] = np.abs(test.observation['mean'] - pred['mean'])
+        except:
+            try:
+                dtc.agreement[str(test)] = np.abs(test.observation['value'] - pred['value'])
+            except:
+                try:
+                    dtc.agreement[str(test)] = np.abs(test.observation['mean'] - pred['value'])
+                except:
+                    pass
         #print(score.norm_score)
     else:
         score = None
-    return score, pred
+    return score, dtc
 
 def get_rh(dtc,rtest):
     place_holder = {}
@@ -125,6 +152,7 @@ def get_rh(dtc,rtest):
     dtc.rheobase = None
     backend_ = dtc.backend
     model = mint_generic_model(backend_)
+    model.set_attrs(**dtc.attrs)
     #model = mint_generic_model()
     dtc.rheobase = rtest.generate_prediction(model)#['value']
     if dtc.rheobase is None:
@@ -280,6 +308,45 @@ def allocate_worst(dtc,tests):
         dtc.score[str(t)] = 1.0
     return dtc
 
+
+def nunit_evaluation_df(dtc):
+    # Inputs single data transport container modules, and neuroelectro observations that
+    # inform test error error_criterion
+    # Outputs Neuron Unit evaluation scores over error criterion
+    # same method as below but with data frame.
+    tests = dtc.tests
+    dtc = copy.copy(dtc)
+    dtc.model_path = path_params['model_path']
+    LEMS_MODEL_PATH = path_params['model_path']
+    df = pd.DataFrame(index=list(tests),columns=['observation','prediction','disagreement'])#,columns=list(reduced_cells.keys()))
+    if dtc.rheobase == -1.0 or type(dtc.rheobase) is type(None):
+        dtc = allocate_worst(tests,dtc)
+    else:
+        for k,t in enumerate(tests):
+            if str('RheobaseTest') != t.name and str('RheobaseTestP') != t.name:
+                t.params = dtc.vtest[k]
+                score, dtc= bridge_judge((t,dtc))
+                if score is not None:
+                    if score.norm_score is not None:
+                        dtc.scores[str(t)] = 1.0 - score.norm_score
+                        df.iloc[k]['observation'] = t.observation['mean']
+                        try:
+                            agreement = np.abs(t.observation['mean'] - pred['value'])
+                            df.iloc[k]['prediction'] = pred['value']
+                            df.iloc[k]['disagreement'] = agreement
+
+                        except:
+                            agreement = np.abs(t.observation['mean'] - pred['mean'])
+                            df.iloc[k]['prediction'] = pred['mean']
+                            df.iloc[k]['disagreement'] = agreement
+                else:
+                    print('gets to None score type')
+    # compute the sum of sciunit score components.
+    dtc.summed = dtc.get_ss()
+    dtc.df = df
+    return dtc
+
+
 def nunit_evaluation(dtc):
     # Inputs single data transport container modules, and neuroelectro observations that
     # inform test error error_criterion
@@ -288,23 +355,23 @@ def nunit_evaluation(dtc):
     dtc = copy.copy(dtc)
     dtc.model_path = path_params['model_path']
     LEMS_MODEL_PATH = path_params['model_path']
-
-
+    #df = pd.DataFrame(index=list(tests),columns=['observation','prediction','disagreement'])#,columns=list(reduced_cells.keys()))
     if dtc.rheobase == -1.0 or type(dtc.rheobase) is type(None):
         dtc = allocate_worst(tests,dtc)
     else:
         for k,t in enumerate(tests):
             if str('RheobaseTest') != t.name and str('RheobaseTestP') != t.name:
                 t.params = dtc.vtest[k]
-                score,_= bridge_judge((t,dtc))
+                score, dtc= bridge_judge((t,dtc))
                 if score is not None:
                     if score.norm_score is not None:
                         dtc.scores[str(t)] = 1.0 - score.norm_score
-                        dtc = score_proc(dtc,t,copy.copy(score))
+
                 else:
                     print('gets to None score type')
     # compute the sum of sciunit score components.
     dtc.summed = dtc.get_ss()
+    #dtc.df = df
     return dtc
 
 
@@ -398,7 +465,7 @@ def run_ga(explore_edges, max_ngen, test, free_params = None, hc = None, NSGA = 
     else:
         selection = str('selIBEA')
     max_ngen = int(np.floor(max_ngen))
-    DO = SciUnitOptimization(offspring_size = MU, error_criterion = test, boundary_dict = ss, backend = model_type, hc = hc)#, selection = selection, boundary_dict = ss, elite_size = 2, hc=hc)
+    DO = SciUnitOptimization(offspring_size = MU, error_criterion = test, boundary_dict = ss, backend = model_type, hc = hc,selection = selection, seed_pop= seed_pop)#, selection = selection, boundary_dict = ss, elite_size = 2, hc=hc)
 
     if seed_pop is not None:
         # This is a re-run condition.
