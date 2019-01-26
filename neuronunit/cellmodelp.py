@@ -21,12 +21,12 @@ cpus = multiprocessing.cpu_count
 
 import numpy as np
 from matplotlib import pyplot as plt
-from sklearn.decomposition import PCA
 try:
     from playhouse.db_url import connect
     from sshtunnel import SSHTunnelForwarder
     from collector import Collector
     from neuronrunner import NeuronRunner, NumericalInstabilityException
+    from sklearn.decomposition import PCA
     from runtimer import RunTimer
     from tables import Cells, Model_Waveforms, Morphometrics, Cell_Morphometrics, db_proxy, Models
     from nmldbmodel import NMLDB_Model
