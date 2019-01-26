@@ -1,17 +1,30 @@
 """Tests of NeuronUnit test classes."""
 
-from .base import *
+from .base import unittest, nu_tests, ReducedModel, NU_BACKEND
 from neuronunit.neuroelectro import is_neuroelectro_up
+
+
+def quick_test_builder(test_class=None, backend=NU_BACKEND):
+    if test_class is None:
+        from neuronunit.tests.fi import RheobaseTestP as test_class
+    else:
+        if isinstance(test_class, str):
+            test_class = nu_tests.__dict__[test_class]
+    model = ReducedModel('neuronunit/models/NeuroML2/LEMS_2007One.xml',
+                         backend=backend)
+    observation = test_class.neuroelectro_summary_observation(
+                  {'nlex_id': 'nifext_50'})
+    test = test_class(observation=observation)
+    return model, test
 
 
 class TestsTestCase(object):
     """Abstract base class for testing tests."""
 
     def setUp(self):
-        from neuronunit.models.reduced import ReducedModel
         from .model_tests import ReducedModelTestCase
         path = ReducedModelTestCase().path
-        self.model = ReducedModel(path, backend='jNeuroML')
+        self.model = ReducedModel(path, backend=NU_BACKEND)
         if not is_neuroelectro_up():
             return self.skipTest("Neuroelectro is down")
 

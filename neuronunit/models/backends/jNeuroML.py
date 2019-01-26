@@ -17,6 +17,9 @@ class jNeuroMLBackend(Backend):
 
     def init_backend(self, *args, **kwargs):
         """Initialize the jNeuroML backend."""
+        assert hasattr(self.model, 'set_lems_run_params'), \
+            "A model using %s must implement `set_lems_run_params`" % \
+            self.backend
         self.stdout = io.StringIO()
         self.model.create_lems_file_copy()  # Create a copy of the LEMS file
         super(jNeuroMLBackend, self).init_backend(*args, **kwargs)
@@ -37,12 +40,12 @@ class jNeuroMLBackend(Backend):
     def set_stop_time(self, t_stop):
         """Set the stop time of the simulation."""
         self.model.run_params['t_stop'] = t_stop
-        self.set_run_params()  # Doesn't work yet.
+        self.set_run_params()
 
     def set_time_step(self, dt):
         """Set the time step of the simulation."""
         self.model.run_params['dt'] = dt
-        self.set_run_params()  # Doesn't work yet.
+        self.set_run_params()
 
     def _backend_run(self):
         """Run the simulation."""

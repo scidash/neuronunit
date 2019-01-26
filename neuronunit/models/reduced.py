@@ -49,6 +49,9 @@ class ReducedModel(LEMSModel,
         return spike_train
 
     def inject_square_current(self, current):
+        assert isinstance(current, dict)
+        assert all(x in current for x in
+                   ['amplitude', 'delay', 'duration'])
         self.set_run_params(injected_square_current=current)
         self._backend.inject_square_current(current)
 
