@@ -168,14 +168,9 @@ explore_ranges['C'] = (glif_dic['C']-glif_dic['C']/2.0,glif_dic['C']+glif_dic['C
 explore_ranges['th_inf'] = (glif_dic['th_inf']-glif_dic['th_inf']/4.0,glif_dic['th_inf']+glif_dic['th_inf']/4.0)
 model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = (str('GLIF')))
 
-
-
-
 store_glif_results = {}
 params = gc.glif.to_dict()
 store_glif_results = {}
-
-
 try:
     with open('glif_seeds.p','rb') as f:
         seeds = pickle.load(f)
@@ -274,6 +269,7 @@ with open('Izh_seeds.p','rb') as f:
     seeds = pickle.load(f)
 
 try:
+
     assert seeds is not None
 
 except:

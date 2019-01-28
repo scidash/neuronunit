@@ -197,8 +197,6 @@ def dtc_to_rheo(dtc):
     dtc.score = {}
     backend_ = dtc.backend
     model = mint_generic_model(backend_)
-    print(dtc.attrs)
-    #import pdb; pdb.set_trace()
     model.set_attrs(dtc.attrs)
     rtest = [ t for t in dtc.tests if str('RheobaseTestP') == t.name ]
 
@@ -313,9 +311,9 @@ def passive_values(keyed):
     return keyed
 
 def format_test(dtc):
-    #pre format the current injection dictionary based on pre computed
-    #rheobase values of current injection.
-    #This is much like the hooked method from the old get neab file.
+    # pre format the current injection dictionary based on pre computed
+    # rheobase values of current injection.
+    # This is much like the hooked method from the old get neab file.
     dtc.vtest = {}
     dtc.tests = switch_logic(dtc.tests)
 
@@ -497,7 +495,7 @@ def run_ga(explore_edges, max_ngen, test, free_params = None, hc = None, NSGA = 
     else:
         selection = str('selIBEA')
     max_ngen = int(np.floor(max_ngen))
-    DO = SciUnitOptimization(offspring_size = MU, error_criterion = test, boundary_dict = ss, backend = model_type, hc = hc,selection = selection, seed_pop= seed_pop)#, selection = selection, boundary_dict = ss, elite_size = 2, hc=hc)
+    DO = SciUnitOptimization(offspring_size = MU, error_criterion = test, boundary_dict = ss, backend = model_type, hc = hc)#, selection = selection, boundary_dict = ss, elite_size = 2, hc=hc)
 
     if seed_pop is not None:
         # This is a re-run condition.
@@ -575,6 +573,9 @@ def new_genes(pop,dtcpop,td):
         sample = numpy.random.normal(loc=mean, scale=2*std, size=1)[0]
         ind.append(sample)
     dtc = DataTC()
+    # Brian and PyNN models should not have to read from a file.
+    # This line satifies an older NU design flaw, that all models evaluated must have
+    # a disk readable path.
     LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
     dtc.attrs = {}
     for i,j in enumerate(ind):
