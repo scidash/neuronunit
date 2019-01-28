@@ -13,8 +13,6 @@
 
 # # Import libraries
 # To keep the standard running version of minimal and memory efficient, not all available packages are loaded by default. In the cell below I import a mixture common python modules, and custom developed modules associated with NeuronUnit (NU) development
-
-
 #!pip install dask distributed seaborn
 #!bash after_install.sh
 import numpy as np
@@ -35,32 +33,20 @@ from neuronunit.optimization.model_parameters import model_params, path_params
 LEMS_MODEL_PATH = path_params['model_path']
 list_to_frame = []
 from neuronunit.tests.fi import RheobaseTestP
-
-
-# from IPython.display import HTML, display
-# import seaborn as sns
-
-
-
-
-
+import copy
+from sklearn.model_selection import ParameterGrid
+from neuronunit.models.interfaces import glif
+from neuronunit.optimization.data_transport_container import DataTC
 # # The Izhiketich model is instanced using some well researched parameter sets.
-#
-
 # First lets get the points in parameter space, that Izhikich himself has published about. These points are often used by the open source brain project to establish between model reproducibility. The itial motivating factor for choosing these points as constellations, of all possible parameter space subsets, is that these points where initially tuned and used as best guesses for matching real observed experimental recordings.
-
 
 explore_param = {k:(np.min(v),np.max(v)) for k,v in reduced_dict.items()}
 
-
 # ## Get the experimental Data pertaining to four different classes or neurons, that can constrain models.
 # Next we get some electro physiology data for four different classes of cells that are very common targets of scientific neuronal modelling. We are interested in finding out what are the most minimal, and detail reduced, low complexity model equations, that are able to satisfy
-
 # Below are some of the data set ID's I used to query neuroelectro.
 # To save time for the reader, I prepared some data earlier to save time, and saved the data as a pickle, pythons preferred serialisation format.
-#
 # The interested reader can find some methods for getting cell specific ephys data from neuroelectro in a code file (neuronunit/optimization/get_neab.py)
-#
 
 
 purkinje ={"id": 18, "name": "Cerebellum Purkinje cell", "neuron_db_id": 271, "nlex_id": "sao471801888"}
@@ -69,21 +55,14 @@ pvis_cortex = {"id": 111, "name": "Neocortex pyramidal cell layer 5-6", "neuron_
 #does not have rheobase
 olf_mitral = {"id": 129, "name": "Olfactory bulb (main) mitral cell", "neuron_db_id": 267, "nlex_id": "nlx_anat_100201"}
 ca1_pyr = {"id": 85, "name": "Hippocampus CA1 pyramidal cell", "neuron_db_id": 258, "nlex_id": "sao830368389"}
-pipe = [ fi_basket, ca1_pyr, purkinje,  pvis_cortex, olf_mitral ]
-
-from neuronunit.optimization import get_neab
-
-
-# In[ ]:
+pipe = [ fi_basket, ca1_pyr, purkinje,  pvis_cortex]
 
 electro_tests = []
 obs_frame = {}
 test_frame = {}
 
 try:
-    #assert 1==2
     electro_path = str(os.getcwd())+'all_tests.p'
-
     assert os.path.isfile(electro_path) == True
     with open(electro_path,'rb') as f:
         (obs_frame,test_frame) = pickle.load(f)
@@ -101,29 +80,25 @@ except:
 # # Cast the tabulatable data to pandas data frame
 # There are many among us who prefer potentially tabulatable data to be encoded in pandas data frame.
 
+# idea something like:
+# test_frame['Olfactory bulb (main) mitral cell'].insert(0,test_frame['Cerebellum Purkinje cell'][0])
+
 for k,v in test_frame.items():
-    if "olf_mitral" not in k:    
-        obs = obs_frame[k]
-    if "olf_mitral" in k:
-        v[0] = RheobaseTestP(obs['Rheobase'])
-        print('gets here?')
+   if "Olfactory bulb (main) mitral cell" not in k:
+       pass
+   if "Olfactory bulb (main) mitral cell" in k:
+       import pdb; pdb.set_trace()
+       v[0] = RheobaseTestP(obs['Rheobase'])
 df = pd.DataFrame.from_dict(obs_frame)
 print(test_frame.keys())
 
 
 # In the data frame below, you can see many different cell types
-
 df['Hippocampus CA1 pyramidal cell']
-
-
-
 # # Tweak Izhikitich equations
 # with educated guesses based on information that is already encoded in the predefined experimental observations.
-#
 # In otherwords use information that is readily amenable into hardcoding into equations
-#
 # Select out the 'Neocortex pyramidal cell layer 5-6' below, as a target for optimization
-
 
 free_params = ['a','b','k','c','C','d','vPeak','vr','vt']
 hc_ = reduced_cells['RS']
@@ -132,57 +107,101 @@ hc_['vPeak'] = hc_['vr'] + 86.364525297619
 explore_param['C'] = (hc_['C']-20,hc_['C']+20)
 explore_param['vr'] = (hc_['vr']-5,hc_['vr']+5)
 use_test = test_frame["Neocortex pyramidal cell layer 5-6"]
-
-#for t in use_test[::-1]:
-#    t.score_type = scores.RatioScore
 test_opt = {}
-
 with open('data_dump.p','wb') as f:
     pickle.dump(test_opt,f)
-
-
 use_test[0].observation
-print(use_test[0].name)
-
 rtp = RheobaseTestP(use_test[0].observation)
 use_test[0] = rtp
-print(use_test[0].observation)
-
-
 reduced_cells.keys()
-#test_frame.keys()
-#test_frame.keys()
-#test_frame['Olfactory bulb (main) mitral cell'].insert(0,test_frame['Cerebellum Purkinje cell'][0])
-test_frame
-
-
-
-
-df = pd.DataFrame(index=list(test_frame.keys()),columns=list(reduced_cells.keys()))
 MU = 6
-NGEN = 200
+NGEN = 90
+gc = glif.GC()
+glif_dic = gc.glif.to_dict()
+explore_ranges = {}
+gd = glif_dic
+explore_ranges['El'] = (glif_dic['El'],glif_dic['El']+10.0)
+explore_ranges['R_input'] = (glif_dic['R_input']-glif_dic['R_input']/2.0,glif_dic['R_input']+glif_dic['R_input']/2.0)
+explore_ranges['C'] = (glif_dic['C']-glif_dic['C']/2.0,glif_dic['C']+glif_dic['C']/2.0)
+explore_ranges['th_inf'] = (glif_dic['th_inf']-glif_dic['th_inf']/4.0,glif_dic['th_inf']+glif_dic['th_inf']/4.0)
+model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = (str('GLIF')))
 
-
-model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = (str('HH')))
-
-
-explore_ranges = {'E_Na' : (40,70), 'g_Na':(100.0,140.0), 'C_m':(0.5,1.5)}
-
-
-
-attrs_hh = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3, \
-         'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -77.0, 'E_Na' : 50.0, 'vr':-65.0 }
-
-
-
-
-import copy
-from sklearn.model_selection import ParameterGrid
-
+store_glif_results = {}
+params = gc.glif.to_dict()
+grid = ParameterGrid(explore_ranges)
+store_glif_results = {}
 
 
 try:
-    assert 1==2
+    with open('glif_seeds.p','rb') as f:
+        seeds = pickle.load(f)
+    assert seeds is not None
+
+except:
+
+    for local_attrs in grid:
+        store_glif_results[str(local_attrs.values())] = {}
+        dtc = DataTC()
+        dtc.tests = use_test
+        dtc.attrs = local_attrs
+        dtc.backend = 'GLIF'
+        dtc.cell_name = 'GLIF'
+        for key, use_test in test_frame.items():
+            dtc.tests = use_test
+            dtc = dtc_to_rheo(dtc)
+            dtc = format_test(dtc)
+            if dtc.rheobase is not None:
+                if dtc.rheobase!=-1.0:
+                    dtc = nunit_evaluation(dtc)
+            print(dtc.get_ss())
+            store_glif_results[str(local_attrs.values())][key] = dtc.get_ss()
+        df = pd.DataFrame(store_glif_results)
+        best_params = {}
+        for index, row in df.iterrows():
+            best_params[index] = row == row.min()
+            best_params[index] = best_params[index].to_dict()
+
+
+        seeds = {}
+        for k,v in best_params.items():
+            for nested_key,nested_val in v.items():
+                if True == nested_val:
+                    seed = nested_key
+                    seeds[k] = seed
+        with open('glif_seeds.p','wb') as f:
+            pickle.dump(seeds,f)
+
+
+
+
+
+
+MU = 6
+NGEN = 150
+
+
+try:
+    with open('multi_objective_glif.p','rb') as f:
+        test_opt = pickle.load(f)
+
+except:
+    for key, use_test in test_frame.items():
+        seed = seeds[key]
+        print(seed)
+        ga_out, _ = om.run_ga(explore_ranges,NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU, model_type = str('GLIF'),seed_pop=seed)
+        test_opt =  {str('multi_objective_glif')+str(seed):ga_out}
+        with open('multi_objective_glif.p','wb') as f:
+            pickle.dump(test_opt,f)
+
+
+
+
+model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = (str('HH')))
+explore_ranges = {'E_Na' : (40,70), 'g_Na':(100.0,140.0), 'C_m':(0.5,1.5)}
+attrs_hh = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3, \
+         'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -77.0, 'E_Na' : 50.0, 'vr':-65.0 }
+
+try:
     with open('HH_seeds.p','rb') as f:
         seeds = pickle.load(f)
     assert seeds is not None
@@ -198,15 +217,12 @@ except:
         updatable_attrs = copy.copy(attrs_hh)
         updatable_attrs.update(local_attrs)
         dtc.attrs = updatable_attrs
-        print(dtc.attrs)
-        #print(updatable_attrs)
+        print(updatable_attrs)
 
         dtc.backend = 'HH'
         dtc.cell_name = 'Point Hodgkin Huxley'
         for key, use_test in test_frame.items():
             dtc.tests = use_test
-            import pdb
-            pdb.set_trace()
             dtc = dtc_to_rheo(dtc)
             dtc = format_test(dtc)
             if dtc.rheobase is not None:
@@ -253,14 +269,18 @@ MU = 6
 NGEN = 150
 
 
-for key, use_test in test_frame.items():
-    seed = seeds[key]
-    print(seed)
-    ga_out, _ = om.run_ga(explore_hh_ranges,NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU, model_type = str('HH'),hc = hold_constant_hh)
-    test_opt =  {str('multi_objective_HH')+str(ga_out):ga_out}
-    with open('multi_objective_HH.p','wb') as f:
-        pickle.dump(test_opt,f)
+try:
+    with open('multi_objective_HH.p','rb') as f:
+        test_opt = pickle.load(f)
 
+except:
+    for key, use_test in test_frame.items():
+        seed = seeds[key]
+        print(seed)
+        ga_out, _ = om.run_ga(explore_hh_ranges,NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU, model_type = str('HH'),hc = hold_constant_hh,seed_pop=seed)
+        test_opt =  {str('multi_objective_HH')+str(ga_out):ga_out}
+        with open('multi_objective_HH.p','wb') as f:
+            pickle.dump(test_opt,f)
 
 
 
@@ -330,11 +350,6 @@ for key, use_test in test_frame.items():
 
 
 
-'''
-Next  Adaptive Exp.
-MU = 6
-NGEN = 2
-model_type = str('HH')
 
-#Next  Adaptive Exp.
+#Next HH, model and Adaptive Exp.
 #model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = ('HH'))
