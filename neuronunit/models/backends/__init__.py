@@ -21,9 +21,16 @@ try:
     from .hhrawf import HHBackend
 except Exception as e:
     print('HH python Error')
+
 try:
     from .glif import GLIFBackend
+except Exception as e:
+    print('glif python Error')
 
+
+
+try:
+    from .general_pyNN import PYNNBackend
 except Exception as e:
     print('glif python Error')
 
