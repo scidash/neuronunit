@@ -5,27 +5,7 @@
 import numpy as np
 import dask.bag as db
 import pandas as pd
-# Import get_neab has to happen exactly here. It has to be called only on
-from neuronunit import tests
-from neuronunit.optimization import get_neab
-from neuronunit.models.reduced import ReducedModel
-from neuronunit.optimization.model_parameters import model_params, path_params
-import numpy
-from neuronunit.optimization import model_parameters as modelp
-from itertools import repeat
-
-import copy
-import math
-
-import quantities as pq
-import numpy as np
-from pyneuroml import pynml
-
-from deap import base
-from neuronunit.optimization.data_transport_container import DataTC
-#from neuronunit.models.interfaces import glif
-
-
+import dask.bag as db
 import os
 import pickle
 from itertools import repeat
@@ -37,10 +17,29 @@ from numba import jit
 from sklearn.model_selection import ParameterGrid
 from itertools import repeat
 from collections import OrderedDict
-
-
 import logging
 logger = logging.getLogger('__main__')
+import copy
+import math
+import quantities as pq
+import numpy as np
+from itertools import repeat
+import numpy
+
+from deap import base
+
+from pyneuroml import pynml
+
+from neuronunit.optimization.data_transport_container import DataTC
+#from neuronunit.models.interfaces import glif
+
+# Import get_neab has to happen exactly here. It has to be called only on
+from neuronunit import tests
+from neuronunit.optimization import get_neab
+from neuronunit.models.reduced import ReducedModel
+from neuronunit.optimization.model_parameters import model_params, path_params
+from neuronunit.optimization import model_parameters as modelp
+
 
 
 
@@ -153,12 +152,43 @@ def get_rh(dtc,rtest):
     backend_ = dtc.backend
     model = mint_generic_model(backend_)
     model.set_attrs(dtc.attrs)
-    #model = mint_generic_model()
-    dtc.rheobase = rtest.generate_prediction(model)#['value']
+    dtc.rheobase = rtest.generate_prediction(model)
     if dtc.rheobase is None:
         dtc.rheobase = - 1.0
     return dtc
 
+
+
+
+def dtc_to_rheo_serial(dtc):
+    # If  test taking data, and objects are present (observations etc).
+    # Take the rheobase test and store it in the data transport container.
+    dtc.scores = {}
+    dtc.score = {}
+    backend_ = dtc.backend
+    model = mint_generic_model(backend_)
+    model.set_attrs(dtc.attrs)
+    rtest = [ t for t in dtc.tests if str('RheobaseTest') == t.name ]
+    if len(rtest):
+        rtest = rtest[0]
+        dtc.rheobase = rtest.generate_prediction(model)
+        if dtc.rheobase is not None and dtc.rheobase !=-1.0:
+            dtc.rheobase = dtc.rheobase['value']
+            obs = rtest.observation
+            score = rtest.compute_score(obs,dtc.rheobase)
+            dtc.scores[str('RheobaseTest')] = 1.0 - score.norm_score
+            if dtc.score is not None:
+                dtc = score_proc(dtc,rtest,copy.copy(score))
+            rtest.params['injected_square_current']['amplitude'] = dtc.rheobase
+        else:
+            dtc.rheobase = - 1.0
+            dtc.scores[str('RheobaseTest')] = 1.0
+    else:
+        # otherwise, if no observation is available, or if rheobase test score is not desired.
+        # Just generate rheobase predictions, giving the models the freedom of rheobase
+        # discovery without test taking.
+        dtc = get_rh(dtc,rtest)
+    return dtc
 
 def dtc_to_rheo(dtc):
     # If  test taking data, and objects are present (observations etc).
@@ -613,7 +643,49 @@ def make_up_lost(pop,dtcpop,td):
                 cnt += 1
     return pop, dtcpop
 
-import dask.bag as db
+def grid_search(explore_ranges,test_frame,backend=None):
+    '''
+    Hopefuly this method can depreciate the whole file optimization_management/exhaustive_search.py
+    Well actually not quiete. This method does more than that. It iterates over multiple NeuroElectro datum entities.
+    A more generalizable method would just act on one NeuroElectro datum entities.
+    '''
+    store_results = {}
+    grid = ParameterGrid(explore_ranges)
+    for local_attrs in grid:
+        store_results[str(local_attrs.values())] = {}
+        dtc = DataTC()
+        #dtc.tests = use_test
+        dtc.attrs = local_attrs
+        dtc.backend = backend
+        dtc.cell_name = backend
+        for key, use_test in test_frame.items():
+            dtc.tests = use_test
+            #dtc = dtc_to_rheo_serial(dtc)
+            dtc = dtc_to_rheo(dtc)
+
+            dtc = format_test(dtc)
+            if dtc.rheobase is not None:
+                if dtc.rheobase!=-1.0:
+                    dtc = nunit_evaluation(dtc)
+            print(dtc.get_ss())
+            store_results[str(local_attrs.values())][key] = dtc.get_ss()
+        df = pd.DataFrame(store_results)
+        best_params = {}
+        for index, row in df.iterrows():
+            best_params[index] = row == row.min()
+            best_params[index] = best_params[index].to_dict()
+
+
+        seeds = {}
+        for k,v in best_params.items():
+            for nested_key,nested_val in v.items():
+                if True == nested_val:
+                    seed = nested_key
+                    seeds[k] = seed
+        with open(str(backend)+'_seeds.p','wb') as f:
+            pickle.dump(seeds,f)
+    return seeds, df
+
 
 def test_runner(pop,td,tests,single_spike=True):
     if single_spike:
@@ -626,31 +698,12 @@ def test_runner(pop,td,tests,single_spike=True):
 
     else:
         pop, dtcpop = init_pop(pop, td, tests)
-    '''
-    xargs = zip(pop,dtcpop,repeat(tests),repeat(td))
-    bag = db.from_sequence(xargs, npartitions = npartitions)
-    results = list(bag.map(parallel_route).compute())
-    pop = [r[0] for r in results]
-    dtcpop = [r[1] for r in results]
-    '''
     pop,dtcpop = parallel_route(pop,dtcpop,tests,td)
     for ind,d in zip(pop,dtcpop):
         ind.dtc = d
         if not hasattr(ind,'fitness'):
             ind.fitness = copy.copy(pop[0].fitness)
     return pop,dtcpop
-    '''
-    if isinstance(pop, Iterable) and isinstance(dtcpop,Iterable):
-        for p,d in zip(pop,dtcpop):
-            if type(p) is type(None) or type(d) is type(None):
-                import pdb
-                pdb.set_trace()
-
-    #serial route:
-    if not isinstance(pop, Iterable):# and not isinstance(dtcpop,Iterable):
-        pop,dtcpop = serial_route(pop,td,tests)
-        print('serial badness')
-    '''
 
 def update_deap_pop(pop, tests, td, backend = None,hc = None):
     '''
