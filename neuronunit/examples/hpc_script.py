@@ -126,7 +126,7 @@ import time
 model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = (str('PYNN')))
 model.set_attrs(cell[0].get_parameters())
 start1 = time.time()
-rt = fi.RheobaseTest(obs_frame['Dentate gyrus basket cell']['Rheobase'])
+rt = fi.RheobaseTestP(obs_frame['Dentate gyrus basket cell']['Rheobase'])
 pred1 = rt.generate_prediction(model)
 end1 = time.time()
 import pdb; pdb.set_trace()
