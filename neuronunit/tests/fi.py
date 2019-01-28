@@ -180,17 +180,17 @@ class RheobaseTest(VmTest):
 
 
 class RheobaseTestP(VmTest):
-    """
-    A parallel Implementation of a Binary search algorithm,
-    which finds a rheobase prediction.
+     """
+     A parallel Implementation of a Binary search algorithm,
+     which finds a rheobase prediction.
 
-    Strengths: this algorithm is faster than the serial class, present in this file for model backends that are not able to
-    implement numba jit optimization, which actually happens to be typical of a signifcant number of backends
-
-    Weaknesses this serial class is significantly slower, for many backend implementations including raw NEURON
-    NEURON via PyNN, and possibly GLIF.
-
-    """
+     Strengths: this algorithm is faster than the serial class, present in this file for model backends that are not able to
+     implement numba jit optimization, which actually happens to be typical of a signifcant number of backends
+ 
+     Weaknesses this serial class is significantly slower, for many backend implementations including raw NEURON
+     NEURON via PyNN, and GLIF.
+ 
+     """
 
 
      required_capabilities = (cap.ReceivesSquareCurrent,
