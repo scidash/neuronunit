@@ -124,10 +124,19 @@ def bridge_judge(test_and_models):
 
         #dtc.prediction = pred
         score = test.compute_score(obs,pred)
+        if not hasattr(dtc,'agreement'):
+            dtc.agreement = None
+            dtc.agreement = {}
         try:
-            dtc.agreement[str(test)] = np.abs(test.observation['mean'] - pred['mean'])            
+            dtc.agreement[str(test)] = np.abs(test.observation['mean'] - pred['mean'])
         except:
-            dtc.agreement[str(test)] = np.abs(test.observation['value'] - pred['value'])
+            try:
+                dtc.agreement[str(test)] = np.abs(test.observation['value'] - pred['value'])
+            except:
+                try:
+                    dtc.agreement[str(test)] = np.abs(test.observation['mean'] - pred['value'])
+                except:
+                    pass
         #print(score.norm_score)
     else:
         score = None
@@ -144,7 +153,6 @@ def get_rh(dtc,rtest):
     backend_ = dtc.backend
     model = mint_generic_model(backend_)
     model.set_attrs(dtc.attrs)
-
     #model = mint_generic_model()
     dtc.rheobase = rtest.generate_prediction(model)#['value']
     if dtc.rheobase is None:
@@ -160,7 +168,6 @@ def dtc_to_rheo(dtc):
     backend_ = dtc.backend
     model = mint_generic_model(backend_)
     model.set_attrs(dtc.attrs)
-
     rtest = [ t for t in dtc.tests if str('RheobaseTestP') == t.name ]
 
 
@@ -510,14 +517,13 @@ def obtain_rheobase(pop, td, tests):
 
 def new_genes(pop,dtcpop,td):
     '''
+    some times genes explored will not return
+    un-usable simulation parameters
+    genes who have no rheobase score
+    will be discarded.
 
     BluePyOpt needs a stable
     gene number however
-
-    some times genes explored will not return
-    parameters corresponding to usable models
-    genes who have no rheobase score
-    will be discarded.
 
     This method finds how many genes have
     been discarded, and tries to build new genes
@@ -537,7 +543,7 @@ def new_genes(pop,dtcpop,td):
         sample = numpy.random.normal(loc=mean, scale=2*std, size=1)[0]
         ind.append(sample)
     dtc = DataTC()
-    # PyNN models should not have to read from a file.
+    # Brian and PyNN models should not have to read from a file.
     # This line satifies an older NU design flaw, that all models evaluated must have
     # a disk readable path.
     LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
