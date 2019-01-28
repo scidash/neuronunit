@@ -34,6 +34,7 @@ def get_diff(vm):
 tolerance = 0.001
 
 
+
 class RheobaseTest(VmTest):
     """
     A serial Implementation of a Binary search algorithm,
@@ -358,10 +359,10 @@ class RheobaseTestP(VmTest):
                     dtc_clones[i].ampl = dtc.current_steps[i]
                 dtc_clones = [ d for d in dtc_clones if not np.isnan(d.ampl) ]
 
-                #import pdb; pdb.set_trace()
+
                 b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
                 dtc_clone = list(b0.map(check_current).compute())
-
+        
                 for dtc in dtc_clone:
                     if dtc.boolean == True:
                         return dtc
