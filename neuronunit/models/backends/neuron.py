@@ -425,7 +425,7 @@ class NEURONBackend(Backend):
         debug = True
         if debug == True:
             self.neuron.h.psection()
-        self._local_run()
+        self._backend_run()
     #@jit
     def _backend_run(self):
         self.h('run()')
