@@ -7,10 +7,6 @@
 #
 # You can run use dockerhub to get the appropriate file, and launch this notebook using Kitematic.
 
-# This is code, change cell type to markdown.
-# ![alt text](plan.jpg "Pub plan")
-
-
 # # Import libraries
 # To keep the standard running version of minimal and memory efficient, not all available packages are loaded by default. In the cell below I import a mixture common python modules, and custom developed modules associated with NeuronUnit (NU) development
 #!pip install dask distributed seaborn
@@ -37,11 +33,7 @@ import copy
 from sklearn.model_selection import ParameterGrid
 from neuronunit.models.interfaces import glif
 from neuronunit.optimization.data_transport_container import DataTC
-# # The Izhiketich model is instanced using some well researched parameter sets.
-# First lets get the points in parameter space, that Izhikich himself has published about. These points are often used by the open source brain project to establish between model reproducibility. The itial motivating factor for choosing these points as constellations, of all possible parameter space subsets, is that these points where initially tuned and used as best guesses for matching real observed experimental recordings.
-
-explore_param = {k:(np.min(v),np.max(v)) for k,v in reduced_dict.items()}
-
+from neuronunit.optimization import get_neab
 # ## Get the experimental Data pertaining to four different classes or neurons, that can constrain models.
 # Next we get some electro physiology data for four different classes of cells that are very common targets of scientific neuronal modelling. We are interested in finding out what are the most minimal, and detail reduced, low complexity model equations, that are able to satisfy
 # Below are some of the data set ID's I used to query neuroelectro.
@@ -55,13 +47,14 @@ pvis_cortex = {"id": 111, "name": "Neocortex pyramidal cell layer 5-6", "neuron_
 #does not have rheobase
 olf_mitral = {"id": 129, "name": "Olfactory bulb (main) mitral cell", "neuron_db_id": 267, "nlex_id": "nlx_anat_100201"}
 ca1_pyr = {"id": 85, "name": "Hippocampus CA1 pyramidal cell", "neuron_db_id": 258, "nlex_id": "sao830368389"}
-pipe = [ fi_basket, ca1_pyr, purkinje,  pvis_cortex]
+pipe = [ fi_basket, ca1_pyr, purkinje,  pvis_cortex,olf_mitral]
 
 electro_tests = []
 obs_frame = {}
 test_frame = {}
 
 try:
+    #assert 1==2
     electro_path = str(os.getcwd())+'all_tests.p'
     assert os.path.isfile(electro_path) == True
     with open(electro_path,'rb') as f:
@@ -78,8 +71,7 @@ except:
 
 
 # # Cast the tabulatable data to pandas data frame
-# There are many among us who prefer potentially tabulatable data to be encoded in pandas data frame.
-
+# There are many among us who prefer tabulatable data to be encoded in pandas data frame.
 # idea something like:
 # test_frame['Olfactory bulb (main) mitral cell'].insert(0,test_frame['Cerebellum Purkinje cell'][0])
 
@@ -87,25 +79,14 @@ for k,v in test_frame.items():
    if "Olfactory bulb (main) mitral cell" not in k:
        pass
    if "Olfactory bulb (main) mitral cell" in k:
-       import pdb; pdb.set_trace()
-       v[0] = RheobaseTestP(obs['Rheobase'])
+       print(k,v)
+
+       #v[0] = RheobaseTestP(obs['Rheobase'])
 df = pd.DataFrame.from_dict(obs_frame)
-print(test_frame.keys())
 
 
 # In the data frame below, you can see many different cell types
 df['Hippocampus CA1 pyramidal cell']
-# # Tweak Izhikitich equations
-# with educated guesses based on information that is already encoded in the predefined experimental observations.
-# In otherwords use information that is readily amenable into hardcoding into equations
-# Select out the 'Neocortex pyramidal cell layer 5-6' below, as a target for optimization
-
-free_params = ['a','b','k','c','C','d','vPeak','vr','vt']
-hc_ = reduced_cells['RS']
-hc_['vr'] = -65.2261863636364
-hc_['vPeak'] = hc_['vr'] + 86.364525297619
-explore_param['C'] = (hc_['C']-20,hc_['C']+20)
-explore_param['vr'] = (hc_['vr']-5,hc_['vr']+5)
 use_test = test_frame["Neocortex pyramidal cell layer 5-6"]
 test_opt = {}
 with open('data_dump.p','wb') as f:
@@ -114,16 +95,71 @@ use_test[0].observation
 rtp = RheobaseTestP(use_test[0].observation)
 use_test[0] = rtp
 reduced_cells.keys()
-MU = 6
-NGEN = 90
+
+import pdb
+
+
+from allensdk.api.queries.cell_types_api import CellTypesApi
+from allensdk.api.queries.glif_api import GlifApi
+glif_api = GlifApi()
+
+from allensdk.core.cell_types_cache import CellTypesCache
+import urllib
+response = urllib.request.urlopen('http://api.brain-map.org/api/v2/data/query.xml?criteria=model::ApiCellTypesSpecimenDetail,rma::criteria,[m__glif$gt0]')
+from bs4 import BeautifulSoup
+soup = BeautifulSoup(response, 'html.parser')
+cell_ids = soup.select('erwkf--id')
+configs = {}
+models = {}
+glif_api.get_neuron_config(313861608)
+for c in cell_ids:
+    id = int(c.text)
+    try:
+        configs[id] = glif_api.get_neuron_config(id)
+    except:
+        pass
+    try:
+        models[id] = glif_api.get_neuronal_model(id)
+        print(models[id])
+
+    except:
+        pass
+pdb.set_trace()
+
+for id in range(0,566302806-1):
+    if id not in configs.keys():
+        try:
+            configs[id] = glif_api.get_neuron_configs(id)
+            print(configs[id])
+
+        except:
+            pass
+
+pdb.set_trace()
+#cells1 = soup.select('specimen--id')
+#cells2 = soup.select('m--glif')
+
+#response = urllib.request.urlopen('http://api.brain-map.org/api/v2/data/query.xml?criteria=model::ApiCellTypesSpecimenDetail,rma::criteria,[m__glif$gt0]')
+#html = response.read()
+#import pdb; pdb.set_trace()
+
+#html = response.read()
+
+#http://api.brain-map.org/api/v2/data/query.xml?criteria=model::ApiCellTypesSpecimenDetail,rma::criteria,[m__glif$gt0]
+
 gc = glif.GC()
 glif_dic = gc.glif.to_dict()
 explore_ranges = {}
 gd = glif_dic
+range_dic = {}
+for k,v in test_frame.items():
+    range_dic['R_input'] = v[1].observation
+    range_dic['C'] = v[3].observation
+    range_dic['th_inf'] = v[7].observation
 explore_ranges['El'] = (glif_dic['El'],glif_dic['El']+10.0)
-explore_ranges['R_input'] = (glif_dic['R_input']-glif_dic['R_input']/2.0,glif_dic['R_input']+glif_dic['R_input']/2.0)
-explore_ranges['C'] = (glif_dic['C']-glif_dic['C']/2.0,glif_dic['C']+glif_dic['C']/2.0)
-explore_ranges['th_inf'] = (glif_dic['th_inf']-glif_dic['th_inf']/4.0,glif_dic['th_inf']+glif_dic['th_inf']/4.0)
+explore_ranges['R_input'] = (range_dic['R_input']-range_dic['R_input']/8.0,range_dic['R_input']+range_dic['R_input']/8.0)
+explore_ranges['C'] = (range_dic['C']-range_dic['C']/8.0,range_dic['C']+range_dic['C']/8.0)
+explore_ranges['th_inf'] = (range_dic['th_inf']-range_dic['th_inf']/4.0,range_dic['th_inf']+range_dic['th_inf']/4.0)
 model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = (str('GLIF')))
 
 store_glif_results = {}
@@ -174,11 +210,8 @@ except:
 
 
 
-
-
 MU = 6
-NGEN = 150
-
+NGEN = 90
 
 try:
     with open('multi_objective_glif.p','rb') as f:
@@ -282,8 +315,23 @@ except:
         with open('multi_objective_HH.p','wb') as f:
             pickle.dump(test_opt,f)
 
+# # The Izhiketich model is instanced using some well researched parameter sets.
+# First lets get the points in parameter space, that Izhikich himself has published about. These points are often used by the open source brain project to establish between model reproducibility. The itial motivating factor for choosing these points as constellations, of all possible parameter space subsets, is that these points where initially tuned and used as best guesses for matching real observed experimental recordings.
+
+explore_param = {k:(np.min(v),np.max(v)) for k,v in reduced_dict.items()}
 
 
+# # Tweak Izhikitich equations
+# with educated guesses based on information that is already encoded in the predefined experimental observations.
+# In otherwords use information that is readily amenable into hardcoding into equations
+# Select out the 'Neocortex pyramidal cell layer 5-6' below, as a target for optimization
+
+free_params = ['a','b','k','c','C','d','vPeak','vr','vt']
+hc_ = reduced_cells['RS']
+hc_['vr'] = -65.2261863636364
+hc_['vPeak'] = hc_['vr'] + 86.364525297619
+explore_param['C'] = (hc_['C']-20,hc_['C']+20)
+explore_param['vr'] = (hc_['vr']-5,hc_['vr']+5)
 
 with open('Izh_seeds.p','rb') as f:
     seeds = pickle.load(f)
