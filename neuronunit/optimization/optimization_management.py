@@ -483,8 +483,7 @@ def run_ga(explore_edges, max_ngen, test, free_params = None, hc = None, NSGA = 
     # These imports need to be defined with local scope to avoid circular importing problems
     # Try to fix local imports later.
     #from bluepyopt.deapext.optimisations import SciUnitOptimization
-    #from optimisations import SciUnitOptimization
-    #from neuronunit.optimization.optimisations import SciUnitOptimization
+
     from neuronunit.optimization.optimisations import SciUnitOptimization
 
 
@@ -501,7 +500,7 @@ def run_ga(explore_edges, max_ngen, test, free_params = None, hc = None, NSGA = 
     max_ngen = int(np.floor(max_ngen))
     if type(test) is not type([0,0]):
         test = [test]
-    DO = SciUnitOptimization(offspring_size = MU, error_criterion = test, boundary_dict = ss, backend = model_type, hc = hc)#, selection = selection, boundary_dict = ss, elite_size = 2, hc=hc)
+    DO = SciUnitOptimization(offspring_size = MU, error_criterion = test, boundary_dict = ss, backend = model_type, hc = hc, selection = selection)#,, boundary_dict = ss, elite_size = 2, hc=hc)
 
     if seed_pop is not None:
         # This is a re-run condition.

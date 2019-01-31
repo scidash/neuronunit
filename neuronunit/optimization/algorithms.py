@@ -210,7 +210,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
                 if np.sum(best.dtc.get_ss()) != 0:
                     print('true minimum',np.sum(hof[0].fitness.values))
                     population.append(hof[0])
-            toolbox.register("select",tools.selIBEA)
+            #toolbox.register("select",tools.selIBEA)
 
         if str('selNSGA') == selection:
             if pf[0].fitness.values is None:
