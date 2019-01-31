@@ -470,7 +470,7 @@ def update_dtc_pop(pop, td):
         # but parsimony of naming variables
         # suggests not to change the variable name to reflect this.
         dtcpop = [ transform(xargs) ]
-        assert exec('dtcpop[0].backend is '+str(_backend)+')')
+        # exec('dtcpop[0].backend is '+str(_backend)+')')
     return dtcpop
 
 

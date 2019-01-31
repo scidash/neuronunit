@@ -362,7 +362,7 @@ class RheobaseTestP(VmTest):
 
                 b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
                 dtc_clone = list(b0.map(check_current).compute())
-        
+
                 for dtc in dtc_clone:
                     if dtc.boolean == True:
                         return dtc
@@ -383,7 +383,7 @@ class RheobaseTestP(VmTest):
                         #dtc.boolean = False
                         return dtc
 
-                self.verbose == 1
+                self.verbose == 2
                 if self.verbose >= 2:
                     print("Try %d: SubMax = %s; SupraMin = %s" % \
                     (cnt, sub.max() if len(sub) else None,
