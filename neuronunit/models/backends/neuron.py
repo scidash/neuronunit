@@ -63,13 +63,14 @@ class NEURONBackend(Backend):
             if type(DTC.attrs) is not type(None):
 
                 self.set_attrs(**DTC.attrs)
-                assert len(self.model.attrs.keys()) > 0
+                if len(DTC.attrs):
+                    assert len(self.model.attrs) > 0
 
             if hasattr(DTC, 'current_src_name'):
                 self._current_src_name = DTC.current_src_name
 
             if hasattr(DTC, 'cell_name'):
-                self.cell_name = DTC.cell_name
+                self._cell_name = DTC.cell_name
 
     def reset_neuron(self, neuronVar):
         """Reset the neuron simulation.
@@ -282,7 +283,9 @@ class NEURONBackend(Backend):
                     self._current_src_name = i.id
                 if str('Cell') in i.type:
                     self._cell_name = i.id
-            more_attributes = None # explitly perform garbage collection on more_attributes since its not needed anymore.
+            more_attributes = None  # explicitly perform garbage collection on
+                                    # more_attributes since its not needed
+                                    # anymore.
         return self
 
     @property
@@ -319,10 +322,8 @@ class NEURONBackend(Backend):
                 sec = self.h.Section(self.h.m_RS_RS_pop[0])
                 #sec.L, sec.diam = 6.3, 5 # empirically tuned
                 sec.cm = h_value
-                #print(sec.cm)
             else:
                 self.h('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
-            #print('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
 
         ass_vr = self.h.m_RS_RS_pop[0].vr
         self.h.m_RS_RS_pop[0].v0 = ass_vr
@@ -343,7 +344,6 @@ class NEURONBackend(Backend):
         for string in neuron_sim_rig:
             # execute hoc code strings in the python interface to neuron.
             self.h(string)
-            #print(string)
 
         # These two variables have been aliased in the code below:
         self.tVector = self.h.v_time
@@ -375,10 +375,8 @@ class NEURONBackend(Backend):
         self.h = None
         self.neuron = None
 
-        #import neuron
         nrn_path = os.path.splitext(self.model.orig_lems_file_path)[0]+'_nrn.py'
         nrn = import_module_from_path(nrn_path)
-        #import copy
 
         ##
         # init_backend is the most reliable way to purge existing NEURON simulations.
@@ -416,17 +414,13 @@ class NEURONBackend(Backend):
 
 
         for string in define_current:
-            #print(string)
             # execute hoc code strings in the python interface to neuron.
             self.h(string)
         self.neuron.h.psection()
-        #print(dir())
-        #print('got here a')
-        debug = True
         if debug == True:
             self.neuron.h.psection()
         self._backend_run()
-    #@jit
+
     def _backend_run(self):
         self.h('run()')
         results = {}
