@@ -1,6 +1,8 @@
 """Tests of NeuronUnit test classes."""
 
-from .base import unittest, nu_tests, ReducedModel, NU_BACKEND
+import os
+
+from .base import unittest, nu_tests, ReducedModel, NU_BACKEND, NU_HOME
 from neuronunit.neuroelectro import is_neuroelectro_up
 
 
@@ -10,8 +12,8 @@ def quick_test_builder(test_class=None, backend=NU_BACKEND):
     else:
         if isinstance(test_class, str):
             test_class = nu_tests.__dict__[test_class]
-    model = ReducedModel('neuronunit/models/NeuroML2/LEMS_2007One.xml',
-                         backend=backend)
+    path = os.path.join(NU_HOME, 'models/NeuroML2/LEMS_2007One.xml')
+    model = ReducedModel(path, backend=backend)
     observation = test_class.neuroelectro_summary_observation(
                   {'nlex_id': 'nifext_50'})
     test = test_class(observation=observation)
@@ -74,7 +76,7 @@ class TestsWaveformTestCase(TestsTestCase, unittest.TestCase):
     def test_ap_width(self):
         from neuronunit.tests.waveform import InjectedCurrentAPWidthTest as T
         score = self.run_test(T)
-        self.assertTrue(-0.6 < score < -0.5)
+        self.assertTrue(-0.65 < score < -0.55)
 
     def test_ap_amplitude(self):
         from neuronunit.tests.waveform import InjectedCurrentAPAmplitudeTest as T

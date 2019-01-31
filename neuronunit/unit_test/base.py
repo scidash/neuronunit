@@ -11,12 +11,15 @@ except ImportError:  # Python 3
     from urllib.request import urlretrieve
 
 import matplotlib as mpl
-mpl.use('Agg')  # Avoid any problems with Macs or headless displays.
+
+OSX = sys.platform == 'darwin'
+if OSX or 'Qt' in mpl.rcParams['backend']:
+    mpl.use('Agg')  # Avoid any problems with Macs or headless displays.
 
 from sciunit.utils import NotebookTools, import_all_modules
 import neuronunit
 from neuronunit.models import ReducedModel
 from neuronunit import neuroelectro, bbp, aibs, tests as nu_tests
 
-OSX = sys.platform == 'darwin'
 NU_BACKEND = os.environ.get('NU_BACKEND', 'jNeuroML')
+NU_HOME = neuronunit.__path__[0]
