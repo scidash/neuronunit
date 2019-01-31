@@ -23,6 +23,8 @@ import time
 import numba
 import copy
 
+#
+# This is not used, but if differentiation based spike detection is used this is faster.
 @jit
 def get_diff(vm):
     differentiated = np.diff(vm)
@@ -30,7 +32,7 @@ def get_diff(vm):
     return spikes
 
 tolerance = 0.001
-#1125
+
 
 
 class RheobaseTest(VmTest):
@@ -186,10 +188,10 @@ class RheobaseTestP(VmTest):
 
      Strengths: this algorithm is faster than the serial class, present in this file for model backends that are not able to
      implement numba jit optimization, which actually happens to be typical of a signifcant number of backends
- 
+
      Weaknesses this serial class is significantly slower, for many backend implementations including raw NEURON
-     NEURON via PyNN, and GLIF.
- 
+     NEURON via PyNN, and possibly GLIF.
+
      """
 
 
@@ -275,9 +277,6 @@ class RheobaseTestP(VmTest):
                 dtc.current_src_name = model._backend.current_src_name
                 assert type(dtc.current_src_name) is not type(None)
                 dtc.cell_name = model._backend.cell_name
-            print(dtc.attrs)
-            model.set_attrs(dtc.attrs)
-            print(model.attrs)
 
             DELAY = 100.0*pq.ms
             DURATION = 1000.0*pq.ms
@@ -291,7 +290,6 @@ class RheobaseTestP(VmTest):
                 current.update(uc)
                 current = {'injected_square_current':current}
                 dtc.run_number += 1
-                print(dtc.attrs)
                 model.set_attrs(dtc.attrs)
                 model.inject_square_current(current)
                 dtc.previous = ampl
@@ -361,19 +359,10 @@ class RheobaseTestP(VmTest):
                     dtc_clones[i].ampl = dtc.current_steps[i]
                 dtc_clones = [ d for d in dtc_clones if not np.isnan(d.ampl) ]
 
+
                 b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
                 dtc_clone = list(b0.map(check_current).compute())
-                '''
-                Slow don't do this
-                @numba.jit(parallel=True)
-                def get_clones(x):
-                    ret = []
-                    for i in numba.prange(len(x)):
-                        ret.append(check_current(x[i]))
-                        #print(check_current(x[i]))
-                    return ret
-                dtc_clone = get_clones(dtc_clones)
-                '''
+
                 for dtc in dtc_clone:
                     if dtc.boolean == True:
                         return dtc
@@ -394,7 +383,7 @@ class RheobaseTestP(VmTest):
                         #dtc.boolean = False
                         return dtc
 
-                self.verbose == 1
+                self.verbose == 2
                 if self.verbose >= 2:
                     print("Try %d: SubMax = %s; SupraMin = %s" % \
                     (cnt, sub.max() if len(sub) else None,

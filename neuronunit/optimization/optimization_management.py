@@ -470,7 +470,7 @@ def update_dtc_pop(pop, td):
         # but parsimony of naming variables
         # suggests not to change the variable name to reflect this.
         dtcpop = [ transform(xargs) ]
-        assert exec('dtcpop[0].backend is '+str(_backend)+')')
+        # exec('dtcpop[0].backend is '+str(_backend)+')')
     return dtcpop
 
 
@@ -482,7 +482,10 @@ def run_ga(explore_edges, max_ngen, test, free_params = None, hc = None, NSGA = 
     # https://stackoverflow.com/questions/744373/circular-or-cyclic-imports-in-python
     # These imports need to be defined with local scope to avoid circular importing problems
     # Try to fix local imports later.
-    from bluepyopt.deapext.optimisations import SciUnitOptimization
+    #from bluepyopt.deapext.optimisations import SciUnitOptimization
+
+    from neuronunit.optimization.optimisations import SciUnitOptimization
+
 
     ss = {}
     for k in free_params:
@@ -495,7 +498,9 @@ def run_ga(explore_edges, max_ngen, test, free_params = None, hc = None, NSGA = 
     else:
         selection = str('selIBEA')
     max_ngen = int(np.floor(max_ngen))
-    DO = SciUnitOptimization(offspring_size = MU, error_criterion = test, boundary_dict = ss, backend = model_type, hc = hc)#, selection = selection, boundary_dict = ss, elite_size = 2, hc=hc)
+    if type(test) is not type([0,0]):
+        test = [test]
+    DO = SciUnitOptimization(offspring_size = MU, error_criterion = test, boundary_dict = ss, backend = model_type, hc = hc, selection = selection)#,, boundary_dict = ss, elite_size = 2, hc=hc)
 
     if seed_pop is not None:
         # This is a re-run condition.
@@ -552,7 +557,7 @@ def new_genes(pop,dtcpop,td):
     genes who have no rheobase score
     will be discarded.
 
-    BluePyOpt needs a stable
+    optimizer needs a stable
     gene number however
 
     This method finds how many genes have
@@ -651,7 +656,16 @@ def grid_search(explore_ranges,test_frame,backend=None):
     A more generalizable method would just act on one NeuroElectro datum entities.
     '''
     store_results = {}
+    npoints = 12
     grid = ParameterGrid(explore_ranges)
+
+    size = len(grid)
+    temp = []
+    if size > npoints:
+        sparsify = np.linspace(0,len(grid)-1,npoints)
+        for i in sparsify:
+            temp.append(grid[int(i)])
+        grid = temp
     for local_attrs in grid:
         store_results[str(local_attrs.values())] = {}
         dtc = DataTC()
