@@ -25,6 +25,8 @@ import quantities as pq
 import numpy as np
 from itertools import repeat
 import numpy
+from sklearn.cluster import KMeans
+
 
 from deap import base
 
@@ -159,15 +161,14 @@ def get_rh(dtc,rtest):
 
 
 
-def quick_cluster_tests(test_opt,use_test,backend,explore_param):
+def cluster_tests(use_test,backend,explore_param):
     '''
-    Given a group of conflicting NU tests, use optimization, and variance Information
+    Given a group of conflicting NU tests, quickly exploit optimization, and variance information
     To find subsets of tests that don't conflict.
     Inputs:
         backend string, signifying model backend type
         explore_param list of dictionaries, of model parameter limits/ranges.
         use_test, a list of tests per experimental entity.
-        test_opt, a list of use_test lists (tests over several experimental entities.)
     Output:
         lists of groups of less conflicted test classes.
         lists of groups of less conflicted test class names.
@@ -175,6 +176,7 @@ def quick_cluster_tests(test_opt,use_test,backend,explore_param):
     '''
     MU = 6
     NGEN = 7
+    test_opt = {}
     for index,test in enumerate(use_test):
         ga_out, DO = om.run_ga(explore_param,NGEN,[test],free_params=free_params, NSGA = True, MU = MU)
         test_opt[test] = ga_out
@@ -185,7 +187,7 @@ def quick_cluster_tests(test_opt,use_test,backend,explore_param):
     for key,value in test_opt.items():
         all_val[key] = {}
         for k in value['pf'][0].dtc.attrs.keys():
-            temp = [i.dtc.attrs[k] for i in value['hof']]
+            temp = [i.dtc.attrs[k] for i in value['pf']]
             all_val[key][k] = temp
 
     first_test = all_val[list(all_val.keys())[0]].values()
