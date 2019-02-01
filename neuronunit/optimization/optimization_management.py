@@ -159,6 +159,58 @@ def get_rh(dtc,rtest):
 
 
 
+def quick_cluster_tests(test_opt,use_test,backend,explore_param):
+    '''
+    Given a group of conflicting NU tests, use optimization, and variance Information
+    To find subsets of tests that don't conflict.
+    Inputs:
+        backend string, signifying model backend type
+        explore_param list of dictionaries, of model parameter limits/ranges.
+        use_test, a list of tests per experimental entity.
+        test_opt, a list of use_test lists (tests over several experimental entities.)
+    Output:
+        lists of groups of less conflicted test classes.
+        lists of groups of less conflicted test class names.
+
+    '''
+    MU = 6
+    NGEN = 7
+    for index,test in enumerate(use_test):
+        ga_out, DO = om.run_ga(explore_param,NGEN,[test],free_params=free_params, NSGA = True, MU = MU)
+        test_opt[test] = ga_out
+        with open('qct.p','wb') as f:
+            pickle.dump(test_opt,f)
+
+    all_val = {}
+    for key,value in test_opt.items():
+        all_val[key] = {}
+        for k in value['pf'][0].dtc.attrs.keys():
+            temp = [i.dtc.attrs[k] for i in value['hof']]
+            all_val[key][k] = temp
+
+    first_test = all_val[list(all_val.keys())[0]].values()
+    ft = all_val[list(all_val.keys())[0]]
+    X = list(first_test)
+    X_labels = all_val[list(all_val.keys())[0]].keys()
+    df1 = pd.DataFrame(X)
+    X = np.array(X)
+    est = KMeans(n_clusters=3)
+    est.fit(X)
+    y_kmeans = est.predict(X)
+    first_test = test_opt[list(test_opt.keys())[0]].values()
+    test_names = [t.name for t in test_opt.keys()]
+    test_classes = [t for t in test_opt.keys()]
+
+    grouped_testsn = {}
+    grouped_tests = {}
+
+    for i,k in enumerate(y_kmeans):
+        grouped_testsn[k] = []
+        grouped_tests[k] = []
+    for i,k in enumerate(y_kmeans):
+        grouped_testsn[k].append(test_names[i])
+        grouped_tests[k].append(test_classes[i])
+    return (grouped_tests, grouped_testsn
 
 def dtc_to_rheo_serial(dtc):
     # If  test taking data, and objects are present (observations etc).
