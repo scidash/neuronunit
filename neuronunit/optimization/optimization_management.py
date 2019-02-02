@@ -66,6 +66,66 @@ class WSFloatIndividual(float):
         self.rheobase = None
         super(WSFloatIndividual, self).__init__()
 
+def inject_and_plot(dtc,figname='problem'):
+    model = mint_generic_model(str('RAW'))
+    model.set_attrs(dtc.attrs)
+    dtc.vtest[0]['injected_square_current']['amplitude'] = dtc.rheobase['value']
+    dtc.vtest[0]['injected_square_current']['duration'] = 1000*pq.ms
+    model.inject_square_current(dtc.vtest[0])
+    plt.plot(model.get_membrane_potential().times,model.get_membrane_potential())#,label='ground truth')
+    plt.savefig(figname+str('debug.png'))
+
+def cluster_tests(use_test,backend,explore_param):
+    '''
+    Given a group of conflicting NU tests, quickly exploit optimization, and variance information
+    To find subsets of tests that don't conflict.
+    Inputs:
+        backend string, signifying model backend type
+        explore_param list of dictionaries, of model parameter limits/ranges.
+        use_test, a list of tests per experimental entity.
+    Output:
+        lists of groups of less conflicted test classes.
+        lists of groups of less conflicted test class names.
+    '''
+    MU = 6
+    NGEN = 7
+    test_opt = {}
+    for index,test in enumerate(use_test):
+        ga_out, DO = om.run_ga(explore_param,NGEN,[test],free_params=free_params, NSGA = True, MU = MU)
+        test_opt[test] = ga_out
+        with open('qct.p','wb') as f:
+            pickle.dump(test_opt,f)
+
+    all_val = {}
+    for key,value in test_opt.items():
+        all_val[key] = {}
+        for k in value['pf'][0].dtc.attrs.keys():
+            temp = [i.dtc.attrs[k] for i in value['pf']]
+            all_val[key][k] = temp
+
+    first_test = all_val[list(all_val.keys())[0]].values()
+    ft = all_val[list(all_val.keys())[0]]
+    X = list(first_test)
+    X_labels = all_val[list(all_val.keys())[0]].keys()
+    df1 = pd.DataFrame(X)
+    X = np.array(X)
+    est = KMeans(n_clusters=3)
+    est.fit(X)
+    y_kmeans = est.predict(X)
+    first_test = test_opt[list(test_opt.keys())[0]].values()
+    test_names = [t.name for t in test_opt.keys()]
+    test_classes = [t for t in test_opt.keys()]
+
+    grouped_testsn = {}
+    grouped_tests = {}
+
+    for i,k in enumerate(y_kmeans):
+        grouped_testsn[k] = []
+        grouped_tests[k] = []
+    for i,k in enumerate(y_kmeans):
+        grouped_testsn[k].append(test_names[i])
+        grouped_tests[k].append(test_classes[i])
+    return (grouped_tests, grouped_tests)
 
 def mint_generic_model(backend):
     LEMS_MODEL_PATH = path_params['model_path']
