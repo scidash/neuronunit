@@ -12,7 +12,7 @@ from .base import *
 import quantities as qt
 from quantities import mV, ms, s
 import matplotlib.pyplot as plt
-from pyNN.neuron import *
+#from pyNN.neuron import *
 from pyNN.neuron import HH_cond_exp
 from pyNN.neuron import EIF_cond_exp_isfa_ista
 from pyNN.neuron import Izhikevich
@@ -23,6 +23,11 @@ from pyNN.neuron import setup as setup
 from pyNN.neuron import DCSource
 import numpy as np
 import copy
+
+
+import gnuplotlib as gp
+
+
 
 # Potassium ion-channel rate functions
 class PYNNBackend(Backend):
@@ -87,15 +92,19 @@ class PYNNBackend(Backend):
         DURATION = 1000.0
         self.eif.record_v()
         neuron.run(DURATION)
-        volts = copy.copy(self.eif.get_v().segments[0].analogsignals)
-        volts = volts[-1]
-        #print(volts)
+        volts = self.eif.get_v().segments[0].analogsignals
+        volts = [ v*1000.0 for v in volts[-1] ]
         vm = AnalogSignal(copy.copy(volts),units = mV,sampling_period = self.dt *s)
         results = {}
-
         results['vm'] = vm
-        results['t'] = vm.times#vm.times # self.times
+        results['t'] = vm.times
         results['run_number'] = results.get('run_number',0) + 1
+        #x = np.linspace(-5,5,100)
+
+        gp.plot((vm.times, vm, {'with': 'cosine'}),
+              _with    = 'lines',
+              terminal = 'dumb 80,40',
+              unset    = 'grid')
 
         return results
 
@@ -132,7 +141,7 @@ class PYNNBackend(Backend):
         stop = float(c['delay'])+float(c['duration'])
         duration = float(c['duration'])
         start = float(c['delay'])
-        amplitude = float(c['amplitude'])*1000.0#*10000.0
+        amplitude = float(c['amplitude'])#*1000.0#*10000.0
 
         electrode = neuron.DCSource(start=start, stop=stop, amplitude=amplitude)
         electrode.inject_into(self.eif)

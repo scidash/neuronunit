@@ -251,6 +251,9 @@ def score_proc(dtc,t,score):
 
 def switch_logic(tests):
     # move this logic into sciunit tests
+    '''
+    Hopefuly depreciated by future NU debugging.
+    '''
     for t in tests:
         t.passive = None
         t.active = None
