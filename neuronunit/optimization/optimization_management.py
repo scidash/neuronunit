@@ -17,6 +17,8 @@ from numba import jit
 from sklearn.model_selection import ParameterGrid
 from itertools import repeat
 from collections import OrderedDict
+
+
 import logging
 logger = logging.getLogger('__main__')
 import copy
@@ -25,6 +27,8 @@ import quantities as pq
 import numpy as np
 from itertools import repeat
 import numpy
+from sklearn.cluster import KMeans
+
 
 from deap import base
 
@@ -66,15 +70,161 @@ class WSFloatIndividual(float):
         self.rheobase = None
         super(WSFloatIndividual, self).__init__()
 
+def inject_and_plot(dtc,figname='problem'):
+    '''
+    For debugging backends during development.
+    '''
+    model = mint_generic_model(str('RAW'))
+    model.set_attrs(dtc.attrs)
+    dtc.vtest[0]['injected_square_current']['amplitude'] = dtc.rheobase['value']
+    dtc.vtest[0]['injected_square_current']['duration'] = 1000*pq.ms
+    model.inject_square_current(dtc.vtest[0])
+    plt.plot(model.get_membrane_potential().times,model.get_membrane_potential())#,label='ground truth')
+    plt.savefig(figname+str('debug.png'))
+
+def obtain_predictions(t,backend,params):
+
+    model = None
+    model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = ('RAW'))
+    model.set_attrs(params)
+    return t.generate_prediction(model)
+
+def make_fake_observations(tests,backend):
+    '''
+    to be used in conjunction with round_trip_test below.
+
+    '''
+    dtc = DataTC()
+    dtc.attrs = local_attrs
+
+    dtc = get_rh(dtc,rtest)
+
+    pt = format_params(tests,rheobase)
+    #ptbag = db.from_sequence(pt)
+    ptbag = db.from_sequence(pt[1::])
+
+    predictions = list(ptbag.map(obtain_predictions).compute())
+    predictions.insert(0,rheobase)
+
+    # having both means and values in dictionary makes it very irritating to iterate over.
+    # It's more harmless to demote means to values, than to elevate values to means.
+    # Simply swap key names: means, for values.
+    for p in predictions:
+        if 'mean' in p.keys():
+            # here pop means remove from dictionary
+            p['value'] = p.pop('mean')
+
+    for ind,t in enumerate(tests):
+        if 'mean' in t.observation.keys():
+            t.observation['value'] = t.observation.pop('mean')
+        pred =  predictions[ind]['value']
+        try:
+            pred = pred.rescale(t.units)
+            t.observation['value'] = pred
+        except:
+            t.observation['value'] = pred
+        t.observation['mean'] = t.observation['value']
+    return tests
+
+def round_trip_test(tests,backend):
+    '''
+    # Inputs:
+    #    -- tests, a list of NU test types,
+    #    -- backend a string encoding what model, backend, simulator to use.
+    # Outputs:
+    #    -- a score, that should be close to zero larger is worse.
+    # Synopsis:
+    #    -- Given any models
+    # lets check if the optimizer can find arbitarily sampeled points in
+    # a parameter space, using only the information in the error gradient.
+    # make some new tests based on internally generated data
+    # as opposed to experimental data.
+    '''
+    explore_param = model_params_everything[backend] # TODO, make this syntax possible.
+    noise_param = {} # randomly sample a point in the viable parameter space.
+    for t in explore_param.keys():
+        mean = np.mean(explore_param[t])
+        std = np.std(explore_param[t])
+        sample = numpy.random.normal(loc=mean, scale=2*std, size=1)[0]
+        noise_param[k] = sample
+    tests = make_fake_observations(tests,backend,noise_param)
+    NGEN = 10
+    MU = 6
+    ga_out, DO = run_ga(explore_param,NGEN,tests,free_params=free_params, NSGA = True, MU = MU, backed=backend, selection=str('selNSGA2'))
+    best = ga_out['pf'][0].dtc.get_ss()
+    print(Bool(best < 0.5))
+    if Bool(best >= 0.5:
+        NGEN = 10
+        MU = 6
+        ga_out, DO = run_ga(explore_param,NGEN,tests,free_params=free_params, NSGA = True, MU = MU, backed=backend, selection=str('selNSGA2'),seed_pop=pf[0].dtc.attrs)
+        best = ga_out['pf'][0].dtc.get_ss()
+    print('Its ',Bool(best < 0.5), ' that optimization succeeds on this model class')
+    print('goodness of fit: ',best)
+
+    return Bool(ga_out['pf'][0] < 0.5)
+
+def cluster_tests(use_test,backend,explore_param):
+    '''
+    Given a group of conflicting NU tests, quickly exploit optimization, and variance information
+    To find subsets of tests that don't conflict.
+    Inputs:
+        backend string, signifying model backend type
+        explore_param list of dictionaries, of model parameter limits/ranges.
+        use_test, a list of tests per experimental entity.
+    Outputs:
+        lists of groups of less conflicted test classes.
+        lists of groups of less conflicted test class names.
+    '''
+    MU = 6
+    NGEN = 7
+    test_opt = {}
+    for index,test in enumerate(use_test):
+        ga_out, DO = run_ga(explore_param,NGEN,[test],free_params=free_params, NSGA = True, MU = MU,backed=backend, selection=str('selNSGA2'))
+        test_opt[test] = ga_out
+        with open('qct.p','wb') as f:
+            pickle.dump(test_opt,f)
+
+    all_val = {}
+    for key,value in test_opt.items():
+        all_val[key] = {}
+        for k in value['pf'][0].dtc.attrs.keys():
+            temp = [i.dtc.attrs[k] for i in value['pf']]
+            all_val[key][k] = temp
+
+    first_test = all_val[list(all_val.keys())[0]].values()
+    ft = all_val[list(all_val.keys())[0]]
+    X = list(first_test)
+    X_labels = all_val[list(all_val.keys())[0]].keys()
+    df1 = pd.DataFrame(X)
+    X = np.array(X)
+    est = KMeans(n_clusters=3)
+    est.fit(X)
+    y_kmeans = est.predict(X)
+    first_test = test_opt[list(test_opt.keys())[0]].values()
+    test_names = [t.name for t in test_opt.keys()]
+    test_classes = [t for t in test_opt.keys()]
+    grouped_testsn = {}
+    grouped_tests = {}
+    for i,k in enumerate(y_kmeans):
+        grouped_testsn[k] = []
+        grouped_tests[k] = []
+    for i,k in enumerate(y_kmeans):
+        grouped_testsn[k].append(test_names[i])
+        grouped_tests[k].append(test_classes[i])
+    return (grouped_tests, grouped_tests)
 
 def mint_generic_model(backend):
     LEMS_MODEL_PATH = path_params['model_path']
     return ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = str(backend))
 
-@jit
+
 def write_opt_to_nml(path,param_dict):
     '''
-    Write optimimal simulation parameters back to NeuroML.
+        -- Inputs: desired file path, model parameters to encode in NeuroML2
+
+        -- Outputs: NeuroML2 file.
+
+        -- Synopsis: Write optimimal simulation parameters back to NeuroML2.
     '''
     orig_lems_file_path = path_params['model_path']
     more_attributes = pynml.read_lems_file(orig_lems_file_path,
@@ -142,6 +292,9 @@ def bridge_judge(test_and_models):
     return score, dtc
 
 def get_rh(dtc,rtest):
+    '''
+    This is used to generate a rheobase test, given unknown experimental observations.s
+    '''
     place_holder = {}
     place_holder['n'] = 86
     place_holder['mean'] = 10*pq.pA
@@ -158,8 +311,60 @@ def get_rh(dtc,rtest):
     return dtc
 
 
+'''
+def cluster_tests(use_test,backend,explore_param):
+
+    Given a group of conflicting NU tests, quickly exploit optimization, and variance information
+    To find subsets of tests that don't conflict.
+    Inputs:
+        backend string, signifying model backend type
+        explore_param list of dictionaries, of model parameter limits/ranges.
+        use_test, a list of tests per experimental entity.
+    Output:
+        lists of groups of less conflicted test classes.
+        lists of groups of less conflicted test class names.
 
 
+    MU = 6
+    NGEN = 7
+    test_opt = {}
+    for index,test in enumerate(use_test):
+        ga_out, DO = om.run_ga(explore_param,NGEN,[test],free_params=free_params, NSGA = True, MU = MU)
+        test_opt[test] = ga_out
+        with open('qct.p','wb') as f:
+            pickle.dump(test_opt,f)
+
+    all_val = {}
+    for key,value in test_opt.items():
+        all_val[key] = {}
+        for k in value['pf'][0].dtc.attrs.keys():
+            temp = [i.dtc.attrs[k] for i in value['pf']]
+            all_val[key][k] = temp
+
+    first_test = all_val[list(all_val.keys())[0]].values()
+    ft = all_val[list(all_val.keys())[0]]
+    X = list(first_test)
+    X_labels = all_val[list(all_val.keys())[0]].keys()
+    df1 = pd.DataFrame(X)
+    X = np.array(X)
+    est = KMeans(n_clusters=3)
+    est.fit(X)
+    y_kmeans = est.predict(X)
+    first_test = test_opt[list(test_opt.keys())[0]].values()
+    test_names = [t.name for t in test_opt.keys()]
+    test_classes = [t for t in test_opt.keys()]
+
+    grouped_testsn = {}
+    grouped_tests = {}
+
+    for i,k in enumerate(y_kmeans):
+        grouped_testsn[k] = []
+        grouped_tests[k] = []
+    for i,k in enumerate(y_kmeans):
+        grouped_testsn[k].append(test_names[i])
+        grouped_tests[k].append(test_classes[i])
+    return (grouped_tests, grouped_testsn
+'''
 def dtc_to_rheo_serial(dtc):
     # If  test taking data, and objects are present (observations etc).
     # Take the rheobase test and store it in the data transport container.
@@ -464,17 +669,18 @@ def update_dtc_pop(pop, td):
         dtcpop = list(bag.map(transform).compute())
         assert len(dtcpop) == len(pop)
     else:
-        for p in pop:
-            p.td = td
-            p.backend = str(_backend)
+        ind = pop
+        for i in ind:
+            i.td = td
+            i.backend = str(_backend)
         # above replaces need for this line:
-        xargs = (pop,td,repeat(backend))
+        xargs = (ind,td,repeat(backend))
         # In this case pop is not really a population but an individual
         # but parsimony of naming variables
         # suggests not to change the variable name to reflect this.
-        dtcpop = [ transform(xargs) ]
-        # exec('dtcpop[0].backend is '+str(_backend)+')')
-    return dtcpop
+        dtc = [ transform(xargs) ]
+
+    return dtc
 
 
 
