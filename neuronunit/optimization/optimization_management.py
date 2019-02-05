@@ -17,6 +17,7 @@ from numba import jit
 from sklearn.model_selection import ParameterGrid
 from itertools import repeat
 from collections import OrderedDict
+import csv
 
 
 import logging
@@ -31,7 +32,6 @@ from sklearn.cluster import KMeans
 
 
 from deap import base
-
 from pyneuroml import pynml
 
 from neuronunit.optimization.data_transport_container import DataTC
@@ -241,7 +241,13 @@ def get_centres(use_test,backend,explore_param):
     centers = est.cluster_centers_
     return td, test_opt, centres
     #if pred is not None:
-
+    
+def save_models_for_justas(dtc):
+    with open(str(dtc.attrs)+'.csv', 'w') as writeFile:
+    writer = csv.writer(writeFile)
+        writer.writerows(lines)
+            
+            
 def cluster_tests(use_test,backend,explore_param):
     '''
     Given a group of conflicting NU tests, quickly exploit optimization, and variance information
@@ -269,19 +275,22 @@ def cluster_tests(use_test,backend,explore_param):
         The key is to realize, that averaging measurements, and computing error is very different to, taking measurements, and averaging error.
         The later is the multiobjective approach to optimization. The former is the approach used here.
         '''
+        dtcpop = []
         for ca in cell_attrs:
             '''
             What is the mean waveform measurement resulting from averaging over the three data points?
             '''
-            dtcpop = list(update_dtc_pop(ca, td))
+            dtc = update_dtc_pop(ca, td)
+            dtcpop.append(dtc)
             dtc.tests = use_test # aliased variable.
             dtc = dtc_to_rheo(dtc)
             dtc = format_test(dtc)
             test_and_dtc = (use_test,dtc)
+
             preds.append(pred_only(test_and_dtc))
         # waveform measurement resulting from averaging over the three data points?
         mean_pred = np.mean(preds)
-        model_attrs = [ dtc.attrs for dtc in dtcpop ]
+        #model_attrs = [ dtc.attrs for dtc in dtcpop ]
         mean_score,dtc = score_only(dtc,mean_pred,test)
         mean_scores.append(mean_score)
         print(mean_scores[-1])
