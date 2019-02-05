@@ -163,31 +163,69 @@ def round_trip_test(tests,backend):
 
     return Bool(ga_out['pf'][0] < 0.5)
 
-def cluster_tests(use_test,backend,explore_param):
-    '''
-    Given a group of conflicting NU tests, quickly exploit optimization, and variance information
-    To find subsets of tests that don't conflict.
-    Inputs:
-        backend string, signifying model backend type
-        explore_param list of dictionaries, of model parameter limits/ranges.
-        use_test, a list of tests per experimental entity.
-    Outputs:
-        lists of groups of less conflicted test classes.
-        lists of groups of less conflicted test class names.
-    '''
-    MU = 6
+
+def pred_only(test_and_models):
+    # Temporarily patch sciunit judge code, which seems to be broken.
+    #
+    #
+    (test, dtc) = test_and_models
+    obs = test.observation
+    backend_ = dtc.backend
+    model = mint_generic_model(backend_)
+    model.set_attrs(dtc.attrs)
+    pred = test.generate_prediction(model)
+    return pred
+
+def score_only(dtc,pred,test):
+    if pred is not None:
+        if hasattr(dtc,'prediction'):# is not None:
+            dtc.prediction[test.name] = pred
+            dtc.observation[test.name] = test.observation['mean']
+
+        else:
+            dtc.prediction = None
+            dtc.observation = None
+            dtc.prediction = {}
+            dtc.prediction[test.name] = pred
+            dtc.observation = {}
+            dtc.observation[test.name] = test.observation['mean']
+
+
+        #dtc.prediction = pred
+        score = test.compute_score(obs,pred)
+        if not hasattr(dtc,'agreement'):
+            dtc.agreement = None
+            dtc.agreement = {}
+        try:
+            dtc.agreement[str(test.name)] = np.abs(test.observation['mean'] - pred['mean'])
+        except:
+            try:
+                dtc.agreement[str(test.name)] = np.abs(test.observation['value'] - pred['value'])
+            except:
+                try:
+                    dtc.agreement[str(test.name)] = np.abs(test.observation['mean'] - pred['value'])
+                except:
+                    pass
+        #print(score.norm_score)
+    else:
+        score = None
+return score, dtc
+
+def get_centres(use_test,backend,explore_param):
+    MU = 7
     NGEN = 7
     test_opt = {}
     for index,test in enumerate(use_test):
-        ga_out, DO = run_ga(explore_param,NGEN,[test],free_params=free_params, NSGA = True, MU = MU,backed=backend, selection=str('selNSGA2'))
-        test_opt[test] = ga_out
-        with open('qct.p','wb') as f:
-            pickle.dump(test_opt,f)
+        ga_out, DO = run_ga(explore_param,NGEN,test,free_params=free_params, NSGA = True, MU = MU,backed=backend, selection=str('selNSGA2'))
+        td = DO.td # td, transfer dictionary, a consistent, stable OrderedDict of parameter values.
+        test_opt[test.name] = ga_out
+    with open('qct.p','wb') as f:
+        pickle.dump(test_opt,f)
 
     all_val = {}
     for key,value in test_opt.items():
         all_val[key] = {}
-        for k in value['pf'][0].dtc.attrs.keys():
+        for k in td.keys():
             temp = [i.dtc.attrs[k] for i in value['pf']]
             all_val[key][k] = temp
 
@@ -200,6 +238,52 @@ def cluster_tests(use_test,backend,explore_param):
     est = KMeans(n_clusters=3)
     est.fit(X)
     y_kmeans = est.predict(X)
+    centers = est.cluster_centers_
+    return td, test_opt, centres
+    #if pred is not None:
+
+def cluster_tests(use_test,backend,explore_param):
+    '''
+    Given a group of conflicting NU tests, quickly exploit optimization, and variance information
+    To find subsets of tests that don't conflict.
+    Inputs:
+        backend string, signifying model backend type
+        explore_param list of dictionaries, of model parameter limits/ranges.
+        use_test, a list of tests per experimental entity.
+    Outputs:
+        lists of groups of less conflicted test classes.
+        lists of groups of less conflicted test class names.
+    '''
+    td, test_opt, centres = get_centres(use_test,backend,explore_param)
+    cell_attrs = [ centers[:, 0],centers[:, 1], centers[:, 2] ]
+    for key, use_test in test_frame.items():
+        preds = []
+        mean_scores = []
+        '''
+        Create a model situation analogous to the NeuroElectro data situation.
+        Assume, that I have three or more clustered experimental observations,
+        averaging wave measurements is inappropriate, but thats what I have.
+        Try to reconstruct the clustered means, by clustering solution sets with respect to 8 waveform measurements.
+        '''
+        for ca in cell_attrs:
+            '''
+            What is the mean waveform measurement resulting from averaging over the three data points?
+            '''
+            dtcpop = list(update_dtc_pop(ca, td))
+            dtc.tests = use_test # aliased variable.
+            dtc = dtc_to_rheo(dtc)
+            dtc = format_test(dtc)
+            test_and_dtc = (use_test,dtc)
+            preds.append(pred_only(test_and_dtc))
+        # waveform measurement resulting from averaging over the three data points?
+        mean_pred = np.mean(preds)
+        model_attrs = [ dtc.attrs for dtc in dtcpop ]
+        mean_score,dtc = score_only(dtc,mean_pred,test)
+        mean_scores.append(mean_score)
+        print(mean_scores[-1])
+        #for k,v in value['pf'][0].dtc.attrs.items():
+
+    #, c=y_kmeans, s=50)
     first_test = test_opt[list(test_opt.keys())[0]].values()
     test_names = [t.name for t in test_opt.keys()]
     test_classes = [t for t in test_opt.keys()]
@@ -211,7 +295,7 @@ def cluster_tests(use_test,backend,explore_param):
     for i,k in enumerate(y_kmeans):
         grouped_testsn[k].append(test_names[i])
         grouped_tests[k].append(test_classes[i])
-    return (grouped_tests, grouped_tests)
+    return (grouped_tests, grouped_tests, mean_scores)
 
 def mint_generic_model(backend):
     LEMS_MODEL_PATH = path_params['model_path']
@@ -247,11 +331,11 @@ def write_opt_to_nml(path,param_dict):
     return
 
 
-def bridge_judge(test_and_models):
+def bridge_judge(test_and_dtc):
     # Temporarily patch sciunit judge code, which seems to be broken.
     #
     #
-    (test, dtc) = test_and_models
+    (test, dtc) = test_and_dtc
     obs = test.observation
     backend_ = dtc.backend
     model = mint_generic_model(backend_)
@@ -259,16 +343,16 @@ def bridge_judge(test_and_models):
     pred = test.generate_prediction(model)
     if pred is not None:
         if hasattr(dtc,'prediction'):# is not None:
-            dtc.prediction[test] = pred
-            dtc.observation[test] = test.observation['mean']
+            dtc.prediction[test.name] = pred
+            dtc.observation[test.name] = test.observation['mean']
 
         else:
             dtc.prediction = None
             dtc.observation = None
             dtc.prediction = {}
-            dtc.prediction[test] = pred
+            dtc.prediction[test.name] = pred
             dtc.observation = {}
-            dtc.observation[test] = test.observation['mean']
+            dtc.observation[test.name] = test.observation['mean']
 
 
         #dtc.prediction = pred
@@ -329,8 +413,8 @@ def cluster_tests(use_test,backend,explore_param):
     NGEN = 7
     test_opt = {}
     for index,test in enumerate(use_test):
-        ga_out, DO = om.run_ga(explore_param,NGEN,[test],free_params=free_params, NSGA = True, MU = MU)
-        test_opt[test] = ga_out
+        ga_out, DO = om.run_ga(explore_param,NGEN,[test.name],free_params=free_params, NSGA = True, MU = MU)
+        test_opt[test.name] = ga_out
         with open('qct.p','wb') as f:
             pickle.dump(test_opt,f)
 
