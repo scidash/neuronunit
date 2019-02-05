@@ -260,10 +260,14 @@ def cluster_tests(use_test,backend,explore_param):
         preds = []
         mean_scores = []
         '''
+
         Create a model situation analogous to the NeuroElectro data situation.
         Assume, that I have three or more clustered experimental observations,
         averaging wave measurements is inappropriate, but thats what I have.
         Try to reconstruct the clustered means, by clustering solution sets with respect to 8 waveform measurements.
+
+        The key is to realize, that averaging measurements, and computing error is very different to, taking measurements, and averaging error.
+        The later is the multiobjective approach to optimization. The former is the approach used here.
         '''
         for ca in cell_attrs:
             '''
@@ -281,6 +285,7 @@ def cluster_tests(use_test,backend,explore_param):
         mean_score,dtc = score_only(dtc,mean_pred,test)
         mean_scores.append(mean_score)
         print(mean_scores[-1])
+    #return mean_scores,
         #for k,v in value['pf'][0].dtc.attrs.items():
 
     #, c=y_kmeans, s=50)
