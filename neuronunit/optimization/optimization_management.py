@@ -246,6 +246,17 @@ def write_opt_to_nml(path,param_dict):
     fopen.close()
     return
 
+def pred_only(test_and_models):
+    # Temporarily patch sciunit judge code, which seems to be broken.
+    #
+    #
+    (test, dtc) = test_and_models
+    obs = test.observation
+    backend_ = dtc.backend
+    model = mint_generic_model(backend_)
+    model.set_attrs(dtc.attrs)
+    pred = test.generate_prediction(model)
+    return pred
 
 def bridge_judge(test_and_models):
     # Temporarily patch sciunit judge code, which seems to be broken.
@@ -581,6 +592,20 @@ def nunit_evaluation_df(dtc):
     dtc.df = df
     return dtc
 
+def pred_evaluation(dtc):
+    # Inputs single data transport container modules, and neuroelectro observations that
+    # inform test error error_criterion
+    # Outputs Neuron Unit evaluation scores over error criterion
+    tests = dtc.tests
+    dtc = copy.copy(dtc)
+    dtc.model_path = path_params['model_path']
+    preds = []
+    for k,t in enumerate(tests):
+        if str('RheobaseTest') != t.name and str('RheobaseTestP') != t.name:
+            t.params = dtc.vtest[k]
+            pred = pred_only(test_and_models)
+            preds.append(pred)
+    return preds
 
 def nunit_evaluation(dtc):
     # Inputs single data transport container modules, and neuroelectro observations that
@@ -589,7 +614,6 @@ def nunit_evaluation(dtc):
     tests = dtc.tests
     dtc = copy.copy(dtc)
     dtc.model_path = path_params['model_path']
-    LEMS_MODEL_PATH = path_params['model_path']
     #df = pd.DataFrame(index=list(tests),columns=['observation','prediction','disagreement'])#,columns=list(reduced_cells.keys()))
     if dtc.rheobase == -1.0 or type(dtc.rheobase) is type(None):
         dtc = allocate_worst(tests,dtc)
@@ -606,7 +630,6 @@ def nunit_evaluation(dtc):
                     print('gets to None score type')
     # compute the sum of sciunit score components.
     dtc.summed = dtc.get_ss()
-    #dtc.df = df
     return dtc
 
 
@@ -829,7 +852,23 @@ def parallel_route(pop,dtcpop,tests,td):
     #import pdb; pdb.set_trace()
     npart = np.min([multiprocessing.cpu_count(),len(dtcpop)])
     dtcbag = db.from_sequence(dtcpop, npartitions = npart)
-    dtcpop = list(dtcbag.map(nunit_evaluation).compute())
+    preds = list(dtcbag.map(pred_evavaluation).compute())
+    for dtc in dtcpop:
+        for i,p in enumerate(preds):
+            if i%2 == 0:
+                if i+1<len(preds):
+                    p = (preds[i]+preds[i+1])/2
+                    score = preds.compute_score(obs,dtc.tests[i])
+                    dtc.scores[dtc.test.name] = 1.0 - score.norm_score
+                    p.dtc = None
+                    p.dtc = dtc
+
+    preds = [ p for i,p in enumerate(preds) if i%1 != 0 ]
+    preds = [ p.dtc for i,p in enumerate(preds) if i%1 != 0 ]
+
+    if dtc.score is not None:
+        dtc = score_proc(dtc,rtest,copy.copy(score))
+    #dtcpop = list(dtcbag.map(nunit_evaluation).compute())
     for i,d in enumerate(dtcpop):
         if not hasattr(pop[i],'dtc'):
             pop[i] = WSListIndividual(pop[i])
