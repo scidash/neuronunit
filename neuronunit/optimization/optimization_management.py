@@ -816,7 +816,7 @@ def filtered(pop,dtcpop):
 
 
 def split_list(a_list):
-    half = len(a_list)/2
+    half = int(len(a_list)/2)
     return a_list[:half], a_list[half:]
 
 def clusty(dtcbag,dtcpop):
