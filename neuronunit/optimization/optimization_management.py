@@ -778,7 +778,7 @@ def new_genes(pop,dtcpop,td):
     # Brian and PyNN models should not have to read from a file.
     # This line satifies an older NU design flaw, that all models evaluated must have
     # a disk readable path.
-    LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
+    # LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
     dtc.attrs = {}
     for i,j in enumerate(ind):
         dtc.attrs[str(td[i])] = j
@@ -836,26 +836,19 @@ def clusty(dtcbag,dtcpop):
     # divide the genes pool in half
     [dtcpopa,dtcpopb] = split_list(copy.copy(dtcpop))
     # average measurements between first half of gene pool, and second half.
-    for dtca in dtcpopa:
-        for dtcb in dtcpopb:
-            dtcb = copy.copy(dtcb)
-            for i,x in enumerate(dtcb.preds):
-                p = (dtca.preds[i]+dtcb.preds[i])/2
-                score = dtca.tests[i].compute_score(obs,p)
-                dtca.twin = None
-                dtca.twin = dtcb.attrs
-                # store the averaged values in the first half of genes.
-
-                dtca.scores[dtca.test.name] = 1.0 - score.norm_score
-                score = dtcb.tests[i].compute_score(obs,p)
-
-                #p = (dtca.preds[i]+dtcb.preds[i])/2
-                #score = p.compute_score(obs,dtcb.tests[i])
-                dtcb.twin = None
-                dtcb.twin = dtca.attrs
-                # store the averaged values in the second half of genes.
-
-                dtcb.scores[dtcb.test.name] = 1.0 - score.norm_score
+    flat_iter = iter( (dtca,dtcb) for dtca in dtcpopa for dtcb in dtcpopb )
+    for dtca, dtcb in flat_iter:
+        for i,_ in enumerate(dtcb.preds):
+            p = (dtca.preds[i]+dtcb.preds[i])/2
+            score = dtca.tests[i].compute_score(obs,p)
+            dtcb.tests[i] = dtca.tests[i]
+            dtcb.twin = dtca.twin = None
+            dtca.twin = dtcb.attrs
+            dtcb.twin = dtca.attrs
+            # store the averaged values in the first half of genes.
+            dtca.scores[dtca.test.name] = 1.0 - score.norm_score
+            # store the averaged values in the second half of genes.
+            dtcb.scores[dtcb.test.name] = 1.0 - score.norm_score
     dtcpop = dtcpopa
     dtcpop.extend(dtcpopb)
     return dtcpop
