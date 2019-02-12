@@ -9,7 +9,6 @@ import quantities as qt
 from quantities import mV, ms, s
 import matplotlib.pyplot as plt
 import pyNN
-from pyNN.neuron import *
 from pyNN.neuron import HH_cond_exp
 from pyNN.neuron import EIF_cond_exp_isfa_ista
 from pyNN.neuron import Izhikevich
@@ -32,12 +31,13 @@ class HHpyNNBackend(Backend):
         neuron.setup(timestep=self.dt, min_delay=1.0)
 
 
-    def init_backend(self, attrs = None, cell_name= 'HH_cond_exp', current_src_name = 'hannah', DTC = None, dt=0.01):
+    def init_backend(self, attrs = None, cell_name= 'HH_cond_exp',
+                     current_src_name = 'hannah', DTC = None, dt=0.01):
         backend = 'HHpyNN'
-        super(HHpyNNBackend,self).init_backend()#*args, **kwargs)
         self.current_src_name = current_src_name
         self.cell_name = cell_name
         self.adexp = True
+        self.dt = dt
 
         #def init_backend(self, attrs=None, simulator='neuron', DTC = None):
         #self.Izhikevich = Izhikevich
@@ -65,8 +65,7 @@ class HHpyNNBackend(Backend):
                 self.cell_name = DTC.cell_name
         #if DTC is not None:
         #    self.set_attrs(**DTC.attrs)
-        self.load_model()
-
+        super(HHpyNNBackend, self).init_backend()#*args, **kwargs)
 
     def get_membrane_potential(self):
         """Must return a neo.core.AnalogSignal.
