@@ -12,15 +12,13 @@ import matplotlib.pyplot as plt
 from elephant.spike_train_generation import threshold_detection
 from neo import AnalogSignal
 try:
-    from pyNN.neuron import *
     from pyNN.neuron import HH_cond_exp
     from pyNN.neuron import EIF_cond_exp_isfa_ista
-    from pyNN.neuron import Izhikevich
-    from pyNN import neuron
+    import pyNN.neuron as pn
     from pyNN.neuron import setup as setup
     from pyNN.neuron import DCSource
     pyNN_NEURON = True
-except ImportError:
+except (ImportError, AttributeError):
     print("Error loading pyNN.neuron")
     pyNN_NEURON = False
 
@@ -35,7 +33,7 @@ def bind_NU_interface(model):
         neuron = None
         from pyNN import neuron
         self.hhcell = neuron.create(EIF_cond_exp_isfa_ista())
-        neuron.setup(timestep=self.dt, min_delay=1.0)
+        pn.setup(timestep=self.dt, min_delay=1.0)
 
 
     def init_backend(self, attrs = None, cell_name= 'HH_cond_exp', current_src_name = 'hannah', DTC = None, dt=0.01):
@@ -50,7 +48,7 @@ def bind_NU_interface(model):
         self.related_data = {}
         self.lookup = {}
         self.attrs = {}
-        self.neuron = neuron
+        self.neuron = pn
         self.model._backend = self
         self.backend = self
         self.model.attrs = {}
@@ -88,7 +86,7 @@ def bind_NU_interface(model):
             self.hhcell.record('spikes','v')
 
         else:
-            self.neuron.record_v(self.hhcell, "Results/HH_cond_exp_%s.v" % str(neuron))
+            self.neuron.record_v(self.hhcell, "Results/HH_cond_exp_%s.v" % str(pn))
 
             #self.neuron.record_gsyn(self.hhcell, "Results/HH_cond_exp_%s.gsyn" % str(neuron))
         self.neuron.run(DURATION)

@@ -1,11 +1,14 @@
 """Neuronunit-specific model backends."""
 
 import inspect
+import warnings
 
 import sciunit.models.backends as su_backends
 from sciunit.utils import PLATFORM, PYTHON_MAJOR_VERSION
 from .base import Backend
 
+warnings.filterwarnings('ignore', message='nested set')
+warnings.filterwarnings('ignore', message='mpi4py')
 
 try:
     from .jNeuroML import jNeuroMLBackend
@@ -31,16 +34,19 @@ except ImportError:
     HHBackend = None
     print('Could not load HHBackend.')
 
+"""
 try:
     from .general_pyNN import HHpyNNBackend
 except ImportError:
     HHpyNNBackend = None
     print('Could not load HHpyNNBackend.')
 except (AttributeError, IOError) as e:
-    if 'NEURON' in str(e):
+    if any([x in str(e) for x in ('NEURON', "'hoc.HocObject' object")]):
         print('Could not load PyNNBackend due to NEURON issues: %s' % str(e))
     else:
         raise e
+"""
+
 try:
     from .glif import GLIFBackend
 except Exception as e:
