@@ -17,7 +17,6 @@ from numba import jit
 from sklearn.model_selection import ParameterGrid
 from itertools import repeat
 from collections import OrderedDict
-import csv
 
 
 import logging
@@ -117,7 +116,6 @@ def make_fake_observations(tests,backend):
     for ind,t in enumerate(tests):
         if 'mean' in t.observation.keys():
             t.observation['value'] = t.observation.pop('mean')
-
         pred =  predictions[ind]['value']
         try:
             pred = pred.rescale(t.units)
@@ -241,7 +239,7 @@ def get_centres(use_test,backend,explore_param):
     y_kmeans = est.predict(X)
     centers = est.cluster_centers_
     return td, test_opt, centres
-    #if pred is not None:
+
 
 def save_models_for_justas(dtc):
     with open(str(dtc.attrs)+'.csv', 'w') as writeFile:
@@ -295,10 +293,7 @@ c
         mean_score,dtc = score_only(dtc,mean_pred,test)
         mean_scores.append(mean_score)
         print(mean_scores[-1])
-    #return mean_scores,
-        #for k,v in value['pf'][0].dtc.attrs.items():
 
-    #, c=y_kmeans, s=50)
     first_test = test_opt[list(test_opt.keys())[0]].values()
     test_names = [t.name for t in test_opt.keys()]
     test_classes = [t for t in test_opt.keys()]
@@ -345,6 +340,17 @@ def write_opt_to_nml(path,param_dict):
     fopen.close()
     return
 
+def pred_only(test_and_models):
+    # Temporarily patch sciunit judge code, which seems to be broken.
+    #
+    #
+    (test, dtc) = test_and_models
+    obs = test.observation
+    backend_ = dtc.backend
+    model = mint_generic_model(backend_)
+    model.set_attrs(dtc.attrs)
+    pred = test.generate_prediction(model)
+    return pred
 
 def bridge_judge(test_and_dtc):
     # Temporarily patch sciunit judge code, which seems to be broken.
@@ -428,8 +434,8 @@ def cluster_tests(use_test,backend,explore_param):
     NGEN = 7
     test_opt = {}
     for index,test in enumerate(use_test):
-        ga_out, DO = om.run_ga(explore_param,NGEN,[test.name],free_params=free_params, NSGA = True, MU = MU)
-        test_opt[test.name] = ga_out
+        ga_out, DO = om.run_ga(explore_param,NGEN,[test],free_params=free_params, NSGA = True, MU = MU)
+        test_opt[test] = ga_out
         with open('qct.p','wb') as f:
             pickle.dump(test_opt,f)
 
@@ -683,6 +689,26 @@ def nunit_evaluation_df(dtc):
     dtc.df = df
     return dtc
 
+def pred_evaluation(dtc):
+    # Inputs single data transport container modules, and neuroelectro observations that
+    # inform test error error_criterion
+    # Outputs Neuron Unit evaluation scores over error criterion
+    tests = dtc.tests
+    dtc = copy.copy(dtc)
+    # TODO
+    # phase out model path:
+    # via very reduced model
+    dtc.model_path = path_params['model_path']
+    preds = []
+    dtc.preds = None
+    dtc.preds = []
+    dtc.preds.append(dtc.rheobase)
+    for k,t in enumerate(tests):
+        if str('RheobaseTest') != t.name and str('RheobaseTestP') != t.name:
+            t.params = dtc.vtest[k]
+            pred = pred_only(test_and_models)
+            dtc.preds.append(pred)
+    return preds
 
 def nunit_evaluation(dtc):
     # Inputs single data transport container modules, and neuroelectro observations that
@@ -691,7 +717,6 @@ def nunit_evaluation(dtc):
     tests = dtc.tests
     dtc = copy.copy(dtc)
     dtc.model_path = path_params['model_path']
-    LEMS_MODEL_PATH = path_params['model_path']
     #df = pd.DataFrame(index=list(tests),columns=['observation','prediction','disagreement'])#,columns=list(reduced_cells.keys()))
     if dtc.rheobase == -1.0 or type(dtc.rheobase) is type(None):
         dtc = allocate_worst(tests,dtc)
@@ -714,12 +739,15 @@ def nunit_evaluation(dtc):
 
 
 
-def evaluate(dtc,regularazation):
+def evaluate(dtc,regularazation=True):
     error_length = len(dtc.scores.keys())
     # assign worst case errors, and then over write them with situation informed errors as they become available.
     fitness = [ 1.0 for i in range(0,error_length) ]
     for k,t in enumerate(dtc.scores.keys()):
-        fitness[k] = dtc.scores[str(t)]**(1.0/2.0)
+	if regularization == True:
+	   fitness[k] = dtc.scores[str(t)]**(1.0/2.0)
+	else:
+	   fitness[k] = dtc.scores[str(t)]
     return tuple(fitness,)
 
 def get_trans_list(param_dict):
@@ -733,7 +761,6 @@ def get_trans_list(param_dict):
 def transform(xargs):
     (ind,td,backend) = xargs
     dtc = DataTC()
-    LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
     dtc.attrs = {}
     for i,j in enumerate(ind):
         dtc.attrs[str(td[i])] = j
@@ -767,6 +794,9 @@ def update_dtc_pop(pop, td):
         bag = db.from_sequence(xargs, npartitions = npart)
         dtcpop = list(bag.map(transform).compute())
         assert len(dtcpop) == len(pop)
+        dtcpop[0].ss = None
+        dtcpop[0].ss = pop[0].ss
+        return dtcpop
     else:
         ind = pop
         for i in ind:
@@ -778,8 +808,9 @@ def update_dtc_pop(pop, td):
         # but parsimony of naming variables
         # suggests not to change the variable name to reflect this.
         dtc = [ transform(xargs) ]
-
-    return dtc
+        dtc.ss = None
+        dtc.ss = pop[0].ss
+        return dtc
 
 
 
@@ -790,7 +821,7 @@ def run_ga(explore_edges, max_ngen, test, free_params = None, hc = None, NSGA = 
     # https://stackoverflow.com/questions/744373/circular-or-cyclic-imports-in-python
     # These imports need to be defined with local scope to avoid circular importing problems
     # Try to fix local imports later.
-    #from bluepyopt.deapext.optimisations import SciUnitOptimization
+
 
     from neuronunit.optimization.optimisations import SciUnitOptimization
 
@@ -816,6 +847,8 @@ def run_ga(explore_edges, max_ngen, test, free_params = None, hc = None, NSGA = 
 
         DO.seed_pop = seed_pop
         DO.setup_deap()
+    DO.population[0].ss = None
+    DO.population[0].ss = ss
 
     # This run condition should not need same arguments as above.
     ga_out = DO.run(max_ngen = max_ngen)#offspring_size = MU, )
