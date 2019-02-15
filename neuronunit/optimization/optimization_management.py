@@ -117,6 +117,7 @@ def make_fake_observations(tests,backend):
     for ind,t in enumerate(tests):
         if 'mean' in t.observation.keys():
             t.observation['value'] = t.observation.pop('mean')
+
         pred =  predictions[ind]['value']
         try:
             pred = pred.rescale(t.units)
@@ -241,13 +242,13 @@ def get_centres(use_test,backend,explore_param):
     centers = est.cluster_centers_
     return td, test_opt, centres
     #if pred is not None:
-    
+
 def save_models_for_justas(dtc):
     with open(str(dtc.attrs)+'.csv', 'w') as writeFile:
     writer = csv.writer(writeFile)
         writer.writerows(lines)
-            
-            
+
+
 def cluster_tests(use_test,backend,explore_param):
     '''
     Given a group of conflicting NU tests, quickly exploit optimization, and variance information
@@ -271,7 +272,7 @@ def cluster_tests(use_test,backend,explore_param):
         Assume, that I have three or more clustered experimental observations,
         averaging wave measurements is inappropriate, but thats what I have.
         Try to reconstruct the clustered means, by clustering solution sets with respect to 8 waveform measurements.
-
+c
         The key is to realize, that averaging measurements, and computing error is very different to, taking measurements, and averaging error.
         The later is the multiobjective approach to optimization. The former is the approach used here.
         '''
@@ -713,12 +714,12 @@ def nunit_evaluation(dtc):
 
 
 
-def evaluate(dtc):
+def evaluate(dtc,regularazation):
     error_length = len(dtc.scores.keys())
     # assign worst case errors, and then over write them with situation informed errors as they become available.
     fitness = [ 1.0 for i in range(0,error_length) ]
     for k,t in enumerate(dtc.scores.keys()):
-        fitness[k] = dtc.scores[str(t)]
+        fitness[k] = dtc.scores[str(t)]**(1.0/2.0)
     return tuple(fitness,)
 
 def get_trans_list(param_dict):
