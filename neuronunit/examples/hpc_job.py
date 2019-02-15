@@ -98,33 +98,22 @@ df['Hippocampus CA1 pyramidal cell']
 # In otherwords use information that is readily amenable into hardcoding into equations
 # Select out the 'Neocortex pyramidal cell layer 5-6' below, as a target for optimization
 
+from neuronunit.optimization import model_params
+from neuronunit.optimization.optimization_management import inject_and_plot, cluster_tests
 
-import pyNN
-from pyNN import neuron
-from pyNN.neuron import EIF_cond_exp_isfa_ista
-#neurons = pyNN.Population(N_CX, pyNN.EIF_cond_exp_isfa_ista, RS_parameters)
 
-cell = neuron.create(EIF_cond_exp_isfa_ista())
-#cell[0].set_parameters(**LTS_parameters)
-explore_ranges = {}
-EIF_dic = cell[0].get_parameters()
-explore_ranges['cm'] = (EIF_dic['cm']-EIF_dic['cm']/2,EIF_dic['cm']+EIF_dic['cm']/2)
-explore_ranges['tau_m'] = (EIF_dic['tau_m']-EIF_dic['tau_m']/2,EIF_dic['tau_m']+EIF_dic['tau_m']/2)
-explore_ranges['b'] = (EIF_dic['b']-EIF_dic['b']/2,EIF_dic['b']+EIF_dic['b']/2)
-explore_ranges['a'] = (EIF_dic['a']-EIF_dic['a']/2,EIF_dic['a']+EIF_dic['a']/2)
-explore_ranges['v_spike'] = (EIF_dic['v_spike']-EIF_dic['v_spike']/2,EIF_dic['v_spike']+EIF_dic['v_spike']/2)
-explore_ranges['v_thresh'] = (EIF_dic['v_thresh']-EIF_dic['v_thresh']/2,EIF_dic['v_thresh']+EIF_dic['v_thresh']/2)
-explore_ranges['v_rest'] = (EIF_dic['v_rest']-EIF_dic['v_rest']/2,EIF_dic['v_rest']+EIF_dic['v_rest']/2)
-explore_ranges['e_rev_E'] = (EIF_dic['e_rev_E']-EIF_dic['e_rev_E']/2,EIF_dic['e_rev_E']+EIF_dic['e_rev_E']/2)
+EIF = model_params.EIF
 
 from neuronunit.tests import RheobaseTestP, fi, RheobaseTest
 import time
 model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = (str('PYNN')))
 model.set_attrs(cell[0].get_parameters())
-start1 = time.time()
 rt = fi.RheobaseTest(obs_frame['Dentate gyrus basket cell']['Rheobase'])
-pred1 = rt.generate_prediction(model)
-end1 = time.time()
+dtc.rheobase = rt
+#pred1 = rt.generate_prediction(model)
+inject_and_plot(dtc,figname='EIF_problem')
+for key, use_test in test_frame.items():
+    grouped_tests, grouped_tests =cluster_tests(use_test,str('PYNN'),EIF)
 
 try:
     with open('adexp_seeds.p','rb') as f:
@@ -132,7 +121,7 @@ try:
     assert seeds is not None
 
 except:
-    seeds, df = grid_search(explore_ranges,test_frame,backend=str('PYNN'))
+    seeds, df = grid_search(EIF,test_frame,backend=str('PYNN'))
 
 MU = 6
 NGEN = 80
@@ -144,7 +133,7 @@ except:
     for key, use_test in test_frame.items():
         seed = seeds[key]
         print(seed)
-        ga_out, _ = om.run_ga(explore_ranges,NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU, model_type = str('PYNN'),seed_pop=seed)
+        ga_out, _ = om.run_ga(EIF,NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU, model_type = str('PYNN'),seed_pop=seed)
         test_opt =  {str('multi_objective_PYNN')+str(seed):ga_out}
         with open('multi_objective_adexp.p','wb') as f:
             pickle.dump(test_opt,f)
