@@ -192,6 +192,11 @@ class SciUnitOptimization():#bluepyopt.optimisations.Optimisation):
         npoints = 2 ** len(list(self.params))
         npoints = np.ceil(npoints)
         dic_grid = es.create_grid(mp_in = self.params,npoints = self.offspring_size, free_params = self.params)
+        '''
+        The grid is now defined, the rest of code just makes sure that the size of the grid is a reasonable size
+        And computationally tractable. When I write sparse, think 'Down sample' a big, overly sampled list of coordinates.
+
+        '''
         size = len(dic_grid)
         if size > self.offspring_size:
             sparsify = np.linspace(0,len(dic_grid)-1,self.offspring_size)
@@ -199,6 +204,7 @@ class SciUnitOptimization():#bluepyopt.optimisations.Optimisation):
             for i in sparsify:
                 d = dic_grid[int(i)]
                 pop.append([d[k] for k in self.td])
+
 
         elif size <= self.offspring_size:
             delta = self.offspring_size - size

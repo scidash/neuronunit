@@ -190,30 +190,29 @@ def eaAlphaMuPlusLambdaCheckpoint(
         population = [ p for p in population if len(p.fitness.values)!=0 ]
         invalid_count = len(invalid_ind)
         hof, pf = _update_history_and_hof(hof, pf, history, offspring, td)
-
+        '''
         if pf[0].dtc is not None:
             print('true minimum',pf[0].dtc.get_ss())
         elif hof[0].dtc is not None:
             print('true minimum',hof[0].dtc.get_ss())
+        '''
 
-
-        population = [ p for p in population if p if len(p.fitness.values)!=0]
 
         _record_stats(stats, logbook, gen, offspring, invalid_count)
 
 
         if str('selIBEA') == selection:
-            if hof[0].fitness.values is None:
+            if hof[0].fitness.values is None or len(hof[0].fitness.values)==0:
                 best,fit = toolbox.evaluate(hof[0:1])
                 best.fitness.values = fit
                 best.dtc.get_ss()
                 if np.sum(best.dtc.get_ss()) != 0:
                     print('true minimum',np.sum(hof[0].fitness.values))
                     population.append(hof[0])
-            #toolbox.register("select",tools.selIBEA)
+            toolbox.register("select",tools.selIBEA)
 
         if str('selNSGA') == selection:
-            if pf[0].fitness.values is None:
+            if pf[0].fitness.values is None or len(pf[0].fitness.values)==0:
                 best,fit = toolbox.evaluate(pf[0:1])
                 best.fitness.values = fit
                 best.dtc.get_ss()
@@ -221,6 +220,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
                     print('true minimum',np.sum(pf[0].fitness.values))
                     print(best.dtc.get_ss())
                     population.append(best[0])
+        population = [ p for p in population if p if len(p.fitness.values)!=0]
 
         toolbox.register("select",selNSGA2)
         parents = toolbox.select(population, mu)
