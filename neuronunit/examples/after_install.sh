@@ -6,5 +6,6 @@ sudo /opt/conda/bin/conda install -y cython
 
 sudo /opt/conda/bin/pip install git+https://github.com/brian-team/brian2.git
 # faster glif
-sudo /opt/conda/bin/pip install git+https://github.com/russelljjarvis/AllenSDK.git
-sudo /opt/conda/bin/pip install pyNN lazyarray gnuplotlib
+#sudo /opt/conda/bin/pip install git+https://github.com/russelljjarvis/AllenSDK.git
+sudo /opt/conda/bin/pip install pyNN lazyarray PyGnuplot
+sudo /opt/conda/bin/conda install numpy

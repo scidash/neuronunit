@@ -11,6 +11,7 @@
 # To keep the standard running version of minimal and memory efficient, not all available packages are loaded by default. In the cell below I import a mixture common python modules, and custom developed modules associated with NeuronUnit (NU) development
 #!pip install dask distributed seaborn
 #!bash after_install.sh
+
 import numpy as np
 import os
 import pickle
@@ -34,6 +35,7 @@ from sklearn.model_selection import ParameterGrid
 from neuronunit.models.interfaces import glif
 from neuronunit.optimization.data_transport_container import DataTC
 from neuronunit.optimization.optimization_management import grid_search
+import matplotlib.pyplot as plt
 
 # # The Izhiketich model is instanced using some well researched parameter sets.
 # First lets get the points in parameter space, that Izhikich himself has published about. These points are often used by the open source brain project to establish between model reproducibility. The itial motivating factor for choosing these points as constellations, of all possible parameter space subsets, is that these points where initially tuned and used as best guesses for matching real observed experimental recordings.
@@ -85,7 +87,7 @@ for k,v in test_frame.items():
    if "Olfactory bulb (main) mitral cell" not in k:
        pass
    if "Olfactory bulb (main) mitral cell" in k:
-
+       pass
        #v[0] = RheobaseTestP(obs['Rheobase'])
 df = pd.DataFrame.from_dict(obs_frame)
 
@@ -98,6 +100,23 @@ df['Hippocampus CA1 pyramidal cell']
 # In otherwords use information that is readily amenable into hardcoding into equations
 # Select out the 'Neocortex pyramidal cell layer 5-6' below, as a target for optimization
 
+#!pip install lazyarray
+clustered_tests = pickle.load(open('clustered_tests.p','rb'))
+grouped_tests = clustered_tests['gtc']
+grouped_testsn = clustered_tests['gtn']
+#{'gtc':,'gtn':grouped_testsn}
+gc = glif.GC()
+glif_dic = gc.glif.to_dict()
+explore_ranges = {}
+gd = glif_dic
+explore_ranges['El'] = (glif_dic['El'],glif_dic['El']+10.0)
+explore_ranges['R_input'] = (glif_dic['R_input']-glif_dic['R_input']/2.0,glif_dic['R_input']+glif_dic['R_input']/2.0)
+explore_ranges['C'] = (glif_dic['C']-glif_dic['C']/2.0,glif_dic['C']+glif_dic['C']/2.0)
+explore_ranges['th_inf'] = (glif_dic['th_inf']-glif_dic['th_inf']/4.0,glif_dic['th_inf']+glif_dic['th_inf']/4.0)
+model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = (str('GLIF')))
+store_glif_results = {}
+params = gc.glif.to_dict()
+store_glif_results = {}
 
 import pyNN
 from pyNN import neuron
@@ -119,12 +138,36 @@ explore_ranges['e_rev_E'] = (EIF_dic['e_rev_E']-EIF_dic['e_rev_E']/2,EIF_dic['e_
 
 from neuronunit.tests import RheobaseTestP, fi, RheobaseTest
 import time
-model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = (str('PYNN')))
+model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = 'PYNN')
 model.set_attrs(cell[0].get_parameters())
 start1 = time.time()
-rt = fi.RheobaseTest(obs_frame['Dentate gyrus basket cell']['Rheobase'])
+rt = fi.RheobaseTestP(obs_frame['Dentate gyrus basket cell']['Rheobase'])
 pred1 = rt.generate_prediction(model)
 end1 = time.time()
+
+
+dtc = DataTC()
+dtc.attrs = EIF_dic
+dtc.backend = str('PYNN')
+dtc.cell_name = str('PYNN')
+dtc.tests = test_frame[list(test_frame.keys())[0]]
+dtc = dtc_to_rheo(dtc)
+
+dtc = format_test(dtc)
+dtc.vtest[0]['injected_square_current']['amplitude']= dtc.vtest[0]['injected_square_current']['amplitude']
+model.inject_square_current(dtc.vtest[0])
+
+#model.inject_square_current(pred1)
+vm = model.get_membrane_potential()
+plt.clf()
+plt.plot(vm.times,vm)
+plt.savefig('debug.png')
+
+dtc = nunit_evaluation(dtc)
+import pdb; pdb.set_trace()
+
+
+
 
 try:
     with open('adexp_seeds.p','rb') as f:
@@ -133,6 +176,7 @@ try:
 
 except:
     seeds, df = grid_search(explore_ranges,test_frame,backend=str('PYNN'))
+
 
 MU = 6
 NGEN = 80
@@ -192,6 +236,10 @@ except:
     for key, use_test in test_frame.items():
         seed = seeds[key]
         print(seed)
+        # Todo optimize on clustered tests
+        print(grouped_tests)
+        print(grouped_tests)
+
         ga_out, _ = om.run_ga(explore_ranges,NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU, model_type = str('GLIF'),seed_pop=seed)
         test_opt =  {str('multi_objective_glif')+str(seed):ga_out}
         with open('multi_objective_glif.p','wb') as f:

@@ -24,9 +24,10 @@ from pyNN.neuron import DCSource
 import numpy as np
 import copy
 
-
-import gnuplotlib as gp
-
+try:
+    import gnuplotlib as gp
+except:
+    pass
 
 
 # Potassium ion-channel rate functions
@@ -100,12 +101,13 @@ class PYNNBackend(Backend):
         results['t'] = vm.times
         results['run_number'] = results.get('run_number',0) + 1
         #x = np.linspace(-5,5,100)
-
-        gp.plot((vm.times, vm, {'with': 'cosine'}),
-              _with    = 'lines',
-              terminal = 'dumb 80,40',
-              unset    = 'grid')
-
+        try:
+            gp.plot((vm.times, vm, {'with': 'cosine'}),
+                    _with    = 'lines',
+                    terminal = 'dumb 80,40',
+                    unset    = 'grid')
+        except:
+            pass
         return results
 
     def load_model(self):
