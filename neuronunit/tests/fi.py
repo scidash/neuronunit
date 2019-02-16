@@ -23,16 +23,37 @@ import time
 import numba
 import copy
 
+import matplotlib as mpl
+mpl.use('Agg')
+import matplotlib.pyplot as plt
+from neuronunit.capabilities.spike_functions import get_spike_waveforms, spikes2amplitudes
 #
 # This is not used, but if differentiation based spike detection is used this is faster.
 @jit
 def get_diff(vm):
     differentiated = np.diff(vm)
-    spikes = len([np.any(differentiated) > 0.000143667327364])
+    spikes = len([np.any(differentiated) > 0.000193667327364])
     return spikes
 
 tolerance = 0.001
 
+
+'''
+@jit
+def get_diff_spikes(vm):
+    differentiated = np.diff(vm)
+    spikes = len([np.any(differentiated) > 0.000143667327364])
+    return spikes
+
+
+@jit
+def get_diff(vm,axis=None):
+    if axis is not None:
+        differentiated = np.diff(vm,axis=axis)
+    else:
+        differentiated = np.diff(vm)
+    return differentiated
+'''
 
 
 class RheobaseTest(VmTest):
@@ -293,7 +314,32 @@ class RheobaseTestP(VmTest):
                 model.set_attrs(dtc.attrs)
                 model.inject_square_current(current)
                 dtc.previous = ampl
-                n_spikes = model.get_spike_count()
+
+
+                if dtc.use_diff == True:
+                    vm = model.get_membrane_potential()
+
+                    print(vm)
+                    print('gets here')
+                    n_spikes = get_diff(vm)
+
+                    if n_spikes >= 1:
+                        dtc.negative_spiker = None
+                        dtc.negative_spiker = True
+                        amp = spikes2amplitudes(get_spike_waveforms(vm))
+                        if amp > 22.0*pq.mV:
+                            n_spikes = 1
+                        else:
+                            n_spikes = 0
+                    print(n_spikes)
+                    plt.clf()
+                    plt.title(str(n_spikes))
+                    plt.plot(vm.times,vm)
+                    plt.savefig('reobase_debug.png')
+                else:
+                    n_spikes = model.get_spike_count()
+
+
                 if n_spikes == 1:
                     dtc.lookup[float(ampl)] = 1
                     dtc.rheobase = float(ampl)
@@ -339,7 +385,8 @@ class RheobaseTestP(VmTest):
             return dtc
 
         def find_rheobase(self, dtc):
-
+            # This line should not be necessary:
+            # a class, VeryReducedModel has been made to circumvent this.
             assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
             # If this it not the first pass/ first generation
             # then assume the rheobase value found before mutation still holds until proven otherwise.
@@ -347,19 +394,27 @@ class RheobaseTestP(VmTest):
             # If its not true enter a search, with ranges informed by memory
             cnt = 0
             sub = np.array([0,0])
+            use_diff = False
+
             while dtc.boolean == False and cnt< 40:
-                if len(sub):
-                    if sub.max()> 1500.0:
-                        dtc.rheobase = None #float(supra.min())
-                        dtc.boolean = False
-                        return dtc
+                if cnt>2 and len(supra) ==0 and len(sub):
+                    use_diff = True # differentiate the wave to look for spikes
+                    # negeative spiker
+                    if len(sub) and cnt>8:
+                        if sub.max()> 2000.0:
+                            dtc.rheobase = None #float(supra.min())
+                            dtc.boolean = False
+                            return dtc
+
                 #dtc.current_steps = list(filter(lambda cs: cs !=0.0 , dtc.current_steps))
                 dtc_clones = [ copy.copy(dtc) for i in range(0,len(dtc.current_steps)) ]
                 for i,s in enumerate(dtc.current_steps):
                     dtc_clones[i].ampl = dtc.current_steps[i]
+                #if use_diff == True:
+                for d in dtc_clones:
+                    d.use_diff = None
+                    d.use_diff = use_diff
                 dtc_clones = [ d for d in dtc_clones if not np.isnan(d.ampl) ]
-
-
                 b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
                 dtc_clone = list(b0.map(check_current).compute())
 
@@ -375,12 +430,11 @@ class RheobaseTestP(VmTest):
                 sub, supra = get_sub_supra(dtc.lookup)
                 if len(supra) and len(sub):
                     delta = float(supra.min()) - float(sub.max())
-                    #if delta == 0 or (str(supra.min()) == str(sub.max())):
                     if delta < tolerance or (str(supra.min()) == str(sub.max())):
-                        dtc.rheobase = supra.min()*pq.pA #float(supra.min())
+                        if self.verbose >= 2:
+                            print(tolerance, 'a neuron, close to the edge! Multi spiking rheobase')
+                        dtc.rheobase = supra.min()*pq.pA
                         dtc.boolean = True
-                        #dtc.rheobase = None
-                        #dtc.boolean = False
                         return dtc
 
                 self.verbose == 2
