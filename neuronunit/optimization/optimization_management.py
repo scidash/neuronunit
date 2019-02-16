@@ -152,7 +152,7 @@ def round_trip_test(tests,backend):
     ga_out, DO = run_ga(explore_param,NGEN,tests,free_params=free_params, NSGA = True, MU = MU, backed=backend, selection=str('selNSGA2'))
     best = ga_out['pf'][0].dtc.get_ss()
     print(Bool(best < 0.5))
-    if Bool(best >= 0.5:
+    if Bool(best >= 0.5):
         NGEN = 10
         MU = 6
         ga_out, DO = run_ga(explore_param,NGEN,tests,free_params=free_params, NSGA = True, MU = MU, backed=backend, selection=str('selNSGA2'),seed_pop=pf[0].dtc.attrs)
@@ -205,10 +205,9 @@ def score_only(dtc,pred,test):
                     dtc.agreement[str(test.name)] = np.abs(test.observation['mean'] - pred['value'])
                 except:
                     pass
-        #print(score.norm_score)
     else:
         score = None
-return score, dtc
+    return score, dtc
 
 def get_centres(use_test,backend,explore_param):
     MU = 7
@@ -243,7 +242,7 @@ def get_centres(use_test,backend,explore_param):
 
 def save_models_for_justas(dtc):
     with open(str(dtc.attrs)+'.csv', 'w') as writeFile:
-    writer = csv.writer(writeFile)
+        writer = csv.writer(writeFile)
         writer.writerows(lines)
 
 
@@ -739,15 +738,15 @@ def nunit_evaluation(dtc):
 
 
 
-def evaluate(dtc,regularazation=True):
+def evaluate(dtc,regularization=True):
     error_length = len(dtc.scores.keys())
     # assign worst case errors, and then over write them with situation informed errors as they become available.
     fitness = [ 1.0 for i in range(0,error_length) ]
     for k,t in enumerate(dtc.scores.keys()):
-	if regularization == True:
-	   fitness[k] = dtc.scores[str(t)]**(1.0/2.0)
-	else:
-	   fitness[k] = dtc.scores[str(t)]
+       if regularization == True:
+          fitness[k] = dtc.scores[str(t)]**(1.0/2.0)
+       else:
+          fitness[k] = dtc.scores[str(t)]
     return tuple(fitness,)
 
 def get_trans_list(param_dict):
