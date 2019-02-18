@@ -2,58 +2,53 @@
 # setting of an appropriate backend.
 #matplotlib.use('agg')
 
-import numpy as np
-import dask.bag as db
-import pandas as pd
-import dask.bag as db
+import copy
+import logging
+import math
+import multiprocessing
 import os
 import pickle
-from itertools import repeat
-import neuronunit
-import multiprocessing
-npartitions = multiprocessing.cpu_count()
-from collections import Iterable
-from numba import jit
-from sklearn.model_selection import ParameterGrid
-from itertools import repeat
-from collections import OrderedDict
-
-
-import logging
-logger = logging.getLogger('__main__')
-import copy
-import math
-import quantities as pq
-import numpy as np
-from itertools import repeat
-import numpy
-from sklearn.cluster import KMeans
-
-
-from deap import base
-
-from pyneuroml import pynml
-
-from neuronunit.optimization.data_transport_container import DataTC
-#from neuronunit.models.interfaces import glif
-
-# Import get_neab has to happen exactly here. It has to be called only on
-from neuronunit import tests
-from neuronunit.optimization import get_neab
-from neuronunit.models.reduced import ReducedModel
-from neuronunit.optimization.model_parameters import model_params, path_params
-from neuronunit.optimization import model_parameters as modelp
-
-
-
-
-from neuronunit.tests.fi import RheobaseTestP# as discovery
-from neuronunit.tests.fi import RheobaseTest# as discovery
-
-import dask.bag as db
+from collections import Iterable, OrderedDict
 # The rheobase has been obtained seperately and cannot be db mapped.
 # Nested DB mappings dont work.
 from itertools import repeat
+
+import dask.bag as db
+import numpy as np
+import pandas as pd
+from deap import base
+from numba import jit
+from sklearn.cluster import KMeans
+from sklearn.model_selection import ParameterGrid
+
+import neuronunit
+import quantities as pq
+# Import get_neab has to happen exactly here. It has to be called only on
+from neuronunit import tests
+from neuronunit.models.reduced import ReducedModel
+from neuronunit.optimization import get_neab
+from neuronunit.optimization import model_parameters as modelp
+from neuronunit.optimization.data_transport_container import DataTC
+from neuronunit.optimization.model_parameters import model_params, path_params
+from neuronunit.tests.fi import RheobaseTest  # as discovery
+from neuronunit.tests.fi import RheobaseTestP  # as discovery
+from pyneuroml import pynml
+
+npartitions = multiprocessing.cpu_count()
+
+
+logger = logging.getLogger('__main__')
+
+
+
+
+#from neuronunit.models.interfaces import glif
+
+
+
+
+
+
 # DEAP mutation strategies:
 # https://deap.readthedocs.io/en/master/api/tools.html#deap.tools.mutESLogNormal
 class WSListIndividual(list):
@@ -102,6 +97,7 @@ def make_fake_observations(tests,backend):
     pt = format_params(tests,rheobase)
     #ptbag = db.from_sequence(pt)
     ptbag = db.from_sequence(pt[1::])
+    fdsafdsa 
 
     predictions = list(ptbag.map(obtain_predictions).compute())
     predictions.insert(0,rheobase)
@@ -822,7 +818,7 @@ def split_list(a_list):
 def clusty(dtcbag,dtcpop):
     '''
     Used for searching and optimizing where averged double sets of model_parameters
-    are the most fundamental gene-unit.
+    are the most fundamental gene-unit (rather than single points in high dim parameter space).
     In other words what is optimized sampled and explored, is the average of two waveform measurements.
     This allows for the ultimate solution, to be expressed as two disparate parameter points, that when averaged
     produce a good model.
