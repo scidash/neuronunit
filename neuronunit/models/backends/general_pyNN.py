@@ -27,7 +27,6 @@ from pyNN.neuron import DCSource
 import numpy as np
 import copy
 
-
 # Potassium ion-channel rate functions
 class PYNNBackend(Backend):
 
@@ -93,14 +92,13 @@ class PYNNBackend(Backend):
         neuron.run(DURATION)
         volts = self.eif.get_v().segments[0].analogsignals
         volts = [ v for v in volts[-1] ]
-        volts = [ v+50.0*pq.mV for v in volts ]
-
         vm = AnalogSignal(copy.copy(volts),units = mV,sampling_period = self.dt *s)
         results = {}
         results['vm'] = vm
         results['t'] = vm.times
         results['run_number'] = results.get('run_number',0) + 1
         plt.clf()
+        #plt.title('')
         plt.plot(vm.times,vm)
         plt.savefig('debug.png')
         return results
