@@ -26,9 +26,10 @@ import copy
 import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
-from neuronunit.capabilities.spike_functions import get_spike_waveforms, spikes2amplitudes
+from neuronunit.capabilities.spike_functions import get_spike_waveforms, spikes2amplitudes, threshold_detection
 #
-# This is not used, but if differentiation based spike detection is used this is faster.
+# When using differentiation based spike detection is used this is faster.
+
 @jit
 def get_diff(vm):
     differentiated = np.diff(vm)
@@ -36,25 +37,6 @@ def get_diff(vm):
     return spikes
 
 tolerance = 0.001
-
-
-'''
-@jit
-def get_diff_spikes(vm):
-    differentiated = np.diff(vm)
-    spikes = len([np.any(differentiated) > 0.000143667327364])
-    return spikes
-
-
-@jit
-def get_diff(vm,axis=None):
-    if axis is not None:
-        differentiated = np.diff(vm,axis=axis)
-    else:
-        differentiated = np.diff(vm)
-    return differentiated
-'''
-
 
 class RheobaseTest(VmTest):
     """
@@ -318,20 +300,12 @@ class RheobaseTestP(VmTest):
 
                 if dtc.use_diff == True:
                     vm = model.get_membrane_potential()
-
-                    print(vm)
-                    print('gets here')
-                    n_spikes = get_diff(vm)
-
+                    diff = get_diff(vm)
+                    spike_train = threshold_detection(diff,threshold=threshold)
+                    n_spikes = len(spike_train)
                     if n_spikes >= 1:
                         dtc.negative_spiker = None
                         dtc.negative_spiker = True
-                        amp = spikes2amplitudes(get_spike_waveforms(vm))
-                        if amp > 22.0*pq.mV:
-                            n_spikes = 1
-                        else:
-                            n_spikes = 0
-                    print(n_spikes)
                     plt.clf()
                     plt.title(str(n_spikes))
                     plt.plot(vm.times,vm)
