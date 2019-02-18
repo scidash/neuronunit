@@ -10,22 +10,18 @@ import collections
 from collections import OrderedDict
 import numpy as np
 
-THIS_DIR = os.path.dirname(os.path.realpath(__file__))
+import pyNN
+from pyNN import neuron
+from pyNN.neuron import EIF_cond_exp_isfa_ista
 
+THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 path_params = {}
 path_params['model_path'] = os.path.realpath(os.path.join(THIS_DIR,'..','models','NeuroML2','LEMS_2007One.xml'))
 
 
-
-import pyNN
-from pyNN import neuron
-from pyNN.neuron import EIF_cond_exp_isfa_ista
-#neurons = pyNN.Population(N_CX, pyNN.EIF_cond_exp_isfa_ista, RS_parameters)
-
 cell = neuron.create(EIF_cond_exp_isfa_ista())
 
 # https://github.com/NeuroML/NML2_LEMS_Examples/blob/master/PyNN.xml
-#cell[0].set_parameters(**LTS_parameters)
 EIF = {}
 EIF_dic = cell[0].get_parameters()
 EIF['cm'] = (EIF_dic['cm']-EIF_dic['cm']/2,EIF_dic['cm']+EIF_dic['cm']/2)
@@ -55,8 +51,6 @@ EIF_cond_exp_isfa_ista_parameters = {
     'e_rev_I':  -80.0,     # Inhibitory reversal potential in mV.
     'tau_syn_I':  5.0,     # Decay time constant of the inhibitory synaptic conductance in ms.
 
-# http://www.physics.usyd.edu.au/teach_res/mp/mscripts/
-# ns_izh002.m
 #recordable = ['spikes', 'v', 'w', 'gsyn_exc', 'gsyn_inh']
 EIF_cond_exp_isfa_ista_initial_values = {
     'v': -70.6,  # 'v_rest',
@@ -64,7 +58,8 @@ EIF_cond_exp_isfa_ista_initial_values = {
     'gsyn_exc': 0.0,
     'gsyn_inh': 0.0,
 }
-# Which Parameters
+
+    # Which Parameters
 # https://www.izhikevich.org/publications/spikes.htm
 type2007 = collections.OrderedDict([
   #              C    k     vr  vt vpeak   a      b   c    d  celltype
@@ -79,6 +74,8 @@ type2007 = collections.OrderedDict([
   ('RTN_burst', (40,  0.25, -65, -45,  0, 0.015, 10, -55,   50,   7))])
 
 
+# http://www.physics.usyd.edu.au/teach_res/mp/mscripts/
+# ns_izh002.m
 
 
 '''
