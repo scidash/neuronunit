@@ -32,7 +32,7 @@ EIF['cm'] = (EIF_dic['cm']-EIF_dic['cm']/2,EIF_dic['cm']+EIF_dic['cm']/2)
 EIF['tau_m'] = (EIF_dic['tau_m']-EIF_dic['tau_m']/2,EIF_dic['tau_m']+EIF_dic['tau_m']/2)
 EIF['b'] = (EIF_dic['b']-EIF_dic['b']/2,EIF_dic['b']+EIF_dic['b']/2)
 EIF['a'] = (EIF_dic['a']-EIF_dic['a']/2,EIF_dic['a']+EIF_dic['a']/2)
-EIF['v_spike'] = (EIF_dic['v_spike']-EIF_dic['v_spike']/2,EIF_dic['v_spike']+EIF_dic['v_spike']/2)
+EIF['v_spike'] = (25.0-45.0)
 EIF['v_thresh'] = (EIF_dic['v_thresh']-EIF_dic['v_thresh']/2,EIF_dic['v_thresh']+EIF_dic['v_thresh']/2)
 EIF['v_rest'] = (EIF_dic['v_rest']-EIF_dic['v_rest']/2,EIF_dic['v_rest']+EIF_dic['v_rest']/2)
 EIF['e_rev_E'] = (EIF_dic['e_rev_E']-EIF_dic['e_rev_E']/2,EIF_dic['e_rev_E']+EIF_dic['e_rev_E']/2)
@@ -40,7 +40,7 @@ EIF['e_rev_E'] = (EIF_dic['e_rev_E']-EIF_dic['e_rev_E']/2,EIF_dic['e_rev_E']+EIF
 EIF_cond_exp_isfa_ista_parameters = {
     'cm':         0.281,   # Capacitance of the membrane in nF
     'tau_refrac': 0.1,     # Duration of refractory period in ms.
-    'v_spike':  -40.0,     # Spike detection threshold in mV.
+    'v_spike':  30.0,     # Spike detection threshold in mV.
     'v_reset':  -70.6,     # Reset value for V_m after a spike. In mV.
     'v_rest':   -70.6,     # Resting membrane potential (Leak reversal potential) in mV.
     'tau_m':      9.3667,  # Membrane time constant in ms
