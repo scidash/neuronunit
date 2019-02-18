@@ -179,6 +179,15 @@ glif_dic = gc.glif.to_dict()
 explore_ranges = {}
 gd = glif_dic
 range_dic = {}
+
+# P4pg0k purkinje
+# QDKPDQ slice of monkey brain
+# YVP 5PD skull
+
+# sketchfab
+# autconverted format.
+
+
 # directly code in observations, that are direct model parameters
 for k,v in test_frame.items():
     range_dic['R_input'] = v[1].observation
