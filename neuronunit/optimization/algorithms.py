@@ -82,12 +82,6 @@ def gene_bad(offspring):
             gene_bad = True
     return gene_bad
 
-
-
-        # for gene in o:
-        #    if math.isnan(gene):
-        #        gene_bad = True
-
 def _get_offspring(parents, toolbox, cxpb, mutpb):
     '''return the offsprint, use toolbox.variate if possible'''
     if hasattr(toolbox, 'variate'):
