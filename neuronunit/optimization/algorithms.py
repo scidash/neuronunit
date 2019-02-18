@@ -110,7 +110,7 @@ def _get_worst(halloffame, nworst):
 
 def _get_elite(halloffame, nelite):
 
-    if nelite > 0 and halloffame is not None:
+    if nelite > 0 and halloffame is no None:
         normsorted_idx = numpy.argsort([ind.fitness.norm for ind in halloffame])
         #hofst = [(sum(h.dtc.scores.values()),h.dtc) for h in halloffame ]
         #ranked = sorted(hofst, key=lambda w: w[0],reverse = True)
@@ -131,7 +131,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
         cxpb,
         mutpb,
         ngen,
-        stats = None,
+        stats=None,
         hof = None,
         pf = None,
         nelite = 3,
@@ -200,7 +200,6 @@ def eaAlphaMuPlusLambdaCheckpoint(
 
         _record_stats(stats, logbook, gen, offspring, invalid_count)
 
-
         if str('selIBEA') == selection:
             if hof[0].fitness.values is None or len(hof[0].fitness.values)==0:
                 best,fit = toolbox.evaluate(hof[0:1])
@@ -209,7 +208,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
                 if np.sum(best.dtc.get_ss()) != 0:
                     print('true minimum',np.sum(hof[0].fitness.values))
                     population.append(hof[0])
-            toolbox.register("select",tools.selIBEA)
+            toolbox.register("select", tools.selIBEA)
 
         if str('selNSGA') == selection:
             if pf[0].fitness.values is None or len(pf[0].fitness.values)==0:
