@@ -10,6 +10,10 @@ import collections
 from collections import OrderedDict
 import numpy as np
 
+import pyNN
+from pyNN import neuron
+from pyNN.neuron import EIF_cond_exp_isfa_ista
+
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 
 path_params = {}
@@ -20,19 +24,17 @@ path_params['model_path'] = os.path.realpath(os.path.join(THIS_DIR,'..','models'
 import pyNN
 from pyNN import neuron
 from pyNN.neuron import EIF_cond_exp_isfa_ista
-#neurons = pyNN.Population(N_CX, pyNN.EIF_cond_exp_isfa_ista, RS_parameters)
 
 cell = neuron.create(EIF_cond_exp_isfa_ista())
 
 # https://github.com/NeuroML/NML2_LEMS_Examples/blob/master/PyNN.xml
-#cell[0].set_parameters(**LTS_parameters)
 EIF = {}
 EIF_dic = cell[0].get_parameters()
 EIF['cm'] = (EIF_dic['cm']-EIF_dic['cm']/2,EIF_dic['cm']+EIF_dic['cm']/2)
 EIF['tau_m'] = (EIF_dic['tau_m']-EIF_dic['tau_m']/2,EIF_dic['tau_m']+EIF_dic['tau_m']/2)
 EIF['b'] = (EIF_dic['b']-EIF_dic['b']/2,EIF_dic['b']+EIF_dic['b']/2)
 EIF['a'] = (EIF_dic['a']-EIF_dic['a']/2,EIF_dic['a']+EIF_dic['a']/2)
-EIF['v_spike'] = (EIF_dic['v_spike']-EIF_dic['v_spike']/2,EIF_dic['v_spike']+EIF_dic['v_spike']/2)
+EIF['v_spike'] = (25.0-45.0)
 EIF['v_thresh'] = (EIF_dic['v_thresh']-EIF_dic['v_thresh']/2,EIF_dic['v_thresh']+EIF_dic['v_thresh']/2)
 EIF['v_rest'] = (EIF_dic['v_rest']-EIF_dic['v_rest']/2,EIF_dic['v_rest']+EIF_dic['v_rest']/2)
 EIF['e_rev_E'] = (EIF_dic['e_rev_E']-EIF_dic['e_rev_E']/2,EIF_dic['e_rev_E']+EIF_dic['e_rev_E']/2)
@@ -40,7 +42,7 @@ EIF['e_rev_E'] = (EIF_dic['e_rev_E']-EIF_dic['e_rev_E']/2,EIF_dic['e_rev_E']+EIF
 EIF_cond_exp_isfa_ista_parameters = {
     'cm':         0.281,   # Capacitance of the membrane in nF
     'tau_refrac': 0.1,     # Duration of refractory period in ms.
-    'v_spike':  -40.0,     # Spike detection threshold in mV.
+    'v_spike':  30.0,     # Spike detection threshold in mV.
     'v_reset':  -70.6,     # Reset value for V_m after a spike. In mV.
     'v_rest':   -70.6,     # Resting membrane potential (Leak reversal potential) in mV.
     'tau_m':      9.3667,  # Membrane time constant in ms
@@ -55,13 +57,14 @@ EIF_cond_exp_isfa_ista_parameters = {
     'e_rev_I':  -80.0,     # Inhibitory reversal potential in mV.
     'tau_syn_I':  5.0}     # Decay time constant of the inhibitory synaptic conductance in ms.
 
-# http://www.physics.usyd.edu.au/teach_res/mp/mscripts/
-# ns_izh002.m
+
 #recordable = ['spikes', 'v', 'w', 'gsyn_exc', 'gsyn_inh']
-EIF_cond_exp_isfa_ista_initial_values = { 'v': -70.6,  \
-    'w': 0.0, \
-    'gsyn_exc': 0.0, \
-    'gsyn_inh': 0.0 }
+EIF_cond_exp_isfa_ista_initial_values = {
+    'v': -70.6,  # 'v_rest',
+    'w': 0.0,
+    'gsyn_exc': 0.0,
+    'gsyn_inh': 0.0,
+}
 # Which Parameters
 # https://www.izhikevich.org/publications/spikes.htm
 type2007 = collections.OrderedDict([
@@ -77,6 +80,8 @@ type2007 = collections.OrderedDict([
   ('RTN_burst', (40,  0.25, -65, -45,  0, 0.015, 10, -55,   50,   7))])
 
 
+# http://www.physics.usyd.edu.au/teach_res/mp/mscripts/
+# ns_izh002.m
 
 
 '''

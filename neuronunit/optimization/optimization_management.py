@@ -8,6 +8,9 @@ import pandas as pd
 import dask.bag as db
 import os
 import pickle
+from collections import Iterable, OrderedDict
+# The rheobase has been obtained seperately and cannot be db mapped.
+# Nested DB mappings dont work.
 from itertools import repeat
 import neuronunit
 import multiprocessing
@@ -269,7 +272,6 @@ def cluster_tests(use_test,backend,explore_param):
         Assume, that I have three or more clustered experimental observations,
         averaging wave measurements is inappropriate, but thats what I have.
         Try to reconstruct the clustered means, by clustering solution sets with respect to 8 waveform measurements.
-c
         The key is to realize, that averaging measurements, and computing error is very different to, taking measurements, and averaging error.
         The later is the multiobjective approach to optimization. The former is the approach used here.
         '''
@@ -415,60 +417,6 @@ def get_rh(dtc,rtest):
     return dtc
 
 
-'''
-def cluster_tests(use_test,backend,explore_param):
-
-    Given a group of conflicting NU tests, quickly exploit optimization, and variance information
-    To find subsets of tests that don't conflict.
-    Inputs:
-        backend string, signifying model backend type
-        explore_param list of dictionaries, of model parameter limits/ranges.
-        use_test, a list of tests per experimental entity.
-    Output:
-        lists of groups of less conflicted test classes.
-        lists of groups of less conflicted test class names.
-
-
-    MU = 6
-    NGEN = 7
-    test_opt = {}
-    for index,test in enumerate(use_test):
-        ga_out, DO = om.run_ga(explore_param,NGEN,[test],free_params=free_params, NSGA = True, MU = MU)
-        test_opt[test] = ga_out
-        with open('qct.p','wb') as f:
-            pickle.dump(test_opt,f)
-
-    all_val = {}
-    for key,value in test_opt.items():
-        all_val[key] = {}
-        for k in value['pf'][0].dtc.attrs.keys():
-            temp = [i.dtc.attrs[k] for i in value['pf']]
-            all_val[key][k] = temp
-
-    first_test = all_val[list(all_val.keys())[0]].values()
-    ft = all_val[list(all_val.keys())[0]]
-    X = list(first_test)
-    X_labels = all_val[list(all_val.keys())[0]].keys()
-    df1 = pd.DataFrame(X)
-    X = np.array(X)
-    est = KMeans(n_clusters=3)
-    est.fit(X)
-    y_kmeans = est.predict(X)
-    first_test = test_opt[list(test_opt.keys())[0]].values()
-    test_names = [t.name for t in test_opt.keys()]
-    test_classes = [t for t in test_opt.keys()]
-
-    grouped_testsn = {}
-    grouped_tests = {}
-
-    for i,k in enumerate(y_kmeans):
-        grouped_testsn[k] = []
-        grouped_tests[k] = []
-    for i,k in enumerate(y_kmeans):
-        grouped_testsn[k].append(test_names[i])
-        grouped_tests[k].append(test_classes[i])
-    return (grouped_tests, grouped_testsn
-'''
 def dtc_to_rheo_serial(dtc):
     # If  test taking data, and objects are present (observations etc).
     # Take the rheobase test and store it in the data transport container.
@@ -732,13 +680,13 @@ def nunit_evaluation(dtc):
                     print('gets to None score type')
     # compute the sum of sciunit score components.
     dtc.summed = dtc.get_ss()
-    #dtc.df = df
     return dtc
 
 
 
 
 def evaluate(dtc,regularization=True):
+	# compute error using L2 regularization.
     error_length = len(dtc.scores.keys())
     # assign worst case errors, and then over write them with situation informed errors as they become available.
     fitness = [ 1.0 for i in range(0,error_length) ]
@@ -820,7 +768,6 @@ def run_ga(explore_edges, max_ngen, test, free_params = None, hc = None, NSGA = 
     # https://stackoverflow.com/questions/744373/circular-or-cyclic-imports-in-python
     # These imports need to be defined with local scope to avoid circular importing problems
     # Try to fix local imports later.
-
 
     from neuronunit.optimization.optimisations import SciUnitOptimization
 
@@ -909,6 +856,16 @@ def new_genes(pop,dtcpop,td):
     the statistics of remaining genes.
     it's possible that they wont be good models either, so keep trying in that event.
     a new model from the mean of the pre-existing model attributes.
+
+    TODO:
+    boot_new_genes is a more standard, and less customized implementation of the code below.
+
+    pop, dtcpop = boot_new_genes(number_genes,dtcpop,td)
+    dtcpop = map(dtc_to_rheo,dtcpop)
+
+    Whats more boot_new_genes maps many to many (efficient).
+    Code below is maps, many to one ( less efficient).
+
     '''
     impute_gene = [] # impute individual, not impute index
     ind = WSListIndividual()
@@ -921,7 +878,7 @@ def new_genes(pop,dtcpop,td):
     # Brian and PyNN models should not have to read from a file.
     # This line satifies an older NU design flaw, that all models evaluated must have
     # a disk readable path.
-    LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
+    # LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
     dtc.attrs = {}
     for i,j in enumerate(ind):
         dtc.attrs[str(td[i])] = j
@@ -956,14 +913,76 @@ def filtered(pop,dtcpop):
     return (pop,dtcpop)
 
 
-def parallel_route(pop,dtcpop,tests,td):
+def split_list(a_list):
+    half = int(len(a_list)/2)
+    return a_list[:half], a_list[half:]
+
+def clusty(dtcbag,dtcpop):
+    '''
+    Used for searching and optimizing where averged double sets of model_parameters
+    are the most fundamental gene-unit (rather than single points in high dim parameter space).
+    In other words what is optimized sampled and explored, is the average of two waveform measurements.
+    This allows for the ultimate solution, to be expressed as two disparate parameter points, that when averaged
+    produce a good model.
+    The motivating argument for doing things this way, is because the models, and the experimental data
+    results from averaged contributions of measurements from clustered data points making a model with optimal
+    error, theoretically unaccessible.
+    '''
+    from neuronunit.optimization.optimisations import SciUnitOptimization
+    # get waveform measurements, and store in genes.
+    dtcpop = list(dtcbag.map(pred_evaluation).compute())
+    # divide the genes pool in half
+    [dtcpopa,dtcpopb] = split_list(copy.copy(dtcpop))
+    # average measurements between first half of gene pool, and second half.
+    flat_iter = iter( (dtca,dtcb) for dtca in dtcpopa for dtcb in dtcpopb )
+    for dtca, dtcb in flat_iter:
+        for i,_ in enumerate(dtcb.preds):
+            p = (dtca.preds[i]+dtcb.preds[i])/2
+            score = dtca.tests[i].compute_score(obs,p)
+            dtcb.tests[i] = dtca.tests[i]
+            dtcb.twin = dtca.twin = None
+            dtca.twin = dtcb.attrs
+            dtcb.twin = dtca.attrs
+            # store the averaged values in the first half of genes.
+            dtca.scores[dtca.test.name] = 1.0 - score.norm_score
+            # store the averaged values in the second half of genes.
+            dtcb.scores[dtcb.test.name] = 1.0 - score.norm_score
+    dtcpop = dtcpopa
+    dtcpop.extend(dtcpopb)
+    return dtcpop
+
+
+def boot_new_genes(number_genes,dtcpop):
+    '''
+    Boot strap new genes to make up for completely called onesself.
+    '''
+    dtcpop = copy.copy(dtcpop)
+    DO = SciUnitOptimization(offspring_size = number_genes, error_criterion = [dtcpop[0].test], boundary_dict = boundary, backend = dtcpop[0].backend, selection = str('selNSGA'))#,, boundary_dict = ss, elite_size = 2, hc=hc)
+    DO.setnparams(nparams = len(free_params), boundary_dict = ss)
+    DO.setup_deap()
+    DO.init_pop()
+    population = DO.population
+    dtcpop = None
+    dtcpop = update_dtc_pop(population,DO.td)
+    return dtcpop
+
+def parallel_route(pop,dtcpop,tests,td,clustered=False):
     for d in dtcpop:
         d.tests = copy.copy(tests)
     dtcpop = list(map(format_test,dtcpop))
     #import pdb; pdb.set_trace()
     npart = np.min([multiprocessing.cpu_count(),len(dtcpop)])
     dtcbag = db.from_sequence(dtcpop, npartitions = npart)
-    dtcpop = list(dtcbag.map(nunit_evaluation).compute())
+    if clustered == True:
+
+        dtcpop = list(dtcbag.map(nunit_evaluation).compute())
+    else:
+    	dtcpop = list(dtcbag.map(nunit_evaluation).compute())
+
+
+
+    if dtc.score is not None:
+        dtc = score_proc(dtc,rtest,copy.copy(score))
     for i,d in enumerate(dtcpop):
         if not hasattr(pop[i],'dtc'):
             pop[i] = WSListIndividual(pop[i])
@@ -974,6 +993,9 @@ def parallel_route(pop,dtcpop,tests,td):
     return pop, dtcpop
 
 def make_up_lost(pop,dtcpop,td):
+    '''
+    make new genes. Two ways to do This
+    '''
     before = len(pop)
     (pop,dtcpop) = filtered(pop,dtcpop)
     after = len(pop)
