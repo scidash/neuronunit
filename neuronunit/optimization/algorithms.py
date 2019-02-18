@@ -18,25 +18,23 @@ Copyright (c) 2016, EPFL/Blue Brain Project
 """
 
 
-import random
+import copy
 import logging
+import math
+import pdb
+import pickle
+import random
 
 import deap.algorithms
 import deap.tools
-import pickle
-import numpy
-
-import copy
-from neuronunit.optimization import optimization_management as om
-
-import pdb
-import math
 #from . import tools
 import numpy as np
+from deap.tools import selNSGA2
+
+from neuronunit.optimization import optimization_management as om
 
 logger = logging.getLogger('__main__')
 
-from deap.tools import selNSGA2
 
 def _evaluate_invalid_fitness(toolbox, population):
     '''Evaluate the individuals with an invalid fitness
@@ -61,13 +59,16 @@ def _update_history_and_hof(halloffame,pf, history, population,td):
 
     if halloffame is not None:
         halloffame.update(population)
+    if history is not None:
+        history.update(population)
+
     if pf is not None:
         try:
             pf.update(population)
         except:
             pass
 
-    return (halloffame,pf)
+    return (halloffame,pf,history)
 
 
 def _record_stats(stats, logbook, gen, population, invalid_count):
@@ -183,31 +184,33 @@ def eaAlphaMuPlusLambdaCheckpoint(
         population = parents + invalid_ind
         population = [ p for p in population if len(p.fitness.values)!=0 ]
         invalid_count = len(invalid_ind)
-        hof, pf = _update_history_and_hof(hof, pf, history, offspring, td)
-
+        hof, pf,history = _update_history_and_hof(hof, pf, history, offspring, td)
+        # TODO recreate a stagnation termination criterion.
+        # if genes don't get substantially better in 50 generations.
+        # Stop.
+        '''
         if pf[0].dtc is not None:
             print('true minimum',pf[0].dtc.get_ss())
         elif hof[0].dtc is not None:
             print('true minimum',hof[0].dtc.get_ss())
+        '''
 
-
-        population = [ p for p in population if p if len(p.fitness.values)!=0]
 
         _record_stats(stats, logbook, gen, offspring, invalid_count)
 
 
         if str('selIBEA') == selection:
-            if hof[0].fitness.values is None:
+            if hof[0].fitness.values is None or len(hof[0].fitness.values)==0:
                 best,fit = toolbox.evaluate(hof[0:1])
                 best.fitness.values = fit
                 best.dtc.get_ss()
                 if np.sum(best.dtc.get_ss()) != 0:
                     print('true minimum',np.sum(hof[0].fitness.values))
                     population.append(hof[0])
-            #toolbox.register("select",tools.selIBEA)
+            toolbox.register("select",tools.selIBEA)
 
         if str('selNSGA') == selection:
-            if pf[0].fitness.values is None:
+            if pf[0].fitness.values is None or len(pf[0].fitness.values)==0:
                 best,fit = toolbox.evaluate(pf[0:1])
                 best.fitness.values = fit
                 best.dtc.get_ss()
@@ -215,6 +218,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
                     print('true minimum',np.sum(pf[0].fitness.values))
                     print(best.dtc.get_ss())
                     population.append(best[0])
+        population = [ p for p in population if p if len(p.fitness.values)!=0]
 
         toolbox.register("select",selNSGA2)
         parents = toolbox.select(population, mu)

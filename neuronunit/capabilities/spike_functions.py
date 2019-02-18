@@ -8,6 +8,11 @@ from numba import jit
 import sciunit
 import math
 
+@jit
+def get_diff_spikes(vm):
+    differentiated = np.diff(vm)
+    return differentiated
+
 def get_spike_train(vm, threshold=0.0*mV):
     """
      vm: a neo.core.AnalogSignal corresponding to a membrane potential trace.
@@ -18,6 +23,13 @@ def get_spike_train(vm, threshold=0.0*mV):
     """
     spike_train = threshold_detection(vm,threshold=threshold)
     return spike_train
+
+@jit
+def get_diff(vm):
+    differentiated = np.diff(vm)
+    spikes = len([np.any(differentiated) > 0.000193667327364])
+    times = [np.any(differentiated) > 0.000193667327364]
+    return (spikes, times)
 
 # Membrane potential trace (1D numpy array) to matrix of spike snippets (2D numpy array)
 def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
@@ -32,12 +44,18 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
      a neo.core.AnalogSignal where each column contains a membrane potential
      snippets corresponding to one spike.
     """
-    spike_train = threshold_detection(vm,threshold=threshold)
-    # Fix for 0-length spike train issue in elephant.
     try:
+        spike_train = threshold_detection(vm,threshold=threshold)
+    # Fix for 0-length spike train issue in elephant.
         assert len(spike_train) != 0
-    except TypeError:
-        spike_train = neo.core.SpikeTrain([],t_start=spike_train.t_start,
+    except:
+        try:
+            spikes,times = get_diff(vm)
+            print(times)
+            import pdb; pdb.set_trace()
+            #spike_train =
+        except TypeError:
+            spike_train = neo.core.SpikeTrain([],t_start=spike_train.t_start,
                                              t_stop=spike_train.t_stop,
                                              units=spike_train.units)
     too_short = True
@@ -77,11 +95,15 @@ def spikes2amplitudes(spike_waveforms):
     if spike_waveforms is not None:
         if len(spike_waveforms)==1:
             ampls = np.max(np.array(spike_waveforms))
-        else:
+        elif len(spike_waveforms)>1:
             pre_ampls = []
             for mp in spike_waveforms:
                 pre_ampls.append(np.max(np.array(mp)))
             ampls = pre_ampls[0]
+        elif len(spike_waveforms) == 0:
+            #import pdb; pdb.set_trace()
+            ampls = np.array([])
+
     else:
         ampls = np.array([])
     return ampls * spike_waveforms.units
@@ -97,31 +119,36 @@ def spikes2widths(spike_waveforms):
     """
     n_spikes = spike_waveforms.shape[1]
     widths = []
+    index_high = 0
+
     for i in range(n_spikes):
         s = spike_waveforms[:,i].squeeze()
         try:
-            x_high = int(np.argmax(s))
-            high = s[x_high]
+            index_high = int(np.argmax(s))
+            high = s[index_high]
         except:
-            high = 0
+            index_high = 0
+            # dont assume spikes are above zero.
+            high = np.mean(s)
             for k in s:
                 for i,j in enumerate(k):
                     if j>high:
                         high  = j
-                        x_high = i
+                        index_high = i
 
-
-        if x_high > 0:
+            #import pdb; pdb.set_trace()
+        if index_high > 0:
             try: # Use threshold to compute half-max.
                 y = np.array(s)
-                dvdt = np.diff(y)
+                dvdt = get_diff_spikes(y)
+                # dvdt = np.diff(y)
                 trigger = dvdt.max()/10
                 x_loc = int(np.where(dvdt >= trigger)[0][0])
                 thresh = (s[x_loc]+s[x_loc+1])/2
                 mid = (high+thresh)/2
             except: # Use minimum value to compute half-max.
-                sciunit.log(("Could not compute threshold; using pre-spike "
-                             "minimum to compute width"))
+                #sciunit.log(("Could not compute threshold; using pre-spike "
+                #             "minimum to compute width"))
                 low = np.min(s[:x_high])
                 mid = (high+low)/2
             n_samples = sum(s>mid) # Number of samples above the half-max.

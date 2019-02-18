@@ -11,6 +11,7 @@
 # To keep the standard running version of minimal and memory efficient, not all available packages are loaded by default. In the cell below I import a mixture common python modules, and custom developed modules associated with NeuronUnit (NU) development
 #!pip install dask distributed seaborn
 #!bash after_install.sh
+
 import numpy as np
 import os
 import pickle
@@ -34,6 +35,7 @@ from sklearn.model_selection import ParameterGrid
 from neuronunit.models.interfaces import glif
 from neuronunit.optimization.data_transport_container import DataTC
 from neuronunit.optimization.optimization_management import grid_search
+import matplotlib.pyplot as plt
 
 # # The Izhiketich model is instanced using some well researched parameter sets.
 # First lets get the points in parameter space, that Izhikich himself has published about. These points are often used by the open source brain project to establish between model reproducibility. The itial motivating factor for choosing these points as constellations, of all possible parameter space subsets, is that these points where initially tuned and used as best guesses for matching real observed experimental recordings.
@@ -85,7 +87,7 @@ for k,v in test_frame.items():
    if "Olfactory bulb (main) mitral cell" not in k:
        pass
    if "Olfactory bulb (main) mitral cell" in k:
-
+       pass
        #v[0] = RheobaseTestP(obs['Rheobase'])
 df = pd.DataFrame.from_dict(obs_frame)
 
@@ -101,6 +103,10 @@ df['Hippocampus CA1 pyramidal cell']
 from neuronunit.optimization import model_params
 from neuronunit.optimization.optimization_management import inject_and_plot, cluster_tests
 
+import pyNN
+from pyNN import neuron
+from pyNN.neuron import EIF_cond_exp_isfa_ista
+#neurons = pyNN.Population(N_CX, pyNN.EIF_cond_exp_isfa_ista, RS_parameters)
 
 EIF = model_params.EIF
 
@@ -114,6 +120,28 @@ dtc.rheobase = rt
 inject_and_plot(dtc,figname='EIF_problem')
 for key, use_test in test_frame.items():
     grouped_tests, grouped_tests =cluster_tests(use_test,str('PYNN'),EIF)
+dtc = DataTC()
+dtc.attrs = EIF_dic
+dtc.backend = str('PYNN')
+dtc.cell_name = str('PYNN')
+dtc.tests = test_frame[list(test_frame.keys())[0]]
+dtc = dtc_to_rheo(dtc)
+
+dtc = format_test(dtc)
+dtc.vtest[0]['injected_square_current']['amplitude']= dtc.vtest[0]['injected_square_current']['amplitude']
+model.inject_square_current(dtc.vtest[0])
+
+#model.inject_square_current(pred1)
+vm = model.get_membrane_potential()
+plt.clf()
+plt.plot(vm.times,vm)
+plt.savefig('debug.png')
+
+dtc = nunit_evaluation(dtc)
+
+
+
+
 
 try:
     with open('adexp_seeds.p','rb') as f:
@@ -181,6 +209,10 @@ except:
     for key, use_test in test_frame.items():
         seed = seeds[key]
         print(seed)
+        # Todo optimize on clustered tests
+        print(grouped_tests)
+        print(grouped_tests)
+
         ga_out, _ = om.run_ga(explore_ranges,NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU, model_type = str('GLIF'),seed_pop=seed)
         test_opt =  {str('multi_objective_glif')+str(seed):ga_out}
         with open('multi_objective_glif.p','wb') as f:
