@@ -7,11 +7,16 @@
 #
 # You can run use dockerhub to get the appropriate file, and launch this notebook using Kitematic.
 
+# This is code, change cell type to markdown.
+# ![alt text](plan.jpg "Pub plan")
+
+
 # # Import libraries
 # To keep the standard running version of minimal and memory efficient, not all available packages are loaded by default. In the cell below I import a mixture common python modules, and custom developed modules associated with NeuronUnit (NU) development
+
+
 #!pip install dask distributed seaborn
 #!bash after_install.sh
-
 import numpy as np
 import os
 import pickle
@@ -34,9 +39,6 @@ import copy
 from sklearn.model_selection import ParameterGrid
 from neuronunit.models.interfaces import glif
 from neuronunit.optimization.data_transport_container import DataTC
-from neuronunit.optimization.optimization_management import grid_search
-import matplotlib.pyplot as plt
-
 # # The Izhiketich model is instanced using some well researched parameter sets.
 # First lets get the points in parameter space, that Izhikich himself has published about. These points are often used by the open source brain project to establish between model reproducibility. The itial motivating factor for choosing these points as constellations, of all possible parameter space subsets, is that these points where initially tuned and used as best guesses for matching real observed experimental recordings.
 
@@ -55,7 +57,8 @@ pvis_cortex = {"id": 111, "name": "Neocortex pyramidal cell layer 5-6", "neuron_
 #does not have rheobase
 olf_mitral = {"id": 129, "name": "Olfactory bulb (main) mitral cell", "neuron_db_id": 267, "nlex_id": "nlx_anat_100201"}
 ca1_pyr = {"id": 85, "name": "Hippocampus CA1 pyramidal cell", "neuron_db_id": 258, "nlex_id": "sao830368389"}
-pipe = [ fi_basket, ca1_pyr, purkinje,  pvis_cortex,olf_mitral]
+pipe = [ fi_basket, ca1_pyr, purkinje,  pvis_cortex]
+
 
 electro_tests = []
 obs_frame = {}
@@ -87,10 +90,10 @@ for k,v in test_frame.items():
    if "Olfactory bulb (main) mitral cell" not in k:
        pass
    if "Olfactory bulb (main) mitral cell" in k:
-       pass
-       #v[0] = RheobaseTestP(obs['Rheobase'])
+       import pdb; pdb.set_trace()
+       v[0] = RheobaseTestP(obs['Rheobase'])
 df = pd.DataFrame.from_dict(obs_frame)
-
+print(test_frame.keys())
 
 
 # In the data frame below, you can see many different cell types
@@ -100,132 +103,117 @@ df['Hippocampus CA1 pyramidal cell']
 # In otherwords use information that is readily amenable into hardcoding into equations
 # Select out the 'Neocortex pyramidal cell layer 5-6' below, as a target for optimization
 
-#!pip install lazyarray
-clustered_tests = pickle.load(open('clustered_tests.p','rb'))
-grouped_tests = clustered_tests['gtc']
-grouped_testsn = clustered_tests['gtn']
-#{'gtc':,'gtn':grouped_testsn}
-gc = glif.GC()
-glif_dic = gc.glif.to_dict()
-explore_ranges = {}
-gd = glif_dic
-explore_ranges['El'] = (glif_dic['El'],glif_dic['El']+10.0)
-explore_ranges['R_input'] = (glif_dic['R_input']-glif_dic['R_input']/2.0,glif_dic['R_input']+glif_dic['R_input']/2.0)
-explore_ranges['C'] = (glif_dic['C']-glif_dic['C']/2.0,glif_dic['C']+glif_dic['C']/2.0)
-explore_ranges['th_inf'] = (glif_dic['th_inf']-glif_dic['th_inf']/4.0,glif_dic['th_inf']+glif_dic['th_inf']/4.0)
-model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = (str('GLIF')))
-store_glif_results = {}
-params = gc.glif.to_dict()
-store_glif_results = {}
+free_params = ['a','b','k','c','C','d','vPeak','vr','vt']
+hc_ = reduced_cells['RS']
+hc_['vr'] = -65.2261863636364
+hc_['vPeak'] = hc_['vr'] + 86.364525297619
+explore_param['C'] = (hc_['C']-20,hc_['C']+20)
+explore_param['vr'] = (hc_['vr']-5,hc_['vr']+5)
+use_test = test_frame["Neocortex pyramidal cell layer 5-6"]
 
-import pyNN
-from pyNN import neuron
-from pyNN.neuron import EIF_cond_exp_isfa_ista
-#neurons = pyNN.Population(N_CX, pyNN.EIF_cond_exp_isfa_ista, RS_parameters)
+test_opt = {}
 
-cell = neuron.create(EIF_cond_exp_isfa_ista())
-#cell[0].set_parameters(**LTS_parameters)
-explore_ranges = {}
-EIF_dic = cell[0].get_parameters()
-explore_ranges['cm'] = (EIF_dic['cm']-EIF_dic['cm']/2,EIF_dic['cm']+EIF_dic['cm']/2)
-explore_ranges['tau_m'] = (EIF_dic['tau_m']-EIF_dic['tau_m']/2,EIF_dic['tau_m']+EIF_dic['tau_m']/2)
-explore_ranges['b'] = (EIF_dic['b']-EIF_dic['b']/2,EIF_dic['b']+EIF_dic['b']/2)
-explore_ranges['a'] = (EIF_dic['a']-EIF_dic['a']/2,EIF_dic['a']+EIF_dic['a']/2)
-explore_ranges['v_spike'] = (25.0,50)
-explore_ranges['v_thresh'] = (EIF_dic['v_thresh']-EIF_dic['v_thresh']/2,EIF_dic['v_thresh']+EIF_dic['v_thresh']/2)
-explore_ranges['v_rest'] = (EIF_dic['v_rest']-EIF_dic['v_rest']/2,EIF_dic['v_rest']+EIF_dic['v_rest']/2)
-explore_ranges['e_rev_E'] = (EIF_dic['e_rev_E']-EIF_dic['e_rev_E']/2,EIF_dic['e_rev_E']+EIF_dic['e_rev_E']/2)
-
-from neuronunit.tests import RheobaseTestP, fi, RheobaseTest
-import time
-model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = 'PYNN')
-model.set_attrs(cell[0].get_parameters())
-start1 = time.time()
-rt = fi.RheobaseTestP(obs_frame['Dentate gyrus basket cell']['Rheobase'])
-pred1 = rt.generate_prediction(model)
-end1 = time.time()
+with open('data_dump.p','wb') as f:
+    pickle.dump(test_opt,f)
 
 
-dtc = DataTC()
-dtc.attrs = EIF_dic
-dtc.backend = str('PYNN')
-dtc.cell_name = str('PYNN')
-dtc.tests = test_frame[list(test_frame.keys())[0]]
-dtc = dtc_to_rheo(dtc)
+use_test[0].observation
 
-dtc = format_test(dtc)
-dtc.vtest[0]['injected_square_current']['amplitude']= dtc.vtest[0]['injected_square_current']['amplitude']
-model.inject_square_current(dtc.vtest[0])
+rtp = RheobaseTestP(use_test[0].observation)
+use_test[0] = rtp
 
-#model.inject_square_current(pred1)
-vm = model.get_membrane_potential()
-plt.clf()
-plt.plot(vm.times,vm)
-plt.savefig('debug.png')
 
-dtc = nunit_evaluation(dtc)
-import pdb; pdb.set_trace()
+reduced_cells.keys()
 
 
 
 
-try:
-    with open('adexp_seeds.p','rb') as f:
-        seeds = pickle.load(f)
-    assert seeds is not None
-
-except:
-    seeds, df = grid_search(explore_ranges,test_frame,backend=str('PYNN'))
-
-
-MU = 6
-NGEN = 80
-
-try:
-    with open('multi_objective_adexp.p','rb') as f:
-        test_opt = pickle.load(f)
-except:
-    for key, use_test in test_frame.items():
-        seed = seeds[key]
-        print(seed)
-        ga_out, _ = om.run_ga(explore_ranges,NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU, model_type = str('PYNN'),seed_pop=seed)
-        test_opt =  {str('multi_objective_PYNN')+str(seed):ga_out}
-        with open('multi_objective_adexp.p','wb') as f:
-            pickle.dump(test_opt,f)
 
 df = pd.DataFrame(index=list(test_frame.keys()),columns=list(reduced_cells.keys()))
-
 MU = 6
 NGEN = 90
+
+
+model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = (str('HH')))
+
+
+explore_ranges = {'E_Na' : (40,70), 'g_Na':(100.0,140.0), 'C_m':(0.5,1.5)}
+
+
+
+attrs_hh = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3, \
+         'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -77.0, 'E_Na' : 50.0, 'vr':-65.0 }
+
 gc = glif.GC()
-glif_dic = gc.glif.to_dict()
-explore_ranges = {}
-gd = glif_dic
-range_dic = {}
-# directly code in observations, that are direct model parameters
-for k,v in test_frame.items():
-    range_dic['R_input'] = v[1].observation
-    range_dic['C'] = v[3].observation
-    range_dic['th_inf'] = v[7].observation
-explore_ranges['El'] = (glif_dic['El'],glif_dic['El']+10.0)
-#explore_ranges['R_input'] = (glif_dic['R_input']-glif_dic['R_input']/2.0,glif_dic['R_input']+glif_dic['R_input']/2.0)
-#explore_ranges['C'] = (glif_dic['C']-glif_dic['C']/2.0,glif_dic['C']+glif_dic['C']/2.0)
-#explore_ranges['th_inf'] = (glif_dic['th_inf']-glif_dic['th_inf']/4.0,glif_dic['th_inf']+glif_dic['th_inf']/4.0)
-model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = (str('GLIF')))
+explore_params = gc.glif.to_dict()
+explore_params['El'] = (explore_params['El'],explore_params['El']+10.0)
+explore_params['R_input'] = (explore_params['R_input']-explore_params['R_input']/2.0,explore_params['R_input']+explore_params['R_input']/2.0)
+explore_params['C'] = (explore_params['C']-explore_params['C']/2.0,explore_params['C']+explore_params['C']/2.0)
+explore_params['th_inf'] = (explore_params['th_inf']-explore_params['th_inf']/4.0,explore_params['th_inf']+explore_params['th_inf']/4.0)
 
 store_glif_results = {}
 params = gc.glif.to_dict()
+grid = ParameterGrid(explore_ranges)
 store_glif_results = {}
+
+from neuronunit.models.backends import glif
+gbe = glif.GLIFBackend()
+dtc = DataTC()
+dtc.backend = str('GLIF')
+#(test, dtc) = test_and_models
+obs = test.observation
+backend_ = dtc.backend
+model = mint_generic_model(backend_)
+model.set_attrs(dtc.attrs)
+print(gbe)
+import pdb; pdb.set_trace()
+
 try:
     with open('glif_seeds.p','rb') as f:
         seeds = pickle.load(f)
     assert seeds is not None
 
 except:
-    seeds, df = grid_search(explore_ranges,test_frame,backend=str('GLIF'))
+    for local_attrs in grid:
+        store_glif_results[str(local_attrs.values())] = {}
+        dtc = DataTC()
+        dtc.tests = use_test
+        print(dtc.attrs)
+
+        dtc.backend = 'GLIF'
+        dtc.cell_name = 'GLIF'
+        for key, use_test in test_frame.items():
+            dtc.tests = use_test
+            dtc = dtc_to_rheo(dtc)
+            dtc = format_test(dtc)
+            if dtc.rheobase is not None:
+                if dtc.rheobase!=-1.0:
+                    dtc = nunit_evaluation(dtc)
+            print(dtc.get_ss())
+            store_glif_results[str(local_attrs.values())][key] = dtc.get_ss()
+        df = pd.DataFrame(store_hh_results)
+        best_params = {}
+        for index, row in df.iterrows():
+            best_params[index] = row == row.min()
+            best_params[index] = best_params[index].to_dict()
+
+
+        seeds = {}
+        for k,v in best_params.items():
+            for nested_key,nested_val in v.items():
+                if True == nested_val:
+                    seed = nested_key
+                    seeds[k] = seed
+        with open('glif_seeds.p','wb') as f:
+            pickle.dump(seeds,f)
+
+
+
+
+
 
 MU = 6
-NGEN = 80
+NGEN = 150
 
 
 try:
@@ -236,11 +224,7 @@ except:
     for key, use_test in test_frame.items():
         seed = seeds[key]
         print(seed)
-        # Todo optimize on clustered tests
-        print(grouped_tests)
-        print(grouped_tests)
-
-        ga_out, _ = om.run_ga(explore_ranges,NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU, model_type = str('GLIF'),seed_pop=seed)
+        ga_out, _ = om.run_ga(explore_params,NGEN,use_test,free_params=explore_params.keys(), NSGA = True, MU = MU, model_type = str('glif'),seed_pop=seed)#,hc = hold_constant_hh)
         test_opt =  {str('multi_objective_glif')+str(seed):ga_out}
         with open('multi_objective_glif.p','wb') as f:
             pickle.dump(test_opt,f)
@@ -248,18 +232,51 @@ except:
 
 
 
-model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = (str('HH')))
-explore_ranges = {'E_Na' : (40,70), 'g_Na':(100.0,140.0), 'C_m':(0.5,1.5)}
-attrs_hh = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3, \
-         'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -77.0, 'E_Na' : 50.0, 'vr':-65.0 }
-
 try:
     with open('HH_seeds.p','rb') as f:
         seeds = pickle.load(f)
     assert seeds is not None
 
 except:
-    seeds, df = grid_search(explore_ranges,test_frame,backend=str('HH'))
+
+    grid = ParameterGrid(explore_ranges)
+    store_hh_results = {}
+    for local_attrs in grid:
+        store_hh_results[str(local_attrs.values())] = {}
+        dtc = DataTC()
+        dtc.tests = use_test
+        updatable_attrs = copy.copy(attrs_hh)
+        updatable_attrs.update(local_attrs)
+        dtc.attrs = updatable_attrs
+        print(updatable_attrs)
+
+        dtc.backend = 'HH'
+        dtc.cell_name = 'Point Hodgkin Huxley'
+        for key, use_test in test_frame.items():
+            dtc.tests = use_test
+            dtc = dtc_to_rheo(dtc)
+            dtc = format_test(dtc)
+            if dtc.rheobase is not None:
+                if dtc.rheobase!=-1.0:
+                    dtc = nunit_evaluation(dtc)
+            print(dtc.get_ss())
+            store_hh_results[str(local_attrs.values())][key] = dtc.get_ss()
+    df = pd.DataFrame(store_hh_results)
+    best_params = {}
+    for index, row in df.iterrows():
+        best_params[index] = row == row.min()
+        best_params[index] = best_params[index].to_dict()
+
+
+    seeds = {}
+    for k,v in best_params.items():
+        for nested_key,nested_val in v.items():
+            if True == nested_val:
+                seed = nested_key
+                seeds[k] = seed
+    with open('HH_seeds.p','wb') as f:
+        pickle.dump(seeds,f)
+
 
 
 attrs_hh = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3, \
@@ -296,44 +313,52 @@ except:
         with open('multi_objective_HH.p','wb') as f:
             pickle.dump(test_opt,f)
 
-# # The Izhiketich model is instanced using some well researched parameter sets.
-# First lets get the points in parameter space, that Izhikich himself has published about. These points are often used by the open source brain project to establish between model reproducibility. The itial motivating factor for choosing these points as constellations, of all possible parameter space subsets, is that these points where initially tuned and used as best guesses for matching real observed experimental recordings.
 
-explore_param = {k:(np.min(v),np.max(v)) for k,v in reduced_dict.items()}
-
-
-# # Tweak Izhikitich equations
-# with educated guesses based on information that is already encoded in the predefined experimental observations.
-# In otherwords use information that is readily amenable into hardcoding into equations
-# Select out the 'Neocortex pyramidal cell layer 5-6' below, as a target for optimization
-
-free_params = ['a','b','k','c','C','d','vPeak','vr','vt']
-hc_ = reduced_cells['RS']
-hc_['vr'] = -65.2261863636364
-hc_['vPeak'] = hc_['vr'] + 86.364525297619
-explore_param['C'] = (hc_['C']-20,hc_['C']+20)
-explore_param['vr'] = (hc_['vr']-5,hc_['vr']+5)
-use_test = test_frame["Neocortex pyramidal cell layer 5-6"]
-test_opt = {}
-with open('data_dump.p','wb') as f:
-    pickle.dump(test_opt,f)
-use_test[0].observation
-rtp = RheobaseTestP(use_test[0].observation)
-use_test[0] = rtp
-reduced_cells.keys()
 
 
 with open('Izh_seeds.p','rb') as f:
     seeds = pickle.load(f)
 
 try:
-
+    #assert 1==2
     assert seeds is not None
 
 except:
     print('exceptional circumstances pickle file does not exist, rebuilding sparse grid for Izhikich')
     # Below we perform a sparse grid sampling over the parameter space, using the published and well corrobarated parameter points, from Izhikitch publications, and the Open Source brain, shows that without optimization, using off the shelf parameter sets to fit real-life biological cell data, does not work so well.
-    seeds, df = grid_search(explore_ranges,test_frame,backend=str('RAW'))
+
+    for k,v in reduced_cells.items():
+        temp = {}
+        temp[str(v)] = {}
+        dtc = DataTC()
+        dtc.tests = use_test
+        dtc.attrs = v
+        dtc.backend = 'RAW'
+        dtc.cell_name = 'vanilla'
+        for key, use_test in test_frame.items():
+            dtc.tests = use_test
+            dtc = dtc_to_rheo(dtc)
+            dtc = format_test(dtc)
+            if dtc.rheobase is not None:
+                if dtc.rheobase!=-1.0:
+                    dtc = nunit_evaluation(dtc)
+            df[k][key] = dtc.get_ss()
+
+    best_params = {}
+    for index, row in df.iterrows():
+        best_params[index] = row == row.min()
+        best_params[index] = best_params[index].to_dict()
+
+
+    seeds = {}
+    for k,v in best_params.items():
+        for nested_key,nested_val in v.items():
+            if True == nested_val:
+                seed = reduced_cells[nested_key]
+                seeds[k] = seed
+    with open('Izh_seeds.p','wb') as f:
+        pickle.dump(seeds,f)
+
 
 
 
