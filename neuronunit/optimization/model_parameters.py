@@ -53,17 +53,15 @@ EIF_cond_exp_isfa_ista_parameters = {
     'e_rev_E':    0.0,     # Excitatory reversal potential in mV.
     'tau_syn_E':  5.0,     # Decay time constant of excitatory synaptic conductance in ms.
     'e_rev_I':  -80.0,     # Inhibitory reversal potential in mV.
-    'tau_syn_I':  5.0,     # Decay time constant of the inhibitory synaptic conductance in ms.
+    'tau_syn_I':  5.0}     # Decay time constant of the inhibitory synaptic conductance in ms.
 
 # http://www.physics.usyd.edu.au/teach_res/mp/mscripts/
 # ns_izh002.m
 #recordable = ['spikes', 'v', 'w', 'gsyn_exc', 'gsyn_inh']
-EIF_cond_exp_isfa_ista_initial_values = {
-    'v': -70.6,  # 'v_rest',
-    'w': 0.0,
-    'gsyn_exc': 0.0,
-    'gsyn_inh': 0.0,
-}
+EIF_cond_exp_isfa_ista_initial_values = { 'v': -70.6,  \
+    'w': 0.0, \
+    'gsyn_exc': 0.0, \
+    'gsyn_inh': 0.0 }
 # Which Parameters
 # https://www.izhikevich.org/publications/spikes.htm
 type2007 = collections.OrderedDict([

@@ -642,7 +642,7 @@ def format_test(dtc):
 
 
 
-def allocate_worst(dtc,tests):
+def allocate_worst(tests,dtc):
     # If the model fails tests, and cannot produce model driven data
     # Allocate the worst score available.
     for t in tests:
