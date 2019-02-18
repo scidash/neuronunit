@@ -2,53 +2,60 @@
 # setting of an appropriate backend.
 #matplotlib.use('agg')
 
-import copy
-import logging
-import math
-import multiprocessing
+import numpy as np
+import dask.bag as db
+import pandas as pd
+import dask.bag as db
 import os
 import pickle
 from collections import Iterable, OrderedDict
 # The rheobase has been obtained seperately and cannot be db mapped.
 # Nested DB mappings dont work.
 from itertools import repeat
-
-import dask.bag as db
-import numpy as np
-import pandas as pd
-from deap import base
-from numba import jit
-from sklearn.cluster import KMeans
-from sklearn.model_selection import ParameterGrid
-
 import neuronunit
+import multiprocessing
+npartitions = multiprocessing.cpu_count()
+from collections import Iterable
+from numba import jit
+from sklearn.model_selection import ParameterGrid
+from itertools import repeat
+from collections import OrderedDict
+
+
+import logging
+logger = logging.getLogger('__main__')
+import copy
+import math
 import quantities as pq
-# Import get_neab has to happen exactly here. It has to be called only on
-from neuronunit import tests
-from neuronunit.models.reduced import ReducedModel
-from neuronunit.optimization import get_neab
-from neuronunit.optimization import model_parameters as modelp
-from neuronunit.optimization.data_transport_container import DataTC
-from neuronunit.optimization.model_parameters import model_params, path_params
-from neuronunit.tests.fi import RheobaseTest  # as discovery
-from neuronunit.tests.fi import RheobaseTestP  # as discovery
+import numpy as np
+from itertools import repeat
+import numpy
+from sklearn.cluster import KMeans
+
+
+from deap import base
 from pyneuroml import pynml
 
-npartitions = multiprocessing.cpu_count()
-
-
-logger = logging.getLogger('__main__')
-
-
-
-
+from neuronunit.optimization.data_transport_container import DataTC
 #from neuronunit.models.interfaces import glif
 
+# Import get_neab has to happen exactly here. It has to be called only on
+from neuronunit import tests
+from neuronunit.optimization import get_neab
+from neuronunit.models.reduced import ReducedModel
+from neuronunit.optimization.model_parameters import model_params, path_params
+from neuronunit.optimization import model_parameters as modelp
 
 
 
 
+from neuronunit.tests.fi import RheobaseTestP# as discovery
+from neuronunit.tests.fi import RheobaseTest# as discovery
 
+import dask.bag as db
+# The rheobase has been obtained seperately and cannot be db mapped.
+# Nested DB mappings dont work.
+from itertools import repeat
 # DEAP mutation strategies:
 # https://deap.readthedocs.io/en/master/api/tools.html#deap.tools.mutESLogNormal
 class WSListIndividual(list):
@@ -97,7 +104,6 @@ def make_fake_observations(tests,backend):
     pt = format_params(tests,rheobase)
     #ptbag = db.from_sequence(pt)
     ptbag = db.from_sequence(pt[1::])
-    fdsafdsa 
 
     predictions = list(ptbag.map(obtain_predictions).compute())
     predictions.insert(0,rheobase)
@@ -149,7 +155,7 @@ def round_trip_test(tests,backend):
     ga_out, DO = run_ga(explore_param,NGEN,tests,free_params=free_params, NSGA = True, MU = MU, backed=backend, selection=str('selNSGA2'))
     best = ga_out['pf'][0].dtc.get_ss()
     print(Bool(best < 0.5))
-    if Bool(best >= 0.5:
+    if Bool(best >= 0.5):
         NGEN = 10
         MU = 6
         ga_out, DO = run_ga(explore_param,NGEN,tests,free_params=free_params, NSGA = True, MU = MU, backed=backend, selection=str('selNSGA2'),seed_pop=pf[0].dtc.attrs)
@@ -158,6 +164,90 @@ def round_trip_test(tests,backend):
     print('goodness of fit: ',best)
 
     return Bool(ga_out['pf'][0] < 0.5)
+
+
+def pred_only(test_and_models):
+    # Temporarily patch sciunit judge code, which seems to be broken.
+    #
+    #
+    (test, dtc) = test_and_models
+    obs = test.observation
+    backend_ = dtc.backend
+    model = mint_generic_model(backend_)
+    model.set_attrs(dtc.attrs)
+    pred = test.generate_prediction(model)
+    return pred
+
+def score_only(dtc,pred,test):
+    if pred is not None:
+        if hasattr(dtc,'prediction'):# is not None:
+            dtc.prediction[test.name] = pred
+            dtc.observation[test.name] = test.observation['mean']
+
+        else:
+            dtc.prediction = None
+            dtc.observation = None
+            dtc.prediction = {}
+            dtc.prediction[test.name] = pred
+            dtc.observation = {}
+            dtc.observation[test.name] = test.observation['mean']
+
+
+        #dtc.prediction = pred
+        score = test.compute_score(obs,pred)
+        if not hasattr(dtc,'agreement'):
+            dtc.agreement = None
+            dtc.agreement = {}
+        try:
+            dtc.agreement[str(test.name)] = np.abs(test.observation['mean'] - pred['mean'])
+        except:
+            try:
+                dtc.agreement[str(test.name)] = np.abs(test.observation['value'] - pred['value'])
+            except:
+                try:
+                    dtc.agreement[str(test.name)] = np.abs(test.observation['mean'] - pred['value'])
+                except:
+                    pass
+    else:
+        score = None
+    return score, dtc
+
+def get_centres(use_test,backend,explore_param):
+    MU = 7
+    NGEN = 7
+    test_opt = {}
+    for index,test in enumerate(use_test):
+        ga_out, DO = run_ga(explore_param,NGEN,test,free_params=free_params, NSGA = True, MU = MU,backed=backend, selection=str('selNSGA2'))
+        td = DO.td # td, transfer dictionary, a consistent, stable OrderedDict of parameter values.
+        test_opt[test.name] = ga_out
+    with open('qct.p','wb') as f:
+        pickle.dump(test_opt,f)
+
+    all_val = {}
+    for key,value in test_opt.items():
+        all_val[key] = {}
+        for k in td.keys():
+            temp = [i.dtc.attrs[k] for i in value['pf']]
+            all_val[key][k] = temp
+
+    first_test = all_val[list(all_val.keys())[0]].values()
+    ft = all_val[list(all_val.keys())[0]]
+    X = list(first_test)
+    X_labels = all_val[list(all_val.keys())[0]].keys()
+    df1 = pd.DataFrame(X)
+    X = np.array(X)
+    est = KMeans(n_clusters=3)
+    est.fit(X)
+    y_kmeans = est.predict(X)
+    centers = est.cluster_centers_
+    return td, test_opt, centres
+
+
+def save_models_for_justas(dtc):
+    with open(str(dtc.attrs)+'.csv', 'w') as writeFile:
+        writer = csv.writer(writeFile)
+        writer.writerows(lines)
+
 
 def cluster_tests(use_test,backend,explore_param):
     '''
@@ -171,31 +261,40 @@ def cluster_tests(use_test,backend,explore_param):
         lists of groups of less conflicted test classes.
         lists of groups of less conflicted test class names.
     '''
-    MU = 6
-    NGEN = 7
-    test_opt = {}
-    for index,test in enumerate(use_test):
-        ga_out, DO = run_ga(explore_param,NGEN,[test],free_params=free_params, NSGA = True, MU = MU,backed=backend, selection=str('selNSGA2'))
-        test_opt[test] = ga_out
-        with open('qct.p','wb') as f:
-            pickle.dump(test_opt,f)
+    td, test_opt, centres = get_centres(use_test,backend,explore_param)
+    cell_attrs = [ centers[:, 0],centers[:, 1], centers[:, 2] ]
+    for key, use_test in test_frame.items():
+        preds = []
+        mean_scores = []
+        '''
 
-    all_val = {}
-    for key,value in test_opt.items():
-        all_val[key] = {}
-        for k in value['pf'][0].dtc.attrs.keys():
-            temp = [i.dtc.attrs[k] for i in value['pf']]
-            all_val[key][k] = temp
+        Create a model situation analogous to the NeuroElectro data situation.
+        Assume, that I have three or more clustered experimental observations,
+        averaging wave measurements is inappropriate, but thats what I have.
+        Try to reconstruct the clustered means, by clustering solution sets with respect to 8 waveform measurements.
+        The key is to realize, that averaging measurements, and computing error is very different to, taking measurements, and averaging error.
+        The later is the multiobjective approach to optimization. The former is the approach used here.
+        '''
+        dtcpop = []
+        for ca in cell_attrs:
+            '''
+            What is the mean waveform measurement resulting from averaging over the three data points?
+            '''
+            dtc = update_dtc_pop(ca, td)
+            dtcpop.append(dtc)
+            dtc.tests = use_test # aliased variable.
+            dtc = dtc_to_rheo(dtc)
+            dtc = format_test(dtc)
+            test_and_dtc = (use_test,dtc)
 
-    first_test = all_val[list(all_val.keys())[0]].values()
-    ft = all_val[list(all_val.keys())[0]]
-    X = list(first_test)
-    X_labels = all_val[list(all_val.keys())[0]].keys()
-    df1 = pd.DataFrame(X)
-    X = np.array(X)
-    est = KMeans(n_clusters=3)
-    est.fit(X)
-    y_kmeans = est.predict(X)
+            preds.append(pred_only(test_and_dtc))
+        # waveform measurement resulting from averaging over the three data points?
+        mean_pred = np.mean(preds)
+        #model_attrs = [ dtc.attrs for dtc in dtcpop ]
+        mean_score,dtc = score_only(dtc,mean_pred,test)
+        mean_scores.append(mean_score)
+        print(mean_scores[-1])
+
     first_test = test_opt[list(test_opt.keys())[0]].values()
     test_names = [t.name for t in test_opt.keys()]
     test_classes = [t for t in test_opt.keys()]
@@ -207,7 +306,7 @@ def cluster_tests(use_test,backend,explore_param):
     for i,k in enumerate(y_kmeans):
         grouped_testsn[k].append(test_names[i])
         grouped_tests[k].append(test_classes[i])
-    return (grouped_tests, grouped_tests)
+    return (grouped_tests, grouped_tests, mean_scores)
 
 def mint_generic_model(backend):
     LEMS_MODEL_PATH = path_params['model_path']
@@ -254,11 +353,11 @@ def pred_only(test_and_models):
     pred = test.generate_prediction(model)
     return pred
 
-def bridge_judge(test_and_models):
+def bridge_judge(test_and_dtc):
     # Temporarily patch sciunit judge code, which seems to be broken.
     #
     #
-    (test, dtc) = test_and_models
+    (test, dtc) = test_and_dtc
     obs = test.observation
     backend_ = dtc.backend
     model = mint_generic_model(backend_)
@@ -266,16 +365,16 @@ def bridge_judge(test_and_models):
     pred = test.generate_prediction(model)
     if pred is not None:
         if hasattr(dtc,'prediction'):# is not None:
-            dtc.prediction[test] = pred
-            dtc.observation[test] = test.observation['mean']
+            dtc.prediction[test.name] = pred
+            dtc.observation[test.name] = test.observation['mean']
 
         else:
             dtc.prediction = None
             dtc.observation = None
             dtc.prediction = {}
-            dtc.prediction[test] = pred
+            dtc.prediction[test.name] = pred
             dtc.observation = {}
-            dtc.observation[test] = test.observation['mean']
+            dtc.observation[test.name] = test.observation['mean']
 
 
         #dtc.prediction = pred
@@ -409,6 +508,9 @@ def score_proc(dtc,t,score):
 
 def switch_logic(tests):
     # move this logic into sciunit tests
+    '''
+    Hopefuly depreciated by future NU debugging.
+    '''
     for t in tests:
         t.passive = None
         t.active = None
@@ -583,12 +685,16 @@ def nunit_evaluation(dtc):
 
 
 
-def evaluate(dtc):
+def evaluate(dtc,regularization=True):
+	# compute error using L2 regularization.
     error_length = len(dtc.scores.keys())
     # assign worst case errors, and then over write them with situation informed errors as they become available.
     fitness = [ 1.0 for i in range(0,error_length) ]
     for k,t in enumerate(dtc.scores.keys()):
-        fitness[k] = dtc.scores[str(t)]
+       if regularization == True:
+          fitness[k] = dtc.scores[str(t)]**(1.0/2.0)
+       else:
+          fitness[k] = dtc.scores[str(t)]
     return tuple(fitness,)
 
 def get_trans_list(param_dict):
@@ -752,7 +858,7 @@ def new_genes(pop,dtcpop,td):
     a new model from the mean of the pre-existing model attributes.
 
     TODO:
-    Boot new_genes is a more standard, and less customized implementation of the code below.
+    boot_new_genes is a more standard, and less customized implementation of the code below.
 
     pop, dtcpop = boot_new_genes(number_genes,dtcpop,td)
     dtcpop = map(dtc_to_rheo,dtcpop)
@@ -761,8 +867,6 @@ def new_genes(pop,dtcpop,td):
     Code below is maps, many to one ( less efficient).
 
     '''
-
-
     impute_gene = [] # impute individual, not impute index
     ind = WSListIndividual()
     for t in td:
@@ -782,8 +886,6 @@ def new_genes(pop,dtcpop,td):
     dtc.tests = dtcpop[0].tests
     dtc = dtc_to_rheo(dtc)
     ind.rheobase = dtc.rheobase
-
-
     return ind,dtc
 
 
@@ -875,6 +977,7 @@ def parallel_route(pop,dtcpop,tests,td,clustered=False):
 
         dtcpop = list(dtcbag.map(nunit_evaluation).compute())
     else:
+    	dtcpop = list(dtcbag.map(nunit_evaluation).compute())
 
 
 
@@ -964,7 +1067,6 @@ def grid_search(explore_ranges,test_frame,backend=None):
 def test_runner(pop,td,tests,single_spike=True):
     if single_spike:
         pop, dtcpop = obtain_rheobase(pop, td, tests)
-
         pop, dtcpop = make_up_lost(pop,dtcpop,td)
         # there are many models, which have no actual rheobase current injection value.
         # filter, filters out such models,
