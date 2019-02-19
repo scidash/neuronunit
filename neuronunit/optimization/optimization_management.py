@@ -98,16 +98,11 @@ def make_fake_observations(tests,backend):
     '''
     dtc = DataTC()
     dtc.attrs = local_attrs
-
     dtc = get_rh(dtc,rtest)
-
     pt = format_params(tests,rheobase)
-    #ptbag = db.from_sequence(pt)
     ptbag = db.from_sequence(pt[1::])
-
     predictions = list(ptbag.map(obtain_predictions).compute())
     predictions.insert(0,rheobase)
-
     # having both means and values in dictionary makes it very irritating to iterate over.
     # It's more harmless to demote means to values, than to elevate values to means.
     # Simply swap key names: means, for values.
@@ -115,7 +110,6 @@ def make_fake_observations(tests,backend):
         if 'mean' in p.keys():
             # here pop means remove from dictionary
             p['value'] = p.pop('mean')
-
     for ind,t in enumerate(tests):
         if 'mean' in t.observation.keys():
             t.observation['value'] = t.observation.pop('mean')
@@ -143,13 +137,13 @@ def round_trip_test(tests,backend):
     # as opposed to experimental data.
     '''
     explore_param = model_params_everything[backend] # TODO, make this syntax possible.
-    noise_param = {} # randomly sample a point in the viable parameter space.
+    random_param = {} # randomly sample a point in the viable parameter space.
     for t in explore_param.keys():
         mean = np.mean(explore_param[t])
         std = np.std(explore_param[t])
         sample = numpy.random.normal(loc=mean, scale=2*std, size=1)[0]
-        noise_param[k] = sample
-    tests = make_fake_observations(tests,backend,noise_param)
+        random_param[k] = sample
+    tests = make_fake_observations(tests,backend,random_param)
     NGEN = 10
     MU = 6
     ga_out, DO = run_ga(explore_param,NGEN,tests,free_params=free_params, NSGA = True, MU = MU, backed=backend, selection=str('selNSGA2'))
@@ -672,9 +666,11 @@ def nunit_evaluation(dtc):
             if str('RheobaseTest') != t.name and str('RheobaseTestP') != t.name:
                 t.params = dtc.vtest[k]
                 score, dtc= bridge_judge((t,dtc))
+                print('score',score)
                 if score is not None:
                     if score.norm_score is not None:
                         dtc.scores[str(t)] = 1.0 - score.norm_score
+
 
                 else:
                     print('gets to None score type')
@@ -917,7 +913,7 @@ def split_list(a_list):
     half = int(len(a_list)/2)
     return a_list[:half], a_list[half:]
 
-def clusty(dtcbag,dtcpop):
+def clusty(dtcbag):
     '''
     Used for searching and optimizing where averged double sets of model_parameters
     are the most fundamental gene-unit (rather than single points in high dim parameter space).
@@ -971,16 +967,12 @@ def parallel_route(pop,dtcpop,tests,td,clustered=False):
         d.tests = copy.copy(tests)
     dtcpop = list(map(format_test,dtcpop))
     #import pdb; pdb.set_trace()
-    npart = np.min([multiprocessing.cpu_count(),len(dtcpop)])
-    dtcbag = db.from_sequence(dtcpop, npartitions = npart)
     if clustered == True:
-
-        dtcpop = list(dtcbag.map(nunit_evaluation).compute())
+        dtcpop = clusty(dtcpop)
     else:
-    	dtcpop = list(dtcbag.map(nunit_evaluation).compute())
-
-
-
+        npart = np.min([multiprocessing.cpu_count(),len(dtcpop)])
+        dtcbag = db.from_sequence(dtcpop, npartitions = npart)
+        dtcpop = list(dtcbag.map(nunit_evaluation).compute())
     if dtc.score is not None:
         dtc = score_proc(dtc,rtest,copy.copy(score))
     for i,d in enumerate(dtcpop):

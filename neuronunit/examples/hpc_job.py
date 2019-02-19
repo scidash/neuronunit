@@ -104,7 +104,7 @@ df['Hippocampus CA1 pyramidal cell']
 clustered_tests = pickle.load(open('clustered_tests.p','rb'))
 grouped_tests = clustered_tests['gtc']
 grouped_testsn = clustered_tests['gtn']
-from neuronunit.optimization import model_params
+from neuronunit.optimization import model_parameters as model_params
 from neuronunit.optimization.optimization_management import inject_and_plot, cluster_tests
 
 import pyNN
@@ -113,23 +113,27 @@ from pyNN.neuron import EIF_cond_exp_isfa_ista
 #neurons = pyNN.Population(N_CX, pyNN.EIF_cond_exp_isfa_ista, RS_parameters)
 
 EIF = model_params.EIF
+'''
+import pdb
+pdb.set_trace()
 
-from neuronunit.tests import RheobaseTestP, fi, RheobaseTest
-import time
-model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = (str('PYNN')))
-model.set_attrs(cell[0].get_parameters())
+from neuronunit.tests import RheobaseTestP, fi#, RheobaseTest
+dtc = DataTC()
+dtc.attrs = EIF
+dtc.backend = str('PYNN')
+dtc.cell_name = str('PYNN')
+dtc.tests = test_frame[list(test_frame.keys())[0]]
+dtc = dtc_to_rheo(dtc)
+
+#import time
+#model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = (str('PYNN')))
+#model.set_attrs(cell[0].get_parameters())
 rt = fi.RheobaseTest(obs_frame['Dentate gyrus basket cell']['Rheobase'])
 dtc.rheobase = rt
 #pred1 = rt.generate_prediction(model)
 inject_and_plot(dtc,figname='EIF_problem')
 for key, use_test in test_frame.items():
-    grouped_tests, grouped_tests =cluster_tests(use_test,str('PYNN'),EIF)
-dtc = DataTC()
-dtc.attrs = EIF_dic
-dtc.backend = str('PYNN')
-dtc.cell_name = str('PYNN')
-dtc.tests = test_frame[list(test_frame.keys())[0]]
-dtc = dtc_to_rheo(dtc)
+    grouped_tests, grouped_tests = cluster_tests(use_test,str('PYNN'),EIF)
 
 dtc = format_test(dtc)
 dtc.vtest[0]['injected_square_current']['amplitude']= dtc.vtest[0]['injected_square_current']['amplitude']
@@ -142,7 +146,7 @@ plt.plot(vm.times,vm)
 plt.savefig('debug.png')
 
 dtc = nunit_evaluation(dtc)
-
+'''
 
 
 
