@@ -19,6 +19,22 @@ THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 path_params = {}
 path_params['model_path'] = os.path.realpath(os.path.join(THIS_DIR,'..','models','NeuroML2','LEMS_2007One.xml'))
 
+try:
+    GLIF = pickle.load(open('glif_params.p','rb'))
+except:
+    from allensdk.api.queries.glif_api import GlifApi
+    gapi = GlifApi()
+
+    cells = gapi.get_neuronal_models() # this returns a list of cells, each containing a list of models
+    models = [ nm for c in cells for nm in c['neuronal_models'] ] # flatten to just a list of models
+
+    # this will take awhile!
+    # returns a dictionary of params, indexed on model id
+    model_params = gapi.get_neuron_configs([ model['id']  for model in models[:-1] ]) # download all the models
+
+    GLIF = {}
+    pickle.dump(GLIF,open('glif_params.p','wb'))
+    pdb.set_trace()
 
 
 import pyNN
@@ -230,12 +246,12 @@ v                     membrane potential     [mV]
        capacitor current     [pA]
 vr                   resting membrane potential     [mV]
 vt                   instantaneous threshold potential     [mV]
-k                    constant (“1/R”)     [pA.mV-1   (10-9 Ω-1)]
+k                    constant (“1/R”)     [pA.mV-1   (10-9 Ω-1)]
 u                   recovery variable     [pA]
 S                   stimulus (synaptic: excitatory or inhibitory, external, noise)     [pA]
        rate of change of recovery variable     [pA.ms-1]
 a                     recovery time constant     [ms-1]
-b                  constant  (“1/R”)    [pA.mV-1   (10-9 Ω-1) ]
+b                  constant  (“1/R”)    [pA.mV-1   (10-9 Ω-1) ]
 c                  potential reset value     [mV]
 d                 outward minus inward currents activated during the spike and affecting the after-spike behavior     [pA]
 vpeak          spike cutoff value     [mV]
