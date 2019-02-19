@@ -8,10 +8,6 @@ from numba import jit
 import sciunit
 import math
 
-@jit
-def get_diff_spikes(vm):
-    differentiated = np.diff(vm)
-    return differentiated
 
 def get_spike_train(vm, threshold=0.0*mV):
     """
@@ -44,16 +40,14 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
      a neo.core.AnalogSignal where each column contains a membrane potential
      snippets corresponding to one spike.
     """
-    try:
-        spike_train = threshold_detection(vm,threshold=threshold)
+    spike_train = threshold_detection(vm,threshold=threshold)
+
     # Fix for 0-length spike train issue in elephant.
-        assert len(spike_train) != 0
-    except:
+    if len(spike_train) == 0:
+        spike_train = threshold_detection(vm,threshold=np.max(vm))
+        diff,_ = get_diff(vm)
         try:
-            spikes,times = get_diff(vm)
-            print(times)
-            import pdb; pdb.set_trace()
-            #spike_train =
+            spike_train = threshold_detection(diff,threshold=threshold)
         except TypeError:
             spike_train = neo.core.SpikeTrain([],t_start=spike_train.t_start,
                                              t_stop=spike_train.t_stop,
