@@ -27,6 +27,12 @@ def get_diff(vm):
     times = [np.any(differentiated) > 0.000193667327364]
     return (spikes, times)
 
+
+@jit
+def diff(vm):
+    differentiated = np.diff(vm)
+    return differentiated
+
 # Membrane potential trace (1D numpy array) to matrix of spike snippets (2D numpy array)
 def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
     """
@@ -134,8 +140,8 @@ def spikes2widths(spike_waveforms):
         if index_high > 0:
             try: # Use threshold to compute half-max.
                 y = np.array(s)
-                dvdt = get_diff_spikes(y)
-                # dvdt = np.diff(y)
+                #dvdt = get_diff_spikes(y)
+                dvdt = diff(y)
                 trigger = dvdt.max()/10
                 x_loc = int(np.where(dvdt >= trigger)[0][0])
                 thresh = (s[x_loc]+s[x_loc+1])/2
@@ -143,7 +149,7 @@ def spikes2widths(spike_waveforms):
             except: # Use minimum value to compute half-max.
                 #sciunit.log(("Could not compute threshold; using pre-spike "
                 #             "minimum to compute width"))
-                low = np.min(s[:x_high])
+                low = np.min(s[:index_high])
                 mid = (high+low)/2
             n_samples = sum(s>mid) # Number of samples above the half-max.
             widths.append(n_samples)

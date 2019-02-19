@@ -31,6 +31,10 @@ from neuronunit.capabilities.spike_functions import get_spike_waveforms, spikes2
 # When using differentiation based spike detection is used this is faster.
 
 @jit
+def diff(vm):
+    return np.diff(vm)
+
+@jit
 def get_diff(vm):
     differentiated = np.diff(vm)
     spikes = len([np.any(differentiated) > 0.000193667327364])
@@ -300,8 +304,8 @@ class RheobaseTestP(VmTest):
 
                 if dtc.use_diff == True:
                     vm = model.get_membrane_potential()
-                    diff = get_diff(vm)
-                    spike_train = threshold_detection(diff,threshold=threshold)
+                    diff = diff(vm)
+                    spike_train = threshold_detection(diff,threshold= 0.000193667327364)
                     n_spikes = len(spike_train)
                     if n_spikes >= 1:
                         dtc.negative_spiker = None
@@ -371,20 +375,17 @@ class RheobaseTestP(VmTest):
             use_diff = False
 
             while dtc.boolean == False and cnt< 40:
-                if cnt>2 and len(supra) ==0 and len(sub):
-                    use_diff = True # differentiate the wave to look for spikes
+                #if cnt>3 and len(supra) ==0 and len(sub):
+                #    use_diff = True # differentiate the wave to look for spikes
                     # negeative spiker
-                    if len(sub) and cnt>8:
-                        if sub.max()> 2000.0:
-                            dtc.rheobase = None #float(supra.min())
-                            dtc.boolean = False
-                            return dtc
+                if sub.max()> 2000.0:
+                    dtc.rheobase = None #float(supra.min())
+                    dtc.boolean = False
+                    return dtc
 
-                #dtc.current_steps = list(filter(lambda cs: cs !=0.0 , dtc.current_steps))
                 dtc_clones = [ copy.copy(dtc) for i in range(0,len(dtc.current_steps)) ]
                 for i,s in enumerate(dtc.current_steps):
                     dtc_clones[i].ampl = dtc.current_steps[i]
-                #if use_diff == True:
                 for d in dtc_clones:
                     d.use_diff = None
                     d.use_diff = use_diff
