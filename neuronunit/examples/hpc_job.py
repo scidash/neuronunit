@@ -100,6 +100,10 @@ df['Hippocampus CA1 pyramidal cell']
 # In otherwords use information that is readily amenable into hardcoding into equations
 # Select out the 'Neocortex pyramidal cell layer 5-6' below, as a target for optimization
 
+#!pip install lazyarray
+clustered_tests = pickle.load(open('clustered_tests.p','rb'))
+grouped_tests = clustered_tests['gtc']
+grouped_testsn = clustered_tests['gtn']
 from neuronunit.optimization import model_params
 from neuronunit.optimization.optimization_management import inject_and_plot, cluster_tests
 
@@ -175,6 +179,15 @@ glif_dic = gc.glif.to_dict()
 explore_ranges = {}
 gd = glif_dic
 range_dic = {}
+
+# P4pg0k purkinje
+# QDKPDQ slice of monkey brain
+# YVP 5PD skull
+
+# sketchfab
+# autconverted format.
+
+
 # directly code in observations, that are direct model parameters
 for k,v in test_frame.items():
     range_dic['R_input'] = v[1].observation

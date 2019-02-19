@@ -27,7 +27,6 @@ from pyNN.neuron import DCSource
 import numpy as np
 import copy
 
-
 # Potassium ion-channel rate functions
 class PYNNBackend(Backend):
 
@@ -93,12 +92,6 @@ class PYNNBackend(Backend):
         neuron.run(DURATION)
         volts = self.eif.get_v().segments[0].analogsignals
         volts = [ v for v in volts[-1] ]
-        delta = np.max(volts)-np.min(volts)
-        # hard code voltage offset as a quick and dirty fix.
-        if delta > 50*pq.mV:
-            print('evidence of spikes without zero crossing')
-        volts = [ v+50*pq.mV for v in volts ]
-        
         vm = AnalogSignal(copy.copy(volts),units = mV,sampling_period = self.dt *s)
         results = {}
         results['vm'] = vm
