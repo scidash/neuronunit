@@ -10,7 +10,6 @@ import numpy as np
 
 import sciunit
 import sciunit.scores as scores
-from sciunit.errors import ObservationError
 import sciunit.capabilities as scap
 import neuronunit.capabilities as ncap
 from neuronunit import neuroelectro
@@ -127,7 +126,7 @@ class VmTest(sciunit.Test):
             if math.isnan(i):
                 return False
 
-        sws = cap.spike_functions.get_spike_waveforms(
+        sws = ncap.spike_functions.get_spike_waveforms(
                                         model.get_membrane_potential())
 
         for i, s in enumerate(sws):
