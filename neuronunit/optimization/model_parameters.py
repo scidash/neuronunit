@@ -18,6 +18,8 @@ THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 
 path_params = {}
 path_params['model_path'] = os.path.realpath(os.path.join(THIS_DIR,'..','models','NeuroML2','LEMS_2007One.xml'))
+import pickle
+import pdb
 
 try:
     GLIF = pickle.load(open('glif_params.p','rb'))
@@ -26,6 +28,8 @@ except:
     gapi = GlifApi()
 
     cells = gapi.get_neuronal_models() # this returns a list of cells, each containing a list of models
+    pdb.set_trace()
+
     models = [ nm for c in cells for nm in c['neuronal_models'] ] # flatten to just a list of models
 
     # this will take awhile!
@@ -33,8 +37,7 @@ except:
     model_params = gapi.get_neuron_configs([ model['id']  for model in models[:-1] ]) # download all the models
 
     GLIF = {}
-    pickle.dump(GLIF,open('glif_params.p','wb'))
-    pdb.set_trace()
+    pickle.dump(model_params,open('glif_params.p','wb'))
 
 
 import pyNN
