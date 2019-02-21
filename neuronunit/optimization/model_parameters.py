@@ -24,20 +24,7 @@ import pdb
 try:
     GLIF = pickle.load(open('glif_params.p','rb'))
 except:
-    from allensdk.api.queries.glif_api import GlifApi
-    gapi = GlifApi()
-
-    cells = gapi.get_neuronal_models() # this returns a list of cells, each containing a list of models
-    pdb.set_trace()
-
-    models = [ nm for c in cells for nm in c['neuronal_models'] ] # flatten to just a list of models
-
-    # this will take awhile!
-    # returns a dictionary of params, indexed on model id
-    model_params = gapi.get_neuron_configs([ model['id']  for model in models[:-1] ]) # download all the models
-
-    GLIF = {}
-    pickle.dump(model_params,open('glif_params.p','wb'))
+    from neuronunit.optimization import get_neab
 
 
 import pyNN
@@ -143,7 +130,6 @@ model_params = OrderedDict(explore_param)
 # page 1
 # http://www.rctn.org/vs265/izhikevich-nn03.pdf
 
-'''
 
 
 def transcribe_units(input_dic):
