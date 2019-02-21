@@ -196,13 +196,11 @@ def get_all_glif_configs():
             model_params = pickle.load(f)
         flat_iter = [ mp.pop(list(mp.keys())[0]) for mp in model_params ]
         new_flat_iter = [(k,v) for fi in flat_iter for k,v in fi.items() ]
-
-        #flat_iter = list((k,v) for p in model_params for k,v in p.values())
         glif_range = {}
         for k,v in new_flat_iter:
             glif_range[k] = [v,v]
         for k,v in new_flat_iter:
-            if type(v) is not type({'dict':1}) and type(v) is not type(None):        #import pdb; pdb.set_trace()
+            if type(v) is not type({'dict':1}) and type(v) is not type(None):       
                 if v<glif_range[k][0]:
                     glif_range[k][0] = v
                 if v>glif_range[k][1]:
