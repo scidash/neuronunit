@@ -59,27 +59,23 @@ def substitute_criteria(observations_donar,observations_acceptor):
     for index,oa in observations_acceptor.items():
         for k,v in oa.items():
             if k == 'std' and v == 0.0:
-                if k in observations_donar.keys():
-                    oa[k] = observations_donar[index][k]
+                oa[k] = observations_donar[index][k]
     return observations_acceptor
 
 def substitute_parallel_for_serial(electro_tests):
     for test,obs in electro_tests:
-        if str('Rheobase') in obs.keys():
-            
-            test[0] = RheobaseTestP(obs['Rheobase'])
+        test[0] = RheobaseTestP(obs['Rheobase'])
 
     return electro_tests
 
 def replace_zero_std(electro_tests):
     for test,obs in electro_tests:
-        if str('Rheobase') in obs.keys():
-            test[0] = RheobaseTestP(obs['Rheobase'])
-            for k,v in obs.items():
-                if v['std'] == 0:
-                    #print(electro_tests[1][1],obs)
-                    obs = substitute_criteria(electro_tests[1][1],obs)
-                    #print(obs)
+        test[0] = RheobaseTestP(obs['Rheobase'])
+        for k,v in obs.items():
+            if v['std'] == 0:
+                #print(electro_tests[1][1],obs)
+                obs = substitute_criteria(electro_tests[1][1],obs)
+                #print(obs)
     return electro_tests
 
 def get_neuron_criteria(cell_id,file_name = None):#,observation = None):
@@ -102,15 +98,14 @@ def get_neuron_criteria(cell_id,file_name = None):#,observation = None):
                      waveform.InjectedCurrentAPThresholdTest]#,
     observations = {}
     for index, t in enumerate(test_classes):
-        try:
-            obs = t.neuroelectro_summary_observation(cell_id)
-            
-            if obs is not None:
-                if 'mean' in obs.keys():
-                    tests.append(t(obs))
-                    observations[t.ephysprop_name] = obs
-        except:
-            pass
+        #import pdb; pdb.set_trace()
+        obs = t.neuroelectro_summary_observation(cell_id)
+
+        if obs is not None:
+            if 'mean' in obs.keys():
+                tests.append(t(obs))
+                observations[t.ephysprop_name] = obs
+
     #hooks = {tests[0]:{'f':update_amplitude}} #This is a trick to dynamically insert the method
     #update amplitude at the location in sciunit thats its passed to, without any loss of generality.
     suite = sciunit.TestSuite(tests,name="vm_suite")
@@ -140,3 +135,78 @@ def get_tests():
     suite = sciunit.TestSuite(tests)
     #tests_ = tests[0:2]
     return tests, test, observation, suite
+
+import pickle
+def get_all_glif_configs():
+    try:
+        with open('gcm.p','rb') as f:
+            model_params = pickle.load(f)
+        flat_iter = [ mp.pop(list(mp.keys())[0]) for mp in model_params ]
+        new_flat_iter = [(k,v) for fi in flat_iter for k,v in fi.items() ]
+
+        #flat_iter = list((k,v) for p in model_params for k,v in p.values())
+        glif_range = {}
+        for k,v in new_flat_iter:
+            glif_range[k] = [v,v]
+        for k,v in new_flat_iter:
+            if type(v) is not type({'dict':1}) and type(v) is not type(None):        #import pdb; pdb.set_trace()
+                    if v<glif_range[k][0]:
+                        glif_range[k][0] = v
+                    if v>glif_range[k][1]:
+                        glif_range[k][1] = v
+            else:
+                glif_range[k] = v
+            with open('glif_range.p','wb') as f: pickle.dump(glif_range,f)
+
+    except:
+        from allensdk.api.queries.glif_api import GlifApi
+        gapi = GlifApi()
+
+        cells = gapi.get_neuronal_models() # this returns a list of cells, each containing a list of models
+        models = [ nm for c in cells for nm in c['neuronal_models'] ] # flatten to just a list of models
+        model_params = []
+        # this will take awhile!
+        # returns a dictionary of params, indexed on model id
+
+        try:
+            with open('last_index.p','rb') as f:
+                index = pickle.load(f)
+        except:
+            index = 0
+        until_done = len(models[index:-1])
+        cnt = 0
+        while cnt <until_done-1:
+            for i,model in enumerate(models[index:-1]):
+                until_done = len(models[index:-1])
+                try:
+                    # keep trying to download more and more.
+                    model_params.append(gapi.get_neuron_configs([model['id']])) # download the first five
+                    print('progress',len(models),i)
+                    with open('gcm.p','wb') as f:
+                        pickle.dump(model_params,f)
+                    with open('last_index.p','wb') as f:
+                        pickle.dump(i,f)
+                except:
+                    with open('last_index.p','rb') as f:
+                        index = pickle.load(f)
+                cnt+=1
+
+
+        with open('gcm.p','rb') as f:
+            model_params = pickle.load(f)
+        flat_iter = [ mp.pop(list(mp.keys())[0]) for mp in model_params ]
+        new_flat_iter = [(k,v) for fi in flat_iter for k,v in fi.items() ]
+        glif_range = {}
+        for k,v in new_flat_iter:
+            glif_range[k] = [v,v]
+        for k,v in new_flat_iter:
+            if type(v) is not type({'dict':1}) and type(v) is not type(None):       
+                if v<glif_range[k][0]:
+                    glif_range[k][0] = v
+                if v>glif_range[k][1]:
+                    glif_range[k][1] = v
+            else:
+                glif_range[k] = v
+        with open('glif_range.p','wb') as f:
+            pickle.dump(glif_range,f)
+    return glif_range
