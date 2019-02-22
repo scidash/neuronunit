@@ -7,11 +7,13 @@ from neuronunit import tests as _, neuroelectro
 #from neuronunit import tests as nu_tests, neuroelectro
 from neuronunit.tests import passive, waveform, fi
 from neuronunit.tests.fi import RheobaseTestP
+from neuronunit.tests import passive, waveform, druckman2012
+import copy
+import sciunit
 
 
 import urllib.request, json
 
-#print(obs_frame)
 from neuronunit import neuroelectro
 
 def neuroelectro_summary_observation(neuron,ontology):
@@ -26,7 +28,6 @@ def neuroelectro_summary_observation(neuron,ontology):
     reference_data.get_values() # Get and verify summary data
                                 # from neuroelectro.org.
     return reference_data
-import urllib.request, json
 
 def get_obs(pipe):
     with urllib.request.urlopen("https://neuroelectro.org/api/1/e/") as url:
@@ -77,8 +78,57 @@ def replace_zero_std(electro_tests):
                 obs = substitute_criteria(electro_tests[1][1],obs)
                 #print(obs)
     return electro_tests
+from neuronunit.tests import druckman2012 as dm
 
-def get_neuron_criteria(cell_id,file_name = None):#,observation = None):
+def executable_druckman_tests(cell_id,file_name = None):
+    # Use neuroelectro experimental obsevations to find test
+    # criterion that will be used to inform scientific unit testing.
+    # some times observations are not sourced from neuroelectro,
+    # but they are imputated or borrowed from other TestSuite
+    # if that happens make test objections using observations external
+    # to this method, and provided as a method argument.
+    tests = []
+    observations = None
+    test_classes = None
+
+    dm.AP1AP1AHPDepthTest.ephysprop_name = None
+    dm.AP1AP1AHPDepthTest.ephysprop_name = 'AHP amplitude'
+    dm.AP2AP1AHPDepthTest.ephysprop_name = None
+    dm.AP2AP1AHPDepthTest.ephysprop_name = 'AHP amplitude'
+    dm.AP1AP1WidthHalfHeightTest.ephysprop_name = None
+    dm.AP1AP1WidthHalfHeightTest.ephysprop_name = 'spike half-width'
+    dm.AP1AP1WidthPeakToTroughTest.ephysprop_name = None
+    dm.AP1AP1WidthPeakToTroughTest.ephysprop_name = 'spike width'
+    dm.IinitialAccomodationMeanTest.ephysprop_name = None
+    dm.IinitialAccomodationMeanTest.ephysprop_name = 'adaptation_percent'
+
+    test_classes = [fi.RheobaseTest, \
+    dm.AP1AP1AHPDepthTest, \
+    dm.AP2AP1AHPDepthTest,\
+    dm.AP1AP1WidthHalfHeightTest,\
+    dm.AP1AP1WidthPeakToTroughTest,\
+    dm.IinitialAccomodationMeanTest,\
+    ]
+    observations = {}
+    for index, t in enumerate(test_classes):
+        obs = t.neuroelectro_summary_observation(cell_id)
+
+        if obs is not None:
+            if 'mean' in obs.keys():
+                tests.append(t(obs))
+                observations[t.ephysprop_name] = obs
+
+    suite = sciunit.TestSuite(tests,name="vm_suite")
+
+    if file_name is not None:
+        file_name = file_name +'.p'
+        with open(file_name, 'wb') as f:
+            pickle.dump(tests, f)
+
+    return tests,observations
+
+
+def executable_tests(cell_id,file_name = None):#,observation = None):
     # Use neuroelectro experimental obsevations to find test
     # criterion that will be used to inform scientific unit testing.
     # some times observations are not sourced from neuroelectro,
@@ -117,8 +167,6 @@ def get_neuron_criteria(cell_id,file_name = None):#,observation = None):
 
     return tests,observations
 
-import copy
-import sciunit
 def get_tests():
     # get neuronunit tests
     # and select out Rheobase test and input resistance test
@@ -200,7 +248,7 @@ def get_all_glif_configs():
         for k,v in new_flat_iter:
             glif_range[k] = [v,v]
         for k,v in new_flat_iter:
-            if type(v) is not type({'dict':1}) and type(v) is not type(None):       
+            if type(v) is not type({'dict':1}) and type(v) is not type(None):
                 if v<glif_range[k][0]:
                     glif_range[k][0] = v
                 if v>glif_range[k][1]:
