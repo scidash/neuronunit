@@ -100,15 +100,14 @@ def executable_druckman_tests(cell_id,file_name = None):
     dm.AP1AP1WidthHalfHeightTest.ephysprop_name = 'spike half-width'
     dm.AP1AP1WidthPeakToTroughTest.ephysprop_name = None
     dm.AP1AP1WidthPeakToTroughTest.ephysprop_name = 'spike width'
-    dm.IinitialAccomodationMeanTest.ephysprop_name = None
-    dm.IinitialAccomodationMeanTest.ephysprop_name = 'adaptation_percent'
+    #dm.IinitialAccomodationMeanTest.ephysprop_name = None
+    #dm.IinitialAccomodationMeanTest.ephysprop_name = 'adaptation_percent'
 
     test_classes = [fi.RheobaseTest, \
     dm.AP1AP1AHPDepthTest, \
     dm.AP2AP1AHPDepthTest,\
     dm.AP1AP1WidthHalfHeightTest,\
     dm.AP1AP1WidthPeakToTroughTest,\
-    dm.IinitialAccomodationMeanTest,\
     ]
     observations = {}
     for index, t in enumerate(test_classes):
@@ -250,7 +249,7 @@ def get_all_glif_configs():
         for k,v in new_flat_iter:
             glif_range[k] = [v,v]
         for k,v in new_flat_iter:
-            if type(v) is not type({'dict':1}) and type(v) is not type(None):
+            if type(v) is not type({'dict':1}) and type(v) is not type(None) and type(v) is not([1,1]):
                 if v<glif_range[k][0]:
                     glif_range[k][0] = v
                 if v>glif_range[k][1]:
