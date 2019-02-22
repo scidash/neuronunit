@@ -61,6 +61,7 @@ electro_tests = []
 obs_frame = {}
 test_frame = {}
 
+
 try:
     electro_path = str(os.getcwd())+'all_tests.p'
     assert os.path.isfile(electro_path) == True
@@ -69,7 +70,10 @@ try:
 
 except:
     for p in pipe:
-        p_tests, p_observations = get_neab.get_neuron_criteria(p)
+        try:
+            tests,observations = get_neab.executable_druckman_tests(p)
+        except:
+            p_tests, p_observations = get_neab.get_neuron_criteria(p)
         obs_frame[p["name"]] = p_observations#, p_tests))
         test_frame[p["name"]] = p_tests#, p_tests))
     electro_path = str(os.getcwd())+'all_tests.p'
@@ -111,43 +115,64 @@ import pyNN
 from pyNN import neuron
 from pyNN.neuron import EIF_cond_exp_isfa_ista
 #neurons = pyNN.Population(N_CX, pyNN.EIF_cond_exp_isfa_ista, RS_parameters)
+#MODEL_PARAMS
+MODEL_PARAMS = model_params.MODEL_PARAMS
 
-EIF = model_params.EIF
+#with open('gcm.p','rb') as f:
+#    model_params = pickle.load(f)
+# directly code in observations, that are direct model parameters
+test_keyed_MODEL_PARAMS = {}
+for k,v in test_frame.items():
+    MODEL_PARAMS['GLIF']['R_input'] = v[1].observation
+    MODEL_PARAMS['GLIF']['C'] = v[3].observation
+    MODEL_PARAMS['GLIF']['init_AScurrents'] = [0,0]
+    test_keyed_MODEL_PARAMS[k] = MODEL_PARAMS['GLIF']
 '''
-import pdb
-pdb.set_trace()
+from allensdk.api.queries.glif_api import GlifApi
+gapi = GlifApi()
 
-from neuronunit.tests import RheobaseTestP, fi#, RheobaseTest
-dtc = DataTC()
-dtc.attrs = EIF
-dtc.backend = str('PYNN')
-dtc.cell_name = str('PYNN')
-dtc.tests = test_frame[list(test_frame.keys())[0]]
-dtc = dtc_to_rheo(dtc)
+cells = gapi.get_neuronal_models() # this returns a list of cells, each containing a list of models
+models = [ nm for c in cells for nm in c['neuronal_models'] ][0:1] # flatten to just a list of models
+config = gapi.get_neuron_configs(models[0]['id'])
+MODEL_PARAMS['GLIF']['init_AScurrents'] = config[566284249]['init_AScurrents']
+print(MODEL_PARAMS['GLIF']['init_AScurrents'])
 
-#import time
-#model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = (str('PYNN')))
-#model.set_attrs(cell[0].get_parameters())
-rt = fi.RheobaseTest(obs_frame['Dentate gyrus basket cell']['Rheobase'])
-dtc.rheobase = rt
-#pred1 = rt.generate_prediction(model)
-inject_and_plot(dtc,figname='EIF_problem')
-for key, use_test in test_frame.items():
-    grouped_tests, grouped_tests = cluster_tests(use_test,str('PYNN'),EIF)
+#import pdb; pdb.set_trace()
 
-dtc = format_test(dtc)
-dtc.vtest[0]['injected_square_current']['amplitude']= dtc.vtest[0]['injected_square_current']['amplitude']
-model.inject_square_current(dtc.vtest[0])
+#model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = (str('GLIF')))
 
-#model.inject_square_current(pred1)
-vm = model.get_membrane_potential()
-plt.clf()
-plt.plot(vm.times,vm)
-plt.savefig('debug.png')
+#params = gc.glif.to_dict()
+store_glif_results = {}
+try:
+    with open('glif_seeds.p','rb') as f:
+        seeds = pickle.load(f)
+    assert seeds is not None
 
-dtc = nunit_evaluation(dtc)
+except:
+    # rewrite test search, so that model params change as a function of.
+    seeds, df = grid_search(MODEL_PARAMS['GLIF'],test_frame,backend=str('GLIF'))
 '''
 
+MU = 6
+NGEN = 80
+
+
+try:
+    with open('multi_objective_glif.p','rb') as f:
+        test_opt = pickle.load(f)
+
+except:
+    for key, use_test in test_frame.items():
+        seed = seeds[key]
+        print(seed)
+        # Todo optimize on clustered tests
+        print(grouped_tests)
+        print(grouped_tests)
+        MODEL_PARAMS['GLIF'] = test_keyed_MODEL_PARAMS[k]
+        ga_out, _ = om.run_ga(MODEL_PARAMS['GLIF'],NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU, model_type = str('GLIF'))#,seed_pop=seed)
+        test_opt =  {str('multi_objective_glif')+str(seed):ga_out}
+        with open('multi_objective_glif.p','wb') as f:
+            pickle.dump(test_opt,f)
 
 
 
@@ -157,7 +182,7 @@ try:
     assert seeds is not None
 
 except:
-    seeds, df = grid_search(EIF,test_frame,backend=str('PYNN'))
+    seeds, df = grid_search(MODEL_PARAMS['PYNN'],test_frame,backend=str('PYNN'))
 
 MU = 6
 NGEN = 80
@@ -169,7 +194,7 @@ except:
     for key, use_test in test_frame.items():
         seed = seeds[key]
         print(seed)
-        ga_out, _ = om.run_ga(EIF,NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU, model_type = str('PYNN'),seed_pop=seed)
+        ga_out, _ = om.run_ga(MODEL_PARAMS['PYNN'],NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU, model_type = str('PYNN'),seed_pop=seed)
         test_opt =  {str('multi_objective_PYNN')+str(seed):ga_out}
         with open('multi_objective_adexp.p','wb') as f:
             pickle.dump(test_opt,f)
@@ -192,48 +217,6 @@ range_dic = {}
 # autconverted format.
 
 
-# directly code in observations, that are direct model parameters
-for k,v in test_frame.items():
-    range_dic['R_input'] = v[1].observation
-    range_dic['C'] = v[3].observation
-    range_dic['th_inf'] = v[7].observation
-explore_ranges['El'] = (glif_dic['El'],glif_dic['El']+10.0)
-#explore_ranges['R_input'] = (glif_dic['R_input']-glif_dic['R_input']/2.0,glif_dic['R_input']+glif_dic['R_input']/2.0)
-#explore_ranges['C'] = (glif_dic['C']-glif_dic['C']/2.0,glif_dic['C']+glif_dic['C']/2.0)
-#explore_ranges['th_inf'] = (glif_dic['th_inf']-glif_dic['th_inf']/4.0,glif_dic['th_inf']+glif_dic['th_inf']/4.0)
-model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = (str('GLIF')))
-
-store_glif_results = {}
-params = gc.glif.to_dict()
-store_glif_results = {}
-try:
-    with open('glif_seeds.p','rb') as f:
-        seeds = pickle.load(f)
-    assert seeds is not None
-
-except:
-    seeds, df = grid_search(explore_ranges,test_frame,backend=str('GLIF'))
-
-MU = 6
-NGEN = 80
-
-
-try:
-    with open('multi_objective_glif.p','rb') as f:
-        test_opt = pickle.load(f)
-
-except:
-    for key, use_test in test_frame.items():
-        seed = seeds[key]
-        print(seed)
-        # Todo optimize on clustered tests
-        print(grouped_tests)
-        print(grouped_tests)
-
-        ga_out, _ = om.run_ga(explore_ranges,NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU, model_type = str('GLIF'),seed_pop=seed)
-        test_opt =  {str('multi_objective_glif')+str(seed):ga_out}
-        with open('multi_objective_glif.p','wb') as f:
-            pickle.dump(test_opt,f)
 
 
 
