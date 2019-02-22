@@ -7,7 +7,9 @@ from neuronunit import tests as _, neuroelectro
 #from neuronunit import tests as nu_tests, neuroelectro
 from neuronunit.tests import passive, waveform, fi
 from neuronunit.tests.fi import RheobaseTestP
-from neuronunit.tests import passive, waveform, druckman2012
+from neuronunit.tests import passive, waveform, druckmann2013
+from neuronunit.tests import druckmann2013 as dm
+
 import copy
 import sciunit
 
@@ -78,7 +80,6 @@ def replace_zero_std(electro_tests):
                 obs = substitute_criteria(electro_tests[1][1],obs)
                 #print(obs)
     return electro_tests
-from neuronunit.tests import druckman2012 as dm
 
 def executable_druckman_tests(cell_id,file_name = None):
     # Use neuroelectro experimental obsevations to find test
@@ -126,7 +127,6 @@ def executable_druckman_tests(cell_id,file_name = None):
             pickle.dump(tests, f)
 
     return tests,observations
-
 
 def executable_tests(cell_id,file_name = None):#,observation = None):
     # Use neuroelectro experimental obsevations to find test
@@ -184,8 +184,10 @@ def get_tests():
     #tests_ = tests[0:2]
     return tests, test, observation, suite
 
-import pickle
 def get_all_glif_configs():
+    '''
+    Find the boundaries of the GLIF cell parameter space, by exhaustively sampling all GLIF cells
+    '''
     try:
         with open('gcm.p','rb') as f:
             model_params = pickle.load(f)
