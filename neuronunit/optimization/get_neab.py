@@ -4,7 +4,6 @@ import neuronunit
 from neuronunit import aibs
 import pickle
 from neuronunit import tests as _, neuroelectro
-#from neuronunit import tests as nu_tests, neuroelectro
 from neuronunit.tests import passive, waveform, fi
 from neuronunit.tests.fi import RheobaseTestP
 from neuronunit.tests import passive, waveform, druckmann2013
