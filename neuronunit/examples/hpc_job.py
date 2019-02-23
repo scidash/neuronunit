@@ -12,6 +12,14 @@
 #!pip install dask distributed seaborn
 #!bash after_install.sh
 
+
+# goals.
+# given https://www.nature.com/articles/nn1352
+# Goal is based on this. Don't optimize to a singular point, optimize onto a cluster.
+# Golowasch, J., Goldman, M., Abbott, L.F, and Marder, E. (2002)
+# Failure of averaging in the construction
+# of conductance-based neuron models. J. Neurophysiol., 87: 11291131.
+
 import numpy as np
 import os
 import pickle
