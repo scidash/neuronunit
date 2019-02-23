@@ -114,12 +114,9 @@ from neuronunit.optimization.optimization_management import inject_and_plot, clu
 import pyNN
 from pyNN import neuron
 from pyNN.neuron import EIF_cond_exp_isfa_ista
-#neurons = pyNN.Population(N_CX, pyNN.EIF_cond_exp_isfa_ista, RS_parameters)
-#MODEL_PARAMS
+
 MODEL_PARAMS = model_params.MODEL_PARAMS
 
-#with open('gcm.p','rb') as f:
-#    model_params = pickle.load(f)
 # directly code in observations, that are direct model parameters
 test_keyed_MODEL_PARAMS = {}
 for k,v in test_frame.items():
