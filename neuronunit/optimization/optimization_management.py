@@ -2,6 +2,12 @@
 # setting of an appropriate backend.
 #matplotlib.use('agg')
 
+#    Goal is based on this. Don't optimize to a singular point, optimize onto a cluster.
+#    Golowasch, J., Goldman, M., Abbott, L.F, and Marder, E. (2002)
+#    Failure of averaging in the construction
+#    of conductance-based neuron models. J. Neurophysiol., 87: 11291131.
+
+
 import numpy as np
 import dask.bag as db
 import pandas as pd
@@ -30,7 +36,10 @@ import quantities as pq
 import numpy as np
 from itertools import repeat
 import numpy
-from sklearn.cluster import KMeans
+from sklearn.
+
+
+import KMeans
 
 
 from deap import base
