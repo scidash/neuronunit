@@ -971,11 +971,10 @@ def boot_new_genes(number_genes,dtcpop):
     dtcpop = update_dtc_pop(population,DO.td)
     return dtcpop
 
-def parallel_route(pop,dtcpop,tests,td,clustered=False):
+def parallel_route(pop,dtcpop,tests,td,clustered=True):
     for d in dtcpop:
         d.tests = copy.copy(tests)
     dtcpop = list(map(format_test,dtcpop))
-    #import pdb; pdb.set_trace()
     if clustered == True:
         dtcpop = clusty(dtcpop)
     else:
