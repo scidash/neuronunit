@@ -286,8 +286,15 @@ def cluster_tests(use_test,backend,explore_param):
             dtc = update_dtc_pop(ca, td)
             dtcpop.append(dtc)
             dtc.tests = use_test # aliased variable.
-            dtc = dtc_to_rheo(dtc)
-            dtc = format_test(dtc)
+            if 'RAW' in dtc.backend  or 'HH' in dtc.backend :#Backend:
+                #rtest = [ t for t in dtc.tests if str('RheobaseTest') == t.name ]
+                dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
+                dtcpop = list(dtcbag.map(dtc_to_rheo))
+                dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
+                dtcpop = list(dtcbag.map(format_test))
+            else:
+                dtcpop = map(dtc_to_rheo,dtcpop)
+                dtcpop = map(format_test,dtcpop)
             test_and_dtc = (use_test,dtc)
 
             preds.append(pred_only(test_and_dtc))
@@ -860,7 +867,16 @@ def obtain_rheobase(pop, td, tests):
     and rheobase test rt
     '''
     pop, dtcpop = init_pop(pop, td, tests)
-    dtcpop = list(map(dtc_to_rheo,dtcpop))
+    if 'RAW' in dtcpop[0].backend  or 'HH' in dtcpop[0].backend :#Backend:
+        #rtest = [ t for t in dtc.tests if str('RheobaseTest') == t.name ]
+        dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
+        dtcpop = list(dtcbag.map(dtc_to_rheo))
+        dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
+        dtcpop = list(dtcbag.map(format_test))
+    else:
+        dtcpop = list(map(dtc_to_rheo,dtcpop))
+        dtcpop = list(map(format_test,dtcpop))
+    #dtcpop = list(map(dtc_to_rheo,dtcpop))
     for ind,d in zip(pop,dtcpop):
         if type(d.rheobase) is not type(1.0):
             ind.rheobase = d.rheobase
@@ -1126,13 +1142,20 @@ def grid_search(explore_ranges,test_frame,backend=None):
         for key, use_test in test_frame.items():
             for dtc in dtcpop:
                 dtc.tests = use_test
-            dtcpop = map(dtc_to_rheo,dtcpop)
 
-            dtcpop = map(format_test,dtcpop)
+            if 'RAW' in dtc.backend  or 'HH' in dtc.backend :#Backend:
+                #rtest = [ t for t in dtc.tests if str('RheobaseTest') == t.name ]
+                dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
+                dtcpop = list(dtcbag.map(dtc_to_rheo))
+                dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
+                dtcpop = list(dtcbag.map(format_test))
+            else:
+                dtcpop = list(map(dtc_to_rheo,dtcpop))
+                dtcpop = list(map(format_test,dtcpop))
             dtcpop = [ dtc for dtc in dtcpop if dtc.rheobase is not None ]
             dtcpop = [ dtc for dtc in dtcpop if dtc.rheobase !=-1.0 ]
             dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
-            dtcbag.map(nunit_evaluation)
+            dtcpop = list(dtcbag.map(nunit_evaluation))
             print(dtc.get_ss())
             for dtc in dtcpop:
                 store_results[str(local_attrs.values())][key] = dtc.get_ss()

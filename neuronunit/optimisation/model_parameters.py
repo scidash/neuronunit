@@ -9,7 +9,6 @@ from neuronunit.optimisation import get_neab
 import collections
 from collections import OrderedDict
 import numpy as np
-'''
 import pyNN
 from pyNN import neuron
 from pyNN.neuron import EIF_cond_exp_isfa_ista
@@ -18,9 +17,8 @@ import pdb
 import pyNN
 from pyNN import neuron
 from pyNN.neuron import EIF_cond_exp_isfa_ista
-cell = neuron.create(EIF_cond_exp_isfa_ista())
+#cell = neuron.create(EIF_cond_exp_isfa_ista())
 
-'''
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 
 path_params = {}
@@ -51,7 +49,6 @@ BAE['Vcut'] = VT + 5 * DeltaT
 RSBrian = [tauw, a, b, Vr = 144*AdEx.b2.units.ms, 4*AdEx.b2.units.nS, 0.0805*AdEx.b2.units.nA, -70.6*AdEx.b2.units.mV] # Regular spiking (as in the paper)
 BurstBrian = [tauw,a,b,Vr=20*AdEx.b2.units.ms,4*AdEx.b2.units.ns,0.5*AdEx.b2.units.nA,VT+5*AdEx.b2.units.mV] # Bursting
 FSBrian = [tauw,a,b,Vr=144*AdEx.b2.units.ms,2*C/(144*AdEx.b2.units.ms),0*AdEx.b2.units.nA,-70.6*AdEx.b2.units.mV] # Fast spiking
-
 
 # https://github.com/NeuroML/NML2_LEMS_Examples/blob/master/PyNN.xml
 EIF = {}
@@ -99,10 +96,9 @@ GLIF_RANGE = {'El_reference': [-0.08569469261169435, -0.05463626766204832], \
               'init_threshold': [0.009908733642683513, 0.04939040414685865], \
               'threshold_reset_method': {'params': {}, 'name': 'inf'}, \
               'th_inf': [0.009908733642683513, 0.04939040414685865], \
-              'spike_cut_length': [20, 199], \
+              'spike_cut_length': [20, 199],
               'init_AScurrents': [[0.0, 0.0], [0.0, 0.0]], \ 
-              'init_voltage': [-70.0, 0.0], \
-              'threshold_dynamics_method': {'params': {}, 'name': 'inf'}, \
+              'init_voltage': [-70.0, 0.0], 'threshold_dynamics_method': {'params': {}, 'name': 'inf'}, \
               'voltage_reset_method': {'params': {}, 'name': 'zero'}, \
               'extrapolation_method_name': ['endpoints', 'endpoints'], \
               'dt': [5e-05, 5e-05], 'voltage_dynamics_method': {'params': {}, 'name': 'linear_forward_euler'}, \
@@ -116,27 +112,27 @@ GLIF_RANGE = {'El_reference': [-0.08569469261169435, -0.05463626766204832], \
               'type': ['GLIF', 'GLIF']}
 MODEL_PARAMS['GLIF'] = GLIF_RANGE
 MODEL_PARAMS['GLIF']['init_AScurrents'] = [0,0]
-
+'''
 # Which Parameters
 # https://www.izhikevich.org/publications/spikes.htm
 type2007 = collections.OrderedDict([
   #              C    k     vr  vt vpeak   a      b   c    d  celltype
   ('RS',        (100, 0.7,  -60, -40, 35, 0.03,   -2, -50,  100,  1)),
   ('IB',        (150, 1.2,  -75, -45, 50, 0.01,   5, -56,  130,   2)),
-  ('CH',        (50,  1.5,  -60, -40, 25, 0.03,   1, -40,  150,   3)),
-  ('LTS',       (100, 1.0,  -56, -42, 40, 0.03,   8, -53,   20,   4)),
-  ('FS',        (20,  1.0,  -55, -40, 25, 0.2,   -2, -45,  -55,   5)),
   ('TC',        (200, 1.6,  -60, -50, 35, 0.01,  15, -60,   10,   6)),
   ('TC_burst',  (200, 1.6,  -60, -50, 35, 0.01,  15, -60,   10,   6)),
-  ('RTN',       (40,  0.25, -65, -45,  0, 0.015, 10, -55,   50,   7)),
-  ('RTN_burst', (40,  0.25, -65, -45,  0, 0.015, 10, -55,   50,   7))])
+  ('LTS',       (100, 1.0,  -56, -42, 40, 0.03,   8, -53,   20,   4))])
+  
+    #('CH',        (50,  1.5,  -60, -40, 25, 0.03,   1, -40,  150,   3)),
+  #('FS',        (20,  1.0,  -55, -40, 25, 0.2,   -2, -45,  -55,   5)),
+    #('RTN',       (40,  0.25, -65, -45,  0, 0.015, 10, -55,   50,   7)),
+  #('RTN_burst', (40,  0.25, -65, -45,  0, 0.015, 10, -55,   50,   7))])
 
 
 # http://www.physics.usyd.edu.au/teach_res/mp/mscripts/
 # ns_izh002.m
 
 
-'''
 temp = {k:[] for k in ['C','k','vr','vt','vPeak','a','b','c','d']  }
 for i,k in enumerate(temp.keys()):
     for v in type2007.values():
@@ -144,7 +140,6 @@ for i,k in enumerate(temp.keys()):
 
 explore_param = {k:(np.min(v),np.max(v)) for k,v in temp.items()}
 #IZHI_PARAMS = OrderedDict(explore_param)
-'''
 
 
 # Fast spiking cannot be reproduced as it requires modifications to the standard Izhi equation,
@@ -170,10 +165,8 @@ IZHI_PARAMS = {k:(np.min(v),np.max(v)) for k,v in trans_dict.items()}
 IZHI_PARAMS = OrderedDict(IZHI_PARAMS)
 MODEL_PARAMS['RAW'] = IZHI_PARAMS
 
-'''
 # page 1
 # http://www.rctn.org/vs265/izhikevich-nn03.pdf
-'''
 
 
 def transcribe_units(input_dic):

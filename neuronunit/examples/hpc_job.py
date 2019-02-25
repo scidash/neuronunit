@@ -166,18 +166,20 @@ except:
 
 MU = 6 # more than six causes a memory leak. I suspect this is PYNN
 NGEN = 150
-#for key, use_test in test_frame.items():
+test_opt = {}#{str('multi_objective_izhi')+str(ga_out):ga_out}
+
+for key, use_test in test_frame.items():
     # use the best parameters found via the sparse grid search above, to inform the first generation
     # of the GA.
     #print(seeds[key])
-use_test = test_frame["Neocortex pyramidal cell layer 5-6"]
+#use_test = test_frame["Neocortex pyramidal cell layer 5-6"]
 
-ga_out, _ = om.run_ga(MODEL_PARAMS['RAW'], NGEN,use_test, free_params = MODEL_PARAMS['RAW'],
-                            NSGA = True, MU = MU, model_type = str('RAW'))
-test_opt =  {str('multi_objective_izhi')+str(ga_out):ga_out}
+    ga_out, _ = om.run_ga(MODEL_PARAMS['RAW'], NGEN,use_test, free_params = MODEL_PARAMS['RAW'],
+                                NSGA = True, MU = MU, model_type = str('RAW'),seed_pop=seeds[key])
+    test_opt[key] = ga_out
 with open('multi_objective_izhi.p','wb') as f:
     pickle.dump(test_opt,f)
-
+import pdb; pdb.set_trace()
 
 try:
     with open('adexp_seeds.p','rb') as f:
