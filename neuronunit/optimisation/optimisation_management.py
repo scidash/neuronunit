@@ -2,6 +2,12 @@
 # setting of an appropriate backend.
 #matplotlib.use('agg')
 
+#    Goal is based on this. Don't optimize to a singular point, optimize onto a cluster.
+#    Golowasch, J., Goldman, M., Abbott, L.F, and Marder, E. (2002)
+#    Failure of averaging in the construction
+#    of conductance-based neuron models. J. Neurophysiol., 87: 11291131.
+
+
 import numpy as np
 import dask.bag as db
 import pandas as pd
@@ -472,7 +478,6 @@ def dtc_to_rheo(dtc):
     model = mint_generic_model(backend_)
     model.set_attrs(dtc.attrs)
 
-    #if len(rtest) == 0:
 
     if 'RAW' in backend_ or 'HH' in backend_:#Backend:
         rtest = [ t for t in dtc.tests if str('RheobaseTest') == t.name ]
@@ -700,6 +705,8 @@ def nunit_evaluation(dtc):
                 if score is not None:
                     if score.norm_score is not None:
                         dtc.scores[str(t)] = 1.0 - score.norm_score
+
+
                 else:
                     print('gets to None score type')
     # compute the sum of sciunit score components.
@@ -709,7 +716,7 @@ def nunit_evaluation(dtc):
 
 
 
-def evaluate(dtc,regularization=False):
+def evaluate(dtc,regularization=True):
 	# compute error using L2 regularization.
     print(dtc)
     error_length = len(dtc.scores.keys())
@@ -1046,7 +1053,8 @@ def parallel_route(pop,dtcpop,tests,td,clustered=False):
     for d in dtcpop:
         d.tests = copy.copy(tests)
     dtcpop = list(map(format_test,dtcpop))
-    #import pdb; pdb.set_trace()
+
+
     if clustered == True:
         dtcpop = opt_on_pair_of_points(dtcpop)
     else:

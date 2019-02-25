@@ -12,6 +12,14 @@
 #!pip install dask distributed seaborn
 #!bash after_install.sh
 
+
+# goals.
+# given https://www.nature.com/articles/nn1352
+# Goal is based on this. Don't optimize to a singular point, optimize onto a cluster.
+# Golowasch, J., Goldman, M., Abbott, L.F, and Marder, E. (2002)
+# Failure of averaging in the construction
+# of conductance-based neuron models. J. Neurophysiol., 87: 11291131.
+
 import numpy as np
 import os
 import pickle
@@ -242,6 +250,28 @@ except:
 
 
 
+try:
+    with open('adexp_seeds.p','rb') as f:
+        seeds = pickle.load(f)
+    assert seeds is not None
+
+except:
+    seeds, df = grid_search(MODEL_PARAMS['PYNN'],test_frame,backend=str('PYNN'))
+
+MU = 6
+NGEN = 80
+
+try:
+    with open('multi_objective_adexp.p','rb') as f:
+        test_opt = pickle.load(f)
+except:
+    for key, use_test in test_frame.items():
+        seed = seeds[key]
+        print(seed)
+        ga_out, _ = om.run_ga(MODEL_PARAMS['PYNN'],NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU, model_type = str('PYNN'),seed_pop=seed)
+        test_opt =  {str('multi_objective_PYNN')+str(seed):ga_out}
+        with open('multi_objective_adexp.p','wb') as f:
+            pickle.dump(test_opt,f)
 
 df = pd.DataFrame(index=list(test_frame.keys()),columns=list(reduced_cells.keys()))
 
@@ -312,8 +342,6 @@ except:
         test_opt =  {str('multi_objective_HH')+str(ga_out):ga_out}
         with open('multi_objective_HH.p','wb') as f:
             pickle.dump(test_opt,f)
-
-
 
 
 #Next HH, model and Adaptive Exp.
