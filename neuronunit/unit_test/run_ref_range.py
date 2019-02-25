@@ -294,17 +294,18 @@ for index,key in enumerate(reduced_cells.keys()):
 print(reduced_cells)
 cells = reduced_cells
 from neuronunit.optimization import optimization_management as om
-free_params = ['a','b','vr','k'] # this can only be odd numbers.
+free_params = ['a','b']#,'vr','k'] # this can only be odd numbers.
 #2**3
 hc = {}
 for k,v in cells['TC'].items():
     if k not in free_params:
         hc[k] = v
 #print(hc)
-TC_tests = pickle.load(open('thalamo_cortical_tests.p','rb'))
+#TC_tests = pickle.load(open('thalamo_cortical_tests.p','rb'))
                 #run_ga(model_params, max_ngen, test, free_params = None, hc = None)
 
 #ga_out, DO = om.run_ga(explore_param,10,TC_tests,free_params=free_params,hc = hc, NSGA = False, MU = 10)
+'''
 try:
     #assert 1==2
     ga_out_nsga = pickle.load(open('contents.p','rb'))
@@ -312,8 +313,9 @@ except:
 
     ga_out_nsga, _ = om.run_ga(explore_param,25,TC_tests,free_params=free_params,hc = hc, NSGA = True)
     pickle.dump(ga_out_nsga, open('contents.p','wb'))
+'''
 
-hof = ga_out_nsga['hof']
+hof = ga_out_nsga['pf']
 history = ga_out_nsga['history']
 
 
