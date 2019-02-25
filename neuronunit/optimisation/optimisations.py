@@ -20,7 +20,7 @@ Copyright (c) 2016, EPFL/Blue Brain Project
 """
 
 # pylint: disable=R0912, R0914
-from neuronunit.optimization import optimization_management
+from neuronunit.optimisation import optimisation_management
 
 import random
 import functools
@@ -46,7 +46,7 @@ logger = logging.getLogger('__main__')
 # TODO abstract the algorithm by creating a class for every algorithm, that way
 # settings of the algorithm can be stored in objects of these classes
 
-#from neuronunit.optimization.optimization_management import evaluate#, update_deap_pop
+#from neuronunit.optimisation.optimisation_management import evaluate#, update_deap_pop
 
 import numpy as np
 from collections import OrderedDict
@@ -119,7 +119,7 @@ class WSFloatIndividual(float):
         self.fitness = WeightedSumFitness(obj_size=obj_size)
 
 
-class SciUnitOptimization():#bluepyopt.optimisations.Optimisation):
+class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
 
     """DEAP Optimisation class"""
     def __init__(self, error_criterion = None, evaluator = None,
@@ -140,7 +140,7 @@ class SciUnitOptimization():#bluepyopt.optimisations.Optimisation):
         self.seed_pop = seed_pop
         """Constructor"""
 
-        #super(SciUnitOptimization, self).__init__()
+        #super(SciUnitOptimisation, self).__init__()
         self.selection = selection
         self.benchmark = benchmark
 
@@ -155,6 +155,7 @@ class SciUnitOptimization():#bluepyopt.optimisations.Optimisation):
         # Create a DEAP toolbox
         self.toolbox = deap.base.Toolbox()
         self.hc = hc
+        self.boundary_dict = boundary_dict
 
         self.setnparams(nparams = nparams, boundary_dict = boundary_dict)
         self.setup_deap()
@@ -168,7 +169,7 @@ class SciUnitOptimization():#bluepyopt.optimisations.Optimisation):
         return mps, tl
 
     def setnparams(self, nparams = 10, boundary_dict = None):
-        self.params = optimization_management.create_subset(nparams = nparams,boundary_dict = boundary_dict)
+        self.params = optimisation_management.create_subset(nparams = nparams,boundary_dict = boundary_dict)
         self.params, self.td = self.transdict(boundary_dict)
         return self.params, self.td
 
@@ -177,18 +178,18 @@ class SciUnitOptimization():#bluepyopt.optimisations.Optimisation):
         if self.benchmark == True:
             self.toolbox.register("evaluate", benchmarks.zdt1)
         else:
-            self.toolbox.register("evaluate", optimization_management.evaluate)
+            self.toolbox.register("evaluate", optimisation_management.evaluate)
 
     def grid_sample_init(self, nparams):
         '''
         the number of points, should be 2**n, where n is the number of dimensions
         but 2**n can be such a big number it's not even computationally tractible.
-        Therefore if 2**n is greater than offspring size, sparsify the grid initialization
+        Therefore if 2**n is greater than offspring size, sparsify the grid initialisation
         and only use a sparse sampling of points.
         1 -self.offsping size/len(dic_grid).
         '''
-        from neuronunit.optimization import exhaustive_search as es
-        from neuronunit.optimization import optimization_management as om
+        from neuronunit.optimisation import exhaustive_search as es
+        from neuronunit.optimisation import optimisation_management as om
         npoints = 2 ** len(list(self.params))
         npoints = np.ceil(npoints)
         dic_grid = es.create_grid(mp_in = self.params,npoints = self.offspring_size, free_params = self.params)
@@ -298,15 +299,16 @@ class SciUnitOptimization():#bluepyopt.optimisations.Optimisation):
             list,
             self.toolbox.Individual)
 
-        import neuronunit.optimization.optimization_management as om
+        import neuronunit.optimisation.optimisation_management as om
         # Register the evaluation function for the individuals
         def custom_code(invalid_ind):
 
             if self.backend is None:
                 self.backend = 'RAW'
-            #print(self.backend)
-            #import pdb; pdb.set_trace()
-            invalid_pop = list(om.update_deap_pop(invalid_ind, self.error_criterion, td = self.td, backend = self.backend, hc = self.hc))
+
+            invalid_pop = list(om.update_deap_pop(invalid_ind, self.error_criterion,
+                                                  td = self.td, backend = self.backend,
+                                                  hc = self.hc,boundary_dict = self.boundary_dict))
             invalid_dtc = [ i.dtc for i in invalid_pop if hasattr(i,'dtc') ]
             fitnesses = list(map(om.evaluate, invalid_dtc))
             return (invalid_pop,fitnesses)

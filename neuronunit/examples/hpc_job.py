@@ -17,36 +17,34 @@ import os
 import pickle
 import pandas as pd
 from neuronunit.tests.fi import RheobaseTestP
-from neuronunit.optimization.model_parameters import reduced_dict, reduced_cells
-from neuronunit.optimization import optimization_management as om
+#from neuronunit.optimisation.model_parameters import reduced_dict, reduced_cells
+from neuronunit.optimisation import optimisation_management as om
 from sciunit import scores# score_type
 
-from neuronunit.optimization.data_transport_container import DataTC
+from neuronunit.optimisation.data_transport_container import DataTC
 from neuronunit.tests.fi import RheobaseTestP# as discovery
-from neuronunit.optimization.optimization_management import dtc_to_rheo, format_test, nunit_evaluation
+from neuronunit.optimisation.optimisation_management import dtc_to_rheo, format_test, nunit_evaluation, grid_search
 import quantities as pq
 from neuronunit.models.reduced import ReducedModel
-from neuronunit.optimization.model_parameters import model_params, path_params
+from neuronunit.optimisation.model_parameters import path_params
 LEMS_MODEL_PATH = path_params['model_path']
 list_to_frame = []
-from neuronunit.tests.fi import RheobaseTestP
+#from neuronunit.tests.fi import RheobaseTestP
 import copy
 from sklearn.model_selection import ParameterGrid
 from neuronunit.models.interfaces import glif
-from neuronunit.optimization.data_transport_container import DataTC
-from neuronunit.optimization.optimization_management import grid_search
 import matplotlib.pyplot as plt
 
 # # The Izhiketich model is instanced using some well researched parameter sets.
 # First lets get the points in parameter space, that Izhikich himself has published about. These points are often used by the open source brain project to establish between model reproducibility. The itial motivating factor for choosing these points as constellations, of all possible parameter space subsets, is that these points where initially tuned and used as best guesses for matching real observed experimental recordings.
 
-explore_param = {k:(np.min(v),np.max(v)) for k,v in reduced_dict.items()}
+#explore_param = {k:(np.min(v),np.max(v)) for k,v in reduced_dict.items()}
 
 # ## Get the experimental Data pertaining to four different classes or neurons, that can constrain models.
 # Next we get some electro physiology data for four different classes of cells that are very common targets of scientific neuronal modelling. We are interested in finding out what are the most minimal, and detail reduced, low complexity model equations, that are able to satisfy
 # Below are some of the data set ID's I used to query neuroelectro.
 # To save time for the reader, I prepared some data earlier to save time, and saved the data as a pickle, pythons preferred serialisation format.
-# The interested reader can find some methods for getting cell specific ephys data from neuroelectro in a code file (neuronunit/optimization/get_neab.py)
+# The interested reader can find some methods for getting cell specific ephys data from neuroelectro in a code file (neuronunit/optimisation/get_neab.py)
 
 
 purkinje ={"id": 18, "name": "Cerebellum Purkinje cell", "neuron_db_id": 271, "nlex_id": "sao471801888"}
@@ -102,78 +100,75 @@ df['Hippocampus CA1 pyramidal cell']
 # # Tweak Izhikitich equations
 # with educated guesses based on information that is already encoded in the predefined experimental observations.
 # In otherwords use information that is readily amenable into hardcoding into equations
-# Select out the 'Neocortex pyramidal cell layer 5-6' below, as a target for optimization
+# Select out the 'Neocortex pyramidal cell layer 5-6' below, as a target for optimisation
 
 #!pip install lazyarray
 clustered_tests = pickle.load(open('clustered_tests.p','rb'))
 grouped_tests = clustered_tests['gtc']
 grouped_testsn = clustered_tests['gtn']
-from neuronunit.optimization import model_parameters as model_params
-from neuronunit.optimization.optimization_management import inject_and_plot, cluster_tests
+from neuronunit.optimisation import model_parameters as model_params
+from neuronunit.optimisation.optimisation_management import inject_and_plot, cluster_tests
 
-import pyNN
-from pyNN import neuron
-from pyNN.neuron import EIF_cond_exp_isfa_ista
-#neurons = pyNN.Population(N_CX, pyNN.EIF_cond_exp_isfa_ista, RS_parameters)
-#MODEL_PARAMS
+#import pyNN
+#from pyNN import neuron
+#from pyNN.neuron import EIF_cond_exp_isfa_ista
 MODEL_PARAMS = model_params.MODEL_PARAMS
 
-#with open('gcm.p','rb') as f:
-#    model_params = pickle.load(f)
-# directly code in observations, that are direct model parameters
-test_keyed_MODEL_PARAMS = {}
-for k,v in test_frame.items():
-    MODEL_PARAMS['GLIF']['R_input'] = v[1].observation
-    MODEL_PARAMS['GLIF']['C'] = v[3].observation
-    MODEL_PARAMS['GLIF']['init_AScurrents'] = [0,0]
-    test_keyed_MODEL_PARAMS[k] = MODEL_PARAMS['GLIF']
+
+# # The Izhiketich model is instanced using some well researched parameter sets.
+# First lets get the points in parameter space, that Izhikich himself has published about. These points are often used by the open source brain project to establish between model reproducibility. The itial motivating factor for choosing these points as constellations, of all possible parameter space subsets, is that these points where initially tuned and used as best guesses for matching real observed experimental recordings.
+
+#explore_param = {k:(np.min(v),np.max(v)) for k,v in reduced_dict.items()}
+
+
+# # Tweak Izhikitich equations
+# with educated guesses based on information that is already encoded in the predefined experimental observations.
+# In otherwords use information that is readily amenable into hardcoding into equations
+# Select out the 'Neocortex pyramidal cell layer 5-6' below, as a target for optimisation
 '''
-from allensdk.api.queries.glif_api import GlifApi
-gapi = GlifApi()
+free_params = ['a','b','k','c','C','d','vPeak','vr','vt']
+hc_ = reduced_cells['RS']
+hc_['vr'] = -65.2261863636364
+hc_['vPeak'] = hc_['vr'] + 86.364525297619
+explore_param['C'] = (hc_['C']-20,hc_['C']+20)
+explore_param['vr'] = (hc_['vr']-5,hc_['vr']+5)
+use_test = test_frame["Neocortex pyramidal cell layer 5-6"]
 
-cells = gapi.get_neuronal_models() # this returns a list of cells, each containing a list of models
-models = [ nm for c in cells for nm in c['neuronal_models'] ][0:1] # flatten to just a list of models
-config = gapi.get_neuron_configs(models[0]['id'])
-MODEL_PARAMS['GLIF']['init_AScurrents'] = config[566284249]['init_AScurrents']
-print(MODEL_PARAMS['GLIF']['init_AScurrents'])
+test_opt = {}
+with open('data_dump.p','wb') as f:
+    pickle.dump(test_opt,f)
+use_test[0].observation
+rtp = RheobaseTestP(use_test[0].observation)
+use_test[0] = rtp
+reduced_cells.keys()
+'''
 
-#import pdb; pdb.set_trace()
+with open('Izh_seeds.p','rb') as f:
+    seeds = pickle.load(f)
 
-#model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = (str('GLIF')))
-
-#params = gc.glif.to_dict()
-store_glif_results = {}
 try:
-    with open('glif_seeds.p','rb') as f:
-        seeds = pickle.load(f)
+
     assert seeds is not None
 
 except:
-    # rewrite test search, so that model params change as a function of.
-    seeds, df = grid_search(MODEL_PARAMS['GLIF'],test_frame,backend=str('GLIF'))
-'''
+    print('exceptional circumstances pickle file does not exist, rebuilding sparse grid for Izhikich')
+    # Below we perform a sparse grid sampling over the parameter space, using the published and well corrobarated parameter points, from Izhikitch publications, and the Open Source brain, shows that without optimisation, using off the shelf parameter sets to fit real-life biological cell data, does not work so well.
+    seeds, df = grid_search(MODEL_PARAMS['RAW'],
+                            test_frame, backend=str('RAW'))
 
-MU = 6
-NGEN = 80
+MU = 6 # more than six causes a memory leak. I suspect this is PYNN
+NGEN = 150
+#for key, use_test in test_frame.items():
+    # use the best parameters found via the sparse grid search above, to inform the first generation
+    # of the GA.
+    #print(seeds[key])
+use_test = test_frame["Neocortex pyramidal cell layer 5-6"]
 
-
-try:
-    with open('multi_objective_glif.p','rb') as f:
-        test_opt = pickle.load(f)
-
-except:
-    for key, use_test in test_frame.items():
-        seed = seeds[key]
-        print(seed)
-        # Todo optimize on clustered tests
-        print(grouped_tests)
-        print(grouped_tests)
-        MODEL_PARAMS['GLIF'] = test_keyed_MODEL_PARAMS[k]
-        ga_out, _ = om.run_ga(MODEL_PARAMS['GLIF'],NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU, model_type = str('GLIF'))#,seed_pop=seed)
-        test_opt =  {str('multi_objective_glif')+str(seed):ga_out}
-        with open('multi_objective_glif.p','wb') as f:
-            pickle.dump(test_opt,f)
-
+ga_out, _ = om.run_ga(MODEL_PARAMS['RAW'], NGEN,use_test, free_params = MODEL_PARAMS['RAW'],
+                            NSGA = True, MU = MU, model_type = str('RAW'))
+test_opt =  {str('multi_objective_izhi')+str(ga_out):ga_out}
+with open('multi_objective_izhi.p','wb') as f:
+    pickle.dump(test_opt,f)
 
 
 try:
@@ -194,10 +189,59 @@ except:
     for key, use_test in test_frame.items():
         seed = seeds[key]
         print(seed)
-        ga_out, _ = om.run_ga(MODEL_PARAMS['PYNN'],NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU, model_type = str('PYNN'),seed_pop=seed)
+        ga_out, _ = om.run_ga(MODEL_PARAMS['PYNN'],NGEN,use_test,free_params=MODEL_PARAMS['PYNN'].keys(), NSGA = True, MU = MU, model_type = str('PYNN'),seed_pop=seed)
         test_opt =  {str('multi_objective_PYNN')+str(seed):ga_out}
         with open('multi_objective_adexp.p','wb') as f:
             pickle.dump(test_opt,f)
+
+
+#neurons = pyNN.Population(N_CX, pyNN.EIF_cond_exp_isfa_ista, RS_parameters)
+#MODEL_PARAMS
+
+#with open('gcm.p','rb') as f:
+#    model_params = pickle.load(f)
+# directly code in observations, that are direct model parameters
+test_keyed_MODEL_PARAMS = {}
+for k,v in test_frame.items():
+    MODEL_PARAMS['GLIF']['R_input'] = v[1].observation
+    MODEL_PARAMS['GLIF']['C'] = v[3].observation
+    MODEL_PARAMS['GLIF']['init_AScurrents'] = [0,0]
+    test_keyed_MODEL_PARAMS[k] = MODEL_PARAMS['GLIF']
+
+#params = gc.glif.to_dict()
+store_glif_results = {}
+try:
+    with open('glif_seeds.p','rb') as f:
+        seeds = pickle.load(f)
+    assert seeds is not None
+
+except:
+    # rewrite test search, so that model params change as a function of.
+    seeds, df = grid_search(MODEL_PARAMS['GLIF'],test_frame,backend=str('GLIF'))
+
+MU = 6
+NGEN = 80
+
+
+try:
+    with open('multi_objective_glif.p','rb') as f:
+        test_opt = pickle.load(f)
+
+except:
+    for key, use_test in test_frame.items():
+        seed = seeds[key]
+        print(seed)
+        # Todo optimise on clustered tests
+        print(grouped_tests)
+        print(grouped_tests)
+        MODEL_PARAMS['GLIF'] = test_keyed_MODEL_PARAMS[k]
+        ga_out, _ = om.run_ga(test_keyed_MODEL_PARAMS[k],NGEN,use_test,free_params=test_keyed_MODEL_PARAMS[k].keys(), NSGA = True, MU = MU, model_type = str('GLIF'),seed_pop=seed)
+        test_opt =  {str('multi_objective_glif')+str(seed):ga_out}
+        with open('multi_objective_glif.p','wb') as f:
+            pickle.dump(test_opt,f)
+
+
+
 
 df = pd.DataFrame(index=list(test_frame.keys()),columns=list(reduced_cells.keys()))
 
@@ -268,64 +312,6 @@ except:
         test_opt =  {str('multi_objective_HH')+str(ga_out):ga_out}
         with open('multi_objective_HH.p','wb') as f:
             pickle.dump(test_opt,f)
-
-# # The Izhiketich model is instanced using some well researched parameter sets.
-# First lets get the points in parameter space, that Izhikich himself has published about. These points are often used by the open source brain project to establish between model reproducibility. The itial motivating factor for choosing these points as constellations, of all possible parameter space subsets, is that these points where initially tuned and used as best guesses for matching real observed experimental recordings.
-
-explore_param = {k:(np.min(v),np.max(v)) for k,v in reduced_dict.items()}
-
-
-# # Tweak Izhikitich equations
-# with educated guesses based on information that is already encoded in the predefined experimental observations.
-# In otherwords use information that is readily amenable into hardcoding into equations
-# Select out the 'Neocortex pyramidal cell layer 5-6' below, as a target for optimization
-
-free_params = ['a','b','k','c','C','d','vPeak','vr','vt']
-hc_ = reduced_cells['RS']
-hc_['vr'] = -65.2261863636364
-hc_['vPeak'] = hc_['vr'] + 86.364525297619
-explore_param['C'] = (hc_['C']-20,hc_['C']+20)
-explore_param['vr'] = (hc_['vr']-5,hc_['vr']+5)
-use_test = test_frame["Neocortex pyramidal cell layer 5-6"]
-test_opt = {}
-with open('data_dump.p','wb') as f:
-    pickle.dump(test_opt,f)
-use_test[0].observation
-rtp = RheobaseTestP(use_test[0].observation)
-use_test[0] = rtp
-reduced_cells.keys()
-
-
-with open('Izh_seeds.p','rb') as f:
-    seeds = pickle.load(f)
-
-try:
-
-    assert seeds is not None
-
-except:
-    print('exceptional circumstances pickle file does not exist, rebuilding sparse grid for Izhikich')
-    # Below we perform a sparse grid sampling over the parameter space, using the published and well corrobarated parameter points, from Izhikitch publications, and the Open Source brain, shows that without optimization, using off the shelf parameter sets to fit real-life biological cell data, does not work so well.
-    seeds, df = grid_search(explore_ranges,test_frame,backend=str('RAW'))
-
-
-
-MU = 6
-NGEN = 150
-
-
-for key, use_test in test_frame.items():
-
-    # use the best parameters found via the sparse grid search above, to inform the first generation
-    # of the GA.
-
-    seed = seeds[key]
-    print(seed)
-    ga_out, _ = om.run_ga(explore_param,NGEN,use_test,free_params=free_params, NSGA = True, MU = MU,seed_pop = seed, model_type = str('RAW'))
-
-    test_opt =  {str('multi_objective_izhi')+str(ga_out):ga_out}
-    with open('multi_objective_izhi.p','wb') as f:
-        pickle.dump(test_opt,f)
 
 
 
