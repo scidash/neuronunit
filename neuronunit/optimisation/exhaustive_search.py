@@ -1,15 +1,15 @@
 
-#from neuronunit.optimization import get_neab
+#from neuronunit.optimisation import get_neab
 #tests = get_neab.tests
 import pdb
 
 import multiprocessing
 from collections import OrderedDict
 
-from neuronunit.optimization.model_parameters import model_params
-from neuronunit.optimization import data_transport_container
-from neuronunit.optimization.optimization_management import nunit_evaluation, update_deap_pop
-from neuronunit.optimization.optimization_management import update_dtc_pop
+#from neuronunit.optimisation.model_parameters import model_params
+from neuronunit.optimisation import data_transport_container
+from neuronunit.optimisation.optimisation_management import nunit_evaluation, update_deap_pop
+from neuronunit.optimisation.optimisation_management import update_dtc_pop
 import numpy as np
 from collections import OrderedDict
 
@@ -152,7 +152,7 @@ def create_a_map(subset):
     keying into an existing of parameters.
 
     This method needs the user of the method to declare a dictionary of model parameters in a path:
-    neuronunit.optimization.model_parameters.
+    neuronunit.optimisation.model_parameters.
 
     Miscallenous, once grid created by this function
     has been evaluated using neuronunit it can be used for informing a more refined second pass fine grained grid

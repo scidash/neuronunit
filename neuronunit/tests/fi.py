@@ -6,9 +6,9 @@ import multiprocessing
 global cpucount
 npartitions = cpucount = multiprocessing.cpu_count()
 from .base import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
-from .. import optimization
+from .. import optimisation
 
-from neuronunit.optimization.data_transport_container import DataTC
+from neuronunit.optimisation.data_transport_container import DataTC
 import os
 import quantities
 import neuronunit
@@ -37,8 +37,9 @@ def diff(vm):
 @jit
 def get_diff(vm):
     differentiated = np.diff(vm)
-    spikes = len([np.any(differentiated) > 0.000193667327364])
-    return spikes
+    spike_lets = threshold_detection(differentiated,threshold=0.000193667327364)
+    n_spikes = len([np.any(differentiated) > 0.000193667327364])
+    return spike_lets, n_spikeson
 
 tolerance = 0.001
 
@@ -49,7 +50,7 @@ class RheobaseTest(VmTest):
 
     Strengths: this algorithm is faster than the parallel class, present in this file under important and
     limited circumstances: this serial algorithm is faster than parallel for model backends that are able to
-    implement numba jit optimization
+    implement numba jit optimisation
 
     Weaknesses this serial class is significantly slower, for many backend implementations including raw NEURON
     NEURON via PyNN, and possibly GLIF.
@@ -194,7 +195,7 @@ class RheobaseTestP(VmTest):
      which finds a rheobase prediction.
 
      Strengths: this algorithm is faster than the serial class, present in this file for model backends that are not able to
-     implement numba jit optimization, which actually happens to be typical of a signifcant number of backends
+     implement numba jit optimisation, which actually happens to be typical of a signifcant number of backends
 
      Weaknesses this serial class is significantly slower, for many backend implementations including raw NEURON
      NEURON via PyNN, and possibly GLIF.
@@ -371,17 +372,18 @@ class RheobaseTestP(VmTest):
             # dtc = check_current(model.rheobase,dtc)
             # If its not true enter a search, with ranges informed by memory
             cnt = 0
-            sub = np.array([0,0])
+            sub = np.array([0,0]); supra = np.array([0,0])
+
             use_diff = False
 
             while dtc.boolean == False and cnt< 40:
-                #if cnt>3 and len(supra) ==0 and len(sub):
+                if len(supra) ==0 and len(sub):
                 #    use_diff = True # differentiate the wave to look for spikes
                     # negeative spiker
-                if sub.max()> 2000.0:
-                    dtc.rheobase = None #float(supra.min())
-                    dtc.boolean = False
-                    return dtc
+                    if sub.max()> 2000.0:
+                        dtc.rheobase = None #float(supra.min())
+                        dtc.boolean = False
+                        return dtc
 
                 dtc_clones = [ copy.copy(dtc) for i in range(0,len(dtc.current_steps)) ]
                 for i,s in enumerate(dtc.current_steps):
