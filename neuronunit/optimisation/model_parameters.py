@@ -32,7 +32,6 @@ except:
     from neuronunit.optimisation import get_neab
 
 
-
 MODEL_PARAMS = {}
 '''
 from neurodynex.adex_model import AdEx
@@ -93,15 +92,28 @@ EIF_cond_exp_isfa_ista_initial_values = {
     'gsyn_inh': 0.0,
 }
 MODEL_PARAMS['PYNN'] = EIF
-'''
-
-
-
-
-
-
-GLIF_RANGE = {'El_reference': [-0.08569469261169435, -0.05463626766204832], 'C': [3.5071610042390286e-11, 7.630189223327981e-10], 'asc_amp_array': [[-6.493692083311101e-10, 1.224690033604069e-09], [1.0368081669092888e-08, -4.738879134819112e-08]], 'init_threshold': [0.009908733642683513, 0.04939040414685865], 'threshold_reset_method': {'params': {}, 'name': 'inf'}, 'th_inf': [0.009908733642683513, 0.04939040414685865], 'spike_cut_length': [20, 199], 'init_AScurrents': [[0.0, 0.0], [0.0, 0.0]], 'init_voltage': [-70.0, 0.0], 'threshold_dynamics_method': {'params': {}, 'name': 'inf'}, 'voltage_reset_method': {'params': {}, 'name': 'zero'}, 'extrapolation_method_name': ['endpoints', 'endpoints'], 'dt': [5e-05, 5e-05], 'voltage_dynamics_method': {'params': {}, 'name': 'linear_forward_euler'}, 'El': [0.0, 0.0], 'asc_tau_array': [[0.01, 0.0033333333333333335], [0.3333333333333333, 0.1]], 'R_input': [27743752.593817078, 1792774179.3647704], 'AScurrent_dynamics_method': {'params': {}, 'name': 'none'}, 'AScurrent_reset_method': {'params': {}, 'name': 'none'}, 'dt_multiplier': [10, 10], 'th_adapt': None, 'coeffs': {'a': 1, 'C': 1, 'b': 1, 'G': 1, 'th_inf': 1.0212937371199788, 'asc_amp_array': [1.0, 1.0]}, 'type': ['GLIF', 'GLIF']}
-
+GLIF_RANGE = {'El_reference': [-0.08569469261169435, -0.05463626766204832], \
+              'C': [3.5071610042390286e-11, 7.630189223327981e-10], \
+              'asc_amp_array': [[-6.493692083311101e-10, 1.224690033604069e-09], \
+                                [1.0368081669092888e-08, -4.738879134819112e-08]], \
+              'init_threshold': [0.009908733642683513, 0.04939040414685865], \
+              'threshold_reset_method': {'params': {}, 'name': 'inf'}, \
+              'th_inf': [0.009908733642683513, 0.04939040414685865], \
+              'spike_cut_length': [20, 199], \
+              'init_AScurrents': [[0.0, 0.0], [0.0, 0.0]], \ 
+              'init_voltage': [-70.0, 0.0], \
+              'threshold_dynamics_method': {'params': {}, 'name': 'inf'}, \
+              'voltage_reset_method': {'params': {}, 'name': 'zero'}, \
+              'extrapolation_method_name': ['endpoints', 'endpoints'], \
+              'dt': [5e-05, 5e-05], 'voltage_dynamics_method': {'params': {}, 'name': 'linear_forward_euler'}, \
+              'El': [0.0, 0.0], 'asc_tau_array': [[0.01, 0.0033333333333333335],[0.3333333333333333, 0.1]], \
+              'R_input': [27743752.593817078, 1792774179.3647704], \
+              'AScurrent_dynamics_method': {'params': {}, 'name': 'none'}, \
+              'AScurrent_reset_method': {'params': {}, 'name': 'none'}, \
+              'dt_multiplier': [10, 10], \
+              'th_adapt': None, 'coeffs': {'a': 1, 'C': 1, 'b': 1, 'G': 1, \
+                                           'th_inf': 1.0212937371199788, 'asc_amp_array': [1.0, 1.0]}, \
+              'type': ['GLIF', 'GLIF']}
 MODEL_PARAMS['GLIF'] = GLIF_RANGE
 MODEL_PARAMS['GLIF']['init_AScurrents'] = [0,0]
 
@@ -111,18 +123,18 @@ type2007 = collections.OrderedDict([
   #              C    k     vr  vt vpeak   a      b   c    d  celltype
   ('RS',        (100, 0.7,  -60, -40, 35, 0.03,   -2, -50,  100,  1)),
   ('IB',        (150, 1.2,  -75, -45, 50, 0.01,   5, -56,  130,   2)),
+  ('CH',        (50,  1.5,  -60, -40, 25, 0.03,   1, -40,  150,   3)),
   ('LTS',       (100, 1.0,  -56, -42, 40, 0.03,   8, -53,   20,   4)),
+  ('FS',        (20,  1.0,  -55, -40, 25, 0.2,   -2, -45,  -55,   5)),
   ('TC',        (200, 1.6,  -60, -50, 35, 0.01,  15, -60,   10,   6)),
-  ('TC_burst',  (200, 1.6,  -60, -50, 35, 0.01,  15, -60,   10,   6))])
-  #('CH',        (50,  1.5,  -60, -40, 25, 0.03,   1, -40,  150,   3)),
-  #('FS',        (20,  1.0,  -55, -40, 25, 0.2,   -2, -45,  -55,   5)),
-
-  #('RTN',       (40,  0.25, -65, -45,  0, 0.015, 10, -55,   50,   7)),
-  #('RTN_burst', (40,  0.25, -65, -45,  0, 0.015, 10, -55,   50,   7))])
+  ('TC_burst',  (200, 1.6,  -60, -50, 35, 0.01,  15, -60,   10,   6)),
+  ('RTN',       (40,  0.25, -65, -45,  0, 0.015, 10, -55,   50,   7)),
+  ('RTN_burst', (40,  0.25, -65, -45,  0, 0.015, 10, -55,   50,   7))])
 
 
 # http://www.physics.usyd.edu.au/teach_res/mp/mscripts/
 # ns_izh002.m
+
 
 '''
 temp = {k:[] for k in ['C','k','vr','vt','vPeak','a','b','c','d']  }
