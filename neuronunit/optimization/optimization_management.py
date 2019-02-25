@@ -966,6 +966,9 @@ def boot_new_genes(number_genes,dtcpop):
     dtcpop = update_dtc_pop(population,DO.td)
     return dtcpop
 
+import dask.array as da
+
+
 def parallel_route(pop,dtcpop,tests,td,clustered=False):
     for d in dtcpop:
         d.tests = copy.copy(tests)
@@ -979,7 +982,10 @@ def parallel_route(pop,dtcpop,tests,td,clustered=False):
     else:
     	dtcpop = list(dtcbag.map(nunit_evaluation).compute())
 
-
+    #dask lazy arrays make pynn ones obsolete.
+    dtcarray = da(dtcpop)
+    dtcarray.compute()
+    dtcarray = dtcarray.persist()
 
     if dtc.score is not None:
         dtc = score_proc(dtc,rtest,copy.copy(score))
