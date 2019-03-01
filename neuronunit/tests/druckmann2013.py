@@ -130,8 +130,11 @@ class Druckmann2013AP:
         time.units = pq.ms
 
         return value, time
-@jit
 def isolate_code_block(threshold_crosses,start_time,dvdt_threshold_crosses,dvdt_zero_crosses,vm):
+    '''
+    The introduction of this function is was not syntactically necissated. The reason for this functions existence 
+    is to support code modularity.
+    '''
     threshold_crosses = threshold_crosses[np.where(threshold_crosses > start_time)]
     dvdt_threshold_crosses = dvdt_threshold_crosses[np.where(dvdt_threshold_crosses > start_time)]
     dvdt_zero_crosses = dvdt_zero_crosses[np.where(dvdt_zero_crosses > start_time)]
