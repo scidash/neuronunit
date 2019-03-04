@@ -8,7 +8,6 @@
 #    of conductance-based neuron models. J. Neurophysiol., 87: 11291131.
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-
 import numpy as np
 import dask.bag as db
 import pandas as pd
@@ -55,6 +54,7 @@ from neuronunit.optimisation import model_parameters as modelp
 
 from neuronunit.tests.fi import RheobaseTestP# as discovery
 from neuronunit.tests.fi import RheobaseTest# as discovery
+from neuronunit.tests.druckmann2013 import *
 
 import dask.bag as db
 # The rheobase has been obtained seperately and cannot be db mapped.
@@ -819,7 +819,7 @@ def pred_evaluation(dtc):
     dtc =  dtc_to_rheo(dtc)
     dtc = format_test(dtc)
     tests = dtc.tests
-    
+
     #test_and_dtc = (use_test,dtc)
 
     for k,t in enumerate(tests):
