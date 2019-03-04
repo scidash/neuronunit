@@ -13,6 +13,8 @@ import pickle
 import copy
 import re
 
+import matplotlib as mpl
+mpl.use('Agg')
 
 import allensdk.core.json_utilities as json_utilities
 from allensdk.model.glif.glif_neuron import GlifNeuron
@@ -155,6 +157,11 @@ class GLIFBackend(Backend):
         results = {}
         results['vm'] = self.vM
         results['t'] = self.vM.times
+
+        plt.clf()
+        #plt.title('')
+        plt.plot(self.vM.times,self.vM)
+        plt.savefig('debug_glif.png')
         results['run_number'] = results.get('run_number',0) + 1
         return results
 
@@ -189,6 +196,7 @@ class GLIFBackend(Backend):
         dt =  self.glif.dt
         self.stim = [ 0.0 ] * int(start) + [ amplitude ] * int(duration) + [ 0.0 ] * int(stop)
         #self.glif.init_voltage = -0.0065
+
         self.results = self.glif.run(self.stim)
         vm = self.results['voltage']
         if len(self.results['interpolated_spike_voltage']) > 0:

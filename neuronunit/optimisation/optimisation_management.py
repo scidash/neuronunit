@@ -6,7 +6,8 @@
 #    Golowasch, J., Goldman, M., Abbott, L.F, and Marder, E. (2002)
 #    Failure of averaging in the construction
 #    of conductance-based neuron models. J. Neurophysiol., 87: 11291131.
-
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 
 import numpy as np
 import dask.bag as db
@@ -37,7 +38,6 @@ import numpy as np
 from itertools import repeat
 import numpy
 from sklearn.cluster import KMeans
-
 
 from deap import base
 from pyneuroml import pynml
@@ -82,11 +82,20 @@ def inject_and_plot(dtc,figname='problem'):
     '''
     model = mint_generic_model(str('RAW'))
     model.set_attrs(dtc.attrs)
-    dtc.vtest[0]['injected_square_current']['amplitude'] = dtc.rheobase['value']
+    try:
+        dtc.vtest[0]['injected_square_current']['amplitude'] = dtc.rheobase['value']
+    except:
+        dtc.vtest[0]['injected_square_current']['amplitude'] = dtc.rheobase
     dtc.vtest[0]['injected_square_current']['duration'] = 1000*pq.ms
     model.inject_square_current(dtc.vtest[0])
+
     plt.plot(model.get_membrane_potential().times,model.get_membrane_potential())#,label='ground truth')
-    plt.savefig(figname+str('debug.png'))
+    plot_backend = mpl.get_backend()
+
+    if plot_backend == str('Agg'):
+        plt.savefig(figname+str('debug.png'))
+    else:
+        plt.show()
 
 def obtain_predictions(t,backend,params):
 
@@ -94,6 +103,38 @@ def obtain_predictions(t,backend,params):
     model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = ('RAW'))
     model.set_attrs(params)
     return t.generate_prediction(model)
+
+def cell_to_test_mapper(content):
+    dm_properties = {}
+    index,dtc = content
+    dm_properties[index] = []
+    ir_currents = dtc.rheobase
+    standard = 1.5*ir_currents
+    #standard *= 1.5
+    strong = 3*ir_currents
+    tests = init_tests(standard,strong)
+    model = None
+    model = mint_generic_model(dtc.backend)
+
+    for i, test in enumerate(tests):
+        print(i,test)
+        model.set_attrs(dtc.attrs)
+        dm_properties[index].append(test.generate_prediction(model)['mean'])
+        print(dm_properties[index])
+    dtc.dm_properties = None
+    dtc.dm_properties = dm_properties
+    return dtc
+
+def add_dm_properties_to_cells(dtcpop):
+    dm_properties = {}
+    flatten_cells = [(index,dtc) for index,dtc in enumerate(dtcpop) ]
+    bag = db.from_sequence(flatten_cells,npartitions=8)
+    dtcpop = list(bag.map(cell_to_test_mapper).compute())
+    dm_properties = {}
+    for l in list_of_dics:
+        dm_properties.update(l)
+    return (dtcpop,dm_properties)
+
 
 def make_fake_observations(tests,backend):
     '''
@@ -140,11 +181,11 @@ def round_trip_test(tests,backend):
     # make some new tests based on internally generated data
     # as opposed to experimental data.
     '''
-    explore_param = model_params_everything[backend] # TODO, make this syntax possible.
+    ranges = MODEL_PARAMS[str(backend)]
     random_param = {} # randomly sample a point in the viable parameter space.
-    for t in explore_param.keys():
-        mean = np.mean(explore_param[t])
-        std = np.std(explore_param[t])
+    for k in ranges.keys():
+        mean = np.mean(ranges[k])
+        std = np.std(ranges[k])
         sample = numpy.random.normal(loc=mean, scale=2*std, size=1)[0]
         random_param[k] = sample
     tests = make_fake_observations(tests,backend,random_param)
@@ -476,24 +517,39 @@ def dtc_to_rheo_serial(dtc):
         dtc = get_rh(dtc,rtest)
     return dtc
 
+from collections.abc import Iterable
+
+def get_rtest(dtc):
+    rtest = None
+    if 'RAW' in dtc.backend or 'HH' in dtc.backend:
+        if not isinstance(dtc.tests, Iterable):
+            rtest = dtc.tests
+        else:
+            rtest = [ t for t in dtc.tests if str('RheobaseTest') == t.name ]
+            rtest = rtest[0]
+    else:
+        if not isinstance(dtc.tests, Iterable):
+            rtest = dtc.tests
+        else:
+            rtest = [ t for t in dtc.tests if str('RheobaseTestP') == t.name ]
+            rtest = rtest[0]
+
+    return rtest
+
 def dtc_to_rheo(dtc):
     # If  test taking data, and objects are present (observations etc).
     # Take the rheobase test and store it in the data transport container.
-    dtc.scores = {}
-    dtc.score = {}
-    backend_ = dtc.backend
-    model = mint_generic_model(backend_)
+    if not hasattr(dtc,'scores'):
+        dtc.scores = None
+        dtc.scores = {}
+    if not hasattr(dtc,'score'):
+        dtc.score = None
+        dtc.score = {}
+    #backend =
+    model = mint_generic_model(dtc.backend)
     model.set_attrs(dtc.attrs)
-
-
-    if 'RAW' in backend_ or 'HH' in backend_:#Backend:
-        rtest = [ t for t in dtc.tests if str('RheobaseTest') == t.name ]
-    else:
-        rtest = [ t for t in dtc.tests if str('RheobaseTestP') == t.name ]
-
-    if len(rtest):
-        rtest = rtest[0]
-
+    rtest = get_rtest(dtc)
+    if rtest is not None:
         dtc.rheobase = rtest.generate_prediction(model)
         #print(dtc.rheobase)
         if dtc.rheobase is not None and dtc.rheobase !=-1.0:
@@ -544,41 +600,49 @@ def switch_logic(tests):
     '''
     Hopefuly depreciated by future NU debugging.
     '''
-    for t in tests:
-        t.passive = None
-        t.active = None
-        active = False
-        passive = False
+    if not isinstance(tests,Iterable):
+        if str('RheobaseTest') == tests.name:
+            active = True
+            passive = False
+        elif str('RheobaseTestP') == tests.name:
+            active = True
+            passive = False
+    else:
+        for t in tests:
+            t.passive = None
+            t.active = None
+            active = False
+            passive = False
 
-        if str('RheobaseTest') == t.name:
-            active = True
-            passive = False
-        elif str('RheobaseTestP') == t.name:
-            active = True
-            passive = False
-        elif str('InjectedCurrentAPWidthTest') == t.name:
-            active = True
-            passive = False
-        elif str('InjectedCurrentAPAmplitudeTest') == t.name:
-            active = True
-            passive = False
-        elif str('InjectedCurrentAPThresholdTest') == t.name:
-            active = True
-            passive = False
-        elif str('RestingPotentialTest') == t.name:
-            passive = True
-            active = False
-        elif str('InputResistanceTest') == t.name:
-            passive = True
-            active = False
-        elif str('TimeConstantTest') == t.name:
-            passive = True
-            active = False
-        elif str('CapacitanceTest') == t.name:
-            passive = True
-            active = False
-        t.passive = passive
-        t.active = active
+            if str('RheobaseTest') == t.name:
+                active = True
+                passive = False
+            elif str('RheobaseTestP') == t.name:
+                active = True
+                passive = False
+            elif str('InjectedCurrentAPWidthTest') == t.name:
+                active = True
+                passive = False
+            elif str('InjectedCurrentAPAmplitudeTest') == t.name:
+                active = True
+                passive = False
+            elif str('InjectedCurrentAPThresholdTest') == t.name:
+                active = True
+                passive = False
+            elif str('RestingPotentialTest') == t.name:
+                passive = True
+                active = False
+            elif str('InputResistanceTest') == t.name:
+                passive = True
+                active = False
+            elif str('TimeConstantTest') == t.name:
+                passive = True
+                active = False
+            elif str('CapacitanceTest') == t.name:
+                passive = True
+                active = False
+            t.passive = passive
+            t.active = active
     return tests
 
 def active_values(keyed,rheobase):

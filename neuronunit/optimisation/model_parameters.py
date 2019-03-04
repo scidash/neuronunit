@@ -17,7 +17,8 @@ import pdb
 import pyNN
 from pyNN import neuron
 from pyNN.neuron import EIF_cond_exp_isfa_ista
-#cell = neuron.create(EIF_cond_exp_isfa_ista())
+from neurodynex.adex_model import AdEx
+
 
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -31,27 +32,35 @@ except:
 
 
 MODEL_PARAMS = {}
-'''
-from neurodynex.adex_model import AdEx
+
 
 BAE = {}
-
+AdEx.b2.units.pF
 # Parameters
 BAE['C'] = 281 * AdEx.b2.units.pF
 BAE['gL'] = 30 * AdEx.b2.units.nS
-BAE['taum'] = C / gL
+BAE['taum'] = BAE['C'] / BAE['gL']
 BAE['EL'] = -70.6 * AdEx.b2.units.mV
 BAE['VT'] = -50.4 * AdEx.b2.units.mV
 BAE['DeltaT'] = 2 * AdEx.b2.units.mV
-BAE['Vcut'] = VT + 5 * DeltaT
+BAE['Vcut'] = BAE['VT'] + 5 * BAE['DeltaT']
+a = 4*AdEx.b2.units.nS
+b = 0.08*AdEx.b2.units.nA
+#I = .8*nA
+#Vcut = VT + 5 * DeltaT  # practical threshold condition
+#N = 200
 
 # Pick an electrophysiological behaviour
-RSBrian = [tauw, a, b, Vr = 144*AdEx.b2.units.ms, 4*AdEx.b2.units.nS, 0.0805*AdEx.b2.units.nA, -70.6*AdEx.b2.units.mV] # Regular spiking (as in the paper)
-BurstBrian = [tauw,a,b,Vr=20*AdEx.b2.units.ms,4*AdEx.b2.units.ns,0.5*AdEx.b2.units.nA,VT+5*AdEx.b2.units.mV] # Bursting
-FSBrian = [tauw,a,b,Vr=144*AdEx.b2.units.ms,2*C/(144*AdEx.b2.units.ms),0*AdEx.b2.units.nA,-70.6*AdEx.b2.units.mV] # Fast spiking
+Vr = 144*AdEx.b2.units.ms
+RSBrian = [BAE['taum'] , a, b,Vr, 4*AdEx.b2.units.nS, 0.0805*AdEx.b2.units.nA, -70.6*AdEx.b2.units.mV] # Regular spiking (as in the paper)
+Vr = 20*AdEx.b2.units.ms
+BurstBrian = [BAE['taum'] ,a,b,Vr,4*AdEx.b2.units.nS,0.5*AdEx.b2.units.nA,BAE['VT']+5*AdEx.b2.units.mV] # Bursting
+Vr = 144*AdEx.b2.units.ms,2*BAE['C']/(144*AdEx.b2.units.ms)
+FSBrian = [BAE['taum'] ,a,b,Vr,0*AdEx.b2.units.nA,-70.6*AdEx.b2.units.mV] # Fast spiking
 
 # https://github.com/NeuroML/NML2_LEMS_Examples/blob/master/PyNN.xml
 EIF = {}
+cell = neuron.create(EIF_cond_exp_isfa_ista())
 EIF_dic = cell[0].get_parameters()
 EIF['cm'] = (EIF_dic['cm']-EIF_dic['cm']/2,EIF_dic['cm']+EIF_dic['cm']/2)
 EIF['tau_m'] = (EIF_dic['tau_m']-EIF_dic['tau_m']/2,EIF_dic['tau_m']+EIF_dic['tau_m']/2)
@@ -97,7 +106,7 @@ GLIF_RANGE = {'El_reference': [-0.08569469261169435, -0.05463626766204832], \
               'threshold_reset_method': {'params': {}, 'name': 'inf'}, \
               'th_inf': [0.009908733642683513, 0.04939040414685865], \
               'spike_cut_length': [20, 199],
-              'init_AScurrents': [[0.0, 0.0], [0.0, 0.0]], \ 
+              'init_AScurrents': [[0.0, 0.0], [0.0, 0.0]], \
               'init_voltage': [-70.0, 0.0], 'threshold_dynamics_method': {'params': {}, 'name': 'inf'}, \
               'voltage_reset_method': {'params': {}, 'name': 'zero'}, \
               'extrapolation_method_name': ['endpoints', 'endpoints'], \
@@ -112,7 +121,7 @@ GLIF_RANGE = {'El_reference': [-0.08569469261169435, -0.05463626766204832], \
               'type': ['GLIF', 'GLIF']}
 MODEL_PARAMS['GLIF'] = GLIF_RANGE
 MODEL_PARAMS['GLIF']['init_AScurrents'] = [0,0]
-'''
+
 # Which Parameters
 # https://www.izhikevich.org/publications/spikes.htm
 type2007 = collections.OrderedDict([
@@ -121,9 +130,8 @@ type2007 = collections.OrderedDict([
   ('IB',        (150, 1.2,  -75, -45, 50, 0.01,   5, -56,  130,   2)),
   ('TC',        (200, 1.6,  -60, -50, 35, 0.01,  15, -60,   10,   6)),
   ('TC_burst',  (200, 1.6,  -60, -50, 35, 0.01,  15, -60,   10,   6)),
-  ('LTS',       (100, 1.0,  -56, -42, 40, 0.03,   8, -53,   20,   4))])
-  
-    #('CH',        (50,  1.5,  -60, -40, 25, 0.03,   1, -40,  150,   3)),
+  ('LTS',       (100, 1.0,  -56, -42, 40, 0.03,   8, -53,   20,   4)),
+  ('CH',        (50,  1.5,  -60, -40, 25, 0.03,   1, -40,  150,   3))])
   #('FS',        (20,  1.0,  -55, -40, 25, 0.2,   -2, -45,  -55,   5)),
     #('RTN',       (40,  0.25, -65, -45,  0, 0.015, 10, -55,   50,   7)),
   #('RTN_burst', (40,  0.25, -65, -45,  0, 0.015, 10, -55,   50,   7))])
@@ -210,7 +218,21 @@ def transcribe_units(input_dic):
         input_dic[k] = v * m2m[k]
     return input_dic
 
+
+# FROM the MOD file.
+vanilla_NRN = {}
+#vanilla_NRN['v0'] = -60# (mV)
+vanilla_NRN['k'] = 7.0E-4# (uS / mV)
+vanilla_NRN['vr'] = -60# (mV)
+vanilla_NRN['vt'] = -40# (mV)
+vanilla_NRN['vpeak'] = 35# (mV)
+vanilla_NRN['a'] = 0.03# (kHz)
+vanilla_NRN['b'] = -0.002# (uS)
+vanilla_NRN['c'] = -50# (mV)
+vanilla_NRN['d'] = 0.1# (nA)
+vanilla_NRN['C'] = 1.0E-4# (microfarads)
 #print(pred0,pred1)
+MODEL_PARAMS['NEURON'] = vanilla_NRN
 
 # General parameters
 
