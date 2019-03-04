@@ -217,7 +217,7 @@ class testoptimisationBackends(NotebookTools,unittest.TestCase):
 
         '''
         MBEs = list(self.MODEL_PARAMS.keys())
-        with open(electro_path,'rb') as f:
+        with open(self.electro_path,'rb') as f:
             (obs_frame,test_frame) = pickle.load(f)
         for key, use_test in test_frame.items():
             for b in MBEs:
