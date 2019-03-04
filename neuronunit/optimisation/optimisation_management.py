@@ -107,11 +107,11 @@ def obtain_predictions(t,backend,params):
 def init_dm_tests(standard,strong):
     '''
     Lets not greedy import
-    '''
     import neuronunit.tests.druckmann2013 as dm
     for t in dir(dm):
         if "Test" in t:
             exec('from neuronunit.tests.druckmann2013 import '+str(t))#+' as '+str(t))
+    '''
 
     tests = [AP12AmplitudeDropTest(standard),
         AP1SSAmplitudeChangeTest(standard),
