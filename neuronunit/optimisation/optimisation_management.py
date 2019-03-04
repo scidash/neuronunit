@@ -96,13 +96,65 @@ def inject_and_plot(dtc,figname='problem'):
         plt.savefig(figname+str('debug.png'))
     else:
         plt.show()
-
+'''
 def obtain_predictions(t,backend,params):
 
     model = None
     model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = ('RAW'))
     model.set_attrs(params)
     return t.generate_prediction(model)
+'''
+def init_dm_tests(standard,strong):
+    '''
+    Lets not greedy import
+    '''
+    import neuronunit.tests.druckmann2013 as dm
+    for t in dir(dm):
+        if "Test" in t:
+            exec('from neuronunit.tests.druckmann2013 import '+str(t))#+' as '+str(t))
+
+    tests = [AP12AmplitudeDropTest(standard),
+        AP1SSAmplitudeChangeTest(standard),
+        AP1AmplitudeTest(standard),
+        AP1WidthHalfHeightTest(standard),
+        AP1WidthPeakToTroughTest(standard),
+        AP1RateOfChangePeakToTroughTest(standard),
+        AP1AHPDepthTest(standard),
+        AP2AmplitudeTest(standard),
+        AP2WidthHalfHeightTest(standard),
+        AP2WidthPeakToTroughTest(standard),
+        AP2RateOfChangePeakToTroughTest(standard),
+        AP2AHPDepthTest(standard),
+        AP12AmplitudeChangePercentTest(standard),
+        AP12HalfWidthChangePercentTest(standard),
+        AP12RateOfChangePeakToTroughPercentChangeTest(standard),
+        AP12AHPDepthPercentChangeTest(standard),
+        AP1DelayMeanTest(standard),
+        AP1DelaySDTest(standard),
+        AP2DelayMeanTest(standard),
+        AP2DelaySDTest(standard),
+        Burst1ISIMeanTest(standard),
+        Burst1ISISDTest(standard),
+        InitialAccommodationMeanTest(standard),
+        SSAccommodationMeanTest(standard),
+        AccommodationRateToSSTest(standard),
+        AccommodationAtSSMeanTest(standard),
+        AccommodationRateMeanAtSSTest(standard),
+        ISICVTest(standard),
+        ISIMedianTest(standard),
+        ISIBurstMeanChangeTest(standard),
+        SpikeRateStrongStimTest(strong),
+        AP1DelayMeanStrongStimTest(strong),
+        AP1DelaySDStrongStimTest(strong),
+        AP2DelayMeanStrongStimTest(strong),
+        AP2DelaySDStrongStimTest(strong),
+        Burst1ISISDStrongStimTest(strong),
+        Burst1ISIMeanStrongStimTest(strong)]
+
+    AHP_list = [AP1AHPDepthTest(standard),
+        AP2AHPDepthTest(standard),
+        AP12AHPDepthPercentChangeTest(standard) ]
+    return tests
 
 def cell_to_test_mapper(content):
     dm_properties = {}
@@ -112,7 +164,7 @@ def cell_to_test_mapper(content):
     standard = 1.5*ir_currents
     #standard *= 1.5
     strong = 3*ir_currents
-    tests = init_tests(standard,strong)
+    tests = init_dm_tests(standard,strong)
     model = None
     model = mint_generic_model(dtc.backend)
 
@@ -136,18 +188,26 @@ def add_dm_properties_to_cells(dtcpop):
     return (dtcpop,dm_properties)
 
 
-def make_fake_observations(tests,backend):
+def make_fake_observations(tests,backend,random_param):
     '''
     to be used in conjunction with round_trip_test below.
 
     '''
     dtc = DataTC()
-    dtc.attrs = local_attrs
-    dtc = get_rh(dtc,rtest)
-    pt = format_params(tests,rheobase)
-    ptbag = db.from_sequence(pt[1::])
-    predictions = list(ptbag.map(obtain_predictions).compute())
-    predictions.insert(0,rheobase)
+    dtc.attrs = random_param
+    dtc.backend = backend
+    dtc = get_rh(dtc,tests[0])
+
+    #pt = format_params(tests,rheobase)
+    dtc = pred_evaluation(dtc)
+
+    #ptbag = db.from_sequence(pt[1::])
+    #test_and_models = (test, dtc)
+    #def pred_only(test_and_models):
+    # Temporarily patch sciunit judge code, which seems to be broken.
+    #predictions = pred_only(test_and_models)
+    #predictions = list(ptbag.map(obtain_predictions).compute())
+    predictions.insert(0,dtc.rheobase)
     # having both means and values in dictionary makes it very irritating to iterate over.
     # It's more harmless to demote means to values, than to elevate values to means.
     # Simply swap key names: means, for values.
@@ -167,6 +227,7 @@ def make_fake_observations(tests,backend):
         t.observation['mean'] = t.observation['value']
     return tests
 
+from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 def round_trip_test(tests,backend):
     '''
     # Inputs:
@@ -184,10 +245,17 @@ def round_trip_test(tests,backend):
     ranges = MODEL_PARAMS[str(backend)]
     random_param = {} # randomly sample a point in the viable parameter space.
     for k in ranges.keys():
-        mean = np.mean(ranges[k])
-        std = np.std(ranges[k])
-        sample = numpy.random.normal(loc=mean, scale=2*std, size=1)[0]
-        random_param[k] = sample
+        print(ranges[k])
+        print(type(ranges[k]))
+        #import pdb; pdb.set_trace()
+        try:
+            mean = np.mean(ranges[k])
+            std = np.std(ranges[k])
+            sample = numpy.random.normal(loc=mean, scale=2*std, size=1)[0]
+            random_param[k] = sample
+        except:
+            print('probably a list and not a flexible parameter')
+            random_param[k] = ranges[k]
     tests = make_fake_observations(tests,backend,random_param)
     NGEN = 10
     MU = 6
@@ -201,8 +269,8 @@ def round_trip_test(tests,backend):
         best = ga_out['pf'][0].dtc.get_ss()
     print('Its ',Bool(best < 0.5), ' that optimisation succeeds on this model class')
     print('goodness of fit: ',best)
-
-    return Bool(ga_out['pf'][0] < 0.5)
+    dtcpop = [ p.dtc for p in ga_out['pf'] ]
+    return ( Bool(ga_out['pf'][0] < 0.5),dtcpop )
 
 
 def pred_only(test_and_models):
@@ -526,12 +594,14 @@ def get_rtest(dtc):
             rtest = dtc.tests
         else:
             rtest = [ t for t in dtc.tests if str('RheobaseTest') == t.name ]
+            print(rtest)
             rtest = rtest[0]
     else:
         if not isinstance(dtc.tests, Iterable):
             rtest = dtc.tests
         else:
             rtest = [ t for t in dtc.tests if str('RheobaseTestP') == t.name ]
+            print(rtest)
             rtest = rtest[0]
 
     return rtest
@@ -738,7 +808,6 @@ def pred_evaluation(dtc):
     # Inputs single data transport container modules, and neuroelectro observations that
     # inform test error error_criterion
     # Outputs Neuron Unit evaluation scores over error criterion
-    tests = dtc.tests
     dtc = copy.copy(dtc)
     # TODO
     # phase out model path:
@@ -747,6 +816,12 @@ def pred_evaluation(dtc):
     #preds = []
     dtc.preds = None
     dtc.preds = {}
+    dtc =  dtc_to_rheo(dtc)
+    dtc = format_test(dtc)
+    tests = dtc.tests
+    
+    #test_and_dtc = (use_test,dtc)
+
     for k,t in enumerate(tests):
         if str('RheobaseTest') != t.name and str('RheobaseTestP') != t.name:
             t.params = dtc.vtest[k]

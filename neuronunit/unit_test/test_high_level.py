@@ -157,6 +157,7 @@ class testoptimisationBackends(NotebookTools,unittest.TestCase):
     def test_rotate_backends0(self):
 
         all_backends = [
+            str('NEURONBackend'),
             str('PYNNBackend'),
             str('jNeuroMLBackend'),
             str('RAWBackend'),
