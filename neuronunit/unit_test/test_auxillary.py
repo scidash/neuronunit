@@ -73,13 +73,15 @@ def grid_points():
     assert dtcpop is not None
     return dtcpop
 
-def test_01a_compute_score(dtcpop, tests):
+def test_rheobase_dtc(dtcpop, tests):
     rheobase_test = tests[0][0][0]
 
     for d in dtcpop:
         d.tests = rheobase_test
         d.backend = str('RAW')
     dtcpop = list(map(dtc_to_rheo,dtcpop))
+    return dtcpop
+    '''
     for d in dtcpop:
         assert len(list(d.attrs.values())) > 0
     b0 = db.from_sequence(dtcpop, npartitions=8)
@@ -87,9 +89,29 @@ def test_01a_compute_score(dtcpop, tests):
 
     b0 = db.from_sequence(dtcpop, npartitions=8)
     dtcpop = list(db.map(nunit_evaluation,b0).compute())
+    '''
+
+def test_all_tests_pop(dtcpop, tests):
+    rheobase_test = tests[0][0][0]
+    all_tests = tests[0][0]
+    for d in dtcpop:
+        d.tests = rheobase_test
+        d.backend = str('RAW')
+        assert len(list(d.attrs.values())) > 0
+
+    dtcpop = list(map(dtc_to_rheo,dtcpop))
+
+    for d in dtcpop:
+        d.tests = all_tests
+        d.backend = str('RAW')
+        assert len(list(d.attrs.values())) > 0
+
+    b0 = db.from_sequence(dtcpop, npartitions=8)
+    dtcpop = list(db.map(format_test,b0).compute())
+
+    b0 = db.from_sequence(dtcpop, npartitions=8)
+    dtcpop = list(db.map(nunit_evaluation,b0).compute())
     return dtcpop
-
-
 
 class testoptimisationBackends(NotebookTools,unittest.TestCase):
 
@@ -107,8 +129,9 @@ class testoptimisationBackends(NotebookTools,unittest.TestCase):
             self.electro_tests = pickle.load(f)
         #self.electro_tests = get_neab.replace_zero_std(self.electro_tests)
 
-        self.test_01a_compute_score = test_01a_compute_score
-        self.dtcpop = test_01a_compute_score(dtcpop,self.electro_tests)
+        self.test_rheobase_dtc = test_rheobase_dtc
+        self.dtcpop = test_rheobase_dtc(dtcpop,self.electro_tests)
+        self.dtcpop = test_all_tests_pop(self.dtcpop,self.electro_tests)
         self.dtc = self.dtcpop[0]
         self.rheobase = self.dtc.rheobase
         self.standard_model = self.model = mint_generic_model('RAW')
@@ -139,7 +162,16 @@ class testoptimisationBackends(NotebookTools,unittest.TestCase):
 
         return bool
 
-    def test_rotate_backends():
+    def test_backend_inheritance(self):
+        ma = mint_generic_model('RAW')
+        if 'get_spike_train' in ma:
+            self.asserTrue(True)
+        else:
+            self.asserTrue(False)
+        return
+
+
+    def test_rotate_backends(self):
 
         all_backends = [
             str('PYNNBackend'),
@@ -173,11 +205,8 @@ class testoptimisationBackends(NotebookTools,unittest.TestCase):
             #assert dtc is not None
             self.assertTrue(dtc is not None)
 
-
-
         return
-
-    def test_solution_quality():
+    def test_solution_quality(self):
         '''
         Select random points in parameter space,
         pretend these points are from experimental observations, by coding them in
@@ -193,15 +222,19 @@ class testoptimisationBackends(NotebookTools,unittest.TestCase):
         for key, use_test in test_frame.items():
             for b in MBEs:
                 boolean = round_trip_test(use_test,b)
-                #assert boolean == True
                 self.assertTrue(boolean)
+        return
 
 
-    def test_get_druckmann():
+    def test_get_druckmann(self):
+        '''
+        test the extraction of Druckmann property Ephys measurements.
+        '''
         (self.dtcpop,dm_properties) = add_dm_properties_to_cells(self.dtcpop)
         for d in dm_properties:
             print(d)
             self.assertTrue(d is not None)
+        return
 
     def get_observation(self, cls):
         print(cls.__name__)
@@ -277,7 +310,6 @@ class testoptimisationBackends(NotebookTools,unittest.TestCase):
         self.assertGreater(len(temp),0)
         rbt = get_neab.tests[0]
         scoreN = rbt.judge(model,stop_on_error = False, deep_error = True)
-        import copy
         dtc.scores[str(rbt)] = copy.copy(scoreN.sort_key)
         assert scoreN.sort_key is not None
         self.assertTrue(scoreN.sort_key is not None)
@@ -293,7 +325,9 @@ class testoptimisationBackends(NotebookTools,unittest.TestCase):
         dtcpop = list(map(exhaustive_search.update_dtc_grid,three_points))
         for d in self.dtcpop:
             assert len(list(d.attrs.values())) > 0
-        dtcpop = self.test_01a_compute_score(self.dtcpop)
+        #dtcpop = self.test_rheobase_dtc(self.dtcpop)
+        dtcpop = test_rheobase_dtc(dtcpop,self.electro_tests)
+
         self.dtcpop = dtcpop
         return dtcpop
 
@@ -368,7 +402,7 @@ class testoptimisationBackends(NotebookTools,unittest.TestCase):
         dtc = data_transport_container.DataTC()
         dtc.rheobase = self.rheobase
         dtc = format_test(dtc)
-        self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend=('NEURON',{'DTC':dtc}))
+        self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend=('RAW',{'DTC':dtc}))
         #score = self.run_test(T)
         score = self.run_test(T,pred=self.rheobase)
 
@@ -396,15 +430,6 @@ class testoptimisationBackends(NotebookTools,unittest.TestCase):
         check_less_thresh = float(np.abs(self.predictionp['value'] - self.predictions['value']))
         self.assertLessEqual(check_less_thresh, 2.0)
 
-    def test_backend_inheritance(self):
-
-        print(get_neab.LEMS_MODEL_PATH)
-        model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend='RAW')
-        ma = list(dir(model))
-        if 'get_spike_train' in ma and 'rheobase' in ma:
-            return True
-        else:
-            return False
 
 
     #@unittest.skip("Not implemented")
