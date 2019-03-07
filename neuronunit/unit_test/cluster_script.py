@@ -102,7 +102,7 @@ except:
 # There are many among us who prefer potentially tabulatable data to be encoded in pandas data frame.
 
 for k,v in test_frame.items():
-    if "olf_mitral" not in k:    
+    if "olf_mitral" not in k:
         obs = obs_frame[k]
     if "olf_mitral" in k:
         v[0] = RheobaseTestP(obs['Rheobase'])
@@ -181,8 +181,32 @@ from sklearn.model_selection import ParameterGrid
 
 
 
+from neuronunit.models.interfaces import glif
+gc = glif.GC()
+
+params = gc.glif.to_dict()
+grid = ParameterGrid(explore_ranges)
+store_hh_results = {}
+for local_attrs in grid:
+   store_hh_results[str(local_attrs.values())] = {}
+   dtc = DataTC()
+   dtc.tests = use_test
+   print(dtc.attrs)
+   dtc.backend = 'glif'
+   dtc.cell_name = 'glif'
+   for key, use_test in test_frame.items():
+      dtc.tests = use_test
+      dtc = dtc_to_rheo(dtc)
+      dtc = format_test(dtc)
+      if dtc.rheobase is not None:
+         if dtc.rheobase!=-1.0:
+            dtc = nunit_evaluation(dtc)
+      print(dtc.get_ss())
+      store_hh_results[str(local_attrs.values())][key] = dtc.get_ss()
+
+
 try:
-    assert 1==2
+    #assert 1==2
     with open('HH_seeds.p','rb') as f:
         seeds = pickle.load(f)
     assert seeds is not None
@@ -198,15 +222,12 @@ except:
         updatable_attrs = copy.copy(attrs_hh)
         updatable_attrs.update(local_attrs)
         dtc.attrs = updatable_attrs
-        print(dtc.attrs)
-        #print(updatable_attrs)
+        print(updatable_attrs)
 
         dtc.backend = 'HH'
         dtc.cell_name = 'Point Hodgkin Huxley'
         for key, use_test in test_frame.items():
             dtc.tests = use_test
-            import pdb
-            pdb.set_trace()
             dtc = dtc_to_rheo(dtc)
             dtc = format_test(dtc)
             if dtc.rheobase is not None:
@@ -253,14 +274,18 @@ MU = 6
 NGEN = 150
 
 
-for key, use_test in test_frame.items():
-    seed = seeds[key]
-    print(seed)
-    ga_out, _ = om.run_ga(explore_hh_ranges,NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU, model_type = str('HH'),hc = hold_constant_hh)
-    test_opt =  {str('multi_objective_HH')+str(ga_out):ga_out}
-    with open('multi_objective_HH.p','wb') as f:
-        pickle.dump(test_opt,f)
+try:
+    with open('multi_objective_HH.p','rb') as f:
+        test_opt = pickle.load(f)
 
+except:
+    for key, use_test in test_frame.items():
+        seed = seeds[key]
+        print(seed)
+        ga_out, _ = om.run_ga(explore_hh_ranges,NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU, model_type = str('HH'),hc = hold_constant_hh)
+        test_opt =  {str('multi_objective_HH')+str(ga_out):ga_out}
+        with open('multi_objective_HH.p','wb') as f:
+            pickle.dump(test_opt,f)
 
 
 
@@ -338,3 +363,4 @@ model_type = str('HH')
 
 #Next  Adaptive Exp.
 #model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = ('HH'))
+'''

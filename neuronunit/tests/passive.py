@@ -162,11 +162,18 @@ class TimeConstantTest(TestPulseTest):
         """Implementation of sciunit.Test.score_prediction."""
         if prediction is None:
             return None# scores.InsufficientDataScore(None)
+        #print(prediction.keys())
+        #print(prediction)
 
         if 'n' in prediction.keys():
             if prediction['n'] == 0:# if prediction is None:
                 score = scores.InsufficientDataScore(None)
+            else:
+                prediction['value'] = prediction['value']
+                score = super(TimeConstantTest,self).compute_score(observation,
+                                                              prediction)
         else:
+            print('why no n in keys?')
             prediction['value'] = prediction['value']
             score = super(TimeConstantTest,self).compute_score(observation,
                                                           prediction)
@@ -204,12 +211,23 @@ class CapacitanceTest(TestPulseTest):
         if prediction is None:
             return None#scores.InsufficientDataScore(None)
 
+        print(prediction.keys())
+        print(prediction)
+        print(observation.keys())
+        print(observation)
+
         if 'n' in prediction.keys():
             if prediction['n'] == 0:
                 score = scores.InsufficientDataScore(None)
+            else:
+                score = super(CapacitanceTest,self).compute_score(observation,
+                                                              prediction)
         else:
+            #print('why no n in keys?')
+            #prediction['value'] = prediction['value']
             score = super(CapacitanceTest,self).compute_score(observation,
                                                           prediction)
+
         return score
 
 
@@ -253,8 +271,6 @@ class RestingPotentialTest(VmTest):
         if prediction is None:
             return None#scores.InsufficientDataScore(None)
         else:
-            #print(observation,prediction)
-            #print(type(observation),type(prediction))
             score = super(RestingPotentialTest,self).\
                         compute_score(observation, prediction)
         return score
