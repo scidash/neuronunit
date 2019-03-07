@@ -187,16 +187,12 @@ def eaAlphaMuPlusLambdaCheckpoint(
         invalid_count = len(invalid_ind)
         hof, pf,history = _update_history_and_hof(hof, pf, history, offspring, td)
         fronts.append(pf)
-        if gen%14==0:# every tenth count.
-            import pdb
-	    pdb.set_trace()
+        if gen%10==0:# every tenth count.
             #            stag_check = [ p for p in stag_check if len(p.fitness.values)!=0 ]
-            stag_check = np.mean([ p.dtc.get_ss() for p in fronts])
-            if not pf[0].dtc.get_ss() < stag_check*0.90:
+            stag_check = np.mean([ p.fitness.values for p in fronts])
+            if not fronts[-1].fitness.values < stag_check*0.90:
                 print('gene poulation stagnant, no appreciable gains in fitness')
                 break
-	    else:
-		fronts = [] #purge the list and check for stagnation 10 cycles later
         #for k,v in history.items()
         # TODO recreate a stagnation termination criterion.
         # if genes don't get substantially better in 50 generations.

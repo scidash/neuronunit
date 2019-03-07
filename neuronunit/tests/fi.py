@@ -6,9 +6,9 @@ import multiprocessing
 global cpucount
 npartitions = cpucount = multiprocessing.cpu_count()
 from .base import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
-from .. import optimization
+from .. import optimisation
 
-from neuronunit.optimization.data_transport_container import DataTC
+from neuronunit.optimisation.data_transport_container import DataTC
 import os
 import quantities
 import neuronunit
@@ -23,20 +23,37 @@ import time
 import numba
 import copy
 
+import matplotlib as mpl
+mpl.use('Agg')
+import matplotlib.pyplot as plt
+from neuronunit.capabilities.spike_functions import get_spike_waveforms, spikes2amplitudes, threshold_detection
+#
+# When using differentiation based spike detection is used this is faster.
+
+@jit
+def diff(vm):
+    return np.diff(vm)
+
 @jit
 def get_diff(vm):
     differentiated = np.diff(vm)
-    spikes = len([np.any(differentiated) > 0.000143667327364])
-    return spikes
+    spike_lets = threshold_detection(differentiated,threshold=0.000193667327364)
+    n_spikes = len([np.any(differentiated) > 0.000193667327364])
+    return spike_lets, n_spikeson
 
 tolerance = 0.001
-#1125
-
 
 class RheobaseTest(VmTest):
     """
-    Tests the full widths of APs at their half-maximum
-    under current injection.
+    A serial Implementation of a Binary search algorithm,
+    which finds a rheobase prediction
+
+    Strengths: this algorithm is faster than the parallel class, present in this file under important and
+    limited circumstances: this serial algorithm is faster than parallel for model backends that are able to
+    implement numba jit optimisation
+
+    Weaknesses this serial class is significantly slower, for many backend implementations including raw NEURON
+    NEURON via PyNN, and possibly GLIF.
     """
     def _extra(self):
         self.prediction = {}
@@ -174,11 +191,17 @@ class RheobaseTest(VmTest):
 
 class RheobaseTestP(VmTest):
      """
-     A parallel version of test Rheobase.
-     Tests the full widths of APs at their half-maximum
-     under current injection.
+     A parallel Implementation of a Binary search algorithm,
+     which finds a rheobase prediction.
+
+     Strengths: this algorithm is faster than the serial class, present in this file for model backends that are not able to
+     implement numba jit optimisation, which actually happens to be typical of a signifcant number of backends
+
+     Weaknesses this serial class is significantly slower, for many backend implementations including raw NEURON
+     NEURON via PyNN, and possibly GLIF.
 
      """
+
 
      required_capabilities = (cap.ReceivesSquareCurrent,
                               cap.ProducesSpikes)
@@ -263,8 +286,6 @@ class RheobaseTestP(VmTest):
                 assert type(dtc.current_src_name) is not type(None)
                 dtc.cell_name = model._backend.cell_name
 
-            #model.set_attrs(dtc.attrs)
-
             DELAY = 100.0*pq.ms
             DURATION = 1000.0*pq.ms
             params = {'injected_square_current':
@@ -277,11 +298,27 @@ class RheobaseTestP(VmTest):
                 current.update(uc)
                 current = {'injected_square_current':current}
                 dtc.run_number += 1
-                #print(dtc.attrs)
                 model.set_attrs(dtc.attrs)
                 model.inject_square_current(current)
                 dtc.previous = ampl
-                n_spikes = model.get_spike_count()
+
+
+                if dtc.use_diff == True:
+                    vm = model.get_membrane_potential()
+                    diff = diff(vm)
+                    spike_train = threshold_detection(diff,threshold= 0.000193667327364)
+                    n_spikes = len(spike_train)
+                    if n_spikes >= 1:
+                        dtc.negative_spiker = None
+                        dtc.negative_spiker = True
+                    plt.clf()
+                    plt.title(str(n_spikes))
+                    plt.plot(vm.times,vm)
+                    plt.savefig('reobase_debug.png')
+                else:
+                    n_spikes = model.get_spike_count()
+
+
                 if n_spikes == 1:
                     dtc.lookup[float(ampl)] = 1
                     dtc.rheobase = float(ampl)
@@ -302,9 +339,14 @@ class RheobaseTestP(VmTest):
                 if dtc.boolean:
 
                     return dtc
+
                 else:
-                    # expand values in the range to accomodate for mutation.
-                    # but otherwise exploit memory of the genes to inform searchable range.
+                    # Exploit memory of the genes to inform searchable range.
+
+                    # if this model has lineage, assume it didn't mutate that far away from it's ancestor.
+                    # using that assumption, on first pass, consult a very narrow range, of test current injection samples:
+                    # only slightly displaced away from the ancestors rheobase value.
+
 
                     if type(dtc.current_steps) is type(float):
                         dtc.current_steps = [ 0.75 * dtc.current_steps, 1.25 * dtc.current_steps ]
@@ -322,39 +364,37 @@ class RheobaseTestP(VmTest):
             return dtc
 
         def find_rheobase(self, dtc):
-
+            # This line should not be necessary:
+            # a class, VeryReducedModel has been made to circumvent this.
             assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
             # If this it not the first pass/ first generation
             # then assume the rheobase value found before mutation still holds until proven otherwise.
             # dtc = check_current(model.rheobase,dtc)
             # If its not true enter a search, with ranges informed by memory
             cnt = 0
-            sub = np.array([0,0])
+            sub = np.array([0,0]); supra = np.array([0,0])
+
+            use_diff = False
+
             while dtc.boolean == False and cnt< 40:
-                if len(sub):
-                    if sub.max()> 1500.0:
+                if len(supra) ==0 and len(sub):
+                #    use_diff = True # differentiate the wave to look for spikes
+                    # negeative spiker
+                    if sub.max()> 2000.0:
                         dtc.rheobase = None #float(supra.min())
                         dtc.boolean = False
                         return dtc
-                #dtc.current_steps = list(filter(lambda cs: cs !=0.0 , dtc.current_steps))
+
                 dtc_clones = [ copy.copy(dtc) for i in range(0,len(dtc.current_steps)) ]
                 for i,s in enumerate(dtc.current_steps):
                     dtc_clones[i].ampl = dtc.current_steps[i]
+                for d in dtc_clones:
+                    d.use_diff = None
+                    d.use_diff = use_diff
                 dtc_clones = [ d for d in dtc_clones if not np.isnan(d.ampl) ]
-
                 b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
                 dtc_clone = list(b0.map(check_current).compute())
-                '''
-                Slow don't do this
-                @numba.jit(parallel=True)
-                def get_clones(x):
-                    ret = []
-                    for i in numba.prange(len(x)):
-                        ret.append(check_current(x[i]))
-                        #print(check_current(x[i]))
-                    return ret
-                dtc_clone = get_clones(dtc_clones)
-                '''
+
                 for dtc in dtc_clone:
                     if dtc.boolean == True:
                         return dtc
@@ -367,15 +407,14 @@ class RheobaseTestP(VmTest):
                 sub, supra = get_sub_supra(dtc.lookup)
                 if len(supra) and len(sub):
                     delta = float(supra.min()) - float(sub.max())
-                    #if delta == 0 or (str(supra.min()) == str(sub.max())):
                     if delta < tolerance or (str(supra.min()) == str(sub.max())):
-                        dtc.rheobase = supra.min()*pq.pA #float(supra.min())
+                        if self.verbose >= 2:
+                            print(tolerance, 'a neuron, close to the edge! Multi spiking rheobase')
+                        dtc.rheobase = supra.min()*pq.pA
                         dtc.boolean = True
-                        #dtc.rheobase = None
-                        #dtc.boolean = False
                         return dtc
 
-                self.verbose == 1
+                self.verbose == 2
                 if self.verbose >= 2:
                     print("Try %d: SubMax = %s; SupraMin = %s" % \
                     (cnt, sub.max() if len(sub) else None,

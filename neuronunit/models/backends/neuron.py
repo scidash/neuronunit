@@ -31,11 +31,17 @@ class NEURONBackend(Backend):
         DTC: An object of type Data Transport Container. The data transport container contains a dictionary of model attributes
         When the DTC object is provided, it\'s attribute dictionary can be used to update the NEURONBackends model attribute dictionary.
         '''
+        try:
+            from neuron import h
+            import neuron
+            NEURON_SUPPORT = True
+        except:
+            NEURON_SUPPORT = False
         if not NEURON_SUPPORT:
             raise BackendException("The neuron module was not successfully imported")
 
         self.stdout = io.StringIO()
-        self.neuron = None
+        self.neuron = neuron
         self.model_path = None
         self.h = h
 
@@ -204,8 +210,10 @@ class NEURONBackend(Backend):
 
     def load_mechanisms(self):
         with redirect_stdout(self.stdout):
-            neuron.load_mechanisms(self.neuron_model_dir)
-
+            try:
+                self.neuron.load_mechanisms(self.neuron_model_dir)
+            except:
+                pass
     def load_model(self, verbose=True):
         """Inputs: NEURONBackend instance object
         Side Effects: Substantially mutates neuronal model stored in self.
@@ -342,10 +350,8 @@ class NEURONBackend(Backend):
         self.h = None
         self.neuron = None
 
-        #import neuron
         nrn_path = os.path.splitext(self.model.orig_lems_file_path)[0]+'_nrn.py'
         nrn = import_module_from_path(nrn_path)
-        #import copy
 
         ##
         # init_backend is the most reliable way to purge existing NEURON simulations.

@@ -7,12 +7,10 @@ try:
 except:
     print('Error in jNeuroMLBackend')
 
-'''
-try:
-    from .neuron import NEURONBackend
-except Exception as e:
-    print('Silent Error eminating from NEURON syntax')
-'''
+#try:
+#    from .neuron import NEURONBackend
+#except Exception as e:
+#    print('Silent Error eminating from NEURON syntax')
 try:
     from .rawpy import RAWBackend
 except Exception as e:
@@ -22,7 +20,19 @@ try:
 except Exception as e:
     print('HH python Error')
 
+try:
+    from .glif import GLIFBackend
+except Exception as e:
+    print('glif python Error')
 
+
+'''
+Memory hog
+try:
+    from .general_pyNN import PYNNBackend
+except Exception as e:
+    print('pynn python Error')
+'''
 available_backends = {x.replace('Backend',''):cls for x, cls \
                    in locals().items() \
                    if inspect.isclass(cls) and \
@@ -45,5 +55,3 @@ available_backends = {x.replace('Backend',''):cls for x, cls \
 #     from .neuron import NEURONBackend
 # except Exception as e:
 #     print('Silent Error eminating from NEURON syntax')
-
-#print(available_backends)
