@@ -2,8 +2,30 @@
 # coding: utf-8
 
 # In[2]:
-
+import numpy as np
+import pprint
+import pickle
+import os
 import matplotlib as mpl
+import matplotlib.pyplot as plt
+import numpy as np
+from neuronunit.plottools import plot_surface
+import matplotlib
+import pandas as pd
+
+
+from neuronunit.neuronunit.optimisations import NUOptimisation
+# In[ ]:neuronunit
+
+from neuronunit.optimisation.exhaustive_search import create_refined_grid
+
+from neuronunit.optimisation import evaluate_as_module as eam
+
+from neuronunit.optimisation import model_parameters as modelp
+mp = modelp.model_params
+
+from neuronunit.optimisation import get_neab
+
 mpl.backend('Agg')
 get_ipython().system('%matplotlib tk')
 get_ipython().system('jupyter kernelspec install /tmp/share/jupyter/kernels/python3')
@@ -19,7 +41,7 @@ get_ipython().system('jupyter kernelspec install /tmp/share/jupyter/kernels/pyth
 # Below BASH code for Ubuntu host:
 #
 # ``` bash
-# cd ~/git/neuronunit; sudo docker run -it -v `pwd`:/home/jovyan/neuronunit -v ~/git/BluePyOpt:/home/jovyan/BluePyOpt neuronunit-optimization /bin/bash'
+# cd ~/git/neuronunit; sudo docker run -it -v `pwd`:/home/jovyan/neuronunit -v ~/git/BluePyOpt:/home/jovyan/BluePyOpt neuronunit-optimisation /bin/bash'
 # ```
 #
 # ## Parallel Environment.
@@ -27,17 +49,15 @@ get_ipython().system('jupyter kernelspec install /tmp/share/jupyter/kernels/pyth
 
 # In[2]:
 
-import os
 os.system('jupyter trust test_ga_versus_grid.ipynb'); #suppress the untrusted notebook warning.
 
 
 
 # In[3]:
 
-import pickle
 with open('dump_all_cells','rb') as f:
    pipe_results = pickle.load(f)
-import pprint
+
 pprint.pprint(pipe_results)
 
 
@@ -48,7 +68,6 @@ pprint.pprint(pipe_results)
 
 # In[ ]:
 
-import pandas as pd
 cell_names = list(pipe_results.keys())
 param_names = list(pipe_results[list(pipe_results.keys())[0]]['pop'][0].dtc.attrs.keys())
 df = pd.DataFrame(index=pipe_results.keys(),columns=param_names)
@@ -60,8 +79,6 @@ df = pd.DataFrame(index=pipe_results.keys(),columns=param_names)
 
 
 # In[ ]:
-
-import pandas as pd
 for index, val in enumerate(pipe_results.values()):
     if index == 0:
         sci = pd.DataFrame(list(val['pop'][0].dtc.scores.values())).T
@@ -74,8 +91,6 @@ print(sci)
 
 
 # In[ ]:
-
-import pandas as pd
 for index, val in enumerate(pipe_results.values()):
     if index == 0:
         attrs = pd.DataFrame(list(val['pop'][0].dtc.attrs.values())).T
@@ -84,12 +99,9 @@ for index, val in enumerate(pipe_results.values()):
 
 attrs.columns = val['pop'][0].dtc.attrs.keys()
 #print(attrs)
-attrs
-
 
 # In[ ]:
 
-import pandas as pd
 
 
 for index, val in enumerate(pipe_results.values()):
@@ -99,16 +111,14 @@ for index, val in enumerate(pipe_results.values()):
     else:
         rheobase = rheobase.append(pd.DataFrame([i.dtc.rheobase for i in val['pop']]).T)
 
-rheobase
 
 names = [ str('generation: ')+str(i) for i in range(0,len(rheobase)) ]
 
-rheobase
 
 
 # In[ ]:
 
-import matplotlib
+
 get_ipython().magic('matplotlib inline')
 
 
@@ -141,7 +151,6 @@ USE_CACHED_GA = False
 
 # In[ ]:
 
-from neuronunit.plottools import plot_surface
 
 
 # # Below two error surface slices from the hypervolume are plotted.
@@ -171,7 +180,7 @@ for index, val in enumerate(pipe_results.values()):
 
 # In[ ]:
 
-list(pipe_results.keys())
+print(list(pipe_results.keys()))
 
 
 # In[ ]:
@@ -195,8 +204,7 @@ for index, val in enumerate(pipe_results.values()):
 
 
 get_ipython().magic('matplotlib inline')
-import matplotlib.pyplot as plt
-import numpy as np
+
 
 plt.style.use('ggplot')
 fig, axes = plt.subplots(figsize=(10, 10), facecolor='white')
@@ -234,19 +242,6 @@ for index, val in enumerate(pipe_results.values()):
         label='population average')
     axes.fill_between(gen_numbers, stdminus, stdplus)
 
-    #axes.plot([i for i in range(0,len(gvh))], gvh,'y--', linewidth=2,  label='grid search error')
-    #axes.plot(gen_numbers, bl, 'go', linewidth=2, label='hall of fame error')
-
-    #axes.plot(gen_numbers, stdminus, label='std variation lower limit')
-    #axes.plot(gen_numbers, stdplus, label='std variation upper limit')
-
-    #axes.set_xlim(np.min(gen_numbers) - 1, np.max(gen_numbers) + 1)
-    #axes.set_xlabel('Generations')
-    #axes.set_ylabel('Sum of objectives')
-    #axes.legend()
-    #fig.tight_layout()
-    #fig.show()
-
 
 # # Comment on plot
 # The plot shows the mean error value of the population as the GA evolves it's population. The red interval at any instant is the standard deviation of the error. The fact that the mean GA error is able to have a net upwards trajectory, after experiencing a temporary downwards trajectory, demonstrates that the GA retains a drive to explore, and is resiliant against being stuck in a local minima. Also in the above plot population variance in error stays remarkably constant, in this way BluePyOpts selection criteria SELIBEA contrasts with DEAPs native selection strategy NSGA2
@@ -267,7 +262,6 @@ minimagr = sorted_grid[0]
 minimagr_dtc = sorted_grid[0]
 minimagr_dtc_1 = sorted_grid[1]
 minimagr_dtc_2 = sorted_grid[2]
-from neuronunit.optimization.exhaustive_search import create_refined_grid
 refined_grid = create_refined_grid(minimagr_dtc, minimagr_dtc_1,minimagr_dtc_2)
 
 
@@ -281,7 +275,7 @@ def pop2dtc(pop1,DO,td):
     This a wasteful, recompute, which is in part necessitated because
     deaps pareto front object, only returns gene individual objects (elements of population)
     '''
-    from neuronunit.optimization import nsga_parallel
+    from neuronunit.optimisation import nsga_parallel
     DO.td = td
     assert DO.td == td
     return_package = nsga_parallel.update_pop(pop1,td);
@@ -369,10 +363,10 @@ def use_dtc_to_plotting(dtcpop,minimagr):
         stored_max.append(np.max(dtc.vm0))
 
     from neuronunit.models.reduced import ReducedModel
-    from neuronunit.optimization.get_neab import tests as T
-    from neuronunit.optimization import get_neab
-    from neuronunit.optimization import evaluate_as_module
-    from neuronunit.optimization.evaluate_as_module import pre_format
+    from neuronunit.optimisation.get_neab import tests as T
+    from neuronunit.optimisation import get_neab
+    from neuronunit.optimisation import evaluate_as_module
+    from neuronunit.optimisation.evaluate_as_module import pre_format
     model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
     import neuron
     model._backend.reset_neuron(neuron)
@@ -412,8 +406,6 @@ use_dtc_to_plotting(dtc_pop,minimagr_dtc)
 
 # In[ ]:
 
-import pandas as pd
-
 print(dtc_pop[0].scores)
 print(minimagr_dtc.scores)
 print(sum(list(dtc_pop[0].scores.values())))
@@ -445,16 +437,11 @@ print("Minimum = %f; 20th percentile = %f; Maximum = %f" % (mini,quantize_distan
 
 # In[ ]:
 
-import pandas as pd
-
-from neuronunit.optimization import evaluate_as_module as eam
 NSGAO = NSGA(0.85)
 NSGAO.setnparams(nparams=nparams,provided_keys=provided_keys)
 #td = eam.get_trans_dict(NSGAO.subset)
 #print(td)
 td = { v:k for k,v in enumerate(td) }
-from neuronunit.optimization import model_parameters as modelp
-mp = modelp.model_params
 #minimaga = pareto_dtc[0]
 for k,v in minimagr_dtc.attrs.items():
     #hvgrid = np.linspace(np.min(mp[k]),np.max(mp[k]),10)
@@ -472,7 +459,6 @@ for k,v in minimagr_dtc.attrs.items():
 
 
 
-# In[ ]:
 
 
 print('the difference between the bf error and the GA\'s error:')
@@ -490,72 +476,18 @@ print(miniga)
 
 # If any time is left over, may as well compute a more accurate grid, to better quantify GA performance in the future.
 
-# In[ ]:
 
 
 
 
-# In[ ]:
-
-from neuronunit.optimization import get_neab
 #fi_basket = {'nlex_id':'NLXCELL:100201'}
 neuron = {'nlex_id': 'nifext_50'}
 
 error_criterion, inh_observations = get_neab.get_neuron_criteria(fi_basket)
 print(error_criterion)
 
-from bluepyopt.deapext.optimisations import DEAPOptimisation
-
 DO = DEAPOptimisation(error_criterion=error_criterion)
 DO.setnparams(nparams = nparams, provided_keys = provided_keys)
 pop, hof, log, history, td, gen_vs_hof = DO.run(offspring_size = MU, max_ngen = NGEN, cp_frequency=4,cp_filename='checkpointedGA.p')
 with open('ga_dump.p','wb') as f:
    pickle.dump([pop, log, history, hof, td],f)
-
-
-# In[ ]:
-
-# Layer V pyramidal cell
-
-
-# In[ ]:
-
-
-
-
-# In[ ]:
-
-
-
-
-# In[ ]:
-
-
-
-
-# In[ ]:
-
-
-
-
-# In[ ]:
-
-
-
-
-# In[ ]:
-
-
-
-
-# In[ ]:
-
-
-
-
-# In[ ]:
-
-
-
-
-# In[ ]:
