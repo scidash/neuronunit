@@ -20,7 +20,7 @@ class VeryReducedModel(mod.ExternalModel,
         LEMS_file_path: Path to LEMS file (an xml file).
         name: Optional model name.
         """
-        super(ReducedModel,self).__init__(,name=name,
+        super(ReducedModel,self).__init__(name=name,
                                           backend=backend,attrs=attrs)
         self.run_number = 0
         self.tstop = None
