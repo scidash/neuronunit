@@ -25,6 +25,7 @@ install:
   - pip install -U pip
   - pip install .
   - pip install coveralls
+  - pip install pylmeasure # required by morphology tests
 ######################################################
 
 script:

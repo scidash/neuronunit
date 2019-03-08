@@ -20,3 +20,5 @@ from .test_druckmann2013 import Model1TestCase, Model2TestCase, \
     Model3TestCase, Model4TestCase, Model5TestCase, \
     Model6TestCase, Model7TestCase, Model8TestCase, Model9TestCase, \
     Model10TestCase, Model11TestCase
+
+from .test_morphology import MorphologyTestCase
