@@ -14,3 +14,5 @@ numba
 dask[complete]
 deap
 bluepyopt @ git+https://github.com/russelljjarvis/BluePyOpt@scidash#egg=bluepyopt-9999
+pylmeasure
+hoc2swc
