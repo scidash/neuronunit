@@ -43,7 +43,11 @@ def get_diff(vm):
 
 tolerance = 0.001
 
-class RheobaseTest(VmTest):
+class NetTest(VmTest):
+
+class ISITest(NetTest):
+
+class CVTest(NetTest):
     """
     A serial Implementation of a Binary search algorithm,
     which finds a rheobase prediction
@@ -76,34 +80,7 @@ class RheobaseTest(VmTest):
 
     def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
-        # Method implementation guaranteed by
-        # ProducesActionPotentials capability.
-        prediction = {'value': None}
-        model.rerun = True
-        try:
-            units = self.observation['value'].units
-        except KeyError:
-            units = self.observation['mean'].units
-        begin_rh = time.time()
-        lookup = self.threshold_FI(model, units)
-        sub = np.array([x for x in lookup if lookup[x]==0])*units
-        supra = np.array([x for x in lookup if lookup[x]>0])*units
-        if self.verbose:
-            if len(sub):
-                print("Highest subthreshold current is %s" \
-                      % (float(sub.max())*units))
-            else:
-                print("No subthreshold current was tested.")
-            if len(supra):
-                print("Lowest suprathreshold current is %s" \
-                      % supra.min())
-            else:
-                print("No suprathreshold current was tested.")
-        if len(sub) and len(supra):
-            rheobase = supra.min()
-        else:
-            rheobase = None
-        prediction['value'] = rheobase
+
         return prediction
 
     def threshold_FI(self, model, units, guess=None):

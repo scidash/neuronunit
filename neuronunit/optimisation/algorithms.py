@@ -31,7 +31,7 @@ import deap.tools
 import numpy as np
 from deap.tools import selNSGA2
 
-from neuronunit.optimization import optimization_management as om
+from neuronunit.optimisation import optimisation_management as om
 
 logger = logging.getLogger('__main__')
 
@@ -105,7 +105,7 @@ def _get_worst(halloffame, nworst):
 
 def _get_elite(halloffame, nelite):
 
-    if nelite > 0 and halloffame is no None:
+    if nelite > 0 and halloffame is not None:
         normsorted_idx = numpy.argsort([ind.fitness.norm for ind in halloffame])
         #hofst = [(sum(h.dtc.scores.values()),h.dtc) for h in halloffame ]
         #ranked = sorted(hofst, key=lambda w: w[0],reverse = True)
@@ -162,7 +162,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
 
         invalid_count = len(parents)
         gen_vs_hof = []
-        hof, pf = _update_history_and_hof(hof, pf, history, parents, td)
+        hof, pf,history = _update_history_and_hof(hof, pf, history, parents, td)
 
         gen_vs_hof.append(hof)
         _record_stats(stats, logbook, start_gen, parents, invalid_count)
