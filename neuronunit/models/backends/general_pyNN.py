@@ -1,14 +1,7 @@
-#from .base import *
-import pyNN
-#import pyNN
 import matplotlib as mpl
 mpl.use('Agg')
-
-import io
-import math
+import copy
 import pdb
-from numba import jit
-from contextlib import redirect_stdout
 import numpy as np
 from .base import *
 import quantities as qt
@@ -22,12 +15,14 @@ from pyNN.neuron import Izhikevich
 
 from pyNN import neuron
 from pyNN.neuron import simulator as sim
+
 from pyNN.neuron import setup as setup
 from pyNN.neuron import DCSource
-import numpy as np
-import copy
 
-# Potassium ion-channel rate functions
+
+sim.logging.debug=False
+sim.logger.setLevel(level=40)
+
 class PYNNBackend(Backend):
 
 
@@ -100,7 +95,7 @@ class PYNNBackend(Backend):
         plt.clf()
         #plt.title('')
         plt.plot(vm.times,vm)
-        plt.savefig('debug.png')
+        plt.savefig('debug_ad_exp.png')
         return results
 
     def load_model(self):
