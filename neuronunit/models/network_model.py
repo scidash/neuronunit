@@ -41,11 +41,10 @@ class NetworkModel(cap.ReceivesCurrent,
     def getSpikeRasters(self, **run_params):
         return self.binary_train
 
-    def inject_square_current(self, current):
+    def inject_noise_current(self, stim_current, syn_weights):
         import pyNN.neuron as sim
-
         noisee = sim.NoisyCurrentSource(mean=0.74/1000.0, stdev=4.00/1000.0, start=0.0, stop=2000.0, dt=1.0)
         noisei = sim.NoisyCurrentSource(mean=1.440/1000.0, stdev=4.00/1000.0, start=0.0, stop=2000.0, dt=1.0)
-        current = [noisee,noisei]
-        self.data,self.vms,self.binary_trains,self.t_spike_axis = net_sim_runner(wg,sim,self.synapses,current)
+        stim_noise_currents = [noisee,noisei]
+        self.data,self.vms,self.binary_trains,self.t_spike_axis = net_sim_runner(syn_weights,sim,self.synapses,stim_noise_currents)
         return (self.vms,self.binary_train,self.data)
