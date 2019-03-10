@@ -213,13 +213,18 @@ class CapacitanceTest(TestPulseTest):
         return score
 
 
-class RestingPotentialTest(VmTest):
+class RestingPotentialTest(TestPulseTest):
     """Tests the resting potential under zero current injection."""
 
-    required_capabilities = (ncap.ReceivesSquareCurrent,)
+    def __init__(self, *args, **kwargs):
+        super(RestingPotentialTest, self).__init__(*args, **kwargs)
+        self.params.update(self.default_params)
 
-    params = {'injected_square_current':
-              {'amplitude': 0.0*pq.pA, 'delay': DELAY, 'duration': DURATION}}
+    default_params = {'injected_square_current':
+                      {'amplitude': 0.0*pq.pA,
+                       'delay': DELAY,
+                       'duration': DURATION}
+                      }
 
     name = "Resting potential test"
 
@@ -234,18 +239,16 @@ class RestingPotentialTest(VmTest):
 
     def generate_prediction(self, model):
         """Implement sciunit.Test.generate_prediction."""
-        model.rerun = True
-        model.inject_square_current(self.params['injected_square_current'])
-        vm = model.get_membrane_potential()
-        if np.any(np.isnan(vm)) or np.any(np.isinf(vm)):
-            return None
-        else:
+        result = super(RestingPotentialTest, self).generate_prediction(model)
+        if result is not None:
             median = model.get_median_vm()  # Use median for robustness.
             std = model.get_std_vm()
             # print('std: ',std,'median: ',median)
             prediction = {'mean': median, 'std': std}
             self.prediction = prediction
             return prediction
+        else:
+            return None
 
     def compute_score(self, observation, prediction):
         """Implement sciunit.Test.score_prediction."""
