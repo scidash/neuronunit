@@ -1202,6 +1202,9 @@ def boot_new_genes(number_genes,dtcpop):
     dtcpop = update_dtc_pop(population,DO.td)
     return dtcpop
 
+import dask.array as da
+
+
 def parallel_route(pop,dtcpop,tests,td,clustered=False):
     NPART = np.min([multiprocessing.cpu_count(),len(dtcpop)])
 
@@ -1209,12 +1212,19 @@ def parallel_route(pop,dtcpop,tests,td,clustered=False):
         d.tests = copy.copy(tests)
     dtcpop = list(map(format_test,dtcpop))
 
+<<<<<<< HEAD:neuronunit/optimization/optimization_management.py
+    #dask lazy arrays make pynn ones obsolete.
+    dtcarray = da(dtcpop)
+    dtcarray.compute()
+    dtcarray = dtcarray.persist()
+=======
 
     if clustered == True:
         dtcpop = opt_on_pair_of_points(dtcpop)
     else:
         dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
         dtcpop = list(dtcbag.map(nunit_evaluation).compute())
+>>>>>>> d5406dfaf1ff44cca8ce5be9a3231cbd8abd6c1f:neuronunit/optimisation/optimisation_management.py
 
     #import pdb; pdb.set_trace()
     #if dtc.score is not None:

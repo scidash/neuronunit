@@ -1,5 +1,5 @@
 """NeuronUnit abstract Capabilities"""
-# The goal is to enumerate all possible capabilities of a model 
+# The goal is to enumerate all possible capabilities of a model
 # that would be tested using NeuronUnit.
 # These capabilities exchange 'neo' objects.
 
@@ -41,6 +41,37 @@ class ProducesMembranePotential(sciunit.Capability):
         # A neo.core.AnalogSignal object
         return vm[0]
 
+class ProducesMultiMembranePotentials(sciunit.Capability):
+    """Indicates that the model produces a somatic membrane potential."""
+
+    def get_membrane_potentials(self, **kwargs):
+        """Must return a neo.core.AnalogSignal."""
+        data = all_cells.get_data().segments[0]
+
+        #raise NotImplementedError()
+
+    def get_mean_vm(self, **kwargs):
+        vm = self.get_membrane_potentials(**kwargs)
+        return np.mean(vm.base)
+
+    def get_median_vm(self, **kwargs):
+        vm = self.get_membrane_potentials(**kwargs)
+        return np.median(vm.base)
+
+    def get_std_vm(self, **kwargs):
+        vm = self.get_membrane_potentials(**kwargs)
+        return np.std(vm.base)
+
+    def get_iqr_vm(self, **kwargs):
+        vm = self.get_membrane_potentials(**kwargs)
+        return (np.percentile(vm,75) - np.percentile(vm,25))*vm.units
+
+    def get_initial_vm(self,**kwargs):
+        """Returns a quantity corresponding to the starting membrane potential.
+        This will in some cases be the resting potential."""
+        vm = self.get_membrane_potentials(**kwargs)
+        # A neo.core.AnalogSignal object
+        return vm[0]
 
 class ProducesSpikes(sciunit.Capability):
     """Indicates that the model produces spikes.
@@ -61,7 +92,30 @@ class ProducesSpikes(sciunit.Capability):
         return len(spike_train)
 
 
-class ProducesActionPotentials(ProducesSpikes, 
+class ProducesSpikeRasters(sciunit.Capability):
+    """Indicates that the model produces spikes.
+    No duration is required for these spikes.
+    """
+
+
+
+    ass = mdf1.analogsignals[0]
+    time_points = ass.times
+
+    def get_spike_train(self):
+        """Gets computed spike times from the model.
+
+        Arguments: None.
+        Returns: a neo.core.SpikeTrain object.
+        """
+
+        raise NotImplementedError()
+
+    def get_spike_count(self):
+        spike_train = self.get_spike_train()
+        return len(spike_train)
+
+class ProducesActionPotentials(ProducesSpikes,
                                ProducesMembranePotential):
     """Indicates the model produces action potential waveforms.
     Waveforms must have a temporal extent.
@@ -133,6 +187,6 @@ class ReceivesCurrent(ReceivesSquareCurrent):
 
 class Runnable(sciunit.Capability):
     """Capability for models that can be run."""
-    
+
     def run(self, **run_params):
         return NotImplementedError("%s not implemented" % inspect.stack()[0][3])
