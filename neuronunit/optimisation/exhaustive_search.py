@@ -122,7 +122,6 @@ def sample_points(iter_dict, npoints=2):
     return replacement
 '''
 
-@jit
 def update_dtc_grid(item_of_iter_list):
 
     dtc = data_transport_container.DataTC()
@@ -132,7 +131,6 @@ def update_dtc_grid(item_of_iter_list):
     dtc.evaluated = False
     dtc.backend = 'NEURON'
     return dtc
-@jit
 def create_a_map(subset):
     maps = {}
     for k,v in subset.items():

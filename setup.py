@@ -2,15 +2,6 @@
 import os
 
 import requests
-'''
-try:
-    from pip.req import parse_requirements
-    from pip.download import PipSession
-except ImportError:
-    from pip._internal.req import parse_requirements
-    from pip._internal.download import PipSession
-
-'''
 try:
     from setuptools import setup
 except ImportError:
@@ -19,8 +10,8 @@ except ImportError:
 from setuptools import setup#, find_packages
 
 def read_requirements():
-    '''parses requirements from requirements.txt'''
-    reqs_path = os.path.join('.', 'requirements.txt')
+    '''parses requirements from requirements_light.txt'''
+    reqs_path = os.path.join('.', 'requirements_light.txt')
     install_reqs = parse_requirements(reqs_path, session=PipSession())
     reqs = [str(ir.req) for ir in install_reqs]
     return reqs
@@ -32,10 +23,9 @@ setup(
     author_email='rgerkin@asu.edu',
     packages=['neuronunit',
             'neuronunit.capabilities',
-            'neuronunit.neuroconstruct',
             'neuronunit.models',
             'neuronunit.tests',
-            'neuronunit.optimization',
+            'neuronunit.optimisation',
             'neuronunit.unit_test'],
 #+    packages=find_packages(),
 

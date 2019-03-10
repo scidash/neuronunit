@@ -2,18 +2,17 @@ import io
 import math
 import pdb
 from numba import jit
-from contextlib import redirect_stdout
+
 import numpy as np
 from .base import *
 import quantities as qt
 from quantities import mV, ms, s
-#import matplotlib.pyplot as plt
+import matplotlib as mpl
 
+mpl.use('Agg')
 
-hc = {}
-hc['vr'] = -65.2261863636364
-hc['vPeak'] = hc['vr'] + 86.364525297619
-hc['C'] = 89.7960714285714
+import matplotlib.pyplot as plt
+# @jit(cache=True) I suspect this causes a memory leak
 
 @jit
 def get_vm(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.364525297619-65.2261863636364), vr=-65.2261863636364, vt=-50, dt=0.030, Iext=[]):
@@ -36,16 +35,15 @@ def get_vm(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.36452
             v[m] = vPeak;# % padding the spike amplitude
             v[m+1] = c;# % membrane voltage reset
             u[m+1] = u[m+1] + d;# % recovery variable update
-    v = np.divide(v, 1000.0)
-    vm = AnalogSignal(v,
-                 units = mV,
-                 sampling_period = dt * ms)
-    return vm
+
+    return v
 
 
 class RAWBackend(Backend):
 
-    def init_backend(self, attrs = None, cell_name = 'alice', current_src_name = 'hannah', DTC = None):
+    def init_backend(self, attrs=None, cell_name='alice',
+                     current_src_name='hannah', DTC=None,
+                     debug = False):
         backend = 'RAW'
         super(RAWBackend,self).init_backend()
         self.model._backend.use_memory_cache = False
@@ -53,7 +51,7 @@ class RAWBackend(Backend):
         self.cell_name = cell_name
         self.vM = None
         self.attrs = attrs
-
+        self.debug = debug
         self.temp_attrs = None
 
         if type(attrs) is not type(None):
@@ -64,7 +62,7 @@ class RAWBackend(Backend):
             if type(DTC.attrs) is not type(None):
 
                 self.set_attrs(**DTC.attrs)
-                #print('gets here to DTC attrs',DTC.attrs)
+
 
             if hasattr(DTC,'current_src_name'):
                 self._current_src_name = DTC.current_src_name
@@ -125,12 +123,25 @@ class RAWBackend(Backend):
 
         attrs['Iext'] = Iext
         attrs['dt'] = dt
-        self.vM  = get_vm(**attrs)
-
+        v = get_vm(**attrs)
+        v = np.divide(v, 1000.0)
+        self.vM = AnalogSignal(v,
+                     units = mV,
+                     sampling_period = dt * ms)
+        self.attrs = attrs
+        if self.debug == True:
+            plt.plot(self.vM.times,self.vM)
+            plt.savefig('izhi_debug.png')
         return self.vM
 
     def _local_run(self):
         results = {}
+        if self.vM is None:
+            v = get_vm(**attrs)
+            v = np.divide(v, 1000.0)
+            self.vM = AnalogSignal(v,
+                         units = mV,
+                         sampling_period = dt * ms)
         results['vm'] = self.vM
         results['t'] = self.vM.times
         results['run_number'] = results.get('run_number',0) + 1
