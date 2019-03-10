@@ -31,7 +31,7 @@ except:
     from allensdk.core.cell_types_cache import CellTypesCache
     import allensdk.core.json_utilities as json_utilities
 
-    os.system('pip install git+https://github.com/scidash/sciunit@dev')
+    #os.system('pip install git+https://github.com/scidash/sciunit@dev')
 
 
 
@@ -70,7 +70,7 @@ class GLIFBackend(Backend):
                 glif_api = GlifApi()
                 self.allen_id = allen_id
                 self.glif = glif_api.get_neuronal_models_by_id([allen_id])[0]
-                self.nc = glif_api.get_neuron_configs([self.allen_id])[self.allen_id]
+                self.nc = glif_api.get_neuron_config([self.allen_id])[self.allen_id]
                 pickle.dump(self.nc,open(str('allen_id.p'),'wb'))
 
 
