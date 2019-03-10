@@ -6,8 +6,8 @@
 #    Golowasch, J., Goldman, M., Abbott, L.F, and Marder, E. (2002)
 #    Failure of averaging in the construction
 #    of conductance-based neuron models. J. Neurophysiol., 87: 11291131.
-
-
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 import numpy as np
 import dask.bag as db
 import pandas as pd
@@ -38,7 +38,6 @@ from itertools import repeat
 import numpy
 from sklearn.cluster import KMeans
 
-
 from deap import base
 from pyneuroml import pynml
 
@@ -55,6 +54,7 @@ from neuronunit.optimisation import model_parameters as modelp
 
 from neuronunit.tests.fi import RheobaseTestP# as discovery
 from neuronunit.tests.fi import RheobaseTest# as discovery
+from neuronunit.tests.druckmann2013 import *
 
 import dask.bag as db
 # The rheobase has been obtained seperately and cannot be db mapped.
@@ -82,31 +82,132 @@ def inject_and_plot(dtc,figname='problem'):
     '''
     model = mint_generic_model(str('RAW'))
     model.set_attrs(dtc.attrs)
-    dtc.vtest[0]['injected_square_current']['amplitude'] = dtc.rheobase['value']
+    try:
+        dtc.vtest[0]['injected_square_current']['amplitude'] = dtc.rheobase['value']
+    except:
+        dtc.vtest[0]['injected_square_current']['amplitude'] = dtc.rheobase
     dtc.vtest[0]['injected_square_current']['duration'] = 1000*pq.ms
     model.inject_square_current(dtc.vtest[0])
-    plt.plot(model.get_membrane_potential().times,model.get_membrane_potential())#,label='ground truth')
-    plt.savefig(figname+str('debug.png'))
 
+    plt.plot(model.get_membrane_potential().times,model.get_membrane_potential())#,label='ground truth')
+    plot_backend = mpl.get_backend()
+
+    if plot_backend == str('Agg'):
+        plt.savefig(figname+str('debug.png'))
+    else:
+        plt.show()
+'''
 def obtain_predictions(t,backend,params):
 
     model = None
     model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = ('RAW'))
     model.set_attrs(params)
     return t.generate_prediction(model)
+'''
+def init_dm_tests(standard,strong):
+    '''
+    Lets not greedy import
+    import neuronunit.tests.druckmann2013 as dm
+    for t in dir(dm):
+        if "Test" in t:
+            exec('from neuronunit.tests.druckmann2013 import '+str(t))#+' as '+str(t))
+    '''
 
-def make_fake_observations(tests,backend):
+    tests = [AP12AmplitudeDropTest(standard),
+        AP1SSAmplitudeChangeTest(standard),
+        AP1AmplitudeTest(standard),
+        AP1WidthHalfHeightTest(standard),
+        AP1WidthPeakToTroughTest(standard),
+        AP1RateOfChangePeakToTroughTest(standard),
+        AP1AHPDepthTest(standard),
+        AP2AmplitudeTest(standard),
+        AP2WidthHalfHeightTest(standard),
+        AP2WidthPeakToTroughTest(standard),
+        AP2RateOfChangePeakToTroughTest(standard),
+        AP2AHPDepthTest(standard),
+        AP12AmplitudeChangePercentTest(standard),
+        AP12HalfWidthChangePercentTest(standard),
+        AP12RateOfChangePeakToTroughPercentChangeTest(standard),
+        AP12AHPDepthPercentChangeTest(standard),
+        AP1DelayMeanTest(standard),
+        AP1DelaySDTest(standard),
+        AP2DelayMeanTest(standard),
+        AP2DelaySDTest(standard),
+        Burst1ISIMeanTest(standard),
+        Burst1ISISDTest(standard),
+        InitialAccommodationMeanTest(standard),
+        SSAccommodationMeanTest(standard),
+        AccommodationRateToSSTest(standard),
+        AccommodationAtSSMeanTest(standard),
+        AccommodationRateMeanAtSSTest(standard),
+        ISICVTest(standard),
+        ISIMedianTest(standard),
+        ISIBurstMeanChangeTest(standard),
+        SpikeRateStrongStimTest(strong),
+        AP1DelayMeanStrongStimTest(strong),
+        AP1DelaySDStrongStimTest(strong),
+        AP2DelayMeanStrongStimTest(strong),
+        AP2DelaySDStrongStimTest(strong),
+        Burst1ISISDStrongStimTest(strong),
+        Burst1ISIMeanStrongStimTest(strong)]
+
+    AHP_list = [AP1AHPDepthTest(standard),
+        AP2AHPDepthTest(standard),
+        AP12AHPDepthPercentChangeTest(standard) ]
+    return tests
+
+def cell_to_test_mapper(content):
+    dm_properties = {}
+    index,dtc = content
+    dm_properties[index] = []
+    ir_currents = dtc.rheobase
+    standard = 1.5*ir_currents
+    #standard *= 1.5
+    strong = 3*ir_currents
+    tests = init_dm_tests(standard,strong)
+    model = None
+    model = mint_generic_model(dtc.backend)
+
+    for i, test in enumerate(tests):
+        print(i,test)
+        model.set_attrs(dtc.attrs)
+        dm_properties[index].append(test.generate_prediction(model)['mean'])
+        print(dm_properties[index])
+    dtc.dm_properties = None
+    dtc.dm_properties = dm_properties
+    return dtc
+
+def add_dm_properties_to_cells(dtcpop):
+    dm_properties = {}
+    flatten_cells = [(index,dtc) for index,dtc in enumerate(dtcpop) ]
+    bag = db.from_sequence(flatten_cells,npartitions=8)
+    dtcpop = list(bag.map(cell_to_test_mapper).compute())
+    dm_properties = {}
+    for l in list_of_dics:
+        dm_properties.update(l)
+    return (dtcpop,dm_properties)
+
+
+def make_fake_observations(tests,backend,random_param):
     '''
     to be used in conjunction with round_trip_test below.
 
     '''
     dtc = DataTC()
-    dtc.attrs = local_attrs
-    dtc = get_rh(dtc,rtest)
-    pt = format_params(tests,rheobase)
-    ptbag = db.from_sequence(pt[1::])
-    predictions = list(ptbag.map(obtain_predictions).compute())
-    predictions.insert(0,rheobase)
+    dtc.attrs = random_param
+    dtc.backend = backend
+    dtc = get_rh(dtc,tests[0])
+
+    #pt = format_params(tests,rheobase)
+    dtc = pred_evaluation(dtc)
+
+    #ptbag = db.from_sequence(pt[1::])
+    #test_and_models = (test, dtc)
+    #def pred_only(test_and_models):
+    # Temporarily patch sciunit judge code, which seems to be broken.
+    #predictions = pred_only(test_and_models)
+    #predictions = list(ptbag.map(obtain_predictions).compute())
+    predictions.insert(0,dtc.rheobase)
     # having both means and values in dictionary makes it very irritating to iterate over.
     # It's more harmless to demote means to values, than to elevate values to means.
     # Simply swap key names: means, for values.
@@ -126,6 +227,7 @@ def make_fake_observations(tests,backend):
         t.observation['mean'] = t.observation['value']
     return tests
 
+from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 def round_trip_test(tests,backend):
     '''
     # Inputs:
@@ -140,13 +242,20 @@ def round_trip_test(tests,backend):
     # make some new tests based on internally generated data
     # as opposed to experimental data.
     '''
-    explore_param = model_params_everything[backend] # TODO, make this syntax possible.
+    ranges = MODEL_PARAMS[str(backend)]
     random_param = {} # randomly sample a point in the viable parameter space.
-    for t in explore_param.keys():
-        mean = np.mean(explore_param[t])
-        std = np.std(explore_param[t])
-        sample = numpy.random.normal(loc=mean, scale=2*std, size=1)[0]
-        random_param[k] = sample
+    for k in ranges.keys():
+        print(ranges[k])
+        print(type(ranges[k]))
+        #import pdb; pdb.set_trace()
+        try:
+            mean = np.mean(ranges[k])
+            std = np.std(ranges[k])
+            sample = numpy.random.normal(loc=mean, scale=2*std, size=1)[0]
+            random_param[k] = sample
+        except:
+            print('probably a list and not a flexible parameter')
+            random_param[k] = ranges[k]
     tests = make_fake_observations(tests,backend,random_param)
     NGEN = 10
     MU = 6
@@ -160,8 +269,8 @@ def round_trip_test(tests,backend):
         best = ga_out['pf'][0].dtc.get_ss()
     print('Its ',Bool(best < 0.5), ' that optimisation succeeds on this model class')
     print('goodness of fit: ',best)
-
-    return Bool(ga_out['pf'][0] < 0.5)
+    dtcpop = [ p.dtc for p in ga_out['pf'] ]
+    return ( Bool(ga_out['pf'][0] < 0.5),dtcpop )
 
 
 def pred_only(test_and_models):
@@ -476,24 +585,41 @@ def dtc_to_rheo_serial(dtc):
         dtc = get_rh(dtc,rtest)
     return dtc
 
+from collections.abc import Iterable
+
+def get_rtest(dtc):
+    rtest = None
+    if 'RAW' in dtc.backend or 'HH' in dtc.backend:
+        if not isinstance(dtc.tests, Iterable):
+            rtest = dtc.tests
+        else:
+            rtest = [ t for t in dtc.tests if str('RheobaseTest') == t.name ]
+            print(rtest)
+            rtest = rtest[0]
+    else:
+        if not isinstance(dtc.tests, Iterable):
+            rtest = dtc.tests
+        else:
+            rtest = [ t for t in dtc.tests if str('RheobaseTestP') == t.name ]
+            print(rtest)
+            rtest = rtest[0]
+
+    return rtest
+
 def dtc_to_rheo(dtc):
     # If  test taking data, and objects are present (observations etc).
     # Take the rheobase test and store it in the data transport container.
-    dtc.scores = {}
-    dtc.score = {}
-    backend_ = dtc.backend
-    model = mint_generic_model(backend_)
+    if not hasattr(dtc,'scores'):
+        dtc.scores = None
+        dtc.scores = {}
+    if not hasattr(dtc,'score'):
+        dtc.score = None
+        dtc.score = {}
+    #backend =
+    model = mint_generic_model(dtc.backend)
     model.set_attrs(dtc.attrs)
-
-
-    if 'RAW' in backend_ or 'HH' in backend_:#Backend:
-        rtest = [ t for t in dtc.tests if str('RheobaseTest') == t.name ]
-    else:
-        rtest = [ t for t in dtc.tests if str('RheobaseTestP') == t.name ]
-
-    if len(rtest):
-        rtest = rtest[0]
-
+    rtest = get_rtest(dtc)
+    if rtest is not None:
         dtc.rheobase = rtest.generate_prediction(model)
         #print(dtc.rheobase)
         if dtc.rheobase is not None and dtc.rheobase !=-1.0:
@@ -544,41 +670,49 @@ def switch_logic(tests):
     '''
     Hopefuly depreciated by future NU debugging.
     '''
-    for t in tests:
-        t.passive = None
-        t.active = None
-        active = False
-        passive = False
+    if not isinstance(tests,Iterable):
+        if str('RheobaseTest') == tests.name:
+            active = True
+            passive = False
+        elif str('RheobaseTestP') == tests.name:
+            active = True
+            passive = False
+    else:
+        for t in tests:
+            t.passive = None
+            t.active = None
+            active = False
+            passive = False
 
-        if str('RheobaseTest') == t.name:
-            active = True
-            passive = False
-        elif str('RheobaseTestP') == t.name:
-            active = True
-            passive = False
-        elif str('InjectedCurrentAPWidthTest') == t.name:
-            active = True
-            passive = False
-        elif str('InjectedCurrentAPAmplitudeTest') == t.name:
-            active = True
-            passive = False
-        elif str('InjectedCurrentAPThresholdTest') == t.name:
-            active = True
-            passive = False
-        elif str('RestingPotentialTest') == t.name:
-            passive = True
-            active = False
-        elif str('InputResistanceTest') == t.name:
-            passive = True
-            active = False
-        elif str('TimeConstantTest') == t.name:
-            passive = True
-            active = False
-        elif str('CapacitanceTest') == t.name:
-            passive = True
-            active = False
-        t.passive = passive
-        t.active = active
+            if str('RheobaseTest') == t.name:
+                active = True
+                passive = False
+            elif str('RheobaseTestP') == t.name:
+                active = True
+                passive = False
+            elif str('InjectedCurrentAPWidthTest') == t.name:
+                active = True
+                passive = False
+            elif str('InjectedCurrentAPAmplitudeTest') == t.name:
+                active = True
+                passive = False
+            elif str('InjectedCurrentAPThresholdTest') == t.name:
+                active = True
+                passive = False
+            elif str('RestingPotentialTest') == t.name:
+                passive = True
+                active = False
+            elif str('InputResistanceTest') == t.name:
+                passive = True
+                active = False
+            elif str('TimeConstantTest') == t.name:
+                passive = True
+                active = False
+            elif str('CapacitanceTest') == t.name:
+                passive = True
+                active = False
+            t.passive = passive
+            t.active = active
     return tests
 
 def active_values(keyed,rheobase):
@@ -674,7 +808,6 @@ def pred_evaluation(dtc):
     # Inputs single data transport container modules, and neuroelectro observations that
     # inform test error error_criterion
     # Outputs Neuron Unit evaluation scores over error criterion
-    tests = dtc.tests
     dtc = copy.copy(dtc)
     # TODO
     # phase out model path:
@@ -683,6 +816,12 @@ def pred_evaluation(dtc):
     #preds = []
     dtc.preds = None
     dtc.preds = {}
+    dtc =  dtc_to_rheo(dtc)
+    dtc = format_test(dtc)
+    tests = dtc.tests
+
+    #test_and_dtc = (use_test,dtc)
+
     for k,t in enumerate(tests):
         if str('RheobaseTest') != t.name and str('RheobaseTestP') != t.name:
             t.params = dtc.vtest[k]

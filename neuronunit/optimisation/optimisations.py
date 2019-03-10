@@ -194,9 +194,16 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
         npoints = np.ceil(npoints)
         dic_grid = es.create_grid(mp_in = self.params,npoints = self.offspring_size, free_params = self.params)
         '''
+        pop = []
+        for i in dic_grid:
+            pop.append([i[k] for k in self.td])
+
+        return pop
+
+
+        This code causes memory errors for some population sizes
         The grid is now defined, the rest of code just makes sure that the size of the grid is a reasonable size
         And computationally tractable. When I write sparse, think 'Down sample' a big, overly sampled list of coordinates.
-
         '''
         size = len(dic_grid)
         if size > self.offspring_size:
@@ -216,10 +223,13 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
             #for i in range(0,delta):
             while delta:
                 delta = self.offspring_size - size
-                for index in range(0,dic_grid):
-                    d = dic_grid[index]
-                    pop.append([d[k] for k in self.td])
+                for i in dic_grid:
+                    pop.append([i[k] for k in self.td])
                     size = len(pop)
+
+                #for index in range(0,dic_grid):
+                #    d = dic_grid[index]
+                #    pop.append([d[k] for k in self.td])
 
         elif size == self.offspring_size:
             pop = []
@@ -228,6 +238,7 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
 
         assert len(pop)==self.offspring_size
         return pop
+        
     def glif_modifications(UPPER,LOWER):
         for index, i in enumerate(UPPER):
             if i == LOWER[index]:

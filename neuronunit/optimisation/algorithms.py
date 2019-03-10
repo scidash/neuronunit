@@ -167,12 +167,13 @@ def eaAlphaMuPlusLambdaCheckpoint(
         gen_vs_hof.append(hof)
         _record_stats(stats, logbook, start_gen, parents, invalid_count)
     toolbox.register("select",selNSGA2)
+    fronts = []
 
     # Begin the generational    process
     for gen in range(start_gen + 1, ngen + 1):
         delta = len(parents[0]) - len(toolbox.Individual())
-        h = copy.copy(history)
-        temp = [ v for v in h.genealogy_history.values()]
+        #h = copy.copy(history)
+        #temp = [ v for v in h.genealogy_history.values()]
 
         offspring = _get_offspring(parents, toolbox, cxpb, mutpb)
         offspring = [ toolbox.clone(ind) for ind in offspring ]
@@ -185,15 +186,24 @@ def eaAlphaMuPlusLambdaCheckpoint(
         population = [ p for p in population if len(p.fitness.values)!=0 ]
         invalid_count = len(invalid_ind)
         hof, pf,history = _update_history_and_hof(hof, pf, history, offspring, td)
+        fronts.append(pf)
+        if gen%10==0:# every tenth count.
+            #            stag_check = [ p for p in stag_check if len(p.fitness.values)!=0 ]
+            stag_check = np.mean([ p.fitness.values for p in fronts])
+            if not fronts[-1].fitness.values < stag_check*0.90:
+                print('gene poulation stagnant, no appreciable gains in fitness')
+                break
+        #for k,v in history.items()
         # TODO recreate a stagnation termination criterion.
         # if genes don't get substantially better in 50 generations.
         # Stop.
-        '''
+
+
         if pf[0].dtc is not None:
             print('true minimum',pf[0].dtc.get_ss())
         elif hof[0].dtc is not None:
             print('true minimum',hof[0].dtc.get_ss())
-        '''
+
 
 
         _record_stats(stats, logbook, gen, offspring, invalid_count)
