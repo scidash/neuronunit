@@ -1,9 +1,11 @@
 """Unit testing module for NeuronUnit"""
- 
+
 import unittest
- 
+
 from .base import *
 from .import_tests import ImportTestCase
+from .test_high_level import testHighLevelOptimisation
+from .test_low_level import testLowLevelOptimisation
 from .doc_tests import DocumentationTestCase
 from .resource_tests import NeuroElectroTestCase,BlueBrainTestCase,AIBSTestCase
 from .model_tests import ReducedModelTestCase

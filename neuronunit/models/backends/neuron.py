@@ -12,7 +12,10 @@ try:
     from base import os, copy, subprocess
 except:
     import os, copy, subprocess
-from base import Backend, BackendException, import_module_from_path
+try:
+    from base import Backend, BackendException, import_module_from_path
+except:
+    import Backend
 try:
     from base import pq, AnalogSignal, NEURON_SUPPORT, neuron, h, pynml
 except:

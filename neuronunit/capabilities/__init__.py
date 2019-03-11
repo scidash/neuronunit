@@ -99,9 +99,6 @@ class ProducesSpikeRasters(sciunit.Capability):
 
 
 
-    ass = mdf1.analogsignals[0]
-    time_points = ass.times
-
     def get_spike_train(self):
         """Gets computed spike times from the model.
 

@@ -83,10 +83,11 @@ class PYNNBackend(Backend):
 
         self.eif[0].set_parameters(**self.model.attrs)
         DURATION = 1000.0
-        self.eif.record_v()
+        self.eif.record('v')
         neuron.run(DURATION)
         volts = self.eif.get_v().segments[0].analogsignals
         volts = [ v for v in volts[-1] ]
+
         vm = AnalogSignal(copy.copy(volts),units = mV,sampling_period = self.dt *s)
         results = {}
         results['vm'] = vm
