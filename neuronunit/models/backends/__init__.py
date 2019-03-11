@@ -1,27 +1,41 @@
-import inspect
+"""Neuronunit-specific model backends."""
 
+import inspect
+import warnings
+
+import sciunit.models.backends as su_backends
+from sciunit.utils import PLATFORM, PYTHON_MAJOR_VERSION
 from .base import Backend
+
+warnings.filterwarnings('ignore', message='nested set')
+warnings.filterwarnings('ignore', message='mpi4py')
 
 try:
     from .jNeuroML import jNeuroMLBackend
 except:
     print('Error in jNeuroMLBackend')
 
+
 try:
     from .neuron import NEURONBackend
-except Exception as e:
-    import pdb
-    print('Silent Error eminating from NEURON syntax')
+except ImportError:
+    NEURONBackend = None
+    print('Could not load NEURONBackend')
 
     pdb.set_trace()
 try:
     from .rawpy import RAWBackend
-except Exception as e:
-    print('raw python Error')
+except ImportError:
+    RAWBackend = None
+    print('Could not load RAWBackend.')
+
 try:
     from .hhrawf import HHBackend
-except Exception as e:
-    print('HH python Error')
+except ImportError:
+    HHBackend = None
+    print('Could not load HHBackend.')
+
+
 
 try:
     from .glif import GLIFBackend
@@ -33,17 +47,11 @@ except Exception as e:
 try:
     from .general_pyNN import PYNNBackend
 except Exception as e:
-    print('pynn python Error')
+    print('Could not load GLIFBackend')
 
-available_backends = {x.replace('Backend',''):cls for x, cls \
-                   in locals().items() \
-                   if inspect.isclass(cls) and \
-                   issubclass(cls, Backend)}
+available_backends = {x.replace('Backend', ''): cls for x, cls
+                      in locals().items()
+                      if inspect.isclass(cls) and
+                      issubclass(cls, Backend)}
 
-
-
-
-# try:
-#    from .external import ExternalSim
-# except Exception as e:
-#    print('External sim python Error')
+su_backends.register_backends(locals())

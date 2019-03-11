@@ -304,8 +304,9 @@ class testLowLevelOptimisation(NotebookTools,unittest.TestCase):
         size = len([ v for v in dtc.attrs.values()])
         assert size > 0
         self.assertGreater(size,0)
-        model = ReducedModel(get_neab.LEMS_MODEL_PATH, name= str('vanilla'), backend=('RAWBackend', {'DTC':dtc}))
-        temp = [ v for v in model.attrs.values() ]
+        model = ReducedModel(get_neab.LEMS_MODEL_PATH, name= str('vanilla'),
+                             backend=('NEURON', {'DTC':dtc}))
+        temp = [v for v in model.attrs.values()]
         assert len(temp) > 0
         self.assertGreater(len(temp),0)
         rbt = get_neab.tests[0]
@@ -334,7 +335,8 @@ class testLowLevelOptimisation(NotebookTools,unittest.TestCase):
     def test_neuron_set_attrs(self):
         self.assertNotEqual(self.dtcpop,None)
         dtc = self.dtcpop[0]
-        self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend=('RAWBackend', {'DTC':dtc})) #backend=('RAW'{'DTC':dtc}))
+        self.model = ReducedModel(get_neab.LEMS_MODEL_PATH,
+                                  backend=('NEURON',{'DTC':dtc}))
         temp = [ v for v in self.model.attrs.values() ]
         assert len(temp) > 0
         self.AssertGreater(temp,0)

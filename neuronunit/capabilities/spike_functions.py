@@ -1,4 +1,4 @@
-"""Auxiliary helper functions for analysis of spiking"""
+"""Auxiliary helper functions for analysis of spiking."""
 
 import numpy as np
 import neo
@@ -11,13 +11,15 @@ import math
 
 def get_spike_train(vm, threshold=0.0*mV):
     """
+    Inputs:
      vm: a neo.core.AnalogSignal corresponding to a membrane potential trace.
      threshold: the value (in mV) above which vm has to cross for there
                 to be a spike.  Scalar float.
+
     Returns:
      a neo.core.SpikeTrain containing the times of spikes.
     """
-    spike_train = threshold_detection(vm,threshold=threshold)
+    spike_train = threshold_detection(vm, threshold=threshold)
     return spike_train
 
 @jit
@@ -36,6 +38,10 @@ def diff(vm):
 # Membrane potential trace (1D numpy array) to matrix of spike snippets (2D numpy array)
 def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
     """
+    Membrane potential trace (1D numpy array) to matrix of
+    spike snippets (2D numpy array)
+
+    Inputs:
      vm: a neo.core.AnalogSignal corresponding to a membrane potential trace.
      threshold: the value (in mV) above which vm has to cross for there
                 to be a spike.  Scalar float.
@@ -46,7 +52,7 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
      a neo.core.AnalogSignal where each column contains a membrane potential
      snippets corresponding to one spike.
     """
-    spike_train = threshold_detection(vm,threshold=threshold)
+    spike_train = threshold_detection(vm, threshold=threshold)
 
     # Fix for 0-length spike train issue in elephant.
     if len(spike_train) == 0:
@@ -70,19 +76,20 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
     t = spike_train[-1]
     if t+width/2.0 < vm.times[-1]:
         too_long = False
-
-    if too_short == False and too_long == False:
-
-        snippets = [vm.time_slice(t-width/2,t+width/2) for t in spike_train]
+    if not too_short and not too_long:
+        snippets = [vm.time_slice(t-width/2, t+width/2) for t in spike_train]
     elif too_long:
-        snippets = [vm.time_slice(t-width/2,t) for t in spike_train]
+        snippets = [vm.time_slice(t-width/2, t) for t in spike_train]
     elif too_short:
-        snippets = [vm.time_slice(t,t+width/2) for t in spike_train]
+        snippets = [vm.time_slice(t, t+width/2) for t in spike_train]
+
     result = neo.core.AnalogSignal(np.array(snippets).T.squeeze(),
                                    units=vm.units,
                                    sampling_rate=vm.sampling_rate)
 
     return result
+
+
 def spikes2amplitudes(spike_waveforms):
     """
     IN:
@@ -151,13 +158,14 @@ def spikes2widths(spike_waveforms):
                 #             "minimum to compute width"))
                 low = np.min(s[:index_high])
                 mid = (high+low)/2
-            n_samples = sum(s>mid) # Number of samples above the half-max.
+            n_samples = sum(s > mid)  # Number of samples above the half-max.
             widths.append(n_samples)
-    widths = np.array(widths,dtype='float')
+    widths = np.array(widths, dtype='float')
     if n_spikes:
         # Convert from samples to time.
         widths = widths*spike_waveforms.sampling_period
     return widths
+
 
 def spikes2thresholds(spike_waveforms):
     """
@@ -176,7 +184,7 @@ def spikes2thresholds(spike_waveforms):
     n_spikes = spike_waveforms.shape[1]
     thresholds = []
     for i in range(n_spikes):
-        s = spike_waveforms[:,i].squeeze()
+        s = spike_waveforms[:, i].squeeze()
         s = np.array(s)
         dvdt = np.diff(s)
         for j in dvdt:

@@ -11,10 +11,11 @@ import io
 import math
 import pdb
 from numba import jit
-from contextlib import redirect_stdout
 from .base import *
 import quantities as qt
 from quantities import mV, ms, s
+
+from sciunit.utils import redirect_stdout
 
 
 def Id(t,delay,duration,tmax,amplitude):
@@ -120,6 +121,8 @@ def get_vm(attrs):
                  units = mV,
                  sampling_period = dt * ms)
     return vm
+
+
 class HHBackend(Backend):
 
     def init_backend(self, attrs = None, cell_name = 'alice', current_src_name = 'hannah', DTC = None):
@@ -171,7 +174,7 @@ class HHBackend(Backend):
     def set_attrs(self, **attrs):
         self.model.attrs.update(attrs)
 
-    def _local_run(self):
+    def _backend_run(self):
         results = {}
         results['vm'] = self.vM
         results['t'] = self.vM.times
