@@ -111,8 +111,12 @@ class RheobaseTest(VmTest):
 
         def f(ampl):
             if float(ampl) not in lookup:
-                current = self.params.copy()['injected_square_current']
-
+                try:
+                    current = self.params.copy()['injected_square_current']
+                except:
+                    current = self.params
+                    import pdb
+                    pdb.set_trace()
                 uc = {'amplitude':ampl}
                 current.update(uc)
 

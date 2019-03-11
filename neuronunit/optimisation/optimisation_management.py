@@ -196,7 +196,8 @@ def make_fake_observations(tests,backend,random_param):
     dtc = DataTC()
     dtc.attrs = random_param
     dtc.backend = backend
-
+    #import pdb; pdb.set_trace()
+    dtc.tests  = tests
     dtc = get_rh(dtc,tests[0])
 
     #pt = format_params(tests,rheobase)
@@ -260,7 +261,7 @@ def round_trip_test(tests,backend):
     tests = make_fake_observations(tests,backend,random_param)
     NGEN = 10
     MU = 6
-    ga_out, DO = run_ga(explore_param,NGEN,tests,free_params=free_params, NSGA = True, MU = MU, backed=backend, selection=str('selNSGA2'))
+    ga_out, DO = run_ga(ranges,NGEN,tests,free_params=free_params, NSGA = True, MU = MU, backed=backend, selection=str('selNSGA2'))
     best = ga_out['pf'][0].dtc.get_ss()
     print(Bool(best < 0.5))
     if Bool(best >= 0.5):
@@ -557,7 +558,7 @@ def get_rh(dtc,rtest):
     DURATION = 1000.0*pq.ms
     DELAY = 100.0*pq.ms
 
-    rtest.params['injected_square_current']['delay']= DELAY
+    rtest.params['injected_square_current']['delay'] = DELAY
     rtest.params['injected_square_current']['duration'] = DURATION
     dtc.rheobase = rtest.generate_prediction(model)
     if dtc.rheobase is None:
@@ -599,6 +600,15 @@ from collections.abc import Iterable
 
 def get_rtest(dtc):
     rtest = None
+    if isinstance(dtc.tests, type(None)):
+        if 'RAW' in dtc.backend or 'HH' in dtc.backend:#Backend:
+            rtest = RheobaseTest(observation=place_holder,
+                                    name='a Rheobase test')
+        else:
+            rtest = RheobaseTestP(observation=place_holder,
+                                    name='a Rheobase test')
+
+
     if 'RAW' in dtc.backend or 'HH' in dtc.backend:
         if not isinstance(dtc.tests, Iterable):
             rtest = dtc.tests
