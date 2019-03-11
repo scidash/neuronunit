@@ -2,10 +2,8 @@
 import unittest
 import os
 import sys
-#from sciunit.utils import NotebookTools#,import_all_modules
 import dask
 from dask import bag
-#from .base import *
 
 
 from itertools import repeat
@@ -26,14 +24,13 @@ from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.optimisation_management import dtc_to_rheo
 from neuronunit.optimisation.optimisation_management import nunit_evaluation
 from neuronunit.optimisation.optimisation_management import format_test, mint_generic_model
-#from neuronunit.optimisation import mint_geneneric_model
 
 from neuronunit import tests as nu_tests, neuroelectro
 from neuronunit.tests import passive, waveform, fi
-from neuronunit.optimisation import get_neab
+#from neuronunit.optimisation import get_neab
 from neuronunit.optimisation import exhaustive_search
 from neuronunit.models.reduced import ReducedModel
-from neuronunit.optimisation import get_neab
+#from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 from neuronunit.tests import dynamics
 from neuronunit.models.reduced import ReducedModel
@@ -42,10 +39,10 @@ from neuronunit.optimisation.optimisation_management import format_test
 from neuronunit.optimisation import data_transport_container
 
 from neuronunit.models.reduced import ReducedModel
-from neuronunit.optimisation import get_neab
+#from neuronunit.optimisation import get_neab
 
 from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
-from neuronunit.optimisation import get_neab
+#from neuronunit.optimisation import get_neab
 from neuronunit.models.reduced import ReducedModel
 from neuronunit import aibs
 
@@ -95,10 +92,7 @@ class testHighLevelOptimisation(unittest.TestCase):
 
         except:
             for p in pipe:
-                try:
-                    tests,observations = get_neab.executable_druckman_tests(p)
-                except:
-                    p_tests, p_observations = get_neab.get_neuron_criteria(p)
+                p_tests, p_observations = get_neab.get_neuron_criteria(p)
                 self.obs_frame[p["name"]] = p_observations#, p_tests))
                 self.test_frame[p["name"]] = p_tests#, p_tests))
             electro_path = str(os.getcwd())+'all_tests.p'
@@ -128,7 +122,6 @@ class testHighLevelOptimisation(unittest.TestCase):
         self.MODEL_PARAMS.pop(str('NEURON'),None)
 
         self.heavy_backends = [
-                    str('PYNNBackend'),
                     str('NEURONBackend'),
                     str('jNeuroMLBackend')
                 ]
@@ -147,7 +140,6 @@ class testHighLevelOptimisation(unittest.TestCase):
         broken_backends = [ str('NEURONBackend') ]
             
         all_backends = [
-            str('PYNNBackend'),
             str('jNeuroMLBackend'),
             str('RAWBackend'),
             str('HHBackend'),
@@ -191,11 +183,20 @@ class testHighLevelOptimisation(unittest.TestCase):
         '''
         from neuronunit.optimisation.optimisation_management import add_dm_properties_to_cells
         (self.dtcpop,dm_properties) = add_dm_properties_to_cells(self.dtcpop)
+       
         for d in dm_properties:
-            print(d)
             self.assertTrue(d is not None)
         return
 
+    def test_executable_druckmann_science_unit_tests(self):
+        '''
+        test the extraction of Druckmann property Ephys measurements.
+        '''
+        from neuronunit.optimisation.optimisation_management import add_dm_properties_to_cells
+
+        tests,observations = get_neab.executable_druckman_tests(p)
+        (self.dtcpop,dm_properties) = add_dm_properties_to_cells(self.dtcpop)
+               
     def test_solution_quality0(self):
         '''
         Select random points in parameter space,
