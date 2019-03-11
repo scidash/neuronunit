@@ -60,7 +60,7 @@ class NetTest(VmTest):
             rpy2('install.packages("remotes")')
             rpy2('install.packages("osfr")')
             rpy2('library(osfr)')
-            rpy2('cr_project <- osf_retrieve_node("yng5u")')
+            rpy2('cr_project <- osf_retrieve_node("64jhz")')
 
         except:
 
