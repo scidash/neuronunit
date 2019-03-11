@@ -183,8 +183,8 @@ def add_dm_properties_to_cells(dtcpop):
     bag = db.from_sequence(flatten_cells,npartitions=8)
     dtcpop = list(bag.map(cell_to_test_mapper).compute())
     dm_properties = {}
-    for l in list_of_dics:
-        dm_properties.update(l)
+    for dtc in dtcpop:
+        dm_properties.update(dtc.dm_properties)
     return (dtcpop,dm_properties)
 
 
@@ -196,6 +196,7 @@ def make_fake_observations(tests,backend,random_param):
     dtc = DataTC()
     dtc.attrs = random_param
     dtc.backend = backend
+
     dtc = get_rh(dtc,tests[0])
 
     #pt = format_params(tests,rheobase)
@@ -539,6 +540,8 @@ def get_rh(dtc,rtest):
     place_holder['std'] = 10*pq.pA
     place_holder['value'] = 10*pq.pA
     backend_ = dtc.backend
+    #keyed['injected_square_current'] = {}
+
     if 'RAW' in backend_ or 'HH' in backend_:#Backend:
         rtest = RheobaseTest(observation=place_holder,
                                 name='a Rheobase test')
@@ -549,6 +552,13 @@ def get_rh(dtc,rtest):
     dtc.rheobase = None
     model = mint_generic_model(backend_)
     model.set_attrs(dtc.attrs)
+    rtest.params['injected_square_current'] = {}
+
+    DURATION = 1000.0*pq.ms
+    DELAY = 100.0*pq.ms
+
+    rtest.params['injected_square_current']['delay']= DELAY
+    rtest.params['injected_square_current']['duration'] = DURATION
     dtc.rheobase = rtest.generate_prediction(model)
     if dtc.rheobase is None:
         dtc.rheobase = - 1.0
@@ -1211,20 +1221,17 @@ def parallel_route(pop,dtcpop,tests,td,clustered=False):
     for d in dtcpop:
         d.tests = copy.copy(tests)
     dtcpop = list(map(format_test,dtcpop))
-
-<<<<<<< HEAD:neuronunit/optimization/optimization_management.py
+    '''
     #dask lazy arrays make pynn ones obsolete.
     dtcarray = da(dtcpop)
     dtcarray.compute()
     dtcarray = dtcarray.persist()
-=======
-
+    '''
     if clustered == True:
         dtcpop = opt_on_pair_of_points(dtcpop)
     else:
         dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
         dtcpop = list(dtcbag.map(nunit_evaluation).compute())
->>>>>>> d5406dfaf1ff44cca8ce5be9a3231cbd8abd6c1f:neuronunit/optimisation/optimisation_management.py
 
     #import pdb; pdb.set_trace()
     #if dtc.score is not None:
