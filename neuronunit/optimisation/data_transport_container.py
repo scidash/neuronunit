@@ -1,5 +1,4 @@
 import numpy as np
-from numba import jit
 class DataTC(object):
     '''
     Data Transport Container
@@ -34,7 +33,6 @@ class DataTC(object):
         self.summed = None
         self.constants = None
 
-    @jit
     def get_ss(self):
         # get summed score
         if self.scores is not None:

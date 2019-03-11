@@ -1449,7 +1449,7 @@ class AccommodationAtSSMeanTest(Druckmann2013Test):
 
         return none_score
 
-    @jit
+    #@jit
     def get_final_result(self, A, B, tau):
         return B / float(A) * 100.0
 
