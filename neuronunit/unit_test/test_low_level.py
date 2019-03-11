@@ -113,7 +113,7 @@ def test_all_tests_pop(dtcpop, tests):
     dtcpop = list(db.map(nunit_evaluation,b0).compute())
     return dtcpop
 
-class testoptimisationBackends(NotebookTools,unittest.TestCase):
+class testLowLevelOptimisation(NotebookTools,unittest.TestCase):
 
     def setUp(self):
         self.predictions = None

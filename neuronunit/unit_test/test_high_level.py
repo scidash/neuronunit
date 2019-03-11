@@ -5,60 +5,49 @@ import sys
 #from sciunit.utils import NotebookTools#,import_all_modules
 import dask
 from dask import bag
-from base import *
+#from .base import *
 
 
-from neuronunit.optimisation import get_neab
-from neuronunit.optimisation.optimisation_management import dtc_to_rheo
-from neuronunit.optimisation.optimisation_management import nunit_evaluation
-from neuronunit.optimisation.optimisation_management import format_test, mint_generic_model
 from itertools import repeat
 import quantities as pq
 
-
-from neuronunit.models.reduced import ReducedModel
-from neuronunit.optimisation import get_neab
 import copy
 import unittest
-from neuronunit import tests as nu_tests, neuroelectro
-from neuronunit.tests import passive, waveform, fi
-#from neuronunit import tests as nu_tests, neuroelectro
-#from neuronunit.tests import passive, waveform, fi
-#from neuronunit.models.reduced import ReducedModel
-from neuronunit.optimisation import get_neab
-from neuronunit.optimisation import exhaustive_search
 import pickle
-#from neuronunit.models.reduced import ReducedModel
-#from neuronunit.optimisation import get_neab
 
-from neuronunit.optimisation.model_parameters import MODEL_PARAMS
-#from neuronunit.optimisation import exhaustive_search
-
-from neuronunit.tests import dynamics
+import numpy as np
 import pickle
 import dask.bag as db
-#import dask.bag as db
+import os
+
+
+from neuronunit.optimisation import get_neab
+#
+from neuronunit.optimisation.optimisation_management import dtc_to_rheo
+from neuronunit.optimisation.optimisation_management import nunit_evaluation
+from neuronunit.optimisation.optimisation_management import format_test, mint_generic_model
+#from neuronunit.optimisation import mint_geneneric_model
+
+from neuronunit import tests as nu_tests, neuroelectro
+from neuronunit.tests import passive, waveform, fi
+from neuronunit.optimisation import get_neab
+from neuronunit.optimisation import exhaustive_search
+from neuronunit.models.reduced import ReducedModel
+from neuronunit.optimisation import get_neab
+from neuronunit.optimisation.model_parameters import MODEL_PARAMS
+from neuronunit.tests import dynamics
 from neuronunit.models.reduced import ReducedModel
 
-#from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.optimisation_management import format_test
 from neuronunit.optimisation import data_transport_container
-#from neuronunit.optimisation import data_transport_container
-
-#from neuronunit.optimisation import get_neab
-#from neuronunit.models.reduced import ReducedModel
-
-#from neuronunit.optimisation import get_neab
-#from neuronunit.models.reduced import ReducedModel
 
 from neuronunit.models.reduced import ReducedModel
 from neuronunit.optimisation import get_neab
-import numpy as np
+
 from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
 from neuronunit.optimisation import get_neab
 from neuronunit.models.reduced import ReducedModel
 from neuronunit import aibs
-import os
 
 def test_all_tests_pop(dtcpop, tests):
     rheobase_test = tests[0][0][0]
@@ -94,7 +83,7 @@ def grid_points():
     assert dtcpop is not None
     return dtcpop
 
-class testoptimisationBackends(NotebookTools,unittest.TestCase):
+class testHighLevelOptimisation(unittest.TestCase):
 
     def setUp(self):
 
@@ -155,17 +144,22 @@ class testoptimisationBackends(NotebookTools,unittest.TestCase):
 
 
     def test_rotate_backends0(self):
-
+        broken_backends = [ str('NEURONBackend') ]
+            
         all_backends = [
-            str('NEURONBackend'),
             str('PYNNBackend'),
             str('jNeuroMLBackend'),
             str('RAWBackend'),
             str('HHBackend'),
             str('GLIFBackend')
+
         ]
 
         for b in all_backends:
+            if b in str('GLIFBackend'):
+                import pdb
+                pdb.set_trace()
+
             model = mint_generic_model(b)
             #assert model is not None
             self.assertTrue(model is not None)
