@@ -26,6 +26,7 @@ from neuronunit.optimization.model_parameters import reduced_dict, reduced_cells
 from neuronunit.optimization import optimization_management as om
 from sciunit import scores# score_type
 
+from neuronunit.optimization import get_neab
 from neuronunit.optimization.data_transport_container import DataTC
 from neuronunit.tests.fi import RheobaseTestP# as discovery
 from neuronunit.optimization.optimization_management import dtc_to_rheo, format_test, nunit_evaluation

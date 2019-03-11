@@ -1,26 +1,32 @@
-"""Passive neuronunit tests, e.g. requiring no active conductances or spiking"""
+"""Passive neuronunit tests, requiring no active conductances or spiking."""
 
-from .base import np, pq, sciunit, cap, VmTest, scores, AMPL, DELAY, DURATION
+from .base import np, pq, sciunit, ncap, VmTest, scores, AMPL, DELAY, DURATION
 from scipy.optimize import curve_fit
-#import math
-#import numpy as np
+
 DURATION = 500.0*pq.ms
 DELAY = 200.0*pq.ms
 
-class TestPulseTest(VmTest):
-    """A base class for tests that use a square test pulse"""
 
-    required_capabilities = (cap.ReceivesSquareCurrent,)
+class TestPulseTest(VmTest):
+    """A base class for tests that use a square test pulse."""
+
+    def __init__(self, *args, **kwargs):
+        super(TestPulseTest, self).__init__(*args, **kwargs)
+        self.params['injected_square_current'] = {'amplitude': -10.0*pq.pA,
+                                                  'delay': DELAY,
+                                                  'duration': DURATION}
+
+    required_capabilities = (ncap.ReceivesSquareCurrent,)
 
     name = ''
 
     score_type = scores.ZScore
 
     def generate_prediction(self, model):
-        """Implementation of sciunit.Test.generate_prediction."""
-        t_stop = self.params['injected_square_current']['delay'] + \
-                   self.params['injected_square_current']['duration'] + \
-                   100.0 * pq.ms
+        """Implement sciunit.Test.generate_prediction."""
+        t_stop = (self.params['injected_square_current']['delay'] +
+                  self.params['injected_square_current']['duration'] +
+                  100.0 * pq.ms)
         model.get_backend().set_stop_time(t_stop)
         model.inject_square_current(self.params['injected_square_current'])
         vm = model.get_membrane_potential()
@@ -28,7 +34,7 @@ class TestPulseTest(VmTest):
         if np.any(np.isnan(vm)) or np.any(np.isinf(vm)):
             return None
 
-        return (i,vm)
+        return (i, vm)
 
     @classmethod
     def get_segment(cls, vm, start, finish):
@@ -39,10 +45,9 @@ class TestPulseTest(VmTest):
     @classmethod
     def get_rin(cls, vm, i):
         start, stop = -11*pq.ms, -1*pq.ms
-        before = cls.get_segment(vm,start+i['delay'],
-                                     stop+i['delay'])
-        after = cls.get_segment(vm,start+i['delay']+i['duration'],
-                                    stop+i['delay']+i['duration'])
+        before = cls.get_segment(vm, start+i['delay'], stop+i['delay'])
+        after = cls.get_segment(vm, start+i['delay']+i['duration'],
+                                stop+i['delay']+i['duration'])
         r_in = (after.mean()-before.mean())/i['amplitude']
         return r_in.simplified
 
@@ -50,10 +55,10 @@ class TestPulseTest(VmTest):
     def get_tau(cls, vm, i):
         # 10 ms before pulse start or halfway between sweep start
         # and pulse start, whichever is longer
-        start = max(i['delay']-10*pq.ms,i['delay']/2)
-        stop = i['duration']+i['delay']-1*pq.ms # 1 ms before pulse end
-        region = cls.get_segment(vm,start,stop)
-        amplitude,tau,y0 = cls.exponential_fit(region, i['delay'])
+        start = max(i['delay'] - 10*pq.ms, i['delay']/2)
+        stop = i['duration']+i['delay'] - 1*pq.ms  # 1 ms before pulse end
+        region = cls.get_segment(vm, start, stop)
+        amplitude, tau, y0 = cls.exponential_fit(region, i['delay'])
         return tau
 
     @classmethod
@@ -67,36 +72,45 @@ class TestPulseTest(VmTest):
         offset = (offset * segment.sampling_rate).simplified
         assert offset.dimensionality == pq.dimensionless
         offset = int(offset)
-        guesses = [vm.min(), # amplitude (mV)
-                   10, # time constant (ms)
-                   vm.max()] # y0 (mV)
+        guesses = [vm.min(),  # amplitude (mV)
+                   10,  # time constant (ms)
+                   vm.max()]  # y0 (mV)
         vm_fit = vm.copy()
 
         def func(x, a, b, c):
-            '''
-            This function is simply the shape of exponential decay which must be differenced, its basically an ideal template
-            An exp decay equation derived from experiments.
-            For the model to compare against.
-            '''
+            """Produce an exponential function.
+
+            Given function parameters a, b, and c, returns the exponential
+            decay function for those parameters.
+            """
             vm_fit[:offset] = c
             shaped = len(np.shape(vm_fit))
-            #print(shaped)
             if shaped > 1:
-                vm_fit[offset:,0] = a * np.exp(-t[offset:]/b) + c
+                vm_fit[offset:, 0] = a * np.exp(-t[offset:]/b) + c
             elif shaped == 1:
                 vm_fit[offset:] = a * np.exp(-t[offset:]/b) + c
 
             return vm_fit.squeeze()
-
-        popt, pcov = curve_fit(func, t, vm.squeeze(), p0=guesses) # Estimate starting values for better convergence
+        # Estimate starting values for better convergence
+        popt, pcov = curve_fit(func, t, vm.squeeze(), p0=guesses)
         amplitude = popt[0]*pq.mV
         tau = popt[1]*pq.ms
         y0 = popt[2]*pq.mV
-        return amplitude,tau,y0
+        return amplitude, tau, y0
+
+    def compute_score(self, observation, prediction):
+        """Implement sciunit.Test.score_prediction."""
+        if prediction is None:
+            return None  # scores.InsufficientDataScore(None)
+
+        else:
+            score = super(TestPulseTest, self).\
+                        compute_score(observation, prediction)
+        return score
 
 
 class InputResistanceTest(TestPulseTest):
-    """Tests the input resistance of a cell."""
+    """Test the input resistance of a cell."""
 
     name = "Input resistance test"
 
@@ -107,35 +121,21 @@ class InputResistanceTest(TestPulseTest):
     ephysprop_name = 'Input Resistance'
 
     def generate_prediction(self, model):
-        """Implementation of sciunit.Test.generate_prediction."""
-        result = super(InputResistanceTest,self).\
-                            generate_prediction(model)
+        """Implement sciunit.Test.generate_prediction."""
+        result = super(InputResistanceTest, self).generate_prediction(model)
         if result is not None:
-            i,vm = result
-            for param in ['delay', 'duration', 'amplitude']:
-                i[param] = self.params['injected_square_current'][param]
-
+            i, vm = result
             r_in = self.__class__.get_rin(vm, i)
             r_in = r_in.simplified
             # Put prediction in a form that compute_score() can use.
-            prediction = {'value':r_in}
+            prediction = {'value': r_in}
             return prediction
         else:
             return None
 
-    def compute_score(self, observation, prediction):
-        """Implementation of sciunit.Test.score_prediction."""
-        if prediction is None:
-            return None#scores.InsufficientDataScore(None)
-
-        else:
-            score = super(InputResistanceTest,self).\
-                        compute_score(observation, prediction)
-        return score
-
 
 class TimeConstantTest(TestPulseTest):
-    """Tests the input resistance of a cell."""
+    """Test the input resistance of a cell."""
 
     name = "Time constant test"
 
@@ -146,37 +146,30 @@ class TimeConstantTest(TestPulseTest):
     ephysprop_name = 'Membrane Time Constant'
 
     def generate_prediction(self, model):
-        """Implementation of sciunit.Test.generate_prediction."""
-        result = super(TimeConstantTest,self).generate_prediction(model)
+        """Implement sciunit.Test.generate_prediction."""
+        result = super(TimeConstantTest, self).generate_prediction(model)
         if result is not None:
-            i,vm = result
+            i, vm = result
             tau = self.__class__.get_tau(vm, i)
             tau = tau.simplified
             # Put prediction in a form that compute_score() can use.
-            prediction = {'value':tau}
+            prediction = {'value': tau}
             return prediction
         else:
             return None
 
     def compute_score(self, observation, prediction):
-        """Implementation of sciunit.Test.score_prediction."""
+        """Implement sciunit.Test.score_prediction."""
         if prediction is None:
-            return None# scores.InsufficientDataScore(None)
-        #print(prediction.keys())
-        #print(prediction)
+            return None  # scores.InsufficientDataScore(None)
 
         if 'n' in prediction.keys():
-            if prediction['n'] == 0:# if prediction is None:
+            if prediction['n'] == 0:  # if prediction is None:
                 score = scores.InsufficientDataScore(None)
-            else:
-                prediction['value'] = prediction['value']
-                score = super(TimeConstantTest,self).compute_score(observation,
-                                                              prediction)
         else:
-            print('why no n in keys?')
             prediction['value'] = prediction['value']
-            score = super(TimeConstantTest,self).compute_score(observation,
-                                                          prediction)
+            score = super(TimeConstantTest, self).compute_score(observation,
+                                                                prediction)
 
         return score
 
@@ -193,51 +186,45 @@ class CapacitanceTest(TestPulseTest):
     ephysprop_name = 'Cell Capacitance'
 
     def generate_prediction(self, model):
-        """Implementation of sciunit.Test.generate_prediction."""
-        result = super(CapacitanceTest,self).generate_prediction(model)
+        """Implement sciunit.Test.generate_prediction."""
+        result = super(CapacitanceTest, self).generate_prediction(model)
         if result is not None:
-            i,vm = result
+            i, vm = result
             r_in = self.__class__.get_rin(vm, i)
             tau = self.__class__.get_tau(vm, i)
             c = (tau/r_in).simplified
             # Put prediction in a form that compute_score() can use.
-            prediction = {'value':c}
+            prediction = {'value': c}
             return prediction
         else:
             return None
 
     def compute_score(self, observation, prediction):
-        """Implementation of sciunit.Test.score_prediction."""
+        """Implement sciunit.Test.score_prediction."""
         if prediction is None:
-            return None#scores.InsufficientDataScore(None)
-
-        print(prediction.keys())
-        print(prediction)
-        print(observation.keys())
-        print(observation)
+            return None  # scores.InsufficientDataScore(None)
 
         if 'n' in prediction.keys():
             if prediction['n'] == 0:
                 score = scores.InsufficientDataScore(None)
-            else:
-                score = super(CapacitanceTest,self).compute_score(observation,
-                                                              prediction)
         else:
-            #print('why no n in keys?')
-            #prediction['value'] = prediction['value']
-            score = super(CapacitanceTest,self).compute_score(observation,
-                                                          prediction)
-
+            score = super(CapacitanceTest, self).compute_score(observation,
+                                                               prediction)
         return score
 
 
-class RestingPotentialTest(VmTest):
+class RestingPotentialTest(TestPulseTest):
     """Tests the resting potential under zero current injection."""
 
-    required_capabilities = (cap.ReceivesSquareCurrent,)
+    def __init__(self, *args, **kwargs):
+        super(RestingPotentialTest, self).__init__(*args, **kwargs)
+        self.params.update(self.default_params)
 
-    params = {'injected_square_current':
-                {'amplitude':0.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+    default_params = {'injected_square_current':
+                      {'amplitude': 0.0*pq.pA,
+                       'delay': DELAY,
+                       'duration': DURATION}
+                      }
 
     name = "Resting potential test"
 
@@ -246,31 +233,30 @@ class RestingPotentialTest(VmTest):
 
     score_type = scores.ZScore
 
-
     units = pq.mV
 
     ephysprop_name = 'Resting membrane potential'
 
     def generate_prediction(self, model):
-        """Implementation of sciunit.Test.generate_prediction."""
-        model.rerun = True
-        model.inject_square_current(self.params['injected_square_current'])
-        vm = model.get_membrane_potential()
-        if np.any(np.isnan(vm)) or np.any(np.isinf(vm)):
-            return None
-        else:
-            median = model.get_median_vm() # Use median for robustness.
+        """Implement sciunit.Test.generate_prediction."""
+        result = super(RestingPotentialTest, self).generate_prediction(model)
+        if result is not None:
+            median = model.get_median_vm()  # Use median for robustness.
             std = model.get_std_vm()
-            #print('std: ',std,'median: ',median)
-            prediction = {'mean':median, 'std':std}
+            # print('std: ',std,'median: ',median)
+            prediction = {'mean': median, 'std': std}
             self.prediction = prediction
             return prediction
+        else:
+            return None
 
     def compute_score(self, observation, prediction):
-        """Implementation of sciunit.Test.score_prediction."""
+        """Implement sciunit.Test.score_prediction."""
         if prediction is None:
-            return None#scores.InsufficientDataScore(None)
+            return None  # scores.InsufficientDataScore(None)
         else:
-            score = super(RestingPotentialTest,self).\
+            # print(observation,prediction)
+            # print(type(observation),type(prediction))
+            score = super(RestingPotentialTest, self).\
                         compute_score(observation, prediction)
         return score

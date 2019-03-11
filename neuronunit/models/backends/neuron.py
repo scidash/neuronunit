@@ -1,26 +1,12 @@
 import io
 import math
 import pdb
-from numba import jit
-import copy
-try:
-    from sciunit.utils import redirect_stdout
-except:
-    pass
 
-try:
-    from base import os, copy, subprocess
-except:
-    import os, copy, subprocess
-try:
-    from base import Backend, BackendException, import_module_from_path
-except:
-    import Backend
-try:
-    from base import pq, AnalogSignal, NEURON_SUPPORT, neuron, h, pynml
-except:
-    from base import pq, AnalogSignal, pynml
-    import neuron
+
+from sciunit.utils import redirect_stdout
+from .base import os, copy, subprocess
+from .base import pq, AnalogSignal, NEURON_SUPPORT, neuron, h, pynml
+from .base import Backend, BackendException, import_module_from_path
 
 
 class NEURONBackend(Backend):
@@ -234,17 +220,11 @@ class NEURONBackend(Backend):
         self.reset_neuron(nrn.neuron)
         self.h.tstop = tstop
         self.set_stop_time(tstop)  # previously 500ms add on 150ms of recovery
-        try:
-            with redirect_stdout(self.stdout):
-                self.ns = nrn.NeuronSimulation(self.h.tstop, dt=0.0025)
-        except:
+        with redirect_stdout(self.stdout):
             self.ns = nrn.NeuronSimulation(self.h.tstop, dt=0.0025)
 
     def load_mechanisms(self):
-        try:
-            with redirect_stdout(self.stdout):
-                neuron.load_mechanisms(self.neuron_model_dir)
-        except:
+        with redirect_stdout(self.stdout):
             neuron.load_mechanisms(self.neuron_model_dir)
 
     def load_model(self, verbose=True):

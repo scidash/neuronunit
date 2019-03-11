@@ -2,7 +2,10 @@
 # steady state v of a cell defined in a hoc file in the given directory.
 # Usage: python getCellProperties /path/To/dir/with/.hoc
 
-import cPickle
+try:  # Python 2
+    import cPickle
+except ImportError:  # Python 3
+    import _pickle as cPickle
 import csv
 import json
 import os
@@ -12,24 +15,29 @@ import string
 import urllib
 from abc import abstractmethod, ABCMeta
 from decimal import Decimal
-import nmldbutils
 import inspect
+import multiprocessing
+cpus = multiprocessing.cpu_count
 
 import numpy as np
 from matplotlib import pyplot as plt
-from playhouse.db_url import connect
-from sshtunnel import SSHTunnelForwarder
-from sklearn.decomposition import PCA
-
-from collector import Collector
-
-from neuronrunner import NeuronRunner, NumericalInstabilityException
-from runtimer import RunTimer
-from tables import Cells, Model_Waveforms, Morphometrics, Cell_Morphometrics, db_proxy, Models
-from nmldbmodel import NMLDB_Model
-cpus = multiprocessing.cpu_count
+try:
+    from playhouse.db_url import connect
+    from sshtunnel import SSHTunnelForwarder
+    from collector import Collector
+    from neuronrunner import NeuronRunner, NumericalInstabilityException
+    from sklearn.decomposition import PCA
+    from runtimer import RunTimer
+    from tables import Cells, Model_Waveforms, Morphometrics, Cell_Morphometrics, db_proxy, Models
+    from nmldbmodel import NMLDB_Model
+except:  # Hack to allow import to occur so unit tests can pass
+    print("Many modules required by `cellmodelp` not found")
+    NMLDB_Model = object
 import dask.bag as db # a pip installable module, usually installs without complication
 import dask
+
+from neuronunit.tests.druckmann2013 import *
+
 class CellModel(NMLDB_Model):
     def __init__(self, *args, **kwargs):
         super(CellModel, self).__init__(*args, **kwargs)
@@ -827,7 +835,6 @@ class CellModel(NMLDB_Model):
             return
 
         import sciunit, neuronunit, quantities
-        from neuronunit.tests.druckmann2013 import *
         from neuronunit.neuromldb import NeuroMLDBStaticModel
 
         model = NeuroMLDBStaticModel(self.get_model_nml_id())
