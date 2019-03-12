@@ -600,29 +600,33 @@ from collections.abc import Iterable
 
 def get_rtest(dtc):
     rtest = None
-    if isinstance(dtc.tests, type(None)):
+    if not hasattr(dtc,'tests'):#, type(None)):
+        place_holder = {}
+        place_holder['n'] = 86
+        place_holder['mean'] = 10*pq.pA
+        place_holder['std'] = 10*pq.pA
+        place_holder['value'] = 10*pq.pA
         if 'RAW' in dtc.backend or 'HH' in dtc.backend:#Backend:
             rtest = RheobaseTest(observation=place_holder,
                                     name='a Rheobase test')
         else:
             rtest = RheobaseTestP(observation=place_holder,
                                     name='a Rheobase test')
-
-
-    if 'RAW' in dtc.backend or 'HH' in dtc.backend:
-        if not isinstance(dtc.tests, Iterable):
-            rtest = dtc.tests
-        else:
-            rtest = [ t for t in dtc.tests if str('RheobaseTest') == t.name ]
-            print(rtest)
-            rtest = rtest[0]
     else:
-        if not isinstance(dtc.tests, Iterable):
-            rtest = dtc.tests
+        if 'RAW' in dtc.backend or 'HH' in dtc.backend:
+            if not isinstance(dtc.tests, Iterable):
+                rtest = dtc.tests
+            else:
+                rtest = [ t for t in dtc.tests if str('RheobaseTest') == t.name ]
+                print(rtest)
+                rtest = rtest[0]
         else:
-            rtest = [ t for t in dtc.tests if str('RheobaseTestP') == t.name ]
-            print(rtest)
-            rtest = rtest[0]
+            if not isinstance(dtc.tests, Iterable):
+                rtest = dtc.tests
+            else:
+                rtest = [ t for t in dtc.tests if str('RheobaseTestP') == t.name ]
+                print(rtest)
+                rtest = rtest[0]
 
     return rtest
 
@@ -641,21 +645,20 @@ def dtc_to_rheo(dtc):
     rtest = get_rtest(dtc)
     if rtest is not None:
         dtc.rheobase = rtest.generate_prediction(model)
+        print(dtc.rheobase)
         #print(dtc.rheobase)
         if dtc.rheobase is not None and dtc.rheobase !=-1.0:
             dtc.rheobase = dtc.rheobase['value']
             obs = rtest.observation
             score = rtest.compute_score(obs,dtc.rheobase)
-            dtc.scores[rtest.name] = 1.0 - score.norm_score
-
             if dtc.score is not None:
                 dtc = score_proc(dtc,rtest,copy.copy(score))
 
-            rtest.params['injected_square_current']['amplitude'] = dtc.rheobase
+            #rtest.params['injected_square_current']['amplitude'] = dtc.rheobase
 
         else:
             dtc.rheobase = - 1.0
-            dtc.scores[rtest.name] = 1.0
+            #dtc.scores[rtest.name] = 1.0
 
 
 
