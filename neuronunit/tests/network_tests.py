@@ -18,7 +18,7 @@ import quantities as pq
 import numpy as np
 import copy
 import pdb
-from numba import jit
+#from numba import jit
 import time
 import numba
 import copy

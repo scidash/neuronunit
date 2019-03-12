@@ -13,7 +13,7 @@ except Exception as e:
     import pdb
     print('Silent Error eminating from NEURON syntax')
 
-    pdb.set_trace()
+    #pdb.set_trace()
 try:
     from .rawpy import RAWBackend
 except Exception as e:
