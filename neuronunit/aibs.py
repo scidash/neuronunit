@@ -173,7 +173,13 @@ def to_map(params):
     return dtc
 
 def run_glif_to_druckmanns():
-    with open('gcm.p','rb') as f: model_params = pickle.load(f)
+    try:
+        with open('gcm.p','rb') as f: model_params = pickle.load(f)
+    except:
+        os.system('wget https://osf.io/k7ryf/download')
+        os.system('mv download gcm.p')
+        with open('gcm.p','rb') as f: model_params = pickle.load(f)
+
     flat_iter = [ mp.pop(list(mp.keys())[0]) for mp in model_params ]
     dtcpop = []
     cnt = 0
