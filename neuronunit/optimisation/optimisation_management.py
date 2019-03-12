@@ -630,6 +630,14 @@ def get_rtest(dtc):
 
     return rtest
 
+#from collections import OrderedDict
+def to_map(params,bend):
+    dtc = DataTC()
+    dtc.attrs = params
+    dtc.backend = bend
+    dtc = dtc_to_rheo(dtc)
+    return dtc
+
 def dtc_to_rheo(dtc):
     # If  test taking data, and objects are present (observations etc).
     # Take the rheobase test and store it in the data transport container.
