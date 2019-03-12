@@ -177,6 +177,8 @@ def run_glif_to_druckmanns():
     flat_iter = [ mp.pop(list(mp.keys())[0]) for mp in model_params ]
     dtcpop = []
     cnt = 0
+    # Todo make this line interruptable/cachable, as its a big job.
+    # count can be pickle loaded to check where left off
     for f in flat_iter:
         dtcpop.append(to_map(f))
         cnt += 1
