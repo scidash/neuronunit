@@ -38,7 +38,7 @@ except:
 
 
 class GLIFBackend(Backend):
-    def init_backend(self, attrs = None, cell_name = 'alice', current_src_name = 'hannah', DTC = None):
+    def init_backend(self, attrs = None, cell_name = 'alice', current_src_name = 'hannah', DTC = None, debug = False):
         backend = 'GLIF'
         super(GLIFBackend,self).init_backend()
 
@@ -46,12 +46,14 @@ class GLIFBackend(Backend):
         self.current_src_name = current_src_name
         self.cell_name = cell_name
         self.vM = None
-        self.allen_id = None
+        #self.allen_id = None
+        self.allen_id = 566302806
+
         self.attrs = attrs
         self.nc = None
 
         self.temp_attrs = None
-
+        self.debug = debug
 
         if self.allen_id == None:
             try:
@@ -70,14 +72,20 @@ class GLIFBackend(Backend):
                 self.nc = pickle.load(open(str('allen_id.p'),'rb'))
             except:
                 glif_api = GlifApi()
+                self.allen_id = 566302806
+
                 self.allen_id = allen_id
                 self.glif = glif_api.get_neuronal_models_by_id([allen_id])[0]
                 self.nc = glif_api.get_neuron_config([self.allen_id])[self.allen_id]
                 pickle.dump(self.nc,open(str('allen_id.p'),'wb'))
 
 
-        self.glif = GlifNeuron.from_dict(self.nc)
-
+        try:
+            self.glif = GlifNeuron.from_dict(self.nc)
+        except:
+            #import pdb; pdb.set_trace()
+            self.nc['init_AScurrents'] = [0,0]
+            self.glif = GlifNeuron.from_dict(self.nc)
 
         if type(attrs) is not type(None):
             self.set_attrs(**attrs)
@@ -157,11 +165,11 @@ class GLIFBackend(Backend):
         results = {}
         results['vm'] = self.vM
         results['t'] = self.vM.times
-
-        plt.clf()
-        #plt.title('')
-        plt.plot(self.vM.times,self.vM)
-        plt.savefig('debug_glif.png')
+        if self.debug == True:
+            plt.clf()
+            #plt.title('')
+            plt.plot(self.vM.times,self.vM)
+            plt.savefig('debug_glif.png')
         results['run_number'] = results.get('run_number',0) + 1
         return results
 
@@ -173,7 +181,12 @@ class GLIFBackend(Backend):
         #self.nc.update(attrs)
         for k,v in attrs.items():
             self.nc[k] = v
-        self.glif = GlifNeuron.from_dict(self.nc)
+        try:
+            self.glif = GlifNeuron.from_dict(self.nc)
+        except:
+            self.nc['init_AScurrents'] = [0,0]
+            self.glif = GlifNeuron.from_dict(self.nc)
+
         return self.glif
 
 

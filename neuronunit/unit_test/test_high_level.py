@@ -137,27 +137,28 @@ class testHighLevelOptimisation(unittest.TestCase):
 
 
     def test_rotate_backends0(self):
-        broken_backends = [ str('NEURONBackend') ]
-            
+        broken_backends = [ str('NEURON') ]
+
         all_backends = [
-            str('jNeuroMLBackend'),
-            str('RAWBackend'),
-            str('HHBackend'),
-            str('GLIFBackend')
+            str('jNeuroML'),
+            str('RAW'),
+            str('HH'),
+            str('GLIF')
 
         ]
 
         for b in all_backends:
-            if b in str('GLIFBackend'):
-                import pdb
-                pdb.set_trace()
+            if b in str('GLIF'):
+                #import pdb
+                #pdb.set_trace()
 
             model = mint_generic_model(b)
             #assert model is not None
             self.assertTrue(model is not None)
-
-            td = model.attrs
-            dtc = update_dtc_pop(pop, td)
+            dtc = DataTC()
+            dtc.backend = b
+            dtc.attrs = model.attrs
+            dtc = dtc_to_rheo(dtc)
             inject_and_plot(dtc)
             self.assertTrue(dtc is not None)
 
@@ -168,11 +169,10 @@ class testHighLevelOptimisation(unittest.TestCase):
             model = mint_generic_model(b)
             #assert model is not None
             self.assertTrue(model is not None)
-
-            td = model.attrs
-            dtc = update_dtc_pop(pop, td)
+            dtc = DataTC()
+            dtc.backend = b
+            dtc.attrs = model.attrs
             inject_and_plot(dtc)
-            #assert dtc is not None
             self.assertTrue(dtc is not None)
 
         return
@@ -183,7 +183,7 @@ class testHighLevelOptimisation(unittest.TestCase):
         '''
         from neuronunit.optimisation.optimisation_management import add_dm_properties_to_cells
         (self.dtcpop,dm_properties) = add_dm_properties_to_cells(self.dtcpop)
-       
+
         for d in dm_properties:
             self.assertTrue(d is not None)
         return
@@ -196,7 +196,7 @@ class testHighLevelOptimisation(unittest.TestCase):
 
         tests,observations = get_neab.executable_druckman_tests(p)
         (self.dtcpop,dm_properties) = add_dm_properties_to_cells(self.dtcpop)
-               
+
     def test_solution_quality0(self):
         '''
         Select random points in parameter space,
