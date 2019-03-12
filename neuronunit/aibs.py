@@ -8,6 +8,22 @@ import numpy as np
 import quantities as pq
 from allensdk.api.queries.cell_types_api import CellTypesApi
 
+from allensdk.api.queries.cell_types_api import CellTypesApi
+from allensdk.core.cell_types_cache import CellTypesCache
+from allensdk.api.queries.glif_api import GlifApi
+import os
+import pickle
+#import allensdk.model.biophysical.runner #manifest.json')
+from allensdk.api.queries.biophysical_api import BiophysicalApi
+## Need this import but it fails because of python2 formatted strings.
+#from allensdk.model.biophysical import runner
+from neuronunit.optimisation.optimisation_management import add_dm_properties_to_cells
+from neuronunit.optimisation.optimisation_management import mint_generic_model, dtc_to_rheo
+from neuronunit.optimisation.data_transport_container import DataTC
+from allensdk.model.glif.glif_neuron import GlifNeuron
+import dask.bag as db
+import multiprocessing
+
 
 def is_aibs_up():
     url = ("http://api.brain-map.org/api/v2/data/query.xml?criteria=model"
@@ -100,14 +116,20 @@ def get_value_dict(experiment_params, sweep_ids, kind):
         value *= pq.pA # Apply units.
         return {'value': value}
 
-from allensdk.api.queries.cell_types_api import CellTypesApi
-from allensdk.core.cell_types_cache import CellTypesCache
-from allensdk.api.queries.glif_api import GlifApi
-import os
-import pickle
-#import allensdk.model.biophysical.runner #manifest.json')
-from allensdk.api.queries.biophysical_api import BiophysicalApi
-#from allensdk.model.biophysical import runner
+
+
+def allen_morph_model(description):
+    utils = Utils.create_utils(description)
+    h = utils.h
+
+    #The next step is to get the path of the morphology file and pass it to NEURON.
+
+    # configure model
+    manifest = description.manifest
+    morphology_path = description.manifest.get_path('MORPHOLOGY')
+    utils.generate_morphology(morphology_path.encode('ascii', 'ignore'))
+    utils.load_cell_parameters()
+
 
 def run_all_cell_bio_configs():
     try:
@@ -124,38 +146,25 @@ def run_all_cell_bio_configs():
     #bp.cache_stimulus = False # change to False to not download the large stimulus NWB file
     #neuronal_model_id = 472451419    # get this from the web site as above
     for cell in cells:
-        #import pdb; pdb.set_trace()
         try:
             bp.cache_data(cell['id'], working_directory='.')
             os.subprocess('nrnivmodl ./modfiles')   # compile the model (only needs to be done once)
-            #import pdb; pdb.set_trace()
+            ## Need this import but it fails because of python2 formatted strings.
+            #from allensdk.model.biophysical import runner
             print(runner)
+
+            allen_morph_model(description)
         except:
             pass
 
     return cells
 
-def allen_morph_model(description):
-    utils = Utils.create_utils(description)
-    h = utils.h
 
-    #The next step is to get the path of the morphology file and pass it to NEURON.
-
-    # configure model
-    manifest = description.manifest
-    morphology_path = description.manifest.get_path('MORPHOLOGY')
-    utils.generate_morphology(morphology_path.encode('ascii', 'ignore'))
-    utils.load_cell_parameters()
-
-
-from neuronunit.optimisation.optimisation_management import add_dm_properties_to_cells
-from neuronunit.optimisation.optimisation_management import mint_generic_model, dtc_to_rheo
-from neuronunit.optimisation.data_transport_container import DataTC
-from allensdk.model.glif.glif_neuron import GlifNeuron
-import dask.bag as db
-import multiprocessing
 
 def to_map(params):
+    '''
+    find rheobase for each model
+    '''
     dtc = DataTC()
     b = str('GLIF')
     dtc.attrs = params
@@ -172,10 +181,33 @@ def run_glif_to_druckmanns():
         dtcpop.append(to_map(f))
         cnt += 1
     # dtcpop = map(to_map,flat_iter)
-    (self.dtcpop,dm_properties) = add_dm_properties_to_cells(dtcpop)
+    self.dtcpop,dm_properties = add_dm_properties_to_cells(dtcpop)
+    return (self.dtcpop,dm_properties)
+
+def construct_data_frame(arg):
+    self.dtcpop,dm_properties = run_glif_to_druckmanns()
+    # populate the data frame
+    # make dummy tests:
+    tests = init_dm_tests(self.dtcpop[0].rheobase,self.dtcpop[0].rheobase*1.5)
+
+    df = pd.DataFrame(columns=tests)
+    df.loc[0] = [ d['mean'] for d in dm_properties ]
+
+    df.head()
+
+    for t in tests:
+        t.name = t.name.replace(" ", "")
+    df1 = pd.DataFrame(columns=tests)
+    df1.loc[-1] = [ d['mean'] for d in dm_properties ]
+
+    return (df,df1)
+
 
 
 def boot_strap_all_glif_configs():
+    '''
+    Mass download all the glif model parameters
+    '''
     gapi = GlifApi()
 
     cells = gapi.get_neuronal_models() # this returns a list of cells, each containing a list of models
