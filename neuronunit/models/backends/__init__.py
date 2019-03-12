@@ -22,7 +22,7 @@ except ImportError:
     NEURONBackend = None
     print('Could not load NEURONBackend')
 
-    pdb.set_trace()
+    #pdb.set_trace()
 try:
     from .rawpy import RAWBackend
 except ImportError:
