@@ -132,6 +132,7 @@ class testHighLevelOptimisation(unittest.TestCase):
         self.medium_backends = [
                     str('GLIFBackend')
                 ]
+        s
         #self.standard_model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend='RAW')
         #self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend='RAW')
 
@@ -149,8 +150,6 @@ class testHighLevelOptimisation(unittest.TestCase):
 
         for b in all_backends:
             if b in str('GLIF'):
-                #import pdb
-                #pdb.set_trace()
 
             model = mint_generic_model(b)
             #assert model is not None
@@ -177,7 +176,7 @@ class testHighLevelOptimisation(unittest.TestCase):
 
         return
 
-    def test_get_druckmann1(self):
+    def test_regular_druckmann_wave_property_measurements(self):
         '''
         test the extraction of Druckmann property Ephys measurements.
         '''
@@ -197,7 +196,7 @@ class testHighLevelOptimisation(unittest.TestCase):
         tests,observations = get_neab.executable_druckman_tests(p)
         (self.dtcpop,dm_properties) = add_dm_properties_to_cells(self.dtcpop)
 
-    def test_solution_quality0(self):
+    def test_solution_quality(self):
         '''
         Select random points in parameter space,
         pretend these points are from experimental observations, by coding them in
@@ -216,6 +215,81 @@ class testHighLevelOptimisation(unittest.TestCase):
 
                 self.assertTrue(boolean)
         return
+
+    def test_opt_set_GA_params(self):
+        '''
+        Test to check if making the population size bigger,
+        '''
+        from neuronunit.optimization.model_parameters import model_params
+        provided_keys = list(model_params.keys())
+        from bluepyopt.deapext.optimisations import DEAPOptimisation
+        DO = DEAPOptimisation()
+        nparams = 5
+        cnt = 0
+        provided_keys = list(model_params.keys())[nparams]
+        DO.setnparams(nparams = nparams, provided_keys = provided_keys)
+        list_check_increase = []
+        all_backends = self.light_backends
+        all_backends.extend(self.medium_backends)
+        all_backends.extend(self.heavy_backends)
+
+        for backend in all_backends:
+            for MU in range(5,40):
+                MODEL_PARAMS[backend]
+                ga_out, _ = run_ga(MODEL_PARAMS[backend],1,tests,free_params=free_params, NSGA = True, MU = MU, backed=backend, selection=str('selNSGA2'))
+                MODEL_PARAMS[backend]['results'] = {}
+                MODEL_PARAMS[backend]['results'] = ga_out
+        return 
+
+
+    def test_opt_set_GA_params(self):
+        '''
+        Test to check if making the population size bigge
+        of generations the GA consumes actually increases the fitness.
+
+        Note only test for better fitness every 10th count, because GAs are stochastic,
+        and by chance occassionally fitness may not increase, just because the GA has
+        more genes to sample with.
+
+        A fairer test of the GA would probably test if the mean of mean fitness is improving
+        or use a sliding window.
+        '''
+        from neuronunit.optimization.model_parameters import model_params
+        provided_keys = list(model_params.keys())
+        from bluepyopt.deapext.optimisations import DEAPOptimisation
+        DO = DEAPOptimisation()
+        nparams = 5
+        cnt = 0
+        provided_keys = list(model_params.keys())[nparams]
+        DO.setnparams(nparams = nparams, provided_keys = provided_keys)
+        list_check_increase = []
+        all_backends = self.light_backends
+        all_backends.extend(self.medium_backends)
+        all_backends.extend(self.heavy_backends)
+
+        for NGEN in range(1,30):
+            for MU in range(5,40):
+                MODEL_PARAMS[backend]
+                ga_out, _ = run_ga(MODEL_PARAMS[backend],1,tests,free_params=free_params, NSGA = True, MU = MU, backed=backend, selection=str('selNSGA2'))
+                MODEL_PARAMS[backend]['results'] = {}
+                MODEL_PARAMS[backend]['results'] = ga_out
+
+                #return_dictionary = DO.run(offspring_size = MU, max_ngen = NGEN, cp_frequency=4,cp_filename='checkpointedGA.p')
+                hof = ga_out['hof']
+                avgf = np.mean([ h.fitness for h in return_dictionary['hof'] ])
+                list_check_increase.append(avgf)
+                if cnt % 10 == 0:
+                    avgf = np.mean([ h.fitness for h in hof ])
+                    old_avg = np.mean(list_check_increase)
+                    self.assertGreater(np.mean(list_check_increase),old_avg)
+                    self.assertGreater(avgf,old)
+                    old = avgf
+                else:
+                    avgf = np.mean([ h.fitness for h in hof ])
+                    old = avgf
+                    old_avg = np.mean(list_check_increase)
+                cnt += 1
+                print(old,cnt)
 
 
 
