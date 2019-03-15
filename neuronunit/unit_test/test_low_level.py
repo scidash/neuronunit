@@ -162,6 +162,81 @@ class testLowLevelOptimisation(NotebookTools,unittest.TestCase):
 
         return bool
 
+
+
+    def get_observation(self, cls):
+        print(cls.__name__)
+        neuron = {'nlex_id': 'nifext_50'} # Layer V pyramidal cell
+        return cls.neuroelectro_summary_observation(neuron)
+
+    def run_test(self, cls, pred =None):
+        observation = self.get_observation(cls)
+        test = cls(observation=observation)
+        score = test.judge(self.standard_model, stop_on_error = True, deep_error = True)
+        return score
+
+
+
+    def test_get_rate_CV(self):
+        from neuronunit.tests import dynamics
+        import quantities as pq
+        doi = 'doi:10.1113/jphysiol.2010.200683'
+        observation = {}
+        observation[doi] = {}
+        observation[doi]['isi'] = 598.0*pq.ms
+        observation[doi]['mean'] = 598.0*pq.ms
+        observation[doi]['std'] = 37.0*pq.ms
+        isi_test = dynamics.ISITest(observation = observation[doi])
+        # Put them together in a test suite
+
+        observation = {}
+        observation[doi] = {}
+        observation[doi]['cv'] = 0.210526*pq.dimensionless
+        observation[doi]['mean'] = 0.210526*pq.dimensionless
+        observation[doi]['std'] = 0.105263*pq.dimensionless
+        #si_test = dynamics.ISITest(observation = observation[doi])
+
+        cv_test = dynamics.CVTest(observation = observation[doi])
+        ap_tests = sciunit.TestSuite([isi_test,cv_test], name="AP CV and ISI Tests")
+
+        from neuronunit.models import static_model
+        true_model = self.model
+        params = {}
+        params['injected_square_current'] = {}
+        params['injected_square_current']['amplitude'] = self.rheobase*2.01
+        model.inject_square_current(params)
+        vm = model.get_membrane_potential()
+        proxy_model = static_model.StaticModel(vm = vm, st = None)
+        score_matrix = ap_tests.judge(proxy_model)
+        for score in score_matrix:
+            self.assertNotEqual(score,None)
+
+
+        # Put them together in a test suite
+        #ap_tests = sciunit.TestSuite([ap_width_test,ap_amplitude_test], name="AP Tests")
+
+
+    #@unittest.skip("Not fully developed yet")
+    def test_get_inhibitory_neuron(self):
+        from neuronunit import tests as nu_tests, neuroelectro
+        from neuronunit.tests import passive, waveform, fi
+        fi_basket = {'nlex_id':'NLXCELL:100201'}
+        observation =  fi.neuroelectro_summary_observation(fi_basket)
+        test_class_params = [(fi.RheobaseTest,None),
+                         (passive.InputResistanceTest,None),
+                         (passive.TimeConstantTest,None),
+                         (passive.CapacitanceTest,None),
+                         (passive.RestingPotentialTest,None),
+                         (waveform.InjectedCurrentAPWidthTest,None),
+                         (waveform.InjectedCurrentAPAmplitudeTest,None),
+                         (waveform.InjectedCurrentAPThresholdTest,None)]#,
+        inh_observations = []
+        for cls,params in test_class_params:
+            inh_observations.append(cls.neuroelectro_summary_observation(fi_basket))
+        self.inh_observations = inh_observations
+        return inh_observations
+
+
     def test_backend_inheritance(self):
         ma = mint_generic_model('RAW')
         if 'get_spike_train' in ma:
@@ -246,6 +321,34 @@ class testLowLevelOptimisation(NotebookTools,unittest.TestCase):
         test = cls(observation=observation)
         score = test.judge(self.standard_model, stop_on_error = True, deep_error = True)
         return score
+
+
+
+    def test_rheobase_single_value_parallel_and_serial_comparison(self):
+        from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
+        from neuronunit.optimization import get_neab
+        from neuronunit.models.reduced import ReducedModel
+        from neuronunit import aibs
+        import os
+        dataset_id = 354190013  # Internal ID that AIBS uses for a particular Scnn1a-Tg2-Cre
+                                # Primary visual area, layer 5 neuron.
+        observation = aibs.get_observation(dataset_id,'rheobase')
+        rt = RheobaseTest(observation = observation)
+        rtp = RheobaseTestP(observation = observation)
+        model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend=('RAW'))
+
+        #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+        self.score_p = rtp.judge(model,stop_on_error = False, deep_error = True)
+        self.predictionp = self.score_p.prediction
+        self.score_p = self.score_p.norm_score
+        #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
+
+        serial_model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='RAW')
+        self.score_s = rt.judge(serial_model,stop_on_error = False, deep_error = True)
+        self.predictions = self.score_s.prediction
+        self.score_s = self.score_s.norm_score
+        check_less_thresh = float(np.abs(self.predictionp['value'] - self.predictions['value']))
+        self.assertLessEqual(check_less_thresh, 2.0)
 
     # Get experimental electro physology bservations for a dentate gyrus baskett cell
     # An inhibitory neuron
