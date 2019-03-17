@@ -11,7 +11,7 @@ import copy
 import dask.bag as db
 
 import neuronunit
-from neuronunit.optimization.data_transport_container import DataTC
+from neuronunit.optimisation.data_transport_container import DataTC
 from neuronunit.models.reduced import ReducedModel
 from .base import np, pq, ncap, VmTest, scores, AMPL, DELAY, DURATION
 

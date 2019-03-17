@@ -260,8 +260,7 @@ class Druckmann2013Test(VmTest):
         start_time = self.params['injected_square_current']['delay'].rescale('sec')
         end_time = start_time + self.params['injected_square_current']['duration'].rescale('sec')
         vm = AnalogSignal(vm.magnitude[np.where(vm_times <= end_time)], sampling_period=vm.sampling_period, units=vm.units)
-
-	try:
+        try:
             dvdt = np.array(np.append([0], get_diff(vm, axis=0))) * pq.mV / vm.sampling_period
         except:
             dvdt = np.array(np.append([0], get_diff(vm))) * pq.mV / vm.sampling_period
@@ -366,7 +365,7 @@ class Druckmann2013Test(VmTest):
             # plt.plot(dvdt_threshold_crosses, len(dvdt_threshold_crosses) * [12], "bo")
             # plt.plot(ap_beginnings, [13] * len(ap_beginnings), 'go')
             # plt.show()
-
+    '''
 
     def get_ISIs(self, model=None):
         aps = self.get_APs(model)
