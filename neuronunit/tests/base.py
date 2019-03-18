@@ -43,13 +43,15 @@ class VmTest(sciunit.Test):
 
     ephysprop_name = ''
 
-    observation_schema = [{'mean': {'units': True, 'required': True},
-                           'std': {'units': True, 'min': 0, 'required': True},
-                           'n': {'type': 'integer', 'min': 1}},
-                          {'mean': {'units': True, 'required': True},
-                           'sem': {'units': True, 'min': 0, 'required': True},
-                           'n': {'type': 'integer', 'min': 1,
-                                 'required': True}}]
+    observation_schema = [("Mean, Standard Deviation, N",
+                           {'mean': {'units': True, 'required': True},
+                            'std': {'units': True, 'min': 0, 'required': True},
+                            'n': {'type': 'integer', 'min': 1}}),
+                          ("Mean, Standard Error, N",
+                           {'mean': {'units': True, 'required': True},
+                            'sem': {'units': True, 'min': 0, 'required': True},
+                            'n': {'type': 'integer', 'min': 1,
+                                  'required': True}})]
 
     params_schema = {'dt': {'type': 'time', 'required': False},
                      'tmax': {'type': 'time', 'min': 0, 'required': False}}
