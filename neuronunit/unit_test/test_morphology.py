@@ -88,11 +88,6 @@ class MorphologyTestCase(unittest.TestCase):
         z = test.judge(model)
         self.assertLess(abs(z.score), 0.1)
 
-    def test_TotalFragmentationTest(self):
-        test = TotalFragmentationTest({"mean":4439, "std":1,"n":1})
-        z = test.judge(model)
-        self.assertLess(abs(z.score), 0.1)
-
     def test_PartitionAsymmetryTest(self):
         test = PartitionAsymmetryTest({"mean":0.51, "std":1,"n":1})
         z = test.judge(model)
@@ -183,11 +178,6 @@ class MorphologyTestCase(unittest.TestCase):
         test = ApicalDendriteAverageContractionTest({"mean": 0.86, "std": 1, "n": 1})
         z = test.judge(model)
         self.assertLess(abs(z.score), 0.1)
-
-    def test_ApicalDendriteTotalFragmentationTest(self):
-        test = ApicalDendriteTotalFragmentationTest({"mean": 4439, "std": 1, "n": 1})
-        z = test.judge(model)
-        self.assertLess(abs(z.score)-1882.0, 0.1)
 
     def test_ApicalDendritePartitionAsymmetryTest(self):
         test = ApicalDendritePartitionAsymmetryTest({"mean": 0.51, "std": 1, "n": 1})
@@ -280,11 +270,6 @@ class MorphologyTestCase(unittest.TestCase):
         test = BasalDendriteAverageContractionTest({"mean":0.86, "std":1,"n":1})
         z = test.judge(model)
         self.assertLess(abs(z.score), 0.1)
-
-    def test_BasalDendriteTotalFragmentationTest(self):
-        test = BasalDendriteTotalFragmentationTest({"mean":4439, "std":1,"n":1})
-        z = test.judge(model)
-        self.assertLess(abs(z.score)-3648, 0.1)
 
     def test_BasalDendritePartitionAsymmetryTest(self):
         test = BasalDendritePartitionAsymmetryTest({"mean":0.51, "std":1,"n":1})
