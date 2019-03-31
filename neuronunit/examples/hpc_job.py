@@ -165,7 +165,7 @@ except:
                             test_frame, backend=str('RAW'))
 
 MU = 6 # more than six causes a memory leak. I suspect this is PYNN
-NGEN = 150
+NGEN = 6
 test_opt = {}#{str('multi_objective_izhi')+str(ga_out):ga_out}
 
 for key, use_test in test_frame.items():
@@ -176,10 +176,10 @@ for key, use_test in test_frame.items():
 
     ga_out, _ = om.run_ga(MODEL_PARAMS['RAW'], NGEN,use_test, free_params = MODEL_PARAMS['RAW'],
                                 NSGA = True, MU = MU, model_type = str('RAW'),seed_pop=seeds[key])
-    test_opt[key] = ga_out
-with open('multi_objective_izhi.p','wb') as f:
-    pickle.dump(test_opt,f)
-import pdb; pdb.set_trace()
+
+    MODEL_PARAMS['RAW']['results'][key]  = ga_out
+    with open('multi_objective_raw.p','wb') as f:
+        pickle.dump(MODEL_PARAMS,f)
 
 try:
     with open('adexp_seeds.p','rb') as f:
@@ -196,20 +196,17 @@ try:
     with open('multi_objective_adexp.p','rb') as f:
         test_opt = pickle.load(f)
 except:
+    MODEL_PARAMS['PYNN']['results'] = {}
     for key, use_test in test_frame.items():
         seed = seeds[key]
         print(seed)
         ga_out, _ = om.run_ga(MODEL_PARAMS['PYNN'],NGEN,use_test,free_params=MODEL_PARAMS['PYNN'].keys(), NSGA = True, MU = MU, model_type = str('PYNN'),seed_pop=seed)
-        test_opt =  {str('multi_objective_PYNN')+str(seed):ga_out}
+        MODEL_PARAMS['PYNN']['results'][key]  = ga_out
         with open('multi_objective_adexp.p','wb') as f:
-            pickle.dump(test_opt,f)
+            pickle.dump(MODEL_PARAMS,f)
 
 
-#neurons = pyNN.Population(N_CX, pyNN.EIF_cond_exp_isfa_ista, RS_parameters)
-#MODEL_PARAMS
 
-#with open('gcm.p','rb') as f:
-#    model_params = pickle.load(f)
 # directly code in observations, that are direct model parameters
 test_keyed_MODEL_PARAMS = {}
 for k,v in test_frame.items():
@@ -238,6 +235,7 @@ try:
         test_opt = pickle.load(f)
 
 except:
+    MODEL_PARAMS['GLIF']['results'] = {}
     for key, use_test in test_frame.items():
         seed = seeds[key]
         print(seed)
@@ -246,9 +244,9 @@ except:
         print(grouped_tests)
         MODEL_PARAMS['GLIF'] = test_keyed_MODEL_PARAMS[k]
         ga_out, _ = om.run_ga(test_keyed_MODEL_PARAMS[k],NGEN,use_test,free_params=test_keyed_MODEL_PARAMS[k].keys(), NSGA = True, MU = MU, model_type = str('GLIF'),seed_pop=seed)
-        test_opt =  {str('multi_objective_glif')+str(seed):ga_out}
+        MODEL_PARAMS['GLIF']['results'][key] = ga_out
         with open('multi_objective_glif.p','wb') as f:
-            pickle.dump(test_opt,f)
+            pickle.dump(MODEL_PARAMS,f)
 
 
 
@@ -267,13 +265,15 @@ try:
     with open('multi_objective_adexp.p','rb') as f:
         test_opt = pickle.load(f)
 except:
+    MODEL_PARAMS['PYNN']['results'] = {}
     for key, use_test in test_frame.items():
         seed = seeds[key]
         print(seed)
         ga_out, _ = om.run_ga(MODEL_PARAMS['PYNN'],NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU, model_type = str('PYNN'),seed_pop=seed)
-        test_opt =  {str('multi_objective_PYNN')+str(seed):ga_out}
+        MODEL_PARAMS['PYNN']['results'][key] = ga_out
+
         with open('multi_objective_adexp.p','wb') as f:
-            pickle.dump(test_opt,f)
+            pickle.dump(MODEL_PARAMS,f)
 
 df = pd.DataFrame(index=list(test_frame.keys()),columns=list(reduced_cells.keys()))
 
@@ -284,18 +284,6 @@ glif_dic = gc.glif.to_dict()
 explore_ranges = {}
 gd = glif_dic
 range_dic = {}
-
-# P4pg0k purkinje
-# QDKPDQ slice of monkey brain
-# YVP 5PD skull
-
-# sketchfab
-# autconverted format.
-
-
-
-
-
 
 model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = (str('HH')))
 explore_ranges = {'E_Na' : (40,70), 'g_Na':(100.0,140.0), 'C_m':(0.5,1.5)}
@@ -324,7 +312,7 @@ explore_hh_ranges = {'E_Na' : (30,80), 'E_K': (-90.0,-75.0), 'g_K': (30.0,42.0),
 
 hold_constant_hh = {}
 for k,v in attrs_hh.items():
-    if k not in explore_ranges.keys():
+    if k not in explore_hh_ranges.keys():
         hold_constant_hh[k] = v
 
 
@@ -337,11 +325,14 @@ try:
         test_opt = pickle.load(f)
 
 except:
+    MODEL_PARAMS['HH']['results'] = {}
+
     for key, use_test in test_frame.items():
         seed = seeds[key]
-        print(seed)
         ga_out, _ = om.run_ga(explore_hh_ranges,NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU, model_type = str('HH'),hc = hold_constant_hh,seed_pop=seed)
-        test_opt =  {str('multi_objective_HH')+str(ga_out):ga_out}
+        MODEL_PARAMS['HH']['results'][key] = ga_out
+
+        #test_opt =  {str('multi_objective_HH')+str(ga_out):ga_out}
         with open('multi_objective_HH.p','wb') as f:
             pickle.dump(test_opt,f)
 

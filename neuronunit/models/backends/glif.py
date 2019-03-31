@@ -165,6 +165,7 @@ class GLIFBackend(Backend):
         results = {}
         results['vm'] = self.vM
         results['t'] = self.vM.times
+        self.debug = True
         if self.debug == True:
             plt.clf()
             #plt.title('')
@@ -204,7 +205,7 @@ class GLIFBackend(Backend):
         stop = float(c['delay'])+float(c['duration'])
         start = float(c['delay'])
         duration = float(c['duration'])
-        amplitude = float(c['amplitude'])/1000.0
+        amplitude = float(c['amplitude'])
         self.glif.dt = 0.001
         dt =  self.glif.dt
         self.stim = [ 0.0 ] * int(start) + [ amplitude ] * int(duration) + [ 0.0 ] * int(stop)

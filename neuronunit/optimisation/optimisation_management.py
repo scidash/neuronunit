@@ -165,6 +165,7 @@ def cell_to_test_mapper(content):
     #standard *= 1.5
     strong = 3*ir_currents
     tests = init_dm_tests(standard,strong)
+    print(standard,strong,ir_currents)
     model = None
     model = mint_generic_model(dtc.backend)
 
@@ -180,8 +181,11 @@ def cell_to_test_mapper(content):
 def add_dm_properties_to_cells(dtcpop):
     dm_properties = {}
     flatten_cells = [(index,dtc) for index,dtc in enumerate(dtcpop) ]
-    bag = db.from_sequence(flatten_cells,npartitions=8)
-    dtcpop = list(bag.map(cell_to_test_mapper).compute())
+    if len(dtcpop) > 8:
+        bag = db.from_sequence(flatten_cells,npartitions=8)
+        dtcpop = list(bag.map(cell_to_test_mapper).compute())
+    else:
+        dtcpop = list(map(cell_to_test_mapper,flatten_cells))
     dm_properties = {}
     for dtc in dtcpop:
         dm_properties.update(dtc.dm_properties)
@@ -196,11 +200,8 @@ def make_fake_observations(tests,backend,random_param):
     dtc = DataTC()
     dtc.attrs = random_param
     dtc.backend = backend
-    #import pdb; pdb.set_trace()
     dtc.tests  = tests
     dtc = get_rh(dtc,tests[0])
-
-    #pt = format_params(tests,rheobase)
     dtc = pred_evaluation(dtc)
 
     #ptbag = db.from_sequence(pt[1::])
@@ -649,7 +650,8 @@ def dtc_to_rheo(dtc):
         dtc.score = {}
     #backend =
     model = mint_generic_model(dtc.backend)
-    model.set_attrs(dtc.attrs)
+    model.attrs = dtc.attrs
+    #model.set_attrs(dtc.attrs)
     rtest = get_rtest(dtc)
     if rtest is not None:
         dtc.rheobase = rtest.generate_prediction(model)
@@ -796,7 +798,9 @@ def allocate_worst(tests,dtc):
         dtc.score[str(t)] = 1.0
     return dtc
 
-'''Should be default.
+'''
+This method Should be default, its the same as the same as another method,
+except that it returns a data frame.
 def nunit_evaluation_df(dtc):
     # Inputs single data transport container modules, and neuroelectro observations that
     # inform test error error_criterion
@@ -843,7 +847,11 @@ def pred_evaluation(dtc):
     # TODO
     # phase out model path:
     # via very reduced model
-    dtc.model_path = path_params['model_path']
+    if hasattr(dtc,'model_path'):
+        dtc.model_path = path_params['model_path']
+    else:
+        dtc.model_path = None
+        dtc.model_path = path_params['model_path']
     #preds = []
     dtc.preds = None
     dtc.preds = {}
@@ -878,12 +886,16 @@ def nunit_evaluation(dtc):
             if str('RheobaseTest') != t.name and str('RheobaseTestP') != t.name:
                 t.params = dtc.vtest[k]
                 score, dtc = bridge_judge((t, dtc))
-                print('score', score)
                 if score is not None:
                     if score.norm_score is not None:
-                        dtc.scores[str(t)] = 1.0 - score.norm_score
-
-
+                        assignment = 1.0 - score.norm_score
+                        key = str(t)
+                        if not hasattr(dtc,'scores') or dtc.scores is None:
+                            dtc.scores = None
+                            dtc.scores = {}
+                            dtc.scores[key] = assignment
+                        else:
+                            dtc.scores[key] = assignment
                 else:
                     print('gets to None score type')
     # compute the sum of sciunit score components.
@@ -969,6 +981,7 @@ def update_dtc_pop(pop, td):
         return dtc
 
 
+import itertools
 
 
 def run_ga(explore_edges, max_ngen, test, free_params = None, hc = None, NSGA = None, MU = None, seed_pop = None, model_type = str('RAW')):
@@ -1005,9 +1018,13 @@ def run_ga(explore_edges, max_ngen, test, free_params = None, hc = None, NSGA = 
     # DO.boundary_dict = ss
     # DO.population[0].ss = ss
     # DO.ss = ss
-
+    print('optimization done, doing extra experimental work beyond the scope of the opt project')
     # This run condition should not need same arguments as above.
     ga_out = DO.run(max_ngen = max_ngen)#offspring_size = MU, )
+    dtcpop = [ p.dtc for p in ga_out['pf'] ]
+    measure_dtc_pop = opt_pair(dtcpop)
+    ga_out['measure_dtc_pop'] = measure_dtc_pop
+    print(ga_out['measure_dtc_pop'])
     return ga_out, DO
 
 
@@ -1149,6 +1166,7 @@ def average_measurements(flat_iter):
         a[k.name] = v
     for k,v in dtca.preds.items():
         tests[k.name] = k
+    print(a,b)
 
     for k in b.keys():
         if isinstance(a[k], type(None)) or isinstance(b[k], type(None)):
@@ -1161,8 +1179,12 @@ def average_measurements(flat_iter):
             dtcb.twin = dtca.attrs
             break
         else:
-            aa = which_thing(a[k])
-            bb = which_thing(b[k])
+            try:
+                aa = which_thing(a[k])
+                bb = which_thing(b[k])
+            except:
+                import pdb; pdb.set_trace()
+
             t = tests[k]
             key = which_key(a[k])
             cc = which_thing(t.observation)
@@ -1183,6 +1205,53 @@ def average_measurements(flat_iter):
             # store the averaged values in the second half of genes.
     return (dtca,dtcb)
 
+
+def opt_pair(dtcpop):
+    '''
+    Used for searching and optimising where averged double sets of model_parameters
+    are the most fundamental gene-unit (rather than single points in high dim parameter space).
+    In other words what is optimised sampled and explored, is the average of two waveform measurements.
+    This allows for the ultimate solution, to be expressed as two disparate parameter points, that when averaged
+    produce a good model.
+    The motivating argument for doing things this way, is because the models, and the experimental data
+    results from averaged contributions of measurements from clustered data points making a model with optimal
+    error, theoretically unaccessible.
+    '''
+    NPART = np.min([multiprocessing.cpu_count(),len(dtcpop)])
+
+    # from neuronunit.optimisation.optimisations import SciUnitOptimisation
+    # get waveform measurements, and store in genes.
+    dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
+    dtcpop = list(dtcbag.map(pred_evaluation).compute())
+    # divide the genes pool in half
+    ab_s = list(itertools.combinations(dtcpop, 2))
+    #measure_dtc_pop = []
+    #for a,b in ab_s:
+    #    measure_dtc_pop.append(opt_on_pair_of_points((a,b)))
+
+    '''
+    dtcpopa,dtcpopb = split_list(copy.copy(dtcpop))
+    '''
+    # average measurements between first half of gene pool, and second half.
+    #flat_iter = zip(dtcpopa,dtcpopb)
+    #dtc_mixed = list(map(average_measurements,flat_iter))
+    #print(len(dtc_mixed),len(dtcpop))
+    #dtcbag = db.from_sequence(ab_s, npartitions = NPART)
+    #dtc_mixed = list(dtcbag.map(average_measurements))
+    for pair in ab_s:
+        dtc = average_measurements(pair)
+    import pdb
+    pdb.set_trace()
+
+    dtcpopa = [dtc[0] for dtc in dtc_mixed]
+    dtcpopb = [dtc[1] for dtc in dtc_mixed]
+    #print(len(dtcpopa))
+
+    dtcpop = dtcpopa
+    dtcpop.extend(dtcpopb)
+    assert len(dtcpop) == 2*len(dtcpopb)
+    return dtcpop
+
 def opt_on_pair_of_points(dtcpop):
     '''
     Used for searching and optimising where averged double sets of model_parameters
@@ -1196,7 +1265,7 @@ def opt_on_pair_of_points(dtcpop):
     '''
     NPART = np.min([multiprocessing.cpu_count(),len(dtcpop)])
 
-    from neuronunit.optimisation.optimisations import SciUnitOptimisation
+    # from neuronunit.optimisation.optimisations import SciUnitOptimisation
     # get waveform measurements, and store in genes.
     dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
 
