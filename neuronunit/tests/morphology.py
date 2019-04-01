@@ -15,8 +15,10 @@ class MorphologyTest(sciunit.Test):
 
     required_capabilities = (ProducesSWC,)
     score_type = ZScore
+    specificity = "Type > 1"
+    pca = False
 
-    def get_lmeasure(self, model_swc, measure, stat, specificity="Type > 1"):
+    def get_lmeasure(self, model_swc, measure, stat):
         '''
         Computes the specified L-Measure measure and selects one of the statistics
 
@@ -26,12 +28,8 @@ class MorphologyTest(sciunit.Test):
         :return: The computed measure statistic
         '''
 
-        pca = False
-        if measure in ("Height", "Width", "Depth"):
-            pca = True
-
         swc_path = model_swc.produce_swc()
-        value = getOneMeasure(measure, swc_path, pca, specificity)[stat]
+        value = getOneMeasure(measure, swc_path, self.pca, self.specificity)[stat]
         return value
 
 
@@ -42,7 +40,9 @@ class SomaSurfaceAreaTest(MorphologyTest):
     units = pq.um**2
 
     def generate_prediction(self, model):
-        value = self.get_lmeasure(model, 'Surface', "TotalSum", specificity="Type == 1")
+        self.specificity = "Type == 1"
+
+        value = self.get_lmeasure(model, 'Surface', "TotalSum")
 
         return {
             'mean': value * self.units,
@@ -58,7 +58,9 @@ class NumberofStemsTest(MorphologyTest):
     units = pq.dimensionless
 
     def generate_prediction(self, model):
-        value = self.get_lmeasure(model, 'N_stems', "TotalSum", specificity="Type > 1")
+        self.specificity = "Type > 0"
+
+        value = self.get_lmeasure(model, 'N_stems', "TotalSum")
 
         return {
             'mean': value * self.units,
@@ -82,6 +84,18 @@ class NumberofBifurcationsTest(MorphologyTest):
             'n': 1
         }
 
+class BasalDendriteNumberofBifurcationsTest(NumberofBifurcationsTest):
+    """Test the agreement between number of basal dendrite bifurcations observed in the model and experiments"""
+
+    name = 'Number of Basal Dendrite Bifurcations Test'
+    specificity = "Type==3"
+
+class ApicalDendriteNumberofBifurcationsTest(NumberofBifurcationsTest):
+    """Test the agreement between number of apical dendrite bifurcations observed in the model and experiments"""
+
+    name = 'Number of Apical Dendrite Bifurcations Test'
+    specificity = "Type==4"
+
 
 class NumberofBranchesTest(MorphologyTest):
     """Test the agreement between number of branches observed in the model and experiments"""
@@ -99,11 +113,22 @@ class NumberofBranchesTest(MorphologyTest):
         }
 
 
+class BasalDendriteNumberofBranchesTest(NumberofBranchesTest):
+    name = 'Basal Dendrite Number of Branches Test'
+    specificity = "Type==3"
+
+
+class ApicalDendriteNumberofBranchesTest(NumberofBranchesTest):
+    name = 'Apical Dendrite Number of Branches Test'
+    specificity = "Type==4"
+
+
 class OverallWidthTest(MorphologyTest):
     """Test the agreement between overall width observed in the model and experiments"""
 
     name = 'Overall Width Test'
     units = pq.um
+    pca = True
 
     def generate_prediction(self, model):
         value = self.get_lmeasure(model, 'Width', "Maximum")
@@ -115,11 +140,22 @@ class OverallWidthTest(MorphologyTest):
         }
 
 
+class BasalDendriteOverallWidthTest(OverallWidthTest):
+    name = 'Basal Dendrite Overall Width Test'
+    specificity = "Type==3"
+
+
+class ApicalDendriteOverallWidthTest(OverallWidthTest):
+    name = 'Apical Dendrite Overall Width Test'
+    specificity = "Type==4"
+
+
 class OverallHeightTest(MorphologyTest):
     """Test the agreement between overall height observed in the model and experiments"""
 
     name = 'Overall Height Test'
     units = pq.um
+    pca = True
 
     def generate_prediction(self, model):
         value = self.get_lmeasure(model, 'Height', "Maximum")
@@ -131,11 +167,22 @@ class OverallHeightTest(MorphologyTest):
         }
 
 
+class BasalDendriteOverallHeightTest(OverallHeightTest):
+    name = 'Basal Dendrite Overall Height Test'
+    specificity = "Type==3"
+
+
+class ApicalDendriteOverallHeightTest(OverallHeightTest):
+    name = 'Apical Dendrite Overall Height Test'
+    specificity = "Type==4"
+
+
 class OverallDepthTest(MorphologyTest):
     """Test the agreement between overall depth observed in the model and experiments"""
 
     name = 'Overall Depth Test'
     units = pq.um
+    pca = True
 
     def generate_prediction(self, model):
         value = self.get_lmeasure(model, 'Depth', "Maximum")
@@ -147,11 +194,22 @@ class OverallDepthTest(MorphologyTest):
         }
 
 
+class BasalDendriteOverallDepthTest(OverallDepthTest):
+    name = 'Basal Dendrite Overall Depth Test'
+    specificity = "Type==3"
+
+
+class ApicalDendriteOverallDepthTest(OverallDepthTest):
+    name = 'Apical Dendrite Overall Depth Test'
+    specificity = "Type==4"
+
+
 class AverageDiameterTest(MorphologyTest):
     """Test the agreement between average diameter observed in the model and experiments"""
 
     name = 'Average Diameter Test'
     units = pq.um
+    pca = True
 
     def generate_prediction(self, model):
         value = self.get_lmeasure(model, 'Diameter', "Average")
@@ -161,6 +219,16 @@ class AverageDiameterTest(MorphologyTest):
             'std': 0 * self.units,
             'n': 1
         }
+
+
+class BasalDendriteAverageDiameterTest(AverageDiameterTest):
+    name = 'Basal Dendrite Average Diameter Test'
+    specificity = "Type==3"
+
+
+class ApicalDendriteAverageDiameterTest(AverageDiameterTest):
+    name = 'Apical Dendrite Average Diameter Test'
+    specificity = "Type==4"
 
 
 class TotalLengthTest(MorphologyTest):
@@ -179,6 +247,16 @@ class TotalLengthTest(MorphologyTest):
         }
 
 
+class BasalDendriteTotalLengthTest(TotalLengthTest):
+    name = 'Basal Dendrite Total Length Test'
+    specificity = "Type==3"
+
+
+class ApicalDendriteTotalLengthTest(TotalLengthTest):
+    name = 'Apical Dendrite Total Length Test'
+    specificity = "Type==4"
+
+
 class TotalSurfaceTest(MorphologyTest):
     """Test the agreement between total surface observed in the model and experiments"""
 
@@ -193,6 +271,16 @@ class TotalSurfaceTest(MorphologyTest):
             'std': 0 * self.units,
             'n': 1
         }
+
+
+class BasalDendriteTotalSurfaceTest(TotalSurfaceTest):
+    name = 'Basal Dendrite Total Surface Test'
+    specificity = "Type==3"
+
+
+class ApicalDendriteTotalSurfaceTest(TotalSurfaceTest):
+    name = 'Apical Dendrite Total Surface Test'
+    specificity = "Type==4"
 
 
 class TotalVolumeTest(MorphologyTest):
@@ -211,6 +299,16 @@ class TotalVolumeTest(MorphologyTest):
         }
 
 
+class BasalDendriteTotalVolumeTest(TotalVolumeTest):
+    name = 'Basal Dendrite Total Volume Test'
+    specificity = "Type==3"
+
+
+class ApicalDendriteTotalVolumeTest(TotalVolumeTest):
+    name = 'Apical Dendrite Total Volume Test'
+    specificity = "Type==4"
+
+
 class MaxEuclideanDistanceTest(MorphologyTest):
     """Test the agreement between max euclidean distance observed in the model and experiments"""
 
@@ -225,6 +323,16 @@ class MaxEuclideanDistanceTest(MorphologyTest):
             'std': 0 * self.units,
             'n': 1
         }
+
+
+class BasalDendriteMaxEuclideanDistanceTest(MaxEuclideanDistanceTest):
+    name = 'Basal Dendrite Max Euclidean Distance Test'
+    specificity = "Type==3"
+
+
+class ApicalDendriteMaxEuclideanDistanceTest(MaxEuclideanDistanceTest):
+    name = 'Apical Dendrite Max Euclidean Distance Test'
+    specificity = "Type==4"
 
 
 class MaxPathDistanceTest(MorphologyTest):
@@ -243,6 +351,16 @@ class MaxPathDistanceTest(MorphologyTest):
         }
 
 
+class BasalDendriteMaxPathDistanceTest(MaxPathDistanceTest):
+    name = 'Basal Dendrite Max Path Distance Test'
+    specificity = "Type==3"
+
+
+class ApicalDendriteMaxPathDistanceTest(MaxPathDistanceTest):
+    name = 'Apical Dendrite Max Path Distance Test'
+    specificity = "Type==4"
+
+
 class MaxBranchOrderTest(MorphologyTest):
     """Test the agreement between max branch order observed in the model and experiments"""
 
@@ -257,6 +375,16 @@ class MaxBranchOrderTest(MorphologyTest):
             'std': 0 * self.units,
             'n': 1
         }
+
+
+class BasalDendriteMaxBranchOrderTest(MaxBranchOrderTest):
+    name = 'Basal Dendrite Max Branch Order Test'
+    specificity = "Type==3"
+
+
+class ApicalDendriteMaxBranchOrderTest(MaxBranchOrderTest):
+    name = 'Apical Dendrite Max Branch Order Test'
+    specificity = "Type==4"
 
 
 class AverageContractionTest(MorphologyTest):
@@ -275,20 +403,14 @@ class AverageContractionTest(MorphologyTest):
         }
 
 
-class TotalFragmentationTest(MorphologyTest):
-    """Test the agreement between total fragmentation observed in the model and experiments"""
+class BasalDendriteAverageContractionTest(AverageContractionTest):
+    name = 'Basal Dendrite Average Contraction Test'
+    specificity = "Type==3"
 
-    name = 'Total Fragmentation Test'
-    units = pq.dimensionless
 
-    def generate_prediction(self, model):
-        value = self.get_lmeasure(model, 'Fragmentation', "TotalSum")
-
-        return {
-            'mean': value * self.units,
-            'std': 0 * self.units,
-            'n': 1
-        }
+class ApicalDendriteAverageContractionTest(AverageContractionTest):
+    name = 'Apical Dendrite Average Contraction Test'
+    specificity = "Type==4"
 
 
 class PartitionAsymmetryTest(MorphologyTest):
@@ -307,6 +429,16 @@ class PartitionAsymmetryTest(MorphologyTest):
         }
 
 
+class BasalDendritePartitionAsymmetryTest(PartitionAsymmetryTest):
+    name = 'Basal Dendrite Partition Asymmetry Test'
+    specificity = "Type==3"
+
+
+class ApicalDendritePartitionAsymmetryTest(PartitionAsymmetryTest):
+    name = 'Apical Dendrite Partition Asymmetry Test'
+    specificity = "Type==4"
+
+
 class AverageRallsRatioTest(MorphologyTest):
     """Test the agreement between average Rall's ratio observed in the model and experiments"""
 
@@ -321,6 +453,16 @@ class AverageRallsRatioTest(MorphologyTest):
             'std': 0 * self.units,
             'n': 1
         }
+
+
+class BasalDendriteAverageRallsRatioTest(AverageRallsRatioTest):
+    name = 'Basal Dendrite Average Ralls Ratio Test'
+    specificity = "Type==3"
+
+
+class ApicalDendriteAverageRallsRatioTest(AverageRallsRatioTest):
+    name = 'Apical Dendrite Average Ralls Ratio Test'
+    specificity = "Type==4"
 
 
 class AverageBifurcationAngleLocalTest(MorphologyTest):
@@ -339,6 +481,16 @@ class AverageBifurcationAngleLocalTest(MorphologyTest):
         }
 
 
+class BasalDendriteAverageBifurcationAngleLocalTest(AverageBifurcationAngleLocalTest):
+    name = 'Basal Dendrite Average Bifurcation Angle Local Test'
+    specificity = "Type==3"
+
+
+class ApicalDendriteAverageBifurcationAngleLocalTest(AverageBifurcationAngleLocalTest):
+    name = 'Apical Dendrite Average Bifurcation Angle Local Test'
+    specificity = "Type==4"
+
+
 class AverageBifurcationAngleRemoteTest(MorphologyTest):
     """Test the agreement between average bifurcation angle remote observed in the model and experiments"""
 
@@ -353,6 +505,16 @@ class AverageBifurcationAngleRemoteTest(MorphologyTest):
             'std': 0 * self.units,
             'n': 1
         }
+
+
+class BasalDendriteAverageBifurcationAngleRemoteTest(AverageBifurcationAngleRemoteTest):
+    name = 'Basal Dendrite Average Bifurcation Angle Remote Test'
+    specificity = "Type==3"
+
+
+class ApicalDendriteAverageBifurcationAngleRemoteTest(AverageBifurcationAngleRemoteTest):
+    name = 'Apical Dendrite Average Bifurcation Angle Remote Test'
+    specificity = "Type==4"
 
 
 class FractalDimensionTest(MorphologyTest):
@@ -371,7 +533,11 @@ class FractalDimensionTest(MorphologyTest):
         }
 
 
+class BasalDendriteFractalDimensionTest(FractalDimensionTest):
+    name = 'Basal Dendrite Fractal Dimension Test'
+    specificity = "Type==3"
 
 
-
-
+class ApicalDendriteFractalDimensionTest(FractalDimensionTest):
+    name = 'Apical Dendrite Fractal Dimension Test'
+    specificity = "Type==4"
