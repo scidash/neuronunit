@@ -3,14 +3,15 @@
 No classes here meant for direct use in testing.
 """
 
+import math
 from types import MethodType
 
-import quantities as pq
 import numpy as np
+import quantities as pq
 
 import sciunit
-import sciunit.scores as scores
 import sciunit.capabilities as scap
+import sciunit.scores as scores
 import neuronunit.capabilities as ncap
 from neuronunit import neuroelectro
 
@@ -42,13 +43,15 @@ class VmTest(sciunit.Test):
 
     ephysprop_name = ''
 
-    observation_schema = [{'mean': {'units': True, 'required': True},
-                           'std': {'units': True, 'min': 0, 'required': True},
-                           'n': {'type': 'integer', 'min': 1}},
-                          {'mean': {'units': True, 'required': True},
-                           'sem': {'units': True, 'min': 0, 'required': True},
-                           'n': {'type': 'integer', 'min': 1,
-                                 'required': True}}]
+    observation_schema = [("Mean, Standard Deviation, N",
+                           {'mean': {'units': True, 'required': True},
+                            'std': {'units': True, 'min': 0, 'required': True},
+                            'n': {'type': 'integer', 'min': 1}}),
+                          ("Mean, Standard Error, N",
+                           {'mean': {'units': True, 'required': True},
+                            'sem': {'units': True, 'min': 0, 'required': True},
+                            'n': {'type': 'integer', 'min': 1,
+                                  'required': True}})]
 
     params_schema = {'dt': {'type': 'time', 'required': False},
                      'tmax': {'type': 'time', 'min': 0, 'required': False}}
@@ -121,7 +124,6 @@ class VmTest(sciunit.Test):
         model.inject_square_current(self.params['injected_square_current'])
 
         mp = model.results['vm']
-        import math
         for i in mp:
             if math.isnan(i):
                 return False
@@ -132,7 +134,6 @@ class VmTest(sciunit.Test):
         for i, s in enumerate(sws):
             s = np.array(s)
             dvdt = np.diff(s)
-            import math
             for j in dvdt:
                 if math.isnan(j):
                     return False
@@ -146,6 +147,7 @@ class VmTest(sciunit.Test):
 
 class FakeTest(sciunit.Test):
     """Fake test class.
+
     Just computes agreement between an observation key and a model attribute.
     e.g.
     observation = {'a':[0.8,0.3], 'b':[0.5,0.1], 'vr':[-70*pq.mV,5*pq.mV]}
