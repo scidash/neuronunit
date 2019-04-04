@@ -12,10 +12,11 @@ from quantities import mV, ms, s
 import pickle
 import copy
 import re
-
 import matplotlib as mpl
 mpl.use('Agg')
 
+
+import matplotlib.pyplot as plt
 import allensdk.core.json_utilities as json_utilities
 from allensdk.model.glif.glif_neuron import GlifNeuron
 from allensdk.api.queries.cell_types_api import CellTypesApi
@@ -165,7 +166,7 @@ class GLIFBackend(Backend):
         results = {}
         results['vm'] = self.vM
         results['t'] = self.vM.times
-        self.debug = True
+        self.debug = False
         if self.debug == True:
             plt.clf()
             #plt.title('')

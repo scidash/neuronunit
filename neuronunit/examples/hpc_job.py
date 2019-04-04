@@ -173,16 +173,14 @@ test_opt = {}#{str('multi_objective_izhi')+str(ga_out):ga_out}
 for key, use_test in test_frame.items():
     # use the best parameters found via the sparse grid search above, to inform the first generation
     # of the GA.
-    #print(seeds[key])
-#use_test = test_frame["Neocortex pyramidal cell layer 5-6"]
+    if str('results') in MODEL_PARAMS['RAW'].keys():
+        MODEL_PARAMS['RAW'].pop('results', None)
 
     ga_out, _ = om.run_ga(MODEL_PARAMS['RAW'], NGEN,use_test, free_params = MODEL_PARAMS['RAW'],
                                 NSGA = True, MU = MU, model_type = str('RAW'),seed_pop=seeds[key])
 
 
 
-    MODEL_PARAMS['RAW']['results'] = {}
-    MODEL_PARAMS['RAW']['results'][key]  = ga_out
 
     try:
         print('optimization done, doing extra experimental work beyond the scope of the opt project')
@@ -190,8 +188,13 @@ for key, use_test in test_frame.items():
         measure_dtc_pop = opt_pair(dtcpop)
         ga_out['measure_dtc_pop'] = measure_dtc_pop
         print(ga_out['measure_dtc_pop'])
+
+
     except:
         print('failed on a new development feature, not critical to optimization')
+
+    MODEL_PARAMS['RAW']['results'] = {}
+    MODEL_PARAMS['RAW']['results'][key]  = ga_out
 
     with open('multi_objective_raw.p','wb') as f:
         pickle.dump(MODEL_PARAMS,f)
@@ -216,9 +219,6 @@ except:
         seed = seeds[key]
         print(seed)
         ga_out, _ = om.run_ga(MODEL_PARAMS['PYNN'],NGEN,use_test,free_params=MODEL_PARAMS['PYNN'].keys(), NSGA = True, MU = MU, model_type = str('PYNN'),seed_pop=seed)
-        MODEL_PARAMS['PYNN']['results'][key]  = ga_out
-        with open('multi_objective_adexp.p','wb') as f:
-            pickle.dump(MODEL_PARAMS,f)
 
         try:
             print('optimization done, doing extra experimental work beyond the scope of the opt project')
@@ -230,6 +230,9 @@ except:
             print('failed on a new development feature, not critical to optimization')
 
 
+        MODEL_PARAMS['PYNN']['results'][key]  = ga_out
+        with open('multi_objective_adexp.p','wb') as f:
+            pickle.dump(MODEL_PARAMS,f)
 
 
 # directly code in observations, that are direct model parameters
@@ -269,9 +272,6 @@ except:
         print(grouped_tests)
         MODEL_PARAMS['GLIF'] = test_keyed_MODEL_PARAMS[k]
         ga_out, _ = om.run_ga(test_keyed_MODEL_PARAMS[k],NGEN,use_test,free_params=test_keyed_MODEL_PARAMS[k].keys(), NSGA = True, MU = MU, model_type = str('GLIF'),seed_pop=seed)
-        MODEL_PARAMS['GLIF']['results'][key] = ga_out
-        with open('multi_objective_glif.p','wb') as f:
-            pickle.dump(MODEL_PARAMS,f)
 
         try:
             print('optimization done, doing extra experimental work beyond the scope of the opt project')
@@ -282,6 +282,9 @@ except:
         except:
             print('failed on a new development feature, not critical to optimization')
 
+        MODEL_PARAMS['GLIF']['results'][key] = ga_out
+        with open('multi_objective_glif.p','wb') as f:
+            pickle.dump(MODEL_PARAMS,f)
 
 
 try:
@@ -304,7 +307,6 @@ except:
         seed = seeds[key]
         print(seed)
         ga_out, _ = om.run_ga(MODEL_PARAMS['PYNN'],NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU, model_type = str('PYNN'),seed_pop=seed)
-        MODEL_PARAMS['PYNN']['results'][key] = ga_out
 
         try:
             print('optimization done, doing extra experimental work beyond the scope of the opt project')
@@ -314,6 +316,7 @@ except:
             print(ga_out['measure_dtc_pop'])
         except:
             print('failed on a new development feature, not critical to optimization')
+        MODEL_PARAMS['PYNN']['results'][key] = ga_out
 
         with open('multi_objective_adexp.p','wb') as f:
             pickle.dump(MODEL_PARAMS,f)
