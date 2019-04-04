@@ -4,7 +4,8 @@
 # Assumptions, the environment for running this notebook was arrived at by building a dedicated docker file.
 #
 # https://cloud.docker.com/repository/registry-1.docker.io/russelljarvis/nuo
-#
+# or more recently:
+# https://cloud.docker.com/u/russelljarvis/repository/docker/russelljarvis/network_unit_opt
 # You can run use dockerhub to get the appropriate file, and launch this notebook using Kitematic.
 
 # # Import libraries
@@ -116,6 +117,7 @@ grouped_tests = clustered_tests['gtc']
 grouped_testsn = clustered_tests['gtn']
 from neuronunit.optimisation import model_parameters as model_params
 from neuronunit.optimisation.optimisation_management import inject_and_plot, cluster_tests
+from neuronunit.optimisation.optimisation_management import opt_pair
 
 #import pyNN
 #from pyNN import neuron
@@ -164,7 +166,7 @@ except:
     seeds, df = grid_search(MODEL_PARAMS['RAW'],
                             test_frame, backend=str('RAW'))
 
-MU = 6 # more than six causes a memory leak. I suspect this is PYNN
+MU = 12 # more than six causes a memory leak. I suspect this is PYNN
 NGEN = 6
 test_opt = {}#{str('multi_objective_izhi')+str(ga_out):ga_out}
 
@@ -177,7 +179,20 @@ for key, use_test in test_frame.items():
     ga_out, _ = om.run_ga(MODEL_PARAMS['RAW'], NGEN,use_test, free_params = MODEL_PARAMS['RAW'],
                                 NSGA = True, MU = MU, model_type = str('RAW'),seed_pop=seeds[key])
 
+
+
+    MODEL_PARAMS['RAW']['results'] = {}
     MODEL_PARAMS['RAW']['results'][key]  = ga_out
+
+    try:
+        print('optimization done, doing extra experimental work beyond the scope of the opt project')
+        dtcpop = [ p.dtc for p in ga_out['pf'] ]
+        measure_dtc_pop = opt_pair(dtcpop)
+        ga_out['measure_dtc_pop'] = measure_dtc_pop
+        print(ga_out['measure_dtc_pop'])
+    except:
+        print('failed on a new development feature, not critical to optimization')
+
     with open('multi_objective_raw.p','wb') as f:
         pickle.dump(MODEL_PARAMS,f)
 
@@ -189,7 +204,7 @@ try:
 except:
     seeds, df = grid_search(MODEL_PARAMS['PYNN'],test_frame,backend=str('PYNN'))
 
-MU = 6
+MU = 12
 NGEN = 80
 
 try:
@@ -204,6 +219,16 @@ except:
         MODEL_PARAMS['PYNN']['results'][key]  = ga_out
         with open('multi_objective_adexp.p','wb') as f:
             pickle.dump(MODEL_PARAMS,f)
+
+        try:
+            print('optimization done, doing extra experimental work beyond the scope of the opt project')
+            dtcpop = [ p.dtc for p in ga_out['pf'] ]
+            measure_dtc_pop = opt_pair(dtcpop)
+            ga_out['measure_dtc_pop'] = measure_dtc_pop
+            print(ga_out['measure_dtc_pop'])
+        except:
+            print('failed on a new development feature, not critical to optimization')
+
 
 
 
@@ -248,6 +273,15 @@ except:
         with open('multi_objective_glif.p','wb') as f:
             pickle.dump(MODEL_PARAMS,f)
 
+        try:
+            print('optimization done, doing extra experimental work beyond the scope of the opt project')
+            dtcpop = [ p.dtc for p in ga_out['pf'] ]
+            measure_dtc_pop = opt_pair(dtcpop)
+            ga_out['measure_dtc_pop'] = measure_dtc_pop
+            print(ga_out['measure_dtc_pop'])
+        except:
+            print('failed on a new development feature, not critical to optimization')
+
 
 
 try:
@@ -259,7 +293,7 @@ except:
     seeds, df = grid_search(MODEL_PARAMS['PYNN'],test_frame,backend=str('PYNN'))
 
 MU = 6
-NGEN = 80
+NGEN = 6
 
 try:
     with open('multi_objective_adexp.p','rb') as f:
@@ -271,6 +305,15 @@ except:
         print(seed)
         ga_out, _ = om.run_ga(MODEL_PARAMS['PYNN'],NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU, model_type = str('PYNN'),seed_pop=seed)
         MODEL_PARAMS['PYNN']['results'][key] = ga_out
+
+        try:
+            print('optimization done, doing extra experimental work beyond the scope of the opt project')
+            dtcpop = [ p.dtc for p in ga_out['pf'] ]
+            measure_dtc_pop = opt_pair(dtcpop)
+            ga_out['measure_dtc_pop'] = measure_dtc_pop
+            print(ga_out['measure_dtc_pop'])
+        except:
+            print('failed on a new development feature, not critical to optimization')
 
         with open('multi_objective_adexp.p','wb') as f:
             pickle.dump(MODEL_PARAMS,f)

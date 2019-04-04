@@ -51,6 +51,10 @@ logger = logging.getLogger('__main__')
 import numpy as np
 from collections import OrderedDict
 
+from neuronunit.optimisation import exhaustive_search as es
+from neuronunit.optimisation import optimisation_management as om
+
+
 
 class WeightedSumFitness(deap.base.Fitness):
 
@@ -188,11 +192,12 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
         and only use a sparse sampling of points.
         1 -self.offsping size/len(dic_grid).
         '''
-        from neuronunit.optimisation import exhaustive_search as es
-        from neuronunit.optimisation import optimisation_management as om
+
         npoints = 2 ** len(list(self.params))
         npoints = np.ceil(npoints)
         dic_grid = es.create_grid(mp_in = self.params,npoints = self.offspring_size, free_params = self.params)
+        dic_grid = list(dic_grid)
+        #import pdb; pdb.set_trace()
         '''
         pop = []
         for i in dic_grid:
@@ -238,7 +243,7 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
 
         assert len(pop)==self.offspring_size
         return pop
-        
+
     def glif_modifications(UPPER,LOWER):
         for index, i in enumerate(UPPER):
             if i == LOWER[index]:
@@ -283,7 +288,7 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
                 ind.append(self.seed_pop[k])
             self.grid_init.append(ind)
             self.td = list(ordered.keys())
-        else:
+        elif type(self.seed_pop) is None:
             self.grid_init = self.grid_sample_init(self.params)#(LOWER, UPPER, self.offspring_size)
 
         def uniform_params(lower_list, upper_list, dimensions):
