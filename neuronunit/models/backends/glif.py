@@ -12,10 +12,11 @@ from quantities import mV, ms, s
 import pickle
 import copy
 import re
-
 import matplotlib as mpl
 mpl.use('Agg')
 
+
+import matplotlib.pyplot as plt
 import allensdk.core.json_utilities as json_utilities
 from allensdk.model.glif.glif_neuron import GlifNeuron
 from allensdk.api.queries.cell_types_api import CellTypesApi
@@ -165,6 +166,7 @@ class GLIFBackend(Backend):
         results = {}
         results['vm'] = self.vM
         results['t'] = self.vM.times
+        self.debug = False
         if self.debug == True:
             plt.clf()
             #plt.title('')
@@ -204,7 +206,7 @@ class GLIFBackend(Backend):
         stop = float(c['delay'])+float(c['duration'])
         start = float(c['delay'])
         duration = float(c['duration'])
-        amplitude = float(c['amplitude'])/1000.0
+        amplitude = float(c['amplitude'])
         self.glif.dt = 0.001
         dt =  self.glif.dt
         self.stim = [ 0.0 ] * int(start) + [ amplitude ] * int(duration) + [ 0.0 ] * int(stop)

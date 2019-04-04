@@ -8,6 +8,11 @@ import os
 import multiprocessing
 import copy
 
+from neuronunit.optimisation.data_transport_container import DataTC
+import os
+import quantities
+import neuronunit
+from neuronunit.models.reduced import ReducedModel# , VeryReducedModel
 import dask.bag as db
 
 import neuronunit
@@ -23,6 +28,9 @@ DEFAULT_INJECTED_SQUARE_CURRENT = {'amplitude': 100.0*pq.pA,
                                    'delay': DELAY,
                                    'duration': DURATION}
 
+
+
+tolerance = 0.0 #0.000000001
 
 class RheobaseTest(VmTest):
     """Serial implementation of a binary search to test the rheobase.
@@ -96,6 +104,7 @@ class RheobaseTest(VmTest):
                 model.inject_square_current(current)
                 n_spikes = model.get_spike_count()
 
+                self.verbose = 1
                 if self.verbose >= 2:
                     print("Injected %s current and got %d spikes" %
                           (ampl, n_spikes))

@@ -17,7 +17,7 @@ import pdb
 import pyNN
 from pyNN import neuron
 from pyNN.neuron import EIF_cond_exp_isfa_ista
-from neurodynex.adex_model import AdEx
+#from neurodynex.adex_model import AdEx
 
 
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -33,7 +33,7 @@ except:
 
 MODEL_PARAMS = {}
 
-
+'''
 BAE = {}
 AdEx.b2.units.pF
 # Parameters
@@ -57,7 +57,7 @@ Vr = 20*AdEx.b2.units.ms
 BurstBrian = [BAE['taum'] ,a,b,Vr,4*AdEx.b2.units.nS,0.5*AdEx.b2.units.nA,BAE['VT']+5*AdEx.b2.units.mV] # Bursting
 Vr = 144*AdEx.b2.units.ms,2*BAE['C']/(144*AdEx.b2.units.ms)
 FSBrian = [BAE['taum'] ,a,b,Vr,0*AdEx.b2.units.nA,-70.6*AdEx.b2.units.mV] # Fast spiking
-
+'''
 # https://github.com/NeuroML/NML2_LEMS_Examples/blob/master/PyNN.xml
 EIF = {}
 cell = neuron.create(EIF_cond_exp_isfa_ista())

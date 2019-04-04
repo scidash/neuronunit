@@ -20,7 +20,7 @@ Copyright (c) 2016, EPFL/Blue Brain Project
 """
 
 # pylint: disable=R0912, R0914
-from neuronunit.optimisation import optimisation_management
+from neuronunit.optimization import optimization_management
 
 import random
 import functools
@@ -46,14 +46,10 @@ logger = logging.getLogger('__main__')
 # TODO abstract the algorithm by creating a class for every algorithm, that way
 # settings of the algorithm can be stored in objects of these classes
 
-#from neuronunit.optimisation.optimisation_management import evaluate#, update_deap_pop
+#from neuronunit.optimization.optimization_management import evaluate#, update_deap_pop
 
 import numpy as np
 from collections import OrderedDict
-
-from neuronunit.optimisation import exhaustive_search as es
-from neuronunit.optimisation import optimisation_management as om
-
 
 
 class WeightedSumFitness(deap.base.Fitness):
@@ -103,6 +99,7 @@ class WSListIndividual(list):
         """Constructor"""
         self.fitness = WeightedSumFitness(obj_size=kwargs['obj_size'])
         self.dtc = None
+        self.ss = None
         self.rheobase = None
         del kwargs['obj_size']
         super(WSListIndividual, self).__init__(*args, **kwargs)
@@ -123,7 +120,7 @@ class WSFloatIndividual(float):
         self.fitness = WeightedSumFitness(obj_size=obj_size)
 
 
-class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
+class SciUnitOptimization():#bluepyopt.optimisations.Optimisation):
 
     """DEAP Optimisation class"""
     def __init__(self, error_criterion = None, evaluator = None,
@@ -144,7 +141,7 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
         self.seed_pop = seed_pop
         """Constructor"""
 
-        #super(SciUnitOptimisation, self).__init__()
+        #super(SciUnitOptimization, self).__init__()
         self.selection = selection
         self.benchmark = benchmark
 
@@ -160,7 +157,6 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
         self.toolbox = deap.base.Toolbox()
         self.hc = hc
         self.boundary_dict = boundary_dict
-
         self.setnparams(nparams = nparams, boundary_dict = boundary_dict)
         self.setup_deap()
 
@@ -173,7 +169,7 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
         return mps, tl
 
     def setnparams(self, nparams = 10, boundary_dict = None):
-        self.params = optimisation_management.create_subset(nparams = nparams,boundary_dict = boundary_dict)
+        self.params = optimization_management.create_subset(nparams = nparams,boundary_dict = boundary_dict)
         self.params, self.td = self.transdict(boundary_dict)
         return self.params, self.td
 
@@ -182,33 +178,25 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
         if self.benchmark == True:
             self.toolbox.register("evaluate", benchmarks.zdt1)
         else:
-            self.toolbox.register("evaluate", optimisation_management.evaluate)
+            self.toolbox.register("evaluate", optimization_management.evaluate)
 
     def grid_sample_init(self, nparams):
         '''
         the number of points, should be 2**n, where n is the number of dimensions
         but 2**n can be such a big number it's not even computationally tractible.
-        Therefore if 2**n is greater than offspring size, sparsify the grid initialisation
+        Therefore if 2**n is greater than offspring size, sparsify the grid initialization
         and only use a sparse sampling of points.
         1 -self.offsping size/len(dic_grid).
         '''
-
+        from neuronunit.optimization import exhaustive_search as es
+        from neuronunit.optimization import optimization_management as om
         npoints = 2 ** len(list(self.params))
         npoints = np.ceil(npoints)
         dic_grid = es.create_grid(mp_in = self.params,npoints = self.offspring_size, free_params = self.params)
-        dic_grid = list(dic_grid)
-        #import pdb; pdb.set_trace()
         '''
-        pop = []
-        for i in dic_grid:
-            pop.append([i[k] for k in self.td])
-
-        return pop
-
-
-        This code causes memory errors for some population sizes
         The grid is now defined, the rest of code just makes sure that the size of the grid is a reasonable size
         And computationally tractable. When I write sparse, think 'Down sample' a big, overly sampled list of coordinates.
+
         '''
         size = len(dic_grid)
         if size > self.offspring_size:
@@ -228,13 +216,10 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
             #for i in range(0,delta):
             while delta:
                 delta = self.offspring_size - size
-                for i in dic_grid:
-                    pop.append([i[k] for k in self.td])
+                for index in range(0,dic_grid):
+                    d = dic_grid[index]
+                    pop.append([d[k] for k in self.td])
                     size = len(pop)
-
-                #for index in range(0,dic_grid):
-                #    d = dic_grid[index]
-                #    pop.append([d[k] for k in self.td])
 
         elif size == self.offspring_size:
             pop = []
@@ -243,7 +228,6 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
 
         assert len(pop)==self.offspring_size
         return pop
-
     def glif_modifications(UPPER,LOWER):
         for index, i in enumerate(UPPER):
             if i == LOWER[index]:
@@ -286,10 +270,12 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
             self.grid_init = self.grid_sample_init(self.params)
             for k,v in ordered.items():
                 ind.append(self.seed_pop[k])
-            self.grid_init.append(ind)
+            self.grid_init = self.grid_init.append(ind)
             self.td = list(ordered.keys())
-        elif type(self.seed_pop) is None:
-            self.grid_init = self.grid_sample_init(self.params)#(LOWER, UPPER, self.offspring_size)
+        else:
+            self.grid_init = \
+                self.grid_sample_init(self.params)
+            self.population = self.grid_init
 
         def uniform_params(lower_list, upper_list, dimensions):
             if hasattr(lower_list, '__iter__'):
@@ -315,16 +301,15 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
             list,
             self.toolbox.Individual)
 
-        import neuronunit.optimisation.optimisation_management as om
+        import neuronunit.optimization.optimization_management as om
         # Register the evaluation function for the individuals
         def custom_code(invalid_ind):
 
             if self.backend is None:
                 self.backend = 'RAW'
-
-            invalid_pop = list(om.update_deap_pop(invalid_ind, self.error_criterion,
-                                                  td = self.td, backend = self.backend,
-                                                  hc = self.hc,boundary_dict = self.boundary_dict))
+            #print(self.backend)
+            #import pdb; pdb.set_trace()
+            invalid_pop = list(om.update_deap_pop(invalid_ind, self.error_criterion, td = self.td, backend = self.backend, hc = self.hc))
             invalid_dtc = [ i.dtc for i in invalid_pop if hasattr(i,'dtc') ]
             fitnesses = list(map(om.evaluate, invalid_dtc))
             return (invalid_pop,fitnesses)
@@ -356,6 +341,7 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
             pop = [ WSListIndividual([g],obj_size=OBJ_SIZE) for g in self.grid_init ]
         else:
             pop = [ WSListIndividual(g, obj_size=OBJ_SIZE) for g in self.grid_init ]
+        self.population = pop
         return pop
 
 
