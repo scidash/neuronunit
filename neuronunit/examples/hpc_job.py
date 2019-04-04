@@ -169,6 +169,7 @@ except:
 MU = 12 # more than six causes a memory leak. I suspect this is PYNN
 NGEN = 6
 test_opt = {}#{str('multi_objective_izhi')+str(ga_out):ga_out}
+MODEL_PARAMS['results'] = {}
 
 for key, use_test in test_frame.items():
     # use the best parameters found via the sparse grid search above, to inform the first generation
@@ -193,8 +194,8 @@ for key, use_test in test_frame.items():
     except:
         print('failed on a new development feature, not critical to optimization')
 
-    MODEL_PARAMS['RAW']['results'] = {}
-    MODEL_PARAMS['RAW']['results'][key]  = ga_out
+    MODEL_PARAMS['results']['RAW'] = {}
+    MODEL_PARAMS['results']['RAW'][key]  = ga_out
 
     with open('multi_objective_raw.p','wb') as f:
         pickle.dump(MODEL_PARAMS,f)
@@ -230,7 +231,7 @@ except:
             print('failed on a new development feature, not critical to optimization')
 
 
-        MODEL_PARAMS['PYNN']['results'][key]  = ga_out
+        MODEL_PARAMS['results']['PYNN'][key]  = ga_out
         with open('multi_objective_adexp.p','wb') as f:
             pickle.dump(MODEL_PARAMS,f)
 
