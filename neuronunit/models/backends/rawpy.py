@@ -9,9 +9,9 @@ import quantities as qt
 from quantities import mV, ms, s
 import matplotlib as mpl
 
-mpl.use('Agg')
+#mpl.use('Agg')
 
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 # @jit(cache=True) I suspect this causes a memory leak
 
 @jit
@@ -35,6 +35,9 @@ def get_vm(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.36452
             v[m] = vPeak;# % padding the spike amplitude
             v[m+1] = c;# % membrane voltage reset
             u[m+1] = u[m+1] + d;# % recovery variable update
+
+    for m in range(0,N-1):
+        v[m] = v[m]/1000.0
 
     return v
 
@@ -124,14 +127,13 @@ class RAWBackend(Backend):
         attrs['Iext'] = Iext
         attrs['dt'] = dt
         v = get_vm(**attrs)
-        v = np.divide(v, 1000.0)
         self.vM = AnalogSignal(v,
                      units = mV,
                      sampling_period = dt * ms)
         self.attrs = attrs
-        if self.debug == True:
-            plt.plot(self.vM.times,self.vM)
-            plt.savefig('izhi_debug.png')
+        #if self.debug == True:
+        #    plt.plot(self.vM.times,self.vM)
+        #    plt.savefig('izhi_debug.png')
         return self.vM
 
     def _local_run(self):
