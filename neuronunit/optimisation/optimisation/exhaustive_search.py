@@ -106,7 +106,6 @@ def sample_points(iter_dict, npoints=3):
             replacement[k] = sample_points
     return replacement
 '''
-@jit
 def sample_points(iter_dict, npoints=2):
     replacement = {}
     for p in range(0,len(iter_dict)):
@@ -139,8 +138,35 @@ def create_a_map(subset):
             maps[k][j] = ind
     return maps
 
-#@jit
-#def create_grid(mp_in=None,npoints=3,free_params=None,ga=None):
+def create_grid(mp_in = None, npoints = 2, free_params = None, ga = None):
+    grid = ParameterGrid(mp_in)
+    return grid
+    '''
+    check for overlap in parameter space.
+    '''
+
+    '''
+
+    if len(free_params)> 1:
+        subset = OrderedDict(free_params)
+    else:
+        subset = {free_params[0]:None}
+
+    ndim = len(subset)
+    #nsteps = np.floor(float(npoints)/float(ndim))
+    if type(mp_in) is not type(None):
+        for k,v in mp_in.items():
+            if k in free_params:
+                subset[k] = np.linspace(np.min(free_params[k]),np.max(free_params[k]), npoints)
+                #subset[k] = ( np.min(free_params[k]),np.max(free_params[k]) )
+            else:
+                subset[k] = v
+    # The function of maps is to map floating point sample spaces onto a  monochromataic matrix indicies.
+    #import pdb; pdb.set_trace()
+    '''
+
+
+def create_grid1(mp_in=None,npoints=3,free_params=None,ga=None):
     '''
     Description, create a grid of evenly spaced samples in model parameters to search over.
     Inputs: npoints, type: Integer: number of sample points per parameter
@@ -154,7 +180,7 @@ def create_a_map(subset):
 
     Miscallenous, once grid created by this function
     has been evaluated using neuronunit it can be used for informing a more refined second pass fine grained grid
-
+    '''
     # smaller is a dictionary thats not necessarily as big
     # as the grid defined in the model_params file. Its not necessarily
     # a smaller dictionary, if it is smaller it is reduced by reducing sampling
@@ -182,16 +208,15 @@ def create_a_map(subset):
 
     print('subset is wrong')
     pdb.set_trace()
-
+    '''
     maps = create_a_map(subset)
     if type(ga) is not type(None):
         if npoints > 1:
             for k,v in subset.items():
                 v[0] = v[0]*1.0/3.0
                 v[1] = v[1]*2.0/3.0
-
-
     '''
+
 #@jit
 def add_constant(hold_constant,pop):
     hold_constant = OrderedDict(hold_constant)
@@ -203,28 +228,6 @@ def add_constant(hold_constant,pop):
         td.append(k)
     return pop,td
 
-def create_grid(mp_in = None, npoints = 3, free_params = None, ga = None):
-    '''
-    check for overlap in parameter space.
-    '''
-    if len(free_params)> 1:
-        subset = OrderedDict(free_params)
-    else:
-        subset = {free_params[0]:None}
-
-    ndim = len(subset)
-    #nsteps = np.floor(float(npoints)/float(ndim))
-    if type(mp_in) is not type(None):
-        for k,v in mp_in.items():
-            if k in free_params:
-                subset[k] = np.linspace(np.min(free_params[k]),np.max(free_params[k]), npoints)
-                #import pdb; pdb.set_trace()
-                #subset[k] = ( np.min(free_params[k]),np.max(free_params[k]) )
-            else:
-                subset[k] = v
-    # The function of maps is to map floating point sample spaces onto a  monochromataic matrix indicies.
-    grid = list(ParameterGrid(subset))
-    return grid
 
 @jit
 def tfg2i(x, y, z):

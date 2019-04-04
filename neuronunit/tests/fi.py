@@ -41,7 +41,7 @@ def get_diff(vm):
     n_spikes = len([np.any(differentiated) > 0.000193667327364])
     return spike_lets, n_spikeson
 
-tolerance = 0.001
+tolerance = 0.0 #0.000000001
 
 class RheobaseTest(VmTest):
     """
@@ -154,6 +154,10 @@ class RheobaseTest(VmTest):
 
             if len(supra) and len(sub):
                 delta = float(supra.min()) - float(sub.max())
+                #if str("GLIF") in dtc.backend:
+                #    dtc.tolerance = 0.0
+                #if hasattr(dtc,'tolerance'):
+                #   tolerance = dtc.tolerance
                 if delta < tolerance or (str(supra.min()) == str(sub.max())):
                     break
 

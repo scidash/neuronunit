@@ -18,7 +18,7 @@ from allensdk.api.queries.biophysical_api import BiophysicalApi
 ## Need this import but it fails because of python2 formatted strings.
 #from allensdk.model.biophysical import runner
 from neuronunit.optimisation.optimisation_management import add_dm_properties_to_cells
-from neuronunit.optimisation.optimisation_management import mint_generic_model, dtc_to_rheo
+from neuronunit.optimisation.optimisation_management import mint_generic_model, dtc_to_rheo, split_list
 from neuronunit.optimisation.data_transport_container import DataTC
 from allensdk.model.glif.glif_neuron import GlifNeuron
 import dask.bag as db
@@ -172,6 +172,22 @@ def to_map(params):
     dtc = dtc_to_rheo(dtc)
     return dtc
 
+def run_glif_to_rheobase():
+    try:
+        with open('gcm.p','rb') as f: model_params = pickle.load(f)
+    except:
+        os.system('wget https://osf.io/k7ryf/download')
+        os.system('mv download gcm.p')
+        with open('gcm.p','rb') as f: model_params = pickle.load(f)
+
+    flat_iter = [ mp.pop(list(mp.keys())[0]) for mp in model_params ]
+    
+    dtcpop = []
+    #cnt = 0
+    # Todo make this line interruptable/cachable, as its a big job.
+    # count can be pickle loaded to check where left off
+    dtcpop = list(map(to_map,flat_iter))
+    return dtcpop
 def run_glif_to_druckmanns():
     try:
         with open('gcm.p','rb') as f: model_params = pickle.load(f)
@@ -181,6 +197,10 @@ def run_glif_to_druckmanns():
         with open('gcm.p','rb') as f: model_params = pickle.load(f)
 
     flat_iter = [ mp.pop(list(mp.keys())[0]) for mp in model_params ]
+    # f1,f2 = split_list(flat_iter)
+    # f_1_2 = split_list(f1)
+    # flat_iter = flat_iter[0:2]
+    
     dtcpop = []
     cnt = 0
     # Todo make this line interruptable/cachable, as its a big job.
@@ -188,9 +208,8 @@ def run_glif_to_druckmanns():
     for f in flat_iter:
         dtcpop.append(to_map(f))
         cnt += 1
-    # dtcpop = map(to_map,flat_iter)
-    self.dtcpop,dm_properties = add_dm_properties_to_cells(dtcpop)
-    return (self.dtcpop,dm_properties)
+    dtcpop,dm_properties = add_dm_properties_to_cells(dtcpop)
+    return (dtcpop,dm_properties)
 
 def construct_data_frame(arg):
     self.dtcpop,dm_properties = run_glif_to_druckmanns()

@@ -165,15 +165,15 @@ def cell_to_test_mapper(content):
     #standard *= 1.5
     strong = 3*ir_currents
     tests = init_dm_tests(standard,strong)
-    print(standard,strong,ir_currents)
+    #print(standard,strong,ir_currents)
     model = None
     model = mint_generic_model(dtc.backend)
 
     for i, test in enumerate(tests):
-        print(i,test)
+        #print(i,test)
         model.set_attrs(dtc.attrs)
         dm_properties[index].append(test.generate_prediction(model)['mean'])
-        print(dm_properties[index])
+        #print(dm_properties[index])
     dtc.dm_properties = None
     dtc.dm_properties = dm_properties
     return dtc
@@ -192,7 +192,7 @@ def add_dm_properties_to_cells(dtcpop):
     return (dtcpop,dm_properties)
 
 
-def make_fake_observations(tests,backend,random_param):
+def make_imputed_observations(tests,backend,random_param):
     '''
     to be used in conjunction with round_trip_test below.
 
@@ -204,9 +204,6 @@ def make_fake_observations(tests,backend,random_param):
     dtc = get_rh(dtc,tests[0])
     dtc = pred_evaluation(dtc)
 
-    #ptbag = db.from_sequence(pt[1::])
-    #test_and_models = (test, dtc)
-    #def pred_only(test_and_models):
     # Temporarily patch sciunit judge code, which seems to be broken.
     #predictions = pred_only(test_and_models)
     #predictions = list(ptbag.map(obtain_predictions).compute())
@@ -248,9 +245,8 @@ def round_trip_test(tests,backend):
     ranges = MODEL_PARAMS[str(backend)]
     random_param = {} # randomly sample a point in the viable parameter space.
     for k in ranges.keys():
-        print(ranges[k])
-        print(type(ranges[k]))
-        #import pdb; pdb.set_trace()
+        #print(ranges[k])
+        #print(type(ranges[k]))
         try:
             mean = np.mean(ranges[k])
             std = np.std(ranges[k])
@@ -259,7 +255,7 @@ def round_trip_test(tests,backend):
         except:
             print('probably a list and not a flexible parameter')
             random_param[k] = ranges[k]
-    tests = make_fake_observations(tests,backend,random_param)
+    tests = make_imputed_observations(tests,backend,random_param)
     NGEN = 10
     MU = 6
     ga_out, DO = run_ga(ranges,NGEN,tests,free_params=free_params, NSGA = True, MU = MU, backed=backend, selection=str('selNSGA2'))
@@ -415,7 +411,7 @@ def cluster_tests(use_test,backend,explore_param):
         #model_attrs = [ dtc.attrs for dtc in dtcpop ]
         mean_score,dtc = score_only(dtc,mean_pred,test)
         mean_scores.append(mean_score)
-        print(mean_scores[-1])
+        #print(mean_scores[-1])
 
     first_test = test_opt[list(test_opt.keys())[0]].values()
     test_names = [t.name for t in test_opt.keys()]
@@ -475,23 +471,6 @@ def pred_only(test_and_models):
     pred = test.generate_prediction(model)
     return pred#(pred,obs)
 
-def which_thing(thing):
-    #print(thing)
-    #print(thing.keys())
-    if 'value' in thing.keys():
-        standard = thing['value']
-    if 'mean' in thing.keys():
-        standard = thing['mean']
-    thing['standard'] = standard
-    return thing
-
-def which_key(thing):
-    #print(thing)
-    #print(thing.keys())
-    if 'value' in thing.keys():
-        return 'value'
-    if 'mean' in thing.keys():
-        return 'mean'
 
 def bridge_judge(test_and_dtc):
     # Temporarily patch sciunit judge code, which seems to be broken.
@@ -1018,14 +997,11 @@ def run_ga(explore_edges, max_ngen, test, free_params = None, hc = None, NSGA = 
     # DO.boundary_dict = ss
     # DO.population[0].ss = ss
     # DO.ss = ss
-    print('optimization done, doing extra experimental work beyond the scope of the opt project')
+
     # This run condition should not need same arguments as above.
     ga_out = DO.run(max_ngen = max_ngen)#offspring_size = MU, )
-    dtcpop = [ p.dtc for p in ga_out['pf'] ]
-    measure_dtc_pop = opt_pair(dtcpop)
-    ga_out['measure_dtc_pop'] = measure_dtc_pop
-    print(ga_out['measure_dtc_pop'])
     return ga_out, DO
+
 
 
 def init_pop(pop, td, tests):
@@ -1154,6 +1130,20 @@ def split_list(a_list):
     return a_list[:half], a_list[half:]
 
 
+def which_thing(thing):
+    if 'value' in thing.keys():
+        standard = thing['value']
+    if 'mean' in thing.keys():
+        standard = thing['mean']
+    thing['standard'] = standard
+    return thing
+
+def which_key(thing):
+
+    if 'value' in thing.keys():
+        return 'value'
+    if 'mean' in thing.keys():
+        return 'mean'
 
 def average_measurements(flat_iter):
     dtca,dtcb = flat_iter
@@ -1183,25 +1173,36 @@ def average_measurements(flat_iter):
                 aa = which_thing(a[k])
                 bb = which_thing(b[k])
             except:
-                import pdb; pdb.set_trace()
+                print('no aa, bb')
+                #import pdb; pdb.set_trace()
 
             t = tests[k]
-            key = which_key(a[k])
             cc = which_thing(t.observation)
+            try:
+                key = which_key(a[k])
+            except:
+                key = 'value'
 
             grab_units = cc['standard'].units
+
             pp = {}
             pp[key] = np.mean([aa['standard'],bb['standard']])*grab_units
             pp['n'] = 1
+            cc['n'] = 1
+            try:
+                score = t.compute_score(cc,pp)
+                dtcb.scores[k]  = dtca.scores[k] = 1.0 - score.norm_score
 
-            score = t.compute_score(cc,pp)
-            print(score.norm_score)
+                print(score.norm_score)
+            except:
+                score = None
+                dtcb.scores[k]  = dtca.scores[k] = 1.0
+
             dtcb.twin = None
             dtca.twin = None
             dtca.twin = dtcb.attrs
             dtcb.twin = dtca.attrs
             # store the averaged values in the first half of genes.
-            dtcb.scores[k]  = dtca.scores[k] = 1.0 - score.norm_score
             # store the averaged values in the second half of genes.
     return (dtca,dtcb)
 
@@ -1225,24 +1226,17 @@ def opt_pair(dtcpop):
     dtcpop = list(dtcbag.map(pred_evaluation).compute())
     # divide the genes pool in half
     ab_s = list(itertools.combinations(dtcpop, 2))
-    #measure_dtc_pop = []
-    #for a,b in ab_s:
-    #    measure_dtc_pop.append(opt_on_pair_of_points((a,b)))
 
-    '''
-    dtcpopa,dtcpopb = split_list(copy.copy(dtcpop))
-    '''
     # average measurements between first half of gene pool, and second half.
-    #flat_iter = zip(dtcpopa,dtcpopb)
+    #flat_iter = zip(ab_s)
     #dtc_mixed = list(map(average_measurements,flat_iter))
     #print(len(dtc_mixed),len(dtcpop))
     #dtcbag = db.from_sequence(ab_s, npartitions = NPART)
     #dtc_mixed = list(dtcbag.map(average_measurements))
+    dtc_mixed = []
     for pair in ab_s:
         dtc = average_measurements(pair)
-    import pdb
-    pdb.set_trace()
-
+        dtc_mixed.append(dtc)
     dtcpopa = [dtc[0] for dtc in dtc_mixed]
     dtcpopb = [dtc[1] for dtc in dtc_mixed]
     #print(len(dtcpopa))
@@ -1331,7 +1325,7 @@ def parallel_route(pop,dtcpop,tests,td,clustered=False):
             pop[i] = WSListIndividual(pop[i])
             pop[i].dtc = None
         d.get_ss()
-        print(d.get_ss())
+        #print(d.get_ss())
         pop[i].dtc = copy.copy(d)
     invalid_dtc_not = [ i for i in pop if not hasattr(i,'dtc') ]
     return pop, dtcpop
@@ -1402,7 +1396,7 @@ def grid_search(explore_ranges,test_frame,backend=None):
             dtcpop = [ dtc for dtc in dtcpop if dtc.rheobase !=-1.0 ]
             dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
             dtcpop = list(dtcbag.map(nunit_evaluation))
-            print(dtc.get_ss())
+            #print(dtc.get_ss())
             for dtc in dtcpop:
                 store_results[str(local_attrs.values())][key] = dtc.get_ss()
         df = pd.DataFrame(store_results)
