@@ -260,7 +260,7 @@ def round_trip_test(tests,backend):
     MU = 6
     ga_out, DO = run_ga(ranges,NGEN,tests,free_params=free_params, NSGA = True, MU = MU, backed=backend, selection=str('selNSGA2'))
     best = ga_out['pf'][0].dtc.get_ss()
-    print(Bool(best < 0.5))
+    #print(Bool(best < 0.5))
     if Bool(best >= 0.5):
         NGEN = 10
         MU = 6
@@ -578,6 +578,10 @@ def dtc_to_rheo_serial(dtc):
 
 from collections.abc import Iterable
 
+def substitute_parallel_for_serial(rtest):
+    rtest = RheobaseTestP(rtest.observation)
+    return rtest
+
 def get_rtest(dtc):
     rtest = None
     if not hasattr(dtc,'tests'):#, type(None)):
@@ -598,15 +602,13 @@ def get_rtest(dtc):
                 rtest = dtc.tests
             else:
                 rtest = [ t for t in dtc.tests if str('RheobaseTest') == t.name ]
-                print(rtest)
                 rtest = rtest[0]
         else:
             if not isinstance(dtc.tests, Iterable):
                 rtest = dtc.tests
             else:
-                rtest = [ t for t in dtc.tests if str('RheobaseTestP') == t.name ]
-                print(rtest)
-                rtest = rtest[0]
+                rtest = [ t for t in dtc.tests if str('RheobaseTest') == t.name ]
+                rtest = substitute_parallel_for_serial(rtest[0])
 
     return rtest
 
@@ -627,15 +629,12 @@ def dtc_to_rheo(dtc):
     if not hasattr(dtc,'score'):
         dtc.score = None
         dtc.score = {}
-    #backend =
     model = mint_generic_model(dtc.backend)
     model.attrs = dtc.attrs
-    #model.set_attrs(dtc.attrs)
     rtest = get_rtest(dtc)
     if rtest is not None:
         dtc.rheobase = rtest.generate_prediction(model)
         print(dtc.rheobase)
-        #print(dtc.rheobase)
         if dtc.rheobase is not None and dtc.rheobase !=-1.0:
             dtc.rheobase = dtc.rheobase['value']
             obs = rtest.observation
@@ -1379,41 +1378,41 @@ def grid_search(explore_ranges,test_frame,backend=None):
         dtcpop.append(dtc)
 
 
-        for key, use_test in test_frame.items():
-            for dtc in dtcpop:
-                dtc.tests = use_test
+    for key, use_test in test_frame.items():
+        for dtc in dtcpop:
+            dtc.tests = use_test
 
-            if 'RAW' in dtc.backend  or 'HH' in dtc.backend :#Backend:
-                #rtest = [ t for t in dtc.tests if str('RheobaseTest') == t.name ]
-                dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
-                dtcpop = list(dtcbag.map(dtc_to_rheo))
-                dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
-                dtcpop = list(dtcbag.map(format_test))
-            else:
-                dtcpop = list(map(dtc_to_rheo,dtcpop))
-                dtcpop = list(map(format_test,dtcpop))
-            dtcpop = [ dtc for dtc in dtcpop if dtc.rheobase is not None ]
-            dtcpop = [ dtc for dtc in dtcpop if dtc.rheobase !=-1.0 ]
+        if 'RAW' in dtc.backend  or 'HH' in dtc.backend :#Backend:
+            #rtest = [ t for t in dtc.tests if str('RheobaseTest') == t.name ]
             dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
-            dtcpop = list(dtcbag.map(nunit_evaluation))
-            #print(dtc.get_ss())
-            for dtc in dtcpop:
-                store_results[str(local_attrs.values())][key] = dtc.get_ss()
-        df = pd.DataFrame(store_results)
-        best_params = {}
-        for index, row in df.iterrows():
-            best_params[index] = row == row.min()
-            best_params[index] = best_params[index].to_dict()
+
+            dtcpop = list(dtcbag.map(dtc_to_rheo))
+            dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
+            dtcpop = list(dtcbag.map(format_test))
+        else:
+            dtcpop = list(map(dtc_to_rheo,dtcpop))
+            dtcpop = list(map(format_test,dtcpop))
+        dtcpop = [ dtc for dtc in dtcpop if dtc.rheobase is not None ]
+        dtcpop = [ dtc for dtc in dtcpop if dtc.rheobase !=-1.0 ]
+        dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
+        dtcpop = list(dtcbag.map(nunit_evaluation))
+        for dtc in dtcpop:
+            store_results[str(local_attrs.values())][key] = dtc.get_ss()
+    df = pd.DataFrame(store_results)
+    best_params = {}
+    for index, row in df.iterrows():
+        best_params[index] = row == row.min()
+        best_params[index] = best_params[index].to_dict()
 
 
-        seeds = {}
-        for k,v in best_params.items():
-            for nested_key,nested_val in v.items():
-                if True == nested_val:
-                    seed = nested_key
-                    seeds[k] = seed
-        with open(str(backend)+'_seeds.p','wb') as f:
-            pickle.dump(seeds,f)
+    seeds = {}
+    for k,v in best_params.items():
+        for nested_key,nested_val in v.items():
+            if True == nested_val:
+                seed = nested_key
+                seeds[k] = seed
+    with open(str(backend)+'_seeds.p','wb') as f:
+        pickle.dump(seeds,f)
     return seeds, df
 
 

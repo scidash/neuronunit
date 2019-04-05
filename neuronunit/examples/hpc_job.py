@@ -119,10 +119,8 @@ from neuronunit.optimisation import model_parameters as model_params
 from neuronunit.optimisation.optimisation_management import inject_and_plot, cluster_tests
 from neuronunit.optimisation.optimisation_management import opt_pair
 
-#import pyNN
-#from pyNN import neuron
-#from pyNN.neuron import EIF_cond_exp_isfa_ista
 MODEL_PARAMS = model_params.MODEL_PARAMS
+MODEL_PARAMS['results'] = {}
 
 
 # # The Izhiketich model is instanced using some well researched parameter sets.
@@ -153,10 +151,10 @@ use_test[0] = rtp
 reduced_cells.keys()
 '''
 
-with open('Izh_seeds.p','rb') as f:
-    seeds = pickle.load(f)
 
 try:
+    with open('Izh_seeds.p','rb') as f:
+        seeds = pickle.load(f)
 
     assert seeds is not None
 
@@ -167,7 +165,7 @@ except:
                             test_frame, backend=str('RAW'))
 
 MU = 12 # more than six causes a memory leak. I suspect this is PYNN
-NGEN = 6
+NGEN = 12
 test_opt = {}#{str('multi_objective_izhi')+str(ga_out):ga_out}
 MODEL_PARAMS['results'] = {}
 
@@ -200,26 +198,27 @@ for key, use_test in test_frame.items():
     with open('multi_objective_raw.p','wb') as f:
         pickle.dump(MODEL_PARAMS,f)
 
+
 try:
     with open('adexp_seeds.p','rb') as f:
         seeds = pickle.load(f)
     assert seeds is not None
 
 except:
-    seeds, df = grid_search(MODEL_PARAMS['PYNN'],test_frame,backend=str('PYNN'))
+    seeds, df = grid_search(MODEL_PARAMS['PYNN']['EIF'],test_frame,backend=str('PYNN'))
 
-MU = 12
-NGEN = 80
-
+MU = 6
+NGEN = 6
 try:
     with open('multi_objective_adexp.p','rb') as f:
         test_opt = pickle.load(f)
 except:
-    MODEL_PARAMS['PYNN']['results'] = {}
+
+    MODEL_PARAMS['results']['PYNN'] = {}
     for key, use_test in test_frame.items():
-        seed = seeds[key]
-        print(seed)
-        ga_out, _ = om.run_ga(MODEL_PARAMS['PYNN'],NGEN,use_test,free_params=MODEL_PARAMS['PYNN'].keys(), NSGA = True, MU = MU, model_type = str('PYNN'),seed_pop=seed)
+        MODEL_PARAMS['RAW'].pop('results', None)
+
+        ga_out, _ = om.run_ga(MODEL_PARAMS['PYNN']['EIF'],NGEN,use_test,free_params=MODEL_PARAMS['PYNN']['EIF'].keys(), NSGA = True, MU = MU, model_type = str('PYNN'))#,seed_pop=seed)
 
         try:
             print('optimization done, doing extra experimental work beyond the scope of the opt project')
@@ -234,6 +233,7 @@ except:
         MODEL_PARAMS['results']['PYNN'][key]  = ga_out
         with open('multi_objective_adexp.p','wb') as f:
             pickle.dump(MODEL_PARAMS,f)
+
 
 
 # directly code in observations, that are direct model parameters
