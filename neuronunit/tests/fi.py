@@ -115,8 +115,8 @@ class RheobaseTest(VmTest):
                     current = self.params.copy()['injected_square_current']
                 except:
                     current = self.params
-                    import pdb
-                    pdb.set_trace()
+                    #import pdb
+                    #pdb.set_trace()
                 uc = {'amplitude':ampl}
                 current.update(uc)
 
@@ -282,13 +282,10 @@ class RheobaseTestP(VmTest):
             output is an virtual model with an updated dictionary.
             '''
             dtc.boolean = False
-            #     model = VeryReducedModel(backend=(dtc.backend, {'DTC':dtc}))
 
-            # else:
             LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
             dtc.model_path = LEMS_MODEL_PATH
             model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
-            #print(dtc.backend)
             if dtc.backend is str('NEURON') or dtc.backend is str('jNEUROML'):
                 dtc.current_src_name = model._backend.current_src_name
                 assert type(dtc.current_src_name) is not type(None)
@@ -300,6 +297,7 @@ class RheobaseTestP(VmTest):
                       {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
             ampl = float(dtc.ampl)
+            print(ampl)
             if ampl not in dtc.lookup or len(dtc.lookup) == 0:
                 current = params.copy()['injected_square_current']
                 uc = {'amplitude':ampl*pq.pA}
@@ -328,6 +326,7 @@ class RheobaseTestP(VmTest):
 
 
                 if n_spikes == 1:
+                    print('finds spike: ',ampl)
                     dtc.lookup[float(ampl)] = 1
                     dtc.rheobase = float(ampl)
                     dtc.boolean = True
@@ -384,10 +383,12 @@ class RheobaseTestP(VmTest):
 
             use_diff = False
 
-            while dtc.boolean == False and cnt< 40:
+            while dtc.boolean == False and cnt< 8:
                 if len(supra) ==0 and len(sub):
-                #    use_diff = True # differentiate the wave to look for spikes
                     # negeative spiker
+                    if sub.max() < -100.0: 
+                        use_diff = True # differentiate the wave to look for spikes
+                
                     if sub.max()> 2000.0:
                         dtc.rheobase = None #float(supra.min())
                         dtc.boolean = False
@@ -400,9 +401,12 @@ class RheobaseTestP(VmTest):
                     d.use_diff = None
                     d.use_diff = use_diff
                 dtc_clones = [ d for d in dtc_clones if not np.isnan(d.ampl) ]
-                b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
-                dtc_clone = list(b0.map(check_current).compute())
-
+                try:
+                    b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
+                    dtc_clone = list(b0.map(check_current).compute())
+                except:
+                    print('mpi failure, but why is this using mpi anyway')
+                    dtc_clone = list(map(check_current,dtc_clones))
                 for dtc in dtc_clone:
                     if dtc.boolean == True:
                         return dtc
