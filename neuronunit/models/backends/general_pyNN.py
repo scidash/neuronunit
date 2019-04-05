@@ -139,3 +139,4 @@ class PYNNBackend(Backend):
 
         self.results = self._local_run()
         self.vm = self.results['vm']
+        #print(self.vm)
