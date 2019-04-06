@@ -132,7 +132,7 @@ class PYNNBackend(Backend):
         stop = float(c['delay'])+float(c['duration'])
         duration = float(c['duration'])
         start = float(c['delay'])
-        amplitude = float(c['amplitude']/1000000.0)#*1000.0#*10000.0
+        amplitude = float(c['amplitude']/1.0)#*1000.0#*10000.0
 
         electrode = neuron.DCSource(start=start, stop=stop, amplitude=amplitude)
         electrode.inject_into(self.eif)
