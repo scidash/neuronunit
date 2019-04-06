@@ -206,7 +206,8 @@ try:
 
 except:
     seeds, df = grid_search(MODEL_PARAMS['PYNN']['EIF'],test_frame,backend=str('PYNN'))
-
+    with open('adexp_seeds.p','rb') as f:
+        pickle.dump(f,seeds)
 MU = 6
 NGEN = 6
 try:
