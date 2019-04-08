@@ -115,8 +115,7 @@ class RheobaseTest(VmTest):
                     current = self.params.copy()['injected_square_current']
                 except:
                     current = self.params
-                    #import pdb
-                    #pdb.set_trace()
+
                 uc = {'amplitude':ampl}
                 current.update(uc)
 
@@ -297,7 +296,7 @@ class RheobaseTestP(VmTest):
                       {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
             ampl = float(dtc.ampl)
-            print(ampl)
+            #print(ampl, 'why is this the same?')
             if ampl not in dtc.lookup or len(dtc.lookup) == 0:
                 current = params.copy()['injected_square_current']
                 uc = {'amplitude':ampl*pq.pA}
@@ -317,10 +316,12 @@ class RheobaseTestP(VmTest):
                     if n_spikes >= 1:
                         dtc.negative_spiker = None
                         dtc.negative_spiker = True
+                    '''
                     plt.clf()
                     plt.title(str(n_spikes))
                     plt.plot(vm.times,vm)
                     plt.savefig('reobase_debug.png')
+                    '''
                 else:
                     n_spikes = model.get_spike_count()
 
@@ -386,27 +387,39 @@ class RheobaseTestP(VmTest):
             while dtc.boolean == False and cnt< 8:
                 if len(supra) ==0 and len(sub):
                     # negeative spiker
-                    if sub.max() < -100.0: 
+                    if sub.max() < -100.0:
                         use_diff = True # differentiate the wave to look for spikes
-                
+
                     if sub.max()> 2000.0:
                         dtc.rheobase = None #float(supra.min())
                         dtc.boolean = False
                         return dtc
 
-                dtc_clones = [ copy.copy(dtc) for i in range(0,len(dtc.current_steps)) ]
+                dtc_clones = [ dtc for i in range(0,len(dtc.current_steps)) ]
                 for i,s in enumerate(dtc.current_steps):
-                    dtc_clones[i].ampl = dtc.current_steps[i]
+                    dtc_clones[i] = copy.copy(dtc_clones[i])
+                    dtc_clones[i].ampl = copy.copy(dtc.current_steps[i])
+
+                #set_clones = set([ float(d.ampl) for d in dtc_clones ])
+                #assert len(dtc_clones) == len(set_clones)
+
                 for d in dtc_clones:
                     d.use_diff = None
                     d.use_diff = use_diff
                 dtc_clones = [ d for d in dtc_clones if not np.isnan(d.ampl) ]
+
                 try:
                     b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
                     dtc_clone = list(b0.map(check_current).compute())
                 except:
-                    print('mpi failure, but why is this using mpi anyway')
-                    dtc_clone = list(map(check_current,dtc_clones))
+                    set_clones = set([ float(d.ampl) for d in dtc_clones ])
+                    dtc_clone = []
+                    for dtc,sc in zip(dtc_clones,set_clones):
+                        dtc = copy.copy(dtc)
+                        dtc.ampl = sc*pq.pA
+                        dtc = check_current(dtc)
+                        dtc_clone.append(dtc)
+
                 for dtc in dtc_clone:
                     if dtc.boolean == True:
                         return dtc
