@@ -5,7 +5,7 @@ import urllib.request, json
 
 import matplotlib.pyplot as plt
 import numpy as np
-
+import pickle
 #from modality import calibrated_diptest, calibrated_bwtest, silverman_bwtest, hartigan_diptest, excess_mass_modes
 #from modality.util import auto_interval
 #import anchor
@@ -26,29 +26,32 @@ def properties(pipe):
                 data = json.loads(url.read().decode())
             for objects in data['objects']:
                 last_label = objects['ecm']['ref_text']
-            try:
-                sample_sizes = sum([n['n'] for n in data['objects']])
-                print(sample_sizes)
-            except:
-                pass
-            values = [ objects['val'] for objects in data['objects'] ]
-            data = np.array([ int(objects['val']) for objects in data['objects'] ])
-
+            #values = [ objects['val'] for objects in data['objects'] ]
+            datax = [ objects['val'] for objects in data['objects'] ]
+            datax = [ dx for dx in datax if type(dx) is not type(None) ]
             neuron_values[str(p["nlex_id"])] = {}
-            neuron_values[str(p["nlex_id"])][val] = values
-            if len(values):
+            neuron_values[str(p["nlex_id"])][val] = datax
+            if len(datax):
+                samples = [ n['n'] for n in data['objects'] ]
+                samples = [ n for n in samples if type(n) is not type(None) ]
+                sample_sizes = sum(samples)
+                #reweighted = []
+                #for i,j in zip(datax,samples):
+                #    reweighted.append(i*j)
 
                 plt.clf()#hartigan_diptest(self.data)
                 try:
-                    sns.distplot(sorted(values), color="skyblue", label=str(last_label)+str(p["nlex_id"])+str(val))
-                    plt.title(str('sample_size: ')+str(len(values)))
+                    sns.distplot(sorted(datax), color="skyblue", label=str(last_label)+str(p["nlex_id"])+str(val))
+                    plt.xlabel(str('sample_size: ')+str(sample_sizes))
                     plt.legend(loc="upper left")
                 except:
-                    plt.title(str('sample_size: ')+str(len(values)))
-                    plt.hist(sorted(values))      #use this to draw histogram of your data
+                    plt.xlabel(str('sample_size: ')+str(sample_sizes))
+                    plt.hist(sorted(datax))      #use this to draw histogram of your data
 
                 plt.savefig(str(last_label)+str(p["nlex_id"])+str(val)+str('.png'))
 
 
     return neuron_values
 neuron_values = properties(pipe)
+with open('values_for_r.p','wb') as f:
+    pickle.dump(neuron_values,f)
