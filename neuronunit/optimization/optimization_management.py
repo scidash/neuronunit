@@ -5,9 +5,7 @@
 import numpy as np
 import dask.bag as db
 import pandas as pd
-# Import get_neab has to happen exactly here. It has to be called only on
 from neuronunit import tests
-from neuronunit.optimization import get_neab
 from neuronunit.models.reduced import ReducedModel
 from neuronunit.optimization.model_parameters import model_params, path_params
 import numpy
