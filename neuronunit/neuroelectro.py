@@ -1,16 +1,16 @@
 """NeuronUnit interface to Neuroelectro.org"""
 
-# Interface for creating tests using neuroelectro.org as reference data.  
-# 
+# Interface for creating tests using neuroelectro.org as reference data.
+#
 # Example workflow:
 
-# x = NeuroElectroDataMap() 
+# x = NeuroElectroDataMap()
 # x.set_neuron(nlex_id='nifext_152') # neurolex.org ID for 'Amygdala basolateral
                                    # nucleus pyramidal neuron'.
-# x.set_ephysprop(id=23) # neuroelectro.org ID for 'Spike width'.  
-# x.set_article(pmid=18667618) # Pubmed ID for Fajardo et al, 2008 (J. Neurosci.)  
-# x.get_values() # Gets values for spike width from this paper.  
-# width = x.val # Spike width reported in that paper. 
+# x.set_ephysprop(id=23) # neuroelectro.org ID for 'Spike width'.
+# x.set_article(pmid=18667618) # Pubmed ID for Fajardo et al, 2008 (J. Neurosci.)
+# x.get_values() # Gets values for spike width from this paper.
+# width = x.val # Spike width reported in that paper.
 
 # t = neurounit.tests.SpikeWidthTest(spike_width=width)
 # c = sciunit.Candidate() # Instantiation of your model (or other candidate)
@@ -20,12 +20,12 @@
 #
 # OR
 #
-# x = NeuroElectroSummary() 
-# x.set_neuron(nlex_id='nifext_152') # neurolex.org ID for 'Amygdala basolateral 
+# x = NeuroElectroSummary()
+# x.set_neuron(nlex_id='nifext_152') # neurolex.org ID for 'Amygdala basolateral
                                    # nucleus pyramidal neuron'.
-# x.set_ephysprop(id=2) # neuroelectro.org ID for 'Spike width'.  
-# x.get_values() # Gets values for spike width from this paper.  
-# width = x.mean # Mean Spike width reported across all matching papers. 
+# x.set_ephysprop(id=2) # neuroelectro.org ID for 'Spike width'.
+# x.get_values() # Gets values for spike width from this paper.
+# width = x.mean # Mean Spike width reported across all matching papers.
 # ...
 
 
@@ -59,7 +59,7 @@ def is_neuroelectro_up():
     url = "http://neuroelectro.org"
     request = requests.get(url)
     return request.status_code == 200
-    
+
 
 class NeuroElectroError(Exception):
     pass
@@ -101,7 +101,7 @@ class NeuroElectroData(object):
             self.get_values()
 
     url = API_URL # Base URL.
-    
+
     def set_names(self, neuron_name, ephysprop_name):
         self.set_neuron(name=neuron_name)
         self.set_ephysprop(name=ephysprop_name)
@@ -208,7 +208,7 @@ class NeuroElectroData(object):
         return self.api_data
 
     def check(self):
-        """See if the data requested from the server 
+        """See if the data requested from the server
         were obtained successfully."""
         if self.require_attrs:
             for attr in self.require_attrs:

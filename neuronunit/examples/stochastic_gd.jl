@@ -89,6 +89,7 @@ pushfirst!(PyVector(pyimport("sys")["path"]),"/home/jovyan/work/sciunit")
 pushfirst!(PyVector(pyimport("sys")["path"]),"/opt/conda/lib/python3.5/site-packages")
 
 pyimport("neuronunit")
+pyimport("from neuronunit.optimisation import optimisation_management as om")
 
 @pyimport pickle
 f = pybuiltin("open")("pipe_tests.p","rb")
@@ -96,6 +97,26 @@ p = pickle.Unpickler(f)
 pipe_tests = p[:load]()
 print(pipe_tests)
 f[:close]()
+
+println("semi colons just suppress output in julia.")
+
+for k in keys(test_frame)
+    println(k, " ==> ", test_frame[k])
+    use_test = test_frame[k]
+
+#for key, use_test in test_frame.items():
+    # use the best parameters found via the sparse grid search above, to inform the first generation
+    # of the GA.
+    if str('results') in MODEL_PARAMS['RAW'].keys():
+        MODEL_PARAMS['RAW'].pop('results', None)
+    NGEN = 10
+
+    #=
+    Just want to initialize the GA and not to use it.
+    ga_out, _ = om.run_ga(MODEL_PARAMS['RAW'], NGEN, use_test, free_params = MODEL_PARAMS['RAW'],
+                                NSGA = True, MU = MU, model_type = str('RAW'),seed_pop=seeds[key])
+    =#
+end
 
 #catch
 #    println("pass")
@@ -166,9 +187,9 @@ print(errdf)
 
 
 function parallel_pi_computation(N::Int; ncores::Int=8)
-    """
+    #=
     Compute pi in parallel, over ncores cores, with a Monte Carlo simulation throwing N total darts
-    """
+    =#
 
     # compute sum of pi's estimated among all cores in parallel
     sum_of_pis = @parallel (+) for i=1:ncores
