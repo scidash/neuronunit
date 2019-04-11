@@ -10,9 +10,9 @@ import numpy as np
 import quantities as pq
 
 import sciunit
-import sciunit.capabilities as scap
 import sciunit.scores as scores
 import neuronunit.capabilities as ncap
+import sciunit.capabilities as scap
 from neuronunit import neuroelectro
 
 
@@ -94,12 +94,17 @@ class VmTest(sciunit.Test):
                                                      # NeuroElectro ontology.
             cached=cached
             )
-        # Get and verify summary data from neuroelectro.org.
-        reference_data.get_values(quiet=not cls.verbose)  #
 
-        observation = {'mean': reference_data.mean*cls.units,
-                       'std': reference_data.std*cls.units,
-                       'n': reference_data.n}
+        # Get and verify summary data from neuroelectro.org.
+        reference_data.get_values(quiet=not cls.verbose)
+
+        if hasattr(reference_data, 'mean'):
+            observation = {'mean': reference_data.mean*cls.units,
+                           'std': reference_data.std*cls.units,
+                           'n': reference_data.n}
+        else:
+            observation = None
+
         return observation
 
     @classmethod
@@ -124,18 +129,17 @@ class VmTest(sciunit.Test):
         model.inject_square_current(self.params['injected_square_current'])
 
         mp = model.results['vm']
-        for i in mp:
-            if math.isnan(i):
-                return False
+        if np.any(np.isnan(mp)) or np.any(np.isinf(mp)):
+            return False
 
         sws = ncap.spike_functions.get_spike_waveforms(
-                                        model.get_membrane_potential())
+                                    model.get_membrane_potential())
 
         for i, s in enumerate(sws):
             s = np.array(s)
             dvdt = np.diff(s)
             for j in dvdt:
-                if math.isnan(j):
+                if np.isnan(j):
                     return False
         return True
 

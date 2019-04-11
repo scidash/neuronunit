@@ -1,5 +1,8 @@
 *.py[co]
+*.pkl
 *.p
+*do-not-add*
+
 # Packages
 *.egg
 *.egg-info
@@ -67,3 +70,5 @@ neuronunit/unit_test/bbp.py
 neuronunit/unit_test/get_tau.py
 scratch
 GeneratedFiles
+docs/tmp/
+tmp/
