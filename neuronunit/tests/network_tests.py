@@ -52,7 +52,19 @@ class NetTest(VmTest):
         prediction['binary_train'] = binary_train
         prediction['exhaustive_data'] = exhaustive_data
         return prediction
+    
+    def get_observations():
+        try:
+            os.system('pip install rpy2')
+            from rpy2.robjects.packages import importr
+            rpy2('install.packages("remotes")')
+            rpy2('install.packages("osfr")')
+            rpy2('library(osfr)')
+            rpy2('cr_project <- osf_retrieve_node("64jhz")')
 
+        except:
+
+            os.system('wget https://osf.io/64jhz/download')
 
 
 class ISITest(NetTest):

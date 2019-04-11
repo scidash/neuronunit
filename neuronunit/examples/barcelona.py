@@ -1,2 +1,2 @@
 from neuronunit import aibs
-dtcpop = aibs.run_glif_to_rheobase()
+dtcpop,dm_properties = aibs.run_glif_to_druckmanns()
