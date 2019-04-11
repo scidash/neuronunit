@@ -43,6 +43,8 @@ import copy
 from sklearn.model_selection import ParameterGrid
 from neuronunit.models.interfaces import glif
 import matplotlib.pyplot as plt
+from neuronunit.optimisation import get_neab
+
 
 # # The Izhiketich model is instanced using some well researched parameter sets.
 # First lets get the points in parameter space, that Izhikich himself has published about. These points are often used by the open source brain project to establish between model reproducibility. The itial motivating factor for choosing these points as constellations, of all possible parameter space subsets, is that these points where initially tuned and used as best guesses for matching real observed experimental recordings.
@@ -63,6 +65,8 @@ pvis_cortex = {"id": 111, "name": "Neocortex pyramidal cell layer 5-6", "neuron_
 olf_mitral = {"id": 129, "name": "Olfactory bulb (main) mitral cell", "neuron_db_id": 267, "nlex_id": "nlx_anat_100201"}
 ca1_pyr = {"id": 85, "name": "Hippocampus CA1 pyramidal cell", "neuron_db_id": 258, "nlex_id": "sao830368389"}
 pipe = [ fi_basket, ca1_pyr, purkinje,  pvis_cortex,olf_mitral]
+#for p in pipe:
+#    tests,observations = get_neab.executable_druckman_tests(p)
 
 electro_tests = []
 obs_frame = {}
@@ -77,10 +81,10 @@ try:
 
 except:
     for p in pipe:
-        try:
-            tests,observations = get_neab.executable_druckman_tests(p)
-        except:
-            p_tests, p_observations = get_neab.get_neuron_criteria(p)
+        #try:
+        tests,observations = get_neab.executable_druckman_tests(p)
+        #except:
+        p_tests, p_observations = get_neab.get_neuron_criteria(p)
         obs_frame[p["name"]] = p_observations#, p_tests))
         test_frame[p["name"]] = p_tests#, p_tests))
     electro_path = str(os.getcwd())+'all_tests.p'
@@ -106,6 +110,47 @@ df = pd.DataFrame.from_dict(obs_frame)
 
 # In the data frame below, you can see many different cell types
 df['Hippocampus CA1 pyramidal cell']
+
+from neuronunit import tests
+from neuronunit import neuroelectro
+'''
+def neuroelectro_summary_observation(neuron, ephysprop_name, cached=False):
+    reference_data = neuroelectro.NeuroElectroSummary(
+        neuron = neuron, # Neuron type lookup using the NeuroLex ID.
+        ephysprop = {'name': ephysprop_name}, # Ephys property name in
+                                                  # NeuroElectro ontology.
+        cached = cached
+        )
+    reference_data.get_values()#quiet=not cls.verbose) # Get and verify summary data
+                                # from neuroelectro.org.
+    print(reference_data)
+    return reference_data
+
+def neuroelectro_pooled_observation(neuron, ephysprop_name, cached=False, quiet=True):
+    reference_data = neuroelectro.NeuroElectroPooledSummary(
+        neuron = neuron, # Neuron type lookup using the NeuroLex ID.
+        ephysprop = {'name': ephysprop_name}, # Ephys property name in
+                                                  # NeuroElectro ontology.
+        cached = cached
+        )
+    print(reference_data)
+    reference_data.get_values()#quiet=quiet) # Get and verify summary data
+    return reference_data
+
+def test_bi_modality(pipe,tests):
+    ne_data = []
+    ne_data_np = []
+    for t in tests:
+        ne_data.append(neuroelectro_summary_observation(pipe[0],t.ephysprop_name))
+    return ne_data
+for key, use_test in test_frame.items():
+    pass
+'''
+
+ne_data = test_bi_modality(pipe,use_test)
+#import pdb; pdb.set_trace()
+#tests.VmTest.neuroelectro_summary_observation
+#import pdb; pdb.set_trace()
 # # Tweak Izhikitich equations
 # with educated guesses based on information that is already encoded in the predefined experimental observations.
 # In otherwords use information that is readily amenable into hardcoding into equations
@@ -164,41 +209,47 @@ except:
     seeds, df = grid_search(MODEL_PARAMS['RAW'],
                             test_frame, backend=str('RAW'))
 
-MU = 12 # more than six causes a memory leak. I suspect this is PYNN
-NGEN = 12
-test_opt = {}#{str('multi_objective_izhi')+str(ga_out):ga_out}
-MODEL_PARAMS['results'] = {}
 
-for key, use_test in test_frame.items():
-    # use the best parameters found via the sparse grid search above, to inform the first generation
-    # of the GA.
-    if str('results') in MODEL_PARAMS['RAW'].keys():
-        MODEL_PARAMS['RAW'].pop('results', None)
+try:
+    with open('multi_objective_raw.p','rb') as f:
+        MODEL_PARAMS = pickle.load(f)
+    assert len(MODEL_PARAMS['results']['RAW'].keys())
+except:
+    MU = 12 # more than six causes a memory leak. I suspect this is PYNN
+    NGEN = 12
+    test_opt = {}#{str('multi_objective_izhi')+str(ga_out):ga_out}
+    MODEL_PARAMS['results'] = {}
 
-    ga_out, _ = om.run_ga(MODEL_PARAMS['RAW'], NGEN,use_test, free_params = MODEL_PARAMS['RAW'],
-                                NSGA = True, MU = MU, model_type = str('RAW'),seed_pop=seeds[key])
+    for key, use_test in test_frame.items():
+        # use the best parameters found via the sparse grid search above, to inform the first generation
+        # of the GA.
+        if str('results') in MODEL_PARAMS['RAW'].keys():
+            MODEL_PARAMS['RAW'].pop('results', None)
 
-
-
-
-    try:
-        print('optimization done, doing extra experimental work beyond the scope of the opt project')
-        dtcpop = [ p.dtc for p in ga_out['pf'] ]
-        measure_dtc_pop = opt_pair(dtcpop)
-        ga_out['measure_dtc_pop'] = measure_dtc_pop
-        print(ga_out['measure_dtc_pop'])
+        ga_out, _ = om.run_ga(MODEL_PARAMS['RAW'], NGEN,use_test, free_params = MODEL_PARAMS['RAW'],
+                                    NSGA = True, MU = MU, model_type = str('RAW'),seed_pop=seeds[key])
 
 
-    except:
-        print('failed on a new development feature, not critical to optimization')
-
-    MODEL_PARAMS['results']['RAW'] = {}
-    MODEL_PARAMS['results']['RAW'][key]  = ga_out
-
-    with open('multi_objective_raw.p','wb') as f:
-        pickle.dump(MODEL_PARAMS,f)
 
 
+        try:
+            print('optimization done, doing extra experimental work beyond the scope of the opt project')
+            dtcpop = [ p.dtc for p in ga_out['pf'] ]
+            measure_dtc_pop = opt_pair(dtcpop)
+            ga_out['measure_dtc_pop'] = measure_dtc_pop
+            print(ga_out['measure_dtc_pop'])
+
+
+        except:
+            print('failed on a new development feature, not critical to optimization')
+
+        MODEL_PARAMS['results']['RAW'] = {}
+        MODEL_PARAMS['results']['RAW'][key]  = ga_out
+
+        with open('multi_objective_raw.p','wb') as f:
+            pickle.dump(MODEL_PARAMS,f)
+
+'''
 try:
     with open('adexp_seeds.p','rb') as f:
         seeds = pickle.load(f)
@@ -207,9 +258,10 @@ try:
 except:
     seeds, df = grid_search(MODEL_PARAMS['PYNN']['EIF'],test_frame,backend=str('PYNN'))
     with open('adexp_seeds.p','rb') as f:
-        pickle.dump(f,seeds)
-MU = 6
-NGEN = 6
+        pickle.dump(seeds,f)
+'''
+MU = 5
+NGEN = 3
 try:
     with open('multi_objective_adexp.p','rb') as f:
         test_opt = pickle.load(f)
