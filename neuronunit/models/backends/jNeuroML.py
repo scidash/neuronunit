@@ -57,7 +57,13 @@ class jNeuroMLBackend(Backend):
                         paths_to_include=[lems_path],
                         skip_run=self.model.skip_run,
                         nogui=self.model.run_params['nogui'],
-                        load_saved_data=True, plot=False,
+                        load_saved_data=True,
+                        plot=False,
                         exec_in_dir=self.exec_in_dir,
+                        exit_on_fail=False,
                         verbose=self.model.run_params['v'])
+        if results is None or not results:
+            print(("No results returned: buffered error, warning, "
+                   "and notice messages follow:\n"))
+            print(self.stdout.getvalue())
         return results
