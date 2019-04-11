@@ -70,7 +70,7 @@ for index, val in enumerate(pipe_results.values()):
 
 #sci.columns = val['pop'][0].dtc.scores.keys()
 #print(sci)
-sci
+print(sci)
 
 
 # In[ ]:

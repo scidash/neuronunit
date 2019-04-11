@@ -5,13 +5,36 @@ function of input current.
 """
 
 import os
+import multiprocessing
+import copy
 
-from .base import np, pq, ncap, VmTest, scores, DELAY, DURATION
+import dask.bag as db
+
+import neuronunit
 from neuronunit.optimization.data_transport_container import DataTC
+from neuronunit.models.reduced import ReducedModel
+from .base import np, pq, ncap, VmTest, scores, AMPL, DELAY, DURATION
+
+N_CPUS = multiprocessing.cpu_count()
+TOLERANCE = 1  # Search tolerance in `self.units`, e.g. pA.
+DURATION = 1000*pq.ms
+STOP_TIME = DELAY + DURATION + 200*pq.ms
+DEFAULT_INJECTED_SQUARE_CURRENT = {'amplitude': 100.0*pq.pA,
+                                   'delay': DELAY,
+                                   'duration': DURATION}
 
 
 class RheobaseTest(VmTest):
-    """Test full widths of APs at their half-max under current injection."""
+    """Serial implementation of a binary search to test the rheobase.
+
+    Strengths: this algorithm is faster than the parallel class, present in
+    this file under important and limited circumstances: this serial algorithm
+    is faster than parallel for model backends that are able to implement
+    numba jit optimization.
+
+    Weaknesses this serial class is significantly slower, for many backend
+    implementations including raw NEURON, NEURON via PyNN, and possibly GLIF.
+    """
 
     def _extra(self):
         self.prediction = {}
@@ -21,9 +44,6 @@ class RheobaseTest(VmTest):
 
     required_capabilities = (ncap.ReceivesSquareCurrent,
                              ncap.ProducesSpikes)
-
-    params = {'injected_square_current':
-              {'amplitude': 100.0*pq.pA, 'delay': DELAY, 'duration': DURATION}}
 
     name = "Rheobase test"
     description = ("A test of the rheobase, i.e. the minimum injected current "
@@ -36,12 +56,14 @@ class RheobaseTest(VmTest):
         """Implement sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
+        model.set_run_params(t_stop=STOP_TIME)
         prediction = {'value': None}
         model.rerun = True
         try:
             units = self.observation['value'].units
         except KeyError:
             units = self.observation['mean'].units
+        # begin_rh = time.time()
         lookup = self.threshold_FI(model, units)
         sub = np.array([x for x in lookup if lookup[x] == 0])*units
         supra = np.array([x for x in lookup if lookup[x] > 0])*units
@@ -60,25 +82,21 @@ class RheobaseTest(VmTest):
             rheobase = supra.min()
         else:
             rheobase = None
-        # prediction['value'] = rheobase
         prediction['value'] = rheobase
         return prediction
 
     def threshold_FI(self, model, units, guess=None):
+        """Use binary search to generate an FI curve including rheobase."""
         lookup = {}  # A lookup table global to the function below.
 
         def f(ampl):
             if float(ampl) not in lookup:
-                current = self.params.copy()['injected_square_current']
-                # This does not do what you would expect.
-                # due to syntax I don't understand.
-                # updating the dictionary keys with new values doesn't work.
-
-                uc = {'amplitude': ampl}
-                current.update(uc)
+                current = DEFAULT_INJECTED_SQUARE_CURRENT.copy()
+                current['amplitude'] = ampl
                 model.inject_square_current(current)
                 n_spikes = model.get_spike_count()
-                if self.verbose:
+
+                if self.verbose >= 2:
                     print("Injected %s current and got %d spikes" %
                           (ampl, n_spikes))
                 lookup[float(ampl)] = n_spikes
@@ -87,7 +105,7 @@ class RheobaseTest(VmTest):
                 if n_spikes and n_spikes <= spike_counts.min():
                     self.rheobase_vm = model.get_membrane_potential()
 
-        max_iters = 45
+        max_iters = 25
 
         # evaluate once with a current injection at 0pA
         high = self.high
@@ -107,6 +125,11 @@ class RheobaseTest(VmTest):
             # computation intensive and therefore
             # a target for parellelization.
 
+            if len(supra) and len(sub):
+                delta = float(supra.min()) - float(sub.max())
+                if delta < TOLERANCE or (str(supra.min()) == str(sub.max())):
+                    break
+
             if i >= max_iters:
                 break
             # Its this part that should be like an evaluate function
@@ -125,9 +148,8 @@ class RheobaseTest(VmTest):
 
     def compute_score(self, observation, prediction):
         """Implement sciunit.Test.score_prediction."""
-        # print("%s: Observation = %s, Prediction = %s" % \
-        # (self.name,str(observation),str(prediction)))
-        if prediction['value'] is None:
+        if prediction is None or \
+           (isinstance(prediction, dict) and prediction['value'] is None):
             score = scores.InsufficientDataScore(None)
         else:
             score = super(RheobaseTest, self).\
@@ -136,245 +158,241 @@ class RheobaseTest(VmTest):
         return score
 
     def bind_score(self, score, model, observation, prediction):
+        """Bind additional attributes to the test score."""
         super(RheobaseTest, self).bind_score(score, model,
                                              observation, prediction)
         if self.rheobase_vm is not None:
             score.related_data['vm'] = self.rheobase_vm
 
 
-class RheobaseTestP(VmTest):
-    """A parallel version of test Rheobase.
+class RheobaseTestP(RheobaseTest):
+    """Parallel implementation of a binary search to test the rheobase.
 
-    Tests the full widths of APs at their half-maximum
-    under current injection.
+    Strengths: this algorithm is faster than the serial class, present in this
+    file for model backends that are not able to implement numba jit
+    optimization, which actually happens to be typical of a signifcant number
+    of backends.
     """
 
-    required_capabilities = (ncap.ReceivesSquareCurrent,
-                             ncap.ProducesSpikes)
-    DELAY = 100.0*pq.ms
-    DURATION = 1000.0*pq.ms
-    params = {'injected_square_current':
-              {'amplitude': 100.0*pq.pA, 'delay': DELAY, 'duration': DURATION}}
     name = "Rheobase test"
     description = ("A test of the rheobase, i.e. the minimum injected current "
                    "needed to evoke at least one spike.")
     units = pq.pA
     ephysprop_name = 'Rheobase'
     score_type = scores.RatioScore
+    get_rheobase_vm = True
 
     def generate_prediction(self, model):
-        """Generate a model prediction.
-
-        inputs a population of genes/alleles, the population size MU,
-        and an optional argument of a rheobase value guess outputs a population
-        of genes/alleles, a population of individual object shells,
-        ie a pickleable container for gene attributes.
-        Rationale, not every gene value will result in a model for which
-        rheobase is found, in which case that gene is discarded, however to
-        compensate for losses in gene population size, more gene samples must
-        be tested for a successful return from a rheobase search. If the tests
-        return are successful these new sampled individuals are appended to the
-        population, and then their attributes are mapped onto corresponding
-        virtual model objects.
-        """
-        def check_fix_range(dtc):
-            """Check for the rheobase value.
-
-            Inputs: lookup, A dictionary of previous current injection values
-            used to search rheobase
-            Outputs: A boolean to indicate if the correct rheobase current was
-            found and a dictionary containing the range of values used.
-            If rheobase was actually found then rather returning a boolean and
-            a dictionary, instead logical True, and the rheobase current is
-            returned.
-            given a dictionary of rheobase search values, use that
-            dictionary as input for a subsequent search.
-            """
-            import numpy as np
-            import quantities as pq
-            sub = []
-            supra = []
-            steps = []
-
-            dtc.rheobase = 0.0
-            for k, v in dtc.lookup.items():
-
-                if v == 1:
-                    # A logical flag is returned to indicate that rheobase
-                    # was found.
-                    dtc.rheobase = float(k)
-                    dtc.current_steps = 0.0
-                    dtc.boolean = True
-                    return dtc
-                elif v == 0:
-                    sub.append(k)
-                elif v > 0:
-                    supra.append(k)
-
-            sub = np.array(sub)
-            supra = np.array(supra)
-            if 0. in supra and len(sub) == 0:
-                dtc.boolean = True
-                dtc.rheobase = -1
-                # score = scores.InsufficientDataScore(None)
-
-                return dtc
-
-            if len(sub) != 0 and len(supra) != 0:
-                # this assertion would only be occur if there was a bug
-                assert sub.max() <= supra.min()
-            if len(sub) and len(supra):
-                center = list(np.linspace(sub.max(), supra.min(), 9.0))
-                center = [i for i in center if not i == sub.max()]
-                center = [i for i in center if not i == supra.min()]
-                center[int(len(center)/2)+1] = (sub.max()+supra.min())/2.0
-                steps = [i*pq.pA for i in center]
-            elif len(sub):
-                steps = list(np.linspace(sub.max(), 2*sub.max(), 9.0))
-                steps = [i for i in steps if not i == sub.max()]
-                steps = [i*pq.pA for i in steps]
-
-            elif len(supra):
-                steps = list(np.linspace(-2*(supra.min()), supra.min(), 9.0))
-                steps = [i for i in steps if not i == supra.min()]
-                steps = [i*pq.pA for i in steps]
-
-            dtc.current_steps = steps
-            dtc.rheobase = None
-            return dtc
-
-        def check_current(ampl, dtc):
-            """Get data associated with response to `ampl` current.
-
-            Inputs are an amplitude to test and a virtual model
-            output is an virtual model with an updated dictionary.
-            """
-            import neuronunit
-            LEMS_MODEL_PATH = str(neuronunit.__path__[0]) +\
-                str('/models/NeuroML2/LEMS_2007One.xml')
-            dtc.model_path = LEMS_MODEL_PATH
-
-            from neuronunit.models.reduced import ReducedModel
-            model = ReducedModel(dtc.model_path, name='vanilla',
-                                 backend=(str(dtc.backend), {'DTC': dtc}))
-            model.set_attrs(dtc.attrs)
-
-            DELAY = 100.0*pq.ms
-            DURATION = 1000.0*pq.ms
-            params = {'injected_square_current':
-                      {'amplitude': 100.0*pq.pA, 'delay': DELAY,
-                       'duration': DURATION}}
-
-            ampl = float(ampl)
-            if ampl not in dtc.lookup or len(dtc.lookup) == 0:
-                current = params.copy()['injected_square_current']
-                uc = {'amplitude': ampl}
-                current.update(uc)
-                current = {'injected_square_current': current}
-                dtc.run_number += 1
-                model.set_attrs(dtc.attrs)
-                model.inject_square_current(current)
-                dtc.previous = ampl
-                n_spikes = model.get_spike_count()
-                dtc.lookup[float(ampl)] = n_spikes
-                if n_spikes == 1:
-                    dtc.rheobase = float(ampl)
-                    dtc.boolean = True
-                    return dtc
-
-                return dtc
-            if float(ampl) in dtc.lookup:
-                return dtc
-
-        def init_dtc(dtc):
-            import numpy as np
-
-            if dtc.initiated is True:
-                # expand values in the range to accomodate for mutation.
-                # but otherwise exploit memory of this range.
-
-                if type(dtc.current_steps) is type(float):
-                    dtc.current_steps = [0.75 * dtc.current_steps,
-                                         1.25 * dtc.current_steps]
-                elif type(dtc.current_steps) is type(list):
-                    dtc.current_steps = [s * 1.25 for s in dtc.current_steps]
-                # logically unnecessary but included for readibility
-                dtc.initiated = True
-
-            if dtc.initiated is False:
-                import quantities as pq
-                dtc.boolean = False
-                steps = np.linspace(0, 250, 7.0)
-                steps_current = [i*pq.pA for i in steps]
-                dtc.current_steps = steps_current
-                dtc.initiated = True
-            return dtc
-
-        def find_rheobase(dtc):
-            import dask.bag as db
-            # import dask.array as da
-            # from distributed import client
-            # c = client.Client()
-            # from dask.diagnostics import Profiler, ResourceProfiler,\
-            # CacheProfiler
-            cnt = 0
-            assert os.path.isfile(dtc.model_path), \
-                "%s is not a file" % dtc.model_path
-            # If this it not the first pass/ first generation
-            # then assume the rheobase value found before mutation still holds
-            # until proven otherwise.
-            # dtc = check_current(model.rheobase,dtc)
-            # If its not true enter a search, with ranges informed by memory
-            cnt = 0
-            while dtc.boolean is False:
-                dtc_clones = [dtc for s in dtc.current_steps]
-                b0 = db.from_sequence(dtc.current_steps, npartitions=8)
-                b1 = db.from_sequence(dtc_clones, npartitions=8)
-                # b0.visualize(filename='rheobase_graph0.svg')
-                # b1.visualize(filename='rheobase_graph1.svg')
-                dtcpop = list(db.map(check_current, b0, b1).compute())
-                for dtc_clone in dtcpop:
-                    dtc.lookup.update(dtc_clone.lookup)
-                dtc = check_fix_range(dtc)
-                cnt += 1
-                # del b0
-                # del b1
-            # del dtc_clones
-            # del dtc.current_steps
-
-            return dtc
-
+        """Generate the test prediction."""
+        model.set_run_params(t_stop=STOP_TIME)
         dtc = DataTC()
         dtc.attrs = {}
         for k, v in model.attrs.items():
             dtc.attrs[k] = v
-        dtc = init_dtc(dtc)
-        dtc.model_path = model.orig_lems_file_path
-        dtc.backend = model.backend
-        assert os.path.isfile(dtc.model_path), \
-            "%s is not a file" % dtc.model_path
 
-        # import dask.array as da
-        # from dask.diagnostics\
-        # import Profiler, ResourceProfiler, CacheProfiler
+        # this is not a perservering assignment, of value,
+        # but rather a multi statement assertion that will be checked.
+
+        dtc = init_dtc(dtc)
+
+        if model.orig_lems_file_path:
+            dtc.model_path = model.orig_lems_file_path
+            dtc.backend = model.backend
+            assert os.path.isfile(dtc.model_path),\
+                "%s is not a file" % dtc.model_path
 
         prediction = {}
-        prediction['value'] = find_rheobase(dtc).rheobase * pq.pA
 
+        rheobase = find_rheobase(self, dtc).rheobase
+        if rheobase is not None:
+            # Something like the below commented line must happen to set the
+            # vm trace associated with the rheobase current.  One additional
+            # simulation may need to be run, unless we want one of the compute
+            # nodes to set it (when found) in either the dtc or in the calling
+            # instance of the test.
+            # self.rheobase_vm = model.get_membrane_potential()
+            prediction['value'] = float(rheobase) * pq.pA
+            if self.get_rheobase_vm:
+                print("Getting rheobase vm")
+                c = DEFAULT_INJECTED_SQUARE_CURRENT.copy()
+                c['amplitude'] = prediction['value']
+                model.inject_square_current(c)
+                self.rheobase_vm = model.get_membrane_potential()
+        else:
+            prediction = None
+            self.rheobase_vm = None
         return prediction
 
-    def compute_score(self, observation, prediction):
-        """Implement sciunit.Test.score_prediction."""
-        score = None
-        # if type(prediction['value']) is type(None):
-        #    prediction['value'] = -1 * pq.pA
-        #    return scores.InsufficientDataScore(None)
+"""
+Functions to support the parallel rheobase search.
+"""
 
-        if float(prediction['value']) <= 0.0:
-            # if rheobase is negative discard the model essentially.
-            prediction['value'] = -1 * pq.pA
-            return scores.InsufficientDataScore(None)
+def check_fix_range(dtc):
+    """Check for the rheobase value.
 
-            score = super(RheobaseTestP, self).\
-                compute_score(observation, prediction)
-        return score
+    Inputs: lookup, A dictionary of previous current injection values
+    used to search rheobase
+    Outputs: A boolean to indicate if the correct rheobase current was
+    found and a dictionary containing the range of values used.
+    If rheobase was actually found then rather returning a boolean and
+    a dictionary, instead logical True, and the rheobase current is
+    returned.
+    given a dictionary of rheobase search values, use that
+    dictionary as input for a subsequent search.
+    """
+    steps = []
+    dtc.rheobase = None
+    sub, supra = get_sub_supra(dtc.lookup)
+
+    if 0. in supra and len(sub) == 0:
+        dtc.boolean = True
+        dtc.rheobase = -1
+        return dtc
+    elif (len(sub) + len(supra)) == 0:
+        # This assertion would only be occur if there was a bug
+        assert sub.max() <= supra.min()
+    elif len(sub) and len(supra):
+        # Termination criterion
+        steps = np.linspace(sub.max(), supra.min(), N_CPUS+1)*pq.pA
+        steps = steps[1:-1]*pq.pA
+    elif len(sub):
+        steps = np.linspace(sub.max(), 2*sub.max(), N_CPUS+1)*pq.pA
+        steps = steps[1:-1]*pq.pA
+    elif len(supra):
+        steps = np.linspace(supra.min()-100, supra.min(),
+                            N_CPUS+1)*pq.pA
+        steps = steps[1:-1]*pq.pA
+
+    dtc.current_steps = steps
+    return dtc
+
+def get_sub_supra(lookup):
+    """Get subthreshold and suprathreshold current values."""
+    sub, supra = [], []
+    for current, n_spikes in lookup.items():
+        if n_spikes == 0:  # No spikes
+            sub.append(current)
+        elif n_spikes > 0:  # Some spikes
+            supra.append(current)
+
+    sub = np.array(sorted(list(set(sub))))
+    supra = np.array(sorted(list(set(supra))))
+    return sub, supra
+
+def check_current(dtc):
+    """Check the response to the proposed current and count spikes.
+
+    Inputs are an amplitude to test and a virtual model
+    output is an virtual model with an updated dictionary.
+    """
+    dtc.boolean = False
+    LEMS_MODEL_PATH = str(neuronunit.__path__[0]) + \
+        str('/models/NeuroML2/LEMS_2007One.xml')
+    dtc.model_path = LEMS_MODEL_PATH
+    model = ReducedModel(dtc.model_path, name='vanilla',
+                         backend=(dtc.backend, {'DTC': dtc}))
+
+    if dtc.backend is str('NEURON') or dtc.backend is str('jNEUROML'):
+        dtc.current_src_name = model._backend.current_src_name
+        assert dtc.current_src_name is not None
+        dtc.cell_name = model._backend.cell_name
+
+    if hasattr(model._backend, 'current_src_name'):
+        dtc.current_src_name = model._backend.current_src_name
+        assert dtc.current_src_name is not None
+        dtc.cell_name = model._backend.cell_name
+
+    ampl = float(dtc.ampl)
+    if ampl not in dtc.lookup or len(dtc.lookup) == 0:
+        current = DEFAULT_INJECTED_SQUARE_CURRENT.copy()
+        uc = {'amplitude': ampl*pq.pA}
+        current.update(uc)
+        dtc.run_number += 1
+        model.inject_square_current(current)
+        dtc.previous = ampl
+        n_spikes = model.get_spike_count()
+        dtc.lookup[float(ampl)] = n_spikes
+    return dtc
+
+def init_dtc(dtc):
+    """Exploit memory of last model in genes."""
+    # check for memory and exploit it.
+    if dtc.initiated is True:
+        dtc = check_current(dtc)
+        if dtc.boolean:
+            return dtc
+
+        else:
+            # Exploit memory of the genes to inform searchable range.
+
+            # if this model has lineage, assume it didn't mutate that
+            # far away from it's ancestor.
+            # using that assumption, on first pass, consult a very
+            # narrow range, of test current injection samples:
+            # only slightly displaced away from the ancestors rheobase
+            # value.
+
+            if isinstance(dtc.current_steps, float):
+                dtc.current_steps = [0.75 * dtc.current_steps,
+                                     1.25 * dtc.current_steps]
+            elif isinstance(dtc.current_steps, list):
+                dtc.current_steps = [s * 1.25 for s
+                                     in dtc.current_steps]
+            # logically unnecessary but included for readibility
+            dtc.initiated = True
+
+    if dtc.initiated is False:
+        dtc.boolean = False
+        steps = np.linspace(1, 250, 7.0)
+        steps_current = [i*pq.pA for i in steps]
+        dtc.current_steps = steps_current
+        dtc.initiated = True
+    return dtc
+
+def find_rheobase(self, dtc):
+    assert os.path.isfile(dtc.model_path),\
+        "%s is not a file" % dtc.model_path
+    # If this it not the first pass/ first generation
+    # then assume the rheobase value found before mutation still holds
+    # until proven otherwise.
+    # dtc = check_current(model.rheobase,dtc)
+    # If its not true enter a search, with ranges informed by memory
+    cnt = 0
+    sub = np.array([0, 0])
+    while dtc.boolean is False and cnt < 40:
+        if len(sub):
+            if sub.max() > 1500.0:
+                dtc.rheobase = None
+                dtc.boolean = False
+                return dtc
+        dtc_clones = [copy.copy(dtc) for i
+                      in range(0, len(dtc.current_steps))]
+        for i, s in enumerate(dtc.current_steps):
+            dtc_clones[i].ampl = dtc.current_steps[i]
+        dtc_clones = [d for d in dtc_clones if not np.isnan(d.ampl)]
+
+        b0 = db.from_sequence(dtc_clones, npartitions=N_CPUS)
+        dtc_clone = list(b0.map(check_current).compute())
+        for dtc in dtc_clone:
+            if dtc.boolean is True:
+                return dtc
+
+        for d in dtc_clone:
+            dtc.lookup.update(d.lookup)
+        dtc = check_fix_range(dtc)
+
+        cnt += 1
+        sub, supra = get_sub_supra(dtc.lookup)
+        if len(supra) and len(sub):
+            delta = float(supra.min()) - float(sub.max())
+            if delta < TOLERANCE or (str(supra.min()) ==
+                                     str(sub.max())):
+                dtc.rheobase = supra.min()*pq.pA
+                dtc.boolean = True
+                return dtc
+
+        if self.verbose >= 2:
+            print("Try %d: SubMax = %s; SupraMin = %s" %
+                  (cnt, sub.max() if len(sub) else None,
+                   supra.min() if len(supra) else None))
+    return dtc

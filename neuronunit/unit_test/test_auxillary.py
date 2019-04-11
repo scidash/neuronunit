@@ -19,10 +19,11 @@ def grid_points():
     with open(electro_path,'rb') as f:
         electro_tests = pickle.load(f)
     from neuronunit.optimization import exhaustive_search
-    grid_points = exhaustive_search.create_grid(npoints = npoints,nparams = nparams)
+    grid_points = exhaustive_search.create_grid(npoints = npoints,provided_keys=['a','b','vr'])
     import dask.bag as db
     b0 = db.from_sequence(grid_points[0:2], npartitions=8)
-    dtcpop = list(db.map(exhaustive_search.update_dtc_grid,b0).compute())
+    es = exhaustive_search.update_dtc_grid
+    dtcpop = list(b0.map(es).compute())
     assert dtcpop is not None
     return dtcpop
 
@@ -71,8 +72,17 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         self.rheobase = self.dtc.rheobase
         from neuronunit.models.reduced import ReducedModel
         from neuronunit.optimization import get_neab
-        self.standard_model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend='NEURON')
-        self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend='NEURON')
+        self.standard_model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend='RAW')
+        self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend='RAW')
+
+    def check_dif(pipe_old,pipe_new):
+        bool = False
+        for key, value in pipe_results.items():
+            if value != pipe_new[key]:
+                bool = True
+            print(value,pipe_new[key])
+
+        return bool
 
     def get_observation(self, cls):
         print(cls.__name__)

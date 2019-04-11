@@ -4,6 +4,8 @@ Testing for neuron and ion channel models
 using the SciUnit framework.
 """
 
+from __future__ import print_function
+from __future__ import unicode_literals
 import os
 import platform
 
