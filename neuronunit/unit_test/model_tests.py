@@ -1,8 +1,6 @@
 """Tests of NeuronUnit model classes"""
 
-
 from .base import *
-
 
 class ReducedModelTestCase(unittest.TestCase):
     """Test instantiation of the reduced model"""
@@ -10,9 +8,9 @@ class ReducedModelTestCase(unittest.TestCase):
     def setUp(self):
         from neuronunit.models.reduced import ReducedModel
         self.ReducedModel = ReducedModel
-        
+
     def runTest(self):
-        pass # Needed so that Python<3 can access the path attribute.  
+        pass # Needed so that Python<3 can access the path attribute.
 
     @property
     def path(self):
@@ -28,6 +26,16 @@ class ReducedModelTestCase(unittest.TestCase):
     def test_reducedmodel_neuron(self):
         model = self.ReducedModel(self.path, backend='NEURON')
 
+
+class ExtraCapabilitiesTestCase(NotebookTools,
+                           unittest.TestCase):
+    """Testing extra capability checks"""
+
+    path = '.'
+
+    def test_receives_current(self):
+        self.do_notebook('nml_extra_capability_check')
+        
 
 if __name__ == '__main__':
     unittest.main()

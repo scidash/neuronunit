@@ -118,6 +118,7 @@ class Druckmann2013AP:
 
         return self.peak['value'], self.peak['time']
 
+
     def get_trough(self):
         peak_v, peak_t = self.get_peak()
 
@@ -133,6 +134,10 @@ class Druckmann2013AP:
         return value, time
 
 def isolate_code_block(threshold_crosses,start_time,dvdt_threshold_crosses,dvdt_zero_crosses,vm):
+    '''
+    The introduction of this function is was not syntactically necissated. The reason for this functions existence 
+    is to support code modularity.
+    '''
     threshold_crosses = threshold_crosses[np.where(threshold_crosses > start_time)]
     dvdt_threshold_crosses = dvdt_threshold_crosses[np.where(dvdt_threshold_crosses > start_time)]
     dvdt_zero_crosses = dvdt_zero_crosses[np.where(dvdt_zero_crosses > start_time)]
@@ -240,8 +245,7 @@ class Druckmann2013Test(VmTest):
 
     def current_length(self):
         return self.params['injected_square_current']['duration']
-    '''
-    #@profile
+
     def get_APs(self, model):
         """
         Spikes were detected by a crossing of a voltage threshold (-20 mV).
@@ -256,8 +260,7 @@ class Druckmann2013Test(VmTest):
         start_time = self.params['injected_square_current']['delay'].rescale('sec')
         end_time = start_time + self.params['injected_square_current']['duration'].rescale('sec')
         vm = AnalogSignal(vm.magnitude[np.where(vm_times <= end_time)], sampling_period=vm.sampling_period, units=vm.units)
-
-	try:
+        try:
             dvdt = np.array(np.append([0], get_diff(vm, axis=0))) * pq.mV / vm.sampling_period
         except:
             dvdt = np.array(np.append([0], get_diff(vm))) * pq.mV / vm.sampling_period
@@ -352,66 +355,6 @@ class Druckmann2013Test(VmTest):
             self.APs.append(Druckmann2013AP(ap_waveforms[i], ap_beginnings[i]))
 
         return self.APs
-        '''
-        threshold_crosses = threshold_crosses[np.where(threshold_crosses > start_time)]
-        dvdt_threshold_crosses = dvdt_threshold_crosses[np.where(dvdt_threshold_crosses > start_time)]
-        dvdt_zero_crosses = dvdt_zero_crosses[np.where(dvdt_zero_crosses > start_time)]
-
-        # Normally, there should be at least as many dvdt threshold crosses as there are v threshold crosses
-        if len(dvdt_threshold_crosses) < len(threshold_crosses):
-            dvdt_threshold_crosses = threshold_crosses # for slowly rising APs (e.g. muscle) use the vm threshold as the beginning
-
-        ap_beginnings = []
-        prev_beginning = start_time
-        prev_threshold = start_time
-
-        for ti, curr_thresh in enumerate(threshold_crosses):
-            prev_dvdt_zero = dvdt_zero_crosses[np.where(dvdt_zero_crosses < curr_thresh)]
-
-            if len(prev_dvdt_zero) == 0:
-                prev_dvdt_zero = start_time
-            else:
-                prev_dvdt_zero = prev_dvdt_zero[-1]
-
-            earliest_dvdt_thresh_since_prev_ap = dvdt_threshold_crosses[
-                np.where((dvdt_threshold_crosses > prev_beginning) & (dvdt_threshold_crosses > prev_threshold) & (dvdt_threshold_crosses > prev_dvdt_zero))
-            ]
-
-            if len(earliest_dvdt_thresh_since_prev_ap) != 0:
-                earliest_dvdt_thresh_since_prev_ap = earliest_dvdt_thresh_since_prev_ap[0]
-            else:
-                if ti == 0:
-                    earliest_dvdt_thresh_since_prev_ap = prev_beginning
-                else:
-                    raise Exception("Did not find a dvdt threshold crossing since previous AP")
-
-            ap_beginnings.append(earliest_dvdt_thresh_since_prev_ap)
-
-            prev_beginning = earliest_dvdt_thresh_since_prev_ap
-            prev_threshold = curr_thresh
-
-        # The number of ap beginnings should match the number aps detected
-        assert len(np.unique(ap_beginnings)) == len(threshold_crosses)
-
-        ap_waveforms = []
-        vm_mag = vm.magnitude
-        vm_times = vm.times
-
-        vm_chopped = np.split(vm_mag, np.isin(vm_times, ap_beginnings).nonzero()[0])
-
-        assert len(vm_chopped) == len(threshold_crosses)+1
-
-        for i, b in enumerate(ap_beginnings):
-            if i != len(ap_beginnings)-1:
-                waveform = vm_chopped[i+1]
-            else:
-                # Keep up to 100ms of the last AP
-                waveform = vm_mag[np.where((vm_times >= b) & (vm_times < b + 100.0*pq.ms))]
-
-            waveform = AnalogSignal(waveform, units=vm.units, sampling_rate=vm.sampling_rate)
-
-            ap_waveforms.append(waveform)
-        '''
 
 
         #if debug:
@@ -422,7 +365,7 @@ class Druckmann2013Test(VmTest):
             # plt.plot(dvdt_threshold_crosses, len(dvdt_threshold_crosses) * [12], "bo")
             # plt.plot(ap_beginnings, [13] * len(ap_beginnings), 'go')
             # plt.show()
-
+    '''
 
     def get_ISIs(self, model=None):
         aps = self.get_APs(model)

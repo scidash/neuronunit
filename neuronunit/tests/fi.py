@@ -115,7 +115,8 @@ class RheobaseTest(VmTest):
                     current = self.params.copy()['injected_square_current']
                 except:
                     current = self.params
-
+                    #import pdb
+                    #pdb.set_trace()
                 uc = {'amplitude':ampl}
                 current.update(uc)
 
@@ -407,7 +408,6 @@ class RheobaseTestP(VmTest):
                     d.use_diff = None
                     d.use_diff = use_diff
                 dtc_clones = [ d for d in dtc_clones if not np.isnan(d.ampl) ]
-
                 try:
                     b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
                     dtc_clone = list(b0.map(check_current).compute())
