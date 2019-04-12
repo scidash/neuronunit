@@ -39,9 +39,9 @@ import requests
 def get_wave_forms(cell_id):
     #try:
     url = str("https://www.neuroml-db.org/api/model?id=")+cell_id
-    print(url)
+    #print(url)
     waveids = requests.get(url)
-    print(waveids.text,type(waveids.text))
+    #print(waveids.text,type(waveids.text))
     waveids = json.loads(waveids.text)
     #except:
     #os.system("wget https://www.neuroml-db.org/api/model?id=NMLCL001129")
