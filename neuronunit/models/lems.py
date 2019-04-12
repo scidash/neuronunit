@@ -36,6 +36,7 @@ class LEMSModel(RunnableModel):
         self.set_default_run_params(nogui=True)
         self.extra_capability_checks[cap.ReceivesSquareCurrent] =\
             'has_pulse_generator'
+        self.use_default_run_params()
 
     def get_nml_paths(self, lems_tree=None, absolute=True, original=False):
         """Get all NeuroML file paths associated with the model."""

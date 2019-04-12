@@ -256,7 +256,7 @@ class NEURONBackend(Backend):
                 show_plot_already=False,
                 exec_in_dir=self.neuron_model_dir,
                 verbose=verbose,
-                exit_on_fail=True)
+                exit_on_fail=False)
             # use a different process to call NEURONS compiler nrnivmodl in the
             # background if the NEURON_file_path does not yet exist.
             subprocess.run(["cd %s; nrnivmodl" % self.neuron_model_dir],

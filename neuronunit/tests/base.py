@@ -3,10 +3,11 @@
 No classes here meant for direct use in testing.
 """
 
+import math
 from types import MethodType
 
-import quantities as pq
 import numpy as np
+import quantities as pq
 
 import sciunit
 import sciunit.scores as scores
@@ -42,13 +43,18 @@ class VmTest(sciunit.Test):
 
     ephysprop_name = ''
 
-    observation_schema = [{'mean': {'units': True, 'required': True},
-                           'std': {'units': True, 'min': 0, 'required': True},
-                           'n': {'type': 'integer', 'min': 1}},
-                          {'mean': {'units': True, 'required': True},
-                           'sem': {'units': True, 'min': 0, 'required': True},
-                           'n': {'type': 'integer', 'min': 1,
-                                 'required': True}}]
+    observation_schema = [("Mean, Standard Deviation, N",
+                           {'mean': {'units': True, 'required': True},
+                            'std': {'units': True, 'min': 0, 'required': True},
+                            'n': {'type': 'integer', 'min': 1}}),
+                          ("Mean, Standard Error, N",
+                           {'mean': {'units': True, 'required': True},
+                            'sem': {'units': True, 'min': 0, 'required': True},
+                            'n': {'type': 'integer', 'min': 1,
+                                  'required': True}})]
+
+    params_schema = {'dt': {'type': 'time', 'required': False},
+                     'tmax': {'type': 'time', 'min': 0, 'required': False}}
 
     def _extra(self):
         pass
@@ -123,7 +129,6 @@ class VmTest(sciunit.Test):
         model.inject_square_current(self.params['injected_square_current'])
 
         mp = model.results['vm']
-
         if np.any(np.isnan(mp)) or np.any(np.isinf(mp)):
             return False
 
