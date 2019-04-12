@@ -140,7 +140,7 @@ class Druckmann2013BaseTestCase:
             }
 
             if predicted is not None and expected is not None:
-                self.assertTrue(predicted - expected * units <= 0.001 * units)
+                self.assertAlmostEqual(predicted, expected * units, delta=0.001)
             else:
                 self.assertTrue(predicted == expected)
 
@@ -799,48 +799,3 @@ class Model11TestCase(Druckmann2013BaseTestCase.BaseTest):
 
 if __name__ == '__main__':
     unittest.main()
-
-# tc = Model11TestCase()
-# tc.setUp()
-# tc.runTest()
-
-# tc.print_predicted()
-# tc.test_set[0]['test'].generate_prediction(tc.model)
-#
-# from matplotlib import pyplot as plt
-#
-# fig = plt.figure()
-#
-# plt.subplot(2, 3, 1)
-# plt.plot(tc.model.vm.times, tc.model.vm)
-# plt.xlim(0, tc.model.vm.times[-1].magnitude)
-#
-# plt.subplot(2, 3, 2)
-# plt.plot(tc.model.vm.times, tc.model.vm)
-# plt.xlim(0.990, 1.200)
-#
-# aps = tc.test_set[0]['test'].get_APs(tc.model)
-#
-# if len(aps) > 0:
-#     plt.subplot(2, 3, 3)
-#     plt.plot(tc.model.vm.times, tc.model.vm)
-#     plt.xlim(aps[0].get_beginning()[1].rescale(sec), aps[0].get_beginning()[1].rescale(sec)+10*ms)
-#
-# if len(aps) > 1:
-#     plt.subplot(2, 3, 4)
-#     plt.plot(tc.model.vm.times, tc.model.vm)
-#     plt.xlim(aps[1].get_beginning()[1].rescale(sec), aps[1].get_beginning()[1].rescale(sec) + 10 * ms)
-#
-# tc.test_set[16]['test'].generate_prediction(tc.model)
-# plt.subplot(2, 3, 5)
-# plt.plot(tc.model.vm.times, tc.model.vm)
-# plt.xlim(0, tc.model.vm.times[-1].magnitude)
-#
-# tc.test_set[31]['test'].generate_prediction(tc.model)
-# plt.subplot(2, 3, 6)
-# plt.plot(tc.model.vm.times, tc.model.vm)
-# plt.xlim(0.990, 1.200)
-#
-# plt.show()
-
-
