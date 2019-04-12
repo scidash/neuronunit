@@ -685,8 +685,8 @@ class Model9TestCase(Druckmann2013BaseTestCase.BaseTest):
                                    0.0, # InitialAccommodationMeanTest
                    -16.666666666666664, # SSAccommodationMeanTest
                   -0.11554816047328524, # AccommodationRateToSSTest
-                    -101.2734178230418, # AccommodationAtSSMeanTest
-                    27.555219323339742, # AccommodationRateMeanAtSSTest
+                   -101.25309994159115, # AccommodationAtSSMeanTest
+                           27.71597275, # AccommodationRateMeanAtSSTest
                      0.623654001611502, # ISICVTest
                     2.6700000000005275, # ISIMedianTest
                     14.062499999992598, # ISIBurstMeanChangeTest
