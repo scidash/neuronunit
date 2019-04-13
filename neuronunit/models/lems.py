@@ -19,6 +19,10 @@ from sciunit.models.runnable import RunnableModel
 class LEMSModel(RunnableModel):
     """A generic LEMS model."""
 
+    extra_capability_checks = {
+        cap.ReceivesSquareCurrent: 'has_pulse_generator'
+    }
+
     def __init__(self, LEMS_file_path, name=None,
                  backend=None, attrs=None):
         """Instantiate a LEMS model."""
@@ -34,8 +38,6 @@ class LEMSModel(RunnableModel):
         super(LEMSModel, self).__init__(name, backend=backend, attrs=attrs)
         self.set_default_run_params(**pynml.DEFAULTS)
         self.set_default_run_params(nogui=True)
-        self.extra_capability_checks[cap.ReceivesSquareCurrent] =\
-            'has_pulse_generator'
         self.use_default_run_params()
 
     def get_nml_paths(self, lems_tree=None, absolute=True, original=False):
