@@ -10,10 +10,6 @@
 
 # # Import libraries
 # To keep the standard running version of minimal and memory efficient, not all available packages are loaded by default. In the cell below I import a mixture common python modules, and custom developed modules associated with NeuronUnit (NU) development
-#!pip install dask distributed seaborn
-#!bash after_install.sh
-
-
 # goals.
 # given https://www.nature.com/articles/nn1352
 # Goal is based on this. Don't optimize to a singular point, optimize onto a cluster.
@@ -26,7 +22,6 @@ import os
 import pickle
 import pandas as pd
 from neuronunit.tests.fi import RheobaseTestP
-#from neuronunit.optimisation.model_parameters import reduced_dict, reduced_cells
 from neuronunit.optimisation import optimisation_management as om
 from sciunit import scores# score_type
 
@@ -38,7 +33,6 @@ from neuronunit.models.reduced import ReducedModel
 from neuronunit.optimisation.model_parameters import path_params
 LEMS_MODEL_PATH = path_params['model_path']
 list_to_frame = []
-#from neuronunit.tests.fi import RheobaseTestP
 import copy
 from sklearn.model_selection import ParameterGrid
 from neuronunit.models.interfaces import glif
@@ -46,15 +40,11 @@ import matplotlib.pyplot as plt
 
 # # The Izhiketich model is instanced using some well researched parameter sets.
 # First lets get the points in parameter space, that Izhikich himself has published about. These points are often used by the open source brain project to establish between model reproducibility. The itial motivating factor for choosing these points as constellations, of all possible parameter space subsets, is that these points where initially tuned and used as best guesses for matching real observed experimental recordings.
-
-#explore_param = {k:(np.min(v),np.max(v)) for k,v in reduced_dict.items()}
-
 # ## Get the experimental Data pertaining to four different classes or neurons, that can constrain models.
 # Next we get some electro physiology data for four different classes of cells that are very common targets of scientific neuronal modelling. We are interested in finding out what are the most minimal, and detail reduced, low complexity model equations, that are able to satisfy
 # Below are some of the data set ID's I used to query neuroelectro.
 # To save time for the reader, I prepared some data earlier to save time, and saved the data as a pickle, pythons preferred serialisation format.
 # The interested reader can find some methods for getting cell specific ephys data from neuroelectro in a code file (neuronunit/optimisation/get_neab.py)
-
 
 purkinje ={"id": 18, "name": "Cerebellum Purkinje cell", "neuron_db_id": 271, "nlex_id": "sao471801888"}
 fi_basket = {"id": 65, "name": "Dentate gyrus basket cell", "neuron_db_id": None, "nlex_id": "nlx_cell_100201"}
@@ -88,18 +78,11 @@ except:
         pickle.dump((obs_frame,test_frame),f)
 
 
-# # Cast the tabulatable data to pandas data frame
-# There are many among us who prefer potentially tabulatable data to be encoded in pandas data frame.
-
-# idea something like:
-# test_frame['Olfactory bulb (main) mitral cell'].insert(0,test_frame['Cerebellum Purkinje cell'][0])
-
 for k,v in test_frame.items():
    if "Olfactory bulb (main) mitral cell" not in k:
        pass
    if "Olfactory bulb (main) mitral cell" in k:
        pass
-       #v[0] = RheobaseTestP(obs['Rheobase'])
 df = pd.DataFrame.from_dict(obs_frame)
 
 
@@ -121,36 +104,6 @@ from neuronunit.optimisation.optimisation_management import opt_pair
 
 MODEL_PARAMS = model_params.MODEL_PARAMS
 MODEL_PARAMS['results'] = {}
-
-
-# # The Izhiketich model is instanced using some well researched parameter sets.
-# First lets get the points in parameter space, that Izhikich himself has published about. These points are often used by the open source brain project to establish between model reproducibility. The itial motivating factor for choosing these points as constellations, of all possible parameter space subsets, is that these points where initially tuned and used as best guesses for matching real observed experimental recordings.
-
-#explore_param = {k:(np.min(v),np.max(v)) for k,v in reduced_dict.items()}
-
-
-# # Tweak Izhikitich equations
-# with educated guesses based on information that is already encoded in the predefined experimental observations.
-# In otherwords use information that is readily amenable into hardcoding into equations
-# Select out the 'Neocortex pyramidal cell layer 5-6' below, as a target for optimisation
-'''
-free_params = ['a','b','k','c','C','d','vPeak','vr','vt']
-hc_ = reduced_cells['RS']
-hc_['vr'] = -65.2261863636364
-hc_['vPeak'] = hc_['vr'] + 86.364525297619
-explore_param['C'] = (hc_['C']-20,hc_['C']+20)
-explore_param['vr'] = (hc_['vr']-5,hc_['vr']+5)
-use_test = test_frame["Neocortex pyramidal cell layer 5-6"]
-
-test_opt = {}
-with open('data_dump.p','wb') as f:
-    pickle.dump(test_opt,f)
-use_test[0].observation
-rtp = RheobaseTestP(use_test[0].observation)
-use_test[0] = rtp
-reduced_cells.keys()
-'''
-
 
 try:
     with open('Izh_seeds.p','rb') as f:
@@ -177,20 +130,6 @@ for key, use_test in test_frame.items():
 
     ga_out, _ = om.run_ga(MODEL_PARAMS['RAW'], NGEN,use_test, free_params = MODEL_PARAMS['RAW'],
                                 NSGA = True, MU = MU, model_type = str('RAW'),seed_pop=seeds[key])
-
-
-
-
-    try:
-        print('optimization done, doing extra experimental work beyond the scope of the opt project')
-        dtcpop = [ p.dtc for p in ga_out['pf'] ]
-        measure_dtc_pop = opt_pair(dtcpop)
-        ga_out['measure_dtc_pop'] = measure_dtc_pop
-        print(ga_out['measure_dtc_pop'])
-
-
-    except:
-        print('failed on a new development feature, not critical to optimization')
 
     MODEL_PARAMS['results']['RAW'] = {}
     MODEL_PARAMS['results']['RAW'][key]  = ga_out
@@ -220,16 +159,6 @@ except:
         MODEL_PARAMS['RAW'].pop('results', None)
 
         ga_out, _ = om.run_ga(MODEL_PARAMS['PYNN']['EIF'],NGEN,use_test,free_params=MODEL_PARAMS['PYNN']['EIF'].keys(), NSGA = True, MU = MU, model_type = str('PYNN'))#,seed_pop=seed)
-
-        try:
-            print('optimization done, doing extra experimental work beyond the scope of the opt project')
-            dtcpop = [ p.dtc for p in ga_out['pf'] ]
-            measure_dtc_pop = opt_pair(dtcpop)
-            ga_out['measure_dtc_pop'] = measure_dtc_pop
-            print(ga_out['measure_dtc_pop'])
-        except:
-            print('failed on a new development feature, not critical to optimization')
-
 
         MODEL_PARAMS['results']['PYNN'][key]  = ga_out
         with open('multi_objective_adexp.p','wb') as f:
@@ -274,15 +203,6 @@ except:
         print(grouped_tests)
         MODEL_PARAMS['GLIF'] = test_keyed_MODEL_PARAMS[k]
         ga_out, _ = om.run_ga(test_keyed_MODEL_PARAMS[k],NGEN,use_test,free_params=test_keyed_MODEL_PARAMS[k].keys(), NSGA = True, MU = MU, model_type = str('GLIF'),seed_pop=seed)
-
-        try:
-            print('optimization done, doing extra experimental work beyond the scope of the opt project')
-            dtcpop = [ p.dtc for p in ga_out['pf'] ]
-            measure_dtc_pop = opt_pair(dtcpop)
-            ga_out['measure_dtc_pop'] = measure_dtc_pop
-            print(ga_out['measure_dtc_pop'])
-        except:
-            print('failed on a new development feature, not critical to optimization')
 
         MODEL_PARAMS['GLIF']['results'][key] = ga_out
         with open('multi_objective_glif.p','wb') as f:
