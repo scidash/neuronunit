@@ -752,10 +752,12 @@ def run_ga(explore_edges, max_ngen, test, free_params = None, hc = None, NSGA = 
     #   - DEAP population type list seed_pop pertains to starting the GA, with an informed guess of where to look. 
     #     For example if you did a coarse grained grid search first, and want the first genes to look in the location
     #     of the coarse grained optima first.
-
-use_test is a list of NU tests, or a singular one.
-    # seed_pop can be used to
-    # to use existing models, that are good guesses at optima, as starting points for optimization.
+    #   - use_test is a list of NU tests (a NeuronUnit tests suite), or a singular test.
+    #  Outputs:
+    #   - A dictionary of GA optimization results
+    #   - stats,     
+    #   - and the pareto-front the paretofront (key 'pf')
+ 
     # https://stackoverflow.com/questions/744373/circular-or-cyclic-imports-in-python
     # These imports need to be defined with local scope to avoid circular importing problems
     # Try to fix local imports later.
@@ -782,13 +784,6 @@ use_test is a list of NU tests, or a singular one.
 
         DO.seed_pop = seed_pop
         DO.setup_deap()
-    # DO.population = None
-    # DO.population = DO.grid_init()
-    # DO.boundary_dict = ss
-    # DO.population[0].ss = ss
-    # DO.ss = ss
-
-    # This run condition should not need same arguments as above.
     ga_out = DO.run(max_ngen = max_ngen)#offspring_size = MU, )
     return ga_out, DO
 
