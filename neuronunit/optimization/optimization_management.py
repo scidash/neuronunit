@@ -1,6 +1,4 @@
-#import matplotlib # Its not that this file is responsible for doing plotting, but it calls many modules that are, such that it needs to pre-empt
-# setting of an appropriate backend.
-#matplotlib.use('agg')
+
 
 import numpy as np
 import dask.bag as db
@@ -21,7 +19,6 @@ from pyneuroml import pynml
 
 from deap import base
 from neuronunit.optimization.data_transport_container import DataTC
-#from neuronunit.models.interfaces import glif
 
 
 import os
