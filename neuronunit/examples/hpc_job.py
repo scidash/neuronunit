@@ -38,6 +38,11 @@ from sklearn.model_selection import ParameterGrid
 from neuronunit.models.interfaces import glif
 import matplotlib.pyplot as plt
 
+from neuronunit.optimisation import model_parameters as model_params
+from neuronunit.optimisation.optimisation_management import inject_and_plot, cluster_tests
+#from neuronunit.optimisation.optimisation_management import opt_pair
+
+
 # # The Izhiketich model is instanced using some well researched parameter sets.
 # First lets get the points in parameter space, that Izhikich himself has published about. These points are often used by the open source brain project to establish between model reproducibility. The itial motivating factor for choosing these points as constellations, of all possible parameter space subsets, is that these points where initially tuned and used as best guesses for matching real observed experimental recordings.
 # ## Get the experimental Data pertaining to four different classes or neurons, that can constrain models.
@@ -87,20 +92,7 @@ df = pd.DataFrame.from_dict(obs_frame)
 
 
 
-# In the data frame below, you can see many different cell types
 df['Hippocampus CA1 pyramidal cell']
-# # Tweak Izhikitich equations
-# with educated guesses based on information that is already encoded in the predefined experimental observations.
-# In otherwords use information that is readily amenable into hardcoding into equations
-# Select out the 'Neocortex pyramidal cell layer 5-6' below, as a target for optimisation
-
-#!pip install lazyarray
-clustered_tests = pickle.load(open('clustered_tests.p','rb'))
-grouped_tests = clustered_tests['gtc']
-grouped_testsn = clustered_tests['gtn']
-from neuronunit.optimisation import model_parameters as model_params
-from neuronunit.optimisation.optimisation_management import inject_and_plot, cluster_tests
-from neuronunit.optimisation.optimisation_management import opt_pair
 
 MODEL_PARAMS = model_params.MODEL_PARAMS
 MODEL_PARAMS['results'] = {}
