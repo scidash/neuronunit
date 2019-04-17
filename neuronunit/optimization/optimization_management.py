@@ -445,13 +445,27 @@ def update_dtc_pop(pop, td):
 
 
 def run_ga(explore_edges, max_ngen, test, free_params = None, hc = None, NSGA = None, MU = None, seed_pop = None, model_type = str('RAW')):
-    # seed_pop can be used to
-    # to use existing models, that are good guesses at optima, as starting points for optimization.
-    # https://stackoverflow.com/questions/744373/circular-or-cyclic-imports-in-python
-    # These imports need to be defined with local scope to avoid circular importing problems
-    # Try to fix local imports later.
     from bluepyopt.deapext.optimisations import SciUnitOptimization
-
+    # Inputs:	
+    #   - dict MODEL_PARAMS is a dictionary of model parameter ranges (the boundaries that define regions where parameters are free to vary).
+    #     You may not want all the parameters to be allowed to vary, so the optinal key word argument: free_params 
+    #     specifies the free_parameters, and every parameter not in that list is held constant.
+    #   - dict free_params takes a list of the dictionary keys for the parameters that are free to vary.
+    #   - int MU is the population size and 
+    #   - int NGEN is the number of generations to evaluate.
+    #     MU*NGEN = total maximum number of models that could be evaluated, although DEAP is smart and 
+    #     doesn't necessarily evaluate every model in MU*NGEN
+    #   - Boolean NSGA tells the optimizer to use the Pareto Front based approach you describe.
+    #   - string Model_type tells the Optimizer what simulator backend model combinartion to use. 
+    #   - DEAP population type list seed_pop pertains to starting the GA, with an informed guess of where to look. 
+    #     For example if you did a coarse grained grid search first, and want the first genes to look in the location
+    #     of the coarse grained optima first.
+    #   - use_test is a list of NU tests (a NeuronUnit tests suite), or a singular test.
+    #  Outputs:
+    #   - A dictionary of GA optimization results
+    #   - stats,     
+    #   - and the pareto-front the paretofront (key 'pf')
+    
     ss = {}
     for k in free_params:
         ss[k] = explore_edges[k]
@@ -622,31 +636,14 @@ def test_runner(pop,td,tests,single_spike=True):
 
     else:
         pop, dtcpop = init_pop(pop, td, tests)
-    '''
-    xargs = zip(pop,dtcpop,repeat(tests),repeat(td))
-    bag = db.from_sequence(xargs, npartitions = npartitions)
-    results = list(bag.map(parallel_route).compute())
-    pop = [r[0] for r in results]
-    dtcpop = [r[1] for r in results]
-    '''
+
     pop,dtcpop = parallel_route(pop,dtcpop,tests,td)
     for ind,d in zip(pop,dtcpop):
         ind.dtc = d
         if not hasattr(ind,'fitness'):
             ind.fitness = copy.copy(pop[0].fitness)
     return pop,dtcpop
-    '''
-    if isinstance(pop, Iterable) and isinstance(dtcpop,Iterable):
-        for p,d in zip(pop,dtcpop):
-            if type(p) is type(None) or type(d) is type(None):
-                import pdb
-                pdb.set_trace()
 
-    #serial route:
-    if not isinstance(pop, Iterable):# and not isinstance(dtcpop,Iterable):
-        pop,dtcpop = serial_route(pop,td,tests)
-        print('serial badness')
-    '''
 
 def update_deap_pop(pop, tests, td, backend = None,hc = None):
     '''
