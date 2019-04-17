@@ -438,28 +438,25 @@ def update_dtc_pop(pop, td):
         assert exec('dtcpop[0].backend is '+str(_backend)+')')
     return dtcpop
 
-
-
-
 def run_ga(explore_edges, max_ngen, test, free_params = None, hc = None, NSGA = None, MU = None, seed_pop = None, model_type = str('RAW')):
     from bluepyopt.deapext.optimisations import SciUnitOptimization
     # Inputs:	
-    #   - dict MODEL_PARAMS is a dictionary of model parameter ranges (the boundaries that define regions where parameters are free to vary).
+    #   - MODEL_PARAMS, is a dictionary of model parameter ranges (the boundaries that define regions where parameters are free to vary).
     #     You may not want all the parameters to be allowed to vary, so the optinal key word argument: free_params 
     #     specifies the free_parameters, and every parameter not in that list is held constant.
-    #   - dict free_params takes a list of the dictionary keys for the parameters that are free to vary.
-    #   - int MU is the population size and 
-    #   - int NGEN is the number of generations to evaluate.
+    #   - free_params is type dictionary it takes a list of the dictionary keys for the parameters that are free to vary.
+    #   - MU type int is the population size and 
+    #   - NGEN type int, is the number of generations to evaluate.
     #     MU*NGEN = total maximum number of models that could be evaluated, although DEAP is smart and 
     #     doesn't necessarily evaluate every model in MU*NGEN
-    #   - Boolean NSGA tells the optimizer to use the Pareto Front based approach you describe.
+    #   - NSGA, type Boolean tells the optimizer to use the Pareto Front based approach (alternative is select Best).
     #   - string Model_type tells the Optimizer what simulator backend model combinartion to use. 
     #   - DEAP population type list seed_pop pertains to starting the GA, with an informed guess of where to look. 
     #     For example if you did a coarse grained grid search first, and want the first genes to look in the location
     #     of the coarse grained optima first.
     #   - use_test is a list of NU tests (a NeuronUnit tests suite), or a singular test.
     #  Outputs:
-    #   - A dictionary of GA optimization results
+    #   - ga_out a dictionary of GA optimization results
     #   - stats,     
     #   - and the pareto-front the paretofront (key 'pf')
     
