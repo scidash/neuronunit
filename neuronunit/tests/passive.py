@@ -30,7 +30,7 @@ class TestPulseTest(VmTest):
 
     def generate_prediction(self, model):
         """Implement sciunit.Test.generate_prediction."""
-        self.condition_model()
+        self.condition_model(model)
         model.inject_square_current(self.params['injected_square_current'])
         vm = model.get_membrane_potential()
         i = self.params['injected_square_current']

@@ -59,7 +59,7 @@ class RheobaseTest(VmTest):
         """Implement sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
-        self.condition_model()
+        self.condition_model(model)
         prediction = {'value': None}
         try:
             units = self.observation['value'].units
@@ -189,7 +189,7 @@ class RheobaseTestP(RheobaseTest):
 
     def generate_prediction(self, model):
         """Generate the test prediction."""
-        self.condition_model()
+        self.condition_model(model)
         dtc = DataTC()
         dtc.attrs = {}
         for k, v in model.attrs.items():
@@ -348,7 +348,7 @@ def init_dtc(dtc):
 
     if dtc.initiated is False:
         dtc.boolean = False
-        steps = np.linspace(1, 250, 7.0)
+        steps = np.linspace(1, 250, 7)
         steps_current = [i*pq.pA for i in steps]
         dtc.current_steps = steps_current
         dtc.initiated = True

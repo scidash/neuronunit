@@ -168,7 +168,7 @@ class ISITest(VmTest):
         st = model.get_spike_train()
         isis = isi(st)
         value = float(np.mean(isis))*1000.0*pq.ms
-        prediction = {'value': alue}
+        prediction = {'value': value}
         return prediction
 
     def compute_score(self, observation, prediction):
