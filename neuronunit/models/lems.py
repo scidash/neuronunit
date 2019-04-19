@@ -1,18 +1,21 @@
 """Model classes for NeuronUnit."""
 
 import os
-try:
-    from tempfile import TemporaryDirectory
-except ImportError:
-    from backports.tempfile import TemporaryDirectory
 import shutil
+try:
+    from urllib.parse import urljoin
+except ImportError:
+    from urllib import urljoin
 
+import requests
+import validators
 import quantities as pq
 from lxml import etree
 from neuroml import nml
 
 import neuronunit.capabilities as cap
 from pyneuroml import pynml
+from sciunit.utils import TemporaryDirectory
 from sciunit.models.runnable import RunnableModel
 
 
@@ -23,9 +26,12 @@ class LEMSModel(RunnableModel):
         cap.ReceivesSquareCurrent: 'has_pulse_generator'
     }
 
-    def __init__(self, LEMS_file_path, name=None,
+    def __init__(self, LEMS_file_path_or_url, name=None,
                  backend=None, attrs=None):
         """Instantiate a LEMS model."""
+        # If a URL is provided, download and get the path
+        LEMS_file_path = self.url_to_path(LEMS_file_path_or_url)
+
         if name is None:
             name = os.path.split(LEMS_file_path)[1].split('.')[0]
         self.orig_lems_file_path = os.path.abspath(LEMS_file_path)
@@ -33,6 +39,13 @@ class LEMSModel(RunnableModel):
             "'%s' is not a file" % self.orig_lems_file_path
         # Use original path unless create_lems_file is called
         self.lems_file_path = self.orig_lems_file_path
+
+        if self.from_url:
+            nml_paths = self.get_nml_paths(original=True, absolute=False)
+            for nml_path in nml_paths:
+                nml_url = urljoin(self.from_url, nml_path)
+                self.url_to_path(nml_url)
+
         if backend is None:
             backend = 'jNeuroML'
         super(LEMSModel, self).__init__(name, backend=backend, attrs=attrs)
@@ -40,12 +53,44 @@ class LEMSModel(RunnableModel):
         self.set_default_run_params(nogui=True)
         self.use_default_run_params()
 
+    from_url = None
+
+    def url_to_path(self, possible_url, base=None):
+        """Check for a URL and download the contents.
+
+        If it is not a URL, just consider it a local path to the contents.
+        """
+        if validators.url(possible_url):
+            if base is None:
+                base = os.getcwd()  # Location to which to download model files
+            file_name = os.path.split(possible_url)[1]
+            download_path = os.path.join(base, file_name)
+            try:
+                r = requests.get(possible_url, allow_redirects=True)
+            except requests.ConnectionError:
+                print("Could not connect to server at %s" % possible_url)
+            if r.status_code != 200:
+                print("URL %s gave a response code %d" % (possible_url,
+                                                          r.status_code))
+            with open(download_path, 'wb') as f:
+                f.write(r.content)
+            self.from_url = possible_url
+        else:
+            download_path = possible_url
+            self.from_url = False
+        return download_path
+
     def get_nml_paths(self, lems_tree=None, absolute=True, original=False):
+        import inspect
         """Get all NeuroML file paths associated with the model."""
         if not lems_tree:
             lems_tree = etree.parse(self.lems_file_path)
-        nml_paths = [x.attrib['file'] for x in
-                     lems_tree.xpath("Include[contains(@file, '.nml')]")]
+        nml_paths = []
+        for atrb in ['file', 'href']:
+            for tag in ['Include', 'include']:
+                match = "*[contains(@%s, '.nml')][name() = '%s']" % (atrb, tag)
+                elements = lems_tree.xpath(match)
+                nml_paths += [x.attrib[atrb] for x in elements]
         if absolute:  # Turn into absolute paths
             lems_file_path = self.orig_lems_file_path if original \
                                                       else self.lems_file_path
@@ -63,7 +108,8 @@ class LEMSModel(RunnableModel):
             name = self.name
         if not hasattr(self, 'temp_dir'):
             self.temp_dir = TemporaryDirectory()
-        lems_copy_path = os.path.join(self.temp_dir.name, '%s.xml' % name)
+        lems_copy_path = os.path.join(self.temp_dir.name,
+                                      '%s.xml' % name)
         shutil.copy2(self.orig_lems_file_path, lems_copy_path)
         nml_paths = self.get_nml_paths(original=True)
         for orig_nml_path in nml_paths:

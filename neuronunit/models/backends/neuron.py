@@ -96,7 +96,11 @@ class NEURONBackend(Backend):
         """Set the simulation duration
         stopTimeMs: duration in milliseconds
         """
-        self.h.tstop = float(stop_time.rescale(pq.ms))
+        # Express as a float in units of ms
+        stop_time = float(stop_time.rescale(pq.ms))
+
+        self.h('tstop = %f' % stop_time)
+        #self.h.tstop = float(stop_time.rescale(pq.ms))
 
     def set_time_step(self, integrationTimeStep=(pq.ms/128.0)):
         """Set the simulation itegration fixed time step
@@ -145,7 +149,7 @@ class NEURONBackend(Backend):
         """
         if self.h.cvode.active() == 0:
             dt = float(copy.copy(self.h.dt))
-            fixed_signal = copy.copy(self.vVector.to_python())
+            fixed_signal = copy.copy(self.h.vVector.to_python())
         else:
             dt = float(copy.copy(self.fixedTimeStep))
             fixed_signal = copy.copy(self.get_variable_step_analog_signal())
@@ -259,16 +263,23 @@ class NEURONBackend(Backend):
                 exit_on_fail=False)
             # use a different process to call NEURONS compiler nrnivmodl in the
             # background if the NEURON_file_path does not yet exist.
-            subprocess.run(["cd %s; nrnivmodl" % self.neuron_model_dir],
+            nrnivmodl_flags = []
+            subprocess.run(["cd %s; nrnivmodl" % self.neuron_model_dir] +
+                           nrnivmodl_flags,
                            shell=True)
+            print(os.environ['NEURON_HOME'])
+            print(self.neuron_model_dir)
             self.load_mechanisms()
         elif os.path.realpath(os.getcwd()) != \
                 os.path.realpath(self.neuron_model_dir):
             # Load mechanisms unless they've already been loaded
             #       subprocess.run(["cd %s; nrnivmodl" % self.neuron_model_dir],shell=True)
             self.load_mechanisms()
+        try:
             self.load()
-
+        except Exception:
+            pass
+        
         # Although the above approach successfuly instantiates a LEMS/neuroml model in pyhoc
         # the resulting hoc variables for current source and cell name are idiosyncratic (not generic).
         # the non generic approach described above makes it hard to create a generalizable code.
@@ -323,12 +334,15 @@ class NEURONBackend(Backend):
                 #sec.L, sec.diam = 6.3, 5 # empirically tuned
                 sec.cm = h_value
             else:
-                self.h('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
+                cmd = 'm_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,
+                                                          self.cell_name,
+                                                          h_key,
+                                                          h_value)
+                self.h(cmd)
 
         ass_vr = self.h.m_RS_RS_pop[0].vr
         self.h.m_RS_RS_pop[0].v0 = ass_vr
 
-        #print(self.model.attrs)
         # Below create a list of NEURON experimental recording rig parameters.
         # This is where parameters of the artificial neuron experiment are
         # initiated.
@@ -412,13 +426,12 @@ class NEURONBackend(Backend):
         define_current.append('{0}duration={1}'.format(prefix,duration))
         define_current.append('{0}delay={1}'.format(prefix,delay))
 
-
         for string in define_current:
             # execute hoc code strings in the python interface to neuron.
             self.h(string)
-        self.neuron.h.psection()
-        if debug == True:
+        if debug:
             self.neuron.h.psection()
+
         self._backend_run()
 
     def _backend_run(self):

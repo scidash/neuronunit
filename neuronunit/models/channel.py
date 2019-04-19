@@ -4,30 +4,33 @@ import os
 
 import sciunit
 import neuronunit.capabilities.channel as cap
+from .lems import LEMSModel
 from pyneuroml.analysis import NML2ChannelAnalysis as ca
 import quantities as pq
 
-class ChannelModel(sciunit.Model, cap.NML2_Channel_Runnable,
+
+class ChannelModel(LEMSModel, cap.NML2_Channel_Runnable,
                                   cap.ProducesIVCurve):
     """A model for ion channels"""
 
-    def __init__(self, channel_file_path, channel_index=0, name=None):
+    def __init__(self, channel_file_path_or_url, channel_index=0, name=None):
         """
         channel_file_path: Path to NML file.
         channel_index: Order of channel in NML file (usually 0 since most files contain one channel).
         name: Optional model name.
         """
-        self.nml_file_path = channel_file_path
-        channels = ca.get_channels_from_channel_file(self.nml_file_path)
+        if name is None:
+            base, file_name = os.path.split(channel_file_path_or_url)
+            name = file_name.split('.')[0]
+        super(ChannelModel, self).__init__(channel_file_path_or_url, name=name,
+                                           backend='jNeuroML')
+        channels = ca.get_channels_from_channel_file(self.orig_lems_file_path)
         self.channel = channels[channel_index]
         self.a = None
         self.run_defaults = ca.DEFAULTS.copy() # Temperature, clamp parameters, etc.
         self.run_defaults.update({'nogui': True})
         self.run_defaults = ca.build_namespace()
-
-        if name is None:
-            name = os.path.split(channel_file_path)[1].split('.')[0]
-        super(ChannelModel,self).__init__(name=name)
+        #super(ChannelModel, self).__init__(name=name)
 
     def NML2_run(self, rerun=False, a=None, verbose=None, **run_params):
         if not run_params:
@@ -37,8 +40,8 @@ class ChannelModel(sciunit.Model, cap.NML2_Channel_Runnable,
             verbose = a.v
         if self.a is None or a.__dict__ != self.a.__dict__ or rerun: # Only rerun if params have changed.
             self.a = a
-            self.lems_file_path = ca.make_lems_file(self.channel,self.a) # Create a lems file.
-            self.results = ca.run_lems_file(self.lems_file_path,verbose) # Writes data to disk.
+            self.lems_file_path = ca.make_lems_file(self.channel, self.a) # Create a lems file.
+            self.results = ca.run_lems_file(self.lems_file_path, verbose) # Writes data to disk.
 
     def produce_iv_curve(self, **run_params):
         run_params['ivCurve'] = True
