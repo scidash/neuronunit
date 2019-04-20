@@ -22,12 +22,15 @@ class TestPulseTest(VmTest):
 
     score_type = scores.ZScore
 
-    def generate_prediction(self, model):
-        """Implement sciunit.Test.generate_prediction."""
+    def condition_model(self, model):
         t_stop = (self.params['injected_square_current']['delay'] +
                   self.params['injected_square_current']['duration'] +
                   100.0 * pq.ms)
         model.get_backend().set_stop_time(t_stop)
+
+    def generate_prediction(self, model):
+        """Implement sciunit.Test.generate_prediction."""
+        self.condition_model(model)
         model.inject_square_current(self.params['injected_square_current'])
         vm = model.get_membrane_potential()
         i = self.params['injected_square_current']

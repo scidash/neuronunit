@@ -19,6 +19,7 @@ from neuronunit import neuroelectro
 AMPL = 0.0*pq.pA
 DELAY = 100.0*pq.ms
 DURATION = 300.0*pq.ms
+STOP_TIME = DELAY + DURATION + 200*pq.ms
 
 
 class VmTest(sciunit.Test):
@@ -65,6 +66,9 @@ class VmTest(sciunit.Test):
         if 'std' not in observation:
             observation['std'] = observation['sem'] * np.sqrt(observation['n'])
         return observation
+
+    def condition_model(self, model):
+        model.set_run_params(t_stop=STOP_TIME)
 
     def bind_score(self, score, model, observation, prediction):
         score.related_data['vm'] = model.get_membrane_potential()

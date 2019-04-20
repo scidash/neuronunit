@@ -52,13 +52,15 @@ class RheobaseTest(VmTest):
     ephysprop_name = 'Rheobase'
     score_type = scores.RatioScore
 
+    def condition_model(self, model):
+        model.set_run_params(t_stop=STOP_TIME)
+
     def generate_prediction(self, model):
         """Implement sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
-        model.set_run_params(t_stop=STOP_TIME)
+        self.condition_model(model)
         prediction = {'value': None}
-        model.rerun = True
         try:
             units = self.observation['value'].units
         except KeyError:
@@ -182,9 +184,12 @@ class RheobaseTestP(RheobaseTest):
     score_type = scores.RatioScore
     get_rheobase_vm = True
 
+    def condition_model(self, model):
+        model.set_run_params(t_stop=STOP_TIME)
+
     def generate_prediction(self, model):
         """Generate the test prediction."""
-        model.set_run_params(t_stop=STOP_TIME)
+        self.condition_model(model)
         dtc = DataTC()
         dtc.attrs = {}
         for k, v in model.attrs.items():
@@ -343,7 +348,7 @@ def init_dtc(dtc):
 
     if dtc.initiated is False:
         dtc.boolean = False
-        steps = np.linspace(1, 250, 7.0)
+        steps = np.linspace(1, 250, 7)
         steps_current = [i*pq.pA for i in steps]
         dtc.current_steps = steps_current
         dtc.initiated = True
