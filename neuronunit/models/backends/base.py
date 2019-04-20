@@ -30,8 +30,8 @@ try:
     import neuron
     from neuron import h
     NEURON_SUPPORT = True
-    os.chdir(curr)
     temp.cleanup()
+    os.chdir(curr)
 except:
     neuron = None
     h = None
