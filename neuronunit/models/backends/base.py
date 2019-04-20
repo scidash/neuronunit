@@ -31,7 +31,7 @@ try:
     from neuron import h
     NEURON_SUPPORT = True
     temp.cleanup()
-    os.chdir(curr)
+    os.chdir(curr) 
 except:
     neuron = None
     h = None
