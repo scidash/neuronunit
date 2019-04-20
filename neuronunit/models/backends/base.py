@@ -20,22 +20,25 @@ from sciunit.models.backends import Backend, BackendException
 from sciunit.utils import dict_hash, import_module_from_path, \
                           TemporaryDirectory
 
+
+# Never import neuron in the current directory, or it will automatically
+# load mechanisms in that directory, which will then cause future calls
+# to load_mechanisms() to fail due to already loaded mechanisms.
+temp = TemporaryDirectory()
+curr = os.getcwd()
+os.chdir(temp.name)
 try:
-    # Never import neuron in the current directory, or it will automatically
-    # load mechanisms in that directory, which will then cause future calls
-    # to load_mechanisms() to fail due to already loaded mechanisms.
-    temp = TemporaryDirectory()
-    curr = os.getcwd()
-    os.chdir(temp.name)
     import neuron
     from neuron import h
     NEURON_SUPPORT = True
-    temp.cleanup()
-    os.chdir(curr) 
 except:
     neuron = None
     h = None
     NEURON_SUPPORT = False
+finally:
+    temp.cleanup()
+    os.chdir(curr) 
+  
 
 try:
     import pyNN
