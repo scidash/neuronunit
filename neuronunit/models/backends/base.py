@@ -27,6 +27,7 @@ from sciunit.utils import dict_hash, import_module_from_path, \
 temp = TemporaryDirectory()
 curr = os.getcwd()
 os.chdir(temp.name)
+
 try:
     import neuron
     from neuron import h
@@ -35,9 +36,9 @@ except:
     neuron = None
     h = None
     NEURON_SUPPORT = False
-finally:
-    temp.cleanup()
-    os.chdir(curr) 
+
+temp.cleanup()
+os.chdir(curr) 
   
 
 try:
