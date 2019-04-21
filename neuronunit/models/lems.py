@@ -5,7 +5,7 @@ import shutil
 try:
     from urllib.parse import urljoin
 except ImportError:
-    from urllib import urljoin
+    from urlparse import urljoin
 
 import requests
 import validators
