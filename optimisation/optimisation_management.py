@@ -607,6 +607,7 @@ def get_rtest(dtc):
             if not isinstance(dtc.tests, Iterable):
                 rtest = dtc.tests
             else:
+                #import pdb; pdb.set_trace()
                 rtest = [ t for t in dtc.tests if str('RheobaseTestP') == t.name ]
                 if len(rtest):
                     rtest = substitute_parallel_for_serial(rtest[0])
@@ -656,7 +657,8 @@ def dtc_to_rheo(dtc):
             obs = rtest.observation
             score = rtest.compute_score(obs,dtc.rheobase)
             if dtc.score is not None:
-                dtc = score_proc(dtc,rtest,copy.copy(score))
+                dtc.scores[rtest.name] = score
+                #dtc = score_proc(dtc,rtest,copy.copy(score))
 
             #rtest.params['injected_square_current']['amplitude'] = dtc.rheobase
 
@@ -792,9 +794,17 @@ def format_test(dtc):
 def allocate_worst(tests,dtc):
     # If the model fails tests, and cannot produce model driven data
     # Allocate the worst score available.
+    if not hasattr(dtc,'scores'):
+        dtc.scores = {}
+    if not hasattr(dtc,'score'):
+        dtc.score = {}
+
     for t in tests:
-        dtc.scores[str(t)] = 1.0
-        dtc.score[str(t)] = 1.0
+        print(type(dtc.scores),dtc.scores,type(t),t)
+        print(type(dtc.scores),dtc.scores,type(t),t.name)
+
+        dtc.scores[str(t.name)] = 1.0
+        dtc.score[str(t.name)] = 1.0
     return dtc
 
 '''
@@ -875,13 +885,11 @@ def nunit_evaluation(dtc):
     # Inputs single data transport container modules, and neuroelectro observations that
     # inform test error error_criterion
     # Outputs Neuron Unit evaluation scores over error criterion
-    #import pdb; pdb.set_trace()
     tests = dtc.tests
     dtc = copy.copy(dtc)
     dtc.model_path = path_params['model_path']
     if dtc.rheobase == -1.0 or isinstance(dtc.rheobase,type(None)):
         print(tests,dtc)
-        #import pdb; pdb.set_trace()
         dtc = allocate_worst(tests, dtc)
     else:
         for k, t in enumerate(tests):
@@ -908,7 +916,9 @@ def nunit_evaluation(dtc):
 
 
 
-def evaluate(dtc,regularization=True):
+def evaluate(dtc,regularization=False):
+    print(dtc.rheobase)
+    import pdb; pdb.set_trace()
 	# compute error using L2 regularization.
     error_length = len(dtc.scores.keys())
     # assign worst case errors, and then over write them with situation informed errors as they become available.
@@ -1037,13 +1047,13 @@ def run_ga(explore_edges, max_ngen, test, free_params = None, hc = None, NSGA = 
         DO.setup_deap()
 
     ga_out = DO.run(max_ngen = max_ngen)
+    import pdb; pdb.set_trace()
 
     Y = [ np.sum(v.fitness.values) for k,v in ga_out['history'].genealogy_history.items() ]
     X = [ list(v.dtc.attrs.values()) for k,v in ga_out['history'].genealogy_history.items() ]
     X = np.matrix(X)
     X = preprocessing.scale(X)
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size = 0.3)
-    import pdb; pdb.set_trace()
     sgd = SGDRegressor()#penalty='none', max_iter=1000, learning_rate='constant' , eta0=0.001  )
     sgd.fit(X_train, Y_train)
     Y_pred = sgd.predict(X_test)
@@ -1152,7 +1162,6 @@ def new_genes(pop,dtcpop,td):
     for t in td:
         mean = np.mean([ d.attrs[t] for d in dtcpop ])
         std = np.std([ d.attrs[t] for d in dtcpop ])
-        import pdb; pdb.set_trace()
         sample = numpy.random.normal(loc=mean, scale=2*std, size=1)[0]
 
         ind.append(sample)
@@ -1167,6 +1176,7 @@ def new_genes(pop,dtcpop,td):
     dtc.backend = dtcpop[0].backend
     dtc.tests = dtcpop[0].tests
     dtc = dtc_to_rheo(dtc)
+    print(dtc.rheobase)
     ind.rheobase = dtc.rheobase
     return ind,dtc
 
@@ -1355,10 +1365,13 @@ def boot_new_genes(number_genes,dtcpop):
     Boot strap new genes to make up for completely called onesself.
     '''
     dtcpop = copy.copy(dtcpop)
-    DO = SciUnitOptimisation(offspring_size = number_genes, error_criterion = [dtcpop[0].test], boundary_dict = boundary, backend = dtcpop[0].backend, selection = str('selNSGA'))#,, boundary_dict = ss, elite_size = 2, hc=hc)
+    DO = SciUnitOptimisation(offspring_size = number_genes,
+    error_criterion = [dtcpop[0].test], boundary_dict = boundary,
+     backend = dtcpop[0].backend, selection = str('selNSGA'))#,, boundary_dict = ss, elite_size = 2, hc=hc)
     DO.setnparams(nparams = len(free_params), boundary_dict = ss)
     DO.setup_deap()
     DO.init_pop()
+    import pdb; pdb.set_trace()
     pop = DO.population
     dtcpop = None
     dtcpop = update_dtc_pop(pop,DO.td)
@@ -1371,8 +1384,8 @@ import dask.array as da
 
 def parallel_route(pop,dtcpop,tests,td,clustered=False):
     NPART = np.min([multiprocessing.cpu_count(),len(dtcpop)])
-
-    for d in dtcpop: d.tests = copy.copy(tests)
+    for d in dtcpop:
+        d.tests = copy.copy(tests)
     dtcpop = list(map(format_test,dtcpop))
     '''
     #dask lazy arrays make pynn ones obsolete.
@@ -1384,12 +1397,11 @@ def parallel_route(pop,dtcpop,tests,td,clustered=False):
         dtcpop = opt_on_pair_of_points(dtcpop)
     else:
         dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
-        #import pdb; pdb.set_trace()
-        for d in dtcpop: d.tests = copy.copy(tests)
-        #dtcpop = list(map(nunit_evaluation,dtcpop))
+        dtcpop = list(map(nunit_evaluation,dtcpop))
 
-        dtcpop = list(dtcbag.map(nunit_evaluation).compute())
-
+        #dtcpop = list(dtcbag.map(nunit_evaluation).compute())
+        for d in dtcpop:
+            d.tests = copy.copy(tests)
     for i,d in enumerate(dtcpop):
         if not hasattr(pop[i],'dtc'):
             pop[i] = WSListIndividual(pop[i])
@@ -1406,14 +1418,22 @@ def make_up_lost(pop,dtcpop,td):
     before = len(pop)
     (pop,dtcpop) = filtered(pop,dtcpop)
     after = len(pop)
+    #assert after>0
     delta = before-after
     if delta:
         #import pdb; pdb.set_trace()
 
         cnt = 0
         while cnt < delta:
-            ind,dtc = new_genes(pop,dtcpop,td)
-            #(pop,dtcpop) = boot_new_genes(number_genes,dtcpop)
+            try:
+                # try parallel
+                assert 1==2
+                pop_,dtcpop_ = boot_new_genes(delta,dtcpop)
+                pop.extend(pop_)
+                dtcpop.extend(dtcpop_)
+            except:
+                # fall back serial
+                ind,dtc = new_genes(pop,dtcpop,td)
             if dtc.rheobase != -1.0:
                 pop.append(ind)
                 dtcpop.append(dtc)
@@ -1478,14 +1498,8 @@ def grid_search(explore_ranges,test_frame,backend=None):
             except:
             '''
             dtcpop = list(map(dtc_to_rheo,dtcpop))
-            #dtcpop = list(map(format_test,dtcpop))
             dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
             dtcpop = list(dtcbag.map(format_test))
-            print('if succeeded was because the statement:')
-            print('RAW in dtc.backend  or HH in dtc.backend')
-            print('was: ', serial_faster)
-            print('Although explicit is best, I think more pythonic is greedy permissiveness')
-            print('Ie always try parallel first, then fall back on serial given parallel failure')
 
 
         dtcpop = [ dtc for dtc in dtcpop if dtc.rheobase is not None ]
@@ -1512,7 +1526,7 @@ def grid_search(explore_ranges,test_frame,backend=None):
     return seeds, df
 
 
-def test_runner(pop,td,tests,single_spike=False):
+def test_runner(pop,td,tests,single_spike=True):
     if single_spike:
         pop, dtcpop = obtain_rheobase(pop, td, tests)
         pop, dtcpop = make_up_lost(pop, dtcpop, td)
@@ -1523,7 +1537,7 @@ def test_runner(pop,td,tests,single_spike=False):
 
     else:
         pop, dtcpop = init_pop(pop, td, tests)
-        pop, dtcpop = obtain_rheobase(pop, td, tests)
+        #pop, dtcpop = obtain_rheobase(pop, td, tests)
 
 
     pop,dtcpop = parallel_route(pop, dtcpop, tests, td, clustered=False)
