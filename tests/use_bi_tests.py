@@ -1,18 +1,38 @@
 import matplotlib
-#matplotlib.use('Agg')
+matplotlib.use('Agg')
 import seaborn as sns
 import urllib.request, json
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 import os
+from scipy.signal import find_peaks_cwt
+
+
+from neuronunit import tests as _, neuroelectro
+from neuronunit.tests import passive, waveform, fi
+from neuronunit.tests.fi import RheobaseTestP
+from neuronunit.tests import passive, waveform#, druckmann2013
+import sciunit
+
+
 with open('specific_test_data.p','rb') as f:
    contents = pickle.load(f)
 cell_name_map = contents[2]
 neuron_values = contents[0]
+import quantities as pq
 test_map = {1:'CapacitanceTest',2:'InputResistanceTest',3:'RestingPotentialTest',4:'TimeConstantTest',\
             5:'InjectedCurrentAPAmplitudeTest',6:'InjectedCurrentAPWidthTest',\
-            7:'InjectedCurrentAPThresholdTest',8:'RheobaseTestp'}
+            7:'InjectedCurrentAPThresholdTest',8:'RheobaseTest'}
+
+units_map = {1:pq.pF,2:pq.MOhm,3:pq.mV,4:pq.ms,\
+            5:pq.mV,6:pq.ms,\
+            7:pq.mV,8:pq.pA}
+
+complete_map = {}
+for k,v in units_map.items():
+    complete_map[test_map[k]] = units_map[k]
+
 name_map ={}
 name_map["Cerebellum Purkinje cell"] = "sao471801888"
 name_map["Dentate gyrus basket cell"] = "nlx_cell_100201"
@@ -22,26 +42,79 @@ name_map["Olfactory bulb (main) mitral cell"] = "nlx_anat_100201"
 name_map["Hippocampus CA1 pyramidal cell"] = "sao830368389"
 
 inv_name_map = {v: k for k, v in name_map.items()}
-
+executable_tests = {}
 russell_tests = {}
 for nlex_ids,values in neuron_values.items():
     cell_name = inv_name_map[nlex_ids]
+    executable_tests[cell_name] = {}#[test_map[i]]
     russell_tests[cell_name] = {}
     for i in neuron_values[nlex_ids].keys():
-        russell_tests[cell_name][test_map[i]] = (neuron_values[nlex_ids][i]['mean'],neuron_values[nlex_ids][i]['std'],neuron_values[nlex_ids][i]['values'])
+        neuron_values[nlex_ids][i]['modes'] = []
         plt.clf()
+
+        fig, ax = plt.subplots()
+        if i==8:
+            print(i,test_map[i])
+        # the histogram of the data
+        n, bins, patches = ax.hist(sorted(neuron_values[nlex_ids][i]['values']), label=str(cell_name)+str(test_map[i]))
+        plt.hist(sorted(neuron_values[nlex_ids][i]['values']), label=str(cell_name)+str(test_map[i]))
+        mode0 = bins[np.where(n==np.max(n))[0][0]]
+        neuron_values[nlex_ids][i]['modes'].append(mode0)
+        half = (bins[1]-bins[0])/2.0
+
+
         try:
-            sns.distplot(sorted(neuron_values[nlex_ids][i]['values']), color="skyblue", label=str(cell_name)+str(test_map[i]))
-            plt.legend(loc="upper left")
-            plt.savefig(str(cell_name)+str(test_map[i])+str('.png'))
+            #print(sorted(n))
+            #import pdb; pdb.set_trace()
+
+            mode1 = bins[np.where(n==sorted(n)[-2])[0][0]]
+            neuron_values[nlex_ids][i]['modes'].append(mode1)
+            plt.scatter(mode1+half,sorted(n)[-2],c='r')
+
         except:
-            plt.scatter(neuron_values[nlex_ids][i]['mean'],4,c='r')
-            plt.scatter(neuron_values[nlex_ids][i]['median'],4,c='g')
+            pass
+        #max_peakind = find_peaks_cwt(bins,np.arange(1,10))
+        plt.legend(loc="upper left")
+        plt.savefig(str(cell_name)+str(test_map[i])+str('.png'))
+        russell_tests[cell_name][test_map[i]] = (neuron_values[nlex_ids][i]['modes'],neuron_values[nlex_ids][i]['std'],neuron_values[nlex_ids][i]['values'])
 
-            plt.hist(sorted(neuron_values[nlex_ids][i]['values']), label=str(cell_name)+str(test_map[i]))
-            plt.legend(loc="upper left")
-            plt.savefig(str(cell_name)+str(test_map[i])+str('.png'))
+        test_classes = [fi.RheobaseTest,
+                         passive.InputResistanceTest,
+                         passive.TimeConstantTest,
+                         passive.CapacitanceTest,
+                         passive.RestingPotentialTest,
+                         waveform.InjectedCurrentAPWidthTest,
+                         waveform.InjectedCurrentAPAmplitudeTest,
+                         waveform.InjectedCurrentAPThresholdTest]#,
 
+        for tt in test_classes:
+            if test_map[i] in str(tt):
+                #import pdb; pdb.set_trace()
+
+                pipe_tests_path = str(os.getcwd())+'/pipe_tests.p'
+                assert os.path.isfile(pipe_tests_path) == True
+                with open(pipe_tests_path,'rb') as f:
+                    pipe_tests = pickle.load(f)
+
+                t = tt()#neuron_values[nlex_ids][i]['modes'][0]*units_map[i])
+                t.observation = {}
+                t.observation['mean'] = neuron_values[nlex_ids][i]['modes'][0]*units_map[i]
+                t.observation['value'] = neuron_values[nlex_ids][i]['modes'][0]*units_map[i]
+                t.observation['std'] = neuron_values[nlex_ids][i]['std']*units_map[i]
+                t.observation['n'] = neuron_values[nlex_ids][i]['n']
+                executable_tests[cell_name][test_map[i]] =  t
+                print(test_map[i],t.name)
+
+                assert test_map[i] == t.name
+                executable_tests[cell_name][test_map[i]].data = None
+                executable_tests[cell_name][test_map[i]].data = neuron_values[nlex_ids][i]['values']
+pipe_tests_path = str(os.getcwd())+'/russell_tests.p'
+#assert os.path.isfile(pipe_tests_path) == True
+import pdb; pdb.set_trace()
+executable_tests.pop('Dentate gyrus basket cell', None)
+with open(pipe_tests_path,'wb') as f:
+    pickle.dump([executable_tests,complete_map],f)
+exit()
 
 pipe_tests_path = str(os.getcwd())+'/pipe_tests.p'
 assert os.path.isfile(pipe_tests_path) == True
@@ -51,7 +124,24 @@ all_tests_path = str(os.getcwd())+'/all_tests.p'
 assert os.path.isfile(all_tests_path) == True
 with open(all_tests_path,'rb') as f:
     (obs_frame,test_frame) = pickle.load(f)
-#import pdb; pdb.set_trace()
+'''
+import pdb; pdb.set_trace()
+observations = {}
+executable_tests = {}
+for cell_name, local_tests in russell_tests.items():
+    executable_tests[cell_name] = {}
+    for test_name,tt in local_tests.items():
+        for index, classic_tests in enumerate(test_classes):
+            if tt in classic_tests:
+                executable_tests[cell_name][test_name] = classic_tests(tt['modes'][0])
+print(executable_tests)
+import pdb; pdb.set_trace()
+'''
+#hooks = {tests[0]:{'f':update_amplitude}} #This is a trick to dynamically insert the method
+#update amplitude at the location in sciunit thats its passed to, without any loss of generality.
+suite = sciunit.TestSuite(tests,name="vm_suite")
+
+import pdb; pdb.set_trace()
 '''
 try:
 
