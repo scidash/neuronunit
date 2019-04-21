@@ -1,5 +1,4 @@
-
-"""NeuronUnit Test classes"""
+"""NeuronUnit Test classes."""
 
 from .passive import *
 from .waveform import *
