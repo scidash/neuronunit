@@ -21,7 +21,7 @@ from sciunit.utils import dict_hash, import_module_from_path, \
                           TemporaryDirectory
 
 # Test for NEURON support in a separate python process
-NEURON_SUPPORT = (os.system('python -c "import neuron" >/dev/null') == 0)  
+NEURON_SUPPORT = (os.system("python -c 'import neuron' > /dev/null 2>&1") == 0)  
 
 try:
     import pyNN
