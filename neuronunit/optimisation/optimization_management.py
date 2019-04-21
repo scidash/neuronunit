@@ -608,45 +608,6 @@ def allocate_worst(tests,dtc):
         dtc.score[str(t)] = 1.0
     return dtc
 
-'''Should be default.
-def nunit_evaluation_df(dtc):
-    # Inputs single data transport container modules, and neuroelectro observations that
-    # inform test error error_criterion
-    # Outputs Neuron Unit evaluation scores over error criterion
-    # same method as below but with data frame.
-    tests = dtc.tests
-    dtc = copy.copy(dtc)
-    dtc.model_path = path_params['model_path']
-    LEMS_MODEL_PATH = path_params['model_path']
-    df = pd.DataFrame(index=list(tests),columns=['observation','prediction','disagreement'])#,columns=list(reduced_cells.keys()))
-    if dtc.rheobase == -1.0 or type(dtc.rheobase) is type(None):
-        dtc = allocate_worst(tests,dtc)
-    else:
-        for k,t in enumerate(tests):
-            if str('RheobaseTest') != t.name and str('RheobaseTestP') != t.name:
-                t.params = dtc.vtest[k]
-                score, dtc= bridge_judge((t,dtc))
-                if score is not None:
-                    if score.norm_score is not None:
-                        dtc.scores[str(t)] = 1.0 - score.norm_score
-                        df.iloc[k]['observation'] = t.observation['mean']
-                        try:
-                            agreement = np.abs(t.observation['mean'] - pred['value'])
-                            df.iloc[k]['prediction'] = pred['value']
-                            df.iloc[k]['disagreement'] = agreement
-
-                        except:
-                            agreement = np.abs(t.observation['mean'] - pred['mean'])
-                            df.iloc[k]['prediction'] = pred['mean']
-                            df.iloc[k]['disagreement'] = agreement
-                else:
-                    print('gets to None score type')
-    # compute the sum of sciunit score components.
-    dtc.summed = dtc.get_ss()
-    dtc.df = df
-    return dtc
-'''
-
 def pred_evaluation(dtc):
     # Inputs single data transport container modules, and neuroelectro observations that
     # inform test error error_criterion
@@ -699,8 +660,7 @@ def nunit_evaluation(dtc):
 
 
 def evaluate(dtc,regularization=False):
-	# compute error using L2 regularization.
-    print(dtc)
+    # compute error using L2 regularization.
     error_length = len(dtc.scores.keys())
     # assign worst case errors, and then over write them with situation informed errors as they become available.
     fitness = [ 1.0 for i in range(0,error_length) ]
@@ -730,6 +690,7 @@ def transform(xargs):
 
 
 def add_constant(hold_constant, pop, td):
+    
     hold_constant = OrderedDict(hold_constant)
     for k in hold_constant.keys():
         td.append(k)
@@ -777,8 +738,26 @@ def update_dtc_pop(pop, td):
 
 
 def run_ga(explore_edges, max_ngen, test, free_params = None, hc = None, NSGA = None, MU = None, seed_pop = None, model_type = str('RAW')):
-    # seed_pop can be used to
-    # to use existing models, that are good guesses at optima, as starting points for optimization.
+    # Inputs:	
+    #   - dict MODEL_PARAMS is a dictionary of model parameter ranges (the boundaries that define regions where parameters are free to vary).
+    #     You may not want all the parameters to be allowed to vary, so the optinal key word argument: free_params 
+    #     specifies the free_parameters, and every parameter not in that list is held constant.
+    #   - dict free_params takes a list of the dictionary keys for the parameters that are free to vary.
+    #   - int MU is the population size and 
+    #   - int NGEN is the number of generations to evaluate.
+    #     MU*NGEN = total maximum number of models that could be evaluated, although DEAP is smart and 
+    #     doesn't necessarily evaluate every model in MU*NGEN
+    #   - Boolean NSGA tells the optimizer to use the Pareto Front based approach you describe.
+    #   - string Model_type tells the Optimizer what simulator backend model combinartion to use. 
+    #   - DEAP population type list seed_pop pertains to starting the GA, with an informed guess of where to look. 
+    #     For example if you did a coarse grained grid search first, and want the first genes to look in the location
+    #     of the coarse grained optima first.
+    #   - use_test is a list of NU tests (a NeuronUnit tests suite), or a singular test.
+    #  Outputs:
+    #   - A dictionary of GA optimization results
+    #   - stats,     
+    #   - and the pareto-front the paretofront (key 'pf')
+ 
     # https://stackoverflow.com/questions/744373/circular-or-cyclic-imports-in-python
     # These imports need to be defined with local scope to avoid circular importing problems
     # Try to fix local imports later.
@@ -805,13 +784,6 @@ def run_ga(explore_edges, max_ngen, test, free_params = None, hc = None, NSGA = 
 
         DO.seed_pop = seed_pop
         DO.setup_deap()
-    # DO.population = None
-    # DO.population = DO.grid_init()
-    # DO.boundary_dict = ss
-    # DO.population[0].ss = ss
-    # DO.ss = ss
-
-    # This run condition should not need same arguments as above.
     ga_out = DO.run(max_ngen = max_ngen)#offspring_size = MU, )
     return ga_out, DO
 
