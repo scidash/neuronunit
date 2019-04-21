@@ -3,10 +3,7 @@ function of input current"""
 
 import os
 import multiprocessing
-global cpucount
-npartitions = cpucount = multiprocessing.cpu_count()
-from .base import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
-from .. import optimisation
+import copy
 
 from neuronunit.optimisation.data_transport_container import DataTC
 import os
@@ -23,12 +20,19 @@ import time
 import numba
 import copy
 
-import matplotlib as mpl
-mpl.use('Agg')
-import matplotlib.pyplot as plt
-from neuronunit.capabilities.spike_functions import get_spike_waveforms, spikes2amplitudes, threshold_detection
-#
-# When using differentiation based spike detection is used this is faster.
+import neuronunit
+from neuronunit.optimisation.data_transport_container import DataTC
+from neuronunit.models.reduced import ReducedModel
+from .base import np, pq, ncap, VmTest, scores, AMPL, DELAY, DURATION
+
+N_CPUS = multiprocessing.cpu_count()
+TOLERANCE = 1  # Search tolerance in `self.units`, e.g. pA.
+DURATION = 1000*pq.ms
+STOP_TIME = DELAY + DURATION + 200*pq.ms
+DEFAULT_INJECTED_SQUARE_CURRENT = {'amplitude': 100.0*pq.pA,
+                                   'delay': DELAY,
+                                   'duration': DURATION}
+
 
 @jit
 def diff(vm):
@@ -44,28 +48,25 @@ def get_diff(vm):
 tolerance = 0.0 #0.000000001
 
 class RheobaseTest(VmTest):
-    """
-    A serial Implementation of a Binary search algorithm,
-    which finds a rheobase prediction
+    """Serial implementation of a binary search to test the rheobase.
 
-    Strengths: this algorithm is faster than the parallel class, present in this file under important and
-    limited circumstances: this serial algorithm is faster than parallel for model backends that are able to
-    implement numba jit optimisation
+    Strengths: this algorithm is faster than the parallel class, present in
+    this file under important and limited circumstances: this serial algorithm
+    is faster than parallel for model backends that are able to implement
+    numba jit optimization.
 
-    Weaknesses this serial class is significantly slower, for many backend implementations including raw NEURON
-    NEURON via PyNN, and possibly GLIF.
+    Weaknesses this serial class is significantly slower, for many backend
+    implementations including raw NEURON, NEURON via PyNN, and possibly GLIF.
     """
+
     def _extra(self):
         self.prediction = {}
         self.high = 300*pq.pA
         self.small = 0*pq.pA
         self.rheobase_vm = None
 
-    required_capabilities = (cap.ReceivesSquareCurrent,
-                             cap.ProducesSpikes)
-
-    params = {'injected_square_current':
-                {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+    required_capabilities = (ncap.ReceivesSquareCurrent,
+                             ncap.ProducesSpikes)
 
     name = "Rheobase test"
     description = ("A test of the rheobase, i.e. the minimum injected current "
@@ -75,27 +76,28 @@ class RheobaseTest(VmTest):
     score_type = scores.RatioScore
 
     def generate_prediction(self, model):
-        """Implementation of sciunit.Test.generate_prediction."""
+        """Implement sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
+        model.set_run_params(t_stop=STOP_TIME)
         prediction = {'value': None}
         model.rerun = True
         try:
             units = self.observation['value'].units
         except KeyError:
             units = self.observation['mean'].units
-        begin_rh = time.time()
+        # begin_rh = time.time()
         lookup = self.threshold_FI(model, units)
-        sub = np.array([x for x in lookup if lookup[x]==0])*units
-        supra = np.array([x for x in lookup if lookup[x]>0])*units
+        sub = np.array([x for x in lookup if lookup[x] == 0])*units
+        supra = np.array([x for x in lookup if lookup[x] > 0])*units
         if self.verbose:
             if len(sub):
-                print("Highest subthreshold current is %s" \
+                print("Highest subthreshold current is %s"
                       % (float(sub.max())*units))
             else:
                 print("No subthreshold current was tested.")
             if len(supra):
-                print("Lowest suprathreshold current is %s" \
+                print("Lowest suprathreshold current is %s"
                       % supra.min())
             else:
                 print("No suprathreshold current was tested.")
@@ -115,7 +117,8 @@ class RheobaseTest(VmTest):
                     current = self.params.copy()['injected_square_current']
                 except:
                     current = self.params
-
+                    #import pdb
+                    #pdb.set_trace()
                 uc = {'amplitude':ampl}
                 current.update(uc)
 
@@ -194,20 +197,14 @@ class RheobaseTest(VmTest):
             score.related_data['vm'] = self.rheobase_vm
 
 
+class RheobaseTestP(RheobaseTest):
+    """Parallel implementation of a binary search to test the rheobase.
 
-
-class RheobaseTestP(VmTest):
-     """
-     A parallel Implementation of a Binary search algorithm,
-     which finds a rheobase prediction.
-
-     Strengths: this algorithm is faster than the serial class, present in this file for model backends that are not able to
-     implement numba jit optimisation, which actually happens to be typical of a signifcant number of backends
-
-     Weaknesses this serial class is significantly slower, for many backend implementations including raw NEURON
-     NEURON via PyNN, and possibly GLIF.
-
-     """
+    Strengths: this algorithm is faster than the serial class, present in this
+    file for model backends that are not able to implement numba jit
+    optimization, which actually happens to be typical of a signifcant number
+    of backends.
+    """
 
 
      required_capabilities = (cap.ReceivesSquareCurrent,
@@ -281,10 +278,13 @@ class RheobaseTestP(VmTest):
             output is an virtual model with an updated dictionary.
             '''
             dtc.boolean = False
+            #     model = VeryReducedModel(backend=(dtc.backend, {'DTC':dtc}))
 
+            # else:
             LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
             dtc.model_path = LEMS_MODEL_PATH
             model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
+            #print(dtc.backend)
             if dtc.backend is str('NEURON') or dtc.backend is str('jNEUROML'):
                 dtc.current_src_name = model._backend.current_src_name
                 assert type(dtc.current_src_name) is not type(None)
@@ -296,7 +296,7 @@ class RheobaseTestP(VmTest):
                       {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
             ampl = float(dtc.ampl)
-            #print(ampl, 'why is this the same?')
+            print(ampl)
             if ampl not in dtc.lookup or len(dtc.lookup) == 0:
                 current = params.copy()['injected_square_current']
                 uc = {'amplitude':ampl*pq.pA}
@@ -307,6 +307,10 @@ class RheobaseTestP(VmTest):
                 model.inject_square_current(current)
                 dtc.previous = ampl
 
+    if hasattr(model._backend, 'current_src_name'):
+        dtc.current_src_name = model._backend.current_src_name
+        assert dtc.current_src_name is not None
+        dtc.cell_name = model._backend.cell_name
 
                 if dtc.use_diff == True:
                     vm = model.get_membrane_potential()
@@ -316,12 +320,10 @@ class RheobaseTestP(VmTest):
                     if n_spikes >= 1:
                         dtc.negative_spiker = None
                         dtc.negative_spiker = True
-                    '''
                     plt.clf()
                     plt.title(str(n_spikes))
                     plt.plot(vm.times,vm)
                     plt.savefig('reobase_debug.png')
-                    '''
                 else:
                     n_spikes = model.get_spike_count()
 
@@ -386,40 +388,29 @@ class RheobaseTestP(VmTest):
 
             while dtc.boolean == False and cnt< 8:
                 if len(supra) ==0 and len(sub):
+                #    use_diff = True # differentiate the wave to look for spikes
                     # negeative spiker
-                    if sub.max() < -100.0:
+                    if sub.max() < -100.0: 
                         use_diff = True # differentiate the wave to look for spikes
-
+                
                     if sub.max()> 2000.0:
                         dtc.rheobase = None #float(supra.min())
                         dtc.boolean = False
                         return dtc
 
-                dtc_clones = [ dtc for i in range(0,len(dtc.current_steps)) ]
+                dtc_clones = [ copy.copy(dtc) for i in range(0,len(dtc.current_steps)) ]
                 for i,s in enumerate(dtc.current_steps):
-                    dtc_clones[i] = copy.copy(dtc_clones[i])
-                    dtc_clones[i].ampl = copy.copy(dtc.current_steps[i])
-
-                #set_clones = set([ float(d.ampl) for d in dtc_clones ])
-                #assert len(dtc_clones) == len(set_clones)
-
+                    dtc_clones[i].ampl = dtc.current_steps[i]
                 for d in dtc_clones:
                     d.use_diff = None
                     d.use_diff = use_diff
                 dtc_clones = [ d for d in dtc_clones if not np.isnan(d.ampl) ]
-
                 try:
                     b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
                     dtc_clone = list(b0.map(check_current).compute())
                 except:
-                    set_clones = set([ float(d.ampl) for d in dtc_clones ])
-                    dtc_clone = []
-                    for dtc,sc in zip(dtc_clones,set_clones):
-                        dtc = copy.copy(dtc)
-                        dtc.ampl = sc*pq.pA
-                        dtc = check_current(dtc)
-                        dtc_clone.append(dtc)
-
+                    print('mpi failure, but why is this using mpi anyway')
+                    dtc_clone = list(map(check_current,dtc_clones))
                 for dtc in dtc_clone:
                     if dtc.boolean == True:
                         return dtc
