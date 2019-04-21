@@ -46,45 +46,93 @@ from types import MethodType
 def get_all(Model_ID = str('NMLNT001592')):
     if Model_ID == None:
         try:
-            # Obtains the cell threshold, rheobase, resting v, and bias currents for
-            #with urllib.request.urlopen("https://www.neuroml-db.org/api/models") as url:
-            #    all_models = json.loads(url.read().decode())
-
 
             url = str("https://www.neuroml-db.org/api/models")
             all_models = requests.get(url)
             all_models = json.loads(all_models.text)
-            print(all_models)
-            for d in all_models:
-                print(d.keys())
-            for d in all_models[0]:
-                print(d['Model_ID'],d['Directory_Path'])
-                url = str('https://www.neuroml-db.org/GetModelZip?modelID=')+str(d['Model_ID'])+str('&version=NeuroML')
-                urllib.request.urlretrieve(url,Model_ID)
-                #https://www.neuroml-db.org/api/models'
-                #url = str('https://www.neuroml-db.org/GetModelZip?modelID=')+str(d['Model_ID'])+str('&version=NeuroML')
-                #os.system('wget '+str(url))
-                os.system(str('unzip *')+str(d['Model_ID'])+('*'))
-                os.system(str('pynml hhneuron.cell.nml -neuron'))
-            return data
+            return all_models
 
         except:
             pass
     else:
         d = {}
         d['Model_ID'] = Model_ID
-        #print(d['Model_ID'],d['Directory_Path'])
-        #https://www.neuroml-db.org/api/models'
-        url = "https://www.neuroml-db.org/GetModelZip?modelID=NMLNT001592&version=NeuroML"
-        #url = str('https://www.neuroml-db.org/GetModelZip?modelID=')+str(d['Model_ID'])+str('&version=NeuroML')
-        urllib.request.urlretrieve(url,Model_ID)
-        print(url)
-        url = "https://www.neuroml-db.org/GetModelZip?modelID=NMLNT001592&version=NeuroML"
-        os.system('wget '+str(url))
-        os.system(str('unzip ')+str(d['Model_ID'])+('*'))
-        os.system(str('pynml hhneuron.cell.nml -neuron'))
+        url = str('https://www.neuroml-db.org/GetModelZip?modelID=')+str(d['Model_ID'])+str('&version=NeuroML')
+        single_model = requests.get(url)
+        single_model = json.loads(all_models.text)
+        #os.system(str('pynml hhneuron.cell.nml -neuron'))
+        return single_model
 
-data = get_all()
+def get_wave_forms(cell_id):
+    url = str("https://www.neuroml-db.org/api/model?id=")+cell_id
+    waveids = requests.get(url)
+    waveids = json.loads(waveids.text)
+    wlist = waveids['waveform_list']
+    waves_to_get = []
+    for wl in wlist:
+        waves_to_test = {}
+        wid = wl['ID']
+        url = str("https://neuroml-db.org/api/waveform?id=")+str(wid)
+        waves = requests.get(url)
+        temp = json.loads(waves.text)
+        if temp['Spikes'] == 1:
+            if 'NOISE' in temp['Protocol_ID']:
+                print((temp['Waveform_Label']))
+
+                pass
+            if 'RAMP' in temp['Protocol_ID']:
+                print((temp['Waveform_Label']))
+
+                pass
+            if 'SHORT_SQUARE_TRIPPLE' in temp['Protocol_ID']:
+                print((temp['Waveform_Label']))
+                pass
+
+            if 'SHORT_SQUARE' in temp['Protocol_ID'] and not 'SHORT_SQUARE_TRIPPLE' in temp['Protocol_ID']:
+                try:
+                    parts = temp['Waveform_Label'].split(' ')
+                    #import pdb; pdb.set_trace()
+                    print(parts[0])
+                    print(parts[1])
+                    waves_to_test['prediction'] = float(parts[0])*nA# '1.1133 nA',
+                    print('yes')
+
+                    temp_vm = list(map(float, temp['Variable_Values'].split(',')))
+
+                    waves_to_test['Times'] = list(map(float,temp['Times'].split(',')))
+                    waves_to_test['DURATION'] = temp['Time_End'] -temp['Time_Start']
+                    waves_to_test['DELAY'] = temp['Time_Start']
+                    waves_to_test['Time_End'] = temp['Time_End']
+                    waves_to_test['Time_Start'] = temp['Time_Start']
+                    dt = waves_to_test['Times'][1]- waves_to_test['Times'][0]
+                    waves_to_test['vm'] = AnalogSignal(temp_vm,sampling_period=dt*ms,units=mV)
+                    waves_to_test['everything'] = temp
+                    waves_to_get.append(waves_to_test)
+
+                except:
+                    if temp['Waveform_Label'] is None:
+                        pass
+                    pass
+    return waves_to_get
+
+
+data = get_all(Model_ID = None)
+smse = []
+
+for d in data:
+    waves = get_wave_forms(d['Model_ID'])
+    for w in waves:
+
+        sm = models.StaticModel(w['vm'])
+        sm.model_name = d['Model_ID']
+        sm.rheobase = {}
+        sm.rheobase['mean'] = w['prediction']
+        sm.complete = w
+        smse.append(sm)
+        print('made model, ',smse[-])
+        with open('exhuastive_static_models.p','wb') as f:
+            pickle.dump(sms,f)
+
 import pdb; pdb.set_trace()
 
 try:
@@ -93,57 +141,6 @@ try:
         sms = pickle.load(f)
 
 except:
-    def get_wave_forms(cell_id):
-        url = str("https://www.neuroml-db.org/api/model?id=")+cell_id
-        waveids = requests.get(url)
-        waveids = json.loads(waveids.text)
-        wlist = waveids['waveform_list']
-        waves_to_get = []
-        for wl in wlist:
-            waves_to_test = {}
-            wid = wl['ID']
-            url = str("https://neuroml-db.org/api/waveform?id=")+str(wid)
-            waves = requests.get(url)
-            temp = json.loads(waves.text)
-            if temp['Spikes'] == 1:
-                if 'NOISE' in temp['Protocol_ID']:
-                    print((temp['Waveform_Label']))
-
-                    pass
-                if 'RAMP' in temp['Protocol_ID']:
-                    print((temp['Waveform_Label']))
-
-                    pass
-                if 'SHORT_SQUARE_TRIPPLE' in temp['Protocol_ID']:
-                    print((temp['Waveform_Label']))
-                    pass
-
-                if 'SHORT_SQUARE' in temp['Protocol_ID'] and not 'SHORT_SQUARE_TRIPPLE' in temp['Protocol_ID']:
-                    try:
-                        parts = temp['Waveform_Label'].split(' ')
-                        #import pdb; pdb.set_trace()
-                        print(parts[0])
-                        print(parts[1])
-                        waves_to_test['prediction'] = float(parts[0])*nA# '1.1133 nA',
-                        print('yes')
-
-                        temp_vm = list(map(float, temp['Variable_Values'].split(',')))
-
-                        waves_to_test['Times'] = list(map(float,temp['Times'].split(',')))
-                        waves_to_test['DURATION'] = temp['Time_End'] -temp['Time_Start']
-                        waves_to_test['DELAY'] = temp['Time_Start']
-                        waves_to_test['Time_End'] = temp['Time_End']
-                        waves_to_test['Time_Start'] = temp['Time_Start']
-                        dt = waves_to_test['Times'][1]- waves_to_test['Times'][0]
-                        waves_to_test['vm'] = AnalogSignal(temp_vm,sampling_period=dt*ms,units=mV)
-                        waves_to_test['everything'] = temp
-                        waves_to_get.append(waves_to_test)
-
-                    except:
-                        if temp['Waveform_Label'] is None:
-                            pass
-                        pass
-        return waves_to_get
     waves = get_wave_forms(str('NMLCL001129'))
     sms = []
     for w in waves:
