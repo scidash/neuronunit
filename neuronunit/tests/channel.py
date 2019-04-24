@@ -27,14 +27,24 @@ class _IVCurveTest(sciunit.Test):
         super(_IVCurveTest,self).__init__(observation, name=name, **params)
 
     required_capabilities = (ProducesIVCurve,)
+    
+    units = {'v':pq.V, 'i':pq.pA}
+    
     score_type = BooleanScore
 
+    observation_schema = [("Current Array, Voltage Array",
+                           {'i': {'units': True, 'iterable': True, 'required': True},
+                            'v': {'units': True, 'iterable': True, 'required': True},
+                            }),
+                          ]
+    
     def validate_observation(self, observation):
-        assert type(observation) is dict
-        for item in ['v', 'i']:
-            assert item in observation
-            assert type(observation[item]) in [list,tuple] \
-                or isinstance(observation[item],np.ndarray)
+        super(_IVCurveTest, self).validate_observation(observation)
+        #assert type(observation) is dict
+        #for item in ['v', 'i']:
+        #    assert item in observation
+        #    assert type(observation[item]) in [list,tuple] \
+        #        or isinstance(observation[item],np.ndarray)
         if hasattr(observation['v'],'units'):
             observation['v'] = observation['v'].rescale(pq.V) # Rescale to V
         if hasattr(observation['i'],'units'):
