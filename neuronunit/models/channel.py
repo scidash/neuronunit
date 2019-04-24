@@ -8,6 +8,7 @@ from .lems import LEMSModel
 from pyneuroml.analysis import NML2ChannelAnalysis as ca
 import quantities as pq
 
+
 class ChannelModel(LEMSModel, cap.NML2_Channel_Runnable,
                                   cap.ProducesIVCurve):
     """A model for ion channels"""

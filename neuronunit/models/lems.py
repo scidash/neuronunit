@@ -5,7 +5,7 @@ import shutil
 try:
     from urllib.parse import urljoin
 except ImportError:
-    from urllib import urljoin
+    from urlparse import urljoin
 
 import requests
 import validators
@@ -21,6 +21,10 @@ from sciunit.models.runnable import RunnableModel
 
 class LEMSModel(RunnableModel):
     """A generic LEMS model."""
+
+    extra_capability_checks = {
+        cap.ReceivesSquareCurrent: 'has_pulse_generator'
+    }
 
     def __init__(self, LEMS_file_path_or_url, name=None,
                  backend=None, attrs=None):
@@ -47,8 +51,6 @@ class LEMSModel(RunnableModel):
         super(LEMSModel, self).__init__(name, backend=backend, attrs=attrs)
         self.set_default_run_params(**pynml.DEFAULTS)
         self.set_default_run_params(nogui=True)
-        self.extra_capability_checks[cap.ReceivesSquareCurrent] =\
-            'has_pulse_generator'
         self.use_default_run_params()
 
     from_url = None
