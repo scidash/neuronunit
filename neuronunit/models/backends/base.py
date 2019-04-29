@@ -17,16 +17,11 @@ from neo.core import AnalogSignal
 import neuronunit.capabilities.spike_functions as sf
 import sciunit
 from sciunit.models.backends import Backend, BackendException
-from sciunit.utils import dict_hash, import_module_from_path
+from sciunit.utils import dict_hash, import_module_from_path, \
+                          TemporaryDirectory
 
-try:
-    import neuron
-    from neuron import h
-    NEURON_SUPPORT = True
-except:
-    neuron = None
-    h = None
-    NEURON_SUPPORT = False
+# Test for NEURON support in a separate python process
+NEURON_SUPPORT = (os.system("python -c 'import neuron' > /dev/null 2>&1") == 0)  
 
 try:
     import pyNN

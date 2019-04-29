@@ -7,8 +7,9 @@ allensdk==0.14.5
 pyNeuroML @ git+https://github.com/rgerkin/pyneuroml@master#egg=pyneuroml-9999
 pyNN>=0.9
 execnet
-backports.tempfile
 sciunit @ git+https://github.com/scidash/sciunit@dev#egg=sciunit-9999
+requests
+validators
 lmfit
 numba
 dask[complete]
