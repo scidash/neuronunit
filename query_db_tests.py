@@ -14,21 +14,12 @@ import shutil
 import string
 import urllib
 from abc import abstractmethod, ABCMeta
-#from decimal import Decimal
-#import nmldbutils
+
 import inspect
 
 import numpy as np
 from matplotlib import pyplot as plt
-#from sklearn.decomposition import PCA
 
-#from collector import Collector
-
-#from neuronrunner import NeuronRunner, NumericalInstabilityException
-#from runtimer import RunTimer
-#from neuronunit.tables import Cells, Model_Waveforms, Morphometrics, Cell_Morphometrics, db_proxy, Models
-#from neuronunit.nmldbmodel import NMLDB_Model
-#cpus = multiprocessing.cpu_count
 import dask.bag as dbag # a pip installable module, usually installs without complication
 import dask
 import urllib.request, json
@@ -42,28 +33,16 @@ from neuronunit.optimisation import get_neab
 
 from types import MethodType
 
+import efel
+import numpy
+with open('static_models.p','rb') as f:
+    sms = pickle.load(f)
 
-def get_all(Model_ID = str('NMLNT001592')):
-    if Model_ID == None:
-        try:
-
-            url = str("https://www.neuroml-db.org/api/models")
-            all_models = requests.get(url)
-            all_models = json.loads(all_models.text)
-            return all_models
-
-        except:
-            pass
-    else:
-        d = {}
-        d['Model_ID'] = Model_ID
-        url = str('https://www.neuroml-db.org/GetModelZip?modelID=')+str(d['Model_ID'])+str('&version=NeuroML')
-        single_model = requests.get(url)
-        single_model = json.loads(all_models.text)
-        #os.system(str('pynml hhneuron.cell.nml -neuron'))
-        return single_model
 
 def get_wave_forms(cell_id):
+    print(cell_id)
+    #import pdb; pdb.set_trace()
+
     url = str("https://www.neuroml-db.org/api/model?id=")+cell_id
     waveids = requests.get(url)
     waveids = json.loads(waveids.text)
@@ -89,56 +68,38 @@ def get_wave_forms(cell_id):
                 pass
 
             if 'SHORT_SQUARE' in temp['Protocol_ID'] and not 'SHORT_SQUARE_TRIPPLE' in temp['Protocol_ID']:
-                try:
-                    parts = temp['Waveform_Label'].split(' ')
-                    #import pdb; pdb.set_trace()
-                    print(parts[0])
-                    print(parts[1])
-                    waves_to_test['prediction'] = float(parts[0])*nA# '1.1133 nA',
-                    print('yes')
+                #try:
+                parts = temp['Waveform_Label'].split(' ')
+                #import pdb; pdb.set_trace()
+                print(parts[0])
+                print(parts[1])
+                waves_to_test['prediction'] = float(parts[0])*nA# '1.1133 nA',
+                print('yes')
 
-                    temp_vm = list(map(float, temp['Variable_Values'].split(',')))
+                temp_vm = list(map(float, temp['Variable_Values'].split(',')))
 
-                    waves_to_test['Times'] = list(map(float,temp['Times'].split(',')))
-                    waves_to_test['DURATION'] = temp['Time_End'] -temp['Time_Start']
-                    waves_to_test['DELAY'] = temp['Time_Start']
-                    waves_to_test['Time_End'] = temp['Time_End']
-                    waves_to_test['Time_Start'] = temp['Time_Start']
-                    dt = waves_to_test['Times'][1]- waves_to_test['Times'][0]
-                    waves_to_test['vm'] = AnalogSignal(temp_vm,sampling_period=dt*ms,units=mV)
-                    waves_to_test['everything'] = temp
-                    waves_to_get.append(waves_to_test)
+                waves_to_test['Times'] = list(map(float,temp['Times'].split(',')))
+                waves_to_test['DURATION'] = temp['Time_End'] -temp['Time_Start']
+                waves_to_test['DELAY'] = temp['Time_Start']
+                waves_to_test['Time_End'] = temp['Time_End']
+                waves_to_test['Time_Start'] = temp['Time_Start']
+                dt = waves_to_test['Times'][1]- waves_to_test['Times'][0]
+                waves_to_test['vm'] = AnalogSignal(temp_vm,sampling_period=dt*ms,units=mV)
+                waves_to_test['everything'] = temp
+                waves_to_get.append(waves_to_test)
 
-                except:
-                    if temp['Waveform_Label'] is None:
-                        pass
-                    pass
+                #except:
+                #    if temp['Waveform_Label'] is None:
+                #        pass
+                #    pass
     return waves_to_get
 
 
-data = get_all(Model_ID = None)
-smse = []
 
-for d in data:
-    waves = get_wave_forms(d['Model_ID'])
-    for w in waves:
-
-        sm = models.StaticModel(w['vm'])
-        sm.model_name = d['Model_ID']
-        sm.rheobase = {}
-        sm.rheobase['mean'] = w['prediction']
-        sm.complete = w
-        smse.append(sm)
-        print('made model, ',smse[-])
-        with open('exhuastive_static_models.p','wb') as f:
-            pickle.dump(sms,f)
-
-import pdb; pdb.set_trace()
+#import pdb; pdb.set_trace()
 
 try:
-    #assert 1==2
-    with open('static_models.p','rb') as f:
-        sms = pickle.load(f)
+    with open('static_models.p','rb') as f: sms = pickle.load(f)
 
 except:
     waves = get_wave_forms(str('NMLCL001129'))
@@ -165,6 +126,98 @@ def generate_prediction(self,model):
     prediction['mean'] = model.rheobase['mean']
     return prediction
     #model.get_membrane_potential()
+
+        #all_models = json.loads(url.read().decode())
+def get_all(Model_ID = str('NMLNT001592')):
+    if Model_ID == None:
+        try:
+
+            url = str("https://www.neuroml-db.org/api/models")
+            all_models = requests.get(url)
+            all_models = json.loads(all_models.text)
+            return all_models
+
+        except:
+            pass
+    else:
+        d = {}
+        d['Model_ID'] = Model_ID
+        url = str('https://www.neuroml-db.org/api/model?id=')+str(d['Model_ID'])+str('&version=NeuroML')
+        single_model = requests.get(url)
+        single_model = json.loads(single_model.text)
+        #os.system(str('pynml hhneuron.cell.nml -neuron'))
+        return single_model
+
+smse = []
+
+#eFEL Documentation, Release 3.0.58(continued from previous page)#
+#Now we will construct the datastructure that will be passed to eFEL
+# A 'trace' is a dictionary
+#trace1 = {}
+# Set the 'T' (=time) key of the tracetrace1['T'] = time# Set the 'V' (=voltage)
+#key of the tracetrace1['V'] = voltage# Set the 'stim_start'
+# (time at which a stimulus starts, in ms)# key of the trace# Warning:
+#this need to be a list (with one element)trace1['stim_start'] = [700]#
+#Set the 'stim_end' (time at which a stimulus end) key of the trace#
+#Warning: this need to be a list (with one element)trace1['stim_end'] = [2700]#
+# Multiple traces can be passed to the eFEL at the same time, so the#
+#argument should be a listtraces = [trace1]# Now we pass 'traces' to
+#the efel and ask it to calculate the feature#
+#valuestraces_results = efel.getFeatureValues(traces,['AP_amplitude', 'voltage_base'])
+data = get_all()
+#try:
+
+waves = get_wave_forms(data['model']['Model_ID'])
+import pdb; pdb.set_trace()
+for w in waves:
+
+    trace = {}
+
+
+    trace['T'] = w['Times']
+    trace['V'] = w['vm']
+    trace['stim_start'] = list(w['Time_Start'])
+    trace['stim_end'] = list(w['duration'])
+    traces = [trace1]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
+    traces_results = efel.getFeatureValues(traces,['AP_amplitude', 'voltage_base'])#
+    #The return value is a list of trace_results, every trace_results# corresponds
+    #to one trace in the 'traces' list above (in same order)
+    for trace_results in traces_results:
+        for feature_name, feature_values in trace_results.items():
+
+            print("Feature%shas the following values:%s".format(feature_name, ', '.join([str(x) for x in feature_values])))
+    #trace_result is a dictionary, with as keys the requested eFeaturesforfeature_name, feature_valuesintrace_results.items():print "Feature%shas the following values:%s" % \(feature_name, ', '.join([str(x)forxinfeature_values]))
+
+    sm = models.StaticModel(w['vm'])
+    sm.model_name = d['Model_ID']
+    sm.rheobase = {}
+    sm.rheobase['mean'] = w['prediction']
+    sm.complete = w
+    smse.append(sm)
+    print('made model, ',smse[-1])
+with open('exhuastive_static_models.p','wb') as f:
+    pickle.dump(sms,f)
+#except:
+for d in data:
+    #import pdb; pdb.set_trace()
+
+    waves = get_wave_forms(d['Model_ID'])
+    for w in waves:
+        trace = {}
+        trace['T'] = w['Times']
+        trace['V'] = w['vm']
+        trace['stim_start'] = list(w['Time_Start'])
+        trace['stim_end'] = list(w['duration'])
+
+        sm = models.StaticModel(w['vm'])
+        sm.model_name = d['Model_ID']
+        sm.rheobase = {}
+        sm.rheobase['mean'] = w['prediction']
+        sm.complete = w
+        smse.append(sm)
+        print('made model, ',smse[-1])
+        with open('exhuastive_static_models.p','wb') as f:
+            pickle.dump(sms,f)
 
 #import pdb; pdb.set_trace()
 test_scores = []
@@ -217,9 +270,6 @@ for t,sm in flat_iter:
 
     else:
         print('passive skipped: ',t.name)
-
-
-        #all_models = json.loads(url.read().decode())
 
 
 def run_cell():
