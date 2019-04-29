@@ -41,7 +41,7 @@ def get_diff(vm):
     n_spikes = len([np.any(differentiated) > 0.000193667327364])
     return spike_lets, n_spikeson
 
-tolerance = 0.0 #0.000000001
+tolerance = 0.001
 
 class RheobaseTest(VmTest):
     """
@@ -160,6 +160,7 @@ class RheobaseTest(VmTest):
                 #   tolerance = dtc.tolerance
                 if delta < tolerance or (str(supra.min()) == str(sub.max())):
                     break
+            print(i,'i rheobase')
 
             if i >= max_iters:
                 break
@@ -242,11 +243,11 @@ class RheobaseTestP(VmTest):
             dtc.rheobase = None
             sub, supra = get_sub_supra(dtc.lookup)
 
-            if 0. in supra and len(sub) == 0:
-                dtc.boolean = True
-                dtc.rheobase = -1
-                return dtc
-            elif (len(sub) + len(supra)) == 0:
+            #if 0. in supra and len(sub) == 0:
+            #    dtc.boolean = True
+            #    dtc.rheobase = None
+            #    return dtc
+            if (len(sub) + len(supra)) == 0:
                 # This assertion would only be occur if there was a bug
                 assert sub.max() <= supra.min()
             elif len(sub) and len(supra):
@@ -297,7 +298,6 @@ class RheobaseTestP(VmTest):
                       {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
             ampl = float(dtc.ampl)
-            #print(ampl, 'why is this the same?')
             if ampl not in dtc.lookup or len(dtc.lookup) == 0:
                 current = params.copy()['injected_square_current']
                 uc = {'amplitude':ampl*pq.pA}
@@ -328,7 +328,6 @@ class RheobaseTestP(VmTest):
 
 
                 if n_spikes == 1:
-                    #print('finds spike: ',ampl)
                     dtc.lookup[float(ampl)] = 1
                     dtc.rheobase = float(ampl)
                     dtc.boolean = True
@@ -362,18 +361,17 @@ class RheobaseTestP(VmTest):
                     elif type(dtc.current_steps) is type(list):
                         dtc.current_steps = [ s * 1.25 for s in dtc.current_steps ]
                     dtc.initiated = True # logically unnecessary but included for readibility
-            print('')
             if dtc.initiated == False:
 
                 dtc.boolean = False
 
 
                 if str('PYNN') in dtc.backend:
-                    print('got here')
                     steps = np.linspace(100,1000,7.0)
                 else:
 
                     steps = np.linspace(1,250,7.0)
+
                 steps_current = [ i*pq.pA for i in steps ]
                 dtc.current_steps = steps_current
                 dtc.initiated = True
@@ -392,33 +390,27 @@ class RheobaseTestP(VmTest):
 
             use_diff = False
 
-            while dtc.boolean == False and cnt< 8:
-                if len(supra) ==0 and len(sub):
-                    # negeative spiker
-                    if sub.max() < -100.0:
-                        use_diff = True # differentiate the wave to look for spikes
+            while dtc.boolean == False and cnt< 15:
+                '''
+                # negeative spiker
+                if sub.max() < -100.0:
+                use_diff = True # differentiate the wave to look for spikes
 
-                    if sub.max()> 2000.0:
-                        dtc.rheobase = None #float(supra.min())
-                        dtc.boolean = False
-                        return dtc
+                if sub.max()> 2000.0:
+                dtc.rheobase = None #float(supra.min())
+                dtc.boolean = False
+                return dtc
+                '''
                 be = dtc.backend
                 dtc_clones = [ dtc for i in range(0,len(dtc.current_steps)) ]
                 for i,s in enumerate(dtc.current_steps):
                     dtc_clones[i] = copy.copy(dtc_clones[i])
                     dtc_clones[i].ampl = copy.copy(dtc.current_steps[i])
 
-                #set_clones = set([ float(d.ampl) for d in dtc_clones ])
-                #assert len(dtc_clones) == len(set_clones)
-
                 for d in dtc_clones:
                     d.use_diff = None
                     d.use_diff = use_diff
                 dtc_clones = [ d for d in dtc_clones if not np.isnan(d.ampl) ]
-                #try:
-                #@jit(target='cuda')
-                #dtc_clone = list(b0.map(check_current).compute())
-                #except:
                 try:
                     b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
                     dtc_clone = list(b0.map(check_current).compute())
@@ -441,7 +433,7 @@ class RheobaseTestP(VmTest):
                     dtc.lookup.update(d.lookup)
                 dtc = check_fix_range(dtc)
 
-                cnt += 1
+
                 sub, supra = get_sub_supra(dtc.lookup)
                 if len(supra) and len(sub):
                     delta = float(supra.min()) - float(sub.max())
@@ -452,11 +444,11 @@ class RheobaseTestP(VmTest):
                         dtc.boolean = True
                         return dtc
 
-                self.verbose == 2
                 if self.verbose >= 2:
                     print("Try %d: SubMax = %s; SupraMin = %s" % \
                     (cnt, sub.max() if len(sub) else None,
                     supra.min() if len(supra) else None))
+                cnt += 1
             return dtc
 
         dtc = DataTC()
