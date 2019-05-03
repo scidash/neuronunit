@@ -67,3 +67,4 @@ class jNeuroMLBackend(Backend):
                    "and notice messages follow:\n"))
             print(self.stdout.getvalue())
         return results
+

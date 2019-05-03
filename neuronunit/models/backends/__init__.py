@@ -17,6 +17,18 @@ except ImportError:
     print('Could not load jNeuroMLBackend')
 
 try:
+    from .jNeuroML import jNeuroMLBackend
+except ImportError:
+    jNeuroMLBackend = None
+    print('Could not load jNeuroMLBackend')
+
+try:
+    from .geppetto import GeppettoBackend
+except ImportError:
+    GeppettoBackend = None
+    print('Could not load GeppettoBackend')
+
+try:
     from .neuron import NEURONBackend
 except ImportError:
     NEURONBackend = None
