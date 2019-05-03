@@ -2,6 +2,8 @@
 *.pkl
 *.p
 *do-not-add*
+neuronunit/examples/model_zoo/*.nml
+*.hoc
 
 # Packages
 *.egg
