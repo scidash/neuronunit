@@ -8,6 +8,8 @@ from neuronunit.neuromldb import NeuroMLDBStaticModel
 from numpy import array
 from quantities import *
 
+DELTA = 0.3
+
 class Druckmann2013BaseTestCase:
     class BaseTest(unittest.TestCase):
         # Use cached pickled model for testing (faster, no external dependency)
@@ -140,7 +142,7 @@ class Druckmann2013BaseTestCase:
             }
 
             if predicted is not None and expected is not None:
-                self.assertAlmostEqual(predicted, expected * units, delta=0.001)
+                self.assertAlmostEqual(predicted, expected * units, delta=DELTA)
             else:
                 self.assertTrue(predicted == expected)
 
