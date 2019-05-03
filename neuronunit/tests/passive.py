@@ -28,11 +28,16 @@ class TestPulseTest(VmTest):
                   100.0 * pq.ms)
         model.get_backend().set_stop_time(t_stop)
 
-    def generate_prediction(self, model):
-        """Implement sciunit.Test.generate_prediction."""
+    def setup_protocol(self, model):
+        """Implement sciunit.tests.ProtocolToFeatureTest.run_protocol."""
         self.condition_model(model)
         model.inject_square_current(self.params['injected_square_current'])
+        
+    def get_result(self, model):
         vm = model.get_membrane_potential()
+        return vm
+
+    def extract_features(self, model, vm):
         i = self.params['injected_square_current']
         if np.any(np.isnan(vm)) or np.any(np.isinf(vm)):
             return None
@@ -123,18 +128,15 @@ class InputResistanceTest(TestPulseTest):
 
     ephysprop_name = 'Input Resistance'
 
-    def generate_prediction(self, model):
-        """Implement sciunit.Test.generate_prediction."""
-        result = super(InputResistanceTest, self).generate_prediction(model)
-        if result is not None:
-            i, vm = result
+    def extract_features(self, model, result):
+        features = super(InputResistanceTest, self).extract_features(model, result)
+        if features is not None:
+            i, vm = features
             r_in = self.__class__.get_rin(vm, i)
             r_in = r_in.simplified
             # Put prediction in a form that compute_score() can use.
-            prediction = {'value': r_in}
-            return prediction
-        else:
-            return None
+            features = {'value': r_in}
+        return features
 
 
 class TimeConstantTest(TestPulseTest):
@@ -148,18 +150,15 @@ class TimeConstantTest(TestPulseTest):
 
     ephysprop_name = 'Membrane Time Constant'
 
-    def generate_prediction(self, model):
-        """Implement sciunit.Test.generate_prediction."""
-        result = super(TimeConstantTest, self).generate_prediction(model)
-        if result is not None:
-            i, vm = result
+    def extract_features(self, model, result):
+        features = super(TimeConstantTest, self).extract_features(model, result)
+        if features is not None:
+            i, vm = features
             tau = self.__class__.get_tau(vm, i)
             tau = tau.simplified
             # Put prediction in a form that compute_score() can use.
-            prediction = {'value': tau}
-            return prediction
-        else:
-            return None
+            features = {'value': tau}
+        return features
 
     def compute_score(self, observation, prediction):
         """Implement sciunit.Test.score_prediction."""
@@ -188,20 +187,17 @@ class CapacitanceTest(TestPulseTest):
 
     ephysprop_name = 'Cell Capacitance'
 
-    def generate_prediction(self, model):
-        """Implement sciunit.Test.generate_prediction."""
-        result = super(CapacitanceTest, self).generate_prediction(model)
-        if result is not None:
-            i, vm = result
+    def extract_features(self, model, result):
+        features = super(CapacitanceTest, self).extract_features(model, result)
+        if features is not None:
+            i, vm = features
             r_in = self.__class__.get_rin(vm, i)
             tau = self.__class__.get_tau(vm, i)
             c = (tau/r_in).simplified
             # Put prediction in a form that compute_score() can use.
-            prediction = {'value': c}
-            return prediction
-        else:
-            return None
-
+            features = {'value': c}
+        return features
+        
     def compute_score(self, observation, prediction):
         """Implement sciunit.Test.score_prediction."""
         if prediction is None:
@@ -240,19 +236,16 @@ class RestingPotentialTest(TestPulseTest):
 
     ephysprop_name = 'Resting membrane potential'
 
-    def generate_prediction(self, model):
-        """Implement sciunit.Test.generate_prediction."""
-        result = super(RestingPotentialTest, self).generate_prediction(model)
-        if result is not None:
+
+
+    def extract_features(self, model, result):
+        features = super(RestingPotentialTest, self).extract_features(model, result)
+        if features is not None:
             median = model.get_median_vm()  # Use median for robustness.
             std = model.get_std_vm()
-            # print('std: ',std,'median: ',median)
-            prediction = {'mean': median, 'std': std}
-            self.prediction = prediction
-            return prediction
-        else:
-            return None
-
+            features = {'mean': median, 'std': std}
+        return features
+        
     def compute_score(self, observation, prediction):
         """Implement sciunit.Test.score_prediction."""
         if prediction is None:
