@@ -3,7 +3,6 @@
 No classes here meant for direct use in testing.
 """
 
-import math
 from types import MethodType
 
 import numpy as np
@@ -15,12 +14,6 @@ import sciunit.scores as scores
 import neuronunit.capabilities as ncap
 import sciunit.capabilities as scap
 from neuronunit import neuroelectro
-
-
-AMPL = 0.0*pq.pA
-DELAY = 100.0*pq.ms
-DURATION = 300.0*pq.ms
-STOP_TIME = DELAY + DURATION + 200*pq.ms
 
 
 class VmTest(ProtocolToFeaturesTest):
@@ -55,11 +48,26 @@ class VmTest(ProtocolToFeaturesTest):
                             'n': {'type': 'integer', 'min': 1,
                                   'required': True}})]
 
-    params_schema = {'dt': {'type': 'time', 'required': False},
-                     'tmax': {'type': 'time', 'min': 0, 'required': False}}
+    default_params = {'amplitude': 0.0*pq.pA,
+                      'delay': 100.0*pq.ms,
+                      'duration': 300.0*pq.ms,
+                      'dt': 0.025*pq.ms,
+                      'padding': 200*pq.ms}
+
+    params_schema = {'dt': {'type': 'time', 'min': 0, 'required': False},
+                     'tmax': {'type': 'time', 'min': 0, 'required': False},
+                     'delay': {'type': 'time', 'min': 0, 'required': False},
+                     'duration': {'type': 'time', 'min': 0, 'required': False},
+                     'amplitude': {'type': 'current', 'required': False},
+                     'padding': {'type': 'time', 'min': 0, 'required': False}}
 
     def _extra(self):
         pass
+
+    def compute_params(self):
+        self.params['tmax'] = (self.params['delay'] +
+                               self.params['duration'] +
+                               self.params['padding'])
 
     def validate_observation(self, observation):
         super(VmTest, self).validate_observation(observation)
@@ -69,7 +77,7 @@ class VmTest(ProtocolToFeaturesTest):
         return observation
 
     def condition_model(self, model):
-        model.set_run_params(t_stop=STOP_TIME)    
+        model.set_run_params(t_stop=self.params['tmax'])
 
     def bind_score(self, score, model, observation, prediction):
         score.related_data['vm'] = model.get_membrane_potential()
@@ -128,8 +136,9 @@ class VmTest(ProtocolToFeaturesTest):
         return observation
 
     def sanity_check(self, rheobase, model):
-        self.params['injected_square_current']['delay'] = DELAY
-        self.params['injected_square_current']['duration'] = DURATION
+        self.params['injected_square_current']['delay'] = self.params['delay']
+        self.params['injected_square_current']['duration'] = \
+            self.params['duration']
         self.params['injected_square_current']['amplitude'] = rheobase
         model.inject_square_current(self.params['injected_square_current'])
 
@@ -147,6 +156,17 @@ class VmTest(ProtocolToFeaturesTest):
                 if np.isnan(j):
                     return False
         return True
+
+    @classmethod
+    def get_default_injected_square_current(cls):
+        current = {key: cls.default_params[key]
+                   for key in ['duration', 'delay', 'amplitude']}
+        return current
+
+    def get_injected_square_current(self):
+        current = {key: self.default_params[key]
+                   for key in ['duration', 'delay', 'amplitude']}
+        return current
 
     @property
     def state(self):

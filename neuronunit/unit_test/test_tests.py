@@ -62,12 +62,12 @@ class TestsPassiveTestCase(TestsTestCase, unittest.TestCase):
     def test_capacitance(self):
         from neuronunit.tests.passive import CapacitanceTest as T
         score = self.run_test(T)
-        self.assertTrue(-0.25 < score < -0.15, "Score was %.2f" % score)
+        self.assertTrue(-0.35 < score < -0.25, "Score was %.2f" % score)
 
     def test_timeconstant(self):
         from neuronunit.tests.passive import TimeConstantTest as T
         score = self.run_test(T)
-        self.assertTrue(-0.85 < score < -0.75, "Score was %.2f" % score)
+        self.assertTrue(-1.00 < score < -0.90, "Score was %.2f" % score)
 
 
 class TestsWaveformTestCase(TestsTestCase, unittest.TestCase):

@@ -1,6 +1,6 @@
 """Passive neuronunit tests, requiring no active conductances or spiking."""
 
-from .base import np, pq, sciunit, ncap, VmTest, scores, AMPL, DELAY, DURATION
+from .base import np, pq, ncap, VmTest, scores
 from scipy.optimize import curve_fit
 
 DURATION = 500.0*pq.ms
@@ -12,9 +12,9 @@ class TestPulseTest(VmTest):
 
     def __init__(self, *args, **kwargs):
         super(TestPulseTest, self).__init__(*args, **kwargs)
-        self.params['injected_square_current'] = {'amplitude': -10.0*pq.pA,
-                                                  'delay': DELAY,
-                                                  'duration': DURATION}
+
+    default_params = dict(VmTest.default_params)
+    default_params['amplitude'] = -10.0 * pq.pA
 
     required_capabilities = (ncap.ReceivesSquareCurrent,)
 
@@ -22,17 +22,20 @@ class TestPulseTest(VmTest):
 
     score_type = scores.ZScore
 
+    def compute_params(self):
+        super(TestPulseTest, self).compute_params()
+        self.params['injected_square_current'] = \
+            self.get_injected_square_current()
+
     def condition_model(self, model):
-        t_stop = (self.params['injected_square_current']['delay'] +
-                  self.params['injected_square_current']['duration'] +
-                  100.0 * pq.ms)
+        t_stop = self.params['tmax']
         model.get_backend().set_stop_time(t_stop)
 
     def setup_protocol(self, model):
         """Implement sciunit.tests.ProtocolToFeatureTest.run_protocol."""
         self.condition_model(model)
         model.inject_square_current(self.params['injected_square_current'])
-        
+
     def get_result(self, model):
         vm = model.get_membrane_potential()
         return vm
@@ -129,7 +132,8 @@ class InputResistanceTest(TestPulseTest):
     ephysprop_name = 'Input Resistance'
 
     def extract_features(self, model, result):
-        features = super(InputResistanceTest, self).extract_features(model, result)
+        features = super(InputResistanceTest, self).\
+                            extract_features(model, result)
         if features is not None:
             i, vm = features
             r_in = self.__class__.get_rin(vm, i)
@@ -151,7 +155,8 @@ class TimeConstantTest(TestPulseTest):
     ephysprop_name = 'Membrane Time Constant'
 
     def extract_features(self, model, result):
-        features = super(TimeConstantTest, self).extract_features(model, result)
+        features = super(TimeConstantTest, self).\
+                            extract_features(model, result)
         if features is not None:
             i, vm = features
             tau = self.__class__.get_tau(vm, i)
@@ -197,7 +202,7 @@ class CapacitanceTest(TestPulseTest):
             # Put prediction in a form that compute_score() can use.
             features = {'value': c}
         return features
-        
+
     def compute_score(self, observation, prediction):
         """Implement sciunit.Test.score_prediction."""
         if prediction is None:
@@ -215,15 +220,8 @@ class CapacitanceTest(TestPulseTest):
 class RestingPotentialTest(TestPulseTest):
     """Tests the resting potential under zero current injection."""
 
-    def __init__(self, *args, **kwargs):
-        super(RestingPotentialTest, self).__init__(*args, **kwargs)
-        self.params.update(self.default_params)
-
-    default_params = {'injected_square_current':
-                      {'amplitude': 0.0*pq.pA,
-                       'delay': DELAY,
-                       'duration': DURATION}
-                      }
+    default_params = dict(TestPulseTest.default_params)
+    default_params['amplitude'] = 0.0 * pq.pA
 
     name = "Resting potential test"
 
@@ -236,16 +234,15 @@ class RestingPotentialTest(TestPulseTest):
 
     ephysprop_name = 'Resting membrane potential'
 
-
-
     def extract_features(self, model, result):
-        features = super(RestingPotentialTest, self).extract_features(model, result)
+        features = super(RestingPotentialTest, self).\
+                            extract_features(model, result)
         if features is not None:
             median = model.get_median_vm()  # Use median for robustness.
             std = model.get_std_vm()
             features = {'mean': median, 'std': std}
         return features
-        
+
     def compute_score(self, observation, prediction):
         """Implement sciunit.Test.score_prediction."""
         if prediction is None:

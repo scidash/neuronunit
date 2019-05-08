@@ -1,6 +1,21 @@
 """Waveform neuronunit tests, e.g. testing AP waveform properties"""
 
-from .base import np, pq, ncap, VmTest, scores, AMPL, DELAY, DURATION
+from .base import np, pq, ncap, VmTest, scores
+
+
+class InjectedCurrent:
+    """Metaclass to mixin with InjectedCurrent tests."""
+
+    required_capabilities = (ncap.ReceivesSquareCurrent,)
+    
+    default_params = dict(VmTest.default_params)
+    default_params.update({'amplitude': 100*pq.pA})
+
+    def compute_params(self):
+        self.params['injected_square_current'] = \
+            self.get_injected_square_current()
+        self.params['injected_square_current']['amplitude'] = \
+            self.params['amplitude']
 
 
 class APWidthTest(VmTest):
@@ -47,18 +62,10 @@ class APWidthTest(VmTest):
         return score
 
 
-class InjectedCurrentAPWidthTest(APWidthTest):
+class InjectedCurrentAPWidthTest(InjectedCurrent, APWidthTest):
     """Tests the full widths of APs at their half-maximum
     under current injection.
     """
-
-    def __init__(self, *args, **kwargs):
-        super(InjectedCurrentAPWidthTest, self).__init__(*args, **kwargs)
-        self.params['injected_square_current'] = {'amplitude': 100.0*pq.pA,
-                                                  'delay': DELAY,
-                                                  'duration': DURATION}
-
-    required_capabilities = (ncap.ReceivesSquareCurrent,)
 
     score_type = scores.ZScore
 
@@ -69,7 +76,6 @@ class InjectedCurrentAPWidthTest(APWidthTest):
     description = ("A test of the widths of action potentials "
                    "at half of their maximum height when current "
                    "is injected into cell.")
-
 
     def generate_prediction(self, model):
         model.inject_square_current(self.params['injected_square_current'])
@@ -118,19 +124,11 @@ class APAmplitudeTest(VmTest):
         return score
 
 
-class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
+class InjectedCurrentAPAmplitudeTest(InjectedCurrent, APAmplitudeTest):
     """Test the heights (peak amplitude) of action potentials.
 
     Uses current injection.
     """
-
-    def __init__(self, *args, **kwargs):
-        super(InjectedCurrentAPAmplitudeTest, self).__init__(*args, **kwargs)
-        self.params['injected_square_current'] = {'amplitude': 100.0*pq.pA,
-                                                  'delay': DELAY,
-                                                  'duration': DURATION}
-
-    required_capabilities = (ncap.ReceivesSquareCurrent,)
 
     name = "Injected current AP amplitude test"
 
@@ -184,16 +182,8 @@ class APThresholdTest(VmTest):
         return score
 
 
-class InjectedCurrentAPThresholdTest(APThresholdTest):
+class InjectedCurrentAPThresholdTest(InjectedCurrent, APThresholdTest):
     """Test the thresholds of action potentials under current injection."""
-
-    def __init__(self, *args, **kwargs):
-        super(InjectedCurrentAPThresholdTest, self).__init__(*args, **kwargs)
-        self.params['injected_square_current'] = {'amplitude': 100.0*pq.pA,
-                                                  'delay': DELAY,
-                                                  'duration': DURATION}
-
-    required_capabilities = (ncap.ReceivesSquareCurrent,)
 
     name = "Injected current AP threshold test"
 

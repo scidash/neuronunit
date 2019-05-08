@@ -5,7 +5,7 @@ from elephant.statistics import isi
 from elephant.statistics import cv
 from elephant.statistics import lv
 from neuronunit.capabilities.channel import *
-from .base import np, pq, ncap, VmTest, scores, AMPL, DELAY, DURATION
+from .base import np, pq, ncap, VmTest, scores
 from .waveform import InjectedCurrentAPWidthTest
 from .fi import RheobaseTest
 
