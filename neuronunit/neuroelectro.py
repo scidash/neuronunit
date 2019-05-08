@@ -194,7 +194,7 @@ class NeuroElectroData(object):
         (e.g. temperature) that neuroelectro.org will provide.
         """
         db = shelve.open('neuroelectro-cache') if self.cached else {}
-        contents = (self.__class__, self.neuron, self.ephysprop,params)
+        contents = (self.__class__, self.neuron, self.ephysprop, params)
         if DUMP:
             pickled = pickle.dumps(contents)
         identifier = hashlib.sha224(pickled).hexdigest()
