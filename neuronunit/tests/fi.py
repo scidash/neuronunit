@@ -16,7 +16,6 @@ from neuronunit.models.reduced import ReducedModel
 from .base import np, pq, ncap, VmTest, scores
 
 N_CPUS = multiprocessing.cpu_count()
-TOLERANCE = 1  # Search tolerance in `self.units`, e.g. pA.
 
 
 class RheobaseTest(VmTest):
@@ -31,6 +30,12 @@ class RheobaseTest(VmTest):
     implementations including raw NEURON, NEURON via PyNN, and possibly GLIF.
     """
 
+    def _extra(self):
+        self.prediction = {}
+        self.high = 300*pq.pA
+        self.small = 0*pq.pA
+        self.rheobase_vm = None
+
     required_capabilities = (ncap.ReceivesSquareCurrent,
                              ncap.ProducesSpikes)
 
@@ -40,15 +45,11 @@ class RheobaseTest(VmTest):
     units = pq.pA
     ephysprop_name = 'Rheobase'
     score_type = scores.RatioScore
-    default_params = dict(VmTest.default_params)
-    default_params.update({'duration': 1000*pq.ms,
-                           'amplitude': 100*pq.pA})
 
-    def _extra(self):
-        self.prediction = {}
-        self.high = 300*pq.pA
-        self.small = 0*pq.pA
-        self.rheobase_vm = None
+    params = dict(VmTest.params)
+    params.update({'amplitude': 100*pq.pA,
+                   'duration': 1000*pq.ms,
+                   'tolerance': 1.0*pq.pA})
 
     def condition_model(self, model):
         model.set_run_params(t_stop=self.params['tmax'])
@@ -56,7 +57,7 @@ class RheobaseTest(VmTest):
     def generate_prediction(self, model):
         """Implement sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
-        # `ProducesActionPotentials` capability.
+        # ProducesActionPotentials capability.
         self.condition_model(model)
         prediction = {'value': None}
         try:
@@ -127,7 +128,8 @@ class RheobaseTest(VmTest):
 
             if len(supra) and len(sub):
                 delta = float(supra.min()) - float(sub.max())
-                if delta < TOLERANCE or (str(supra.min()) == str(sub.max())):
+                tolerance = float(self.params['tolerance'].rescale(pq.pA))
+                if delta < tolerance or (str(supra.min()) == str(sub.max())):
                     break
 
             if i >= max_iters:
@@ -394,7 +396,8 @@ def find_rheobase(self, dtc):
         sub, supra = get_sub_supra(dtc.lookup)
         if len(supra) and len(sub):
             delta = float(supra.min()) - float(sub.max())
-            if delta < TOLERANCE or (str(supra.min()) ==
+            tolerance = self.params['tolerance'].rescale(pq.pA)
+            if delta < tolerance or (str(supra.min()) ==
                                      str(sub.max())):
                 dtc.rheobase = supra.min()*pq.pA
                 dtc.boolean = True
