@@ -12,25 +12,24 @@
 
 # Optimization specific:  
 
-# Assumptions, the environment for running this notebook was arrived at by building a dedicated docker file.
-#
-# https://cloud.docker.com/repository/registry-1.docker.io/russelljarvis/nuo
-# or more recently:
-# https://cloud.docker.com/u/russelljarvis/repository/docker/russelljarvis/network_unit_opt
-# You can run use dockerhub to get the appropriate file, and launch this notebook using Kitematic.
+ Assumptions, the environment for running this notebook was arrived at by building a dedicated docker file.
+
+ https://cloud.docker.com/repository/registry-1.docker.io/russelljarvis/nuo
+ or more recently:
+ https://cloud.docker.com/u/russelljarvis/repository/docker/russelljarvis/network_unit_opt
+ You can run use dockerhub to get the appropriate file, and launch this notebook using Kitematic.
 
 # # Import libraries
-# To keep the standard running version of minimal and memory efficient, not all available packages are loaded by default. In the cell below I import a mixture common python modules, and custom developed modules associated with NeuronUnit (NU) development
+To keep the standard running version of minimal and memory efficient, not all available packages are loaded by default. In the cell below I import a mixture common python modules, and custom developed modules associated with NeuronUnit (NU) development
 #!pip install dask distributed seaborn
 #!bash after_install.sh
 
 
 # goals.
-# given https://www.nature.com/articles/nn1352
-# Goal is based on this. Don't optimize to a singular point, optimize onto a cluster.
-# Golowasch, J., Goldman, M., Abbott, L.F, and Marder, E. (2002)
-# Failure of averaging in the construction
-# of conductance-based neuron models. J. Neurophysiol., 87: 11291131.
+given https://www.nature.com/articles/nn1352
+Goal is based on this. Don't optimize to a singular point, optimize onto a cluster.
+Golowasch, J., Goldman, M., Abbott, L.F, and Marder, E. (2002)
+ Failure of averaging in the construction of conductance-based neuron models. J. Neurophysiol., 87: 11291131.
 
 
 # Concept:
