@@ -13,22 +13,13 @@ import re
 import shutil
 import string
 import urllib
-from abc import abstractmethod, ABCMeta
-#from decimal import Decimal
-#import nmldbutils
+#from abc import abstractmethod, ABCMeta
+
 import inspect
 
 import numpy as np
 from matplotlib import pyplot as plt
-#from sklearn.decomposition import PCA
 
-#from collector import Collector
-
-#from neuronrunner import NeuronRunner, NumericalInstabilityException
-#from runtimer import RunTimer
-#from neuronunit.tables import Cells, Model_Waveforms, Morphometrics, Cell_Morphometrics, db_proxy, Models
-#from neuronunit.nmldbmodel import NMLDB_Model
-#cpus = multiprocessing.cpu_count
 import dask.bag as dbag # a pip installable module, usually installs without complication
 import dask
 import urllib.request, json
@@ -43,7 +34,6 @@ from neuronunit.optimisation import get_neab
 from types import MethodType
 
 try:
-    #assert 1==2
     with open('static_models.p','rb') as f:
         sms = pickle.load(f)
 
@@ -112,8 +102,7 @@ except:
         pickle.dump(sms,f)
 
 electro_path = str(os.getcwd())+'/examples/pipe_tests.p'
-#import pdb
-#pdb.set_trace()
+
 assert os.path.isfile(electro_path) == True
 with open(electro_path,'rb') as f:
     test_frame = pickle.load(f)
