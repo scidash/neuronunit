@@ -40,12 +40,30 @@ class _IVCurveTest(sciunit.Test):
                             }),
                           ]
 
+    default_params = {'v_min': -80.0*pq.mV,
+                      'v_step': 20.0*pq.mV,
+                      'v_max': 60.0*pq.mV,
+                      'dt': 0.025*pq.ms,
+                      'tmax': 100*pq.ms}
+
+    params_schema = {'v_min': {'type': 'voltage', 'required': True},
+                     'v_step': {'type': 'voltage', 'min': 1e-3,
+                                'required': True},
+                     'v_max': {'type': 'time', 'required': True},
+                     'dt': {'type': 'time', 'min': 0, 'required': False},
+                     'tmax': {'type': 'time', 'min': 0, 'required': False}}
+
     def validate_observation(self, observation):
         super(_IVCurveTest, self).validate_observation(observation)
         if hasattr(observation['v'], 'units'):
             observation['v'] = observation['v'].rescale(pq.V)  # Rescale to V
         if hasattr(observation['i'], 'units'):
             observation['i'] = observation['i'].rescale(pq.pA)  # Rescale to pA
+
+    def validate_params(self, params):
+        assert params['v_max'] > params['v_min'], \
+            "v_max must be greater than v_min"
+        return params
 
     def generate_prediction(self, model):
         raise Exception(("This is a meta-class for tests; use tests derived "

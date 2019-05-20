@@ -46,10 +46,13 @@ class RheobaseTest(VmTest):
     ephysprop_name = 'Rheobase'
     score_type = scores.RatioScore
 
-    params = dict(VmTest.params)
-    params.update({'amplitude': 100*pq.pA,
-                   'duration': 1000*pq.ms,
-                   'tolerance': 1.0*pq.pA})
+    default_params = dict(VmTest.default_params)
+    default_params.update({'amplitude': 100*pq.pA,
+                           'duration': 1000*pq.ms,
+                           'tolerance': 1.0*pq.pA})
+
+    params_schema = dict(VmTest.params_schema)
+    params_schema.update({'tolerance': {'type': 'current', 'min': 1, 'required': False}})
 
     def condition_model(self, model):
         model.set_run_params(t_stop=self.params['tmax'])

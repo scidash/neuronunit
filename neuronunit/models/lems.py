@@ -106,8 +106,6 @@ class LEMSModel(RunnableModel):
         """
         if name is None:
             name = self.name
-        if not hasattr(self, 'temp_dir'):
-            self.temp_dir = TemporaryDirectory()
         lems_copy_path = os.path.join(self.temp_dir.name,
                                       '%s.xml' % name)
         shutil.copy2(self.orig_lems_file_path, lems_copy_path)
@@ -192,3 +190,9 @@ class LEMSModel(RunnableModel):
             except Exception:
                 pass
             return False
+
+    @property
+    def temp_dir(self):
+        if not hasattr(self, '_temp_dir'):
+            self._temp_dir = TemporaryDirectory()
+        return self._temp_dir
