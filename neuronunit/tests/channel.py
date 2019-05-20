@@ -1,54 +1,51 @@
 """NeuronUnit Test classes for ion channel models"""
 
-from types import MethodType
-
 import numpy as np
 from scipy.interpolate import interp1d
 from scipy.optimize import minimize
 import quantities as pq
 
 import sciunit
-from sciunit.scores import BooleanScore,FloatScore
+from sciunit.scores import BooleanScore, FloatScore
 from sciunit.converters import AtMostToBoolean
-from neuronunit.capabilities.channel import *
+from neuronunit.capabilities.channel import ProducesIVCurve
+
 
 class _IVCurveTest(sciunit.Test):
-    """Test the agreement between channel IV curves produced by models and those
-    observed in experiments"""
+    """Test the agreement between channel IV curves produced by models and
+    those observed in experiments"""
 
     def __init__(self, observation, name='IV Curve Test', scale=False,
                  **params):
         self.validate_observation(observation)
-        for key,value in observation.items():
+        for key, value in observation.items():
             setattr(self, key, value)
-        self.scale = scale # Whether to scale the predicted IV curve to
-                           # minimize distance from the observed IV curve
-        self.converter = AtMostToBoolean(pq.Quantity(1.0,'pA**2'))
-        super(_IVCurveTest,self).__init__(observation, name=name, **params)
+        # Whether to scale the predicted IV curve to
+        # minimize distance from the observed IV curve
+        self.scale = scale
+        self.converter = AtMostToBoolean(pq.Quantity(1.0, 'pA**2'))
+        super(_IVCurveTest, self).__init__(observation, name=name, **params)
 
     required_capabilities = (ProducesIVCurve,)
-    
-    units = {'v':pq.V, 'i':pq.pA}
-    
+
+    units = {'v': pq.V, 'i': pq.pA}
+
     score_type = BooleanScore
 
     observation_schema = [("Current Array, Voltage Array",
-                           {'i': {'units': True, 'iterable': True, 'required': True},
-                            'v': {'units': True, 'iterable': True, 'required': True},
+                           {'i': {'units': True, 'iterable': True,
+                                  'required': True},
+                            'v': {'units': True, 'iterable': True,
+                                  'required': True},
                             }),
                           ]
-    
+
     def validate_observation(self, observation):
         super(_IVCurveTest, self).validate_observation(observation)
-        #assert type(observation) is dict
-        #for item in ['v', 'i']:
-        #    assert item in observation
-        #    assert type(observation[item]) in [list,tuple] \
-        #        or isinstance(observation[item],np.ndarray)
-        if hasattr(observation['v'],'units'):
-            observation['v'] = observation['v'].rescale(pq.V) # Rescale to V
-        if hasattr(observation['i'],'units'):
-            observation['i'] = observation['i'].rescale(pq.pA) # Rescale to pA
+        if hasattr(observation['v'], 'units'):
+            observation['v'] = observation['v'].rescale(pq.V)  # Rescale to V
+        if hasattr(observation['i'], 'units'):
+            observation['i'] = observation['i'].rescale(pq.pA)  # Rescale to pA
 
     def generate_prediction(self, model):
         raise Exception(("This is a meta-class for tests; use tests derived "
@@ -67,11 +64,11 @@ class _IVCurveTest(sciunit.Test):
                from the experiment .
         """
 
-        if type(i_obs)==dict:
+        if isinstance(i_obs, dict):
             # Convert dict to numpy array.
             units = list(i_obs.values())[0].units
             i_obs = np.array([i_obs[float(key)] for key in v_obs]) * units
-        if type(i_pred)==dict:
+        if isinstance(i_pred, dict):
             # Convert dict to numpy array.
             units = list(i_pred.values())[0].units
             i_pred = np.array([i_pred[float(key)] for key in v_pred]) * units
@@ -85,12 +82,12 @@ class _IVCurveTest(sciunit.Test):
 
         f_obs = interp1d(v_obs, i_obs, kind='cubic')
         f_pred = interp1d(v_pred, i_pred, kind='cubic')
-        start = max(v_obs[0],v_pred[0]) # Min voltage in mV
-        stop = min(v_obs[-1],v_pred[-1]) # Max voltage in mV
+        start = max(v_obs[0], v_pred[0])  # Min voltage in mV
+        stop = min(v_obs[-1], v_pred[-1])  # Max voltage in mV
 
-        v_new = np.linspace(start, stop, 100) # 1 mV interpolation
-        i_obs_interp = f_obs(v_new)*pq.pA # Interpolated current from data
-        i_pred_interp = f_pred(v_new)*pq.pA # Interpolated current from model
+        v_new = np.linspace(start, stop, 100)  # 1 mV interpolation
+        i_obs_interp = f_obs(v_new)*pq.pA  # Interpolated current from data
+        i_pred_interp = f_pred(v_new)*pq.pA  # Interpolated current from model
 
         return {'v': v_new*pq.mV,
                 'i_pred': i_pred_interp,
@@ -107,7 +104,7 @@ class _IVCurveTest(sciunit.Test):
                 score = FloatScore.compute_ssd(interped['i_obs'],
                                                (10**sf)*interped['i_pred'])
                 return score.score.magnitude
-            result = minimize(f,0.0)
+            result = minimize(f, 0.0)
             scale_factor = 10**result.x
             interped['i_pred'] *= scale_factor
         else:
@@ -118,7 +115,7 @@ class _IVCurveTest(sciunit.Test):
         self.interped = interped
         return score
 
-    def bind_score(self,score,model,observation,prediction):
+    def bind_score(self, score, model, observation, prediction):
         score.description = ("The sum-squared difference in the observed and "
                              "predicted current values over the range of the "
                              "tested holding potentials.")
@@ -133,13 +130,15 @@ class _IVCurveTest(sciunit.Test):
             rd['v'] = rd['v'].rescale('V')
             rd['i_obs'] = rd['i_obs'].rescale('A')
             rd['i_pred'] = rd['i_pred'].rescale('A')
-            score.test.last_model.plot_iv_curve(rd['v'],rd['i_obs'],
-                color='k',label='Observed (data)')
-            score.test.last_model.plot_iv_curve(rd['v'],rd['i_pred'],
-                color='r',same_fig=True,label='Predicted (model)')
-            plt.title('%s on %s: %s' % (score.model,score.test,score))
+            score.test.last_model.plot_iv_curve(rd['v'], rd['i_obs'],
+                                                color='k',
+                                                label='Observed (data)')
+            score.test.last_model.plot_iv_curve(rd['v'], rd['i_pred'],
+                                                color='r', same_fig=True,
+                                                label='Predicted (model)')
+            plt.title('%s on %s: %s' % (score.model, score.test, score))
 
-        score.plot = plot.__get__(score) # Binds this method to 'score'.
+        score.plot = plot.__get__(score)  # Binds this method to 'score'.
         return score
 
 
