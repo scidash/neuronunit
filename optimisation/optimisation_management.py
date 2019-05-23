@@ -88,9 +88,23 @@ def inject_and_plot(dtc,figname='problem'):
         dtc.vtest[0]['injected_square_current']['amplitude'] = dtc.rheobase
     dtc.vtest[0]['injected_square_current']['duration'] = 1000*pq.ms
     model.inject_square_current(dtc.vtest[0])
+    i = dtc.vtest[0]
+    #from neuronunit.models.backends import AdExCell
+    from neuronunit.models.backends import singleAdex
+
+    a = singleAdex.AdExCell(name = "saffron")
+    #i = np.array([10.0 for i in range(0,100)])
+    #t = len(i)
+    #import pdb; pdb.set_trace()
+
+    vm = a.inject_square_current(dtc.vtest[0])
+
+
 
     plt.plot(model.get_membrane_potential().times,model.get_membrane_potential())#,label='ground truth')
     plot_backend = mpl.get_backend()
+
+
 
     if plot_backend == str('Agg'):
         plt.savefig(figname+str('debug.png'))
@@ -214,7 +228,7 @@ def cell_to_test_mapper(content):
         model.set_attrs(dtc.attrs)
         dm_properties[index].append(test.generate_prediction(model)['mean'])
         print(dir(test))
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
 
         test.related_data['vm']
 
@@ -529,7 +543,9 @@ def bridge_judge(test_and_dtc):
     backend_ = dtc.backend
     model = mint_generic_model(backend_)
     model.set_attrs(dtc.attrs)
-    #import pdb; pdb.set_trace()
+    print(model.attrs)
+    pred = test.generate_prediction(model)
+
     try:
         pred = test.generate_prediction(model)
     except:
@@ -666,7 +682,9 @@ def dtc_to_rheo(dtc):
     if type(dtc.scores) is type(None):
         dtc.scores = {}
     model = mint_generic_model(dtc.backend)
+    #print('fails here?')
     model.attrs = dtc.attrs
+    print(model.attrs)
     rtest = get_rtest(dtc)
     if rtest is not None:
         dtc.rheobase = rtest.generate_prediction(model)
@@ -822,8 +840,8 @@ def allocate_worst(tests,dtc):
     for t in tests:
         dtc.scores[str(t.name)] = 1.0
     print(np.sum(list(dtc.scores.values())),len(dtc.tests))
-
-    assert len(dtc.tests) == np.sum(list(dtc.scores.values()))
+    #import pdb; pdb.set_trace()
+    #assert len(dtc.tests) == np.sum(list(dtc.scores.values()))
     return dtc
 
 
@@ -876,6 +894,7 @@ def nunit_evaluation(dtc):
             if str('RheobaseTest') != t.name and str('RheobaseTestP') != t.name:
                 t.params = dtc.vtest[k]
                 score, dtc = bridge_judge((t, dtc))
+                #import pdb; pdb.set_trace()
                 print(score)
                 if score is not None:
                     if score.norm_score is not None:
@@ -957,6 +976,7 @@ def update_dtc_pop(pop, td):
         npart = np.min([multiprocessing.cpu_count(),len(pop)])
         bag = db.from_sequence(xargs, npartitions = npart)
         dtcpop = list(bag.map(transform).compute())
+
         assert len(dtcpop) == len(pop)
         dtcpop[0].boundary_dict = None
         dtcpop[0].boundary_dict = pop[0].boundary_dict
@@ -1169,14 +1189,14 @@ def obtain_rheobase(pop, td, tests):
     pop, dtcpop = init_pop(pop, td, tests)
     if 'RAW' in dtcpop[0].backend  or 'HH' in dtcpop[0].backend :#Backend:
 
-        dtcpop = list(map(dtc_to_rheo,dtcpop))
-        dtcpop = list(map(format_test,dtcpop))
+        #dtcpop = list(map(dtc_to_rheo,dtcpop))
+        #dtcpop = list(map(format_test,dtcpop))
 
         #rtest = [ t for t in dtc.tests if str('RheobaseTest') == t.name ]
-        #dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
-        #dtcpop = list(dtcbag.map(dtc_to_rheo))
-        #dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
-        #dtcpop = list(dtcbag.map(format_test))
+        dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
+        dtcpop = list(dtcbag.map(dtc_to_rheo))
+        dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
+        dtcpop = list(dtcbag.map(format_test))
     else:
         dtcpop = list(map(dtc_to_rheo,dtcpop))
         dtcpop = list(map(format_test,dtcpop))
@@ -1450,18 +1470,25 @@ def parallel_route(pop,dtcpop,tests,td,clustered=False):
         d.tests = copy.copy(tests)
     dtcpop = list(map(format_test,dtcpop))
 
+    #import pdb; pdb.set_trace()
+
     if clustered == True:
         dtcpop = opt_on_pair_of_points(dtcpop)
     else:
-        dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
         #dtcpop = list(map(nunit_evaluation,dtcpop))
 
+        dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
+
         dtcpop = list(dtcbag.map(nunit_evaluation).compute())
-        for d in dtcpop:
-            d.tests = copy.copy(tests)
+        #f#or d in dtcpop:
+        #    d.tests = copy.copy(tests)
+        #import pdb; pdb.set_trace()
+
     for i,d in enumerate(dtcpop):
         if not hasattr(pop[i],'dtc'):
             pop[i] = WSListIndividual(pop[i])
+            print('why are all genes the same?')
+            print(pop,pop[i])
             pop[i].dtc = None
         d.get_ss()
         pop[i].dtc = copy.copy(d)
@@ -1624,6 +1651,10 @@ def update_deap_pop(pop, tests, td, backend = None,hc = None,boundary_dict = Non
     pop, dtcpop = test_runner(pop,td,tests)
     for p,d in zip(pop,dtcpop):
         p.dtc = d
+
+    print(pop)
+
+
     return pop
 
 def create_subset(nparams = 10, boundary_dict = None):
