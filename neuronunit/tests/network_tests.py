@@ -73,6 +73,11 @@ class TE_TEST(NetTest):
         (vms,binary_train,exhaustive_data) = model.inject_noise_current(current)
         self.prediction['vms'] = vms
         self.prediction['binary_train'] = binary_train
+        xs = [0,0,1,1,1,1,0,0,0]
+        ys = [0,1,1,1,1,0,0,0,1]
+        transfer_entropy(ys, xs, k=1)
+        #0.8112781244591329
+        # https://elife-asu.github.io/PyInform/timeseries.html#module-pyinform.transferentropy
         self.prediction['exhaustive_data'] = exhaustive_data
         return self.prediction
 

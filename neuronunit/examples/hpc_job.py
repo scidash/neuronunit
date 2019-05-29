@@ -27,7 +27,6 @@ import pickle
 import pandas as pd
 from neuronunit.tests.fi import RheobaseTestP
 #from neuronunit.optimisation.model_parameters import reduced_dict, reduced_cells
-from neuronunit.optimisation import optimisation_management as om
 from sciunit import scores# score_type
 
 from neuronunit.optimisation.data_transport_container import DataTC
@@ -45,156 +44,44 @@ from neuronunit.models.interfaces import glif
 import matplotlib.pyplot as plt
 from neuronunit.optimisation import get_neab
 
-
-# # The Izhiketich model is instanced using some well researched parameter sets.
-# First lets get the points in parameter space, that Izhikich himself has published about. These points are often used by the open source brain project to establish between model reproducibility. The itial motivating factor for choosing these points as constellations, of all possible parameter space subsets, is that these points where initially tuned and used as best guesses for matching real observed experimental recordings.
-
-#explore_param = {k:(np.min(v),np.max(v)) for k,v in reduced_dict.items()}
-
-# ## Get the experimental Data pertaining to four different classes or neurons, that can constrain models.
-# Next we get some electro physiology data for four different classes of cells that are very common targets of scientific neuronal modelling. We are interested in finding out what are the most minimal, and detail reduced, low complexity model equations, that are able to satisfy
-# Below are some of the data set ID's I used to query neuroelectro.
-# To save time for the reader, I prepared some data earlier to save time, and saved the data as a pickle, pythons preferred serialisation format.
-# The interested reader can find some methods for getting cell specific ephys data from neuroelectro in a code file (neuronunit/optimisation/get_neab.py)
-
-
-purkinje ={"id": 18, "name": "Cerebellum Purkinje cell", "neuron_db_id": 271, "nlex_id": "sao471801888"}
-fi_basket = {"id": 65, "name": "Dentate gyrus basket cell", "neuron_db_id": None, "nlex_id": "nlx_cell_100201"}
-pvis_cortex = {"id": 111, "name": "Neocortex pyramidal cell layer 5-6", "neuron_db_id": 265, "nlex_id": "nifext_50"}
-#does not have rheobase
-olf_mitral = {"id": 129, "name": "Olfactory bulb (main) mitral cell", "neuron_db_id": 267, "nlex_id": "nlx_anat_100201"}
-ca1_pyr = {"id": 85, "name": "Hippocampus CA1 pyramidal cell", "neuron_db_id": 258, "nlex_id": "sao830368389"}
-pipe = [ fi_basket, ca1_pyr, purkinje,  pvis_cortex,olf_mitral]
-#for p in pipe:
-#    tests,observations = get_neab.executable_druckman_tests(p)
-
-electro_tests = []
-obs_frame = {}
-test_frame = {}
-
-
-try:
-    electro_path = str(os.getcwd())+'all_tests.p'
-    assert os.path.isfile(electro_path) == True
-    with open(electro_path,'rb') as f:
-        (obs_frame,test_frame) = pickle.load(f)
-
-except:
-    for p in pipe:
-        #try:
-        tests,observations = get_neab.executable_druckman_tests(p)
-        #except:
-        p_tests, p_observations = get_neab.get_neuron_criteria(p)
-        obs_frame[p["name"]] = p_observations#, p_tests))
-        test_frame[p["name"]] = p_tests#, p_tests))
-    electro_path = str(os.getcwd())+'all_tests.p'
-    with open(electro_path,'wb') as f:
-        pickle.dump((obs_frame,test_frame),f)
-
-
-# # Cast the tabulatable data to pandas data frame
-# There are many among us who prefer potentially tabulatable data to be encoded in pandas data frame.
-
-# idea something like:
-# test_frame['Olfactory bulb (main) mitral cell'].insert(0,test_frame['Cerebellum Purkinje cell'][0])
-
-for k,v in test_frame.items():
-   if "Olfactory bulb (main) mitral cell" not in k:
-       pass
-   if "Olfactory bulb (main) mitral cell" in k:
-       pass
-       #v[0] = RheobaseTestP(obs['Rheobase'])
-df = pd.DataFrame.from_dict(obs_frame)
-
-
-
-# In the data frame below, you can see many different cell types
-df['Hippocampus CA1 pyramidal cell']
-
+import pickle
 from neuronunit import tests
 from neuronunit import neuroelectro
-'''
-def neuroelectro_summary_observation(neuron, ephysprop_name, cached=False):
-    reference_data = neuroelectro.NeuroElectroSummary(
-        neuron = neuron, # Neuron type lookup using the NeuroLex ID.
-        ephysprop = {'name': ephysprop_name}, # Ephys property name in
-                                                  # NeuroElectro ontology.
-        cached = cached
-        )
-    reference_data.get_values()#quiet=not cls.verbose) # Get and verify summary data
-                                # from neuroelectro.org.
-    print(reference_data)
-    return reference_data
-
-def neuroelectro_pooled_observation(neuron, ephysprop_name, cached=False, quiet=True):
-    reference_data = neuroelectro.NeuroElectroPooledSummary(
-        neuron = neuron, # Neuron type lookup using the NeuroLex ID.
-        ephysprop = {'name': ephysprop_name}, # Ephys property name in
-                                                  # NeuroElectro ontology.
-        cached = cached
-        )
-    print(reference_data)
-    reference_data.get_values()#quiet=quiet) # Get and verify summary data
-    return reference_data
-
-def test_bi_modality(pipe,tests):
-    ne_data = []
-    ne_data_np = []
-    for t in tests:
-        ne_data.append(neuroelectro_summary_observation(pipe[0],t.ephysprop_name))
-    return ne_data
-for key, use_test in test_frame.items():
-    pass
-'''
-
-ne_data = test_bi_modality(pipe,use_test)
-#import pdb; pdb.set_trace()
-#tests.VmTest.neuroelectro_summary_observation
-#import pdb; pdb.set_trace()
-# # Tweak Izhikitich equations
-# with educated guesses based on information that is already encoded in the predefined experimental observations.
-# In otherwords use information that is readily amenable into hardcoding into equations
-# Select out the 'Neocortex pyramidal cell layer 5-6' below, as a target for optimisation
-
-#!pip install lazyarray
-clustered_tests = pickle.load(open('clustered_tests.p','rb'))
-grouped_tests = clustered_tests['gtc']
-grouped_testsn = clustered_tests['gtn']
-from neuronunit.optimisation import model_parameters as model_params
-from neuronunit.optimisation.optimisation_management import inject_and_plot, cluster_tests
-from neuronunit.optimisation.optimisation_management import opt_pair
-
+import neuronunit.optimisation.model_parameters as model_params
 MODEL_PARAMS = model_params.MODEL_PARAMS
 MODEL_PARAMS['results'] = {}
 
+from neuronunit.optimization import optimization_management as om
 
-# # The Izhiketich model is instanced using some well researched parameter sets.
-# First lets get the points in parameter space, that Izhikich himself has published about. These points are often used by the open source brain project to establish between model reproducibility. The itial motivating factor for choosing these points as constellations, of all possible parameter space subsets, is that these points where initially tuned and used as best guesses for matching real observed experimental recordings.
+from collections import Iterable, OrderedDict
+import quantities as qt
+rts,complete_map = pickle.load(open('../tests/russell_tests.p','rb'))
+#import pdb; pdb.set_trace()
+local_tests = [value for value in rts['Hippocampus CA1 pyramidal cell'].values() ]
+ga_out, DO = om.run_ga(MODEL_PARAMS['RAW'], 4, local_tests, free_params = MODEL_PARAMS['RAW'],
+                            NSGA = True, MU = 12, model_type = str('RAW'))#,seed_pop=seeds[key])
 
-#explore_param = {k:(np.min(v),np.max(v)) for k,v in reduced_dict.items()}
+from neuronunit.optimisation.optimisation_management import stochastic_gradient_descent
+import pdb
 
+pdb.set_trace()
 
-# # Tweak Izhikitich equations
-# with educated guesses based on information that is already encoded in the predefined experimental observations.
-# In otherwords use information that is readily amenable into hardcoding into equations
-# Select out the 'Neocortex pyramidal cell layer 5-6' below, as a target for optimisation
-'''
-free_params = ['a','b','k','c','C','d','vPeak','vr','vt']
-hc_ = reduced_cells['RS']
-hc_['vr'] = -65.2261863636364
-hc_['vPeak'] = hc_['vr'] + 86.364525297619
-explore_param['C'] = (hc_['C']-20,hc_['C']+20)
-explore_param['vr'] = (hc_['vr']-5,hc_['vr']+5)
-use_test = test_frame["Neocortex pyramidal cell layer 5-6"]
+stochastic_gradient_descent(ga_out)
+import sciunit
+for cell,tt in rts.items():
+    tests = [ y for x,y in tt.items() ]
+    if len(tests):
+        ga_out, DO = om.run_ga(MODEL_PARAMS['RAW'], 12 , rts['Hippocampus CA1 pyramidal cell'], free_params = MODEL_PARAMS['RAW'],
+                                    NSGA = True, MU = 12, model_type = str('RAW'))#,seed_pop=seeds[key])
 
-test_opt = {}
-with open('data_dump.p','wb') as f:
-    pickle.dump(test_opt,f)
-use_test[0].observation
-rtp = RheobaseTestP(use_test[0].observation)
-use_test[0] = rtp
-reduced_cells.keys()
-'''
+        #ga_out, _ = om.run_ga(MODEL_PARAMS['RAW']['EIF'],2 ,tests,free_params=MODEL_PARAMS['PYNN']['EIF'].keys(),
+        #                            NSGA = True, MU = 4, model_type = str('PYNN'))#,seed_pop=seed)
+        everything = list(zip(pop,dtcpop))
+
+        #import pdb; pdb.set_trace()
+        with open('GA_init_for_julia_objective_raw.p','wb') as f:
+            pickle.dump(everything,f)
+
 
 
 try:
@@ -225,29 +112,22 @@ except:
         # of the GA.
         if str('results') in MODEL_PARAMS['RAW'].keys():
             MODEL_PARAMS['RAW'].pop('results', None)
-
-        ga_out, _ = om.run_ga(MODEL_PARAMS['RAW'], NGEN,use_test, free_params = MODEL_PARAMS['RAW'],
+        ga_out, DO = om.run_ga(MODEL_PARAMS['RAW'], NGEN,use_test, free_params = MODEL_PARAMS['RAW'],
                                     NSGA = True, MU = MU, model_type = str('RAW'),seed_pop=seeds[key])
-
-
-
-
         try:
             print('optimization done, doing extra experimental work beyond the scope of the opt project')
             dtcpop = [ p.dtc for p in ga_out['pf'] ]
             measure_dtc_pop = opt_pair(dtcpop)
             ga_out['measure_dtc_pop'] = measure_dtc_pop
             print(ga_out['measure_dtc_pop'])
-
-
         except:
             print('failed on a new development feature, not critical to optimization')
-
         MODEL_PARAMS['results']['RAW'] = {}
         MODEL_PARAMS['results']['RAW'][key]  = ga_out
-
         with open('multi_objective_raw.p','wb') as f:
             pickle.dump(MODEL_PARAMS,f)
+
+
 
 '''
 try:
