@@ -25,6 +25,7 @@ import numpy as np
 import copy
 from neo import AnalogSignal
 import neuronunit.capabilities.spike_functions as sf
+from types import MethodType
 
 import neuronunit.capabilities as cap
 cap.ReceivesCurrent

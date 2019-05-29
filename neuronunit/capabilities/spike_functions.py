@@ -22,9 +22,10 @@ def get_spike_train(vm, threshold=0.0*mV):
 
 @jit
 def get_diff(vm):
-    differentiated = np.diff(vm)
-    spikes = len([np.any(differentiated) > 0.000193667327364])
-    times = [np.any(differentiated) > 0.000193667327364]
+    #differentiated = np.diff(vm)
+    differentiated = np.diff([float(v) for v in vm])
+    spikes = len([np.any(differentiated) > 0.0000193667327364])
+    times = vm.times[np.where(np.any(differentiated) > 0.0000193667327364)]
     return (spikes, times)
 
 
@@ -50,27 +51,38 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
 
     # Fix for 0-length spike train issue in elephant.
     if len(spike_train) == 0:
-        spike_train = threshold_detection(vm,threshold=np.max(vm))
-        diff,_ = get_diff(vm)
-        try:
-            spike_train = threshold_detection(diff,threshold=threshold)
-        except TypeError:
-            spike_train = neo.core.SpikeTrain([],t_start=spike_train.t_start,
-                                             t_stop=spike_train.t_stop,
-                                             units=spike_train.units)
+        diff,times = get_diff(vm)
+        print(spike_train,times)
+        #import pdb; pdb.set_trace()
+        # try:
+        #     spike_train = threshold_detection(diff,threshold=0.0000193667327364)
+        #     print(spike_train)
+        # except TypeError:
+
+        temp = float(np.mean(vm))+float(np.std(vm))
+        spike_train = threshold_detection(vm,threshold=temp)
+        print(spike_train)
+            #spike_train = neo.core.SpikeTrain([],t_start=spike_train.t_start,
+            #                                 t_stop=spike_train.t_stop,
+            #                                 units=spike_train.units)
     too_short = True
     too_long = True
 
     # This code checks that you are not asking for a window into an array,
     # with out of bounds indicies.
-    t = spike_train[0]
+    try:
+        t = spike_train[0]
+        t1 = spike_train[-1]
+        print(t,t1,'two spike times or weird data structure?')
+    except:
+        print(spike_train,'this may have worked')
+        t = spike_train
+
     if t-width/2.0 > 0.0*ms:
         too_short = False
 
-    t = spike_train[-1]
     if t+width/2.0 < vm.times[-1]:
         too_long = False
-
     if too_short == False and too_long == False:
 
         snippets = [vm.time_slice(t-width/2,t+width/2) for t in spike_train]
@@ -81,7 +93,7 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
     result = neo.core.AnalogSignal(np.array(snippets).T.squeeze(),
                                    units=vm.units,
                                    sampling_rate=vm.sampling_rate)
-
+    print('gets here a')
     return result
 def spikes2amplitudes(spike_waveforms):
     """
@@ -101,11 +113,11 @@ def spikes2amplitudes(spike_waveforms):
                 pre_ampls.append(np.max(np.array(mp)))
             ampls = pre_ampls[0]
         elif len(spike_waveforms) == 0:
-            #import pdb; pdb.set_trace()
             ampls = np.array([])
 
     else:
         ampls = np.array([])
+
     return ampls * spike_waveforms.units
 
 def spikes2widths(spike_waveforms):
@@ -142,7 +154,10 @@ def spikes2widths(spike_waveforms):
                 y = np.array(s)
                 #dvdt = get_diff_spikes(y)
                 dvdt = diff(y)
-                trigger = dvdt.max()/10
+                print('gets here b')
+                print(dvdt,len(dvdt))
+                trigger = dvdt.max()/10.0
+                print('gets here c')
                 x_loc = int(np.where(dvdt >= trigger)[0][0])
                 thresh = (s[x_loc]+s[x_loc+1])/2
                 mid = (high+thresh)/2
@@ -175,15 +190,23 @@ def spikes2thresholds(spike_waveforms):
 
     n_spikes = spike_waveforms.shape[1]
     thresholds = []
+    print(n_spikes)
+    if n_spikes > 1:
+        print('gets to multispiking')
+        import pdb
+        pdb.set_trace()
     for i in range(n_spikes):
         s = spike_waveforms[:,i].squeeze()
         s = np.array(s)
         dvdt = np.diff(s)
+        print(dvdt)
         for j in dvdt:
             if math.isnan(j):
-                return thresholds * spike_waveforms.units
+                print(j, 'gets to nan')
+                import pdb; pdb.set_trace()
 
-        trigger = dvdt.max()/10
+                return thresholds * spike_waveforms.units
+        trigger = dvdt.max()/10.0
         x_loc = np.where(dvdt >= trigger)[0][0]
         thresh = (s[x_loc]+s[x_loc+1])/2
         thresholds.append(thresh)

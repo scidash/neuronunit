@@ -11,9 +11,7 @@ class TestPulseTest(VmTest):
     """A base class for tests that use a square test pulse"""
 
     required_capabilities = (cap.ReceivesSquareCurrent,)
-
     name = ''
-
     score_type = scores.ZScore
 
     def generate_prediction(self, model):
@@ -173,7 +171,6 @@ class TimeConstantTest(TestPulseTest):
                 score = super(TimeConstantTest,self).compute_score(observation,
                                                               prediction)
         else:
-            print('why no n in keys?')
             prediction['value'] = prediction['value']
             score = super(TimeConstantTest,self).compute_score(observation,
                                                           prediction)
@@ -223,8 +220,6 @@ class CapacitanceTest(TestPulseTest):
                 score = super(CapacitanceTest,self).compute_score(observation,
                                                               prediction)
         else:
-            #print('why no n in keys?')
-            #prediction['value'] = prediction['value']
             score = super(CapacitanceTest,self).compute_score(observation,
                                                           prediction)
 
@@ -261,7 +256,6 @@ class RestingPotentialTest(VmTest):
         else:
             median = model.get_median_vm() # Use median for robustness.
             std = model.get_std_vm()
-            #print('std: ',std,'median: ',median)
             prediction = {'mean':median, 'std':std}
             self.prediction = prediction
             return prediction

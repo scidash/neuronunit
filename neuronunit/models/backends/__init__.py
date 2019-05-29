@@ -28,12 +28,17 @@ try:
 except Exception as e:
     print('glif python Error')
 
-
-
 try:
     from .general_pyNN import PYNNBackend
 except Exception as e:
     print('pynn python Error')
+
+try:
+    from .badexp import ADEXPBackend
+except Exception as e:
+    print('pynn python Error')
+
+
 
 available_backends = {x.replace('Backend',''):cls for x, cls \
                    in locals().items() \
