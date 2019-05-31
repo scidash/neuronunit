@@ -111,12 +111,7 @@ class ADEXPBackend(Backend):
         duration = int(c['duration'])#/dt#/dt.rescale('ms')
         delay = int(c['delay'])#/dt#.resc1ale('ms')
 
-
-
-        #current = input_factory.get_step_current(delay, duration, 1. * b2.ms, 65.0 * b2.pA)
         state_monitor, self.spike_monitor = self.AdEx.simulate_AdEx_neuron(I_stim=current, simulation_time=(duration+delay)* b2.ms)
-
-        print("nr of spikes: {}".format(self.spike_monitor.count[0]))
 
         return int(self.spike_monitor.count[0])
 
@@ -162,7 +157,7 @@ class ADEXPBackend(Backend):
         v_reset = attrs['V_RESET']*AdEx.b2.units.mV,
         v_rheobase = attrs['RHEOBASE_THRESHOLD_v_rh']*AdEx.b2.units.mV,
         a = attrs['ADAPTATION_VOLTAGE_COUPLING_a']*AdEx.b2.units.nS,
-        b =  attrs['b']*,
+        b =  attrs['b']*b2.pA,
         v_spike=attrs['FIRING_THRESHOLD_v_spike']*AdEx.b2.units.mV,
         delta_T = attrs['SHARPNESS_delta_T']*AdEx.b2.units.mV,
         tau_w = attrs['ADAPTATION_TIME_CONSTANT_tau_w']*AdEx.b2.units.ms ,
@@ -182,8 +177,20 @@ class ADEXPBackend(Backend):
             plt.plot(self.vM.times,self.vM)
             plt.savefig(str(float(self.vM[-1]))+'.png')
         return self.vM
-
+    '''
     def _local_run(self):
+        results = {}
+        v = self.get_membrane_potential()
+
+        self.vM = AnalogSignal(v,
+                     units = mV,
+                     sampling_period = 1.0 * pq.ms)
+        results['vm'] = self.vM
+        results['t'] = self.vM.times
+        results['run_number'] = results.get('run_number',0) + 1
+        return results
+    '''
+    def _backend_run(self):
         results = {}
         v = self.get_membrane_potential()
 
