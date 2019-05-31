@@ -34,11 +34,63 @@ import efel
 from types import MethodType
 from neuronunit.optimisation.optimisation_management import init_dm_tests
 
+import pdb
+
+
+def crawl_ids(url):
+    #pdb.set_trace()
+
+    all_data = requests.get(url)
+    all_data = json.loads(all_data.text)
+    print(all_data)
+    pdb.set_trace()
+
+    Model_IDs = []
+    for d in all_data:
+        Model_ID = str(d['Model_ID'])#,d['Directory_Path'])
+        try:
+            url = str('https://www.neuroml-db.org/GetModelZip?modelID=')+Model_ID+str('&version=NEURON')
+            print(url)
+            urllib.request.urlretrieve(url,Model_ID)
+            Model_IDs.append(Model_ID)
+
+
+        except:
+            url = str('https://www.neuroml-db.org/GetModelZip?modelID=')+Model_ID+str('&version=NeuroML')
+            print(url)
+
+            urllib.request.urlretrieve(url,Model_ID)
+            os.system(str('unzip ')+str(d['Model_ID'])+('*'))
+            os.chdir(('*')+str(d['Model_ID'])+('*'))
+            try:
+                os.system(str('nrnivmodl *.mod'))
+            except:
+                print('No MOD files')
+            try:
+                os.system(str('pynml hhneuron.cell.nml -neuron'))
+            except:
+                print('No NeuroML files')
+
+            Model_IDs.append(Model_ID)
+    return Model_IDs
+
+list_to_get =[ str('https://www.neuroml-db.org/api/search?q=traub'),
+    str('https://www.neuroml-db.org/api/search?q=markram'),
+    str('https://www.neuroml-db.org/api/search?q=Gouwens') ]
+
+authors = {}
+for url in list_to_get:
+    #pdb.set_trace()
+
+    Model_IDs = crawl_ids(url)
+    parts = url.split('?q=')
+
+    authors[parts[1]] = Model_IDs
+
 try:
-    assert 1==2
+    #assert 1==2
     with open('static_models.p','rb') as f: sms = pickle.load(f)
     with open('waves.p','rb') as f: waves = pickle.load(f)
-
     #with open('waves.p','wb') as f:
     #    pickle.dump(waves,f)
 except:
@@ -55,12 +107,15 @@ except:
             waves = requests.get(url)
             temp = json.loads(waves.text)
             if 'NOISE' in temp['Protocol_ID']:
+
                 pass
             if 'RAMP' in temp['Protocol_ID']:
                 pass
             if 'SHORT_SQUARE_TRIPPLE' in temp['Protocol_ID']:
                 print((temp['Waveform_Label']))
                 pass
+            if type(temp['Waveform_Label']) is type(None):
+                break
             if str("1.0xRB") in temp['Waveform_Label'] or str("1.25xRB") in temp['Waveform_Label']:
                 print(temp['Protocol_ID'])
                 temp_vm = list(map(float, temp['Variable_Values'].split(',')))
@@ -133,6 +188,7 @@ except:
                     waves_to_get.append(waves_to_test)
 
                 except:
+
                     if temp['Waveform_Label'] is None:
                         pass
                     pass
@@ -140,12 +196,6 @@ except:
     waves = get_wave_forms(str('NMLCL001129'))
     with open('waves.p','wb') as f:
         pickle.dump(waves,f)
-
-
-    #import pdb
-    #pdb.set_trace()
-    with open('static_models.p','wb') as f:
-        pickle.dump(sms,f)
 
 
 protocols = [ w['everything']['Protocol_ID'] for w in waves ]
@@ -161,7 +211,8 @@ for w in not_current_injections:
     sm.rheobase['mean'] = w['prediction']
     sm.complete = w
     sms.append(sm)
-
+with open('static_models.p','wb') as f:
+    pickle.dump(sms,f)
 current_injections = [ w for w in waves if w['everything']['Variable_Name'] == str('Current') ]
 
 electro_path = str(os.getcwd())+'/examples/pipe_tests.p'
@@ -275,7 +326,6 @@ for t,sm in flat_iter:
 
             print('active skipped: ',t.name)
         print(test_scores)
-import pdb; pdb.set_trace()
         #all_models = json.loads(url.read().decode())
 def get_all(Model_ID = str('NMLNT001592')):
     if Model_ID == None:
@@ -299,6 +349,7 @@ def get_all(Model_ID = str('NMLNT001592')):
                 #url = str('https://www.neuroml-db.org/GetModelZip?modelID=')+str(d['Model_ID'])+str('&version=NeuroML')
                 #os.system('wget '+str(url))
                 os.system(str('unzip *')+str(d['Model_ID'])+('*'))
+                os.system('cd *')+str(d['Model_ID'])+('*'))
                 os.system(str('pynml hhneuron.cell.nml -neuron'))
             return data
 
@@ -316,6 +367,8 @@ def get_all(Model_ID = str('NMLNT001592')):
         url = "https://www.neuroml-db.org/GetModelZip?modelID=NMLNT001592&version=NeuroML"
         os.system('wget '+str(url))
         os.system(str('unzip ')+str(d['Model_ID'])+('*'))
+        os.system('cd *')+str(d['Model_ID'])+('*'))
+
         os.system(str('pynml hhneuron.cell.nml -neuron'))
 
 
