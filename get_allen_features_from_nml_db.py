@@ -45,6 +45,7 @@ import numpy as np
 import efel
 from capabilities.spike_functions import get_spike_waveforms
 import pickle
+from allensdk.ephys.extract_cell_features import extract_cell_features
 
 def crawl_ids(url):
     ''' move to aibs '''
@@ -55,18 +56,15 @@ def crawl_ids(url):
 
     Model_IDs = []
     for d in all_data:
-        Model_ID = str(d['Model_ID'])#,d['Directory_Path'])
+        Model_ID = str(d['Model_ID'])
         try:
             url = str('https://www.neuroml-db.org/GetModelZip?modelID=')+Model_ID+str('&version=NEURON')
             print(url)
             urllib.request.urlretrieve(url,Model_ID)
             Model_IDs.append(Model_ID)
-
-
         except:
             url = str('https://www.neuroml-db.org/GetModelZip?modelID=')+Model_ID+str('&version=NeuroML')
             print(url)
-
             urllib.request.urlretrieve(url,Model_ID)
             os.system(str('unzip ')+str(d['Model_ID'])+('*'))
             os.chdir(('*')+str(d['Model_ID'])+('*'))
@@ -86,13 +84,12 @@ list_to_get =[ str('https://www.neuroml-db.org/api/search?q=traub'),
     str('https://www.neuroml-db.org/api/search?q=markram'),
     str('https://www.neuroml-db.org/api/search?q=Gouwens') ]
 
-authors = {}
-'''
-for url in list_to_get:
-    Model_IDs = crawl_ids(url)
-    parts = url.split('?q=')
-    authors[parts[1]] = Model_IDs
-'''
+def get_all_cortical_cells(list_to_get):
+    authors = {}
+    for url in list_to_get:
+        Model_IDs = crawl_ids(url)
+        parts = url.split('?q=')
+        authors[parts[1]] = Model_IDs
 
 
 def get_wave_forms(cell_id):
@@ -128,28 +125,22 @@ def get_wave_forms(cell_id):
             dt = waves_to_test['Times'][1]- waves_to_test['Times'][0]
             waves_to_test['vm'] = AnalogSignal(temp_vm,sampling_period=dt*ms,units=mV)
 
-            #waves_to_test['everything'] = temp
 
             sm = models.StaticModel(waves_to_test['vm'])
             sm.complete = None
             sm.complete = temp
             sm.complete['vm'] = waves_to_test['vm']
 
-            #import pdb; pdb.set_trace()
 
             trace0 = {}
             DURATION = sm.complete['Time_End'] -sm.complete['Time_Start']
 
             trace0['T'] = waves_to_test['Times']
-            #trace['V'] = vm = [float(v[0]) for v in trace['V'].tolist()]
 
             trace0['V'] = temp_vm
-            #AnalogSignal(temp_vm,sampling_period=dt*ms,units=mV)
             trace0['stim_start'] = [sm.complete['Time_Start']]#rtest.run_params[]
-
             trace0['stim_end'] = [sm.complete['Time_End'] ]# list(sm.complete['duration'])
             traces0 = [trace0]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
-            #import pdb; pdb.set_trace()
             print(temp['Spikes'])
             if temp['Spikes'] and np.min(temp_vm)<0:
 
@@ -191,12 +182,8 @@ def get_wave_forms(cell_id):
         if 'SHORT_SQUARE' in temp['Protocol_ID'] and not 'SHORT_SQUARE_TRIPPLE' in temp['Protocol_ID'] or 'SHORT_SQUARE_TRIPPLE' in temp['Protocol_ID']:
             try:
                 parts = temp['Waveform_Label'].split(' ')
-
-                #import pdb; pdb.set_trace()
                 print(' value ',parts[0], ' units ',parts[1])
-
                 waves_to_test['prediction'] = float(parts[0])*nA# '1.1133 nA',
-                #print('yes')
 
                 temp_vm = list(map(float, temp['Variable_Values'].split(',')))
 
@@ -220,22 +207,17 @@ def get_wave_forms(cell_id):
 try:
     with open('static_models.p','rb') as f: sms = pickle.load(f)
     with open('waves.p','rb') as f: wlist = pickle.load(f)
-    #with open('waves.p','wb') as f:
-    #    pickle.dump(waves,f)
 except:
-
     waves = get_wave_forms(str('NMLCL001129'))
     with open('waves.p','wb') as f: pickle.dump(waves,f)
 
 
 protocols = [ w['everything']['Protocol_ID'] for w in waves ]
 ss = [ w['everything'] for w in waves if w['everything']['Protocol_ID'] == 'SHORT_SQUARE' ]
-#not_current_injections = [ w for w in waves if w['everything']['Spikes'] > 1 ]
 
 not_current_injections = [ w for w in waves if w['everything']['Variable_Name'] != str('Current') ]
 sms = []
 for w in not_current_injections:
-
     sm = models.StaticModel(w['vm'])
     sm.rheobase = {}
     sm.rheobase['mean'] = w['prediction']
@@ -257,9 +239,7 @@ def generate_prediction(self,model):
     prediction['std'] = 1.0
     prediction['mean'] = model.rheobase['mean']
     return prediction
-    #model.get_membrane_potential()
 
-#import pdb; pdb.set_trace()
 test_scores = []
 tt = [tests for tests in test_frame[0][0] ]
 for t in tt: t.generate_prediction = MethodType(generate_prediction,t)
@@ -271,15 +251,8 @@ def get_m_p(cls,params = {}):
 for model in sms:
     model.inject_square_current = MethodType(get_m_p,model)#get_membrane_potential
 
-#def get_membrane_potential():
-
-#for model in sms: model.inject_square_current = MethodType(model.get_membrane_potential,model)
-
-#for model in sms: model.inject_square_current = MethodType(model.get_membrane_potential,model)
-#for model in sms: print(model.inject_square_current())# = MethodType(model.get_membrane_potential,params)
-
 tt[0].generate_prediction = MethodType(generate_prediction,tt[0])
-#print(active_values.__file__)
+
 def active_values(keyed,rheobase,square = None):
     keyed['injected_square_current'] = {}
     if square == None:
@@ -328,14 +301,13 @@ for t,sm in flat_iter:
 
         trace['T'] = sm.complete['Times']
         trace['V'] = results
-        trace['stim_start'] = [sm.complete['Time_Start']]#rtest.run_params[]
+        trace['stim_start'] = [sm.complete['Time_Start']]
         DURATION = sm.complete['Time_End'] -sm.complete['Time_Start']
 
-        trace['stim_end'] = [sm.complete['Time_End'] ]# list(sm.complete['duration'])
+        trace['stim_end'] = [sm.complete['Time_End'] ]
         traces = [trace]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
         traces_results = efel.getFeatureValues(traces,list(efel.getFeatureNames()))#
 
-        from allensdk.ephys.extract_cell_features import extract_cell_features
 
         for v in traces_results:
             for key,value in v.items():
@@ -346,63 +318,5 @@ for t,sm in flat_iter:
             print(test_scores[-1],t.name)
         except:
             test_scores.append(t.judge(sm))
-
             print(test_scores[-1],t.name)
-
             print('active skipped: ',t.name)
-
-
-        #all_models = json.loads(url.read().decode())
-def get_all(Model_ID = str('NMLNT001592')):
-    if Model_ID == None:
-        try:
-            # Obtains the cell threshold, rheobase, resting v, and bias currents for
-            #with urllib.request.urlopen("https://www.neuroml-db.org/api/models") as url:
-            #    all_models = json.loads(url.read().decode())
-
-
-            url = str("https://www.neuroml-db.org/api/models")
-            all_models = requests.get(url)
-            all_models = json.loads(all_models.text)
-            print(all_models)
-            for d in all_models:
-                print(d.keys())
-            for d in all_models[0]:
-                print(d['Model_ID'],d['Directory_Path'])
-                url = str('https://www.neuroml-db.org/GetModelZip?modelID=')+str(d['Model_ID'])+str('&version=NeuroML')
-                urllib.request.urlretrieve(url,Model_ID)
-                #https://www.neuroml-db.org/api/models'
-                #url = str('https://www.neuroml-db.org/GetModelZip?modelID=')+str(d['Model_ID'])+str('&version=NeuroML')
-                #os.system('wget '+str(url))
-                os.system(str('unzip *')+str(d['Model_ID'])+str('*'))
-                os.system(str('cd *')+str(d['Model_ID'])+str('*'))
-                os.system(str('pynml hhneuron.cell.nml -neuron'))
-            return data
-
-        except:
-            pass
-    else:
-        d = {}
-        d['Model_ID'] = Model_ID
-        #print(d['Model_ID'],d['Directory_Path'])
-        #https://www.neuroml-db.org/api/models'
-        url = "https://www.neuroml-db.org/GetModelZip?modelID=NMLNT001592&version=NeuroML"
-        #url = str('https://www.neuroml-db.org/GetModelZip?modelID=')+str(d['Model_ID'])+str('&version=NeuroML')
-        urllib.request.urlretrieve(url,Model_ID)
-        print(url)
-        url = "https://www.neuroml-db.org/GetModelZip?modelID=NMLNT001592&version=NeuroML"
-        os.system('wget '+str(url))
-        os.system(str('unzip ')+str(d['Model_ID'])+str('*'))
-        os.system(str('cd *')+str(d['Model_ID'])+str('*'))
-
-        os.system(str('pynml hhneuron.cell.nml -neuron'))
-
-
-def run_cell():
-    from neuron import h
-    h.load_file('hhneuron.hoc')
-    cell = h.hhneuron
-    d = {}
-    d['Model_ID'] = str('NT001592')
-    with urllib.request.urlopen(str('https://www.neuroml-db.org/api/model?id=')+str(d['Model_ID'])) as url:
-        data_on_model = json.loads(url.read().decode())
