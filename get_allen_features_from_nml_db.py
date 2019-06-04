@@ -35,15 +35,23 @@ from types import MethodType
 from neuronunit.optimisation.optimisation_management import init_dm_tests
 
 import pdb
+try:
+    from optimisation.optimisation_management import add_druckmann_properties_to_cells as dm
+except:
+    from neuronunit.optimisation.optimisation_management import add_dm_properties_to_cells as dm
 
+from optimisation.optimisation_management import inject_rh_and_dont_plot
+import numpy as np
+import efel
+from capabilities.spike_functions import get_spike_waveforms
+import pickle
 
 def crawl_ids(url):
-    #pdb.set_trace()
-
+    ''' move to aibs '''
     all_data = requests.get(url)
     all_data = json.loads(all_data.text)
     print(all_data)
-    pdb.set_trace()
+
 
     Model_IDs = []
     for d in all_data:
@@ -79,46 +87,119 @@ list_to_get =[ str('https://www.neuroml-db.org/api/search?q=traub'),
     str('https://www.neuroml-db.org/api/search?q=Gouwens') ]
 
 authors = {}
+'''
 for url in list_to_get:
-    #pdb.set_trace()
-
     Model_IDs = crawl_ids(url)
     parts = url.split('?q=')
-
     authors[parts[1]] = Model_IDs
+'''
 
-try:
-    #assert 1==2
-    with open('static_models.p','rb') as f: sms = pickle.load(f)
-    with open('waves.p','rb') as f: waves = pickle.load(f)
-    #with open('waves.p','wb') as f:
-    #    pickle.dump(waves,f)
-except:
-    def get_wave_forms(cell_id):
-        url = str("https://www.neuroml-db.org/api/model?id=")+cell_id
-        waveids = requests.get(url)
-        waveids = json.loads(waveids.text)
-        wlist = waveids['waveform_list']
-        waves_to_get = []
-        for wl in wlist:
-            waves_to_test = {}
-            wid = wl['ID']
-            url = str("https://neuroml-db.org/api/waveform?id=")+str(wid)
-            waves = requests.get(url)
-            temp = json.loads(waves.text)
-            if 'NOISE' in temp['Protocol_ID']:
 
+def get_wave_forms(cell_id):
+    url = str("https://www.neuroml-db.org/api/model?id=")+cell_id
+    waveids = requests.get(url)
+    waveids = json.loads(waveids.text)
+    wlist = waveids['waveform_list']
+    waves_to_get = []
+    for wl in wlist:
+        waves_to_test = {}
+        wid = wl['ID']
+        url = str("https://neuroml-db.org/api/waveform?id=")+str(wid)
+        waves = requests.get(url)
+        temp = json.loads(waves.text)
+        if 'NOISE' in temp['Protocol_ID']:
+
+            pass
+        if 'RAMP' in temp['Protocol_ID']:
+            pass
+        if 'SHORT_SQUARE_TRIPPLE' in temp['Protocol_ID']:
+            print((temp['Waveform_Label']))
+            pass
+        if type(temp['Waveform_Label']) is type(None):
+            break
+        if str("1.0xRB") in temp['Waveform_Label'] or str("1.25xRB") in temp['Waveform_Label']:
+            print(temp['Protocol_ID'])
+            temp_vm = list(map(float, temp['Variable_Values'].split(',')))
+            waves_to_test['Times'] = list(map(float,temp['Times'].split(',')))
+            waves_to_test['DURATION'] = temp['Time_End'] -temp['Time_Start']
+            waves_to_test['DELAY'] = temp['Time_Start']
+            waves_to_test['Time_End'] = temp['Time_End']
+            waves_to_test['Time_Start'] = temp['Time_Start']
+            dt = waves_to_test['Times'][1]- waves_to_test['Times'][0]
+            waves_to_test['vm'] = AnalogSignal(temp_vm,sampling_period=dt*ms,units=mV)
+
+            #waves_to_test['everything'] = temp
+
+            sm = models.StaticModel(waves_to_test['vm'])
+            sm.complete = None
+            sm.complete = temp
+            sm.complete['vm'] = waves_to_test['vm']
+
+            #import pdb; pdb.set_trace()
+
+            trace0 = {}
+            DURATION = sm.complete['Time_End'] -sm.complete['Time_Start']
+
+            trace0['T'] = waves_to_test['Times']
+            #trace['V'] = vm = [float(v[0]) for v in trace['V'].tolist()]
+
+            trace0['V'] = temp_vm
+            #AnalogSignal(temp_vm,sampling_period=dt*ms,units=mV)
+            trace0['stim_start'] = [sm.complete['Time_Start']]#rtest.run_params[]
+
+            trace0['stim_end'] = [sm.complete['Time_End'] ]# list(sm.complete['duration'])
+            traces0 = [trace0]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
+            #import pdb; pdb.set_trace()
+            print(temp['Spikes'])
+            if temp['Spikes'] and np.min(temp_vm)<0:
+
+                traces_results = efel.getFeatureValues(traces0,list(efel.getFeatureNames()))#
+                for v in traces_results:
+                    for key,value in v.items():
+                        if type(value) is not type(None):
+                            #pass
+                            print(key,value)
+
+
+                [(model,times,vm)] = pickle.load(open('efel_practice.p','rb'))
+
+                waveforms = get_spike_waveforms(vm)
+
+                trace1 = {}
+                trace1['T'] = waveforms[:,0].times
+                trace1['V'] = waveforms[:,0]
+
+                trace1['T'] = [ float(t) for t in trace1['T'] ]
+                trace1['V'] = [ float(v) for v in trace1['V'] ]
+                trace1['stim_start'] = [ 0 ] #[sm.complete['Time_Start']]#rtest.run_params[]
+                trace1['stim_end'] = [ 0 + float(np.max(trace1['T'])) ]# list(sm.complete['duration'])
+                traces1 = [trace1]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
+                import pdb; pdb.set_trace()
+
+                traces_results = efel.getFeatureValues(traces1,list(efel.getFeatureNames()))#
+                print(trace_results)
+                dm_properties['efel'].append(traces_results)
+                dtc.efel_properties = None
+                dtc.efel_properties = dm_properties['efel']
+            else:
+                print(temp['Spikes'],np.min(temp_vm))
                 pass
-            if 'RAMP' in temp['Protocol_ID']:
-                pass
-            if 'SHORT_SQUARE_TRIPPLE' in temp['Protocol_ID']:
-                print((temp['Waveform_Label']))
-                pass
-            if type(temp['Waveform_Label']) is type(None):
-                break
-            if str("1.0xRB") in temp['Waveform_Label'] or str("1.25xRB") in temp['Waveform_Label']:
-                print(temp['Protocol_ID'])
+
+
+
+
+        if 'SHORT_SQUARE' in temp['Protocol_ID'] and not 'SHORT_SQUARE_TRIPPLE' in temp['Protocol_ID'] or 'SHORT_SQUARE_TRIPPLE' in temp['Protocol_ID']:
+            try:
+                parts = temp['Waveform_Label'].split(' ')
+
+                #import pdb; pdb.set_trace()
+                print(' value ',parts[0], ' units ',parts[1])
+
+                waves_to_test['prediction'] = float(parts[0])*nA# '1.1133 nA',
+                #print('yes')
+
                 temp_vm = list(map(float, temp['Variable_Values'].split(',')))
+
                 waves_to_test['Times'] = list(map(float,temp['Times'].split(',')))
                 waves_to_test['DURATION'] = temp['Time_End'] -temp['Time_Start']
                 waves_to_test['DELAY'] = temp['Time_Start']
@@ -126,76 +207,25 @@ except:
                 waves_to_test['Time_Start'] = temp['Time_Start']
                 dt = waves_to_test['Times'][1]- waves_to_test['Times'][0]
                 waves_to_test['vm'] = AnalogSignal(temp_vm,sampling_period=dt*ms,units=mV)
+                waves_to_test['everything'] = temp
+                waves_to_get.append(waves_to_test)
 
-                #waves_to_test['everything'] = temp
+            except:
 
-                sm = models.StaticModel(waves_to_test['vm'])
-                sm.complete = None
-                sm.complete = temp
-                sm.complete['vm'] = waves_to_test['vm']
-
-                #import pdb; pdb.set_trace()
-
-                trace = {}
-                DURATION = sm.complete['Time_End'] -sm.complete['Time_Start']
-
-                trace['T'] = waves_to_test['Times']
-                #trace['V'] = vm = [float(v[0]) for v in trace['V'].tolist()]
-
-                trace['V'] = temp_vm
-                #AnalogSignal(temp_vm,sampling_period=dt*ms,units=mV)
-                trace['stim_start'] = [sm.complete['Time_Start']]#rtest.run_params[]
-
-                trace['stim_end'] = [sm.complete['Time_End'] ]# list(sm.complete['duration'])
-                traces = [trace]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
-                #import pdb; pdb.set_trace()
-                print(temp['Spikes'])
-                if temp['Spikes'] and np.min(temp_vm)<0:
-
-                    traces_results = efel.getFeatureValues(traces,list(efel.getFeatureNames()))#
-                    for v in traces_results:
-                        for key,value in v.items():
-                            if type(value) is not type(None):
-                                #pass
-                                print(key,value)
-                else:
-                    print(temp['Spikes'],np.min(temp_vm))
+                if temp['Waveform_Label'] is None:
                     pass
+                pass
+    return waves_to_get
 
+try:
+    with open('static_models.p','rb') as f: sms = pickle.load(f)
+    with open('waves.p','rb') as f: wlist = pickle.load(f)
+    #with open('waves.p','wb') as f:
+    #    pickle.dump(waves,f)
+except:
 
-
-
-            if 'SHORT_SQUARE' in temp['Protocol_ID'] and not 'SHORT_SQUARE_TRIPPLE' in temp['Protocol_ID'] or 'SHORT_SQUARE_TRIPPLE' in temp['Protocol_ID']:
-                try:
-                    parts = temp['Waveform_Label'].split(' ')
-
-                    #import pdb; pdb.set_trace()
-                    print(' value ',parts[0], ' units ',parts[1])
-
-                    waves_to_test['prediction'] = float(parts[0])*nA# '1.1133 nA',
-                    #print('yes')
-
-                    temp_vm = list(map(float, temp['Variable_Values'].split(',')))
-
-                    waves_to_test['Times'] = list(map(float,temp['Times'].split(',')))
-                    waves_to_test['DURATION'] = temp['Time_End'] -temp['Time_Start']
-                    waves_to_test['DELAY'] = temp['Time_Start']
-                    waves_to_test['Time_End'] = temp['Time_End']
-                    waves_to_test['Time_Start'] = temp['Time_Start']
-                    dt = waves_to_test['Times'][1]- waves_to_test['Times'][0]
-                    waves_to_test['vm'] = AnalogSignal(temp_vm,sampling_period=dt*ms,units=mV)
-                    waves_to_test['everything'] = temp
-                    waves_to_get.append(waves_to_test)
-
-                except:
-
-                    if temp['Waveform_Label'] is None:
-                        pass
-                    pass
-        return waves_to_get
     waves = get_wave_forms(str('NMLCL001129'))
-    with open('waves.p','wb') as f:
-        pickle.dump(waves,f)
+    with open('waves.p','wb') as f: pickle.dump(waves,f)
 
 
 protocols = [ w['everything']['Protocol_ID'] for w in waves ]
@@ -232,24 +262,24 @@ def generate_prediction(self,model):
 #import pdb; pdb.set_trace()
 test_scores = []
 tt = [tests for tests in test_frame[0][0] ]
-#vtest[k] = active_values(keyed,dtc.rheobase)
 for t in tt: t.generate_prediction = MethodType(generate_prediction,t)
 params = {}
 
-'''
+
 def get_m_p(cls,params = {}):
     return model.get_membrane_potential()
 for model in sms:
     model.inject_square_current = MethodType(get_m_p,model)#get_membrane_potential
-'''
+
 #def get_membrane_potential():
 
 #for model in sms: model.inject_square_current = MethodType(model.get_membrane_potential,model)
 
 #for model in sms: model.inject_square_current = MethodType(model.get_membrane_potential,model)
 #for model in sms: print(model.inject_square_current())# = MethodType(model.get_membrane_potential,params)
-#for t in tt: t.generate_prediction = MethodType(generate_prediction,t)
 
+tt[0].generate_prediction = MethodType(generate_prediction,tt[0])
+#print(active_values.__file__)
 def active_values(keyed,rheobase,square = None):
     keyed['injected_square_current'] = {}
     if square == None:
@@ -280,10 +310,8 @@ for t in tt:
 
 
 flat_iter = [(t,sm) for t in tt for sm in sms]
-try:
-    from neuronunit.optimisation.optimisation_management import add_druckmann_properties_to_cells as dm
-except:
-    from neuronunit.optimisation.optimisation_management import add_dm_properties_to_cells as dm
+import pdb
+waves = get_wave_forms(str('NMLCL001129'))
 
 for t,sm in flat_iter:
     sm._backend = None
@@ -294,38 +322,36 @@ for t,sm in flat_iter:
         #score = rtest.judge(model)
         results = sm.get_membrane_potential()
         value = float(np.max(current_injections[0]['vm']))
-
         dm_tests = init_dm_tests(value,1.5*value)
-
         predictions = [ dm.generate_prediction(sm) for dm in dm_tests ]
-        #import pdb; pdb.set_trace()
         trace = {}
-        DURATION = sm.complete['Time_End'] -sm.complete['Time_Start']
 
         trace['T'] = sm.complete['Times']
         trace['V'] = results
         trace['stim_start'] = [sm.complete['Time_Start']]#rtest.run_params[]
+        DURATION = sm.complete['Time_End'] -sm.complete['Time_Start']
 
         trace['stim_end'] = [sm.complete['Time_End'] ]# list(sm.complete['duration'])
         traces = [trace]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
         traces_results = efel.getFeatureValues(traces,list(efel.getFeatureNames()))#
+
+        from allensdk.ephys.extract_cell_features import extract_cell_features
+
         for v in traces_results:
             for key,value in v.items():
                 if type(value) is not type(None):
-                    #pass
                     print(key,value)
-        #try:
-            #import pdb; pdb.set_trace()
-        #    sm.get_membrane_potential()
-        #    test_scores.append(t.judge(sm))
-        #    print(test_scores[-1],t.name)
-        #except:
-            #test_scores.append(t.judge(sm))
+        try:
+            test_scores.append(t.judge(sm))
+            print(test_scores[-1],t.name)
+        except:
+            test_scores.append(t.judge(sm))
 
-            #print(test_scores[-1],t.name)
+            print(test_scores[-1],t.name)
 
             print('active skipped: ',t.name)
-        print(test_scores)
+
+
         #all_models = json.loads(url.read().decode())
 def get_all(Model_ID = str('NMLNT001592')):
     if Model_ID == None:
@@ -348,8 +374,8 @@ def get_all(Model_ID = str('NMLNT001592')):
                 #https://www.neuroml-db.org/api/models'
                 #url = str('https://www.neuroml-db.org/GetModelZip?modelID=')+str(d['Model_ID'])+str('&version=NeuroML')
                 #os.system('wget '+str(url))
-                os.system(str('unzip *')+str(d['Model_ID'])+('*'))
-                os.system('cd *')+str(d['Model_ID'])+('*'))
+                os.system(str('unzip *')+str(d['Model_ID'])+str('*'))
+                os.system(str('cd *')+str(d['Model_ID'])+str('*'))
                 os.system(str('pynml hhneuron.cell.nml -neuron'))
             return data
 
@@ -366,8 +392,8 @@ def get_all(Model_ID = str('NMLNT001592')):
         print(url)
         url = "https://www.neuroml-db.org/GetModelZip?modelID=NMLNT001592&version=NeuroML"
         os.system('wget '+str(url))
-        os.system(str('unzip ')+str(d['Model_ID'])+('*'))
-        os.system('cd *')+str(d['Model_ID'])+('*'))
+        os.system(str('unzip ')+str(d['Model_ID'])+str('*'))
+        os.system(str('cd *')+str(d['Model_ID'])+str('*'))
 
         os.system(str('pynml hhneuron.cell.nml -neuron'))
 
