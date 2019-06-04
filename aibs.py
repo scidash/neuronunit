@@ -26,6 +26,93 @@ import multiprocessing
 from allensdk.model.biophysical import runner
 
 
+        #all_models = json.loads(url.read().decode())
+def get_all(Model_ID = str('NMLNT001592')):
+    if Model_ID == None:
+        try:
+            url = str("https://www.neuroml-db.org/api/models")
+            all_models = requests.get(url)
+            all_models = json.loads(all_models.text)
+            print(all_models)
+            for d in all_models:
+                print(d.keys())
+            for d in all_models[0]:
+                print(d['Model_ID'],d['Directory_Path'])
+                url = str('https://www.neuroml-db.org/GetModelZip?modelID=')+str(d['Model_ID'])+str('&version=NeuroML')
+                urllib.request.urlretrieve(url,Model_ID)
+                os.system(str('unzip *')+str(d['Model_ID'])+str('*'))
+                os.system(str('cd *')+str(d['Model_ID'])+str('*'))
+                os.system(str('pynml hhneuron.cell.nml -neuron'))
+            return data
+
+        except:
+            pass
+    else:
+        d = {}
+        d['Model_ID'] = Model_ID
+        url = "https://www.neuroml-db.org/GetModelZip?modelID=NMLNT001592&version=NeuroML"
+        urllib.request.urlretrieve(url,Model_ID)
+        url = "https://www.neuroml-db.org/GetModelZip?modelID=NMLNT001592&version=NeuroML"
+        os.system('wget '+str(url))
+        os.system(str('unzip ')+str(d['Model_ID'])+str('*'))
+        os.system(str('cd *')+str(d['Model_ID'])+str('*'))
+
+        os.system(str('pynml hhneuron.cell.nml -neuron'))
+
+
+def run_cell():
+    from neuron import h
+    h.load_file('hhneuron.hoc')
+    cell = h.hhneuron
+    d = {}
+    d['Model_ID'] = str('NT001592')
+    with urllib.request.urlopen(str('https://www.neuroml-db.org/api/model?id=')+str(d['Model_ID'])) as url:
+        data_on_model = json.loads(url.read().decode())
+
+
+        #all_models = json.loads(url.read().decode())
+def get_all(Model_ID = str('NMLNT001592')):
+    if Model_ID == None:
+        try:
+            url = str("https://www.neuroml-db.org/api/models")
+            all_models = requests.get(url)
+            all_models = json.loads(all_models.text)
+            print(all_models)
+            for d in all_models:
+                print(d.keys())
+            for d in all_models[0]:
+                print(d['Model_ID'],d['Directory_Path'])
+                url = str('https://www.neuroml-db.org/GetModelZip?modelID=')+str(d['Model_ID'])+str('&version=NeuroML')
+                urllib.request.urlretrieve(url,Model_ID)
+                os.system(str('unzip *')+str(d['Model_ID'])+str('*'))
+                os.system(str('cd *')+str(d['Model_ID'])+str('*'))
+                os.system(str('pynml hhneuron.cell.nml -neuron'))
+            return data
+
+        except:
+            pass
+    else:
+        d = {}
+        d['Model_ID'] = Model_ID
+        url = "https://www.neuroml-db.org/GetModelZip?modelID=NMLNT001592&version=NeuroML"
+        urllib.request.urlretrieve(url,Model_ID)
+        url = "https://www.neuroml-db.org/GetModelZip?modelID=NMLNT001592&version=NeuroML"
+        os.system('wget '+str(url))
+        os.system(str('unzip ')+str(d['Model_ID'])+str('*'))
+        os.system(str('cd *')+str(d['Model_ID'])+str('*'))
+
+        os.system(str('pynml hhneuron.cell.nml -neuron'))
+
+
+def run_cell():
+    from neuron import h
+    h.load_file('hhneuron.hoc')
+    cell = h.hhneuron
+    d = {}
+    d['Model_ID'] = str('NT001592')
+    with urllib.request.urlopen(str('https://www.neuroml-db.org/api/model?id=')+str(d['Model_ID'])) as url:
+        data_on_model = json.loads(url.read().decode())
+
 def is_aibs_up():
     """Check whether the AIBS Cell Types Database API is working."""
     url = ("http://api.brain-map.org/api/v2/data/query.xml?criteria=model"
