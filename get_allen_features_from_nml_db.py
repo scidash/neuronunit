@@ -124,38 +124,27 @@ def get_wave_forms(cell_id):
             waves_to_test['Time_Start'] = temp['Time_Start']
             dt = waves_to_test['Times'][1]- waves_to_test['Times'][0]
             waves_to_test['vm'] = AnalogSignal(temp_vm,sampling_period=dt*ms,units=mV)
-
-
             sm = models.StaticModel(waves_to_test['vm'])
             sm.complete = None
             sm.complete = temp
             sm.complete['vm'] = waves_to_test['vm']
-
-
             trace0 = {}
             DURATION = sm.complete['Time_End'] -sm.complete['Time_Start']
-
             trace0['T'] = waves_to_test['Times']
-
             trace0['V'] = temp_vm
             trace0['stim_start'] = [sm.complete['Time_Start']]#rtest.run_params[]
             trace0['stim_end'] = [sm.complete['Time_End'] ]# list(sm.complete['duration'])
             traces0 = [trace0]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
             print(temp['Spikes'])
             if temp['Spikes'] and np.min(temp_vm)<0:
-
                 traces_results = efel.getFeatureValues(traces0,list(efel.getFeatureNames()))#
                 for v in traces_results:
                     for key,value in v.items():
                         if type(value) is not type(None):
                             #pass
                             print(key,value)
-
-
-                [(model,times,vm)] = pickle.load(open('efel_practice.p','rb'))
-
-                waveforms = get_spike_waveforms(vm)
-
+                # [(model,times,vm)] = pickle.load(open('efel_practice.p','rb'))
+                # waveforms = get_spike_waveforms(vm)
                 trace1 = {}
                 trace1['T'] = waveforms[:,0].times
                 trace1['V'] = waveforms[:,0]
@@ -165,7 +154,7 @@ def get_wave_forms(cell_id):
                 trace1['stim_start'] = [ 0 ] #[sm.complete['Time_Start']]#rtest.run_params[]
                 trace1['stim_end'] = [ 0 + float(np.max(trace1['T'])) ]# list(sm.complete['duration'])
                 traces1 = [trace1]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
-                import pdb; pdb.set_trace()
+                # import pdb; pdb.set_trace()
 
                 traces_results = efel.getFeatureValues(traces1,list(efel.getFeatureNames()))#
                 print(trace_results)
@@ -291,19 +280,16 @@ for t,sm in flat_iter:
     if t.active:
         t.params = {}
         t.params['injected_square_current'] = None
-
         #score = rtest.judge(model)
         results = sm.get_membrane_potential()
         value = float(np.max(current_injections[0]['vm']))
         dm_tests = init_dm_tests(value,1.5*value)
         predictions = [ dm.generate_prediction(sm) for dm in dm_tests ]
         trace = {}
-
         trace['T'] = sm.complete['Times']
         trace['V'] = results
         trace['stim_start'] = [sm.complete['Time_Start']]
         DURATION = sm.complete['Time_End'] -sm.complete['Time_Start']
-
         trace['stim_end'] = [sm.complete['Time_End'] ]
         traces = [trace]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
         traces_results = efel.getFeatureValues(traces,list(efel.getFeatureNames()))#
