@@ -1,7 +1,8 @@
 
 import matplotlib as mpl
 mpl.use('agg')
-
+import logging
+logging.info("test")
 from allensdk.core.cell_types_cache import CellTypesCache
 from allensdk.ephys.extract_cell_features import extract_cell_features
 from collections import defaultdict
@@ -14,15 +15,44 @@ from neuronunit import aibs
 
 #dm_tests = init_dm_tests(value,1.5*value)
 
+try:
+    ctc = CellTypesCache(manifest_file='cell_types/manifest.json')
+except:
+    pass
+    all_features = ctc.get_all_features()
+    pickle.dump(all_features,open('all_features.p','wb'))
+
+try:
+    with open('../all_allen_cells.p','rb') as f:
+        cells = pickle.load(f)
+        #cells = pickle.load(open('../all_allen_cells.p','rb'))
+
+except:
+    ctc = CellTypesCache(manifest_file='cell_types/manifest.json')
+    cells = ctc.get_cells()
+    with open('all_allen_cells.p','wb') as f:
+        pickle.dump(cells,f)
+
+ids = [ c['id'] for c in cells ]
+
+
+
 files = [324257146, 485909730]
 data = []
-for f in files:
-    data.append(aibs.get_nwb(f))
+for f in ids:
+    data_set = ctc.get_ephys_data(f)
+
+    file_name = 'cell_types/specimen_'+str(f)+'/ephys.nwb'
+    data_set = NwbDataSet(file_name)
+    print(f)
+    data.append((f,aibs.get_nwb(f)))
+
 import pdb; pdb.set_trace()
 
 
 def a_cell_for_check(stim):
     cells = pickle.load(open("multi_objective_raw.p","rb"))
+
     dtc = cells['results']['RAW']['Dentate gyrus basket cell']['pf'][0].dtc
     dtc.attrs['dt'] = 0.0001
 
@@ -30,7 +60,6 @@ def a_cell_for_check(stim):
     return (_,times,vm)
 # if you ran the examples above, you will have a NWB file here
 
-ctc = CellTypesCache(manifest_file='cell_types/manifest.json')
 file_name = 'cell_types/specimen_485909730/ephys.nwb'
 specimen_id = 485909730
 
