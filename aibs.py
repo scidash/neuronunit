@@ -1,5 +1,8 @@
 """NeuronUnit module for interaction with the Allen Brain Insitute
 Cell Types database"""
+import logging
+logging.info("test")
+
 import matplotlib as mpl
 mpl.use('agg')
 import shelve
@@ -44,6 +47,9 @@ import quantities as qt
 from types import MethodType
 import numpy as np
 
+from allensdk.ephys.extract_cell_features import extract_cell_features
+from collections import defaultdict
+from allensdk.core.cell_types_cache import CellTypesCache
 
 import numpy as np
 import neo
@@ -54,6 +60,7 @@ import sciunit
 import math
 import pdb
 from allensdk.ephys.extract_cell_features import extract_cell_features
+from itertools import repeat
 
 def a_cell_for_check(stim):
     cells = pickle.load(open("multi_objective_raw.p","rb"))
@@ -67,7 +74,12 @@ def a_cell_for_check(stim):
 # pick a cell to analyze
 #specimen_id = 324257146
     # download the ephys data and s
-        #all_models = json.loads(url.read().decode())
+
+#all_models = json.loads(url.read().decode())
+
+import logging
+logging.info("test")
+
 def get_all(Model_ID = str('NMLNT001592')):
     if Model_ID == None:
         try:
@@ -167,44 +179,37 @@ def get_spike_count(model):
     train = get_spike_train(vm)
     return len(train)
 
-from itertools import repeat
 
 def dm_map(compound):
     (sm, dm) = compound
     return dm.generate_prediction(sm)
-    
-    
-from allensdk.core.cell_types_cache import CellTypesCache
-from allensdk.ephys.extract_cell_features import extract_cell_features
-from collections import defaultdict
 
 
 def get_nwb(specimen_id = 324257146):
     file_name = 'cell_types/specimen_'+str(specimen_id)+'/ephys.nwb'
-    try:
-        data_set = NwbDataSet(file_name)
-        sweep_numbers = data_set.get_sweep_numbers()
-        sweeps = ctc.get_ephys_sweeps(specimen_id)
+    data_set = NwbDataSet(file_name)
 
+    try:
+        sweep_numbers = data_set.get_sweep_numbers()
+    except:
+        return
+    try:
+        sweeps = ctc.get_ephys_sweeps(specimen_id)
         for sn in sweep_numbers:
             spike_times = data_set.get_spike_times(sn)
             sweep_data = data_set.get_sweep(sn)
-
     except:
         ctc = CellTypesCache(manifest_file='cell_types/manifest.json')
-
-        #file_name ='cell_types/specimen_324257146/ephys.nwb'
-        #import pdb
-        #pdb.set_trace()
         data_set = ctc.get_ephys_data(specimen_id)
-        sweeps = ctc.get_ephys_sweeps(specimen_id)
-        
+
+    sweeps = ctc.get_ephys_sweeps(specimen_id)
+
     sweep_numbers = defaultdict(list)
-    for sweep in sweeps: 
+    for sweep in sweeps:
         sweep_numbers[sweep['stimulus_name']].append(sweep['sweep_number'])
-                                     
-                                     
-    cell_features = extract_cell_features(data_set, sweep_numbers['Ramp'],sweep_numbers['Short Square'],sweep_numbers['Long Square'])
+
+
+    #cell_features = extract_cell_features(data_set, sweep_numbers['Ramp'],sweep_numbers['Short Square'],sweep_numbers['Long Square'])
 
     sweep_numbers = data_set.get_sweep_numbers()
     smallest_multi = 1000
@@ -240,16 +245,16 @@ def get_nwb(specimen_id = 324257146):
     sm.inject_square_current(inj_rheobase)
     dm_tests[0].generate_prediction(sm)
     sm.inject_square_current(inj_mutli_spike)
-    compound = zip(repeat(sm),dm_tests)
-    #preds = list(map(dm_map,compound))
+    #import pdb; pdb.set_trace()
+    compound = list(zip(repeat(sm),dm_tests))
+    #preds = list(map(dm_map,list(compound)[0:2]))
     bag = db.from_sequence(compound,npartitions=8)
     preds = list(bag.map(dm_map).compute())
+    names = [ d.name for d in dm_tests ]
+    preds = list(zip(preds,names))
 
-    
 
-
-     
-    everything = [preds,cell_features]
+    everything = preds
     index_range = sweep_data['index_range']
     return everything
 
