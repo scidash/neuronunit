@@ -1,5 +1,7 @@
 
 import matplotlib as mpl
+import matplotlib.pyplot as plt
+
 mpl.use('agg')
 import logging
 logging.info("test")
