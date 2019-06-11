@@ -67,6 +67,7 @@ import math
 import pdb
 from allensdk.ephys.extract_cell_features import extract_cell_features
 from itertools import repeat
+from sklearn.cross_decomposition import CCA
 
 def a_cell_for_check(stim):
     cells = pickle.load(open("multi_objective_raw.p","rb"))
@@ -139,6 +140,7 @@ def is_aibs_up():
 
 
 def find_nearest(array, value):
+    #value = float(value)
     array = np.asarray(array)
     idx = (np.abs(array - value)).argmin()
     return (array[idx], idx)
@@ -231,16 +233,20 @@ def get_nwb(specimen_id = 324257146):
             smallest_multi = len(spike_times)
             inj_mutli_spike = np.max(sweep_data['stimulus'])
             temp_vm = sweep_data['response']
-        all_currents.append(np.max(sweep_data['stimulus']*qt.pA))
+        val = np.max(sweep_data['stimulus'])#*qt.pA
+        all_currents.append(val)
 
-    dmrheobase15 = 1.5*cell_features['long_squares']['rheobase_i']*qt.pA
+    dmrheobase15 = (1.5*inj_rheobase)#cell_features['long_squares']['rheobase_i'])#*qt.pA
     (nearest_allen15,idx_nearest_allen) = find_nearest(all_currents,dmrheobase15)
     print('how close are these two \n\n\n\n\n\n ?', nearest_allen15,inj_mutli_spike)
-    if inj_mutli_spike < dmrheobase15:# != inj_rheobase:
-        import pdb; pdb.set_trace()
-        dm_tests = init_dm_tests(inj_rheobase,nearest_allen15)
+    if inj_mutli_spike < nearest_allen15 and inj_rheobase!=nearest_allen15:# != inj_rheobase:
+        #import pdb; pdb.set_trace()
+    #
+        pass
+        #dm_tests = init_dm_tests(inj_rheobase,nearest_allen15)
     else:
-        dm_tests = init_dm_tests(inj_rheobase,inj_mutli_spike)
+        pass
+    dm_tests = init_dm_tests(inj_rheobase,inj_mutli_spike)
 
     # Two things need to be done.
     # 1. Apply these stimulations to allen models.
@@ -257,20 +263,25 @@ def get_nwb(specimen_id = 324257146):
     sm.inject_square_current = MethodType(inject_square_current,sm)
     sm.get_membrane_potential = MethodType(get_membrane_potential,sm)
     sm.get_spike_count = MethodType(get_spike_count,sm)
-    sm.inject_square_current(inj_rheobase)
-    dm_tests[0].generate_prediction(sm)
-    sm.inject_square_current(inj_mutli_spike)
+    #sm.inject_square_current(inj_rheobase)
+    #dm_tests[0].generate_prediction(sm)
+    #sm.inject_square_current(inj_mutli_spike)
     compound = list(zip(repeat(sm),dm_tests))
     bag = db.from_sequence(compound,npartitions=8)
     preds = list(bag.map(dm_map).compute())
     names = [ d.name for d in dm_tests ]
     preds = list(zip(preds,names))
-    spiking_sweeps = cell_features['long_squares']['spiking_sweeps']
+    spiking_sweeps = cell_features['long_squares']['spiking_sweeps'][0]
     multi_spike_features = cell_features['long_squares']['hero_sweep']
     biophysics = cell_features['long_squares']
     shapes =  cell_features['long_squares']['spiking_sweeps'][0]['spikes'][0]
-    print(spiking_sweeps)
-    print(biophysics)
+    #import pdb; pdb.set_trace()
+    #print(spiking_sweeps)
+    #print(biophysics)
+    #cca = CCA(n_components=1)
+    #cca.fit(X, Y)
+
+    #X_c, Y_c = cca.transform(X, Y)
 
     everything = (preds,cell_features)
     pickle.dump(everything,open(str(specimen_id)+'.p','wb'))
