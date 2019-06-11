@@ -2,22 +2,13 @@
 Cell Types database"""
 import logging
 logging.info("test")
-
 import matplotlib as mpl
 mpl.use('agg')
-
 import matplotlib.pyplot as plt
-
-
-#import matplotlib as mpl
-#mpl.use('agg')
 import shelve
 import requests
-
 import numpy as np
 import quantities as pq
-# from allensdk.api.queries.cell_types_api import CellTypesApi
-
 from allensdk.api.queries.cell_types_api import CellTypesApi
 from allensdk.core.cell_types_cache import CellTypesCache
 from allensdk.api.queries.glif_api import GlifApi
