@@ -5,6 +5,12 @@ logging.info("test")
 
 import matplotlib as mpl
 mpl.use('agg')
+
+import matplotlib.pyplot as plt
+
+
+#import matplotlib as mpl
+#mpl.use('agg')
 import shelve
 import requests
 
@@ -213,6 +219,7 @@ def get_nwb(specimen_id = 324257146):
 
     sweep_numbers = data_set.get_sweep_numbers()
     smallest_multi = 1000
+    all_currents = []
     for sn in sweep_numbers:
         spike_times = data_set.get_spike_times(sn)
         sweep_data = data_set.get_sweep(sn)
@@ -223,11 +230,17 @@ def get_nwb(specimen_id = 324257146):
         if len(spike_times) < smallest_multi and len(spike_times) > 1:
             smallest_multi = len(spike_times)
             inj_mutli_spike = np.max(sweep_data['stimulus'])
-            #print(inj_mutli_spike,'smallest multispiking')
             temp_vm = sweep_data['response']
+        all_currents.append(np.max(sweep_data['stimulus']*qt.pA))
 
-
-    dm_tests = init_dm_tests(inj_rheobase,inj_mutli_spike)
+    dmrheobase15 = 1.5*cell_features['long_squares']['rheobase_i']*qt.pA
+    (nearest_allen15,idx_nearest_allen) = find_nearest(all_currents,dmrheobase15)
+    print('how close are these two \n\n\n\n\n\n ?', nearest_allen15,inj_mutli_spike)
+    if inj_mutli_spike < dmrheobase15:# != inj_rheobase:
+        import pdb; pdb.set_trace()
+        dm_tests = init_dm_tests(inj_rheobase,nearest_allen15)
+    else:
+        dm_tests = init_dm_tests(inj_rheobase,inj_mutli_spike)
 
     # Two things need to be done.
     # 1. Apply these stimulations to allen models.
@@ -236,6 +249,9 @@ def get_nwb(specimen_id = 324257146):
     # sampling rate is in Hz
     sampling_rate = sweep_data['sampling_rate']
     vm = AnalogSignal(temp_vm,sampling_rate=sampling_rate*qt.Hz,units=qt.V)
+    #plt.plot(vm.times,vm.magnitude)
+    #plt.savefig('too_small_debug.png')
+
     sm = models.StaticModel(vm)
     sm.data_set = data_set
     sm.inject_square_current = MethodType(inject_square_current,sm)
@@ -249,10 +265,15 @@ def get_nwb(specimen_id = 324257146):
     preds = list(bag.map(dm_map).compute())
     names = [ d.name for d in dm_tests ]
     preds = list(zip(preds,names))
-
+    spiking_sweeps = cell_features['long_squares']['spiking_sweeps']
+    multi_spike_features = cell_features['long_squares']['hero_sweep']
+    biophysics = cell_features['long_squares']
+    shapes =  cell_features['long_squares']['spiking_sweeps'][0]['spikes'][0]
+    print(spiking_sweeps)
+    print(biophysics)
 
     everything = (preds,cell_features)
-    # index_range = sweep_data['index_range']
+    pickle.dump(everything,open(str(specimen_id)+'.p','wb'))
     return everything
 
 
