@@ -263,8 +263,9 @@ def get_nwb(specimen_id = 324257146):
     sm.inject_square_current = MethodType(inject_square_current,sm)
     sm.get_membrane_potential = MethodType(get_membrane_potential,sm)
     sm.get_spike_count = MethodType(get_spike_count,sm)
-    #sm.inject_square_current(inj_rheobase)
-    #dm_tests[0].generate_prediction(sm)
+    # these lines are functional
+    sm.inject_square_current(inj_rheobase)
+    dm_tests[0].generate_prediction(sm)
     #sm.inject_square_current(inj_mutli_spike)
     compound = list(zip(repeat(sm),dm_tests))
     bag = db.from_sequence(compound,npartitions=8)
