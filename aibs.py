@@ -2,41 +2,26 @@
 Cell Types database"""
 import logging
 logging.info("test")
-
 import matplotlib as mpl
 mpl.use('agg')
-
 import matplotlib.pyplot as plt
-
-
-#import matplotlib as mpl
-#mpl.use('agg')
 import shelve
 import requests
-
 import numpy as np
 import quantities as pq
-# from allensdk.api.queries.cell_types_api import CellTypesApi
-
 from allensdk.api.queries.cell_types_api import CellTypesApi
 from allensdk.core.cell_types_cache import CellTypesCache
 from allensdk.api.queries.glif_api import GlifApi
 import os
 import pickle
-#import allensdk.model.biophysical.runner #manifest.json')
 from allensdk.api.queries.biophysical_api import BiophysicalApi
 ## Need this import but it fails because of python2 formatted strings.
-#from allensdk.model.biophysical import runner
 from neuronunit.optimisation.optimisation_management import add_druckmann_properties_to_cells
 from neuronunit.optimisation.optimisation_management import mint_generic_model, dtc_to_rheo, split_list
 from neuronunit.optimisation.data_transport_container import DataTC
 from allensdk.model.glif.glif_neuron import GlifNeuron
 import dask.bag as db
 import multiprocessing
-#from allensdk.model.biophysical import runner
-
-
-
 
 from allensdk.core.cell_types_cache import CellTypesCache
 from allensdk.ephys.extract_cell_features import extract_cell_features
@@ -51,13 +36,11 @@ from neuronunit import models
 from neo.core import AnalogSignal
 import quantities as qt
 from types import MethodType
-import numpy as np
 
 from allensdk.ephys.extract_cell_features import extract_cell_features
 from collections import defaultdict
 from allensdk.core.cell_types_cache import CellTypesCache
 
-import numpy as np
 import neo
 from elephant.spike_train_generation import threshold_detection
 from quantities import mV, ms
