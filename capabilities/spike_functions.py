@@ -58,39 +58,26 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
     # Fix for 0-length spike train issue in elephant.
     if len(spike_train) == 0:
         diff,times = get_diff(vm)
-        print(spike_train,times)
-        #import pdb; pdb.set_trace()
-        # try:
-        #     spike_train = threshold_detection(diff,threshold=0.0000193667327364)
-        #     print(spike_train)
-        # except TypeError:
-
         temp = float(np.mean(vm))+float(np.std(vm))
         spike_train = threshold_detection(vm,threshold=temp)
-        print(spike_train)
-            #spike_train = neo.core.SpikeTrain([],t_start=spike_train.t_start,
-            #                                 t_stop=spike_train.t_stop,
-            #                                 units=spike_train.units)
+        if len(spike_train) == 0:
+            spike_train = threshold_detection(vm,threshold=np.max(vm))
+            if len(spike_train) == 0:
+                return None
+
     too_short = True
     too_long = True
 
-    # This code checks that you are not asking for a window into an array,
-    # with out of bounds indicies.
-    try:
-        t = spike_train[0]
-        t1 = spike_train[-1]
-    except:
-        t = spike_train
-
-    if t-width/2.0 > 0.0*ms:
+    last_t = spike_train[-1]
+    if last_t-width/2.0 > 0.0*ms:
         too_short = False
-
-    if t+width/2.0 < vm.times[-1]:
+    if last_t+width/2.0 < vm.times[-1]:
         too_long = False
+        
     if not too_short and not too_long:
         snippets = [vm.time_slice(t-width/2, t+width/2) for t in spike_train]
     elif too_long:
-        snippets = [vm.time_slice(t-width/2, t) for t in spike_train]
+        snippets = [vm.time_slice(t-width/2, t) for t in spike_train[0:-1]]
     elif too_short:
         snippets = [vm.time_slice(t, t+width/2) for t in spike_train]
 
@@ -191,7 +178,6 @@ def spikes2thresholds(spike_waveforms):
 
     n_spikes = spike_waveforms.shape[1]
     thresholds = []
-    print(n_spikes)
     if n_spikes > 1:
         # good to know can handle multispikeing
         pass
@@ -199,7 +185,6 @@ def spikes2thresholds(spike_waveforms):
         s = spike_waveforms[:, i].squeeze()
         s = np.array(s)
         dvdt = np.diff(s)
-        print(dvdt)
         for j in dvdt:
             if math.isnan(j):
                 return thresholds * spike_waveforms.units
