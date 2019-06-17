@@ -81,7 +81,6 @@ class LEMSModel(RunnableModel):
         return download_path
 
     def get_nml_paths(self, lems_tree=None, absolute=True, original=False):
-        import inspect
         """Get all NeuroML file paths associated with the model."""
         if not lems_tree:
             lems_tree = etree.parse(self.lems_file_path)

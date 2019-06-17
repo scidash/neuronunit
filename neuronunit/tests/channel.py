@@ -8,7 +8,7 @@ import quantities as pq
 from sciunit.tests import ProtocolToFeaturesTest
 from sciunit.scores import BooleanScore, FloatScore
 from sciunit.converters import AtMostToBoolean
-from neuronunit.capabilities.channel import ProducesIVCurve
+from neuronunit.capabilities.channel import NML2ChannelAnalysis
 import pyneuroml.analysis.NML2ChannelAnalysis as ca
 
 
@@ -27,8 +27,7 @@ class _IVCurveTest(ProtocolToFeaturesTest):
         self.converter = AtMostToBoolean(pq.Quantity(1.0, 'pA**2'))
         super(_IVCurveTest, self).__init__(observation, name=name, **params)
 
-    required_capabilities = (ProducesIVCurve,)  #  Should probably something
-                                                #  like HasChannelAnalyzer
+    required_capabilities = (NML2ChannelAnalysis,)
 
     units = {'v': pq.V, 'i': pq.pA}
 
@@ -68,11 +67,9 @@ class _IVCurveTest(ProtocolToFeaturesTest):
         return params
 
     def condition_model(self, model):
-        model.params = model.default_params.copy()
-        model.params.update({'ivCurve': True})
-        self.ca_namespace = ca.build_namespace(**model.params)
-        model.lems_file_path = ca.make_lems_file(model.channel,
-                                                 self.ca_namespace)
+        params = model.default_params.copy()
+        params.update(**{'ivCurve': True})
+        model.ca_make_lems_file(**params)
 
     def setup_protocol(self, model):
         """Implement sciunit.tests.ProtocolToFeatureTest.setup_protocol."""
@@ -181,7 +178,7 @@ class IVCurveSSTest(_IVCurveTest):
     """Test IV curves using steady-state curent"""
 
     def extract_features(self, model, results):
-        iv_data = model.ca_produce_iv_curve(self.ca_namespace, results)
+        iv_data = model.ca_compute_iv_curve(results)
         return {'v': iv_data['hold_v'],
                 'i': iv_data['i_steady']}
 
@@ -190,6 +187,6 @@ class IVCurvePeakTest(_IVCurveTest):
     """Test IV curves using steady-state curent"""
 
     def extract_features(self, model, results):
-        iv_data = model.ca_produce_iv_curve(self.ca_namespace, results)
+        iv_data = model.ca_compute_iv_curve(results)
         return {'v': iv_data['hold_v'],
                 'i': iv_data['i_peak']}

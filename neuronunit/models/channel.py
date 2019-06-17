@@ -8,8 +8,7 @@ from pyneuroml.analysis import NML2ChannelAnalysis as ca
 import quantities as pq
 
 
-class ChannelModel(LEMSModel, cap.NML2_Channel_Runnable,
-                   cap.ProducesIVCurve):
+class ChannelModel(LEMSModel, cap.NML2ChannelAnalysis):
     """A model for ion channels"""
 
     def __init__(self, channel_file_path_or_url, channel_index=0, name=None):
@@ -30,7 +29,6 @@ class ChannelModel(LEMSModel, cap.NML2_Channel_Runnable,
         # Temperature, clamp parameters, etc.
         self.default_params = ca.DEFAULTS.copy()
         self.default_params.update({'nogui': True})
-        #self.run_defaults = ca.build_namespace()
 
     """
     DEPRECATED
@@ -53,12 +51,18 @@ class ChannelModel(LEMSModel, cap.NML2_Channel_Runnable,
             self.results = ca.run_lems_file(self.lems_file_path, verbose)
     """
 
+    def ca_make_lems_file(self, **params):
+        self.params = params
+        self.ca_namespace = ca.build_namespace(**params)
+        self.lems_file_path = ca.make_lems_file(self.channel,
+                                                self.ca_namespace)
+
     def ca_run_lems_file(self, verbose=True):
         results = ca.run_lems_file(self.lems_file_path, verbose)
         return results
 
-    def ca_produce_iv_curve(self, ca_namespace, results):
-        iv_data = ca.compute_iv_curve(self.channel, ca_namespace, results)
+    def ca_compute_iv_curve(self, results):
+        iv_data = ca.compute_iv_curve(self.channel, self.ca_namespace, results)
         self.iv_data = {}
         for kind in ['i_peak', 'i_steady']:
             self.iv_data[kind] = {}
