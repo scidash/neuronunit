@@ -5,13 +5,14 @@ from scipy.interpolate import interp1d
 from scipy.optimize import minimize
 import quantities as pq
 
-import sciunit
+from sciunit.tests import ProtocolToFeaturesTest
 from sciunit.scores import BooleanScore, FloatScore
 from sciunit.converters import AtMostToBoolean
 from neuronunit.capabilities.channel import ProducesIVCurve
+import pyneuroml.analysis.NML2ChannelAnalysis as ca
 
 
-class _IVCurveTest(sciunit.Test):
+class _IVCurveTest(ProtocolToFeaturesTest):
     """Test the agreement between channel IV curves produced by models and
     those observed in experiments"""
 
@@ -26,7 +27,8 @@ class _IVCurveTest(sciunit.Test):
         self.converter = AtMostToBoolean(pq.Quantity(1.0, 'pA**2'))
         super(_IVCurveTest, self).__init__(observation, name=name, **params)
 
-    required_capabilities = (ProducesIVCurve,)
+    required_capabilities = (ProducesIVCurve,)  #  Should probably something
+                                                #  like HasChannelAnalyzer
 
     units = {'v': pq.V, 'i': pq.pA}
 
@@ -65,9 +67,24 @@ class _IVCurveTest(sciunit.Test):
             "v_max must be greater than v_min"
         return params
 
-    def generate_prediction(self, model):
-        raise Exception(("This is a meta-class for tests; use tests derived "
-                         "from this class instead"))
+    def condition_model(self, model):
+        model.params = model.default_params.copy()
+        model.params.update({'ivCurve': True})
+        self.ca_namespace = ca.build_namespace(**model.params)
+        model.lems_file_path = ca.make_lems_file(model.channel,
+                                                 self.ca_namespace)
+
+    def setup_protocol(self, model):
+        """Implement sciunit.tests.ProtocolToFeatureTest.setup_protocol."""
+        self.condition_model(model)
+
+    def get_result(self, model):
+        results = model.ca_run_lems_file(verbose=True)
+        return results
+
+    def extract_features(self, model, result):
+        """Implemented in the subclasses"""
+        return NotImplementedError()
 
     def interp_IV_curves(self, v_obs, i_obs, v_pred, i_pred):
         """
@@ -163,12 +180,16 @@ class _IVCurveTest(sciunit.Test):
 class IVCurveSSTest(_IVCurveTest):
     """Test IV curves using steady-state curent"""
 
-    def generate_prediction(self, model):
-        return model.produce_iv_curve_ss(**self.params)
+    def extract_features(self, model, results):
+        iv_data = model.ca_produce_iv_curve(self.ca_namespace, results)
+        return {'v': iv_data['hold_v'],
+                'i': iv_data['i_steady']}
 
 
 class IVCurvePeakTest(_IVCurveTest):
     """Test IV curves using steady-state curent"""
 
-    def generate_prediction(self, model):
-        return model.produce_iv_curve_peak(**self.params)
+    def extract_features(self, model, results):
+        iv_data = model.ca_produce_iv_curve(self.ca_namespace, results)
+        return {'v': iv_data['hold_v'],
+                'i': iv_data['i_peak']}

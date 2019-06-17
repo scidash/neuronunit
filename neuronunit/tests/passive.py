@@ -32,7 +32,7 @@ class TestPulseTest(VmTest):
         model.get_backend().set_stop_time(t_stop)
 
     def setup_protocol(self, model):
-        """Implement sciunit.tests.ProtocolToFeatureTest.run_protocol."""
+        """Implement sciunit.tests.ProtocolToFeatureTest.setup_protocol."""
         self.condition_model(model)
         model.inject_square_current(self.params['injected_square_current'])
 
