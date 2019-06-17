@@ -1,6 +1,7 @@
 """NeuronUnit model class for ion channels models"""
 
 import os
+import re
 
 import neuronunit.capabilities.channel as cap
 from .lems import LEMSModel
@@ -51,9 +52,17 @@ class ChannelModel(LEMSModel, cap.NML2ChannelAnalysis):
             self.results = ca.run_lems_file(self.lems_file_path, verbose)
     """
 
+    
+
     def ca_make_lems_file(self, **params):
+        # Set params in the SciUnit model instance
         self.params = params
+        # ChannelAnalysis only accepts camelCase parameter names
+        # This converts snake_case to camelCase
+        params = {snake_to_camel(key): value for key, value in params.items()}
+        # Build a namespace for use by ChannelAnalysis
         self.ca_namespace = ca.build_namespace(**params)
+        # Make the new LEMS file
         self.lems_file_path = ca.make_lems_file(self.channel,
                                                 self.ca_namespace)
 
@@ -74,3 +83,7 @@ class ChannelModel(LEMSModel, cap.NML2ChannelAnalysis):
 
     def plot_iv_curve(self, v, i, *plt_args, **plt_kwargs):
         ca.plot_iv_curve(self.a, v, i, *plt_args, **plt_kwargs)
+
+
+def snake_to_camel(string):
+    return re.sub(r'_([a-z])', lambda x: x.group(1).upper(), string)

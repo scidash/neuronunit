@@ -50,7 +50,7 @@ class _IVCurveTest(ProtocolToFeaturesTest):
     params_schema = {'v_min': {'type': 'voltage', 'required': True},
                      'v_step': {'type': 'voltage', 'min': 1e-3,
                                 'required': True},
-                     'v_max': {'type': 'time', 'required': True},
+                     'v_max': {'type': 'voltage', 'required': True},
                      'dt': {'type': 'time', 'min': 0, 'required': False},
                      'tmax': {'type': 'time', 'min': 0, 'required': False}}
 
@@ -62,13 +62,19 @@ class _IVCurveTest(ProtocolToFeaturesTest):
             observation['i'] = observation['i'].rescale(pq.pA)  # Rescale to pA
 
     def validate_params(self, params):
+        params = super(_IVCurveTest, self).validate_params(params)
         assert params['v_max'] > params['v_min'], \
             "v_max must be greater than v_min"
         return params
 
     def condition_model(self, model):
+        # Start with the model defaults
         params = model.default_params.copy()
+        # Required parameter by ChannelAnalysis to commpute an IV curve
         params.update(**{'ivCurve': True})
+        # Use test parameters as well to build the new LEMS file
+        params.update(self.params)
+        # Make a new LEMS file with these parameters
         model.ca_make_lems_file(**params)
 
     def setup_protocol(self, model):
