@@ -12,7 +12,7 @@ import quantities as pq
 class ChannelModel(LEMSModel, cap.NML2ChannelAnalysis):
     """A model for ion channels"""
 
-    def __init__(self, channel_file_path_or_url, channel_index=0, name=None):
+    def __init__(self, channel_file_path_or_url, channel_index=0, name=None, backend='jNeuroML'):
         """
         channel_file_path: Path to NML file.
         channel_index: Order of channel in NML file
@@ -23,7 +23,7 @@ class ChannelModel(LEMSModel, cap.NML2ChannelAnalysis):
             base, file_name = os.path.split(channel_file_path_or_url)
             name = file_name.split('.')[0]
         super(ChannelModel, self).__init__(channel_file_path_or_url, name=name,
-                                           backend='jNeuroML')
+                                           backend=backend)
         channels = ca.get_channels_from_channel_file(self.orig_lems_file_path)
         self.channel = channels[channel_index]
         self.a = None
@@ -67,8 +67,8 @@ class ChannelModel(LEMSModel, cap.NML2ChannelAnalysis):
                                                 self.ca_namespace)
 
     def ca_run_lems_file(self, verbose=True):
-        results = ca.run_lems_file(self.lems_file_path, verbose)
-        return results
+        self.run(verbose=verbose)
+        return self.results
 
     def ca_compute_iv_curve(self, results):
         iv_data = ca.compute_iv_curve(self.channel, self.ca_namespace, results)
