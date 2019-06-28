@@ -38,8 +38,8 @@ def get_vm(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.36452
             v[m+1] = c;# % membrane voltage reset
             u[m+1] = u[m+1] + d;# % recovery variable update
 
-    #for m in range(0,N-1):
-    #    v[m] = v[m]/1000.0
+    for m in range(0,N):
+        v[m] = v[m]/1000.0
 
     return v
 
@@ -84,16 +84,23 @@ class RAWBackend(Backend):
         self.tstop = float(stop_time.rescale(pq.ms))
 
 
-    def get_membrane_potential(self):
+    def get_membrane_potential(self,**run_params):
         """Must return a neo.core.AnalogSignal.
         And must destroy the hoc vectors that comprise it.
         """
+        if type(self.vM) is not type(None):
+            pass
+        else:
+            v = get_vm(**self.attrs)
+            self.vM = AnalogSignal(v,
+                                   units = mV,
+                                   sampling_period = self.attrs['dt'] * ms)
         return self.vM
 
     def set_attrs(self, **attrs):
-
+        self.attrs = attrs
         self.model.attrs.update(attrs)
-
+        
 
     def inject_square_current(self, current):#, section = None, debug=False):
         """Inputs: current : a dictionary with exactly three items, whose keys are: 'amplitude', 'delay', 'duration'
@@ -115,9 +122,7 @@ class RAWBackend(Backend):
         tMax = delay + duration + 200.0#/dt#*pq.ms
         self.set_stop_time(tMax*pq.ms)
         tMax = self.tstop
-
-        dt = 0.025
-        N = int(tMax/dt)
+        N = int(tMax/attrs['dt'])
         Iext = np.zeros(N)
         delay_ind = int((delay/tMax)*N)
         duration_ind = int((duration/tMax)*N)
@@ -125,40 +130,23 @@ class RAWBackend(Backend):
         Iext[0:delay_ind-1] = 0.0
         Iext[delay_ind:delay_ind+duration_ind-1] = amplitude
         Iext[delay_ind+duration_ind::] = 0.0
-
         attrs['Iext'] = Iext
-        attrs['dt'] = dt
         v = get_vm(**attrs)
         self.vM = AnalogSignal(v,
                      units = mV,
                      sampling_period = attrs['dt'] * ms)
         self.attrs = attrs
-        #if self.debug == True:
-        #    plt.plot(self.vM.times,self.vM)
-        #    plt.savefig('izhi_debug.png')
+        self.model.attrs.update(attrs)
         return self.vM
 
     def _backend_run(self):
         results = {}
-        v = get_vm(**self.attrs)
+        v = get_vm(**self.attrs)            
         self.vM = AnalogSignal(v,
-         units = mV,
-         sampling_period = self.attrs['dt'] * ms)
+                               units = mV,
+                               sampling_period = self.attrs['dt'] * ms)
         results['vm'] = self.vM
         results['t'] = self.vM.times
         results['run_number'] = results.get('run_number',0) + 1
         return results
-    '''
-    def _local_run(self):
-        results = {}
-        #if self.vM is None:
-        v = get_vm(**attrs)
-        v = np.divide(v, 1000.0)
-        self.vM = AnalogSignal(v,
-         units = mV,
-         sampling_period = dt * ms)
-        results['vm'] = self.vM
-        results['t'] = self.vM.times
-        results['run_number'] = results.get('run_number',0) + 1
-        return results
-    '''
+    

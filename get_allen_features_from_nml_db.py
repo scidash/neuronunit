@@ -2,6 +2,7 @@
 # steady state v of a cell defined in a hoc file in the given directory.
 # Usage: python getCellProperties /path/To/dir/with/.hoc
 #from neuronunit.tests.druckmann2013 import *
+from allensdk.ephys.ephys_extractor import EphysSweepSetFeatureExtractor
 try:
     import cPickle
 except:
@@ -120,7 +121,10 @@ def plot_all(temps):
         temp['easy_Times'] = list(map(float,temp['Times'].split(',')))
 
         dt = temp['easy_Times'][1]- temp['easy_Times'][0]
-
+        temp['dt'] = dt
+        #temp['sampling_rate'] = dt
+        import pdb
+        pdb.set_trace()
         temp['vm'] = AnalogSignal(temp_vm,sampling_period=dt*ms,units=mV)
         plt.plot(temp['vm'].times,temp['vm'].magnitude)#,label='ground truth')
     #plt.show()
@@ -159,9 +163,54 @@ def get_wave_forms(cell_id):#,test_frame = None):
     return temps
 
 
+def extractor_for_nwb(data, fixed_start=None, fixed_end=None, \
+                             dv_cutoff=20., thresh_frac=0.05):
+    v_set = []
+    t_set = []
+    i_set = []
+    start = []
+    end = []
+    #data = dataset.get_sweep(sweep_number)
+    v = data['response'] * 1e3 # mV
+    i = data['stimulus'] * 1e12 # pA
+    hz = data['sampling_rate'] 
+    dt = 1. / hz
+    t = np.arange(0, len(v)) * dt # sec
+
+    s, e = dt * np.array(data['index_range'])
+    v_set.append(v)
+    i_set.append(i)
+    t_set.append(t)
+    start.append(s)
+    end.append(e)
+
+    if fixed_start and not fixed_end:
+        start = [fixed_start] * len(end)
+    elif fixed_start and fixed_end:
+        start = fixed_start
+        end = fixed_end
+
+
+    ext = EphysSweepSetFeatureExtractor([t], [v])
+    ext.process_spikes()
+    swp = ext.sweeps()[0]
+    spikes = swp.spikes()
+    ##
+    # second block.
+    ##
+    keys = swp.spike_feature_keys()
+    swp_keys = swp.sweep_feature_keys()
+    result = swp.spike_feature(keys[0])
+    result = swp.sweep_feature("first_isi")
+    result = ext.sweep_features("first_isi")
+    result = ext.spike_feature_averages(keys[0])
+    
+    return EphysSweepSetFeatureExtractor(t_set, v_set, i_set, start=start, end=end,
+                                         dv_cutoff=dv_cutoff, thresh_frac=thresh_frac, id_set=t_set)
+
 def take_temps(temps,test_frame = None):
     if test_frame == None:
-        electro_path = str(os.getcwd())+str('/neuronunit/examples/pipe_tests.p')
+        electro_path = str(os.getcwd())+str('/examples/pipe_tests.p')
         assert os.path.isfile(electro_path) == True
         with open(electro_path,'rb') as f: test_frame = pickle.load(f)
 
@@ -185,7 +234,11 @@ def take_temps(temps,test_frame = None):
         waves_to_test['DELAY'] = temp['Time_Start']
         waves_to_test['Time_End'] = temp['Time_End']
         waves_to_test['Time_Start'] = temp['Time_Start']
-
+        vslice = temp['vm'].time_slice(temp['Time_Start']*qt.ms,temp['Time_End']*pq.ms)
+        tslice = temp['vm'].times.time_slice(temp['Time_Start']*qt.ms,temp['Time_End']*pq.ms)
+        
+        other_t = np.arange(temp['Time_Start'],temp['Time_End'],temp['dt'])
+        pdb.set_trace()
         ## Make a static NEURONUNIT MODEL
         trace0 = {}
         sm = models.StaticModel(temp['vm'])
@@ -194,7 +247,7 @@ def take_temps(temps,test_frame = None):
         sm = map_to_model(sm,test_frame,lookup,current)
         #plt.plot(sm.get_membrane_potential().times,sm.get_membrane_potential())#,label='ground truth')
         DURATION = sm.complete['Time_End'] -sm.complete['Time_Start']
-        trace0['T'] = waves_to_test['easy_Times']
+        trace0['T'] = temp['easy_Times']
         trace0['V'] = temp['vm']#temp_vm
         trace0['stim_start'] = [sm.complete['Time_Start']]#rtest.run_params[]
         trace0['stim_end'] = [sm.complete['Time_End'] ]# list(sm.complete['duration'])
@@ -227,12 +280,63 @@ def take_temps(temps,test_frame = None):
     cv = traces_results[0]['ISI_CV']
     isis = traces_results[0]['ISIs']
     median_isis = np.median(isis)
+    path = os.getcwd()
+    data = np.loadtxt(os.path.join(path, "spike_test_pair.txt"))
+    tt = data[:, 0]
+    vv = data[:, 1]
+    t = np.array([ t for t in temp['easy_Times'] ])
+    v = np.array([ vm for vm in temp['vm'] ])
+    
+    ext0 = EphysSweepSetFeatureExtractor([tt],[vv])
+    import pdb
+    pdb.set_trace()
+    assert len(t)==len(v)
+    ext = EphysSweepSetFeatureExtractor([t],[v])
+
+    ext.process_spikes()
+    swp = ext.sweeps()[0]
+    spikes = swp.spikes()
+
+    keys = swp.spike_feature_keys()
+    swp_keys = swp.sweep_feature_keys()
+    result = swp.spike_feature(keys[0])
+    result = swp.sweep_feature("first_isi")
+    result = ext.sweep_features("first_isi")
+    result = ext.spike_feature_averages(keys[0])
 
     dm_tests = init_dm_tests(params,rheo15*qt.pA,rheo30*qt.pA)
     isi_median = [d for d in dm_tests if str("ISIMedianTest")==str(d) ][0]
-    print(rheo15*qt.pA)
-    #import pdb
+    # print(rheo15*qt.pA)
+    # import pdb
+    # pdb.set_trace()
+    '''
+    nwb_out_path = os.getcwd()
+    output = NwbDataSet(nwb_out_path)
+    output_data = (np.array(temp['vm']) - junction_potential) * mV
+    output.set_sweep(0, None, output_data)
+    '''
+    #data = {}
+    #data['sampling_rate'] = temp['sampling_rate']
+    #print(data['sampling_rate'])
+    
+    #data['response'] = temp['vm']
+    #data['stimulus'] = rheobase
+    #data = np.loadtxt(os.path.join(path, "data/spike_test_pair.txt"))
+    #t = data[:, 0]
+    #v = data[:, 1]
+
+    
+    import pdb
+    pdb.set_trace()
+
+    #data['index_range'] = [0,len(temp['vm'])]
+    #allen_object = extractor_for_nwb(data, fixed_start=None, fixed_end=None,
+    #                         dv_cutoff=20., thresh_frac=0.05)
     #pdb.set_trace()
+    #allen_object.process_spikes()
+    
+    # import pdb
+    # pdb.set_trace()
     isi_median.generate_prediction(sm)
     isi_median.generate_repetition_prediction()
     delay = [ d for d in dm_tests if str("AP1DelayMeanTest")== str(d) ][0]

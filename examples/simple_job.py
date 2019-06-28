@@ -77,6 +77,48 @@ from neuronunit.optimisation.optimisation_management import stochastic_gradient_
 import seaborn as sns
 
 
+#from optimisation_management import init_dm_tests
+from neuronunit.optimisation.optimisation_management import init_dm_tests
+from neuronunit.optimisation.optimisation_management import mint_generic_model
+from neuronunit.optimisation.optimisation_management import add_dm_properties_to_cells
+from collections import Iterable, OrderedDict
+import quantities as qt
+rts,complete_map = pickle.load(open('../tests/russell_tests.p','rb'))
+local_tests = [value for value in rts['Hippocampus CA1 pyramidal cell'].values() ]
+
+
+#try:
+ga_out = pickle.load(open('izhi_ca1.p','rb'))
+dtcpop = [ ind.dtc for ind in ga_out['pf'] ]
+(dtcpop,dm_properties) = add_dm_properties_to_cells(dtcpop)
+
+#except:
+#    pass
+'''
+ga_out, DO = om.run_ga(model_params.MODEL_PARAMS['RAW'],10, local_tests, free_params = model_params.MODEL_PARAMS['RAW'],
+                                NSGA = True, MU = 10, model_type = str('RAW'))#,seed_pop=seeds[key])
+
+pickle.dump(ga_out,open('izhi_ca1.p','wb'))
+'''
+#dtcpop = [ ind.dtc for ind in ga_out['pf'] ]
+#(dtcpop,dm_properties) = add_druckmann_properties_to_cells(dtcpop)
+try:
+    assert 1==2
+    ga_out = pickle.load(open('adexp_ca1.p','rb'))
+except:
+    ga_out, DO = om.run_ga(model_params.MODEL_PARAMS['BAE1'],60, local_tests, free_params = model_params.MODEL_PARAMS['BAE1'],
+                                NSGA = True, MU = 14, model_type = str('ADEXP'))#,seed_pop=seeds[key])
+    #dtcpop = [ ind.dtc for ind in ga_out['pf'] ]
+    #(dtcpop,dm_properties) = add_dm_properties_to_cells(dtcpop)
+    pickle.dump(ga_out,open('adexp_ca1.p','wb'))
+#import pdb
+#pdb.set_trace()
+
+
+new_ind = copy.copy(ga_out['pf'][0])
+
+
+
 def scale(X):
     before = copy.copy(X)
     for i in range(0,np.shape(X)[1]):
@@ -116,42 +158,9 @@ def mean_new(X):
 
 
 
-from collections import Iterable, OrderedDict
-import quantities as qt
-rts,complete_map = pickle.load(open('../tests/russell_tests.p','rb'))
-local_tests = [value for value in rts['Hippocampus CA1 pyramidal cell'].values() ]
-
-#from optimisation_management import init_dm_tests
-from neuronunit.optimisation.optimisation_management import init_dm_tests
-from neuronunit.optimisation.optimisation_management import mint_generic_model
-from neuronunit.optimisation.optimisation_management import add_druckmann_properties_to_cells
-
-
-    #dtcpop = [ ind.dtc for ind in ga_out['pf'] ]
-    #(dtcpop,dm_properties) = add_druckmann_properties_to_cells(dtcpop)
-try:
-    assert 1==2
-    ga_out = pickle.load(open('ca1.p','rb'))
-except:
-    ga_out, DO = om.run_ga(model_params.MODEL_PARAMS['BAE1'],8, local_tests, free_params = model_params.MODEL_PARAMS['BAE1'],
-                                NSGA = True, MU = 12, model_type = str('ADEXP'))#,seed_pop=seeds[key])
-    pickle.dump(ga_out,open('ca1.p','wb'))
-    dtcpop = [ ind.dtc for ind in ga_out['pf'] ]
-    (dtcpop,dm_properties) = add_druckmann_properties_to_cells(dtcpop)
-
-new_ind = copy.copy(ga_out['pf'][0])
 
 
 
-try:
-    assert 1==2
-    ga_out = pickle.load(open('ca1.p','rb'))
-except:
-    ga_out, DO = om.run_ga(model_params.MODEL_PARAMS['RAW'],100, local_tests, free_params = model_params.MODEL_PARAMS['RAW'],
-                                NSGA = True, MU = 10, model_type = str('RAW'))#,seed_pop=seeds[key])
-    pickle.dump(ga_out,open('izhi_ca1.p','wb'))
-import pbd
-pdb.set_trace()
 
 
 
