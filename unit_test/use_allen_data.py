@@ -41,14 +41,25 @@ ids = [ c['id'] for c in cells ]
 
 files = [324257146, 485909730]
 data = []
-for f in ids:
-    data_set = ctc.get_ephys_data(f)
+for specimen_id in ids:
+    data_set = ctc.get_ephys_data(specimen_id)
 
-    file_name = 'cell_types/specimen_'+str(f)+'/ephys.nwb'
+    file_name = 'cell_types/specimen_'+str(specimen_id)+'/ephys.nwb'
     data_set = NwbDataSet(file_name)
-    print(f)
-    data.append((f,aibs.get_nwb(f)))
+    everything = aibs.get_nwb(specimen_id)
+    prefix = str('/dedicated_folder')
+    try:
+        os.mkdir(prefix)
+    except:
+        pass
+    import pdb
+    pdb.set_trace()
+        #pass
+    pickle.dump(everything,open(prefix+str(specimen_id)+'.p','wb'))
 
+
+
+'''
 import pdb; pdb.set_trace()
 
 
@@ -69,36 +80,7 @@ try:
     data_set = NwbDataSet(file_name)
 except:
     pass
-# pick a cell to analyze
-#specimen_id = 324257146
-    # download the ephys data and sweep metadata
 
-
-def get_nwb(specimen_id = 485909730):
-    data_set = ctc.get_ephys_data(specimen_id)
-    data_set = NwbDataSet(file_name)
-
-    sweep_numbers = data_set.get_sweep_numbers()
-    for sn in sweep_numbers:
-        spike_times = data_set.get_spike_times(sn)
-        if sum(spike_times):
-            sweep_data = data_set.get_sweep(sn)
-            vm = sweep_data['response']
-            # Two things need to be done.
-            # 1. Apply these stimulations to allen models.
-            # 2. Apply the feature extraction to optimized models.
-            injection = sweep_data['stimulus']
-            # sampling rate is in Hz
-            sampling_rate = sweep_data['sampling_rate']
-
-            # start/stop indices that exclude the experimental test pulse (if applicable)
-            index_range = sweep_data['index_range']
-
-            #import pdb; pdb.set_trace()
-            #meta_d = data_set.get_sweep_metadata(sn)
-            #print(vm)
-            #print(meta_d)
-    return data_set
 
 
 def get_features(specimen_id = 485909730):
@@ -125,3 +107,4 @@ def get_features(specimen_id = 485909730):
                                           sweep_numbers['Ramp'],
                                           sweep_numbers['Short Square'],
                                           sweep_numbers['Long Square'])
+'''
