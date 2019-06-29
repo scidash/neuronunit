@@ -52,6 +52,9 @@ from allensdk.ephys.extract_cell_features import extract_cell_features
 import pandas as pd
 from allensdk.ephys.extract_cell_features import extract_cell_features
 import matplotlib.pyplot as plt
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+
 
 def generate_prediction(self,model):
     prediction = {}
@@ -173,7 +176,7 @@ def extractor_for_nwb(data, fixed_start=None, fixed_end=None, \
     #data = dataset.get_sweep(sweep_number)
     v = data['response'] * 1e3 # mV
     i = data['stimulus'] * 1e12 # pA
-    hz = data['sampling_rate'] 
+    hz = data['sampling_rate']
     dt = 1. / hz
     t = np.arange(0, len(v)) * dt # sec
 
@@ -204,7 +207,7 @@ def extractor_for_nwb(data, fixed_start=None, fixed_end=None, \
     result = swp.sweep_feature("first_isi")
     result = ext.sweep_features("first_isi")
     result = ext.spike_feature_averages(keys[0])
-    
+
     return EphysSweepSetFeatureExtractor(t_set, v_set, i_set, start=start, end=end,
                                          dv_cutoff=dv_cutoff, thresh_frac=thresh_frac, id_set=t_set)
 
@@ -220,6 +223,7 @@ def take_temps(temps,test_frame = None):
     (rheo15, idx15) = find_nearest(injections, float(injections[0])*1.5)
     (rheo30, idx30) = find_nearest(injections, float(injections[0])*3.0)
     new_temps = [ temps[idx15], temps[idx30] ]
+
     lookup= {}
     for i in [idx15,idx30]:
         current = injections[i]
@@ -236,7 +240,7 @@ def take_temps(temps,test_frame = None):
         waves_to_test['Time_Start'] = temp['Time_Start']
         vslice = temp['vm'].time_slice(temp['Time_Start']*qt.ms,temp['Time_End']*pq.ms)
         tslice = temp['vm'].times.time_slice(temp['Time_Start']*qt.ms,temp['Time_End']*pq.ms)
-        
+
         other_t = np.arange(temp['Time_Start'],temp['Time_End'],temp['dt'])
         pdb.set_trace()
         ## Make a static NEURONUNIT MODEL
@@ -286,7 +290,7 @@ def take_temps(temps,test_frame = None):
     vv = data[:, 1]
     t = np.array([ t for t in temp['easy_Times'] ])
     v = np.array([ vm for vm in temp['vm'] ])
-    
+
     ext0 = EphysSweepSetFeatureExtractor([tt],[vv])
     import pdb
     pdb.set_trace()
@@ -318,14 +322,14 @@ def take_temps(temps,test_frame = None):
     #data = {}
     #data['sampling_rate'] = temp['sampling_rate']
     #print(data['sampling_rate'])
-    
+
     #data['response'] = temp['vm']
     #data['stimulus'] = rheobase
     #data = np.loadtxt(os.path.join(path, "data/spike_test_pair.txt"))
     #t = data[:, 0]
     #v = data[:, 1]
 
-    
+
     import pdb
     pdb.set_trace()
 
@@ -334,7 +338,7 @@ def take_temps(temps,test_frame = None):
     #                         dv_cutoff=20., thresh_frac=0.05)
     #pdb.set_trace()
     #allen_object.process_spikes()
-    
+
     # import pdb
     # pdb.set_trace()
     isi_median.generate_prediction(sm)
