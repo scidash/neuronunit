@@ -151,13 +151,12 @@ class Interoperabe(object):
 
         if units is None:
             units = pq.dimensionless
-
         try:
             predicted = test_class.generate_prediction(self.model)['mean']
 
         except:
             predicted = -3333333 * units
-        return prediction
+        return predicted
 
 
         return predicted
@@ -166,7 +165,7 @@ class Interoperabe(object):
         for i, t in enumerate(self.test_set):
             predictions.append(self.run_test(i))
             print(predictions[-1])
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
             #try:
             #
             #except:

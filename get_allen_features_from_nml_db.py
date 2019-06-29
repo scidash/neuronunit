@@ -61,6 +61,7 @@ import matplotlib.pyplot as plt
 #import ssl
 #ssl._create_default_https_context = ssl._create_unverified_context
 from neuronunit.neuromldb import NeuroMLDBStaticModel
+import interoperable #import Interoperabe
 
 
 def generate_prediction(self,model):
@@ -166,7 +167,6 @@ def get_static_models(cell_id):#,test_frame = None):
     long_squares = [ w for w in wlist if w['Protocol_ID'] == 'LONG_SQUARE' ]
     currents = [ w for w in wlist if w["Protocol_ID"] == "LONG_SQUARE" and w["Variable_Name"] == "Voltage" ]
     in_current_filter = [ w for w in wlist if w["Protocol_ID"] == "SQUARE" and w["Variable_Name"] == "Voltage" ]
-
     rheobases = []
     for wl in long_squares:
         wid = wl['ID']
@@ -205,36 +205,26 @@ def get_static_models(cell_id):#,test_frame = None):
     model.vm30 = model.inject_square_current(current)
     current['amplitude'] = druckmann2013_input_resistance_currents[0]
     model.vminh =  model.inject_square_current(current)
-
     return model
 
-import interoperable #import Interoperabe
 def take_models(model,test_frame = None):
-    #print('gets this far c')
     trace0 = {}
-    trace0['T'] = model.vm_rheobase.times
-    trace0['V'] = model.vm_rheobase#temp_vm
-    import matplotlib.pyplot as plt
-    plt.plot(trace0['T'],trace0['V'])
-    trace0['stim_start'] = [ model.protocol['Time_Start'].rescale('s') ]#rtest.run_params[]
-    trace0['stim_end'] = [ model.protocol['Time_End'].rescale('s') ]# list(sm.complete['duration'])
+    trace0['T'] = [ float(t) for t in model.vm_rheobase.times.rescale('ms') ]
+    trace0['V'] = [ float(v) for v in model.vm_rheobase]#temp_vm
+    #import matplotlib.pyplot as plt
+    trace0['stim_start'] = [ float(model.protocol['Time_Start'].rescale('ms')) ]
+    trace0['stim_end'] = [ trace0['T'][-1] ]# list(sm.complete['duration'])
     traces0 = [trace0]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
-    '''
-    try:
-        traces_results = efel.getFeatureValues(traces0,list(efel.getFeatureNames()))#
-        for v in traces_results:
-            for key,value in v.items():
-                if type(value) is not type(None):
-                    print(key,value)
-                    pass
-    except:
-    '''
+    efel_results = efel.getFeatureValues(traces0,list(efel.getFeatureNames()))#
+    for v in efel_results:
+        for key,value in v.items():
+            if type(value) is not type(None):
+                print(key,value)
+
     a = interoperable.Interoperabe()
 
     a.test_setup(None,None,model= model)
-    predictions = a.runTest()
-    print(predictions)
-    import pdb; pdb.set_trace()
+    dm_test_features = a.runTest()
 
 
     times = np.array([float(t) for t in model.vm_rheobase.times])
@@ -242,8 +232,10 @@ def take_models(model,test_frame = None):
 
     ext = EphysSweepSetFeatureExtractor([times],[volts])
     ext.process_spikes()
+
     swp = ext.sweeps()[0]
     spikes = swp.spikes()
+    allen_features = spikes
 
     keys = swp.spike_feature_keys()
     swp_keys = swp.sweep_feature_keys()
