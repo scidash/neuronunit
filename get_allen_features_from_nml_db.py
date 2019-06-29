@@ -52,8 +52,8 @@ from allensdk.ephys.extract_cell_features import extract_cell_features
 import pandas as pd
 from allensdk.ephys.extract_cell_features import extract_cell_features
 import matplotlib.pyplot as plt
-import ssl
-ssl._create_default_https_context = ssl._create_unverified_context
+#import ssl
+#ssl._create_default_https_context = ssl._create_unverified_context
 
 
 def generate_prediction(self,model):
@@ -164,52 +164,6 @@ def get_wave_forms(cell_id):#,test_frame = None):
     with open('temps.p','wb') as f:
         pickle.dump(temps,f)
     return temps
-
-
-def extractor_for_nwb(data, fixed_start=None, fixed_end=None, \
-                             dv_cutoff=20., thresh_frac=0.05):
-    v_set = []
-    t_set = []
-    i_set = []
-    start = []
-    end = []
-    #data = dataset.get_sweep(sweep_number)
-    v = data['response'] * 1e3 # mV
-    i = data['stimulus'] * 1e12 # pA
-    hz = data['sampling_rate']
-    dt = 1. / hz
-    t = np.arange(0, len(v)) * dt # sec
-
-    s, e = dt * np.array(data['index_range'])
-    v_set.append(v)
-    i_set.append(i)
-    t_set.append(t)
-    start.append(s)
-    end.append(e)
-
-    if fixed_start and not fixed_end:
-        start = [fixed_start] * len(end)
-    elif fixed_start and fixed_end:
-        start = fixed_start
-        end = fixed_end
-
-
-    ext = EphysSweepSetFeatureExtractor([t], [v])
-    ext.process_spikes()
-    swp = ext.sweeps()[0]
-    spikes = swp.spikes()
-    ##
-    # second block.
-    ##
-    keys = swp.spike_feature_keys()
-    swp_keys = swp.sweep_feature_keys()
-    result = swp.spike_feature(keys[0])
-    result = swp.sweep_feature("first_isi")
-    result = ext.sweep_features("first_isi")
-    result = ext.spike_feature_averages(keys[0])
-
-    return EphysSweepSetFeatureExtractor(t_set, v_set, i_set, start=start, end=end,
-                                         dv_cutoff=dv_cutoff, thresh_frac=thresh_frac, id_set=t_set)
 
 def take_temps(temps,test_frame = None):
     if test_frame == None:
@@ -433,6 +387,52 @@ for t in tt:
 
 #def inject_square_current():#
 #    return
+
+
+def extractor_for_nwb(data, fixed_start=None, fixed_end=None, \
+                             dv_cutoff=20., thresh_frac=0.05):
+    v_set = []
+    t_set = []
+    i_set = []
+    start = []
+    end = []
+    #data = dataset.get_sweep(sweep_number)
+    v = data['response'] * 1e3 # mV
+    i = data['stimulus'] * 1e12 # pA
+    hz = data['sampling_rate'] 
+    dt = 1. / hz
+    t = np.arange(0, len(v)) * dt # sec
+
+    s, e = dt * np.array(data['index_range'])
+    v_set.append(v)
+    i_set.append(i)
+    t_set.append(t)
+    start.append(s)
+    end.append(e)
+
+    if fixed_start and not fixed_end:
+        start = [fixed_start] * len(end)
+    elif fixed_start and fixed_end:
+        start = fixed_start
+        end = fixed_end
+
+
+    ext = EphysSweepSetFeatureExtractor([t], [v])
+    ext.process_spikes()
+    swp = ext.sweeps()[0]
+    spikes = swp.spikes()
+    ##
+    # second block.
+    ##
+    keys = swp.spike_feature_keys()
+    swp_keys = swp.sweep_feature_keys()
+    result = swp.spike_feature(keys[0])
+    result = swp.sweep_feature("first_isi")
+    result = ext.sweep_features("first_isi")
+    result = ext.spike_feature_averages(keys[0])
+    
+    return EphysSweepSetFeatureExtractor(t_set, v_set, i_set, start=start, end=end,
+                                         dv_cutoff=dv_cutoff, thresh_frac=thresh_frac, id_set=t_set)
 
 
 flat_iter = [(t,sm) for t in tt for sm in sms]
