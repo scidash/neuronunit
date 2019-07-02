@@ -64,7 +64,7 @@ import matplotlib.pyplot as plt
 #import ssl
 #ssl._create_default_https_context = ssl._create_unverified_context
 from neuronunit.neuromldb import NeuroMLDBStaticModel
-import interoperable #import Interoperabe
+import dm_test_interoperable #import Interoperabe
 
 
 def generate_prediction(self,model):
@@ -81,18 +81,31 @@ def find_nearest(array, value):
     return (array[idx], idx)
 
 def get_m_p(model,current):
-    #print('got here')
-    #print(float(current['amplitude']),current)
-    #print(model.lookup[float(current['amplitude'])])
+    '''
+    synopsis:
+        get_m_p belongs to a 3 method stack (2 below)
+
+    replace get_membrane_potential in a NU model class with a statically defined lookup table.
+
+
+    '''
     return model.lookup[float(current['amplitude'])]
 
-def map_to_model(model,test_frame,lookup,current):
+def update_static_model_methods(model,test_frame,lookup):
+    '''
+    Overwrite/ride. a NU models inject_square_current,generate_prediction methods
+    with methods for querying a lookup table, such that given a current injection,
+    a V_{m} is returned.
+    '''
     model.lookup = lookup
     model.inject_square_current = MethodType(get_m_p,model)#get_membrane_potential
     test_frame[0][0][0].generate_prediction = MethodType(generate_prediction,test_frame[0][0][0])
-    return model
+    return model, test_frame
 
 def map_to_sms(sms):
+    '''
+    given a list of static models, update the static models methods
+    '''
     for model in sms:
         model.inject_square_current = MethodType(get_m_p,model)#get_membrane_potential
     tt[0].generate_prediction = MethodType(generate_prediction,tt[0])
@@ -130,34 +143,37 @@ def get_all_cortical_cells(list_to_get):
 
 
 def find_nearest(array, value):
-    #value = float(value)
+
     array = np.asarray(array)
     idx = (np.abs(array - value)).argmin()
     return (array[idx], idx)
-    #return currents
+
 
 def get_waveform_current_amplitude(waveform):
     return float(waveform["Waveform_Label"].replace(" nA", "")) * pq.nA
 
 
-def get_static_models(cell_id):#,test_frame = None):
+def get_static_models(cell_id):
+    """
+    Inputs: NML-DB cell ids, a method designed to be called inside an iteration loop.
+
+    Synpopsis: given a NML-DB id, query nml-db, create a NMLDB static model based on wave forms
+        obtained for that NML-ID.
+        get mainly just waveforms, and current injection values relevant to performing druckman tests
+        as well as a rheobase value for good measure.
+        Update the NML-DB model objects attributes, with all the waveform data/injection values obtained for the appropriate cell IDself.
+    """
+
+
     url = str("https://www.neuroml-db.org/api/model?id=")+cell_id
     model_contents = requests.get(url)
     model_contents = json.loads(model_contents.text)
     model = NeuroMLDBStaticModel(cell_id)
-    #stability = {}
-    #stability['Stability_Range_Low_Corr'] =  model_contents['model']['Stability_Range_Low_Corr']
-    #stability['Max_Stable_DT_Benchmark_RunTime'] = model_contents['model']['Max_Stable_DT_Benchmark_RunTime']
-    #stability['Optimal_DT_a'] = model_contents['model']['Optimal_DT_a']
+
     wlist = model_contents['waveform_list']
     long_squares = [ w for w in wlist if w['Protocol_ID'] == 'LONG_SQUARE' ]
-
-    #variable_names = [  w["Variable_Name"] for w in wlist if w["Protocol_ID"] == "LONG_SQUARE" ]
     applied_current_injections = [ w for w in wlist if w["Protocol_ID"] == "LONG_SQUARE" and w["Variable_Name"] == "Current" ]
-
-    #import pdb; pdb.set_trace()
     currents = [ w for w in wlist if w["Protocol_ID"] == "LONG_SQUARE" and w["Variable_Name"] == "Voltage" ]
-
     in_current_filter = [ w for w in wlist if w["Protocol_ID"] == "SQUARE" and w["Variable_Name"] == "Voltage" ]
     rheobases = []
     for wl in long_squares:
@@ -203,30 +219,61 @@ def get_static_models(cell_id):#,test_frame = None):
     return model
 
 def allen_format(volts,times):
+    '''
+    Synposis:
+        At its most fundamental level, AllenSDK still calls a single trace a sweep.
+        In otherwords there are no single traces, but there are sweeps of size 1.
+        This is a bit like wrapping unitary objects in iterable containers like [times].
+
+    inputs:
+        np.arrays of time series: Specifically a time recording vector, and a membrane potential recording.
+        in floats probably with units striped away
+    outputs:
+        a data frame of Allen features, a very big dump of features as they pertain to each spike in a train.
+
+        to get a managable data digest
+        we out put features from the middle spike of a spike train.
+
+    '''
     ext = EphysSweepSetFeatureExtractor([times],[volts])
     ext.process_spikes()
 
     swp = ext.sweeps()[0]
     spikes = swp.spikes()
+    middle_spike_index = int(len(spikes)/2.0)
+    midle_spike_info = pd.DataFrame(spikes[middle_spike_index])
+    #
+    #
+
     #allen_features = spikes
     #spike_keys = swp.spike_feature_keys()
     #swp_keys = swp.sweep_feature_keys()
     allen_features = {}
-    for s in swp.sweep_feature_keys():
-        #print(swp.sweep_feature(s),s)
-        allen_features[s] = swp.sweep_feature(s)
-    for s in swp.spike_feature_keys():
-        #print(swp.spike_feature_keys(s),s)
+    meaned_features_overspikes = {}
 
-        allen_features[s] = swp.spike_feature(s)
+    for s in swp.sweep_feature_keys():
+        allen_features[s] = swp.sweep_feature(s)
+        if str('isi_type') not in s:
+            meaned_features_overspikes[s] = np.mean([i for i in swp.spike_feature(s) if type(i) is not type(str(''))])
+
+    #print(swp.sweep_feature(s),s)
+    #for s in swp.spike_feature_keys(): print(swp.spike_feature(s))
+    #for s in swp.spike_feature_keys():
+
     per_spike_info = spikes
     frame = pd.DataFrame(allen_features)
-    import pdb; pdb.set_trace()
-    return allen_features,frame,per_spike_info
+    meaned_features_overspikes = pd.DataFrame(meaned_features_overspikes)
+    return allen_features,frame,per_spike_info, midle_spike_info, meaned_features_overspikes
 
 def recoverable_interuptable_batch_process():
     '''
-    Mass download all the glif model parameters
+    Synposis:
+
+        Mass download all the NML model waveforms for all cortical regions
+        And perform three types of feature extraction on resulting waveforms.
+
+    Inputs: None
+    Outputs: None in namespace, yet, lots of data written to pickle.
     '''
     all_the_NML_IDs =  pickle.load(open('cortical_NML_IDs/cortical_cells_list.p','rb'))
 
@@ -238,18 +285,24 @@ def recoverable_interuptable_batch_process():
         os.mkdir(path_name)
     except:
         print('directory already made :)')
-        #pass
     try:
+        ##
+        # This is the index in the list to the last NML-DB model that was analyzed
+        # this index is stored to facilitate recovery from interruption
+        ##
         with open('last_index.p','rb') as f:
             index = pickle.load(f)
     except:
         index = 0
     until_done = len(mid[index:-1])
     cnt = 0
+    ##
+    # Do the batch job, with the background assumption that some models may
+    # have already been run and cached.
+    ##
     while cnt <until_done-1:
         for i,mid_ in enumerate(mid[index:-1]):
             until_done = len(mid[index:-1])
-            print(i,mid_)
             model = get_static_models(mid_)
             if type(model) is not type(None):
                 three_feature_sets = three_feature_sets_on_static_models(model)
@@ -260,9 +313,71 @@ def recoverable_interuptable_batch_process():
             cnt+=1
 
 
+
+
+def standard_nu_tests(model,lookup,current):
+	'''
+	Do standard NU predictions, to do this may need to overwrite generate_prediction
+	Overwrite/ride. a NU models inject_square_current,generate_prediction methods
+	with methods for querying a lookup table, such that given a current injection,
+	a V_{m} is returned.
+	'''
+	model, test_frame = update_static_model_methods(model,test_frame,lookup)
+	rts,complete_map = pickle.load(open('russell_tests.p','rb'))
+	local_tests = [value for value in rts['Hippocampus CA1 pyramidal cell'].values() ]
+	nu_preds = []
+	for t in local_tests:
+	    # pred = t.generate_prediction(model)
+	    try:
+		pred = t.generate_prediction(model)
+	    except:
+		pred = None
+	    nu_preds.append(pred)
+	return nu_preds
+
+
+def more_challenging(model):
+    '''
+    Isolate harder code, still wrangling data types.
+    When this is done, EFEL might be able to report back about input resistance.
+    '''
+    single_spike = {}
+    single_spike['APWaveForm'] = [ float(v) for v in model.vm_rheobase]#temp_vm
+    single_spike['T'] = [ float(t) for t in model.vm_rheobase.times.rescale('ms') ]
+    single_spike['V'] = [ float(v) for v in model.vm_rheobase ]#temp_vm
+    single_spike['stim_start'] = [ float(model.protocol['Time_Start']) ]
+    single_spike['stimulus_current'] = [ model.model.rheobase_current ]
+    single_spike['stim_end'] = [ trace15['T'][-1] ]
+
+    single_spike = [single_spike]
+
+    trace_ephys_prop = {}
+    trace_ephys_prop['stimulus_current'] = model.druckmann2013_input_resistance_currents[0]# = druckmann2013_input_resistance_currents[0]
+    trace_ephys_prop['V'] = [ float(v) for v in model.vminh ]
+    trace_ephys_prop['T'] = [ float(t) for t in model.vminh.times.rescale('ms') ]
+    trace_ephys_prop['stim_end'] = [ trace15['T'][-1] ]
+    trace_ephys_prop['stim_start'] = [ float(model.inh_protocol['Time_Start']) ]# = in_current_filter[0]['Time_End']
+    trace_ephys_props = [trace_ephys_prop]
+
+    efel_results_inh = efel.getFeatureValues(trace_ephys_props,list(efel.getFeatureNames()))#
+    efel_results_ephys = efel.getFeatureValues(trace_ephys_prop,list(efel.getFeatureNames()))#
+
+
 def three_feature_sets_on_static_models(model,test_frame = None):
+    '''
+    Conventions:
+        variables ending with 15 refer to 1.5 current injection protocols.
+        variables ending with 30 refer to 3.0 current injection protocols.
+    Inputs:
+        NML-DB models, a method designed to be called inside an iteration loop, where a list of
+        models is iterated over, and on each iteration a new model is supplied to this method.
+
+    Outputs:
+        A dictionary of dataframes, for features sought according to: Druckman, EFEL, AllenSDK
+
+    '''
     ##
-    # EFEL features (HBP)
+    # Wrangle data to prepare for EFEL feature calculation.
     ##
     trace3 = {}
     trace3['T'] = [ float(t) for t in model.vm30.times.rescale('ms') ]
@@ -284,38 +399,10 @@ def three_feature_sets_on_static_models(model,test_frame = None):
     trace15['stim_end'] = [ trace15['T'][-1] ]
     #trace0['decay_end_after_stim'] = [ trace0['T'][-1] ]# list(sm.complete['duration'])
     traces15 = [trace15]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
-    '''
-    single_spike = {}
-    single_spike['APWaveForm'] = [ float(v) for v in model.vm_rheobase]#temp_vm
-    single_spike['T'] = [ float(t) for t in model.vm_rheobase.times.rescale('ms') ]
-    single_spike['V'] = [ float(v) for v in model.vm_rheobase ]#temp_vm
-    single_spike['stim_start'] = [ float(model.protocol['Time_Start']) ]
-    single_spike['stimulus_current'] = [ model.model.rheobase_current ]
-    single_spike['stim_end'] = [ trace15['T'][-1] ]
-
-    single_spike = [single_spike]
-
-    #model.inh_protocol['Time_Start'] #= in_current_filter[0]['Time_Start']
-
-    '''
-
-    #try:
-        # efel_results_ephys = efel.getFeatureValues(single_spike,list(efel.getFeatureNames()))#
-    #    efel_results_ephys = efel.getFeatureValues(trace_ephys_prop,list(efel.getFeatureNames()))#
-    #except:
-    #    print('failed on input impedance'
-    #    )
-    trace_ephys_prop = {}
-    #print(trace3['stimulus_current'])
-    #import pdb; pdb.set_trace()
-    trace_ephys_prop['stimulus_current'] = model.druckmann2013_input_resistance_currents[0]# = druckmann2013_input_resistance_currents[0]
-    trace_ephys_prop['V'] = [ float(v) for v in model.vminh ]
-    trace_ephys_prop['T'] = [ float(t) for t in model.vminh.times.rescale('ms') ]
-    trace_ephys_prop['stim_end'] = [ trace15['T'][-1] ]
-    trace_ephys_prop['stim_start'] = [ float(model.inh_protocol['Time_Start']) ]# = in_current_filter[0]['Time_End']
-    trace_ephys_props = [trace_ephys_prop]
-
-    #efel_results_inh = efel.getFeatureValues(trace_ephys_props,list(efel.getFeatureNames()))#
+    ##
+    # Compute
+    # EFEL features (HBP)
+    ##
 
     efel_results15 = efel.getFeatureValues(traces15,list(efel.getFeatureNames()))#
     efel_results30 = efel.getFeatureValues(traces3,list(efel.getFeatureNames()))#
@@ -334,42 +421,57 @@ def three_feature_sets_on_static_models(model,test_frame = None):
 
 
     ##
-    # Druckman features
+    # Get Druckman features, this is mainly handled in external files.
     ##
-    a = interoperable.Interoperabe()
+    a = dm_test_interoperable.Interoperabe()
     a.test_setup(None,None,model= model)
     dm_test_features = a.runTest()
     dm_frame = pd.DataFrame(dm_test_features)
 
     ##
+    # wrangle data in preperation for computing
     # Allen Features
     ##
 
 
     times = np.array([float(t) for t in model.vm30.times])
     volts = np.array([float(v) for v in model.vm30])
-    #allen_features,frame,per_spike_info
-    allen_features,frame30,per_spike_info_30 = allen_format(volts,times)
+
+
+    ##
+    # Allen Features
+    ##
+
+    allen_features,frame30, mdd30, mfos30 = allen_format(volts,times)
     frame30['protocol'] = 3.0
+
+    ##
+    # wrangle data in preperation for computing
+    # Allen Features
+    ##
 
     times = np.array([float(t) for t in model.vm15.times])
     volts = np.array([float(v) for v in model.vm15])
-    allen_features,frame15,per_spike_info_15 = allen_format(volts,times)
+
+    ##
+    # Allen Features
+    ##
+
+    allen_features,frame15, mdd15, mfos15 = allen_format(volts,times)
     frame15['protocol'] = 1.5
     allen_frame = frame30.append(frame15)
     allen_frame.set_index('protocol')
 
-    import pdb; pdb.set_trace()
-    rts,complete_map = pickle.load(open('russell_tests.p','rb'))
-    local_tests = [value for value in rts['Hippocampus CA1 pyramidal cell'].values() ]
-    nu_preds = []
-    for t in local_tests:
-        # pred = t.generate_prediction(model)
-        try:
-            pred = t.generate_prediction(model)
-        except:
-            pred = None
-        nu_preds.append(pred)
+    try:
+       lookup = {}
+       lookup[model.druckmann2013_input_resistance_currents[0]] = model.vminh
+       lookup[model.druckmann2013_standard_current] = model.vm15
+       lookup[ model.druckmann2013_strong_current ] = model.vm30
+       nu_preds = standard_nu_tests(model,lookup,current)
+
+    except:
+        print('standard nu tests failed.')
+    #import pdb; pdb.set_trace()
 
     return {'efel':efel_frame,'dm':dm_frame,'allen':allen_frame,'allen_spike_data':(per_spike_info_15,per_spike_info_30)}
 
@@ -421,3 +523,4 @@ def plot_all(temps):
         temp['vm'] = AnalogSignal(temp_vm,sampling_period=dt*ms,units=mV)
         plt.plot(temp['vm'].times,temp['vm'].magnitude)#,label='ground truth')
     return temps
+'''
