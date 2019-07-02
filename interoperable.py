@@ -11,6 +11,55 @@ import pickle
 import glob
 import sys, os
 
+def map_to_protocol():
+    standard = 1.5
+    strong = 3.0
+    easy_map = [
+            {'AP12AmplitudeDropTest':standard},
+            {'AP1SSAmplitudeChangeTest':standard},
+            {'AP1AmplitudeTest':standard},
+            {'AP1WidthHalfHeightTest':standard},
+            {'AP1WidthPeakToTroughTest':standard},
+            {'AP1RateOfChangePeakToTroughTest':standard},
+            {'AP1AHPDepthTest':standard},
+            {'AP2AmplitudeTest':standard},
+            {'AP2WidthHalfHeightTest':standard},
+            {'AP2WidthPeakToTroughTest':standard},
+            {'AP2RateOfChangePeakToTroughTest':standard},
+            {'AP2AHPDepthTest':standard},
+            {'AP12AmplitudeChangePercentTest':standard},
+            {'AP12HalfWidthChangePercentTest':standard},
+            {'AP12RateOfChangePeakToTroughPercentChangeTest':standard},
+            {'AP12AHPDepthPercentChangeTest':standard},
+            {'InputResistanceTest':str('ir_currents')},
+            {'AP1DelayMeanTest':standard},
+            {'AP1DelaySDTest':standard},
+            {'AP2DelayMeanTest':standard},
+            {'AP2DelaySDTest':standard},
+            {'Burst1ISIMeanTest':standard},
+            {'Burst1ISISDTest':standard},
+            {'InitialAccommodationMeanTest':standard},
+            {'SSAccommodationMeanTest':standard},
+            {'AccommodationRateToSSTest':standard},
+            {'AccommodationAtSSMeanTest':standard},
+            {'AccommodationRateMeanAtSSTest':standard},
+            {'ISICVTest':standard},
+            {'ISIMedianTest':standard},
+            {'ISIBurstMeanChangeTest':standard},
+            {'SpikeRateStrongStimTest':strong},
+            {'AP1DelayMeanStrongStimTest':strong},
+            {'AP1DelaySDStrongStimTest':strong},
+            {'AP2DelayMeanStrongStimTest':strong},
+            {'AP2DelaySDStrongStimTest':strong},
+            {'Burst1ISIMeanStrongStimTest':strong},
+            {'Burst1ISISDStrongStimTest':strong},
+        ]
+    test_prot_map = {}
+    for easy in easy_map:
+        test_prot_map.update(easy)
+    test_prot_map = test_prot_map
+    return test_prot_map
+
 #class Druckmann2013BaseTestCase:
 class Interoperabe(object):
     def __init__(self):
@@ -36,7 +85,7 @@ class Interoperabe(object):
                     key = model_file.split('.')[0]
                     key = key.split('for_dm_tests_')[1]
                     model_cache[key] = pickle.load(f)
-
+        self.test_prot_map = map_to_protocol()
         self.model_cache = model_cache
 
     def set_expected(self, expected_values):
@@ -113,7 +162,7 @@ class Interoperabe(object):
     def get_model(self):
 
         if self.model_id not in self.__class__.model_cache:
-            print('Model ' + self.model_id + ' not in cache. Downloading waveforms...')
+            #print('Model ' + self.model_id + ' not in cache. Downloading waveforms...')
 
             self.__class__.model_cache[self.model_id] = NeuroMLDBStaticModel(self.model_id)
             model = self.__class__.model_cache[self.model_id]
@@ -156,20 +205,17 @@ class Interoperabe(object):
 
         except:
             predicted = -3333333 * units
-        return predicted
+        return (test_class,predicted)
 
-
-        return predicted
     def runTest(self):
-        predictions = []
+        predictions = {}
         for i, t in enumerate(self.test_set):
-            predictions.append(self.run_test(i))
-            print(predictions[-1])
-            #import pdb; pdb.set_trace()
-            #try:
-            #
-            #except:
-            #    pass
+           (tclass,prediction) = self.run_test(i)
+           prot =  self.test_prot_map[tclass.name]
+           predictions[tclass.name] = {}
+           predictions[tclass.name]['pred'] = prediction
+           predictions[tclass.name]['protocol'] = prot
+           print(predictions[tclass.name]['protocol'])
         return predictions
 
     def test_0(self):
@@ -288,7 +334,7 @@ class Interoperabe(object):
     def test_37(self):
         self.run_test(37)
 
-    @classmethod
+    #@classmethod
     def print_predicted(cls):
 
         for model_id in cls.predicted.keys():
@@ -300,68 +346,3 @@ class Interoperabe(object):
                     print('             '+'None'.rjust(25)+', # ' + p['test'])
 
             print('         ]')
-'''
-if __name__ == '__main__':
-    a = Interoperabe()
-    #a.model_cache.keys()
-    for k,v in a.model_cache.items():
-        print(k,v)
-        a.test_setup(k,a.model_cache)
-        a.runTest()
-'''
-    #import pdb;
-    #pdb.set_trace()
-
-    #import pdb; pdb.set_trace()
-    # a = Interoperabe()
-    #a.test_setup(model_id)
-    #a.setUp()
-    #a.getModel()
-
-    #model = a.getModel()
-    #a.test_set
-
-    #unittest.main()
-
-# tc = Model11TestCase()
-# tc.setUp()
-# tc.runTest()
-
-# tc.print_predicted()
-# tc.test_set[0]['test'].generate_prediction(tc.model)
-#
-# from matplotlib import pyplot as plt
-#
-# fig = plt.figure()
-#
-# plt.subplot(2, 3, 1)
-# plt.plot(tc.model.vm.times, tc.model.vm)
-# plt.xlim(0, tc.model.vm.times[-1].magnitude)
-#
-# plt.subplot(2, 3, 2)
-# plt.plot(tc.model.vm.times, tc.model.vm)
-# plt.xlim(0.990, 1.200)
-#
-# aps = tc.test_set[0]['test'].get_APs(tc.model)
-#
-# if len(aps) > 0:
-#     plt.subplot(2, 3, 3)
-#     plt.plot(tc.model.vm.times, tc.model.vm)
-#     plt.xlim(aps[0].get_beginning()[1].rescale(sec), aps[0].get_beginning()[1].rescale(sec)+10*ms)
-#
-# if len(aps) > 1:
-#     plt.subplot(2, 3, 4)
-#     plt.plot(tc.model.vm.times, tc.model.vm)
-#     plt.xlim(aps[1].get_beginning()[1].rescale(sec), aps[1].get_beginning()[1].rescale(sec) + 10 * ms)
-#
-# tc.test_set[16]['test'].generate_prediction(tc.model)
-# plt.subplot(2, 3, 5)
-# plt.plot(tc.model.vm.times, tc.model.vm)
-# plt.xlim(0, tc.model.vm.times[-1].magnitude)
-#
-# tc.test_set[31]['test'].generate_prediction(tc.model)
-# plt.subplot(2, 3, 6)
-# plt.plot(tc.model.vm.times, tc.model.vm)
-# plt.xlim(0.990, 1.200)
-#
-# plt.show()

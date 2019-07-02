@@ -5,7 +5,10 @@
 
 
 ##
-# This uses the docker file defined in
+# This uses the docker file in this directory.
+# I build it with the name efl.
+# and launch it with this alias.
+# alias efel='cd /home/russell/outside/neuronunit; sudo docker run -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v /home/russell/outside/neuronunit:/home/jovyan/neuronunit -v /home/russell/Dropbox\ \(ASU\)/AllenDruckmanData:/home/jovyan/work/allendata efel /bin/bash'
 ##
 
 from allensdk.ephys.ephys_extractor import EphysSweepSetFeatureExtractor
@@ -79,8 +82,8 @@ def find_nearest(array, value):
 
 def get_m_p(model,current):
     #print('got here')
-    print(float(current['amplitude']),current)
-    print(model.lookup[float(current['amplitude'])])
+    #print(float(current['amplitude']),current)
+    #print(model.lookup[float(current['amplitude'])])
     return model.lookup[float(current['amplitude'])]
 
 def map_to_model(model,test_frame,lookup,current):
@@ -110,36 +113,21 @@ list_to_get =[ str('https://www.neuroml-db.org/api/search?q=traub'),
     str('https://www.neuroml-db.org/api/search?q=Gouwens') ]
 
 def get_all_cortical_cells(list_to_get):
-    authors = {}
+    model_ids = {}
     for url in list_to_get:
         Model_IDs = crawl_ids(url)
         parts = url.split('?q=')
         try:
-            authors[parts[1]].append(Model_IDs)
+            model_ids[parts[1]].append(Model_IDs)
         except:
-            authors[parts[1]] = []
-            authors[parts[1]].append(Model_IDs)
+            model_ids[parts[1]] = []
+            model_ids[parts[1]].append(Model_IDs)
     with open('cortical_cells_list.p','wb') as f:
-        pickle.dump(authors,f)
+        pickle.dump(model_ids,f)
 
-    return authors
+    return model_ids
 
-authors = get_all_cortical_cells(list_to_get)
 
-def plot_all(temps):
-    for temp in temps:
-        temp_vm = list(map(float, temp['Variable_Values'].split(',')))
-        temp['easy_Times'] = list(map(float,temp['Times'].split(',')))
-
-        dt = temp['easy_Times'][1]- temp['easy_Times'][0]
-        temp['dt'] = dt
-        #temp['sampling_rate'] = dt
-        #import pdb
-        #pdb.set_trace()
-        temp['vm'] = AnalogSignal(temp_vm,sampling_period=dt*ms,units=mV)
-        plt.plot(temp['vm'].times,temp['vm'].magnitude)#,label='ground truth')
-    #plt.show()
-    return temps
 
 def find_nearest(array, value):
     #value = float(value)
@@ -153,19 +141,23 @@ def get_waveform_current_amplitude(waveform):
 
 
 def get_static_models(cell_id):#,test_frame = None):
-
-
     url = str("https://www.neuroml-db.org/api/model?id=")+cell_id
     model_contents = requests.get(url)
     model_contents = json.loads(model_contents.text)
     model = NeuroMLDBStaticModel(cell_id)
-    stability = {}
-    stability['Stability_Range_Low_Corr'] =  model_contents['model']['Stability_Range_Low_Corr']
-    stability['Max_Stable_DT_Benchmark_RunTime'] = model_contents['model']['Max_Stable_DT_Benchmark_RunTime']
-    stability['Optimal_DT_a'] = model_contents['model']['Optimal_DT_a']
+    #stability = {}
+    #stability['Stability_Range_Low_Corr'] =  model_contents['model']['Stability_Range_Low_Corr']
+    #stability['Max_Stable_DT_Benchmark_RunTime'] = model_contents['model']['Max_Stable_DT_Benchmark_RunTime']
+    #stability['Optimal_DT_a'] = model_contents['model']['Optimal_DT_a']
     wlist = model_contents['waveform_list']
     long_squares = [ w for w in wlist if w['Protocol_ID'] == 'LONG_SQUARE' ]
+
+    #variable_names = [  w["Variable_Name"] for w in wlist if w["Protocol_ID"] == "LONG_SQUARE" ]
+    applied_current_injections = [ w for w in wlist if w["Protocol_ID"] == "LONG_SQUARE" and w["Variable_Name"] == "Current" ]
+
+    #import pdb; pdb.set_trace()
     currents = [ w for w in wlist if w["Protocol_ID"] == "LONG_SQUARE" and w["Variable_Name"] == "Voltage" ]
+
     in_current_filter = [ w for w in wlist if w["Protocol_ID"] == "SQUARE" and w["Variable_Name"] == "Voltage" ]
     rheobases = []
     for wl in long_squares:
@@ -175,6 +167,8 @@ def get_static_models(cell_id):#,test_frame = None):
         temp = json.loads(waves.text)
         if temp['Spikes'] >= 1:
             rheobases.append(temp)
+    if len(rheobases) == 0:
+        return None
 
     in_current = []
     for check in in_current_filter:
@@ -192,10 +186,11 @@ def get_static_models(cell_id):#,test_frame = None):
     model.inh_protocol = {}
     model.inh_protocol['Time_End'] = in_current_filter[0]['Time_End']
     model.inh_protocol['Time_Start'] = in_current_filter[0]['Time_Start']
+    model.druckmann2013_input_resistance_currents = druckmann2013_input_resistance_currents
+
     model.rheobase_current = rheobase_current
     model.druckmann2013_standard_current = druckmann2013_standard_current
     model.druckmann2013_strong_current = druckmann2013_strong_current
-    model.druckmann2013_input_resistance_currents = druckmann2013_input_resistance_currents
     current = {}
     current['amplitude'] = rheobase_current
     model.vm_rheobase = model.inject_square_current(current)
@@ -207,391 +202,222 @@ def get_static_models(cell_id):#,test_frame = None):
     model.vminh =  model.inject_square_current(current)
     return model
 
-def take_models(model,test_frame = None):
-    trace0 = {}
-    trace0['T'] = [ float(t) for t in model.vm_rheobase.times.rescale('ms') ]
-    trace0['V'] = [ float(v) for v in model.vm_rheobase]#temp_vm
-    #import matplotlib.pyplot as plt
-    trace0['stim_start'] = [ float(model.protocol['Time_Start'].rescale('ms')) ]
-    trace0['stim_end'] = [ trace0['T'][-1] ]# list(sm.complete['duration'])
-    traces0 = [trace0]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
-    efel_results = efel.getFeatureValues(traces0,list(efel.getFeatureNames()))#
-    for v in efel_results:
-        for key,value in v.items():
-            if type(value) is not type(None):
-                print(key,value)
-
-    a = interoperable.Interoperabe()
-
-    a.test_setup(None,None,model= model)
-    dm_test_features = a.runTest()
-
-
-    times = np.array([float(t) for t in model.vm_rheobase.times])
-    volts = np.array([float(v) for v in model.vm15])
-
+def allen_format(volts,times):
     ext = EphysSweepSetFeatureExtractor([times],[volts])
     ext.process_spikes()
 
     swp = ext.sweeps()[0]
     spikes = swp.spikes()
-    allen_features = spikes
+    #allen_features = spikes
+    #spike_keys = swp.spike_feature_keys()
+    #swp_keys = swp.sweep_feature_keys()
+    allen_features = {}
+    for s in swp.sweep_feature_keys():
+        #print(swp.sweep_feature(s),s)
+        allen_features[s] = swp.sweep_feature(s)
+    for s in swp.spike_feature_keys():
+        #print(swp.spike_feature_keys(s),s)
 
-    keys = swp.spike_feature_keys()
-    swp_keys = swp.sweep_feature_keys()
-    result = swp.spike_feature(keys[0])
-    result = swp.sweep_feature("first_isi")
-    result = ext.sweep_features("first_isi")
-    result = ext.spike_feature_averages(keys[0])
-
-
-
-
-def take_temps(model,test_frame = None):
-    #temps = model.temps
-    print('gets this far c')
+        allen_features[s] = swp.spike_feature(s)
+    per_spike_info = spikes
+    frame = pd.DataFrame(allen_features)
     import pdb; pdb.set_trace()
+    return allen_features,frame,per_spike_info
 
-    if test_frame == None:
-        electro_path = str(os.getcwd())+str('/examples/pipe_tests.p')
-        assert os.path.isfile(electro_path) == True
-        with open(electro_path,'rb') as f: test_frame = pickle.load(f)
-    print('gets this far d')
+def recoverable_interuptable_batch_process():
+    '''
+    Mass download all the glif model parameters
+    '''
+    all_the_NML_IDs =  pickle.load(open('cortical_NML_IDs/cortical_cells_list.p','rb'))
+
+    mid = [] # mid is a list of model identifiers.
+    for v in all_the_NML_IDs.values():
+        mid.extend(v[0])
+    path_name = str('three_feature_folder')
+    try:
+        os.mkdir(path_name)
+    except:
+        print('directory already made :)')
+        #pass
+    try:
+        with open('last_index.p','rb') as f:
+            index = pickle.load(f)
+    except:
+        index = 0
+    until_done = len(mid[index:-1])
+    cnt = 0
+    while cnt <until_done-1:
+        for i,mid_ in enumerate(mid[index:-1]):
+            until_done = len(mid[index:-1])
+            print(i,mid_)
+            model = get_static_models(mid_)
+            if type(model) is not type(None):
+                three_feature_sets = three_feature_sets_on_static_models(model)
+                with open(str(path_name)+str('/')+str(mid_)+'.p','wb') as f:
+                    pickle.dump(three_feature_sets,f)
+            with open('last_index.p','wb') as f:
+                pickle.dump(i,f)
+            cnt+=1
+
+
+def three_feature_sets_on_static_models(model,test_frame = None):
+    ##
+    # EFEL features (HBP)
+    ##
+    trace3 = {}
+    trace3['T'] = [ float(t) for t in model.vm30.times.rescale('ms') ]
+    trace3['V'] = [ float(v) for v in model.vm30]#temp_vm
+    trace3['peak_voltage'] = [ np.max(model.vm30) ]
+
+    trace3['stim_start'] = [ float(model.protocol['Time_Start']) ]
+    trace3['stimulus_current'] = [ model.druckmann2013_strong_current ]
+    trace3['stim_end'] = [ trace3['T'][-1] ]
+    #trace0['decay_end_after_stim'] = [ trace0['T'][-1] ]# list(sm.complete['duration'])
+    traces3 = [trace3]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
+    trace15 = {}
+    trace15['T'] = [ float(t) for t in model.vm15.times.rescale('ms') ]
+    trace15['V'] = [ float(v) for v in model.vm15]#temp_vm
+    trace15['peak_voltage'] = [ np.max(model.vm15) ]
+
+    trace15['stim_start'] = [ float(model.protocol['Time_Start']) ]
+    trace15['stimulus_current'] = [ model.druckmann2013_standard_current ]
+    trace15['stim_end'] = [ trace15['T'][-1] ]
+    #trace0['decay_end_after_stim'] = [ trace0['T'][-1] ]# list(sm.complete['duration'])
+    traces15 = [trace15]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
+    '''
+    single_spike = {}
+    single_spike['APWaveForm'] = [ float(v) for v in model.vm_rheobase]#temp_vm
+    single_spike['T'] = [ float(t) for t in model.vm_rheobase.times.rescale('ms') ]
+    single_spike['V'] = [ float(v) for v in model.vm_rheobase ]#temp_vm
+    single_spike['stim_start'] = [ float(model.protocol['Time_Start']) ]
+    single_spike['stimulus_current'] = [ model.model.rheobase_current ]
+    single_spike['stim_end'] = [ trace15['T'][-1] ]
+
+    single_spike = [single_spike]
+
+    #model.inh_protocol['Time_Start'] #= in_current_filter[0]['Time_Start']
+
+    '''
+
+    #try:
+        # efel_results_ephys = efel.getFeatureValues(single_spike,list(efel.getFeatureNames()))#
+    #    efel_results_ephys = efel.getFeatureValues(trace_ephys_prop,list(efel.getFeatureNames()))#
+    #except:
+    #    print('failed on input impedance'
+    #    )
+    trace_ephys_prop = {}
+    #print(trace3['stimulus_current'])
+    #import pdb; pdb.set_trace()
+    trace_ephys_prop['stimulus_current'] = model.druckmann2013_input_resistance_currents[0]# = druckmann2013_input_resistance_currents[0]
+    trace_ephys_prop['V'] = [ float(v) for v in model.vminh ]
+    trace_ephys_prop['T'] = [ float(t) for t in model.vminh.times.rescale('ms') ]
+    trace_ephys_prop['stim_end'] = [ trace15['T'][-1] ]
+    trace_ephys_prop['stim_start'] = [ float(model.inh_protocol['Time_Start']) ]# = in_current_filter[0]['Time_End']
+    trace_ephys_props = [trace_ephys_prop]
+
+    #efel_results_inh = efel.getFeatureValues(trace_ephys_props,list(efel.getFeatureNames()))#
+
+    efel_results15 = efel.getFeatureValues(traces15,list(efel.getFeatureNames()))#
+    efel_results30 = efel.getFeatureValues(traces3,list(efel.getFeatureNames()))#
+
+
+
+    df15 = pd.DataFrame(efel_results15)
+    #import pdb; pdb.set_trace()
+    df15['protocol'] = 1.5
+
+    df30 = pd.DataFrame(efel_results30)
+    df30['protocol'] = 3.0
+
+    efel_frame = df15.append(df30)
+    efel_frame.set_index('protocol')
+
+
+    ##
+    # Druckman features
+    ##
+    a = interoperable.Interoperabe()
+    a.test_setup(None,None,model= model)
+    dm_test_features = a.runTest()
+    dm_frame = pd.DataFrame(dm_test_features)
+
+    ##
+    # Allen Features
+    ##
+
+
+    times = np.array([float(t) for t in model.vm30.times])
+    volts = np.array([float(v) for v in model.vm30])
+    #allen_features,frame,per_spike_info
+    allen_features,frame30,per_spike_info_30 = allen_format(volts,times)
+    frame30['protocol'] = 3.0
+
+    times = np.array([float(t) for t in model.vm15.times])
+    volts = np.array([float(v) for v in model.vm15])
+    allen_features,frame15,per_spike_info_15 = allen_format(volts,times)
+    frame15['protocol'] = 1.5
+    allen_frame = frame30.append(frame15)
+    allen_frame.set_index('protocol')
+
     import pdb; pdb.set_trace()
+    rts,complete_map = pickle.load(open('russell_tests.p','rb'))
+    local_tests = [value for value in rts['Hippocampus CA1 pyramidal cell'].values() ]
+    nu_preds = []
+    for t in local_tests:
+        # pred = t.generate_prediction(model)
+        try:
+            pred = t.generate_prediction(model)
+        except:
+            pred = None
+        nu_preds.append(pred)
 
-    temps = plot_all(temps)
+    return {'efel':efel_frame,'dm':dm_frame,'allen':allen_frame,'allen_spike_data':(per_spike_info_15,per_spike_info_30)}
 
-    print('gets this far e')
-    import pdb; pdb.set_trace()
+recoverable_interuptable_batch_process()
 
-    injections = [ float(t['Waveform_Label'].split(' ')[0]) for t in temps ]
-
-    (rheo15, idx15) = find_nearest(injections, float(injections[0])*1.5)
-    (rheo30, idx30) = find_nearest(injections, float(injections[0])*3.0)
-    new_temps = [ temps[idx15], temps[idx30] ]
-
-    lookup= {}
-    for i in [idx15,idx30]:
-        current = injections[i]
-        response = temps[i]['vm']
-        lookup[current] = response
-
-    for temp in new_temps:
-        waves_to_test = {}
-
-        waves_to_test['easy_Times'] = temp['easy_Times'] # list(map(float,temp['Times'].split(',')))
-        waves_to_test['DURATION'] = temp['Time_End'] -temp['Time_Start']
-        waves_to_test['DELAY'] = temp['Time_Start']
-        waves_to_test['Time_End'] = temp['Time_End']
-        waves_to_test['Time_Start'] = temp['Time_Start']
-        #vslice = temp['vm'].time_slice(temp['Time_Start']*qt.ms,temp['Time_End']*pq.ms)
-        #tslice = temp['vm'].times.time_slice(temp['Time_Start']*qt.ms,temp['Time_End']*pq.ms)
-
-        other_t = np.arange(temp['Time_Start'],temp['Time_End'],temp['dt'])
-        #pdb.set_trace()
-        ## Make a static NEURONUNIT MODEL
-        sm = models.StaticModel(temp['vm'])
-        sm.complete = temp
-        sm.complete['vm'] = temp['vm']
-        sm = map_to_model(sm,test_frame,lookup,current)
-
-        print('gets this far f')
-        import pdb; pdb.set_trace()
-        #plt.plot(sm.get_membrane_potential().times,sm.get_membrane_potential())#,label='ground truth')
-        DURATION = sm.complete['Time_End'] -sm.complete['Time_Start']
-        trace0 = {}
-        trace0['T'] = temp['easy_Times']
-        trace0['V'] = temp['vm']#temp_vm
-        trace0['stim_start'] = [sm.complete['Time_Start']]#rtest.run_params[]
-        trace0['stim_end'] = [sm.complete['Time_End'] ]# list(sm.complete['duration'])
-
-
-        rheobase = float(temp['Waveform_Label'].split(' ')[0])
-
-        params = {
-            'injected_square_current': {
-                'delay': sm.complete['Time_Start'] * pq.ms,
-                'duration': sm.complete['Time_End']* pq.ms - sm.complete['Time_Start'] * pq.ms,
-                'amplitude': rheobase * qt.pA
-            },
-            'threshold': -20 * pq.mV,
-            'beginning_threshold': 12.0 * pq.mV/pq.ms,
-            'ap_window': 10 * pq.ms,
-            'repetitions': 1,
-        }
-        traces0 = [trace0]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
-
-        traces_results = efel.getFeatureValues(traces0,list(efel.getFeatureNames()))#
-        for v in traces_results:
-            for key,value in v.items():
-                if type(value) is not type(None):
-                    print(key,value)
-                    pass
-
-        in_resistance = traces_results[0]['ohmic_input_resistance']
-        sag = traces_results[0]['sag_amplitude']
-        cv = traces_results[0]['ISI_CV']
-        isis = traces_results[0]['ISIs']
-        median_isis = np.median(isis)
-        dm_tests = init_dm_tests(params,rheo15*qt.pA,rheo30*qt.pA)
-        isi_median = [d for d in dm_tests if str("ISIMedianTest")==str(d) ][0]
-        # print(rheo15*qt.pA)
-        # import pdb
-        # pdb.set_trace()
-        '''
-        nwb_out_path = os.getcwd()
-        output = NwbDataSet(nwb_out_path)
-        output_data = (np.array(temp['vm']) - junction_potential) * mV
-        output.set_sweep(0, None, output_data)
-        '''
-        #data = {}
-        #data['sampling_rate'] = temp['sampling_rate']
-        #print(data['sampling_rate'])
-
-        #data['response'] = temp['vm']
-        #data['stimulus'] = rheobase
-        #data = np.loadtxt(os.path.join(path, "data/spike_test_pair.txt"))
-        #t = data[:, 0]
-        #v = data[:, 1]
-
-
-        import pdb
-        pdb.set_trace()
-
-        #data['index_range'] = [0,len(temp['vm'])]
-        #allen_object = extractor_for_nwb(data, fixed_start=None, fixed_end=None,
-        #                         dv_cutoff=20., thresh_frac=0.05)
-        #pdb.set_trace()
-        #allen_object.process_spikes()
-
-        # import pdb
-        # pdb.set_trace()
-        isi_median.generate_prediction(sm)
-        isi_median.generate_repetition_prediction()
-        delay = [ d for d in dm_tests if str("AP1DelayMeanTest")== str(d) ][0]
-        accom = [ d for d in dm_tests if str("InitialAccommodationMeanTest")== str(d)][0]
-
-        predictions = []
-        print(params)
-        import pdb;
-        pdb.set_trace()
-        #[
-        for dm in dm_tests:
-            dm.params = params
-        [ dm.get_APs(sm) for dm in dm_tests ]
-
-        for dm in dm_tests:
-            try:
-                predictions.append(dm.generate_prediction(sm))
-            except:
-
-                pass
-        print(predictions)
-        import pdb;
-        pdb.set_trace()
-
-        print(predictions)
-        efel_to_data_frame = []
-        for i,k in enumerate(traces_results[0].keys()):
-            efel_to_data_frame.append({k:v})
-        pd.DataFrame(efel_to_data_frame)
-    return waves_to_get
-
-
+'''
 try:
+    assert 1==2
     with open('models.p','rb') as f:
         models = pickle.load(f)
 
 except:
-    models = get_static_models(str('NMLCL001129'))
+'''
+'''
+list_to_get =[ str('https://www.neuroml-db.org/api/search?q=traub'),
+    str('https://www.neuroml-db.org/api/search?q=markram'),
+    str('https://www.neuroml-db.org/api/search?q=Gouwens') ]
+
+
+all_the_NML_IDs =  pickle.load(open('cortical_NML_IDs/cortical_cells_list.p','rb'))
+
+lll = []
+for v in all_the_NML_IDs.values():
+    lll.extend(v[0])
+
+for mid in lll[0:2]:
+    print(mid)
+    model = get_static_models(mid)
+    if type(model) is not type(None):
+        three_feature_sets = three_feature_sets_on_static_models(model)
+    print(three_feature_sets)
+    print('gets here')
     with open('models.p','wb') as f:
         pickle.dump(models,f)
 
-    print(models)
-    print('gets this far b')
-    import pdb; pdb.set_trace()
-
-take_models(models)
-
-import pdb
-pdb.set_trace()
-
-protocols = [ w['everything']['Protocol_ID'] for w in waves ]
-ss = [ w['everything'] for w in waves if w['everything']['Protocol_ID'] == 'LONG_SQUARE' ]
-
-not_current_injections = [ w for w in waves if w['everything']['Variable_Name'] != str('Current') ]
-sms = []
-for w in not_current_injections:
-    sm = models.StaticModel(w['vm'])
-    sm.rheobase = {}
-    sm.rheobase['mean'] = w['prediction']
-    sm.complete = w
-    sms.append(sm)
-with open('static_models.p','wb') as f:
-    pickle.dump(sms,f)
-current_injections = [ w for w in waves if w['everything']['Variable_Name'] == str('Current') ]
-
-
-import pdb; pdb.set_trace()
-def active_values(keyed,rheobase,square = None):
-    keyed['injected_square_current'] = {}
-    if square == None:
-        DURATION = 1000.0*pq.ms
-        DELAY = 100.0*pq.ms
-        if type(rheobase) is type({str('k'):str('v')}):
-            keyed['injected_square_current']['amplitude'] = float(rheobase['value'])*pq.pA
-        else:
-            keyed['injected_square_current']['amplitude'] = rheobase
-    else:
-        DURATION = square['Time_End'] -square['Time_Start']
-        DELAY = square['Time_Start']
-        keyed['injected_square_current']['amplitude'] = square['prediction']#value'])*pq.pA
-
-    keyed['injected_square_current']['delay']= DELAY
-    keyed['injected_square_current']['duration'] = DURATION
-
-    return keyed
 
 
 
-tt = switch_logic(tt) # for tests in tt ]
-for t in tt:
-    for sm in sms:
-        rheobase = sm.complete['prediction']
-        t.params = {}
-        t.params = active_values(t.params,rheobase,square=sm.complete)
-
-#def inject_square_current():#
-#    return
 
 
-def extractor_for_nwb(data, fixed_start=None, fixed_end=None, \
-                             dv_cutoff=20., thresh_frac=0.05):
-    v_set = []
-    t_set = []
-    i_set = []
-    start = []
-    end = []
-    #data = dataset.get_sweep(sweep_number)
-    v = data['response'] * 1e3 # mV
-    i = data['stimulus'] * 1e12 # pA
-    hz = data['sampling_rate']
-    dt = 1. / hz
-    t = np.arange(0, len(v)) * dt # sec
+def plot_all(temps):
+    for temp in temps:
+        temp_vm = list(map(float, temp['Variable_Values'].split(',')))
+        temp['easy_Times'] = list(map(float,temp['Times'].split(',')))
 
-    s, e = dt * np.array(data['index_range'])
-    v_set.append(v)
-    i_set.append(i)
-    t_set.append(t)
-    start.append(s)
-    end.append(e)
+        dt = temp['easy_Times'][1]- temp['easy_Times'][0]
+        temp['dt'] = dt
 
-    if fixed_start and not fixed_end:
-        start = [fixed_start] * len(end)
-    elif fixed_start and fixed_end:
-        start = fixed_start
-        end = fixed_end
-
-
-    ext = EphysSweepSetFeatureExtractor([t], [v])
-    ext.process_spikes()
-    swp = ext.sweeps()[0]
-    spikes = swp.spikes()
-    ##
-    # second block.
-    ##
-    keys = swp.spike_feature_keys()
-    swp_keys = swp.sweep_feature_keys()
-    result = swp.spike_feature(keys[0])
-    result = swp.sweep_feature("first_isi")
-    result = ext.sweep_features("first_isi")
-    result = ext.spike_feature_averages(keys[0])
-
-    return EphysSweepSetFeatureExtractor(t_set, v_set, i_set, start=start, end=end,
-                                         dv_cutoff=dv_cutoff, thresh_frac=thresh_frac, id_set=t_set)
-
-
-flat_iter = [(t,sm) for t in tt for sm in sms]
-import pdb
-waves = get_wave_forms(str('NMLCL001129'))
-
-for t,sm in flat_iter:
-    sm._backend = None
-    if t.active:
-        t.params = {}
-        t.params['injected_square_current'] = None
-        results = sm.get_membrane_potential()
-        value = float(np.max(current_injections[0]['vm']))
-        dm_tests = init_dm_tests(1.5*value,3.0*value)
-        predictions = [ dm.generate_prediction(sm) for dm in dm_tests ]
-        trace = {}
-        trace['T'] = sm.complete['Times']
-        trace['V'] = results
-        trace['stim_start'] = [sm.complete['Time_Start']]
-        DURATION = sm.complete['Time_End'] -sm.complete['Time_Start']
-        trace['stim_end'] = [sm.complete['Time_End'] ]
-        traces = [trace]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
-        traces_results = efel.getFeatureValues(traces,list(efel.getFeatureNames()))#
-
-
-        for v in traces_results:
-            for key,value in v.items():
-                if type(value) is not type(None):
-                    print(key,value)
-        try:
-            test_scores.append(t.judge(sm))
-            print(test_scores[-1],t.name)
-        except:
-            test_scores.append(t.judge(sm))
-            print(test_scores[-1],t.name)
-            print('active skipped: ',t.name)
-
-
-'''
-def get_wave_forms(cell_id):#,test_frame = None):
-
-
-    url = str("https://www.neuroml-db.org/api/model?id=")+cell_id
-    model_contents = requests.get(url)
-    model_contents = json.loads(model_contents.text)
-    model = NeuroMLDBStaticModel(cell_id)
-
-
-
-    stability = {}
-    stability['Stability_Range_Low_Corr'] =  model_contents['model']['Stability_Range_Low_Corr']
-    stability['Max_Stable_DT_Benchmark_RunTime'] = model_contents['model']['Max_Stable_DT_Benchmark_RunTime']
-    stability['Optimal_DT_a'] = model_contents['model']['Optimal_DT_a']
-    wlist = model_contents['waveform_list']
-    long_squares = [ w for w in wlist if w['Protocol_ID'] == 'LONG_SQUARE' ]
-    currents = [ w for w in wlist if w["Protocol_ID"] == "LONG_SQUARE" and w["Variable_Name"] == "Voltage" ]
-    in_current_filter = [ w for w in wlist if w["Protocol_ID"] == "SQUARE" and w["Variable_Name"] == "Voltage" ]
-    in_current = []
-    for check in in_current_filter:
-        amp = get_waveform_current_amplitude(check)
-        if amp < 0 * pq.nA:
-            in_current.append(amp)
-    druckmann2013_standard_current = get_waveform_current_amplitude(currents[-2])
-    druckmann2013_strong_current = get_waveform_current_amplitude(currents[-1])
-    druckmann2013_input_resistance_currents = in_current
-    model.waveforms = long_squares
-    model.druckmann2013_standard_current = druckmann2013_standard_current
-    model.druckmann2013_strong_current = druckmann2013_strong_current
-    model.druckmann2013_input_resistance_currents = druckmann2013_input_resistance_currents
-
-    model.temps = None
-    model.temps = []
-
-    for wl in long_squares:
-        wid = wl['ID']
-        url = str("https://neuroml-db.org/api/waveform?id=")+str(wid)
-        waves = requests.get(url)
-        temp = json.loads(waves.text)
-
-        if temp['Spikes'] > 0:
-            model.temps.append(temp)
-    print('gets this far a')
-    import pdb; pdb.set_trace()
-
-    return model
-'''
+        temp['vm'] = AnalogSignal(temp_vm,sampling_period=dt*ms,units=mV)
+        plt.plot(temp['vm'].times,temp['vm'].magnitude)#,label='ground truth')
+    return temps
