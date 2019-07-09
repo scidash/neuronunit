@@ -19,9 +19,12 @@ mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 from types import MethodType
+from neuronunit.optimisation import ascii_plot
 
 #import matplotlib.pyplot as plt
 # @jit(cache=True) I suspect this causes a memory leak
+import asciiplotlib as apl
+import numpy
 
 
 class ADEXPBackend(Backend):
@@ -148,7 +151,7 @@ class ADEXPBackend(Backend):
         delay = int(c['delay'])#/dt#.rescale('ms')
         pre_current = int(duration)
         stim = input_factory.get_step_current(int(delay), int(pre_current), 1. * b2.ms, amplitude * b2.pA)
-        st = (duration+delay)* b2.ms 
+        st = (duration+delay)* b2.ms
 
         self.state_monitor, self.spike_monitor = self.AdEx.simulate_AdEx_neuron(
         tau_m = attrs['MEMBRANE_TIME_SCALE_tau_m']*AdEx.b2.units.ms,
@@ -169,11 +172,21 @@ class ADEXPBackend(Backend):
         self.vM = AnalogSignal(vm,units = mV,sampling_period = float(1.0) * pq.ms)
         self.n_spikes = self.spike_monitor.count[0]
         self.attrs = attrs
-        self.debug = False
+        self.debug = True
         if self.debug == True:
-            plt.clf()
-            plt.plot(self.vM.times,self.vM)
-            plt.savefig(str(float(self.vM[-1]))+'.png')
+            #try:
+            y = [float(f) for f in self.vM.times]
+            x = [float(f) for f in self.vM.magnitude]
+            #import pdb; pdb.set_trace()
+
+            fig = apl.figure()
+            fig.plot(x, y, label="data", width=50, height=15)
+            fig.show()
+            #ascii_plot.ascii_plot(y,xdata = x,title='adexponential',xlabel='time (ms)', ylabel='memb potential (mV)')
+
+            #plt.clf()
+            #plt.plot(self.vM.times,self.vM)
+            #plt.savefig(str(float(self.vM[-1]))+'.png')
         return self.vM
 
     def inject_square_current_debug(self, current):#, section = None, debug=False):
@@ -200,9 +213,9 @@ class ADEXPBackend(Backend):
         delay = int(c['delay'])
         pre_current = int(duration)
         stim = input_factory.get_step_current(int(delay), int(pre_current), 1. * b2.ms, amplitude * b2.pA)
-        st = (duration+delay)* b2.ms 
-        import pdb
-        pdb.set_trace()
+        st = (duration+delay)* b2.ms
+        #import pdb
+        #pdb.set_trace()
         self.state_monitor, self.spike_monitor = self.AdEx.simulate_AdEx_neuron(
         tau_m = attrs['MEMBRANE_TIME_SCALE_tau_m']*AdEx.b2.units.ms,
         R = attrs['MEMBRANE_RESISTANCE_R']*AdEx.b2.units.Gohm,
@@ -219,7 +232,10 @@ class ADEXPBackend(Backend):
         self.state_monitor.clock.dt = 1. *b2.ms
         self.dt = self.state_monitor.clock.dt
         vm = [ float(i) for i in self.state_monitor.get_states()['v'] ]
+        offset = float(np.abs(0-np.max(vm)))
+        vm = [ float(i)+offset for i in vm ]
         self.vM = AnalogSignal(vm,units = mV,sampling_period = float(1.0) * pq.ms)
+
         self.n_spikes = self.spike_monitor.count[0]
         self.attrs = attrs
         self.debug = False
@@ -241,6 +257,7 @@ class ADEXPBackend(Backend):
         #             units = mV,
         #             sampling_period = 1.0 * pq.ms)
         results['vm'] = self.vM
+
         results['t'] = self.vM.times
         results['run_number'] = results.get('run_number',0) + 1
         return results
