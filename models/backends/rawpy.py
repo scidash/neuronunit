@@ -8,6 +8,8 @@ from .base import *
 import quantities as qt
 from quantities import mV, ms, s
 import matplotlib as mpl
+import asciiplotlib as apl
+import numpy
 
 #mpl.use('Agg')
 
@@ -135,6 +137,12 @@ class RAWBackend(Backend):
         self.vM = AnalogSignal(v,
                      units = mV,
                      sampling_period = attrs['dt'] * ms)
+        t = [float(f) for f in self.vM.times]
+        v = [float(f) for f in self.vM.magnitude]
+        print(len(v),len(t),'this is a short vector')
+        fig = apl.figure()
+        fig.plot(t, v, label=str('spikes: '), width=100, height=20)
+        fig.show()
         self.attrs = attrs
         self.model.attrs.update(attrs)
         return self.vM
