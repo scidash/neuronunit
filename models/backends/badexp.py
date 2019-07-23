@@ -19,7 +19,7 @@ mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 from types import MethodType
-from neuronunit.optimisation import ascii_plot
+# from neuronunit.optimisation import ascii_plot
 
 #import matplotlib.pyplot as plt
 # @jit(cache=True) I suspect this causes a memory leak
@@ -29,9 +29,9 @@ import numpy
 
 class ADEXPBackend(Backend):
     def get_spike_count(self):
+        print(int(self.spike_monitor.count[0]))
+        #import pdb; pdb.set_trace()
         return int(self.spike_monitor.count[0])
-
-
     def init_backend(self, attrs=None, cell_name='thembi',
                      current_src_name='spanner', DTC=None,
                      debug = False):
@@ -39,7 +39,7 @@ class ADEXPBackend(Backend):
         super(ADEXPBackend,self).init_backend()
         self.name = str(backend)
 
-        self.threshold = -20.0*qt.mV
+        #self.threshold = -20.0*qt.mV
         self.debug = None
         self.model._backend.use_memory_cache = False
         self.current_src_name = current_src_name
@@ -61,13 +61,9 @@ class ADEXPBackend(Backend):
 
         if type(DTC) is not type(None):
             if type(DTC.attrs) is not type(None):
-
                 self.set_attrs(**DTC.attrs)
-
-
             if hasattr(DTC,'current_src_name'):
                 self._current_src_name = DTC.current_src_name
-
             if hasattr(DTC,'cell_name'):
                 self.cell_name = DTC.cell_name
 
@@ -84,13 +80,15 @@ class ADEXPBackend(Backend):
         """Must return a neo.core.AnalogSignal.
         And must destroy the hoc vectors that comprise it.
         """
+        for t in self.spike_monitor.spike_trains():
+            i = int(t/self.state_monitor.clock.dt)
+            self.vM[i] = 0.020*mV
+
         return self.vM
 
     def set_attrs(self, **attrs):
         self.AdEx = None
-
         self.AdEx = AdEx
-
         self.AdEx.ADAPTATION_TIME_CONSTANT_tau_w = attrs['ADAPTATION_TIME_CONSTANT_tau_w']*AdEx.b2.units.ms
         self.AdEx.ADAPTATION_VOLTAGE_COUPLING_a = attrs['ADAPTATION_VOLTAGE_COUPLING_a']*AdEx.b2.units.nS
         self.AdEx.FIRING_THRESHOLD_v_spike = attrs['FIRING_THRESHOLD_v_spike']*AdEx.b2.units.mV
@@ -103,29 +101,30 @@ class ADEXPBackend(Backend):
         self.AdEx.V_REST = attrs['V_REST']*AdEx.b2.units.mV
         self.model.attrs.update(attrs)
 
-    def mini_test(self, current):
-        self.AdEx = None
+    def print_stuff(self,attrs):
+        self.AdEx.simulate_AdEx_neuron()
+        print(self.AdEx.ADAPTATION_TIME_CONSTANT_tau_w-attrs['ADAPTATION_TIME_CONSTANT_tau_w']*AdEx.b2.units.ms,
+        self.AdEx.ADAPTATION_VOLTAGE_COUPLING_a-attrs['ADAPTATION_VOLTAGE_COUPLING_a']*AdEx.b2.units.nS,
+        self.AdEx.FIRING_THRESHOLD_v_spike-attrs['FIRING_THRESHOLD_v_spike']*AdEx.b2.units.mV,
+        self.AdEx.MEMBRANE_RESISTANCE_R-attrs['MEMBRANE_RESISTANCE_R']*AdEx.b2.units.Gohm,
+        self.AdEx.MEMBRANE_TIME_SCALE_tau_m-attrs['MEMBRANE_TIME_SCALE_tau_m']*AdEx.b2.units.ms,
+        self.AdEx.RHEOBASE_THRESHOLD_v_rh-attrs['RHEOBASE_THRESHOLD_v_rh']*AdEx.b2.units.mV,
+        self.AdEx.SHARPNESS_delta_T-attrs['SHARPNESS_delta_T']*AdEx.b2.units.mV,
+        self.AdEx.SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b-attrs['b']*b2.pA,
+        self.AdEx.V_RESET-attrs['V_RESET']*AdEx.b2.units.mV
+        ,self.AdEx.V_REST-attrs['V_REST']*AdEx.b2.units.mV)
 
-        attrs = copy.copy(self.model.attrs)
-
-        self.set_attrs(**attrs)
-        c = copy.copy(current)
-        if 'injected_square_current' in c.keys():
-            c = current['injected_square_current']
-
-        amplitude = float(c['amplitude'])
-        duration = int(c['duration'])#/dt#/dt.rescale('ms')
-        delay = int(c['delay'])#/dt#.resc1ale('ms')
-
-        state_monitor, self.spike_monitor = self.AdEx.simulate_AdEx_neuron(I_stim=current, simulation_time=(duration+delay)* b2.ms)
-
-        return int(self.spike_monitor.count[0])
-
-    #
-
-
-    #self.model.get_spike_count = get_spike_count
-        # np.array(spike_times)
+        print(self.AdEx.ADAPTATION_TIME_CONSTANT_tau_w,
+        self.AdEx.ADAPTATION_VOLTAGE_COUPLING_a,
+        self.AdEx.FIRING_THRESHOLD_v_spike,
+        self.AdEx.MEMBRANE_RESISTANCE_R,
+        self.AdEx.MEMBRANE_TIME_SCALE_tau_m,
+        self.AdEx.RHEOBASE_THRESHOLD_v_rh,
+        self.AdEx.SHARPNESS_delta_T,
+        self.AdEx.SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b,
+        self.AdEx.V_RESET
+        ,self.AdEx.V_REST)
+        return
 
     def inject_square_current(self, current):#, section = None, debug=False):
         """Inputs: current : a dictionary with exactly three items, whose keys are: 'amplitude', 'delay', 'duration'
@@ -136,12 +135,12 @@ class ADEXPBackend(Backend):
 
         """
         b2.defaultclock.dt = 1. * b2.ms
-
+        self.state_monitor = None
+        self.spike_monitor = None
+        self.AdEx = None
         self.AdEx = AdEx
         attrs = copy.copy(self.model.attrs)
         self.set_attrs(**attrs)
-
-
         if 'injected_square_current' in current.keys():
             c = current['injected_square_current'];
         else:
@@ -149,13 +148,15 @@ class ADEXPBackend(Backend):
         amplitude = float(c['amplitude'])#*1000.0
         duration = int(c['duration'])#/dt#/dt.rescale('ms')
         delay = int(c['delay'])#/dt#.rescale('ms')
-        pre_current = int(duration)
-        stim = input_factory.get_step_current(int(delay), int(pre_current), 1. * b2.ms, amplitude * b2.pA)
-        st = (duration+delay)* b2.ms
+        pre_current = int(duration)+100
+        stim = input_factory.get_step_current(int(delay), int(pre_current), 1. * b2.ms, amplitude *b2.pA)
+        st = (duration+delay+100)* b2.ms
+        print(st, 'simulation time')
+
 
         self.state_monitor, self.spike_monitor = self.AdEx.simulate_AdEx_neuron(
         tau_m = attrs['MEMBRANE_TIME_SCALE_tau_m']*AdEx.b2.units.ms,
-        R = attrs['MEMBRANE_RESISTANCE_R']*AdEx.b2.units.Gohm,
+        R = np.abs(attrs['MEMBRANE_RESISTANCE_R'])*AdEx.b2.units.Gohm,
         v_rest = attrs['V_REST']*AdEx.b2.units.mV,
         v_reset = attrs['V_RESET']*AdEx.b2.units.mV,
         v_rheobase = attrs['RHEOBASE_THRESHOLD_v_rh']*AdEx.b2.units.mV,
@@ -166,96 +167,45 @@ class ADEXPBackend(Backend):
         tau_w = attrs['ADAPTATION_TIME_CONSTANT_tau_w']*AdEx.b2.units.ms ,
         I_stim = stim, simulation_time=st)
 
-        self.state_monitor.clock.dt = 1. *b2.ms
+
+        #print("nr of spikes: {}".format(self.spike_monitor.count[0]))
+
+        #print(self.AdEx.getting_started())
+        self.state_monitor.clock.dt = 0.01 *b2.ms
         self.dt = self.state_monitor.clock.dt
-        vm = [ float(i) for i in self.state_monitor.get_states()['v'] ]
+
+        state_dic = self.state_monitor.get_states()
+        vm = state_dic['v']
+        vm = [ float(i) for i in vm ]
+
         self.vM = AnalogSignal(vm,units = mV,sampling_period = float(1.0) * pq.ms)
-        self.n_spikes = self.spike_monitor.count[0]
+        #import pdb; pdb.set_trace()
+        for t in self.spike_monitor.spike_trains():
+            i = int(t/self.state_monitor.clock.dt)
+            self.vM[i] = 0.020*mV
+            print(self.vM[i], 'gets here')
+
+        self.n_spikes = int(self.spike_monitor.count[0])
         self.attrs = attrs
-        self.debug = True
-        if self.debug == True:
-            #try:
-            y = [float(f) for f in self.vM.times]
-            x = [float(f) for f in self.vM.magnitude]
-            #import pdb; pdb.set_trace()
-
-            fig = apl.figure()
-            fig.plot(x, y, label="data", width=50, height=15)
-            fig.show()
-            #ascii_plot.ascii_plot(y,xdata = x,title='adexponential',xlabel='time (ms)', ylabel='memb potential (mV)')
-
-            #plt.clf()
-            #plt.plot(self.vM.times,self.vM)
-            #plt.savefig(str(float(self.vM[-1]))+'.png')
-        return self.vM
-
-    def inject_square_current_debug(self, current):#, section = None, debug=False):
-        """Inputs: current : a dictionary with exactly three items, whose keys are: 'amplitude', 'delay', 'duration'
-        Example: current = {'amplitude':float*pq.pA, 'delay':float*pq.ms, 'duration':float*pq.ms}}
-        where \'pq\' is a physical unit representation, implemented by casting float values to the quanitities \'type\'.
-        Description: A parameterized means of applying current injection into defined
-        Currently only single section neuronal models are supported, the neurite section is understood to be simply the soma.
-
-        """
-        b2.defaultclock.dt = 1. * b2.ms
-
-        self.AdEx = AdEx
-        attrs = copy.copy(self.model.attrs)
-        self.set_attrs(**attrs)
 
 
-        if 'injected_square_current' in current.keys():
-            c = current['injected_square_current'];
-        else:
-            c = current
-        amplitude = float(c['amplitude'])
-        duration = int(c['duration'])
-        delay = int(c['delay'])
-        pre_current = int(duration)
-        stim = input_factory.get_step_current(int(delay), int(pre_current), 1. * b2.ms, amplitude * b2.pA)
-        st = (duration+delay)* b2.ms
-        #import pdb
-        #pdb.set_trace()
-        self.state_monitor, self.spike_monitor = self.AdEx.simulate_AdEx_neuron(
-        tau_m = attrs['MEMBRANE_TIME_SCALE_tau_m']*AdEx.b2.units.ms,
-        R = attrs['MEMBRANE_RESISTANCE_R']*AdEx.b2.units.Gohm,
-        v_rest = attrs['V_REST']*AdEx.b2.units.mV,
-        v_reset = attrs['V_RESET']*AdEx.b2.units.mV,
-        v_rheobase = attrs['RHEOBASE_THRESHOLD_v_rh']*AdEx.b2.units.mV,
-        a = attrs['ADAPTATION_VOLTAGE_COUPLING_a']*AdEx.b2.units.nS,
-        b =  attrs['b']*b2.pA,
-        v_spike=attrs['FIRING_THRESHOLD_v_spike']*AdEx.b2.units.mV,
-        delta_T = attrs['SHARPNESS_delta_T']*AdEx.b2.units.mV,
-        tau_w = attrs['ADAPTATION_TIME_CONSTANT_tau_w']*AdEx.b2.units.ms ,
-        I_stim = stim, simulation_time=st)
-
-        self.state_monitor.clock.dt = 1. *b2.ms
-        self.dt = self.state_monitor.clock.dt
-        vm = [ float(i) for i in self.state_monitor.get_states()['v'] ]
-        offset = float(np.abs(0-np.max(vm)))
-        vm = [ float(i)+offset for i in vm ]
-        self.vM = AnalogSignal(vm,units = mV,sampling_period = float(1.0) * pq.ms)
-
-        self.n_spikes = self.spike_monitor.count[0]
-        self.attrs = attrs
-        self.debug = False
-        if self.debug == True:
-            plt.clf()
-            plt.plot(self.vM.times,self.vM)
-            plt.savefig(str(float(self.vM[-1]))+'.png')
+        t = [float(f) for f in self.vM.times]
+        v = [float(f) for f in self.vM.magnitude]
+        #print(len(v),len(t),'this is a short vector')
+        fig = apl.figure()
+        fig.plot(t, v, label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
+        fig.show()
+        fig  = None
+        if len(self.spike_monitor.spike_trains())>1:
+            import matplotlib.pyplot as plt
+            plt.plot(y,x)
+            plt.savefig('debug.png')
         return self.vM
 
     def _backend_run(self):
         results = None
         results = {}
 
-        #vm = [ float(i) for i in self.state_monitor.get_states()['v'] ]
-        #self.vM = AnalogSignal(vm,units = mV,sampling_period = float(self.dt) * pq.ms)
-
-        #vm = self.get_membrane_potential()
-        #self.vM = AnalogSignal(vm,
-        #             units = mV,
-        #             sampling_period = 1.0 * pq.ms)
         results['vm'] = self.vM
 
         results['t'] = self.vM.times
