@@ -10,6 +10,7 @@
 # and launch it with this alias.
 # alias efel='cd /home/russell/outside/neuronunit; sudo docker run -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v /home/russell/outside/neuronunit:/home/jovyan/neuronunit -v /home/russell/Dropbox\ \(ASU\)/AllenDruckmanData:/home/jovyan/work/allendata efel /bin/bash'
 ##
+from collections import Iterable, OrderedDict
 
 from allensdk.ephys.ephys_extractor import EphysSweepSetFeatureExtractor
 try:
