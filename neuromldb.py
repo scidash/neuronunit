@@ -12,12 +12,14 @@ if sys.version_info[0] >= 3:
 else:
     import urllib
 
-class NeuroMLDBModel:
-    def __init__(self, model_id = "NMLCL000086"):
+class NeuroMLDBModel(object):
+    def __init__(self, model_id = "NMLCL000086", waveform_list = None):
         self.model_id = model_id
         self.api_url = "https://neuroml-db.org/api/" # See docs at: https://neuroml-db.org/api
-
-        self.waveforms = None
+        if waveform_list is not None:
+            self.waveforms = waveform_list
+        else:
+            self.waveforms = None
 
         self.waveform_signals = {}
         self.url_responses = {}
@@ -43,10 +45,12 @@ class NeuroMLDBModel:
         return self.waveforms
 
     def fetch_waveform_as_AnalogSignal(self, waveform_id, resolution_ms = 0.01, units = "mV"):
+        #print('gets to b')
 
         # If signal not in cache
         if waveform_id not in self.waveform_signals:
             # Load api URL into Python
+            #import pdb; pdb.set_trace(
             #import pdb; pdb.set_trace()
             data = self.read_api_url(self.api_url + "waveform?id=" + str(waveform_id))
 
@@ -89,12 +93,19 @@ class NeuroMLDBModel:
         return self.steady_state_waveform
 
     def get_waveform_by_current(self, amplitude_nA):
+        #import pdb; pdb.set_trace()
+
         for w in self.waveforms:
             if w["Variable_Name"] == "Voltage":
+                #import pdb; pdb.set_trace()
+
                 wave_amp = self.get_waveform_current_amplitude(w)
+                #import pdb; pdb.set_trace()
+
                 if ((amplitude_nA < 0 * pq.nA and w["Protocol_ID"] == "SQUARE") or
                     (amplitude_nA >= 0 * pq.nA and w["Protocol_ID"] == "LONG_SQUARE")) \
                         and amplitude_nA == wave_amp:
+                    print(w["ID"])
                     return self.fetch_waveform_as_AnalogSignal(w["ID"])
 
         raise Exception("Did not find a Voltage waveform with injected " + str(amplitude_nA) +
@@ -147,3 +158,4 @@ class NeuroMLDBStaticModel(StaticModel):
 
     def inject_square_current(self, current):
         self.vm = self.nmldb_model.get_waveform_by_current(current["amplitude"])
+        return self.vm

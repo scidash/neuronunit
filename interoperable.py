@@ -95,6 +95,15 @@ class Interoperabe(object):
             self.test_set[i]['expected'] = v
 
     def test_setup(self,model_id,model_dict,model=None):
+        '''
+        Synopsis: Construct initialize and otherwise setup Druckman tests.
+        if a model does not exist yet, but a desired NML-DB model id is known, use the model-id
+        to quickly initialize a NML-DB model.
+
+        If a model is actually passed instead, assume that model has known current_injection value
+        attributes and use those.
+
+        '''
         if not hasattr(self, "expected"):
             self.expected = [0.0 for i in range(38)]
 

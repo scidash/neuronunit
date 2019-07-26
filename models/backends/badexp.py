@@ -12,7 +12,7 @@ from numba import jit
 import numpy as np
 from .base import *
 import quantities as qt
-from quantities import mV, ms, s, us
+from quantities import mV, ms, s, us, ns
 import matplotlib as mpl
 
 mpl.use('Agg')
@@ -26,6 +26,7 @@ from types import MethodType
 import asciiplotlib as apl
 import numpy
 
+from scipy.interpolate import interp1d
 
 class ADEXPBackend(Backend):
     def get_spike_count(self):
@@ -80,9 +81,18 @@ class ADEXPBackend(Backend):
         """Must return a neo.core.AnalogSignal.
         And must destroy the hoc vectors that comprise it.
         """
-        for t in self.spike_monitor.spike_trains():
-            i = int(t/self.state_monitor.clock.dt)
-            self.vM[i] = 0.020*mV
+	if np.max(self.vM[i])!=0.020*qt.V:
+           tdic = self.spike_monitor.spike_trains()
+           for key,value in tdic.items():
+
+               if len(value)==1:
+                   i = int(float(value)/0.001)
+                   self.vM[i] = 0.020*qt.mV
+               else:
+                   for v in value:
+                      i = int(float(v)/0.001)
+                      self.vM[i] = 0.020*qt.mV
+
 
         return self.vM
 
@@ -125,6 +135,15 @@ class ADEXPBackend(Backend):
         self.AdEx.V_RESET
         ,self.AdEx.V_REST)
         return
+    def finalize(self):
+
+        transform_function = interp1d([float(t) for t in self.vM.times],[float(v) for v in self.vM.magnitude])
+
+        xnew = np.linspace(0, float(np.max(self.vM.times)), num=1004001, endpoint=True)
+        vm_new = transform_function(xnew) #% generate the y values for all x values in xnew
+        print(len(vm_new))
+        self.vM = AnalogSignal(vm_new,units = mV,sampling_period = float(xnew[1]-xnew[0]) * pq.s)
+        print(len(self.vM))
 
     def inject_square_current(self, current):#, section = None, debug=False):
         """Inputs: current : a dictionary with exactly three items, whose keys are: 'amplitude', 'delay', 'duration'
@@ -134,7 +153,7 @@ class ADEXPBackend(Backend):
         Currently only single section neuronal models are supported, the neurite section is understood to be simply the soma.
 
         """
-        b2.defaultclock.dt = 1. * b2.ms
+        b2.defaultclock.dt = 1 * b2.ms
         self.state_monitor = None
         self.spike_monitor = None
         self.AdEx = None
@@ -149,7 +168,7 @@ class ADEXPBackend(Backend):
         duration = int(c['duration'])#/dt#/dt.rescale('ms')
         delay = int(c['delay'])#/dt#.rescale('ms')
         pre_current = int(duration)+100
-        stim = input_factory.get_step_current(int(delay), int(pre_current), 1. * b2.ms, amplitude *b2.pA)
+        stim = input_factory.get_step_current(int(delay), int(pre_current), 1 * b2.ms, amplitude *b2.pA)
         st = (duration+delay+100)* b2.ms
         print(st, 'simulation time')
 
@@ -171,7 +190,7 @@ class ADEXPBackend(Backend):
         #print("nr of spikes: {}".format(self.spike_monitor.count[0]))
 
         #print(self.AdEx.getting_started())
-        self.state_monitor.clock.dt = 0.01 *b2.ms
+        self.state_monitor.clock.dt = 1 *b2.ms
         self.dt = self.state_monitor.clock.dt
 
         state_dic = self.state_monitor.get_states()
@@ -179,11 +198,20 @@ class ADEXPBackend(Backend):
         vm = [ float(i) for i in vm ]
 
         self.vM = AnalogSignal(vm,units = mV,sampling_period = float(1.0) * pq.ms)
-        #import pdb; pdb.set_trace()
-        for t in self.spike_monitor.spike_trains():
-            i = int(t/self.state_monitor.clock.dt)
-            self.vM[i] = 0.020*mV
-            print(self.vM[i], 'gets here')
+
+
+        tdic = self.spike_monitor.spike_trains()
+        for key,value in tdic.items():
+
+            if len(value)==1:
+                i = int(float(value)/0.001)
+                self.vM[i] = 0.020*qt.mV
+            else:
+                for v in value:
+                    i = int(float(v)/0.001)
+                    print(i)
+                    self.vM[i] = 0.020*qt.mV
+
 
         self.n_spikes = int(self.spike_monitor.count[0])
         self.attrs = attrs
