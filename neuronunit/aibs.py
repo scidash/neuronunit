@@ -1,32 +1,27 @@
 """NeuronUnit module for interaction with the Allen Brain Insitute
 Cell Types database"""
-
-import shelve
+import logging
+logging.info("test")
+import matplotlib as mpl
+mpl.use('agg')
+import matplotlib.pyplot as plt
+#import shelve
 import requests
-
 import numpy as np
 import quantities as pq
-# from allensdk.api.queries.cell_types_api import CellTypesApi
-
 from allensdk.api.queries.cell_types_api import CellTypesApi
 from allensdk.core.cell_types_cache import CellTypesCache
 from allensdk.api.queries.glif_api import GlifApi
 import os
 import pickle
-#import allensdk.model.biophysical.runner #manifest.json')
 from allensdk.api.queries.biophysical_api import BiophysicalApi
 ## Need this import but it fails because of python2 formatted strings.
-#from allensdk.model.biophysical import runner
-from neuronunit.optimisation.optimisation_management import add_druckmann_properties_to_cells
+from neuronunit.optimisation.optimisation_management import add_dm_properties_to_cells
 from neuronunit.optimisation.optimisation_management import mint_generic_model, dtc_to_rheo, split_list
 from neuronunit.optimisation.data_transport_container import DataTC
 from allensdk.model.glif.glif_neuron import GlifNeuron
 import dask.bag as db
 import multiprocessing
-#from allensdk.model.biophysical import runner
-
-
-
 
 from allensdk.core.cell_types_cache import CellTypesCache
 from allensdk.ephys.extract_cell_features import extract_cell_features
@@ -41,10 +36,11 @@ from neuronunit import models
 from neo.core import AnalogSignal
 import quantities as qt
 from types import MethodType
-import numpy as np
 
+from allensdk.ephys.extract_cell_features import extract_cell_features
+from collections import defaultdict
+from allensdk.core.cell_types_cache import CellTypesCache
 
-import numpy as np
 import neo
 from elephant.spike_train_generation import threshold_detection
 from quantities import mV, ms
@@ -53,6 +49,8 @@ import sciunit
 import math
 import pdb
 from allensdk.ephys.extract_cell_features import extract_cell_features
+from itertools import repeat
+##from sklearn.cross_decomposition import CCA
 
 def a_cell_for_check(stim):
     cells = pickle.load(open("multi_objective_raw.p","rb"))
@@ -66,7 +64,12 @@ def a_cell_for_check(stim):
 # pick a cell to analyze
 #specimen_id = 324257146
     # download the ephys data and s
-        #all_models = json.loads(url.read().decode())
+
+#all_models = json.loads(url.read().decode())
+
+import logging
+logging.info("test")
+
 def get_all(Model_ID = str('NMLNT001592')):
     if Model_ID == None:
         try:
@@ -120,6 +123,7 @@ def is_aibs_up():
 
 
 def find_nearest(array, value):
+    #value = float(value)
     array = np.asarray(array)
     idx = (np.abs(array - value)).argmin()
     return (array[idx], idx)
@@ -166,50 +170,43 @@ def get_spike_count(model):
     train = get_spike_train(vm)
     return len(train)
 
-from itertools import repeat
 
 def dm_map(compound):
     (sm, dm) = compound
     return dm.generate_prediction(sm)
-    
-    
-from allensdk.core.cell_types_cache import CellTypesCache
-from allensdk.ephys.extract_cell_features import extract_cell_features
-from collections import defaultdict
 
 
 def get_nwb(specimen_id = 324257146):
     file_name = 'cell_types/specimen_'+str(specimen_id)+'/ephys.nwb'
-    try:
-        data_set = NwbDataSet(file_name)
-        sweep_numbers = data_set.get_sweep_numbers()
-        sweeps = ctc.get_ephys_sweeps(specimen_id)
+    data_set = NwbDataSet(file_name)
 
+    try:
+        sweep_numbers = data_set.get_sweep_numbers()
+    except:
+        return
+    try:
+        sweeps = ctc.get_ephys_sweeps(specimen_id)
         for sn in sweep_numbers:
             spike_times = data_set.get_spike_times(sn)
             sweep_data = data_set.get_sweep(sn)
-
     except:
         ctc = CellTypesCache(manifest_file='cell_types/manifest.json')
-
-        #file_name ='cell_types/specimen_324257146/ephys.nwb'
-        #import pdb
-        #pdb.set_trace()
         data_set = ctc.get_ephys_data(specimen_id)
-        sweeps = ctc.get_ephys_sweeps(specimen_id)
-        
+
+    sweeps = ctc.get_ephys_sweeps(specimen_id)
+
     sweep_numbers = defaultdict(list)
-    for sweep in sweeps: 
+    for sweep in sweeps:
         sweep_numbers[sweep['stimulus_name']].append(sweep['sweep_number'])
-                                     
-                                     
+
+
     cell_features = extract_cell_features(data_set, sweep_numbers['Ramp'],sweep_numbers['Short Square'],sweep_numbers['Long Square'])
 
     sweep_numbers = data_set.get_sweep_numbers()
     smallest_multi = 1000
+    all_currents = []
     for sn in sweep_numbers:
         spike_times = data_set.get_spike_times(sn)
-        #print(spike_times,len(spike_times))
         sweep_data = data_set.get_sweep(sn)
 
         if len(spike_times) == 1:
@@ -217,12 +214,25 @@ def get_nwb(specimen_id = 324257146):
 
         if len(spike_times) < smallest_multi and len(spike_times) > 1:
             smallest_multi = len(spike_times)
-            inj_mutli_spike = np.max(sweep_data['stimulus'])
-            #print(inj_mutli_spike,'smallest multispiking')
+            inj_multi_spike = np.max(sweep_data['stimulus'])
             temp_vm = sweep_data['response']
+        val = np.max(sweep_data['stimulus'])#*qt.pA
+        all_currents.append(val)
+    dmrheobase15 = (1.5*inj_rheobase)#cell_features['long_squares']['rheobase_i'])#*qt.pA
+    (nearest_allen15,idx_nearest_allen) = find_nearest(all_currents,dmrheobase15)
+    dmrheobase30 = (3.0*inj_rheobase)#cell_features['long_squares']['rheobase_i'])#*qt.pA
+    (nearest_allen30,idx_nearest_allen) = find_nearest(all_currents,dmrheobase30)
 
-
-    dm_tests = init_dm_tests(inj_rheobase,inj_mutli_spike)
+    print(nearest_allen15,nearest_allen30,inj_multi_spike)
+    #import pdb
+    #pdb.set_trace()
+    #print('how close are these two \n\n\n\n\n\n ?', nearest_allen15,inj_multi_spike)
+    if inj_multi_spike < nearest_allen15 and inj_rheobase!=nearest_allen15:# != inj_rheobase:
+        pass
+        #dm_tests = init_dm_tests(inj_rheobase,nearest_allen15)
+    else:
+        pass
+    dm_tests = init_dm_tests(inj_rheobase,inj_multi_spike)
 
     # Two things need to be done.
     # 1. Apply these stimulations to allen models.
@@ -231,36 +241,41 @@ def get_nwb(specimen_id = 324257146):
     # sampling rate is in Hz
     sampling_rate = sweep_data['sampling_rate']
     vm = AnalogSignal(temp_vm,sampling_rate=sampling_rate*qt.Hz,units=qt.V)
+    #plt.plot(vm.times,vm.magnitude)
+    #plt.savefig('too_small_debug.png')
+
     sm = models.StaticModel(vm)
     sm.data_set = data_set
     sm.inject_square_current = MethodType(inject_square_current,sm)
     sm.get_membrane_potential = MethodType(get_membrane_potential,sm)
     sm.get_spike_count = MethodType(get_spike_count,sm)
+    # these lines are functional
     sm.inject_square_current(inj_rheobase)
     dm_tests[0].generate_prediction(sm)
-    sm.inject_square_current(inj_mutli_spike)
-    compound = zip(repeat(sm),dm_tests)
-    #preds = list(map(dm_map,compound))
+    #sm.inject_square_current(inj_mutli_spike)
+    compound = list(zip(repeat(sm),dm_tests))
     bag = db.from_sequence(compound,npartitions=8)
     preds = list(bag.map(dm_map).compute())
+    names = [ d.name for d in dm_tests ]
+    preds = list(zip(preds,names))
+    spiking_sweeps = cell_features['long_squares']['spiking_sweeps'][0]
+    multi_spike_features = cell_features['long_squares']['hero_sweep']
+    biophysics = cell_features['long_squares']
+    shapes =  cell_features['long_squares']['spiking_sweeps'][0]['spikes'][0]
+    #import pdb; pdb.set_trace()
+    #print(spiking_sweeps)
+    #print(biophysics)
+    #cca = CCA(n_components=1)
+    #cca.fit(X, Y)
 
-    
+    #X_c, Y_c = cca.transform(X, Y)
 
-
-     
-    everything = [preds,cell_features]
-    index_range = sweep_data['index_range']
+    everything = (preds,cell_features)
     return everything
 
 
 
-
-
-
-def get_features(specimen_id = 485909730):
-    data_set = ctc.get_ephys_data(specimen_id)
-    sweeps = ctc.get_ephys_sweeps(specimen_id)
-
+def appropriate_features():
     for s in sweeps:
         if s['ramp']:
             print([(k,v) for k,v in s.items()])
@@ -268,6 +283,12 @@ def get_features(specimen_id = 485909730):
         current['amplitude'] = s['stimulus_absolute_amplitude']
         current['duration'] = s['stimulus_duration']
         current['delay'] = s['stimulus_start_time']
+
+def get_features(specimen_id = 485909730):
+    data_set = ctc.get_ephys_data(specimen_id)
+    sweeps = ctc.get_ephys_sweeps(specimen_id)
+
+
 
 
     # group the sweeps by stimulus
@@ -378,6 +399,8 @@ def get_value_dict(experiment_params, sweep_ids, kind):
 
 
 def allen_morph_model(description):
+    from allensdk.model.biophysical.utils import Utils
+    from allensdk.model.biophys_sim import neuron
     utils = Utils.create_utils(description)
     h = utils.h
 
@@ -402,22 +425,67 @@ def run_all_cell_bio_configs():
         with open('all_allen_cells.p','wb') as f:
             pickle.dump(cells,f)
     bp = BiophysicalApi()
+    from bmtk.simulator.utils import config
+    from allensdk.model.biophysical import runner
+    from allensdk.model.biophysical.utils import Utils
+
 
     #bp.cache_stimulus = False # change to False to not download the large stimulus NWB file
     #neuronal_model_id = 472451419    # get this from the web site as above
     for description in cells[0:5]:
+        config = config.from_dict(description)
+        '''
+                # configure NEURON -- this will infer model type (perisomatic vs. all-active)
+        utils = Utils.create_utils(description)
+        h = utils.h
 
-        try:
-            bp.cache_data(cell['id'], working_directory='.')
-            os.subprocess('nrnivmodl ./modfiles')   # compile the model (only needs to be done once)
-            ## Need this import but it fails because of python2 formatted strings.
-            print(runner)
+        The next step is to get the path of the morphology file and pass it to NEURON.
 
-            #allen_morph_model(description)
-            runner.load_description(description)
-            runner.run(description, sweeps=None, procs=6)
-        except:
-            pass
+        # configure model
+        manifest = description.manifest
+        morphology_path = description.manifest.get_path('MORPHOLOGY')
+        utils.generate_morphology(morphology_path.encode('ascii', 'ignore'))
+        utils.load_cell_parameters()
+
+        Then read the stimulus and recording configuration and configure NEURON
+
+        # configure stimulus and recording
+        stimulus_path = description.manifest.get_path('stimulus_path')
+        nwb_out_path = manifest.get_path("output")
+        output = NwbDataSet(nwb_out_path)
+        run_params = description.data['runs'][0]
+        sweeps = run_params['sweeps']
+        junction_potential = description.data['fitting'][0]['junction_potential']
+        mV = 1.0e-3
+
+        Loop through the stimulus sweeps and write the output.
+
+        # run sweeps
+        for sweep in sweeps:
+            utils.setup_iclamp(stimulus_path, sweep=sweep)
+            vec = utils.record_values()
+
+            h.finitialize()
+            h.run()
+
+            # write to an NWB File
+            output_data = (numpy.array(vec['v']) - junction_potential) * mV
+            output.set_sweep(sweep, None, output_data)
+
+
+        import pdb; pdb.set_trace()
+        '''
+        #try:
+        bp.cache_data(cell['id'], working_directory='.')
+        os.subprocess('nrnivmodl ./modfiles')   # compile the model (only needs to be done once)
+        ## Need this import but it fails because of python2 formatted strings.
+        print(runner)
+
+        allen_morph_model(description)
+        runner.load_description(description)
+        runner.run(description, sweeps=None, procs=6)
+        #except:
+        #    pass
 
     return cells
 
