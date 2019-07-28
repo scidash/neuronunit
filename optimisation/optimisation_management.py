@@ -543,7 +543,7 @@ def bridge_judge(test_and_dtc):
     backend_ = dtc.backend
     model = mint_generic_model(backend_)
     model.set_attrs(dtc.attrs)
-    print(model.attrs)
+    #print(model.attrs)
     pred = test.generate_prediction(model)
 
     try:
