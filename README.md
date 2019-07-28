@@ -4,6 +4,7 @@
 | [![RTFD](https://readthedocs.org/projects/neuronunit/badge/?version=master)](http://neuronunit.readthedocs.io/en/latest/?badge=master) | [![RTFD](https://readthedocs.org/projects/neuronunit/badge/?version=dev)](http://neuronunit.readthedocs.io/en/latest/?badge=dev) |
 | [![Coveralls](https://coveralls.io/repos/github/scidash/neuronunit/badge.svg?branch=master)](https://coveralls.io/github/scidash/neuronunit?branch=master) | [![Coveralls](https://coveralls.io/repos/github/scidash/neuronunit/badge.svg?branch=dev)](https://coveralls.io/github/scidash/neuronunit?branch=dev) |
 | [![Requirements](https://requires.io/github/scidash/neuronunit/requirements.svg?branch=master)](https://requires.io/github/scidash/neuronunit/requirements/?branch=master) |  [![Requirements](https://requires.io/github/scidash/neuronunit/requirements.svg?branch=dev)](https://requires.io/github/scidash/neuronunit/requirements/?branch=dev) |
+| [![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/scidash/neuronunit/master) |
 
 
 
@@ -11,25 +12,24 @@
 
 # Optimization specific:  
 
-# Assumptions, the environment for running this notebook was arrived at by building a dedicated docker file.
-#
-# https://cloud.docker.com/repository/registry-1.docker.io/russelljarvis/nuo
-# or more recently:
-# https://cloud.docker.com/u/russelljarvis/repository/docker/russelljarvis/network_unit_opt
-# You can run use dockerhub to get the appropriate file, and launch this notebook using Kitematic.
+ Assumptions, the environment for running this notebook was arrived at by building a dedicated docker file.
+
+ https://cloud.docker.com/repository/registry-1.docker.io/russelljarvis/nuo
+ or more recently:
+ https://cloud.docker.com/u/russelljarvis/repository/docker/russelljarvis/network_unit_opt
+ You can run use dockerhub to get the appropriate file, and launch this notebook using Kitematic.
 
 # # Import libraries
-# To keep the standard running version of minimal and memory efficient, not all available packages are loaded by default. In the cell below I import a mixture common python modules, and custom developed modules associated with NeuronUnit (NU) development
+To keep the standard running version of minimal and memory efficient, not all available packages are loaded by default. In the cell below I import a mixture common python modules, and custom developed modules associated with NeuronUnit (NU) development
 #!pip install dask distributed seaborn
 #!bash after_install.sh
 
 
 # goals.
-# given https://www.nature.com/articles/nn1352
-# Goal is based on this. Don't optimize to a singular point, optimize onto a cluster.
-# Golowasch, J., Goldman, M., Abbott, L.F, and Marder, E. (2002)
-# Failure of averaging in the construction
-# of conductance-based neuron models. J. Neurophysiol., 87: 11291131.
+given https://www.nature.com/articles/nn1352
+Goal is based on this. Don't optimize to a singular point, optimize onto a cluster.
+Golowasch, J., Goldman, M., Abbott, L.F, and Marder, E. (2002)
+ Failure of averaging in the construction of conductance-based neuron models. J. Neurophysiol., 87: 11291131.
 
 
 # Concept:
@@ -84,10 +84,6 @@ score.plot(rd['v'],rd['i_pred'],same_fig=True,color='r',label='Predicted (model)
 ```
 ![png](https://raw.githubusercontent.com/scidash/assets/master/figures/SCU_IVCurve_Model_6_0.png)
 
-# Open Data
-This is a code repository, some open data used by these notebooks, and intermediate files live at a data repository hosted at the [Open Science FrameWork](https://osf.io/bxc3g/files/):
-
-
 ```
 score.summarize()
 """ OUTPUT:
@@ -121,7 +117,7 @@ reference_data = neuroelectro.NeuroElectroSummary(
 reference_data.get_values()
 vm_test = tests.RestingPotentialTest(
                 observation = {'mean':reference_data.mean,
-                               'std':reference_data.std},
+                               'sd':reference_data.std},
                 name = 'Resting Potential')
 
 # Specify reference data for a test of action potential width.
@@ -132,7 +128,7 @@ reference_data = neuroelectro.NeuroElectroSummary(
 reference_data.get_values()
 spikewidth_test = tests.InjectedCurrentAPWidthTest(
                 observation = {'mean':reference_data.mean,
-                               'std':reference_data.std},
+                               'sd':reference_data.std},
                 name = 'Spike Width',
                 params={'injected_square_current':{'amplitude':5.3*pq.pA,
                                                    'delay':50.0*pq.ms,
@@ -234,7 +230,7 @@ class ToyAveragePotentialTest(sciunit.Test):
 	"""Tests the average membrane potential of a neuron."""
 
 	def __init__(self,
-			     observation={'mean':None,'std':None},
+			     observation={'mean':None,'sd':None},
 			     name="Average potential test"):
 		"""Takes the mean and standard deviation of reference membrane potentials."""
 
@@ -250,10 +246,10 @@ class ToyAveragePotentialTest(sciunit.Test):
 	    reference data has the right form"""
 		try:
 			assert type(observation['mean']) is quantities.Quantity # From the 'quantities' package
-			assert type(observation['std']) is quantities.Quantity
+			assert type(observation['sd']) is quantities.Quantity
 		except Exception as e:
 			raise sciunit.ObservationError(("Observation must be of the form "
-									"{'mean':float*mV,'std':float*mV}"))
+									"{'mean':float*mV,'sd':float*mV}"))
 
 	def generate_prediction(self, model):
 		"""Implementation of sciunit.Test.generate_prediction."""
@@ -275,7 +271,7 @@ The test constructor takes an observation to parameterize the test, e.g.:
 ```python
 from quantities import mV
 my_observation = {'mean':-60.0*mV,
-                  'std':3.5*mV}
+                  'sd':3.5*mV}
 my_average_potential_test = ToyAveragePotentialTest(my_observation, name='my_average_potential_test')
 ```
 
@@ -310,3 +306,6 @@ score.describe()
 The score was computed according to 'the difference of the predicted and observed means divided by the observed standard deviation' with raw value 1.0
 '''
 ```
+
+## Reproducible Research ID
+RRID:[SCR_015634](https://scicrunch.org/scicrunch/Resources/record/nlx_144509-1/c70f9dfd-0fc6-5052-9d90-a571c2ebea2e/search)

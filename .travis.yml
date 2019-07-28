@@ -2,19 +2,13 @@
 # https://conda.io/docs/travis.html               ####
 language: python
 python:
-  # We don't actually use the Travis Python, but this keeps it organized.
-  - "2.7"
   - "3.5"
   - "3.6"
 install:
   - sudo apt-get update
   # We do this conditionally because it saves us some downloading if the
   # version is the same.
-  - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-      wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
-    else
-      wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-    fi
+    wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
@@ -22,13 +16,17 @@ install:
   - conda update -q conda
   # Useful for debugging any issues with conda
   - conda info -a
-  - pip install --no-cache-dir -r requirements.txt . 
+  - pip install -U pip
+  - pip install .
   - pip install coveralls
+  - pip3 install -e git+https://github.com/fun-zoological-computing/AllenSDK
+  - pip3 install -e git+https://github.com/scidash/sciunit@dev
+  - pip3 install dask distributed brian2 numba
+  - sudo pip3 install --upgrade beautifulsoup4
 ######################################################
 
-script: 
-  - export NC_HOME='.' # NeuroConstruct isn't used but tests need this
-                       # variable set to pass.  
-  - sh test.sh  
+script:
+  
+  - sh test.sh
 after_success:
   - coveralls

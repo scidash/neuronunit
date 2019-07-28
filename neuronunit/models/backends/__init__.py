@@ -1,37 +1,50 @@
-import inspect
+"""Neuronunit-specific model backends."""
 
+import inspect
+import warnings
+
+import sciunit.models.backends as su_backends
+from sciunit.utils import PLATFORM, PYTHON_MAJOR_VERSION
 from .base import Backend
 
-try:
-    from .jNeuroML import jNeuroMLBackend
-except:
-    print('Error in jNeuroMLBackend')
+warnings.filterwarnings('ignore', message='nested set')
+warnings.filterwarnings('ignore', message='mpi4py')
+def heavy_backends():
+    try:
+        from .jNeuroML import jNeuroMLBackend
+    except:
+        print('Error in jNeuroMLBackend')
 
-try:
-    from .neuron import NEURONBackend
-except Exception as e:
-    import pdb
-    print('Silent Error eminating from NEURON syntax')
+    try:
+        from .neuron import NEURONBackend
+    except ImportError:
+        NEURONBackend = None
+        print('Could not load NEURONBackend')
+    try:
+        from .general_pyNN import PYNNBackend
+    except Exception as e:
+        print('pynn python Error')
+
 
     #pdb.set_trace()
 try:
     from .rawpy import RAWBackend
-except Exception as e:
-    print('raw python Error')
+except ImportError:
+    RAWBackend = None
+    print('Could not load RAWBackend.')
+
 try:
     from .hhrawf import HHBackend
-except Exception as e:
-    print('HH python Error')
+except ImportError:
+    HHBackend = None
+    print('Could not load HHBackend.')
+
+
 
 try:
     from .glif import GLIFBackend
 except Exception as e:
     print('glif python Error')
-
-try:
-    from .general_pyNN import PYNNBackend
-except Exception as e:
-    print('pynn python Error')
 
 try:
     from .badexp import ADEXPBackend
@@ -46,9 +59,9 @@ available_backends = {x.replace('Backend',''):cls for x, cls \
                    issubclass(cls, Backend)}
 
 
+available_backends = {x.replace('Backend', ''): cls for x, cls
+                      in locals().items()
+                      if inspect.isclass(cls) and
+                      issubclass(cls, Backend)}
 
-
-# try:
-#    from .external import ExternalSim
-# except Exception as e:
-#    print('External sim python Error')
+su_backends.register_backends(locals())

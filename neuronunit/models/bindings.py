@@ -1,42 +1,44 @@
 import io
 import math
 import pdb
-#from numba import jit
-from contextlib import redirect_stdout
-import numpy as np
-#from .base import *
-import quantities as qt
-from quantities import mV, ms, s
-import matplotlib.pyplot as plt
-from pyNN.neuron import *
-from pyNN.neuron import HH_cond_exp
-from pyNN.neuron import EIF_cond_exp_isfa_ista
-from pyNN.neuron import Izhikevich
-from elephant.spike_train_generation import threshold_detection
-
-from pyNN import neuron
-#
-#from pyNN.neuron import simulator as sim
-from pyNN.neuron import setup as setup
-#from pyNN.neuron import Izhikevich
-#from pyNN.neuron import Population
-from pyNN.neuron import DCSource
-import numpy as np
 import copy
-from neo import AnalogSignal
-import neuronunit.capabilities.spike_functions as sf
 from types import MethodType
 
+
+import numpy as np
+import quantities as pq
+import matplotlib.pyplot as plt
+
+from elephant.spike_train_generation import threshold_detection
+from neo import AnalogSignal
+try:
+    from pyNN.neuron import HH_cond_exp
+    from pyNN.neuron import EIF_cond_exp_isfa_ista
+    import pyNN.neuron as pn
+    from pyNN.neuron import setup as setup
+    from pyNN.neuron import DCSource
+    pyNN_NEURON = True
+except (ImportError, AttributeError):
+    print("Error loading pyNN.neuron")
+    pyNN_NEURON = False
+
+from sciunit.utils import redirect_stdout
+import neuronunit.capabilities.spike_functions as sf
+<<<<<<< HEAD
+from types import MethodType
+
+=======
+>>>>>>> 51529ae8e9a02874e8b1d050bb812f2aec8d41d9
 import neuronunit.capabilities as cap
-cap.ReceivesCurrent
-cap.ProducesActionPotentials
+
+
 def bind_NU_interface(model):
 
     def load_model(self):
         neuron = None
         from pyNN import neuron
         self.hhcell = neuron.create(EIF_cond_exp_isfa_ista())
-        neuron.setup(timestep=self.dt, min_delay=1.0)
+        pn.setup(timestep=self.dt, min_delay=1.0)
 
 
     def init_backend(self, attrs = None, cell_name= 'HH_cond_exp', current_src_name = 'hannah', DTC = None, dt=0.01):
@@ -51,7 +53,7 @@ def bind_NU_interface(model):
         self.related_data = {}
         self.lookup = {}
         self.attrs = {}
-        self.neuron = neuron
+        self.neuron = pn
         self.model._backend = self
         self.backend = self
         self.model.attrs = {}
@@ -89,7 +91,7 @@ def bind_NU_interface(model):
             self.hhcell.record('spikes','v')
 
         else:
-            self.neuron.record_v(self.hhcell, "Results/HH_cond_exp_%s.v" % str(neuron))
+            self.neuron.record_v(self.hhcell, "Results/HH_cond_exp_%s.v" % str(pn))
 
             #self.neuron.record_gsyn(self.hhcell, "Results/HH_cond_exp_%s.gsyn" % str(neuron))
         self.neuron.run(DURATION)
@@ -98,8 +100,8 @@ def bind_NU_interface(model):
         #data_block = all_cells.get_data()
 
         vm = AnalogSignal(volts,
-                     units = mV,
-                     sampling_period = self.dt *ms)
+                     units = pq.mV,
+                     sampling_period = self.dt*pq.ms)
         results['vm'] = vm
         results['t'] = vm.times # self.times
         results['run_number'] = results.get('run_number',0) + 1
@@ -116,8 +118,8 @@ def bind_NU_interface(model):
 
 
         vm = AnalogSignal(volts,
-             units = mV,
-             sampling_period = self.dt *ms)
+             units = pq.mV,
+             sampling_period = self.dt*pq.ms)
 
         return vm
 
@@ -152,19 +154,19 @@ def bind_NU_interface(model):
 
     def get_APs(self,vm):
         vm = self.get_membrane_potential()
-        waveforms = sf.get_spike_waveforms(vm,threshold=-45.0*mV)
+        waveforms = sf.get_spike_waveforms(vm,threshold=-45.0*pq.mV)
         return waveforms
 
     def get_spike_train(self,**run_params):
         vm = self.get_membrane_potential()
 
-        spike_train = threshold_detection(vm,threshold=-45.0*mV)
+        spike_train = threshold_detection(vm,threshold=-45.0*pq.mV)
 
         return spike_train
 
     def get_spike_count(self,**run_params):
         vm = self.get_membrane_potential()
-        return len(threshold_detection(vm,threshold=-45.0*mV))
+        return len(threshold_detection(vm,threshold=-45.0*pq.mV))
 
     model.init_backend = MethodType(init_backend,model)
     model.get_spike_count = MethodType(get_spike_count,model)
@@ -180,5 +182,6 @@ def bind_NU_interface(model):
     #model.load_model() #= MethodType(load_model, model) # Bind to the score.
 
     return model
-HH_cond_exp = bind_NU_interface(HH_cond_exp)
-#HH_cond_exp
+
+if pyNN_NEURON:
+    HH_cond_exp = bind_NU_interface(HH_cond_exp)
