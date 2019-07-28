@@ -3,9 +3,14 @@ matplotlib>=2.0
 neo==0.5.2
 elephant==0.4.1
 igor==0.3
-allensdk==0.14.2
-pyNeuroML>-0.3.10
+allensdk==0.14.5
 pyNN>=0.9
 execnet
 backports.tempfile
--e git+https://github.com/scidash/sciunit.git@dev#egg=sciunit
+lmfit
+numba
+dask[complete]
+deap
+# sciunit @ git+https://github.com/scidash/sciunit@dev#egg=sciunit-9999
+# pyNeuroML @ git+https://github.com/rgerkin/pyneuroml@master#egg=pyneuroml-9999
+# bluepyopt @ git+https://github.com/russelljjarvis/BluePyOpt@scidash#egg=bluepyopt-9999
