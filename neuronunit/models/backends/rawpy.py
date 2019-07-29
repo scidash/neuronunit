@@ -15,7 +15,7 @@ import numpy
 
 #import matplotlib.pyplot as plt
 # @jit(cache=True) I suspect this causes a memory leak
-from numba import vectorize, cuda
+from numba import jit
 # @cuda.jit(device=True, cache=True)
 
 @jit
@@ -124,17 +124,17 @@ class RAWBackend(Backend):
         tMax = delay + duration + 200.0#/dt#*pq.ms
         self.set_stop_time(tMax*pq.ms)
         tMax = self.tstop
-	attrs['dt'] = DT
+        attrs['dt'] = DT
         N = int(tMax/attrs['dt'])
         Iext = np.zeros(N)
         delay_ind = int((delay/tMax)*N)
         duration_ind = int((duration/tMax)*N)
-	try:
-        	Iext = [ 0.0 ] * int(ALLEN_ONSET) + [ amplitude ] * int(ALLEN_STOP) + [ 0.0 ] * int(ALLEN_FINISH)
-	except:        
-		Iext[0:delay_ind-1] = 0.0
-		Iext[delay_ind:delay_ind+duration_ind-1] = amplitude
-		Iext[delay_ind+duration_ind::] = 0.0
+        try:
+            Iext = [ 0.0 ] * int(ALLEN_ONSET) + [ amplitude ] * int(ALLEN_STOP) + [ 0.0 ] * int(ALLEN_FINISH)
+        except:        
+            Iext[0:delay_ind-1] = 0.0
+            Iext[delay_ind:delay_ind+duration_ind-1] = amplitude
+            Iext[delay_ind+duration_ind::] = 0.0
         attrs['Iext'] = Iext
         v = get_vm(**attrs)
         self.vM = AnalogSignal(v,

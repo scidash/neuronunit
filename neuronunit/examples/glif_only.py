@@ -10,27 +10,8 @@ from hide_imports import *
 # In[2]:
 
 
-with open('../gcm.p','rb') as f:
+with open('gcm.p','rb') as f:
     glif_params = pickle.load(f)
-#flat_iter = [ mp.pop(list(mp.keys())[0]) for mp in glif_params ]
-#new_flat_iter = [(k,v) for fi in flat_iter for k,v in fi.items() ]
-'''
-glif_range = {}
-for k,v in new_flat_iter:
-    glif_range[k] = [v,v]
-for k,v in new_flat_iter:
-    if isinstance(v,dict) and not isinstance(v,type(None)) and not isinstance(v,list):
-        if v<glif_range[k][0]:
-            glif_range[k][0] = v
-        if v>glif_range[k][1]:
-            glif_range[k][1] = v
-    else:
-        glif_range[k] = v
-'''
-#new_flat_iter
-
-
-# In[3]:
 
 
 for k,v in rts.items():
