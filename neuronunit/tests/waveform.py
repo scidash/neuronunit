@@ -26,13 +26,14 @@ class APWidthTest(VmTest):
         # if get_spike_count is zero, then widths will be None
         # len of None returns an exception that is not handled
         model.inject_square_current(self.params['injected_square_current'])
-
-        widths = model.get_AP_widths()
-        # Put prediction in a form that compute_score() can use.
-        prediction = {'mean': np.mean(widths) if len(widths) else None,
+        try:
+            widths = model.get_AP_widths()
+            # Put prediction in a form that compute_score() can use.
+            prediction = {'mean': np.mean(widths) if len(widths) else None,
                       'std': np.std(widths) if len(widths) else None,
                       'n': len(widths)}
-
+        except:
+            prediction = None
         return prediction
 
     def compute_score(self, observation, prediction):
@@ -100,12 +101,28 @@ class APAmplitudeTest(VmTest):
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
         model.inject_square_current(self.params['injected_square_current'])
+        
+        try:
+            #print('bug in quantities',model.get_AP_amplitudes(),model.get_AP_thresholds())
+            #heights = np.abs(model.get_AP_amplitudes() - model.get_AP_thresholds())
+            #print('heights:',heights)
+            #print('min and max',float(np.min(model.get_membrane_potential())),np.max(model.get_membrane_potential()))
+            height = np.max(model.get_membrane_potential()) -float(np.min(model.get_membrane_potential()))/1000.0*model.get_membrane_potential().units #- model.get_AP_thresholds()
+            print(height)
+            prediction = {'mean':height, 'n':1, 'std':height}
+            #prediction = {'mean': np.mean(heights) if len(heights) else None,
+            #              'std': np.std(heights) if len(heights) else None,
+            #             'n': len(heights)}
 
-        heights = model.get_AP_amplitudes() - model.get_AP_thresholds()
+        except:
+            #print(model.get_AP_amplitudes(),model.get_AP_thresholds())
+            prediction = {'mean': None,
+                          'std': None,
+                          'n': 0}
+
+            #import pdb
+            #pdb.set_trace()
         # Put prediction in a form that compute_score() can use.
-        prediction = {'mean': np.mean(heights) if len(heights) else None,
-                      'std': np.std(heights) if len(heights) else None,
-                      'n': len(heights)}
         return prediction
 
     def compute_score(self, observation, prediction):
@@ -166,12 +183,19 @@ class APThresholdTest(VmTest):
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
         model.inject_square_current(self.params['injected_square_current'])
+        try:
+            threshes = model.get_AP_thresholds()
+        except:
+            threshes = None
+        if type(threshes) is not type(None):
+            prediction = {'mean': np.mean(threshes) if len(threshes) else None,
+                          'std': np.std(threshes) if len(threshes) else None,
+                          'n': len(threshes) if len(threshes) else 0 }
+        else:
+            prediction = {'mean':  None,
+                          'std':  None,
+                          'n': 0 }
 
-        threshes = model.get_AP_thresholds()
-        # Put prediction in a form that compute_score() can use.
-        prediction = {'mean': np.mean(threshes) if len(threshes) else None,
-                      'std': np.std(threshes) if len(threshes) else None,
-                      'n': len(threshes)}
         return prediction
 
     def compute_score(self, observation, prediction):

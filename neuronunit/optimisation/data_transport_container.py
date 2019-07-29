@@ -1,4 +1,8 @@
 import numpy as np
+#from neuronunit.optimisation.optimisation_management import mint_generic_model
+from neuronunit.models import VeryReducedModel
+from sciunit.models.runnable import RunnableModel
+
 class DataTC(object):
     '''
     Data Transport Container
@@ -48,3 +52,19 @@ class DataTC(object):
         if self.constants is not None:
             self.attrs.update(self.constants)
         return #self.attrs
+
+    def dtc_to_model(self):
+        model = RunnableModel(str(self.backend),backend=self.backend,attrs=self.attrs)
+        model = RunnableModel(str(self.backend),backend=(self.backend, {'DTC':self}))
+
+        # If  test taking data, and objects are present (observations etc).
+        # Take the rheobase test and store it in the data transport container.
+        if not hasattr(self,'scores'):
+            self.scores = None
+        if type(self.scores) is type(None):
+            self.scores = {}
+        model.attrs=self.attrs
+        model.scores=self.scores
+        # model = mint_generic_model(dtc.backend)
+        # model.attrs = self.attrs
+        return model

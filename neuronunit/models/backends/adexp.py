@@ -10,9 +10,8 @@ mpl.use('Agg')
 import brian2 as b2
 from neurodynex.adex_model import AdEx
 from neurodynex.tools import plot_tools, input_factory
-
-
-
+from brian2 import NeuronGroup, StateMonitor, SpikeMonitor, run
+'''
 # Parameters
 C = 281 * pF
 gL = 30 * nS
@@ -27,17 +26,6 @@ tauw, a, b, Vr = 144*ms, 4*nS, 0.0805*nA, -70.6*mV # Regular spiking (as in the 
 #tauw,a,b,Vr=20*ms,4*nS,0.5*nA,VT+5*mV # Bursting
 #tauw,a,b,Vr=144*ms,2*C/(144*ms),0*nA,-70.6*mV # Fast spiking
 
-['ADAPTATION_TIME_CONSTANT_tau_w',
-'ADAPTATION_VOLTAGE_COUPLING_a',
-'FIRING_THRESHOLD_v_spike',
-'MEMBRANE_RESISTANCE_R',
-'MEMBRANE_TIME_SCALE_tau_m',
-'RHEOBASE_THRESHOLD_v_rh',
-'SHARPNESS_delta_T',
-'SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b',
-'V_RESET']
-from brian2 import NeuronGroup, StateMonitor, SpikeMonitor
-'''
 
 eqs = """
 dvm/dt = (gL*(EL - vm) + gL*DeltaT*exp((vm - VT)/DeltaT) + I - w)/C : volt
@@ -120,7 +108,7 @@ class BRIANADEXPBackend(Backend):
              sampling_period = self.dt *ms)
 
         return vm
-
+    '''
     def _local_run(self):
         '''
         '''
@@ -136,8 +124,8 @@ class BRIANADEXPBackend(Backend):
             plt.clf()
             plt.plot(vm.times,vm)
             plt.savefig('debug_ad_exp.png')
-        return results
-
+        return results  
+    '''	
     def load_model(self):
         neuron.setup(timestep=0.01, min_delay=1.0)
         #self.eif = neuron.Population(1,EIF_cond_exp_isfa_ista())
@@ -167,6 +155,11 @@ class BRIANADEXPBackend(Backend):
         self.tstop = float(stop_time.rescale(pq.ms))
 
 
+
+        #current = input_factory.get_step_current(delay, duration, 1. * b2.ms, amplitude * b2.pA)
+        #state_monitor, spike_monitor = self.AdEx.simulate_AdEx_neuron(I_stim=current, simulation_time=(duration+delay)* b2.ms)
+
+
     def inject_square_current(self, current):
 
         #plot_tools.plot_voltage_and_current_traces(state_monitor, current)
@@ -178,12 +171,31 @@ class BRIANADEXPBackend(Backend):
         if 'injected_square_current' in c.keys():
             c = current['injected_square_current']
 
-        stop = float(c['delay'])+float(c['duration'])
-        duration = float(c['duration'])
-        start = float(c['delay'])
-        amplitude = float(c['amplitude']/1000.0)#*1000.0#*10000.0
-        current = input_factory.get_step_current(start, duration, 1. * b2.ms, amplitude * b2.pA)
-        state_monitor, spike_monitor = AdEx.simulate_AdEx_neuron(I_stim=current, simulation_time=stop * b2.ms)
+        amplitude = float(c['amplitude'])
+        duration = int(c['duration'])#/dt#/dt.rescale('ms')
+        delay = int(c['delay'])#/dt#.rescale('ms')
 
-        self.results = self._local_run()
-        self.vm = self.results['vm']
+        current = input_factory.get_step_current(delay, duration, 1. * b2.ms, amplitude * b2.pA)
+        state_monitor, spike_monitor = self.AdEx.simulate_AdEx_neuron(I_stim=current, simulation_time=(duration+delay)* b2.ms)
+
+        self.vM = AnalogSignal(state_monitor.get_states()['v'],
+                     units = mV,
+                     sampling_period = dt * ms)
+        self.attrs = attrs
+        if self.debug == True:
+            plt.plot(self.vM.times,self.vM)
+            plt.savefig('izhi_debug.png')
+        return self.vM
+
+    def _local_run(self):
+        results = {}
+        if self.vM is None:
+            v = get_vm(**attrs)
+            v = np.divide(v, 1000.0)
+            self.vM = AnalogSignal(v,
+                         units = mV,
+                         sampling_period = dt * ms)
+        results['vm'] = self.vM
+        results['t'] = self.vM.times
+        results['run_number'] = results.get('run_number',0) + 1
+        return results

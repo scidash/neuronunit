@@ -1,10 +1,17 @@
 # Obtains the cell threshold, rheobase, resting v, and bias currents for
 # steady state v of a cell defined in a hoc file in the given directory.
 # Usage: python getCellProperties /path/To/dir/with/.hoc
+<<<<<<< HEAD
 #from neuronunit.tests.druckmann2013 import *
 try:
     import cPickle
 except:
+=======
+
+try:  # Python 2
+    import cPickle
+except ImportError:  # Python 3
+>>>>>>> 51529ae8e9a02874e8b1d050bb812f2aec8d41d9
     import _pickle as cPickle
 import csv
 import json
@@ -14,12 +21,19 @@ import shutil
 import string
 import urllib
 from abc import abstractmethod, ABCMeta
+<<<<<<< HEAD
 #from decimal import Decimal
 #import nmldbutils
+=======
+from decimal import Decimal
+>>>>>>> 51529ae8e9a02874e8b1d050bb812f2aec8d41d9
 import inspect
+import multiprocessing
+cpus = multiprocessing.cpu_count
 
 import numpy as np
 from matplotlib import pyplot as plt
+<<<<<<< HEAD
 #from sklearn.decomposition import PCA
 
 #from collector import Collector
@@ -60,7 +74,7 @@ except:
             url = str("https://neuroml-db.org/api/waveform?id=")+str(wid)
             waves = requests.get(url)
             temp = json.loads(waves.text)
-            if temp['Spikes'] == 1:
+            if temp['Spikes'] >= 1:
                 if 'NOISE' in temp['Protocol_ID']:
                     print((temp['Waveform_Label']))
 
@@ -276,6 +290,26 @@ def run_cell():
 
 
 class CellModel():
+=======
+try:
+    from playhouse.db_url import connect
+    from sshtunnel import SSHTunnelForwarder
+    from collector import Collector
+    from neuronrunner import NeuronRunner, NumericalInstabilityException
+    from sklearn.decomposition import PCA
+    from runtimer import RunTimer
+    from tables import Cells, Model_Waveforms, Morphometrics, Cell_Morphometrics, db_proxy, Models
+    from nmldbmodel import NMLDB_Model
+except:  # Hack to allow import to occur so unit tests can pass
+    print("Many modules required by `cellmodelp` not found")
+    NMLDB_Model = object
+import dask.bag as db # a pip installable module, usually installs without complication
+import dask
+
+from neuronunit.tests.druckmann2013 import *
+
+class CellModel(NMLDB_Model):
+>>>>>>> 51529ae8e9a02874e8b1d050bb812f2aec8d41d9
     def __init__(self, *args, **kwargs):
         super(CellModel, self).__init__(*args, **kwargs)
 
@@ -1072,7 +1106,10 @@ class CellModel():
             return
 
         import sciunit, neuronunit, quantities
+<<<<<<< HEAD
 
+=======
+>>>>>>> 51529ae8e9a02874e8b1d050bb812f2aec8d41d9
         from neuronunit.neuromldb import NeuroMLDBStaticModel
 
         model = NeuroMLDBStaticModel(self.get_model_nml_id())

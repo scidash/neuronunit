@@ -34,7 +34,9 @@ class LEMSModel(RunnableModel):
         super(LEMSModel, self).__init__(name, backend=backend, attrs=attrs)
         self.set_default_run_params(**pynml.DEFAULTS)
         self.set_default_run_params(nogui=True)
-        self.extra_capability_checks[cap.ReceivesSquareCurrent] =\
+        if type(self.extra_capability_checks) is type(None):
+            self.extra_capability_checks = {}
+            self.extra_capability_checks[cap.ReceivesSquareCurrent] =\
             'has_pulse_generator'
 
     def get_nml_paths(self, lems_tree=None, absolute=True, original=False):

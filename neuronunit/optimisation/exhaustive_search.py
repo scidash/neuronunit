@@ -128,8 +128,10 @@ def update_dtc_grid(item_of_iter_list):
     dtc.scores = {}
     dtc.rheobase = None
     dtc.evaluated = False
-    dtc.backend = 'NEURON'
+    print(dtc)
+    #dtc.backend = 'NEURON'
     return dtc
+
 def create_a_map(subset):
     maps = {}
     for k,v in subset.items():
@@ -139,7 +141,11 @@ def create_a_map(subset):
     return maps
 
 def create_grid(mp_in = None, npoints = 2, free_params = None, ga = None):
-    grid = ParameterGrid(mp_in)
+    print(mp_in)
+    try:
+        grid = ParameterGrid(mp_in)
+    except:
+        grid = ParameterGrid(free_params)
     return grid
     '''
     check for overlap in parameter space.

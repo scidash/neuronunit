@@ -1,40 +1,6 @@
-# Allen Institute Software License - This software license is the 2-clause BSD
-# license plus a third clause that prohibits redistribution for commercial
-# purposes without further permission.
-#
-# Copyright 2017. Allen Institute. All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-# 1. Redistributions of source code must retain the above copyright notice,
-# this list of conditions and the following disclaimer.
-#
-# 2. Redistributions in binary form must reproduce the above copyright notice,
-# this list of conditions and the following disclaimer in the documentation
-# and/or other materials provided with the distribution.
-#
-# 3. Redistributions for commercial purposes are not permitted without the
-# Allen Institute's written permission.
-# For purposes of this license, commercial purposes is the incorporation of the
-# Allen Institute's software into anything for which you will charge fees or
-# other compensation. Contact terms@alleninstitute.org for commercial licensing
-# opportunities.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
-#
-from ..biophys_sim.config import Config
-from .utils import create_utils
+
+from allensdk.model.biophys_sim.config import Config
+from allensdk.model.biophysical.utils import create_utils
 from allensdk.core.nwb_data_set import NwbDataSet
 import allensdk.ephys.extract_cell_features as extract_cell_features
 from shutil import copy
@@ -45,15 +11,178 @@ import os
 import multiprocessing as mp
 from functools import partial
 
+import asciiplotlib as apl
+import io
+import math
+import pdb
+#from numba import jit
+
+import numpy as np
+from .base import *
+import quantities as qt
+from quantities import mV, ms, s, us, ns
+import matplotlib as mpl
 _runner_log = logging.getLogger('allensdk.model.biophysical.runner')
-
 _lock = None
-
 def _init_lock(lock):
     global _lock
     _lock = lock
+_runner_log.info = print
 
-def run(description, sweeps=None, procs=6):
+
+class ALLENBIOBackend(Backend):
+    def init_backend(self, attrs=None, cell_name='allen_full_bio',
+                     current_src_name='spanner', DTC=None,
+                     debug = False):
+        backend = 'allenbio'
+        super(ALLENBIOBackend,self).init_backend()
+        self.name = str(backend)
+
+        #self.threshold = -20.0*qt.mV
+        self.debug = None
+        self.model._backend.use_memory_cache = False
+        self.current_src_name = current_src_name
+        self.cell_name = cell_name
+        self.vM = None
+        self.attrs = attrs
+        self.debug = debug
+        self.temp_attrs = None
+        self.n_spikes = None
+        self.spike_monitor = None
+
+
+        self.model.get_spike_count = self.get_spike_count
+
+
+        if type(attrs) is not type(None):
+            self.set_attrs(**attrs)
+            self.sim_attrs = attrs
+
+        if type(DTC) is not type(None):
+            if type(DTC.attrs) is not type(None):
+                self.set_attrs(**DTC.attrs)
+            if hasattr(DTC,'current_src_name'):
+                self._current_src_name = DTC.current_src_name
+            if hasattr(DTC,'cell_name'):
+                self.cell_name = DTC.cell_name
+
+
+    def get_membrane_potential(self):
+        recorded_data = utils.get_recorded_data(vec)
+
+
+
+        #vm = [ float(i) for i in vm ]
+        dt = recorded_data["t"][1] - recorded_data["t"][0]
+        self.vM = AnalogSignal(recorded_data["v"],units = mV,sampling_period = dt * pq.ms)
+
+        fig = apl.figure()
+        fig.plot(t, v, label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
+        fig.show()
+
+    def inject_square_current(self, current):#, section = None, debug=False):
+        """Inputs: current : a dictionary with exactly three items, whose keys are: 'amplitude', 'delay', 'duration'
+        Example: current = {'amplitude':float*pq.pA, 'delay':float*pq.ms, 'duration':float*pq.ms}}
+        where \'pq\' is a physical unit representation, implemented by casting float values to the quanitities \'type\'.
+        Description: A parameterized means of applying current injection into defined
+        Currently only single section neuronal models are supported, the neurite section is understood to be simply the soma.
+
+        """
+
+        attrs = copy.copy(self.model.attrs)
+        self.set_attrs(**attrs)
+
+        utils = create_utils(description)
+
+        h = utils.h
+
+        # configure model
+        manifest = description.manifest
+        morphology_path = description.manifest.get_path('MORPHOLOGY')
+
+        try:
+            utils.generate_morphology(morphology_path)
+        except:
+            utils.generate_morphology(morphology_path.encode('ascii', 'ignore'))
+
+        utils.load_cell_parameters()
+        # configure stimulus and recording
+        stimulus_path = description.manifest.get_path('stimulus_path')
+        run_params = description.data['runs'][0]
+        if sweeps is None:
+            sweeps = run_params['sweeps']
+        try:
+            sweeps_by_type = run_params['sweeps_by_type']
+        except:
+            pass
+        output_path = manifest.get_path("output_path")
+
+        sweep = sweeps
+        _runner_log.info("Loading sweep: %d" % (sweep))
+
+
+        if 'injected_square_current' in current.keys():
+            c = current['injected_square_current'];
+        else:
+            c = current
+        amplitude = float(c['amplitude'])#*1000.0
+        duration = int(c['duration'])#/dt#/dt.rescale('ms')
+        delay = int(c['delay'])#/dt#.rescale('ms')
+        pre_current = int(duration)+100
+        stim_curr = [ 0.0 ] * int(start) + [ amplitude ] * int(duration) + [ 0.0 ] * int(stop)
+        utils.setup_iclamp()
+
+        # configure NEURON
+
+        utils.setup_iclamp(stimulus_path, sweep=sweep)
+
+        _runner_log.info("Simulating sweep: %d" % (sweep))
+        vec = utils.record_values()
+        tstart = time.time()
+        h.finitialize()
+        h.run()
+        tstop = time.time()
+        _runner_log.info("Time: %f" % (tstop - tstart))
+
+        # write to an NWB File
+        _runner_log.info("Writing sweep: %d" % (sweep))
+        recorded_data = utils.get_recorded_data(vec)
+
+
+
+        #vm = [ float(i) for i in vm ]
+        dt = recorded_data["t"][1] - recorded_data["t"][0]
+        self.vM = AnalogSignal(recorded_data["v"],units = mV,sampling_period = dt * pq.ms)
+
+        fig = apl.figure()
+        fig.plot(t, v, label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
+        fig.show()
+        return self.vM
+
+    def set_attrs():
+        seclist = utils.description.data['genome']
+        for seclist in utils.description.data['genome']:
+            for key,value in seclist.items():
+                print(key,value)
+        for p in utils.description.data['passive']:
+            for k,v in p.items():
+                print(k,v)
+
+    def get_raw_mp(self):
+        t = [float(f) for f in self.vM.times]
+        v = [float(f) for f in self.vM.magnitude]
+
+    def _backend_run(self):
+        results = None
+        results = {}
+
+        results['vm'] = self.vM
+
+        results['t'] = self.vM.times
+        results['run_number'] = results.get('run_number',0) + 1
+        return results
+
+def run(description, sweeps=None, procs=6,swn = 0):
     '''Main function for simulating sweeps in a biophysical experiment.
 
     Parameters
@@ -67,28 +196,32 @@ def run(description, sweeps=None, procs=6):
     '''
 
     prepare_nwb_output(description.manifest.get_path('stimulus_path'))
-    #                   description.manifest.get_path('output_path'))
-    # import pdb
-    # pdb.set_trace()
-        
-    if procs == True:
-        run_sync(description, sweeps)
-        return
+
 
     if sweeps is None:
         stimulus_path = description.manifest.get_path('stimulus_path')
         run_params = description.data['runs'][0]
         sweeps = run_params['sweeps']
 
-    #lock = mp.Lock()
-    #pool = mp.Pool(procs, initializer=_init_lock, initargs=(lock,))
-    #lesser = [sweeps[0],sweeps[-1]]
-    #pool.map(partial(run_sync, description), [[sweep] for sweep in lesser])
-    (vm,times) = run_sync(description,sweeps[0])
-    #pool.close()
-    #pool.join()
-    return (vm,times)
+    (vm,times,wraped) = run_sync(description,sweeps[swn])
+    return (vm,times,wraped)
 
+from neuronunit.tests.allen_tests import allen_format 
+
+def examination(vm,time,wraped):
+    model = pickle.load(open('typical_model.p','rb'))
+    model.vm30 = wraped
+    model.static = None
+    model.static = True
+    size=len(model.vm30)
+    short = vm[0:size]
+    model.vm30 = short
+    #(a,b) = allen_format(np.array([float(v) for v in short]),np.array([float(t) for t in model.vm30.times])
+    #scores = [ judge(model,t) for t in test_collection ]
+    (a,b) = allen_format(np.array([float(v) for v in vm]),np.array([float(t) for t in time]))
+                         
+    return (a,b)
+                         
 def run_sync(description, sweeps=None):
     '''Single-process main function for simulating sweeps in a biophysical experiment.
 
@@ -102,17 +235,13 @@ def run_sync(description, sweeps=None):
 
     # configure NEURON
     utils = create_utils(description)
-    print(utils)
-    print(description)
-    import pdb
-    pdb.set_trace()
+
     h = utils.h
 
     # configure model
     manifest = description.manifest
     morphology_path = description.manifest.get_path('MORPHOLOGY')
-    print(morphology_path)
-    
+
     try:
         utils.generate_morphology(morphology_path)
     except:
@@ -124,24 +253,17 @@ def run_sync(description, sweeps=None):
     run_params = description.data['runs'][0]
     if sweeps is None:
         sweeps = run_params['sweeps']
-    #print(run_params.keys())    
-    # sweeps_by_type = run_params['sweeps_by_type']
-
+    try:
+        sweeps_by_type = run_params['sweeps_by_type']
+    except:
+        pass
     output_path = manifest.get_path("output_path")
-    #import pdb
-    #pdb.set_trace()
-    # run sweeps
-    #lesser = [sweeps[0],sweeps[-1]]
-    #print(len(lesser))
-    
-    #for xi,sweep in enumerate(sweeps):
+
     sweep = sweeps
-    #print('xi: ',xi)
-    _runner_log.info = print
     _runner_log.info("Loading sweep: %d" % (sweep))
 
     utils.setup_iclamp(stimulus_path, sweep=sweep)
-    
+
     _runner_log.info("Simulating sweep: %d" % (sweep))
     vec = utils.record_values()
     tstart = time.time()
@@ -152,19 +274,22 @@ def run_sync(description, sweeps=None):
 
     # write to an NWB File
     _runner_log.info("Writing sweep: %d" % (sweep))
-    print(sweep)
     recorded_data = utils.get_recorded_data(vec)
-        
-    if _lock is not None:
-        _lock.acquire()
-    try:
-        save_nwb(output_path, recorded_data["v"], sweep, sweeps_by_type)
+    dt = recorded_data["t"][1] - recorded_data["t"][0]
+    wraped = AnalogSignal(recorded_data["v"],units = mV,sampling_period = dt * pq.ms)
+    print('gets here \n\n\n\n')
+    try:                     
+        (a,b) = examination(recorded_data["v"],recorded_data["t"],wraped)
+        print('success \n\n\n\n')
+        print(a,b)
+        import pdb
+        pdb.set_trace()
     except:
-        save_nwb(output_path, recorded_data["v"], sweep)
-    print(output_path)
-    if _lock is not None:
-        _lock.release()
-    return (recorded_data["v"],recorded_data["t"])
+        print('fail')
+        #pass
+    return (recorded_data["v"],recorded_data["t"],wraped)
+
+
 
 def prepare_nwb_output(nwb_stimulus_path):
     '''Copy the stimulus file, zero out the recorded voltages and spike times.
@@ -238,4 +363,3 @@ def load_description(manifest_json_path):
     description.fix_unary_sections(fix_sections)
 
     return description
-

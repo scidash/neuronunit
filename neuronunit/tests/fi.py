@@ -127,8 +127,11 @@ class RheobaseTest(VmTest):
                 #current.update(uc)
 
                 model.inject_square_current(uc)
-                n_spikes = model.get_spike_count()
-
+                try:
+                    n_spikes = model._backend.get_spike_count()
+                except:
+                    pdb.set_trace()
+                self.n_spikes = n_spikes
                 if self.verbose >= 2:
                     print("Injected %s current and got %d spikes" % \
                             (ampl,n_spikes))
@@ -158,13 +161,17 @@ class RheobaseTest(VmTest):
 
             if len(supra) and len(sub):
                 delta = float(supra.min()) - float(sub.max())
-                if str("GLIF") in dtc.backend:
-                    tolerance = 0.0
+                #if str("GLIF") in dtc.backend:
+                #tolerance = 0.0
 
                 if delta < tolerance or (str(supra.min()) == str(sub.max())):
+                    #print('break')
+                    #self.n_spike = len()
+
                     break
 
             if i >= max_iters:
+                print('break')
                 break
             #Its this part that should be like an evaluate function that is passed to futures map.
             if len(sub) and len(supra):
@@ -188,7 +195,10 @@ class RheobaseTest(VmTest):
         else:
             score = super(RheobaseTest,self).\
                         compute_score(observation, prediction)
-            #self.bind_score(score,None,observation,prediction)
+
+            #if self.n_spikes > 1:
+            #    score = score*self.n_spikes
+             #self.bind_score(score,None,observation,prediction)
         return score
 
     def bind_score(self, score, model, observation, prediction):
@@ -213,7 +223,7 @@ class RheobaseTestP(VmTest):
 
      """
      def _extra(self):
-         self.verbose = 3
+         self.verbose = 1
 
 
      required_capabilities = (cap.ReceivesSquareCurrent,
@@ -297,8 +307,11 @@ class RheobaseTestP(VmTest):
                 assert type(dtc.current_src_name) is not type(None)
                 dtc.cell_name = model._backend.cell_name
             else:
-                model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
-                m_ = VeryReducedModel(backend=dtc.backend)
+                #model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
+                from sciunit.models.runnable import RunnableModel
+
+                model = RunnableModel(str(dtc.backend),backend=(dtc.backend, {'DTC':dtc}))
+                model = RunnableModel(str(dtc.backend),backend=(dtc.backend, {'DTC':dtc}))
 
             params = {'injected_square_current':
                       {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
@@ -310,8 +323,8 @@ class RheobaseTestP(VmTest):
                 dtc.run_number += 1
                 model.set_attrs(**dtc.attrs)
                 model.inject_square_current(uc)
-                n_spikes = model.get_spike_count()
-                print(n_spikes,'from rheobase')
+                n_spikes = model._backend.get_spike_count()
+                #print(n_spikes,'from rheobase')
 
                 dtc.previous = ampl
 
@@ -391,7 +404,8 @@ class RheobaseTestP(VmTest):
         def find_rheobase(self, dtc):
             # This line should not be necessary:
             # a class, VeryReducedModel has been made to circumvent this.
-            assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
+            if hasattr(dtc,'model_path'):
+                assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
             # If this it not the first pass/ first generation
             # then assume the rheobase value found before mutation still holds until proven otherwise.
             # dtc = check_current(model.rheobase,dtc)
@@ -418,7 +432,7 @@ class RheobaseTestP(VmTest):
                 for i,s in enumerate(dtc.current_steps):
                     dtc_clones[i] = copy.copy(dtc_clones[i])
                     dtc_clones[i].ampl = copy.copy(dtc.current_steps[i])
-
+                #import pdb; pdb.set_trace()
                 for d in dtc_clones:
                     d.use_diff = None
                     d.use_diff = use_diff
@@ -426,10 +440,6 @@ class RheobaseTestP(VmTest):
                 try:
                     b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
                     dtc_clone = list(b0.map(check_current).compute())
-
-                    # b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
-                    # dtc_clone = list(map(check_current,dtc_clones))
-                    # import pdb; pdb.set_trace()
                 except:
                     set_clones = set([ float(d.ampl) for d in dtc_clones ])
                     dtc_clone = []
@@ -455,7 +465,9 @@ class RheobaseTestP(VmTest):
                     delta = float(supra.min()) - float(sub.max())
                     if str("GLIF") in dtc.backend:
                         tolerance = 0.0
-
+                    else:
+                        tolerance = 0.00125
+                        #tolerance = tolerance
                     if delta < tolerance or (str(supra.min()) == str(sub.max())):
                         if self.verbose >= 2:
                             print(delta, 'a neuron, close to the edge! Multi spiking rheobase. # spikes: ',len(supra))
@@ -488,7 +500,7 @@ class RheobaseTestP(VmTest):
 
         dtc = init_dtc(dtc)
 
-        if model.orig_lems_file_path:
+        if hasattr(model,'orig_lems_file_path'):
             dtc.model_path = model.orig_lems_file_path
             assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
 

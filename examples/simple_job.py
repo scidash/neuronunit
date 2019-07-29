@@ -67,16 +67,56 @@ import pylab as pl
 
 
 from sklearn import preprocessing
-#from sklearn.model_selection import train_test_split
-#from sklearn.preprocessing import StandardScaler
-#from sklearn.linear_model import SGDRegressor
 from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn import preprocessing
 import sklearn
+import neuronunit.optimisation.model_parameters as model_params
 
 from neuronunit.optimisation.optimisation_management import stochastic_gradient_descent
 import seaborn as sns
+
+
+#from optimisation_management import init_dm_tests
+from neuronunit.optimisation.optimisation_management import init_dm_tests
+from neuronunit.optimisation.optimisation_management import mint_generic_model
+from neuronunit.optimisation.optimisation_management import add_dm_properties_to_cells
+from collections import Iterable, OrderedDict
+import quantities as qt
+rts,complete_map = pickle.load(open('../tests/russell_tests.p','rb'))
+local_tests = [value for value in rts['Hippocampus CA1 pyramidal cell'].values() ]
+
+
+#try:
+ga_out = pickle.load(open('izhi_ca1.p','rb'))
+dtcpop = [ ind.dtc for ind in ga_out['pf'] ]
+(dtcpop,dm_properties) = add_dm_properties_to_cells(dtcpop)
+
+#except:
+#    pass
+'''
+ga_out, DO = om.run_ga(model_params.MODEL_PARAMS['RAW'],10, local_tests, free_params = model_params.MODEL_PARAMS['RAW'],
+                                NSGA = True, MU = 10, model_type = str('RAW'))#,seed_pop=seeds[key])
+
+pickle.dump(ga_out,open('izhi_ca1.p','wb'))
+'''
+#dtcpop = [ ind.dtc for ind in ga_out['pf'] ]
+#(dtcpop,dm_properties) = add_druckmann_properties_to_cells(dtcpop)
+try:
+    assert 1==2
+    ga_out = pickle.load(open('adexp_ca1.p','rb'))
+except:
+    ga_out, DO = om.run_ga(model_params.MODEL_PARAMS['BAE1'],60, local_tests, free_params = model_params.MODEL_PARAMS['BAE1'],
+                                NSGA = True, MU = 14, model_type = str('ADEXP'))#,seed_pop=seeds[key])
+    #dtcpop = [ ind.dtc for ind in ga_out['pf'] ]
+    #(dtcpop,dm_properties) = add_dm_properties_to_cells(dtcpop)
+    pickle.dump(ga_out,open('adexp_ca1.p','wb'))
+#import pdb
+#pdb.set_trace()
+
+
+new_ind = copy.copy(ga_out['pf'][0])
+
 
 
 def scale(X):
@@ -118,29 +158,14 @@ def mean_new(X):
 
 
 
-from collections import Iterable, OrderedDict
-import quantities as qt
-rts,complete_map = pickle.load(open('../tests/russell_tests.p','rb'))
-local_tests = [value for value in rts['Hippocampus CA1 pyramidal cell'].values() ]
-#from neuronunit.optimisation.model_parameters import BAE1
-#params =
-import neuronunit.optimisation.model_parameters as model_params
-#MODEL_PARAMS = model_params.MODEL_PARAMS
-
-#params = model_paramaters.MODEL_PARAMS['BAE1']
-
-try:
-    assert 1==2
-    ga_out = pickle.load(open('ca1.p','rb'))
-except:
-    ga_out, DO = om.run_ga(model_params.MODEL_PARAMS['BAE1'], 10, local_tests, free_params = model_params.MODEL_PARAMS['BAE1'],
-                                NSGA = True, MU = 10, model_type = str('ADEXP'))#,seed_pop=seeds[key])
-    pickle.dump(ga_out,open('ca1.p','wb'))
-new_ind = copy.copy(ga_out['pf'][0])
 
 
-#X0_ = np.matrix([ list(ind.dtc.attrs.values()) for ind in ga_out['pf'] ])
-#Y = [ np.sum(ind.fitness.values) for ind in ga_out['pf']  ]
+
+
+
+
+
+
 
 Y = [ np.sum(v.fitness.values) for k,v in ga_out['history'].genealogy_history.items() ]
 Y_ = np.matrix([ list(v.fitness.values) for k,v in ga_out['history'].genealogy_history.items() ])
@@ -148,7 +173,6 @@ Y_ = np.matrix([ list(v.fitness.values) for k,v in ga_out['history'].genealogy_h
 X0_ = np.matrix([ list(v.dtc.attrs.values()) for k,v in ga_out['history'].genealogy_history.items() ])
 
 ordered_attrs = list(ga_out['history'].genealogy_history[1].dtc.attrs.keys())
-#X1 = np.matrix(X1)
 new,b4 = scale(X0_)
 
 
@@ -163,22 +187,16 @@ new_ind.boundary_dict = model_params.MODEL_PARAMS['BAE1']
 
 from neuronunit.optimisation.optimisation_management import test_runner, cell_to_test_mapper
 from neuronunit.optimisation.optimisation_management import inject_and_plot
-#dtc = ga_out['pf'][0].dtc
-#inject_and_plot(dtc)
+
 
 import pdb; pdb.set_trace()
 _,dtc_pop = test_runner([new_ind],ordered_attrs,local_tests)
 print(sum(dtc_pop[0].scores.values()))
-#import pdb; pdb.set_trace()
 
 def generate_dataset(n_train, n_test, n_features, noise=0.1, verbose=False):
     """Generate a regression dataset with the given parameters."""
     if verbose:
         print("generating dataset...")
-
-    #X, y, coef = make_regression(n_samples=n_train + n_test,
-    #                             n_features=n_features, noise=noise, coef=True)
-    #import pdb; pdb.set_trace()
 
     random_seed = 13
     X_train, X_test, y_train, y_test = train_test_split(
@@ -193,9 +211,6 @@ def generate_dataset(n_train, n_test, n_features, noise=0.1, verbose=False):
     y_train = y_scaler.fit_transform(y_train[:, None])[:, 0]
     y_test = y_scaler.transform(y_test[:, None])[:, 0]
 
-    #gc.collect()
-    #if verbose:
-    #    print("ok")
     return X_train, y_train, X_test, y_test
 
 
