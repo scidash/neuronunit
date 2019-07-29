@@ -1,8 +1,8 @@
-from neuronunit.tests.base import ALLEN_STIM, ALLEN_ONSET, on_indexs, DT, ALLEN_STIM, ALLEN_STOP, ALLEN_FINISH
-from quantities import mV, ms, s, V
-import sciunit
-from neo import AnalogSignal
-import neuronunit.capabilities as cap
+import io
+import math
+import pdb
+from numba import jit
+
 import numpy as np
 from .base import *
 import quantities as qt
@@ -102,7 +102,7 @@ class RAWBackend(Backend):
     def set_attrs(self, **attrs):
         self.attrs = attrs
         self.model.attrs.update(attrs)
-
+        
 
     def inject_square_current(self, current):#, section = None, debug=False):
         """Inputs: current : a dictionary with exactly three items, whose keys are: 'amplitude', 'delay', 'duration'
@@ -124,17 +124,14 @@ class RAWBackend(Backend):
         tMax = delay + duration + 200.0#/dt#*pq.ms
         self.set_stop_time(tMax*pq.ms)
         tMax = self.tstop
-	attrs['dt'] = DT
         N = int(tMax/attrs['dt'])
         Iext = np.zeros(N)
         delay_ind = int((delay/tMax)*N)
         duration_ind = int((duration/tMax)*N)
-	try:
-        	Iext = [ 0.0 ] * int(ALLEN_ONSET) + [ amplitude ] * int(ALLEN_STOP) + [ 0.0 ] * int(ALLEN_FINISH)
-	except:        
-		Iext[0:delay_ind-1] = 0.0
-		Iext[delay_ind:delay_ind+duration_ind-1] = amplitude
-		Iext[delay_ind+duration_ind::] = 0.0
+
+        Iext[0:delay_ind-1] = 0.0
+        Iext[delay_ind:delay_ind+duration_ind-1] = amplitude
+        Iext[delay_ind+duration_ind::] = 0.0
         attrs['Iext'] = Iext
         v = get_vm(**attrs)
         self.vM = AnalogSignal(v,
@@ -142,20 +139,17 @@ class RAWBackend(Backend):
                      sampling_period = attrs['dt'] * ms)
         t = [float(f) for f in self.vM.times]
         v = [float(f) for f in self.vM.magnitude]
-        #print(len(v),len(t),'this is a short vector')
-        try:
-            fig = apl.figure()
-            fig.plot(t, v, label=str('spikes: '), width=100, height=20)
-            fig.show()
-        except:
-            pass
+        print(len(v),len(t),'this is a short vector')
+        fig = apl.figure()
+        fig.plot(t, v, label=str('spikes: '), width=100, height=20)
+        fig.show()
         self.attrs = attrs
         self.model.attrs.update(attrs)
         return self.vM
 
     def _backend_run(self):
         results = {}
-        v = get_vm(**self.attrs)
+        v = get_vm(**self.attrs)            
         self.vM = AnalogSignal(v,
                                units = mV,
                                sampling_period = self.attrs['dt'] * ms)
@@ -163,3 +157,4 @@ class RAWBackend(Backend):
         results['t'] = self.vM.times
         results['run_number'] = results.get('run_number',0) + 1
         return results
+    

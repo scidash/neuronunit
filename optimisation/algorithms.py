@@ -194,7 +194,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
             #stag_check0 = np.mean([ p.fitness.values for pf in fronts for p in pf ])
             stag_check1 = np.mean([ p.dtc.get_ss() for pf in fronts for p in pf ])
 
-            #print(stag_check0,stag_check1)
+            print(stag_check0,stag_check1)
             '''
             if not np.sum(fronts[-1][0].fitness.values) < stag_check0*0.90:
                 print('gene poulation stagnant, no appreciable gains in fitness')
@@ -227,7 +227,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
                 if np.sum(best.dtc.get_ss()) != 0:
                     print('true minimum',np.sum(hof[0].fitness.values))
                     population.append(best)
-
+            
             '''
         if str('selNSGA') == selection:
             toolbox.register("select",selNSGA2)
@@ -238,43 +238,21 @@ def eaAlphaMuPlusLambdaCheckpoint(
                 best = best[0]
                 best.fitness.values = fit
                 best.dtc.get_ss()
-                if np.sum(best.dtc.get_ss()) > 0 and np.sum(fit)> 0:
 
+                if np.sum(best.dtc.get_ss()) > 0 and np.sum(fit)> 0:
+                    print('true minimum',np.sum(pf[0].fitness.values))
+                    print(best.dtc.get_ss())
                     population.append(best)
             '''
-        old_max = 0
-        for ind in population:
-            if len(ind.fitness.values) > old_max:
-                old_max = len(ind.fitness.values)
-        '''
-        for i,ind in enumerate(copy.copy(population)):
-            if len(ind.fitness.values)!= old_max:
-                ind,fitnesses = toolbox.evaluate([ind])
-                ind = ind[0]
-                ind.fitness.values = fitnesses
-                ind.dtc.get_ss()
-                if len(ind.fitness.values) == old_max:
-                    population[i] = ind
-                if len(ind.fitness.values)!= old_max:
-                    print('how is this happening',ind.fitness.values)
-                    ind,fitnesses = toolbox.evaluate([ind])
-                    print('ind fitness values')
-                    import pdb; pdb.set_trace()
+        population = [ p for p in population if p if len(p.fitness.values)!=0]
 
-        population = [ ind for ind in population if ind if len(ind.fitness.values)!= old_max ]
-        if len(population) == 0:
-            import pdb
-            pdb.set_trace()
-        '''
-        population = [ ind for ind in population if ind if ind.fitness.values is not type(None) ]
-
-        #if len(population) != mu:
-        #pdb.set_trace()
         try:
             parents = toolbox.select(population, mu)
         except:
             parents = toolbox.select(population, len(population))
 
+            #import pdb
+            #pdb.set_trace()
         # make new genes that are in the middle of the best and worst.
         # make sure best gene breeds.
 

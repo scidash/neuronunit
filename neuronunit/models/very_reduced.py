@@ -5,11 +5,11 @@ from neo.core import AnalogSignal
 import quantities as pq
 
 import neuronunit.capabilities as cap
-import neuronunit.models as mod
+
 import neuronunit.capabilities.spike_functions as sf
+from .static import ExternalModel
 
-
-class VeryReducedModel(mod.ExternalModel,
+class VeryReducedModel(ExternalModel,
                        cap.ReceivesCurrent,
                        cap.ProducesActionPotentials,
                        ):
@@ -17,18 +17,18 @@ class VeryReducedModel(mod.ExternalModel,
     and not requiring file paths this is to wrap pyNN models, Brian models,
     and other self contained models+model descriptions"""
 
-    def __init__(self, name=None, backend=None, attrs=None):
+    def __init__(self, backend=None, attrs=None):
         """Instantiate a reduced model.
 
         LEMS_file_path: Path to LEMS file (an xml file).
         name: Optional model name.
         """
-        super(VeryReducedModel, self).__init__(name=name,
-                                               backend=backend,
-                                               attrs=attrs)
+        super(VeryReducedModel, self).__init__()
+        self.backend = backend
+        self.attrs = attrs
         self.run_number = 0
         self.tstop = None
-
+    '''
     def get_membrane_potential(self, **run_params):
         self.run(**run_params)
         for rkey in self.results.keys():
@@ -52,3 +52,4 @@ class VeryReducedModel(mod.ExternalModel,
     def inject_square_current(self, current):
         self.set_run_params(injected_square_current=current)
         self._backend.inject_square_current(current)
+    '''

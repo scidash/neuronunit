@@ -1,4 +1,3 @@
-from neuronunit.tests.base import ALLEN_STIM, ALLEN_ONSET, on_indexs, DT, ALLEN_STIM, ALLEN_STOP, ALLEN_FINISH
 from quantities import mV, ms, s, V
 import sciunit
 from neo import AnalogSignal
@@ -14,12 +13,9 @@ import pickle
 import copy
 import re
 import matplotlib as mpl
-#mpl.use('Agg')
+mpl.use('Agg')
 
-#try:
 import asciiplotlib as apl
-#except:
-#    pass
 import matplotlib.pyplot as plt
 import allensdk.core.json_utilities as json_utilities
 from allensdk.model.glif.glif_neuron import GlifNeuron
@@ -40,14 +36,6 @@ except:
 
     #os.system('pip install git+https://github.com/scidash/sciunit@dev')
 
-#ls = ls1[0]
-#DT = sampling_period = 1.0/ls['sampling_rate']*pq.s
-#on_indexs = np.where(ls==np.max(ls))
-
-#ALLEN_STIM = ls
-#ALLEN_ONSET = start = np.min(on_indexs)*1.0/ls['sampling_rate']*pq.s
-#ALLEN_STOP = stop = np.max(on_indexs)*1.0/ls['sampling_rate']*pq.s
-#ALLEN_FINISH = len(ls)*(1.0/ls['sampling_rate'])*pq.s
 
 
 class GLIFBackend(Backend):
@@ -139,8 +127,6 @@ class GLIFBackend(Backend):
         sweep = ds.get_sweep(sweep_number)
         return sweep
 
-
-
     def get_stimulus(self, n):
         sweep = self.get_sweep(n)
         return sweep['stimulus']
@@ -149,15 +135,12 @@ class GLIFBackend(Backend):
         self.stimulus = self.get_stimulus(n)
 
     def get_spike_train(self):
+        #vms = self.get_membrane_potential()
+        #from neuronunit.capabilities.spike_functions import get_spike_train
+        #import numpy as np
         spike_times = self.results['interpolated_spike_times']
+        return np.array(spike_times)
 
-        print(self.results['interpolated_spike_times'])
-        return np.array(self.results['grid_spike_times'])
-    def get_spike_count(self):
-        print('npsikes: ',len(self.results['interpolated_spike_times']))
-        self.results['interpolated_spike_times']
-        return len(self.results['grid_spike_times'])
-        #return np.array(spike_times)
     def get_membrane_potential(self):
         """Must return a neo.core.AnalogSignal.
         And must destroy the hoc vectors that comprise it.
@@ -171,13 +154,28 @@ class GLIFBackend(Backend):
         after_spike_currents = self.results['AScurrents']
 
         vm = self.results['voltage']
-        if len(grid_spike_times) > 0:
-            #print(len(self.results['interpolated_spike_voltage']), 'yes')
+        if len(self.results['interpolated_spike_voltage']) > 0:
             isv = self.results['interpolated_spike_voltage'].tolist()[0]
             vm = list(map(lambda x: isv if np.isnan(x) else x, vm))
         dt =  self.glif.dt
         self.vM = AnalogSignal(vm,units = mV,sampling_period =  dt * ms)
-        return self.vM
+        return vms
+
+    def _local_run(self):
+        #self.results = np.array(self.glif.run(self.stim))
+        results = {}
+        results['vm'] = self.vM
+        results['t'] = self.vM.times
+        self.debug = False
+        if self.debug == True:
+            plt.clf()
+            #plt.title('')
+            plt.plot(self.vM.times,self.vM)
+            plt.savefig('debug_glif.png')
+        results['run_number'] = results.get('run_number',0) + 1
+        return results
+
+        return self.results
 
 
     def set_attrs(self, **attrs):
@@ -185,10 +183,11 @@ class GLIFBackend(Backend):
         #self.nc.update(attrs)
         for k,v in attrs.items():
             self.nc[k] = v
-        #self.nc['init_AScurrents'] = [0,0]
-        self.glif = GlifNeuron.from_dict(self.nc)
-        print(self.nc)
-        self.glif.init_voltage = -0.0065
+        try:
+            self.glif = GlifNeuron.from_dict(self.nc)
+        except:
+            self.nc['init_AScurrents'] = [0,0]
+            self.glif = GlifNeuron.from_dict(self.nc)
 
         return self.glif
 
@@ -207,105 +206,24 @@ class GLIFBackend(Backend):
         stop = float(c['delay'])+float(c['duration'])
         start = float(c['delay'])
         duration = float(c['duration'])
-        amplitude = float(c['amplitude'])/100000000000.0
-        self.glif.dt = DT
+        amplitude = float(c['amplitude'])
+        self.glif.dt = 0.001
         dt =  self.glif.dt
-        '''
-        ls = pickle.load(open('../models/backends/generic_current_injection.p','rb'))
-        ls = ls[0]['stimulus']
-        old_max = np.max(ls)
-        on_indexs = np.where(ls==np.max(ls))
-        #import pdb; pdb.set_trace()
-        ls[on_indexs] = amplitude
+        self.stim = [ 0.0 ] * int(start) + [ amplitude ] * int(duration) + [ 0.0 ] * int(stop)
+        #self.glif.init_voltage = -0.0065
 
-        assert np.max(ls)!= old_max
-        self.stim = ls
-        '''
-        #ALLEN_STIM, ALLEN_ONSET, on_indexs, DT, ALLEN_STIM, ALLEN_STOP, ALLEN_FINISH
-
-        stim = [ 0.0 ] * int(ALLEN_ONSET) + [ amplitude ] * int(ALLEN_STOP) + [ 0.0 ] * int(ALLEN_FINISH)
-        print(np.max(stim),'max current')
-        self.results = self.glif.run(stim)
-        #import pdb; pdb.set_trace()
-        vm = self.results['voltage']
-        if len(self.results['interpolated_spike_voltage']) > 0:
-            print('npsikes: ',len(self.results['interpolated_spike_times']), 'called by rheobase?')
-            isv = self.results['interpolated_spike_voltage'].tolist()[0]
-            self.spikes = self.results['interpolated_spike_voltage']
-            vm = list(map(lambda x: isv if np.isnan(x) else x, vm))
-
-        self.vM = AnalogSignal(vm,units = V,sampling_period =  dt * s)
-        t = [float(f) for f in self.vM.times]
-        v = [float(f) for f in self.vM.magnitude]
-        #try:
-        #plt.clf()
-        #plt.plot(t,v)
-        #plt.show()
-        try:
-            fig = apl.figure()
-            fig.plot(t, v, label=str('spikes: ')+str(len(self.results['grid_spike_times'])), width=100, height=20)
-            fig.show()
-        except:
-            pass
-        return self.vM
-
-
-    def inject_square_current_allen(self, current):
-        if 'injected_square_current' in current.keys():
-            c = current['injected_square_current']
-        else:
-            c = current
-        stop = float(c['delay'])+float(c['duration'])
-        start = float(c['delay'])
-        duration = float(c['duration'])
-        amplitude = float(c['amplitude'])/100000000000.0
-        import pickle
-
-        ls1 = pickle.load(open('../models/backends/generic_current_injection.p','rb'))
-        ls = ls1[0]['stimulus']
-        DT = sampling_period = 1.0/ls1[0]['sampling_rate']#*pq.s
-        on_indexs = np.where(ls==np.max(ls))
-
-        ALLEN_STIM = ls
-        ALLEN_ONSET = start = np.min(on_indexs)*DT
-        ALLEN_STOP = stop = np.max(on_indexs)*DT
-        ALLEN_FINISH = len(ls)*DT
-
-        ls = ls1[0]['stimulus']
-
-
-        old_max = np.max(ls)
-        on_indexs = np.where(ls==np.max(ls))
-
-        ls[on_indexs] = amplitude
-
-        assert np.max(ls)!= old_max
-
-        self.stim = ls
-        self.glif.dt = sampling_period
-        dt =  self.glif.dt
-        print(np.max(self.stim),'max current')
         self.results = self.glif.run(self.stim)
         vm = self.results['voltage']
         if len(self.results['interpolated_spike_voltage']) > 0:
-            print('npsikes: ',len(self.results['interpolated_spike_times']), 'called by rheobase?')
             isv = self.results['interpolated_spike_voltage'].tolist()[0]
-            self.spikes = self.results['interpolated_spike_voltage']
             vm = list(map(lambda x: isv if np.isnan(x) else x, vm))
 
         self.vM = AnalogSignal(vm,units = V,sampling_period =  dt * s)
         t = [float(f) for f in self.vM.times]
         v = [float(f) for f in self.vM.magnitude]
-        #try:
-        #plt.clf()
-        #plt.plot(t,v)
-        #plt.show()
-        try:
-            fig = apl.figure()
-            fig.plot(t, v, label=str('spikes: ')+str(len(self.results['grid_spike_times'])), width=100, height=20)
-            fig.show()
-        except:
-            pass
+        fig = apl.figure()
+        fig.plot(t, v, label=str('spikes: '), width=100, height=20)
+        fig.show()
         return self.vM
 
 

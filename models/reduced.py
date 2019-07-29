@@ -1,12 +1,11 @@
 """NeuronUnit model class for reduced neuron models."""
-from .lems import LEMSModel
 
 import numpy as np
 from neo.core import AnalogSignal
 import quantities as pq
 
 import neuronunit.capabilities as cap
-
+from .lems import LEMSModel
 from .static import ExternalModel
 import neuronunit.capabilities.spike_functions as sf
 

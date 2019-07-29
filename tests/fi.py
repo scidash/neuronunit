@@ -6,6 +6,8 @@ import multiprocessing
 global cpucount
 npartitions = cpucount = multiprocessing.cpu_count()
 from .base import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
+DURATION = 2000
+DELAY = 200
 from .. import optimisation
 
 from neuronunit.optimisation.data_transport_container import DataTC
@@ -41,7 +43,7 @@ def get_diff(vm):
     n_spikes = len([np.any(differentiated) > 0.000193667327364])
     return spike_lets, n_spikeson
 
-tolerance = 0.001
+tolerance = 0.125
 
 class RheobaseTest(VmTest):
     """
@@ -60,6 +62,7 @@ class RheobaseTest(VmTest):
         self.high = 300*pq.pA
         self.small = 0*pq.pA
         self.rheobase_vm = None
+        self.verbose = 3
 
     required_capabilities = (cap.ReceivesSquareCurrent,
                              cap.ProducesSpikes)
@@ -111,20 +114,18 @@ class RheobaseTest(VmTest):
 
         def f(ampl):
             if float(ampl) not in lookup:
-                try:
-                    current = self.params.copy()['injected_square_current']
-                except:
-                    current = self.params
+                #try:
+                #    current = self.params.copy()['injected_square_current']
+                #except:
+                #    current = self.params
 
                 uc = {'amplitude':ampl,'duration':DURATION,'delay':DELAY}
-                #AMPL, DELAY,
+                #uc = {'amplitude':ampl}
+                #current.update(uc)
 
-                current.update(uc)
-
-                model.inject_square_current(current)
+                model.inject_square_current(uc)
                 n_spikes = model.get_spike_count()
 
-                self.verbose = 1
                 if self.verbose >= 2:
                     print("Injected %s current and got %d spikes" % \
                             (ampl,n_spikes))
@@ -155,12 +156,9 @@ class RheobaseTest(VmTest):
             if len(supra) and len(sub):
                 delta = float(supra.min()) - float(sub.max())
                 #if str("GLIF") in dtc.backend:
-                #    dtc.tolerance = 0.0
-                #if hasattr(dtc,'tolerance'):
-                #   tolerance = dtc.tolerance
+                #    tolerance = 0.0
                 if delta < tolerance or (str(supra.min()) == str(sub.max())):
                     break
-            print(i,'i rheobase')
 
             if i >= max_iters:
                 break
@@ -210,12 +208,14 @@ class RheobaseTestP(VmTest):
      NEURON via PyNN, and possibly GLIF.
 
      """
+     def _extra(self):
+         self.verbose = 3
 
 
      required_capabilities = (cap.ReceivesSquareCurrent,
                               cap.ProducesSpikes)
-     DELAY = 100.0*pq.ms
-     DURATION = 1000.0*pq.ms
+     #DELAY = 100.0*pq.ms
+     # DURATION = 1000.0*pq.ms
      params = {'injected_square_current':
                  {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
      name = "Rheobase test"
@@ -292,22 +292,22 @@ class RheobaseTestP(VmTest):
                 assert type(dtc.current_src_name) is not type(None)
                 dtc.cell_name = model._backend.cell_name
 
-            DELAY = 100.0*pq.ms
-            DURATION = 1000.0*pq.ms
+            #DELAY = 100.0*pq.ms
+            #DURATION = 1000.0*pq.ms
             params = {'injected_square_current':
                       {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
             ampl = float(dtc.ampl)
             if ampl not in dtc.lookup or len(dtc.lookup) == 0:
-                current = params.copy()['injected_square_current']
-                uc = {'amplitude':ampl*pq.pA}
-                current.update(uc)
-                current = {'injected_square_current':current}
-                dtc.run_number += 1
-                model.set_attrs(dtc.attrs)
-                model.inject_square_current(current)
-                dtc.previous = ampl
+                #current = params.copy()['injected_square_current']
+                uc = {'amplitude':ampl,'duration':DURATION,'delay':DELAY}
 
+                dtc.run_number += 1
+                model.set_attrs(**dtc.attrs)
+                model.inject_square_current(uc)
+                n_spikes = model.get_spike_count()
+
+                dtc.previous = ampl
 
                 if dtc.use_diff == True:
                     vm = model.get_membrane_potential()
@@ -317,14 +317,14 @@ class RheobaseTestP(VmTest):
                     if n_spikes >= 1:
                         dtc.negative_spiker = None
                         dtc.negative_spiker = True
-                    '''
-                    plt.clf()
-                    plt.title(str(n_spikes))
-                    plt.plot(vm.times,vm)
-                    plt.savefig('reobase_debug.png')
-                    '''
+
                 else:
                     n_spikes = model.get_spike_count()
+
+                if float(ampl) < -86.0:
+                    dtc.rheobase = None
+                    dtc.boolean = True
+                    return dtc
 
 
                 if n_spikes == 1:
@@ -390,16 +390,12 @@ class RheobaseTestP(VmTest):
 
             use_diff = False
 
-            while dtc.boolean == False and cnt< 15:
+            while dtc.boolean == False and cnt< 6:
                 '''
                 # negeative spiker
                 if sub.max() < -100.0:
                 use_diff = True # differentiate the wave to look for spikes
 
-                if sub.max()> 2000.0:
-                dtc.rheobase = None #float(supra.min())
-                dtc.boolean = False
-                return dtc
                 '''
                 be = dtc.backend
                 dtc_clones = [ dtc for i in range(0,len(dtc.current_steps)) ]
@@ -414,6 +410,10 @@ class RheobaseTestP(VmTest):
                 try:
                     b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
                     dtc_clone = list(b0.map(check_current).compute())
+
+                    #b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
+                    #dtc_clone = list(map(check_current,dtc_clones))
+                    #import pdb; pdb.set_trace()
                 except:
                     set_clones = set([ float(d.ampl) for d in dtc_clones ])
                     dtc_clone = []

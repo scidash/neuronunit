@@ -129,7 +129,7 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
     def __init__(self, error_criterion = None, evaluator = None,
                  selection = 'selIBEA',
                  benchmark = False,
-                 seed=1,
+                 seed=None,
                  offspring_size=15,
                  elite_size=3,
                  eta=10,
@@ -244,18 +244,16 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
         assert len(pop)==self.offspring_size
         return pop
 
-    def glif_modifications(UPPER,LOWER):
-        for index, i in enumerate(UPPER):
-            if i == LOWER[index]:
-                LOWER[index]-=2.0
-                i+=2.0
-        return LOWER
 
 
     def setup_deap(self):
         """Set up optimisation"""
         # Set random seed
-        random.seed(self.seed)
+        from datetime import datetime
+        if self.seed is None:
+            random.seed(datetime.now())
+        else:
+            random.seed(self.seed)
 
         # Eta parameter of crossover / mutation parameters
         # Basically defines how much they 'spread' solution around
@@ -267,10 +265,34 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
         IND_SIZE = len(list(self.params.values()))
 
         OBJ_SIZE = len(self.error_criterion)
-        LOWER = [ np.min(self.params[v]) for v in self.td ]
-        UPPER = [ np.max(self.params[v]) for v in self.td ]
-        #if self.backend == 'glif':
-        #    LOWER = glif_modifications(UPPER,LOWER)
+        print(self.backend)
+        #import pdb
+        #pdb.set_trace()
+        def glif_modifications(UPPER,LOWER):
+            for index, i in enumerate(UPPER):
+                if i == LOWER[index]:
+                    LOWER[index]-=2.0
+                    i+=2.0
+            return LOWER
+
+        if self.backend == 'GLIF':
+            #self.td = [ param
+            #import pdb; pdb.set_trace()
+            del self.td[-1]
+            self.params.pop('type',None)
+
+            self.td = [ param for param in self.td if type(self.params[param][0]) is type(float(0.0)) ]
+            self.params = { param:self.params[param] for param in self.td if type(self.params[param][0]) is type(float(0.0)) }
+
+            #print([v for v in self.td])
+            #import pdb; pdb.set_trace()
+
+            LOWER = [ np.min(self.params[v]) for v in self.td ]
+            UPPER = [ np.max(self.params[v]) for v in self.td ]
+            LOWER = glif_modifications(UPPER,LOWER)
+        else:
+            LOWER = [ np.min(self.params[v]) for v in self.td ]
+            UPPER = [ np.max(self.params[v]) for v in self.td ]
         # in other words the population
         if type(self.seed_pop) is type([]):
             self.grid_init = self.seed_pop
@@ -290,6 +312,8 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
             self.td = list(ordered.keys())
         elif type(self.seed_pop) is None:
             self.grid_init = self.grid_sample_init(self.params)#(LOWER, UPPER, self.offspring_size)
+        if not hasattr(self,'grid_init'):
+             self.grid_init = self.grid_sample_init(self.params)
 
         def uniform_params(lower_list, upper_list, dimensions):
             if hasattr(lower_list, '__iter__'):
@@ -325,8 +349,13 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
             invalid_pop = list(om.update_deap_pop(invalid_ind, self.error_criterion,
                                                   td = self.td, backend = self.backend,
                                                   hc = self.hc,boundary_dict = self.boundary_dict))
+
+
             invalid_dtc = [ i.dtc for i in invalid_pop if hasattr(i,'dtc') ]
+
             fitnesses = list(map(om.evaluate, invalid_dtc))
+            #import pdb; pdb.set_trace()
+
             return (invalid_pop,fitnesses)
 
         self.toolbox.register("evaluate", custom_code)
@@ -349,15 +378,17 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
 
         self.toolbox.register("variate", deap.algorithms.varAnd)
 
-    def set_pop(self):
-        IND_SIZE = len(list(self.params.values()))
-        OBJ_SIZE = len(self.error_criterion)
-        if IND_SIZE == 1:
-            pop = [ WSListIndividual([g],obj_size=OBJ_SIZE) for g in self.grid_init ]
+    def set_pop(self, boot_new_random=0):
+        if boot_new_random == 0:
+            IND_SIZE = len(list(self.params.values()))
+            OBJ_SIZE = len(self.error_criterion)
+            if IND_SIZE == 1:
+                pop = [ WSListIndividual([g],obj_size=OBJ_SIZE) for g in self.grid_init ]
+            else:
+                pop = [ WSListIndividual(g, obj_size=OBJ_SIZE) for g in self.grid_init ]
         else:
-            pop = [ WSListIndividual(g, obj_size=OBJ_SIZE) for g in self.grid_init ]
+            pop = self.toolbox.population(n=boot_new_random)
         return pop
-
 
     def run_cma(self, max_ngen = 10):
         # call other module in this path.
