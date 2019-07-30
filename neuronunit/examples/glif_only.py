@@ -9,6 +9,7 @@ from hide_imports import *
 
 # In[2]:
 
+from neuronunit.optimisation.optimisation_management import nunit_evaluation_simple
 
 with open('gcm.p','rb') as f:
     glif_params = pickle.load(f)
@@ -36,7 +37,7 @@ mp = model_params.MODEL_PARAMS['GLIF']
 
 mp = { k:v for k,v in mp.items() if type(v) is not dict }
 mp = { k:v for k,v in mp.items() if v is not None }
-ga_out_glif[key], DO = om.run_ga(mp ,2, local_tests, free_params = mp, NSGA = True, MU = 4, model_type = str('GLIF'))#,seed_pop=seeds[key])
+ga_out_glif[key], DO = om.run_ga(mp ,10, local_tests, free_params = mp, NSGA = True, MU = 10, model_type = str('GLIF'))#,seed_pop=seeds[key])
 
 
 #ga_out = pickle.load(open('adexp_ca1.p','rb'))
@@ -86,16 +87,14 @@ dtc = ga_out_glif[list(ga_out_glif.keys())[0]]['pop'][0].dtc
 
 
 # In[11]:
-
-
-from neuronunit.optimisation.optimisation_management import nunit_evaluation_simple
-print('gets here')
 import pdb
 pdb.set_trace()
+
 glif_and_score = []
 for l in glif_params[0:4]:
     for value in l.values():
         for k,v in model.attrs.items():
+            dtc.rtests = local_tests
             dtc.attrs[k] = value[k]
             model.attrs[k] = value[k]
             for test in dtc.tests:
@@ -112,9 +111,6 @@ for g in glif_and_score: print(g)
 
 # In[13]:
 
-
-type(new_flat_iter)
-np.shape(new_flat_iter)
 
 
 # In[ ]:
