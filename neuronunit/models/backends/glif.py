@@ -85,11 +85,13 @@ class GLIFBackend(Backend):
                 self.nc = pickle.load(open(str('allen_id.p'),'rb'))
             except:
                 glif_api = GlifApi()
-                self.allen_id = 566302806
+                #allen_id = 
 
-                self.allen_id = allen_id
-                self.glif = glif_api.get_neuronal_models_by_id([allen_id])[0]
-                self.nc = glif_api.get_neuron_config([self.allen_id])[self.allen_id]
+                self.allen_id = 566302806
+                self.glif = glif_api.get_neuronal_models_by_id([self.allen_id])[0]
+                #import pdb
+                #pdb.set_trace()
+                self.nc = glif_api.get_neuron_configs([self.allen_id])[self.allen_id]
                 pickle.dump(self.nc,open(str('allen_id.p'),'wb'))
 
 
