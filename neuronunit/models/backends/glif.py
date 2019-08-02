@@ -207,7 +207,7 @@ class GLIFBackend(Backend):
             c = current['injected_square_current']
         else:
             c = current
-        stop = float(c['delay'])+float(c['duration'])
+        stop = float(c['delay'])+float(c['duration'])+200.0
         start = float(c['delay'])
         duration = float(c['duration'])
         amplitude = float(c['amplitude'])/100000000000.0
@@ -215,9 +215,28 @@ class GLIFBackend(Backend):
         dt = 0.030
         self.glif.dt = dt
 
-        stim = [ 0.0 ] * int(start/self.glif.dt) + [ amplitude ] * int(stop/self.glif.dt) + [ 0.0 ] * int(duration/self.glif.dt)
+        #amplitude = float(c['amplitude'])
+        duration = float(c['duration'])#/dt#/dt.rescale('ms')
+        delay = float(c['delay'])#/dt#.rescale('ms')
+        if 'sim_length' in c.keys():
+            sim_length = c['sim_length']
+        tMax = delay + duration + 200.0#/dt#*pq.ms
+        self.set_stop_time(tMax*pq.ms)
+        tMax = self.tstop
+        #attrs['dt'] = DT
+        N = int(tMax/dt)
+        Iext = np.zeros(N)
+        delay_ind = int((delay/tMax)*N)
+        duration_ind = int((duration/tMax)*N)
+
+        Iext[0:delay_ind-1] = 0.0
+        Iext[delay_ind:delay_ind+duration_ind-1] = amplitude
+        Iext[delay_ind+duration_ind::] = 0.0
+
+
+        #stim = [ 0.0 ] * int(start) + [ amplitude ] * int(stop) + [ 0.0 ] * int(duration)
         #print(np.max(stim),'max current')
-        self.results = self.glif.run(stim)
+        self.results = self.glif.run(Iext)
         #import pdb; pdb.set_trace()
         vm = self.results['voltage']
         if len(self.results['interpolated_spike_voltage']) > 0:
