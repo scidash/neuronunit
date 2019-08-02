@@ -307,11 +307,11 @@ class RheobaseTestP(VmTest):
                 assert type(dtc.current_src_name) is not type(None)
                 dtc.cell_name = model._backend.cell_name
             else:
-                #model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
-                from sciunit.models.runnable import RunnableModel
+                model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
+                #from sciunit.models.runnable import RunnableModel
 
-                model = RunnableModel(str(dtc.backend),backend=(dtc.backend, {'DTC':dtc}))
-                model = RunnableModel(str(dtc.backend),backend=(dtc.backend, {'DTC':dtc}))
+                #model = RunnableModel(str(dtc.backend),backend=(dtc.backend, {'DTC':dtc}))
+                #model = RunnableModel(str(dtc.backend),backend=(dtc.backend, {'DTC':dtc}))
 
             params = {'injected_square_current':
                       {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
@@ -329,11 +329,11 @@ class RheobaseTestP(VmTest):
                 dtc.previous = ampl
 
                 if dtc.use_diff == True:
-                    from neuronunit.tests import druckman2013 as dm
-                    DM = dm.Druckmann2013Test()
+                    #from neuronunit.tests import druckman2013 as dm
+                    #DM = dm.Druckmann2013Test()
 
                     #vm = model.get_membrane_potential()
-                    spike_train = DM.get_APs(model)
+                    #spike_train = DM.get_APs(model)
                     #diff = diff(vm)
                     #spike_train = threshold_detection(diff,threshold= 0.000193667327364)
                     n_spikes = len(spike_train)
@@ -472,11 +472,11 @@ class RheobaseTestP(VmTest):
                         if self.verbose >= 2:
                             print(delta, 'a neuron, close to the edge! Multi spiking rheobase. # spikes: ',len(supra))
                         if len(supra)<15:
-                            dtc.rheobase = None
+                            dtc.rheobase = float(supra.min())
                             dtc.boolean = True
                             dtc.lookup[float(supra.min())] = len(supra)
                         else:
-                            dtc.rheobase = None
+                            dtc.rheobase = float(supra.min())
                             dtc.boolean = True
                             dtc.lookup[float(supra.min())] = len(supra)
 
