@@ -59,16 +59,23 @@ def _update_history_and_hof(halloffame,pf, history, population,td):
     '''
 
     if halloffame is not None:
-        halloffame.update(population)
+        try:
+            halloffame.update(population)
+        except:
+            print('mostly not relevant')
     if history is not None:
         history.update(population)
 
     if pf is not None:
+        for ind in population:
+            for i,j in enumerate(ind):
+                ind[i] = float(j)
         try:
             pf.update(population)
         except:
             pass
-
+            #import pdb
+            #pdb.set_trace()
     return (halloffame,pf,history)
 
 
@@ -145,7 +152,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
         population = cp["population"]
         parents = cp["parents"]
         start_gen = cp["generation"]
-        halloffame = cp["halloffame"]
+        hof = cp["halloffame"]
         logbook = cp["logbook"]
         history = cp["history"]
         random.setstate(cp["rndstate"])
@@ -188,94 +195,29 @@ def eaAlphaMuPlusLambdaCheckpoint(
         invalid_count = len(invalid_ind)
 
         fronts.append(pf)
-        if gen%10==0:# every 10th count.
-            #            stag_check = [ p for p in stag_check if len(p.fitness.values)!=0 ]
-
-            #stag_check0 = np.mean([ p.fitness.values for pf in fronts for p in pf ])
+        if gen%10==0:
             stag_check1 = np.mean([ p.dtc.get_ss() for pf in fronts for p in pf ])
-
-            #print(stag_check0,stag_check1)
-            '''
-            if not np.sum(fronts[-1][0].fitness.values) < stag_check0*0.90:
-                print('gene poulation stagnant, no appreciable gains in fitness')
-                return population, hof, pf, logbook, history, gen_vs_pop
-
-            '''
             if not np.sum(fronts[-1][0].dtc.get_ss()) < stag_check1*0.95:
                 print('gene poulation stagnant, no appreciable gains in fitness')
                 return population, hof, pf, logbook, history, gen_vs_pop
 
-        # for k,v in history.items()
-        # TODO recreate a stagnation termination criterion.
-        # if genes don't get substantially better in 50 generations.
-        # Stop.
-
-
-        #if pf[0].dtc is not None and pf[0]:
-        #    print('true minimum',pf[0].dtc.get_ss())
-
-
 
         if str('selIBEA') == selection:
             toolbox.register("select", tools.selIBEA)
-            '''
-            if hof[0].fitness.values is None or len(hof[0].fitness.values)==0:
-                best,fit = toolbox.evaluate(hof[0:1])
-                best = best[0]
-                best.fitness.values = fit
-                best.dtc.get_ss()
-                if np.sum(best.dtc.get_ss()) != 0:
-                    print('true minimum',np.sum(hof[0].fitness.values))
-                    population.append(best)
-
-            '''
         if str('selNSGA') == selection:
             toolbox.register("select",selNSGA2)
-            '''
-            if pf[0].fitness.values is None or len(pf[0].fitness.values)==0:
-                best,fit = toolbox.evaluate(pf[0:1])
-                fit = fit[0]
-                best = best[0]
-                best.fitness.values = fit
-                best.dtc.get_ss()
-                if np.sum(best.dtc.get_ss()) > 0 and np.sum(fit)> 0:
-
-                    population.append(best)
-            '''
         old_max = 0
         for ind in population:
             if len(ind.fitness.values) > old_max:
                 old_max = len(ind.fitness.values)
-        '''
-        for i,ind in enumerate(copy.copy(population)):
-            if len(ind.fitness.values)!= old_max:
-                ind,fitnesses = toolbox.evaluate([ind])
-                ind = ind[0]
-                ind.fitness.values = fitnesses
-                ind.dtc.get_ss()
-                if len(ind.fitness.values) == old_max:
-                    population[i] = ind
-                if len(ind.fitness.values)!= old_max:
-                    print('how is this happening',ind.fitness.values)
-                    ind,fitnesses = toolbox.evaluate([ind])
-                    print('ind fitness values')
-                    import pdb; pdb.set_trace()
-
-        population = [ ind for ind in population if ind if len(ind.fitness.values)!= old_max ]
-        if len(population) == 0:
-            import pdb
-            pdb.set_trace()
-        '''
         population = [ ind for ind in population if ind if ind.fitness.values is not type(None) ]
 
+        popp = [ i for i in population if len(i.fitness.values)==old_max ]
         try:
-            parents = toolbox.select(population, mu)
+            parents = toolbox.select(popp, mu)
         except:
-            population = [ ind for ind in population if ind if ind.fitness.values is not type(None) ]
-            print(len(population),mu)
-            pdb.set_trace()
 
-            parents = toolbox.select(population, len(population))
+            parents = toolbox.select(popp, len(population))
 
         # make new genes that are in the middle of the best and worst.
         # make sure best gene breeds.
@@ -298,18 +240,3 @@ def eaAlphaMuPlusLambdaCheckpoint(
             logger.debug('Wrote checkpoint to %s', cp_filename)
 
     return population, hof, pf, logbook, history, gen_vs_pop
-    '''
-    two = copy.copy(_get_elite(temp, 2))
-    worst = copy.copy(_get_elite(temp, 1))
-
-    # make new genes that are in the middle of the two best.
-    mean_best = [ (i+j)/2.0 for i,j in zip(two[0],two[1]) ]
-    mean_worst = [ (i+j)/2.0 for i,j in zip(worst[0],two[1]) ]
-
-    one = copy.copy(parents[0])
-    for ind, o in enumerate(one):
-        o = mean_best[ind]
-    offspring.append(one)
-
-    one_ = _get_elite(temp, 1)[0]
-    '''
