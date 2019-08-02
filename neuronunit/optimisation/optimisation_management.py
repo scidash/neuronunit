@@ -1821,6 +1821,7 @@ def update_deap_pop(pop, tests, td, backend = None,hc = None,boundary_dict = Non
     DTCs are then scored by neuronunit, using neuronunit models that act in place.
     '''
     if len(pop)==0:
+        print('len(pop)==0')
         import pdb
         pdb.set_trace()
     #pop = copy.copy(pop)

@@ -22,7 +22,7 @@ ga_outiz = {}
 for key,v in rts.items():
     local_tests = [value for value in v.values() ]
     backend = str('BAE1')
-    file_name = str(key)+backend+str('.p')
+    filename = str(key)+backend+str('.p')
 
     try:
 
@@ -30,12 +30,13 @@ for key,v in rts.items():
         
         ga_outad[key] = pickle.load(open(filename,'rb'))
     except:
-        ga_outad[key], DO = om.run_ga(model_params.MODEL_PARAMS['BAE1'],6, local_tests, free_params = model_params.MODEL_PARAMS['BAE1'],
+        ga_outad[key], DO = om.run_ga(model_params.MODEL_PARAMS['BAE1'],3, local_tests, free_params = model_params.MODEL_PARAMS['BAE1'],
                                     NSGA = True, MU = 10, model_type = str('ADEXP'))
         pickle.dump(ga_outad[key],open(filename,'wb'))
-
+    print('success')
+    pdb.set_trace()
     backend = str('RAW')
-    file_name = str(key)+backend+str('.p')
+    filename = str(key)+backend+str('.p')
         
     try:
         assert 1==2
