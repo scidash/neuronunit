@@ -56,14 +56,14 @@ def allen_format(volts,times,key=None,stim=None):
         return allen_features[key], allen_features
     else:
         return allen_features, allen_features
-try:
+try:    
     data_sets = get_data_sets_from_cache(do_features=True)
     assert len(data_sets) > 1
 except:
     data_sets = get_data_sets_from_remote(upper_bound=2)
     assert len(data_sets) > 1
 
-
+    
 
 specific_data = data_sets[1][0]
 numbers = specific_data.get_sweep_numbers()
@@ -130,7 +130,7 @@ def dtc_to_model(dtc):
     model = mint_generic_model(dtc.backend)
     print(dtc.backend)
     model.attrs = dtc.attrs
-
+    
     return model
 
 def generate_prediction(self, model):
@@ -150,10 +150,12 @@ def generate_prediction(self, model):
             keyed['injected_square_current']['amplitude'] = 1.5*rheobase
         keyed['injected_square_current']['delay']= DELAY
         keyed['injected_square_current']['duration'] = DURATION
+        print('gets to a')
         model = dtc_to_model(model.dtc)
+        
         model.vm15 = None
-        model.inject_allen_square_current(keyed['injected_square_current'])
-        model.finalize()
+        model.inject_square_current(keyed['injected_square_current'])
+        #model.finalize()
         model.vm15 = model.get_membrane_potential()
         if type(rheobase) is type({str('k'):str('v')}):
             keyed['injected_square_current']['amplitude'] = float(rheobase['value'])*3.0*pq.pA
@@ -163,8 +165,8 @@ def generate_prediction(self, model):
         keyed['injected_square_current']['duration'] = DURATION
         #model = dtc_to_model(model.dtc)
         model.vm30 = None
-        model.inject_allen_square_current(keyed['injected_square_current'])
-        model.finalize()
+        model.inject_square_current(keyed['injected_square_current'])
+        #model.finalize()
         model.vm30 = model.get_membrane_potential()
         if type(rheobase) is type({str('k'):str('v')}):
             keyed['injected_square_current']['amplitude'] = float(rheobase['value'])*pq.pA
@@ -185,7 +187,7 @@ def generate_prediction(self, model):
         #import pdb; pdb.set_trace()
         volts = np.array([float(v) for v in model.vm15.magnitude])
         times = np.array([float(t) for t in model.vm15.times])
-
+        print(volts,'gets to c')
         pred,model.lookup = allen_format(volts,times,key,stim)
     if model.lookup is None:
         volts = np.array([float(v) for v in model.vm15.magnitude])

@@ -6,17 +6,15 @@ for key,v in rts.items():
     local_tests = [value for value in v.values() ]
     backend = str('BAE1')
     filename = str(key)+backend+str('.p')
-
     try:
 
         assert 1==2
 
         ga_outad[key] = pickle.load(open(filename,'rb'))
     except:
-        ga_outad[key], DO = om.run_ga(model_params.MODEL_PARAMS['BAE1'],6, local_tests, free_params = model_params.MODEL_PARAMS['BAE1'],
-                                    NSGA = True, MU = 10, model_type = str('ADEXP'))
+        ga_outad[key], DO = om.run_ga(model_params.MODEL_PARAMS['BAE1'],3, local_tests, free_params = model_params.MODEL_PARAMS['BAE1'],
+                                    NSGA = True, MU = 4, model_type = str('ADEXP'))
         pickle.dump(ga_outad[key],open(filename,'wb'))
-
     backend = str('RAW')
     file_name = str(key)+backend+str('.p')
 

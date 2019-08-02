@@ -1,24 +1,15 @@
 """Waveform neuronunit tests, e.g. testing AP waveform properties"""
-
 from .base import np, pq, ncap, VmTest, scores, AMPL, DELAY, DURATION
-
-
 class APWidthTest(VmTest):
     """Test the full widths of action potentials at their half-maximum."""
 
     required_capabilities = (ncap.ProducesActionPotentials,)
-
     name = "AP width test"
-
     description = ("A test of the widths of action potentials "
                    "at half of their maximum height.")
-
     score_type = scores.RatioScore
-
     units = pq.ms
-
     ephysprop_name = 'Spike Half-Width'
-
     def generate_prediction(self, model):
         """Implement sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
@@ -60,13 +51,9 @@ class InjectedCurrentAPWidthTest(APWidthTest):
                                                   'duration': DURATION}
 
     required_capabilities = (ncap.ReceivesSquareCurrent,)
-
     score_type = scores.ZScore
-
     units = pq.ms
-
     name = "Injected current AP width test"
-
     description = ("A test of the widths of action potentials "
                    "at half of their maximum height when current "
                    "is injected into cell.")
@@ -103,25 +90,15 @@ class APAmplitudeTest(VmTest):
         model.inject_square_current(self.params['injected_square_current'])
         
         try:
-            #print('bug in quantities',model.get_AP_amplitudes(),model.get_AP_thresholds())
-            #heights = np.abs(model.get_AP_amplitudes() - model.get_AP_thresholds())
-            #print('heights:',heights)
-            #print('min and max',float(np.min(model.get_membrane_potential())),np.max(model.get_membrane_potential()))
             height = np.max(model.get_membrane_potential()) -float(np.min(model.get_membrane_potential()))/1000.0*model.get_membrane_potential().units #- model.get_AP_thresholds()
-            print(height)
             prediction = {'mean':height, 'n':1, 'std':height}
-            #prediction = {'mean': np.mean(heights) if len(heights) else None,
-            #              'std': np.std(heights) if len(heights) else None,
-            #             'n': len(heights)}
-
+            
         except:
-            #print(model.get_AP_amplitudes(),model.get_AP_thresholds())
             prediction = {'mean': None,
                           'std': None,
                           'n': 0}
 
-            #import pdb
-            #pdb.set_trace()
+            
         # Put prediction in a form that compute_score() can use.
         return prediction
 
@@ -166,16 +143,11 @@ class APThresholdTest(VmTest):
     """Test the full widths of action potentials at their half-maximum."""
 
     required_capabilities = (ncap.ProducesActionPotentials,)
-
     name = "AP threshold test"
-
     description = ("A test of the membrane potential threshold at which "
                    "action potentials are produced.")
-
     score_type = scores.ZScore
-
     units = pq.mV
-
     ephysprop_name = 'Spike Threshold'
 
     def generate_prediction(self, model):
@@ -218,9 +190,7 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
                                                   'duration': DURATION}
 
     required_capabilities = (ncap.ReceivesSquareCurrent,)
-
     name = "Injected current AP threshold test"
-
     description = ("A test of the membrane potential threshold at which "
                    "action potentials are produced under current injection.")
 
