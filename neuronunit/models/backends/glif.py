@@ -1,4 +1,4 @@
-from neuronunit.tests.base import ALLEN_STIM, ALLEN_ONSET, on_indexs, DT, ALLEN_STIM, ALLEN_STOP, ALLEN_FINISH
+from neuronunit.tests.base import ALLEN_ONSET, DT, ALLEN_STOP, ALLEN_FINISH
 from quantities import mV, ms, s, V
 import sciunit
 from neo import AnalogSignal
@@ -85,7 +85,7 @@ class GLIFBackend(Backend):
                 self.nc = pickle.load(open(str('allen_id.p'),'rb'))
             except:
                 glif_api = GlifApi()
-                #allen_id = 
+                #allen_id =
 
                 self.allen_id = 566302806
                 self.glif = glif_api.get_neuronal_models_by_id([self.allen_id])[0]
@@ -153,10 +153,10 @@ class GLIFBackend(Backend):
     def get_spike_train(self):
         spike_times = self.results['interpolated_spike_times']
 
-        print(self.results['interpolated_spike_times'])
+        ##print(self.results['interpolated_spike_times'])
         return np.array(self.results['grid_spike_times'])
     def get_spike_count(self):
-        print('npsikes: ',len(self.results['interpolated_spike_times']))
+        #print('npsikes: ',len(self.results['interpolated_spike_times']))
         self.results['interpolated_spike_times']
         return len(self.results['grid_spike_times'])
         #return np.array(spike_times)
@@ -178,6 +178,7 @@ class GLIFBackend(Backend):
             isv = self.results['interpolated_spike_voltage'].tolist()[0]
             vm = list(map(lambda x: isv if np.isnan(x) else x, vm))
         dt =  self.glif.dt
+        vm = [v*10.0 for v in vm]
         self.vM = AnalogSignal(vm,units = mV,sampling_period =  dt * ms)
         return self.vM
 
@@ -189,8 +190,8 @@ class GLIFBackend(Backend):
             self.nc[k] = v
         #self.nc['init_AScurrents'] = [0,0]
         self.glif = GlifNeuron.from_dict(self.nc)
-        print(self.nc)
-        self.glif.init_voltage = -0.0065
+        #print(self.nc)
+        self.glif.init_voltage = -0.065
 
         return self.glif
 
@@ -210,32 +211,21 @@ class GLIFBackend(Backend):
         start = float(c['delay'])
         duration = float(c['duration'])
         amplitude = float(c['amplitude'])/100000000000.0
-        self.glif.dt = DT
-        dt =  self.glif.dt
-        '''
-        ls = pickle.load(open('../models/backends/generic_current_injection.p','rb'))
-        ls = ls[0]['stimulus']
-        old_max = np.max(ls)
-        on_indexs = np.where(ls==np.max(ls))
-        #import pdb; pdb.set_trace()
-        ls[on_indexs] = amplitude
+        #self.glif.dt = DT
+        dt = 0.030
+        self.glif.dt = dt
 
-        assert np.max(ls)!= old_max
-        self.stim = ls
-        '''
-        #ALLEN_STIM, ALLEN_ONSET, on_indexs, DT, ALLEN_STIM, ALLEN_STOP, ALLEN_FINISH
-
-        stim = [ 0.0 ] * int(ALLEN_ONSET) + [ amplitude ] * int(ALLEN_STOP) + [ 0.0 ] * int(ALLEN_FINISH)
-        print(np.max(stim),'max current')
+        stim = [ 0.0 ] * int(start/self.glif.dt) + [ amplitude ] * int(stop/self.glif.dt) + [ 0.0 ] * int(duration/self.glif.dt)
+        #print(np.max(stim),'max current')
         self.results = self.glif.run(stim)
         #import pdb; pdb.set_trace()
         vm = self.results['voltage']
         if len(self.results['interpolated_spike_voltage']) > 0:
-            print('npsikes: ',len(self.results['interpolated_spike_times']), 'called by rheobase?')
+            #print('npsikes: ',len(self.results['interpolated_spike_times']), 'called by rheobase?')
             isv = self.results['interpolated_spike_voltage'].tolist()[0]
             self.spikes = self.results['interpolated_spike_voltage']
             vm = list(map(lambda x: isv if np.isnan(x) else x, vm))
-
+        vm = [v*10.0 for v in vm]
         self.vM = AnalogSignal(vm,units = V,sampling_period =  dt * s)
         t = [float(f) for f in self.vM.times]
         v = [float(f) for f in self.vM.magnitude]
@@ -286,11 +276,11 @@ class GLIFBackend(Backend):
         self.stim = ls
         self.glif.dt = sampling_period
         dt =  self.glif.dt
-        print(np.max(self.stim),'max current')
+        #print(np.max(self.stim),'max current')
         self.results = self.glif.run(self.stim)
         vm = self.results['voltage']
         if len(self.results['interpolated_spike_voltage']) > 0:
-            print('npsikes: ',len(self.results['interpolated_spike_times']), 'called by rheobase?')
+            #print('npsikes: ',len(self.results['interpolated_spike_times']), 'called by rheobase?')
             isv = self.results['interpolated_spike_voltage'].tolist()[0]
             self.spikes = self.results['interpolated_spike_voltage']
             vm = list(map(lambda x: isv if np.isnan(x) else x, vm))

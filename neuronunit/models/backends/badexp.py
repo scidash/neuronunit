@@ -8,13 +8,19 @@ import io
 import math
 import pdb
 from numba import jit
-
+defaults = {'DT': 2e-05, 'ALLEN_STOP': 3.0199800000000003, 'ALLEN_FINISH': 10.020000000000001,'ALLEN_ONSET':1.02}
+DT = defaults["DT"]
+ALLEN_ONSET = defaults["ALLEN_ONSET"]
+ALLEN_STOP = defaults["ALLEN_STOP"]
+ALLEN_FINISH = defaults["ALLEN_FINISH"]
+#from neuronunit.tests.base import ALLEN_ONSET, DT, ALLEN_STOP, ALLEN_FINISH
 import numpy as np
 from .base import *
 import quantities as qt
 from quantities import mV, ms, s, us, ns
 import matplotlib as mpl
 
+from neuronunit.capabilities import spike_functions as sf
 mpl.use('Agg')
 import matplotlib.pyplot as plt
 
@@ -24,6 +30,12 @@ from types import MethodType
 #import matplotlib.pyplot as plt
 # @jit(cache=True) I suspect this causes a memory leak
 import asciiplotlib as apl
+
+
+try:
+    import asciiplotlib as apl
+except:
+    pass
 import numpy
 
 from scipy.interpolate import interp1d
@@ -31,6 +43,7 @@ from scipy.interpolate import interp1d
 class ADEXPBackend(Backend):
     def get_spike_count(self):
         print(int(self.spike_monitor.count[0]))
+        #print(int(self.spike_monitor.count[0]))
         #import pdb; pdb.set_trace()
         return int(self.spike_monitor.count[0])
     def init_backend(self, attrs=None, cell_name='thembi',
@@ -93,6 +106,8 @@ class ADEXPBackend(Backend):
                        self.vM[i] = 0.020*qt.mV
 
 
+                        i = int(float(v)/0.001)
+                        self.vM[i] = 0.020*qt.mV
         return self.vM
 
     def set_attrs(self, **attrs):
@@ -143,6 +158,9 @@ class ADEXPBackend(Backend):
         print(len(vm_new))
         self.vM = AnalogSignal(vm_new,units = mV,sampling_period = float(xnew[1]-xnew[0]) * pq.s)
         print(len(self.vM))
+        #print(len(vm_new))
+        self.vM = AnalogSignal(vm_new,units = mV,sampling_period = float(xnew[1]-xnew[0]) * pq.s)
+        #print(len(self.vM))
 
     def inject_square_current(self, current):#, section = None, debug=False):
         """Inputs: current : a dictionary with exactly three items, whose keys are: 'amplitude', 'delay', 'duration'
@@ -170,6 +188,7 @@ class ADEXPBackend(Backend):
         stim = input_factory.get_step_current(int(delay), int(pre_current), 1 * b2.ms, amplitude *b2.pA)
         st = (duration+delay+100)* b2.ms
         print(st, 'simulation time')
+        #print(st, 'simulation time')
 
 
         self.state_monitor, self.spike_monitor = self.AdEx.simulate_AdEx_neuron(
@@ -209,6 +228,7 @@ class ADEXPBackend(Backend):
                 for v in value:
                     i = int(float(v)/0.001)
                     print(i)
+                    #print(i)
                     self.vM[i] = 0.020*qt.mV
 
 
@@ -223,6 +243,13 @@ class ADEXPBackend(Backend):
         fig.plot(t, v, label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
         fig.show()
         fig  = None
+        try:
+            fig = apl.figure()
+            fig.plot(t, v, label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
+            fig.show()
+            fig  = None
+        except:
+            pass
         if len(self.spike_monitor.spike_trains())>1:
             import matplotlib.pyplot as plt
             plt.plot(y,x)
