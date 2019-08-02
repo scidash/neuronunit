@@ -1,22 +1,5 @@
-"""Optimisation class"""
+"""Optimisation class This file is part of BluePyOpt <https://github.com/BlueBrain/BluePyOpt>
 
-"""
-Copyright (c) 2016, EPFL/Blue Brain Project
-
- This file is part of BluePyOpt <https://github.com/BlueBrain/BluePyOpt>
-
- This library is free software; you can redistribute it and/or modify it under
- the terms of the Lesser General Public License version 3.0 as published
- by the Free Software Foundation.
-
- This library is distributed in the hope that it will be useful, but WITHOUT
- ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
- details.
-
- You should have received a copy of the GNU Lesser General Public License
- along with this library; if not, write to the Free Software Foundation, Inc.,
- 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 """
 
 # pylint: disable=R0912, R0914
@@ -144,11 +127,13 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
         self.seed_pop = seed_pop
         """Constructor"""
 
+
         #super(SciUnitOptimisation, self).__init__()
         self.selection = selection
         self.benchmark = benchmark
 
         self.error_criterion = error_criterion
+        self.error_length = len(error_criterion)
         self.seed = seed
         self.offspring_size = offspring_size
         self.elite_size = elite_size
@@ -197,14 +182,7 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
         npoints = np.ceil(npoints)
         dic_grid = es.create_grid(mp_in = self.params,npoints = self.offspring_size, free_params = self.params)
         dic_grid = list(dic_grid)
-        #import pdb; pdb.set_trace()
         '''
-        pop = []
-        for i in dic_grid:
-            pop.append([i[k] for k in self.td])
-
-        return pop
-
 
         This code causes memory errors for some population sizes
         The grid is now defined, the rest of code just makes sure that the size of the grid is a reasonable size
@@ -284,8 +262,6 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
             self.td = [ param for param in self.td if type(self.params[param][0]) is type(float(0.0)) ]
             self.params = { param:self.params[param] for param in self.td if type(self.params[param][0]) is type(float(0.0)) }
 
-            #print([v for v in self.td])
-            #import pdb; pdb.set_trace()
 
             LOWER = [ np.min(self.params[v]) for v in self.td ]
             UPPER = [ np.max(self.params[v]) for v in self.td ]
@@ -345,10 +321,13 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
 
             if self.backend is None:
                 self.backend = 'RAW'
-
+            #for ind in invalid_ind:
+            #    ind.error_length = None
+            #    ind.error_length = self.error_length
+                
             invalid_pop = list(om.update_deap_pop(invalid_ind, self.error_criterion,
                                                   td = self.td, backend = self.backend,
-                                                  hc = self.hc,boundary_dict = self.boundary_dict))
+                                                  hc = self.hc,boundary_dict = self.boundary_dict,error_length=self.error_length))
 
 
             invalid_dtc = [ i.dtc for i in invalid_pop if hasattr(i,'dtc') ]
