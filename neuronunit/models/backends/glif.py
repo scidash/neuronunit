@@ -178,7 +178,7 @@ class GLIFBackend(Backend):
             isv = self.results['interpolated_spike_voltage'].tolist()[0]
             vm = list(map(lambda x: isv if np.isnan(x) else x, vm))
         dt =  self.glif.dt
-        vm = [v*10.0 for v in vm]
+        #vm = [v*10.0 for v in vm]
         self.vM = AnalogSignal(vm,units = mV,sampling_period =  dt * ms)
         return self.vM
 
@@ -244,7 +244,7 @@ class GLIFBackend(Backend):
             isv = self.results['interpolated_spike_voltage'].tolist()[0]
             self.spikes = self.results['interpolated_spike_voltage']
             vm = list(map(lambda x: isv if np.isnan(x) else x, vm))
-        vm = [v*10.0 for v in vm]
+        #vm = [v*10.0 for v in vm]
         self.vM = AnalogSignal(vm,units = V,sampling_period =  dt * s)
         t = [float(f) for f in self.vM.times]
         v = [float(f) for f in self.vM.magnitude]
