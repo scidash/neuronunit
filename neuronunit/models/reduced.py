@@ -40,12 +40,12 @@ class ReducedModel(LEMSModel,
         return vm
 
     def get_APs(self, **run_params):
-        print(run_params, 'run params')
+        #print(run_params, 'run params')
         try:
             vm = self._backend.get_membrane_potential(**run_params)
         except:
             vm = self.get_membrane_potential(**run_params)
-        print(len(vm),'len vm')
+        #print(len(vm),'len vm')
         if hasattr(self._backend,'name'):
 
             self._backend.threshold = np.max(vm)-np.max(vm)/250.0
@@ -153,7 +153,7 @@ class VeryReducedModel(ExternalModel,
             raise Exception(("A backend (e.g. 'jNeuroML' or 'NEURON') "
                              "must be selected"))
         else:
-            print(name,available_backends)
+            #print(name,available_backends)
             #import pdb; pdb.set_trace()
             raise Exception("Backend %s not found in backends.py" \
                             % name)

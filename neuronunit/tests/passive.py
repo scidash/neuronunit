@@ -215,9 +215,7 @@ class CapacitanceTest(TestPulseTest):
             if prediction['n'] == 0:
                 score = scores.InsufficientDataScore(None)
         else:
-            print('observation: ',observation)
-            print('prediction: ',prediction)
-
+            
             score = super(CapacitanceTest, self).compute_score(observation,
                                                                prediction)
         return score
@@ -257,7 +255,6 @@ class RestingPotentialTest(TestPulseTest):
             std = model.get_std_vm()
             prediction = {'mean': median, 'std': std}
             self.prediction = prediction
-            print('sanity check',np.min(model.get_membrane_potential()),median)
             return prediction
         else:
             return None
