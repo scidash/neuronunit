@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('Agg') 
 from hide_imports import *
 df = pd.DataFrame(rts)
 ga_outad = {}
@@ -16,34 +18,43 @@ for key,v in rts.items():
     mp = model_params.MODEL_PARAMS['GLIF']
     mp = { k:v for k,v in mp.items() if type(v) is not dict }
     mp = { k:v for k,v in mp.items() if v is not None }
-    ga_outgl[key], DO = om.run_ga(mp ,NGEN, local_tests, free_params = mp, NSGA = True, MU = MU, model_type = str('GLIF'))#,seed_pop=seeds[key])
-    d2 = [p.dtc for p in ga_outgl[key]['pf'][0:-1] if not p.dtc.rheobase is None]
-    pickle.dump(ga_outgl[key],open(filename,'wb'))
+    try:
+        ga_outgl = pickle.load(open(filename,'rb'))
+    except:
+        ga_outgl[key], DO = om.run_ga(mp ,NGEN, local_tests, free_params = mp, NSGA = True, MU = MU, model_type = str('GLIF'))#,seed_pop=seeds[key])
+        d2 = [p.dtc for p in ga_outgl[key]['pf'][0:-1] if not p.dtc.rheobase is None]
+        pickle.dump(ga_outgl[key],open(filename,'wb'))
 
     backend = str('RAW')
     filename = str(key)+backend+str('.p')
-    ga_outiz[key], DO = om.run_ga(model_params.MODEL_PARAMS['RAW'],NGEN, local_tests, free_params = model_params.MODEL_PARAMS['RAW'],
+    try:
+        ga_outiz = pickle.load(open(filename,'rb'))
+    except:
+        ga_outiz[key], DO = om.run_ga(model_params.MODEL_PARAMS['RAW'],NGEN, local_tests, free_params = model_params.MODEL_PARAMS['RAW'],
                                     NSGA = True, MU = MU, model_type = str('RAW'))
-    pickle.dump(ga_outiz[key],open(filename,'wb'))
+        pickle.dump(ga_outiz[key],open(filename,'wb'))
     dtcpop = [ ind.dtc for ind in ga_outiz[key]['pf'] ]
     filename = str(key)+backend+str('.p')
     d1 = [p.dtc for p in ga_outiz[key]['pf'][0:-1]]
     #d2 = [p.dtc for p in ga_outgl[key]['pf'][0:-1]]
-    try:
-        inject_and_plot(d1,second_pop=d2,third_pop=d2,figname=key+'quick_two')
-    except:
-        inject_and_plot(d1,second_pop=d1,third_pop=d1,figname=key+'quick_two')
+    #try:
+    #    inject_and_plot(d1,second_pop=d2,third_pop=d2,figname=key+'quick_two')
+    #except:
+    #    inject_and_plot(d1,second_pop=d1,third_pop=d1,figname=key+'quick_two')
     backend = str('BAE1')
     filename = str(key)+backend+str('.p')
-    ga_outad[key], DO = om.run_ga(model_params.MODEL_PARAMS['BAE1'],NGEN, local_tests, free_params = model_params.MODEL_PARAMS['BAE1'],
+    try:
+        ga_outad = pickle.load(open(filename,'rb'))
+    except:
+        ga_outad[key], DO = om.run_ga(model_params.MODEL_PARAMS['BAE1'],NGEN, local_tests, free_params = model_params.MODEL_PARAMS['BAE1'],
                                 NSGA = True, MU = MU, model_type = str('ADEXP'))
-    pickle.dump(ga_outad[key],open(filename,'wb'))
+        pickle.dump(ga_outad[key],open(filename,'wb'))
 
     d3 = [p.dtc for p in ga_outad[key]['pf'][0:-1]]
-    try:
-        inject_and_plot(d1,second_pop=d2,third_pop=d3,figname=key)
-    except:
-        inject_and_plot(d3,second_pop=d2,third_pop=d3,figname=key)
+    #try:
+    inject_and_plot(d2,second_pop=d2,third_pop=d3,figname=key)
+    #except:
+    #    inject_and_plot(d3,second_pop=d2,third_pop=d3,figname=key)
 
 #for key,v in rts.items():
 #    local_tests = [value for value in v.values() ]

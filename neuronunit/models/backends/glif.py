@@ -1,4 +1,4 @@
-from neuronunit.tests.base import ALLEN_ONSET, DT, ALLEN_STOP, ALLEN_FINISH
+#from neuronunit.tests.base import ALLEN_ONSET, DT, ALLEN_STOP, ALLEN_FINISH
 from quantities import mV, ms, s, V
 import sciunit
 from neo import AnalogSignal
