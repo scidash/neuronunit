@@ -17,7 +17,7 @@ try:
 except:
     print('consider installing pynn a heavier backend')
 import pickle
-import pdb
+#import pdb
 
 from neurodynex.adex_model import AdEx
 import brian2 as b2s

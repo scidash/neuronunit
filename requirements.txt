@@ -2,18 +2,10 @@ scipy>=0.17
 matplotlib>=2.0
 neo==0.5.2
 elephant==0.4.1
-igor==0.3
 allensdk==0.14.5
-pyNN>=0.9
 execnet
 backports.tempfile
 lmfit
 numba
 dask[complete]
 deap
-<<<<<<< HEAD
-# sciunit @ git+https://github.com/scidash/sciunit@dev#egg=sciunit-9999
-# pyNeuroML @ git+https://github.com/rgerkin/pyneuroml@master#egg=pyneuroml-9999
-# bluepyopt @ git+https://github.com/russelljjarvis/BluePyOpt@scidash#egg=bluepyopt-9999
-=======
->>>>>>> a2b9efbe6955a78107387106f803036d3e9abf09
