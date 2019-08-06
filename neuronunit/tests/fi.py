@@ -125,13 +125,16 @@ class RheobaseTest(VmTest):
                 uc = {'amplitude':ampl,'duration':DURATION,'delay':DELAY}
                 #uc = {'amplitude':ampl}
                 #current.update(uc)
+                #from neuronunit.capabilities import spike_functions
 
                 model.inject_square_current(uc)
-                try:
-                    n_spikes = model._backend.get_spike_count()
-                except:
-                    pdb.set_trace()
+                n_spikes = model._backend.get_spike_count()
+                vm30 = model._backend.get_membrane_potential()
+                if n_spikes >= 1:
+                    pass
+
                 self.n_spikes = n_spikes
+
                 if self.verbose >= 2:
                     print("Injected %s current and got %d spikes" % \
                             (ampl,n_spikes))
@@ -323,9 +326,10 @@ class RheobaseTestP(VmTest):
                 dtc.run_number += 1
                 model.set_attrs(**dtc.attrs)
                 model.inject_square_current(uc)
-                n_spikes = model._backend.get_spike_count()
-                #print(n_spikes,'from rheobase')
-
+                n_spikes = model.get_spike_count()
+                vm30 = model._backend.get_membrane_potential()
+                if n_spikes >= 1:
+                    pass
                 dtc.previous = ampl
 
                 if dtc.use_diff == True:
