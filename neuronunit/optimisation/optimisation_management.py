@@ -1212,9 +1212,15 @@ def evaluate_allen(dtc,regularization=True):
     fitness = [ 1.0 for i in range(0,len(dtc.ascores)) ]
     for int_,t in enumerate(dtc.ascores.keys()):
        if regularization == True:
-          fitness[int_] = dtc.ascores[str(t)]**(1.0/2.0)
+          if dtc.ascores[str(t)] is None:
+              fitness[int_] = 1.0
+          else:
+              fitness[int_] = dtc.ascores[str(t)]**(1.0/2.0)
        else:
-          fitness[int_] = dtc.ascores[str(t)]
+          if dtc.ascores[str(t)] is None:
+              fitness[int_] = 1.0
+          else:
+              fitness[int_] = dtc.ascores[str(t)]
     print(fitness)
     return tuple(fitness,)
 
