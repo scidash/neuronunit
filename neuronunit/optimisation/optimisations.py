@@ -118,16 +118,15 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
                  eta=10,
                  mutpb=0.7,
                  cxpb=0.7,
-                 map_function=None,
                  backend = None,
                  nparams = 10,
                  boundary_dict= {},
                  hc = None,
-                 seed_pop = None):
+                 seed_pop = None, allen=False):
         self.seed_pop = seed_pop
         """Constructor"""
 
-
+        self.allen = allen
         #super(SciUnitOptimisation, self).__init__()
         self.selection = selection
         self.benchmark = benchmark
@@ -145,7 +144,7 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
         self.toolbox = deap.base.Toolbox()
         self.hc = hc
         self.boundary_dict = boundary_dict
-
+        self.OBJ_SIZE = None
         self.setnparams(nparams = nparams, boundary_dict = boundary_dict)
         self.setup_deap()
 
@@ -241,9 +240,12 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
         # Number of parameters
         # Bounds for the parameters
         IND_SIZE = len(list(self.params.values()))
-
-        OBJ_SIZE = len(self.error_criterion)
+        if self.allen==True:
+            OBJ_SIZE = len(self.error_criterion)+7
+        else:
+            OBJ_SIZE = len(self.error_criterion)
         print(self.backend)
+        self.OBJ_SIZE = OBJ_SIZE
         #import pdb
         #pdb.set_trace()
         def glif_modifications(UPPER,LOWER):
@@ -324,7 +326,7 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
             #for ind in invalid_ind:
             #    ind.error_length = None
             #    ind.error_length = self.error_length
-                
+
             invalid_pop = list(om.update_deap_pop(invalid_ind, self.error_criterion,
                                                   td = self.td, backend = self.backend,
                                                   hc = self.hc,boundary_dict = self.boundary_dict,error_length=self.error_length))
@@ -333,8 +335,9 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
             invalid_dtc = [ i.dtc for i in invalid_pop if hasattr(i,'dtc') ]
 
             fitnesses = list(map(om.evaluate, invalid_dtc))
-            #import pdb; pdb.set_trace()
-
+            more_fitnesses = list(map(om.evaluate_allen, invalid_dtc))
+            fitnesses.extend(more_fitnesses)
+            print(len(fitnesses))
             return (invalid_pop,fitnesses)
 
         self.toolbox.register("evaluate", custom_code)
@@ -360,7 +363,10 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
     def set_pop(self, boot_new_random=0):
         if boot_new_random == 0:
             IND_SIZE = len(list(self.params.values()))
-            OBJ_SIZE = len(self.error_criterion)
+            if self.allen is False:
+                OBJ_SIZE = len(self.error_criterion)
+            else:
+                OBJ_SIZE = len(self.error_criterion) +7
             if IND_SIZE == 1:
                 pop = [ WSListIndividual([g],obj_size=OBJ_SIZE) for g in self.grid_init ]
             else:

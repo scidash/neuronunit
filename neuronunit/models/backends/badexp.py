@@ -88,7 +88,7 @@ class ADEXPBackend(Backend):
         """Must return a neo.core.AnalogSignal.
         And must destroy the hoc vectors that comprise it.
         """
-        if np.max(self.vM[i])!=0.020*qt.V:
+        if np.max(self.vM)!=0.020*qt.V:
             tdic = self.spike_monitor.spike_trains()
             for key,value in tdic.items():
                 if len(value)==1:
