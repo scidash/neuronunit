@@ -39,6 +39,7 @@ def get_obs(pipe):
     obs = []
     for p in pipe:
         for l in ontologies['objects']:
+            print(p,l)
             obs.append(neuroelectro_summary_observation(p,l))
     return obs
 
@@ -186,7 +187,8 @@ def get_common_criteria():
 
     except:
         for p in pipe:
-            p_tests, p_observations = get_neuron_criteria(p)
+            p_tests, p_observations = get_obs(p)
+
             obs_frame[p["name"]] = p_observations#, p_tests))
             test_frame[p["name"]] = p_tests#, p_tests))
         electro_path = str(os.getcwd())+'all_tests.p'

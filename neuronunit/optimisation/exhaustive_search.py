@@ -11,8 +11,10 @@ from neuronunit.optimisation import data_transport_container
 from neuronunit.optimisation.optimisation_management import nunit_evaluation, update_deap_pop
 from neuronunit.optimisation.optimisation_management import update_dtc_pop
 import numpy as np
-from collections import OrderedDict
-
+#from collections import OrderedDict
+#import neuronunit.optimisation.optimisation_management as om
+#OM = om.OptMan(protocol={'allen':False,'elephant':True})
+#update_deap_pop = OM.update_deap_pop
 
 import copy
 from copy import deepcopy
