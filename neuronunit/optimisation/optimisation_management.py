@@ -2,7 +2,7 @@
 # setting of an appropriate backend.
 import matplotlib
 matplotlib.use('agg')
-CONFIDENT = True
+CONFIDENT = False
 #    Goal is based on this. Don't optimize to a singular point, optimize onto a cluster.
 #    Golowasch, J., Goldman, M., Abbott, L.F, and Marder, E. (2002)
 #    Failure of averaging in the construction
@@ -129,6 +129,7 @@ def inject_rh_and_dont_plot(dtc):
     return (model, model.get_membrane_potential().times,model.get_membrane_potential(),uc)
 
 import seaborn as sns
+from neuronunit.capabilities.spike_functions import get_spike_waveforms
 
 def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem'):
     sns.set_style("darkgrid")
@@ -151,7 +152,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem'):
             #print(str(dtc.backend))
         #vm = model.get_membrane_potential().magnitude
         sns.set_style("darkgrid")
-        plt.plot(model.get_membrane_potential().times,vm.magnitude)#,label='ground truth')
+        plt.plot(model.get_membrane_potential().times,model.get_membrane_potential().magnitude)#,label='ground truth')
         plot_backend = mpl.get_backend()
         if plot_backend == str('Agg'):
             plt.savefig(figname+str('debug.png'))
@@ -159,6 +160,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem'):
             plt.show()
 
     else:
+
         if type(second_pop) is not type(None):
             dtcpop = copy.copy(dtc)
             dtc = None
@@ -166,11 +168,11 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem'):
             fig = plt.figure(figsize=(11,8.5))
             ax = fig.add_subplot(111)
 
-            NPART = np.min([multiprocessing.cpu_count(),len(dtcpop)])
+            #NPART = np.min([multiprocessing.cpu_count(),len(dtcpop)])
 
-            dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
-            dtcpop = list(dtcbag.map(nuunit_dm_evaluation).compute())
-            latency = np.mean([dtc.AP1DelayMeanTest for dtc in dtcpop])
+            #dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
+            #dtcpop = list(dtcbag.map(nuunit_dm_evaluation).compute())
+            #latency = np.mean([dtc.AP1DelayMeanTest for dtc in dtcpop])
 
             for dtc in dtcpop:
                 model = mint_generic_model(dtc.backend)
@@ -191,7 +193,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem'):
                 else:
                     pass
                     #print(str(dtc.backend))
-                vm = model.get_membrane_potential().magnitude
+                vm = model.get_membrane_potential()#.magnitude
                 #print(np.max(vm))
                 #sns.set_style("darkgrid")
                 if str("RAW") in dtc.backend:
@@ -201,20 +203,21 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem'):
                     label=str('Adaptive Exponential Model')
                 if str("GLIF") in dtc.backend:
                     label=str('Generalized Leaky Integrate and Fire')
-                label = label+str(latency)
+                #label = label+str(latency)
 
                 sns.set_style("darkgrid")
-
-                plt.plot(model.get_membrane_potential().times,vm,color='red',label=label)#,label='ground truth')
+                #from neuronunit.capabilities import get_spike_waveforms
+                snipptes = get_spike_waveforms(vm)
+                plt.plot(snipptes.times,snipptes,color='red',label=label)#,label='ground truth')
                 ax.legend()
             #second_pop = list(map(nuunit_dm_evaluation,second_pop))
 
 
-            NPART = np.min([multiprocessing.cpu_count(),len(dtcpop)])
+            #NPART = np.min([multiprocessing.cpu_count(),len(dtcpop)])
 
-            dtcbag = db.from_sequence(second_pop, npartitions = NPART)
-            second_pop = list(dtcbag.map(nuunit_dm_evaluation).compute())
-            latency = np.mean([dtc.AP1DelayMeanTest for dtc in second_pop])
+            #dtcbag = db.from_sequence(second_pop, npartitions = NPART)
+            #second_pop = list(dtcbag.map(nuunit_dm_evaluation).compute())
+            #latency = np.mean([dtc.AP1DelayMeanTest for dtc in second_pop])
 
 
             #latency = np.mean([dtc.AP1DelayMeanTest for dtc in second_pop])
@@ -238,7 +241,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem'):
                 else:
                     pass
                     #print(str(dtc.backend))
-                vm = model.get_membrane_potential().magnitude
+                vm = model.get_membrane_potential()#.magnitude
                 if str("RAW") in dtc.backend:
                     label=str('Izhikevich Model')
 
@@ -247,20 +250,22 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem'):
 
                 if str("GLIF") in dtc.backend:
                     label=str('Generalized Leaky Integrate and Fire')
-                label = label+str(latency)
+                #label = label+str(latency)
 
                 sns.set_style("darkgrid")
+                snipptes = get_spike_waveforms(vm)
+                plt.plot(snipptes.times,snipptes,color='blue',label=label)#,label='ground truth')
 
-                plt.plot(model.get_membrane_potential().times,vm,color='blue',label=label)#,label='ground truth')
+                #plt.plot(model.get_membrane_potential().times,vm,color='blue',label=label)#,label='ground truth')
                 #ax.legend(['A simple line'])
                 ax.legend()
             if third_pop is None:
                 return
             else:
 
-                dtcbag = db.from_sequence(third_pop, npartitions = NPART)
-                third_pop = list(dtcbag.map(nuunit_dm_evaluation).compute())
-                latency = np.mean([dtc.AP1DelayMeanTest for dtc in third_pop])
+                #dtcbag = db.from_sequence(third_pop, npartitions = NPART)
+                #third_pop = list(dtcbag.map(nuunit_dm_evaluation).compute())
+                #latency = np.mean([dtc.AP1DelayMeanTest for dtc in third_pop])
 
                 #third_pop = list(map(nuunit_dm_evaluation,third_pop))
                 #latency = np.mean([dtc.AP1DelayMeanTest for dtc in third_pop])
@@ -284,7 +289,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem'):
                     else:
                         pass
                         #print(str(dtc.backend))
-                    vm = model.get_membrane_potential().magnitude
+                    vm = model.get_membrane_potential()#.magnitude
                     sns.set_style("darkgrid")
 
                     if str("RAW") in dtc.backend:
@@ -294,8 +299,9 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem'):
                         label=str('Adaptive Exponential Model')
                     if str("GLIF") in dtc.backend:
                         label=str('Generalized Leaky Integrate and Fire')
-                    label = label+str(latency)
-                    plt.plot(model.get_membrane_potential().times,vm,color='green',label=label)#,label='ground truth')
+                    #label = label+str(latency)
+                    snipptes = get_spike_waveforms(vm)
+                    plt.plot(snipptes.times,snipptes,color='green',label=label)#,label='ground truth')
                     #ax.legend(['A simple line'])
                     ax.legend()
                 plot_backend = mpl.get_backend()
@@ -337,9 +343,14 @@ def make_imputed_observations(tests,backend,random_param):
     dtc = DataTC()
     dtc.attrs = random_param
     dtc.backend = backend
-    dtc.tests  = tests
-    dtc = get_rh(dtc,tests[0])
+    #dtc.tests  = tests
+    #import pdb; pdb.set_trace()
+    if str('RheobaseTest') in tests.keys():
+        dtc = get_rh(dtc,tests['RheobaseTest'])
+    tests = list(tests.values())
+    dtc.tests = tests
     dtc = pred_evaluation(dtc)
+    print('gets here d',dtc)
 
     # Temporarily patch sciunit judge code, which seems to be broken.
     predictions.insert(0,dtc.rheobase)
@@ -386,15 +397,20 @@ def round_trip_test(tests,backend):
             random_param[k] = sample
         except:
             random_param[k] = ranges[k]
+    print('gets here c')
+
     tests = make_imputed_observations(tests,backend,random_param)
     NGEN = 10
     MU = 6
+    print('gets here a')
+
     ga_out, DO = run_ga(ranges,NGEN,tests,free_params=free_params, NSGA = True, MU = MU, backed=backend, selection=str('selNSGA2'))
     best = ga_out['pf'][0].dtc.get_ss()
     #print(Bool(best < 0.5))
     if Bool(best >= 0.5):
         NGEN = 10
         MU = 6
+        print('gets here b')
         ga_out, DO = run_ga(explore_param,NGEN,tests,free_params=free_params, NSGA = True, MU = MU, backed=backend, selection=str('selNSGA2'),seed_pop=pf[0].dtc.attrs)
         best = ga_out['pf'][0].dtc.get_ss()
     #print('Its ',Bool(best < 0.5), ' that optimisation succeeds on this model class')
@@ -532,7 +548,7 @@ def pred_only(test_and_models):
     #obs = test.observation
     backend_ = dtc.backend
     model = mint_generic_model(backend_)
-    model.set_attrs(dtc.attrs)
+    model.set_attrs(**dtc.attrs)
     pred = test.generate_prediction(model)
     return pred#(pred,obs)
 
@@ -579,7 +595,7 @@ def get_rh(dtc,rtest):
     backend_ = dtc.backend
     #keyed['injected_square_current'] = {}
 
-    if 'RAW' in backend_ or 'HH' in backend:#_ or 'ADEXP' in backend_ or 'GLIF' in backend_:#Backend:
+    if 'RAW' in backend_ or 'HH' in backend_:#_ or 'ADEXP' in backend_ or 'GLIF' in backend_:#Backend:
         rtest = RheobaseTest(observation=place_holder,
                                 name='a Rheobase test')
     else:
@@ -588,7 +604,8 @@ def get_rh(dtc,rtest):
 
     dtc.rheobase = None
     model = mint_generic_model(backend_)
-    model.set_attrs(dtc.attrs)
+    #import pdb; pdb.set_trace()
+    model.set_attrs(**dtc.attrs)
     rtest.params['injected_square_current'] = {}
     #print('gets here')
     rtest.params['injected_square_current']['delay'] = DELAY
@@ -733,7 +750,7 @@ def dtc_to_rheo(dtc):
             dtc.rheobase = dtc.rheobase['value']
             obs = rtest.observation
             score = rtest.compute_score(obs,dtc.rheobase)
-            if type(dtc.scores) is not type(None):
+            if type(score.norm_score) is not type(None):
                 dtc.scores[rtest.name] = 1.0 - float(score.norm_score)
             else:
                 dtc.scores[rtest.name] = 1.0
@@ -778,7 +795,9 @@ def switch_logic(tests):
             active = True
             passive = False
     else:
+        #import pdb; pdb.set_trace()
         for t in tests:
+
             t.passive = None
             t.active = None
             active = False
@@ -896,7 +915,8 @@ def pred_evaluation(dtc):
     #preds = []
     dtc.preds = None
     dtc.preds = {}
-    dtc =  dtc_to_rheo(dtc)
+    dtc = dtc_to_rheo(dtc)
+
     dtc = format_test(dtc)
     tests = dtc.tests
 
@@ -947,6 +967,10 @@ from neuronunit.tests import dm_test_interoperable #import Interoperabe
 from neuronunit.tests.base import VmTest
 from scipy.signal import decimate
 from allensdk.ephys.ephys_extractor import EphysSweepFeatureExtractor
+global cpucount
+cpucount = multiprocessing.cpu_count()
+from scipy.special import logit as logistic
+
 #from neuronunit.examples.hide_imports import *
 rts,complete_map = pickle.load(open('../tests/russell_tests.p','rb'))
 df = pd.DataFrame(rts)
@@ -954,25 +978,44 @@ for key,v in rts.items():
     helper_tests = [value for value in v.values() ]
     break
 
-def the_rest(dtc):
+def sigmoid(x):
+    return math.exp(-np.logaddexp(0, -x))
+
+def current_and_features(dtc):
     #dtc.rheobase*3.0
     #current = {'injected_square_current':
     #            {'amplitude':pre_obs[1]*pq.pA, 'delay':DELAY, 'duration':DURATION}}
     current = {'injected_square_current':
-                {'amplitude':dtc.rheobase*3.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+                {'amplitude':dtc.ampl, 'delay':DELAY, 'duration':DURATION}}
     compare = dtc.pre_obs
+    target = len(dtc.pre_obs['spikes'])
+
     model = mint_generic_model(dtc.backend)
     model.set_attrs(**dtc.attrs)
     #model.name = str(pre_obs[0])
 
     vm30 = model.inject_square_current(current['injected_square_current'])
     vm30 = model.get_membrane_potential()
+
+    if model.get_spike_count()!=target:
+        '''
+        rejection due to not meeting target
+        '''
+        dtc.scores = None
+        dtc.fitted_spike_cnt = False
+        #return dtc
+    else:
+        dtc.fitted_spike_cnt = True
     if np.max(vm30)<0.0 or model.get_spike_count()<1:
         dtc.scores = None
         return dtc
     model.vm30 = None
     model.vm30 = vm30
-    v = [float(v)*1000.0 for v in vm30.magnitude]
+    try:
+        vm30.rescale(pq.V)
+    except:
+        pass
+    v = [float(v*1000.0) for v in vm30.magnitude]
     t = [float(t) for t in vm30.times]
     try:
         spks = ft.detect_putative_spikes(np.array(v),np.array(t))
@@ -985,8 +1028,15 @@ def the_rest(dtc):
         downsample too densely sampled signals.
         Making them amenable to Allen analysis
         '''
-        t = decimate(t,13)
-        v = decimate(v,13)
+
+        #t = decimate(t,13)
+        #v = decimate(v,13)
+        #vm30 = model.inject_square_current(current['injected_square_current'])
+        if dtc.backend in str('ADEXP'):
+            vm30 = model.finalize()
+            #v = [float(v)*1000.0
+            v = [ float(v*1000.0) for v in vm30.magnitude]
+            t = [ float(t) for t in vm30.times ]
         #t = decimate(t,13)
         #v = decimate(v,13)
         try:
@@ -1048,6 +1098,17 @@ def the_rest(dtc):
     print(dtc.scores)
     dtc.ephys = None
     dtc.ephys = ephys
+    spike_cnt_pred = model.get_spike_count()
+    delta = np.sqrt(spike_cnt_pred)-np.sqrt(target)
+
+
+    #import numpy as np
+
+    dtc.scores['spk_count'] = sigmoid(np.abs(delta))
+    print(dtc.scores['spk_count'],'spike count delta')
+    delta = float(dtc.ampl)-dtc.pre_obs['current_test']
+    dtc.scores['current_test'] = sigmoid(np.abs(delta))
+    print(dtc.scores['current_test'],'current  injection delta')
 
     return dtc
 
@@ -1061,18 +1122,29 @@ def nuunit_allen_evaluation(dtc):
                 current['amplitude'] = dtc.rheobase * 3.0
                 break
     else:
-        '''
-        steps = np.linspace(1.25*dtc.rheobase,5.0*dtc.rheobase,cpucount+1)*pq.pA
+        #compare = dtc.pre_obs
+        target_spikes = len(dtc.pre_obs['spikes'])
+        observation_spike={}
+        observation_spike['value']=target_spikes
+        from neuronunit.tests.fi import SpikeCountSearch
+        scs = SpikeCountSearch(observation_spike)
+        target_current = scs.generate_prediction(model)
+        steps = np.linspace(float(dtc.rheobase),1.25*float(dtc.rheobase),cpucount+1)*pq.pA
         steps = steps[1:-1]*pq.pA
-        dtc.current_steps = steps
-        dtc_clones = [ dtc for i in range(0,len(dtc.current_steps)) ]
-        for i,s in enumerate(dtc.current_steps):
-            dtc_clones[i] = copy.copy(dtc_clones[i])
-            dtc_clones[i].ampl = copy.copy(dtc.current_steps[i])
-        '''
+        current_steps = steps
+        dtc_clones = [ copy.copy(dtc) for i in range(0,len(current_steps)) ]
+        #import pdb; pdb.set_trace()
 
-        dtc = the_rest(dtc)
-        return dtc
+        population = []
+        for i,s in enumerate(current_steps): dtc_clones[i].ampl = copy.copy(current_steps[i])
+        for i,s in enumerate(current_steps):
+             dtc = current_and_features(dtc_clones[i])
+             population.append(dtc)
+        dtcpop = sorted([(p.scores['spk_count'],p) for p in population ], key=lambda tup: tup[0])
+             #if dtc.fitted_spike_cnt == True:
+        #import pdb; pdb.set_trace()
+
+        return dtcpop[0][1]
 
 
 
@@ -1273,8 +1345,10 @@ def nunit_evaluation(dtc):
     #print('failed to make score length the same')
     print(dtc.scores)
     dtc.summed = dtc.get_ss()
-
-    greatest = np.max([dtc.error_length,len(dtc.scores)])
+    try:
+        greatest = np.max([dtc.error_length,len(dtc.scores)])
+    except:
+        greatest = len(dtc.scores)
     dtc.scores_ratio = None
     dtc.scores_ratio = dtc.summed/greatest
     return dtc
@@ -1508,49 +1582,6 @@ def stochastic_gradient_descent(ga_out):
 
     return (sgd,losslasso,lossridge)
 
-def run_ga(explore_edges, max_ngen, test, \
-        free_params = None, hc = None,
-        NSGA = None, MU = None, seed_pop = None, \
-        model_type = str('RAW'),allen=True):
-    # seed_pop can be used to
-    # to use existing models, that are good guesses at optima, as starting points for optimisation.
-    # https://stackoverflow.com/questions/744373/circular-or-cyclic-imports-in-python
-    # These imports need to be defined with local scope to avoid circular importing problems
-    # Try to fix local imports later.
-    from neuronunit.optimisation.optimisations import SciUnitOptimisation
-
-    ss = {}
-    for k in free_params:
-        ss[k] = explore_edges[k]
-    if type(MU) == type(None):
-        MU = 2**len(list(free_params))
-    # make sure that the gene population size is divisible by 4.
-    if NSGA == True:
-        selection = str('selNSGA')
-    else:
-        selection = str('selIBEA')
-    max_ngen = int(np.floor(max_ngen))
-    #if type(test) is not type([0,0]):
-    if not isinstance(test, Iterable):
-        test = [test]
-    DO = SciUnitOptimisation(offspring_size = MU, error_criterion = test,\
-     boundary_dict = ss, backend = model_type, hc = hc, \
-     selection = selection,allen=True)#,, boundary_dict = ss, elite_size = 2, hc=hc)
-
-
-    if seed_pop is not None:
-        # This is a re-run condition.
-        DO.setnparams(nparams = len(free_params), boundary_dict = ss)
-
-        DO.seed_pop = seed_pop
-        DO.setup_deap()
-        DO.error_length = len(test)
-
-    ga_out = DO.run(max_ngen = max_ngen)
-    #import pdb; pdb.set_trace()
-
-
-    return ga_out, DO
 
 
 
@@ -1924,21 +1955,21 @@ def get_allen(pop,dtcpop,tests,td):
 
     return pop, dtcpop
 
-def parallel_route(pop,dtcpop,tests,td,allen=True,dm=False):
+def parallel_route(pop,dtcpop,tests,td,protocol=None):
     NPART = np.min([multiprocessing.cpu_count(),len(dtcpop)])
-
-    if allen:
+    #import pdb; pdb.set_trace()
+    if protocol['allen'] == True:
         pop, dtcpop = get_allen(pop,dtcpop,tests,td)
 
         pop = [pop[i] for i,d in enumerate(dtcpop) if type(d) is not type(None)]
         dtcpop = [d for d in dtcpop if type(d) is not type(None)]
         return pop, dtcpop
 
-    elif dm:
+    elif protocol['dm'] == True:
         pop, dtcpop = get_dm(pop,dtcpop,tests,td)
         return pop, dtcpop
 
-    else:
+    elif protocol['elephant'] == True:
         #dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
         #dtcpop = list(dtcbag.map(format_test))
         for d in dtcpop:
@@ -2063,7 +2094,7 @@ def grid_search(explore_ranges,test_frame,backend=None):
     return seeds, df
 
 
-def test_runner(pop,td,tests,single_spike=True):
+def test_runner(pop,td,tests,single_spike=True,protocol=None):
     if single_spike:
         pop_, dtcpop = obtain_rheobase(pop, td, tests)
 
@@ -2090,7 +2121,7 @@ def test_runner(pop,td,tests,single_spike=True):
             d.error_length = error_length
             ind.error_length = error_length
 
-    pop,dtcpop = parallel_route(pop, dtcpop, tests, td,allen=True)#, clustered=False)
+    pop,dtcpop = parallel_route(pop, dtcpop, tests, td,protocol=protocol)#, clustered=False)
     for ind,d in zip(pop,dtcpop):
         ind.dtc = None
         ind.dtc = d
@@ -2105,7 +2136,8 @@ def test_runner(pop,td,tests,single_spike=True):
     #import pdb; pdb.set_trace()
     return pop,dtcpop
 
-def update_deap_pop(pop, tests, td, backend = None,hc = None,boundary_dict = None, error_length=None):
+
+def update_deap_pop(self,pop, tests, td, backend = None,hc = None,boundary_dict = None, error_length=None):
     '''
     Inputs a population of genes (pop).
     Returned neuronunit scored DataTransportContainers (dtcpop).
@@ -2121,7 +2153,7 @@ def update_deap_pop(pop, tests, td, backend = None,hc = None,boundary_dict = Non
     #pop = copy.copy(pop)
     if hc is not None:
         pop[0].td = None
-        pop[0].td = td
+        pop[0].td = self.td
 
     if hc is not None:
         pop[0].hc = None
@@ -2144,6 +2176,58 @@ def update_deap_pop(pop, tests, td, backend = None,hc = None,boundary_dict = Non
         p.dtc = d
         print(p.error_length)
     return pop
+
+class OptMan():
+    def __init__(self,tests, td=None, backend = None,hc = None,boundary_dict = None, error_length=None,protocol=None):
+        self.tests = tests
+        self.td = td
+        self.protocol=protocol
+        self.error_length = error_length
+        self.tests = tests
+        self.backend = backend
+        self.hc = hc
+        self.boundary_dict= boundary_dict
+        self.protocol = protocol
+
+    def update_deap_pop(self,pop, tests, td, backend = None,hc = None,boundary_dict = None, error_length=None):
+        '''
+        Inputs a population of genes (pop).
+        Returned neuronunit scored DataTransportContainers (dtcpop).
+        This method converts a population of genes to a population of Data Transport Containers,
+        Which act as communicatable data types for storing model attributes.
+        Rheobase values are found on the DTCs
+        DTCs for which a rheobase value of x (pA)<=0 are filtered out
+        DTCs are then scored by neuronunit, using neuronunit models that act in place.
+        '''
+        if len(pop)==0:
+            import pdb
+            pdb.set_trace()
+        #pop = copy.copy(pop)
+        if hc is not None:
+            pop[0].td = None
+            pop[0].td = self.td
+
+        if hc is not None:
+            pop[0].hc = None
+            pop[0].hc = hc
+
+        if backend is not None:
+            pop[0].backend = None
+            pop[0].backend = backend
+        if boundary_dict is not None:
+            pop[0].boundary_dict = None
+            pop[0].boundary_dict = boundary_dict
+        for p in pop:
+            if error_length is not None:
+                p.error_length = None
+                p.error_length = error_length
+
+
+        pop, dtcpop = test_runner(pop,td,tests,protocol=self.protocol)
+        for p,d in zip(pop,dtcpop):
+            p.dtc = d
+            print(p.error_length)
+        return pop
 
 def create_subset(nparams = 10, boundary_dict = None):
     # used by GA to find subsets in parameter space.

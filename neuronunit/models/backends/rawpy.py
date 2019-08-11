@@ -1,11 +1,10 @@
 #from neuronunit.tests.base import ALLEN_ONSET, DT, ALLEN_STOP, ALLEN_FINISH
-
 defaults = {'DT': 2e-05, 'ALLEN_STOP': 3.0199800000000003, 'ALLEN_FINISH': 10.020000000000001,'ALLEN_ONSET':1.02}
+
 DT = defaults["DT"]
 ALLEN_ONSET = defaults["ALLEN_ONSET"]
 ALLEN_STOP = defaults["ALLEN_STOP"]
 ALLEN_FINISH = defaults["ALLEN_FINISH"]
-
 from quantities import mV, ms, s, V
 import sciunit
 from neo import AnalogSignal
@@ -151,6 +150,7 @@ class RAWBackend(Backend):
         else:
             c = current
         amplitude = float(c['amplitude'])
+
         duration = float(c['duration'])#/dt#/dt.rescale('ms')
         delay = float(c['delay'])#/dt#.rescale('ms')
         if 'sim_length' in c.keys():
@@ -158,8 +158,11 @@ class RAWBackend(Backend):
         tMax = delay + duration + 200.0#/dt#*pq.ms
         self.set_stop_time(tMax*pq.ms)
         tMax = self.tstop
-        #attrs['dt'] = DT
-        N = int(tMax/attrs['dt'])
+        if str('dt') in attrs:
+            N = int(tMax/attrs['dt'])
+        else:
+            attrs['dt'] = 0.03
+            N = int(tMax/attrs['dt'])
         Iext = np.zeros(N)
         delay_ind = int((delay/tMax)*N)
         duration_ind = int((duration/tMax)*N)
@@ -170,6 +173,8 @@ class RAWBackend(Backend):
 
         attrs['Iext'] = Iext
         v = get_vm(**attrs)
+        #print(np.max(v))
+
         self.vM = AnalogSignal(v,
                      units = mV,
                      sampling_period = attrs['dt'] * ms)
@@ -202,6 +207,7 @@ class RAWBackend(Backend):
             c = current['injected_square_current']
         else:
             c = current
+        DT = 0.003
         amplitude = float(c['amplitude'])
         duration = float(c['duration'])#/dt#/dt.rescale('ms')
         delay = float(c['delay'])#/dt#.rescale('ms')
@@ -210,12 +216,16 @@ class RAWBackend(Backend):
         tMax = delay + duration + 200.0#/dt#*pq.ms
         self.set_stop_time(tMax*pq.ms)
         tMax = self.tstop
-        attrs['dt'] = DT
-        N = int(tMax/attrs['dt'])
+        #attrs['dt'] = DT
+        print(DT,tMax)
+        N = int(tMax/DT)#attrs['dt'])
         Iext = np.zeros(N)
         delay_ind = int((delay/tMax)*N)
         duration_ind = int((duration/tMax)*N)
-        Iext = [ 0.0 ] * int(ALLEN_ONSET*1000.0) + [ amplitude ] * int(ALLEN_STOP*1000.0) + [ 0.0 ] * int(ALLEN_FINISH*1000.0)
+        defaults = {}
+        defaults = {'DT': 2e-05, 'ALLEN_STOP': 3.0199800000000003, 'ALLEN_FINISH': 10.020000000000001,'ALLEN_ONSET':1.02}
+        attrs['dt']=0.25
+        Iext = [ 0.0 ] * int(1.02*100000.0) + [ amplitude ] * int(3.0199800000000003*100000.0) + [ 0.0 ] * int(10.020000000000001*100000.0)
 
         attrs['Iext'] = Iext
         v = get_vm_regular(**attrs)

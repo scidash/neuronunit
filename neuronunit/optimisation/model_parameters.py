@@ -87,7 +87,9 @@ BAE1['b'] = [BAE1['b'] - 0.125 * BAE1['b'],  BAE1['b']+ 0.125 * BAE1['b']]
 BAE1['C'] = [BAE1['C']- 0.125 * BAE1['C'], BAE1['C'] + 0.125 * BAE1['C'] ]
 
 
-MODEL_PARAMS['BAE1'] = BAE1
+BAE1['peak_v'] = [0.001, 0.06]
+
+MODEL_PARAMS['ADEXP'] = BAE1
 #I = .8*nA
 #Vcut = VT + 5 * DeltaT  # practical threshold condition
 #N = 200
