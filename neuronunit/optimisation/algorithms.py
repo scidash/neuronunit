@@ -170,7 +170,11 @@ def eaAlphaMuPlusLambdaCheckpoint(
         logbook.header = ['gen', 'nevals'] + (stats.fields if stats else [])
         history = deap.tools.History()
         #toolbox.register("select", tools.selNSGA2)
-        toolbox.register("select", tools.selNSGA3, ref_points=population)
+        def experimental():
+            NOBJ = len(population[0].fitness.values)
+            #print('stuck_here uniform')
+            ref_points = tools.uniform_reference_points(NOBJ, 20)
+            toolbox.register("select", tools.selNSGA3, ref_points=population)
 
         # TODO this first loop should be not be repeated !
         parents = _evaluate_invalid_fitness(toolbox, population)
@@ -183,9 +187,6 @@ def eaAlphaMuPlusLambdaCheckpoint(
         _record_stats(stats, logbook, start_gen, parents, invalid_count)
     #toolbox.register("select",selNSGA2)
     #from deap.tools import selNSGA3
-    NOBJ = len(population[0].fitness.values)
-    print('stuck_here uniform')
-    #ref_points = tools.uniform_reference_points(NOBJ, 20)
 
     fronts = []
 
@@ -259,7 +260,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
         #    toolbox.register("select", tools.selNSGA3, ref_points=ref_points)
         #print('fails at d')
 
-        #toolbox.register("select",selNSGA2)
+        toolbox.register("select",selNSGA2)
 
         print('fails at e')
         old_max = 0
