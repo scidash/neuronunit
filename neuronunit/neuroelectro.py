@@ -1,5 +1,34 @@
 """NeuronUnit interface to Neuroelectro.org.
 
+# Interface for creating tests using neuroelectro.org as reference data.
+#
+# Example workflow:
+
+# x = NeuroElectroDataMap()
+# x.set_neuron(nlex_id='nifext_152') # neurolex.org ID for 'Amygdala basolateral
+                                   # nucleus pyramidal neuron'.
+# x.set_ephysprop(id=23) # neuroelectro.org ID for 'Spike width'.
+# x.set_article(pmid=18667618) # Pubmed ID for Fajardo et al, 2008 (J. Neurosci.)
+# x.get_values() # Gets values for spike width from this paper.
+# width = x.val # Spike width reported in that paper.
+
+# t = neurounit.tests.SpikeWidthTest(spike_width=width)
+# c = sciunit.Candidate() # Instantiation of your model (or other candidate)
+# c.execute = code_that_runs_your_model
+# result = sciunit.run(t,m)
+# print result.score
+#
+# OR
+#
+# x = NeuroElectroSummary()
+# x.set_neuron(nlex_id='nifext_152') # neurolex.org ID for 'Amygdala basolateral
+                                   # nucleus pyramidal neuron'.
+# x.set_ephysprop(id=2) # neuroelectro.org ID for 'Spike width'.
+# x.get_values() # Gets values for spike width from this paper.
+# width = x.mean # Mean Spike width reported across all matching papers.
+# ...
+
+=======
 Interface for creating tests using neuroelectro.org as reference data.
 
 Example workflow:
@@ -119,8 +148,7 @@ class NeuroElectroData(object):
         if get_values:
             self.get_values()
 
-    url = API_URL  # Base URL.
-
+    url = API_URL # Base URL.
     def set_names(self, neuron_name, ephysprop_name):
         """Set the names of the neurons (i.e. their types)."""
         self.set_neuron(name=neuron_name)
@@ -227,7 +255,8 @@ class NeuroElectroData(object):
         return self.api_data
 
     def check(self):
-        """See if data requested from the server were obtained successfully."""
+        """See if the data requested from the server
+        were obtained successfully."""
         if self.require_attrs:
             for attr in self.require_attrs:
                 if not hasattr(self, attr):

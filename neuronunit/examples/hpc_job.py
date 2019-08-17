@@ -10,10 +10,6 @@
 
 # # Import libraries
 # To keep the standard running version of minimal and memory efficient, not all available packages are loaded by default. In the cell below I import a mixture common python modules, and custom developed modules associated with NeuronUnit (NU) development
-#!pip install dask distributed seaborn
-#!bash after_install.sh
-
-
 # goals.
 # given https://www.nature.com/articles/nn1352
 # Goal is based on this. Don't optimize to a singular point, optimize onto a cluster.
@@ -38,23 +34,41 @@ from neuronunit.models.reduced import ReducedModel
 from neuronunit.optimisation.model_parameters import path_params
 LEMS_MODEL_PATH = path_params['model_path']
 list_to_frame = []
-#from neuronunit.tests.fi import RheobaseTestP
 import copy
 from sklearn.model_selection import ParameterGrid
 from neuronunit.models.interfaces import glif
 import matplotlib.pyplot as plt
+from neuronunit.optimisation import get_neab
+
+import pickle
+from neuronunit import tests
+from neuronunit import neuroelectro
+import neuronunit.optimisation.model_parameters as model_params
+MODEL_PARAMS = model_params.MODEL_PARAMS
+MODEL_PARAMS['results'] = {}
+
+from neuronunit.optimization import optimization_management as om
+
+from collections import Iterable, OrderedDict
+import quantities as qt
+rts,complete_map = pickle.load(open('../tests/russell_tests.p','rb'))
+#import pdb; pdb.set_trace()
+local_tests = [value for value in rts['Hippocampus CA1 pyramidal cell'].values() ]
+ga_out, DO = om.run_ga(MODEL_PARAMS['RAW'], 4, local_tests, free_params = MODEL_PARAMS['RAW'],
+                            NSGA = True, MU = 12, model_type = str('RAW'))#,seed_pop=seeds[key])
+=======
+from neuronunit.optimisation import model_parameters as model_params
+from neuronunit.optimisation.optimisation_management import inject_and_plot, cluster_tests
+#from neuronunit.optimisation.optimisation_management import opt_pair
+
 
 # # The Izhiketich model is instanced using some well researched parameter sets.
 # First lets get the points in parameter space, that Izhikich himself has published about. These points are often used by the open source brain project to establish between model reproducibility. The itial motivating factor for choosing these points as constellations, of all possible parameter space subsets, is that these points where initially tuned and used as best guesses for matching real observed experimental recordings.
-
-#explore_param = {k:(np.min(v),np.max(v)) for k,v in reduced_dict.items()}
-
 # ## Get the experimental Data pertaining to four different classes or neurons, that can constrain models.
 # Next we get some electro physiology data for four different classes of cells that are very common targets of scientific neuronal modelling. We are interested in finding out what are the most minimal, and detail reduced, low complexity model equations, that are able to satisfy
 # Below are some of the data set ID's I used to query neuroelectro.
 # To save time for the reader, I prepared some data earlier to save time, and saved the data as a pickle, pythons preferred serialisation format.
 # The interested reader can find some methods for getting cell specific ephys data from neuroelectro in a code file (neuronunit/optimisation/get_neab.py)
-
 
 purkinje ={"id": 18, "name": "Cerebellum Purkinje cell", "neuron_db_id": 271, "nlex_id": "sao471801888"}
 fi_basket = {"id": 65, "name": "Dentate gyrus basket cell", "neuron_db_id": None, "nlex_id": "nlx_cell_100201"}
@@ -88,70 +102,44 @@ except:
         pickle.dump((obs_frame,test_frame),f)
 
 
-# # Cast the tabulatable data to pandas data frame
-# There are many among us who prefer potentially tabulatable data to be encoded in pandas data frame.
-
-# idea something like:
-# test_frame['Olfactory bulb (main) mitral cell'].insert(0,test_frame['Cerebellum Purkinje cell'][0])
-
 for k,v in test_frame.items():
    if "Olfactory bulb (main) mitral cell" not in k:
        pass
    if "Olfactory bulb (main) mitral cell" in k:
        pass
-       #v[0] = RheobaseTestP(obs['Rheobase'])
 df = pd.DataFrame.from_dict(obs_frame)
 
 
 
-# In the data frame below, you can see many different cell types
 df['Hippocampus CA1 pyramidal cell']
-# # Tweak Izhikitich equations
-# with educated guesses based on information that is already encoded in the predefined experimental observations.
-# In otherwords use information that is readily amenable into hardcoding into equations
-# Select out the 'Neocortex pyramidal cell layer 5-6' below, as a target for optimisation
+>>>>>>> 51529ae8e9a02874e8b1d050bb812f2aec8d41d9
 
-#!pip install lazyarray
-clustered_tests = pickle.load(open('clustered_tests.p','rb'))
-grouped_tests = clustered_tests['gtc']
-grouped_testsn = clustered_tests['gtn']
-from neuronunit.optimisation import model_parameters as model_params
-from neuronunit.optimisation.optimisation_management import inject_and_plot, cluster_tests
-from neuronunit.optimisation.optimisation_management import opt_pair
+from neuronunit.optimisation.optimisation_management import stochastic_gradient_descent
+import pdb
 
-MODEL_PARAMS = model_params.MODEL_PARAMS
-MODEL_PARAMS['results'] = {}
+<<<<<<< HEAD
+pdb.set_trace()
 
+stochastic_gradient_descent(ga_out)
+import sciunit
+for cell,tt in rts.items():
+    tests = [ y for x,y in tt.items() ]
+    if len(tests):
+        ga_out, DO = om.run_ga(MODEL_PARAMS['RAW'], 12 , rts['Hippocampus CA1 pyramidal cell'], free_params = MODEL_PARAMS['RAW'],
+                                    NSGA = True, MU = 12, model_type = str('RAW'))#,seed_pop=seeds[key])
 
-# # The Izhiketich model is instanced using some well researched parameter sets.
-# First lets get the points in parameter space, that Izhikich himself has published about. These points are often used by the open source brain project to establish between model reproducibility. The itial motivating factor for choosing these points as constellations, of all possible parameter space subsets, is that these points where initially tuned and used as best guesses for matching real observed experimental recordings.
+        #ga_out, _ = om.run_ga(MODEL_PARAMS['RAW']['EIF'],2 ,tests,free_params=MODEL_PARAMS['PYNN']['EIF'].keys(),
+        #                            NSGA = True, MU = 4, model_type = str('PYNN'))#,seed_pop=seed)
+        everything = list(zip(pop,dtcpop))
 
-#explore_param = {k:(np.min(v),np.max(v)) for k,v in reduced_dict.items()}
-
-
-# # Tweak Izhikitich equations
-# with educated guesses based on information that is already encoded in the predefined experimental observations.
-# In otherwords use information that is readily amenable into hardcoding into equations
-# Select out the 'Neocortex pyramidal cell layer 5-6' below, as a target for optimisation
-'''
-free_params = ['a','b','k','c','C','d','vPeak','vr','vt']
-hc_ = reduced_cells['RS']
-hc_['vr'] = -65.2261863636364
-hc_['vPeak'] = hc_['vr'] + 86.364525297619
-explore_param['C'] = (hc_['C']-20,hc_['C']+20)
-explore_param['vr'] = (hc_['vr']-5,hc_['vr']+5)
-use_test = test_frame["Neocortex pyramidal cell layer 5-6"]
-
-test_opt = {}
-with open('data_dump.p','wb') as f:
-    pickle.dump(test_opt,f)
-use_test[0].observation
-rtp = RheobaseTestP(use_test[0].observation)
-use_test[0] = rtp
-reduced_cells.keys()
-'''
+        #import pdb; pdb.set_trace()
+        with open('GA_init_for_julia_objective_raw.p','wb') as f:
+            pickle.dump(everything,f)
 
 
+
+=======
+>>>>>>> 51529ae8e9a02874e8b1d050bb812f2aec8d41d9
 try:
     with open('Izh_seeds.p','rb') as f:
         seeds = pickle.load(f)
@@ -164,11 +152,37 @@ except:
     seeds, df = grid_search(MODEL_PARAMS['RAW'],
                             test_frame, backend=str('RAW'))
 
-MU = 12 # more than six causes a memory leak. I suspect this is PYNN
-NGEN = 12
-test_opt = {}#{str('multi_objective_izhi')+str(ga_out):ga_out}
-MODEL_PARAMS['results'] = {}
 
+try:
+    with open('multi_objective_raw.p','rb') as f:
+        MODEL_PARAMS = pickle.load(f)
+    assert len(MODEL_PARAMS['results']['RAW'].keys())
+except:
+    MU = 12 # more than six causes a memory leak. I suspect this is PYNN
+    NGEN = 12
+    test_opt = {}#{str('multi_objective_izhi')+str(ga_out):ga_out}
+    MODEL_PARAMS['results'] = {}
+
+    for key, use_test in test_frame.items():
+        # use the best parameters found via the sparse grid search above, to inform the first generation
+        # of the GA.
+        if str('results') in MODEL_PARAMS['RAW'].keys():
+            MODEL_PARAMS['RAW'].pop('results', None)
+        ga_out, DO = om.run_ga(MODEL_PARAMS['RAW'], NGEN,use_test, free_params = MODEL_PARAMS['RAW'],
+                                    NSGA = True, MU = MU, model_type = str('RAW'),seed_pop=seeds[key])
+        try:
+            print('optimization done, doing extra experimental work beyond the scope of the opt project')
+            dtcpop = [ p.dtc for p in ga_out['pf'] ]
+            measure_dtc_pop = opt_pair(dtcpop)
+            ga_out['measure_dtc_pop'] = measure_dtc_pop
+            print(ga_out['measure_dtc_pop'])
+        except:
+            print('failed on a new development feature, not critical to optimization')
+        MODEL_PARAMS['results']['RAW'] = {}
+        MODEL_PARAMS['results']['RAW'][key]  = ga_out
+        with open('multi_objective_raw.p','wb') as f:
+            pickle.dump(MODEL_PARAMS,f)
+=======
 for key, use_test in test_frame.items():
     # use the best parameters found via the sparse grid search above, to inform the first generation
     # of the GA.
@@ -178,27 +192,13 @@ for key, use_test in test_frame.items():
     ga_out, _ = om.run_ga(MODEL_PARAMS['RAW'], NGEN,use_test, free_params = MODEL_PARAMS['RAW'],
                                 NSGA = True, MU = MU, model_type = str('RAW'),seed_pop=seeds[key])
 
-
-
-
-    try:
-        print('optimization done, doing extra experimental work beyond the scope of the opt project')
-        dtcpop = [ p.dtc for p in ga_out['pf'] ]
-        measure_dtc_pop = opt_pair(dtcpop)
-        ga_out['measure_dtc_pop'] = measure_dtc_pop
-        print(ga_out['measure_dtc_pop'])
-
-
-    except:
-        print('failed on a new development feature, not critical to optimization')
-
     MODEL_PARAMS['results']['RAW'] = {}
     MODEL_PARAMS['results']['RAW'][key]  = ga_out
-
-    with open('multi_objective_raw.p','wb') as f:
-        pickle.dump(MODEL_PARAMS,f)
+>>>>>>> 51529ae8e9a02874e8b1d050bb812f2aec8d41d9
 
 
+
+'''
 try:
     with open('adexp_seeds.p','rb') as f:
         seeds = pickle.load(f)
@@ -207,9 +207,10 @@ try:
 except:
     seeds, df = grid_search(MODEL_PARAMS['PYNN']['EIF'],test_frame,backend=str('PYNN'))
     with open('adexp_seeds.p','rb') as f:
-        pickle.dump(f,seeds)
-MU = 6
-NGEN = 6
+        pickle.dump(seeds,f)
+'''
+MU = 5
+NGEN = 3
 try:
     with open('multi_objective_adexp.p','rb') as f:
         test_opt = pickle.load(f)
@@ -220,16 +221,6 @@ except:
         MODEL_PARAMS['RAW'].pop('results', None)
 
         ga_out, _ = om.run_ga(MODEL_PARAMS['PYNN']['EIF'],NGEN,use_test,free_params=MODEL_PARAMS['PYNN']['EIF'].keys(), NSGA = True, MU = MU, model_type = str('PYNN'))#,seed_pop=seed)
-
-        try:
-            print('optimization done, doing extra experimental work beyond the scope of the opt project')
-            dtcpop = [ p.dtc for p in ga_out['pf'] ]
-            measure_dtc_pop = opt_pair(dtcpop)
-            ga_out['measure_dtc_pop'] = measure_dtc_pop
-            print(ga_out['measure_dtc_pop'])
-        except:
-            print('failed on a new development feature, not critical to optimization')
-
 
         MODEL_PARAMS['results']['PYNN'][key]  = ga_out
         with open('multi_objective_adexp.p','wb') as f:
@@ -274,15 +265,6 @@ except:
         print(grouped_tests)
         MODEL_PARAMS['GLIF'] = test_keyed_MODEL_PARAMS[k]
         ga_out, _ = om.run_ga(test_keyed_MODEL_PARAMS[k],NGEN,use_test,free_params=test_keyed_MODEL_PARAMS[k].keys(), NSGA = True, MU = MU, model_type = str('GLIF'),seed_pop=seed)
-
-        try:
-            print('optimization done, doing extra experimental work beyond the scope of the opt project')
-            dtcpop = [ p.dtc for p in ga_out['pf'] ]
-            measure_dtc_pop = opt_pair(dtcpop)
-            ga_out['measure_dtc_pop'] = measure_dtc_pop
-            print(ga_out['measure_dtc_pop'])
-        except:
-            print('failed on a new development feature, not critical to optimization')
 
         MODEL_PARAMS['GLIF']['results'][key] = ga_out
         with open('multi_objective_glif.p','wb') as f:

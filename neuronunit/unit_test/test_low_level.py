@@ -136,6 +136,9 @@ class testLowLevelOptimisation(NotebookTools,unittest.TestCase):
         self.rheobase = self.dtc.rheobase
         self.standard_model = self.model = mint_generic_model('RAW')
         self.MODEL_PARAMS = MODEL_PARAMS
+        #
+        # NEURON backend broken this branch (barcelona), should work when
+        # merged
         self.MODEL_PARAMS.pop(str('NEURON'),None)
 
         self.heavy_backends = [
@@ -152,6 +155,16 @@ class testLowLevelOptimisation(NotebookTools,unittest.TestCase):
                 ]
         #self.standard_model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend='RAW')
         #self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend='RAW')
+
+
+        purkinje ={"id": 18, "name": "Cerebellum Purkinje cell", "neuron_db_id": 271, "nlex_id": "sao471801888"}
+        fi_basket = {"id": 65, "name": "Dentate gyrus basket cell", "neuron_db_id": None, "nlex_id": "nlx_cell_100201"}
+        pvis_cortex = {"id": 111, "name": "Neocortex pyramidal cell layer 5-6", "neuron_db_id": 265, "nlex_id": "nifext_50"}
+        #does not have rheobase
+        olf_mitral = {"id": 129, "name": "Olfactory bulb (main) mitral cell", "neuron_db_id": 267, "nlex_id": "nlx_anat_100201"}
+        ca1_pyr = {"id": 85, "name": "Hippocampus CA1 pyramidal cell", "neuron_db_id": 258, "nlex_id": "sao830368389"}
+        pipe = [ fi_basket, ca1_pyr, purkinje,  pvis_cortex,olf_mitral]
+        self.pipe = pipe
 
     def check_dif(pipe_old,pipe_new):
         bool = False
@@ -244,6 +257,14 @@ class testLowLevelOptimisation(NotebookTools,unittest.TestCase):
         else:
             self.asserTrue(False)
         return
+
+    def data_driven_druckmann(self):
+        '''
+        can we use neuro electro data to instance druckmann
+        on a handle ful of applicable druckmann?
+        '''
+        for p in pipe:
+            tests,observations = get_neab.executable_druckman_tests(p)
 
 
     def test_rotate_backends(self):

@@ -9,15 +9,18 @@ from neuronunit.optimisation import get_neab
 import collections
 from collections import OrderedDict
 import numpy as np
-import pyNN
-from pyNN import neuron
-from pyNN.neuron import EIF_cond_exp_isfa_ista
+try:
+    import pyNN
+    from pyNN import neuron
+    from pyNN.neuron import EIF_cond_exp_isfa_ista
+    from pyNN import neuron
+except:
+    print('consider installing pynn a heavier backend')
 import pickle
-import pdb
-import pyNN
-from pyNN import neuron
-from pyNN.neuron import EIF_cond_exp_isfa_ista
-#from neurodynex.adex_model import AdEx
+#import pdb
+
+from neurodynex.adex_model import AdEx
+import brian2 as b2s
 
 
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -35,21 +38,62 @@ MODEL_PARAMS = {}
 
 '''
 BAE = {}
-AdEx.b2.units.pF
+#AdEx.b2.units.pF
+#from neurodynex.adex_model.AdEx.units import *
 # Parameters
-BAE['C'] = 281 * AdEx.b2.units.pF
-BAE['gL'] = 30 * AdEx.b2.units.nS
+BAE['C'] = 281 #* AdEx.b2.units.pF
+BAE['gL'] = 30# * AdEx.b2.units.nS
 BAE['taum'] = BAE['C'] / BAE['gL']
-BAE['EL'] = -70.6 * AdEx.b2.units.mV
-BAE['VT'] = -50.4 * AdEx.b2.units.mV
-BAE['DeltaT'] = 2 * AdEx.b2.units.mV
+BAE['EL'] = -70.6# * AdEx.b2.units.mV
+BAE['VT'] = -50.4# * AdEx.b2.units.mV
+BAE['DeltaT'] = 2# * AdEx.b2.units.mV
 BAE['Vcut'] = BAE['VT'] + 5 * BAE['DeltaT']
-a = 4*AdEx.b2.units.nS
-b = 0.08*AdEx.b2.units.nA
+a = 4#*AdEx.b2.units.nS
+b = 0.08#*AdEx.b2.units.nA
+'''
+BAE1 = {}
+BAE1['ADAPTATION_TIME_CONSTANT_tau_w'] = 100#*AdEx.b2.units.ms
+BAE1['ADAPTATION_VOLTAGE_COUPLING_a'] = 0.5#*AdEx.b2.units.nS
+BAE1['b'] = 0.09#*AdEx.b2.units.nS
+BAE1['C'] = 1.0
+#BAE1['gL'] = 30.0
+#BAE1['EL'] = -70.0
+#BAE1['a'] = 4
+BAE1['FIRING_THRESHOLD_v_spike'] = -30#*AdEx.b2.units.mV
+BAE1['MEMBRANE_RESISTANCE_R'] =  0.5#*AdEx.b2.units.Gohm
+BAE1['MEMBRANE_TIME_SCALE_tau_m'] = 5#*AdEx.b2.units.ms
+BAE1['RHEOBASE_THRESHOLD_v_rh'] = -50.0#*AdEx.b2.units.mV
+BAE1['SHARPNESS_delta_T'] = 2.0#*AdEx.b2.units.mV
+BAE1['SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b'] = 7#*AdEx.b2.units.pA
+BAE1['V_RESET'] = -51.0#*AdEx.b2.units.mV
+BAE1['V_REST'] = -70#*AdEx.b2.units.mV
+
+BAE1['ADAPTATION_TIME_CONSTANT_tau_w'] = [BAE1['ADAPTATION_TIME_CONSTANT_tau_w'] - 0.125 * BAE1['ADAPTATION_TIME_CONSTANT_tau_w'], BAE1['ADAPTATION_TIME_CONSTANT_tau_w']+0.125 * BAE1['ADAPTATION_TIME_CONSTANT_tau_w']]
+BAE1['ADAPTATION_VOLTAGE_COUPLING_a'] = [BAE1['ADAPTATION_VOLTAGE_COUPLING_a'] -0.125 * BAE1['ADAPTATION_VOLTAGE_COUPLING_a'], BAE1['ADAPTATION_VOLTAGE_COUPLING_a']+ 0.125 * BAE1['ADAPTATION_VOLTAGE_COUPLING_a']]
+BAE1['FIRING_THRESHOLD_v_spike'] = [ BAE1['FIRING_THRESHOLD_v_spike'],BAE1['FIRING_THRESHOLD_v_spike'] ]
+#[BAE1['FIRING_THRESHOLD_v_spike'] - 0.15 * BAE1['FIRING_THRESHOLD_v_spike'],BAE1['FIRING_THRESHOLD_v_spike']+ 0.25 * BAE1['FIRING_THRESHOLD_v_spike']]
+BAE1['MEMBRANE_RESISTANCE_R'] = [BAE1['MEMBRANE_RESISTANCE_R']- 0.125 * BAE1['MEMBRANE_RESISTANCE_R'], BAE1['MEMBRANE_RESISTANCE_R']*0.125 * BAE1['MEMBRANE_RESISTANCE_R']]
+BAE1['MEMBRANE_TIME_SCALE_tau_m'] = [BAE1['MEMBRANE_TIME_SCALE_tau_m'] - 0.125 * BAE1['MEMBRANE_TIME_SCALE_tau_m'], BAE1['MEMBRANE_TIME_SCALE_tau_m']+ 0.125*BAE1['MEMBRANE_TIME_SCALE_tau_m']]
+BAE1['RHEOBASE_THRESHOLD_v_rh'] = [BAE1['RHEOBASE_THRESHOLD_v_rh'] - 0.125 * BAE1['RHEOBASE_THRESHOLD_v_rh'], BAE1['RHEOBASE_THRESHOLD_v_rh']+ 0.125 * BAE1['RHEOBASE_THRESHOLD_v_rh']]
+BAE1['SHARPNESS_delta_T'] = [BAE1['SHARPNESS_delta_T']-0.125 * BAE1['SHARPNESS_delta_T'], 0.125 * BAE1['SHARPNESS_delta_T']]
+BAE1['SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b'] = \
+                                                 [BAE1['SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b'] -0.125 \
+                                                  * BAE1['SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b'], \
+                                                  BAE1['SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b'] +0.125 * BAE1['SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b']]
+BAE1['V_RESET'] = [ BAE1['V_RESET'] -0.125*BAE1['V_RESET'],  BAE1['V_RESET']+0.125*BAE1['V_RESET']]
+BAE1['V_REST'] = [  BAE1['V_REST'], BAE1['V_REST']]
+#[  BAE1['V_REST'] - 0.75*BAE1['V_REST'], BAE1['V_REST']+0.25*BAE1['V_REST']]
+BAE1['b'] = [BAE1['b'] - 0.125 * BAE1['b'],  BAE1['b']+ 0.125 * BAE1['b']]
+BAE1['C'] = [BAE1['C']- 0.125 * BAE1['C'], BAE1['C'] + 0.125 * BAE1['C'] ]
+
+
+BAE1['peak_v'] = [0.001, 0.06]
+
+MODEL_PARAMS['ADEXP'] = BAE1
 #I = .8*nA
 #Vcut = VT + 5 * DeltaT  # practical threshold condition
 #N = 200
-
+'''
 # Pick an electrophysiological behaviour
 Vr = 144*AdEx.b2.units.ms
 RSBrian = [BAE['taum'] , a, b,Vr, 4*AdEx.b2.units.nS, 0.0805*AdEx.b2.units.nA, -70.6*AdEx.b2.units.mV] # Regular spiking (as in the paper)
@@ -57,6 +101,7 @@ Vr = 20*AdEx.b2.units.ms
 BurstBrian = [BAE['taum'] ,a,b,Vr,4*AdEx.b2.units.nS,0.5*AdEx.b2.units.nA,BAE['VT']+5*AdEx.b2.units.mV] # Bursting
 Vr = 144*AdEx.b2.units.ms,2*BAE['C']/(144*AdEx.b2.units.ms)
 FSBrian = [BAE['taum'] ,a,b,Vr,0*AdEx.b2.units.nA,-70.6*AdEx.b2.units.mV] # Fast spiking
+'''
 '''
 # https://github.com/NeuroML/NML2_LEMS_Examples/blob/master/PyNN.xml
 EIF = {}
@@ -97,8 +142,14 @@ EIF_cond_exp_isfa_ista_initial_values = {
     'gsyn_exc': 0.0,
     'gsyn_inh': 0.0,
 }
-MODEL_PARAMS['PYNN'] = EIF
-GLIF_RANGE = {'El_reference': [-0.08569469261169435, -0.05463626766204832], \
+MODEL_PARAMS['PYNN'] = {}
+MODEL_PARAMS['PYNN']['EIF'] = EIF
+MODEL_PARAMS['PYNN']['parallelRheobase'] = True
+'''
+
+
+GLIF_RANGE = {'init_AScurrents':[0,0], \
+              'El_reference': [-0.08569469261169435, -0.05463626766204832], \
               'C': [3.5071610042390286e-11, 7.630189223327981e-10], \
               'asc_amp_array': [[-6.493692083311101e-10, 1.224690033604069e-09], \
                                 [1.0368081669092888e-08, -4.738879134819112e-08]], \
@@ -120,7 +171,7 @@ GLIF_RANGE = {'El_reference': [-0.08569469261169435, -0.05463626766204832], \
                                            'th_inf': 1.0212937371199788, 'asc_amp_array': [1.0, 1.0]}, \
               'type': ['GLIF', 'GLIF']}
 MODEL_PARAMS['GLIF'] = GLIF_RANGE
-MODEL_PARAMS['GLIF']['init_AScurrents'] = [0,0]
+#MODEL_PARAMS['GLIF']
 
 # Which Parameters
 # https://www.izhikevich.org/publications/spikes.htm
@@ -171,6 +222,7 @@ for index,key in enumerate(reduced_cells.keys()):
 
 IZHI_PARAMS = {k:(np.min(v),np.max(v)) for k,v in trans_dict.items()}
 IZHI_PARAMS = OrderedDict(IZHI_PARAMS)
+IZHI_PARAMS['dt'] = [0.005, 0.005]
 MODEL_PARAMS['RAW'] = IZHI_PARAMS
 
 # page 1
