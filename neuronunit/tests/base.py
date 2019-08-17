@@ -37,7 +37,6 @@ PASSIVE_DURATION = 300.0*pq.ms
 
 class VmTest(sciunit.Test):
     """Base class for tests involving the membrane potential of a model."""
-
     def __init__(self,
                  observation={'mean':None,'std':None},
                  name=None,
