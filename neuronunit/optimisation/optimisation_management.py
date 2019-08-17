@@ -2188,6 +2188,125 @@ class OptMan():
         self.hc = hc
         self.boundary_dict= boundary_dict
         self.protocol = protocol
+    def update_dtc_pop(self,pop, td):
+        '''
+        inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
+        outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
+        Rationale, not every gene value will result in a model for which rheobase is found, in which case that gene is discarded, however to
+        compensate for losses in gene population size, more gene samples must be tested for a successful return from a rheobase search.
+        If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
+        corresponding virtual model objects.
+        '''
+        if self.backend is not None:
+            _backend = self.backend
+        if isinstance(pop, Iterable):# and type(pop[0]) is not type(str('')):
+            xargs = zip(pop,repeat(td),repeat(_backend))
+            npart = np.min([multiprocessing.cpu_count(),len(pop)])
+            bag = db.from_sequence(xargs, npartitions = npart)
+            dtcpop = list(bag.map(transform).compute())
+
+            assert len(dtcpop) == len(pop)
+            for dtc in dtcpop:
+                dtc.backend = self.backend
+                dtc.boundary_dict = None
+                dtc.boundary_dict = self.boundary_dict
+            return dtcpop
+        else:
+            ind = pop
+            for i in ind:
+                i.td = td
+                i.backend = str(_backend)
+            # above replaces need for this line:
+            xargs = (ind,td,repeat(backend))
+            # In this case pop is not really a population but an individual
+            # but parsimony of naming variables
+            # suggests not to change the variable name to reflect this.
+            dtc = [ transform(xargs) ]
+            dtc.boundary_dict = None
+            dtc.boundary_dict = self.boundary_dict
+            return dtc
+
+
+    def init_pop(self,pop, td, tests):
+        from neuronunit.optimisation.exhaustive_search import update_dtc_grid
+        dtcpop = list(self.update_dtc_pop(pop, td))
+        for d in dtcpop:
+            d.tests = tests
+            if self.backend is not None:
+                d.backend = self.backend
+
+        if self.hc is not None:
+            constant = self.hc
+            for d in dtcpop:
+                if constant is not None:
+                    if len(constant):
+                        d.constants = constant
+                        d.add_constant()
+
+        return pop, dtcpop
+
+    def obtain_rheobase(self,pop, td, tests):
+        '''
+        Calculate rheobase for a given population pop
+        Ordered parameter dictionary td
+        and rheobase test rt
+        '''
+        pop, dtcpop = self.init_pop(pop, td, tests)
+        if 'RAW' in self.backend  or 'HH' in self.backend or str('ADEXP') in self.backend:
+            dtcpop = list(map(dtc_to_rheo,dtcpop))
+            #dtcpop = list(map(format_test,dtcpop))
+        else:
+            dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
+            dtcpop = list(dtcbag.map(dtc_to_rheo))
+
+        for ind,d in zip(pop,dtcpop):
+            if type(d.rheobase) is not type(None):
+                ind.rheobase = d.rheobase
+                d.rheobase = d.rheobase
+            else:
+                ind.rheobase = None
+                d.rheobase = None
+        return pop, dtcpop
+
+    def test_runner(self,pop,td,tests,single_spike=True,protocol=None):
+        if single_spike:
+            pop_, dtcpop = self.obtain_rheobase(pop, td, tests)
+
+            for ind,dtc in zip(pop,dtcpop):
+                dtc.error_length = self.error_length
+                error_length = self.error_length
+            pop, dtcpop = make_up_lost(copy.copy(pop_), dtcpop, td)
+
+            # there are many models, which have no actual rheobase current injection value.
+            # filter, filters out such models,
+            # gew genes, add genes to make up for missing values.
+            # delta is the number of genes to replace.
+
+        else:
+
+            pop, dtcpop = init_pop(pop, td, tests)
+            for ind,dtc in zip(pop,dtcpop):
+                dtc.error_length = self.error_length
+                error_length = self.error_length
+
+            for ind,d in zip(pop,dtcpop):
+                d.error_length = self.error_length
+                ind.error_length = self. error_length
+
+        pop,dtcpop = parallel_route(pop, dtcpop, tests, td,protocol=protocol)#, clustered=False)
+        for ind,d in zip(pop,dtcpop):
+            ind.dtc = None
+            ind.dtc = d
+            #import pdb; pdb.set_trace()
+            print(d.get_ss())
+            if not hasattr(ind,'fitness'):
+                ind.fitness = copy.copy(pop_[0].fitness)
+                for i,v in enumerate(list(ind.fitness.values)):
+                    ind.fitness.values[i] = list(ind.dtc.evaluate.values())[i]
+        pop = [ ind for ind,d in zip(pop,dtcpop) if d.scores is not None ]
+        dtcpop = [ d for ind,d in zip(pop,dtcpop) if d.scores is not None ]
+        #import pdb; pdb.set_trace()
+        return pop,dtcpop
 
     def update_deap_pop(self,pop, tests, td, backend = None,hc = None,boundary_dict = None, error_length=None):
         '''
@@ -2200,33 +2319,31 @@ class OptMan():
         DTCs are then scored by neuronunit, using neuronunit models that act in place.
         '''
         if len(pop)==0:
-            import pdb
-            pdb.set_trace()
-        #pop = copy.copy(pop)
+            raise Exception('User error population size set to 0')
         if hc is not None:
-            pop[0].td = None
-            pop[0].td = self.td
+            self.td = None
+            self.td = self.td
 
         if hc is not None:
-            pop[0].hc = None
-            pop[0].hc = hc
+            self.hc = None
+            self.hc = hc
 
         if backend is not None:
-            pop[0].backend = None
-            pop[0].backend = backend
+            self.backend = None
+            self.backend = backend
         if boundary_dict is not None:
-            pop[0].boundary_dict = None
-            pop[0].boundary_dict = boundary_dict
+            self.boundary_dict = None
+            self.boundary_dict = boundary_dict
         for p in pop:
             if error_length is not None:
-                p.error_length = None
-                p.error_length = error_length
+                self.error_length = None
+                self.error_length = error_length
 
 
-        pop, dtcpop = test_runner(pop,td,tests,protocol=self.protocol)
+        pop, dtcpop = self.test_runner(pop,td,tests,protocol=self.protocol)
         for p,d in zip(pop,dtcpop):
             p.dtc = d
-            print(p.error_length)
+            p.error_length = self.error_length
         return pop
 
 def create_subset(nparams = 10, boundary_dict = None):

@@ -49,7 +49,7 @@ from neuronunit import tests
 from neuronunit import neuroelectro
 #MODEL_PARAMS['results'] = {}
 
-from neuronunit.optimisation import optimisation_management as om
+from neuronunit.optimisation import optimisations as om
 
 
 from sklearn.neural_network import MLPClassifier, MLPRegressor
