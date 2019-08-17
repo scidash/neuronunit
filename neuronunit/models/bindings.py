@@ -24,6 +24,11 @@ except (ImportError, AttributeError):
 
 from sciunit.utils import redirect_stdout
 import neuronunit.capabilities.spike_functions as sf
+<<<<<<< HEAD
+from types import MethodType
+
+=======
+>>>>>>> 51529ae8e9a02874e8b1d050bb812f2aec8d41d9
 import neuronunit.capabilities as cap
 
 

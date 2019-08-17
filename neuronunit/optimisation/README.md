@@ -1,6 +1,6 @@
 # Documentation Companion 
 
-Optimizing inside a Data Driven Optimizer, and Falsification Engine. 
+Optimizing inside a Data Driven Optimizer, and Model Validation Framework. By exploring and disgarding falsified Models. 
 ```python
 #!pip install --user tabulate # Install the tabulate package
 from tabulate import tabulate

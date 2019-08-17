@@ -6,3 +6,4 @@ from .lems import LEMSModel
 from .channel import ChannelModel
 from .reduced import ReducedModel
 from . import backends  # Required to register backends
+from .very_reduced import VeryReducedModel

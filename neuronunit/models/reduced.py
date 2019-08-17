@@ -1,11 +1,12 @@
 """NeuronUnit model class for reduced neuron models."""
+from .lems import LEMSModel
 
 import numpy as np
 from neo.core import AnalogSignal
 import quantities as pq
 
 import neuronunit.capabilities as cap
-from .lems import LEMSModel
+
 from .static import ExternalModel
 import neuronunit.capabilities.spike_functions as sf
 
@@ -39,13 +40,30 @@ class ReducedModel(LEMSModel,
         return vm
 
     def get_APs(self, **run_params):
-        vm = self.get_membrane_potential(**run_params)
-        waveforms = sf.get_spike_waveforms(vm)
+        #print(run_params, 'run params')
+        try:
+            vm = self._backend.get_membrane_potential(**run_params)
+        except:
+            vm = self.get_membrane_potential(**run_params)
+        #print(len(vm),'len vm')
+        if hasattr(self._backend,'name'):
+
+            self._backend.threshold = np.max(vm)-np.max(vm)/250.0
+            waveforms = sf.get_spike_waveforms(vm,self._backend.threshold)
+        else:
+            waveforms = sf.get_spike_waveforms(vm)
         return waveforms
 
     def get_spike_train(self, **run_params):
         vm = self.get_membrane_potential(**run_params)
-        spike_train = sf.get_spike_train(vm)
+        #spike_train = sf.get_spike_train(vm)
+        #if str('ADEXP') in self._backend.name:
+        if hasattr(self._backend,'name'):
+            self._backend.threshold = np.max(vm)-np.max(vm)/250.0
+            spike_train = sf.get_spike_train(vm,self._backend.threshold)
+        else:
+            spike_train = sf.get_spike_train(vm)
+
         return spike_train
 
     def inject_square_current(self, current):
@@ -135,7 +153,7 @@ class VeryReducedModel(ExternalModel,
             raise Exception(("A backend (e.g. 'jNeuroML' or 'NEURON') "
                              "must be selected"))
         else:
-            print(name,available_backends)
+            #print(name,available_backends)
             #import pdb; pdb.set_trace()
             raise Exception("Backend %s not found in backends.py" \
                             % name)

@@ -1,10 +1,10 @@
 """Passive neuronunit tests, requiring no active conductances or spiking."""
 
-from .base import np, pq, sciunit, ncap, VmTest, scores, AMPL, DELAY, DURATION
+from .base import np, pq, sciunit, ncap, VmTest, scores#, AMPL, DELAY, DURATION
 from scipy.optimize import curve_fit
 
-DURATION = 500.0*pq.ms
-DELAY = 200.0*pq.ms
+PASSIVE_DURATION = 500.0*pq.ms
+PASSIVE_DELAY = 200.0*pq.ms
 
 
 class TestPulseTest(VmTest):
@@ -13,13 +13,13 @@ class TestPulseTest(VmTest):
     def __init__(self, *args, **kwargs):
         super(TestPulseTest, self).__init__(*args, **kwargs)
         self.params['injected_square_current'] = {'amplitude': -10.0*pq.pA,
-                                                  'delay': DELAY,
-                                                  'duration': DURATION}
+                                                  'delay': PASSIVE_DELAY,
+                                                  'duration': PASSIVE_DURATION}
 
+    #required_capabilities = (cap.ReceivesSquareCurrent,)
     required_capabilities = (ncap.ReceivesSquareCurrent,)
 
     name = ''
-
     score_type = scores.ZScore
 
     def generate_prediction(self, model):
@@ -58,7 +58,10 @@ class TestPulseTest(VmTest):
         start = max(i['delay'] - 10*pq.ms, i['delay']/2)
         stop = i['duration']+i['delay'] - 1*pq.ms  # 1 ms before pulse end
         region = cls.get_segment(vm, start, stop)
-        amplitude, tau, y0 = cls.exponential_fit(region, i['delay'])
+        try:
+            amplitude, tau, y0 = cls.exponential_fit(region, i['delay'])
+        except:
+            tau = None
         return tau
 
     @classmethod
@@ -151,15 +154,20 @@ class TimeConstantTest(TestPulseTest):
         if result is not None:
             i, vm = result
             tau = self.__class__.get_tau(vm, i)
-            tau = tau.simplified
-            # Put prediction in a form that compute_score() can use.
-            prediction = {'value': tau}
-            return prediction
+            if type(tau) is not type(None):
+                tau = tau.simplified
+                # Put prediction in a form that compute_score() can use.
+                prediction = {'value': tau}
+                
+            else:
+                prediction = None
         else:
-            return None
+            prediction = None
+        return prediction
 
     def compute_score(self, observation, prediction):
         """Implement sciunit.Test.score_prediction."""
+        score = None
         if prediction is None:
             return None  # scores.InsufficientDataScore(None)
 
@@ -208,6 +216,7 @@ class CapacitanceTest(TestPulseTest):
             if prediction['n'] == 0:
                 score = scores.InsufficientDataScore(None)
         else:
+            
             score = super(CapacitanceTest, self).compute_score(observation,
                                                                prediction)
         return score
@@ -222,8 +231,8 @@ class RestingPotentialTest(TestPulseTest):
 
     default_params = {'injected_square_current':
                       {'amplitude': 0.0*pq.pA,
-                       'delay': DELAY,
-                       'duration': DURATION}
+                       'delay': PASSIVE_DELAY,
+                       'duration': PASSIVE_DURATION}
                       }
 
     name = "Resting potential test"
@@ -238,12 +247,13 @@ class RestingPotentialTest(TestPulseTest):
     ephysprop_name = 'Resting membrane potential'
 
     def generate_prediction(self, model):
-        """Implement sciunit.Test.generate_prediction."""
+        """Implement sciunit.Test.generate_prediction.
+        This heavily assumes the membrane potential is not multispiking
+        """
         result = super(RestingPotentialTest, self).generate_prediction(model)
         if result is not None:
             median = model.get_median_vm()  # Use median for robustness.
             std = model.get_std_vm()
-            # print('std: ',std,'median: ',median)
             prediction = {'mean': median, 'std': std}
             self.prediction = prediction
             return prediction

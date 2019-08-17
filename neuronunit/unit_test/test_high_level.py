@@ -141,7 +141,7 @@ class testHighLevelOptimisation(unittest.TestCase):
         broken_backends = [ str('NEURON') ]
 
         all_backends = [
-            str('jNeuroML'),
+            str('ADEXP'),
             str('RAW'),
             str('HH'),
             str('GLIF')
@@ -150,7 +150,7 @@ class testHighLevelOptimisation(unittest.TestCase):
 
         for b in all_backends:
             if b in str('GLIF'):
-
+                pass
             model = mint_generic_model(b)
             #assert model is not None
             self.assertTrue(model is not None)
@@ -163,8 +163,8 @@ class testHighLevelOptimisation(unittest.TestCase):
 
             #assert dtc is not None
 
-        MBEs = list(self.MODEL_PARAMS.keys())
-        for b in MBEs:
+        #MBEs = list(self.MODEL_PARAMS.keys())
+        for b in all_backends:
             model = mint_generic_model(b)
             #assert model is not None
             self.assertTrue(model is not None)

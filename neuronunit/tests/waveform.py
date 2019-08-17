@@ -1,24 +1,15 @@
 """Waveform neuronunit tests, e.g. testing AP waveform properties"""
-
 from .base import np, pq, ncap, VmTest, scores, AMPL, DELAY, DURATION
-
-
 class APWidthTest(VmTest):
     """Test the full widths of action potentials at their half-maximum."""
 
     required_capabilities = (ncap.ProducesActionPotentials,)
-
     name = "AP width test"
-
     description = ("A test of the widths of action potentials "
                    "at half of their maximum height.")
-
     score_type = scores.RatioScore
-
     units = pq.ms
-
     ephysprop_name = 'Spike Half-Width'
-
     def generate_prediction(self, model):
         """Implement sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
@@ -26,13 +17,14 @@ class APWidthTest(VmTest):
         # if get_spike_count is zero, then widths will be None
         # len of None returns an exception that is not handled
         model.inject_square_current(self.params['injected_square_current'])
-
-        widths = model.get_AP_widths()
-        # Put prediction in a form that compute_score() can use.
-        prediction = {'mean': np.mean(widths) if len(widths) else None,
+        try:
+            widths = model.get_AP_widths()
+            # Put prediction in a form that compute_score() can use.
+            prediction = {'mean': np.mean(widths) if len(widths) else None,
                       'std': np.std(widths) if len(widths) else None,
                       'n': len(widths)}
-
+        except:
+            prediction = None
         return prediction
 
     def compute_score(self, observation, prediction):
@@ -59,13 +51,9 @@ class InjectedCurrentAPWidthTest(APWidthTest):
                                                   'duration': DURATION}
 
     required_capabilities = (ncap.ReceivesSquareCurrent,)
-
     score_type = scores.ZScore
-
     units = pq.ms
-
     name = "Injected current AP width test"
-
     description = ("A test of the widths of action potentials "
                    "at half of their maximum height when current "
                    "is injected into cell.")
@@ -100,12 +88,18 @@ class APAmplitudeTest(VmTest):
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
         model.inject_square_current(self.params['injected_square_current'])
+        
+        try:
+            height = np.max(model.get_membrane_potential()) -float(np.min(model.get_membrane_potential()))/1000.0*model.get_membrane_potential().units #- model.get_AP_thresholds()
+            prediction = {'mean':height, 'n':1, 'std':height}
+            
+        except:
+            prediction = {'mean': None,
+                          'std': None,
+                          'n': 0}
 
-        heights = model.get_AP_amplitudes() - model.get_AP_thresholds()
+            
         # Put prediction in a form that compute_score() can use.
-        prediction = {'mean': np.mean(heights) if len(heights) else None,
-                      'std': np.std(heights) if len(heights) else None,
-                      'n': len(heights)}
         return prediction
 
     def compute_score(self, observation, prediction):
@@ -149,16 +143,11 @@ class APThresholdTest(VmTest):
     """Test the full widths of action potentials at their half-maximum."""
 
     required_capabilities = (ncap.ProducesActionPotentials,)
-
     name = "AP threshold test"
-
     description = ("A test of the membrane potential threshold at which "
                    "action potentials are produced.")
-
     score_type = scores.ZScore
-
     units = pq.mV
-
     ephysprop_name = 'Spike Threshold'
 
     def generate_prediction(self, model):
@@ -166,12 +155,19 @@ class APThresholdTest(VmTest):
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
         model.inject_square_current(self.params['injected_square_current'])
+        try:
+            threshes = model.get_AP_thresholds()
+        except:
+            threshes = None
+        if type(threshes) is not type(None):
+            prediction = {'mean': np.mean(threshes) if len(threshes) else None,
+                          'std': np.std(threshes) if len(threshes) else None,
+                          'n': len(threshes) if len(threshes) else 0 }
+        else:
+            prediction = {'mean':  None,
+                          'std':  None,
+                          'n': 0 }
 
-        threshes = model.get_AP_thresholds()
-        # Put prediction in a form that compute_score() can use.
-        prediction = {'mean': np.mean(threshes) if len(threshes) else None,
-                      'std': np.std(threshes) if len(threshes) else None,
-                      'n': len(threshes)}
         return prediction
 
     def compute_score(self, observation, prediction):
@@ -194,9 +190,7 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
                                                   'duration': DURATION}
 
     required_capabilities = (ncap.ReceivesSquareCurrent,)
-
     name = "Injected current AP threshold test"
-
     description = ("A test of the membrane potential threshold at which "
                    "action potentials are produced under current injection.")
 
