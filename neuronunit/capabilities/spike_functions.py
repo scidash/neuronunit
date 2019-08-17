@@ -22,7 +22,7 @@ def get_spike_train(vm, threshold=0.0*mV):
     spike_train = threshold_detection(vm, threshold=threshold)
     return spike_train
 
-@jit
+#@jit
 def get_diff(vm):
     #differentiated = np.diff(vm)
     differentiated = np.diff([float(v) for v in vm])
@@ -31,7 +31,7 @@ def get_diff(vm):
     return (spikes, times)
 
 
-@jit
+#@jit
 def diff(vm):
     differentiated = np.diff(vm)
     return differentiated
