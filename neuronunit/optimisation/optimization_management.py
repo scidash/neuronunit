@@ -270,9 +270,6 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem'):
                         uc = {'amplitude':dtc.ampl,'duration':DURATION,'delay':DELAY}
                     print(uc)
 
-                    #if rheobase is None:
-                    #    break
-                    #dtc.run_number += 1
                     model.set_attrs(**dtc.attrs)
                     model.inject_square_current(uc)
                     #if model.get_spike_count()>1:
@@ -491,8 +488,8 @@ def round_trip_test(tests,backend):
     #import pdb; pdb.set_trace()
     random_param.pop('Iext',None)
     free_params = random_param.keys()
-    NGEN = 15
-    MU = 7
+    NGEN = 16
+    MU = 10
     #   import pdb; pdb.set_trace()
 
     ranges = MODEL_PARAMS[backend]
@@ -506,8 +503,7 @@ def round_trip_test(tests,backend):
         protocol={'allen':True,'elephant':False})
         dtcpop0 = [ p.dtc for p in ga_out['pf'] ]
         dtcpop1 = [ dtc for i in range(0,len(ga_out['pf'])) ]
-        #import pdb; pdb.set_trace()
-        inject_and_plot(dtcpop0)
+        inject_and_plot(dtcpop0,dtcpop1)
 
     elif tests['protocol'] == str('elephant'):
         working_tests = []
