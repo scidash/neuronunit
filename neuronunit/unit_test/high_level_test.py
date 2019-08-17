@@ -23,9 +23,9 @@ import os
 from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.data_transport_container import DataTC
 
-from neuronunit.optimisation.optimisation_management import dtc_to_rheo
-from neuronunit.optimisation.optimisation_management import nunit_evaluation
-from neuronunit.optimisation.optimisation_management import format_test, mint_generic_model
+from neuronunit.optimisation.optimization_management import dtc_to_rheo
+from neuronunit.optimisation.optimization_management import nunit_evaluation
+from neuronunit.optimisation.optimization_management import format_test, mint_generic_model
 
 from neuronunit import tests as nu_tests, neuroelectro
 from neuronunit.tests import passive, waveform, fi
@@ -37,7 +37,7 @@ from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 from neuronunit.tests import dynamics
 from neuronunit.models.reduced import ReducedModel
 
-from neuronunit.optimisation.optimisation_management import format_test, inject_and_plot
+from neuronunit.optimisation.optimization_management import format_test, inject_and_plot
 from neuronunit.optimisation import data_transport_container
 
 from neuronunit.models.reduced import ReducedModel
@@ -47,6 +47,7 @@ from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
 #from neuronunit.optimisation import get_neab
 from neuronunit.models.reduced import ReducedModel
 from neuronunit import aibs
+from neuronunit.optimisation.optimization_management import round_trip_test
 
 def test_all_tests_pop(dtcpop, tests):
 
@@ -84,7 +85,7 @@ class testHighLevelOptimisation(unittest.TestCase):
 
     def setUp(self):
         electro_path = str(os.getcwd())+'/../tests/russell_tests.p'
-        
+
         assert os.path.isfile(electro_path) == True
         with open(electro_path,'rb') as f:
             (self.test_frame,self.obs_frame) = pickle.load(f)
@@ -118,22 +119,39 @@ class testHighLevelOptimisation(unittest.TestCase):
         self.medium_backends = [
                     str('GLIFBackend')
                 ]
-    def test_solution_quality0(self):
-        '''
-        Select random points in parameter space,
-        pretend these points are from experimental observations, by coding them in
-        as NeuroElectro observations.
-        This effectively redefines the sampled point as a the global minimum of error.
-        Show that the optimiser can find this point, only using information obtained by
-        sparesely learning the error surface.
 
-        '''
+    def test_solution_quality0(self):
+
+        from neuronunit.tests.allen_tests import pre_obs#, test_collection
+        NGEN = 10
+        local_tests = pre_obs[2][1]
+        pre_obs[2][1]['spikes'][0]
+
+        local_tests.update(pre_obs[2][1]['spikes'][0])
+        local_tests['current_test'] = pre_obs[1][0]
+        local_tests['spk_count'] = len(pre_obs[2][1]['spikes'])
+        local_tests['protocol'] = str('allen')
+        tuples_ = round_trip_test(local_tests,str('RAW'))
+        (boolean,self.dtcpop) = tuples_
+        print('done one')
+        print(boolean,self.dtcpop)
+        self.assertTrue(boolean)
+        return
+    '''
+    def test_solution_quality1(self):
+
+        #Select random points in parameter space,
+        #pretend these points are from experimental observations, by coding them in
+        #as NeuroElectro observations.
+        #This effectively redefines the sampled point as a the global minimum of error.
+        #Show that the optimiser can find this point, only using information obtained by
+        #sparesely learning the error surface.
+
         #MBEs = list(self.MODEL_PARAMS.keys())
-        MBEs = [str('RAW'),str('ADEXP')]
-        from neuronunit.optimisation.optimisation_management import round_trip_test
+        MBEs = [str('RAW'),str('BADEXP')]
         for key, use_test in self.test_frame.items():
-            #use_test = [v for v in use_test.values() ]
             for b in MBEs:
+                use_test['protocol'] = str('elephant')
 
                 tuples_ = round_trip_test(use_test,b)
                 (boolean,self.dtcpop) = tuples_
@@ -141,15 +159,16 @@ class testHighLevelOptimisation(unittest.TestCase):
                 print(boolean,self.dtcpop)
                 self.assertTrue(boolean)
         return
-
-
+    '''
+    '''
+    move to low level tests
     def test_rotate_backends2(self):
         self.dtcpop = grid_points()
-        
+
         self.dtcpop = test_all_tests_pop(self.dtcpop,self.electro_tests)
         self.dtc = self.dtcpop[0]
         self.rheobase = self.dtc.rheobase
-        
+
         broken_backends = [ str('NEURON'),str('jNeuroML') ]
 
         all_backends = [
@@ -191,26 +210,8 @@ class testHighLevelOptimisation(unittest.TestCase):
 
         return
 
-        #self.standard_model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend='RAW')
-        #self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend='RAW')
-
-        '''
-    def test_get_druckmann1(self):
-        test the extraction of Druckmann property Ephys measurements.
-        #from neuronunit.optimisation.optimisation_management import add_dm_properties_to_cells
-        #2(self.dtcpop,dm_properties) = add_dm_properties_to_cells(self.dtcpop)
-
-        for d in dm_properties:
-            self.assertTrue(d is not None)
-        return
-
-    def test_executable_druckmann_science_unit_tests(self):
-        #test the extraction of Druckmann property Ephys measurements.
-        from neuronunit.optimisation.optimisation_management import add_dm_properties_to_cells
-
-        tests,observations = get_neab.executable_druckman_tests(p)
-        (self.dtcpop,dm_properties) = add_dm_properties_to_cells(self.dtcpop)
     '''
+
 
 
 

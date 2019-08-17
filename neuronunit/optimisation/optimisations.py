@@ -115,9 +115,9 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
                  seed=None,
                  offspring_size=15,
                  elite_size=3,
-                 eta=10,
+                 eta=20,
                  mutpb=0.7,
-                 cxpb=0.7,
+                 cxpb=0.9,
                  backend = None,
                  nparams = 10,
                  boundary_dict= {},
@@ -253,8 +253,6 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
             return LOWER
 
         if self.backend == 'GLIF':
-            #self.td = [ param
-            #import pdb; pdb.set_trace()
             del self.td[-1]
             self.params.pop('type',None)
 
@@ -299,8 +297,8 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
             return other
         # Register the 'uniform' function
         self.toolbox.register("uniform_params", uniform_params, LOWER, UPPER, IND_SIZE)
-
-
+        print(OBJ_SIZE,'objective size')
+        #gimport pdb; pdb.set_trace()
         self.toolbox.register(
             "Individual",
             deap.tools.initIterate,
@@ -314,30 +312,29 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
             list,
             self.toolbox.Individual)
 
-        import neuronunit.optimisation.optimisation_management as om
+        import neuronunit.optimisation.optimization_management as om
+        #import pdb; pdb.set_trace()
+
+        self.error_criterion['protocol'] = self.protocol # ={'allen':False,'elephant':True,'dm':False}
         OM = om.OptMan(self.error_criterion,self.td, backend = self.backend, \
                                               hc = self.hc,boundary_dict = self.boundary_dict, \
-                                              error_length=self.error_length,protocol={'allen':False,'elephant':True,'dm':False})
-        # Register the evaluation function for the individuals
+                                              error_length=self.error_length,protocol=self.protocol)
         def custom_code(invalid_ind):
 
             if self.backend is None:
                 self.backend = 'RAW'
-            #for ind in invalid_ind:
-            #    ind.error_length = None
-            #    ind.error_length = self.error_length
-
+            print(self.error_criterion['protocol'])
             invalid_pop = list(OM.update_deap_pop(invalid_ind, self.error_criterion, \
                                                   td = self.td, backend = self.backend, \
-                                                  hc = self.hc,boundary_dict = self.boundary_dict,error_length=self.error_length))
+                                                  hc = self.hc,boundary_dict = self.boundary_dict, \
+                                                  error_length=self.error_length))
 
+            print('gets here a')
 
             invalid_dtc = [ i.dtc for i in invalid_pop if hasattr(i,'dtc') ]
 
             fitnesses = list(map(om.evaluate, invalid_dtc))
-            #more_fitnesses = list(map(om.evaluate_allen, invalid_dtc))
-            #fitnesses.extend(more_fitnesses)
-            #print(len(fitnesses))
+            print('gets here b')
             return (invalid_pop,fitnesses)
 
         self.toolbox.register("evaluate", custom_code)
@@ -345,20 +342,21 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
         self.toolbox.register(
             "mate",
             deap.tools.cxSimulatedBinaryBounded,
-            eta=ETA,
+            eta=self.eta,
             low=LOWER,
             up=UPPER)
 
+
         # Register the mutation operator
+        self.toolbox.register("variate", deap.algorithms.varAnd)
+        IND_SIZE = len(list(self.params.values()))
         self.toolbox.register(
             "mutate",
             deap.tools.mutPolynomialBounded,
-            eta=ETA,
+            eta=self.eta,
             low=LOWER,
             up=UPPER,
-            indpb=0.5)
-
-        self.toolbox.register("variate", deap.algorithms.varAnd)
+            indpb=1.0/IND_SIZE)
 
     def set_pop(self, boot_new_random=0):
         if boot_new_random == 0:
@@ -423,35 +421,24 @@ from collections import Iterable, OrderedDict
 
 def run_ga(explore_edges, max_ngen, test, \
         free_params = None, hc = None,
-        NSGA = None, MU = None, seed_pop = None, \
-        model_type = str('RAW'),protocol={'allen':False,'elephant':True}):
-    # seed_pop can be used to
-    # to use existing models, that are good guesses at optima, as starting points for optimisation.
-    # https://stackoverflow.com/questions/744373/circular-or-cyclic-imports-in-python
-    # These imports need to be defined with local scope to avoid circular importing problems
-    # Try to fix local imports later.
-    #if type(test) is type({'a':'a'}):
-
-    #from neuronunit.optimisation.optimisations import SciUnitOptimisation
-
+        selection = None, MU = None, seed_pop = None, \
+        backend = str('RAW'),protocol={'allen':False,'elephant':True}):
     ss = {}
     for k in free_params:
         ss[k] = explore_edges[k]
     if type(MU) == type(None):
         MU = 2**len(list(free_params))
     # make sure that the gene population size is divisible by 4.
-    if NSGA == True:
-        selection = str('selNSGA')
-    else:
-        selection = str('selIBEA')
+    #if selection == True:
+    #    selection = str('selNSGA')
+    #else:
+    #   selection = str('selIBEA')
     max_ngen = int(np.floor(max_ngen))
-    #if type(test) is not type([0,0]):
     if not isinstance(test, Iterable):
         test = [test]
     DO = SciUnitOptimisation(offspring_size = MU, error_criterion = test,\
-     boundary_dict = ss, backend = model_type, hc = hc, \
-     selection = selection,protocol=protocol)#,, boundary_dict = ss, elite_size = 2, hc=hc)
-
+     boundary_dict = ss, backend = backend, hc = hc, \
+     selection = selection,protocol=protocol)
 
     if seed_pop is not None:
         # This is a re-run condition.
