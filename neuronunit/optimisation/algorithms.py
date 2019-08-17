@@ -169,7 +169,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
         logbook = deap.tools.Logbook()
         logbook.header = ['gen', 'nevals'] + (stats.fields if stats else [])
         history = deap.tools.History()
-        #toolbox.register("select", tools.selNSGA2)
+        toolbox.register("select", tools.selNSGA2)
         def experimental():
             NOBJ = len(population[0].fitness.values)
             #print('stuck_here uniform')
@@ -260,7 +260,8 @@ def eaAlphaMuPlusLambdaCheckpoint(
         #    toolbox.register("select", tools.selNSGA3, ref_points=ref_points)
         #print('fails at d')
 
-        toolbox.register("select",selNSGA2)
+        #toolbox.register("select",selNSGA2)
+        toolbox.register("select", tools.selNSGA2)
 
         print('fails at e')
         old_max = 0
