@@ -14,8 +14,8 @@ install:
   - pip install -U pip
   - pip install .
   - pip install coveralls
-  - pip install -e git+https://github.com/fun-zoological-computing/AllenSDK
-  - pip install -e git+https://github.com/scidash/sciunit@dev
+  - pip install git+https://github.com/fun-zoological-computing/AllenSDK
+  - pip install git+https://github.com/scidash/sciunit@dev
   - pip install dask distributed brian2 numba
   - sudo pip install --upgrade beautifulsoup4
 

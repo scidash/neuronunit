@@ -120,24 +120,7 @@ class testHighLevelOptimisation(unittest.TestCase):
                     str('GLIFBackend')
                 ]
 
-    def test_solution_quality0(self):
 
-        from neuronunit.tests.allen_tests import pre_obs#, test_collection
-        NGEN = 10
-        local_tests = pre_obs[2][1]
-        pre_obs[2][1]['spikes'][0]
-
-        local_tests.update(pre_obs[2][1]['spikes'][0])
-        local_tests['current_test'] = pre_obs[1][0]
-        local_tests['spk_count'] = len(pre_obs[2][1]['spikes'])
-        local_tests['protocol'] = str('allen')
-        tuples_ = round_trip_test(local_tests,str('RAW'))
-        (boolean,self.dtcpop) = tuples_
-        print('done one')
-        print(boolean,self.dtcpop)
-        self.assertTrue(boolean)
-        return
-    '''
     def test_solution_quality1(self):
 
         #Select random points in parameter space,
@@ -159,7 +142,43 @@ class testHighLevelOptimisation(unittest.TestCase):
                 print(boolean,self.dtcpop)
                 self.assertTrue(boolean)
         return
-    '''
+
+    def test_solution_quality0(self):
+
+        from neuronunit.tests.allen_tests import pre_obs#, test_collection
+        NGEN = 10
+        local_tests = pre_obs[2][1]
+        pre_obs[2][1]['spikes'][0]
+
+        local_tests.update(pre_obs[2][1]['spikes'][0])
+        local_tests['current_test'] = pre_obs[1][0]
+        local_tests['spk_count'] = len(pre_obs[2][1]['spikes'])
+        local_tests['protocol'] = str('allen')
+        tuples_ = round_trip_test(local_tests,str('GLIF'))
+        (boolean,self.dtcpop) = tuples_
+        print('done one')
+        print(boolean,self.dtcpop)
+        self.assertTrue(boolean)
+        return
+
+    def test_solution_quality3(self):
+
+        from neuronunit.tests.allen_tests import pre_obs#, test_collection
+        NGEN = 10
+        local_tests = pre_obs[2][1]
+        pre_obs[2][1]['spikes'][0]
+
+        local_tests.update(pre_obs[2][1]['spikes'][0])
+        local_tests['current_test'] = pre_obs[1][0]
+        local_tests['spk_count'] = len(pre_obs[2][1]['spikes'])
+        local_tests['protocol'] = str('allen')
+        tuples_ = round_trip_test(local_tests,str('RAW'))
+        (boolean,self.dtcpop) = tuples_
+        print('done one')
+        print(boolean,self.dtcpop)
+        self.assertTrue(boolean)
+        return
+
     '''
     move to low level tests
     def test_rotate_backends2(self):
