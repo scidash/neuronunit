@@ -16,11 +16,12 @@ install:
   - pip install coveralls
   - pip install git+https://github.com/fun-zoological-computing/AllenSDK
   - pip install git+https://github.com/scidash/sciunit@dev
-  - pip install dask distributed brian2 numba
-  - sudo pip install --upgrade beautifulsoup4
+  - pip install dask distributed brian2 numba unittest
+  - pip install --upgrade beautifulsoup4
+    
 
 script:
-  - python -m unittest unit_test/high_level_tests.py 	
-  - sh test.sh
+  - python unit_test/high_level_tests.py
+  - python unit_test/low_level_tests.py
 after_success:
   - coveralls
