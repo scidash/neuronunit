@@ -147,17 +147,17 @@ MODEL_PARAMS['PYNN']['EIF'] = EIF
 MODEL_PARAMS['PYNN']['parallelRheobase'] = True
 '''
 
+#'init_AScurrents':[0.0,0.0], \
+#'asc_amp_array': [[-6.493692083311101e-10, 1.224690033604069e-09], \
+#                     [1.0368081669092888e-08, -4.738879134819112e-08]], \
 
-GLIF_RANGE = {'init_AScurrents':[0,0], \
-              'El_reference': [-0.08569469261169435, -0.05463626766204832], \
+GLIF_RANGE = {'El_reference': [-0.08569469261169435, -0.05463626766204832], \
               'C': [3.5071610042390286e-11, 7.630189223327981e-10], \
-              'asc_amp_array': [[-6.493692083311101e-10, 1.224690033604069e-09], \
-                                [1.0368081669092888e-08, -4.738879134819112e-08]], \
               'init_threshold': [0.009908733642683513, 0.04939040414685865], \
               'threshold_reset_method': {'params': {}, 'name': 'inf'}, \
               'th_inf': [0.009908733642683513, 0.04939040414685865], \
               'spike_cut_length': [20, 199],
-              'init_AScurrents': [[0.0, 0.0], [0.0, 0.0]], \
+              'init_AScurrents': [0.0, 0.0], \
               'init_voltage': [-70.0, 0.0], 'threshold_dynamics_method': {'params': {}, 'name': 'inf'}, \
               'voltage_reset_method': {'params': {}, 'name': 'zero'}, \
               'extrapolation_method_name': ['endpoints', 'endpoints'], \

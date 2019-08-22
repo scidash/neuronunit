@@ -131,7 +131,7 @@ def inject_rh_and_dont_plot(dtc):
 import seaborn as sns
 from neuronunit.capabilities.spike_functions import get_spike_waveforms
 
-def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem'):
+def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippets=False):
     sns.set_style("darkgrid")
 
     if not isinstance(dtc, Iterable):
@@ -145,7 +145,6 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem'):
         if hasattr(dtc,'ampl'):
             uc = {'amplitude':dtc.ampl,'duration':DURATION,'delay':DELAY}
 
-        #dtc.run_number += 1
         model.set_attrs(**dtc.attrs)
         model.inject_square_current(uc)
         if str(dtc.backend) is str('ADEXP'):
@@ -209,8 +208,11 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem'):
 
                 sns.set_style("darkgrid")
                 #from neuronunit.capabilities import get_spike_waveforms
-                snipptes = get_spike_waveforms(vm)
-                plt.plot(snipptes.times,snipptes,color='red',label=label)#,label='ground truth')
+                if snippets==True:
+                    snippets = get_spike_waveforms(vm)
+                    plt.plot(snipptes.times,snippets,color='red',label=label)#,label='ground truth')
+                else:
+                    plt.plot(vm.times,vm,color='red',label=label)#,label='ground truth')
                 ax.legend()
 
             for dtc in second_pop:
@@ -248,8 +250,11 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem'):
                 #label = label+str(latency)
 
                 sns.set_style("darkgrid")
-                snipptes = get_spike_waveforms(vm)
-                plt.plot(snipptes.times,snipptes,color='blue',label=label)#,label='ground truth')
+                if snippets==True:
+                    snipptes = get_spike_waveforms(vm)
+                    plt.plot(snipptes.times,snipptes,color='blue',label=label)#,label='ground truth')
+                else:
+                    plt.plot(vm.times,vm,color='blue',label=label)#,label='ground truth')
 
                 #plt.plot(model.get_membrane_potential().times,vm,color='blue',label=label)#,label='ground truth')
                 #ax.legend(['A simple line'])
@@ -290,10 +295,15 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem'):
                     if str("GLIF") in dtc.backend:
                         label=str('Generalized Leaky Integrate and Fire')
                     #label = label+str(latency)
-                    snipptes = get_spike_waveforms(vm)
-                    plt.plot(snipptes.times,snipptes,color='green',label=label)#,label='ground truth')
-                    #ax.legend(['A simple line'])
-                    ax.legend()
+                    if snippets==True:
+
+                        snipptes = get_spike_waveforms(vm)
+                        plt.plot(snipptes.times,snipptes,color='green',label=label)#,label='ground truth')
+                        #ax.legend(['A simple line'])
+                        ax.legend()
+                    else:
+                        plt.plot(vm.times,vm,color='green',label=label)#,label='ground truth')
+
                 plot_backend = mpl.get_backend()
                 #if plot_backend == str('Agg'):
                 plt.title(figname)
@@ -330,6 +340,8 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem'):
     #else:
     return (None,None)
 def filter_predictions(dtc):
+    if not hasattr(dtc,'preds'):
+        dtc.preds = {}
     dtc.preds = {k:v for k,v in dtc.preds.items() if type(v['mean']) is not type(None)}
     dtc.preds = {k:v for k,v in dtc.preds.items() if v['mean']!=1.0}
     dtc.preds = {k:v for k,v in dtc.preds.items() if v['mean']!=False}
@@ -362,15 +374,18 @@ def make_imputed_observations(tests,backend,random_param):
 
         tests = list(tests.values())
         dtc.tests = tests
-        if type(tests[-2]) is type(str('')):
-            if tests[-2] in str('elephant'):
-                del tests[-2]
-
-        simulated_observations = {k:v for k,v in simulated_observations.items() if v is not None}
+        for i,t in enumerate(tests):
+            if type(t) is type(str('')):
+                if t in str('elephant'):
+                    break
+        del tests[i]
+        print(tests)
         simulated_observations = {t.name:copy.copy(t.observation['value']) for t in tests}
+        simulated_observations = {k:v for k,v in simulated_observations.items() if v is not None}
         dtc.observation = simulated_observations
         dtc = pred_evaluation(dtc)
         simulated_observations = dtc.preds
+
         try:
             temp = copy.copy(simulated_observations['RheobaseTest'])
             simulated_observations['RheobaseTest'] = {}
@@ -396,8 +411,16 @@ def make_imputed_observations(tests,backend,random_param):
 
         for k,v in simulated_observations.items():
             s = simulated_observations[k]['value']
-            s.rescale(v.units)
-            v.rescale(s.units)
+            try:
+                s.rescale(v.units)
+                v.rescale(s.units)
+            except:
+                #print(type(k),type(s),s,v)
+                v = v['value']
+                s.rescale(v.units)
+                v.rescale(s.units)
+
+                #import pdb; pdb.set_trace()
             assert float(s)!=float(v)
             print(k,'experimental obs',v,'simulated observation',s)
             simulated_observations[k]['mean'] = s
@@ -416,7 +439,7 @@ def make_imputed_observations(tests,backend,random_param):
         dtc.backend = backend
         dtc.pre_obs = tests
         target_current = None
-        while target_current == None or important_length<10:
+        while target_current == None or important_length<15:
             dtc.attrs = random_p(dtc.backend)
 
             from neuronunit.tests.fi import SpikeCountSearch
@@ -430,12 +453,8 @@ def make_imputed_observations(tests,backend,random_param):
             if target_current !=None:
                 dtc.ampl = target_current['value']
                 dtc = prediction_current_and_features(dtc)
-
                 dtc = filter_predictions(dtc)
-
                 important_length = len(dtc.preds)
-                #print('important length',important_length)
-        #print('satisfies criteria')
         target_spikes = dtc.spike_number
         observation_spike = {}
         observation_spike['value'] = target_spikes
@@ -443,6 +462,7 @@ def make_imputed_observations(tests,backend,random_param):
         dtc.preds['spike_count']['mean'] = target_spikes
         dtc.preds['current'] = {}
         dtc.preds['current']['mean'] = target_current['value']
+        dtc.pre_obs = dtc.preds
         return dtc
     #if
 
@@ -483,13 +503,25 @@ def round_trip_test(tests,backend):
 
     out_tests = []
     random_param = random_p(backend)
-    dtc = make_imputed_observations(tests,backend,random_param)
-    print(dtc.preds)
     #import pdb; pdb.set_trace()
-    random_param.pop('Iext',None)
+
+    #print(dtc.preds)
+    #import pdb; pdb.set_trace()
+    if 'RAWBackend' in str(backend):
+        random_param.pop('Iext',None)
+
+    if 'GLIF' in str(backend):
+        #random_param['asc_tau_array'] = #('Iext',None)
+        #random_param['asc_tau_array'] =
+
+        random_param['init_AScurrents'] = [0.0,0.0]
+        #'asc_tau_array': [0.3333333333333333, 0.01], 'init_AScurrents': [0.0, 0.0]
+        random_param['asc_tau_array'] = [0.3333333333333333,0.01]
+    dtc = make_imputed_observations(tests,backend,random_param)
+
     free_params = random_param.keys()
-    NGEN = 16
-    MU = 10
+    NGEN = 3
+    MU = 3
     #   import pdb; pdb.set_trace()
 
     ranges = MODEL_PARAMS[backend]
@@ -503,17 +535,22 @@ def round_trip_test(tests,backend):
         protocol={'allen':True,'elephant':False})
         dtcpop0 = [ p.dtc for p in ga_out['pf'] ]
         dtcpop1 = [ dtc for i in range(0,len(ga_out['pf'])) ]
-        inject_and_plot(dtcpop0,dtcpop1)
+        import pdb; pdb.set_trace()
+        inject_and_plot(dtcpop0,second_pop=dtcpop1,third_pop=[dtcpop0[0],dtcpop0[-1]],figname='not_a_problem.png',snippets=False)
 
+        #inject_and_plot(dtcpop0,dtcpop1)
+        #import pdb; pdb.set_trace()
     elif tests['protocol'] == str('elephant'):
         working_tests = []
         broken_tests = []
-        fp = free_params[0:1]
-        ga_out, DO = run_ga(ranges,NGEN,[tests[0],tests[1]],free_params=fp, MU = MU, backend=backend, selection=str('selNSGA2'))
-        print(bool(ga_out['log'][-1]['min'] < 0.1))
+        fp = list(free_params)[0:1]
+        #ga_out, DO = run_ga(ranges,NGEN,[tests[0],tests[1]],free_params=fp, MU = MU, backend=backend, selection=str('selNSGA2'))
+        #print(bool(ga_out['log'][-1]['min'] < 0.1))
 
         for t in tests:
-            ga_out, DO = run_ga(ranges,NGEN,[t],free_params=free_params, MU = MU, backend=backend, selection=str('selNSGA2'))
+            ga_out, DO = run_ga(ranges,NGEN,[t],free_params=fp, MU = MU, backend=backend, selection=str('selNSGA2'))
+            inject_and_plot(dtcpop0,second_pop=dtcpop1,third_pop=[dtcpop0[0],dtcpop0[-1]],figname='not_a_problem.png',snippets=True)
+
             print(bool(ga_out['log'][-1]['min'] < 0.1))
             #other_best = np.sum(list(ga_out['pop'][0].dtc.scores.values()))
             #ob = np.sum(list(ga_out['gen_vs_pop'][-1][0].dtc.scores.values()))
@@ -561,11 +598,10 @@ def round_trip_test(tests,backend):
         else:
             print(fitness)
 
-    #import pdb
+        import pdb
+        pdb.set_trace()
 
-    #pdb.set_trace()
-
-        if bool(best >= 0.05):
+        if bool(best >= 0.1):
             NGEN = 10
             MU = 6
             #print('gets here b')
@@ -1248,13 +1284,10 @@ def prediction_current_and_features(dtc):
         target = len(dtc.pre_obs['spikes'])
     except:
         target = 6
-
     model = mint_generic_model(dtc.backend)
     model.set_attrs(**dtc.attrs)
-
     vm30 = model.inject_square_current(current['injected_square_current'])
     vm30 = model.get_membrane_potential()
-
     if model.get_spike_count()!=target:
         '''
         rejection due to not meeting target
@@ -1333,7 +1366,7 @@ def prediction_current_and_features(dtc):
                 try:
                     score = VmTest.compute_score(helper,obs,prediction)
                 except:
-                    print(helper,obs,prediction)
+                    #print(helper,obs,prediction)
                     score = None
                 dtc.tests[k] = VmTest(obs)#.compute_score(helper,obs,prediction)
                 if score is not None and score.norm_score is not None:
@@ -1345,9 +1378,10 @@ def prediction_current_and_features(dtc):
             compute perspike waveform features on just the first spike
             '''
             try:
-                first_spike = observation[0]
+                first_spike = ephys_dict[k][0]
             except:
-                pass
+                return dtc
+                #pass
                 #import pdb; pdb.set_trace()
             for key,spike_obs in first_spike.items():
 
@@ -1375,6 +1409,8 @@ def prediction_current_and_features(dtc):
                     if not score is None and not score.norm_score is None:
                         #print(key,'fails here because')
                         dtc.scores[key] = 1.0-score.norm_score
+                    else:
+                        dtc.scores[key] = 1.0
                 except:
                     dtc.scores[key] = 1.0
     print(dtc.scores)
@@ -1399,9 +1435,27 @@ def prediction_current_and_features(dtc):
 
 def new_model(dtc):
     model = mint_generic_model(dtc.backend)
+    #import pdb; pdb.set_trace()
     model.set_attrs(**dtc.attrs)
     return model
-
+def new_single_gene(dtc):
+    from neuronunit.optimisation.optimisations import SciUnitOptimisation
+    import random
+    from datetime import datetime
+    random.seed(datetime.now())
+    #random.seed(64)
+    DO = SciUnitOptimisation(offspring_size = 1,
+    error_criterion = [dtc.tests], boundary_dict = dtc.boundary_dict,
+     backend = dtc.backend, selection = str('selNSGA'))#,, boundary_dict = ss, elite_size = 2, hc=hc)
+    DO.setnparams(nparams = len(dtc.attrs), boundary_dict = dtc.boundary_dict)
+    DO.setup_deap()
+    #pop = []
+    gene = DO.set_pop(boot_new_random=1)
+    gene = dtc2model(gene,dtc)
+    dtc_ = update_dtc_pop(gene,dtc.td)
+    dtc_ = pop2dtc(gene,dtc_)
+    return (gene,dtc_)
+from neuronunit.tests.fi import SpikeCountSearch, RheobaseTestP
 def nuunit_allen_evaluation(dtc):
 
     if hasattr(dtc,'vtest'):
@@ -1412,18 +1466,10 @@ def nuunit_allen_evaluation(dtc):
                 current['amplitude'] = dtc.rheobase * 3.0
                 break
     else:
-        #compare = dtc.pre_obs
         try:
             target_spikes = dtc.tests['value']
         except:
             target_spikes = dtc.spike_number
-        #target_current = None
-        #cnt=0
-        #while target_current == None or important_length<10:
-        #    dtc.attrs = random_p(dtc.backend)
-
-        from neuronunit.tests.fi import SpikeCountSearch, RheobaseTestP
-
         observation_spike = {}
         observation_spike['value'] = target_spikes
         dtc.pre_obs['spike_number'] = target_spikes
@@ -1438,44 +1484,53 @@ def nuunit_allen_evaluation(dtc):
             dtc = filter_predictions(dtc)
             dtc.error_length = len(dtc.preds)
             #important_length = len(dtc.preds)
-        else:
-            #cnt+=1
+        if target_current==None or len(dtc.preds)<7:
             dtc.ampl = None
-            #if cnt==5:
-            rh = RheobaseTestP(observation_spike)
-            model = new_model(dtc)
-            assert model is not None
-            target_current = rh.generate_prediction(model)
             if target_current is None:
                 dtc.preds = {}
                 return dtc
-            dtc.ampl = target_current['value']*1.5
-            dtc = prediction_current_and_features(dtc)
-            dtc = filter_predictions(dtc)
-            dtc.error_length = len(dtc.preds)
 
-            #important_length = len(dtc.preds)
-
-            #return dtc
         return dtc
 
-        #pop[0][1]
+'''
+try:
+    dtc_,gene = new_single_gene(dtc)
+    observation_spike = {}
+    observation_spike['value'] = target_spikes
+    dtc.pre_obs['spike_number'] = target_spikes
+    scs = SpikeCountSearch(observation_spike)
+    model = new_model(dtc)
+    assert model is not None
+    target_current = scs.generate_prediction(model)
+    dtc.ampl = None
+    if target_current !=None:
+        dtc.ampl = target_current['value']
+        dtc = prediction_current_and_features(dtc)
+        dtc = filter_predictions(dtc)
+        dtc.error_length = len(dtc.preds)
 
-        '''
-        observation_spike = {}
-        observation_spike['value'] = target_spikes
-        dtc.pre_obs['spike_number'] = target_spikes
-        from neuronunit.tests.fi import SpikeCountSearch
-        scs = SpikeCountSearch(observation_spike)
-        model = new_model(dtc)
-        target_current = scs.generate_prediction(model)
-        if target_current is not None:
-            dtc.ampl = target_current['value']
-            dtc = prediction_current_and_features(dtc)
-        else:
-            dtc.ampl = None
-        return dtc#pop[0][1]
-        '''
+except:
+'''
+
+
+
+#pop[0][1]
+
+'''
+observation_spike = {}
+observation_spike['value'] = target_spikes
+dtc.pre_obs['spike_number'] = target_spikes
+from neuronunit.tests.fi import SpikeCountSearch
+scs = SpikeCountSearch(observation_spike)
+model = new_model(dtc)
+target_current = scs.generate_prediction(model)
+if target_current is not None:
+    dtc.ampl = target_current['value']
+    dtc = prediction_current_and_features(dtc)
+else:
+    dtc.ampl = None
+return dtc#pop[0][1]
+'''
 
 
 
@@ -2173,7 +2228,7 @@ def opt_on_pair_of_points(dtcpop):
     assert len(dtcpop) == 2*len(dtcpopb)
     return dtcpop
 
-def dtc2model(pop,dtcpop):
+def dtc2gene(pop,dtcpop):
     fitness_attr = pop[0].fitness
     if type(fitness_attr) is type(None):
         import pdb; pdb.set_trace()
@@ -2225,7 +2280,7 @@ def boot_new_genes(number_genes,dtcpop,td):
         pop = DO.set_pop(boot_new_random=5)
     else:
         pop = DO.set_pop(boot_new_random=number_genes)
-    pop = dtc2model(pop,dtcpop)
+    pop = dtc2gene(pop,dtcpop)
     dtcpop_ = update_dtc_pop(pop,td)
     dtcpop_ = pop2dtc(pop,dtcpop_)
     dtcpop_ = list(map(dtc_to_rheo,dtcpop_))
@@ -2262,27 +2317,58 @@ def get_dm(pop,dtcpop,tests,td):
     return dtcpop,pop
 def get_allen(pop,dtcpop,tests,td):
     NPART = np.min([multiprocessing.cpu_count(),len(dtcpop)])
-    #import pdb; pdb.set_trace()
-    #pdb.set_trace()
-    #tests = {k:v for k,v in tests.items() if type(v['mean']) is not type(False)}
     for dtc in dtcpop: dtc.spike_number = tests['spike_count']['mean']
     for dtc in dtcpop: dtc.pre_obs = None
     for dtc in dtcpop: dtc.pre_obs = tests
-        #import pdb; pdb.set_trace()
-        #try:
-        #dtc.spike_number = dtc.preds['spike_count']['mean']
-        #except:
-        #dtc.spike_number = tests['spike_count']['mean']
-        #import pdb; pdb.set_trace()
     if CONFIDENT == True:
         dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
         dtcpop = list(dtcbag.map(nuunit_allen_evaluation).compute())
 
     else:
         dtcpop = list(map(nuunit_allen_evaluation,dtcpop))
-    #dtcpop,pop = score_attr(dtcpop,pop)
     pop = [pop[i] for i,d in enumerate(dtcpop) if type(d) is not type(None)]
     dtcpop = [d for d in dtcpop if type(d) is not type(None)]
+    initial_length = len(pop)
+    both = [(ind,dtc) for ind,dtc in zip(pop,dtcpop) if len(dtc.preds) > 6 ]
+    both = [(ind,dtc) for ind,dtc in zip(pop,dtcpop) if dtc.ampl is not None ]
+
+    if len(both):
+        dtcpop = [i[1] for i in both]
+        pop = [i[0] for i in both]
+        delta = initial_length-len(both)
+        for i in range(0,delta):
+            pop.append(copy.copy(pop[0]))
+            dtcpop.append(copy.copy(dtcpop[0]))
+    else:
+        for i,(ind,dtc) in enumerate(list(zip(pop,dtcpop))):
+            target_current =  None
+            while (dtc.error_length)<2 or target_current==None:
+                import pdb; pdb.set_trace()
+                dtc,ind = new_single_gene(dtc,pop[0].td)
+                observation_spike = {}
+                observation_spike['value'] = target_spikes
+                scs = SpikeCountSearch(observation_spike)
+                model = new_model(dtc)
+                assert model is not None
+                target_current = scs.generate_prediction(model)
+                dtc.ampl = None
+                if target_current !=None:
+                    dtc.ampl = target_current['value']
+                    print('got to making new genes')
+                    dtc = prediction_current_and_features(dtc)
+                    dtc = filter_predictions(dtc)
+                    dtc.error_length = len(dtc.preds)
+            print('stuck in loop',dtc.error_length)
+            pop[i] = ind
+            dtcpop[i] = dtc
+
+            print('left loop',dtc.error_length)
+    if CONFIDENT == True:
+        dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
+        dtcpop = list(dtcbag.map(nuunit_allen_evaluation).compute())
+
+    else:
+        dtcpop = list(map(nuunit_allen_evaluation,dtcpop))
 
     return pop, dtcpop
 
