@@ -35,10 +35,11 @@ import numpy as np
 from collections import OrderedDict
 
 from neuronunit.optimisation import exhaustive_search as es
-from neuronunit.optimisation import optimisation_management as om
+from neuronunit.optimisation import optimization_management as om
 
+#import neuronunit.optimisation.optimization_management as om
 
-
+import copy
 class WeightedSumFitness(deap.base.Fitness):
 
     """Fitness that compares by weighted sum"""
@@ -145,9 +146,12 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
         self.toolbox = deap.base.Toolbox()
         self.hc = hc
         self.boundary_dict = boundary_dict
-        self.OBJ_SIZE = None
+        #self.OBJ_SIZE = None
+
         self.setnparams(nparams = nparams, boundary_dict = boundary_dict)
+
         self.setup_deap()
+        print('passes setup c?')
 
     def transdict(self,dictionaries):
         mps = OrderedDict()
@@ -180,7 +184,14 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
 
         npoints = 2 ** len(list(self.params))
         npoints = np.ceil(npoints)
-        dic_grid = es.create_grid(mp_in = self.params,npoints = self.offspring_size, free_params = self.params)
+        if len(self.params)>1:
+            dic_grid = es.create_grid(mp_in = self.params,npoints = self.offspring_size, free_params = self.params)
+        else:
+            npoints = self.offspring_size
+            values = np.linspace(np.min(list(self.params.values())[0]),np.max(list(self.params.values())[0]),npoints)
+            single_key = list(self.params.keys())[0]
+            dic_grid = [{single_key:v} for v in values ]
+            #import pdb; pdb.set_trace()
         dic_grid = list(dic_grid)
         '''
 
@@ -201,18 +212,20 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
             delta = self.offspring_size - size
             pop = []
             for i in dic_grid:
-                pop.append([i[k] for k in self.td])
+                 pop.append([i[k] for k in self.td])
 
             #for i in range(0,delta):
-            while delta:
-                delta = self.offspring_size - size
-                for i in dic_grid:
-                    pop.append([i[k] for k in self.td])
-                    size = len(pop)
+            dic_grid = list(copy.copy(dic_grid))
+            cnt=0
+            while delta:# and cnt<2:
+                #for i in dic_grid:
+                pop.append(copy.copy(pop[0]))
+                size = len(pop)
 
-                #for index in range(0,dic_grid):
-                #    d = dic_grid[index]
-                #    pop.append([d[k] for k in self.td])
+                delta = self.offspring_size - size
+
+                cnt+=1
+                print(cnt,pop)
 
         elif size == self.offspring_size:
             pop = []
@@ -220,6 +233,7 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
                 pop.append([i[k] for k in self.td])
 
         assert len(pop)==self.offspring_size
+        print(pop,'makes a population')
         return pop
 
 
@@ -244,7 +258,7 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
 
         OBJ_SIZE = len(self.error_criterion)
         print(self.backend)
-        self.OBJ_SIZE = OBJ_SIZE
+        #self.OBJ_SIZE = OBJ_SIZE
         def glif_modifications(UPPER,LOWER):
             for index, i in enumerate(UPPER):
                 if i == LOWER[index]:
@@ -278,11 +292,13 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
             '''
             ordered = OrderedDict(self.params)
             ind = []
+
             self.grid_init = self.grid_sample_init(self.params)
             for k,v in ordered.items():
                 ind.append(self.seed_pop[k])
             self.grid_init.append(ind)
             self.td = list(ordered.keys())
+
         elif type(self.seed_pop) is None:
             self.grid_init = self.grid_sample_init(self.params)#(LOWER, UPPER, self.offspring_size)
         if not hasattr(self,'grid_init'):
@@ -297,8 +313,7 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
             return other
         # Register the 'uniform' function
         self.toolbox.register("uniform_params", uniform_params, LOWER, UPPER, IND_SIZE)
-        print(OBJ_SIZE,'objective size')
-        #gimport pdb; pdb.set_trace()
+
         self.toolbox.register(
             "Individual",
             deap.tools.initIterate,
@@ -312,10 +327,9 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
             list,
             self.toolbox.Individual)
 
-        import neuronunit.optimisation.optimization_management as om
-        #import pdb; pdb.set_trace()
 
         self.error_criterion['protocol'] = self.protocol # ={'allen':False,'elephant':True,'dm':False}
+        #print('broken here, d')
         OM = om.OptMan(self.error_criterion,self.td, backend = self.backend, \
                                               hc = self.hc,boundary_dict = self.boundary_dict, \
                                               error_length=self.error_length,protocol=self.protocol)
@@ -324,17 +338,18 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
             if self.backend is None:
                 self.backend = 'RAW'
             print(self.error_criterion['protocol'])
+
             invalid_pop = list(OM.update_deap_pop(invalid_ind, self.error_criterion, \
                                                   td = self.td, backend = self.backend, \
                                                   hc = self.hc,boundary_dict = self.boundary_dict, \
                                                   error_length=self.error_length))
 
-            print('gets here a')
+            #print('gets here a')
 
             invalid_dtc = [ i.dtc for i in invalid_pop if hasattr(i,'dtc') ]
 
             fitnesses = list(map(om.evaluate, invalid_dtc))
-            print('gets here b')
+            #print('gets here b')
             return (invalid_pop,fitnesses)
 
         self.toolbox.register("evaluate", custom_code)
@@ -363,7 +378,7 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
             IND_SIZE = len(list(self.params.values()))
             OBJ_SIZE = len(self.error_criterion)
             if IND_SIZE == 1:
-                pop = [ WSListIndividual([g],obj_size=OBJ_SIZE) for g in self.grid_init ]
+                pop = [ WSListIndividual(g,obj_size=OBJ_SIZE) for g in self.grid_init ]
             else:
                 pop = [ WSListIndividual(g, obj_size=OBJ_SIZE) for g in self.grid_init ]
         else:
@@ -424,8 +439,19 @@ def run_ga(explore_edges, max_ngen, test, \
         selection = None, MU = None, seed_pop = None, \
         backend = str('RAW'),protocol={'allen':False,'elephant':True}):
     ss = {}
+    try:
+        free_params.pop('dt')
+    except:
+        pass
+    if 'Iext' in free_params:
+        free_params.pop('Iext')
     for k in free_params:
-        ss[k] = explore_edges[k]
+        if not k in explore_edges.keys() and k not in str('Iext') and k not in str('dt'):
+            ss[k] = explore_edges[str(free_params)]
+        else:
+            ss[k] = explore_edges[k]
+    #print(k)
+
     if type(MU) == type(None):
         MU = 2**len(list(free_params))
     # make sure that the gene population size is divisible by 4.
@@ -447,7 +473,7 @@ def run_ga(explore_edges, max_ngen, test, \
         DO.seed_pop = seed_pop
         DO.setup_deap()
         DO.error_length = len(test)
-
+    print(DO,'gets past initialization')
     ga_out = DO.run(max_ngen = max_ngen)
     return ga_out, DO
 

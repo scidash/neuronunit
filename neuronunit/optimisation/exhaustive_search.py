@@ -144,9 +144,12 @@ def create_a_map(subset):
 
 def create_grid(mp_in = None, npoints = 2, free_params = None, ga = None):
     #print(mp_in)
-    try:
+    #import pdb; pdb.set_trace()
+    #try:
+    if mp_in is not None:
         grid = ParameterGrid(mp_in)
-    except:
+    #except:
+    if free_params is not None:
         grid = ParameterGrid(free_params)
     return grid
     '''
