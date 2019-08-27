@@ -87,7 +87,7 @@ class ADEXPBackend(Backend):
         """Must return a neo.core.AnalogSignal.
         And must destroy the hoc vectors that comprise it.
         """
-        if np.max(self.vM)!=0.020*qt.V:
+        if np.max(self.vM)<0.000*qt.V:
             tdic = self.spike_monitor.spike_trains()
             for key,value in tdic.items():
                 if len(value)==1:
@@ -157,9 +157,9 @@ class ADEXPBackend(Backend):
             c = current['injected_square_current'];
         else:
             c = current
-        amplitude = float(c['amplitude'])#*1000.0
-        duration = int(c['duration'])#/dt#/dt.rescale('ms')
-        delay = int(c['delay'])#/dt#.rescale('ms')
+        amplitude = float(c['amplitude'].simplified)#*1000.0
+        duration = int(c['duration'].simplified)#/dt#/dt.rescale('ms')
+        delay = int(c['delay'].simplified)#/dt#.rescale('ms')
         pre_current = int(duration)+100
         stim = input_factory.get_step_current(int(delay), int(pre_current), 1 * b2.ms, amplitude *b2.pA)
         st = (duration+delay+100)* b2.ms

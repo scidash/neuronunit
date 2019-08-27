@@ -173,9 +173,8 @@ def eaAlphaMuPlusLambdaCheckpoint(
         def experimental():
             NOBJ = len(population[0].fitness.values)
             #print('stuck_here uniform')
-            ref_points = tools.uniform_reference_points(NOBJ, 20)
-            toolbox.register("select", tools.selNSGA3, ref_points=population)
-
+            import pdb; pdb.set_trace()
+        #experimental()
         # TODO this first loop should be not be repeated !
         parents = _evaluate_invalid_fitness(toolbox, population)
         #import pdb; pdb.set_trace()
@@ -260,8 +259,14 @@ def eaAlphaMuPlusLambdaCheckpoint(
         #    toolbox.register("select", tools.selNSGA3, ref_points=ref_points)
         #print('fails at d')
 
-        #toolbox.register("select",selNSGA2)
-        toolbox.register("select", tools.selNSGA2)
+
+        try:
+            ref_points = tools.uniform_reference_points(len(population[0]), 12)
+            #toolbox.register("select", tools.selNSGA3WithMemory, ref_points=population)
+            toolbox.register("select", selNSGA3WithMemory(ref_points))
+        except:
+            #toolbox.register("select",selNSGA2)
+            toolbox.register("select", tools.selNSGA2)
 
         print('fails at e')
         old_max = 0

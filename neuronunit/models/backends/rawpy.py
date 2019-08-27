@@ -149,12 +149,14 @@ class RAWBackend(Backend):
             c = current['injected_square_current']
         else:
             c = current
-        amplitude = float(c['amplitude'])
+        #import pdb; pdb.set_trace()
+        amplitude = float(c['amplitude'].simplified) #this needs to be in every backends
+        #print(amplitude)
 
         duration = float(c['duration'])#/dt#/dt.rescale('ms')
         delay = float(c['delay'])#/dt#.rescale('ms')
         if 'sim_length' in c.keys():
-            sim_length = c['sim_length']
+            sim_length = c['sim_length']#.simplified
         tMax = delay + duration + 200.0#/dt#*pq.ms
         self.set_stop_time(tMax*pq.ms)
         tMax = self.tstop
@@ -172,7 +174,11 @@ class RAWBackend(Backend):
         Iext[delay_ind+duration_ind::] = 0.0
 
         attrs['Iext'] = Iext
+        #print(attrs)
+        #if len(attrs)>1:
         v = get_vm(**attrs)
+        #else:
+        #    v = get_vm(attrs)
         #print(np.max(v))
 
         self.vM = AnalogSignal(v,
