@@ -21,7 +21,7 @@ install:
     
 
 script:
-  - python unit_test/high_level_tests.py
+  - python neuronunit/unit_test/working/elephant_test.py
   - python unit_test/low_level_tests.py
 after_success:
   - coveralls
