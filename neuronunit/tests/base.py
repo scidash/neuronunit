@@ -13,19 +13,6 @@ import neuronunit.capabilities as ncap
 import neuronunit.capabilities as cap
 
 from neuronunit import neuroelectro
-import pickle
-
-ls1 = pickle.load(open('../models/backends/generic_current_injection.p','rb'))
-ls = ls1[0]['stimulus']
-DT = sampling_period = 1.0/ls1[0]['sampling_rate']#*pq.s
-on_indexs = np.where(ls==np.max(ls))
-
-ALLEN_STIM = ls
-ALLEN_ONSET = start = np.min(on_indexs)*DT
-ALLEN_STOP = stop = np.max(on_indexs)*DT
-ALLEN_FINISH = len(ls)*DT
-#import pdb
-#pdb.set_trace()
 AMPL = 0.0*pq.pA
 DELAY = 100.0*pq.ms
 DURATION = 1000.0*pq.ms

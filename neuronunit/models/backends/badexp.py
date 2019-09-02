@@ -104,10 +104,8 @@ class ADEXPBackend(Backend):
                     for v in value:
                        i = int(float(v)/0.001)
                        self.vM[i] = 0.020*qt.mV
-
-
-                        i = int(float(v)/0.001)
-                        self.vM[i] = 0.020*qt.mV
+                       #i = int(float(v)/0.001)
+                       #self.vM[i] = 0.020*qt.mV
         return self.vM
 
     def set_attrs(self, **attrs):
