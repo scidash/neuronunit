@@ -128,7 +128,7 @@ def update_dtc_grid(item_of_iter_list):
     dtc.scores = {}
     dtc.rheobase = None
     dtc.evaluated = False
-    print(dtc)
+    #print(dtc)
     #dtc.backend = 'NEURON'
     return dtc
 
@@ -141,7 +141,7 @@ def create_a_map(subset):
     return maps
 
 def create_grid(mp_in = None, npoints = 2, free_params = None, ga = None):
-    print(mp_in)
+    #print(mp_in)
     try:
         grid = ParameterGrid(mp_in)
     except:
@@ -202,7 +202,7 @@ def create_grid1(mp_in=None,npoints=3,free_params=None,ga=None):
     sp = sample_points(copy.copy(mp_in), npoints=2)
     whole_p_set = OrderedDict(sp)
 
-    print(type(free_params), 'free_params')
+    #print(type(free_params), 'free_params')
     if type(free_params) is type(dict):
         subset = OrderedDict( {k:whole_p_set[k] for k in list(free_params.keys())})
 
@@ -212,8 +212,8 @@ def create_grid1(mp_in=None,npoints=3,free_params=None,ga=None):
     else:
         subset = OrderedDict( {k:whole_p_set[k] for k in free_params})
 
-    print('subset is wrong')
-    pdb.set_trace()
+    #print('subset is wrong')
+    #pdb.set_trace()
     '''
     maps = create_a_map(subset)
     if type(ga) is not type(None):
@@ -352,7 +352,7 @@ def run_grid(npoints, tests, provided_keys = None, hold_constant = None, ranges=
                 s['grid_results'] = grid_results
                 s['sub_pop'] = sub_pop
         cnt += 1
-        print('done_block_of_N_cells: ',cnt)
+        #print('done_block_of_N_cells: ',cnt)
     if type(s) is not type(None):
         s.close()
     return grid_results
