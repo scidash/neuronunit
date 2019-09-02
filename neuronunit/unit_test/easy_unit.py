@@ -7,16 +7,24 @@ from neuronunit.optimisation.optimisation_management import inject_and_plot
 
 NGEN = 1
 for key,v in rts.items():
-
     backend = str('GLIF')
     filename = str(key)+backend+str('.p')
 
     mp = model_params.MODEL_PARAMS['GLIF']
     mp = { k:v for k,v in mp.items() if type(v) is not dict }
     mp = { k:v for k,v in mp.items() if v is not None }
-    ga_outgl[key], DO = om.run_ga(mp ,NGEN, local_tests, free_params = mp, NSGA = True, MU = 10, model_type = str('GLIF'))#,seed_pop=seeds[key])
-    pickle.dump(ga_outgl[key],open(filename,'wb'))
+    #ga_outgl[key], DO = om.run_ga(mp ,NGEN, local_tests, free_params = mp, NSGA = True, MU = 10, model_type = str('GLIF'))#,seed_pop=seeds[key])
+#d2 = [p.dtc for p in ga_outgl[key]['pf'][0:-1] if not p.dtc.rheobase is None]
 
+    #while not len(d2):
+    ga_outgl[key], DO = om.run_ga(mp ,10, local_tests, free_params = mp, NSGA = True, MU = 10, model_type = str('GLIF'))#,seed_pop=seeds[key])
+    d2 = [p.dtc for p in ga_outgl[key]['pop'] if not p.dtc.rheobase is None]
+    rh = [ p.dtc.rheobase  for p in ga_outgl[key]['pop']  ]
+
+    #print('still looping')
+    pickle.dump(ga_outgl[key],open(filename,'wb'))
+    #import pdb
+    #pdb.set_trace()
 
     local_tests = [value for value in v.values() ]
     backend = str('RAW')
@@ -26,9 +34,13 @@ for key,v in rts.items():
     pickle.dump(ga_outiz[key],open(filename,'wb'))
     dtcpop = [ ind.dtc for ind in ga_outiz[key]['pf'] ]
     filename = str(key)+backend+str('.p')
-    d1 = [p.dtc for p in ga_outiz[key]['pf'][0:-1]]
-    d2 = [p.dtc for p in ga_outgl[key]['pf'][0:-1]]
-    inject_and_plot(d1,second_pop=d2,third_pop=d2,figname=key+'quick_two')
+    d1 = [p.dtc for p in ga_outiz[key]['pop']]
+    #d2 = [p.dtc for p in ga_outgl[key]['pf'][0:-1]]
+    #try:
+    #    inject_and_plot(d1,second_pop=d2,third_pop=d2,figname=key+'quick_two')
+
+    #except:
+    #inject_and_plot(d1,second_pop=d2,third_pop=d3,figname=key+'quick_two')
 
     backend = str('BAE1')
     filename = str(key)+backend+str('.p')
@@ -36,10 +48,11 @@ for key,v in rts.items():
                                 NSGA = True, MU = 10, model_type = str('ADEXP'))
     pickle.dump(ga_outad[key],open(filename,'wb'))
 
-    d3 = [p.dtc for p in ga_outad[key]['pf'][0:-1]]
-
-    inject_and_plot(d1,second_pop=d2,third_pop=d3,figname=key)
-
+    d3 = [p.dtc for p in ga_outad[key]['pop']]
+    #try:
+    #    inject_and_plot(d1,second_pop=d2,third_pop=d3,figname=key)
+    #except:
+    inject_and_plot(d1,second_pop=d1,third_pop=d3,figname=key)
 
 #for key,v in rts.items():
 #    local_tests = [value for value in v.values() ]
