@@ -84,7 +84,7 @@ def grid_points():
 class testHighLevelOptimisation(unittest.TestCase):
 
     def setUp(self):
-        electro_path = str(os.getcwd())+'/../tests/russell_tests.p'
+        electro_path = str(os.getcwd())+'/../../tests/russell_tests.p'
 
         assert os.path.isfile(electro_path) == True
         with open(electro_path,'rb') as f:
@@ -121,7 +121,7 @@ class testHighLevelOptimisation(unittest.TestCase):
                 ]
 
 
-    def test_solution_quality1(self):
+    def test_solution_quality0(self):
 
         #Select random points in parameter space,
         #pretend these points are from experimental observations, by coding them in
@@ -133,16 +133,17 @@ class testHighLevelOptimisation(unittest.TestCase):
         #MBEs = list(self.MODEL_PARAMS.keys())
         MBEs = [str('RAW'),str('BADEXP')]
         for key, use_test in self.test_frame.items():
-            for b in MBEs:
-                use_test['protocol'] = str('elephant')
+            use_test['protocol'] = str('elephant')
 
+            for b in MBEs:
+            
                 tuples_ = round_trip_test(use_test,b)
                 (boolean,self.dtcpop) = tuples_
                 print('done one')
                 print(boolean,self.dtcpop)
                 self.assertTrue(boolean)
         return
-
+    '''
     def test_solution_quality0(self):
 
         from neuronunit.tests.allen_tests import pre_obs#, test_collection
@@ -179,8 +180,7 @@ class testHighLevelOptimisation(unittest.TestCase):
         self.assertTrue(boolean)
         return
 
-    '''
-    move to low level tests
+        move to low level tests
     def test_rotate_backends2(self):
         self.dtcpop = grid_points()
 

@@ -35,10 +35,11 @@ import numpy as np
 from collections import OrderedDict
 
 from neuronunit.optimisation import exhaustive_search as es
-from neuronunit.optimisation import optimisation_management as om
+from neuronunit.optimisation import optimization_management as om
 
+#import neuronunit.optimisation.optimization_management as om
 
-
+import copy
 class WeightedSumFitness(deap.base.Fitness):
 
     """Fitness that compares by weighted sum"""
@@ -115,25 +116,25 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
                  seed=None,
                  offspring_size=15,
                  elite_size=3,
-                 eta=10,
+                 eta=20,
                  mutpb=0.7,
-                 cxpb=0.7,
-                 map_function=None,
+                 cxpb=0.9,
                  backend = None,
                  nparams = 10,
                  boundary_dict= {},
                  hc = None,
-                 seed_pop = None):
+                 seed_pop = None, protocol={'allen':False,'elephant':True}):
         self.seed_pop = seed_pop
         """Constructor"""
 
-
+        self.protocol = protocol
         #super(SciUnitOptimisation, self).__init__()
         self.selection = selection
         self.benchmark = benchmark
 
         self.error_criterion = error_criterion
         self.error_length = len(error_criterion)
+        #import pdb; pdb.set_trace()
         self.seed = seed
         self.offspring_size = offspring_size
         self.elite_size = elite_size
@@ -145,9 +146,12 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
         self.toolbox = deap.base.Toolbox()
         self.hc = hc
         self.boundary_dict = boundary_dict
+        #self.OBJ_SIZE = None
 
         self.setnparams(nparams = nparams, boundary_dict = boundary_dict)
+
         self.setup_deap()
+        print('passes setup c?')
 
     def transdict(self,dictionaries):
         mps = OrderedDict()
@@ -180,7 +184,14 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
 
         npoints = 2 ** len(list(self.params))
         npoints = np.ceil(npoints)
-        dic_grid = es.create_grid(mp_in = self.params,npoints = self.offspring_size, free_params = self.params)
+        if len(self.params)>1:
+            dic_grid = es.create_grid(mp_in = self.params,npoints = self.offspring_size, free_params = self.params)
+        else:
+            npoints = self.offspring_size
+            values = np.linspace(np.min(list(self.params.values())[0]),np.max(list(self.params.values())[0]),npoints)
+            single_key = list(self.params.keys())[0]
+            dic_grid = [{single_key:v} for v in values ]
+            #import pdb; pdb.set_trace()
         dic_grid = list(dic_grid)
         '''
 
@@ -201,18 +212,20 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
             delta = self.offspring_size - size
             pop = []
             for i in dic_grid:
-                pop.append([i[k] for k in self.td])
+                 pop.append([i[k] for k in self.td])
 
             #for i in range(0,delta):
-            while delta:
-                delta = self.offspring_size - size
-                for i in dic_grid:
-                    pop.append([i[k] for k in self.td])
-                    size = len(pop)
+            dic_grid = list(copy.copy(dic_grid))
+            cnt=0
+            while delta:# and cnt<2:
+                #for i in dic_grid:
+                pop.append(copy.copy(pop[0]))
+                size = len(pop)
 
-                #for index in range(0,dic_grid):
-                #    d = dic_grid[index]
-                #    pop.append([d[k] for k in self.td])
+                delta = self.offspring_size - size
+
+                cnt+=1
+                print(cnt,pop)
 
         elif size == self.offspring_size:
             pop = []
@@ -220,6 +233,7 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
                 pop.append([i[k] for k in self.td])
 
         assert len(pop)==self.offspring_size
+        print(pop,'makes a population')
         return pop
 
 
@@ -244,8 +258,7 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
 
         OBJ_SIZE = len(self.error_criterion)
         print(self.backend)
-        #import pdb
-        #pdb.set_trace()
+        #self.OBJ_SIZE = OBJ_SIZE
         def glif_modifications(UPPER,LOWER):
             for index, i in enumerate(UPPER):
                 if i == LOWER[index]:
@@ -254,8 +267,6 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
             return LOWER
 
         if self.backend == 'GLIF':
-            #self.td = [ param
-            #import pdb; pdb.set_trace()
             del self.td[-1]
             self.params.pop('type',None)
 
@@ -281,11 +292,13 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
             '''
             ordered = OrderedDict(self.params)
             ind = []
+
             self.grid_init = self.grid_sample_init(self.params)
             for k,v in ordered.items():
                 ind.append(self.seed_pop[k])
             self.grid_init.append(ind)
             self.td = list(ordered.keys())
+
         elif type(self.seed_pop) is None:
             self.grid_init = self.grid_sample_init(self.params)#(LOWER, UPPER, self.offspring_size)
         if not hasattr(self,'grid_init'):
@@ -301,7 +314,6 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
         # Register the 'uniform' function
         self.toolbox.register("uniform_params", uniform_params, LOWER, UPPER, IND_SIZE)
 
-
         self.toolbox.register(
             "Individual",
             deap.tools.initIterate,
@@ -315,26 +327,29 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
             list,
             self.toolbox.Individual)
 
-        import neuronunit.optimisation.optimisation_management as om
-        # Register the evaluation function for the individuals
+
+        self.error_criterion['protocol'] = self.protocol # ={'allen':False,'elephant':True,'dm':False}
+        #print('broken here, d')
+        OM = om.OptMan(self.error_criterion,self.td, backend = self.backend, \
+                                              hc = self.hc,boundary_dict = self.boundary_dict, \
+                                              error_length=self.error_length,protocol=self.protocol)
         def custom_code(invalid_ind):
 
             if self.backend is None:
                 self.backend = 'RAW'
-            #for ind in invalid_ind:
-            #    ind.error_length = None
-            #    ind.error_length = self.error_length
-                
-            invalid_pop = list(om.update_deap_pop(invalid_ind, self.error_criterion,
-                                                  td = self.td, backend = self.backend,
-                                                  hc = self.hc,boundary_dict = self.boundary_dict,error_length=self.error_length))
+            print(self.error_criterion['protocol'])
 
+            invalid_pop = list(OM.update_deap_pop(invalid_ind, self.error_criterion, \
+                                                  td = self.td, backend = self.backend, \
+                                                  hc = self.hc,boundary_dict = self.boundary_dict, \
+                                                  error_length=self.error_length))
+
+            #print('gets here a')
 
             invalid_dtc = [ i.dtc for i in invalid_pop if hasattr(i,'dtc') ]
 
             fitnesses = list(map(om.evaluate, invalid_dtc))
-            #import pdb; pdb.set_trace()
-
+            #print('gets here b')
             return (invalid_pop,fitnesses)
 
         self.toolbox.register("evaluate", custom_code)
@@ -342,27 +357,28 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
         self.toolbox.register(
             "mate",
             deap.tools.cxSimulatedBinaryBounded,
-            eta=ETA,
+            eta=self.eta,
             low=LOWER,
             up=UPPER)
 
+
         # Register the mutation operator
+        self.toolbox.register("variate", deap.algorithms.varAnd)
+        IND_SIZE = len(list(self.params.values()))
         self.toolbox.register(
             "mutate",
             deap.tools.mutPolynomialBounded,
-            eta=ETA,
+            eta=self.eta,
             low=LOWER,
             up=UPPER,
-            indpb=0.5)
-
-        self.toolbox.register("variate", deap.algorithms.varAnd)
+            indpb=1.0/IND_SIZE)
 
     def set_pop(self, boot_new_random=0):
         if boot_new_random == 0:
             IND_SIZE = len(list(self.params.values()))
             OBJ_SIZE = len(self.error_criterion)
             if IND_SIZE == 1:
-                pop = [ WSListIndividual([g],obj_size=OBJ_SIZE) for g in self.grid_init ]
+                pop = [ WSListIndividual(g,obj_size=OBJ_SIZE) for g in self.grid_init ]
             else:
                 pop = [ WSListIndividual(g, obj_size=OBJ_SIZE) for g in self.grid_init ]
         else:
@@ -416,53 +432,97 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
         td = self.td
         self.results = {'pop':pop,'hof':hof,'pf':pf,'log':log,'history':history,'td':td,'gen_vs_pop':gen_vs_pop}
         return self.results
+from collections import Iterable, OrderedDict
 
-        '''
-        temp = [ v.dtc for k,v in history.genealogy_history.items() ]
-        temp = [ i for i in temp if type(i) is not type(None)]
-        temp = [ i for i in temp if len(list(i.attrs.values())) != 0.0 ]
-        true_history = [ (dtc, dtc.get_ss()) for dtc in temp ]
-        true_mins = sorted(true_history, key=lambda h: h[1])
+def run_ga(explore_edges, max_ngen, test, \
+        free_params = None, hc = None,
+        selection = None, MU = None, seed_pop = None, \
+        backend = str('RAW'),protocol={'allen':False,'elephant':True}):
+    ss = {}
+    try:
+        free_params.pop('dt')
+    except:
+        pass
+    if 'Iext' in free_params:
+        free_params.pop('Iext')
+    for k in free_params:
+        if not k in explore_edges.keys() and k not in str('Iext') and k not in str('dt'):
+            ss[k] = explore_edges[str(free_params)]
+        else:
+            ss[k] = explore_edges[k]
+    #print(k)
 
-        #sorted(student_tuples, key=lambda student: student[2])
-        hof = [ h for h in hof if len(h)==len(pop[0])]
-        hof = [ h for h in hof if type(h.dtc) is not type(None)]
-        pf = [ p for p in pf if len(p)==len(pop[0])]
-        pf = [ p for p in pf if type(p.dtc) is not type(None)]
-        try:
-            assert true_mins[0][1] <  hof[0].dtc.get_ss()
-            if true_mins[0][1] <  hof[0].dtc.get_ss():
-                #print('hall of fame unreliable, compared to history')
-                hof = [i[0] for i in true_mins]
-                best = hof[0]
-                best_attrs = best.attrs
-        except:
-            pass
-        '''
-        '''
-        try:
-            attr_keys = list(hof[0].dtc.attrs.keys())
+    if type(MU) == type(None):
+        MU = 2**len(list(free_params))
+    # make sure that the gene population size is divisible by 4.
+    #if selection == True:
+    #    selection = str('selNSGA')
+    #else:
+    #   selection = str('selIBEA')
+    max_ngen = int(np.floor(max_ngen))
+    if not isinstance(test, Iterable):
+        test = [test]
+    DO = SciUnitOptimisation(offspring_size = MU, error_criterion = test,\
+     boundary_dict = ss, backend = backend, hc = hc, \
+     selection = selection,protocol=protocol)
+
+    if seed_pop is not None:
+        # This is a re-run condition.
+        DO.setnparams(nparams = len(free_params), boundary_dict = ss)
+
+        DO.seed_pop = seed_pop
+        DO.setup_deap()
+        DO.error_length = len(test)
+    print(DO,'gets past initialization')
+    ga_out = DO.run(max_ngen = max_ngen)
+    return ga_out, DO
+
+'''
+temp = [ v.dtc for k,v in history.genealogy_history.items() ]
+temp = [ i for i in temp if type(i) is not type(None)]
+temp = [ i for i in temp if len(list(i.attrs.values())) != 0.0 ]
+true_history = [ (dtc, dtc.get_ss()) for dtc in temp ]
+true_mins = sorted(true_history, key=lambda h: h[1])
+
+#sorted(student_tuples, key=lambda student: student[2])
+hof = [ h for h in hof if len(h)==len(pop[0])]
+hof = [ h for h in hof if type(h.dtc) is not type(None)]
+pf = [ p for p in pf if len(p)==len(pop[0])]
+pf = [ p for p in pf if type(p.dtc) is not type(None)]
+try:
+    assert true_mins[0][1] <  hof[0].dtc.get_ss()
+    if true_mins[0][1] <  hof[0].dtc.get_ss():
+        #print('hall of fame unreliable, compared to history')
+        hof = [i[0] for i in true_mins]
+        best = hof[0]
+        best_attrs = best.attrs
+except:
+    pass
+'''
+'''
+try:
+    attr_keys = list(hof[0].dtc.attrs.keys())
 
 
-            us = {} # GA utilized_space
-            for key in attr_keys:
-                #temp = [ v.dtc for k,v in history.genealogy_history.items() ]
-                temp = [ i.attrs[key] for i in temp if type(i) is not type(None)]
-                #temp = [ v.dtc.attrs[key] for k,v in history.genealogy_history.items() ]
-                us[key] = ( np.min(temp), np.max(temp))
-                self.us = us
-        except:
-            attr_keys = list(pf[0].dtc.attrs.keys())
-            #pass
+    us = {} # GA utilized_space
+    for key in attr_keys:
+        #temp = [ v.dtc for k,v in history.genealogy_history.items() ]
+        temp = [ i.attrs[key] for i in temp if type(i) is not type(None)]
+        #temp = [ v.dtc.attrs[key] for k,v in history.genealogy_history.items() ]
+        us[key] = ( np.min(temp), np.max(temp))
+        self.us = us
+except:
+    attr_keys = list(pf[0].dtc.attrs.keys())
+    #pass
 
-        try:
-            self.results['dhof'] = [ h.dtc for h in self.results['hof'] ]
-            self.results['bd'] = self.results['hof'][0].dtc
-        except:
-            try:
-                self.results['bd'] = self.results['hof'][0].dtc
-                self.results['dpf'] = [ h.dtc for h in self.results['pf'] ]
-            except:
-                self.results['dhof'] = [ p.dtc for p in pop ]
-                self.results['bd'] = pop[0].dtc
-        '''
+try:
+    self.results['dhof'] = [ h.dtc for h in self.results['hof'] ]
+    self.results['bd'] = self.results['hof'][0].dtc
+except:
+    try:
+        self.results['bd'] = self.results['hof'][0].dtc
+        self.results['dpf'] = [ h.dtc for h in self.results['pf'] ]
+    except:
+        self.results['dhof'] = [ p.dtc for p in pop ]
+        self.results['bd'] = pop[0].dtc
+'''

@@ -14,12 +14,14 @@ install:
   - pip install -U pip
   - pip install .
   - pip install coveralls
-  - pip3 install -e git+https://github.com/fun-zoological-computing/AllenSDK
-  - pip3 install -e git+https://github.com/scidash/sciunit@dev
-  - pip3 install dask distributed brian2 numba
-  - sudo pip3 install --upgrade beautifulsoup4
+  - pip install git+https://github.com/fun-zoological-computing/AllenSDK
+  - pip install git+https://github.com/scidash/sciunit@dev
+  - pip install dask distributed brian2 numba
+  - pip install --upgrade beautifulsoup4
+    
 
-script:  
-  - sh test.sh
+script:
+  - python neuronunit/unit_test/working/elephant_test.py
+  - python unit_test/low_level_tests.py
 after_success:
   - coveralls

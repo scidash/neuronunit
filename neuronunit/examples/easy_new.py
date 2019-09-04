@@ -64,6 +64,9 @@ for key,v in rts.items():
     #inject_and_plot(d2,second_pop=d2,third_pop=d3,figname=key)
     #except:
     #    inject_and_plot(d3,second_pop=d2,third_pop=d3,figname=key)
+        #assert 1 ==2
+        ga_outiz[key]  = pickle.load(open(filename,'rb'))
+    except:
         ga_outiz[key], DO = om.run_ga(model_params.MODEL_PARAMS['RAW'],NGEN, local_tests, free_params = model_params.MODEL_PARAMS['RAW'],
                                         NSGA = True, MU = MU, model_type = str('RAW'))
         pickle.dump(ga_outiz[key],open(filename,'wb'))
@@ -78,7 +81,14 @@ for key,v in rts.items():
         ga_outiz[key]  = pickle.load(open(filename,'rb')))
     except:
         ga_outad[key], DO = om.run_ga(model_params.MODEL_PARAMS['BAE1'],NGEN, local_tests, free_params = model_params.MODEL_PARAMS['BAE1'],
+    backend = str('BAE1')
+    filename = str(key)+backend+str('.p')
+    try:
+        #assert 1 ==2
+
+        ga_outiz[key]  = pickle.load(open(filename,'rb'))
+    except:
+        ga_outad[key], DO = om.run_ga(model_params.MODEL_PARAMS['ADEXP'],NGEN, local_tests, free_params = model_params.MODEL_PARAMS['ADEXP'],
                                     NSGA = True, MU = MU, model_type = str('ADEXP'))
         pickle.dump(ga_outad[key],open(filename,'wb'))
         d3 = [p.dtc for p in ga_outad[key]['pf'][0:-1]]
-    '''

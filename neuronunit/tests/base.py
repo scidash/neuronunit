@@ -1,5 +1,7 @@
-"""Base classes and attributes for many neuronunit tests.  No classes here meant
-for direct use in testing"""
+"""Base classes and attributes for many neuronunit tests.
+
+No classes here meant for direct use in testing.
+"""
 
 from types import MethodType
 
@@ -13,6 +15,18 @@ import neuronunit.capabilities as ncap
 import neuronunit.capabilities as cap
 
 from neuronunit import neuroelectro
+import pickle
+
+ls1 = pickle.load(open('../models/backends/generic_current_injection.p','rb'))
+ls = ls1[0]['stimulus']
+DT = sampling_period = 1.0/ls1[0]['sampling_rate']#*pq.s
+on_indexs = np.where(ls==np.max(ls))
+
+ALLEN_STIM = ls
+ALLEN_ONSET = start = np.min(on_indexs)*DT
+ALLEN_STOP = stop = np.max(on_indexs)*DT
+ALLEN_FINISH = len(ls)*DT
+
 AMPL = 0.0*pq.pA
 DELAY = 100.0*pq.ms
 DURATION = 1000.0*pq.ms
@@ -137,6 +151,7 @@ class VmTest(sciunit.Test):
                            'n': reference_data.n}
         else:
             observation = None
+
         return observation
 
     @classmethod
@@ -163,7 +178,7 @@ class VmTest(sciunit.Test):
         self.params['injected_square_current']['amplitude'] = rheobase
         model.inject_square_current(self.params['injected_square_current'])
 
-        mp = model.results['vm']
+        vm  = model.results['vm']
 
         if np.any(np.isnan(vm)) or np.any(np.isinf(vm)):
             return False

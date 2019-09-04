@@ -129,7 +129,8 @@ class DMTNMLO(object):
                 self.predicted[self.model_id] = [None for i in range(38)] # There are 38 tests
             self.standard = self.model.nmldb_model.get_druckmann2013_standard_current()
             self.strong = self.model.nmldb_model.get_druckmann2013_strong_current()
-            self.ir_currents = self.model.nmldb_model.get_druckmann2013_input_resistance_currents()
+            if not ir_current_limited==True:
+                self.ir_currents = self.model.nmldb_model.get_druckmann2013_input_resistance_currents()
 
         #model = self.__class__.model_cache[self.model_id]
         else:
@@ -137,7 +138,8 @@ class DMTNMLO(object):
 
             self.standard = model.druckmann2013_standard_current
             self.strong = model.druckmann2013_strong_current
-            self.ir_currents = model.druckmann2013_input_resistance_currents
+            if not ir_current_limited==True:
+                self.ir_currents = model.druckmann2013_input_resistance_currents
             self.test_set = [
             {'test': AP12AmplitudeDropTest(self.standard), 'units': pq.mV, 'expected': None},
             {'test': AP1SSAmplitudeChangeTest(self.standard), 'units': pq.mV, 'expected': None},
@@ -155,7 +157,6 @@ class DMTNMLO(object):
             {'test': AP12HalfWidthChangePercentTest(self.standard), 'units': None, 'expected': None},
             {'test': AP12RateOfChangePeakToTroughPercentChangeTest(self.standard), 'units': None, 'expected': None},
             {'test': AP12AHPDepthPercentChangeTest(self.standard), 'units': None, 'expected': None},
-            {'test': InputResistanceTest(injection_currents=self.ir_currents), 'units': pq.Quantity(1,'MOhm'), 'expected': None},
             {'test': AP1DelayMeanTest(self.standard), 'units': pq.ms, 'expected': None},
             {'test': AP1DelaySDTest(self.standard), 'units': pq.ms, 'expected': None},
             {'test': AP2DelayMeanTest(self.standard), 'units': pq.ms, 'expected': None},
@@ -176,10 +177,13 @@ class DMTNMLO(object):
             {'test': AP2DelayMeanStrongStimTest(self.strong), 'units': pq.ms, 'expected': None},
             {'test': AP2DelaySDStrongStimTest(self.strong), 'units': pq.ms, 'expected': None},
             {'test': Burst1ISIMeanStrongStimTest(self.strong), 'units': pq.ms, 'expected': None},
-            {'test': Burst1ISISDStrongStimTest(self.strong), 'units': pq.ms, 'expected': None},
+            {'test': Burst1ISISDStrongStimTest(self.strong), 'units': pq.ms, 'expected': None}
+
             ]
         if ir_current_limited==True:
-            del self.test_set[16]
+            pass
+        else:
+            self.test_set.append({'test': InputResistanceTest(injection_currents=self.ir_currents), 'units': pq.Quantity(1,'MOhm'), 'expected': None})
         if not hasattr(self, "expected"):
             self.expected = [0.0 for i in range(len(self.test_set))]
         self.set_expected(self.expected)
@@ -232,7 +236,7 @@ class DMTNMLO(object):
 
         except:
             predicted = None
-            #import pdb; pdb.set_trace()
+        #    import pdb; pdb.set_trace()
         return (test_class,predicted)
 
     def runTest(self):

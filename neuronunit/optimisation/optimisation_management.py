@@ -2,7 +2,7 @@
 # setting of an appropriate backend.
 import matplotlib
 matplotlib.use('agg')
-CONFIDENT = True
+CONFIDENT = False
 #    Goal is based on this. Don't optimize to a singular point, optimize onto a cluster.
 #    Golowasch, J., Goldman, M., Abbott, L.F, and Marder, E. (2002)
 #    Failure of averaging in the construction
@@ -70,10 +70,10 @@ import efel
 #DURATION = 1000.0*pq.ms
 #DELAY = 100.0*pq.ms
 from neuronunit.tests.base import AMPL, DELAY, DURATION
-try:
-    from neuronunit.tests.base import passive_AMPL, passive_DELAY, passive_DURATION
-except:
-    pass
+#try:
+#    from neuronunit.tests.base import passive_AMPL, passive_DELAY, passive_DURATION
+#except:
+#    pass
 import efel
 
 from allensdk.ephys.extract_cell_features import extract_cell_features
@@ -85,10 +85,13 @@ from sciunit.models.runnable import RunnableModel
 from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 from collections.abc import Iterable
 
-confident = True
+CONFIDENT = False
 
 #DURATION = 2000
 #DELAY = 200
+#from allensdk.ephys import ephys_extractor
+#EphysSweepSetFeatureExtractor = ephys_extractor.EphysSweepSetFeatureExtractor
+from allensdk.ephys.ephys_extractor import EphysSweepFeatureExtractor
 
 # DEAP mutation strategies:
 # https://deap.readthedocs.io/en/master/api/tools.html#deap.tools.mutESLogNormal
@@ -122,13 +125,14 @@ def inject_rh_and_dont_plot(dtc):
 
     dtc.run_number += 1
     model.set_attrs(**dtc.attrs)
-
     model.inject_square_current(uc['injected_square_current'])
     return (model, model.get_membrane_potential().times,model.get_membrane_potential(),uc)
 
-def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem'):
+import seaborn as sns
+from neuronunit.capabilities.spike_functions import get_spike_waveforms
 
-    import seaborn as sns
+def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem'):
+    sns.set_style("darkgrid")
 
     if not isinstance(dtc, Iterable):
         model = mint_generic_model(dtc.backend)
@@ -148,7 +152,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem'):
             #print(str(dtc.backend))
         #vm = model.get_membrane_potential().magnitude
         sns.set_style("darkgrid")
-        plt.plot(model.get_membrane_potential().times,vm.magnitude)#,label='ground truth')
+        plt.plot(model.get_membrane_potential().times,model.get_membrane_potential().magnitude)#,label='ground truth')
         plot_backend = mpl.get_backend()
         if plot_backend == str('Agg'):
             plt.savefig(figname+str('debug.png'))
@@ -156,13 +160,21 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem'):
             plt.show()
 
     else:
+
         if type(second_pop) is not type(None):
             dtcpop = copy.copy(dtc)
             dtc = None
 
             fig = plt.figure(figsize=(11,8.5))
             ax = fig.add_subplot(111)
-            for dtc in [dtcpop[0],dtcpop[-1]]:
+
+            #NPART = np.min([multiprocessing.cpu_count(),len(dtcpop)])
+
+            #dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
+            #dtcpop = list(dtcbag.map(nuunit_dm_evaluation).compute())
+            #latency = np.mean([dtc.AP1DelayMeanTest for dtc in dtcpop])
+
+            for dtc in dtcpop:
                 model = mint_generic_model(dtc.backend)
                 try:
                     rheobase = dtc.rheobase['value']
@@ -181,66 +193,123 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem'):
                 else:
                     pass
                     #print(str(dtc.backend))
-                vm = model.get_membrane_potential().magnitude
+                vm = model.get_membrane_potential()#.magnitude
                 #print(np.max(vm))
                 #sns.set_style("darkgrid")
+                if str("RAW") in dtc.backend:
+                    label=str('Izhikevich Model')
 
-                plt.plot(model.get_membrane_potential().times,vm,color='red',label=dtc.backend)#,label='ground truth')
-                ax.legend()
+                if str("ADEXP") in dtc.backend:
+                    label=str('Adaptive Exponential Model')
+                if str("GLIF") in dtc.backend:
+                    label=str('Generalized Leaky Integrate and Fire')
+                #label = label+str(latency)
 
-            for dtc in [second_pop[0],second_pop[-1]]:
-                model = mint_generic_model(dtc.backend)
-                try:
-                    rheobase = dtc.rheobase['value']
-                except:
-                    rheobase = dtc.rheobase
-                if rheobase is None:
-                    break
-                uc = {'amplitude':rheobase,'duration':DURATION,'delay':DELAY}
-                dtc.run_number += 1
-                model.set_attrs(**dtc.attrs)
-                model.inject_square_current(uc)
-                if model.get_spike_count()>1:
-                    break
-                if str(dtc.backend) in str('ADEXP'):
-                    model.finalize()
-                else:
-                    pass
-                    #print(str(dtc.backend))
-                vm = model.get_membrane_potential().magnitude
-
-                plt.plot(model.get_membrane_potential().times,vm,color='blue',label=dtc.backend)#,label='ground truth')
-                #ax.legend(['A simple line'])
-                ax.legend()
-            for dtc in [third_pop[0],third_pop[-1]]:
-                model = mint_generic_model(dtc.backend)
-                try:
-                    rheobase = dtc.rheobase['value']
-                except:
-                    rheobase = dtc.rheobase
-                uc = {'amplitude':rheobase,'duration':DURATION,'delay':DELAY}
-                if rheobase is None:
-                    break
-                dtc.run_number += 1
-                model.set_attrs(**dtc.attrs)
-                model.inject_square_current(uc)
-                if model.get_spike_count()>1:
-                    break
-                if str(dtc.backend) in str('ADEXP'):
-                    model.finalize()
-                else:
-                    pass
-                    #print(str(dtc.backend))
-                vm = model.get_membrane_potential().magnitude
                 sns.set_style("darkgrid")
-                plt.plot(model.get_membrane_potential().times,vm,color='green',label=dtc.backend)#,label='ground truth')
+                #from neuronunit.capabilities import get_spike_waveforms
+                snipptes = get_spike_waveforms(vm)
+                plt.plot(snipptes.times,snipptes,color='red',label=label)#,label='ground truth')
+                ax.legend()
+            #second_pop = list(map(nuunit_dm_evaluation,second_pop))
+
+
+            #NPART = np.min([multiprocessing.cpu_count(),len(dtcpop)])
+
+            #dtcbag = db.from_sequence(second_pop, npartitions = NPART)
+            #second_pop = list(dtcbag.map(nuunit_dm_evaluation).compute())
+            #latency = np.mean([dtc.AP1DelayMeanTest for dtc in second_pop])
+
+
+            #latency = np.mean([dtc.AP1DelayMeanTest for dtc in second_pop])
+
+            for dtc in second_pop:
+                model = mint_generic_model(dtc.backend)
+                try:
+                    rheobase = dtc.rheobase['value']
+                except:
+                    rheobase = dtc.rheobase
+                if rheobase is None:
+                    break
+                uc = {'amplitude':rheobase,'duration':DURATION,'delay':DELAY}
+                dtc.run_number += 1
+                model.set_attrs(**dtc.attrs)
+                model.inject_square_current(uc)
+                if model.get_spike_count()>1:
+                    break
+                if str(dtc.backend) in str('ADEXP'):
+                    model.finalize()
+                else:
+                    pass
+                    #print(str(dtc.backend))
+                vm = model.get_membrane_potential()#.magnitude
+                if str("RAW") in dtc.backend:
+                    label=str('Izhikevich Model')
+
+                if str("ADEXP") in dtc.backend:
+                    label=str('Adaptive Exponential Model')
+
+                if str("GLIF") in dtc.backend:
+                    label=str('Generalized Leaky Integrate and Fire')
+                #label = label+str(latency)
+
+                sns.set_style("darkgrid")
+                snipptes = get_spike_waveforms(vm)
+                plt.plot(snipptes.times,snipptes,color='blue',label=label)#,label='ground truth')
+
+                #plt.plot(model.get_membrane_potential().times,vm,color='blue',label=label)#,label='ground truth')
                 #ax.legend(['A simple line'])
                 ax.legend()
-            plot_backend = mpl.get_backend()
-            #if plot_backend == str('Agg'):
-            plt.savefig(figname+str('all_traces.png'))
-            #else:
-            #    plt.show()
+            if third_pop is None:
+                return
+            else:
+
+                #dtcbag = db.from_sequence(third_pop, npartitions = NPART)
+                #third_pop = list(dtcbag.map(nuunit_dm_evaluation).compute())
+                #latency = np.mean([dtc.AP1DelayMeanTest for dtc in third_pop])
+
+                #third_pop = list(map(nuunit_dm_evaluation,third_pop))
+                #latency = np.mean([dtc.AP1DelayMeanTest for dtc in third_pop])
+
+                for dtc in third_pop:
+                    model = mint_generic_model(dtc.backend)
+                    try:
+                        rheobase = dtc.rheobase['value']
+                    except:
+                        rheobase = dtc.rheobase
+                    uc = {'amplitude':rheobase,'duration':DURATION,'delay':DELAY}
+                    if rheobase is None:
+                        break
+                    dtc.run_number += 1
+                    model.set_attrs(**dtc.attrs)
+                    model.inject_square_current(uc)
+                    if model.get_spike_count()>1:
+                        break
+                    if str(dtc.backend) in str('ADEXP'):
+                        model.finalize()
+                    else:
+                        pass
+                        #print(str(dtc.backend))
+                    vm = model.get_membrane_potential()#.magnitude
+                    sns.set_style("darkgrid")
+
+                    if str("RAW") in dtc.backend:
+                        label=str('Izhikevich Model')
+
+                    if str("ADEXP") in dtc.backend:
+                        label=str('Adaptive Exponential Model')
+                    if str("GLIF") in dtc.backend:
+                        label=str('Generalized Leaky Integrate and Fire')
+                    #label = label+str(latency)
+                    snipptes = get_spike_waveforms(vm)
+                    plt.plot(snipptes.times,snipptes,color='green',label=label)#,label='ground truth')
+                    #ax.legend(['A simple line'])
+                    ax.legend()
+                plot_backend = mpl.get_backend()
+                #if plot_backend == str('Agg'):
+                plt.title(figname)
+                plt.savefig(figname+str('all_traces.png'))
+                #else:
+                #    plt.show()
         else:
             dtcpop = copy.copy(dtc)
             dtc = None
@@ -274,9 +343,14 @@ def make_imputed_observations(tests,backend,random_param):
     dtc = DataTC()
     dtc.attrs = random_param
     dtc.backend = backend
-    dtc.tests  = tests
-    dtc = get_rh(dtc,tests[0])
+    #dtc.tests  = tests
+    #import pdb; pdb.set_trace()
+    if str('RheobaseTest') in tests.keys():
+        dtc = get_rh(dtc,tests['RheobaseTest'])
+    tests = list(tests.values())
+    dtc.tests = tests
     dtc = pred_evaluation(dtc)
+    print('gets here d',dtc)
 
     # Temporarily patch sciunit judge code, which seems to be broken.
     predictions.insert(0,dtc.rheobase)
@@ -323,15 +397,20 @@ def round_trip_test(tests,backend):
             random_param[k] = sample
         except:
             random_param[k] = ranges[k]
+    print('gets here c')
+
     tests = make_imputed_observations(tests,backend,random_param)
     NGEN = 10
     MU = 6
+    print('gets here a')
+
     ga_out, DO = run_ga(ranges,NGEN,tests,free_params=free_params, NSGA = True, MU = MU, backed=backend, selection=str('selNSGA2'))
     best = ga_out['pf'][0].dtc.get_ss()
     #print(Bool(best < 0.5))
     if Bool(best >= 0.5):
         NGEN = 10
         MU = 6
+        print('gets here b')
         ga_out, DO = run_ga(explore_param,NGEN,tests,free_params=free_params, NSGA = True, MU = MU, backed=backend, selection=str('selNSGA2'),seed_pop=pf[0].dtc.attrs)
         best = ga_out['pf'][0].dtc.get_ss()
     #print('Its ',Bool(best < 0.5), ' that optimisation succeeds on this model class')
@@ -469,7 +548,7 @@ def pred_only(test_and_models):
     #obs = test.observation
     backend_ = dtc.backend
     model = mint_generic_model(backend_)
-    model.set_attrs(dtc.attrs)
+    model.set_attrs(**dtc.attrs)
     pred = test.generate_prediction(model)
     return pred#(pred,obs)
 
@@ -516,7 +595,7 @@ def get_rh(dtc,rtest):
     backend_ = dtc.backend
     #keyed['injected_square_current'] = {}
 
-    if 'RAW' in backend_ or 'HH' in backend:#_ or 'ADEXP' in backend_ or 'GLIF' in backend_:#Backend:
+    if 'RAW' in backend_ or 'HH' in backend_:#_ or 'ADEXP' in backend_ or 'GLIF' in backend_:#Backend:
         rtest = RheobaseTest(observation=place_holder,
                                 name='a Rheobase test')
     else:
@@ -525,7 +604,8 @@ def get_rh(dtc,rtest):
 
     dtc.rheobase = None
     model = mint_generic_model(backend_)
-    model.set_attrs(dtc.attrs)
+    #import pdb; pdb.set_trace()
+    model.set_attrs(**dtc.attrs)
     rtest.params['injected_square_current'] = {}
     #print('gets here')
     rtest.params['injected_square_current']['delay'] = DELAY
@@ -539,7 +619,7 @@ def get_rh(dtc,rtest):
 def dtc_to_rheo_serial(dtc):
     # If  test taking data, and objects are present (observations etc).
     # Take the rheobase test and store it in the data transport container.
-    dtc.scores = {}
+    dtc.evaluate = {}
     backend_ = dtc.backend
     model = mint_generic_model(backend_)
     model.set_attrs(dtc.attrs)
@@ -551,11 +631,11 @@ def dtc_to_rheo_serial(dtc):
             dtc.rheobase = dtc.rheobase['value']
             obs = rtest.observation
             score = rtest.compute_score(obs,dtc.rheobase)
-            dtc.scores[rtest.name] = 1.0 - score.norm_score
+            dtc.evaluate[rtest.name] = 1.0 - score.norm_score
             rtest.params['injected_square_current']['amplitude'] = dtc.rheobase
         else:
             dtc.rheobase = None
-            dtc.scores[rtest.name] = 1.0
+            dtc.evaluate[rtest.name] = 1.0
 
     else:
         # otherwise, if no observation is available, or if rheobase test score is not desired.
@@ -589,25 +669,44 @@ def get_rtest(dtc):
             if not isinstance(dtc.tests, Iterable):
                 rtest = dtc.tests
             else:
-                #import pdb; pdb.set_trace()
-                rtest = [ t for t in dtc.tests if str('RheobaseTest') == t.name ]
+                #try:
+                rtest = [ t for t in dtc.tests if hasattr(t,'name') ]
                 if len(rtest):
-                    rtest = rtest[0]
+                    rtest = [ t for t in rtest if str('RheobaseTest') == t.name ]
+                    if len(rtest):
+                        rtest = rtest[0]
+                    else:
+                        rtest = RheobaseTest(observation=place_holder,
+                                                name='a Rheobase test')
                     #rtest = substitute_parallel_for_serial(rtest[0])
                 else:
                     rtest = RheobaseTest(observation=place_holder,
                                             name='a Rheobase test')
+            #except:
+                #    rtest = RheobaseTest(observation=place_holder,
+                #                            name='a Rheobase test')
 
         else:
             if not isinstance(dtc.tests, Iterable):
                 rtest = dtc.tests
             else:
-                rtest = [ t for t in dtc.tests if str('RheobaseTestP') == t.name ]
+                rtest = [ t for t in dtc.tests if hasattr(t,'name') ]
                 if len(rtest):
-                    rtest = substitute_parallel_for_serial(rtest[0])
+                    rtest = [ t for t in rtest if str('RheobaseTestP') == t.name ]
+                    if len(rtest):
+                        rtest = substitute_parallel_for_serial(rtest[0])
+                    else:
+                        rtest = RheobaseTestP(observation=place_holder,
+                                                name='a Rheobase test')
                 else:
                     rtest = RheobaseTestP(observation=place_holder,
                                             name='a Rheobase test')
+
+                #rtest = [ t for t in dtc.tests if str('RheobaseTestP') == t.name ]
+                #if len(rtest):
+                #    rtest = substitute_parallel_for_serial(rtest[0])
+                #else:
+
     return rtest
 
 #from collections import OrderedDict
@@ -640,6 +739,9 @@ def dtc_to_rheo(dtc):
     model.attrs = dtc.attrs
     rtest = get_rtest(dtc)
     if rtest is not None:
+        if isinstance(rtest,Iterable):
+            #import pdb; pdb.set_trace()
+            rtest = rtest[0]
         dtc.rheobase = rtest.generate_prediction(model)
         if type(dtc.rheobase) is not type(None):
             if not hasattr(dtc,'prediction'):
@@ -648,7 +750,7 @@ def dtc_to_rheo(dtc):
             dtc.rheobase = dtc.rheobase['value']
             obs = rtest.observation
             score = rtest.compute_score(obs,dtc.rheobase)
-            if type(dtc.scores) is not type(None):
+            if type(score.norm_score) is not type(None):
                 dtc.scores[rtest.name] = 1.0 - float(score.norm_score)
             else:
                 dtc.scores[rtest.name] = 1.0
@@ -693,7 +795,9 @@ def switch_logic(tests):
             active = True
             passive = False
     else:
+        #import pdb; pdb.set_trace()
         for t in tests:
+
             t.passive = None
             t.active = None
             active = False
@@ -811,7 +915,8 @@ def pred_evaluation(dtc):
     #preds = []
     dtc.preds = None
     dtc.preds = {}
-    dtc =  dtc_to_rheo(dtc)
+    dtc = dtc_to_rheo(dtc)
+
     dtc = format_test(dtc)
     tests = dtc.tests
 
@@ -857,6 +962,342 @@ def nunit_evaluation_simple(dtc):
     dtc.summed = dtc.get_ss()
 
     return dtc
+
+from neuronunit.tests import dm_test_interoperable #import Interoperabe
+from neuronunit.tests.base import VmTest
+from scipy.signal import decimate
+from allensdk.ephys.ephys_extractor import EphysSweepFeatureExtractor
+global cpucount
+cpucount = multiprocessing.cpu_count()
+from scipy.special import logit as logistic
+
+#from neuronunit.examples.hide_imports import *
+rts,complete_map = pickle.load(open('../tests/russell_tests.p','rb'))
+df = pd.DataFrame(rts)
+for key,v in rts.items():
+    helper_tests = [value for value in v.values() ]
+    break
+
+def sigmoid(x):
+    return math.exp(-np.logaddexp(0, -x))
+
+def current_and_features(dtc):
+    #dtc.rheobase*3.0
+    #current = {'injected_square_current':
+    #            {'amplitude':pre_obs[1]*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+    current = {'injected_square_current':
+                {'amplitude':dtc.ampl, 'delay':DELAY, 'duration':DURATION}}
+    compare = dtc.pre_obs
+    target = len(dtc.pre_obs['spikes'])
+
+    model = mint_generic_model(dtc.backend)
+    model.set_attrs(**dtc.attrs)
+    #model.name = str(pre_obs[0])
+
+    vm30 = model.inject_square_current(current['injected_square_current'])
+    vm30 = model.get_membrane_potential()
+
+    if model.get_spike_count()!=target:
+        '''
+        rejection due to not meeting target
+        '''
+        dtc.scores = None
+        dtc.fitted_spike_cnt = False
+        #return dtc
+    else:
+        dtc.fitted_spike_cnt = True
+    if np.max(vm30)<0.0 or model.get_spike_count()<1:
+        dtc.scores = None
+        return dtc
+    model.vm30 = None
+    model.vm30 = vm30
+    try:
+        vm30.rescale(pq.V)
+    except:
+        pass
+    v = [float(v*1000.0) for v in vm30.magnitude]
+    t = [float(t) for t in vm30.times]
+    try:
+        spks = ft.detect_putative_spikes(np.array(v),np.array(t))
+        ephys = EphysSweepFeatureExtractor(t=np.array(t),v=np.array(v))#,\
+        ephys.process_spikes()
+
+    except:
+        '''
+        rectify unfilterable high sample frequencies by downsampling them
+        downsample too densely sampled signals.
+        Making them amenable to Allen analysis
+        '''
+
+        #t = decimate(t,13)
+        #v = decimate(v,13)
+        #vm30 = model.inject_square_current(current['injected_square_current'])
+        if dtc.backend in str('ADEXP'):
+            vm30 = model.finalize()
+            #v = [float(v)*1000.0
+            v = [ float(v*1000.0) for v in vm30.magnitude]
+            t = [ float(t) for t in vm30.times ]
+        #t = decimate(t,13)
+        #v = decimate(v,13)
+        try:
+            ephys = EphysSweepFeatureExtractor(t=np.array(t),v=np.array(v))#,\
+            ephys.process_spikes()
+        except:
+            return dtc
+    ephys_dict = ephys.as_dict()
+
+    dtc.scores = None
+    dtc.scores = {}
+    #test = copy.copy(helper_tests[0])
+    #compare = pre_obs
+    #import pdb; pdb.set_trace()
+    for k,v in compare.items():
+        dtc.scores[k] = 1.0
+    helper = helper_tests[0]
+
+    for k,observation in compare.items():
+        if str(k) not in str('spikes'):
+            '''
+            compute interspike firing frame_dynamics
+            '''
+
+            obs = {}
+            obs['mean'] = observation
+            prediction = {}
+            if k in ephys_dict.keys():
+                prediction['mean'] = ephys_dict[k]
+                helper.name = str(k)
+                obs['std']=1.0
+                prediction['std']=1.0
+                score = VmTest.compute_score(helper,obs,prediction)
+                if score is not None and score.norm_score is not None:
+                    dtc.scores[k] = 1.0-score.norm_score
+                else:
+                    dtc.scores[k] = 1.0
+        if str(k) in str('spikes'):
+            '''
+            compute perspike waveform features on just the first spike
+            '''
+            first_spike = observation[0]
+            for key,spike_obs in first_spike.items():
+
+                #if not str('direct') in key and not str('adp_i') in key and not str('peak_i') in key and not str('fast_trough_i') and not str('fast_trough_i') and not str('trough_i'):
+                try:
+                    obs = {}
+                    obs['mean'] = spike_obs
+                    prediction = {}
+                    prediction['mean'] = ephys_dict['spikes'][0][key]
+                    helper.name = str(key)
+                    obs['std']=1.0
+                    prediction['std']=1.0
+                    score = VmTest.compute_score(helper,obs,prediction)
+                    if not score is None and not score.norm_score is None:
+                        dtc.scores[key] = 1.0-score.norm_score
+                except:
+                    dtc.scores[key] = 1.0
+    print(dtc.scores)
+    dtc.ephys = None
+    dtc.ephys = ephys
+    spike_cnt_pred = model.get_spike_count()
+    delta = np.sqrt(spike_cnt_pred)-np.sqrt(target)
+
+
+    #import numpy as np
+
+    dtc.scores['spk_count'] = sigmoid(np.abs(delta))
+    print(dtc.scores['spk_count'],'spike count delta')
+    delta = float(dtc.ampl)-dtc.pre_obs['current_test']
+    dtc.scores['current_test'] = sigmoid(np.abs(delta))
+    print(dtc.scores['current_test'],'current  injection delta')
+
+    return dtc
+
+def nuunit_allen_evaluation(dtc):
+
+    if hasattr(dtc,'vtest'):
+        values = [v for v in dtc.vtest.values()]
+        for value in values:
+            if str('injected_square_current') in value.keys():
+                current = value['injected_square_current']
+                current['amplitude'] = dtc.rheobase * 3.0
+                break
+    else:
+        #compare = dtc.pre_obs
+        target_spikes = len(dtc.pre_obs['spikes'])
+        observation_spike={}
+        observation_spike['value']=target_spikes
+        from neuronunit.tests.fi import SpikeCountSearch
+        scs = SpikeCountSearch(observation_spike)
+        target_current = scs.generate_prediction(model)
+        steps = np.linspace(float(dtc.rheobase),1.25*float(dtc.rheobase),cpucount+1)*pq.pA
+        steps = steps[1:-1]*pq.pA
+        current_steps = steps
+        dtc_clones = [ copy.copy(dtc) for i in range(0,len(current_steps)) ]
+        #import pdb; pdb.set_trace()
+
+        population = []
+        for i,s in enumerate(current_steps): dtc_clones[i].ampl = copy.copy(current_steps[i])
+        for i,s in enumerate(current_steps):
+             dtc = current_and_features(dtc_clones[i])
+             population.append(dtc)
+        dtcpop = sorted([(p.scores['spk_count'],p) for p in population ], key=lambda tup: tup[0])
+             #if dtc.fitted_spike_cnt == True:
+        #import pdb; pdb.set_trace()
+
+        return dtcpop[0][1]
+
+
+
+
+from neuronunit.capabilities import spike_functions
+import allensdk.ephys.ephys_features as ft
+from scipy.signal import decimate
+import asciiplotlib as apl
+import allensdk.ephys.ephys_features as ft
+#import asciiplotlib as apl
+
+def nuunit_dm_evaluation(dtc):
+    model = mint_generic_model(dtc.backend)
+    model.set_attrs(**dtc.attrs)
+    values = [v for v in dtc.vtest.values()][0]
+    current = values['injected_square_current']
+
+    current['amplitude'] = dtc.rheobase * 1.5
+    model.inject_square_current(current)
+    vm15 = model.get_membrane_potential()
+
+    model.vm15 = None
+    model.vm15 = vm15
+    model.druckmann2013_standard_current = None
+    model.druckmann2013_standard_current = dtc.rheobase * 1.5
+    current['amplitude'] = dtc.rheobase * 3.0
+
+    vm30 = model.inject_square_current(current)
+    vm30 = model.get_membrane_potential()
+    if dtc.rheobase <0.0 or np.max(vm30)<0.0 or model.get_spike_count()<1:
+        return dtc
+    model.vm30 = None
+    model.vm30 = vm30
+    model.druckmann2013_strong_current = None
+    model.druckmann2013_strong_current = dtc.rheobase * 3.0
+
+    model.druckmann2013_input_resistance_currents =[ -5.0*pq.pA, -10.0*pq.pA, -15.0*pq.pA]#,copy.copy(current)
+
+    DMTNMLO = dm_test_interoperable.DMTNMLO()
+    DMTNMLO.test_setup(None,None,model= model)
+    dm_test_features = DMTNMLO.runTest()
+    dtc.AP1DelayMeanTest = None
+    dtc.AP1DelayMeanTest = dm_test_features['AP1DelayMeanTest']
+    print(dtc.AP1DelayMeanTest)
+    dtc.dm_test_features = None
+    dtc.dm_test_features = dm_test_features
+    return dtc
+    '''
+    try:
+        fig = apl.figure()
+        fig.plot(t, v, label=str('spikes: '), width=100, height=20)
+        fig.show()
+    except:
+        pass
+    v = [float(v)*1000.0 for v in vm30.magnitude]
+    t = [float(t) for t in vm30.times]
+    from allensdk.ephys.ephys_extractor import EphysSweepFeatureExtractor
+
+    ephys = EphysSweepFeatureExtractor(t=np.array(t),v=np.array(v))#,\
+    ephys.process_spikes()
+    print(ephys.spikes(),'spikes')
+    spks = ft.detect_putative_spikes(np.array(v),np.array(t))
+    print(spks)
+    dtc.spks = None
+    dtc.spks = spks
+    dtc.ephys = None
+    dtc.ephys = ephys
+    return dtc
+    '''
+
+        #,end=finish)
+
+    #current_inh['duration'] = 500.0*pq.ms
+    #current_inh['delay'] = 200.0*pq.ms
+    #current_inh['amplidtude'] = -10.0*pq.pA
+    #self.params['injected_square_current'] = {'amplitude': -10.0*pq.pA,
+
+    #print(dtc.dm_test_features.keys())
+    #print(dm_test_features)
+    #import pdb; pdb.set_trace()
+    ##
+    # Wrangle data to prepare for EFEL feature calculation.
+    ##
+    '''
+    values = [v for v in dtc.vtest.values()][0]
+    current = values['injected_square_current']
+
+    current['amplidtude'] = dtc.rheobase * 1.5
+    model.protocol = None
+    model.protocol = {}
+    model.protocol['Time_End'] = current['duration'] + current['delay']
+    model.protocol['Time_Start'] = current['delay']
+
+    trace3 = {}
+    trace3['T'] = [ float(t) for t in model.vm30.times.rescale('ms') ]
+    trace3['V'] = [ float(v) for v in model.vm30.magnitude]#temp_vm
+    trace3['stimulus_current'] = [ model.druckmann2013_strong_current ]
+    trace3['stim_end'] = [ trace3['T'][-1] ]
+
+    #trace3['stim_end'] = [ float(model.protocol['Time_End'])*1000.0 ]
+    trace3['stim_start'] = [ trace3['T'][0] ]
+
+    traces3 = [trace3]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
+
+    trace15 = {}
+    trace15['T'] = [ float(t) for t in model.vm15.times.rescale('ms') ]
+    trace15['V'] = [ float(v) for v in model.vm15.magnitude ]#temp_vm
+
+    #trace15['stim_end'] = [ float(model.protocol['Time_End'])*1000.0 ]
+    #trace15['stim_start'] = [ float(model.protocol['Time_Start'])*1000.0 ]
+    trace15['stim_start'] = [ trace15['T'][0] ]
+
+    trace15['stimulus_current'] = [ model.druckmann2013_standard_current ]
+    trace15['stim_end'] = [ trace15['T'][-1] ]
+    traces15 = [trace15]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
+
+    ##
+    # Compute
+    # EFEL features (HBP)
+    ##
+    efel.reset()
+
+    if len(threshold_detection(model.vm15, threshold=0)):
+        threshold = float(np.max(model.vm15.magnitude)-0.5*np.abs(np.std(model.vm15.magnitude)))
+
+
+    #efel_15 = efel.getMeanFeatureValues(traces15,list(efel.getFeatureNames()))#
+    else:
+        threshold = float(np.max(model.vm15.magnitude)-0.2*np.abs(np.std(model.vm15.magnitude)))
+    efel.setThreshold(threshold)
+    if np.min(model.vm15.magnitude)<0:
+        efel_15 = efel.getMeanFeatureValues(traces15,list(efel.getFeatureNames()))
+    else:
+        efel_15 = None
+    efel.reset()
+    if len(threshold_detection(model.vm30, threshold=0)):
+        threshold = float(np.max(model.vm30.magnitude)-0.5*np.abs(np.std(model.vm30.magnitude)))
+    else:
+        threshold = float(np.max(model.vm30.magnitude)-0.2*np.abs(np.std(model.vm30.magnitude)))
+        efel.setThreshold(threshold)
+    if np.min(model.vm30.magnitude)<0:
+        efel_30 = efel.getMeanFeatureValues(traces3,list(efel.getFeatureNames()))
+    else:
+        efel_30 = None
+    efel.reset()
+    print(efel_30)
+    print(efel_15)
+    dtc.efel_15 = None
+    dtc.efel_30 = None
+    dtc.efel_15 = efel_15
+    dtc.efel_30 = efel_30
+    '''
+
 
 
 def nunit_evaluation(dtc):
@@ -904,18 +1345,44 @@ def nunit_evaluation(dtc):
     #print('failed to make score length the same')
     print(dtc.scores)
     dtc.summed = dtc.get_ss()
-    greatest = np.max([dtc.error_length,len(dtc.scores)])
+    try:
+        greatest = np.max([dtc.error_length,len(dtc.scores)])
+    except:
+        greatest = len(dtc.scores)
     dtc.scores_ratio = None
     dtc.scores_ratio = dtc.summed/greatest
     return dtc
 
 
-
+def evaluate_allen(dtc,regularization=True):
+    # assign worst case errors, and then over write them with situation informed errors as they become available.
+    #print({k:v for k,v in dtc.scores.items()})
+    #greatest = np.max([dtc.error_length,len(dtc.ascores)])
+    print(dtc.ascores)
+    fitness = [ 1.0 for i in range(0,len(dtc.ascores)) ]
+    for int_,t in enumerate(dtc.ascores.keys()):
+       if regularization == True:
+          if dtc.ascores[str(t)] is None:
+              fitness[int_] = 1.0
+          else:
+              fitness[int_] = dtc.ascores[str(t)]**(1.0/2.0)
+       else:
+          if dtc.ascores[str(t)] is None:
+              fitness[int_] = 1.0
+          else:
+              fitness[int_] = dtc.ascores[str(t)]
+    print(fitness)
+    return tuple(fitness,)
 
 def evaluate(dtc,regularization=True):
     # assign worst case errors, and then over write them with situation informed errors as they become available.
     #print({k:v for k,v in dtc.scores.items()})
+    if not hasattr(dtc,str('scores')):
+        fitness = [ 1.0 for i in range(0,dtc.error_length) ]
+        return fitness
+
     greatest = np.max([dtc.error_length,len(dtc.scores)])
+    #import pdb; pdb.set_trace()
 
     fitness = [ 1.0 for i in range(0,greatest) ]
     for int_,t in enumerate(dtc.scores.keys()):
@@ -923,7 +1390,7 @@ def evaluate(dtc,regularization=True):
           fitness[int_] = dtc.scores[str(t)]**(1.0/2.0)
        else:
           fitness[int_] = dtc.scores[str(t)]
-
+    print(fitness)
     return tuple(fitness,)
 
 def get_trans_list(param_dict):
@@ -1115,43 +1582,6 @@ def stochastic_gradient_descent(ga_out):
 
     return (sgd,losslasso,lossridge)
 
-def run_ga(explore_edges, max_ngen, test, free_params = None, hc = None, NSGA = None, MU = None, seed_pop = None, model_type = str('RAW')):
-    # seed_pop can be used to
-    # to use existing models, that are good guesses at optima, as starting points for optimisation.
-    # https://stackoverflow.com/questions/744373/circular-or-cyclic-imports-in-python
-    # These imports need to be defined with local scope to avoid circular importing problems
-    # Try to fix local imports later.
-    from neuronunit.optimisation.optimisations import SciUnitOptimisation
-
-    ss = {}
-    for k in free_params:
-        ss[k] = explore_edges[k]
-    if type(MU) == type(None):
-        MU = 2**len(list(free_params))
-    # make sure that the gene population size is divisible by 4.
-    if NSGA == True:
-        selection = str('selNSGA')
-    else:
-        selection = str('selIBEA')
-    max_ngen = int(np.floor(max_ngen))
-    if type(test) is not type([0,0]):
-        test = [test]
-    DO = SciUnitOptimisation(offspring_size = MU, error_criterion = test, boundary_dict = ss, backend = model_type, hc = hc, selection = selection)#,, boundary_dict = ss, elite_size = 2, hc=hc)
-
-
-    if seed_pop is not None:
-        # This is a re-run condition.
-        DO.setnparams(nparams = len(free_params), boundary_dict = ss)
-
-        DO.seed_pop = seed_pop
-        DO.setup_deap()
-        DO.error_length = len(test)
-
-    ga_out = DO.run(max_ngen = max_ngen)
-    #import pdb; pdb.set_trace()
-
-
-    return ga_out, DO
 
 
 
@@ -1182,12 +1612,10 @@ def obtain_rheobase(pop, td, tests):
     pop, dtcpop = init_pop(pop, td, tests)
     if 'RAW' in dtcpop[0].backend  or 'HH' in dtcpop[0].backend or str('ADEXP') in dtcpop[0].backend:
         dtcpop = list(map(dtc_to_rheo,dtcpop))
-        dtcpop = list(map(format_test,dtcpop))
+        #dtcpop = list(map(format_test,dtcpop))
     else:
         dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
         dtcpop = list(dtcbag.map(dtc_to_rheo))
-        dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
-        dtcpop = list(dtcbag.map(format_test))
 
     for ind,d in zip(pop,dtcpop):
         if type(d.rheobase) is not type(None):
@@ -1344,7 +1772,7 @@ def average_measurements(flat_iter):
                 print(score.norm_score)
             except:
                 score = None
-                dtcb.scores[k]  = dtca.scores[k] = 1.0
+                dtcb.nuunit_allen_evaluation[k]  = dtca.evaluate[k] = 1.0
 
             dtcb.twin = None
             dtca.twin = None
@@ -1492,28 +1920,69 @@ def resample_high_sampling_freq(dtcpop):
     (dtcpop,_) = add_dm_properties_to_cells(dtcpop)
     return dtcpop
 '''
-
-def parallel_route(pop,dtcpop,tests,td,clustered=False):
-    NPART = np.min([multiprocessing.cpu_count(),len(dtcpop)])
-    for d in dtcpop:
-        d.tests = copy.copy(tests)
-    dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
-    dtcpop = list(dtcbag.map(format_test).compute())
-
-    if CONFIDENT == True:
-        dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
-        dtcpop = list(dtcbag.map(nunit_evaluation).compute())
-    else:
-        dtcpop = list(map(nunit_evaluation,dtcpop))
-
+def score_attr(dtcpop,pop):
     for i,d in enumerate(dtcpop):
         if not hasattr(pop[i],'dtc'):
             # print('last change.')
-            # pop[i] = WSListIndividual(pop[i])
+            #pop[i] = WSListIndividual(pop[i])
             pop[i].dtc = None
         d.get_ss()
         pop[i].dtc = copy.copy(d)
-    invalid_dtc_not = [ i for i in pop if not hasattr(i,'dtc') ]
+    return dtcpop,pop
+def get_dm(pop,dtcpop,tests,td):
+    if CONFIDENT == True:
+        dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
+        dtcpop = list(dtcbag.map(nuunit_dm_evaluation).compute())
+    else:
+        dtcpop = list(map(nuunit_dm_evaluation,dtcpop))
+    dtcpop,pop = score_attr(dtcpop,pop)
+    return dtcpop,pop
+def get_allen(pop,dtcpop,tests,td):
+    NPART = np.min([multiprocessing.cpu_count(),len(dtcpop)])
+    for dtc in dtcpop:
+        dtc.pre_obs = None
+        dtc.pre_obs = tests
+
+    if CONFIDENT == True:
+        dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
+        dtcpop = list(dtcbag.map(nuunit_allen_evaluation).compute())
+
+    else:
+        dtcpop = list(map(nuunit_allen_evaluation,dtcpop))
+    #dtcpop,pop = score_attr(dtcpop,pop)
+    pop = [pop[i] for i,d in enumerate(dtcpop) if type(d) is not type(None)]
+    dtcpop = [d for d in dtcpop if type(d) is not type(None)]
+
+    return pop, dtcpop
+
+def parallel_route(pop,dtcpop,tests,td,protocol=None):
+    NPART = np.min([multiprocessing.cpu_count(),len(dtcpop)])
+    #import pdb; pdb.set_trace()
+    if protocol['allen'] == True:
+        pop, dtcpop = get_allen(pop,dtcpop,tests,td)
+
+        pop = [pop[i] for i,d in enumerate(dtcpop) if type(d) is not type(None)]
+        dtcpop = [d for d in dtcpop if type(d) is not type(None)]
+        return pop, dtcpop
+
+    elif protocol['dm'] == True:
+        pop, dtcpop = get_dm(pop,dtcpop,tests,td)
+        return pop, dtcpop
+
+    elif protocol['elephant'] == True:
+        #dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
+        #dtcpop = list(dtcbag.map(format_test))
+        for d in dtcpop:
+            d.tests = copy.copy(tests)
+        dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
+        dtcpop = list(dtcbag.map(format_test).compute())
+
+        if CONFIDENT == True:
+            dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
+            dtcpop = list(dtcbag.map(nunit_evaluation).compute())
+        else:
+            dtcpop = list(map(nunit_evaluation,dtcpop))
+
     return pop, dtcpop
 
 def make_up_lost(pop,dtcpop,td):
@@ -1625,9 +2094,10 @@ def grid_search(explore_ranges,test_frame,backend=None):
     return seeds, df
 
 
-def test_runner(pop,td,tests,single_spike=False):
+def test_runner(pop,td,tests,single_spike=True,protocol=None):
     if single_spike:
         pop_, dtcpop = obtain_rheobase(pop, td, tests)
+
         for ind,dtc in zip(pop,dtcpop):
             dtc.error_length = ind.error_length
             error_length = ind.error_length
@@ -1645,23 +2115,29 @@ def test_runner(pop,td,tests,single_spike=False):
             dtc.error_length = ind.error_length
             error_length = ind.error_length
 
-        pop, dtcpop = obtain_rheobase(pop, td, tests)
+        #pop, dtcpop = obtain_rheobase(pop, td, tests)
 
         for ind,d in zip(pop,dtcpop):
             d.error_length = error_length
             ind.error_length = error_length
 
-    pop,dtcpop = parallel_route(pop, dtcpop, tests, td, clustered=False)
+    pop,dtcpop = parallel_route(pop, dtcpop, tests, td,protocol=protocol)#, clustered=False)
     for ind,d in zip(pop,dtcpop):
+        ind.dtc = None
         ind.dtc = d
+        #import pdb; pdb.set_trace()
+        print(d.get_ss())
         if not hasattr(ind,'fitness'):
             ind.fitness = copy.copy(pop_[0].fitness)
             for i,v in enumerate(list(ind.fitness.values)):
-                ind.fitness.values[i] = list(ind.dtc.scores.values())[i]
-
+                ind.fitness.values[i] = list(ind.dtc.evaluate.values())[i]
+    pop = [ ind for ind,d in zip(pop,dtcpop) if d.scores is not None ]
+    dtcpop = [ d for ind,d in zip(pop,dtcpop) if d.scores is not None ]
+    #import pdb; pdb.set_trace()
     return pop,dtcpop
 
-def update_deap_pop(pop, tests, td, backend = None,hc = None,boundary_dict = None, error_length=None):
+
+def update_deap_pop(self,pop, tests, td, backend = None,hc = None,boundary_dict = None, error_length=None):
     '''
     Inputs a population of genes (pop).
     Returned neuronunit scored DataTransportContainers (dtcpop).
@@ -1678,7 +2154,7 @@ def update_deap_pop(pop, tests, td, backend = None,hc = None,boundary_dict = Non
     #pop = copy.copy(pop)
     if hc is not None:
         pop[0].td = None
-        pop[0].td = td
+        pop[0].td = self.td
 
     if hc is not None:
         pop[0].hc = None
@@ -1701,6 +2177,175 @@ def update_deap_pop(pop, tests, td, backend = None,hc = None,boundary_dict = Non
         p.dtc = d
         print(p.error_length)
     return pop
+
+class OptMan():
+    def __init__(self,tests, td=None, backend = None,hc = None,boundary_dict = None, error_length=None,protocol=None):
+        self.tests = tests
+        self.td = td
+        self.protocol=protocol
+        self.error_length = error_length
+        self.tests = tests
+        self.backend = backend
+        self.hc = hc
+        self.boundary_dict= boundary_dict
+        self.protocol = protocol
+    def update_dtc_pop(self,pop, td):
+        '''
+        inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
+        outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
+        Rationale, not every gene value will result in a model for which rheobase is found, in which case that gene is discarded, however to
+        compensate for losses in gene population size, more gene samples must be tested for a successful return from a rheobase search.
+        If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
+        corresponding virtual model objects.
+        '''
+        if self.backend is not None:
+            _backend = self.backend
+        if isinstance(pop, Iterable):# and type(pop[0]) is not type(str('')):
+            xargs = zip(pop,repeat(td),repeat(_backend))
+            npart = np.min([multiprocessing.cpu_count(),len(pop)])
+            bag = db.from_sequence(xargs, npartitions = npart)
+            dtcpop = list(bag.map(transform).compute())
+
+            assert len(dtcpop) == len(pop)
+            for dtc in dtcpop:
+                dtc.backend = self.backend
+                dtc.boundary_dict = None
+                dtc.boundary_dict = self.boundary_dict
+            return dtcpop
+        else:
+            ind = pop
+            for i in ind:
+                i.td = td
+                i.backend = str(_backend)
+            # above replaces need for this line:
+            xargs = (ind,td,repeat(backend))
+            # In this case pop is not really a population but an individual
+            # but parsimony of naming variables
+            # suggests not to change the variable name to reflect this.
+            dtc = [ transform(xargs) ]
+            dtc.boundary_dict = None
+            dtc.boundary_dict = self.boundary_dict
+            return dtc
+
+
+    def init_pop(self,pop, td, tests):
+        from neuronunit.optimisation.exhaustive_search import update_dtc_grid
+        dtcpop = list(self.update_dtc_pop(pop, td))
+        for d in dtcpop:
+            d.tests = tests
+            if self.backend is not None:
+                d.backend = self.backend
+
+        if self.hc is not None:
+            constant = self.hc
+            for d in dtcpop:
+                if constant is not None:
+                    if len(constant):
+                        d.constants = constant
+                        d.add_constant()
+
+        return pop, dtcpop
+
+    def obtain_rheobase(self,pop, td, tests):
+        '''
+        Calculate rheobase for a given population pop
+        Ordered parameter dictionary td
+        and rheobase test rt
+        '''
+        pop, dtcpop = self.init_pop(pop, td, tests)
+        if 'RAW' in self.backend  or 'HH' in self.backend or str('ADEXP') in self.backend:
+            dtcpop = list(map(dtc_to_rheo,dtcpop))
+            #dtcpop = list(map(format_test,dtcpop))
+        else:
+            dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
+            dtcpop = list(dtcbag.map(dtc_to_rheo))
+
+        for ind,d in zip(pop,dtcpop):
+            if type(d.rheobase) is not type(None):
+                ind.rheobase = d.rheobase
+                d.rheobase = d.rheobase
+            else:
+                ind.rheobase = None
+                d.rheobase = None
+        return pop, dtcpop
+
+    def test_runner(self,pop,td,tests,single_spike=True,protocol=None):
+        if single_spike:
+            pop_, dtcpop = self.obtain_rheobase(pop, td, tests)
+
+            for ind,dtc in zip(pop,dtcpop):
+                dtc.error_length = self.error_length
+                error_length = self.error_length
+            pop, dtcpop = make_up_lost(copy.copy(pop_), dtcpop, td)
+
+            # there are many models, which have no actual rheobase current injection value.
+            # filter, filters out such models,
+            # gew genes, add genes to make up for missing values.
+            # delta is the number of genes to replace.
+
+        else:
+
+            pop, dtcpop = init_pop(pop, td, tests)
+            for ind,dtc in zip(pop,dtcpop):
+                dtc.error_length = self.error_length
+                error_length = self.error_length
+
+            for ind,d in zip(pop,dtcpop):
+                d.error_length = self.error_length
+                ind.error_length = self. error_length
+
+        pop,dtcpop = parallel_route(pop, dtcpop, tests, td,protocol=protocol)#, clustered=False)
+        for ind,d in zip(pop,dtcpop):
+            ind.dtc = None
+            ind.dtc = d
+            #import pdb; pdb.set_trace()
+            print(d.get_ss())
+            if not hasattr(ind,'fitness'):
+                ind.fitness = copy.copy(pop_[0].fitness)
+                for i,v in enumerate(list(ind.fitness.values)):
+                    ind.fitness.values[i] = list(ind.dtc.evaluate.values())[i]
+        pop = [ ind for ind,d in zip(pop,dtcpop) if d.scores is not None ]
+        dtcpop = [ d for ind,d in zip(pop,dtcpop) if d.scores is not None ]
+        #import pdb; pdb.set_trace()
+        return pop,dtcpop
+
+    def update_deap_pop(self,pop, tests, td, backend = None,hc = None,boundary_dict = None, error_length=None):
+        '''
+        Inputs a population of genes (pop).
+        Returned neuronunit scored DataTransportContainers (dtcpop).
+        This method converts a population of genes to a population of Data Transport Containers,
+        Which act as communicatable data types for storing model attributes.
+        Rheobase values are found on the DTCs
+        DTCs for which a rheobase value of x (pA)<=0 are filtered out
+        DTCs are then scored by neuronunit, using neuronunit models that act in place.
+        '''
+        if len(pop)==0:
+            raise Exception('User error population size set to 0')
+        if hc is not None:
+            self.td = None
+            self.td = self.td
+
+        if hc is not None:
+            self.hc = None
+            self.hc = hc
+
+        if backend is not None:
+            self.backend = None
+            self.backend = backend
+        if boundary_dict is not None:
+            self.boundary_dict = None
+            self.boundary_dict = boundary_dict
+        for p in pop:
+            if error_length is not None:
+                self.error_length = None
+                self.error_length = error_length
+
+
+        pop, dtcpop = self.test_runner(pop,td,tests,protocol=self.protocol)
+        for p,d in zip(pop,dtcpop):
+            p.dtc = d
+            p.error_length = self.error_length
+        return pop
 
 def create_subset(nparams = 10, boundary_dict = None):
     # used by GA to find subsets in parameter space.
