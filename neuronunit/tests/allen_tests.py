@@ -16,7 +16,7 @@ import copy
 from neuronunit.tests.fi import RheobaseTest as generic
 from sciunit.scores.complete import ZScore
 import quantities as pq
-from neuronunit.optimisation.optimisation_management import mint_generic_model
+from neuronunit.optimisation.optimization_management import mint_generic_model
 
 def allen_format(volts,times,key=None,stim=None):
     '''
@@ -66,47 +66,58 @@ except:
     data_sets = get_data_sets_from_remote(upper_bound=2)
     assert len(data_sets) > 1
 
+from neuronunit.examples.hide_imports import *
 
-
-specific_data = data_sets[1][0]
 #import pdb; pdb.set_trace()
-numbers = specific_data.get_sweep_numbers()
-sweeps = []
-for n in numbers:
-    sweeps.append(specific_data.get_sweep(n))
+def data_set(number):
+    # store = [(i,len(data_sets[0][0].get_spike_times(i))) for i in sweeps ]
 
-stim_types = [ specific_data.get_sweep_metadata(n)['aibs_stimulus_name'] for n in numbers ]
-responses = [ specific_data.get_sweep(n)['response'] for n in numbers ]
+    specific_data = data_sets[number][0]
+    numbers = specific_data.get_sweep_numbers()
+    sweeps = []
+    for n in numbers:
+        sweeps.append(specific_data.get_sweep(n))
 
-try:
-    assert 1==2
-    with open('allen_test.p','rb') as f:
-        pre_obs = pickle.load(f)
-
-except:
-    from neuronunit.examples.hide_imports import *
-    df = pd.DataFrame(rts)
-    for key,v in rts.items():
-        helper_tests = [value for value in v.values() ]
-        break
     stim_types = [ specific_data.get_sweep_metadata(n)['aibs_stimulus_name'] for n in numbers ]
-    #import pdb; pdb.set_trace()
-    stim_amps = [ specific_data.get_sweep_metadata(n)['aibs_stimulus_amplitude_pa'] for n in numbers ]
-    response_features_2 = allensdk.ephys.extract_cell_features.extract_feature_wave_russell(responses[-2], stim_types[-2],\
-     specific_data,numbers)
-    response_features_3 = allensdk.ephys.extract_cell_features.extract_feature_wave_russell(responses[-3], stim_types[-3],\
-     specific_data,numbers)
-
     responses = [ specific_data.get_sweep(n)['response'] for n in numbers ]
-    one_sweep = [ stim_amps[-2],response_features_2[list(response_features_2.keys())[-2]],helper_tests, responses[-2] ]
-    two_sweep = [ stim_amps[-3],response_features_3[list(response_features_3.keys())[-3]],helper_tests, responses[-3] ]
 
-    pre_obs = [specific_data.file_name,one_sweep,two_sweep]
+    try:
+        assert 1==2
+        with open('allen_test.p','rb') as f:
+            pre_obs = pickle.load(f)
 
-    observation = {}
-    observation['value'] = pre_obs
-    with open('allen_test.p','wb') as f:
-        pickle.dump(pre_obs,f)
+    except:
+        df = pd.DataFrame(rts)
+        for key,v in rts.items():
+            helper_tests = [value for value in v.values() ]
+            break
+        stim_types = [ specific_data.get_sweep_metadata(n)['aibs_stimulus_name'] for n in numbers ]
+        supra_sweeps = [(i,j) for i,j in enumerate(stim_types) if str("Suprathreshold") in j ]
+        analy_dict = {}
+        for i in supra_sweeps:
+            analy_dict[i[0]] = allensdk.ephys.extract_cell_features.extract_feature_wave_russell(responses[i[0]], stim_types[i[0]],\
+            specific_data,numbers)
+        #import pdb; pdb.set_trace()
+        stim_amps = [ specific_data.get_sweep_metadata(n)['aibs_stimulus_amplitude_pa'] for n in numbers ]
+        response_features_2 = allensdk.ephys.extract_cell_features.extract_feature_wave_russell(responses[-2], stim_types[-2],\
+         specific_data,numbers)
+        response_features_3 = allensdk.ephys.extract_cell_features.extract_feature_wave_russell(responses[-3], stim_types[-3],\
+         specific_data,numbers)
+
+        responses = [ specific_data.get_sweep(n)['response'] for n in numbers ]
+        one_sweep = [ stim_amps[-2],response_features_2[list(response_features_2.keys())[-2]],helper_tests, responses[-2] ]
+        two_sweep = [ stim_amps[-3],response_features_3[list(response_features_3.keys())[-3]],helper_tests, responses[-3] ]
+        #import pdb
+        #pdb.set_trace()
+
+        pre_obs = [specific_data.file_name,one_sweep,two_sweep]
+
+        observation = {}
+        observation['value'] = pre_obs
+        with open('allen_test{0}.p'.format(number),'wb') as f:
+            pickle.dump(pre_obs,f)
+        return pre_obs
+pre_obs = data_set(0)
 #['isi_cv'], 'spikes', 'mean_isi', 'id', 'adapt', 'latency', 'median_isi', 'avg_rate', 'first_isi'])
 #import pdb
 #pdb.set_trace()

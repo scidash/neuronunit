@@ -49,6 +49,13 @@ except:
 #ALLEN_STOP = stop = np.max(on_indexs)*1.0/ls['sampling_rate']*pq.s
 #ALLEN_FINISH = len(ls)*(1.0/ls['sampling_rate'])*pq.s
 
+from allensdk.api.queries.glif_api import GlifApi
+from allensdk.core.cell_types_cache import CellTypesCache
+import allensdk.core.json_utilities as json_utilities
+
+import allensdk.core.json_utilities as json_utilities
+from allensdk.model.glif.glif_neuron import GlifNeuron
+import pickle
 
 class GLIFBackend(Backend):
     def init_backend(self, attrs = None, cell_name = 'alice', current_src_name = 'hannah', DTC = None, debug = False):
@@ -70,19 +77,23 @@ class GLIFBackend(Backend):
 
         if self.allen_id == None:
             try:
-                self.nc = pickle.load(open(str('allen_id.p'),'rb'))
+                with open(str('allen_id.p'),'rb') as f:
+                    self.nc = pickle.load(f)
             except:
                 self.allen_id = 566302806
                 glif_api = GlifApi()
 
                 self.nc = glif_api.get_neuron_configs([self.allen_id])[self.allen_id]
-                pickle.dump(copy.copy(self.nc),open(str('allen_id.p'),'wb'))
+                with open(str('allen_id.p'),'wb') as f:
+                    pickle.dump(self.nc,f)
 
 
         else:
 
             try:
-                self.nc = pickle.load(open(str('allen_id.p'),'rb'))
+                with open(str('allen_id.p'),'rb') as f:
+                    self.nc = pickle.load(f)
+
             except:
                 glif_api = GlifApi()
                 #allen_id =
@@ -92,16 +103,16 @@ class GLIFBackend(Backend):
                 #import pdb
                 #pdb.set_trace()
                 self.nc = glif_api.get_neuron_configs([self.allen_id])[self.allen_id]
-                pickle.dump(self.nc,open(str('allen_id.p'),'wb'))
+                with open(str('allen_id.p'),'wb') as f:
+                    pickle.dump(self.nc,f)
 
+                #pickle.dump(self.nc,open(str('allen_id.p'),'wb'))
 
-        try:
-            self.glif = GlifNeuron.from_dict(self.nc)
-        except:
-            #import pdb; pdb.set_trace()
-            self.nc['init_AScurrents'] = [0,0]
-            self.glif = GlifNeuron.from_dict(self.nc)
-
+        #except:
+        self.nc['init_AScurrents'] = [0.0,0.0]
+        #'asc_tau_array': [0.3333333333333333, 0.01], 'init_AScurrents': [0.0, 0.0]
+        self.nc['asc_tau_array'] = [0.3333333333333333,0.01]
+        self.glif = GlifNeuron.from_dict(self.nc)
         if type(attrs) is not type(None):
             self.set_attrs(**attrs)
             self.sim_attrs = attrs
@@ -178,7 +189,7 @@ class GLIFBackend(Backend):
             isv = self.results['interpolated_spike_voltage'].tolist()[0]
             vm = list(map(lambda x: isv if np.isnan(x) else x, vm))
         dt =  self.glif.dt
-        vm = [v-0.0650 for v in vm]
+        #vm = [v-0.0650 for v in vm]
         self.vM = AnalogSignal(vm,units = mV,sampling_period =  dt * ms)
         return self.vM
 
@@ -188,11 +199,14 @@ class GLIFBackend(Backend):
         #self.nc.update(attrs)
         for k,v in attrs.items():
             self.nc[k] = v
-        #self.nc['init_AScurrents'] = [0,0]
+        self.nc['asc_tau_array'] = [0.3333333333333333,0.01]
+        self.nc['init_AScurrents'] = [0.0,0.0]
+        #import pdb; pdb.set_trace()
         self.glif = GlifNeuron.from_dict(self.nc)
         #print(self.nc)
-        #self.glif.init_voltage = -0.065
-
+        self.glif.init_voltage = -0.065
+        #import pdb
+        #pdb.set_trace()
         return self.glif
 
 
@@ -237,7 +251,7 @@ class GLIFBackend(Backend):
             isv = self.results['interpolated_spike_voltage'].tolist()[0]
             self.spikes = self.results['interpolated_spike_voltage']
             vm = list(map(lambda x: isv if np.isnan(x) else x, vm))
-        vm = [v-0.0650 for v in vm]
+        #vm = [v-0.0650 for v in vm]
         self.vM = AnalogSignal(vm,units = V,sampling_period =  dt * s)
         t = [float(f) for f in self.vM.times]
         v = [float(f) for f in self.vM.magnitude]
@@ -247,19 +261,57 @@ class GLIFBackend(Backend):
             fig.show()
         except:
             pass
-
-        from allensdk.api.queries.glif_api import GlifApi
-        from allensdk.core.cell_types_cache import CellTypesCache
-        import allensdk.core.json_utilities as json_utilities
+        '''
+        except:
+            pass
+        try:
+            fig = apl.figure()
+            fig.plot(t, v, label=str('spikes: ')+str(len(self.results['grid_spike_times'])), width=100, height=20)
+            fig.show()
+        except:
+            pass
+        '''
 
         neuronal_model_id = 566302806
         # download model metadata
-                #try:
-        #    fig = apl.figure()
-        #    fig.plot(t, v, label=str('what happened naturally: '), width=100, height=20)
-        #    fig.show()
-        #except:
-        #    pass
+        def do_once():
+            glif_api = GlifApi()
+            nm = glif_api.get_neuronal_models_by_id([neuronal_model_id])[0]
+
+            # download the model configuration file
+            nc = glif_api.get_neuron_configs([neuronal_model_id])[neuronal_model_id]
+            neuron_config = glif_api.get_neuron_configs([neuronal_model_id])
+            json_utilities.write('neuron_config.json', neuron_config)
+
+            # download information about the cell
+            ctc = CellTypesCache()
+            #ctc.get_ephys_data(nm['specimen_id'], file_name='stimulus.nwb')
+            #ctc.get_ephys_sweeps(nm['specimen_id'], file_name='ephys_sweeps.json')
+
+        # initialize the neuron
+        def check_defaults():
+            neuron_config = json_utilities.read('neuron_config.json')['566302806']
+            neuron = GlifNeuron.from_dict(neuron_config)
+
+            # make a short square pulse. stimulus units should be in Amps.
+            #stimulus = [ 0.0 ] * 100 + [ 10e-9 ] * 100 + [ 0.0 ] * 100
+            # important! set the neuron's dt value for your stimulus in seconds
+            neuron.dt = 5e-6
+            # simulate the neuron
+            output = neuron.run(Iext)
+            vm = output['voltage']
+            threshold = output['threshold']
+            spike_times = output['interpolated_spike_times']
+            #vm = self.results['voltage']
+            if len(output['interpolated_spike_voltage']) > 0:
+                isv = output['interpolated_spike_voltage'].tolist()[0]
+                spikes = output['interpolated_spike_voltage']
+                vm = list(map(lambda x: isv if np.isnan(x) else x, vm))
+            #vm = [v/10.0 for v in vm]
+            vM = AnalogSignal(vm,units = V,sampling_period =  dt * s)
+            t = [float(f) for f in vM.times]
+            v = [float(f) for f in vM.magnitude]
+
 
 
 
@@ -316,9 +368,8 @@ class GLIFBackend(Backend):
         stop = float(c['delay'])+float(c['duration'])
         start = float(c['delay'])
         duration = float(c['duration'])
-        amplitude = float(c['amplitude'])/100000000000.0
-        import pickle
-
+        amplitude = float(c['amplitude'])#/100 000 000 000.0
+        '''
         ls1 = pickle.load(open('../models/backends/generic_current_injection.p','rb'))
         ls = ls1[0]['stimulus']
         DT = sampling_period = 1.0/ls1[0]['sampling_rate']#*pq.s
@@ -338,8 +389,9 @@ class GLIFBackend(Backend):
         ls[on_indexs] = amplitude
 
         assert np.max(ls)!= old_max
-
         self.stim = ls
+        '''
+
         self.glif.dt = sampling_period
         dt =  self.glif.dt
         #print(np.max(self.stim),'max current')
