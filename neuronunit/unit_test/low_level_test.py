@@ -5,7 +5,7 @@ import sys
 #from sciunit.utils import NotebookTools#,import_all_modules
 import dask
 from dask import bag
-from base import *
+#from base import *
 
 
 from neuronunit.optimisation import get_neab

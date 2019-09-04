@@ -59,8 +59,11 @@ class TestPulseTest(VmTest):
         stop = i['duration']+i['delay'] - 1*pq.ms  # 1 ms before pulse end
         region = cls.get_segment(vm, start, stop)
         try:
-            amplitude, tau, y0 = cls.exponential_fit(region, i['delay'])
+            should_be_high = np.std(region)
+            amplitude, tau, y0 = cls.exponential_fit(region, i['delay'].simplified)
         except:
+            print(i['delay'])
+            import pdb; pdb.set_trace()
             tau = None
         return tau
 
@@ -158,7 +161,7 @@ class TimeConstantTest(TestPulseTest):
                 tau = tau.simplified
                 # Put prediction in a form that compute_score() can use.
                 prediction = {'value': tau}
-                
+
             else:
                 prediction = None
         else:
@@ -203,6 +206,8 @@ class CapacitanceTest(TestPulseTest):
             c = (tau/r_in).simplified
             # Put prediction in a form that compute_score() can use.
             prediction = {'value': c}
+            #except:
+            #    prediction = None
             return prediction
         else:
             return None
@@ -216,7 +221,7 @@ class CapacitanceTest(TestPulseTest):
             if prediction['n'] == 0:
                 score = scores.InsufficientDataScore(None)
         else:
-            
+
             score = super(CapacitanceTest, self).compute_score(observation,
                                                                prediction)
         return score

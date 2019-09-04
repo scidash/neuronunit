@@ -2,8 +2,7 @@
 
 """
 
-# pylint: disable=R0912, R0914
-from neuronunit.optimisation import optimisation_management
+from neuronunit.optimisation import optimization_management
 
 import random
 import functools
@@ -147,11 +146,8 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
         self.hc = hc
         self.boundary_dict = boundary_dict
         #self.OBJ_SIZE = None
-
         self.setnparams(nparams = nparams, boundary_dict = boundary_dict)
-
         self.setup_deap()
-        print('passes setup c?')
 
     def transdict(self,dictionaries):
         mps = OrderedDict()
@@ -193,13 +189,14 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
             dic_grid = [{single_key:v} for v in values ]
             #import pdb; pdb.set_trace()
         dic_grid = list(dic_grid)
+        size = len(dic_grid)
+
         '''
 
         This code causes memory errors for some population sizes
         The grid is now defined, the rest of code just makes sure that the size of the grid is a reasonable size
         And computationally tractable. When I write sparse, think 'Down sample' a big, overly sampled list of coordinates.
         '''
-        size = len(dic_grid)
         if size > self.offspring_size:
             sparsify = np.linspace(0,len(dic_grid)-1,self.offspring_size)
             pop = []
@@ -211,21 +208,22 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
         elif size <= self.offspring_size:
             delta = self.offspring_size - size
             pop = []
+            dic_grid = es.create_grid(mp_in = self.params,npoints = self.offspring_size+delta, free_params = self.params)
+            size = len(dic_grid)
+            delta = self.offspring_size - size
+
             for i in dic_grid:
                  pop.append([i[k] for k in self.td])
 
-            #for i in range(0,delta):
-            dic_grid = list(copy.copy(dic_grid))
+
             cnt=0
             while delta:# and cnt<2:
-                #for i in dic_grid:
+                dic_grid = list(copy.copy(dic_grid))
+
                 pop.append(copy.copy(pop[0]))
                 size = len(pop)
-
                 delta = self.offspring_size - size
-
                 cnt+=1
-                print(cnt,pop)
 
         elif size == self.offspring_size:
             pop = []
@@ -233,7 +231,6 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
                 pop.append([i[k] for k in self.td])
 
         assert len(pop)==self.offspring_size
-        print(pop,'makes a population')
         return pop
 
 
@@ -257,7 +254,6 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
         IND_SIZE = len(list(self.params.values()))
 
         OBJ_SIZE = len(self.error_criterion)
-        print(self.backend)
         #self.OBJ_SIZE = OBJ_SIZE
         def glif_modifications(UPPER,LOWER):
             for index, i in enumerate(UPPER):
@@ -329,7 +325,6 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
 
 
         self.error_criterion['protocol'] = self.protocol # ={'allen':False,'elephant':True,'dm':False}
-        #print('broken here, d')
         OM = om.OptMan(self.error_criterion,self.td, backend = self.backend, \
                                               hc = self.hc,boundary_dict = self.boundary_dict, \
                                               error_length=self.error_length,protocol=self.protocol)
@@ -337,19 +332,16 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
 
             if self.backend is None:
                 self.backend = 'RAW'
-            print(self.error_criterion['protocol'])
 
             invalid_pop = list(OM.update_deap_pop(invalid_ind, self.error_criterion, \
                                                   td = self.td, backend = self.backend, \
                                                   hc = self.hc,boundary_dict = self.boundary_dict, \
                                                   error_length=self.error_length))
 
-            #print('gets here a')
 
             invalid_dtc = [ i.dtc for i in invalid_pop if hasattr(i,'dtc') ]
 
             fitnesses = list(map(om.evaluate, invalid_dtc))
-            #print('gets here b')
             return (invalid_pop,fitnesses)
 
         self.toolbox.register("evaluate", custom_code)
@@ -450,8 +442,6 @@ def run_ga(explore_edges, max_ngen, test, \
             ss[k] = explore_edges[str(free_params)]
         else:
             ss[k] = explore_edges[k]
-    #print(k)
-
     if type(MU) == type(None):
         MU = 2**len(list(free_params))
     # make sure that the gene population size is divisible by 4.
@@ -473,7 +463,6 @@ def run_ga(explore_edges, max_ngen, test, \
         DO.seed_pop = seed_pop
         DO.setup_deap()
         DO.error_length = len(test)
-    print(DO,'gets past initialization')
     ga_out = DO.run(max_ngen = max_ngen)
     return ga_out, DO
 

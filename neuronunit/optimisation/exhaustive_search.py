@@ -1,6 +1,3 @@
-
-#from neuronunit.optimisation import get_neab
-#tests = get_neab.tests
 import pdb
 
 import multiprocessing
@@ -8,13 +5,7 @@ from collections import OrderedDict
 
 #from neuronunit.optimisation.model_parameters import model_params
 from neuronunit.optimisation import data_transport_container
-from neuronunit.optimisation.optimisation_management import nunit_evaluation, update_deap_pop
-from neuronunit.optimisation.optimisation_management import update_dtc_pop
 import numpy as np
-#from collections import OrderedDict
-#import neuronunit.optimisation.optimisation_management as om
-#OM = om.OptMan(protocol={'allen':False,'elephant':True})
-#update_deap_pop = OM.update_deap_pop
 
 import copy
 from copy import deepcopy
@@ -287,6 +278,9 @@ def transdict(dictionaries):
 
 
 def run_rick_grid(rick_grid, tests,td):
+    from neuronunit.optimisation.optimization_management import update_deap_pop
+    from neuronunit.optimisation.optimization_management import update_dtc_pop
+
     consumable = iter(rick_grid)
     grid_results = []
     results = update_deap_pop(consumable, tests, td)
@@ -298,6 +292,9 @@ def run_rick_grid(rick_grid, tests,td):
     return grid_results
 
 def run_simple_grid(npoints, tests, ranges, free_params, hold_constant = None):
+    from neuronunit.optimisation.optimization_management import update_deap_pop
+    from neuronunit.optimisation.optimization_management import update_dtc_pop
+
     subset = OrderedDict()
     for k,v in ranges.items():
         if k in free_params:
@@ -334,6 +331,9 @@ def run_simple_grid(npoints, tests, ranges, free_params, hold_constant = None):
     return grid_results
 
 def run_grid(npoints, tests, provided_keys = None, hold_constant = None, ranges=None):
+    from neuronunit.optimisation.optimization_management import update_deap_pop
+    from neuronunit.optimisation.optimization_management import update_dtc_pop
+
     subset = mp_in[provided_keys]
 
     consumable_ ,td = build_chunk_grid(npoints,provided_keys)
