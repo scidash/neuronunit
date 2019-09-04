@@ -31,7 +31,7 @@ from sciunit import scores# score_type
 
 from neuronunit.optimisation.data_transport_container import DataTC
 from neuronunit.tests.fi import RheobaseTestP# as discovery
-from neuronunit.optimisation.optimisation_management import dtc_to_rheo, format_test, nunit_evaluation, grid_search
+from neuronunit.optimisation.optimization_management import dtc_to_rheo, format_test, nunit_evaluation, grid_search
 import quantities as pq
 from neuronunit.models.reduced import ReducedModel
 from neuronunit.optimisation.model_parameters import path_params
@@ -73,15 +73,28 @@ from sklearn import preprocessing
 import sklearn
 import neuronunit.optimisation.model_parameters as model_params
 
-from neuronunit.optimisation.optimisation_management import stochastic_gradient_descent
+#from neuronunit.optimisation.optimization_management import stochastic_gradient_descent
 import seaborn as sns
 
 
 #from optimisation_management import init_dm_tests
 #from neuronunit.optimisation.optimisation_management import init_dm_tests
-from neuronunit.optimisation.optimisation_management import mint_generic_model
+from neuronunit.optimisation.optimization_management import mint_generic_model
 #from neuronunit.optimisation.optimisation_management import add_dm_properties_to_cells
 from collections import Iterable, OrderedDict
 import quantities as qt
-rts,complete_map = pickle.load(open('../tests/russell_tests.p','rb'))
+import os
+import neuronunit
+anchor = neuronunit.__file__
+anchor = os.path.dirname(anchor)
+
+mypath = os.path.join(os.sep,anchor,'tests/russell_tests.p')
+#print(anchor,mypath)
+#import pdb; pdb.set_trace()
+rts,complete_map = pickle.load(open(mypath,'rb'))
+df = pd.DataFrame(rts)
+
+#import pdb
+#pdb.set_trace()
+#rts,complete_map = pickle.load(open(mypath),'rb')
 local_tests = [value for value in rts['Hippocampus CA1 pyramidal cell'].values() ]

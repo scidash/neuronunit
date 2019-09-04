@@ -188,6 +188,53 @@ class DMTNMLO(object):
             self.expected = [0.0 for i in range(len(self.test_set))]
         self.set_expected(self.expected)
 
+
+
+
+    def test_setup_subset(self,model_id,model_dict,model=None,ir_current_limited=False):
+        '''
+        Synopsis: Construct initialize and otherwise setup Druckman tests.
+        if a model does not exist yet, but a desired NML-DB model id is known, use the model-id
+        to quickly initialize a NML-DB model.
+
+        If a model is actually passed instead, assume that model has known current_injection value
+        attributes and use those.
+
+        inputs: model_id, and a dictionary lookup table of models/model_ids
+
+        '''
+
+
+        if type(model) is type(None):
+            self.model = model_dict[model_id]
+            self.model_id = model_id
+            if self.model_id not in self.predicted:
+                self.predicted[self.model_id] = [None for i in range(38)] # There are 38 tests
+            self.standard = self.model.nmldb_model.get_druckmann2013_standard_current()
+            self.strong = self.model.nmldb_model.get_druckmann2013_strong_current()
+            if not ir_current_limited==True:
+                self.ir_currents = self.model.nmldb_model.get_druckmann2013_input_resistance_currents()
+
+        #model = self.__class__.model_cache[self.model_id]
+        else:
+            self.model = model
+
+            self.standard = model.druckmann2013_standard_current
+            self.strong = model.druckmann2013_strong_current
+            if not ir_current_limited==True:
+                self.ir_currents = model.druckmann2013_input_resistance_currents
+            self.test_set = [
+            {'test': AP1AmplitudeTest(self.standard), 'units': pq.mV, 'expected': None},
+            {'test': AP1WidthHalfHeightTest(self.standard), 'units': pq.ms, 'expected': None},
+            ]
+        if ir_current_limited==True:
+            pass
+        else:
+            self.test_set.append({'test': InputResistanceTest(injection_currents=self.ir_currents), 'units': pq.Quantity(1,'MOhm'), 'expected': None})
+        if not hasattr(self, "expected"):
+            self.expected = [0.0 for i in range(len(self.test_set))]
+        self.set_expected(self.expected)
+
         #import pdb; pdb.set_trace()
 
     '''
