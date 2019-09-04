@@ -167,6 +167,7 @@ class TimeConstantTest(TestPulseTest):
 
     def compute_score(self, observation, prediction):
         """Implement sciunit.Test.score_prediction."""
+        score = None
         if prediction is None:
             return None  # scores.InsufficientDataScore(None)
 

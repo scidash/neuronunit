@@ -257,6 +257,15 @@ def get_data_sets_from_remote(upper_bound=2,lower_bound=None):
         ctc = CellTypesCache(manifest_file='cell_types/manifest.json')
 
         cells = ctc.get_cells()
+        inhibitory_rodent = []
+        excitatory_rodent = []
+        for cell in cells:
+            if str("Mus musculus") in cell['species']:
+                print(cell['structure_layer_name'], cell['species'], cell['name'])
+                if str("Pvalb-IRES-Cre") in cell['name']:
+                    inhibitory_rodent.append(cell)
+                else:
+                    excitatory_rodent.append(cell)
         with open('all_allen_cells.p','wb') as f:
             pickle.dump(cells,f)
     data = []

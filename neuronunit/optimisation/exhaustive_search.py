@@ -11,8 +11,10 @@ from neuronunit.optimisation import data_transport_container
 from neuronunit.optimisation.optimisation_management import nunit_evaluation, update_deap_pop
 from neuronunit.optimisation.optimisation_management import update_dtc_pop
 import numpy as np
-from collections import OrderedDict
-
+#from collections import OrderedDict
+#import neuronunit.optimisation.optimisation_management as om
+#OM = om.OptMan(protocol={'allen':False,'elephant':True})
+#update_deap_pop = OM.update_deap_pop
 
 import copy
 from copy import deepcopy
@@ -142,9 +144,12 @@ def create_a_map(subset):
 
 def create_grid(mp_in = None, npoints = 2, free_params = None, ga = None):
     #print(mp_in)
-    try:
+    #import pdb; pdb.set_trace()
+    #try:
+    if mp_in is not None:
         grid = ParameterGrid(mp_in)
-    except:
+    #except:
+    if free_params is not None:
         grid = ParameterGrid(free_params)
     return grid
     '''

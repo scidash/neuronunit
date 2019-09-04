@@ -17,6 +17,7 @@ Copyright (c) 2016, EPFL/Blue Brain Project
  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 """
 
+import deap.tools as tools
 
 import copy
 import logging
@@ -29,7 +30,6 @@ import deap.algorithms
 import deap.tools
 #from . import tools
 import numpy as np
-from deap.tools import selNSGA2
 
 from neuronunit.optimisation import optimisation_management as om
 
@@ -43,11 +43,13 @@ def _evaluate_invalid_fitness(toolbox, population):
     '''
     invalid_ind = [ind for ind in population if not ind.fitness.valid]
     invalid_pop,fitnesses = toolbox.evaluate(invalid_ind)
+    print('does not get to evalueate')
 
     for j, ind in enumerate(invalid_pop):
         ind.fitness.values = fitnesses[j]
         ind.dtc.get_ss()
 
+    print('does not get to evalueate ')
 
     return invalid_pop
 
@@ -96,6 +98,8 @@ def _get_offspring(parents, toolbox, cxpb, mutpb):
     if hasattr(toolbox, 'variate'):
 
         offspring = toolbox.variate(parents, toolbox, cxpb, mutpb)
+        offspring = deap.algorithms.varAnd(offspring, toolbox, cxpb, mutpb)
+
         while gene_bad(offspring) == True:
             offspring = deap.algorithms.varAnd(parents, toolbox, cxpb, mutpb)
 
@@ -142,7 +146,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
         cp_frequency = 1,
         cp_filename = None,
         continue_cp = False,
-        selection = 'selNSGA2',
+        selection = 'selNSGA3',
         td=None):
     gen_vs_pop = []
 
@@ -159,23 +163,30 @@ def eaAlphaMuPlusLambdaCheckpoint(
     else:
         # Start a new evolution
         start_gen = 1
-        parents = population#[:]
+        #parents = population#[:]
 
         gen_vs_pop.append(population)
         logbook = deap.tools.Logbook()
         logbook.header = ['gen', 'nevals'] + (stats.fields if stats else [])
         history = deap.tools.History()
-
+        toolbox.register("select", tools.selNSGA2)
+        def experimental():
+            NOBJ = len(population[0].fitness.values)
+            #print('stuck_here uniform')
+            import pdb; pdb.set_trace()
+        #experimental()
         # TODO this first loop should be not be repeated !
         parents = _evaluate_invalid_fitness(toolbox, population)
-
+        #import pdb; pdb.set_trace()
         invalid_count = len(parents)
         gen_vs_hof = []
         hof, pf,history = _update_history_and_hof(hof, pf, history, parents, td)
 
         gen_vs_hof.append(hof)
         _record_stats(stats, logbook, start_gen, parents, invalid_count)
-    toolbox.register("select",selNSGA2)
+    #toolbox.register("select",selNSGA2)
+    #from deap.tools import selNSGA3
+
     fronts = []
 
     # Begin the generational    process
@@ -188,7 +199,42 @@ def eaAlphaMuPlusLambdaCheckpoint(
 
         assert len(offspring)>0
         gen_vs_pop.append(offspring)
+
+        #except:
+        fitness = [ list(i[0].fitness.values)[0] for i in gen_vs_pop if len(i[0].fitness.values)>0 ]
+        rec_lenf = [ i for i in range(0,len(fitness))]
+
+        scores = [ list(i[0].dtc.scores.values())[0] for i in gen_vs_pop]
+        rec_len = [ i for i in range(0,len(scores))]
+        print(scores)
+        names = offspring[0].dtc.scores.keys()
+        print(names)
+        if len(rec_len):
+            #try:
+            import asciiplotlib as apl
+            fig = apl.figure()
+            try:
+                fig.plot(rec_lenf,fitness, label=str('evolution fitness: '), width=100, height=20)
+                fitness1 = [ list(i[0].fitness.values)[1] for i in gen_vs_pop if len(i[0].fitness.values)>1 ]
+                fig.plot(rec_lenf,fitness1, label=str('evolution fitness: '), width=100, height=20)
+
+                fig.show()
+                front = [ list(i.dtc.scores.values())[0] for i in ga_out['pf']]
+                front_lens = [ i for i in range(0,len(front))]
+
+                fig.plot(front_lens,front, label=str('pareto front: '), width=100, height=20)
+                fig.show()
+            except:
+                pass
+            fig.plot(rec_len,scores, label=str('evolution scores: '), width=100, height=20)
+            fig.show()
+
+        else:
+            print(fitness)
+        #    pass
+
         invalid_ind = _evaluate_invalid_fitness(toolbox, offspring)
+        print('stuck here c')
         # something in evaluate fitness has knocked out fitness
         population = parents + invalid_ind
         population = [ p for p in population if len(p.fitness.values)!=0 ]
@@ -197,15 +243,32 @@ def eaAlphaMuPlusLambdaCheckpoint(
         fronts.append(pf)
         if gen%10==0:
             stag_check1 = np.mean([ p.dtc.get_ss() for pf in fronts for p in pf ])
-            if not np.sum(fronts[-1][0].dtc.get_ss()) < stag_check1*0.95:
+            if not np.sum(fronts[-1][0].dtc.get_ss()) < stag_check1*0.975:
                 print('gene poulation stagnant, no appreciable gains in fitness')
-                return population, hof, pf, logbook, history, gen_vs_pop
+                #return population, hof, pf, logbook, history, gen_vs_pop
 
-
+        '''
         if str('selIBEA') == selection:
             toolbox.register("select", tools.selIBEA)
         if str('selNSGA') == selection:
-            toolbox.register("select",selNSGA2)
+            toolbox.register("select", tools.selNSGA2)
+        toolbox.register("select", tools.selNSGA2)
+        '''
+            #toolbox.register("select",selNSGA2)
+        #else:
+        #    toolbox.register("select", tools.selNSGA3, ref_points=ref_points)
+        #print('fails at d')
+
+
+        try:
+            ref_points = tools.uniform_reference_points(len(population[0]), 12)
+            #toolbox.register("select", tools.selNSGA3WithMemory, ref_points=population)
+            toolbox.register("select", selNSGA3WithMemory(ref_points))
+        except:
+            #toolbox.register("select",selNSGA2)
+            toolbox.register("select", tools.selNSGA2)
+
+        print('fails at e')
         old_max = 0
         for ind in population:
             if len(ind.fitness.values) > old_max:
@@ -213,7 +276,11 @@ def eaAlphaMuPlusLambdaCheckpoint(
         population = [ ind for ind in population if ind if ind.fitness.values is not type(None) ]
 
         popp = [ i for i in population if len(i.fitness.values)==old_max ]
+        print(popp)
+        #import pdb; pdb.set_trace()
         try:
+            #toolbox.register("select",selNSGA3)
+
             parents = toolbox.select(popp, mu)
         except:
 

@@ -34,12 +34,15 @@ def allen_format(volts,times,key=None,stim=None):
         to get a managable data digest
         we out put features from the middle spike of a spike train.
     '''
-    ext = EphysSweepSetFeatureExtractor([times],[volts])
+    ext = EphysSweepSetFeatureExtractor([np.array(volts)],[np.array(times)])
+
+
     ext.process_spikes()
     swp = ext.sweeps()[0]
     spikes = swp.spikes()
     if len(spikes)==0:
-        import pdb; pdb.set_trace()
+        print('no spikes detected')
+        #import pdb; pdb.set_trace()
         #return (None,None)
     meaned_features_1 = {}
     skeys = [ skey for skey in spikes[0].keys() ]
@@ -56,16 +59,17 @@ def allen_format(volts,times,key=None,stim=None):
         return allen_features[key], allen_features
     else:
         return allen_features, allen_features
-try:    
+try:
     data_sets = get_data_sets_from_cache(do_features=True)
     assert len(data_sets) > 1
 except:
     data_sets = get_data_sets_from_remote(upper_bound=2)
     assert len(data_sets) > 1
 
-    
+
 
 specific_data = data_sets[1][0]
+#import pdb; pdb.set_trace()
 numbers = specific_data.get_sweep_numbers()
 sweeps = []
 for n in numbers:
@@ -75,32 +79,55 @@ stim_types = [ specific_data.get_sweep_metadata(n)['aibs_stimulus_name'] for n i
 responses = [ specific_data.get_sweep(n)['response'] for n in numbers ]
 
 try:
+    assert 1==2
     with open('allen_test.p','rb') as f:
         pre_obs = pickle.load(f)
 
 except:
-    pre_obs = allensdk.ephys.extract_cell_features.extract_feature_wave_russell(responses[0], stim_types[0], specific_data,numbers)
+    from neuronunit.examples.hide_imports import *
+    df = pd.DataFrame(rts)
+    for key,v in rts.items():
+        helper_tests = [value for value in v.values() ]
+        break
+    stim_types = [ specific_data.get_sweep_metadata(n)['aibs_stimulus_name'] for n in numbers ]
+    #import pdb; pdb.set_trace()
+    stim_amps = [ specific_data.get_sweep_metadata(n)['aibs_stimulus_amplitude_pa'] for n in numbers ]
+    response_features_2 = allensdk.ephys.extract_cell_features.extract_feature_wave_russell(responses[-2], stim_types[-2],\
+     specific_data,numbers)
+    response_features_3 = allensdk.ephys.extract_cell_features.extract_feature_wave_russell(responses[-3], stim_types[-3],\
+     specific_data,numbers)
+
+    responses = [ specific_data.get_sweep(n)['response'] for n in numbers ]
+    one_sweep = [ stim_amps[-2],response_features_2[list(response_features_2.keys())[-2]],helper_tests, responses[-2] ]
+    two_sweep = [ stim_amps[-3],response_features_3[list(response_features_3.keys())[-3]],helper_tests, responses[-3] ]
+
+    pre_obs = [specific_data.file_name,one_sweep,two_sweep]
+
     observation = {}
     observation['value'] = pre_obs
     with open('allen_test.p','wb') as f:
         pickle.dump(pre_obs,f)
 #['isi_cv'], 'spikes', 'mean_isi', 'id', 'adapt', 'latency', 'median_isi', 'avg_rate', 'first_isi'])
+#import pdb
+#pdb.set_trace()
+'''
+data_keys  = list(response_features.keys())
 cv = {}
-cv['mean'] = pre_obs[4]['isi_cv']
+cv['mean'] = response_features[data_keys[0]]['isi_cv']
 latency = {}
-latency['mean'] = pre_obs[4]['latency']
+latency['mean'] = response_features[data_keys[0]]['latency']
 avg_rate = {}
-avg_rate['mean'] = pre_obs[4]['avg_rate']
+avg_rate['mean'] = pre_obs[data_keys[0]]['avg_rate']
 median_isi = {}
-median_isi['mean'] = pre_obs[4]['median_isi']
+median_isi['mean'] = response_features[data_keys[0]]['median_isi']
 upstroke = {}
-upstroke['mean'] = pre_obs[4]['spikes'][0]['upstroke_v']
+upstroke['mean'] = response_features[data_keys[0]]['spikes'][0]['upstroke_v']
 upstroke['std'] = 1
 
 width = {}
-width['mean'] = pre_obs[4]['spikes'][0]['width']
+width['mean'] = response_features[data_keys[0]]['spikes'][0]['width']
 height = {}
-height['mean'] = pre_obs[4]['spikes'][0]['peak_v']
+height['mean'] = response_features[data_keys[0]]['spikes'][0]['peak_v']
 ###
 #
 cv_test = sciunit.Test(cv)
@@ -130,7 +157,7 @@ def dtc_to_model(dtc):
     model = mint_generic_model(dtc.backend)
     print(dtc.backend)
     model.attrs = dtc.attrs
-    
+
     return model
 
 def generate_prediction(self, model):
@@ -145,14 +172,14 @@ def generate_prediction(self, model):
         DURATION = 1000.0*pq.ms
         DELAY = 100.0*pq.ms
         if type(rheobase) is type({str('k'):str('v')}):
-            keyed['injected_square_current']['amplitude'] = float(rheobase['value'])*1.1115*pq.pA
+            keyed['injected_square_current']['amplitude'] = float(rheobase['value'])*1.5*pq.pA
         else:
             keyed['injected_square_current']['amplitude'] = 1.5*rheobase
         keyed['injected_square_current']['delay']= DELAY
         keyed['injected_square_current']['duration'] = DURATION
-        print('gets to a')
+        #print('gets to a')
         model = dtc_to_model(model.dtc)
-        
+
         model.vm15 = None
         model.inject_square_current(keyed['injected_square_current'])
         #model.finalize()
@@ -187,7 +214,7 @@ def generate_prediction(self, model):
         #import pdb; pdb.set_trace()
         volts = np.array([float(v) for v in model.vm15.magnitude])
         times = np.array([float(t) for t in model.vm15.times])
-        print(volts,'gets to c')
+        #print(volts,'gets to c')
         pred,model.lookup = allen_format(volts,times,key,stim)
     if model.lookup is None:
         volts = np.array([float(v) for v in model.vm15.magnitude])
@@ -204,20 +231,11 @@ def generate_prediction(self, model):
     prediction['mean'] = pred
     return prediction
 
-def judge(model,test):
-    prediction = test.generate_prediction(model)
-    print(prediction)
-    import pdb
-    pdb.set_trace()
-    model = prediction['model']
+def judge(model,test,prediction):
 
     score = VmTest.compute_score(test,test.observation,prediction)
     return score, model
 
-
-##
-# missing generate prediction
-##
 #cv_test.compute_score = MethodType(compute_score,cv_test)
 def mutate_test(test,generic):
     generic = generic()
@@ -225,7 +243,7 @@ def mutate_test(test,generic):
     generic.key = test.name
     generic.observation = test.observation
     generic.name = test.name
-    generic.generate_prediction = MethodType(generate_prediction,generic)
+    #generic.generate_prediction = MethodType(generate_prediction,generic)
     generic.judge = MethodType(judge,generic)
     return generic
 
@@ -238,3 +256,4 @@ keys = [ t.key for t in test_collection ]
 
 test_collection[-2].score_type = ZScore
 #scores = [ judge(model,t) for t in test_collection ]
+'''

@@ -253,9 +253,11 @@ class Druckmann2013Test(VmTest):
 
         vm = model.get_membrane_potential()
 
+
         vm_times = vm.times
         start_time = self.params['injected_square_current']['delay'].rescale('sec')
         end_time = start_time + self.params['injected_square_current']['duration'].rescale('sec')
+        #import pdb; pdb.set_trace()
         vm = AnalogSignal(vm.magnitude[np.where(vm_times <= end_time)], sampling_period=vm.sampling_period, units=vm.units)
         try:
             dvdt = np.array(np.append([0], get_diff(vm, axis=0))) * pq.mV / vm.sampling_period
