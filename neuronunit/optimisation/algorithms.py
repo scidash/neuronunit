@@ -31,7 +31,7 @@ import deap.tools
 #from . import tools
 import numpy as np
 
-from neuronunit.optimisation import optimisation_management as om
+from neuronunit.optimisation import optimization_management as om
 
 logger = logging.getLogger('__main__')
 
@@ -201,7 +201,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
         gen_vs_pop.append(offspring)
 
         #except:
-        fitness = [ list(i[0].fitness.values)[0] for i in gen_vs_pop if len(i[0].fitness.values)>0 ]
+        fitness = [ np.sum(list(i[0].fitness.values)[0]) for i in gen_vs_pop if len(i[0].fitness.values)>0 ]
         rec_lenf = [ i for i in range(0,len(fitness))]
 
         scores = [ list(i[0].dtc.scores.values())[0] for i in gen_vs_pop]
@@ -215,19 +215,22 @@ def eaAlphaMuPlusLambdaCheckpoint(
             fig = apl.figure()
             try:
                 fig.plot(rec_lenf,fitness, label=str('evolution fitness: '), width=100, height=20)
-                fitness1 = [ list(i[0].fitness.values)[1] for i in gen_vs_pop if len(i[0].fitness.values)>1 ]
+                fitness1 = [ np.sum(list(i[0].fitness.values)) for i in gen_vs_pop if len(i[0].fitness.values)>1 ]
                 fig.plot(rec_lenf,fitness1, label=str('evolution fitness: '), width=100, height=20)
 
                 fig.show()
-                front = [ list(i.dtc.scores.values())[0] for i in ga_out['pf']]
+                front = [ np.sum(list(i.dtc.scores.values())) for i in ga_out['pf']]
                 front_lens = [ i for i in range(0,len(front))]
 
                 fig.plot(front_lens,front, label=str('pareto front: '), width=100, height=20)
                 fig.show()
             except:
                 pass
-            fig.plot(rec_len,scores, label=str('evolution scores: '), width=100, height=20)
-            fig.show()
+            try:
+                fig.plot(rec_len,scores, label=str('evolution scores: '), width=100, height=20)
+                fig.show()
+            except:
+                pass
 
         else:
             print(fitness)

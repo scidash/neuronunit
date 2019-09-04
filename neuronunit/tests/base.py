@@ -16,8 +16,15 @@ import neuronunit.capabilities as cap
 
 from neuronunit import neuroelectro
 import pickle
+'''
+wave_dict = pickle.load(open('waves.p','rb'))
+keys = list(wave_dict.keys())
+injected_current = {}
+injected_square_current = wave_dict[keys[0]]
+injected_square_current['duration'] = wave_dict[keys[0]]['durations']
 
-ls1 = pickle.load(open('../models/backends/generic_current_injection.p','rb'))
+
+ls1 = pickle.load(open('models/backends/generic_current_injection.p','rb'))
 ls = ls1[0]['stimulus']
 DT = sampling_period = 1.0/ls1[0]['sampling_rate']#*pq.s
 on_indexs = np.where(ls==np.max(ls))
@@ -26,10 +33,12 @@ ALLEN_STIM = ls
 ALLEN_ONSET = start = np.min(on_indexs)*DT
 ALLEN_STOP = stop = np.max(on_indexs)*DT
 ALLEN_FINISH = len(ls)*DT
-
+'''
 AMPL = 0.0*pq.pA
-DELAY = 100.0*pq.ms
-DURATION = 1000.0*pq.ms
+DELAY = 100.0*pq.ms#wave_dict[keys[0]]['delay']*pq.s#100.0*pq.ms
+DURATION = 1000.0*pq.ms#wave_dict[keys[0]]['delay']*pq.s#1000.0*pq.ms
+
+#import pdb; pdb.set_trace()
 
 PASSIVE_AMPL = -10.0*pq.pA
 PASSIVE_DELAY = 100.0*pq.ms
