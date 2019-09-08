@@ -359,10 +359,13 @@ def make_imputed_observations(tests,backend,random_param):
     if tests['protocol'] in str('elephant'):
         if str('RheobaseTest') in tests.keys():
             dtc = get_rh(dtc,tests['RheobaseTest'])
-            if dtc.rheobase['value'] is None:
-                return False
+            if type(dtc.rheobase) is type(float(0.0)):
+                pass
+            if type(dtc.rheobase) is type({'1':0}):
+                if dtc.rheobase['value'] is None:
+                    return False
 
-        while dtc.rheobase is None:
+        while dtc.rheobase['value'] is None:
             dtc = DataTC()
             dtc.backend = backend
             dtc.attrs = random_p(dtc.backend)
@@ -497,18 +500,23 @@ def random_p(backend):
 from neuronunit.optimisation.optimisations import run_ga
 def process_rparam(backend):
     random_param = random_p(backend)
-    if 'RAWBackend' in str(backend):
+    if 'RAW' in str(backend):
         random_param.pop('Iext',None)
         rp = {}
         chosen_keys =[str('a'),str('b'),str('c'),str('C'),str('d')]
         for key in chosen_keys:
             rp[key] = random_param[key]
+    if str('ADEXP') in str(backend):
+        random_param.pop('Iext',None)
+        rp = random_param
+        chosen_keys = rp.keys()
 
     if 'GLIF' in str(backend):
         random_param['init_AScurrents'] = [0.0,0.0]
         random_param['asc_tau_array'] = [0.3333333333333333,0.01]
         rp = random_param
         chosen_keys = rp.keys()
+  
     dsolution = DataTC()
     dsolution.attrs = rp
     dsolution.backend = backend
@@ -533,11 +541,10 @@ def round_trip_test(tests,backend,free_paramaters=None):
 
     #dsolution.rheobase = tests['RheobaseTest'].observation['value']
 
-    NGEN = 13
-    MU = 13
-
+    NGEN = 5
+    MU = 5
     ranges = MODEL_PARAMS[backend]
-
+        
     if tests['protocol'] == str('allen'):
         dtc = False
         while dtc is False:
@@ -580,8 +587,8 @@ def round_trip_test(tests,backend,free_paramaters=None):
 
         print(ga_out['pf'][0].dtc.attrs)
         #print(rp)
-        #import pdb; pdb.set_trace()
-
+        import pdb; pdb.set_trace()
+        
         inject_and_plot(dtcpop0,second_pop=dtcpop1,third_pop=[dtcpop0[0]],figname='not_a_problem.png',snippets=True)
         return ga_out,dtcpop0,dtcpop1
 
@@ -840,30 +847,31 @@ def bridge_dm_test(test_and_dtc):
     (test, dtc) = test_and_dtc
 
     pred_dm = nuunit_dm_rheo_evaluation(dtc)
-    width = pred_dm.dm_test_features['AP1WidthHalfHeightTest']
-    width_obs = {}
-    width_obs['mean'] = width
-    print(width)
-    width_obs['std'] = 1.0
-    width_obs['n'] = 1
+    if pred_dm.dm_test_features['AP1AmplitudeTest'] is not None:
+        width = pred_dm.dm_test_features['AP1WidthHalfHeightTest']
+        width_obs = {}
+        width_obs['mean'] = width
+        print(width)
+        width_obs['std'] = 1.0
+        width_obs['n'] = 1
 
-    height = pred_dm.dm_test_features['AP1AmplitudeTest'][0]
-    height_obs = {}
-    height_obs['mean'] = height
-    print(height)
-    height_obs['std'] = 1.0
-    height_obs['n'] = 1
-    if str('InjectedCurrentAPWidthTest') in test.name:
+        height = pred_dm.dm_test_features['AP1AmplitudeTest'][0]
+        height_obs = {}
+        height_obs['mean'] = height
+        print(height)
+        height_obs['std'] = 1.0
+        height_obs['n'] = 1
+        if str('InjectedCurrentAPWidthTest') in test.name:
 
-        #import pdb; pdb.set_trace()
-        score = test.compute_score(test.observation,width_obs)
-        return score, dtc
+            #import pdb; pdb.set_trace()
+            score = test.compute_score(test.observation,width_obs)
+            return score, dtc
 
-    elif str('InjectedCurrentAPAmplitudeTest') in test.name:
-        #import pdb; pdb.set_trace()
+        elif str('InjectedCurrentAPAmplitudeTest') in test.name:
+            #import pdb; pdb.set_trace()
 
-        score = test.compute_score(test.observation,height_obs)
-        return score, dtc
+            score = test.compute_score(test.observation,height_obs)
+            return score, dtc
 
 def get_rh(dtc,rtest):
     '''
@@ -964,7 +972,7 @@ def get_rtest(dtc):
                 else:
                     rtest = RheobaseTest(observation=place_holder,
                                             name='RheobaseTest')
-            
+
         else:
             if not isinstance(dtc.tests, Iterable):
                 rtest = dtc.tests
@@ -1219,7 +1227,6 @@ def pred_evaluation(dtc):
 
             test_and_models = (t, dtc)
             pred = pred_only(test_and_models)
-            #print('f fails heres')
             dtc.preds[str(t.name)] = pred
 
         else:
@@ -1245,10 +1252,12 @@ def nunit_evaluation_simple(dtc):
         t.params = dtc.vtest[k]
 
         score, dtc = bridge_judge((t, dtc))
-        compare_score, compare_dtc = bridge_dm_test((t, dtc))
-        dtc.compare_scores[key] = compare_score
+        #compare_score, compare_dtc = bridge_dm_test((t, dtc))
+
+        #dtc.compare_scores[key] = compare_score
+        #print(compare_score,score)
+
         print(t.name, 'dm score versus elephanat score')
-        print(compare_score,score)
         if score is not None:
             if score.norm_score is not None:
                 assignment = 1.0 - score.norm_score

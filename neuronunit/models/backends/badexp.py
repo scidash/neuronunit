@@ -154,14 +154,22 @@ class ADEXPBackend(Backend):
         else:
             self.set_attrs(**attrs)
         if 'injected_square_current' in current.keys():
-            c = current['injected_square_current'];
+            c = current['injected_square_current']
         else:
             c = current
-        amplitude = float(c['amplitude'].simplified)#*1000.0
-        duration = int(c['duration'].simplified)#/dt#/dt.rescale('ms')
-        delay = int(c['delay'].simplified)#/dt#.rescale('ms')
+        try:
+            amplitude = c['amplitude'].simplified
+        except:
+            amplitude = c['amplitude']
+            
+        duration = int(c['duration'])#/dt#/dt.rescale('ms')
+        delay = int(c['delay'])#/dt#.rescale('ms')
         pre_current = int(duration)+100
-        stim = input_factory.get_step_current(int(delay), int(pre_current), 1 * b2.ms, amplitude *b2.pA)
+        try:
+            stim = input_factory.get_step_current(int(delay), int(pre_current), 1 * b2.ms, amplitude *b2.pA)
+        except:
+            pdb.set_trace()
+            
         st = (duration+delay+100)* b2.ms
         #print(st, 'simulation time')
 

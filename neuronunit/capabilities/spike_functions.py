@@ -73,7 +73,7 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
         too_short = False
     if last_t+width/2.0 < vm.times[-1]:
         too_long = False
-        
+
     if not too_short and not too_long:
         snippets = [vm.time_slice(t-width/2, t+width/2) for t in spike_train]
     elif too_long:
@@ -156,9 +156,12 @@ def spikes2widths(spike_waveforms):
             n_samples = sum(s > mid)  # Number of samples above the half-max.
             widths.append(n_samples)
     widths = np.array(widths, dtype='float')
+    print(widths, 'unconverted')
     if n_spikes:
         # Convert from samples to time.
         widths = widths*spike_waveforms.sampling_period
+        print(widths, 'converted')
+
     return widths
 
 

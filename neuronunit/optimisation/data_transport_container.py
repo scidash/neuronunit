@@ -53,7 +53,7 @@ class DataTC(object):
         return #self.attrs
     def dtc_to_model(self):
         from neuronunit.models import VeryReducedModel
-
+        import os
         #model = RunnableModel(str(self.backend),backend=self.backend,attrs=self.attrs)
         #model = RunnableModel(str(self.backend),backend=(self.backend, {'DTC':self}))
         model = VeryReducedModel(name='vanilla',backend=(self.backend, {'DTC':self}))#, {'DTC':dtc}))
