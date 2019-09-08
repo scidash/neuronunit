@@ -149,9 +149,12 @@ class RAWBackend(Backend):
             c = current['injected_square_current']
         else:
             c = current
-        #import pdb; pdb.set_trace()
-        amplitude = float(c['amplitude'].simplified) #this needs to be in every backends
-        #print(amplitude)
+        try:    
+            amplitude = float(c['amplitude'].simplified) #this needs to be in every backends
+        except:
+            amplitude = float(c['amplitude'])
+        
+
 
         duration = float(c['duration'])#/dt#/dt.rescale('ms')
         delay = float(c['delay'])#/dt#.rescale('ms')

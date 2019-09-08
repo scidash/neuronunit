@@ -96,8 +96,15 @@ class RheobaseTest(VmTest):
         ##
         # New code
         ##
+        temp = [ v for v in lookup.values() if v>1 ]
+        if len(temp):
+            too_many_spikes = np.min(temp)
+        else:
+            too_many_spikes = 0
+
         spikes_one = [ v for v in lookup.values() if v==1 ]
         single_spike_found = bool(len(spikes_one))
+
         sub = np.array([x for x in lookup if lookup[x]==0])*units
         supra = np.array([x for x in lookup if lookup[x]>0])*units
         if self.verbose>1:
@@ -111,7 +118,7 @@ class RheobaseTest(VmTest):
                       % supra.min())
             else:
                 print("No suprathreshold current was tested.")
-        if len(sub) and len(supra) and single_spike_found:
+        if len(sub) and len(supra) and single_spike_found and too_many_spikes<15:
             rheobase = supra.min()
         else:
             #print('gets here')
@@ -161,8 +168,13 @@ class RheobaseTest(VmTest):
 
             if len(supra) and len(sub):
                 delta = float(supra.min()) - float(sub.max())
+                temp = [ v for v in lookup.values() if v>1 ]
+                if len(temp):
+                    too_many_spikes = np.min(temp)
+                else:
+                    too_many_spikes = 0
 
-                if delta < tolerance or (str(supra.min()) == str(sub.max())):
+                if (delta < tolerance or (str(supra.min()) == str(sub.max()))):# and too_many_spikes<15:
 
                     break
 
@@ -307,6 +319,8 @@ class RheobaseTestP(VmTest):
                 dtc.cell_name = model._backend.cell_name
             else:
                 model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
+
+                #model = VeryReducedModel(name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
                 #from sciunit.models.runnable import RunnableModel
 
                 #model = RunnableModel(str(dtc.backend),backend=(dtc.backend, {'DTC':dtc}))
@@ -328,14 +342,14 @@ class RheobaseTestP(VmTest):
                 #n_spikes = model.get_spike_count()
 
                 if float(ampl) < -1.0:
-                    dtc.rheobase = None
+                    dtc.rheobase = {}
+                    dtc.rheobase['value'] = None
                     dtc.boolean = True
                     return dtc
 
-
                 if n_spikes == 1:
                     dtc.lookup[float(ampl)] = 1
-                    dtc.rheobase = float(ampl)*pq.pA
+                    dtc.rheobase['value'] = float(ampl)*pq.pA
                     dtc.boolean = True
                     return dtc
 
@@ -450,14 +464,23 @@ class RheobaseTestP(VmTest):
                     if delta < tolerance or (str(supra.min()) == str(sub.max())):
                         if self.verbose >= 2:
                             print(delta, 'a neuron, close to the edge! Multi spiking rheobase. # spikes: ',len(supra))
-                        if len(supra)<15:
-                            dtc.rheobase = float(supra.min())
+                        too_many_spikes = np.min([ v for v in dtc.lookup.values() if v>1 ])
+                        if too_many_spikes>15:
+                            dtc.rheobase = {}
+                            dtc.rheobase['value'] = None
                             dtc.boolean = True
                             dtc.lookup[float(supra.min())] = len(supra)
+
                         else:
-                            dtc.rheobase = float(supra.min())
-                            dtc.boolean = True
-                            dtc.lookup[float(supra.min())] = len(supra)
+                            if len(supra)<15:
+
+                                dtc.rheobase = float(supra.min())
+                                dtc.boolean = True
+                                dtc.lookup[float(supra.min())] = len(supra)
+                            else:
+                                dtc.rheobase = float(supra.min())
+                                dtc.boolean = True
+                                dtc.lookup[float(supra.min())] = len(supra)
 
                         return dtc
 
@@ -488,7 +511,14 @@ class RheobaseTestP(VmTest):
 
         temp = find_rheobase(self,dtc).rheobase
         if type(temp) is not type(None):
-            prediction['value'] =  float(temp)* pq.pA
+            if type(temp) is type({'1':1}):
+                if temp['value'] is None:
+                    prediction = None
+                    return None
+                else:
+                    prediction['value'] =  float(temp['value'])* pq.pA
+            else:
+                prediction['value'] =  float(temp)* pq.pA
         else:
             prediction = None
         return prediction
@@ -554,7 +584,8 @@ class SpikeCountSearch(VmTest):
             '''
 
             steps = []
-            dtc.rheobase = None
+            dtc.rheobase = {}
+            dtc.rheobase['value'] = None
             sub, supra = get_sub_supra(dtc.lookup)
 
             #if 0. in supra and len(sub) == 0:
@@ -608,10 +639,8 @@ class SpikeCountSearch(VmTest):
                 dtc.cell_name = model._backend.cell_name
             else:
                 model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
-                #from sciunit.models.runnable import RunnableModel
 
-                #model = RunnableModel(str(dtc.backend),backend=(dtc.backend, {'DTC':dtc}))
-                #model = RunnableModel(str(dtc.backend),backend=(dtc.backend, {'DTC':dtc}))
+                #model = VeryReducedModel(name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
 
             params = {'injected_square_current':
                       {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
@@ -626,16 +655,17 @@ class SpikeCountSearch(VmTest):
                 n_spikes = model.get_spike_count()
 
                 if float(ampl) < -1.0:
-                    dtc.rheobase = None
+                    dtc.rheobase = {}
+                    dtc.rheobase['value'] = None
                     dtc.boolean = True
                     return dtc
 
                 target_spk_count = self.observation['value']
                 if n_spikes == target_spk_count:
                     dtc.lookup[float(ampl)] = 1
-                    dtc.rheobase = float(ampl)*pq.pA
+                    dtc.rheobase['value'] = float(ampl)*pq.pA
                     dtc.target_spk_count = None
-                    dtc.target_spk_count = dtc.rheobase
+                    dtc.target_spk_count = dtc.rheobase['value']
                     dtc.boolean = True
                     if self.verbose >2:
                         print('gets here',n_spikes,target_spk_count,n_spikes == target_spk_count)
@@ -657,12 +687,6 @@ class SpikeCountSearch(VmTest):
                     return dtc
 
                 else:
-                    # Exploit memory of the genes to inform searchable range.
-
-                    # if this model has lineage, assume it didn't mutate that far away from it's ancestor.
-                    # using that assumption, on first pass, consult a very narrow range, of test current injection samples:
-                    # only slightly displaced away from the ancestors rheobase value.
-
 
                     if type(dtc.current_steps) is type(float):
                         dtc.current_steps = [ 0.75 * dtc.current_steps, 1.25 * dtc.current_steps ]
@@ -749,21 +773,7 @@ class SpikeCountSearch(VmTest):
                         tolerance = 0.0
                     else:
                         tolerance = 0.0
-                        #tolerance = tolerance
-                    if delta < tolerance or (str(supra.min()) == str(sub.max())):
-                        if self.verbose >= 2:
-                            print(delta, 'a neuron, close to the edge! Multi spiking rheobase. # spikes: ',len(supra))
-                        if len(supra)<25:
-                            dtc.rheobase = float(supra.min())
-                            dtc.boolean = True
-                            dtc.lookup[float(supra.min())] = len(supra)
-                        else:
-                            dtc.rheobase = float(supra.min())
-                            dtc.boolean = True
-                            dtc.lookup[float(supra.min())] = len(supra)
-
-                        return dtc
-
+                       
                 if self.verbose >= 2:
                     print('not rheobase alg')
                     #print("Try %d: SubMax = %s; SupraMin = %s" % \
@@ -792,6 +802,7 @@ class SpikeCountSearch(VmTest):
         temp = find_target_current(self,dtc).rheobase
         if type(temp) is not type(None):
             prediction['value'] =  float(temp)* pq.pA
+
         else:
             prediction = None
         return prediction
@@ -897,6 +908,8 @@ class SpikeCountRangeSearch(VmTest):
                 dtc.cell_name = model._backend.cell_name
             else:
                 model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
+
+                #model = VeryReducedModel(name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
                 #from sciunit.models.runnable import RunnableModel
 
                 #model = RunnableModel(str(dtc.backend),backend=(dtc.backend, {'DTC':dtc}))
@@ -922,9 +935,9 @@ class SpikeCountRangeSearch(VmTest):
                 #target_spk_count = self.observation['range']
                 if self.observation['range'][0] <= n_spikes <= self.observation['range'][1]:
                     dtc.lookup[float(ampl)] = 1
-                    dtc.rheobase = float(ampl)*pq.pA
+                    dtc.rheobase['value'] = float(ampl)*pq.pA
                     dtc.target_spk_count = None
-                    dtc.target_spk_count = dtc.rheobase
+                    dtc.target_spk_count = dtc.rheobase['value']
                     dtc.boolean = True
                     if self.verbose >2:
                         print('gets here',n_spikes,target_spk_count,n_spikes == target_spk_count)
@@ -1043,11 +1056,11 @@ class SpikeCountRangeSearch(VmTest):
                         if self.verbose >= 2:
                             print(delta, 'a neuron, close to the edge! Multi spiking rheobase. # spikes: ',len(supra))
                         if len(supra)<25:
-                            dtc.rheobase = float(supra.min())
+                            dtc.rheobase['value'] = float(supra.min())
                             dtc.boolean = True
                             dtc.lookup[float(supra.min())] = len(supra)
                         else:
-                            dtc.rheobase = float(supra.min())
+                            dtc.rheobase['value'] = float(supra.min())
                             dtc.boolean = True
                             dtc.lookup[float(supra.min())] = len(supra)
 
