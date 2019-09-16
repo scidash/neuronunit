@@ -2,7 +2,7 @@
 # setting of an appropriate backend.
 import matplotlib
 matplotlib.use('agg')
-CONFIDENT = True
+CONFIDENT = False
 #    Goal is based on this. Don't optimize to a singular point, optimize onto a cluster.
 #    Golowasch, J., Goldman, M., Abbott, L.F, and Marder, E. (2002)
 #    Failure of averaging in the construction
