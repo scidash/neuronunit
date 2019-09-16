@@ -158,7 +158,7 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
         return mps, tl
 
     def setnparams(self, nparams = 10, boundary_dict = None):
-        self.params = optimisation_management.create_subset(nparams = nparams,boundary_dict = boundary_dict)
+        self.params = optimization_management.create_subset(nparams = nparams,boundary_dict = boundary_dict)
         self.params, self.td = self.transdict(boundary_dict)
         return self.params, self.td
 

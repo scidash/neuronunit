@@ -497,7 +497,7 @@ def random_p(backend):
 from neuronunit.optimisation.optimisations import run_ga
 def process_rparam(backend):
     random_param = random_p(backend)
-    if 'RAWBackend' in str(backend):
+    if 'RAW' in str(backend):
         random_param.pop('Iext',None)
         rp = {}
         chosen_keys =[str('a'),str('b'),str('c'),str('C'),str('d')]
@@ -510,6 +510,8 @@ def process_rparam(backend):
         rp = random_param
         chosen_keys = rp.keys()
     dsolution = DataTC()
+    #import pdb
+    #pdb.set_trace()
     dsolution.attrs = rp
     dsolution.backend = backend
     return dsolution,rp,chosen_keys,random_param
@@ -1256,7 +1258,7 @@ def nunit_evaluation_simple(dtc):
         else:
 
             dtc.scores[key] = 1.0
-            dtc = allocate_worst(tests, dtc)
+            #dtc = allocate_worst(tests, dtc)
     # compute the sum of sciunit score components.
     dtc.summed = dtc.get_ss()
 
@@ -1879,7 +1881,7 @@ def nunit_evaluation(dtc):
                     dtc.scores[key] = assignment
             else:
                 dtc.scores[key] = 1.0
-                dtc = allocate_worst(tests, dtc)
+                #dtc = allocate_worst(tests, dtc)
     dtc.summed = dtc.get_ss()
     try:
         greatest = np.max([dtc.error_length,len(dtc.scores)])
