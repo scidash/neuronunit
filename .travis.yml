@@ -24,7 +24,9 @@ install:
     
 
 script:
+  - cd neuronunit/unit_test/working
+  - python elephant_test.py
   - python neuronunit/unit_test/working/elephant_test.py
-  - python unit_test/low_level_tests.py
+  - python neuronunit/unit_test/low_level_tests.py
 after_success:
   - coveralls
