@@ -1,12 +1,14 @@
 """Passive neuronunit tests, requiring no active conductances or spiking."""
 
-from .base import np, pq, sciunit, ncap, VmTest, scores#, AMPL, DELAY, DURATION
+from .base import np, pq, ncap, VmTest, scores
 from scipy.optimize import curve_fit
 
 PASSIVE_DURATION = 500.0*pq.ms
 PASSIVE_DELAY = 200.0*pq.ms
 
 
+DURATION = 500.0*pq.ms
+DELAY = 200.0*pq.ms
 class TestPulseTest(VmTest):
     """A base class for tests that use a square test pulse."""
 
@@ -58,13 +60,7 @@ class TestPulseTest(VmTest):
         start = max(i['delay'] - 10*pq.ms, i['delay']/2)
         stop = i['duration']+i['delay'] - 1*pq.ms  # 1 ms before pulse end
         region = cls.get_segment(vm, start, stop)
-        try:
-            should_be_high = np.std(region)
-            amplitude, tau, y0 = cls.exponential_fit(region, i['delay'].simplified)
-        except:
-            print(i['delay'])
-            import pdb; pdb.set_trace()
-            tau = None
+        amplitude, tau, y0 = cls.exponential_fit(region, i['delay'])
         return tau
 
     @classmethod
