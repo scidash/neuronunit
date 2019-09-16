@@ -58,13 +58,13 @@ class TestPulseTest(VmTest):
         start = max(i['delay'] - 10*pq.ms, i['delay']/2)
         stop = i['duration']+i['delay'] - 1*pq.ms  # 1 ms before pulse end
         region = cls.get_segment(vm, start, stop)
-        try:
-            should_be_high = np.std(region)
-            amplitude, tau, y0 = cls.exponential_fit(region, i['delay'].simplified)
-        except:
-            print(i['delay'])
-            import pdb; pdb.set_trace()
-            tau = None
+        #try:
+        should_be_high = np.std(region)
+        amplitude, tau, y0 = cls.exponential_fit(region, i['delay'].simplified)
+        #except:
+        print(i['delay'])
+        #import pdb; pdb.set_trace()
+        #    tau = None
         return tau
 
     @classmethod

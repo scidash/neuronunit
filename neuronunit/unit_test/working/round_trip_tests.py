@@ -29,10 +29,8 @@ from neuronunit.optimisation.optimization_management import format_test, mint_ge
 
 from neuronunit import tests as nu_tests, neuroelectro
 from neuronunit.tests import passive, waveform, fi
-#from neuronunit.optimisation import get_neab
 from neuronunit.optimisation import exhaustive_search
 from neuronunit.models.reduced import ReducedModel
-#from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 from neuronunit.tests import dynamics
 from neuronunit.models.reduced import ReducedModel
@@ -84,7 +82,7 @@ def grid_points():
 class testHighLevelOptimisation(unittest.TestCase):
 
     def setUp(self):
-        electro_path = str(os.getcwd())+'/../tests/russell_tests.p'
+        electro_path = str(os.getcwd())+'/../../tests/russell_tests.p'
 
         assert os.path.isfile(electro_path) == True
         with open(electro_path,'rb') as f:
@@ -121,7 +119,7 @@ class testHighLevelOptimisation(unittest.TestCase):
                 ]
 
 
-    def test_solution_quality1(self):
+    def test_solution_quality0(self):
 
         #Select random points in parameter space,
         #pretend these points are from experimental observations, by coding them in
@@ -130,7 +128,6 @@ class testHighLevelOptimisation(unittest.TestCase):
         #Show that the optimiser can find this point, only using information obtained by
         #sparesely learning the error surface.
 
-        #MBEs = list(self.MODEL_PARAMS.keys())
         MBEs = [str('RAW'),str('BADEXP')]
         for key, use_test in self.test_frame.items():
             for b in MBEs:
@@ -143,7 +140,7 @@ class testHighLevelOptimisation(unittest.TestCase):
                 self.assertTrue(boolean)
         return
 
-    def test_solution_quality0(self):
+    def test_solution_quality11(self):
 
         from neuronunit.tests.allen_tests import pre_obs#, test_collection
         NGEN = 10
@@ -161,7 +158,7 @@ class testHighLevelOptimisation(unittest.TestCase):
         self.assertTrue(boolean)
         return
 
-    def test_solution_quality3(self):
+    def test_solution_quality12(self):
 
         from neuronunit.tests.allen_tests import pre_obs#, test_collection
         NGEN = 10
@@ -179,57 +176,6 @@ class testHighLevelOptimisation(unittest.TestCase):
         self.assertTrue(boolean)
         return
 
-    '''
-    move to low level tests
-    def test_rotate_backends2(self):
-        self.dtcpop = grid_points()
-
-        self.dtcpop = test_all_tests_pop(self.dtcpop,self.electro_tests)
-        self.dtc = self.dtcpop[0]
-        self.rheobase = self.dtc.rheobase
-
-        broken_backends = [ str('NEURON'),str('jNeuroML') ]
-
-        all_backends = [
-
-            str('RAW'),
-            str('ADEXP'),
-            str('GLIF')
-
-        ]
-
-        for b in all_backends:
-            if b in str('GLIF'):
-                print(b)
-
-            model = mint_generic_model(b)
-            self.assertTrue(model is not None)
-            from neuronunit.optimisation.data_transport_container import DataTC
-
-            dtc = DataTC()
-            dtc.backend = b
-            dtc.attrs = model.attrs
-            print(b,model.attrs)
-            dtc = dtc_to_rheo(dtc)
-            inject_and_plot(dtc)
-            self.assertTrue(dtc is not None)
-
-            #assert dtc is not None
-
-        #MBEs = list(self.MODEL_PARAMS.keys())
-        for b in all_backends:
-            model = mint_generic_model(b)
-            #assert model is not None
-            self.assertTrue(model is not None)
-            dtc = DataTC()
-            dtc.backend = b
-            dtc.attrs = model.attrs
-            inject_and_plot(dtc)
-            self.assertTrue(dtc is not None)
-
-        return
-
-    '''
 
 
 
