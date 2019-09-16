@@ -888,10 +888,8 @@ def get_rh(dtc,rtest):
 
     dtc.rheobase = None
     model = mint_generic_model(backend_)
-    #import pdb; pdb.set_trace()
     model.set_attrs(**dtc.attrs)
     rtest.params['injected_square_current'] = {}
-    #print('gets here')
     rtest.params['injected_square_current']['delay'] = DELAY
     rtest.params['injected_square_current']['duration'] = DURATION
     dtc.rheobase = rtest.generate_prediction(model)
@@ -1880,8 +1878,13 @@ def nunit_evaluation(dtc):
                     assignment = 1.0 - score.norm_score
                     dtc.scores[key] = assignment
             else:
+                print(t.name,'failed at')
                 dtc.scores[key] = 1.0
+                import pdb
+                pdb.set_trace()
+
                 #dtc = allocate_worst(tests, dtc)
+    print(dtc.scores)
     dtc.summed = dtc.get_ss()
     try:
         greatest = np.max([dtc.error_length,len(dtc.scores)])
