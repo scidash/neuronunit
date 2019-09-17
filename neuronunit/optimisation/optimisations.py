@@ -28,7 +28,7 @@ logger = logging.getLogger('__main__')
 # TODO abstract the algorithm by creating a class for every algorithm, that way
 # settings of the algorithm can be stored in objects of these classes
 
-#from neuronunit.optimisation.optimisation_management import evaluate#, update_deap_pop
+#from neuronunit.optimisation.optimization_management import evaluate#, update_deap_pop
 
 import numpy as np
 from collections import OrderedDict
@@ -158,7 +158,7 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
         return mps, tl
 
     def setnparams(self, nparams = 10, boundary_dict = None):
-        self.params = optimisation_management.create_subset(nparams = nparams,boundary_dict = boundary_dict)
+        self.params = optimization_management.create_subset(nparams = nparams,boundary_dict = boundary_dict)
         self.params, self.td = self.transdict(boundary_dict)
         return self.params, self.td
 
@@ -167,7 +167,7 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
         if self.benchmark == True:
             self.toolbox.register("evaluate", benchmarks.zdt1)
         else:
-            self.toolbox.register("evaluate", optimisation_management.evaluate)
+            self.toolbox.register("evaluate", optimization_management.evaluate)
 
     def grid_sample_init(self, nparams):
         '''

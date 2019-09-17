@@ -3,7 +3,7 @@ df = pd.DataFrame(rts)
 ga_outad = {}
 ga_outiz = {}
 ga_outgl = {}
-from neuronunit.optimisation.optimisation_management import inject_and_plot
+from neuronunit.optimisation.optimization_management import inject_and_plot
 
 NGEN = 10
 MU = 10

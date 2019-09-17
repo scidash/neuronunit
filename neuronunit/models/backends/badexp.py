@@ -157,11 +157,14 @@ class ADEXPBackend(Backend):
             c = current['injected_square_current']
         else:
             c = current
-        try:
-            amplitude = c['amplitude'].simplified
-        except:
-            amplitude = c['amplitude']
-            
+        #try:
+        #    amplitude = float(c['amplitude'].simplified)
+        #except:
+        amplitude = float(c['amplitude'])
+        print(amplitude,'amplitude')
+        #for i in range(0,N):
+        #    Iext[i] = float(Iext[i]*10000000000000.0)
+        #amplitude = amplitude#*10000000000000.0
         duration = int(c['duration'])#/dt#/dt.rescale('ms')
         delay = int(c['delay'])#/dt#.rescale('ms')
         pre_current = int(duration)+100
@@ -169,7 +172,8 @@ class ADEXPBackend(Backend):
             stim = input_factory.get_step_current(int(delay), int(pre_current), 1 * b2.ms, amplitude *b2.pA)
         except:
             pdb.set_trace()
-            
+        print(amplitude,'gets here \n\n\n\n\n\n')
+
         st = (duration+delay+100)* b2.ms
         #print(st, 'simulation time')
 
