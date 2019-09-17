@@ -397,13 +397,11 @@ def round_trip_test(tests,backend):
             random_param[k] = sample
         except:
             random_param[k] = ranges[k]
-    print('gets here c')
 
     tests = make_imputed_observations(tests,backend,random_param)
     NGEN = 10
     MU = 6
-    print('gets here a')
-
+    
     ga_out, DO = run_ga(ranges,NGEN,tests,free_params=free_params, NSGA = True, MU = MU, backed=backend, selection=str('selNSGA2'))
     best = ga_out['pf'][0].dtc.get_ss()
     #print(Bool(best < 0.5))
@@ -972,7 +970,10 @@ cpucount = multiprocessing.cpu_count()
 from scipy.special import logit as logistic
 
 #from neuronunit.examples.hide_imports import *
-rts,complete_map = pickle.load(open('../tests/russell_tests.p','rb'))
+#print(os.cwd())
+#import pdb
+#pdb.set_trace()
+rts,complete_map = pickle.load(open('../../tests/russell_tests.p','rb'))
 df = pd.DataFrame(rts)
 for key,v in rts.items():
     helper_tests = [value for value in v.values() ]
