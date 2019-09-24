@@ -23,19 +23,20 @@ import os
 from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.data_transport_container import DataTC
 
-from neuronunit.optimisation.optimization_management import dtc_to_rheo
-from neuronunit.optimisation.optimization_management import nunit_evaluation
-from neuronunit.optimisation.optimization_management import format_test, mint_generic_model
+from neuronunit.optimisation.optimization_management import dtc_to_rheo, mint_generic_model
+from neuronunit.optimisation.optimization_management import OptMan
 
 from neuronunit import tests as nu_tests, neuroelectro
 from neuronunit.tests import passive, waveform, fi
+#from neuronunit.optimisation import get_neab
 from neuronunit.optimisation import exhaustive_search
 from neuronunit.models.reduced import ReducedModel
+#from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 from neuronunit.tests import dynamics
 from neuronunit.models.reduced import ReducedModel
 
-from neuronunit.optimisation.optimization_management import format_test, inject_and_plot
+#from neuronunit.optimisation.optimization_management import format_test, inject_and_plot
 from neuronunit.optimisation import data_transport_container
 
 from neuronunit.models.reduced import ReducedModel
@@ -45,7 +46,7 @@ from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
 #from neuronunit.optimisation import get_neab
 from neuronunit.models.reduced import ReducedModel
 from neuronunit import aibs
-from neuronunit.optimisation.optimization_management import round_trip_test
+#from neuronunit.optimisation.optimization_management import round_trip_test, round_trip_test_rheob
 
 def test_all_tests_pop(dtcpop, tests):
 
@@ -58,13 +59,16 @@ def test_all_tests_pop(dtcpop, tests):
         assert len(list(d.attrs.values())) > 0
 
     dtcpop = list(map(dtc_to_rheo,dtcpop))
+    OM = OptMan(all_tests)
 
+    format_test = OM.format_test
+    elephant_evaluation = OM.elephant_evaluation
 
     b0 = db.from_sequence(dtcpop, npartitions=8)
     dtcpop = list(db.map(format_test,b0).compute())
 
     b0 = db.from_sequence(dtcpop, npartitions=8)
-    dtcpop = list(db.map(nunit_evaluation,b0).compute())
+    dtcpop = list(db.map(elephant_evaluation,b0).compute())
     return dtcpop
 
 def grid_points():
@@ -87,6 +91,7 @@ class testHighLevelOptimisation(unittest.TestCase):
         assert os.path.isfile(electro_path) == True
         with open(electro_path,'rb') as f:
             (self.test_frame,self.obs_frame) = pickle.load(f)
+        self.filtered_tests = {key:val for key,val in self.test_frame.items() if len(val) ==8}
 
         self.predictions = None
         self.predictionp = None
@@ -120,63 +125,18 @@ class testHighLevelOptimisation(unittest.TestCase):
 
 
     def test_solution_quality0(self):
+        #for key, use_test in self.filtered_tests.items():
+        #    use_test['protocol'] = str('elephant')
+        #    break
+        use_test = self.filtered_tests['Hippocampus CA1 pyramidal cell']#['RheobaseTest']]
+        OM = OptMan(use_test,protocol={'elephant':True,'allen':False,'dm':False})
+        results = OM.round_trip_test(use_test,str('RAW'),MU=7,NGEN=7,mini_tests=True)
+        model = results['pf'][0].dtc.dtc_to_model()
+        from neuronunit.tests.elephant_tests import ETest
+        ET = ETest(model)
+        features = ET.runTest()
 
-        #Select random points in parameter space,
-        #pretend these points are from experimental observations, by coding them in
-        #as NeuroElectro observations.
-        #This effectively redefines the sampled point as a the global minimum of error.
-        #Show that the optimiser can find this point, only using information obtained by
-        #sparesely learning the error surface.
-
-        MBEs = [str('RAW'),str('BADEXP')]
-        for key, use_test in self.test_frame.items():
-            for b in MBEs:
-                use_test['protocol'] = str('elephant')
-
-                tuples_ = round_trip_test(use_test,b)
-                (boolean,self.dtcpop) = tuples_
-                print('done one')
-                print(boolean,self.dtcpop)
-                self.assertTrue(boolean)
         return
-
-    def test_solution_quality11(self):
-
-        from neuronunit.tests.allen_tests import pre_obs#, test_collection
-        NGEN = 10
-        local_tests = pre_obs[2][1]
-        pre_obs[2][1]['spikes'][0]
-
-        local_tests.update(pre_obs[2][1]['spikes'][0])
-        local_tests['current_test'] = pre_obs[1][0]
-        local_tests['spk_count'] = len(pre_obs[2][1]['spikes'])
-        local_tests['protocol'] = str('allen')
-        tuples_ = round_trip_test(local_tests,str('GLIF'))
-        (boolean,self.dtcpop) = tuples_
-        print('done one')
-        print(boolean,self.dtcpop)
-        self.assertTrue(boolean)
-        return
-
-    def test_solution_quality12(self):
-
-        from neuronunit.tests.allen_tests import pre_obs#, test_collection
-        NGEN = 10
-        local_tests = pre_obs[2][1]
-        pre_obs[2][1]['spikes'][0]
-
-        local_tests.update(pre_obs[2][1]['spikes'][0])
-        local_tests['current_test'] = pre_obs[1][0]
-        local_tests['spk_count'] = len(pre_obs[2][1]['spikes'])
-        local_tests['protocol'] = str('allen')
-        tuples_ = round_trip_test(local_tests,str('RAW'))
-        (boolean,self.dtcpop) = tuples_
-        print('done one')
-        print(boolean,self.dtcpop)
-        self.assertTrue(boolean)
-        return
-
-
 
 
 

@@ -286,6 +286,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
             if len(ind.fitness.values) > old_max:
                 old_max = len(ind.fitness.values)
         population = [ ind for ind in population if ind if ind.fitness.values is not type(None) ]
+
         popp = [ i for i in population if len(i.fitness.values)==old_max ]
         print(popp)
         #import pdb; pdb.set_trace()
@@ -294,6 +295,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
 
             parents = toolbox.select(popp, mu)
         except:
+
             parents = toolbox.select(popp, len(population))
 
         # make new genes that are in the middle of the best and worst.

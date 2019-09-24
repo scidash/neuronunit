@@ -13,6 +13,14 @@ for key,v in rts.items():
         ga_outad[key] = pickle.load(open(filename,'rb'))
     except:
         ga_outad[key], DO = om.run_ga(model_params.MODEL_PARAMS['BAE1'],3, local_tests, free_params = model_params.MODEL_PARAMS['BAE1'],
+                                    NSGA = True, MU = 10, model_type = str('ADEXP'))
+        pickle.dump(ga_outad[key],open(filename,'wb'))
+    print('success')
+    pdb.set_trace()
+    backend = str('RAW')
+    filename = str(key)+backend+str('.p')
+        
+=======
                                     NSGA = True, MU = 4, model_type = str('ADEXP'))
         pickle.dump(ga_outad[key],open(filename,'wb'))
     backend = str('RAW')
