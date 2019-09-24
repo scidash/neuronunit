@@ -103,11 +103,11 @@ class BRIANADEXPBackend(Backend):
         #data = self.state_monitor
         #volts = data.filter(name="v")[0]
 
-        vm = AnalogSignal(self.vm,
-             units = mV,
-             sampling_period = self.dt *ms)
+        #vm = AnalogSignal(self.vm,
+        #     units = mV,
+        #     sampling_period = self.dt *ms)
 
-        return vm
+        return self.vM
     '''
     def _local_run(self):
         '''

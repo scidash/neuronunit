@@ -159,10 +159,10 @@ def spikes2widths(spike_waveforms):
     print(widths, 'unconverted')
     if n_spikes:
         # Convert from samples to time.
-        widths = widths*spike_waveforms.sampling_period
-        print(widths, 'converted')
-
-    return widths
+        widths_ = widths*spike_waveforms.sampling_period.simplified
+    #    print(widths, 'converted')
+    #pdb.set_trace()
+    return widths_
 
 
 def spikes2thresholds(spike_waveforms):
