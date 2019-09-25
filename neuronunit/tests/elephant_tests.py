@@ -1,9 +1,5 @@
+
 """
-
-This file contains a Druckman NU test static-neuromld model running object.
-This is a hacking, re-writing and re-purposing of JB NU unit test of Druckman tests.
-Which seemed to work really well with a static NU backend.
-
 """
 
 import unittest
@@ -18,6 +14,9 @@ import glob
 import sys, os
 from collections import Iterable, OrderedDict
 from neuronunit.tests.base import AMPL, DELAY, DURATION
+PASSIVE_DURATION = 500.0*pq.ms
+PASSIVE_DELAY = 200.0*pq.ms
+
 from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
 from neuronunit.tests import InjectedCurrentAPThresholdTest, APThresholdTest
 from neuronunit.tests import InjectedCurrentAPAmplitudeTest, APAmplitudeTest, APWidthTest, RestingPotentialTest, CapacitanceTest
@@ -53,10 +52,8 @@ def format_test(dtc):
                 dtc.vtest[k] = passive_values(keyed)
         if v.name in str('RestingPotentialTest'):
 
-            #keyed['injected_square_current']['amplitude'] = -10*pq.pA
             dtc.vtest[k]['injected_square_current']['amplitude'] = 0.0*pq.pA
             keyed = dtc.vtest[k]
-            #print(keyed)
     return dtc
 
 
@@ -130,41 +127,12 @@ def active_values(keyed,rheobase,square = None):
     return keyed
 
 def passive_values(keyed):
-    PASSIVE_DURATION = 500.0*pq.ms
-    PASSIVE_DELAY = 200.0*pq.ms
     keyed['injected_square_current'] = {}
     keyed['injected_square_current']['delay']= PASSIVE_DELAY
     keyed['injected_square_current']['duration'] = PASSIVE_DURATION
     keyed['injected_square_current']['amplitude'] = -10*pq.pA
     return keyed
 
-
-
-def map_to_protocol():
-    '''
-    A method that takes nothing and returns
-    a hard coded dictionary that keeps track of which protocol is used by each test.
-    which is helpful on the data analysis end of this pipeline.
-    '''
-    standard = 1.0
-
-    easy_map = [
-            {'InjectedCurrentAPThresholdTest':standard},
-            {'APThresholdTest':standard},
-            {'InjectedCurrentAPAmplitudeTest':standard},
-            {'APAmplitudeTest':standard},
-            {'InjectedCurrentAPWidthTest':standard},
-            {'APWidthTest':standard},
-            {'RestingPotentialTest':standard},
-            {'CapacitanceTest':standard},
-            {'TimeConstantTest':standard},
-            {'InputResistanceTest':standard}
-        ]
-    test_prot_map = {}
-    for easy in easy_map:
-        test_prot_map.update(easy)
-    test_prot_map = test_prot_map
-    return test_prot_map
 
 def test_setup(self,model,protocol_container):#,model_id,model_dict,model=None,ir_current_limited=False):
     '''
@@ -178,7 +146,7 @@ def test_setup(self,model,protocol_container):#,model_id,model_dict,model=None,i
     inputs: model_id, and a dictionary lookup table of models/model_ids
 
     '''
-    standard = model.rheobase
+    #standard = model.rheobase
     params_dic = {t.name:t.params for t in protocol_container}
     obs_dic = {t.name:t.observation for t in protocol_container }
     name_to_test = {t.name:t for t in protocol_container }
@@ -197,10 +165,10 @@ def test_setup(self,model,protocol_container):#,model_id,model_dict,model=None,i
         print(params_dic.keys())
         self.test_set.append(APThresholdTest(obs_dic['APThresholdTest'], \
             params = params_dic['APThresholdTest']))
-    if 'RheobasTest' in params_dic.keys():
+    if 'RheobaseTest' in params_dic.keys():
         print(params_dic.keys())
-        self.test_set.append(RheobasTestP(obs_dic['RheobasTest'], \
-            params = params_dic['RheobasTest']))
+        self.test_set.append(RheobaseTestP(obs_dic['RheobaseTest'], \
+            params = params_dic['RheobaseTest']))
     if 'InjectedCurrentAPAmplitudeTest' in params_dic.keys():
         print(params_dic.keys())
         self.test_set.append(InjectedCurrentAPAmplitudeTest(obs_dic['InjectedCurrentAPAmplitudeTest'], \
@@ -223,9 +191,9 @@ def test_setup(self,model,protocol_container):#,model_id,model_dict,model=None,i
         print(obs_dic['InputResistanceTest'])
         print(params_dic['InputResistanceTest'])
         inht = InputResistanceTest(obs_dic['InputResistanceTest'], \
-            params = params_dic['InputResistanceTest'])
+            params = params_dic['InputResistanceTest']['injected_square_current'])
+        print(inht)
         self.test_set.append(inht)
-
     return self.test_set
 
 
@@ -237,21 +205,42 @@ class ETest(object):
         model = dtc.dtc_to_model()
         model.set_attrs(dtc.attrs)
         self.model = model
+        self.model.rheobase = dtc.rheobase
+
         dtc = format_test(dtc)
         self.test_set = test_setup(self,self.model,dtc.tests)
 
 
     def run_test(self, index):
         test_class = self.test_set[index]
-        score = test_class.judge(self.model)#['mean']
+        print(test_class.name)
+        try:
+            score = test_class.judge(self.model)
+
+        except:
+            score = None
+            print('fails at {0}'.format(test_class.name))
+        try:
+            if hasattr(test_class,'generate_prediction'):
+                test_class.prediction = test_class.generate_prediction(self.model)
+            else:
+                test_class.prediction = test_class.extract_features(self.model)
+        except:
+            print('fails at {0}'.format(test_class.name))
+
         return (test_class,score)
 
     def runTest(self):
         scores = {}
+        tclasses = {}
         for i, t in enumerate(self.test_set):
            (tclass,score) = self.run_test(i)
-           scores[tclass.name] = score
-        return scores
+           if score is not None:
+               scores[tclass.name] = score.norm_score
+           else:
+               scores[tclass.name] = score
+           tclasses[tclass.name] = tclass
+        return (scores,tclass)
 
     def test_0(self):
         self.run_test(0)
@@ -279,106 +268,3 @@ class ETest(object):
 
     def test_8(self):
         self.run_test(8)
-    def print_predicted(cls):
-
-        for model_id in cls.predicted.keys():
-            print('Predicted values for '+model_id+': [')
-            for i, p in enumerate(cls.predicted[model_id]):
-                if p['predicted'] is not None:
-                    print('             ' + str((p['predicted'] * dimensionless).magnitude).rjust(25) + ', # ' + p['test'])
-                else:
-                    print('             '+'None'.rjust(25)+', # ' + p['test'])
-
-            print('         ]')
-
-    '''
-    def test_9(self):
-        self.run_test(9)
-
-    def test_10(self):
-        self.run_test(10)
-
-    def test_11(self):
-        self.run_test(11)
-
-    def test_12(self):
-        self.run_test(12)
-
-    def test_13(self):
-        self.run_test(13)
-
-    def test_14(self):
-        self.run_test(14)
-
-    def test_15(self):
-        self.run_test(15)
-
-    def test_16(self):
-        self.run_test(16)
-
-    def test_17(self):
-        self.run_test(17)
-
-    def test_18(self):
-        self.run_test(18)
-
-    def test_19(self):
-        self.run_test(19)
-
-    def test_20(self):
-        self.run_test(20)
-
-    def test_21(self):
-        self.run_test(21)
-
-    def test_22(self):
-        self.run_test(22)
-
-    def test_23(self):
-        self.run_test(23)
-
-    def test_24(self):
-        self.run_test(24)
-
-    def test_25(self):
-        self.run_test(25)
-
-    def test_26(self):
-        #import pdb; pdb.set_trace()
-
-        self.run_test(26)
-
-    def test_27(self):
-        self.run_test(27)
-
-    def test_28(self):
-        self.run_test(28)
-
-    def test_29(self):
-        self.run_test(29)
-
-    def test_30(self):
-        self.run_test(30)
-
-    def test_31(self):
-        self.run_test(31)
-
-    def test_32(self):
-        self.run_test(32)
-
-    def test_33(self):
-        self.run_test(33)
-
-    def test_34(self):
-        self.run_test(34)
-
-    def test_35(self):
-        self.run_test(35)
-
-    def test_36(self):
-        self.run_test(36)
-
-    def test_37(self):
-        self.run_test(37)
-    '''
-    #@classmethod

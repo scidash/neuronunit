@@ -20,28 +20,29 @@ class TestPulseTest(VmTest):
         super(TestPulseTest, self).__init__(*args, **kwargs)
         self.param = {}
         self.params['tmax'] = 1000.0*pq.ms
-        if params in kwargs:
-            self.params = params
+        if str('params') in kwargs:
+            self.params = kwargs['params']
         else:
             self.params = None
     default_params = dict(VmTest.default_params)
     default_params['amplitude'] = -1.0 * pq.pA
     default_params['tmax'] = 1000.0*pq.ms
     required_capabilities = (ncap.ReceivesSquareCurrent,)
-    def get_injected_square_current(self):
-        self.setup_protocol()
+    #def get_injected_square_current(self,model):
+
+        #self.setup_protocol(model)
         #self.model.inject_square_current(self.params['injected_square_current'])
-        result = self.model.get_membrane_potential()
-        return result
+        #result = self.model.get_membrane_potential()
+        #return result
 
     name = ''
 
     score_type = scores.ZScore
 
-    def compute_params(self):
-        super(TestPulseTest, self).compute_params()
-        self.params['injected_square_current'] = \
-            self.get_injected_square_current()
+    #def compute_params(self,model):
+    #    super(TestPulseTest, self).compute_params(model)
+        #self.params['injected_square_current'] = \
+        #    self.get_injected_square_current(model)
 
     def condition_model(self, model):
         if str('tmax') not in self.params.keys():

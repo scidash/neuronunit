@@ -24,7 +24,7 @@ from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.data_transport_container import DataTC
 
 from neuronunit.optimisation.optimization_management import dtc_to_rheo
-from neuronunit.optimisation.optimization_management import elephant_evaluation
+from neuronunit.optimisation.optimization_management import nunit_evaluation
 from neuronunit.optimisation.optimization_management import format_test, mint_generic_model
 
 from neuronunit import tests as nu_tests, neuroelectro
@@ -89,21 +89,16 @@ class testHighLevelOptimisation(unittest.TestCase):
         assert os.path.isfile(electro_path) == True
         with open(electro_path,'rb') as f:
             (self.test_frame,self.obs_frame) = pickle.load(f)
+        self.filtered_tests = {key:val for key,val in self.test_frame.items() if len(val) ==8}
 
         self.predictions = None
         self.predictionp = None
         self.score_p = None
         self.score_s = None
-         #self.grid_points
 
-        #electro_path = 'pipe_tests.p'
         assert os.path.isfile(electro_path) == True
         with open(electro_path,'rb') as f:
             self.electro_tests = pickle.load(f)
-        #self.electro_tests = get_neab.replace_zero_std(self.electro_tests)
-
-        #self.test_rheobase_dtc = test_rheobase_dtc
-        #self.dtcpop = test_rheobase_dtc(self.dtcpop,self.electro_tests)
         self.standard_model = self.model = mint_generic_model('RAW')
         self.MODEL_PARAMS = MODEL_PARAMS
         self.MODEL_PARAMS.pop(str('NEURON'),None)
@@ -123,115 +118,16 @@ class testHighLevelOptimisation(unittest.TestCase):
 
     def test_solution_quality0(self):
 
-        #Select random points in parameter space,
-        #pretend these points are from experimental observations, by coding them in
-        #as NeuroElectro observations.
-        #This effectively redefines the sampled point as a the global minimum of error.
-        #Show that the optimiser can find this point, only using information obtained by
-        #sparesely learning the error surface.
 
-        #MBEs = list(self.MODEL_PARAMS.keys())
-        #MBEs = [str('RAW'),str('BADEXP')]
-        for key, use_test in self.test_frame.items():
-            #for b in MBEs:
+        for key, use_test in self.filtered_tests.items():
             use_test['protocol'] = str('elephant')
 
-            tuples_ = round_trip_test(use_test,b)
+            tuples_ = round_trip_test(use_test,str('ADEXP'))
             (boolean,self.dtcpop) = tuples_
             print('done one')
             print(boolean,self.dtcpop)
             self.assertTrue(boolean)
         return
-    '''
-    def test_solution_quality0(self):
-
-        from neuronunit.tests.allen_tests import pre_obs#, test_collection
-        NGEN = 10
-        local_tests = pre_obs[2][1]
-        pre_obs[2][1]['spikes'][0]
-
-        local_tests.update(pre_obs[2][1]['spikes'][0])
-        local_tests['current_test'] = pre_obs[1][0]
-        local_tests['spk_count'] = len(pre_obs[2][1]['spikes'])
-        local_tests['protocol'] = str('allen')
-        tuples_ = round_trip_test(local_tests,str('GLIF'))
-        (boolean,self.dtcpop) = tuples_
-        print('done one')
-        print(boolean,self.dtcpop)
-        self.assertTrue(boolean)
-        return
-
-    def test_solution_quality3(self):
-
-        from neuronunit.tests.allen_tests import pre_obs#, test_collection
-        NGEN = 10
-        local_tests = pre_obs[2][1]
-        pre_obs[2][1]['spikes'][0]
-
-        local_tests.update(pre_obs[2][1]['spikes'][0])
-        local_tests['current_test'] = pre_obs[1][0]
-        local_tests['spk_count'] = len(pre_obs[2][1]['spikes'])
-        local_tests['protocol'] = str('allen')
-        tuples_ = round_trip_test(local_tests,str('RAW'))
-        (boolean,self.dtcpop) = tuples_
-        print('done one')
-        print(boolean,self.dtcpop)
-        self.assertTrue(boolean)
-        return
-
-        move to low level tests
-    def test_rotate_backends2(self):
-        self.dtcpop = grid_points()
-
-        self.dtcpop = test_all_tests_pop(self.dtcpop,self.electro_tests)
-        self.dtc = self.dtcpop[0]
-        self.rheobase = self.dtc.rheobase
-
-        broken_backends = [ str('NEURON'),str('jNeuroML') ]
-
-        all_backends = [
-
-            str('RAW'),
-            str('ADEXP'),
-            str('GLIF')
-
-        ]
-
-        for b in all_backends:
-            if b in str('GLIF'):
-                print(b)
-
-            model = mint_generic_model(b)
-            self.assertTrue(model is not None)
-            from neuronunit.optimisation.data_transport_container import DataTC
-
-            dtc = DataTC()
-            dtc.backend = b
-            dtc.attrs = model.attrs
-            print(b,model.attrs)
-            dtc = dtc_to_rheo(dtc)
-            inject_and_plot(dtc)
-            self.assertTrue(dtc is not None)
-
-            #assert dtc is not None
-
-        #MBEs = list(self.MODEL_PARAMS.keys())
-        for b in all_backends:
-            model = mint_generic_model(b)
-            #assert model is not None
-            self.assertTrue(model is not None)
-            dtc = DataTC()
-            dtc.backend = b
-            dtc.attrs = model.attrs
-            inject_and_plot(dtc)
-            self.assertTrue(dtc is not None)
-
-        return
-
-    '''
-
-
-
 
 if __name__ == '__main__':
     unittest.main()

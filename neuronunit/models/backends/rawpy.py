@@ -156,7 +156,7 @@ class RAWBackend(Backend):
             c = current['injected_square_current']
         else:
             c = current
-        amplitude = float(c['amplitude']) #this needs to be in every backends
+        amplitude = float(c['amplitude'])#/1000.0 #this needs to be in every backends
 
         duration = float(c['duration'])#/dt#/dt.rescale('ms')
         delay = float(c['delay'])#/dt#.rescale('ms')
@@ -180,12 +180,8 @@ class RAWBackend(Backend):
         Iext[delay_ind+duration_ind::] = 0.0
 
         attrs['Iext'] = Iext
-        #pdb.set_trace()
-
         self.attrs = attrs
-        #import pdb
-        #print(attrs)
-        #pdb.set_trace()
+
         v = get_vm(**self.attrs)
 
         self.model.attrs.update(attrs)
@@ -199,7 +195,11 @@ class RAWBackend(Backend):
 
     def _backend_run(self):
         results = {}
-        v = get_vm(**self.attrs)
+        #print(self.attrs,'is attributes the empty list?')
+        if len(self.attrs) > 1:
+            v = get_vm(**self.attrs)
+        else:
+            v = get_vm(self.attrs)
         self.vM = AnalogSignal(v,
                                units = voltage_units,
                                sampling_period = self.attrs['dt'] * ms)
@@ -233,7 +233,7 @@ class RAWBackend(Backend):
         self.set_stop_time(tMax*pq.ms)
         tMax = self.tstop
         #attrs['dt'] = DT
-        print(DT,tMax)
+        #print(DT,tMax)
         N = int(tMax/DT)#attrs['dt'])
         Iext = np.zeros(N)
         delay_ind = int((delay/tMax)*N)

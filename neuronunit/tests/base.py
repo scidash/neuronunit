@@ -123,6 +123,7 @@ class VmTest(sciunit.Test):
         return observation
 
     def bind_score(self, score, model, observation, prediction):
+        model.inject_square_current(self.params['injected_square_current'])
         score.related_data['vm'] = model.get_membrane_potential()
         score.related_data['model_name'] = '%s_%s' % (model.name,self.name)
 

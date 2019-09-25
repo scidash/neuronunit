@@ -2,11 +2,13 @@
 # setting of an appropriate backend.
 import matplotlib
 matplotlib.use('agg')
-CONFIDENT = False
+CONFIDENT = True
 #    Goal is based on this. Don't optimize to a singular point, optimize onto a cluster.
 #    Golowasch, J., Goldman, M., Abbott, L.F, and Marder, E. (2002)
 #    Failure of averaging in the construction
 #    of conductance-based neuron models. J. Neurophysiol., 87: 11291131.
+from neuronunit.tests.elephant_tests import ETest
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -61,7 +63,7 @@ from neuronunit.optimisation import model_parameters as modelp
 
 from neuronunit.tests.fi import RheobaseTest, RheobaseTestP# as discovery
 #from neuronunit.tests.fi import RheobaseTest# as discovery
-from neuronunit.tests.druckman2013 import *
+#from neuronunit.tests.druckman2013 import *
 #from neuronunit.tests.base import PASSIVE_DURATION, PASSIVE_DELAY
 
 import dask.bag as db
@@ -963,12 +965,14 @@ anchor = os.path.dirname(anchor)
 
 mypath = os.path.join(os.sep,anchor,'tests/russell_tests.p')
 #print(anchor,mypath)
-#import pdb; pdb.set_trace()
 rts,complete_map = pickle.load(open(mypath,'rb'))
 df = pd.DataFrame(rts)
 for key,v in rts.items():
     helper_tests = [value for value in v.values() ]
     break
+    print(helper_tests)
+#    pdb.set_trace()
+import pdb; pdb.set_trace()
 
 def sigmoid(x):
     return math.exp(-np.logaddexp(0, -x))
@@ -2073,6 +2077,14 @@ class OptMan():
         self.protocol = protocol
 
 
+    def dtc_to_elephant(self,dtc):
+        ET = ETest(dtc.dtc_to_model(),dtc)
+        temp = ET.runTest()
+        dtc.other_scores = temp[0]
+        dtc.other_tests = temp[1]
+        return dtc
+
+
     def round_trip_test(self,tests,backend,free_paramaters=None,NGEN=None,MU=None,mini_tests=None):
         from neuronunit.optimisation.optimisations import run_ga
 
@@ -2102,16 +2114,9 @@ class OptMan():
             dtc = False
             while dtc is False:
                 dsolution,rp,chosen_keys,random_param = process_rparam(backend)
-                #free_params = random_param.keys()
-
                 (new_tests,dtc) = self.make_imputed_observations(tests,backend,rp)
                 for t in new_tests:
                     print(t.name,t.observation)
-            print('at a critical check')
-            import pdb
-            pdb.set_trace()
-
-            #dtc = new_tests
             observations = dtc.preds
             target_spikes = dtc.spike_number+10
             observation_spike = {}
@@ -2128,17 +2133,14 @@ class OptMan():
             while new_tests is False:
                 dsolution,rp,chosen_keys,random_param = process_rparam(backend)
                 (new_tests,dtc) = self.make_imputed_observations(tests,backend,rp,dsolution=dsolution)
-
+                print('at a critical check')
                 if type(new_tests) is not type(False):
                     if 'RheobaseTest' not in new_tests.keys():
                         continue
-                        # means go back into while cycle.
                     try:
                         dsolution.rheobase = new_tests['RheobaseTest'].observation
                     except:
                         dsolution.rheobase = new_tests['RheobaseTestP'].observation
-                    #print(dtc)
-                    #import pdb; pdb.set_trace()
 
             for k,v in new_tests.items():
                 if type(v) is type({}):
@@ -2146,6 +2148,14 @@ class OptMan():
                         v.observation['mean'] = v.observation['mean'].simplified
                     except:
                         v.observation['value'] = v.observation['value'].simplified
+
+
+
+            dtc = self.dtc_to_elephant(dtc)
+            import pdb
+            pdb.set_trace()
+
+
 
             if type(mini_tests) is not type(None):
                 results = {}
@@ -2157,7 +2167,11 @@ class OptMan():
                 for k,v in mini_tests.items():
                     mt = {}
                     mt[k] = v
-                    mt['RheobaseTest'] = new_tests['RheobaseTest']
+                    if str('ReobaseTest') in new_tests.keys():
+                        mt['RheobaseTest'] = new_tests['RheobaseTest']
+                    if str('ReobaseTestP') in new_tests.keys():
+                        mt['RheobaseTest'] = new_tests['RheobaseTestP']
+
                     ga_out, DO = run_ga(ranges,NGEN,mt,free_params=rp.keys(), MU = MU, backend=backend, selection=str('selNSGA2'),protocol={'elephant':True,'allen':False})
                     results[k] = copy.copy(ga_out['pf'][0].dtc.scores)
                 print(ga_out['pf'][0].dtc.scores)
@@ -2327,11 +2341,8 @@ class OptMan():
                         assignment = 1.0 - score.norm_score
                     else:
                         dtc.judge_test()
-                        #pdb.set_trace()
                 else:
                     dtc.judge_test()
-                    #pdb.set_trace()
-                print('if printed on left, optimized if on right not')
                 dtc.scores[key] = assignment
 
         dtc.summed = dtc.get_ss()
@@ -2656,6 +2667,8 @@ class OptMan():
 
         elif str('dm') in self.protocol.keys():
             if self.protocol['dm'] == True:
+                print(self.protocol)
+                pdb.set_trace()
                 pop, dtcpop = get_dm(pop,dtcpop,tests,td)
                 return pop, dtcpop
 
@@ -2673,19 +2686,17 @@ class OptMan():
                 for d in dtcpop:
                     d.tests = copy.copy(self.tests)
 
-                from neuronunit.tests.elephant_tests import ETest
-                for dtc in dtcpop:
-                    dtc = self.format_test(dtc)
+                #for dtc in dtcpop:
+                    #dtc = self.format_test(dtc)
 
-                    ET = ETest(dtc.dtc_to_model(),dtc)
-                    scores = ET.runTest()
 
-                dtcpop = list(map(self.format_test,dtcpop))
-                dtcpop = list(map(self.elephant_evaluation,dtcpop))
+                #dtcpop = list(map(self.elephant_evaluation,dtcpop))
             if 1==2:
                 # hint at how to simplify above
                 #dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
                 dtcpop = [dtc.dtc_to_predictions() for dtc in dtcpop]#list(dtcbag.map(dtc_to_predictions).compute())
+            #dtcpop = list(map(self.format_test,dtcpop))
+            #dtcpop = list(map(self.dtc_to_elephant,dtcpop))
 
         for d in dtcpop:
             if len(d.tests) < 2:
