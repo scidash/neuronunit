@@ -130,12 +130,10 @@ class testHighLevelOptimisation(unittest.TestCase):
         #    break
         use_test = self.filtered_tests['Hippocampus CA1 pyramidal cell']#['RheobaseTest']]
         OM = OptMan(use_test,protocol={'elephant':True,'allen':False,'dm':False})
-        results = OM.round_trip_test(use_test,str('RAW'),MU=7,NGEN=7,mini_tests=True)
+        results = OM.round_trip_test(use_test,str('RAW'),MU=8,NGEN=8,mini_tests=True)
+        pdb.set_trace()
         model = results['pf'][0].dtc.dtc_to_model()
-        from neuronunit.tests.elephant_tests import ETest
-        ET = ETest(model)
-        features = ET.runTest()
-
+        
         return
 
 

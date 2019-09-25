@@ -322,9 +322,7 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
             deap.tools.initRepeat,
             list,
             self.toolbox.Individual)
-
-
-        self.error_criterion['protocol'] = self.protocol # ={'allen':False,'elephant':True,'dm':False}
+        #self.error_criterion['protocol'] = self.protocol # ={'allen':False,'elephant':True,'dm':False}
         OM = om.OptMan(self.error_criterion,self.td, backend = self.backend, \
                                               hc = self.hc,boundary_dict = self.boundary_dict, \
                                               error_length=self.error_length,protocol=self.protocol)

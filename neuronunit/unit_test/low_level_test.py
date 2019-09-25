@@ -9,9 +9,9 @@ from dask import bag
 
 
 from neuronunit.optimisation import get_neab
-from neuronunit.optimisation.optimisation_management import dtc_to_rheo
-from neuronunit.optimisation.optimisation_management import nunit_evaluation
-from neuronunit.optimisation.optimisation_management import format_test, mint_generic_model
+from neuronunit.optimisation.optimization_management import dtc_to_rheo
+from neuronunit.optimisation.optimization_management import nunit_evaluation
+from neuronunit.optimisation.optimization_management import format_test, mint_generic_model
 from itertools import repeat
 import quantities as pq
 
@@ -41,7 +41,7 @@ import dask.bag as db
 from neuronunit.models.reduced import ReducedModel
 
 #from neuronunit.optimisation import get_neab
-from neuronunit.optimisation.optimisation_management import format_test
+from neuronunit.optimisation.optimization_management import format_test
 from neuronunit.optimisation import data_transport_container
 #from neuronunit.optimisation import data_transport_container
 
@@ -76,7 +76,7 @@ def update_dtc_grid(item_of_iter_list):
     return dtc
 '''
 def grid_points():
-    npoints = 2
+    npoints = 10
     nparams = 10
     free_params = MODEL_PARAMS[str('RAW')]
     USE_CACHED_GS = False
@@ -113,6 +113,10 @@ def test_rheobase_dtc(dtcpop, tests):
     for d in dtcpop:
         d.tests = rheobase_test
         d.backend = str('RAW')
+    print('befor critical fail')
+    import pdb
+    pdb.set_trace()
+    
     dtcpop = list(map(dtc_to_rheo,dtcpop))
     return dtcpop
     '''
@@ -147,7 +151,7 @@ def test_all_tests_pop(dtcpop, tests):
     dtcpop = list(db.map(nunit_evaluation,b0).compute())
     return dtcpop
 
-class testLowLevelOptimisation(NotebookTools,unittest.TestCase):
+class testLowLevelOptimisation(unittest.TestCase):
 
     def setUp(self):
         self.predictions = None

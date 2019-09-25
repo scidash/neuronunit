@@ -4,7 +4,7 @@ df = pd.DataFrame(rts)
 ga_outad = {}
 ga_outiz = {}
 ga_outgl = {}
-from neuronunit.optimisation.optimisation_management import inject_and_plot
+from neuronunit.optimisation.optimization_management import inject_and_plot
 from neuronunit.tests.allen_tests import pre_obs#, test_collection
 #import pdb;
 #pdb.set_trace()
