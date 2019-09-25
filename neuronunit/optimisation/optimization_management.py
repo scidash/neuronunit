@@ -206,7 +206,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
 
                 sns.set_style("darkgrid")
                 #from neuronunit.capabilities import get_spike_waveforms
-                if snippets==True:
+                if snippets:
                     snippets_ = get_spike_waveforms(vm)
                     plt.plot(snippets_.times,snippets_,color='red',label=label)#,label='ground truth')
                 else:
@@ -248,7 +248,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                 #label = label+str(latency)
 
                 sns.set_style("darkgrid")
-                if snippets==True:
+                if snippets:
                     snippets_ = get_spike_waveforms(vm)
                     plt.plot(snippets_.times,snippets_,color='blue',label=label)#,label='ground truth')
                 else:
@@ -292,7 +292,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                     if str("GLIF") in dtc.backend:
                         label=str('Generalized Leaky Integrate and Fire')
                     #label = label+str(latency)
-                    if snippets==True:
+                    if snippets:
 
                         snippets_ = get_spike_waveforms(vm)
                         plt.plot(snippets_.times,snippets_,color='green',label=label)#,label='ground truth')
@@ -438,7 +438,7 @@ def make_imputed_observations(tests,backend,random_param):
         dtc.backend = backend
         dtc.pre_obs = tests
         target_current = None
-        while target_current == None or important_length<15:
+        while target_current is None or important_length<15:
             dtc.attrs = random_p(dtc.backend)
             make_stim_waves = pickle.load(open('waves.p','rb'))
             #import pdb; pdb.set_trace()
@@ -463,7 +463,7 @@ def make_imputed_observations(tests,backend,random_param):
 
             dtc.ampl = None
             #import pdb; pdb.set_trace()
-            if target_current !=None:
+            if target_current is not None:
                 dtc.ampl = target_current['value']
                 dtc = prediction_current_and_features(dtc)
                 dtc = filter_predictions(dtc)
@@ -1123,7 +1123,7 @@ def switch_logic(tests):
 
 def active_values(keyed,rheobase,square = None):
     keyed['injected_square_current'] = {}
-    if square == None:
+    if square is None:
         if type(rheobase) is type({str('k'):str('v')}):
             keyed['injected_square_current']['amplitude'] = float(rheobase['value'])*pq.pA
         else:
@@ -1599,13 +1599,13 @@ def nuunit_allen_evaluation(dtc):
             dtc.ampl = None
             print(scs, dir(scs))
             #import pdb; pdb.set_trace()
-            if target_current !=None:
+            if target_current is not None:
                 dtc.ampl = target_current['value']
                 dtc = prediction_current_and_features(dtc)
                 dtc = filter_predictions(dtc)
                 dtc.error_length = len(dtc.preds)
                 #important_length = len(dtc.preds)
-            if target_current==None or len(dtc.preds)<7:
+            if target_current is None or len(dtc.preds)<7:
                 dtc.ampl = None
                 if target_current is None:
                     dtc.preds = {}
@@ -1906,7 +1906,7 @@ def evaluate_allen(dtc,regularization=False):
     print(dtc.ascores)
     fitness = [ 1.0 for i in range(0,len(dtc.ascores)) ]
     for int_,t in enumerate(dtc.ascores.keys()):
-       if regularization == True:
+       if regularization:
           if dtc.ascores[str(t)] is None:
               fitness[int_] = 1.0
           else:
@@ -1935,7 +1935,7 @@ def evaluate(dtc,regularization=False):
 
     fitness = [ 1.0 for i in range(0,greatest) ]
     for int_,t in enumerate(dtc.scores.keys()):
-       if regularization == True:
+       if regularization:
           fitness[int_] = float(dtc.scores[str(t)]**(1.0/2.0))
        else:
           fitness[int_] = float(dtc.scores[str(t)])
@@ -2494,7 +2494,7 @@ def score_attr(dtcpop,pop):
         pop[i].dtc = copy.copy(d)
     return dtcpop,pop
 def get_dm(pop,dtcpop,tests,td):
-    if CONFIDENT == True:
+    if CONFIDENT:
         dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
         dtcpop = list(dtcbag.map(nuunit_dm_evaluation).compute())
     else:
@@ -2509,7 +2509,7 @@ def get_allen(pop,dtcpop,tests,td):
     for dtc in dtcpop: dtc.spike_number = tests['spike_count']['mean']
     for dtc in dtcpop: dtc.pre_obs = None
     for dtc in dtcpop: dtc.pre_obs = tests
-    if CONFIDENT == True:
+    if CONFIDENT:
         dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
         dtcpop = list(dtcbag.map(nuunit_allen_evaluation).compute())
 
@@ -2531,7 +2531,7 @@ def get_allen(pop,dtcpop,tests,td):
     else:
         for i,(ind,dtc) in enumerate(list(zip(pop,dtcpop))):
             target_current =  None
-            while (dtc.error_length)<2 or target_current==None:
+            while (dtc.error_length)<2 or target_current is None:
                 #import pdb; pdb.set_trace()
                 dtc,ind = new_single_gene(dtc,pop[0].td)
                 observation_spike = {}
@@ -2541,7 +2541,7 @@ def get_allen(pop,dtcpop,tests,td):
                 assert model is not None
                 target_current = scs.generate_prediction(model)
                 dtc.ampl = None
-                if target_current !=None:
+                if target_current is not None:
                     dtc.ampl = target_current['value']
                     print('got to making new genes')
                     dtc = prediction_current_and_features(dtc)
@@ -2552,7 +2552,7 @@ def get_allen(pop,dtcpop,tests,td):
             dtcpop[i] = dtc
 
             print('left loop',dtc.error_length)
-    if CONFIDENT == True:
+    if CONFIDENT:
         dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
         dtcpop = list(dtcbag.map(nuunit_allen_evaluation).compute())
 
@@ -2568,9 +2568,9 @@ def parallel_route(pop,dtcpop,tests,td,protocol=None):
     print(tests['protocol'])
     if type(tests['protocol']) is type({}):
 
-        if tests['protocol']['elephant'] == True:
+        if tests['protocol']['elephant']:
            tests['protocol'] = 'elephant'
-        elif tests['protocol']['allen'] == True:
+        elif tests['protocol']['allen']:
            tests['protocol'] = 'allen'
     if str('allen') in tests['protocol']:
 
@@ -2587,7 +2587,7 @@ def parallel_route(pop,dtcpop,tests,td,protocol=None):
         for d in dtcpop:
             d.tests = copy.copy(tests)
 
-        if CONFIDENT == True:
+        if CONFIDENT:
             dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
             dtcpop = list(dtcbag.map(format_test).compute())
 
@@ -2700,7 +2700,7 @@ def grid_search(explore_ranges,test_frame,backend=None):
     seeds = {}
     for k,v in best_params.items():
         for nested_key,nested_val in v.items():
-            if True == nested_val:
+            if nested_val:
                 seed = nested_key
                 seeds[k] = seed
     with open(str(backend)+'_seeds.p','wb') as f:
@@ -2911,11 +2911,11 @@ class OptMan():
                 d.error_length = self.error_length
                 ind.error_length = self.error_length
         pop,dtcpop = parallel_route(pop, dtcpop, tests, td,protocol=protocol)#, clustered=False)
-        both = [(ind,dtc) for ind,dtc in zip(pop,dtcpop) if dtc.scores!=None]
+        both = [(ind,dtc) for ind,dtc in zip(pop,dtcpop) if dtc.scores is not None]
         for ind,d in both:
             ind.dtc = None
             ind.dtc = d
-            if d.scores!=None:
+            if d.scores is not None:
                 ind = copy.copy(both[0][0])
                 d = copy.copy(both[0][1])
 
