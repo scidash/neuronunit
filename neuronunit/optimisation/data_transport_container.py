@@ -1,6 +1,7 @@
 import numpy as np
 #from neuronunit.optimisation.optimisation_management import mint_generic_model
 #from sciunit.models.runnable import RunnableModel
+import asciiplotlib as apl
 
 class DataTC(object):
     '''
@@ -32,9 +33,14 @@ class DataTC(object):
         self.searched = []
         self.searchedd = {}
         self.cached_attrs = {}
+        self.predictions = {}
+        self.observations = {}
         self.backend = None
         self.summed = None
         self.constants = None
+        self.scores_ratio = None
+        self.from_imputation = False
+        self.preds = {}
 
     def get_ss(self):
         # get summed score
@@ -53,7 +59,7 @@ class DataTC(object):
         return #self.attrs
     def dtc_to_model(self):
         from neuronunit.models import VeryReducedModel
-        import os
+        #import os
         #model = RunnableModel(str(self.backend),backend=self.backend,attrs=self.attrs)
         #model = RunnableModel(str(self.backend),backend=(self.backend, {'DTC':self}))
         model = VeryReducedModel(name='vanilla',backend=(self.backend, {'DTC':self}))#, {'DTC':dtc}))
@@ -65,6 +71,53 @@ class DataTC(object):
             self.scores = {}
         model.attrs=self.attrs
         model.scores=self.scores
-        # model = mint_generic_model(dtc.backend)
-        # model.attrs = self.attrs
+        model.rheobase = self.rheobase
         return model
+    def judge_test(self,index=0):
+        model = self.dtc_to_model()
+        ts = self.tests
+        #this_test = ts[index]
+        if not hasattr(self,'preds'):
+            self.preds = {}
+        filteredt = [this_test for this_test in self.tests if type(this_test) is not type('str')]
+        for this_test in filteredt:
+            if this_test.passive:
+                this_test.setup_protocol(model)
+                pred = this_test.extract_features(model,this_test.get_result(model))
+            else:
+                pred = this_test.generate_prediction(model)
+            self.preds[this_test.name] = pred
+        return self.preds
+
+    def check_params(self):
+        self.judge_test()
+        print(self.rheobase)
+        print(self.vparams)
+        print(self.params)
+        return self.preds
+    def plot_obs(self,ow):
+        t = [float(f) for f in ow.times]
+        v = [float(f) for f in ow.magnitude]
+        fig = apl.figure()
+        fig.plot(t, v, label=str('observation waveform from inside dtc: '), width=100, height=20)
+        fig.show()
+
+    def iap(self):
+        model = self.dtc_to_model()
+        #new_tests['RheobaseTest']
+        for t in self.tests:
+            if t.name in str('RheobaseTest'):
+                uset_t = t
+                break
+        pms = uset_t.params
+        pms['injected_square_current']['amplitude'] = self.rheobase
+        print(pms)
+        model.inject_square_current(pms['injected_square_current'])
+        nspike = model.get_spike_train()
+        print(nspike)
+        vm = model.get_membrane_potential()
+        t = [float(f) for f in vm.times]
+        v = [float(f) for f in vm.magnitude]
+        fig = apl.figure()
+        fig.plot(t, v, label=str('observation waveform from inside dtc: ')+str(nspike), width=100, height=20)
+        fig.show()

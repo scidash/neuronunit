@@ -24,13 +24,15 @@ from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.data_transport_container import DataTC
 
 from neuronunit.optimisation.optimization_management import dtc_to_rheo
-from neuronunit.optimisation.optimization_management import nunit_evaluation
+from neuronunit.optimisation.optimization_management import elephant_evaluation
 from neuronunit.optimisation.optimization_management import format_test, mint_generic_model
 
 from neuronunit import tests as nu_tests, neuroelectro
 from neuronunit.tests import passive, waveform, fi
+#from neuronunit.optimisation import get_neab
 from neuronunit.optimisation import exhaustive_search
 from neuronunit.models.reduced import ReducedModel
+#from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 from neuronunit.tests import dynamics
 from neuronunit.models.reduced import ReducedModel
@@ -87,6 +89,7 @@ class testHighLevelOptimisation(unittest.TestCase):
         assert os.path.isfile(electro_path) == True
         with open(electro_path,'rb') as f:
             (self.test_frame,self.obs_frame) = pickle.load(f)
+        self.filtered_tests = {key:val for key,val in self.test_frame.items() if len(val) ==8}
 
         self.predictions = None
         self.predictionp = None
@@ -120,63 +123,15 @@ class testHighLevelOptimisation(unittest.TestCase):
 
 
     def test_solution_quality0(self):
+        use_test = self.filtered_tests['Hippocampus CA1 pyramidal cell']#['RheobaseTest']]
+        use_test['protocol'] = str('elephant')
 
-        #Select random points in parameter space,
-        #pretend these points are from experimental observations, by coding them in
-        #as NeuroElectro observations.
-        #This effectively redefines the sampled point as a the global minimum of error.
-        #Show that the optimiser can find this point, only using information obtained by
-        #sparesely learning the error surface.
+        #all_tests = list(tests[0]['Hippocampus CA1 pyramidal cell'].values())
 
-        MBEs = [str('RAW'),str('BADEXP')]
-        for key, use_test in self.test_frame.items():
-            for b in MBEs:
-                use_test['protocol'] = str('elephant')
-
-                tuples_ = round_trip_test(use_test,b)
-                (boolean,self.dtcpop) = tuples_
-                print('done one')
-                print(boolean,self.dtcpop)
-                self.assertTrue(boolean)
+        results = round_trip_test(use_test,str('ADEXP'),MU=6,NGEN=10)
+        import pdb
+        pdb.set_trace()
         return
-
-    def test_solution_quality11(self):
-
-        from neuronunit.tests.allen_tests import pre_obs#, test_collection
-        NGEN = 10
-        local_tests = pre_obs[2][1]
-        pre_obs[2][1]['spikes'][0]
-
-        local_tests.update(pre_obs[2][1]['spikes'][0])
-        local_tests['current_test'] = pre_obs[1][0]
-        local_tests['spk_count'] = len(pre_obs[2][1]['spikes'])
-        local_tests['protocol'] = str('allen')
-        tuples_ = round_trip_test(local_tests,str('GLIF'))
-        (boolean,self.dtcpop) = tuples_
-        print('done one')
-        print(boolean,self.dtcpop)
-        self.assertTrue(boolean)
-        return
-
-    def test_solution_quality12(self):
-
-        from neuronunit.tests.allen_tests import pre_obs#, test_collection
-        NGEN = 10
-        local_tests = pre_obs[2][1]
-        pre_obs[2][1]['spikes'][0]
-
-        local_tests.update(pre_obs[2][1]['spikes'][0])
-        local_tests['current_test'] = pre_obs[1][0]
-        local_tests['spk_count'] = len(pre_obs[2][1]['spikes'])
-        local_tests['protocol'] = str('allen')
-        tuples_ = round_trip_test(local_tests,str('RAW'))
-        (boolean,self.dtcpop) = tuples_
-        print('done one')
-        print(boolean,self.dtcpop)
-        self.assertTrue(boolean)
-        return
-
-
 
 
 

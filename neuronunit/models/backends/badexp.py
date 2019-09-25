@@ -25,6 +25,11 @@ mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 from types import MethodType
+# from neuronunit.optimisation import ascii_plot
+
+#import matplotlib.pyplot as plt
+# @jit(cache=True) I suspect this causes a memory leak
+import asciiplotlib as apl
 
 
 try:
@@ -37,7 +42,6 @@ from scipy.interpolate import interp1d
 
 class ADEXPBackend(Backend):
     def get_spike_count(self):
-
         return int(self.spike_monitor.count[0])
     def init_backend(self, attrs=None, cell_name='thembi',
                      current_src_name='spanner', DTC=None,
@@ -87,6 +91,7 @@ class ADEXPBackend(Backend):
         """Must return a neo.core.AnalogSignal.
         And must destroy the hoc vectors that comprise it.
         """
+        '''
         if np.max(self.vM)<0.000*qt.V:
             tdic = self.spike_monitor.spike_trains()
             for key,value in tdic.items():
@@ -95,8 +100,13 @@ class ADEXPBackend(Backend):
                     self.vM[i] = self.peak_v*qt.mV
                 else:
                     for v in value:
+                       i = int(float(v)/0.001)
+                       self.vM[i] = 0.020*qt.mV
+                       #i = int(float(v)/0.001)
+                       #self.vM[i] = 0.020*qt.mV
                         i = int(float(v)/0.001)
                         self.vM[i] = self.peak_v*qt.mV
+        '''
         return self.vM
 
     def set_attrs(self, **attrs):
@@ -133,6 +143,10 @@ class ADEXPBackend(Backend):
         transform_function = interp1d([float(t) for t in self.vM.times],[float(v) for v in self.vM.magnitude])
         xnew = np.linspace(0, float(np.max(self.vM.times)), num=1004001, endpoint=True)
         vm_new = transform_function(xnew) #% generate the y values for all x values in xnew
+        print(len(vm_new))
+        self.vM = AnalogSignal(vm_new,units = mV,sampling_period = float(xnew[1]-xnew[0]) * pq.s)
+        print(len(self.vM))
+        #print(len(vm_new))
         self.vM = AnalogSignal(vm_new,units = mV,sampling_period = float(xnew[1]-xnew[0]) * pq.s)
         return self.vM
     def inject_square_current(self, current):#, section = None, debug=False):
@@ -157,11 +171,14 @@ class ADEXPBackend(Backend):
             c = current['injected_square_current']
         else:
             c = current
-        try:
-            amplitude = c['amplitude'].simplified
-        except:
-            amplitude = c['amplitude']
-            
+        #try:
+        #    amplitude = float(c['amplitude'].simplified)
+        #except:
+        amplitude = float(c['amplitude'])
+        #print(amplitude,'amplitude')
+        #for i in range(0,N):
+        #    Iext[i] = float(Iext[i]*10000000000000.0)
+        #amplitude = amplitude#*10000000000000.0
         duration = int(c['duration'])#/dt#/dt.rescale('ms')
         delay = int(c['delay'])#/dt#.rescale('ms')
         pre_current = int(duration)+100
@@ -169,8 +186,10 @@ class ADEXPBackend(Backend):
             stim = input_factory.get_step_current(int(delay), int(pre_current), 1 * b2.ms, amplitude *b2.pA)
         except:
             pdb.set_trace()
-            
+        #print(amplitude,'gets here \n\n\n\n\n\n')
+
         st = (duration+delay+100)* b2.ms
+        #print(st, 'simulation time')
         #print(st, 'simulation time')
 
         if self.model.attrs is None or not len(self.model.attrs):
@@ -221,6 +240,7 @@ class ADEXPBackend(Backend):
                 for v in value:
                     i = int(float(v)/0.001)
                     #print(i)
+                    #print(i)
                     self.vM[i] = self.peak_v*qt.mV
 
 
@@ -231,6 +251,10 @@ class ADEXPBackend(Backend):
         t = [float(f) for f in self.vM.times]
         v = [float(f) for f in self.vM.magnitude]
         #print(len(v),len(t),'this is a short vector')
+        fig = apl.figure()
+        fig.plot(t, v, label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
+        fig.show()
+        fig  = None
         try:
             fig = apl.figure()
             fig.plot(t, v, label=str('spikes: ')+str(self.n_spikes), width=100, height=20)

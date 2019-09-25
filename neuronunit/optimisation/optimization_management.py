@@ -1,4 +1,4 @@
-    #import matplotlib # Its not that this file is responsible for doing plotting, but it calls many modules that are, such that it needs to pre-empt
+#import matplotlib # Its not that this file is responsible for doing plotting, but it calls many modules that are, such that it needs to pre-empt
 # setting of an appropriate backend.
 import matplotlib
 matplotlib.use('agg')
@@ -7,6 +7,8 @@ CONFIDENT = True
 #    Golowasch, J., Goldman, M., Abbott, L.F, and Marder, E. (2002)
 #    Failure of averaging in the construction
 #    of conductance-based neuron models. J. Neurophysiol., 87: 11291131.
+from neuronunit.tests.elephant_tests import ETest
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -27,7 +29,11 @@ from numba import jit
 from sklearn.model_selection import ParameterGrid
 from itertools import repeat
 from collections import OrderedDict
+import cython
 
+
+import seaborn as sns
+from neuronunit.capabilities.spike_functions import get_spike_waveforms
 
 import logging
 logger = logging.getLogger('__main__')
@@ -57,14 +63,14 @@ from neuronunit.optimisation import model_parameters as modelp
 
 from neuronunit.tests.fi import RheobaseTest, RheobaseTestP# as discovery
 #from neuronunit.tests.fi import RheobaseTest# as discovery
-from neuronunit.tests.druckman2013 import *
+#from neuronunit.tests.druckman2013 import *
 #from neuronunit.tests.base import PASSIVE_DURATION, PASSIVE_DELAY
 
 import dask.bag as db
 # The rheobase has been obtained seperately and cannot be db mapped.
 # Nested DB mappings dont work.
 from itertools import repeat
-import efel
+#import efel
 
 
 #DURATION = 1000.0*pq.ms
@@ -128,9 +134,10 @@ def inject_rh_and_dont_plot(dtc):
     model.inject_square_current(uc['injected_square_current'])
     return (model, model.get_membrane_potential().times,model.get_membrane_potential(),uc)
 
-import seaborn as sns
-from neuronunit.capabilities.spike_functions import get_spike_waveforms
 
+#
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippets=False):
     sns.set_style("darkgrid")
 
@@ -191,10 +198,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                     model.finalize()
                 else:
                     pass
-                    #print(str(dtc.backend))
                 vm = model.get_membrane_potential()#.magnitude
-                #print(np.max(vm))
-                #sns.set_style("darkgrid")
                 if str("RAW") in dtc.backend:
                     label=str('Izhikevich Model')
 
@@ -202,11 +206,9 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                     label=str('Adaptive Exponential Model')
                 if str("GLIF") in dtc.backend:
                     label=str('Generalized Leaky Integrate and Fire')
-                #label = label+str(latency)
 
                 sns.set_style("darkgrid")
-                #from neuronunit.capabilities import get_spike_waveforms
-                if snippets:
+                if snippets==True:
                     snippets_ = get_spike_waveforms(vm)
                     plt.plot(snippets_.times,snippets_,color='red',label=label)#,label='ground truth')
                 else:
@@ -248,7 +250,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                 #label = label+str(latency)
 
                 sns.set_style("darkgrid")
-                if snippets:
+                if snippets==True:
                     snippets_ = get_spike_waveforms(vm)
                     plt.plot(snippets_.times,snippets_,color='blue',label=label)#,label='ground truth')
                 else:
@@ -292,7 +294,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                     if str("GLIF") in dtc.backend:
                         label=str('Generalized Leaky Integrate and Fire')
                     #label = label+str(latency)
-                    if snippets:
+                    if snippets==True:
 
                         snippets_ = get_spike_waveforms(vm)
                         plt.plot(snippets_.times,snippets_,color='green',label=label)#,label='ground truth')
@@ -336,6 +338,9 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
     #    return (model.get_membrane_potential().times,model.get_membrane_potential())
     #else:
     return (None,None)
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def filter_predictions(dtc):
     if not hasattr(dtc,'preds'):
         dtc.preds = {}
@@ -346,142 +351,39 @@ def filter_predictions(dtc):
     dtc.preds = {k:v for k,v in dtc.preds.items() if not np.isnan(v['mean'])}
     return dtc
 
-
-def make_imputed_observations(tests,backend,random_param):
-    '''
-    to be used in conjunction with round_trip_test below.
-
-    '''
+        #except:
+def make_new_random(dtc_,backend):
+    print(dtc_.rheobase)
     dtc = DataTC()
-    dtc.attrs = random_param
+    #backend = dtc_.backend
     dtc.backend = backend
 
-    if tests['protocol'] in str('elephant'):
-        if str('RheobaseTest') in tests.keys():
-            dtc = get_rh(dtc,tests['RheobaseTest'])
-            if type(dtc.rheobase) is type(float(0.0)):
-                pass
-            if type(dtc.rheobase) is type({'1':0}):
-                if dtc.rheobase['value'] is None:
-                    return False
-
-        while dtc.rheobase['value'] is None:
-            dtc = DataTC()
-            dtc.backend = backend
-            dtc.attrs = random_p(dtc.backend)
-            dtc = dtc_to_rheo(dtc)
-
-        tests = list(tests.values())
-        dtc.tests = tests
-        for i,t in enumerate(tests):
-            if type(t) is type(str('')):
-                if t in str('elephant'):
-                    break
-        del tests[i]
-        simulated_observations = {t.name:copy.copy(t.observation['value']) for t in tests}
-        simulated_observations = {k:v for k,v in simulated_observations.items() if v is not None}
-        dtc.observation = simulated_observations
-        dtc = pred_evaluation(dtc)
-        simulated_observations = dtc.preds
-
-        try:
-            temp = copy.copy(simulated_observations['RheobaseTest'])
-            simulated_observations['RheobaseTest'] = {}
-            simulated_observations['RheobaseTest']['value'] = temp
-        except:
-            pass
-        simulated_observations = {k:p for k,p in simulated_observations.items() if type(k) is not type(None) }
-        for k,p in simulated_observations.items():
-
-            if not hasattr(p,'keys'):
-                import pdb
-                pdb.set_trace()
-            if 'mean' in p.keys():
-                p['value'] = p.pop('mean')
-        for ind,t in enumerate(tests):
-            if 'mean' in t.observation.keys():
-                t.observation['value'] = t.observation.pop('mean')
-            pred = simulated_observations[str(t.name)]['value']
-            try:
-                pred = pred.rescale(t.units)
-                t.observation['value'] = pred
-            except:
-                t.observation['value'] = pred
-            t.observation['mean'] = t.observation['value']
-
-            score = t.compute_score(t.observation,simulated_observations[str(t.name)])
-
-        for k,v in simulated_observations.items():
-            s = simulated_observations[k]['value']
-            try:
-                s.rescale(v.units)
-                v.rescale(s.units)
-                assert float(s)==float(v)
-
-            except:
-                pass
-
-            simulated_observations[k]['mean'] = s
-        subset = {}
-        subset['protocol'] = str('elephant')
-
-        for t in tests:
-            #if t.name in ['RestingPotentialTest','TimeConstantTest', 'InputResistanceTest']:
-            subset[t.name] = t
-
-        return subset
-
-
-    if tests['protocol'] in str('allen'):
-        #target_current = None
+    dtc.attrs = random_p(backend)
+    dtc = dtc_to_rheo(dtc)
+    if type(dtc.rheobase) is not type({'1':1}):
+        temp = dtc.rheobase
+        dtc.rheobase = {}
+        dtc.rheobase['value'] = temp
+    while dtc.rheobase['value'] is None:
         dtc = DataTC()
         dtc.backend = backend
-        dtc.pre_obs = tests
-        target_current = None
-        while target_current is None or important_length<15:
-            dtc.attrs = random_p(dtc.backend)
-            make_stim_waves = pickle.load(open('waves.p','rb'))
-            #import pdb; pdb.set_trace()
-            from neuronunit.tests.fi import SpikeCountSearch
-            observation_spike = {}
-            observation_spike['value'] = 10.0
-            for i in list(make_stim_waves.keys()):
-                print(i)
+        dtc.attrs = random_p(backend)
+        #import pdb
+        #pdb.set_trace()
+        dtc = dtc_to_rheo(dtc)
+        if type(dtc.rheobase) is not type({'1':1}):
+            temp = dtc.rheobase
+            dtc.rheobase = {}
+            dtc.rheobase['value'] = temp
+    return dtc
 
-            # make_stim_waves)[0]]
-            # note set delay and duration to be anything.
-            if dtc.backend is str("GLIF"):
-                observation_range = {}
-                observation_range['range'] = [2,15]
 
-                scs = SpikeCountRangeSearch(observation_range)
-            else:
-                scs = SpikeCountSearch(observation_spike)
-            model = new_model(dtc)
-            assert model is not None
-            target_current = scs.generate_prediction(model)
-
-            dtc.ampl = None
-            #import pdb; pdb.set_trace()
-            if target_current is not None:
-                dtc.ampl = target_current['value']
-                dtc = prediction_current_and_features(dtc)
-                dtc = filter_predictions(dtc)
-                important_length = len(dtc.preds)
-        target_spikes = dtc.spike_number
-        observation_spike = {}
-        observation_spike['value'] = target_spikes
-        dtc.preds['spike_count'] ={}
-        dtc.preds['spike_count']['mean'] = target_spikes
-        dtc.preds['current'] = {}
-        dtc.preds['current']['mean'] = target_current['value']
-        dtc.pre_obs = dtc.preds
-        return dtc
     #if
 
     #works = "InjectedCurrentAPThresholdTest"
     #import pdb; pdb.set_trace()
-
+#@cython.boundscheck(False)
+#@cython.wraparound(False)
 def random_p(backend):
     #print(backend)
     #import pdb; pdb.set_trace()
@@ -491,19 +393,20 @@ def random_p(backend):
         try:
             mean = np.mean(ranges[k])
             std = np.std(ranges[k])
-            sample = numpy.random.normal(loc=mean, scale=2*std, size=1)[0]
+            sample = numpy.random.normal(loc=mean, scale=0.25*std, size=1)[0]
             random_param[k] = sample
         except:
             random_param[k] = ranges[k]
     return random_param
 
-from neuronunit.optimisation.optimisations import run_ga
+#@cython.boundscheck(False)
+#@cython.wraparound(False)
 def process_rparam(backend):
     random_param = random_p(backend)
     if 'RAW' in str(backend):
         random_param.pop('Iext',None)
         rp = {}
-        chosen_keys =[str('a'),str('b'),str('c'),str('C'),str('d')]
+        chosen_keys =[str('a')]#,str('b'),str('c'),str('C'),str('d')]
         for key in chosen_keys:
             rp[key] = random_param[key]
     if str('ADEXP') in str(backend):
@@ -516,163 +419,20 @@ def process_rparam(backend):
         random_param['asc_tau_array'] = [0.3333333333333333,0.01]
         rp = random_param
         chosen_keys = rp.keys()
-  
+
     dsolution = DataTC()
     dsolution.attrs = rp
+    #import pdb
+    #pdb.set_trace()
     dsolution.backend = backend
     return dsolution,rp,chosen_keys,random_param
-
-def round_trip_test(tests,backend,free_paramaters=None):
-    '''
-    # Inputs:
-    #    -- tests, a list of NU test types,
-    #    -- backend a string encoding what model, backend, simulator to use.
-    # Outputs:
-    #    -- a score, that should be close to zero larger is worse.
-    # Synopsis:
-    #    -- Given any models
-    # lets check if the optimiser can find arbitarily sampeled points in
-    # a parameter space, using only the information in the error gradient.
-    # make some new tests based on internally generated data
-    # as opposed to experimental data.
-    '''
-
-    out_tests = []
-
-    #dsolution.rheobase = tests['RheobaseTest'].observation['value']
-
-    NGEN = 5
-    MU = 5
-    ranges = MODEL_PARAMS[backend]
-        
-    if tests['protocol'] == str('allen'):
-        dtc = False
-        while dtc is False:
-            dsolution,rp,chosen_keys,random_param = process_rparam(backend)
-            free_params = random_param.keys()
-
-            dtc = make_imputed_observations(tests,backend,rp)
-
-        #dtc = new_tests
-        observations = dtc.preds
-        target_spikes = dtc.spike_number+10
-        observation_spike = {}
-        observation_spike['value'] = target_spikes
-        ga_out, DO = run_ga(ranges,NGEN,observations,free_params=free_params, MU = MU, backend=backend, selection=str('selNSGA3'), protocol={'allen':True,'elephant':False})
-        dtcpop0 = [ p.dtc for p in ga_out['pf'] ]
-        dtcpop1 = [ dsolution for i in range(0,len(ga_out['pf'])) ]
-        #import pdb; pdb.set_trace()
-        inject_and_plot(dtcpop0,second_pop=dtcpop1,third_pop=[dtcpop0[0],dtcpop0[-1]],figname='snippets.png',snippets=True)
-
-        #inject_and_plot(dtcpop0,dtcpop1)
-
-    elif tests['protocol'] == str('elephant'):
-        new_tests = False
-        while new_tests is False:
-            dsolution,rp,chosen_keys,random_param = process_rparam(backend)
-            free_params = random_param.keys()
-
-            new_tests = make_imputed_observations(tests,backend,rp)
-
-        if free_paramaters is None:
-            fp = chosen_keys
-        else:
-            fp = free_paramaters
-        dsolution.rheobase = new_tests['RheobaseTest'].observation
-        #import pdb; pdb.set_trace()
-        ga_out, DO = run_ga(ranges,NGEN,new_tests,free_params=fp, MU = MU, backend=backend, selection=str('selNSGA2'))
-        dtcpop0 = [ p.dtc for p in ga_out['pf'][0:2] ]
-        dtcpop1 = [ dsolution for i in range(0,len(ga_out['pf'])) ][0:2]
-        #import pdb; pdb.set_trace()
-
-        print(ga_out['pf'][0].dtc.attrs)
-        #print(rp)
-        import pdb; pdb.set_trace()
-        
-        inject_and_plot(dtcpop0,second_pop=dtcpop1,third_pop=[dtcpop0[0]],figname='not_a_problem.png',snippets=True)
-        return ga_out,dtcpop0,dtcpop1
-
-        #inject_and_plot(dtcpop0,second_pop=dtcpop1,third_pop=[dtcpop0[0],dtcpop0[-1]],figname='not_a_problem.png',snippets=True)
-
-        #print(bool(ga_out['log'][-1]['min'] < 0.1))
-        #other_best = np.sum(list(ga_out['pop'][0].dtc.scores.values()))
-        #ob = np.sum(list(ga_out['gen_vs_pop'][-1][0].dtc.scores.values()))
-        #if other_best < best:
-        #    import pdb; pdb.set_trace()
-        #if ob < best or ob < other_best:
-        #    import pdb; pdb.set_trace()
-        #ga_out['pf'][0].dtc.scores.pop('a Rheobase test',None)
-        #best = np.sum(list(ga_out['pf'][0].dtc.scores.values()))
-        '''
-        broken_tests = []
-        working_tests = []
-        if best< 0.1:
-            print('success')
-            best = np.sum(list(ga_out['pf'][0].dtc.scores.values()))
-
-            print(ga_out['hof'][0].dtc.scores)
-            working_tests.append((t.name,best))
-        else:
-            broken_tests.append((t.name,best))
-        working_tests = [w[1] for w in working_tests]
-
-        ga_out, DO = run_ga(ranges,NGEN,working_tests,free_params=free_params, MU = MU, backend=backend, selection=str('selNSGA2'))
-
-        fitness = [ list(i[0].fitness.values)[0] for i in ga_out['gen_vs_pop']]
-        fitness = [ list(i[0].fitness.values)[0] for i in ga_out['gen_vs_pop'] if len(i[0].fitness.values)>0 ]
-
-        scores = [ list(i[0].dtc.scores.values())[0] for i in ga_out['gen_vs_pop']]
-        rec_lens = [ i for i in range(0,len(scores))]
-        rec_lenf = [ i for i in range(0,len(fitness))]
-
-        if len(rec_lens):
-            #try:
-            import asciiplotlib as apl
-            fig = apl.figure()
-            #fig.plot(t, v, label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
-            #fig.show()
-            #import pdb; pdb.set_trace()
-            fig.plot(rec_lens,scores, label=str('evolution scores: '), width=100, height=20)
-            fig.plot(rec_lenf,fitness, label=str('evolution fitness: '), width=100, height=20)
-            front = [ list(i.dtc.scores.values())[0] for i in ga_out['pf']]
-            front = front[::-1]
-            front_lens = [ i for i in range(0,len(front))]
-
-            fig.plot(front_lens,front, label=str('pareeto front: '), width=100, height=20)
-            fig.show()
-        else:
-            pass
-            #print(fitness)
-
-        #import pdb
-        #pdb.set_trace()
-
-        if bool(best >= 0.1):
-            NGEN = 10
-            MU = 6
-            #print('gets here b')
-
-            ga_out, DO = run_ga(ranges,NGEN,tests,free_params=free_params, NSGA = True, MU = MU, backed=backend, selection=str('selNSGA2'),seed_pop=pf[0].dtc.attrs)
-            best = ga_out['pf'][0].dtc.get_ss()
-    #print('Its ',Bool(best < 0.5), ' that optimisation succeeds on this model class')
-    #print('goodness of fit: ',best)
-    dtcpop = [ p.dtc for p in ga_out['pf'] ]
-    return ( bool(ga_out['pf'][0] < 0.5),dtcpop )
-
-    '''
-def pred_only(test_and_models):
-    # Temporarily patch sciunit judge code, which seems to be broken.
-    (test, dtc) = test_and_models
-    obs = test.observation
-    backend_ = dtc.backend
-    model = mint_generic_model(backend_)
-    model.set_attrs(dtc.attrs)
-    try:
-        pred = test.generate_prediction(model)
-    except:
-        pred = None
-
-    return pred
+def check_test(new_tests):
+    replace = False
+    for k,t in new_tests.items():
+        print(t.observation)
+        if t.observation['value'] is None:
+            replace = True
+            return replace
 
 def score_only(dtc,pred,test):
     '''
@@ -790,12 +550,16 @@ def pred_only(test_and_models):
     backend_ = dtc.backend
     model = mint_generic_model(backend_)
     model.set_attrs(**dtc.attrs)
-    #try:
-    pred = test.generate_prediction(model)
-    #except:
-    #    pred = None
+    if test.passive:
+        test.setup_protocol(model)
+        try:
+            pred = test.extract_features(model,test.get_result(model))
+        except:
+            pred = None
+    else:
+        pred = test.generate_prediction(model)
     print(pred,test.name)
-    return pred#(pred,obs)
+    return pred
 
 
 #def t2m(bridge_judge):
@@ -812,12 +576,6 @@ def _pseudo_decor(bridge_judge):
 
 #@_pseudo_decor
 def bridge_judge(test_and_dtc):
-    #self.test_and_dtc = test_and_dtc
-    # Temporarily patch sciunit judge code, which seems to be broken.
-    #
-    #
-    #def __init__(self):
-    #    self.test_and_dtc = test_and_dtc
     (test, dtc) = test_and_dtc
     obs = test.observation
     backend_ = dtc.backend
@@ -825,22 +583,28 @@ def bridge_judge(test_and_dtc):
     model.set_attrs(**dtc.attrs)
 
 
-    try:
+    if test.passive:
+        test.setup_protocol(model)
+        pred = test.extract_features(model,test.get_result(model))
+
+    else:
         pred = test.generate_prediction(model)
-    except:
-        pred = None
+    #test.observation['mean'] = test.observation['mean'].simplified
+    dtc.predictions[test.name] = pred
+    dtc.observations[test.name] = test.observation
+    if 'mean' in dtc.observations.keys():
+        temp = copy.copy(dtc.observations[test.name]['mean'].simplified)
+        dtc.observations[test.name]['mean'] = temp
+        temp = copy.copy(dtc.predictions[test.name]['mean'].simplified)
+        dtc.predictions[test.name]['mean'] = temp
+        if 'value' in dtc.observations.keys():
+            dtc.observations.pop('value',None)
 
     if type(pred) is not type(None):
-        #print(test.observation,pred)
         try:
             score = test.compute_score(test.observation,pred)
         except:
             score = None
-
-    else:
-        score = None
-    print(pred,score)
-
     return score, dtc
 
 def bridge_dm_test(test_and_dtc):
@@ -1019,29 +783,47 @@ def dtc_to_rheo(dtc):
         dtc.scores = {}
     model = mint_generic_model(dtc.backend)
     model.set_attrs(**dtc.attrs)
-    #import pdb; pdb.set_trace()
-    rtest = get_rtest(dtc)
+    if hasattr(dtc,'tests'):
+        if type(dtc.tests) is type({}) and str('RheobaseTest') in dtc.tests.keys():
+            print(dtc.tests.keys())
+            rtest = dtc.tests['RheobaseTest']
+        else:
+            rtest = get_rtest(dtc)
+    else:
+        rtest = get_rtest(dtc)
+
+    print(rtest)
+    print(rtest.observation)
+    #import pdb
+    #pdb.set_trace()
     if rtest is not None:
         if isinstance(rtest,Iterable):
-            #import pdb; pdb.set_trace()
             rtest = rtest[0]
         dtc.rheobase = rtest.generate_prediction(model)
-        if not 1 in dtc.lookup.values():
-            print('multispikeing')
-        if type(dtc.rheobase) is not type(None):
-            if not hasattr(dtc,'prediction'):
-                dtc.prediction = {}
-            dtc.prediction[str(rtest.name)] = dtc.rheobase
-            dtc.rheobase = dtc.rheobase['value']
-            obs = rtest.observation
-            score = rtest.compute_score(obs,dtc.rheobase)
-            if type(score.norm_score) is not type(None):
-                dtc.scores[rtest.name] = 1.0 - float(score.norm_score)
+        if dtc.rheobase is not None:
+            if type(dtc.rheobase['value']) is not type(None):
+                if not hasattr(dtc,'prediction'):
+                    dtc.prediction = {}
+                dtc.prediction[str(rtest.name)] = dtc.rheobase
+                dtc.rheobase = dtc.rheobase['value']
+
+                obs = rtest.observation
+                rtest.prediction = None
+                rtest.prediction = dtc.rheobase
+                #import pdb
+                #pdb.set_trace()
+                score = rtest.compute_score(obs,dtc.rheobase)
+                if type(score.norm_score) is not type(None):
+                    dtc.scores[rtest.name] = 1.0 - float(score.norm_score)
+                else:
+                    dtc.scores[rtest.name] = 1.0
             else:
+                dtc.rheobase = None
                 dtc.scores[rtest.name] = 1.0
         else:
             dtc.rheobase = None
             dtc.scores[rtest.name] = 1.0
+
     else:
         # otherwise, if no observation is available, or if rheobase test score is not desired.
         # Just generate rheobase predictions, giving the models the freedom of rheobase
@@ -1073,20 +855,17 @@ def switch_logic(tests):
     Hopefuly depreciated by future NU debugging.
     '''
     if not isinstance(tests,Iterable):
-        if str('RheobaseTest') == tests.name:
-            active = True
-            passive = False
-        elif str('RheobaseTestP') == tests.name:
+        if str('RheobaseTest') == tests.name or str('RheobaseTestP') == tests.name:
             active = True
             passive = False
     else:
-        #import pdb; pdb.set_trace()
         for t in tests:
-            #if not hasattr(t,'keys'):#['protocol']:
-            #    continue
-
-            t.passive = None
-            t.active = None
+            try:
+                t.passive = None
+                t.active = None
+            except:
+                import pdb
+                pdb.set_trace()
             active = False
             passive = False
 
@@ -1123,7 +902,7 @@ def switch_logic(tests):
 
 def active_values(keyed,rheobase,square = None):
     keyed['injected_square_current'] = {}
-    if square is None:
+    if square == None:
         if type(rheobase) is type({str('k'):str('v')}):
             keyed['injected_square_current']['amplitude'] = float(rheobase['value'])*pq.pA
         else:
@@ -1148,36 +927,6 @@ def passive_values(keyed):
     keyed['injected_square_current']['amplitude'] = -10*pq.pA
     return keyed
 
-def format_test(dtc):
-    # pre format the current injection dictionary based on pre computed
-    # rheobase values of current injection.
-    # This is much like the hooked method from the old get neab file.
-    dtc.vtest = {}
-    print(type(dtc.tests))
-    print(dtc.tests)
-    #try:
-    if type(dtc.tests) is type({}):
-        if str('protocol') in dtc.tests.keys():
-            dtc.tests.pop('protocol')
-        tests = [key for key in dtc.tests.values()]
-        dtc.tests = switch_logic(tests)
-    else:
-        dtc.tests = switch_logic(dtc.tests)
-
-
-
-    for k,v in enumerate(dtc.tests):
-        dtc.vtest[k] = {}
-        #for t in tests:
-        if hasattr(v,'passive'):#['protocol']:
-            if v.passive == False and v.active == True:
-                keyed = dtc.vtest[k]
-                dtc.vtest[k] = active_values(keyed,dtc.rheobase)
-                #print(dtc.vtest[k]['injected_square_current']['delay']+dtc.vtest[k]['injected_square_current']['duration'])
-            elif v.passive == True and v.active == False:
-                keyed = dtc.vtest[k]
-                dtc.vtest[k] = passive_values(keyed)
-    return dtc
 
 
 
@@ -1191,94 +940,19 @@ def allocate_worst(tests,dtc):
     for t in tests:
         dtc.scores[str(t.name)] = 1.0
 
-    #assert len(dtc.scores) == dtc.error_length
-    #assert np.sum(dtc.scores.values) == dtc.error_length
-    #print(np.sum(list(dtc.scores.values())),len(dtc.tests))
-    #import pdb; pdb.set_trace()
-    #assert len(dtc.tests) == np.sum(list(dtc.scores.values()))
     return dtc
 
 
-def pred_evaluation(dtc):
-    # Inputs single data transport container modules, and neuroelectro observations that
-    # inform test error error_criterion
-    # Outputs Neuron Unit evaluation scores over error criterion
-    dtc = copy.copy(dtc)
-    # TODO
-    # phase out model path:
-    # via very reduced model
-    if hasattr(dtc,'model_path'):
-        dtc.model_path = path_params['model_path']
-    else:
-        dtc.model_path = None
-        dtc.model_path = path_params['model_path']
-    #preds = []
-    dtc.preds = None
-    dtc.preds = {}
-    dtc = dtc_to_rheo(dtc)
 
-    dtc = format_test(dtc)
-    tests = dtc.tests
-    #import pdb; pdb.set_trace()
-
-    for k,t in enumerate(tests):
-        if str('RheobaseTest') != t.name and str('RheobaseTestP') != t.name:
-            t.params = dtc.vtest[k]
-
-            test_and_models = (t, dtc)
-            pred = pred_only(test_and_models)
-            dtc.preds[str(t.name)] = pred
-
-        else:
-            dtc.preds[str(t.name)] = dtc.rheobase
-    return dtc
-
-def nunit_evaluation_simple(dtc):
-    # Inputs single data transport container modules, and neuroelectro observations that
-    # inform test error error_criterion
-    # Outputs Neuron Unit evaluation scores over error criterion
-    tests = dtc.rtests
-    dtc = copy.copy(dtc)
-    if not hasattr(dtc,'scores') or dtc.scores is None:
-        dtc.scores = None
-        dtc.scores = {}
-
-
-    for k, t in enumerate(tests):
-        #compare_score, compare_dtc =bridge_dm_test((t, dtc))
-        key = str(t)
-        #if str('RheobaseTest') != t.name and str('RheobaseTestP') != t.name:
-        dtc.scores[key] = 1.0
-        t.params = dtc.vtest[k]
-
-        score, dtc = bridge_judge((t, dtc))
-        #compare_score, compare_dtc = bridge_dm_test((t, dtc))
-
-        #dtc.compare_scores[key] = compare_score
-        #print(compare_score,score)
-
-        print(t.name, 'dm score versus elephanat score')
-        if score is not None:
-            if score.norm_score is not None:
-                assignment = 1.0 - score.norm_score
-                dtc.scores[key] = assignment
-        else:
-
-            dtc.scores[key] = 1.0
-            dtc = allocate_worst(tests, dtc)
-    # compute the sum of sciunit score components.
-    dtc.summed = dtc.get_ss()
-
-    return dtc
-
-from neuronunit.tests import dm_test_interoperable #import Interoperabe
+from neuronunit.tests import dm_test_container #import Interoperabe
 from neuronunit.tests.base import VmTest
 from scipy.signal import decimate
 from allensdk.ephys.ephys_extractor import EphysSweepFeatureExtractor
 global cpucount
 cpucount = multiprocessing.cpu_count()
 from scipy.special import logit as logistic
-from neuronunit.tests.fi import SpikeCountSearch, RheobaseTestP, SpikeCountRangeSearch
+from neuronunit.tests.fi import RheobaseTestP
+from neuronunit.tests.target_spike_current import SpikeCountSearch, SpikeCountRangeSearch
 #make_stim_waves = pickle.load(open('waves.p','rb'))
 #import pdb; pdb.set_trace()
 
@@ -1291,12 +965,14 @@ anchor = os.path.dirname(anchor)
 
 mypath = os.path.join(os.sep,anchor,'tests/russell_tests.p')
 #print(anchor,mypath)
-#import pdb; pdb.set_trace()
 rts,complete_map = pickle.load(open(mypath,'rb'))
 df = pd.DataFrame(rts)
 for key,v in rts.items():
     helper_tests = [value for value in v.values() ]
     break
+    print(helper_tests)
+#    pdb.set_trace()
+import pdb; pdb.set_trace()
 
 def sigmoid(x):
     return math.exp(-np.logaddexp(0, -x))
@@ -1368,9 +1044,7 @@ def allen_scores(dtc):
                         score = None
                         print(helper,obs,prediction)
                     dtc.tests[key] = VmTest(obs)
-                    #dtc.prediction = prediction
                     if not score is None and not score.norm_score is None:
-                        #print(key,'fails here because')
                         dtc.scores[key] = 1.0-score.norm_score
                 except:
                     dtc.scores[key] = 1.0
@@ -1524,9 +1198,7 @@ def prediction_current_and_features(dtc):
                         score = None
                         print(helper,obs,prediction)
                     dtc.tests[key] = VmTest(obs)
-                    #dtc.prediction = prediction
                     if not score is None and not score.norm_score is None:
-                        #print(key,'fails here because')
                         dtc.scores[key] = 1.0-score.norm_score
                     else:
                         dtc.scores[key] = 1.0
@@ -1574,6 +1246,9 @@ def new_single_gene(dtc):
     dtc_ = update_dtc_pop(gene,dtc.td)
     dtc_ = pop2dtc(gene,dtc_)
     return (gene,dtc_)
+
+import pickle
+
 def nuunit_allen_evaluation(dtc):
 
     if hasattr(dtc,'vtest'):
@@ -1599,19 +1274,18 @@ def nuunit_allen_evaluation(dtc):
             dtc.ampl = None
             print(scs, dir(scs))
             #import pdb; pdb.set_trace()
-            if target_current is not None:
+            if target_current !=None:
                 dtc.ampl = target_current['value']
                 dtc = prediction_current_and_features(dtc)
                 dtc = filter_predictions(dtc)
                 dtc.error_length = len(dtc.preds)
                 #important_length = len(dtc.preds)
-            if target_current is None or len(dtc.preds)<7:
+            if target_current==None or len(dtc.preds)<7:
                 dtc.ampl = None
                 if target_current is None:
                     dtc.preds = {}
                     return dtc
         else:
-            import pickle
             #pickle.dump(make_stim_waves,open('waves.p','wb'))
 
             make_stim_waves = pickle.load(open('waves.p','wb'))
@@ -1694,6 +1368,7 @@ def nuunit_dm_evaluation(dtc):
     vm30 = model.inject_square_current(current)
     vm30 = model.get_membrane_potential()
     if dtc.rheobase <0.0 or np.max(vm30)<0.0 or model.get_spike_count()<1:
+        dtc.dm_test_features = None
         return dtc
     model.vm30 = None
     model.vm30 = vm30
@@ -1702,7 +1377,7 @@ def nuunit_dm_evaluation(dtc):
 
     model.druckmann2013_input_resistance_currents =[ -5.0*pq.pA, -10.0*pq.pA, -15.0*pq.pA]#,copy.copy(current)
 
-    DMTNMLO = dm_test_interoperable.DMTNMLO()
+    DMTNMLO = dm_test_container.DMTNMLO()
     DMTNMLO.test_setup(None,None,model= model)
     dm_test_features = DMTNMLO.runTest()
     dtc.AP1DelayMeanTest = None
@@ -1738,9 +1413,10 @@ def nuunit_dm_rheo_evaluation(dtc):
 
     model.druckmann2013_input_resistance_currents =[ -5.0*pq.pA, -10.0*pq.pA, -15.0*pq.pA]#,copy.copy(current)
 
-    DMTNMLO = dm_test_interoperable.DMTNMLO()
+    DMTNMLO = dm_test_container.DMTNMLO()
     DMTNMLO.test_setup_subset(None,None,model= model)
     dm_test_features = DMTNMLO.runTest()
+
     #dtc.AP1DelayMeanTest = None
     #dtc.AP1DelayMeanTest = dm_test_features['AP1DelayMeanTest']
     #print(dtc.AP1DelayMeanTest)
@@ -1798,20 +1474,13 @@ def efel_evaluation(dtc):
     trace3['V'] = [ float(v) for v in model.vm30.magnitude]#temp_vm
     trace3['stimulus_current'] = [ model.druckmann2013_strong_current ]
     trace3['stim_end'] = [ trace3['T'][-1] ]
-
-    #trace3['stim_end'] = [ float(model.protocol['Time_End'])*1000.0 ]
     trace3['stim_start'] = [ trace3['T'][0] ]
-
     traces3 = [trace3]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
 
     trace15 = {}
     trace15['T'] = [ float(t) for t in model.vm15.times.rescale('ms') ]
     trace15['V'] = [ float(v) for v in model.vm15.magnitude ]#temp_vm
-
-    #trace15['stim_end'] = [ float(model.protocol['Time_End'])*1000.0 ]
-    #trace15['stim_start'] = [ float(model.protocol['Time_Start'])*1000.0 ]
     trace15['stim_start'] = [ trace15['T'][0] ]
-
     trace15['stimulus_current'] = [ model.druckmann2013_standard_current ]
     trace15['stim_end'] = [ trace15['T'][-1] ]
     traces15 = [trace15]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
@@ -1854,59 +1523,21 @@ def efel_evaluation(dtc):
 
 
 
-def nunit_evaluation(dtc):
-    # Inputs single data transport container modules, and neuroelectro observations that
-    # inform test error error_criterion
-    # Outputs Neuron Unit evaluation scores over error criterion
-    tests = dtc.tests
-    dtc = copy.copy(dtc)
-    if not hasattr(dtc,'scores') or dtc.scores is None:
-        dtc.scores = None
-        dtc.scores = {}
-
-    try:
-        dtc.model_path = path_params['model_path']
-    except:
-        pass
-        #print('only some models need paths')
-    if isinstance(dtc.rheobase,type(None)) or type(dtc.rheobase) is type(None):
-
-        dtc = allocate_worst(tests, dtc)
-        # this should happen when a model lacks a feature it is tested on
-    else:
-
-        for k, t in enumerate(tests):
-            key = str(t)
-            #if str('RheobaseTest') != t.name and str('RheobaseTestP') != t.name:
-            dtc.scores[key] = 1.0
-            t.params = dtc.vtest[k]
-
-            score, dtc = bridge_judge((t, dtc))
-            if score is not None:
-                if score.norm_score is not None:
-                    assignment = 1.0 - score.norm_score
-                    dtc.scores[key] = assignment
-            else:
-                dtc.scores[key] = 1.0
-                dtc = allocate_worst(tests, dtc)
-    dtc.summed = dtc.get_ss()
-    try:
-        greatest = np.max([dtc.error_length,len(dtc.scores)])
-    except:
-        greatest = len(dtc.scores)
-    dtc.scores_ratio = None
-    dtc.scores_ratio = dtc.summed/greatest
+def dtc_to_predictions(dtc):
+    dtc.preds = {}
+    for t in dtc.tests:
+        preds = t.generate_prediction(dtc.dtc_to_model())
+        dtc.preds[t.name] = preds
     return dtc
 
-
-def evaluate_allen(dtc,regularization=False):
+def evaluate_allen(dtc,regularization=True):
     # assign worst case errors, and then over write them with situation informed errors as they become available.
     #print({k:v for k,v in dtc.scores.items()})
     #greatest = np.max([dtc.error_length,len(dtc.ascores)])
-    print(dtc.ascores)
+    #print(dtc.ascores)
     fitness = [ 1.0 for i in range(0,len(dtc.ascores)) ]
     for int_,t in enumerate(dtc.ascores.keys()):
-       if regularization:
+       if regularization == True:
           if dtc.ascores[str(t)] is None:
               fitness[int_] = 1.0
           else:
@@ -1919,10 +1550,11 @@ def evaluate_allen(dtc,regularization=False):
     print(fitness)
     return tuple(fitness,)
 
-def evaluate(dtc,regularization=False):
+def evaluate(dtc,regularization=True):
     # assign worst case errors, and then over write them with situation informed errors as they become available.
     #print({k:v for k,v in dtc.scores.items()})
     #dtc.scores.pop('a Rheobase test',None)
+    #dtc.judge_test()
     try:
         greatest = np.max([dtc.error_length,len(dtc.scores)])
     except:
@@ -1935,10 +1567,11 @@ def evaluate(dtc,regularization=False):
 
     fitness = [ 1.0 for i in range(0,greatest) ]
     for int_,t in enumerate(dtc.scores.keys()):
-       if regularization:
+       if regularization == True:
           fitness[int_] = float(dtc.scores[str(t)]**(1.0/2.0))
        else:
           fitness[int_] = float(dtc.scores[str(t)])
+    print(dtc.scores)
     print(fitness,greatest)
     #import pdb; pdb.set_trace()
     return tuple(fitness,)
@@ -2154,31 +1787,6 @@ def init_pop(pop, td, tests):
 
     return pop, dtcpop
 
-def obtain_rheobase(pop, td, tests):
-    '''
-    Calculate rheobase for a given population pop
-    Ordered parameter dictionary td
-    and rheobase test rt
-    '''
-    pop, dtcpop = init_pop(pop, td, tests)
-    if 'RAW' in dtcpop[0].backend  or 'HH' in dtcpop[0].backend or str('ADEXP') in dtcpop[0].backend:
-        import pdb
-        pdb.set_trace()
-        dtcpop = list(map(dtc_to_rheo,dtcpop))
-        #dtcpop = list(map(format_test,dtcpop))
-    else:
-        dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
-        dtcpop = list(dtcbag.map(dtc_to_rheo))
-
-    for ind,d in zip(pop,dtcpop):
-        if type(d.rheobase) is not type(None):
-            ind.rheobase = d.rheobase
-            d.rheobase = d.rheobase
-        else:
-            ind.rheobase = None
-            d.rheobase = None
-    return pop, dtcpop
-
 def new_single_gene(pop,dtcpop,td):
     # some times genes explored will not return
     # un-usable simulation parameters
@@ -2228,21 +1836,6 @@ def new_single_gene(pop,dtcpop,td):
     ind.rheobase = dtc.rheobase
     return ind,dtc
 
-def serial_route(pop,td,tests):
-    '''
-    parallel list mapping only works with an iterable collection.
-    Serial route is intended for single items.
-    '''
-    if type(dtc.rheobase) is type(None):
-        print('Error Score bad model')
-        for t in tests:
-            dtc.scores[t.names] = 1.0
-            dtc.get_ss()
-    else:
-        dtc = format_test((dtc,tests))
-        dtc = nunit_evaluation((dtc,tests))
-
-    return pop, dtc
 
 def filtered(pop,dtcpop):
     dtcpop = [ dtc for dtc in dtcpop if type(dtc.rheobase) is not type(None) ]
@@ -2274,134 +1867,6 @@ def which_key(thing):
         return 'value'
     if 'mean' in thing.keys():
         return 'mean'
-
-def average_measurements(flat_iter):
-    dtca,dtcb = flat_iter
-    a = OrderedDict()
-    b = OrderedDict()
-    tests = OrderedDict()
-    for k,v in dtcb.preds.items():
-        b[k.name] = v
-    for k,v in dtca.preds.items():
-        a[k.name] = v
-    for k,v in dtca.preds.items():
-        tests[k.name] = k
-    #print(a,b)
-
-    for k in b.keys():
-        if isinstance(a[k], type(None)) or isinstance(b[k], type(None)):
-            dtcb.scores[k] = dtca.scores[k] = 1.0 #- score.norm_score
-            # store the averaged values in the second half of genes.
-            #1.0 #- score.norm_score
-            dtcb.twin = None
-            dtca.twin = None
-            dtca.twin = dtcb.attrs
-            dtcb.twin = dtca.attrs
-            break
-        else:
-            try:
-                aa = which_thing(a[k])
-                bb = which_thing(b[k])
-            except:
-                pass
-
-            t = tests[k]
-            cc = which_thing(t.observation)
-            try:
-                key = which_key(a[k])
-            except:
-                key = 'value'
-
-            grab_units = cc['standard'].units
-
-            pp = {}
-            pp[key] = np.mean([aa['standard'],bb['standard']])*grab_units
-            pp['n'] = 1
-            cc['n'] = 1
-            try:
-                score = t.compute_score(cc,pp)
-                dtcb.scores[k]  = dtca.scores[k] = 1.0 - score.norm_score
-
-                print(score.norm_score)
-            except:
-                score = None
-                dtcb.nuunit_allen_evaluation[k]  = dtca.evaluate[k] = 1.0
-
-            dtcb.twin = None
-            dtca.twin = None
-            dtca.twin = dtcb.attrs
-            dtcb.twin = dtca.attrs
-            # store the averaged values in the first half of genes.
-            # store the averaged values in the second half of genes.
-    return (dtca,dtcb)
-
-
-def opt_pair(dtcpop):
-    '''
-    Used for searching and optimising where averged double sets of model_parameters
-    are the most fundamental gene-unit (rather than single points in high dim parameter space).
-    In other words what is optimised sampled and explored, is the average of two waveform measurements.
-    This allows for the ultimate solution, to be expressed as two disparate parameter points, that when averaged
-    produce a good model.
-    The motivating argument for doing things this way, is because the models, and the experimental data
-    results from averaged contributions of measurements from clustered data points making a model with optimal
-    error, theoretically unaccessible.
-    '''
-    NPART = np.min([multiprocessing.cpu_count(),len(dtcpop)])
-
-    # from neuronunit.optimisation.optimisations import SciUnitOptimisation
-    # get waveform measurements, and store in genes.
-    dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
-    dtcpop = list(dtcbag.map(pred_evaluation).compute())
-    # divide the genes pool in half
-    ab_s = list(itertools.combinations(dtcpop, 2))
-
-    # average measurements between first half of gene pool, and second half.
-
-    dtc_mixed = []
-    for pair in ab_s:
-        dtc = average_measurements(pair)
-        dtc_mixed.append(dtc)
-    dtcpopa = [dtc[0] for dtc in dtc_mixed]
-    dtcpopb = [dtc[1] for dtc in dtc_mixed]
-
-    dtcpop = dtcpopa
-    dtcpop.extend(dtcpopb)
-    assert len(dtcpop) == 2*len(dtcpopb)
-    return dtcpop
-
-def opt_on_pair_of_points(dtcpop):
-    '''
-    Used for searching and optimising where averged double sets of model_parameters
-    are the most fundamental gene-unit (rather than single points in high dim parameter space).
-    In other words what is optimised sampled and explored, is the average of two waveform measurements.
-    This allows for the ultimate solution, to be expressed as two disparate parameter points, that when averaged
-    produce a good model.
-    The motivating argument for doing things this way, is because the models, and the experimental data
-    results from averaged contributions of measurements from clustered data points making a model with optimal
-    error, theoretically unaccessible.
-    '''
-    NPART = np.min([multiprocessing.cpu_count(),len(dtcpop)])
-
-    # from neuronunit.optimisation.optimisations import SciUnitOptimisation
-    # get waveform measurements, and store in genes.
-    dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
-
-    dtcpop = list(dtcbag.map(pred_evaluation).compute())
-    # divide the genes pool in half
-    dtcpopa,dtcpopb = split_list(copy.copy(dtcpop))
-    # average measurements between first half of gene pool, and second half.
-    flat_iter = zip(dtcpopa,dtcpopb)
-    #dtc_mixed = list(map(average_measurements,flat_iter))
-    dtcbag = db.from_sequence(flat_iter, npartitions = NPART)
-    dtc_mixed = list(dtcbag.map(average_measurements))
-    dtcpopa = [dtc[0] for dtc in dtc_mixed]
-    dtcpopb = [dtc[1] for dtc in dtc_mixed]
-
-    dtcpop = dtcpopa
-    dtcpop.extend(dtcpopb)
-    assert len(dtcpop) == 2*len(dtcpopb)
-    return dtcpop
 
 def dtc2gene(pop,dtcpop):
     fitness_attr = pop[0].fitness
@@ -2436,46 +1901,6 @@ def pop2dtc(pop,dtcpop):
             dtcpop[i].boundary_dict = pop[0].boundary_dict
     return dtcpop
 
-def boot_new_genes(number_genes,dtcpop,td):
-    '''
-    Boot strap new genes to make up for completely called onesself.
-    '''
-    from neuronunit.optimisation.optimisations import SciUnitOptimisation
-    import random
-    from datetime import datetime
-    random.seed(datetime.now())
-    #random.seed(64)
-    try:
-        dtcpop[0].tests.pop('protocol')
-    except:
-        pass
-    #DO = SciUnitOptimisation(offspring_size = MU, error_criterion = test,\
-    # boundary_dict = ss, backend = backend, hc = hc, \
-    # selection = selection,protocol=protocol)
-    if len(dtcpop[0].tests)==1:
-        tests = [dtcpop[0].tests]
-    else:
-        tests = dtcpop[0].tests
-    DO = SciUnitOptimisation(offspring_size = number_genes,
-    error_criterion = tests, boundary_dict = dtcpop[0].boundary_dict,
-     backend = dtcpop[0].backend, selection = str('selNSGA'))#,, boundary_dict = ss, elite_size = 2, hc=hc)
-    DO.setnparams(nparams = len(dtcpop[0].attrs), boundary_dict = dtcpop[0].boundary_dict)
-    DO.setup_deap()
-    pop = []
-    if number_genes<5:
-        pop = DO.set_pop(boot_new_random=5)
-    else:
-        pop = DO.set_pop(boot_new_random=number_genes)
-    pop = dtc2gene(pop,dtcpop)
-    dtcpop_ = update_dtc_pop(pop,td)
-    dtcpop_ = pop2dtc(pop,dtcpop_)
-    dtcpop_ = list(map(dtc_to_rheo,dtcpop_))
-    for i,ind in enumerate(pop):
-        pop[i].rheobase = dtcpop_[i].rheobase
-    pop = pop[0:number_genes]
-    dtcpop_ = dtcpop_[0:number_genes]
-
-    return (pop,dtcpop_)
 '''
 def resample_high_sampling_freq(dtcpop):
     for d in dtcpop:
@@ -2494,7 +1919,7 @@ def score_attr(dtcpop,pop):
         pop[i].dtc = copy.copy(d)
     return dtcpop,pop
 def get_dm(pop,dtcpop,tests,td):
-    if CONFIDENT:
+    if CONFIDENT == True:
         dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
         dtcpop = list(dtcbag.map(nuunit_dm_evaluation).compute())
     else:
@@ -2509,7 +1934,7 @@ def get_allen(pop,dtcpop,tests,td):
     for dtc in dtcpop: dtc.spike_number = tests['spike_count']['mean']
     for dtc in dtcpop: dtc.pre_obs = None
     for dtc in dtcpop: dtc.pre_obs = tests
-    if CONFIDENT:
+    if CONFIDENT == True:
         dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
         dtcpop = list(dtcbag.map(nuunit_allen_evaluation).compute())
 
@@ -2531,7 +1956,7 @@ def get_allen(pop,dtcpop,tests,td):
     else:
         for i,(ind,dtc) in enumerate(list(zip(pop,dtcpop))):
             target_current =  None
-            while (dtc.error_length)<2 or target_current is None:
+            while (dtc.error_length)<2 or target_current==None:
                 #import pdb; pdb.set_trace()
                 dtc,ind = new_single_gene(dtc,pop[0].td)
                 observation_spike = {}
@@ -2541,7 +1966,7 @@ def get_allen(pop,dtcpop,tests,td):
                 assert model is not None
                 target_current = scs.generate_prediction(model)
                 dtc.ampl = None
-                if target_current is not None:
+                if target_current !=None:
                     dtc.ampl = target_current['value']
                     print('got to making new genes')
                     dtc = prediction_current_and_features(dtc)
@@ -2552,7 +1977,7 @@ def get_allen(pop,dtcpop,tests,td):
             dtcpop[i] = dtc
 
             print('left loop',dtc.error_length)
-    if CONFIDENT:
+    if CONFIDENT == True:
         dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
         dtcpop = list(dtcbag.map(nuunit_allen_evaluation).compute())
 
@@ -2561,86 +1986,14 @@ def get_allen(pop,dtcpop,tests,td):
 
     return pop, dtcpop
 
-def parallel_route(pop,dtcpop,tests,td,protocol=None):
-    NPART = np.min([multiprocessing.cpu_count(),len(dtcpop)])
-    if type(tests) is type(dict):
-        tests = [ values for value in tests.values() ]
-    print(tests['protocol'])
-    if type(tests['protocol']) is type({}):
+def eval_subtest(name):
+    for dtc in dtcpop:
+        for t in dtc.tests:
+            if name in t.name:
+                score, dtc = bridge_judge((t, dtc))
+                print('rheobase real score \n\n\n\n\n {0}'.format(score))
 
-        if tests['protocol']['elephant']:
-           tests['protocol'] = 'elephant'
-        elif tests['protocol']['allen']:
-           tests['protocol'] = 'allen'
-    if str('allen') in tests['protocol']:
-
-        pop, dtcpop = get_allen(pop,dtcpop,tests,td)
-        pop = [pop[i] for i,d in enumerate(dtcpop) if type(d) is not type(None)]
-        dtcpop = [d for d in dtcpop if type(d) is not type(None)]
-        return pop, dtcpop
-
-    elif str('dm') in tests['protocol']:
-        pop, dtcpop = get_dm(pop,dtcpop,tests,td)
-        return pop, dtcpop
-
-    elif str('elephant') in tests['protocol']:
-        for d in dtcpop:
-            d.tests = copy.copy(tests)
-
-        if CONFIDENT:
-            dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
-            dtcpop = list(dtcbag.map(format_test).compute())
-
-            dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
-            dtcpop = list(dtcbag.map(nunit_evaluation).compute())
-        else:
-            dtcpop = list(map(format_test,dtcpop))
-            dtcpop = list(map(nunit_evaluation,dtcpop))
-
-    return pop, dtcpop
-
-def make_up_lost(pop,dtcpop,td):
-    '''
-    make new genes.
-    '''
-    before = len(pop)
-    fitness_attr = pop[0].fitness
-    spare = copy.copy(dtcpop)
-
-    (pop,dtcpop) = filtered(pop,dtcpop)
-    after = len(pop)
-    delta = before-after
-    if not delta:
-        return (pop,dtcpop)
-    if delta:
-        cnt = 0
-        while delta:
-            #ind,dtc = new_single_gene(pop,dtcpop,td)
-            pop_,dtcpop_ = boot_new_genes(delta,spare,td)
-            for dtc,ind in zip(pop_,dtcpop_):
-                ind.from_imputation = None
-                dtc.from_imputation = None
-                ind.from_imputation = True
-                dtc.from_imputation = True
-            pop_ = [ p for p in pop_ if len(p)>1 ]
-            if cnt>=2 or not len(pop_):
-                pop.extend(pop[0])
-                dtcpop.extend(dtcpop[0])
-            else:
-                pop.extend(pop_)
-                dtcpop.extend(dtcpop_)
-            (pop,dtcpop) = filtered(pop,dtcpop)
-            for i,p in enumerate(pop):
-                if not hasattr(p,'fitness'):
-                    p.fitness = fitness_attr
-
-            after = len(pop)
-            delta = before-after
-            if not delta:
-                break
-            print(cnt,delta,'make new genes')
-        return pop, dtcpop
-
+   
 def grid_search(explore_ranges,test_frame,backend=None):
     '''
     Hopefuly this method can depreciate the whole file optimisation_management/exhaustive_search.py
@@ -2683,11 +2036,13 @@ def grid_search(explore_ranges,test_frame,backend=None):
             serial_faster = False
             dtcpop = list(map(dtc_to_rheo,dtcpop))
         dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
-        dtcpop = list(dtcbag.map(format_test))
+        dtcpop = list(dtcbag.map(self.format_test))
         dtcpop = [ dtc for dtc in dtcpop if type(dtc.rheobase) is not type(None) ]
 
         dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
-        dtcpop = list(dtcbag.map(nunit_evaluation))
+
+
+        dtcpop = list(dtcbag.map(self.elephant_evaluation))
         for dtc in dtcpop:
             store_results[str(local_attrs.values())][key] = dtc.get_ss()
     df = pd.DataFrame(store_results)
@@ -2700,103 +2055,17 @@ def grid_search(explore_ranges,test_frame,backend=None):
     seeds = {}
     for k,v in best_params.items():
         for nested_key,nested_val in v.items():
-            if nested_val:
+            if True == nested_val:
                 seed = nested_key
                 seeds[k] = seed
     with open(str(backend)+'_seeds.p','wb') as f:
         pickle.dump(seeds,f)
     return seeds, df
 
-'''
-def test_runner(pop,td,tests,single_spike=True,protocol=None):
-    if protocol['elephant']:
-        print('gets here')
-        import pdb
-        pdb.set_trace()
-        pop_, dtcpop = obtain_rheobase(pop, td, tests)
-
-        for ind,dtc in zip(pop,dtcpop):
-            dtc.error_length = ind.error_length
-            error_length = ind.error_length
-        pop, dtcpop = make_up_lost(copy.copy(pop_), dtcpop, td)
-
-        # there are many models, which have no actual rheobase current injection value.
-        # filter, filters out such models,
-        # gew genes, add genes to make up for missing values.
-        # delta is the number of genes to replace.
-
-    elif protocol['allen']:
-
-        pop, dtcpop = init_pop(pop, td, tests)
-        for ind,dtc in zip(pop,dtcpop):
-            dtc.error_length = ind.error_length
-            error_length = ind.error_length
-
-        #pop, dtcpop = obtain_rheobase(pop, td, tests)
-
-        for ind,d in zip(pop,dtcpop):
-            d.error_length = error_length
-            ind.error_length = error_length
-
-    pop,dtcpop = parallel_route(pop, dtcpop, tests, td,protocol=protocol)#, clustered=False)
-    for ind,d in zip(pop,dtcpop):
-        ind.dtc = None
-        ind.dtc = d
-        #import pdb; pdb.set_trace()
-        print(d.get_ss())
-        if not hasattr(ind,'fitness'):
-            ind.fitness = copy.copy(pop_[0].fitness)
-            for i,v in enumerate(list(ind.fitness.values)):
-                ind.fitness.values[i] = list(ind.dtc.evaluate.values())[i]
-    pop = [ ind for ind,d in zip(pop,dtcpop) if d.scores is not None ]
-    dtcpop = [ d for ind,d in zip(pop,dtcpop) if d.scores is not None ]
-    #import pdb; pdb.set_trace()
-    return pop,dtcpop
-'''
-'''
-def update_deap_pop(self,pop, tests, td, backend = None,hc = None,boundary_dict = None, error_length=None):
-    #Inputs a population of genes (pop).
-    #Returned neuronunit scored DataTransportContainers (dtcpop).
-    #This method converts a population of genes to a population of Data Transport Containers,
-    #Which act as communicatable data types for storing model attributes.
-    #Rheobase values are found on the DTCs
-    #DTCs for which a rheobase value of x (pA)<=0 are filtered out
-    #DTCs are then scored by neuronunit, using neuronunit models that act in place.
-    if len(pop)==0:
-        import pdb
-        pdb.set_trace()
-    #pop = copy.copy(pop)
-    if hc is not None:
-        pop[0].td = None
-        pop[0].td = self.td
-
-    if hc is not None:
-        pop[0].hc = None
-        pop[0].hc = hc
-
-    if backend is not None:
-        pop[0].backend = None
-        pop[0].backend = backend
-    if boundary_dict is not None:
-        pop[0].boundary_dict = None
-        pop[0].boundary_dict = boundary_dict
-    for p in pop:
-        if error_length is not None:
-            p.error_length = None
-            p.error_length = error_length
-
-
-    pop, dtcpop = test_runner(pop,td,tests)
-    for p,d in zip(pop,dtcpop):
-        p.dtc = d
-        print(p.error_length)
-    return pop
-'''
 class OptMan():
     def __init__(self,tests, td=None, backend = None,hc = None,boundary_dict = None, error_length=None,protocol=None):
         self.tests = tests
         self.td = td
-        self.protocol=protocol
         self.error_length = len(tests)
         print(len(tests),self.error_length,tests)
         self.tests = tests
@@ -2804,6 +2073,505 @@ class OptMan():
         self.hc = hc
         self.boundary_dict= boundary_dict
         self.protocol = protocol
+
+
+    def dtc_to_elephant(self,dtc):
+        ET = ETest(dtc.dtc_to_model(),dtc)
+        temp = ET.runTest()
+        dtc.other_scores = temp[0]
+        dtc.other_tests = temp[1]
+        return dtc
+
+
+    def round_trip_test(self,tests,backend,free_paramaters=None,NGEN=None,MU=None,mini_tests=None):
+        from neuronunit.optimisation.optimisations import run_ga
+
+        '''
+        # Inputs:
+        #    -- tests, a list of NU test types,
+        #    -- backend a string encoding what model, backend, simulator to use.
+        # Outputs:
+        #    -- a score, that should be close to zero larger is worse.
+        # Synopsis:
+        #    -- Given any models
+        # check if the optimiser can find arbitarily sampeled points in
+        # a parameter space, using only the information in the error gradient.
+        # make some new tests based on internally generated data
+        # as opposed to experimental data.
+        '''
+
+        out_tests = []
+
+        if NGEN is None:
+            NGEN = 10
+        if MU is None:
+            MU = 10
+        ranges = MODEL_PARAMS[backend]
+
+        if self.protocol['allen'] == True:
+            dtc = False
+            while dtc is False:
+                dsolution,rp,chosen_keys,random_param = process_rparam(backend)
+                (new_tests,dtc) = self.make_imputed_observations(tests,backend,rp)
+                for t in new_tests:
+                    print(t.name,t.observation)
+            observations = dtc.preds
+            target_spikes = dtc.spike_number+10
+            observation_spike = {}
+            observation_spike['value'] = target_spikes
+            ga_out, DO = run_ga(ranges,NGEN,observations,free_params=free_params, MU = MU, backend=backend, selection=str('selNSGA3'), protocol={'allen':True,'elephant':False})
+            ga_out.b = None
+            ga_out.bdtc = ga_out['pf'][0].dtc
+            dtcpop0 = [ p.dtc for p in ga_out['pf'] ]
+            dtcpop1 = [ dsolution for i in range(0,len(ga_out['pf'])) ]
+            inject_and_plot(dtcpop0,second_pop=dtcpop1,third_pop=[dtcpop0[0],dtcpop0[-1]],figname='snippets.png',snippets=True)
+
+        elif self.protocol['elephant'] == True:
+            new_tests = False
+            while new_tests is False:
+                dsolution,rp,chosen_keys,random_param = process_rparam(backend)
+                (new_tests,dtc) = self.make_imputed_observations(tests,backend,rp,dsolution=dsolution)
+                print('at a critical check')
+                if type(new_tests) is not type(False):
+                    if 'RheobaseTest' not in new_tests.keys():
+                        continue
+                    try:
+                        dsolution.rheobase = new_tests['RheobaseTest'].observation
+                    except:
+                        dsolution.rheobase = new_tests['RheobaseTestP'].observation
+
+            for k,v in new_tests.items():
+                if type(v) is type({}):
+                    try:
+                        v.observation['mean'] = v.observation['mean'].simplified
+                    except:
+                        v.observation['value'] = v.observation['value'].simplified
+
+
+
+            dtc = self.dtc_to_elephant(dtc)
+            import pdb
+            pdb.set_trace()
+
+
+
+            if type(mini_tests) is not type(None):
+                results = {}
+                mini_tests = {}
+
+                for k,t in new_tests.items():
+                    mini_tests[k] = t
+
+                for k,v in mini_tests.items():
+                    mt = {}
+                    mt[k] = v
+                    if str('ReobaseTest') in new_tests.keys():
+                        mt['RheobaseTest'] = new_tests['RheobaseTest']
+                    if str('ReobaseTestP') in new_tests.keys():
+                        mt['RheobaseTest'] = new_tests['RheobaseTestP']
+
+                    ga_out, DO = run_ga(ranges,NGEN,mt,free_params=rp.keys(), MU = MU, backend=backend, selection=str('selNSGA2'),protocol={'elephant':True,'allen':False})
+                    results[k] = copy.copy(ga_out['pf'][0].dtc.scores)
+                print(ga_out['pf'][0].dtc.scores)
+                print(results)
+            else:
+                ga_out, DO = run_ga(ranges,NGEN,new_tests,free_params=chosen_keys, MU = MU, backend=backend, selection=str('selNSGA2'))
+                results = copy.copy(ga_out['pf'][0].dtc.scores)
+                print(results)
+                import pdb
+                pdb.set_trace()
+
+            print(ga_out['pf'][0].dtc.scores)
+            print(results)
+            #for t in new_tests:
+            dtcpop0 = [ p.dtc for p in ga_out['pf'][0:2] ]
+            dtcpop1 = [ dsolution for i in range(0,len(ga_out['pf'])) ][0:2]
+            #import pdb; pdb.set_trace()
+            print(ga_out['pf'][0].dtc.attrs)
+            #print(rp)
+            import pdb; pdb.set_trace()
+
+            inject_and_plot(dtcpop0,second_pop=dtcpop1,third_pop=[dtcpop0[0]],figname='not_a_problem.png',snippets=True)
+            return ga_out,dtcpop0,dtcpop1
+
+    def round_trip_test_rheob(self,tests,backend,free_paramaters=None,NGEN=None,MU=None):
+        '''
+        # Inputs:
+        #    -- tests, a list of NU test types,
+        #    -- backend a string encoding what model, backend, simulator to use.
+        # Outputs:
+        #    -- a score, that should be close to zero larger is worse.
+        # Synopsis:
+        #    -- Given any models
+        # lets check if the optimiser can find arbitarily sampeled points in
+        # a parameter space, using only the information in the error gradient.
+        # make some new tests based on internally generated data
+        # as opposed to experimental data.
+        '''
+
+        out_tests = []
+
+        #dsolution.rheobase = tests['RheobaseTest'].observation['value']
+        if NGEN is None:
+            NGEN = 10
+        if MU is None:
+            MU = 10
+        ranges = MODEL_PARAMS[backend]
+
+        if self.protocol['allen'] == True:
+            dtc = False
+            while dtc is False:
+                dsolution,rp,chosen_keys,random_param = process_rparam(backend)
+                free_params = random_param.keys()
+
+                dtc = self.make_imputed_observations(tests,backend,rp)
+                dsolution.tests = tests
+            #dtc = new_tests
+            observations = dtc.preds
+            target_spikes = dtc.spike_number+10
+            observation_spike = {}
+            observation_spike['value'] = target_spikes
+            ga_out, DO = run_ga(ranges,NGEN,observations,free_params=free_params, MU = MU, backend=backend, selection=str('selNSGA3'), protocol={'allen':True,'elephant':False})
+            ga_out.b = None
+            ga_out.bdtc = ga_out['pf'][0].dtc
+            dtcpop0 = [ p.dtc for p in ga_out['pf'] ]
+            dtcpop1 = [ dsolution for i in range(0,len(ga_out['pf'])) ]
+            inject_and_plot(dtcpop0,second_pop=dtcpop1,third_pop=[dtcpop0[0],dtcpop0[-1]],figname='snippets.png',snippets=True)
+
+        elif self.protocol['elephant'] == True:
+            new_tests = False
+            while new_tests is False:
+                dsolution,rp,chosen_keys,random_param = process_rparam(backend)
+                free_params = random_param.keys()
+
+                new_tests = self.make_imputed_observations(tests,backend,rp)
+
+            if free_paramaters is None:
+                fp = chosen_keys
+            else:
+                fp = free_paramaters
+            dsolution.rheobase = new_tests['RheobaseTest'].observation
+            import pdb
+            mini_tests = {}
+            cnt=0
+            while check_test(new_tests):
+                new_tests = self.make_imputed_observations(tests,backend,rp)
+                print('stuck in loop cnt=: {0}'.format(cnt))
+            results = {}
+            mini_tests = {}
+
+            mini_tests['RheobaseTest'] = new_tests['RheobaseTest']
+
+
+            ga_out, DO = run_ga(ranges,NGEN,mini_tests,free_params=fp, MU = MU, backend=backend, selection=str('selNSGA2'))
+            pdb.set_trace()
+
+            #for t in new_tests:
+            dtcpop0 = [ p.dtc for p in ga_out['pf'][0:2] ]
+            dtcpop1 = [ dsolution for i in range(0,len(ga_out['pf'])) ][0:2]
+            #import pdb; pdb.set_trace()
+            print(ga_out['pf'][0].dtc.attrs)
+            #print(rp)
+            import pdb; pdb.set_trace()
+
+            return ga_out,dtcpop0,dtcpop1
+
+
+    def pred_evaluation(self,dtc):
+        # Inputs single data transport container modules, and neuroelectro observations that
+        # inform test error error_criterion
+        # Outputs Neuron Unit evaluation scores over error criterion
+        dtc = copy.copy(dtc)
+        # TODO
+        # phase out model path:
+        # via very reduced model
+        if hasattr(dtc,'model_path'):
+            dtc.model_path = path_params['model_path']
+        else:
+            dtc.model_path = None
+            dtc.model_path = path_params['model_path']
+        dtc.preds = None
+        dtc.preds = {}
+        dtc = dtc_to_rheo(dtc)
+
+        dtc = self.format_test(dtc)
+        tests = dtc.tests
+
+        for k,t in enumerate(tests):
+            if str('RheobaseTest') != t.name and str('RheobaseTestP') != t.name:
+                t.params = dtc.vtest[k]
+
+                test_and_models = (t, dtc)
+                pred = pred_only(test_and_models)
+                dtc.preds[str(t.name)] = pred
+
+            else:
+                dtc.preds[str(t.name)] = dtc.rheobase
+        return dtc
+
+
+    def elephant_evaluation(self,dtc):
+        # Inputs single data transport container modules, and neuroelectro observations that
+        # inform test error error_criterion
+        # Outputs Neuron Unit evaluation scores over error criterion
+        tests = dtc.tests
+        dtc = copy.copy(dtc)
+        if not hasattr(dtc,'scores') or dtc.scores is None:
+            dtc.scores = None
+            dtc.scores = {}
+
+        if isinstance(dtc.rheobase,type(None)) or type(dtc.rheobase) is type(None):
+            dtc = allocate_worst(tests, dtc)
+            print('score worst via test failure at {0}'.format('rheobase'))
+        else:
+
+            for k, t in enumerate(tests):
+                key = str(t)
+                dtc.scores[key] = 1.0
+                dtc = self.format_test(dtc)
+                t.params = dtc.vtest[k]
+                print(t.name,t.params,'wrong params is a problem')
+                score, dtc = bridge_judge((t, dtc))
+                assignment = 1.0
+                import pdb
+                if score is not None:
+                    if score.norm_score is not None:
+                        assignment = 1.0 - score.norm_score
+                    else:
+                        dtc.judge_test()
+                else:
+                    dtc.judge_test()
+                dtc.scores[key] = assignment
+
+        dtc.summed = dtc.get_ss()
+        try:
+            greatest = np.max([dtc.error_length,len(dtc.scores)])
+        except:
+            greatest = len(dtc.scores)
+        dtc.scores_ratio = dtc.summed/greatest
+        #pdb.set_trace()
+        return dtc
+
+        def serial_route(self,pop,td,tests):
+            '''
+            parallel list mapping only works with an iterable collection.
+            Serial route is intended for single items.
+            '''
+            if type(dtc.rheobase) is type(None):
+                print('Error Score bad model')
+                for t in tests:
+                    dtc.scores[t.names] = 1.0
+                    dtc.get_ss()
+            else:
+                dtc = self.format_test((dtc,tests))
+                dtc = self.elephant_evaluation((dtc,tests))
+
+            return pop, dtc
+
+
+
+    def format_test(self,dtc):
+        # pre format the current injection dictionary based on pre computed
+        # rheobase values of current injection.
+        # This is much like the hooked method from the old get neab file.
+        dtc.vtest = {}
+
+        dtc.tests = copy.copy(self.tests)
+
+        if type(dtc.tests) is type({}):
+            tests = [key for key in dtc.tests.values()]
+            dtc.tests = switch_logic(tests)
+        else:
+            dtc.tests = switch_logic(dtc.tests)
+
+
+
+        for k,v in enumerate(dtc.tests):
+            dtc.vtest[k] = {}
+            #for t in tests:
+            if hasattr(v,'passive'):#['protocol']:
+                if v.passive == False and v.active == True:
+                    keyed = dtc.vtest[k]
+                    dtc.vtest[k] = active_values(keyed,dtc.rheobase)
+                    #print(dtc.vtest[k]['injected_square_current']['delay']+dtc.vtest[k]['injected_square_current']['duration'])
+                elif v.passive == True and v.active == False:
+                    keyed = dtc.vtest[k]
+                    dtc.vtest[k] = passive_values(keyed)
+            if v.name in str('RestingPotentialTest'):
+
+                #keyed['injected_square_current']['amplitude'] = -10*pq.pA
+                dtc.vtest[k]['injected_square_current']['amplitude'] = 0.0*pq.pA
+                keyed = dtc.vtest[k]
+                #print(keyed)
+        return dtc
+
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    def make_imputed_observations(self,tests,backend,random_param,dsolution=None):
+        '''
+        to be used in conjunction with round_trip_test below.
+
+        '''
+        if dsolution is None:
+            dtc = DataTC()
+            dtc.attrs = random_param
+            dtc.backend = copy.copy(backend)
+        else:
+            dtc = dsolution
+            #dsolution = dtc
+        if self.protocol['elephant'] == True:
+            if str('RheobaseTest') in tests.keys():
+                dtc = get_rh(dtc,tests['RheobaseTest'])
+                if type(dtc.rheobase) is type(float(0.0)):
+                    pass
+                if type(dtc.rheobase) is type({'1':0}):
+                    if dtc.rheobase['value'] is None:
+                        return (False,dtc)
+            dtc = make_new_random(dtc, copy.copy(backend))
+            tests = list(tests.values())
+            dtc.tests = tests
+            for i,t in enumerate(tests):
+                if type(t) is type(str('')):
+                    if t in str('elephant'):
+                        break
+            del tests[i]
+            simulated_observations = {t.name:copy.copy(t.observation['value']) for t in tests}
+            simulated_observations = {k:v for k,v in simulated_observations.items() if v is not None}
+            dtc.observation = simulated_observations
+            dtc = self.pred_evaluation(dtc)
+            model = dtc.dtc_to_model()
+            dtc = self.format_test(dtc)
+            for t in dtc.tests:
+                if t.name in "CapacitanceTest":
+                    model.inject_square_current(t.params['injected_square_current'])
+                    vm = model.get_membrane_potential()
+
+                    t.cp = None
+                    t.cp = vm
+                    dtc.cp = None
+                    dtc.cp = vm
+                    dtc.plot_obs(dtc.cp)
+
+
+                if t.name in "RestingPotentialTest":
+                    model.inject_square_current(t.params['injected_square_current'])
+                    vm = model.get_membrane_potential()
+
+                    t.rp = None
+                    t.rp = vm
+                    dtc.rp = None
+                    dtc.rp = vm
+                    dtc.plot_obs(dtc.rp)
+                if t.name in "InjectedCurrentAPWidthTest":
+                    model.inject_square_current(t.params['injected_square_current'])
+                    vm = model.get_membrane_potential()
+                    t.ow = None
+                    t.ow = vm
+                    dtc.owh = None
+                    dtc.owh = vm
+                    dtc.plot_obs(dtc.owh)
+
+            simulated_observations = {k:p for k,p in dtc.preds.items() if type(k) is not type(None) and type(p) is not type(None) }
+
+            while len(dtc.preds)!= len(simulated_observations):
+                dtc = make_new_random(dtc, copy.copy(backend))
+                dtc = self.pred_evaluation(dtc)
+                dtc.tests = tests
+                simulated_observations = {k:p for k,p in dtc.preds.items() if type(k) is not type(None) and type(p) is not type(None) }
+
+
+            try:
+                temp = copy.copy(simulated_observations['RheobaseTest'])
+                simulated_observations['RheobaseTest'] = {}
+                simulated_observations['RheobaseTest']['value'] = temp
+            except:
+                pass
+
+            simulated_observations = {k:p for k,p in simulated_observations.items() if type(k) is not type(None) and type(p) is not type(None) }
+            for k,p in simulated_observations.items():
+
+                if not hasattr(p,'keys'):
+                    pass
+                if 'mean' in p.keys():
+                    p['value'] = p.pop('mean')
+            for ind,t in enumerate(tests):
+                if 'mean' in t.observation.keys():
+                    t.observation['value'] = t.observation.pop('mean')
+                pred = simulated_observations[str(t.name)]['value']
+                try:
+                    pred = pred.rescale(t.units)
+                    t.observation['value'] = pred
+                except:
+                    t.observation['value'] = pred
+                t.observation['mean'] = t.observation['value']
+                try:
+                    score = t.compute_score(t.observation,simulated_observations[str(t.name)])
+
+                except:
+                    print(simulated_observations[str(t.name)])
+            for k,v in simulated_observations.items():
+                s = simulated_observations[k]['value']
+                try:
+                    s.rescale(v.units)
+                    v.rescale(s.units)
+                    assert float(s)==float(v)
+
+                except:
+                    pass
+
+                simulated_observations[k]['mean'] = s
+            test_dic = {}
+
+            for t in tests:
+                test_dic[t.name] = t
+            return test_dic, dtc
+
+
+        if self.protocol['allen'] == True:
+            #target_current = None
+            dtc = DataTC()
+            dtc.backend = backend
+            dtc.pre_obs = tests
+            target_current = None
+            while target_current == None or important_length<15:
+                dtc.attrs = random_p(dtc.backend)
+                make_stim_waves = pickle.load(open('waves.p','rb'))
+                #import pdb; pdb.set_trace()
+                from neuronunit.tests.fi import SpikeCountSearch
+                observation_spike = {}
+                observation_spike['value'] = 10.0
+                for i in list(make_stim_waves.keys()):
+                    print(i)
+
+                # make_stim_waves)[0]]
+                # note set delay and duration to be anything.
+                if dtc.backend is str("GLIF"):
+                    observation_range = {}
+                    observation_range['range'] = [2,15]
+
+                    scs = SpikeCountRangeSearch(observation_range)
+                else:
+                    scs = SpikeCountSearch(observation_spike)
+                model = new_model(dtc)
+                assert model is not None
+                target_current = scs.generate_prediction(model)
+
+                dtc.ampl = None
+                #import pdb; pdb.set_trace()
+                if target_current !=None:
+                    dtc.ampl = target_current['value']
+                    dtc = prediction_current_and_features(dtc)
+                    dtc = filter_predictions(dtc)
+                    important_length = len(dtc.preds)
+            target_spikes = dtc.spike_number
+            observation_spike = {}
+            observation_spike['value'] = target_spikes
+            dtc.preds['spike_count'] ={}
+            dtc.preds['spike_count']['mean'] = target_spikes
+            dtc.preds['current'] = {}
+            dtc.preds['current']['mean'] = target_current['value']
+            dtc.pre_obs = dtc.preds
+            return dtc
 
     def update_dtc_pop(self,pop, td):
         '''
@@ -2869,9 +2637,11 @@ class OptMan():
         and rheobase test rt
         '''
         pop, dtcpop = self.init_pop(pop, td, tests)
-        if 'RAW' in self.backend  or 'HH' in self.backend or str('ADEXP') in self.backend:
+        #for d in dtcpop:
+        #    d.tests = tests
+        if 'RAW' in self.backend  or 'HH' in self.backend:# or str('ADEXP') in self.backend:
             dtcpop = list(map(dtc_to_rheo,dtcpop))
-            #dtcpop = list(map(format_test,dtcpop))
+            dtcpop = list(map(self.format_test,dtcpop))
         else:
             dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
             dtcpop = list(dtcbag.map(dtc_to_rheo))
@@ -2885,15 +2655,70 @@ class OptMan():
                 d.rheobase = None
         return pop, dtcpop
 
-    def test_runner(self,pop,td,tests,single_spike=True,protocol=None):
-        if protocol['elephant']:
+    def parallel_route(self,pop,dtcpop,tests,td):
+        NPART = np.min([multiprocessing.cpu_count(),len(dtcpop)])
+        if self.protocol['allen'] == True:
+            pop, dtcpop = get_allen(pop,dtcpop,tests,td)
+            pop = [pop[i] for i,d in enumerate(dtcpop) if type(d) is not type(None)]
+            dtcpop = [d for d in dtcpop if type(d) is not type(None)]
+            return pop, dtcpop
+
+        elif str('dm') in self.protocol.keys():
+            if self.protocol['dm'] == True:
+                print(self.protocol)
+                pdb.set_trace()
+                pop, dtcpop = get_dm(pop,dtcpop,tests,td)
+                return pop, dtcpop
+
+        elif self.protocol['elephant'] == True:
+            for d in dtcpop:
+                d.tests = copy.copy(self.tests)
+
+            if CONFIDENT == True:
+                dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
+                dtcpop = list(dtcbag.map(self.format_test).compute())
+
+                dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
+                dtcpop = list(dtcbag.map(self.elephant_evaluation).compute())
+            else:
+                for d in dtcpop:
+                    d.tests = copy.copy(self.tests)
+
+                #for dtc in dtcpop:
+                    #dtc = self.format_test(dtc)
+
+
+                #dtcpop = list(map(self.elephant_evaluation,dtcpop))
+            if 1==2:
+                # hint at how to simplify above
+                #dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
+                dtcpop = [dtc.dtc_to_predictions() for dtc in dtcpop]#list(dtcbag.map(dtc_to_predictions).compute())
+            #dtcpop = list(map(self.format_test,dtcpop))
+            #dtcpop = list(map(self.dtc_to_elephant,dtcpop))
+
+        for d in dtcpop:
+            if len(d.tests) < 2:
+                print([d.from_imputation for d in dtcpop])
+                print([d.tests for d in dtcpop if hasattr(d,'tests')])
+                print("suggesting imputed genes don't have tests")
+
+
+            try:
+                assert len(d.tests)>0
+            except:
+                print(d.scores)
+                import pdb
+                pdb.set_trace()
+
+        return pop, dtcpop
+
+    def test_runner(self,pop,td,tests,single_spike=True):
+        if self.protocol['elephant']:
             pop_, dtcpop = self.obtain_rheobase(pop, td, tests)
-
-
             for ind,dtc in zip(pop,dtcpop):
                 dtc.error_length = self.error_length
                 error_length = self.error_length
-            pop, dtcpop = make_up_lost(copy.copy(pop_), dtcpop, td)
+            pop, dtcpop = self.make_up_lost(copy.copy(pop_), dtcpop, td)
 
             # there are many models, which have no actual rheobase current injection value.
             # filter, filters out such models,
@@ -2910,12 +2735,12 @@ class OptMan():
             for ind,d in zip(pop,dtcpop):
                 d.error_length = self.error_length
                 ind.error_length = self.error_length
-        pop,dtcpop = parallel_route(pop, dtcpop, tests, td,protocol=protocol)#, clustered=False)
-        both = [(ind,dtc) for ind,dtc in zip(pop,dtcpop) if dtc.scores is not None]
+        pop,dtcpop = self.parallel_route(pop, dtcpop, tests, td)#, clustered=False)
+        both = [(ind,dtc) for ind,dtc in zip(pop,dtcpop) if dtc.scores!=None]
         for ind,d in both:
             ind.dtc = None
             ind.dtc = d
-            if d.scores is not None:
+            if d.scores!=None:
                 ind = copy.copy(both[0][0])
                 d = copy.copy(both[0][1])
 
@@ -2928,6 +2753,55 @@ class OptMan():
         dtcpop = [ d for ind,d in zip(pop,dtcpop) if d.scores is not None ]
         #import pdb; pdb.set_trace()
         return pop,dtcpop
+
+    def make_up_lost(self,pop,dtcpop,td):
+        '''
+        make new genes.
+        '''
+        before = len(pop)
+        fitness_attr = pop[0].fitness
+        spare = copy.copy(dtcpop)
+
+        (pop,dtcpop) = filtered(pop,dtcpop)
+        after = len(pop)
+        delta = before-after
+        if not delta:
+            return (pop,dtcpop)
+        if delta:
+            cnt = 0
+            while delta:
+                pop_,dtcpop_ = self.boot_new_genes(delta,spare,td)
+                for dtc,ind in zip(pop_,dtcpop_):
+                    ind.from_imputation = None
+                    ind.from_imputation = True
+                    dtc.from_imputation = True
+                    dtc.tests = copy.copy(self.tests)
+                    assert len(self.tests)
+                    dtc = self.format_test(dtc)
+
+                    ind.dtc = dtc
+                pop_ = [ p for p in pop_ if len(p)>1 ]
+                if cnt>=2 or not len(pop_):
+                    pop.extend(pop[0])
+                    dtcpop.extend(dtcpop[0])
+                else:
+                    pop.extend(pop_)
+                    dtcpop.extend(dtcpop_)
+                (pop,dtcpop) = filtered(pop,dtcpop)
+                for i,p in enumerate(pop):
+                    if not hasattr(p,'fitness'):
+                        p.fitness = fitness_attr
+
+                after = len(pop)
+                delta = before-after
+                if not delta:
+                    break
+                print(cnt,delta,'make new genes')
+            print([d.from_imputation for d in dtcpop])
+            print([d.tests for d in dtcpop if hasattr(d,'tests')])
+
+
+            return pop, dtcpop
 
     def update_deap_pop(self,pop, tests, td, backend = None,hc = None,boundary_dict = None, error_length=None):
         '''
@@ -2961,12 +2835,42 @@ class OptMan():
                 self.error_length = error_length
 
 
-        pop, dtcpop = self.test_runner(pop,td,tests,protocol=self.protocol)
+        pop, dtcpop = self.test_runner(pop,td,tests)
         for p,d in zip(pop,dtcpop):
             p.dtc = d
             p.error_length = self.error_length
             p.backend = self.backend
         return pop
+    def boot_new_genes(self,number_genes,dtcpop,td):
+        '''
+        Boot strap new genes to make up for completely called onesself.
+        '''
+        from neuronunit.optimisation.optimisations import SciUnitOptimisation
+        import random
+        from datetime import datetime
+        random.seed(datetime.now())
+        tests = self.tests
+        DO = SciUnitOptimisation(offspring_size = number_genes,
+        error_criterion = tests, boundary_dict = dtcpop[0].boundary_dict,
+         backend = dtcpop[0].backend, selection = str('selNSGA'),protocol = self.protocol)#,, boundary_dict = ss, elite_size = 2, hc=hc)
+        DO.setnparams(nparams = len(dtcpop[0].attrs), boundary_dict = dtcpop[0].boundary_dict)
+        DO.setup_deap()
+        pop = []
+        if number_genes<5:
+            pop = DO.set_pop(boot_new_random=5)
+        else:
+            pop = DO.set_pop(boot_new_random=number_genes)
+        pop = dtc2gene(pop,dtcpop)
+        dtcpop_ = update_dtc_pop(pop,td)
+        dtcpop_ = pop2dtc(pop,dtcpop_)
+        dtcpop_ = list(map(dtc_to_rheo,dtcpop_))
+        for i,ind in enumerate(pop):
+            pop[i].rheobase = dtcpop_[i].rheobase
+        pop = pop[0:number_genes]
+        dtcpop_ = dtcpop_[0:number_genes]
+
+        return (pop,dtcpop_)
+
 
 def create_subset(nparams = 10, boundary_dict = None):
     # used by GA to find subsets in parameter space.

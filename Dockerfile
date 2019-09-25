@@ -45,10 +45,12 @@ RUN pip install tornado==4.5.3
 RUN /opt/conda/bin/python3 -m pip install ipykernel
 RUN /opt/conda/bin/python3 -m ipykernel install --user
 RUN pip install deap
+RUN pip install git+https://github.com/fun-zoological-computing/AllenSDK
 WORKDIR $HOME
 # ADD . neuronunit
 # WORKDIR neuronunit
 # RUN sudo /opt/conda/bin/pip install -e .
 #RUN bash post_install.sh
+
 ENTRYPOINT /bin/bash
 

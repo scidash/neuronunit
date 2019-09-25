@@ -5,7 +5,7 @@ import neuronunit
 import pickle
 from neuronunit import tests as _, neuroelectro
 from neuronunit.tests import passive, waveform, fi
-from neuronunit.tests.fi import RheobaseTestP
+#from neuronunit.tests.fi import RheobaseTestP
 from neuronunit.tests import passive, waveform, druckman2013
 from neuronunit.tests import druckman2013 as dm
 
