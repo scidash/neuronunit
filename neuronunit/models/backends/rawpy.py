@@ -12,10 +12,11 @@ import neuronunit.capabilities as cap
 import numpy as np
 from .base import *
 import quantities as qt
-from quantities import mV, ms, s
+from quantities import mV, ms, s, V
 import matplotlib as mpl
 import asciiplotlib as apl
 import numpy
+voltage_units = mV
 
 #mpl.use('Agg')
 from elephant.spike_train_generation import threshold_detection
@@ -23,7 +24,7 @@ from elephant.spike_train_generation import threshold_detection
 # @jit(cache=True) I suspect this causes a memory leak
 from numba import jit
 # @cuda.jit(device=True, cache=True)
-
+import cython
 @jit
 def get_vm(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.364525297619-65.2261863636364), vr=-65.2261863636364, vt=-50, dt=0.030, Iext=[]):
     '''
@@ -32,7 +33,12 @@ def get_vm(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.36452
     This function can't get too pythonic (functional), it needs to be a simple loop for
     numba/jit to understand it.
     '''
+    #Iext = [i/1000000000.0 for i in Iext]
     N = len(Iext)
+    #vr=vr/1000.0
+    #vPeak=vPeak/1000.0
+    #vt=vt/1000.0
+
     v = np.zeros(N)
     u = np.zeros(N)
     v[0] = vr
@@ -46,8 +52,8 @@ def get_vm(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.36452
             v[m+1] = c;# % membrane voltage reset
             u[m+1] = u[m+1] + d;# % recovery variable update
 
-    for m in range(0,N):
-        v[m] = v[m]/1000.0
+    #for m in range(0,N):
+    #    v[m] = v[m]/1000.0
 
     return v
 
@@ -120,14 +126,13 @@ class RAWBackend(Backend):
         """Must return a neo.core.AnalogSignal.
         And must destroy the hoc vectors that comprise it.
         """
-        if type(self.vM) is not type(None):
-            pass
-        else:
 
+        if type(self.vM) is type(None):
             v = get_vm(**self.attrs)
             self.vM = AnalogSignal(v,
-                                   units = mV,
+                                   units = voltage_units,
                                    sampling_period = self.attrs['dt'] * ms)
+
         return self.vM
 
     def set_attrs(self, **attrs):
@@ -135,6 +140,8 @@ class RAWBackend(Backend):
         self.model.attrs.update(attrs)
 
 
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
     def inject_square_current(self, current):#, section = None, debug=False):
         """Inputs: current : a dictionary with exactly three items, whose keys are: 'amplitude', 'delay', 'duration'
         Example: current = {'amplitude':float*pq.pA, 'delay':float*pq.ms, 'duration':float*pq.ms}}
@@ -149,18 +156,14 @@ class RAWBackend(Backend):
             c = current['injected_square_current']
         else:
             c = current
-        try:    
-            amplitude = float(c['amplitude'].simplified) #this needs to be in every backends
-        except:
-            amplitude = float(c['amplitude'])
-        
-
+        amplitude = float(c['amplitude'])#/1000.0 #this needs to be in every backends
 
         duration = float(c['duration'])#/dt#/dt.rescale('ms')
         delay = float(c['delay'])#/dt#.rescale('ms')
-        if 'sim_length' in c.keys():
-            sim_length = c['sim_length']#.simplified
+        #if 'sim_length' in c.keys():
+        #    sim_length = c['sim_length']#.simplified
         tMax = delay + duration + 200.0#/dt#*pq.ms
+
         self.set_stop_time(tMax*pq.ms)
         tMax = self.tstop
         if str('dt') in attrs:
@@ -177,30 +180,34 @@ class RAWBackend(Backend):
         Iext[delay_ind+duration_ind::] = 0.0
 
         attrs['Iext'] = Iext
-        #print(attrs)
-        #if len(attrs)>1:
-        v = get_vm(**attrs)
-        #else:
-        #    v = get_vm(attrs)
-        #print(np.max(v))
+        self.attrs = attrs
+
+        v = get_vm(**self.attrs)
+
+        self.model.attrs.update(attrs)
 
         self.vM = AnalogSignal(v,
-                     units = mV,
-                     sampling_period = attrs['dt'] * ms)
-        '''
-        try:
-            t = [float(f) for f in self.vM.times]
-            v = [float(f) for f in self.vM.magnitude]
+                     units = voltage_units,
+                     sampling_period = attrs['dt']*pq.ms)
 
-            fig = apl.figure()
-            fig.plot(t, v, label=str('spikes: '), width=100, height=20)
-            fig.show()
-        except:
-            pass
-        '''
-        self.attrs = attrs
-        self.model.attrs.update(attrs)
+
         return self.vM
+
+    def _backend_run(self):
+        results = {}
+        #print(self.attrs,'is attributes the empty list?')
+        if len(self.attrs) > 1:
+            v = get_vm(**self.attrs)
+        else:
+            v = get_vm(self.attrs)
+        self.vM = AnalogSignal(v,
+                               units = voltage_units,
+                               sampling_period = self.attrs['dt'] * ms)
+        results['vm'] = self.vM.magnitude
+        results['t'] = self.vM.times
+        results['run_number'] = results.get('run_number',0) + 1
+        return results
+
 
     def inject_square_current_allen(self, current):#, section = None, debug=False):
         """Inputs: current : a dictionary with exactly three items, whose keys are: 'amplitude', 'delay', 'duration'
@@ -226,7 +233,7 @@ class RAWBackend(Backend):
         self.set_stop_time(tMax*pq.ms)
         tMax = self.tstop
         #attrs['dt'] = DT
-        print(DT,tMax)
+        #print(DT,tMax)
         N = int(tMax/DT)#attrs['dt'])
         Iext = np.zeros(N)
         delay_ind = int((delay/tMax)*N)
@@ -239,7 +246,7 @@ class RAWBackend(Backend):
         attrs['Iext'] = Iext
         v = get_vm_regular(**attrs)
         self.vM = AnalogSignal(v,
-                     units = mV,
+                     units = voltage_units,
                      sampling_period = attrs['dt'] * ms)
         #try:
         t = [float(f) for f in self.vM.times]
@@ -253,14 +260,3 @@ class RAWBackend(Backend):
         self.attrs = attrs
         self.model.attrs.update(attrs)
         return (self.vM, t, v)
-
-    def _backend_run(self):
-        results = {}
-        v = get_vm(**self.attrs)
-        self.vM = AnalogSignal(v,
-                               units = mV,
-                               sampling_period = self.attrs['dt'] * ms)
-        results['vm'] = self.vM
-        results['t'] = self.vM.times
-        results['run_number'] = results.get('run_number',0) + 1
-        return results

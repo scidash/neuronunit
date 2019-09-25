@@ -24,7 +24,7 @@ from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.data_transport_container import DataTC
 
 from neuronunit.optimisation.optimization_management import dtc_to_rheo
-from neuronunit.optimisation.optimization_management import nunit_evaluation
+from neuronunit.optimisation.optimization_management import elephant_evaluation
 from neuronunit.optimisation.optimization_management import format_test, mint_generic_model
 
 from neuronunit import tests as nu_tests, neuroelectro
@@ -131,17 +131,16 @@ class testHighLevelOptimisation(unittest.TestCase):
         #sparesely learning the error surface.
 
         #MBEs = list(self.MODEL_PARAMS.keys())
-        MBEs = [str('RAW'),str('BADEXP')]
+        #MBEs = [str('RAW'),str('BADEXP')]
         for key, use_test in self.test_frame.items():
+            #for b in MBEs:
             use_test['protocol'] = str('elephant')
 
-            for b in MBEs:
-            
-                tuples_ = round_trip_test(use_test,b)
-                (boolean,self.dtcpop) = tuples_
-                print('done one')
-                print(boolean,self.dtcpop)
-                self.assertTrue(boolean)
+            tuples_ = round_trip_test(use_test,b)
+            (boolean,self.dtcpop) = tuples_
+            print('done one')
+            print(boolean,self.dtcpop)
+            self.assertTrue(boolean)
         return
     '''
     def test_solution_quality0(self):

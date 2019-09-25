@@ -63,18 +63,6 @@ from neuronunit.optimisation.exhaustive_search import update_dtc_grid as ug
 from sciunit.models.runnable import RunnableModel
 #model = RunnableModel(str(dtc.backend),backend=(dtc.backend, {'DTC':dtc}))
 
-'''
-def update_dtc_grid(item_of_iter_list):
-    dtc = data_transport_container.DataTC()
-    dtc.attrs = deepcopy(item_of_iter_list)
-
-    dtc.scores = {}
-    dtc.rheobase = None
-    dtc.evaluated = False
-    print(dtc)
-    #dtc.backend = 'NEURON'
-    return dtc
-'''
 def grid_points():
     npoints = 10
     nparams = 10
@@ -82,30 +70,13 @@ def grid_points():
     USE_CACHED_GS = False
     grid_points = exhaustive_search.create_grid(npoints = npoints,free_params=free_params)
     dtcpop = []
-    for g in list(grid_points)[0:2]:
+    for g in list(grid_points):
         dtc = data_transport_container.DataTC()
         dtc.attrs = g
         dtcpop.append(dtc)
         print(dtc.attrs)
     return dtcpop
-    '''
-    import pdb
-    pdb.set_trace()
-    try:
-        #if len(grid_points)>3:
-        #    b0 = db.from_sequence(grid_points[0:2], npartitions=2)
-        #else:
-        #    b0 = db.from_sequence(grid_points, npartitions=len(grid_points))
-        #dtcpop = list(b0.map(ug).compute())
-        dtcpop = list(map(grid_points,ug))
-        print(dtcpop)
-        assert dtcpop is not None
-
-    except:
-        print(grid_points)
-        dtcpop = None
-    return dtcpop
-    '''
+   
 
 def test_rheobase_dtc(dtcpop, tests):
     rheobase_test = tests[0][0][0]
