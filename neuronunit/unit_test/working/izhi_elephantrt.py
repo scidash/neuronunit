@@ -133,7 +133,7 @@ class testHighLevelOptimisation(unittest.TestCase):
         results = OM.round_trip_test(use_test,str('RAW'),MU=8,NGEN=8,mini_tests=True)
         pdb.set_trace()
         model = results['pf'][0].dtc.dtc_to_model()
-        
+
         return
 
 
