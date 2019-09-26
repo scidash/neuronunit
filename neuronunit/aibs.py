@@ -1,7 +1,8 @@
 """NeuronUnit module for interaction with the Allen Brain Insitute
 Cell Types database"""
-import logging
-logging.info("test")
+#import logging
+#logger = logging.getLogger(name)
+#logging.info("test")
 import matplotlib as mpl
 mpl.use('agg')
 import matplotlib.pyplot as plt
