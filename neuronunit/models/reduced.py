@@ -1,5 +1,4 @@
 """NeuronUnit model class for reduced neuron models."""
-from .lems import LEMSModel
 
 import numpy as np
 from neo.core import AnalogSignal
@@ -9,8 +8,9 @@ import neuronunit.capabilities as cap
 
 from .static import ExternalModel
 import neuronunit.capabilities.spike_functions as sf
+from neuronunit.optimisation.model_parameters import path_params
 
-
+from .lems import LEMSModel
 class ReducedModel(LEMSModel,
                    cap.ReceivesSquareCurrent,
                    cap.ProducesActionPotentials,
@@ -40,12 +40,10 @@ class ReducedModel(LEMSModel,
         return vm
 
     def get_APs(self, **run_params):
-        #print(run_params, 'run params')
         try:
             vm = self._backend.get_membrane_potential(**run_params)
         except:
             vm = self.get_membrane_potential(**run_params)
-        #print(len(vm),'len vm')
         if hasattr(self._backend,'name'):
 
             self._backend.threshold = np.max(vm)-np.max(vm)/250.0
@@ -74,7 +72,7 @@ class ReducedModel(LEMSModel,
         self._backend.inject_square_current(current)
 
 
-class VeryReducedModel(ExternalModel,
+class VeryReducedModel(ReducedModel,
                    cap.ReceivesCurrent,
                    cap.ProducesActionPotentials,
                    ):
@@ -85,15 +83,17 @@ class VeryReducedModel(ExternalModel,
         LEMS_file_path: Path to LEMS file (an xml file).
         name: Optional model name.
         """
-        super(VeryReducedModel,self).__init__()
-        self.name=name,
-        self.backend=backend,
-        self.attrs=attrs,
-        self.run_number = 0
-        self.tstop = None
-        self.attrs = attrs if attrs else {}
-        self.unpicklable = []
-        self._backend = backend
+        LEMS_MODEL_PATH = path_params['model_path']
+        #model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = str(backend))
+        super(VeryReducedModel,self).__init__(LEMS_MODEL_PATH,name=name,backend=backend)
+        #self.name=name,
+        #self.backend=backend,
+        self.attrs=attrs
+        #self.run_number = 0
+        #self.tstop = None
+        #self.attrs = attrs if attrs else {}
+        #    self.unpicklable = []
+        #self._backend = backend
 
     def set_attrs(self,attrs):
         self._backend.set_attrs(**attrs)
@@ -102,7 +102,7 @@ class VeryReducedModel(ExternalModel,
     def get_backend(self):
         return self._backend
 
-
+    '''
     def run(self, rerun=None, **run_params):
         if rerun is None:
             rerun = self.rerun
@@ -168,3 +168,4 @@ class VeryReducedModel(ExternalModel,
         pass
     def inject_square_current(self, current):
         pass
+    '''
