@@ -138,5 +138,8 @@ class testHighLevelOptimisation(unittest.TestCase):
 
 
 
-if __name__ == '__main__':
-    unittest.main()
+a = testHighLevelOptimisation()
+a.setUp()
+a.test_solution_quality0()
+#if __name__ == '__main__':
+#    unittest.main()
