@@ -17,7 +17,7 @@ import pickle
 from allensdk.api.queries.biophysical_api import BiophysicalApi
 ## Need this import but it fails because of python2 formatted strings.
 #from neuronunit.optimisation.optimisation_management import add_dm_properties_to_cells
-from neuronunit.optimisation.optimisation_management import mint_generic_model, dtc_to_rheo, split_list
+from neuronunit.optimisation.optimization_management import mint_generic_model, dtc_to_rheo, split_list
 from neuronunit.optimisation.data_transport_container import DataTC
 from allensdk.model.glif.glif_neuron import GlifNeuron
 import dask.bag as db
@@ -26,7 +26,7 @@ import multiprocessing
 from allensdk.core.cell_types_cache import CellTypesCache
 from allensdk.ephys.extract_cell_features import extract_cell_features
 from collections import defaultdict
-from neuronunit.optimisation.optimisation_management import inject_rh_and_dont_plot
+from neuronunit.optimisation.optimization_management import inject_rh_and_dont_plot
 
 from allensdk.core.nwb_data_set import NwbDataSet
 import pickle
