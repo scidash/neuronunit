@@ -62,14 +62,14 @@ class DataTC(object):
         #import os
         #model = RunnableModel(str(self.backend),backend=self.backend,attrs=self.attrs)
         #model = RunnableModel(str(self.backend),backend=(self.backend, {'DTC':self}))
-        model = VeryReducedModel(name='vanilla',backend=(self.backend, {'DTC':self}))#, {'DTC':dtc}))
+        model = VeryReducedModel(backend=(self.backend, {'DTC':self}))#, {'DTC':dtc}))
         # If  test taking data, and objects are present (observations etc).
         # Take the rheobase test and store it in the data transport container.
         if not hasattr(self,'scores'):
             self.scores = None
         if type(self.scores) is type(None):
             self.scores = {}
-        model.attrs=self.attrs
+        model.set_attrs(**self.attrs)
         model.scores=self.scores
         model.rheobase = self.rheobase
         return model
