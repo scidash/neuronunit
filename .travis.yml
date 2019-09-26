@@ -4,7 +4,7 @@ python:
   - "3.6"
 install:
   - sudo apt-get update
-  - sudo apt-get install python-lxml
+  - sudo apt-get install python-lxml gnuplot
   - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
@@ -21,12 +21,10 @@ install:
   - pip install git+https://github.com/scidash/sciunit@dev
   - pip install dask distributed brian2 numba
   - pip install --upgrade beautifulsoup4
-    
-
+  - pip install asciiplotlib
 script:
   - cd neuronunit/unit_test/working
-  - python elephant_test.py
-  - python neuronunit/unit_test/working/elephant_test.py
-  - python neuronunit/unit_test/low_level_tests.py
+  - python izhi_elephantrt.py
+  - python neuronunit/unit_test/working/izhi_elephantrt.py
 after_success:
   - coveralls
