@@ -11,8 +11,9 @@ DURATION = 500.0*pq.ms
 DELAY = 200.0*pq.ms
 try:
     import asciiplotlib as apl
+    ascii_plot = True
 except:
-    pass
+    ascii_plot = False
 class TestPulseTest(VmTest):
     """A base class for tests that use a square test pulse."""
 
@@ -28,22 +29,9 @@ class TestPulseTest(VmTest):
     default_params['amplitude'] = -1.0 * pq.pA
     default_params['tmax'] = 1000.0*pq.ms
     required_capabilities = (ncap.ReceivesSquareCurrent,)
-    #def get_injected_square_current(self,model):
-
-        #self.setup_protocol(model)
-        #self.model.inject_square_current(self.params['injected_square_current'])
-        #result = self.model.get_membrane_potential()
-        #return result
-
     name = ''
 
     score_type = scores.ZScore
-
-    #def compute_params(self,model):
-    #    super(TestPulseTest, self).compute_params(model)
-        #self.params['injected_square_current'] = \
-        #    self.get_injected_square_current(model)
-
     def condition_model(self, model):
         if str('tmax') not in self.params.keys():
             self.params['tmax'] = 1000.0*pq.ms
@@ -93,15 +81,15 @@ class TestPulseTest(VmTest):
         Iext[0:delay_ind-1] = i['amplitude']
         Iext[delay_ind:delay_ind+duration_ind-1] = i['amplitude']#*1000.0
         Iext[delay_ind+duration_ind::] = i['amplitude']
+        if ascii_plot:
+            fig = apl.figure()
 
-        fig = apl.figure()
+            fig.plot(ts, vs, label=str('voltage from negative injection: '), width=100, height=20)
+            fig.show()
 
-        fig.plot(ts, vs, label=str('voltage from negative injection: '), width=100, height=20)
-        fig.show()
+            fig.plot(ts, Iext, label=str('negative injection times 1,000: '), width=100, height=20)
 
-        fig.plot(ts, Iext, label=str('negative injection times 1,000: '), width=100, height=20)
-
-        fig.show()
+            fig.show()
         print(r_in.simplified)
         return r_in.simplified
 
@@ -206,6 +194,8 @@ class InputResistanceTest(TestPulseTest):
             observation['value'] = observation['value'].simplified
             score = super(InputResistanceTest, self).compute_score(observation,
                                                                 prediction)
+            import pdb
+            pdb.set_trace()
 
         return score
 

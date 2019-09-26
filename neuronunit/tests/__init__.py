@@ -4,7 +4,8 @@ from .passive import *
 from .waveform import *
 from .dynamics import *
 from .fi import *
-#from .druckman2013 import *
+from .elephant_tests import *
+from .druckman2013 import *
 from sciunit import scores, errors
 
 from sciunit.errors import CapabilityError, InvalidScoreError

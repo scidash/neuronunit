@@ -1,6 +1,10 @@
 """Waveform neuronunit tests, e.g. testing AP waveform properties"""
 from .base import np, pq, ncap, VmTest, scores, AMPL, DELAY, DURATION
-import asciiplotlib as apl
+try:
+    import asciiplotlib as apl
+    ascii_plot = True
+except:
+    ascii_plot = False
 
 class APWidthTest(VmTest):
     """Test the full widths of action potentials at their half-maximum."""
@@ -20,9 +24,9 @@ class APWidthTest(VmTest):
         # len of None returns an exception that is not handled
         model.inject_square_current(self.params['injected_square_current'])
         print(self.params['injected_square_current'])
-        try:
-            widths = model.get_AP_widths()
-            model.get_membrane_potential()
+        model.get_membrane_potential()
+        widths = model.get_AP_widths()
+        if ascii_plot:
             t = [float(f) for f in model.vM.times]
             v = [float(f) for f in model.vM.magnitude]
 
@@ -79,13 +83,14 @@ class InjectedCurrentAPWidthTest(APWidthTest):
 
         model.inject_square_current(self.params['injected_square_current'])
         model.get_membrane_potential()
-        t = [float(f) for f in model.vM.times]
-        v = [float(f) for f in model.vM.magnitude]
+        if ascii_plot:
+            t = [float(f) for f in model.vM.times]
+            v = [float(f) for f in model.vM.magnitude]
 
-        fig = apl.figure()
+            fig = apl.figure()
 
-        fig.plot(t, v, label=str('spikes: ')+str(model.get_spike_count()), width=100, height=20)
-        fig.show()
+            fig.plot(t, v, label=str('spikes: ')+str(model.get_spike_count()), width=100, height=20)
+            fig.show()
 
         prediction = super(InjectedCurrentAPWidthTest, self).\
             generate_prediction(model)
@@ -115,17 +120,17 @@ class APAmplitudeTest(VmTest):
         """Implement sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
-        print(self.params['injected_square_current'])
 
         model.inject_square_current(self.params['injected_square_current'])
         model.get_membrane_potential()
-        t = [float(f) for f in model.vM.times]
-        v = [float(f) for f in model.vM.magnitude]
+        if ascii_plot:
+            t = [float(f) for f in model.vM.times]
+            v = [float(f) for f in model.vM.magnitude]
 
-        fig = apl.figure()
+            fig = apl.figure()
 
-        fig.plot(t, v, label=str('spikes: ')+str(model.get_spike_count()), width=100, height=20)
-        fig.show()
+            fig.plot(t, v, label=str('spikes: ')+str(model.get_spike_count()), width=100, height=20)
+            fig.show()
         try:
             height = np.max(model.get_membrane_potential()) -float(np.min(model.get_membrane_potential()))/1000.0*model.get_membrane_potential().units #- model.get_AP_thresholds()
             prediction = {'mean':height, 'n':1, 'std':height}
@@ -173,17 +178,16 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
                    "is injected into cell.")
 
     def generate_prediction(self, model):
-        print(self.params['injected_square_current'])
-
         model.inject_square_current(self.params['injected_square_current'])
         model.get_membrane_potential()
-        t = [float(f) for f in model.vM.times]
-        v = [float(f) for f in model.vM.magnitude]
+        if ascii_plot:
+            t = [float(f) for f in model.vM.times]
+            v = [float(f) for f in model.vM.magnitude]
 
-        fig = apl.figure()
+            fig = apl.figure()
 
-        fig.plot(t, v, label=str('spikes: ')+str(model.get_spike_count()), width=100, height=20)
-        fig.show()
+            fig.plot(t, v, label=str('spikes: ')+str(model.get_spike_count()), width=100, height=20)
+            fig.show()
         prediction = super(InjectedCurrentAPAmplitudeTest, self).\
             generate_prediction(model)
         return prediction
@@ -213,18 +217,17 @@ class APThresholdTest(VmTest):
         """Implement sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
-        print(self.params['injected_square_current'])
-
         model.inject_square_current(self.params['injected_square_current'])
         model.get_membrane_potential()
-        t = [float(f) for f in model.vM.times]
-        v = [float(f) for f in model.vM.magnitude]
 
-        fig = apl.figure()
+        if ascii_plot:
+            t = [float(f) for f in model.vM.times]
+            v = [float(f) for f in model.vM.magnitude]
 
-        fig.plot(t, v, label=str('spikes: ')+str(model.get_spike_count()), width=100, height=20)
-        fig.show()
-        #model.inject_square_current(self.params['injected_square_current'])
+            fig = apl.figure()
+
+            fig.plot(t, v, label=str('spikes: ')+str(model.get_spike_count()), width=100, height=20)
+            fig.show()
         try:
             threshes = model.get_AP_thresholds()
         except:
@@ -271,13 +274,14 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
     def generate_prediction(self, model):
         model.inject_square_current(self.params['injected_square_current'])
         model.get_membrane_potential()
-        t = [float(f) for f in model.vM.times]
-        v = [float(f) for f in model.vM.magnitude]
+        if ascii_plot:
+            t = [float(f) for f in model.vM.times]
+            v = [float(f) for f in model.vM.magnitude]
 
-        fig = apl.figure()
+            fig = apl.figure()
 
-        fig.plot(t, v, label=str('spikes: ')+str(model.get_spike_count()), width=100, height=20)
-        fig.show()
+            fig.plot(t, v, label=str('spikes: ')+str(model.get_spike_count()), width=100, height=20)
+            fig.show()
         return super(InjectedCurrentAPThresholdTest, self).\
             generate_prediction(model)
 

@@ -29,13 +29,12 @@ from types import MethodType
 
 #import matplotlib.pyplot as plt
 # @jit(cache=True) I suspect this causes a memory leak
-import asciiplotlib as apl
-
 
 try:
     import asciiplotlib as apl
+    ascii_plot = True
 except:
-    pass
+    ascii_plot = False
 import numpy
 
 from scipy.interpolate import interp1d
@@ -247,21 +246,15 @@ class ADEXPBackend(Backend):
         self.n_spikes = int(self.spike_monitor.count[0])
         self.attrs = attrs
 
-
-        t = [float(f) for f in self.vM.times]
-        v = [float(f) for f in self.vM.magnitude]
-        #print(len(v),len(t),'this is a short vector')
-        fig = apl.figure()
-        fig.plot(t, v, label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
-        fig.show()
-        fig  = None
-        try:
+        if ascii_plot:
+            t = [float(f) for f in self.vM.times]
+            v = [float(f) for f in self.vM.magnitude]
+            #print(len(v),len(t),'this is a short vector')
             fig = apl.figure()
             fig.plot(t, v, label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
             fig.show()
             fig  = None
-        except:
-            pass
+
         if len(self.spike_monitor.spike_trains())>1:
             import matplotlib.pyplot as plt
             plt.plot(y,x)
