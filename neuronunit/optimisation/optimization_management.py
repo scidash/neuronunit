@@ -2311,13 +2311,8 @@ class OptMan:
             dtc.tests = switch_logic(dtc.tests)
 
 
-        print(self.tests)
-        import pdb
-        pdb.set_trace()
-
         for k,v in enumerate(dtc.tests):
             dtc.vtest[k] = {}
-            #for t in tests:
             if hasattr(v,'passive'):#['protocol']:
                 if v.passive == False and v.active == True:
                     keyed = dtc.vtest[k]
@@ -2363,92 +2358,30 @@ class OptMan:
             simulated_observations = {k:v for k,v in simulated_observations.items() if v is not None}
             dtc.observation = simulated_observations
             dtc = self.pred_evaluation(dtc)
-            model = dtc.dtc_to_model()
-            dtc = self.format_test(dtc)
-            for t in dtc.tests:
-                if t.name in "CapacitanceTest":
-                    model.inject_square_current(t.params['injected_square_current'])
-                    vm = model.get_membrane_potential()
-
-                    t.cp = None
-                    t.cp = vm
-                    dtc.cp = None
-                    dtc.cp = vm
-                    dtc.plot_obs(dtc.cp)
-
-
-                if t.name in "RestingPotentialTest":
-                    model.inject_square_current(t.params['injected_square_current'])
-                    vm = model.get_membrane_potential()
-
-                    t.rp = None
-                    t.rp = vm
-                    dtc.rp = None
-                    dtc.rp = vm
-                    dtc.plot_obs(dtc.rp)
-                if t.name in "InjectedCurrentAPWidthTest":
-                    model.inject_square_current(t.params['injected_square_current'])
-                    vm = model.get_membrane_potential()
-                    t.ow = None
-                    t.ow = vm
-                    dtc.owh = None
-                    dtc.owh = vm
-                    dtc.plot_obs(dtc.owh)
 
             simulated_observations = {k:p for k,p in dtc.preds.items() if type(k) is not type(None) and type(p) is not type(None) }
 
             while len(dtc.preds)!= len(simulated_observations):
                 dtc = make_new_random(dtc, copy.copy(backend))
                 dtc = self.pred_evaluation(dtc)
-                dtc.tests = tests
+                dtc.tests = xtests
                 simulated_observations = {k:p for k,p in dtc.preds.items() if type(k) is not type(None) and type(p) is not type(None) }
 
 
-            try:
-                temp = copy.copy(simulated_observations['RheobaseTest'])
-                simulated_observations['RheobaseTest'] = {}
-                simulated_observations['RheobaseTest']['value'] = temp
-            except:
-                pass
-
+                if str("RheobaseTest") in simulated_observations.keys():
+                    temp = copy.copy(simulated_observations['RheobaseTest'])
+                    simulated_observations['RheobaseTest'] = {}
+                    simulated_observations['RheobaseTest']['value'] = temp
+                    break
+                else:
+                    continue
+                
             simulated_observations = {k:p for k,p in simulated_observations.items() if type(k) is not type(None) and type(p) is not type(None) }
-            for k,p in simulated_observations.items():
-
-                if not hasattr(p,'keys'):
-                    pass
-                if 'mean' in p.keys():
-                    p['value'] = p.pop('mean')
-            for ind,t in enumerate(tests):
-                if 'mean' in t.observation.keys():
-                    t.observation['value'] = t.observation.pop('mean')
-                pred = simulated_observations[str(t.name)]['value']
-                try:
-                    pred = pred.rescale(t.units)
-                    t.observation['value'] = pred
-                except:
-                    t.observation['value'] = pred
-                t.observation['mean'] = t.observation['value']
-                try:
-                    score = t.compute_score(t.observation,simulated_observations[str(t.name)])
-
-                except:
-                    print(simulated_observations[str(t.name)])
-            for k,v in simulated_observations.items():
-                s = simulated_observations[k]['value']
-                try:
-                    s.rescale(v.units)
-                    v.rescale(s.units)
-                    assert float(s)==float(v)
-
-                except:
-                    pass
-
-                simulated_observations[k]['mean'] = s
-            test_dic = {}
-
-            for t in tests:
-                test_dic[t.name] = t
-            return test_dic, dtc
+            simulated_tests = {}
+            for k in xtests:
+                k.observation = simulated_observations[k.name]
+                simulated_tests[k.name] = k
+            return simulated_tests, dtc
 
 
         if self.protocol['allen']:
@@ -2458,7 +2391,7 @@ class OptMan:
             dtc.pre_obs = tests
             target_current = None
             while target_current is None or important_length<15:
-                dtc.attrs = random_p(dtc.backend)
+                dtc.attrs = random_p(dtc.backend) 
                 make_stim_waves = pickle.load(open('waves.p','rb'))
                 #import pdb; pdb.set_trace()
                 from neuronunit.tests.fi import SpikeCountSearch
