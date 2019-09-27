@@ -2413,12 +2413,11 @@ class OptMan:
 
             simulated_observations = {k:p for k,p in simulated_observations.items() if type(k) is not type(None) and type(p) is not type(None) }
             for k,p in simulated_observations.items():
-
                 if not hasattr(p,'keys'):
                     pass
                 if 'mean' in p.keys():
                     p['value'] = p.pop('mean')
-            for ind,t in enumerate(tests):
+            for ind,t in enumerate(dtc.tests):
                 if 'mean' in t.observation.keys():
                     t.observation['value'] = t.observation.pop('mean')
                 pred = simulated_observations[str(t.name)]['value']
