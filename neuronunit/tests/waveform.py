@@ -35,8 +35,6 @@ class APWidthTest(VmTest):
             fig.plot(t, v, label=str('spikes: ')+str(model.get_spike_count()), width=100, height=20)
             fig.show()
         try:
-            # Put prediction in a form that compute_score() can use.
-        try:
             prediction = {'mean': np.mean(widths) if len(widths) else None,
                       'std': np.std(widths) if len(widths) else None,
                       'n': len(widths)}
