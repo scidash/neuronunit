@@ -2391,7 +2391,7 @@ class OptMan:
             dtc.pre_obs = tests
             target_current = None
             while target_current is None or important_length<15:
-                dtc.attrs = random_p(dtc.backend) 
+                dtc.attrs = random_p(dtc.backend)
                 make_stim_waves = pickle.load(open('waves.p','rb'))
                 #import pdb; pdb.set_trace()
                 from neuronunit.tests.fi import SpikeCountSearch
