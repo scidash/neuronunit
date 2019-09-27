@@ -25,6 +25,5 @@ install:
 script:
   - cd neuronunit/unit_test/working
   - python izhi_elephantrt.py
-  - python neuronunit/unit_test/working/izhi_elephantrt.py
 after_success:
   - coveralls

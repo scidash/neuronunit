@@ -36,6 +36,7 @@ class APWidthTest(VmTest):
             fig.show()
         try:
             # Put prediction in a form that compute_score() can use.
+        try:
             prediction = {'mean': np.mean(widths) if len(widths) else None,
                       'std': np.std(widths) if len(widths) else None,
                       'n': len(widths)}
