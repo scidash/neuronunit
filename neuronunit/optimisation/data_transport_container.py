@@ -69,7 +69,7 @@ class DataTC(object):
             self.scores = None
         if type(self.scores) is type(None):
             self.scores = {}
-        model.set_attrs(**self.attrs)
+        model.attrs = self.attrs
         model.scores=self.scores
         model.rheobase = self.rheobase
         return model

@@ -767,12 +767,18 @@ def dtc_to_rheo(dtc):
 
     print(rtest)
     print(rtest.observation)
-    #import pdb
-    #pdb.set_trace()
     if rtest is not None:
         if isinstance(rtest,Iterable):
             rtest = rtest[0]
-        dtc.rheobase = rtest.generate_prediction(model)
+        print(rtest,'failed at')
+        try:
+            dtc.rheobase = rtest.generate_prediction(model)
+        except:
+            import pdb
+            pdb.set_trace()
+        print(dtc.rheobase)
+        #import pdb
+        #pdb.set_trace()
         if dtc.rheobase is not None:
             if type(dtc.rheobase['value']) is not type(None):
                 if not hasattr(dtc,'prediction'):
