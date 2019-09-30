@@ -14,7 +14,6 @@ install:
   - conda update -q conda
   - conda info -a
   - pip install -U pip
-  - pip install .
   - pip install coveralls
   - pip install git+https://github.com/fun-zoological-computing/AllenSDK
   - pip install pyneuroml
@@ -24,8 +23,9 @@ install:
   - pip install --upgrade beautifulsoup4
   - pip install asciiplotlib
   - pip install neurodynex
-  - sudo bash do_travis.sh 
   - pip install pyneuroml
+  - pip install .
+
 script:
   - cd neuronunit/unit_test/working
   - python izhi_elephantrt.py
