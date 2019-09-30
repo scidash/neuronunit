@@ -2,8 +2,22 @@
 Its not that this file is responsible for doing plotting, but it calls many modules that are, such that it needs to pre-empt
 '''
 # setting of an appropriate backend.
+# optional imports
 import matplotlib
-matplotlib.use('agg')
+try:
+    matplotlib.use('agg')
+except:
+    pass
+
+try:
+    import asciiplotlib as apl
+except:
+    pass
+try:
+    import efel
+except:
+    pass
+
 CONFIDENT = True
 #    Goal is based on this. Don't optimize to a singular point, optimize onto a cluster.
 #    Golowasch, J., Goldman, M., Abbott, L.F, and Marder, E. (2002)
@@ -50,7 +64,6 @@ from neuronunit.optimisation.model_parameters import path_params
 from neuronunit.optimisation import model_parameters as modelp
 from itertools import repeat
 from neuronunit.tests.base import AMPL, DELAY, DURATION
-import efel
 from neuronunit.models import ReducedModel
 from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 from collections.abc import Iterable
@@ -364,8 +377,8 @@ def make_new_random(dtc_,backend):
 
     #works = "InjectedCurrentAPThresholdTest"
     #import pdb; pdb.set_trace()
-#@cython.boundscheck(False)
-#@cython.wraparound(False)
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def random_p(backend):
     #print(backend)
     #import pdb; pdb.set_trace()
@@ -381,8 +394,8 @@ def random_p(backend):
             random_param[k] = ranges[k]
     return random_param
 
-#@cython.boundscheck(False)
-#@cython.wraparound(False)
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def process_rparam(backend):
     random_param = random_p(backend)
     if 'RAW' in str(backend):
@@ -771,12 +784,16 @@ def dtc_to_rheo(dtc):
         if isinstance(rtest,Iterable):
             rtest = rtest[0]
         print(rtest,'failed at')
-        try:
-            dtc.rheobase = rtest.generate_prediction(model)
-        except:
-            pass
-            import pdb
-            pdb.set_trace()
+        #try:
+        dtc.rheobase = rtest.generate_prediction(model)
+        #except:
+        #    import pdb
+        #    pdb.set_trace()
+
+        #et = ETest(model,dtc)
+        #dtc = ETest.elephant_tests(dtc)
+        #res = et.runTest()
+        #pass
         print(dtc.rheobase)
         #import pdb
         #pdb.set_trace()
@@ -1286,10 +1303,6 @@ else:
 return dtc#pop[0][1]
 '''
 
-
-
-
-import asciiplotlib as apl
 
 def nuunit_dm_evaluation(dtc):
     model = mint_generic_model(dtc.backend)
@@ -2101,6 +2114,25 @@ class OptMan:
                         mt['RheobaseTest'] = new_tests['RheobaseTest']
                     if str('ReobaseTestP') in new_tests.keys():
                         mt['RheobaseTest'] = new_tests['RheobaseTestP']
+                    print(mt,'formated right?')
+                    try:
+                        mt['RheobaseTest'] = new_tests['RheobaseTest']
+
+                    except:
+                        pass
+                    import pdb
+                    import quantities as pq
+
+                    pdb.set_trace()
+
+                    temp = mt['RheobaseTest'].observation
+                    mt['RheobaseTest'].observation = {}
+                    #['value'].units = pq.p
+                    mt['RheobaseTest'].observation['value'] = temp
+
+                    mt['RheobaseTest'].observation['mean'] = temp
+                    mt['RheobaseTest'].observation['std'] = temp
+                    #['value'].units = pq.pA
 
                     ga_out, DO = run_ga(ranges,NGEN,mt,free_params=rp.keys(), MU = MU, backend=backend, selection=str('selNSGA2'),protocol={'elephant':True,'allen':False})
                     results[k] = copy.copy(ga_out['pf'][0].dtc.scores)
@@ -2383,6 +2415,7 @@ class OptMan:
             for k in xtests:
                 k.observation = simulated_observations[k.name]
                 simulated_tests[k.name] = k
+            print('try generating rheobase from this test')
             import pdb
             pdb.set_trace()
             return simulated_tests, dtc

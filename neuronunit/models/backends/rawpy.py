@@ -14,7 +14,10 @@ from .base import *
 import quantities as qt
 from quantities import mV, ms, s, V
 import matplotlib as mpl
-import asciiplotlib as apl
+try:
+    import asciiplotlib as apl
+except:
+    pass
 import numpy
 voltage_units = mV
 
