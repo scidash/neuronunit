@@ -774,6 +774,7 @@ def dtc_to_rheo(dtc):
         try:
             dtc.rheobase = rtest.generate_prediction(model)
         except:
+            pass
             import pdb
             pdb.set_trace()
         print(dtc.rheobase)
@@ -2053,6 +2054,8 @@ class OptMan:
                 (new_tests,dtc) = self.make_imputed_observations(tests,backend,rp)
                 for t in new_tests:
                     print(t.name,t.observation)
+                import pdb
+                pdb.set_trace()
             observations = dtc.preds
             target_spikes = dtc.spike_number+10
             observation_spike = {'value': target_spikes}
@@ -2084,14 +2087,7 @@ class OptMan:
                     except:
                         v.observation['value'] = v.observation['value'].simplified
 
-
-
-            dtc = self.dtc_to_elephant(dtc)
-            import pdb
-            pdb.set_trace()
-
-
-
+            # made not none through keyword argument.
             if type(mini_tests) is not type(None):
                 results = {}
                 mini_tests = {}
@@ -2387,6 +2383,8 @@ class OptMan:
             for k in xtests:
                 k.observation = simulated_observations[k.name]
                 simulated_tests[k.name] = k
+            import pdb
+            pdb.set_trace()
             return simulated_tests, dtc
 
 
