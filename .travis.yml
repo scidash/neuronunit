@@ -24,7 +24,7 @@ install:
   - pip install asciiplotlib
   - pip install neurodynex
   - pip install pyneuroml
-  - pip install .
+  - pip install -e .
 
 script:
   - cd neuronunit/unit_test/working
