@@ -1,8 +1,11 @@
 import numpy as np
 #from neuronunit.optimisation.optimisation_management import mint_generic_model
 #from sciunit.models.runnable import RunnableModel
-import asciiplotlib as apl
 
+try:
+    import asciiplotlib as apl
+except:
+    pass
 class DataTC(object):
     '''
     Data Transport Container

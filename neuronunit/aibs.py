@@ -4,7 +4,10 @@ Cell Types database"""
 #logger = logging.getLogger(name)
 #logging.info("test")
 import matplotlib as mpl
-mpl.use('agg')
+try:
+    mpl.use('agg')
+except:
+    pass
 import matplotlib.pyplot as plt
 #import shelve
 import requests

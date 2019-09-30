@@ -24,7 +24,7 @@ install:
   - pip install --upgrade beautifulsoup4
   - pip install asciiplotlib
   - pip install neurodynex
-  - sudo bash do_travis 
+  - sudo bash do_travis.sh 
   - pip install pyneuroml
 script:
   - cd neuronunit/unit_test/working

@@ -14,8 +14,8 @@ from neuronunit.optimisation.data_transport_container import DataTC
 import os
 import quantities
 import neuronunit
-from neuronunit.models import ReducedModel# , VeryReducedModel
-from neuronunit.models import VeryReducedModel
+from neuronunit.models.reduced import ReducedModel# , VeryReducedModel
+from neuronunit.models.reduced import VeryReducedModel
 
 import dask.bag as db
 import quantities as pq
@@ -28,7 +28,10 @@ import numba
 import copy
 
 import matplotlib as mpl
-mpl.use('Agg')
+try:
+    mpl.use('Agg')
+except:
+    pass
 import matplotlib.pyplot as plt
 from neuronunit.capabilities.spike_functions import get_spike_waveforms, spikes2amplitudes, threshold_detection
 #
@@ -92,7 +95,11 @@ class RheobaseTest(VmTest):
         try:
             units = self.observation['value'].units
         except KeyError:
+            print('self.observation["value"].units')
+            import pdb
+            pdb.set_trace()
             units = self.observation['mean'].units
+        
         begin_rh = time.time()
         lookup = self.threshold_FI(model, units)
         ##
