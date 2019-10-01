@@ -3,18 +3,33 @@ function of input current"""
 
 import os
 import multiprocessing
-global cpucount
-npartitions = cpucount = multiprocessing.cpu_count()
-from .base import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
-DURATION = 2000
-DELAY = 200
-from .. import optimisation
+from abc import ABC
 
-from neuronunit.optimisation.data_transport_container import DataTC
+
 import os
+global cpucount
+npartitions = multiprocessing.cpu_count()
+from .base import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
+#DURATION = 2000
+#DELAY = 200
+from .. import optimisation
 import quantities
-import neuronunit
-from neuronunit.models.reduced import ReducedModel# , VeryReducedModel
+
+
+
+import os
+import os
+
+import os
+import os
+#import neuronunit
+try:
+    from neuronunit.models.reduced import ReducedModel#, VeryReducedModel
+except:
+    pass
+from neuronunit.models.very_reduced_sans_lems import VeryReducedModel
+
+
 import dask.bag as db
 import quantities as pq
 import numpy as np
@@ -36,16 +51,16 @@ from neuronunit.capabilities.spike_functions import get_spike_waveforms, spikes2
 def diff(vm):
     return np.diff(vm)
 
-#@jit
+
 def get_diff(vm):
     differentiated = np.diff(vm)
-    spike_lets = threshold_detection(differentiated,threshold=0.000193667327364)
+    spike_lets = threshold_detection(differentiated, threshold=0.000193667327364)
     n_spikes = len([np.any(differentiated) > 0.000193667327364])
-    return spike_lets, n_spikeson
+    return spike_lets, n_spikes
 
 tolerance = 0.125
 
-class RheobaseTest(VmTest):
+class RheobaseTest(VmTest, ABC):
     """
     A serial Implementation of a Binary search algorithm,
     which finds a rheobase prediction
@@ -87,7 +102,6 @@ class RheobaseTest(VmTest):
             units = self.observation['value'].units
         except KeyError:
             units = self.observation['mean'].units
-        begin_rh = time.time()
         lookup = self.threshold_FI(model, units)
         sub = np.array([x for x in lookup if lookup[x]==0])*units
         supra = np.array([x for x in lookup if lookup[x]>0])*units
@@ -109,7 +123,7 @@ class RheobaseTest(VmTest):
         prediction['value'] = rheobase
         return prediction
 
-    def threshold_FI(self, model, units, guess=None):
+    def threshold_FI(self, model, units):
         lookup = {} # A lookup table global to the function below.
 
         def f(ampl):
@@ -196,7 +210,7 @@ class RheobaseTest(VmTest):
 
 
 
-class RheobaseTestP(VmTest):
+class RheobaseTestP(VmTest, ABC):
      """
      A parallel Implementation of a Binary search algorithm,
      which finds a rheobase prediction.
@@ -287,6 +301,8 @@ class RheobaseTestP(VmTest):
             LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
             dtc.model_path = LEMS_MODEL_PATH
             model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
+            m = VeryReducedModel(dtc.backend)
+            m.attrs = dtc.attrs
             if dtc.backend is str('NEURON') or dtc.backend is str('jNEUROML'):
                 dtc.current_src_name = model._backend.current_src_name
                 assert type(dtc.current_src_name) is not type(None)
@@ -294,8 +310,8 @@ class RheobaseTestP(VmTest):
 
             #DELAY = 100.0*pq.ms
             #DURATION = 1000.0*pq.ms
-            params = {'injected_square_current':
-                      {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+            #params = {'injected_square_current':
+            #          {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
             ampl = float(dtc.ampl)
             if ampl not in dtc.lookup or len(dtc.lookup) == 0:
@@ -305,11 +321,11 @@ class RheobaseTestP(VmTest):
                 dtc.run_number += 1
                 model.set_attrs(**dtc.attrs)
                 model.inject_square_current(uc)
-                n_spikes = model.get_spike_count()
+                # n_spikes = model.get_spike_count()
 
                 dtc.previous = ampl
 
-                if dtc.use_diff == True:
+                if dtc.use_diff:
                     vm = model.get_membrane_potential()
                     diff = diff(vm)
                     spike_train = threshold_detection(diff,threshold= 0.000193667327364)
@@ -341,7 +357,7 @@ class RheobaseTestP(VmTest):
             Exploit memory of last model in genes.
             '''
             # check for memory and exploit it.
-            if dtc.initiated == True:
+            if dtc.initiated:
 
                 dtc = check_current(dtc)
                 if dtc.boolean:
@@ -361,16 +377,15 @@ class RheobaseTestP(VmTest):
                     elif type(dtc.current_steps) is type(list):
                         dtc.current_steps = [ s * 1.25 for s in dtc.current_steps ]
                     dtc.initiated = True # logically unnecessary but included for readibility
-            if dtc.initiated == False:
+            if not dtc.initiated:
 
                 dtc.boolean = False
 
 
                 if str('PYNN') in dtc.backend:
-                    steps = np.linspace(100,1000,7.0)
+                    steps = np.linspace(100,1000,7)
                 else:
-
-                    steps = np.linspace(1,250,7.0)
+                    steps = np.linspace(1,250,7)
 
                 steps_current = [ i*pq.pA for i in steps ]
                 dtc.current_steps = steps_current
@@ -386,7 +401,8 @@ class RheobaseTestP(VmTest):
             # dtc = check_current(model.rheobase,dtc)
             # If its not true enter a search, with ranges informed by memory
             cnt = 0
-            sub = np.array([0,0]); supra = np.array([0,0])
+            # sub = np.array([0,0]);
+            # supra = np.array([0,0])
 
             use_diff = False
 
@@ -398,7 +414,7 @@ class RheobaseTestP(VmTest):
 
                 '''
                 be = dtc.backend
-                dtc_clones = [ dtc for i in range(0,len(dtc.current_steps)) ]
+                dtc_clones = [ dtc for _ in range(0,len(dtc.current_steps)) ]
                 for i,s in enumerate(dtc.current_steps):
                     dtc_clones[i] = copy.copy(dtc_clones[i])
                     dtc_clones[i].ampl = copy.copy(dtc.current_steps[i])
@@ -426,7 +442,7 @@ class RheobaseTestP(VmTest):
 
 
                 for dtc in dtc_clone:
-                    if dtc.boolean == True:
+                    if dtc.boolean:
                         return dtc
 
                 for d in dtc_clone:
@@ -481,7 +497,7 @@ class RheobaseTestP(VmTest):
 
      def compute_score(self, observation, prediction):
          """Implementation of sciunit.Test.score_prediction."""
-         score = None
+         #score = None
 
          score = super(RheobaseTestP,self).\
                      compute_score(observation, prediction)
