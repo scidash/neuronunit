@@ -31,7 +31,8 @@ from sciunit import scores# score_type
 
 from neuronunit.optimisation.data_transport_container import DataTC
 from neuronunit.tests.fi import RheobaseTestP# as discovery
-from neuronunit.optimisation.optimization_management import dtc_to_rheo, format_test, nunit_evaluation, grid_search
+from neuronunit.optimisation.optimization_management import OptMan
+# dtc_to_rheo, format_test, nunit_evaluation, grid_search
 import quantities as pq
 from neuronunit.models.reduced import ReducedModel
 from neuronunit.optimisation.model_parameters import path_params

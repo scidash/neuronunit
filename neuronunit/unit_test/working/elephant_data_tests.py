@@ -124,22 +124,116 @@ class testHighLevelOptimisation(unittest.TestCase):
                 ]
 
 
+    def test_data_driven(self):
+
+        use_test1 = self.filtered_tests['Hippocampus CA1 pyramidal cell']
+        #use_tests = list(self.test_frame[0]['Hippocampus CA1 pyramidal cell'].values())
+        use_tests = list(self.test_frame['Hippocampus CA1 pyramidal cell'].values())
+        from neuronunit.optimisation.optimisations import run_ga
+        import pdb
+        from neuronunit.optimisation import model_parameters
+        param_edges = model_parameters.MODEL_PARAMS['RAW']
+        for key, use_test in self.test_frame.items():
+            use_test['protocol'] = str('elephant')
+
+            ga_out = run_ga(param_edges, 10, use_tests, free_params=param_edges.keys(), \
+                   backend=str('RAW'), protocol={'allen': False, 'elephant': True})
+        
+            (boolean,self.dtcpop) = tuples_
+            print('done one')
+            print(boolean,self.dtcpop)
+            self.assertTrue(boolean)
+        return
+    '''
     def test_solution_quality0(self):
-        #for key, use_test in self.filtered_tests.items():
-        #    use_test['protocol'] = str('elephant')
-        #    break
-        use_test = self.filtered_tests['Hippocampus CA1 pyramidal cell']#['RheobaseTest']]
-        OM = OptMan(use_test,protocol={'elephant':True,'allen':False,'dm':False})
-        results = OM.round_trip_test(use_test,str('RAW'),MU=8,NGEN=8,mini_tests=True)
-        pdb.set_trace()
-        model = results['pf'][0].dtc.dtc_to_model()
+
+        from neuronunit.tests.allen_tests import pre_obs#, test_collection
+        NGEN = 10
+        local_tests = pre_obs[2][1]
+        pre_obs[2][1]['spikes'][0]
+
+        local_tests.update(pre_obs[2][1]['spikes'][0])
+        local_tests['current_test'] = pre_obs[1][0]
+        local_tests['spk_count'] = len(pre_obs[2][1]['spikes'])
+        local_tests['protocol'] = str('allen')
+        tuples_ = round_trip_test(local_tests,str('GLIF'))
+        (boolean,self.dtcpop) = tuples_
+        print('done one')
+        print(boolean,self.dtcpop)
+        self.assertTrue(boolean)
+        return
+
+    def test_solution_quality3(self):
+
+        from neuronunit.tests.allen_tests import pre_obs#, test_collection
+        NGEN = 10
+        local_tests = pre_obs[2][1]
+        pre_obs[2][1]['spikes'][0]
+
+        local_tests.update(pre_obs[2][1]['spikes'][0])
+        local_tests['current_test'] = pre_obs[1][0]
+        local_tests['spk_count'] = len(pre_obs[2][1]['spikes'])
+        local_tests['protocol'] = str('allen')
+        tuples_ = round_trip_test(local_tests,str('RAW'))
+        (boolean,self.dtcpop) = tuples_
+        print('done one')
+        print(boolean,self.dtcpop)
+        self.assertTrue(boolean)
+        return
+
+        move to low level tests
+    def test_rotate_backends2(self):
+        self.dtcpop = grid_points()
+
+        self.dtcpop = test_all_tests_pop(self.dtcpop,self.electro_tests)
+        self.dtc = self.dtcpop[0]
+        self.rheobase = self.dtc.rheobase
+
+        broken_backends = [ str('NEURON'),str('jNeuroML') ]
+
+        all_backends = [
+
+            str('RAW'),
+            str('ADEXP'),
+            str('GLIF')
+
+        ]
+
+        for b in all_backends:
+            if b in str('GLIF'):
+                print(b)
+
+            model = mint_generic_model(b)
+            self.assertTrue(model is not None)
+            from neuronunit.optimisation.data_transport_container import DataTC
+
+            dtc = DataTC()
+            dtc.backend = b
+            dtc.attrs = model.attrs
+            print(b,model.attrs)
+            dtc = dtc_to_rheo(dtc)
+            inject_and_plot(dtc)
+            self.assertTrue(dtc is not None)
+
+            #assert dtc is not None
+
+        #MBEs = list(self.MODEL_PARAMS.keys())
+        for b in all_backends:
+            model = mint_generic_model(b)
+            #assert model is not None
+            self.assertTrue(model is not None)
+            dtc = DataTC()
+            dtc.backend = b
+            dtc.attrs = model.attrs
+            inject_and_plot(dtc)
+            self.assertTrue(dtc is not None)
 
         return
 
+    '''
 
 
-a = testHighLevelOptimisation()
-a.setUp()
-a.test_solution_quality0()
-#if __name__ == '__main__':
-#    unittest.main()
+
+
+if __name__ == '__main__':
+    unittest.main()
