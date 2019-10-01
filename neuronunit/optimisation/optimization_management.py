@@ -17,7 +17,14 @@ try:
     import efel
 except:
     pass
-
+try:
+    import seaborn as sns
+except:
+    pass
+try:
+    from sklearn.cluster import KMeans
+except:
+    pass
 CONFIDENT = True
 #    Goal is based on this. Don't optimize to a singular point, optimize onto a cluster.
 #    Golowasch, J., Goldman, M., Abbott, L.F, and Marder, E. (2002)
@@ -40,7 +47,6 @@ from collections import OrderedDict
 import cython
 
 
-import seaborn as sns
 from neuronunit.capabilities.spike_functions import get_spike_waveforms
 
 import logging
@@ -50,7 +56,6 @@ import copy
 import math
 import quantities as pq
 import numpy
-from sklearn.cluster import KMeans
 
 #from pyneuroml import pynml
 
