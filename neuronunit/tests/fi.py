@@ -93,6 +93,7 @@ class RheobaseTest(VmTest):
         prediction = {'value': None}
         model.rerun = True
         try:
+            print(self.observation)
             units = self.observation['value'].units
         except KeyError:
             print('self.observation["value"].units')

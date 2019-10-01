@@ -2123,15 +2123,17 @@ class OptMan:
                     import pdb
                     import quantities as pq
 
-                    pdb.set_trace()
+                    #pdb.set_trace()
 
                     temp = mt['RheobaseTest'].observation
                     mt['RheobaseTest'].observation = {}
                     #['value'].units = pq.p
-                    mt['RheobaseTest'].observation['value'] = temp
+                    import pdb
+                    pdb.set_trace()
+                    mt['RheobaseTest'].observation['value'] = temp['value']
 
-                    mt['RheobaseTest'].observation['mean'] = temp
-                    mt['RheobaseTest'].observation['std'] = temp
+                    mt['RheobaseTest'].observation['mean'] = temp['mean']
+                    mt['RheobaseTest'].observation['std'] = temp['std']
                     #['value'].units = pq.pA
 
                     ga_out, DO = run_ga(ranges,NGEN,mt,free_params=rp.keys(), MU = MU, backend=backend, selection=str('selNSGA2'),protocol={'elephant':True,'allen':False})
