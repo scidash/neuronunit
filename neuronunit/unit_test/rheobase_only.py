@@ -9,9 +9,10 @@ from dask import bag
 
 
 from neuronunit.optimisation import get_neab
-from neuronunit.optimisation.optimization_management import dtc_to_rheo
-from neuronunit.optimisation.optimization_management import nunit_evaluation
+from neuronunit.optimisation.optimization_management import elephant_evaluation
 from neuronunit.optimisation.optimization_management import format_test, mint_generic_model
+from neuronunit.optimisation.optimization_management import dtc_to_rheo
+
 from itertools import repeat
 import quantities as pq
 
@@ -22,34 +23,18 @@ import copy
 import unittest
 from neuronunit import tests as nu_tests, neuroelectro
 from neuronunit.tests import passive, waveform, fi
-#from neuronunit import tests as nu_tests, neuroelectro
-#from neuronunit.tests import passive, waveform, fi
-#from neuronunit.models.reduced import ReducedModel
 from neuronunit.optimisation import get_neab
 from neuronunit.optimisation import exhaustive_search
 import pickle
-#from neuronunit.models.reduced import ReducedModel
-#from neuronunit.optimisation import get_neab
-
 from neuronunit.optimisation.model_parameters import MODEL_PARAMS
-#from neuronunit.optimisation import exhaustive_search
 
 from neuronunit.tests import dynamics
 import pickle
 import dask.bag as db
-#import dask.bag as db
 from neuronunit.models.reduced import ReducedModel
 
-#from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.optimization_management import format_test
 from neuronunit.optimisation import data_transport_container
-#from neuronunit.optimisation import data_transport_container
-
-#from neuronunit.optimisation import get_neab
-#from neuronunit.models.reduced import ReducedModel
-
-#from neuronunit.optimisation import get_neab
-#from neuronunit.models.reduced import ReducedModel
 
 from neuronunit.models.reduced import ReducedModel
 from neuronunit.optimisation import get_neab
@@ -61,44 +46,48 @@ from neuronunit import aibs
 import os
 from neuronunit.optimisation.exhaustive_search import update_dtc_grid as ug
 from sciunit.models.runnable import RunnableModel
-#model = RunnableModel(str(dtc.backend),backend=(dtc.backend, {'DTC':dtc}))
-
+from neuronunit.optimisation.optimization_management import get_rtest
 def grid_points():
-    npoints = 10
+    npoints = 4
     nparams = 10
     free_params = MODEL_PARAMS[str('RAW')]
     USE_CACHED_GS = False
     grid_points = exhaustive_search.create_grid(npoints = npoints,free_params=free_params)
     dtcpop = []
-    for g in list(grid_points):
+    for g in list(grid_points)[0:2]:
         dtc = data_transport_container.DataTC()
         dtc.attrs = g
         dtcpop.append(dtc)
-        print(dtc.attrs)
+        #print(dtc.attrs)
     return dtcpop
-   
 
-def test_rheobase_dtc(dtcpop, tests):
+
+
+def test_rheobase_dtc0(dtcpop, tests):
     rheobase_test = tests[0][0][0]
 
     for d in dtcpop:
         d.tests = rheobase_test
         d.backend = str('RAW')
     print('befor critical fail')
-    import pdb
-    pdb.set_trace()
+    rtest = get_rtest(dtcpop[0])
+    model = dtcpop[0].dtc_to_model()
+    prediction = rtest.generate_prediction(model)
+
+
+    return dtcpop
+
+
+
+def test_rheobase_dtc1(dtcpop, tests):
+    rheobase_test = tests[0][0][0]
+
+    for d in dtcpop:
+        d.tests = rheobase_test
+        d.backend = str('RAW')
     
     dtcpop = list(map(dtc_to_rheo,dtcpop))
     return dtcpop
-    '''
-    for d in dtcpop:
-        assert len(list(d.attrs.values())) > 0
-    b0 = db.from_sequence(dtcpop, npartitions=8)
-    dtcpop = list(db.map(format_test,b0).compute())
-
-    b0 = db.from_sequence(dtcpop, npartitions=8)
-    dtcpop = list(db.map(nunit_evaluation,b0).compute())
-    '''
 
 def test_all_tests_pop(dtcpop, tests):
     rheobase_test = tests[0][0][0]
@@ -119,7 +108,7 @@ def test_all_tests_pop(dtcpop, tests):
     dtcpop = list(db.map(format_test,b0).compute())
 
     b0 = db.from_sequence(dtcpop, npartitions=8)
-    dtcpop = list(db.map(nunit_evaluation,b0).compute())
+    dtcpop = list(db.map(elephant_evaluation,b0).compute())
     return dtcpop
 
 class testLowLevelOptimisation(unittest.TestCase):
@@ -130,16 +119,15 @@ class testLowLevelOptimisation(unittest.TestCase):
         self.score_p = None
         self.score_s = None
         self.grid_points = grid_points()
-        dtcpop = self.grid_points
+        dtcpop = self.grid_points[0:10]
 
         electro_path = 'pipe_tests.p'
         assert os.path.isfile(electro_path) == True
         with open(electro_path,'rb') as f:
             self.electro_tests = pickle.load(f)
-        #self.electro_tests = get_neab.replace_zero_std(self.electro_tests)
+        test_rheobase_dtc0(dtcpop,self.electro_tests)
 
-        self.test_rheobase_dtc = test_rheobase_dtc
-        self.dtcpop = test_rheobase_dtc(dtcpop,self.electro_tests)
+        self.dtcpop = test_rheobase_dtc1(dtcpop,self.electro_tests)
         self.dtcpop = test_all_tests_pop(self.dtcpop,self.electro_tests)
         self.dtc = self.dtcpop[0]
         self.rheobase = self.dtc.rheobase
@@ -163,8 +151,6 @@ class testLowLevelOptimisation(unittest.TestCase):
         self.medium_backends = [
                     str('GLIFBackend')
                 ]
-        #self.standard_model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend='RAW')
-        #self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend='RAW')
 
 
         purkinje ={"id": 18, "name": "Cerebellum Purkinje cell", "neuron_db_id": 271, "nlex_id": "sao471801888"}
@@ -207,7 +193,6 @@ class testLowLevelOptimisation(unittest.TestCase):
         dtc = self.dtcpop[0]
         self.model = RunnableModel(str(dtc.backend),backend=('RAWBackend', {'DTC':dtc}))
 
-        #self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend=('RAWBackend', {'DTC':dtc})) #backend=('RAW'{'DTC':dtc}))
         temp = [ v for v in self.model.attrs.values() ]
         assert len(temp) > 0
         self.AssertGreater(temp,0)
@@ -430,14 +415,6 @@ class testLowLevelOptimisation(unittest.TestCase):
     def test_ap_amplitude(self):
 
         from neuronunit.tests.waveform import InjectedCurrentAPAmplitudeTest as T
-        #from neuronunit.optimisation.optimisation_management import format_test
-        #from neuronunit.optimisation import data_transport_container
-        #dtc = data_transport_container.DataTC()
-        #dtc.rheobase = self.rheobase
-        #def run_test(self, cls, pred =None):
-        #dtc = format_test(dtc)
-        #self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend=('NEURON',{'DTC':dtc}))
-
         score = self.run_test(T,pred=self.rheobase)
         self.assertTrue(-1.7 < score < -1.6)
 
@@ -462,11 +439,9 @@ class testLowLevelOptimisation(unittest.TestCase):
         rtp = RheobaseTestP(observation = observation)
         model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend=('RAW'))
 
-        #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
         self.score_p = rtp.judge(model,stop_on_error = False, deep_error = True)
         self.predictionp = self.score_p.prediction
         self.score_p = self.score_p.sort_key
-        #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
 
         serial_model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='RAW')
         self.score_s = rt.judge(serial_model,stop_on_error = False, deep_error = True)
