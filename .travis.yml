@@ -28,7 +28,9 @@ install:
   - pip install -e .
 
 script:
-  - cd neuronunit/unit_test/working
+  - cd cd neuronunit/unit_test/
+  - python -m unittest rheobase_only.py
+  - cd working
   - python elephant_data_tests.py
   - python izhi_elephantrt.py
 after_success:

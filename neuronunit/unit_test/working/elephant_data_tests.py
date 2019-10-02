@@ -2,6 +2,7 @@
 import unittest
 import os
 import sys
+from sciunit.utils import NotebookTools#,import_all_modules
 import dask
 from dask import bag
 import matplotlib
@@ -28,10 +29,10 @@ from neuronunit.optimisation.optimization_management import OptMan
 
 from neuronunit import tests as nu_tests, neuroelectro
 from neuronunit.tests import passive, waveform, fi
-#from neuronunit.optimisation import get_neab
+# from neuronunit.optimisation import get_neab
 from neuronunit.optimisation import exhaustive_search
 from neuronunit.models.reduced import ReducedModel
-#from neuronunit.optimisation import get_neab
+# from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 from neuronunit.tests import dynamics
 from neuronunit.models.reduced import ReducedModel
