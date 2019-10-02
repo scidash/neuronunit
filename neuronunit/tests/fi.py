@@ -97,8 +97,10 @@ class RheobaseTest(VmTest):
             units = self.observation['value'].units
         except KeyError:
             print('self.observation["value"].units')
-            import pdb
-            pdb.set_trace()
+
+            print(model._backend.attrs)
+            print( model.attrs)
+            print('should not be empty')
             units = self.observation['mean'].units
         
         begin_rh = time.time()
@@ -144,7 +146,7 @@ class RheobaseTest(VmTest):
             if float(ampl) not in lookup:
 
                 uc = {'amplitude':ampl,'duration':DURATION,'delay':DELAY}
-
+                # print(model.attrs)
                 model.inject_square_current(uc)
                 n_spikes = model._backend.get_spike_count()
 

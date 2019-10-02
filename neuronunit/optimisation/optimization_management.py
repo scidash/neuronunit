@@ -788,12 +788,12 @@ def dtc_to_rheo(dtc):
     if rtest is not None:
         if isinstance(rtest,Iterable):
             rtest = rtest[0]
-        print(rtest,'failed at')
+        #print(rtest,'failed at')
         #try:
         dtc.rheobase = rtest.generate_prediction(model)
         #except:
-        #    import pdb
-        #    pdb.set_trace()
+        # import pdb
+        # pdb.set_trace()
 
         #et = ETest(model,dtc)
         #dtc = ETest.elephant_tests(dtc)
@@ -2305,8 +2305,13 @@ class OptMan:
                     if score.norm_score is not None:
                         assignment = 1.0 - score.norm_score
                     else:
+                        print('test params')
+                        print('for some reason unformated test params')
+                        dtc = self.format_test(dtc)
+                        print(t.params)
                         dtc.judge_test()
                 else:
+                    print('test params')
                     dtc.judge_test()
                 dtc.scores[key] = assignment
 
