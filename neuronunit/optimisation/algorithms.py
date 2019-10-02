@@ -34,7 +34,10 @@ import numpy as np
 from neuronunit.optimisation import optimization_management as om
 
 logger = logging.getLogger('__main__')
-
+try:
+    import asciiplotlib as apl
+except:
+    pass
 
 def _evaluate_invalid_fitness(toolbox, population):
     '''Evaluate the individuals with an invalid fitness
@@ -220,9 +223,9 @@ def eaAlphaMuPlusLambdaCheckpoint(
         print(names)
         if gen>1:
             if str('rec_len') in locals().keys():
-                import asciiplotlib as apl
-                fig = apl.figure()
                 try:
+                    fig = apl.figure()
+                
                     fig.plot(rec_lenf,fitness, label=str('evolution fitness: '), width=100, height=20)
                     fitness1 = [ np.sum(list(i[0].fitness.values)) for i in gen_vs_pop if len(i[0].fitness.values)>1 ]
                     fig.plot(rec_lenf,fitness1, label=str('evolution fitness: '), width=100, height=20)
