@@ -10,8 +10,8 @@ from dask import bag
 
 from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.optimization_management import dtc_to_rheo
-from neuronunit.optimisation.optimization_management import nunit_evaluation
-from neuronunit.optimisation.optimization_management import format_test, mint_generic_model
+from neuronunit.optimisation.optimization_management import OptMan # elephant_evaluation
+#from neuronunit.optimisation.optimization_management import format_test, mint_generic_model
 from itertools import repeat
 import quantities as pq
 

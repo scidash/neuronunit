@@ -1,5 +1,6 @@
 """NeuronUnit module for interaction with the Allen Brain Insitute
 Cell Types database"""
+import shelve
 import logging
 logging.info("test")
 import matplotlib as mpl

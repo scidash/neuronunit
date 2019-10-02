@@ -2,8 +2,29 @@
 Its not that this file is responsible for doing plotting, but it calls many modules that are, such that it needs to pre-empt
 '''
 # setting of an appropriate backend.
+# optional imports
 import matplotlib
-matplotlib.use('agg')
+try:
+    matplotlib.use('agg')
+except:
+    pass
+
+try:
+    import asciiplotlib as apl
+except:
+    pass
+try:
+    import efel
+except:
+    pass
+try:
+    import seaborn as sns
+except:
+    pass
+try:
+    from sklearn.cluster import KMeans
+except:
+    pass
 CONFIDENT = True
 #    Goal is based on this. Don't optimize to a singular point, optimize onto a cluster.
 #    Golowasch, J., Goldman, M., Abbott, L.F, and Marder, E. (2002)
@@ -26,7 +47,6 @@ from collections import OrderedDict
 import cython
 
 
-import seaborn as sns
 from neuronunit.capabilities.spike_functions import get_spike_waveforms
 
 import logging
@@ -36,7 +56,6 @@ import copy
 import math
 import quantities as pq
 import numpy
-from sklearn.cluster import KMeans
 
 #from pyneuroml import pynml
 
@@ -50,7 +69,6 @@ from neuronunit.optimisation.model_parameters import path_params
 from neuronunit.optimisation import model_parameters as modelp
 from itertools import repeat
 from neuronunit.tests.base import AMPL, DELAY, DURATION
-import efel
 from neuronunit.models import ReducedModel
 from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 from collections.abc import Iterable
@@ -364,8 +382,8 @@ def make_new_random(dtc_,backend):
 
     #works = "InjectedCurrentAPThresholdTest"
     #import pdb; pdb.set_trace()
-#@cython.boundscheck(False)
-#@cython.wraparound(False)
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def random_p(backend):
     #print(backend)
     #import pdb; pdb.set_trace()
@@ -381,8 +399,8 @@ def random_p(backend):
             random_param[k] = ranges[k]
     return random_param
 
-#@cython.boundscheck(False)
-#@cython.wraparound(False)
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def process_rparam(backend):
     random_param = random_p(backend)
     if 'RAW' in str(backend):
@@ -767,12 +785,23 @@ def dtc_to_rheo(dtc):
 
     print(rtest)
     print(rtest.observation)
-    #import pdb
-    #pdb.set_trace()
     if rtest is not None:
         if isinstance(rtest,Iterable):
             rtest = rtest[0]
+        #print(rtest,'failed at')
+        #try:
         dtc.rheobase = rtest.generate_prediction(model)
+        #except:
+        # import pdb
+        # pdb.set_trace()
+
+        #et = ETest(model,dtc)
+        #dtc = ETest.elephant_tests(dtc)
+        #res = et.runTest()
+        #pass
+        print(dtc.rheobase)
+        #import pdb
+        #pdb.set_trace()
         if dtc.rheobase is not None:
             if type(dtc.rheobase['value']) is not type(None):
                 if not hasattr(dtc,'prediction'):
@@ -1279,10 +1308,6 @@ else:
 return dtc#pop[0][1]
 '''
 
-
-
-
-import asciiplotlib as apl
 
 def nuunit_dm_evaluation(dtc):
     model = mint_generic_model(dtc.backend)
@@ -2047,6 +2072,8 @@ class OptMan:
                 (new_tests,dtc) = self.make_imputed_observations(tests,backend,rp)
                 for t in new_tests:
                     print(t.name,t.observation)
+                import pdb
+                pdb.set_trace()
             observations = dtc.preds
             target_spikes = dtc.spike_number+10
             observation_spike = {'value': target_spikes}
@@ -2078,14 +2105,7 @@ class OptMan:
                     except:
                         v.observation['value'] = v.observation['value'].simplified
 
-
-
-            dtc = self.dtc_to_elephant(dtc)
-            import pdb
-            pdb.set_trace()
-
-
-
+            # made not none through keyword argument.
             if type(mini_tests) is not type(None):
                 results = {}
                 mini_tests = {}
@@ -2099,6 +2119,27 @@ class OptMan:
                         mt['RheobaseTest'] = new_tests['RheobaseTest']
                     if str('ReobaseTestP') in new_tests.keys():
                         mt['RheobaseTest'] = new_tests['RheobaseTestP']
+                    print(mt,'formated right?')
+                    try:
+                        mt['RheobaseTest'] = new_tests['RheobaseTest']
+
+                    except:
+                        pass
+                    import pdb
+                    import quantities as pq
+
+                    #pdb.set_trace()
+
+                    temp = mt['RheobaseTest'].observation
+                    mt['RheobaseTest'].observation = {}
+                    #['value'].units = pq.p
+                    import pdb
+                    pdb.set_trace()
+                    mt['RheobaseTest'].observation['value'] = temp['value']
+
+                    mt['RheobaseTest'].observation['mean'] = temp['mean']
+                    mt['RheobaseTest'].observation['std'] = temp['std']
+                    #['value'].units = pq.pA
 
                     ga_out, DO = run_ga(ranges,NGEN,mt,free_params=rp.keys(), MU = MU, backend=backend, selection=str('selNSGA2'),protocol={'elephant':True,'allen':False})
                     results[k] = copy.copy(ga_out['pf'][0].dtc.scores)
@@ -2264,8 +2305,13 @@ class OptMan:
                     if score.norm_score is not None:
                         assignment = 1.0 - score.norm_score
                     else:
+                        print('test params')
+                        print('for some reason unformated test params')
+                        dtc = self.format_test(dtc)
+                        print(t.params)
                         dtc.judge_test()
                 else:
+                    print('test params')
                     dtc.judge_test()
                 dtc.scores[key] = assignment
 
@@ -2381,6 +2427,9 @@ class OptMan:
             for k in xtests:
                 k.observation = simulated_observations[k.name]
                 simulated_tests[k.name] = k
+            print('try generating rheobase from this test')
+            import pdb
+            pdb.set_trace()
             return simulated_tests, dtc
 
 

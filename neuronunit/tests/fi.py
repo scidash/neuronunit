@@ -14,8 +14,8 @@ from neuronunit.optimisation.data_transport_container import DataTC
 import os
 import quantities
 import neuronunit
-from neuronunit.models import ReducedModel# , VeryReducedModel
-from neuronunit.models import VeryReducedModel
+from neuronunit.models.reduced import ReducedModel# , VeryReducedModel
+from neuronunit.models.reduced import VeryReducedModel
 
 import dask.bag as db
 import quantities as pq
@@ -28,7 +28,10 @@ import numba
 import copy
 
 import matplotlib as mpl
-mpl.use('Agg')
+try:
+    mpl.use('Agg')
+except:
+    pass
 import matplotlib.pyplot as plt
 from neuronunit.capabilities.spike_functions import get_spike_waveforms, spikes2amplitudes, threshold_detection
 #
@@ -90,9 +93,16 @@ class RheobaseTest(VmTest):
         prediction = {'value': None}
         model.rerun = True
         try:
+            print(self.observation)
             units = self.observation['value'].units
         except KeyError:
+            print('self.observation["value"].units')
+
+            print(model._backend.attrs)
+            print( model.attrs)
+            print('should not be empty')
             units = self.observation['mean'].units
+        
         begin_rh = time.time()
         lookup = self.threshold_FI(model, units)
         ##
@@ -136,7 +146,7 @@ class RheobaseTest(VmTest):
             if float(ampl) not in lookup:
 
                 uc = {'amplitude':ampl,'duration':DURATION,'delay':DELAY}
-
+                # print(model.attrs)
                 model.inject_square_current(uc)
                 n_spikes = model._backend.get_spike_count()
 
