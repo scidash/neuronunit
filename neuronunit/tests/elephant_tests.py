@@ -167,7 +167,7 @@ def test_setup(self,model,protocol_container):#,model_id,model_dict,model=None,i
             params = params_dic['APThresholdTest']))
     if 'RheobaseTest' in params_dic.keys():
         print(params_dic.keys())
-        self.test_set.append(RheobaseTestP(obs_dic['RheobaseTest'], \
+        self.test_set.append(RheobaseTest(obs_dic['RheobaseTest'], \
             params = params_dic['RheobaseTest']))
     if 'InjectedCurrentAPAmplitudeTest' in params_dic.keys():
         print(params_dic.keys())
