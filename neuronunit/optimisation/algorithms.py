@@ -46,18 +46,24 @@ def _evaluate_invalid_fitness(toolbox, population):
     '''
     invalid_ind = [ind for ind in population if not ind.fitness.valid]
     invalid_pop,fitnesses = toolbox.evaluate(invalid_ind)
-    print('does not get to evalueate')
-
+    
     for j, ind in enumerate(invalid_pop):
         ind.fitness.values = fitnesses[j]
         ind.dtc.get_ss()
 
-    print('does not get to evalueate ')
-
+    
     return invalid_pop
 
+def strip_object(p):
+    state = super(type(p)).state
+    p.unpicklable = []
+    print('i suspect a brian module is in the deap gene, and it should not be')
+    import pdb
+    pdb.set_trace()
+    return p._state(state=state, exclude=['unpicklable','verbose'])
 
-def _update_history_and_hof(halloffame,pf, history, population,td):
+
+def _update_history_and_hof(halloffame,pf, history, population,td,mu):
     '''Update the hall of fame with the generated individuals
 
     Note: History and Hall-of-Fame behave like dictionaries
@@ -65,18 +71,24 @@ def _update_history_and_hof(halloffame,pf, history, population,td):
 
     if halloffame is not None:
         try:
-            halloffame.update(population)
+            
+            halloffame.update(population[0:mu])
         except:
             print('mostly not relevant')
     if history is not None:
-        history.update(population)
-
+        try:
+            history.update(population[0:mu])
+        except:
+            for p in population:
+                print(p.dtc.from_imputation, 'from imputation')
+                #p = strip_object(p)
+            pass
     if pf is not None:
         for ind in population:
             for i,j in enumerate(ind):
                 ind[i] = float(j)
         try:
-            pf.update(population)
+            pf.update(population[0:mu])
         except:
             pass
             #import pdb
@@ -183,7 +195,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
         #import pdb; pdb.set_trace()
         invalid_count = len(parents)
         gen_vs_hof = []
-        hof, pf,history = _update_history_and_hof(hof, pf, history, parents, td)
+        hof, pf,history = _update_history_and_hof(hof, pf, history, parents, td,mu)
 
         gen_vs_hof.append(hof)
         _record_stats(stats, logbook, start_gen, parents, invalid_count)
@@ -210,17 +222,11 @@ def eaAlphaMuPlusLambdaCheckpoint(
             scores = [ list(i[0].dtc.scores.values())[0] for i in gen_vs_pop]
 
             rec_len = [ i for i in range(0,len(scores))]
-            print(scores)
                     
         except:
             dtcs_ = [j.dtc for i in gen_vs_pop for j in i]
-            print(locals().keys())
-            #print(dtcs_)
-            #print('dtcs_ still small why')
-            #pdb.set_trace()
-            #pass
+            
         names = offspring[0].dtc.scores.keys()
-        print(names)
         if gen>1:
             if str('rec_len') in locals().keys():
                 try:
@@ -249,7 +255,6 @@ def eaAlphaMuPlusLambdaCheckpoint(
         #    pass
 
         invalid_ind = _evaluate_invalid_fitness(toolbox, offspring)
-        print('stuck here c')
         # something in evaluate fitness has knocked out fitness
         population = parents + invalid_ind
         population = [ p for p in population if len(p.fitness.values)!=0 ]
@@ -262,19 +267,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
                 print('gene poulation stagnant, no appreciable gains in fitness')
                 #return population, hof, pf, logbook, history, gen_vs_pop
 
-        '''
-        if str('selIBEA') == selection:
-            toolbox.register("select", tools.selIBEA)
-        if str('selNSGA') == selection:
-            toolbox.register("select", tools.selNSGA2)
-        toolbox.register("select", tools.selNSGA2)
-        '''
-            #toolbox.register("select",selNSGA2)
-        #else:
-        #    toolbox.register("select", tools.selNSGA3, ref_points=ref_points)
-        #print('fails at d')
-
-
+        
         try:
             ref_points = tools.uniform_reference_points(len(population[0]), 12)
             #toolbox.register("select", tools.selNSGA3WithMemory, ref_points=population)
@@ -283,7 +276,6 @@ def eaAlphaMuPlusLambdaCheckpoint(
             #toolbox.register("select",selNSGA2)
             toolbox.register("select", tools.selNSGA2)
 
-        print('fails at e')
         old_max = 0
         for ind in population:
             if len(ind.fitness.values) > old_max:
@@ -291,11 +283,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
         population = [ ind for ind in population if ind if ind.fitness.values is not type(None) ]
 
         popp = [ i for i in population if len(i.fitness.values)==old_max ]
-        print(popp)
-        #import pdb; pdb.set_trace()
         try:
-            #toolbox.register("select",selNSGA3)
-
             parents = toolbox.select(popp, mu)
         except:
 
@@ -304,7 +292,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
         # make new genes that are in the middle of the best and worst.
         # make sure best gene breeds.
 
-        hof, pf,history = _update_history_and_hof(hof, pf, history, parents, td)
+        hof, pf,history = _update_history_and_hof(hof, pf, history, parents, td, mu)
 
         logger.info(logbook.stream)
 

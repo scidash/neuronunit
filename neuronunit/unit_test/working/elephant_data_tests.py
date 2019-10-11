@@ -125,8 +125,10 @@ class testHighLevelOptimisation(unittest.TestCase):
                 ]
 
 
-    def test_data_driven(self):
-
+    def test_data_driven_fe(self):
+        '''
+        forward euler
+        '''
         use_test1 = self.filtered_tests['Hippocampus CA1 pyramidal cell']
         #use_tests = list(self.test_frame[0]['Hippocampus CA1 pyramidal cell'].values())
         use_tests = list(self.test_frame['Hippocampus CA1 pyramidal cell'].values())
@@ -134,18 +136,67 @@ class testHighLevelOptimisation(unittest.TestCase):
         import pdb
         from neuronunit.optimisation import model_parameters
         param_edges = model_parameters.MODEL_PARAMS['RAW']
+        results = {}
         for key, use_test in self.test_frame.items():
             use_test['protocol'] = str('elephant')
+            
+            ga_out = run_ga(param_edges, 7, use_tests, free_params=param_edges.keys(), \
+                            backend=str('RAW'), MU=7, protocol={'allen': False, 'elephant': True})
+            results[key] = copy.copy(ga_out)
+            return results
 
-            ga_out = run_ga(param_edges, 10, use_tests, free_params=param_edges.keys(), \
-                   backend=str('RAW'), protocol={'allen': False, 'elephant': True})
-        
-            (boolean,self.dtcpop) = tuples_
-            print('done one')
-            print(boolean,self.dtcpop)
-            self.assertTrue(boolean)
-        return
-    '''
+    def test_data_driven_ae(self):
+        '''
+        forward euler
+        '''
+        use_test1 = self.filtered_tests['Hippocampus CA1 pyramidal cell']
+        #use_tests = list(self.test_frame[0]['Hippocampus CA1 pyramidal cell'].values())
+        use_tests = list(self.test_frame['Hippocampus CA1 pyramidal cell'].values())
+        from neuronunit.optimisation.optimisations import run_ga
+        import pdb
+        from neuronunit.optimisation import model_parameters
+        param_edges = model_parameters.MODEL_PARAMS['ADEXP']
+        results = {}
+        for key, use_test in self.test_frame.items():
+            use_test['protocol'] = str('elephant')
+            
+            ga_out = run_ga(param_edges, 7, use_tests, free_params=param_edges.keys(), \
+                            backend=str('ADEXP'), MU=7, protocol={'allen': False, 'elephant': True})
+            results[key] = copy.copy(ga_out)
+            return results
+
+            #(boolean,self.dtcpop) = tuples_
+            #print('done one')
+            #print(boolean,self.dtcpop)
+            #self.assertTrue(boolean)
+a = testHighLevelOptimisation()
+a.setUp()
+#resultsfe = a.test_data_driven_fe()
+resultsae = a.test_data_driven_ae()
+
+new_dic ={}
+for k,v in resultsae.items():
+   new_dic[k] = resultsae[k][0]['pf']
+with open('contentsae.p','wb') as f:
+    pickle.dump(new_dic,f)
+#for k,v in results.items():
+#   new_dic[k] = results[k][0]['pf']
+import pandas as pd
+#m = results['Cerebellum Purkinje cell'][0]['pf'][0].dtc.
+res = results[list(results.keys())[0]][0]['pf'][0].dtc.tests
+dtc  = results[list(results.keys())[0]][0]['pf'][0].dt
+df0 = pd.DataFrame(res)
+dicframe = {}
+m = results[list(results.keys())[0]][0]['pf'][0].dtc.dtc_to_model()
+other_dic = {}
+for i in res:
+    other_dic[i.name] = list(i.observation.values())[0]
+for i in res:
+    dicframe[i.observation]=i.name
+df1 = pd.DataFrame(dicframe)
+df0
+df1
+'''
     def test_solution_quality0(self):
 
         from neuronunit.tests.allen_tests import pre_obs#, test_collection
@@ -231,10 +282,10 @@ class testHighLevelOptimisation(unittest.TestCase):
 
         return
 
-    '''
+'''
 
 
 
 
-if __name__ == '__main__':
-    unittest.main()
+#if __name__ == '__main__':
+#    unittest.main()

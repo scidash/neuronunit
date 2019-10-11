@@ -25,6 +25,7 @@ class TestPulseTest(VmTest):
             self.params = kwargs['params']
         else:
             self.params = None
+        self.verbose = 0
     default_params = dict(VmTest.default_params)
     default_params['amplitude'] = -1.0 * pq.pA
     default_params['tmax'] = 1000.0*pq.ms
@@ -90,7 +91,6 @@ class TestPulseTest(VmTest):
             fig.plot(ts, Iext, label=str('negative injection times 1,000: '), width=100, height=20)
 
             fig.show()
-        print(r_in.simplified)
         return r_in.simplified
 
     @classmethod
@@ -194,8 +194,6 @@ class InputResistanceTest(TestPulseTest):
             observation['value'] = observation['value'].simplified
             score = super(InputResistanceTest, self).compute_score(observation,
                                                                 prediction)
-            import pdb
-            pdb.set_trace()
 
         return score
 
@@ -319,11 +317,12 @@ class RestingPotentialTest(TestPulseTest):
         else:
             # print(observation,prediction)
             # print(type(observation),type(prediction))
-            prediction['value'] = prediction['value'].simplified
-            observation['value'] = observation['value'].simplified
+            #prediction['value'] = prediction['value'].simplified
+            #observation['value'] = observation['value'].simplified
 
             score = super(RestingPotentialTest, self).\
                         compute_score(observation, prediction)
+        if self.verbose:
             print(score)
             print(observation, prediction)
         return score

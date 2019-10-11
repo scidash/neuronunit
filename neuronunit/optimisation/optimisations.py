@@ -106,7 +106,7 @@ class WSFloatIndividual(float):
         self.fitness = WeightedSumFitness(obj_size=obj_size)
 
 
-class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
+class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
 
     """DEAP Optimisation class"""
     def __init__(self, error_criterion = None, evaluator = None,
@@ -122,10 +122,10 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
                  nparams = 10,
                  boundary_dict= {},
                  hc = None,
-                 seed_pop = None, protocol={'allen':False,'elephant':True}):
+                 seed_pop = None, protocol={'allen':False,'elephant':True},simulated_obs=None):
         self.seed_pop = seed_pop
         """Constructor"""
-
+        #self.simulated_obs = simulated_obs
         self.protocol = protocol
         #super(SciUnitOptimisation, self).__init__()
         self.selection = selection
@@ -326,6 +326,8 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
         OM = om.OptMan(self.error_criterion,self.td, backend = self.backend, \
                                               hc = self.hc,boundary_dict = self.boundary_dict, \
                                               error_length=self.error_length,protocol=self.protocol)
+        #OM.siulated_obs = self.simulated_obs
+        #assert type(OM.simulated_obs) is not type(None)
         def custom_code(invalid_ind):
 
             if self.backend is None:
@@ -363,6 +365,8 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
             up=UPPER,
             indpb=1.0/IND_SIZE)
 
+        return OM
+    
     def set_pop(self, boot_new_random=0):
         if boot_new_random == 0:
             IND_SIZE = len(list(self.params.values()))
@@ -375,9 +379,6 @@ class SciUnitOptimisation():#bluepyopt.optimisations.Optimisation):
             pop = self.toolbox.population(n=boot_new_random)
         return pop
 
-    def run_cma(self, max_ngen = 10):
-        # call other module in this path.
-        pass
 
     def run(self,
             continue_cp=False,
