@@ -68,7 +68,7 @@ class RheobaseTest(VmTest):
         self.high = 300*pq.pA
         self.small = 0*pq.pA
         self.rheobase_vm = None
-        self.verbose = 3
+        self.verbose = 0
 
 
     required_capabilities = (cap.ReceivesSquareCurrent,
@@ -93,14 +93,8 @@ class RheobaseTest(VmTest):
         prediction = {'value': None}
         model.rerun = True
         try:
-            print(self.observation)
             units = self.observation['value'].units
         except KeyError:
-            print('self.observation["value"].units')
-
-            print(model._backend.attrs)
-            print( model.attrs)
-            print('should not be empty')
             units = self.observation['mean'].units
         
         begin_rh = time.time()
@@ -119,17 +113,19 @@ class RheobaseTest(VmTest):
 
         sub = np.array([x for x in lookup if lookup[x]==0])*units
         supra = np.array([x for x in lookup if lookup[x]>0])*units
+        '''
         if self.verbose>1:
             if len(sub):
-                print("Highest subthreshold current is %s" \
-                      % (float(sub.max())*units))
+                #print("Highest subthreshold current is %s" \
+                #      % (float(sub.max())*units))
             else:
-                print("No subthreshold current was tested.")
+                #print("No subthreshold current was tested.")
             if len(supra):
-                print("Lowest suprathreshold current is %s" \
-                      % supra.min())
+                #print("Lowest suprathreshold current is %s" \
+                 #     % supra.min())
             else:
                 print("No suprathreshold current was tested.")
+        '''
         if len(sub) and len(supra) and single_spike_found:# or too_many_spikes<5:
             rheobase = supra.min()
         elif too_many_spikes>=2:
@@ -146,15 +142,15 @@ class RheobaseTest(VmTest):
             if float(ampl) not in lookup:
 
                 uc = {'amplitude':ampl,'duration':DURATION,'delay':DELAY}
-                # print(model.attrs)
                 model.inject_square_current(uc)
                 n_spikes = model._backend.get_spike_count()
 
                 self.n_spikes = n_spikes
 
                 if self.verbose >= 5:
-                    print("Injected %s current and got %d spikes" % \
-                            (ampl,n_spikes))
+                    pass
+                    #print("Injected %s current and got %d spikes" % \
+                    #        (ampl,n_spikes))
                 lookup[float(ampl)] = n_spikes
                 spike_counts = np.array([n for x,n in lookup.items() if n>0])
 
@@ -192,7 +188,6 @@ class RheobaseTest(VmTest):
                     break
 
             if i >= max_iters:
-                #print('break')
                 break
             #Its this part that should be like an evaluate function that is passed to futures map.
             if len(sub) and len(supra):
@@ -244,7 +239,7 @@ class RheobaseTestP(VmTest):
 
      """
      def _extra(self):
-         self.verbose = 1
+         self.verbose = 0
 
      # def __init__(self,other_current=None):
      #     self.other_current = other_current
@@ -474,9 +469,12 @@ class RheobaseTestP(VmTest):
                         #tolerance = tolerance
                     if delta < tolerance or (str(supra.min()) == str(sub.max())):
                         if self.verbose >= 2:
-                            print(delta, 'a neuron, close to the edge! Multi spiking rheobase. # spikes: ',len(supra))
+                            import warning
+                            warning(delta, 'a neuron, close to the edge! Multi spiking rheobase. # spikes: ',len(supra))
                         too_many_spikes = np.min([ v for v in dtc.lookup.values() if v>1 ])
                         if too_many_spikes>15:
+                            import warning
+                            warning(delta, 'elephant tests dont work well on high frequency spikes, therefore, this trace excluded. # spikes: ',len(supra))
                             dtc.rheobase = {}
                             dtc.rheobase['value'] = None
                             dtc.boolean = True
@@ -497,9 +495,10 @@ class RheobaseTestP(VmTest):
 
 
                 if self.verbose >= 2:
-                    print("Try %d: SubMax = %s; SupraMin = %s" % \
-                    (cnt, sub.max() if len(sub) else None,
-                    supra.min() if len(supra) else None))
+                    pass
+                    #print("Try %d: SubMax = %s; SupraMin = %s" % \
+                    #(cnt, sub.max() if len(sub) else None,
+                    #supra.min() if len(supra) else None))
                 cnt += 1
             return dtc
 
@@ -521,8 +520,7 @@ class RheobaseTestP(VmTest):
         prediction = {}
 
         temp = find_rheobase(self,dtc).rheobase
-        print(temp)
-
+        
         if type(temp) is not type(None):
             if type(temp) is type({'dict':0}):
                 if temp['value'] is None:

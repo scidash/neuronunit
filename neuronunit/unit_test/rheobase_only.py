@@ -11,51 +11,25 @@ try:
 except:
     pass
 
-from itertools import repeat
 import quantities as pq
-
-
 import copy
 import unittest
-import pickle
-
-import numpy as np
-import pickle
-import dask.bag as db
-import os
-
-
-from neuronunit.optimisation import get_neab
-from neuronunit.optimisation.data_transport_container import DataTC
-
 from neuronunit.optimisation.optimization_management import dtc_to_rheo, mint_generic_model
 from neuronunit.optimisation.optimization_management import OptMan
-
-from neuronunit import tests as nu_tests, neuroelectro
 from neuronunit.tests import passive, waveform, fi
-from neuronunit.optimisation import get_neab
 from neuronunit.optimisation import exhaustive_search
-import pickle
 from neuronunit.optimisation.model_parameters import MODEL_PARAMS
-
 from neuronunit.tests import dynamics
 import pickle
 import dask.bag as db
-from neuronunit.models.reduced import ReducedModel
-
 from neuronunit.optimisation import data_transport_container
-
-from neuronunit.models.reduced import ReducedModel
-from neuronunit.optimisation import get_neab
 import numpy as np
 from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
 from neuronunit.optimisation import get_neab
 from neuronunit.models.reduced import ReducedModel, VeryReducedModel
 from neuronunit import aibs
 import os
-from neuronunit.optimisation.exhaustive_search import update_dtc_grid as ug
 from sciunit.models.runnable import RunnableModel
-#model = RunnableModel(str(dtc.backend),backend=(dtc.backend, {'DTC':dtc}))
 
 def grid_points():
     npoints = 10
@@ -386,6 +360,8 @@ class testLowLevelOptimisation(unittest.TestCase):
         et = ETest(model,dtc)
         dtc = ETest.elephant_tests(dtc)
         res = et.runTest()
+        #import pdb
+        #pdb.set_trace()
 
     def test_rheobase_serial(self):
         from neuronunit.tests.fi import RheobaseTest as T

@@ -55,8 +55,8 @@ def get_vm(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.36452
             v[m+1] = c;# % membrane voltage reset
             u[m+1] = u[m+1] + d;# % recovery variable update
 
-    #for m in range(0,N):
-    #    v[m] = v[m]/1000.0
+    for m in range(0,N):
+        v[m] = v[m]/1000.0
 
     return v
 
@@ -159,7 +159,7 @@ class RAWBackend(Backend):
             c = current['injected_square_current']
         else:
             c = current
-        amplitude = float(c['amplitude'])#/1000.0 #this needs to be in every backends
+        amplitude = float(c['amplitude'])*1000.0 #this needs to be in every backends
 
         duration = float(c['duration'])#/dt#/dt.rescale('ms')
         delay = float(c['delay'])#/dt#.rescale('ms')

@@ -61,7 +61,7 @@ class ADEXPBackend(Backend):
         self.n_spikes = None
         self.spike_monitor = None
         self.peak_v = 0.02
-
+        self.verbose = False
         self.model.get_spike_count = self.get_spike_count
 
 
@@ -142,10 +142,9 @@ class ADEXPBackend(Backend):
         transform_function = interp1d([float(t) for t in self.vM.times],[float(v) for v in self.vM.magnitude])
         xnew = np.linspace(0, float(np.max(self.vM.times)), num=1004001, endpoint=True)
         vm_new = transform_function(xnew) #% generate the y values for all x values in xnew
-        print(len(vm_new))
         self.vM = AnalogSignal(vm_new,units = mV,sampling_period = float(xnew[1]-xnew[0]) * pq.s)
-        print(len(self.vM))
-        #print(len(vm_new))
+        if self.verbose:
+            print(len(self.vM))
         self.vM = AnalogSignal(vm_new,units = mV,sampling_period = float(xnew[1]-xnew[0]) * pq.s)
         return self.vM
     def inject_square_current(self, current):#, section = None, debug=False):
@@ -170,26 +169,15 @@ class ADEXPBackend(Backend):
             c = current['injected_square_current']
         else:
             c = current
-        #try:
-        #    amplitude = float(c['amplitude'].simplified)
-        #except:
         amplitude = float(c['amplitude'])
-        #print(amplitude,'amplitude')
-        #for i in range(0,N):
-        #    Iext[i] = float(Iext[i]*10000000000000.0)
-        #amplitude = amplitude#*10000000000000.0
         duration = int(c['duration'])#/dt#/dt.rescale('ms')
         delay = int(c['delay'])#/dt#.rescale('ms')
         pre_current = int(duration)+100
         try:
             stim = input_factory.get_step_current(int(delay), int(pre_current), 1 * b2.ms, amplitude *b2.pA)
         except:
-            pdb.set_trace()
-        #print(amplitude,'gets here \n\n\n\n\n\n')
-
+            pass
         st = (duration+delay+100)* b2.ms
-        #print(st, 'simulation time')
-        #print(st, 'simulation time')
 
         if self.model.attrs is None or not len(self.model.attrs):
             #from neurodynex.adex_model import AdEx
@@ -197,7 +185,7 @@ class ADEXPBackend(Backend):
 
             self.AdEx = AdEx
             self.state_monitor, self.spike_monitor = self.AdEx.simulate_AdEx_neuron(I_stim = stim, simulation_time=st)
-            #print('gets here a')
+            
         else:
             self.set_attrs(**attrs)
             self.state_monitor, self.spike_monitor = self.AdEx.simulate_AdEx_neuron(
@@ -238,8 +226,6 @@ class ADEXPBackend(Backend):
             else:
                 for v in value:
                     i = int(float(v)/0.001)
-                    #print(i)
-                    #print(i)
                     self.vM[i] = self.peak_v*qt.mV
 
 
@@ -249,7 +235,6 @@ class ADEXPBackend(Backend):
         if ascii_plot:
             t = [float(f) for f in self.vM.times]
             v = [float(f) for f in self.vM.magnitude]
-            #print(len(v),len(t),'this is a short vector')
             fig = apl.figure()
             fig.plot(t, v, label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
             fig.show()

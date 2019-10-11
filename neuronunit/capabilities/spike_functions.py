@@ -156,12 +156,9 @@ def spikes2widths(spike_waveforms):
             n_samples = sum(s > mid)  # Number of samples above the half-max.
             widths.append(n_samples)
     widths = np.array(widths, dtype='float')
-    print(widths, 'unconverted')
     if n_spikes:
         # Convert from samples to time.
         widths_ = widths*spike_waveforms.sampling_period.simplified
-    #    print(widths, 'converted')
-    #pdb.set_trace()
     return widths_
 
 

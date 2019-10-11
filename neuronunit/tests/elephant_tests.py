@@ -22,39 +22,28 @@ from neuronunit.tests import InjectedCurrentAPThresholdTest, APThresholdTest
 from neuronunit.tests import InjectedCurrentAPAmplitudeTest, APAmplitudeTest, APWidthTest, RestingPotentialTest, CapacitanceTest
 from neuronunit.tests import TimeConstantTest, InputResistanceTest, InjectedCurrentAPWidthTest
 
-def format_test(dtc):
-    import copy
-    # pre format the current injection dictionary based on pre computed
-    # rheobase values of current injection.
-    # This is much like the hooked method from the old get neab file.
-    dtc.vtest = {}
-
-    dtc.tests = copy.copy(dtc.tests)
-
-    if type(dtc.tests) is type({}):
-        tests = [key for key in dtc.tests.values()]
-        dtc.tests = switch_logic(tests)
-    else:
-        dtc.tests = switch_logic(dtc.tests)
+def ft(tests,rheobase):
 
 
-
-    for k,v in enumerate(dtc.tests):
-        dtc.vtest[k] = {}
+    protocols = {}
+    for k,v in enumerate(tests):
+        protocols[k] = {}
         #for t in tests:
         if hasattr(v,'passive'):#['protocol']:
             if v.passive == False and v.active == True:
-                keyed = dtc.vtest[k]
-                dtc.vtest[k] = active_values(keyed,dtc.rheobase)
+                keyed = tests[k].params
+                v.params = active_values(keyed,rheobase)
                 #print(dtc.vtest[k]['injected_square_current']['delay']+dtc.vtest[k]['injected_square_current']['duration'])
             elif v.passive == True and v.active == False:
-                keyed = dtc.vtest[k]
-                dtc.vtest[k] = passive_values(keyed)
+                keyed = tests[k].params
+                v.params = passive_values(keyed)
         if v.name in str('RestingPotentialTest'):
-
-            dtc.vtest[k]['injected_square_current']['amplitude'] = 0.0*pq.pA
-            keyed = dtc.vtest[k]
-    return dtc
+            #try:
+            v.params['injected_square_current']['amplitude'] = 0.0*pq.pA
+            #except:
+            #    pdb.set_trace()
+            #keyed = dtc.vtest[k]
+    return tests
 
 
 def switch_logic(tests):
@@ -147,53 +136,56 @@ def test_setup(self,model,protocol_container):#,model_id,model_dict,model=None,i
 
     '''
     #standard = model.rheobase
+    #protocol_container = dtc.tests
     params_dic = {t.name:t.params for t in protocol_container}
     obs_dic = {t.name:t.observation for t in protocol_container }
     name_to_test = {t.name:t for t in protocol_container }
-
     self.test_set = []
 
     if 'InjectedCurrentAPThresholdTest' in params_dic.keys():
-        print(params_dic.keys())
+        #print(params_dic.keys())
         self.test_set.append(InjectedCurrentAPThresholdTest(obs_dic['InjectedCurrentAPThresholdTest'], \
-            params = params_dic['InjectedCurrentAPThresholdTest']))
+                                                            name='',params = params_dic['InjectedCurrentAPThresholdTest']))
     if 'CapacitanceTest' in params_dic.keys():
-        print(params_dic.keys())
+        #print(params_dic.keys())
         self.test_set.append(CapacitanceTest(obs_dic['CapacitanceTest'], \
-            params = params_dic['CapacitanceTest']))
+            name='',params = params_dic['CapacitanceTest']))
     if 'APThresholdTest' in params_dic.keys():
-        print(params_dic.keys())
+        #print(params_dic.keys())
         self.test_set.append(APThresholdTest(obs_dic['APThresholdTest'], \
-            params = params_dic['APThresholdTest']))
+            name='',params = params_dic['APThresholdTest']))
     if 'RheobaseTest' in params_dic.keys():
-        print(params_dic.keys())
-        self.test_set.append(RheobaseTest(obs_dic['RheobaseTest'], \
-            params = params_dic['RheobaseTest']))
+        rt = RheobaseTest(obs_dic['RheobaseTest'], \
+                                          name='',params = params_dic['RheobaseTest'])
+        if 'params' in rt.params.keys():
+            rt.params = rt.params['params']
+        self.test_set.append(rt)
     if 'InjectedCurrentAPAmplitudeTest' in params_dic.keys():
-        print(params_dic.keys())
+        #print(params_dic.keys())
         self.test_set.append(InjectedCurrentAPAmplitudeTest(obs_dic['InjectedCurrentAPAmplitudeTest'], \
-            params = params_dic['InjectedCurrentAPAmplitudeTest']))
+            name='',params = params_dic['InjectedCurrentAPAmplitudeTest']))
     if 'InjectedCurrentAPWidthTest' in params_dic.keys():
         print(params_dic.keys())
         self.test_set.append(InjectedCurrentAPWidthTest(obs_dic['InjectedCurrentAPWidthTest'], \
-            params = params_dic['InjectedCurrentAPWidthTest']))
+            name='',params = params_dic['InjectedCurrentAPWidthTest']))
 
     if 'RestingPotentialTest' in params_dic.keys():
-        print(params_dic.keys())
+        #print(params_dic.keys())
         self.test_set.append(RestingPotentialTest(obs_dic['RestingPotentialTest'], \
-            params = params_dic['RestingPotentialTest']))
+            name='',params = params_dic['RestingPotentialTest']))
     if 'TimeConstantTest' in params_dic.keys():
-        print(params_dic.keys())
+        #print(params_dic.keys())
         self.test_set.append(TimeConstantTest(obs_dic['TimeConstantTest'], \
-            params = params_dic['TimeConstantTest']))
+            name='',params = params_dic['TimeConstantTest']))
     if 'InputResistanceTest' in params_dic.keys():
-        print(params_dic.keys())
-        print(obs_dic['InputResistanceTest'])
-        print(params_dic['InputResistanceTest'])
+        #print(params_dic.keys())
+        #print(obs_dic['InputResistanceTest'])
+        #print(params_dic['InputResistanceTest'])
         inht = InputResistanceTest(obs_dic['InputResistanceTest'], \
-            params = params_dic['InputResistanceTest']['injected_square_current'])
-        print(inht)
+            name='',params = params_dic['InputResistanceTest'])
+        #print(inht)
         self.test_set.append(inht)
+
     return self.test_set
 
 
@@ -207,26 +199,31 @@ class ETest(object):
         self.model = model
         self.model.rheobase = dtc.rheobase
 
-        dtc = format_test(dtc)
-        self.test_set = test_setup(self,self.model,dtc.tests)
+        self.test_set = switch_logic(test_setup(self,self.model,dtc.tests))
+        self.protocols = ft(self.test_set,dtc.rheobase)
 
 
     def run_test(self, index):
         test_class = self.test_set[index]
-        print(test_class.name)
+        #print(test_class.name)
+        #test_class = switch_logic(test_class)
+        if 'std' not in test_class.observation.keys():
+            test_class.observation['std'] = list(test_class.observation.values())[0]
+        
         try:
             score = test_class.judge(self.model)
-
         except:
             score = None
-            print('fails at {0}'.format(test_class.name))
-        try:
-            if hasattr(test_class,'generate_prediction'):
-                test_class.prediction = test_class.generate_prediction(self.model)
-            else:
-                test_class.prediction = test_class.extract_features(self.model)
-        except:
-            print('fails at {0}'.format(test_class.name))
+        #print('fails at {0}'.format(test_class.name))
+        #import pdb
+        #pdb.set_trace()
+        if test_class.active:
+            test_class.prediction = test_class.generate_prediction(self.model)
+        if test_class.passive:
+            test_class.setup_protocol(self.model)
+            result = test_class.get_result(self.model)
+            test_class.prediction = test_class.extract_features(self.model,result)
+        #print('fails at {0}'.format(test_class.name))
 
         return (test_class,score)
 
@@ -236,9 +233,14 @@ class ETest(object):
         for i, t in enumerate(self.test_set):
            (tclass,score) = self.run_test(i)
            if score is not None:
-               scores[tclass.name] = score.norm_score
+               if type(score.norm_score) is not type(None):
+                   scores[tclass.name] = 1.0 - score.norm_score
+               else:
+                   scores[tclass.name] = score
            else:
                scores[tclass.name] = score
+
+                   
            tclasses[tclass.name] = tclass
         return (scores,tclass)
 

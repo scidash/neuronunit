@@ -46,8 +46,17 @@ from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
 #from neuronunit.optimisation import get_neab
 from neuronunit.models.reduced import ReducedModel
 from neuronunit import aibs
+from neuronunit.optimisation.optimisations import run_ga
+import pdb
+from neuronunit.optimisation import model_parameters
+'''
+class TC(dict):
+    def __init__(self,larg=None,simulated_obs=None):
+       super(TC,self).__init__()
+       self.simulated_obs = simulated_obs
+       self.update(larg)
 
-
+'''
 def test_all_tests_pop(dtcpop, tests):
 
     rheobase_test = [tests[0]['Hippocampus CA1 pyramidal cell']['RheobaseTest']]
@@ -59,8 +68,7 @@ def test_all_tests_pop(dtcpop, tests):
         assert len(list(d.attrs.values())) > 0
 
     dtcpop = list(map(dtc_to_rheo,dtcpop))
-    OM = OptMan(all_tests)
-
+    OM = OptMan(all_tests,simulated_obs=False)
     format_test = OM.format_test
     elephant_evaluation = OM.elephant_evaluation
 
@@ -129,17 +137,75 @@ class testHighLevelOptimisation(unittest.TestCase):
         #    use_test['protocol'] = str('elephant')
         #    break
         use_test = self.filtered_tests['Hippocampus CA1 pyramidal cell']#['RheobaseTest']]
-        OM = OptMan(use_test,protocol={'elephant':True,'allen':False,'dm':False})
-        results = OM.round_trip_test(use_test,str('RAW'),MU=8,NGEN=8,mini_tests=True)
+        easy_standards = {ut.name:ut.observation['std'] for ut in use_test.values()}
+        '''
+        for index,(key,test) in enumerate(self.filtered_tests.items()):                            
+            stds.append([ut.observation['std'] for ut in test.values()])
+        stds_norm= {}
+        print(stds)
+        print(len(stds))
+        import pdb
         pdb.set_trace()
-        model = results['pf'][0].dtc.dtc_to_model()
 
+        #for index in range(0,len((self.filtered_tests.items()))):
+        for index,(key,test) in enumerate(use_test.items()):
+            try:
+                stds_norm[test.name] = np.std([i[index] for i in stds]) * stds[index][0].units
+            except:
+                pass
+        print(stds)
+
+        '''
+        print(easy_standards)
+        [(value.name,value.observation) for value in use_test.values()]
+        try:
+            #assert 1==2
+            with open('jd.p','rb') as f:
+                results,converged,target,simulated_tests = pickle.load(f)
+        except:
+
+            OM = OptMan(use_test,protocol={'elephant':True,'allen':False,'dm':False})
+            results,converged,target,simulated_tests = OM.round_trip_test(use_test,str('RAW'),MU=3,NGEN=3,stds = easy_standards)
+            print(converged,target)
+            temp = [results,converged,target,simulated_tests]
+
+            with open('jd.p','wb') as f:
+                pickle.dump(temp,f)
+        param_edges = model_parameters.MODEL_PARAMS['ADEXP'] 
+        try:
+            assert 1==2
+            with open('jda.p','rb') as f:
+                adconv = pickle.load(f)[0]
+        except:
+
+            ga_out = run_ga(param_edges, 2, simulated_tests, free_params=param_edges.keys(), \
+                        backend=str('ADEXP'), MU = 8,  protocol={'allen': False, 'elephant': True})
+            adconv = [ p.dtc for p in ga_out[0]['pf'] ]
+            with open('jda.p','wb') as f:
+                temp = [adconv]
+                pickle.dump(temp,f)
+        import copy
+        from neuronunit.optimisation import optimization_management as om
+        om.inject_and_plot(copy.copy(converged),second_pop=copy.copy(target),third_pop=copy.copy(adconv),figname='snippets_false.png',snippets=False)
+        om.inject_and_plot(copy.copy(converged),second_pop=copy.copy(target),third_pop=copy.copy(adconv),figname='snippets_true.png',snippets=True)
+        om.inject_and_plot(copy.copy(adconv),second_pop=copy.copy(adconv),third_pop=copy.copy(adconv),figname='adexp_only_true.png',snippets=True)
+        om.inject_and_plot(copy.copy(adconv),second_pop=copy.copy(adconv),third_pop=copy.copy(adconv),figname='adexp_only_false.png',snippets=False)
+
+        mpa = adconv[0].iap()
+        cpm = converged[0].iap()
+        #print(cpm)
+        #print(mpa.units)
+
+        pdb.set_trace()
+        
         return
 
 
 
-a = testHighLevelOptimisation()
-a.setUp()
-a.test_solution_quality0()
-#if __name__ == '__main__':
-#    unittest.main()
+#a = testHighLevelOptimisation()
+#a.setUp()
+#a.test_solution_quality0()
+
+       
+if __name__ == '__main__':
+    unittest.main()

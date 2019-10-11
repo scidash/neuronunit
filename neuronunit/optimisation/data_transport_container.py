@@ -2,6 +2,7 @@ import numpy as np
 #from neuronunit.optimisation.optimisation_management import mint_generic_model
 #from sciunit.models.runnable import RunnableModel
 
+from neuronunit.models import VeryReducedModel
 
 try:
     import asciiplotlib as apl
@@ -62,7 +63,6 @@ class DataTC(object):
             self.attrs.update(self.constants)
         return #self.attrs
     def dtc_to_model(self):
-        from neuronunit.models import VeryReducedModel
         #import os
         #model = RunnableModel(str(self.backend),backend=self.backend,attrs=self.attrs)
         #model = RunnableModel(str(self.backend),backend=(self.backend, {'DTC':self}))
@@ -109,10 +109,18 @@ class DataTC(object):
     def iap(self):
         model = self.dtc_to_model()
         #new_tests['RheobaseTest']
-        for t in self.tests:
-            if t.name in str('RheobaseTest'):
-                uset_t = t
-                break
+        if type(self.tests) is type({'1':1}):
+            if 'RheobaseTest' in self.tests.keys():
+                uset_t = self.tests['RheobaseTest']
+            else:
+                uset_t = self.tests['RheobaseTestP']
+        
+        elif type(self.tests) is type(list):
+            for t in self.tests:
+                if t.name in str('RheobaseTest'):
+                    uset_t = t
+                    break
+
         pms = uset_t.params
         pms['injected_square_current']['amplitude'] = self.rheobase
         print(pms)
@@ -122,6 +130,11 @@ class DataTC(object):
         vm = model.get_membrane_potential()
         t = [float(f) for f in vm.times]
         v = [float(f) for f in vm.magnitude]
-        fig = apl.figure()
-        fig.plot(t, v, label=str('observation waveform from inside dtc: ')+str(nspike), width=100, height=20)
-        fig.show()
+        try:
+            fig = apl.figure()
+            fig.plot(t, v, label=str('observation waveform from inside dtc: ')+str(nspike), width=100, height=20)
+            fig.show()
+        except:
+            import warnings
+            print('ascii plot not installed')
+        return vm

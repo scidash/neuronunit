@@ -16,6 +16,9 @@ class APWidthTest(VmTest):
     score_type = scores.RatioScore
     units = pq.ms
     ephysprop_name = 'Spike Half-Width'
+    def __init__():
+        super(VmTest,self).__init__()
+        self.verbose = 0
     def generate_prediction(self, model):
         """Implement sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
@@ -23,7 +26,8 @@ class APWidthTest(VmTest):
         # if get_spike_count is zero, then widths will be None
         # len of None returns an exception that is not handled
         model.inject_square_current(self.params['injected_square_current'])
-        print(self.params['injected_square_current'])
+        if self.verbose:
+            print(self.params['injected_square_current'])
         model.get_membrane_potential()
         widths = model.get_AP_widths()
         if ascii_plot:
@@ -78,7 +82,8 @@ class InjectedCurrentAPWidthTest(APWidthTest):
 
 
     def generate_prediction(self, model):
-        print(self.params['injected_square_current'])
+        if self.verbose:
+            print(self.params['injected_square_current'])
 
         model.inject_square_current(self.params['injected_square_current'])
         model.get_membrane_potential()
@@ -259,8 +264,7 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
         super(InjectedCurrentAPThresholdTest, self).__init__(*args, **kwargs)
         if str('params') in kwargs.keys():
             self.params = kwargs['params']
-            print(self.params['injected_square_current'])
-
+            
 
     required_capabilities = (ncap.ReceivesSquareCurrent,)
     name = "Injected current AP threshold test"
@@ -271,7 +275,12 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
     #    model.inject_square_current(self.params['injected_square_current'])
 
     def generate_prediction(self, model):
-        model.inject_square_current(self.params['injected_square_current'])
+        if 'injected_square_current' in self.params.keys():
+            model.inject_square_current(self.params['injected_square_current'])
+    
+        else:
+            model.inject_square_current(self.params)
+    
         model.get_membrane_potential()
         if ascii_plot:
             t = [float(f) for f in model.vM.times]
