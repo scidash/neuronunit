@@ -29,7 +29,6 @@ install:
 
 script:
   - cd cd neuronunit/unit_test/
-  - python -m unittest rheobase_only.py
   - cd working
   - python izhi_elephantrt.py
   - python elephant_data_tests.py
