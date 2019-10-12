@@ -1981,7 +1981,11 @@ def bridge_passive(package):
     score = t.compute_score(t.observation,pred)
     return score, dtc
 
+def can_this_map1(dtc):
+    return dtc
+
 def can_this_map(dtc):
+
     # Inputs single data transport container modules, and neuroelectro observations that
     # inform test error error_criterion
     # Outputs Neuron Unit evaluation scores over error criterion
@@ -1997,9 +2001,6 @@ def can_this_map(dtc):
     else:
 
         for k, t in enumerate(tests):
-            #if "RheobaseTest" in str(k):
-            #    print('gets here')
-            #    return dtc
             key = str(t)
             dtc.scores[key] = 1.0
             #dtc = self.format_test(dtc)
@@ -2683,11 +2684,23 @@ class OptMan():
                     assert hasattr(d, 'tests')
 
                 if str('ADEXP') in self.backend:
+                    new_dtc = []
+                    for dtc in dtcpop:
+                        new_dtc.append(DataTC());
+                        new_dtc[-1].attrs = dtc.attrs;
+                        new_dtc[-1].backend = dtc.backend;
+                        new_dtc[-1].rheobase = dtc.rheobase;
+                        new_dtc[-1].protocols = dtc.protocols
+                        # suggesting that passive tests not always picklable
+                        new_dtc[-1].tests = []
+
+                        for t in dtc.tests:
+                            if not t.passive:
+                                new_dtc[-1].tests.append(t)
+
+                    dtcbag = db.from_sequence(new_dtc, npartitions = NPART)
+                    new_dtc = list(dtcbag.map(self.elephant_evaluation).compute())
                     dtcpop = list(map(self.elephant_evaluation,dtcpop))
-                    #dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
-                    #dtcpop = list(dtcbag.map(can_this_map).compute())
-
-
                 else:
                     dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
                     dtcpop = list(dtcbag.map(self.elephant_evaluation).compute())

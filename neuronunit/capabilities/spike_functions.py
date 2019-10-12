@@ -65,19 +65,20 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
             if len(spike_train) == 0:
                 return None
 
-    too_short = True
-    too_long = True
-
+    too_short = False
+    too_long = False
     last_t = spike_train[-1]
-    if last_t-width/2.0 > 0.0*ms:
-        too_short = False
-    if last_t+width/2.0 < vm.times[-1]:
-        too_long = False
+    first_t = spike_train[0]
+
+    if first_t-width/2.0 < 0.0*ms:
+        too_short = True
+    if last_t+width/2.0 > vm.times[-1]:
+        too_long = True
 
     if not too_short and not too_long:
         snippets = [vm.time_slice(t-width/2, t+width/2) for t in spike_train]
     elif too_long:
-        snippets = [vm.time_slice(t-width/2, t) for t in spike_train[0:-1]]
+        snippets = [vm.time_slice(t-width/2, t) for t in spike_train]
     elif too_short:
         snippets = [vm.time_slice(t, t+width/2) for t in spike_train]
 
