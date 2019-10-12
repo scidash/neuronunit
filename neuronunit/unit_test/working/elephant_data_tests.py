@@ -29,10 +29,8 @@ from neuronunit.optimisation.optimization_management import OptMan
 
 from neuronunit import tests as nu_tests, neuroelectro
 from neuronunit.tests import passive, waveform, fi
-# from neuronunit.optimisation import get_neab
 from neuronunit.optimisation import exhaustive_search
 from neuronunit.models.reduced import ReducedModel
-# from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 from neuronunit.tests import dynamics
 from neuronunit.models.reduced import ReducedModel
@@ -41,10 +39,8 @@ from neuronunit.models.reduced import ReducedModel
 from neuronunit.optimisation import data_transport_container
 
 from neuronunit.models.reduced import ReducedModel
-#from neuronunit.optimisation import get_neab
 
 from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
-#from neuronunit.optimisation import get_neab
 from neuronunit.models.reduced import ReducedModel
 from neuronunit import aibs
 
@@ -124,11 +120,10 @@ class testHighLevelOptimisation(unittest.TestCase):
                     str('GLIFBackend')
                 ]
 
-
+    '''
+        
     def test_data_driven_fe(self):
-        '''
-        forward euler
-        '''
+        #forward euler
         use_test1 = self.filtered_tests['Hippocampus CA1 pyramidal cell']
         #use_tests = list(self.test_frame[0]['Hippocampus CA1 pyramidal cell'].values())
         use_tests = list(self.test_frame['Hippocampus CA1 pyramidal cell'].values())
@@ -144,7 +139,7 @@ class testHighLevelOptimisation(unittest.TestCase):
                             backend=str('RAW'), MU=7, protocol={'allen': False, 'elephant': True})
             results[key] = copy.copy(ga_out)
             return results
-
+    '''
     def test_data_driven_ae(self):
         '''
         forward euler, and adaptive exponential
@@ -171,25 +166,8 @@ class testHighLevelOptimisation(unittest.TestCase):
         return results
 a = testHighLevelOptimisation()
 a.setUp()
-#resultsfe = a.test_data_driven_fe()
 resultsae = a.test_data_driven_ae()
 new_dic ={}
-#for k,v in resultsae.items():
-#   new_dic[k] = resultsae[k][0]['pf']
 with open('contentsae.p','wb') as f:
     pickle.dump(restultsae,f)
-'''
-import pandas as pd
-res = resultsae[list(results.keys())[0]][0]['pf'][0].dtc.tests
-dtc  = resultsae[list(results.keys())[0]][0]['pf'][0].dt
-df0 = pd.DataFrame(res)
-dicframe = {}
-m = results[list(resultsae.keys())[0]][0]['pf'][0].dtc.dtc_to_model()
-other_dic = {}
-for i in res:
-    other_dic[i.name] = list(i.observation.values())[0]
-for i in res:
-    dicframe[i.observation]=i.name
-df1 = pd.DataFrame(dicframe)
-'''
-
+B

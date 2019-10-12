@@ -1,8 +1,8 @@
-"""Passive neuronunit tests, requiring no active conductances or spiking."""
+"""PAassive neuronunit tests, requiring no active conductances or spiking."""
 
 from .base import np, pq, ncap, VmTest, scores
 from scipy.optimize import curve_fit
-
+import gc
 DURATION = 500.0*pq.ms
 DELAY = 200.0*pq.ms
 
@@ -91,6 +91,8 @@ class TestPulseTest(VmTest):
             fig.plot(ts, Iext, label=str('negative injection times 1,000: '), width=100, height=20)
 
             fig.show()
+
+        gc.collect()    
         return r_in.simplified
 
     @classmethod
