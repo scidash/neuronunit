@@ -120,29 +120,9 @@ class testHighLevelOptimisation(unittest.TestCase):
                 ]
 
 
-    def test_data_driven_fe(self):
-        '''
-        forward euler
-        '''
-        use_test1 = self.filtered_tests['Hippocampus CA1 pyramidal cell']
-        #use_tests = list(self.test_frame[0]['Hippocampus CA1 pyramidal cell'].values())
-        use_tests = list(self.test_frame['Hippocampus CA1 pyramidal cell'].values())
-        from neuronunit.optimisation.optimisations import run_ga
-        import pdb
-        from neuronunit.optimisation import model_parameters
-        param_edges = model_parameters.MODEL_PARAMS['RAW']
-        results = {}
-        for key, use_test in self.test_frame.items():
-            use_test['protocol'] = str('elephant')
-            
-            ga_out = run_ga(param_edges, 7, use_tests, free_params=param_edges.keys(), \
-                            backend=str('RAW'), MU=7, protocol={'allen': False, 'elephant': True})
-            results[key] = copy.copy(ga_out)
-            return results
-
 
         
-    def test_data_driven_ae(self):
+    def test_call_opt_from_test_suite_object(self):
         '''
         forward euler, and adaptive exponential
         '''
@@ -155,7 +135,8 @@ class testHighLevelOptimisation(unittest.TestCase):
 
 
         for key, use_test in self.test_frame.items():
-            #test_dic = {t.name:t for t in use_tests}
+            '''
+            '''
             use_tests = TSL(tests=use_tests)
             backend = str('RAW')
             ga_out = use_tests.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=7, \
@@ -165,6 +146,3 @@ class testHighLevelOptimisation(unittest.TestCase):
 a = testHighLevelOptimisation()
 a.setUp()
 resultsae = a.test_data_driven_ae()
-new_dic ={}
-with open('contentsae.p','wb') as f:
-    pickle.dump(restultsae,f)

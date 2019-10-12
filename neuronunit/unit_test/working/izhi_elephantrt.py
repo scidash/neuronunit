@@ -19,7 +19,6 @@ import pickle
 import dask.bag as db
 import os
 
-
 from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.data_transport_container import DataTC
 
@@ -28,10 +27,8 @@ from neuronunit.optimisation.optimization_management import OptMan
 
 from neuronunit import tests as nu_tests, neuroelectro
 from neuronunit.tests import passive, waveform, fi
-#from neuronunit.optimisation import get_neab
 from neuronunit.optimisation import exhaustive_search
 from neuronunit.models.reduced import ReducedModel
-#from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 from neuronunit.tests import dynamics
 from neuronunit.models.reduced import ReducedModel
@@ -42,20 +39,7 @@ from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
 from neuronunit.models.reduced import ReducedModel
 from neuronunit import aibs
 from neuronunit.optimisation.optimisations import run_ga
-import pdb
 from neuronunit.optimisation import model_parameters
-#from neuronunit import tests as nu_test_class
-'''
-from sciunit import TestSuite
-
-class TC(TestSuite):
-    def __init__(self,tests=None):
-       super(TC,self).__init__(tests)
-    def optimize(self,param_edges,backend=None,protocol=None,MU=None,NGEN=None):
-        ga_out = run_ga(param_edges, NGEN, self.tests, free_params=param_edges.keys(), \
-                    backend=str('ADEXP'), MU = 8,  protocol={'allen': False, 'elephant': True})
-        return ga_out
-'''    
 def test_all_tests_pop(dtcpop, tests):
 
     rheobase_test = [tests[0]['Hippocampus CA1 pyramidal cell']['RheobaseTest']]
@@ -132,33 +116,11 @@ class testHighLevelOptimisation(unittest.TestCase):
 
 
     def test_solution_quality0(self):
-        #for key, use_test in self.filtered_tests.items():
-        #    use_test['protocol'] = str('elephant')
-        #    break
         use_test = self.filtered_tests['Hippocampus CA1 pyramidal cell']#['RheobaseTest']]
         easy_standards = {ut.name:ut.observation['std'] for ut in use_test.values()}
-        '''
-        for index,(key,test) in enumerate(self.filtered_tests.items()):                            
-            stds.append([ut.observation['std'] for ut in test.values()])
-        stds_norm= {}
-        print(stds)
-        print(len(stds))
-        import pdb
-        pdb.set_trace()
-
-        #for index in range(0,len((self.filtered_tests.items()))):
-        for index,(key,test) in enumerate(use_test.items()):
-            try:
-                stds_norm[test.name] = np.std([i[index] for i in stds]) * stds[index][0].units
-            except:
-                pass
-        print(stds)
-
-        '''
         print(easy_standards)
         [(value.name,value.observation) for value in use_test.values()]
         try:
-            #assert 1==2
             with open('jd.p','rb') as f:
                 results,converged,target,simulated_tests = pickle.load(f)
         except:
@@ -172,7 +134,6 @@ class testHighLevelOptimisation(unittest.TestCase):
                 pickle.dump(temp,f)
         param_edges = model_parameters.MODEL_PARAMS['ADEXP'] 
         try:
-            #assert 1==2
             with open('jda.p','rb') as f:
                 adconv = pickle.load(f)[0]
         except:
@@ -192,18 +153,7 @@ class testHighLevelOptimisation(unittest.TestCase):
 
         mpa = adconv[0].iap()
         cpm = converged[0].iap()
-        #print(cpm)
-        #print(mpa.units)
-
-        #pdb.set_trace()
-        
         return
-
-
-
-#a = testHighLevelOptimisation()
-#a.setUp()
-#a.test_solution_quality0()
 
        
 if __name__ == '__main__':

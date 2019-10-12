@@ -1184,6 +1184,7 @@ def new_model(dtc):
     return model
 def new_single_gene(dtc):
     from neuronunit.optimisation.optimisations import SciUnitOptimisation
+
     import random
     from datetime import datetime
     random.seed(datetime.now())
@@ -1201,6 +1202,29 @@ def new_single_gene(dtc):
     return gene, dtc_
 
 import pickle
+
+from sciunit import TestSuite
+
+class TSO(TestSuite):
+    def __init__(self,tests=None):
+       super(TC,self).__init__(tests)
+
+    def optimize(self,param_edges,backend=None,protocol=None,MU=None,NGEN=None):
+        from neuronunit.optimisation.optimisations import run_ga
+        ga_out = run_ga(param_edges, NGEN, self, free_params=param_edges.keys(), \
+                    backend=backend, MU = 8,  protocol={'allen': False, 'elephant': True})
+        return ga_out
+
+class TSL(list):
+    def __init__(self,tests=[]):
+       super(TSL,self).__init__()
+       self.extend(tests)
+       
+    def optimize(self,param_edges,backend=None,protocol=None,MU=None,NGEN=None):
+        from neuronunit.optimisation.optimisations import run_ga
+        ga_out = run_ga(param_edges, NGEN, self, free_params=param_edges.keys(), \
+                    backend=backend, MU = 8,  protocol={'allen': False, 'elephant': True})
+        return ga_out
 
 def nuunit_allen_evaluation(dtc):
 
@@ -2068,6 +2092,7 @@ class OptMan():
 
     def round_trip_test(self,tests,backend,free_paramaters=None,NGEN=None,MU=None,mini_tests=None,stds=None):
         from neuronunit.optimisation.optimisations import run_ga
+
 
         '''
         # Inputs:
