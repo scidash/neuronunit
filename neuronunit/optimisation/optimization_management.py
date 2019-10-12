@@ -2656,7 +2656,25 @@ class OptMan():
                 ind.rheobase = None
                 d.rheobase = None
         return pop, dtcpop
+    def serial_dtc(self,dtcpop,b=False):
+        parallel_dtc = []
+        for dtc in dtcpop:
+            parallel_dtc.append(DataTC());
+            
+            parallel_dtc[-1].attrs = dtc.attrs;
+            parallel_dtc[-1].backend = dtc.backend;
+            parallel_dtc[-1].rheobase = dtc.rheobase;
+            parallel_dtc[-1].protocols = dtc.protocols
+            # suggesting that passive tests not always picklable
+            # as the passive tests associated with brian backend objects have
+            # persistant weak references that cannot be used.
+            parallel_dtc[-1].tests = []
 
+            for t in dtc.tests:
+                if t.passive==b:
+                    parallel_dtc[-1].tests.append(t)
+        return parallel_dtc
+    
     def parallel_route(self,pop,dtcpop,tests,td):
         NPART = np.min([multiprocessing.cpu_count(),len(dtcpop)])
         if self.protocol['allen']:
@@ -2684,23 +2702,21 @@ class OptMan():
                     assert hasattr(d, 'tests')
 
                 if str('ADEXP') in self.backend:
-                    new_dtc = []
-                    for dtc in dtcpop:
-                        new_dtc.append(DataTC());
-                        new_dtc[-1].attrs = dtc.attrs;
-                        new_dtc[-1].backend = dtc.backend;
-                        new_dtc[-1].rheobase = dtc.rheobase;
-                        new_dtc[-1].protocols = dtc.protocols
-                        # suggesting that passive tests not always picklable
-                        new_dtc[-1].tests = []
+                    serial_dtc = list(map(self.elephant_evaluation,dtcpop))
+                    '''
+                    A way to get parallelism backinto brian2.
+                    serial_dtc = self.serial_dtc(dtcpop,b=True)
+                    parallel_dtc = self.serial_dtc(dtcpop,b=False)
+                    dtcbag = db.from_sequence(parallel_dtc, npartitions = NPART)
+                    parallel_dtc = list(dtcbag.map(self.elephant_evaluation).compute())
+                    serial_dtc = list(map(self.elephant_evaluation,serial_dtc))
+                    dtcpop = []
+                    for i,j in zip(serial_dtc,parallel_dtc):
+                        i.tests.extend(j.tests)
+                        i.tests.extend(j.tests)
+                        dtcpop.append(i)
+                    '''
 
-                        for t in dtc.tests:
-                            if not t.passive:
-                                new_dtc[-1].tests.append(t)
-
-                    dtcbag = db.from_sequence(new_dtc, npartitions = NPART)
-                    new_dtc = list(dtcbag.map(self.elephant_evaluation).compute())
-                    dtcpop = list(map(self.elephant_evaluation,dtcpop))
                 else:
                     dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
                     dtcpop = list(dtcbag.map(self.elephant_evaluation).compute())

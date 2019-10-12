@@ -35,28 +35,27 @@ from neuronunit.models.reduced import ReducedModel
 from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 from neuronunit.tests import dynamics
 from neuronunit.models.reduced import ReducedModel
-
-
 from neuronunit.optimisation import data_transport_container
-
 from neuronunit.models.reduced import ReducedModel
-#from neuronunit.optimisation import get_neab
 
 from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
-#from neuronunit.optimisation import get_neab
 from neuronunit.models.reduced import ReducedModel
 from neuronunit import aibs
 from neuronunit.optimisation.optimisations import run_ga
 import pdb
 from neuronunit.optimisation import model_parameters
+#from neuronunit import tests as nu_test_class
 '''
-class TC(dict):
-    def __init__(self,larg=None,simulated_obs=None):
-       super(TC,self).__init__()
-       self.simulated_obs = simulated_obs
-       self.update(larg)
+from sciunit import TestSuite
 
-'''
+class TC(TestSuite):
+    def __init__(self,tests=None):
+       super(TC,self).__init__(tests)
+    def optimize(self,param_edges,backend=None,protocol=None,MU=None,NGEN=None):
+        ga_out = run_ga(param_edges, NGEN, self.tests, free_params=param_edges.keys(), \
+                    backend=str('ADEXP'), MU = 8,  protocol={'allen': False, 'elephant': True})
+        return ga_out
+'''    
 def test_all_tests_pop(dtcpop, tests):
 
     rheobase_test = [tests[0]['Hippocampus CA1 pyramidal cell']['RheobaseTest']]
@@ -173,13 +172,13 @@ class testHighLevelOptimisation(unittest.TestCase):
                 pickle.dump(temp,f)
         param_edges = model_parameters.MODEL_PARAMS['ADEXP'] 
         try:
-            assert 1==2
+            #assert 1==2
             with open('jda.p','rb') as f:
                 adconv = pickle.load(f)[0]
         except:
+            ga_out = run_ga(param_edges, 8, simulated_tests, free_params=param_edges.keys(), \
+                backend=str('ADEXP'), MU = 8,  protocol={'allen': False, 'elephant': True})
 
-            ga_out = run_ga(param_edges, 2, simulated_tests, free_params=param_edges.keys(), \
-                        backend=str('ADEXP'), MU = 8,  protocol={'allen': False, 'elephant': True})
             adconv = [ p.dtc for p in ga_out[0]['pf'] ]
             with open('jda.p','wb') as f:
                 temp = [adconv]
@@ -196,7 +195,7 @@ class testHighLevelOptimisation(unittest.TestCase):
         #print(cpm)
         #print(mpa.units)
 
-        pdb.set_trace()
+        #pdb.set_trace()
         
         return
 

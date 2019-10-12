@@ -1,4 +1,4 @@
-#import matplotlib # Its not that this file is responsible for doing plotting, but it calls many modules that are, such that it needs to pre-empt
+ #import matplotlib # Its not that this file is responsible for doing plotting, but it calls many modules that are, such that it needs to pre-empt
 # setting of an appropriate backend.
 import matplotlib
 matplotlib.use('agg')
@@ -312,7 +312,7 @@ def cell_to_efel_mapper(content):
 def cell_to_test_mapper(dtc):
 
     dm_properties = {}
-  
+
 
     dm_properties['dm'] = []
     dm_properties['efel'] = []

@@ -68,6 +68,7 @@ def _update_history_and_hof(halloffame,pf, history, population,td,mu):
 
     Note: History and Hall-of-Fame behave like dictionaries
     '''
+    population = wrangle(population)
 
     if halloffame is not None:
         try:
@@ -79,6 +80,7 @@ def _update_history_and_hof(halloffame,pf, history, population,td,mu):
         try:
             history.update(population[0:mu])
         except:
+
             for p in population:
                 print(p.dtc.from_imputation, 'from imputation')
                 #p = strip_object(p)
@@ -107,11 +109,25 @@ def gene_bad(offspring):
         if np.any(np.isnan(o)) or np.any(np.isinf(o)):
             gene_bad = True
     return gene_bad
+import copy
+
+def wrangle(parents):
+    initial_length = len(parents)
+    imp = [o for o in parents if o.dtc.from_imputation==True]
+    parents = [o for o in parents if o.dtc.from_imputation==False]
+    subsequent = len(parents)
+    delta = initial_length - subsequent
+    for i in range(0,delta):
+        ind = copy.copy(parents[0])
+        for x,y in enumerate(ind):
+            ind[x] = copy.copy(imp[i][x])
+        parents.append(ind)
+    return parents        
 
 def _get_offspring(parents, toolbox, cxpb, mutpb):
     '''return the offsprint, use toolbox.variate if possible'''
     if hasattr(toolbox, 'variate'):
-
+        parents = wrangle(parents)
         offspring = toolbox.variate(parents, toolbox, cxpb, mutpb)
         offspring = deap.algorithms.varAnd(offspring, toolbox, cxpb, mutpb)
 
@@ -199,9 +215,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
 
         gen_vs_hof.append(hof)
         _record_stats(stats, logbook, start_gen, parents, invalid_count)
-    #toolbox.register("select",selNSGA2)
-    #from deap.tools import selNSGA3
-
+    
     fronts = []
 
     # Begin the generational    process
