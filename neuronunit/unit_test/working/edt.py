@@ -23,6 +23,7 @@ import os
 
 from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.data_transport_container import DataTC
+
 from neuronunit.optimisation.optimization_management import dtc_to_rheo, mint_generic_model
 from neuronunit.optimisation.optimization_management import OptMan
 
@@ -38,6 +39,7 @@ from neuronunit.models.reduced import ReducedModel
 from neuronunit.optimisation import data_transport_container
 
 from neuronunit.models.reduced import ReducedModel
+
 from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
 from neuronunit.models.reduced import ReducedModel
 from neuronunit import aibs
@@ -92,9 +94,15 @@ class testHighLevelOptimisation(unittest.TestCase):
         self.predictionp = None
         self.score_p = None
         self.score_s = None
+         #self.grid_points
+
+        #electro_path = 'pipe_tests.p'
         assert os.path.isfile(electro_path) == True
         with open(electro_path,'rb') as f:
             self.electro_tests = pickle.load(f)
+        #self.electro_tests = get_neab.replace_zero_std(self.electro_tests)
+
+        #self.test_rheobase_dtc = test_rheobase_dtc
         #self.dtcpop = test_rheobase_dtc(self.dtcpop,self.electro_tests)
         self.standard_model = self.model = mint_generic_model('RAW')
         self.MODEL_PARAMS = MODEL_PARAMS
@@ -112,36 +120,47 @@ class testHighLevelOptimisation(unittest.TestCase):
                     str('GLIFBackend')
                 ]
 
-
-
+    '''
         
-    def test_call_opt_from_test_suite_object(self):
+    def test_data_driven_fe(self):
+        #forward euler
+        use_test1 = self.filtered_tests['Hippocampus CA1 pyramidal cell']
+        #use_tests = list(self.test_frame[0]['Hippocampus CA1 pyramidal cell'].values())
+        use_tests = list(self.test_frame['Hippocampus CA1 pyramidal cell'].values())
+        from neuronunit.optimisation.optimisations import run_ga
+        import pdb
+        from neuronunit.optimisation import model_parameters
+        param_edges = model_parameters.MODEL_PARAMS['RAW']
+        results = {}
+        for key, use_test in self.test_frame.items():
+            use_test['protocol'] = str('elephant')
+            
+            ga_out = run_ga(param_edges, 7, use_tests, free_params=param_edges.keys(), \
+                            backend=str('RAW'), MU=7, protocol={'allen': False, 'elephant': True})
+            results[key] = copy.copy(ga_out)
+            return results
+    '''
+    def test_data_driven_ae(self):
         '''
-        only test if can make a python list of tests, where the test class has a method that performs 
-        optomisation using the lists self.
         forward euler, and adaptive exponential
         '''
-        #use_test1 = self.filtered_tests['Hippocampus CA1 pyramidal cell']
-        #use_tests = list(self.test_frame['Hippocampus CA1 pyramidal cell'].values())
-        from neuronunit.optimisation.optimization_management import TSL
+        use_test1 = self.filtered_tests['Hippocampus CA1 pyramidal cell']
+        use_tests = list(self.test_frame['Hippocampus CA1 pyramidal cell'].values())
+        from neuronunit.optimisation.optimisations import run_ga
+        import pdb
         from neuronunit.optimisation import model_parameters
-        from sciunit import TestSuite
-
         results = {}
         results['RAW'] = {}
-
+        results['ADEXP'] = {}
 
         for key, use_test in self.test_frame.items():
-            '''
-            '''
-            try:
-                suite = TestSuite(use_tests)
-            except:
-                print('making a sciunit test suite with opt method still not working')
-                
-            use_tests = TSL(tests=use_tests)
+            use_test['protocol'] = str('elephant')
+            backend = str('ADEXP')
+            ga_out = run_ga(model_parameters.MODEL_PARAMS[backend], 7, use_tests, free_params=model_parameters.MODEL_PARAMS[backend].keys(), \
+                            backend=backend, MU=7, protocol={'allen': False, 'elephant': True})
+            results[backend][key] = copy.copy(ga_out)
             backend = str('RAW')
-            ga_out = use_tests.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=7, \
+            ga_out = run_ga(model_parameters.MODEL_PARAMS[backend], 7, use_tests, free_params=model_parameters.MODEL_PARAMS[backend].keys(), \
                             backend=backend, MU=7, protocol={'allen': False, 'elephant': True})
             results[backend][key] = copy.copy(ga_out)
             break
@@ -149,3 +168,7 @@ class testHighLevelOptimisation(unittest.TestCase):
 a = testHighLevelOptimisation()
 a.setUp()
 resultsae = a.test_data_driven_ae()
+new_dic ={}
+with open('contentsae.p','wb') as f:
+    pickle.dump(restultsae,f)
+B
