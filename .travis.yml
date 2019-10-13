@@ -32,7 +32,7 @@ script:
   - cd working
   - python izhi_elephantrt.py
   - python test_synt_sugar.py
-  - python elephant_data_tests.py
+  - python edt.py
 
 after_success:
   - coveralls
