@@ -95,6 +95,8 @@ def data_set(number):
         supra_sweeps = [(i,j) for i,j in enumerate(stim_types) if str("Suprathreshold") in j ]
         analy_dict = {}
         for i in supra_sweeps:
+            import pdb
+            pdb.set_trace()
             analy_dict[i[0]] = allensdk.ephys.extract_cell_features.extract_feature_wave_russell(responses[i[0]], stim_types[i[0]],\
             specific_data,numbers)
         #import pdb; pdb.set_trace()

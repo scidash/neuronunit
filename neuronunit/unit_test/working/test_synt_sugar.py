@@ -3,6 +3,7 @@ import unittest
 import os
 import sys
 from sciunit.utils import NotebookTools#,import_all_modules
+
 import dask
 from dask import bag
 import matplotlib
@@ -42,6 +43,11 @@ from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
 from neuronunit.models.reduced import ReducedModel
 from neuronunit import aibs
 
+path='../../examples/example_data.ipynb'
+try:
+    NotebookTools.run_notebook(path,open(path,'r'))
+except:
+    pass
 
 def test_all_tests_pop(dtcpop, tests):
 

@@ -56,7 +56,10 @@ from neo.core import AnalogSignal
 from quantities import mV, ms, nA
 from neuronunit import models
 import pickle
-import efel
+try:
+    import efel
+except:
+    pass
 from types import MethodType
 import quantities as pq
 import pdb
@@ -64,7 +67,6 @@ import pdb
 from collections import Iterable, OrderedDict
 
 import numpy as np
-import efel
 import pickle
 from allensdk.ephys.extract_cell_features import extract_cell_features
 import pandas as pd

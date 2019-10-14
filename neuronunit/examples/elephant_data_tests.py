@@ -83,7 +83,7 @@ def grid_points():
 class testHighLevelOptimisation(unittest.TestCase):
 
     def setUp(self):
-        electro_path = str(os.getcwd())+'/../../tests/russell_tests.p'
+        electro_path = str(os.getcwd())+'/..//tests/russell_tests.p'
 
         assert os.path.isfile(electro_path) == True
         with open(electro_path,'rb') as f:
@@ -148,28 +148,49 @@ class testHighLevelOptimisation(unittest.TestCase):
         use_tests = list(self.test_frame['Hippocampus CA1 pyramidal cell'].values())
         from neuronunit.optimisation.optimisations import run_ga
         import pdb
+        from neuronunit.optimisation.optimization_management import TSL        
+        from neuronunit.optimisation.optimization_management import TSL
         from neuronunit.optimisation import model_parameters
         results = {}
         results['RAW'] = {}
         results['ADEXP'] = {}
-
+        prev = 0
         for key, use_test in self.test_frame.items():
-            use_test['protocol'] = str('elephant')
-            backend = str('ADEXP')
-            ga_out = run_ga(model_parameters.MODEL_PARAMS[backend], 7, use_tests, free_params=model_parameters.MODEL_PARAMS[backend].keys(), \
-                            backend=backend, MU=7, protocol={'allen': False, 'elephant': True})
-            results[backend][key] = copy.copy(ga_out)
+            use_tests = TSL(tests=use_tests)
+
             backend = str('RAW')
-            ga_out = run_ga(model_parameters.MODEL_PARAMS[backend], 7, use_tests, free_params=model_parameters.MODEL_PARAMS[backend].keys(), \
-                            backend=backend, MU=7, protocol={'allen': False, 'elephant': True})
-            results[backend][key] = copy.copy(ga_out)            
+            ga_out = use_tests.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=8, \
+                                        backend=backend, MU=8, protocol={'allen': False, 'elephant': True})
+            results[backend][key] = copy.copy(ga_out)
+            use_tests = TSL(tests=use_tests)
+
+            backend = str('ADEXP')
+            ga_out = use_tests.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=8, \
+                                        backend=backend, MU=8, protocol={'allen': False, 'elephant': True})
+            results[backend][key] = copy.copy(ga_out)
+            current = [ set(v[list(v.keys())[0]][0]['pf'][0].dtc.scores.values()) for v in results.values()][0]
+            
+            print(current != prev)
+            prev = current
         return results
+'''
+ga_out = run_ga(model_parameters.MODEL_PARAMS[backend], 8, use_test, free_params=model_parameters.MODEL_PARAMS[backend].keys(), \
+backend=backend, MU=8, protocol={'allen': False, 'elephant': True})
+results[backend][key] = copy.copy(ga_out)
+backend = str('RAW')
+ga_out = run_ga(model_parameters.MODEL_PARAMS[backend], 8, use_test, free_params=model_parameters.MODEL_PARAMS[backend].keys(), \
+backend=backend, MU=8, protocol={'allen': False, 'elephant': True})
+results[backend][key] = copy.copy(ga_out)
+'''
+            
 a = testHighLevelOptimisation()
 a.setUp()
 results = a.test_data_driven_ae()
+import pdb
+pdb.set_trace()
 #new_dic ={}
-
 pdic = {str(key)+str('_')+str(k):value[0]['pf'] for k,v in results.items() for key,value in v.items() }
+
 pickle.dump(pdic,open('all_data_tests.p','wb'))
 
 #pdic = {key:{k:value[0]['pf']} for k,v in resultsae.items() for key,value in v.items() }
