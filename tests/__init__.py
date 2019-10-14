@@ -26,6 +26,4 @@ class FakeTest(sciunit.Test):
         mean = observation[0]
         std = observation[1]
         z = (prediction - mean)/std
-        #self.prediction = prediction
-        #print(scores.ZScore(z))
         return scores.ZScore(z)
