@@ -349,6 +349,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
     #if model.get_membrane_potential() is not None:
     #    return (model.get_membrane_potential().times,model.get_membrane_potential())
     #else:
+    print(plot_backend)
     return None, None
 
 @cython.boundscheck(False)
@@ -1219,7 +1220,7 @@ class TSL(list):
     def __init__(self,tests=[]):
        super(TSL,self).__init__()
        self.extend(tests)
-       
+
     def optimize(self,param_edges,backend=None,protocol=None,MU=None,NGEN=None):
         from neuronunit.optimisation.optimisations import run_ga
         ga_out = run_ga(param_edges, NGEN, self, free_params=param_edges.keys(), \
@@ -1319,7 +1320,14 @@ return dtc#pop[0][1]
 def nuunit_dm_evaluation(dtc):
     model = mint_generic_model(dtc.backend)
     model.set_attrs(**dtc.attrs)
-    values = [v for v in dtc.vtest.values()][0]
+    try:
+        values = [v for v in dtc.protocols.values()][0]
+
+    except:
+        values = [v for v in dtc.tests.values()][0]
+
+        #values = [v for v in dtc.vtest.values()][0]
+
     current = values['injected_square_current']
 
     current['amplitude'] = dtc.rheobase * 1.5
@@ -1349,14 +1357,21 @@ def nuunit_dm_evaluation(dtc):
     dm_test_features = DMTNMLO.runTest()
     dtc.AP1DelayMeanTest = None
     dtc.AP1DelayMeanTest = dm_test_features['AP1DelayMeanTest']
-    print(dtc.AP1DelayMeanTest)
+    #print(dtc.AP1DelayMeanTest)
     dtc.dm_test_features = None
     dtc.dm_test_features = dm_test_features
     return dtc
+
 def nuunit_dm_rheo_evaluation(dtc):
     model = mint_generic_model(dtc.backend)
     model.set_attrs(**dtc.attrs)
-    values = [v for v in dtc.vtest.values()][0]
+    #values = [v for v in dtc.vtest.values()][0]
+
+    try:
+        values = [v for v in dtc.protocols.values()][0]
+    except:
+        values = [v for v in dtc.tests.values()][0]
+
     current = values['injected_square_current']
 
     current['amplitude'] = dtc.rheobase
@@ -2069,7 +2084,8 @@ class OptMan():
     def __init__(self,tests, td=None, backend = None,hc = None,boundary_dict = None, error_length=None,protocol=None,simulated_obs=None,verbosity=None):
         self.tests = tests
         self.td = td
-        self.error_length = len(tests)
+        if tests is not None:
+            self.error_length = len(tests)
         self.backend = backend
         self.hc = hc
         self.boundary_dict= boundary_dict
@@ -2429,12 +2445,12 @@ class OptMan():
                     pred = t.generate_prediction(model)
                     take_anything = list(t.observation.values())[0]
                     t.observation['std'] = 15*take_anything.magnitude * take_anything.units
-                    
+
                     take_anything = list(pred.values())[0]
                     if take_anything is None:
                         continue
                     pred['std'] = 15*take_anything.magnitude * take_anything.units
-                    
+
                     score, dtc = bridge_judge((t, dtc))
                 else:
                     score, dtc = bridge_passive((t, dtc))
@@ -2685,7 +2701,7 @@ class OptMan():
         parallel_dtc = []
         for dtc in dtcpop:
             parallel_dtc.append(DataTC());
-            
+
             parallel_dtc[-1].attrs = dtc.attrs;
             parallel_dtc[-1].backend = dtc.backend;
             parallel_dtc[-1].rheobase = dtc.rheobase;
@@ -2699,7 +2715,7 @@ class OptMan():
                 if t.passive==b:
                     parallel_dtc[-1].tests.append(t)
         return parallel_dtc
-    
+
     def parallel_route(self,pop,dtcpop,tests,td):
         NPART = np.min([multiprocessing.cpu_count(),len(dtcpop)])
         if self.protocol['allen']:
