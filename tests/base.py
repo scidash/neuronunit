@@ -127,8 +127,6 @@ class VmTest(sciunit.Test):
             )
         reference_data.get_values(quiet=not cls.verbose) # Get and verify summary data
                                     # from neuroelectro.org.
-        print(reference_data)
-        #import pdb; pdb.set_trace()
         if hasattr(reference_data,'mean'):
             observation = {'mean': reference_data.mean*cls.units,
                            'std': reference_data.std*cls.units,
@@ -145,8 +143,6 @@ class VmTest(sciunit.Test):
                                                       # NeuroElectro ontology.
             cached = cached
             )
-        print(reference_data)
-        #import pdb; pdb.set_trace()
         reference_data.get_values(quiet=quiet) # Get and verify summary data
                                     # from neuroelectro.org.
         observation = {'mean': reference_data.mean*cls.units,

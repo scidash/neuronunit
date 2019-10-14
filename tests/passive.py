@@ -78,7 +78,6 @@ class TestPulseTest(VmTest):
             '''
             vm_fit[:offset] = c
             shaped = len(np.shape(vm_fit))
-            #print(shaped)
             if shaped > 1:
                 vm_fit[offset:,0] = a * np.exp(-t[offset:]/b) + c
             elif shaped == 1:
@@ -160,9 +159,7 @@ class TimeConstantTest(TestPulseTest):
         """Implementation of sciunit.Test.score_prediction."""
         if prediction is None:
             return None# scores.InsufficientDataScore(None)
-        #print(prediction.keys())
-        #print(prediction)
-
+        
         if 'n' in prediction.keys():
             if prediction['n'] == 0:# if prediction is None:
                 score = scores.InsufficientDataScore(None)
@@ -208,10 +205,6 @@ class CapacitanceTest(TestPulseTest):
         if prediction is None:
             return None#scores.InsufficientDataScore(None)
 
-        print(prediction.keys())
-        print(prediction)
-        print(observation.keys())
-        print(observation)
 
         if 'n' in prediction.keys():
             if prediction['n'] == 0:
