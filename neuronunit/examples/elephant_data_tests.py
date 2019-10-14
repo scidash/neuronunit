@@ -166,8 +166,13 @@ class testHighLevelOptimisation(unittest.TestCase):
         return results
 a = testHighLevelOptimisation()
 a.setUp()
-resultsae = a.test_data_driven_ae()
-new_dic ={}
-with open('contentsae.p','wb') as f:
-    pickle.dump(restultsae,f)
-B
+results = a.test_data_driven_ae()
+#new_dic ={}
+
+pdic = {str(key)+str('_')+str(k):value[0]['pf'] for k,v in results.items() for key,value in v.items() }
+pickle.dump(pdic,open('all_data_tests.p','wb'))
+
+#pdic = {key:{k:value[0]['pf']} for k,v in resultsae.items() for key,value in v.items() }
+#with open('contentsae.p','wb') as f:
+#    pickle.dump(pdic,f)
+#B
