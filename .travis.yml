@@ -28,6 +28,7 @@ install:
   - pip install -e .
 
 script:
+  - jupyter nbconvert --execute examples/example_data.ipynb 
   - cd neuronunit/unit_test/
   - cd working
   - python izhi_elephantrt.py
