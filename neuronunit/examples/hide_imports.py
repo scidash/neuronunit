@@ -31,7 +31,7 @@ from sciunit import scores# score_type
 
 from neuronunit.optimisation.data_transport_container import DataTC
 from neuronunit.tests.fi import RheobaseTestP# as discovery
-from neuronunit.optimisation.optimization_management import dtc_to_rheo, format_test, nunit_evaluation, grid_search
+#from neuronunit.optimisation.optimization_management import dtc_to_rheo, format_test, nunit_evaluation, grid_search
 import quantities as pq
 from neuronunit.models.reduced import ReducedModel
 from neuronunit.optimisation.model_parameters import path_params
@@ -52,6 +52,7 @@ from neuronunit import neuroelectro
 from neuronunit.optimisation import optimisations as om
 
 
+'''
 from sklearn.neural_network import MLPClassifier, MLPRegressor
 from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
@@ -72,7 +73,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 from sklearn import preprocessing
 import sklearn
 import neuronunit.optimisation.model_parameters as model_params
-
+'''
 #from neuronunit.optimisation.optimization_management import stochastic_gradient_descent
 import seaborn as sns
 

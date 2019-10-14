@@ -821,9 +821,6 @@ class InputResistanceTest(Druckmann2013Test):
             raise Exception("Test requires at least one current injection")
 
         for i in injection_currents:
-            print('how is code getting here')
-            import pdb
-            pdb.set_trace()
             if i.units != pq.nA:
                 i.units = pq.nA
 
