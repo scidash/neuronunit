@@ -20,6 +20,8 @@ import pickle
 import dask.bag as db
 import os
 
+from neuronunit.optimisation.optimization_management import TSD
+#from neuronunit.optimisation.optimization_management import TSD
 
 from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.data_transport_container import DataTC
@@ -120,26 +122,44 @@ class testHighLevelOptimisation(unittest.TestCase):
                     str('GLIFBackend')
                 ]
 
-    '''
+
+    def get_cells(self,backend,model_parameters):
+        #import pdb; pdb.set_trace()
+        cpc = TSD(tests= self.test_frame['Cerebellum Purkinje cell'],use_rheobase_score=False)
+        cpc_out = cpc.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=9, \
+                                backend=backend, MU=9, protocol={'allen': False, 'elephant': True})
+
+        omc = TSD(tests= self.test_frame['Olfactory bulb (main) mitral cell'],use_rheobase_score=False)
+        om_out = omc.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=9, \
+                                backend=backend, MU=9, protocol={'allen': False, 'elephant': True})
+        ca1 = TSD(tests= self.test_frame['Hippocampus CA1 pyramidal cell'],use_rheobase_score=False)
+
+        ca1_out = ca1.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=9, backend=backend, MU=9, protocol={'allen': False, 'elephant': True})
+
+        basket = TSD(tests= self.test_frame['Hippocampus CA1 basket cell'],use_rheobase_score=False)#, NGEN=10, \
+                               # backend=backend, MU=10, protocol={'allen': False, 'elephant': True})
+
+        basket_out = basket.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=9, \
+                                backend=backend, MU=9, protocol={'allen': False, 'elephant': True})
+        neo = TSD(tests= self.test_frame['Neocortex pyramidal cell layer 5-6'],use_rheobase_score=False)#, NGEN=10, \
+
+#
+#dict_keys(['Cerebellum Purkinje cell', 'Olfactory bulb (main) mitral cell', 'Hippocampus CA1 pyramidal cell', 'Neocortex pyramidal cell layer 5-6', 'Hippocampus CA1 basket cell'])
+        neo_out = neo.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=8, \
+                                backend=backend, MU=8, protocol={'allen': False, 'elephant': True})
         
-    def test_data_driven_fe(self):
-        #forward euler
-        use_test1 = self.filtered_tests['Hippocampus CA1 pyramidal cell']
-        #use_tests = list(self.test_frame[0]['Hippocampus CA1 pyramidal cell'].values())
-        use_tests = list(self.test_frame['Hippocampus CA1 pyramidal cell'].values())
-        from neuronunit.optimisation.optimisations import run_ga
-        import pdb
-        from neuronunit.optimisation import model_parameters
-        param_edges = model_parameters.MODEL_PARAMS['RAW']
-        results = {}
-        for key, use_test in self.test_frame.items():
-            use_test['protocol'] = str('elephant')
-            
-            ga_out = run_ga(param_edges, 7, use_tests, free_params=param_edges.keys(), \
-                            backend=str('RAW'), MU=7, protocol={'allen': False, 'elephant': True})
-            results[key] = copy.copy(ga_out)
-            return results
-    '''
+        dtcpop0 = [p for p in om_out[0]['pf'] ]
+        dtcpop1 = [p for p in cpc_out[0]['pf'] ]
+        dtcpop2 = [p for p in ca1_out[0]['pf'] ]
+        dtcpop3 = [p for p in basket_out[0]['pf'] ]
+        dtcpop4 = [p for p in neo_out[0]['pf'] ]
+
+        pdic = {str(backend):{'olf':dtcpop0,'purkine':dtcpop1,'ca1pyr':dtcpop2,'ca1basket':dtcpop3,'neo':dtcpop4}}
+
+        pickle.dump(pdic,open(str(backend)+str('all_data_tests.p'),'wb'))
+
+        return (dtcpop0,dtcpop1,dtcpop2,dtcpop3,dtcpop4,cpc_out,ca1_out,om_out,basket_out,neo_out)
+
     def test_data_driven_ae(self):
         '''
         forward euler, and adaptive exponential
@@ -148,19 +168,79 @@ class testHighLevelOptimisation(unittest.TestCase):
         use_tests = list(self.test_frame['Hippocampus CA1 pyramidal cell'].values())
         from neuronunit.optimisation.optimisations import run_ga
         import pdb
-        from neuronunit.optimisation.optimization_management import TSL        
-        from neuronunit.optimisation.optimization_management import TSL
         from neuronunit.optimisation import model_parameters
         results = {}
         results['RAW'] = {}
         results['ADEXP'] = {}
         prev = 0
-        for key, use_test in self.test_frame.items():
-            use_tests = TSL(tests=use_tests)
+        use_test_old = 0.0
+        tests_changed=0.0
+        #print(self.test_frame['Cerebellum Purkinje cell'])
+        #backend = str('RAW')
+        #(dtcpop0,dtcpop1,dtcpop2,dtcpop3,dtcpop4,cpc_out,ca1_out,om_out,basket_out,neo_out) = self.get_cells(backend,model_parameters)
+        backend = str('ADEXP')
+        (dtcpop0,dtcpop1,dtcpop2,dtcpop3,dtcpop4,cpc_out,ca1_out,om_out,basket_out,neo_out) = self.get_cells(backend,model_parameters)
+        return (dtcpop0,dtcpop1,dtcpop2,dtcpop3,dtcpop4,cpc_out,ca1_out,om_out,basket_out,neo_out)
 
+    '''
+        #print(cpc)
+        #vOlfactory bulb (main) mitral cel        (Pdb) print(self.test_frame['Olfactory bulb (main) mitral cell'].keys())
+
+        #olf_out = run_ga(model_parameters.MODEL_PARAMS[backend], 3, self.test_frame['Olfactory bulb (main) mitral cell'], free_params=model_parameters.MODEL_PARAMS[backend].keys(), \
+        #                backend=backend, MU=3, protocol={'allen': False, 'elephant': True})
+        #results = copy.copy(ga_out)
+        print(om_out,cpc_out)
+        import pdb
+        pdb.set_trace()
+
+
+        purkinje = run_ga(model_parameters.MODEL_PARAMS[backend], 3, self.test_frame['Cerebellum Purkinje cell'], free_params=model_parameters.MODEL_PARAMS[backend].keys(), \
+                        backend=backend, MU=3, protocol={'allen': False, 'elephant': True})
+        #results = copy.copy(ga_out)
+        olf_out[1].error_criterion[0].observation['value']
+        purkinje[1].error_criterion[0].observation['value']
+
+        import pdb
+        pdb.set_trace()
+
+        #aaa = cpc.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=1,backend=backend, MU=1, protocol={'allen': False, 'elephant': True})
+
+        self.test_frame['Cerebellum Purkinje cell']['CapacitanceTest'].observation['value'] != self.test_frame['Hippocampus CA1 basket cell']['CapacitanceTest'].observation['value']
+        for key, use_test in self.test_frame.items():
+            ks = list(use_test.keys())
+            k = ks[0]
+            print(use_test[k].observation)
+            assert use_test_old != use_test[k].observation[list(use_test[k].observation.keys())[0]]
+            print(use_test_old,use_test[k].observation[list(use_test[k].observation.keys())[0]])
+
+            use_test_old = use_test[k].observation[list(use_test[k].observation.keys())[0]]
+            use_tests = TSL(tests=use_tests)
             backend = str('RAW')
+            ga_out = use_tests.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=1, \
+                                    backend=backend, MU=1, protocol={'allen': False, 'elephant': True})
+
+            use_tests = None
+            tests_change = ga_out[1].error_criterion[0].observation['value']
+            print(tests_changed,tests_change)
+            try:
+                assert tests_changed != tests_change
+            except:
+                import pdb
+                pdb.set_trace()
+            tests_changed = tests_change
+            current = [ set(p) for p in ga_out[0]['pop'] ][0]
+            print(current,prev)
+            #try:
+            assert current != prev
+            prev = current
+        for key, use_test in self.test_frame.items():
+
+            use_tests = TSL(tests=use_tests)
+            backend = str('RAW')
+
             ga_out = use_tests.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=8, \
                                         backend=backend, MU=8, protocol={'allen': False, 'elephant': True})
+
             results[backend][key] = copy.copy(ga_out)
             use_tests = TSL(tests=use_tests)
 
@@ -169,10 +249,11 @@ class testHighLevelOptimisation(unittest.TestCase):
                                         backend=backend, MU=8, protocol={'allen': False, 'elephant': True})
             results[backend][key] = copy.copy(ga_out)
             current = [ set(v[list(v.keys())[0]][0]['pf'][0].dtc.scores.values()) for v in results.values()][0]
-            
-            print(current != prev)
+            assert current != prev
             prev = current
+
         return results
+    '''
 '''
 ga_out = run_ga(model_parameters.MODEL_PARAMS[backend], 8, use_test, free_params=model_parameters.MODEL_PARAMS[backend].keys(), \
 backend=backend, MU=8, protocol={'allen': False, 'elephant': True})
@@ -182,16 +263,18 @@ ga_out = run_ga(model_parameters.MODEL_PARAMS[backend], 8, use_test, free_params
 backend=backend, MU=8, protocol={'allen': False, 'elephant': True})
 results[backend][key] = copy.copy(ga_out)
 '''
-            
+
 a = testHighLevelOptimisation()
 a.setUp()
-results = a.test_data_driven_ae()
+#results =
+(dtcpop0,dtcpop1,dtcpop2,dtcpop3,dtcpop4, cpc_out,ca1_out,om_out,basket_out,neo_out) = a.test_data_driven_ae()
+from neuronunit.optimisation.optimization_management import inject_and_plot
+aaa = inject_and_plot(dtcpop0,second_pop=dtcpop1,third_pop=dtcpop2,figname='not_a_problemsfdsfs.png',snippets=False)
+aaa = inject_and_plot(dtcpop0,second_pop=dtcpop1,third_pop=dtcpop3,figname='not_a_problemsffs.png',snippets=False)
+
 import pdb
 pdb.set_trace()
 #new_dic ={}
-pdic = {str(key)+str('_')+str(k):value[0]['pf'] for k,v in results.items() for key,value in v.items() }
-
-pickle.dump(pdic,open('all_data_tests.p','wb'))
 
 #pdic = {key:{k:value[0]['pf']} for k,v in resultsae.items() for key,value in v.items() }
 #with open('contentsae.p','wb') as f:

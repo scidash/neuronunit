@@ -1,21 +1,22 @@
-import allensdk.core.json_utilities as json_utilities
+Aimport allensdk.core.json_utilities as json_utilities
 import pickle
 neuronal_model_id = 566302806
-'''
 # download model metadata
-glif_api = GlifApi()
-nm = glif_api.get_neuronal_models_by_id([neuronal_model_id])[0]
+try:
+    ephys_sweeps = json_utilities.read('ephys_sweeps.json')
+except:
+    glif_api = GlifApi()
+    nm = glif_api.get_neuronal_models_by_id([neuronal_model_id])[0]
 
 
-# download information about the cell
-ctc = CellTypesCache()
-ctc.get_ephys_data(nm['specimen_id'], file_name='stimulus.nwb')
-ctc.get_ephys_sweeps(nm['specimen_id'], file_name='ephys_sweeps.json')
-'''
-ephys_sweeps = json_utilities.read('ephys_sweeps.json')
+    # download information about the cell
+    ctc = CellTypesCache()
+    ctc.get_ephys_data(nm['specimen_id'], file_name='stimulus.nwb')
+    ctc.get_ephys_sweeps(nm['specimen_id'], file_name='ephys_sweeps.json')
+    ephys_sweeps = json_utilities.read('ephys_sweeps.json')
+
 ephys_file_name = 'stimulus.nwb'
 
-#neuron = GlifNeuron.from_dict(neuron_config)
 
 sweep_numbers = [ s['sweep_number'] for s in ephys_sweeps if s['stimulus_units'] == 'Amps' ]
 
@@ -27,8 +28,6 @@ stimulus = [ s for s in ephys_sweeps if s['stimulus_units'] == 'Amps' \
 amplitudes = [ s['stimulus_absolute_amplitude'] for s in stimulus ]
 durations = [ s['stimulus_duration'] for s in stimulus ]
 
-import pdb
-pdb.set_trace()
 expeceted_spikes = [ s['num_spikes'] for s in stimulus ]
 #durations = [ s['stimulus_absolute_amplitude'] for s in stimulus ]
 delays = [ s['stimulus_start_time'] for s in stimulus ]
@@ -43,5 +42,3 @@ for i,j in enumerate(sn):
 
 pickle.dump(make_stim_waves,open('waves.p','wb'))
 print(make_stim_waves)
-#sweep_numbers = sweep_numbers[:1] # for the sake of a speedy example, just run the first one
-#simulate_neuron(neuron, sweep_numbers, ephys_file_name, ephys_file_name, 0.05)
