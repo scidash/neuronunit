@@ -32,6 +32,7 @@ import deap.tools
 import numpy as np
 
 from neuronunit.optimisation import optimization_management as om
+from neuronunit.optimisation.optimization_management import WSListIndividual
 
 logger = logging.getLogger('__main__')
 try:
@@ -49,7 +50,8 @@ def _evaluate_invalid_fitness(toolbox, population):
     
     for j, ind in enumerate(invalid_pop):
         ind.fitness.values = fitnesses[j]
-        ind.dtc.get_ss()
+        ind.dtc = None
+        #ind.dtc.get_ss()
 
     
     return invalid_pop
@@ -58,8 +60,8 @@ def strip_object(p):
     state = super(type(p)).state
     p.unpicklable = []
     print('i suspect a brian module is in the deap gene, and it should not be')
-    import pdb
-    pdb.set_trace()
+    #import pdb
+    #pdb.set_trace()
     return p._state(state=state, exclude=['unpicklable','verbose'])
 
 
@@ -100,7 +102,8 @@ def _update_history_and_hof(halloffame,pf, history, population,td,mu):
 
 def _record_stats(stats, logbook, gen, population, invalid_count):
     '''Update the statistics with the new population'''
-    record = stats.compile(population) if stats is not None else {}
+    print(population)
+    record = stats.compile(copy.copy(population)) if stats is not None else {}
     logbook.record(gen=gen, nevals=invalid_count, **record)
 
 def gene_bad(offspring):
@@ -109,31 +112,66 @@ def gene_bad(offspring):
         if np.any(np.isnan(o)) or np.any(np.isinf(o)):
             gene_bad = True
     return gene_bad
-import copy
-
 def wrangle(parents):
+    '''hygeinise
+    strip off extra objects that might contain modules
+    which are not pickle friendly
+    '''
     initial_length = len(parents)
-    imp = [o for o in parents if o.dtc.from_imputation==True]
-    parents = [o for o in parents if o.dtc.from_imputation==False]
-    subsequent = len(parents)
-    delta = initial_length - subsequent
-    for i in range(0,delta):
-        ind = copy.copy(parents[0])
-        for x,y in enumerate(ind):
-            ind[x] = copy.copy(imp[i][x])
-        parents.append(ind)
-    return parents        
+    if type(parents[0].dtc) is not type(None):
+        imp = [o for o in parents if o.dtc.from_imputation==True]
+        parents = [o for o in parents if o.dtc.from_imputation==False]
+        subsequent = len(parents)
+        delta = initial_length - subsequent
+        for i in range(0,delta):
+            ind = copy.copy(parents[0])
+            for x,y in enumerate(ind):
+                ind[x] = copy.copy(imp[i][x])
+                ind[x].fitness = imp[i].fitness
+                ind[x].rheobase = imp[i].rheobase
+                parents.append(ind)
+        parents_ = []
+        for i,off_ in enumerate(parents):
+            parents_.append(WSListIndividual(off_,obj_size=len(off_)))
+            parents_[-1].fitness = off_.fitness
+            parents_[-1].rheobase = off_.rheobase
+    else:
+        parents_ = []
+        for i,off_ in enumerate(parents):
+            parents_.append(WSListIndividual())
+            for j in off_:
+                parents_[-1].append(float(j))
+                parents_[-1].fitness = off_.fitness 
+                parents_[-1].rheobae = off_.rheobase
+    return parents_        
 
 def _get_offspring(parents, toolbox, cxpb, mutpb):
     '''return the offsprint, use toolbox.variate if possible'''
     if hasattr(toolbox, 'variate'):
-        parents = wrangle(parents)
-        offspring = toolbox.variate(parents, toolbox, cxpb, mutpb)
-        offspring = deap.algorithms.varAnd(offspring, toolbox, cxpb, mutpb)
+        
+        try:
+            offspring = toolbox.variate(parents, toolbox, cxpb, mutpb)
+            offspring = deap.algorithms.varAnd(parents, toolbox, cxpb, mutpb)
+            
+        except:
+            parents_ = []
+            parents = wrangle(parents)
+        
+            for i,off_ in enumerate(parents):
+                parents_.append(WSListIndividual())
+                for j in off_:
+                    parents_[-1].append(float(j))
+                    parents_[-1].fitness = off_.fitness 
+
+                parents = parents_
+                #parents.append(WSListIndividual(off_,obj_size=len(off_)))
+                
+            offspring = toolbox.variate(parents, toolbox, cxpb, mutpb)
+            offspring = deap.algorithms.varAnd(parents, toolbox, cxpb, mutpb)
 
         while gene_bad(offspring) == True:
             offspring = deap.algorithms.varAnd(parents, toolbox, cxpb, mutpb)
-
+        
     return offspring
 
 def _get_worst(halloffame, nworst):
@@ -203,7 +241,6 @@ def eaAlphaMuPlusLambdaCheckpoint(
         toolbox.register("select", tools.selNSGA2)
         def experimental():
             NOBJ = len(population[0].fitness.values)
-            #print('stuck_here uniform')
             import pdb; pdb.set_trace()
         #experimental()
         # TODO this first loop should be not be repeated !
@@ -211,6 +248,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
         #import pdb; pdb.set_trace()
         invalid_count = len(parents)
         gen_vs_hof = []
+        print(invalid_count)
         hof, pf,history = _update_history_and_hof(hof, pf, history, parents, td,mu)
 
         gen_vs_hof.append(hof)
@@ -223,7 +261,9 @@ def eaAlphaMuPlusLambdaCheckpoint(
         delta = len(parents[0]) - len(toolbox.Individual())
 
         offspring = _get_offspring(parents, toolbox, cxpb, mutpb)
+        print(offspring)
         offspring = [ toolbox.clone(ind) for ind in offspring ]
+
         _record_stats(stats, logbook, gen, offspring, invalid_count)
 
         assert len(offspring)>0
@@ -238,8 +278,10 @@ def eaAlphaMuPlusLambdaCheckpoint(
             rec_len = [ i for i in range(0,len(scores))]
                     
         except:
-            dtcs_ = [j.dtc for i in gen_vs_pop for j in i]
-            
+            pass
+        
+            #dtcs_ = [j.dtc for i in gen_vs_pop for j in i]
+        '''    
         names = offspring[0].dtc.scores.keys()
         if gen>1:
             if str('rec_len') in locals().keys():
@@ -267,7 +309,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
             else:
                 print(fitness)
         #    pass
-
+        '''
         invalid_ind = _evaluate_invalid_fitness(toolbox, offspring)
         # something in evaluate fitness has knocked out fitness
         population = parents + invalid_ind

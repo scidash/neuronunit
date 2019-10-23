@@ -115,7 +115,8 @@ class SpikeCountSearch(VmTest):
                     sub.append(current)
                 elif n_spikes > self.observation['value']:
                     supra.append(current)
-
+                delta = n_spikes- self.observation['value']
+                #print(delta,'difference \n\n\n\nn')
             sub = np.array(sorted(list(set(sub))))
             supra = np.array(sorted(list(set(supra))))
             return sub, supra
@@ -145,13 +146,14 @@ class SpikeCountSearch(VmTest):
 
             ampl = float(dtc.ampl)
             if ampl not in dtc.lookup or len(dtc.lookup) == 0:
-                uc = {'amplitude':ampl,'duration':DURATION,'delay':DELAY}
+                uc = {'amplitude':ampl*pq.pA,'duration':DURATION,'delay':DELAY}
 
                 dtc.run_number += 1
                 model.set_attrs(**dtc.attrs)
                 model.inject_square_current(uc)
                 n_spikes = model.get_spike_count()
-
+                #print(n_spikes)
+                #print(uc)
                 if float(ampl) < -1.0:
                     dtc.rheobase = {}
                     dtc.rheobase['value'] = None
@@ -160,13 +162,14 @@ class SpikeCountSearch(VmTest):
 
                 target_spk_count = self.observation['value']
                 if n_spikes == target_spk_count:
-                    dtc.lookup[float(ampl)] = 1
+                    dtc.lookup[float(ampl)] = n_spikes
+                    dtc.rheobase = {}
                     dtc.rheobase['value'] = float(ampl)*pq.pA
                     dtc.target_spk_count = None
                     dtc.target_spk_count = dtc.rheobase['value']
                     dtc.boolean = True
                     if self.verbose >2:
-                        print('gets here',n_spikes,target_spk_count,n_spikes == target_spk_count)
+                         print('gets here',n_spikes,target_spk_count,n_spikes == target_spk_count)
                     return dtc
 
                 dtc.lookup[float(ampl)] = n_spikes
@@ -200,7 +203,7 @@ class SpikeCountSearch(VmTest):
                     steps = np.linspace(100,1000,7.0)
                 else:
 
-                    steps = np.linspace(1,550,7.0)
+                    steps = np.linspace(0,55,7.0)
 
                 steps_current = [ i*pq.pA for i in steps ]
                 dtc.current_steps = steps_current
@@ -223,7 +226,7 @@ class SpikeCountSearch(VmTest):
             if dtc.backend is 'GLIF':
                 big = 100
             else:
-                big = 26
+                big = 50
 
             while dtc.boolean == False and cnt< big:
 
@@ -245,13 +248,13 @@ class SpikeCountSearch(VmTest):
                     b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
                     dtc_clone = list(b0.map(check_current).compute())
                 except:
-                    set_clones = set([ float(d.ampl) for d in dtc_clones ])
+                    set_clones = set([float(d.ampl) for d in dtc_clones ])
                     dtc_clone = []
                     for dtc,sc in zip(dtc_clones,set_clones):
                         dtc = copy.copy(dtc)
                         dtc.ampl = sc*pq.pA
                         dtc = check_current(dtc)
-                        dtc.backend = be
+                        #dtc.backend = be
                         dtc_clone.append(dtc)
 
 
@@ -278,6 +281,9 @@ class SpikeCountSearch(VmTest):
                     #(cnt, sub.max() if len(sub) else None,
                     #supra.min() if len(supra) else None))
                 cnt += 1
+                reversed = {v:k for k,v in dtc.lookup.items() }
+                #target_current = reversed[self.observation['value']]
+                #dtc.target_current = target_current
             return dtc
 
         dtc = DataTC()
@@ -298,11 +304,17 @@ class SpikeCountSearch(VmTest):
         prediction = {}
 
         temp = find_target_current(self,dtc).rheobase
-        if type(temp) is not type(None):
-            prediction['value'] =  float(temp)* pq.pA
 
+        if type(temp) is not type(None) and not type(dict):
+            prediction['value'] =  float(temp)* pq.pA
+        elif type(temp) is not type(None) and type(dict):
+            if temp['value'] is not None:
+                 prediction['value'] =  float(temp['value'])* pq.pA
+            else:
+                 prediction = None
         else:
             prediction = None
+        #pdb.set_trace()
         return prediction
 
 class SpikeCountRangeSearch(VmTest):
@@ -418,7 +430,7 @@ class SpikeCountRangeSearch(VmTest):
 
             ampl = float(dtc.ampl)
             if ampl not in dtc.lookup or len(dtc.lookup) == 0:
-                uc = {'amplitude':ampl,'duration':DURATION,'delay':DELAY}
+                uc = {'amplitude':ampl*pq.pA,'duration':DURATION,'delay':DELAY}
 
                 dtc.run_number += 1
                 model.set_attrs(**dtc.attrs)
@@ -432,7 +444,8 @@ class SpikeCountRangeSearch(VmTest):
 
                 #target_spk_count = self.observation['range']
                 if self.observation['range'][0] <= n_spikes <= self.observation['range'][1]:
-                    dtc.lookup[float(ampl)] = 1
+                    dtc.lookup[float(ampl)] = n_spikes
+                    dtc.rheobase = {}
                     dtc.rheobase['value'] = float(ampl)*pq.pA
                     dtc.target_spk_count = None
                     dtc.target_spk_count = dtc.rheobase['value']
@@ -478,7 +491,7 @@ class SpikeCountRangeSearch(VmTest):
                     steps = np.linspace(100,1000,7.0)
                 else:
 
-                    steps = np.linspace(1,550,7.0)
+                    steps = np.linspace(0,55,7.0)
 
                 steps_current = [ i*pq.pA for i in steps ]
                 dtc.current_steps = steps_current
@@ -545,10 +558,10 @@ class SpikeCountRangeSearch(VmTest):
                 sub, supra = get_sub_supra(dtc.lookup)
                 if len(supra) and len(sub):
                     delta = float(supra.min()) - float(sub.max())
-                    if str("GLIF") in dtc.backend:
-                        tolerance = 0.0
-                    else:
-                        tolerance = 0.0
+                    #if str("GLIF") in dtc.backend:
+                    #    tolerance = 0.0
+                    #else:
+                    tolerance = 0.0
                         #tolerance = tolerance
                     if delta < tolerance or (str(supra.min()) == str(sub.max())):
                         if self.verbose >= 2:
@@ -558,8 +571,8 @@ class SpikeCountRangeSearch(VmTest):
                             dtc.boolean = True
                             dtc.lookup[float(supra.min())] = len(supra)
                         else:
-                            dtc.rheobase['value'] = float(supra.min())
-                            dtc.boolean = True
+                            dtc.rheobase['value'] = None#float(supra.min())
+                            dtc.boolean = False
                             dtc.lookup[float(supra.min())] = len(supra)
 
                         return dtc
@@ -591,7 +604,11 @@ class SpikeCountRangeSearch(VmTest):
 
         temp = find_target_current(self,dtc).rheobase
         if type(temp) is not type(None):
-            prediction['value'] =  float(temp)* pq.pA
+            if type(temp) is not type(dict()):
+                 prediction['value'] =  float(temp)* pq.pA
+            else:
+                 prediction['value'] =  float(temp['value'])* pq.pA
+
         else:
             prediction = None
         return prediction

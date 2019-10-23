@@ -36,14 +36,25 @@ local_tests['current_test'] = pre_obs[1][0]
 local_tests['spk_count'] = len(pre_obs[2][1]['spikes'])
 
 OM = OptMan(local_tests,protocol={'elephant':False,'allen':True,'dm':False},confident=False)
-results,converged,target,simulated_tests = OM.round_trip_test(local_tests,str('RAW'),MU=3,NGEN=10)#,stds = easy_standards)
-print(converged,target)
+res = OM.round_trip_test(local_tests,str('RAW'),MU=5,NGEN=5)#,stds = easy_standards)
+
+import pdb
+pdb.set_trace()
 temp = [results,converged,target,simulated_tests]
+print(converged,target)
 
 with open('jd.p','wb') as f:
     pickle.dump(temp,f)
 
+results,converged,target,simulated_tests = res
+sim_tests = TSD(simulated_tests)
+backend = str('ADEXP')
+similar = sim_tests.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=4, \
+                             backend=backend, MU=4, protocol={'allen': True, 'elephant': False})
 
+
+import pdb
+pdb.set_trace()
 # In[ ]:
 
 

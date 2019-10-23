@@ -74,8 +74,15 @@ class DataTC(object):
         if type(self.scores) is type(None):
             self.scores = {}
         model.attrs = self.attrs
-        model.scores=self.scores
+        model.scores = self.scores
         model.rheobase = self.rheobase
+        try:
+            model.inj = self.params
+        except:
+            try:
+                model.inj = self.vparams
+            except:
+                model.inj = None
         return model
     def judge_test(self,index=0):
         model = self.dtc_to_model()
