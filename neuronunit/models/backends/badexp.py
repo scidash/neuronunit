@@ -144,6 +144,7 @@ class ADEXPBackend(Backend):
         vm_new = transform_function(xnew) #% generate the y values for all x values in xnew
         self.vM = AnalogSignal(vm_new,units = mV,sampling_period = float(xnew[1]-xnew[0]) * pq.s)
         if self.verbose:
+        
             print(len(self.vM))
         self.vM = AnalogSignal(vm_new,units = mV,sampling_period = float(xnew[1]-xnew[0]) * pq.s)
         return self.vM
@@ -217,7 +218,10 @@ class ADEXPBackend(Backend):
         if str('peak_v') in attrs.keys():
             self.peak_v = attrs['peak_v']
         else:
-            self.peak_v = 0.02
+            self.peak_v = 2
+        if self.verbose:
+        
+            print(self.peak_v)
         for key,value in tdic.items():
 
             if len(value)==1:
