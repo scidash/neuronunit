@@ -98,55 +98,12 @@ except:
     warnings.warn('SKLearn library not available, consider installing')
 
 
-#print(anchor,mypath)
 rts,complete_map = pickle.load(open(mypath,'rb'))
 df = pd.DataFrame(rts)
 for key,v in rts.items():
     helper_tests = [value for value in v.values() ]
-    #print(helper_tests)
     break
-'''
-class TCL(list):
-    def __init__(self,tl=None,simulated_obs=None):
-        super(TCL,self).__init__()
-        self.extend(tl)
-        self.simulated_obs = simulated_obs
-        # Depricated
-class TCD(dict):
-    def __init__(self,tl=None,simulated_obs=None):
-        super(TCL,self).__init__()
-        self.update(tl)
-        self.simulated_obs = simulated_obs
-        self.use_rheobase_score = False
-'''
 
-
-'''
-import pickle
-
-from sciunit import TestSuite
-
-class TSO(TestSuite):
-    def __init__(self,tests=None):
-       super(TC,self).__init__(tests)
-
-    def optimize(self,param_edges,backend=None,protocol=None,MU=None,NGEN=None):
-        from neuronunit.optimisation.optimisations import run_ga
-        ga_out = run_ga(param_edges, NGEN, self, free_params=param_edges.keys(), \
-                    backend=backend, MU = 8,  protocol={'allen': False, 'elephant': True})
-        return ga_out
-
-class TSL(list):
-    def __init__(self,tests=[]):
-       super(TSL,self).__init__()
-       self.extend(tests)
-
-    def optimize(self,param_edges,backend=None,protocol=None,MU=None,NGEN=None):
-        from neuronunit.optimisation.optimisations import run_ga
-        ga_out = run_ga(param_edges, NGEN, self, free_params=param_edges.keys(), \
-                    backend=backend, MU = 8,  protocol={'allen': False, 'elephant': True})
-        return ga_out
-'''
 class TSD(dict):
     def __init__(self,tests=[],use_rheobase_score=False):
        super(TSD,self).__init__()
@@ -158,9 +115,10 @@ class TSD(dict):
         from neuronunit.optimisation.optimisations import run_ga
         ga_out,DO = run_ga(param_edges, NGEN, self, free_params=param_edges.keys(), \
                     backend=backend, MU = 8,  protocol={'allen': False, 'elephant': True})
-        if backend in str('ADEXP'):
-            dtc_pop = self.update_dtc_pop(ga_out[0]['pf'], DO.td)
+        dtc_pop = self.update_dtc_pop(ga_out[0]['pf'], DO.OM.td)
+        _,dtc_pop = self.test_runner(dtc_pop, DO.OM.tests, DO.OM.td)
 
+        ga_out['dtc_pop'] = dtc_pop
 
         return ga_out, DO
 
@@ -397,10 +355,6 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                 plt.savefig(figname+str('all_traces.png'))
             else:
                 plt.show()
-    #if model.get_membrane_potential() is not None:
-    #    return (model.get_membrane_potential().times,model.get_membrane_potential())
-    #else:
-    print(plot_backend)
     return None, None
 
 @cython.boundscheck(False)
@@ -408,17 +362,15 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
 def filter_predictions(dtc):
     if not hasattr(dtc,'preds'):
         dtc.preds = {}
-    print(dtc.preds)
     dtc.preds = {k:v for k,v in dtc.preds.items() if type(v) is not type(int(1))}
     dtc.preds = {k:v for k,v in dtc.preds.items() if type(v['mean']) is not type(None)}
     dtc.preds = {k:v for k,v in dtc.preds.items() if v['mean']!=1.0}
     dtc.preds = {k:v for k,v in dtc.preds.items() if v['mean']!=False}
     dtc.preds = {k:v for k,v in dtc.preds.items() if type(v['mean']) is not type(str(''))}
-    print(dtc.preds)
     dtc.preds = {k:v for k,v in dtc.preds.items() if not np.isnan(v['mean'])}
     return dtc
-
-        #except:
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def make_new_random(dtc_,backend):
     dtc = DataTC()
     dtc.backend = backend
@@ -1093,12 +1045,12 @@ def get_dtc_pop(result_ADEXP,filtered_tests,model_parameters,backend = 'ADEXP'):
     #print(result_ADEXP['ADEXP'])
 
     #random.seed(64)
-    boundary_dict=model_parameters.MODEL_PARAMS[str('ADEXP')]
+    boundary_dict=model_parameters.MODEL_PARAMS[backend]
     tests=filtered_tests['Hippocampus CA1 basket cell']
     try:
         DO = SciUnitOptimisation(offspring_size = 1,
             error_criterion = tests, boundary_dict = boundary_dict,
-                                     backend = backen, selection = str('selNSGA'))#,simulated_obs=dtc.preds)#,, boundary_dict = ss, elite_size = 2, hc=hc)
+                                     backend = backend, selection = str('selNSGA'))#,simulated_obs=dtc.preds)#,, boundary_dict = ss, elite_size = 2, hc=hc)
     except:
         DO = SciUnitOptimisation(offspring_size = 1,
             error_criterion = tests, boundary_dict = boundary_dict,
@@ -1108,18 +1060,19 @@ def get_dtc_pop(result_ADEXP,filtered_tests,model_parameters,backend = 'ADEXP'):
     DO.setup_deap()
 
     dtcdic = {}
-    for k,v in result_ADEXP['ADEXP'].items():
+    for k,v in result_ADEXP[backend].items():
 
         dtcpop = []
         for i in v:
-            dtcpop.append(transform((i,DO.td,str("ADEXP"))))
-            dtcpop[-1].backend = str("ADEXP")
+            dtcpop.append(transform((i,DO.td,backend)))
+            dtcpop[-1].backend = backend
             dtcpop[-1] = dtc_to_rheo(dtcpop[-1])
         dtcdic[k] = copy.copy(dtcpop)
 #print(dtcdic.keys())
     return dtcdic, DO
 
-def prediction_current_and_features(dtc):
+
+def just_allen_predictions(dtc):
     current = {'injected_square_current':
                 {'amplitude':dtc.ampl, 'delay':DELAY, 'duration':DURATION}}
     #print(current)
@@ -1131,6 +1084,8 @@ def prediction_current_and_features(dtc):
             target = compare['spike_count']
         else:
             target = compare['spk_count']
+    else:
+        compare = None
     model = new_model(dtc)
     assert model is not None
     vm30 = model.inject_square_current(current['injected_square_current'])
@@ -1187,17 +1142,31 @@ def prediction_current_and_features(dtc):
         for k in ephys_dict.keys():
             if 'spikes' not in k:
                 prediction['mean'] = ephys_dict[k]
-                #obs['std'] = 10.0
                 prediction['std'] = 10.0
                 dtc.preds[k] = prediction
 
             else:
                 for other in ephys_dict['spikes'][0].keys():
-                    prediction['mean'] = other
-                    #obs['std'] = 10.0
+                    temp = ephys_dict['spikes'][0][other]
+                    prediction['mean'] = temp 
                     prediction['std'] = 10.0
-                    dtc.preds[k] = prediction
+                    dtc.preds[other] = prediction                    
+                dtc.spike_cnt = len(ephys_dict['spikes'])
+                dtc.preds['spikes'] = dtc.spike_cnt
+                                
+        return dtc,compare,ephys
+
+    
+
+def prediction_current_and_features(dtc):
+    returned = just_allen_predictions(dtc)
+    try:
+        dtc,compare,ephys = returned
+    except:
+        dtc = returned
         return dtc
+   
+    ephys_dict = ephys.as_dict()
     dtc.scores = None
     dtc.scores = {}
     for k,v in compare.items():
@@ -1236,43 +1205,36 @@ def prediction_current_and_features(dtc):
                     dtc.scores[k] = 1.0-float(score.norm_score)
                 else:
                     dtc.scores[k] = 1.0
-        if str('spikes')==str(k) and ephys_dict['avg_rate'] != 0:
-            '''
-            compute perspike waveform features on just the first spike
-            '''
-            first_spike = ephys_dict[k][0]
 
-            for key,spike_obs in first_spike.items():
-
-                #if not str('direct') in key and not str('adp_i') in key and not str('peak_i') in key and not str('fast_trough_i') and not str('fast_trough_i') and not str('trough_i'):
-                try:
-                    obs = {'mean': spike_obs}
-                    prediction = {'mean': ephys_dict['spikes'][0][key]}
-                    #print('gets here inside spike iteration of allen',key)
-                    #print(ephys_dict['spikes'][0][key],len((ephys_dict['spikes'])))
-                    helper.name = str(key)
-                    obs['std']=10.0
-                    prediction['std']=10.0
-                    dtc.preds[key] = prediction
-                    #score = VmTest.compute_score(helper,obs,prediction)
-
-                    try:
-                        score = VmTest.compute_score(helper,obs,prediction)
-                    except:
-                        score = None
-                        #print(helper,obs,prediction)
-                    dtc.tests[key] = VmTest(obs)
-                    if not score is None and not score.norm_score is None:
-                        dtc.scores[key] = 1.0-score.norm_score
-                    else:
-                        dtc.scores[key] = 1.0
-
-                except:
-                    dtc.scores[key] = 1.0
+        '''
+        compute perspike waveform features on just the first spike
+        '''
+        first_spike = ephys_dict['spikes'][0]
+        first_spike.pop('direct',None)
+        for key,spike_obs in first_spike.items():
+                
+            #if not str('direct') in key and not str('adp_i') in key and not str('peak_i') in key and not str('fast_trough_i') and not str('fast_trough_i') and not str('trough_i'):
+            #try:
+            obs = {'mean': compare[key]['mean']}
+            
+            prediction = {'mean': ephys_dict['spikes'][0][key]}
+            helper.name = str(key)
+            obs['std']=10.0
+            prediction['std']=10.0
+            dtc.preds[key] = prediction
+            try:
+                
+                score = VmTest.compute_score(helper,obs,prediction)
+            except:
+                score = None
+            dtc.tests[key] = VmTest(obs)
+            if not score is None and not score.norm_score is None:
+                dtc.scores[key] = 1.0-score.norm_score
+            else:
+                dtc.scores[key] = 1.0
     dtc.ephys = None
     dtc.ephys = ephys
     dtc.spike_number = len(ephys_dict['spikes'])
-    spike_cnt_pred = model.get_spike_count()
     try:
         dtc.scores['spike_count'] = np.abs(spike_cnt_pred - target)# sigmoid(np.abs(delta))
     except:
@@ -1285,11 +1247,11 @@ def prediction_current_and_features(dtc):
 
     return dtc
 
-
+'''
+depricated
 def allen_features_block2(dtc):
     current = {'injected_square_current':
                 {'amplitude':dtc.ampl, 'delay':DELAY, 'duration':DURATION}}
-    print(current)
     compare = dtc.pre_obs
 
 
@@ -1317,11 +1279,9 @@ def allen_features_block2(dtc):
         ephys.process_spikes()
 
     except:
-        '''
-        rectify unfilterable high sample frequencies by downsampling them
-        downsample too densely sampled signals.
-        Making them amenable to Allen analysis
-        '''
+        #rectify unfilterable high sample frequencies by downsampling them
+        #downsample too densely sampled signals.
+        #Making them amenable to Allen analysis
 
         if dtc.backend in str('ADEXP'):
             vm30 = model.finalize()
@@ -1346,16 +1306,10 @@ def allen_features_block2(dtc):
 
     dtc.preds = {}
     dtc.tests = {}
-    import pdb
-    pdb.set_trace()
     for k,observation in compare.items():
         if str(k) not in str('spikes'):
-            '''
-            compute interspike firing frame_dynamics
-            '''
-            import pdb
-            pdb.set_trace()
-
+            #compute interspike firing frame_dynamics
+         
             obs = {}
             if type(observation) is not type(dict()):
                 obs['mean'] = observation
@@ -1379,12 +1333,8 @@ def allen_features_block2(dtc):
                 else:
                     dtc.scores[k] = 1.0
         if str(k) in str('spikes'):
-            '''
-            compute perspike waveform features on just the first spike
-            '''
+            #compute perspike waveform features on just the first spike
             first_spike = ephys_dict[k][0]
-            import pdb
-            pdb.set_trace()
 
             for key,spike_obs in first_spike.items():
 
@@ -1392,8 +1342,6 @@ def allen_features_block2(dtc):
                 try:
                     obs = {'mean': spike_obs}
                     prediction = {'mean': ephys_dict['spikes'][0][key]}
-                    #print('gets here inside spike iteration of allen',key)
-                    #print(ephys_dict['spikes'][0][key],len((ephys_dict['spikes'])))
                     helper.name = str(key)
                     obs['std']=10.0
                     prediction['std']=10.0
@@ -1404,7 +1352,6 @@ def allen_features_block2(dtc):
                         score = VmTest.compute_score(helper,obs,prediction)
                     except:
                         score = None
-                        #print(helper,obs,prediction)
                     dtc.tests[key] = VmTest(obs)
                     if not score is None and not score.norm_score is None:
                         dtc.scores[key] = 1.0-score.norm_score
@@ -1427,7 +1374,7 @@ def allen_features_block2(dtc):
         pass
 
     return dtc
-
+'''
 def new_model(dtc):
     model = mint_generic_model(dtc.backend)
     model.set_attrs(**dtc.attrs)
@@ -1479,7 +1426,6 @@ def make_stim_waves_func():
         make_stim_waves[j]['expeceted_spikes'] = expeceted_spikes[i]
 
     pickle.dump(make_stim_waves,open('waves.p','wb'))
-    print(make_stim_waves)
     return make_stim_waves
 
 
@@ -1496,40 +1442,31 @@ def nuunit_allen_evaluation(dtc):
                 current['amplitude'] = dtc.rheobase * 3.0
                 break
     else:
+        #import pdb
+        #pdb.set_trace()
         try:
-            target_spikes = dtc.tests['value']
+            observation_spike = {'range': dtc.tsr}
         except:
-            target_spikes = dtc.spike_number
-        observation_spike = {'value': target_spikes}
-        dtc.preds['spike_number'] = target_spikes
+            dtc.tsr = [ dtc.pre_obs['spike_count']['mean']-2, dtc.pre_obs['spike_count']['mean']+5]
+            observation_spike = {'range': dtc.tsr}
 
-        #dtc = self.get_allen(dtc)
-        #return dtc
         if not str('GLIF') in str(dtc.backend):
-            scs = SpikeCountSearch(observation_spike)
-            #model = dtc.dtc_to_model()
-            #model.set_attrs(dtc.attrs)
+            scs = SpikeCountRangeSearch(observation_spike)
             model = new_model(dtc)
             assert model is not None
             target_current = scs.generate_prediction(model)
             dtc.ampl = None
-            #print(scs, dir(scs))
-            #import pdb; pdb.set_trace()
             if target_current is not None:
                 dtc.ampl = target_current['value']
                 dtc = prediction_current_and_features(dtc)
-                pdb.set_trace()
-                dtc = allen_features_block2(dtc)
                 dtc = filter_predictions(dtc)
                 dtc.error_length = len(dtc.preds)
-                #important_length = len(dtc.preds)
             if target_current is None or len(dtc.preds):
                 dtc.ampl = None
                 if target_current is None:
                     dtc.preds = {}
                     return dtc
         else:
-            #pickle.dump(make_stim_waves,open('waves.p','wb'))
             try:
                 with open('waves.p','wb') as f:
                     make_stim_waves = pickle.load(f)
@@ -1537,54 +1474,12 @@ def nuunit_allen_evaluation(dtc):
                 make_stim_waves = make_stim_waves_func()
             dtc = dtc_to_rheo(dtc)
             dtc.ampl = dtc.rheobase['value']*3.0
-            print(dtc.ampl)
             dtc = prediction_current_and_features(dtc)
             dtc = filter_predictions(dtc)
-            dtc = allen_features_block2(dtc)
 
             dtc.error_length = len(dtc.preds)
 
         return dtc
-
-'''
-try:
-    dtc_,gene = new_single_gene(dtc)
-    observation_spike = {}
-    observation_spike['value'] = target_spikes
-    dtc.pre_obs['spike_number'] = target_spikes
-    scs = SpikeCountSearch(observation_spike)
-    model = new_model(dtc)
-    assert model is not None
-    target_current = scs.generate_prediction(model)
-    dtc.ampl = None
-    if target_current !=None:
-        dtc.ampl = target_current['value']
-        dtc = prediction_current_and_features(dtc)
-        dtc = filter_predictions(dtc)
-        dtc.error_length = len(dtc.preds)
-
-except:
-'''
-
-
-
-#pop[0][1]
-
-'''
-observation_spike = {}
-observation_spike['value'] = target_spikes
-dtc.pre_obs['spike_number'] = target_spikes
-from neuronunit.tests.fi import SpikeCountSearch
-scs = SpikeCountSearch(observation_spike)
-model = new_model(dtc)
-target_current = scs.generate_prediction(model)
-if target_current is not None:
-    dtc.ampl = target_current['value']
-    dtc = prediction_current_and_features(dtc)
-else:
-    dtc.ampl = None
-return dtc#pop[0][1]
-'''
 
 
 def nuunit_dm_evaluation(dtc):
@@ -1627,7 +1522,6 @@ def nuunit_dm_evaluation(dtc):
     dm_test_features = DMTNMLO.runTest()
     dtc.AP1DelayMeanTest = None
     dtc.AP1DelayMeanTest = dm_test_features['AP1DelayMeanTest']
-    #print(dtc.AP1DelayMeanTest)
     dtc.dm_test_features = None
     dtc.dm_test_features = dm_test_features
     return dtc
@@ -1755,8 +1649,6 @@ def efel_evaluation(dtc):
     else:
         efel_30 = None
     efel.reset()
-    print(efel_30)
-    print(efel_15)
     dtc.efel_15 = None
     dtc.efel_30 = None
     dtc.efel_15 = efel_15
@@ -1788,7 +1680,6 @@ def evaluate_allen(dtc,regularization=True):
               fitness[int_] = 1.0
           else:
               fitness[int_] = dtc.ascores[str(t)]
-    print(fitness)
     return tuple(fitness,)
 
 def evaluate(dtc,regularization=False):
@@ -1805,7 +1696,6 @@ def evaluate(dtc,regularization=False):
           fitness.append(float(dtc.scores[str(t)]**(1.0/2.0)))
        else:
           fitness.append(float(dtc.scores[str(t)]))
-    print(fitness)
     return tuple(fitness,)
 
 def get_trans_list(param_dict):
@@ -1919,7 +1809,6 @@ def data_versus_optimal(ga_out):
         try:
             # mode = mode0*qt.unitless
             mode0 = mode0.rescale(opt_value)
-            print(mode0-opt_value)
             half = (bins[1]-bins[0])/2.0
             td = sorted(t.data)
             td = [t*qt.unitless for t in td]
@@ -2297,7 +2186,7 @@ def can_this_map(dtc):
 
 
 class OptMan():
-    def __init__(self,tests, td=None, backend = None,hc = None,boundary_dict = None, error_length=None,protocol=None,simulated_obs=None,verbosity=None,confident=None):
+    def __init__(self,tests, td=None, backend = None,hc = None,boundary_dict = None, error_length=None,protocol=None,simulated_obs=None,verbosity=None,confident=None,tsr=None):
         self.tests = tests
         self.td = td
         if tests is not None:
@@ -2315,6 +2204,8 @@ class OptMan():
             self.verbose = 0
         else:
             self.verbose = verbosity
+        if type(tsr) is not None:
+            self.tsr = tsr
 
     def new_single_gene(self,dtc,td):
         from neuronunit.optimisation.optimisations import SciUnitOptimisation
@@ -2345,7 +2236,7 @@ class OptMan():
 
 
 
-    def get_allen(self,pop,dtcpop,tests,td):
+    def get_allen(self,pop,dtcpop,tests,td,tsr=None):
         with open('waves.p','rb') as f:
             make_stim_waves = pickle.load(f)
             #import pdb; pdb.set_trace()
@@ -2353,6 +2244,7 @@ class OptMan():
         for dtc in dtcpop: dtc.spike_number = tests['spike_count']['mean']
         for dtc in dtcpop: dtc.pre_obs = None
         for dtc in dtcpop: dtc.pre_obs = self.tests
+        for dtc in dtcpop: dtc.tsr = tsr #not a property but an aim
     #        assert
         if CONFIDENT==True:
             dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
@@ -2360,7 +2252,7 @@ class OptMan():
 
         else:
             dtcpop = list(map(nuunit_allen_evaluation,dtcpop))
-            print('failshere why')
+            
         pop = [pop[i] for i,d in enumerate(dtcpop) if type(d) is not type(None)]
         dtcpop = [d for d in dtcpop if type(d) is not type(None)]
         initial_length = len(pop)
@@ -2377,16 +2269,14 @@ class OptMan():
         else:
             for i,(ind,dtc) in enumerate(list(zip(pop,dtcpop))):
                 target_current =  None
-                #dtc.preds # = 0
                 dtc.error_length = 0
                 while target_current is None:
-                    #import pdb; pdb.set_trace()
                     ind,dtc = self.new_single_gene(dtc,self.td)
                     dtc.pre_obs = None
                     dtc.pre_obs = self.tests
 
-                    observation_spike = {'value': tests['spike_count']['mean']}
-                    scs = SpikeCountSearch(observation_spike)
+                    observation_spike = {'range': [tests['spike_count']['mean']-3,tests['spike_count']['mean']+5] }
+                    scs = SpikeCountRangeSearch(observation_spike)
 
                     model = new_model(dtc)
                     target_current = scs.generate_prediction(model)
@@ -2395,19 +2285,15 @@ class OptMan():
 
                     if target_current is not None:
                         dtc.ampl = target_current['value']
-                        #print('got to making new genes')
                         dtc = prediction_current_and_features(dtc)
-                        #print('stuck in loop',target_current,observation_spike, dtc.preds )
-
+                        
                         dtc = filter_predictions(dtc)
-                        #dtc = allen_features_block2(dtc)
-
+                        
                         dtc.error_length = len(dtc.preds)
-                    #print('stuck in loop',target_current,observation_spike, dtc.error_length )
+                    
                 pop[i] = ind
                 dtcpop[i] = dtc
 
-        #print('left loop',dtc.error_length)
         if CONFIDENT == True:
             dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
             dtcpop = list(dtcbag.map(nuunit_allen_evaluation).compute())
@@ -2417,16 +2303,6 @@ class OptMan():
 
         return pop, dtcpop
 
-
-    '''
-    @staticmethod
-    def dtc_to_elephant(dtc):
-        ET = ETest(dtc.dtc_to_model(),dtc)
-        temp = ET.runTest()
-        dtc.other_scores = temp[0]
-        dtc.other_tests = temp[1]
-        return dtc
-    '''
 
 
     def round_trip_test(self,tests,backend,free_paramaters=None,NGEN=None,MU=None,mini_tests=None,stds=None):
@@ -2461,18 +2337,19 @@ class OptMan():
             while dtc is False:
                 dsolution,rp,chosen_keys,random_param = process_rparam(backend)
                 (new_tests,dtc) = self.make_simulated_observations(tests,backend,rp)
-                pdb.set_trace()
 
             observations = dtc.preds
             target_spikes = dtc.spike_number#+10
             observation_spike = {'value': target_spikes}
-            ga_out, DO = run_ga(ranges,NGEN,new_tests,free_params=rp.keys(), MU = MU, backend=backend, selection=str('selNSGA3'), protocol={'allen':True,'elephant':False})
-            #ga_out.b = None
-            #ga_out.bdtc = ga_out['pf'][0].dtc
-            dtcpop0 = [ p.dtc for p in ga_out['pf'] ]
-            dtcpop1 = [ dsolution for i in range(0,len(ga_out['pf'])) ]
-            import pdb
-            pdb.set_trace()
+            new_tests = TSD(new_tests)
+            new_tests.use_rheobase_score = False
+            ga_out, DO = run_ga(ranges,NGEN,new_tests,free_params=rp.keys(), MU = MU, backend=backend, selection=str('selNSGA3'), protocol={'allen':True,'elephant':False,'tsr':[target_spikes-2,target_spikes+5]})
+            ga_converged = [ p for p in ga_out['pf'] ]
+            test_origin_target = [ dsolution for i in range(0,len(ga_out['pf'])) ]
+            ga_out,ga_converged,test_origin_target,new_tests
+
+            #import pdb
+            #pdb.set_trace()
             #inject_and_plot(dtcpop0,second_pop=dtcpop1,third_pop=[dtcpop0[0],dtcpop0[-1]],figname='snippets.png',snippets=True)
 
         elif self.protocol['elephant']:
@@ -2917,7 +2794,7 @@ class OptMan():
             dtc.attrs = random_p(dtc.backend)
             dtc.preds = {}
             target_current = None
-            while target_current is None or 'spikes' not in dtc.preds.keys():
+            while target_current is None or not hasattr(dtc,'spike_cnt'):# is None:
                 dtc.attrs = random_p(dtc.backend)
                 try:
                     with open('waves.p','wb') as f:
@@ -2932,12 +2809,11 @@ class OptMan():
                 #if dtc.backend is str("GLIF"):
                 try:
                     observation_range={}
-                    observation_range['value'] = 5.0
+                    observation_range['value'] = 15.0
                     scs = SpikeCountSearch(observation_range)
                     model = new_model(dtc)
                     assert model is not None
                     target_current = scs.generate_prediction(model)
-                    #print(target_current,'worked')
                 except:
                     observation_range = {'range': [8, 15]}
 
@@ -2948,7 +2824,6 @@ class OptMan():
                     target_current = scs.generate_prediction(model)
 
 
-                print(target_current)
                 dtc.ampl = None
                 if target_current is not None:
 
@@ -2960,36 +2835,30 @@ class OptMan():
                         dtc = dtc_to_rheo(dtc)
                         if type(dtc.rheobase) is type(None):
                             continue
-
-                    print(dtc.rheobase)
                     try:
-                        dtc.ampl = dtc.rheobase['value'] * 3.5
+                        dtc.ampl = dtc.rheobase['value'] * 1.5
                     except:
-                        dtc.ampl = dtc.rheobase * 3.5
+                        dtc.ampl = dtc.rheobase * 1.5
 
 
                 target_current = dtc.ampl
                 dtc.pre_obs = None
-                dtc = prediction_current_and_features(dtc)
-                dtc = filter_predictions(dtc)
-                print(dtc.preds)
-                if not hasattr(dtc,'spike_number'):
-                    continue
+                returned = just_allen_predictions(dtc)
+                try:
+                    dtc,_,_ = returned
+                except:
+                    dtc = returned
+                    return dtc
 
-                important_length = len(dtc.preds)
-                #if not 'spikes' in dtc.preds.keys():
-                #    continue
-                #else:
-                #   break
-            target_spikes = dtc.spike_number
-            print(dtc.spike_number)
+                
+                dtc = filter_predictions(dtc)
+            dtc.spike_number = dtc.spike_cnt
+            target_spikes = dtc.spike_cnt
             dtc.preds['spike_count'] ={}
             dtc.preds['spike_count']['mean'] = target_spikes
             dtc.preds['current'] = {}
             dtc.preds['current']['mean'] = dtc.ampl
-            #if len(dtc.pre_obs) == 0:
             dtc.pre_obs = dtc.preds
-            print(dtc.preds.keys())
             return dtc.preds, dtc
 
     def update_dtc_pop(self,pop, td):
@@ -3094,15 +2963,15 @@ class OptMan():
 
     def parallel_route(self,pop,dtcpop,tests,td):
         NPART = np.min([multiprocessing.cpu_count(),len(dtcpop)])
+
         if self.protocol['allen']:
-            pop, dtcpop = self.get_allen(pop,dtcpop,tests,td)
+            pop, dtcpop = self.get_allen(pop,dtcpop,tests,td,tsr=self.protocol['tsr'])
             pop = [pop[i] for i,d in enumerate(dtcpop) if type(d) is not type(None)]
             dtcpop = [d for d in dtcpop if type(d) is not type(None)]
             return pop, dtcpop
 
         elif str('dm') in self.protocol.keys():
             if self.protocol['dm']:
-                print(self.protocol)
                 pdb.set_trace()
                 pop, dtcpop = get_dm(pop,dtcpop,tests,td)
                 return pop, dtcpop
@@ -3118,28 +2987,8 @@ class OptMan():
                 for d in dtcpop:
                     assert hasattr(d, 'tests')
 
-                if str('ADEXP') in self.backend:
-                    # serial_dtc = list(map(self.elephant_evaluation,dtcpop))
-
-                    dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
-                    dtcpop = list(dtcbag.map(self.elephant_evaluation).compute())
-                                    # A way to get parallelism backinto brian2.
-                    '''
-                    serial_dtc = self.serial_dtc(dtcpop,b=True)
-                    parallel_dtc = self.serial_dtc(dtcpop,b=False)
-                    dtcbag = db.from_sequence(parallel_dtc, npartitions = NPART)
-                    parallel_dtc = list(dtcbag.map(self.elephant_evaluation).compute())
-                    serial_dtc = list(map(self.elephant_evaluation,serial_dtc))
-                    dtcpop = []
-                    for i,j in zip(serial_dtc,parallel_dtc):
-                        i.tests.extend(j.tests)
-                        i.tests.extend(j.tests)
-                        dtcpop.append(i)
-                    '''
-
-                else:
-                    dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
-                    dtcpop = list(dtcbag.map(self.elephant_evaluation).compute())
+                dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
+                dtcpop = list(dtcbag.map(self.elephant_evaluation).compute())
 
 
                 for d in dtcpop:
@@ -3201,7 +3050,6 @@ class OptMan():
                     ind.fitness.values[i] = list(ind.dtc.evaluate.values())[i]
         pop = [ ind for ind,d in zip(pop,dtcpop) if d.scores is not None ]
         dtcpop = [ d for ind,d in zip(pop,dtcpop) if d.scores is not None ]
-        #import pdb; pdb.set_trace()
         return pop,dtcpop
 
     def make_up_lost(self,pop,dtcpop,td):
