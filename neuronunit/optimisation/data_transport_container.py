@@ -2,7 +2,6 @@ import numpy as np
 #from neuronunit.optimisation.optimisation_management import mint_generic_model
 #from sciunit.models.runnable import RunnableModel
 
-from neuronunit.models import VeryReducedModel
 
 try:
     import asciiplotlib as apl
@@ -63,7 +62,7 @@ class DataTC(object):
             self.attrs.update(self.constants)
         return #self.attrs
     def dtc_to_model(self):
-        #import os
+        from neuronunit.models import VeryReducedModel
         #model = RunnableModel(str(self.backend),backend=self.backend,attrs=self.attrs)
         #model = RunnableModel(str(self.backend),backend=(self.backend, {'DTC':self}))
         model = VeryReducedModel(backend=(self.backend, {'DTC':self}))#, {'DTC':dtc}))

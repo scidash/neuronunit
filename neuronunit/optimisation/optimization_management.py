@@ -9,15 +9,19 @@ try:
     matplotlib.use('agg')
 except:
     warnings.warn('X11 plotting backend not available, consider installing')
+#_arraytools
 
+import warnings
+warnings.filterwarnings("ignore")
+    
 # optional imports
 
-CONFIDENT = False
+CONFIDENT = True
 #    Goal is based on this. Don't optimize to a singular point, optimize onto a cluster.
 #    Golowasch, J., Goldman, M., Abbott, L.F, and Marder, E. (2002)
 #    Failure of averaging in the construction
 #    of conductance-based neuron models. J. Neurophysiol., 87: 11291131.
-from neuronunit.tests.elephant_tests import ETest
+#from neuronunit.tests.elephant_tests import ETest
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -51,7 +55,7 @@ from neuronunit.optimisation.data_transport_container import DataTC
 
 # Import get_neab has to happen exactly here. It has to be called only on
 #from neuronunit import tests
-from neuronunit.models.reduced import ReducedModel
+#from neuronunit.models.reduced import ReducedModel
 from neuronunit.optimisation.model_parameters import path_params
 from neuronunit.optimisation import model_parameters as modelp
 from itertools import repeat
@@ -111,14 +115,14 @@ class TSD(dict):
        self.use_rheobase_score=use_rheobase_score
 
 
-    def optimize(self,param_edges,backend=None,protocol=None,MU=None,NGEN=None):
+    def optimize(self,param_edges,backend=None,protocol={'allen': False, 'elephant': True},MU=5,NGEN=5):
         from neuronunit.optimisation.optimisations import run_ga
         ga_out,DO = run_ga(param_edges, NGEN, self, free_params=param_edges.keys(), \
-                    backend=backend, MU = 8,  protocol={'allen': False, 'elephant': True})
-        dtc_pop = self.update_dtc_pop(ga_out[0]['pf'], DO.OM.td)
-        _,dtc_pop = self.test_runner(dtc_pop, DO.OM.tests, DO.OM.td)
-
-        ga_out['dtc_pop'] = dtc_pop
+                           backend=backend, MU = 8,  protocol=protocol)
+        # dtc_pop = self.update_dtc_pop(ga_out['pf'], DO.OM.td)
+        if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
+            _,dtc_pop = DO.OM.test_runner(ga_out['pf'],DO.OM.td,DO.OM.tests)
+            ga_out['dtc_pop1'] = dtc_pop
 
         return ga_out, DO
 
@@ -948,6 +952,7 @@ def allocate_worst(xtests,dtc):
 
 def sigmoid(x):
     return math.exp(-np.logaddexp(0, -x))
+'''depricated
 def allen_scores(dtc):
     ephys_dict = dtc.ephys.as_dict()
     if not 'spikes' in ephys_dict.keys():
@@ -961,10 +966,8 @@ def allen_scores(dtc):
 
     for k,observation in compare.items():
         if str(k) not in str('spikes'):
-            '''
-            compute interspike firing frame_dynamics
-            '''
-
+            #compute interspike firing frame_dynamics
+             
             obs = {}
             if type(observation) is not type({'1':0}):
                 obs['mean'] = observation
@@ -988,14 +991,11 @@ def allen_scores(dtc):
                 else:
                     dtc.scores[k] = 1.0
         if str(k) in str('spikes'):
-            '''
-            compute perspike waveform features on just the first spike
-            '''
+            #compute perspike waveform features on just the first spike
             try:
                 first_spike = observation[0]
             except:
                 pass
-                #import pdb; pdb.set_trace()
             for key,spike_obs in first_spike.items():
 
                 #if not str('direct') in key and not str('adp_i') in key and not str('peak_i') in key and not str('fast_trough_i') and not str('fast_trough_i') and not str('trough_i'):
@@ -1025,26 +1025,24 @@ def allen_scores(dtc):
     try:
         delta = spike_cnt_pred-target
         dtc.scores['spk_count'] = np.abs(delta)#sigmoid()#spike_cnt_pred-target #
-        print(dtc.scores['spk_count'],'spike count delta')
+        
     except:
         pass
     try:
         delta = np.abs(float(dtc.ampl)-dtc.pre_obs['current_test'])
         dtc.scores['current_test'] = delta #sigmoid(np.abs(delta))
-        print(dtc.scores['current_test'],'current  injection delta')
+        
     except:
         pass
 
     return dtc
-
+'''
 def get_dtc_pop(result_ADEXP,filtered_tests,model_parameters,backend = 'ADEXP'):
     from neuronunit.optimisation.optimisations import SciUnitOptimisation
     from neuronunit.optimisation.optimization_management import get_dtc_pop
     import copy
 
-    #print(result_ADEXP['ADEXP'])
-
-    #random.seed(64)
+    random.seed(64)
     boundary_dict=model_parameters.MODEL_PARAMS[backend]
     tests=filtered_tests['Hippocampus CA1 basket cell']
     try:
@@ -1068,14 +1066,12 @@ def get_dtc_pop(result_ADEXP,filtered_tests,model_parameters,backend = 'ADEXP'):
             dtcpop[-1].backend = backend
             dtcpop[-1] = dtc_to_rheo(dtcpop[-1])
         dtcdic[k] = copy.copy(dtcpop)
-#print(dtcdic.keys())
     return dtcdic, DO
 
 
 def just_allen_predictions(dtc):
     current = {'injected_square_current':
                 {'amplitude':dtc.ampl, 'delay':DELAY, 'duration':DURATION}}
-    #print(current)
     comp = False
     if type(dtc.pre_obs) is not type(None):
         compare = dtc.pre_obs
@@ -1090,7 +1086,7 @@ def just_allen_predictions(dtc):
     assert model is not None
     vm30 = model.inject_square_current(current['injected_square_current'])
     vm30 = model.get_membrane_potential()
-
+    dtc.current = current
     if comp:
         if model.get_spike_count()!=target:
 
@@ -1157,7 +1153,8 @@ def just_allen_predictions(dtc):
         return dtc,compare,ephys
 
     
-
+from sciunit import scores
+                
 def prediction_current_and_features(dtc):
     returned = just_allen_predictions(dtc)
     try:
@@ -1172,7 +1169,12 @@ def prediction_current_and_features(dtc):
     for k,v in compare.items():
         dtc.scores[k] = 1.0
     helper = helper_tests[0]
-
+    #score_type = scores.RatioScore
+    score_type = scores.ZScore
+    #helper.score_type = score_type
+                
+    helper.score_type = score_type
+                
     dtc.preds = {}
     dtc.tests = {}
 
@@ -1191,14 +1193,13 @@ def prediction_current_and_features(dtc):
             if k in ephys_dict.keys():
                 prediction['mean'] = ephys_dict[k]
                 helper.name = str(k)
-                obs['std'] = 10.0
-                prediction['std'] = 10.0
+                obs['std'] = obs['mean']/15.0
                 dtc.preds[k] = prediction
-
+                prediction['std'] = prediction['mean']/15.0
+            
                 try:
                     score = VmTest.compute_score(helper,obs,prediction)
                 except:
-                    #print(helper,obs,prediction)
                     score = None
                 dtc.tests[k] = VmTest(obs)#.compute_score(helper,obs,prediction)
                 if score is not None and score.norm_score is not None:
@@ -1219,13 +1220,15 @@ def prediction_current_and_features(dtc):
             
             prediction = {'mean': ephys_dict['spikes'][0][key]}
             helper.name = str(key)
-            obs['std']=10.0
-            prediction['std']=10.0
-            dtc.preds[key] = prediction
-            try:
-                
+            #obs['std']=10.0
+            #prediction['std']=10.0
+            #dtc.preds[key] = prediction
+            obs['std'] = obs['mean']/15.0
+            dtc.preds[k] = prediction
+            if type(prediction['mean']) is not type(str()):
+                prediction['std'] = prediction['mean']/15.0
                 score = VmTest.compute_score(helper,obs,prediction)
-            except:
+            else:
                 score = None
             dtc.tests[key] = VmTest(obs)
             if not score is None and not score.norm_score is None:
@@ -1442,8 +1445,6 @@ def nuunit_allen_evaluation(dtc):
                 current['amplitude'] = dtc.rheobase * 3.0
                 break
     else:
-        #import pdb
-        #pdb.set_trace()
         try:
             observation_spike = {'range': dtc.tsr}
         except:
@@ -1455,17 +1456,17 @@ def nuunit_allen_evaluation(dtc):
             model = new_model(dtc)
             assert model is not None
             target_current = scs.generate_prediction(model)
+            #print(target_current)
             dtc.ampl = None
             if target_current is not None:
                 dtc.ampl = target_current['value']
                 dtc = prediction_current_and_features(dtc)
                 dtc = filter_predictions(dtc)
                 dtc.error_length = len(dtc.preds)
-            if target_current is None or len(dtc.preds):
+            if target_current is None:
                 dtc.ampl = None
-                if target_current is None:
-                    dtc.preds = {}
-                    return dtc
+                dtc.preds = {}
+                return dtc
         else:
             try:
                 with open('waves.p','wb') as f:
@@ -1563,9 +1564,6 @@ def nuunit_dm_rheo_evaluation(dtc):
     DMTNMLO.test_setup_subset(None,None,model= model)
     dm_test_features = DMTNMLO.runTest()
 
-    #dtc.AP1DelayMeanTest = None
-    #dtc.AP1DelayMeanTest = dm_test_features['AP1DelayMeanTest']
-    #print(dtc.AP1DelayMeanTest)
     dtc.dm_test_features = None
     dtc.dm_test_features = dm_test_features
     return dtc
@@ -1587,9 +1585,7 @@ def efel_evaluation(dtc):
 
     ephys = EphysSweepFeatureExtractor(t=np.array(t),v=np.array(v))#,\
     ephys.process_spikes()
-    #print(ephys.spikes(),'spikes')
     spks = ft.detect_putative_spikes(np.array(v),np.array(t))
-    #print(spks)
     dtc.spks = None
     dtc.spks = spks
     dtc.ephys = None
@@ -1665,9 +1661,6 @@ def dtc_to_predictions(dtc):
 
 def evaluate_allen(dtc,regularization=True):
     # assign worst case errors, and then over write them with situation informed errors as they become available.
-    #print({k:v for k,v in dtc.scores.items()})
-    #greatest = np.max([dtc.error_length,len(dtc.ascores)])
-    #print(dtc.ascores)
     fitness = [ 1.0 for i in range(0,len(dtc.ascores)) ]
     for int_,t in enumerate(dtc.ascores.keys()):
        if regularization:
@@ -1786,7 +1779,6 @@ def data_versus_optimal(ga_out):
         plt.clf()
         fig, ax = plt.subplots()
         if t.name not in ga_out['pf'][0].dtc.prediction.keys():
-            #print('gets here',t.name)
             try:
                 pred = ga_out['pf'][0].dtc.prediction['RheobaseTestP']
 
@@ -1815,8 +1807,6 @@ def data_versus_optimal(ga_out):
             td = [t.rescale(opt_value) for t in td]
         except:
             import pdb; pdb.set_trace()
-        print(sorted(t.data)[-1],'data')
-        print(opt_value,'optimizer')
         import pdb; pdb.set_trace()
         plt.hist(sorted(t.data), label=str(cell)+str(t.name))
         try:
@@ -2030,8 +2020,6 @@ def resample_high_sampling_freq(dtcpop):
 def score_attr(dtcpop,pop):
     for i,d in enumerate(dtcpop):
         if not hasattr(pop[i],'dtc'):
-            # print('last change.')
-            #pop[i] = WSListIndividual(pop[i])
             pop[i].dtc = None
         d.get_ss()
         pop[i].dtc = copy.copy(d)
@@ -2050,8 +2038,7 @@ def eval_subtest(name):
         for t in dtc.tests:
             if name in t.name:
                 score, dtc = bridge_judge((t, dtc))
-                print('rheobase real score \n\n\n\n\n {0}'.format(score))
-
+                
 
 import pdb
 import quantities as pq
@@ -2199,7 +2186,6 @@ class OptMan():
             self.CONFIDENT = True
         else:
             self.CONFIDENT = confident
-        print(self.CONFIDENT)
         if verbosity is None:
             self.verbose = 0
         else:
@@ -2334,23 +2320,24 @@ class OptMan():
 
         if self.protocol['allen']:
             dtc = False
-            while dtc is False:
-                dsolution,rp,chosen_keys,random_param = process_rparam(backend)
-                (new_tests,dtc) = self.make_simulated_observations(tests,backend,rp)
-
+            while dtc is False or type(new_tests) is type(None):
+                _,rp,chosen_keys,random_param = process_rparam(backend)
+                new_tests,dtc = self.make_simulated_observations(tests,backend,rp)
+            test_origin_target=dtc
             observations = dtc.preds
             target_spikes = dtc.spike_number#+10
             observation_spike = {'value': target_spikes}
             new_tests = TSD(new_tests)
+            #import pdb
+            #pdb.set_trace()
+            #for k,v in new_tests.items(): print(v.scoretype)
+
             new_tests.use_rheobase_score = False
             ga_out, DO = run_ga(ranges,NGEN,new_tests,free_params=rp.keys(), MU = MU, backend=backend, selection=str('selNSGA3'), protocol={'allen':True,'elephant':False,'tsr':[target_spikes-2,target_spikes+5]})
             ga_converged = [ p for p in ga_out['pf'] ]
-            test_origin_target = [ dsolution for i in range(0,len(ga_out['pf'])) ]
             ga_out,ga_converged,test_origin_target,new_tests
+            return ga_out,ga_converged,test_origin_target,new_tests,self.protocol['tsr']
 
-            #import pdb
-            #pdb.set_trace()
-            #inject_and_plot(dtcpop0,second_pop=dtcpop1,third_pop=[dtcpop0[0],dtcpop0[-1]],figname='snippets.png',snippets=True)
 
         elif self.protocol['elephant']:
             new_tests = False
@@ -2574,7 +2561,6 @@ class OptMan():
             #for t in new_tests:
             dtcpop0 = [ p.dtc for p in ga_out['pf'][0:2] ]
             dtcpop1 = [ dsolution for i in range(0,len(ga_out['pf'])) ][0:2]
-            #import pdb; pdb.set_trace()
             if self.verbose:
                 print(ga_out['pf'][0].dtc.scores)
                 print(results)
@@ -2627,8 +2613,8 @@ class OptMan():
 
         if isinstance(dtc.rheobase,type(None)) or type(dtc.rheobase) is type(None):
             dtc = allocate_worst(tests, dtc)
-            #if self.verbose:
-            #    print('score worst via test failure at {0}'.format('rheobase'))
+            if self.verbose:
+                print('score worst via test failure at {0}'.format('rheobase'))
         else:
 
             for k, t in enumerate(tests):
@@ -2685,7 +2671,6 @@ class OptMan():
             Serial route is intended for single items.
             '''
             if type(dtc.rheobase) is type(None):
-                print('Error Score bad model')
                 for t in tests:
                     dtc.scores[t.names] = 1.0
                     dtc.get_ss()
@@ -2716,20 +2701,13 @@ class OptMan():
                 if v.passive == False and v.active == True:
                     keyed = dtc.protocols[k]#.params
                     dtc.protocols[k] = active_values(keyed,dtc.rheobase)
-                    #print(dtc.vtest[k]['injected_square_current']['delay']+dtc.vtest[k]['injected_square_current']['duration'])
+                    
                 elif v.passive == True and v.active == False:
                     keyed = dtc.protocols[k]#.params
                     dtc.protocols[k] = passive_values(keyed)
             if v.name in str('RestingPotentialTest'):
 
-                #keyed['injected_square_current']['amplitude'] = -10*pq.pA
                 dtc.protocols[k]['injected_square_current']['amplitude'] = 0.0*pq.pA
-        try:
-            print(self.tests.use_rheobase_score)
-        except:
-            print('cant get dtc.use_rheobase_score')
-            import pdb
-            pdb.set_trace()
         return dtc
 
     def make_simulated_observations(self,xtests,backend,random_param,dsolution=None):
@@ -2847,8 +2825,8 @@ class OptMan():
                 try:
                     dtc,_,_ = returned
                 except:
-                    dtc = returned
-                    return dtc
+                    dtc = False
+                    return None,dtc
 
                 
                 dtc = filter_predictions(dtc)

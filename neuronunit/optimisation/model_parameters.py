@@ -87,7 +87,7 @@ BAE1['b'] = [BAE1['b'] - 0.125 * BAE1['b'],  BAE1['b']+ 0.125 * BAE1['b']]
 BAE1['C'] = [BAE1['C']- 0.125 * BAE1['C'], BAE1['C'] + 0.125 * BAE1['C'] ]
 
 
-BAE1['peak_v'] = [10, 60]
+BAE1['peak_v'] = [0.010, 0.060]
 
 MODEL_PARAMS['ADEXP'] = BAE1
 #I = .8*nA
