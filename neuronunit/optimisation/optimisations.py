@@ -458,8 +458,7 @@ def run_ga(explore_edges, max_ngen, test, \
         DO.error_length = len(test)
     ga_out = DO.run(max_ngen = max_ngen)
     
-    dtc_pop = DO.OM.update_dtc_pop(ga_out['pf'], DO.OM.td)
-    pop,dtc_pop = DO.OM.test_runner(dtc_pop, DO.OM.tests, DO.OM.td)
+    pop,dtc_pop = DO.OM.test_runner(ga_out['pf'], DO.OM.td, DO.OM.tests)
     ga_out['dtc_pop'] = dtc_pop
 
 

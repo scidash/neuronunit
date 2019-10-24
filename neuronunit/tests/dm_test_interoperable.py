@@ -283,24 +283,23 @@ class DMTNMLO(object):
 
         except:
             predicted = None
-        #    import pdb; pdb.set_trace()
+
         return (test_class,predicted)
 
     def runTest(self):
         predictions = {}
         for i, t in enumerate(self.test_set):
            (tclass,prediction) = self.run_test(i)
-           try:
-               prot =  self.test_prot_map[tclass.name]
-           except:
-               print(self.test_prot_map)
-               print(tclass.name)
-               prot = str('figure out protocol for Drop in AP amplitude from 1st to 2nd AP')
-               import pdb; pdb.set_trace()
-           #predictions[tclass.name] = {}
+           #try:
+           prot =  self.test_prot_map[tclass.name]
+           #except:
+           #    print(self.test_prot_map)
+           #    print(tclass.name)
+           #    prot = str('figure out protocol for Drop in AP amplitude from 1st to 2nd AP')
+           
            predictions[tclass.name] = prediction
-           #predictions[tclass.name]['protocol'] = prot
-           #print(predictions[tclass.name]['protocol'])
+           predictions[str(prot)] = prediction
+
         return predictions
 
     def test_0(self):

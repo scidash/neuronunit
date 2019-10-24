@@ -317,10 +317,10 @@ def eaAlphaMuPlusLambdaCheckpoint(
         invalid_count = len(invalid_ind)
 
         fronts.append(pf)
-        if gen%10==0:
-            stag_check1 = np.mean([ p.dtc.get_ss() for pf in fronts for p in pf ])
-            if not np.sum(fronts[-1][0].dtc.get_ss()) < stag_check1*0.975:
-                print('gene poulation stagnant, no appreciable gains in fitness')
+        #if gen%10==0:
+            #stag_check1 = np.mean([ p.dtc.get_ss() for pf in fronts for p in pf ])
+            #if not np.sum(fronts[-1][0].dtc.get_ss()) < stag_check1*0.975:
+            #    print('gene poulation stagnant, no appreciable gains in fitness')
                 #return population, hof, pf, logbook, history, gen_vs_pop
 
         

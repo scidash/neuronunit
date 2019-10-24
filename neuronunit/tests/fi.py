@@ -14,8 +14,6 @@ from neuronunit.optimisation.data_transport_container import DataTC
 import os
 import quantities
 import neuronunit
-from neuronunit.models.reduced import ReducedModel# , VeryReducedModel
-from neuronunit.models.reduced import VeryReducedModel
 
 import dask.bag as db
 import quantities as pq
@@ -316,17 +314,20 @@ class RheobaseTestP(VmTest):
             output is an virtual model with an updated dictionary.
             '''
             dtc.boolean = False
-            LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
-            dtc.model_path = LEMS_MODEL_PATH
+            #LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
+            #dtc.model_path = LEMS_MODEL_PATH
+            from neuronunit.models.reduced import ReducedModel, VeryReducedModel
 
             if dtc.backend is str('NEURON') or dtc.backend is str('jNEUROML'):
-
-                model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
+                #model = VeryReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
+                model = VeryReducedModel(name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
+                
                 dtc.current_src_name = model._backend.current_src_name
                 assert type(dtc.current_src_name) is not type(None)
                 dtc.cell_name = model._backend.cell_name
             else:
-                model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
+                #model = VeryReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
+                model = VeryReducedModel(name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
 
 
 
