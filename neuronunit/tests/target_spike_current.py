@@ -242,6 +242,7 @@ class SpikeCountSearch(VmTest):
                 for i,s in enumerate(dtc.current_steps):
                     dtc_clones[i] = copy.copy(dtc_clones[i])
                     dtc_clones[i].ampl = copy.copy(dtc.current_steps[i])
+                    dtc_clones[i].backend = copy.copy(dtc.backend[i])
 
                 dtc_clones = [d for d in dtc_clones if not np.isnan(d.ampl)]
                 try:
@@ -254,7 +255,6 @@ class SpikeCountSearch(VmTest):
                         dtc = copy.copy(dtc)
                         dtc.ampl = sc*pq.pA
                         dtc = check_current(dtc)
-                        #dtc.backend = be
                         dtc_clone.append(dtc)
 
 
@@ -501,8 +501,8 @@ class SpikeCountRangeSearch(VmTest):
         def find_target_current(self, dtc):
             # This line should not be necessary:
             # a class, VeryReducedModel has been made to circumvent this.
-            if hasattr(dtc,'model_path'):
-                assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
+            #if hasattr(dtc,'model_path'):
+            #    assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
             # If this it not the first pass/ first generation
             # then assume the rheobase value found before mutation still holds until proven otherwise.
             # dtc = check_current(model.rheobase,dtc)
@@ -530,6 +530,7 @@ class SpikeCountRangeSearch(VmTest):
                 for i,s in enumerate(dtc.current_steps):
                     dtc_clones[i] = copy.copy(dtc_clones[i])
                     dtc_clones[i].ampl = copy.copy(dtc.current_steps[i])
+                    dtc_clones[i].backend = copy.copy(dtc.backend)
 
                 dtc_clones = [d for d in dtc_clones if not np.isnan(d.ampl)]
                 try:
@@ -542,7 +543,7 @@ class SpikeCountRangeSearch(VmTest):
                         dtc = copy.copy(dtc)
                         dtc.ampl = sc*pq.pA
                         dtc = check_current(dtc)
-                        dtc.backend = be
+                        #dtc.backend = be
                         dtc_clone.append(dtc)
 
 
@@ -571,7 +572,8 @@ class SpikeCountRangeSearch(VmTest):
                             dtc.boolean = True
                             dtc.lookup[float(supra.min())] = len(supra)
                         else:
-                            dtc.rheobase['value'] = None#float(supra.min())
+                            if type(dtc.rheobase) is type(None): dtc.rheobase = {}
+                            dtc.rheobase['value'] = None
                             dtc.boolean = False
                             dtc.lookup[float(supra.min())] = len(supra)
 
@@ -606,8 +608,13 @@ class SpikeCountRangeSearch(VmTest):
         if type(temp) is not type(None):
             if type(temp) is not type(dict()):
                  prediction['value'] =  float(temp)* pq.pA
-            else:
-                 prediction['value'] =  float(temp['value'])* pq.pA
+            elif type(temp) is type(dict()):
+                 if type(temp['value']) is not type(None):
+                      prediction['value'] = float(temp['value'])* pq.pA
+                 else:
+                      prediction['value'] = None
+            elif type(temp) is type(None):
+                 prediction['value'] = None# float(temp['value'])* pq.pA
 
         else:
             prediction = None

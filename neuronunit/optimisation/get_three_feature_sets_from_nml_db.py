@@ -289,15 +289,23 @@ def three_feature_sets_on_static_models(model,unit_test = False, challenging=Fal
         model = model.dtc_to_model()
         model.inj = temp
     if not hasattr(model,'vm30'):
-        current = model.inj
+        # assume not static model anymore
+        current = model.inj[0]['injected_square_current']
         current['amplitude']= model.rheobase*3.0
         model.inject_square_current(current)
-        model.vm30 = model.get_membrane_potential()
+        vm = model.get_membrane_potential()
+        model.vm30 = vm
+        model.druckmann2013_strong_current = current
+
         current['amplitude']= model.rheobase*1.5
-        model.inject_square_current(current)        
-        model.vm15 = model.get_membrane_potential()
-        
-    
+        model.protocol = {}
+        model.protocol['Time_Start'] = current['delay']
+        model.inject_square_current(current)
+        vm = model.get_membrane_potential()
+        model.vm15 = vm
+        model.druckmann2013_standard_current = current
+
+
     times = np.array([float(t) for t in model.vm30.times])
     volts = np.array([float(v) for v in model.vm30])
     try:
@@ -339,6 +347,8 @@ def three_feature_sets_on_static_models(model,unit_test = False, challenging=Fal
     else:
         DMTNMLO.test_setup(None,None,model= model,ir_current_limited=True)
     dm_test_features = DMTNMLO.runTest()
+    print(dm_test_features)
+    import pdb; pdb.set_trace()
     ##
     # Wrangle data to prepare for EFEL feature calculation.
     ##
@@ -392,7 +402,11 @@ def three_feature_sets_on_static_models(model,unit_test = False, challenging=Fal
         print(threshold,'threshold', np.max(model.vm15.magnitude))
 
     if np.min(model.vm15.magnitude)<0:
-        efel_15 = efel.getMeanFeatureValues(traces15,list(efel.getFeatureNames()))
+        try:
+            efel_15 = efel.getMeanFeatureValues(traces15,list(efel.getFeatureNames()))
+        except:
+            efel_15 = None
+
     else:
         efel_15 = None
     efel.reset()
@@ -413,7 +427,12 @@ def three_feature_sets_on_static_models(model,unit_test = False, challenging=Fal
         print(threshold,'threshold', np.max(model.vm15.magnitude))
 
     if np.min(model.vm30.magnitude)<0:
-        efel_30 = efel.getMeanFeatureValues(traces3,list(efel.getFeatureNames()))
+        #efel_30 = efel.getMeanFeatureValues(traces3,list(efel.getFeatureNames()))
+        try:
+            efel_30 = efel.getMeanFeatureValues(traces3,list(efel.getFeatureNames()))
+        except:
+            efel_30 = None
+
     else:
         efel_30 = None
 

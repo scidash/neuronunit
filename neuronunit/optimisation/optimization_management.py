@@ -164,8 +164,8 @@ def inject_rh_and_dont_plot(dtc):
 
 
 #
-@cython.boundscheck(False)
-@cython.wraparound(False)
+#@cython.boundscheck(False)
+#@cython.wraparound(False)
 def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippets=False):
     sns.set_style("darkgrid")
 
@@ -1073,15 +1073,21 @@ def just_allen_predictions(dtc):
     current = {'injected_square_current':
                 {'amplitude':dtc.ampl, 'delay':DELAY, 'duration':DURATION}}
     comp = False
-    if type(dtc.pre_obs) is not type(None):
-        compare = dtc.pre_obs
-        comp = True
-        if 'spk_count' not in compare.keys():
-            target = compare['spike_count']
+    if hasattr(dtc,'pre_obs'):
+        
+        if type(dtc.pre_obs) is not type(None):
+            compare = dtc.pre_obs
+            comp = True
+            if 'spk_count' not in compare.keys():
+                target = compare['spike_count']
+            else:
+                target = compare['spk_count']
         else:
-            target = compare['spk_count']
+            compare = None
+
     else:
         compare = None
+
     model = new_model(dtc)
     assert model is not None
     vm30 = model.inject_square_current(current['injected_square_current'])
@@ -2680,8 +2686,8 @@ class OptMan():
 
             return pop, dtc
 
-    @cython.boundscheck(False)
-    @cython.wraparound(False)
+    #@cython.boundscheck(False)
+    #@cython.wraparound(False)
     def format_test(self,dtc):
         # pre format the current injection dictionary based on pre computed
         # rheobase values of current injection.
@@ -2958,15 +2964,30 @@ class OptMan():
             for d in dtcpop:
                 d.tests = copy.copy(self.tests)
 
-            if CONFIDENT == True:
+                
+            if CONFIDENT == True:# and self.backend is not str('ADEXP'):
                 dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
                 dtcpop = list(dtcbag.map(self.format_test).compute())
-
+                
                 for d in dtcpop:
                     assert hasattr(d, 'tests')
 
-                dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
-                dtcpop = list(dtcbag.map(self.elephant_evaluation).compute())
+                if str('ADEXP') in self.backend:
+                    serial_dtc = list(map(self.elephant_evaluation,dtcpop))
+                    # A way to get parallelism backinto brian2.
+                    serial_dtc = self.serial_dtc(dtcpop,b=True)
+                    parallel_dtc = self.serial_dtc(dtcpop,b=False)
+                    dtcbag = db.from_sequence(parallel_dtc, npartitions = NPART)
+                    parallel_dtc = list(dtcbag.map(self.elephant_evaluation).compute())
+                    serial_dtc = list(map(self.elephant_evaluation,serial_dtc))
+                    dtcpop = []
+                    for i,j in zip(serial_dtc,parallel_dtc):
+                        i.tests.extend(j.tests)
+                        i.tests.extend(j.tests)
+                        dtcpop.append(i)
+                else:       
+                    dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
+                    dtcpop = list(dtcbag.map(self.elephant_evaluation).compute())
 
 
                 for d in dtcpop:
@@ -2982,9 +3003,9 @@ class OptMan():
                     d.tests = copy.copy(self.tests)
 
 
-                def skip_over(dtcpop):
-                    # hint at how to simplify above
-                    dtcpop = [dtc.dtc_to_predictions() for dtc in dtcpop]#list(dtcbag.map(dtc_to_predictions).compute())
+                #def skip_over(dtcpop):
+                #    # hint at how to simplify above
+                #    dtcpop = [dtc.dtc_to_predictions() for dtc in dtcpop]#list(dtcbag.map(dtc_to_predictions).compute())
 
             for d in dtcpop:
                if not hasattr(d, 'tests'):
