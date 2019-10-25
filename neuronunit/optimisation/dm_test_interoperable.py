@@ -236,7 +236,7 @@ class DMTNMLO(object):
 
         except:
             predicted = None
-            #import pdb; pdb.set_trace()
+
         return (test_class,predicted)
 
     def runTest(self):
@@ -250,10 +250,9 @@ class DMTNMLO(object):
                print(tclass.name)
                prot = str('figure out protocol for Drop in AP amplitude from 1st to 2nd AP')
                import pdb; pdb.set_trace()
-           #predictions[tclass.name] = {}
+
            predictions[tclass.name] = prediction
-           #predictions[tclass.name]['protocol'] = prot
-           #print(predictions[tclass.name]['protocol'])
+
         return predictions
 
     def test_0(self):

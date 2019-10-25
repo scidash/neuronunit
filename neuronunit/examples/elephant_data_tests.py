@@ -183,8 +183,8 @@ a = testHighLevelOptimisation()
 a.setUp()
 (dtcpop0,dtcpop1,dtcpop2,dtcpop3,dtcpop4, cpc_out,ca1_out,om_out,basket_out,neo_out) = a.test_data_driven_ae()
 from neuronunit.optimisation.optimization_management import inject_and_plot
-aaa = inject_and_plot(dtcpop0,second_pop=dtcpop1,third_pop=dtcpop2,figname='not_a_problemsfdsfs.png',snippets=False)
-aaa = inject_and_plot(dtcpop0,second_pop=dtcpop1,third_pop=dtcpop3,figname='not_a_problemsffs.png',snippets=False)
+#aaa = inject_and_plot(dtcpop0,second_pop=dtcpop1,third_pop=dtcpop2,figname='not_a_problemsfdsfs.png',snippets=False)
+#aaa = inject_and_plot(dtcpop0,second_pop=dtcpop1,third_pop=dtcpop3,figname='not_a_problemsffs.png',snippets=False)
 
 import pdb
 pdb.set_trace()
