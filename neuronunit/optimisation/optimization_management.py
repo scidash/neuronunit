@@ -164,9 +164,9 @@ def inject_rh_and_dont_plot(dtc):
 
 
 #
-#@cython.boundscheck(False)
-#@cython.wraparound(False)
-def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippets=False):
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippets=False,experimental_cell_type="neo_cortical"):
     sns.set_style("darkgrid")
 
     if not isinstance(dtc, Iterable):
@@ -201,7 +201,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
             dtcpop = copy.copy(dtc)
             dtc = None
 
-            fig = plt.figure(figsize=(11,8.5))
+            fig = plt.figure(figsize=(11,11,dpi=100))
             ax = fig.add_subplot(111)
 
 
@@ -238,11 +238,16 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                 sns.set_style("darkgrid")
                 if snippets:
                     snippets_ = get_spike_waveforms(vm)
-                    plt.plot(snippets_.times,snippets_,color='red',label=label)#,label='ground truth')
+                    plt.plot(snippets_.times,snippets_,color='red',label=str('model type: ')+label)#,label='ground truth')
                 else:
-                    plt.plot(vm.times,vm,color='red',label=label)#,label='ground truth')
+                    plt.plot(vm.times,vm,color='red',label=str('model type: ')+label)#,label='ground truth')
                 ax.legend()
+                sns.set_style("darkgrid")
 
+                plt.title(experimental_cell_type)#+str(' Model Type: '+str(second_pop[0].backend)+str(dtc.backend)))
+                plt.xlabel('Time (ms)')
+                plt.ylabel('Amplitude (mV)')
+                    
             for dtc in second_pop:
                 model = mint_generic_model(dtc.backend)
                 if hasattr(dtc,'rheobase'):
@@ -278,15 +283,20 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                 sns.set_style("darkgrid")
                 if snippets:
                     snippets_ = get_spike_waveforms(vm)
-                    plt.plot(snippets_.times,snippets_,color='blue',label=label)#,label='ground truth')
+                    plt.plot(snippets_.times,snippets_,color='blue',label=str('model type: ')+label)#,label='ground truth')
                 else:
-                    plt.plot(vm.times,vm,color='blue',label=label)#,label='ground truth')
-
+                    plt.plot(vm.times,vm,color='blue',label=str('model type: ')+label)#,label='ground truth')
                 #plt.plot(model.get_membrane_potential().times,vm,color='blue',label=label)#,label='ground truth')
                 #ax.legend(['A simple line'])
                 ax.legend()
+                sns.set_style("darkgrid")
+
+                plt.title(experimental_cell_type)#+str(' Model Type: '+str(second_pop[0].backend)+str(dtc.backend)))
+                plt.xlabel('Time (ms)')
+                plt.ylabel('Amplitude (mV)')
+                    
             if third_pop is None:
-                return
+                pass
             else:
 
                 for dtc in third_pop:
@@ -322,15 +332,21 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                     if snippets:
 
                         snippets_ = get_spike_waveforms(vm)
-                        plt.plot(snippets_.times,snippets_,color='green',label=label)#,label='ground truth')
+                        plt.plot(snippets_.times,snippets_,color='green',label=str('model type: ')+label)#,label='ground truth')
                         #ax.legend(['A simple line'])
                         ax.legend()
                     else:
-                        plt.plot(vm.times,vm,color='green',label=label)#,label='ground truth')
+                        plt.plot(vm.times,vm,color='green',label=str('model type: ')+label)#,label='ground truth')
 
                 plot_backend = mpl.get_backend()
+                sns.set_style("darkgrid")
+
+                plt.title(experimental_cell_type)#+str(' Model Type: '+str(second_pop[0].backend)+str(dtc.backend)))
+                plt.xlabel('Time (ms)')
+                plt.ylabel('Amplitude (mV)')
+                    
                 if str('agg') in plot_backend:
-                    plt.title(figname)
+                    
                     plt.savefig(figname+str('all_traces.png'))
                 else:
                     plt.show()
@@ -353,8 +369,15 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                 model.inject_square_current(uc)
                 vm = model.get_membrane_potential().magnitude
                 sns.set_style("darkgrid")
+
                 plt.plot(model.get_membrane_potential().times,vm)#,label='ground truth')
             plot_backend = mpl.get_backend()
+            sns.set_style("darkgrid")
+
+            plt.title(experimental_cell_type)#+str(' Model Type: '+str(second_pop[0].backend)+str(dtc.backend)))
+            plt.xlabel('Time (ms)')
+            plt.ylabel('Amplitude (mV)')
+                    
             if plot_backend == str('agg'):
                 plt.savefig(figname+str('all_traces.png'))
             else:
@@ -2686,8 +2709,8 @@ class OptMan():
 
             return pop, dtc
 
-    #@cython.boundscheck(False)
-    #@cython.wraparound(False)
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
     def format_test(self,dtc):
         # pre format the current injection dictionary based on pre computed
         # rheobase values of current injection.
