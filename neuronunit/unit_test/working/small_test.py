@@ -2,7 +2,6 @@
 import unittest
 import os
 import sys
-from sciunit.utils import NotebookTools#,import_all_modules
 import dask
 from dask import bag
 import matplotlib
@@ -20,7 +19,6 @@ import pickle
 import dask.bag as db
 import os
 
-
 from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.data_transport_container import DataTC
 
@@ -34,17 +32,14 @@ from neuronunit.models.reduced import ReducedModel
 from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 from neuronunit.tests import dynamics
 from neuronunit.models.reduced import ReducedModel
-
-
 from neuronunit.optimisation import data_transport_container
-
 from neuronunit.models.reduced import ReducedModel
 
 from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
 from neuronunit.models.reduced import ReducedModel
 from neuronunit import aibs
-
-
+from neuronunit.optimisation.optimisations import run_ga
+from neuronunit.optimisation import model_parameters
 def test_all_tests_pop(dtcpop, tests):
 
     rheobase_test = [tests[0]['Hippocampus CA1 pyramidal cell']['RheobaseTest']]
@@ -56,8 +51,7 @@ def test_all_tests_pop(dtcpop, tests):
         assert len(list(d.attrs.values())) > 0
 
     dtcpop = list(map(dtc_to_rheo,dtcpop))
-    OM = OptMan(all_tests)
-
+    OM = OptMan(all_tests,simulated_obs=False)
     format_test = OM.format_test
     elephant_evaluation = OM.elephant_evaluation
 
@@ -120,56 +114,47 @@ class testHighLevelOptimisation(unittest.TestCase):
                     str('GLIFBackend')
                 ]
 
-    '''
-        
-    def test_data_driven_fe(self):
-        #forward euler
-        use_test1 = self.filtered_tests['Hippocampus CA1 pyramidal cell']
-        #use_tests = list(self.test_frame[0]['Hippocampus CA1 pyramidal cell'].values())
-        use_tests = list(self.test_frame['Hippocampus CA1 pyramidal cell'].values())
-        from neuronunit.optimisation.optimisations import run_ga
-        import pdb
-        from neuronunit.optimisation import model_parameters
-        param_edges = model_parameters.MODEL_PARAMS['RAW']
-        results = {}
-        for key, use_test in self.test_frame.items():
-            use_test['protocol'] = str('elephant')
-            
-            ga_out = run_ga(param_edges, 7, use_tests, free_params=param_edges.keys(), \
-                            backend=str('RAW'), MU=7, protocol={'allen': False, 'elephant': True})
-            results[key] = copy.copy(ga_out)
-            return results
-    '''
-    def test_data_driven_ae(self):
-        '''
-        forward euler, and adaptive exponential
-        '''
-        use_test1 = self.filtered_tests['Hippocampus CA1 pyramidal cell']
-        use_tests = list(self.test_frame['Hippocampus CA1 pyramidal cell'].values())
-        from neuronunit.optimisation.optimisations import run_ga
-        import pdb
-        from neuronunit.optimisation import model_parameters
-        results = {}
-        results['RAW'] = {}
-        results['ADEXP'] = {}
 
-        for key, use_test in self.test_frame.items():
-            use_test['protocol'] = str('elephant')
-            backend = str('ADEXP')
-            NGEN = MU = 2
-            ga_out = run_ga(model_parameters.MODEL_PARAMS[backend], NGEN, use_tests, free_params=model_parameters.MODEL_PARAMS[backend].keys(), \
-                            backend=backend, MU=MU, protocol={'allen': False, 'elephant': True})
-            results[backend][key] = copy.copy(ga_out)
-            backend = str('RAW')
-            ga_out = run_ga(model_parameters.MODEL_PARAMS[backend], NGEN, use_tests, free_params=model_parameters.MODEL_PARAMS[backend].keys(), \
-                            backend=backend, MU=MU, protocol={'allen': False, 'elephant': True})
-            results[backend][key] = copy.copy(ga_out)
-            break
-        return results
-a = testHighLevelOptimisation()
-a.setUp()
-resultsae = a.test_data_driven_ae()
-new_dic ={}
-with open('contentsae.p','wb') as f:
-    pickle.dump(restultsae,f)
-B
+    def test_solution_quality0(self):
+        use_test = self.filtered_tests['Hippocampus CA1 pyramidal cell']#['RheobaseTest']]
+        easy_standards = {ut.name:ut.observation['std'] for ut in use_test.values()}
+        print(easy_standards)
+        [(value.name,value.observation) for value in use_test.values()]
+        try:
+            with open('jd.p','rb') as f:
+                results,converged,target,simulated_tests = pickle.load(f)
+        except:
+
+            OM = OptMan(use_test,protocol={'elephant':True,'allen':False,'dm':False})
+            results,converged,target,simulated_tests = OM.round_trip_test(use_test,str('RAW'),MU=2,NGEN=2,stds = easy_standards)
+            print(converged,target)
+            temp = [results,converged,target,simulated_tests]
+
+            with open('jd.p','wb') as f:
+                pickle.dump(temp,f)
+        param_edges = model_parameters.MODEL_PARAMS['ADEXP'] 
+        try:
+            with open('jda.p','rb') as f:
+                adconv = pickle.load(f)[0]
+        except:
+            ga_out = run_ga(param_edges, 2, simulated_tests, free_params=param_edges.keys(), \
+                backend=str('ADEXP'), MU = 2,  protocol={'allen': False, 'elephant': True})
+
+            adconv = [ p.dtc for p in ga_out[0]['pf'] ]
+            with open('jda.p','wb') as f:
+                temp = [adconv]
+                pickle.dump(temp,f)
+        import copy
+        from neuronunit.optimisation import optimization_management as om
+        om.inject_and_plot(copy.copy(converged),second_pop=copy.copy(target),third_pop=copy.copy(adconv),figname='snippets_false.png',snippets=False)
+        om.inject_and_plot(copy.copy(converged),second_pop=copy.copy(target),third_pop=copy.copy(adconv),figname='snippets_true.png',snippets=True)
+        om.inject_and_plot(copy.copy(adconv),second_pop=copy.copy(adconv),third_pop=copy.copy(adconv),figname='adexp_only_true.png',snippets=True)
+        om.inject_and_plot(copy.copy(adconv),second_pop=copy.copy(adconv),third_pop=copy.copy(adconv),figname='adexp_only_false.png',snippets=False)
+
+        mpa = adconv[0].iap()
+        cpm = converged[0].iap()
+        return
+
+       
+if __name__ == '__main__':
+    unittest.main()
