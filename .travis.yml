@@ -31,7 +31,7 @@ script:
   - jupyter nbconvert --execute examples/example_data.ipynb 
   - cd neuronunit/unit_test/
   - cd working
-  - python izhi_elephantrt.py
+  - python small_test.py
   - python edt.py
 
 after_success:
