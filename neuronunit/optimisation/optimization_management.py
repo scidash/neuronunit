@@ -1,6 +1,6 @@
-'''
-Its not that this file is responsible for doing plotting, but it calls many modules that are, such that it needs to pre-empt
-'''
+# Its not that this file is responsible for doing plotting,
+# but it calls many modules that are, such that it needs to pre-empt
+
 # setting of an appropriate backend.
 # optional imports
 import warnings
@@ -10,9 +10,9 @@ try:
 except:
     warnings.warn('X11 plotting backend not available, consider installing')
 #_arraytools
-
-import warnings
-warnings.filterwarnings("ignore")
+SILENT = True
+if SILENT:
+    warnings.filterwarnings("ignore")
     
 # optional imports
 
@@ -102,6 +102,10 @@ except:
     warnings.warn('SKLearn library not available, consider installing')
 
 
+# Helper tests are dummy instances of NU tests. 
+# They are used by other methods analogous to a base class,
+# these are base instances that become more derived 
+# contexts, that modify copies of the helper class in place.
 rts,complete_map = pickle.load(open(mypath,'rb'))
 df = pd.DataFrame(rts)
 for key,v in rts.items():
@@ -143,11 +147,10 @@ class WSFloatIndividual(float):
         self.rheobase = None
         super(WSFloatIndividual, self).__init__()
 
+'''depriciated
 
-def inject_rh_and_dont_plot(dtc):
-    '''
-    For debugging backends during development.
-    '''
+def _and_dont_plot(dtc):
+    # For debugging backends during development.
     model = mint_generic_model(dtc.backend)
 
     try:
@@ -161,6 +164,7 @@ def inject_rh_and_dont_plot(dtc):
     model.set_attrs(**dtc.attrs)
     model.inject_square_current(uc['injected_square_current'])
     return model, model.get_membrane_potential().times,model.get_membrane_potential(),uc
+'''
 
 
 #
@@ -420,10 +424,7 @@ def make_new_random(dtc_,backend):
     return dtc
 
 
-    #if
 
-    #works = "InjectedCurrentAPThresholdTest"
-    #import pdb; pdb.set_trace()
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def random_p(backend):
@@ -507,7 +508,13 @@ def score_only(dtc,pred,test):
         score = None
     return score, dtc
 
+# this method is not currently used, but it could also be too prospectively usefull to delete.
+# TODO move to a utils file.
+
 def get_centres(use_test,backend,explore_param):
+    '''
+    Do optimization, but then get cluster centres.
+    '''
     MU = 7
     NGEN = 7
     test_opt = {}
@@ -538,16 +545,16 @@ def get_centres(use_test,backend,explore_param):
     return td, test_opt, centres
 
 
-def save_models_for_justas(dtc):
-    with open(str(dtc.attrs)+'.csv', 'w') as writeFile:
-        writer = csv.writer(writeFile)
-        writer.writerows(lines)
-
 def mint_generic_model(backend):
     LEMS_MODEL_PATH = path_params['model_path']
     model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = str(backend))
     return model
 
+
+def save_models_for_justas(dtc):
+    with open(str(dtc.attrs)+'.csv', 'w') as writeFile:
+        writer = csv.writer(writeFile)
+        writer.writerows(lines)
 
 def write_opt_to_nml(path,param_dict):
     '''
@@ -596,7 +603,7 @@ def pred_only(test_and_models):
         pred = test.generate_prediction(model)
     return pred
 
-
+'''
 #def t2m(bridge_judge):
 def _pseudo_decor(bridge_judge):
     (test, dtc) = bridge_judge.test_and_dtc
@@ -605,7 +612,7 @@ def _pseudo_decor(bridge_judge):
     model = mint_generic_model(backend_)
     model.set_attrs(**dtc.attrs)
     return model
-
+'''
 #from functools import partial
 #t2m = partial(_pseudo_decor, argument=arg)
 
@@ -707,7 +714,7 @@ def get_rh(dtc,rtest_class):
         dtc.rheobase = - 1.0
     return dtc
 
-
+'''
 def dtc_to_rheo_serial(dtc):
     # If  test taking data, and objects are present (observations etc).
     # Take the rheobase test and store it in the data transport container.
@@ -735,7 +742,7 @@ def dtc_to_rheo_serial(dtc):
         # discovery without test taking.
         dtc = get_rh(dtc,rtest)
     return dtc
-
+'''
 
 def substitute_parallel_for_serial(rtest):
     rtest = RheobaseTestP(rtest.observation)
@@ -2313,7 +2320,7 @@ class OptMan():
         for dtc in dtcpop: dtc.pre_obs = None
         for dtc in dtcpop: dtc.pre_obs = self.tests
         for dtc in dtcpop: dtc.tsr = tsr #not a property but an aim
-    #        assert
+        #        assert
         if CONFIDENT==True:
             dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
             dtcpop = list(dtcbag.map(nuunit_allen_evaluation).compute())
