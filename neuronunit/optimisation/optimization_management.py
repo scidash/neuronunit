@@ -201,7 +201,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
             dtcpop = copy.copy(dtc)
             dtc = None
 
-            fig = plt.figure(figsize=(11,11,dpi=100))
+            fig = plt.figure(figsize=(11,11),dpi=100)
             ax = fig.add_subplot(111)
 
 
@@ -1791,6 +1791,59 @@ def scale(X):
         X[:,i] = (X[:,i] - np.mean(X[:,i]))/np.std(X[:,i])
     return X, before
 
+def data_versus_optimal1(dtc_pop):
+    rts,complete_map = pickle.load(open('../tests/russell_tests.p','rb'))
+
+    #dtcpop = [ p.dtc for p in ga_out['pf'] ]
+    #pop = [ p for p in ga_out['pf'] ]
+    # first a nice violin plot of the test data.
+    to_norm = np.matrix([list(t.data) for t in rts ])
+
+    X,before = scale(to_norm)
+
+    ax = sns.violinplot(x="test type", y="physical unit", hue="smoker",
+                 data=X, palette="muted")
+
+    for t in tests:
+        plt.clf()
+        fig, ax = plt.subplots()
+        if t.name not in ga_out['pf'][0].dtc.prediction.keys():
+            try:
+                pred = ga_out['pf'][0].dtc.prediction['RheobaseTestP']
+
+            except:
+                pred = ga_out['pf'][0].dtc.rheobase
+            if not isinstance(pred, dict):
+                pred = {'value':pred}
+        else:
+            pred = ga_out['pf'][0].dtc.prediction[t.name]
+        try:
+            opt_value = pred['value']
+        except:
+            opt_value = pred['mean']
+        if t.name not in complete_map.keys():
+            import pdb; pdb.set_trace()
+
+        opt_value = opt_value.rescale(complete_map[t.name])
+        n, bins, patches = ax.hist(sorted(t.data), label=str(cell)+str(t.name))
+        mode0 = bins[np.where(n==np.max(n))[0][0]]
+        try:
+            # mode = mode0*qt.unitless
+            mode0 = mode0.rescale(opt_value)
+            half = (bins[1]-bins[0])/2.0
+            td = sorted(t.data)
+            td = [t*qt.unitless for t in td]
+            td = [t.rescale(opt_value) for t in td]
+        except:
+            import pdb; pdb.set_trace()
+        import pdb; pdb.set_trace()
+        plt.hist(sorted(t.data), label=str(cell)+str(t.name))
+        try:
+            plt.scatter(opt_value,np.max(n),c='r',label='optima')
+
+        except:
+            plt.scatter(opt_value,np.max(n),c='r',label='optima')
+        plt.savefig(str('optima_')+str(cell)+str(t.name)+str('.png'))
 def data_versus_optimal(ga_out):
     rts,complete_map = pickle.load(open('../tests/russell_tests.p','rb'))
 
