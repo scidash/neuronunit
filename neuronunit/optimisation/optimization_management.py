@@ -1,6 +1,6 @@
-'''
-Its not that this file is responsible for doing plotting, but it calls many modules that are, such that it needs to pre-empt
-'''
+# Its not that this file is responsible for doing plotting,
+# but it calls many modules that are, such that it needs to pre-empt
+
 # setting of an appropriate backend.
 # optional imports
 import warnings
@@ -10,9 +10,9 @@ try:
 except:
     warnings.warn('X11 plotting backend not available, consider installing')
 #_arraytools
-
-import warnings
-warnings.filterwarnings("ignore")
+SILENT = True
+if SILENT:
+    warnings.filterwarnings("ignore")
     
 # optional imports
 
