@@ -25,6 +25,7 @@ install:
   - pip install pyneuroml
   - pip install sklearn
   - pip install seaborn
+  - pip install .
 
 script:
   - jupyter nbconvert --execute examples/example_data.ipynb 
