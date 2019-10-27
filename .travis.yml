@@ -32,7 +32,6 @@ script:
   - cd neuronunit/unit_test/
   - cd working
   - python izhi_elephantrt.py
-  - python test_synt_sugar.py
   - python edt.py
 
 after_success:
