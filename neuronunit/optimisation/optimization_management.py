@@ -2179,7 +2179,7 @@ def bridge_passive(package):
 
         score = t.compute_score(t.observation, pred)
     else:
-        print('Ratio score failed')
+        #print('Ratio score failed')
         t.score_type = scores.ZScore
 
         score = t.compute_score(t.observation, pred)
@@ -2511,7 +2511,7 @@ class OptMan():
                 new_tests = TSD(new_tests)
                 new_tests.use_rheobase_score = tests.use_rheobase_score
 
-                ga_out, DO = run_ga(ranges,NGEN,new_tests,free_params=chosen_keys, MU = MU, backend=backend, selection=str('selNSGA2'))
+                ga_out, DO = run_ga(ranges,NGEN,new_tests,free_params=chosen_keys, MU = MU, backend=backend, selection=str('selNSGA2'),protocol={'elephant':True,'allen':False})
                 results = copy.copy(ga_out['pf'][0].dtc.scores)
             ga_converged = [ p.dtc for p in ga_out['pf'][0:2] ]
             test_origin_target = [ dsolution for i in range(0,len(ga_out['pf'])) ][0:2]
@@ -2520,7 +2520,7 @@ class OptMan():
                 print(results)
                 print(ga_out['pf'][0].dtc.attrs)
 
-            inject_and_plot(ga_converged,second_pop=test_origin_target,third_pop=[ga_converged[0]],figname='not_a_problem.png',snippets=True)
+            #inject_and_plot(ga_converged,second_pop=test_origin_target,third_pop=[ga_converged[0]],figname='not_a_problem.png',snippets=True)
             return ga_out,ga_converged,test_origin_target,new_tests
 
 
@@ -3063,13 +3063,19 @@ class OptMan():
 
 
             if CONFIDENT == True:# and self.backend is not str('ADEXP'):
-                dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
-                dtcpop = list(dtcbag.map(self.format_test).compute())
+                passed = False
+                try:
+                    dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
+                    dtcpop = list(dtcbag.map(self.format_test).compute())
+                    passed = True 
+                except:
+                    dtcpop = list(map(self.format_test,dtcpop))
+
 
                 for d in dtcpop:
                     assert hasattr(d, 'tests')
 
-                if str('ADEXP') in self.backend:
+                if str('ADEXP') in self.backend and passed:
                     serial_dtc = list(map(self.elephant_evaluation,dtcpop))
                     # A way to get parallelism backinto brian2.
                     serial_dtc = self.serial_dtc(dtcpop,b=True)
@@ -3083,10 +3089,11 @@ class OptMan():
                         i.tests.extend(j.tests)
                         i.scores.update(j.scores)
                         dtcpop.append(i)
-                else:
+                elif str('ADEXP') not in self.backend and passed:
                     dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
                     dtcpop = list(dtcbag.map(self.elephant_evaluation).compute())
-
+                else:
+                    dtcpop = list(map(self.elephant_evaluation,dtcpop))
 
                 for d in dtcpop:
                     assert hasattr(d, 'tests')
@@ -3097,6 +3104,7 @@ class OptMan():
             else:
                 dtcpop = list(map(self.format_test,dtcpop))
                 dtcpop = list(map(self.elephant_evaluation,dtcpop))
+
                 for d in dtcpop:
                     d.tests = copy.copy(self.tests)
 
