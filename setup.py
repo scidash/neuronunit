@@ -25,7 +25,7 @@ setup(
             'neuronunit.unit_test'],
 #+    packages=find_packages(),
 
-    packages=find_packages(),
+    #packages=find_packages(),
     url='http://github.com/scidash/neuronunit',
     license='MIT',
     description=("A SciUnit library for data-driven testing of "
