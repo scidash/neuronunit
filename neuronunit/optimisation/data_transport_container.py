@@ -45,7 +45,7 @@ class DataTC(object):
         self.scores_ratio = None
         self.from_imputation = False
         self.preds = {}
-
+        self.td = None
     def get_ss(self):
         # get summed score
         if self.scores is not None:
@@ -83,6 +83,17 @@ class DataTC(object):
             except:
                 model.inj = None
         return model
+    def dtc_to_gene(self):
+        from neuronunit.optimisation.optimization_management import WSListIndividual
+        print('warning translation dictionary should be used, to garuntee correct attribute order from random access dictionaries')
+        if hasattr(self,'td'):
+            print(self.td)
+            gene = WSListIndividual(list(self.attrs.values()))
+
+        else:
+            gene = WSListIndividual(list(self.attrs.values()))
+        return gene
+                                    
     def judge_test(self,index=0):
         model = self.dtc_to_model()
         ts = self.tests

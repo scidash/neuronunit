@@ -22,7 +22,7 @@ print([i for i in blah.columns])
 here = ne_raw[ne_raw['TableID']==18]
 print(here['rheo_raw'])
 
-import pdb; pdb.set_trace()
+#import pdb; pdb.set_trace()
 from scipy.signal import find_peaks_cwt
 
 
