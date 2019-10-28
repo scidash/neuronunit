@@ -2160,9 +2160,11 @@ def bridge_passive(package):
     assert 'mean' in t.observation.keys()
     # if    'std' not in t.observation.keys():
     take_anything = list(t.observation.values())[0]
-    t.observation['std'] = 15 * take_anything.magnitude * take_anything.units
+    
+    #t.observation['std'] = 15 * take_anything.magnitude * take_anything.units
     take_anything = list(pred.values())[0]
     pred['std'] = 15 * take_anything.magnitude * take_anything.units
+   
     if not hasattr(dtc,'predictions'):
         dtc.predictions = {}
         dtc.predictions[t.name] = pred
@@ -2193,7 +2195,7 @@ def bridge_passive(package):
     assert 'mean' in t.observation.keys()
     #if 'std' not in t.observation.keys():
     take_anything = list(t.observation.values())[0]
-    t.observation['std'] = 15*take_anything.magnitude * take_anything.units
+    #['t.observation['std'] = 15*take_anything.magnitude * take_anything.units
     take_anything = list(pred.values())[0]
     pred['std'] = 15*take_anything.magnitude * take_anything.units
 
@@ -2727,7 +2729,7 @@ class OptMan():
                     model = new_model(dtc)
                     pred = t.generate_prediction(model)
                     take_anything = list(t.observation.values())[0]
-                    t.observation['std'] = 15*take_anything.magnitude * take_anything.units
+                    #t.observation['std'] = 15*take_anything.magnitude * take_anything.units
 
                     take_anything = list(pred.values())[0]
                     if take_anything is None:
@@ -3067,6 +3069,7 @@ class OptMan():
                     for i,j in zip(serial_dtc,parallel_dtc):
                         i.tests.extend(j.tests)
                         i.tests.extend(j.tests)
+                        i.scores.update(j.scores)
                         dtcpop.append(i)
                 else:       
                     dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
