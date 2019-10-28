@@ -1,9 +1,14 @@
 See the Documentation notebooks:
 =======
 [chapter1](neuronunit/examples/chapter1.ipynb)
+
 [chapter2](neuronunit/examples/chapter1.ipynb)
+
 [chapter3](neuronunit/examples/chapter1.ipynb)
+
 [chapter4](neuronunit/examples/chapter1.ipynb)
+
+
 
 | Master  | Dev |
 | ------------- | ------------- |
