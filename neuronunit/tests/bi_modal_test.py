@@ -8,6 +8,12 @@ import numpy as np
 import pickle
 import os
 
+import os
+import neuronunit
+anchor = neuronunit.__file__
+anchor = os.path.dirname(anchor)
+mypath = os.path.join(os.sep,anchor,'tests/russell_tests.p')
+
 #from modality import calibrated_diptest, calibrated_bwtest, silverman_bwtest, hartigan_diptest, excess_mass_modes
 #from modality.util import auto_interval
 #import anchor
@@ -116,7 +122,7 @@ def specific_properties(name_map,test_map):
         neuron_values[str(p["nlex_id"])] = {}
         for val in range(1,13):
             if val==8:
-                print('hit \n\n\n')
+                pass
             if val == 9 or val == 11:
                 break
             reverse_cell_map[cell_name] = p["nlex_id"]
@@ -157,13 +163,12 @@ def specific_properties(name_map,test_map):
     return neuron_values, test_obs
 
 
-
-all_tests_path = str(os.getcwd())+'/all_tests.p'
+'''
+all_tests_path = str(mypath)+'/all_tests.p'
 assert os.path.isfile(all_tests_path) == True
 with open(all_tests_path,'rb') as f:
     (obs_frame,test_frame) = pickle.load(f)
-#import pdb; pdb.set_trace()
-
+'''
 
 
 neuron_values,test_obs = specific_properties(name_map,test_map)

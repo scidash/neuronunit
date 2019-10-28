@@ -5,7 +5,7 @@ import neuronunit
 import pickle
 from neuronunit import tests as _, neuroelectro
 from neuronunit.tests import passive, waveform, fi
-#from neuronunit.tests.fi import RheobaseTestP
+from neuronunit.tests.fi import RheobaseTestP
 from neuronunit.tests import passive, waveform, druckman2013
 from neuronunit.tests import druckman2013 as dm
 
@@ -176,6 +176,10 @@ def get_common_criteria():
     electro_tests = []
     obs_frame = {}
     test_frame = {}
+    import neuronunit
+    anchor = neuronunit.__file__
+    anchor = os.path.dirname(anchor)
+    mypath = os.path.join(os.sep,anchor,'optimisation/all_tests.p')
 
     try:
 
@@ -187,6 +191,7 @@ def get_common_criteria():
 
     except:
         for p in pipe:
+            print(p)
             p_tests, p_observations = get_obs(p)
 
             obs_frame[p["name"]] = p_observations#, p_tests))
@@ -199,17 +204,26 @@ def get_common_criteria():
 
 
 
-def get_tests():
+def get_tests(backend=str("RAW")):
+    import neuronunit
+    anchor = neuronunit.__file__
+    anchor = os.path.dirname(anchor)
+    mypath = os.path.join(os.sep,anchor,'unit_test/pipe_tests.p')
+
     # get neuronunit tests
     # and select out Rheobase test and input resistance test
     # and less about electrophysiology of the membrane.
     # We are more interested in phenomonogical properties.
-    electro_path = str(os.getcwd())+'/pipe_tests.p'
+    electro_path = mypath
+    #str(os.getcwd())+'/pipe_tests.p'
     assert os.path.isfile(electro_path) == True
     with open(electro_path,'rb') as f:
         electro_tests = pickle.load(f)
+    obs_frame,electro_tests = get_common_criteria()
     electro_tests = replace_zero_std(electro_tests)
-    electro_tests = substitute_parallel_for_serial(electro_tests)
+    if backend in str('ADEXP'):
+        electro_tests = substitute_parallel_for_serial(electro_tests)
+    
     test, observation = electro_tests[0]
     tests = copy.copy(electro_tests[0][0])
     suite = sciunit.TestSuite(tests)
