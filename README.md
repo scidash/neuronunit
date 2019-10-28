@@ -1,7 +1,16 @@
+See the Documentation notebooks:
 =======
+[Chapter 1](neuronunit/examples/chapter1.ipynb)
+
+[Chapter 2](neuronunit/examples/chapter2.ipynb)
+
+[Chapter 3](neuronunit/examples/chapter3.ipynb)
+
+[Chapter 4](neuronunit/examples/chapter4.ipynb)
+
 | Master  | Dev |
 | ------------- | ------------- |
-| [![Travis](https://travis-ci.org/scidash/neuronunit.svg?branch=master)](https://travis-ci.org/scidash/neuronunit) | [![Travis](https://travis-ci.org/scidash/neuronunit.svg?branch=dev)](https://travis-ci.org/scidash/neuronunit)  |
+| [![Travis](https://travis-ci.com/russelljjarvis/neuronunit.svg?branch=master)](https://travis-ci.com/russelljjarvis/neuronunit) | [![Travis](https://travis-ci.org/russelljjarvis/neuronunit.svg?branch=dev)](https://travis-ci.org/russelljjarvis/neuronunit)  |
 | [![RTFD](https://readthedocs.org/projects/neuronunit/badge/?version=master)](http://neuronunit.readthedocs.io/en/latest/?badge=master) | [![RTFD](https://readthedocs.org/projects/neuronunit/badge/?version=dev)](http://neuronunit.readthedocs.io/en/latest/?badge=dev) |
 | [![Coveralls](https://coveralls.io/repos/github/scidash/neuronunit/badge.svg?branch=master)](https://coveralls.io/github/scidash/neuronunit?branch=master) | [![Coveralls](https://coveralls.io/repos/github/scidash/neuronunit/badge.svg?branch=dev)](https://coveralls.io/github/scidash/neuronunit?branch=dev) |
 | [![Requirements](https://requires.io/github/scidash/neuronunit/requirements.svg?branch=master)](https://requires.io/github/scidash/neuronunit/requirements/?branch=master) |  [![Requirements](https://requires.io/github/scidash/neuronunit/requirements.svg?branch=dev)](https://requires.io/github/scidash/neuronunit/requirements/?branch=dev) |
