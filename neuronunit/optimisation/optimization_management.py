@@ -1,4 +1,4 @@
-# Its not that this file is responsible for doing plotting,
+# Its noAAAt that this file is responsible for doing plotting,
 # but it calls many modules that are, such that it needs to pre-empt
 
 # setting of an appropriate backend.
@@ -11,9 +11,10 @@ except:
     warnings.warn('X11 plotting backend not available, consider installing')
 #_arraytools
 SILENT = True
+RATIO_SCORE = False
 if SILENT:
     warnings.filterwarnings("ignore")
-    
+
 # optional imports
 
 CONFIDENT = True
@@ -102,9 +103,9 @@ except:
     warnings.warn('SKLearn library not available, consider installing')
 
 
-# Helper tests are dummy instances of NU tests. 
+# Helper tests are dummy instances of NU tests.
 # They are used by other methods analogous to a base class,
-# these are base instances that become more derived 
+# these are base instances that become more derived
 # contexts, that modify copies of the helper class in place.
 rts,complete_map = pickle.load(open(mypath,'rb'))
 df = pd.DataFrame(rts)
@@ -251,7 +252,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                 plt.title(experimental_cell_type)#+str(' Model Type: '+str(second_pop[0].backend)+str(dtc.backend)))
                 plt.xlabel('Time (ms)')
                 plt.ylabel('Amplitude (mV)')
-                    
+
             for dtc in second_pop:
                 model = mint_generic_model(dtc.backend)
                 if hasattr(dtc,'rheobase'):
@@ -298,7 +299,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                 plt.title(experimental_cell_type)#+str(' Model Type: '+str(second_pop[0].backend)+str(dtc.backend)))
                 plt.xlabel('Time (ms)')
                 plt.ylabel('Amplitude (mV)')
-                    
+
             if third_pop is None:
                 pass
             else:
@@ -348,9 +349,9 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                 plt.title(experimental_cell_type)#+str(' Model Type: '+str(second_pop[0].backend)+str(dtc.backend)))
                 plt.xlabel('Time (ms)')
                 plt.ylabel('Amplitude (mV)')
-                    
+
                 if str('agg') in plot_backend:
-                    
+
                     plt.savefig(figname+str('all_traces.png'))
                 else:
                     plt.show()
@@ -381,7 +382,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
             plt.title(experimental_cell_type)#+str(' Model Type: '+str(second_pop[0].backend)+str(dtc.backend)))
             plt.xlabel('Time (ms)')
             plt.ylabel('Amplitude (mV)')
-                    
+
             if plot_backend == str('agg'):
                 plt.savefig(figname+str('all_traces.png'))
             else:
@@ -997,7 +998,7 @@ def allen_scores(dtc):
     for k,observation in compare.items():
         if str(k) not in str('spikes'):
             #compute interspike firing frame_dynamics
-             
+
             obs = {}
             if type(observation) is not type({'1':0}):
                 obs['mean'] = observation
@@ -1055,13 +1056,13 @@ def allen_scores(dtc):
     try:
         delta = spike_cnt_pred-target
         dtc.scores['spk_count'] = np.abs(delta)#sigmoid()#spike_cnt_pred-target #
-        
+
     except:
         pass
     try:
         delta = np.abs(float(dtc.ampl)-dtc.pre_obs['current_test'])
         dtc.scores['current_test'] = delta #sigmoid(np.abs(delta))
-        
+
     except:
         pass
 
@@ -1104,7 +1105,7 @@ def just_allen_predictions(dtc):
                 {'amplitude':dtc.ampl, 'delay':DELAY, 'duration':DURATION}}
     comp = False
     if hasattr(dtc,'pre_obs'):
-        
+
         if type(dtc.pre_obs) is not type(None):
             compare = dtc.pre_obs
             comp = True
@@ -1180,17 +1181,17 @@ def just_allen_predictions(dtc):
             else:
                 for other in ephys_dict['spikes'][0].keys():
                     temp = ephys_dict['spikes'][0][other]
-                    prediction['mean'] = temp 
+                    prediction['mean'] = temp
                     prediction['std'] = 10.0
-                    dtc.preds[other] = prediction                    
+                    dtc.preds[other] = prediction
                 dtc.spike_cnt = len(ephys_dict['spikes'])
                 dtc.preds['spikes'] = dtc.spike_cnt
-                                
+
         return dtc,compare,ephys
 
-    
+
 from sciunit import scores
-                
+
 def prediction_current_and_features(dtc):
     returned = just_allen_predictions(dtc)
     try:
@@ -1198,7 +1199,7 @@ def prediction_current_and_features(dtc):
     except:
         dtc = returned
         return dtc
-   
+
     ephys_dict = ephys.as_dict()
     dtc.scores = None
     dtc.scores = {}
@@ -1208,9 +1209,9 @@ def prediction_current_and_features(dtc):
     #score_type = scores.RatioScore
     score_type = scores.ZScore
     #helper.score_type = score_type
-                
+
     helper.score_type = score_type
-                
+
     dtc.preds = {}
     dtc.tests = {}
 
@@ -1232,7 +1233,7 @@ def prediction_current_and_features(dtc):
                 obs['std'] = obs['mean']/15.0
                 dtc.preds[k] = prediction
                 prediction['std'] = prediction['mean']/15.0
-            
+
                 try:
                     score = VmTest.compute_score(helper,obs,prediction)
                 except:
@@ -1249,11 +1250,11 @@ def prediction_current_and_features(dtc):
         first_spike = ephys_dict['spikes'][0]
         first_spike.pop('direct',None)
         for key,spike_obs in first_spike.items():
-                
+
             #if not str('direct') in key and not str('adp_i') in key and not str('peak_i') in key and not str('fast_trough_i') and not str('fast_trough_i') and not str('trough_i'):
             #try:
             obs = {'mean': compare[key]['mean']}
-            
+
             prediction = {'mean': ephys_dict['spikes'][0][key]}
             helper.name = str(key)
             #obs['std']=10.0
@@ -1348,7 +1349,7 @@ def allen_features_block2(dtc):
     for k,observation in compare.items():
         if str(k) not in str('spikes'):
             #compute interspike firing frame_dynamics
-         
+
             obs = {}
             if type(observation) is not type(dict()):
                 obs['mean'] = observation
@@ -2127,10 +2128,12 @@ def eval_subtest(name):
         for t in dtc.tests:
             if name in t.name:
                 score, dtc = bridge_judge((t, dtc))
-                
+
 
 import pdb
 import quantities as pq
+from sciunit import scores
+
 def bridge_passive(package):
     t,dtc = package
     #model = mint_generic_model(dtc.backend)
@@ -2160,21 +2163,27 @@ def bridge_passive(package):
     assert 'mean' in t.observation.keys()
     # if    'std' not in t.observation.keys():
     take_anything = list(t.observation.values())[0]
-    
-    #t.observation['std'] = 15 * take_anything.magnitude * take_anything.units
+    if 'std' not in t.observation.keys():
+        t.observation['std'] = 5 * take_anything.magnitude * take_anything.units
     take_anything = list(pred.values())[0]
-    pred['std'] = 15 * take_anything.magnitude * take_anything.units
-   
+    if 'std' not in pred.keys():
+        pred['std'] = 5 * take_anything.magnitude * take_anything.units
+
     if not hasattr(dtc,'predictions'):
         dtc.predictions = {}
         dtc.predictions[t.name] = pred
     else:
         dtc.predictions[t.name] = pred
+    if RATIO_SCORE:
+        t.score_type = scores.RatioScore
 
-    score = t.compute_score(t.observation, pred)
-    #model.set_attrs(**dtc.attrs)
-    # this is neater but might break parallelism
-    #model = dtc.dtc_to_model()
+        score = t.compute_score(t.observation, pred)
+    else:
+        print('Ratio score failed')
+        t.score_type = scores.ZScore
+
+        score = t.compute_score(t.observation, pred)
+
     model = new_model(dtc)
     t.setup_protocol(model)
     result = t.get_result(model)
@@ -2195,7 +2204,8 @@ def bridge_passive(package):
     assert 'mean' in t.observation.keys()
     #if 'std' not in t.observation.keys():
     take_anything = list(t.observation.values())[0]
-    #['t.observation['std'] = 15*take_anything.magnitude * take_anything.units
+    if 'std' not in t.observation.keys():
+        std.observation['std'] = 15*take_anything.magnitude * take_anything.units
     take_anything = list(pred.values())[0]
     pred['std'] = 15*take_anything.magnitude * take_anything.units
 
@@ -2329,7 +2339,7 @@ class OptMan():
 
         else:
             dtcpop = list(map(nuunit_allen_evaluation,dtcpop))
-            
+
         pop = [pop[i] for i,d in enumerate(dtcpop) if type(d) is not type(None)]
         dtcpop = [d for d in dtcpop if type(d) is not type(None)]
         initial_length = len(pop)
@@ -2363,11 +2373,11 @@ class OptMan():
                     if target_current is not None:
                         dtc.ampl = target_current['value']
                         dtc = prediction_current_and_features(dtc)
-                        
+
                         dtc = filter_predictions(dtc)
-                        
+
                         dtc.error_length = len(dtc.preds)
-                    
+
                 pop[i] = ind
                 dtcpop[i] = dtc
 
@@ -2419,9 +2429,6 @@ class OptMan():
             target_spikes = dtc.spike_number#+10
             observation_spike = {'value': target_spikes}
             new_tests = TSD(new_tests)
-            #import pdb
-            #pdb.set_trace()
-            #for k,v in new_tests.items(): print(v.scoretype)
 
             new_tests.use_rheobase_score = False
             ga_out, DO = run_ga(ranges,NGEN,new_tests,free_params=rp.keys(), MU = MU, backend=backend, selection=str('selNSGA3'), protocol={'allen':True,'elephant':False,'tsr':[target_spikes-2,target_spikes+5]})
@@ -2483,7 +2490,8 @@ class OptMan():
                     if 'std' not in temp.keys():
                         mt['RheobaseTest'].observation['std'] = mt['RheobaseTest'].observation['value']
                     #self.simulated_obs = True
-
+                    new_tests = TSD(new_tests)
+                    new_tests.use_rheobase_score = tests.use_rheobase_score
 
                     ga_out, DO = run_ga(ranges,NGEN,mt,free_params=rp.keys(), MU = MU, backend=backend, selection=str('selNSGA2'),protocol={'elephant':True,'allen':False})
                     results[k] = copy.copy(ga_out['pf'][0].dtc.scores)
@@ -2500,6 +2508,9 @@ class OptMan():
                 if 'std' not in temp.keys():
                     new_tests['RheobaseTest'].observation['std'] = new_tests['RheobaseTest'].observation['value']
                 [(value.name,value.observation) for value in new_tests.values()]
+                new_tests = TSD(new_tests)
+                new_tests.use_rheobase_score = tests.use_rheobase_score
+
                 ga_out, DO = run_ga(ranges,NGEN,new_tests,free_params=chosen_keys, MU = MU, backend=backend, selection=str('selNSGA2'))
                 results = copy.copy(ga_out['pf'][0].dtc.scores)
             ga_converged = [ p.dtc for p in ga_out['pf'][0:2] ]
@@ -2729,7 +2740,8 @@ class OptMan():
                     model = new_model(dtc)
                     pred = t.generate_prediction(model)
                     take_anything = list(t.observation.values())[0]
-                    #t.observation['std'] = 15*take_anything.magnitude * take_anything.units
+                    if 'std' not in t.observation.keys():
+                        t.observation['std'] = 15*take_anything.magnitude * take_anything.units
 
                     take_anything = list(pred.values())[0]
                     if take_anything is None:
@@ -2792,7 +2804,7 @@ class OptMan():
                 if v.passive == False and v.active == True:
                     keyed = dtc.protocols[k]#.params
                     dtc.protocols[k] = active_values(keyed,dtc.rheobase)
-                    
+
                 elif v.passive == True and v.active == False:
                     keyed = dtc.protocols[k]#.params
                     dtc.protocols[k] = passive_values(keyed)
@@ -2919,7 +2931,7 @@ class OptMan():
                     dtc = False
                     return None,dtc
 
-                
+
                 dtc = filter_predictions(dtc)
             dtc.spike_number = dtc.spike_cnt
             target_spikes = dtc.spike_cnt
@@ -3049,11 +3061,11 @@ class OptMan():
             for d in dtcpop:
                 d.tests = copy.copy(self.tests)
 
-                
+
             if CONFIDENT == True:# and self.backend is not str('ADEXP'):
                 dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
                 dtcpop = list(dtcbag.map(self.format_test).compute())
-                
+
                 for d in dtcpop:
                     assert hasattr(d, 'tests')
 
@@ -3071,7 +3083,7 @@ class OptMan():
                         i.tests.extend(j.tests)
                         i.scores.update(j.scores)
                         dtcpop.append(i)
-                else:       
+                else:
                     dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
                     dtcpop = list(dtcbag.map(self.elephant_evaluation).compute())
 

@@ -30,7 +30,7 @@ import multiprocessing
 from allensdk.core.cell_types_cache import CellTypesCache
 from allensdk.ephys.extract_cell_features import extract_cell_features
 from collections import defaultdict
-from neuronunit.optimisation.optimization_management import inject_rh_and_dont_plot
+#from neuronunit.optimisation.optimization_management import inject_rh_and_dont_plot
 
 from allensdk.core.nwb_data_set import NwbDataSet
 import pickle
@@ -55,7 +55,7 @@ import pdb
 from allensdk.ephys.extract_cell_features import extract_cell_features
 from itertools import repeat
 ##from sklearn.cross_decomposition import CCA
-
+'''
 def a_cell_for_check(stim):
     cells = pickle.load(open("multi_objective_raw.p","rb"))
     dtc = cells['results']['RAW']['Dentate gyrus basket cell']['pf'][0].dtc
@@ -63,6 +63,7 @@ def a_cell_for_check(stim):
 
     (_,times,vm) = inject_rh_and_dont_plot(dtc)
     return (_,times,vm)
+'''
 # if you ran the examples above, you will have a NWB file here
 
 # pick a cell to analyze

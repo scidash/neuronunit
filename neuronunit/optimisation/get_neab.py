@@ -40,7 +40,13 @@ def get_obs(pipe):
     for p in pipe:
         for l in ontologies['objects']:
             print(p,l)
-            obs.append(neuroelectro_summary_observation(p,l))
+            try:
+                print('worked')
+                obs.append(neuroelectro_summary_observation(p,l))
+            except:
+                print('did not work')
+                #import pdb
+                #pdb.set_trace()
     return obs
 
 def update_amplitude(test,tests,score):
@@ -167,12 +173,12 @@ def executable_tests(cell_id,file_name = None):#,observation = None):
 
 def get_common_criteria():
     purkinje ={"id": 18, "name": "Cerebellum Purkinje cell", "neuron_db_id": 271, "nlex_id": "sao471801888"}
-    fi_basket = {"id": 65, "name": "Dentate gyrus basket cell", "neuron_db_id": None, "nlex_id": "nlx_cell_100201"}
+    #fi_basket = {"id": 65, "name": "Dentate gyrus basket cell", "neuron_db_id": None, "nlex_id": "nlx_cell_100201"}
     pvis_cortex = {"id": 111, "name": "Neocortex pyramidal cell layer 5-6", "neuron_db_id": 265, "nlex_id": "nifext_50"}
     #This olfactory mitral cell does not have datum about rheobase, current injection values.
     olf_mitral = {"id": 129, "name": "Olfactory bulb (main) mitral cell", "neuron_db_id": 267, "nlex_id": "nlx_anat_100201"}
     ca1_pyr = {"id": 85, "name": "Hippocampus CA1 pyramidal cell", "neuron_db_id": 258, "nlex_id": "sao830368389"}
-    pipe = [ fi_basket, ca1_pyr, purkinje,  pvis_cortex]
+    pipe = [ olf_mitral, ca1_pyr, purkinje,  pvis_cortex]
     electro_tests = []
     obs_frame = {}
     test_frame = {}

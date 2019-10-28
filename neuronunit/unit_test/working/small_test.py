@@ -77,7 +77,11 @@ def grid_points():
 class testHighLevelOptimisation(unittest.TestCase):
 
     def setUp(self):
-        electro_path = str(os.getcwd())+'/../../tests/russell_tests.p'
+        import neuronunit
+        anchor = neuronunit.__file__
+        anchor = os.path.dirname(anchor)
+        electro_path = os.path.join(os.sep,anchor,'tests/russell_tests.p')
+        #electro_path = str(os.getcwd())+'/../../tests/russell_tests.p'
 
         assert os.path.isfile(electro_path) == True
         with open(electro_path,'rb') as f:
