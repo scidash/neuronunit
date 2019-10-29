@@ -127,12 +127,15 @@ class testHighLevelOptimisation(unittest.TestCase):
                 ]
         
 
-    def get_cells(self,backend,model_parameters):
-        #import pdb; pdb.set_trace()
-        for v in self.test_frame.values():
-            for _,values in v.items():
-                values.score_type = scores.RatioScore
-
+    def get_cells(self,backend,model_parameters,score_type=None):
+        if score_type is not None:
+            from sciunit import scores
+            for v in self.test_frame.values():
+                for _,values in v.items():
+                    if score_type in str('ratio'):
+                        values.score_type = scores.RatioScore
+                    else:
+                        values.score_type = scores.ZScore
         cpc = TSD(tests= self.test_frame['Cerebellum Purkinje cell'],use_rheobase_score=False)
         
         cpc_out = cpc.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=9, \

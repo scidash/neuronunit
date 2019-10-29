@@ -2283,6 +2283,7 @@ class OptMan():
         self.hc = hc
         self.boundary_dict= boundary_dict
         self.protocol = protocol
+        # note this is not effective at changing parallel behavior yet
         if type(confident) is type(None):
             self.CONFIDENT = True
         else:
@@ -2321,7 +2322,87 @@ class OptMan():
         dtc_ = pop2dtc(gene,dtc_)
         return gene[0], dtc_[0]
 
+    def run_simple_grid(self,npoints=10,free_params=None):
+        self.exhaustive = True
 
+        from neuronunit.optimisation.exhaustive_search import sample_points, add_constant, chunks
+        ranges = self.boundary_dict
+        subset = OrderedDict()
+        if type(free_params) is type(None):
+            free_params = list(ranges.keys())
+        for k,v in ranges.items():
+            if k in free_params:
+                subset[k] = ( np.min(ranges[k]),np.max(ranges[k]) )
+        # The function of maps is to map floating point sample spaces onto a  monochromataic matrix indicies.
+        subset = OrderedDict(subset)
+        subset = sample_points(subset, npoints = npoints)
+        grid_points = list(ParameterGrid(subset))
+        td = grid_points[0].keys()
+        if type(self.hc) is not type(None):
+            grid_points = add_constant(hold_constant,grid_points)
+
+        if len(td) > 1:
+            consumable = [ WSListIndividual(g.values()) for g in grid_points ]
+        else:
+            consumable = [ val for g in grid_points for val in g.values() ]
+        grid_results = []
+        td = list(td)
+
+        if len(consumable) <= 16:
+            consumable = consumable
+            results = self.update_deap_pop(consumable, self.tests, td,backend=self.backend)
+            results_ = []
+            for r in results:
+                r.dtc = self.elephant_evaluation(r.dtc)
+                results_.append(r)
+            if type(results_) is not None:
+                grid_results.extend(results_)
+
+        if len(consumable) > 16:
+            consumable = chunks(consumable,8)
+            for sub_pop in consumable:
+                sub_pop = sub_pop
+                results = self.update_deap_pop(sub_pop, self.tests, td)
+                results_ = []
+                for r in results:
+                    r.dtc = self.elephant_evaluation(r.dtc)
+                    results_.append(r)
+                if type(results_) is not None:
+                    grid_results.extend(results_)
+        return grid_results
+
+    def run_grid(self,npoints, provided_keys = []):
+        if type(provided_keys) is type(None):
+            provided_keys = list(self.boundary_dict.keys())
+        from neuronunit.optimisation.exhaustive_search import sample_points, add_constant, chunks, build_chunk_grid
+        ranges = self.boundary_dict
+
+        subset = mp_in[provided_keys]
+        tests = self.tests
+        consumable_ ,td = build_chunk_grid(npoints,provided_keys)
+        cnt = 0
+        grid_results = []
+        if type(hold_constant) is not type(None):
+            td, hc = add_constant(self.hc,consumable_,td)
+        consumable = iter(consumable_)
+        use_cache = None
+        s = None
+        for sub_pop in consumable:
+            results = self.update_deap_pop(sub_pop, self.tests, td)
+            if type(results) is not None:
+                grid_results.extend(results)
+
+            if type(use_cache) is not type(None):
+                if type(s) is not type(None):
+                    s['consumable'] = consumable
+                    s['cnt'] = cnt
+                    s['grid_results'] = grid_results
+                    s['sub_pop'] = sub_pop
+            cnt += 1
+            #print('done_block_of_N_cells: ',cnt)
+        if type(s) is not type(None):
+            s.close()
+        return grid_results
 
     def get_allen(self,pop,dtcpop,tests,td,tsr=None):
         with open('waves.p','rb') as f:
@@ -2754,7 +2835,6 @@ class OptMan():
 
 
                 assignment = 1.0
-                #import pdb
                 if score is not None:
                     if score.norm_score is not None:
                         assignment = 1.0 - score.norm_score
@@ -2954,7 +3034,7 @@ class OptMan():
         if self.backend is not None:
             _backend = self.backend
         if isinstance(pop, Iterable):# and type(pop[0]) is not type(str('')):
-            xargs = zip(pop,repeat(td),repeat(_backend))
+            xargs = zip(pop,repeat(td),repeat(self.backend))
             npart = np.min([multiprocessing.cpu_count(),len(pop)])
             bag = db.from_sequence(xargs, npartitions = npart)
             dtcpop = list(bag.map(transform).compute())
@@ -3067,7 +3147,7 @@ class OptMan():
                 try:
                     dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
                     dtcpop = list(dtcbag.map(self.format_test).compute())
-                    passed = True 
+                    passed = True
                 except:
                     dtcpop = list(map(self.format_test,dtcpop))
 
@@ -3124,8 +3204,14 @@ class OptMan():
             pop_, dtcpop = self.obtain_rheobase(pop, td, tests)
             for ind,dtc in zip(pop,dtcpop):
                 dtc.error_length = self.error_length
-            pop, dtcpop = self.make_up_lost(copy.copy(pop_), dtcpop, td)
-
+            if not hasattr(self,'exhaustive'):# is type (None):
+                pop, dtcpop = self.make_up_lost(copy.copy(pop_), dtcpop, td)
+            else:
+                pop,dtcpop = self.parallel_route(pop, dtcpop, tests, td)#, clustered=False)
+                both = [(ind,dtc) for ind,dtc in zip(pop,dtcpop) if dtc.scores is not None]
+                for ind,d in both:
+                    if not hasattr(ind,'fitness'):
+                        ind.fitness = []#copy.copy(pop_[0].fitness)
             # there are many models, which have no actual rheobase current injection value.
             # filter, filters out such models,
             # gew genes, add genes to make up for missing values.

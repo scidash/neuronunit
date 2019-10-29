@@ -161,8 +161,23 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
         self.params = optimization_management.create_subset(nparams = nparams,boundary_dict = boundary_dict)
         self.params, self.td = self.transdict(boundary_dict)
         return self.params, self.td
+    '''
+    def evaluate_local(dtc,regularization=False):
+        # assign worst case errors, and then over write them with situation informed errors as they become available.
+        greatest = len(dtc.tests)
+        fitness = []# 1.0 for i in range(0,greatest) ]
+        
+        if not hasattr(dtc,str('scores')):
+            return fitness
 
-
+        #fitness = [ 1.0 for i in range(0,greatest) ]
+        for int_,t in enumerate(dtc.scores.keys()):
+            if regularization:
+                fitness.append(float(dtc.scores[str(t)]**(1.0/2.0)))
+            else:
+                fitness.append(float(dtc.scores[str(t)]))
+        return tuple(fitness,)
+    '''
     def set_evaluate(self):
         if self.benchmark == True:
             self.toolbox.register("evaluate", benchmarks.zdt1)

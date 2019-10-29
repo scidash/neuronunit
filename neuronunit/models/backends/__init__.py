@@ -24,9 +24,14 @@ def heavy_backends():
         from .general_pyNN import PYNNBackend
     except Exception as e:
         print('pynn python Error')
+    
+    try:
+        from .glif import GLIFBackend
+    except Exception as e:
+        print('glif python Error')
 
 
-    #pdb.set_trace()
+
 try:
     from .rawpy import RAWBackend
 except ImportError:
@@ -39,12 +44,6 @@ except ImportError:
     HHBackend = None
     print('Could not load HHBackend.')
 
-
-
-try:
-    from .glif import GLIFBackend
-except Exception as e:
-    print('glif python Error')
 
 try:
     from .badexp import ADEXPBackend
