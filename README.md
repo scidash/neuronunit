@@ -8,6 +8,17 @@ See the Documentation notebooks:
 
 [Chapter 4](neuronunit/examples/chapter4.ipynb)
 
+[Chapter 5](neuronunit/examples/chapter5.ipynb)
+
+[Chapter 6](neuronunit/examples/chapter6.ipynb)
+
+[Chapter 7](neuronunit/examples/chapter7.ipynb)
+
+[Chapter 8](neuronunit/examples/chapter8.ipynb)
+
+[Chapter 9](neuronunit/examples/chapter9.ipynb)
+
+
 | Master  | Dev |
 | ------------- | ------------- |
 | [![Travis](https://travis-ci.com/russelljjarvis/neuronunit.svg?branch=master)](https://travis-ci.com/russelljjarvis/neuronunit) | [![Travis](https://travis-ci.org/russelljjarvis/neuronunit.svg?branch=dev)](https://travis-ci.org/russelljjarvis/neuronunit)  |
