@@ -41,12 +41,11 @@ def get_obs(pipe):
         for l in ontologies['objects']:
             print(p,l)
             try:
-                print('worked')
+                print('obs.append(neuroelectro_summary_observation(p,l))')
                 obs.append(neuroelectro_summary_observation(p,l))
+                print('worked')
             except:
                 print('did not work')
-                #import pdb
-                #pdb.set_trace()
     return obs
 
 def update_amplitude(test,tests,score):

@@ -276,7 +276,7 @@ def transdict(dictionaries):
     tl = [ k for k in mps.keys() ]
     return mps, tl
 
-
+'''
 def run_rick_grid(rick_grid, tests,td):
     from neuronunit.optimisation.optimization_management import update_deap_pop
     from neuronunit.optimisation.optimization_management import update_dtc_pop
@@ -291,7 +291,7 @@ def run_rick_grid(rick_grid, tests,td):
         grid_results.extend(results)
     return grid_results
 
-def run_simple_grid(npoints, tests, ranges, free_params, hold_constant = None):
+def run_simple_grid(npoints, tests, ranges, free_params, hold_constant = None, backend=str('RAW')):
     from neuronunit.optimisation.optimization_management import update_deap_pop
     from neuronunit.optimisation.optimization_management import update_dtc_pop
 
@@ -313,6 +313,10 @@ def run_simple_grid(npoints, tests, ranges, free_params, hold_constant = None):
         consumable = [ val for g in grid_points for val in g.values() ]
     grid_results = []
     td = list(td)
+    import pdb
+    pdb.set_trace()
+    OM = OptMan(tests = tests, backend=backend,ranges = ranges, hc= hold_constant, provided_keys=provided_keys)
+
     if len(consumable) <= 16:
         consumable = consumable
         results = update_deap_pop(consumable, tests, td)
@@ -330,10 +334,9 @@ def run_simple_grid(npoints, tests, ranges, free_params, hold_constant = None):
                 grid_results.extend(results)
     return grid_results
 
-def run_grid(npoints, tests, provided_keys = None, hold_constant = None, ranges=None):
-    from neuronunit.optimisation.optimization_management import update_deap_pop
-    from neuronunit.optimisation.optimization_management import update_dtc_pop
-
+def run_grid(npoints, tests, provided_keys = None, hold_constant = None, ranges=None, backend=str('RAW') ):
+    from neuronunit.optimisation.optimization_management import update_deap_pop, OptMan
+    
     subset = mp_in[provided_keys]
 
     consumable_ ,td = build_chunk_grid(npoints,provided_keys)
@@ -344,6 +347,7 @@ def run_grid(npoints, tests, provided_keys = None, hold_constant = None, ranges=
     consumable = iter(consumable_)
     use_cache = None
     s = None
+    OM = OptMan(tests = tests, backend=backend, ranges = ranges, hc= hold_constant, provided_keys=provided_keys)
 
     for sub_pop in consumable:
         results = update_deap_pop(sub_pop, tests, td)
@@ -361,3 +365,4 @@ def run_grid(npoints, tests, provided_keys = None, hold_constant = None, ranges=
     if type(s) is not type(None):
         s.close()
     return grid_results
+'''
