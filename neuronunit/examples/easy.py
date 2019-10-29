@@ -12,7 +12,7 @@ for key,v in rts.items():
 
         ga_outad[key] = pickle.load(open(filename,'rb'))
     except:
-        ga_outad[key], DO = om.run_ga(model_params.MODEL_PARAMS['BAE1'],3, local_tests, free_params = model_params.MODEL_PARAMS['BAE1'],
+        ga_outad[key], DO = om.run_ga(model_params.MODEL_PARAMS['ADEXP'],3, local_tests, free_params = model_params.MODEL_PARAMS['ADEXP'],
                                     NSGA = True, MU = 10, model_type = str('ADEXP'))
         pickle.dump(ga_outad[key],open(filename,'wb'))
     print('success')
@@ -20,9 +20,7 @@ for key,v in rts.items():
     backend = str('RAW')
     filename = str(key)+backend+str('.p')
         
-=======
-                                    NSGA = True, MU = 4, model_type = str('ADEXP'))
-        pickle.dump(ga_outad[key],open(filename,'wb'))
+    pickle.dump(ga_outad[key],open(filename,'wb'))
     backend = str('RAW')
     file_name = str(key)+backend+str('.p')
 
@@ -37,9 +35,6 @@ for key,v in rts.items():
         pickle.dump(ga_outiz,open(filename,'wb'))
         dtcpop = [ ind.dtc for ind in ga_outiz['pf'] ]
 
-
-
-# In[ ]:
 
 
 
