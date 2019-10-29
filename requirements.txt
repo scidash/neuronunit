@@ -10,4 +10,4 @@ numba
 dask[complete]
 deap
 brian2
-git+git://github.com/fun-zoological-computing/AllenSDK
+git+git://github.com/fun-zoological-computing/AllenSDK.git
