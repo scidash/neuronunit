@@ -2,9 +2,13 @@
 from .base import np, pq, ncap, VmTest, scores, AMPL, DELAY, DURATION
 try:
     import asciiplotlib as apl
+    fig = apl.figure()
+    fig.plot([0,1], [0,1], label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
+    fig.show()
     ascii_plot = True
 except:
     ascii_plot = False
+#import numpy
 
 class APWidthTest(VmTest):
     """Test the full widths of action potentials at their half-maximum."""
@@ -265,7 +269,7 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
         super(InjectedCurrentAPThresholdTest, self).__init__()#*args, **kwargs)
         if str('params') in kwargs.keys():
             self.params = kwargs['params']
-            
+
 
     required_capabilities = (ncap.ReceivesSquareCurrent,)
     name = "Injected current AP threshold test"
@@ -278,10 +282,10 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
     def generate_prediction(self, model):
         if 'injected_square_current' in self.params.keys():
             model.inject_square_current(self.params['injected_square_current'])
-    
+
         else:
             model.inject_square_current(self.params)
-    
+
         model.get_membrane_potential()
         if ascii_plot:
             t = [float(f) for f in model.vM.times]
