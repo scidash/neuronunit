@@ -69,7 +69,7 @@ def test_all_tests_pop(dtcpop, tests):
     b0 = db.from_sequence(dtcpop, npartitions=8)
     dtcpop = list(db.map(elephant_evaluation,b0).compute())
     return dtcpop
-
+'''
 def grid_points():
     npoints = 2
     nparams = 10
@@ -81,11 +81,11 @@ def grid_points():
     dtcpop = list(b0.map(es).compute())
     assert dtcpop is not None
     return dtcpop
-
+'''
 class testHighLevelOptimisation(unittest.TestCase):
 
     def setUp(self):
-        electro_path = str(os.getcwd())+'/..//tests/russell_tests.p'
+        electro_path = str(os.getcwd())+'/../tests/russell_tests.p'
 
         assert os.path.isfile(electro_path) == True
         with open(electro_path,'rb') as f:
@@ -110,7 +110,7 @@ class testHighLevelOptimisation(unittest.TestCase):
         self.MODEL_PARAMS = MODEL_PARAMS
         self.MODEL_PARAMS.pop(str('NEURON'),None)
 
-        
+
         self.light_backends = [
                     str('RAWBackend'),
                     str('ADEXPBackend')
@@ -121,11 +121,11 @@ class testHighLevelOptimisation(unittest.TestCase):
                     str('NEURONBackend'),
                     str('jNeuroMLBackend')
                 ]
-        
+
         self.medium_backends = [
                     str('GLIFBackend')
                 ]
-        
+
 
     def get_cells(self,backend,model_parameters,score_type=None):
         if score_type is not None:
@@ -137,7 +137,7 @@ class testHighLevelOptimisation(unittest.TestCase):
                     else:
                         values.score_type = scores.ZScore
         cpc = TSD(tests= self.test_frame['Cerebellum Purkinje cell'],use_rheobase_score=False)
-        
+
         cpc_out = cpc.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=9, \
                                 backend=backend, MU=9, protocol={'allen': False, 'elephant': True})
 
@@ -154,7 +154,7 @@ class testHighLevelOptimisation(unittest.TestCase):
         neo = TSD(tests= self.test_frame['Neocortex pyramidal cell layer 5-6'],use_rheobase_score=False)#, NGEN=10, \
         neo_out = neo.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=8, \
                                 backend=backend, MU=8, protocol={'allen': False, 'elephant': True})
-        
+
         dtcpop0 = [p for p in om_out[0]['pf'] ]
         dtcpop1 = [p for p in cpc_out[0]['pf'] ]
         dtcpop2 = [p for p in ca1_out[0]['pf'] ]
@@ -190,15 +190,3 @@ class testHighLevelOptimisation(unittest.TestCase):
 a = testHighLevelOptimisation()
 a.setUp()
 (dtcpop0,dtcpop1,dtcpop2,dtcpop3,dtcpop4, cpc_out,ca1_out,om_out,basket_out,neo_out) = a.test_data_driven_ae()
-from neuronunit.optimisation.optimization_management import inject_and_plot
-#aaa = inject_and_plot(dtcpop0,second_pop=dtcpop1,third_pop=dtcpop2,figname='not_a_problemsfdsfs.png',snippets=False)
-#aaa = inject_and_plot(dtcpop0,second_pop=dtcpop1,third_pop=dtcpop3,figname='not_a_problemsffs.png',snippets=False)
-
-import pdb
-pdb.set_trace()
-#new_dic ={}
-
-#pdic = {key:{k:value[0]['pf']} for k,v in resultsae.items() for key,value in v.items() }
-#with open('contentsae.p','wb') as f:
-#    pickle.dump(pdic,f)
-#B
