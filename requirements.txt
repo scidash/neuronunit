@@ -2,7 +2,6 @@ scipy>=0.17
 matplotlib>=2.0
 neo==0.5.2
 elephant==0.4.1
-allensdk==0.16.3
 execnet
 backports.tempfile
 lmfit
@@ -13,4 +12,3 @@ brian2
 efel
 tabulate
 nbimporter
-git+git://github.com/fun-zoological-computing/AllenSDK.git

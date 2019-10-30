@@ -32,6 +32,9 @@ from types import MethodType
 
 try:
     import asciiplotlib as apl
+    fig = apl.figure()
+    fig.plot([0,1], [0,1], label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
+    fig.show()
     ascii_plot = True
 except:
     ascii_plot = False
