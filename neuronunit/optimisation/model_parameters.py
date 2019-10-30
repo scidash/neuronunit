@@ -81,7 +81,7 @@ BAE1['SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b'] = \
                                                   * BAE1['SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b'], \
                                                   BAE1['SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b'] +0.125 * BAE1['SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b']]
 BAE1['V_RESET'] = [ BAE1['V_RESET'] -0.125*BAE1['V_RESET'],  BAE1['V_RESET']+0.125*BAE1['V_RESET']]
-BAE1['V_REST'] = [  BAE1['V_REST'], BAE1['V_REST']]
+BAE1['V_REST'] = [  BAE1['V_REST']-0.5*BAE1['V_REST'],BAE1['V_REST']+0.5*BAE1['V_REST']]
 #[  BAE1['V_REST'] - 0.75*BAE1['V_REST'], BAE1['V_REST']+0.25*BAE1['V_REST']]
 BAE1['b'] = [BAE1['b'] - 0.125 * BAE1['b'],  BAE1['b']+ 0.125 * BAE1['b']]
 BAE1['C'] = [BAE1['C']- 0.125 * BAE1['C'], BAE1['C'] + 0.125 * BAE1['C'] ]

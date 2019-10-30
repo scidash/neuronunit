@@ -45,7 +45,7 @@ class DataTC(object):
         self.scores_ratio = None
         self.from_imputation = False
         self.preds = {}
-        self.td = None
+        self.td = {}
     def get_ss(self):
         # get summed score
         if self.scores is not None:
@@ -96,6 +96,10 @@ class DataTC(object):
                                     
     def judge_test(self,index=0):
         model = self.dtc_to_model()
+        if not hasattr(self,'tests'):
+            print('warning dtc object does not contain NU-tests yet')
+            return dtc
+
         ts = self.tests
         #this_test = ts[index]
         if not hasattr(self,'preds'):
@@ -117,6 +121,11 @@ class DataTC(object):
         print(self.params)
         return self.preds
     def plot_obs(self,ow):
+        '''
+        assuming a waveform exists (observed waved-form) plot to terminal with ascii
+        This is useful for debugging new backends, in bash big/fast command line orientated optimization routines.
+        '''
+
         t = [float(f) for f in ow.times]
         v = [float(f) for f in ow.magnitude]
         fig = apl.figure()
@@ -124,6 +133,11 @@ class DataTC(object):
         fig.show()
 
     def iap(self):
+        '''
+        Inject and plot to terminal with ascii
+        This is useful for debugging new backends, in bash big/fast command line orientated optimization routines.
+        '''
+
         model = self.dtc_to_model()
         #new_tests['RheobaseTest']
         if type(self.tests) is type({'1':1}):
