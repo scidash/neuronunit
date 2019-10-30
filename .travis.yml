@@ -26,14 +26,16 @@ install:
   - pip install pyneuroml
   - pip install sklearn
   - pip install seaborn
+  - pip install -r requirements.txt
   - pip install .
 
 script:
-  - jupyter nbconvert --execute examples/example_data.ipynb 
   - cd neuronunit/unit_test/
   - cd working
   - python small_test.py
   - python edt.py
+  - jupyter nbconvert --execute examples/chapter3.ipynb 
+  - jupyter nbconvert --execute examples/example_data.ipynb 
 
 after_success:
   - coveralls
