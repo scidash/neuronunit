@@ -120,10 +120,13 @@ class TSD(dict):
        self.use_rheobase_score=use_rheobase_score
 
 
-    def optimize(self,param_edges,backend=None,protocol={'allen': False, 'elephant': True},MU=5,NGEN=5):
+    def optimize(self,param_edges,backend=None,protocol={'allen': False, 'elephant': True},MU=5,NGEN=5,free_params=None,seed_pop=None):
         from neuronunit.optimisation.optimisations import run_ga
-        ga_out,DO = run_ga(param_edges, NGEN, self, free_params=param_edges.keys(), \
-                           backend=backend, MU = 8,  protocol=protocol)
+        if type(free_params) is type(None):
+            free_params=param_edges.keys()
+
+        ga_out,DO = run_ga(param_edges, NGEN, self, free_params=free_params, \
+                           backend=backend, MU = 8,  protocol=protocol,seed_pop = seed_pop)
         # dtc_pop = self.update_dtc_pop(ga_out['pf'], DO.OM.td)
         if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
             _,dtc_pop = DO.OM.test_runner(ga_out['pf'],DO.OM.td,DO.OM.tests)
@@ -672,12 +675,10 @@ def bridge_dm_test(test_and_dtc):
         height_obs['n'] = 1
         if str('InjectedCurrentAPWidthTest') in test.name:
 
-            #import pdb; pdb.set_trace()
             score = test.compute_score(test.observation,width_obs)
             return score, dtc
 
         elif str('InjectedCurrentAPAmplitudeTest') in test.name:
-            #import pdb; pdb.set_trace()
 
             score = test.compute_score(test.observation,height_obs)
             return score, dtc
@@ -846,8 +847,7 @@ def dtc_to_rheo(dtc):
                 obs = rtest.observation
                 rtest.prediction = None
                 rtest.prediction = dtc.rheobase
-                #import pdb
-                #pdb.set_trace()
+
                 score = rtest.compute_score(obs,dtc.rheobase)
                 if type(score.norm_score) is not type(None):
                     dtc.scores[rtest.name] = 1.0 - float(score.norm_score)
@@ -900,8 +900,7 @@ def switch_logic(xtests):
                 t.passive = None
                 t.active = None
             except:
-                import pdb
-                pdb.set_trace()
+                print(Error('fatal'))
             active = False
             passive = False
 
@@ -1738,6 +1737,7 @@ def get_trans_list(param_dict):
 
 def transform(xargs):
     (ind,td,backend) = xargs
+    print(td)
     dtc = DataTC()
     dtc.attrs = {}
     for i,j in enumerate(ind):
@@ -1830,8 +1830,7 @@ def data_versus_optimal1(dtc_pop):
         except:
             opt_value = pred['mean']
         if t.name not in complete_map.keys():
-            import pdb; pdb.set_trace()
-
+            print('fatal')
         opt_value = opt_value.rescale(complete_map[t.name])
         n, bins, patches = ax.hist(sorted(t.data), label=str(cell)+str(t.name))
         mode0 = bins[np.where(n==np.max(n))[0][0]]
@@ -1843,8 +1842,7 @@ def data_versus_optimal1(dtc_pop):
             td = [t*qt.unitless for t in td]
             td = [t.rescale(opt_value) for t in td]
         except:
-            import pdb; pdb.set_trace()
-        import pdb; pdb.set_trace()
+            print('fatal')
         plt.hist(sorted(t.data), label=str(cell)+str(t.name))
         try:
             plt.scatter(opt_value,np.max(n),c='r',label='optima')
@@ -1883,8 +1881,7 @@ def data_versus_optimal(ga_out):
         except:
             opt_value = pred['mean']
         if t.name not in complete_map.keys():
-            import pdb; pdb.set_trace()
-
+            print('fatal')
         opt_value = opt_value.rescale(complete_map[t.name])
         n, bins, patches = ax.hist(sorted(t.data), label=str(cell)+str(t.name))
         mode0 = bins[np.where(n==np.max(n))[0][0]]
@@ -1896,8 +1893,8 @@ def data_versus_optimal(ga_out):
             td = [t*qt.unitless for t in td]
             td = [t.rescale(opt_value) for t in td]
         except:
-            import pdb; pdb.set_trace()
-        import pdb; pdb.set_trace()
+            print('fatal')
+
         plt.hist(sorted(t.data), label=str(cell)+str(t.name))
         try:
             plt.scatter(opt_value,np.max(n),c='r',label='optima')
@@ -1966,23 +1963,6 @@ def stochastic_gradient_descent(ga_out):
 
 
 
-def init_pop(pop, td, tests):
-    from neuronunit.optimisation.exhaustive_search import update_dtc_grid
-    dtcpop = list(update_dtc_pop(pop, td))
-    for d in dtcpop:
-        d.tests = tests
-        if hasattr(pop[0],'backend'):
-            d.backend = pop[0].backend
-
-    if hasattr(pop[0],'hc'):
-        constant = pop[0].hc
-        for d in dtcpop:
-            if constant is not None:
-                if len(constant):
-                    d.constants = constant
-                    d.add_constant()
-
-    return pop, dtcpop
 '''
 Depricated
 def new_single_gene(pop,dtcpop,td):
@@ -2039,7 +2019,8 @@ def filtered(pop,dtcpop):
     dtcpop = [ dtc for dtc in dtcpop if type(dtc.rheobase) is not type(None) ]
     pop = [ p for p in pop if type(p.rheobase) is not type(None) ]
     if len(pop) != len(dtcpop):
-        import pdb; pdb.set_trace()
+        print('fatal')
+
 
     assert len(pop) == len(dtcpop)
     return pop, dtcpop
@@ -2068,8 +2049,6 @@ def which_key(thing):
 
 def dtc2gene(pop,dtcpop):
     fitness_attr = pop[0].fitness
-    if type(fitness_attr) is type(None):
-        import pdb; pdb.set_trace()
     for i,p in enumerate(pop):
         if not hasattr(p,'fitness'):
             p.fitness = fitness_attr
@@ -2212,14 +2191,15 @@ def bridge_passive(package):
     score = t.compute_score(t.observation,pred)
     return score, dtc
 
-def can_this_map1(dtc):
-    return dtc
+
 
 def can_this_map(dtc):
-
+    '''
+    # used for debugging parallel mapping of brian class with passive tests
     # Inputs single data transport container modules, and neuroelectro observations that
     # inform test error error_criterion
     # Outputs Neuron Unit evaluation scores over error criterion
+    '''
     tests = dtc.tests
     if not hasattr(dtc,'scores') or dtc.scores is None:
         dtc.scores = None
@@ -2295,6 +2275,8 @@ class OptMan():
         if type(tsr) is not None:
             self.tsr = tsr
 
+    #depricated?
+
     def new_single_gene(self,dtc,td):
         from neuronunit.optimisation.optimisations import SciUnitOptimisation
 
@@ -2313,18 +2295,36 @@ class OptMan():
 
         DO.setnparams(nparams = len(dtc.attrs), boundary_dict = self.boundary_dict)
         DO.setup_deap()
-        #pop = []
         gene = DO.set_pop(boot_new_random=1)
-        #import pdb
-        #pdb.set_trace()
-        #gene = dtc2model(gene,dtc)
+
         dtc_ = self.update_dtc_pop(gene,self.td)
         dtc_ = pop2dtc(gene,dtc_)
         return gene[0], dtc_[0]
 
+    def optimize(self,free_params=None,NGEN=10,MU=10,seed_pop=None,constants=None):
+        from neuronunit.optimisation.optimisations import run_ga
+        ranges = self.boundary_dict
+        subset = OrderedDict()
+        if type(free_params) is type(None):
+            free_params = list(ranges.keys())
+
+        if type(constants) is type(None):
+            temp = copy.copy(self.boundary_dict)
+            for k in free_params:
+                temp.pop(k,None)
+            if len(temp)==0:
+                hold_constant = None
+            else:
+                hold_constant = temp
+            for k,v in hold_constant.items():
+                hold_constant[k] = np.mean(v)
+
+        ga_out,DO = run_ga(self.boundary_dict, NGEN, self.tests, free_params=free_params, \
+                           backend=self.backend, MU = MU,  protocol=self.protocol,seed_pop = seed_pop,hc=hold_constant)
+        self.DO = DO
+        return ga_out
     def run_simple_grid(self,npoints=10,free_params=None):
         self.exhaustive = True
-
         from neuronunit.optimisation.exhaustive_search import sample_points, add_constant, chunks
         ranges = self.boundary_dict
         subset = OrderedDict()
@@ -2337,20 +2337,18 @@ class OptMan():
         subset = OrderedDict(subset)
         subset = sample_points(subset, npoints = npoints)
         grid_points = list(ParameterGrid(subset))
-        td = grid_points[0].keys()
         if type(self.hc) is not type(None):
-            grid_points = add_constant(hold_constant,grid_points)
+            grid_points = add_constant(self.hc,grid_points)#,self.td)
+        self.td = list(grid_points[0].keys())
 
-        if len(td) > 1:
+        if len(self.td) > 1:
             consumable = [ WSListIndividual(g.values()) for g in grid_points ]
         else:
             consumable = [ val for g in grid_points for val in g.values() ]
         grid_results = []
-        td = list(td)
-
+        self.td = list(self.td)
         if len(consumable) <= 16:
-            consumable = consumable
-            results = self.update_deap_pop(consumable, self.tests, td,backend=self.backend)
+            results = self.update_deap_pop(consumable, self.tests, self.td,backend=self.backend)
             results_ = []
             for r in results:
                 r.dtc = self.elephant_evaluation(r.dtc)
@@ -2361,16 +2359,17 @@ class OptMan():
         if len(consumable) > 16:
             consumable = chunks(consumable,8)
             for sub_pop in consumable:
-                sub_pop = sub_pop
-                results = self.update_deap_pop(sub_pop, self.tests, td)
+                #sub_pop = sub_pop
+                results = self.update_deap_pop(sub_pop, self.tests, self.td)
                 results_ = []
                 for r in results:
                     r.dtc = self.elephant_evaluation(r.dtc)
                     results_.append(r)
                 if type(results_) is not None:
                     grid_results.extend(results_)
-        return grid_results
-
+        sorted_pop = sorted([ (gr.dtc.scores_ratio,gr.dtc.attrs,gr) for gr in grid_results ], key=lambda tup: tup[0])
+        return grid_results, sorted_pop
+    '''
     def run_grid(self,npoints, provided_keys = []):
         if type(provided_keys) is type(None):
             provided_keys = list(self.boundary_dict.keys())
@@ -2403,11 +2402,10 @@ class OptMan():
         if type(s) is not type(None):
             s.close()
         return grid_results
-
+    '''
     def get_allen(self,pop,dtcpop,tests,td,tsr=None):
         with open('waves.p','rb') as f:
             make_stim_waves = pickle.load(f)
-            #import pdb; pdb.set_trace()
         NPART = np.min([multiprocessing.cpu_count(),len(dtcpop)])
         for dtc in dtcpop: dtc.spike_number = tests['spike_count']['mean']
         for dtc in dtcpop: dtc.pre_obs = None
@@ -2804,8 +2802,10 @@ class OptMan():
                 try:
                     print(self.tests.use_rheobase_score)
                 except:
-                    import pdb
-                    pdb.set_trace()
+                    print('warning please add whether or not model should be scored on rheobase to protocol')
+                    self.tests.use_rheobase_score = True
+                    print(self.tests.use_rheobase_score)
+
                 if self.tests.use_rheobase_score == False and "RheobaseTest" in str(k):
                     continue
                 key = str(t)
@@ -3038,7 +3038,7 @@ class OptMan():
             npart = np.min([multiprocessing.cpu_count(),len(pop)])
             bag = db.from_sequence(xargs, npartitions = npart)
             dtcpop = list(bag.map(transform).compute())
-
+            print(dtcpop)
             assert len(dtcpop) == len(pop)
             for dtc in dtcpop:
                 dtc.backend = self.backend
@@ -3061,21 +3061,19 @@ class OptMan():
             return dtc
 
 
-    def init_pop(self,pop, td, tests):
-        #from neuronunit.optimisation.exhaustive_search import update_dtc_grid
-        dtcpop = list(self.update_dtc_pop(pop, td))
+    def init_pop(self,pop, tests):
+
+        dtcpop = list(self.update_dtc_pop(pop, self.td))
         for d in dtcpop:
             d.tests = tests
             if self.backend is not None:
                 d.backend = self.backend
 
-        if self.hc is not None:
-            constant = self.hc
-            for d in dtcpop:
-                if constant is not None:
-                    if len(constant):
-                        d.constants = constant
-                        d.add_constant()
+        if not hasattr(self,'exhaustive'):
+            if self.hc is not None:
+                for d in dtcpop:
+                    print(self.hc)
+                    d.attrs.update(self.hc)
 
         return pop, dtcpop
 
@@ -3085,7 +3083,7 @@ class OptMan():
         Ordered parameter dictionary td
         and rheobase test rt
         '''
-        pop, dtcpop = self.init_pop(pop, td, tests)
+        pop, dtcpop = self.init_pop(pop, tests)
         #for d in dtcpop:
         #    d.tests = tests
         if 'RAW' in self.backend  or 'HH' in self.backend or str('ADEXP') in self.backend:
@@ -3133,7 +3131,6 @@ class OptMan():
 
         elif str('dm') in self.protocol.keys():
             if self.protocol['dm']:
-                pdb.set_trace()
                 pop, dtcpop = get_dm(pop,dtcpop,tests,td)
                 return pop, dtcpop
 
@@ -3188,15 +3185,11 @@ class OptMan():
                 for d in dtcpop:
                     d.tests = copy.copy(self.tests)
 
-
-                #def skip_over(dtcpop):
-                #    # hint at how to simplify above
-                #    dtcpop = [dtc.dtc_to_predictions() for dtc in dtcpop]#list(dtcbag.map(dtc_to_predictions).compute())
-
             for d in dtcpop:
                if not hasattr(d, 'tests'):
-                 import pdb
-                 pdb.set_trace()
+                 print(Error('broken no test in dtc'))
+                 #import pdb
+                 #pdb.set_trace()
         return pop, dtcpop
 
     def test_runner(self,pop,td,tests):
@@ -3219,7 +3212,7 @@ class OptMan():
 
         elif self.protocol['allen']:
 
-            pop, dtcpop = self.init_pop(pop, td, tests)
+            pop, dtcpop = self.init_pop(pop, tests)
             for ind,dtc in zip(pop,dtcpop):
                 dtc.error_length = self.error_length
 
@@ -3303,12 +3296,12 @@ class OptMan():
         '''
         if len(pop)==0:
             raise Exception('User error population size set to 0')
-        if hc is not None:
-            self.td = None
-            self.td = self.td
+        if td is not None:
+            #self.td = None
+            self.td = td
 
         if hc is not None:
-            self.hc = None
+            #self.hc = None
             self.hc = hc
 
         if backend is not None:
