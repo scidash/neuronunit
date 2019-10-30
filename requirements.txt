@@ -10,4 +10,7 @@ numba
 dask[complete]
 deap
 brian2
+efel
+tabulate
+nbimporter
 git+git://github.com/fun-zoological-computing/AllenSDK.git

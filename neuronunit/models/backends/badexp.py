@@ -188,6 +188,9 @@ class ADEXPBackend(Backend):
             self.state_monitor, self.spike_monitor = self.AdEx.simulate_AdEx_neuron(I_stim = stim, simulation_time=st)
             
         else:
+            if self.verbose:
+                print(attrs)
+                print(attrs['ADAPTATION_TIME_CONSTANT_tau_w'])
             self.set_attrs(**attrs)
             self.state_monitor, self.spike_monitor = self.AdEx.simulate_AdEx_neuron(
             tau_m = attrs['MEMBRANE_TIME_SCALE_tau_m']*AdEx.b2.units.ms,
@@ -199,7 +202,7 @@ class ADEXPBackend(Backend):
             b =  attrs['b']*b2.pA,
             v_spike=attrs['FIRING_THRESHOLD_v_spike']*AdEx.b2.units.mV,
             delta_T = attrs['SHARPNESS_delta_T']*AdEx.b2.units.mV,
-            tau_w = attrs['ADAPTATION_TIME_CONSTANT_tau_w']*AdEx.b2.units.ms ,
+            tau_w = attrs['ADAPTATION_TIME_CONSTANT_tau_w']*AdEx.b2.units.ms,
             I_stim = stim, simulation_time=st)
 
 

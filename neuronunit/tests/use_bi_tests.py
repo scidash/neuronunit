@@ -12,9 +12,9 @@ import pandas
 
 try:
     ne_raw = pandas.read_csv('article_ephys_metadata_curated.csv', delimiter='\t')
-    !ls -ltr *.csv
+    os.system('!ls -ltr *.csv')
 except:
-    !wget https://neuroelectro.org/static/src/article_ephys_metadata_curated.csv
+    os.system('wget https://neuroelectro.org/static/src/article_ephys_metadata_curated.csv')
     ne_raw = pandas.read_csv('article_ephys_metadata_curated.csv', delimiter='\t')
 
 blah = ne_raw[ne_raw['NeuronName'].str.match('Hippocampus CA1 pyramidal cell')]
@@ -62,9 +62,10 @@ import seaborn
 inv_name_map = {v: k for k, v in name_map.items()}
 executable_tests = {}
 russell_tests = {}
+
 for nlex_ids,values in neuron_values.items():
-        plt.legend(loc="upper left")
-        plt.savefig(str(cell_name)+str(test_map[i])+str('.png'))
+    #plt.legend(loc="upper left")
+    #plt.savefig(str(cell_name)+str(test_map[i])+str('.png'))
     cell_name = inv_name_map[nlex_ids]
     executable_tests[cell_name] = {}#[test_map[i]]
     russell_tests[cell_name] = {}
@@ -114,25 +115,30 @@ for nlex_ids,values in neuron_values.items():
                          waveform.InjectedCurrentAPWidthTest,
                          waveform.InjectedCurrentAPAmplitudeTest,
                          waveform.InjectedCurrentAPThresholdTest]#,
-
+        import neuronunit
         for tt in test_classes:
             if test_map[i] in str(tt):
+                anchor = neuronunit.__file__
+                anchor = os.path.dirname(anchor)
+                pipe_tests_path = os.path.join(os.sep,anchor,'unit_test/pipe_tests.p')
                 #import pdb; pdb.set_trace()
-
-                pipe_tests_path = str(os.getcwd())+'/pipe_tests.p'
+                
+                #pipe_tests_path = str(os.getcwd())+'/pipe_tests.p'
                 assert os.path.isfile(pipe_tests_path) == True
                 with open(pipe_tests_path,'rb') as f:
                     pipe_tests = pickle.load(f)
-
-                t = tt()#neuron_values[nlex_ids][i]['modes'][0]*units_map[i])
-                t.observation = {}
-                t.observation['mean'] = neuron_values[nlex_ids][i]['modes'][0]*units_map[i]
-                t.observation['value'] = neuron_values[nlex_ids][i]['modes'][0]*units_map[i]
-                t.observation['std'] = neuron_values[nlex_ids][i]['std']*units_map[i]
-                t.observation['n'] = neuron_values[nlex_ids][i]['n']
+                
+                observation = {}
+                observation['mean'] = neuron_values[nlex_ids][i]['modes'][0]*units_map[i]
+                observation['value'] = neuron_values[nlex_ids][i]['modes'][0]*units_map[i]
+                observation['std'] = neuron_values[nlex_ids][i]['std']*units_map[i]
+                observation['n'] = neuron_values[nlex_ids][i]['n']
+                print(test_map[i])
+            
+                t = tt()#observation)#neuron_values[nlex_ids][i]['modes'][0]*units_map[i])
+                t.observation = observation
                 executable_tests[cell_name][test_map[i]] =  t
-                print(test_map[i],t.name)
-
+            
                 assert test_map[i] == t.name
                 executable_tests[cell_name][test_map[i]].data = None
                 executable_tests[cell_name][test_map[i]].data = neuron_values[nlex_ids][i]['values']
@@ -222,3 +228,4 @@ for datax in data:
 #plt.scatter(neuron_values['nifext_50']['\u2003Input resistance (MΩ)'],neuron_values['nifext_50']['Rheobase, pA'])
     plt.savefig(str(cnt)+'inR_vs_rheobase.png')
 '''
+B
