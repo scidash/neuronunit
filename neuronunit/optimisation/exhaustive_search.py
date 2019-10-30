@@ -224,11 +224,14 @@ def add_constant(hold_constant,pop):
     hold_constant = OrderedDict(hold_constant)
     for p in pop:
         for k,v in hold_constant.items():
-            p[k] = v
-
-    for k in hold_constant.keys():
-        td.append(k)
-    return pop,td
+            if len(v)>1:
+                p[k] = np.mean(v)
+            else:
+                p[k] = v
+    #td = []
+    #for k in hold_constant.keys():
+    #    td.append(k)
+    return pop
 
 
 @jit
@@ -336,7 +339,7 @@ def run_simple_grid(npoints, tests, ranges, free_params, hold_constant = None, b
 
 def run_grid(npoints, tests, provided_keys = None, hold_constant = None, ranges=None, backend=str('RAW') ):
     from neuronunit.optimisation.optimization_management import update_deap_pop, OptMan
-    
+
     subset = mp_in[provided_keys]
 
     consumable_ ,td = build_chunk_grid(npoints,provided_keys)

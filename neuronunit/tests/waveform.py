@@ -17,7 +17,7 @@ class APWidthTest(VmTest):
     units = pq.ms
     ephysprop_name = 'Spike Half-Width'
     def __init__():
-        super(VmTest,self).__init__()
+        super(VmTest,self).__init__(**args,**kwargs)
         self.verbose = 0
     def generate_prediction(self, model):
         """Implement sciunit.Test.generate_prediction."""
@@ -64,7 +64,7 @@ class InjectedCurrentAPWidthTest(APWidthTest):
     """
 
     def __init__(self, *args, **kwargs):
-        super(InjectedCurrentAPWidthTest, self).__init__(*args, **kwargs)
+        super(InjectedCurrentAPWidthTest, self).__init__(**args,**kwargs)#*args, **kwargs)
         if str('params') in kwargs.keys():
             self.params = kwargs['params']
 
@@ -164,10 +164,11 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
     Uses current injection.
     """
 
-    def __init__(self, *args, **kwargs):
-        super(InjectedCurrentAPAmplitudeTest, self).__init__(*args, **kwargs)
-        if str('params') in kwargs.keys():
-            self.params = kwargs['params']
+    def __init__(self):# *args, **kwargs):
+        super(InjectedCurrentAPAmplitudeTest, self).__init__()#*args, **kwargs)
+        if hasattr(self,'params'):# in .keys():
+            print(self.params)
+            #self.params = kwargs['params']
 
         #self.params['injected_square_current'] = {'amplitude': 100.0*pq.pA,
         #                                          'delay': DELAY,
@@ -260,8 +261,8 @@ class APThresholdTest(VmTest):
 class InjectedCurrentAPThresholdTest(APThresholdTest):
     """Test the thresholds of action potentials under current injection."""
 
-    def __init__(self, *args, **kwargs):
-        super(InjectedCurrentAPThresholdTest, self).__init__(*args, **kwargs)
+    def __init__(self):#, *args, **kwargs):
+        super(InjectedCurrentAPThresholdTest, self).__init__()#*args, **kwargs)
         if str('params') in kwargs.keys():
             self.params = kwargs['params']
             
