@@ -1432,7 +1432,7 @@ def make_stim_waves_func():
         glif_api = GlifApi()
         nm = glif_api.get_neuronal_models_by_id([neuronal_model_id])[0]
 
-
+        from allensdk.core.cell_types_cache import CellTypesCache
         # download information about the cell
         ctc = CellTypesCache()
         ctc.get_ephys_data(nm['specimen_id'], file_name='stimulus.nwb')
