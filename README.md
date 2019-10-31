@@ -1,22 +1,6 @@
 See the Documentation notebooks:
 =======
-[Chapter 1](neuronunit/examples/chapter1.ipynb)
-
-[Chapter 2](neuronunit/examples/chapter2.ipynb)
-
-[Chapter 3](neuronunit/examples/chapter3.ipynb)
-
-[Chapter 4](neuronunit/examples/chapter4.ipynb)
-
-[Chapter 5](neuronunit/examples/chapter5.ipynb)
-
-[Chapter 6](neuronunit/examples/chapter6.ipynb)
-
-[Chapter 7](neuronunit/examples/chapter7.ipynb)
-
-[Chapter 8](neuronunit/examples/chapter8.ipynb)
-
-[Chapter 9](neuronunit/examples/chapter9.ipynb)
+[Chapter 1](neuronunit/examples/chapter1.ipynb) / [Chapter 2](neuronunit/examples/chapter2.ipynb) / [Chapter 3](neuronunit/examples/chapter3.ipynb) / [Chapter 4](neuronunit/examples/chapter4.ipynb) / [Chapter 5](neuronunit/examples/chapter5.ipynb) / [Chapter 6](neuronunit/examples/chapter6.ipynb) / [Chapter 7](neuronunit/examples/chapter7.ipynb) / [Chapter 8](neuronunit/examples/chapter8.ipynb) / [Chapter 9](neuronunit/examples/chapter9.ipynb)
 
 
 | Master  | Dev |

@@ -481,10 +481,15 @@ def process_rparam(backend):
     random_param = random_p(backend)
     if 'RAW' in str(backend):
         random_param.pop('Iext',None)
+        rp = random_param
+        chosen_keys = rp.keys()
+
+        '''
         rp = {}
         chosen_keys =[str('a'),str('b'),str('c'),str('C'),str('d')]
         for key in chosen_keys:
             rp[key] = random_param[key]
+        '''
     if str('ADEXP') in str(backend):
         random_param.pop('Iext',None)
         rp = random_param
@@ -1469,7 +1474,7 @@ def make_stim_waves_func():
         glif_api = GlifApi()
         nm = glif_api.get_neuronal_models_by_id([neuronal_model_id])[0]
 
-
+        from allensdk.core.cell_types_cache import CellTypesCache
         # download information about the cell
         ctc = CellTypesCache()
         ctc.get_ephys_data(nm['specimen_id'], file_name='stimulus.nwb')
@@ -1774,7 +1779,6 @@ def get_trans_list(param_dict):
 
 def transform(xargs):
     (ind,td,backend) = xargs
-    print(td)
     dtc = DataTC()
     dtc.attrs = {}
     for i,j in enumerate(ind):
@@ -2244,8 +2248,8 @@ def can_this_map(dtc):
 
     if isinstance(dtc.rheobase,type(None)) or type(dtc.rheobase) is type(None):
         dtc = allocate_worst(tests, dtc)
-        #if self.verbose:
-        #    print('score worst via test failure at {0}'.format('rheobase'))
+        if self.verbose:
+            print('score worst via test failure at {0}'.format('rheobase'))
     else:
 
         for k, t in enumerate(tests):
@@ -2605,11 +2609,11 @@ class OptMan():
                         mt['RheobaseTest'].observation['mean'] = mt['RheobaseTest'].observation['value']
                     if 'std' not in temp.keys():
                         mt['RheobaseTest'].observation['std'] = mt['RheobaseTest'].observation['value']
-                    #self.simulated_obs = True
                     new_tests = TSD(new_tests)
                     new_tests.use_rheobase_score = tests.use_rheobase_score
 
-                    ga_out, DO = run_ga(ranges,NGEN,mt,free_params=rp.keys(), MU = MU, backend=backend, selection=str('selNSGA2'),protocol={'elephant':True,'allen':False})
+                    ga_out, DO = run_ga(ranges,NGEN,mt,free_params=rp.keys(), MU = MU, \
+                        backend=backend,protocol={'elephant':True,'allen':False})
                     results[k] = copy.copy(ga_out['pf'][0].dtc.scores)
 
             else:
@@ -2627,7 +2631,8 @@ class OptMan():
                 new_tests = TSD(new_tests)
                 new_tests.use_rheobase_score = tests.use_rheobase_score
 
-                ga_out, DO = run_ga(ranges,NGEN,new_tests,free_params=chosen_keys, MU = MU, backend=backend, selection=str('selNSGA2'),protocol={'elephant':True,'allen':False})
+                ga_out, DO = run_ga(ranges,NGEN,new_tests,free_params=chosen_keys, MU = MU, backend=backend,\
+                    selection=str('selNSGA2'),protocol={'elephant':True,'allen':False})
                 results = copy.copy(ga_out['pf'][0].dtc.scores)
             ga_converged = [ p.dtc for p in ga_out['pf'][0:2] ]
             test_origin_target = [ dsolution for i in range(0,len(ga_out['pf'])) ][0:2]
@@ -2837,7 +2842,8 @@ class OptMan():
             print('gets here')
             for k, t in enumerate(tests):
                 try:
-                    print(self.tests.use_rheobase_score)
+
+                    assert hasattr(self.tests,'use_rheobase_score')
                 except:
                     print('warning please add whether or not model should be scored on rheobase to protocol')
                     self.tests.use_rheobase_score = True
@@ -2975,10 +2981,13 @@ class OptMan():
                     continue
 
             simulated_observations = {k:p for k,p in simulated_observations.items() if type(k) is not type(None) and type(p) is not type(None) }
+            if self.verbose:
+                print(simulated_observations)
             simulated_tests = {}
             for k in xtests:
-                k.observation = simulated_observations[k.name]
-                simulated_tests[k.name] = k
+                if k in simulated_observations.keys():
+                    k.observation = simulated_observations[k.name]
+                    simulated_tests[k.name] = k
             if self.verbose:
                 print('try generating rheobase from this test')
             return simulated_tests, dtc
@@ -3075,7 +3084,8 @@ class OptMan():
             npart = np.min([multiprocessing.cpu_count(),len(pop)])
             bag = db.from_sequence(xargs, npartitions = npart)
             dtcpop = list(bag.map(transform).compute())
-            print(dtcpop)
+            if self.verbose:
+                print(dtcpop)
             assert len(dtcpop) == len(pop)
             for dtc in dtcpop:
                 dtc.backend = self.backend
@@ -3109,7 +3119,8 @@ class OptMan():
         if not hasattr(self,'exhaustive'):
             if self.hc is not None:
                 for d in dtcpop:
-                    print(self.hc)
+                    if self.verbose:
+                        print(self.hc)
                     d.attrs.update(self.hc)
 
         return pop, dtcpop
