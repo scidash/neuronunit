@@ -22,7 +22,6 @@ CONFIDENT = True
 #    Golowasch, J., Goldman, M., Abbott, L.F, and Marder, E. (2002)
 #    Failure of averaging in the construction
 #    of conductance-based neuron models. J. Neurophysiol., 87: 11291131.
-#from neuronunit.tests.elephant_tests import ETest
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -113,7 +112,39 @@ for key,v in rts.items():
     helper_tests = [value for value in v.values() ]
     break
 
+
 class TSD(dict):
+    def __init__(self,tests=[],use_rheobase_score=False):
+       super(TSD,self).__init__()
+       self.update(tests)
+       self.use_rheobase_score=use_rheobase_score
+
+
+    def optimize(self,param_edges,backend=None,protocol={'allen': False, 'elephant': True},MU=5,NGEN=5,free_params=None,seed_pop=None):
+        from neuronunit.optimisation.optimisations import run_ga
+        if type(free_params) is type(None):
+            free_params=param_edges.keys()
+
+        ga_out,DO = run_ga(param_edges, NGEN, self, free_params=free_params, \
+                           backend=backend, MU = 8,  protocol=protocol,seed_pop = seed_pop)
+        # dtc_pop = self.update_dtc_pop(ga_out['pf'], DO.OM.td)
+        if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
+            _,dtc_pop = DO.OM.test_runner(ga_out['pf'],DO.OM.td,DO.OM.tests)
+            ga_out['dtc_pop'] = dtc_pop
+        from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
+
+        ##
+        # TODO populate a score table pass it back to DO.OM
+        
+        ##
+        ##
+        # TODO plot objective function progress as a function of generations
+        # ie fitness versus generation
+        ##
+        return ga_out, DO
+from sciunit.suites import TestSuite# as TSuite
+
+class TSS(TestSuite):
     def __init__(self,tests=[],use_rheobase_score=False):
        super(TSD,self).__init__()
        self.update(tests)
@@ -174,7 +205,7 @@ def _and_dont_plot(dtc):
 #
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippets=False,experimental_cell_type="neo_cortical"):
+def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippets=False,experimental_cell_type="neo_cortical",ground_truth = None):
     sns.set_style("darkgrid")
 
     if not isinstance(dtc, Iterable):
@@ -556,9 +587,13 @@ def mint_generic_model(backend):
 
 
 def save_models_for_justas(dtc):
-    with open(str(dtc.attrs)+'.csv', 'w') as writeFile:
+    with open(str(list(dtc.attrs.values()))+'.csv', 'w') as writeFile:
+        import pandas as pd
+        df = pd.DataFrame([dtc.attrs])
+        
         writer = csv.writer(writeFile)
-        writer.writerows(lines)
+        
+        writer.writerows(df)
 
 def write_opt_to_nml(path,param_dict):
     '''
@@ -1067,13 +1102,13 @@ def allen_scores(dtc):
 
     return dtc
 '''
-def get_dtc_pop(result_ADEXP,filtered_tests,model_parameters,backend = 'ADEXP'):
+def get_dtc_pop(contains_dtcpop,filtered_tests,model_parameters,backend = 'ADEXP'):
     from neuronunit.optimisation.optimisations import SciUnitOptimisation
-    from neuronunit.optimisation.optimization_management import get_dtc_pop
+    #from neuronunit.optimisation.optimization_management import get_dtc_pop
     import copy
 
     random.seed(64)
-    boundary_dict=model_parameters.MODEL_PARAMS[backend]
+    boundary_dict = model_parameters.MODEL_PARAMS[backend]
     tests=filtered_tests['Hippocampus CA1 basket cell']
     try:
         DO = SciUnitOptimisation(offspring_size = 1,
@@ -1084,17 +1119,19 @@ def get_dtc_pop(result_ADEXP,filtered_tests,model_parameters,backend = 'ADEXP'):
             error_criterion = tests, boundary_dict = boundary_dict,
                                      backend = backend, selection = str('selNSGA'))#,simulated_obs=dtc.preds)#,, boundary_dict = ss, elite_size = 2, hc=hc)
 
-    DO.setnparams(nparams = len(result_ADEXP['ADEXP']['olf']), boundary_dict = boundary_dict)
+    DO.setnparams(nparams = len(contains), boundary_dict = boundary_dict)
     DO.setup_deap()
 
     dtcdic = {}
-    for k,v in result_ADEXP[backend].items():
+    for k,v in contains_dtcpop[backend].items():
 
         dtcpop = []
         for i in v:
             dtcpop.append(transform((i,DO.td,backend)))
             dtcpop[-1].backend = backend
-            dtcpop[-1] = dtc_to_rheo(dtcpop[-1])
+            dtcpop[-1] = DO.OptMan.dtc_to_rheo(dtcpop[-1])
+            dtcpop[-1] = DO.OptMan.format_test(dtcpop[-1])
+
         dtcdic[k] = copy.copy(dtcpop)
     return dtcdic, DO
 
@@ -2797,7 +2834,7 @@ class OptMan():
             if self.verbose:
                 print('score worst via test failure at {0}'.format('rheobase'))
         else:
-
+            print('gets here')
             for k, t in enumerate(tests):
                 try:
                     print(self.tests.use_rheobase_score)
