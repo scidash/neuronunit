@@ -135,7 +135,7 @@ class TSD(dict):
 
         ##
         # TODO populate a score table pass it back to DO.OM
-        
+
         ##
         ##
         # TODO plot objective function progress as a function of generations
@@ -595,9 +595,9 @@ def save_models_for_justas(dtc):
     with open(str(list(dtc.attrs.values()))+'.csv', 'w') as writeFile:
         import pandas as pd
         df = pd.DataFrame([dtc.attrs])
-        
+
         writer = csv.writer(writeFile)
-        
+
         writer.writerows(df)
 
 def write_opt_to_nml(path,param_dict):
@@ -2824,6 +2824,45 @@ class OptMan():
         #else:
         #        dtc.preds[str(t.name)] = dtc.rheobase
         return dtc
+
+
+        def score_specific_param_models(self,test_frame,backend,known_parameters):
+        '''
+        -- Inputs: tests, simulator backend, the parameters to explore
+        -- Outputs: data frame of index paramaterized model, column tests suite aggregate average.
+        '''
+        df = pd.DataFrame(index=list(test_frame.keys()),columns=list(known_parameters.keys()))
+
+        for l,(key, use_test) in enumerate(test_frame.items()):
+            #use_test = TSD(use_test)
+            if RheobaseTest in use_test.keys():
+                use_test.use_rheobase_score = True
+            else:
+                use_test.use_rheobase_score = False
+
+            OM = OptMan(use_test,backend=backend,\
+                        boundary_dict=MODEL_PARAMS[backend],\
+                        protocol={'elephant':True,'allen':False,'dm':False},)#'tsr':spk_range})
+            dtcpop = []
+            for k,v in known_parameters.items():
+                #use_test = TSD(use_test)
+                #use_test.use_rheobase_score
+                temp = {}
+                temp[str(v)] = {}
+                dtc = DataTC()
+                dtc.attrs = v
+                dtc.backend = backend
+                dtc.cell_name = 'vanilla'
+                dtc.tests = copy.copy(use_test)
+                dtc = dtc_to_rheo(dtc)
+                print(dtc.rheobase)
+                dtc.tests = dtc.format_test()
+                dtcpop.append(dtc)
+            dtcpop = list(map(OM.elephant_evaluation,dtcpop))
+            for i,j in enumerate(dtcpop):
+                df.iloc[l][i] = np.sum(list(j.scores.values()))/len(list(j.scores.values()))
+
+        return df
 
     def elephant_evaluation(self,dtc):
         # Inputs single data transport container modules, and neuroelectro observations that
