@@ -29,5 +29,5 @@ setup(
                  "single-neuron physiology models."),
     long_description="",
     test_suite="neuronunit.unit_test.core_tests",
-    #install_requires=read_requirements(),
+    install_requires=read_requirements(),
     )
