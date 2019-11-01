@@ -23,14 +23,11 @@ setup(
             'neuronunit.tests',
             'neuronunit.optimisation',
             'neuronunit.unit_test'],
-#+    packages=find_packages(),
-
-    #packages=find_packages(),
     url='http://github.com/scidash/neuronunit',
     license='MIT',
     description=("A SciUnit library for data-driven testing of "
                  "single-neuron physiology models."),
     long_description="",
     test_suite="neuronunit.unit_test.core_tests",
-    install_requires=read_requirements(),
+    #install_requires=read_requirements(),
     )
