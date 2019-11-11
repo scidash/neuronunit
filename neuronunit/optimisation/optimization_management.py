@@ -1,4 +1,4 @@
-# Its noAAAt that this file is responsible for doing plotting,
+# Its not that this file is responsible for doing plotting,
 # but it calls many modules that are, such that it needs to pre-empt
 
 # setting of an appropriate backend.
@@ -114,23 +114,109 @@ for key,v in rts.items():
 
 
 class TSD(dict):
-    def __init__(self,tests=[],use_rheobase_score=False):
+    def __init__(self,tests={},use_rheobase_score=False):
        super(TSD,self).__init__()
        self.update(tests)
+       if 'name' in self.keys():
+           self.cell_name = tests['name']
+           self.pop('name',None)
+ 
        self.use_rheobase_score=use_rheobase_score
+
+
 
 
     def optimize(self,param_edges,backend=None,protocol={'allen': False, 'elephant': True},MU=5,NGEN=5,free_params=None,seed_pop=None):
         from neuronunit.optimisation.optimisations import run_ga
         if type(free_params) is type(None):
             free_params=param_edges.keys()
-
+        experimental_name = 'place_holder'
         ga_out,DO = run_ga(param_edges, NGEN, self, free_params=free_params, \
                            backend=backend, MU = 8,  protocol=protocol,seed_pop = seed_pop)
-        # dtc_pop = self.update_dtc_pop(ga_out['pf'], DO.OM.td)
+        temp = copy.copy(ga_out['pf'][0].dtc.scores)
+        temp.pop("RheobaseTest",None)
+        objectives = list(temp.keys())
+        print('log book please')
+        logbook = ga_out['log']
+        gen = logbook.select("gen")
+        fit_mins = logbook.select("min")
+        size_avgs = logbook.select("avg")
+        #size_max = logbook.chapters["fitness"].select("max")
+
+        #   import matplotlib.pyplot as plt
+
+        fig, ax1 = plt.subplots()
+        line1 = ax1.plot(gen, fit_mins, "b-", label="Minimum Fitness")
+        ax1.set_xlabel("Generation")
+        ax1.set_ylabel("Fitness", color="b")
+        for tl in ax1.get_yticklabels():
+            tl.set_color("b")
+
+        ax2 = ax1.twinx()
+        line2 = ax2.plot(gen, size_avgs, "r-", label="Average Size")
+        ax2.set_ylabel("Size", color="r")
+        for tl in ax2.get_yticklabels():
+            tl.set_color("r")
+
+        lns = line1 + line2
+        labs = [l.get_label() for l in lns]
+        ax1.legend(lns, labs, loc="center right")
+        ga_out['stats_plot_1'] = ax1, ax2, fig
+        plt.savefig('evolution_'+str(self.cell_name)+str('.png'))
+
+        avg, max_, min_ = logbook.select("avg", "max", "min")
+        fig = plt.figure()
+        plt.subplot(2, 2, 1)
+        plt.semilogy(gen, avg, "--b")
+        plt.semilogy(gen, max_, "--b")
+        plt.semilogy(gen, min_, "-b")
+        #plt.semilogy(x, fbest, "-c")
+        #plt.semilogy(x, sigma, "-g")
+        #plt.semilogy(x, axis_ratio, "-r")
+        plt.grid(True)
+        plt.title("blue: ")
+
+        plt.subplot(2, 2, 2)
+        plt.plot(gen, best)
+        plt.grid(True)
+        plt.title("Object Variables")
+
+        plt.subplot(2, 2, 4)
+        plt.semilogy(gen, std)
+        plt.grid(True)
+        plt.title("Standard Deviations in All Coordinates")
+        plt.savefig('evolution_log_'+str(self.cell_name)+str('.png'))
+
+        ga_out['stats_plot_2'] = fig, plt
+        all_over_gen = {}
+        #best_over_gen = {}
+        #worst_over_gen = {}
+        #ga_out['mean_over_gen'] = []#mean_over_gen
+        #ga_out['best_over_gen'] = []#best_over_gen
+        #ga_out['worst_over_gen'] = []#worst_over_gen
+
+        for k in objectives:
+            for gen in ga_out['gen_vs_pop']:
+
+                all_over_gen[k].append(np.min([ ind.dtc.scores[k] for pop in gen ]))
+        fig1 = plt.figure()
+        for k in objectives:
+            plt.plot(all_over_gen[k],list(range(0,len(all_over_gen[k]))))
+        plt.savefig('crazy_plot_'+str(self.cell_name)+str('.png'))
+        ga_out['crazy_plot_'] = (fig1,plt)
+                #mean_over_gen[k] = np.mean([ j.dtc.scores[k] for j in i ])
+                #best_over_gen[k] = np.min([ j.dtc.scores[k] for j in i ])
+                #worst_over_gen[k] = np.max([ j.dtc.scores[k] for j in i ])
+
+            #ga_out['mean_over_gen'].append(mean_over_gen)
+            #ga_out['best_over_gen'].append(best_over_gen)
+            #ga_out['worst_over_gen'].append(worst_over_gen)
+
+
         if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
             _,dtc_pop = DO.OM.test_runner(ga_out['pf'],DO.OM.td,DO.OM.tests)
             ga_out['dtc_pop'] = dtc_pop
+
         from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
 
         ##
@@ -1140,10 +1226,140 @@ def get_dtc_pop(contains_dtcpop,filtered_tests,model_parameters,backend = 'ADEXP
         dtcdic[k] = copy.copy(dtcpop)
     return dtcdic, DO
 
+def allen_wave_predictions(vm30):
+    dtc = DataTC()
+    try:
+        vm30.rescale(pq.V)
+    except:
+        pass
+    v = [float(v*1000.0) for v in vm30.magnitude]
+    t = [float(t) for t in vm30.times]
+    try:
+        #spks = ft.detect_putative_spikes(np.array(v),np.array(t))
+        ephys = EphysSweepFeatureExtractor(t=np.array(t),v=np.array(v))#,\
+        ephys.process_spikes()
+
+    except:
+        '''
+        rectify unfilterable high sample frequencies by downsampling them
+        downsample too densely sampled signals.
+        Making them amenable to Allen analysis
+        '''
+
+        #if dtc.backend in str('ADEXP'):
+        #    vm30 = model.finalize()
+        v = [ float(v*1000.0) for v in vm30.magnitude]
+        t = [ float(t) for t in vm30.times ]
+        ephys = EphysSweepFeatureExtractor(t=np.array(t),v=np.array(v))#,\
+        ephys.process_spikes()
+
+    ephys_dict = ephys.as_dict()
+    if not 'spikes' in ephys_dict.keys() or ephys_dict['avg_rate'] == 0:
+        dtc.scores = None
+        dtc.preds = {}
+        return dtc
+    else:
+        prediction = {}
+        dtc.preds= {}
+        obs= {}
+        for k in ephys_dict.keys():
+            if 'spikes' not in k:
+                prediction['mean'] = ephys_dict[k]
+                prediction['std'] = 10.0
+                dtc.preds[k] = prediction
+
+            else:
+
+                for wavef in ephys_dict['spikes'][0].keys():
+                    temp = ephys_dict['spikes'][0][wavef]
+                    prediction['mean'] = temp
+                    prediction['std'] = 10.0
+                    dtc.preds[wavef+str('_first')] = prediction
+                for wavef in ephys_dict['spikes'][-1].keys():
+                    temp = ephys_dict['spikes'][-1][wavef]
+                    prediction['mean'] = temp
+                    prediction['std'] = 10.0
+                    dtc.preds[wavef+str('_last')] = prediction
+                half = int(len(ephys_dict['spikes'])/2.0)
+                for wavef in ephys_dict['spikes'][half].keys():
+                    temp = ephys_dict['spikes'][half][wavef]
+                    prediction['mean'] = temp
+                    prediction['std'] = 10.0
+                    dtc.preds[wavef+str('_half')] = prediction
+                '''
+                for i in ephys_dict['spikes']:
+                    for wavef in i.keys():
+                        temp = i[wavef]
+                        prediction['mean'] = temp
+                        prediction['std'] = 10.0
+                        dtc.preds[wavef+str(i) = prediction
+                '''
+
+                dtc.spike_cnt = len(ephys_dict['spikes'])
+                dtc.preds['spikes'] = dtc.spike_cnt
+
+        return dtc,ephys
+
+def append_spikes(ephys_dict,dtc):
+    prediction = {}
+    dtc.preds= {}
+    obs= {}
+    for k in ephys_dict.keys():
+        if 'spikes' not in k:
+            prediction['mean'] = ephys_dict[k]
+            prediction['std'] = 10.0
+            dtc.preds[k] = prediction
+
+        else:
+
+            for wavef in ephys_dict['spikes'][0].keys():
+                temp = ephys_dict['spikes'][0][wavef]
+                prediction['mean'] = temp
+                prediction['std'] = 10.0
+                dtc.preds[wavef+str('_first')] = prediction
+            for wavef in ephys_dict['spikes'][-1].keys():
+                temp = ephys_dict['spikes'][-1][wavef]
+                prediction['mean'] = temp
+                prediction['std'] = 10.0
+                dtc.preds[wavef+str('_last')] = prediction
+            half = int(len(ephys_dict['spikes'])/2.0)
+            for wavef in ephys_dict['spikes'][half].keys():
+                temp = ephys_dict['spikes'][half][wavef]
+                prediction['mean'] = temp
+                prediction['std'] = 10.0
+                dtc.preds[wavef+str('_half')] = prediction
+
+            '''
+            Fit all the spikes
+            for i in ephys_dict['spikes']:
+                for wavef in i.keys():
+                    temp = i[wavef]
+                    prediction['mean'] = temp
+                    prediction['std'] = 10.0
+                    dtc.preds[wavef+str(i) = prediction
+            '''
+        dtc.spike_cnt = len(ephys_dict['spikes'])
+        dtc.preds['spikes'] = dtc.spike_cnt
+    return dtc
+
+from neuronunit.tests.target_spike_current import SpikeCountSearch, SpikeCountRangeSearch
 
 def just_allen_predictions(dtc):
+    if type(dtc.ampl) is not type(None):
+        current = {'injected_square_current':
+                    {'amplitude':dtc.ampl, 'delay':DELAY, 'duration':DURATION}}
+    else:
+        if 'spike_count' in dtc.preds.keys():
+            observation_spike = {'vale': dtc.preds['spike_count']['mean']} # -1,dtc.preds['spike_count']['mean']+1] }
+            scs = SpikeCountRangeSearch(observation_spike)
+            model = new_model(dtc)
+            dtc.ampl = scs.generate_prediction(model)
+        else:
+            dtc = dtc_to_rheo(dtc)
+            dtc.ampl = 3.0 * dtc.rheobase#['value']
     current = {'injected_square_current':
-                {'amplitude':dtc.ampl, 'delay':DELAY, 'duration':DURATION}}
+               {'amplitude':dtc.ampl, 'delay':DELAY, 'duration':DURATION}}
+
     comp = False
     if hasattr(dtc,'pre_obs'):
 
@@ -1151,6 +1367,7 @@ def just_allen_predictions(dtc):
             compare = dtc.pre_obs
             comp = True
             if 'spk_count' not in compare.keys():
+                # TODO unalias these variables.
                 target = compare['spike_count']
             else:
                 target = compare['spk_count']
@@ -1184,7 +1401,7 @@ def just_allen_predictions(dtc):
     v = [float(v*1000.0) for v in vm30.magnitude]
     t = [float(t) for t in vm30.times]
     try:
-        spks = ft.detect_putative_spikes(np.array(v),np.array(t))
+        #spks = ft.detect_putative_spikes(np.array(v),np.array(t))
         ephys = EphysSweepFeatureExtractor(t=np.array(t),v=np.array(v))#,\
         ephys.process_spikes()
 
@@ -1210,24 +1427,8 @@ def just_allen_predictions(dtc):
         dtc.preds = {}
         return dtc
     else:
-        prediction = {}
-        dtc.preds= {}
-        obs= {}
-        for k in ephys_dict.keys():
-            if 'spikes' not in k:
-                prediction['mean'] = ephys_dict[k]
-                prediction['std'] = 10.0
-                dtc.preds[k] = prediction
 
-            else:
-                for other in ephys_dict['spikes'][0].keys():
-                    temp = ephys_dict['spikes'][0][other]
-                    prediction['mean'] = temp
-                    prediction['std'] = 10.0
-                    dtc.preds[other] = prediction
-                dtc.spike_cnt = len(ephys_dict['spikes'])
-                dtc.preds['spikes'] = dtc.spike_cnt
-
+        dtc = append_spikes(ephys_dict,dtc)
         return dtc,compare,ephys
 
 
@@ -1271,9 +1472,9 @@ def prediction_current_and_features(dtc):
             if k in ephys_dict.keys():
                 prediction['mean'] = ephys_dict[k]
                 helper.name = str(k)
-                obs['std'] = obs['mean']/15.0
+                obs['std'] = obs['mean']/10.0
                 dtc.preds[k] = prediction
-                prediction['std'] = prediction['mean']/15.0
+                prediction['std'] = prediction['mean']/10.0
 
                 try:
                     score = VmTest.compute_score(helper,obs,prediction)
@@ -1289,30 +1490,43 @@ def prediction_current_and_features(dtc):
         compute perspike waveform features on just the first spike
         '''
         first_spike = ephys_dict['spikes'][0]
+        half_spike = ephys_dict['spikes'][int(len(ephys_dict['spikes'])/2.0)]
+        last_spike = ephys_dict['spikes'][-1]
+
         first_spike.pop('direct',None)
-        for key,spike_obs in first_spike.items():
+        #import pdb
+        #pdb.set_trace()
+        temp = ['_first','_half','_last']
+        for i,spike in enumerate([first_spike,half_spike,last_spike]):
+            for key,spike_obs in spike.items():
+                if i == 0:
+                    obs = {'mean': compare[key+str('_first')]['mean']}
+                elif i == 1:
+                    obs = {'mean': compare[key+str('_half')]['mean']}
+                elif i == 2:
+                    obs = {'mean': compare[key+str('_last')]['mean']}
 
-            #if not str('direct') in key and not str('adp_i') in key and not str('peak_i') in key and not str('fast_trough_i') and not str('fast_trough_i') and not str('trough_i'):
-            #try:
-            obs = {'mean': compare[key]['mean']}
+                #if not str('direct') in key and not str('adp_i') in key and not str('peak_i') in key and not str('fast_trough_i') and not str('fast_trough_i') and not str('trough_i'):
+                #try:
 
-            prediction = {'mean': ephys_dict['spikes'][0][key]}
-            helper.name = str(key)
-            #obs['std']=10.0
-            #prediction['std']=10.0
-            #dtc.preds[key] = prediction
-            obs['std'] = obs['mean']/15.0
-            dtc.preds[k] = prediction
-            if type(prediction['mean']) is not type(str()):
-                prediction['std'] = prediction['mean']/15.0
-                score = VmTest.compute_score(helper,obs,prediction)
-            else:
-                score = None
-            dtc.tests[key] = VmTest(obs)
-            if not score is None and not score.norm_score is None:
-                dtc.scores[key] = 1.0-score.norm_score
-            else:
-                dtc.scores[key] = 1.0
+
+                prediction = {'mean': ephys_dict['spikes'][0][key]}
+                helper.name = str(key)
+                #obs['std']=10.0
+                #prediction['std']=10.0
+                #dtc.preds[key] = prediction
+                obs['std'] = obs['mean']/15.0
+                dtc.preds[k] = prediction
+                if type(prediction['mean']) is not type(str()):
+                    prediction['std'] = prediction['mean']/15.0
+                    score = VmTest.compute_score(helper,obs,prediction)
+                else:
+                    score = None
+                dtc.tests[key] = VmTest(obs)
+                if not score is None and not score.norm_score is None:
+                    dtc.scores[key] = 1.0-score.norm_score
+                else:
+                    dtc.scores[key] = 1.0
     dtc.ephys = None
     dtc.ephys = ephys
     dtc.spike_number = len(ephys_dict['spikes'])
@@ -2297,6 +2511,11 @@ def can_this_map(dtc):
 class OptMan():
     def __init__(self,tests, td=None, backend = None,hc = None,boundary_dict = None, error_length=None,protocol=None,simulated_obs=None,verbosity=None,confident=None,tsr=None):
         self.tests = tests
+        if type(self.tests) is type(dict()):
+            if 'name' in self.tests.keys():
+                self.cell_name = tests['name']
+                tests.pop('name',None)
+ 
         self.td = td
         if tests is not None:
             self.error_length = len(tests)
@@ -2410,40 +2629,6 @@ class OptMan():
                     grid_results.extend(results_)
         sorted_pop = sorted([ (gr.dtc.scores_ratio,gr.dtc.attrs,gr) for gr in grid_results ], key=lambda tup: tup[0])
         return grid_results, sorted_pop
-    '''
-    def run_grid(self,npoints, provided_keys = []):
-        if type(provided_keys) is type(None):
-            provided_keys = list(self.boundary_dict.keys())
-        from neuronunit.optimisation.exhaustive_search import sample_points, add_constant, chunks, build_chunk_grid
-        ranges = self.boundary_dict
-
-        subset = mp_in[provided_keys]
-        tests = self.tests
-        consumable_ ,td = build_chunk_grid(npoints,provided_keys)
-        cnt = 0
-        grid_results = []
-        if type(hold_constant) is not type(None):
-            td, hc = add_constant(self.hc,consumable_,td)
-        consumable = iter(consumable_)
-        use_cache = None
-        s = None
-        for sub_pop in consumable:
-            results = self.update_deap_pop(sub_pop, self.tests, td)
-            if type(results) is not None:
-                grid_results.extend(results)
-
-            if type(use_cache) is not type(None):
-                if type(s) is not type(None):
-                    s['consumable'] = consumable
-                    s['cnt'] = cnt
-                    s['grid_results'] = grid_results
-                    s['sub_pop'] = sub_pop
-            cnt += 1
-            #print('done_block_of_N_cells: ',cnt)
-        if type(s) is not type(None):
-            s.close()
-        return grid_results
-    '''
     def get_allen(self,pop,dtcpop,tests,td,tsr=None):
         with open('waves.p','rb') as f:
             make_stim_waves = pickle.load(f)
@@ -2826,27 +3011,28 @@ class OptMan():
         return dtc
 
 
-        def score_specific_param_models(self,test_frame,backend,known_parameters):
+    def score_specific_param_models(self,known_parameters,test_frame):
         '''
         -- Inputs: tests, simulator backend, the parameters to explore
         -- Outputs: data frame of index paramaterized model, column tests suite aggregate average.
         '''
-        df = pd.DataFrame(index=list(test_frame.keys()),columns=list(known_parameters.keys()))
+        try:
+            from dask import dataframe as pdd
+            df = pdd.DataFrame(index=list(test_frame.keys()),columns=list(known_parameters.keys()))
+        except:
+            df = pd.DataFrame(index=list(test_frame.keys()),columns=list(known_parameters.keys()))
 
-        for l,(key, use_test) in enumerate(test_frame.items()):
-            #use_test = TSD(use_test)
+        backend = self.backend
+        for l,(key, use_test) in enumerate(self.tests.items()):
             if RheobaseTest in use_test.keys():
                 use_test.use_rheobase_score = True
             else:
                 use_test.use_rheobase_score = False
-
             OM = OptMan(use_test,backend=backend,\
                         boundary_dict=MODEL_PARAMS[backend],\
                         protocol={'elephant':True,'allen':False,'dm':False},)#'tsr':spk_range})
             dtcpop = []
             for k,v in known_parameters.items():
-                #use_test = TSD(use_test)
-                #use_test.use_rheobase_score
                 temp = {}
                 temp[str(v)] = {}
                 dtc = DataTC()
@@ -2855,10 +3041,14 @@ class OptMan():
                 dtc.cell_name = 'vanilla'
                 dtc.tests = copy.copy(use_test)
                 dtc = dtc_to_rheo(dtc)
-                print(dtc.rheobase)
                 dtc.tests = dtc.format_test()
                 dtcpop.append(dtc)
-            dtcpop = list(map(OM.elephant_evaluation,dtcpop))
+            try:
+                bagged = db.from_sequence(dtcpop,npartitions=npartitions)
+                dtcpop = list(bagged.map(OM.elephant_evaluation))
+
+            except:
+                dtcpop = list(map(OM.elephant_evaluation,dtcpop))
             for i,j in enumerate(dtcpop):
                 df.iloc[l][i] = np.sum(list(j.scores.values()))/len(list(j.scores.values()))
 
