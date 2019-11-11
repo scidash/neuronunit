@@ -9,7 +9,7 @@ try:
 except:
     pass
 import matplotlib.pyplot as plt
-#import shelve
+import shelve
 import requests
 import numpy as np
 import quantities as pq
