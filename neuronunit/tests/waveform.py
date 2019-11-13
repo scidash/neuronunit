@@ -22,7 +22,7 @@ class APWidthTest(VmTest):
     ephysprop_name = 'Spike Half-Width'
     def __init__():
         super(VmTest,self).__init__(**args,**kwargs)
-        self.verbose = 0
+        self.verbose = False
     def generate_prediction(self, model):
         """Implement sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
@@ -171,7 +171,8 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
     def __init__(self):# *args, **kwargs):
         super(InjectedCurrentAPAmplitudeTest, self).__init__()#*args, **kwargs)
         if hasattr(self,'params'):# in .keys():
-            print(self.params)
+            if self.verbose:
+                print(self.params)
             #self.params = kwargs['params']
 
         #self.params['injected_square_current'] = {'amplitude': 100.0*pq.pA,
