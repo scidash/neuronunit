@@ -45,6 +45,9 @@ from neuronunit.models.reduced import ReducedModel
 from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
 from neuronunit.models.reduced import ReducedModel
 from neuronunit import aibs
+from neuronunit.optimisation.optimisations import run_ga
+import pdb
+from neuronunit.optimisation import model_parameters
 
 
 def test_all_tests_pop(dtcpop, tests):
@@ -123,36 +126,42 @@ class testHighLevelOptimisation(unittest.TestCase):
                         values.score_type = scores.RatioScore
                     else:
                         values.score_type = scores.ZScore
+
+        NGEN = 20
+        MU = 8
+        tests= self.test_frame['Hippocampus CA1 pyramidal cell']
+        tests['name'] = 'Hippocampus CA1 pyramidal cell'
+        ca1 = TSD(tests = tests,use_rheobase_score=True)
+        ca1_out = ca1.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=NGEN, \
+                               backend=backend, MU=MU, protocol={'allen': False, 'elephant': True})
+        dtcpop2 = [p for p in ca1_out[0]['pf'] ]
+
         tests = self.test_frame['Cerebellum Purkinje cell']
         tests['name'] = 'Cerebellum Purkinje cell'
         cpc = TSD(tests= tests,use_rheobase_score=False)
-        cpc_out = cpc.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=8, \
+        cpc_out = cpc.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=NGEN, \
                                 backend=backend, MU=8, protocol={'allen': False, 'elephant': True})
         dtcpop1 = [p for p in cpc_out[0]['pf'] ]
         tests = self.test_frame['Olfactory bulb (main) mitral cell']
         tests['name'] = 'Olfactory bulb (main) mitral cell'
-        
+
         omc = TSD(tests=tests,use_rheobase_score=False)
-        om_out = omc.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=8, \
+        om_out = omc.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=NGEN, \
                                 backend=backend, MU=8, protocol={'allen': False, 'elephant': True})
         dtcpop0 = [p for p in om_out[0]['pf'] ]
-        tests= self.test_frame['Hippocampus CA1 pyramidal cell']
-        tests['name'] = 'Hippocampus CA1 pyramidal cell'
-        ca1 = TSD(tests = tests,use_rheobase_score=False)
-        ca1_out = ca1.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=8, \
-                               backend=backend, MU=8, protocol={'allen': False, 'elephant': True})
+
         tests = self.test_frame['Hippocampus CA1 basket cell']
         tests['name'] = 'Hippocampus CA1 basket cell'
-        dtcpop2 = [p for p in ca1_out[0]['pf'] ]       
-        basket = TSD(tests=tests,use_rheobase_score=False)#, NGEN=10, \
-        basket_out = basket.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=8, \
+
+        basket = TSD(tests=tests,use_rheobase_score=True)#, NGEN=10, \
+        basket_out = basket.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=NGEN, \
                                 backend=backend, MU=8, protocol={'allen': False, 'elephant': True})
         dtcpop3 = [p for p in basket_out[0]['pf'] ]
         tests = self.test_frame['Neocortex pyramidal cell layer 5-6']
         tests['name'] = 'Neocortex pyramidal cell layer 5-6'
-        
-        neo = TSD(tests=tests,use_rheobase_score=False)#, NGEN=10, \
-        neo_out = neo.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=8, \
+
+        neo = TSD(tests=tests,use_rheobase_score=True)#, NGEN=10, \
+        neo_out = neo.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=NGEN, \
                                 backend=backend, MU=8, protocol={'allen': False, 'elephant': True})
         dtcpop4 = [p for p in neo_out[0]['pf'] ]
 
@@ -160,33 +169,20 @@ class testHighLevelOptimisation(unittest.TestCase):
 
         pickle.dump(pdic,open(str(backend)+str('all_data_tests.p'),'wb'))
 
-        #return (dtcpop0,dtcpop1,dtcpop2,dtcpop3,dtcpop4,cpc_out,ca1_out,om_out,basket_out,neo_out)
-
     def test_data_driven_ae(self):
         '''
         forward euler, and adaptive exponential
         '''
         use_test1 = self.filtered_tests['Hippocampus CA1 pyramidal cell']
         use_tests = list(self.test_frame['Hippocampus CA1 pyramidal cell'].values())
-        from neuronunit.optimisation.optimisations import run_ga
-        import pdb
-        from neuronunit.optimisation import model_parameters
         results = {}
 
         prev = 0
         use_test_old = 0.0
         tests_changed=0.0
         backend = str('RAW')
-        
-        #backend = str('ADEXP')
-        #(dtcpop0,dtcpop1,dtcpop2,dtcpop3,dtcpop4,cpc_out,ca1_out,om_out,basket_out,neo_out) =
+
         self.get_cells(backend,model_parameters)
-        #(dtcpop0,dtcpop1,dtcpop2,dtcpop3,dtcpop4,cpc_out,ca1_out,om_out,basket_out,neo_out) =
-        #self.get_cells(backend,model_parameters)
-        
-        #return (dtcpop0,dtcpop1,dtcpop2,dtcpop3,dtcpop4,cpc_out,ca1_out,om_out,basket_out,neo_out)
 
-
-# a = testHighLevelOptimisation()
-# a.setUp()
-# (dtcpop0,dtcpop1,dtcpop2,dtcpop3,dtcpop4, cpc_out,ca1_out,om_out,basket_out,neo_out) = a.test_data_driven_ae()
+        backend = str('ADEXP')
+        self.get_cells(backend,model_parameters)

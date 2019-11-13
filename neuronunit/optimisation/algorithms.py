@@ -32,7 +32,13 @@ import deap.tools
 import numpy as np
 
 from neuronunit.optimisation import optimization_management as om
-from neuronunit.optimisation.optimization_management import WSListIndividual
+#from neuronunit.optimisation.optimization_management import WSListIndividual
+class WSListIndividual(list):
+    """Individual consisting of list with weighted sum field"""
+    def __init__(self, *args, **kwargs):
+        """Constructor"""
+        self.rheobase = None
+        super(WSListIndividual, self).__init__(*args, **kwargs)
 
 logger = logging.getLogger('__main__')
 try:
@@ -47,19 +53,19 @@ def _evaluate_invalid_fitness(toolbox, population):
     '''
     invalid_ind = [ind for ind in population if not ind.fitness.valid]
     invalid_pop,fitnesses = toolbox.evaluate(invalid_ind)
-    
+
     for j, ind in enumerate(invalid_pop):
         ind.fitness.values = fitnesses[j]
         ind.dtc = None
         #ind.dtc.get_ss()
 
-    
+
     return invalid_pop
 
 def strip_object(p):
     state = super(type(p)).state
     p.unpicklable = []
-    print('i suspect a brian module is in the deap gene, and it should not be')
+    #print('i suspect a brian module is in the deap gene, and it should not be')
     #import pdb
     #pdb.set_trace()
     return p._state(state=state, exclude=['unpicklable','verbose'])
@@ -70,40 +76,47 @@ def _update_history_and_hof(halloffame,pf, history, population,td,mu):
 
     Note: History and Hall-of-Fame behave like dictionaries
     '''
-    population = wrangle(population)
+
 
     if halloffame is not None:
         try:
-            
-            halloffame.update(population[0:mu])
+
+            halloffame.update(population)
         except:
-            print('mostly not relevant')
+            population = purify(population)
+            halloffame.update(population)
+
     if history is not None:
         try:
-            history.update(population[0:mu])
+            history.update(population)
         except:
-
-            for p in population:
-                print(p.dtc.from_imputation, 'from imputation')
-                #p = strip_object(p)
-            pass
+            population = purify(population)
+            history.update(population)
     if pf is not None:
-        for ind in population:
-            for i,j in enumerate(ind):
-                ind[i] = float(j)
         try:
-            pf.update(population[0:mu])
+            pf.update(population)
         except:
-            pass
-            #import pdb
-            #pdb.set_trace()
+            population = purify(population)
+            try:
+                pf.update(population)
+            except:
+                print(len(population))
+                #pass
     return (halloffame,pf,history)
 
 
 def _record_stats(stats, logbook, gen, population, invalid_count):
     '''Update the statistics with the new population'''
-    print(population)
-    record = stats.compile(copy.copy(population)) if stats is not None else {}
+    stats_fit = tools.Statistics(key=lambda ind: ind.fitness.sum)
+    everything = tools.Statistics(key=lambda ind: ind.fitness.values)
+    mstats = tools.MultiStatistics(fitness=stats_fit, every=everything)#,stats_size=stats_size)
+
+    mstats.register("avg", np.mean, axis=0)
+    mstats.register("std", np.std, axis=0)
+    mstats.register("min", np.min, axis=0)
+    mstats.register("max", np.max, axis=0)
+
+    record = mstats.compile(copy.copy(population)) if mstats is not None else {}
     logbook.record(gen=gen, nevals=invalid_count, **record)
 
 def gene_bad(offspring):
@@ -112,7 +125,7 @@ def gene_bad(offspring):
         if np.any(np.isnan(o)) or np.any(np.isinf(o)):
             gene_bad = True
     return gene_bad
-def wrangle(parents):
+def purify(parents):
     '''hygeinise
     strip off extra objects that might contain modules
     which are not pickle friendly
@@ -141,37 +154,37 @@ def wrangle(parents):
             parents_.append(WSListIndividual())
             for j in off_:
                 parents_[-1].append(float(j))
-                parents_[-1].fitness = off_.fitness 
+                parents_[-1].fitness = off_.fitness
                 parents_[-1].rheobae = off_.rheobase
-    return parents_        
+    return parents_
 
 def _get_offspring(parents, toolbox, cxpb, mutpb):
     '''return the offsprint, use toolbox.variate if possible'''
     if hasattr(toolbox, 'variate'):
-        
+
         try:
             offspring = toolbox.variate(parents, toolbox, cxpb, mutpb)
             offspring = deap.algorithms.varAnd(parents, toolbox, cxpb, mutpb)
-            
+
         except:
             parents_ = []
-            parents = wrangle(parents)
-        
+            parents = purify(parents)
+
             for i,off_ in enumerate(parents):
                 parents_.append(WSListIndividual())
                 for j in off_:
                     parents_[-1].append(float(j))
-                    parents_[-1].fitness = off_.fitness 
+                    parents_[-1].fitness = off_.fitness
 
                 parents = parents_
                 #parents.append(WSListIndividual(off_,obj_size=len(off_)))
-                
+
             offspring = toolbox.variate(parents, toolbox, cxpb, mutpb)
             offspring = deap.algorithms.varAnd(parents, toolbox, cxpb, mutpb)
 
         while gene_bad(offspring) == True:
             offspring = deap.algorithms.varAnd(parents, toolbox, cxpb, mutpb)
-        
+
     return offspring
 
 def _get_worst(halloffame, nworst):
@@ -233,7 +246,6 @@ def eaAlphaMuPlusLambdaCheckpoint(
         # Start a new evolution
         start_gen = 1
         #parents = population#[:]
-
         gen_vs_pop.append(population)
         logbook = deap.tools.Logbook()
         logbook.header = ['gen', 'nevals'] + (stats.fields if stats else [])
@@ -248,88 +260,40 @@ def eaAlphaMuPlusLambdaCheckpoint(
         #import pdb; pdb.set_trace()
         invalid_count = len(parents)
         gen_vs_hof = []
-        print(invalid_count)
         hof, pf,history = _update_history_and_hof(hof, pf, history, parents, td,mu)
 
         gen_vs_hof.append(hof)
         _record_stats(stats, logbook, start_gen, parents, invalid_count)
-    
+    stag_check1 = []
     fronts = []
 
     # Begin the generational    process
     for gen in range(start_gen + 1, ngen + 1):
         delta = len(parents[0]) - len(toolbox.Individual())
-
+        _record_stats(stats, logbook, gen, parents, invalid_count)
         offspring = _get_offspring(parents, toolbox, cxpb, mutpb)
-        print(offspring)
         offspring = [ toolbox.clone(ind) for ind in offspring ]
-
-        _record_stats(stats, logbook, gen, offspring, invalid_count)
-
         assert len(offspring)>0
         gen_vs_pop.append(offspring)
-
         fitness = [ np.sum(list(i[0].fitness.values)[0]) for i in gen_vs_pop if len(i[0].fitness.values)>0 ]
-        #if gen>1:
         rec_lenf = [ i for i in range(0,len(fitness))]
-        try:
-            scores = [ list(i[0].dtc.scores.values())[0] for i in gen_vs_pop]
-
-            rec_len = [ i for i in range(0,len(scores))]
-                    
-        except:
-            pass
-        
-            #dtcs_ = [j.dtc for i in gen_vs_pop for j in i]
-        '''    
-        names = offspring[0].dtc.scores.keys()
-        if gen>1:
-            if str('rec_len') in locals().keys():
-                try:
-                    fig = apl.figure()
-                
-                    fig.plot(rec_lenf,fitness, label=str('evolution fitness: '), width=100, height=20)
-                    fitness1 = [ np.sum(list(i[0].fitness.values)) for i in gen_vs_pop if len(i[0].fitness.values)>1 ]
-                    fig.plot(rec_lenf,fitness1, label=str('evolution fitness: '), width=100, height=20)
-
-                    fig.show()
-                    front = [ np.sum(list(i.dtc.scores.values())) for i in ga_out['pf']]
-                    front_lens = [ i for i in range(0,len(front))]
-
-                    fig.plot(front_lens,front, label=str('pareto front: '), width=100, height=20)
-                    fig.show()
-                except:
-                    pass
-                    try:
-                        fig.plot(rec_len,scores, label=str('evolution scores: '), width=100, height=20)
-                        fig.show()
-                    except:
-                        pass
-
-            else:
-                print(fitness)
-        #    pass
-        '''
         invalid_ind = _evaluate_invalid_fitness(toolbox, offspring)
-        # something in evaluate fitness has knocked out fitness
         population = parents + invalid_ind
         population = [ p for p in population if len(p.fitness.values)!=0 ]
         invalid_count = len(invalid_ind)
-
         fronts.append(pf)
-        #if gen%10==0:
-            #stag_check1 = np.mean([ p.dtc.get_ss() for pf in fronts for p in pf ])
-            #if not np.sum(fronts[-1][0].dtc.get_ss()) < stag_check1*0.975:
-            #    print('gene poulation stagnant, no appreciable gains in fitness')
-                #return population, hof, pf, logbook, history, gen_vs_pop
+        stag_check1.append(np.mean([ np.sum(p.fitness.values) for pf in fronts for p in pf ]))
+        if gen%5==0:
+            if not np.sum(fronts[-1][0].fitness.values) < stag_check1[gen-4]*0.95:
+                # and \
+                print(np.std(population))#<record:
+                print('gene poulation stagnant, no appreciable gains in fitness')
 
-        
+
         try:
             ref_points = tools.uniform_reference_points(len(population[0]), 12)
-            #toolbox.register("select", tools.selNSGA3WithMemory, ref_points=population)
             toolbox.register("select", selNSGA3WithMemory(ref_points))
         except:
-            #toolbox.register("select",selNSGA2)
             toolbox.register("select", tools.selNSGA2)
 
         old_max = 0
@@ -338,12 +302,12 @@ def eaAlphaMuPlusLambdaCheckpoint(
                 old_max = len(ind.fitness.values)
         population = [ ind for ind in population if ind if ind.fitness.values is not type(None) ]
 
-        popp = [ i for i in population if len(i.fitness.values)==old_max ]
+        pop = [ i for i in population if len(i.fitness.values)==old_max ]
         try:
-            parents = toolbox.select(popp, mu)
+            parents = toolbox.select(pop, mu)
         except:
 
-            parents = toolbox.select(popp, len(population))
+            parents = toolbox.select(pop, len(population))
 
         # make new genes that are in the middle of the best and worst.
         # make sure best gene breeds.

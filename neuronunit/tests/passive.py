@@ -25,7 +25,7 @@ class TestPulseTest(VmTest):
             self.params = kwargs['params']
         else:
             self.params = None
-        self.verbose = 0
+        self.verbose = None
     default_params = dict(VmTest.default_params)
     default_params['amplitude'] = -1.0 * pq.pA
     default_params['tmax'] = 1000.0*pq.ms
@@ -317,8 +317,6 @@ class RestingPotentialTest(TestPulseTest):
         if prediction is None:
             return None  # scores.InsufficientDataScore(None)
         else:
-            # print(observation,prediction)
-            # print(type(observation),type(prediction))
             #prediction['value'] = prediction['value'].simplified
             #observation['value'] = observation['value'].simplified
 

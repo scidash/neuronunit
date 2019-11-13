@@ -1,4 +1,4 @@
-#% matplotlib inline
+
 import brian2 as b2
 from neurodynex.adex_model import AdEx
 b2.defaultclock.dt = 1 * b2.ms

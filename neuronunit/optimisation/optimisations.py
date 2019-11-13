@@ -1,7 +1,5 @@
-"""Optimisation class This file is part of BluePyOpt <https://github.com/BlueBrain/BluePyOpt>
-
-"""
-
+"""Optimisation class This file is part of BluePyOpt <https://github.com/BlueBrain/BluePyOpt>"""
+# https://deap.readthedocs.io/en/master/tutorials/basic/part3.html
 from neuronunit.optimisation import optimization_management
 
 import random
@@ -11,7 +9,7 @@ import numpy
 import deap
 import deap.base
 import deap.algorithms
-import deap.tools
+import deap.tools as tools
 
 from . import algorithms
 #from . import tools
@@ -122,8 +120,10 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
                  nparams = 10,
                  boundary_dict= {},
                  hc = None,
+                 verbose = 0,
                  seed_pop = None, protocol={'allen':False,'elephant':True},simulated_obs=None):
         self.seed_pop = seed_pop
+        self.verbose = verbose
         """Constructor"""
         #self.simulated_obs = simulated_obs
         self.protocol = protocol
@@ -161,23 +161,7 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
         self.params = optimization_management.create_subset(nparams = nparams,boundary_dict = boundary_dict)
         self.params, self.td = self.transdict(boundary_dict)
         return self.params, self.td
-    '''
-    def evaluate_local(dtc,regularization=False):
-        # assign worst case errors, and then over write them with situation informed errors as they become available.
-        greatest = len(dtc.tests)
-        fitness = []# 1.0 for i in range(0,greatest) ]
-        
-        if not hasattr(dtc,str('scores')):
-            return fitness
 
-        #fitness = [ 1.0 for i in range(0,greatest) ]
-        for int_,t in enumerate(dtc.scores.keys()):
-            if regularization:
-                fitness.append(float(dtc.scores[str(t)]**(1.0/2.0)))
-            else:
-                fitness.append(float(dtc.scores[str(t)]))
-        return tuple(fitness,)
-    '''
     def set_evaluate(self):
         if self.benchmark == True:
             self.toolbox.register("evaluate", benchmarks.zdt1)
@@ -347,7 +331,8 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
 
             if self.backend is None:
                 self.backend = 'RAW'
-            print(self.error_criterion.use_rheobase_score)
+            if self.verbose:
+                print(self.error_criterion.use_rheobase_score)
             invalid_pop = list(self.OM.update_deap_pop(invalid_ind, self.error_criterion, \
                                                   td = self.td, backend = self.backend, \
                                                   hc = self.hc,boundary_dict = self.boundary_dict, \
@@ -381,7 +366,7 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
             indpb=1.0/IND_SIZE)
 
         return self.OM
-    
+
     def set_pop(self, boot_new_random=0):
         if boot_new_random == 0:
             IND_SIZE = len(list(self.params.values()))
@@ -412,11 +397,26 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
         hof = deap.tools.HallOfFame(offspring_size)
         pf = deap.tools.ParetoFront(offspring_size)
 
-        stats = deap.tools.Statistics(key=lambda ind: ind.fitness.sum)
+        #stats = deap.tools.Statistics(key=lambda ind: ind.fitness.sum)
+        #stats2 = deap.tools.Statistics(key=lambda ind: ind.fitness.values)
+
+        #stats = tools.Statistics(key=lambda ind: ind.fitness.values)
+        stats_fit = tools.Statistics(key=lambda ind: ind.fitness.values)
+        everything = tools.Statistics(key=lambda ind: ind.fitness.values)
+        stats_size = tools.Statistics(key=len)
+        mstats = tools.MultiStatistics(fitness=stats_fit, every=everything,stats_size=stats_size)
+
+        mstats.register("avg", np.mean, axis=0)
+        mstats.register("std", np.std, axis=0)
+        mstats.register("min", np.min, axis=0)
+        mstats.register("max", np.max, axis=0)
+
+        '''
         stats.register("avg", numpy.mean)
         stats.register("std", numpy.std)
         stats.register("min", numpy.min)
         stats.register("max", numpy.max)
+        '''
         pop, hof, pf, log, history, gen_vs_pop = algorithms.eaAlphaMuPlusLambdaCheckpoint(
             pop,
             self.toolbox,
@@ -424,7 +424,7 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
             self.cxpb,
             self.mutpb,
             max_ngen,
-            stats=stats,
+            stats=mstats,
             hof=hof,
             pf=pf,
             nelite=self.elite_size,
@@ -472,11 +472,10 @@ def run_ga(explore_edges, max_ngen, test, \
         DO.setup_deap()
         DO.error_length = len(test)
     ga_out = DO.run(max_ngen = max_ngen)
-    
+
     pop,dtc_pop = DO.OM.test_runner(ga_out['pf'], DO.OM.td, DO.OM.tests)
     ga_out['dtc_pop'] = dtc_pop
 
 
 
     return ga_out, DO
-
