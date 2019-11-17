@@ -1,4 +1,4 @@
-"""NeuronUnit model class for reduced neuron models"""
+"""NeuronUnit model class for Network models"""
 
 import numpy as np
 from neo.core import AnalogSignal
