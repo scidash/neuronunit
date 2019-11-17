@@ -47,13 +47,13 @@ def _evaluate_invalid_fitness(toolbox, population):
     '''
     invalid_ind = [ind for ind in population if not ind.fitness.valid]
     invalid_pop,fitnesses = toolbox.evaluate(invalid_ind)
-    
+
     for j, ind in enumerate(invalid_pop):
         ind.fitness.values = fitnesses[j]
         ind.dtc = None
         #ind.dtc.get_ss()
 
-    
+
     return invalid_pop
 
 def strip_object(p):
@@ -64,7 +64,11 @@ def strip_object(p):
     #pdb.set_trace()
     return p._state(state=state, exclude=['unpicklable','verbose'])
 
-
+def purify2(population):            
+    for ind in population:
+        for i,j in enumerate(ind):
+            ind[i] = float(j)
+    return population
 def _update_history_and_hof(halloffame,pf, history, population,td,mu):
     '''Update the hall of fame with the generated individuals
 
@@ -74,7 +78,7 @@ def _update_history_and_hof(halloffame,pf, history, population,td,mu):
 
     if halloffame is not None:
         try:
-            
+
             halloffame.update(population[0:mu])
         except:
             print('mostly not relevant')
@@ -88,9 +92,8 @@ def _update_history_and_hof(halloffame,pf, history, population,td,mu):
                 #p = strip_object(p)
             pass
     if pf is not None:
-        for ind in population:
-            for i,j in enumerate(ind):
-                ind[i] = float(j)
+        population = purify2(population)
+
         try:
             pf.update(population[0:mu])
         except:
@@ -141,37 +144,37 @@ def wrangle(parents):
             parents_.append(WSListIndividual())
             for j in off_:
                 parents_[-1].append(float(j))
-                parents_[-1].fitness = off_.fitness 
+                parents_[-1].fitness = off_.fitness
                 parents_[-1].rheobae = off_.rheobase
-    return parents_        
+    return parents_
 
 def _get_offspring(parents, toolbox, cxpb, mutpb):
     '''return the offsprint, use toolbox.variate if possible'''
     if hasattr(toolbox, 'variate'):
-        
+
         try:
             offspring = toolbox.variate(parents, toolbox, cxpb, mutpb)
             offspring = deap.algorithms.varAnd(parents, toolbox, cxpb, mutpb)
-            
+
         except:
             parents_ = []
             parents = wrangle(parents)
-        
+
             for i,off_ in enumerate(parents):
                 parents_.append(WSListIndividual())
                 for j in off_:
                     parents_[-1].append(float(j))
-                    parents_[-1].fitness = off_.fitness 
+                    parents_[-1].fitness = off_.fitness
 
                 parents = parents_
                 #parents.append(WSListIndividual(off_,obj_size=len(off_)))
-                
+
             offspring = toolbox.variate(parents, toolbox, cxpb, mutpb)
             offspring = deap.algorithms.varAnd(parents, toolbox, cxpb, mutpb)
 
         while gene_bad(offspring) == True:
             offspring = deap.algorithms.varAnd(parents, toolbox, cxpb, mutpb)
-        
+
     return offspring
 
 def _get_worst(halloffame, nworst):
@@ -253,7 +256,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
 
         gen_vs_hof.append(hof)
         _record_stats(stats, logbook, start_gen, parents, invalid_count)
-    
+
     fronts = []
 
     # Begin the generational    process
@@ -276,18 +279,18 @@ def eaAlphaMuPlusLambdaCheckpoint(
             scores = [ list(i[0].dtc.scores.values())[0] for i in gen_vs_pop]
 
             rec_len = [ i for i in range(0,len(scores))]
-                    
+
         except:
             pass
-        
+
             #dtcs_ = [j.dtc for i in gen_vs_pop for j in i]
-        '''    
+        '''
         names = offspring[0].dtc.scores.keys()
         if gen>1:
             if str('rec_len') in locals().keys():
                 try:
                     fig = apl.figure()
-                
+
                     fig.plot(rec_lenf,fitness, label=str('evolution fitness: '), width=100, height=20)
                     fitness1 = [ np.sum(list(i[0].fitness.values)) for i in gen_vs_pop if len(i[0].fitness.values)>1 ]
                     fig.plot(rec_lenf,fitness1, label=str('evolution fitness: '), width=100, height=20)
@@ -323,7 +326,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
             #    print('gene poulation stagnant, no appreciable gains in fitness')
                 #return population, hof, pf, logbook, history, gen_vs_pop
 
-        
+
         try:
             ref_points = tools.uniform_reference_points(len(population[0]), 12)
             #toolbox.register("select", tools.selNSGA3WithMemory, ref_points=population)
