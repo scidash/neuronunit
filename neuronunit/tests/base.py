@@ -7,8 +7,6 @@ from types import MethodType
 
 import quantities as pq
 import numpy as np
-
-import sciunit
 import sciunit.scores as scores
 from sciunit.errors import ObservationError
 import neuronunit.capabilities as ncap
@@ -45,6 +43,7 @@ PASSIVE_DELAY = 100.0*pq.ms
 PASSIVE_DURATION = 300.0*pq.ms
 
 
+import sciunit
 class VmTest(sciunit.Test):
     """Base class for tests involving the membrane potential of a model."""
 
@@ -172,7 +171,7 @@ class VmTest(sciunit.Test):
                                                       # NeuroElectro ontology.
             cached = cached
             )
-        print(reference_data)
+        #print(reference_data)
         #import pdb; pdb.set_trace()
         reference_data.get_values(quiet=quiet) # Get and verify summary data
                                     # from neuroelectro.org.

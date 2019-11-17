@@ -138,7 +138,8 @@ class ISICVTest(VmTest):
         if prediction is None:
             score = scores.InsufficientDataScore(None)
         else:
-            print(observation, prediction)
+            if self.verbose:
+                print(observation, prediction)
             score = self.score_type.compute(observation, prediction, key='cv')
         return score
 
