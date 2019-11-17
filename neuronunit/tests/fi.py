@@ -66,7 +66,7 @@ class RheobaseTest(VmTest):
         self.high = 300*pq.pA
         self.small = 0*pq.pA
         self.rheobase_vm = None
-        self.verbose = 0
+        self.verbose = False
 
 
     required_capabilities = (cap.ReceivesSquareCurrent,
@@ -237,7 +237,7 @@ class RheobaseTestP(VmTest):
 
      """
      def _extra(self):
-         self.verbose = 0
+         self.verbose = False
 
      # def __init__(self,other_current=None):
      #     self.other_current = other_current
