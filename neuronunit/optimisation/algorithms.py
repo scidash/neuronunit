@@ -1,20 +1,6 @@
 """Optimisation class
 Copyright (c) 2016, EPFL/Blue Brain Project
-
  This file is part of BluePyOpt <https://github.com/BlueBrain/BluePyOpt>
-
- This library is free software; you can redistribute it and/or modify it under
- the terms of the GNU Lesser General Public License version 3.0 as published
- by the Free Software Foundation.
-
- This library is distributed in the hope that it will be useful, but WITHOUT
- ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
- details.
-
- You should have received a copy of the GNU Lesser General Public License
- along with this library; if not, write to the Free Software Foundation, Inc.,
- 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 """
 
 import deap.tools as tools
@@ -70,38 +56,46 @@ def strip_object(p):
     #pdb.set_trace()
     return p._state(state=state, exclude=['unpicklable','verbose'])
 
+def purify2(population):
+    pop2 = []
+    for ind in population:
+        for i,j in enumerate(ind):
+            ind[i] = float(j)
+        pop2.append(ind)
+    return pop2
 
 def _update_history_and_hof(halloffame,pf, history, population,td,mu):
     '''Update the hall of fame with the generated individuals
 
     Note: History and Hall-of-Fame behave like dictionaries
     '''
-
+    temp = copy.copy(population)
 
     if halloffame is not None:
         try:
 
-            halloffame.update(population)
+            halloffame.update(temp)
         except:
-            population = purify(population)
-            halloffame.update(population)
+            temp = purify(temp)
+            halloffame.update(temp)
 
     if history is not None:
         try:
-            history.update(population)
+            history.update(temp)
         except:
-            population = purify(population)
-            history.update(population)
+            temp = purify(temp)
+            history.update(temp)
     if pf is not None:
+
         try:
-            pf.update(population)
+            pf.update(temp[0:mu])
         except:
-            population = purify(population)
+            temp = purify2(temp)
+            temp = purify(temp)
             try:
-                pf.update(population)
+                pf.update(temp[0:mu])
             except:
-                print(len(population))
-                #pass
+                print(len(temp))
     return (halloffame,pf,history)
 
 
@@ -303,16 +297,18 @@ def eaAlphaMuPlusLambdaCheckpoint(
         population = [ ind for ind in population if ind if ind.fitness.values is not type(None) ]
 
         pop = [ i for i in population if len(i.fitness.values)==old_max ]
+
+        #hof, pf,history = _update_history_and_hof(hof, pf, history, pop, td, mu)
         try:
             parents = toolbox.select(pop, mu)
         except:
 
             parents = toolbox.select(pop, len(population))
 
+        hof, pf,history = _update_history_and_hof(hof, pf, history, parents, td, mu)
         # make new genes that are in the middle of the best and worst.
         # make sure best gene breeds.
 
-        hof, pf,history = _update_history_and_hof(hof, pf, history, parents, td, mu)
 
         logger.info(logbook.stream)
 

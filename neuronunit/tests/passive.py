@@ -43,7 +43,6 @@ class TestPulseTest(VmTest):
         """Implement sciunit.tests.ProtocolToFeatureTest.setup_protocol."""
         self.condition_model(model)
         model.inject_square_current(self.params['injected_square_current'])
-        self.model = model
     def get_result(self, model):
         vm = model.get_membrane_potential()
         return vm
@@ -92,7 +91,7 @@ class TestPulseTest(VmTest):
 
             fig.show()
 
-        gc.collect()    
+        gc.collect()
         return r_in.simplified
 
     @classmethod
@@ -104,8 +103,8 @@ class TestPulseTest(VmTest):
         region = cls.get_segment(vm, start, stop)
         #import pdb
         #pdb.set_trace()
-        #if np.std(region.magnitude)>0.0:
-        if len(set(r[0] for r in region.magnitude))>1:
+        #if :
+        if len(set(r[0] for r in region.magnitude))>1 and np.std(region.magnitude)>0.0:
             amplitude, tau, y0 = cls.exponential_fit(region, i['delay'])
         else:
             tau = None
@@ -221,6 +220,7 @@ class TimeConstantTest(TestPulseTest):
                 tau = tau.simplified
             else:
                 tau = None
+                
             # Put prediction in a form that compute_score() can use.
             features = {'value': tau}
         return features
@@ -306,8 +306,8 @@ class RestingPotentialTest(TestPulseTest):
         model.inject_square_current(self.params['injected_square_current'])
 
         #if features is not None:
-        median = model.get_median_vm()  # Use median for robustness.
-        std = model.get_std_vm()
+        median = -np.abs(model.get_median_vm())  # Use median for robustness.
+        std = -np.abs(model.get_std_vm())
 
         features = {'mean': median, 'std': std}
         return features

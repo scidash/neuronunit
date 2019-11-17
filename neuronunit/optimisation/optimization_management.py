@@ -1,4 +1,4 @@
-# Its not that this file is responsible for doing plotting,
+    # Its not that this file is responsible for doing plotting,
 # but it calls many modules that are, such that it needs to pre-empt
 
 # setting of an appropriate backend.
@@ -18,7 +18,7 @@ if SILENT:
 
 # optional imports
 
-CONFIDENT = True
+PARALLEL_CONFIDENT = True
 #    Goal is based on this. Don't optimize to a singular point, optimize onto a cluster.
 #    Golowasch, J., Goldman, M., Abbott, L.F, and Marder, E. (2002)
 #    Failure of averaging in the construction
@@ -849,25 +849,16 @@ def bridge_judge(test_and_dtc):
     (test, dtc) = test_and_dtc
     obs = test.observation
     backend_ = dtc.backend
-    print('noise from mint model?')
     model = mint_generic_model(backend_)
     model.set_attrs(**dtc.attrs)
 
 
     if test.passive:
         test.setup_protocol(model)
-        print('noise from passive?')
-
         pred = test.extract_features(model,test.get_result(model))
-        # pred = tests[0].extract_features(dtc.dtc_to_model(),tests[0].get_result(dtc.dtc_to_model()))
-
     else:
-        print('noise from active?')
-
         pred = test.generate_prediction(model)
-
     dtc.predictions[test.name] = pred
-
     dtc.observations[test.name] = test.observation
     if 'mean' in dtc.observations.keys():
         temp = copy.copy(dtc.observations[test.name]['mean'].simplified)
@@ -2063,7 +2054,7 @@ def evaluate_allen(dtc,regularization=True):
               fitness[int_] = dtc.ascores[str(t)]
     return tuple(fitness,)
 
-def evaluate(dtc,regularization=True):
+def evaluate(dtc,regularization=False):
     # assign worst case errors, and then over write them with situation informed errors as they become available.
     greatest = len(dtc.tests)
     fitness = []# 1.0 for i in range(0,greatest) ]
@@ -2444,7 +2435,7 @@ def score_attr(dtcpop,pop):
         pop[i].dtc = copy.copy(d)
     return dtcpop,pop
 def get_dm(pop,dtcpop,tests,td):
-    if CONFIDENT:
+    if PARALLEL_CONFIDENT:
         dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
         dtcpop = list(dtcbag.map(nuunit_dm_evaluation).compute())
     else:
@@ -2474,28 +2465,39 @@ def bridge_passive(package):
     result = t.get_result(model)
 
     assert 'mean' in t.observation.keys()
+    pred = None
     try:
         pred = t.extract_features(model, result)
     except:
         pred = None
-        return None,dtc
+
+    if type(pred) is type(None):
+        return None,dtc,pred
+
+    take_anything = list(t.observation.values())[0]
+    if 'std' not in t.observation.keys():
+        t.observation['std'] = 10.0 * take_anything.magnitude * take_anything.units
     if 'std' in pred.keys():
         if float(pred['std']) == 0.0:
-            pred['std'] = 1.0 * pred['mean'].units
+            pred['std'] = 10.0*pred['mean'].units
+
+    if 'std' in pred.keys():
+        if float(pred['std']) == 0.0:
+            pred['std'] = t.observation['std']#     10.0 * pred['mean'].units
 
     else:
         if not 'mean' in pred.keys():
             pred['mean'] = pred['value']
 
     assert 'mean' in t.observation.keys()
-    take_anything = list(t.observation.values())[0]
-    if 'std' not in t.observation.keys():
-        t.observation['std'] = 5 * take_anything.magnitude * take_anything.units
     take_anything = list(pred.values())[0]
     if 'std' not in pred.keys():
         if type(take_anything) is type(None):
-            score = None
-            return score,dtc
+            #print(t.observation)
+            import pdb
+            pdb.set_trace()
+            #score = None
+            #return score,dtc
         else:
             pred['std'] = 5 * take_anything.magnitude * take_anything.units
 
@@ -2513,19 +2515,42 @@ def bridge_passive(package):
         t.score_type = scores.ZScore
 
         score = t.compute_score(t.observation, pred)
+    if np.isinf(float(score.raw)):
+        t.score_type = scores.RatioScore
+        score = t.compute_score(pred,t.observation)
+    if type(score) is type(None):
+        pass
+        def dont_do_this():
+            cnt=0
+            while type(pred) is type(None):
+                cnt+=1
+                t.params['amplitude'] = -10*pq.pA*cnt
+                t.setup_protocol(model)
+                result = t.get_result(model)
 
+                assert 'mean' in t.observation.keys()
+                pred = None
+                try:
+                    pred = t.extract_features(model, result)
+                except:
+                    pred = None
+
+            score = t.compute_score(pred,t.observation)
+    return score, dtc, pred
+
+    '''
     model = new_model(dtc)
     t.setup_protocol(model)
     result = t.get_result(model)
-    '''
-    standard deviations erroneously set to 0, in imputate predictions
-    make simulated samples
-    '''
+
+    # standard deviations erroneously set to 0, in imputate predictions
+    # make simulated samples
+
     assert 'mean' in t.observation.keys()
     pred = t.extract_features(model,result)
     if 'std' in pred.keys():
         if float(pred['std']) == 0.0:
-            pred['std'] = 1.0*pred['mean'].units
+            pred['std'] = 10.0*pred['mean'].units
 
     else:
         if not 'mean' in pred.keys():
@@ -2541,6 +2566,7 @@ def bridge_passive(package):
 
     score = t.compute_score(t.observation,pred)
     return score, dtc
+    '''
 
 from neuronunit.optimisation.optimisations import SciUnitOptimisation
 import random
@@ -2607,7 +2633,7 @@ def can_this_map(dtc):
 
 
 class OptMan():
-    def __init__(self,tests, td=None, backend = None,hc = None,boundary_dict = None, error_length=None,protocol=None,simulated_obs=None,verbosity=None,confident=None,tsr=None):
+    def __init__(self,tests, td=None, backend = None,hc = None,boundary_dict = None, error_length=None,protocol=None,simulated_obs=None,verbosity=None,PARALLEL_CONFIDENT=None,tsr=None):
         self.tests = tests
         if type(self.tests) is type(dict()):
             if 'name' in self.tests.keys():
@@ -2622,10 +2648,10 @@ class OptMan():
         self.boundary_dict= boundary_dict
         self.protocol = protocol
         # note this is not effective at changing parallel behavior yet
-        if type(confident) is type(None):
-            self.CONFIDENT = True
+        if type(PARALLEL_CONFIDENT) is type(None):
+            self.PARALLEL_CONFIDENT = True
         else:
-            self.CONFIDENT = confident
+            self.PARALLEL_CONFIDENT = PARALLEL_CONFIDENT
         if verbosity is None:
             self.verbose = 0
         else:
@@ -2731,8 +2757,7 @@ class OptMan():
         for dtc in dtcpop: dtc.pre_obs = None
         for dtc in dtcpop: dtc.pre_obs = self.tests
         for dtc in dtcpop: dtc.tsr = tsr #not a property but an aim
-        #        assert
-        if CONFIDENT==True:
+        if PARALLEL_CONFIDENT:
             dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
             dtcpop = list(dtcbag.map(nuunit_allen_evaluation).compute())
 
@@ -2780,7 +2805,7 @@ class OptMan():
                 pop[i] = ind
                 dtcpop[i] = dtc
 
-        if CONFIDENT == True:
+        if PARALLEL_CONFIDENT:
             dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
             dtcpop = list(dtcbag.map(nuunit_allen_evaluation).compute())
 
@@ -2897,6 +2922,7 @@ class OptMan():
 
             else:
                 temp = new_tests['RheobaseTest'].observation
+
                 if type(temp) is not type({'0':1}):
                     new_tests['RheobaseTest'].observation = {}
                     new_tests['RheobaseTest'].observation['value'] = temp#*pq.pA
@@ -3147,7 +3173,14 @@ class OptMan():
                 df.iloc[l][i] = np.sum(list(j.scores.values()))/len(list(j.scores.values()))
 
         return df
-    @timer
+    #@timer
+    def pred_std(self,pred,t):
+        take_anything = list(pred.values())[0]
+        if take_anything is None or type(take_anything) is type(int()):
+            take_anything = list(pred.values())[1]
+
+        pred['std'] = t.observation['std']# 15*take_anything.magnitude * take_anything.units
+        return pred
     def elephant_evaluation(self,dtc):
         # Inputs single data transport container modules, and neuroelectro observations that
         # inform test error error_criterion
@@ -3180,29 +3213,46 @@ class OptMan():
 
                     t.observation['mean']  = t.observation['value']
                     assert 'mean' in t.observation.keys()
+                take_anything = t.observation['mean']
+                if 'std' not in t.observation.keys() or float(t.observation['std']):
+                    t.observation['std'] = 15*take_anything.magnitude * take_anything.units
+
+
                 if t.passive is False:
                     #model = dtc.dtc_to_model()
                     model = new_model(dtc)
                     pred = t.generate_prediction(model)
-                    take_anything = list(t.observation.values())[0]
-                    if 'std' not in t.observation.keys():
-                        t.observation['std'] = 15*take_anything.magnitude * take_anything.units
-
-                    take_anything = list(pred.values())[0]
-                    if take_anything is None or type(take_anything) is type(int()):
-                        continue
-                    pred['std'] = 15*take_anything.magnitude * take_anything.units
-
+                    pred = self.pred_std(pred,t)
                     score, dtc = bridge_judge((t, dtc))
+                    if type(take_anything) is type(int()):
+                        pass
                 else:
-                    score, dtc = bridge_passive((t, dtc))
-
+                    score, dtc, pred = bridge_passive((t, dtc))
+                if self.verbose:
+                    print(take_anything.units)
+                    print(t.observation['mean'].units)
+                    print(take_anything.magnitude)
+                    print(t.observation['mean'].magnitude)
+                    print('obs mag {0}: '.format(t.observation['mean'].magnitude))
+                    print('passive: {0} '.format(t.passive),score,t.name)
+                    print(score,type(score))
+                if type(score) is type(None):
+                    pass
+                else:
+                    if np.isinf(float(score.raw)):
+                        t.score_type = scores.RatioScore
+                        score = t.compute_score(pred,t.observation)
 
                 assignment = 1.0
                 if score is not None:
                     if score.norm_score is not None:
                         assignment = 1.0 - score.norm_score
                 dtc.scores[key] = assignment
+                if dtc.scores[key] == 1.0:
+                    print('failed at: ',t.passive,t.name,t.score_type,pred,t.observation['std'])
+                if dtc.scores[key] == 0.0:
+                    print('succeeded at: ',t.passive,t.name,t.score_type,pred,t.observation['std'])
+
         dtc.summed = dtc.get_ss()
         try:
             greatest = np.max([dtc.error_length,len(dtc.scores)])
@@ -3226,9 +3276,9 @@ class OptMan():
                 dtc = self.elephant_evaluation((dtc,tests))
 
             return pop, dtc
-    @cython.boundscheck(False)
-    @cython.wraparound(False)
-    @timer
+    #@cython.boundscheck(False)
+    #@cython.wraparound(False)
+    #@timer
     def format_test(self,dtc):
         # pre format the current injection dictionary based on pre computed
         # rheobase values of current injection.
@@ -3257,7 +3307,7 @@ class OptMan():
                 dtc.protocols[k]['injected_square_current']['amplitude'] = 0.0*pq.pA
         return dtc
     @timer
-    def make_simulated_observations(self,xtests,backend,random_param,dsolution=None):
+    def make_simulated_observations(self,original_test_dic,backend,random_param,dsolution=None):
         #self.simulated_obs = True
         # to be used in conjunction with round_trip_test below.
 
@@ -3269,15 +3319,19 @@ class OptMan():
             dtc = dsolution
             #dsolution = dtc
         if self.protocol['elephant']:
-            if str('RheobaseTest') in xtests.keys():
-                dtc = get_rh(dtc,xtests['RheobaseTest'])
-                if type(dtc.rheobase) is type(float(0.0)):
-                    pass
+            #print(xtests)
+            #import pdb
+            #pdb.set_trace()
+            if str('RheobaseTest') in original_test_dic.keys():
+                dtc = get_rh(dtc,original_test_dic['RheobaseTest'])
                 if type(dtc.rheobase) is type({'1':0}):
                     if dtc.rheobase['value'] is None:
                         return False, dtc
+                elif type(dtc.rheobase) is type(float(0.0)):
+                    pass
+
             dtc = make_new_random(dtc, copy.copy(backend))
-            xtests = list(xtests.values())
+            xtests = list(copy.copy(original_test_dic).values())
             dtc.tests = xtests
             simulated_observations = {t.name:copy.copy(t.observation['value']) for t in xtests}
             simulated_observations = {k:v for k,v in simulated_observations.items() if v is not None}
@@ -3296,7 +3350,12 @@ class OptMan():
                 if str("RheobaseTest") in simulated_observations.keys():
                     temp = copy.copy(simulated_observations['RheobaseTest'])
                     simulated_observations['RheobaseTest'] = {}
-                    simulated_observations['RheobaseTest']['value'] = temp
+
+                    if type(temp) is type(dict()):
+                        if 'value' in temp.keys():
+                            simulated_observations['RheobaseTest']['value'] = temp['value']
+                    else:
+                        simulated_observations['RheobaseTest']['value'] = temp
                     break
                 else:
                     continue
@@ -3306,9 +3365,10 @@ class OptMan():
                 print(simulated_observations)
             simulated_tests = {}
             for k in xtests:
-                if k in simulated_observations.keys():
+                if k.name in simulated_observations.keys():
                     k.observation = simulated_observations[k.name]
                     simulated_tests[k.name] = k
+
             if self.verbose:
                 print('try generating rheobase from this test')
             return simulated_tests, dtc
@@ -3388,7 +3448,7 @@ class OptMan():
             dtc.preds['current']['mean'] = dtc.ampl
             dtc.pre_obs = dtc.preds
             return dtc.preds, dtc
-    @timer
+    #@timer
     def update_dtc_pop(self,pop, td):
         '''
         inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
@@ -3508,7 +3568,7 @@ class OptMan():
                 d.tests = copy.copy(self.tests)
 
 
-            if CONFIDENT == True:# and self.backend is not str('ADEXP'):
+            if PARALLEL_CONFIDENT:# and self.backend is not str('ADEXP'):
                 passed = False
                 try:
                     dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
@@ -3522,6 +3582,10 @@ class OptMan():
                     assert hasattr(d, 'tests')
 
                 if str('ADEXP') in self.backend and passed:
+                    dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
+                    dtcpop = list(dtcbag.map(self.elephant_evaluation).compute())
+
+                    '''
                     serial_dtc = list(map(self.elephant_evaluation,dtcpop))
                     # A way to get parallelism backinto brian2.
                     serial_dtc = self.serial_dtc(dtcpop,b=True)
@@ -3535,10 +3599,13 @@ class OptMan():
                         i.tests.extend(j.tests)
                         i.scores.update(j.scores)
                         dtcpop.append(i)
+                    '''
                 elif str('ADEXP') not in self.backend and passed:
                     dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
                     dtcpop = list(dtcbag.map(self.elephant_evaluation).compute())
-                else:
+                elif not passed:
+                    print(passed,'gets here')
+                    dtcpop = list(map(self.format_test,dtcpop))
                     dtcpop = list(map(self.elephant_evaluation,dtcpop))
 
                 for d in dtcpop:
@@ -3547,7 +3614,7 @@ class OptMan():
                 for d in dtcpop:
                     d.tests = copy.copy(self.tests)
 
-            else:
+            if not PARALLEL_CONFIDENT:
                 dtcpop = list(map(self.format_test,dtcpop))
                 dtcpop = list(map(self.elephant_evaluation,dtcpop))
 
@@ -3560,7 +3627,7 @@ class OptMan():
                  #import pdb
                  #pdb.set_trace()
         return pop, dtcpop
-    @timer
+    #@timer
     def test_runner(self,pop,td,tests):
         if self.protocol['elephant']:
             pop_, dtcpop = self.obtain_rheobase(pop, td, tests)
