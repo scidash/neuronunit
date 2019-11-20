@@ -1534,8 +1534,8 @@ def evaluate(dtc,regularization=False,elastic_net=True):
 
     for int_,t in enumerate(dtc.scores.keys()):
         if elastic_net:
-           fitness0 = (t**(1.0/2.0) for int_,t in enumerate(dtc.ascores.keys()))
-           fitness1 = (np.abs(t) for int_,t in enumerate(dtc.ascores.keys()))
+           fitness0 = [ t**(1.0/2.0) for int_,t in enumerate(dtc.scores.values())]
+           fitness1 = [ np.abs(t) for int_,t in enumerate(dtc.scores.values())]
            fitness = [ (fitness1[i]+j)/2.0 for i,j in enumerate(fitness0)]
         else:
            fitness.append(float(dtc.scores[str(t)]))
@@ -1870,12 +1870,13 @@ def bridge_passive(package):
     if type(pred) is type(None):
         return None,dtc,pred
 
-    take_anything = list(t.observation.values())[0]
     if 'std' not in t.observation.keys():
-        t.observation['std'] = 10.0 * take_anything.magnitude * take_anything.units
+        take_anything = list(t.observation['mean'])[0]
+
+        t.observation['std'] = 1.5 * take_anything.magnitude * take_anything.units
     if 'std' in pred.keys():
         if float(pred['std']) == 0.0:
-            pred['std'] = 10.0*pred['mean'].units
+            pred['std'] = 1.5*pred['mean'].units
 
     if 'std' in pred.keys():
         if float(pred['std']) == 0.0:
@@ -1889,27 +1890,21 @@ def bridge_passive(package):
     take_anything = list(pred.values())[0]
     if 'std' not in pred.keys():
         if type(take_anything) is type(None):
-            #print(t.observation)
-            import pdb
-            pdb.set_trace()
-            #score = None
+            pred['std'] = 1.5 * take_anything.magnitude * take_anything.units
             #return score,dtc
         else:
-            pred['std'] = 5 * take_anything.magnitude * take_anything.units
+            pred['std'] = 1.5 * take_anything.magnitude * take_anything.units
 
     if not hasattr(dtc,'predictions'):
         dtc.predictions = {}
         dtc.predictions[t.name] = pred
     else:
         dtc.predictions[t.name] = pred
-    if RATIO_SCORE:
+    try:
         t.score_type = scores.RatioScore
-
         score = t.compute_score(t.observation, pred)
-    else:
-        #print('Ratio score failed')
+    except:
         t.score_type = scores.ZScore
-
         score = t.compute_score(t.observation, pred)
     if np.isinf(float(score.raw)):
         t.score_type = scores.RatioScore
