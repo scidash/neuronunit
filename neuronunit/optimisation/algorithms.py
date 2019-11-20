@@ -171,7 +171,7 @@ def _get_offspring(parents, toolbox, cxpb, mutpb):
         except:
             parents_ = []
             parents = wrangle(parents)
-        
+
             for i,off_ in enumerate(parents):
                 parents_.append(WSListIndividual())
                 for j in off_:
@@ -244,22 +244,20 @@ def eaAlphaMuPlusLambdaCheckpoint(
         logbook = cp["logbook"]
         history = cp["history"]
         random.setstate(cp["rndstate"])
+        print('remarkably enters checkpoint')
+        import pdb
+        pdb.set_trace()
     else:
-        # Start a new evolution
         start_gen = 1
-        #parents = population#[:]
         gen_vs_pop.append(population)
         logbook = deap.tools.Logbook()
         logbook.header = ['gen', 'nevals'] + (stats.fields if stats else [])
         history = deap.tools.History()
         toolbox.register("select", tools.selNSGA2)
-        def experimental():
-            NOBJ = len(population[0].fitness.values)
-            import pdb; pdb.set_trace()
-        #experimental()
-        # TODO this first loop should be not be repeated !
+
         parents = _evaluate_invalid_fitness(toolbox, population)
-        #import pdb; pdb.set_trace()
+        import pdb
+        pdb.set_trace()
         invalid_count = len(parents)
         gen_vs_hof = []
         hof, pf,history = _update_history_and_hof(hof, pf, history, parents, td,mu)
