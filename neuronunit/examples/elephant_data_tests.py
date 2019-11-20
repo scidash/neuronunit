@@ -200,9 +200,9 @@ class testHighLevelOptimisation(unittest.TestCase):
         '''
         forward euler, and adaptive exponential
         '''
-        backend = str('ADEXP')
-        out = self.get_cells(backend,model_parameters)
         backend = str('RAW')
+        out = self.get_cells(backend,model_parameters)
+        backend = str('ADEXP')
         out = self.get_cells(backend,model_parameters)
 
         return out
