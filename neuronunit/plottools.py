@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import colorsys
 import numpy
 import collections
+import cython
 
 
 import sys
@@ -21,6 +22,392 @@ import bs4
 from IPython.display import HTML,Javascript,display
 
 KERNEL = ('ipykernel' in sys.modules)
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippets=False,experimental_cell_type="neo_cortical",ground_truth = None):
+    sns.set_style("darkgrid")
+
+    if not isinstance(dtc, Iterable):
+        model = mint_generic_model(dtc.backend)
+        if hasattr(dtc,'rheobase'):
+            try:
+                rheobase = dtc.rheobase['value']
+            except:
+                rheobase = dtc.rheobase
+                uc = {'amplitude':rheobase,'duration':DURATION,'delay':DELAY}
+        if hasattr(dtc,'ampl'):
+            uc = {'amplitude':dtc.ampl,'duration':DURATION,'delay':DELAY}
+
+        model.set_attrs(**dtc.attrs)
+        model.inject_square_current(uc)
+        if str(dtc.backend) is str('ADEXP'):
+            model.finalize()
+        else:
+            pass
+        #vm = model.get_membrane_potential().magnitude
+        sns.set_style("darkgrid")
+        plt.plot(model.get_membrane_potential().times,model.get_membrane_potential().magnitude)#,label='ground truth')
+        plot_backend = mpl.get_backend()
+        if plot_backend == str('agg'):
+            plt.savefig(figname+str('debug.png'))
+        else:
+            plt.show()
+
+    else:
+
+        if type(second_pop) is not type(None):
+            dtcpop = copy.copy(dtc)
+            dtc = None
+
+            fig = plt.figure(figsize=(11,11),dpi=100)
+            ax = fig.add_subplot(111)
+
+
+            for dtc in dtcpop:
+                model = mint_generic_model(dtc.backend)
+                if hasattr(dtc,'rheobase'):
+                    try:
+                        rheobase = dtc.rheobase['value']
+                    except:
+                        rheobase = dtc.rheobase
+                        uc = {'amplitude':rheobase,'duration':DURATION,'delay':DELAY}
+                if hasattr(dtc,'ampl'):
+                    uc = {'amplitude':dtc.ampl,'duration':DURATION,'delay':DELAY}
+                #dtc.run_number += 1
+                model.set_attrs(**dtc.attrs)
+                if rheobase is None:
+                    break
+                model.inject_square_current(uc)
+                #if model.get_spike_count()>1:
+                #    break
+                if str(dtc.backend) in str('ADEXP'):
+                    model.finalize()
+                else:
+                    pass
+                vm = model.get_membrane_potential()#.magnitude
+                if str("RAW") in dtc.backend:
+                    label=str('Izhikevich Model')
+
+                if str("ADEXP") in dtc.backend:
+                    label=str('Adaptive Exponential Model')
+                if str("GLIF") in dtc.backend:
+                    label=str('Generalized Leaky Integrate and Fire')
+
+                sns.set_style("darkgrid")
+                if snippets:
+                    snippets_ = get_spike_waveforms(vm)
+                    plt.plot(snippets_.times,snippets_,color='red',label=str('model type: ')+label)#,label='ground truth')
+                else:
+                    plt.plot(vm.times,vm,color='red',label=str('model type: ')+label)#,label='ground truth')
+                ax.legend()
+                sns.set_style("darkgrid")
+
+                plt.title(experimental_cell_type)#+str(' Model Type: '+str(second_pop[0].backend)+str(dtc.backend)))
+                plt.xlabel('Time (ms)')
+                plt.ylabel('Amplitude (mV)')
+
+            for dtc in second_pop:
+                model = mint_generic_model(dtc.backend)
+                if hasattr(dtc,'rheobase'):
+                    try:
+                        rheobase = dtc.rheobase['value']
+                    except:
+                        rheobase = dtc.rheobase
+                        uc = {'amplitude':rheobase,'duration':DURATION,'delay':DELAY}
+                if hasattr(dtc,'ampl'):
+                    uc = {'amplitude':dtc.ampl,'duration':DURATION,'delay':DELAY}
+
+                #uc = {'amplitude':rheobase,'duration':DURATION,'delay':DELAY}
+                #dtc.run_number += 1
+                model.set_attrs(**dtc.attrs)
+                model.inject_square_current(uc)
+                #if model.get_spike_count()>1:
+                #    break
+                if str(dtc.backend) in str('ADEXP'):
+                    model.finalize()
+                else:
+                    pass
+                vm = model.get_membrane_potential()#.magnitude
+                if str("RAW") in dtc.backend:
+                    label=str('Izhikevich Model')
+
+                if str("ADEXP") in dtc.backend:
+                    label=str('Adaptive Exponential Model')
+
+                if str("GLIF") in dtc.backend:
+                    label=str('Generalized Leaky Integrate and Fire')
+                #label = label+str(latency)
+
+                sns.set_style("darkgrid")
+                if snippets:
+                    snippets_ = get_spike_waveforms(vm)
+                    plt.plot(snippets_.times,snippets_,color='blue',label=str('model type: ')+label)#,label='ground truth')
+                else:
+                    plt.plot(vm.times,vm,color='blue',label=str('model type: ')+label)#,label='ground truth')
+                #plt.plot(model.get_membrane_potential().times,vm,color='blue',label=label)#,label='ground truth')
+                #ax.legend(['A simple line'])
+                ax.legend()
+                sns.set_style("darkgrid")
+
+                plt.title(experimental_cell_type)#+str(' Model Type: '+str(second_pop[0].backend)+str(dtc.backend)))
+                plt.xlabel('Time (ms)')
+                plt.ylabel('Amplitude (mV)')
+
+            if third_pop is None:
+                pass
+            else:
+
+                for dtc in third_pop:
+                    model = mint_generic_model(dtc.backend)
+                    if hasattr(dtc,'rheobase'):
+                        try:
+                            rheobase = dtc.rheobase['value']
+                        except:
+                            rheobase = dtc.rheobase
+                            uc = {'amplitude':rheobase,'duration':DURATION,'delay':DELAY}
+                    if hasattr(dtc,'ampl'):
+                        uc = {'amplitude':dtc.ampl,'duration':DURATION,'delay':DELAY}
+
+                    model.set_attrs(**dtc.attrs)
+                    model.inject_square_current(uc)
+                    #if model.get_spike_count()>1:
+                    #    break
+                    if str(dtc.backend) in str('ADEXP'):
+                        model.finalize()
+                    else:
+                        pass
+                    vm = model.get_membrane_potential()#.magnitude
+                    sns.set_style("darkgrid")
+
+                    if str("RAW") in dtc.backend:
+                        label=str('Izhikevich Model')
+
+                    if str("ADEXP") in dtc.backend:
+                        label=str('Adaptive Exponential Model')
+                    if str("GLIF") in dtc.backend:
+                        label=str('Generalized Leaky Integrate and Fire')
+                    #label = label+str(latency)
+                    if snippets:
+
+                        snippets_ = get_spike_waveforms(vm)
+                        plt.plot(snippets_.times,snippets_,color='green',label=str('model type: ')+label)#,label='ground truth')
+                        #ax.legend(['A simple line'])
+                        ax.legend()
+                    else:
+                        plt.plot(vm.times,vm,color='green',label=str('model type: ')+label)#,label='ground truth')
+
+                plot_backend = mpl.get_backend()
+                sns.set_style("darkgrid")
+
+                plt.title(experimental_cell_type)#+str(' Model Type: '+str(second_pop[0].backend)+str(dtc.backend)))
+                plt.xlabel('Time (ms)')
+                plt.ylabel('Amplitude (mV)')
+
+                if str('agg') in plot_backend:
+
+                    plt.savefig(figname+str('all_traces.png'))
+                else:
+                    plt.show()
+        else:
+            dtcpop = copy.copy(dtc)
+            dtc = None
+            for dtc in dtcpop[0:2]:
+                model = mint_generic_model(dtc.backend)
+                if hasattr(dtc,'rheobase'):
+                    try:
+                        rheobase = dtc.rheobase['value']
+                    except:
+                        rheobase = dtc.rheobase
+                        uc = {'amplitude':rheobase,'duration':DURATION,'delay':DELAY}
+                if hasattr(dtc,'ampl'):
+                    uc = {'amplitude':dtc.ampl,'duration':DURATION,'delay':DELAY}
+
+                #dtc.run_number += 1
+                model.set_attrs(**dtc.attrs)
+                model.inject_square_current(uc)
+                vm = model.get_membrane_potential().magnitude
+                sns.set_style("darkgrid")
+
+                plt.plot(model.get_membrane_potential().times,vm)#,label='ground truth')
+            plot_backend = mpl.get_backend()
+            sns.set_style("darkgrid")
+
+            plt.title(experimental_cell_type)#+str(' Model Type: '+str(second_pop[0].backend)+str(dtc.backend)))
+            plt.xlabel('Time (ms)')
+            plt.ylabel('Amplitude (mV)')
+
+            if plot_backend == str('agg'):
+                plt.savefig(figname+str('all_traces.png'))
+            else:
+                plt.show()
+    return None, None
+
+
+def elaborate_plots(self,ga_out):
+
+
+    plt.style.use('ggplot')
+    fig, axes = plt.subplots(figsize=(10, 10), facecolor='white')
+    '''
+    Move to slides
+    The plot shows the mean error value of the population as the GA evolves it's population. The red interval at any instant is the standard deviation of the error. The fact that the mean GA error is able to have a net upwards trajectory, after experiencing a temporary downwards trajectory, demonstrates that the GA retains a drive to explore, and is resiliant against being stuck in a local minima. Also in the above plot population variance in error stays remarkably constant, in this way BluePyOpts selection criteria SELIBEA contrasts with DEAPs native selection strategy NSGA2
+    #for index, val in enumerate(ga_out.values()):
+    '''
+    temp = copy.copy(ga_out['pf'][0].dtc.scores)
+    if not self.use_rheobase_score:
+        temp.pop("RheobaseTest",None)
+    objectives = list(temp.keys())
+
+    logbook = ga_out['log']
+    ret = logbook.chapters
+    logbook = ret['fitness']
+
+
+    gen_numbers =[ i for i in range(0,len(logbook.select('gen'))) ]
+    pf = ga_out['pf']
+    mean = np.array(logbook.select('stats_fit'))
+
+    mean = np.array(logbook.select('avg'))
+    std = np.array(logbook.select('std'))
+    minimum = logbook.select('min')
+    try:
+        stdminus = mean - std
+        stdplus = mean + std
+        try:
+            assert len(gen_numbers) == len(stdminus) == len(stdplus)
+        except:
+            pass
+
+        axes.plot(
+            gen_numbers,
+            mean,
+            color='black',
+            linewidth=2,
+            label='population average')
+        axes.fill_between(gen_numbers, stdminus, stdplus)
+        #axes.plot([i for i in range(0,len(gvh))], gvh,'y--', linewidth=2,  label='grid search error')
+        #axes.plot(gen_numbers, bl, 'go', linewidth=2, label='hall of fame error')
+        axes.plot(gen_numbers, stdminus, label='std variation lower limit')
+        axes.plot(gen_numbers, stdplus, label='std variation upper limit')
+        axes.set_xlim(np.min(gen_numbers) - 1, np.max(gen_numbers) + 1)
+        axes.set_xlabel('Generations')
+        axes.set_ylabel('Sum of objectives')
+        axes.legend()
+        fig.tight_layout()
+        plt.savefig(str('classic_evolution_')+str(self.cell_name)+str(self.backend)+str('.png'))
+    except:
+        print('mistake, plotting routine access logbook stats')
+
+    #sns.set_style("darkgrid")
+    plt.figure()
+    sns.set_style("darkgrid")
+    logbook = ga_out['log']
+    ret = logbook.chapters
+    gen = ret['every'].select("gen")
+
+    everything = ret["every"]
+    #fig, ax1 = plt.subplots(figsize=(10,10))
+    fig2, ax2 = plt.subplots(len(objectives),1,figsize=(10,10))
+
+    for i,k in enumerate(objectives):
+
+        line2 = ax2[i].plot(gen, [j[i] for j in everything.select("avg")], "r-", label="Evolution objectives")
+        ax2[i].set_ylim([0.0, 1.0])
+        if i!=len(objectives)-1:
+            ax2[i].tick_params(
+                axis='x',          # changes apply to the x-axis
+                which='both',      # both major and minor ticks are affected
+                bottom=False,      # ticks along the bottom edge are off
+                top=False,         # ticks along the top edge are off
+                labelbottom=False) # labels along the bottom edge are off
+        h = ax2[i].set_xlabel("NeuronUnit Test: {0}".format(k))
+    plt.savefig(str('reliable_history_plot_')+str(self.cell_name)+str(self.backend)+str('.png'))
+
+
+
+    #logbook = ga_out['log']
+    logbook = ga_out['log']
+    ret = logbook.chapters
+    logbook = ret['fitness']
+
+    gen = logbook.select("gen")
+    fit_mins = logbook.select("min")
+    fit_max = logbook.select("max")
+    fit_avgs = logbook.select("avg")
+
+
+    fig, ax1 = plt.subplots(figsize=(10,10))
+    line1 = ax1.plot(gen, fit_mins, "r-", label="Minimum Fitness")
+    line2 = ax1.plot(gen, fit_avgs, "g-", label="Average Fitness")
+    line3 = ax1.plot(gen, fit_max, "b-", label="Maximum Fitness")
+    ax1.set_xlabel("Generation")
+    ax1.set_ylabel("Fitness out of: {0}".format(len(objectives)))
+    lns = line1 + line2 + line3
+    labs = [l.get_label() for l in lns]
+    ax1.legend(lns, labs, loc="center right")
+    plt.savefig(str('evolution_')+str(self.cell_name)+str(self.backend)+str('.png'))
+    ga_out['stats_plot_1'] = ax1, fig# ax2, ax3, fig
+
+    avg, max_, min_, std_ = logbook.select("avg", "max", "min","std")
+    all_over_gen = {}
+    for i,k in enumerate(objectives):
+        all_over_gen[k] = []
+        for v in ga_out['history'].genealogy_history.values():
+            all_over_gen[k].append(v.fitness.values[i])# if type(ind.dtc) is not type(None) ]
+    plt.figure()
+    sns.set_style("darkgrid")
+
+
+    fig2, ax2 = plt.subplots(len(objectives),1,figsize=(10,10))
+    for i,k in enumerate(objectives):
+        ax2[i].plot(list(range(0,len(all_over_gen[k]))),all_over_gen[k])
+        temp = [0 for i in range(0,len(all_over_gen[k])) ]
+        ax2[i].plot(list(range(0,len(all_over_gen[k]))),temp)
+        ax2[i].set_ylim([0.0, 1.0])
+        if i!=len(objectives)-1:
+            ax2[i].tick_params(
+                axis='x',          # changes apply to the x-axis
+                which='both',      # both major and minor ticks are affected
+                bottom=False,      # ticks along the bottom edge are off
+                top=False,         # ticks along the top edge are off
+                labelbottom=False) # labels along the bottom edge are off
+        h = ax2[i].set_xlabel("NeuronUnit Test: {0}".format(k))
+        #h.set_rotation(90)
+        plt.savefig(str('history_plot_')+str(self.cell_name)+str(self.backend)+str('.png'))
+        ga_out['history_plot_'] = (fig2,plt)
+
+
+    all_over_gen = {}
+    for i,k in enumerate(objectives):
+        all_over_gen[k] = []
+        for gen in ga_out['gen_vs_pop']:
+            sorted_pop = sorted([(np.sum(ind.fitness.values),ind) for ind in gen if len(ind.fitness.values)==len(objectives) ], key=lambda tup: tup[0])
+            ind = sorted_pop[0][1]
+            all_over_gen[k].append(ind.fitness.values[i])# if type(ind.dtc) is not type(None) ]
+    plt.figure()
+    sns.set_style("darkgrid")
+
+    fig2, ax2 = plt.subplots(len(objectives),1,figsize=(10,10))
+    for i,k in enumerate(objectives):
+        ax2[i].plot(list(range(0,len(all_over_gen[k]))),all_over_gen[k])
+        temp = [0 for i in range(0,len(all_over_gen[k])) ]
+        ax2[i].plot(list(range(0,len(all_over_gen[k]))),temp)
+        ax2[i].set_ylim([0.0, 1.0])
+        if i!=len(objectives)-1:
+            ax2[i].tick_params(
+                axis='x',          # changes apply to the x-axis
+                which='both',      # both major and minor ticks are affected
+                bottom=False,      # ticks along the bottom edge are off
+                top=False,         # ticks along the top edge are off
+                labelbottom=False) # labels along the bottom edge are off
+        h = ax2[i].set_xlabel("NeuronUnit Test: {0}".format(k))
+        #h.set_rotation(90)
+    plt.savefig(str('crazy_plot_')+str(self.cell_name)+str(self.backend)+str('.png'))
+    ga_out['crazy_plot_'] = (fig2,plt)
+
+    return ga_out
+
 
 def adjust_spines(ax, spines, color='k', d_out=10, d_down=None):
 
