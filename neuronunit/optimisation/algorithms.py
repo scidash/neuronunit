@@ -87,6 +87,14 @@ def _update_history_and_hof(halloffame,pf, history, population,td,mu):
             history.update(temp)
     if pf is not None:
 
+            for p in population:
+                print(p.dtc.from_imputation, 'from imputation')
+                #p = strip_object(p)
+            pass
+    if pf is not None:
+        for ind in population:
+            for i,j in enumerate(ind):
+                ind[i] = float(j)
         try:
             pf.update(temp[0:mu])
         except:
@@ -162,8 +170,8 @@ def _get_offspring(parents, toolbox, cxpb, mutpb):
 
         except:
             parents_ = []
-            parents = purify(parents)
-
+            parents = wrangle(parents)
+        
             for i,off_ in enumerate(parents):
                 parents_.append(WSListIndividual())
                 for j in off_:
@@ -271,6 +279,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
         gen_vs_pop.append(offspring)
         fitness = [ np.sum(list(i[0].fitness.values)[0]) for i in gen_vs_pop if len(i[0].fitness.values)>0 ]
         rec_lenf = [ i for i in range(0,len(fitness))]
+
         invalid_ind = _evaluate_invalid_fitness(toolbox, offspring)
         population = parents + invalid_ind
         population = [ p for p in population if len(p.fitness.values)!=0 ]
