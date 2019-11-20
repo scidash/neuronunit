@@ -5,6 +5,7 @@
 # optional imports
 import warnings
 import matplotlib
+import cython
 
 # optional imports
 try:
@@ -98,10 +99,18 @@ except:
     warnings.warn('SKLearn library not available, consider installing')
 
 import time
-
-from neuronunit.optimisation.optimisations import SciUnitOptimisation
+import seaborn as sns
 import random
 from datetime import datetime
+
+import pdb
+import quantities as pq
+from sciunit import scores
+from neuronunit.optimisation.optimisations import SciUnitOptimisation
+import random
+from neuronunit.plottools import inject_and_plot
+
+from neuronunit.optimisation.optimisations import SciUnitOptimisation
 def timer(func):
     def inner(*args, **kwargs):
         t1 = time.time()
@@ -120,172 +129,8 @@ df = pd.DataFrame(rts)
 for key,v in rts.items():
     helper_tests = [value for value in v.values() ]
     break
+from neuronunit.plottools import elaborate_plots
 
-import seaborn as sns
-
-def elaborate_plots(self,ga_out):
-
-
-    plt.style.use('ggplot')
-    fig, axes = plt.subplots(figsize=(10, 10), facecolor='white')
-    '''
-    Move to slides
-    The plot shows the mean error value of the population as the GA evolves it's population. The red interval at any instant is the standard deviation of the error. The fact that the mean GA error is able to have a net upwards trajectory, after experiencing a temporary downwards trajectory, demonstrates that the GA retains a drive to explore, and is resiliant against being stuck in a local minima. Also in the above plot population variance in error stays remarkably constant, in this way BluePyOpts selection criteria SELIBEA contrasts with DEAPs native selection strategy NSGA2
-    #for index, val in enumerate(ga_out.values()):
-    '''
-    temp = copy.copy(ga_out['pf'][0].dtc.scores)
-    if not self.use_rheobase_score:
-        temp.pop("RheobaseTest",None)
-    objectives = list(temp.keys())
-
-    logbook = ga_out['log']
-    ret = logbook.chapters
-    logbook = ret['fitness']
-
-
-    gen_numbers =[ i for i in range(0,len(logbook.select('gen'))) ]
-    pf = ga_out['pf']
-    mean = np.array(logbook.select('stats_fit'))
-
-    mean = np.array(logbook.select('avg'))
-    std = np.array(logbook.select('std'))
-    minimum = logbook.select('min')
-    try:
-        stdminus = mean - std
-        stdplus = mean + std
-        try:
-            assert len(gen_numbers) == len(stdminus) == len(stdplus)
-        except:
-            pass
-
-        axes.plot(
-            gen_numbers,
-            mean,
-            color='black',
-            linewidth=2,
-            label='population average')
-        axes.fill_between(gen_numbers, stdminus, stdplus)
-        #axes.plot([i for i in range(0,len(gvh))], gvh,'y--', linewidth=2,  label='grid search error')
-        #axes.plot(gen_numbers, bl, 'go', linewidth=2, label='hall of fame error')
-        axes.plot(gen_numbers, stdminus, label='std variation lower limit')
-        axes.plot(gen_numbers, stdplus, label='std variation upper limit')
-        axes.set_xlim(np.min(gen_numbers) - 1, np.max(gen_numbers) + 1)
-        axes.set_xlabel('Generations')
-        axes.set_ylabel('Sum of objectives')
-        axes.legend()
-        fig.tight_layout()
-        plt.savefig(str('classic_evolution_')+str(self.cell_name)+str(self.backend)+str('.png'))
-    except:
-        print('mistake, plotting routine access logbook stats')
-
-    #sns.set_style("darkgrid")
-    plt.figure()
-    sns.set_style("darkgrid")
-    logbook = ga_out['log']
-    ret = logbook.chapters
-    gen = ret['every'].select("gen")
-
-    everything = ret["every"]
-    #fig, ax1 = plt.subplots(figsize=(10,10))
-    fig2, ax2 = plt.subplots(len(objectives),1,figsize=(10,10))
-
-    for i,k in enumerate(objectives):
-
-        line2 = ax2[i].plot(gen, [j[i] for j in everything.select("avg")], "r-", label="Evolution objectives")
-        ax2[i].set_ylim([0.0, 1.0])
-        if i!=len(objectives)-1:
-            ax2[i].tick_params(
-                axis='x',          # changes apply to the x-axis
-                which='both',      # both major and minor ticks are affected
-                bottom=False,      # ticks along the bottom edge are off
-                top=False,         # ticks along the top edge are off
-                labelbottom=False) # labels along the bottom edge are off
-        h = ax2[i].set_xlabel("NeuronUnit Test: {0}".format(k))
-    plt.savefig(str('reliable_history_plot_')+str(self.cell_name)+str(self.backend)+str('.png'))
-
-
-
-    #logbook = ga_out['log']
-    logbook = ga_out['log']
-    ret = logbook.chapters
-    logbook = ret['fitness']
-
-    gen = logbook.select("gen")
-    fit_mins = logbook.select("min")
-    fit_max = logbook.select("max")
-    fit_avgs = logbook.select("avg")
-
-
-    fig, ax1 = plt.subplots(figsize=(10,10))
-    line1 = ax1.plot(gen, fit_mins, "r-", label="Minimum Fitness")
-    line2 = ax1.plot(gen, fit_avgs, "g-", label="Average Fitness")
-    line3 = ax1.plot(gen, fit_max, "b-", label="Maximum Fitness")
-    ax1.set_xlabel("Generation")
-    ax1.set_ylabel("Fitness out of: {0}".format(len(objectives)))
-    lns = line1 + line2 + line3
-    labs = [l.get_label() for l in lns]
-    ax1.legend(lns, labs, loc="center right")
-    plt.savefig(str('evolution_')+str(self.cell_name)+str(self.backend)+str('.png'))
-    ga_out['stats_plot_1'] = ax1, fig# ax2, ax3, fig
-
-    avg, max_, min_, std_ = logbook.select("avg", "max", "min","std")
-    all_over_gen = {}
-    for i,k in enumerate(objectives):
-        all_over_gen[k] = []
-        for v in ga_out['history'].genealogy_history.values():
-            all_over_gen[k].append(v.fitness.values[i])# if type(ind.dtc) is not type(None) ]
-    plt.figure()
-    sns.set_style("darkgrid")
-
-
-    fig2, ax2 = plt.subplots(len(objectives),1,figsize=(10,10))
-    for i,k in enumerate(objectives):
-        ax2[i].plot(list(range(0,len(all_over_gen[k]))),all_over_gen[k])
-        temp = [0 for i in range(0,len(all_over_gen[k])) ]
-        ax2[i].plot(list(range(0,len(all_over_gen[k]))),temp)
-        ax2[i].set_ylim([0.0, 1.0])
-        if i!=len(objectives)-1:
-            ax2[i].tick_params(
-                axis='x',          # changes apply to the x-axis
-                which='both',      # both major and minor ticks are affected
-                bottom=False,      # ticks along the bottom edge are off
-                top=False,         # ticks along the top edge are off
-                labelbottom=False) # labels along the bottom edge are off
-        h = ax2[i].set_xlabel("NeuronUnit Test: {0}".format(k))
-        #h.set_rotation(90)
-        plt.savefig(str('history_plot_')+str(self.cell_name)+str(self.backend)+str('.png'))
-        ga_out['history_plot_'] = (fig2,plt)
-
-
-    all_over_gen = {}
-    for i,k in enumerate(objectives):
-        all_over_gen[k] = []
-        for gen in ga_out['gen_vs_pop']:
-            sorted_pop = sorted([(np.sum(ind.fitness.values),ind) for ind in gen if len(ind.fitness.values)==len(objectives) ], key=lambda tup: tup[0])
-            ind = sorted_pop[0][1]
-            all_over_gen[k].append(ind.fitness.values[i])# if type(ind.dtc) is not type(None) ]
-    plt.figure()
-    sns.set_style("darkgrid")
-
-    fig2, ax2 = plt.subplots(len(objectives),1,figsize=(10,10))
-    for i,k in enumerate(objectives):
-        ax2[i].plot(list(range(0,len(all_over_gen[k]))),all_over_gen[k])
-        temp = [0 for i in range(0,len(all_over_gen[k])) ]
-        ax2[i].plot(list(range(0,len(all_over_gen[k]))),temp)
-        ax2[i].set_ylim([0.0, 1.0])
-        if i!=len(objectives)-1:
-            ax2[i].tick_params(
-                axis='x',          # changes apply to the x-axis
-                which='both',      # both major and minor ticks are affected
-                bottom=False,      # ticks along the bottom edge are off
-                top=False,         # ticks along the top edge are off
-                labelbottom=False) # labels along the bottom edge are off
-        h = ax2[i].set_xlabel("NeuronUnit Test: {0}".format(k))
-        #h.set_rotation(90)
-    plt.savefig(str('crazy_plot_')+str(self.cell_name)+str(self.backend)+str('.png'))
-    ga_out['crazy_plot_'] = (fig2,plt)
-
-    return ga_out
 
 class TSD(dict):
     def __init__(self,tests={},use_rheobase_score=False):
@@ -355,14 +200,6 @@ class TSS(TestSuite):
 
 # DEAP mutation strategies:
 # https://deap.readthedocs.io/en/master/api/tools.html#deap.tools.mutESLogNormal
-'''
-class WSListIndividual(list):
-    """Individual consisting of list with weighted sum field"""
-    def __init__(self, *args, **kwargs):
-        """Constructor"""
-        self.rheobase = None
-        super(WSListIndividual, self).__init__(*args, **kwargs)
-'''
 class WSFloatIndividual(float):
     """Individual consisting of list with weighted sum field"""
     def __init__(self, *args, **kwargs):
@@ -370,246 +207,6 @@ class WSFloatIndividual(float):
         self.rheobase = None
         super(WSFloatIndividual, self).__init__()
 
-'''depriciated
-
-def _and_dont_plot(dtc):
-    # For debugging backends during development.
-    model = mint_generic_model(dtc.backend)
-
-    try:
-        rheobase = dtc.rheobase['value']
-    except:
-        rheobase = dtc.rheobase
-
-    uc = { 'injected_square_current': {'amplitude':rheobase,'duration':DURATION,'delay':DELAY }}
-
-    #dtc.run_number += 1
-    model.set_attrs(**dtc.attrs)
-    model.inject_square_current(uc['injected_square_current'])
-    return model, model.get_membrane_potential().times,model.get_membrane_potential(),uc
-'''
-
-
-#
-@cython.boundscheck(False)
-@cython.wraparound(False)
-def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippets=False,experimental_cell_type="neo_cortical",ground_truth = None):
-    sns.set_style("darkgrid")
-
-    if not isinstance(dtc, Iterable):
-        model = mint_generic_model(dtc.backend)
-        if hasattr(dtc,'rheobase'):
-            try:
-                rheobase = dtc.rheobase['value']
-            except:
-                rheobase = dtc.rheobase
-                uc = {'amplitude':rheobase,'duration':DURATION,'delay':DELAY}
-        if hasattr(dtc,'ampl'):
-            uc = {'amplitude':dtc.ampl,'duration':DURATION,'delay':DELAY}
-
-        model.set_attrs(**dtc.attrs)
-        model.inject_square_current(uc)
-        if str(dtc.backend) is str('ADEXP'):
-            model.finalize()
-        else:
-            pass
-        #vm = model.get_membrane_potential().magnitude
-        sns.set_style("darkgrid")
-        plt.plot(model.get_membrane_potential().times,model.get_membrane_potential().magnitude)#,label='ground truth')
-        plot_backend = mpl.get_backend()
-        if plot_backend == str('agg'):
-            plt.savefig(figname+str('debug.png'))
-        else:
-            plt.show()
-
-    else:
-
-        if type(second_pop) is not type(None):
-            dtcpop = copy.copy(dtc)
-            dtc = None
-
-            fig = plt.figure(figsize=(11,11),dpi=100)
-            ax = fig.add_subplot(111)
-
-
-            for dtc in dtcpop:
-                model = mint_generic_model(dtc.backend)
-                if hasattr(dtc,'rheobase'):
-                    try:
-                        rheobase = dtc.rheobase['value']
-                    except:
-                        rheobase = dtc.rheobase
-                        uc = {'amplitude':rheobase,'duration':DURATION,'delay':DELAY}
-                if hasattr(dtc,'ampl'):
-                    uc = {'amplitude':dtc.ampl,'duration':DURATION,'delay':DELAY}
-                #dtc.run_number += 1
-                model.set_attrs(**dtc.attrs)
-                if rheobase is None:
-                    break
-                model.inject_square_current(uc)
-                #if model.get_spike_count()>1:
-                #    break
-                if str(dtc.backend) in str('ADEXP'):
-                    model.finalize()
-                else:
-                    pass
-                vm = model.get_membrane_potential()#.magnitude
-                if str("RAW") in dtc.backend:
-                    label=str('Izhikevich Model')
-
-                if str("ADEXP") in dtc.backend:
-                    label=str('Adaptive Exponential Model')
-                if str("GLIF") in dtc.backend:
-                    label=str('Generalized Leaky Integrate and Fire')
-
-                sns.set_style("darkgrid")
-                if snippets:
-                    snippets_ = get_spike_waveforms(vm)
-                    plt.plot(snippets_.times,snippets_,color='red',label=str('model type: ')+label)#,label='ground truth')
-                else:
-                    plt.plot(vm.times,vm,color='red',label=str('model type: ')+label)#,label='ground truth')
-                ax.legend()
-                sns.set_style("darkgrid")
-
-                plt.title(experimental_cell_type)#+str(' Model Type: '+str(second_pop[0].backend)+str(dtc.backend)))
-                plt.xlabel('Time (ms)')
-                plt.ylabel('Amplitude (mV)')
-
-            for dtc in second_pop:
-                model = mint_generic_model(dtc.backend)
-                if hasattr(dtc,'rheobase'):
-                    try:
-                        rheobase = dtc.rheobase['value']
-                    except:
-                        rheobase = dtc.rheobase
-                        uc = {'amplitude':rheobase,'duration':DURATION,'delay':DELAY}
-                if hasattr(dtc,'ampl'):
-                    uc = {'amplitude':dtc.ampl,'duration':DURATION,'delay':DELAY}
-
-                #uc = {'amplitude':rheobase,'duration':DURATION,'delay':DELAY}
-                #dtc.run_number += 1
-                model.set_attrs(**dtc.attrs)
-                model.inject_square_current(uc)
-                #if model.get_spike_count()>1:
-                #    break
-                if str(dtc.backend) in str('ADEXP'):
-                    model.finalize()
-                else:
-                    pass
-                vm = model.get_membrane_potential()#.magnitude
-                if str("RAW") in dtc.backend:
-                    label=str('Izhikevich Model')
-
-                if str("ADEXP") in dtc.backend:
-                    label=str('Adaptive Exponential Model')
-
-                if str("GLIF") in dtc.backend:
-                    label=str('Generalized Leaky Integrate and Fire')
-                #label = label+str(latency)
-
-                sns.set_style("darkgrid")
-                if snippets:
-                    snippets_ = get_spike_waveforms(vm)
-                    plt.plot(snippets_.times,snippets_,color='blue',label=str('model type: ')+label)#,label='ground truth')
-                else:
-                    plt.plot(vm.times,vm,color='blue',label=str('model type: ')+label)#,label='ground truth')
-                #plt.plot(model.get_membrane_potential().times,vm,color='blue',label=label)#,label='ground truth')
-                #ax.legend(['A simple line'])
-                ax.legend()
-                sns.set_style("darkgrid")
-
-                plt.title(experimental_cell_type)#+str(' Model Type: '+str(second_pop[0].backend)+str(dtc.backend)))
-                plt.xlabel('Time (ms)')
-                plt.ylabel('Amplitude (mV)')
-
-            if third_pop is None:
-                pass
-            else:
-
-                for dtc in third_pop:
-                    model = mint_generic_model(dtc.backend)
-                    if hasattr(dtc,'rheobase'):
-                        try:
-                            rheobase = dtc.rheobase['value']
-                        except:
-                            rheobase = dtc.rheobase
-                            uc = {'amplitude':rheobase,'duration':DURATION,'delay':DELAY}
-                    if hasattr(dtc,'ampl'):
-                        uc = {'amplitude':dtc.ampl,'duration':DURATION,'delay':DELAY}
-
-                    model.set_attrs(**dtc.attrs)
-                    model.inject_square_current(uc)
-                    #if model.get_spike_count()>1:
-                    #    break
-                    if str(dtc.backend) in str('ADEXP'):
-                        model.finalize()
-                    else:
-                        pass
-                    vm = model.get_membrane_potential()#.magnitude
-                    sns.set_style("darkgrid")
-
-                    if str("RAW") in dtc.backend:
-                        label=str('Izhikevich Model')
-
-                    if str("ADEXP") in dtc.backend:
-                        label=str('Adaptive Exponential Model')
-                    if str("GLIF") in dtc.backend:
-                        label=str('Generalized Leaky Integrate and Fire')
-                    #label = label+str(latency)
-                    if snippets:
-
-                        snippets_ = get_spike_waveforms(vm)
-                        plt.plot(snippets_.times,snippets_,color='green',label=str('model type: ')+label)#,label='ground truth')
-                        #ax.legend(['A simple line'])
-                        ax.legend()
-                    else:
-                        plt.plot(vm.times,vm,color='green',label=str('model type: ')+label)#,label='ground truth')
-
-                plot_backend = mpl.get_backend()
-                sns.set_style("darkgrid")
-
-                plt.title(experimental_cell_type)#+str(' Model Type: '+str(second_pop[0].backend)+str(dtc.backend)))
-                plt.xlabel('Time (ms)')
-                plt.ylabel('Amplitude (mV)')
-
-                if str('agg') in plot_backend:
-
-                    plt.savefig(figname+str('all_traces.png'))
-                else:
-                    plt.show()
-        else:
-            dtcpop = copy.copy(dtc)
-            dtc = None
-            for dtc in dtcpop[0:2]:
-                model = mint_generic_model(dtc.backend)
-                if hasattr(dtc,'rheobase'):
-                    try:
-                        rheobase = dtc.rheobase['value']
-                    except:
-                        rheobase = dtc.rheobase
-                        uc = {'amplitude':rheobase,'duration':DURATION,'delay':DELAY}
-                if hasattr(dtc,'ampl'):
-                    uc = {'amplitude':dtc.ampl,'duration':DURATION,'delay':DELAY}
-
-                #dtc.run_number += 1
-                model.set_attrs(**dtc.attrs)
-                model.inject_square_current(uc)
-                vm = model.get_membrane_potential().magnitude
-                sns.set_style("darkgrid")
-
-                plt.plot(model.get_membrane_potential().times,vm)#,label='ground truth')
-            plot_backend = mpl.get_backend()
-            sns.set_style("darkgrid")
-
-            plt.title(experimental_cell_type)#+str(' Model Type: '+str(second_pop[0].backend)+str(dtc.backend)))
-            plt.xlabel('Time (ms)')
-            plt.ylabel('Amplitude (mV)')
-
-            if plot_backend == str('agg'):
-                plt.savefig(figname+str('all_traces.png'))
-            else:
-                plt.show()
-    return None, None
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -672,12 +269,6 @@ def process_rparam(backend):
         rp = random_param
         chosen_keys = rp.keys()
 
-        '''
-        rp = {}
-        chosen_keys =[str('a'),str('b'),str('c'),str('C'),str('d')]
-        for key in chosen_keys:
-            rp[key] = random_param[key]
-        '''
     if str('ADEXP') in str(backend):
         random_param.pop('Iext',None)
         rp = random_param
@@ -741,7 +332,7 @@ def score_only(dtc,pred,test):
 
 def get_centres(use_test,backend,explore_param):
     '''
-    Do optimization, but then get cluster centres.
+    Do optimization, but then get cluster centres of parameters
     '''
     MU = 7
     NGEN = 7
@@ -778,14 +369,12 @@ def mint_generic_model(backend):
     model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = str(backend))
     return model
 
+import pandas as pd
 
 def save_models_for_justas(dtc):
     with open(str(list(dtc.attrs.values()))+'.csv', 'w') as writeFile:
-        import pandas as pd
         df = pd.DataFrame([dtc.attrs])
-
         writer = csv.writer(writeFile)
-
         writer.writerows(df)
 
 def write_opt_to_nml(path,param_dict):
@@ -924,35 +513,6 @@ def get_rh(dtc,rtest_class):
         dtc.rheobase = - 1.0
     return dtc
 
-'''
-def dtc_to_rheo_serial(dtc):
-    # If  test taking data, and objects are present (observations etc).
-    # Take the rheobase test and store it in the data transport container.
-    dtc.evaluate = {}
-    backend_ = dtc.backend
-    model = mint_generic_model(backend_)
-    model.set_attrs(dtc.attrs)
-    rtest = [ t for t in dtc.tests if str('RheobaseTest') == t.name ]
-    if len(rtest):
-        rtest = rtest[0]
-        dtc.rheobase = rtest.generate_prediction(model)
-        if type(dtc.rheobase) is not type(None):# and dtc.rheobase !=-1.0:
-            dtc.rheobase = dtc.rheobase['value']
-            obs = rtest.observation
-            score = rtest.compute_score(obs,dtc.rheobase)
-            dtc.evaluate[rtest.name] = 1.0 - score.norm_score
-            rtest.params['injected_square_current']['amplitude'] = dtc.rheobase
-        else:
-            dtc.rheobase = None
-            dtc.evaluate[rtest.name] = 1.0
-
-    else:
-        # otherwise, if no observation is available, or if rheobase test score is not desired.
-        # Just generate rheobase predictions, giving the models the freedom of rheobase
-        # discovery without test taking.
-        dtc = get_rh(dtc,rtest)
-    return dtc
-'''
 
 def substitute_parallel_for_serial(rtest):
     rtest = RheobaseTestP(rtest.observation)
@@ -1190,91 +750,7 @@ def allocate_worst(xtests,dtc):
 
 def sigmoid(x):
     return math.exp(-np.logaddexp(0, -x))
-'''depricated
-def allen_scores(dtc):
-    ephys_dict = dtc.ephys.as_dict()
-    if not 'spikes' in ephys_dict.keys():
-        dtc.scores = None
-        return dtc
-    dtc.scores = None
-    dtc.scores = {}
-    for k,v in compare.items():
-        dtc.scores[k] = 1.0
-    helper = helper_tests[0]
 
-    for k,observation in compare.items():
-        if str(k) not in str('spikes'):
-            #compute interspike firing frame_dynamics
-
-            obs = {}
-            if type(observation) is not type({'1':0}):
-                obs['mean'] = observation
-            else:
-                obs = observation
-            prediction = {}
-            if k in ephys_dict.keys():
-                assert prediction['mean'] == ephys_dict[k]['mean']
-                #helper.name = str(k)
-                #obs['std']= 1.0
-                #prediction['std']=1.0
-                prediction = dtc.preds[k]
-                try:
-                    score = VmTest.compute_score(helper,obs,prediction)
-                except:
-
-                    score = None
-                dtc.tests[k] = VmTest(obs)#.compute_score(helper,obs,prediction)
-                if score is not None and score.norm_score is not None:
-                    dtc.scores[k] = 1.0-score.norm_score
-                else:
-                    dtc.scores[k] = 1.0
-        if str(k) in str('spikes'):
-            #compute perspike waveform features on just the first spike
-            try:
-                first_spike = observation[0]
-            except:
-                pass
-            for key,spike_obs in first_spike.items():
-
-                #if not str('direct') in key and not str('adp_i') in key and not str('peak_i') in key and not str('fast_trough_i') and not str('fast_trough_i') and not str('trough_i'):
-                try:
-                    obs = {'mean': spike_obs}
-                    prediction = {'mean': ephys_dict['spikes'][0][key]}
-                    helper.name = str(key)
-                    obs['std']=1.0
-                    prediction['std']=1.0
-                    dtc.preds[key] = prediction
-                    #score = VmTest.compute_score(helper,obs,prediction)
-
-                    try:
-                        score = VmTest.compute_score(helper,obs,prediction)
-                    except:
-                        score = None
-
-                    dtc.tests[key] = VmTest(obs)
-                    if not score is None and not score.norm_score is None:
-                        dtc.scores[key] = 1.0-score.norm_score
-                except:
-                    dtc.scores[key] = 1.0
-    dtc.ephys = None
-    dtc.ephys = ephys
-    dtc.spike_number = len(ephys_dict['spikes'])
-    spike_cnt_pred = model.get_spike_count()
-    try:
-        delta = spike_cnt_pred-target
-        dtc.scores['spk_count'] = np.abs(delta)#sigmoid()#spike_cnt_pred-target #
-
-    except:
-        pass
-    try:
-        delta = np.abs(float(dtc.ampl)-dtc.pre_obs['current_test'])
-        dtc.scores['current_test'] = delta #sigmoid(np.abs(delta))
-
-    except:
-        pass
-
-    return dtc
-'''
 def get_dtc_pop(contains_dtcpop,filtered_tests,model_parameters,backend = 'ADEXP'):
     from neuronunit.optimisation.optimisations import SciUnitOptimisation
     #from neuronunit.optimisation.optimization_management import get_dtc_pop
@@ -2036,17 +1512,16 @@ def dtc_to_predictions(dtc):
 def evaluate_allen(dtc,regularization=True):
     # assign worst case errors, and then over write them with situation informed errors as they become available.
     fitness = [ 1.0 for i in range(0,len(dtc.ascores)) ]
-    for int_,t in enumerate(dtc.ascores.keys()):
-       if regularization:
-          if dtc.ascores[str(t)] is None:
-              fitness[int_] = 1.0
-          else:
-              fitness[int_] = dtc.ascores[str(t)]**(1.0/2.0)
-       else:
-          if dtc.ascores[str(t)] is None:
-              fitness[int_] = 1.0
-          else:
-              fitness[int_] = dtc.ascores[str(t)]
+    if regularization:
+        fitness0 = (t**(1.0/2.0) for int_,t in enumerate(dtc.ascores.keys()))
+        fitness1 = (np.abs(t) for int_,t in enumerate(dtc.ascores.keys()))
+        fitness = [ (fitness1[i]+j)/2.0 for i,j in enumerate(fitness0)]
+        return tuple(fitness,)
+    else:
+        if dtc.ascores[str(t)] is None:
+            fitness[int_] = 1.0
+        else:
+            fitness[int_] = dtc.ascores[str(t)]
     return tuple(fitness,)
 
 def evaluate(dtc,regularization=False,elastic_net=True):
@@ -2057,18 +1532,13 @@ def evaluate(dtc,regularization=False,elastic_net=True):
     if not hasattr(dtc,str('scores')):
         return fitness
 
-    #fitness = [ 1.0 for i in range(0,greatest) ]
     for int_,t in enumerate(dtc.scores.keys()):
-       if regularization:
-          fitness.append(float(dtc.scores[str(t)]**(1.0/2.0)))
-      elif elastic_net:
-          a * L1 + b * L2
-          #from sklearn.linear_model import ElasticNet
-          #regr = ElasticNet(random_state=0)
-          #regr.fit(X, y)
-          fitness
-       else:
-          fitness.append(float(dtc.scores[str(t)]))
+        if elastic_net:
+           fitness0 = (t**(1.0/2.0) for int_,t in enumerate(dtc.ascores.keys()))
+           fitness1 = (np.abs(t) for int_,t in enumerate(dtc.ascores.keys()))
+           fitness = [ (fitness1[i]+j)/2.0 for i,j in enumerate(fitness0)]
+        else:
+           fitness.append(float(dtc.scores[str(t)]))
     return tuple(fitness,)
 
 def get_trans_list(param_dict):
@@ -2296,67 +1766,9 @@ def stochastic_gradient_descent(ga_out):
     print(sklearn_sgd_predictions)
     print(ga_out['pf'][0].dtc.attrs)
     delta_y = Y_test - sklearn_sgd_predictions
-    #pl.matshow(cm)
-    #pl.title('Confusion matrix of the classifier')
-    #pl.colorbar()
-    #pl.show()
 
     return sgd, losslasso, lossridge
 
-
-
-
-'''
-Depricated
-def new_single_gene(pop,dtcpop,td):
-    # some times genes explored will not return
-    # un-usable simulation parameters
-    # genes who have no rheobase score
-    # will be discarded.
-    #
-    # optimiser needs a stable
-    # gene number however
-    #
-    # This method finds how many genes have
-    # been discarded, and tries to build new genes
-    # from the existing distribution of gene values, by mimicing a normal random distribution
-    # of genes that are not deleted.
-    # if a rheobase value cannot be found for a given set of dtc model more_attributes
-    # delete that model, or rather, filter it out above, and make new genes based on
-    # the statistics of remaining genes.
-    # it's possible that they wont be good models either, so keep trying in that event.
-    # a new model from the mean of the pre-existing model attributes.
-
-    # TODO:
-    # boot_new_genes is a more standard, and less customized implementation of the code below.
-    # pop, dtcpop = boot_new_genes(number_genes,dtcpop,td)
-    dtcpop = list(map(dtc_to_rheo,dtcpop))
-    # Whats more boot_new_genes maps many to many (efficient).
-    # Code below is maps, many to one ( less efficient).
-    impute_gene = [] # impute individual, not impute index
-    ind = WSListIndividual()
-    for t in td:
-        #try:
-        mean = np.mean([ d.attrs[t] for d in dtcpop ])
-        std = np.std([ d.attrs[t] for d in dtcpop ])
-        sample = numpy.random.normal(loc=mean, scale=2*np.abs(std), size=1)[0]
-            #import pdb; pdb.set_trace()
-        ind.append(sample)
-    dtc = DataTC()
-    # Brian and PyNN models should not have to read from a file.
-    # This line satifies an older NU design flaw, that all models evaluated must have
-    # a disk readable path.
-    # LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
-    dtc.attrs = {}
-    for i,j in enumerate(ind):
-        dtc.attrs[str(td[i])] = j
-    dtc.backend = dtcpop[0].backend
-    dtc.tests = dtcpop[0].tests
-    dtc = dtc_to_rheo(dtc)
-    #print(dtc.rheobase)
-    ind.rheobase = dtc.rheobase
-    return ind,dtc
-'''
 
 def filtered(pop,dtcpop):
     dtcpop = [ dtc for dtc in dtcpop if type(dtc.rheobase) is not type(None) ]
@@ -2405,12 +1817,6 @@ def dtc2gene(pop,dtcpop):
             pop[i].boundary_dict = dtcpop[0].boundary_dict
     return pop
 
-'''
-def dtc2model(pop,dtcpop):
-    for i,ind in enumerate(pop):
-        pop[i].rheobase = dtcpop[i].rheobase
-    return pop
-'''
 
 def pop2dtc(pop,dtcpop):
     for i,dtc in enumerate(dtcpop):
@@ -2420,14 +1826,6 @@ def pop2dtc(pop,dtcpop):
             dtcpop[i].boundary_dict = pop[0].boundary_dict
     return dtcpop
 
-'''
-def resample_high_sampling_freq(dtcpop):
-    for d in dtcpop:
-        d.attrs['dt'] = d.attrs['dt'] *(1.0/21.41)
-
-    (dtcpop,_) = add_dm_properties_to_cells(dtcpop)
-    return dtcpop
-'''
 def score_attr(dtcpop,pop):
     for i,d in enumerate(dtcpop):
         if not hasattr(pop[i],'dtc'):
@@ -2451,9 +1849,6 @@ def eval_subtest(name):
                 score, dtc = bridge_judge((t, dtc))
 
 
-import pdb
-import quantities as pq
-from sciunit import scores
 
 def bridge_passive(package):
     '''
@@ -2539,100 +1934,6 @@ def bridge_passive(package):
             score = t.compute_score(pred,t.observation)
     return score, dtc, pred
 
-    '''
-    model = new_model(dtc)
-    t.setup_protocol(model)
-    result = t.get_result(model)
-
-    # standard deviations erroneously set to 0, in imputate predictions
-    # make simulated samples
-
-    assert 'mean' in t.observation.keys()
-    pred = t.extract_features(model,result)
-    if 'std' in pred.keys():
-        if float(pred['std']) == 0.0:
-            pred['std'] = 10.0*pred['mean'].units
-
-    else:
-        if not 'mean' in pred.keys():
-            pred['mean'] = pred['value']
-
-    assert 'mean' in t.observation.keys()
-    #if 'std' not in t.observation.keys():
-    take_anything = list(t.observation.values())[0]
-    if 'std' not in t.observation.keys():
-        std.observation['std'] = 15*take_anything.magnitude * take_anything.units
-    take_anything = list(pred.values())[0]
-    pred['std'] = 15*take_anything.magnitude * take_anything.units
-
-    score = t.compute_score(t.observation,pred)
-    return score, dtc
-    '''
-
-from neuronunit.optimisation.optimisations import SciUnitOptimisation
-import random
-
-def can_this_map(dtc):
-    '''
-    # used for debugging parallel mapping of brian class with passive tests
-    # Inputs single data transport container modules, and neuroelectro observations that
-    # inform test error error_criterion
-    # Outputs Neuron Unit evaluation scores over error criterion
-    '''
-    tests = dtc.tests
-    if not hasattr(dtc,'scores') or dtc.scores is None:
-        dtc.scores = None
-        dtc.scores = {}
-
-    if isinstance(dtc.rheobase,type(None)) or type(dtc.rheobase) is type(None):
-        dtc = allocate_worst(tests, dtc)
-        if self.verbose:
-            print('score worst via test failure at {0}'.format('rheobase'))
-    else:
-
-        for k, t in enumerate(tests):
-            key = str(t)
-            dtc.scores[key] = 1.0
-            #dtc = self.format_test(dtc)
-            t.params = dtc.protocols[k]
-            if 'mean' not in t.observation.keys():
-
-                t.observation['mean']  = t.observation['value']
-                assert 'mean' in t.observation.keys()
-            #model = dtc.dtc_to_model()
-
-            #model = mint_generic_model(dtc.backend)
-            model = new_model(dtc)
-            if not t.passive:
-                pred = t.generate_prediction(model)
-            else:
-                pass
-    return dtc
-    '''
-    t.setup_protocol(model)
-    result = t.get_result(model)
-
-    assert 'mean' in t.observation.keys()
-    pred = t.extract_features(model, result)
-    if 'std' in pred.keys():
-        if float(pred['std']) == 0.0:
-            pred['std'] = 1.0 * pred['mean'].units
-
-    else:
-        if not 'mean' in pred.keys():
-            pred['mean'] = pred['value']
-
-    assert 'mean' in t.observation.keys()
-    # if    'std' not in t.observation.keys():
-    take_anything = list(t.observation.values())[0]
-    t.observation['std'] = 15 * take_anything.magnitude * take_anything.units
-    take_anything = list(pred.values())[0]
-    pred['std'] = 15 * take_anything.magnitude * take_anything.units
-    return dtc
-    '''
-
-
-
 class OptMan():
     def __init__(self,tests, td=None, backend = None,hc = None,boundary_dict = None, error_length=None,protocol=None,simulated_obs=None,verbosity=None,PARALLEL_CONFIDENT=None,tsr=None):
         self.tests = tests
@@ -2649,7 +1950,7 @@ class OptMan():
         self.boundary_dict= boundary_dict
         self.protocol = protocol
         # note this is not effective at changing parallel behavior yet
-        if type(PARALLEL_CONFIDENT) is type(None):
+        if PARALLEL_CONFIDENT not in globals():
             self.PARALLEL_CONFIDENT = True
         else:
             self.PARALLEL_CONFIDENT = PARALLEL_CONFIDENT
@@ -2660,11 +1961,8 @@ class OptMan():
         if type(tsr) is not None:
             self.tsr = tsr
 
-    #depricated?
-
     def new_single_gene(self,dtc,td):
         random.seed(datetime.now())
-        #random.seed(64)
         try:
             DO = SciUnitOptimisation(offspring_size = 1,
                 error_criterion = [self.tests], boundary_dict = dtc.boundary_dict,
@@ -3019,85 +2317,6 @@ class OptMan():
             pickle.dump(seeds,f)
         return seeds, df
 
-    def round_trip_test_rheob(self,tests,backend,free_paramaters=None,NGEN=None,MU=None):
-        '''
-        # Inputs:
-        #    -- tests, a list of NU test types,
-        #    -- backend a string encoding what model, backend, simulator to use.
-        # Outputs:
-        #    -- a score, that should be close to zero larger is worse.
-        # Synopsis:
-        #    -- Given any models
-        # lets check if the optimiser can find arbitarily sampeled points in
-        # a parameter space, using only the information in the error gradient.
-        # make some new tests based on internally generated data
-        # as opposed to experimental data.
-        '''
-
-        out_tests = []
-
-        #dsolution.rheobase = tests['RheobaseTest'].observation['value']
-        if NGEN is None:
-            NGEN = 10
-        if MU is None:
-            MU = 10
-        ranges = MODEL_PARAMS[backend]
-
-        if self.protocol['allen']:
-            dtc = False
-            while dtc is False:
-                dsolution,rp,chosen_keys,random_param = process_rparam(backend)
-                free_params = random_param.keys()
-
-                dtc = self.make_simulated_observations(tests,backend,rp)
-                dsolution.tests = tests
-            #dtc = new_tests
-            observations = dtc.preds
-            target_spikes = dtc.spike_number+10
-            observation_spike = {'value': target_spikes}
-            ga_out, DO = run_ga(ranges,NGEN,observations,free_params=free_params, MU = MU, backend=backend, selection=str('selNSGA3'), protocol={'allen':True,'elephant':False})
-            ga_out.b = None
-            ga_out.bdtc = ga_out['pf'][0].dtc
-            dtcpop0 = [ p.dtc for p in ga_out['pf'] ]
-            dtcpop1 = [ dsolution for i in range(0,len(ga_out['pf'])) ]
-            inject_and_plot(dtcpop0,second_pop=dtcpop1,third_pop=[dtcpop0[0],dtcpop0[-1]],figname='snippets.png',snippets=True)
-
-        elif self.protocol['elephant']:
-            new_tests = False
-            while new_tests is False:
-                dsolution,rp,chosen_keys,random_param = process_rparam(backend)
-                free_params = random_param.keys()
-
-                new_tests = self.make_simulated_observations(tests,backend,rp)
-
-            if free_paramaters is None:
-                fp = chosen_keys
-            else:
-                fp = free_paramaters
-            dsolution.rheobase = new_tests['RheobaseTest'].observation
-            import pdb
-            mini_tests = {}
-            cnt=0
-            while check_test(new_tests):
-                new_tests = self.make_simulated_observations(tests,backend,rp)
-                if self.verbose:
-                    print('in loop cnt=: {0}'.format(cnt))
-            results = {}
-            mini_tests = {'RheobaseTest': new_tests['RheobaseTest']}
-
-            ga_out, DO = run_ga(ranges,NGEN,mini_tests,free_params=fp, MU = MU, backend=backend, selection=str('selNSGA2'))
-
-            #for t in new_tests:
-            dtcpop0 = [ p.dtc for p in ga_out['pf'][0:2] ]
-            dtcpop1 = [ dsolution for i in range(0,len(ga_out['pf'])) ][0:2]
-            if self.verbose:
-                print(ga_out['pf'][0].dtc.scores)
-                print(results)
-
-                print(ga_out['pf'][0].dtc.attrs)
-
-            return ga_out,dtcpop0,dtcpop1
-
     @timer
     def pred_evaluation(self,dtc):
         # Inputs single data transport container modules, and neuroelectro observations that
@@ -3277,9 +2496,9 @@ class OptMan():
                 dtc = self.elephant_evaluation((dtc,tests))
 
             return pop, dtc
-    #@cython.boundscheck(False)
-    #@cython.wraparound(False)
-    #@timer
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    @timer
     def format_test(self,dtc):
         # pre format the current injection dictionary based on pre computed
         # rheobase values of current injection.
