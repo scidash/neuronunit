@@ -6,6 +6,7 @@
 import warnings
 import matplotlib
 
+# optional imports
 try:
     matplotlib.use('agg')
 except:
@@ -15,8 +16,6 @@ SILENT = True
 RATIO_SCORE = False
 if SILENT:
     warnings.filterwarnings("ignore")
-
-# optional imports
 
 PARALLEL_CONFIDENT = True
 #    Goal is based on this. Don't optimize to a singular point, optimize onto a cluster.
@@ -41,15 +40,11 @@ import cython
 
 from neuronunit.capabilities.spike_functions import get_spike_waveforms
 
-import logging
-logger = logging.getLogger('brian2')
-#logger.debug('test')
 import copy
 import math
 import quantities as pq
 import numpy
 
-#from pyneuroml import pynml
 
 from neuronunit.optimisation.data_transport_container import DataTC
 #from neuronunit.models.interfaces import glif
@@ -2054,7 +2049,7 @@ def evaluate_allen(dtc,regularization=True):
               fitness[int_] = dtc.ascores[str(t)]
     return tuple(fitness,)
 
-def evaluate(dtc,regularization=False):
+def evaluate(dtc,regularization=False,elastic_net=True):
     # assign worst case errors, and then over write them with situation informed errors as they become available.
     greatest = len(dtc.tests)
     fitness = []# 1.0 for i in range(0,greatest) ]
@@ -2066,6 +2061,12 @@ def evaluate(dtc,regularization=False):
     for int_,t in enumerate(dtc.scores.keys()):
        if regularization:
           fitness.append(float(dtc.scores[str(t)]**(1.0/2.0)))
+      elif elastic_net:
+          a * L1 + b * L2
+          #from sklearn.linear_model import ElasticNet
+          #regr = ElasticNet(random_state=0)
+          #regr.fit(X, y)
+          fitness
        else:
           fitness.append(float(dtc.scores[str(t)]))
     return tuple(fitness,)
