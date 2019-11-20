@@ -7,7 +7,7 @@ import colorsys
 import numpy
 import collections
 import cython
-
+import copy
 
 import sys
 KERNEL = ('ipykernel' in sys.modules)
