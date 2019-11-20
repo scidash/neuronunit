@@ -86,15 +86,6 @@ def _update_history_and_hof(halloffame,pf, history, population,td,mu):
             temp = purify(temp)
             history.update(temp)
     if pf is not None:
-
-            for p in population:
-                print(p.dtc.from_imputation, 'from imputation')
-                #p = strip_object(p)
-            pass
-    if pf is not None:
-        for ind in population:
-            for i,j in enumerate(ind):
-                ind[i] = float(j)
         try:
             pf.update(temp[0:mu])
         except:
@@ -256,8 +247,6 @@ def eaAlphaMuPlusLambdaCheckpoint(
         toolbox.register("select", tools.selNSGA2)
 
         parents = _evaluate_invalid_fitness(toolbox, population)
-        import pdb
-        pdb.set_trace()
         invalid_count = len(parents)
         gen_vs_hof = []
         hof, pf,history = _update_history_and_hof(hof, pf, history, parents, td,mu)
