@@ -1,4 +1,4 @@
-"""NeuronUnit model class for reduced neuron models"""
+"""NeuronUnit model class for Network models"""
 
 import numpy as np
 from neo.core import AnalogSignal
@@ -9,6 +9,7 @@ import neuronunit.models as mod
 import neuronunit.capabilities.spike_functions as sf
 from neuronunit.models import backends
 from generic_network import net_sim_runner, get_dummy_synapses
+import pyNN.neuron as sim
 
 
 class NetworkModel(cap.ReceivesCurrent,
@@ -42,7 +43,6 @@ class NetworkModel(cap.ReceivesCurrent,
         return self.binary_train
 
     def inject_noise_current(self, stim_current, syn_weights):
-        import pyNN.neuron as sim
         noisee = sim.NoisyCurrentSource(mean=0.74/1000.0, stdev=4.00/1000.0, start=0.0, stop=2000.0, dt=1.0)
         noisei = sim.NoisyCurrentSource(mean=1.440/1000.0, stdev=4.00/1000.0, start=0.0, stop=2000.0, dt=1.0)
         stim_noise_currents = [noisee,noisei]
