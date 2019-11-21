@@ -3,6 +3,8 @@ import seaborn as sns
 import matplotlib
 import matplotlib.colors as mplcol
 import matplotlib.pyplot as plt
+import matplotlib as mpl
+
 import colorsys
 import numpy
 import collections
@@ -20,13 +22,22 @@ import numpy as np
 import pandas as pd
 import bs4
 from IPython.display import HTML,Javascript,display
+#KERNEL = ('ipykernel' in sys.modules)
+from collections.abc import Iterable
+#from neuronunit.tests.base import AMPL, DELAY, DURATION
 
-KERNEL = ('ipykernel' in sys.modules)
+#from collections.abc import Iterable
+import seaborn as sns
+from neuronunit.tests.base import AMPL, DELAY, DURATION
+import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippets=False,experimental_cell_type="neo_cortical",ground_truth = None,BPO=True):
     sns.set_style("darkgrid")
+    from neuronunit.optimisation.optimization_management import mint_generic_model
+
     if not isinstance(dtc, Iterable):
         model = mint_generic_model(dtc.backend)
         if hasattr(dtc,'rheobase'):
@@ -88,11 +99,13 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
 
                 if str("RAW") in dtc.backend:
                     label=str('Izhikevich Model')
-                if str("ADEXP") in dtc.backend:
-                    label=str('Adaptive Exponential Model')
                 if str("GLIF") in dtc.backend:
                     label=str('Generalized Leaky Integrate and Fire')
 
+                if str("BHH") in dtc.backend:
+                    label=str('Hodgkin Huxley Model')
+                if str("ADEXP") in dtc.backend:
+                    label=str('Adaptive Exponential Model')
                 sns.set_style("darkgrid")
                 if snippets:
                     snippets_ = get_spike_waveforms(vm)
