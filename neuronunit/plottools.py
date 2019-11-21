@@ -25,9 +25,8 @@ KERNEL = ('ipykernel' in sys.modules)
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippets=False,experimental_cell_type="neo_cortical",ground_truth = None):
+def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippets=False,experimental_cell_type="neo_cortical",ground_truth = None,BPO=True):
     sns.set_style("darkgrid")
-
     if not isinstance(dtc, Iterable):
         model = mint_generic_model(dtc.backend)
         if hasattr(dtc,'rheobase'):
@@ -48,6 +47,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
         #vm = model.get_membrane_potential().magnitude
         sns.set_style("darkgrid")
         plt.plot(model.get_membrane_potential().times,model.get_membrane_potential().magnitude)#,label='ground truth')
+        dtc.vm = model.get_membrane_potential()
         plot_backend = mpl.get_backend()
         if plot_backend == str('agg'):
             plt.savefig(figname+str('debug.png'))
@@ -59,14 +59,15 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
         if type(second_pop) is not type(None):
             dtcpop = copy.copy(dtc)
             dtc = None
-
             fig = plt.figure(figsize=(11,11),dpi=100)
             ax = fig.add_subplot(111)
-
-
-            for dtc in dtcpop:
+            for index,dtc in enumerate(dtcpop):
+                color = 'lightblue'
+                if index == 0:
+                    color = 'blue'
                 model = mint_generic_model(dtc.backend)
                 if hasattr(dtc,'rheobase'):
+                    # this ugly hack can be fixed in the file tests/fi.py
                     try:
                         rheobase = dtc.rheobase['value']
                     except:
@@ -74,21 +75,19 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                         uc = {'amplitude':rheobase,'duration':DURATION,'delay':DELAY}
                 if hasattr(dtc,'ampl'):
                     uc = {'amplitude':dtc.ampl,'duration':DURATION,'delay':DELAY}
-                #dtc.run_number += 1
                 model.set_attrs(**dtc.attrs)
                 if rheobase is None:
                     break
                 model.inject_square_current(uc)
-                #if model.get_spike_count()>1:
-                #    break
                 if str(dtc.backend) in str('ADEXP'):
                     model.finalize()
                 else:
                     pass
                 vm = model.get_membrane_potential()#.magnitude
+                dtc.vm = vm
+
                 if str("RAW") in dtc.backend:
                     label=str('Izhikevich Model')
-
                 if str("ADEXP") in dtc.backend:
                     label=str('Adaptive Exponential Model')
                 if str("GLIF") in dtc.backend:
@@ -97,9 +96,10 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                 sns.set_style("darkgrid")
                 if snippets:
                     snippets_ = get_spike_waveforms(vm)
-                    plt.plot(snippets_.times,snippets_,color='red',label=str('model type: ')+label)#,label='ground truth')
+                    dtc.snippets = snippets_
+                    plt.plot(snippets_.times,snippets_,color=color,label=str('model type: ')+label)#,label='ground truth')
                 else:
-                    plt.plot(vm.times,vm,color='red',label=str('model type: ')+label)#,label='ground truth')
+                    plt.plot(vm.times,vm,color=color,label=str('model type: ')+label)#,label='ground truth')
                 ax.legend()
                 sns.set_style("darkgrid")
 
@@ -107,7 +107,10 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                 plt.xlabel('Time (ms)')
                 plt.ylabel('Amplitude (mV)')
 
-            for dtc in second_pop:
+            for index,dtc in enumerate(second_pop):
+                color = 'lightred'
+                if index == 0:
+                    color = 'red'
                 model = mint_generic_model(dtc.backend)
                 if hasattr(dtc,'rheobase'):
                     try:
@@ -129,6 +132,8 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                 else:
                     pass
                 vm = model.get_membrane_potential()#.magnitude
+                vm = model.get_membrane_potential()#.magnitude
+                dtc.vm = vm
                 if str("RAW") in dtc.backend:
                     label=str('Izhikevich Model')
 
@@ -142,9 +147,9 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                 sns.set_style("darkgrid")
                 if snippets:
                     snippets_ = get_spike_waveforms(vm)
-                    plt.plot(snippets_.times,snippets_,color='blue',label=str('model type: ')+label)#,label='ground truth')
+                    plt.plot(snippets_.times,snippets_,color=color,label=str('model type: ')+label)#,label='ground truth')
                 else:
-                    plt.plot(vm.times,vm,color='blue',label=str('model type: ')+label)#,label='ground truth')
+                    plt.plot(vm.times,vm,color=color,label=str('model type: ')+label)#,label='ground truth')
                 #plt.plot(model.get_membrane_potential().times,vm,color='blue',label=label)#,label='ground truth')
                 #ax.legend(['A simple line'])
                 ax.legend()
@@ -158,7 +163,10 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                 pass
             else:
 
-                for dtc in third_pop:
+                for index,dtc in enumerate(second_pop):
+                    color = 'lightgreen'
+                    if index == 0:
+                        color = 'green'
                     model = mint_generic_model(dtc.backend)
                     if hasattr(dtc,'rheobase'):
                         try:
@@ -178,6 +186,8 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                     else:
                         pass
                     vm = model.get_membrane_potential()#.magnitude
+                    #vm = model.get_membrane_potential()#.magnitude
+                    dtc.vm = vm
                     sns.set_style("darkgrid")
 
                     if str("RAW") in dtc.backend:
@@ -191,11 +201,11 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                     if snippets:
 
                         snippets_ = get_spike_waveforms(vm)
-                        plt.plot(snippets_.times,snippets_,color='green',label=str('model type: ')+label)#,label='ground truth')
+                        plt.plot(snippets_.times,snippets_,color=color,label=str('model type: ')+label)#,label='ground truth')
                         #ax.legend(['A simple line'])
                         ax.legend()
                     else:
-                        plt.plot(vm.times,vm,color='green',label=str('model type: ')+label)#,label='ground truth')
+                        plt.plot(vm.times,vm,color=color,label=str('model type: ')+label)#,label='ground truth')
 
                 plot_backend = mpl.get_backend()
                 sns.set_style("darkgrid")
@@ -227,6 +237,8 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                 model.set_attrs(**dtc.attrs)
                 model.inject_square_current(uc)
                 vm = model.get_membrane_potential().magnitude
+                #vm = model.get_membrane_potential()#.magnitude
+                dtc.vm =  model.get_membrane_potential()
                 sns.set_style("darkgrid")
 
                 plt.plot(model.get_membrane_potential().times,vm)#,label='ground truth')
@@ -241,12 +253,9 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                 plt.savefig(figname+str('all_traces.png'))
             else:
                 plt.show()
-    return None, None
-
+    return [dtc,second_pop,third_pop]
 
 def elaborate_plots(self,ga_out):
-
-
     plt.style.use('ggplot')
     fig, axes = plt.subplots(figsize=(10, 10), facecolor='white')
     '''
@@ -286,8 +295,7 @@ def elaborate_plots(self,ga_out):
             linewidth=2,
             label='population average')
         axes.fill_between(gen_numbers, stdminus, stdplus)
-        #axes.plot([i for i in range(0,len(gvh))], gvh,'y--', linewidth=2,  label='grid search error')
-        #axes.plot(gen_numbers, bl, 'go', linewidth=2, label='hall of fame error')
+
         axes.plot(gen_numbers, stdminus, label='std variation lower limit')
         axes.plot(gen_numbers, stdplus, label='std variation upper limit')
         axes.set_xlim(np.min(gen_numbers) - 1, np.max(gen_numbers) + 1)
@@ -305,23 +313,31 @@ def elaborate_plots(self,ga_out):
     logbook = ga_out['log']
     ret = logbook.chapters
     gen = ret['every'].select("gen")
-
     everything = ret["every"]
-    #fig, ax1 = plt.subplots(figsize=(10,10))
-    fig2, ax2 = plt.subplots(len(objectives),1,figsize=(10,10))
+    fig2, ax2 = plt.subplots(len(objectives)+1,1,figsize=(10,10))
 
     for i,k in enumerate(objectives):
 
         line2 = ax2[i].plot(gen, [j[i] for j in everything.select("avg")], "r-", label="Evolution objectives")
         ax2[i].set_ylim([0.0, 1.0])
-        if i!=len(objectives)-1:
+        if i!=len(objectives):
             ax2[i].tick_params(
                 axis='x',          # changes apply to the x-axis
                 which='both',      # both major and minor ticks are affected
                 bottom=False,      # ticks along the bottom edge are off
                 top=False,         # ticks along the top edge are off
                 labelbottom=False) # labels along the bottom edge are off
-        h = ax2[i].set_xlabel("NeuronUnit Test: {0}".format(k))
+        ax2[len(objectives)].plot(
+            gen_numbers,
+            mean,
+            color='black',
+            linewidth=2,
+            label='population average')
+        ax2[len(objectives)].fill_between(gen_numbers, stdminus, stdplus)
+        ax2[len(objectives)].plot(gen_numbers, stdminus, label='std variation lower limit')
+        ax2[len(objectives)].plot(gen_numbers, stdplus, label='std variation upper limit')
+        ax2[len(objectives)].set_xlim(np.min(gen_numbers) - 1, np.max(gen_numbers) + 1)
+        h = ax2[len(objectives)].set_xlabel("NeuronUnit Test: {0}".format(k))
     plt.savefig(str('reliable_history_plot_')+str(self.cell_name)+str(self.backend)+str('.png'))
 
 
