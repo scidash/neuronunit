@@ -1,5 +1,5 @@
 """Tools for plotting (contributed by Blue Brain Project)"""
-
+import seaborn as sns
 import matplotlib
 import matplotlib.colors as mplcol
 import matplotlib.pyplot as plt
