@@ -189,7 +189,7 @@ class testHighLevelOptimisation(unittest.TestCase):
         OM = OptMan(ca1,protocol={'elephant':True,'allen':False})
         out = OM.round_trip_test(ca1,backend,model_parameters.MODEL_PARAMS[backend], NGEN=NGEN, MU=MU)
         return out
-    def test_data_driven_rt_ae(self):
+    def test_not_data_driven_rt_ae(self):
         '''
         forward euler, and adaptive exponential
         '''
