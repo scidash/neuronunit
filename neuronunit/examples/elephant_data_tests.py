@@ -22,10 +22,8 @@ import os
 
 from neuronunit.optimisation.optimization_management import TSD
 #from neuronunit.optimisation.optimization_management import TSD
-
 from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.data_transport_container import DataTC
-
 from neuronunit.optimisation.optimization_management import dtc_to_rheo, mint_generic_model
 from neuronunit.optimisation.optimization_management import OptMan
 
@@ -117,7 +115,7 @@ class testHighLevelOptimisation(unittest.TestCase):
                 ]
 
 
-    def get_cells(self,backend,model_parameters,score_type=None,short_test=None):
+    def get_cells(self,backend,model_parameters,NGEN,MU,score_type=None,short_test=None):
         if score_type is not None:
             from sciunit import scores
             for v in self.test_frame.values():
@@ -127,8 +125,6 @@ class testHighLevelOptimisation(unittest.TestCase):
                     else:
                         values.score_type = scores.ZScore
 
-        NGEN = 8
-        MU = 8
         tests= self.test_frame['Hippocampus CA1 pyramidal cell']
         tests['name'] = 'Hippocampus CA1 pyramidal cell'
         ca1 = TSD(tests = tests,use_rheobase_score=True)
@@ -200,9 +196,15 @@ class testHighLevelOptimisation(unittest.TestCase):
         '''
         forward euler, and adaptive exponential
         '''
+        NGEN = 16
+        MU = 8
+        backend = str('BHH')
+        out = self.get_cells(backend,model_parameters,NGEN,MU)
+
         backend = str('RAW')
-        out = self.get_cells(backend,model_parameters)
+        out = self.get_cells(backend,model_parameters,NGEN,MU)
+
         backend = str('ADEXP')
-        out = self.get_cells(backend,model_parameters)
+        out = self.get_cells(backend,model_parameters,NGEN,MU)
 
         return out

@@ -18,7 +18,7 @@ RATIO_SCORE = False
 if SILENT:
     warnings.filterwarnings("ignore")
 
-PARALLEL_CONFIDENT = True
+PARALLEL_CONFIDENT = False
 #    Goal is based on this. Don't optimize to a singular point, optimize onto a cluster.
 #    Golowasch, J., Goldman, M., Abbott, L.F, and Marder, E. (2002)
 #    Failure of averaging in the construction
@@ -490,13 +490,7 @@ def get_rh(dtc,rtest_class):
     '''
     place_holder = {'n': 86, 'mean': 10 * pq.pA, 'std': 10 * pq.pA, 'value': 10 * pq.pA}
     backend_ = dtc.backend
-    #if type(rtest) is not None:
-    #    return rtest
-    if 'RAW' in backend_ or 'HH' in backend_:
-
-        rtest = RheobaseTest(observation=place_holder,
-                             name='RheobaseTest')
-    elif 'ADEXP' in backend_ or 'GLIF' in backend_ or 'BHH' in backend_:
+    if 'ADEXP' in backend_ or 'GLIF' in backend_ or 'BHH' in backend_:
         rtest = RheobaseTestP(observation=place_holder,
                                 name='RheobaseTest')
     else:
@@ -522,14 +516,14 @@ def get_rtest(dtc):
     place_holder = {'n': 86, 'mean': 10 * pq.pA, 'std': 10 * pq.pA, 'value': 10 * pq.pA}
 
     if not hasattr(dtc,'tests'):#, type(None)):
-        if 'RAW' in dtc.backend or 'HH' in dtc.backend:# or 'GLIF' in dtc.backend:#Backend:
+        if 'RAW' in dtc.backend :# or 'GLIF' in dtc.backend:#Backend:
             rtest = RheobaseTest(observation=place_holder,
                                     name='RheobaseTest')
         else:
             rtest = RheobaseTestP(observation=place_holder,
                                     name='RheobaseTest')
     else:
-        if 'RAW' in dtc.backend or 'HH' in dtc.backend:# or 'GLIF' in dtc.backend:
+        if 'RAW' in dtc.backend:# or 'GLIF' in dtc.backend:
             if not isinstance(dtc.tests, Iterable):
                 rtest = dtc.tests
             else:
@@ -542,7 +536,7 @@ def get_rtest(dtc):
                     else:
                         rtest = RheobaseTest(observation=place_holder,
                                                 name='RheobaseTest')
-                    #rtest = substitute_parallel_for_serial(rtest[0])
+
                 else:
                     rtest = RheobaseTest(observation=place_holder,
                                             name='RheobaseTest')
@@ -563,16 +557,18 @@ def get_rtest(dtc):
                     rtest = RheobaseTestP(observation=place_holder,
                                             name='RheobaseTest')
 
+            #rtest = substitute_parallel_for_serial(rtest[0])
     return rtest
 
 #from collections import OrderedDict
+'''
 def to_map(params,bend):
     dtc = DataTC()
     dtc.attrs = params
     dtc.backend = bend
     dtc = dtc_to_rheo(dtc)
     return dtc
-
+'''
 def dtc_to_model(dtc):
     # If  test taking data, and objects are present (observations etc).
     # Take the rheobase test and store it in the data transport container.
@@ -596,6 +592,8 @@ def dtc_to_rheo(dtc):
     if hasattr(dtc,'tests'):
         if type(dtc.tests) is type({}) and str('RheobaseTest') in dtc.tests.keys():
             rtest = dtc.tests['RheobaseTest']
+            if str('BHH') in dtc.backend_ or str('ADEXP') in dtc.backend_ or str("GLIF") in dtc.backend_:
+                 rtest = RheobaseTestP(dtc.tests['RheobaseTest'].observation)
         else:
             rtest = get_rtest(dtc)
     else:
@@ -1877,7 +1875,8 @@ def bridge_passive(package):
         t.score_type = scores.RatioScore
         score = t.compute_score(pred,t.observation)
     if type(score) is type(None):
-        pass
+        import pdb
+        pdb.set_trace()
         def dont_do_this():
             cnt=0
             while type(pred) is type(None):
@@ -2379,6 +2378,11 @@ class OptMan():
                 print('score worst via test failure at {0}'.format('rheobase'))
         else:
             for k, t in enumerate(tests):
+                if "RheobaseTest" in  t.name:
+                    if str("BHH") in dtc.backend or str("ADEXP") in dtc.backend or str("GLIF") in dtc.backend:
+                        t = RheobaseTestP(t.observation)
+                        t.passive = False
+
                 try:
                     assert hasattr(self.tests,'use_rheobase_score')
                 except:
@@ -2430,6 +2434,9 @@ class OptMan():
                 if score is not None:
                     if score.norm_score is not None:
                         assignment = 1.0 - score.norm_score
+                    else:
+                        import pdb
+                        pdb.set_trace()
                 dtc.scores[key] = assignment
                 if dtc.scores[key] == 1.0:
                     print('failed at: ',t.passive,t.name,t.score_type,pred,t.observation['std'])

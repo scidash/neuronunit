@@ -11,7 +11,7 @@ from numba import jit
 import numpy as np
 from .base import *
 import quantities as qt
-from quantities import mV, ms, s, us, ns
+from quantities import mV, ms, s, us, ns, V
 import matplotlib as mpl
 
 from neuronunit.capabilities import spike_functions as sf
@@ -24,12 +24,12 @@ from types import MethodType
 
 #import matplotlib.pyplot as plt
 # @jit(cache=True) I suspect this causes a memory leak
+#ascii_plot = True
 
 try:
     import asciiplotlib as apl
     fig = apl.figure()
-    fig.plot([0,1], [0,1], label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
-    fig.show()
+    fig.plot([1,1], [2,2])
     ascii_plot = True
 except:
     ascii_plot = False
@@ -118,7 +118,7 @@ class BHHBackend(Backend):
         self.temp_attrs = None
         self.n_spikes = None
         #self.spike_monitor = None
-        self.peak_v = 0.02
+        #self.peak_v = 0.02
         self.verbose = False
         #self.model.get_spike_count = self.get_spike_count
 
@@ -137,6 +137,7 @@ class BHHBackend(Backend):
 
     def get_spike_count(self):
         thresh = threshold_detection(self.vM)
+        print(len(thresh),'num spikes')
         return len(thresh)
 
     def set_stop_time(self, stop_time = 650*pq.ms):
@@ -159,7 +160,6 @@ class BHHBackend(Backend):
         self.HH = HH
 
         if len(attrs):
-            #print(attrs)
             self.El = attrs['El'] * b2.units.mV
             self.EK = attrs['EK'] * b2.units.mV
             self.ENa = attrs['ENa'] * b2.units.mV
@@ -167,11 +167,8 @@ class BHHBackend(Backend):
             self.gK = attrs['gK'] * b2.units.msiemens
             self.gNa = attrs['gNa'] * b2.units.msiemens
             self.C = attrs['C'] * b2.units.ufarad
-            #self.I_stim = stim, simulation_time=st)
 
 
-            #if str('peak_v') in attrs:
-            #    self.peak_v = attrs['peak_v']
 
             self.model.attrs.update(attrs)
         if attrs is None:
@@ -187,11 +184,11 @@ class BHHBackend(Backend):
         transform_function = interp1d([float(t) for t in self.vM.times],[float(v) for v in self.vM.magnitude])
         xnew = np.linspace(0, float(np.max(self.vM.times)), num=1004001, endpoint=True)
         vm_new = transform_function(xnew) #% generate the y values for all x values in xnew
-        self.vM = AnalogSignal(vm_new,units = mV,sampling_period = float(xnew[1]-xnew[0]) * pq.s)
+        self.vM = AnalogSignal(vm_new,units = V,sampling_period = float(xnew[1]-xnew[0]) * pq.s)
         if self.verbose:
 
             print(len(self.vM))
-        self.vM = AnalogSignal(vm_new,units = mV,sampling_period = float(xnew[1]-xnew[0]) * pq.s)
+        self.vM = AnalogSignal(vm_new,units = V,sampling_period = float(xnew[1]-xnew[0]) * pq.s)
         return self.vM
 
 
@@ -217,19 +214,15 @@ class BHHBackend(Backend):
             c = current['injected_square_current']
         else:
             c = current
-        amplitude = float(c['amplitude'])
+        amplitude = float(c['amplitude'])#*100000.0
         duration = int(c['duration'])#/dt#/dt.rescale('ms')
         delay = int(c['delay'])#/dt#.rescale('ms')
         pre_current = int(duration)+100
-        try:
-            stim = input_factory.get_step_current(int(delay), int(pre_current), 1 * b2.ms, amplitude *b2.pA)
-        except:
-            pass
+        stim = input_factory.get_step_current(delay, duration, b2.ms, amplitude * b2.uA)
+
         st = (duration+delay+100)* b2.ms
 
         if self.model.attrs is None or not len(self.model.attrs):
-            #from neurodynex.HH_model import HH
-            b2.defaultclock.dt = 1 * b2.ms
 
             self.HH = HH
             self.state_monitor = self.HH.simulate_HH_neuron(I_stim = stim, simulation_time=st)
@@ -238,6 +231,8 @@ class BHHBackend(Backend):
             if self.verbose:
                 print(attrs)
             self.set_attrs(**attrs)
+
+
             self.state_monitor = simulate_HH_neuron_local(
             El = attrs['El'] * b2.units.mV,
             EK = attrs['EK'] * b2.units.mV,
@@ -253,10 +248,8 @@ class BHHBackend(Backend):
 
         state_dic = self.state_monitor.get_states()
         vm = state_dic['vm']
-        vm = [ float(i) for i in vm ]
+        vm = [float(v)/1000.0 -0.55 for v in vm]
         self.vM = AnalogSignal(vm,units = mV,sampling_period = float(1.0) * pq.ms)
-        # tdic = self.spike_monitor.spike_trains()
-        #self.n_spikes = int(self.spike_monitor.count[0])
         self.attrs = attrs
 
         if ascii_plot:
@@ -265,7 +258,7 @@ class BHHBackend(Backend):
             fig = apl.figure()
             fig.plot(t, v, label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
             fig.show()
-            fig  = None
+        fig  = None
         '''
         if len(self.spike_monitor.spike_trains())>1:
             import matplotlib.pyplot as plt
@@ -277,9 +270,7 @@ class BHHBackend(Backend):
     def _backend_run(self):
         results = None
         results = {}
-
         results['vm'] = self.vM
-
         results['t'] = self.vM.times
         results['run_number'] = results.get('run_number',0) + 1
         return results
