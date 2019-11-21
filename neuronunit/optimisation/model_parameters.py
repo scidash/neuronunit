@@ -88,6 +88,20 @@ BAE1['C'] = [BAE1['C']- 0.125 * BAE1['C'], BAE1['C'] + 0.125 * BAE1['C'] ]
 BAE1['peak_v'] = [0.010, 0.060]
 
 MODEL_PARAMS['ADEXP'] = BAE1
+
+
+        # neuron parameters
+HH_dic =  { 'El' : 10.6 * b2.mV
+        'EK' : -12 * b2.mV
+        'ENa' : 115 * b2.mV
+        'gl' : 0.3 * b2.msiemens
+        'gK' : 36 * b2.msiemens
+        'gNa' : 120 * b2.msiemens
+        'C' : 1 * b2.ufarad }
+
+HH_dic = { k:(v-0.5*v,v+0.5v) for k,v in HH_dic.items() }
+MODEL_PARAMS['BHH'] = HH_dic
+
 #I = .8*nA
 #Vcut = VT + 5 * DeltaT  # practical threshold condition
 #N = 200
