@@ -496,7 +496,7 @@ def get_rh(dtc,rtest_class):
 
         rtest = RheobaseTest(observation=place_holder,
                              name='RheobaseTest')
-    elif 'ADEXP' in backend_ or 'GLIF' in backend_:#Backend::
+    elif 'ADEXP' in backend_ or 'GLIF' in backend_ or 'BHH' in backend_:
         rtest = RheobaseTestP(observation=place_holder,
                                 name='RheobaseTest')
     else:
@@ -1567,45 +1567,8 @@ def add_constant(hold_constant, pop, td):
         for v in hold_constant.values():
             p.append(v)
     return pop,td
-''' Depricated
-def update_dtc_pop(self,pop, td):
-    inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
-    outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
-    Rationale, not every gene value will result in a model for which rheobase is found, in which case that gene is discarded, however to
-    compensate for losses in gene population size, more gene samples must be tested for a successful return from a rheobase search.
-    If the tests return are successful these new sampled individuals are appended to the population, and then their attributes are mapped onto
-    corresponding virtual model objects.
-    if self.backend is not None:
-        _backend = pop[0].backend
-
-    if isinstance(pop, Iterable):# and type(pop[0]) is not type(str('')):
-        xargs = zip(pop,repeat(td),repeat(_backend))
-        npart = np.min([multiprocessing.cpu_count(),len(pop)])
-        bag = db.from_sequence(xargs, npartitions = npart)
-        dtcpop = list(bag.map(transform).compute())
-
-        assert len(dtcpop) == len(pop)
-        for dtc in dtcpop:
-            dtc.boundary_dict = None
-            dtc.boundary_dict = pop[0].boundary_dict
-        return dtcpop
-    else:
-        ind = pop
-        for i in ind:
-            i.td = td
-            i.backend = str(_backend)
-        # above replaces need for this line:
-        xargs = (ind,td,repeat(backend))
-        # In this case pop is not really a population but an individual
-        # but parsimony of naming variables
-        # suggests not to change the variable name to reflect this.
-        dtc = [ transform(xargs) ]
-        dtc.boundary_dict = None
-        dtc.boundary_dict = pop[0].boundary_dict
-        return dtc
-
 '''
-
+Depriciated
 def scale(X):
     before = copy.copy(X)
     for i in range(0,np.shape(X)[1]):
@@ -1614,7 +1577,6 @@ def scale(X):
 
 def data_versus_optimal1(dtc_pop):
     rts,complete_map = pickle.load(open('../tests/russell_tests.p','rb'))
-
     #dtcpop = [ p.dtc for p in ga_out['pf'] ]
     #pop = [ p for p in ga_out['pf'] ]
     # first a nice violin plot of the test data.
@@ -1768,7 +1730,7 @@ def stochastic_gradient_descent(ga_out):
     delta_y = Y_test - sklearn_sgd_predictions
 
     return sgd, losslasso, lossridge
-
+'''
 
 def filtered(pop,dtcpop):
     dtcpop = [ dtc for dtc in dtcpop if type(dtc.rheobase) is not type(None) ]
@@ -1817,7 +1779,7 @@ def dtc2gene(pop,dtcpop):
             pop[i].boundary_dict = dtcpop[0].boundary_dict
     return pop
 
-
+'''
 def pop2dtc(pop,dtcpop):
     for i,dtc in enumerate(dtcpop):
         if not hasattr(dtc,'backend') or dtc.backend is None:
@@ -1825,7 +1787,7 @@ def pop2dtc(pop,dtcpop):
         if not hasattr(dtc,'boundary_dict') or dtc.boundary_dict is None:
             dtcpop[i].boundary_dict = pop[0].boundary_dict
     return dtcpop
-
+'''
 def score_attr(dtcpop,pop):
     for i,d in enumerate(dtcpop):
         if not hasattr(pop[i],'dtc'):
@@ -1907,6 +1869,7 @@ def bridge_passive(package):
         t.score_type = scores.ZScore
         score = t.compute_score(t.observation, pred)
     if np.isinf(float(score.raw)):
+        print(np.isinf(float(score.raw)),score)
         t.score_type = scores.RatioScore
         score = t.compute_score(pred,t.observation)
     if type(score) is type(None):
@@ -1972,17 +1935,17 @@ class OptMan():
         gene = DO.set_pop(boot_new_random=1)
 
         dtc_ = self.update_dtc_pop(gene,self.td)
-        dtc_ = pop2dtc(gene,dtc_)
+        #dtc_ = pop2dtc(gene,dtc_)
         return gene[0], dtc_[0]
 
-    def optimize(self,free_params=None,NGEN=10,MU=10,seed_pop=None,constants=None):
+    def optimize(self,free_params=None,NGEN=10,MU=10,seed_pop=None,hold_constant=None):
         from neuronunit.optimisation.optimisations import run_ga
         ranges = self.boundary_dict
         subset = OrderedDict()
         if type(free_params) is type(None):
             free_params = list(ranges.keys())
 
-        if type(constants) is type(None):
+        if type(hold_constant) is type(None):
             temp = copy.copy(self.boundary_dict)
             for k in free_params:
                 temp.pop(k,None)
@@ -1992,6 +1955,7 @@ class OptMan():
                 hold_constant = temp
             for k,v in hold_constant.items():
                 hold_constant[k] = np.mean(v)
+        print(hold_constant)
 
         ga_out,DO = run_ga(self.boundary_dict, NGEN, self.tests, free_params=free_params, \
                            backend=self.backend, MU = MU,  protocol=self.protocol,seed_pop = seed_pop,hc=hold_constant)
@@ -2664,7 +2628,7 @@ class OptMan():
             dtc.pre_obs = dtc.preds
             return dtc.preds, dtc
     #@timer
-    def update_dtc_pop(self,pop, td):
+    def update_dtc_pop(self,pop):
         '''
         inputs a population of genes/alleles, the population size MU, and an optional argument of a rheobase value guess
         outputs a population of genes/alleles, a population of individual object shells, ie a pickleable container for gene attributes.
@@ -2676,7 +2640,7 @@ class OptMan():
         if self.backend is not None:
             _backend = self.backend
         if isinstance(pop, Iterable):# and type(pop[0]) is not type(str('')):
-            xargs = zip(pop,repeat(td),repeat(self.backend))
+            xargs = zip(pop,repeat(self.td),repeat(self.backend))
             npart = np.min([multiprocessing.cpu_count(),len(pop)])
             bag = db.from_sequence(xargs, npartitions = npart)
             dtcpop = list(bag.map(transform).compute())
@@ -2685,13 +2649,18 @@ class OptMan():
             assert len(dtcpop) == len(pop)
             for dtc in dtcpop:
                 dtc.backend = self.backend
-                dtc.boundary_dict = None
-                dtc.boundary_dict = self.boundary_dict
+
+            if self.hc is not None:
+                for d in dtcpop:
+                    d.attrs.update(self.hc)
+
+                #dtc.boundary_dict = None
+                #dtc.boundary_dict = self.boundary_dict
             return dtcpop
         else:
             ind = pop
             for i in ind:
-                i.td = td
+                #i.td = td
                 i.backend = str(_backend)
             # above replaces need for this line:
             xargs = (ind,td,repeat(backend))
@@ -2706,7 +2675,7 @@ class OptMan():
     @timer
     def init_pop(self,pop, tests):
 
-        dtcpop = list(self.update_dtc_pop(pop, self.td))
+        dtcpop = list(self.update_dtc_pop(pop))
         for d in dtcpop:
             d.tests = tests
             if self.backend is not None:
@@ -2792,36 +2761,8 @@ class OptMan():
                 except:
                     dtcpop = list(map(self.format_test,dtcpop))
 
-
-                for d in dtcpop:
-                    assert hasattr(d, 'tests')
-
-                if str('ADEXP') in self.backend and passed:
-                    dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
-                    dtcpop = list(dtcbag.map(self.elephant_evaluation).compute())
-
-                    '''
-                    serial_dtc = list(map(self.elephant_evaluation,dtcpop))
-                    # A way to get parallelism backinto brian2.
-                    serial_dtc = self.serial_dtc(dtcpop,b=True)
-                    parallel_dtc = self.serial_dtc(dtcpop,b=False)
-                    dtcbag = db.from_sequence(parallel_dtc, npartitions = NPART)
-                    parallel_dtc = list(dtcbag.map(self.elephant_evaluation).compute())
-                    serial_dtc = list(map(self.elephant_evaluation,serial_dtc))
-                    dtcpop = []
-                    for i,j in zip(serial_dtc,parallel_dtc):
-                        i.tests.extend(j.tests)
-                        i.tests.extend(j.tests)
-                        i.scores.update(j.scores)
-                        dtcpop.append(i)
-                    '''
-                elif str('ADEXP') not in self.backend and passed:
-                    dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
-                    dtcpop = list(dtcbag.map(self.elephant_evaluation).compute())
-                elif not passed:
-                    print(passed,'gets here')
-                    dtcpop = list(map(self.format_test,dtcpop))
-                    dtcpop = list(map(self.elephant_evaluation,dtcpop))
+                dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
+                dtcpop = list(dtcbag.map(self.elephant_evaluation).compute())
 
                 for d in dtcpop:
                     assert hasattr(d, 'tests')
@@ -2992,7 +2933,7 @@ class OptMan():
         else:
             pop = DO.set_pop(boot_new_random=number_genes)
         pop = dtc2gene(pop,dtcpop)
-        dtcpop_ = self.update_dtc_pop(pop,td)
+        dtcpop_ = self.update_dtc_pop(pop)
         dtcpop_ = pop2dtc(pop,dtcpop_)
         dtcpop_ = list(map(dtc_to_rheo,dtcpop_))
         for i,ind in enumerate(pop):

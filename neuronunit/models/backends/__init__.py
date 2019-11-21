@@ -24,7 +24,7 @@ def heavy_backends():
         from .general_pyNN import PYNNBackend
     except Exception as e:
         print('pynn python Error')
-    
+
     try:
         from .glif import GLIFBackend
     except Exception as e:
@@ -50,7 +50,10 @@ try:
 except Exception as e:
     print('pynn python Error')
 
-
+try:
+    from .bhh import BHHBackend
+except Exception as e:
+    print('could not import brian2 neuronaldynamicsError')
 
 available_backends = {x.replace('Backend',''):cls for x, cls \
                    in locals().items() \
