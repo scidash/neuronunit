@@ -17,6 +17,7 @@ import matplotlib as mpl
 from neuronunit.capabilities import spike_functions as sf
 mpl.use('Agg')
 import matplotlib.pyplot as plt
+from elephant.spike_train_generation import threshold_detection
 
 from types import MethodType
 # from neuronunit.optimisation import ascii_plot
@@ -43,21 +44,78 @@ def downsample(array, npts):
     interpolated = interp1d(np.arange(len(array)), array, axis = 0, fill_value = 'extrapolate')
     downsampled = interpolated(np.linspace(0, len(array), npts))
     return downsampled
+    #I_stim = stim, simulation_time=st)
+
+def simulate_HH_neuron_local(I_stim=None, simulation_time=None,El=None,\
+                            EK=None,ENa=None,gl=None,\
+                            gK=None,gNa=None,C=None):
+    # code lifted from:
+    # /usr/local/lib/python3.5/dist-packages/neurodynex/hodgkin_huxley
+
+    input_current = I_stim #= #stim, simulation_time=st)
+
+    """A Hodgkin-Huxley neuron implemented in Brian2.
+
+    Args:
+        input_current (TimedArray): Input current injected into the HH neuron
+        simulation_time (float): Simulation time [seconds]
+
+    Returns:
+        StateMonitor: Brian2 StateMonitor with recorded fields
+        ["vm", "I_e", "m", "n", "h"]
+    """
+
+
+    # forming HH model with differential equations
+    eqs = """
+    I_e = input_current(t,i) : amp
+    membrane_Im = I_e + gNa*m**3*h*(ENa-vm) + \
+        gl*(El-vm) + gK*n**4*(EK-vm) : amp
+    alphah = .07*exp(-.05*vm/mV)/ms    : Hz
+    alpham = .1*(25*mV-vm)/(exp(2.5-.1*vm/mV)-1)/mV/ms : Hz
+    alphan = .01*(10*mV-vm)/(exp(1-.1*vm/mV)-1)/mV/ms : Hz
+    betah = 1./(1+exp(3.-.1*vm/mV))/ms : Hz
+    betam = 4*exp(-.0556*vm/mV)/ms : Hz
+    betan = .125*exp(-.0125*vm/mV)/ms : Hz
+    dh/dt = alphah*(1-h)-betah*h : 1
+    dm/dt = alpham*(1-m)-betam*m : 1
+    dn/dt = alphan*(1-n)-betan*n : 1
+    dvm/dt = membrane_Im/C : volt
+    """
+
+    neuron = b2.NeuronGroup(1, eqs, method="exponential_euler")
+
+    # parameter initialization
+    neuron.vm = 0
+    neuron.m = 0.05
+    neuron.h = 0.60
+    neuron.n = 0.32
+    #spike_monitor = b2.SpikeMonitor(neuron)
+
+    # tracking parameters
+    st_mon = b2.StateMonitor(neuron, ["vm", "I_e", "m", "n", "h"], record=True)
+
+    # running the simulation
+    hh_net = b2.Network(neuron)
+    hh_net.add(st_mon)
+    hh_net.run(simulation_time)
+
+    return st_mon
 
 # downsampled_y = downsample(y, 6000)
 
 class BHHBackend(Backend):
-    def get_spike_count(self):
-        return int(self.spike_monitor.count[0])
+    #def get_spike_count(self):
+    #    return int(self.spike_monitor.count[0])
     def init_backend(self, attrs=None, cell_name='thembi',
                      current_src_name='spanner', DTC=None,
                      debug = False):
-        backend = 'brianHH'
+        backend = 'BHH'
         super(BHHBackend,self).init_backend()
         self.name = str(backend)
 
         #self.threshold = -20.0*qt.mV
-        self.debug = None
+        #self.debug = None
         self.model._backend.use_memory_cache = False
         self.current_src_name = current_src_name
         self.cell_name = cell_name
@@ -66,10 +124,10 @@ class BHHBackend(Backend):
         self.debug = debug
         self.temp_attrs = None
         self.n_spikes = None
-        self.spike_monitor = None
+        #self.spike_monitor = None
         self.peak_v = 0.02
         self.verbose = False
-        self.model.get_spike_count = self.get_spike_count
+        #self.model.get_spike_count = self.get_spike_count
 
 
         if type(attrs) is not type(None):
@@ -84,7 +142,9 @@ class BHHBackend(Backend):
             if hasattr(DTC,'cell_name'):
                 self.cell_name = DTC.cell_name
 
-
+    def get_spike_count(self):
+        thresh = threshold_detection(self.vM)
+        return len(thresh)
 
     def set_stop_time(self, stop_time = 650*pq.ms):
         """Sets the simulation duration
@@ -97,7 +157,7 @@ class BHHBackend(Backend):
         """Must return a neo.core.AnalogSignal.
         And must destroy the hoc vectors that comprise it.
         """
-        
+
         return self.vM
 
     def set_attrs(self, **attrs):
@@ -106,24 +166,15 @@ class BHHBackend(Backend):
         self.HH = HH
 
         if len(attrs):
-            '''
-            # neuron parameters
-            El = 10.6 * b2.mV
-            EK = -12 * b2.mV
-            ENa = 115 * b2.mV
-            gl = 0.3 * b2.msiemens
-            gK = 36 * b2.msiemens
-            gNa = 120 * b2.msiemens
-            C = 1 * b2.ufarad
-            '''
-            self.EL = attrs['El'] * b2.units.mV,
-            self.EK = attrs['EK'] * b2.units.mV,
-            self.ENa = attrs['ENa'] * b2.units.mV,
-            self.gl =  attrs['gl'] * b2.units.msiemens,
-            self.gK = attrs['gK'] * b2.units.msiemens,
-            self.gNa = attrs['gNA'] * b2.units.msiemens,
-            self.C = attrs['C'] * b2.units.ufarad,
-            self.I_stim = stim, simulation_time=st)
+            #print(attrs)
+            self.El = attrs['El'] * b2.units.mV
+            self.EK = attrs['EK'] * b2.units.mV
+            self.ENa = attrs['ENa'] * b2.units.mV
+            self.gl =  attrs['gl'] * b2.units.msiemens
+            self.gK = attrs['gK'] * b2.units.msiemens
+            self.gNa = attrs['gNa'] * b2.units.msiemens
+            self.C = attrs['C'] * b2.units.ufarad
+            #self.I_stim = stim, simulation_time=st)
 
 
             #if str('peak_v') in attrs:
@@ -149,6 +200,8 @@ class BHHBackend(Backend):
             print(len(self.vM))
         self.vM = AnalogSignal(vm_new,units = mV,sampling_period = float(xnew[1]-xnew[0]) * pq.s)
         return self.vM
+
+
     def inject_square_current(self, current):#, section = None, debug=False):
         """Inputs: current : a dictionary with exactly three items, whose keys are: 'amplitude', 'delay', 'duration'
         Example: current = {'amplitude':float*pq.pA, 'delay':float*pq.ms, 'duration':float*pq.ms}}
@@ -159,7 +212,7 @@ class BHHBackend(Backend):
         """
         b2.defaultclock.dt = 1 * b2.ms
         self.state_monitor = None
-        self.spike_monitor = None
+        #self.spike_monitor = None
         self.HH = None
         self.HH = HH
         attrs = copy.copy(self.model.attrs)
@@ -186,19 +239,19 @@ class BHHBackend(Backend):
             b2.defaultclock.dt = 1 * b2.ms
 
             self.HH = HH
-            self.state_monitor, self.spike_monitor = self.HH.simulate_HH_neuron(I_stim = stim, simulation_time=st)
+            self.state_monitor = self.HH.simulate_HH_neuron(I_stim = stim, simulation_time=st)
 
         else:
             if self.verbose:
                 print(attrs)
             self.set_attrs(**attrs)
-            self.state_monitor, self.spike_monitor = self.HH.simulate_HH_neuron(
-            EL = attrs['El'] * b2.units.mV,
+            self.state_monitor = simulate_HH_neuron_local(
+            El = attrs['El'] * b2.units.mV,
             EK = attrs['EK'] * b2.units.mV,
             ENa = attrs['ENa'] * b2.units.mV,
             gl =  attrs['gl'] * b2.units.msiemens,
             gK = attrs['gK'] * b2.units.msiemens,
-            gNa = attrs['gNA'] * b2.units.msiemens,
+            gNa = attrs['gNa'] * b2.units.msiemens,
             C = attrs['C'] * b2.units.ufarad,
             I_stim = stim, simulation_time=st)
 
@@ -206,11 +259,11 @@ class BHHBackend(Backend):
         self.dt = self.state_monitor.clock.dt
 
         state_dic = self.state_monitor.get_states()
-        vm = state_dic['v']
+        vm = state_dic['vm']
         vm = [ float(i) for i in vm ]
         self.vM = AnalogSignal(vm,units = mV,sampling_period = float(1.0) * pq.ms)
         # tdic = self.spike_monitor.spike_trains()
-        self.n_spikes = int(self.spike_monitor.count[0])
+        #self.n_spikes = int(self.spike_monitor.count[0])
         self.attrs = attrs
 
         if ascii_plot:
@@ -220,11 +273,12 @@ class BHHBackend(Backend):
             fig.plot(t, v, label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
             fig.show()
             fig  = None
-
+        '''
         if len(self.spike_monitor.spike_trains())>1:
             import matplotlib.pyplot as plt
             plt.plot(y,x)
             plt.savefig('debug.png')
+        '''
         return self.vM
 
     def _backend_run(self):
