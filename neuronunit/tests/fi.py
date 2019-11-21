@@ -94,7 +94,7 @@ class RheobaseTest(VmTest):
             units = self.observation['value'].units
         except KeyError:
             units = self.observation['mean'].units
-        
+
         begin_rh = time.time()
         lookup = self.threshold_FI(model, units)
         ##
@@ -106,26 +106,29 @@ class RheobaseTest(VmTest):
         else:
             too_many_spikes = 0
 
-        spikes_one = [ v for v in lookup.values() if v==1 ]
-        single_spike_found = bool(len(spikes_one))
+        spikes_one = sorted([ (k,v) for k,v in lookup.items() if v==1 ])
+        #smaller = sorted([ (dtc.ampl,dtc) for dtc in dtc_clone if dtc.boolean == True ])
 
+        single_spike_found = bool(len(spikes_one))
         sub = np.array([x for x in lookup if lookup[x]==0])*units
         supra = np.array([x for x in lookup if lookup[x]>0])*units
-        '''
         if self.verbose>1:
             if len(sub):
-                #print("Highest subthreshold current is %s" \
-                #      % (float(sub.max())*units))
+                print("Highest subthreshold current is %s" \
+                      % (float(sub.max())*units))
             else:
-                #print("No subthreshold current was tested.")
+                print("No subthreshold current was tested.")
             if len(supra):
-                #print("Lowest suprathreshold current is %s" \
-                 #     % supra.min())
+                print("Lowest suprathreshold current is %s" \
+                      % supra.min())
             else:
                 print("No suprathreshold current was tested.")
-        '''
+
         if len(sub) and len(supra) and single_spike_found:# or too_many_spikes<5:
             rheobase = supra.min()
+            #rheobase = spikes_one[-1][1]
+
+
         elif too_many_spikes>=2:
             rheobase = None
         else:
@@ -144,6 +147,7 @@ class RheobaseTest(VmTest):
                 n_spikes = model._backend.get_spike_count()
 
                 self.n_spikes = n_spikes
+                print('serial alogrithm',n_spikes)
 
                 if self.verbose >= 5:
                     pass
@@ -321,14 +325,14 @@ class RheobaseTestP(VmTest):
             if dtc.backend is str('NEURON') or dtc.backend is str('jNEUROML'):
                 model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
                 #model = VeryReducedModel(name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
-                
+
                 dtc.current_src_name = model._backend.current_src_name
                 assert type(dtc.current_src_name) is not type(None)
                 dtc.cell_name = model._backend.cell_name
             else:
                 model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
                 #model = VeryReducedModel(name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
-            
+
 
             params = {'injected_square_current':
                       {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
@@ -337,10 +341,11 @@ class RheobaseTestP(VmTest):
                 uc = {'amplitude':dtc.ampl,'duration':DURATION,'delay':DELAY}
 
                 dtc.run_number += 1
-                
+
                 model.set_attrs(**dtc.attrs)
                 model.inject_square_current(uc)
                 n_spikes = model.get_spike_count()
+                print(n_spikes)
                 dtc.previous = ampl
 
                 dtc.rheobase = {}
@@ -446,9 +451,18 @@ class RheobaseTestP(VmTest):
                         dtc.backend = be
                         dtc_clone.append(dtc)
 
-                smaller = sorted([ (dtc.ampl,dtc) for dtc in dtc_clone if dtc.boolean == True ])
-                if len(smaller):
-                    return smaller[0][1]
+                if str("BHH") not in dtc.backend:
+                    # take smallest spiking if multi spiking rheobase
+
+                    smaller = sorted([ (dtc.ampl,dtc) for dtc in dtc_clone if dtc.boolean == True ])
+                    if len(smaller):
+                        return smaller[0][1]#int(1*len(smaller)/4.0)]
+                else:
+                    smaller = sorted([ (dtc.ampl,dtc) for dtc in dtc_clone if dtc.boolean == True ])
+                    print(smaller)
+                    if len(smaller):
+                        return smaller[-1][1]
+                        #smaller[3*int(len(smaller)/4.0)][1]
                 #for dtc in dtc_clone:
                 #    if dtc.boolean == True:
                 #        return dtc
@@ -496,10 +510,9 @@ class RheobaseTestP(VmTest):
 
 
                 if self.verbose >= 2:
-                    pass
-                    #print("Try %d: SubMax = %s; SupraMin = %s" % \
-                    #(cnt, sub.max() if len(sub) else None,
-                    #supra.min() if len(supra) else None))
+                    print("Try %d: SubMax = %s; SupraMin = %s" % \
+                    (cnt, sub.max() if len(sub) else None,
+                    supra.min() if len(supra) else None))
                 cnt += 1
             return dtc
 
@@ -521,7 +534,7 @@ class RheobaseTestP(VmTest):
         prediction = {}
 
         temp = find_rheobase(self,dtc).rheobase
-        
+
         if type(temp) is not type(None):
             if type(temp) is type({'dict':0}):
                 if temp['value'] is None:
