@@ -36,14 +36,7 @@ except:
 import numpy
 
 
-from scipy.interpolate import interp1d
 
-# from scipy.interpolate import interp1d
-
-def downsample(array, npts):
-    interpolated = interp1d(np.arange(len(array)), array, axis = 0, fill_value = 'extrapolate')
-    downsampled = interpolated(np.linspace(0, len(array), npts))
-    return downsampled
     #I_stim = stim, simulation_time=st)
 
 def simulate_HH_neuron_local(I_stim=None, simulation_time=None,El=None,\

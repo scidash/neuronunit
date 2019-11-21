@@ -844,19 +844,19 @@ def allen_wave_predictions(vm30):
                     prediction['mean'] = temp
                     prediction['std'] = 10.0
                     dtc.preds[wavef+str('_half')] = prediction
-                '''
-                for i in ephys_dict['spikes']:
-                    for wavef in i.keys():
-                        temp = i[wavef]
-                        prediction['mean'] = temp
-                        prediction['std'] = 10.0
-                        dtc.preds[wavef+str(i) = prediction
-                '''
 
                 dtc.spike_cnt = len(ephys_dict['spikes'])
                 dtc.preds['spikes'] = dtc.spike_cnt
 
         return dtc,ephys
+from scipy.interpolate import interp1d
+
+# from scipy.interpolate import interp1d
+
+def downsample(array, npts):
+    interpolated = interp1d(np.arange(len(array)), array, axis = 0, fill_value = 'extrapolate')
+    downsampled = interpolated(np.linspace(0, len(array), npts))
+    return downsampled
 
 def append_spikes(ephys_dict,dtc):
     prediction = {}
@@ -985,7 +985,11 @@ def just_allen_predictions(dtc):
         dtc.preds = {}
         return dtc
     else:
-
+        def use_later(npts):
+            '''
+            garuntee a maximum number of aligned reference indexs in disparate length spike trains.
+            '''
+            garunteed_reference_points = downsample(list(range(0,len(ephys_dict['spikes'])), npts))
         dtc = append_spikes(ephys_dict,dtc)
         return dtc,compare,ephys
 
@@ -1526,7 +1530,7 @@ def evaluate_allen(dtc,regularization=True):
 
 def evaluate(dtc,regularization=False,elastic_net=True):
     # assign worst case errors, and then over write them with situation informed errors as they become available.
-    greatest = len(dtc.tests)
+    #greatest = len(dtc.tests)
     fitness = []# 1.0 for i in range(0,greatest) ]
 
     if not hasattr(dtc,str('scores')):
@@ -1762,7 +1766,7 @@ def which_key(thing):
         return 'value'
     if 'mean' in thing.keys():
         return 'mean'
-
+'''
 def dtc2gene(pop,dtcpop):
     fitness_attr = pop[0].fitness
     for i,p in enumerate(pop):
@@ -1778,7 +1782,7 @@ def dtc2gene(pop,dtcpop):
         if not hasattr(ind,'boundary_dict') or ind.boundary_dict is None:
             pop[i].boundary_dict = dtcpop[0].boundary_dict
     return pop
-
+'''
 '''
 def pop2dtc(pop,dtcpop):
     for i,dtc in enumerate(dtcpop):
@@ -2920,9 +2924,10 @@ class OptMan():
 
         random.seed(datetime.now())
         DO = SciUnitOptimisation(offspring_size = number_genes,
-                                 error_criterion = self.tests, boundary_dict = dtcpop[0].boundary_dict,
-                                 backend = dtcpop[0].backend, selection = str('selNSGA'),protocol = self.protocol)#,, boundary_dict = ss, elite_size = 2, hc=hc)
-        DO.setnparams(nparams = len(dtcpop[0].attrs), boundary_dict = dtcpop[0].boundary_dict)
+                                 error_criterion = self.tests, boundary_dict =self.boundary_dict,
+                                 backend = self.backend, selection = str('selNSGA'),protocol = self.protocol)#,, boundary_dict = ss, elite_size = 2, hc=hc)
+
+        DO.setnparams(nparams = len(dtcpop[0].attrs), boundary_dict = self.boundary_dict)
         DO.setup_deap()
         # pop = []
         if 1==number_genes:
@@ -2932,9 +2937,9 @@ class OptMan():
 
         else:
             pop = DO.set_pop(boot_new_random=number_genes)
-        pop = dtc2gene(pop,dtcpop)
+        #pop = dtc2gene(pop,dtcpop)
         dtcpop_ = self.update_dtc_pop(pop)
-        dtcpop_ = pop2dtc(pop,dtcpop_)
+        #dtcpop_ = pop2dtc(pop,dtcpop_)
         dtcpop_ = list(map(dtc_to_rheo,dtcpop_))
         for i,ind in enumerate(pop):
             pop[i].rheobase = dtcpop_[i].rheobase
