@@ -120,7 +120,8 @@ class testHighLevelOptimisation(unittest.TestCase):
 
 
     def test_solution_quality0(self):
-        use_test = self.filtered_tests['Hippocampus CA1 pyramidal cell']#['RheobaseTest']]
+        #use_test = self.filtered_tests['Hippocampus CA1 pyramidal cell']#['RheobaseTest']]
+        use_test = self.filtered_tests['Neocortex pyramidal cell layer 5-6']
         easy_standards = {ut.name:ut.observation['std'] for ut in use_test.values()}
         print(easy_standards)
         [(value.name,value.observation) for value in use_test.values()]
