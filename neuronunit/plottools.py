@@ -17,6 +17,7 @@ try:
     from io import StringIO
 except ImportError:
     from StringIO import StringIO
+from neuronunit.capabilities.spike_functions import get_spike_waveforms
 
 import numpy as np
 import pandas as pd
