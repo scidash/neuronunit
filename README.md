@@ -1,5 +1,5 @@
 # Description
-* A collection of compact, parsimonious neuronal models, implemented in community favorite languages. Attached to a fast data driven optimization routine (numba, dask etc).
+* A collection of compact, parsimonious neuronal models, implemented in community favorite python modules. Attached to a fast data driven optimization routine (numba, dask etc).
 
 
 
