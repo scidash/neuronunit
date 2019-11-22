@@ -196,8 +196,8 @@ class testHighLevelOptimisation(unittest.TestCase):
         '''
         forward euler, and adaptive exponential
         '''
-        NGEN = 16
-        MU = 8
+        NGEN = 10
+        MU = 10
         backend = str('BHH')
         out = self.get_cells(backend,model_parameters,NGEN,MU)
 
