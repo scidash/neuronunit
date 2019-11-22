@@ -40,7 +40,6 @@ from collections import OrderedDict
 import cython
 
 
-from neuronunit.capabilities.spike_functions import get_spike_waveforms
 
 import copy
 import math
@@ -572,7 +571,7 @@ def dtc_to_rheo(dtc):
     if hasattr(dtc,'tests'):
         if type(dtc.tests) is type({}) and str('RheobaseTest') in dtc.tests.keys():
             rtest = dtc.tests['RheobaseTest']
-            if str('BHH') in dtc.backend_ or str('ADEXP') in dtc.backend_ or str("GLIF") in dtc.backend_:
+            if str('BHH') in dtc.backend or str('ADEXP') in dtc.backend or str("GLIF") in dtc.backend:
                  rtest = RheobaseTestP(dtc.tests['RheobaseTest'].observation)
         else:
             rtest = get_rtest(dtc)
@@ -1791,9 +1790,15 @@ def eval_subtest(name):
             if name in t.name:
                 score, dtc = bridge_judge((t, dtc))
 
-def increase_current(dtc):
+def increase_current(dtc,t):
     cnt=0
     model = new_model(dtc)
+    pred = None
+    if 'mean' in t.observation.keys():
+        t.observation['value'] = t.observation['mean']
+    else:
+        t.observation['mean'] = t.observation['value']
+    t.score_type = scores.RatioScore
 
     while type(pred) is type(None):
         cnt+=1
@@ -1805,10 +1810,12 @@ def increase_current(dtc):
         pred = None
         try:
             pred = t.extract_features(model, result)
+            print(pred)
         except:
             pred = None
         print(pred,cnt,'suggesting that units of model backend are wrong, or capabilities units are wrong')
         if cnt==10:
+
             score = t.compute_score(pred,t.observation)
             return score
     score = t.compute_score(pred,t.observation)
@@ -1827,10 +1834,7 @@ def bridge_passive(package):
 
     assert 'mean' in t.observation.keys()
     pred = None
-    try:
-        pred = t.extract_features(model, result)
-    except:
-        pred = None
+    pred = t.extract_features(model,result)
 
     if type(pred) is type(None):
         return None,dtc,pred
@@ -1853,13 +1857,13 @@ def bridge_passive(package):
 
     assert 'mean' in t.observation.keys()
     take_anything = list(pred.values())[0]
+
     if 'std' not in pred.keys():
         if type(take_anything) is type(None):
-            pred['std'] = 1.5 * take_anything.magnitude * take_anything.units
-            #return score,dtc
+            pred['std'] = t.observation['std']#     10.0 * pred['mean'].units
+
         else:
             pred['std'] = 1.5 * take_anything.magnitude * take_anything.units
-
     if not hasattr(dtc,'predictions'):
         dtc.predictions = {}
         dtc.predictions[t.name] = pred
@@ -1870,13 +1874,18 @@ def bridge_passive(package):
         score = t.compute_score(t.observation, pred)
     except:
         t.score_type = scores.ZScore
-        score = t.compute_score(t.observation, pred)
-    if np.isinf(float(score.raw)):
-        print(np.isinf(float(score.raw)),score)
-        t.score_type = scores.RatioScore
-        score = t.compute_score(pred,t.observation)
-    if type(score) is type(None):
-        score = increase_current(dtc)
+        if type(pred['value']) is type(None) and type(pred['mean']) is type(None):
+            score = None
+        else:
+            score = t.compute_score(t.observation, pred)
+        if type(score) is not type(None):
+
+            if type(score.raw) is not type(None):
+                if np.isinf(float(score.raw)):
+                    t.score_type = scores.RatioScore
+                    score = t.compute_score(pred,t.observation)
+    #if type(score) is type(None):
+    #    score = increase_current(dtc,t)
     return score, dtc, pred
 
 class OptMan():
@@ -2411,16 +2420,30 @@ class OptMan():
                 if type(score) is type(None):
                     pass
                 else:
-                    if np.isinf(float(score.raw)):
+                    if type(score.raw) is not type(None):
+                        if np.isinf(float(score.raw)):
+                            t.score_type = scores.RatioScore
+                            score = t.compute_score(pred,t.observation)
+                    else:
                         t.score_type = scores.RatioScore
-                        score = t.compute_score(pred,t.observation)
+                        if type(pred['mean']) is not type(None):
+                            score = t.compute_score(pred,t.observation)
 
                 assignment = 1.0
                 if score is not None:
-                    if score.norm_score is not None:
+                    if t.score_type is scores.RatioScore:
+                        assignment = 1-float(score.raw)
+
+                    #print(score.raw_score)
+                    try:
+                        assert score.norm_score is not None
                         assignment = 1.0 - score.norm_score
-                    else:
-                        print('broken score')
+                    except:
+                         logging.info('math domain error')
+                        assignment = 0.95
+                            #t.score_type = scores.ZScore
+                            #score = t.compute_score(pred,t.observation)
+
                 dtc.scores[key] = assignment
                 if dtc.scores[key] == 1.0:
                     try:
@@ -2434,7 +2457,7 @@ class OptMan():
 
                         if 'mean' not in t.observation.keys():
                             t.observation['mean']  = t.observation['value']
-                        print(t.observation['mean'],pred, 'incompatible')
+                        #print(t.observation['mean'],pred, 'incompatible')
                         t.score_type = scores.RatioScore
                         score = t.compute_score(pred,t.observation)
                         assignment = 1.0 - score.norm_score
