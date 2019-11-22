@@ -331,27 +331,30 @@ def elaborate_plots(self,ga_out):
     fig2, ax2 = plt.subplots(len(objectives)+2,1,figsize=(10,10))
 
     for i,k in enumerate(objectives):
+        if i < len(everything.select("avg")[0]):
+            #[j[i] for j in everything.select("avg")]
+            line2 = ax2[i].plot([j[i] for j in everything.select("avg")], "r-", label="Evolution objectives")
 
-        line2 = ax2[i].plot(gen, [j[i] for j in everything.select("avg")], "r-", label="Evolution objectives")
-        ax2[i].set_ylim([0.0, 1.0])
-        if i!=len(objectives):
-            ax2[i].tick_params(
-                axis='x',          # changes apply to the x-axis
-                which='both',      # both major and minor ticks are affected
-                bottom=False,      # ticks along the bottom edge are off
-                top=False,         # ticks along the top edge are off
-                labelbottom=False) # labels along the bottom edge are off
-        ax2[len(objectives)].plot(
-            gen_numbers,
-            mean,
-            color='black',
-            linewidth=2,
-            label='population average')
-        ax2[len(objectives)].fill_between(gen_numbers, stdminus, stdplus)
-        ax2[len(objectives)].plot(gen_numbers, stdminus, label='std variation lower limit')
-        ax2[len(objectives)].plot(gen_numbers, stdplus, label='std variation upper limit')
-        ax2[len(objectives)].set_xlim(np.min(gen_numbers) - 1, np.max(gen_numbers) + 1)
-        h = ax2[len(objectives)].set_xlabel("NeuronUnit Test: {0}".format(k))
+            [j[i] for j in everything.select("avg")]
+            ax2[i].set_ylim([0.0, 1.0])
+            if i!=len(objectives):
+                ax2[i].tick_params(
+                    axis='x',          # changes apply to the x-axis
+                    which='both',      # both major and minor ticks are affected
+                    bottom=False,      # ticks along the bottom edge are off
+                    top=False,         # ticks along the top edge are off
+                    labelbottom=False) # labels along the bottom edge are off
+            ax2[len(objectives)].plot(
+                gen_numbers,
+                mean,
+                color='black',
+                linewidth=2,
+                label='population average')
+            ax2[len(objectives)].fill_between(gen_numbers, stdminus, stdplus)
+            ax2[len(objectives)].plot(gen_numbers, stdminus, label='std variation lower limit')
+            ax2[len(objectives)].plot(gen_numbers, stdplus, label='std variation upper limit')
+            ax2[len(objectives)].set_xlim(np.min(gen_numbers) - 1, np.max(gen_numbers) + 1)
+            h = ax2[len(objectives)].set_xlabel("NeuronUnit Test: {0}".format(k))
     plt.savefig(str('reliable_history_plot_')+str(self.cell_name)+str(self.backend)+str('.png'))
 
 
@@ -389,8 +392,10 @@ def elaborate_plots(self,ga_out):
     sns.set_style("darkgrid")
 
 
-    fig2, ax2 = plt.subplots(len(objectives),1,figsize=(10,10))
+    fig2, ax2 = plt.subplots(len(objectives)+1,1,figsize=(10,10))
     for i,k in enumerate(objectives):
+        #if i < len(everything.select("avg")[0]):
+
         ax2[i].plot(list(range(0,len(all_over_gen[k]))),all_over_gen[k])
         temp = [0 for i in range(0,len(all_over_gen[k])) ]
         ax2[i].plot(list(range(0,len(all_over_gen[k]))),temp)
@@ -418,7 +423,7 @@ def elaborate_plots(self,ga_out):
     plt.figure()
     sns.set_style("darkgrid")
 
-    fig2, ax2 = plt.subplots(len(objectives),1,figsize=(10,10))
+    fig2, ax2 = plt.subplots(len(objectives)+1,1,figsize=(10,10))
     for i,k in enumerate(objectives):
         ax2[i].plot(list(range(0,len(all_over_gen[k]))),all_over_gen[k])
         temp = [0 for i in range(0,len(all_over_gen[k])) ]
