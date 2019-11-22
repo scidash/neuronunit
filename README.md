@@ -1,4 +1,7 @@
-A collection of compact, parsimonious neural models, implemented in community favorite languages. Attached to a data driven optimization routine.
+# Description
+* A collection of compact, parsimonious neuronal models, implemented in community favorite languages. Attached to a fast data driven optimization routine (numba, dask etc).
+
+
 
 See the Documentation notebooks:
 =======
