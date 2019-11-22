@@ -1,6 +1,11 @@
 # Description
 * A collection of compact, parsimonious neuronal models, implemented in community favorite python modules. Attached to a fast data driven optimization routine (numba, dask etc).
 
+Interoperability with Brian2 is accessible via a simple pip install, Allen-SDK, PyNN and NEURON interoperability is available via an elaborate Docker container.
+
+Feature extraction routines: AllenSDK, Druckman, Elephant.
+
+Simulator Backends: brian2, Allen-GLIF, NEURON, PyNN
 
 
 See the Documentation notebooks:
