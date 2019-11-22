@@ -121,6 +121,12 @@ def timer(func):
         logging.info('Runtime taken to evaluate function {1} {0} seconds'.format(t2-t1,func))
         return f
     return inner
+class WSListIndividual(list):
+    """Individual consisting of list with weighted sum field"""
+    def __init__(self, *args, **kwargs):
+        """Constructor"""
+        self.rheobase = None
+        super(WSListIndividual, self).__init__(*args, **kwargs)
 
 # Helper tests are dummy instances of NU tests.
 # They are used by other methods analogous to a base class,
@@ -150,13 +156,13 @@ class TSD(dict):
 
 
     def optimize(self,param_edges,backend=None,protocol={'allen': False, 'elephant': True},\
-        MU=5,NGEN=5,free_params=None,seed_pop=None):
+        MU=5,NGEN=5,free_params=None,seed_pop=None,hold_constant=None):
         from neuronunit.optimisation.optimisations import run_ga
         if type(free_params) is type(None):
             free_params=param_edges.keys()
         #experimental_name = self.cell_name
         ga_out,DO = run_ga(param_edges, NGEN, self, free_params=free_params, \
-                           backend=backend, MU = 8,  protocol=protocol,seed_pop = seed_pop)
+                           backend=backend, MU = 8,  protocol=protocol,seed_pop = seed_pop, hc=hold_constant)
         self.backend = backend
         if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
             _,dtc_pop = DO.OM.test_runner(ga_out['pf'],DO.OM.td,DO.OM.tests)
@@ -1501,6 +1507,7 @@ def evaluate_allen(dtc,regularization=True):
             fitness[int_] = 1.0
         else:
             fitness[int_] = dtc.ascores[str(t)]
+    print(fitness)
     return tuple(fitness,)
 
 def evaluate(dtc,regularization=False,elastic_net=True):
@@ -1513,7 +1520,7 @@ def evaluate(dtc,regularization=False,elastic_net=True):
 
     for int_,t in enumerate(dtc.scores.keys()):
         if elastic_net:
-           fitness0 = [ t**(1.0/2.0) for int_,t in enumerate(dtc.scores.values())]
+           fitness0 = [ np.abs(t)**(2.0) for int_,t in enumerate(dtc.scores.values())]
            fitness1 = [ np.abs(t) for int_,t in enumerate(dtc.scores.values())]
            fitness = [ (fitness1[i]+j)/2.0 for i,j in enumerate(fitness0)]
         else:
@@ -1834,8 +1841,10 @@ def bridge_passive(package):
 
     assert 'mean' in t.observation.keys()
     pred = None
-    pred = t.extract_features(model,result)
-
+    try:
+        pred = t.extract_features(model,result)
+    except:
+        pred = None
     if type(pred) is type(None):
         return None,dtc,pred
 
@@ -2431,16 +2440,19 @@ class OptMan():
 
                 assignment = 1.0
                 if score is not None:
+                    #assignment = 1-1.0/score.raw
                     if t.score_type is scores.RatioScore:
-                        assignment = 1-float(score.raw)
-
-                    #print(score.raw_score)
-                    try:
-                        assert score.norm_score is not None
-                        assignment = 1.0 - score.norm_score
-                    except:
-                         logging.info('math domain error')
-                        assignment = 0.95
+                        if float(score.raw) == 0:
+                            assignment = 1.0
+                        else:
+                            assignment = np.abs(1-1.0/float(np.abs(float(score.raw))))
+                    else:
+                        try:
+                            assert score.norm_score is not None
+                            assignment = 1.0 - score.norm_score
+                        except:
+                            logging.info('math domain error')
+                            assignment = 0.95
                             #t.score_type = scores.ZScore
                             #score = t.compute_score(pred,t.observation)
 

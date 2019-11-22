@@ -10,8 +10,12 @@ import pdb
 from numba import jit
 import numpy as np
 from .base import *
-import quantities as qt
-from quantities import mV, ms, s, us, ns, V
+import quantities as pq
+from quantities import mV as qmV
+from quantities import ms as qms
+from quantities import V as qV
+
+#, ms, s, us, ns, V
 import matplotlib as mpl
 
 from neuronunit.capabilities import spike_functions as sf
@@ -35,9 +39,10 @@ try:
 except:
     ascii_plot = False
 import numpy
-
-
-
+try:
+    brian2.clear_cache('cython')
+except:
+    pass
     #I_stim = stim, simulation_time=st)
 
 def simulate_HH_neuron_local(I_stim=None, simulation_time=None,El=None,\
@@ -106,11 +111,10 @@ def simulate_HH_neuron_local(I_stim=None, simulation_time=None,El=None,\
 
     state_dic = st_mon.get_states()
     vm = state_dic['vm']
-    vm = [ (float(v)+Vr)/10.0 for v in vm]
-    vM = AnalogSignal(vm,units = mV,sampling_period = float(1.0) * pq.ms)
+    vm = [ (float(v)+Vr) for v in vm]
+    vM = AnalogSignal(vm,units = pq.mV,sampling_period = float(1.0) * pq.ms)
     return st_mon,vM
 
-# downsampled_y = downsample(y, 6000)
 getting_started = False
 class BHHBackend(Backend):
     #def get_spike_count(self):
@@ -122,8 +126,6 @@ class BHHBackend(Backend):
         super(BHHBackend,self).init_backend()
         self.name = str(backend)
 
-        #self.threshold = -20.0*qt.mV
-        #self.debug = None
         self.model._backend.use_memory_cache = False
         self.current_src_name = current_src_name
         self.cell_name = cell_name
@@ -225,13 +227,11 @@ class BHHBackend(Backend):
             c = current['injected_square_current']
         else:
             c = current
-        amplitude = float(c['amplitude'])/1000.0#*100000.0
+        amplitude = float(c['amplitude'])/100.0#*100000.0
         duration = int(c['duration'])#/dt#/dt.rescale('ms')
         delay = int(c['delay'])#/dt#.rescale('ms')
         pre_current = int(duration)+100
 
-        #current = input_factory.get_step_current(10, 45, b2.ms, 7.2 * b2.uA)
-        #state_monitor = simulate_HH_neuron(current, 70 * b2.ms)
         if getting_started == False:
             stim = input_factory.get_step_current(delay, duration, b2.ms, amplitude * b2.uA)
             st = (duration+delay+100)* b2.ms
