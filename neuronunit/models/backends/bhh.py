@@ -19,29 +19,29 @@ mpl.use('Agg')
 import matplotlib.pyplot as plt
 from elephant.spike_train_generation import threshold_detection
 
-from types import MethodType
+#from types import MethodType
 # from neuronunit.optimisation import ascii_plot
 
 #import matplotlib.pyplot as plt
 # @jit(cache=True) I suspect this causes a memory leak
-#ascii_plot = True
 
 try:
     import asciiplotlib as apl
     fig = apl.figure()
-    fig.plot([1,1], [2,2])
+    fig.plot([1,0], [0,1])
     ascii_plot = True
 except:
     ascii_plot = False
 import numpy
 
+#ascii_plot = True
 
 
     #I_stim = stim, simulation_time=st)
 
 def simulate_HH_neuron_local(I_stim=None, simulation_time=None,El=None,\
                             EK=None,ENa=None,gl=None,\
-                            gK=None,gNa=None,C=None):
+                            gK=None,gNa=None,C=None,Vr=None):
     # code lifted from:
     # /usr/local/lib/python3.5/dist-packages/neurodynex/hodgkin_huxley
 
@@ -56,9 +56,19 @@ def simulate_HH_neuron_local(I_stim=None, simulation_time=None,El=None,\
     Returns:
         StateMonitor: Brian2 StateMonitor with recorded fields
         ["vm", "I_e", "m", "n", "h"]
+    for k in kwargs:
+        if type(k) is type(None):
+            #Hodgkin Huxley parameters
+            HH_dic = { 'El' : 10.6 * b2.units.mV,
+            'EK' : -12 * b2.mV,
+            'ENa' : 115 * b2.mV,
+            'gl' : 0.3 * b2.msiemens,
+            'gK' : 36 * b2.msiemens,
+            'gNa' : 120 * b2.msiemens,
+            'C' : 1 * b2.ufarad,
+            'Vr':-70.0 }
+            k = HH_dic[k]	
     """
-
-
     # forming HH model with differential equations
     eqs = """
     I_e = input_current(t,i) : amp
@@ -92,8 +102,12 @@ def simulate_HH_neuron_local(I_stim=None, simulation_time=None,El=None,\
     hh_net = b2.Network(neuron)
     hh_net.add(st_mon)
     hh_net.run(simulation_time)
-
-    return st_mon
+    
+    state_dic = st_mon.get_states()
+    vm = state_dic['vm']
+    vm = [(float(v) +Vr)/1000.0 for v in vm]
+    vM = AnalogSignal(vm,units = V,sampling_period = float(1.0) * pq.ms)
+    return st_mon,vM
 
 # downsampled_y = downsample(y, 6000)
 
@@ -167,7 +181,7 @@ class BHHBackend(Backend):
             self.gK = attrs['gK'] * b2.units.msiemens
             self.gNa = attrs['gNa'] * b2.units.msiemens
             self.C = attrs['C'] * b2.units.ufarad
-
+            self.Vr = attrs['Vr']
 
 
             self.model.attrs.update(attrs)
@@ -178,8 +192,8 @@ class BHHBackend(Backend):
             self.HH =HH
     def finalize(self):
         '''
-        Necessary for imputing missing sampling, simulating at high sample frequency is prohibitevely slow, with
-        out significant difference in behavior.
+        Necessary for imputing missing sampling, simulating at high sample frequency is prohibitevely slow, and yet, there is 
+        no significant difference in behavior.
         '''
         transform_function = interp1d([float(t) for t in self.vM.times],[float(v) for v in self.vM.magnitude])
         xnew = np.linspace(0, float(np.max(self.vM.times)), num=1004001, endpoint=True)
@@ -233,7 +247,7 @@ class BHHBackend(Backend):
             self.set_attrs(**attrs)
 
 
-            self.state_monitor = simulate_HH_neuron_local(
+            self.state_monitor,self.vM = simulate_HH_neuron_local(
             El = attrs['El'] * b2.units.mV,
             EK = attrs['EK'] * b2.units.mV,
             ENa = attrs['ENa'] * b2.units.mV,
@@ -241,15 +255,12 @@ class BHHBackend(Backend):
             gK = attrs['gK'] * b2.units.msiemens,
             gNa = attrs['gNa'] * b2.units.msiemens,
             C = attrs['C'] * b2.units.ufarad,
+            Vr = attrs['Vr'],
             I_stim = stim, simulation_time=st)
 
         self.state_monitor.clock.dt = 1 *b2.ms
         self.dt = self.state_monitor.clock.dt
 
-        state_dic = self.state_monitor.get_states()
-        vm = state_dic['vm']
-        vm = [float(v)/1000.0 -0.55 for v in vm]
-        self.vM = AnalogSignal(vm,units = mV,sampling_period = float(1.0) * pq.ms)
         self.attrs = attrs
 
         if ascii_plot:
@@ -259,12 +270,6 @@ class BHHBackend(Backend):
             fig.plot(t, v, label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
             fig.show()
         fig  = None
-        '''
-        if len(self.spike_monitor.spike_trains())>1:
-            import matplotlib.pyplot as plt
-            plt.plot(y,x)
-            plt.savefig('debug.png')
-        '''
         return self.vM
 
     def _backend_run(self):

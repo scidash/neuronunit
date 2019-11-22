@@ -38,14 +38,13 @@ def _evaluate_invalid_fitness(toolbox, population):
     Returns the count of individuals with invalid fitness
     '''
     invalid_ind = [ind for ind in population if not ind.fitness.valid]
+    #print(invalid_ind[0].dtc.scores)
+    #print(invalid_ind[0].dtc.from_imputation)
     invalid_pop,fitnesses = toolbox.evaluate(invalid_ind)
 
     for j, ind in enumerate(invalid_pop):
         ind.fitness.values = fitnesses[j]
         ind.dtc = None
-        #ind.dtc.get_ss()
-
-
     return invalid_pop
 
 def strip_object(p):
@@ -161,7 +160,7 @@ def _get_offspring(parents, toolbox, cxpb, mutpb):
 
         except:
             parents_ = []
-            parents = wrangle(parents)
+            parents = purify(parents)
 
             for i,off_ in enumerate(parents):
                 parents_.append(WSListIndividual())
@@ -235,9 +234,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
         logbook = cp["logbook"]
         history = cp["history"]
         random.setstate(cp["rndstate"])
-        print('remarkably enters checkpoint')
-        import pdb
-        pdb.set_trace()
+
     else:
         start_gen = 1
         gen_vs_pop.append(population)
@@ -274,12 +271,9 @@ def eaAlphaMuPlusLambdaCheckpoint(
         fronts.append(pf)
         stag_check1.append(np.mean([ np.sum(p.fitness.values) for pf in fronts for p in pf ]))
         if gen%5==0:
-            if not np.sum(fronts[-1][0].fitness.values) < stag_check1[gen-4]*0.95:
-                # and \
+            if not np.sum(fronts[-1][0].fitness.values) < stag_check1[gen-4]*0.75:
                 print(np.std(population))#<record:
                 print('gene poulation stagnant, no appreciable gains in fitness')
-
-
         try:
             ref_points = tools.uniform_reference_points(len(population[0]), 12)
             toolbox.register("select", selNSGA3WithMemory(ref_points))

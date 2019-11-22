@@ -121,7 +121,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                 plt.ylabel('Amplitude (mV)')
 
             for index,dtc in enumerate(second_pop):
-                color = 'lightred'
+                color = 'lightcoral'
                 if index == 0:
                     color = 'red'
                 model = mint_generic_model(dtc.backend)
@@ -327,7 +327,7 @@ def elaborate_plots(self,ga_out):
     ret = logbook.chapters
     gen = ret['every'].select("gen")
     everything = ret["every"]
-    fig2, ax2 = plt.subplots(len(objectives)+1,1,figsize=(10,10))
+    fig2, ax2 = plt.subplots(len(objectives)+2,1,figsize=(10,10))
 
     for i,k in enumerate(objectives):
 
