@@ -6,6 +6,7 @@
 import warnings
 import matplotlib
 import cython
+import logging
 
 # optional imports
 try:
@@ -18,7 +19,7 @@ RATIO_SCORE = False
 if SILENT:
     warnings.filterwarnings("ignore")
 
-PARALLEL_CONFIDENT = False
+PARALLEL_CONFIDENT = True
 #    Goal is based on this. Don't optimize to a singular point, optimize onto a cluster.
 #    Golowasch, J., Goldman, M., Abbott, L.F, and Marder, E. (2002)
 #    Failure of averaging in the construction
@@ -79,7 +80,6 @@ import os
 import neuronunit
 anchor = neuronunit.__file__
 anchor = os.path.dirname(anchor)
-
 mypath = os.path.join(os.sep,anchor,'tests/russell_tests.p')
 try:
     import asciiplotlib as apl
@@ -116,7 +116,10 @@ def timer(func):
         t1 = time.time()
         f = func(*args, **kwargs)
         t2 = time.time()
-        print('Runtime taken to evaluate function {1} {0} seconds'.format(t2-t1,func))
+        logger = logging.getLogger('__main__')
+        logging.basicConfig(level=logging.DEBUG)
+
+        logging.info('Runtime taken to evaluate function {1} {0} seconds'.format(t2-t1,func))
         return f
     return inner
 
@@ -168,11 +171,6 @@ class TSD(dict):
         ##
         # TODO populate a score table pass it back to DO.OM
 
-        ##
-        ##
-        # TODO plot objective function progress as a function of generations
-        # ie fitness versus generation
-        ##
         return ga_out, DO
 from sciunit.suites import TestSuite# as TSuite
 
@@ -181,22 +179,8 @@ class TSS(TestSuite):
        super(TSD,self).__init__()
        self.update(tests)
        self.use_rheobase_score=use_rheobase_score
-
-
     def optimize(self,param_edges,backend=None,protocol={'allen': False, 'elephant': True},MU=5,NGEN=5,free_params=None,seed_pop=None):
-        from neuronunit.optimisation.optimisations import run_ga
-        if type(free_params) is type(None):
-            free_params=param_edges.keys()
-
-        ga_out,DO = run_ga(param_edges, NGEN, self, free_params=free_params, \
-                           backend=backend, MU = 8,  protocol=protocol,seed_pop = seed_pop)
-        # dtc_pop = self.update_dtc_pop(ga_out['pf'], DO.OM.td)
-        if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
-            _,dtc_pop = DO.OM.test_runner(ga_out['pf'],DO.OM.td,DO.OM.tests)
-            ga_out['dtc_pop1'] = dtc_pop
-
-        return ga_out, DO
-
+        pass
 
 # DEAP mutation strategies:
 # https://deap.readthedocs.io/en/master/api/tools.html#deap.tools.mutESLogNormal
@@ -235,8 +219,6 @@ def make_new_random(dtc_,backend):
         dtc = DataTC()
         dtc.backend = backend
         dtc.attrs = random_p(backend)
-        #import pdb
-        #pdb.set_trace()
         dtc = dtc_to_rheo(dtc)
         if type(dtc.rheobase) is not type({'1':1}):
             temp = dtc.rheobase
@@ -282,8 +264,6 @@ def process_rparam(backend):
 
     dsolution = DataTC()
     dsolution.attrs = rp
-    #import pdb
-    #pdb.set_trace()
     dsolution.backend = backend
     return dsolution,rp,chosen_keys,random_param
 def check_test(new_tests):
@@ -1054,8 +1034,6 @@ def prediction_current_and_features(dtc):
         last_spike = ephys_dict['spikes'][-1]
 
         first_spike.pop('direct',None)
-        #import pdb
-        #pdb.set_trace()
         temp = ['_first','_half','_last']
         for i,spike in enumerate([first_spike,half_spike,last_spike]):
             for key,spike_obs in spike.items():
@@ -1528,8 +1506,8 @@ def evaluate_allen(dtc,regularization=True):
 
 def evaluate(dtc,regularization=False,elastic_net=True):
     # assign worst case errors, and then over write them with situation informed errors as they become available.
-    #greatest = len(dtc.tests)
-    fitness = []# 1.0 for i in range(0,greatest) ]
+    print(dtc.scores)
+    fitness = [ 1.0 for i in range(0,len(dtc.scores)) ]
 
     if not hasattr(dtc,str('scores')):
         return fitness
@@ -1541,6 +1519,7 @@ def evaluate(dtc,regularization=False,elastic_net=True):
            fitness = [ (fitness1[i]+j)/2.0 for i,j in enumerate(fitness0)]
         else:
            fitness.append(float(dtc.scores[str(t)]))
+    print(fitness)
     return tuple(fitness,)
 
 def get_trans_list(param_dict):
@@ -1812,6 +1791,28 @@ def eval_subtest(name):
             if name in t.name:
                 score, dtc = bridge_judge((t, dtc))
 
+def increase_current(dtc):
+    cnt=0
+    model = new_model(dtc)
+
+    while type(pred) is type(None):
+        cnt+=1
+        t.params['amplitude'] = -10*pq.pA*cnt
+        t.setup_protocol(model)
+        result = t.get_result(model)
+
+        assert 'mean' in t.observation.keys()
+        pred = None
+        try:
+            pred = t.extract_features(model, result)
+        except:
+            pred = None
+        print(pred,cnt,'suggesting that units of model backend are wrong, or capabilities units are wrong')
+        if cnt==10:
+            score = t.compute_score(pred,t.observation)
+            return score
+    score = t.compute_score(pred,t.observation)
+    return score
 
 
 def bridge_passive(package):
@@ -1875,24 +1876,7 @@ def bridge_passive(package):
         t.score_type = scores.RatioScore
         score = t.compute_score(pred,t.observation)
     if type(score) is type(None):
-        import pdb
-        pdb.set_trace()
-        def dont_do_this():
-            cnt=0
-            while type(pred) is type(None):
-                cnt+=1
-                t.params['amplitude'] = -10*pq.pA*cnt
-                t.setup_protocol(model)
-                result = t.get_result(model)
-
-                assert 'mean' in t.observation.keys()
-                pred = None
-                try:
-                    pred = t.extract_features(model, result)
-                except:
-                    pred = None
-
-            score = t.compute_score(pred,t.observation)
+        score = increase_current(dtc)
     return score, dtc, pred
 
 class OptMan():
@@ -2378,6 +2362,8 @@ class OptMan():
                 print('score worst via test failure at {0}'.format('rheobase'))
         else:
             for k, t in enumerate(tests):
+                key = str(t)
+
                 if "RheobaseTest" in  t.name:
                     if str("BHH") in dtc.backend or str("ADEXP") in dtc.backend or str("GLIF") in dtc.backend:
                         t = RheobaseTestP(t.observation)
@@ -2392,7 +2378,6 @@ class OptMan():
 
                 if self.tests.use_rheobase_score == False and "RheobaseTest" in str(k):
                     continue
-                key = str(t)
                 dtc.scores[key] = 1.0
                 #dtc = self.format_test(dtc)
                 t.params = dtc.protocols[k]
@@ -2435,11 +2420,26 @@ class OptMan():
                     if score.norm_score is not None:
                         assignment = 1.0 - score.norm_score
                     else:
-                        import pdb
-                        pdb.set_trace()
+                        print('broken score')
                 dtc.scores[key] = assignment
                 if dtc.scores[key] == 1.0:
-                    print('failed at: ',t.passive,t.name,t.score_type,pred,t.observation['std'])
+                    try:
+                        print('failed at: ',t.passive,t.name,t.score_type,pred,t.observation['std'],dtc.scores[str(t.name)])
+                    except:
+                        if not 'mean' in pred.keys():
+                            pred['mean'] = pred['value']
+                        else:
+                            pred.pop('mean',None)
+                            pred['mean'] = pred['value']
+
+                        if 'mean' not in t.observation.keys():
+                            t.observation['mean']  = t.observation['value']
+                        print(t.observation['mean'],pred, 'incompatible')
+                        t.score_type = scores.RatioScore
+                        score = t.compute_score(pred,t.observation)
+                        assignment = 1.0 - score.norm_score
+                        dtc.scores[str(t.name)] = assignment
+
                 if dtc.scores[key] == 0.0:
                     print('succeeded at: ',t.passive,t.name,t.score_type,pred,t.observation['std'])
 
@@ -2507,11 +2507,8 @@ class OptMan():
             dtc.backend = copy.copy(backend)
         else:
             dtc = dsolution
-            #dsolution = dtc
         if self.protocol['elephant']:
-            #print(xtests)
-            #import pdb
-            #pdb.set_trace()
+
             if str('RheobaseTest') in original_test_dic.keys():
                 dtc = get_rh(dtc,original_test_dic['RheobaseTest'])
                 if type(dtc.rheobase) is type({'1':0}):
@@ -2791,17 +2788,18 @@ class OptMan():
             for d in dtcpop:
                if not hasattr(d, 'tests'):
                  print(Error('broken no test in dtc'))
-                 #import pdb
-                 #pdb.set_trace()
         return pop, dtcpop
-    #@timer
     def test_runner(self,pop,td,tests):
         if self.protocol['elephant']:
             pop_, dtcpop = self.obtain_rheobase(pop, td, tests)
             for ind,dtc in zip(pop,dtcpop):
                 dtc.error_length = self.error_length
-            if not hasattr(self,'exhaustive'):# is type (None):
-                #pass
+            if not hasattr(self,'exhaustive'):
+                # there are many models, which have no actual rheobase current injection value.
+                # filter, filters out such models,
+                # gew genes, add genes to make up for missing values.
+                # delta is the number of genes to replace.
+
                 pop, dtcpop = self.make_up_lost(copy.copy(pop_), dtcpop, td)
             else:
                 pop,dtcpop = self.parallel_route(pop, dtcpop, tests, td)#, clustered=False)
@@ -2809,10 +2807,6 @@ class OptMan():
                 for ind,d in both:
                     if not hasattr(ind,'fitness'):
                         ind.fitness = []#copy.copy(pop_[0].fitness)
-            # there are many models, which have no actual rheobase current injection value.
-            # filter, filters out such models,
-            # gew genes, add genes to make up for missing values.
-            # delta is the number of genes to replace.
 
         elif self.protocol['allen']:
 
@@ -2918,10 +2912,12 @@ class OptMan():
 
 
         pop, dtcpop = self.test_runner(pop,td,self.tests)
+
         for p,d in zip(pop,dtcpop):
             p.dtc = d
             p.error_length = self.error_length
             p.backend = self.backend
+
         return pop
     @timer
     def boot_new_genes(self,number_genes,dtcpop,td):

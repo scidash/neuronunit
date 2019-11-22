@@ -20,7 +20,7 @@ import pickle
 #import pdb
 
 from neurodynex.adex_model import AdEx
-import brian2 as b2s
+import brian2 as b2
 
 
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -68,21 +68,21 @@ BAE1['SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b'] = 7#*AdEx.b2.units.pA
 BAE1['V_RESET'] = -51.0#*AdEx.b2.units.mV
 BAE1['V_REST'] = -70#*AdEx.b2.units.mV
 
-BAE1['ADAPTATION_TIME_CONSTANT_tau_w'] = [BAE1['ADAPTATION_TIME_CONSTANT_tau_w'] - 0.5 * BAE1['ADAPTATION_TIME_CONSTANT_tau_w'], BAE1['ADAPTATION_TIME_CONSTANT_tau_w']+0.5*BAE1['ADAPTATION_TIME_CONSTANT_tau_w']]
-BAE1['ADAPTATION_VOLTAGE_COUPLING_a'] = [BAE1['ADAPTATION_VOLTAGE_COUPLING_a'] -0.5 * BAE1['ADAPTATION_VOLTAGE_COUPLING_a'], BAE1['ADAPTATION_VOLTAGE_COUPLING_a']+ 0.5 * BAE1['ADAPTATION_VOLTAGE_COUPLING_a']]
+BAE1['ADAPTATION_TIME_CONSTANT_tau_w'] = [BAE1['ADAPTATION_TIME_CONSTANT_tau_w'] - 0.5 * np.abs(BAE1['ADAPTATION_TIME_CONSTANT_tau_w']), BAE1['ADAPTATION_TIME_CONSTANT_tau_w']+0.5*BAE1['ADAPTATION_TIME_CONSTANT_tau_w']]
+BAE1['ADAPTATION_VOLTAGE_COUPLING_a'] = [BAE1['ADAPTATION_VOLTAGE_COUPLING_a'] -0.5 * np.abs(BAE1['ADAPTATION_VOLTAGE_COUPLING_a']), BAE1['ADAPTATION_VOLTAGE_COUPLING_a']+ 0.5 * BAE1['ADAPTATION_VOLTAGE_COUPLING_a']]
 BAE1['FIRING_THRESHOLD_v_spike'] = [ BAE1['FIRING_THRESHOLD_v_spike'],BAE1['FIRING_THRESHOLD_v_spike'] ]
-BAE1['MEMBRANE_RESISTANCE_R'] = [BAE1['MEMBRANE_RESISTANCE_R']- 0.125 * BAE1['MEMBRANE_RESISTANCE_R'], BAE1['MEMBRANE_RESISTANCE_R']*0.125 * BAE1['MEMBRANE_RESISTANCE_R']]
+BAE1['MEMBRANE_RESISTANCE_R'] = [BAE1['MEMBRANE_RESISTANCE_R']- 0.125 * np.abs(BAE1['MEMBRANE_RESISTANCE_R']), BAE1['MEMBRANE_RESISTANCE_R']*0.125 * BAE1['MEMBRANE_RESISTANCE_R']]
 BAE1['MEMBRANE_TIME_SCALE_tau_m'] = [BAE1['MEMBRANE_TIME_SCALE_tau_m'] - 0.125 * BAE1['MEMBRANE_TIME_SCALE_tau_m'], BAE1['MEMBRANE_TIME_SCALE_tau_m']+ 0.125*BAE1['MEMBRANE_TIME_SCALE_tau_m']]
 BAE1['RHEOBASE_THRESHOLD_v_rh'] = [BAE1['RHEOBASE_THRESHOLD_v_rh'] - 0.125 * BAE1['RHEOBASE_THRESHOLD_v_rh'], BAE1['RHEOBASE_THRESHOLD_v_rh']+ 0.125 * BAE1['RHEOBASE_THRESHOLD_v_rh']]
 BAE1['SHARPNESS_delta_T'] = [BAE1['SHARPNESS_delta_T']-0.125 * BAE1['SHARPNESS_delta_T'], 0.125 * BAE1['SHARPNESS_delta_T']]
 BAE1['SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b'] = [BAE1['SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b'] -0.5 \
                                                   * BAE1['SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b'], \
                                                   BAE1['SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b'] +0.5 * BAE1['SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b']]
-BAE1['V_RESET'] = [ BAE1['V_RESET'] -0.125*BAE1['V_RESET'],  BAE1['V_RESET']+0.125*BAE1['V_RESET']]
-BAE1['V_REST'] = [  BAE1['V_REST']-0.5*BAE1['V_REST'],BAE1['V_REST']+0.5*BAE1['V_REST']]
+BAE1['V_RESET'] = [ BAE1['V_RESET'] -0.125*np.abs(BAE1['V_RESET']),  BAE1['V_RESET']+0.125*BAE1['V_RESET']]
+BAE1['V_REST'] = [  BAE1['V_REST']-0.5*np.abs(BAE1['V_REST']),BAE1['V_REST']+0.5*BAE1['V_REST']]
 #[  BAE1['V_REST'] - 0.75*BAE1['V_REST'], BAE1['V_REST']+0.25*BAE1['V_REST']]
-BAE1['b'] = [BAE1['b'] - 0.125 * BAE1['b'],  BAE1['b']+ 0.125 * BAE1['b']]
-BAE1['C'] = [BAE1['C']- 0.125 * BAE1['C'], BAE1['C'] + 0.125 * BAE1['C'] ]
+BAE1['b'] = [BAE1['b'] - 0.125 * np.abs(BAE1['b']),  BAE1['b']+ 0.125 * BAE1['b']]
+BAE1['C'] = [BAE1['C']- 0.125 * np.abs(BAE1['C']), BAE1['C'] + 0.125 * BAE1['C'] ]
 
 
 BAE1['peak_v'] = [0.010, 0.060]
@@ -90,16 +90,18 @@ BAE1['peak_v'] = [0.010, 0.060]
 MODEL_PARAMS['ADEXP'] = BAE1
 
 
-        # neuron parameters
-HH_dic =  { 'El' : 10.6 * b2.mV
-        'EK' : -12 * b2.mV
-        'ENa' : 115 * b2.mV
-        'gl' : 0.3 * b2.msiemens
-        'gK' : 36 * b2.msiemens
-        'gNa' : 120 * b2.msiemens
-        'C' : 1 * b2.ufarad }
+# Hodgkin Huxley parameters
+HH_dic =  { 'El' : 10.6 * b2.units.mV,
+        'EK' : -12 * b2.mV,
+        'ENa' : 115 * b2.mV,
+        'gl' : 0.3 * b2.msiemens,
+        'gK' : 36 * b2.msiemens,
+        'gNa' : 120 * b2.msiemens,
+        'C' : 1 * b2.ufarad,
+	'Vr':-80.0 }
 
-HH_dic = { k:(v-0.5*v,v+0.5v) for k,v in HH_dic.items() }
+HH_dic = { k:(float(v)-0.5*float(np.abs(v)),float(v)+0.5*float(v)) for k,v in HH_dic.items() }
+HH_dic['Vr'] = [-100,-50]
 MODEL_PARAMS['BHH'] = HH_dic
 
 #I = .8*nA
