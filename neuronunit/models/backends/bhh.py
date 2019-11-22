@@ -19,22 +19,23 @@ mpl.use('Agg')
 import matplotlib.pyplot as plt
 from elephant.spike_train_generation import threshold_detection
 
-#from types import MethodType
+
 # from neuronunit.optimisation import ascii_plot
 
 #import matplotlib.pyplot as plt
 # @jit(cache=True) I suspect this causes a memory leak
-
+getting_started = False
 try:
     import asciiplotlib as apl
     fig = apl.figure()
     fig.plot([1,0], [0,1])
     ascii_plot = True
+    import gc
+
 except:
     ascii_plot = False
 import numpy
 
-#ascii_plot = True
 
 
     #I_stim = stim, simulation_time=st)
@@ -67,7 +68,7 @@ def simulate_HH_neuron_local(I_stim=None, simulation_time=None,El=None,\
             'gNa' : 120 * b2.msiemens,
             'C' : 1 * b2.ufarad,
             'Vr':-70.0 }
-            k = HH_dic[k]	
+            k = HH_dic[k]
     """
     # forming HH model with differential equations
     eqs = """
@@ -102,15 +103,15 @@ def simulate_HH_neuron_local(I_stim=None, simulation_time=None,El=None,\
     hh_net = b2.Network(neuron)
     hh_net.add(st_mon)
     hh_net.run(simulation_time)
-    
+
     state_dic = st_mon.get_states()
     vm = state_dic['vm']
-    vm = [(float(v) +Vr)/1000.0 for v in vm]
-    vM = AnalogSignal(vm,units = V,sampling_period = float(1.0) * pq.ms)
+    vm = [ (float(v)+Vr)/10.0 for v in vm]
+    vM = AnalogSignal(vm,units = mV,sampling_period = float(1.0) * pq.ms)
     return st_mon,vM
 
 # downsampled_y = downsample(y, 6000)
-
+getting_started = False
 class BHHBackend(Backend):
     #def get_spike_count(self):
     #    return int(self.spike_monitor.count[0])
@@ -131,10 +132,7 @@ class BHHBackend(Backend):
         self.debug = debug
         self.temp_attrs = None
         self.n_spikes = None
-        #self.spike_monitor = None
-        #self.peak_v = 0.02
         self.verbose = False
-        #self.model.get_spike_count = self.get_spike_count
 
 
         if type(attrs) is not type(None):
@@ -186,13 +184,12 @@ class BHHBackend(Backend):
 
             self.model.attrs.update(attrs)
         if attrs is None:
-            #from neurodynex.HH_model import HH
             b2.defaultclock.dt = 1 * b2.ms
 
             self.HH =HH
     def finalize(self):
         '''
-        Necessary for imputing missing sampling, simulating at high sample frequency is prohibitevely slow, and yet, there is 
+        Necessary for imputing missing sampling, simulating at high sample frequency is prohibitevely slow, and yet, there is
         no significant difference in behavior.
         '''
         transform_function = interp1d([float(t) for t in self.vM.times],[float(v) for v in self.vM.magnitude])
@@ -228,13 +225,19 @@ class BHHBackend(Backend):
             c = current['injected_square_current']
         else:
             c = current
-        amplitude = float(c['amplitude'])#*100000.0
+        amplitude = float(c['amplitude'])/1000.0#*100000.0
         duration = int(c['duration'])#/dt#/dt.rescale('ms')
         delay = int(c['delay'])#/dt#.rescale('ms')
         pre_current = int(duration)+100
-        stim = input_factory.get_step_current(delay, duration, b2.ms, amplitude * b2.uA)
 
-        st = (duration+delay+100)* b2.ms
+        #current = input_factory.get_step_current(10, 45, b2.ms, 7.2 * b2.uA)
+        #state_monitor = simulate_HH_neuron(current, 70 * b2.ms)
+        if getting_started == False:
+            stim = input_factory.get_step_current(delay, duration, b2.ms, amplitude * b2.uA)
+            st = (duration+delay+100)* b2.ms
+        else:
+            stim = input_factory.get_step_current(10, 45, b2.ms, 7.2 * b2.uA)
+            st = 70 * b2.ms
 
         if self.model.attrs is None or not len(self.model.attrs):
 
@@ -258,7 +261,7 @@ class BHHBackend(Backend):
             Vr = attrs['Vr'],
             I_stim = stim, simulation_time=st)
 
-        self.state_monitor.clock.dt = 1 *b2.ms
+        #self.state_monitor.clock.dt = 1 *b2.ms
         self.dt = self.state_monitor.clock.dt
 
         self.attrs = attrs
@@ -269,6 +272,8 @@ class BHHBackend(Backend):
             fig = apl.figure()
             fig.plot(t, v, label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
             fig.show()
+            gc.collect()
+
         fig  = None
         return self.vM
 

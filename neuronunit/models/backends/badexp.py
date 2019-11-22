@@ -29,7 +29,7 @@ from types import MethodType
 
 #import matplotlib.pyplot as plt
 # @jit(cache=True) I suspect this causes a memory leak
-
+getting_started = True
 try:
     import asciiplotlib as apl
     fig = apl.figure()
@@ -93,22 +93,6 @@ class ADEXPBackend(Backend):
         """Must return a neo.core.AnalogSignal.
         And must destroy the hoc vectors that comprise it.
         """
-        '''
-        if np.max(self.vM)<0.000*qt.V:
-            tdic = self.spike_monitor.spike_trains()
-            for key,value in tdic.items():
-                if len(value)==1:
-                    i = int(float(value)/0.001)
-                    self.vM[i] = self.peak_v*qt.mV
-                else:
-                    for v in value:
-                       i = int(float(v)/0.001)
-                       self.vM[i] = 0.020*qt.mV
-                       #i = int(float(v)/0.001)
-                       #self.vM[i] = 0.020*qt.mV
-                        i = int(float(v)/0.001)
-                        self.vM[i] = self.peak_v*qt.mV
-        '''
         return self.vM
 
     def set_attrs(self, **attrs):
@@ -147,7 +131,7 @@ class ADEXPBackend(Backend):
         vm_new = transform_function(xnew) #% generate the y values for all x values in xnew
         self.vM = AnalogSignal(vm_new,units = mV,sampling_period = float(xnew[1]-xnew[0]) * pq.s)
         if self.verbose:
-        
+
             print(len(self.vM))
         self.vM = AnalogSignal(vm_new,units = mV,sampling_period = float(xnew[1]-xnew[0]) * pq.s)
         return self.vM
@@ -189,11 +173,16 @@ class ADEXPBackend(Backend):
 
             self.AdEx = AdEx
             self.state_monitor, self.spike_monitor = self.AdEx.simulate_AdEx_neuron(I_stim = stim, simulation_time=st)
-            
+
         else:
             if self.verbose:
                 print(attrs)
                 print(attrs['ADAPTATION_TIME_CONSTANT_tau_w'])
+
+            if getting_started == True:
+
+                stim = input_factory.get_step_current(10, 200, 1. * b2.ms, 65.0 * b2.pA)
+                st = 300 * b2.ms
             self.set_attrs(**attrs)
             self.state_monitor, self.spike_monitor = self.AdEx.simulate_AdEx_neuron(
             tau_m = attrs['MEMBRANE_TIME_SCALE_tau_m']*AdEx.b2.units.ms,
@@ -210,7 +199,7 @@ class ADEXPBackend(Backend):
 
 
 
-        self.state_monitor.clock.dt = 1 *b2.ms
+        #self.state_monitor.clock.dt = 1 *b2.ms
         self.dt = self.state_monitor.clock.dt
 
         state_dic = self.state_monitor.get_states()
@@ -226,7 +215,7 @@ class ADEXPBackend(Backend):
         else:
             self.peak_v = 2
         if self.verbose:
-        
+
             print(self.peak_v)
         for key,value in tdic.items():
 

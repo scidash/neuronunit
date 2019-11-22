@@ -4,14 +4,14 @@ from .base import np, pq, ncap, VmTest, scores
 from scipy.optimize import curve_fit
 import gc
 DURATION = 500.0*pq.ms
-DELAY = 200.0*pq.ms
-
-
-DURATION = 500.0*pq.ms
-DELAY = 200.0*pq.ms
+DELAY = 200.0*pq.m
 try:
     import asciiplotlib as apl
+    fig.plot([1,0], [0,1])
+
     ascii_plot = True
+    import gc
+
 except:
     ascii_plot = False
 class TestPulseTest(VmTest):
@@ -40,14 +40,25 @@ class TestPulseTest(VmTest):
         model.get_backend().set_stop_time(t_stop)
 
     def setup_protocol(self, model):
-        """Implement sciunit.tests.ProtocolToFeatureTest.setup_protocol."""
+        """Not a great design for parallel code as model can't be shared"""
         self.condition_model(model)
         model.inject_square_current(self.params['injected_square_current'])
+        #return vm
     def get_result(self, model):
+        self.condition_model(model)
+        model.inject_square_current(self.params['injected_square_current'])
         vm = model.get_membrane_potential()
         return vm
 
-    def extract_features(self, model, vm):
+    def extract_features(self, model,result):
+        #model = dtc.to_model()
+        self.condition_model(model)
+        #print(self.params)
+        model.inject_square_current(self.params['injected_square_current'])
+        #print(model.attrs)
+        vm = model.get_membrane_potential()
+        #print(vm)
+
         i = self.params['injected_square_current']
         if np.any(np.isnan(vm)) or np.any(np.isinf(vm)):
             return None
@@ -83,15 +94,11 @@ class TestPulseTest(VmTest):
         Iext[delay_ind+duration_ind::] = i['amplitude']
         if ascii_plot:
             fig = apl.figure()
-
             fig.plot(ts, vs, label=str('voltage from negative injection: '), width=100, height=20)
             fig.show()
-
             fig.plot(ts, Iext, label=str('negative injection times 1,000: '), width=100, height=20)
-
             fig.show()
-
-        gc.collect()
+            gc.collect()
         return r_in.simplified
 
     @classmethod
@@ -220,7 +227,7 @@ class TimeConstantTest(TestPulseTest):
                 tau = tau.simplified
             else:
                 tau = None
-                
+
             # Put prediction in a form that compute_score() can use.
             features = {'value': tau}
         return features
@@ -233,11 +240,12 @@ class TimeConstantTest(TestPulseTest):
         if 'n' in prediction.keys():
             if prediction['n'] == 0:  # if prediction is None:
                 score = scores.InsufficientDataScore(None)
+            else:
+                score = super(TimeConstantTest, self).compute_score(observation,
+                                                                prediction)
         else:
-            #prediction['value'] = prediction['value']
             score = super(TimeConstantTest, self).compute_score(observation,
                                                                 prediction)
-
         return score
 
 
@@ -273,12 +281,13 @@ class CapacitanceTest(TestPulseTest):
 
         if 'n' in prediction.keys():
             if prediction['n'] == 0:
-                pdb.set_trace()
                 score = scores.InsufficientDataScore(None)
+            else:
+                score = super(CapacitanceTest, self).compute_score(observation,
+                                                               prediction)
         else:
             score = super(CapacitanceTest, self).compute_score(observation,
                                                                prediction)
-        #import pdb; pdb.set_trace()
         return score
 
 
