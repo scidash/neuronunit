@@ -301,22 +301,11 @@ def score_only(dtc,pred,test):
 # this method is not currently used, but it could also be too prospectively usefull to delete.
 # TODO move to a utils file.
 
-def get_centres(use_test,backend,explore_param):
+def get_centres(ga_out):
     '''
     Do optimization, but then get cluster centres of parameters
     '''
-    MU = 7
-    NGEN = 7
-    test_opt = {}
-    for index,test in enumerate(use_test):
-        ga_out, DO = run_ga(explore_param,NGEN,test,free_params=free_params, NSGA = True, MU = MU,backed=backend, selection=str('selNSGA2'))
-        td = DO.td # td, transfer dictionary, a consistent, stable OrderedDict of parameter values.
-        test_opt[test.name] = ga_out
-    with open('qct.p','wb') as f:
-        pickle.dump(test_opt,f)
-
-    all_val = {}
-    for key,value in test_opt.items():
+    for key,value in ga_out['pf']:
         all_val[key] = {}
         for k in td.keys():
             temp = [i.dtc.attrs[k] for i in value['pf']]
@@ -336,6 +325,11 @@ def get_centres(use_test,backend,explore_param):
 
 
 def mint_generic_model(backend):
+    '''
+    Possibly depricated:
+    see:
+    dtc.to_model()
+    '''
     LEMS_MODEL_PATH = path_params['model_path']
     model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = str(backend))
     return model
