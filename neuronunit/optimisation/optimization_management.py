@@ -1,4 +1,4 @@
-    # Its not that this file is responsible for doing plotting,
+# Its not that this file is responsible for doing plotting,
 # but it calls many modules that are, such that it needs to pre-empt
 
 # setting of an appropriate backend.
@@ -20,8 +20,11 @@ if SILENT:
     warnings.filterwarnings("ignore")
 
 PARALLEL_CONFIDENT = True
-# Rationale Many methods inside the file optimization_management.py cannot be easily monkey patched using ```pdb.set_trace()``` unless at the top of the file, the parallel_confident static variable is declared false
-# This converts parallel mapping functions to serial mapping functions. scheduled Parallel mapping functions cannot tolerate being paused, serial ones can.
+# Rationale Many methods inside the file optimization_management.py cannot be easily monkey patched using 
+#```pdb.set_trace()``` unless at the top of the file,
+# the parallel_confident static variable is declared false
+# This converts parallel mapping functions to serial mapping functions. s
+# cheduled Parallel mapping functions cannot tolerate being paused, serial ones can.
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
