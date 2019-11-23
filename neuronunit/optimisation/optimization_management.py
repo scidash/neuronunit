@@ -1,5 +1,10 @@
 # Its not that this file is responsible for doing plotting,
 # but it calls many modules that are, such that it needs to pre-empt
+try:
+    matplotlib.use('agg')
+except:
+    warnings.warn('X11 plotting backend not available, consider installing')
+#_arraytools
 
 # setting of an appropriate backend.
 # optional imports
@@ -9,13 +14,8 @@ import cython
 import logging
 
 # optional imports
-try:
-    matplotlib.use('agg')
-except:
-    warnings.warn('X11 plotting backend not available, consider installing')
-#_arraytools
 SILENT = True
-RATIO_SCORE = False
+#RATIO_SCORE = False
 if SILENT:
     warnings.filterwarnings("ignore")
 
@@ -48,11 +48,7 @@ import numpy
 
 
 from neuronunit.optimisation.data_transport_container import DataTC
-#from neuronunit.models.interfaces import glif
 
-# Import get_neab has to happen exactly here. It has to be called only on
-#from neuronunit import tests
-#from neuronunit.models.reduced import ReducedModel
 from neuronunit.optimisation.model_parameters import path_params
 from neuronunit.optimisation import model_parameters as modelp
 from itertools import repeat
@@ -60,7 +56,6 @@ from neuronunit.tests.base import AMPL, DELAY, DURATION
 from neuronunit.models import ReducedModel
 from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 from collections.abc import Iterable
-DEBUG = False
 from neuronunit.tests import dm_test_container #import Interoperabe
 from neuronunit.tests.base import VmTest
 
@@ -107,7 +102,17 @@ import quantities as pq
 from sciunit import scores
 from neuronunit.optimisation.optimisations import SciUnitOptimisation
 import random
+from neuronunit.plottools import elaborate_plots
 from neuronunit.plottools import inject_and_plot
+# Helper tests are dummy instances of NU tests.
+# They are used by other methods analogous to a base class,
+# these are base instances that become more derived
+# contexts, that modify copies of the helper class in place.
+rts,complete_map = pickle.load(open(mypath,'rb'))
+df = pd.DataFrame(rts)
+for key,v in rts.items():
+    helper_tests = [value for value in v.values() ]
+    break
 
 from neuronunit.optimisation.optimisations import SciUnitOptimisation
 def timer(func):
@@ -127,17 +132,6 @@ class WSListIndividual(list):
         """Constructor"""
         self.rheobase = None
         super(WSListIndividual, self).__init__(*args, **kwargs)
-
-# Helper tests are dummy instances of NU tests.
-# They are used by other methods analogous to a base class,
-# these are base instances that become more derived
-# contexts, that modify copies of the helper class in place.
-rts,complete_map = pickle.load(open(mypath,'rb'))
-df = pd.DataFrame(rts)
-for key,v in rts.items():
-    helper_tests = [value for value in v.values() ]
-    break
-from neuronunit.plottools import elaborate_plots
 
 
 class TSD(dict):
@@ -177,15 +171,7 @@ class TSD(dict):
         # TODO populate a score table pass it back to DO.OM
 
         return ga_out, DO
-from sciunit.suites import TestSuite# as TSuite
 
-class TSS(TestSuite):
-    def __init__(self,tests=[],use_rheobase_score=False):
-       super(TSD,self).__init__()
-       self.update(tests)
-       self.use_rheobase_score=use_rheobase_score
-    def optimize(self,param_edges,backend=None,protocol={'allen': False, 'elephant': True},MU=5,NGEN=5,free_params=None,seed_pop=None):
-        pass
 
 # DEAP mutation strategies:
 # https://deap.readthedocs.io/en/master/api/tools.html#deap.tools.mutESLogNormal
