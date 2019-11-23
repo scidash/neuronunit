@@ -20,11 +20,8 @@ if SILENT:
     warnings.filterwarnings("ignore")
 
 PARALLEL_CONFIDENT = True
-#    Goal is based on this. Don't optimize to a singular point, optimize onto a cluster.
-#    Golowasch, J., Goldman, M., Abbott, L.F, and Marder, E. (2002)
-#    Failure of averaging in the construction
-#    of conductance-based neuron models. J. Neurophysiol., 87: 11291131.
-
+# Rationale Many methods inside the file optimization_management.py cannot be easily monkey patched using ```pdb.set_trace()``` unless at the top of the file, the parallel_confident static variable is declared false
+# This converts parallel mapping functions to serial mapping functions. scheduled Parallel mapping functions cannot tolerate being paused, serial ones can.
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
