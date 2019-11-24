@@ -100,8 +100,8 @@ HH_dic =  { 'El' : 10.6 * b2.units.mV,
         'C' : 1 * b2.ufarad,
 	'Vr':-80.0 }
 
-HH_dic = { k:(float(v)-0.5*float(np.abs(v)),float(v)+0.5*float(v)) for k,v in HH_dic.items() }
-HH_dic['Vr'] = [-110,-60]
+HH_dic = { k:(float(v)-0.25*float(v),float(v)+0.25*float(v)) for k,v in HH_dic.items() }
+HH_dic['Vr'] = [-85,-45]
 MODEL_PARAMS['BHH'] = HH_dic
 
 #I = .8*nA

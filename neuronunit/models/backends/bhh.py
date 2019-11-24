@@ -62,18 +62,7 @@ def simulate_HH_neuron_local(I_stim=None, simulation_time=None,El=None,\
     Returns:
         StateMonitor: Brian2 StateMonitor with recorded fields
         ["vm", "I_e", "m", "n", "h"]
-    for k in kwargs:
-        if type(k) is type(None):
-            #Hodgkin Huxley parameters
-            HH_dic = { 'El' : 10.6 * b2.units.mV,
-            'EK' : -12 * b2.mV,
-            'ENa' : 115 * b2.mV,
-            'gl' : 0.3 * b2.msiemens,
-            'gK' : 36 * b2.msiemens,
-            'gNa' : 120 * b2.msiemens,
-            'C' : 1 * b2.ufarad,
-            'Vr':-70.0 }
-            k = HH_dic[k]
+
     """
     # forming HH model with differential equations
     eqs = """

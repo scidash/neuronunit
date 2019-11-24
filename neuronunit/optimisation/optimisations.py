@@ -111,7 +111,7 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
                  selection = 'selIBEA',
                  benchmark = False,
                  seed=None,
-                 offspring_size=15,
+                 MU=15,
                  elite_size=3,
                  eta=20,
                  mutpb=0.7,
@@ -135,7 +135,7 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
         self.error_length = len(error_criterion)
         #import pdb; pdb.set_trace()
         self.seed = seed
-        self.offspring_size = offspring_size
+        self.MU = MU
         self.elite_size = elite_size
         self.eta = eta
         self.cxpb = cxpb
@@ -180,9 +180,9 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
         npoints = 2 ** len(list(self.params))
         npoints = np.ceil(npoints)
         if len(self.params)>1:
-            dic_grid = es.create_grid(mp_in = self.params,npoints = self.offspring_size, free_params = self.params)
+            dic_grid = es.create_grid(mp_in = self.params,npoints = self.MU, free_params = self.params)
         else:
-            npoints = self.offspring_size
+            npoints = self.MU
             values = np.linspace(np.min(list(self.params.values())[0]),np.max(list(self.params.values())[0]),npoints)
             single_key = list(self.params.keys())[0]
             dic_grid = [{single_key:v} for v in values ]
@@ -196,20 +196,20 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
         The grid is now defined, the rest of code just makes sure that the size of the grid is a reasonable size
         And computationally tractable. When I write sparse, think 'Down sample' a big, overly sampled list of coordinates.
         '''
-        if size > self.offspring_size:
-            sparsify = np.linspace(0,len(dic_grid)-1,self.offspring_size)
+        if size > self.MU:
+            sparsify = np.linspace(0,len(dic_grid)-1,self.MU)
             pop = []
             for i in sparsify:
                 d = dic_grid[int(i)]
                 pop.append([d[k] for k in self.td])
 
 
-        elif size <= self.offspring_size:
-            delta = self.offspring_size - size
+        elif size <= self.MU:
+            delta = self.MU - size
             pop = []
-            dic_grid = es.create_grid(mp_in = self.params,npoints = self.offspring_size+delta, free_params = self.params)
+            dic_grid = es.create_grid(mp_in = self.params,npoints = self.MU+delta, free_params = self.params)
             size = len(dic_grid)
-            delta = self.offspring_size - size
+            delta = self.MU - size
 
             for i in dic_grid:
                  pop.append([i[k] for k in self.td])
@@ -221,15 +221,15 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
 
                 pop.append(copy.copy(pop[0]))
                 size = len(pop)
-                delta = self.offspring_size - size
+                delta = self.MU - size
                 cnt+=1
 
-        elif size == self.offspring_size:
+        elif size == self.MU:
             pop = []
             for i in dic_grid:
                 pop.append([i[k] for k in self.td])
 
-        assert len(pop)==self.offspring_size
+        assert len(pop)==self.MU
         return pop
 
 
@@ -295,7 +295,7 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
             self.td = list(ordered.keys())
 
         elif type(self.seed_pop) is None:
-            self.grid_init = self.grid_sample_init(self.params)#(LOWER, UPPER, self.offspring_size)
+            self.grid_init = self.grid_sample_init(self.params)#(LOWER, UPPER, self.MU)
         if not hasattr(self,'grid_init'):
              self.grid_init = self.grid_sample_init(self.params)
 
@@ -384,18 +384,18 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
             continue_cp=False,
             cp_filename=None,
             cp_frequency=2,
-            max_ngen = 10):
+            NGEN = 10):
         """Run optimisation"""
-        # Allow run function to override offspring_size
+        # Allow run function to override MU
         # TODO probably in the future this should not be an object field anymore
         # keeping for backward compatibility
-        #if offspring_size is None:
-        offspring_size = self.offspring_size
+        #if MU is None:
+        MU = self.MU
 
-        #pop = self.toolbox.population(n=offspring_size)
+        #pop = self.toolbox.population(n=MU)
         pop = self.set_pop()
-        hof = deap.tools.HallOfFame(offspring_size)
-        pf = deap.tools.ParetoFront(offspring_size)
+        hof = deap.tools.HallOfFame(MU)
+        pf = deap.tools.ParetoFront(MU)
 
         #stats = deap.tools.Statistics(key=lambda ind: ind.fitness.sum)
         #stats2 = deap.tools.Statistics(key=lambda ind: ind.fitness.values)
@@ -420,10 +420,10 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
         pop, hof, pf, log, history, gen_vs_pop = algorithms.eaAlphaMuPlusLambdaCheckpoint(
             pop,
             self.toolbox,
-            offspring_size,
+            MU,
             self.cxpb,
             self.mutpb,
-            max_ngen,
+            NGEN,
             stats=mstats,
             hof=hof,
             pf=pf,
@@ -439,7 +439,7 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
         self.results = {'pop':pop,'hof':hof,'pf':pf,'log':log,'history':history,'td':td,'gen_vs_pop':gen_vs_pop}
         return self.results
 
-def run_ga(explore_edges, max_ngen, test, \
+def run_ga(explore_edges, NGEN, test, \
         free_params = None, hc = None,
         selection = None, MU = None, seed_pop = None, \
            backend = str('RAW'),protocol={'allen':False,'elephant':True}):
@@ -457,10 +457,10 @@ def run_ga(explore_edges, max_ngen, test, \
             ss[k] = explore_edges[k]
     if type(MU) == type(None):
         MU = 2**len(list(free_params))
-    max_ngen = int(np.floor(max_ngen))
+    NGEN = int(np.floor(NGEN))
     if not isinstance(test, Iterable):
         test = [test]
-    DO = SciUnitOptimisation(offspring_size = MU, error_criterion = test,\
+    DO = SciUnitOptimisation(MU = MU, error_criterion = test,\
      boundary_dict = ss, backend = backend, hc = hc, \
                              selection = selection,protocol=protocol)
 
@@ -471,7 +471,7 @@ def run_ga(explore_edges, max_ngen, test, \
         DO.seed_pop = seed_pop
         DO.setup_deap()
         DO.error_length = len(test)
-    ga_out = DO.run(max_ngen = max_ngen)
+    ga_out = DO.run(NGEN = NGEN)
 
     pop,dtc_pop = DO.OM.test_runner(ga_out['pf'], DO.OM.td, DO.OM.tests)
     ga_out['dtc_pop'] = dtc_pop

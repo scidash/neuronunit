@@ -109,7 +109,19 @@ from neuronunit.optimisation.optimisations import SciUnitOptimisation
 import random
 from neuronunit.plottools import inject_and_plot
 
-from neuronunit.optimisation.optimisations import SciUnitOptimisation
+#from neuronunit.optimisation.optimisations import SciUnitOptimisation
+
+# Helper tests are dummy instances of NU tests.
+# They are used by other methods analogous to a base class,
+# these are base instances that become more derived
+# contexts, that modify copies of the helper class in place.
+rts,complete_map = pickle.load(open(mypath,'rb'))
+df = pd.DataFrame(rts)
+for key,v in rts.items():
+    helper_tests = [value for value in v.values() ]
+    break
+from neuronunit.plottools import elaborate_plots
+
 def timer(func):
     def inner(*args, **kwargs):
         t1 = time.time()
@@ -128,18 +140,93 @@ class WSListIndividual(list):
         self.rheobase = None
         super(WSListIndividual, self).__init__(*args, **kwargs)
 
-# Helper tests are dummy instances of NU tests.
-# They are used by other methods analogous to a base class,
-# these are base instances that become more derived
-# contexts, that modify copies of the helper class in place.
-rts,complete_map = pickle.load(open(mypath,'rb'))
-df = pd.DataFrame(rts)
-for key,v in rts.items():
-    helper_tests = [value for value in v.values() ]
-    break
-from neuronunit.plottools import elaborate_plots
+
+def make_ga_DO(explore_edges, max_ngen, test, \
+        free_params = None, hc = None,
+        selection = None, MU = None, seed_pop = None, \
+           backend = str('RAW'),protocol={'allen':False,'elephant':True}):
+    '''
+    construct an DEAP Optimization Object, suitable for this test class and caching etc.
+    '''
+
+    ss = {}
+    if 'dt' in free_params:
+        free_params.pop('dt')
+    if 'Iext' in free_params:
+        free_params.pop('Iext')
+    for k in free_params:
+        if not k in explore_edges.keys() and k not in str('Iext') and k not in str('dt'):
+            ss[k] = explore_edges[str(free_params)]
+        else:
+            ss[k] = explore_edges[k]
+    if type(MU) == type(None):
+        MU = 2**len(list(free_params))
+    else:
+        MU = MU
+    max_ngen = int(np.floor(max_ngen))
+    if not isinstance(test, Iterable):
+        test = [test]
+    from neuronunit.optimisation.optimisations import SciUnitOptimisation
+    DO = SciUnitOptimisation(MU = MU, error_criterion = test,\
+         boundary_dict = ss, backend = backend, hc = hc, \
+                             selection = selection,protocol=protocol)
+
+    if seed_pop is not None:
+        # This is a re-run condition.
+        DO.setnparams(nparams = len(free_params), boundary_dict = ss)
+
+        DO.seed_pop = seed_pop
+        DO.setup_deap()
+        DO.error_length = len(test)
+
+    return DO
 
 
+
+class TSD(dict):
+    def __init__(self,tests={},use_rheobase_score=False):
+       self.DO = None
+
+       super(TSD,self).__init__()
+
+       self.update(tests)
+       if 'name' in self.keys():
+           self.cell_name = tests['name']
+           self.pop('name',None)
+       else:
+           self.cell_name = 'simulated data'
+
+       self.use_rheobase_score = use_rheobase_score
+       self.elaborate_plots  = elaborate_plots
+       self.backend = None
+
+
+    def optimize(self,param_edges,backend=None,protocol={'allen': False, 'elephant': True},\
+        MU=5,NGEN=5,free_params=None,seed_pop=None,hold_constant=None):
+        if type(free_params) is type(None):
+            free_params=param_edges.keys()
+        #experimental_name = self.cell_name
+        self.DO = make_ga_DO(param_edges, NGEN, self, free_params=free_params, \
+                           backend=backend, MU = 8,  protocol=protocol,seed_pop = seed_pop, hc=hold_constant)
+        self.DO.MU = MU
+        self.DO.NGEN = NGEN
+        ga_out = self.DO.run(NGEN = self.DO.NGEN)
+        ga_out['dtc_pop'] = dtc_pop
+        self.backend = backend
+        if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
+            _,dtc_pop = DO.OM.test_runner(ga_out['pf'],self.DO.OM.td,self.DO.OM.tests)
+            ga_out['dtc_pop'] = dtc_pop
+        if str(self.cell_name) not in str('simulated data'):
+            ga_out = self.elaborate_plots(self,ga_out)
+
+
+        from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
+
+        ##
+        # TODO populate a score table pass it back to DO.OM
+
+        return ga_out, DO
+'''
 class TSD(dict):
     def __init__(self,tests={},use_rheobase_score=False):
        super(TSD,self).__init__()
@@ -186,7 +273,7 @@ class TSS(TestSuite):
        self.use_rheobase_score=use_rheobase_score
     def optimize(self,param_edges,backend=None,protocol={'allen': False, 'elephant': True},MU=5,NGEN=5,free_params=None,seed_pop=None):
         pass
-
+'''
 # DEAP mutation strategies:
 # https://deap.readthedocs.io/en/master/api/tools.html#deap.tools.mutESLogNormal
 class WSFloatIndividual(float):
@@ -618,6 +705,19 @@ def dtc_to_rheo(dtc):
         dtc = get_rh(dtc,rtest)
     return dtc
 
+def inject_and_plot_model(attrs,backend):
+    pre_model = DataTC()
+    pre_model.attrs = attrs
+    pre_model.backend = backend
+    # get rheobase injection value
+    pre_model = dtc_to_rheo(pre_model)
+    # get an object of class ReducedModel with known attributes and known rheobase current injection value.
+    model = pre_model.dtc_to_model()
+    uc = {'amplitude':model.rheobase,'duration':DURATION,'delay':DELAY}
+    model.inject_square_current(uc)
+    vm = model.get_membrane_potential()
+    plt.plot(vm.times,vm.magnitude)
+    return vm
 
 def score_proc(dtc,t,score):
     dtc.score[str(t)] = {}
