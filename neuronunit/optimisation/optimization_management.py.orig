@@ -1,7 +1,5 @@
 # Its not that this file is responsible for doing plotting,
 # but it calls many modules that are, such that it needs to pre-empt
-import warnings
-
 try:
     matplotlib.use('agg')
 except:
@@ -10,19 +8,19 @@ except:
 
 # setting of an appropriate backend.
 # optional imports
+import warnings
 import matplotlib
 import cython
 import logging
 
 # optional imports
-
 SILENT = True
-
+#RATIO_SCORE = False
 if SILENT:
     warnings.filterwarnings("ignore")
 
 PARALLEL_CONFIDENT = True
-# Rationale Many methods inside the file optimization_management.py cannot be easily monkey patched using
+# Rationale Many methods inside the file optimization_management.py cannot be easily monkey patched using 
 #```pdb.set_trace()``` unless at the top of the file,
 # the parallel_confident static variable is declared false
 # This converts parallel mapping functions to serial mapping functions. s
@@ -115,6 +113,18 @@ df = pd.DataFrame(rts)
 for key,v in rts.items():
     helper_tests = [value for value in v.values() ]
     break
+
+#from neuronunit.optimisation.optimisations import SciUnitOptimisation
+
+# Helper tests are dummy instances of NU tests.
+# They are used by other methods analogous to a base class,
+# these are base instances that become more derived
+# contexts, that modify copies of the helper class in place.
+rts,complete_map = pickle.load(open(mypath,'rb'))
+df = pd.DataFrame(rts)
+for key,v in rts.items():
+    helper_tests = [value for value in v.values() ]
+    break
 from neuronunit.plottools import elaborate_plots
 
 def timer(func):
@@ -135,6 +145,7 @@ class WSListIndividual(list):
         self.rheobase = None
         super(WSListIndividual, self).__init__(*args, **kwargs)
 
+<<<<<<< HEAD
 
 def make_ga_DO(explore_edges, max_ngen, test, \
         free_params = None, hc = None,
@@ -190,6 +201,8 @@ class TSD(dict):
            self.pop('name',None)
        else:
            self.cell_name = 'simulated data'
+=======
+>>>>>>> 1a5e66a1749a4716500ae4e013c3fcb424d23fa5
 
        self.use_rheobase_score = use_rheobase_score
        self.elaborate_plots  = elaborate_plots
@@ -200,19 +213,21 @@ class TSD(dict):
         MU=5,NGEN=5,free_params=None,seed_pop=None,hold_constant=None):
         if type(free_params) is type(None):
             free_params=param_edges.keys()
+        #experimental_name = self.cell_name
         self.DO = make_ga_DO(param_edges, NGEN, self, free_params=free_params, \
                            backend=backend, MU = 8,  protocol=protocol,seed_pop = seed_pop, hc=hold_constant)
         self.DO.MU = MU
         self.DO.NGEN = NGEN
         ga_out = self.DO.run(NGEN = self.DO.NGEN)
-        if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
-            _,dtc_pop = DO.OM.test_runner(copy.copy(ga_out['pf']),self.DO.OM.td,self.DO.OM.tests)
-            ga_out['dtc_pop'] = dtc_pop
+        ga_out['dtc_pop'] = dtc_pop
         self.backend = backend
-
+        if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
+            _,dtc_pop = DO.OM.test_runner(ga_out['pf'],self.DO.OM.td,self.DO.OM.tests)
+            ga_out['dtc_pop'] = dtc_pop
         if str(self.cell_name) not in str('simulated data'):
-            # is this a data driven test? if so its worth plotting results
             ga_out = self.elaborate_plots(self,ga_out)
+
+
         from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
 
         ##
@@ -257,8 +272,8 @@ class TSD(dict):
         # TODO populate a score table pass it back to DO.OM
 
         return ga_out, DO
-from sciunit.suites import TestSuite# as TSuite
 
+<<<<<<< HEAD
 class TSS(TestSuite):
     def __init__(self,tests=[],use_rheobase_score=False):
        super(TSD,self).__init__()
@@ -267,6 +282,9 @@ class TSS(TestSuite):
     def optimize(self,param_edges,backend=None,protocol={'allen': False, 'elephant': True},MU=5,NGEN=5,free_params=None,seed_pop=None):
         pass
 '''
+=======
+
+>>>>>>> 1a5e66a1749a4716500ae4e013c3fcb424d23fa5
 # DEAP mutation strategies:
 # https://deap.readthedocs.io/en/master/api/tools.html#deap.tools.mutESLogNormal
 class WSFloatIndividual(float):
