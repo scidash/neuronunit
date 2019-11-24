@@ -14,7 +14,7 @@ import quantities as pq
 from quantities import mV as qmV
 from quantities import ms as qms
 from quantities import V as qV
-
+SNIPPETS = True
 #, ms, s, us, ns, V
 import matplotlib as mpl
 
@@ -256,6 +256,12 @@ class BHHBackend(Backend):
         self.attrs = attrs
 
         if ascii_plot:
+            if SNIPPETS:
+                from neuronunit.capabilities.spike_functions import get_spike_waveforms
+                vm = get_spike_waveforms(vm)
+                dtc.snippets = snippets_
+            else:
+                pass
             t = [float(f) for f in self.vM.times]
             v = [float(f) for f in self.vM.magnitude]
             fig = apl.figure()
