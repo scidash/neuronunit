@@ -13,7 +13,7 @@ from .base import *
 import quantities as qt
 from quantities import mV, ms, s, us, ns
 import matplotlib as mpl
-
+SNIPPETS = True
 from neuronunit.capabilities import spike_functions as sf
 mpl.use('Agg')
 import matplotlib.pyplot as plt
@@ -31,6 +31,76 @@ except:
 import numpy
 
 from scipy.interpolate import interp1d
+
+# This function implement Adaptive Exponential Leaky Integrate-And-Fire neuron model
+def simulate_AdEx_neuron_local(
+        tau_m=MEMBRANE_TIME_SCALE_tau_m,
+        R=MEMBRANE_RESISTANCE_R,
+        v_rest=V_REST,
+        v_reset=V_RESET,
+        v_rheobase=RHEOBASE_THRESHOLD_v_rh,
+        a=ADAPTATION_VOLTAGE_COUPLING_a,
+        b=SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b,
+        v_spike=FIRING_THRESHOLD_v_spike,
+        delta_T=SHARPNESS_delta_T,
+        tau_w=ADAPTATION_TIME_CONSTANT_tau_w,
+        I_stim=input_factory.get_zero_current(),
+        simulation_time=200 * b2.ms):
+    r"""
+    code is from:
+    /neurodynex/adex_model/AdEx.py
+
+    Implementation of the AdEx model with a single adaptation variable w.
+
+    The Brian2 model equations are:
+
+    .. math::
+
+        \frac{dv}{dt} = (-(v-v_rest) +delta_T*exp((v-v_rheobase)/delta_T)+ R * I_stim(t,i) - R * w)/(tau_m) : volt \\
+        \frac{dw}{dt} = (a*(v-v_rest)-w)/tau_w : amp
+
+    Args:
+        tau_m (Quantity): membrane time scale
+        R (Quantity): membrane restistance
+        v_rest (Quantity): resting potential
+        v_reset (Quantity): reset potential
+        v_rheobase (Quantity): rheobase threshold
+        a (Quantity): Adaptation-Voltage coupling
+        b (Quantity): Spike-triggered adaptation current (=increment of w after each spike)
+        v_spike (Quantity): voltage threshold for the spike condition
+        delta_T (Quantity): Sharpness of the exponential term
+        tau_w (Quantity): Adaptation time constant
+        I_stim (TimedArray): Input current
+        simulation_time (Quantity): Duration for which the model is simulated
+
+    Returns:
+        (state_monitor, spike_monitor):
+        A b2.StateMonitor for the variables "v" and "w" and a b2.SpikeMonitor
+    """
+
+    v_spike_str = "v>{:f}*mvolt".format(v_spike / b2.mvolt)
+
+    # EXP-IF
+    eqs = """
+        dv/dt = (-(v-v_rest) +delta_T*exp((v-v_rheobase)/delta_T)+ R * I_stim(t,i) - R * w)/(tau_m) : volt
+        dw/dt=(a*(v-v_rest)-w)/tau_w : amp
+        """
+
+    neuron = b2.NeuronGroup(1, model=eqs, threshold=v_spike_str, reset="v=v_reset;w+=b", method="euler")
+
+    # initial values of v and w is set here:
+    neuron.v = v_rest
+    neuron.w = 0.0 * b2.pA
+
+    # Monitoring membrane voltage (v) and w
+    state_monitor = b2.StateMonitor(neuron, ["v", "w"], record=True)
+    spike_monitor = b2.SpikeMonitor(neuron)
+
+    # running simulation
+    b2.run(simulation_time)
+    return state_monitor, spike_monitor
+
+
 
 class ADEXPBackend(Backend):
     def get_spike_count(self):
@@ -162,7 +232,7 @@ class ADEXPBackend(Backend):
             b2.defaultclock.dt = 1 * b2.ms
 
             self.AdEx = AdEx
-            self.state_monitor, self.spike_monitor = self.AdEx.simulate_AdEx_neuron(I_stim = stim, simulation_time=st)
+            self.state_monitor, self.spike_monitor = simulate_AdEx_neuron_local(I_stim = stim, simulation_time=st)
 
         else:
             if self.verbose:
@@ -222,6 +292,12 @@ class ADEXPBackend(Backend):
         self.attrs = attrs
 
         if ascii_plot:
+            if SNIPPETS:
+                from neuronunit.capabilities.spike_functions import get_spike_waveforms
+                vm = get_spike_waveforms(vm)
+                dtc.snippets = snippets_
+            else:
+                pass
             t = [float(f) for f in self.vM.times]
             v = [float(f) for f in self.vM.magnitude]
             fig = apl.figure()
