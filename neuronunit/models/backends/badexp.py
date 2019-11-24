@@ -292,18 +292,18 @@ class ADEXPBackend(Backend):
         self.attrs = attrs
 
         if ascii_plot:
-            if SNIPPETS:
+            if SNIPPETS and self.get_spike_count():
                 from neuronunit.capabilities.spike_functions import get_spike_waveforms
                 vm = get_spike_waveforms(vm)
-                dtc.snippets = snippets_
+                #dtc.snippets = snippets_
             else:
-                pass
-            t = [float(f) for f in self.vM.times]
-            v = [float(f) for f in self.vM.magnitude]
+                vm = self.vM
+            t = [float(f) for f in vm.times]
+            v = [float(f) for f in vm.magnitude]
             fig = apl.figure()
             fig.plot(t, v, label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
             fig.show()
-            fig  = None
+            fig = None
 
         if len(self.spike_monitor.spike_trains())>1:
             import matplotlib.pyplot as plt

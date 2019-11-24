@@ -34,7 +34,8 @@ try:
     fig = apl.figure()
     fig.plot([1,0], [0,1])
     ascii_plot = True
-    import gc
+    print('true')
+    #import gc
 
 except:
     ascii_plot = False
@@ -256,14 +257,14 @@ class BHHBackend(Backend):
         self.attrs = attrs
 
         if ascii_plot:
-            if SNIPPETS:
+            if SNIPPETS and self.get_spike_count()>=1 :
                 from neuronunit.capabilities.spike_functions import get_spike_waveforms
                 vm = get_spike_waveforms(vm)
-                dtc.snippets = snippets_
             else:
-                pass
-            t = [float(f) for f in self.vM.times]
-            v = [float(f) for f in self.vM.magnitude]
+                vm = self.vM
+            print(vm)
+            t = [float(f) for f in vm.times]
+            v = [float(f) for f in vm.magnitude]
             fig = apl.figure()
             fig.plot(t, v, label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
             fig.show()
