@@ -29,7 +29,7 @@ from types import MethodType
 
 #import matplotlib.pyplot as plt
 # @jit(cache=True) I suspect this causes a memory leak
-getting_started = True
+getting_started = False
 try:
     import asciiplotlib as apl
     fig = apl.figure()
