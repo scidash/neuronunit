@@ -1,7 +1,7 @@
 # Description
-* A collection of compact, parsimonious neuronal models, implemented in community favorite python modules which are directly interfaced into a fast data driven optimization routine (numba, dask etc).
+* A collection of compact, parsimonious bio-medical neuronal models, implemented in community preferred python modules and  interfaced into a fast data driven muliti-objective optimization routine (numba, dask etc).
 
-* Brian2 Interoperability ships with the most minimal install. A wide range of interfaces and simulator backend support: Allen-SDK, PyNN and NEURON are provided with an easy to use Docker container.
+* Brian2 Interoperability ships with the most minimal install. A wide range of interfaces and simulator backend support: Allen-SDK, PyNN and NEURON are provided with an [easy to use Docker container](https://github.com/russelljjarvis/docker-stacks-returned/blob/scidash/efel_dm/Dockerfile).
 
 * Feature extraction routines: AllenSDK, Druckman, Elephant.
 
