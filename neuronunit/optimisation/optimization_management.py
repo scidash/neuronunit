@@ -1,5 +1,7 @@
 # Its not that this file is responsible for doing plotting,
 # but it calls many modules that are, such that it needs to pre-empt
+import warnings
+
 try:
     matplotlib.use('agg')
 except:
@@ -8,7 +10,6 @@ except:
 
 # setting of an appropriate backend.
 # optional imports
-import warnings
 import matplotlib
 import cython
 import logging
@@ -21,7 +22,7 @@ if SILENT:
     warnings.filterwarnings("ignore")
 
 PARALLEL_CONFIDENT = True
-# Rationale Many methods inside the file optimization_management.py cannot be easily monkey patched using 
+# Rationale Many methods inside the file optimization_management.py cannot be easily monkey patched using
 #```pdb.set_trace()``` unless at the top of the file,
 # the parallel_confident static variable is declared false
 # This converts parallel mapping functions to serial mapping functions. s
@@ -199,21 +200,19 @@ class TSD(dict):
         MU=5,NGEN=5,free_params=None,seed_pop=None,hold_constant=None):
         if type(free_params) is type(None):
             free_params=param_edges.keys()
-        #experimental_name = self.cell_name
         self.DO = make_ga_DO(param_edges, NGEN, self, free_params=free_params, \
                            backend=backend, MU = 8,  protocol=protocol,seed_pop = seed_pop, hc=hold_constant)
         self.DO.MU = MU
         self.DO.NGEN = NGEN
         ga_out = self.DO.run(NGEN = self.DO.NGEN)
-        ga_out['dtc_pop'] = dtc_pop
-        self.backend = backend
         if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
-            _,dtc_pop = DO.OM.test_runner(ga_out['pf'],self.DO.OM.td,self.DO.OM.tests)
+            _,dtc_pop = DO.OM.test_runner(copy.copy(ga_out['pf']),self.DO.OM.td,self.DO.OM.tests)
             ga_out['dtc_pop'] = dtc_pop
+        self.backend = backend
+
         if str(self.cell_name) not in str('simulated data'):
-            ga_out = self.elaborate_plots(self,ga_out)
-
-
+            # is this a data driven test? if so its worth plotting results
+	    ga_out = self.elaborate_plots(self,ga_out)
         from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
 
         ##
