@@ -2500,10 +2500,20 @@ class OptMan():
                     model = new_model(dtc)
                     pred = t.generate_prediction(model)
                     pred = self.pred_std(pred,t)
+
+                    import pdb
+                    pdb.set_trace()
+                    t.judge(model)
                     score, dtc = bridge_judge((t, dtc))
                     if type(take_anything) is type(int()):
                         pass
                 else:
+                    model = dtc.dtc_to_model()
+                    import pdb
+                    pdb.set_trace()
+
+                    t.judge(model)
+
                     score, dtc, pred = bridge_passive((t, dtc))
                 if self.verbose:
                     print(take_anything.units)

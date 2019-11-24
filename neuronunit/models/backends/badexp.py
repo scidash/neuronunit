@@ -294,8 +294,7 @@ class ADEXPBackend(Backend):
         if ascii_plot:
             if SNIPPETS and self.get_spike_count():
                 from neuronunit.capabilities.spike_functions import get_spike_waveforms
-                vm = get_spike_waveforms(vm)
-                #dtc.snippets = snippets_
+                vm = get_spike_waveforms(self.vM)
             else:
                 vm = self.vM
             t = [float(f) for f in vm.times]
