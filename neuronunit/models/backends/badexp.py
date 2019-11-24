@@ -8,12 +8,6 @@ import io
 import math
 import pdb
 from numba import jit
-#defaults = {'DT': 2e-05, 'ALLEN_STOP': 3.0199800000000003, 'ALLEN_FINISH': 10.020000000000001,'ALLEN_ONSET':1.02}
-#DT = defaults["DT"]
-#ALLEN_ONSET = defaults["ALLEN_ONSET"]
-#ALLEN_STOP = defaults["ALLEN_STOP"]
-#ALLEN_FINISH = defaults["ALLEN_FINISH"]
-#from neuronunit.tests.base import ALLEN_ONSET, DT, ALLEN_STOP, ALLEN_FINISH
 import numpy as np
 from .base import *
 import quantities as qt
@@ -25,10 +19,6 @@ mpl.use('Agg')
 import matplotlib.pyplot as plt
 
 from types import MethodType
-# from neuronunit.optimisation import ascii_plot
-
-#import matplotlib.pyplot as plt
-# @jit(cache=True) I suspect this causes a memory leak
 getting_started = False
 try:
     import asciiplotlib as apl
