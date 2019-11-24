@@ -37,6 +37,7 @@ except:
 MODEL_PARAMS = {}
 
 '''
+DEFAULTS
 BAE = {}
 #AdEx.b2.units.pF
 #from neurodynex.adex_model.AdEx.units import *

@@ -1,5 +1,10 @@
-    # Its not that this file is responsible for doing plotting,
+# Its not that this file is responsible for doing plotting,
 # but it calls many modules that are, such that it needs to pre-empt
+try:
+    matplotlib.use('agg')
+except:
+    warnings.warn('X11 plotting backend not available, consider installing')
+#_arraytools
 
 # setting of an appropriate backend.
 # optional imports
@@ -9,22 +14,18 @@ import cython
 import logging
 
 # optional imports
-try:
-    matplotlib.use('agg')
-except:
-    warnings.warn('X11 plotting backend not available, consider installing')
-#_arraytools
+
 SILENT = True
-RATIO_SCORE = False
+
 if SILENT:
     warnings.filterwarnings("ignore")
 
 PARALLEL_CONFIDENT = True
-#    Goal is based on this. Don't optimize to a singular point, optimize onto a cluster.
-#    Golowasch, J., Goldman, M., Abbott, L.F, and Marder, E. (2002)
-#    Failure of averaging in the construction
-#    of conductance-based neuron models. J. Neurophysiol., 87: 11291131.
-
+# Rationale Many methods inside the file optimization_management.py cannot be easily monkey patched using 
+#```pdb.set_trace()``` unless at the top of the file,
+# the parallel_confident static variable is declared false
+# This converts parallel mapping functions to serial mapping functions. s
+# cheduled Parallel mapping functions cannot tolerate being paused, serial ones can.
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -48,11 +49,7 @@ import numpy
 
 
 from neuronunit.optimisation.data_transport_container import DataTC
-#from neuronunit.models.interfaces import glif
 
-# Import get_neab has to happen exactly here. It has to be called only on
-#from neuronunit import tests
-#from neuronunit.models.reduced import ReducedModel
 from neuronunit.optimisation.model_parameters import path_params
 from neuronunit.optimisation import model_parameters as modelp
 from itertools import repeat
@@ -60,7 +57,6 @@ from neuronunit.tests.base import AMPL, DELAY, DURATION
 from neuronunit.models import ReducedModel
 from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 from collections.abc import Iterable
-DEBUG = False
 from neuronunit.tests import dm_test_container #import Interoperabe
 from neuronunit.tests.base import VmTest
 
@@ -107,10 +103,8 @@ import quantities as pq
 from sciunit import scores
 from neuronunit.optimisation.optimisations import SciUnitOptimisation
 import random
+from neuronunit.plottools import elaborate_plots
 from neuronunit.plottools import inject_and_plot
-
-#from neuronunit.optimisation.optimisations import SciUnitOptimisation
-
 # Helper tests are dummy instances of NU tests.
 # They are used by other methods analogous to a base class,
 # these are base instances that become more derived
@@ -402,22 +396,11 @@ def score_only(dtc,pred,test):
 # this method is not currently used, but it could also be too prospectively usefull to delete.
 # TODO move to a utils file.
 
-def get_centres(use_test,backend,explore_param):
+def get_centres(ga_out):
     '''
     Do optimization, but then get cluster centres of parameters
     '''
-    MU = 7
-    NGEN = 7
-    test_opt = {}
-    for index,test in enumerate(use_test):
-        ga_out, DO = run_ga(explore_param,NGEN,test,free_params=free_params, NSGA = True, MU = MU,backed=backend, selection=str('selNSGA2'))
-        td = DO.td # td, transfer dictionary, a consistent, stable OrderedDict of parameter values.
-        test_opt[test.name] = ga_out
-    with open('qct.p','wb') as f:
-        pickle.dump(test_opt,f)
-
-    all_val = {}
-    for key,value in test_opt.items():
+    for key,value in ga_out['pf']:
         all_val[key] = {}
         for k in td.keys():
             temp = [i.dtc.attrs[k] for i in value['pf']]
@@ -437,6 +420,11 @@ def get_centres(use_test,backend,explore_param):
 
 
 def mint_generic_model(backend):
+    '''
+    Possibly depricated:
+    see:
+    dtc.to_model()
+    '''
     LEMS_MODEL_PATH = path_params['model_path']
     model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = str(backend))
     return model
