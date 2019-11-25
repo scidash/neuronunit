@@ -49,8 +49,8 @@ RUN pip install .
 #WORKDIR $HOME
 #EXPOSE 80
 
-WORKDIR neuronunit/unit_test/working
+#WORKDIR neuronunit/unit_test/working
 # RUN jupyter nbconvert --execute examples/chapter3.ipynb
 # RUN jupyter nbconvert --execute examples/example_data.ipynb
 
-ENTRYPOINT ["python", "small_test.py"]
+#ENTRYPOINT ["python", "small_tests.py"]
