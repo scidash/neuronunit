@@ -51,7 +51,7 @@ EXPOSE 80
 
 RUN cd neuronunit/unit_test/
 RUN cd working
-RUN jupyter nbconvert --execute examples/chapter3.ipynb
-RUN jupyter nbconvert --execute examples/example_data.ipynb
+# RUN jupyter nbconvert --execute examples/chapter3.ipynb
+# RUN jupyter nbconvert --execute examples/example_data.ipynb
 
 ENTRYPOINT ["python", "examples/use_edt.py"]

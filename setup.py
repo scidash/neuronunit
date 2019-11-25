@@ -23,7 +23,6 @@ setup(
             'neuronunit.tests',
             'neuronunit.optimisation',
             'neuronunit.unit_test'],
-    install_requires = read_requirements(),
     url='http://github.com/scidash/neuronunit',
     license='MIT',
     description=("A SciUnit library for data-driven testing of "
