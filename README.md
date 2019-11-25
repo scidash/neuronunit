@@ -1,19 +1,22 @@
 # Description
 * A very Python native model-data optimization toolchain derived from ***neuronunit*** and tightly interfaced with other community supported modules which yield standard workflows in: feature extraction, data scraping and model simulation. 
 * A collection of compact, parsimonious biological neuronal models, implemented in community supported python modules and  interfaced into a fast data driven muliti-objective optimization routine (numba, dask etc).
-* Neo, elephant, Brian2 and dask interoperability ships with the most minimal install. A wide range of feature extraction, data source, and interfaces and simulator backend support: NeuroML-DB, NeurML, Allen-SDK, PyNN and NEURON are provided with an easy to use [Docker container](docker pull russelljarvis/efel_allen_dm).
+* Neo, elephant, Brian2 and dask interoperability ships with the most minimal install. A wide range of feature extraction, data source, and interfaces and simulator backend support: NeuroML-DB, NeurML, Allen-SDK, PyNN and NEURON are provided with an easy to use [Docker container]().
 * Brian2 Interoperability ships with the most minimal install. A wide range of interfaces and simulator backend support: Allen-SDK, PyNN and NEURON are provided with an [easy to use Docker container](https://github.com/russelljjarvis/docker-stacks-returned/blob/scidash/efel_dm/Dockerfile).
 
 
 ![brian](docs/brian2_logo.png)
 ![numba](docs/numba.png)
 ![dask](docs/dask_logo.png)
-
+![DEAP](docs/deap.png)
 
 * Feature extraction routines: AllenSDK, Druckman, Elephant.
 
 * Simulator Backends: brian2, Allen-GLIF, NEURON, PyNN
-
+```
+docker pull russelljarvis/efel_allen_dm
+docker run russelljarvis/efel_allen_dm neuronunit/examples/use_ed
+```
 
 See the Documentation notebooks:
 =======
