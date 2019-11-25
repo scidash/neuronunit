@@ -3,6 +3,8 @@ import numpy as np
 #from sciunit.models.runnable import RunnableModel
 import quantities as qt
 import copy
+from neuronunit.models.very_reduced_sans_lems import VeryReducedModel
+
 try:
     import asciiplotlib as apl
 except:
@@ -91,19 +93,25 @@ class DataTC(object):
 
         return self.tests
     def dtc_to_model(self):
-        from neuronunit.models import VeryReducedModel
+        #import pdb
+        #pdb.set_trace()
         #model = RunnableModel(str(self.backend),backend=self.backend,attrs=self.attrs)
         #model = RunnableModel(str(self.backend),backend=(self.backend, {'DTC':self}))
-        model = VeryReducedModel(backend=(self.backend, {'DTC':self}))#, {'DTC':dtc}))
+        model = VeryReducedModel(backend=self.backend)
+        model.backend = self.backend
+        model.attrs = self.attrs
+        model.rheobase = self.rheobase
+
+        #backend=(self.backend, {'DTC':self}))#, {'DTC':dtc}))
         # If  test taking data, and objects are present (observations etc).
         # Take the rheobase test and store it in the data transport container.
         if not hasattr(self,'scores'):
             self.scores = None
         if type(self.scores) is type(None):
             self.scores = {}
-        model.attrs = self.attrs
+        #model.attrs = self.attrs
         model.scores = self.scores
-        model.rheobase = self.rheobase
+        #model.rheobase = self.rheobase
         try:
             model.inj = self.params
         except:

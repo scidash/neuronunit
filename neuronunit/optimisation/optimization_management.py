@@ -55,12 +55,11 @@ from neuronunit.optimisation.model_parameters import path_params
 from neuronunit.optimisation import model_parameters as modelp
 from itertools import repeat
 from neuronunit.tests.base import AMPL, DELAY, DURATION
-from neuronunit.models import ReducedModel
+#from neuronunit.models import ReducedModel
 from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 from collections.abc import Iterable
 from neuronunit.tests import dm_test_container #import Interoperabe
 from neuronunit.tests.base import VmTest
-
 
 import sys
 
@@ -417,17 +416,15 @@ def get_centres(ga_out):
     centers = est.cluster_centers_
     return td, test_opt, centres
 
-
+'''
 def mint_generic_model(backend):
-    '''
     Possibly depricated:
     see:
     dtc.to_model()
-    '''
     LEMS_MODEL_PATH = path_params['model_path']
     model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = str(backend))
     return model
-
+'''
 import pandas as pd
 
 def save_models_for_justas(dtc):
@@ -473,7 +470,7 @@ def pred_only(test_and_models):
     backend_ = dtc.backend
     model = dtc.dtc_to_model()
     #model = mint_generic_model(backend_)
-    model.set_attrs(**dtc.attrs)
+    model.set_attrs(dtc.attrs)
     if test.passive:
         test.setup_protocol(model)
         try:
@@ -493,7 +490,8 @@ def bridge_judge(test_and_dtc):
     (test, dtc) = test_and_dtc
     obs = test.observation
     backend_ = dtc.backend
-    model = mint_generic_model(backend_)
+    model = dtc.dtc_to_model()
+    #model = mint_generic_model(backend_)
     model.set_attrs(**dtc.attrs)
 
 
@@ -557,8 +555,9 @@ def get_rh(dtc,rtest_class):
         rtest = RheobaseTest(observation=place_holder,
                          name='RheobaseTest')
     dtc.rheobase = None
-    model = mint_generic_model(backend_)
-    model.set_attrs(**dtc.attrs)
+    model = dtc.dtc_to_model()
+    #model = mint_generic_model(backend_)
+    model.set_attrs(dtc.attrs)
     rtest.params['injected_square_current'] = {}
     rtest.params['injected_square_current']['delay'] = DELAY
     rtest.params['injected_square_current']['duration'] = DURATION
@@ -636,7 +635,8 @@ def dtc_to_model(dtc):
         dtc.scores = None
     if type(dtc.scores) is type(None):
         dtc.scores = {}
-    model = mint_generic_model(dtc.backend)
+    model = dtc.dtc_to_model()
+    #model = mint_generic_model(dtc.backend)
     model.attrs = dtc.attrs
     return model
 
@@ -647,8 +647,9 @@ def dtc_to_rheo(dtc):
         dtc.scores = None
     if type(dtc.scores) is type(None):
         dtc.scores = {}
-    model = mint_generic_model(dtc.backend)
-    model.set_attrs(**dtc.attrs)
+    model = dtc.dtc_to_model()
+    #model = mint_generic_model(dtc.backend)
+    model.set_attrs(dtc.attrs)
     if hasattr(dtc,'tests'):
         if type(dtc.tests) is type({}) and str('RheobaseTest') in dtc.tests.keys():
             rtest = dtc.tests['RheobaseTest']
@@ -1302,8 +1303,9 @@ L
     return dtc
 '''
 def new_model(dtc):
-    model = mint_generic_model(dtc.backend)
-    model.set_attrs(**dtc.attrs)
+    model = dtc.dtc_to_model()
+    #model = mint_generic_model(dtc.backend)
+    model.set_attrs(dtc.attrs)
     return model
 
 def make_stim_waves_func():
@@ -1407,7 +1409,8 @@ def nuunit_allen_evaluation(dtc):
 
 
 def nuunit_dm_evaluation(dtc):
-    model = mint_generic_model(dtc.backend)
+    model = dtc.dtc_to_model()
+    #model = mint_generic_model(dtc.backend)
     model.set_attrs(**dtc.attrs)
     try:
         values = [v for v in dtc.protocols.values()][0]
@@ -1451,7 +1454,8 @@ def nuunit_dm_evaluation(dtc):
     return dtc
 
 def nuunit_dm_rheo_evaluation(dtc):
-    model = mint_generic_model(dtc.backend)
+    model = dtc.dtc_to_model()
+    #model = mint_generic_model(dtc.backend)
     model.set_attrs(**dtc.attrs)
     #values = [v for v in dtc.vtest.values()][0]
 
@@ -2501,7 +2505,7 @@ class OptMan():
                     model = new_model(dtc)
                     pred = t.generate_prediction(model)
                     pred = self.pred_std(pred,t)
-                    try: 
+                    try:
                         score = t.judge(model)
                     except:
                         score, dtc = bridge_judge((t, dtc))
