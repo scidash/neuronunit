@@ -20,6 +20,7 @@ setup(
             'neuronunit.capabilities',
             'neuronunit.neuroconstruct',
             'neuronunit.models',
+            'neuronunit.models.backends',
             'neuronunit.tests',
             'neuronunit.optimisation',
             'neuronunit.unit_test'],
