@@ -4,10 +4,10 @@
 * Neo, elephant, Brian2 and dask interoperability ships with the most minimal install. A wide range of feature extraction, data source, and interfaces and simulator backend support: NeuroML-DB, NeurML, Allen-SDK, PyNN and NEURON are provided with an easy to use [Docker container]().
 * Brian2 Interoperability ships with the most minimal install. A wide range of interfaces and simulator backend support: Allen-SDK, PyNN and NEURON are provided with an [easy to use Docker container](https://github.com/russelljjarvis/docker-stacks-returned/blob/scidash/efel_dm/Dockerfile).
 
-![brian](docs/brian2_logo.png)
-![numba](docs/numba.png)
-![dask](docs/dask_logo.png)
-![DEAP](docs/deap.png)
+![brian](docs/brian2_logo.png){ width=25% }
+![numba](docs/numba.png){ width=25% }
+![dask](docs/dask_logo.png){ width=25% }
+![DEAP](docs/deap.png){ width=25% }
 
 * Feature extraction routines: AllenSDK, Druckman, Elephant.
 
