@@ -14,7 +14,7 @@ import quantities as pq
 from quantities import mV as qmV
 from quantities import ms as qms
 from quantities import V as qV
-SNIPPETS = True
+SLOW_ZOOM = False
 #, ms, s, us, ns, V
 import matplotlib as mpl
 
@@ -256,7 +256,7 @@ class BHHBackend(Backend):
         self.attrs = attrs
 
         if ascii_plot:
-            if SNIPPETS and self.get_spike_count()>=1 :
+            if SLOW_ZOOM and self.get_spike_count()>=1 :
                 from neuronunit.capabilities.spike_functions import get_spike_waveforms
                 vm = get_spike_waveforms(self.vM)
             else:
