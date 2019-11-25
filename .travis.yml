@@ -41,6 +41,6 @@ script:
   - python small_test.py
   - jupyter nbconvert --execute examples/chapter3.ipynb 
   - jupyter nbconvert --execute examples/example_data.ipynb 
-  - docker run nuopt /opt/conda/bin/python -c neuronunit/neuronunit/unit_test/working/small_test.py
+  - docker run nuopt /opt/conda/bin/python -c "import neuronunit"
 after_success:
   - coveralls
