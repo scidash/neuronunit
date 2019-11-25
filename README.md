@@ -1,11 +1,15 @@
 # Description
-* A collection of compact, parsimonious neuronal models, implemented in community favorite python modules which are directly interfaced into a fast data driven optimization routine (numba, dask etc).
+* A very Python native model-data optimization toolchain that preferences compact, parsimonious neuronal models, implemented in community favorite python modules which are directly interfaced into a fast data driven optimization routine (numba, dask etc).
 
-* Brian2 Interoperability ships with the most minimal install. A wide range of interfaces and simulator backend support: Allen-SDK, PyNN and NEURON are provided with an easy to use Docker container.
+* Brian2 and dask interoperability ships with the most minimal install. A wide range of interfaces and simulator backend support: Allen-SDK, PyNN and NEURON are provided with an easy to use Docker container.
 
 * Feature extraction routines: AllenSDK, Druckman, Elephant.
 
 * Simulator Backends: brian2, Allen-GLIF, NEURON, PyNN
+
+![brian](docs/brian2_logo.png)
+![numba](docs/numba.png)
+![dask](docs/dask_logo.png)
 
 
 See the Documentation notebooks:
@@ -23,7 +27,7 @@ See the Documentation notebooks:
 
 ![NeuronUnit Logo](https://raw.githubusercontent.com/scidash/assets/master/logos/neuronunit/NeuronUnitBlack2.png)
 
-# Optimization specific:  
+# Optimization specific:
 
  Assumptions, the environment for running this notebook was arrived at by building a dedicated docker file.
 

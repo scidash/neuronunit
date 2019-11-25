@@ -13,7 +13,7 @@ class DataTC(object):
 
     This Object class serves as a data type for storing rheobase search
     attributes and apriori model parameters,
-    with the distinction that unlike the NEURON model this class
+    with the distinction that unlike the LEMS model this class
     can be cheaply transported across HOSTS/CPUs
     '''
     def __init__(self):
@@ -65,30 +65,30 @@ class DataTC(object):
 
     def format_test(self):
         from neuronunit.optimisation.optimization_management import switch_logic, active_values, passive_values
-        # pre format the current injection dictionary based on pre computed                                                                                                                                                                  
-        # rheobase values of current injection.                                                                                                                                                                                              
-        # This is much like the hooked method from the old get neab file.                                                                                                                                                                    
+        # pre format the current injection dictionary based on pre computed
+        # rheobase values of current injection.
+        # This is much like the hooked method from the old get neab file.
         self.protocols = {}
         if not hasattr(self,'tests'):
             self.tests = copy.copy(self.tests)
-        if hasattr(self.tests,'keys'):# is type(dict):                                                                                                                                                                                       
+        if hasattr(self.tests,'keys'):# is type(dict):
             tests = [key for key in self.tests.values()]
-            self.tests = switch_logic(tests)#,self.tests.use_rheobase_score)                                                                                                                                                                 
+            self.tests = switch_logic(tests)#,self.tests.use_rheobase_score)
         else:
             self.tests = switch_logic(self.tests)
         for k,v in enumerate(self.tests):
             self.protocols[k] = {}
-            if hasattr(v,'passive'):#['protocol']:                                                                                                                                                                                           
+            if hasattr(v,'passive'):#['protocol']:
                 if v.passive == False and v.active == True:
-                    keyed = self.protocols[k]#.params                                                                                                                                                                                        
+                    keyed = self.protocols[k]#.params
                     self.protocols[k] = active_values(keyed,self.rheobase)
                 elif v.passive == True and v.active == False:
-                    keyed = self.protocols[k]#.params                                                                                                                                                                                        
+                    keyed = self.protocols[k]#.params
                     self.protocols[k] = passive_values(keyed)
                     #tests.protocols[k] = self.protocols
             if v.name in str('RestingPotentialTest'):
                 self.protocols[k]['injected_square_current']['amplitude'] = 0.0*qt.pA
-                
+
         return self.tests
     def dtc_to_model(self):
         from neuronunit.models import VeryReducedModel
@@ -116,13 +116,14 @@ class DataTC(object):
         from neuronunit.optimisation.optimization_management import WSListIndividual
         print('warning translation dictionary should be used, to garuntee correct attribute order from random access dictionaries')
         if hasattr(self,'td'):
-            print(self.td)
-            gene = WSListIndividual(list(self.attrs.values()))
+            gene = WSListIndividual()
+            for i in self.td:
+                gene.append(self.attrs[i])
 
         else:
             gene = WSListIndividual(list(self.attrs.values()))
         return gene
-                                    
+
     def judge_test(self,index=0):
         model = self.dtc_to_model()
         if not hasattr(self,'tests'):
@@ -184,7 +185,7 @@ class DataTC(object):
                 self.failed = {}
                 self.failed['pred'] = pred
                 self.failed['observation'] = this_test.observation
-                
+
         return self.preds
 
     def check_params(self):
@@ -218,7 +219,7 @@ class DataTC(object):
                 uset_t = self.tests['RheobaseTest']
             else:
                 uset_t = self.tests['RheobaseTestP']
-        
+
         elif type(self.tests) is type(list):
             for t in self.tests:
                 if t.name in str('RheobaseTest'):
