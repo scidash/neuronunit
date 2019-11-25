@@ -13,7 +13,7 @@ from .base import *
 import quantities as qt
 from quantities import mV, ms, s, us, ns
 import matplotlib as mpl
-SNIPPETS = True
+SLOW_ZOOM = True
 from neuronunit.capabilities import spike_functions as sf
 mpl.use('Agg')
 import matplotlib.pyplot as plt
@@ -292,7 +292,7 @@ class ADEXPBackend(Backend):
         self.attrs = attrs
 
         if ascii_plot:
-            if SNIPPETS and self.get_spike_count():
+            if SLOW_ZOOM and self.get_spike_count():
                 from neuronunit.capabilities.spike_functions import get_spike_waveforms
                 vm = get_spike_waveforms(self.vM)
             else:
