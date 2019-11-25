@@ -24,7 +24,7 @@ from neuronunit.optimisation.optimization_management import TSD
 #from neuronunit.optimisation.optimization_management import TSD
 from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.data_transport_container import DataTC
-from neuronunit.optimisation.optimization_management import dtc_to_rheo, mint_generic_model
+from neuronunit.optimisation.optimization_management import dtc_to_rheo#, mint_generic_model
 from neuronunit.optimisation.optimization_management import OptMan
 
 from neuronunit import tests as nu_tests, neuroelectro
@@ -94,7 +94,7 @@ class testHighLevelOptimisation(unittest.TestCase):
 
         #self.test_rheobase_dtc = test_rheobase_dtc
         #self.dtcpop = test_rheobase_dtc(self.dtcpop,self.electro_tests)
-        self.standard_model = self.model = mint_generic_model('RAW')
+        #self.standard_model = self.model = mint_generic_model('RAW')
         self.MODEL_PARAMS = MODEL_PARAMS
         self.MODEL_PARAMS.pop(str('NEURON'),None)
 
@@ -196,8 +196,8 @@ class testHighLevelOptimisation(unittest.TestCase):
         '''
         forward euler, and adaptive exponential
         '''
-        NGEN = 10
-        MU = 10
+        NGEN = 3
+        MU = 3
         backend = str('BHH')
         out = self.get_cells(backend,model_parameters,NGEN,MU)
 
