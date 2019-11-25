@@ -448,13 +448,17 @@ def run_ga(explore_edges, NGEN, test, \
         free_params.pop('dt')
     except:
         pass
-    if 'Iext' in free_params:
-        free_params.pop('Iext')
+    #if 'Iext' in explore_edges:
+    try: 
+        explore_edges.pop('Iext')
+    except:
+        pass
     for k in free_params:
-        if not k in explore_edges.keys() and k not in str('Iext') and k not in str('dt'):
-            ss[k] = explore_edges[str(free_params)]
-        else:
-            ss[k] = explore_edges[k]
+        if k not in "Iext":
+            if not k in explore_edges.keys() and k not in str('Iext') and k not in str('dt'):
+                ss[k] = explore_edges[str(free_params)]
+            else:
+                ss[k] = explore_edges[k]
     if type(MU) == type(None):
         MU = 2**len(list(free_params))
     NGEN = int(np.floor(NGEN))

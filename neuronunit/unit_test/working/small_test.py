@@ -22,21 +22,17 @@ import os
 from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.data_transport_container import DataTC
 
-from neuronunit.optimisation.optimization_management import dtc_to_rheo, mint_generic_model
+from neuronunit.optimisation.optimization_management import dtc_to_rheo#, mint_generic_model
 from neuronunit.optimisation.optimization_management import OptMan
 
 from neuronunit import tests as nu_tests, neuroelectro
 from neuronunit.tests import passive, waveform, fi
 from neuronunit.optimisation import exhaustive_search
-from neuronunit.models.reduced import ReducedModel
 from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 from neuronunit.tests import dynamics
-from neuronunit.models.reduced import ReducedModel
 from neuronunit.optimisation import data_transport_container
-from neuronunit.models.reduced import ReducedModel
 
 from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
-from neuronunit.models.reduced import ReducedModel
 from neuronunit import aibs
 from neuronunit.optimisation.optimisations import run_ga
 from neuronunit.optimisation import model_parameters
@@ -102,7 +98,6 @@ class testHighLevelOptimisation(unittest.TestCase):
 
         #self.test_rheobase_dtc = test_rheobase_dtc
         #self.dtcpop = test_rheobase_dtc(self.dtcpop,self.electro_tests)
-        self.standard_model = self.model = mint_generic_model('RAW')
         self.MODEL_PARAMS = MODEL_PARAMS
         self.MODEL_PARAMS.pop(str('NEURON'),None)
 
