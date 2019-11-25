@@ -34,17 +34,17 @@ from scipy.interpolate import interp1d
 
 # This function implement Adaptive Exponential Leaky Integrate-And-Fire neuron model
 def simulate_AdEx_neuron_local(
-        tau_m=MEMBRANE_TIME_SCALE_tau_m,
-        R=MEMBRANE_RESISTANCE_R,
-        v_rest=V_REST,
-        v_reset=V_RESET,
-        v_rheobase=RHEOBASE_THRESHOLD_v_rh,
-        a=ADAPTATION_VOLTAGE_COUPLING_a,
-        b=SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b,
-        v_spike=FIRING_THRESHOLD_v_spike,
-        delta_T=SHARPNESS_delta_T,
-        tau_w=ADAPTATION_TIME_CONSTANT_tau_w,
-        I_stim=input_factory.get_zero_current(),
+        tau_m=None,
+        R=None,
+        v_rest=None,#
+        v_reset=None,#V_RESET,
+        v_rheobase=None,#RHEOBASE_THRESHOLD_v_rh,
+        a=None,#ADAPTATION_VOLTAGE_COUPLING_a,
+        b=None,#SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b,
+        v_spike=None,#FIRING_THRESHOLD_v_spike,
+        delta_T=None,#SHARPNESS_delta_T,
+        tau_w=None,#ADAPTATION_TIME_CONSTANT_tau_w,
+        I_stim=None,#input_factory.get_zero_current(),
         simulation_time=200 * b2.ms):
     r"""
     code is from:
