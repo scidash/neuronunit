@@ -12,9 +12,9 @@
 * Feature extraction routines: AllenSDK, Druckman, Elephant.
 
 * Simulator Backends: brian2, Allen-GLIF, NEURON, PyNN
-```
+``` BASH
 docker pull russelljarvis/efel_allen_dm
-docker run russelljarvis/efel_allen_dm neuronunit/examples/use_ed
+docker run russelljarvis/efel_allen_dm neuronunit/examples/use_edt.py
 ```
 
 See the Documentation notebooks:
