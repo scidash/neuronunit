@@ -41,16 +41,16 @@ RUN pip install -r requirements.txt
 RUN pip install .
 
 #script:
-RUN sudo /opt/conda/bin/pip install git+https://github.com/plotly/dash
-RUN git clone https://github.com/hfwittmann/dash.git
+#RUN sudo /opt/conda/bin/pip install git+https://github.com/plotly/dash
+#RUN git clone https://github.com/hfwittmann/dash.git
 
 
-RUN sudo /opt/conda/bin/pip install -r dash/dash-simple/requirements-simple.txt
-WORKDIR $HOME
-EXPOSE 80
+#RUN sudo /opt/conda/bin/pip install -r dash/dash-simple/requirements-simple.txt
+#WORKDIR $HOME
+#EXPOSE 80
 
 WORKDIR neuronunit/unit_test/working
 # RUN jupyter nbconvert --execute examples/chapter3.ipynb
 # RUN jupyter nbconvert --execute examples/example_data.ipynb
 
-ENTRYPOINT ["python", "examples/use_edt.py"]
+ENTRYPOINT ["python", "small_test.py"]
