@@ -37,8 +37,8 @@ install:
   - pip install .
 
 script:
-  - cd neuronunit/unit_test/working
-  - python small_test.py
+  - cd neuronunit/unit_test
+  - python working/small_test.py
   - jupyter nbconvert --execute examples/chapter3.ipynb 
   - jupyter nbconvert --execute examples/example_data.ipynb 
   - docker run nuopt /opt/conda/bin/python -c "import neuronunit"
