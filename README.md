@@ -4,7 +4,7 @@
 * Neo, elephant, Brian2 and dask interoperability ships with the most minimal install. A wide range of feature extraction, data source, and interfaces and simulator backend support: NeuroML-DB, NeurML, Allen-SDK, PyNN and NEURON are provided with an easy to use [Docker container]().
 * Brian2 Interoperability ships with the most minimal install. A wide range of interfaces and simulator backend support: Allen-SDK, PyNN and NEURON are provided with an [easy to use Docker container](https://github.com/russelljjarvis/docker-stacks-returned/blob/scidash/efel_dm/Dockerfile).
 
-<img src="docs/brian2_logo.png" width="200" height="200" /> <img src="docs/numba.png" width="200" height="200" /> <img src="docs/dask_logo.png" width="175" height="200" /> <img src="docs/deap.png" width="200" height="200" />
+<img src="docs/brian2_logo.png" width="200" height="150" /> <img src="docs/numba.png" width="200" height="150" /> <img src="docs/dask_logo.png" width="175" height="125" /> <img src="docs/deap.png" width="200" height="150" />
 
 * Feature extraction routines: AllenSDK, Druckman, Elephant.
 
@@ -21,7 +21,7 @@ See the Documentation notebooks:
 
 | Master  | Dev |
 | ------------- | ------------- |
-| [![Travis](https://travis-ci.com/russelljjarvis/neuronunit_opt.svg?branch=master)](https://travis-ci.com/russelljjarvis/neuronunit) | [![Travis](https://travis-ci.org/russelljjarvis/neuronunit.svg?branch=dev)](https://travis-ci.org/russelljjarvis/neuronunit)  |
+| [![Travis](https://travis-ci.com/russelljjarvis/NeuronunitOpt.svg?branch=master)](https://travis-ci.com/russelljjarvis/neuronunit) | [![Travis](https://travis-ci.org/russelljjarvis/neuronunit.svg?branch=dev)](https://travis-ci.org/russelljjarvis/neuronunit)  |
 | [![RTFD](https://readthedocs.org/projects/neuronunit/badge/?version=master)](http://neuronunit.readthedocs.io/en/latest/?badge=master) | [![RTFD](https://readthedocs.org/projects/neuronunit/badge/?version=dev)](http://neuronunit.readthedocs.io/en/latest/?badge=dev) |
 | [![Coveralls](https://coveralls.io/repos/github/scidash/neuronunit/badge.svg?branch=master)](https://coveralls.io/github/scidash/neuronunit?branch=master) | [![Coveralls](https://coveralls.io/repos/github/scidash/neuronunit/badge.svg?branch=dev)](https://coveralls.io/github/scidash/neuronunit?branch=dev) |
 | [![Requirements](https://requires.io/github/scidash/neuronunit/requirements.svg?branch=master)](https://requires.io/github/scidash/neuronunit/requirements/?branch=master) |  [![Requirements](https://requires.io/github/scidash/neuronunit/requirements.svg?branch=dev)](https://requires.io/github/scidash/neuronunit/requirements/?branch=dev) |
