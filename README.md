@@ -1,17 +1,19 @@
 # Description
-* A very Python native model-data optimization toolchain that preferences compact, parsimonious neuronal models, implemented in community favorite python modules which are directly interfaced into a fast data driven optimization routine (numba, dask etc).
-* A collection of compact, parsimonious bio-medical neuronal models, implemented in community preferred python modules and  interfaced into a fast data driven muliti-objective optimization routine (numba, dask etc).
+* A very Python native model-data optimization toolchain, derived from ***neuronunit*** and tightly interfaced with other community supported python modules for feature extraction and data scraping and simulation. 
+* A collection of compact, parsimonious biological neuronal models, implemented in community supported python modules and  interfaced into a fast data driven muliti-objective optimization routine (numba, dask etc).
 
 * Brian2 and dask interoperability ships with the most minimal install. A wide range of interfaces and simulator backend support: Allen-SDK, PyNN and NEURON are provided with an easy to use [Docker container](docker pull russelljarvis/efel_allen_dm).
 * Brian2 Interoperability ships with the most minimal install. A wide range of interfaces and simulator backend support: Allen-SDK, PyNN and NEURON are provided with an [easy to use Docker container](https://github.com/russelljjarvis/docker-stacks-returned/blob/scidash/efel_dm/Dockerfile).
 
-* Feature extraction routines: AllenSDK, Druckman, Elephant.
-
-* Simulator Backends: brian2, Allen-GLIF, NEURON, PyNN
 
 ![brian](docs/brian2_logo.png)
 ![numba](docs/numba.png)
 ![dask](docs/dask_logo.png)
+
+
+* Feature extraction routines: AllenSDK, Druckman, Elephant.
+
+* Simulator Backends: brian2, Allen-GLIF, NEURON, PyNN
 
 
 See the Documentation notebooks:
