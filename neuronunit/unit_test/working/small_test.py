@@ -121,15 +121,18 @@ class testHighLevelOptimisation(unittest.TestCase):
 
     def test_solution_quality0(self):
         #use_test = self.filtered_tests['Hippocampus CA1 pyramidal cell']#['RheobaseTest']]
-        use_test = self.filtered_tests['Neocortex pyramidal cell layer 5-6']
+        from neuronunit.optimisation.optimization_management import TSD
+        use_test = TSD(self.filtered_tests['Neocortex pyramidal cell layer 5-6'])
         easy_standards = {ut.name:ut.observation['std'] for ut in use_test.values()}
+        
+        use_test.use_rheobase_score = True
         print(easy_standards)
         [(value.name,value.observation) for value in use_test.values()]
         try:
             with open('jd.p','rb') as f:
                 results,converged,target,simulated_tests = pickle.load(f)
         except:
-
+            
             OM = OptMan(use_test,protocol={'elephant':True,'allen':False,'dm':False})
             results,converged,target,simulated_tests = OM.round_trip_test(use_test,str('RAW'),MU=2,NGEN=2,stds = easy_standards)
             print(converged,target)
