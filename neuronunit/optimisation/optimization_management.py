@@ -204,12 +204,14 @@ class TSD(dict):
         self.DO.MU = MU
         self.DO.NGEN = NGEN
         ga_out = self.DO.run(NGEN = self.DO.NGEN)
+        ga_out['DO'] = self.DO
         if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
             _,dtc_pop = DO.OM.test_runner(copy.copy(ga_out['pf']),self.DO.OM.td,self.DO.OM.tests)
             ga_out['dtc_pop'] = dtc_pop
         self.backend = backend
 
         if str(self.cell_name) not in str('simulated data'):
+            pass
             # is this a data driven test? if so its worth plotting results
             #ga_out = self.elaborate_plots(self,ga_out)
         from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
