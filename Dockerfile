@@ -49,8 +49,7 @@ RUN sudo /opt/conda/bin/pip install -r dash/dash-simple/requirements-simple.txt
 WORKDIR $HOME
 EXPOSE 80
 
-RUN cd neuronunit/unit_test/
-RUN cd working
+WORKDIR neuronunit/unit_test/working
 # RUN jupyter nbconvert --execute examples/chapter3.ipynb
 # RUN jupyter nbconvert --execute examples/example_data.ipynb
 
