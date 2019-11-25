@@ -211,7 +211,7 @@ class TSD(dict):
 
         if str(self.cell_name) not in str('simulated data'):
             # is this a data driven test? if so its worth plotting results
-            ga_out = self.elaborate_plots(self,ga_out)
+            #ga_out = self.elaborate_plots(self,ga_out)
         from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
 
         ##

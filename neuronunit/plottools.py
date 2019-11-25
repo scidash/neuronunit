@@ -277,7 +277,13 @@ def elaborate_plots(self,ga_out):
     The plot shows the mean error value of the population as the GA evolves it's population. The red interval at any instant is the standard deviation of the error. The fact that the mean GA error is able to have a net upwards trajectory, after experiencing a temporary downwards trajectory, demonstrates that the GA retains a drive to explore, and is resiliant against being stuck in a local minima. Also in the above plot population variance in error stays remarkably constant, in this way BluePyOpts selection criteria SELIBEA contrasts with DEAPs native selection strategy NSGA2
     #for index, val in enumerate(ga_out.values()):
     '''
-    temp = copy.copy(ga_out['pf'][0].dtc.scores)
+    import pdb
+    pdb.set_trace()
+    try:
+       temp = copy.copy(ga_out['pf'][0].dtc.scores)
+    except:
+       temp = copy.copy(ga_out['dtc_pop'][0].scores)
+
     if not self.use_rheobase_score:
         temp.pop("RheobaseTest",None)
     objectives = list(temp.keys())
