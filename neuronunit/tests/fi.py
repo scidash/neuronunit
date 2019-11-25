@@ -147,12 +147,11 @@ class RheobaseTest(VmTest):
                 n_spikes = model._backend.get_spike_count()
 
                 self.n_spikes = n_spikes
-                print('serial alogrithm',n_spikes)
 
                 if self.verbose >= 5:
                     pass
-                    #print("Injected %s current and got %d spikes" % \
-                    #        (ampl,n_spikes))
+                    print("Injected %s current and got %d spikes" % \
+                            (ampl,n_spikes))
                 lookup[float(ampl)] = n_spikes
                 spike_counts = np.array([n for x,n in lookup.items() if n>0])
 
@@ -318,20 +317,17 @@ class RheobaseTestP(VmTest):
             output is an virtual model with an updated dictionary.
             '''
             dtc.boolean = False
-            LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
-            dtc.model_path = LEMS_MODEL_PATH
-            from neuronunit.models.reduced import ReducedModel, VeryReducedModel
 
             if dtc.backend is str('NEURON') or dtc.backend is str('jNEUROML'):
+                LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
+                dtc.model_path = LEMS_MODEL_PATH
+                from neuronunit.models.reduced import ReducedModel, VeryReducedModel
                 model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
-                #model = VeryReducedModel(name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
-
                 dtc.current_src_name = model._backend.current_src_name
                 assert type(dtc.current_src_name) is not type(None)
                 dtc.cell_name = model._backend.cell_name
             else:
-                model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
-                #model = VeryReducedModel(name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
+                model = dtc.dtc_to_model()
 
 
             params = {'injected_square_current':
@@ -339,13 +335,11 @@ class RheobaseTestP(VmTest):
             ampl = dtc.ampl
             if float(ampl) not in dtc.lookup or len(dtc.lookup) == 0:
                 uc = {'amplitude':dtc.ampl,'duration':DURATION,'delay':DELAY}
-
                 dtc.run_number += 1
-
-                model.set_attrs(**dtc.attrs)
+                model.attrs = dtc.attrs
+                #model.set_attrs(**dtc.attrs)
                 model.inject_square_current(uc)
                 n_spikes = model.get_spike_count()
-                print(n_spikes)
                 dtc.previous = ampl
 
                 dtc.rheobase = {}
@@ -459,7 +453,6 @@ class RheobaseTestP(VmTest):
                         return smaller[0][1]#int(1*len(smaller)/4.0)]
                 else:
                     smaller = sorted([ (dtc.ampl,dtc) for dtc in dtc_clone if dtc.boolean == True ])
-                    print(smaller)
                     if len(smaller):
                         return smaller[-1][1]
                         #smaller[3*int(len(smaller)/4.0)][1]

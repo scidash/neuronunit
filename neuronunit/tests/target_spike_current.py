@@ -127,19 +127,17 @@ class SpikeCountSearch(VmTest):
             output is an virtual model with an updated dictionary.
             '''
             dtc.boolean = False
-            LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
-            dtc.model_path = LEMS_MODEL_PATH
 
             if dtc.backend is str('NEURON') or dtc.backend is str('jNEUROML'):
 
+                LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
+                dtc.model_path = LEMS_MODEL_PATH
                 model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
                 dtc.current_src_name = model._backend.current_src_name
                 assert type(dtc.current_src_name) is not type(None)
                 dtc.cell_name = model._backend.cell_name
             else:
-                model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
-
-                #model = VeryReducedModel(name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
+          	model = dtc.dtc_to_model()
 
             params = {'injected_square_current':
                       {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
@@ -407,23 +405,17 @@ class SpikeCountRangeSearch(VmTest):
             output is an virtual model with an updated dictionary.
             '''
             dtc.boolean = False
-            LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
-            dtc.model_path = LEMS_MODEL_PATH
 
             if dtc.backend is str('NEURON') or dtc.backend is str('jNEUROML'):
 
+                LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
+                dtc.model_path = LEMS_MODEL_PATH
                 model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
                 dtc.current_src_name = model._backend.current_src_name
                 assert type(dtc.current_src_name) is not type(None)
                 dtc.cell_name = model._backend.cell_name
             else:
-                model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
-
-                #model = VeryReducedModel(name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
-                #from sciunit.models.runnable import RunnableModel
-
-                #model = RunnableModel(str(dtc.backend),backend=(dtc.backend, {'DTC':dtc}))
-                #model = RunnableModel(str(dtc.backend),backend=(dtc.backend, {'DTC':dtc}))
+                model = dtc.dtc_to_model()
 
             params = {'injected_square_current':
                       {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
