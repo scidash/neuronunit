@@ -141,7 +141,7 @@ class testHighLevelOptimisation(unittest.TestCase):
                 adconv = pickle.load(f)[0]
         except:
             ga_out = run_ga(param_edges, 2, simulated_tests, free_params=param_edges.keys(), \
-                backend=str('ADEXP'), MU = 2,  protocol={'allen': False, 'elephant': True})
+                backend=str('ADEXP'), MU = 4,  protocol={'allen': False, 'elephant': True})
 
             adconv = [ p.dtc for p in ga_out[0]['pf'] ]
             with open('jda.p','wb') as f:
