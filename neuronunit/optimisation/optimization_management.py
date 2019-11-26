@@ -2531,11 +2531,11 @@ class OptMan():
                     pass
                 else:
                     if type(score.raw) is not type(None):
-                        if np.isinf(float(score.raw)):
+                        if np.isinf(float(score.raw)) and pred[list(pred.keys())[0]]>0.0:
                             t.score_type = scores.RatioScore
                             score = t.compute_score(pred,t.observation)
                     else:
-                        t.score_type = scores.RatioScore
+                        t.score_type = scores.ZScore
                         if type(pred['mean']) is not type(None):
                             score = t.compute_score(pred,t.observation)
 
