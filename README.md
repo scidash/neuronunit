@@ -1,3 +1,22 @@
+See the Documentation notebooks:
+=======
+[Chapter 1](neuronunit/examples/chapter1.ipynb) / [Chapter 2](neuronunit/examples/chapter2.ipynb) / [Chapter 3](neuronunit/examples/chapter3.ipynb) / [Chapter 4](neuronunit/examples/chapter4.ipynb) / [Chapter 5](neuronunit/examples/chapter5.ipynb) / [Chapter 6](neuronunit/examples/chapter6.ipynb) / [Chapter 7](neuronunit/examples/chapter7.ipynb) / [Chapter 8](neuronunit/examples/chapter8.ipynb) / [Chapter 9](neuronunit/examples/chapter9.ipynb)
+
+
+| Master  | Dev |
+| ------------- | ------------- |
+| [![Travis](https://travis-ci.com/russelljjarvis/NeuronunitOpt.svg?branch=master)](https://travis-ci.com/russelljjarvis/neuronunit) | [![Travis](https://travis-ci.org/russelljjarvis/neuronunit.svg?branch=dev)](https://travis-ci.org/russelljjarvis/neuronunit)  |
+| [![RTFD](https://readthedocs.org/projects/neuronunit/badge/?version=master)](http://neuronunit.readthedocs.io/en/latest/?badge=master) | [![RTFD](https://readthedocs.org/projects/neuronunit/badge/?version=dev)](http://neuronunit.readthedocs.io/en/latest/?badge=dev) |
+| [![Coveralls](https://coveralls.io/repos/github/scidash/neuronunit/badge.svg?branch=master)](https://coveralls.io/github/scidash/neuronunit?branch=master) | [![Coveralls](https://coveralls.io/repos/github/scidash/neuronunit/badge.svg?branch=dev)](https://coveralls.io/github/scidash/neuronunit?branch=dev) |
+| [![Requirements](https://requires.io/github/scidash/neuronunit/requirements.svg?branch=master)](https://requires.io/github/scidash/neuronunit/requirements/?branch=master) |  [![Requirements](https://requires.io/github/scidash/neuronunit/requirements.svg?branch=dev)](https://requires.io/github/scidash/neuronunit/requirements/?branch=dev) |
+| [![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/scidash/neuronunit/master) | [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/russelljjarvis/neuronunit/dev)
+
+![NeuronUnit Logo](https://raw.githubusercontent.com/scidash/assets/master/logos/neuronunit/NeuronUnitBlack2.png)
+
+# Installation:
+```
+sudo pip install neuronunit-opt==0.1 
+```
 # Description
 * A very Python native model-data optimization toolchain derived from ***neuronunit*** and tightly interfaced with other community supported modules, levarging standard workflows in: feature extraction, data scraping and model simulation. 
 * A collection of compact, parsimonious biological neuronal models, implemented in community supported python modules and  tightly integrated into a fast data driven muliti-objective optimization routine (deap, numba, dask etc).
@@ -13,21 +32,6 @@
 docker pull russelljarvis/efel_allen_dm
 docker run russelljarvis/efel_allen_dm neuronunit/examples/use_edt.py
 ```
-
-See the Documentation notebooks:
-=======
-[Chapter 1](neuronunit/examples/chapter1.ipynb) / [Chapter 2](neuronunit/examples/chapter2.ipynb) / [Chapter 3](neuronunit/examples/chapter3.ipynb) / [Chapter 4](neuronunit/examples/chapter4.ipynb) / [Chapter 5](neuronunit/examples/chapter5.ipynb) / [Chapter 6](neuronunit/examples/chapter6.ipynb) / [Chapter 7](neuronunit/examples/chapter7.ipynb) / [Chapter 8](neuronunit/examples/chapter8.ipynb) / [Chapter 9](neuronunit/examples/chapter9.ipynb)
-
-
-| Master  | Dev |
-| ------------- | ------------- |
-| [![Travis](https://travis-ci.com/russelljjarvis/NeuronunitOpt.svg?branch=master)](https://travis-ci.com/russelljjarvis/neuronunit) | [![Travis](https://travis-ci.org/russelljjarvis/neuronunit.svg?branch=dev)](https://travis-ci.org/russelljjarvis/neuronunit)  |
-| [![RTFD](https://readthedocs.org/projects/neuronunit/badge/?version=master)](http://neuronunit.readthedocs.io/en/latest/?badge=master) | [![RTFD](https://readthedocs.org/projects/neuronunit/badge/?version=dev)](http://neuronunit.readthedocs.io/en/latest/?badge=dev) |
-| [![Coveralls](https://coveralls.io/repos/github/scidash/neuronunit/badge.svg?branch=master)](https://coveralls.io/github/scidash/neuronunit?branch=master) | [![Coveralls](https://coveralls.io/repos/github/scidash/neuronunit/badge.svg?branch=dev)](https://coveralls.io/github/scidash/neuronunit?branch=dev) |
-| [![Requirements](https://requires.io/github/scidash/neuronunit/requirements.svg?branch=master)](https://requires.io/github/scidash/neuronunit/requirements/?branch=master) |  [![Requirements](https://requires.io/github/scidash/neuronunit/requirements.svg?branch=dev)](https://requires.io/github/scidash/neuronunit/requirements/?branch=dev) |
-| [![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/scidash/neuronunit/master) | [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/russelljjarvis/neuronunit/dev)
-
-![NeuronUnit Logo](https://raw.githubusercontent.com/scidash/assets/master/logos/neuronunit/NeuronUnitBlack2.png)
 
 # Optimization specific:
 
