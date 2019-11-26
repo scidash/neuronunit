@@ -34,7 +34,6 @@ install:
 
 script:
   - cd neuronunit
-  - python -c "print('at least the build' works')"
   - python -c "import neuronunit"
 after_success:
   - coveralls
