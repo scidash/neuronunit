@@ -48,7 +48,7 @@ To keep the standard running version of minimal and memory efficient, not all av
 #!bash after_install.sh
 
 
-# goals.
+# Broad Aims:
 given https://www.nature.com/articles/nn1352
 Goal is based on this. Don't optimize to a singular point, optimize onto a cluster.
 Golowasch, J., Goldman, M., Abbott, L.F, and Marder, E. (2002)
