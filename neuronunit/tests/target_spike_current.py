@@ -137,8 +137,7 @@ class SpikeCountSearch(VmTest):
                 assert type(dtc.current_src_name) is not type(None)
                 dtc.cell_name = model._backend.cell_name
             else:
-          	model = dtc.dtc_to_model()
-
+                model = dtc.dtc_to_model()
             params = {'injected_square_current':
                       {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
@@ -150,8 +149,6 @@ class SpikeCountSearch(VmTest):
                 model.set_attrs(**dtc.attrs)
                 model.inject_square_current(uc)
                 n_spikes = model.get_spike_count()
-                #print(n_spikes)
-                #print(uc)
                 if float(ampl) < -1.0:
                     dtc.rheobase = {}
                     dtc.rheobase['value'] = None
