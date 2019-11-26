@@ -42,7 +42,7 @@ docker run russelljarvis/efel_allen_dm neuronunit/examples/use_edt.py
  https://cloud.docker.com/u/russelljarvis/repository/docker/russelljarvis/network_unit_opt
  You can run use dockerhub to get the appropriate file, and launch this notebook using Kitematic.
 
-# # Import libraries
+# Import libraries
 To keep the standard running version of minimal and memory efficient, not all available packages are loaded by default. In the cell below I import a mixture common python modules, and custom developed modules associated with NeuronUnit (NU) development
 #!pip install dask distributed seaborn
 #!bash after_install.sh
