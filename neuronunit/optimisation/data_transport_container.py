@@ -3,7 +3,6 @@ import numpy as np
 #from sciunit.models.runnable import RunnableModel
 import quantities as qt
 import copy
-from neuronunit.models.very_reduced_sans_lems import VeryReducedModel
 
 try:
     import asciiplotlib as apl
@@ -93,10 +92,7 @@ class DataTC(object):
 
         return self.tests
     def dtc_to_model(self):
-        #import pdb
-        #pdb.set_trace()
-        #model = RunnableModel(str(self.backend),backend=self.backend,attrs=self.attrs)
-        #model = RunnableModel(str(self.backend),backend=(self.backend, {'DTC':self}))
+        from neuronunit.models.very_reduced_sans_lems import VeryReducedModel
         model = VeryReducedModel(backend=self.backend)
         model.backend = self.backend
         model.attrs = self.attrs
