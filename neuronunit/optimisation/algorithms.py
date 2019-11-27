@@ -24,8 +24,8 @@ class WSListIndividual(list):
     def __init__(self, *args, **kwargs):
         """Constructor"""
         self.rheobase = None
+        self.dtc = None
         super(WSListIndividual, self).__init__(*args, **kwargs)
-
 logger = logging.getLogger('__main__')
 try:
     import asciiplotlib as apl
@@ -56,10 +56,14 @@ def strip_object(p):
     return p._state(state=state, exclude=['unpicklable','verbose'])
 
 def purify2(population):
-    pop2 = []
+    pop2 = WSListIndividual()
     for ind in population:
         for i,j in enumerate(ind):
             ind[i] = float(j)
+        ind.dtc = ind.dtc
+        assert hasattr(ind,'dtc')
+        #ind.rheobase = ind.rheoase
+
         pop2.append(ind)
     return pop2
 
@@ -94,6 +98,8 @@ def _update_history_and_hof(halloffame,pf, history, population,td,mu):
                 pf.update(temp[0:mu])
             except:
                 print(len(temp))
+        for ind in pf:
+            assert hasattr(ind,'dtc')
     return (halloffame,pf,history)
 
 
@@ -134,6 +140,8 @@ def purify(parents):
                 ind[x] = copy.copy(imp[i][x])
                 ind[x].fitness = imp[i].fitness
                 ind[x].rheobase = imp[i].rheobase
+                ind[x].dtc = imp[i].dtc
+
                 parents.append(ind)
         parents_ = []
         for i,off_ in enumerate(parents):

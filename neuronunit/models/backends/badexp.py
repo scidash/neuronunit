@@ -18,17 +18,23 @@ from neuronunit.capabilities import spike_functions as sf
 mpl.use('Agg')
 import matplotlib.pyplot as plt
 
-from types import MethodType
+
 getting_started = False
 try:
     import asciiplotlib as apl
     fig = apl.figure()
-    fig.plot([0,1], [0,1], label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
-    fig.show()
+    fig.plot([1,0], [0,1])
     ascii_plot = True
+    import gc
+
 except:
     ascii_plot = False
 import numpy
+try:
+    brian2.clear_cache('cython')
+except:
+    pass
+    #I_stim = stim, simulation_time=st)
 
 from scipy.interpolate import interp1d
 
@@ -101,7 +107,7 @@ def simulate_AdEx_neuron_local(
     return state_monitor, spike_monitor
 
 
-
+getting_started = False
 class ADEXPBackend(Backend):
     def get_spike_count(self):
         return int(self.spike_monitor.count[0])
@@ -112,7 +118,7 @@ class ADEXPBackend(Backend):
         super(ADEXPBackend,self).init_backend()
         self.name = str(backend)
 
-        #self.threshold = -20.0*qt.mV
+
         self.debug = None
         self.model._backend.use_memory_cache = False
         self.current_src_name = current_src_name
@@ -217,15 +223,20 @@ class ADEXPBackend(Backend):
             c = current['injected_square_current']
         else:
             c = current
-        amplitude = float(c['amplitude'])
+
+        amplitude = c['amplitude'].simplified
+
         duration = int(c['duration'])#/dt#/dt.rescale('ms')
         delay = int(c['delay'])#/dt#.rescale('ms')
         pre_current = int(duration)+100
-        try:
-            stim = input_factory.get_step_current(int(delay), int(pre_current), 1 * b2.ms, amplitude *b2.pA)
-        except:
-            pass
-        st = (duration+delay+100)* b2.ms
+        amp = c['amplitude'].rescale('uA')
+        amplitude = amp.simplified
+        if getting_started == False:
+            stim = input_factory.get_step_current(delay, duration, b2.ms, amplitude * b2.uA)
+            st = (duration+delay+100)* b2.ms
+        else:
+            stim = input_factory.get_step_current(10, 45, b2.ms, 7.2 * b2.uA)
+            st = 70 * b2.ms
 
         if self.model.attrs is None or not len(self.model.attrs):
             #from neurodynex.adex_model import AdEx
@@ -292,7 +303,7 @@ class ADEXPBackend(Backend):
         self.attrs = attrs
 
         if ascii_plot:
-            if SLOW_ZOOM and self.get_spike_count():
+            if SLOW_ZOOM and self.get_spike_count()>=1 :
                 from neuronunit.capabilities.spike_functions import get_spike_waveforms
                 vm = get_spike_waveforms(self.vM)
             else:
@@ -302,12 +313,14 @@ class ADEXPBackend(Backend):
             fig = apl.figure()
             fig.plot(t, v, label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
             fig.show()
+            gc.collect()
             fig = None
-
+	'''
         if len(self.spike_monitor.spike_trains())>1:
             import matplotlib.pyplot as plt
             plt.plot(y,x)
             plt.savefig('debug.png')
+        '''
         return self.vM
 
     def _backend_run(self):

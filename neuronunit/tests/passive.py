@@ -27,7 +27,7 @@ class TestPulseTest(VmTest):
             self.params = None
         self.verbose = None
     default_params = dict(VmTest.default_params)
-    default_params['amplitude'] = -1.0 * pq.pA
+    default_params['amplitude'] = -10.0 * pq.pA
     default_params['tmax'] = 1000.0*pq.ms
     required_capabilities = (ncap.ReceivesSquareCurrent,)
     name = ''
@@ -45,14 +45,14 @@ class TestPulseTest(VmTest):
         model.inject_square_current(self.params['injected_square_current'])
         #return vm
     def get_result(self, model):
-        self.condition_model(model)
-        model.inject_square_current(self.params['injected_square_current'])
+        #self.condition_model(model)
+        #model.inject_square_current(self.params['injected_square_current'])
         vm = model.get_membrane_potential()
         return vm
 
     def extract_features(self, model,result):
         #model = dtc.to_model()
-        self.condition_model(model)
+        #self.condition_model(model)
         #print(self.params)
         model.inject_square_current(self.params['injected_square_current'])
         #print(model.attrs)
@@ -295,7 +295,7 @@ class RestingPotentialTest(TestPulseTest):
     """Tests the resting potential under zero current injection."""
 
     default_params = dict(TestPulseTest.default_params)
-    default_params['amplitude'] = 0.0 * pq.pA
+    default_params['amplitude'] = -10.0 * pq.pA
 
     name = "Resting potential test"
 
@@ -311,7 +311,7 @@ class RestingPotentialTest(TestPulseTest):
     def extract_features(self, model, result):
         #features = super(RestingPotentialTest, self).\
         #                    extract_features(model, result)
-        self.params['injected_square_current']['amplitude'] = 0*pq.mV
+        self.params['injected_square_current']['amplitude'] = -10*pq.pA
         model.inject_square_current(self.params['injected_square_current'])
 
         #if features is not None:

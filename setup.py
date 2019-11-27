@@ -12,10 +12,10 @@ def read_requirements():
 
 
 setup(
-    name='neuronunit',
-    version='0.19',
-    author='Rick Gerkin',
-    author_email='rgerkin@asu.edu',
+    name='neuronunit_opt',
+    version='0.1',
+    author='Russell Jarvis, Rick Gerkin',
+    author_email='rjjarvis@asu.edu',
     packages=['neuronunit',
             'neuronunit.capabilities',
             'neuronunit.neuroconstruct',
@@ -24,9 +24,9 @@ setup(
             'neuronunit.tests',
             'neuronunit.optimisation',
             'neuronunit.unit_test'],
-    url='http://github.com/scidash/neuronunit',
+    url='http://github.com/russelljjarvis/NeuronunitOpt',
     license='MIT',
-    description=("A SciUnit library for data-driven testing of "
+    description=("A SciUnit library for optimizing data-driven testing of "
                  "single-neuron physiology models."),
     long_description="",
     test_suite="neuronunit.unit_test.core_tests"
