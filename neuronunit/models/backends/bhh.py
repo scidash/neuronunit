@@ -17,17 +17,13 @@ from quantities import V as qV
 SLOW_ZOOM = False
 #, ms, s, us, ns, V
 import matplotlib as mpl
-
+SLOW_ZOOM = True
 from neuronunit.capabilities import spike_functions as sf
 mpl.use('Agg')
 import matplotlib.pyplot as plt
 from elephant.spike_train_generation import threshold_detection
 
 
-# from neuronunit.optimisation import ascii_plot
-
-#import matplotlib.pyplot as plt
-# @jit(cache=True) I suspect this causes a memory leak
 getting_started = False
 try:
     import asciiplotlib as apl
@@ -100,8 +96,8 @@ def simulate_HH_neuron_local(I_stim=None, simulation_time=None,El=None,\
 
     state_dic = st_mon.get_states()
     vm = state_dic['vm']
-    vm = [ (float(v)+Vr) for v in vm]
-    vM = AnalogSignal(vm,units = pq.mV,sampling_period = float(1.0) * pq.ms)
+    vm = [ (float(v)+Vr/1000.0) for v in vm]
+    vM = AnalogSignal(vm,units = pq.V,sampling_period = float(1.0) * pq.ms)
     return st_mon,vM
 
 getting_started = False
@@ -140,7 +136,7 @@ class BHHBackend(Backend):
 
     def get_spike_count(self):
         thresh = threshold_detection(self.vM)
-        print(len(thresh),'num spikes')
+        #print(len(thresh),'num spikes')
         return len(thresh)
 
     def set_stop_time(self, stop_time = 650*pq.ms):
@@ -216,11 +212,14 @@ class BHHBackend(Backend):
             c = current['injected_square_current']
         else:
             c = current
-        amplitude = float(c['amplitude'])/100.0#*100000.0
+
+        amplitude = c['amplitude'].simplified
+
         duration = int(c['duration'])#/dt#/dt.rescale('ms')
         delay = int(c['delay'])#/dt#.rescale('ms')
         pre_current = int(duration)+100
-
+        amp = c['amplitude'].rescale('uA')
+        amplitude = amp.simplified
         if getting_started == False:
             stim = input_factory.get_step_current(delay, duration, b2.ms, amplitude * b2.uA)
             st = (duration+delay+100)* b2.ms
@@ -267,6 +266,7 @@ class BHHBackend(Backend):
             fig.plot(t, v, label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
             fig.show()
             gc.collect()
+            fig = None
 
         fig  = None
         return self.vM

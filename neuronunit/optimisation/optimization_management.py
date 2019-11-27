@@ -144,10 +144,13 @@ def make_ga_DO(explore_edges, max_ngen, test, \
     '''
 
     ss = {}
-    if 'dt' in free_params:
-        free_params.pop('dt')
-    if 'Iext' in free_params:
-        free_params.pop('Iext')
+    if type(free_params) is type(dict()):
+        if 'dt' in free_params:
+            free_params.pop('dt')
+        if 'Iext' in free_params:
+            free_params.pop('Iext')
+    else:
+        free_params = [f for f in free_params if str(f) not in 'Iext' and str(f) not in str('dt')]
     for k in free_params:
         if not k in explore_edges.keys() and k not in str('Iext') and k not in str('dt'):
             ss[k] = explore_edges[str(free_params)]
@@ -219,7 +222,7 @@ class TSD(dict):
         ##
         # TODO populate a score table pass it back to DO.OM
 
-        return ga_out, DO
+        return ga_out, self.DO
 '''
 class TSD(dict):
     def __init__(self,tests={},use_rheobase_score=False):
@@ -1843,6 +1846,17 @@ def which_key(thing):
         return 'value'
     if 'mean' in thing.keys():
         return 'mean'
+def simple_error(observation,prediction):
+    observation = which_thing(observation)
+    prediction = which_thing(prediction)
+    obs = observation['standard']
+    pred = prediction['standard']
+    pred = temp.rescale(pred.units)
+    print('difference: ',float(obs.magnitude)-float(pred.magnitude))
+    pre_error = np.sqrt((float(obs.magnitude)-float(pred.magnitude))**2)
+    error = pre_error/obs
+    print('error: ',error)
+    return error
 '''
 def dtc2gene(pop,dtcpop):
     fitness_attr = pop[0].fitness
@@ -1941,7 +1955,9 @@ def bridge_passive(package):
         pred = None
     if type(pred) is type(None):
         return None,dtc,pred
-
+    score = simple_error(t.observation,pred)
+    return score, dtc, pred
+    '''
     if 'std' not in t.observation.keys():
         take_anything = list(t.observation['mean'])[0]
 
@@ -1990,7 +2006,7 @@ def bridge_passive(package):
     #if type(score) is type(None):
     #    score = increase_current(dtc,t)
     return score, dtc, pred
-
+    '''
 class OptMan():
     def __init__(self,tests, td=None, backend = None,hc = None,boundary_dict = None, error_length=None,protocol=None,simulated_obs=None,verbosity=None,PARALLEL_CONFIDENT=None,tsr=None):
         self.tests = tests
@@ -2008,7 +2024,7 @@ class OptMan():
         self.protocol = protocol
         # note this is not effective at changing parallel behavior yet
         if PARALLEL_CONFIDENT not in globals():
-            self.PARALLEL_CONFIDENT = True
+            self.PARALLEL_CONFIDENT = False
         else:
             self.PARALLEL_CONFIDENT = PARALLEL_CONFIDENT
         if verbosity is None:
@@ -2459,11 +2475,57 @@ class OptMan():
 
         pred['std'] = t.observation['std']# 15*take_anything.magnitude * take_anything.units
         return pred
+
     def elephant_evaluation(self,dtc):
         # Inputs single data transport container modules, and neuroelectro observations that
         # inform test error error_criterion
         # Outputs Neuron Unit evaluation scores over error criterion
         tests = dtc.tests
+
+        if not hasattr(dtc,'scores') or dtc.scores is None:
+            dtc.scores = None
+            dtc.scores = {}
+
+        if isinstance(dtc.rheobase,type(None)) or type(dtc.rheobase) is type(None):
+            dtc = allocate_worst(tests, dtc)
+        else:
+            for k, t in enumerate(tests):
+                key = str(t)
+                if "RheobaseTest" in  t.name:
+                    if str("BHH") in dtc.backend or str("ADEXP") in dtc.backend or str("GLIF") in dtc.backend:
+                        t = RheobaseTestP(t.observation)
+                        t.passive = False
+                try:
+                    assert hasattr(self.tests,'use_rheobase_score')
+                except:
+                    print('warning please add whether or not model should be scored on rheobase to protocol')
+                    self.tests.use_rheobase_score = True
+                if self.tests.use_rheobase_score == False and "RheobaseTest" in str(k):
+                    continue
+                dtc.scores[key] = np.inf
+                t.params = dtc.protocols[k]
+                model = dtc.dtc_to_model()
+                if t.passive is False:
+                    pred = t.generate_prediction(model)
+                    score = simple_error(t.observation,pred)
+                if t.passive is True:
+                    score, dtc, pred = bridge_passive((t, dtc))
+                dtc.scores[str(t.name)] = score
+        dtc.summed = dtc.get_ss()
+        try:
+            greatest = np.max([dtc.error_length,len(dtc.scores)])
+        except:
+            greatest = len(dtc.scores)
+        dtc.scores_ratio = dtc.summed/greatest
+        return dtc
+
+
+    def elephant_evaluation_old(self,dtc):
+        # Inputs single data transport container modules, and neuroelectro observations that
+        # inform test error error_criterion
+        # Outputs Neuron Unit evaluation scores over error criterion
+        tests = dtc.tests
+
         if not hasattr(dtc,'scores') or dtc.scores is None:
             dtc.scores = None
             dtc.scores = {}
@@ -2507,10 +2569,13 @@ class OptMan():
                     model = new_model(dtc)
                     pred = t.generate_prediction(model)
                     pred = self.pred_std(pred,t)
+                    score = simple_error(t.observation,pred)
+                    '''
                     try:
                         score = t.judge(model)
                     except:
                         score, dtc = bridge_judge((t, dtc))
+                    '''
                     if type(take_anything) is type(int()):
                         pass
                 else:
@@ -2519,6 +2584,8 @@ class OptMan():
                         score = t.judge(model)
                     except:
                         score, dtc, pred = bridge_passive((t, dtc))
+                dtc.scores[str(t.name)] = score
+                '''
                 if self.verbose:
                     print(take_anything.units)
                     print(t.observation['mean'].units)
@@ -2576,9 +2643,9 @@ class OptMan():
                         assignment = 1.0 - score.norm_score
                         dtc.scores[str(t.name)] = assignment
 
-                if dtc.scores[key] == 0.0:
+                if not dtc.scores[key] == 0.0:
                     print('succeeded at: ',t.passive,t.name,t.score_type,pred,t.observation['std'])
-
+        '''
         dtc.summed = dtc.get_ss()
         try:
             greatest = np.max([dtc.error_length,len(dtc.scores)])
@@ -3062,7 +3129,7 @@ class OptMan():
         '''
 
         random.seed(datetime.now())
-        DO = SciUnitOptimisation(offspring_size = number_genes,
+        DO = SciUnitOptimisation(MU = number_genes,
                                  error_criterion = self.tests, boundary_dict =self.boundary_dict,
                                  backend = self.backend, selection = str('selNSGA'),protocol = self.protocol)#,, boundary_dict = ss, elite_size = 2, hc=hc)
 
