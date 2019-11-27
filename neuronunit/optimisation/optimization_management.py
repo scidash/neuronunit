@@ -1851,7 +1851,8 @@ def simple_error(observation,prediction):
     prediction = which_thing(prediction)
     obs = observation['standard']
     pred = prediction['standard']
-    pred = temp.rescale(pred.units)
+    obs = obs.rescale(pred.units)
+    pred = pred.rescale(obs.units)
     print('difference: ',float(obs.magnitude)-float(pred.magnitude))
     pre_error = np.sqrt((float(obs.magnitude)-float(pred.magnitude))**2)
     error = pre_error/obs
