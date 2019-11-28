@@ -160,7 +160,7 @@ class RheobaseTest(VmTest):
 
         max_iters = 45
 
-        #evaluate once with a current injection at 0pA
+        #evaluate once with a current injection at 0nA
         high=self.high
         small=self.small
         f(high)
@@ -195,10 +195,10 @@ class RheobaseTest(VmTest):
                 f((supra.min() + sub.max())/2)
 
             elif len(sub):
-                f(max(small,sub.max()*2))
+                f(max(small,sub.max()*10))
 
             elif len(supra):
-                f(min(-small,supra.min()*2))
+                f(min(-small,supra.min()))
             i += 1
 
         return lookup
@@ -288,13 +288,15 @@ class RheobaseTestP(VmTest):
                 # Termination criterion
 
                 steps = np.linspace(sub.max(),supra.min(),cpucount+1)*pq.pA
-                steps = steps[1:-1]*pq.pA
+                steps = steps[1:-1]#*pq.pA
             elif len(sub):
-                steps = np.linspace(sub.max(),2*sub.max(),cpucount+1)*pq.pA
-                steps = steps[1:-1]*pq.pA
+                #steps = np.linspace(sub.max(),0.5*sub.max(),cpucount+1)*pq.pA
+
+                steps = np.linspace(sub.max(),10*sub.max(),cpucount+1)*pq.pA
+                steps = steps[1:-1]#*pq.pA
             elif len(supra):
                 steps = np.linspace(supra.min()-100,supra.min(),cpucount+1)*pq.pA
-                steps = steps[1:-1]*pq.pA
+                steps = steps[1:-1]#*pq.pA
 
             dtc.current_steps = steps
             return dtc
@@ -532,13 +534,14 @@ class RheobaseTestP(VmTest):
             if type(temp) is type({'dict':0}):
                 if temp['value'] is None:
                     prediction['value'] = None
-                    return None
+                    return prediction
                 else:
                     prediction['value'] =  float(temp['value'])* pq.pA
             else:
                 prediction['value'] =  float(temp)* pq.pA
         else:
-            prediction = None
+            prediction['value'] = None
+            return prediction
         return prediction
 
      def bind_score(self, score, model, observation, prediction):
