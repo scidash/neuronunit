@@ -1,3 +1,4 @@
+#0.001 * pq.nA
 """PAassive neuronunit tests, requiring no active conductances or spiking."""
 
 from .base import np, pq, ncap, VmTest, scores
@@ -51,13 +52,9 @@ class TestPulseTest(VmTest):
         return vm
 
     def extract_features(self, model,result):
-        #model = dtc.to_model()
-        #self.condition_model(model)
-        #print(self.params)
+
         model.inject_square_current(self.params['injected_square_current'])
-        #print(model.attrs)
         vm = model.get_membrane_potential()
-        #print(vm)
 
         i = self.params['injected_square_current']
         if np.any(np.isnan(vm)) or np.any(np.isinf(vm)):
@@ -160,7 +157,8 @@ class TestPulseTest(VmTest):
     def compute_score(self, observation, prediction):
         """Implement sciunit.Test.score_prediction."""
         if prediction is None:
-            return None  # scores.InsufficientDataScore(None)
+            score = None
+            return score  # scores.InsufficientDataScore(None)
 
         else:
             score = super(TestPulseTest, self).\
@@ -311,7 +309,7 @@ class RestingPotentialTest(TestPulseTest):
     def extract_features(self, model, result):
         #features = super(RestingPotentialTest, self).\
         #                    extract_features(model, result)
-        self.params['injected_square_current']['amplitude'] = -10*pq.pA
+        self.params['injected_square_current']['amplitude'] = -10*0.001 * pq.pA
         model.inject_square_current(self.params['injected_square_current'])
 
         #if features is not None:

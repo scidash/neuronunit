@@ -40,6 +40,8 @@ try:
 except:
     pass
     #I_stim = stim, simulation_time=st)
+    # The model
+
 
 def simulate_HH_neuron_local(I_stim=None, simulation_time=None,El=None,\
                             EK=None,ENa=None,gl=None,\
@@ -77,6 +79,8 @@ def simulate_HH_neuron_local(I_stim=None, simulation_time=None,El=None,\
     dvm/dt = membrane_Im/C : volt
     """
 
+
+
     neuron = b2.NeuronGroup(1, eqs, method="exponential_euler")
 
     # parameter initialization
@@ -96,8 +100,8 @@ def simulate_HH_neuron_local(I_stim=None, simulation_time=None,El=None,\
 
     state_dic = st_mon.get_states()
     vm = state_dic['vm']
-    vm = [ (float(v)+Vr/1000.0) for v in vm]
-    vM = AnalogSignal(vm,units = pq.V,sampling_period = float(1.0) * pq.ms)
+    vm = [ (float(v)+Vr) for v in vm]
+    vM = AnalogSignal(vm,units = pq.mV,sampling_period = float(1.0) * pq.ms)
     return st_mon,vM
 
 getting_started = False
@@ -174,11 +178,10 @@ class BHHBackend(Backend):
             b2.defaultclock.dt = 1 * b2.ms
 
             self.HH =HH
+    '''
     def finalize(self):
-        '''
-        Necessary for imputing missing sampling, simulating at high sample frequency is prohibitevely slow, and yet, there is
+        For interpolating missing sampling, simulating at high sample frequency is prohibitevely slow, and yet, there is
         no significant difference in behavior.
-        '''
         transform_function = interp1d([float(t) for t in self.vM.times],[float(v) for v in self.vM.magnitude])
         xnew = np.linspace(0, float(np.max(self.vM.times)), num=1004001, endpoint=True)
         vm_new = transform_function(xnew) #% generate the y values for all x values in xnew
@@ -188,6 +191,7 @@ class BHHBackend(Backend):
             print(len(self.vM))
         self.vM = AnalogSignal(vm_new,units = V,sampling_period = float(xnew[1]-xnew[0]) * pq.s)
         return self.vM
+    '''
 
 
     def inject_square_current(self, current):#, section = None, debug=False):
@@ -213,18 +217,24 @@ class BHHBackend(Backend):
         else:
             c = current
 
-        amplitude = c['amplitude'].simplified
+        #amplitude = c['amplitude'].simplified
 
         duration = int(c['duration'])#/dt#/dt.rescale('ms')
         delay = int(c['delay'])#/dt#.rescale('ms')
         pre_current = int(duration)+100
-        amp = c['amplitude'].rescale('uA')
-        amplitude = amp.simplified
+        amp = float(c['amplitude'])#.rescale('uA')
+        print(amp,'should this be rescaled?')
+        #amplitude = amp.simplified
         if getting_started == False:
-            stim = input_factory.get_step_current(delay, duration, b2.ms, amplitude * b2.uA)
+            stim = input_factory.get_step_current(delay, duration, b2.ms, amp *1000000.0 * b2.pA)
+
+            #st = 70 * b2.ms
+
             st = (duration+delay+100)* b2.ms
         else:
-            stim = input_factory.get_step_current(10, 45, b2.ms, 7.2 * b2.uA)
+            stim = input_factory.get_step_current(10, 45, b2.ms, 7 * b2.nA)
+
+            #stim = input_factory.get_step_current(delay, duration, b2.ms, amp * b2.pA)
             st = 70 * b2.ms
 
         if self.model.attrs is None or not len(self.model.attrs):
