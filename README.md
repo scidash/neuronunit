@@ -31,8 +31,8 @@ sudo pip install neuronunit-opt==0.1
 <img src="docs/brian2_logo.png" width="200" height="150" /> <img src="docs/numba.png" width="200" height="150" /> <img src="docs/dask_logo.png" width="175" height="125" /> <img src="docs/deap.png" width="200" height="150" />
 
 * Feature extraction routines: AllenSDK, Druckman, Elephant.
-
 * Simulator Backends: brian2, Allen-GLIF, NEURON, PyNN
+
 ``` BASH
 docker pull russelljarvis/efel_allen_dm
 docker run russelljarvis/efel_allen_dm neuronunit/examples/use_edt.py
