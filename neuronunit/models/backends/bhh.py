@@ -223,7 +223,7 @@ class BHHBackend(Backend):
         delay = int(c['delay'])#/dt#.rescale('ms')
         pre_current = int(duration)+100
         amp = float(c['amplitude'])#.rescale('uA')
-        print(amp,'should this be rescaled?')
+        #print(amp,'should this be rescaled?')
         #amplitude = amp.simplified
         if getting_started == False:
             stim = input_factory.get_step_current(delay, duration, b2.ms, amp *1000000.0 * b2.pA)

@@ -46,14 +46,15 @@ class TestPulseTest(VmTest):
         model.inject_square_current(self.params['injected_square_current'])
         #return vm
     def get_result(self, model):
-        #self.condition_model(model)
-        #model.inject_square_current(self.params['injected_square_current'])
+        self.condition_model(model)
+        model.inject_square_current(self.params['injected_square_current'])
         vm = model.get_membrane_potential()
         return vm
 
     def extract_features(self, model,result):
 
         model.inject_square_current(self.params['injected_square_current'])
+        print(self.params)
         vm = model.get_membrane_potential()
 
         i = self.params['injected_square_current']
@@ -75,27 +76,6 @@ class TestPulseTest(VmTest):
         after_ = cls.get_segment(vm, start+i['delay']+i['duration'],
                                 stop+i['delay']+i['duration'])
         r_in = (after_.mean()-before.mean())/i['amplitude']
-
-        vs =[float(v) for v in vm.magnitude]
-
-        ts =[float(t) for t in vm.times]
-        tMax = np.max(vm.times).simplified
-        N = int(tMax/vm.sampling_period)
-        Iext = np.zeros(N)
-
-        delay_ind = int((i['delay']/tMax)*N)
-        duration_ind = int((i['duration']/tMax)*N)
-
-        Iext[0:delay_ind-1] = i['amplitude']
-        Iext[delay_ind:delay_ind+duration_ind-1] = i['amplitude']#*1000.0
-        Iext[delay_ind+duration_ind::] = i['amplitude']
-        if ascii_plot:
-            fig = apl.figure()
-            fig.plot(ts, vs, label=str('voltage from negative injection: '), width=100, height=20)
-            fig.show()
-            fig.plot(ts, Iext, label=str('negative injection times 1,000: '), width=100, height=20)
-            fig.show()
-            gc.collect()
         return r_in.simplified
 
     @classmethod
@@ -105,9 +85,6 @@ class TestPulseTest(VmTest):
         start = max(i['delay'] - 10*pq.ms, i['delay']/2)
         stop = i['duration']+i['delay'] - 1*pq.ms  # 1 ms before pulse end
         region = cls.get_segment(vm, start, stop)
-        #import pdb
-        #pdb.set_trace()
-        #if :
         if len(set(r[0] for r in region.magnitude))>1 and np.std(region.magnitude)>0.0:
             amplitude, tau, y0 = cls.exponential_fit(region, i['delay'])
         else:
@@ -149,8 +126,6 @@ class TestPulseTest(VmTest):
         amplitude = popt[0]*pq.mV
         tau = popt[1]*pq.ms
         y0 = popt[2]*pq.mV
-        #import pdb
-        #pdb.set_trace()
 
         return amplitude, tau, y0
 
@@ -183,7 +158,6 @@ class InputResistanceTest(TestPulseTest):
         if features is not None:
             i, vm = features
             r_in = self.__class__.get_rin(vm, i)
-            #r_in = r_in.simplified
             features = {'value': r_in}
         return features
 
@@ -309,7 +283,7 @@ class RestingPotentialTest(TestPulseTest):
     def extract_features(self, model, result):
         #features = super(RestingPotentialTest, self).\
         #                    extract_features(model, result)
-        self.params['injected_square_current']['amplitude'] = -10*0.001 * pq.pA
+        self.params['injected_square_current']['amplitude'] = -10 * pq.pA
         model.inject_square_current(self.params['injected_square_current'])
 
         #if features is not None:
