@@ -23,11 +23,16 @@ sudo pip install neuronunit-opt==0.1
 * Neo, elephant, Brian2 and dask interoperability ships with the most minimal install. A wide range of feature extraction, data source, and interfaces and simulator backend support: NeuroML-DB, NeurML, Allen-SDK, PyNN and NEURON are provided with an easy to use [Docker container]().
 * Brian2 Interoperability ships with the most minimal install. A wide range of interfaces and simulator backend support: Allen-SDK, PyNN and NEURON are provided with an [easy to use Docker container](https://github.com/russelljjarvis/docker-stacks-returned/blob/scidash/efel_dm/Dockerfile).
 
+# Advantages
+* Appeals to interest in AP shape, electrophysiology and Rheobase current injection value. 
+* 
+* Relatively fast, but with little administrative overhead. Optionally no C/NEURON building required.
+
 <img src="docs/brian2_logo.png" width="200" height="150" /> <img src="docs/numba.png" width="200" height="150" /> <img src="docs/dask_logo.png" width="175" height="125" /> <img src="docs/deap.png" width="200" height="150" />
 
 * Feature extraction routines: AllenSDK, Druckman, Elephant.
-
 * Simulator Backends: brian2, Allen-GLIF, NEURON, PyNN
+
 ``` BASH
 docker pull russelljarvis/efel_allen_dm
 docker run russelljarvis/efel_allen_dm neuronunit/examples/use_edt.py
