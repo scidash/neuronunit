@@ -21,7 +21,7 @@ SILENT = True
 if SILENT:
     warnings.filterwarnings("ignore")
 
-PARALLEL_CONFIDENT = True
+PARALLEL_CONFIDENT = False
 # Rationale Many methods inside the file optimization_management.py cannot be easily monkey patched using
 #```pdb.set_trace()``` unless at the top of the file,
 # the parallel_confident static variable is declared false
@@ -580,14 +580,14 @@ def get_rtest(dtc):
     place_holder = {'n': 86, 'mean': 10 * pq.pA, 'std': 10 * pq.pA, 'value': 10 * pq.pA}
 
     if not hasattr(dtc,'tests'):#, type(None)):
-        if 'RAW' in dtc.backend :# or 'GLIF' in dtc.backend:#Backend:
+        if 'RAW' in dtc.backend or 'HH' in dtc.backend:# or 'GLIF' in dtc.backend:#Backend:
             rtest = RheobaseTest(observation=place_holder,
                                     name='RheobaseTest')
         else:
             rtest = RheobaseTestP(observation=place_holder,
                                     name='RheobaseTest')
     else:
-        if 'RAW' in dtc.backend:# or 'GLIF' in dtc.backend:
+        if 'RAW' in dtc.backend or 'HH' in dtc.backend:
             if not isinstance(dtc.tests, Iterable):
                 rtest = dtc.tests
             else:
@@ -711,7 +711,8 @@ def inject_and_plot_model(attrs,backend):
     model.inject_square_current(uc)
     vm = model.get_membrane_potential()
     plt.plot(vm.times,vm.magnitude)
-    return vm
+    plt.show()
+    return vm,plt
 
 def score_proc(dtc,t,score):
     dtc.score[str(t)] = {}
@@ -1846,17 +1847,19 @@ def which_key(thing):
         return 'value'
     if 'mean' in thing.keys():
         return 'mean'
-def simple_error(observation,prediction):
+
+def simple_error(observation,prediction,t):
     observation = which_thing(observation)
     prediction = which_thing(prediction)
     obs = observation['standard']
     pred = prediction['standard']
-    obs = obs.rescale(pred.units)
-    pred = pred.rescale(obs.units)
-    print('difference: ',float(obs.magnitude)-float(pred.magnitude))
-    pre_error = np.sqrt((float(obs.magnitude)-float(pred.magnitude))**2)
-    error = pre_error/obs
-    print('error: ',error)
+    try:
+        obs = obs.rescale(pred.units)
+        pre_error = np.abs((float(obs.magnitude)-float(pred.magnitude)))
+        error = pre_error/np.abs(obs.magnitude)
+
+    except:
+        error = np.inf
     return error
 '''
 def dtc2gene(pop,dtcpop):
@@ -1950,13 +1953,20 @@ def bridge_passive(package):
 
     assert 'mean' in t.observation.keys()
     pred = None
-    try:
-        pred = t.extract_features(model,result)
-    except:
-        pred = None
+    #try:
+    pred = t.extract_features(model,result)
+
     if type(pred) is type(None):
-        return None,dtc,pred
-    score = simple_error(t.observation,pred)
+        return np.inf,dtc,pred
+
+    if 'mean' in pred.keys():
+        pred['standard'] = pred['mean']
+    if 'value' in pred.keys():
+        pred['standard'] = pred['value']
+    if type(pred['standard']) is type(None):
+        return np.inf,dtc,pred
+    if type(pred['standard']) is not type(None):
+        score = simple_error(t.observation,pred,t)
     return score, dtc, pred
     '''
     if 'std' not in t.observation.keys():
@@ -2508,16 +2518,13 @@ class OptMan():
                 model = dtc.dtc_to_model()
                 if t.passive is False:
                     pred = t.generate_prediction(model)
-                    score = simple_error(t.observation,pred)
+                    if "RheobaseTest" in  t.name:
+                        pass
+
+                    score = simple_error(t.observation,pred,t)
                 if t.passive is True:
                     score, dtc, pred = bridge_passive((t, dtc))
                 dtc.scores[str(t.name)] = score
-        dtc.summed = dtc.get_ss()
-        try:
-            greatest = np.max([dtc.error_length,len(dtc.scores)])
-        except:
-            greatest = len(dtc.scores)
-        dtc.scores_ratio = dtc.summed/greatest
         return dtc
 
 
@@ -2570,7 +2577,7 @@ class OptMan():
                     model = new_model(dtc)
                     pred = t.generate_prediction(model)
                     pred = self.pred_std(pred,t)
-                    score = simple_error(t.observation,pred)
+                    score = simple_error(t.observation,pred,t)
                     '''
                     try:
                         score = t.judge(model)

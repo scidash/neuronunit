@@ -100,7 +100,8 @@ def simulate_HH_neuron_local(I_stim=None, simulation_time=None,El=None,\
 
     state_dic = st_mon.get_states()
     vm = state_dic['vm']
-    vm = [ (float(v)+Vr) for v in vm]
+    max = np.max(vm)
+    vm = [ float(v)-0.75*max for v in vm]
     vM = AnalogSignal(vm,units = pq.mV,sampling_period = float(1.0) * pq.ms)
     return st_mon,vM
 
@@ -139,7 +140,7 @@ class BHHBackend(Backend):
                 self.cell_name = DTC.cell_name
 
     def get_spike_count(self):
-        thresh = threshold_detection(self.vM)
+        thresh = threshold_detection(self.vM,18.0*pq.mV)
         #print(len(thresh),'num spikes')
         return len(thresh)
 

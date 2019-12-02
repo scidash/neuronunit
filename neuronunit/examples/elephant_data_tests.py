@@ -196,13 +196,15 @@ class testHighLevelOptimisation(unittest.TestCase):
         NGEN = 4
         MU = 4
         #pdb.set_trace()
+        backend = str('BHH')
+        out = self.get_cells(backend,model_parameters,NGEN,MU)
+        
+        #backend = str('HH')
+        #out = self.get_cells(backend,model_parameters,NGEN,MU)
         backend = str('RAW')
         out = self.get_cells(backend,model_parameters,NGEN,MU)
-
         backend = str('ADEXP')
         out = self.get_cells(backend,model_parameters,NGEN,MU)
 
-        backend = str('BHH')
-        out = self.get_cells(backend,model_parameters,NGEN,MU)
         #import pdb
         return out

@@ -105,6 +105,20 @@ HH_dic = { k:(float(v)-0.25*float(v),float(v)+0.25*float(v)) for k,v in HH_dic.i
 HH_dic['Vr'] = [-85,-45]
 MODEL_PARAMS['BHH'] = HH_dic
 
+HH_attrs = { 'E_L' : 9.6,
+        'E_K' : -12,
+        'E_Na' : 115,
+        'g_L' : 0.3,
+        'g_K' : 36,
+        'g_Na' : 120,
+        'C_m' : 1,
+        'vr':-65.0}
+
+HH_dic1 = { k:(float(v)-0.25*float(v),float(v)+0.25*float(v)) for k,v in HH_attrs.items() }
+HH_dic1['Vr'] = [-85,-45]
+
+MODEL_PARAMS['HH'] = HH_dic1
+
 #I = .8*nA
 #Vcut = VT + 5 * DeltaT  # practical threshold condition
 #N = 200
