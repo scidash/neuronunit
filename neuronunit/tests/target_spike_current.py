@@ -5,7 +5,7 @@ import os
 import multiprocessing
 global cpucount
 npartitions = cpucount = multiprocessing.cpu_count()
-from .base import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
+from .base import np, pq, ncap, VmTest, scores, AMPL, DELAY, DURATION
 #DURATION = 2000
 #DELAY = 200
 from .. import optimisation
@@ -54,8 +54,8 @@ class SpikeCountSearch(VmTest):
      #     self.other_current = other_current
 
 
-     required_capabilities = (cap.ReceivesSquareCurrent,
-                              cap.ProducesSpikes)
+     required_capabilities = (ncap.ReceivesSquareCurrent,
+                              ncap.ProducesSpikes)
      #DELAY = 100.0*pq.ms
      # DURATION = 1000.0*pq.ms
      params = {'injected_square_current':
@@ -331,8 +331,8 @@ class SpikeCountRangeSearch(VmTest):
      #     self.other_current = other_current
 
 
-     required_capabilities = (cap.ReceivesSquareCurrent,
-                              cap.ProducesSpikes)
+     required_capabilities = (ncap.ReceivesSquareCurrent,
+                              ncap.ProducesSpikes)
      #DELAY = 100.0*pq.ms
      # DURATION = 1000.0*pq.ms
      params = {'injected_square_current':

@@ -1,11 +1,14 @@
-"""F/I neuronunit tests, e.g. investigating firing rates and patterns as a
-function of input current"""
+"""F/I neuronunit tests.
+
+For example, investigating firing rates and patterns as a
+function of input current.
+"""
 
 import os
 import multiprocessing
 global cpucount
 npartitions = cpucount = multiprocessing.cpu_count()
-from .base import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
+from .base import np, pq, ncap, VmTest, scores, AMPL, DELAY, DURATION
 #DURATION = 2000
 #DELAY = 200
 from .. import optimisation
@@ -68,9 +71,8 @@ class RheobaseTest(VmTest):
         self.rheobase_vm = None
         self.verbose = False
 
-
-    required_capabilities = (cap.ReceivesSquareCurrent,
-                             cap.ProducesSpikes)
+    required_capabilities = (ncap.ReceivesSquareCurrent,
+                             ncap.ProducesSpikes)
 
     params = {'injected_square_current':
                 {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
@@ -83,6 +85,18 @@ class RheobaseTest(VmTest):
     score_type = scores.ZScore
 
     #score_type = scores.RatioScore
+    score_type = scores.RatioScore
+
+    default_params = dict(VmTest.default_params)
+    default_params.update({'amplitude': 100*pq.pA,
+                           'duration': 1000*pq.ms,
+                           'tolerance': 1.0*pq.pA})
+
+    params_schema = dict(VmTest.params_schema)
+    params_schema.update({'tolerance': {'type': 'current', 'min': 1, 'required': False}})
+
+    def condition_model(self, model):
+        model.set_run_params(t_stop=self.params['tmax'])
 
     def generate_prediction(self, model):
         """Implementation of sciunit.Test.generate_prediction."""
@@ -134,6 +148,10 @@ class RheobaseTest(VmTest):
         else:
             rheobase = None
         prediction['value'] = rheobase
+        return prediction
+
+    def extract_features(self,model):
+        prediction = self.generate_prediction(model)
         return prediction
 
     def threshold_FI(self, model, units, guess=None):
@@ -239,15 +257,15 @@ class RheobaseTestP(VmTest):
      NEURON via PyNN, and possibly GLIF.
 
      """
-     def _extra(self):
-         self.verbose = False
+     #def _extra(self):
+     #    self.verbose = False
 
      # def __init__(self,other_current=None):
      #     self.other_current = other_current
 
 
-     required_capabilities = (cap.ReceivesSquareCurrent,
-                              cap.ProducesSpikes)
+     required_capabilities = (ncap.ReceivesSquareCurrent,
+                              ncap.ProducesSpikes)
      #DELAY = 100.0*pq.ms
      # DURATION = 1000.0*pq.ms
      params = {'injected_square_current':
@@ -259,6 +277,22 @@ class RheobaseTestP(VmTest):
      #tolerance  # Rheobase search tolerance in `self.units`.
      ephysprop_name = 'Rheobase'
      score_type = scores.ZScore
+
+     score_type = scores.RatioScore
+
+     default_params = dict(VmTest.default_params)
+     default_params.update({'amplitude': 100*pq.pA,
+                           'duration': 1000*pq.ms,
+                           'tolerance': 1.0*pq.pA})
+
+     params_schema = dict(VmTest.params_schema)
+     params_schema.update({'tolerance': {'type': 'current', 'min': 1, 'required': False}})
+
+     def condition_model(self, model):
+         model.set_run_params(t_stop=self.params['tmax'])
+
+     def condition_model(self, model):
+         model.set_run_params(t_stop=self.params['tmax'])
 
      def generate_prediction(self, model):
         def check_fix_range(dtc):
@@ -543,6 +577,10 @@ class RheobaseTestP(VmTest):
             prediction['value'] = None
             return prediction
         return prediction
+
+     def extract_features(self,model):
+         prediction = self.generate_prediction(model)
+         return prediction
 
      def bind_score(self, score, model, observation, prediction):
          super(RheobaseTestP,self).bind_score(score, model,
