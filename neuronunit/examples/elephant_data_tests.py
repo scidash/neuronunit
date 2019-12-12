@@ -13,6 +13,7 @@ import quantities as pq
 
 import copy
 import unittest
+import pathlib
 import pickle
 
 import numpy as np
@@ -20,6 +21,7 @@ import pickle
 import dask.bag as db
 import os
 
+import neuronunit
 from neuronunit.optimisation.optimization_management import TSD
 #from neuronunit.optimisation.optimization_management import TSD
 from neuronunit.optimisation import get_neab
@@ -73,9 +75,10 @@ def test_all_tests_pop(dtcpop, tests):
 class testHighLevelOptimisation(unittest.TestCase):
 
     def setUp(self):
-        electro_path = str(os.getcwd())+'/../tests/russell_tests.p'
-
-        assert os.path.isfile(electro_path) == True
+        #electro_path = str(os.getcwd())+'/../tests/russell_tests.p'
+        #assert os.path.isfile(electro_path) == True
+        electro_path = neuronunit.NU_HOME / 'tests' / 'russell_tests.p' 
+        assert electro_path.is_file()
         with open(electro_path,'rb') as f:
             (self.test_frame,self.obs_frame) = pickle.load(f)
         self.filtered_tests = {key:val for key,val in self.test_frame.items() if len(val) ==8}
