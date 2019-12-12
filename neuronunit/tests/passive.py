@@ -19,7 +19,8 @@ class TestPulseTest(VmTest):
     """A base class for tests that use a square test pulse."""
 
     def __init__(self, *args, **kwargs):
-        super(TestPulseTest, self).__init__(*args, **kwargs)
+        #print(args,'thrown away')
+        super(TestPulseTest, self).__init__(**kwargs)
         self.param = {}
         self.params['tmax'] = 1000.0*pq.ms
         if str('params') in kwargs:
@@ -142,6 +143,14 @@ class TestPulseTest(VmTest):
 
 
 class InputResistanceTest(TestPulseTest):
+    def __init__(self, **kwargs):
+        super(InputResistanceTest, self).__init__(**kwargs)
+        self.param = {}
+        self.params['tmax'] = 1000.0*pq.ms
+        if str('params') in kwargs:
+            self.params = kwargs['params']
+        else:
+            self.params = None
     """Test the input resistance of a cell."""
 
     name = "Input resistance test"
@@ -188,6 +197,15 @@ class TimeConstantTest(TestPulseTest):
     units = pq.ms
 
     ephysprop_name = 'Membrane Time Constant'
+    def __init__(self):
+        super(TimeConstantTest, self).__init__()
+        self.param = {}
+        self.params['tmax'] = 1000.0*pq.ms
+        if str('params') in kwargs:
+            self.params = kwargs['params']
+        else:
+            self.params = None
+
 
     def extract_features(self, model, result):
         features = super(TimeConstantTest, self).\
@@ -231,6 +249,14 @@ class CapacitanceTest(TestPulseTest):
     units = pq.pF
 
     ephysprop_name = 'Cell Capacitance'
+    def __init__(self):
+        super(CapacitanceTest, self).__init__()
+        self.param = {}
+        self.params['tmax'] = 1000.0*pq.ms
+        if str('params') in kwargs:
+            self.params = kwargs['params']
+        else:
+            self.params = None
 
     def extract_features(self, model, result):
         features = super(CapacitanceTest, self).extract_features(model, result)
@@ -279,6 +305,15 @@ class RestingPotentialTest(TestPulseTest):
     units = pq.mV
 
     ephysprop_name = 'Resting membrane potential'
+    def __init__(self, *args, **kwargs):
+        print(args,kwargs)
+        super(RestingPotentialTest, self).__init__()
+        self.param = {}
+        #self.params['tmax'] = 1000.0*pq.ms
+        #if str('params') in kwargs:
+        #    self.params = kwargs['params']
+        #else:
+        #    self.params = None
 
     def extract_features(self, model, result):
         #features = super(RestingPotentialTest, self).\

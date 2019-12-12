@@ -6,15 +6,12 @@ try:
     matplotlib.use('agg')
 except:
     warnings.warn('X11 plotting backend not available, consider installing')
-#_arraytools
-
 # setting of an appropriate backend.
 # optional imports
 import matplotlib
 import cython
 import logging
 
-# optional imports
 
 SILENT = True
 
@@ -109,11 +106,7 @@ from neuronunit.plottools import inject_and_plot
 # They are used by other methods analogous to a base class,
 # these are base instances that become more derived
 # contexts, that modify copies of the helper class in place.
-rts,complete_map = pickle.load(open(mypath,'rb'))
-df = pd.DataFrame(rts)
-for key,v in rts.items():
-    helper_tests = [value for value in v.values() ]
-    break
+
 from neuronunit.plottools import elaborate_plots
 
 def timer(func):
@@ -209,8 +202,16 @@ class TSD(dict):
         ga_out = self.DO.run(NGEN = self.DO.NGEN)
         ga_out['DO'] = self.DO
         if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
-            _,dtc_pop = DO.OM.test_runner(copy.copy(ga_out['pf']),self.DO.OM.td,self.DO.OM.tests)
+            _,dtc_pop = self.DO.OM.test_runner(copy.copy(ga_out['pf']),self.DO.OM.td,self.DO.OM.tests)
             ga_out['dtc_pop'] = dtc_pop
+        if type(ga_out['pf'][0].dtc) is type(None):
+            _,ga_out['dtc_pop'] = self.DO.OM.test_runner(copy.copy(ga_out['pf']),self.DO.OM.td,self.DO.OM.tests)
+            ga_out['pf'], ga_out['dtc_pop'] = get_dm(ga_out['dtc_pop'],pop=ga_out['pf'])
+        else:
+            ga_out['dtc_pop'] = [ i.dtc for i in ga_out['pf'] ]
+            ga_out['pf'], ga_out['dtc_pop'] = get_dm(ga_out['dtc_pop'],pop=ga_out['pf'])
+
+        ga_out['dm'] = ga_out['dtc_pop']
         self.backend = backend
 
         if str(self.cell_name) not in str('simulated data'):
@@ -496,10 +497,7 @@ def bridge_judge(test_and_dtc):
     obs = test.observation
     backend_ = dtc.backend
     model = dtc.dtc_to_model()
-    #model = mint_generic_model(backend_)
-    model.set_attrs(**dtc.attrs)
-
-
+    model.set_attrs(dtc.attrs)
     if test.passive:
         test.setup_protocol(model)
         pred = test.extract_features(model,test.get_result(model))
@@ -1075,6 +1073,11 @@ def just_allen_predictions(dtc):
 from sciunit import scores
 
 def prediction_current_and_features(dtc):
+    rts,complete_map = pickle.load(open(mypath,'rb'))
+    df = pd.DataFrame(rts)
+    for key,v in rts.items():
+        helper = [value for value in v.values() ]
+        break
     returned = just_allen_predictions(dtc)
     try:
         dtc,compare,ephys = returned
@@ -1087,7 +1090,7 @@ def prediction_current_and_features(dtc):
     dtc.scores = {}
     for k,v in compare.items():
         dtc.scores[k] = 1.0
-    helper = helper_tests[0]
+    helper = helper[0]
     #score_type = scores.RatioScore
     score_type = scores.ZScore
     #helper.score_type = score_type
@@ -1191,7 +1194,7 @@ L
     model = dtc.dtc_to_model()
     model.set_attrs(dtc.attrs)
     assert model is not None
-    #model.set_attrs(**dtc.attrs)
+    #model.set_attrs(dtc.attrs)
     vm30 = model.inject_square_current(current['injected_square_current'])
     vm30 = model.get_membrane_potential()
 
@@ -1235,7 +1238,7 @@ L
     dtc.scores = {}
     for k,v in compare.items():
         dtc.scores[k] = 1.0
-    helper = helper_tests[0]
+    helper = helper[0]
 
     dtc.preds = {}
     dtc.tests = {}
@@ -1416,8 +1419,52 @@ def nuunit_allen_evaluation(dtc):
 
 def nuunit_dm_evaluation(dtc):
     model = dtc.dtc_to_model()
+    model.set_attrs(dtc.attrs)
+    try:
+        values = [v for v in dtc.protocols.values()][0]
+
+    except:
+        values = [v for v in dtc.tests.values()][0]
+    current = values['injected_square_current']
+
+    current['amplitude'] = dtc.rheobase * 1.5
+    model.inject_square_current(current)
+    vm15 = model.get_membrane_potential()
+
+    model.vm15 = None
+    model.vm15 = vm15
+    model.druckmann2013_standard_current = None
+    model.druckmann2013_standard_current = dtc.rheobase * 1.5
+    current['amplitude'] = dtc.rheobase * 3.0
+
+    vm30 = model.inject_square_current(current)
+    vm30 = model.get_membrane_potential()
+    if dtc.rheobase <0.0 or np.max(vm30)<0.0 or model.get_spike_count()<1:
+        dtc.dm_test_features = None
+        return dtc
+    model.vm30 = None
+    model.vm30 = vm30
+    model.druckmann2013_strong_current = None
+    model.druckmann2013_strong_current = dtc.rheobase * 3.0
+
+    model.druckmann2013_input_resistance_currents =[ -5.0*pq.pA, -10.0*pq.pA, -15.0*pq.pA]#,copy.copy(current)
+
+    DMTNMLO = dm_test_container.DMTNMLO()
+    DMTNMLO.test_setup(None,None,model= model)
+    dm_test_features = DMTNMLO.runTest()
+    dtc.AP1DelayMeanTest = None
+    dtc.AP1DelayMeanTest = dm_test_features['AP1DelayMeanTest']
+    dtc.InputResistanceTest = dm_test_features['InputResistanceTest']
+
+    dtc.dm_test_features = None
+    dtc.dm_test_features = dm_test_features
+    return dtc
+
+
+def input_resistance_dm_evaluation(dtc):
+    model = dtc.dtc_to_model()
     #model = mint_generic_model(dtc.backend)
-    model.set_attrs(**dtc.attrs)
+    model.set_attrs(dtc.attrs)
     try:
         values = [v for v in dtc.protocols.values()][0]
 
@@ -1455,14 +1502,18 @@ def nuunit_dm_evaluation(dtc):
     dm_test_features = DMTNMLO.runTest()
     dtc.AP1DelayMeanTest = None
     dtc.AP1DelayMeanTest = dm_test_features['AP1DelayMeanTest']
+    dtc.InputResistanceTest = dm_test_features['InputResistanceTest']
+
     dtc.dm_test_features = None
     dtc.dm_test_features = dm_test_features
     return dtc
 
+
+
 def nuunit_dm_rheo_evaluation(dtc):
     model = dtc.dtc_to_model()
     #model = mint_generic_model(dtc.backend)
-    model.set_attrs(**dtc.attrs)
+    model.set_attrs(dtc.attrs)
     #values = [v for v in dtc.vtest.values()][0]
 
     try:
@@ -1618,7 +1669,7 @@ def evaluate(dtc,regularization=False,elastic_net=True):
 
     for int_,t in enumerate(dtc.scores.keys()):
         if elastic_net:
-           fitness0 = [ np.abs(t)**(2.0) for int_,t in enumerate(dtc.scores.values())]
+           fitness0 = [ np.abs(t)*(2.0) for int_,t in enumerate(dtc.scores.values())]
            fitness1 = [ np.abs(t) for int_,t in enumerate(dtc.scores.values())]
            fitness = [ (fitness1[i]+j)/2.0 for i,j in enumerate(fitness0)]
         else:
@@ -1894,13 +1945,14 @@ def score_attr(dtcpop,pop):
         d.get_ss()
         pop[i].dtc = copy.copy(d)
     return dtcpop,pop
-def get_dm(pop,dtcpop,tests,td):
+def get_dm(dtcpop,pop=None):
     if PARALLEL_CONFIDENT:
         dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
         dtcpop = list(dtcbag.map(nuunit_dm_evaluation).compute())
     else:
         dtcpop = list(map(nuunit_dm_evaluation,dtcpop))
-    dtcpop,pop = score_attr(dtcpop,pop)
+    if type(pop) is not type(None):
+        dtcpop,pop = score_attr(dtcpop,pop)
     return dtcpop,pop
 
 def eval_subtest(name):
@@ -1953,9 +2005,16 @@ def bridge_passive(package):
 
     assert 'mean' in t.observation.keys()
     pred = None
-    #try:
-    pred = t.extract_features(model,result)
-
+    try:
+        pred = t.extract_features(model,result)
+    except:
+        hash =[str(k)+str(v) for i,k,v in enumerate(dtc.attrs.items()) if i==0]
+        with open(str(hash)+'contents.p','wb') as f:
+           pickle.dump(f,dtc)
+        dtc = input_resistance_dm_evaluation(dtc)
+        assert type(dtc.InputResistanceTest) is not type(None)
+        import pdb
+        pdb.set_trace()
     if type(pred) is type(None):
         return np.inf,dtc,pred
 
@@ -2963,7 +3022,7 @@ class OptMan():
 
         elif str('dm') in self.protocol.keys():
             if self.protocol['dm']:
-                pop, dtcpop = get_dm(pop,dtcpop,tests,td)
+                pop, dtcpop = get_dm(pop,dtcpop)
                 return pop, dtcpop
 
         elif self.protocol['elephant']:

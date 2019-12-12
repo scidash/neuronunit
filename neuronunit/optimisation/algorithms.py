@@ -2,7 +2,7 @@
 Copyright (c) 2016, EPFL/Blue Brain Project
  This file is part of BluePyOpt <https://github.com/BlueBrain/BluePyOpt>
 """
-
+from deap.benchmarks.tools import diversity, convergence
 import deap.tools as tools
 
 import copy
@@ -25,7 +25,11 @@ class WSListIndividual(list):
         """Constructor"""
         self.rheobase = None
         self.dtc = None
-        super(WSListIndividual, self).__init__(*args, **kwargs)
+        super(WSListIndividual, self).__init__()
+        self.extend(args)
+        self.obj_size = len(args)
+        self.fitness = (1.0 for i in range(0,self.obj_size))
+
 logger = logging.getLogger('__main__')
 try:
     import asciiplotlib as apl
@@ -38,21 +42,18 @@ def _evaluate_invalid_fitness(toolbox, population):
     Returns the count of individuals with invalid fitness
     '''
     invalid_ind = [ind for ind in population if not ind.fitness.valid]
-    #print(invalid_ind[0].dtc.scores)
-    #print(invalid_ind[0].dtc.from_imputation)
+
     invalid_pop,fitnesses = toolbox.evaluate(invalid_ind)
 
     for j, ind in enumerate(invalid_pop):
         ind.fitness.values = fitnesses[j]
-        ind.dtc = None
+        #ind.dtc = None
     return invalid_pop
 
 def strip_object(p):
     state = super(type(p)).state
     p.unpicklable = []
-    #print('i suspect a brian module is in the deap gene, and it should not be')
-    #import pdb
-    #pdb.set_trace()
+
     return p._state(state=state, exclude=['unpicklable','verbose'])
 
 def purify2(population):
@@ -92,7 +93,7 @@ def _update_history_and_hof(halloffame,pf, history, population,td,mu):
         try:
             pf.update(temp[0:mu])
         except:
-            temp = purify2(temp)
+            #temp = purify2(temp)
             temp = purify(temp)
             try:
                 pf.update(temp[0:mu])
@@ -138,9 +139,16 @@ def purify(parents):
             ind = copy.copy(parents[0])
             for x,y in enumerate(ind):
                 ind[x] = copy.copy(imp[i][x])
-                ind[x].fitness = imp[i].fitness
-                ind[x].rheobase = imp[i].rheobase
-                ind[x].dtc = imp[i].dtc
+                """
+                if not hasattr(imp,'fitness'):
+                    ind.fitness = (1 for j in range(0,len(parents[0].fitness)))
+                else:
+                    
+                    ind.fitness = None
+                    ind.fitness = imp.fitness
+                """
+                ind.rheobase = imp[i].rheobase
+                ind.dtc = imp[i].dtc
 
                 parents.append(ind)
         parents_ = []
@@ -180,9 +188,10 @@ def _get_offspring(parents, toolbox, cxpb, mutpb):
                 #parents.append(WSListIndividual(off_,obj_size=len(off_)))
 
             offspring = toolbox.variate(parents, toolbox, cxpb, mutpb)
-            offspring = deap.algorithms.varAnd(parents, toolbox, cxpb, mutpb)
+            #offspring = deap.algorithms.varAnd(parents, toolbox, cxpb, mutpb)
 
         while gene_bad(offspring) == True:
+            # try a different strategy.
             offspring = deap.algorithms.varAnd(parents, toolbox, cxpb, mutpb)
 
     return offspring
@@ -263,7 +272,8 @@ def eaAlphaMuPlusLambdaCheckpoint(
 
     # Begin the generational    process
     for gen in range(start_gen + 1, ngen + 1):
-        delta = len(parents[0]) - len(toolbox.Individual())
+        #delta = len(parents[0]) - len(toolbox.Individual())
+
         _record_stats(stats, logbook, gen, parents, invalid_count)
         offspring = _get_offspring(parents, toolbox, cxpb, mutpb)
         offspring = [ toolbox.clone(ind) for ind in offspring ]

@@ -77,7 +77,8 @@ class testHighLevelOptimisation(unittest.TestCase):
 
         assert os.path.isfile(electro_path) == True
         with open(electro_path,'rb') as f:
-            (self.test_frame,self.obs_frame) = pickle.load(f)
+             
+            self.test_frame = pickle.load(f)
         self.filtered_tests = {key:val for key,val in self.test_frame.items() if len(val) ==8}
 
         self.predictions = None
@@ -195,16 +196,14 @@ class testHighLevelOptimisation(unittest.TestCase):
         '''
         NGEN = 4
         MU = 4
-        #pdb.set_trace()
-        backend = str('BHH')
-        out = self.get_cells(backend,model_parameters,NGEN,MU)
         
-        #backend = str('HH')
-        #out = self.get_cells(backend,model_parameters,NGEN,MU)
         backend = str('RAW')
         out = self.get_cells(backend,model_parameters,NGEN,MU)
         backend = str('ADEXP')
         out = self.get_cells(backend,model_parameters,NGEN,MU)
 
-        #import pdb
+        backend = str('BHH')
+        out = self.get_cells(backend,model_parameters,NGEN,MU)
+        backend = str('HH')
+        out = self.get_cells(backend,model_parameters,NGEN,MU)
         return out
