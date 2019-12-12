@@ -101,7 +101,8 @@ def simulate_HH_neuron_local(I_stim=None, simulation_time=None,El=None,\
     state_dic = st_mon.get_states()
     vm = state_dic['vm']
     max = np.max(vm)
-    vm = [ float(v)-0.75*max for v in vm]
+    #print(float(vm[0]), vm[0], max)
+    vm = [v-0.75*max for v in vm]
     vM = AnalogSignal(vm,units = pq.mV,sampling_period = float(1.0) * pq.ms)
     return st_mon,vM
 
