@@ -2,16 +2,19 @@
 
 import os
 import zipfile
-import requests
+import json
 
+import requests
 import matplotlib.pyplot as plt
 from neo.io import IgorIO
 
 try:  # Python 3
     from io import BytesIO
+    from urllib.request import urlopen, URLError
     MAJOR_VERSION = 3
 except ImportError:  # Python 2
     from StringIO import StringIO
+    from urllib2 import urlopen, URLError
     MAJOR_VERSION = 2
 
 
@@ -28,7 +31,21 @@ def list_curated_data():
     Includes those found at
     http://microcircuits.epfl.ch/#/article/article_4_eph
     """
-    return ['B95', 'C9', 'C12']
+    url = "http://microcircuits.epfl.ch/data/articles/article_4_eph.json"
+    cells = []
+    try:
+        response = urlopen(url)
+    except URLError:
+        print ("Could not find list of curated data at %s" % URL)
+    else:
+        data = json.load(response)
+        table = data['data_table']['table']['rows']
+        for section in table:
+            for row in section:
+                if 'term' in row:
+                    cell = row['term'].split(' ')[1]
+                    cells.append(cell)
+    return cells
 
 
 def get_curated_data(data_id, sweeps=None):
@@ -76,6 +93,7 @@ def find_or_download_data(url):
     """
     zipped = url.split('/')[-1]  # Name of zip file
     unzipped = zipped.split('.')[0]  # Name when unzipped
+    z = None
     if not os.path.isdir(unzipped):  # If unzipped version not found
         if MAJOR_VERSION == 2:
             r = requests.get(url, stream=True)
@@ -84,6 +102,7 @@ def find_or_download_data(url):
             r = requests.get(url)
             z = zipfile.ZipFile(BytesIO(r.content))
         z.extractall(unzipped)
+    return unzipped
 
 
 def list_sweeps(url, extension='.ibw'):

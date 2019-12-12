@@ -22,21 +22,17 @@ import os
 from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.data_transport_container import DataTC
 
-from neuronunit.optimisation.optimization_management import dtc_to_rheo, mint_generic_model
+from neuronunit.optimisation.optimization_management import dtc_to_rheo#, mint_generic_model
 from neuronunit.optimisation.optimization_management import OptMan
 
 from neuronunit import tests as nu_tests, neuroelectro
 from neuronunit.tests import passive, waveform, fi
 from neuronunit.optimisation import exhaustive_search
-from neuronunit.models.reduced import ReducedModel
 from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 from neuronunit.tests import dynamics
-from neuronunit.models.reduced import ReducedModel
 from neuronunit.optimisation import data_transport_container
-from neuronunit.models.reduced import ReducedModel
 
 from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
-from neuronunit.models.reduced import ReducedModel
 from neuronunit import aibs
 from neuronunit.optimisation.optimisations import run_ga
 from neuronunit.optimisation import model_parameters
@@ -102,7 +98,6 @@ class testHighLevelOptimisation(unittest.TestCase):
 
         #self.test_rheobase_dtc = test_rheobase_dtc
         #self.dtcpop = test_rheobase_dtc(self.dtcpop,self.electro_tests)
-        self.standard_model = self.model = mint_generic_model('RAW')
         self.MODEL_PARAMS = MODEL_PARAMS
         self.MODEL_PARAMS.pop(str('NEURON'),None)
 
@@ -121,15 +116,18 @@ class testHighLevelOptimisation(unittest.TestCase):
 
     def test_solution_quality0(self):
         #use_test = self.filtered_tests['Hippocampus CA1 pyramidal cell']#['RheobaseTest']]
-        use_test = self.filtered_tests['Neocortex pyramidal cell layer 5-6']
+        from neuronunit.optimisation.optimization_management import TSD
+        use_test = TSD(self.filtered_tests['Neocortex pyramidal cell layer 5-6'])
         easy_standards = {ut.name:ut.observation['std'] for ut in use_test.values()}
+        
+        use_test.use_rheobase_score = True
         print(easy_standards)
         [(value.name,value.observation) for value in use_test.values()]
         try:
             with open('jd.p','rb') as f:
                 results,converged,target,simulated_tests = pickle.load(f)
         except:
-
+            
             OM = OptMan(use_test,protocol={'elephant':True,'allen':False,'dm':False})
             results,converged,target,simulated_tests = OM.round_trip_test(use_test,str('RAW'),MU=2,NGEN=2,stds = easy_standards)
             print(converged,target)
@@ -143,7 +141,7 @@ class testHighLevelOptimisation(unittest.TestCase):
                 adconv = pickle.load(f)[0]
         except:
             ga_out = run_ga(param_edges, 2, simulated_tests, free_params=param_edges.keys(), \
-                backend=str('ADEXP'), MU = 2,  protocol={'allen': False, 'elephant': True})
+                backend=str('ADEXP'), MU = 4,  protocol={'allen': False, 'elephant': True})
 
             adconv = [ p.dtc for p in ga_out[0]['pf'] ]
             with open('jda.p','wb') as f:

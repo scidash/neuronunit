@@ -37,10 +37,10 @@ import matplotlib as mpl
 @cython.wraparound(False)
 def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippets=False,experimental_cell_type="neo_cortical",ground_truth = None,BPO=True):
     sns.set_style("darkgrid")
-    from neuronunit.optimisation.optimization_management import mint_generic_model
+    #from neuronunit.optimisation.optimization_management import mint_generic_model
 
     if not isinstance(dtc, Iterable):
-        model = mint_generic_model(dtc.backend)
+        model = dtc.dtc_to_model()
         if hasattr(dtc,'rheobase'):
             try:
                 rheobase = dtc.rheobase['value']
@@ -50,7 +50,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
         if hasattr(dtc,'ampl'):
             uc = {'amplitude':dtc.ampl,'duration':DURATION,'delay':DELAY}
 
-        model.set_attrs(**dtc.attrs)
+        model.set_attrs(dtc.attrs)
         model.inject_square_current(uc)
         if str(dtc.backend) is str('ADEXP'):
             model.finalize()
@@ -77,7 +77,8 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                 color = 'lightblue'
                 if index == 0:
                     color = 'blue'
-                model = mint_generic_model(dtc.backend)
+                model = dtc.dtc_to_model()
+
                 if hasattr(dtc,'rheobase'):
                     # this ugly hack can be fixed in the file tests/fi.py
                     try:
@@ -87,7 +88,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                         uc = {'amplitude':rheobase,'duration':DURATION,'delay':DELAY}
                 if hasattr(dtc,'ampl'):
                     uc = {'amplitude':dtc.ampl,'duration':DURATION,'delay':DELAY}
-                model.set_attrs(**dtc.attrs)
+                model.set_attrs(dtc.attrs)
                 if rheobase is None:
                     break
                 model.inject_square_current(uc)
@@ -125,7 +126,9 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                 color = 'lightcoral'
                 if index == 0:
                     color = 'red'
-                model = mint_generic_model(dtc.backend)
+                model = dtc.dtc_to_model()
+
+                #model = mint_generic_model(dtc.backend)
                 if hasattr(dtc,'rheobase'):
                     try:
                         rheobase = dtc.rheobase['value']
@@ -137,7 +140,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
 
                 #uc = {'amplitude':rheobase,'duration':DURATION,'delay':DELAY}
                 #dtc.run_number += 1
-                model.set_attrs(**dtc.attrs)
+                model.set_attrs(dtc.attrs)
                 model.inject_square_current(uc)
                 #if model.get_spike_count()>1:
                 #    break
@@ -181,7 +184,9 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                     color = 'lightgreen'
                     if index == 0:
                         color = 'green'
-                    model = mint_generic_model(dtc.backend)
+                    #model = mint_generic_model(dtc.backend)
+                    model = dtc.dtc_to_model()
+
                     if hasattr(dtc,'rheobase'):
                         try:
                             rheobase = dtc.rheobase['value']
@@ -237,7 +242,9 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
             dtcpop = copy.copy(dtc)
             dtc = None
             for dtc in dtcpop[0:2]:
-                model = mint_generic_model(dtc.backend)
+                model = dtc.dtc_to_model()
+
+                #model = mint_generic_model(dtc.backend)
                 if hasattr(dtc,'rheobase'):
                     try:
                         rheobase = dtc.rheobase['value']
@@ -248,7 +255,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                     uc = {'amplitude':dtc.ampl,'duration':DURATION,'delay':DELAY}
 
                 #dtc.run_number += 1
-                model.set_attrs(**dtc.attrs)
+                model.set_attrs(dtc.attrs)
                 model.inject_square_current(uc)
                 vm = model.get_membrane_potential().magnitude
                 #vm = model.get_membrane_potential()#.magnitude
@@ -277,7 +284,13 @@ def elaborate_plots(self,ga_out):
     The plot shows the mean error value of the population as the GA evolves it's population. The red interval at any instant is the standard deviation of the error. The fact that the mean GA error is able to have a net upwards trajectory, after experiencing a temporary downwards trajectory, demonstrates that the GA retains a drive to explore, and is resiliant against being stuck in a local minima. Also in the above plot population variance in error stays remarkably constant, in this way BluePyOpts selection criteria SELIBEA contrasts with DEAPs native selection strategy NSGA2
     #for index, val in enumerate(ga_out.values()):
     '''
-    temp = copy.copy(ga_out['pf'][0].dtc.scores)
+    import pdb
+    pdb.set_trace()
+    try:
+       temp = copy.copy(ga_out['pf'][0].dtc.scores)
+    except:
+       temp = copy.copy(ga_out['dtc_pop'][0].scores)
+
     if not self.use_rheobase_score:
         temp.pop("RheobaseTest",None)
     objectives = list(temp.keys())

@@ -1,13 +1,3 @@
-# Description
-* A collection of compact, parsimonious neuronal models, implemented in community favorite python modules. Attached to a fast data driven optimization routine (numba, dask etc).
-
-* Interoperability with Brian2 is accessible via a simple pip install, Allen-SDK, PyNN and NEURON interoperability is available via an elaborate Docker container.
-
-* Feature extraction routines: AllenSDK, Druckman, Elephant.
-
-* Simulator Backends: brian2, Allen-GLIF, NEURON, PyNN
-
-
 See the Documentation notebooks:
 =======
 [Chapter 1](neuronunit/examples/chapter1.ipynb) / [Chapter 2](neuronunit/examples/chapter2.ipynb) / [Chapter 3](neuronunit/examples/chapter3.ipynb) / [Chapter 4](neuronunit/examples/chapter4.ipynb) / [Chapter 5](neuronunit/examples/chapter5.ipynb) / [Chapter 6](neuronunit/examples/chapter6.ipynb) / [Chapter 7](neuronunit/examples/chapter7.ipynb) / [Chapter 8](neuronunit/examples/chapter8.ipynb) / [Chapter 9](neuronunit/examples/chapter9.ipynb)
@@ -15,7 +5,7 @@ See the Documentation notebooks:
 
 | Master  | Dev |
 | ------------- | ------------- |
-| [![Travis](https://travis-ci.com/russelljjarvis/neuronunit.svg?branch=master)](https://travis-ci.com/russelljjarvis/neuronunit) | [![Travis](https://travis-ci.org/russelljjarvis/neuronunit.svg?branch=dev)](https://travis-ci.org/russelljjarvis/neuronunit)  |
+| [![Travis](https://travis-ci.com/russelljjarvis/NeuronunitOpt.svg?branch=master)](https://travis-ci.com/russelljjarvis/neuronunit) | [![Travis](https://travis-ci.org/russelljjarvis/neuronunit.svg?branch=dev)](https://travis-ci.org/russelljjarvis/neuronunit)  |
 | [![RTFD](https://readthedocs.org/projects/neuronunit/badge/?version=master)](http://neuronunit.readthedocs.io/en/latest/?badge=master) | [![RTFD](https://readthedocs.org/projects/neuronunit/badge/?version=dev)](http://neuronunit.readthedocs.io/en/latest/?badge=dev) |
 | [![Coveralls](https://coveralls.io/repos/github/scidash/neuronunit/badge.svg?branch=master)](https://coveralls.io/github/scidash/neuronunit?branch=master) | [![Coveralls](https://coveralls.io/repos/github/scidash/neuronunit/badge.svg?branch=dev)](https://coveralls.io/github/scidash/neuronunit?branch=dev) |
 | [![Requirements](https://requires.io/github/scidash/neuronunit/requirements.svg?branch=master)](https://requires.io/github/scidash/neuronunit/requirements/?branch=master) |  [![Requirements](https://requires.io/github/scidash/neuronunit/requirements.svg?branch=dev)](https://requires.io/github/scidash/neuronunit/requirements/?branch=dev) |
@@ -23,7 +13,32 @@ See the Documentation notebooks:
 
 ![NeuronUnit Logo](https://raw.githubusercontent.com/scidash/assets/master/logos/neuronunit/NeuronUnitBlack2.png)
 
-# Optimization specific:  
+# Installation:
+```
+sudo pip install neuronunit-opt==0.1 
+```
+# Description
+* A very Python native model-data optimization toolchain derived from ***neuronunit*** and tightly interfaced with other community supported modules, levarging standard workflows in: feature extraction, data scraping and model simulation. 
+* A collection of compact, parsimonious biological neuronal models, implemented in community supported python modules and  tightly integrated into a fast data driven muliti-objective optimization routine (deap, numba, dask etc).
+* Neo, elephant, Brian2 and dask interoperability ships with the most minimal install. A wide range of feature extraction, data source, and interfaces and simulator backend support: NeuroML-DB, NeurML, Allen-SDK, PyNN and NEURON are provided with an easy to use [Docker container]().
+* Brian2 Interoperability ships with the most minimal install. A wide range of interfaces and simulator backend support: Allen-SDK, PyNN and NEURON are provided with an [easy to use Docker container](https://github.com/russelljjarvis/docker-stacks-returned/blob/scidash/efel_dm/Dockerfile).
+
+# Advantages
+* Appeals to interest in AP shape, electrophysiology and Rheobase current injection value. 
+* 
+* Relatively fast, but with little administrative overhead. Optionally no C/NEURON building required.
+
+<img src="docs/brian2_logo.png" width="200" height="150" /> <img src="docs/numba.png" width="200" height="150" /> <img src="docs/dask_logo.png" width="175" height="125" /> <img src="docs/deap.png" width="200" height="150" />
+
+* Feature extraction routines: AllenSDK, Druckman, Elephant.
+* Simulator Backends: brian2, Allen-GLIF, NEURON, PyNN
+
+``` BASH
+docker pull russelljarvis/efel_allen_dm
+docker run russelljarvis/efel_allen_dm neuronunit/examples/use_edt.py
+```
+
+# Optimization specific:
 
  Assumptions, the environment for running this notebook was arrived at by building a dedicated docker file.
 
@@ -32,13 +47,13 @@ See the Documentation notebooks:
  https://cloud.docker.com/u/russelljarvis/repository/docker/russelljarvis/network_unit_opt
  You can run use dockerhub to get the appropriate file, and launch this notebook using Kitematic.
 
-# # Import libraries
+# Import libraries
 To keep the standard running version of minimal and memory efficient, not all available packages are loaded by default. In the cell below I import a mixture common python modules, and custom developed modules associated with NeuronUnit (NU) development
 #!pip install dask distributed seaborn
 #!bash after_install.sh
 
 
-# goals.
+# Broad Aims:
 given https://www.nature.com/articles/nn1352
 Goal is based on this. Don't optimize to a singular point, optimize onto a cluster.
 Golowasch, J., Goldman, M., Abbott, L.F, and Marder, E. (2002)

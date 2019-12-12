@@ -8,31 +8,106 @@ import io
 import math
 import pdb
 from numba import jit
-
 import numpy as np
 from .base import *
 import quantities as qt
 from quantities import mV, ms, s, us, ns
 import matplotlib as mpl
-
+SLOW_ZOOM = True
 from neuronunit.capabilities import spike_functions as sf
 mpl.use('Agg')
 import matplotlib.pyplot as plt
 
-from types import MethodType
-getting_started = True
+
+getting_started = False
 try:
     import asciiplotlib as apl
     fig = apl.figure()
-    fig.plot([0,1], [0,1], label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
-    fig.show()
+    fig.plot([1,0], [0,1])
     ascii_plot = True
+    import gc
+
 except:
     ascii_plot = False
 import numpy
+try:
+    brian2.clear_cache('cython')
+except:
+    pass
+    #I_stim = stim, simulation_time=st)
 
 from scipy.interpolate import interp1d
 
+# This function implement Adaptive Exponential Leaky Integrate-And-Fire neuron model
+def simulate_AdEx_neuron_local(
+        tau_m=None,
+        R=None,
+        v_rest=None,#
+        v_reset=None,#V_RESET,
+        v_rheobase=None,#RHEOBASE_THRESHOLD_v_rh,
+        a=None,#ADAPTATION_VOLTAGE_COUPLING_a,
+        b=None,#SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b,
+        v_spike=None,#FIRING_THRESHOLD_v_spike,
+        delta_T=None,#SHARPNESS_delta_T,
+        tau_w=None,#ADAPTATION_TIME_CONSTANT_tau_w,
+        I_stim=None,#input_factory.get_zero_current(),
+        simulation_time=200 * b2.ms):
+    r"""
+    code is from:
+    /neurodynex/adex_model/AdEx.py
+
+    Implementation of the AdEx model with a single adaptation variable w.
+
+    The Brian2 model equations are:
+
+    .. math::
+
+        \frac{dv}{dt} = (-(v-v_rest) +delta_T*exp((v-v_rheobase)/delta_T)+ R * I_stim(t,i) - R * w)/(tau_m) : volt \\
+        \frac{dw}{dt} = (a*(v-v_rest)-w)/tau_w : amp
+
+    Args:
+        tau_m (Quantity): membrane time scale
+        R (Quantity): membrane restistance
+        v_rest (Quantity): resting potential
+        v_reset (Quantity): reset potential
+        v_rheobase (Quantity): rheobase threshold
+        a (Quantity): Adaptation-Voltage coupling
+        b (Quantity): Spike-triggered adaptation current (=increment of w after each spike)
+        v_spike (Quantity): voltage threshold for the spike condition
+        delta_T (Quantity): Sharpness of the exponential term
+        tau_w (Quantity): Adaptation time constant
+        I_stim (TimedArray): Input current
+        simulation_time (Quantity): Duration for which the model is simulated
+
+    Returns:
+        (state_monitor, spike_monitor):
+        A b2.StateMonitor for the variables "v" and "w" and a b2.SpikeMonitor
+    """
+
+    v_spike_str = "v>{:f}*mvolt".format(v_spike / b2.mvolt)
+
+    # EXP-IF
+    eqs = """
+        dv/dt = (-(v-v_rest) +delta_T*exp((v-v_rheobase)/delta_T)+ R * I_stim(t,i) - R * w)/(tau_m) : volt
+        dw/dt=(a*(v-v_rest)-w)/tau_w : amp
+        """
+
+    neuron = b2.NeuronGroup(1, model=eqs, threshold=v_spike_str, reset="v=v_reset;w+=b", method="euler")
+
+    # initial values of v and w is set here:
+    neuron.v = v_rest
+    neuron.w = 0.0 * b2.pA
+
+    # Monitoring membrane voltage (v) and w
+    state_monitor = b2.StateMonitor(neuron, ["v", "w"], record=True)
+    spike_monitor = b2.SpikeMonitor(neuron)
+
+    # running simulation
+    b2.run(simulation_time)
+    return state_monitor, spike_monitor
+
+
+getting_started = False
 class ADEXPBackend(Backend):
     def get_spike_count(self):
         return int(self.spike_monitor.count[0])
@@ -43,7 +118,7 @@ class ADEXPBackend(Backend):
         super(ADEXPBackend,self).init_backend()
         self.name = str(backend)
 
-        #self.threshold = -20.0*qt.mV
+
         self.debug = None
         self.model._backend.use_memory_cache = False
         self.current_src_name = current_src_name
@@ -148,22 +223,27 @@ class ADEXPBackend(Backend):
             c = current['injected_square_current']
         else:
             c = current
-        amplitude = float(c['amplitude'])
+
+        amplitude = c['amplitude'].simplified
+
         duration = int(c['duration'])#/dt#/dt.rescale('ms')
         delay = int(c['delay'])#/dt#.rescale('ms')
         pre_current = int(duration)+100
-        try:
-            stim = input_factory.get_step_current(int(delay), int(pre_current), 1 * b2.ms, amplitude *b2.pA)
-        except:
-            pass
-        st = (duration+delay+100)* b2.ms
+        amp = c['amplitude'].rescale('uA')
+        amplitude = amp.simplified
+        if getting_started == False:
+            stim = input_factory.get_step_current(delay, duration, b2.ms, amplitude * b2.uA)
+            st = (duration+delay+100)* b2.ms
+        else:
+            stim = input_factory.get_step_current(10, 45, b2.ms, 7.2 * b2.uA)
+            st = 70 * b2.ms
 
         if self.model.attrs is None or not len(self.model.attrs):
             #from neurodynex.adex_model import AdEx
             b2.defaultclock.dt = 1 * b2.ms
 
             self.AdEx = AdEx
-            self.state_monitor, self.spike_monitor = self.AdEx.simulate_AdEx_neuron(I_stim = stim, simulation_time=st)
+            self.state_monitor, self.spike_monitor = simulate_AdEx_neuron_local(I_stim = stim, simulation_time=st)
 
         else:
             if self.verbose:
@@ -223,17 +303,24 @@ class ADEXPBackend(Backend):
         self.attrs = attrs
 
         if ascii_plot:
-            t = [float(f) for f in self.vM.times]
-            v = [float(f) for f in self.vM.magnitude]
+            if SLOW_ZOOM and self.get_spike_count()>=1 :
+                from neuronunit.capabilities.spike_functions import get_spike_waveforms
+                vm = get_spike_waveforms(self.vM)
+            else:
+                vm = self.vM
+            t = [float(f) for f in vm.times]
+            v = [float(f) for f in vm.magnitude]
             fig = apl.figure()
             fig.plot(t, v, label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
             fig.show()
-            fig  = None
-
+            gc.collect()
+            fig = None
+	'''
         if len(self.spike_monitor.spike_trains())>1:
             import matplotlib.pyplot as plt
             plt.plot(y,x)
             plt.savefig('debug.png')
+        '''
         return self.vM
 
     def _backend_run(self):
