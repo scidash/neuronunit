@@ -24,7 +24,7 @@ from neuronunit.optimisation.optimization_management import TSD
 #from neuronunit.optimisation.optimization_management import TSD
 from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.data_transport_container import DataTC
-from neuronunit.optimisation.optimization_management import dtc_to_rheo, mint_generic_model
+from neuronunit.optimisation.optimization_management import dtc_to_rheo#, mint_generic_model
 from neuronunit.optimisation.optimization_management import OptMan
 
 from neuronunit import tests as nu_tests, neuroelectro
@@ -92,9 +92,6 @@ class testHighLevelOptimisation(unittest.TestCase):
             self.electro_tests = pickle.load(f)
         #self.electro_tests = get_neab.replace_zero_std(self.electro_tests)
 
-        #self.test_rheobase_dtc = test_rheobase_dtc
-        #self.dtcpop = test_rheobase_dtc(self.dtcpop,self.electro_tests)
-        self.standard_model = self.model = mint_generic_model('RAW')
         self.MODEL_PARAMS = MODEL_PARAMS
         self.MODEL_PARAMS.pop(str('NEURON'),None)
 
@@ -178,7 +175,7 @@ class testHighLevelOptimisation(unittest.TestCase):
 
 
         NGEN = 8
-        MU = 8
+        MU = 4
         tests= self.test_frame['Hippocampus CA1 pyramidal cell']
         tests['name'] = 'Hippocampus CA1 pyramidal cell'
         ca1 = TSD(tests = tests,use_rheobase_score=True)
@@ -196,15 +193,18 @@ class testHighLevelOptimisation(unittest.TestCase):
         '''
         forward euler, and adaptive exponential
         '''
-        NGEN = 10
-        MU = 10
+        NGEN = 4
+        MU = 4
+        #pdb.set_trace()
         backend = str('BHH')
         out = self.get_cells(backend,model_parameters,NGEN,MU)
-
+        
+        #backend = str('HH')
+        #out = self.get_cells(backend,model_parameters,NGEN,MU)
         backend = str('RAW')
         out = self.get_cells(backend,model_parameters,NGEN,MU)
-
         backend = str('ADEXP')
         out = self.get_cells(backend,model_parameters,NGEN,MU)
 
+        #import pdb
         return out

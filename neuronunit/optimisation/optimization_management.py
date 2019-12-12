@@ -1,7 +1,7 @@
-import warnings
-
 # Its not that this file is responsible for doing plotting,
 # but it calls many modules that are, such that it needs to pre-empt
+import warnings
+
 try:
     matplotlib.use('agg')
 except:
@@ -15,13 +15,14 @@ import cython
 import logging
 
 # optional imports
+
 SILENT = True
-#RATIO_SCORE = False
+
 if SILENT:
     warnings.filterwarnings("ignore")
 
-PARALLEL_CONFIDENT = True
-# Rationale Many methods inside the file optimization_management.py cannot be easily monkey patched using 
+PARALLEL_CONFIDENT = False
+# Rationale Many methods inside the file optimization_management.py cannot be easily monkey patched using
 #```pdb.set_trace()``` unless at the top of the file,
 # the parallel_confident static variable is declared false
 # This converts parallel mapping functions to serial mapping functions. s
@@ -54,12 +55,11 @@ from neuronunit.optimisation.model_parameters import path_params
 from neuronunit.optimisation import model_parameters as modelp
 from itertools import repeat
 from neuronunit.tests.base import AMPL, DELAY, DURATION
-from neuronunit.models import ReducedModel
+#from neuronunit.models import ReducedModel
 from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 from collections.abc import Iterable
 from neuronunit.tests import dm_test_container #import Interoperabe
 from neuronunit.tests.base import VmTest
-
 
 import sys
 
@@ -114,8 +114,8 @@ df = pd.DataFrame(rts)
 for key,v in rts.items():
     helper_tests = [value for value in v.values() ]
     break
+from neuronunit.plottools import elaborate_plots
 
-from neuronunit.optimisation.optimisations import SciUnitOptimisation
 def timer(func):
     def inner(*args, **kwargs):
         t1 = time.time()
@@ -135,6 +135,95 @@ class WSListIndividual(list):
         super(WSListIndividual, self).__init__(*args, **kwargs)
 
 
+def make_ga_DO(explore_edges, max_ngen, test, \
+        free_params = None, hc = None,
+        selection = None, MU = None, seed_pop = None, \
+           backend = str('RAW'),protocol={'allen':False,'elephant':True}):
+    '''
+    construct an DEAP Optimization Object, suitable for this test class and caching etc.
+    '''
+
+    ss = {}
+    if type(free_params) is type(dict()):
+        if 'dt' in free_params:
+            free_params.pop('dt')
+        if 'Iext' in free_params:
+            free_params.pop('Iext')
+    else:
+        free_params = [f for f in free_params if str(f) not in 'Iext' and str(f) not in str('dt')]
+    for k in free_params:
+        if not k in explore_edges.keys() and k not in str('Iext') and k not in str('dt'):
+            ss[k] = explore_edges[str(free_params)]
+        else:
+            ss[k] = explore_edges[k]
+    if type(MU) == type(None):
+        MU = 2**len(list(free_params))
+    else:
+        MU = MU
+    max_ngen = int(np.floor(max_ngen))
+    if not isinstance(test, Iterable):
+        test = [test]
+    from neuronunit.optimisation.optimisations import SciUnitOptimisation
+    DO = SciUnitOptimisation(MU = MU, error_criterion = test,\
+         boundary_dict = ss, backend = backend, hc = hc, \
+                             selection = selection,protocol=protocol)
+
+    if seed_pop is not None:
+        # This is a re-run condition.
+        DO.setnparams(nparams = len(free_params), boundary_dict = ss)
+
+        DO.seed_pop = seed_pop
+        DO.setup_deap()
+        DO.error_length = len(test)
+
+    return DO
+
+
+
+class TSD(dict):
+    def __init__(self,tests={},use_rheobase_score=False):
+       self.DO = None
+
+       super(TSD,self).__init__()
+
+       self.update(tests)
+       if 'name' in self.keys():
+           self.cell_name = tests['name']
+           self.pop('name',None)
+       else:
+           self.cell_name = 'simulated data'
+
+       self.use_rheobase_score = use_rheobase_score
+       self.elaborate_plots  = elaborate_plots
+       self.backend = None
+
+
+    def optimize(self,param_edges,backend=None,protocol={'allen': False, 'elephant': True},\
+        MU=5,NGEN=5,free_params=None,seed_pop=None,hold_constant=None):
+        if type(free_params) is type(None):
+            free_params=param_edges.keys()
+        self.DO = make_ga_DO(param_edges, NGEN, self, free_params=free_params, \
+                           backend=backend, MU = 8,  protocol=protocol,seed_pop = seed_pop, hc=hold_constant)
+        self.DO.MU = MU
+        self.DO.NGEN = NGEN
+        ga_out = self.DO.run(NGEN = self.DO.NGEN)
+        ga_out['DO'] = self.DO
+        if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
+            _,dtc_pop = DO.OM.test_runner(copy.copy(ga_out['pf']),self.DO.OM.td,self.DO.OM.tests)
+            ga_out['dtc_pop'] = dtc_pop
+        self.backend = backend
+
+        if str(self.cell_name) not in str('simulated data'):
+            pass
+            # is this a data driven test? if so its worth plotting results
+            #ga_out = self.elaborate_plots(self,ga_out)
+        from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
+
+        ##
+        # TODO populate a score table pass it back to DO.OM
+
+        return ga_out, self.DO
+'''
 class TSD(dict):
     def __init__(self,tests={},use_rheobase_score=False):
        super(TSD,self).__init__()
@@ -172,8 +261,16 @@ class TSD(dict):
         # TODO populate a score table pass it back to DO.OM
 
         return ga_out, DO
+from sciunit.suites import TestSuite# as TSuite
 
-
+class TSS(TestSuite):
+    def __init__(self,tests=[],use_rheobase_score=False):
+       super(TSD,self).__init__()
+       self.update(tests)
+       self.use_rheobase_score=use_rheobase_score
+    def optimize(self,param_edges,backend=None,protocol={'allen': False, 'elephant': True},MU=5,NGEN=5,free_params=None,seed_pop=None):
+        pass
+'''
 # DEAP mutation strategies:
 # https://deap.readthedocs.io/en/master/api/tools.html#deap.tools.mutESLogNormal
 class WSFloatIndividual(float):
@@ -324,17 +421,15 @@ def get_centres(ga_out):
     centers = est.cluster_centers_
     return td, test_opt, centres
 
-
+'''
 def mint_generic_model(backend):
-    '''
     Possibly depricated:
     see:
     dtc.to_model()
-    '''
     LEMS_MODEL_PATH = path_params['model_path']
     model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = str(backend))
     return model
-
+'''
 import pandas as pd
 
 def save_models_for_justas(dtc):
@@ -378,8 +473,9 @@ def pred_only(test_and_models):
     (test, dtc) = test_and_models
     #obs = test.observation
     backend_ = dtc.backend
-    model = mint_generic_model(backend_)
-    model.set_attrs(**dtc.attrs)
+    model = dtc.dtc_to_model()
+    #model = mint_generic_model(backend_)
+    model.set_attrs(dtc.attrs)
     if test.passive:
         test.setup_protocol(model)
         try:
@@ -399,7 +495,8 @@ def bridge_judge(test_and_dtc):
     (test, dtc) = test_and_dtc
     obs = test.observation
     backend_ = dtc.backend
-    model = mint_generic_model(backend_)
+    model = dtc.dtc_to_model()
+    #model = mint_generic_model(backend_)
     model.set_attrs(**dtc.attrs)
 
 
@@ -463,8 +560,9 @@ def get_rh(dtc,rtest_class):
         rtest = RheobaseTest(observation=place_holder,
                          name='RheobaseTest')
     dtc.rheobase = None
-    model = mint_generic_model(backend_)
-    model.set_attrs(**dtc.attrs)
+    model = dtc.dtc_to_model()
+    #model = mint_generic_model(backend_)
+    model.set_attrs(dtc.attrs)
     rtest.params['injected_square_current'] = {}
     rtest.params['injected_square_current']['delay'] = DELAY
     rtest.params['injected_square_current']['duration'] = DURATION
@@ -482,14 +580,14 @@ def get_rtest(dtc):
     place_holder = {'n': 86, 'mean': 10 * pq.pA, 'std': 10 * pq.pA, 'value': 10 * pq.pA}
 
     if not hasattr(dtc,'tests'):#, type(None)):
-        if 'RAW' in dtc.backend :# or 'GLIF' in dtc.backend:#Backend:
+        if 'RAW' in dtc.backend or 'HH' in dtc.backend:# or 'GLIF' in dtc.backend:#Backend:
             rtest = RheobaseTest(observation=place_holder,
                                     name='RheobaseTest')
         else:
             rtest = RheobaseTestP(observation=place_holder,
                                     name='RheobaseTest')
     else:
-        if 'RAW' in dtc.backend:# or 'GLIF' in dtc.backend:
+        if 'RAW' in dtc.backend or 'HH' in dtc.backend:
             if not isinstance(dtc.tests, Iterable):
                 rtest = dtc.tests
             else:
@@ -542,7 +640,8 @@ def dtc_to_model(dtc):
         dtc.scores = None
     if type(dtc.scores) is type(None):
         dtc.scores = {}
-    model = mint_generic_model(dtc.backend)
+    model = dtc.dtc_to_model()
+    #model = mint_generic_model(dtc.backend)
     model.attrs = dtc.attrs
     return model
 
@@ -553,8 +652,9 @@ def dtc_to_rheo(dtc):
         dtc.scores = None
     if type(dtc.scores) is type(None):
         dtc.scores = {}
-    model = mint_generic_model(dtc.backend)
-    model.set_attrs(**dtc.attrs)
+    model = dtc.dtc_to_model()
+    #model = mint_generic_model(dtc.backend)
+    model.set_attrs(dtc.attrs)
     if hasattr(dtc,'tests'):
         if type(dtc.tests) is type({}) and str('RheobaseTest') in dtc.tests.keys():
             rtest = dtc.tests['RheobaseTest']
@@ -599,6 +699,20 @@ def dtc_to_rheo(dtc):
         dtc = get_rh(dtc,rtest)
     return dtc
 
+def inject_and_plot_model(attrs,backend):
+    pre_model = DataTC()
+    pre_model.attrs = attrs
+    pre_model.backend = backend
+    # get rheobase injection value
+    pre_model = dtc_to_rheo(pre_model)
+    # get an object of class ReducedModel with known attributes and known rheobase current injection value.
+    model = pre_model.dtc_to_model()
+    uc = {'amplitude':model.rheobase,'duration':DURATION,'delay':DELAY}
+    model.inject_square_current(uc)
+    vm = model.get_membrane_potential()
+    plt.plot(vm.times,vm.magnitude)
+    plt.show()
+    return vm,plt
 
 def score_proc(dtc,t,score):
     dtc.score[str(t)] = {}
@@ -1195,8 +1309,9 @@ L
     return dtc
 '''
 def new_model(dtc):
-    model = mint_generic_model(dtc.backend)
-    model.set_attrs(**dtc.attrs)
+    model = dtc.dtc_to_model()
+    #model = mint_generic_model(dtc.backend)
+    model.set_attrs(dtc.attrs)
     return model
 
 def make_stim_waves_func():
@@ -1300,7 +1415,8 @@ def nuunit_allen_evaluation(dtc):
 
 
 def nuunit_dm_evaluation(dtc):
-    model = mint_generic_model(dtc.backend)
+    model = dtc.dtc_to_model()
+    #model = mint_generic_model(dtc.backend)
     model.set_attrs(**dtc.attrs)
     try:
         values = [v for v in dtc.protocols.values()][0]
@@ -1344,7 +1460,8 @@ def nuunit_dm_evaluation(dtc):
     return dtc
 
 def nuunit_dm_rheo_evaluation(dtc):
-    model = mint_generic_model(dtc.backend)
+    model = dtc.dtc_to_model()
+    #model = mint_generic_model(dtc.backend)
     model.set_attrs(**dtc.attrs)
     #values = [v for v in dtc.vtest.values()][0]
 
@@ -1730,6 +1847,20 @@ def which_key(thing):
         return 'value'
     if 'mean' in thing.keys():
         return 'mean'
+
+def simple_error(observation,prediction,t):
+    observation = which_thing(observation)
+    prediction = which_thing(prediction)
+    obs = observation['standard']
+    pred = prediction['standard']
+    try:
+        obs = obs.rescale(pred.units)
+        pre_error = np.abs((float(obs.magnitude)-float(pred.magnitude)))
+        error = pre_error/np.abs(obs.magnitude)
+
+    except:
+        error = np.inf
+    return error
 '''
 def dtc2gene(pop,dtcpop):
     fitness_attr = pop[0].fitness
@@ -1822,13 +1953,22 @@ def bridge_passive(package):
 
     assert 'mean' in t.observation.keys()
     pred = None
-    try:
-        pred = t.extract_features(model,result)
-    except:
-        pred = None
-    if type(pred) is type(None):
-        return None,dtc,pred
+    #try:
+    pred = t.extract_features(model,result)
 
+    if type(pred) is type(None):
+        return np.inf,dtc,pred
+
+    if 'mean' in pred.keys():
+        pred['standard'] = pred['mean']
+    if 'value' in pred.keys():
+        pred['standard'] = pred['value']
+    if type(pred['standard']) is type(None):
+        return np.inf,dtc,pred
+    if type(pred['standard']) is not type(None):
+        score = simple_error(t.observation,pred,t)
+    return score, dtc, pred
+    '''
     if 'std' not in t.observation.keys():
         take_anything = list(t.observation['mean'])[0]
 
@@ -1877,7 +2017,7 @@ def bridge_passive(package):
     #if type(score) is type(None):
     #    score = increase_current(dtc,t)
     return score, dtc, pred
-
+    '''
 class OptMan():
     def __init__(self,tests, td=None, backend = None,hc = None,boundary_dict = None, error_length=None,protocol=None,simulated_obs=None,verbosity=None,PARALLEL_CONFIDENT=None,tsr=None):
         self.tests = tests
@@ -1895,7 +2035,7 @@ class OptMan():
         self.protocol = protocol
         # note this is not effective at changing parallel behavior yet
         if PARALLEL_CONFIDENT not in globals():
-            self.PARALLEL_CONFIDENT = True
+            self.PARALLEL_CONFIDENT = False
         else:
             self.PARALLEL_CONFIDENT = PARALLEL_CONFIDENT
         if verbosity is None:
@@ -2346,11 +2486,54 @@ class OptMan():
 
         pred['std'] = t.observation['std']# 15*take_anything.magnitude * take_anything.units
         return pred
+
     def elephant_evaluation(self,dtc):
         # Inputs single data transport container modules, and neuroelectro observations that
         # inform test error error_criterion
         # Outputs Neuron Unit evaluation scores over error criterion
         tests = dtc.tests
+
+        if not hasattr(dtc,'scores') or dtc.scores is None:
+            dtc.scores = None
+            dtc.scores = {}
+
+        if isinstance(dtc.rheobase,type(None)) or type(dtc.rheobase) is type(None):
+            dtc = allocate_worst(tests, dtc)
+        else:
+            for k, t in enumerate(tests):
+                key = str(t)
+                if "RheobaseTest" in  t.name:
+                    if str("BHH") in dtc.backend or str("ADEXP") in dtc.backend or str("GLIF") in dtc.backend:
+                        t = RheobaseTestP(t.observation)
+                        t.passive = False
+                try:
+                    assert hasattr(self.tests,'use_rheobase_score')
+                except:
+                    print('warning please add whether or not model should be scored on rheobase to protocol')
+                    self.tests.use_rheobase_score = True
+                if self.tests.use_rheobase_score == False and "RheobaseTest" in str(k):
+                    continue
+                dtc.scores[key] = np.inf
+                t.params = dtc.protocols[k]
+                model = dtc.dtc_to_model()
+                if t.passive is False:
+                    pred = t.generate_prediction(model)
+                    if "RheobaseTest" in  t.name:
+                        pass
+
+                    score = simple_error(t.observation,pred,t)
+                if t.passive is True:
+                    score, dtc, pred = bridge_passive((t, dtc))
+                dtc.scores[str(t.name)] = score
+        return dtc
+
+
+    def elephant_evaluation_old(self,dtc):
+        # Inputs single data transport container modules, and neuroelectro observations that
+        # inform test error error_criterion
+        # Outputs Neuron Unit evaluation scores over error criterion
+        tests = dtc.tests
+
         if not hasattr(dtc,'scores') or dtc.scores is None:
             dtc.scores = None
             dtc.scores = {}
@@ -2394,11 +2577,23 @@ class OptMan():
                     model = new_model(dtc)
                     pred = t.generate_prediction(model)
                     pred = self.pred_std(pred,t)
-                    score, dtc = bridge_judge((t, dtc))
+                    score = simple_error(t.observation,pred,t)
+                    '''
+                    try:
+                        score = t.judge(model)
+                    except:
+                        score, dtc = bridge_judge((t, dtc))
+                    '''
                     if type(take_anything) is type(int()):
                         pass
                 else:
-                    score, dtc, pred = bridge_passive((t, dtc))
+                    model = dtc.dtc_to_model()
+                    try:
+                        score = t.judge(model)
+                    except:
+                        score, dtc, pred = bridge_passive((t, dtc))
+                dtc.scores[str(t.name)] = score
+                '''
                 if self.verbose:
                     print(take_anything.units)
                     print(t.observation['mean'].units)
@@ -2411,11 +2606,11 @@ class OptMan():
                     pass
                 else:
                     if type(score.raw) is not type(None):
-                        if np.isinf(float(score.raw)):
+                        if np.isinf(float(score.raw)) and pred[list(pred.keys())[0]]>0.0:
                             t.score_type = scores.RatioScore
                             score = t.compute_score(pred,t.observation)
                     else:
-                        t.score_type = scores.RatioScore
+                        t.score_type = scores.ZScore
                         if type(pred['mean']) is not type(None):
                             score = t.compute_score(pred,t.observation)
 
@@ -2456,9 +2651,9 @@ class OptMan():
                         assignment = 1.0 - score.norm_score
                         dtc.scores[str(t.name)] = assignment
 
-                if dtc.scores[key] == 0.0:
+                if not dtc.scores[key] == 0.0:
                     print('succeeded at: ',t.passive,t.name,t.score_type,pred,t.observation['std'])
-
+        '''
         dtc.summed = dtc.get_ss()
         try:
             greatest = np.max([dtc.error_length,len(dtc.scores)])
@@ -2942,7 +3137,7 @@ class OptMan():
         '''
 
         random.seed(datetime.now())
-        DO = SciUnitOptimisation(offspring_size = number_genes,
+        DO = SciUnitOptimisation(MU = number_genes,
                                  error_criterion = self.tests, boundary_dict =self.boundary_dict,
                                  backend = self.backend, selection = str('selNSGA'),protocol = self.protocol)#,, boundary_dict = ss, elite_size = 2, hc=hc)
 

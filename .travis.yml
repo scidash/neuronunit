@@ -1,16 +1,11 @@
 language: python
 python:
   - "3.5"
-  - "3.6"
+  - "3.7"
 services:
   - docker
 
 install:
-
-
-  - docker build -t nuopt .
-  - docker run nuopt /opt/conda/bin/python -c neuronunit/neuronunit/unit_test/small_test.py
-  - docker run nuopt /opt/conda/bin/python -c neuronunit/neuronunit/unit_test/edt.py
   - sudo apt-get update
   - sudo apt-get install python-lxml 
   - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
@@ -38,12 +33,7 @@ install:
   - pip install .
 
 script:
-  - cd neuronunit/unit_test/
-  - cd working
-  - python small_test.py
-  - python edt.py
-  - jupyter nbconvert --execute examples/chapter3.ipynb 
-  - jupyter nbconvert --execute examples/example_data.ipynb 
-
+  - cd neuronunit
+  - python -c "import neuronunit"
 after_success:
   - coveralls
