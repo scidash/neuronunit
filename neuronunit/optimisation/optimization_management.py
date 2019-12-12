@@ -1,3 +1,5 @@
+import warnings
+
 # Its not that this file is responsible for doing plotting,
 # but it calls many modules that are, such that it needs to pre-empt
 try:
@@ -8,7 +10,6 @@ except:
 
 # setting of an appropriate backend.
 # optional imports
-import warnings
 import matplotlib
 import cython
 import logging
