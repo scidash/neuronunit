@@ -263,7 +263,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
 
     # Begin the generational    process
     for gen in range(start_gen + 1, ngen + 1):
-        delta = len(parents[0]) - len(toolbox.Individual())
+        #delta = len(parents[0]) - len(toolbox.Individual())
         _record_stats(stats, logbook, gen, parents, invalid_count)
         offspring = _get_offspring(parents, toolbox, cxpb, mutpb)
         offspring = [ toolbox.clone(ind) for ind in offspring ]
