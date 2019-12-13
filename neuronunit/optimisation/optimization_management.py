@@ -109,7 +109,7 @@ from neuronunit.plottools import inject_and_plot
 # They are used by other methods analogous to a base class,
 # these are base instances that become more derived
 # contexts, that modify copies of the helper class in place.
-rts,complete_map = pickle.load(open(mypath,'rb'))
+rts = pickle.load(open(mypath,'rb'))
 df = pd.DataFrame(rts)
 for key,v in rts.items():
     helper_tests = [value for value in v.values() ]
