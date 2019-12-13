@@ -6,12 +6,15 @@ try:
     matplotlib.use('agg')
 except:
     warnings.warn('X11 plotting backend not available, consider installing')
+
+
 # setting of an appropriate backend.
 # optional imports
 import matplotlib
 import cython
 import logging
 
+# optional imports
 
 SILENT = True
 
@@ -106,7 +109,11 @@ from neuronunit.plottools import inject_and_plot
 # They are used by other methods analogous to a base class,
 # these are base instances that become more derived
 # contexts, that modify copies of the helper class in place.
-
+rts = pickle.load(open(mypath,'rb'))
+df = pd.DataFrame(rts)
+for key,v in rts.items():
+    helper_tests = [value for value in v.values() ]
+    break
 from neuronunit.plottools import elaborate_plots
 
 def timer(func):
@@ -1073,11 +1080,6 @@ def just_allen_predictions(dtc):
 from sciunit import scores
 
 def prediction_current_and_features(dtc):
-    rts,complete_map = pickle.load(open(mypath,'rb'))
-    df = pd.DataFrame(rts)
-    for key,v in rts.items():
-        helper = [value for value in v.values() ]
-        break
     returned = just_allen_predictions(dtc)
     try:
         dtc,compare,ephys = returned
@@ -1508,8 +1510,6 @@ def input_resistance_dm_evaluation(dtc):
     dtc.dm_test_features = dm_test_features
     return dtc
 
-
-
 def nuunit_dm_rheo_evaluation(dtc):
     model = dtc.dtc_to_model()
     #model = mint_generic_model(dtc.backend)
@@ -1669,7 +1669,7 @@ def evaluate(dtc,regularization=False,elastic_net=True):
 
     for int_,t in enumerate(dtc.scores.keys()):
         if elastic_net:
-           fitness0 = [ np.abs(t)*(2.0) for int_,t in enumerate(dtc.scores.values())]
+           fitness0 = [ np.abs(t)**(2.0) for int_,t in enumerate(dtc.scores.values())]
            fitness1 = [ np.abs(t) for int_,t in enumerate(dtc.scores.values())]
            fitness = [ (fitness1[i]+j)/2.0 for i,j in enumerate(fitness0)]
         else:
@@ -2005,16 +2005,9 @@ def bridge_passive(package):
 
     assert 'mean' in t.observation.keys()
     pred = None
-    try:
-        pred = t.extract_features(model,result)
-    except:
-        hash =[str(k)+str(v) for i,k,v in enumerate(dtc.attrs.items()) if i==0]
-        with open(str(hash)+'contents.p','wb') as f:
-           pickle.dump(f,dtc)
-        dtc = input_resistance_dm_evaluation(dtc)
-        assert type(dtc.InputResistanceTest) is not type(None)
-        import pdb
-        pdb.set_trace()
+    #try:
+    pred = t.extract_features(model,result)
+
     if type(pred) is type(None):
         return np.inf,dtc,pred
 

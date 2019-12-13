@@ -93,7 +93,7 @@ def _update_history_and_hof(halloffame,pf, history, population,td,mu):
         try:
             pf.update(temp[0:mu])
         except:
-            #temp = purify2(temp)
+            temp = purify2(temp)
             temp = purify(temp)
             try:
                 pf.update(temp[0:mu])
@@ -188,7 +188,7 @@ def _get_offspring(parents, toolbox, cxpb, mutpb):
                 #parents.append(WSListIndividual(off_,obj_size=len(off_)))
 
             offspring = toolbox.variate(parents, toolbox, cxpb, mutpb)
-            #offspring = deap.algorithms.varAnd(parents, toolbox, cxpb, mutpb)
+            offspring = deap.algorithms.varAnd(parents, toolbox, cxpb, mutpb)
 
         while gene_bad(offspring) == True:
             # try a different strategy.
@@ -273,7 +273,6 @@ def eaAlphaMuPlusLambdaCheckpoint(
     # Begin the generational    process
     for gen in range(start_gen + 1, ngen + 1):
         #delta = len(parents[0]) - len(toolbox.Individual())
-
         _record_stats(stats, logbook, gen, parents, invalid_count)
         offspring = _get_offspring(parents, toolbox, cxpb, mutpb)
         offspring = [ toolbox.clone(ind) for ind in offspring ]
