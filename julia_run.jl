@@ -7,6 +7,17 @@ Pkg.build("PyCall")
 using PyCall
 py"""
 from neuronunit.optimisation import optimization_management as om
+
+anchor = neuronunit.__file__
+anchor = os.path.dirname(anchor)
+mypath = os.path.join(os.sep,anchor,'tests/russell_tests.p')
+df = pd.DataFrame(rts)
+for key,v in rts.items():
+    helper_tests = [value for value in v.values() ]
+    break
+DO = om.make_ga_DO(param_edges, 1,  free_params=free_params, \
+                   backend=backend, MU = 1,  protocol=protocol,seed_pop = seed_pop, hc=hold_constant)
+
 """
 omj = py"om"
 #using revisions
