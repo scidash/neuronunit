@@ -25,8 +25,7 @@ PASSIVE_AMPL = -10.0*pq.pA
 PASSIVE_DELAY = 100.0*pq.ms
 PASSIVE_DURATION = 300.0*pq.ms
 
-import sciunit
-#class VmTest(sciunit.Test):
+
 class VmTest(ProtocolToFeaturesTest):
     """Base class for tests involving the membrane potential of a model."""
 
