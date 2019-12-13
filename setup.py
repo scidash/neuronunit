@@ -1,4 +1,3 @@
-
 import os
 from setuptools import setup, find_packages
 
@@ -24,10 +23,11 @@ setup(
             'neuronunit.tests',
             'neuronunit.optimisation',
             'neuronunit.unit_test'],
-    url='http://github.com/russelljjarvis/NeuronunitOpt',
+    install_requires=read_requirements(),
+    url='http://github.com/scidash/neuronunit',
     license='MIT',
     description=("A SciUnit library for optimizing data-driven testing of "
                  "single-neuron physiology models."),
     long_description="",
-    test_suite="neuronunit.unit_test.core_tests"
+    test_suite="neuronunit.unit_test.core_tests",
     )

@@ -3,6 +3,7 @@
 
 from .base import np, pq, ncap, VmTest, scores
 from scipy.optimize import curve_fit
+from sciunit.tests import ProtocolToFeaturesTest
 import gc
 DURATION = 500.0*pq.ms
 DELAY = 200.0*pq.m
@@ -15,7 +16,7 @@ try:
 
 except:
     ascii_plot = False
-class TestPulseTest(VmTest):
+class TestPulseTest(ProtocolToFeaturesTest):
     """A base class for tests that use a square test pulse."""
 
     def __init__(self, *args, **kwargs):
@@ -46,20 +47,14 @@ class TestPulseTest(VmTest):
         self.condition_model(model)
         model.inject_square_current(self.params['injected_square_current'])
         #return vm
+        
     def get_result(self, model):
-        self.condition_model(model)
-        model.inject_square_current(self.params['injected_square_current'])
         vm = model.get_membrane_potential()
         return vm
 
-    def extract_features(self, model,result):
-
-        model.inject_square_current(self.params['injected_square_current'])
-        print(self.params)
-        vm = model.get_membrane_potential()
-
+    def extract_features(self, model, result):
         i = self.params['injected_square_current']
-        if np.any(np.isnan(vm)) or np.any(np.isinf(vm)):
+        if np.any(np.isnan(result)) or np.any(np.isinf(result)):
             return None
 
         return (i, vm)
@@ -316,14 +311,11 @@ class RestingPotentialTest(TestPulseTest):
         #    self.params = None
 
     def extract_features(self, model, result):
-        #features = super(RestingPotentialTest, self).\
-        #                    extract_features(model, result)
-        self.params['injected_square_current']['amplitude'] = -10 * pq.pA
-        model.inject_square_current(self.params['injected_square_current'])
-
-        #if features is not None:
-        median = -np.abs(model.get_median_vm())  # Use median for robustness.
-        std = -np.abs(model.get_std_vm())
+        # Use median for robustness.
+        # np.median cannot be used directly with AnalogSignal,
+        # hence units are stripped and re-added
+        median = np.median(result.data)*result.units
+        std = np.std(result)
 
         features = {'mean': median, 'std': std}
         return features
