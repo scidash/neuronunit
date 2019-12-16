@@ -4,6 +4,8 @@ from .base import np, pq, ncap, VmTest, scores
 from scipy.optimize import curve_fit
 from sciunit.tests import ProtocolToFeaturesTest
 import gc
+from neuronunit import neuroelectro
+
 DURATION = 500.0*pq.ms
 DELAY = 200.0*pq.m
 try:
@@ -29,6 +31,53 @@ class TestPulseTest(ProtocolToFeaturesTest):
     name = ''
 
     score_type = scores.ZScore
+    @classmethod
+    def get_default_injected_square_current(cls):
+        current = {key: cls.default_params[key]
+                   for key in ['duration', 'delay', 'amplitude']}
+        return current
+
+    def get_injected_square_current(self):
+        current = {key: self.default_params[key]
+                   for key in ['duration', 'delay', 'amplitude']}
+        return current
+
+    @classmethod
+    def neuroelectro_summary_observation(cls, neuron, cached=False):
+        reference_data = neuroelectro.NeuroElectroSummary(
+            neuron=neuron,  # Neuron type lookup using the NeuroLex ID.
+            ephysprop={'name': cls.ephysprop_name},  # Ephys property name in
+                                                     # NeuroElectro ontology.
+            cached=cached
+            )
+
+        # Get and verify summary data from neuroelectro.org.
+        reference_data.get_values(quiet=not cls.verbose)
+
+        if hasattr(reference_data, 'mean'):
+            observation = {'mean': reference_data.mean*cls.units,
+                           'std': reference_data.std*cls.units,
+                           'n': reference_data.n}
+        else:
+            observation = None
+
+        return observation
+
+    @classmethod
+    def neuroelectro_pooled_observation(cls, neuron, cached=False, quiet=True):
+        reference_data = neuroelectro.NeuroElectroPooledSummary(
+            neuron=neuron,  # Neuron type lookup using the NeuroLex ID.
+            # Ephys property name in NeuroElectro ontology.
+            ephysprop={'name': cls.ephysprop_name},
+            cached=cached
+            )
+        # Get and verify summary data from neuroelectro.org.
+        reference_data.get_values(quiet=quiet)
+        observation = {'mean': reference_data.mean*cls.units,
+                       'std': reference_data.std*cls.units,
+                       'n': reference_data.n}
+        return observation
+
 
     def compute_params(self):
         super(TestPulseTest, self).compute_params()
@@ -43,14 +92,14 @@ class TestPulseTest(ProtocolToFeaturesTest):
 
     def setup_protocol(self, model):
         """Implement sciunit.tests.ProtocolToFeatureTest.setup_protocol."""
-        """Not a great design for parallel code as model can't be shared"""        
+        """Not a great design for parallel code as model can't be shared"""
         self.condition_model(model)
         model.inject_square_current(self.params['injected_square_current'])
 
         # self.condition_model(model)
         # model.inject_square_current(self.params['injected_square_current'])
         #return vm
-        
+
     def get_result(self, model):
         vm = model.get_membrane_potential()
         return vm
@@ -149,7 +198,7 @@ class InputResistanceTest(TestPulseTest):
             self.params = kwargs['params']
         else:
             self.params = None
-    """	
+    """
     """Test the input resistance of a cell."""
 
     name = "Input resistance test"
@@ -290,9 +339,9 @@ class CapacitanceTest(TestPulseTest):
 
 class RestingPotentialTest(TestPulseTest):
     """Tests the resting potential under zero current injection."""
-    
+
     default_params = dict(TestPulseTest.default_params)
-    
+
     default_params['amplitude'] = 0.0 * pq.pA
 
     name = "Resting potential test"

@@ -2,7 +2,6 @@ from neuronunit.optimisation import get_neab
 from neuronunit import tests as _, neuroelectro
 from neuronunit.tests import fi, passive, waveform
 import pickle
-from neuronunit.tests import fi, passive, waveform
 def get_neuron_criteria(cell_id,file_name = None):#,observation = None):
     # Use neuroelectro experimental obsevations to find test
     # criterion that will be used to inform scientific unit testing.
@@ -23,23 +22,10 @@ def get_neuron_criteria(cell_id,file_name = None):#,observation = None):
                      waveform.InjectedCurrentAPThresholdTest]#,
     observations = {}
     for index, t in enumerate(test_classes):
-        try:
-            obs = t.neuroelectro_summary_observation(cell_id)
+        obs = t.neuroelectro_summary_observation(cell_id)
+        tests[t.name] = t(obs)
+        observations[t.ephysprop_name] = obs
 
-            if obs is not None:
-                if 'mean' in obs.keys():
-                    tests[t.name] = t(obs)
-                    observations[t.ephysprop_name] = obs
-        except:
-            pass
-    #hooks = {tests[0]:{'f':update_amplitude}} #This is a trick to dynamically insert the method
-    #update amplitude at the location in sciunit thats its passed to, without any loss of generality.
-    #suite = sciunit.TestSuite(tests,name="vm_suite")
-
-    if file_name is not None:
-        file_name = file_name +'.p'
-        with open(file_name, 'wb') as f:
-            pickle.dump(tests, f)
 
     return tests,observations
 
@@ -56,14 +42,12 @@ ca1_pyr = {"id": 85, "name": "Hippocampus CA1 pyramidal cell", "neuron_db_id": 2
 cell_list = [ olf_mitral, ca1_pyr, purkinje,  pvis_cortex]
 cell_constraints = {}
 for cell in cell_list:
+    try:
+        tests,observations = get_neuron_criteria(cell)
+        cell_constraints[cell["name"]] = tests
+    except:
+        print('cell id badness')
 
-    tests,observations = get_neuron_criteria(cell)
-    cell_constraints[cell["name"]] = tests
 
-
-
-with open('russell_tests.p','wb') as f:
+with open('multicellular_constraints.p','wb') as f:
     pickle.dump(cell_constraints,f)
-
-
-                
