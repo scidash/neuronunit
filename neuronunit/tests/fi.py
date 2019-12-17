@@ -92,7 +92,10 @@ class RheobaseTest(VmTest):
     params_schema.update({'tolerance': {'type': 'current', 'min': 1, 'required': False}})
 
     def condition_model(self, model):
-        model.set_run_params(t_stop=self.params['tmax'])
+        if not 'tmax' in self.params:
+            self.params['tmax'] = 2000.0*pq.ms
+        else:
+            model.set_run_params(t_stop=self.params['tmax'])
 
     def generate_prediction(self, model):
         """Implement sciunit.Test.generate_prediction."""
@@ -204,8 +207,10 @@ class RheobaseTest(VmTest):
                     too_many_spikes = np.min(temp)
                 else:
                     too_many_spikes = 0
-
-                tolerance = float(self.params['tolerance'].rescale(pq.pA))
+                if 'tolerance' not in self.params.keys():
+                    tolerance = 0.0000001*pq.pA
+                else:
+                    tolerance = float(self.params['tolerance'].rescale(pq.pA))
                 if delta < tolerance or (str(supra.min()) == str(sub.max())):
                     break
 
