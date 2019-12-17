@@ -2,7 +2,7 @@
 import unittest
 import os
 import sys
-from sciunit.utils import NotebookTools#,import_all_modules
+#from sciunit.utils import NotebookTools#,import_all_modules
 import dask
 from dask import bag
 import matplotlib
@@ -32,10 +32,9 @@ from neuronunit.optimisation.optimization_management import OptMan
 from neuronunit import tests as nu_tests, neuroelectro
 from neuronunit.tests import passive, waveform, fi
 from neuronunit.optimisation import exhaustive_search
-from neuronunit.models.reduced import ReducedModel
 from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 from neuronunit.tests import dynamics
-from neuronunit.models.reduced import ReducedModel
+
 
 
 from neuronunit.optimisation import data_transport_container
@@ -75,11 +74,9 @@ def test_all_tests_pop(dtcpop, tests):
 class testHighLevelOptimisation(unittest.TestCase):
 
     def setUp(self):
-        electro_path1 = str(os.getcwd())+'/../tests/russell_tests.p'
-        assert os.path.isfile(electro_path1)
-        electro_path = neuronunit.NU_HOME / 'tests' / 'russell_tests.p'
+        electro_path = neuronunit.NU_HOME / 'tests' / 'multicellular_constraints.p'
         assert electro_path.is_file()
-        with open(electro_path1,'rb') as f:
+        with open(str(electro_path),'rb') as f:
             self.electro_tests = pickle.load(f)
 
         with open(str(electro_path),'rb') as f:
@@ -92,7 +89,7 @@ class testHighLevelOptimisation(unittest.TestCase):
         self.score_s = None
          #self.grid_points
 
-        
+
         self.MODEL_PARAMS = MODEL_PARAMS
         self.MODEL_PARAMS.pop(str('NEURON'),None)
 
@@ -123,6 +120,13 @@ class testHighLevelOptimisation(unittest.TestCase):
                     else:
                         values.score_type = scores.ZScore
 
+        tests = self.test_frame['Neocortex pyramidal cell layer 5-6']
+        tests['name'] = 'Neocortex pyramidal cell layer 5-6'
+
+        neo = TSD(tests=tests,use_rheobase_score=True)#, NGEN=10, \
+        neo_out = neo.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=NGEN, \
+                                backend=backend, MU=MU, protocol={'allen': False, 'elephant': True})
+        dtcpop4 = [p for p in neo_out[0]['pf'] ]
         tests= self.test_frame['Hippocampus CA1 pyramidal cell']
         tests['name'] = 'Hippocampus CA1 pyramidal cell'
         ca1 = TSD(tests = tests,use_rheobase_score=True)
@@ -151,13 +155,6 @@ class testHighLevelOptimisation(unittest.TestCase):
         basket_out = basket.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=NGEN, \
                                 backend=backend, MU=8, protocol={'allen': False, 'elephant': True})
         dtcpop3 = [p for p in basket_out[0]['pf'] ]
-        tests = self.test_frame['Neocortex pyramidal cell layer 5-6']
-        tests['name'] = 'Neocortex pyramidal cell layer 5-6'
-
-        neo = TSD(tests=tests,use_rheobase_score=True)#, NGEN=10, \
-        neo_out = neo.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=NGEN, \
-                                backend=backend, MU=MU, protocol={'allen': False, 'elephant': True})
-        dtcpop4 = [p for p in neo_out[0]['pf'] ]
 
         pdic = {str(backend):{'olf':dtcpop0,'purkine':dtcpop1,'ca1pyr':dtcpop2,'ca1basket':dtcpop3,'neo':dtcpop4}}
 
@@ -196,7 +193,7 @@ class testHighLevelOptimisation(unittest.TestCase):
         '''
         NGEN = 4
         MU = 4
-        
+
         backend = str('RAW')
         out = self.get_cells(backend,model_parameters,NGEN,MU)
         backend = str('ADEXP')

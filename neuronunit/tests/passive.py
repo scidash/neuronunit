@@ -134,7 +134,11 @@ class TestPulseTest(ProtocolToFeaturesTest):
         stop = i['duration']+i['delay'] - 1*pq.ms  # 1 ms before pulse end
         region = cls.get_segment(vm, start, stop)
         if len(set(r[0] for r in region.magnitude))>1 and np.std(region.magnitude)>0.0:
-            amplitude, tau, y0 = cls.exponential_fit(region, i['delay'])
+            try:
+                amplitude, tau, y0 = cls.exponential_fit(region, i['delay'])
+            except:
+                import pdb
+                pdb.set_trace()
         else:
             tau = None
         return tau
