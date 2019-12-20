@@ -75,7 +75,7 @@ import os
 import neuronunit
 anchor = neuronunit.__file__
 anchor = os.path.dirname(anchor)
-mypath = os.path.join(os.sep,anchor,'tests/russell_tests.p')
+mypath = os.path.join(os.sep,anchor,'tests/multicellular_constraints.p')
 try:
     import asciiplotlib as apl
 except:
@@ -152,8 +152,10 @@ def make_ga_DO(explore_edges, max_ngen, test, \
     else:
         free_params = [f for f in free_params if str(f) not in 'Iext' and str(f) not in str('dt')]
     for k in free_params:
+        #print(explore_edges[k])
         if not k in explore_edges.keys() and k not in str('Iext') and k not in str('dt'):
-            ss[k] = explore_edges[str(free_params)]
+
+            ss[k] = explore_edges[k]
         else:
             ss[k] = explore_edges[k]
     if type(MU) == type(None):
@@ -658,7 +660,6 @@ def dtc_to_rheo(dtc):
     if type(dtc.scores) is type(None):
         dtc.scores = {}
     model = dtc.dtc_to_model()
-    #model = mint_generic_model(dtc.backend)
     model.set_attrs(dtc.attrs)
     if hasattr(dtc,'tests'):
         if type(dtc.tests) is type({}) and str('RheobaseTest') in dtc.tests.keys():
@@ -834,10 +835,10 @@ def allocate_worst(xtests,dtc):
 def sigmoid(x):
     return math.exp(-np.logaddexp(0, -x))
 
+import copy
+
 def get_dtc_pop(contains_dtcpop,filtered_tests,model_parameters,backend = 'ADEXP'):
     from neuronunit.optimisation.optimisations import SciUnitOptimisation
-    #from neuronunit.optimisation.optimization_management import get_dtc_pop
-    import copy
 
     random.seed(64)
     boundary_dict = model_parameters.MODEL_PARAMS[backend]
@@ -1712,7 +1713,7 @@ def scale(X):
     return X, before
 
 def data_versus_optimal1(dtc_pop):
-    rts,complete_map = pickle.load(open('../tests/russell_tests.p','rb'))
+    rts,complete_map = pickle.load(open('../tests/multicellular_constraints.p','rb'))
     #dtcpop = [ p.dtc for p in ga_out['pf'] ]
     #pop = [ p for p in ga_out['pf'] ]
     # first a nice violin plot of the test data.
@@ -1762,7 +1763,7 @@ def data_versus_optimal1(dtc_pop):
             plt.scatter(opt_value,np.max(n),c='r',label='optima')
         plt.savefig(str('optima_')+str(cell)+str(t.name)+str('.png'))
 def data_versus_optimal(ga_out):
-    rts,complete_map = pickle.load(open('../tests/russell_tests.p','rb'))
+    rts,complete_map = pickle.load(open('../tests/multicellular_constraints.p','rb'))
 
     dtcpop = [ p.dtc for p in ga_out['pf'] ]
     pop = [ p for p in ga_out['pf'] ]
@@ -1954,7 +1955,7 @@ def get_dm(dtcpop,pop=None):
     if type(pop) is not type(None):
         dtcpop,pop = score_attr(dtcpop,pop)
     return dtcpop,pop
-
+'''
 def eval_subtest(name):
     for dtc in dtcpop:
         for t in dtc.tests:
@@ -1991,7 +1992,7 @@ def increase_current(dtc,t):
             return score
     score = t.compute_score(pred,t.observation)
     return score
-
+'''
 
 def bridge_passive(package):
     '''
@@ -2544,7 +2545,6 @@ class OptMan():
         # inform test error error_criterion
         # Outputs Neuron Unit evaluation scores over error criterion
         tests = dtc.tests
-
         if not hasattr(dtc,'scores') or dtc.scores is None:
             dtc.scores = None
             dtc.scores = {}
@@ -2568,14 +2568,12 @@ class OptMan():
                 dtc.scores[key] = np.inf
                 t.params = dtc.protocols[k]
                 model = dtc.dtc_to_model()
+                score = 1.0
                 if t.passive is False:
-                    pred = t.generate_prediction(model)
-                    if "RheobaseTest" in  t.name:
-                        pass
-
-                    score = simple_error(t.observation,pred,t)
+                    score = t.judge(model)
                 if t.passive is True:
-                    score, dtc, pred = bridge_passive((t, dtc))
+                    score = t.judge(model)
+                score = 1.0 - score.norm_score
                 dtc.scores[str(t.name)] = score
         return dtc
 

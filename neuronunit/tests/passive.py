@@ -5,7 +5,8 @@ from scipy.optimize import curve_fit
 from sciunit.tests import ProtocolToFeaturesTest
 import gc
 from neuronunit import neuroelectro
-
+import numpy as np
+from neo import AnalogSignal
 DURATION = 500.0*pq.ms
 DELAY = 200.0*pq.m
 try:
@@ -135,10 +136,10 @@ class TestPulseTest(ProtocolToFeaturesTest):
         region = cls.get_segment(vm, start, stop)
         if len(set(r[0] for r in region.magnitude))>1 and np.std(region.magnitude)>0.0:
             try:
-                amplitude, tau, y0 = cls.exponential_fit(region, i['delay'])
+                _, tau, _ = cls.exponential_fit(region, i['delay'])
             except:
-                import pdb
-                pdb.set_trace()
+                region = AnalogSignal([j*1000.0 for j in region],sampling_period=region.sampling_period,units=region.units)
+                _, tau, _ = cls.exponential_fit(region, i['delay'])
         else:
             tau = None
         return tau
@@ -219,8 +220,8 @@ class InputResistanceTest(TestPulseTest):
         if features is not None:
             i, vm = features
             r_in = self.__class__.get_rin(vm, i)
-            print("r_in = r_in.simplified")
-            print("Put prediction in a form that compute_score() can use.")
+            #print("r_in = r_in.simplified")
+            #print("Put prediction in a form that compute_score() can use.")
             features = {'value': r_in}
         return features
     """
