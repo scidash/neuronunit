@@ -127,12 +127,9 @@ class testHighLevelOptimisation(unittest.TestCase):
         neo_out = neo.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=NGEN, \
                                 backend=backend, MU=MU, protocol={'allen': False, 'elephant': True})
         dtcpop4 = [p for p in neo_out[0]['pf'] ]
-        tests= self.test_frame['Hippocampus CA1 pyramidal cell']
-        tests['name'] = 'Hippocampus CA1 pyramidal cell'
-        ca1 = TSD(tests = tests,use_rheobase_score=True)
-        ca1_out = ca1.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=NGEN, \
-                               backend=backend, MU=MU, protocol={'allen': False, 'elephant': True})
-        dtcpop2 = [p for p in ca1_out[0]['pf'] ]
+        print(self.test_frame.keys())
+        import pdb
+        pdb.set_trace()
 
         tests = self.test_frame['Cerebellum Purkinje cell']
         tests['name'] = 'Cerebellum Purkinje cell'
@@ -140,9 +137,16 @@ class testHighLevelOptimisation(unittest.TestCase):
         cpc_out = cpc.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=NGEN, \
                                 backend=backend, MU=MU, protocol={'allen': False, 'elephant': True})
         dtcpop1 = [p for p in cpc_out[0]['pf'] ]
-        tests = self.test_frame['Olfactory bulb (main) mitral cell']
+        '''
+        tests= self.test_frame['Hippocampus CA1 pyramidal cell']
+        tests['name'] = 'Hippocampus CA1 pyramidal cell'
+        ca1 = TSD(tests = tests,use_rheobase_score=True)
+        ca1_out = ca1.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=NGEN, \
+                               backend=backend, MU=MU, protocol={'allen': False, 'elephant': True})
+        dtcpop2 = [p for p in ca1_out[0]['pf'] ]
         tests['name'] = 'Olfactory bulb (main) mitral cell'
 
+        tests = self.test_frame['Olfactory bulb (main) mitral cell']
         omc = TSD(tests=tests,use_rheobase_score=False)
         om_out = omc.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=NGEN, \
                                 backend=backend, MU=MU, protocol={'allen': False, 'elephant': True})
@@ -155,7 +159,7 @@ class testHighLevelOptimisation(unittest.TestCase):
         basket_out = basket.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=NGEN, \
                                 backend=backend, MU=8, protocol={'allen': False, 'elephant': True})
         dtcpop3 = [p for p in basket_out[0]['pf'] ]
-
+	'''
         pdic = {str(backend):{'olf':dtcpop0,'purkine':dtcpop1,'ca1pyr':dtcpop2,'ca1basket':dtcpop3,'neo':dtcpop4}}
 
         pickle.dump(pdic,open(str(backend)+str('all_data_tests.p'),'wb'))
