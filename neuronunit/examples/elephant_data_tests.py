@@ -47,6 +47,7 @@ from neuronunit import aibs
 from neuronunit.optimisation.optimisations import run_ga
 import pdb
 from neuronunit.optimisation import model_parameters
+from neuronunit.optimisation.optimization_management import inject_and_plot
 
 
 def test_all_tests_pop(dtcpop, tests):
@@ -127,13 +128,16 @@ class testHighLevelOptimisation(unittest.TestCase):
         neo_out = neo.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=NGEN, \
                                 backend=backend, MU=MU, protocol={'allen': False, 'elephant': True})
         dtcpop4 = [p for p in neo_out[0]['pf'] ]
-        print(self.test_frame.keys())
-        import pdb
-        pdb.set_trace()
+
+        dtc,_,_= inject_and_plot(neo_out[0]['pf'])
+        print(dtc.vm)
 
         tests = self.test_frame['Cerebellum Purkinje cell']
         tests['name'] = 'Cerebellum Purkinje cell'
         cpc = TSD(tests= tests,use_rheobase_score=False)
+        for k,v in cpc.items()
+           print(k,v.observation)
+
         cpc_out = cpc.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=NGEN, \
                                 backend=backend, MU=MU, protocol={'allen': False, 'elephant': True})
         dtcpop1 = [p for p in cpc_out[0]['pf'] ]
@@ -195,16 +199,16 @@ class testHighLevelOptimisation(unittest.TestCase):
         '''
         forward euler, and adaptive exponential
         '''
-        NGEN = 4
-        MU = 4
+        NGEN = 3
+        MU = 3
 
         backend = str('RAW')
         out = self.get_cells(backend,model_parameters,NGEN,MU)
         backend = str('ADEXP')
         out = self.get_cells(backend,model_parameters,NGEN,MU)
 
-        backend = str('BHH')
-        out = self.get_cells(backend,model_parameters,NGEN,MU)
         backend = str('HH')
+        out = self.get_cells(backend,model_parameters,NGEN,MU)
+        backend = str('BHH')
         out = self.get_cells(backend,model_parameters,NGEN,MU)
         return out
