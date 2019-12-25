@@ -115,7 +115,7 @@ for key,v in rts.items():
     helper_tests = [value for value in v.values() ]
     break
 from neuronunit.plottools import elaborate_plots
-
+VERBOSE = False
 def timer(func):
     def inner(*args, **kwargs):
         t1 = time.time()
@@ -123,8 +123,8 @@ def timer(func):
         t2 = time.time()
         logger = logging.getLogger('__main__')
         logging.basicConfig(level=logging.DEBUG)
-
-        logging.info('Runtime taken to evaluate function {1} {0} seconds'.format(t2-t1,func))
+        if VERBOSE:
+            logging.info('Runtime taken to evaluate function {1} {0} seconds'.format(t2-t1,func))
         return f
     return inner
 class WSListIndividual(list):
@@ -218,7 +218,7 @@ class TSD(dict):
             ga_out['pf'], ga_out['dtc_pop'] = get_dm(ga_out['dtc_pop'],pop=ga_out['pf'])
         else:
             ga_out['dtc_pop'] = [ i.dtc for i in ga_out['pf'] ]
-            ga_out['pf'], ga_out['dtc_pop'] = get_dm(ga_out['dtc_pop'],pop=ga_out['pf'])
+            ga_out['pf'], ga_out['dtc_pop'] = get_dm([p.dtc for p in ga_out['pf']],pop=ga_out['pf'])
 
         ga_out['dm'] = ga_out['dtc_pop']
         self.backend = backend
@@ -660,7 +660,7 @@ def dtc_to_rheo(dtc):
     if type(dtc.scores) is type(None):
         dtc.scores = {}
     model = dtc.dtc_to_model()
-    model.set_attrs(dtc.attrs)
+
     if hasattr(dtc,'tests'):
         if type(dtc.tests) is type({}) and str('RheobaseTest') in dtc.tests.keys():
             rtest = dtc.tests['RheobaseTest']
@@ -670,11 +670,16 @@ def dtc_to_rheo(dtc):
             rtest = get_rtest(dtc)
     else:
         rtest = get_rtest(dtc)
+    #print(rtest, 'rtest is none?')
 
     if rtest is not None:
         if isinstance(rtest,Iterable):
             rtest = rtest[0]
-        dtc.rheobase = rtest.generate_prediction(model)
+        dtc.rheobase = rtest.generate_prediction(model)['value']
+        #import pdb
+        #pdb.set_trace()
+        return dtc
+
         if dtc.rheobase is not None:
             if type(dtc.rheobase['value']) is not type(None):
                 if not hasattr(dtc,'prediction'):
@@ -682,11 +687,12 @@ def dtc_to_rheo(dtc):
                 dtc.prediction[str(rtest.name)] = dtc.rheobase
                 dtc.rheobase = dtc.rheobase['value']
 
-                obs = rtest.observation
-                rtest.prediction = None
+                #obs = rtest.observation
+                #rtest.prediction = None
                 rtest.prediction = dtc.rheobase
-
-                score = rtest.compute_score(obs,dtc.rheobase)
+                return dtc
+                """
+                score = rtest.judge(model)
                 if type(score.norm_score) is not type(None):
                     dtc.scores[rtest.name] = 1.0 - float(score.norm_score)
                 else:
@@ -697,7 +703,7 @@ def dtc_to_rheo(dtc):
         else:
             dtc.rheobase = None
             dtc.scores[rtest.name] = 1.0
-
+            """
     else:
         # otherwise, if no observation is available, or if rheobase test score is not desired.
         # Just generate rheobase predictions, giving the models the freedom of rheobase
@@ -714,6 +720,7 @@ def inject_and_plot_model(attrs,backend):
     # get an object of class ReducedModel with known attributes and known rheobase current injection value.
     model = pre_model.dtc_to_model()
     uc = {'amplitude':model.rheobase,'duration':DURATION,'delay':DELAY}
+    print(uc)
     model.inject_square_current(uc)
     vm = model.get_membrane_potential()
     plt.plot(vm.times,vm.magnitude)
@@ -2113,7 +2120,7 @@ class OptMan():
         DO.setup_deap()
         gene = DO.set_pop(boot_new_random=1)
 
-        dtc_ = self.update_dtc_pop(gene,self.td)
+        dtc_ = self.update_dtc_pop(gene)#,self.td)
         #dtc_ = pop2dtc(gene,dtc_)
         return gene[0], dtc_[0]
 
@@ -2959,7 +2966,7 @@ class OptMan():
 
         return pop, dtcpop
     @timer
-    def obtain_rheobase(self,pop, td, tests):
+    def obtain_rheobase(self,pop,tests):#, td, tests):
         '''
         Calculate rheobase for a given population pop
         Ordered parameter dictionary td
@@ -2970,7 +2977,9 @@ class OptMan():
         #    d.tests = tests
         if 'RAW' in self.backend  or 'HH' in self.backend or str('ADEXP') in self.backend:
             dtcpop = list(map(dtc_to_rheo,dtcpop))
+
             dtcpop = list(map(self.format_test,dtcpop))
+            dtcpop = [d for d in dtcpop if d is not None]
         else:
             dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
             dtcpop = list(dtcbag.map(dtc_to_rheo))
@@ -3052,7 +3061,7 @@ class OptMan():
         return pop, dtcpop
     def test_runner(self,pop,td,tests):
         if self.protocol['elephant']:
-            pop_, dtcpop = self.obtain_rheobase(pop, td, tests)
+            pop_, dtcpop = self.obtain_rheobase(pop, tests)
             for ind,dtc in zip(pop,dtcpop):
                 dtc.error_length = self.error_length
             if not hasattr(self,'exhaustive'):
