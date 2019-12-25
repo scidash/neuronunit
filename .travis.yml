@@ -20,14 +20,10 @@ install:
   - pip install --upgrade pip
   - pip install coveralls
   - pip install git+https://github.com/fun-zoological-computing/AllenSDK
-  - pip install pyneuroml
-  - pip install git+https://github.com/NeuralEnsemble/libNeuroML 
   - pip install git+https://github.com/scidash/sciunit@dev
   - pip install dask distributed brian2 numba
   - pip install --upgrade beautifulsoup4
   - pip install neurodynex
-  - pip install pyneuroml
-  - pip install sklearn
   - pip install seaborn
   - pip install -r requirements.txt
   - pip install .
@@ -35,5 +31,7 @@ install:
 script:
   - cd neuronunit
   - python -c "import neuronunit"
+  - python backend_test.py
+  - python use_edt.py
 after_success:
   - coveralls
