@@ -16,6 +16,7 @@ import quantities as qt
 from quantities import mV, ms, s
 from sciunit.utils import redirect_stdout
 from elephant.spike_train_generation import threshold_detection
+'''
 try:
     import asciiplotlib as apl
     fig = apl.figure()
@@ -26,6 +27,8 @@ try:
 except:
     ascii_plot = False
 SLOW_ZOOM = True
+'''
+ascii_plot = False
 
 @jit
 def Id(t,delay,duration,tmax,amplitude):
@@ -83,9 +86,19 @@ def dALLdt(X, t, attrs):
     |  :param t:
     |  :return: calculate membrane potential & activation variables
     """
-    #defaults = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3, \
-    #         'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -77.0, 'E_Na' : 50.0, 'vr':-65.0 }
-
+    defaults = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3, \
+             'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -77.0, 'E_Na' : 50.0, 'vr':-65.0 }
+    #print("defaults",defaults)
+    #print("actual:",attrs)
+    delay,duration,T,amplitude = copy.copy(attrs['I'])
+    for k,v in attrs.items():
+        if k in defaults.keys():
+            pass
+        pass
+            #print('difference in k: ',k,': ',defaults[k]-v)
+            #attrs[k] = defaults[k]
+    #    return
+    #attrs = defaults
     V, m, h, n = X
 
     C_m = attrs['C_m']
@@ -122,9 +135,10 @@ def get_vm(attrs):
     # State (Vm, n, m, h)
     # saturation value
     #vr = attrs['vr']
-    m = 0.05*10
-    h = 0.60*10
-    n = 0.32*10
+    m = 0.05#*1000.0
+    h = 0.60#*1000.0
+    n = 0.32#*1000.0
+
     Y = [attrs['vr'], m, h, n]
     # Solve ODE system
     T = attrs['T']
@@ -140,7 +154,7 @@ def get_vm(attrs):
         t = [float(f) for f in vm.times]
         v = [float(f) for f in vm.magnitude]
         fig = apl.figure()
-        fig.plot(t, v, label=str('spikes: '), width=100, height=20)
+        fig.plot(t, v, label=str('hhraw: ')+str(vm.units), width=100, height=20)
         fig.show()
         gc.collect()
         fig = None
@@ -161,6 +175,7 @@ class HHBackend(Backend):
         self.attrs = attrs
 
         self.temp_attrs = None
+        self.name = str(backend)
 
         if type(attrs) is not type(None):
             self.set_attrs(**attrs)
@@ -192,8 +207,8 @@ class HHBackend(Backend):
         return self.vM
 
     def get_spike_count(self):
-        thresh = threshold_detection(self.vM,10.0*pq.mV)
-        print(len(thresh),'spikes')
+        thresh = threshold_detection(self.vM,0.0*pq.mV)
+        print(len(thresh),' spikes')
         return len(thresh)
 
     def set_attrs(self, **attrs):
