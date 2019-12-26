@@ -130,18 +130,18 @@ class testHighLevelOptimisation(unittest.TestCase):
         dtcpop4 = [p for p in neo_out[0]['pf'] ]
 
         dtc,_,_= inject_and_plot(neo_out[0]['pf'])
+        '''
         print(dtc.vm)
 
         tests = self.test_frame['Cerebellum Purkinje cell']
         tests['name'] = 'Cerebellum Purkinje cell'
         cpc = TSD(tests= tests,use_rheobase_score=False)
-        for k,v in cpc.items()
-           print(k,v.observation)
+        for k,v in cpc.items(): print(k,v.observation)
 
         cpc_out = cpc.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=NGEN, \
                                 backend=backend, MU=MU, protocol={'allen': False, 'elephant': True})
         dtcpop1 = [p for p in cpc_out[0]['pf'] ]
-        '''
+        
         tests= self.test_frame['Hippocampus CA1 pyramidal cell']
         tests['name'] = 'Hippocampus CA1 pyramidal cell'
         ca1 = TSD(tests = tests,use_rheobase_score=True)
