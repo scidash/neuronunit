@@ -21,14 +21,20 @@ from neuronunit.optimisation import optimization_management as om
 #from neuronunit.optimisation.optimization_management import WSListIndividual
 class WSListIndividual(list):
     """Individual consisting of list with weighted sum field"""
+    def set_fitness(self,obj_size):
+        self.fitness = WeightedSumFitness(obj_size=obj_size)
     def __init__(self, *args, **kwargs):
         """Constructor"""
         self.rheobase = None
         self.dtc = None
-        super(WSListIndividual, self).__init__()
-        self.extend(args)
+        super(WSListIndividual, self).__init__(args)#args)#, **kwargs)
+        #super(WSListIndividual, self).__init__()
+        #self.extend(args)
         self.obj_size = len(args)
-        self.fitness = (1.0 for i in range(0,self.obj_size))
+        #self.set_fitness()
+        #self.fitness = tuple(1.0 for i in range(0,self.obj_size))
+        self.set_fitness(obj_size=self.obj_size)
+
 
 logger = logging.getLogger('__main__')
 try:
@@ -38,7 +44,6 @@ except:
 
 def _evaluate_invalid_fitness(toolbox, population):
     '''Evaluate the individuals with an invalid fitness
-
     Returns the count of individuals with invalid fitness
     '''
     invalid_ind = [ind for ind in population if not ind.fitness.valid]
@@ -49,7 +54,7 @@ def _evaluate_invalid_fitness(toolbox, population):
         ind.fitness.values = fitnesses[j]
         #ind.dtc = None
     return invalid_pop
-
+'''
 def strip_object(p):
     state = super(type(p)).state
     p.unpicklable = []
@@ -60,62 +65,53 @@ def purify2(population):
     pop2 = WSListIndividual()
     for ind in population:
         for i,j in enumerate(ind):
-            ind[i] = float(j)
+            try:
+                ind[i] = float(j)
+            except:
+                import pdb
+                pdb.set_trace()
+
         ind.dtc = ind.dtc
+        try:
+            ind.dtc.tests.DO = None
+        except:
+            ind.dtc.tests = None
         assert hasattr(ind,'dtc')
-        #ind.rheobase = ind.rheoase
 
         pop2.append(ind)
     return pop2
-
-def _update_history_and_hof(halloffame,pf, history, population,td,mu):
+'''
+def _update_history_and_hof(halloffame,pf, history, population,GEN,MU):
     '''Update the hall of fame with the generated individuals
 
     Note: History and Hall-of-Fame behave like dictionaries
     '''
-    temp = copy.copy(population)
-
+    print('gen is: ',GEN)
+    temp = copy.copy([p for p in population if hasattr(p,'dtc')])
     if halloffame is not None:
-        try:
-
-            halloffame.update(temp)
-        except:
-            temp = purify(temp)
-            halloffame.update(temp)
-
+        halloffame.update(temp)
     if history is not None:
-        try:
-            history.update(temp)
-        except:
-            temp = purify(temp)
-            history.update(temp)
+        history.update(temp)
     if pf is not None:
-        try:
-            pf.update(temp[0:mu])
-        except:
-            temp = purify2(temp)
-            temp = purify(temp)
-            try:
-                pf.update(temp[0:mu])
-            except:
-                print(len(temp))
-        for ind in pf:
-            assert hasattr(ind,'dtc')
+        if GEN ==0:
+            pf = deap.tools.ParetoFront(MU)
+        #print(len(pf),len(temp))
+        #print([p.fitness.values for p in population])
+        pf.update(temp)
+
+
     return (halloffame,pf,history)
 
 
 def _record_stats(stats, logbook, gen, population, invalid_count):
     '''Update the statistics with the new population'''
-    stats_fit = tools.Statistics(key=lambda ind: ind.fitness.sum)
-    everything = tools.Statistics(key=lambda ind: ind.fitness.values)
-    mstats = tools.MultiStatistics(fitness=stats_fit, every=everything)#,stats_size=stats_size)
-
-    mstats.register("avg", np.mean, axis=0)
-    mstats.register("std", np.std, axis=0)
-    mstats.register("min", np.min, axis=0)
-    mstats.register("max", np.max, axis=0)
-
-    record = mstats.compile(copy.copy(population)) if mstats is not None else {}
+    stats = tools.Statistics(key=lambda ind: ind.fitness.values)
+    import numpy
+    stats.register("avg", numpy.mean)
+    stats.register("std", numpy.std)
+    stats.register("min", numpy.min)
+    stats.register("max", numpy.max)
+    record = stats.compile(copy.copy(population)) if stats is not None else {}
     logbook.record(gen=gen, nevals=invalid_count, **record)
 
 def gene_bad(offspring):
@@ -124,6 +120,7 @@ def gene_bad(offspring):
         if np.any(np.isnan(o)) or np.any(np.isinf(o)):
             gene_bad = True
     return gene_bad
+"""
 def purify(parents):
     '''hygeinise
     strip off extra objects that might contain modules
@@ -139,14 +136,14 @@ def purify(parents):
             ind = copy.copy(parents[0])
             for x,y in enumerate(ind):
                 ind[x] = copy.copy(imp[i][x])
-                """
+                '''
                 if not hasattr(imp,'fitness'):
                     ind.fitness = (1 for j in range(0,len(parents[0].fitness)))
                 else:
-                    
+
                     ind.fitness = None
                     ind.fitness = imp.fitness
-                """
+                '''
                 ind.rheobase = imp[i].rheobase
                 ind.dtc = imp[i].dtc
 
@@ -156,6 +153,8 @@ def purify(parents):
             parents_.append(WSListIndividual(off_,obj_size=len(off_)))
             parents_[-1].fitness = off_.fitness
             parents_[-1].rheobase = off_.rheobase
+
+
     else:
         parents_ = []
         for i,off_ in enumerate(parents):
@@ -164,10 +163,12 @@ def purify(parents):
                 parents_[-1].append(float(j))
                 parents_[-1].fitness = off_.fitness
                 parents_[-1].rheobae = off_.rheobase
-    return parents_
 
+    return parents_, parents
+"""
+'''
 def _get_offspring(parents, toolbox, cxpb, mutpb):
-    '''return the offsprint, use toolbox.variate if possible'''
+    return the offsprint, use toolbox.variate if possible
     if hasattr(toolbox, 'variate'):
 
         try:
@@ -216,20 +217,23 @@ def _get_elite(halloffame, nelite):
         return [halloffame[idx] for idx in normsorted_idx[:nelite]]
     else:
         return list()
-
+'''
 def prune_constants(parents,num_constants):
     for i in range(0,num_constants):
         for p in parents:
             del p[-1]
     return parents
-
+import numpy
+from deap import algorithms
+CXPB = 1.0
+MUTPB = 1.0
 def eaAlphaMuPlusLambdaCheckpoint(
-        population,
+        pop,
         toolbox,
-        mu,
+        MU,
         cxpb,
         mutpb,
-        ngen,
+        NGEN,
         stats=None,
         hof = None,
         pf = None,
@@ -244,7 +248,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
     if continue_cp:
         # A file name has been given, then load the data from the file
         cp = pickle.load(open(cp_filename, "r"))
-        population = cp["population"]
+        pop = cp["population"]
         parents = cp["parents"]
         start_gen = cp["generation"]
         hof = cp["halloffame"]
@@ -253,20 +257,87 @@ def eaAlphaMuPlusLambdaCheckpoint(
         random.setstate(cp["rndstate"])
 
     else:
-        start_gen = 1
-        gen_vs_pop.append(population)
-        logbook = deap.tools.Logbook()
-        logbook.header = ['gen', 'nevals'] + (stats.fields if stats else [])
         history = deap.tools.History()
-        toolbox.register("select", tools.selNSGA2)
 
-        parents = _evaluate_invalid_fitness(toolbox, population)
-        invalid_count = len(parents)
-        gen_vs_hof = []
-        hof, pf,history = _update_history_and_hof(hof, pf, history, parents, td,mu)
+        ref_points = tools.uniform_reference_points(len(pop[0]), 12)
+        toolbox.register("select", tools.selNSGA3, ref_points=ref_points)
+        random.seed()
 
-        gen_vs_hof.append(hof)
-        _record_stats(stats, logbook, start_gen, parents, invalid_count)
+        stats.register("avg", numpy.mean, axis=0)
+        stats.register("std", numpy.std, axis=0)
+        stats.register("min", numpy.min, axis=0)
+        stats.register("max", numpy.max, axis=0)
+
+        logbook = tools.Logbook()
+        logbook.header = "gen", "evals", "std", "min", "avg", "max"
+        invalid_ind = [ind for ind in pop if not ind.fitness.valid]
+        invalid_ind,fitnesses = toolbox.evaluate(invalid_ind)
+        print([ind.dtc for ind in invalid_ind if hasattr(ind,'dtc')])
+
+        for ind, fit in zip(invalid_ind, fitnesses):
+            ind.fitness.values = fit
+        print([ind.fitness.values for ind in invalid_ind])
+
+        # Compile statistics about the population
+        pop = [p for p in pop if len(p.fitness.values) ]
+        #foffspring = [p for p in offspring if len(p.fitness.values) ]
+
+        record = stats.compile(pop)
+        logbook.record(gen=0, evals=len(invalid_ind), **record)
+        hof, pf,history = _update_history_and_hof(hof, pf, history, pop,0,MU)
+
+        print(logbook.stream)
+
+        # Begin the generational process
+        for gen in range(1, NGEN):
+            offspring = algorithms.varAnd(pop, toolbox, CXPB, MUTPB)
+
+            # Evaluate the individuals with an invalid fitness
+            invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+            invalid_ind,fitnesses = toolbox.evaluate(invalid_ind)
+
+            #fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+
+            for ind, fit in zip(invalid_ind, fitnesses):
+                ind.fitness.values = fit
+            hof, pf,history = _update_history_and_hof(hof, pf, history, invalid_ind,gen,MU)
+
+            # Select the next generation population from parents and offspring
+            pop = [p for p in pop if len(p.fitness.values) ]
+            offspring = [p for p in offspring if len(p.fitness.values) ]
+            pool = pop
+            pool.extend(offspring)
+            #if len(offspring)==MU and len(pop)==MU:
+            if len(pool)>=MU:
+               pop = toolbox.select(pop + offspring, MU)
+            else:
+               import pdb
+               pdb.set_trace()
+            # Compile statistics about the new population
+            record = stats.compile(pop)
+            logbook.record(gen=gen, evals=len(invalid_ind), **record)
+            pop = [p for p in pop if len(p.fitness.values) ]
+
+            print(logbook.stream)
+    return pop, hof, pf, logbook, history, gen_vs_pop
+
+    #return pop, logbook
+    '''
+
+    start_gen = 1
+    gen_vs_pop.append(population)
+    logbook = deap.tools.Logbook()
+    logbook.header = ['gen', 'nevals'] + (stats.fields if stats else [])
+    history = deap.tools.History()
+    toolbox.register("select", tools.selNSGA2)
+
+    parents = _evaluate_invalid_fitness(toolbox, population)
+    invalid_count = len(parents)
+    gen_vs_hof = []
+    hof, pf,history = _update_history_and_hof(hof, pf, history, parents, td,mu)
+
+    gen_vs_hof.append(hof)
+    _record_stats(stats, logbook, start_gen, parents, invalid_count)
     stag_check1 = []
     fronts = []
 
@@ -333,3 +404,4 @@ def eaAlphaMuPlusLambdaCheckpoint(
             logger.debug('Wrote checkpoint to %s', cp_filename)
 
     return population, hof, pf, logbook, history, gen_vs_pop
+    '''

@@ -21,7 +21,7 @@ SILENT = True
 if SILENT:
     warnings.filterwarnings("ignore")
 
-PARALLEL_CONFIDENT = False
+PARALLEL_CONFIDENT = True
 # Rationale Many methods inside the file optimization_management.py cannot be easily monkey patched using
 #```pdb.set_trace()``` unless at the top of the file,
 # the parallel_confident static variable is declared false
@@ -114,7 +114,6 @@ df = pd.DataFrame(rts)
 for key,v in rts.items():
     helper_tests = [value for value in v.values() ]
     break
-from neuronunit.plottools import elaborate_plots
 VERBOSE = False
 def timer(func):
     def inner(*args, **kwargs):
@@ -127,12 +126,23 @@ def timer(func):
             logging.info('Runtime taken to evaluate function {1} {0} seconds'.format(t2-t1,func))
         return f
     return inner
+from neuronunit.optimisation.optimisations import WeightedSumFitness
+
 class WSListIndividual(list):
     """Individual consisting of list with weighted sum field"""
+    def set_fitness(self,obj_size):
+        self.fitness = WeightedSumFitness(obj_size=obj_size)
     def __init__(self, *args, **kwargs):
         """Constructor"""
         self.rheobase = None
-        super(WSListIndividual, self).__init__(*args, **kwargs)
+        if 'dtc' in kwargs:
+           self.dtc = kwargs['dtc']
+        else:
+           self.dtc = None
+        super(WSListIndividual, self).__init__(args)#args)#, **kwargs)
+        self.obj_size = len(args)
+        #self.fitness = tuple(1.0 for i in range(0,self.obj_size))
+        self.set_fitness(obj_size=self.obj_size)
 
 
 def make_ga_DO(explore_edges, max_ngen, test, \
@@ -215,24 +225,26 @@ class TSD(dict):
             ga_out['dtc_pop'] = dtc_pop
         if type(ga_out['pf'][0].dtc) is type(None):
             _,ga_out['dtc_pop'] = self.DO.OM.test_runner(copy.copy(ga_out['pf']),self.DO.OM.td,self.DO.OM.tests)
-            ga_out['pf'], ga_out['dtc_pop'] = get_dm(ga_out['dtc_pop'],pop=ga_out['pf'])
+            pop,dtcpop = get_dm(ga_out['dtc_pop'],pop=ga_out['pf'])
         else:
-            ga_out['dtc_pop'] = [ i.dtc for i in ga_out['pf'] ]
-            ga_out['pf'], ga_out['dtc_pop'] = get_dm([p.dtc for p in ga_out['pf']],pop=ga_out['pf'])
-
-        ga_out['dm'] = ga_out['dtc_pop']
+            local = [p.dtc for p in ga_out['pf']]
+            #ga_out['dtc_pop'] = [ i.dtc for i in ga_out['pf'] ]
+            pop,dtcpop = get_dm(local,pop=ga_out['pf'])
+            #p in ga_out['pf']],pop=ga_out['pf'])
+        print(dtcpop[0].dtc.dm_test_features)
         self.backend = backend
-
+        '''
         if str(self.cell_name) not in str('simulated data'):
-            pass
+            #pass
             # is this a data driven test? if so its worth plotting results
-            #ga_out = self.elaborate_plots(self,ga_out)
-        from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
-
+            ga_out = self.elaborate_plots(self,ga_out)
+        '''
         ##
         # TODO populate a score table pass it back to DO.OM
-
-        return ga_out, self.DO
+        from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
+        #df = pd.DataFrame([ga_out['pf'][0].dtc.scores])
+        SM = ScoreMatrix([v for v in self.values()], [ind.dtc.dtc_to_model() for ind in ga_out['pf']])
+        return ga_out, self.DO, SM
 '''
 class TSD(dict):
     def __init__(self,tests={},use_rheobase_score=False):
@@ -664,20 +676,17 @@ def dtc_to_rheo(dtc):
     if hasattr(dtc,'tests'):
         if type(dtc.tests) is type({}) and str('RheobaseTest') in dtc.tests.keys():
             rtest = dtc.tests['RheobaseTest']
-            if str('BHH') in dtc.backend or str('ADEXP') in dtc.backend or str("GLIF") in dtc.backend:
+            if str('JHH') in dtc.backend or str('BHH') in dtc.backend or str('ADEXP') in dtc.backend or str("GLIF") in dtc.backend:
                  rtest = RheobaseTestP(dtc.tests['RheobaseTest'].observation)
         else:
             rtest = get_rtest(dtc)
     else:
         rtest = get_rtest(dtc)
-    #print(rtest, 'rtest is none?')
 
     if rtest is not None:
         if isinstance(rtest,Iterable):
             rtest = rtest[0]
         dtc.rheobase = rtest.generate_prediction(model)['value']
-        #import pdb
-        #pdb.set_trace()
         return dtc
 
         if dtc.rheobase is not None:
@@ -1664,25 +1673,24 @@ def evaluate_allen(dtc,regularization=True):
             fitness[int_] = 1.0
         else:
             fitness[int_] = dtc.ascores[str(t)]
-    print(fitness)
     return tuple(fitness,)
 
-def evaluate(dtc,regularization=False,elastic_net=True):
+def evaluate(dtc,regularization=False,elastic_net=False):
     # assign worst case errors, and then over write them with situation informed errors as they become available.
-    print(dtc.scores)
-    fitness = [ 1.0 for i in range(0,len(dtc.scores)) ]
 
     if not hasattr(dtc,str('scores')):
         return fitness
-
-    for int_,t in enumerate(dtc.scores.keys()):
+    fitness = []
+    for int_,t in enumerate(dtc.errors.keys()):
+        fitness.append(float(dtc.errors[str(t)]))
         if elastic_net:
-           fitness0 = [ np.abs(t)**(2.0) for int_,t in enumerate(dtc.scores.values())]
-           fitness1 = [ np.abs(t) for int_,t in enumerate(dtc.scores.values())]
-           fitness = [ (fitness1[i]+j)/2.0 for i,j in enumerate(fitness0)]
+           fitness0 = [ np.abs(t)**(2.0) for int_,t in enumerate(dtc.errors.values())]
+           fitness1 = [ np.abs(t) for int_,t in enumerate(dtc.errors.values())]
+           fitness = [ float(fitness1[i]+j)/2.0 for i,j in enumerate(fitness0)]
         else:
-           fitness.append(float(dtc.scores[str(t)]))
-    print(fitness)
+           fitness.append(float(dtc.errors[str(t)]))
+    #fitness = tuple(f for f in fitness)
+
     return tuple(fitness,)
 
 def get_trans_list(param_dict):
@@ -1821,59 +1829,6 @@ def data_versus_optimal(ga_out):
         except:
             plt.scatter(opt_value,np.max(n),c='r',label='optima')
         plt.savefig(str('optima_')+str(cell)+str(t.name)+str('.png'))
-
-def ridge_regression(X_train, Y_train, X_test, Y_test, model_alpha):
-    clf = linear_model.Ridge(model_alpha)
-    clf.fit(X_train, Y_train)
-    predictions = clf.predict(X_test)
-    loss = np.sum((predictions - Y_test)**2)
-    return loss
-
-def lasso_regression(X_train, Y_train, X_test, Y_test, model_alpha):
-    clf = linear_model.Lasso(model_alpha)
-    clf.fit(X_train, Y_train)
-    predictions = clf.predict(X_test)
-    loss = np.sum((predictions - Y_test)**2)
-    return loss
-# https://stackoverflow.com/questions/35714772/sklearn-lasso-regression-is-orders-of-magnitude-worse-than-ridge-regression
-
-def stochastic_gradient_descent(ga_out):
-    Y = [ np.sum(v.fitness.values) for k,v in ga_out['history'].genealogy_history.items() ]
-    X = [ list(v.dtc.attrs.values()) for k,v in ga_out['history'].genealogy_history.items() ]
-    #ordered_attrs = set(ind.dtc.attrs.keys() for ind in ga_out['history'].genealogy_history[1])
-    ordered_attrs = list(ga_out['history'].genealogy_history[1].dtc.attrs.keys())
-
-    le = preprocessing.LabelEncoder()
-    le.fit(ordered_attrs)
-    le.classes_
-
-    X = np.matrix(X)
-    X,before = scale(X)
-    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size = 0.3)
-    sgd = SGDClassifier(penalty='l2', max_iter=1000, learning_rate='constant' , eta0=0.001  )
-
-    sgd = SGDRegressor(penalty='l2', max_iter=1000, learning_rate='constant' , eta0=0.001  )
-    sklearn.neural_network.MLPRegressor
-    dnn = MLPClassifier(hidden_layer_sizes=(len(X),len(Y) ), activation='relu',
-        solver='lbfgs', alpha=0.0001, batch_size='auto', learning_rate='constant',
-        learning_rate_init=0.001, power_t=0.5, max_iter=200, shuffle=True,
-        random_state=None, tol=0.0001, verbose=True, warm_start=False,
-        momentum=0.9, nesterovs_momentum=True, early_stopping=False,
-        validation_fraction=0.1, beta_1=0.9, beta_2=0.999, epsilon=1e-08,
-        n_iter_no_change=10)
-    sgd.fit(X_train, Y_train)
-    dnn.fit(X_train, Y_train)
-    Y_pred = sgd.predict(X_test)
-    sklearn_sgd_predictions = sgd.predict(X_test)
-
-    losslasso = lasso_regression(X_train, Y_train, X_test, Y_test, 0.3)
-    lossridge = ridge_regression(X_train, Y_train, X_test, Y_test, 0.3)
-
-    print(sklearn_sgd_predictions)
-    print(ga_out['pf'][0].dtc.attrs)
-    delta_y = Y_test - sklearn_sgd_predictions
-
-    return sgd, losslasso, lossridge
 '''
 
 def filtered(pop,dtcpop):
@@ -1920,32 +1875,7 @@ def simple_error(observation,prediction,t):
     except:
         error = np.inf
     return error
-'''
-def dtc2gene(pop,dtcpop):
-    fitness_attr = pop[0].fitness
-    for i,p in enumerate(pop):
-        if not hasattr(p,'fitness'):
-            p.fitness = fitness_attr
 
-    for i,ind in enumerate(pop):
-        if not hasattr(ind,'error_length') or ind.error_length is None:
-            pop[i].error_length = dtcpop[0].error_length
-        if not hasattr(ind,'backend') or ind.backend is None:
-            pop[i].backend = dtcpop[0].backend
-
-        if not hasattr(ind,'boundary_dict') or ind.boundary_dict is None:
-            pop[i].boundary_dict = dtcpop[0].boundary_dict
-    return pop
-'''
-'''
-def pop2dtc(pop,dtcpop):
-    for i,dtc in enumerate(dtcpop):
-        if not hasattr(dtc,'backend') or dtc.backend is None:
-            dtcpop[i].backend = pop[0].backend
-        if not hasattr(dtc,'boundary_dict') or dtc.boundary_dict is None:
-            dtcpop[i].boundary_dict = pop[0].boundary_dict
-    return dtcpop
-'''
 def score_attr(dtcpop,pop):
     for i,d in enumerate(dtcpop):
         if not hasattr(pop[i],'dtc'):
@@ -1955,6 +1885,7 @@ def score_attr(dtcpop,pop):
     return dtcpop,pop
 def get_dm(dtcpop,pop=None):
     if PARALLEL_CONFIDENT:
+        NPART = min(npartitions,len(dtcpop))
         dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
         dtcpop = list(dtcbag.map(nuunit_dm_evaluation).compute())
     else:
@@ -1962,49 +1893,13 @@ def get_dm(dtcpop,pop=None):
     if type(pop) is not type(None):
         dtcpop,pop = score_attr(dtcpop,pop)
     return dtcpop,pop
-'''
-def eval_subtest(name):
-    for dtc in dtcpop:
-        for t in dtc.tests:
-            if name in t.name:
-                score, dtc = bridge_judge((t, dtc))
 
-def increase_current(dtc,t):
-    cnt=0
-    model = new_model(dtc)
-    pred = None
-    if 'mean' in t.observation.keys():
-        t.observation['value'] = t.observation['mean']
-    else:
-        t.observation['mean'] = t.observation['value']
-    t.score_type = scores.RatioScore
-
-    while type(pred) is type(None):
-        cnt+=1
-        t.params['amplitude'] = -10*pq.pA*cnt
-        t.setup_protocol(model)
-        result = t.get_result(model)
-
-        assert 'mean' in t.observation.keys()
-        pred = None
-        try:
-            pred = t.extract_features(model, result)
-            print(pred)
-        except:
-            pred = None
-        print(pred,cnt,'suggesting that units of model backend are wrong, or capabilities units are wrong')
-        if cnt==10:
-
-            score = t.compute_score(pred,t.observation)
-            return score
-    score = t.compute_score(pred,t.observation)
-    return score
 '''
 
 def bridge_passive(package):
-    '''
+    """
     Necessary because sciunit judge did not always work.
-    '''
+    """
     t,dtc = package
 
     model = new_model(dtc)
@@ -2013,7 +1908,6 @@ def bridge_passive(package):
 
     assert 'mean' in t.observation.keys()
     pred = None
-    #try:
     pred = t.extract_features(model,result)
 
     if type(pred) is type(None):
@@ -2028,56 +1922,9 @@ def bridge_passive(package):
     if type(pred['standard']) is not type(None):
         score = simple_error(t.observation,pred,t)
     return score, dtc, pred
-    '''
-    if 'std' not in t.observation.keys():
-        take_anything = list(t.observation['mean'])[0]
+'''
+from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
 
-        t.observation['std'] = 1.5 * take_anything.magnitude * take_anything.units
-    if 'std' in pred.keys():
-        if float(pred['std']) == 0.0:
-            pred['std'] = 1.5*pred['mean'].units
-
-    if 'std' in pred.keys():
-        if float(pred['std']) == 0.0:
-            pred['std'] = t.observation['std']#     10.0 * pred['mean'].units
-
-    else:
-        if not 'mean' in pred.keys():
-            pred['mean'] = pred['value']
-
-    assert 'mean' in t.observation.keys()
-    take_anything = list(pred.values())[0]
-
-    if 'std' not in pred.keys():
-        if type(take_anything) is type(None):
-            pred['std'] = t.observation['std']#     10.0 * pred['mean'].units
-
-        else:
-            pred['std'] = 1.5 * take_anything.magnitude * take_anything.units
-    if not hasattr(dtc,'predictions'):
-        dtc.predictions = {}
-        dtc.predictions[t.name] = pred
-    else:
-        dtc.predictions[t.name] = pred
-    try:
-        t.score_type = scores.RatioScore
-        score = t.compute_score(t.observation, pred)
-    except:
-        t.score_type = scores.ZScore
-        if type(pred['value']) is type(None) and type(pred['mean']) is type(None):
-            score = None
-        else:
-            score = t.compute_score(t.observation, pred)
-        if type(score) is not type(None):
-
-            if type(score.raw) is not type(None):
-                if np.isinf(float(score.raw)):
-                    t.score_type = scores.RatioScore
-                    score = t.compute_score(pred,t.observation)
-    #if type(score) is type(None):
-    #    score = increase_current(dtc,t)
-    return score, dtc, pred
-    '''
 class OptMan():
     def __init__(self,tests, td=None, backend = None,hc = None,boundary_dict = None, error_length=None,protocol=None,simulated_obs=None,verbosity=None,PARALLEL_CONFIDENT=None,tsr=None):
         self.tests = tests
@@ -2093,6 +1940,7 @@ class OptMan():
         self.hc = hc
         self.boundary_dict= boundary_dict
         self.protocol = protocol
+        self.julia = False
         # note this is not effective at changing parallel behavior yet
         if PARALLEL_CONFIDENT not in globals():
             self.PARALLEL_CONFIDENT = False
@@ -2438,10 +2286,7 @@ class OptMan():
             dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
             dtcpop = list(dtcbag.map(self.format_test))
             dtcpop = [ dtc for dtc in dtcpop if type(dtc.rheobase) is not type(None) ]
-
             dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
-
-
             dtcpop = list(dtcbag.map(self.elephant_evaluation))
             for dtc in dtcpop:
                 store_results[str(local_attrs.values())][key] = dtc.get_ss()
@@ -2450,8 +2295,6 @@ class OptMan():
         for index, row in df.iterrows():
             best_params[index] = row == row.min()
             best_params[index] = best_params[index].to_dict()
-
-
         seeds = {}
         for k,v in best_params.items():
             for nested_key,nested_val in v.items():
@@ -2546,12 +2389,24 @@ class OptMan():
 
         pred['std'] = t.observation['std']# 15*take_anything.magnitude * take_anything.units
         return pred
-
+    def score_matrix(self,dtc):
+        # Inputs single data transport container modules, and neuroelectro observations that
+        # inform test error error_criterion
+        # Outputs Neuron Unit evaluation scores over error criterion
+        tests = dtc.tests
+        #dtc.scores[key] = np.inf
+        #t.params = dtc.protocols[k]
+        model = dtc.dtc_to_model()
+        from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
+        SM = ScoreMatrix(tests, model)
+        #dtc.SM = SM
+        return SM
     def elephant_evaluation(self,dtc):
         # Inputs single data transport container modules, and neuroelectro observations that
         # inform test error error_criterion
         # Outputs Neuron Unit evaluation scores over error criterion
         tests = dtc.tests
+        model = dtc.dtc_to_model()
         if not hasattr(dtc,'scores') or dtc.scores is None:
             dtc.scores = None
             dtc.scores = {}
@@ -2565,6 +2420,9 @@ class OptMan():
                     if str("BHH") in dtc.backend or str("ADEXP") in dtc.backend or str("GLIF") in dtc.backend:
                         t = RheobaseTestP(t.observation)
                         t.passive = False
+                        score = t.compute_score(t.observation,dtc.rheobase)
+                        dtc.errors[key] = 1.0 - score.norm_score
+                        continue
                 try:
                     assert hasattr(self.tests,'use_rheobase_score')
                 except:
@@ -2572,18 +2430,21 @@ class OptMan():
                     self.tests.use_rheobase_score = True
                 if self.tests.use_rheobase_score == False and "RheobaseTest" in str(k):
                     continue
-                dtc.scores[key] = np.inf
+                dtc.errors[key] = np.inf
                 t.params = dtc.protocols[k]
-                model = dtc.dtc_to_model()
-                score = 1.0
-                if t.passive is False:
+                error = 1.0
+                try:
                     score = t.judge(model)
-                if t.passive is True:
-                    score = t.judge(model)
-                score = 1.0 - score.norm_score
-                dtc.scores[str(t.name)] = score
+                    error = 1.0 - score.norm_score
+                except:
+                    print('score broke')
+                    pass
+                    #pickle.dump(dtc,open('model_'+str(dtc.backend)+str(list(dtc.attrs.values()))+'.p','wb'))
+                    #error = 1.0
+                dtc.errors[str(t.name)] = error
+        SM = ScoreMatrix(tests, model)
+        print(SM)
         return dtc
-
 
     def elephant_evaluation_old(self,dtc):
         # Inputs single data transport container modules, and neuroelectro observations that
@@ -2972,9 +2833,11 @@ class OptMan():
         Ordered parameter dictionary td
         and rheobase test rt
         '''
-        pop, dtcpop = self.init_pop(pop, tests)
-        #for d in dtcpop:
-        #    d.tests = tests
+
+
+        _, dtcpop = self.init_pop(pop, tests)
+        for d in dtcpop:
+            d.tests = tests
         if 'RAW' in self.backend  or 'HH' in self.backend or str('ADEXP') in self.backend:
             dtcpop = list(map(dtc_to_rheo,dtcpop))
 
@@ -2984,6 +2847,19 @@ class OptMan():
             dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
             dtcpop = list(dtcbag.map(dtc_to_rheo))
 
+
+        if not hasattr(pop[0],'rheobase'):
+            self.julia = True
+            pop_ = []
+            for ind,d in zip(pop,dtcpop):
+                if type(ind) is not type(WSListIndividual()):
+                    temp = ind.tolist()
+                    temp_ind = WSListIndividual(obj_size=len(self.tests))
+                    temp_ind.extend(temp)
+                    ind = temp_ind
+                    ind.dtc = d
+                    pop_.append(ind)
+            pop = pop_
         for ind,d in zip(pop,dtcpop):
             if type(d.rheobase) is not type(None):
                 ind.rheobase = d.rheobase
@@ -3062,8 +2938,11 @@ class OptMan():
     def test_runner(self,pop,td,tests):
         if self.protocol['elephant']:
             pop_, dtcpop = self.obtain_rheobase(pop, tests)
+
             for ind,dtc in zip(pop,dtcpop):
                 dtc.error_length = self.error_length
+
+
             if not hasattr(self,'exhaustive'):
                 # there are many models, which have no actual rheobase current injection value.
                 # filter, filters out such models,
@@ -3120,6 +2999,7 @@ class OptMan():
         if not delta:
             return pop, dtcpop
         if delta:
+            print(delta,'stuck in boot new')
             cnt = 0
             while delta:
                 pop_,dtcpop_ = self.boot_new_genes(delta,spare,td)
@@ -3151,7 +3031,6 @@ class OptMan():
     @timer
     def update_deap_pop(self,pop, tests, td, backend = None,hc = None,boundary_dict = None, error_length=None):
         '''
-        Inputs a population of genes (pop).
         Returned neuronunit scored DataTransportContainers (dtcpop).
         This method converts a population of genes to a population of Data Transport Containers,
         Which act as communicatable data types for storing model attributes.
@@ -3162,11 +3041,9 @@ class OptMan():
         if len(pop)==0:
             raise Exception('User error population size set to 0')
         if td is not None:
-            #self.td = None
             self.td = td
 
         if hc is not None:
-            #self.hc = None
             self.hc = hc
 
         if backend is not None:
@@ -3179,14 +3056,15 @@ class OptMan():
             if error_length is not None:
                 self.error_length = None
                 self.error_length = error_length
-
-
         pop, dtcpop = self.test_runner(pop,td,self.tests)
 
         for p,d in zip(pop,dtcpop):
             p.dtc = d
             p.error_length = self.error_length
             p.backend = self.backend
+        if self.julia:
+            fitnesses = [ list(dtc.errors.values()) for dtc in dtcpop ]
+            return fitnesses, pop, dtcpop
 
         return pop
     @timer
@@ -3202,7 +3080,6 @@ class OptMan():
 
         DO.setnparams(nparams = len(dtcpop[0].attrs), boundary_dict = self.boundary_dict)
         DO.setup_deap()
-        # pop = []
         if 1==number_genes:
             pop = DO.set_pop(boot_new_random=5)
         if 1<number_genes and number_genes<5:
@@ -3210,12 +3087,12 @@ class OptMan():
 
         else:
             pop = DO.set_pop(boot_new_random=number_genes)
-        #pop = dtc2gene(pop,dtcpop)
         dtcpop_ = self.update_dtc_pop(pop)
-        #dtcpop_ = pop2dtc(pop,dtcpop_)
         dtcpop_ = list(map(dtc_to_rheo,dtcpop_))
         for i,ind in enumerate(pop):
             pop[i].rheobase = dtcpop_[i].rheobase
+            pop[i].dtc = dtcpop_[i]
+
         pop = pop[0:number_genes]
         dtcpop_ = dtcpop_[0:number_genes]
 

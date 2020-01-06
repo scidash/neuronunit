@@ -47,6 +47,8 @@ class DataTC(object):
         self.from_imputation = False
         self.preds = {}
         self.td = {}
+        self.errors = {}
+        self.SM = None
 
     def get_ss(self):
         # get summed score
