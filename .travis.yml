@@ -19,8 +19,9 @@ install:
   - pip install -U pip
   - pip install --upgrade pip
   - pip install coveralls
-  - pip install git+https://github.com/fun-zoological-computing/AllenSDK
   - pip install git+https://github.com/scidash/sciunit@dev
+  - pip install git+https://github.com/fun-zoological-computing/AllenSDK
+  - pip install git+https://github.com/fun-zoological-computing/deap
   - pip install dask distributed brian2 numba
   - pip install --upgrade beautifulsoup4
   - pip install neurodynex
@@ -31,7 +32,7 @@ install:
 script:
   - cd neuronunit
   - python -c "import neuronunit"
-  - python backend_test.py
-  - python use_edt.py
+  - python ../backend_test.py
+  - python examples/use_edt.py
 after_success:
   - coveralls

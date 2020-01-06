@@ -1,8 +1,12 @@
 
 import brian2 as b2
 from neurodynex.hodgkin_huxley import HH
-b2.defaultclock.dt = 1 * b2.ms
+#b2.defaultclock.dt = 1 * b2.ms
+#import brian2 as b2
 
+b2.A = 1000000000000*b2.pA
+b2.units.V = 1000.0*b2.units.mV
+#b2.A = 1000000000000*b2.pA
 from neurodynex.tools import plot_tools, input_factory
 import io
 import math
@@ -141,8 +145,9 @@ class BHHBackend(Backend):
                 self.cell_name = DTC.cell_name
 
     def get_spike_count(self):
-        if np.max(self.vM)>4*np.mean(self.vM):
-            thresh = threshold_detection(self.vM,np.max(self.vM)-0.25*np.max(self.vM))
+        if np.max(self.vM)>20.0*np.mean(self.vM):
+            thresh = threshold_detection(self.vM,np.max(self.vM)-0.10*np.max(self.vM))
+
         else:
             thresh = []
         return len(thresh)
@@ -182,20 +187,7 @@ class BHHBackend(Backend):
             b2.defaultclock.dt = 1 * b2.ms
 
             self.HH =HH
-    '''
-    def finalize(self):
-        For interpolating missing sampling, simulating at high sample frequency is prohibitevely slow, and yet, there is
-        no significant difference in behavior.
-        transform_function = interp1d([float(t) for t in self.vM.times],[float(v) for v in self.vM.magnitude])
-        xnew = np.linspace(0, float(np.max(self.vM.times)), num=1004001, endpoint=True)
-        vm_new = transform_function(xnew) #% generate the y values for all x values in xnew
-        self.vM = AnalogSignal(vm_new,units = V,sampling_period = float(xnew[1]-xnew[0]) * pq.s)
-        if self.verbose:
 
-            print(len(self.vM))
-        self.vM = AnalogSignal(vm_new,units = V,sampling_period = float(xnew[1]-xnew[0]) * pq.s)
-        return self.vM
-    '''
 
 
     def inject_square_current(self, current):#, section = None, debug=False):
@@ -223,8 +215,8 @@ class BHHBackend(Backend):
 
         #amplitude = c['amplitude'].simplified
 
-        duration = int(c['duration'])#/dt#/dt.rescale('ms')
-        delay = int(c['delay'])#/dt#.rescale('ms')
+        duration = int(c['duration'])#/10.0)#/dt#/dt.rescale('ms')
+        delay = int(c['delay'])#/10.0)#/dt#.rescale('ms')
         pre_current = int(duration)+100
         amp = float(c['amplitude'])#.rescale('uA')
         #print(amp,'should this be rescaled?')
@@ -232,7 +224,8 @@ class BHHBackend(Backend):
         getting_started = False
         if getting_started == False:
             #stim = input_factory.get_step_current(delay, duration, b2.ms, amp * b2.pA)
-            stim = input_factory.get_step_current(delay, duration, b2.ms, amp * b2.nA)
+
+            stim = input_factory.get_step_current(delay, duration, b2.ms, amp * b2.A)
 
             #st = 70 * b2.ms
 
@@ -253,11 +246,10 @@ class BHHBackend(Backend):
                 print(attrs)
             self.set_attrs(attrs)
 
-
             self.state_monitor,self.vM = simulate_HH_neuron_local(
-            El = attrs['El'] * b2.units.mV,
-            EK = attrs['EK'] * b2.units.mV,
-            ENa = attrs['ENa'] * b2.units.mV,
+            El = attrs['El'] * b2.units.V,
+            EK = attrs['EK'] * b2.units.V,
+            ENa = attrs['ENa'] * b2.units.V,
             gl =  attrs['gl'] * b2.units.msiemens,
             gK = attrs['gK'] * b2.units.msiemens,
             gNa = attrs['gNa'] * b2.units.msiemens,

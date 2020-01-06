@@ -83,8 +83,8 @@ def get_vm_regular(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(
             v[m+1] = c;# % membrane voltage reset
             u[m+1] = u[m+1] + d;# % recovery variable update
 
-    for m in range(0,N):
-        v[m] = v[m]/1000.0
+    #for m in range(0,N):
+    #    v[m] = v[m]/1000.0
 
     return v
 class RAWBackend(Backend):

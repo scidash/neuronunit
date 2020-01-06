@@ -25,13 +25,18 @@ def heavy_backends():
     except Exception as e:
         print('pynn python Error')
 
-    try:
-        from .glif import GLIFBackend
-    except Exception as e:
-        print('glif python Error')
+try:
+    from .glif import GLIFBackend
+except Exception as e:
+    print('glif python Error')
 
-
-
+"""
+try:
+    from .hh_wraper import JHHBackend
+except ImportError:
+    JHHBackend = None
+    print('Could not load JHHBackend.')
+"""
 try:
     from .rawpy import RAWBackend
 except ImportError:
