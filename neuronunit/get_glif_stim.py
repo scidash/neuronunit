@@ -1,4 +1,4 @@
-Aimport allensdk.core.json_utilities as json_utilities
+import allensdk.core.json_utilities as json_utilities
 import pickle
 neuronal_model_id = 566302806
 # download model metadata

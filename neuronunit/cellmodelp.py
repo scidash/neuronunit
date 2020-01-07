@@ -1,17 +1,11 @@
 # Obtains the cell threshold, rheobase, resting v, and bias currents for
 # steady state v of a cell defined in a hoc file in the given directory.
 # Usage: python getCellProperties /path/To/dir/with/.hoc
-<<<<<<< HEAD
+
 #from neuronunit.tests.druckmann2013 import *
 try:
     import cPickle
-except:
-=======
-
-try:  # Python 2
-    import cPickle
 except ImportError:  # Python 3
->>>>>>> 51529ae8e9a02874e8b1d050bb812f2aec8d41d9
     import _pickle as cPickle
 import csv
 import json
@@ -21,19 +15,15 @@ import shutil
 import string
 import urllib
 from abc import abstractmethod, ABCMeta
-<<<<<<< HEAD
 #from decimal import Decimal
 #import nmldbutils
-=======
 from decimal import Decimal
->>>>>>> 51529ae8e9a02874e8b1d050bb812f2aec8d41d9
 import inspect
 import multiprocessing
 cpus = multiprocessing.cpu_count
 
 import numpy as np
 from matplotlib import pyplot as plt
-<<<<<<< HEAD
 #from sklearn.decomposition import PCA
 
 #from collector import Collector
