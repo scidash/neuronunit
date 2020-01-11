@@ -114,12 +114,11 @@ print(mypath)
 try:
    assert os.path.exists(mypath)
    rts = pickle.load(open(mypath,'rb'))
-   df = pd.DataFrame(rts)
-
+#df = pd.DataFrame(rts)
 except:
-    os.wget("https://github.com/russelljjarvis/NeuronunitOpt/blob/master/neuronunit/tests/multicellular_constraints.p?raw=true")
+    os.system('wget("https://github.com/russelljjarvis/NeuronunitOpt/blob/master/neuronunit/tests/multicellular_constraints.p?raw=true")')
     rts = pickle.load(open('multicellular_constraints.p?raw=true','rb'))
-    df = pd.DataFrame(rts)
+df = pd.DataFrame(rts)
 
 for key,v in rts.items():
     helper_tests = [value for value in v.values() ]
