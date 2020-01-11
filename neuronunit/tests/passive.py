@@ -79,7 +79,7 @@ class TestPulseTest(ProtocolToFeaturesTest):
                        'n': reference_data.n}
         return observation
 
-
+    
     def compute_params(self):
         super(TestPulseTest, self).compute_params()
         self.params['injected_square_current'] = \
@@ -90,11 +90,12 @@ class TestPulseTest(ProtocolToFeaturesTest):
             self.params['tmax'] = 1000.0*pq.ms
         t_stop = self.params['tmax']
         model.get_backend().set_stop_time(t_stop)
+        return model
 
     def setup_protocol(self, model):
         """Implement sciunit.tests.ProtocolToFeatureTest.setup_protocol."""
         """Not a great design for parallel code as model can't be shared"""
-        self.condition_model(model)
+        model = self.condition_model(model)
         model.inject_square_current(self.params['injected_square_current'])
 
         # self.condition_model(model)
@@ -138,8 +139,14 @@ class TestPulseTest(ProtocolToFeaturesTest):
             try:
                 _, tau, _ = cls.exponential_fit(region, i['delay'])
             except:
-                region = AnalogSignal([j*1000.0 for j in region],sampling_period=region.sampling_period,units=region.units)
-                _, tau, _ = cls.exponential_fit(region, i['delay'])
+                try:
+                    print('1,000 magnitude wrong offset')
+                    region = AnalogSignal([j*1000.0 for j in region],sampling_period=region.sampling_period,units=region.units)
+                    _, tau, _ = cls.exponential_fit(region, i['delay'])
+                except:
+                    print('1,000,000 magnitude wrong offset')
+                    region = AnalogSignal([j*1000000.0 for j in region],sampling_period=region.sampling_period,units=region.units)
+                    _, tau, _ = cls.exponential_fit(region, i['delay'])
         else:
             tau = None
         return tau
