@@ -76,6 +76,8 @@ import neuronunit
 anchor = neuronunit.__file__
 anchor = os.path.dirname(anchor)
 mypath = os.path.join(os.sep,anchor,'tests/multicellular_constraints.p')
+print(mypath)
+assert os.path.exists(mypath)
 try:
     import asciiplotlib as apl
 except:
@@ -720,6 +722,24 @@ def dtc_to_rheo(dtc):
         dtc = get_rh(dtc,rtest)
     return dtc
 
+def inject_and_plot_passive_model(attrs,backend):
+    pre_model = DataTC()
+    pre_model.attrs = attrs
+    pre_model.backend = backend
+    # get rheobase injection value
+    #pre_model = dtc_to_rheo(pre_model)
+    # get an object of class ReducedModel with known attributes and known rheobase current injection value.
+    model = pre_model.dtc_to_model()
+    DURATION = 500.0*pq.ms
+    DELAY = 200.0*pq.m
+    uc = {'amplitude':-10*pq.pA,'duration':DURATION,'delay':DELAY}
+    print(uc)
+    model.inject_square_current(uc)
+    vm = model.get_membrane_potential()
+    plt.plot(vm.times,vm.magnitude)
+    plt.show()
+    return vm,plt
+
 def inject_and_plot_model(attrs,backend):
     pre_model = DataTC()
     pre_model.attrs = attrs
@@ -735,6 +755,7 @@ def inject_and_plot_model(attrs,backend):
     plt.plot(vm.times,vm.magnitude)
     plt.show()
     return vm,plt
+
 
 def score_proc(dtc,t,score):
     dtc.score[str(t)] = {}
@@ -2438,10 +2459,12 @@ class OptMan():
                     error = 1.0 - score.norm_score
                 except:
                     print('score broke')
-                    pass
+                    print(dtc.backend,t,'backend,test')
+                    #pass
                     #pickle.dump(dtc,open('model_'+str(dtc.backend)+str(list(dtc.attrs.values()))+'.p','wb'))
                     #error = 1.0
                 dtc.errors[str(t.name)] = error
+                print(dtc.errors[str(t.name)])
         SM = ScoreMatrix(tests, model)
         print(SM)
         return dtc
