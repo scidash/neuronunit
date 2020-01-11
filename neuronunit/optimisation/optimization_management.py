@@ -112,13 +112,19 @@ anchor = os.path.dirname(anchor)
 mypath = os.path.join(os.sep,anchor,'tests/multicellular_constraints.p')
 print(mypath)
 try:
-   assert os.path.exists(mypath)
-   rts = pickle.load(open(mypath,'rb'))
+    try:
+       assert os.path.exists(mypath)
+       rts = pickle.load(open(mypath,'rb'))
+    except:
+       os.system('wget("https://github.com/russelljjarvis/NeuronunitOpt/blob/master/neuronunit/tests/multicellular_constraints.p?raw=true")')
+       rts = pickle.load(open('multicellular_constraints.p?raw=true','rb'))
+
 #df = pd.DataFrame(rts)
 except:
-    os.system('wget("https://github.com/russelljjarvis/NeuronunitOpt/blob/master/neuronunit/tests/multicellular_constraints.p?raw=true")')
-    rts = pickle.load(open('multicellular_constraints.p?raw=true','rb'))
-df = pd.DataFrame(rts)
+    from neuronunit.optimisation import mint_tests
+
+    rts = mint_tests.get_cell_constraints()
+    df = pd.DataFrame(rts)
 
 for key,v in rts.items():
     helper_tests = [value for value in v.values() ]
