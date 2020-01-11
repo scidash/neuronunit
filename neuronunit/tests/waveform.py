@@ -88,7 +88,7 @@ class APWidthTest(VmTest):
 class InjectedCurrentAPWidthTest(InjectedCurrent, APWidthTest):
     """Tests the full widths of APs at their half-maximum
     under current injection.
-    
+
 
     def __init__(self,**kwargs):
         super(InjectedCurrentAPWidthTest, self).__init__()#*args,**kwargs)#*args, **kwargs)
@@ -183,7 +183,7 @@ class APAmplitudeTest(VmTest):
                       'std': np.std(heights) if len(heights) else None,
                       'n': len(heights)}
 
-  
+
 
 
         # Put prediction in a form that compute_score() can use.
