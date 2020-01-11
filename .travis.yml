@@ -31,8 +31,7 @@ install:
 
 script:
   - cd neuronunit
-  - python -c "import neuronunit"
-  - python backend_tests.py
+  - python -m unittest neuronunit/unit_test/working/backend_tests.py
   - python neuronunit/examples/use_edt.py
 after_success:
   - coveralls
