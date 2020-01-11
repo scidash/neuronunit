@@ -65,21 +65,21 @@ except:
 
     
 
-specific_data = data_sets[1][0]
-numbers = specific_data.get_sweep_numbers()
+real_cellular_data = data_sets[1][0]
+numbers = real_cellular_data.get_sweep_numbers()
 sweeps = []
 for n in numbers:
-    sweeps.append(specific_data.get_sweep(n))
+    sweeps.append(real_cellular_data.get_sweep(n))
 
-stim_types = [ specific_data.get_sweep_metadata(n)['aibs_stimulus_name'] for n in numbers ]
-responses = [ specific_data.get_sweep(n)['response'] for n in numbers ]
+stim_types = [ real_cellular_data.get_sweep_metadata(n)['aibs_stimulus_name'] for n in numbers ]
+responses = [ real_cellular_data.get_sweep(n)['response'] for n in numbers ]
 
 try:
     with open('allen_test.p','rb') as f:
         pre_obs = pickle.load(f)
 
 except:
-    pre_obs = allensdk.ephys.extract_cell_features.extract_feature_wave_russell(responses[0], stim_types[0], specific_data,numbers)
+    pre_obs = allensdk.ephys.extract_cell_features.extract_feature_wave_russell(responses[0], stim_types[0], real_cellular_data,numbers)
     observation = {}
     observation['value'] = pre_obs
     with open('allen_test.p','wb') as f:
