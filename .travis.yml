@@ -30,8 +30,9 @@ install:
   - pip install .
 
 script:
-  - cd neuronunit
-  - python -m unittest neuronunit/unit_test/working/backend_tests.py
+  - cd neuronunit/unit_test/working
+  - python -m unittest backend_tests.py
+  - python -m unittest small_test.py
   - python neuronunit/examples/use_edt.py
 after_success:
   - coveralls
