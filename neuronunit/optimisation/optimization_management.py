@@ -71,13 +71,7 @@ this.cpucount = multiprocessing.cpu_count()
 from neuronunit.tests.fi import RheobaseTestP
 from neuronunit.tests.target_spike_current import SpikeCountSearch, SpikeCountRangeSearch
 #make_stim_waves = pickle.load(open('waves.p','rb'))
-import os
-import neuronunit
-anchor = neuronunit.__file__
-anchor = os.path.dirname(anchor)
-mypath = os.path.join(os.sep,anchor,'tests/multicellular_constraints.p')
-print(mypath)
-assert os.path.exists(mypath)
+
 try:
     import asciiplotlib as apl
 except:
@@ -111,8 +105,22 @@ from neuronunit.plottools import inject_and_plot
 # They are used by other methods analogous to a base class,
 # these are base instances that become more derived
 # contexts, that modify copies of the helper class in place.
-rts = pickle.load(open(mypath,'rb'))
-df = pd.DataFrame(rts)
+import os
+import neuronunit
+anchor = neuronunit.__file__
+anchor = os.path.dirname(anchor)
+mypath = os.path.join(os.sep,anchor,'tests/multicellular_constraints.p')
+print(mypath)
+try:
+   assert os.path.exists(mypath)
+   rts = pickle.load(open(mypath,'rb'))
+   df = pd.DataFrame(rts)
+
+except:
+    os.wget("https://github.com/russelljjarvis/NeuronunitOpt/blob/master/neuronunit/tests/multicellular_constraints.p?raw=true")
+    rts = pickle.load(open('multicellular_constraints.p?raw=true','rb'))
+    df = pd.DataFrame(rts)
+
 for key,v in rts.items():
     helper_tests = [value for value in v.values() ]
     break
