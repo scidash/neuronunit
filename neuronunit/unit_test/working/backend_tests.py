@@ -35,7 +35,6 @@ class testCrucialBackendsSucceed(unittest.TestCase):
                 attrs["V_REST"] = -75.0
             pre_model.attrs = attrs
             pre_model.backend = b
-            print(b)
             vm,_ = inject_and_plot_model(pre_model.attrs,b)
             axs[cnt].plot(vm.times,vm.magnitude)
             axs[cnt].set_title(b)

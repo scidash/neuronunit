@@ -20,20 +20,15 @@ install:
   - pip install --upgrade pip
   - pip install coveralls
   - pip install git+https://github.com/scidash/sciunit@dev
-  - pip install git+https://github.com/fun-zoological-computing/AllenSDK
-  - pip install git+https://github.com/fun-zoological-computing/deap
   - pip install dask distributed brian2 numba
   - pip install --upgrade beautifulsoup4
   - pip install neurodynex
   - pip install seaborn
   - pip install -r requirements.txt
-  - pip install .
-
+  - pip install git+https://github.com/fun-zoological-computing/AllenSDK
+  - pip install git+https://github.com/fun-zoological-computing/deap
+  - pip install -e .
 script:
-  - wget "https://github.com/russelljjarvis/NeuronunitOpt/blob/master/neuronunit/tests/multicellular_constraints.p?raw=true"
-  - python -c "import pickle; import pickle; rts = pickle.load(open('multicellular_constraints.p?raw=true','rb'))"
-
-  - ls neuronunit/tests/multicellular_constraints.p
   - cd neuronunit/unit_test/working
   - python -m unittest backend_tests.py
   - python -m unittest small_test.py

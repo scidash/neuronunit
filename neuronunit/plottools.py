@@ -98,7 +98,8 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                     label=str('Izhikevich Model')
                 if str("GLIF") in dtc.backend:
                     label=str('Generalized Leaky Integrate and Fire')
-
+                if str("HH") in dtc.backend:
+                    label=str("raw hodgkin huxley")
                 if str("BHH") in dtc.backend:
                     label=str('Hodgkin Huxley Model')
                 if str("ADEXP") in dtc.backend:
@@ -191,7 +192,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                     if hasattr(dtc,'ampl'):
                         uc = {'amplitude':dtc.ampl,'duration':DURATION,'delay':DELAY}
 
-                    model.set_attrs(**dtc.attrs)
+                    model.set_attrs(dtc.attrs)
                     model.inject_square_current(uc)
                     #if model.get_spike_count()>1:
                     #    break

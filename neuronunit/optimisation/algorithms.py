@@ -259,8 +259,8 @@ def eaAlphaMuPlusLambdaCheckpoint(
     else:
         history = deap.tools.History()
 
-        ref_points = tools.uniform_reference_points(len(pop[0]), 12)
-        toolbox.register("select", tools.selNSGA3, ref_points=ref_points)
+        #ref_points = tools.uniform_reference_points(len(pop[0]), len(pop))
+        toolbox.register("select", tools.selNSGA2)#, ref_points=ref_points)
         random.seed()
 
         stats.register("avg", numpy.mean, axis=0)
@@ -309,7 +309,10 @@ def eaAlphaMuPlusLambdaCheckpoint(
             pool.extend(offspring)
             #if len(offspring)==MU and len(pop)==MU:
             if len(pool)>=MU:
-               pop = toolbox.select(pop + offspring, MU)
+                try:
+                    pop = toolbox.select(pop + offspring, MU)
+                except:
+                    pop = toolbox.select(offspring,MU)
             else:
                import pdb
                pdb.set_trace()
