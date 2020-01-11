@@ -22,7 +22,7 @@ import os
 from neuronunit.optimisation import get_neab
 #
 from neuronunit.optimisation.optimization_management import dtc_to_rheo
-from neuronunit.optimisation.optimization_management import nunit_evaluation
+from neuronunit.optimisation.optimization_management import elephant_evaluation
 from neuronunit.optimisation.optimization_management import format_test, mint_generic_model
 
 from neuronunit import tests as nu_tests, neuroelectro
