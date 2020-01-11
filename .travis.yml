@@ -30,6 +30,9 @@ install:
   - pip install .
 
 script:
+  - wget "https://github.com/russelljjarvis/NeuronunitOpt/blob/master/neuronunit/tests/multicellular_constraints.p?raw=true"
+  - python -c "import pickle; import pickle; rts = pickle.load(open('multicellular_constraints.p?raw=true','rb'))"
+
   - ls neuronunit/tests/multicellular_constraints.p
   - cd neuronunit/unit_test/working
   - python -m unittest backend_tests.py
