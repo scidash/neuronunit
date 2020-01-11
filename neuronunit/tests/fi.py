@@ -421,7 +421,10 @@ class RheobaseTestP(RheobaseTest):
                 if str('PYNN') in dtc.backend:
                     steps = np.linspace(100.0,1000.0,7.0)
                 else:
-                    steps = np.linspace(1.0,550.0,7.0)
+                    try:
+                        steps = np.linspace(1.0,550.0,7.0)
+                    except:
+                        steps = np.linspace(1,550,7)
                 steps_current = [ i*pq.pA for i in steps ]
                 dtc.current_steps = steps_current
                 dtc.initiated = True
