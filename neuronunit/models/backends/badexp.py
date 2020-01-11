@@ -51,7 +51,7 @@ def simulate_AdEx_neuron_local(
         delta_T=None,#SHARPNESS_delta_T,
         tau_w=None,#ADAPTATION_TIME_CONSTANT_tau_w,
         I_stim=None,#input_factory.get_zero_current(),
-        simulation_time=200 * b2.ms):
+        simulation_time=None):
     r"""
     code is from:
     /neurodynex/adex_model/AdEx.py
@@ -83,7 +83,7 @@ def simulate_AdEx_neuron_local(
         (state_monitor, spike_monitor):
         A b2.StateMonitor for the variables "v" and "w" and a b2.SpikeMonitor
     """
-
+    print(v_rest)
     v_spike_str = "v>{:f}*mvolt".format(v_spike / b2.mvolt)
 
     # EXP-IF
@@ -167,17 +167,18 @@ class ADEXPBackend(Backend):
         self.AdEx = AdEx
 
         if len(attrs):
-
             self.AdEx.ADAPTATION_TIME_CONSTANT_tau_w = attrs['ADAPTATION_TIME_CONSTANT_tau_w']*AdEx.b2.units.ms
             self.AdEx.ADAPTATION_VOLTAGE_COUPLING_a = attrs['ADAPTATION_VOLTAGE_COUPLING_a']*AdEx.b2.units.nS
-            self.AdEx.FIRING_THRESHOLD_v_spike = attrs['FIRING_THRESHOLD_v_spike']*AdEx.b2.units.mV
+            self.AdEx.FIRING_THRESHOLD_v_spike = attrs['FIRING_THRESHOLD_v_spike']*AdEx.b2.units.mV*100
             self.AdEx.MEMBRANE_RESISTANCE_R = attrs['MEMBRANE_RESISTANCE_R']*AdEx.b2.units.Gohm
             self.AdEx.MEMBRANE_TIME_SCALE_tau_m = attrs['MEMBRANE_TIME_SCALE_tau_m']*AdEx.b2.units.ms
-            self.AdEx.RHEOBASE_THRESHOLD_v_rh = attrs['RHEOBASE_THRESHOLD_v_rh']*AdEx.b2.units.mV
-            self.AdEx.SHARPNESS_delta_T = attrs['SHARPNESS_delta_T']*AdEx.b2.units.mV
+            self.AdEx.RHEOBASE_THRESHOLD_v_rh = attrs['RHEOBASE_THRESHOLD_v_rh']*AdEx.b2.units.mV*100
+            self.AdEx.SHARPNESS_delta_T = attrs['SHARPNESS_delta_T']*AdEx.b2.units.mV*100
             self.AdEx.SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b = attrs['SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b']*AdEx.b2.units.pA
             self.AdEx.V_RESET = attrs['V_RESET']*AdEx.b2.units.mV
-            self.AdEx.V_REST = attrs['V_REST']*AdEx.b2.units.mV
+            self.AdEx.V_REST = attrs['V_REST']*AdEx.b2.units.mV*100
+            print(self.AdEx.V_REST)
+
             if str('peak_v') in attrs:
                 self.peak_v = attrs['peak_v']
 
@@ -195,11 +196,11 @@ class ADEXPBackend(Backend):
         transform_function = interp1d([float(t) for t in self.vM.times],[float(v) for v in self.vM.magnitude])
         xnew = np.linspace(0, float(np.max(self.vM.times)), num=1004001, endpoint=True)
         vm_new = transform_function(xnew) #% generate the y values for all x values in xnew
-        self.vM = AnalogSignal(vm_new,units = mV,sampling_period = float(xnew[1]-xnew[0]) * pq.s)
+        self.vM = AnalogSignal(vm_new,units = V,sampling_period = float(xnew[1]-xnew[0]) * pq.s)
         if self.verbose:
 
             print(len(self.vM))
-        self.vM = AnalogSignal(vm_new,units = mV,sampling_period = float(xnew[1]-xnew[0]) * pq.s)
+        self.vM = AnalogSignal(vm_new,units = V,sampling_period = float(xnew[1]-xnew[0]) * pq.s)
         return self.vM
     def inject_square_current(self, current):#, section = None, debug=False):
         """Inputs: current : a dictionary with exactly three items, whose keys are: 'amplitude', 'delay', 'duration'
@@ -224,16 +225,16 @@ class ADEXPBackend(Backend):
         else:
             c = current
 
-        amplitude = c['amplitude'].simplified
+        #amplitude = c['amplitude'].simplified
 
         duration = int(c['duration'])#/dt#/dt.rescale('ms')
         delay = int(c['delay'])#/dt#.rescale('ms')
         pre_current = int(duration)+100
-        amp = c['amplitude'].rescale('uA')
+        amp = c['amplitude']#.rescale('uA')
         amplitude = amp.simplified
         if getting_started == False:
-            stim = input_factory.get_step_current(delay, duration, b2.ms, amplitude * b2.uA)
-            st = (duration+delay+100)* b2.ms
+            stim = input_factory.get_step_current(delay, delay+duration, b2.ms, 1000.0*amplitude*b2.A)
+            st = (duration+delay+200)* b2.ms
         else:
             stim = input_factory.get_step_current(10, 45, b2.ms, 7.2 * b2.uA)
             st = 70 * b2.ms
@@ -258,13 +259,13 @@ class ADEXPBackend(Backend):
             self.state_monitor, self.spike_monitor = self.AdEx.simulate_AdEx_neuron(
             tau_m = attrs['MEMBRANE_TIME_SCALE_tau_m']*AdEx.b2.units.ms,
             R = np.abs(attrs['MEMBRANE_RESISTANCE_R'])*AdEx.b2.units.Gohm,
-            v_rest = attrs['V_REST']*AdEx.b2.units.mV,
-            v_reset = attrs['V_RESET']*AdEx.b2.units.mV,
-            v_rheobase = attrs['RHEOBASE_THRESHOLD_v_rh']*AdEx.b2.units.mV,
+            v_rest = attrs['V_REST']*AdEx.b2.units.V,
+            v_reset = attrs['V_RESET']*AdEx.b2.units.V,
+            v_rheobase = attrs['RHEOBASE_THRESHOLD_v_rh']*AdEx.b2.units.V,
             a = attrs['ADAPTATION_VOLTAGE_COUPLING_a']*AdEx.b2.units.nS,
             b =  attrs['b']*b2.pA,
-            v_spike=attrs['FIRING_THRESHOLD_v_spike']*AdEx.b2.units.mV,
-            delta_T = attrs['SHARPNESS_delta_T']*AdEx.b2.units.mV,
+            v_spike=attrs['FIRING_THRESHOLD_v_spike']*AdEx.b2.units.V,
+            delta_T = attrs['SHARPNESS_delta_T']*AdEx.b2.units.V,
             tau_w = attrs['ADAPTATION_TIME_CONSTANT_tau_w']*AdEx.b2.units.ms,
             I_stim = stim, simulation_time=st)
 
@@ -277,7 +278,7 @@ class ADEXPBackend(Backend):
         vm = state_dic['v']
         vm = [ float(i) for i in vm ]
 
-        self.vM = AnalogSignal(vm,units = V,sampling_period = float(1.0) * pq.ms)
+        self.vM = AnalogSignal(vm,units = mV,sampling_period = float(1.0) * pq.ms)
 
 
         tdic = self.spike_monitor.spike_trains()
