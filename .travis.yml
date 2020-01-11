@@ -33,6 +33,7 @@ script:
   - cd neuronunit/unit_test/working
   - python -m unittest backend_tests.py
   - python -m unittest small_test.py
-  - python neuronunit/examples/use_edt.py
+  - cd ../../examples
+  - python use_edt.py
 after_success:
   - coveralls
