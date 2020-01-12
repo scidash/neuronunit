@@ -187,15 +187,15 @@ class testHighLevelOptimisation(unittest.TestCase):
         NGEN = 8
         MU = 8
 
-        backend = str('JHH')
-        out = self.get_cells(backend,model_parameters,NGEN,MU)
+        #backend = str('JHH')
+        #out = self.get_cells(backend,model_parameters,NGEN,MU)
         backend = str('RAW')
         out = self.get_cells(backend,model_parameters,NGEN,MU)
 
-        backend = str('ADEXP')
-        out = self.get_cells(backend,model_parameters,NGEN,MU)
+        #backend = str('ADEXP')
+        #out = self.get_cells(backend,model_parameters,NGEN,MU)
         backend = str('HH')
         out = self.get_cells(backend,model_parameters,NGEN,MU)
-        backend = str('BHH')
-        out = self.get_cells(backend,model_parameters,NGEN,MU)
+        #backend = str('BHH')
+        #out = self.get_cells(backend,model_parameters,NGEN,MU)
         return out
