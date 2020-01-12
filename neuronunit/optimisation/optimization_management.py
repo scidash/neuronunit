@@ -2684,9 +2684,19 @@ class OptMan():
 
             dtc = make_new_random(dtc, copy.copy(backend))
             xtests = list(copy.copy(original_test_dic).values())
+
             dtc.tests = xtests
-            simulated_observations = {t.name:copy.copy(t.observation['value']) for t in xtests}
-            simulated_observations = {k:v for k,v in simulated_observations.items() if v is not None}
+            import pdb
+            pdb.set_trace()
+            mean = True
+            for t in xtests:
+                if 'mean' in t.observation.keys():
+                    mean = True
+                else:
+                    mean = False
+            if mean:
+                simulated_observations = {t.name:copy.copy(t.observation['mean']) for t in xtests}
+                simulated_observations = {k:v for k,v in simulated_observations.items() if v is not None}
             dtc.observation = simulated_observations
             dtc = self.pred_evaluation(dtc)
 
