@@ -29,13 +29,13 @@ install:
   - pip install git+https://github.com/fun-zoological-computing/AllenSDK
   - pip install git+https://github.com/fun-zoological-computing/deap
   - pip install -e .
+ 
   - git clone https://github.com/fun-zoological-computing/deap
-  - cd deap
-  - cp tools/support.py /home/travis/miniconda/lib/python3.7/site-packages/deap/tools/support.py
-  - pip install .
-  - cd ../
+  - cp deap/tools/support.py /home/travis/miniconda/lib/python3.7/site-packages/deap/tools/support.py
 
 script:
+  - git clone https://github.com/fun-zoological-computing/deap
+  - cp deap/tools/support.py /home/travis/miniconda/lib/python3.7/site-packages/deap/tools/support.py
   - cd neuronunit/unit_test/working
   - python -m unittest backend_tests.py
   - python -m unittest small_test.py
