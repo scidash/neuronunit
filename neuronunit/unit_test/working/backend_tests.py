@@ -20,12 +20,12 @@ import quantities as pq
 class testCrucialBackendsSucceed(unittest.TestCase):
     def setUp(self):
         model_parameters.MODEL_PARAMS.keys()
-        self.backends =  ["RAW", "HH", "ADEXP"]
-        self.backends_complex =  ["GLIF", "NEURON","BHH"]
+        self.backends =  ["RAW", "HH"]
+        self.backends_complex =  ["GLIF", "NEURON","BHH","BADEXP"]
         #raw_attrs = {k:np.mean(v) for k,v in model_parameters.MODEL_PARAMS[backend].items()}
         #self.backends = backends
         self.model_parameters = model_parameters
-    def test_must_pass_0(self): 
+    def test_must_pass_0(self):
         fig, axs = plt.subplots(len(self.backends)*2+1,figsize=(40, 40))
         cnt=0
         for b in self.backends:
