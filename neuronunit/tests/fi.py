@@ -423,8 +423,14 @@ class RheobaseTestP(RheobaseTest):
                 else:
                     try:
                         steps = np.linspace(1.0,550.0,7.0)
+                        steps1 = np.linspace(1,550,7)
+                        print(steps)
+                        print(steps1)
+                        import pdb
+                        pdb.set_trace()
                     except:
                         steps = np.linspace(1,550,7)
+
                 steps_current = [ i*pq.pA for i in steps ]
                 dtc.current_steps = steps_current
                 dtc.initiated = True
@@ -495,7 +501,7 @@ class RheobaseTestP(RheobaseTest):
 
                 sub, supra = get_sub_supra(dtc.lookup)
                 if len(supra) and len(sub):
-                    
+
                     delta = float(supra.min()) - float(sub.max())
                     '''
                     if str("GLIF") in dtc.backend:
