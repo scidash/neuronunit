@@ -36,6 +36,8 @@ from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
 from neuronunit import aibs
 from neuronunit.optimisation.optimisations import run_ga
 from neuronunit.optimisation import model_parameters
+from neuronunit.optimisation import mint_tests
+
 def test_all_tests_pop(dtcpop, tests):
 
     rheobase_test = [tests[0]['Hippocampus CA1 pyramidal cell']['RheobaseTest']]
@@ -70,7 +72,7 @@ def grid_points():
     assert dtcpop is not None
     return dtcpop
 
-class estHighLevelOptimisation(unittest.TestCase):
+class testHighLevelOptimisation(unittest.TestCase):
 
     def setUp(self):
         import neuronunit
@@ -79,12 +81,16 @@ class estHighLevelOptimisation(unittest.TestCase):
         electro_path = os.path.join(os.sep,anchor,'tests/multicellular_constraints.p')
         #electro_path = str(os.getcwd())+'/../../tests/russell_tests.p'
 
-        assert os.path.isfile(electro_path) == True
-        with open(electro_path,'rb') as f:
-            try:
-                self.test_frame = pickle.load(f)
-            except:
-                (self.test_frame,self.obs_frame) = pickle.load(f)
+        if os.path.isfile(electro_path):
+            with open(electro_path,'rb') as f:
+                try:
+                    self.test_frame = pickle.load(f)
+                except:
+                    (self.test_frame,self.obs_frame) = pickle.load(f)
+        else:
+            self.test_frame = mint_tests.get_cell_constraints()
+            df = pd.DataFrame(rts)
+
         self.filtered_tests = {key:val for key,val in self.test_frame.items() }# if len(val) ==8}
         print(self.filtered_tests)
         self.predictions = None
@@ -125,7 +131,7 @@ class estHighLevelOptimisation(unittest.TestCase):
         except:
             use_test = TSD(self.filtered_tests[list(self.filtered_tests.keys())[0]])
         easy_standards = {ut.name:ut.observation['std'] for ut in use_test.values()}
-        
+
         use_test.use_rheobase_score = True
         print(easy_standards)
         [(value.name,value.observation) for value in use_test.values()]
@@ -133,7 +139,7 @@ class estHighLevelOptimisation(unittest.TestCase):
             with open('jd.p','rb') as f:
                 results,converged,target,simulated_tests = pickle.load(f)
         except:
-            
+
             OM = OptMan(use_test,protocol={'elephant':True,'allen':False,'dm':False})
             results,converged,target,simulated_tests = OM.round_trip_test(use_test,str('RAW'),MU=2,NGEN=2)#,stds = easy_standards)
             print(converged,target)
@@ -141,7 +147,7 @@ class estHighLevelOptimisation(unittest.TestCase):
 
             with open('jd.p','wb') as f:
                 pickle.dump(temp,f)
-        param_edges = model_parameters.MODEL_PARAMS['HH'] 
+        param_edges = model_parameters.MODEL_PARAMS['HH']
         try:
             with open('jda.p','rb') as f:
                 adconv = pickle.load(f)[0]
@@ -164,6 +170,6 @@ class estHighLevelOptimisation(unittest.TestCase):
         #cpm = converged[0].iap()
         return
 
-       
+
 if __name__ == '__main__':
     unittest.main()
