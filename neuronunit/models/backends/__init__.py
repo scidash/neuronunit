@@ -53,7 +53,7 @@ except ImportError:
 try:
     from .badexp import ADEXPBackend
 except Exception as e:
-    print('pynn python Error')
+    print('brian adaptive exponentional error python Error')
 
 try:
     from .bhh import BHHBackend
