@@ -2686,8 +2686,6 @@ class OptMan():
             xtests = list(copy.copy(original_test_dic).values())
 
             dtc.tests = xtests
-            import pdb
-            pdb.set_trace()
             mean = True
             for t in xtests:
                 if 'mean' in t.observation.keys():
