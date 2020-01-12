@@ -25,12 +25,14 @@ install:
   - pip install neurodynex
   - pip install seaborn
   - pip install -r requirements.txt
+  - pip uninstall deap
+  - rm -r /home/travis/build/russelljjarvis/NeuronunitOpt/deap
   - pip install git+https://github.com/fun-zoological-computing/AllenSDK
   - pip install git+https://github.com/fun-zoological-computing/deap
   - pip install -e .
   - git clone https://github.com/fun-zoological-computing/deap
   - cd deap
-  - pip install -e .
+  - pip install .
   - cd ../
 script:
   - cd neuronunit/unit_test/working
