@@ -69,7 +69,7 @@ class RheobaseTest(VmTest):
         self.high = 300*pq.pA
         self.small = 0*pq.pA
         self.rheobase_vm = None
-        self.verbose = 3
+        self.verbose = 0
     required_capabilities = (ncap.ReceivesSquareCurrent,
                              ncap.ProducesSpikes)
 
@@ -426,8 +426,6 @@ class RheobaseTestP(RheobaseTest):
                         steps1 = np.linspace(1,550,7)
                         print(steps)
                         print(steps1)
-                        import pdb
-                        pdb.set_trace()
                     except:
                         steps = np.linspace(1,550,7)
 
@@ -454,7 +452,7 @@ class RheobaseTestP(RheobaseTest):
                 big = 16
 
             while dtc.boolean == False and cnt< big:
-                print(cnt)
+                #print(cnt)
                 # negeative spiker
                 if len(sub):
                     if sub.max() < -1.0:
