@@ -30,8 +30,8 @@ install:
   - pip install git+https://github.com/fun-zoological-computing/deap
   - pip install -e .
  
-  - git clone https://github.com/fun-zoological-computing/deap
-  - cp deap/tools/support.py /home/travis/miniconda/lib/python3.7/site-packages/deap/tools/support.py
+  #- git clone https://github.com/fun-zoological-computing/deap
+  #- cp deap/tools/support.py /home/travis/miniconda/lib/python3.7/site-packages/deap/tools/support.py
 
 script:
   - git clone https://github.com/fun-zoological-computing/deap
