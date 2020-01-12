@@ -28,6 +28,10 @@ install:
   - pip install git+https://github.com/fun-zoological-computing/AllenSDK
   - pip install git+https://github.com/fun-zoological-computing/deap
   - pip install -e .
+  - git clone https://github.com/fun-zoological-computing/deap
+  - cd deap
+  - pip install -e .
+  - cd ../
 script:
   - cd neuronunit/unit_test/working
   - python -m unittest backend_tests.py
