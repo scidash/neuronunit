@@ -76,7 +76,7 @@ class estHighLevelOptimisation(unittest.TestCase):
         import neuronunit
         anchor = neuronunit.__file__
         anchor = os.path.dirname(anchor)
-        electro_path = os.path.join(os.sep,anchor,'tests/russell_tests.p')
+        electro_path = os.path.join(os.sep,anchor,'tests/multicellular_constraints.p')
         #electro_path = str(os.getcwd())+'/../../tests/russell_tests.p'
 
         assert os.path.isfile(electro_path) == True
