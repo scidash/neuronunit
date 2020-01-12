@@ -138,6 +138,7 @@ class testHighLevelOptimisation(unittest.TestCase):
         use_test.use_rheobase_score = True
         print(easy_standards)
         [(value.name,value.observation) for value in use_test.values()]
+        print(use_test)
 
         OM = OptMan(use_test,protocol={'elephant':True,'allen':False,'dm':False})
         results,converged,target,simulated_tests = OM.round_trip_test(use_test,str('RAW'),MU=2,NGEN=2)#,stds = easy_standards)
@@ -158,6 +159,8 @@ class testHighLevelOptimisation(unittest.TestCase):
         with open('jda.p','wb') as f:
             temp = [adconv]
             pickle.dump(temp,f)
+        return
+        """
         import copy
         from neuronunit.optimisation import optimization_management as om
         om.inject_and_plot(copy.copy(converged),second_pop=copy.copy(target),third_pop=copy.copy(adconv),figname='snippets_false.png',snippets=False)
@@ -168,7 +171,7 @@ class testHighLevelOptimisation(unittest.TestCase):
         #mpa = adconv[0].iap()
         #cpm = converged[0].iap()
         return
-
+        """
 
 if __name__ == '__main__':
     unittest.main()
