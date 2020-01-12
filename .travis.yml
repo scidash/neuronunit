@@ -40,6 +40,6 @@ script:
   - python -m unittest backend_tests.py
   - python -m unittest small_test.py
   - cd ../../examples
-  - python use_edt.py
+  #- python use_edt.py
 after_success:
   - coveralls
