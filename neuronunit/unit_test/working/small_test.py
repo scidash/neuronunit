@@ -138,30 +138,26 @@ class testHighLevelOptimisation(unittest.TestCase):
         use_test.use_rheobase_score = True
         print(easy_standards)
         [(value.name,value.observation) for value in use_test.values()]
-        try:
-            with open('jd.p','rb') as f:
-                results,converged,target,simulated_tests = pickle.load(f)
-        except:
 
-            OM = OptMan(use_test,protocol={'elephant':True,'allen':False,'dm':False})
-            results,converged,target,simulated_tests = OM.round_trip_test(use_test,str('RAW'),MU=2,NGEN=2)#,stds = easy_standards)
-            print(converged,target)
-            temp = [results,converged,target,simulated_tests]
+        OM = OptMan(use_test,protocol={'elephant':True,'allen':False,'dm':False})
+        results,converged,target,simulated_tests = OM.round_trip_test(use_test,str('RAW'),MU=2,NGEN=2)#,stds = easy_standards)
+        print(converged,target)
+        temp = [results,converged,target,simulated_tests]
 
-            with open('jd.p','wb') as f:
-                pickle.dump(temp,f)
+        with open('jd.p','wb') as f:
+            pickle.dump(temp,f)
         param_edges = model_parameters.MODEL_PARAMS['HH']
-        try:
-            with open('jda.p','rb') as f:
-                adconv = pickle.load(f)[0]
-        except:
-            ga_out = run_ga(param_edges, 2, simulated_tests, free_params=param_edges.keys(), \
+        #try:
+        #    with open('jda.p','rb') as f:
+        #        adconv = pickle.load(f)[0]
+        #except:
+        ga_out = run_ga(param_edges, 2, simulated_tests, free_params=param_edges.keys(), \
                 backend=str('HH'), MU = 4,  protocol={'allen': False, 'elephant': True})
 
-            adconv = [ p.dtc for p in ga_out[0]['pf'] ]
-            with open('jda.p','wb') as f:
-                temp = [adconv]
-                pickle.dump(temp,f)
+        adconv = [ p.dtc for p in ga_out[0]['pf'] ]
+        with open('jda.p','wb') as f:
+            temp = [adconv]
+            pickle.dump(temp,f)
         import copy
         from neuronunit.optimisation import optimization_management as om
         om.inject_and_plot(copy.copy(converged),second_pop=copy.copy(target),third_pop=copy.copy(adconv),figname='snippets_false.png',snippets=False)
