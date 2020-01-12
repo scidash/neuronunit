@@ -31,8 +31,10 @@ install:
   - pip install -e .
   - git clone https://github.com/fun-zoological-computing/deap
   - cd deap
+  - cp tools/support.py /home/travis/miniconda/lib/python3.7/site-packages/deap/tools/support.py
   - pip install .
   - cd ../
+
 script:
   - cd neuronunit/unit_test/working
   - python -m unittest backend_tests.py
