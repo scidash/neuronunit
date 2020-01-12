@@ -82,6 +82,10 @@ class testHighLevelOptimisation(unittest.TestCase):
         #electro_path = str(os.getcwd())+'/../../tests/russell_tests.p'
 
         if os.path.isfile(electro_path):
+            try:
+                assert os.path.isfile(electro_path) == True
+            except:
+                print('Exception')
             with open(electro_path,'rb') as f:
                 try:
                     self.test_frame = pickle.load(f)
@@ -100,7 +104,6 @@ class testHighLevelOptimisation(unittest.TestCase):
          #self.grid_points
 
         #electro_path = 'pipe_tests.p'
-        assert os.path.isfile(electro_path) == True
         with open(electro_path,'rb') as f:
             self.electro_tests = pickle.load(f)
         #self.electro_tests = get_neab.replace_zero_std(self.electro_tests)
