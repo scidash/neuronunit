@@ -5,7 +5,6 @@ jobs:
       - image: russelljarvis/efel_allen_dm
     steps:
       - checkout
-      - run: <command>
   test:
     docker:
       - image: russelljarvis/efel_allen_dm
@@ -35,9 +34,8 @@ jobs:
       - pip install git+https://github.com/fun-zoological-computing/AllenSDK
       - pip install git+https://github.com/fun-zoological-computing/deap
       - pip install -e .
-    - run:
-        - cd neuronunit/examples
-        - jupyter nbconvert --to notebook --execute chapter1.ipynb
+      - cd neuronunit/examples
+      - jupyter nbconvert --to notebook --execute chapter1.ipynb
         - jupyter nbconvert --to notebook --execute chapter10.ipynb
         - jupyter nbconvert --to notebook --execute chapter11.ipynb
         - jupyter nbconvert --to notebook --execute chapter2_needs_merge.ipynb
