@@ -7,7 +7,7 @@ services:
 
 install:
   - sudo apt-get update
-  - sudo apt-get install python-lxml 
+  - sudo apt-get install python-lxml
   - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
@@ -29,15 +29,16 @@ install:
   - pip install git+https://github.com/fun-zoological-computing/AllenSDK
   - pip install git+https://github.com/fun-zoological-computing/deap
   - pip install -e .
+  - git clone https://github.com/fun-zoological-computing/deap
+  - cp deap/tools/support.py /home/travis/miniconda/lib/python3.7/site-packages/deap/tools/support.py
  
   #- git clone https://github.com/fun-zoological-computing/deap
   #- cp deap/tools/support.py /home/travis/miniconda/lib/python3.7/site-packages/deap/tools/support.py
 
 script:
-  - git clone https://github.com/fun-zoological-computing/deap
-  - cp deap/tools/support.py /home/travis/miniconda/lib/python3.7/site-packages/deap/tools/support.py
   - cd neuronunit/examples
   - jupyter nbconvert --to notebook --execute chapter1.ipynb
+  - jupyter nbconvert --to notebook --execute backend_tests.ipynb
   - jupyter nbconvert --to notebook --execute chapter10.ipynb
   - jupyter nbconvert --to notebook --execute chapter11.ipynb
   - jupyter nbconvert --to notebook --execute chapter2_needs_merge.ipynb
