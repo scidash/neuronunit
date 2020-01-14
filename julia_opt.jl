@@ -68,7 +68,7 @@ for key,v in rts.items():
     helper_tests = [value for value in v.values() ]
     break
 
-backend=str('JHH')
+backend=str('RAW')
 param_edges = model_parameters.MODEL_PARAMS[backend]
 protocol = {'allen':False,'elephant':True}
 vm_container = []
@@ -92,21 +92,6 @@ tests = rts['Neocortex pyramidal cell layer 5-6']
 tests = TSD(tests)
 DO = om.make_ga_DO(param_edges,1,tests,free_params=list(param_edges.keys()),backend=backend, MU = 10,  protocol=protocol)
 pre_genes = DO.set_pop()
-"""
-function dont_do_this_two()
-    py"""
-    tests = TSD(tests)
-    NGEN = MU = 1
-
-    neo_out = tests.optimize(param_edges, NGEN=NGEN, \
-                            backend=backend, MU=MU, protocol={'allen': False, 'elephant': True})
-    """
-
-    dtc=py"""neo_out[0]['pf'][0]"""
-    model = dtc.dtc_to_model()
-
-    neo_out=py"neo_out"
-end
 
 using JLD
 try
