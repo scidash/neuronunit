@@ -1,4 +1,6 @@
 language: python
+julia: 
+  - "1.1.0"
 python:
   - "3.6"
   - "3.7"
@@ -7,6 +9,7 @@ services:
 
 install:
   - sudo apt-get update
+  - sudo apt-get install python3-tk 
   - sudo apt-get install python-lxml
   - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
   - bash miniconda.sh -b -p $HOME/miniconda
@@ -29,6 +32,7 @@ install:
   - pip install git+https://github.com/fun-zoological-computing/AllenSDK
   - pip install git+https://github.com/fun-zoological-computing/deap
   - pip install -e .
+  - pip install julia
   - git clone https://github.com/fun-zoological-computing/deap
   - cp deap/tools/support.py /home/travis/miniconda/lib/python3.7/site-packages/deap/tools/support.py
  
@@ -36,16 +40,5 @@ install:
   #- cp deap/tools/support.py /home/travis/miniconda/lib/python3.7/site-packages/deap/tools/support.py
 
 script:
-  - cd neuronunit/examples
-  - jupyter nbconvert --to notebook --execute chapter1.ipynb
-  - jupyter nbconvert --to notebook --execute backend_tests.ipynb
-  - jupyter nbconvert --to notebook --execute chapter10.ipynb
-  - jupyter nbconvert --to notebook --execute chapter11.ipynb
-  - jupyter nbconvert --to notebook --execute chapter2_needs_merge.ipynb
-  - jupyter nbconvert --to notebook --execute chapter3.ipynb
-  - jupyter nbconvert --to notebook --execute chapter4.ipynb
-  - jupyter nbconvert --to notebook --execute chapter5.ipynb
-  - jupyter nbconvert --to notebook --execute chapter6.ipynb
-  - jupyter nbconvert --to notebook --execute chapter7.ipynb
-  - jupyter nbconvert --to notebook --execute chapter8.ipynb
-  - jupyter nbconvert --to notebook --execute chapter9.ipynb
+  cd neuronunit/examples
+  -python-jl -m IPython pyjul.py 
