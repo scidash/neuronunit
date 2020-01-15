@@ -205,15 +205,12 @@ def make_ga_DO(explore_edges, max_ngen, test, \
 
     return DO
 
-
 from sciunit import TestSuite
+
 class TSD(TestSuite):
     def __init__(self,tests={},use_rheobase_score=False):
        self.DO = None
-
-
        super(TSD,self).__init__(tests)
-
        self.update(tests)
        if 'name' in self.keys():
            self.cell_name = tests['name']
