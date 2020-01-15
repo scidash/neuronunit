@@ -206,12 +206,13 @@ def make_ga_DO(explore_edges, max_ngen, test, \
     return DO
 
 
-
-class TSD(dict):
+from sciunit import TestSuite
+class TSD(TestSuite):
     def __init__(self,tests={},use_rheobase_score=False):
        self.DO = None
 
-       super(TSD,self).__init__()
+
+       super(TSD,self).__init__(tests)
 
        self.update(tests)
        if 'name' in self.keys():
@@ -717,8 +718,8 @@ def dtc_to_rheo(dtc):
                 return dtc
                 """
                 score = rtest.judge(model)
-                if type(score.norm_score) is not type(None):
-                    dtc.scores[rtest.name] = 1.0 - float(score.norm_score)
+                if type(score.log_norm_score) is not type(None):
+                    dtc.scores[rtest.name] = 1.0 - float(score.log_norm_score)
                 else:
                     dtc.scores[rtest.name] = 1.0
             else:
@@ -773,7 +774,7 @@ def inject_and_plot_model(attrs,backend):
 def score_proc(dtc,t,score):
     dtc.score[str(t)] = {}
     if hasattr(score,'norm_score'):
-        dtc.score[str(t)]['value'] = copy.copy(score.norm_score)
+        dtc.score[str(t)]['value'] = copy.copy(score.log_norm_score)
         if hasattr(score,'prediction'):
             if type(score.prediction) is not type(None):
                 dtc.score[str(t)][str('prediction')] = score.prediction
@@ -1177,8 +1178,8 @@ def prediction_current_and_features(dtc):
                 except:
                     score = None
                 dtc.tests[k] = VmTest(obs)#.compute_score(helper,obs,prediction)
-                if score is not None and score.norm_score is not None:
-                    dtc.scores[k] = 1.0-float(score.norm_score)
+                if score is not None and score.log_norm_score is not None:
+                    dtc.scores[k] = 1.0-float(score.log_norm_score)
                 else:
                     dtc.scores[k] = 1.0
 
@@ -1217,8 +1218,8 @@ def prediction_current_and_features(dtc):
                 else:
                     score = None
                 dtc.tests[key] = VmTest(obs)
-                if not score is None and not score.norm_score is None:
-                    dtc.scores[key] = 1.0-score.norm_score
+                if not score is None and not score.log_norm_score is None:
+                    dtc.scores[key] = 1.0-score.log_norm_score
                 else:
                     dtc.scores[key] = 1.0
     dtc.ephys = None
@@ -1317,8 +1318,8 @@ L
                     #print(helper,obs,prediction)
                     score = None
                 dtc.tests[k] = VmTest(obs)#.compute_score(helper,obs,prediction)
-                if score is not None and score.norm_score is not None:
-                    dtc.scores[k] = 1.0-float(score.norm_score)
+                if score is not None and score.log_norm_score is not None:
+                    dtc.scores[k] = 1.0-float(score.log_norm_score)
                 else:
                     dtc.scores[k] = 1.0
         if str(k) in str('spikes'):
@@ -1342,8 +1343,8 @@ L
                     except:
                         score = None
                     dtc.tests[key] = VmTest(obs)
-                    if not score is None and not score.norm_score is None:
-                        dtc.scores[key] = 1.0-score.norm_score
+                    if not score is None and not score.log_norm_score is None:
+                        dtc.scores[key] = 1.0-score.log_norm_score
                     else:
                         dtc.scores[key] = 1.0
                 except:
@@ -1975,6 +1976,7 @@ class OptMan():
         self.boundary_dict= boundary_dict
         self.protocol = protocol
         self.julia = False
+        self.simulated_data_tests = self.round_trip_test
         # note this is not effective at changing parallel behavior yet
         if PARALLEL_CONFIDENT not in globals():
             self.PARALLEL_CONFIDENT = False
@@ -2275,7 +2277,6 @@ class OptMan():
             #inject_and_plot(ga_converged,second_pop=test_origin_target,third_pop=[ga_converged[0]],figname='not_a_problem.png',snippets=True)
             return ga_out,ga_converged,test_origin_target,new_tests
 
-
     def grid_search(self,explore_ranges,test_frame,backend=None):
         '''
         Hopefuly this method can depreciate the whole file optimisation_management/exhaustive_search.py
@@ -2455,7 +2456,7 @@ class OptMan():
                         t = RheobaseTestP(t.observation)
                         t.passive = False
                         score = t.compute_score(t.observation,dtc.rheobase)
-                        dtc.errors[key] = 1.0 - score.norm_score
+                        dtc.errors[key] = 1.0 - score.log_norm_score
                         continue
                 try:
                     assert hasattr(self.tests,'use_rheobase_score')
@@ -2469,7 +2470,7 @@ class OptMan():
                 error = 1.0
                 try:
                     score = t.judge(model)
-                    error = 1.0 - score.norm_score
+                    error = 1.0 - score.log_norm_score
                 except:
                     print('score broke')
                     print(dtc.backend,t,'backend,test')
@@ -2578,8 +2579,8 @@ class OptMan():
                             assignment = np.abs(1-1.0/float(np.abs(float(score.raw))))
                     else:
                         try:
-                            assert score.norm_score is not None
-                            assignment = 1.0 - score.norm_score
+                            assert score.log_norm_score is not None
+                            assignment = 1.0 - score.log_norm_score
                         except:
                             logging.info('math domain error')
                             assignment = 0.95
@@ -2602,7 +2603,7 @@ class OptMan():
                         #print(t.observation['mean'],pred, 'incompatible')
                         t.score_type = scores.RatioScore
                         score = t.compute_score(pred,t.observation)
-                        assignment = 1.0 - score.norm_score
+                        assignment = 1.0 - score.log_norm_score
                         dtc.scores[str(t.name)] = assignment
 
                 if not dtc.scores[key] == 0.0:
