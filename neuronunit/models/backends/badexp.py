@@ -83,7 +83,6 @@ def simulate_AdEx_neuron_local(
         (state_monitor, spike_monitor):
         A b2.StateMonitor for the variables "v" and "w" and a b2.SpikeMonitor
     """
-    print(v_rest)
     v_spike_str = "v>{:f}*mvolt".format(v_spike / b2.mvolt)
 
     # EXP-IF
@@ -177,7 +176,6 @@ class ADEXPBackend(Backend):
             self.AdEx.SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b = attrs['SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b']*AdEx.b2.units.pA
             self.AdEx.V_RESET = attrs['V_RESET']*AdEx.b2.units.mV
             self.AdEx.V_REST = attrs['V_REST']*AdEx.b2.units.mV*100
-            print(self.AdEx.V_REST)
 
             if str('peak_v') in attrs:
                 self.peak_v = attrs['peak_v']
@@ -248,7 +246,7 @@ class ADEXPBackend(Backend):
 
         else:
             if self.verbose:
-                print(attrs)
+                #print(attrs)
                 print(attrs['ADAPTATION_TIME_CONSTANT_tau_w'])
 
             if getting_started == True:
