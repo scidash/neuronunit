@@ -23,7 +23,7 @@ class testCrucialBackendsSucceed(unittest.TestCase):
         self.backends =  ["RAW", "HH"]
         self.other_backends =["BHH","BADEXP"]
         self.backends_complex =  ["GLIF", "NEURON"]
-        self.julia_backend =["JHH"]
+        self.julia_backend ="JHH"
 
         #raw_attrs = {k:np.mean(v) for k,v in model_parameters.MODEL_PARAMS[backend].items()}
         #self.backends = backends
