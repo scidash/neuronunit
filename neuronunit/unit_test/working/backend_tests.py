@@ -21,7 +21,7 @@ class testCrucialBackendsSucceed(unittest.TestCase):
     def setUp(self):
         model_parameters.MODEL_PARAMS.keys()
         self.backends =  ["RAW", "HH"]
-        self.other_backends =["BHH","BADEXP"]
+        self.other_backends =["BHH","ADEXP"]
         self.backends_complex =  ["GLIF", "NEURON"]
         self.julia_backend ="JHH"
 
@@ -94,7 +94,12 @@ class testCrucialBackendsSucceed(unittest.TestCase):
     def test_prefer_pass_2(self):
         fig, axs = plt.subplots(len(self.backends)*2+1,figsize=(40, 40))
         cnt=0
-        for b in self.complex_backends:
+        for b in self.backends_complex:
+            if b in str("GLIF"):
+                print(self.model_parameters.MODEL_PARAMS[b])
+                import pdb
+                pdb.set_trace()
+
             attrs = {k:np.mean(v) for k,v in self.model_parameters.MODEL_PARAMS[b].items()}
             pre_model = DataTC()
             if str("V_REST") in attrs.keys():
@@ -122,7 +127,7 @@ class testCrucialBackendsSucceed(unittest.TestCase):
             self.assertTrue(boolean)
 
         return True
-
+    """
     def test_prefer_pass_3(self):
         fig, axs = plt.subplots(len(self.backends)*2+1,figsize=(40, 40))
         cnt=0
@@ -155,7 +160,7 @@ class testCrucialBackendsSucceed(unittest.TestCase):
         self.assertTrue(boolean)
 
         return True
-
+    """
 
     """
     def not_required_to_pass_1(self):
