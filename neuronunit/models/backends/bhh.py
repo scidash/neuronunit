@@ -70,7 +70,7 @@ def simulate_HH_neuron_local(I_stim=None,
     """
     # forming HH model with differential equations
     # dVdt = (Iext - I_Na - I_K - I_L) / C_m
-
+    assert float(El)<0.0
     eqs = """
     I_e = input_current(t,i) : amp
     membrane_Im = I_e + gNa*m**3*h*(ENa-vm) + \
@@ -88,7 +88,7 @@ def simulate_HH_neuron_local(I_stim=None,
     """
     neuron = b2.NeuronGroup(1, eqs, method="exponential_euler")
     # parameter initialization
-    neuron.vm = 65.0*b2.units.mV
+    neuron.vm = El#*b2.units.mV
     neuron.m = 0.05
     neuron.h = 0.60
     neuron.n = 0.32
@@ -106,7 +106,7 @@ def simulate_HH_neuron_local(I_stim=None,
     v_nan = []
     for v in vm:
        if np.isnan(v):
-           v_nan.append(65.0*b2.units.mV)
+           v_nan.append(-65.0*b2.units.mV)
        else:
            v_nan.append(v)
     vM = AnalogSignal(v_nan,units = pq.V,sampling_period = 1*pq.ms)#b2.defaultclock.dt*pq.s)
@@ -223,18 +223,10 @@ class BHHBackend(Backend):
         getting_started = False
         if getting_started == False:
             stim = input_factory.get_step_current(delay, duration, b2.ms, amp * b2.A)
-            #stim1 = input_factory.get_step_current(delay+duration, (duration+delay+100), b2.ms, amp * b2.A)
-
-
-
             st = (duration+delay+100)* b2.ms
-            #print(duration,delay,100)
-            #import pdb
-            #pdb.set_trace()
         else:
             stim = input_factory.get_step_current(10, 7, b2.ms, 45.0 * b2.nA)
 
-            #stim = input_factory.get_step_current(delay, duration, b2.ms, amp * b2.pA)
             st = 70 * b2.ms
 
         if self.model.attrs is None or not len(self.model.attrs):
