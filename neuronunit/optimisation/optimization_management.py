@@ -205,91 +205,44 @@ def make_ga_DO(explore_edges, max_ngen, test, \
 
     return DO
 
-    
+  
 def optimize(testsuite, param_edges, backend=None, protocol={'allen': False, 'elephant': True},
              MU=5, NGEN=5, free_params=None, seed_pop=None, hold_constant=None):
-        if type(free_params) is type(None):
-            free_params=param_edges.keys()
-        DO = make_ga_DO(param_edges, NGEN, testsuite, free_params=free_params, \
-                           backend=backend, MU = 8, protocol=protocol,seed_pop = seed_pop, hc=hold_constant)
-        DO.MU = MU
-        DO.NGEN = NGEN
-        ga_out = DO.run(NGEN = DO.NGEN)
-        ga_out['DO'] = DO
-        if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
-            _,dtc_pop = DO.OM.test_runner(copy.copy(ga_out['pf']), DO.OM.td, DO.OM.tests)
-            ga_out['dtc_pop'] = dtc_pop
-        if type(ga_out['pf'][0].dtc) is type(None):
-            _,ga_out['dtc_pop'] = DO.OM.test_runner(copy.copy(ga_out['pf']), DO.OM.td, DO.OM.tests)
-            pop,dtcpop = get_dm(ga_out['dtc_pop'], pop=ga_out['pf'])
-        else:
-            local = [p.dtc for p in ga_out['pf']]
-            #ga_out['dtc_pop'] = [ i.dtc for i in ga_out['pf'] ]
-            pop,dtcpop = get_dm(local,pop=ga_out['pf'])
-            #p in ga_out['pf']],pop=ga_out['pf'])
-        print(dtcpop[0].dtc.dm_test_features)
-        testsuite.backend = backend
-        '''
-        if str(self.cell_name) not in str('simulated data'):
-            #pass
-            # is this a data driven test? if so its worth plotting results
-            ga_out = self.elaborate_plots(self,ga_out)
-        '''
-        ##
-        # TODO populate a score table pass it back to DO.OM
-        from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
-        #df = pd.DataFrame([ga_out['pf'][0].dtc.scores])
-        SM = ScoreMatrix([v for v in testsuite.values()], [ind.dtc.dtc_to_model() for ind in ga_out['pf']])
-        return ga_out, DO, SM
-    
-'''
-class TSD(dict):
-    def __init__(self,tests={},use_rheobase_score=False):
-       super(TSD,self).__init__()
-       self.update(tests)
-       if 'name' in self.keys():
-           self.cell_name = tests['name']
-           self.pop('name',None)
-       else:
-           self.cell_name = 'simulated data'
-
-       self.use_rheobase_score = use_rheobase_score
-       self.elaborate_plots  = elaborate_plots
-       self.backend = None
+    if type(free_params) is type(None):
+        free_params=param_edges.keys()
+    DO = make_ga_DO(param_edges, NGEN, testsuite, free_params=free_params, \
+                    backend=backend, MU = 8, protocol=protocol,seed_pop = seed_pop, hc=hold_constant)
+    DO.MU = MU
+    DO.NGEN = NGEN
+    ga_out = DO.run(NGEN = DO.NGEN)
+    ga_out['DO'] = DO
+    if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
+        _,dtc_pop = DO.OM.test_runner(copy.copy(ga_out['pf']), DO.OM.td, DO.OM.tests)
+        ga_out['dtc_pop'] = dtc_pop
+    if type(ga_out['pf'][0].dtc) is type(None):
+        _,ga_out['dtc_pop'] = DO.OM.test_runner(copy.copy(ga_out['pf']), DO.OM.td, DO.OM.tests)
+        pop,dtcpop = get_dm(ga_out['dtc_pop'], pop=ga_out['pf'])
+    else:
+        local = [p.dtc for p in ga_out['pf']]
+        #ga_out['dtc_pop'] = [ i.dtc for i in ga_out['pf'] ]
+        pop,dtcpop = get_dm(local,pop=ga_out['pf'])
+        #p in ga_out['pf']],pop=ga_out['pf'])
+    print(dtcpop[0].dtc.dm_test_features)
+    testsuite.backend = backend
+    '''
+    if str(self.cell_name) not in str('simulated data'):
+        #pass
+        # is this a data driven test? if so its worth plotting results
+        ga_out = self.elaborate_plots(self,ga_out)
+    '''
+    ##
+    # TODO populate a score table pass it back to DO.OM
+    from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
+    #df = pd.DataFrame([ga_out['pf'][0].dtc.scores])
+    SM = ScoreMatrix([v for v in testsuite.values()], [ind.dtc.dtc_to_model() for ind in ga_out['pf']])
+    return ga_out, DO, SM
 
 
-    def optimize(self,param_edges,backend=None,protocol={'allen': False, 'elephant': True},\
-        MU=5,NGEN=5,free_params=None,seed_pop=None,hold_constant=None):
-        from neuronunit.optimisation.optimisations import run_ga
-        if type(free_params) is type(None):
-            free_params=param_edges.keys()
-        #experimental_name = self.cell_name
-        ga_out,DO = run_ga(param_edges, NGEN, self, free_params=free_params, \
-                           backend=backend, MU = 8,  protocol=protocol,seed_pop = seed_pop, hc=hold_constant)
-        self.backend = backend
-        if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
-            _,dtc_pop = DO.OM.test_runner(ga_out['pf'],DO.OM.td,DO.OM.tests)
-            ga_out['dtc_pop'] = dtc_pop
-        if str(self.cell_name) not in str('simulated data'):
-            ga_out = self.elaborate_plots(self,ga_out)
-
-
-        from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
-
-        ##
-        # TODO populate a score table pass it back to DO.OM
-
-        return ga_out, DO
-from sciunit.suites import TestSuite# as TSuite
-
-class TSS(TestSuite):
-    def __init__(self,tests=[],use_rheobase_score=False):
-       super(TSD,self).__init__()
-       self.update(tests)
-       self.use_rheobase_score=use_rheobase_score
-    def optimize(self,param_edges,backend=None,protocol={'allen': False, 'elephant': True},MU=5,NGEN=5,free_params=None,seed_pop=None):
-        pass
-'''
 # DEAP mutation strategies:
 # https://deap.readthedocs.io/en/master/api/tools.html#deap.tools.mutESLogNormal
 class WSFloatIndividual(float):
@@ -699,8 +652,8 @@ def dtc_to_rheo(dtc):
                 return dtc
                 """
                 score = rtest.judge(model)
-                if type(score.norm_score) is not type(None):
-                    dtc.scores[rtest.name] = 1.0 - float(score.norm_score)
+                if type(score.log_norm_score) is not type(None):
+                    dtc.scores[rtest.name] = 1.0 - float(score.log_norm_score)
                 else:
                     dtc.scores[rtest.name] = 1.0
             else:
@@ -755,7 +708,7 @@ def inject_and_plot_model(attrs,backend):
 def score_proc(dtc,t,score):
     dtc.score[str(t)] = {}
     if hasattr(score,'norm_score'):
-        dtc.score[str(t)]['value'] = copy.copy(score.norm_score)
+        dtc.score[str(t)]['value'] = copy.copy(score.log_norm_score)
         if hasattr(score,'prediction'):
             if type(score.prediction) is not type(None):
                 dtc.score[str(t)][str('prediction')] = score.prediction
@@ -1159,8 +1112,8 @@ def prediction_current_and_features(dtc):
                 except:
                     score = None
                 dtc.tests[k] = VmTest(obs)#.compute_score(helper,obs,prediction)
-                if score is not None and score.norm_score is not None:
-                    dtc.scores[k] = 1.0-float(score.norm_score)
+                if score is not None and score.log_norm_score is not None:
+                    dtc.scores[k] = 1.0-float(score.log_norm_score)
                 else:
                     dtc.scores[k] = 1.0
 
@@ -1199,8 +1152,8 @@ def prediction_current_and_features(dtc):
                 else:
                     score = None
                 dtc.tests[key] = VmTest(obs)
-                if not score is None and not score.norm_score is None:
-                    dtc.scores[key] = 1.0-score.norm_score
+                if not score is None and not score.log_norm_score is None:
+                    dtc.scores[key] = 1.0-score.log_norm_score
                 else:
                     dtc.scores[key] = 1.0
     dtc.ephys = None
@@ -1299,8 +1252,8 @@ L
                     #print(helper,obs,prediction)
                     score = None
                 dtc.tests[k] = VmTest(obs)#.compute_score(helper,obs,prediction)
-                if score is not None and score.norm_score is not None:
-                    dtc.scores[k] = 1.0-float(score.norm_score)
+                if score is not None and score.log_norm_score is not None:
+                    dtc.scores[k] = 1.0-float(score.log_norm_score)
                 else:
                     dtc.scores[k] = 1.0
         if str(k) in str('spikes'):
@@ -1324,8 +1277,8 @@ L
                     except:
                         score = None
                     dtc.tests[key] = VmTest(obs)
-                    if not score is None and not score.norm_score is None:
-                        dtc.scores[key] = 1.0-score.norm_score
+                    if not score is None and not score.log_norm_score is None:
+                        dtc.scores[key] = 1.0-score.log_norm_score
                     else:
                         dtc.scores[key] = 1.0
                 except:
@@ -1957,6 +1910,7 @@ class OptMan():
         self.boundary_dict= boundary_dict
         self.protocol = protocol
         self.julia = False
+        self.simulated_data_tests = self.round_trip_test
         # note this is not effective at changing parallel behavior yet
         if PARALLEL_CONFIDENT not in globals():
             self.PARALLEL_CONFIDENT = False
@@ -2257,7 +2211,6 @@ class OptMan():
             #inject_and_plot(ga_converged,second_pop=test_origin_target,third_pop=[ga_converged[0]],figname='not_a_problem.png',snippets=True)
             return ga_out,ga_converged,test_origin_target,new_tests
 
-
     def grid_search(self,explore_ranges,test_frame,backend=None):
         '''
         Hopefuly this method can depreciate the whole file optimisation_management/exhaustive_search.py
@@ -2437,7 +2390,7 @@ class OptMan():
                         t = RheobaseTestP(t.observation)
                         t.passive = False
                         score = t.compute_score(t.observation,dtc.rheobase)
-                        dtc.errors[key] = 1.0 - score.norm_score
+                        dtc.errors[key] = 1.0 - score.log_norm_score
                         continue
                 try:
                     assert hasattr(self.tests,'use_rheobase_score')
@@ -2451,7 +2404,7 @@ class OptMan():
                 error = 1.0
                 try:
                     score = t.judge(model)
-                    error = 1.0 - score.norm_score
+                    error = 1.0 - score.log_norm_score
                 except:
                     print('score broke')
                     print(dtc.backend,t,'backend,test')
@@ -2560,8 +2513,8 @@ class OptMan():
                             assignment = np.abs(1-1.0/float(np.abs(float(score.raw))))
                     else:
                         try:
-                            assert score.norm_score is not None
-                            assignment = 1.0 - score.norm_score
+                            assert score.log_norm_score is not None
+                            assignment = 1.0 - score.log_norm_score
                         except:
                             logging.info('math domain error')
                             assignment = 0.95
@@ -2584,7 +2537,7 @@ class OptMan():
                         #print(t.observation['mean'],pred, 'incompatible')
                         t.score_type = scores.RatioScore
                         score = t.compute_score(pred,t.observation)
-                        assignment = 1.0 - score.norm_score
+                        assignment = 1.0 - score.log_norm_score
                         dtc.scores[str(t.name)] = assignment
 
                 if not dtc.scores[key] == 0.0:
