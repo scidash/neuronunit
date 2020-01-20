@@ -1,0 +1,55 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: russelljarvis/efel_allen_dm
+    steps:
+      - checkout
+  test:
+    docker:
+      - image: russelljarvis/efel_allen_dm
+
+    steps:
+      - checkout
+      - sudo apt-get update
+      - sudo apt-get install python-lxml
+      - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+      - bash miniconda.sh -b -p $HOME/miniconda
+      - export PATH="$HOME/miniconda/bin:$PATH"
+      - sudo apt-get install python-lxml
+      - hash -r
+      - conda config --set always_yes yes --set changeps1 no
+      - conda update -q conda
+      - conda info -a
+      - pip install -U pip
+      - pip install --upgrade pip
+      - pip install coveralls
+      - pip install git+https://github.com/scidash/sciunit@dev
+      - pip install dask distributed brian2 numba
+      - pip install --upgrade beautifulsoup4
+      - pip install neurodynex
+      - pip install seaborn
+      - pip install -r requirements.txt
+      - pip uninstall deap -y
+      - pip install git+https://github.com/fun-zoological-computing/AllenSDK
+      - pip install git+https://github.com/fun-zoological-computing/deap
+      - pip install -e .
+      - cd neuronunit/examples
+      - jupyter nbconvert --to notebook --execute chapter1.ipynb
+        - jupyter nbconvert --to notebook --execute chapter10.ipynb
+        - jupyter nbconvert --to notebook --execute chapter11.ipynb
+        - jupyter nbconvert --to notebook --execute chapter2_needs_merge.ipynb
+        - jupyter nbconvert --to notebook --execute chapter3.ipynb
+        - jupyter nbconvert --to notebook --execute chapter4.ipynb
+        - jupyter nbconvert --to notebook --execute chapter5.ipynb
+        - jupyter nbconvert --to notebook --execute chapter6.ipynb
+        - jupyter nbconvert --to notebook --execute chapter7.ipynb
+        - jupyter nbconvert --to notebook --execute chapter8.ipynb
+        - jupyter nbconvert --to notebook --execute chapter9.ipynb
+
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - build
+      - test
