@@ -94,9 +94,11 @@ def _update_history_and_hof(halloffame,pf, history, population,GEN,MU):
         history.update(temp)
     if pf is not None:
         if GEN ==0:
-            pf = deap.tools.ParetoFront(MU)
+            #pf = deap.tools.ParetoFront(MU) # Wrong because first arg to ParetoFront is similarity metric not pop size
+            pf = deap.tools.ParetoFront()
         #print(len(pf),len(temp))
         #print([p.fitness.values for p in population])
+        print(pf.similar, 3333333333)
         pf.update(temp)
 
 
