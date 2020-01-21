@@ -48,7 +48,7 @@ import math
 import quantities as pq
 import numpy
 
-
+from sciunit import TestSuite
 from neuronunit.optimisation.data_transport_container import DataTC
 
 from neuronunit.optimisation.model_parameters import path_params
@@ -188,8 +188,7 @@ def make_ga_DO(explore_edges, max_ngen, test, \
     else:
         MU = MU
     max_ngen = int(np.floor(max_ngen))
-    if not isinstance(test, Iterable):
-        test = [test]
+    assert isinstance(test, TestSuite)
     from neuronunit.optimisation.optimisations import SciUnitOptimisation
     DO = SciUnitOptimisation(MU = MU, error_criterion = test,\
          boundary_dict = ss, backend = backend, hc = hc, \
@@ -239,7 +238,7 @@ def optimize(testsuite, param_edges, backend=None, protocol={'allen': False, 'el
     # TODO populate a score table pass it back to DO.OM
     from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
     #df = pd.DataFrame([ga_out['pf'][0].dtc.scores])
-    SM = ScoreMatrix([v for v in testsuite.values()], [ind.dtc.dtc_to_model() for ind in ga_out['pf']])
+    SM = ScoreMatrix([t for t in testsuite.tests], [ind.dtc.dtc_to_model() for ind in ga_out['pf']])
     return ga_out, DO, SM
 
 
@@ -545,63 +544,29 @@ def substitute_parallel_for_serial(rtest):
     rtest = RheobaseTestP(rtest.observation)
     return rtest
 
-def get_rtest(dtc):
+def is_parallel_rheobase_compatible(backend):
+    incompatible_backends = ['RAW', 'HH']
+    incompatible = any([x in backend for x in incompatible_backends])
+    return not incompatible        
+
+def get_new_rtest(dtc):
     place_holder = {'n': 86, 'mean': 10 * pq.pA, 'std': 10 * pq.pA, 'value': 10 * pq.pA}
+    f = RheobaseTestP if is_parallel_rheobase_compatible(dtc.backend) else RheobaseTest
+    return f(observation=place_holder, name='RheobaseTest')
 
-    if not hasattr(dtc,'tests'):#, type(None)):
-        if 'RAW' in dtc.backend or 'HH' in dtc.backend:# or 'GLIF' in dtc.backend:#Backend:
-            rtest = RheobaseTest(observation=place_holder,
-                                    name='RheobaseTest')
-        else:
-            rtest = RheobaseTestP(observation=place_holder,
-                                    name='RheobaseTest')
+def get_rtest(dtc):
+    if not hasattr(dtc, 'tests'):
+        rtest = get_new_rtest(dtc)       
     else:
-        if 'RAW' in dtc.backend or 'HH' in dtc.backend:
-            if not isinstance(dtc.tests, Iterable):
-                rtest = dtc.tests
-            else:
-                #try:
-                rtest = [ t for t in dtc.tests if hasattr(t,'name') ]
-                if len(rtest):
-                    rtest = [ t for t in rtest if str('RheobaseTest') == t.name ]
-                    if len(rtest):
-                        rtest = rtest[0]
-                    else:
-                        rtest = RheobaseTest(observation=place_holder,
-                                                name='RheobaseTest')
-
-                else:
-                    rtest = RheobaseTest(observation=place_holder,
-                                            name='RheobaseTest')
-
+        rtests = [t for t in dtc.tests if 'rheo' in t.name.lower()]
+        if len(rtests):
+            rtest = rtests[0]
+            if is_parallel_rheobase_compatible(dtc.backend):
+                rtest = substitute_parallel_for_serial(rtest)
         else:
-            if not isinstance(dtc.tests, Iterable):
-                rtest = dtc.tests
-            else:
-                rtest = [ t for t in dtc.tests if hasattr(t,'name') ]
-                if len(rtest):
-                    rtest = [ t for t in rtest if str('RheobaseTestP') == t.name ]
-                    if len(rtest):
-                        rtest = substitute_parallel_for_serial(rtest[0])
-                    else:
-                        rtest = RheobaseTestP(observation=place_holder,
-                                                name='RheobaseTest')
-                else:
-                    rtest = RheobaseTestP(observation=place_holder,
-                                            name='RheobaseTest')
-
-            #rtest = substitute_parallel_for_serial(rtest[0])
+            rtest = get_new_rtest(dtc)
     return rtest
 
-#from collections import OrderedDict
-'''
-def to_map(params,bend):
-    dtc = DataTC()
-    dtc.attrs = params
-    dtc.backend = bend
-    dtc = dtc_to_rheo(dtc)
-    return dtc
-'''
 def dtc_to_model(dtc):
     # If  test taking data, and objects are present (observations etc).
     # Take the rheobase test and store it in the data transport container.
@@ -727,49 +692,37 @@ def switch_logic(xtests):
     '''
     Hopefuly depreciated by future NU debugging.
     '''
-    if str("TSD") in str(type(xtests)):
-        xtests = list(xtests.values())
-    if not isinstance(xtests,Iterable):
-        pass
-    else:
-        for t in xtests:
-            try:
-                t.passive = None
-                t.active = None
-            except:
-                print(Error('fatal'))
-            active = False
-            passive = False
-
+    for t in xtests:
             if str('RheobaseTest') == t.name:
-                active = True
-                passive = False
+                t.active = True
+                t.passive = False
             elif str('RheobaseTestP') == t.name:
-                active = True
-                passive = False
+                t.active = True
+                t.passive = False
             elif str('InjectedCurrentAPWidthTest') == t.name:
-                active = True
-                passive = False
+                t.active = True
+                t.passive = False
             elif str('InjectedCurrentAPAmplitudeTest') == t.name:
-                active = True
-                passive = False
+                t.active = True
+                t.passive = False
             elif str('InjectedCurrentAPThresholdTest') == t.name:
-                active = True
-                passive = False
+                t.active = True
+                t.passive = False
             elif str('RestingPotentialTest') == t.name:
-                passive = True
-                active = False
+                t.passive = True
+                t.active = False
             elif str('InputResistanceTest') == t.name:
-                passive = True
-                active = False
+                t.passive = True
+                t.active = False
             elif str('TimeConstantTest') == t.name:
-                passive = True
-                active = False
+                t.passive = True
+                t.active = False
             elif str('CapacitanceTest') == t.name:
-                passive = True
-                active = False
-            t.passive = passive
-            t.active = active
+                t.passive = True
+                t.active = False
+            else:
+                t.passive = False
+                t.active = False
     return xtests
 
 def active_values(keyed,rheobase,square = None):
@@ -2396,6 +2349,7 @@ class OptMan():
                     assert hasattr(self.tests,'use_rheobase_score')
                 except:
                     print('warning please add whether or not model should be scored on rheobase to protocol')
+                    print(tests, self.tests)
                     self.tests.use_rheobase_score = True
                 if self.tests.use_rheobase_score == False and "RheobaseTest" in str(k):
                     continue
@@ -2574,14 +2528,7 @@ class OptMan():
         # rheobase values of current injection.
         # This is much like the hooked method from the old get neab file.
         dtc.protocols = {}
-        if not hasattr(dtc,'tests'):
-            dtc.tests = copy.copy(self.tests)
-
-        if hasattr(dtc.tests,'keys'):# is type(dict):
-            tests = [key for key in dtc.tests.values()]
-            dtc.tests = switch_logic(tests)#,self.tests.use_rheobase_score)
-        else:
-            dtc.tests = switch_logic(dtc.tests)
+        dtc.tests = switch_logic(dtc.tests)
         for k,v in enumerate(dtc.tests):
             dtc.protocols[k] = {}
             if hasattr(v,'passive'):#['protocol']:
@@ -2593,7 +2540,7 @@ class OptMan():
                     keyed = dtc.protocols[k]#.params
                     dtc.protocols[k] = passive_values(keyed)
             if v.name in str('RestingPotentialTest'):
-
+                #print(dtc.protocols[k], v, v.passive, v.active)
                 dtc.protocols[k]['injected_square_current']['amplitude'] = 0.0*pq.pA
         return dtc
     @timer
