@@ -1,18 +1,18 @@
 using Pkg
-#=
+
 try
-   Pkg.add("Py2Jl")
    using Py2Jl
 catch
+   Pkg.add("MLStyle")
    Pkg.add("Py2Jl")
    using Py2Jl
 end
 
-ENV["PYTHON"]="/usr/local/lib/python3.5"
-ENV["PYTHON"]="/usr/bin/python3.5"
+ENV["PYTHON"]="/usr/local/lib/python3.6"
+ENV["PYTHON"]="/usr/bin/python3.6"
 using Pkg
 Pkg.build("PyCall")
-=#
+
 using Debugger
 using PyCall
 using Random: bitrand, randperm, shuffle
@@ -22,7 +22,7 @@ include("plot.jl")
 using SpikingNeuralNetworks
 include("units.jl")
 using Pkg
-using NSGAIII#, PyPlot
+#using NSGAIII#, PyPlot
 using UnicodePlots
 
 try
@@ -32,7 +32,6 @@ catch
     using NSGAIII
 end
 
-#using NSGAIII
 
 try
    using NSGAIII

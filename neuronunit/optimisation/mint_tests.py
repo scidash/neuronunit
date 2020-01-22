@@ -1,7 +1,12 @@
 from neuronunit.optimisation import get_neab
 from neuronunit import tests as _, neuroelectro
 from neuronunit.tests import fi, passive, waveform
-from sciunit import Test, TestSuite
+
+try:
+   from sciunit.tests import TestSuite
+except:
+   from sciunit import Test, TestSuite
+import pickle
 
 import pickle
 def get_neuron_criteria(cell_id,file_name = None):#,observation = None):
@@ -23,14 +28,17 @@ def get_neuron_criteria(cell_id,file_name = None):#,observation = None):
                      waveform.InjectedCurrentAPAmplitudeTest,
                      waveform.InjectedCurrentAPThresholdTest]#,
     observations = {}
-    test_list = []
+    default_list = []
     for index, t in enumerate(test_classes):
         obs = t.neuroelectro_summary_observation(cell_id)
-        #tests[t.name] =
-        test_list.append(t(obs))
+        tests[t.name] = t(obs)
+        default_list.append(t(obs))
         observations[t.ephysprop_name] = obs
-    suite = TestSuite(test_list)
-    return suite,observations
+    Tsuite = TestSuite(default_list)
+
+    return Tsuite,tests,observations
+
+
 
 
 def get_cell_constraints():
@@ -41,14 +49,22 @@ def get_cell_constraints():
     olf_mitral = {"id": 129, "name": "Olfactory bulb (main) mitral cell", "neuron_db_id": 267, "nlex_id": "nlx_anat_100201"}
     ca1_pyr = {"id": 85, "name": "Hippocampus CA1 pyramidal cell", "neuron_db_id": 258, "nlex_id": "sao830368389"}
     cell_list = [ olf_mitral, ca1_pyr, purkinje,  pvis_cortex]
-    cell_constraints = {}
+    cell_constraint = {}
+    cell_constraint_suite = {}
+
     for cell in cell_list:
         try:
-            tests,observations = get_neuron_criteria(cell)
-            cell_constraints[cell["name"]] = tests
+            Tsuite,tests,observations = get_neuron_criteria(cell)
+            cell_constraint[cell["name"]] = tests
+            cell_constraint_suite[cell["name"]] = Tsuite
+
         except:
-            print('cell id badness')
+
+            print('cell id badness: {0}'.format(cell))
+
+    with open('multicellular_suite_constraints.p','wb') as f:
+        pickle.dump(cell_constraint_suite,f)
 
     with open('multicellular_constraints.p','wb') as f:
-        pickle.dump(cell_constraints,f)
-    return cell_constraints
+        pickle.dump(cell_constraint,f)
+    return (cell_constraint_suite, cell_constraint)

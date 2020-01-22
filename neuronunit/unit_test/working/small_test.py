@@ -79,7 +79,6 @@ class testHighLevelOptimisation(unittest.TestCase):
         anchor = neuronunit.__file__
         anchor = os.path.dirname(anchor)
         electro_path = os.path.join(os.sep,anchor,'tests/multicellular_constraints.p')
-        #electro_path = str(os.getcwd())+'/../../tests/russell_tests.p'
 
         if os.path.isfile(electro_path):
             try:
@@ -92,8 +91,8 @@ class testHighLevelOptimisation(unittest.TestCase):
                 except:
                     (self.test_frame,self.obs_frame) = pickle.load(f)
         else:
-            self.test_frame = mint_tests.get_cell_constraints()
-            df = pd.DataFrame(rts)
+            suite, self.test_frame = mint_tests.get_cell_constraints()
+            _ = pd.DataFrame(self.test_frame)
 
         self.filtered_tests = {key:val for key,val in self.test_frame.items() }# if len(val) ==8}
         print(self.filtered_tests)
