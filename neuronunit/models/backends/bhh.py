@@ -43,6 +43,7 @@ try:
 except:
     pass
 
+from neuronunit.capabilities.spike_functions import get_spike_waveforms
 
 def simulate_HH_neuron_local(I_stim=None,
                             st=None,
@@ -89,9 +90,9 @@ def simulate_HH_neuron_local(I_stim=None,
     neuron = b2.NeuronGroup(1, eqs, method="exponential_euler")
     # parameter initialization
     neuron.vm = El#*b2.units.mV
-    neuron.m = 0.05
-    neuron.h = 0.60
-    neuron.n = 0.32
+    neuron.m = 0.05*1.0/1000.0
+    neuron.h = 0.60*1.0/1000.0
+    neuron.n = 0.32*1.0/1000.0
     #spike_monitor = b2.SpikeMonitor(neuron)
     # tracking parameters
     st_mon = b2.StateMonitor(neuron, ["vm", "I_e", "m", "n", "h"], record=True)
@@ -109,7 +110,7 @@ def simulate_HH_neuron_local(I_stim=None,
            v_nan.append(-65.0*b2.units.mV)
        else:
            v_nan.append(v)
-    vM = AnalogSignal(v_nan,units = pq.V,sampling_period = 1*pq.ms)#b2.defaultclock.dt*pq.s)
+    vM = AnalogSignal(v_nan,units = pq.mV,sampling_period = 1*pq.ms)#b2.defaultclock.dt*pq.s)
     return st_mon,vM,vm
 
 getting_started = False
@@ -218,11 +219,11 @@ class BHHBackend(Backend):
         duration = duration
         delay = int(c['delay'])#/10.0)#/dt#.rescale('ms')
         pre_current = int(duration)+100
-        amp = c['amplitude'].rescale('uA')
-        amplitude = amp.simplified#/1000000.0
+        amp = c['amplitude']#.rescale('uA')
+        #amplitude = amp.simplified#/1000000.0
         getting_started = False
         if getting_started == False:
-            stim = input_factory.get_step_current(delay, duration, b2.ms, amp * b2.A)
+            stim = input_factory.get_step_current(delay, duration, b2.ms, amp * b2.pA)
             st = (duration+delay+100)* b2.ms
         else:
             stim = input_factory.get_step_current(10, 7, b2.ms, 45.0 * b2.nA)
@@ -259,7 +260,6 @@ class BHHBackend(Backend):
         if ascii_plot:
             SLOW_ZOOM = False
             if SLOW_ZOOM and self.get_spike_count()>=1 :
-                from neuronunit.capabilities.spike_functions import get_spike_waveforms
                 vm = get_spike_waveforms(self.vM)
             else:
                 vm = self.vM

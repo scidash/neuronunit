@@ -1,6 +1,8 @@
 from neuronunit.optimisation import get_neab
 from neuronunit import tests as _, neuroelectro
 from neuronunit.tests import fi, passive, waveform
+from sciunit import Test, TestSuite
+
 import pickle
 def get_neuron_criteria(cell_id,file_name = None):#,observation = None):
     # Use neuroelectro experimental obsevations to find test
@@ -21,16 +23,15 @@ def get_neuron_criteria(cell_id,file_name = None):#,observation = None):
                      waveform.InjectedCurrentAPAmplitudeTest,
                      waveform.InjectedCurrentAPThresholdTest]#,
     observations = {}
+    test_list = []
     for index, t in enumerate(test_classes):
         obs = t.neuroelectro_summary_observation(cell_id)
-        tests[t.name] = t(obs)
+        #tests[t.name] =
+        test_list.append(t(obs))
         observations[t.ephysprop_name] = obs
+    suite = TestSuite(test_list)
+    return suite,observations
 
-
-    return tests,observations
-
-
-# In[11]:
 
 def get_cell_constraints():
     purkinje ={"id": 18, "name": "Cerebellum Purkinje cell", "neuron_db_id": 271, "nlex_id": "sao471801888"}
@@ -49,5 +50,5 @@ def get_cell_constraints():
             print('cell id badness')
 
     with open('multicellular_constraints.p','wb') as f:
-        pickle.dump(cell_constraints,f)        
+        pickle.dump(cell_constraints,f)
     return cell_constraints

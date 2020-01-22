@@ -265,7 +265,7 @@ class TSD(dict):
     def __init__(self,tests={},use_rheobase_score=False):
        self.DO = None
        tt = list(tests.values())[0:-1]
-       super(TSD,self).__init__(tt)
+       super(TSD,self).__init__()
        self.update(tests)
 
        if 'name' in self.keys():
