@@ -41,4 +41,16 @@ install:
 
 script:
   cd neuronunit/examples
-  -python-jl -m IPython pyjul.py 
+      - jupyter nbconvert --to notebook --execute chapter1.ipynb
+      - jupyter nbconvert --to notebook --execute eleborate_backend_tests.ipynb
+      - jupyter nbconvert --to notebook --execute chapter10.ipynb
+      - jupyter nbconvert --to notebook --execute chapter11.ipynb
+      - jupyter nbconvert --to notebook --execute chapter2_needs_merge.ipynb
+      - jupyter nbconvert --to notebook --execute chapter3.ipynb
+      - jupyter nbconvert --to notebook --execute chapter4.ipynb
+      - jupyter nbconvert --to notebook --execute chapter5.ipynb
+      - jupyter nbconvert --to notebook --execute chapter6.ipynb
+      - jupyter nbconvert --to notebook --execute chapter7.ipynb
+      - jupyter nbconvert --to notebook --execute chapter8.ipynb
+      - jupyter nbconvert --to notebook --execute chapter9.ipynb
+      - python-jl -m IPython pyjul.py 

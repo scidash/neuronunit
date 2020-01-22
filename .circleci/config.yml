@@ -1,6 +1,12 @@
 version: 2
 jobs:
   build:
+    branches:
+      only:
+         - master
+         - rick
+         - notebooks
+         - julia
     docker:
       - image: russelljarvis/efel_allen_dm
     steps:
@@ -36,16 +42,17 @@ jobs:
       - pip install -e .
       - cd neuronunit/examples
       - jupyter nbconvert --to notebook --execute chapter1.ipynb
-        - jupyter nbconvert --to notebook --execute chapter10.ipynb
-        - jupyter nbconvert --to notebook --execute chapter11.ipynb
-        - jupyter nbconvert --to notebook --execute chapter2_needs_merge.ipynb
-        - jupyter nbconvert --to notebook --execute chapter3.ipynb
-        - jupyter nbconvert --to notebook --execute chapter4.ipynb
-        - jupyter nbconvert --to notebook --execute chapter5.ipynb
-        - jupyter nbconvert --to notebook --execute chapter6.ipynb
-        - jupyter nbconvert --to notebook --execute chapter7.ipynb
-        - jupyter nbconvert --to notebook --execute chapter8.ipynb
-        - jupyter nbconvert --to notebook --execute chapter9.ipynb
+      - jupyter nbconvert --to notebook --execute eleborate_backend_tests.ipynb
+      - jupyter nbconvert --to notebook --execute chapter10.ipynb
+      - jupyter nbconvert --to notebook --execute chapter11.ipynb
+      - jupyter nbconvert --to notebook --execute chapter2_needs_merge.ipynb
+      - jupyter nbconvert --to notebook --execute chapter3.ipynb
+      - jupyter nbconvert --to notebook --execute chapter4.ipynb
+      - jupyter nbconvert --to notebook --execute chapter5.ipynb
+      - jupyter nbconvert --to notebook --execute chapter6.ipynb
+      - jupyter nbconvert --to notebook --execute chapter7.ipynb
+      - jupyter nbconvert --to notebook --execute chapter8.ipynb
+      - jupyter nbconvert --to notebook --execute chapter9.ipynb
 
 workflows:
   version: 2

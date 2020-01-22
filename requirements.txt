@@ -6,7 +6,6 @@ backports.tempfile
 lmfit
 numba
 dask[complete]
-# deap
 brian2
 efel
 tabulate
