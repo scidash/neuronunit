@@ -409,7 +409,8 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
 
         pop = self.set_pop()
         hof = deap.tools.HallOfFame(MU)
-        pf = deap.tools.ParetoFront(MU)
+        pf = deap.tools.ParetoFront()
+        #pf = deap.tools.ParetoFront(MU) # Wrong because first arg to ParetoFront is similarity metric not pop size
 
         stats = tools.Statistics(lambda ind: ind.fitness.values)
 

@@ -47,8 +47,10 @@ import copy
 import math
 import quantities as pq
 import numpy
-
-
+try:
+    from sciunit import TestSuite
+except:
+    pass
 from neuronunit.optimisation.data_transport_container import DataTC
 
 from neuronunit.optimisation.model_parameters import path_params
@@ -260,6 +262,8 @@ class TSS(TestSuite):
         #df = pd.DataFrame([ga_out['pf'][0].dtc.scores])
         SM = ScoreMatrix([v for v in self.values()], [ind.dtc.dtc_to_model() for ind in ga_out['pf']])
         return ga_out, self.DO, SM
+
+
 
 class TSD(dict):
     def __init__(self,tests={},use_rheobase_score=False):
@@ -664,63 +668,33 @@ def substitute_parallel_for_serial(rtest):
     rtest = RheobaseTestP(rtest.observation)
     return rtest
 
-def get_rtest(dtc):
+def is_parallel_rheobase_compatible(backend):
+    incompatible_backends = ['RAW', 'HH']
+    incompatible = any([x in backend for x in incompatible_backends])
+    return not incompatible
+
+def get_new_rtest(dtc):
     place_holder = {'n': 86, 'mean': 10 * pq.pA, 'std': 10 * pq.pA, 'value': 10 * pq.pA}
+    f = RheobaseTestP if is_parallel_rheobase_compatible(dtc.backend) else RheobaseTest
+    return f(observation=place_holder, name='RheobaseTest')
 
-    if not hasattr(dtc,'tests'):#, type(None)):
-        if 'RAW' in dtc.backend or 'HH' in dtc.backend:# or 'GLIF' in dtc.backend:#Backend:
-            rtest = RheobaseTest(observation=place_holder,
-                                    name='RheobaseTest')
-        else:
-            rtest = RheobaseTestP(observation=place_holder,
-                                    name='RheobaseTest')
+def get_rtest(dtc):
+    if not hasattr(dtc, 'tests'):
+        rtest = get_new_rtest(dtc)
     else:
-        if 'RAW' in dtc.backend or 'HH' in dtc.backend:
-            if not isinstance(dtc.tests, Iterable):
-                rtest = dtc.tests
-            else:
-                #try:
-                rtest = [ t for t in dtc.tests if hasattr(t,'name') ]
-                if len(rtest):
-                    rtest = [ t for t in rtest if str('RheobaseTest') == t.name ]
-                    if len(rtest):
-                        rtest = rtest[0]
-                    else:
-                        rtest = RheobaseTest(observation=place_holder,
-                                                name='RheobaseTest')
-
-                else:
-                    rtest = RheobaseTest(observation=place_holder,
-                                            name='RheobaseTest')
-
+        if type(dtc.tests) is type(list()):
+           rtests = [t for t in dtc.tests if 'rheo' in t.name.lower()]
         else:
-            if not isinstance(dtc.tests, Iterable):
-                rtest = dtc.tests
-            else:
-                rtest = [ t for t in dtc.tests if hasattr(t,'name') ]
-                if len(rtest):
-                    rtest = [ t for t in rtest if str('RheobaseTestP') == t.name ]
-                    if len(rtest):
-                        rtest = substitute_parallel_for_serial(rtest[0])
-                    else:
-                        rtest = RheobaseTestP(observation=place_holder,
-                                                name='RheobaseTest')
-                else:
-                    rtest = RheobaseTestP(observation=place_holder,
-                                            name='RheobaseTest')
+           rtests = [v for k,v in dtc.tests.items() if 'rheo' in str(k).lower()]
 
-            #rtest = substitute_parallel_for_serial(rtest[0])
+        if len(rtests):
+            rtest = rtests[0]
+            if is_parallel_rheobase_compatible(dtc.backend):
+                rtest = substitute_parallel_for_serial(rtest)
+        else:
+            rtest = get_new_rtest(dtc)
     return rtest
 
-#from collections import OrderedDict
-'''
-def to_map(params,bend):
-    dtc = DataTC()
-    dtc.attrs = params
-    dtc.backend = bend
-    dtc = dtc_to_rheo(dtc)
-    return dtc
-'''
 def dtc_to_model(dtc):
     # If  test taking data, and objects are present (observations etc).
     # Take the rheobase test and store it in the data transport container.
@@ -846,49 +820,42 @@ def switch_logic(xtests):
     '''
     Hopefuly depreciated by future NU debugging.
     '''
-    if str("TSD") in str(type(xtests)):
+    aTSD = neuronunit.optimisation.optimization_management.TSD()
+    if type(xtests) is type(aTSD):
         xtests = list(xtests.values())
-    if not isinstance(xtests,Iterable):
+    if type(xtests) is type(list()):
         pass
-    else:
-        for t in xtests:
-            try:
-                t.passive = None
-                t.active = None
-            except:
-                print(Error('fatal'))
-            active = False
-            passive = False
-
-            if str('RheobaseTest') == t.name:
-                active = True
-                passive = False
-            elif str('RheobaseTestP') == t.name:
-                active = True
-                passive = False
-            elif str('InjectedCurrentAPWidthTest') == t.name:
-                active = True
-                passive = False
-            elif str('InjectedCurrentAPAmplitudeTest') == t.name:
-                active = True
-                passive = False
-            elif str('InjectedCurrentAPThresholdTest') == t.name:
-                active = True
-                passive = False
-            elif str('RestingPotentialTest') == t.name:
-                passive = True
-                active = False
-            elif str('InputResistanceTest') == t.name:
-                passive = True
-                active = False
-            elif str('TimeConstantTest') == t.name:
-                passive = True
-                active = False
-            elif str('CapacitanceTest') == t.name:
-                passive = True
-                active = False
-            t.passive = passive
-            t.active = active
+    for t in xtests:
+        if str('RheobaseTest') == t.name:
+            t.active = True
+            t.passive = False
+        elif str('RheobaseTestP') == t.name:
+            t.active = True
+            t.passive = False
+        elif str('InjectedCurrentAPWidthTest') == t.name:
+            t.active = True
+            t.passive = False
+        elif str('InjectedCurrentAPAmplitudeTest') == t.name:
+            t.active = True
+            t.passive = False
+        elif str('InjectedCurrentAPThresholdTest') == t.name:
+            t.active = True
+            t.passive = False
+        elif str('RestingPotentialTest') == t.name:
+            t.passive = True
+            t.active = False
+        elif str('InputResistanceTest') == t.name:
+            t.passive = True
+            t.active = False
+        elif str('TimeConstantTest') == t.name:
+            t.passive = True
+            t.active = False
+        elif str('CapacitanceTest') == t.name:
+            t.passive = True
+            t.active = False
+        else:
+            t.passive = False
+            t.active = False
     return xtests
 
 def active_values(keyed,rheobase,square = None):
