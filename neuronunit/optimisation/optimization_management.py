@@ -160,6 +160,58 @@ class WSListIndividual(list):
         self.set_fitness(obj_size=self.obj_size)
 
 
+class TSD(dict):
+    def __init__(self,tests={},use_rheobase_score=False):
+       self.DO = None
+       super(TSD,self).__init__()
+       self.update(tests)
+       if 'name' in self.keys():
+           self.cell_name = tests['name']
+           self.pop('name',None)
+       else:
+           self.cell_name = 'simulated data'
+
+       self.use_rheobase_score = use_rheobase_score
+       self.elaborate_plots  = elaborate_plots
+       self.backend = None
+
+
+    def optimize(self,param_edges,backend=None,protocol={'allen': False, 'elephant': True},\
+        MU=5,NGEN=5,free_params=None,seed_pop=None,hold_constant=None):
+        if type(free_params) is type(None):
+            free_params=param_edges.keys()
+        self.DO = make_ga_DO(param_edges, NGEN, self, free_params=free_params, \
+                           backend=backend, MU = 8,  protocol=protocol,seed_pop = seed_pop, hc=hold_constant)
+        self.DO.MU = MU
+        self.DO.NGEN = NGEN
+        ga_out = self.DO.run(NGEN = self.DO.NGEN)
+        ga_out['DO'] = self.DO
+        if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
+            _,dtc_pop = self.DO.OM.test_runner(copy.copy(ga_out['pf']),self.DO.OM.td,self.DO.OM.tests)
+            ga_out['dtc_pop'] = dtc_pop
+        if type(ga_out['pf'][0].dtc) is type(None):
+            _,ga_out['dtc_pop'] = self.DO.OM.test_runner(copy.copy(ga_out['pf']),self.DO.OM.td,self.DO.OM.tests)
+            pop,dtcpop = get_dm(ga_out['dtc_pop'],pop=ga_out['pf'])
+        else:
+            local = [p.dtc for p in ga_out['pf']]
+            #ga_out['dtc_pop'] = [ i.dtc for i in ga_out['pf'] ]
+            pop,dtcpop = get_dm(local,pop=ga_out['pf'])
+            #p in ga_out['pf']],pop=ga_out['pf'])
+        print(dtcpop[0].dtc.dm_test_features)
+        self.backend = backend
+        '''
+        if str(self.cell_name) not in str('simulated data'):
+            #pass
+            # is this a data driven test? if so its worth plotting results
+            ga_out = self.elaborate_plots(self,ga_out)
+        '''
+        ##
+        # TODO populate a score table pass it back to DO.OM
+        from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
+        #df = pd.DataFrame([ga_out['pf'][0].dtc.scores])
+        SM = ScoreMatrix([v for v in self.values()], [ind.dtc.dtc_to_model() for ind in ga_out['pf']])
+        return ga_out, self.DO, SM
+
 def make_ga_DO(explore_edges, max_ngen, test, \
         free_params = None, hc = None,
         selection = None, MU = None, seed_pop = None, \
@@ -204,7 +256,7 @@ def make_ga_DO(explore_edges, max_ngen, test, \
 
     return DO
 
-  
+
 def optimize(testsuite, param_edges, backend=None, protocol={'allen': False, 'elephant': True},
              MU=5, NGEN=5, free_params=None, seed_pop=None, hold_constant=None):
     if type(free_params) is type(None):
@@ -547,7 +599,7 @@ def substitute_parallel_for_serial(rtest):
 def is_parallel_rheobase_compatible(backend):
     incompatible_backends = ['RAW', 'HH']
     incompatible = any([x in backend for x in incompatible_backends])
-    return not incompatible        
+    return not incompatible
 
 def get_new_rtest(dtc):
     place_holder = {'n': 86, 'mean': 10 * pq.pA, 'std': 10 * pq.pA, 'value': 10 * pq.pA}
@@ -556,7 +608,7 @@ def get_new_rtest(dtc):
 
 def get_rtest(dtc):
     if not hasattr(dtc, 'tests'):
-        rtest = get_new_rtest(dtc)       
+        rtest = get_new_rtest(dtc)
     else:
         rtests = [t for t in dtc.tests if 'rheo' in t.name.lower()]
         if len(rtests):
