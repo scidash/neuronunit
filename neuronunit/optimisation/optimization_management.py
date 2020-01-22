@@ -610,7 +610,11 @@ def get_rtest(dtc):
     if not hasattr(dtc, 'tests'):
         rtest = get_new_rtest(dtc)
     else:
-        rtests = [t for t in dtc.tests if 'rheo' in t.name.lower()]
+        if type(dtc.tests) is type(list()):
+           rtests = [t for t in dtc.tests if 'rheo' in t.name.lower()]
+        else:
+           rtests = [v for k,v in dtc.tests.items() if 'rheo' in str(k).lower()]
+
         if len(rtests):
             rtest = rtests[0]
             if is_parallel_rheobase_compatible(dtc.backend):
@@ -744,37 +748,42 @@ def switch_logic(xtests):
     '''
     Hopefuly depreciated by future NU debugging.
     '''
+    aTSD = neuronunit.optimisation.optimization_management.TSD()
+    if type(xtests) is type(aTSD):
+        xtests = list(xtests.values())
+    if type(xtests) is type(list()):
+        pass
     for t in xtests:
-            if str('RheobaseTest') == t.name:
-                t.active = True
-                t.passive = False
-            elif str('RheobaseTestP') == t.name:
-                t.active = True
-                t.passive = False
-            elif str('InjectedCurrentAPWidthTest') == t.name:
-                t.active = True
-                t.passive = False
-            elif str('InjectedCurrentAPAmplitudeTest') == t.name:
-                t.active = True
-                t.passive = False
-            elif str('InjectedCurrentAPThresholdTest') == t.name:
-                t.active = True
-                t.passive = False
-            elif str('RestingPotentialTest') == t.name:
-                t.passive = True
-                t.active = False
-            elif str('InputResistanceTest') == t.name:
-                t.passive = True
-                t.active = False
-            elif str('TimeConstantTest') == t.name:
-                t.passive = True
-                t.active = False
-            elif str('CapacitanceTest') == t.name:
-                t.passive = True
-                t.active = False
-            else:
-                t.passive = False
-                t.active = False
+        if str('RheobaseTest') == t.name:
+            t.active = True
+            t.passive = False
+        elif str('RheobaseTestP') == t.name:
+            t.active = True
+            t.passive = False
+        elif str('InjectedCurrentAPWidthTest') == t.name:
+            t.active = True
+            t.passive = False
+        elif str('InjectedCurrentAPAmplitudeTest') == t.name:
+            t.active = True
+            t.passive = False
+        elif str('InjectedCurrentAPThresholdTest') == t.name:
+            t.active = True
+            t.passive = False
+        elif str('RestingPotentialTest') == t.name:
+            t.passive = True
+            t.active = False
+        elif str('InputResistanceTest') == t.name:
+            t.passive = True
+            t.active = False
+        elif str('TimeConstantTest') == t.name:
+            t.passive = True
+            t.active = False
+        elif str('CapacitanceTest') == t.name:
+            t.passive = True
+            t.active = False
+        else:
+            t.passive = False
+            t.active = False
     return xtests
 
 def active_values(keyed,rheobase,square = None):
@@ -2581,6 +2590,8 @@ class OptMan():
         # This is much like the hooked method from the old get neab file.
         dtc.protocols = {}
         dtc.tests = switch_logic(dtc.tests)
+        if type(dtc.tests) is type(dict()):
+            dtc.tests = list(dtc.tests.values())
         for k,v in enumerate(dtc.tests):
             dtc.protocols[k] = {}
             if hasattr(v,'passive'):#['protocol']:

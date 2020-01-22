@@ -22,7 +22,7 @@ class testCrucialBackendsSucceed(unittest.TestCase):
         model_parameters.MODEL_PARAMS.keys()
         self.backends =  ["RAW", "HH"]
         self.other_backends =["BHH","ADEXP"]
-        self.backends_complex =  ["GLIF", "NEURON"]
+        self.backends_complex =  ["GLIF","NEURON"]
         self.julia_backend ="JHH"
 
         #raw_attrs = {k:np.mean(v) for k,v in model_parameters.MODEL_PARAMS[backend].items()}
@@ -97,10 +97,17 @@ class testCrucialBackendsSucceed(unittest.TestCase):
         for b in self.backends_complex:
             if b in str("GLIF"):
                 print(self.model_parameters.MODEL_PARAMS[b])
-                import pdb
-                pdb.set_trace()
+                attrs_ = {k:v for k,v in model_parameters.MODEL_PARAMS["GLIF"].items() if type(v) is not type(dict())}
 
-            attrs = {k:np.mean(v) for k,v in self.model_parameters.MODEL_PARAMS[b].items()}
+                attrs_ = {k:v for k,v in attrs_.items() if type(v) is not type(dict()) }
+                attrs_ = {k:v for k,v in attrs_.items() if type(v) is not type(None) }
+                attrs_ = {k:np.mean(v) for k,v in attrs_.items() if type(v[0]) is not type(str())}
+                attrs = attrs_
+            else:
+                print('actually NEURON support only in docker container')
+                #attrs = {k:np.mean(v) for k,v in self.model_parameters.MODEL_PARAMS[b].items()}
+                return 
+
             pre_model = DataTC()
             if str("V_REST") in attrs.keys():
                 attrs["V_REST"] = -75.0
