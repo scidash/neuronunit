@@ -1,11 +1,14 @@
-"""F/I neuronunit tests, e.g. investigating firing rates and patterns as a
-function of input current"""
+"""F/I neuronunit tests.
+
+For example, investigating firing rates and patterns as a
+function of input current.
+"""
 
 import os
 import multiprocessing
 global cpucount
 npartitions = cpucount = multiprocessing.cpu_count()
-from .base import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
+from .base import np, pq, ncap, VmTest, scores, AMPL, DELAY, DURATION
 #DURATION = 2000
 #DELAY = 200
 from .. import optimisation
@@ -49,45 +52,56 @@ def get_diff(vm):
 tolerance = 0.0#0.00125
 
 class RheobaseTest(VmTest):
+    """Serial implementation of a binary search to test the rheobase.
+
+    Strengths: this algorithm is faster than the parallel class, present in
+    this file under important and limited circumstances: this serial algorithm
+    is faster than parallel for model backends that are able to implement
+    numba jit optimization.
+
+    Weaknesses this serial class is significantly slower, for many backend
+    implementations including raw NEURON, NEURON via PyNN, and possibly GLIF.
+
     """
-    A serial Implementation of a Binary search algorithm,
-    which finds a rheobase prediction
-
-    Strengths: this algorithm is faster than the parallel class, present in this file under important and
-    limited circumstances: this serial algorithm is faster than parallel for model backends that are able to
-    implement numba jit optimisation
-
-    Weaknesses this serial class is significantly slower, for many backend implementations including raw NEURON
-    NEURON via PyNN, and possibly GLIF.
-    """
-
     def _extra(self):
         self.prediction = {}
         self.high = 300*pq.pA
         self.small = 0*pq.pA
         self.rheobase_vm = None
         self.verbose = False
+    required_capabilities = (ncap.ReceivesSquareCurrent,
+                             ncap.ProducesSpikes)
 
-
-    required_capabilities = (cap.ReceivesSquareCurrent,
-                             cap.ProducesSpikes)
-
-    params = {'injected_square_current':
-                {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+    # params = {'injected_square_current':
+    #            {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
 
     name = "Rheobase test"
     description = ("A test of the rheobase, i.e. the minimum injected current "
                    "needed to evoke at least one spike.")
     units = pq.pA
     ephysprop_name = 'Rheobase'
-    score_type = scores.ZScore
+    # score_type = scores.ZScore
+    score_type = scores.RatioScore
 
-    #score_type = scores.RatioScore
+    default_params = dict(VmTest.default_params)
+    default_params.update({'amplitude': 100*pq.pA,
+                           'duration': 1000*pq.ms,
+                           'tolerance': 1.0*pq.pA})
+
+    params_schema = dict(VmTest.params_schema)
+    params_schema.update({'tolerance': {'type': 'current', 'min': 1, 'required': False}})
+
+    def condition_model(self, model):
+        if not 'tmax' in self.params:
+            self.params['tmax'] = 2000.0*pq.ms
+        else:
+            model.set_run_params(t_stop=self.params['tmax'])
 
     def generate_prediction(self, model):
-        """Implementation of sciunit.Test.generate_prediction."""
+        """Implement sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
+        self.condition_model(model)
         prediction = {'value': None}
         model.rerun = True
         try:
@@ -136,16 +150,24 @@ class RheobaseTest(VmTest):
         prediction['value'] = rheobase
         return prediction
 
+    def extract_features(self,model):
+        prediction = self.generate_prediction(model)
+        return prediction
+
     def threshold_FI(self, model, units, guess=None):
-        lookup = {} # A lookup table global to the function below.
+        """Use binary search to generate an FI curve including rheobase."""
+        lookup = {}  # A lookup table global to the function below.
 
         def f(ampl):
             if float(ampl) not in lookup:
-
-                uc = {'amplitude':ampl,'duration':DURATION,'delay':DELAY}
-                model.inject_square_current(uc)
-                n_spikes = model._backend.get_spike_count()
-
+                if False:
+                    uc = {'amplitude':ampl,'duration':DURATION,'delay':DELAY}
+                    model.inject_square_current(uc)
+                    n_spikes = model._backend.get_spike_count()
+                current = self.get_injected_square_current()
+                current['amplitude'] = ampl
+                model.inject_square_current(current)
+                n_spikes = model.get_spike_count()
                 self.n_spikes = n_spikes
 
                 if self.verbose >= 5:
@@ -153,28 +175,30 @@ class RheobaseTest(VmTest):
                     print("Injected %s current and got %d spikes" % \
                             (ampl,n_spikes))
                 lookup[float(ampl)] = n_spikes
-                spike_counts = np.array([n for x,n in lookup.items() if n>0])
-
+                spike_counts = \
+                    np.array([n for x, n in lookup.items() if n > 0])
                 if n_spikes and n_spikes <= spike_counts.min():
                     self.rheobase_vm = model.get_membrane_potential()
 
-        max_iters = 45
+        max_iters = 25
 
-        #evaluate once with a current injection at 0nA
-        high=self.high
-        small=self.small
+        # evaluate once with a current injection at 0pA
+        high = self.high
+        small = self.small
+
         f(high)
         i = 0
 
         while True:
-            #sub means below threshold, or no spikes
-            sub = np.array([x for x in lookup if lookup[x]==0])*units
-            #supra means above threshold, but possibly too high above threshold.
+            # sub means below threshold, or no spikes
+            sub = np.array([x for x in lookup if lookup[x] == 0])*units
+            # supra means above threshold,
+            # but possibly too high above threshold.
 
-            supra = np.array([x for x in lookup if lookup[x]>0])*units
-            #The actual part of the Rheobase test that is
-            #computation intensive and therefore
-            #a target for parellelization.
+            supra = np.array([x for x in lookup if lookup[x] > 0])*units
+            # The actual part of the Rheobase test that is
+            # computation intensive and therefore
+            # a target for parellelization.
 
             if len(supra) and len(sub):
                 delta = float(supra.min()) - float(sub.max())
@@ -183,14 +207,18 @@ class RheobaseTest(VmTest):
                     too_many_spikes = np.min(temp)
                 else:
                     too_many_spikes = 0
-
-                if (delta < tolerance or (str(supra.min()) == str(sub.max()))):# and too_many_spikes<15:
-
+                if 'tolerance' not in self.params.keys():
+                    tolerance = 0.0000001*pq.pA
+                else:
+                    tolerance = float(self.params['tolerance'].rescale(pq.pA))
+                if delta < tolerance or (str(supra.min()) == str(sub.max())):
                     break
+
 
             if i >= max_iters:
                 break
-            #Its this part that should be like an evaluate function that is passed to futures map.
+            # Its this part that should be like an evaluate function
+            # that is passed to futures map.
             if len(sub) and len(supra):
                 f((supra.min() + sub.max())/2)
 
@@ -198,69 +226,63 @@ class RheobaseTest(VmTest):
                 f(max(small,sub.max()*10))
 
             elif len(supra):
-                f(min(-small,supra.min()))
+                f(min(-small, supra.min()*2))
             i += 1
 
         return lookup
 
     def compute_score(self, observation, prediction):
-        """Implementation of sciunit.Test.score_prediction."""
-        #print("%s: Observation = %s, Prediction = %s" % \
-        #	 (self.name,str(observation),str(prediction)))
-        if prediction is None:
+        """Implement sciunit.Test.score_prediction."""
+        if prediction is None or \
+           (isinstance(prediction, dict) and prediction['value'] is None):
             score = scores.InsufficientDataScore(None)
         else:
-            score = super(RheobaseTest,self).\
-                        compute_score(observation, prediction)
-
-            #if self.n_spikes > 1:
-            #    score = score*self.n_spikes
-             #self.bind_score(score,None,observation,prediction)
+            score = super(RheobaseTest, self).\
+                          compute_score(observation, prediction)
+            # self.bind_score(score,None,observation,prediction)
         return score
 
     def bind_score(self, score, model, observation, prediction):
-        super(RheobaseTest,self).bind_score(score, model,
-                                            observation, prediction)
+        """Bind additional attributes to the test score."""
+        super(RheobaseTest, self).bind_score(score, model,
+                                             observation, prediction)
         if self.rheobase_vm is not None:
             score.related_data['vm'] = self.rheobase_vm
 
 
+class RheobaseTestP(RheobaseTest):
+    """Parallel implementation of a binary search to test the rheobase.
+
+    Strengths: this algorithm is faster than the serial class, present in this
+    file for model backends that are not able to implement numba jit
+    optimization, which actually happens to be typical of a signifcant number
+    of backends.
+    """
+
+    name = "Rheobase test"
+    description = ("A test of the rheobase, i.e. the minimum injected current "
+                   "needed to evoke at least one spike.")
+    units = pq.pA
+    ephysprop_name = 'Rheobase'
+    score_type = scores.RatioScore
+    get_rheobase_vm = True
+    def condition_model(self, model):
+        """
+        condition model
+        """
+        model.set_run_params(t_stop=self.params['tmax'])
 
 
-class RheobaseTestP(VmTest):
-     """
-     A parallel Implementation of a Binary search algorithm,
-     which finds a rheobase prediction.
+    default_params = dict(VmTest.default_params)
+    default_params.update({'amplitude': 100*pq.pA,
+                           'duration': 1000*pq.ms,
+                           'tolerance': 1.0*pq.pA})
 
-     Strengths: this algorithm is faster than the serial class, present in this file for model backends that are not able to
-     implement numba jit optimisation, which actually happens to be typical of a signifcant number of backends
-
-     Weaknesses this serial class is significantly slower, for many backend implementations including raw NEURON
-     NEURON via PyNN, and possibly GLIF.
-
-     """
-     def _extra(self):
-         self.verbose = False
-
-     # def __init__(self,other_current=None):
-     #     self.other_current = other_current
+    params_schema = dict(VmTest.params_schema)
+    params_schema.update({'tolerance': {'type': 'current', 'min': 1, 'required': False}})
 
 
-     required_capabilities = (cap.ReceivesSquareCurrent,
-                              cap.ProducesSpikes)
-     #DELAY = 100.0*pq.ms
-     # DURATION = 1000.0*pq.ms
-     params = {'injected_square_current':
-                 {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
-     name = "Rheobase test"
-     description = ("A test of the rheobase, i.e. the minimum injected current "
-                    "needed to evoke at least one spike.")
-     units = pq.pA
-     #tolerance  # Rheobase search tolerance in `self.units`.
-     ephysprop_name = 'Rheobase'
-     score_type = scores.ZScore
-
-     def generate_prediction(self, model):
+    def generate_prediction(self, model):
         def check_fix_range(dtc):
             '''
             Inputs: lookup, A dictionary of previous current injection values
@@ -544,14 +566,18 @@ class RheobaseTestP(VmTest):
             return prediction
         return prediction
 
-     def bind_score(self, score, model, observation, prediction):
-         super(RheobaseTestP,self).bind_score(score, model,
+    def extract_features(self,model):
+        prediction = self.generate_prediction(model)
+        return prediction
+
+    def bind_score(self, score, model, observation, prediction):
+        super(RheobaseTestP,self).bind_score(score, model,
                                             observation, prediction)
 
-     def compute_score(self, observation, prediction):
-         """Implementation of sciunit.Test.score_prediction."""
-         score = None
+    def compute_score(self, observation, prediction):
+        """Implementation of sciunit.Test.score_prediction."""
+        score = None
 
-         score = super(RheobaseTestP,self).\
+        score = super(RheobaseTestP,self).\
                      compute_score(observation, prediction)
-         return score
+        return score

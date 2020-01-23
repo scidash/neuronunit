@@ -70,7 +70,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
-from neuromldb import NeuroMLDBStaticModel
+#from neuromldb import NeuroMLDBStaticModel
 
 from neuronunit.optimisation import dm_test_interoperable #import Interoperabe
 from dask import bag as db
@@ -136,8 +136,6 @@ def get_static_models(cell_id):
 
 
     url = str("https://www.neuroml-db.org/api/model?id=")+cell_id
-    #import pdb
-    #pdb.set_trace()
     model_contents = requests.get(url)
     model_contents = json.loads(model_contents.text)
     model = NeuroMLDBStaticModel(cell_id)

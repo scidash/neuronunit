@@ -1,10 +1,12 @@
 #from neuronunit.tests.base import ALLEN_ONSET, DT, ALLEN_STOP, ALLEN_FINISH
+'''
 defaults = {'DT': 2e-05, 'ALLEN_STOP': 3.0199800000000003, 'ALLEN_FINISH': 10.020000000000001,'ALLEN_ONSET':1.02}
 
 DT = defaults["DT"]
 ALLEN_ONSET = defaults["ALLEN_ONSET"]
 ALLEN_STOP = defaults["ALLEN_STOP"]
 ALLEN_FINISH = defaults["ALLEN_FINISH"]
+'''
 from quantities import mV, ms, s, V
 import sciunit
 from neo import AnalogSignal
@@ -55,8 +57,8 @@ def get_vm(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.36452
             v[m+1] = c;# % membrane voltage reset
             u[m+1] = u[m+1] + d;# % recovery variable update
 
-    for m in range(0,N):
-        v[m] = v[m]/1000.0
+    #for m in range(0,N):
+    #    v[m] = v[m]/1000.0
 
     return v
 
@@ -81,8 +83,8 @@ def get_vm_regular(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(
             v[m+1] = c;# % membrane voltage reset
             u[m+1] = u[m+1] + d;# % recovery variable update
 
-    for m in range(0,N):
-        v[m] = v[m]/1000.0
+    #for m in range(0,N):
+    #    v[m] = v[m]/1000.0
 
     return v
 class RAWBackend(Backend):

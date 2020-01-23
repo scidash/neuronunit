@@ -90,20 +90,52 @@ BAE1['peak_v'] = [0.010, 0.060]
 
 MODEL_PARAMS['ADEXP'] = BAE1
 
+JHH = {
+  'Vr':-68.9346,
+  'Cm':0.0002,
+  'gl':1.0*1e-5,
+  'El': -65.0,
+  'EK': -90.0,
+  'ENa': 50.0,
+  'gNa': 0.02,
+  'gK': 0.006,
+  'Vt': -63.0
+}
+JHH = { k:(float(v)-0.25*float(v),float(v)+0.25*float(v)) for k,v in JHH.items() }
+MODEL_PARAMS['JHH'] = JHH
 
 # Hodgkin Huxley parameters
-HH_dic =  { 'El' : 10.6 * b2.units.mV,
-        'EK' : -12 * b2.mV,
-        'ENa' : 115 * b2.mV,
+HH_dic =  { 'El' : -54.387 * b2.mV,
+        'EK' : -77.0 * b2.mV,
+        'ENa' : 50.0 * b2.mV,
         'gl' : 0.3 * b2.msiemens,
         'gK' : 36 * b2.msiemens,
         'gNa' : 120 * b2.msiemens,
         'C' : 1 * b2.ufarad,
-	'Vr':-80.0 }
+	'Vr':-65.0 }
 
 HH_dic = { k:(float(v)-0.25*float(v),float(v)+0.25*float(v)) for k,v in HH_dic.items() }
 HH_dic['Vr'] = [-85,-45]
 MODEL_PARAMS['BHH'] = HH_dic
+
+
+
+#defaults = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3, \
+#		 'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -77.0, 'E_Na' : 50.0, 'vr':-65.0 }
+
+HH_attrs = { 'E_L' : -70.387,
+        'E_K' : -77.0,
+        'E_Na' : 50.0,
+        'g_L' : 0.3,
+        'g_K' : 36,
+        'g_Na' : 120,
+        'C_m' : 1.0,
+        'vr':-65.0}
+
+HH_dic1 = { k:(float(v)-0.25*float(v),float(v)+0.25*float(v)) for k,v in HH_attrs.items() }
+HH_dic1['Vr'] = [-85,-45]
+
+MODEL_PARAMS['HH'] = HH_dic1
 
 #I = .8*nA
 #Vcut = VT + 5 * DeltaT  # practical threshold condition

@@ -7,6 +7,7 @@ using the SciUnit framework.
 from __future__ import print_function
 from __future__ import unicode_literals
 import os
+import pathlib
 import platform
 
 try:
@@ -20,3 +21,4 @@ IMPLEMENTATION = platform.python_implementation()
 JYTHON = IMPLEMENTATION == 'Jython'
 CPYTHON = IMPLEMENTATION == 'CPython'
 DIR = os.path.dirname(os.path.realpath(__file__))
+NU_HOME = pathlib.Path(DIR)

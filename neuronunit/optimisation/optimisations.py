@@ -26,7 +26,6 @@ logger = logging.getLogger('__main__')
 # TODO abstract the algorithm by creating a class for every algorithm, that way
 # settings of the algorithm can be stored in objects of these classes
 
-#from neuronunit.optimisation.optimization_management import evaluate#, update_deap_pop
 
 import numpy as np
 from collections import Iterable, OrderedDict
@@ -37,6 +36,7 @@ from neuronunit.optimisation import optimization_management as om
 #import neuronunit.optimisation.optimization_management as om
 
 import copy
+#WeightedSumFitness = deap.base.Fitness
 class WeightedSumFitness(deap.base.Fitness):
 
     """Fitness that compares by weighted sum"""
@@ -76,20 +76,25 @@ class WeightedSumFitness(deap.base.Fitness):
         return result
 
 
+
 class WSListIndividual(list):
 
     """Individual consisting of list with weighted sum field"""
-
-    def __init__(self, *args, **kwargs):
-        """Constructor"""
-        self.fitness = WeightedSumFitness(obj_size=kwargs['obj_size'])
-        self.dtc = None
-        self.rheobase = None
-        del kwargs['obj_size']
-        super(WSListIndividual, self).__init__(*args, **kwargs)
-
     def set_fitness(self,obj_size):
         self.fitness = WeightedSumFitness(obj_size=obj_size)
+    def __init__(self, *args, **kwargs):
+        """Constructor"""
+        #self.fitness = WeightedSumFitness(obj_size=kwargs['obj_size'])
+        self.dtc = None
+        self.rheobase = None
+        #del kwargs['obj_size']
+        super(WSListIndividual, self).__init__(args)#, **kwargs)
+        self.set_fitness(obj_size=kwargs['obj_size'])
+        #self.extend(args)
+
+        #s
+        #self.set_fitness(obj_size=self.obj_size)
+
 
 
 class WSFloatIndividual(float):
@@ -201,7 +206,7 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
             pop = []
             for i in sparsify:
                 d = dic_grid[int(i)]
-                pop.append([d[k] for k in self.td])
+                pop.append([float(d[k]) for k in self.td])
 
 
         elif size <= self.MU:
@@ -212,7 +217,7 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
             delta = self.MU - size
 
             for i in dic_grid:
-                 pop.append([i[k] for k in self.td])
+                 pop.append([float(i[k]) for k in self.td])
 
 
             cnt=0
@@ -227,9 +232,12 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
         elif size == self.MU:
             pop = []
             for i in dic_grid:
-                pop.append([i[k] for k in self.td])
+                pop.append([float(i[k]) for k in self.td])
 
         assert len(pop)==self.MU
+        for p in pop:
+            for i,j in enumerate(p):
+                p[i] = float(j)
         return pop
 
 
@@ -325,8 +333,7 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
         self.OM = om.OptMan(self.error_criterion,self.td, backend = self.backend, \
                                               hc = self.hc,boundary_dict = self.boundary_dict, \
                                               error_length=self.error_length,protocol=self.protocol)
-        #OM.siulated_obs = self.simulated_obs
-        #assert type(OM.simulated_obs) is not type(None)
+
         def custom_code(invalid_ind):
 
             if self.backend is None:
@@ -340,7 +347,7 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
 
 
             invalid_dtc = [ i.dtc for i in invalid_pop if hasattr(i,'dtc') ]
-
+            assert len(invalid_pop) == len(invalid_dtc)
             fitnesses = list(map(om.evaluate, invalid_dtc))
             return (invalid_pop,fitnesses)
 
@@ -367,18 +374,26 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
 
         return self.OM
 
+
+
     def set_pop(self, boot_new_random=0):
+        IND_SIZE = len(list(self.params.values()))
+        OBJ_SIZE = len(self.error_criterion)
         if boot_new_random == 0:
-            IND_SIZE = len(list(self.params.values()))
-            OBJ_SIZE = len(self.error_criterion)
-            if IND_SIZE == 1:
-                pop = [ WSListIndividual(g,obj_size=OBJ_SIZE) for g in self.grid_init ]
-            else:
-                pop = [ WSListIndividual(g, obj_size=OBJ_SIZE) for g in self.grid_init ]
+            pop = []
+            for g in self.grid_init:
+                p = WSListIndividual(obj_size=OBJ_SIZE)
+                p.extend(g)
+                pop.append(p)
         else:
             pop = self.toolbox.population(n=boot_new_random)
+            pop_ = [p[0] for p in copy.copy(pop)]
+            pop = []
+            for g in pop_:
+                p = WSListIndividual(obj_size=OBJ_SIZE)
+                p.extend(g)
+                pop.append(p)
         return pop
-
 
     def run(self,
             continue_cp=False,
@@ -392,31 +407,12 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
         #if MU is None:
         MU = self.MU
 
-        #pop = self.toolbox.population(n=MU)
         pop = self.set_pop()
         hof = deap.tools.HallOfFame(MU)
         pf = deap.tools.ParetoFront(MU)
 
-        #stats = deap.tools.Statistics(key=lambda ind: ind.fitness.sum)
-        #stats2 = deap.tools.Statistics(key=lambda ind: ind.fitness.values)
+        stats = tools.Statistics(lambda ind: ind.fitness.values)
 
-        #stats = tools.Statistics(key=lambda ind: ind.fitness.values)
-        stats_fit = tools.Statistics(key=lambda ind: ind.fitness.values)
-        everything = tools.Statistics(key=lambda ind: ind.fitness.values)
-        stats_size = tools.Statistics(key=len)
-        mstats = tools.MultiStatistics(fitness=stats_fit, every=everything,stats_size=stats_size)
-
-        mstats.register("avg", np.mean, axis=0)
-        mstats.register("std", np.std, axis=0)
-        mstats.register("min", np.min, axis=0)
-        mstats.register("max", np.max, axis=0)
-
-        '''
-        stats.register("avg", numpy.mean)
-        stats.register("std", numpy.std)
-        stats.register("min", numpy.min)
-        stats.register("max", numpy.max)
-        '''
         pop, hof, pf, log, history, gen_vs_pop = algorithms.eaAlphaMuPlusLambdaCheckpoint(
             pop,
             self.toolbox,
@@ -424,7 +420,7 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
             self.cxpb,
             self.mutpb,
             NGEN,
-            stats=mstats,
+            stats=stats,
             hof=hof,
             pf=pf,
             nelite=self.elite_size,
@@ -449,7 +445,7 @@ def run_ga(explore_edges, NGEN, test, \
     except:
         pass
     #if 'Iext' in explore_edges:
-    try: 
+    try:
         explore_edges.pop('Iext')
     except:
         pass

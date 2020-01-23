@@ -8,6 +8,8 @@ from neuronunit.tests import passive, waveform, fi
 from neuronunit.tests.fi import RheobaseTestP
 from neuronunit.tests import passive, waveform, druckman2013
 from neuronunit.tests import druckman2013 as dm
+import neuronunit
+anchor = neuronunit.__file__
 
 import copy
 import sciunit
@@ -17,16 +19,12 @@ import urllib.request, json
 
 from neuronunit import neuroelectro
 
-def neuroelectro_summary_observation(neuron,ontology):
+def neuroelectro_summary_observation(neuron_name,ontology):
     ephysprop_name = ''
     verbose = False
-
-    reference_data = neuroelectro.NeuroElectroSummary(
-        neuron = neuron, # Neuron type lookup using the NeuroLex ID.
-        ephysprop = {'name': ontology['name']}, # Ephys property name in
-        # NeuroElectro ontology.
-    )
-    reference_data.get_values() # Get and verify summary data
+    reference_data = neuroelectro.NeuroElectroSummary(neuron=neuron_name, ephysprop={'name': ontology['name']}, get_values=True, cached=True)
+    #reference_data = neuroelectro.NeuroElectroSummary(neuron_name)#,ephysprop = )
+    #data = reference_data.get_values() # Get and verify summary data
                                 # from neuroelectro.org.
     return reference_data
 
@@ -37,15 +35,10 @@ def get_obs(pipe):
     #with urllib.request.urlopen("https://neuroelectro.org/api/1/e/") as url:
     #    ontologies = json.loads(url.read().decode())
     obs = []
-    for p in pipe:
-        for l in ontologies['objects']:
-            print(p,l)
-            try:
-                print('obs.append(neuroelectro_summary_observation(p,l))')
-                obs.append(neuroelectro_summary_observation(p,l))
-                print('worked')
-            except:
-                print('did not work')
+    #for p in pipe.values():
+    neuron_name = pipe['nlex_id']
+    for l in ontologies['objects']:
+        obs.append(neuroelectro_summary_observation(pipe,l))
     return obs
 
 def update_amplitude(test,tests,score):
@@ -170,6 +163,71 @@ def executable_tests(cell_id,file_name = None):#,observation = None):
 
     return tests,observations
 
+from neuronunit.optimisation import get_neab
+from neuronunit import tests as _, neuroelectro
+from neuronunit.tests import fi, passive, waveform
+import pickle
+from neuronunit.tests import fi, passive, waveform
+def get_neuron_criteria(cell_id,file_name = None):#,observation = None):
+    # Use neuroelectro experimental obsevations to find test
+    # criterion that will be used to inform scientific unit testing.
+    # some times observations are not sourced from neuroelectro,
+    # but they are imputated or borrowed from other TestSuite
+    # if that happens make test objections using observations external
+    # to this method, and provided as a method argument.
+    tests = {}
+    observations = None
+    test_classes = None
+    test_classes = [fi.RheobaseTest,
+                     passive.InputResistanceTest,
+                     passive.TimeConstantTest,
+                     passive.CapacitanceTest,
+                     passive.RestingPotentialTest,
+                     waveform.InjectedCurrentAPWidthTest,
+                     waveform.InjectedCurrentAPAmplitudeTest,
+                     waveform.InjectedCurrentAPThresholdTest]#,
+    observations = {}
+    for index, t in enumerate(test_classes):
+        try:
+            obs = t.neuroelectro_summary_observation(cell_id)
+
+            if obs is not None:
+                if 'mean' in obs.keys():
+                    tests[t.name] = t(obs)
+                    observations[t.ephysprop_name] = obs
+        except:
+            pass
+    #hooks = {tests[0]:{'f':update_amplitude}} #This is a trick to dynamically insert the method
+    #update amplitude at the location in sciunit thats its passed to, without any loss of generality.
+    #suite = sciunit.TestSuite(tests,name="vm_suite")
+
+    if file_name is not None:
+        file_name = file_name +'.p'
+        with open(file_name, 'wb') as f:
+            pickle.dump(tests, f)
+
+    return tests,observations
+
+def get_all_cells():
+	purkinje ={"id": 18, "name": "Cerebellum Purkinje cell", "neuron_db_id": 271, "nlex_id": "sao471801888"}
+	#fi_basket = {"id": 65, "name": "Dentate gyrus basket cell", "neuron_db_id": None, "nlex_id": "nlx_cell_100201"}
+	pvis_cortex = {"id": 111, "name": "Neocortex pyramidal cell layer 5-6", "neuron_db_id": 265, "nlex_id": "nifext_50"}
+	#This olfactory mitral cell does not have datum about rheobase, current injection values.
+	olf_mitral = {"id": 129, "name": "Olfactory bulb (main) mitral cell", "neuron_db_id": 267, "nlex_id": "nlx_anat_100201"}
+	ca1_pyr = {"id": 85, "name": "Hippocampus CA1 pyramidal cell", "neuron_db_id": 258, "nlex_id": "sao830368389"}
+	cell_list = [ olf_mitral, ca1_pyr, purkinje,  pvis_cortex]
+	cell_constraints = {}
+	for cell in cell_list:
+
+	    tests,observations = get_neuron_criteria(cell)
+	    cell_constraints[cell["name"]] = tests
+
+
+
+	with open('russell_tests.p','wb') as f:
+	    pickle.dump(cell_constraints,f)
+
+
 def get_common_criteria():
     purkinje ={"id": 18, "name": "Cerebellum Purkinje cell", "neuron_db_id": 271, "nlex_id": "sao471801888"}
     #fi_basket = {"id": 65, "name": "Dentate gyrus basket cell", "neuron_db_id": None, "nlex_id": "nlx_cell_100201"}
@@ -181,12 +239,10 @@ def get_common_criteria():
     electro_tests = []
     obs_frame = {}
     test_frame = {}
-    import neuronunit
-    anchor = neuronunit.__file__
-    anchor = os.path.dirname(anchor)
-    mypath = os.path.join(os.sep,anchor,'optimisation/all_tests.p')
 
     try:
+        anchor = os.path.dirname(anchor)
+        mypath = os.path.join(os.sep,anchor,'optimisation/all_tests.p')
 
         electro_path = str(os.getcwd())+'all_tests.p'
 
@@ -202,9 +258,10 @@ def get_common_criteria():
             obs_frame[p["name"]] = p_observations#, p_tests))
             test_frame[p["name"]] = p_tests#, p_tests))
         electro_path = str(os.getcwd())+'all_tests.p'
+        with open(electro_path,'wb') as f:
+            pickle.dump((obs_frame,test_frame),f)
+
     return (obs_frame,test_frame)
-        #with open(electro_path,'wb') as f:
-        #    pickle.dump((obs_frame,test_frame),f)
 
 
 
@@ -221,16 +278,88 @@ def get_tests(backend=str("RAW")):
     # We are more interested in phenomonogical properties.
     electro_path = mypath
     #str(os.getcwd())+'/pipe_tests.p'
-    assert os.path.isfile(electro_path) == True
-    with open(electro_path,'rb') as f:
-        electro_tests = pickle.load(f)
-    obs_frame,electro_tests = get_common_criteria()
+    def dont_use_cache():
+        assert os.path.isfile(electro_path) == True
+        with open(electro_path,'rb') as f:
+            electro_tests = pickle.load(f)
+    electro_tests = get_common_criteria()
     electro_tests = replace_zero_std(electro_tests)
     if backend in str('ADEXP'):
         electro_tests = substitute_parallel_for_serial(electro_tests)
-    
+
     test, observation = electro_tests[0]
     tests = copy.copy(electro_tests[0][0])
     suite = sciunit.TestSuite(tests)
     #tests_ = tests[0:2]
+    return tests, test, observation, suite
+
+def do_use_cache():
+    import neuronunit
+    anchor = neuronunit.__file__
+    anchor = os.path.dirname(anchor)
+    mypath = os.path.join(os.sep,anchor,'unit_test/pipe_tests.p')
+
+    # get neuronunit tests
+    # and select out Rheobase test and input resistance test
+    # and less about electrophysiology of the membrane.
+    # We are more interested in phenomonogical properties.
+    electro_path = mypath
+    assert os.path.isfile(electro_path) == True
+    with open(electro_path,'rb') as f:
+        electro_tests = pickle.load(f)
+    return electro_tests
+
+
+def remake_tests():#,observation = None):
+    # Use neuroelectro experimental obsevations to find test
+    # criterion that will be used to inform scientific unit testing.
+    # some times observations are not sourced from neuroelectro,
+    # but they are imputated or borrowed from other TestSuite
+    # if that happens make test objections using observations external
+    # to this method, and provided as a method argument.
+    tests = []
+    observations = None
+    test_classes = None
+
+
+    test_classes = [fi.RheobaseTest,
+                     passive.InputResistanceTest,
+                     passive.TimeConstantTest,
+                     passive.CapacitanceTest,
+                     passive.RestingPotentialTest,
+                     waveform.InjectedCurrentAPWidthTest,
+                     waveform.InjectedCurrentAPAmplitudeTest,
+                     waveform.InjectedCurrentAPThresholdTest]#,
+    electro_obs = do_use_cache()
+    import pdb
+    pdb.set_trace()
+    test_cell_dict = {}
+    for eo in electro_obs:
+        tests = []
+        for index, t in enumerate(test_classes):
+            for ind_obs in eo:
+                test = t(ind_obs)
+                tests.append(test)
+        suite = sciunit.TestSuite(tests)
+        #test_cell_dict[]
+
+
+        if obs is not None:
+            if 'mean' in obs.keys():
+                tests.append(t(obs))
+                observations[t.ephysprop_name] = obs
+
+
+
+    #str(os.getcwd())+'/pipe_tests.p'
+    #electro_tests = get_common_criteria()
+    electro_tests = replace_zero_std(electro_tests)
+    if backend in str('ADEXP'):
+        electro_tests = substitute_parallel_for_serial(electro_tests)
+
+    test, observation = electro_tests[0]
+    #tests = copy.copy(electro_tests[0][0])
+    #
+    #tests_ = tests[0:2]
+
     return tests, test, observation, suite

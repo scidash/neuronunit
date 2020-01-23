@@ -8,21 +8,40 @@ try:
     ascii_plot = True
 except:
     ascii_plot = False
-#import numpy
+
+class InjectedCurrent:
+    """Metaclass to mixin with InjectedCurrent tests."""
+
+    required_capabilities = (ncap.ReceivesSquareCurrent,)
+
+    default_params = dict(VmTest.default_params)
+    default_params.update({'amplitude': 100*pq.pA})
+
+    def compute_params(self):
+        self.params['injected_square_current'] = \
+            self.get_injected_square_current()
+        self.params['injected_square_current']['amplitude'] = \
+            self.params['amplitude']
+
 
 class APWidthTest(VmTest):
     """Test the full widths of action potentials at their half-maximum."""
 
     required_capabilities = (ncap.ProducesActionPotentials,)
+
     name = "AP width test"
+
     description = ("A test of the widths of action potentials "
                    "at half of their maximum height.")
+
     score_type = scores.RatioScore
+
     units = pq.ms
+
     ephysprop_name = 'Spike Half-Width'
-    def __init__():
-        super(VmTest,self).__init__(**args,**kwargs)
-        self.verbose = False
+    #def __init__():
+    #    super(APWidthTest,self).__init__(*args,**kwargs)
+    #    self.verbose = False
     def generate_prediction(self, model):
         """Implement sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
@@ -50,6 +69,10 @@ class APWidthTest(VmTest):
             prediction = None
         return prediction
 
+    def extract_features(self, model):
+        prediction = self.generate_prediction(model)
+        return prediction
+
     def compute_score(self, observation, prediction):
         """Implement sciunit.Test.score_prediction."""
         if isinstance(prediction, type(None)):
@@ -62,28 +85,32 @@ class APWidthTest(VmTest):
         return score
 
 
-class InjectedCurrentAPWidthTest(APWidthTest):
+class InjectedCurrentAPWidthTest(InjectedCurrent, APWidthTest):
     """Tests the full widths of APs at their half-maximum
     under current injection.
-    """
+    
 
-    def __init__(self, *args, **kwargs):
-        super(InjectedCurrentAPWidthTest, self).__init__(**args,**kwargs)#*args, **kwargs)
-        if str('params') in kwargs.keys():
-            self.params = kwargs['params']
+    def __init__(self,**kwargs):
+        super(InjectedCurrentAPWidthTest, self).__init__()#*args,**kwargs)#*args, **kwargs)
+        #print(params)
+        #if str('params') in kwargs.keys():
+        #    self.params = kwargs['params']
 
         #self.params['injected_square_current'] = {'amplitude': 100.0*pq.pA,
         #                                          'delay': DELAY,
         #                                          'duration': DURATION}
-
+    """
     required_capabilities = (ncap.ReceivesSquareCurrent,)
+
     score_type = scores.ZScore
+
     units = pq.ms
+
     name = "Injected current AP width test"
+
     description = ("A test of the widths of action potentials "
                    "at half of their maximum height when current "
                    "is injected into cell.")
-
 
     def generate_prediction(self, model):
         if self.verbose:
@@ -105,9 +132,19 @@ class InjectedCurrentAPWidthTest(APWidthTest):
 
         return prediction
 
+    def extract_features(self, model):
+        prediction = self.generate_prediction(model)
+        return prediction
+
 
 class APAmplitudeTest(VmTest):
-    """Test the heights (peak amplitude) of action potentials."""
+    """
+    def __init__(self, *args, **kwargs):
+        super(APAmplitudeTest, self).__init__(*args,**kwargs)#*args, **kwargs)
+        if str('params') in kwargs.keys():
+            self.params = kwargs['params']
+
+    Test the heights (peak amplitude) of action potentials."""
 
     required_capabilities = (ncap.ProducesActionPotentials,)
 
@@ -116,10 +153,8 @@ class APAmplitudeTest(VmTest):
     description = ("A test of the amplitude (peak minus threshold) of "
                    "action potentials.")
 
-
     score_type = scores.ZScore
 
-    #
     units = pq.mV
 
     ephysprop_name = 'Spike Amplitude'
@@ -128,7 +163,6 @@ class APAmplitudeTest(VmTest):
         """Implement sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
-
         model.inject_square_current(self.params['injected_square_current'])
         model.get_membrane_potential()
         if ascii_plot:
@@ -139,17 +173,24 @@ class APAmplitudeTest(VmTest):
 
             fig.plot(t, v, label=str('spikes: ')+str(model.get_spike_count()), width=100, height=20)
             fig.show()
-        try:
+        if False:
             height = np.max(model.get_membrane_potential()) -float(np.min(model.get_membrane_potential()))/1000.0*model.get_membrane_potential().units #- model.get_AP_thresholds()
             prediction = {'mean':height, 'n':1, 'std':height}
 
-        except:
-            prediction = {'mean': None,
-                          'std': None,
-                          'n': 0}
+        heights = model.get_AP_amplitudes() - model.get_AP_thresholds()
+        # Put prediction in a form that compute_score() can use.
+        prediction = {'mean': np.mean(heights) if len(heights) else None,
+                      'std': np.std(heights) if len(heights) else None,
+                      'n': len(heights)}
+
+  
 
 
         # Put prediction in a form that compute_score() can use.
+        return prediction
+
+    def extract_features(self, model):
+        prediction = self.generate_prediction(model)
         return prediction
 
     def compute_score(self, observation, prediction):
@@ -162,12 +203,9 @@ class APAmplitudeTest(VmTest):
         return score
 
 
-class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
+class InjectedCurrentAPAmplitudeTest(InjectedCurrent, APAmplitudeTest):
     """Test the heights (peak amplitude) of action potentials.
-
     Uses current injection.
-    """
-
     def __init__(self):# *args, **kwargs):
         super(InjectedCurrentAPAmplitudeTest, self).__init__()#*args, **kwargs)
         if hasattr(self,'params'):# in .keys():
@@ -178,7 +216,7 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
         #self.params['injected_square_current'] = {'amplitude': 100.0*pq.pA,
         #                                          'delay': DELAY,
         #                                              'duration': DURATION}
-
+    """
     required_capabilities = (ncap.ReceivesSquareCurrent,)
 
     name = "Injected current AP amplitude test"
@@ -201,6 +239,11 @@ class InjectedCurrentAPAmplitudeTest(APAmplitudeTest):
         prediction = super(InjectedCurrentAPAmplitudeTest, self).\
             generate_prediction(model)
         return prediction
+
+    def extract_features(self, model):
+        prediction = self.generate_prediction(model)
+        return prediction
+
     def compute_score(self, observation, prediction):
         """Implement sciunit.Test.score_prediction."""
         if prediction['n'] == 0:
@@ -216,11 +259,16 @@ class APThresholdTest(VmTest):
     """Test the full widths of action potentials at their half-maximum."""
 
     required_capabilities = (ncap.ProducesActionPotentials,)
+
     name = "AP threshold test"
+
     description = ("A test of the membrane potential threshold at which "
                    "action potentials are produced.")
+
     score_type = scores.ZScore
+
     units = pq.mV
+
     ephysprop_name = 'Spike Threshold'
 
     def generate_prediction(self, model):
@@ -244,13 +292,17 @@ class APThresholdTest(VmTest):
             threshes = None
         if type(threshes) is not type(None):
             prediction = {'mean': np.mean(threshes) if len(threshes) else None,
-                          'std': np.std(threshes) if len(threshes) else None,
-                          'n': len(threshes) if len(threshes) else 0 }
+                      'std': np.std(threshes) if len(threshes) else None,
+                      'n': len(threshes)}
         else:
             prediction = {'mean':  None,
                           'std':  None,
                           'n': 0 }
 
+        return prediction
+
+    def extract_features(self, model):
+        prediction = self.generate_prediction(model)
         return prediction
 
     def compute_score(self, observation, prediction):
@@ -263,22 +315,13 @@ class APThresholdTest(VmTest):
         return score
 
 
-class InjectedCurrentAPThresholdTest(APThresholdTest):
+class InjectedCurrentAPThresholdTest(InjectedCurrent, APThresholdTest):
     """Test the thresholds of action potentials under current injection."""
 
-    def __init__(self):#, *args, **kwargs):
-        super(InjectedCurrentAPThresholdTest, self).__init__()#*args, **kwargs)
-        if str('params') in kwargs.keys():
-            self.params = kwargs['params']
-
-
-    required_capabilities = (ncap.ReceivesSquareCurrent,)
     name = "Injected current AP threshold test"
+
     description = ("A test of the membrane potential threshold at which "
                    "action potentials are produced under current injection.")
-
-    #def generate_prediction(self, model):
-    #    model.inject_square_current(self.params['injected_square_current'])
 
     def generate_prediction(self, model):
         if 'injected_square_current' in self.params.keys():
@@ -298,6 +341,10 @@ class InjectedCurrentAPThresholdTest(APThresholdTest):
             fig.show()
         return super(InjectedCurrentAPThresholdTest, self).\
             generate_prediction(model)
+
+    def extract_features(self, model):
+        prediction = self.generate_prediction(model)
+        return prediction
 
     def compute_score(self, observation, prediction):
         """Implement sciunit.Test.score_prediction."""

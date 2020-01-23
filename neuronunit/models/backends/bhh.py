@@ -1,8 +1,12 @@
 
 import brian2 as b2
 from neurodynex.hodgkin_huxley import HH
-b2.defaultclock.dt = 1 * b2.ms
+#b2.defaultclock.dt = 1 * b2.ms
+#import brian2 as b2
 
+b2.A = 1000000000000*b2.pA
+b2.units.V = 1000.0*b2.units.mV
+#b2.A = 1000000000000*b2.pA
 from neurodynex.tools import plot_tools, input_factory
 import io
 import math
@@ -48,7 +52,7 @@ def simulate_HH_neuron_local(I_stim=None, simulation_time=None,El=None,\
                             gK=None,gNa=None,C=None,Vr=None):
     # code lifted from:
     # /usr/local/lib/python3.5/dist-packages/neurodynex/hodgkin_huxley
-
+    #Vr *= 1000.0
     input_current = I_stim #= #stim, simulation_time=st)
 
     """A Hodgkin-Huxley neuron implemented in Brian2.
@@ -63,6 +67,8 @@ def simulate_HH_neuron_local(I_stim=None, simulation_time=None,El=None,\
 
     """
     # forming HH model with differential equations
+    # dVdt = (Iext - I_Na - I_K - I_L) / C_m
+
     eqs = """
     I_e = input_current(t,i) : amp
     membrane_Im = I_e + gNa*m**3*h*(ENa-vm) + \
@@ -100,8 +106,8 @@ def simulate_HH_neuron_local(I_stim=None, simulation_time=None,El=None,\
 
     state_dic = st_mon.get_states()
     vm = state_dic['vm']
-    vm = [ (float(v)+Vr) for v in vm]
-    vM = AnalogSignal(vm,units = pq.mV,sampling_period = float(1.0) * pq.ms)
+
+    vM = AnalogSignal(vm,units = pq.V,sampling_period = float(1.0) * pq.ms)
     return st_mon,vM
 
 getting_started = False
@@ -127,20 +133,23 @@ class BHHBackend(Backend):
 
 
         if type(attrs) is not type(None):
-            self.set_attrs(**attrs)
+            self.set_attrs(attrs)
             self.sim_attrs = attrs
 
         if type(DTC) is not type(None):
             if type(DTC.attrs) is not type(None):
-                self.set_attrs(**DTC.attrs)
+                self.set_attrs(DTC.attrs)
             if hasattr(DTC,'current_src_name'):
                 self._current_src_name = DTC.current_src_name
             if hasattr(DTC,'cell_name'):
                 self.cell_name = DTC.cell_name
 
     def get_spike_count(self):
-        thresh = threshold_detection(self.vM)
-        #print(len(thresh),'num spikes')
+        if np.max(self.vM)>20.0*np.mean(self.vM):
+            thresh = threshold_detection(self.vM,np.max(self.vM)-0.10*np.max(self.vM))
+
+        else:
+            thresh = []
         return len(thresh)
 
     def set_stop_time(self, stop_time = 650*pq.ms):
@@ -157,7 +166,7 @@ class BHHBackend(Backend):
 
         return self.vM
 
-    def set_attrs(self, **attrs):
+    def set_attrs(self,attrs):
 
         self.HH = None
         self.HH = HH
@@ -178,20 +187,7 @@ class BHHBackend(Backend):
             b2.defaultclock.dt = 1 * b2.ms
 
             self.HH =HH
-    '''
-    def finalize(self):
-        For interpolating missing sampling, simulating at high sample frequency is prohibitevely slow, and yet, there is
-        no significant difference in behavior.
-        transform_function = interp1d([float(t) for t in self.vM.times],[float(v) for v in self.vM.magnitude])
-        xnew = np.linspace(0, float(np.max(self.vM.times)), num=1004001, endpoint=True)
-        vm_new = transform_function(xnew) #% generate the y values for all x values in xnew
-        self.vM = AnalogSignal(vm_new,units = V,sampling_period = float(xnew[1]-xnew[0]) * pq.s)
-        if self.verbose:
 
-            print(len(self.vM))
-        self.vM = AnalogSignal(vm_new,units = V,sampling_period = float(xnew[1]-xnew[0]) * pq.s)
-        return self.vM
-    '''
 
 
     def inject_square_current(self, current):#, section = None, debug=False):
@@ -211,7 +207,7 @@ class BHHBackend(Backend):
         if self.model.attrs is None or not len(self.model.attrs):
             self.HH = HH
         else:
-            self.set_attrs(**attrs)
+            self.set_attrs(attrs)
         if 'injected_square_current' in current.keys():
             c = current['injected_square_current']
         else:
@@ -219,20 +215,23 @@ class BHHBackend(Backend):
 
         #amplitude = c['amplitude'].simplified
 
-        duration = int(c['duration'])#/dt#/dt.rescale('ms')
-        delay = int(c['delay'])#/dt#.rescale('ms')
+        duration = int(c['duration'])#/10.0)#/dt#/dt.rescale('ms')
+        delay = int(c['delay'])#/10.0)#/dt#.rescale('ms')
         pre_current = int(duration)+100
         amp = float(c['amplitude'])#.rescale('uA')
         #print(amp,'should this be rescaled?')
         #amplitude = amp.simplified
+        getting_started = False
         if getting_started == False:
-            stim = input_factory.get_step_current(delay, duration, b2.ms, amp *1000000.0 * b2.pA)
+            #stim = input_factory.get_step_current(delay, duration, b2.ms, amp * b2.pA)
+
+            stim = input_factory.get_step_current(delay, duration, b2.ms, amp * b2.A)
 
             #st = 70 * b2.ms
 
             st = (duration+delay+100)* b2.ms
         else:
-            stim = input_factory.get_step_current(10, 45, b2.ms, 7 * b2.nA)
+            stim = input_factory.get_step_current(10, 7, b2.ms, 45.0 * b2.nA)
 
             #stim = input_factory.get_step_current(delay, duration, b2.ms, amp * b2.pA)
             st = 70 * b2.ms
@@ -245,13 +244,12 @@ class BHHBackend(Backend):
         else:
             if self.verbose:
                 print(attrs)
-            self.set_attrs(**attrs)
-
+            self.set_attrs(attrs)
 
             self.state_monitor,self.vM = simulate_HH_neuron_local(
-            El = attrs['El'] * b2.units.mV,
-            EK = attrs['EK'] * b2.units.mV,
-            ENa = attrs['ENa'] * b2.units.mV,
+            El = attrs['El'] * b2.units.V,
+            EK = attrs['EK'] * b2.units.V,
+            ENa = attrs['ENa'] * b2.units.V,
             gl =  attrs['gl'] * b2.units.msiemens,
             gK = attrs['gK'] * b2.units.msiemens,
             gNa = attrs['gNa'] * b2.units.msiemens,
@@ -265,6 +263,7 @@ class BHHBackend(Backend):
         self.attrs = attrs
 
         if ascii_plot:
+            SLOW_ZOOM = False
             if SLOW_ZOOM and self.get_spike_count()>=1 :
                 from neuronunit.capabilities.spike_functions import get_spike_waveforms
                 vm = get_spike_waveforms(self.vM)
@@ -273,7 +272,9 @@ class BHHBackend(Backend):
             t = [float(f) for f in vm.times]
             v = [float(f) for f in vm.magnitude]
             fig = apl.figure()
-            fig.plot(t, v, label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
+            #fig.plot(t, v, label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
+            fig.plot(t, v, label=str('brian HH: ')+str(vm.units)+str(current['amplitude']), width=100, height=20)
+
             fig.show()
             gc.collect()
             fig = None
