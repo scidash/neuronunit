@@ -53,7 +53,7 @@ from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
 #from neuronunit.optimisation import get_neab
 from neuronunit.models.reduced import ReducedModel
 from neuronunit import aibs
-
+import pandas as pd
 def test_all_tests_pop(dtcpop, tests):
 
     rheobase_test = [tests[0]['Hippocampus CA1 pyramidal cell']['RheobaseTest']]
@@ -96,7 +96,7 @@ class testHighLevelOptimisation(unittest.TestCase):
                 self.electro_tests = pickle.load(f)
         except:
             pass
-        suite, self.test_frame, self.obs_frame = mint_tests.get_cell_constraints()
+        suite, self.test_frame = mint_tests.get_cell_constraints()
         _ = pd.DataFrame(self.test_frame )
         self.predictions = None
         self.predictionp = None
