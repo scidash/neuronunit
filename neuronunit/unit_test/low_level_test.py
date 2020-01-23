@@ -160,17 +160,18 @@ class testLowLevelOptimisation(unittest.TestCase):
         self.predictionp = None
         self.score_p = None
         self.score_s = None
+        self.obs_frame = None
         self.grid_points = grid_points()
         dtcpop = self.grid_points
         try:
 
-            electro_path = 'pipe_tests.p'
+            electro_path = 'multicellular_suite_constraints.p'
             assert os.path.isfile(electro_path) == True
             with open(electro_path,'rb') as f:
                 self.electro_tests = pickle.load(f)
         except:
             pass
-        suite, self.test_frame = mint_tests.get_cell_constraints()
+        suite, self.test_frame, self.obs_frame = mint_tests.get_cell_constraints()
         _ = pd.DataFrame(self.test_frame )
 
         self.electro_tests = {key:val for key,val in self.test_frame.items() }# if len(val) ==8}
