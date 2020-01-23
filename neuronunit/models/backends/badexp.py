@@ -11,7 +11,7 @@ from numba import jit
 import numpy as np
 from .base import *
 import quantities as qt
-from quantities import mV, ms, s, us, ns
+from quantities import mV, ms, s, us, ns, V
 import matplotlib as mpl
 SLOW_ZOOM = True
 from neuronunit.capabilities import spike_functions as sf
@@ -277,7 +277,7 @@ class ADEXPBackend(Backend):
         vm = state_dic['v']
         vm = [ float(i) for i in vm ]
 
-        self.vM = AnalogSignal(vm,units = mV,sampling_period = float(1.0) * pq.ms)
+        self.vM = AnalogSignal(vm,units = V,sampling_period = float(1.0) * pq.ms)
 
 
         tdic = self.spike_monitor.spike_trains()
@@ -308,19 +308,16 @@ class ADEXPBackend(Backend):
                 vm = get_spike_waveforms(self.vM)
             else:
                 vm = self.vM
-            t = [float(f) for f in vm.times]
-            v = [float(f) for f in vm.magnitude]
-            fig = apl.figure()
-            fig.plot(t, v, label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
-            fig.show()
-            gc.collect()
-            fig = None
-	'''
-        if len(self.spike_monitor.spike_trains())>1:
-            import matplotlib.pyplot as plt
-            plt.plot(y,x)
-            plt.savefig('debug.png')
-        '''
+            try:
+                t = [float(f) for f in vm.times]
+                v = [float(f) for f in vm.magnitude]
+                fig = apl.figure()
+                fig.plot(t, v, label=str('brain adexp: ')+str(vm.units), width=100, height=20)
+                fig.show()
+                gc.collect()
+                fig = None
+            except:
+                print('strange error')
         return self.vM
 
     def _backend_run(self):
