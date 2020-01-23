@@ -4,8 +4,8 @@ import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
 
-from neuronunit.optimisation.optimization_management import inject_and_plot_model, dtc_to_rheo
-from neuronunit.optimisation.optimization_management import inject_and_plot_passive_model
+#from neuronunit.optimisation.optimization_management import inject_and_plot_model, dtc_to_rheo
+#from neuronunit.optimisation.optimization_management import inject_and_plot_passive_model
 
 import numpy as np
 from neuronunit.optimisation.data_transport_container import DataTC

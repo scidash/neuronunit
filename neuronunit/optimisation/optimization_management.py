@@ -516,15 +516,12 @@ def get_centres(ga_out):
     centers = est.cluster_centers_
     return td, test_opt, centres
 
-'''
 def mint_generic_model(backend):
-    Possibly depricated:
-    see:
-    dtc.to_model()
-    LEMS_MODEL_PATH = path_params['model_path']
-    model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = str(backend))
+    dtc = DataTC()
+    dtc.backend = backend
+    model = dtc.to_model()
     return model
-'''
+
 import pandas as pd
 
 def save_models_for_justas(dtc):
