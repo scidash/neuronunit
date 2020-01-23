@@ -32,12 +32,12 @@ ascii_plot = False
 
 @jit
 def Id(t,delay,duration,tmax,amplitude):
+    #print(delay+duration,tmax)
+
     if 0.0 < t < delay:
         return 0.0
     elif delay < t < delay+duration:
-
         return amplitude#(100.0)
-
     elif delay+duration < t < tmax:
         return 0.0
     return 0.0
@@ -91,10 +91,10 @@ def dALLdt(X, t, attrs):
     #print("defaults",defaults)
     #print("actual:",attrs)
     delay,duration,T,amplitude = copy.copy(attrs['I'])
-    for k,v in attrs.items():
-        if k in defaults.keys():
-            pass
-        pass
+    #for k,v in attrs.items():
+    #    if k in defaults.keys():
+    #        pass
+    #    pass
             #print('difference in k: ',k,': ',defaults[k]-v)
             #attrs[k] = defaults[k]
     #    return
@@ -110,7 +110,9 @@ def dALLdt(X, t, attrs):
     g_Na = attrs['g_Na'] #/ Cm) * np.power(m, 3.0) * h
     g_L = attrs['g_L'] #/ Cm
     delay,duration,T,amplitude = attrs['I']
-    Iext = Id(t,delay,duration,T,amplitude)
+    #Id(t,delay,duration,tmax,amplitude)
+    Iext = Id(t,delay,duration,np.max(T),amplitude)
+    #print(Iext)
 
 
     I_Na = g_Na * m**3.0 * h * (V - E_Na)
@@ -248,6 +250,11 @@ class HHBackend(Backend):
 
         attrs = copy.copy(self.model.attrs)
         attrs['I'] = (delay,duration,tmax,amplitude)
+        #Iext = Id(t,delay,duration,T,amplitude)
+
+        #Iext_ = [Id(t,delay,duration,np.max(T),amplitude) for t in T]
+        #import pdb
+        #pdb.set_trace()
         attrs['dt'] = dt
         attrs['T'] = T
 

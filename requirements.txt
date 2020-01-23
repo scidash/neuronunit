@@ -6,10 +6,14 @@ backports.tempfile
 lmfit
 numba
 dask[complete]
-deap
 brian2
 efel
 tabulate
 nbimporter
+sklearn
+neurodynex
+pyneuroml
+seaborn
+deap @ git+https://github.com/fun-zoological-computing/deap.git
 allensdk @ git+https://github.com/fun-zoological-computing/AllenSDK.git
 sciunit @ git+https://github.com/scidash/sciunit@dev#egg=sciunit-9999
