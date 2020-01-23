@@ -79,7 +79,7 @@ class TestPulseTest(ProtocolToFeaturesTest):
                        'n': reference_data.n}
         return observation
 
-
+    
     def compute_params(self):
         super(TestPulseTest, self).compute_params()
         self.params['injected_square_current'] = \
@@ -90,11 +90,12 @@ class TestPulseTest(ProtocolToFeaturesTest):
             self.params['tmax'] = 1000.0*pq.ms
         t_stop = self.params['tmax']
         model.get_backend().set_stop_time(t_stop)
+        return model
 
     def setup_protocol(self, model):
         """Implement sciunit.tests.ProtocolToFeatureTest.setup_protocol."""
         """Not a great design for parallel code as model can't be shared"""
-        self.condition_model(model)
+        model = self.condition_model(model)
         model.inject_square_current(self.params['injected_square_current'])
 
         # self.condition_model(model)
@@ -132,53 +133,81 @@ class TestPulseTest(ProtocolToFeaturesTest):
         # 10 ms before pulse start or halfway between sweep start
         # and pulse start, whichever is longer
         start = max(i['delay'] - 10*pq.ms, i['delay']/2)
-        stop = i['duration']+i['delay'] - 1*pq.ms  # 1 ms before pulse end
+        stop = i['duration'] +i['delay'] - 1*pq.ms  # 1 ms before pulse end
         region = cls.get_segment(vm, start, stop)
         if len(set(r[0] for r in region.magnitude))>1 and np.std(region.magnitude)>0.0:
             try:
                 _, tau, _ = cls.exponential_fit(region, i['delay'])
             except:
-                region = AnalogSignal([j*1000.0 for j in region],sampling_period=region.sampling_period,units=region.units)
-                _, tau, _ = cls.exponential_fit(region, i['delay'])
+                try:
+                    print('1,000 magnitude wrong offset')
+                    region = AnalogSignal([j*1000.0 for j in region],sampling_period=region.sampling_period,units=region.units)
+                    _, tau, _ = cls.exponential_fit(region, i['delay'])
+                except:
+                    print('1,000,000 magnitude wrong offset')
+                    region = AnalogSignal([j*1000000.0 for j in region],sampling_period=region.sampling_period,units=region.units)
+                    _, tau, _ = cls.exponential_fit(region, i['delay'])
         else:
             tau = None
         return tau
 
     @classmethod
     def exponential_fit(cls, segment, offset):
-        t = segment.times.rescale('ms')
-        start = t[0]
+        """Compute an exponential fit to the waveform in `segment`
+        Strips units, center, and standardize to avoid precision issues.
+        Params:
+            segment: A neo AnalogSignal
+            offset: A python quantity of time 
+        Returns:
+            amplitude (segment units)
+            tau (ms)
+            y0 (segment units).
+        """
+        t = segment.times.rescale('ms')  # Segment time point array in ms
+        start = t[0]  # The time of the first point in the segment
+        # Shift all time points to be relative to offset
+        # i.e. t=0 should be the beginning of the action
+        t = t-offset 
+        # The location of the desired offset, relative to segment start,
+        # for determining the number of samples until offset
         offset = offset-start
-        t = t-start
-        t = t.magnitude
-        vm = segment.rescale('mV').magnitude
+        t = t.magnitude # Strip units (implied units of ms)
+        vm = segment.rescale('mV').magnitude # Strip units (implied units of mV)
+        # If multi-dimensional, take only first column
+        if len(np.shape(vm)) > 1:
+            vm = vm[:, 0]
+        vm = vm.squeeze() # Remove extra dimensions, if any
+        # Convert the offset to an integer number of samples
         offset = (offset * segment.sampling_rate).simplified
         assert offset.dimensionality == pq.dimensionless
         offset = int(offset)
-        guesses = [vm.min(),  # amplitude (mV)
-                   10,  # time constant (ms)
-                   vm.max()]  # y0 (mV)
-        vm_fit = vm.copy()
-
-        def func(x, a, b, c):
+        # Center and standardize to avoid precision issues
+        mean = vm.mean()
+        std = vm.std()
+        vm = (vm - mean)/std
+        # Make a copy for manipulation in the fit function
+        y = vm.copy()
+        # Initial guesses
+        guesses = [-1,  # ampl (in s.d.)
+                   10,  # tau (implied ms)
+                   0]  # y0 (in s.d.)
+        
+        def func(t, ampl, tau, y0):
             """Produce an exponential function.
 
             Given function parameters a, b, and c, returns the exponential
             decay function for those parameters.
             """
-            vm_fit[:offset] = c
-            shaped = len(np.shape(vm_fit))
-            if shaped > 1:
-                vm_fit[offset:, 0] = a * np.exp(-t[offset:]/b) + c
-            elif shaped == 1:
-                vm_fit[offset:] = a * np.exp(-t[offset:]/b) + c
-
-            return vm_fit.squeeze()
-        # Estimate starting values for better convergence
-        popt, pcov = curve_fit(func, t, vm.squeeze(), p0=guesses)
-        amplitude = popt[0]*pq.mV
+            y[:offset] = y0
+            y[offset:] = ampl * np.exp(-t[offset:]/tau) + y0
+            return y
+        
+        # Do the curve fit
+        popt, pcov = curve_fit(func, t, vm, p0=guesses)
+        # Extract the parameters, adding back mean, std, and units
+        amplitude = popt[0]*std*pq.mV
         tau = popt[1]*pq.ms
-        y0 = popt[2]*pq.mV
+        y0 = (mean + popt[2]*std)*pq.mV
         return amplitude, tau, y0
 
     def compute_score(self, observation, prediction):

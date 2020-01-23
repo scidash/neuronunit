@@ -38,7 +38,6 @@ import matplotlib as mpl
 def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippets=False,experimental_cell_type="neo_cortical",ground_truth = None,BPO=True):
     sns.set_style("darkgrid")
     #from neuronunit.optimisation.optimization_management import mint_generic_model
-
     if not isinstance(dtc, Iterable):
         model = dtc.dtc_to_model()
         if hasattr(dtc,'rheobase'):
@@ -49,7 +48,6 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                 uc = {'amplitude':rheobase,'duration':DURATION,'delay':DELAY}
         if hasattr(dtc,'ampl'):
             uc = {'amplitude':dtc.ampl,'duration':DURATION,'delay':DELAY}
-
         model.set_attrs(dtc.attrs)
         model.inject_square_current(uc)
         if str(dtc.backend) is str('ADEXP'):
@@ -65,9 +63,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
             plt.savefig(figname+str('debug.png'))
         else:
             plt.show()
-
     else:
-
         if type(second_pop) is not type(None):
             dtcpop = copy.copy(dtc)
             dtc = None
@@ -78,7 +74,6 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                 if index == 0:
                     color = 'blue'
                 model = dtc.dtc_to_model()
-
                 if hasattr(dtc,'rheobase'):
                     # this ugly hack can be fixed in the file tests/fi.py
                     try:
@@ -103,7 +98,8 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                     label=str('Izhikevich Model')
                 if str("GLIF") in dtc.backend:
                     label=str('Generalized Leaky Integrate and Fire')
-
+                if str("HH") in dtc.backend:
+                    label=str("raw hodgkin huxley")
                 if str("BHH") in dtc.backend:
                     label=str('Hodgkin Huxley Model')
                 if str("ADEXP") in dtc.backend:
@@ -196,7 +192,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                     if hasattr(dtc,'ampl'):
                         uc = {'amplitude':dtc.ampl,'duration':DURATION,'delay':DELAY}
 
-                    model.set_attrs(**dtc.attrs)
+                    model.set_attrs(dtc.attrs)
                     model.inject_square_current(uc)
                     #if model.get_spike_count()>1:
                     #    break
@@ -284,13 +280,11 @@ def elaborate_plots(self,ga_out):
     The plot shows the mean error value of the population as the GA evolves it's population. The red interval at any instant is the standard deviation of the error. The fact that the mean GA error is able to have a net upwards trajectory, after experiencing a temporary downwards trajectory, demonstrates that the GA retains a drive to explore, and is resiliant against being stuck in a local minima. Also in the above plot population variance in error stays remarkably constant, in this way BluePyOpts selection criteria SELIBEA contrasts with DEAPs native selection strategy NSGA2
     #for index, val in enumerate(ga_out.values()):
     '''
-    import pdb
-    pdb.set_trace()
+
     try:
        temp = copy.copy(ga_out['pf'][0].dtc.scores)
     except:
-       temp = copy.copy(ga_out['dtc_pop'][0].scores)
-
+       temp = copy.copy(ga_out['dtc_pop'][0].dtc.scores)
     if not self.use_rheobase_score:
         temp.pop("RheobaseTest",None)
     objectives = list(temp.keys())
@@ -338,121 +332,263 @@ def elaborate_plots(self,ga_out):
     plt.figure()
     sns.set_style("darkgrid")
     logbook = ga_out['log']
+
+    try:
+       OLD_BOOK = False
+       avg = [i['avg'] for i in logbook]
+    except:
+       OLD_BOOK = True
+    #print(ret.keys())
+    #import pdb
+    #pdb.set_trace()
+    fig2, ax2 = plt.subplots(len(objectives)+2,1,figsize=(10,10))
+
     ret = logbook.chapters
     gen = ret['every'].select("gen")
     everything = ret["every"]
-    fig2, ax2 = plt.subplots(len(objectives)+2,1,figsize=(10,10))
+    #if len(everything)i:
+    if OLD_BOOK:
+        for i,k in enumerate(objectives):
+            if i < len(everything.select("avg")[0]):
+                #[j[i] for j in everything.select("avg")]
+                line2 = ax2[i].plot([j[i] for j in everything.select("avg")], "r-", label="Evolution objectives")
 
-    for i,k in enumerate(objectives):
-        if i < len(everything.select("avg")[0]):
-            #[j[i] for j in everything.select("avg")]
-            line2 = ax2[i].plot([j[i] for j in everything.select("avg")], "r-", label="Evolution objectives")
+                [j[i] for j in everything.select("avg")]
+                ax2[i].set_ylim([0.0, 1.0])
+                if i!=len(objectives):
+                    ax2[i].tick_params(
+                        axis='x',          # changes apply to the x-axis
+                        which='both',      # both major and minor ticks are affected
+                        bottom=False,      # ticks along the bottom edge are off
+                        top=False,         # ticks along the top edge are off
+                        labelbottom=False) # labels along the bottom edge are off
+                ax2[len(objectives)].plot(
+                    gen_numbers,
+                    mean,
+                    color='black',
+                    linewidth=2,
+                    label='population average')
+                ax2[len(objectives)].fill_between(gen_numbers, stdminus, stdplus)
+                ax2[len(objectives)].plot(gen_numbers, stdminus, label='std variation lower limit')
+                ax2[len(objectives)].plot(gen_numbers, stdplus, label='std variation upper limit')
+                ax2[len(objectives)].set_xlim(np.min(gen_numbers) - 1, np.max(gen_numbers) + 1)
+                h = ax2[len(objectives)].set_xlabel("NeuronUnit Test: {0}".format(k))
+        plt.savefig(str('reliable_history_plot_')+str(self.cell_name)+str(self.backend)+str('.png'))
 
-            [j[i] for j in everything.select("avg")]
+
+
+        #logbook = ga_out['log']
+        logbook = ga_out['log']
+        ret = logbook.chapters
+        logbook = ret['fitness']
+
+        gen = logbook.select("gen")
+        fit_mins = logbook.select("min")
+        fit_max = logbook.select("max")
+        fit_avgs = logbook.select("avg")
+
+
+        fig, ax1 = plt.subplots(figsize=(10,10))
+        line1 = ax1.plot(gen, fit_mins, "r-", label="Minimum Fitness")
+        line2 = ax1.plot(gen, fit_avgs, "g-", label="Average Fitness")
+        line3 = ax1.plot(gen, fit_max, "b-", label="Maximum Fitness")
+        ax1.set_xlabel("Generation")
+        ax1.set_ylabel("Fitness out of: {0}".format(len(objectives)))
+        lns = line1 + line2 + line3
+        labs = [l.get_label() for l in lns]
+        ax1.legend(lns, labs, loc="center right")
+        plt.savefig(str('evolution_')+str(self.cell_name)+str(self.backend)+str('.png'))
+        ga_out['stats_plot_1'] = ax1, fig# ax2, ax3, fig
+
+        avg, max_, min_, std_ = logbook.select("avg", "max", "min","std")
+        all_over_gen = {}
+        for i,k in enumerate(objectives):
+            all_over_gen[k] = []
+            for v in ga_out['history'].genealogy_history.values():
+                all_over_gen[k].append(v.fitness.values[i])# if type(ind.dtc) is not type(None) ]
+        plt.figure()
+        sns.set_style("darkgrid")
+
+
+        fig2, ax2 = plt.subplots(len(objectives)+1,1,figsize=(10,10))
+        for i,k in enumerate(objectives):
+            #if i < len(everything.select("avg")[0]):
+
+            ax2[i].plot(list(range(0,len(all_over_gen[k]))),all_over_gen[k])
+            temp = [0 for i in range(0,len(all_over_gen[k])) ]
+            ax2[i].plot(list(range(0,len(all_over_gen[k]))),temp)
             ax2[i].set_ylim([0.0, 1.0])
-            if i!=len(objectives):
+            if i!=len(objectives)-1:
                 ax2[i].tick_params(
                     axis='x',          # changes apply to the x-axis
                     which='both',      # both major and minor ticks are affected
                     bottom=False,      # ticks along the bottom edge are off
                     top=False,         # ticks along the top edge are off
                     labelbottom=False) # labels along the bottom edge are off
-            ax2[len(objectives)].plot(
-                gen_numbers,
-                mean,
-                color='black',
-                linewidth=2,
-                label='population average')
-            ax2[len(objectives)].fill_between(gen_numbers, stdminus, stdplus)
-            ax2[len(objectives)].plot(gen_numbers, stdminus, label='std variation lower limit')
-            ax2[len(objectives)].plot(gen_numbers, stdplus, label='std variation upper limit')
-            ax2[len(objectives)].set_xlim(np.min(gen_numbers) - 1, np.max(gen_numbers) + 1)
-            h = ax2[len(objectives)].set_xlabel("NeuronUnit Test: {0}".format(k))
-    plt.savefig(str('reliable_history_plot_')+str(self.cell_name)+str(self.backend)+str('.png'))
+            h = ax2[i].set_xlabel("NeuronUnit Test: {0}".format(k))
+            #h.set_rotation(90)
+            plt.savefig(str('history_plot_')+str(self.cell_name)+str(self.backend)+str('.png'))
+            ga_out['history_plot_'] = (fig2,plt)
+
+
+        all_over_gen = {}
+        for i,k in enumerate(objectives):
+            all_over_gen[k] = []
+            for gen in ga_out['gen_vs_pop']:
+                sorted_pop = sorted([(np.sum(ind.fitness.values),ind) for ind in gen if len(ind.fitness.values)==len(objectives) ], key=lambda tup: tup[0])
+                ind = sorted_pop[0][1]
+                all_over_gen[k].append(ind.fitness.values[i])# if type(ind.dtc) is not type(None) ]
+        plt.figure()
+        sns.set_style("darkgrid")
+
+        fig2, ax2 = plt.subplots(len(objectives)+1,1,figsize=(10,10))
+        for i,k in enumerate(objectives):
+            ax2[i].plot(list(range(0,len(all_over_gen[k]))),all_over_gen[k])
+            temp = [0 for i in range(0,len(all_over_gen[k])) ]
+            ax2[i].plot(list(range(0,len(all_over_gen[k]))),temp)
+            ax2[i].set_ylim([0.0, 1.0])
+            if i!=len(objectives)-1:
+                ax2[i].tick_params(
+                    axis='x',          # changes apply to the x-axis
+                    which='both',      # both major and minor ticks are affected
+                    bottom=False,      # ticks along the bottom edge are off
+                    top=False,         # ticks along the top edge are off
+                    labelbottom=False) # labels along the bottom edge are off
+            h = ax2[i].set_xlabel("NeuronUnit Test: {0}".format(k))
+            #h.set_rotation(90)
+        plt.savefig(str('crazy_plot_')+str(self.cell_name)+str(self.backend)+str('.png'))
+        ga_out['crazy_plot_'] = (fig2,plt)
+    else:
+        for i,k in enumerate(objectives):
+            mean = [i['avg'] for i in logbook ]
+            std = [i['std'] for i in logbook ]
+            minimum = [i['min'] for i in logbook ]
+
+            gen_numbers = [i['gen'] for i in logbook ]
+            #gen_numbers =[ i for i in range(0,len(log.select('gen'))) ]
+            #mean = np.array([ np.sum(i) for i in log.select('avg')])
+            #std = np.array([ np.sum(i) for i in log.select('std')])
+            #minimum = np.array([ np.sum(i) for i in log.select('min')])
+
+            stdminus = np.array(mean) - np.array(std)
+            stdplus = np.array(mean) + np.array(std)
+
+            if i < len(avg[0]):
+                #[j[i] for j in everything.select("avg")]
+                line2 = ax2[i].plot([j[i] for j in avg], "r-", label="Evolution objectives")
+
+                [j[i] for j in avg]
+                ax2[i].set_ylim([0.0, 1.0])
+                if i!=len(objectives):
+                    ax2[i].tick_params(
+                        axis='x',          # changes apply to the x-axis
+                        which='both',      # both major and minor ticks are affected
+                        bottom=False,      # ticks along the bottom edge are off
+                        top=False,         # ticks along the top edge are off
+                        labelbottom=False) # labels along the bottom edge are off
+                ax2[len(objectives)].plot(
+                    gen_numbers,
+                    mean,
+                    color='black',
+                    linewidth=2,
+                    label='population average')
+                import pdb
+                pdb.set_trace()
+                ax2[len(objectives)].fill_between(gen_numbers, stdminus, stdplus)
+                ax2[len(objectives)].plot(gen_numbers, stdminus, label='std variation lower limit')
+                ax2[len(objectives)].plot(gen_numbers, stdplus, label='std variation upper limit')
+                ax2[len(objectives)].set_xlim(np.min(gen_numbers) - 1, np.max(gen_numbers) + 1)
+                h = ax2[len(objectives)].set_xlabel("NeuronUnit Test: {0}".format(k))
+        plt.savefig(str('reliable_history_plot_')+str(self.cell_name)+str(self.backend)+str('.png'))
 
 
 
-    #logbook = ga_out['log']
-    logbook = ga_out['log']
-    ret = logbook.chapters
-    logbook = ret['fitness']
+        #logbook = ga_out['log']
+        logbook = ga_out['log']
+        ret = logbook.chapters
+        logbook = ret['fitness']
+        fit_avgs = [i['avg'] for i in logbook ]
+        gen = [i['gen'] for i in logbook ]
 
-    gen = logbook.select("gen")
-    fit_mins = logbook.select("min")
-    fit_max = logbook.select("max")
-    fit_avgs = logbook.select("avg")
+        #gen = logbook.select("gen")
+        fit_min = [i['min'] for i in logbook ]
+        fit_max = [i['max'] for i in logbook ]
 
-
-    fig, ax1 = plt.subplots(figsize=(10,10))
-    line1 = ax1.plot(gen, fit_mins, "r-", label="Minimum Fitness")
-    line2 = ax1.plot(gen, fit_avgs, "g-", label="Average Fitness")
-    line3 = ax1.plot(gen, fit_max, "b-", label="Maximum Fitness")
-    ax1.set_xlabel("Generation")
-    ax1.set_ylabel("Fitness out of: {0}".format(len(objectives)))
-    lns = line1 + line2 + line3
-    labs = [l.get_label() for l in lns]
-    ax1.legend(lns, labs, loc="center right")
-    plt.savefig(str('evolution_')+str(self.cell_name)+str(self.backend)+str('.png'))
-    ga_out['stats_plot_1'] = ax1, fig# ax2, ax3, fig
-
-    avg, max_, min_, std_ = logbook.select("avg", "max", "min","std")
-    all_over_gen = {}
-    for i,k in enumerate(objectives):
-        all_over_gen[k] = []
-        for v in ga_out['history'].genealogy_history.values():
-            all_over_gen[k].append(v.fitness.values[i])# if type(ind.dtc) is not type(None) ]
-    plt.figure()
-    sns.set_style("darkgrid")
+        #fit_mins = logbook.select("min")
+        #fit_max = logbook.select("max")
+        #fit_avgs = logbook.select("avg")
 
 
-    fig2, ax2 = plt.subplots(len(objectives)+1,1,figsize=(10,10))
-    for i,k in enumerate(objectives):
-        #if i < len(everything.select("avg")[0]):
+        fig, ax1 = plt.subplots(figsize=(10,10))
+        line1 = ax1.plot(gen, fit_mins, "r-", label="Minimum Fitness")
+        line2 = ax1.plot(gen, fit_avgs, "g-", label="Average Fitness")
+        line3 = ax1.plot(gen, fit_max, "b-", label="Maximum Fitness")
+        ax1.set_xlabel("Generation")
+        ax1.set_ylabel("Fitness out of: {0}".format(len(objectives)))
+        lns = line1 + line2 + line3
+        labs = [l.get_label() for l in lns]
+        ax1.legend(lns, labs, loc="center right")
+        plt.savefig(str('evolution_')+str(self.cell_name)+str(self.backend)+str('.png'))
+        ga_out['stats_plot_1'] = ax1, fig# ax2, ax3, fig
 
-        ax2[i].plot(list(range(0,len(all_over_gen[k]))),all_over_gen[k])
-        temp = [0 for i in range(0,len(all_over_gen[k])) ]
-        ax2[i].plot(list(range(0,len(all_over_gen[k]))),temp)
-        ax2[i].set_ylim([0.0, 1.0])
-        if i!=len(objectives)-1:
-            ax2[i].tick_params(
-                axis='x',          # changes apply to the x-axis
-                which='both',      # both major and minor ticks are affected
-                bottom=False,      # ticks along the bottom edge are off
-                top=False,         # ticks along the top edge are off
-                labelbottom=False) # labels along the bottom edge are off
-        h = ax2[i].set_xlabel("NeuronUnit Test: {0}".format(k))
-        #h.set_rotation(90)
-        plt.savefig(str('history_plot_')+str(self.cell_name)+str(self.backend)+str('.png'))
-        ga_out['history_plot_'] = (fig2,plt)
+        avg, max_, min_, std_ = logbook.select("avg", "max", "min","std")
+        all_over_gen = {}
+        for i,k in enumerate(objectives):
+            all_over_gen[k] = []
+            for v in ga_out['history'].genealogy_history.values():
+                all_over_gen[k].append(v.fitness.values[i])# if type(ind.dtc) is not type(None) ]
+        plt.figure()
+        sns.set_style("darkgrid")
 
 
-    all_over_gen = {}
-    for i,k in enumerate(objectives):
-        all_over_gen[k] = []
-        for gen in ga_out['gen_vs_pop']:
-            sorted_pop = sorted([(np.sum(ind.fitness.values),ind) for ind in gen if len(ind.fitness.values)==len(objectives) ], key=lambda tup: tup[0])
-            ind = sorted_pop[0][1]
-            all_over_gen[k].append(ind.fitness.values[i])# if type(ind.dtc) is not type(None) ]
-    plt.figure()
-    sns.set_style("darkgrid")
+        fig2, ax2 = plt.subplots(len(objectives)+1,1,figsize=(10,10))
+        for i,k in enumerate(objectives):
+            #if i < len(everything.select("avg")[0]):
 
-    fig2, ax2 = plt.subplots(len(objectives)+1,1,figsize=(10,10))
-    for i,k in enumerate(objectives):
-        ax2[i].plot(list(range(0,len(all_over_gen[k]))),all_over_gen[k])
-        temp = [0 for i in range(0,len(all_over_gen[k])) ]
-        ax2[i].plot(list(range(0,len(all_over_gen[k]))),temp)
-        ax2[i].set_ylim([0.0, 1.0])
-        if i!=len(objectives)-1:
-            ax2[i].tick_params(
-                axis='x',          # changes apply to the x-axis
-                which='both',      # both major and minor ticks are affected
-                bottom=False,      # ticks along the bottom edge are off
-                top=False,         # ticks along the top edge are off
-                labelbottom=False) # labels along the bottom edge are off
-        h = ax2[i].set_xlabel("NeuronUnit Test: {0}".format(k))
-        #h.set_rotation(90)
-    plt.savefig(str('crazy_plot_')+str(self.cell_name)+str(self.backend)+str('.png'))
-    ga_out['crazy_plot_'] = (fig2,plt)
+            ax2[i].plot(list(range(0,len(all_over_gen[k]))),all_over_gen[k])
+            temp = [0 for i in range(0,len(all_over_gen[k])) ]
+            ax2[i].plot(list(range(0,len(all_over_gen[k]))),temp)
+            ax2[i].set_ylim([0.0, 1.0])
+            if i!=len(objectives)-1:
+                ax2[i].tick_params(
+                    axis='x',          # changes apply to the x-axis
+                    which='both',      # both major and minor ticks are affected
+                    bottom=False,      # ticks along the bottom edge are off
+                    top=False,         # ticks along the top edge are off
+                    labelbottom=False) # labels along the bottom edge are off
+            h = ax2[i].set_xlabel("NeuronUnit Test: {0}".format(k))
+            #h.set_rotation(90)
+            plt.savefig(str('history_plot_')+str(self.cell_name)+str(self.backend)+str('.png'))
+            ga_out['history_plot_'] = (fig2,plt)
+
+
+        all_over_gen = {}
+        for i,k in enumerate(objectives):
+            all_over_gen[k] = []
+            for gen in ga_out['gen_vs_pop']:
+                sorted_pop = sorted([(np.sum(ind.fitness.values),ind) for ind in gen if len(ind.fitness.values)==len(objectives) ], key=lambda tup: tup[0])
+                ind = sorted_pop[0][1]
+                all_over_gen[k].append(ind.fitness.values[i])# if type(ind.dtc) is not type(None) ]
+        plt.figure()
+        sns.set_style("darkgrid")
+
+        fig2, ax2 = plt.subplots(len(objectives)+1,1,figsize=(10,10))
+        for i,k in enumerate(objectives):
+            ax2[i].plot(list(range(0,len(all_over_gen[k]))),all_over_gen[k])
+            temp = [0 for i in range(0,len(all_over_gen[k])) ]
+            ax2[i].plot(list(range(0,len(all_over_gen[k]))),temp)
+            ax2[i].set_ylim([0.0, 1.0])
+            if i!=len(objectives)-1:
+                ax2[i].tick_params(
+                    axis='x',          # changes apply to the x-axis
+                    which='both',      # both major and minor ticks are affected
+                    bottom=False,      # ticks along the bottom edge are off
+                    top=False,         # ticks along the top edge are off
+                    labelbottom=False) # labels along the bottom edge are off
+            h = ax2[i].set_xlabel("NeuronUnit Test: {0}".format(k))
+            #h.set_rotation(90)
+        plt.savefig(str('crazy_plot_')+str(self.cell_name)+str(self.backend)+str('.png'))
+        ga_out['crazy_plot_'] = (fig2,plt)
 
     return ga_out
 

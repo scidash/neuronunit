@@ -223,6 +223,7 @@ def finalize_wiring(conn_ee, conn_ie, conn_ei, conn_ii):
         cleaned = []
         for i,vm in enumerate(vms):
             if np.max(vm) > 900.0 or np.min(vm) <- 900.0:
+                pass
             else:
                 cleaned.append(vm)
         vms = cleaned

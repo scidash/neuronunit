@@ -24,20 +24,26 @@ from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.data_transport_container import DataTC
 
 from neuronunit.optimisation.optimization_management import dtc_to_rheo
-from neuronunit.optimisation.optimization_management import nunit_evaluation
-from neuronunit.optimisation.optimization_management import format_test, mint_generic_model
+from neuronunit.optimisation.optimization_management import OptMan as OM
+elephant_evaluation = OM.elephant_evaluation
+format_test = OM.format_test
+round_trip_test = OM.format_test
 
+#mint_generic_model = OM.mint_generic_model
+
+from neuronunit.optimisation.optimization_management import mint_generic_model
+from neuronunit.optimisation import mint_tests
 from neuronunit import tests as nu_tests, neuroelectro
 from neuronunit.tests import passive, waveform, fi
 #from neuronunit.optimisation import get_neab
 from neuronunit.optimisation import exhaustive_search
-from neuronunit.models.reduced import ReducedModel
+from neuronunit.models.reduced import ReducedModel, VeryReducedModel
 #from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 from neuronunit.tests import dynamics
-from neuronunit.models.reduced import ReducedModel
+#from neuronunit.models.reduced import
 
-from neuronunit.optimisation.optimization_management import format_test, inject_and_plot
+#from neuronunit.optimisation.optimization_management import format_test, inject_and_plot
 from neuronunit.optimisation import data_transport_container
 
 from neuronunit.models.reduced import ReducedModel
@@ -47,7 +53,6 @@ from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
 #from neuronunit.optimisation import get_neab
 from neuronunit.models.reduced import ReducedModel
 from neuronunit import aibs
-from neuronunit.optimisation.optimization_management import round_trip_test
 
 def test_all_tests_pop(dtcpop, tests):
 
@@ -84,12 +89,15 @@ def grid_points():
 class testHighLevelOptimisation(unittest.TestCase):
 
     def setUp(self):
-        electro_path = str(os.getcwd())+'/../tests/russell_tests.p'
-
-        assert os.path.isfile(electro_path) == True
-        with open(electro_path,'rb') as f:
-            (self.test_frame,self.obs_frame) = pickle.load(f)
-
+        try:
+            electro_path = 'multicellular_suite_constraints.p'
+            assert os.path.isfile(electro_path) == True
+            with open(electro_path,'rb') as f:
+                self.electro_tests = pickle.load(f)
+        except:
+            pass
+        suite, self.test_frame, self.obs_frame = mint_tests.get_cell_constraints()
+        _ = pd.DataFrame(self.test_frame )
         self.predictions = None
         self.predictionp = None
         self.score_p = None
@@ -104,7 +112,12 @@ class testHighLevelOptimisation(unittest.TestCase):
 
         #self.test_rheobase_dtc = test_rheobase_dtc
         #self.dtcpop = test_rheobase_dtc(self.dtcpop,self.electro_tests)
-        self.standard_model = self.model = mint_generic_model('RAW')
+        dtc = DataTC()
+        dtc.backend = 'RAW'
+        try:
+            self.standard_model = self.model = dtc.dtc_to_model()
+        except:
+            self.standard_model = self.model = mint_generic_model('RAW')
         self.MODEL_PARAMS = MODEL_PARAMS
         self.MODEL_PARAMS.pop(str('NEURON'),None)
 

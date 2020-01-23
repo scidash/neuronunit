@@ -21,13 +21,12 @@ import pickle
 import dask.bag as db
 import os
 
+from sciunit import TestSuite
 import neuronunit
-from neuronunit.optimisation.optimization_management import TSD
-#from neuronunit.optimisation.optimization_management import TSD
 from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.data_transport_container import DataTC
 from neuronunit.optimisation.optimization_management import dtc_to_rheo#, mint_generic_model
-from neuronunit.optimisation.optimization_management import OptMan
+from neuronunit.optimisation.optimization_management import OptMan, optimize
 
 from neuronunit import tests as nu_tests, neuroelectro
 from neuronunit.tests import passive, waveform, fi
@@ -72,6 +71,8 @@ def test_all_tests_pop(dtcpop, tests):
     b0 = db.from_sequence(dtcpop, npartitions=8)
     dtcpop = list(db.map(elephant_evaluation,b0).compute())
     return dtcpop
+
+
 class testHighLevelOptimisation(unittest.TestCase):
 
     def setUp(self):
@@ -94,23 +95,6 @@ class testHighLevelOptimisation(unittest.TestCase):
         self.MODEL_PARAMS = MODEL_PARAMS
         self.MODEL_PARAMS.pop(str('NEURON'),None)
 
-
-        self.light_backends = [
-                    str('RAWBackend'),
-                    str('ADEXPBackend')
-                ]
-
-        # unused backends:
-        self.heavy_backends = [
-                    str('NEURONBackend'),
-                    str('jNeuroMLBackend')
-                ]
-
-        self.medium_backends = [
-                    str('GLIFBackend')
-                ]
-
-
     def get_cells(self,backend,model_parameters,NGEN,MU,score_type=None,short_test=None):
         if score_type is not None:
             from sciunit import scores
@@ -123,13 +107,17 @@ class testHighLevelOptimisation(unittest.TestCase):
 
         tests = self.test_frame['Neocortex pyramidal cell layer 5-6']
         tests['name'] = 'Neocortex pyramidal cell layer 5-6'
-
-        neo = TSD(tests=tests,use_rheobase_score=True)#, NGEN=10, \
+        tests['use_rheobase_score'] = True
+        neo = TestSuite(tests, optimizer=optimize)#, NGEN=10, \
         neo_out = neo.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=NGEN, \
-                                backend=backend, MU=MU, protocol={'allen': False, 'elephant': True})
+                               backend=backend, MU=MU, protocol={'allen': False, 'elephant': True})
+        for p in neo_out[0]['pf']: p.dtc.tests.DO = None
         dtcpop4 = [p for p in neo_out[0]['pf'] ]
 
-        dtc,_,_= inject_and_plot(neo_out[0]['pf'])
+        dtc,_,_= inject_and_plot([ind.dtc for ind in neo_out[0]['pf']])
+        pdic = {str(backend):{'neo':dtcpop4}}
+        pickle.dump(pdic,open(str(backend)+str('all_data_tests.p'),'wb'))
+        return pdic
         '''
         print(dtc.vm)
 
@@ -141,7 +129,7 @@ class testHighLevelOptimisation(unittest.TestCase):
         cpc_out = cpc.optimize(model_parameters.MODEL_PARAMS[backend], NGEN=NGEN, \
                                 backend=backend, MU=MU, protocol={'allen': False, 'elephant': True})
         dtcpop1 = [p for p in cpc_out[0]['pf'] ]
-        
+
         tests= self.test_frame['Hippocampus CA1 pyramidal cell']
         tests['name'] = 'Hippocampus CA1 pyramidal cell'
         ca1 = TSD(tests = tests,use_rheobase_score=True)
@@ -164,10 +152,8 @@ class testHighLevelOptimisation(unittest.TestCase):
                                 backend=backend, MU=8, protocol={'allen': False, 'elephant': True})
         dtcpop3 = [p for p in basket_out[0]['pf'] ]
 	'''
-        pdic = {str(backend):{'olf':dtcpop0,'purkine':dtcpop1,'ca1pyr':dtcpop2,'ca1basket':dtcpop3,'neo':dtcpop4}}
 
-        pickle.dump(pdic,open(str(backend)+str('all_data_tests.p'),'wb'))
-        return pdic
+        # pdic = {str(backend):{'olf':dtcpop0,'purkine':dtcpop1,'ca1pyr':dtcpop2,'ca1basket':dtcpop3,'neo':dtcpop4}}
 
     def get_short_round_trip(self,backend,model_parameters,score_type=None,short_test=None):
         if score_type is not None:
@@ -184,10 +170,12 @@ class testHighLevelOptimisation(unittest.TestCase):
         MU = 4
         tests= self.test_frame['Hippocampus CA1 pyramidal cell']
         tests['name'] = 'Hippocampus CA1 pyramidal cell'
-        ca1 = TSD(tests = tests,use_rheobase_score=True)
-        OM = OptMan(ca1,protocol={'elephant':True,'allen':False})
+        tests['use_rheobase_score'] = True
+        ca1 = TestSuite(tests, optimizer=optimize)
+        OM = OptMan(ca1, protocol={'elephant':True, 'allen':False})
         out = OM.round_trip_test(ca1,backend,model_parameters.MODEL_PARAMS[backend], NGEN=NGEN, MU=MU)
         return out
+    
     def test_not_data_driven_rt_ae(self):
         '''
         forward euler, and adaptive exponential
@@ -195,20 +183,23 @@ class testHighLevelOptimisation(unittest.TestCase):
         backend = str('RAW')
         out = self.get_short_round_trip(backend,model_parameters)
         return out
+    
     def test_data_driven_ae(self):
         '''
         forward euler, and adaptive exponential
         '''
-        NGEN = 3
-        MU = 3
+        NGEN = 8
+        MU = 8
 
+        #backend = str('JHH')
+        #out = self.get_cells(backend,model_parameters,NGEN,MU)
         backend = str('RAW')
         out = self.get_cells(backend,model_parameters,NGEN,MU)
-        backend = str('ADEXP')
-        out = self.get_cells(backend,model_parameters,NGEN,MU)
 
+        #backend = str('ADEXP')
+        #out = self.get_cells(backend,model_parameters,NGEN,MU)
         backend = str('HH')
         out = self.get_cells(backend,model_parameters,NGEN,MU)
-        backend = str('BHH')
-        out = self.get_cells(backend,model_parameters,NGEN,MU)
+        #backend = str('BHH')
+        #out = self.get_cells(backend,model_parameters,NGEN,MU)
         return out

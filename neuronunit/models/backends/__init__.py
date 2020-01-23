@@ -25,11 +25,7 @@ def heavy_backends():
     except Exception as e:
         print('pynn python Error')
 
-try:
-    from .glif import GLIFBackend
-except Exception as e:
-    print('glif python Error')
-
+heavy_backends()
 """
 try:
     from .hh_wraper import JHHBackend
@@ -48,12 +44,15 @@ try:
 except ImportError:
     HHBackend = None
     print('Could not load HHBackend.')
-
+try:
+    from .glif import GLIFBackend
+except Exception as e:
+    print('glif python Error')
 
 try:
     from .badexp import ADEXPBackend
 except Exception as e:
-    print('pynn python Error')
+    print('brian adaptive exponentional error python Error')
 
 try:
     from .bhh import BHHBackend

@@ -172,7 +172,11 @@ class RAWBackend(Backend):
         self.set_stop_time(tMax*pq.ms)
         tMax = self.tstop
         if str('dt') in attrs:
-            N = int(tMax/attrs['dt'])
+            try:   
+                N = int(tMax/attrs['dt'])
+            except:
+                attrs['dt'] = 0.03
+                N = int(tMax/attrs['dt'])
         else:
             attrs['dt'] = 0.03
             N = int(tMax/attrs['dt'])
