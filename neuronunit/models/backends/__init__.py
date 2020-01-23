@@ -9,23 +9,25 @@ from .base import Backend
 
 warnings.filterwarnings('ignore', message='nested set')
 warnings.filterwarnings('ignore', message='mpi4py')
+
 def heavy_backends():
     try:
         from .jNeuroML import jNeuroMLBackend
     except:
-        print('Error in jNeuroMLBackend')
+        print('Could not load jNeuroML backend')
 
     try:
         from .neuron import NEURONBackend
     except ImportError:
         NEURONBackend = None
-        print('Could not load NEURONBackend')
+        print('Could not load NEURON backend')
     try:
         from .general_pyNN import PYNNBackend
     except Exception as e:
-        print('pynn python Error')
+        print('Could not load PyNN backend')
 
 heavy_backends()
+
 """
 try:
     from .hh_wraper import JHHBackend
@@ -33,37 +35,36 @@ except ImportError:
     JHHBackend = None
     print('Could not load JHHBackend.')
 """
+
 try:
     from .rawpy import RAWBackend
 except ImportError:
     RAWBackend = None
-    print('Could not load RAWBackend.')
+    print('Could not load RAW Backend.')
 
 try:
     from .hhrawf import HHBackend
 except ImportError:
     HHBackend = None
-    print('Could not load HHBackend.')
+    print('Could not load HH Backend.')
+
 try:
     from .glif import GLIFBackend
 except Exception as e:
-    print('glif python Error')
+    GLIFBackend = None
+    print('Could not load GLIF Backend')
 
 try:
     from .badexp import ADEXPBackend
 except Exception as e:
-    print('brian adaptive exponentional error python Error')
+    ADEXPBackend = None
+    print('Could not load BRIAN Adaptive Exponentional backend')
 
 try:
     from .bhh import BHHBackend
 except Exception as e:
-    print('could not import brian2 neuronaldynamicsError')
-
-available_backends = {x.replace('Backend',''):cls for x, cls \
-                   in locals().items() \
-                   if inspect.isclass(cls) and \
-                   issubclass(cls, Backend)}
-
+    BHHBackend = None
+    print('Could not load Brian HH backend')
 
 available_backends = {x.replace('Backend', ''): cls for x, cls
                       in locals().items()
