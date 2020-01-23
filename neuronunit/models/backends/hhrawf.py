@@ -77,7 +77,7 @@ def beta_n(V):
     return 0.125*np.exp(-(V+65) / 80.0)
 
 
-@jit
+@jit(forceobj=True)
 def dALLdt(X, t, attrs):
     """
     Integrate
