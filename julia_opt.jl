@@ -1,5 +1,5 @@
 using Pkg
-
+#=
 try
    using Py2Jl
 catch
@@ -7,20 +7,20 @@ catch
    Pkg.add("Py2Jl")
    using Py2Jl
 end
-
 ENV["PYTHON"]="/usr/local/lib/python3.6"
 ENV["PYTHON"]="/usr/bin/python3.6"
 using Pkg
 Pkg.build("PyCall")
+=#
 
-using Debugger
+#using Debugger
 using PyCall
 using Random: bitrand, randperm, shuffle
 using LinearAlgebra: dot
 using UnicodePlots
-include("plot.jl")
+include("neuronunit/models/backends/plot.jl")
 using SpikingNeuralNetworks
-include("units.jl")
+include("neuronunit/models/backends/units.jl")
 using Pkg
 #using NSGAIII#, PyPlot
 using UnicodePlots
@@ -43,7 +43,7 @@ catch
 end
 SNN = SpikingNeuralNetworks
 
-using Debugger
+#using Debugger
 
 py"""
 from neuronunit.optimisation import optimization_management as om
