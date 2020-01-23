@@ -1,29 +1,36 @@
 # coding: utf-8
+import io
+import contextlib
 import unittest
+import warnings
 
-import matplotlib as mpl
-mpl.use('Agg')
+#from numba.errors import NumbaDeprecationWarning, NumbaPendingDeprecationWarning
 
-import matplotlib.pyplot as plt
+import_stdout = io.StringIO()
+with contextlib.redirect_stdout(import_stdout):
+    import matplotlib as mpl
+    mpl.use('Agg')
+    import matplotlib.pyplot as plt
 
+    from neuronunit.optimisation.optimization_management import inject_and_plot_model, dtc_to_rheo
+    from neuronunit.optimisation.optimization_management import inject_and_plot_passive_model
 
-from neuronunit.optimisation.optimization_management import inject_and_plot_model, dtc_to_rheo
-from neuronunit.optimisation.optimization_management import inject_and_plot_passive_model
-
-import numpy as np
-from neuronunit.optimisation.data_transport_container import DataTC
-from neuronunit.optimisation import model_parameters
-from elephant.spike_train_generation import threshold_detection
-import quantities as pq
+    import numpy as np
+    from neuronunit.optimisation.data_transport_container import DataTC
+    from neuronunit.optimisation import model_parameters
+    from elephant.spike_train_generation import threshold_detection
+    import quantities as pq
+    
+#warnings.simplefilter('ignore', category=NumbaDeprecationWarning)
+#warnings.simplefilter('ignore', category=NumbaPendingDeprecationWarning)
 
 
 class testCrucialBackendsSucceed(unittest.TestCase):
     def setUp(self):
-        model_parameters.MODEL_PARAMS.keys()
-        self.backends =  ["RAW", "HH"]
-        self.other_backends =["BHH","ADEXP"]
-        self.backends_complex =  ["GLIF","NEURON"]
-        self.julia_backend ="JHH"
+        self.backends = ["RAW", "HH"]
+        self.other_backends = ["BHH", "ADEXP"]
+        self.backends_complex = ["GLIF", "NEURON"]
+        self.julia_backend = "JHH"
 
         #raw_attrs = {k:np.mean(v) for k,v in model_parameters.MODEL_PARAMS[backend].items()}
         #self.backends = backends
