@@ -7,7 +7,7 @@ jl.eval("using SpikingNeuralNetworks")
 jl.eval("SNN = SpikingNeuralNetworks")
 jl.eval('include("units.jl")')
 jl.eval('include("plot.jl")')
-Main.eval("using Debugger")
+# Main.eval("using Debugger")
  
 import io
 import math
