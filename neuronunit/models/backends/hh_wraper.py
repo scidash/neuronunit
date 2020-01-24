@@ -1,7 +1,8 @@
 import julia
 jl = julia.Julia()
 from julia import Main
-
+#jl.eval("using Pkg")
+#jl.eval('Pkg.dev("https://github.com/russelljjarvis/SpikingNeuralNetworks.jl")')
 jl.eval("using SpikingNeuralNetworks")
 jl.eval("SNN = SpikingNeuralNetworks")
 jl.eval('include("units.jl")')
