@@ -7,23 +7,20 @@ catch
    Pkg.add("Py2Jl")
    using Py2Jl
 end
-
-
 ENV["PYTHON"]="/usr/local/lib/python3.6"
-
-=#
 ENV["PYTHON"]="/usr/bin/python3.6"
 using Pkg
 Pkg.build("PyCall")
-Pkg.add("Debugger")
-using Debugger
+=#
+
+#using Debugger
 using PyCall
 using Random: bitrand, randperm, shuffle
 using LinearAlgebra: dot
 using UnicodePlots
-include("plot.jl")
+include("neuronunit/models/backends/plot.jl")
 using SpikingNeuralNetworks
-include("units.jl")
+include("neuronunit/models/backends/units.jl")
 using Pkg
 #using NSGAIII#, PyPlot
 using UnicodePlots

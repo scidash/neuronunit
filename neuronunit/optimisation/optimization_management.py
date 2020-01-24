@@ -518,7 +518,7 @@ def get_centres(ga_out):
 
 
 def mint_generic_model(backend):
-    # depricated:
+    #this is almost a depricated method
     dtc = DataTC()
     dtc.backend = backend
     model = dtc.to_model()
