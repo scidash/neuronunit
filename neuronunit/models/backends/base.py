@@ -27,7 +27,6 @@ except:
     neuron = None
     h = None
     NEURON_SUPPORT = False
-
 try:
     import pyNN
     pyNN_SUPPORT = True
