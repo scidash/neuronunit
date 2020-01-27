@@ -15,7 +15,7 @@ try:
     from pyNN.neuron import EIF_cond_exp_isfa_ista
     from pyNN import neuron
 except:
-    print('consider installing pynn a heavier backend')
+    pass#print('consider installing pynn a heavier backend')
 import pickle
 #import pdb
 

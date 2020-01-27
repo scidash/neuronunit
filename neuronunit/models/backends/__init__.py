@@ -1,6 +1,11 @@
 """Neuronunit-specific model backends."""
 
+import contextlib
+import io
+import importlib
 import inspect
+import pathlib
+import re
 import warnings
 
 import sciunit.models.backends as su_backends
@@ -10,65 +15,44 @@ from .base import Backend
 warnings.filterwarnings('ignore', message='nested set')
 warnings.filterwarnings('ignore', message='mpi4py')
 
-def heavy_backends():
-    try:
-        from .jNeuroML import jNeuroMLBackend
-    except:
-        print('Could not load jNeuroML backend')
 
+backend_paths = ['jNeuroML.jNeuroMLBackend',
+                 'neuron.NEURONBackend',
+                 'general_pyNN.PYNNBackend',
+                 'hh_wraper.JHHBackend',
+                 'rawpy.RAWBackend',
+                 'hhrawf.HHBackend',
+                 'glif.GLIFBackend',
+                 'badexp.ADEXPBackend',
+                 'bhh.BHHBackend',
+                ]
+
+def check_backend(partial_path):
+    full_path = 'neuronunit.models.backends.%s' % partial_path
+    class_name = full_path.split('.')[-1]
+    module_path = '.'.join(full_path.split('.')[:-1])
     try:
-        from .neuron import NEURONBackend
-    except ImportError:
-        NEURONBackend = None
-        print('Could not load NEURON backend')
-    try:
-        from .general_pyNN import PYNNBackend
+        backend_stdout = io.StringIO()
+        with contextlib.redirect_stdout(backend_stdout):
+            module = importlib.import_module(module_path)
+            backend = getattr(module, class_name)
     except Exception as e:
-        print('Could not load PyNN backend')
+        msg = "Import of %s failed due to:" % partial_path
+        stdout = backend_stdout.read()
+        if stdout:
+            msg += '\n%s' % stdout
+        msg += '\n%s' % e
+        print(msg)
+        #warnings.warn(msg)
+        return None
+    else:
+        return (backend.name, backend)
+    
+available_backends = {}
+for backend_path in backend_paths:
+    result = check_backend(backend_path)
+    if result is not None:
+        name, backend = result
+        available_backends[name] = backend
 
-heavy_backends()
-
-"""
-try:
-    from .hh_wraper import JHHBackend
-except ImportError:
-    JHHBackend = None
-    print('Could not load JHHBackend.')
-"""
-
-try:
-    from .rawpy import RAWBackend
-except ImportError:
-    RAWBackend = None
-    print('Could not load RAW Backend.')
-
-try:
-    from .hhrawf import HHBackend
-except ImportError:
-    HHBackend = None
-    print('Could not load HH Backend.')
-
-try:
-    from .glif import GLIFBackend
-except Exception as e:
-    GLIFBackend = None
-    print('Could not load GLIF Backend')
-
-try:
-    from .badexp import ADEXPBackend
-except Exception as e:
-    ADEXPBackend = None
-    print('Could not load BRIAN Adaptive Exponentional backend')
-
-try:
-    from .bhh import BHHBackend
-except Exception as e:
-    BHHBackend = None
-    print('Could not load Brian HH backend')
-
-available_backends = {x.replace('Backend', ''): cls for x, cls
-                      in locals().items()
-                      if inspect.isclass(cls) and
-                      issubclass(cls, Backend)}
-
-su_backends.register_backends(locals())
+#su_backends.register_backends(available_backends)
