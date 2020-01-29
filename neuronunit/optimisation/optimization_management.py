@@ -305,11 +305,15 @@ class TSD(dict):
             ga_out['dtc_pop'] = dtc_pop
         if type(ga_out['pf'][0].dtc) is type(None):
             _,ga_out['dtc_pop'] = self.DO.OM.test_runner(copy.copy(ga_out['pf']),self.DO.OM.td,self.DO.OM.tests)
-            pop,dtcpop = get_dm(ga_out['dtc_pop'],pop=ga_out['pf'])
+            DM = False
+            if DM:
+                pop,dtcpop = get_dm(ga_out['dtc_pop'],pop=ga_out['pf'])
         else:
             local = [p.dtc for p in ga_out['pf']]
             #ga_out['dtc_pop'] = [ i.dtc for i in ga_out['pf'] ]
-            pop,dtcpop = get_dm(local,pop=ga_out['pf'])
+            DM = False
+            if DM:
+                pop,dtcpop = get_dm(local,pop=ga_out['pf'])
             #p in ga_out['pf']],pop=ga_out['pf'])
         print(dtcpop[0].dtc.dm_test_features)
         self.backend = backend
@@ -1775,6 +1779,16 @@ def evaluate_allen(dtc,regularization=True):
             fitness[int_] = dtc.ascores[str(t)]
     return tuple(fitness,)
 
+def evaluate_sm(dtc,regularization=False,elastic_net=False):
+    # assign worst case errors, and then over write them with situation informed errors as they become available.
+
+    if not hasattr(dtc,str('SM')):
+        return fitness
+    fitness = []
+    for key,value in zip(dtc.SM.keys(),dtc.SM.values()):
+        fitness.append(float(value))
+    return tuple(fitness,)
+
 def evaluate(dtc,regularization=False,elastic_net=False):
     # assign worst case errors, and then over write them with situation informed errors as they become available.
 
@@ -1783,12 +1797,15 @@ def evaluate(dtc,regularization=False,elastic_net=False):
     fitness = []
     for int_,t in enumerate(dtc.errors.keys()):
         fitness.append(float(dtc.errors[str(t)]))
+
+        #fitness.append(float(dtc.errors[str(t)]))
+        """
         if elastic_net:
            fitness0 = [ np.abs(t)**(2.0) for int_,t in enumerate(dtc.errors.values())]
            fitness1 = [ np.abs(t) for int_,t in enumerate(dtc.errors.values())]
            fitness = [ float(fitness1[i]+j)/2.0 for i,j in enumerate(fitness0)]
         else:
-           fitness.append(float(dtc.errors[str(t)]))
+        """
     #fitness = tuple(f for f in fitness)
 
     return tuple(fitness,)
@@ -2336,9 +2353,15 @@ class OptMan():
                 print('check tests here, do they work for standard dev obs?')
                 for t in new_tests.values():
                     if 'value' in t.observation.keys():
-                        t.observation['std'] = t.observation['value']
-                        t.observation['mean'] = t.observation['std']
-
+                        t.observation['mean'] = t.observation['value']
+                        t.observation['std'] = np.abs(t.observation['mean'])
+                    if t.observation['std'] == 0.0:
+                        t.observation['std'] = np.abs(t.observation['mean'])
+                    try:
+                        assert float(t.observation['std']) >0.0
+                    except:
+                        import pdb
+                        pdb.set_trace()
                 ga_out, DO = run_ga(ranges,NGEN,new_tests,free_params=chosen_keys, MU = MU, backend=backend,\
                     selection=str('selNSGA2'),protocol={'elephant':True,'allen':False})
                 results = copy.copy(ga_out['pf'][0].dtc.scores)
@@ -2509,7 +2532,7 @@ class OptMan():
         model = dtc.dtc_to_model()
         from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
         SM = ScoreMatrix(tests, model)
-        #dtc.SM = SM
+        dtc.SM = SM
         return SM
     def elephant_evaluation(self,dtc):
         # Inputs single data transport container modules, and neuroelectro observations that
@@ -2540,7 +2563,7 @@ class OptMan():
                     self.tests.use_rheobase_score = True
                 if self.tests.use_rheobase_score == False and "RheobaseTest" in str(k):
                     continue
-                dtc.errors[key] = np.inf
+                #dtc.errors[key] = np.inf
                 t.params = dtc.protocols[k]
                 error = 1.0
 
@@ -2550,20 +2573,20 @@ class OptMan():
                     t.observation['std'] = t.observation['mean']
                     t.observation['sem'] = t.observation['mean']
 
-                try:
-                    score = t.judge(model)
+                #try:
+                score = t.judge(model)
+                error = 1.0 - score.log_norm_score
+                #except:
+                #    score = t.judge(model)
 
-                    error = 1.0 - score.log_norm_score
-                    print(error)
-                except:
-                    score = t.judge(model)
-                    print(score.score)
-
-                    #error = 1.0 - score.log_norm_score
                 dtc.errors[str(t.name)] = error
                 print(dtc.errors[str(t.name)])
-        SM = ScoreMatrix(tests, model)
-        print(SM)
+        try:
+            SM = ScoreMatrix(tests, model)
+        except:
+            SM = ScoreMatrix(tests, model)
+        dtc.SM = SM
+        #print(SM)
         return dtc
 
     def elephant_evaluation_old(self,dtc):

@@ -169,10 +169,18 @@ class testHighLevelOptimisation(unittest.TestCase):
         ga_out = use_test.optimize(edges,backend="RAW",protocol={'allen': False, 'elephant': True},\
            MU=5,NGEN=5,free_params=None,seed_pop=None,hold_constant=None)
 
-        adconv = [ p.dtc for p in ga_out[0]['pf'] ]
         try:
+            adconv = [ p.dtc for p in ga_out[0]['pf'] ]
+            for dtc in adconv:
+                dtc.tests = None
+
+            for dtc in adconv:
+                for attr, value in dtc.__dict__.items():
+                    print(attr);
+                    pickle.dump([attr,value],open('temp.p','wb'))
+
             with open('jda.p','wb') as f:
-                temp = [adconv]
+                temp = adconv
                 pickle.dump(temp,f)
         except:
             import pdb
