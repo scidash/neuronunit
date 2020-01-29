@@ -1,13 +1,29 @@
 import julia
 jl = julia.Julia()
 from julia import Main
-
+import neuronunit
+import os
+#anchor = neuronunit.__file__
+#anchor = os.path.dirname(anchor)
+import pathlib
+anchor = pathlib.Path(__file__).parent.absolute()
+#print(anchor)
+#mypath = os.path.join(os.sep,anchor,'../../../')
+print(anchor)
 jl.eval("using SpikingNeuralNetworks")
 jl.eval("SNN = SpikingNeuralNetworks")
-jl.eval('include("units.jl")')
-jl.eval('include("plot.jl")')
+try:
+    print('include("'+str(anchor)+'/plot.jl")')
+    print('include("'+str(anchor)+'/plot.jl")')
+    jl.eval('include("'+str(anchor)+'/units.jl")')
+    jl.eval('include("'+str(anchor)+'/plot.jl")')
+
+except:
+    jl.eval('include("units.jl")')
+    jl.eval('include("plot.jl")')
+
 Main.eval("using Debugger")
- 
+
 import io
 import math
 import pdb

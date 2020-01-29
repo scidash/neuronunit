@@ -2,6 +2,7 @@
 # but it calls many modules that are, such that it needs to pre-empt
 import warnings
 
+import matplotlib
 try:
     matplotlib.use('agg')
 except:
@@ -10,7 +11,6 @@ except:
 
 # setting of an appropriate backend.
 # optional imports
-import matplotlib
 import cython
 import logging
 
@@ -21,7 +21,7 @@ SILENT = True
 if SILENT:
     warnings.filterwarnings("ignore")
 
-PARALLEL_CONFIDENT = True
+PARALLEL_CONFIDENT = False
 # Rationale Many methods inside the file optimization_management.py cannot be easily monkey patched using
 #```pdb.set_trace()``` unless at the top of the file,
 # the parallel_confident static variable is declared false
@@ -240,11 +240,16 @@ class TSS(TestSuite):
             ga_out['dtc_pop'] = dtc_pop
         if type(ga_out['pf'][0].dtc) is type(None):
             _,ga_out['dtc_pop'] = self.DO.OM.test_runner(copy.copy(ga_out['pf']),self.DO.OM.td,self.DO.OM.tests)
-            pop,dtcpop = get_dm(ga_out['dtc_pop'],pop=ga_out['pf'])
+            # druckman tests can optionally be run on optimized cells here.
+            DM = False
+            if DM:
+                pop,dtcpop = get_dm(ga_out['dtc_pop'],pop=ga_out['pf'])
         else:
             local = [p.dtc for p in ga_out['pf']]
             #ga_out['dtc_pop'] = [ i.dtc for i in ga_out['pf'] ]
-            pop,dtcpop = get_dm(local,pop=ga_out['pf'])
+            DM = False
+            if DM:
+                pop,dtcpop = get_dm(local,pop=ga_out['pf'])
             #p in ga_out['pf']],pop=ga_out['pf'])
         print(dtcpop[0].dtc.dm_test_features)
         self.backend = backend
@@ -264,8 +269,15 @@ class TSS(TestSuite):
 class TSD(dict):
     def __init__(self,tests={},use_rheobase_score=False):
        self.DO = None
-       tt = list(tests.values())[0:-1]
-       super(TSD,self).__init__(tt)
+
+       if type(tests) is TestSuite:
+           tests = {t.name:t for t in tests.tests}
+       if type(tests) is type(dict()):
+           pass
+       if type(tests) is type(list()):
+          tests = {t.name:t for t in tests}
+
+       super(TSD,self).__init__()
        self.update(tests)
 
        if 'name' in self.keys():
@@ -2296,6 +2308,11 @@ class OptMan():
                         mt['RheobaseTest'].observation['std'] = mt['RheobaseTest'].observation['value']
                     new_tests = TSD(new_tests)
                     new_tests.use_rheobase_score = tests.use_rheobase_score
+                    print('check tests here, do they work for standard dev obs?')
+                    for v in mt.values():
+                        if 'std' not in v.keys():
+                            v['mean'] = v['std'] = v['value']
+
 
                     ga_out, DO = run_ga(ranges,NGEN,mt,free_params=rp.keys(), MU = MU, \
                         backend=backend,protocol={'elephant':True,'allen':False})
@@ -2316,6 +2333,11 @@ class OptMan():
                 [(value.name,value.observation) for value in new_tests.values()]
                 new_tests = TSD(new_tests)
                 new_tests.use_rheobase_score = tests.use_rheobase_score
+                print('check tests here, do they work for standard dev obs?')
+                for t in new_tests.values():
+                    if 'value' in t.observation.keys():
+                        t.observation['std'] = t.observation['value']
+                        t.observation['mean'] = t.observation['std']
 
                 ga_out, DO = run_ga(ranges,NGEN,new_tests,free_params=chosen_keys, MU = MU, backend=backend,\
                     selection=str('selNSGA2'),protocol={'elephant':True,'allen':False})
@@ -2521,15 +2543,23 @@ class OptMan():
                 dtc.errors[key] = np.inf
                 t.params = dtc.protocols[k]
                 error = 1.0
+
+                if not 'std' in t.observation.keys():
+                    t.observation['std'] = t.observation['mean']
+                if float(t.observation['std']) == 0.0:
+                    t.observation['std'] = t.observation['mean']
+                    t.observation['sem'] = t.observation['mean']
+
                 try:
                     score = t.judge(model)
+
                     error = 1.0 - score.log_norm_score
+                    print(error)
                 except:
-                    print('score broke')
-                    print(dtc.backend,t,'backend,test')
-                    #pass
-                    #pickle.dump(dtc,open('model_'+str(dtc.backend)+str(list(dtc.attrs.values()))+'.p','wb'))
-                    #error = 1.0
+                    score = t.judge(model)
+                    print(score.score)
+
+                    #error = 1.0 - score.log_norm_score
                 dtc.errors[str(t.name)] = error
                 print(dtc.errors[str(t.name)])
         SM = ScoreMatrix(tests, model)
@@ -2695,6 +2725,12 @@ class OptMan():
         dtc.protocols = {}
         if not hasattr(dtc,'tests'):
             dtc.tests = copy.copy(self.tests)
+        print(dtc.tests)
+
+        if type(dtc.tests) is type(dict()):
+            for t in dtc.tests.values():
+                assert 'std' in t.observation.keys()
+
 
         if hasattr(dtc.tests,'keys'):# is type(dict):
             tests = [key for key in dtc.tests.values()]
@@ -2738,7 +2774,6 @@ class OptMan():
 
             dtc = make_new_random(dtc, copy.copy(backend))
             xtests = list(copy.copy(original_test_dic).values())
-
             dtc.tests = xtests
             mean = True
             for t in xtests:
@@ -2751,16 +2786,12 @@ class OptMan():
                 simulated_observations = {k:v for k,v in simulated_observations.items() if v is not None}
             dtc.observation = simulated_observations
             dtc = self.pred_evaluation(dtc)
-
             simulated_observations = {k:p for k,p in dtc.preds.items() if type(k) is not type(None) and type(p) is not type(None) }
-
             while len(dtc.preds)!= len(simulated_observations):
                 dtc = make_new_random(dtc, copy.copy(backend))
                 dtc = self.pred_evaluation(dtc)
                 dtc.tests = xtests
                 simulated_observations = {k:p for k,p in dtc.preds.items() if type(k) is not type(None) and type(p) is not type(None) }
-
-
                 if str("RheobaseTest") in simulated_observations.keys():
                     temp = copy.copy(simulated_observations['RheobaseTest'])
                     simulated_observations['RheobaseTest'] = {}
@@ -2936,8 +2967,27 @@ class OptMan():
         _, dtcpop = self.init_pop(pop, tests)
         for d in dtcpop:
             d.tests = tests
+        for dtc in dtcpop:
+
+            if type(dtc.tests) is type(dict()):
+                for t in dtc.tests.values():
+                    assert 'std' in t.observation.keys()
+
+            elif type(dtc.tests) is type(list()):
+                for t in dtc.tests:
+                    assert 'std' in t.observation.keys()
+
         if 'RAW' in self.backend  or 'HH' in self.backend or str('ADEXP') in self.backend:
+            for dtc in dtcpop:
+                if type(dtc.tests) is type(dict()):
+                    for t in dtc.tests.values():
+                        assert 'std' in t.observation.keys()
+
             dtcpop = list(map(dtc_to_rheo,dtcpop))
+            for dtc in dtcpop:
+                if type(dtc.tests) is type(dict()):
+                    for t in dtc.tests.values():
+                        assert 'std' in t.observation.keys()
 
             dtcpop = list(map(self.format_test,dtcpop))
             dtcpop = [d for d in dtcpop if d is not None]
@@ -3035,6 +3085,14 @@ class OptMan():
         return pop, dtcpop
     def test_runner(self,pop,td,tests):
         if self.protocol['elephant']:
+            if type(tests) is type(dict()):
+                for t in tests.values():
+                    assert 'std' in t.observation.keys()
+
+            elif type(tests) is type(list()):
+                for t in tests:
+                    assert 'std' in t.observation.keys()
+
             pop_, dtcpop = self.obtain_rheobase(pop, tests)
 
             for ind,dtc in zip(pop,dtcpop):

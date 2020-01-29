@@ -14,6 +14,7 @@ nbimporter
 sklearn
 neurodynex
 pyneuroml
+simplejson
 seaborn
 deap @ git+https://github.com/fun-zoological-computing/deap.git
 allensdk @ git+https://github.com/fun-zoological-computing/AllenSDK.git
