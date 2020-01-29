@@ -79,8 +79,9 @@ class testHighLevelOptimisation(unittest.TestCase):
         anchor = neuronunit.__file__
         anchor = os.path.dirname(anchor)
         electro_path = os.path.join(os.sep,anchor,'tests/multicellular_constraints.p')
+        os.path.isfile(electro_path)
         #electro_path = str(os.getcwd())+'/../../tests/russell_tests.p'
-
+        """
         if os.path.isfile(electro_path):
             try:
                 assert os.path.isfile(electro_path) == True
@@ -94,6 +95,17 @@ class testHighLevelOptimisation(unittest.TestCase):
         else:
             self.test_frame = mint_tests.get_cell_constraints()
             df = pd.DataFrame(rts)
+            import pdb
+            pdb.set_trace()
+        """
+        from neuronunit.optimisation import get_neab
+        self.test_frame = get_neab.process_all_cells()
+        self.test_frame = {k:tf for k,tf in self.test_frame.items() if len(tf.tests)>0 }
+        for testsuite in self.test_frame.values():
+            for t in testsuite.tests:
+                if float(t.observation['std']) == 0.0:
+                    t.observation['std'] = t.observation['mean']
+         #[tf for tf in self.test_frame if len(tf.tests)>0 ]
 
         self.filtered_tests = {key:val for key,val in self.test_frame.items() }# if len(val) ==8}
         print(self.filtered_tests)
@@ -133,13 +145,12 @@ class testHighLevelOptimisation(unittest.TestCase):
             use_test = TSD(self.filtered_tests['Neocortex pyramidal cell layer 5-6'])
         except:
             use_test = TSD(self.filtered_tests[list(self.filtered_tests.keys())[0]])
-        easy_standards = {ut.name:ut.observation['std'] for ut in use_test.values()}
+        #easy_standards = {ut.name:ut.observation['std'] for ut in use_test.values()}
 
         use_test.use_rheobase_score = True
-        print(easy_standards)
         [(value.name,value.observation) for value in use_test.values()]
         print(use_test)
-
+        edges = model_parameters.MODEL_PARAMS["RAW"]
         OM = OptMan(use_test,protocol={'elephant':True,'allen':False,'dm':False})
         results,converged,target,simulated_tests = OM.round_trip_test(use_test,str('RAW'),MU=2,NGEN=2)#,stds = easy_standards)
         print(converged,target)
@@ -155,10 +166,17 @@ class testHighLevelOptimisation(unittest.TestCase):
         ga_out = run_ga(param_edges, 2, simulated_tests, free_params=param_edges.keys(), \
                 backend=str('HH'), MU = 4,  protocol={'allen': False, 'elephant': True})
 
+        ga_out = use_test.optimize(edges,backend="RAW",protocol={'allen': False, 'elephant': True},\
+           MU=5,NGEN=5,free_params=None,seed_pop=None,hold_constant=None)
+
         adconv = [ p.dtc for p in ga_out[0]['pf'] ]
-        with open('jda.p','wb') as f:
-            temp = [adconv]
-            pickle.dump(temp,f)
+        try:
+            with open('jda.p','wb') as f:
+                temp = [adconv]
+                pickle.dump(temp,f)
+        except:
+            import pdb
+            pdb.set_trace()
         return
         """
         import copy

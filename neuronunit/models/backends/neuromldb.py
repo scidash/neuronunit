@@ -48,7 +48,6 @@ class NeuroMLDBModel(object):
         return self.waveforms
 
     def fetch_waveform_as_AnalogSignal(self, waveform_id, resolution_ms = 0.01, units = "mV"):
-        #print('gets to b')
 
         # If signal not in cache
         if waveform_id not in self.waveform_signals:
@@ -108,7 +107,6 @@ class NeuroMLDBModel(object):
                 if ((amplitude_nA < 0 * pq.nA and w["Protocol_ID"] == "SQUARE") or
                     (amplitude_nA >= 0 * pq.nA and w["Protocol_ID"] == "LONG_SQUARE")) \
                         and amplitude_nA == wave_amp:
-                    print(w["ID"])
                     return self.fetch_waveform_as_AnalogSignal(w["ID"])
 
         raise Exception("Did not find a Voltage waveform with injected " + str(amplitude_nA) +
