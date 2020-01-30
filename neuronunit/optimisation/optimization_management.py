@@ -1,13 +1,13 @@
 # Its not that this file is responsible for doing plotting,
 # but it calls many modules that are, such that it needs to pre-empt
 import warnings
-
+"""
 import matplotlib
 try:
     matplotlib.use('agg')
 except:
     warnings.warn('X11 plotting backend not available, consider installing')
-
+"""
 
 # setting of an appropriate backend.
 # optional imports
@@ -314,8 +314,8 @@ class TSD(dict):
             DM = False
             if DM:
                 pop,dtcpop = get_dm(local,pop=ga_out['pf'])
-            #p in ga_out['pf']],pop=ga_out['pf'])
-        print(dtcpop[0].dtc.dm_test_features)
+                #p in ga_out['pf']],pop=ga_out['pf'])
+                print(dtcpop[0].dtc.dm_test_features)
         self.backend = backend
         '''
         if str(self.cell_name) not in str('simulated data'):
@@ -2575,18 +2575,20 @@ class OptMan():
 
                 #try:
                 score = t.judge(model)
-                error = 1.0 - score.log_norm_score
-                #except:
-                #    score = t.judge(model)
+                #try:
+                if score.get_raw() != 0:
+                     error = np.abs(1.0 - np.abs(score.log_norm_score))
+
+                else:
+                     from sciunit import scores
+                     t.score_type = scores.ZScore
+                     score = t.judge(model)
+                     error = np.abs(1.0 - np.abs(score.log_norm_score))
 
                 dtc.errors[str(t.name)] = error
                 print(dtc.errors[str(t.name)])
-        try:
-            SM = ScoreMatrix(tests, model)
-        except:
-            SM = ScoreMatrix(tests, model)
+        SM = ScoreMatrix(tests, model)
         dtc.SM = SM
-        #print(SM)
         return dtc
 
     def elephant_evaluation_old(self,dtc):
