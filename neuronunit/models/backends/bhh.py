@@ -6,6 +6,21 @@ from neurodynex.hodgkin_huxley import HH
 
 b2.A = 1000000000000*b2.pA
 b2.units.V = 1000.0*b2.units.mV
+
+# Hodgkin Huxley parameters
+LOCAL_PARAMS =  { 'El' : -54.387 * b2.mV,
+        'EK' : -77.0 * b2.mV,
+        'ENa' : 50.0 * b2.mV,
+        'gl' : 0.3 * b2.msiemens,
+        'gK' : 36 * b2.msiemens,
+        'gNa' : 120 * b2.msiemens,
+        'C' : 1 * b2.ufarad,
+	'Vr':-65.0 }
+
+LOCAL_PARAMS = { k:(float(v)-0.25*float(v),float(v)+0.25*float(v)) for k,v in LOCAL_PARAMS.items() }
+LOCAL_PARAMS['Vr'] = [-85,-45]
+
+
 #b2.A = 1000000000000*b2.pA
 from neurodynex.tools import plot_tools, input_factory
 import io
