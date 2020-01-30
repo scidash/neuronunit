@@ -86,18 +86,15 @@ def _update_history_and_hof(halloffame,pf, history, population,GEN,MU):
 
     Note: History and Hall-of-Fame behave like dictionaries
     '''
-    print('gen is: ',GEN)
-    temp = copy.copy([p for p in population if hasattr(p,'dtc')])
+    #temp = copy.copy(
+    temp = [p for p in population if hasattr(p,'dtc')]
     if halloffame is not None:
         halloffame.update(temp)
     if history is not None:
         history.update(temp)
     if pf is not None:
         if GEN ==0:
-            #pf = deap.tools.ParetoFront(MU) # Wrong because first arg to ParetoFront is similarity metric not pop size
-            pf = deap.tools.ParetoFront()
-        #print(len(pf),len(temp))
-        #print([p.fitness.values for p in population])
+            pf = deap.tools.ParetoFront(MU)
         print(pf.similar, 3333333333)
         pf.update(temp)
 
@@ -274,11 +271,11 @@ def eaAlphaMuPlusLambdaCheckpoint(
         logbook.header = "gen", "evals", "std", "min", "avg", "max"
         invalid_ind = [ind for ind in pop if not ind.fitness.valid]
         invalid_ind,fitnesses = toolbox.evaluate(invalid_ind)
-        print([ind.dtc for ind in invalid_ind if hasattr(ind,'dtc')])
+
 
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
-        print([ind.fitness.values for ind in invalid_ind])
+
 
         # Compile statistics about the population
         pop = [p for p in pop if len(p.fitness.values) ]
@@ -288,7 +285,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
         logbook.record(gen=0, evals=len(invalid_ind), **record)
         hof, pf,history = _update_history_and_hof(hof, pf, history, pop,0,MU)
 
-        print(logbook.stream)
+        #print(logbook.stream)
 
         # Begin the generational process
         for gen in range(1, NGEN):
@@ -323,7 +320,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
             logbook.record(gen=gen, evals=len(invalid_ind), **record)
             pop = [p for p in pop if len(p.fitness.values) ]
 
-            print(logbook.stream)
+            #print(logbook.stream)
     return pop, hof, pf, logbook, history, gen_vs_pop
 
     #return pop, logbook

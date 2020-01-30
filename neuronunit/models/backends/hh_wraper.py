@@ -1,14 +1,25 @@
 import julia
 jl = julia.Julia()
 from julia import Main
-#jl.eval("using Pkg")
-#jl.eval('Pkg.dev("https://github.com/russelljjarvis/SpikingNeuralNetworks.jl")')
+import neuronunit
+import os
+import pathlib
+anchor = pathlib.Path(__file__).parent.absolute()
+print(anchor)
 jl.eval("using SpikingNeuralNetworks")
 jl.eval("SNN = SpikingNeuralNetworks")
-jl.eval('include("units.jl")')
-jl.eval('include("plot.jl")')
-# Main.eval("using Debugger")
- 
+try:
+    print('include("'+str(anchor)+'/plot.jl")')
+    print('include("'+str(anchor)+'/plot.jl")')
+    jl.eval('include("'+str(anchor)+'/units.jl")')
+    jl.eval('include("'+str(anchor)+'/plot.jl")')
+
+except:
+    jl.eval('include("units.jl")')
+    jl.eval('include("plot.jl")')
+
+Main.eval("using Debugger")
+
 import io
 import math
 import pdb

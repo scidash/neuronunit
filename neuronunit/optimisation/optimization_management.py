@@ -2,6 +2,7 @@
 # but it calls many modules that are, such that it needs to pre-empt
 import warnings
 
+import matplotlib
 try:
     matplotlib.use('agg')
 except:
@@ -10,7 +11,6 @@ except:
 
 # setting of an appropriate backend.
 # optional imports
-import matplotlib
 import cython
 import logging
 
@@ -242,13 +242,18 @@ class TSS(TestSuite):
             ga_out['dtc_pop'] = dtc_pop
         if type(ga_out['pf'][0].dtc) is type(None):
             _,ga_out['dtc_pop'] = self.DO.OM.test_runner(copy.copy(ga_out['pf']),self.DO.OM.td,self.DO.OM.tests)
-            pop,dtcpop = get_dm(ga_out['dtc_pop'],pop=ga_out['pf'])
+            # druckman tests can optionally be run on optimized cells here.
+            DM = False
+            if DM:
+                pop,dtcpop = get_dm(ga_out['dtc_pop'],pop=ga_out['pf'])
         else:
             local = [p.dtc for p in ga_out['pf']]
             #ga_out['dtc_pop'] = [ i.dtc for i in ga_out['pf'] ]
-            pop,dtcpop = get_dm(local,pop=ga_out['pf'])
+            DM = False
+            if DM:
+                pop,dtcpop = get_dm(local,pop=ga_out['pf'])
             #p in ga_out['pf']],pop=ga_out['pf'])
-        print(dtcpop[0].dtc.dm_test_features)
+
         self.backend = backend
         '''
         if str(self.cell_name) not in str('simulated data'):
@@ -256,19 +261,20 @@ class TSS(TestSuite):
             # is this a data driven test? if so its worth plotting results
             ga_out = self.elaborate_plots(self,ga_out)
         '''
-        ##
-        # TODO populate a score table pass it back to DO.OM
-        from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
-        #df = pd.DataFrame([ga_out['pf'][0].dtc.scores])
-        SM = ScoreMatrix([v for v in self.values()], [ind.dtc.dtc_to_model() for ind in ga_out['pf']])
-        return ga_out, self.DO, SM
 
-
+        return ga_out, self.DO
 
 class TSD(dict):
     def __init__(self,tests={},use_rheobase_score=False):
        self.DO = None
-       tt = list(tests.values())[0:-1]
+
+       if type(tests) is TestSuite:
+           tests = {t.name:t for t in tests.tests}
+       if type(tests) is type(dict()):
+           pass
+       if type(tests) is type(list()):
+          tests = {t.name:t for t in tests}
+
        super(TSD,self).__init__()
        self.update(tests)
 
@@ -297,26 +303,22 @@ class TSD(dict):
             ga_out['dtc_pop'] = dtc_pop
         if type(ga_out['pf'][0].dtc) is type(None):
             _,ga_out['dtc_pop'] = self.DO.OM.test_runner(copy.copy(ga_out['pf']),self.DO.OM.td,self.DO.OM.tests)
-            pop,dtcpop = get_dm(ga_out['dtc_pop'],pop=ga_out['pf'])
+            DM = False
+            if DM:
+                pop,dtcpop = get_dm(ga_out['dtc_pop'],pop=ga_out['pf'])
         else:
             local = [p.dtc for p in ga_out['pf']]
-            #ga_out['dtc_pop'] = [ i.dtc for i in ga_out['pf'] ]
-            pop,dtcpop = get_dm(local,pop=ga_out['pf'])
-            #p in ga_out['pf']],pop=ga_out['pf'])
-        print(dtcpop[0].dtc.dm_test_features)
+            DM = False
+            if DM:
+                pop,dtcpop = get_dm(local,pop=ga_out['pf'])
         self.backend = backend
-        '''
+
         if str(self.cell_name) not in str('simulated data'):
             #pass
             # is this a data driven test? if so its worth plotting results
             ga_out = self.elaborate_plots(self,ga_out)
         '''
-        ##
-        # TODO populate a score table pass it back to DO.OM
-        from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
-        #df = pd.DataFrame([ga_out['pf'][0].dtc.scores])
-        SM = ScoreMatrix([v for v in self.values()], [ind.dtc.dtc_to_model() for ind in ga_out['pf']])
-        return ga_out, self.DO, SM
+        return ga_out, self.DO
 
 '''
 class TSD(dict):
@@ -694,6 +696,7 @@ def get_rtest(dtc):
             rtest = get_new_rtest(dtc)
     return rtest
 
+
 def dtc_to_model(dtc):
     # If  test taking data, and objects are present (observations etc).
     # Take the rheobase test and store it in the data transport container.
@@ -789,7 +792,7 @@ def inject_and_plot_model(attrs,backend):
     # get an object of class ReducedModel with known attributes and known rheobase current injection value.
     model = pre_model.dtc_to_model()
     uc = {'amplitude':model.rheobase,'duration':DURATION,'delay':DELAY}
-    print(uc)
+
     model.inject_square_current(uc)
     vm = model.get_membrane_potential()
     plt.plot(vm.times,vm.magnitude)
@@ -1463,7 +1466,7 @@ def nuunit_allen_evaluation(dtc):
             model = new_model(dtc)
             assert model is not None
             target_current = scs.generate_prediction(model)
-            #print(target_current)
+
             dtc.ampl = None
             if target_current is not None:
                 dtc.ampl = target_current['value']
@@ -1729,6 +1732,16 @@ def evaluate_allen(dtc,regularization=True):
             fitness[int_] = dtc.ascores[str(t)]
     return tuple(fitness,)
 
+def evaluate_sm(dtc,regularization=False,elastic_net=False):
+    # assign worst case errors, and then over write them with situation informed errors as they become available.
+
+    if not hasattr(dtc,str('SM')):
+        return fitness
+    fitness = []
+    for key,value in zip(dtc.SM.keys(),dtc.SM.values()):
+        fitness.append(float(value))
+    return tuple(fitness,)
+
 def evaluate(dtc,regularization=False,elastic_net=False):
     # assign worst case errors, and then over write them with situation informed errors as they become available.
 
@@ -1737,12 +1750,15 @@ def evaluate(dtc,regularization=False,elastic_net=False):
     fitness = []
     for int_,t in enumerate(dtc.errors.keys()):
         fitness.append(float(dtc.errors[str(t)]))
+
+        #fitness.append(float(dtc.errors[str(t)]))
+        """
         if elastic_net:
            fitness0 = [ np.abs(t)**(2.0) for int_,t in enumerate(dtc.errors.values())]
            fitness1 = [ np.abs(t) for int_,t in enumerate(dtc.errors.values())]
            fitness = [ float(fitness1[i]+j)/2.0 for i,j in enumerate(fitness0)]
         else:
-           fitness.append(float(dtc.errors[str(t)]))
+        """
     #fitness = tuple(f for f in fitness)
 
     return tuple(fitness,)
@@ -1753,6 +1769,7 @@ def get_trans_list(param_dict):
         trans_list.append(k)
     return trans_list
 
+from sciunit import scores
 
 
 def transform(xargs):
@@ -1977,7 +1994,9 @@ def bridge_passive(package):
         score = simple_error(t.observation,pred,t)
     return score, dtc, pred
 '''
-from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
+from sciunit.scores.collections import ScoreArray
+
+#from sciunit.scores.collections_m2m import  ScoreMatrixM2M,  ScoreArrayM2M#(pd.DataFrame, SciUnit, TestWeighted)
 
 class OptMan():
     def __init__(self,tests, td=None, backend = None,hc = None,boundary_dict = None, error_length=None,protocol=None,simulated_obs=None,verbosity=None,PARALLEL_CONFIDENT=None,tsr=None):
@@ -2044,7 +2063,7 @@ class OptMan():
                 hold_constant = temp
             for k,v in hold_constant.items():
                 hold_constant[k] = np.mean(v)
-        print(hold_constant)
+
 
         ga_out,DO = run_ga(self.boundary_dict, NGEN, self.tests, free_params=free_params, \
                            backend=self.backend, MU = MU,  protocol=self.protocol,seed_pop = seed_pop,hc=hold_constant)
@@ -2263,6 +2282,11 @@ class OptMan():
                     new_tests = TSD(new_tests)
                     new_tests.use_rheobase_score = tests.use_rheobase_score
 
+                    for v in mt.values():
+                        if 'std' not in v.keys():
+                            v['mean'] = v['std'] = v['value']
+
+
                     ga_out, DO = run_ga(ranges,NGEN,mt,free_params=rp.keys(), MU = MU, \
                         backend=backend,protocol={'elephant':True,'allen':False})
                     results[k] = copy.copy(ga_out['pf'][0].dtc.scores)
@@ -2283,6 +2307,17 @@ class OptMan():
                 new_tests = TSD(new_tests)
                 new_tests.use_rheobase_score = tests.use_rheobase_score
 
+                for t in new_tests.values():
+                    if 'value' in t.observation.keys():
+                        t.observation['mean'] = t.observation['value']
+                        t.observation['std'] = np.abs(t.observation['mean'])
+                    if t.observation['std'] == 0.0:
+                        t.observation['std'] = np.abs(t.observation['mean'])
+                    try:
+                        assert float(t.observation['std']) >0.0
+                    except:
+                        import pdb
+                        pdb.set_trace()
                 ga_out, DO = run_ga(ranges,NGEN,new_tests,free_params=chosen_keys, MU = MU, backend=backend,\
                     selection=str('selNSGA2'),protocol={'elephant':True,'allen':False})
                 results = copy.copy(ga_out['pf'][0].dtc.scores)
@@ -2452,13 +2487,14 @@ class OptMan():
         #t.params = dtc.protocols[k]
         model = dtc.dtc_to_model()
         from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
-        SM = ScoreMatrix(tests, model)
-        #dtc.SM = SM
+        SM = ScoreMatrix(tests, model,scores = pd.DataFrame(dtc.scores), transpose=True)
+        dtc.SM = SM
         return SM
     def elephant_evaluation(self,dtc):
         # Inputs single data transport container modules, and neuroelectro observations that
         # inform test error error_criterion
         # Outputs Neuron Unit evaluation scores over error criterion
+        scores_ = []
         tests = dtc.tests
         model = dtc.dtc_to_model()
         if not hasattr(dtc,'scores') or dtc.scores is None:
@@ -2484,22 +2520,30 @@ class OptMan():
                     self.tests.use_rheobase_score = True
                 if self.tests.use_rheobase_score == False and "RheobaseTest" in str(k):
                     continue
-                dtc.errors[key] = np.inf
+                #dtc.errors[key] = np.inf
                 t.params = dtc.protocols[k]
                 error = 1.0
-                try:
-                    score = t.judge(model)
-                    error = 1.0 - score.log_norm_score
-                except:
-                    print('score broke')
-                    print(dtc.backend,t,'backend,test')
-                    #pass
-                    #pickle.dump(dtc,open('model_'+str(dtc.backend)+str(list(dtc.attrs.values()))+'.p','wb'))
-                    #error = 1.0
-                dtc.errors[str(t.name)] = error
-                print(dtc.errors[str(t.name)])
-        SM = ScoreMatrix(tests, model)
-        print(SM)
+
+                if not 'std' in t.observation.keys():
+                    t.observation['std'] = t.observation['mean']
+                if float(t.observation['std']) == 0.0:
+                    t.observation['std'] = t.observation['mean']
+                    #t.observation['sem'] = t.observation['mean']
+
+
+                score = t.judge(model)
+
+                if score.get_raw() == 0:
+                     t.score_type = scores.ZScore
+                     score = t.judge(model)
+                scores_.append(score)
+        SM = ScoreArray(tests, scores_)
+        for test,score in zip(SM.keys(),SM.values):
+            error = np.abs(1.0 - np.abs(score.log_norm_score))
+            dtc.errors[str(test.name)] = error
+        dtc.SM = SM
+        dtc.EM = pd.DataFrame([dtc.errors])
+        dtc.frame = pd.concat([dtc.SM, dtc.EM], axis=1,columns=['tests','scores','errors'])
         return dtc
 
     def elephant_evaluation_old(self,dtc):
@@ -2530,7 +2574,7 @@ class OptMan():
                 except:
                     print('warning please add whether or not model should be scored on rheobase to protocol')
                     self.tests.use_rheobase_score = True
-                    #print(self.tests.use_rheobase_score)
+
 
                 if self.tests.use_rheobase_score == False and "RheobaseTest" in str(k):
                     continue
@@ -2661,6 +2705,11 @@ class OptMan():
         dtc.protocols = {}
         if not hasattr(dtc,'tests'):
             dtc.tests = copy.copy(self.tests)
+
+        if type(dtc.tests) is type(dict()):
+            for t in dtc.tests.values():
+                assert 'std' in t.observation.keys()
+
 
         if hasattr(dtc.tests,'keys'):# is type(dict):
             tests = [key for key in dtc.tests.values()]
@@ -2902,8 +2951,28 @@ class OptMan():
         _, dtcpop = self.init_pop(pop, tests)
         for d in dtcpop:
             d.tests = tests
+
+        for dtc in dtcpop:
+
+            if type(dtc.tests) is type(dict()):
+                for t in dtc.tests.values():
+                    assert 'std' in t.observation.keys()
+
+            elif type(dtc.tests) is type(list()):
+                for t in dtc.tests:
+                    assert 'std' in t.observation.keys()
+
         if 'RAW' in self.backend  or 'HH' in self.backend or str('ADEXP') in self.backend:
+            for dtc in dtcpop:
+                if type(dtc.tests) is type(dict()):
+                    for t in dtc.tests.values():
+                        assert 'std' in t.observation.keys()
+
             dtcpop = list(map(dtc_to_rheo,dtcpop))
+            for dtc in dtcpop:
+                if type(dtc.tests) is type(dict()):
+                    for t in dtc.tests.values():
+                        assert 'std' in t.observation.keys()
 
             dtcpop = list(map(self.format_test,dtcpop))
             dtcpop = [d for d in dtcpop if d is not None]
@@ -3001,6 +3070,14 @@ class OptMan():
         return pop, dtcpop
     def test_runner(self,pop,td,tests):
         if self.protocol['elephant']:
+            if type(tests) is type(dict()):
+                for t in tests.values():
+                    assert 'std' in t.observation.keys()
+
+            elif type(tests) is type(list()):
+                for t in tests:
+                    assert 'std' in t.observation.keys()
+
             pop_, dtcpop = self.obtain_rheobase(pop, tests)
 
             for ind,dtc in zip(pop,dtcpop):
@@ -3063,7 +3140,7 @@ class OptMan():
         if not delta:
             return pop, dtcpop
         if delta:
-            print(delta,'stuck in boot new')
+
             cnt = 0
             while delta:
                 pop_,dtcpop_ = self.boot_new_genes(delta,spare,td)
