@@ -110,7 +110,6 @@ import neuronunit
 anchor = neuronunit.__file__
 anchor = os.path.dirname(anchor)
 mypath = os.path.join(os.sep,anchor,'tests/multicellular_constraints.p')
-print(mypath)
 try:
     try:
        assert os.path.exists(mypath)
@@ -177,7 +176,6 @@ def make_ga_DO(explore_edges, max_ngen, test, \
     else:
         free_params = [f for f in free_params if str(f) not in 'Iext' and str(f) not in str('dt')]
     for k in free_params:
-        #print(explore_edges[k])
         if not k in explore_edges.keys() and k not in str('Iext') and k not in str('dt'):
 
             ss[k] = explore_edges[k]
@@ -251,7 +249,6 @@ class TSS(TestSuite):
             if DM:
                 pop,dtcpop = get_dm(local,pop=ga_out['pf'])
             #p in ga_out['pf']],pop=ga_out['pf'])
-        print(dtcpop[0].dtc.dm_test_features)
         self.backend = backend
         '''
         if str(self.cell_name) not in str('simulated data'):
@@ -263,7 +260,7 @@ class TSS(TestSuite):
         # TODO populate a score table pass it back to DO.OM
         from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
         #df = pd.DataFrame([ga_out['pf'][0].dtc.scores])
-        SM = ScoreMatrix([v for v in self.values()], [ind.dtc.dtc_to_model() for ind in ga_out['pf']])
+        #SM = ScoreMatrix([v for v in self.values()], [ind.dtc.dtc_to_model() for ind in ga_out['pf']])
         return ga_out, self.DO, SM
 
 class TSD(dict):
@@ -310,25 +307,21 @@ class TSD(dict):
                 pop,dtcpop = get_dm(ga_out['dtc_pop'],pop=ga_out['pf'])
         else:
             local = [p.dtc for p in ga_out['pf']]
-            #ga_out['dtc_pop'] = [ i.dtc for i in ga_out['pf'] ]
             DM = False
             if DM:
                 pop,dtcpop = get_dm(local,pop=ga_out['pf'])
-                #p in ga_out['pf']],pop=ga_out['pf'])
-                print(dtcpop[0].dtc.dm_test_features)
         self.backend = backend
-        '''
+
         if str(self.cell_name) not in str('simulated data'):
             #pass
             # is this a data driven test? if so its worth plotting results
             ga_out = self.elaborate_plots(self,ga_out)
-        '''
         ##
         # TODO populate a score table pass it back to DO.OM
-        from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
+        #from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
         #df = pd.DataFrame([ga_out['pf'][0].dtc.scores])
-        SM = ScoreMatrix([v for v in self.values()], [ind.dtc.dtc_to_model() for ind in ga_out['pf']])
-        return ga_out, self.DO, SM
+        #SM = ScoreMatrix([v for v in self.values()], [ind.dtc.dtc_to_model() for ind in ga_out['pf']])
+        return ga_out, self.DO
 
 '''
 class TSD(dict):
@@ -816,7 +809,6 @@ def inject_and_plot_passive_model(attrs,backend):
     DURATION = 500.0*pq.ms
     DELAY = 200.0*pq.m
     uc = {'amplitude':-10*pq.pA,'duration':DURATION,'delay':DELAY}
-    print(uc)
     model.inject_square_current(uc)
     vm = model.get_membrane_potential()
     plt.plot(vm.times,vm.magnitude)
@@ -832,7 +824,6 @@ def inject_and_plot_model(attrs,backend):
     # get an object of class ReducedModel with known attributes and known rheobase current injection value.
     model = pre_model.dtc_to_model()
     uc = {'amplitude':model.rheobase,'duration':DURATION,'delay':DELAY}
-    print(uc)
     model.inject_square_current(uc)
     vm = model.get_membrane_potential()
     plt.plot(vm.times,vm.magnitude)
@@ -1513,7 +1504,6 @@ def nuunit_allen_evaluation(dtc):
             model = new_model(dtc)
             assert model is not None
             target_current = scs.generate_prediction(model)
-            #print(target_current)
             dtc.ampl = None
             if target_current is not None:
                 dtc.ampl = target_current['value']
@@ -1816,6 +1806,7 @@ def get_trans_list(param_dict):
         trans_list.append(k)
     return trans_list
 
+from sciunit import scores
 
 
 def transform(xargs):
@@ -2040,7 +2031,9 @@ def bridge_passive(package):
         score = simple_error(t.observation,pred,t)
     return score, dtc, pred
 '''
-from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
+from sciunit.scores.collections import ScoreArray
+
+#from sciunit.scores.collections_m2m import  ScoreMatrixM2M,  ScoreArrayM2M#(pd.DataFrame, SciUnit, TestWeighted)
 
 class OptMan():
     def __init__(self,tests, td=None, backend = None,hc = None,boundary_dict = None, error_length=None,protocol=None,simulated_obs=None,verbosity=None,PARALLEL_CONFIDENT=None,tsr=None):
@@ -2107,7 +2100,6 @@ class OptMan():
                 hold_constant = temp
             for k,v in hold_constant.items():
                 hold_constant[k] = np.mean(v)
-        print(hold_constant)
 
         ga_out,DO = run_ga(self.boundary_dict, NGEN, self.tests, free_params=free_params, \
                            backend=self.backend, MU = MU,  protocol=self.protocol,seed_pop = seed_pop,hc=hold_constant)
@@ -2531,13 +2523,14 @@ class OptMan():
         #t.params = dtc.protocols[k]
         model = dtc.dtc_to_model()
         from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
-        SM = ScoreMatrix(tests, model)
+        SM = ScoreMatrix(tests, model,scores = pd.DataFrame(dtc.scores), transpose=True)
         dtc.SM = SM
         return SM
     def elephant_evaluation(self,dtc):
         # Inputs single data transport container modules, and neuroelectro observations that
         # inform test error error_criterion
         # Outputs Neuron Unit evaluation scores over error criterion
+        scores_ = []
         tests = dtc.tests
         model = dtc.dtc_to_model()
         if not hasattr(dtc,'scores') or dtc.scores is None:
@@ -2573,22 +2566,20 @@ class OptMan():
                     t.observation['std'] = t.observation['mean']
                     t.observation['sem'] = t.observation['mean']
 
-                #try:
-                score = t.judge(model)
-                #try:
-                if score.get_raw() != 0:
-                     error = np.abs(1.0 - np.abs(score.log_norm_score))
 
-                else:
-                     from sciunit import scores
+                score = t.judge(model)
+
+                if score.get_raw() == 0:
                      t.score_type = scores.ZScore
                      score = t.judge(model)
-                     error = np.abs(1.0 - np.abs(score.log_norm_score))
-
-                dtc.errors[str(t.name)] = error
-                print(dtc.errors[str(t.name)])
-        SM = ScoreMatrix(tests, model)
+                scores_.append(score)
+        SM = ScoreArray(tests, scores_)
+        for test,score in zip(SM.keys(),SM.values):
+            error = np.abs(1.0 - np.abs(score.log_norm_score))
+            dtc.errors[str(test.name)] = error
         dtc.SM = SM
+        dtc.EM = pd.DataFrame([dtc.errors])
+        dtc.frame = pd.concat([dtc.SM, dtc.EM], axis=1,columns=['tests','scores','errors'])
         return dtc
 
     def elephant_evaluation_old(self,dtc):
@@ -2619,7 +2610,6 @@ class OptMan():
                 except:
                     print('warning please add whether or not model should be scored on rheobase to protocol')
                     self.tests.use_rheobase_score = True
-                    #print(self.tests.use_rheobase_score)
 
                 if self.tests.use_rheobase_score == False and "RheobaseTest" in str(k):
                     continue
@@ -2750,7 +2740,6 @@ class OptMan():
         dtc.protocols = {}
         if not hasattr(dtc,'tests'):
             dtc.tests = copy.copy(self.tests)
-        print(dtc.tests)
 
         if type(dtc.tests) is type(dict()):
             for t in dtc.tests.values():
@@ -3180,7 +3169,6 @@ class OptMan():
         if not delta:
             return pop, dtcpop
         if delta:
-            print(delta,'stuck in boot new')
             cnt = 0
             while delta:
                 pop_,dtcpop_ = self.boot_new_genes(delta,spare,td)
