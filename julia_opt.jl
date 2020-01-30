@@ -1,26 +1,57 @@
 using Pkg
-#=
+
+Pkg.add("PyPlot")
+#try
+#   Pkg.add("Py2Jl")
+#   using Py2Jl
+#catch
+#   Pkg.add("Py2Jl")
+#   using Py2Jl
+#end
+#Pkg.add("PyCall")
+#Pkg.clone("https://github.com/gsoleilhac/NSGAII.jl")'
+ENV["PYTHON"]="/usr/bin/python3"
+#ENV["PYTHON"]="/usr/local/bin/python3.5"
+#ENV["PYTHON"] = "/usr/bin/python3.6"
+Pkg.build("PyCall")
+
+using PyCall
 try
-   Pkg.add("Py2Jl")
-   using Py2Jl
+   using Conda
 catch
-   Pkg.add("Py2Jl")
-   using Py2Jl
+   Pkg.add("Conda")
+   using Conda
 end
 
-ENV["PYTHON"]="/usr/local/lib/python3.5"
-ENV["PYTHON"]="/usr/bin/python3.5"
+#Conda.add("pyparsing")
+#Conda.add("matplotlib")
+py"""
+import matplotlib
+"""
+py"""
+from neuronunit import models
+from neuronunit.optimisation import optimization_management
+"""
 using Pkg
-Pkg.build("PyCall")
-=#
-using Debugger
+Pkg.add("Plots")
+
+Pkg.add("UnicodePlots")
+#using Debugger
 using PyCall
 using Random: bitrand, randperm, shuffle
 using LinearAlgebra: dot
 using UnicodePlots
-include("plot.jl")
+Pkg.add("SpikingNeuralNetworks")
+
 using SpikingNeuralNetworks
+#Pkg.add("https://github.com/fun-zoological-computing/SNN.jl.git")
+#Pkg.resolve()
+#Pkg.build("SNN")
+#println("gets here")
+#using SNN
+#SpikingNeuralNetworks = SNN
 include("units.jl")
+include("plot.jl")
 using Pkg
 using NSGAIII#, PyPlot
 using UnicodePlots
@@ -47,9 +78,10 @@ SNN = SpikingNeuralNetworks
 using Debugger
 
 py"""
-from neuronunit.optimisation import optimization_management as om
+#from neuronunit.optimisation import optimization_management as om
 from neuronunit.optimisation import model_parameters
-from neuronunit.optimisation.optimization_management import TSD
+print('can import')
+#from neuronunit.optimisation.optimization_management import TSD
 #from neuronunit.optimisation.optimization_management import score_specific_param_models
 from neuronunit.models import VeryReducedModel as VRM
 from neuronunit.optimisation.optimization_management import inject_and_plot, inject_and_plot_model
