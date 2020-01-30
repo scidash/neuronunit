@@ -107,6 +107,10 @@ def simulate_HH_neuron_local(I_stim=None,
     neuron.m = 0.05
     neuron.h = 0.60
     neuron.n = 0.32
+
+    #m = 0.05#*1000.0
+    #h = 0.60#*1000.0
+    #n = 0.32#*1000.0
     #spike_monitor = b2.SpikeMonitor(neuron)
     # tracking parameters
     st_mon = b2.StateMonitor(neuron, ["vm", "I_e", "m", "n", "h"], record=True)
@@ -160,11 +164,12 @@ class BHHBackend(Backend):
                 self.cell_name = DTC.cell_name
 
     def get_spike_count(self):
-        if np.max(self.vM)>20.0*np.mean(self.vM):
-            thresh = threshold_detection(self.vM,np.max(self.vM)-0.10*np.max(self.vM))
+        #if np.max(self.vM)>20.0*np.mean(self.vM):
+        #thresh = threshold_detection(self.vM,np.max(self.vM)-0.10*np.max(self.vM))
+        thresh = threshold_detection(self.vM,0.0*pq.mV)
 
-        else:
-            thresh = []
+        #else:
+        #    thresh = []
         return len(thresh)
 
     def set_stop_time(self, stop_time = 650*pq.ms):
