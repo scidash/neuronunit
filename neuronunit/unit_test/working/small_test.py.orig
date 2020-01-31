@@ -79,9 +79,13 @@ class testHighLevelOptimisation(unittest.TestCase):
         anchor = neuronunit.__file__
         anchor = os.path.dirname(anchor)
         electro_path = os.path.join(os.sep,anchor,'tests/multicellular_constraints.p')
+<<<<<<< HEAD
+
+=======
         os.path.isfile(electro_path)
         #electro_path = str(os.getcwd())+'/../../tests/russell_tests.p'
         """
+>>>>>>> julia
         if os.path.isfile(electro_path):
             try:
                 assert os.path.isfile(electro_path) == True
@@ -93,9 +97,14 @@ class testHighLevelOptimisation(unittest.TestCase):
                 except:
                     (self.test_frame,self.obs_frame) = pickle.load(f)
         else:
+<<<<<<< HEAD
+            suite, self.test_frame = mint_tests.get_cell_constraints()
+            _ = pd.DataFrame(self.test_frame)
+=======
             self.test_frame = mint_tests.get_cell_constraints()
             df = pd.DataFrame(rts)
-
+            import pdb
+            pdb.set_trace()
         """
         from neuronunit.optimisation import get_neab
         self.test_frame = get_neab.process_all_cells()
@@ -105,6 +114,7 @@ class testHighLevelOptimisation(unittest.TestCase):
                 if float(t.observation['std']) == 0.0:
                     t.observation['std'] = t.observation['mean']
          #[tf for tf in self.test_frame if len(tf.tests)>0 ]
+>>>>>>> julia
 
         self.filtered_tests = {key:val for key,val in self.test_frame.items() }# if len(val) ==8}
         print(self.filtered_tests)
@@ -147,7 +157,6 @@ class testHighLevelOptimisation(unittest.TestCase):
         #easy_standards = {ut.name:ut.observation['std'] for ut in use_test.values()}
 
         use_test.use_rheobase_score = True
-
         [(value.name,value.observation) for value in use_test.values()]
         print(use_test)
         edges = model_parameters.MODEL_PARAMS["RAW"]

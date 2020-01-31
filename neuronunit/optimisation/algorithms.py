@@ -95,7 +95,6 @@ def _update_history_and_hof(halloffame,pf, history, population,GEN,MU):
     if pf is not None:
         if GEN ==0:
             pf = deap.tools.ParetoFront(MU)
-        print(pf.similar, 3333333333)
         pf.update(temp)
 
 
