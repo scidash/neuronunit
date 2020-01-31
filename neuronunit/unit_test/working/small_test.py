@@ -160,13 +160,11 @@ class testHighLevelOptimisation(unittest.TestCase):
         with open('jd.p','wb') as f:
             pickle.dump(temp,f)
         param_edges = model_parameters.MODEL_PARAMS['HH']
-        #ga_out = run_ga(param_edges, 2, simulated_tests, free_params=param_edges.keys(), \
-        #        backend=str('HH'), MU = 4,  protocol={'allen': False, 'elephant': True})
 
         ga_out = use_test.optimize(edges,backend="RAW",protocol={'allen': False, 'elephant': True},\
            MU=5,NGEN=5,free_params=None,seed_pop=None,hold_constant=None)
 
-        adconv = [ p.dtc for p in ga_out[0]['pf'] ]
+        adconv = [ p.dtc for p in ga_out['pf'] ]
         for dtc in adconv: 
             dtc.tests ={ k:v for k,v in dtc.tests.items() }
         try:

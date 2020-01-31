@@ -315,11 +315,17 @@ class TSD(dict):
         PLOT = False
         if PLOT == True:
             if str(self.cell_name) not in str('simulated data'):
-                #pass
                 # is this a data driven test? if so its worth plotting results
                 ga_out = self.elaborate_plots(self,ga_out)
+        # make ga_out pickleable by cleansing sciunit and deap objects
+        for pop in ga_out.values():
+            if hasattr(pop,'len'):
+                if len(pop):
+                    if hasattr(pop[0],'dtc'):
+                        for ind in pop:
+                            ind.dtc.tests ={ k:v for k,v in ind.dtc.tests.items() }
 
-        return ga_out, self.DO
+        return ga_out
 """
 import sciunit
 class TSD(dict):
