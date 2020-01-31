@@ -85,17 +85,19 @@ from neuronunit.optimisation.optimization_management import mint_generic_model
 from collections import Iterable, OrderedDict
 import quantities as qt
 import os
-import neuronunit
-anchor = neuronunit.__file__
-anchor = os.path.dirname(anchor)
+#import neuronunit
+#anchor = neuronunit.__file__
+#anchor = os.path.dirname(anchor)
 
-mypath = os.path.join(os.sep,anchor,'tests/russell_tests.p')
+#mypath = os.path.join(os.sep,anchor,'tests/russell_tests.p')
 #print(anchor,mypath)
 #import pdb; pdb.set_trace()
-rts,complete_map = pickle.load(open(mypath,'rb'))
-df = pd.DataFrame(rts)
+#rts,complete_map = pickle.load(open(mypath,'rb'))
+#df = pd.DataFrame(rts)
 
 #import pdb
 #pdb.set_trace()
 #rts,complete_map = pickle.load(open(mypath),'rb')
+from neuronunit.optimisation import get_neab
+rts = get_neab.process_all_cells()
 local_tests = [value for value in rts['Hippocampus CA1 pyramidal cell'].values() ]
