@@ -21,7 +21,6 @@ install:
   - pip install -U pip
   - pip install --upgrade pip
   - pip install coveralls
-  - pip install git+https://github.com/scidash/sciunit@dev
   - pip install dask distributed brian2 numba
   - pip install --upgrade beautifulsoup4
   - pip install neurodynex
@@ -29,10 +28,12 @@ install:
   - pip install -r requirements.txt
   - pip install git+https://github.com/fun-zoological-computing/AllenSDK
   - pip install git+https://github.com/fun-zoological-computing/deap
+  - pip install git+https://github.com/fun-zoological-computing/sciunit@dev
   - pip install -e .
   - pip install julia
-  - git clone https://github.com/fun-zoological-computing/deap
-  - cp deap/tools/support.py /home/travis/miniconda/lib/python3.7/site-packages/deap/tools/support.py
+  #- pip install git+https://github.com/scidash/sciunit@dev
+  #- git clone https://github.com/fun-zoological-computing/deap
+  #- cp deap/tools/support.py /home/travis/miniconda/lib/python3.7/site-packages/deap/tools/support.py
 
 script:
   - sh test.sh
