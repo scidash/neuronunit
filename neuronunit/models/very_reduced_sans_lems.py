@@ -15,6 +15,7 @@ import numpy as np
 from neo.core import AnalogSignal
 import quantities as pq
 from sciunit.models.runnable import RunnableModel
+from neuronunit.optimisation.data_transport_container import DataTC
 
 import neuronunit.capabilities.spike_functions as sf
 class VeryReducedModel(RunnableModel,
@@ -38,6 +39,14 @@ class VeryReducedModel(RunnableModel,
         self.attrs = {}
         self.run_number = 0
         self.tstop = None
+        self.rheobse = None
+
+    def model_to_dtc(self):
+        dtc = DataTC()
+        dtc.attrs = self.attrs
+        dtc.backend = self.backend
+        dtc.backend = self.rheobase
+        return dtc
 
     def inject_square_current(self, current):
         #pass

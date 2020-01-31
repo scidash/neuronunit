@@ -1,8 +1,9 @@
 # Its not that this file is responsible for doing plotting,
 # but it calls many modules that are, such that it needs to pre-empt
 import warnings
-
 import matplotlib
+import cython
+import logging
 try:
     matplotlib.use('agg')
 except:
@@ -11,8 +12,7 @@ except:
 
 # setting of an appropriate backend.
 # optional imports
-import cython
-import logging
+
 
 # optional imports
 
@@ -21,7 +21,7 @@ SILENT = True
 if SILENT:
     warnings.filterwarnings("ignore")
 
-PARALLEL_CONFIDENT = True
+PARALLEL_CONFIDENT = False
 # Rationale Many methods inside the file optimization_management.py cannot be easily monkey patched using
 #```pdb.set_trace()``` unless at the top of the file,
 # the parallel_confident static variable is declared false
@@ -312,19 +312,28 @@ class TSD(dict):
             if DM:
                 pop,dtcpop = get_dm(local,pop=ga_out['pf'])
         self.backend = backend
+        PLOT = False
+        if PLOT == True:
+            if str(self.cell_name) not in str('simulated data'):
+                #pass
+                # is this a data driven test? if so its worth plotting results
+                ga_out = self.elaborate_plots(self,ga_out)
 
-        if str(self.cell_name) not in str('simulated data'):
-            #pass
-            # is this a data driven test? if so its worth plotting results
-            ga_out = self.elaborate_plots(self,ga_out)
-        '''
         return ga_out, self.DO
-
-'''
+"""
+import sciunit
 class TSD(dict):
     def __init__(self,tests={},use_rheobase_score=False):
        super(TSD,self).__init__()
-       self.update(tests)
+       if type(tests) is type(dict()):
+           self.update(tests)
+       elif type(tests) is sciunit.suites.TestSuite:
+           tests = {t.name:t for t in tests.tests }
+           self.update(tests)
+       elif type(tests) is type(list()):
+           tests = { t.name:t for t in tests }
+           self.update(tests)
+
        if 'name' in self.keys():
            self.cell_name = tests['name']
            self.pop('name',None)
@@ -348,11 +357,13 @@ class TSD(dict):
         if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
             _,dtc_pop = DO.OM.test_runner(ga_out['pf'],DO.OM.td,DO.OM.tests)
             ga_out['dtc_pop'] = dtc_pop
-        if str(self.cell_name) not in str('simulated data'):
-            ga_out = self.elaborate_plots(self,ga_out)
+        PLOT = False
+        if PLOT:
+            if str(self.cell_name) not in str('simulated data'):
+                ga_out = self.elaborate_plots(self,ga_out)
 
 
-        from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
+        #from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
 
         ##
         # TODO populate a score table pass it back to DO.OM
@@ -367,7 +378,7 @@ class TSS(TestSuite):
        self.use_rheobase_score=use_rheobase_score
     def optimize(self,param_edges,backend=None,protocol={'allen': False, 'elephant': True},MU=5,NGEN=5,free_params=None,seed_pop=None):
         pass
-'''
+"""
 # DEAP mutation strategies:
 # https://deap.readthedocs.io/en/master/api/tools.html#deap.tools.mutESLogNormal
 class WSFloatIndividual(float):
@@ -1744,24 +1755,11 @@ def evaluate_sm(dtc,regularization=False,elastic_net=False):
 
 def evaluate(dtc,regularization=False,elastic_net=False):
     # assign worst case errors, and then over write them with situation informed errors as they become available.
-
-    if not hasattr(dtc,str('scores')):
+    if not hasattr(dtc,str('SM')):
+        return []
+    else:
+        fitness = tuple(dtc.SM.score.values[0],)
         return fitness
-    fitness = []
-    for int_,t in enumerate(dtc.errors.keys()):
-        fitness.append(float(dtc.errors[str(t)]))
-
-        #fitness.append(float(dtc.errors[str(t)]))
-        """
-        if elastic_net:
-           fitness0 = [ np.abs(t)**(2.0) for int_,t in enumerate(dtc.errors.values())]
-           fitness1 = [ np.abs(t) for int_,t in enumerate(dtc.errors.values())]
-           fitness = [ float(fitness1[i]+j)/2.0 for i,j in enumerate(fitness0)]
-        else:
-        """
-    #fitness = tuple(f for f in fitness)
-
-    return tuple(fitness,)
 
 def get_trans_list(param_dict):
     trans_list = []
@@ -1790,8 +1788,8 @@ def add_constant(hold_constant, pop, td):
         for v in hold_constant.values():
             p.append(v)
     return pop,td
-'''
-Depriciated
+"""
+# Depriciated
 def scale(X):
     before = copy.copy(X)
     for i in range(0,np.shape(X)[1]):
@@ -1900,15 +1898,12 @@ def data_versus_optimal(ga_out):
         except:
             plt.scatter(opt_value,np.max(n),c='r',label='optima')
         plt.savefig(str('optima_')+str(cell)+str(t.name)+str('.png'))
-'''
-
+"""
 def filtered(pop,dtcpop):
     dtcpop = [ dtc for dtc in dtcpop if type(dtc.rheobase) is not type(None) ]
     pop = [ p for p in pop if type(p.rheobase) is not type(None) ]
     if len(pop) != len(dtcpop):
         print('fatal')
-
-
     assert len(pop) == len(dtcpop)
     return pop, dtcpop
 
@@ -1965,7 +1960,7 @@ def get_dm(dtcpop,pop=None):
         dtcpop,pop = score_attr(dtcpop,pop)
     return dtcpop,pop
 
-'''
+
 
 def bridge_passive(package):
     """
@@ -1993,7 +1988,7 @@ def bridge_passive(package):
     if type(pred['standard']) is not type(None):
         score = simple_error(t.observation,pred,t)
     return score, dtc, pred
-'''
+
 from sciunit.scores.collections import ScoreArray
 
 #from sciunit.scores.collections_m2m import  ScoreMatrixM2M,  ScoreArrayM2M#(pd.DataFrame, SciUnit, TestWeighted)
@@ -2478,6 +2473,7 @@ class OptMan():
 
         pred['std'] = t.observation['std']# 15*take_anything.magnitude * take_anything.units
         return pred
+    """
     def score_matrix(self,dtc):
         # Inputs single data transport container modules, and neuroelectro observations that
         # inform test error error_criterion
@@ -2490,16 +2486,10 @@ class OptMan():
         SM = ScoreMatrix(tests, model,scores = pd.DataFrame(dtc.scores), transpose=True)
         dtc.SM = SM
         return SM
-    def elephant_evaluation(self,dtc):
-        # Inputs single data transport container modules, and neuroelectro observations that
-        # inform test error error_criterion
-        # Outputs Neuron Unit evaluation scores over error criterion
-        scores_ = []
+    """
+
+    def preprocess(self,dtc):
         tests = dtc.tests
-        model = dtc.dtc_to_model()
-        if not hasattr(dtc,'scores') or dtc.scores is None:
-            dtc.scores = None
-            dtc.scores = {}
 
         if isinstance(dtc.rheobase,type(None)) or type(dtc.rheobase) is type(None):
             dtc = allocate_worst(tests, dtc)
@@ -2507,12 +2497,13 @@ class OptMan():
             for k, t in enumerate(tests):
                 key = str(t)
                 if "RheobaseTest" in  t.name:
+                    t.score_type = scores.ZScore
                     if str("BHH") in dtc.backend or str("ADEXP") in dtc.backend or str("GLIF") in dtc.backend:
                         t = RheobaseTestP(t.observation)
                         t.passive = False
-                        score = t.compute_score(t.observation,dtc.rheobase)
-                        dtc.errors[key] = 1.0 - score.log_norm_score
-                        continue
+                        #score = t.compute_score(t.observation,dtc.rheobase)
+                        #dtc.errors[key] = 1.0 - score.log_norm_score
+                        #continue
                 try:
                     assert hasattr(self.tests,'use_rheobase_score')
                 except:
@@ -2520,165 +2511,38 @@ class OptMan():
                     self.tests.use_rheobase_score = True
                 if self.tests.use_rheobase_score == False and "RheobaseTest" in str(k):
                     continue
-                #dtc.errors[key] = np.inf
                 t.params = dtc.protocols[k]
-                error = 1.0
-
                 if not 'std' in t.observation.keys():
                     t.observation['std'] = t.observation['mean']
                 if float(t.observation['std']) == 0.0:
                     t.observation['std'] = t.observation['mean']
-                    #t.observation['sem'] = t.observation['mean']
-
-
-                score = t.judge(model)
-
-                if score.get_raw() == 0:
-                     t.score_type = scores.ZScore
-                     score = t.judge(model)
-                scores_.append(score)
-        SM = ScoreArray(tests, scores_)
-        for test,score in zip(SM.keys(),SM.values):
-            error = np.abs(1.0 - np.abs(score.log_norm_score))
-            dtc.errors[str(test.name)] = error
-        dtc.SM = SM
-        dtc.EM = pd.DataFrame([dtc.errors])
-        dtc.frame = pd.concat([dtc.SM, dtc.EM], axis=1,columns=['tests','scores','errors'])
-        return dtc
-
-    def elephant_evaluation_old(self,dtc):
+        return tests
+    def elephant_evaluation(self,dtc):
         # Inputs single data transport container modules, and neuroelectro observations that
         # inform test error error_criterion
         # Outputs Neuron Unit evaluation scores over error criterion
-        tests = dtc.tests
-
+        model = dtc.dtc_to_model()
         if not hasattr(dtc,'scores') or dtc.scores is None:
             dtc.scores = None
             dtc.scores = {}
-
-        if isinstance(dtc.rheobase,type(None)) or type(dtc.rheobase) is type(None):
-            dtc = allocate_worst(tests, dtc)
-            if self.verbose:
-                print('score worst via test failure at {0}'.format('rheobase'))
+        dtc.tests = self.preprocess(dtc)
+        if PARALLEL_CONFIDENT is False:
+            suite = TestSuite(dtc.tests)
+            SM = suite.judge(model,parallel=False,log_norm=True)
+            dtc.SM = SM
         else:
-            for k, t in enumerate(tests):
-                key = str(t)
-
-                if "RheobaseTest" in  t.name:
-                    if str("BHH") in dtc.backend or str("ADEXP") in dtc.backend or str("GLIF") in dtc.backend:
-                        t = RheobaseTestP(t.observation)
-                        t.passive = False
-
-                try:
-                    assert hasattr(self.tests,'use_rheobase_score')
-                except:
-                    print('warning please add whether or not model should be scored on rheobase to protocol')
-                    self.tests.use_rheobase_score = True
-
-
-                if self.tests.use_rheobase_score == False and "RheobaseTest" in str(k):
-                    continue
-                dtc.scores[key] = 1.0
-                #dtc = self.format_test(dtc)
-                t.params = dtc.protocols[k]
-                if 'mean' not in t.observation.keys():
-
-                    t.observation['mean']  = t.observation['value']
-                    assert 'mean' in t.observation.keys()
-                take_anything = t.observation['mean']
-                if 'std' not in t.observation.keys() or float(t.observation['std']):
-                    t.observation['std'] = 15*take_anything.magnitude * take_anything.units
-
-
-                if t.passive is False:
-                    #model = dtc.dtc_to_model()
-                    model = new_model(dtc)
-                    pred = t.generate_prediction(model)
-                    pred = self.pred_std(pred,t)
-                    score = simple_error(t.observation,pred,t)
-                    '''
-                    try:
-                        score = t.judge(model)
-                    except:
-                        score, dtc = bridge_judge((t, dtc))
-                    '''
-                    if type(take_anything) is type(int()):
-                        pass
-                else:
-                    model = dtc.dtc_to_model()
-                    try:
-                        score = t.judge(model)
-                    except:
-                        score, dtc, pred = bridge_passive((t, dtc))
-                dtc.scores[str(t.name)] = score
-                '''
-                if self.verbose:
-                    print(take_anything.units)
-                    print(t.observation['mean'].units)
-                    print(take_anything.magnitude)
-                    print(t.observation['mean'].magnitude)
-                    print('obs mag {0}: '.format(t.observation['mean'].magnitude))
-                    print('passive: {0} '.format(t.passive),score,t.name)
-                    print(score,type(score))
-                if type(score) is type(None):
-                    pass
-                else:
-                    if type(score.raw) is not type(None):
-                        if np.isinf(float(score.raw)) and pred[list(pred.keys())[0]]>0.0:
-                            t.score_type = scores.RatioScore
-                            score = t.compute_score(pred,t.observation)
-                    else:
-                        t.score_type = scores.ZScore
-                        if type(pred['mean']) is not type(None):
-                            score = t.compute_score(pred,t.observation)
-
-                assignment = 1.0
-                if score is not None:
-                    #assignment = 1-1.0/score.raw
-                    if t.score_type is scores.RatioScore:
-                        if float(score.raw) == 0:
-                            assignment = 1.0
-                        else:
-                            assignment = np.abs(1-1.0/float(np.abs(float(score.raw))))
-                    else:
-                        try:
-                            assert score.log_norm_score is not None
-                            assignment = 1.0 - score.log_norm_score
-                        except:
-                            logging.info('math domain error')
-                            assignment = 0.95
-                            #t.score_type = scores.ZScore
-                            #score = t.compute_score(pred,t.observation)
-
-                dtc.scores[key] = assignment
-                if dtc.scores[key] == 1.0:
-                    try:
-                        print('failed at: ',t.passive,t.name,t.score_type,pred,t.observation['std'],dtc.scores[str(t.name)])
-                    except:
-                        if not 'mean' in pred.keys():
-                            pred['mean'] = pred['value']
-                        else:
-                            pred.pop('mean',None)
-                            pred['mean'] = pred['value']
-
-                        if 'mean' not in t.observation.keys():
-                            t.observation['mean']  = t.observation['value']
-                        #print(t.observation['mean'],pred, 'incompatible')
-                        t.score_type = scores.RatioScore
-                        score = t.compute_score(pred,t.observation)
-                        assignment = 1.0 - score.log_norm_score
-                        dtc.scores[str(t.name)] = assignment
-
-                if not dtc.scores[key] == 0.0:
-                    print('succeeded at: ',t.passive,t.name,t.score_type,pred,t.observation['std'])
-        '''
-        dtc.summed = dtc.get_ss()
-        try:
-            greatest = np.max([dtc.error_length,len(dtc.scores)])
-        except:
-            greatest = len(dtc.scores)
-        dtc.scores_ratio = dtc.summed/greatest
+            scores_ = []
+            for t in dtc.tests:
+                score = t.judge(model)
+                if score.get_raw() == 0:
+                     t.score_type = scores.ZScore
+                     score = t.judge(model)
+                     score.log_norm_score
+                scores_.append(score)
+            dtc.SM = ScoreArray(tests, scores_)
+        dtc.obs_preds = pd.DataFrame([{t.name:t.observation for t in dtc.tests},{t.name:t.prediction for t in dtc.tests}])
         return dtc
+
 
         @timer
         def serial_route(self,pop,td,tests):
