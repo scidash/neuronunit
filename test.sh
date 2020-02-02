@@ -7,7 +7,6 @@ coverage run neuronunit/unit_test/working/backend_tests.py
 python-jl neuronunit/unit_test/working/backend_test_julia.py
 coverage run neuronunit/unit_test/working/small_test.py
 coverage run neuronunit/unit_test/working/low_level_test.py
-coverage run neuronunit/unit_test/working/high_level_test.py
 
 while getopts 'a' flag; do
   case "${flag}" in
@@ -19,6 +18,8 @@ if [ $run_all ]; then
   coverage run neuronunit/examples/use_edt.py
 fi
 python neuronunit/unit_test/doc_tests.py
+coverage run neuronunit/unit_test/working/test_high_level.py
+python neuronunit/unit_test/working/opt_all.py
 #cd neuronunit/examples
 #jupyter nbconvert --to notebook --execute chapter1.ipynb
 #jupyter nbconvert --to notebook --execute chapter10.ipynb
