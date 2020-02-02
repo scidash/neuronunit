@@ -9,13 +9,6 @@ try:
 except:
     warnings.warn('X11 plotting backend not available, consider installing')
 
-
-# setting of an appropriate backend.
-# optional imports
-
-
-# optional imports
-
 SILENT = True
 
 if SILENT:
@@ -112,24 +105,14 @@ import neuronunit
 anchor = neuronunit.__file__
 anchor = os.path.dirname(anchor)
 mypath = os.path.join(os.sep,anchor,'tests/multicellular_constraints.p')
-print(mypath)
-try:
-    try:
-       assert os.path.exists(mypath)
-       rts = pickle.load(open(mypath,'rb'))
-    except:
-       os.system('wget("https://github.com/russelljjarvis/NeuronunitOpt/blob/master/neuronunit/tests/multicellular_constraints.p?raw=true")')
-       rts = pickle.load(open('multicellular_constraints.p?raw=true','rb'))
+from neuronunit.optimisation import mint_tests,get_neab
+from neuronunit.optimisation.optimisations import WeightedSumFitness
 
-#df = pd.DataFrame(rts)
-except:
-    from neuronunit.optimisation import mint_tests
-
-    rts = mint_tests.get_cell_constraints()
-    df = pd.DataFrame(rts)
-
-for key,v in rts.items():
-    helper_tests = [value for value in v.values() ]
+tests = get_neab.process_all_cells()
+#import pdb
+#pdb.set_trace()
+for t in tests.values():
+    helper_tests = [value for value in t.tests ]
     break
 VERBOSE = False
 def timer(func):
@@ -143,7 +126,6 @@ def timer(func):
             logging.info('Runtime taken to evaluate function {1} {0} seconds'.format(t2-t1,func))
         return f
     return inner
-from neuronunit.optimisation.optimisations import WeightedSumFitness
 
 class WSListIndividual(list):
     """Individual consisting of list with weighted sum field"""
@@ -179,7 +161,6 @@ def make_ga_DO(explore_edges, max_ngen, test, \
     else:
         free_params = [f for f in free_params if str(f) not in 'Iext' and str(f) not in str('dt')]
     for k in free_params:
-        #print(explore_edges[k])
         if not k in explore_edges.keys() and k not in str('Iext') and k not in str('dt'):
 
             ss[k] = explore_edges[k]
@@ -267,6 +248,11 @@ class TSS(TestSuite):
 class TSD(dict):
     def __init__(self,tests={},use_rheobase_score=False):
        self.DO = None
+       self.use_rheobase_score = use_rheobase_score
+       self.elaborate_plots  = elaborate_plots
+       self.backend = None
+
+      # self.use_rheobase_score = None
 
        if type(tests) is TestSuite:
            tests = {t.name:t for t in tests.tests}
@@ -283,9 +269,6 @@ class TSD(dict):
            self.pop('name',None)
        else:
            self.cell_name = 'simulated data'
-       self.use_rheobase_score = use_rheobase_score
-       self.elaborate_plots  = elaborate_plots
-       self.backend = None
 
 
     def optimize(self,param_edges,backend=None,protocol={'allen': False, 'elephant': True},\
@@ -326,65 +309,6 @@ class TSD(dict):
                             ind.dtc.tests ={ k:v for k,v in ind.dtc.tests.items() }
 
         return ga_out
-"""
-import sciunit
-class TSD(dict):
-    def __init__(self,tests={},use_rheobase_score=False):
-       super(TSD,self).__init__()
-       if type(tests) is type(dict()):
-           self.update(tests)
-       elif type(tests) is sciunit.suites.TestSuite:
-           tests = {t.name:t for t in tests.tests }
-           self.update(tests)
-       elif type(tests) is type(list()):
-           tests = { t.name:t for t in tests }
-           self.update(tests)
-
-       if 'name' in self.keys():
-           self.cell_name = tests['name']
-           self.pop('name',None)
-       else:
-           self.cell_name = 'simulated data'
-
-       self.use_rheobase_score = use_rheobase_score
-       self.elaborate_plots  = elaborate_plots
-       self.backend = None
-
-
-    def optimize(self,param_edges,backend=None,protocol={'allen': False, 'elephant': True},\
-        MU=5,NGEN=5,free_params=None,seed_pop=None,hold_constant=None):
-        from neuronunit.optimisation.optimisations import run_ga
-        if type(free_params) is type(None):
-            free_params=param_edges.keys()
-        #experimental_name = self.cell_name
-        ga_out,DO = run_ga(param_edges, NGEN, self, free_params=free_params, \
-                           backend=backend, MU = 8,  protocol=protocol,seed_pop = seed_pop, hc=hold_constant)
-        self.backend = backend
-        if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
-            _,dtc_pop = DO.OM.test_runner(ga_out['pf'],DO.OM.td,DO.OM.tests)
-            ga_out['dtc_pop'] = dtc_pop
-        PLOT = False
-        if PLOT:
-            if str(self.cell_name) not in str('simulated data'):
-                ga_out = self.elaborate_plots(self,ga_out)
-
-
-        #from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
-
-        ##
-        # TODO populate a score table pass it back to DO.OM
-
-        return ga_out, DO
-from sciunit.suites import TestSuite# as TSuite
-
-class TSS(TestSuite):
-    def __init__(self,tests=[],use_rheobase_score=False):
-       super(TSD,self).__init__()
-       self.update(tests)
-       self.use_rheobase_score=use_rheobase_score
-    def optimize(self,param_edges,backend=None,protocol={'allen': False, 'elephant': True},MU=5,NGEN=5,free_params=None,seed_pop=None):
-        pass
-"""
 # DEAP mutation strategies:
 # https://deap.readthedocs.io/en/master/api/tools.html#deap.tools.mutESLogNormal
 class WSFloatIndividual(float):
@@ -671,7 +595,6 @@ def get_rh(dtc,rtest_class):
                          name='RheobaseTest')
     dtc.rheobase = None
     model = dtc.dtc_to_model()
-    #model = mint_generic_model(backend_)
     model.set_attrs(dtc.attrs)
     rtest.params['injected_square_current'] = {}
     rtest.params['injected_square_current']['delay'] = DELAY
@@ -722,7 +645,6 @@ def dtc_to_model(dtc):
     if type(dtc.scores) is type(None):
         dtc.scores = {}
     model = dtc.dtc_to_model()
-    #model = mint_generic_model(dtc.backend)
     model.attrs = dtc.attrs
     return model
 
@@ -757,24 +679,9 @@ def dtc_to_rheo(dtc):
                     dtc.prediction = {}
                 dtc.prediction[str(rtest.name)] = dtc.rheobase
                 dtc.rheobase = dtc.rheobase['value']
-
-                #obs = rtest.observation
-                #rtest.prediction = None
                 rtest.prediction = dtc.rheobase
                 return dtc
-                """
-                score = rtest.judge(model)
-                if type(score.log_norm_score) is not type(None):
-                    dtc.scores[rtest.name] = 1.0 - float(score.log_norm_score)
-                else:
-                    dtc.scores[rtest.name] = 1.0
-            else:
-                dtc.rheobase = None
-                dtc.scores[rtest.name] = 1.0
-        else:
-            dtc.rheobase = None
-            dtc.scores[rtest.name] = 1.0
-            """
+
     else:
         # otherwise, if no observation is available, or if rheobase test score is not desired.
         # Just generate rheobase predictions, giving the models the freedom of rheobase
@@ -786,14 +693,11 @@ def inject_and_plot_passive_model(attrs,backend):
     pre_model = DataTC()
     pre_model.attrs = attrs
     pre_model.backend = backend
-    # get rheobase injection value
-    #pre_model = dtc_to_rheo(pre_model)
     # get an object of class ReducedModel with known attributes and known rheobase current injection value.
     model = pre_model.dtc_to_model()
     DURATION = 500.0*pq.ms
     DELAY = 200.0*pq.m
     uc = {'amplitude':-10*pq.pA,'duration':DURATION,'delay':DELAY}
-    print(uc)
     model.inject_square_current(uc)
     vm = model.get_membrane_potential()
     plt.plot(vm.times,vm.magnitude)
@@ -1276,134 +1180,6 @@ def prediction_current_and_features(dtc):
 
     return dtc
 
-'''
-depricated
-def allen_features_block2(dtc):
-    current = {'injected_square_current':
-                {'amplitude':dtc.ampl, 'delay':DELAY, 'duration':DURATION}}
-    compare = dtc.pre_obs
-L
-
-    model = dtc.dtc_to_model()
-    model.set_attrs(dtc.attrs)
-    assert model is not None
-    #model.set_attrs(dtc.attrs)
-    vm30 = model.inject_square_current(current['injected_square_current'])
-    vm30 = model.get_membrane_potential()
-
-    if np.max(vm30)<0.0 or model.get_spike_count()<1:
-        dtc.scores = None
-        return dtc
-    model.vm30 = None
-    model.vm30 = vm30
-    try:
-        vm30.rescale(pq.V)
-    except:
-        pass
-    v = [float(v*1000.0) for v in vm30.magnitude]
-    t = [float(t) for t in vm30.times]
-    try:
-        spks = ft.detect_putative_spikes(np.array(v),np.array(t))
-        ephys = EphysSweepFeatureExtractor(t=np.array(t),v=np.array(v))#,\
-        ephys.process_spikes()
-
-    except:
-        #rectify unfilterable high sample frequencies by downsampling them
-        #downsample too densely sampled signals.
-        #Making them amenable to Allen analysis
-
-        if dtc.backend in str('ADEXP'):
-            vm30 = model.finalize()
-            v = [ float(v*1000.0) for v in vm30.magnitude]
-            t = [ float(t) for t in vm30.times ]
-        try:
-            ephys = EphysSweepFeatureExtractor(t=np.array(t),v=np.array(v))#,\
-            ephys.process_spikes()
-        except:
-            return dtc
-    ephys_dict = ephys.as_dict()
-
-    if not 'spikes' in ephys_dict.keys():
-        dtc.scores = None
-        dtc.preds = {}
-        return dtc
-    dtc.scores = None
-    dtc.scores = {}
-    for k,v in compare.items():
-        dtc.scores[k] = 1.0
-    helper = helper[0]
-
-    dtc.preds = {}
-    dtc.tests = {}
-    for k,observation in compare.items():
-        if str(k) not in str('spikes'):
-            #compute interspike firing frame_dynamics
-
-            obs = {}
-            if type(observation) is not type(dict()):
-                obs['mean'] = observation
-            else:
-                obs = observation
-            prediction = {}
-            if k in ephys_dict.keys():
-                prediction['mean'] = ephys_dict[k]
-                helper.name = str(k)
-                obs['std'] = 10.0
-                prediction['std'] = 10.0
-                dtc.preds[k] = prediction
-                try:
-                    score = VmTest.compute_score(helper,obs,prediction)
-                except:
-                    #print(helper,obs,prediction)
-                    score = None
-                dtc.tests[k] = VmTest(obs)#.compute_score(helper,obs,prediction)
-                if score is not None and score.log_norm_score is not None:
-                    dtc.scores[k] = 1.0-float(score.log_norm_score)
-                else:
-                    dtc.scores[k] = 1.0
-        if str(k) in str('spikes'):
-            #compute perspike waveform features on just the first spike
-            first_spike = ephys_dict[k][0]
-
-            for key,spike_obs in first_spike.items():
-
-                #if not str('direct') in key and not str('adp_i') in key and not str('peak_i') in key and not str('fast_trough_i') and not str('fast_trough_i') and not str('trough_i'):
-                try:
-                    obs = {'mean': spike_obs}
-                    prediction = {'mean': ephys_dict['spikes'][0][key]}
-                    helper.name = str(key)
-                    obs['std']=10.0
-                    prediction['std']=10.0
-                    dtc.preds[key] = prediction
-                    #score = VmTest.compute_score(helper,obs,prediction)
-
-                    try:
-                        score = VmTest.compute_score(helper,obs,prediction)
-                    except:
-                        score = None
-                    dtc.tests[key] = VmTest(obs)
-                    if not score is None and not score.log_norm_score is None:
-                        dtc.scores[key] = 1.0-score.log_norm_score
-                    else:
-                        dtc.scores[key] = 1.0
-                except:
-                    dtc.scores[key] = 1.0
-    dtc.ephys = None
-    dtc.ephys = ephys
-    dtc.spike_number = len(ephys_dict['spikes'])
-    spike_cnt_pred = model.get_spike_count()
-    try:
-        dtc.scores['spike_count'] = np.abs(spike_cnt_pred - target)# sigmoid(np.abs(delta))
-    except:
-        pass
-    try:
-        delta = np.abs(float(dtc.ampl)-dtc.pre_obs['current_test'])
-        dtc.scores['current_test'] = delta# sigmoid(np.abs(delta))
-    except:
-        pass
-
-    return dtc
-'''
 def new_model(dtc):
     model = dtc.dtc_to_model()
     #model = mint_generic_model(dtc.backend)
@@ -1764,6 +1540,7 @@ def evaluate(dtc,regularization=False,elastic_net=False):
     if not hasattr(dtc,str('SM')):
         return []
     else:
+
         fitness = tuple(dtc.SM.score.values[0],)
         return fitness
 
@@ -1794,117 +1571,7 @@ def add_constant(hold_constant, pop, td):
         for v in hold_constant.values():
             p.append(v)
     return pop,td
-"""
-# Depriciated
-def scale(X):
-    before = copy.copy(X)
-    for i in range(0,np.shape(X)[1]):
-        X[:,i] = (X[:,i] - np.mean(X[:,i]))/np.std(X[:,i])
-    return X, before
 
-def data_versus_optimal1(dtc_pop):
-    rts,complete_map = pickle.load(open('../tests/multicellular_constraints.p','rb'))
-    #dtcpop = [ p.dtc for p in ga_out['pf'] ]
-    #pop = [ p for p in ga_out['pf'] ]
-    # first a nice violin plot of the test data.
-    to_norm = np.matrix([list(t.data) for t in rts ])
-
-    X,before = scale(to_norm)
-
-    ax = sns.violinplot(x="test type", y="physical unit", hue="smoker",
-                 data=X, palette="muted")
-
-    for t in tests:
-        plt.clf()
-        fig, ax = plt.subplots()
-        if t.name not in ga_out['pf'][0].dtc.prediction.keys():
-            try:
-                pred = ga_out['pf'][0].dtc.prediction['RheobaseTestP']
-
-            except:
-                pred = ga_out['pf'][0].dtc.rheobase
-            if not isinstance(pred, dict):
-                pred = {'value':pred}
-        else:
-            pred = ga_out['pf'][0].dtc.prediction[t.name]
-        try:
-            opt_value = pred['value']
-        except:
-            opt_value = pred['mean']
-        if t.name not in complete_map.keys():
-            print('fatal')
-        opt_value = opt_value.rescale(complete_map[t.name])
-        n, bins, patches = ax.hist(sorted(t.data), label=str(cell)+str(t.name))
-        mode0 = bins[np.where(n==np.max(n))[0][0]]
-        try:
-            # mode = mode0*qt.unitless
-            mode0 = mode0.rescale(opt_value)
-            half = (bins[1]-bins[0])/2.0
-            td = sorted(t.data)
-            td = [t*qt.unitless for t in td]
-            td = [t.rescale(opt_value) for t in td]
-        except:
-            print('fatal')
-        plt.hist(sorted(t.data), label=str(cell)+str(t.name))
-        try:
-            plt.scatter(opt_value,np.max(n),c='r',label='optima')
-
-        except:
-            plt.scatter(opt_value,np.max(n),c='r',label='optima')
-        plt.savefig(str('optima_')+str(cell)+str(t.name)+str('.png'))
-def data_versus_optimal(ga_out):
-    rts,complete_map = pickle.load(open('../tests/multicellular_constraints.p','rb'))
-
-    dtcpop = [ p.dtc for p in ga_out['pf'] ]
-    pop = [ p for p in ga_out['pf'] ]
-    # first a nice violin plot of the test data.
-    to_norm = np.matrix([list(t.data) for t in tests ])
-
-    X,before = scale(to_norm)
-
-    ax = sns.violinplot(x="test type", y="physical unit", hue="smoker",
-                 data=X, palette="muted")
-
-    for t in tests:
-        plt.clf()
-        fig, ax = plt.subplots()
-        if t.name not in ga_out['pf'][0].dtc.prediction.keys():
-            try:
-                pred = ga_out['pf'][0].dtc.prediction['RheobaseTestP']
-
-            except:
-                pred = ga_out['pf'][0].dtc.rheobase
-            if not isinstance(pred, dict):
-                pred = {'value':pred}
-        else:
-            pred = ga_out['pf'][0].dtc.prediction[t.name]
-        try:
-            opt_value = pred['value']
-        except:
-            opt_value = pred['mean']
-        if t.name not in complete_map.keys():
-            print('fatal')
-        opt_value = opt_value.rescale(complete_map[t.name])
-        n, bins, patches = ax.hist(sorted(t.data), label=str(cell)+str(t.name))
-        mode0 = bins[np.where(n==np.max(n))[0][0]]
-        try:
-            # mode = mode0*qt.unitless
-            mode0 = mode0.rescale(opt_value)
-            half = (bins[1]-bins[0])/2.0
-            td = sorted(t.data)
-            td = [t*qt.unitless for t in td]
-            td = [t.rescale(opt_value) for t in td]
-        except:
-            print('fatal')
-
-        plt.hist(sorted(t.data), label=str(cell)+str(t.name))
-        try:
-            plt.scatter(opt_value,np.max(n),c='r',label='optima')
-
-        except:
-            plt.scatter(opt_value,np.max(n),c='r',label='optima')
-        plt.savefig(str('optima_')+str(cell)+str(t.name)+str('.png'))
-"""
 def filtered(pop,dtcpop):
     dtcpop = [ dtc for dtc in dtcpop if type(dtc.rheobase) is not type(None) ]
     pop = [ p for p in pop if type(p.rheobase) is not type(None) ]
@@ -2000,7 +1667,15 @@ from sciunit.scores.collections import ScoreArray
 #from sciunit.scores.collections_m2m import  ScoreMatrixM2M,  ScoreArrayM2M#(pd.DataFrame, SciUnit, TestWeighted)
 
 class OptMan():
-    def __init__(self,tests, td=None, backend = None,hc = None,boundary_dict = None, error_length=None,protocol=None,simulated_obs=None,verbosity=None,PARALLEL_CONFIDENT=None,tsr=None):
+    def __init__(self,tests, td=None, \
+                backend = None,hc = None,\
+                boundary_dict = None, \
+                error_length=None,\
+                protocol=None,\
+                simulated_obs=None,\
+                verbosity=None,\
+                PARALLEL_CONFIDENT=None,\
+                tsr=None):
         self.tests = tests
         if type(self.tests) is type(dict()):
             if 'name' in self.tests.keys():
@@ -2406,26 +2081,23 @@ class OptMan():
         # via very reduced model
         if hasattr(dtc,'model_path'):
             dtc.model_path = path_params['model_path']
-        else:
-            dtc.model_path = None
-            dtc.model_path = path_params['model_path']
+        #else:
+        #    dtc.model_path = None
+        #    dtc.model_path = path_params['model_path']
         dtc.preds = None
         dtc.preds = {}
         dtc = dtc_to_rheo(dtc)
 
         dtc = self.format_test(dtc)
         tests = dtc.tests
-
-        for k,t in enumerate(tests):
+        if type(tests) is not type(dict()):
+            tests = {t.name:t for t in tests}
+        for k,t in tests.items():
             #if str('RheobaseTest') != t.name and str('RheobaseTestP') != t.name:
             t.params = dtc.protocols[k]
-
             test_and_models = (t, dtc)
             pred = pred_only(test_and_models)
             dtc.preds[str(t.name)] = pred
-
-        #else:
-        #        dtc.preds[str(t.name)] = dtc.rheobase
         return dtc
 
     @timer
@@ -2479,20 +2151,7 @@ class OptMan():
 
         pred['std'] = t.observation['std']# 15*take_anything.magnitude * take_anything.units
         return pred
-    """
-    def score_matrix(self,dtc):
-        # Inputs single data transport container modules, and neuroelectro observations that
-        # inform test error error_criterion
-        # Outputs Neuron Unit evaluation scores over error criterion
-        tests = dtc.tests
-        #dtc.scores[key] = np.inf
-        #t.params = dtc.protocols[k]
-        model = dtc.dtc_to_model()
-        from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
-        SM = ScoreMatrix(tests, model,scores = pd.DataFrame(dtc.scores), transpose=True)
-        dtc.SM = SM
-        return SM
-    """
+
 
     def preprocess(self,dtc):
         tests = dtc.tests
@@ -2500,16 +2159,23 @@ class OptMan():
         if isinstance(dtc.rheobase,type(None)) or type(dtc.rheobase) is type(None):
             dtc = allocate_worst(tests, dtc)
         else:
-            for k, t in enumerate(tests):
-                key = str(t)
+            for t in tests:
+                k = str(t.name)
+                # it's critical that paramaters are assigned here
+                t.params = dtc.protocols[k]
+
                 if "RheobaseTest" in  t.name:
                     t.score_type = scores.ZScore
+                    # The code block below
+                    # is prefeable but it won't lead to scoring
+                    """
                     if str("BHH") in dtc.backend or str("ADEXP") in dtc.backend or str("GLIF") in dtc.backend:
                         t = RheobaseTestP(t.observation)
+                        # it's critical that paramaters are assigned here
+
+                        t.params = dtc.protocols['RheobaseTest']
                         t.passive = False
-                        #score = t.compute_score(t.observation,dtc.rheobase)
-                        #dtc.errors[key] = 1.0 - score.log_norm_score
-                        #continue
+                    """
                 try:
                     assert hasattr(self.tests,'use_rheobase_score')
                 except:
@@ -2534,8 +2200,8 @@ class OptMan():
         dtc.tests = self.preprocess(dtc)
         if PARALLEL_CONFIDENT is False:
             suite = TestSuite(dtc.tests)
-            SM = suite.judge(model,parallel=False,log_norm=True)
-            dtc.SM = SM
+            #try:
+            dtc.SM = suite.judge(model,parallel=False,log_norm=True)
         else:
             scores_ = []
             for t in dtc.tests:
@@ -2547,6 +2213,7 @@ class OptMan():
                 scores_.append(score)
             dtc.SM = ScoreArray(tests, scores_)
         dtc.obs_preds = pd.DataFrame([{t.name:t.observation for t in dtc.tests},{t.name:t.prediction for t in dtc.tests}])
+        assert dtc.SM is not None
         return dtc
 
 
@@ -2572,6 +2239,10 @@ class OptMan():
         # pre format the current injection dictionary based on pre computed
         # rheobase values of current injection.
         # This is much like the hooked method from the old get neab file.
+        if type(dtc) is type(str()):
+            print('error dtc is string')
+            import pdb
+            pdb.set_trace()
         dtc.protocols = {}
         if not hasattr(dtc,'tests'):
             dtc.tests = copy.copy(self.tests)
@@ -2586,19 +2257,24 @@ class OptMan():
             dtc.tests = switch_logic(tests)#,self.tests.use_rheobase_score)
         else:
             dtc.tests = switch_logic(dtc.tests)
-        for k,v in enumerate(dtc.tests):
+
+        for v in dtc.tests:
+            k = v.name
             dtc.protocols[k] = {}
-            if hasattr(v,'passive'):#['protocol']:
+            if hasattr(v,'active'): #['protocol']:
                 if v.passive == False and v.active == True:
                     keyed = dtc.protocols[k]#.params
                     dtc.protocols[k] = active_values(keyed,dtc.rheobase)
-
-                elif v.passive == True and v.active == False:
+            if hasattr(v,'passive'):
+                if v.passive == True and v.active == False:
                     keyed = dtc.protocols[k]#.params
                     dtc.protocols[k] = passive_values(keyed)
             if v.name in str('RestingPotentialTest'):
 
                 dtc.protocols[k]['injected_square_current']['amplitude'] = 0.0*pq.pA
+        #import pdb
+        #pdb.set_trace()
+
         return dtc
     @timer
     def make_simulated_observations(self,original_test_dic,backend,random_param,dsolution=None):
@@ -2809,6 +2485,11 @@ class OptMan():
                     d.attrs.update(self.hc)
 
         return pop, dtcpop
+    def defend_against_zero_std(self,dtcpop):
+        for dtc in dtcpop:
+            if type(dtc.tests) is type(dict()):
+                for t in dtc.tests.values():
+                    assert 'std' in t.observation.keys()
     @timer
     def obtain_rheobase(self,pop,tests):#, td, tests):
         '''
@@ -2833,11 +2514,7 @@ class OptMan():
                     assert 'std' in t.observation.keys()
 
         if 'RAW' in self.backend  or 'HH' in self.backend or str('ADEXP') in self.backend:
-            for dtc in dtcpop:
-                if type(dtc.tests) is type(dict()):
-                    for t in dtc.tests.values():
-                        assert 'std' in t.observation.keys()
-
+            self.defend_against_zero_std(copy.copy(dtcpop))
             dtcpop = list(map(dtc_to_rheo,dtcpop))
             for dtc in dtcpop:
                 if type(dtc.tests) is type(dict()):
@@ -2923,16 +2600,22 @@ class OptMan():
 
                 for d in dtcpop:
                     assert hasattr(d, 'tests')
+                    assert dtc.SM is not None
 
                 for d in dtcpop:
                     d.tests = copy.copy(self.tests)
 
             if not PARALLEL_CONFIDENT:
                 dtcpop = list(map(self.format_test,dtcpop))
+                #if self.backend == 'ADEXP':
                 dtcpop = list(map(self.elephant_evaluation,dtcpop))
 
                 for d in dtcpop:
                     d.tests = copy.copy(self.tests)
+                for d in dtcpop:
+                    assert hasattr(d, 'tests')
+                    assert d.SM is not None
+
 
             for d in dtcpop:
                if not hasattr(d, 'tests'):

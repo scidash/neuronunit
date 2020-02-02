@@ -87,11 +87,27 @@ def _update_history_and_hof(halloffame,pf, history, population,GEN,MU):
     Note: History and Hall-of-Fame behave like dictionaries
     '''
     #temp = copy.copy(
-    temp = [p for p in population if hasattr(p,'dtc')]
+    temp = copy.copy([p for p in population if hasattr(p,'dtc')])
+    dtcpop = copy.copy([p.dtc for p in population if hasattr(p,'dtc')])
+
+    for t in temp:
+        if "ADEXP" in t.backend or "BHH" in t.backend:
+            t.dtc = None
+
     if halloffame is not None:
-        halloffame.update(temp)
+        try:
+            halloffame.update(temp)
+        except:
+            print(temp,'temp bad')
+            import pdb
+            pdb.set_trace()
     if history is not None:
-        history.update(temp)
+        try:
+            history.update(temp)
+        except:
+            print(temp,'temp bad')
+            import pdb
+            pdb.set_trace()
     if pf is not None:
         if GEN ==0:
             pf = deap.tools.ParetoFront(MU)
@@ -282,8 +298,10 @@ def eaAlphaMuPlusLambdaCheckpoint(
 
         record = stats.compile(pop)
         logbook.record(gen=0, evals=len(invalid_ind), **record)
-        hof, pf,history = _update_history_and_hof(hof, pf, history, pop,0,MU)
-
+        temp_pop = copy.copy(pop)
+        hof, pf,history = _update_history_and_hof(hof, pf, history, temp_pop ,0,MU)
+        for p in pop:
+            assert hasattr(p,'dtc')
         #print(logbook.stream)
 
         # Begin the generational process
@@ -305,15 +323,13 @@ def eaAlphaMuPlusLambdaCheckpoint(
             offspring = [p for p in offspring if len(p.fitness.values) ]
             pool = pop
             pool.extend(offspring)
-            #if len(offspring)==MU and len(pop)==MU:
             if len(pool)>=MU:
                 try:
                     pop = toolbox.select(pop + offspring, MU)
                 except:
                     pop = toolbox.select(offspring,MU)
             else:
-               import pdb
-               pdb.set_trace()
+               pop = toolbox.select(pool,MU)
             # Compile statistics about the new population
             record = stats.compile(pop)
             logbook.record(gen=gen, evals=len(invalid_ind), **record)
