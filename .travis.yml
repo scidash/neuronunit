@@ -32,7 +32,9 @@ install:
   - pip install -e .
   - pip install julia
   - git clone https://github.com/fun-zoological-computing/sciunit
-  - cp sciunit/sciunit/suites.py /home/travis/miniconda/lib/python3.7/site-packages/sciunit/sciunit/suites.py
+  - ls sciunit/sciunit/suites.py
+  - ls /home/travis/miniconda/lib/python3.7/site-packages/sciunit
+  - cp sciunit/sciunit/suites.py /home/travis/miniconda/lib/python3.7/site-packages/sciunit/suites.py
   - git clone https://github.com/fun-zoological-computing/deap
   - cp deap/tools/support.py /home/travis/miniconda/lib/python3.7/site-packages/deap/tools/support.py
 script:
