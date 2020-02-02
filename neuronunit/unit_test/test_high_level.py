@@ -22,8 +22,12 @@ import os
 from neuronunit.optimisation import get_neab
 #
 from neuronunit.optimisation.optimization_management import dtc_to_rheo
-from neuronunit.optimisation.optimization_management import elephant_evaluation
-from neuronunit.optimisation.optimization_management import format_test, mint_generic_model
+from neuronunit.optimisation.optimization_management import OptMan
+
+elephant_evaluation = OptMan.elephant_evaluation
+format_test = OptMan.format_test
+#mint_generic_model = OptMan.mint_generic_model
+from neuronunit.optimisation.optimization_management import mint_generic_model
 
 from neuronunit import tests as nu_tests, neuroelectro
 from neuronunit.tests import passive, waveform, fi
@@ -35,7 +39,7 @@ from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 from neuronunit.tests import dynamics
 from neuronunit.models.reduced import ReducedModel
 
-from neuronunit.optimisation.optimization_management import format_test
+#from neuronunit.optimisation.optimization_management import format_test
 from neuronunit.optimisation import data_transport_container
 
 from neuronunit.models.reduced import ReducedModel
@@ -91,6 +95,14 @@ class testHighLevelOptimisation(unittest.TestCase):
                 (self.obs_frame,self.test_frame) = pickle.load(f)
 
         except:
+            purkinje ={"id": 18, "name": "Cerebellum Purkinje cell", "neuron_db_id": 271, "nlex_id": "sao471801888"}
+            fi_basket = {"id": 65, "name": "Dentate gyrus basket cell", "neuron_db_id": None, "nlex_id": "nlx_cell_100201"}
+            pvis_cortex = {"id": 111, "name": "Neocortex pyramidal cell layer 5-6", "neuron_db_id": 265, "nlex_id": "nifext_50"}
+            #This olfactory mitral cell does not have datum about rheobase, current injection values.
+            olf_mitral = {"id": 129, "name": "Olfactory bulb (main) mitral cell", "neuron_db_id": 267, "nlex_id": "nlx_anat_100201"}
+            ca1_pyr = {"id": 85, "name": "Hippocampus CA1 pyramidal cell", "neuron_db_id": 258, "nlex_id": "sao830368389"}
+            pipe = [ fi_basket, ca1_pyr, purkinje,  pvis_cortex]
+
             for p in pipe:
                 p_tests, p_observations = get_neab.get_neuron_criteria(p)
                 self.obs_frame[p["name"]] = p_observations#, p_tests))

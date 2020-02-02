@@ -31,10 +31,9 @@ install:
   - pip install git+https://github.com/fun-zoological-computing/sciunit@dev
   - pip install -e .
   - pip install julia
-  #- pip install git+https://github.com/scidash/sciunit@dev
-  #- git clone https://github.com/fun-zoological-computing/deap
-  #- cp deap/tools/support.py /home/travis/miniconda/lib/python3.7/site-packages/deap/tools/support.py
-
+  - git clone https://github.com/fun-zoological-computing/deap
+  - cp sciunit/sciunit/suites.py /home/travis/miniconda/lib/python3.7/site-packages/sciunit/sciunit/suites.py
+  - cp deap/tools/support.py /home/travis/miniconda/lib/python3.7/site-packages/deap/tools/support.py
 script:
   - sh test.sh
    cd neuronunit/examples
