@@ -221,6 +221,9 @@ if __name__ == '__main__':
     unittest.main()
 #a = testCrucialBackendsSucceed()
 #a.setUp()
+#a.test_prefer_pass_1()
+#import pdb
+#pdb.set_trace()
 #boolean = a.must_pass_0()
 #print(dir(a))
 #pre_model.rheobase
