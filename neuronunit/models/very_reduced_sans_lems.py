@@ -1,13 +1,6 @@
 """NeuronUnit model class for reduced neuron models."""
 
-#from .static import ExternalModel
 import sciunit
-'''
-class StaticModel(sciunit.Model,
-                  cap.ReceivesSquareCurrent,
-                  cap.ProducesActionPotentials,
-                  cap.ProducesMembranePotential):
-'''
 import neuronunit.capabilities as cap
 
 
@@ -44,8 +37,12 @@ class VeryReducedModel(RunnableModel,
     def model_to_dtc(self):
         dtc = DataTC()
         dtc.attrs = self.attrs
-        dtc.backend = self.backend
-        dtc.backend = self.rheobase
+        try:
+            dtc.backend = self.get_backend()
+        except:
+            dtc.backend = self.backend
+        if hasattr(self,'rheobase'):
+            dtc.rheobase = self.rheobase
         return dtc
 
     def inject_square_current(self, current):
