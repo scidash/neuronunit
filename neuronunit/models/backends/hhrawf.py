@@ -32,7 +32,6 @@ ascii_plot = False
 
 @jit
 def Id(t,delay,duration,tmax,amplitude):
-    #print(delay+duration,tmax)
 
     if 0.0 < t < delay:
         return 0.0
@@ -77,7 +76,7 @@ def beta_n(V):
     return 0.125*np.exp(-(V+65) / 80.0)
 
 
-@jit
+#@jit
 def dALLdt(X, t, attrs):
     """
     Integrate
@@ -88,17 +87,8 @@ def dALLdt(X, t, attrs):
     """
     defaults = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3, \
              'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -77.0, 'E_Na' : 50.0, 'vr':-65.0 }
-    #print("defaults",defaults)
-    #print("actual:",attrs)
+
     delay,duration,T,amplitude = copy.copy(attrs['I'])
-    #for k,v in attrs.items():
-    #    if k in defaults.keys():
-    #        pass
-    #    pass
-            #print('difference in k: ',k,': ',defaults[k]-v)
-            #attrs[k] = defaults[k]
-    #    return
-    #attrs = defaults
     V, m, h, n = X
 
     C_m = attrs['C_m']
@@ -110,9 +100,7 @@ def dALLdt(X, t, attrs):
     g_Na = attrs['g_Na'] #/ Cm) * np.power(m, 3.0) * h
     g_L = attrs['g_L'] #/ Cm
     delay,duration,T,amplitude = attrs['I']
-    #Id(t,delay,duration,tmax,amplitude)
     Iext = Id(t,delay,duration,np.max(T),amplitude)
-    #print(Iext)
 
 
     I_Na = g_Na * m**3.0 * h * (V - E_Na)
@@ -210,7 +198,6 @@ class HHBackend(Backend):
 
     def get_spike_count(self):
         thresh = threshold_detection(self.vM,0.0*pq.mV)
-        print(len(thresh),' spikes')
         return len(thresh)
 
     def set_attrs(self, **attrs):

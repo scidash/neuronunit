@@ -52,28 +52,7 @@ from neuronunit import neuroelectro
 from neuronunit.optimisation import optimisations as om
 
 
-'''
-from sklearn.neural_network import MLPClassifier, MLPRegressor
-from sklearn import preprocessing
-from sklearn.model_selection import train_test_split
-import itertools
-#from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import SGDRegressor
-from sklearn.metrics import mean_squared_error, r2_score
-from sklearn import preprocessing
-from sklearn import linear_model
-from sklearn.metrics import confusion_matrix
-import pylab as pl
 
-
-#from sklearn import preprocessing
-#from sklearn.linear_model import SGDClassifier
-##from sklearn.metrics import mean_squared_error, r2_score
-##from sklearn import preprocessing
-#import sklearn
-import neuronunit.optimisation.model_parameters as model_params
-'''
 #from neuronunit.optimisation.optimization_management import stochastic_gradient_descent
 import seaborn as sns
 
@@ -90,12 +69,10 @@ anchor = neuronunit.__file__
 anchor = os.path.dirname(anchor)
 
 mypath = os.path.join(os.sep,anchor,'tests/multicellular_constraints.p')
-#print(anchor,mypath)
-#import pdb; pdb.set_trace()
 rts,complete_map = pickle.load(open(mypath,'rb'))
 df = pd.DataFrame(rts)
 
-#import pdb
-#pdb.set_trace()
 #rts,complete_map = pickle.load(open(mypath),'rb')
+from neuronunit.optimisation import get_neab
+rts = get_neab.process_all_cells()
 local_tests = [value for value in rts['Hippocampus CA1 pyramidal cell'].values() ]

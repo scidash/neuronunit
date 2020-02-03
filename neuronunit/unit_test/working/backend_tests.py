@@ -22,17 +22,17 @@ class testCrucialBackendsSucceed(unittest.TestCase):
         model_parameters.MODEL_PARAMS.keys()
         self.backends =  ["RAW", "HH"]
         self.other_backends =["BHH","ADEXP"]
-        self.backends_complex =  ["GLIF","NEURON"]
-        self.julia_backend ="JHH"
+        self.backends_complex =  ["GLIF"]#,"NEURON"]
+        #self.julia_backend ="JHH"
 
         #raw_attrs = {k:np.mean(v) for k,v in model_parameters.MODEL_PARAMS[backend].items()}
         #self.backends = backends
         self.model_parameters = model_parameters
-
-    def test_can_pass_0(self):
+    '''
+    def luxury_pass_0j(self):
         fig, axs = plt.subplots(len(self.backends)*2+1,figsize=(40, 40))
         cnt=0
-        b = self.julia_backend
+        b =  self.julia_backend
         attrs = {k:np.mean(v) for k,v in self.model_parameters.MODEL_PARAMS[b].items()}
         pre_model = DataTC()
         if str("V_REST") in attrs.keys():
@@ -53,6 +53,8 @@ class testCrucialBackendsSucceed(unittest.TestCase):
         vm,_ = inject_and_plot_passive_model(pre_model.attrs,b)
         axs[cnt].plot(vm.times,vm.magnitude)
         axs[cnt].set_title(b)
+        cnt+=1
+
         if len(vm)>0 and vm is not None:
             boolean = True
         else:
@@ -60,7 +62,7 @@ class testCrucialBackendsSucceed(unittest.TestCase):
         self.assertTrue(boolean)
 
         return True
-
+    '''
 
     def test_must_pass_0(self):
         fig, axs = plt.subplots(len(self.backends)*2+1,figsize=(40, 40))
@@ -140,7 +142,7 @@ class testCrucialBackendsSucceed(unittest.TestCase):
             else:
                 print('actually NEURON support only in docker container')
                 #attrs = {k:np.mean(v) for k,v in self.model_parameters.MODEL_PARAMS[b].items()}
-                return
+                return 
 
             pre_model = DataTC()
             if str("V_REST") in attrs.keys():
@@ -219,6 +221,9 @@ if __name__ == '__main__':
     unittest.main()
 #a = testCrucialBackendsSucceed()
 #a.setUp()
+#a.test_prefer_pass_1()
+#import pdb
+#pdb.set_trace()
 #boolean = a.must_pass_0()
 #print(dir(a))
 #pre_model.rheobase

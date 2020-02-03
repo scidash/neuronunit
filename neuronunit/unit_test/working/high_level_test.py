@@ -85,19 +85,21 @@ def grid_points():
     dtcpop = list(b0.map(es).compute())
     assert dtcpop is not None
     return dtcpop
-
+from neuronunit.optimisation import get_neab
 class testHighLevelOptimisation(unittest.TestCase):
 
     def setUp(self):
-        try:
-            electro_path = 'multicellular_suite_constraints.p'
-            assert os.path.isfile(electro_path) == True
-            with open(electro_path,'rb') as f:
-                self.electro_tests = pickle.load(f)
-        except:
-            pass
-        suite, self.test_frame = mint_tests.get_cell_constraints()
-        _ = pd.DataFrame(self.test_frame )
+        self.test_frame = get_neab.process_all_cells()
+        #import pdb
+        #pdb.set_trace()
+
+        self.test_frame = {k:tf for k,tf in self.test_frame.items() if len(tf.tests)>0 }
+
+        for testsuite in self.test_frame.values():
+            for t in testsuite.tests:
+                if float(t.observation['std']) == 0.0:
+                    t.observation['std'] = t.observation['mean']
+
         self.predictions = None
         self.predictionp = None
         self.score_p = None
@@ -105,9 +107,9 @@ class testHighLevelOptimisation(unittest.TestCase):
          #self.grid_points
 
         #electro_path = 'pipe_tests.p'
-        assert os.path.isfile(electro_path) == True
-        with open(electro_path,'rb') as f:
-            self.electro_tests = pickle.load(f)
+        #assert os.path.isfile(electro_path) == True
+        #with open(electro_path,'rb') as f:
+        #    self.electro_tests = pickle.load(f)
         #self.electro_tests = get_neab.replace_zero_std(self.electro_tests)
 
         #self.test_rheobase_dtc = test_rheobase_dtc
@@ -146,9 +148,17 @@ class testHighLevelOptimisation(unittest.TestCase):
         #MBEs = list(self.MODEL_PARAMS.keys())
         MBEs = [str('RAW'),str('BADEXP')]
         for key, use_test in self.test_frame.items():
+            import sciunit
+            if type(use_test) is type(sciunit.suites.TestSuite):
+                print('capture')
+                use_test = {t.name:t for t in use_test}
+                import pdb
+                pdb.set_trace()
+            use_test = {k.name:k for k in use_test.tests }
+
             for b in MBEs:
                 use_test['protocol'] = str('elephant')
-
+                print(use_test)
                 tuples_ = round_trip_test(use_test,b)
                 (boolean,self.dtcpop) = tuples_
                 print('done one')

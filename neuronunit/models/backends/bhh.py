@@ -6,6 +6,21 @@ from neurodynex.hodgkin_huxley import HH
 
 b2.A = 1000000000000*b2.pA
 b2.units.V = 1000.0*b2.units.mV
+
+# Hodgkin Huxley parameters
+LOCAL_PARAMS =  { 'El' : -54.387 * b2.mV,
+        'EK' : -77.0 * b2.mV,
+        'ENa' : 50.0 * b2.mV,
+        'gl' : 0.3 * b2.msiemens,
+        'gK' : 36 * b2.msiemens,
+        'gNa' : 120 * b2.msiemens,
+        'C' : 1 * b2.ufarad,
+	'Vr':-65.0 }
+
+LOCAL_PARAMS = { k:(float(v)-0.25*float(v),float(v)+0.25*float(v)) for k,v in LOCAL_PARAMS.items() }
+LOCAL_PARAMS['Vr'] = [-85,-45]
+
+
 #b2.A = 1000000000000*b2.pA
 from neurodynex.tools import plot_tools, input_factory
 import io
@@ -90,9 +105,10 @@ def simulate_HH_neuron_local(I_stim=None,
     neuron = b2.NeuronGroup(1, eqs, method="exponential_euler")
     # parameter initialization
     neuron.vm = El#*b2.units.mV
-    neuron.m = 0.05*1.0/1000.0
-    neuron.h = 0.60*1.0/1000.0
-    neuron.n = 0.32*1.0/1000.0
+    neuron.m = 0.05
+    neuron.h = 0.60
+    neuron.n = 0.32
+
     #spike_monitor = b2.SpikeMonitor(neuron)
     # tracking parameters
     st_mon = b2.StateMonitor(neuron, ["vm", "I_e", "m", "n", "h"], record=True)
@@ -146,11 +162,12 @@ class BHHBackend(Backend):
                 self.cell_name = DTC.cell_name
 
     def get_spike_count(self):
-        if np.max(self.vM)>20.0*np.mean(self.vM):
-            thresh = threshold_detection(self.vM,np.max(self.vM)-0.10*np.max(self.vM))
+        #if np.max(self.vM)>20.0*np.mean(self.vM):
+        #thresh = threshold_detection(self.vM,np.max(self.vM)-0.10*np.max(self.vM))
+        thresh = threshold_detection(self.vM,0.0*pq.mV)
 
-        else:
-            thresh = []
+        #else:
+        #    thresh = []
         return len(thresh)
 
     def set_stop_time(self, stop_time = 650*pq.ms):
@@ -260,6 +277,7 @@ class BHHBackend(Backend):
         if ascii_plot:
             SLOW_ZOOM = False
             if SLOW_ZOOM and self.get_spike_count()>=1 :
+
                 vm = get_spike_waveforms(self.vM)
             else:
                 vm = self.vM

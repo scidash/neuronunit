@@ -4,19 +4,22 @@ try
    using Py2Jl
 catch
    Pkg.add("MLStyle")
-Pkg.add("Py2Jl")
-using Py2Jl
+   Pkg.add("Py2Jl")
+   using Py2Jl
 end
 ENV["PYTHON"]="/usr/local/lib/python3.6"
+ENV["PYTHON"]="/usr/bin/python3.6"
+using Pkg
+Pkg.build("PyCall")
 =#
-
-# ENV["PYTHON"]="/usr/bin/python3.6"
-
-
-#ENV["PYTHON"] = "/anaconda3/bin/python"
-#using Pkg
-#Pkg.build("PyCall")
-#using Py2JL
+Pkg.add("SpikingNeuralNetworks")
+Pkg.add("Plots")
+Pkg.add("UnicodePlots")
+try
+   using Conda
+catch
+   Pkg.add("Conda")
+   using Conda
 #using Debugger
 using PyCall
 #Pkg.add("Py2Jl")
@@ -28,7 +31,17 @@ include("neuronunit/models/backends/plot.jl")
 using SpikingNeuralNetworks
 include("neuronunit/models/backends/units.jl")
 using Pkg
-#using NSGAIII#, PyPlot
+using NSGAIII#, PyPlot
+
+Pkg.add("SpikingNeuralNetworks")
+
+using SpikingNeuralNetworks
+#Pkg.add("https://github.com/fun-zoological-computing/SNN.jl.git")
+#Pkg.resolve()
+#Pkg.build("SNN")
+#println("gets here")
+#using SNN
+#SpikingNeuralNetworks = SNN
 using UnicodePlots
 
 try
@@ -51,15 +64,19 @@ SNN = SpikingNeuralNetworks
 
 # using Debugger
 @pyimport(sciunit)
+@pyimport(neuronunit)
+py2jl"""from neuronunit.optimisation import optimization_management as om"""
+
 @pyimport neuronunit.optimisation.optimization_management as om
 #optimisation = @pyimport(neuronunit.optimisation)
 #py2jl"""from neuronunit.optimisation import optimization_management as om"""
 
-#@pyimport(from neuronunit.optimisation import optimization_management as om)
+@pyimport(from neuronunit.optimisation import optimization_management as om)
 
 py"""from neuronunit.optimisation.optimization_management import TSD
 """
 py"""
+from neuronunit.optimisation import optimization_management as om
 from neuronunit.optimisation import model_parameters
 """
 py"""from neuronunit.optimisation.optimization_management import TSD
@@ -290,7 +307,7 @@ append!(P, indiv.(convert.(X, seed),z, fCV))
 fast_non_dominated_sort!(P)
 associate_references!(P, references)
 Q = similar(P)
-
+=#
 try
    nsga(MU, NGEN, init, zzz, fplot = plot_pop)
 catch
@@ -301,6 +318,8 @@ catch
    Q = similar(P)
 end
 #include("indivs.jl")
+
+#=
 
 
 =#

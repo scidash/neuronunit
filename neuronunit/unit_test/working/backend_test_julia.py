@@ -1,8 +1,8 @@
 # coding: utf-8
 import unittest
-import matplotlib as mpl
-mpl.use('Agg')
-import matplotlib.pyplot as plt
+#import matplotlib as mpl
+#mpl.use('Agg')
+#import matplotlib.pyplot as plt
 
 #from neuronunit.optimisation.optimization_management import inject_and_plot_model, dtc_to_rheo
 #from neuronunit.optimisation.optimization_management import inject_and_plot_passive_model
@@ -12,7 +12,8 @@ from neuronunit.optimisation.data_transport_container import DataTC
 from neuronunit.optimisation import model_parameters
 from elephant.spike_train_generation import threshold_detection
 import quantities as pq
-
+import pdb
+pdb.set_trace()
 
 class testCrucialBackendsSucceed(unittest.TestCase):
     def setUp(self):
