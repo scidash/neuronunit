@@ -16,8 +16,8 @@ class InjectedCurrent:
 
     default_params = dict(VmTest.default_params)
     default_params.update({'amplitude': 100*pq.pA})
-
     def compute_params(self):
+        self.verbose = False
         self.params['injected_square_current'] = \
             self.get_injected_square_current()
         self.params['injected_square_current']['amplitude'] = \
@@ -39,9 +39,9 @@ class APWidthTest(VmTest):
     units = pq.ms
 
     ephysprop_name = 'Spike Half-Width'
-    #def __init__():
-    #    super(APWidthTest,self).__init__(*args,**kwargs)
-    #    self.verbose = False
+    def __init__():
+        super(APWidthTest,self).__init__(*args,**kwargs)
+        self.verbose = False
     def generate_prediction(self, model):
         """Implement sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
@@ -49,6 +49,7 @@ class APWidthTest(VmTest):
         # if get_spike_count is zero, then widths will be None
         # len of None returns an exception that is not handled
         model.inject_square_current(self.params['injected_square_current'])
+        self.verbose = False
         if self.verbose:
             print(self.params['injected_square_current'])
         model.get_membrane_potential()
@@ -75,9 +76,11 @@ class APWidthTest(VmTest):
 
     def compute_score(self, observation, prediction):
         """Implement sciunit.Test.score_prediction."""
-        if isinstance(prediction, type(None)):
-            score = scores.InsufficientDataScore(None)
-        elif prediction['n'] == 0:
+        #if isinstance(prediction, type(None)):
+        #    score = scores.InsufficientDataScore(None)
+        #import pdb
+        #pdb.set_trace()
+        if prediction['n'] == 0:
             score = scores.InsufficientDataScore(None)
         else:
             score = super(APWidthTest, self).compute_score(observation,
@@ -129,6 +132,8 @@ class InjectedCurrentAPWidthTest(InjectedCurrent, APWidthTest):
 
         prediction = super(InjectedCurrentAPWidthTest, self).\
             generate_prediction(model)
+        # useful to retain inside object.
+        self.prediction = prediction
 
         return prediction
 
@@ -185,6 +190,8 @@ class APAmplitudeTest(VmTest):
 
 
 
+        # useful to retain inside object.
+        self.prediction = prediction
 
         # Put prediction in a form that compute_score() can use.
         return prediction
@@ -238,6 +245,9 @@ class InjectedCurrentAPAmplitudeTest(InjectedCurrent, APAmplitudeTest):
             fig.show()
         prediction = super(InjectedCurrentAPAmplitudeTest, self).\
             generate_prediction(model)
+        # useful to retain inside object.
+        self.prediction = prediction
+
         return prediction
 
     def extract_features(self, model):
@@ -298,6 +308,8 @@ class APThresholdTest(VmTest):
             prediction = {'mean':  None,
                           'std':  None,
                           'n': 0 }
+        # useful to retain inside object.
+        self.prediction = prediction
 
         return prediction
 
@@ -339,8 +351,14 @@ class InjectedCurrentAPThresholdTest(InjectedCurrent, APThresholdTest):
 
             fig.plot(t, v, label=str('spikes: ')+str(model.get_spike_count()), width=100, height=20)
             fig.show()
-        return super(InjectedCurrentAPThresholdTest, self).\
+
+        # useful to retain inside object.
+        prediction =  super(InjectedCurrentAPThresholdTest, self).\
             generate_prediction(model)
+
+        self.prediction = prediction
+
+        return prediction
 
     def extract_features(self, model):
         prediction = self.generate_prediction(model)

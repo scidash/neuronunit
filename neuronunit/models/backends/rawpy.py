@@ -117,8 +117,7 @@ class RAWBackend(Backend):
     def get_spike_count(self):
         thresh = threshold_detection(self.vM)
         return len(thresh)
-        #print(thresh)
-        #import pdb; pdb.set_trace()
+
 
     def set_stop_time(self, stop_time = 650*pq.ms):
         """Sets the simulation duration
@@ -172,11 +171,13 @@ class RAWBackend(Backend):
         self.set_stop_time(tMax*pq.ms)
         tMax = self.tstop
         if str('dt') in attrs:
-            try:   
-                N = int(tMax/attrs['dt'])
-            except:
-                attrs['dt'] = 0.03
-                N = int(tMax/attrs['dt'])
+            if np.isnan(tMax/attrs['dt']):
+                if np.isnan(attrs['dt']):
+                   attrs['dt'] = 0.03
+                   N = int(tMax/attrs['dt'])
+
+            else:
+               N = int(tMax/attrs['dt'])
         else:
             attrs['dt'] = 0.03
             N = int(tMax/attrs['dt'])

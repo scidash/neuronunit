@@ -79,7 +79,7 @@ class TestPulseTest(ProtocolToFeaturesTest):
                        'n': reference_data.n}
         return observation
 
-    
+
     def compute_params(self):
         super(TestPulseTest, self).compute_params()
         self.params['injected_square_current'] = \
@@ -157,7 +157,7 @@ class TestPulseTest(ProtocolToFeaturesTest):
         Strips units, center, and standardize to avoid precision issues.
         Params:
             segment: A neo AnalogSignal
-            offset: A python quantity of time 
+            offset: A python quantity of time
         Returns:
             amplitude (segment units)
             tau (ms)
@@ -167,7 +167,7 @@ class TestPulseTest(ProtocolToFeaturesTest):
         start = t[0]  # The time of the first point in the segment
         # Shift all time points to be relative to offset
         # i.e. t=0 should be the beginning of the action
-        t = t-offset 
+        t = t-offset
         # The location of the desired offset, relative to segment start,
         # for determining the number of samples until offset
         offset = offset-start
@@ -191,7 +191,7 @@ class TestPulseTest(ProtocolToFeaturesTest):
         guesses = [-1,  # ampl (in s.d.)
                    10,  # tau (implied ms)
                    0]  # y0 (in s.d.)
-        
+
         def func(t, ampl, tau, y0):
             """Produce an exponential function.
 
@@ -201,7 +201,7 @@ class TestPulseTest(ProtocolToFeaturesTest):
             y[:offset] = y0
             y[offset:] = ampl * np.exp(-t[offset:]/tau) + y0
             return y
-        
+
         # Do the curve fit
         popt, pcov = curve_fit(func, t, vm, p0=guesses)
         # Extract the parameters, adding back mean, std, and units
@@ -252,6 +252,7 @@ class InputResistanceTest(TestPulseTest):
             #print("r_in = r_in.simplified")
             #print("Put prediction in a form that compute_score() can use.")
             features = {'value': r_in}
+        self.prediction = features
         return features
     """
     def compute_score(self, observation, prediction):
@@ -301,6 +302,8 @@ class TimeConstantTest(TestPulseTest):
             tau = tau.simplified
             # Put prediction in a form that compute_score() can use.
             features = {'value': tau}
+        self.prediction = features
+
         return features
 
     def compute_score(self, observation, prediction):
@@ -354,6 +357,8 @@ class CapacitanceTest(TestPulseTest):
             else:
                 c = None
             features = {'value': c}
+        self.prediction = features
+
         return features
 
     def compute_score(self, observation, prediction):
@@ -406,6 +411,8 @@ class RestingPotentialTest(TestPulseTest):
             median = model.get_median_vm()  # Use median for robustness.
             std = model.get_std_vm()
             features = {'mean': median, 'std': std}
+        self.prediction = features
+
         return features
 
     def compute_score(self, observation, prediction):
@@ -418,6 +425,7 @@ class RestingPotentialTest(TestPulseTest):
 
             score = super(RestingPotentialTest, self).\
                         compute_score(observation, prediction)
+        self.verbose = False
         if self.verbose:
             print(score)
             print(observation, prediction)

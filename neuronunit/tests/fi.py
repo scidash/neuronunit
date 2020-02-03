@@ -10,8 +10,7 @@ import multiprocessing
 global cpucount
 npartitions = cpucount = multiprocessing.cpu_count()
 from .base import np, pq, ncap, VmTest, scores, AMPL, DELAY, DURATION
-#DURATION = 2000
-#DELAY = 200
+
 from .. import optimisation
 
 from neuronunit.optimisation.data_transport_container import DataTC
@@ -157,10 +156,12 @@ class RheobaseTest(VmTest):
             prediction['value'] = sorted(supra)[1]
         if len(supra) and single_spike_found and str("HH") in str(model._backend.name):
             prediction['value'] = sorted(supra)[0]
+        self.prediction = prediction
         return prediction
 
     def extract_features(self,model):
         prediction = self.generate_prediction(model)
+        self.prediction = prediction
         return prediction
 
     def threshold_FI(self, model, units, guess=None):
@@ -424,8 +425,7 @@ class RheobaseTestP(RheobaseTest):
                     try:
                         steps = np.linspace(1.0,550.0,7.0)
                         steps1 = np.linspace(1,550,7)
-                        print(steps)
-                        print(steps1)
+
                     except:
                         steps = np.linspace(1,550,7)
 
@@ -452,12 +452,10 @@ class RheobaseTestP(RheobaseTest):
                 big = 16
 
             while dtc.boolean == False and cnt< big:
-                #print(cnt)
-                # negeative spiker
+
                 if len(sub):
                     if sub.max() < -1.0:
                         pass
-                        #use_diff = True # differentiate the wave to look for spikes
 
 
                 be = dtc.backend
@@ -575,7 +573,9 @@ class RheobaseTestP(RheobaseTest):
         else:
             prediction['value'] = None
             return prediction
+        self.prediction = prediction
         return prediction
+
 
     def extract_features(self,model):
         prediction = self.generate_prediction(model)

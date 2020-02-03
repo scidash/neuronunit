@@ -44,7 +44,12 @@ j.eval("MU = 3")
 j.eval("NGEN = 1")
 j.eval("using SpikingNeuralNetworks")
 j.eval("using NSGAIII")
+Main.include("julia_run.jl")
 
+#print(Main.varinfo())
+#print(MU,NGEN)
+j.eval("MU = 3")
+j.eval("NGEN = 1")
 
 try:
     vm = pickle.load(open('neuronunit/examples/dummy_wave.p','rb'))

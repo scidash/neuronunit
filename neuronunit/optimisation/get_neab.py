@@ -9,7 +9,8 @@ from neuronunit.tests.fi import RheobaseTestP
 from neuronunit.tests import passive, waveform, druckman2013
 from neuronunit.tests import druckman2013 as dm
 import neuronunit
-anchor = neuronunit.__file__
+#anchor = neuronunit.__file__
+anchor = __file__
 
 import copy
 import sciunit
@@ -218,15 +219,48 @@ def get_all_cells():
 	cell_list = [ olf_mitral, ca1_pyr, purkinje,  pvis_cortex]
 	cell_constraints = {}
 	for cell in cell_list:
-
 	    tests,observations = get_neuron_criteria(cell)
 	    cell_constraints[cell["name"]] = tests
-
-
-
-	with open('russell_tests.p','wb') as f:
+	with open('multicellular_constraints.p','wb') as f:
 	    pickle.dump(cell_constraints,f)
+	return cell_constraints
 
+from sciunit.suites import TestSuite
+import pickle
+def process_all_cells():
+    try:
+        with open('processed_multicellular_constraints.p','rb') as f:
+            filtered_cells = pickle.load(f)
+        return filtered_cells
+    except:
+        try:
+            cell_constraints = pickle.load(open("multicellular_suite_constraints.p","rb"))
+        except:
+	        cell_constraints = get_all_cells()
+
+    filtered_cells = {}
+    for key,cell in cell_constraints.items():
+        filtered_cell_constraints = []
+        if type(cell) is type(dict()):
+	        for t in cell.values():
+	            if t.observation is not None:
+	                if float(t.observation['std']) == 0.0:
+	                    t.observation['std'] = t.observation['mean']
+	                else:
+	                    filtered_cell_constraints.append(t)
+	    #    filtered_cells[key] = TestSuite(filtered_cell_constraints)
+        else:
+	        for t in cell.tests:
+	            if t.observation is not None:
+	                if float(t.observation['std']) == 0.0:
+	                    t.observation['std'] = t.observation['mean']
+	                else:
+	                    filtered_cell_constraints.append(t)
+
+        filtered_cells[key] = TestSuite(filtered_cell_constraints)
+        with open('processed_multicellular_constraints.p','wb') as f:
+           pickle.dump(filtered_cells,f)
+    return filtered_cells
 
 def get_common_criteria():
     purkinje ={"id": 18, "name": "Cerebellum Purkinje cell", "neuron_db_id": 271, "nlex_id": "sao471801888"}
@@ -241,6 +275,8 @@ def get_common_criteria():
     test_frame = {}
 
     try:
+
+
         anchor = os.path.dirname(anchor)
         mypath = os.path.join(os.sep,anchor,'optimisation/all_tests.p')
 
@@ -253,8 +289,8 @@ def get_common_criteria():
     except:
         for p in pipe:
             print(p)
-            p_tests, p_observations = get_obs(p)
-
+            p_observations = get_obs(p)
+            p_tests = p(p_observations)
             obs_frame[p["name"]] = p_observations#, p_tests))
             test_frame[p["name"]] = p_tests#, p_tests))
         electro_path = str(os.getcwd())+'all_tests.p'

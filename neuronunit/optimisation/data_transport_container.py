@@ -180,7 +180,7 @@ class DataTC(object):
             temp = copy.copy(this_test.score_type)
             this_test.score_type = ratio_type
             try:
-                print(this_test.name)
+                #print(this_test.name)
                 self.rscores[rscores.name] = this_test.compute_score(this_test.observation,pred)
 
             except:
@@ -196,9 +196,7 @@ class DataTC(object):
 
     def check_params(self):
         self.judge_test()
-        print(self.rheobase)
-        print(self.vparams)
-        print(self.params)
+
         return self.preds
     def plot_obs(self,ow):
         '''
@@ -234,10 +232,8 @@ class DataTC(object):
 
         pms = uset_t.params
         pms['injected_square_current']['amplitude'] = self.rheobase
-        print(pms)
         model.inject_square_current(pms['injected_square_current'])
         nspike = model.get_spike_train()
-        print(nspike)
         vm = model.get_membrane_potential()
         t = [float(f) for f in vm.times]
         v = [float(f) for f in vm.magnitude]
