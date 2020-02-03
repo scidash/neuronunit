@@ -4,17 +4,23 @@ try
    using Py2Jl
 catch
    Pkg.add("MLStyle")
-   Pkg.add("Py2Jl")
-   using Py2Jl
+Pkg.add("Py2Jl")
+using Py2Jl
 end
 ENV["PYTHON"]="/usr/local/lib/python3.6"
-ENV["PYTHON"]="/usr/bin/python3.6"
-using Pkg
-Pkg.build("PyCall")
 =#
 
+# ENV["PYTHON"]="/usr/bin/python3.6"
+
+
+#ENV["PYTHON"] = "/anaconda3/bin/python"
+#using Pkg
+#Pkg.build("PyCall")
+#using Py2JL
 #using Debugger
 using PyCall
+#Pkg.add("Py2Jl")
+#using Py2Jl
 using Random: bitrand, randperm, shuffle
 using LinearAlgebra: dot
 using UnicodePlots
@@ -45,17 +51,18 @@ SNN = SpikingNeuralNetworks
 
 # using Debugger
 @pyimport(sciunit)
-@pyimport(neuronunit)
-py2jl"""from neuronunit.optimisation import optimization_management as om"""
+@pyimport neuronunit.optimisation.optimization_management as om
+#optimisation = @pyimport(neuronunit.optimisation)
+#py2jl"""from neuronunit.optimisation import optimization_management as om"""
 
 #@pyimport(from neuronunit.optimisation import optimization_management as om)
 
-#=
-py"""
-print("made it")
+py"""from neuronunit.optimisation.optimization_management import TSD
+"""
 py"""
 from neuronunit.optimisation import model_parameters
-from neuronunit.optimisation.optimization_management import TSD
+"""
+py"""from neuronunit.optimisation.optimization_management import TSD
 #from neuronunit.optimisation.optimization_management import score_specific_param_models
 from neuronunit.models import VeryReducedModel as VRM
 from neuronunit.optimisation.optimization_management import inject_and_plot, inject_and_plot_model
@@ -98,7 +105,7 @@ tests = rts['Neocortex pyramidal cell layer 5-6']
 tests = TSD(tests)
 DO = om.make_ga_DO(param_edges,1,tests,free_params=list(param_edges.keys()),backend=backend, MU = 10,  protocol=protocol)
 pre_genes = DO.set_pop()
-
+"""
 using JLD
 try
     load("current.jld")

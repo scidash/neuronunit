@@ -67,11 +67,11 @@ from sklearn.metrics import confusion_matrix
 import pylab as pl
 
 
-from sklearn import preprocessing
-from sklearn.linear_model import SGDClassifier
-from sklearn.metrics import mean_squared_error, r2_score
-from sklearn import preprocessing
-import sklearn
+#from sklearn import preprocessing
+#from sklearn.linear_model import SGDClassifier
+##from sklearn.metrics import mean_squared_error, r2_score
+##from sklearn import preprocessing
+#import sklearn
 import neuronunit.optimisation.model_parameters as model_params
 '''
 #from neuronunit.optimisation.optimization_management import stochastic_gradient_descent
@@ -89,7 +89,7 @@ import neuronunit
 anchor = neuronunit.__file__
 anchor = os.path.dirname(anchor)
 
-mypath = os.path.join(os.sep,anchor,'tests/russell_tests.p')
+mypath = os.path.join(os.sep,anchor,'tests/multicellular_constraints.p')
 #print(anchor,mypath)
 #import pdb; pdb.set_trace()
 rts,complete_map = pickle.load(open(mypath,'rb'))
