@@ -87,21 +87,21 @@ def test_all_tests_pop(dtcpop, tests):
         assert len(list(d.attrs.values())) > 0
 
     dtcpop = list(map(dtc_to_rheo,dtcpop))
-
+    print([for d in dtcpop],len(dtcpop))
     for d in dtcpop:
         d.tests = all_tests
         d.backend = str('RAW')
         assert len(list(d.attrs.values())) > 0
-    try:
-        b0 = db.from_sequence(dtcpop, npartitions=4)
+    if len(dtcpop)>2:
+        b0 = db.from_sequence(dtcpop, npartitions=2)
         dtcpop = list(b0.map(format_test).compute())
-        b0 = db.from_sequence(dtcpop, npartitions=4)
+        b0 = db.from_sequence(dtcpop, npartitions=2)
         dtcpop = list(b0.map(elephant_evaluation).compute())
-        assert True
-    except:
-        dtcpop = map(format_test,dtcpop)
-        dtcpop = map(elephant_evaluation,dtcpop) 
-        assert False
+        #assert True
+    else:
+        dtcpop = list(map(format_test,dtcpop))
+        dtcpop = list(map(elephant_evaluation,dtcpop)) 
+        #assert False
     return dtcpop
 
 class testLowLevelOptimisation(unittest.TestCase):
@@ -123,7 +123,7 @@ class testLowLevelOptimisation(unittest.TestCase):
         except:
             pass
         self.test_frame = get_neab.process_all_cells()
-        self.electro_tests = get_neab.replace_zero_std(self.electro_tests)
+        #self.electro_tests = get_neab.replace_zero_std(self.electro_tests)
         #_ = pd.DataFrame(self.test_frame)
 
         self.electro_tests = {key:val for key,val in self.test_frame.items() }# if len(val) ==8}
@@ -131,6 +131,7 @@ class testLowLevelOptimisation(unittest.TestCase):
 
         self.test_rheobase_dtc = test_rheobase_dtc
         self.dtcpop = test_rheobase_dtc(dtcpop,self.electro_tests)
+        print(self.dtcpop,len(self.dtcpop))
         self.dtcpop = test_all_tests_pop(self.dtcpop,self.electro_tests)
         self.dtc = self.dtcpop[0]
         self.rheobase = self.dtc.rheobase
