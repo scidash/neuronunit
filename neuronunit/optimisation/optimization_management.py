@@ -105,7 +105,7 @@ import neuronunit
 anchor = neuronunit.__file__
 anchor = os.path.dirname(anchor)
 mypath = os.path.join(os.sep,anchor,'tests/multicellular_constraints.p')
-from neuronunit.optimisation import mint_tests,get_neab
+from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.optimisations import WeightedSumFitness
 
 tests = get_neab.process_all_cells()
@@ -373,6 +373,7 @@ def random_p(backend):
 @cython.wraparound(False)
 def process_rparam(backend):
     random_param = random_p(backend)
+    """
     if 'RAW' in str(backend):
         random_param.pop('Iext',None)
         rp = random_param
@@ -382,12 +383,17 @@ def process_rparam(backend):
         random_param.pop('Iext',None)
         rp = random_param
         chosen_keys = rp.keys()
-
+    """
     if 'GLIF' in str(backend):
         random_param['init_AScurrents'] = [0.0,0.0]
         random_param['asc_tau_array'] = [0.3333333333333333,0.01]
         rp = random_param
         chosen_keys = rp.keys()
+    else:
+        random_param.pop('Iext',None)
+        rp = random_param
+        chosen_keys = rp.keys()
+
 
     dsolution = DataTC()
     dsolution.attrs = rp
@@ -1858,7 +1864,14 @@ class OptMan():
 
 
 
-    def round_trip_test(self,tests,backend,free_paramaters=None,NGEN=None,MU=None,mini_tests=None,stds=None):
+    def round_trip_test(self,
+                        tests,
+                        backend,
+                        free_paramaters=None,
+                        NGEN=None,
+                        MU=None,
+                        mini_tests=None,
+                        stds=None):
         from neuronunit.optimisation.optimisations import run_ga
 
 
@@ -1968,9 +1981,12 @@ class OptMan():
                     results[k] = copy.copy(ga_out['pf'][0].dtc.scores)
 
             else:
-                temp = new_tests['RheobaseTest'].observation
+                if 'RheobaseTest' in new_tests.keys():
+                    temp = new_tests['RheobaseTest'].observation
+                else:
+                    return
 
-                if type(temp) is not type({'0':1}):
+                if type(temp) is not type(dict()):
                     new_tests['RheobaseTest'].observation = {}
                     new_tests['RheobaseTest'].observation['value'] = temp#*pq.pA
                     new_tests['RheobaseTest'].observation['mean'] = temp#*pq.pA
@@ -1994,7 +2010,12 @@ class OptMan():
                     except:
                         import pdb
                         pdb.set_trace()
-                ga_out, DO = run_ga(ranges,NGEN,new_tests,free_params=chosen_keys, MU = MU, backend=backend,\
+                ga_out, DO = run_ga(ranges,
+                                    NGEN,
+                                    new_tests,
+                                    free_params=chosen_keys,
+                                    MU = MU,
+                                    backend=backend,\
                     selection=str('selNSGA2'),protocol={'elephant':True,'allen':False})
                 results = copy.copy(ga_out['pf'][0].dtc.scores)
             ga_converged = [ p.dtc for p in ga_out['pf'][0:2] ]
