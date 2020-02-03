@@ -93,9 +93,9 @@ def test_all_tests_pop(dtcpop, tests):
         d.backend = str('RAW')
         assert len(list(d.attrs.values())) > 0
     try:
-        b0 = db.from_sequence(dtcpop, npartitions=8)
+        b0 = db.from_sequence(dtcpop, npartitions=4)
         dtcpop = list(b0.map(format_test).compute())
-        b0 = db.from_sequence(dtcpop, npartitions=8)
+        b0 = db.from_sequence(dtcpop, npartitions=4)
         dtcpop = list(b0.map(elephant_evaluation).compute())
         assert True
     except:

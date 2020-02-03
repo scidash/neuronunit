@@ -44,6 +44,9 @@ from neuronunit.optimisation.optimisations import run_ga
 from neuronunit.optimisation import model_parameters
 from neuronunit.optimisation import mint_tests
 from neuronunit.optimisation import get_neab
+
+from IPython.display import HTML, display
+
 test_frame = get_neab.process_all_cells()
 test_frame.pop('Olfactory bulb (main) mitral cell',None)
 
@@ -51,9 +54,9 @@ def permutations(use_test,backend):
     use_test = TSD(use_test)
     use_test.use_rheobase_score = True
     edges = model_parameters.MODEL_PARAMS[backend]
-    ga_out = use_test.optimize(edges,backend=backend,\
+    ga_out0 = use_test.optimize(edges,backend=backend,\
         protocol={'allen': False, 'elephant': True}, MU=2,NGEN=1)
-    use_test.optimize(edges,backend=backend,\
+    ga_out1 =  use_test.optimize(edges,backend=backend,\
         protocol={'allen': False, 'elephant': True},\
             MU=2,NGEN=1,seed_pop=ga_out['pf'][0])
 
@@ -66,21 +69,12 @@ def permutations(use_test,backend):
     vm,plt = inject_and_plot_model(dtc.attrs,dtc.backend)
     plt.plot(vm.times,vm.magnitude)
 
-    return dtc, ga_out['DO'], OM
+    return dtc, ga_out['DO'], OM, vm
 
 
 
 
-for t in test_frame.values():
-    #print(t,b)
-    break
 
-
-from IPython.display import HTML, display
-#(dtc,DO,OM) = permutations(copy.copy(test_frame['Neocortex pyramidal cell layer 5-6']),"RAW")
-
-#display(dtc.SM)
-#display(dtc.obs_preds)
 
 
 
@@ -89,11 +83,9 @@ backends = ["RAW","HH","ADEXP","BHH"]
 OMObjects = []
 for t in test_frame.values():
     for b in backends:
-        (dtc,DO,OM) = permutations(copy.copy(t),b)
+        (dtc,DO,OM,vm) = permutations(copy.copy(t),b)
         OMObjects.append(OM)
         rt_out = OM.round_trip_test(use_test,b)
-        #break
-    #break
-#DO.
+
 display(dtc.SM)
 display(dtc.obs_preds)
