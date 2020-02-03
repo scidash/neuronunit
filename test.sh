@@ -4,7 +4,7 @@
 #UNIT_TEST_SUITE="setup.py test"
 #coverage run -m --source=. --omit=*unit_test*,setup.py,.eggs $UNIT_TEST_SUITE
 coverage run neuronunit/unit_test/working/backend_tests.py
-python-jl neuronunit/unit_test/working/backend_test_julia.py
+#python-jl neuronunit/unit_test/working/backend_test_julia.py
 coverage run neuronunit/unit_test/working/small_test.py
 coverage run neuronunit/unit_test/working/low_level_test.py
 
