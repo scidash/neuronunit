@@ -2,31 +2,34 @@
 # but it calls many modules that are, such that it needs to pre-empt
 import warnings
 
-try:
-    matplotlib.use('agg')
-except:
-    warnings.warn('X11 plotting backend not available, consider installing')
-
-
+SILENT = True
+if SILENT:
+    warnings.filterwarnings("ignore")
 # setting of an appropriate backend.
 # optional imports
 import matplotlib
+JULIA = True
+if JULIA:
+    pass
+else:
+    try:
+        matplotlib.use('agg')
+    except:
+        warnings.warn('X11 plotting backend not available, consider installing')
+
 import cython
 import logging
 
 # optional imports
 
-SILENT = True
 
-if SILENT:
-    warnings.filterwarnings("ignore")
 
 PARALLEL_CONFIDENT = True
 # Rationale Many methods inside the file optimization_management.py cannot be easily monkey patched using
 #```pdb.set_trace()``` unless at the top of the file,
 # the parallel_confident static variable is declared false
-# This converts parallel mapping functions to serial mapping functions. s
-# cheduled Parallel mapping functions cannot tolerate being paused, serial ones can.
+# This converts parallel mapping functions to serial mapping functions.
+# scheduled Parallel mapping functions cannot tolerate being paused, serial ones can.
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -35,11 +38,14 @@ import pandas as pd
 import pickle
 # The rheobase has been obtained seperately and cannot be db mapped.
 # Nested DB mappings dont work.
+
+print('a')
 import multiprocessing
 npartitions = multiprocessing.cpu_count()
 from sklearn.model_selection import ParameterGrid
 from collections import OrderedDict
 import cython
+print('b')
 
 
 
@@ -53,12 +59,16 @@ except:
     pass
 from neuronunit.optimisation.data_transport_container import DataTC
 
-from neuronunit.optimisation.model_parameters import path_params
-from neuronunit.optimisation import model_parameters as modelp
 from itertools import repeat
 from neuronunit.tests.base import AMPL, DELAY, DURATION
 #from neuronunit.models import ReducedModel
+print('c')
+
 from neuronunit.optimisation.model_parameters import MODEL_PARAMS
+
+#from neuronunit.optimisation.model_parameters import path_params
+#from neuronunit.optimisation import model_parameters as modelp
+print('d')
 from collections.abc import Iterable
 from neuronunit.tests import dm_test_container #import Interoperabe
 from neuronunit.tests.base import VmTest
@@ -206,22 +216,21 @@ def make_ga_DO(explore_edges, max_ngen, test, \
         DO.error_length = len(test)
 
     return DO
-
+'''
 from sciunit import TestSuite
 
 class TSS(TestSuite):
     def __init__(self,tests={},use_rheobase_score=False):
        self.DO = None
        tt = list(tests.values())[0:-1]
-       super(TSD,self).__init__(tt)
+       super(TSS,self).__init__(tt)
        #self.update(tests)
-       '''
        if 'name' in self.keys():
            self.cell_name = tests['name']
            self.pop('name',None)
        else:
            self.cell_name = 'simulated data'
-       '''
+
        self.use_rheobase_score = use_rheobase_score
        self.elaborate_plots  = elaborate_plots
        self.backend = None
@@ -250,12 +259,12 @@ class TSS(TestSuite):
             #p in ga_out['pf']],pop=ga_out['pf'])
         print(dtcpop[0].dtc.dm_test_features)
         self.backend = backend
-        '''
+
         if str(self.cell_name) not in str('simulated data'):
             #pass
             # is this a data driven test? if so its worth plotting results
             ga_out = self.elaborate_plots(self,ga_out)
-        '''
+
         ##
         # TODO populate a score table pass it back to DO.OM
         from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
@@ -263,7 +272,7 @@ class TSS(TestSuite):
         SM = ScoreMatrix([v for v in self.values()], [ind.dtc.dtc_to_model() for ind in ga_out['pf']])
         return ga_out, self.DO, SM
 
-
+'''
 
 class TSD(dict):
     def __init__(self,tests={},use_rheobase_score=False):
@@ -318,54 +327,6 @@ class TSD(dict):
         SM = ScoreMatrix([v for v in self.values()], [ind.dtc.dtc_to_model() for ind in ga_out['pf']])
         return ga_out, self.DO, SM
 
-'''
-class TSD(dict):
-    def __init__(self,tests={},use_rheobase_score=False):
-       super(TSD,self).__init__()
-       self.update(tests)
-       if 'name' in self.keys():
-           self.cell_name = tests['name']
-           self.pop('name',None)
-       else:
-           self.cell_name = 'simulated data'
-
-       self.use_rheobase_score = use_rheobase_score
-       self.elaborate_plots  = elaborate_plots
-       self.backend = None
-
-
-    def optimize(self,param_edges,backend=None,protocol={'allen': False, 'elephant': True},\
-        MU=5,NGEN=5,free_params=None,seed_pop=None,hold_constant=None):
-        from neuronunit.optimisation.optimisations import run_ga
-        if type(free_params) is type(None):
-            free_params=param_edges.keys()
-        #experimental_name = self.cell_name
-        ga_out,DO = run_ga(param_edges, NGEN, self, free_params=free_params, \
-                           backend=backend, MU = 8,  protocol=protocol,seed_pop = seed_pop, hc=hold_constant)
-        self.backend = backend
-        if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
-            _,dtc_pop = DO.OM.test_runner(ga_out['pf'],DO.OM.td,DO.OM.tests)
-            ga_out['dtc_pop'] = dtc_pop
-        if str(self.cell_name) not in str('simulated data'):
-            ga_out = self.elaborate_plots(self,ga_out)
-
-
-        from sciunit.scores.collections import ScoreMatrix#(pd.DataFrame, SciUnit, TestWeighted)
-
-        ##
-        # TODO populate a score table pass it back to DO.OM
-
-        return ga_out, DO
-from sciunit.suites import TestSuite# as TSuite
-
-class TSS(TestSuite):
-    def __init__(self,tests=[],use_rheobase_score=False):
-       super(TSD,self).__init__()
-       self.update(tests)
-       self.use_rheobase_score=use_rheobase_score
-    def optimize(self,param_edges,backend=None,protocol={'allen': False, 'elephant': True},MU=5,NGEN=5,free_params=None,seed_pop=None):
-        pass
-'''
 # DEAP mutation strategies:
 # https://deap.readthedocs.io/en/master/api/tools.html#deap.tools.mutESLogNormal
 class WSFloatIndividual(float):
@@ -2189,7 +2150,8 @@ class OptMan():
             MU = 10
         ranges = MODEL_PARAMS[backend]
         #self.simulated_obs = True
-
+        import pdb
+        pdb.set_trace()
         if self.protocol['allen']:
             dtc = False
             while dtc is False or type(new_tests) is type(None):

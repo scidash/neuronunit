@@ -5,8 +5,10 @@ from julia import Main
 #jl.eval('Pkg.dev("https://github.com/russelljjarvis/SpikingNeuralNetworks.jl")')
 jl.eval("using SpikingNeuralNetworks")
 jl.eval("SNN = SpikingNeuralNetworks")
-jl.eval('include("units.jl")')
-jl.eval('include("plot.jl")')
+import pathlib
+anchor = pathlib.Path(__file__).parent.absolute()
+jl.eval('include("'+str(anchor)+'/units.jl")')
+jl.eval('include("'+str(anchor)+'/plot.jl")')
 # Main.eval("using Debugger")
  
 import io
@@ -22,8 +24,8 @@ from quantities import V as qV
 import matplotlib as mpl
 
 from neuronunit.capabilities import spike_functions as sf
-mpl.use('Agg')
-import matplotlib.pyplot as plt
+#mpl.use('Agg')
+#import matplotlib.pyplot as plt
 from elephant.spike_train_generation import threshold_detection
 ascii_plot = True
 
