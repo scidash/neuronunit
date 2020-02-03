@@ -12,6 +12,7 @@ from neuronunit.optimisation.optimization_management import dtc_to_rheo
 from neuronunit.optimisation.optimization_management import OptMan # elephant_evaluation
 from itertools import repeat
 import quantities as pq
+elephant_evaluation = OptMan.elephant_evaluation
 format_test = OptMan.format_test
 from neuronunit.optimisation import mint_tests
 
@@ -62,7 +63,7 @@ def grid_points():
     USE_CACHED_GS = False
     grid_points = exhaustive_search.create_grid(npoints = npoints,free_params=free_params)
     dtcpop = []
-    for g in list(grid_points)[0:2]:
+    for g in list(grid_points)[0:11]:
         dtc = data_transport_container.DataTC()
         dtc.attrs = g
         dtcpop.append(dtc)
@@ -91,12 +92,16 @@ def test_all_tests_pop(dtcpop, tests):
         d.tests = all_tests
         d.backend = str('RAW')
         assert len(list(d.attrs.values())) > 0
-
-    b0 = db.from_sequence(dtcpop, npartitions=8)
-    dtcpop = list(db.map(format_test,b0).compute())
-
-    b0 = db.from_sequence(dtcpop, npartitions=8)
-    dtcpop = list(db.map(nunit_evaluation,b0).compute())
+    try:
+        b0 = db.from_sequence(dtcpop, npartitions=8)
+        dtcpop = list(b0.map(format_test).compute())
+        b0 = db.from_sequence(dtcpop, npartitions=8)
+        dtcpop = list(b0.map(elephant_evaluation).compute())
+        assert True
+    except:
+        dtcpop = map(format_test,dtcpop)
+        dtcpop = map(elephant_evaluation,dtcpop) 
+        assert False
     return dtcpop
 
 class testLowLevelOptimisation(unittest.TestCase):
