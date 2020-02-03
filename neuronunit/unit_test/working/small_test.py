@@ -36,8 +36,11 @@ from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
 from neuronunit import aibs
 from neuronunit.optimisation.optimisations import run_ga
 from neuronunit.optimisation import model_parameters
-from neuronunit.optimisation import mint_tests
+#from neuronunit.optimisation import mint_tests
 
+OM = OptMan
+format_test = OM.format_test
+elephant_evaluation = OM.elephant_evaluation
 def test_all_tests_pop(dtcpop, tests):
 
     rheobase_test = [tests[0]['Hippocampus CA1 pyramidal cell']['RheobaseTest']]
@@ -49,9 +52,6 @@ def test_all_tests_pop(dtcpop, tests):
         assert len(list(d.attrs.values())) > 0
 
     dtcpop = list(map(dtc_to_rheo,dtcpop))
-    OM = OptMan(all_tests,simulated_obs=False)
-    format_test = OM.format_test
-    elephant_evaluation = OM.elephant_evaluation
 
     b0 = db.from_sequence(dtcpop, npartitions=8)
     dtcpop = list(db.map(format_test,b0).compute())
@@ -72,32 +72,11 @@ def grid_points():
     assert dtcpop is not None
     return dtcpop
 
+from neuronunit.optimisation import get_neab
+
 class testHighLevelOptimisation(unittest.TestCase):
 
     def setUp(self):
-        import neuronunit
-        anchor = neuronunit.__file__
-        anchor = os.path.dirname(anchor)
-        electro_path = os.path.join(os.sep,anchor,'tests/multicellular_constraints.p')
-        os.path.isfile(electro_path)
-        #electro_path = str(os.getcwd())+'/../../tests/russell_tests.p'
-        """
-        if os.path.isfile(electro_path):
-            try:
-                assert os.path.isfile(electro_path) == True
-            except:
-                print('Exception')
-            with open(electro_path,'rb') as f:
-                try:
-                    self.test_frame = pickle.load(f)
-                except:
-                    (self.test_frame,self.obs_frame) = pickle.load(f)
-        else:
-            self.test_frame = mint_tests.get_cell_constraints()
-            df = pd.DataFrame(rts)
-
-        """
-        from neuronunit.optimisation import get_neab
         self.test_frame = get_neab.process_all_cells()
         self.test_frame = {k:tf for k,tf in self.test_frame.items() if len(tf.tests)>0 }
         for testsuite in self.test_frame.values():
@@ -132,7 +111,10 @@ class testHighLevelOptimisation(unittest.TestCase):
                 ]
         self.light_backends = [
                     str('RAWBackend'),
-                    str('ADEXPBackend')
+                    str('ADEXPBackend'),
+                    str('HHBackend'),
+                    str('BHHBackend')
+
                 ]
         self.medium_backends = [
                     str('GLIFBackend')
@@ -165,13 +147,13 @@ class testHighLevelOptimisation(unittest.TestCase):
            MU=5,NGEN=5,free_params=None,seed_pop=None,hold_constant=None)
 
         adconv = [ p.dtc for p in ga_out['pf'] ]
-        for dtc in adconv: 
+        for dtc in adconv:
             dtc.tests ={ k:v for k,v in dtc.tests.items() }
         try:
 
             for dtc in adconv:
                 for attr, value in dtc.__dict__.items():
-                    with open('temp.p','wb') as f: 
+                    with open('temp.p','wb') as f:
                         pickle.dump([attr,value],f)
 
             with open('jda.p','wb') as f:
