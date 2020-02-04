@@ -229,11 +229,13 @@ from sciunit.suites import TestSuite
 import pickle
 def process_all_cells():
     try:
+        assert 1==2
         with open('processed_multicellular_constraints.p','rb') as f:
             filtered_cells = pickle.load(f)
         return filtered_cells
     except:
         try:
+            assert 1==2
             cell_constraints = pickle.load(open("multicellular_suite_constraints.p","rb"))
         except:
 	        cell_constraints = get_all_cells()
