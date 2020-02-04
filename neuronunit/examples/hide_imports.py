@@ -100,4 +100,4 @@ import os
 #rts,complete_map = pickle.load(open(mypath),'rb')
 from neuronunit.optimisation import get_neab
 rts = get_neab.process_all_cells()
-local_tests = [value for value in rts['Hippocampus CA1 pyramidal cell'].values() ]
+local_tests = [value for value in rts['Hippocampus CA1 pyramidal cell'].tests ]

@@ -14,7 +14,7 @@ SILENT = True
 if SILENT:
     warnings.filterwarnings("ignore")
 
-PARALLEL_CONFIDENT = False
+PARALLEL_CONFIDENT = True
 # Rationale Many methods inside the file optimization_management.py cannot be easily monkey patched using
 #```pdb.set_trace()``` unless at the top of the file,
 # the parallel_confident static variable is declared false
@@ -594,8 +594,11 @@ def get_rh(dtc,rtest_class):
     place_holder = {'n': 86, 'mean': 10 * pq.pA, 'std': 10 * pq.pA, 'value': 10 * pq.pA}
     backend_ = dtc.backend
     if 'ADEXP' in backend_ or 'GLIF' in backend_ or 'BHH' in backend_:
-        rtest = RheobaseTestP(observation=place_holder,
+        rtest = RheobaseTest(observation=place_holder,
                                 name='RheobaseTest')
+
+        #rtest = RheobaseTestP(observation=place_holder,
+        #                        name='RheobaseTest')
     else:
         rtest = RheobaseTest(observation=place_holder,
                          name='RheobaseTest')
@@ -2312,7 +2315,7 @@ class OptMan():
 
             if str('RheobaseTest') in original_test_dic.keys():
                 dtc = get_rh(dtc,original_test_dic['RheobaseTest'])
-                if type(dtc.rheobase) is type({'1':0}):
+                if type(dtc.rheobase) is type(dict()):
                     if dtc.rheobase['value'] is None:
                         return False, dtc
                 elif type(dtc.rheobase) is type(float(0.0)):
@@ -2322,15 +2325,19 @@ class OptMan():
             xtests = list(copy.copy(original_test_dic).values())
 
             dtc.tests = xtests
-            mean = True
-            for t in xtests:
+            simulated_observations = {}
+            xtests = [t for t in xtests if 'mean' in t.observation.keys() or 'value' in t.observation.keys() ]
+            for i,t in enumerate(xtests):
                 if 'mean' in t.observation.keys():
-                    mean = True
+                    simulated_observations[t.name] = copy.copy(t.observation['mean'])
+                elif 'value' in t.observation.keys():
+                    simulated_observations[t.name] = copy.copy(t.observation['value'])
                 else:
-                    mean = False
-            if mean:
-                simulated_observations = {t.name:copy.copy(t.observation['mean']) for t in xtests}
-                simulated_observations = {k:v for k,v in simulated_observations.items() if v is not None}
+                    return (dtc,False)
+
+            #if False not in set(means):
+            #    simulated_observations = {t.name:copy.copy(t.observation['mean']) for t in xtests}
+            #    simulated_observations = {k:v for k,v in simulated_observations.items() if v is not None}
             dtc.observation = simulated_observations
             dtc = self.pred_evaluation(dtc)
 
@@ -2682,20 +2689,22 @@ class OptMan():
                 d.error_length = self.error_length
                 ind.error_length = self.error_length
         pop,dtcpop = self.parallel_route(pop, dtcpop, tests, td)#, clustered=False)
-        both = [(ind,dtc) for ind,dtc in zip(pop,dtcpop) if dtc.scores is not None]
+        both = [(ind,dtc) for ind,dtc in zip(pop,dtcpop) if dtc.SM.score is not None]
         for ind,d in both:
             ind.dtc = None
             ind.dtc = d
-            if d.scores is not None:
+            if d.SM.score is not None:
                 ind = copy.copy(both[0][0])
                 d = copy.copy(both[0][1])
 
             if not hasattr(ind,'fitness'):
                 ind.fitness = copy.copy(pop_[0].fitness)
                 for i,v in enumerate(list(ind.fitness.values)):
-                    ind.fitness.values[i] = list(ind.dtc.evaluate.values())[i]
-        pop = [ ind for ind,d in zip(pop,dtcpop) if d.scores is not None ]
-        dtcpop = [ d for ind,d in zip(pop,dtcpop) if d.scores is not None ]
+                    ind.fitness.values[i] = list(ind.dtc.SM.score.values())[i]
+        #import pdb
+        #pdb.set_trace()
+        pop = [ ind for ind,d in zip(pop,dtcpop) if d.SM.score is not None ]
+        dtcpop = [ d for ind,d in zip(pop,dtcpop) if d.SM.score is not None ]
         return pop,dtcpop
 
     @timer
