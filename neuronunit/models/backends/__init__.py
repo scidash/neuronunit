@@ -44,15 +44,18 @@ def check_backend(partial_path):
         msg += '\n%s' % e
         print(msg)
         #warnings.warn(msg)
-        return None
+        return (None, None)
     else:
         return (backend.name, backend)
     
-available_backends = {}
-for backend_path in backend_paths:
-    result = check_backend(backend_path)
-    if result is not None:
-        name, backend = result
-        available_backends[name] = backend
-
-#su_backends.register_backends(available_backends)
+def register_backends(backend_paths):
+    provided_backends = {}
+    for partial_path in backend_paths:
+        name, backend = check_backend(partial_path)
+        if name is not None:
+            provided_backends[name] = backend
+    print(provided_backends)
+    su_backends.register_backends(provided_backends)
+    
+register_backends(backend_paths)
+available_backends = su_backends.available_backends
