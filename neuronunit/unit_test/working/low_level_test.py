@@ -14,7 +14,17 @@ from itertools import repeat
 import quantities as pq
 elephant_evaluation = OptMan.elephant_evaluation
 format_test = OptMan.format_test
-from neuronunit.optimisation import mint_tests
+
+def format_test_(dtc):
+    from neuronunit.optimisation.optimization_management import OptMan # elephant_evaluation
+    dtc = OptMan.format_test(OptMan,dtc)
+    return dtc
+
+def elephant_evaluation_(dtc):
+    from neuronunit.optimisation.optimization_management import OptMan # elephant_evaluation
+    dtc = OptMan.elephant_evaluation(OptMan,dtc)
+    return dtc
+#from neuronunit.optimisation import mint_tests
 
 
 from neuronunit.models.reduced import ReducedModel, VeryReducedModel
@@ -87,21 +97,20 @@ def test_all_tests_pop(dtcpop, tests):
         assert len(list(d.attrs.values())) > 0
 
     dtcpop = list(map(dtc_to_rheo,dtcpop))
-    print([for d in dtcpop],len(dtcpop))
+    print([d for d in dtcpop],len(dtcpop))
     for d in dtcpop:
         d.tests = all_tests
         d.backend = str('RAW')
         assert len(list(d.attrs.values())) > 0
     if len(dtcpop)>2:
+        
         b0 = db.from_sequence(dtcpop, npartitions=2)
-        dtcpop = list(b0.map(format_test).compute())
+        dtcpop = list(b0.map(format_test_).compute())
         b0 = db.from_sequence(dtcpop, npartitions=2)
-        dtcpop = list(b0.map(elephant_evaluation).compute())
-        #assert True
+        dtcpop = list(b0.map(elephant_evaluation_).compute())
     else:
-        dtcpop = list(map(format_test,dtcpop))
-        dtcpop = list(map(elephant_evaluation,dtcpop)) 
-        #assert False
+        dtcpop = list(map(format_test_,dtcpop))
+        dtcpop = list(map(elephant_evaluation_,dtcpop))
     return dtcpop
 
 class testLowLevelOptimisation(unittest.TestCase):
@@ -383,26 +392,33 @@ class testLowLevelOptimisation(unittest.TestCase):
         self.assertNotEqual(self.rheobase,None)
         self.dtc.attrs = self.model.attrs
 
+    def test_parallel_sciunit(self):
+        for tests in self.test_frame:
+            suite = TestSuite(tests)
+            SM = suite.judge(self.standard_model,parallel=True)
+            #self.assertTrue(SM.scores)
+
+
 
     def test_inputresistance(self):
         from neuronunit.tests.passive import InputResistanceTest as T
         score = self.run_test(T)
-        self.assertTrue(-0.6 < float(score.log_norm_score) < -0.5)
+        self.assertTrue(-0.6 < float(score.norm_score) < -0.5)
 
     def test_restingpotential(self):
         from neuronunit.tests.passive import RestingPotentialTest as T
         score = self.run_test(T)
-        self.assertTrue(1.2 < score < 1.3)
+        self.assertTrue(1.2 < float(score.norm_score) < 1.3)
 
     def test_capacitance(self):
         from neuronunit.tests.passive import CapacitanceTest as T
         score = self.run_test(T)
-        self.assertTrue(-0.15 < score < -0.05)
+        self.assertTrue(-0.15 < float(score.norm_score) < -0.05)
 
     def test_timeconstant(self):
         from neuronunit.tests.passive import TimeConstantTest as T
         score = self.run_test(T)
-        self.assertTrue(-1.45 < score < -1.35)
+        self.assertTrue(-1.45 < float(score.norm_score) < -1.35)
 
 
 
@@ -417,13 +433,6 @@ class testLowLevelOptimisation(unittest.TestCase):
     def test_ap_amplitude(self):
 
         from neuronunit.tests.waveform import InjectedCurrentAPAmplitudeTest as T
-        #from neuronunit.optimisation.optimisation_management import format_test
-        #from neuronunit.optimisation import data_transport_container
-        #dtc = data_transport_container.DataTC()
-        #dtc.rheobase = self.rheobase
-        #def run_test(self, cls, pred =None):
-        #dtc = format_test(dtc)
-        #self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend=('NEURON',{'DTC':dtc}))
 
         score = self.run_test(T,pred=self.rheobase)
         self.assertTrue(-1.7 < score < -1.6)
@@ -433,7 +442,7 @@ class testLowLevelOptimisation(unittest.TestCase):
         from neuronunit.tests.waveform import InjectedCurrentAPThresholdTest as T
         dtc = data_transport_container.DataTC()
         dtc.rheobase = self.rheobase
-        dtc = format_test(dtc)
+        dtc = format_test_(dtc)
         try:
             self.model = VeryReducedModel(backend=('RAW',{'DTC':dtc}))
         except:
