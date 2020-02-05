@@ -14,7 +14,7 @@ SILENT = True
 if SILENT:
     warnings.filterwarnings("ignore")
 
-PARALLEL_CONFIDENT = True
+PARALLEL_CONFIDENT = False
 # Rationale Many methods inside the file optimization_management.py cannot be easily monkey patched using
 #```pdb.set_trace()``` unless at the top of the file,
 # the parallel_confident static variable is declared false
@@ -107,10 +107,10 @@ anchor = os.path.dirname(anchor)
 mypath = os.path.join(os.sep,anchor,'tests/multicellular_constraints.p')
 from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.optimisations import WeightedSumFitness
-
+pq.PREFERRED = [pq.mV, pq.pA, pq.UnitQuantity('femtocoulomb', 1e-15*pq.C, 'fC')]
+import sciunit
+sciunit.utils.settings['LOGGING'] = False
 tests = get_neab.process_all_cells()
-#import pdb
-#pdb.set_trace()
 for t in tests.values():
     helper_tests = [value for value in t.tests ]
     break
@@ -1519,21 +1519,15 @@ def dtc_to_predictions(dtc):
         dtc.preds[t.name] = preds
     return dtc
 
-def evaluate_allen(dtc,regularization=True):
+def evaluate_allen(dtc):
     # assign worst case errors, and then over write them with situation informed errors as they become available.
     fitness = [ 1.0 for i in range(0,len(dtc.ascores)) ]
-    if regularization:
-        fitness0 = (t**(1.0/2.0) for int_,t in enumerate(dtc.ascores.keys()))
-        fitness1 = (np.abs(t) for int_,t in enumerate(dtc.ascores.keys()))
-        fitness = [ (fitness1[i]+j)/2.0 for i,j in enumerate(fitness0)]
-        return tuple(fitness,)
+    if dtc.ascores[str(t)] is None:
+        fitness[int_] = 1.0
     else:
-        if dtc.ascores[str(t)] is None:
-            fitness[int_] = 1.0
-        else:
-            fitness[int_] = dtc.ascores[str(t)]
+        fitness[int_] = dtc.ascores[str(t)]
     return tuple(fitness,)
-
+"""
 def evaluate_sm(dtc,regularization=False,elastic_net=False):
     # assign worst case errors, and then over write them with situation informed errors as they become available.
 
@@ -1543,14 +1537,15 @@ def evaluate_sm(dtc,regularization=False,elastic_net=False):
     for key,value in zip(dtc.SM.keys(),dtc.SM.values()):
         fitness.append(float(value))
     return tuple(fitness,)
-
-def evaluate(dtc,regularization=False,elastic_net=False):
+"""
+def evaluate(dtc):
     # assign worst case errors, and then over write them with situation informed errors as they become available.
-    if not hasattr(dtc,str('SM')):
+    if not hasattr(dtc,str('SA')):
         return []
     else:
-
-        fitness = tuple(dtc.SM.score.values[0],)
+        ordered_score = dtc.ordered_score()
+        fitness = [v.score for v in ordered_score.values()]
+        fitness = tuple(fitness,)
         return fitness
 
 def get_trans_list(param_dict):
@@ -1604,12 +1599,10 @@ def which_thing(thing):
     return thing
 
 def which_key(thing):
-
-    if 'value' in thing.keys():
-        return 'value'
     if 'mean' in thing.keys():
         return 'mean'
-
+    if 'value' in thing.keys():
+        return 'value'
 def simple_error(observation,prediction,t):
     observation = which_thing(observation)
     prediction = which_thing(prediction)
@@ -1865,6 +1858,13 @@ class OptMan():
 
         return pop, dtcpop
 
+    def closeness(self,left,right):
+        closeness_ = {}
+        for k in left.keys():
+            lp = left[k].prediction
+            rp = right[k].prediction
+            closeness_[k] = np.abs(lp-rp)
+        return closeness_
 
 
     def round_trip_test(self,
@@ -2027,9 +2027,10 @@ class OptMan():
                 print(ga_out['pf'][0].dtc.scores)
                 print(results)
                 print(ga_out['pf'][0].dtc.attrs)
-
+            left = ga_out['pf'][0].dtc.tests
+            closeness_ = self.closeness(left,new_tests)
             #inject_and_plot(ga_converged,second_pop=test_origin_target,third_pop=[ga_converged[0]],figname='not_a_problem.png',snippets=True)
-            return ga_out,ga_converged,test_origin_target,new_tests
+            return ga_out,ga_converged,test_origin_target,new_tests,closeness_
 
     def grid_search(self,explore_ranges,test_frame,backend=None):
         '''
@@ -2221,11 +2222,21 @@ class OptMan():
         if not hasattr(dtc,'scores') or dtc.scores is None:
             dtc.scores = None
             dtc.scores = {}
+            if hasattr(dtc,'SA'):
+                import pdb
+                pdb.set_trace()
+
         dtc.tests = self.preprocess(dtc)
         if PARALLEL_CONFIDENT is False:
             suite = TestSuite(dtc.tests)
-            #try:
-            dtc.SM = suite.judge(model,parallel=False,log_norm=True)
+            try:
+                dtc.SM = suite.judge(model,parallel=False,log_norm=True)
+                dtc.SA = dtc.SM[model]
+                dtc.SA = dtc.ordered_score()
+            except:
+                print(dtc.SA)
+                import pdb
+                pdb.set_trace()
         else:
             scores_ = []
             for t in dtc.tests:
@@ -2236,8 +2247,24 @@ class OptMan():
                      score.log_norm_score
                 scores_.append(score)
             dtc.SM = ScoreArray(tests, scores_)
-        dtc.obs_preds = pd.DataFrame([{t.name:t.observation for t in dtc.tests},{t.name:t.prediction for t in dtc.tests}])
+            dtc.SA = dtc.SM[model]
+            dtc.SA = dtc.ordered_score()
+        #try:
+            #pq.PREFERRED = [pq.mV, pq.pA, pq.UnitQuantity('femtocoulomb', 1e-15*pq.C, 'fC')]
+        #    obs = {t.name:which_key(t.observation) for t in dtc.tests}
+        #    pred = {t.name:which_key(t.prediction) for t in dtc.tests}
+
+            #obs = {t.name:pq.rescale_prefered(t.observation['mean']) for t in dtc.tests}
+            #pred = {t.name:pq.rescale_prefered(t.prediction['value']) for t in dtc.tests}
+        #except:
+
+        obs = {t.name:t.observation for t in dtc.tests}
+        pred = {t.name:t.prediction for t in dtc.tests}
+
+        dtc.obs_preds = pd.DataFrame([obs,pred])
         assert dtc.SM is not None
+        assert dtc.SA is not None
+
         return dtc
 
 
@@ -2296,8 +2323,6 @@ class OptMan():
             if v.name in str('RestingPotentialTest'):
 
                 dtc.protocols[k]['injected_square_current']['amplitude'] = 0.0*pq.pA
-        #import pdb
-        #pdb.set_trace()
 
         return dtc
     @timer
@@ -2312,7 +2337,8 @@ class OptMan():
         else:
             dtc = dsolution
         if self.protocol['elephant']:
-
+            if 'protocol' in  original_test_dic.keys():
+                original_test_dic.pop('protocol',None)
             if str('RheobaseTest') in original_test_dic.keys():
                 dtc = get_rh(dtc,original_test_dic['RheobaseTest'])
                 if type(dtc.rheobase) is type(dict()):
@@ -2689,22 +2715,21 @@ class OptMan():
                 d.error_length = self.error_length
                 ind.error_length = self.error_length
         pop,dtcpop = self.parallel_route(pop, dtcpop, tests, td)#, clustered=False)
-        both = [(ind,dtc) for ind,dtc in zip(pop,dtcpop) if dtc.SM.score is not None]
-        for ind,d in both:
+        both = [(ind,dtc) for ind,dtc in zip(pop,dtcpop) if dtc.SA is not None]
+        for ind,dtc in both:
             ind.dtc = None
-            ind.dtc = d
-            if d.SM.score is not None:
+            ind.dtc = dtc
+            if dtc.SA is not None:
                 ind = copy.copy(both[0][0])
-                d = copy.copy(both[0][1])
+                dtc = copy.copy(both[0][1])
 
             if not hasattr(ind,'fitness'):
                 ind.fitness = copy.copy(pop_[0].fitness)
                 for i,v in enumerate(list(ind.fitness.values)):
-                    ind.fitness.values[i] = list(ind.dtc.SM.score.values())[i]
-        #import pdb
-        #pdb.set_trace()
-        pop = [ ind for ind,d in zip(pop,dtcpop) if d.SM.score is not None ]
-        dtcpop = [ d for ind,d in zip(pop,dtcpop) if d.SM.score is not None ]
+                    ind.fitness.values[i] = list(ind.dtc.SA.values())[i]
+
+        pop = [ ind for ind,dtc in zip(pop,dtcpop) if dtc.SA is not None ]
+        dtcpop = [ dtc for ind,dtc in zip(pop,dtcpop) if dtc.SA is not None ]
         return pop,dtcpop
 
     @timer
