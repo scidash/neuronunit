@@ -33,7 +33,7 @@ import quantities as pq
 from quantities import mV as qmV
 from quantities import ms as qms
 from quantities import V as qV
-pq.PREFERRED = [pq.mV, pq.pA, pq.UnitQuantity('femtocoulomb', 1e-15*pq.C, 'fC')]
+#pq.PREFERRED = [pq.mV, pq.pA, pq.UnitQuantity('femtocoulomb', 1e-15*pq.C, 'fC')]
 
 SLOW_ZOOM = False
 #, ms, s, us, ns, V
@@ -124,17 +124,21 @@ def simulate_HH_neuron_local(I_stim=None,
     vm = state_dic['vm']
     v_nan = []
     for v in vm:
+	   v = v*1000.0
        if np.isnan(v):
            v_nan.append(-65.0*b2.units.mV)
        else:
            v_nan.append(v)
-    vM = AnalogSignal(v_nan,units = pq.V,sampling_period = 1*pq.ms)#b2.defaultclock.dt*pq.s)
-	try:
+
+    vM = AnalogSignal(v_nan,units = pq.mV,sampling_period = 1*pq.ms)#b2.defaultclock.dt*pq.s)
+    '''
+    try:
      	vM.rescale_prefered()
-	except:
-		import pdb
-		pdb.set_trace()
-	return st_mon,vM,vm
+    except:
+	import pdb
+	pdb.set_trace()
+    '''
+    return st_mon,vM,vm
 
 getting_started = False
 class BHHBackend(Backend):

@@ -712,11 +712,9 @@ def inject_and_plot_model(attrs,backend):
     # get an object of class ReducedModel with known attributes and known rheobase current injection value.
     model = pre_model.dtc_to_model()
     uc = {'amplitude':model.rheobase,'duration':DURATION,'delay':DELAY}
-
     model.inject_square_current(uc)
     vm = model.get_membrane_potential()
     plt.plot(vm.times,vm.magnitude)
-    plt.show()
     return vm,plt
 
 
@@ -1825,8 +1823,10 @@ class OptMan():
     def closeness(self,left,right):
         closeness_ = {}
         for k in left.keys():
-            lp = left[k].prediction
-            rp = right[k].prediction
+            key = which_key(left[k].prediction)
+            lp = left[k].prediction[key]
+            key = which_key(right[k].prediction)
+            rp = right[k].prediction[key]
             closeness_[k] = np.abs(lp-rp)
         return closeness_
 
