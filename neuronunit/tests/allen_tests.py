@@ -138,8 +138,10 @@ def data_set(number):
         with open('allen_test{0}.p'.format(number),'wb') as f:
             pickle.dump(pre_obs,f)
         return pre_obs
-
-pre_obs = data_set(0)
+try:
+    pre_obs = data_set(0)
+except:
+    pre_obs = data_set(1)
 #['isi_cv'], 'spikes', 'mean_isi', 'id', 'adapt', 'latency', 'median_isi', 'avg_rate', 'first_isi'])
 #import pdb
 #pdb.set_trace()

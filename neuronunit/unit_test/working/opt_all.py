@@ -58,18 +58,18 @@ def permutations(use_test,backend):
         protocol={'allen': False, 'elephant': True}, MU=2,NGEN=1)
     ga_out1 =  use_test.optimize(edges,backend=backend,\
         protocol={'allen': False, 'elephant': True},\
-            MU=2,NGEN=1,seed_pop=ga_out['pf'][0])
+            MU=2,NGEN=1,seed_pop=ga_out0['pf'][0])
 
     OM = OptMan(use_test,\
                 backend=backend,\
                 boundary_dict=edges,\
                 protocol={'allen': False, 'elephant': True})
 
-    dtc = ga_out['pf'][0].dtc
+    dtc = ga_out1['pf'][0].dtc
     vm,plt = inject_and_plot_model(dtc.attrs,dtc.backend)
     plt.plot(vm.times,vm.magnitude)
 
-    return dtc, ga_out['DO'], OM, vm
+    return dtc, ga_out1['DO'], OM, vm
 
 
 
@@ -84,8 +84,8 @@ OMObjects = []
 for t in test_frame.values():
     for b in backends:
         (dtc,DO,OM,vm) = permutations(copy.copy(t),b)
-        OMObjects.append(OM)
-        rt_out = OM.round_trip_test(use_test,b)
+        #OMObjects.append(OM)
+        #rt_out = OM.round_trip_test(use_test,b)
 
 display(dtc.SM)
 display(dtc.obs_preds)
