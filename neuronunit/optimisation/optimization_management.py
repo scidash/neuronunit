@@ -8,6 +8,7 @@ if SILENT:
 # setting of an appropriate backend.
 # optional imports
 import matplotlib
+
 try:
     matplotlib.use('agg')
 except:
@@ -109,10 +110,10 @@ anchor = os.path.dirname(anchor)
 mypath = os.path.join(os.sep,anchor,'tests/multicellular_constraints.p')
 from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.optimisations import WeightedSumFitness
-
+pq.PREFERRED = [pq.mV, pq.pA, pq.UnitQuantity('femtocoulomb', 1e-15*pq.C, 'fC')]
+import sciunit
+sciunit.utils.settings['LOGGING'] = False
 tests = get_neab.process_all_cells()
-#import pdb
-#pdb.set_trace()
 for t in tests.values():
     helper_tests = [value for value in t.tests ]
     break
@@ -235,9 +236,8 @@ class TSS(TestSuite):
             if DM:
                 pop,dtcpop = get_dm(local,pop=ga_out['pf'])
             #p in ga_out['pf']],pop=ga_out['pf'])
+
         self.backend = backend
-
-
         '''
         if str(self.cell_name) not in str('simulated data'):
             #pass
@@ -270,7 +270,6 @@ class TSD(dict):
            self.pop('name',None)
        else:
            self.cell_name = 'simulated data'
-
 
 
     def optimize(self,param_edges,backend=None,protocol={'allen': False, 'elephant': True},\
@@ -586,8 +585,11 @@ def get_rh(dtc,rtest_class):
     place_holder = {'n': 86, 'mean': 10 * pq.pA, 'std': 10 * pq.pA, 'value': 10 * pq.pA}
     backend_ = dtc.backend
     if 'ADEXP' in backend_ or 'GLIF' in backend_ or 'BHH' in backend_:
-        rtest = RheobaseTestP(observation=place_holder,
+        rtest = RheobaseTest(observation=place_holder,
                                 name='RheobaseTest')
+
+        #rtest = RheobaseTestP(observation=place_holder,
+        #                        name='RheobaseTest')
     else:
         rtest = RheobaseTest(observation=place_holder,
                          name='RheobaseTest')
@@ -710,11 +712,9 @@ def inject_and_plot_model(attrs,backend):
     # get an object of class ReducedModel with known attributes and known rheobase current injection value.
     model = pre_model.dtc_to_model()
     uc = {'amplitude':model.rheobase,'duration':DURATION,'delay':DELAY}
-
     model.inject_square_current(uc)
     vm = model.get_membrane_potential()
     plt.plot(vm.times,vm.magnitude)
-    plt.show()
     return vm,plt
 
 
@@ -1507,38 +1507,33 @@ def dtc_to_predictions(dtc):
         dtc.preds[t.name] = preds
     return dtc
 
-def evaluate_allen(dtc,regularization=True):
+def evaluate_allen(dtc):
     # assign worst case errors, and then over write them with situation informed errors as they become available.
     fitness = [ 1.0 for i in range(0,len(dtc.ascores)) ]
-    if regularization:
-        fitness0 = (t**(1.0/2.0) for int_,t in enumerate(dtc.ascores.keys()))
-        fitness1 = (np.abs(t) for int_,t in enumerate(dtc.ascores.keys()))
-        fitness = [ (fitness1[i]+j)/2.0 for i,j in enumerate(fitness0)]
-        return tuple(fitness,)
+    if dtc.ascores[str(t)] is None:
+        fitness[int_] = 1.0
     else:
-        if dtc.ascores[str(t)] is None:
-            fitness[int_] = 1.0
-        else:
-            fitness[int_] = dtc.ascores[str(t)]
+        fitness[int_] = dtc.ascores[str(t)]
     return tuple(fitness,)
-
+"""
 def evaluate_sm(dtc,regularization=False,elastic_net=False):
     # assign worst case errors, and then over write them with situation informed errors as they become available.
 
-    if not hasattr(dtc,'SM'):
+    if not hasattr(dtc,str('SM')):
         return fitness
     fitness = []
     for key,value in zip(dtc.SM.keys(),dtc.SM.values()):
         fitness.append(float(value))
     return tuple(fitness,)
-
-def evaluate(dtc,regularization=False,elastic_net=False):
+"""
+def evaluate(dtc):
     # assign worst case errors, and then over write them with situation informed errors as they become available.
-    if not hasattr(dtc,str('SM')):
+    if not hasattr(dtc,str('SA')):
         return []
     else:
-
-        fitness = tuple(dtc.SM.score.values[0],)
+        ordered_score = dtc.ordered_score()
+        fitness = [v.score for v in ordered_score.values()]
+        fitness = tuple(fitness,)
         return fitness
 
 def get_trans_list(param_dict):
@@ -1592,11 +1587,11 @@ def which_thing(thing):
     return thing
 
 def which_key(thing):
-
-    if 'value' in thing.keys():
-        return 'value'
     if 'mean' in thing.keys():
         return 'mean'
+    if 'value' in thing.keys():
+        return 'value'
+
 
 def simple_error(observation,prediction,t):
     observation = which_thing(observation)
@@ -1629,7 +1624,6 @@ def get_dm(dtcpop,pop=None):
     if type(pop) is not type(None):
         dtcpop,pop = score_attr(dtcpop,pop)
     return dtcpop,pop
-
 
 
 from sciunit.scores.collections import ScoreArray
@@ -1825,6 +1819,30 @@ class OptMan():
             dtcpop = list(map(nuunit_allen_evaluation,dtcpop))
 
         return pop, dtcpop
+    '''
+    def closeness(self,left,right):
+        closeness_ = {}
+        for k in left.keys():
+            key = which_key(left[k].prediction)
+            lp = left[k].prediction[key]
+            key = which_key(right[k].prediction)
+            rp = right[k].prediction[key]
+            closeness_[k] = np.abs(lp-rp)
+        return closeness_
+    '''
+    def closeness(self,left,right):
+        closeness_ = {}
+        lps = []
+        rps = []
+        for k in left.keys():
+            key = which_key(left[k].prediction)
+            lp = left[k].prediction[key]
+            lps.append(lp)
+            key = which_key(right[k].observation)
+            rp = right[k].observation[key]
+            rps.append(rp)
+            closeness_[k] = np.abs(lp-rp)
+        return closeness_,lps,rps
 
 
 
@@ -1987,9 +2005,10 @@ class OptMan():
                 print(ga_out['pf'][0].dtc.scores)
                 print(results)
                 print(ga_out['pf'][0].dtc.attrs)
-
+            left = ga_out['pf'][0].dtc.tests
+            closeness_,_,_ = self.closeness(left,new_tests)
             #inject_and_plot(ga_converged,second_pop=test_origin_target,third_pop=[ga_converged[0]],figname='not_a_problem.png',snippets=True)
-            return ga_out,ga_converged,test_origin_target,new_tests
+            return ga_out,ga_converged,test_origin_target,new_tests,closeness_
 
     def grid_search(self,explore_ranges,test_frame,backend=None):
         '''
@@ -2179,11 +2198,21 @@ class OptMan():
         if not hasattr(dtc,'scores') or dtc.scores is None:
             dtc.scores = None
             dtc.scores = {}
+            if hasattr(dtc,'SA'):
+                import pdb
+                pdb.set_trace()
+
         dtc.tests = self.preprocess(dtc)
         if PARALLEL_CONFIDENT is False:
             suite = TestSuite(dtc.tests)
-            #try:
-            dtc.SM = suite.judge(model,parallel=False,log_norm=True)
+            try:
+                dtc.SM = suite.judge(model,parallel=False,log_norm=True)
+                dtc.SA = dtc.SM[model]
+                dtc.SA = dtc.ordered_score()
+            except:
+                print(dtc.SA)
+                import pdb
+                pdb.set_trace()
         else:
             scores_ = []
             for t in dtc.tests:
@@ -2194,8 +2223,20 @@ class OptMan():
                      score.log_norm_score
                 scores_.append(score)
             dtc.SM = ScoreArray(tests, scores_)
-        dtc.obs_preds = pd.DataFrame([{t.name:t.observation for t in dtc.tests},{t.name:t.prediction for t in dtc.tests}])
+            dtc.SA = dtc.SM[model]
+            dtc.SA = dtc.ordered_score()
+
+        obs = {}
+        pred = {}
+        temp = {t.name:t for t in dtc.tests}
+        similarity,lps,rps =  self.closeness(temp,temp)
+        for k,o,p in zip(list(similarity.keys()),lps,rps):
+            obs[k] = o
+            pred[k] = p
+
+        dtc.obs_preds = pd.DataFrame([obs,pred])
         assert dtc.SM is not None
+        assert dtc.SA is not None
         return dtc
 
 
@@ -2254,6 +2295,7 @@ class OptMan():
             if v.name in str('RestingPotentialTest'):
 
                 dtc.protocols[k]['injected_square_current']['amplitude'] = 0.0*pq.pA
+
         return dtc
     @timer
     def make_simulated_observations(self,original_test_dic,backend,random_param,dsolution=None):
@@ -2267,10 +2309,11 @@ class OptMan():
         else:
             dtc = dsolution
         if self.protocol['elephant']:
-
+            if 'protocol' in  original_test_dic.keys():
+                original_test_dic.pop('protocol',None)
             if str('RheobaseTest') in original_test_dic.keys():
                 dtc = get_rh(dtc,original_test_dic['RheobaseTest'])
-                if type(dtc.rheobase) is type({'1':0}):
+                if type(dtc.rheobase) is type(dict()):
                     if dtc.rheobase['value'] is None:
                         return False, dtc
                 elif type(dtc.rheobase) is type(float(0.0)):
@@ -2280,15 +2323,19 @@ class OptMan():
             xtests = list(copy.copy(original_test_dic).values())
 
             dtc.tests = xtests
-            mean = True
-            for t in xtests:
+            simulated_observations = {}
+            xtests = [t for t in xtests if 'mean' in t.observation.keys() or 'value' in t.observation.keys() ]
+            for i,t in enumerate(xtests):
                 if 'mean' in t.observation.keys():
-                    mean = True
+                    simulated_observations[t.name] = copy.copy(t.observation['mean'])
+                elif 'value' in t.observation.keys():
+                    simulated_observations[t.name] = copy.copy(t.observation['value'])
                 else:
-                    mean = False
-            if mean:
-                simulated_observations = {t.name:copy.copy(t.observation['mean']) for t in xtests}
-                simulated_observations = {k:v for k,v in simulated_observations.items() if v is not None}
+                    return (dtc,False)
+
+            #if False not in set(means):
+            #    simulated_observations = {t.name:copy.copy(t.observation['mean']) for t in xtests}
+            #    simulated_observations = {k:v for k,v in simulated_observations.items() if v is not None}
             dtc.observation = simulated_observations
             dtc = self.pred_evaluation(dtc)
 
@@ -2640,20 +2687,21 @@ class OptMan():
                 d.error_length = self.error_length
                 ind.error_length = self.error_length
         pop,dtcpop = self.parallel_route(pop, dtcpop, tests, td)#, clustered=False)
-        both = [(ind,dtc) for ind,dtc in zip(pop,dtcpop) if dtc.scores is not None]
-        for ind,d in both:
+        both = [(ind,dtc) for ind,dtc in zip(pop,dtcpop) if dtc.SA is not None]
+        for ind,dtc in both:
             ind.dtc = None
-            ind.dtc = d
-            if d.scores is not None:
+            ind.dtc = dtc
+            if dtc.SA is not None:
                 ind = copy.copy(both[0][0])
-                d = copy.copy(both[0][1])
+                dtc = copy.copy(both[0][1])
 
             if not hasattr(ind,'fitness'):
                 ind.fitness = copy.copy(pop_[0].fitness)
                 for i,v in enumerate(list(ind.fitness.values)):
-                    ind.fitness.values[i] = list(ind.dtc.evaluate.values())[i]
-        pop = [ ind for ind,d in zip(pop,dtcpop) if d.scores is not None ]
-        dtcpop = [ d for ind,d in zip(pop,dtcpop) if d.scores is not None ]
+                    ind.fitness.values[i] = list(ind.dtc.SA.values())[i]
+
+        pop = [ ind for ind,dtc in zip(pop,dtcpop) if dtc.SA is not None ]
+        dtcpop = [ dtc for ind,dtc in zip(pop,dtcpop) if dtc.SA is not None ]
         return pop,dtcpop
 
     @timer
