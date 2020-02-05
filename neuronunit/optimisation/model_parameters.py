@@ -27,12 +27,12 @@ THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 
 path_params = {}
 path_params['model_path'] = os.path.realpath(os.path.join(THIS_DIR,'..','models','NeuroML2','LEMS_2007One.xml'))
-
+'''
 try:
     GLIF = pickle.load(open('glif_params.p','rb'))
 except:
     from neuronunit.optimisation import get_neab
-
+'''
 
 MODEL_PARAMS = {}
 

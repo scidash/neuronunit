@@ -29,7 +29,7 @@ class testCrucialBackendsSucceed(unittest.TestCase):
         #self.backends = backends
         self.model_parameters = model_parameters
     '''
-    def test_must_pass_0j(self):
+    def luxury_pass_0j(self):
         fig, axs = plt.subplots(len(self.backends)*2+1,figsize=(40, 40))
         cnt=0
         b =  self.julia_backend
