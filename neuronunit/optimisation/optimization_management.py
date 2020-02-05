@@ -1819,7 +1819,7 @@ class OptMan():
             dtcpop = list(map(nuunit_allen_evaluation,dtcpop))
 
         return pop, dtcpop
-
+    '''
     def closeness(self,left,right):
         closeness_ = {}
         for k in left.keys():
@@ -1829,6 +1829,21 @@ class OptMan():
             rp = right[k].prediction[key]
             closeness_[k] = np.abs(lp-rp)
         return closeness_
+    '''
+    def closeness(self,left,right):
+        closeness_ = {}
+        lps = []
+        rps = []
+        for k in left.keys():
+            key = which_key(left[k].prediction)
+            lp = left[k].prediction[key]
+            lps.append(lp)
+            key = which_key(right[k].observation)
+            rp = right[k].observation[key]
+            rps.append(rp)
+            closeness_[k] = np.abs(lp-rp)
+        return closeness_,lps,rps
+
 
 
     def round_trip_test(self,
@@ -1991,7 +2006,7 @@ class OptMan():
                 print(results)
                 print(ga_out['pf'][0].dtc.attrs)
             left = ga_out['pf'][0].dtc.tests
-            closeness_ = self.closeness(left,new_tests)
+            closeness_,_,_ = self.closeness(left,new_tests)
             #inject_and_plot(ga_converged,second_pop=test_origin_target,third_pop=[ga_converged[0]],figname='not_a_problem.png',snippets=True)
             return ga_out,ga_converged,test_origin_target,new_tests,closeness_
 
@@ -2211,14 +2226,17 @@ class OptMan():
             dtc.SA = dtc.SM[model]
             dtc.SA = dtc.ordered_score()
 
-
-        obs = {t.name:t.observation for t in dtc.tests}
-        pred = {t.name:t.prediction for t in dtc.tests}
+        obs = {}
+        pred = {}
+        temp = {t.name:t for t in dtc.tests}
+        similarity,lps,rps =  self.closeness(temp,temp)
+        for k,o,p in zip(list(similarity.keys()),lps,rps):
+            obs[k] = o
+            pred[k] = p
 
         dtc.obs_preds = pd.DataFrame([obs,pred])
         assert dtc.SM is not None
         assert dtc.SA is not None
-
         return dtc
 
 
