@@ -87,16 +87,13 @@ def _update_history_and_hof(halloffame,pf, history, population,GEN,MU):
 
     Note: History and Hall-of-Fame behave like dictionaries
     '''
-    #temp = copy.copy(
     temp = copy.copy([p for p in population if hasattr(p,'dtc')])
     dtcpop = copy.copy([p.dtc for p in population if hasattr(p,'dtc')])
 
     if "ADEXP" in temp[0].dtc.backend or "BHH" in temp[0].dtc.backend:
         for t in temp:
             t.dtc.tests = None
-
             t.dtc = None
-        print('cleansed',t.backend  )
     if halloffame is not None:
         try:
             halloffame.update(temp)
@@ -111,8 +108,6 @@ def _update_history_and_hof(halloffame,pf, history, population,GEN,MU):
         if GEN ==0:
             pf = deap.tools.ParetoFront(MU)
         pf.update(temp)
-
-
     return (halloffame,pf,history)
 
 

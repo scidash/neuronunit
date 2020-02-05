@@ -1837,10 +1837,13 @@ class OptMan():
         for k in left.keys():
             key = which_key(left[k].prediction)
             lp = left[k].prediction[key]
-            lps.append(lp)
             key = which_key(right[k].observation)
             rp = right[k].observation[key]
+            lp.rescale(rp.units)
+            rp.rescale(lp.units)
             rps.append(rp)
+            lps.append(lp)
+
             closeness_[k] = np.abs(lp-rp)
         return closeness_,lps,rps
 
@@ -1989,8 +1992,7 @@ class OptMan():
                     try:
                         assert float(t.observation['std']) >0.0
                     except:
-                        import pdb
-                        pdb.set_trace()
+                        pass
                 ga_out, DO = run_ga(ranges,
                                     NGEN,
                                     new_tests,
@@ -2199,9 +2201,7 @@ class OptMan():
             dtc.scores = None
             dtc.scores = {}
             if hasattr(dtc,'SA'):
-                import pdb
-                pdb.set_trace()
-
+                pass
         dtc.tests = self.preprocess(dtc)
         if PARALLEL_CONFIDENT is False:
             suite = TestSuite(dtc.tests)
