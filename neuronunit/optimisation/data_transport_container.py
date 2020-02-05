@@ -3,6 +3,7 @@ import numpy as np
 #from sciunit.models.runnable import RunnableModel
 import quantities as qt
 import copy
+from collections import OrderedDict
 
 try:
     import asciiplotlib as apl
@@ -60,6 +61,13 @@ class DataTC(object):
         else:
             self.summed = None
         return self.summed
+
+    def ordered_score(self):
+        if not hasattr(self,'os'):
+            self.os = OrderedDict(self.SA.to_dict())
+        else:
+            self.os = {k:self.SA[k] for k in self.os.keys()}
+        return self.os
 
     def add_constant(self):
         if self.constants is not None:
