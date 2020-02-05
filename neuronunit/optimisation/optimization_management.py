@@ -1,25 +1,31 @@
 # Its not that this file is responsible for doing plotting,
 # but it calls many modules that are, such that it needs to pre-empt
 import warnings
+
+SILENT = True
+if SILENT:
+    warnings.filterwarnings("ignore")
+# setting of an appropriate backend.
+# optional imports
 import matplotlib
-import cython
-import logging
+
 try:
     matplotlib.use('agg')
 except:
     warnings.warn('X11 plotting backend not available, consider installing')
 
-SILENT = True
+import cython
+import logging
 
-if SILENT:
-    warnings.filterwarnings("ignore")
+# optional imports
+
 
 PARALLEL_CONFIDENT = False
 # Rationale Many methods inside the file optimization_management.py cannot be easily monkey patched using
 #```pdb.set_trace()``` unless at the top of the file,
 # the parallel_confident static variable is declared false
-# This converts parallel mapping functions to serial mapping functions. s
-# cheduled Parallel mapping functions cannot tolerate being paused, serial ones can.
+# This converts parallel mapping functions to serial mapping functions.
+# scheduled Parallel mapping functions cannot tolerate being paused, serial ones can.
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -33,9 +39,6 @@ npartitions = multiprocessing.cpu_count()
 from sklearn.model_selection import ParameterGrid
 from collections import OrderedDict
 import cython
-
-
-
 import copy
 import math
 import quantities as pq
@@ -43,7 +46,7 @@ import numpy
 try:
     from sciunit import TestSuite
 except:
-    pass
+    print('sciunit older version')
 from neuronunit.optimisation.data_transport_container import DataTC
 
 from neuronunit.optimisation.model_parameters import path_params
@@ -194,15 +197,14 @@ class TSS(TestSuite):
     def __init__(self,tests={},use_rheobase_score=False):
        self.DO = None
        tt = list(tests.values())[0:-1]
-       super(TSD,self).__init__(tt)
+       super(TSS,self).__init__(tt)
        #self.update(tests)
-       '''
        if 'name' in self.keys():
            self.cell_name = tests['name']
            self.pop('name',None)
        else:
            self.cell_name = 'simulated data'
-       '''
+
        self.use_rheobase_score = use_rheobase_score
        self.elaborate_plots  = elaborate_plots
        self.backend = None
@@ -242,7 +244,6 @@ class TSS(TestSuite):
             # is this a data driven test? if so its worth plotting results
             ga_out = self.elaborate_plots(self,ga_out)
         '''
-
         return ga_out, self.DO
 
 class TSD(dict):
@@ -373,17 +374,7 @@ def random_p(backend):
 @cython.wraparound(False)
 def process_rparam(backend):
     random_param = random_p(backend)
-    """
-    if 'RAW' in str(backend):
-        random_param.pop('Iext',None)
-        rp = random_param
-        chosen_keys = rp.keys()
 
-    if str('ADEXP') in str(backend):
-        random_param.pop('Iext',None)
-        rp = random_param
-        chosen_keys = rp.keys()
-    """
     if 'GLIF' in str(backend):
         random_param['init_AScurrents'] = [0.0,0.0]
         random_param['asc_tau_array'] = [0.3333333333333333,0.01]
@@ -644,7 +635,6 @@ def get_rtest(dtc):
         else:
             rtest = get_new_rtest(dtc)
     return rtest
-
 
 def dtc_to_model(dtc):
     # If  test taking data, and objects are present (observations etc).
@@ -1603,6 +1593,8 @@ def which_key(thing):
         return 'mean'
     if 'value' in thing.keys():
         return 'value'
+
+
 def simple_error(observation,prediction,t):
     observation = which_thing(observation)
     prediction = which_thing(prediction)
@@ -1635,34 +1627,6 @@ def get_dm(dtcpop,pop=None):
         dtcpop,pop = score_attr(dtcpop,pop)
     return dtcpop,pop
 
-
-
-def bridge_passive(package):
-    """
-    Necessary because sciunit judge did not always work.
-    """
-    t,dtc = package
-
-    model = new_model(dtc)
-    t.setup_protocol(model)
-    result = t.get_result(model)
-
-    assert 'mean' in t.observation.keys()
-    pred = None
-    pred = t.extract_features(model,result)
-
-    if type(pred) is type(None):
-        return np.inf,dtc,pred
-
-    if 'mean' in pred.keys():
-        pred['standard'] = pred['mean']
-    if 'value' in pred.keys():
-        pred['standard'] = pred['value']
-    if type(pred['standard']) is type(None):
-        return np.inf,dtc,pred
-    if type(pred['standard']) is not type(None):
-        score = simple_error(t.observation,pred,t)
-    return score, dtc, pred
 
 from sciunit.scores.collections import ScoreArray
 
@@ -1900,7 +1864,6 @@ class OptMan():
             MU = 10
         ranges = MODEL_PARAMS[backend]
         #self.simulated_obs = True
-
         if self.protocol['allen']:
             dtc = False
             while dtc is False or type(new_tests) is type(None):
@@ -2106,9 +2069,7 @@ class OptMan():
         # via very reduced model
         if hasattr(dtc,'model_path'):
             dtc.model_path = path_params['model_path']
-        #else:
-        #    dtc.model_path = None
-        #    dtc.model_path = path_params['model_path']
+
         dtc.preds = None
         dtc.preds = {}
         dtc = dtc_to_rheo(dtc)
@@ -2249,14 +2210,7 @@ class OptMan():
             dtc.SM = ScoreArray(tests, scores_)
             dtc.SA = dtc.SM[model]
             dtc.SA = dtc.ordered_score()
-        #try:
-            #pq.PREFERRED = [pq.mV, pq.pA, pq.UnitQuantity('femtocoulomb', 1e-15*pq.C, 'fC')]
-        #    obs = {t.name:which_key(t.observation) for t in dtc.tests}
-        #    pred = {t.name:which_key(t.prediction) for t in dtc.tests}
 
-            #obs = {t.name:pq.rescale_prefered(t.observation['mean']) for t in dtc.tests}
-            #pred = {t.name:pq.rescale_prefered(t.prediction['value']) for t in dtc.tests}
-        #except:
 
         obs = {t.name:t.observation for t in dtc.tests}
         pred = {t.name:t.prediction for t in dtc.tests}
