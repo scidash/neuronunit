@@ -1,5 +1,6 @@
 
-
+import scipy as sp
+#import pylab as plt
 from scipy.integrate import odeint
 from numba import jit
 import numpy as np
@@ -13,10 +14,10 @@ import pdb
 from numba import jit
 from .base import *
 import quantities as qt
-from quantities import mV, ms, s
+from quantities import mV, ms, s, Hz
 from sciunit.utils import redirect_stdout
 from elephant.spike_train_generation import threshold_detection
-'''
+
 try:
     import asciiplotlib as apl
     fig = apl.figure()
@@ -27,9 +28,24 @@ try:
 except:
     ascii_plot = False
 SLOW_ZOOM = True
-'''
-ascii_plot = False
+import time
+import logging
+VERBOSE = True
+def timer(func):
+    def inner(*args, **kwargs):
+        t1 = time.time()
+        f = func(*args, **kwargs)
+        t2 = time.time()
+        logger = logging.getLogger('__main__')
+        logging.basicConfig(level=logging.DEBUG)
+        if VERBOSE:
+            logging.info('Runtime taken to evaluate function {1} {0} seconds'.format(t2-t1,func))
+        return f
+    return inner
 
+
+ascii_plot = False
+#@timer
 @jit
 def Id(t,delay,duration,tmax,amplitude):
 
@@ -74,9 +90,58 @@ def alpha_n(V):
 def beta_n(V):
     """Channel gating kinetics. Functions of membrane voltage"""
     return 0.125*np.exp(-(V+65) / 80.0)
+@jit
+def I_Na(V, m, h,g_Na):
+	"""
+	Membrane current (in uA/cm^2)
+	Sodium (Na = element name)
+
+	|  :param V:
+	|  :param m:
+	|  :param h:
+	|  :return:
+	"""
+	return g_Na * m**3 * h * (V - E_Na)
+@jit
+def I_K(V, n):
+	"""
+	Membrane current (in uA/cm^2)
+	Potassium (K = element name)
+
+	|  :param V:
+	|  :param h:
+	|  :return:
+	"""
+	return g_K  * n**4 * (V - E_K)
+#  Leak
+@jit
+def I_L(V):
+	"""
+	Membrane current (in uA/cm^2)
+	Leak
+
+	|  :param V:
+	|  :param h:
+	|  :return:
+	"""
+	return g_L * (V - E_L)
+#@timer
+@jit
+def I_inj(t,delay,duration,tMax,amplitude):
+	"""
+	External Current
+
+	|  :param t: time
+	|  :return: nothing at time interval uA/cm^2 at 0<delay
+		    step up to amplitude uA/cm^2 at t>delay
+	|           step down to 0 uA/cm^2 at t>delay+duration
+	|           nothing uA/cm^2 at delay+duration>t>end
+	"""
+
+	return 0*(t<delay) +amplitude*(t>delay) -amplitude*(t>delay+duration)
 
 
-#@jit
+@jit
 def dALLdt(X, t, attrs):
     """
     Integrate
@@ -107,12 +172,42 @@ def dALLdt(X, t, attrs):
     I_K = g_K  * n**4.0 * (V - E_K)
     #  Leak
     I_L = g_L * (V - E_L)
+    #ina = I_Na(V, m, h, g_Na)
+    #ik = I_K(V, n, g_K)
+    #il = I_L(V, g_L)
 
-    dVdt = (Iext - I_Na - I_K - I_L) / C_m
+    # use time to time this.
+    """
+    try:
+        t1 = time.time()
+        a = I_inj(t,delay,duration,np.max(T),amplitude)
+    	print(a)
+        b = I_Na(V, m, h)
+        c = I_K(V, n)
+        d = I_L(V)
+        dVdt0 =(a+b+c+d)/C_m
+    except:
+        pass
+    """
+    t2 = time.time()
+
+    # use time to time this
+    dVdt1 = (Iext - I_Na - I_K - I_L) / C_m
+    t3 = time.time()
+    #first = t2-t1
+    second = t3-t2
+    #print('original faster ',second<first)
+    #if set(dVdt0) == set(dVdt1):
+    #   if second<first:
+    #      dVdt = dVdt1
+    #   else:
+    #      dVdt = dVdt0
     dmdt = alpha_m(V)*(1.0-m) - beta_m(V)*m
     dhdt = alpha_h(V)*(1.0-h) - beta_h(V)*h
     dndt = alpha_n(V)*(1.0-n) - beta_n(V)*n
-    return dVdt, dmdt, dhdt, dndt
+    #import pdb
+    #pdb.set_trace()
+    return dVdt1, dmdt, dhdt, dndt
 
 
 def get_vm(attrs):
@@ -124,22 +219,28 @@ def get_vm(attrs):
     '''
     # State (Vm, n, m, h)
     # saturation value
-    #vr = attrs['vr']
+    vr = attrs['vr']
     m = 0.05#*1000.0
     h = 0.60#*1000.0
     n = 0.32#*1000.0
 
-    Y = [attrs['vr'], m, h, n]
+    Y = [vr, m, h, n]
     # Solve ODE system
     T = attrs['T']
     dt = attrs['dt']
-    Vy = odeint(dALLdt, Y, T, args=(attrs,))
+    X = odeint(dALLdt, Y, T, args=(attrs,))
+    vm = V = X[:,0]
+    m = X[:,1]
+    h = X[:,2]
+    n = X[:,3]
 
-    volts = [ v[0] for v in Vy ]
-    vm = AnalogSignal(volts,
+
+    #vm = [ v[0] for v in Vy ]
+    size = len(vm)
+    scale = 1.0/1.3
+    vm = AnalogSignal(vm,
                  units = mV,
-                 sampling_period = dt * ms)
-
+                 sampling_rate = (size*scale)*Hz)
     if ascii_plot:
         t = [float(f) for f in vm.times]
         v = [float(f) for f in vm.magnitude]
@@ -232,16 +333,13 @@ class HHBackend(Backend):
         tmax = self.tstop
         tmin = 0.0
         DT = 0.01
-        T = np.linspace(tmin, tmax, int(tmax/DT))
-        dt = T[1]-T[0]
+        #T = np.linspace(tmin, tmax, int(tmax/DT))
+        dt = 0.01
+        T = sp.arange(0.0, 1300.0, dt)
+        #dt = T[1]-T[0]
 
         attrs = copy.copy(self.model.attrs)
         attrs['I'] = (delay,duration,tmax,amplitude)
-        #Iext = Id(t,delay,duration,T,amplitude)
-
-        #Iext_ = [Id(t,delay,duration,np.max(T),amplitude) for t in T]
-        #import pdb
-        #pdb.set_trace()
         attrs['dt'] = dt
         attrs['T'] = T
 
