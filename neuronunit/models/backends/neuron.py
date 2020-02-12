@@ -344,9 +344,13 @@ class NEURONBackend(Backend):
         for h_key,h_value in self.model.attrs.items():
             h_value = float(h_value)
             if h_key is str('C'):
-                sec = self.h.Section(self.h.m_RS_RS_pop[0])
-                for seg in sec.allseg():
-                    seg.cm = h_value
+                seg = model._backend.h.m_RS_RS_pop[0].get_segment()
+                seg.cm = h_value
+                #sec = self.h.Section(self.h.m_RS_RS_pop[0])
+                #sec.cm = h_value
+
+                #for seg in sec.allseg():
+                #    seg.cm = h_value
             else:
                 self.h('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
 
