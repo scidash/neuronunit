@@ -123,7 +123,8 @@ MODEL_PARAMS['BHH'] = HH_dic
 #defaults = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3, \
 #		 'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -77.0, 'E_Na' : 50.0, 'vr':-65.0 }
 
-HH_attrs = { 'E_L' : -70.387,
+HH_attrs = {
+        'E_L' : -54.387,
         'E_K' : -77.0,
         'E_Na' : 50.0,
         'g_L' : 0.3,
@@ -133,7 +134,7 @@ HH_attrs = { 'E_L' : -70.387,
         'vr':-65.0}
 
 HH_dic1 = { k:(float(v)-0.25*float(v),float(v)+0.25*float(v)) for k,v in HH_attrs.items() }
-HH_dic1['Vr'] = [-85,-45]
+HH_dic1['Vr'] = HH_dic1['E_L']
 
 MODEL_PARAMS['HH'] = HH_dic1
 

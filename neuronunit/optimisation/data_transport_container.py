@@ -4,7 +4,7 @@ import numpy as np
 import quantities as qt
 import copy
 from collections import OrderedDict
-
+from sciunit import scores
 try:
     import asciiplotlib as apl
 except:
@@ -67,6 +67,10 @@ class DataTC(object):
             self.os = OrderedDict(self.SA.to_dict())
         else:
             self.os = {k:self.SA[k] for k in self.os.keys()}
+        for k,v in self.os.items():
+            if v is scores.InsufficientDataScore(None):
+                self.os.items[k] = -np.inf
+
         return self.os
 
     def add_constant(self):
@@ -103,7 +107,12 @@ class DataTC(object):
         return self.tests
     def dtc_to_model(self):
         from neuronunit.models.very_reduced_sans_lems import VeryReducedModel
+        #if self.backend is not in "NEURON":
         model = VeryReducedModel(backend=self.backend)
+        #else:
+        #    try:
+        #        model = ReducedModel(backend=self.backend)
+        #    except:
         model.backend = self.backend
         model.attrs = self.attrs
         model.rheobase = self.rheobase

@@ -88,8 +88,9 @@ class VmTest(ProtocolToFeaturesTest):
         try:
             super(VmTest, self).validate_observation(observation)
         except:
-            print('failed to validate obs',observation)
-            print('simulated observation')
+            pass
+            #print('failed to validate obs',observation)
+            #print('simulated observation')
         return observation
 
     def condition_model(self, model):

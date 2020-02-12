@@ -9,24 +9,24 @@ from .base import Backend
 
 warnings.filterwarnings('ignore', message='nested set')
 warnings.filterwarnings('ignore', message='mpi4py')
-def heavy_backends():
-    try:
-        from .jNeuroML import jNeuroMLBackend
-    except:
-        print('Error in jNeuroMLBackend')
+#def heavy_backends():
+try:
+    from .jNeuroML import jNeuroMLBackend
+except:
+    print('Error in jNeuroMLBackend')
 
-    try:
-        from .neuron import NEURONBackend
-    except ImportError:
-        NEURONBackend = None
-        print('Could not load NEURONBackend')
-    try:
-        from .general_pyNN import PYNNBackend
-    except Exception as e:
-        print('pynn python Error')
+try:
+    from .neuron import NEURONBackend
+except ImportError:
+    NEURONBackend = None
+    print('Could not load NEURONBackend')
+try:
+    from .general_pyNN import PYNNBackend
+except Exception as e:
+    print('pynn python Error')
 
-heavy_backends()
 """
+#heavy_backends()
 try:
     from .hh_wraper import JHHBackend
 except ImportError:
