@@ -178,9 +178,9 @@ class APAmplitudeTest(VmTest):
 
             fig.plot(t, v, label=str('spikes: ')+str(model.get_spike_count()), width=100, height=20)
             fig.show()
-        if False:
-            height = np.max(model.get_membrane_potential()) -float(np.min(model.get_membrane_potential()))/1000.0*model.get_membrane_potential().units #- model.get_AP_thresholds()
-            prediction = {'mean':height, 'n':1, 'std':height}
+        #if False:
+        #    height = np.max(model.get_membrane_potential()) -float(np.min(model.get_membrane_potential()))/1000.0*model.get_membrane_potential().units #- model.get_AP_thresholds()
+        #    prediction = {'mean':height, 'n':1, 'std':height}
 
         heights = model.get_AP_amplitudes() - model.get_AP_thresholds()
         # Put prediction in a form that compute_score() can use.

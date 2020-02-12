@@ -20,7 +20,7 @@ import logging
 # optional imports
 
 
-PARALLEL_CONFIDENT = False
+PARALLEL_CONFIDENT = True
 # Rationale Many methods inside the file optimization_management.py cannot be easily monkey patched using
 #```pdb.set_trace()``` unless at the top of the file,
 # the parallel_confident static variable is declared false
@@ -53,7 +53,7 @@ from neuronunit.optimisation.model_parameters import path_params
 from neuronunit.optimisation import model_parameters as modelp
 from itertools import repeat
 from neuronunit.tests.base import AMPL, DELAY, DURATION
-#from neuronunit.models import ReducedModel
+from neuronunit.models import ReducedModel
 from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 from collections.abc import Iterable
 from neuronunit.tests import dm_test_container #import Interoperabe
@@ -108,22 +108,21 @@ import neuronunit
 anchor = neuronunit.__file__
 anchor = os.path.dirname(anchor)
 mypath = os.path.join(os.sep,anchor,'tests/multicellular_constraints.p')
-from neuronunit.optimisation import get_neab
+
 from neuronunit.optimisation.optimisations import WeightedSumFitness
-pq.PREFERRED = [pq.mV, pq.pA, pq.UnitQuantity('femtocoulomb', 1e-15*pq.C, 'fC')]
+#quantities.pq.PREFERRED = [pq.mV, pq.pA, pq.UnitQuantity('femtocoulomb', 1e-15*pq.C, 'fC')]
 import sciunit
 sciunit.utils.settings['LOGGING'] = False
-tests = get_neab.process_all_cells()
-for t in tests.values():
-    helper_tests = [value for value in t.tests ]
-    break
 VERBOSE = False
 def timer(func):
     def inner(*args, **kwargs):
         t1 = time.time()
         f = func(*args, **kwargs)
         t2 = time.time()
-        logger = logging.getLogger('__main__')
+        try:
+            logger.sciunit.utils.logging
+        except:
+            logger = logging.getLogger('__main__')
         logging.basicConfig(level=logging.DEBUG)
         if VERBOSE:
             logging.info('Runtime taken to evaluate function {1} {0} seconds'.format(t2-t1,func))
@@ -654,7 +653,6 @@ def dtc_to_rheo(dtc):
         dtc.scores = None
     if type(dtc.scores) is type(None):
         dtc.scores = {}
-    model = dtc.dtc_to_model()
 
     if hasattr(dtc,'tests'):
         if type(dtc.tests) is type({}) and str('RheobaseTest') in dtc.tests.keys():
@@ -667,6 +665,10 @@ def dtc_to_rheo(dtc):
         rtest = get_rtest(dtc)
 
     if rtest is not None:
+        if "NEURON" not in dtc.backend:
+            model = dtc.dtc_to_model()
+        else:
+            model = mint_NEURON_model(pre_model)
         if isinstance(rtest,Iterable):
             rtest = rtest[0]
         dtc.rheobase = rtest.generate_prediction(model)['value']
@@ -703,18 +705,49 @@ def inject_and_plot_passive_model(attrs,backend):
     plt.show()
     return vm,plt
 
+def mint_NEURON_model(dtc):
+    LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
+    pre_model.model_path = LEMS_MODEL_PATH
+    pre_model = dtc_to_rheo(pre_model)
+
+    from neuronunit.models.reduced import ReducedModel#, VeryReducedModel
+    model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
+    pre_model.current_src_name = model._backend.current_src_name
+    assert type(pre_model.current_src_name) is not type(None)
+    dtc.cell_name = model._backend.cell_name
+    model.attrs = pre_model.attrs
+    return model
+
 def inject_and_plot_model(attrs,backend):
     pre_model = DataTC()
     pre_model.attrs = attrs
     pre_model.backend = backend
     # get rheobase injection value
-    pre_model = dtc_to_rheo(pre_model)
     # get an object of class ReducedModel with known attributes and known rheobase current injection value.
-    model = pre_model.dtc_to_model()
+    print(backend)
+    if str(backend) not in "NEURON":
+        pre_model = dtc_to_rheo(pre_model)
+        model = pre_model.dtc_to_model()
+    else:
+        model = mint_NEURON_model(pre_model)
+        print(pre_model.rheobase)
+        #import pdb
+        #pdb.set_trace()
+
+        #orig_lems_file_path = path_params['model_path']
+        #model = ReducedModel(name='vanilla', path=orig_lems_file_path, dtc=(pre_model))
     uc = {'amplitude':model.rheobase,'duration':DURATION,'delay':DELAY}
     model.inject_square_current(uc)
     vm = model.get_membrane_potential()
-    plt.plot(vm.times,vm.magnitude)
+
+    plt.figure()
+    if pre_model.backend in str("HH"):
+        plt.title('Hodgkin-Huxley Neuron')
+    else:
+        plt.title('membrane potential plot')
+    plt.plot(vm.times, vm.magnitude, 'k')
+    plt.ylabel('V (mV)')
+    #plt.plot(vm.times,vm.magnitude)
     return vm,plt
 
 
@@ -1638,8 +1671,9 @@ class OptMan():
                 protocol=None,\
                 simulated_obs=None,\
                 verbosity=None,\
-                PARALLEL_CONFIDENT=None,\
+                PARALLEL_CONFIDENT=True,\
                 tsr=None):
+
         self.tests = tests
         if type(self.tests) is type(dict()):
             if 'name' in self.tests.keys():
@@ -1666,6 +1700,14 @@ class OptMan():
             self.verbose = verbosity
         if type(tsr) is not None:
             self.tsr = tsr
+    def get_dummy_tests(self):
+        from neuronunit.optimisation import get_neab
+        tests = get_neab.process_all_cells()
+        for t in tests.values():
+            helper_tests = [value for value in t.tests ]
+            break
+        self.helper_tests = helper_tests
+
 
     def new_single_gene(self,dtc,td):
         random.seed(datetime.now())
@@ -1763,7 +1805,7 @@ class OptMan():
         for dtc in dtcpop: dtc.pre_obs = None
         for dtc in dtcpop: dtc.pre_obs = self.tests
         for dtc in dtcpop: dtc.tsr = tsr #not a property but an aim
-        if PARALLEL_CONFIDENT:
+        if self.PARALLEL_CONFIDENT:
             dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
             dtcpop = list(dtcbag.map(nuunit_allen_evaluation).compute())
 
@@ -1811,7 +1853,7 @@ class OptMan():
                 pop[i] = ind
                 dtcpop[i] = dtc
 
-        if PARALLEL_CONFIDENT:
+        if self.PARALLEL_CONFIDENT:
             dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
             dtcpop = list(dtcbag.map(nuunit_allen_evaluation).compute())
 
@@ -1836,11 +1878,19 @@ class OptMan():
         rps = []
         for k in left.keys():
             key = which_key(left[k].prediction)
+            #print(key)
             lp = left[k].prediction[key]
+            #print(left[k],lp)
             key = which_key(right[k].observation)
             rp = right[k].observation[key]
-            lp.rescale(rp.units)
-            rp.rescale(lp.units)
+            #print(lp,rp)
+            lp = lp.rescale(rp.units)
+            try:
+                assert lp is not None
+                assert rp is not None
+            except:
+                import pdb
+                pdb.set_trace()
             rps.append(rp)
             lps.append(lp)
 
@@ -1855,7 +1905,7 @@ class OptMan():
                         free_paramaters=None,
                         NGEN=None,
                         MU=None,
-                        mini_tests=None,
+                        single_tests=None,
                         stds=None):
         from neuronunit.optimisation.optimisations import run_ga
 
@@ -1905,32 +1955,43 @@ class OptMan():
             while new_tests is False:
                 dsolution,rp,chosen_keys,random_param = process_rparam(backend)
                 (new_tests,dtc) = self.make_simulated_observations(tests,backend,rp,dsolution=dsolution)
+                new_tests = {k:v for k,v in new_tests.items() if v.observation[which_key(v.observation)] is not None}
+                if type(new_tests) is not type(bool()):
+                    for t in new_tests.values():
+                        key = which_key(t.observation)
+                        if t.observation[key] is None:
+                            new_tests = False
+                            break
+                    if type(new_tests) is type(bool()):
+                        print(new_tests,'not useable sample')
 
-                if type(new_tests) is not type(False):
+                        continue
                     if 'RheobaseTest' not in new_tests.keys():
+                        new_tests = False
                         continue
                     try:
                         dsolution.rheobase = new_tests['RheobaseTest'].observation
                     except:
                         dsolution.rheobase = new_tests['RheobaseTestP'].observation
-
-            for k,v in new_tests.items():
-                if type(v) is type({}):
-                    v.observation['std'] = stds[k]
-                    try:
-                        v.observation['mean'] = v.observation['mean'].simplified
-                    except:
-                        v.observation['value'] = v.observation['value'].simplified
+            print(new_tests,'broken out')
+            #for k,v in new_tests.items():
+                #if type(v) is type({}):
+                    #v.observation['std'] = stds[k]
+                    #try:
+                    #    v.observation['mean'] = v.observation['mean'].simplified
+                    #except:
+                    #    v.observation['value'] = v.observation['value'].simplified
 
             # made not none through keyword argument.
-            if type(mini_tests) is not type(None):
+
+            if type(single_tests) is not type(None):
                 results = {}
-                mini_tests = {}
+                single_tests = {}
 
                 for k,t in new_tests.items():
-                    mini_tests[k] = t
+                    single_tests[k] = t
 
-                for k,v in mini_tests.items():
+                for k,v in single_tests.items():
                     mt = {k: v}
                     if str('ReobaseTest') in new_tests.keys():
                         mt['RheobaseTest'] = new_tests['RheobaseTest']
@@ -1943,7 +2004,7 @@ class OptMan():
                         pass
 
                     temp = mt['RheobaseTest'].observation
-                    if type(temp) is not type({'0':1}):
+                    if type(temp) is not type(dict()):
                         mt['RheobaseTest'].observation = {}
                         mt['RheobaseTest'].observation['value'] = temp#*pq.pA
                         mt['RheobaseTest'].observation['mean'] = temp#*pq.pA
@@ -1982,7 +2043,9 @@ class OptMan():
                 [(value.name,value.observation) for value in new_tests.values()]
                 new_tests = TSD(new_tests)
                 new_tests.use_rheobase_score = tests.use_rheobase_score
-
+                #print()
+                #import pdb
+                #pdb.set_trace()
                 for t in new_tests.values():
                     if 'value' in t.observation.keys():
                         t.observation['mean'] = t.observation['value']
@@ -2167,18 +2230,9 @@ class OptMan():
                 # it's critical that paramaters are assigned here
                 t.params = dtc.protocols[k]
 
-                if "RheobaseTest" in  t.name:
-                    t.score_type = scores.ZScore
-                    # The code block below
-                    # is prefeable but it won't lead to scoring
-                    """
-                    if str("BHH") in dtc.backend or str("ADEXP") in dtc.backend or str("GLIF") in dtc.backend:
-                        t = RheobaseTestP(t.observation)
-                        # it's critical that paramaters are assigned here
+                #if "RheobaseTest" in  t.name:
+                #    t.score_type = scores.ZScore
 
-                        t.params = dtc.protocols['RheobaseTest']
-                        t.passive = False
-                    """
                 try:
                     assert hasattr(self.tests,'use_rheobase_score')
                 except:
@@ -2203,39 +2257,35 @@ class OptMan():
             if hasattr(dtc,'SA'):
                 pass
         dtc.tests = self.preprocess(dtc)
-        if PARALLEL_CONFIDENT is False:
-            suite = TestSuite(dtc.tests)
-            try:
-                dtc.SM = suite.judge(model,parallel=False,log_norm=True)
-                dtc.SA = dtc.SM[model]
-                dtc.SA = dtc.ordered_score()
-            except:
-                print(dtc.SA)
-                import pdb
-                pdb.set_trace()
-        else:
-            scores_ = []
-            for t in dtc.tests:
-                score = t.judge(model)
-                if score.get_raw() == 0:
-                     t.score_type = scores.ZScore
-                     score = t.judge(model)
-                     score.log_norm_score
-                scores_.append(score)
-            dtc.SM = ScoreArray(tests, scores_)
-            dtc.SA = dtc.SM[model]
-            dtc.SA = dtc.ordered_score()
+        #if self.PARALLEL_CONFIDENT is False:
+        #    suite = TestSuite(dtc.tests)
+        #    dtc.SM = suite.judge(model,parallel=False,log_norm=True)
+        #    dtc.SA = dtc.SM[model]
+        #    dtc.SA = dtc.ordered_score()
+        #else:
+        scores_ = []
+        suite = TestSuite(dtc.tests)
+        for t in suite:
+            score = t.judge(model)
+            if not type(score) is sciunit.scores.incomplete.InsufficientDataScore:
+               score.log_norm_score
+            else:
+                print(t.name)
+                score = -np.inf
+            scores_.append(score)
+            #print(scores_)
+        dtc.SA = ScoreArray(dtc.tests, scores_)
+        dtc.SA = dtc.ordered_score()
 
         obs = {}
         pred = {}
         temp = {t.name:t for t in dtc.tests}
         similarity,lps,rps =  self.closeness(temp,temp)
-        for k,o,p in zip(list(similarity.keys()),lps,rps):
+        for k,p,o in zip(list(similarity.keys()),lps,rps):
             obs[k] = o
             pred[k] = p
 
-        dtc.obs_preds = pd.DataFrame([obs,pred])
-        assert dtc.SM is not None
+        dtc.obs_preds = pd.DataFrame([obs,pred],index=['observations','predictions'])
         assert dtc.SA is not None
         return dtc
 
@@ -2611,36 +2661,42 @@ class OptMan():
             for d in dtcpop:
                 d.tests = copy.copy(self.tests)
 
+            b4 = len(dtcpop)
+            delta = [d for d in dtcpop if d.rheobase is None]
 
-            if PARALLEL_CONFIDENT:# and self.backend is not str('ADEXP'):
+            pop, dtcpop = self.make_up_lost(copy.copy(pop), dtcpop, self.td)
+            delta = [d for d in dtcpop if d.rheobase is None]
+
+
+            #print(len(dtcpop),'length after filtering')
+            if self.PARALLEL_CONFIDENT:# and self.backend is not str('ADEXP'):
                 passed = False
-                try:
-                    dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
-                    dtcpop = list(dtcbag.map(self.format_test).compute())
-                    passed = True
-                except:
-                    dtcpop = list(map(self.format_test,dtcpop))
+
+                dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
+                dtcpop = list(dtcbag.map(self.format_test).compute())
+                passed = True
+                #except:
+                #    dtcpop = list(map(self.format_test,dtcpop))
 
                 dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
                 dtcpop = list(dtcbag.map(self.elephant_evaluation).compute())
 
                 for d in dtcpop:
                     assert hasattr(d, 'tests')
-                    assert dtc.SM is not None
+                    #assert dtc.SM is not None
 
                 for d in dtcpop:
                     d.tests = copy.copy(self.tests)
 
-            if not PARALLEL_CONFIDENT:
+            if not self.PARALLEL_CONFIDENT:
                 dtcpop = list(map(self.format_test,dtcpop))
-                #if self.backend == 'ADEXP':
                 dtcpop = list(map(self.elephant_evaluation,dtcpop))
 
                 for d in dtcpop:
                     d.tests = copy.copy(self.tests)
                 for d in dtcpop:
                     assert hasattr(d, 'tests')
-                    assert d.SM is not None
+                    #assert d.SM is not None
 
 
             for d in dtcpop:
