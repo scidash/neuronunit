@@ -3,7 +3,8 @@ import numpy as np
 #from sciunit.models.runnable import RunnableModel
 import quantities as qt
 import copy
-
+from collections import OrderedDict
+from sciunit import scores
 try:
     import asciiplotlib as apl
 except:
@@ -61,6 +62,17 @@ class DataTC(object):
             self.summed = None
         return self.summed
 
+    def ordered_score(self):
+        if not hasattr(self,'os'):
+            self.os = OrderedDict(self.SA.to_dict())
+        else:
+            self.os = {k:self.SA[k] for k in self.os.keys()}
+        for k,v in self.os.items():
+            if v is scores.InsufficientDataScore(None):
+                self.os.items[k] = -np.inf
+
+        return self.os
+
     def add_constant(self):
         if self.constants is not None:
             self.attrs.update(self.constants)
@@ -95,7 +107,12 @@ class DataTC(object):
         return self.tests
     def dtc_to_model(self):
         from neuronunit.models.very_reduced_sans_lems import VeryReducedModel
+        #if self.backend is not in "NEURON":
         model = VeryReducedModel(backend=self.backend)
+        #else:
+        #    try:
+        #        model = ReducedModel(backend=self.backend)
+        #    except:
         model.backend = self.backend
         model.attrs = self.attrs
         model.rheobase = self.rheobase
@@ -180,7 +197,7 @@ class DataTC(object):
             temp = copy.copy(this_test.score_type)
             this_test.score_type = ratio_type
             try:
-                print(this_test.name)
+                #print(this_test.name)
                 self.rscores[rscores.name] = this_test.compute_score(this_test.observation,pred)
 
             except:
@@ -196,9 +213,7 @@ class DataTC(object):
 
     def check_params(self):
         self.judge_test()
-        print(self.rheobase)
-        print(self.vparams)
-        print(self.params)
+
         return self.preds
     def plot_obs(self,ow):
         '''
@@ -234,10 +249,8 @@ class DataTC(object):
 
         pms = uset_t.params
         pms['injected_square_current']['amplitude'] = self.rheobase
-        print(pms)
         model.inject_square_current(pms['injected_square_current'])
         nspike = model.get_spike_train()
-        print(nspike)
         vm = model.get_membrane_potential()
         t = [float(f) for f in vm.times]
         v = [float(f) for f in vm.magnitude]
