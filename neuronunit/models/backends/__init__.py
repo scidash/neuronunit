@@ -16,7 +16,8 @@ warnings.filterwarnings('ignore', message='nested set')
 warnings.filterwarnings('ignore', message='mpi4py')
 
 
-backend_paths = ['jNeuroML.jNeuroMLBackend',
+backend_paths = ['base.EmptyBackend',
+                 'jNeuroML.jNeuroMLBackend',
                  'neuron.NEURONBackend',
                  'general_pyNN.PYNNBackend',
                  'hh_wraper.JHHBackend',
