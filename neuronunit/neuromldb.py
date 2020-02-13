@@ -1,9 +1,16 @@
-import sys, json, quantities
+from urllib import request
+import sys
+import json
+import zipfile, tempfile
+import os
+import pathlib
+
+import quantities
+import quantities as pq
 from scipy.interpolate import interp1d
 import numpy as np
 from neo import AnalogSignal
 from neuronunit.models.static import StaticModel
-import quantities as pq
 
 if sys.version_info[0] >= 3:
     import urllib.request as urllib
@@ -19,6 +26,16 @@ class NeuroMLDBModel:
 
         self.waveform_signals = {}
         self.url_responses = {}
+        
+    def get_files(self): 
+        zip_url = "https://neuroml-db.org/GetModelZip?modelID=%s&version=NeuroML" % self.model_id
+        location = pathlib.Path(tempfile.mkdtemp())
+        zip_location = location / ('%s.zip' % self.model_id)
+        request.urlretrieve(zip_url, zip_location)
+        assert zip_location.is_file()
+        with zipfile.ZipFile(zip_location, 'r') as zip_ref:
+            zip_ref.extractall(location)
+        return location
 
     def read_api_url(self, url):
         if url not in self.url_responses:
