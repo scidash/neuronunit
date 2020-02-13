@@ -43,13 +43,13 @@ def Id(t,delay,duration,tmax,amplitude):
 class JHHBackend(Backend):
     #def get_spike_count(self):
     #    return int(self.spike_monitor.count[0])
+    
+    name = 'JHH'
+    
     def init_backend(self, attrs=None, cell_name='thembi',
                      current_src_name='spanner', DTC=None,
                      debug = False):
-        backend = 'JHH'
         super(JHHBackend,self).init_backend()
-        self.name = str(backend)
-
         self.model._backend.use_memory_cache = False
         self.current_src_name = current_src_name
         self.cell_name = cell_name

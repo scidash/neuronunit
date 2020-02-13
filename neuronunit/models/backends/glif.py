@@ -58,8 +58,10 @@ from allensdk.model.glif.glif_neuron import GlifNeuron
 import pickle
 
 class GLIFBackend(Backend):
+    
+    name = 'GLIF'
+    
     def init_backend(self, attrs = None, cell_name = 'alice', current_src_name = 'hannah', DTC = None, debug = False):
-        backend = 'GLIF'
         super(GLIFBackend,self).init_backend()
 
         self.model._backend.use_memory_cache = False
