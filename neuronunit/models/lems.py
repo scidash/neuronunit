@@ -125,6 +125,16 @@ class LEMSModel(RunnableModel):
         trees = {self.lems_file_path: lems_tree}
         nml_paths = self.get_nml_paths(lems_tree=lems_tree)
         trees.update({x: nml.nml.parsexml_(x) for x in nml_paths})
+        for path, tree in trees.items():
+            for elem in tree.getiterator():
+                try:
+                    # Set the tag name to the local name (i.e. without the namespace)
+                    elem.tag = etree.QName(elem).localname
+                except:
+                    # Probably a comment or someting else that has no QName
+                    pass
+            # Remove unused namespace declarations
+            etree.cleanup_namespaces(tree)
         return trees
 
     def set_lems_attrs(self, path=None):
@@ -181,13 +191,15 @@ class LEMSModel(RunnableModel):
             try:
                 pulse_generators = tree.findall('pulseGenerator')
                 pg_ids = [pg.attrib['id'] for pg in pulse_generators]
-                explicit_inputs = tree.findall('network')[0].\
-                    findall('explicitInput')
-                ei_inputs = [ei.attrib['input'] for ei in explicit_inputs]
-                if len(set(pg_ids).intersection(ei_inputs)):
+                all_inputs = []
+                explicit_inputs = tree.findall('.//explicitInput')
+                all_inputs += [ei.attrib['input'] for ei in explicit_inputs]
+                inputLists = tree.findall('.//inputList')
+                all_inputs += [il.attrib['component'] for il in inputLists]
+                if len(set(pg_ids).intersection(all_inputs)):
                     return True
-            except Exception:
-                pass
+            except Exception as e:
+                raise e
             return False
 
     @property
