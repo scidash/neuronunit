@@ -5,9 +5,12 @@ from numba import jit
 
 from sciunit.utils import redirect_stdout
 from .base import os, copy, subprocess
-from .base import pq, AnalogSignal, NEURON_SUPPORT, neuron, h, pynml
+from .base import pq, AnalogSignal, NEURON_SUPPORT, pynml
 from .base import Backend, BackendException, import_module_from_path
 
+if NEURON_SUPPORT:
+    import neuron
+    from neuron import h
 
 class NEURONBackend(Backend):
     """Use for simulation with NEURON, a popular simulator.

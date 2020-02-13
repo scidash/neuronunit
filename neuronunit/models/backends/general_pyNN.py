@@ -8,16 +8,18 @@ import numpy as np
 import quantities as qt
 from quantities import mV, ms, s
 import matplotlib.pyplot as plt
-import pyNN
-from pyNN.neuron import HH_cond_exp
-from pyNN.neuron import EIF_cond_exp_isfa_ista
-from pyNN.neuron import Izhikevich
-from pyNN import neuron
-from pyNN.neuron import simulator as sim
-from pyNN.neuron import setup as setup
-from pyNN.neuron import DCSource
-
 from sciunit.utils import redirect_stdout
+import pyNN
+pyNN.neuron_log = io.StringIO()
+with redirect_stdout(pyNN.neuron_log):
+    from pyNN.neuron import HH_cond_exp
+    from pyNN.neuron import EIF_cond_exp_isfa_ista
+    from pyNN.neuron import Izhikevich
+    from pyNN import neuron
+    from pyNN.neuron import simulator as sim
+    from pyNN.neuron import setup as setup
+    from pyNN.neuron import DCSource
+
 from .base import *
 
 
@@ -26,7 +28,6 @@ class HHpyNNBackend(Backend):
 
     def load_model(self):
         neuron = None
-        from pyNN import neuron
         self.hhcell = neuron.create(EIF_cond_exp_isfa_ista())
         neuron.setup(timestep=self.dt, min_delay=1.0)
 
@@ -110,7 +111,6 @@ class HHpyNNBackend(Backend):
 
     def load_model(self):
         neuron = None
-        from pyNN import neuron
         if self.adexp:
         	self.hhcell = neuron.create(EIF_cond_exp_isfa_ista())
         elif self.HH:
