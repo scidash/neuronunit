@@ -115,12 +115,14 @@ def simulate_HH_neuron_local(I_stim=None,
 
 getting_started = False
 class BHHBackend(Backend):
+    
+    name = 'BHH'
+    
     def init_backend(self, attrs=None, cell_name='thembi',
                      current_src_name='spanner', DTC=None,
                      debug = False):
-        backend = 'BHH'
+        
         super(BHHBackend,self).init_backend()
-        self.name = str(backend)
 
         self.model._backend.use_memory_cache = False
         self.current_src_name = current_src_name

@@ -20,7 +20,7 @@ backend_paths = ['base.EmptyBackend',
                  'jNeuroML.jNeuroMLBackend',
                  'neuron.NEURONBackend',
                  'general_pyNN.PYNNBackend',
-                 'hh_wraper.JHHBackend',
+                 #'hh_wraper.JHHBackend',
                  'rawpy.RAWBackend',
                  'hhrawf.HHBackend',
                  'glif.GLIFBackend',
@@ -55,7 +55,6 @@ def register_backends(backend_paths):
         name, backend = check_backend(partial_path)
         if name is not None:
             provided_backends[name] = backend
-    print(provided_backends)
     su_backends.register_backends(provided_backends)
     
 register_backends(backend_paths)
