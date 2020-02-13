@@ -5,17 +5,26 @@ import sys
 #from sciunit.utils import NotebookTools#,import_all_modules
 import dask
 from dask import bag
-#from base import *
 
 
 from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.optimization_management import dtc_to_rheo
 from neuronunit.optimisation.optimization_management import OptMan # elephant_evaluation
-#from neuronunit.optimisation.optimization_management import format_test, mint_generic_model
 from itertools import repeat
 import quantities as pq
+elephant_evaluation = OptMan.elephant_evaluation
+format_test = OptMan.format_test
 
-from neuronunit.optimisation import mint_tests
+def format_test_(dtc):
+    from neuronunit.optimisation.optimization_management import OptMan # elephant_evaluation
+    dtc = OptMan.format_test(OptMan,dtc)
+    return dtc
+
+def elephant_evaluation_(dtc):
+    from neuronunit.optimisation.optimization_management import OptMan # elephant_evaluation
+    dtc = OptMan.elephant_evaluation(OptMan,dtc)
+    return dtc
+#from neuronunit.optimisation import mint_tests
 
 
 from neuronunit.models.reduced import ReducedModel, VeryReducedModel
@@ -42,17 +51,9 @@ import dask.bag as db
 #import dask.bag as db
 from neuronunit.models.reduced import ReducedModel
 
-#from neuronunit.optimisation import get_neab
-#from neuronunit.optimisation.optimization_management import format_test
+
 from neuronunit.optimisation import data_transport_container
-#from neuronunit.optimisation import data_transport_container
-
-#from neuronunit.optimisation import get_neab
-#from neuronunit.models.reduced import ReducedModel
-
-#from neuronunit.optimisation import get_neab
-#from neuronunit.models.reduced import ReducedModel
-
+from neuronunit.optimisation.optimization_management import TSD
 from neuronunit.models.reduced import ReducedModel
 from neuronunit.optimisation import get_neab
 import numpy as np
@@ -63,20 +64,8 @@ from neuronunit import aibs
 import os
 from neuronunit.optimisation.exhaustive_search import update_dtc_grid as ug
 from sciunit.models.runnable import RunnableModel
-#model = RunnableModel(str(dtc.backend),backend=(dtc.backend, {'DTC':dtc}))
+import pandas as pd
 
-'''
-def update_dtc_grid(item_of_iter_list):
-    dtc = data_transport_container.DataTC()
-    dtc.attrs = deepcopy(item_of_iter_list)
-
-    dtc.scores = {}
-    dtc.rheobase = None
-    dtc.evaluated = False
-    print(dtc)
-    #dtc.backend = 'NEURON'
-    return dtc
-'''
 def grid_points():
     npoints = 10
     nparams = 10
@@ -84,73 +73,44 @@ def grid_points():
     USE_CACHED_GS = False
     grid_points = exhaustive_search.create_grid(npoints = npoints,free_params=free_params)
     dtcpop = []
-    for g in list(grid_points)[0:2]:
+    for g in list(grid_points)[0:11]:
         dtc = data_transport_container.DataTC()
         dtc.attrs = g
         dtcpop.append(dtc)
-        print(dtc.attrs)
     return dtcpop
-    '''
-    import pdb
-    pdb.set_trace()
-    try:
-        #if len(grid_points)>3:
-        #    b0 = db.from_sequence(grid_points[0:2], npartitions=2)
-        #else:
-        #    b0 = db.from_sequence(grid_points, npartitions=len(grid_points))
-        #dtcpop = list(b0.map(ug).compute())
-        dtcpop = list(map(grid_points,ug))
-        print(dtcpop)
-        assert dtcpop is not None
-
-    except:
-        print(grid_points)
-        dtcpop = None
-    return dtcpop
-    '''
 
 def test_rheobase_dtc(dtcpop, tests):
-    rheobase_test = tests[0][0][0]
 
+    all_tests = TSD(tests['Hippocampus CA1 pyramidal cell'])
     for d in dtcpop:
-        d.tests = rheobase_test
+        d.tests = all_tests
         d.backend = str('RAW')
-    print('befor critical fail')
-    import pdb
-    pdb.set_trace()
 
     dtcpop = list(map(dtc_to_rheo,dtcpop))
     return dtcpop
-    '''
-    for d in dtcpop:
-        assert len(list(d.attrs.values())) > 0
-    b0 = db.from_sequence(dtcpop, npartitions=8)
-    dtcpop = list(db.map(format_test,b0).compute())
-
-    b0 = db.from_sequence(dtcpop, npartitions=8)
-    dtcpop = list(db.map(nunit_evaluation,b0).compute())
-    '''
 
 def test_all_tests_pop(dtcpop, tests):
-    rheobase_test = tests[0][0][0]
-    all_tests = tests[0][0]
-    for d in dtcpop:
-        d.tests = rheobase_test
-        d.backend = str('RAW')
-        assert len(list(d.attrs.values())) > 0
-
-    dtcpop = list(map(dtc_to_rheo,dtcpop))
-
+    all_tests = TSD(tests['Hippocampus CA1 pyramidal cell'])
     for d in dtcpop:
         d.tests = all_tests
         d.backend = str('RAW')
         assert len(list(d.attrs.values())) > 0
 
-    b0 = db.from_sequence(dtcpop, npartitions=8)
-    dtcpop = list(db.map(format_test,b0).compute())
-
-    b0 = db.from_sequence(dtcpop, npartitions=8)
-    dtcpop = list(db.map(nunit_evaluation,b0).compute())
+    dtcpop = list(map(dtc_to_rheo,dtcpop))
+    print([d for d in dtcpop],len(dtcpop))
+    for d in dtcpop:
+        d.tests = all_tests
+        d.backend = str('RAW')
+        assert len(list(d.attrs.values())) > 0
+    if len(dtcpop)>2:
+        
+        b0 = db.from_sequence(dtcpop, npartitions=2)
+        dtcpop = list(b0.map(format_test_).compute())
+        b0 = db.from_sequence(dtcpop, npartitions=2)
+        dtcpop = list(b0.map(elephant_evaluation_).compute())
+    else:
+        dtcpop = list(map(format_test_,dtcpop))
+        dtcpop = list(map(elephant_evaluation_,dtcpop))
     return dtcpop
 
 class testLowLevelOptimisation(unittest.TestCase):
@@ -171,15 +131,16 @@ class testLowLevelOptimisation(unittest.TestCase):
                 self.electro_tests = pickle.load(f)
         except:
             pass
-        suite, self.test_frame, self.obs_frame = mint_tests.get_cell_constraints()
-        _ = pd.DataFrame(self.test_frame )
+        self.test_frame = get_neab.process_all_cells()
+        #self.electro_tests = get_neab.replace_zero_std(self.electro_tests)
+        #_ = pd.DataFrame(self.test_frame)
 
         self.electro_tests = {key:val for key,val in self.test_frame.items() }# if len(val) ==8}
 
-        #self.electro_tests = get_neab.replace_zero_std(self.electro_tests)
 
         self.test_rheobase_dtc = test_rheobase_dtc
         self.dtcpop = test_rheobase_dtc(dtcpop,self.electro_tests)
+        print(self.dtcpop,len(self.dtcpop))
         self.dtcpop = test_all_tests_pop(self.dtcpop,self.electro_tests)
         self.dtc = self.dtcpop[0]
         self.rheobase = self.dtc.rheobase
@@ -221,7 +182,6 @@ class testLowLevelOptimisation(unittest.TestCase):
         for key, value in pipe_results.items():
             if value != pipe_new[key]:
                 bool = True
-            print(value,pipe_new[key])
 
         return bool
 
@@ -317,12 +277,10 @@ class testLowLevelOptimisation(unittest.TestCase):
         '''
         (self.dtcpop,dm_properties) = add_dm_properties_to_cells(self.dtcpop)
         for d in dm_properties:
-            print(d)
             self.assertTrue(d is not None)
         return
 
     def get_observation(self, cls):
-        print(cls.__name__)
         neuron = {'nlex_id': 'nifext_50'} # Layer V pyramidal cell
         return cls.neuroelectro_summary_observation(neuron)
 
@@ -434,28 +392,33 @@ class testLowLevelOptimisation(unittest.TestCase):
         self.assertNotEqual(self.rheobase,None)
         self.dtc.attrs = self.model.attrs
 
+    def test_parallel_sciunit(self):
+        for tests in self.test_frame:
+            suite = TestSuite(tests)
+            SM = suite.judge(self.standard_model,parallel=True)
+            #self.assertTrue(SM.scores)
+
+
 
     def test_inputresistance(self):
         from neuronunit.tests.passive import InputResistanceTest as T
         score = self.run_test(T)
-        print(score)
-        print(score.sort_key)
-        self.assertTrue(-0.6 < float(score.sort_key) < -0.5)
+        self.assertTrue(-0.6 < float(score.norm_score) < -0.5)
 
     def test_restingpotential(self):
         from neuronunit.tests.passive import RestingPotentialTest as T
         score = self.run_test(T)
-        self.assertTrue(1.2 < score < 1.3)
+        self.assertTrue(1.2 < float(score.norm_score) < 1.3)
 
     def test_capacitance(self):
         from neuronunit.tests.passive import CapacitanceTest as T
         score = self.run_test(T)
-        self.assertTrue(-0.15 < score < -0.05)
+        self.assertTrue(-0.15 < float(score.norm_score) < -0.05)
 
     def test_timeconstant(self):
         from neuronunit.tests.passive import TimeConstantTest as T
         score = self.run_test(T)
-        self.assertTrue(-1.45 < score < -1.35)
+        self.assertTrue(-1.45 < float(score.norm_score) < -1.35)
 
 
 
@@ -470,13 +433,6 @@ class testLowLevelOptimisation(unittest.TestCase):
     def test_ap_amplitude(self):
 
         from neuronunit.tests.waveform import InjectedCurrentAPAmplitudeTest as T
-        #from neuronunit.optimisation.optimisation_management import format_test
-        #from neuronunit.optimisation import data_transport_container
-        #dtc = data_transport_container.DataTC()
-        #dtc.rheobase = self.rheobase
-        #def run_test(self, cls, pred =None):
-        #dtc = format_test(dtc)
-        #self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend=('NEURON',{'DTC':dtc}))
 
         score = self.run_test(T,pred=self.rheobase)
         self.assertTrue(-1.7 < score < -1.6)
@@ -486,7 +442,7 @@ class testLowLevelOptimisation(unittest.TestCase):
         from neuronunit.tests.waveform import InjectedCurrentAPThresholdTest as T
         dtc = data_transport_container.DataTC()
         dtc.rheobase = self.rheobase
-        dtc = format_test(dtc)
+        dtc = format_test_(dtc)
         try:
             self.model = VeryReducedModel(backend=('RAW',{'DTC':dtc}))
         except:

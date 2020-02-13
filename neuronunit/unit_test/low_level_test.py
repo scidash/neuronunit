@@ -168,11 +168,13 @@ class testLowLevelOptimisation(unittest.TestCase):
             electro_path = 'multicellular_suite_constraints.p'
             assert os.path.isfile(electro_path) == True
             with open(electro_path,'rb') as f:
-                self.electro_tests = pickle.load(f)
+                self.test_frame = pickle.load(f)
         except:
             pass
-        suite, self.test_frame, self.obs_frame = mint_tests.get_cell_constraints()
+        suite, self.test_frame = mint_tests.get_cell_constraints()
         _ = pd.DataFrame(self.test_frame )
+        with open(electro_path,'wb') as f:
+            pickle.dump(self.test_frame,f)
 
         self.electro_tests = {key:val for key,val in self.test_frame.items() }# if len(val) ==8}
 

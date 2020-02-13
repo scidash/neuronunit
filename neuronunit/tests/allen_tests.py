@@ -59,12 +59,16 @@ def allen_format(volts,times,key=None,stim=None):
         return allen_features[key], allen_features
     else:
         return allen_features, allen_features
+
 try:
     data_sets = get_data_sets_from_cache(do_features=True)
     assert len(data_sets) > 1
 except:
     data_sets = get_data_sets_from_remote(upper_bound=2)
     assert len(data_sets) > 1
+
+#data_sets = get_data_sets_from_remote(upper_bound=2)
+#assert len(data_sets) > 1
 
 from neuronunit.examples.hide_imports import *
 
@@ -81,16 +85,35 @@ def data_set(number):
     stim_types = [ specific_data.get_sweep_metadata(n)['aibs_stimulus_name'] for n in numbers ]
     responses = [ specific_data.get_sweep(n)['response'] for n in numbers ]
 
+from neuronunit.examples.hide_imports import *
+
+def data_set(number):
+    # store = [(i,len(data_sets[0][0].get_spike_times(i))) for i in sweeps ]
+
+    specific_data = data_sets[number][0]
+    numbers = specific_data.get_sweep_numbers()
+    sweeps = []
+    for n in numbers:
+        sweeps.append(specific_data.get_sweep(n))
+
+    stim_types = [ specific_data.get_sweep_metadata(n)['aibs_stimulus_name'] for n in numbers ]
+    responses = [ specific_data.get_sweep(n)['response'] for n in numbers ]
+
     try:
-        assert 1==2
+        #assert 1==2
         with open('allen_test.p','rb') as f:
             pre_obs = pickle.load(f)
 
     except:
-        df = pd.DataFrame(rts)
-        for key,v in rts.items():
-            helper_tests = [value for value in v.values() ]
-            break
+        from neuronunit.optimisation import get_neab
+        rts = get_neab.process_all_cells()
+        helper_tests = rts['Neocortex pyramidal cell layer 5-6'].tests
+        #import pdb
+        #pdb.set_trace()
+        #df = pd.DataFrame(rts)
+        #for key,v in rts.items():
+        #    helper_tests = [value for value in v.values() ]
+        #    break
         stim_types = [ specific_data.get_sweep_metadata(n)['aibs_stimulus_name'] for n in numbers ]
         supra_sweeps = [(i,j) for i,j in enumerate(stim_types) if str("Suprathreshold") in j ]
         analy_dict = {}
@@ -107,8 +130,6 @@ def data_set(number):
         responses = [ specific_data.get_sweep(n)['response'] for n in numbers ]
         one_sweep = [ stim_amps[-2],response_features_2[list(response_features_2.keys())[-2]],helper_tests, responses[-2] ]
         two_sweep = [ stim_amps[-3],response_features_3[list(response_features_3.keys())[-3]],helper_tests, responses[-3] ]
-        #import pdb
-        #pdb.set_trace()
 
         pre_obs = [specific_data.file_name,one_sweep,two_sweep]
 
@@ -117,7 +138,10 @@ def data_set(number):
         with open('allen_test{0}.p'.format(number),'wb') as f:
             pickle.dump(pre_obs,f)
         return pre_obs
-pre_obs = data_set(0)
+try:
+    pre_obs = data_set(0)
+except:
+    pre_obs = data_set(1)
 #['isi_cv'], 'spikes', 'mean_isi', 'id', 'adapt', 'latency', 'median_isi', 'avg_rate', 'first_isi'])
 #import pdb
 #pdb.set_trace()

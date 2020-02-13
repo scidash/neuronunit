@@ -1,13 +1,6 @@
 """NeuronUnit model class for reduced neuron models."""
 
-#from .static import ExternalModel
 import sciunit
-'''
-class StaticModel(sciunit.Model,
-                  cap.ReceivesSquareCurrent,
-                  cap.ProducesActionPotentials,
-                  cap.ProducesMembranePotential):
-'''
 import neuronunit.capabilities as cap
 
 
@@ -15,6 +8,7 @@ import numpy as np
 from neo.core import AnalogSignal
 import quantities as pq
 from sciunit.models.runnable import RunnableModel
+from neuronunit.optimisation.data_transport_container import DataTC
 
 import neuronunit.capabilities.spike_functions as sf
 class VeryReducedModel(RunnableModel,
@@ -38,6 +32,18 @@ class VeryReducedModel(RunnableModel,
         self.attrs = {}
         self.run_number = 0
         self.tstop = None
+        self.rheobse = None
+
+    def model_to_dtc(self):
+        dtc = DataTC()
+        dtc.attrs = self.attrs
+        try:
+            dtc.backend = self.get_backend()
+        except:
+            dtc.backend = self.backend
+        if hasattr(self,'rheobase'):
+            dtc.rheobase = self.rheobase
+        return dtc
 
     def inject_square_current(self, current):
         #pass

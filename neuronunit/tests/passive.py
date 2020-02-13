@@ -7,8 +7,7 @@ import gc
 from neuronunit import neuroelectro
 import numpy as np
 from neo import AnalogSignal
-DURATION = 500.0*pq.ms
-DELAY = 200.0*pq.m
+
 try:
     import asciiplotlib as apl
     fig.plot([1,0], [0,1])
@@ -79,7 +78,7 @@ class TestPulseTest(ProtocolToFeaturesTest):
                        'n': reference_data.n}
         return observation
 
-    
+
     def compute_params(self):
         super(TestPulseTest, self).compute_params()
         self.params['injected_square_current'] = \
@@ -136,17 +135,7 @@ class TestPulseTest(ProtocolToFeaturesTest):
         stop = i['duration'] +i['delay'] - 1*pq.ms  # 1 ms before pulse end
         region = cls.get_segment(vm, start, stop)
         if len(set(r[0] for r in region.magnitude))>1 and np.std(region.magnitude)>0.0:
-            try:
-                _, tau, _ = cls.exponential_fit(region, i['delay'])
-            except:
-                try:
-                    print('1,000 magnitude wrong offset')
-                    region = AnalogSignal([j*1000.0 for j in region],sampling_period=region.sampling_period,units=region.units)
-                    _, tau, _ = cls.exponential_fit(region, i['delay'])
-                except:
-                    print('1,000,000 magnitude wrong offset')
-                    region = AnalogSignal([j*1000000.0 for j in region],sampling_period=region.sampling_period,units=region.units)
-                    _, tau, _ = cls.exponential_fit(region, i['delay'])
+            _, tau, _ = cls.exponential_fit(region, i['delay'])
         else:
             tau = None
         return tau
@@ -157,7 +146,7 @@ class TestPulseTest(ProtocolToFeaturesTest):
         Strips units, center, and standardize to avoid precision issues.
         Params:
             segment: A neo AnalogSignal
-            offset: A python quantity of time 
+            offset: A python quantity of time
         Returns:
             amplitude (segment units)
             tau (ms)
@@ -167,7 +156,7 @@ class TestPulseTest(ProtocolToFeaturesTest):
         start = t[0]  # The time of the first point in the segment
         # Shift all time points to be relative to offset
         # i.e. t=0 should be the beginning of the action
-        t = t-offset 
+        t = t-offset
         # The location of the desired offset, relative to segment start,
         # for determining the number of samples until offset
         offset = offset-start
@@ -191,7 +180,7 @@ class TestPulseTest(ProtocolToFeaturesTest):
         guesses = [-1,  # ampl (in s.d.)
                    10,  # tau (implied ms)
                    0]  # y0 (in s.d.)
-        
+
         def func(t, ampl, tau, y0):
             """Produce an exponential function.
 
@@ -201,7 +190,7 @@ class TestPulseTest(ProtocolToFeaturesTest):
             y[:offset] = y0
             y[offset:] = ampl * np.exp(-t[offset:]/tau) + y0
             return y
-        
+
         # Do the curve fit
         popt, pcov = curve_fit(func, t, vm, p0=guesses)
         # Extract the parameters, adding back mean, std, and units
@@ -209,17 +198,6 @@ class TestPulseTest(ProtocolToFeaturesTest):
         tau = popt[1]*pq.ms
         y0 = (mean + popt[2]*std)*pq.mV
         return amplitude, tau, y0
-
-    def compute_score(self, observation, prediction):
-        """Implement sciunit.Test.score_prediction."""
-        if prediction is None:
-            score = None
-            return score  # scores.InsufficientDataScore(None)
-
-        else:
-            score = super(TestPulseTest, self).\
-                        compute_score(observation, prediction)
-        return score
 
 
 class InputResistanceTest(TestPulseTest):
@@ -252,10 +230,11 @@ class InputResistanceTest(TestPulseTest):
             #print("r_in = r_in.simplified")
             #print("Put prediction in a form that compute_score() can use.")
             features = {'value': r_in}
+        self.prediction = features
+        #print(self.prediction)
         return features
-    """
     def compute_score(self, observation, prediction):
-        Implement sciunit.Test.score_prediction.
+        #Implement sciunit.Test.score_prediction.
         if prediction is None:
             return None  # scores.InsufficientDataScore(None)
         score = None
@@ -263,13 +242,12 @@ class InputResistanceTest(TestPulseTest):
             if prediction['n'] == 0:  # if prediction is None:
                 score = scores.InsufficientDataScore(None)
         else:
-            prediction['value'] = prediction['value'].simplified
-            observation['value'] = observation['value'].simplified
+            #prediction['value'] = prediction['value'].simplified
+            #observation['value'] = observation['value'].simplified
             score = super(InputResistanceTest, self).compute_score(observation,
                                                                 prediction)
 
         return score
-    """
 
 class TimeConstantTest(TestPulseTest):
     """Test the input resistance of a cell."""
@@ -298,9 +276,14 @@ class TimeConstantTest(TestPulseTest):
         if features is not None:
             i, vm = features
             tau = self.__class__.get_tau(vm, i)
-            tau = tau.simplified
-            # Put prediction in a form that compute_score() can use.
-            features = {'value': tau}
+            try:
+                tau = tau.simplified
+                # Put prediction in a form that compute_score() can use.
+                features = {'value': tau}
+            except:
+                features = {'value': None}
+        self.prediction = features
+        print(self.prediction)
         return features
 
     def compute_score(self, observation, prediction):
@@ -312,10 +295,14 @@ class TimeConstantTest(TestPulseTest):
             if prediction['n'] == 0:  # if prediction is None:
                 score = scores.InsufficientDataScore(None)
             else:
+                print(observation,prediction)
+                print(observation['mean'].units,prediction['value'].units)
+
                 score = super(TimeConstantTest, self).compute_score(observation,
                                                                 prediction)
         else:
-            # prediction['value'] = prediction['value']
+            print(observation,prediction)
+            print(observation['mean'].units,prediction['value'].units)
             score = super(TimeConstantTest, self).compute_score(observation,
                                                                 prediction)
 
@@ -354,6 +341,8 @@ class CapacitanceTest(TestPulseTest):
             else:
                 c = None
             features = {'value': c}
+        self.prediction = features
+
         return features
 
     def compute_score(self, observation, prediction):
@@ -406,6 +395,8 @@ class RestingPotentialTest(TestPulseTest):
             median = model.get_median_vm()  # Use median for robustness.
             std = model.get_std_vm()
             features = {'mean': median, 'std': std}
+        self.prediction = features
+
         return features
 
     def compute_score(self, observation, prediction):
@@ -415,9 +406,11 @@ class RestingPotentialTest(TestPulseTest):
         else:
             #prediction['value'] = prediction['value'].simplified
             #observation['value'] = observation['value'].simplified
+            print(observation, prediction)
 
             score = super(RestingPotentialTest, self).\
                         compute_score(observation, prediction)
+        self.verbose = False
         if self.verbose:
             print(score)
             print(observation, prediction)

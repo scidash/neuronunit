@@ -10,8 +10,7 @@ import multiprocessing
 global cpucount
 npartitions = cpucount = multiprocessing.cpu_count()
 from .base import np, pq, ncap, VmTest, scores, AMPL, DELAY, DURATION
-#DURATION = 2000
-#DELAY = 200
+
 from .. import optimisation
 
 from neuronunit.optimisation.data_transport_container import DataTC
@@ -157,10 +156,12 @@ class RheobaseTest(VmTest):
             prediction['value'] = sorted(supra)[1]
         if len(supra) and single_spike_found and str("HH") in str(model._backend.name):
             prediction['value'] = sorted(supra)[0]
+        self.prediction = prediction
         return prediction
 
     def extract_features(self,model):
         prediction = self.generate_prediction(model)
+        self.prediction = prediction
         return prediction
 
     def threshold_FI(self, model, units, guess=None):
@@ -178,6 +179,8 @@ class RheobaseTest(VmTest):
                 model.inject_square_current(current)
                 n_spikes = model.get_spike_count()
                 self.n_spikes = n_spikes
+                if self.n_spikes == 1:
+                    self.params['injected_square_current'] = current
                 temp = model._backend.get_spike_count()
 
                 if self.verbose >= 2:
@@ -367,11 +370,11 @@ class RheobaseTestP(RheobaseTest):
                 model = dtc.dtc_to_model()
 
 
-            default_params = {'injected_square_current':
-                      {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+            #default_params = {'injected_square_current':
+            #          {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
             ampl = dtc.ampl
             if float(ampl) not in dtc.lookup or len(dtc.lookup) == 0:
-                default_params['injected_square_current']
+                #default_params['injected_square_current']
                 uc = {'amplitude':dtc.ampl,'duration':DURATION,'delay':DELAY}
                 dtc.run_number += 1
                 model.inject_square_current(uc)
@@ -424,8 +427,7 @@ class RheobaseTestP(RheobaseTest):
                     try:
                         steps = np.linspace(1.0,550.0,7.0)
                         steps1 = np.linspace(1,550,7)
-                        print(steps)
-                        print(steps1)
+
                     except:
                         steps = np.linspace(1,550,7)
 
@@ -452,12 +454,10 @@ class RheobaseTestP(RheobaseTest):
                 big = 16
 
             while dtc.boolean == False and cnt< big:
-                #print(cnt)
-                # negeative spiker
+
                 if len(sub):
                     if sub.max() < -1.0:
                         pass
-                        #use_diff = True # differentiate the wave to look for spikes
 
 
                 be = dtc.backend
@@ -466,20 +466,23 @@ class RheobaseTestP(RheobaseTest):
                     dtc_clones[i] = copy.copy(dtc_clones[i])
                     dtc_clones[i].ampl = copy.copy(dtc.current_steps[i])
                 dtc_clones = [d for d in dtc_clones if not np.isnan(d.ampl)]
-                #try:
-                b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
-                dtc_clone = list(b0.map(check_current).compute())
-                '''
+                try:
+                    b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
+                    dtc_clone = list(b0.map(check_current).compute())
+
                 except:
                     set_clones = set([ float(d.ampl) for d in dtc_clones ])
                     dtc_clone = []
                     for dtc,sc in zip(dtc_clones,set_clones):
                         dtc = copy.copy(dtc)
                         dtc.ampl = sc*pq.pA
-                        dtc = check_current(dtc)
-                        dtc.backend = be
-                        dtc_clone.append(dtc)
-                '''
+                        try:
+                            dtc = check_current(dtc)
+                            dtc.backend = be
+                            dtc_clone.append(dtc)
+                        except:
+                            dtc.lookup[float(dtc.ampl)] = 0
+
                 if str("BHH") not in dtc.backend:
                     # take smallest spiking if multi spiking rheobase
 
@@ -575,7 +578,9 @@ class RheobaseTestP(RheobaseTest):
         else:
             prediction['value'] = None
             return prediction
+        self.prediction = prediction
         return prediction
+
 
     def extract_features(self,model):
         prediction = self.generate_prediction(model)

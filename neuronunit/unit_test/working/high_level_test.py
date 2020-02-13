@@ -24,7 +24,7 @@ from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.data_transport_container import DataTC
 
 from neuronunit.optimisation.optimization_management import dtc_to_rheo
-from neuronunit.optimisation.optimization_management import OptMan as OM
+from neuronunit.optimisation.optimization_management import OptMan as OM, OptMan
 elephant_evaluation = OM.elephant_evaluation
 format_test = OM.format_test
 round_trip_test = OM.format_test
@@ -41,6 +41,8 @@ from neuronunit.models.reduced import ReducedModel, VeryReducedModel
 #from neuronunit.optimisation import get_neab
 from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 from neuronunit.tests import dynamics
+from neuronunit.optimisation.optimization_management import TSD
+
 #from neuronunit.models.reduced import
 
 #from neuronunit.optimisation.optimization_management import format_test, inject_and_plot
@@ -54,6 +56,8 @@ from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
 from neuronunit.models.reduced import ReducedModel
 from neuronunit import aibs
 import pandas as pd
+from neuronunit.optimisation import get_neab
+
 def test_all_tests_pop(dtcpop, tests):
 
     rheobase_test = [tests[0]['Hippocampus CA1 pyramidal cell']['RheobaseTest']]
@@ -85,33 +89,22 @@ def grid_points():
     dtcpop = list(b0.map(es).compute())
     assert dtcpop is not None
     return dtcpop
-
 class testHighLevelOptimisation(unittest.TestCase):
 
     def setUp(self):
-        try:
-            electro_path = 'multicellular_suite_constraints.p'
-            assert os.path.isfile(electro_path) == True
-            with open(electro_path,'rb') as f:
-                self.electro_tests = pickle.load(f)
-        except:
-            pass
-        suite, self.test_frame = mint_tests.get_cell_constraints()
-        _ = pd.DataFrame(self.test_frame )
+        self.test_frame = get_neab.process_all_cells()
+
+        self.test_frame = {k:tf for k,tf in self.test_frame.items() if len(tf.tests)>0 }
+
+        for testsuite in self.test_frame.values():
+            for t in testsuite.tests:
+                if float(t.observation['std']) == 0.0:
+                    t.observation['std'] = t.observation['mean']
+
         self.predictions = None
         self.predictionp = None
         self.score_p = None
         self.score_s = None
-         #self.grid_points
-
-        #electro_path = 'pipe_tests.p'
-        assert os.path.isfile(electro_path) == True
-        with open(electro_path,'rb') as f:
-            self.electro_tests = pickle.load(f)
-        #self.electro_tests = get_neab.replace_zero_std(self.electro_tests)
-
-        #self.test_rheobase_dtc = test_rheobase_dtc
-        #self.dtcpop = test_rheobase_dtc(self.dtcpop,self.electro_tests)
         dtc = DataTC()
         dtc.backend = 'RAW'
         try:
@@ -146,13 +139,28 @@ class testHighLevelOptimisation(unittest.TestCase):
         #MBEs = list(self.MODEL_PARAMS.keys())
         MBEs = [str('RAW'),str('BADEXP')]
         for key, use_test in self.test_frame.items():
-            for b in MBEs:
-                use_test['protocol'] = str('elephant')
+            import sciunit
+            if type(use_test) is type(sciunit.suites.TestSuite):
+                print('capture')
+                use_test = {t.name:t for t in use_test}
+                import pdb
+                pdb.set_trace()
+            use_test = {k.name:k for k in use_test.tests }
+            use_test['protocol'] = str('elephant')
+            use_test = TSD(use_test)
+            use_test.use_rheobase_score = True
 
-                tuples_ = round_trip_test(use_test,b)
-                (boolean,self.dtcpop) = tuples_
+            for b in MBEs:
+                edges = self.MODEL_PARAMS[b]
+
+                OM = OptMan(use_test,\
+                    backend=b,\
+                    boundary_dict=edges,\
+                    protocol={'allen': False, 'elephant': True})
+                out = OM.round_trip_test(use_test,b,edges,NGEN = 10, MU = 10)
+                boolean = out[4]<0.5
                 print('done one')
-                print(boolean,self.dtcpop)
+                #print(boolean,self.dtcpop)
                 self.assertTrue(boolean)
         return
 
@@ -162,22 +170,32 @@ class testHighLevelOptimisation(unittest.TestCase):
         NGEN = 10
         local_tests = pre_obs[2][1]
         pre_obs[2][1]['spikes'][0]
+        b = str('GLIF')
 
         local_tests.update(pre_obs[2][1]['spikes'][0])
         local_tests['current_test'] = pre_obs[1][0]
         local_tests['spk_count'] = len(pre_obs[2][1]['spikes'])
         local_tests['protocol'] = str('allen')
-        tuples_ = round_trip_test(local_tests,str('GLIF'))
-        (boolean,self.dtcpop) = tuples_
+
+        edges = self.MODEL_PARAMS[b]
+
+        OM = OptMan(local_tests,\
+            backend=b,\
+            boundary_dict=edges,\
+            protocol={'allen': False, 'elephant': True})
+        out = OM.round_trip_test(local_tests,b,edges,NGEN = 10, MU = 10)
+        boolean = out[4]<0.5
         print('done one')
-        print(boolean,self.dtcpop)
+        #print(boolean,self.dtcpop)
         self.assertTrue(boolean)
+
         return
 
     def test_solution_quality3(self):
 
         from neuronunit.tests.allen_tests import pre_obs#, test_collection
         NGEN = 10
+
         local_tests = pre_obs[2][1]
         pre_obs[2][1]['spikes'][0]
 

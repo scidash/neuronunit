@@ -275,7 +275,7 @@ class ADEXPBackend(Backend):
         vm = state_dic['v']
         vm = [ float(i) for i in vm ]
 
-        self.vM = AnalogSignal(vm,units = mV,sampling_period = float(1.0) * pq.ms)
+        self.vM = AnalogSignal(vm,units = mV,sampling_period = float(0.0001) * pq.s)
 
 
         tdic = self.spike_monitor.spike_trains()
