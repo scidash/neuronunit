@@ -53,7 +53,7 @@ from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
 #from neuronunit.optimisation import get_neab
 from neuronunit.models.reduced import ReducedModel
 from neuronunit import aibs
-
+import pandas as pd
 def test_all_tests_pop(dtcpop, tests):
 
     rheobase_test = [tests[0]['Hippocampus CA1 pyramidal cell']['RheobaseTest']]
@@ -90,13 +90,15 @@ class testHighLevelOptimisation(unittest.TestCase):
 
     def setUp(self):
         try:
+            #multicellular_suite_constraints.p
             electro_path = 'multicellular_suite_constraints.p'
             assert os.path.isfile(electro_path) == True
             with open(electro_path,'rb') as f:
-                self.electro_tests = pickle.load(f)
+                suite, self.test_frame = pickle.load(f)
         except:
-            pass
-        suite, self.test_frame, self.obs_frame = mint_tests.get_cell_constraints()
+            print('fail to load pickle')
+            suite, self.test_frame = mint_tests.get_cell_constraints()
+        
         _ = pd.DataFrame(self.test_frame )
         self.predictions = None
         self.predictionp = None
@@ -105,13 +107,16 @@ class testHighLevelOptimisation(unittest.TestCase):
          #self.grid_points
 
         #electro_path = 'pipe_tests.p'
-        assert os.path.isfile(electro_path) == True
-        with open(electro_path,'rb') as f:
-            self.electro_tests = pickle.load(f)
-        #self.electro_tests = get_neab.replace_zero_std(self.electro_tests)
+        #assert os.path.isfile(electro_path) == True
+        #with open(electro_path,'rb') as f:
+        #    self.electro_tests = pickle.load(f)
+        try:
+            self.electro_tests = get_neab.replace_zero_std(self.test_frame)
 
-        #self.test_rheobase_dtc = test_rheobase_dtc
-        #self.dtcpop = test_rheobase_dtc(self.dtcpop,self.electro_tests)
+            self.test_rheobase_dtc = test_rheobase_dtc
+            self.dtcpop = test_rheobase_dtc(self.dtcpop,self.electro_tests)
+        except:
+            pass
         dtc = DataTC()
         dtc.backend = 'RAW'
         try:
@@ -121,13 +126,15 @@ class testHighLevelOptimisation(unittest.TestCase):
         self.MODEL_PARAMS = MODEL_PARAMS
         self.MODEL_PARAMS.pop(str('NEURON'),None)
 
-        self.heavy_backends = [
+        self.docker_backends = [
                     str('NEURONBackend'),
-                    str('jNeuroMLBackend')
+                    str('jNeuroMLBackend'),
+                    str('PyNNBackend')
                 ]
         self.light_backends = [
                     str('RAWBackend'),
-                    str('ADEXPBackend')
+                    str('ADEXPBackend'),
+                    str('BHHBackend')
                 ]
         self.medium_backends = [
                     str('GLIFBackend')
@@ -144,7 +151,7 @@ class testHighLevelOptimisation(unittest.TestCase):
         #sparesely learning the error surface.
 
         #MBEs = list(self.MODEL_PARAMS.keys())
-        MBEs = [str('RAW'),str('BADEXP')]
+        MBEs = [str('RAW'),str('ADEXP')]
         for key, use_test in self.test_frame.items():
             for b in MBEs:
                 use_test['protocol'] = str('elephant')

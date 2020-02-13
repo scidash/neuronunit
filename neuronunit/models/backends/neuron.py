@@ -2,12 +2,25 @@ import io
 import math
 import pdb
 
+from quantities import mV, ms, s, V
+import sciunit
+from neo import AnalogSignal
+import neuronunit.capabilities as cap
+import numpy as np
+from .base import *
+import quantities as qt
+from quantities import mV, ms, s, V
+import matplotlib as mpl
+try:
+    import asciiplotlib as apl
+except:
+    pass
+import numpy
+voltage_units = mV
 
 from sciunit.utils import redirect_stdout
-from .base import os, copy, subprocess
-from .base import pq, AnalogSignal, NEURON_SUPPORT, neuron, h, pynml
-from .base import Backend, BackendException, import_module_from_path
 
+from elephant.spike_train_generation import threshold_detection
 
 class NEURONBackend(Backend):
     """Use for simulation with NEURON, a popular simulator.
@@ -97,6 +110,10 @@ class NEURONBackend(Backend):
         stopTimeMs: duration in milliseconds
         """
         self.h.tstop = float(stop_time.rescale(pq.ms))
+    def get_spike_count(self):
+        thresh = threshold_detection(self.vM)
+        return len(thresh)
+
 
     def set_time_step(self, integrationTimeStep=(pq.ms/128.0)):
         """Set the simulation itegration fixed time step
@@ -152,9 +169,12 @@ class NEURONBackend(Backend):
 
         self.h.dt = dt
         self.fixedTimeStep = float(1.0/dt)
-        return AnalogSignal(fixed_signal,
+        fixed_signal = [ v*1000.0 for v in fixed_signal ]
+        self.vM = AnalogSignal(fixed_signal,
                             units=pq.mV,
-                            sampling_period=dt*pq.ms)
+                            sampling_period=self.h.dt*pq.ms)
+
+        return self.vM       #waves0 = [i.rescale(qt.mV) for i in waves0 ]
 
     def get_variable_step_analog_signal(self):
         """Convert variable dt array values to fixed dt array.
@@ -308,26 +328,38 @@ class NEURONBackend(Backend):
                 .format(self.cell_name,self.cell_name,'v0',ass_vr))
 
 
-    def set_attrs(self, **attrs):
-        self.model.attrs = {}
-        self.model.attrs.update(attrs)
-        for h_key, h_value in attrs.items():
-            self.h('m_{0}_{1}_pop[0].{2} = {3}'
-                   .format(self.cell_name, self.cell_name, h_key, h_value))
+    def set_attrs(self, attrs):
+        if not hasattr(self.model,'attrs'):# is None:
+            self.model.attrs = {}
+            self.model.attrs.update(attrs)
+        else:
+            self.model.attrs.update(attrs)
+        #import pdb
+        #pdb.set_trace()
+        #for h_key, h_value in attrs.items():
+            #print(h_key,h_value)
+        #    self.h('m_{0}_{1}_pop[0].{2} = {3}'
+        #           .format(self.cell_name, self.cell_name, h_key, h_value))
 
-
-        for h_key,h_value in attrs.items():
+        for h_key,h_value in self.model.attrs.items():
             h_value = float(h_value)
             if h_key is str('C'):
-                sec = self.h.Section(self.h.m_RS_RS_pop[0])
-                #sec.L, sec.diam = 6.3, 5 # empirically tuned
-                sec.cm = h_value
+                seg = model._backend.h.m_RS_RS_pop[0].get_segment()
+                seg.cm = h_value
+                #sec = self.h.Section(self.h.m_RS_RS_pop[0])
+                #sec.cm = h_value
+
+                #for seg in sec.allseg():
+                #    seg.cm = h_value
             else:
                 self.h('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
 
         ass_vr = self.h.m_RS_RS_pop[0].vr
         self.h.m_RS_RS_pop[0].v0 = ass_vr
-
+        #self.h('psection()')
+        #print(attrs.items())
+        #import pdb
+        #pdb.set_trace()
         #print(self.model.attrs)
         # Below create a list of NEURON experimental recording rig parameters.
         # This is where parameters of the artificial neuron experiment are
@@ -372,8 +404,8 @@ class NEURONBackend(Backend):
         4. Translate the dictionary of current injection parameters into
            executable HOC code.
         """
-        self.h = None
-        self.neuron = None
+        #self.h = None
+        #self.neuron = None
 
         nrn_path = os.path.splitext(self.model.orig_lems_file_path)[0]+'_nrn.py'
         nrn = import_module_from_path(nrn_path)
@@ -385,19 +417,26 @@ class NEURONBackend(Backend):
         # store the model attributes, in a temp buffer such that they persist throughout the model reinitialization.
         ##
         # These lines are crucial.
+        assert len(self.model.attrs)
+
         temp_attrs = copy.copy(self.model.attrs)
+        assert len(temp_attrs)
+
         self.init_backend()
-        self.set_attrs(**temp_attrs)
+        if len(temp_attrs):
+            self.set_attrs(temp_attrs)
 
         current = copy.copy(current)
+        self.last_current = current
         if 'injected_square_current' in current.keys():
             c = current['injected_square_current']
         else:
             c = current
+
         ##
         # critical code:
         ##
-        self.set_stop_time(c['delay']+c['duration']+100.0*pq.ms)
+        self.set_stop_time(c['delay']+c['duration']+200.0*pq.ms)
         # translate pico amps to nano amps
         # NEURONs default unit multiplier for current injection values is nano amps.
         # to make sure that pico amps are not erroneously interpreted as a larger nano amp.
@@ -416,20 +455,45 @@ class NEURONBackend(Backend):
         for string in define_current:
             # execute hoc code strings in the python interface to neuron.
             self.h(string)
-        self.neuron.h.psection()
+        #self.neuron.h.psection()
+
         if debug == True:
             self.neuron.h.psection()
-        self._backend_run()
+            for h_key,h_value in self.model.attrs.items():
 
-    def _backend_run(self):
+                print(self.h('m_{0}_{1}_pop[0].{2}'.format(self.cell_name,self.cell_name,h_key)))
+
         self.h('run()')
+        self.vM = AnalogSignal([float(x) for x in
+                         copy.copy(self.neuron.h.v_v_of0.to_python())],
+                                             units=pq.mV,
+                                             sampling_period=self.h.dt*pq.ms)
+        #self._local_run()
+        return self.vM
+    def local_run(self):
+        with redirect_stdout(self.stdout):
+            self.h('run()')
         results = {}
         # Prepare NEURON vectors for quantities/sciunit
         # By rescaling voltage to milli volts, and time to milli seconds.
-        results['vm'] = [float(x/1000.0) for x in
-                         copy.copy(self.neuron.h.v_v_of0.to_python())]
-        results['t'] = [float(x/1000.0) for x in
-                        copy.copy(self.neuron.h.v_time.to_python())]
+        #        vm1 = AnalogSignal(fixed_signal,
+        #                            units=pq.mV,
+        #                            sampling_period=dt*pq.ms)
+        results['vm'] = AnalogSignal([float(x) for x in
+                         copy.copy(self.neuron.h.v_v_of0.to_python())],
+                                             units=pq.mV,
+                                             sampling_period=self.h.dt*pq.ms)
+        results['t'] = results['vm'].times
+        #[float(x/1000.0) for x in
+        #                copy.copy(self.neuron.h.v_time.to_python())]
+
         results['run_number'] = results.get('run_number', 0) + 1
 
         return results
+
+    def _backend_run(self):
+        #temp_attrs = copy.copy(self.model.attrs)
+        #self.init_backend()
+        #self.set_attrs(temp_attrs)
+        self.inject_square_current(self.last_current)
+        return self.local_run()
