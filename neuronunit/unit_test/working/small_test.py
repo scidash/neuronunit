@@ -36,8 +36,11 @@ from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
 from neuronunit import aibs
 from neuronunit.optimisation.optimisations import run_ga
 from neuronunit.optimisation import model_parameters
-from neuronunit.optimisation import mint_tests
+#from neuronunit.optimisation import mint_tests
 
+OM = OptMan
+format_test = OM.format_test
+elephant_evaluation = OM.elephant_evaluation
 def test_all_tests_pop(dtcpop, tests):
 
     rheobase_test = [tests[0]['Hippocampus CA1 pyramidal cell']['RheobaseTest']]
@@ -49,9 +52,6 @@ def test_all_tests_pop(dtcpop, tests):
         assert len(list(d.attrs.values())) > 0
 
     dtcpop = list(map(dtc_to_rheo,dtcpop))
-    OM = OptMan(all_tests,simulated_obs=False)
-    format_test = OM.format_test
-    elephant_evaluation = OM.elephant_evaluation
 
     b0 = db.from_sequence(dtcpop, npartitions=8)
     dtcpop = list(db.map(format_test,b0).compute())
@@ -72,30 +72,23 @@ def grid_points():
     assert dtcpop is not None
     return dtcpop
 
+from neuronunit.optimisation import get_neab
+
 class testHighLevelOptimisation(unittest.TestCase):
 
     def setUp(self):
-        import neuronunit
-        anchor = neuronunit.__file__
-        anchor = os.path.dirname(anchor)
-        electro_path = os.path.join(os.sep,anchor,'tests/multicellular_constraints.p')
-
-        if os.path.isfile(electro_path):
-            try:
-                assert os.path.isfile(electro_path) == True
-            except:
-                print('Exception')
-            with open(electro_path,'rb') as f:
-                try:
-                    self.test_frame = pickle.load(f)
-                except:
-                    (self.test_frame,self.obs_frame) = pickle.load(f)
-        else:
-            suite, self.test_frame = mint_tests.get_cell_constraints()
-            _ = pd.DataFrame(self.test_frame)
+        self.test_frame = get_neab.process_all_cells()
+        self.test_frame = {k:tf for k,tf in self.test_frame.items() if len(tf.tests)>0 }
+        for testsuite in self.test_frame.values():
+            for t in testsuite.tests:
+                if float(t.observation['std']) == 0.0:
+                    t.observation['std'] = t.observation['mean']
+         #[tf for tf in self.test_frame if len(tf.tests)>0 ]
 
         self.filtered_tests = {key:val for key,val in self.test_frame.items() }# if len(val) ==8}
         print(self.filtered_tests)
+        #import pdb
+        #pdb.set_trace()
         self.predictions = None
         self.predictionp = None
         self.score_p = None
@@ -103,8 +96,8 @@ class testHighLevelOptimisation(unittest.TestCase):
          #self.grid_points
 
         #electro_path = 'pipe_tests.p'
-        with open(electro_path,'rb') as f:
-            self.electro_tests = pickle.load(f)
+        #with open(electro_path,'rb') as f:
+        #    self.electro_tests = pickle.load(f)
         #self.electro_tests = get_neab.replace_zero_std(self.electro_tests)
 
         #self.test_rheobase_dtc = test_rheobase_dtc
@@ -118,7 +111,10 @@ class testHighLevelOptimisation(unittest.TestCase):
                 ]
         self.light_backends = [
                     str('RAWBackend'),
-                    str('ADEXPBackend')
+                    str('ADEXPBackend'),
+                    str('HHBackend'),
+                    str('BHHBackend')
+
                 ]
         self.medium_backends = [
                     str('GLIFBackend')
@@ -132,32 +128,40 @@ class testHighLevelOptimisation(unittest.TestCase):
             use_test = TSD(self.filtered_tests['Neocortex pyramidal cell layer 5-6'])
         except:
             use_test = TSD(self.filtered_tests[list(self.filtered_tests.keys())[0]])
-        easy_standards = {ut.name:ut.observation['std'] for ut in use_test.values()}
+        #easy_standards = {ut.name:ut.observation['std'] for ut in use_test.values()}
 
         use_test.use_rheobase_score = True
-        print(easy_standards)
+
         [(value.name,value.observation) for value in use_test.values()]
         print(use_test)
-
+        edges = model_parameters.MODEL_PARAMS["RAW"]
         OM = OptMan(use_test,protocol={'elephant':True,'allen':False,'dm':False})
-        results,converged,target,simulated_tests = OM.round_trip_test(use_test,str('RAW'),MU=2,NGEN=2)#,stds = easy_standards)
-        print(converged,target)
-        temp = [results,converged,target,simulated_tests]
+        results,converged,target,simulated_tests,goodness_of_fit = OM.round_trip_test(use_test,str('RAW'),MU=2,NGEN=2)#,stds = easy_standards)
+        temp = [results,converged,target,simulated_tests,goodness_of_fit]
 
         with open('jd.p','wb') as f:
             pickle.dump(temp,f)
         param_edges = model_parameters.MODEL_PARAMS['HH']
-        #try:
-        #    with open('jda.p','rb') as f:
-        #        adconv = pickle.load(f)[0]
-        #except:
-        ga_out = run_ga(param_edges, 2, simulated_tests, free_params=param_edges.keys(), \
-                backend=str('HH'), MU = 4,  protocol={'allen': False, 'elephant': True})
 
-        adconv = [ p.dtc for p in ga_out[0]['pf'] ]
-        with open('jda.p','wb') as f:
-            temp = [adconv]
-            pickle.dump(temp,f)
+        ga_out = use_test.optimize(edges,backend="RAW",protocol={'allen': False, 'elephant': True},\
+           MU=5,NGEN=5,free_params=None,seed_pop=None,hold_constant=None)
+
+        adconv = [ p.dtc for p in ga_out['pf'] ]
+        for dtc in adconv:
+            dtc.tests ={ k:v for k,v in dtc.tests.items() }
+        try:
+
+            for dtc in adconv:
+                for attr, value in dtc.__dict__.items():
+                    with open('temp.p','wb') as f:
+                        pickle.dump([attr,value],f)
+
+            with open('jda.p','wb') as f:
+                temp = adconv
+                pickle.dump(temp,f)
+        except:
+            import pdb
+            pdb.set_trace()
         return
         """
         import copy

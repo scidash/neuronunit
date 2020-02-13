@@ -16,10 +16,10 @@ import re
 import matplotlib as mpl
 #mpl.use('Agg')
 
-#try:
-import asciiplotlib as apl
-#except:
-#    pass
+try:
+   import asciiplotlib as apl
+except:
+   pass
 import matplotlib.pyplot as plt
 import allensdk.core.json_utilities as json_utilities
 from allensdk.model.glif.glif_neuron import GlifNeuron
