@@ -1,12 +1,13 @@
 import pickle
 from neo.core import AnalogSignal
 import sciunit
+from sciunit.models import RunnableModel
 import sciunit.capabilities as scap
 import neuronunit.capabilities as cap
 import neuronunit.capabilities.spike_functions as sf
 
 
-class StaticModel(sciunit.Model,
+class StaticModel(RunnableModel,
                   cap.ReceivesSquareCurrent,
                   cap.ProducesActionPotentials,
                   cap.ProducesMembranePotential):
@@ -26,6 +27,7 @@ class StaticModel(sciunit.Model,
             raise TypeError('vm must be a neo.core.AnalogSignal')
 
         self.vm = vm
+        self.set_backend('Empty')
 
     def get_membrane_potential(self, **kwargs):
         """Return the Vm passed into the class constructor."""

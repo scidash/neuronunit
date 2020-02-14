@@ -13,7 +13,7 @@ from .base import Backend
 class jNeuroMLBackend(Backend):
     """Use for simulation with jNeuroML, a reference simulator for NeuroML."""
 
-    backend = 'jNeuroML'
+    name = 'jNeuroML'
 
     def init_backend(self, *args, **kwargs):
         """Initialize the jNeuroML backend."""
