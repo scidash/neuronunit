@@ -25,8 +25,9 @@ try:
 except Exception as e:
     print('pynn python Error')
 
-"""
+
 #heavy_backends()
+"""
 try:
     from .hh_wraper import JHHBackend
 except ImportError:

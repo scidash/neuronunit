@@ -82,18 +82,31 @@ def purify2(population):
         pop2.append(ind)
     return pop2
 '''
+#from neuronunit.optimisation.optimization_management import OptMan
 def _update_history_and_hof(halloffame,pf, history, population,GEN,MU):
     '''Update the hall of fame with the generated individuals
 
     Note: History and Hall-of-Fame behave like dictionaries
     '''
-    temp = copy.copy([p for p in population if hasattr(p,'dtc')])
-    dtcpop = copy.copy([p.dtc for p in population if hasattr(p,'dtc')])
-
+    #temp = copy.copy([p for p in population if hasattr(p,'dtc')])
+    #dtcpop = copy.copy([p.dtc for p in population if hasattr(p,'dtc')])
+    temp = population
     if "ADEXP" in temp[0].dtc.backend or "BHH" in temp[0].dtc.backend:
-        for t in temp:
-            t.dtc.tests = None
-            t.dtc = None
+       dtc = temp[0].dtc
+       try:
+           import brian as b2
+           b2.clear_cache("cython")
+           b2 = None
+       except:
+           brian2 = None
+       OM = dtc.dtc_to_opt_man()
+       temp_,_ = OM.boot_new_genes(len(temp),dtcpop)
+       for i,t in enumerate(temp):
+           temp_[i].fitness = t.fitness
+           for x,j in enumerate(t):
+               temp_[i][x] = j
+       temp = temp_
+
     if halloffame is not None:
         try:
             halloffame.update(temp)
@@ -106,7 +119,7 @@ def _update_history_and_hof(halloffame,pf, history, population,GEN,MU):
             print(temp,'temp bad')
     if pf is not None:
         if GEN ==0:
-            pf = deap.tools.ParetoFront(MU)
+            pf = deap.tools.ParetoFront()
         pf.update(temp)
     return (halloffame,pf,history)
 

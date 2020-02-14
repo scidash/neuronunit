@@ -62,9 +62,14 @@ class DataTC(object):
             self.summed = None
         return self.summed
 
+    def dtc_to_opt_man(self):
+        from neuronunit.optimisation.optimization_management import OptMan
+        OM = Optman(self.tests,self.backend)
+        return OM
+        
     def ordered_score(self):
         if not hasattr(self,'os'):
-            self.os = OrderedDict(self.SA.to_dict())
+            self.os = OrderedDict({k.name:self.SA[k] for k in self.SA.to_dict()})
         else:
             self.os = {k:self.SA[k] for k in self.os.keys()}
         for k,v in self.os.items():
@@ -91,7 +96,12 @@ class DataTC(object):
             self.tests = switch_logic(tests)#,self.tests.use_rheobase_score)
         else:
             self.tests = switch_logic(self.tests)
-        for k,v in enumerate(self.tests):
+
+        #dtc.tests = switch_logic(dtc.tests)
+
+        for v in self.tests:
+        #for k,v in enumerate(self.tests):
+            k = v.name
             self.protocols[k] = {}
             if hasattr(v,'passive'):#['protocol']:
                 if v.passive == False and v.active == True:
