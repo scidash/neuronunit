@@ -7,9 +7,9 @@ from neurodynex.hodgkin_huxley import HH
 b2.A = 1000000000000*b2.pA
 b2.units.V = 1000.0*b2.units.mV
 # Hodgkin Huxley parameters
-
+'''
 # Parameters
-Cm = 1*ufarad*cm**-2 * area
+Cm = 1*b2.ufarad*cm**-2 * area
 gl = 5e-5*siemens*cm**-2 * area
 El = -65*mV
 EK = -90*mV
@@ -17,7 +17,7 @@ ENa = 50*mV
 g_na = 100*msiemens*cm**-2 * area
 g_kd = 30*msiemens*cm**-2 * area
 VT = -63*mV
-
+'''
 #b2.A = 1000000000000*b2.pA
 from neurodynex.tools import plot_tools, input_factory
 import io

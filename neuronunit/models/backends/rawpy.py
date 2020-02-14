@@ -22,7 +22,7 @@ from elephant.spike_train_generation import threshold_detection
 from numba import jit
 import cython
 @jit
-def get_vm(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.364525297619-65.2261863636364), vr=-65.2261863636364, vt=-50, dt=0.0010, Iext=[]):
+def get_vm(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.364525297619-65.2261863636364), vr=-65.2261863636364, vt=-50, dt=0.030, Iext=[]):
     '''
     dt determined by
     Apply izhikevich equation as model
@@ -49,7 +49,7 @@ def get_vm(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.36452
 
     return v
 
-def get_vm_regular(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.364525297619-65.2261863636364), vr=-65.2261863636364, vt=-50, dt=0.0010, Iext=[]):
+def get_vm_regular(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.364525297619-65.2261863636364), vr=-65.2261863636364, vt=-50, dt=0.030, Iext=[]):
     '''
     dt determined by
     Apply izhikevich equation as model
@@ -162,14 +162,20 @@ class RAWBackend(Backend):
         if str('dt') in attrs:
             if np.isnan(tMax/attrs['dt']):
                 if np.isnan(attrs['dt']):
-                   attrs['dt'] = 0.001
+                   attrs['dt'] = 0.03
                    N = int(tMax/attrs['dt'])
 
             else:
                N = int(tMax/attrs['dt'])
         else:
-            attrs['dt'] = 0.001
+            attrs['dt'] = 0.03
+        NORMAL = True
+        if NORMAL == True:
             N = int(tMax/attrs['dt'])
+        else:
+            print('adding in larger N seems to artificially dilate the width of neural events')
+            N = int(tMax/attrs['dt'])*100
+
         Iext = np.zeros(N)
         delay_ind = int((delay/tMax)*N)
         duration_ind = int((duration/tMax)*N)
@@ -187,22 +193,10 @@ class RAWBackend(Backend):
 
         self.vM = AnalogSignal(v,
                             units=pq.mV,
-                            sampling_period=0.001*pq.ms)
-        #print(self.vM.times[-1] < c['delay']+c['duration']+200*pq.ms)
+                            sampling_period=0.03*pq.ms)
+
         #print(self.vM.times[-1],c['delay']+c['duration']+200*pq.ms)
-        #import pdb
-        #pdb.set_trace()
-
-        #period = self.attrs['dt'] * pq.s * (1.0/len(v))
-        #print(period)
-        #self.vM = AnalogSignal(v,
-        #                       units = voltage_units,
-        #                       sampling_period = period)
-
-        #self.vM = AnalogSignal(v,
-        #             units = voltage_units,
-        #             sampling_period = attrs['dt']*pq.s)
-
+        #assert self.vM.times[-1] == (c['delay']+c['duration']+200*pq.ms)
 
         return self.vM
 
@@ -213,11 +207,8 @@ class RAWBackend(Backend):
             v = get_vm(**self.attrs)
         else:
             v = get_vm(self.attrs)
-        #self.vM = AnalogSignal(v,
-        #                       units = voltage_units,
-        #                       sampling_freqeuncy = len(v)/self.attrs['dt'] * pq.Hz)
-        #period = self.attrs['dt'] * pq.s * (1.0/len(v))
-        period = 0.001*pq.ms
+
+        period = 0.03*pq.ms
         self.vM = AnalogSignal(v,
                                units = voltage_units,
                                sampling_period = period)

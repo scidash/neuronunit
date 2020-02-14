@@ -1,5 +1,6 @@
 """Waveform neuronunit tests, e.g. testing AP waveform properties"""
 from .base import np, pq, ncap, VmTest, scores, AMPL, DELAY, DURATION
+
 try:
     import asciiplotlib as apl
     fig = apl.figure()
@@ -182,11 +183,16 @@ class APAmplitudeTest(VmTest):
         #    height = np.max(model.get_membrane_potential()) -float(np.min(model.get_membrane_potential()))/1000.0*model.get_membrane_potential().units #- model.get_AP_thresholds()
         #    prediction = {'mean':height, 'n':1, 'std':height}
 
-        heights = model.get_AP_amplitudes() - model.get_AP_thresholds()
+        #heights = model.get_AP_amplitudes() - model.get_AP_thresholds()
+        #import pdb
+        #pdb.set_trace()
         # Put prediction in a form that compute_score() can use.
-        prediction = {'mean': np.mean(heights) if len(heights) else None,
-                      'std': np.std(heights) if len(heights) else None,
-                      'n': len(heights)}
+        height = np.max(model.get_membrane_potential())-model.get_AP_thresholds()
+
+        prediction = {'value': height,
+                      'mean':np.mean(height) if len(height) else None,
+                      'std': np.std(height) if len(height) else None,
+                      'n': len(height)}
 
 
 

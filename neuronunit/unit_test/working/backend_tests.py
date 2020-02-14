@@ -21,48 +21,13 @@ class testCrucialBackendsSucceed(unittest.TestCase):
     def setUp(self):
         model_parameters.MODEL_PARAMS.keys()
         self.backends =  ["RAW", "HH"]
-        self.other_backends =["BHH","ADEXP"]
+        self.other_backends =["NEURON","NEURON"]#["BHH","ADEXP","NEURON"]
         self.backends_complex =  ["GLIF"]#,"NEURON"]
         #self.julia_backend ="JHH"
 
         #raw_attrs = {k:np.mean(v) for k,v in model_parameters.MODEL_PARAMS[backend].items()}
         #self.backends = backends
         self.model_parameters = model_parameters
-    '''
-    def luxury_pass_0j(self):
-        fig, axs = plt.subplots(len(self.backends)*2+1,figsize=(40, 40))
-        cnt=0
-        b =  self.julia_backend
-        attrs = {k:np.mean(v) for k,v in self.model_parameters.MODEL_PARAMS[b].items()}
-        pre_model = DataTC()
-        if str("V_REST") in attrs.keys():
-            attrs["V_REST"] = -75.0
-        pre_model.attrs = attrs
-        pre_model.backend = b
-        vm,_ = inject_and_plot_model(pre_model.attrs,b)
-        axs[cnt].plot(vm.times,vm.magnitude)
-        axs[cnt].set_title(b)
-        cnt+=1
-        thresh = threshold_detection(vm,0.0*pq.mV)
-
-        if len(thresh)>0 and vm is not None:
-            boolean = True
-        else:
-            boolean = False
-        self.assertTrue(boolean)
-        vm,_ = inject_and_plot_passive_model(pre_model.attrs,b)
-        axs[cnt].plot(vm.times,vm.magnitude)
-        axs[cnt].set_title(b)
-        cnt+=1
-
-        if len(vm)>0 and vm is not None:
-            boolean = True
-        else:
-            boolean = False
-        self.assertTrue(boolean)
-
-        return True
-    '''
 
     def test_must_pass_0(self):
         fig, axs = plt.subplots(len(self.backends)*2+1,figsize=(40, 40))
@@ -98,6 +63,7 @@ class testCrucialBackendsSucceed(unittest.TestCase):
     def test_prefer_pass_1(self):
         fig, axs = plt.subplots(len(self.backends)*2+1,figsize=(40, 40))
         cnt=0
+
         for b in self.other_backends:
             attrs = {k:np.mean(v) for k,v in self.model_parameters.MODEL_PARAMS[b].items()}
             pre_model = DataTC()
@@ -142,7 +108,7 @@ class testCrucialBackendsSucceed(unittest.TestCase):
             else:
                 print('actually NEURON support only in docker container')
                 #attrs = {k:np.mean(v) for k,v in self.model_parameters.MODEL_PARAMS[b].items()}
-                return 
+                return
 
             pre_model = DataTC()
             if str("V_REST") in attrs.keys():
@@ -170,6 +136,54 @@ class testCrucialBackendsSucceed(unittest.TestCase):
             self.assertTrue(boolean)
 
         return True
+
+if __name__ == '__main__':
+    unittest.main()
+    #a = testCrucialBackendsSucceed()
+    #a.setUp()
+    #a.test_prefer_pass_1()
+    #import pdb
+    #pdb.set_trace()
+    #boolean = a.must_pass_0()
+    #print(dir(a))
+    #pre_model.rheobase
+    #exit()
+    '''
+    def luxury_pass_0j(self):
+    fig, axs = plt.subplots(len(self.backends)*2+1,figsize=(40, 40))
+    cnt=0
+    b =  self.julia_backend
+    attrs = {k:np.mean(v) for k,v in self.model_parameters.MODEL_PARAMS[b].items()}
+    pre_model = DataTC()
+    if str("V_REST") in attrs.keys():
+        attrs["V_REST"] = -75.0
+    pre_model.attrs = attrs
+    pre_model.backend = b
+    vm,_ = inject_and_plot_model(pre_model.attrs,b)
+    axs[cnt].plot(vm.times,vm.magnitude)
+    axs[cnt].set_title(b)
+    cnt+=1
+    thresh = threshold_detection(vm,0.0*pq.mV)
+
+    if len(thresh)>0 and vm is not None:
+        boolean = True
+    else:
+        boolean = False
+    self.assertTrue(boolean)
+    vm,_ = inject_and_plot_passive_model(pre_model.attrs,b)
+    axs[cnt].plot(vm.times,vm.magnitude)
+    axs[cnt].set_title(b)
+    cnt+=1
+
+    if len(vm)>0 and vm is not None:
+        boolean = True
+    else:
+        boolean = False
+    self.assertTrue(boolean)
+
+    return True
+    '''
+
     """
     def test_prefer_pass_3(self):
         fig, axs = plt.subplots(len(self.backends)*2+1,figsize=(40, 40))
@@ -216,15 +230,3 @@ class testCrucialBackendsSucceed(unittest.TestCase):
             inject_and_plot_model(raw_attrs,b)
             vm,_ = inject_and_plot_passive_model(raw_attrs,b)
     """
-
-if __name__ == '__main__':
-    unittest.main()
-#a = testCrucialBackendsSucceed()
-#a.setUp()
-#a.test_prefer_pass_1()
-#import pdb
-#pdb.set_trace()
-#boolean = a.must_pass_0()
-#print(dir(a))
-#pre_model.rheobase
-#exit()

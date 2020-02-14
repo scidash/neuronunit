@@ -307,8 +307,16 @@ class TSD(dict):
                     if hasattr(pop[0],'dtc'):
                         for ind in pop:
                             ind.dtc.tests ={ k:v for k,v in ind.dtc.tests.items() }
+        self.ga_out = ga_out
+        return self.ga_out
 
-        return ga_out
+    def display(self):
+        from IPython.display import display
+        if hasattr(self,'ga_out'):
+            return display(self.ga_out['pf'][0].dtc.obs_preds)
+        else:
+            print('optimize first')
+            return None
 # DEAP mutation strategies:
 # https://deap.readthedocs.io/en/master/api/tools.html#deap.tools.mutESLogNormal
 class WSFloatIndividual(float):
@@ -1565,7 +1573,12 @@ def evaluate(dtc):
         return []
     else:
         ordered_score = dtc.ordered_score()
-        fitness = [v.score for v in ordered_score.values()]
+        fitness = []
+        for v in ordered_score.values():
+            if hasattr(v,'score'):
+                fitness.append(v.score)
+            else:
+                fitness.append(v)
         fitness = tuple(fitness,)
         return fitness
 
@@ -1884,13 +1897,10 @@ class OptMan():
             key = which_key(right[k].observation)
             rp = right[k].observation[key]
             #print(lp,rp)
-            lp = lp.rescale(rp.units)
-            try:
-                assert lp is not None
-                assert rp is not None
-            except:
-                import pdb
-                pdb.set_trace()
+            if lp is not None:
+                lp = lp.rescale(rp.units)
+            else:
+                print('test ',k, 'prediction is None',lp)
             rps.append(rp)
             lps.append(lp)
 
@@ -2071,6 +2081,7 @@ class OptMan():
                 print(results)
                 print(ga_out['pf'][0].dtc.attrs)
             left = ga_out['pf'][0].dtc.tests
+
             closeness_,_,_ = self.closeness(left,new_tests)
             #inject_and_plot(ga_converged,second_pop=test_origin_target,third_pop=[ga_converged[0]],figname='not_a_problem.png',snippets=True)
             return ga_out,ga_converged,test_origin_target,new_tests,closeness_
@@ -2172,11 +2183,11 @@ class OptMan():
         -- Inputs: tests, simulator backend, the parameters to explore
         -- Outputs: data frame of index paramaterized model, column tests suite aggregate average.
         '''
-        try:
-            from dask import dataframe as pdd
-            df = pdd.DataFrame(index=list(test_frame.keys()),columns=list(known_parameters.keys()))
-        except:
-            df = pd.DataFrame(index=list(test_frame.keys()),columns=list(known_parameters.keys()))
+        #try:
+        #    from dask import dataframe as pdd
+        #    df = pdd.DataFrame(index=list(test_frame.keys()),columns=list(known_parameters.keys()))
+        #except:
+        df = pd.DataFrame(index=list(test_frame.keys()),columns=list(known_parameters.keys()))
 
         backend = self.backend
         for l,(key, use_test) in enumerate(self.tests.items()):
@@ -2186,7 +2197,7 @@ class OptMan():
                 use_test.use_rheobase_score = False
             OM = OptMan(use_test,backend=backend,\
                         boundary_dict=MODEL_PARAMS[backend],\
-                        protocol={'elephant':True,'allen':False,'dm':False},)#'tsr':spk_range})
+                        protocol={'elephant':True,'allen':False,'dm':False})#'tsr':spk_range})
             dtcpop = []
             for k,v in known_parameters.items():
                 temp = {}
@@ -2228,6 +2239,7 @@ class OptMan():
             for t in tests:
                 k = str(t.name)
                 # it's critical that paramaters are assigned here
+
                 t.params = dtc.protocols[k]
 
                 #if "RheobaseTest" in  t.name:
@@ -2246,6 +2258,7 @@ class OptMan():
                 if float(t.observation['std']) == 0.0:
                     t.observation['std'] = t.observation['mean']
         return tests
+
     def elephant_evaluation(self,dtc):
         # Inputs single data transport container modules, and neuroelectro observations that
         # inform test error error_criterion
@@ -2268,7 +2281,10 @@ class OptMan():
         for t in suite:
             score = t.judge(model)
             if not type(score) is sciunit.scores.incomplete.InsufficientDataScore:
-               score.log_norm_score
+                try:
+                    score.log_norm_score
+                except:
+                    score = -np.inf
             else:
                 print(t.name)
                 score = -np.inf
@@ -2280,13 +2296,20 @@ class OptMan():
         obs = {}
         pred = {}
         temp = {t.name:t for t in dtc.tests}
-        similarity,lps,rps =  self.closeness(temp,temp)
-        for k,p,o in zip(list(similarity.keys()),lps,rps):
-            obs[k] = o
-            pred[k] = p
+        if dtc.rheobase is not None:
+            similarity,lps,rps =  self.closeness(temp,temp)
+            scores_ = {}
+            for k,p,o in zip(list(similarity.keys()),lps,rps):
+                obs[k] = o
+                pred[k] = p
+                if hasattr(dtc.SA[k],'score'):
+                    scores_[k] = dtc.SA[k].score
+                else:
+                    scores_[k] = 100.0 #dtc.SA[k]
 
-        dtc.obs_preds = pd.DataFrame([obs,pred],index=['observations','predictions'])
-        assert dtc.SA is not None
+            scores_["total"] = np.sum([ np.abs(v) for v in scores_.values()])
+            dtc.obs_preds = pd.DataFrame([obs,pred,scores_],index=['observations','predictions','scores'])
+            assert dtc.SA is not None
         return dtc
 
 
@@ -2779,7 +2802,7 @@ class OptMan():
 
             cnt = 0
             while delta:
-                pop_,dtcpop_ = self.boot_new_genes(delta,spare,td)
+                pop_,dtcpop_ = self.boot_new_genes(delta,spare)#,td)
                 for dtc,ind in zip(pop_,dtcpop_):
                     ind.from_imputation = None
                     ind.from_imputation = True
@@ -2845,7 +2868,7 @@ class OptMan():
 
         return pop
     @timer
-    def boot_new_genes(self,number_genes,dtcpop,td):
+    def boot_new_genes(self,number_genes,dtcpop):
         '''
         Boot strap new genes to make up for completely called onesself.
         '''
@@ -2855,7 +2878,8 @@ class OptMan():
                                  error_criterion = self.tests, boundary_dict =self.boundary_dict,
                                  backend = self.backend, selection = str('selNSGA'),protocol = self.protocol)#,, boundary_dict = ss, elite_size = 2, hc=hc)
 
-        DO.setnparams(nparams = len(dtcpop[0].attrs), boundary_dict = self.boundary_dict)
+        #DO.setnparams(nparams = len(dtcpop[0].attrs), boundary_dict = self.boundary_dict)
+        DO.setnparams(nparams = len(self.td), boundary_dict = self.boundary_dict)
         DO.setup_deap()
         if 1==number_genes:
             pop = DO.set_pop(boot_new_random=5)

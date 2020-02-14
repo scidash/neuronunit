@@ -344,13 +344,10 @@ class NEURONBackend(Backend):
         for h_key,h_value in self.model.attrs.items():
             h_value = float(h_value)
             if h_key is str('C'):
-                seg = model._backend.h.m_RS_RS_pop[0].get_segment()
-                seg.cm = h_value
-                #sec = self.h.Section(self.h.m_RS_RS_pop[0])
-                #sec.cm = h_value
+                seg = self.h.m_RS_RS_pop[0].get_segment()
+                # this is how you would adjust Cm
+                # seg.cm = h_value
 
-                #for seg in sec.allseg():
-                #    seg.cm = h_value
             else:
                 self.h('m_{0}_{1}_pop[0].{2} = {3}'.format(self.cell_name,self.cell_name,h_key,h_value))
 
@@ -417,8 +414,10 @@ class NEURONBackend(Backend):
         # store the model attributes, in a temp buffer such that they persist throughout the model reinitialization.
         ##
         # These lines are crucial.
-        assert len(self.model.attrs)
-
+        try:
+            assert len(self.model.attrs)
+        except:
+            print("this means you didnt instance a model and then add in model parameters")
         temp_attrs = copy.copy(self.model.attrs)
         assert len(temp_attrs)
 
