@@ -1572,13 +1572,8 @@ def evaluate(dtc):
     if not hasattr(dtc,str('SA')):
         return []
     else:
-        ordered_score = dtc.ordered_score()
-        fitness = []
-        for v in ordered_score.values():
-            if hasattr(v,'score'):
-                fitness.append(v.score)
-            else:
-                fitness.append(v)
+        #ordered_score = dtc.ordered_score()
+        fitness = [v.score for v in dtc.SA.values()]
         fitness = tuple(fitness,)
         return fitness
 
@@ -2081,7 +2076,6 @@ class OptMan():
                 print(results)
                 print(ga_out['pf'][0].dtc.attrs)
             left = ga_out['pf'][0].dtc.tests
-
             closeness_,_,_ = self.closeness(left,new_tests)
             #inject_and_plot(ga_converged,second_pop=test_origin_target,third_pop=[ga_converged[0]],figname='not_a_problem.png',snippets=True)
             return ga_out,ga_converged,test_origin_target,new_tests,closeness_
@@ -2183,11 +2177,11 @@ class OptMan():
         -- Inputs: tests, simulator backend, the parameters to explore
         -- Outputs: data frame of index paramaterized model, column tests suite aggregate average.
         '''
-        #try:
-        #    from dask import dataframe as pdd
-        #    df = pdd.DataFrame(index=list(test_frame.keys()),columns=list(known_parameters.keys()))
-        #except:
-        df = pd.DataFrame(index=list(test_frame.keys()),columns=list(known_parameters.keys()))
+        try:
+            from dask import dataframe as pdd
+            df = pdd.DataFrame(index=list(test_frame.keys()),columns=list(known_parameters.keys()))
+        except:
+            df = pd.DataFrame(index=list(test_frame.keys()),columns=list(known_parameters.keys()))
 
         backend = self.backend
         for l,(key, use_test) in enumerate(self.tests.items()):
@@ -2197,7 +2191,7 @@ class OptMan():
                 use_test.use_rheobase_score = False
             OM = OptMan(use_test,backend=backend,\
                         boundary_dict=MODEL_PARAMS[backend],\
-                        protocol={'elephant':True,'allen':False,'dm':False})#'tsr':spk_range})
+                        protocol={'elephant':True,'allen':False,'dm':False},)#'tsr':spk_range})
             dtcpop = []
             for k,v in known_parameters.items():
                 temp = {}
@@ -2239,7 +2233,6 @@ class OptMan():
             for t in tests:
                 k = str(t.name)
                 # it's critical that paramaters are assigned here
-
                 t.params = dtc.protocols[k]
 
                 #if "RheobaseTest" in  t.name:
@@ -2258,7 +2251,6 @@ class OptMan():
                 if float(t.observation['std']) == 0.0:
                     t.observation['std'] = t.observation['mean']
         return tests
-
     def elephant_evaluation(self,dtc):
         # Inputs single data transport container modules, and neuroelectro observations that
         # inform test error error_criterion
@@ -2280,14 +2272,10 @@ class OptMan():
         suite = TestSuite(dtc.tests)
         for t in suite:
             score = t.judge(model)
-            if not type(score) is sciunit.scores.incomplete.InsufficientDataScore:
-                try:
-                    score.log_norm_score
-                except:
-                    score = -np.inf
+            if isinstance(score, sciunit.scores.incomplete.InsufficientDataScore):
+                score.score = -np.inf
             else:
-                print(t.name)
-                score = -np.inf
+                score = score.score
             scores_.append(score)
             #print(scores_)
         dtc.SA = ScoreArray(dtc.tests, scores_)
@@ -2802,7 +2790,7 @@ class OptMan():
 
             cnt = 0
             while delta:
-                pop_,dtcpop_ = self.boot_new_genes(delta,spare)#,td)
+                pop_,dtcpop_ = self.boot_new_genes(delta,spare,td)
                 for dtc,ind in zip(pop_,dtcpop_):
                     ind.from_imputation = None
                     ind.from_imputation = True

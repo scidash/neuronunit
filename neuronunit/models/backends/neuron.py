@@ -36,6 +36,8 @@ class NEURONBackend(Backend):
     i -- nA
     """
 
+    name = 'NEURON'
+    
     def init_backend(self, attrs=None, cell_name=None, current_src_name=None,
                      DTC=None):
         """Initialize the NEURON backend for neuronunit.
@@ -65,8 +67,6 @@ class NEURONBackend(Backend):
         self.neuron = None
         self.model_path = None
         self.h = h
-
-        backend = 'NEURON'
 
         super(NEURONBackend, self).init_backend()
         self.model._backend.use_memory_cache = False

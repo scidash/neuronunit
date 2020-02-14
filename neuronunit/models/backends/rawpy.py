@@ -74,10 +74,11 @@ def get_vm_regular(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(
     return v
 class RAWBackend(Backend):
 
+    name = 'RAW'
+    
     def init_backend(self, attrs=None, cell_name='alice',
                      current_src_name='hannah', DTC=None,
                      debug = False):
-        backend = 'RAW'
         super(RAWBackend,self).init_backend()
         self.model._backend.use_memory_cache = False
         self.current_src_name = current_src_name
