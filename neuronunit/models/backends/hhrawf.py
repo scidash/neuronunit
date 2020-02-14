@@ -141,7 +141,7 @@ def I_inj(t,delay,duration,tMax,amplitude):
 	return 0*(t<delay) +amplitude*(t>delay) -amplitude*(t>delay+duration)
 
 
-@jit
+@jit(forceobj=True)
 def dALLdt(X, t, attrs):
     """
     Integrate
@@ -231,8 +231,9 @@ def get_vm(attrs):
 
 class HHBackend(Backend):
 
+    name = 'HH'
+    
     def init_backend(self, attrs = None, cell_name = 'alice', current_src_name = 'hannah', DTC = None):
-        backend = 'HH'
         super(HHBackend,self).init_backend()
         self.model._backend.use_memory_cache = False
         self.current_src_name = current_src_name
@@ -241,7 +242,6 @@ class HHBackend(Backend):
         self.attrs = attrs
 
         self.temp_attrs = None
-        self.name = str(backend)
 
         if type(attrs) is not type(None):
             self.set_attrs(**attrs)
