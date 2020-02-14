@@ -69,7 +69,7 @@ class DataTC(object):
             self.os = {k:self.SA[k] for k in self.os.keys()}
         for k,v in self.os.items():
             if v is scores.InsufficientDataScore(None):
-                self.os.items[k] = -np.inf
+                v.score = -np.inf
 
         return self.os
 
