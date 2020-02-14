@@ -2267,11 +2267,8 @@ class OptMan():
         suite = TestSuite(dtc.tests)
         for t in suite:
             score = t.judge(model)
-            if not type(score) is sciunit.scores.incomplete.InsufficientDataScore:
-               score.log_norm_score
-            else:
-                print(t.name)
-                score = -np.inf
+            if isinstance(score, sciunit.scores.incomplete.InsufficientDataScore):
+                score.score = -np.inf
             scores_.append(score)
             #print(scores_)
         dtc.SA = ScoreArray(dtc.tests, scores_)
