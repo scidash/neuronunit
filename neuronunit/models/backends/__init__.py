@@ -1,6 +1,11 @@
 """Neuronunit-specific model backends."""
 
+import contextlib
+import io
+import importlib
 import inspect
+import pathlib
+import re
 import warnings
 
 import sciunit.models.backends as su_backends
@@ -9,65 +14,47 @@ from .base import Backend
 
 warnings.filterwarnings('ignore', message='nested set')
 warnings.filterwarnings('ignore', message='mpi4py')
-#def heavy_backends():
-try:
-    from .jNeuroML import jNeuroMLBackend
-except:
-    print('Error in jNeuroMLBackend')
 
-try:
-    from .neuron import NEURONBackend
-except ImportError:
-    NEURONBackend = None
-    print('Could not load NEURONBackend')
-try:
-    from .general_pyNN import PYNNBackend
-except Exception as e:
-    print('pynn python Error')
+backend_paths = ['base.EmptyBackend',
+                 'jNeuroML.jNeuroMLBackend',
+                 'neuron.NEURONBackend',
+                 'general_pyNN.PYNNBackend',
+                 #'hh_wraper.JHHBackend',
+                 'rawpy.RAWBackend',
+                 'hhrawf.HHBackend',
+                 'glif.GLIFBackend',
+                 'badexp.ADEXPBackend',
+                 'bhh.BHHBackend',
+                ]
 
-"""
-#heavy_backends()
-try:
-    from .hh_wraper import JHHBackend
-except ImportError:
-    JHHBackend = None
-    print('Could not load JHHBackend.')
-"""
-try:
-    from .rawpy import RAWBackend
-except ImportError:
-    RAWBackend = None
-    print('Could not load RAWBackend.')
-
-try:
-    from .hhrawf import HHBackend
-except ImportError:
-    HHBackend = None
-    print('Could not load HHBackend.')
-try:
-    from .glif import GLIFBackend
-except Exception as e:
-    print('glif python Error')
-
-try:
-    from .badexp import ADEXPBackend
-except Exception as e:
-    print('brian adaptive exponentional error python Error')
-
-try:
-    from .bhh import BHHBackend
-except Exception as e:
-    print('could not import brian2 neuronaldynamicsError')
-
-available_backends = {x.replace('Backend',''):cls for x, cls \
-                   in locals().items() \
-                   if inspect.isclass(cls) and \
-                   issubclass(cls, Backend)}
-
-
-available_backends = {x.replace('Backend', ''): cls for x, cls
-                      in locals().items()
-                      if inspect.isclass(cls) and
-                      issubclass(cls, Backend)}
-
-su_backends.register_backends(locals())
+def check_backend(partial_path):
+    full_path = 'neuronunit.models.backends.%s' % partial_path
+    class_name = full_path.split('.')[-1]
+    module_path = '.'.join(full_path.split('.')[:-1])
+    try:
+        backend_stdout = io.StringIO()
+        with contextlib.redirect_stdout(backend_stdout):
+            module = importlib.import_module(module_path)
+            backend = getattr(module, class_name)
+    except Exception as e:
+        msg = "Import of %s failed due to:" % partial_path
+        stdout = backend_stdout.read()
+        if stdout:
+            msg += '\n%s' % stdout
+        msg += '\n%s' % e
+        print(msg)
+        #warnings.warn(msg)
+        return (None, None)
+    else:
+        return (backend.name, backend)
+    
+def register_backends(backend_paths):
+    provided_backends = {}
+    for partial_path in backend_paths:
+        name, backend = check_backend(partial_path)
+        if name is not None:
+            provided_backends[name] = backend
+    su_backends.register_backends(provided_backends)
+    
+register_backends(backend_paths)
+available_backends = su_backends.available_backends

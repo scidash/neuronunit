@@ -25,9 +25,9 @@ sim.logger.setLevel(level=40)
 
 class PYNNBackend(Backend):
 
+    name = 'PyNN'
 
     def init_backend(self, attrs = None, cell_name= 'adexp', current_src_name = 'hannah', DTC = None, dt=0.01, cell_type=None):
-        backend = 'PYNN'
         super(PYNNBackend,self).init_backend()
         self.current_src_name = current_src_name
         self.cell_name = cell_name
