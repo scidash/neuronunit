@@ -14,7 +14,7 @@ try:
 except:
     warnings.warn('X11 plotting backend not available, consider installing')
 
-import cython
+#import cython
 import logging
 
 # optional imports
@@ -38,7 +38,6 @@ import multiprocessing
 npartitions = multiprocessing.cpu_count()
 from sklearn.model_selection import ParameterGrid
 from collections import OrderedDict
-import cython
 import copy
 import math
 import quantities as pq
@@ -320,8 +319,8 @@ class WSFloatIndividual(float):
         super(WSFloatIndividual, self).__init__()
 
 
-@cython.boundscheck(False)
-@cython.wraparound(False)
+#@cython.boundscheck(False)
+#@cython.wraparound(False)
 def filter_predictions(dtc):
     if not hasattr(dtc,'preds'):
         dtc.preds = {}
@@ -332,8 +331,8 @@ def filter_predictions(dtc):
     dtc.preds = {k:v for k,v in dtc.preds.items() if type(v['mean']) is not type(str(''))}
     dtc.preds = {k:v for k,v in dtc.preds.items() if not np.isnan(v['mean'])}
     return dtc
-@cython.boundscheck(False)
-@cython.wraparound(False)
+#@cython.boundscheck(False)
+#@cython.wraparound(False)
 def make_new_random(dtc_,backend):
     dtc = DataTC()
     dtc.backend = backend
@@ -355,8 +354,8 @@ def make_new_random(dtc_,backend):
 
 
 
-@cython.boundscheck(False)
-@cython.wraparound(False)
+#@cython.boundscheck(False)
+#@@cython.wraparound(False)
 def random_p(backend):
     ranges = MODEL_PARAMS[backend]
     random_param = {} # randomly sample a point in the viable parameter space.
@@ -370,8 +369,8 @@ def random_p(backend):
             random_param[k] = ranges[k]
     return random_param
 
-@cython.boundscheck(False)
-@cython.wraparound(False)
+#@cython.boundscheck(False)
+#@cython.wraparound(False)
 def process_rparam(backend):
     random_param = random_p(backend)
 
@@ -1531,8 +1530,11 @@ def evaluate(dtc):
     if not hasattr(dtc,str('SA')):
         return []
     else:
+        #print(dtc,'before fail')
         ordered_score = dtc.ordered_score()
+        #print(ordered_score)
         fitness = [v.score for v in ordered_score.values()]
+        #print(fitness)
         fitness = tuple(fitness,)
         return fitness
 
@@ -1839,8 +1841,8 @@ class OptMan():
             lp = left[k].prediction[key]
             key = which_key(right[k].observation)
             rp = right[k].observation[key]
-            lp.rescale(rp.units)
-            rp.rescale(lp.units)
+            lp = lp.rescale(rp.units)
+            rp =    rp.rescale(lp.units)
             rps.append(rp)
             lps.append(lp)
 
@@ -2192,6 +2194,23 @@ class OptMan():
                 if float(t.observation['std']) == 0.0:
                     t.observation['std'] = t.observation['mean']
         return tests
+
+    def serial_version(self,dtc):
+        scores_ = []
+        model = dtc.dtc_to_model()
+        for t in dtc.tests:
+            score = t.judge(model)
+            if score is not None:
+                score = score.log_norm_score
+            else:
+                score = -np.inf
+
+            scores_.append(score)
+        dtc.SA = ScoreArray(dtc.tests, scores_)
+        dtc.SA = dtc.ordered_score()
+        return dtc
+
+
     def elephant_evaluation(self,dtc):
         # Inputs single data transport container modules, and neuroelectro observations that
         # inform test error error_criterion
@@ -2208,24 +2227,12 @@ class OptMan():
             try:
                 dtc.SM = suite.judge(model,parallel=False,log_norm=True)
                 dtc.SA = dtc.SM[model]
+                assert dtc.SM is not None
                 dtc.SA = dtc.ordered_score()
             except:
-                print(dtc.SA)
-                import pdb
-                pdb.set_trace()
+                dtc = self.serial_version(dtc)
         else:
-            scores_ = []
-            for t in dtc.tests:
-                score = t.judge(model)
-                if score.get_raw() == 0:
-                     t.score_type = scores.ZScore
-                     score = t.judge(model)
-                     score.log_norm_score
-                scores_.append(score)
-            dtc.SM = ScoreArray(tests, scores_)
-            dtc.SA = dtc.SM[model]
-            dtc.SA = dtc.ordered_score()
-
+            dtc = self.serial_version(dtc)
         obs = {}
         pred = {}
         temp = {t.name:t for t in dtc.tests}
@@ -2233,9 +2240,8 @@ class OptMan():
         for k,o,p in zip(list(similarity.keys()),lps,rps):
             obs[k] = o
             pred[k] = p
-
-        dtc.obs_preds = pd.DataFrame([obs,pred])
-        assert dtc.SM is not None
+        dtc.similarity = similarity
+        dtc.obs_preds = pd.DataFrame([obs,pred],index=['observations','predictions'])
         assert dtc.SA is not None
         return dtc
 
@@ -2255,8 +2261,8 @@ class OptMan():
                 dtc = self.elephant_evaluation((dtc,tests))
 
             return pop, dtc
-    @cython.boundscheck(False)
-    @cython.wraparound(False)
+    #@cython.boundscheck(False)
+    #@cython.wraparound(False)
     @timer
     def format_test(self,dtc):
         # pre format the current injection dictionary based on pre computed
@@ -2626,7 +2632,7 @@ class OptMan():
 
                 for d in dtcpop:
                     assert hasattr(d, 'tests')
-                    assert dtc.SM is not None
+                    #assert dtc.SM is not None
 
                 for d in dtcpop:
                     d.tests = copy.copy(self.tests)

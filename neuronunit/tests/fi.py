@@ -65,7 +65,7 @@ class RheobaseTest(VmTest):
     """
     def _extra(self):
         self.prediction = {}
-        self.high = 300*pq.pA
+        self.high = 900*pq.pA
         self.small = 0*pq.pA
         self.rheobase_vm = None
         self.verbose = 0
@@ -464,10 +464,10 @@ class RheobaseTestP(RheobaseTest):
                     dtc_clones[i] = copy.copy(dtc_clones[i])
                     dtc_clones[i].ampl = copy.copy(dtc.current_steps[i])
                 dtc_clones = [d for d in dtc_clones if not np.isnan(d.ampl)]
-                #try:
-                b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
-                dtc_clone = list(b0.map(check_current).compute())
-                '''
+                try:
+                    b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
+                    dtc_clone = list(b0.map(check_current).compute())
+
                 except:
                     set_clones = set([ float(d.ampl) for d in dtc_clones ])
                     dtc_clone = []
@@ -477,7 +477,7 @@ class RheobaseTestP(RheobaseTest):
                         dtc = check_current(dtc)
                         dtc.backend = be
                         dtc_clone.append(dtc)
-                '''
+
                 if str("BHH") not in dtc.backend:
                     # take smallest spiking if multi spiking rheobase
 

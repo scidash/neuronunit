@@ -36,7 +36,7 @@ from neuronunit.capabilities import spike_functions as sf
 mpl.use('Agg')
 import matplotlib.pyplot as plt
 from elephant.spike_train_generation import threshold_detection
-ascii_plot = True
+#ascii_plot = True
 
 
 
@@ -136,8 +136,8 @@ class JHHBackend(Backend):
         Main.eval("E2.m = zeros(N)")
         Main.eval("E2.n = zeros(N)")
         Main.eval("E2.h = ones(N)")
-        Main.eval("E2.ge = (1.5randn(N) .+ 4) .* 10nS")
-        Main.eval("E2.gi = (12randn(N) .+ 20) .* 10nS")
+        Main.eval("E2.ge = (1.ones(N) .+ 4) .* 10nS")
+        Main.eval("E2.gi = (ones(N) .+ 20) .* 10nS")
         Main.eval("E2.fire = zeros(Bool, N)")
         Main.eval('E2.I = convert(Array{Float32,1},temp_i)')
         Main.eval('E2.records = Dict()')
@@ -189,16 +189,17 @@ class JHHBackend(Backend):
 
 
 
-        Main.eval("SNN.monitor(E2, [:v])")
-        Main.eval("SNN.monitor(E2, [:I])")
-        Main.dur = current["duration"]
-        Main.eval("v = SNN.getrecord(E2, :v)")
-        Main.eval("ii = SNN.getrecord(E2, :I)")
-
+        #Main.dur = current["duration"]
+        #Main.eval("ii = SNN.getrecord(E2, :I)")
+        Main.current = current
         Main.eval("E2.I = convert(Vector{Float32},E2.I)")
-
-        jl.eval("SNN.sim!([E2], []; dt = 0.015*ms, duration = dur*ms)")
+        Main.eval("SNN.monitor(E2, [:v])")
+        
+        Main.eval('SNN.sim!([E2], []; dt = 0.015*ms,delay = current["delay"], duration = current["duration],s')
+        Main.eval("v = SNN.getrecord(E2, :v)")
+        print('gets here')
         # jl.eval("SNN.sim!([param], []; dt = 0.015*ms, duration = dur*ms)")
+        #Main.eval("SNN.monitor(E2, [:I])")
 
         v = Main.v
         #if ascii_plot:
