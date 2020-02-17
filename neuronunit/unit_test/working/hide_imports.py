@@ -1,34 +1,36 @@
-from neuronunit.optimisation.optimization_management import TSD
+# from neuronunit.optimisation.optimization_management import TSD
 """Tests of NeuronUnit test classes"""
-import unittest
-import os
-import sys
+# import unittest
+# import os
+#import sys
 #import dask
 #from dask import bag
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+#import matplotlib
+#matplotlib.use('Agg')
+#import matplotlib.pyplot as plt
 
-from itertools import repeat
-import quantities as pq
+#from itertools import repeat
+#import quantities as pq
 
-import copy
-import unittest
-import pickle
+#import copy
+#import unittest
+#import pickle
 
-import numpy as np
-import pickle
-#import dask.bag as db
-import os
-
+# import os
+# import numpy as np
+# import pickle
+# import dask.bag as db
+'''
 #from neuronunit.optimisation import get_neab
-from neuronunit.optimisation.data_transport_container import DataTC
+#from neuronunit.optimisation.data_transport_container import DataTC
 
-from neuronunit.optimisation.optimization_management import dtc_to_rheo#, mint_generic_model
-from neuronunit.optimisation.optimization_management import OptMan,inject_and_plot_model
+#from neuronunit.optimisation.optimization_management import dtc_to_rheo#, mint_generic_model
+#from neuronunit.optimisation.optimization_management import OptMan,inject_and_plot_model
 
+print('not dask')
 #from neuronunit import tests as nu_tests, neuroelectro
 from neuronunit.tests import passive, waveform, fi
+
 from neuronunit.optimisation import exhaustive_search
 # from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 # from neuronunit.tests import dynamics
@@ -43,3 +45,4 @@ from neuronunit.optimisation import get_neab
 test_frame = get_neab.process_all_cells()
 test_frame.pop('Olfactory bulb (main) mitral cell',None)
 from IPython.display import HTML, display
+'''

@@ -63,6 +63,9 @@ class DataTC(object):
         return self.summed
 
     def ordered_score(self):
+        """
+        hopefuly depricated
+        """
         if not hasattr(self,'os'):
             self.os = OrderedDict(self.SA.to_dict())
         else:
@@ -102,30 +105,48 @@ class DataTC(object):
 
         return self.tests
     def dtc_to_model(self):
-        from neuronunit.models.very_reduced_sans_lems import VeryReducedModel
-        model = VeryReducedModel(backend=self.backend)
-        model.backend = self.backend
-        model.attrs = self.attrs
-        model.rheobase = self.rheobase
+        if dtc.backend is str("JULIA"):
+            from neuronunit.models import simple_with_current_injection
+            model = SimpleModel(attrs)
 
-        #backend=(self.backend, {'DTC':self}))#, {'DTC':dtc}))
-        # If  test taking data, and objects are present (observations etc).
-        # Take the rheobase test and store it in the data transport container.
-        if not hasattr(self,'scores'):
-            self.scores = None
-        if type(self.scores) is type(None):
-            self.scores = {}
-        #model.attrs = self.attrs
-        model.scores = self.scores
-        #model.rheobase = self.rheobase
-        try:
-            model.inj = self.params
-        except:
+        if dtc.backend is str('NEURON') or dtc.backend is str('jNEUROML'):
+            LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
+            dtc.model_path = LEMS_MODEL_PATH
+            from neuronunit.models.reduced import ReducedModel#, VeryReducedModel
+            model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
+            dtc.current_src_name = model._backend.current_src_name
+            assert type(dtc.current_src_name) is not type(None)
+            dtc.cell_name = model._backend.cell_name
+            model.attrs = dtc.attrs
+        else:
+            # The most likely outcome
+            from neuronunit.models.very_reduced_sans_lems import VeryReducedModel
+            model = VeryReducedModel(backend=self.backend)
+            model.backend = self.backend
+            model.attrs = self.attrs
+            model.rheobase = self.rheobase
+
+            #backend=(self.backend, {'DTC':self}))#, {'DTC':dtc}))
+            # If  test taking data, and objects are present (observations etc).
+            # Take the rheobase test and store it in the data transport container.
+            if not hasattr(self,'scores'):
+                self.scores = None
+            if type(self.scores) is type(None):
+                self.scores = {}
+            #model.attrs = self.attrs
+            model.scores = self.scores
+            #model.rheobase = self.rheobase
             try:
-                model.inj = self.vparams
+                model.inj = self.params
             except:
-                model.inj = None
+                try:
+                    model.inj = self.vparams
+                except:
+                    model.inj = None
+
+
         return model
+
     def dtc_to_gene(self):
         from neuronunit.optimisation.optimization_management import WSListIndividual
         print('warning translation dictionary should be used, to garuntee correct attribute order from random access dictionaries')

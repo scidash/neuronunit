@@ -55,33 +55,7 @@ def _evaluate_invalid_fitness(toolbox, population):
         ind.fitness.values = fitnesses[j]
         #ind.dtc = None
     return invalid_pop
-'''
-def strip_object(p):
-    state = super(type(p)).state
-    p.unpicklable = []
 
-    return p._state(state=state, exclude=['unpicklable','verbose'])
-
-def purify2(population):
-    pop2 = WSListIndividual()
-    for ind in population:
-        for i,j in enumerate(ind):
-            try:
-                ind[i] = float(j)
-            except:
-                import pdb
-                pdb.set_trace()
-
-        ind.dtc = ind.dtc
-        try:
-            ind.dtc.tests.DO = None
-        except:
-            ind.dtc.tests = None
-        assert hasattr(ind,'dtc')
-
-        pop2.append(ind)
-    return pop2
-'''
 def _update_history_and_hof(halloffame,pf, history, population,GEN,MU):
     '''Update the hall of fame with the generated individuals
 
@@ -94,21 +68,26 @@ def _update_history_and_hof(halloffame,pf, history, population,GEN,MU):
         for t in temp:
             t.dtc.tests = None
             t.dtc = None
+    fail = False
     if halloffame is not None:
         try:
             halloffame.update(temp)
         except:
-            print(temp,'temp bad')
+            fail = True
     if history is not None:
         try:
             history.update(temp)
         except:
-            print(temp,'temp bad')
+            fail = True
     if pf is not None:
         if GEN ==0:
             pf = deap.tools.ParetoFront(MU)
-        pf.update(temp)
-    return (halloffame,pf,history)
+        try:
+            pf.update(temp)
+        except:
+            fail = True
+
+    return (fail,halloffame,pf,history)
 
 
 def _record_stats(stats, logbook, gen, population, invalid_count):
@@ -194,7 +173,12 @@ def eaAlphaMuPlusLambdaCheckpoint(
         record = stats.compile(pop)
         logbook.record(gen=0, evals=len(invalid_ind), **record)
         temp_pop = copy.copy(pop)
-        hof, pf,history = _update_history_and_hof(hof, pf, history, temp_pop ,0,MU)
+        fail, hof, pf,history = _update_history_and_hof(hof, pf, history, temp_pop ,0,MU)
+        if fail:
+            print(pf)
+            print(temp)
+            import pdb;
+            pdb.set_trace()
         for p in pop:
             assert hasattr(p,'dtc')
         #print(logbook.stream)
@@ -205,13 +189,19 @@ def eaAlphaMuPlusLambdaCheckpoint(
 
             # Evaluate the individuals with an invalid fitness
             invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+
             invalid_ind,fitnesses = toolbox.evaluate(invalid_ind)
 
             #fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
 
             for ind, fit in zip(invalid_ind, fitnesses):
                 ind.fitness.values = fit
-            hof, pf,history = _update_history_and_hof(hof, pf, history, invalid_ind,gen,MU)
+            fail, hof, pf,history = _update_history_and_hof(hof, pf, history, invalid_ind,gen,MU)
+            if fail:
+                print(pf)
+                print(temp)
+                import pdb;
+                pdb.set_trace()
 
             # Select the next generation population from parents and offspring
             pop = [p for p in pop if len(p.fitness.values) ]
