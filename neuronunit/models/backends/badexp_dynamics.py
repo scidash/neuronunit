@@ -108,16 +108,15 @@ def simulate_AdEx_neuron_local(
 
 getting_started = False
 class ADEXPBackend(Backend):
+    
+    name = 'adexp'
+    
     def get_spike_count(self):
         return int(self.spike_monitor.count[0])
     def init_backend(self, attrs=None, cell_name='thembi',
                      current_src_name='spanner', DTC=None,
                      debug = False):
-        backend = 'adexp'
         super(ADEXPBackend,self).init_backend()
-        self.name = str(backend)
-
-
         self.debug = None
         self.model._backend.use_memory_cache = False
         self.current_src_name = current_src_name
@@ -276,7 +275,7 @@ class ADEXPBackend(Backend):
         vm = state_dic['v']
         vm = [ float(i) for i in vm ]
 
-        self.vM = AnalogSignal(vm,units = mV,sampling_period = float(1.0) * pq.ms)
+        self.vM = AnalogSignal(vm,units = mV,sampling_period = float(0.0001) * pq.s)
 
 
         tdic = self.spike_monitor.spike_trains()

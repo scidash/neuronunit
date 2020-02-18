@@ -1,12 +1,4 @@
-#from neuronunit.tests.base import ALLEN_ONSET, DT, ALLEN_STOP, ALLEN_FINISH
-'''
-defaults = {'DT': 2e-05, 'ALLEN_STOP': 3.0199800000000003, 'ALLEN_FINISH': 10.020000000000001,'ALLEN_ONSET':1.02}
 
-DT = defaults["DT"]
-ALLEN_ONSET = defaults["ALLEN_ONSET"]
-ALLEN_STOP = defaults["ALLEN_STOP"]
-ALLEN_FINISH = defaults["ALLEN_FINISH"]
-'''
 from quantities import mV, ms, s, V
 import sciunit
 from neo import AnalogSignal
@@ -23,12 +15,11 @@ except:
 import numpy
 voltage_units = mV
 
-#mpl.use('Agg')
 from elephant.spike_train_generation import threshold_detection
 #import matplotlib.pyplot as plt
-# @jit(cache=True) I suspect this causes a memory leak
+#mpl.use('Agg')
+
 from numba import jit
-# @cuda.jit(device=True, cache=True)
 import cython
 @jit
 def get_vm(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.364525297619-65.2261863636364), vr=-65.2261863636364, vt=-50, dt=0.030, Iext=[]):
@@ -38,11 +29,7 @@ def get_vm(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.36452
     This function can't get too pythonic (functional), it needs to be a simple loop for
     numba/jit to understand it.
     '''
-    #Iext = [i/1000000000.0 for i in Iext]
     N = len(Iext)
-    #vr=vr/1000.0
-    #vPeak=vPeak/1000.0
-    #vt=vt/1000.0
 
     v = np.zeros(N)
     u = np.zeros(N)
@@ -56,9 +43,9 @@ def get_vm(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.36452
             v[m] = vPeak;# % padding the spike amplitude
             v[m+1] = c;# % membrane voltage reset
             u[m+1] = u[m+1] + d;# % recovery variable update
-
     #for m in range(0,N):
     #    v[m] = v[m]/1000.0
+
 
     return v
 
@@ -83,16 +70,15 @@ def get_vm_regular(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(
             v[m+1] = c;# % membrane voltage reset
             u[m+1] = u[m+1] + d;# % recovery variable update
 
-    #for m in range(0,N):
-    #    v[m] = v[m]/1000.0
 
     return v
 class RAWBackend(Backend):
 
+    name = 'RAW'
+    
     def init_backend(self, attrs=None, cell_name='alice',
                      current_src_name='hannah', DTC=None,
                      debug = False):
-        backend = 'RAW'
         super(RAWBackend,self).init_backend()
         self.model._backend.use_memory_cache = False
         self.current_src_name = current_src_name
@@ -133,9 +119,14 @@ class RAWBackend(Backend):
 
         if type(self.vM) is type(None):
             v = get_vm(**self.attrs)
+
             self.vM = AnalogSignal(v,
-                                   units = voltage_units,
-                                   sampling_period = self.attrs['dt'] * ms)
+                                units=pq.mV,
+                                sampling_period=0.0051*pq.ms)
+
+            #self.vM = AnalogSignal(v,
+            #                       units = voltage_units,
+            #                       sampling_period = self.attrs['dt'] * qt.s)
 
         return self.vM
 
@@ -160,8 +151,7 @@ class RAWBackend(Backend):
             c = current['injected_square_current']
         else:
             c = current
-        amplitude = float(c['amplitude'])*1000.0 #this needs to be in every backends
-
+        amplitude = float(c['amplitude']) #this needs to be in every backends
         duration = float(c['duration'])#/dt#/dt.rescale('ms')
         delay = float(c['delay'])#/dt#.rescale('ms')
         #if 'sim_length' in c.keys():
@@ -180,7 +170,13 @@ class RAWBackend(Backend):
                N = int(tMax/attrs['dt'])
         else:
             attrs['dt'] = 0.03
+        NORMAL = True
+        if NORMAL == True:
             N = int(tMax/attrs['dt'])
+        else:
+            print('adding in larger N seems to artificially dilate the width of neural events')
+            N = int(tMax/attrs['dt'])*100
+
         Iext = np.zeros(N)
         delay_ind = int((delay/tMax)*N)
         duration_ind = int((duration/tMax)*N)
@@ -197,9 +193,11 @@ class RAWBackend(Backend):
         self.model.attrs.update(attrs)
 
         self.vM = AnalogSignal(v,
-                     units = voltage_units,
-                     sampling_period = attrs['dt']*pq.ms)
+                            units=pq.mV,
+                            sampling_period=0.03*pq.ms)
 
+        #print(self.vM.times[-1],c['delay']+c['duration']+200*pq.ms)
+        #assert self.vM.times[-1] == (c['delay']+c['duration']+200*pq.ms)
 
         return self.vM
 
@@ -210,63 +208,12 @@ class RAWBackend(Backend):
             v = get_vm(**self.attrs)
         else:
             v = get_vm(self.attrs)
+
+        period = 0.03*pq.ms
         self.vM = AnalogSignal(v,
                                units = voltage_units,
-                               sampling_period = self.attrs['dt'] * ms)
+                               sampling_period = period)
         results['vm'] = self.vM.magnitude
         results['t'] = self.vM.times
         results['run_number'] = results.get('run_number',0) + 1
         return results
-
-
-    def inject_square_current_allen(self, current):#, section = None, debug=False):
-        """Inputs: current : a dictionary with exactly three items, whose keys are: 'amplitude', 'delay', 'duration'
-        Example: current = {'amplitude':float*pq.pA, 'delay':float*pq.ms, 'duration':float*pq.ms}}
-        where \'pq\' is a physical unit representation, implemented by casting float values to the quanitities \'type\'.
-        Description: A parameterized means of applying current injection into defined
-        Currently only single section neuronal models are supported, the neurite section is understood to be simply the soma.
-
-        """
-        attrs = copy.copy(self.model.attrs)
-
-        if 'injected_square_current' in current.keys():
-            c = current['injected_square_current']
-        else:
-            c = current
-        DT = 0.003
-        amplitude = float(c['amplitude'])
-        duration = float(c['duration'])#/dt#/dt.rescale('ms')
-        delay = float(c['delay'])#/dt#.rescale('ms')
-        if 'sim_length' in c.keys():
-            sim_length = c['sim_length']
-        tMax = delay + duration + 200.0#/dt#*pq.ms
-        self.set_stop_time(tMax*pq.ms)
-        tMax = self.tstop
-        #attrs['dt'] = DT
-        #print(DT,tMax)
-        N = int(tMax/DT)#attrs['dt'])
-        Iext = np.zeros(N)
-        delay_ind = int((delay/tMax)*N)
-        duration_ind = int((duration/tMax)*N)
-        defaults = {}
-        defaults = {'DT': 2e-05, 'ALLEN_STOP': 3.0199800000000003, 'ALLEN_FINISH': 10.020000000000001,'ALLEN_ONSET':1.02}
-        attrs['dt']=0.25
-        Iext = [ 0.0 ] * int(1.02*100000.0) + [ amplitude ] * int(3.0199800000000003*100000.0) + [ 0.0 ] * int(10.020000000000001*100000.0)
-
-        attrs['Iext'] = Iext
-        v = get_vm_regular(**attrs)
-        self.vM = AnalogSignal(v,
-                     units = voltage_units,
-                     sampling_period = attrs['dt'] * ms)
-        #try:
-        t = [float(f) for f in self.vM.times]
-        v = [float(f) for f in self.vM.magnitude]
-
-        fig = apl.figure()
-        fig.plot(t, v, label=str('spikes: '), width=100, height=20)
-        fig.show()
-        #except:
-        #    pass
-        self.attrs = attrs
-        self.model.attrs.update(attrs)
-        return (self.vM, t, v)

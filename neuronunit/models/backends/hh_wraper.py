@@ -55,12 +55,15 @@ def Id(t,delay,duration,tmax,amplitude):
 class JHHBackend(Backend):
     #def get_spike_count(self):
     #    return int(self.spike_monitor.count[0])
+    
+    name = 'JHH'
+    
     def init_backend(self, attrs=None, cell_name='thembi',
                      current_src_name='spanner', DTC=None,
                      debug = False):
-        backend = 'JHH'
+
         super(JHHBackend,self).init_backend()
-        self.name = str(backend)
+
 
         self.model._backend.use_memory_cache = False
         self.current_src_name = current_src_name
@@ -111,8 +114,9 @@ class JHHBackend(Backend):
         ###
         # SpikingNeuralNetworks.HH(; param, N, v, m, n, h, ge, gi, fire, I, records)
         ###
-
-        attrs["N"] = 10000
+        
+        # here N is the number of neurons that are being simulated.
+        attrs["N"] = 1
 
         Main.temp = attrs["N"]
         #Main.eval('N = temp')
@@ -136,8 +140,8 @@ class JHHBackend(Backend):
         Main.eval("E2.m = zeros(N)")
         Main.eval("E2.n = zeros(N)")
         Main.eval("E2.h = ones(N)")
-        Main.eval("E2.ge = (1.ones(N) .+ 4) .* 10nS")
-        Main.eval("E2.gi = (ones(N) .+ 20) .* 10nS")
+        Main.eval("E2.ge = (1.5*ones(N) .+ 4) .* 10nS")
+        Main.eval("E2.gi = (12*ones(N) .+ 20) .* 10nS")
         Main.eval("E2.fire = zeros(Bool, N)")
         Main.eval('E2.I = convert(Array{Float32,1},temp_i)')
         Main.eval('E2.records = Dict()')

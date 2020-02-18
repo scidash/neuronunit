@@ -55,39 +55,88 @@ def _evaluate_invalid_fitness(toolbox, population):
         ind.fitness.values = fitnesses[j]
         #ind.dtc = None
     return invalid_pop
+'''
+def strip_object(p):
+    state = super(type(p)).state
+    p.unpicklable = []
+
+    return p._state(state=state, exclude=['unpicklable','verbose'])
+
+def purify2(population):
+    pop2 = WSListIndividual()
+    for ind in population:
+        for i,j in enumerate(ind):
+            try:
+                ind[i] = float(j)
+            except:
+                import pdb
+                pdb.set_trace()
+
+        ind.dtc = ind.dtc
+        try:
+            ind.dtc.tests.DO = None
+        except:
+            ind.dtc.tests = None
+        assert hasattr(ind,'dtc')
+
+        pop2.append(ind)
+    return pop2
+'''
+
+def cleanse(temp):
+   dtc = temp[0].dtc
+   if "ADEXP" in temp[0].dtc.backend or "BHH" in temp[0].dtc.backend:
+	   try:
+		   import brian as b2
+		   b2.clear_cache("cython")
+		   b2 = None
+	   except:
+		   brian2 = None
+	   OM = dtc.dtc_to_opt_man()
+	   temp_,_ = OM.boot_new_genes(len(temp),dtcpop)
+	   for i,t in enumerate(temp):
+		   temp_[i].fitness = t.fitness
+		   for x,j in enumerate(t):
+		       temp_[i][x] = j
+	   temp = temp_
+
+		for t in temp:
+		    t.dtc.tests = None
+		    t.dtc = None
+	return temp
 
 def _update_history_and_hof(halloffame,pf, history, population,GEN,MU):
     '''Update the hall of fame with the generated individuals
 
     Note: History and Hall-of-Fame behave like dictionaries
     '''
-    temp = copy.copy([p for p in population if hasattr(p,'dtc')])
-    dtcpop = copy.copy([p.dtc for p in population if hasattr(p,'dtc')])
+    temp = population
 
-    if "ADEXP" in temp[0].dtc.backend or "BHH" in temp[0].dtc.backend:
-        for t in temp:
-            t.dtc.tests = None
-            t.dtc = None
-    fail = False
     if halloffame is not None:
         try:
             halloffame.update(temp)
         except:
-            fail = True
+            temp = cleanse(temp)
+            halloffame.update(temp)
     if history is not None:
         try:
             history.update(temp)
         except:
-            fail = True
+            temp = cleanse(temp)
+            history.update(temp)
+
+            print(temp,'temp bad')
     if pf is not None:
         if GEN ==0:
-            pf = deap.tools.ParetoFront(MU)
+            pf = deap.tools.ParetoFront()
         try:
             pf.update(temp)
         except:
-            fail = True
+            temp = cleanse(temp)
+            pf.update(temp)
 
-    return (fail,halloffame,pf,history)
+
+    return (halloffame,pf,history)
 
 
 def _record_stats(stats, logbook, gen, population, invalid_count):
@@ -173,12 +222,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
         record = stats.compile(pop)
         logbook.record(gen=0, evals=len(invalid_ind), **record)
         temp_pop = copy.copy(pop)
-        fail, hof, pf,history = _update_history_and_hof(hof, pf, history, temp_pop ,0,MU)
-        if fail:
-            print(pf)
-            print(temp)
-            import pdb;
-            pdb.set_trace()
+        hof, pf,history = _update_history_and_hof(hof, pf, history, temp_pop ,0,MU)
         for p in pop:
             assert hasattr(p,'dtc')
         #print(logbook.stream)
@@ -189,19 +233,13 @@ def eaAlphaMuPlusLambdaCheckpoint(
 
             # Evaluate the individuals with an invalid fitness
             invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-
             invalid_ind,fitnesses = toolbox.evaluate(invalid_ind)
 
             #fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
 
             for ind, fit in zip(invalid_ind, fitnesses):
                 ind.fitness.values = fit
-            fail, hof, pf,history = _update_history_and_hof(hof, pf, history, invalid_ind,gen,MU)
-            if fail:
-                print(pf)
-                print(temp)
-                import pdb;
-                pdb.set_trace()
+            hof, pf,history = _update_history_and_hof(hof, pf, history, invalid_ind,gen,MU)
 
             # Select the next generation population from parents and offspring
             pop = [p for p in pop if len(p.fitness.values) ]

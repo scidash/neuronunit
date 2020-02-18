@@ -4,7 +4,7 @@ import numpy as np
 import quantities as qt
 import copy
 from collections import OrderedDict
-
+from sciunit import scores
 try:
     import asciiplotlib as apl
 except:
@@ -62,14 +62,23 @@ class DataTC(object):
             self.summed = None
         return self.summed
 
+    def dtc_to_opt_man(self):
+        from neuronunit.optimisation.optimization_management import OptMan
+        OM = Optman(self.tests,self.backend)
+        return OM
+        
     def ordered_score(self):
         """
         hopefuly depricated
         """
         if not hasattr(self,'os'):
-            self.os = OrderedDict(self.SA.to_dict())
+            self.os = OrderedDict({k.name:self.SA[k] for k in self.SA.to_dict()})
         else:
             self.os = {k:self.SA[k] for k in self.os.keys()}
+        for k,v in self.os.items():
+            if v is scores.InsufficientDataScore(None):
+                v.score = -np.inf
+
         return self.os
 
     def add_constant(self):
@@ -90,7 +99,12 @@ class DataTC(object):
             self.tests = switch_logic(tests)#,self.tests.use_rheobase_score)
         else:
             self.tests = switch_logic(self.tests)
-        for k,v in enumerate(self.tests):
+
+
+
+        for v in self.tests:
+        #for k,v in enumerate(self.tests):
+            k = v.name
             self.protocols[k] = {}
             if hasattr(v,'passive'):#['protocol']:
                 if v.passive == False and v.active == True:
@@ -108,7 +122,7 @@ class DataTC(object):
         if dtc.backend is str("JULIA"):
             from neuronunit.models import simple_with_current_injection
             model = SimpleModel(attrs)
-
+        
         if dtc.backend is str('NEURON') or dtc.backend is str('jNEUROML'):
             LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
             dtc.model_path = LEMS_MODEL_PATH
@@ -124,18 +138,27 @@ class DataTC(object):
             model = VeryReducedModel(backend=self.backend)
             model.backend = self.backend
             model.attrs = self.attrs
-            model.rheobase = self.rheobase
+            model.rheobase = self.rheobase 
 
-            #backend=(self.backend, {'DTC':self}))#, {'DTC':dtc}))
-            # If  test taking data, and objects are present (observations etc).
-            # Take the rheobase test and store it in the data transport container.
-            if not hasattr(self,'scores'):
-                self.scores = None
-            if type(self.scores) is type(None):
-                self.scores = {}
-            #model.attrs = self.attrs
-            model.scores = self.scores
-            #model.rheobase = self.rheobase
+        from neuronunit.models.very_reduced_sans_lems import VeryReducedModel
+        model = VeryReducedModel(backend=self.backend)
+        model.backend = self.backend
+        model.attrs = self.attrs
+        model.rheobase = self.rheobase
+
+        #backend=(self.backend, {'DTC':self}))#, {'DTC':dtc}))
+        # If  test taking data, and objects are present (observations etc).
+        # Take the rheobase test and store it in the data transport container.
+        if not hasattr(self,'scores'):
+            self.scores = None
+        if type(self.scores) is type(None):
+            self.scores = {}
+        #model.attrs = self.attrs
+        model.scores = self.scores
+        #model.rheobase = self.rheobase
+        try:
+            model.inj = self.params
+        except:
             try:
                 model.inj = self.params
             except:
