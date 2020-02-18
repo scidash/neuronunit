@@ -295,14 +295,14 @@ class TimeConstantTest(TestPulseTest):
             if prediction['n'] == 0:  # if prediction is None:
                 score = scores.InsufficientDataScore(None)
             else:
-                print(observation,prediction)
-                print(observation['mean'].units,prediction['value'].units)
+                #print(observation,prediction)
+                #print(observation['mean'].units,prediction['value'].units)
 
                 score = super(TimeConstantTest, self).compute_score(observation,
                                                                 prediction)
         else:
-            print(observation,prediction)
-            print(observation['mean'].units,prediction['value'].units)
+            #print(observation,prediction)
+            #print(observation['mean'].units,prediction['value'].units)
             score = super(TimeConstantTest, self).compute_score(observation,
                                                                 prediction)
 
@@ -406,7 +406,7 @@ class RestingPotentialTest(TestPulseTest):
         else:
             #prediction['value'] = prediction['value'].simplified
             #observation['value'] = observation['value'].simplified
-            print(observation, prediction)
+            #print(observation, prediction)
 
             score = super(RestingPotentialTest, self).\
                         compute_score(observation, prediction)

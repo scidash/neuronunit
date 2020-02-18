@@ -51,7 +51,7 @@ class APWidthTest(VmTest):
         # len of None returns an exception that is not handled
         model.inject_square_current(self.params['injected_square_current'])
         self.verbose = False
-        if self.verbose:
+        if self.verbose is False:
             print(self.params['injected_square_current'])
         model.get_membrane_potential()
         widths = model.get_AP_widths()
@@ -117,7 +117,8 @@ class InjectedCurrentAPWidthTest(InjectedCurrent, APWidthTest):
                    "is injected into cell.")
 
     def generate_prediction(self, model):
-        if self.verbose:
+        self.verbose = False
+        if self.verbose is True:
             print(self.params['injected_square_current'])
 
         model.inject_square_current(self.params['injected_square_current'])
