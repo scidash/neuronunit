@@ -20,8 +20,9 @@ except:
 class TestPulseTest(ProtocolToFeaturesTest):
     """A base class for tests that use a square test pulse."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs,):
         super(TestPulseTest, self).__init__(*args, **kwargs)
+        self.verbose = kwargs['verbose']
 
     default_params = dict(VmTest.default_params)
     default_params['amplitude'] = -10.0 * pq.pA
@@ -283,7 +284,6 @@ class TimeConstantTest(TestPulseTest):
             except:
                 features = {'value': None}
         self.prediction = features
-        print(self.prediction)
         return features
 
     def compute_score(self, observation, prediction):
@@ -295,14 +295,10 @@ class TimeConstantTest(TestPulseTest):
             if prediction['n'] == 0:  # if prediction is None:
                 score = scores.InsufficientDataScore(None)
             else:
-                #print(observation,prediction)
-                #print(observation['mean'].units,prediction['value'].units)
 
                 score = super(TimeConstantTest, self).compute_score(observation,
                                                                 prediction)
         else:
-            #print(observation,prediction)
-            #print(observation['mean'].units,prediction['value'].units)
             score = super(TimeConstantTest, self).compute_score(observation,
                                                                 prediction)
 
@@ -404,14 +400,10 @@ class RestingPotentialTest(TestPulseTest):
         if prediction is None:
             return None  # scores.InsufficientDataScore(None)
         else:
-            #prediction['value'] = prediction['value'].simplified
-            #observation['value'] = observation['value'].simplified
-            #print(observation, prediction)
 
             score = super(RestingPotentialTest, self).\
                         compute_score(observation, prediction)
-        self.verbose = False
-        if self.verbose:
+        if self.verbose is True:
             print(score)
             print(observation, prediction)
         return score
