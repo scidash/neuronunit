@@ -7,7 +7,7 @@ allensdk==0.14.5
 pyNeuroML @ git+https://github.com/rgerkin/pyneuroml@master#egg=pyneuroml-9999
 pyNN>=0.9
 execnet
-sciunit @ git+https://github.com/scidash/sciunit@dev#egg=sciunit-9999
+sciunit @ git+https://github.com/scidash/sciunit@metacell#egg=sciunit-9999
 requests
 validators
 lmfit
