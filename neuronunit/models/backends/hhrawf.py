@@ -1,5 +1,5 @@
 
-import scipy as sp
+#import scipy as sp
 #import pylab as plt
 from scipy.integrate import odeint
 from numba import jit
@@ -141,7 +141,7 @@ def I_inj(t,delay,duration,tMax,amplitude):
 	return 0*(t<delay) +amplitude*(t>delay) -amplitude*(t>delay+duration)
 
 
-@jit
+@jit(forceobj=True)
 def dALLdt(X, t, attrs):
     """
     Integrate
@@ -176,37 +176,12 @@ def dALLdt(X, t, attrs):
     #ik = I_K(V, n, g_K)
     #il = I_L(V, g_L)
 
-    # use time to time this.
-    """
-    try:
-        t1 = time.time()
-        a = I_inj(t,delay,duration,np.max(T),amplitude)
-    	print(a)
-        b = I_Na(V, m, h)
-        c = I_K(V, n)
-        d = I_L(V)
-        dVdt0 =(a+b+c+d)/C_m
-    except:
-        pass
-    """
-    t2 = time.time()
 
     # use time to time this
     dVdt1 = (Iext - I_Na - I_K - I_L) / C_m
-    t3 = time.time()
-    #first = t2-t1
-    second = t3-t2
-    #print('original faster ',second<first)
-    #if set(dVdt0) == set(dVdt1):
-    #   if second<first:
-    #      dVdt = dVdt1
-    #   else:
-    #      dVdt = dVdt0
     dmdt = alpha_m(V)*(1.0-m) - beta_m(V)*m
     dhdt = alpha_h(V)*(1.0-h) - beta_h(V)*h
     dndt = alpha_n(V)*(1.0-n) - beta_n(V)*n
-    #import pdb
-    #pdb.set_trace()
     return dVdt1, dmdt, dhdt, dndt
 
 
@@ -256,8 +231,9 @@ def get_vm(attrs):
 
 class HHBackend(Backend):
 
+    name = 'HH'
+    
     def init_backend(self, attrs = None, cell_name = 'alice', current_src_name = 'hannah', DTC = None):
-        backend = 'HH'
         super(HHBackend,self).init_backend()
         self.model._backend.use_memory_cache = False
         self.current_src_name = current_src_name
@@ -266,7 +242,6 @@ class HHBackend(Backend):
         self.attrs = attrs
 
         self.temp_attrs = None
-        self.name = str(backend)
 
         if type(attrs) is not type(None):
             self.set_attrs(**attrs)
@@ -326,16 +301,17 @@ class HHBackend(Backend):
         else:
             c = current
         amplitude = float(c['amplitude'])#s.simplified*1000000000000000.0)
+        amplitude = amplitude#*1.0/10.0
         duration = float(c['duration'])#/dt#/dt.rescale('ms')
         delay = float(c['delay'])#/dt#.rescale('ms')
         tmax = delay + duration + 200.0#/dt#*pq.ms
         self.set_stop_time(tmax*pq.ms)
         tmax = self.tstop
         tmin = 0.0
-        DT = 0.01
+        #DT = 0.01
         #T = np.linspace(tmin, tmax, int(tmax/DT))
-        dt = 0.01
-        T = sp.arange(0.0, 1300.0, dt)
+        dt = 0.001
+        T = np.arange(0.0, tmax, dt)
         #dt = T[1]-T[0]
 
         attrs = copy.copy(self.model.attrs)

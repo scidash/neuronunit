@@ -179,6 +179,8 @@ class RheobaseTest(VmTest):
                 model.inject_square_current(current)
                 n_spikes = model.get_spike_count()
                 self.n_spikes = n_spikes
+                if self.n_spikes == 1:
+                    self.params['injected_square_current'] = current
                 temp = model._backend.get_spike_count()
 
                 if self.verbose >= 2:
@@ -368,11 +370,11 @@ class RheobaseTestP(RheobaseTest):
                 model = dtc.dtc_to_model()
 
 
-            default_params = {'injected_square_current':
-                      {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+            #default_params = {'injected_square_current':
+            #          {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
             ampl = dtc.ampl
             if float(ampl) not in dtc.lookup or len(dtc.lookup) == 0:
-                default_params['injected_square_current']
+                #default_params['injected_square_current']
                 uc = {'amplitude':dtc.ampl,'duration':DURATION,'delay':DELAY}
                 dtc.run_number += 1
                 model.inject_square_current(uc)
@@ -474,9 +476,12 @@ class RheobaseTestP(RheobaseTest):
                     for dtc,sc in zip(dtc_clones,set_clones):
                         dtc = copy.copy(dtc)
                         dtc.ampl = sc*pq.pA
-                        dtc = check_current(dtc)
-                        dtc.backend = be
-                        dtc_clone.append(dtc)
+                        try:
+                            dtc = check_current(dtc)
+                            dtc.backend = be
+                            dtc_clone.append(dtc)
+                        except:
+                            dtc.lookup[float(dtc.ampl)] = 0
 
                 if str("BHH") not in dtc.backend:
                     # take smallest spiking if multi spiking rheobase
