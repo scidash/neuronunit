@@ -81,11 +81,12 @@ class RheobaseTest(VmTest):
     units = pq.pA
     ephysprop_name = 'Rheobase'
     # score_type = scores.ZScore
-    score_type = scores.RatioScore
+    #score_type = scores.RatioScore
 
     default_params = dict(VmTest.default_params)
     default_params.update({'amplitude': 100*pq.pA,
-                           'duration': 1000*pq.ms,
+                           'duration': DURATION,
+                           'delay': DELAY,
                            'tolerance': 1.0*pq.pA})
 
     params_schema = dict(VmTest.params_schema)
@@ -279,7 +280,7 @@ class RheobaseTestP(RheobaseTest):
                    "needed to evoke at least one spike.")
     units = pq.pA
     ephysprop_name = 'Rheobase'
-    score_type = scores.RatioScore
+    #score_type = scores.RatioScore
     get_rheobase_vm = True
     def condition_model(self, model):
         """
@@ -290,12 +291,26 @@ class RheobaseTestP(RheobaseTest):
 
     default_params = dict(VmTest.default_params)
     default_params.update({'amplitude': 100*pq.pA,
-                           'duration': 1000*pq.ms,
+                           'duration': DURATION,
+                           'duration': DELAY,
                            'tolerance': 1.0*pq.pA})
     #self.default_params = default_params
     params_schema = dict(VmTest.params_schema)
     params_schema.update({'tolerance': {'type': 'current', 'min': 1, 'required': False}})
 
+    def neuron_lems_dtc_to_model(self,dtc):
+        """
+        a similar method may appear in optimization management.
+        """
+        LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
+        dtc.model_path = LEMS_MODEL_PATH
+        from neuronunit.models.reduced import ReducedModel#, VeryReducedModel
+        model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
+        dtc.current_src_name = model._backend.current_src_name
+        assert type(dtc.current_src_name) is not type(None)
+        dtc.cell_name = model._backend.cell_name
+        model.attrs = dtc.attrs
+        return model,dtc
 
     def generate_prediction(self, model):
         def check_fix_range(dtc):
@@ -358,14 +373,7 @@ class RheobaseTestP(RheobaseTest):
             dtc.boolean = False
 
             if dtc.backend is str('NEURON') or dtc.backend is str('jNEUROML'):
-                LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
-                dtc.model_path = LEMS_MODEL_PATH
-                from neuronunit.models.reduced import ReducedModel#, VeryReducedModel
-                model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
-                dtc.current_src_name = model._backend.current_src_name
-                assert type(dtc.current_src_name) is not type(None)
-                dtc.cell_name = model._backend.cell_name
-                model.attrs = dtc.attrs
+                model,dtc = neuron_lems_dtc_to_model(dtc)
             else:
                 model = dtc.dtc_to_model()
 
