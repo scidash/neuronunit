@@ -529,25 +529,22 @@ def pred_only(test_and_models):
     #
     #
     (test, dtc) = test_and_models
-    #obs = test.observation
     backend_ = dtc.backend
     model = dtc.dtc_to_model()
-    #model = mint_generic_model(backend_)
-    model.set_attrs(dtc.attrs)
     if test.passive:
         test.setup_protocol(model)
-        try:
-            pred = test.extract_features(model,test.get_result(model))
-        except:
-            pred = None
+        pred = test.extract_features(model,test.get_result(model))
+
     else:
-        pred = test.generate_prediction(model)
+        pred = test.extract_features(model)
+    print(pred)    
     return pred
 
 #from functools import partial
 #t2m = partial(_pseudo_decor, argument=arg)
 
 #@_pseudo_decor
+"""
 @timer
 def bridge_judge(test_and_dtc):
     (test, dtc) = test_and_dtc
@@ -573,7 +570,7 @@ def bridge_judge(test_and_dtc):
         score = test.compute_score(test.observation,pred)
 
     return score, dtc
-
+"""
 def bridge_dm_test(test_and_dtc):
     (test, dtc) = test_and_dtc
 
@@ -1997,17 +1994,17 @@ class OptMan():
                 if 'mean' not in v.observation.keys():
                     v.observation['mean'] = v.observation['value']
 
-
                 if 'std' not in v.observation.keys():
                     key = which_key(v.observation)
-                    v.observation['std'] =  0.1*np.abs(v.observation[key])
+                    units = v.observation[key].units
+                    v.observation['std'] =  0.1*copy.copy(v.observation[key])#*units
 
 
                 if float(v.observation['std']) == 0:
                     key = which_key(v.observation)
-                    v.observation['std'] =  0.1*np.abs(v.observation[key])
+                    v.observation['std'] =  0.1*copy.copy(v.observation[key])#*units
                     new_tests[k] = v
-                
+
             print('Random simulated data tests made')
             # made not none through keyword argument.
 
@@ -2070,45 +2067,28 @@ class OptMan():
                 [(value.name,value.observation) for value in new_tests.values()]
                 new_tests = TSD(new_tests)
                 new_tests.use_rheobase_score = tests.use_rheobase_score
-
+                previous = new_tests['TimeConstantTest'].observation['value']
+                #new_tests['TimeConstantTest'].observation['value'] = 0.001*previous
+                new_tests['TimeConstantTest'].observation['mean'] = 0.001*previous
                 for t in new_tests.values():
                     if 'value' in t.observation.keys():
                         t.observation['mean'] = t.observation['value']
                         t.observation['std'] = np.abs(t.observation['mean'])
                     if float(t.observation['std'] == 0.0):
                         t.observation['std'] = np.abs(t.observation['mean'])
-                        #assert float(t.observation['std']) >0.0
-                """
-                ga_out, DO = run_ga(ranges,
-                                    NGEN,
-                                    new_tests,
-                                    free_params=chosen_keys,
-                                    MU = MU,
-                                    backend=backend,\
-                    selection=str('selNSGA2'),protocol={'elephant':True,'allen':False})
-                """
-                #ga_out = new_tests.optimize(self,param_edges,**kwargs)
+
                 ga_out = new_tests.optimize(ranges,
                                             backend=backend,
                                             protocol={'allen': False, 'elephant': True},\
                                             MU=5,NGEN=5)
-                """
-                defaults = {'backend':None,\
-                            'protocol':{'allen': False, 'elephant': True},\
-                            'MU':5,\
-                            'NGEN':5,\
-                            'free_params':None,\
-                            'seed_pop':None,\
-                            'hold_constant':None\
-                            }
-                """    
+
                 results = copy.copy(ga_out['pf'][0].dtc.scores)
             ga_converged = [ p.dtc for p in ga_out['pf'][0:2] ]
             test_origin_target = [ dsolution for i in range(0,len(ga_out['pf'])) ][0:2]
             print(test_origin_target)
             print(new_tests['RheobaseTest'].observation)
             print('ranges',ranges,'maybe ranges are wrong')
-            print([t.observation for t in new_tests.values()])
+            print([(t.name,t.observation['std']) for t in new_tests.values()])
             #import pdb
             #pdb.set_trace()
 
@@ -2120,6 +2100,73 @@ class OptMan():
             closeness_,_,_ = self.closeness(left,new_tests)
             #inject_and_plot(ga_converged,second_pop=test_origin_target,third_pop=[ga_converged[0]],figname='not_a_problem.png',snippets=True)
             return ga_out,ga_converged,test_origin_target,new_tests,closeness_
+
+
+
+    def simulate_data(self,
+                        tests,
+                        backend,
+                        free_paramaters=None):
+        '''
+        # Inputs:
+        #    -- tests, a list of NU test types,
+        #    -- backend a string encoding what model, backend, simulator to use.
+        # Outputs:
+        #    -- a score, that should be close to zero larger is worse.
+        # Synopsis:
+        #    -- Given any models
+        # check if the optimiser can find arbitarily sampeled points in
+        # a parameter space, using only the information in the error gradient.
+        # make some new tests based on internally generated data
+        # as opposed to experimental data.
+        '''
+
+        out_tests = []
+        ranges = MODEL_PARAMS[backend]
+        #self.simulated_obs = True
+        if self.protocol['allen']:
+            dtc = False
+            while dtc is False or type(new_tests) is type(None):
+                _,rp,chosen_keys,_ = process_rparam(backend)
+                new_tests,dtc = self.make_simulated_observations(tests,backend,rp)
+            test_origin_target=dtc
+            observations = dtc.preds
+            target_spikes = dtc.spike_number#+10
+            observation_spike = {'value': target_spikes}
+            new_tests = TSD(new_tests)
+
+            new_tests.use_rheobase_score = False
+            ga_out, DO = run_ga(ranges,NGEN,new_tests,free_params=rp.keys(), MU = MU, backend=backend, selection=str('selNSGA3'), protocol={'allen':True,'elephant':False,'tsr':[target_spikes-2,target_spikes+5]})
+            ga_converged = [ p for p in ga_out['pf'] ]
+            ga_out,ga_converged,test_origin_target,new_tests
+            return ga_out,ga_converged,test_origin_target,new_tests,self.protocol['tsr']
+
+
+        elif self.protocol['elephant']:
+            new_tests = False
+            while new_tests is False:
+                dsolution,rp,chosen_keys,_ = process_rparam(backend)
+                (new_tests,dtc) = self.make_simulated_observations(tests,backend,rp,dsolution=dsolution)
+                if new_tests is False:
+                    continue
+                new_tests = {k:v for k,v in new_tests.items() if v.observation[which_key(v.observation)] is not None}
+                if type(new_tests) is not type(bool()):
+                    for t in new_tests.values():
+                        key = which_key(t.observation)
+                        if t.observation[key] is None:
+                            new_tests = False
+                            break
+                    if type(new_tests) is type(bool()):
+                        print(new_tests,'not useable sample')
+
+                        continue
+                    if 'RheobaseTest' not in new_tests.keys():
+                        new_tests = False
+                        continue
+                    dsolution.rheobase = new_tests['RheobaseTest'].observation
+            print('Random simulated data tests made')
+            test_origin_target = dsolution# for i in range(0,len(ga_out['pf'])) ][0:2]
+            return test_origin_target,new_tests
 
     def grid_search(self,explore_ranges,test_frame,backend=None):
         '''
@@ -2288,9 +2335,9 @@ class OptMan():
                     continue
                 t.params = dtc.protocols[k]
                 if not 'std' in t.observation.keys():
-                    t.observation['std'] = t.observation['mean']
+                    t.observation['std'] = copy.copy(t.observation['mean'])
                 if float(t.observation['std']) == 0.0:
-                    t.observation['std'] = t.observation['mean']
+                    t.observation['std'] = copy.copy(t.observation['mean'])
         return tests
     def elephant_evaluation(self,dtc):
         # Inputs single data transport container modules, and neuroelectro observations that
@@ -2306,8 +2353,11 @@ class OptMan():
         scores_ = []
         suite = TestSuite(dtc.tests)
         for t in suite:
-            if float(t.observation['std']) == 0.0: t.observation['std'] = t.observation['mean']
-            if 'Rheobase' in t.name: t.score_type = sciunit.scores.ZScore
+            if float(t.observation['std']) == 0.0:
+                units = t.observation['mean'].units
+                t.observation['std'] = 0.1*copy.copy(t.observation['mean'])#*units
+            if 'Rheobase' in t.name:
+                t.score_type = sciunit.scores.ZScore
             try:
                 score = t.judge(model)
             except:
@@ -2622,7 +2672,7 @@ class OptMan():
                 for t in dtc.tests.values():
                     assert 'std' in t.observation.keys()
                     if float(t.observation['std']) == 0.0:
-                        t.observation['std'] = t.observation['mean']
+                        t.observation['std'] = 0.1*copy.copy(t.observation['mean'])#*t.observation['mean'].units
                     assert t.observation['mean'] != 0.0
                     assert t.observation['std'] != 0.0
 
