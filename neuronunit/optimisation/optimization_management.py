@@ -582,7 +582,6 @@ def bridge_dm_test(test_and_dtc):
             score = test.compute_score(test.observation,height_obs)
             return score, dtc
 
-from neuronunit.tests import RheobaseTest, RheobaseTestP
 def get_rh(dtc,rtest_class):
     '''
     :param dtc:
@@ -2252,12 +2251,13 @@ class OptMan():
             score = t.judge(model)
             if isinstance(score, sciunit.scores.incomplete.InsufficientDataScore):
                 score.score = -np.inf
+                score = score.score
             else:
                 score = score.score
             scores_.append(score)
             #print(scores_)
         dtc.SA = ScoreArray(dtc.tests, scores_)
-        dtc.SA = dtc.ordered_score()
+        #dtc.SA = dtc.ordered_score()
 
         obs = {}
         pred = {}
