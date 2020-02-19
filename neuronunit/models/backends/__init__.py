@@ -24,6 +24,10 @@ backend_paths = ['base.EmptyBackend',
                  'rawpy.RAWBackend',
                  'hhrawf.HHBackend',
                  'glif.GLIFBackend',
+                 'badexp_dynamics.ADEXPBackend',
+                 'bhh_dynamics.BHHBackend',
+                ]
+failed_backend_paths = [
                  'badexp.ADEXPBackend',
                  'bhh.BHHBackend',
                 ]
@@ -56,6 +60,13 @@ def register_backends(backend_paths):
         if name is not None:
             provided_backends[name] = backend
     su_backends.register_backends(provided_backends)
-    
-register_backends(backend_paths)
+
+
+try:
+    register_backends(failed_backend_paths)
+    register_backends(backend_paths)
+
+except:
+    register_backends(backend_paths)
+
 available_backends = su_backends.available_backends

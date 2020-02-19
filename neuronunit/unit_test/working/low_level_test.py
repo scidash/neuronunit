@@ -1,4 +1,4 @@
-"""Tests of NeuronUnit test classes"""
+"RAW""""Tests of NeuronUnit test classes"""
 import unittest
 import os
 import sys
@@ -69,7 +69,7 @@ import pandas as pd
 def grid_points():
     npoints = 10
     nparams = 10
-    free_params = MODEL_PARAMS[str('RAW')]
+    free_params = MODEL_PARAMS[str("RAW")]
     USE_CACHED_GS = False
     grid_points = exhaustive_search.create_grid(npoints = npoints,free_params=free_params)
     dtcpop = []
@@ -84,7 +84,7 @@ def test_rheobase_dtc(dtcpop, tests):
     all_tests = TSD(tests['Hippocampus CA1 pyramidal cell'])
     for d in dtcpop:
         d.tests = all_tests
-        d.backend = str('RAW')
+        d.backend = str("RAW")
 
     dtcpop = list(map(dtc_to_rheo,dtcpop))
     return dtcpop
@@ -93,7 +93,7 @@ def test_all_tests_pop(dtcpop, tests):
     all_tests = TSD(tests['Hippocampus CA1 pyramidal cell'])
     for d in dtcpop:
         d.tests = all_tests
-        d.backend = str('RAW')
+        d.backend = str("RAW")
         assert len(list(d.attrs.values())) > 0
 
     dtcpop = list(map(dtc_to_rheo,dtcpop))
@@ -101,7 +101,7 @@ def test_all_tests_pop(dtcpop, tests):
     print([d for d in dtcpop],len(dtcpop))
     for d in dtcpop:
         d.tests = all_tests
-        d.backend = str('RAW')
+        d.backend = str("RAW")
         assert len(list(d.attrs.values())) > 0
     if len(dtcpop)>2:
 
@@ -142,10 +142,11 @@ class testLowLevelOptimisation(unittest.TestCase):
         self.test_rheobase_dtc = test_rheobase_dtc
         self.dtcpop = test_rheobase_dtc(dtcpop,self.electro_tests)
         print(self.dtcpop,len(self.dtcpop))
-        self.dtcpop = test_all_tests_pop(self.dtcpop,self.electro_tests)
+        #self.dtcpop = test_all_tests_pop(self.dtcpop,self.electro_tests)
         self.dtc = self.dtcpop[0]
         self.rheobase = self.dtc.rheobase
-        self.standard_model = self.model = mint_generic_model('RAW')
+        self.model = self.dtc.dtc_to_model()
+        #self.standard_model = self.model =#@ mint_generic_model("RAW")
         self.MODEL_PARAMS = MODEL_PARAMS
         #
         # NEURON backend broken this branch (barcelona), should work when
@@ -158,15 +159,15 @@ class testLowLevelOptimisation(unittest.TestCase):
                     str('jNeuroMLBackend')
                 ]
         self.light_backends = [
-                    str('RAWBackend'),
+                    str('HHBackend'),
                     str('HHBackend'),
                     str('ADEXPBackend')
                 ]
         self.medium_backends = [
                     str('GLIFBackend')
                 ]
-        #self.standard_model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend='RAW')
-        #self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend='RAW')
+        #self.standard_model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend="RAW")
+        #self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend="RAW")
 
 
         purkinje ={"id": 18, "name": "Cerebellum Purkinje cell", "neuron_db_id": 271, "nlex_id": "sao471801888"}
@@ -187,7 +188,7 @@ class testLowLevelOptimisation(unittest.TestCase):
         return bool
 
     def test_backend_inheritance(self):
-        ma = mint_generic_model('RAW')
+        ma = mint_generic_model("RAW")
         if 'get_spike_train' in ma:
             self.asserTrue(True)
         else:
@@ -206,9 +207,9 @@ class testLowLevelOptimisation(unittest.TestCase):
     def test_neuron_set_attrs(self):
         self.assertNotEqual(self.dtcpop,None)
         dtc = self.dtcpop[0]
-        self.model = RunnableModel(str(dtc.backend),backend=('RAWBackend', {'DTC':dtc}))
+        #self.model = RunnableModel(str(dtc.backend),backend=('HHBackend', {'DTC':dtc}))
 
-        #self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend=('RAWBackend', {'DTC':dtc})) #backend=('RAW'{'DTC':dtc}))
+        #self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend=('HHBackend', {'DTC':dtc})) #backend=("RAW"{'DTC':dtc}))
         temp = [ v for v in self.model.attrs.values() ]
         assert len(temp) > 0
         self.AssertGreater(temp,0)
@@ -221,18 +222,20 @@ class testLowLevelOptimisation(unittest.TestCase):
         all_backends = [
             str('PYNNBackend'),
             str('jNeuroMLBackend'),
-            str('RAWBackend'),
+            str('HHBackend'),
             str('HHBackend'),
             str('GLIFBackend'),
             str('ADEXPBackend')
         ]
 
         for b in all_backends:
-            model = mint_generic_model(b)
+            #model = mint_generic_model(b)
             #assert model is not None
             self.assertTrue(model is not None)
-
-            td = model.attrs
+            dtc = DataTC(b)
+            #dtc.attrs =
+            #dtc_to_model()
+            #td = model.attrs
             dtc = update_dtc_pop(pop, td)
             inject_and_plot(dtc)
             self.assertTrue(dtc is not None)
@@ -241,11 +244,11 @@ class testLowLevelOptimisation(unittest.TestCase):
 
         MBEs = list(self.MODEL_PARAMS.keys())
         for b in MBEs:
-            model = mint_generic_model(b)
+            #model = mint_generic_model(b)
             #assert model is not None
             self.assertTrue(model is not None)
 
-            td = model.attrs
+            #td = model.attrs
             dtc = update_dtc_pop(pop, td)
             inject_and_plot(dtc)
             #assert dtc is not None
@@ -348,7 +351,7 @@ class testLowLevelOptimisation(unittest.TestCase):
         size = len([ v for v in dtc.attrs.values()])
         assert size > 0
         self.assertGreater(size,0)
-        model = ReducedModel(get_neab.LEMS_MODEL_PATH, name= str('vanilla'), backend=('RAWBackend', {'DTC':dtc}))
+        model = ReducedModel(get_neab.LEMS_MODEL_PATH, name= str('vanilla'), backend=('HHBackend', {'DTC':dtc}))
         temp = [ v for v in model.attrs.values() ]
         assert len(temp) > 0
         self.assertGreater(len(temp),0)
@@ -378,7 +381,7 @@ class testLowLevelOptimisation(unittest.TestCase):
     def test_neuron_set_attrs(self):
         self.assertNotEqual(self.dtcpop,None)
         dtc = self.dtcpop[0]
-        self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend=('RAWBackend', {'DTC':dtc})) #backend=('RAW'{'DTC':dtc}))
+        #self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend=('HHBackend', {'DTC':dtc})) #backend=("RAW"{'DTC':dtc}))
         temp = [ v for v in self.model.attrs.values() ]
         assert len(temp) > 0
         self.AssertGreater(temp,0)
@@ -445,36 +448,35 @@ class testLowLevelOptimisation(unittest.TestCase):
         dtc.rheobase = self.rheobase
         dtc = format_test_(dtc)
         try:
-            self.model = VeryReducedModel(backend=('RAW',{'DTC':dtc}))
+            self.model = VeryReducedModel(backend=("RAW",{'DTC':dtc}))
         except:
-            self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend=('RAW',{'DTC':dtc}))
+            self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend=("RAW",{'DTC':dtc}))
         #score = self.run_test(T)
         score = self.run_test(T,pred=self.rheobase)
 
 
 
     def test_rheobase_single_value_parallel_and_serial_comparison(self):
+        try:
+            from neuronunit.optimisation import get_neab
+            tests = get_neab.process_all_cells()
+            rt = tests['Neocortex pyramidal cell layer 5-6'][0]
+            rtp = RheobaseTestP(observation = rt.observation)
+        except:
+            dataset_id = 354190013  # Internal ID that AIBS uses for a particular Scnn1a-Tg2-Cre
+                                    # Primary visual area, layer 5 neuron.
+            observation = aibs.get_observation(dataset_id,'rheobase')
+            rt = RheobaseTest(observation = observation)
+            rtp = RheobaseTestP(observation = observation)
 
-        dataset_id = 354190013  # Internal ID that AIBS uses for a particular Scnn1a-Tg2-Cre
-                                # Primary visual area, layer 5 neuron.
-        observation = aibs.get_observation(dataset_id,'rheobase')
-        rt = RheobaseTest(observation = observation)
-        rtp = RheobaseTestP(observation = observation)
-        model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend=('RAW'))
-
-        #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-        self.score_p = rtp.judge(model,stop_on_error = False, deep_error = True)
-        self.predictionp = self.score_p.prediction
-        self.score_p = self.score_p.sort_key
-        #model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
-
-        serial_model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='RAW')
-        self.score_s = rt.judge(serial_model,stop_on_error = False, deep_error = True)
-        self.predictions = self.score_s.prediction
-        self.score_s = self.score_s.sort_key
-        check_less_thresh = float(np.abs(self.predictionp['value'] - self.predictions['value']))
+        model = self.model
+        preds = rt.generate_prediction(model)#,stop_on_error = False, deep_error = True)
+        predp = rtp.generate_prediction(model)#,stop_on_error = False, deep_error = True)
+        print(preds,predp)
+        import pdb
+        pdb.set_trace()
+        check_less_thresh = float(np.abs(preds['value'] - predp['value']))
         self.assertLessEqual(check_less_thresh, 2.0)
-
 
 
     #@unittest.skip("Not implemented")

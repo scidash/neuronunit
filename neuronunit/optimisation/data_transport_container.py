@@ -68,6 +68,9 @@ class DataTC(object):
         return OM
         
     def ordered_score(self):
+        """
+        hopefuly depricated
+        """
         if not hasattr(self,'os'):
             self.os = OrderedDict({k.name:self.SA[k] for k in self.SA.to_dict()})
         else:
@@ -97,7 +100,7 @@ class DataTC(object):
         else:
             self.tests = switch_logic(self.tests)
 
-        #dtc.tests = switch_logic(dtc.tests)
+
 
         for v in self.tests:
         #for k,v in enumerate(self.tests):
@@ -116,13 +119,29 @@ class DataTC(object):
 
         return self.tests
     def dtc_to_model(self):
+        if dtc.backend is str("JULIA"):
+            from neuronunit.models import simple_with_current_injection
+            model = SimpleModel(attrs)
+        
+        if dtc.backend is str('NEURON') or dtc.backend is str('jNEUROML'):
+            LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
+            dtc.model_path = LEMS_MODEL_PATH
+            from neuronunit.models.reduced import ReducedModel#, VeryReducedModel
+            model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
+            dtc.current_src_name = model._backend.current_src_name
+            assert type(dtc.current_src_name) is not type(None)
+            dtc.cell_name = model._backend.cell_name
+            model.attrs = dtc.attrs
+        else:
+            # The most likely outcome
+            from neuronunit.models.very_reduced_sans_lems import VeryReducedModel
+            model = VeryReducedModel(backend=self.backend)
+            model.backend = self.backend
+            model.attrs = self.attrs
+            model.rheobase = self.rheobase 
+
         from neuronunit.models.very_reduced_sans_lems import VeryReducedModel
-        #if self.backend is not in "NEURON":
         model = VeryReducedModel(backend=self.backend)
-        #else:
-        #    try:
-        #        model = ReducedModel(backend=self.backend)
-        #    except:
         model.backend = self.backend
         model.attrs = self.attrs
         model.rheobase = self.rheobase
@@ -141,10 +160,16 @@ class DataTC(object):
             model.inj = self.params
         except:
             try:
-                model.inj = self.vparams
+                model.inj = self.params
             except:
-                model.inj = None
+                try:
+                    model.inj = self.vparams
+                except:
+                    model.inj = None
+
+
         return model
+
     def dtc_to_gene(self):
         from neuronunit.optimisation.optimization_management import WSListIndividual
         print('warning translation dictionary should be used, to garuntee correct attribute order from random access dictionaries')

@@ -17,6 +17,7 @@ from neuronunit.optimisation.data_transport_container import DataTC
 import os
 import quantities
 import neuronunit
+from scipy.signal import find_peaks
 
 import dask.bag as db
 import quantities as pq
@@ -65,7 +66,7 @@ class RheobaseTest(VmTest):
     """
     def _extra(self):
         self.prediction = {}
-        self.high = 300*pq.pA
+        self.high = 900*pq.pA
         self.small = 0*pq.pA
         self.rheobase_vm = None
         self.verbose = 0
@@ -298,19 +299,6 @@ class RheobaseTestP(RheobaseTest):
     params_schema = dict(VmTest.params_schema)
     params_schema.update({'tolerance': {'type': 'current', 'min': 1, 'required': False}})
 
-    def neuron_lems_dtc_to_model(self,dtc):
-        """
-        a similar method may appear in optimization management.
-        """
-        LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
-        dtc.model_path = LEMS_MODEL_PATH
-        from neuronunit.models.reduced import ReducedModel#, VeryReducedModel
-        model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
-        dtc.current_src_name = model._backend.current_src_name
-        assert type(dtc.current_src_name) is not type(None)
-        dtc.cell_name = model._backend.cell_name
-        model.attrs = dtc.attrs
-        return model,dtc
 
     def generate_prediction(self, model):
         def check_fix_range(dtc):
@@ -372,21 +360,22 @@ class RheobaseTestP(RheobaseTest):
             '''
             dtc.boolean = False
 
-            if dtc.backend is str('NEURON') or dtc.backend is str('jNEUROML'):
-                model,dtc = neuron_lems_dtc_to_model(dtc)
-            else:
-                model = dtc.dtc_to_model()
+            model = dtc.dtc_to_model()
 
 
-            #default_params = {'injected_square_current':
-            #          {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
             ampl = dtc.ampl
             if float(ampl) not in dtc.lookup or len(dtc.lookup) == 0:
-                #default_params['injected_square_current']
                 uc = {'amplitude':dtc.ampl,'duration':DURATION,'delay':DELAY}
                 dtc.run_number += 1
                 model.inject_square_current(uc)
-                n_spikes = model.get_spike_count()
+
+                vm = model.get_membrane_potential()
+                one_d = [v[0] for v in vm.magnitude]
+                peak_idx,_ = find_peaks(one_d,threshold=0)
+                n_spikes = len(peak_idx)
+
+
+
                 dtc.previous = ampl
 
                 dtc.rheobase = {}
@@ -433,11 +422,10 @@ class RheobaseTestP(RheobaseTest):
                     steps = np.linspace(100.0,1000.0,7.0)
                 else:
                     try:
-                        steps = np.linspace(1.0,550.0,7.0)
-                        steps1 = np.linspace(1,550,7)
+                        steps = np.linspace(0.0,550.0,7.0)
 
                     except:
-                        steps = np.linspace(1,550,7)
+                        steps = np.linspace(0.0,550,7.0)
 
                 steps_current = [ i*pq.pA for i in steps ]
                 dtc.current_steps = steps_current
@@ -455,11 +443,7 @@ class RheobaseTestP(RheobaseTest):
             sub = np.array([0,0]);
             supra = np.array([0,0])
 
-            #use_diff = False
-            if dtc.backend is 'GLIF':
-                big = 100
-            else:
-                big = 16
+            big = 25
 
             while dtc.boolean == False and cnt< big:
 
@@ -484,23 +468,15 @@ class RheobaseTestP(RheobaseTest):
                     for dtc,sc in zip(dtc_clones,set_clones):
                         dtc = copy.copy(dtc)
                         dtc.ampl = sc*pq.pA
-                        try:
-                            dtc = check_current(dtc)
-                            dtc.backend = be
-                            dtc_clone.append(dtc)
-                        except:
-                            dtc.lookup[float(dtc.ampl)] = 0
+                        dtc = check_current(dtc)
+                        dtc.backend = be
+                        dtc_clone.append(dtc)
 
-                if str("BHH") not in dtc.backend:
-                    # take smallest spiking if multi spiking rheobase
 
-                    smaller = sorted([ (dtc.ampl,dtc) for dtc in dtc_clone if dtc.boolean == True ])
-                    if len(smaller):
-                        return smaller[0][1]
-                else:
-                    smaller = sorted([ (dtc.ampl,dtc) for dtc in dtc_clone if dtc.boolean == True ])
-                    if len(smaller):
-                        return smaller[-1][1]
+                smaller = sorted([ (dtc.ampl,dtc) for dtc in dtc_clone if dtc.boolean == True ])
+                if len(smaller):
+
+                    return smaller[-1][1]
 
 
                 for d in dtc_clone:
@@ -508,19 +484,12 @@ class RheobaseTestP(RheobaseTest):
                 dtc = check_fix_range(dtc)
 
 
+
                 sub, supra = get_sub_supra(dtc.lookup)
                 if len(supra) and len(sub):
 
                     delta = float(supra.min()) - float(sub.max())
-                    '''
-                    if str("GLIF") in dtc.backend:
-                        tolerance = 0.0
-                    elif str("ADEXP") in dtc.backend:
-                        tolerance = 0.0
-                    else:
-                        tolerance = 0.0000125
-                        #tolerance = tolerance
-                    '''
+
                     tolerance = 0.0
                     if delta < tolerance or (str(supra.min()) == str(sub.max())):
                         if self.verbose >= 2:
@@ -566,11 +535,6 @@ class RheobaseTestP(RheobaseTest):
         dtc.backend = model.backend
 
         dtc = init_dtc(dtc)
-        '''
-        if hasattr(model,'orig_lems_file_path'):
-            dtc.model_path = model.orig_lems_file_path
-            assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
-        '''
         prediction = {}
         temp = find_rheobase(self,dtc).rheobase
 
