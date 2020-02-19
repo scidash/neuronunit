@@ -269,8 +269,10 @@ for index,key in enumerate(reduced_cells.keys()):
         reduced_cells[key][k] = v[index]
 
 IZHI_PARAMS = {k:(np.min(v),np.max(v)) for k,v in trans_dict.items()}
+
 IZHI_PARAMS = OrderedDict(IZHI_PARAMS)
 IZHI_PARAMS['dt'] = [0.005, 0.005]
+print(IZHI_PARAMS['vr'])
 MODEL_PARAMS['RAW'] = IZHI_PARAMS
 
 # page 1

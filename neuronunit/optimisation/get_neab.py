@@ -9,11 +9,19 @@ from neuronunit.tests.fi import RheobaseTestP
 from neuronunit.tests import passive, waveform, druckman2013
 from neuronunit.tests import druckman2013 as dm
 import neuronunit
+
+from neuronunit.optimisation import get_neab
+from neuronunit import tests as _, neuroelectro
+from neuronunit.tests import fi, passive, waveform
+import pickle
+
 #anchor = neuronunit.__file__
 anchor = __file__
 
 import copy
 import sciunit
+from sciunit.suites import TestSuite
+import pickle
 
 
 import urllib.request, json
@@ -164,11 +172,6 @@ def executable_tests(cell_id,file_name = None):#,observation = None):
 
     return tests,observations
 
-from neuronunit.optimisation import get_neab
-from neuronunit import tests as _, neuroelectro
-from neuronunit.tests import fi, passive, waveform
-import pickle
-from neuronunit.tests import fi, passive, waveform
 def get_neuron_criteria(cell_id,file_name = None):#,observation = None):
     # Use neuroelectro experimental obsevations to find test
     # criterion that will be used to inform scientific unit testing.
@@ -225,8 +228,51 @@ def get_all_cells():
 	    pickle.dump(cell_constraints,f)
 	return cell_constraints
 
-from sciunit.suites import TestSuite
-import pickle
+
+
+def switch_logic(xtests):
+    # move this logic into sciunit tests
+    '''
+    Hopefuly depreciated by future NU debugging.
+    '''
+    aTSD = neuronunit.optimisation.optimization_management.TSD()
+    if type(xtests) is type(aTSD):
+        xtests = list(xtests.values())
+    if type(xtests) is type(list()):
+        pass
+    for t in xtests:
+        if str('RheobaseTest') == t.name:
+            t.active = True
+            t.passive = False
+        elif str('RheobaseTestP') == t.name:
+            t.active = True
+            t.passive = False
+        elif str('InjectedCurrentAPWidthTest') == t.name:
+            t.active = True
+            t.passive = False
+        elif str('InjectedCurrentAPAmplitudeTest') == t.name:
+            t.active = True
+            t.passive = False
+        elif str('InjectedCurrentAPThresholdTest') == t.name:
+            t.active = True
+            t.passive = False
+        elif str('RestingPotentialTest') == t.name:
+            t.passive = True
+            t.active = False
+        elif str('InputResistanceTest') == t.name:
+            t.passive = True
+            t.active = False
+        elif str('TimeConstantTest') == t.name:
+            t.passive = True
+            t.active = False
+        elif str('CapacitanceTest') == t.name:
+            t.passive = True
+            t.active = False
+        else:
+            t.passive = False
+            t.active = False
+    return xtests
+
 def process_all_cells():
     try:
         with open('processed_multicellular_constraints.p','rb') as f:
@@ -258,6 +304,14 @@ def process_all_cells():
 	                    filtered_cell_constraints.append(t)
 
         filtered_cells[key] = TestSuite(filtered_cell_constraints)
+        for t in filtered_cells[key].tests:
+            t = switch_logic(t)
+            assert hasattr(t,'active')
+            assert hasattr(t,'passive')
+        for t in filtered_cells[key].tests:
+            assert hasattr(t,'active')
+            assert hasattr(t,'passive')	
+
         with open('processed_multicellular_constraints.p','wb') as f:
            pickle.dump(filtered_cells,f)
     return filtered_cells
