@@ -99,11 +99,10 @@ def cleanse(temp):
 		   for x,j in enumerate(t):
 		       temp_[i][x] = j
 	   temp = temp_
-
-		for t in temp:
-		    t.dtc.tests = None
-		    t.dtc = None
-	return temp
+	   for t in temp:
+		   t.dtc.tests = None
+		   t.dtc = None
+   return temp
 
 def _update_history_and_hof(halloffame,pf, history, population,GEN,MU):
     '''Update the hall of fame with the generated individuals

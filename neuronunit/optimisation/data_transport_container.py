@@ -66,7 +66,7 @@ class DataTC(object):
         from neuronunit.optimisation.optimization_management import OptMan
         OM = Optman(self.tests,self.backend)
         return OM
-        
+
     def ordered_score(self):
         """
         hopefuly depricated
@@ -119,53 +119,34 @@ class DataTC(object):
 
         return self.tests
     def dtc_to_model(self):
-        if dtc.backend is str("JULIA"):
+        if self.backend is str("JULIA"):
             from neuronunit.models import simple_with_current_injection
             model = SimpleModel(attrs)
-        
-        if dtc.backend is str('NEURON') or dtc.backend is str('jNEUROML'):
+
+        if self.backend is str('NEURON') or self.backend is str('jNEUROML'):
             LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
-            dtc.model_path = LEMS_MODEL_PATH
+            self.model_path = LEMS_MODEL_PATH
             from neuronunit.models.reduced import ReducedModel#, VeryReducedModel
-            model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
-            dtc.current_src_name = model._backend.current_src_name
-            assert type(dtc.current_src_name) is not type(None)
-            dtc.cell_name = model._backend.cell_name
-            model.attrs = dtc.attrs
+            model = ReducedModel(self.model_path,name='vanilla', backend=(self.backend, {'DTC':self}))
+            self.current_src_name = model._backend.current_src_name
+            assert type(self.current_src_name) is not type(None)
+            self.cell_name = model._backend.cell_name
+            model.attrs = self.attrs
         else:
             # The most likely outcome
             from neuronunit.models.very_reduced_sans_lems import VeryReducedModel
             model = VeryReducedModel(backend=self.backend)
             model.backend = self.backend
             model.attrs = self.attrs
-            model.rheobase = self.rheobase 
+            model.rheobase = self.rheobase
 
-        from neuronunit.models.very_reduced_sans_lems import VeryReducedModel
-        model = VeryReducedModel(backend=self.backend)
-        model.backend = self.backend
-        model.attrs = self.attrs
-        model.rheobase = self.rheobase
-
-        #backend=(self.backend, {'DTC':self}))#, {'DTC':dtc}))
-        # If  test taking data, and objects are present (observations etc).
-        # Take the rheobase test and store it in the data transport container.
-        if not hasattr(self,'scores'):
-            self.scores = None
-        if type(self.scores) is type(None):
-            self.scores = {}
-        #model.attrs = self.attrs
-        model.scores = self.scores
-        #model.rheobase = self.rheobase
         try:
             model.inj = self.params
         except:
             try:
-                model.inj = self.params
+                model.inj = self.vparams
             except:
-                try:
-                    model.inj = self.vparams
-                except:
-                    model.inj = None
+                model.inj = None
 
 
         return model
