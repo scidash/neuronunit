@@ -82,11 +82,12 @@ class RheobaseTest(VmTest):
     units = pq.pA
     ephysprop_name = 'Rheobase'
     # score_type = scores.ZScore
-    score_type = scores.RatioScore
+    #score_type = scores.RatioScore
 
     default_params = dict(VmTest.default_params)
     default_params.update({'amplitude': 100*pq.pA,
-                           'duration': 1000*pq.ms,
+                           'duration': DURATION,
+                           'delay': DELAY,
                            'tolerance': 1.0*pq.pA})
 
     params_schema = dict(VmTest.params_schema)
@@ -280,7 +281,7 @@ class RheobaseTestP(RheobaseTest):
                    "needed to evoke at least one spike.")
     units = pq.pA
     ephysprop_name = 'Rheobase'
-    score_type = scores.RatioScore
+    #score_type = scores.RatioScore
     get_rheobase_vm = True
     def condition_model(self, model):
         """
@@ -291,7 +292,8 @@ class RheobaseTestP(RheobaseTest):
 
     default_params = dict(VmTest.default_params)
     default_params.update({'amplitude': 100*pq.pA,
-                           'duration': 1000*pq.ms,
+                           'duration': DURATION,
+                           'duration': DELAY,
                            'tolerance': 1.0*pq.pA})
     #self.default_params = default_params
     params_schema = dict(VmTest.params_schema)
@@ -349,7 +351,6 @@ class RheobaseTestP(RheobaseTest):
 
             sub = np.array(sorted(list(set(sub))))
             supra = np.array(sorted(list(set(supra))))
-            print(sub,supra)
             return sub, supra
 
         def check_current(dtc):
@@ -372,7 +373,7 @@ class RheobaseTestP(RheobaseTest):
                 one_d = [v[0] for v in vm.magnitude]
                 peak_idx,_ = find_peaks(one_d,threshold=0)
                 n_spikes = len(peak_idx)
-                print(n_spikes,'gets here')
+
 
 
                 dtc.previous = ampl
@@ -472,10 +473,9 @@ class RheobaseTestP(RheobaseTest):
                         dtc_clone.append(dtc)
 
 
-
                 smaller = sorted([ (dtc.ampl,dtc) for dtc in dtc_clone if dtc.boolean == True ])
                 if len(smaller):
-                    print(smaller)
+
                     return smaller[-1][1]
 
 
@@ -535,10 +535,8 @@ class RheobaseTestP(RheobaseTest):
         dtc.backend = model.backend
 
         dtc = init_dtc(dtc)
-
         prediction = {}
         temp = find_rheobase(self,dtc).rheobase
-        print(temp)
 
         if type(temp) is not type(None):
             if type(temp) is type({'dict':0}):

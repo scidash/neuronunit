@@ -33,6 +33,30 @@ class VeryReducedModel(RunnableModel,
         self.run_number = 0
         self.tstop = None
         self.rheobse = None
+    import copy
+
+    def model_test_eval(self,tests):
+        """
+        Take a model and some tests
+        Evaluate a test suite over them.
+        """
+        from sciunit import TestSuite
+        if type(tests) is TestSuite:
+            not_suite = TSD({t.name:t for t in tests.tests})
+        OM = OptMan(tests, backend = self._backend)
+        dtc = DataTC()
+        dtc.attrs = self.attrs
+        assert set(self._backend.attrs.keys()) in set(self.attrs.keys())
+        dtc.backend = self._backend
+        dtc.tests = copy.copy(not_suite)
+        dtc = dtc_to_rheo(dtc)
+        if dtc.rheobase is not None:
+            dtc.tests = dtc.format_test()
+            dtc = list(map(OM.elephant_evaluation,[dtc]))
+        model = dtc.dtc_to_model()
+        model.SM = dtc.SM
+        model.obs_preds = dtc.obs_preds
+        return dtc[0], model
 
     def model_to_dtc(self):
         dtc = DataTC()
