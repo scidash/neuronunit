@@ -2,12 +2,12 @@
 
 import sciunit
 import neuronunit.capabilities as cap
+from sciunit.models.runnable import RunnableModel
 
 
 import numpy as np
 from neo.core import AnalogSignal
 import quantities as pq
-from sciunit.models.runnable import RunnableModel
 from neuronunit.optimisation.data_transport_container import DataTC
 
 import neuronunit.capabilities.spike_functions as sf
@@ -87,5 +87,10 @@ class VeryReducedModel(RunnableModel,
         vm = self.get_membrane_potential(**run_params)
         spike_train = sf.get_spike_train(vm)
         return spike_train
+
+    def get_spike_count(self, **run_params):
+        train = self.get_spike_train(**run_params)
+        return len(train)
+
     def set_attrs(self,attrs):
         self.attrs.update(attrs)

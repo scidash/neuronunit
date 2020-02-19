@@ -20,7 +20,6 @@ import logging
 # optional imports
 
 
-PARALLEL_CONFIDENT = True
 # Rationale Many methods inside the file optimization_management.py cannot be easily monkey patched using
 #```pdb.set_trace()``` unless at the top of the file,
 # the parallel_confident static variable is declared false
@@ -38,7 +37,7 @@ import multiprocessing
 npartitions = multiprocessing.cpu_count()
 from sklearn.model_selection import ParameterGrid
 from collections import OrderedDict
-import cython
+
 import copy
 import math
 import quantities as pq
@@ -53,7 +52,7 @@ from neuronunit.optimisation.model_parameters import path_params
 from neuronunit.optimisation import model_parameters as modelp
 from itertools import repeat
 from neuronunit.tests.base import AMPL, DELAY, DURATION
-from neuronunit.models import ReducedModel
+
 from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 from collections.abc import Iterable
 from neuronunit.tests import dm_test_container #import Interoperabe
@@ -525,8 +524,7 @@ def write_opt_to_nml(path,param_dict):
     return
 @timer
 def pred_only(test_and_models):
-    # Temporarily patch sciunit judge code, which seems to be broken.
-    #
+    # To obtain simulated data sets
     #
     (test, dtc) = test_and_models
     backend_ = dtc.backend
@@ -605,12 +603,12 @@ def get_rh(dtc,rtest_class):
     '''
     place_holder = {'n': 86, 'mean': 10 * pq.pA, 'std': 10 * pq.pA, 'value': 10 * pq.pA}
     backend_ = dtc.backend
-    if 'ADEXP' in backend_ or 'GLIF' in backend_ or 'BHH' in backend_:
-        rtest = RheobaseTest(observation=place_holder,
-                                name='RheobaseTest')
-
-        #rtest = RheobaseTestP(observation=place_holder,
+    if 'NEURON' in backend_ or 'HH' in backend_ 'ADEXP' in backend_ or 'GLIF' in backend_ or 'BHH' in backend_:
+        #rtest = RheobaseTest(observation=place_holder,
         #                        name='RheobaseTest')
+
+        rtest = RheobaseTestP(observation=place_holder,
+                                name='RheobaseTest')
     else:
         rtest = RheobaseTest(observation=place_holder,
                          name='RheobaseTest')
@@ -687,10 +685,8 @@ def dtc_to_rheo(dtc):
         rtest = get_rtest(dtc)
 
     if rtest is not None:
-        if "NEURON" not in dtc.backend:
-            model = dtc.dtc_to_model()
-        else:
-            model = mint_NEURON_model(pre_model)
+        model = dtc.dtc_to_model()
+
         if isinstance(rtest,Iterable):
             rtest = rtest[0]
         dtc.rheobase = rtest.generate_prediction(model)['value']
@@ -746,12 +742,7 @@ def inject_and_plot_model(attrs,backend):
     pre_model.backend = backend
     # get rheobase injection value
     # get an object of class ReducedModel with known attributes and known rheobase current injection value.
-    if str(backend) not in "NEURON":
-        pre_model = dtc_to_rheo(pre_model)
-        model = pre_model.dtc_to_model()
-    else:
-        model = mint_NEURON_model(pre_model)
-
+    model = pre_model.dtc_to_model()
     uc = {'amplitude':model.rheobase,'duration':DURATION,'delay':DELAY}
     model.inject_square_current(uc)
     vm = model.get_membrane_potential()
@@ -1994,17 +1985,17 @@ class OptMan():
                 if 'mean' not in v.observation.keys():
                     v.observation['mean'] = v.observation['value']
 
+
                 if 'std' not in v.observation.keys():
                     key = which_key(v.observation)
-                    units = v.observation[key].units
-                    v.observation['std'] =  0.1*copy.copy(v.observation[key])#*units
+                    v.observation['std'] =  0.1*np.abs(v.observation[key])
 
 
                 if float(v.observation['std']) == 0:
                     key = which_key(v.observation)
-                    v.observation['std'] =  0.1*copy.copy(v.observation[key])#*units
+                    v.observation['std'] =  0.1*np.abs(v.observation[key])
                     new_tests[k] = v
-
+                
             print('Random simulated data tests made')
             # made not none through keyword argument.
 
@@ -2068,8 +2059,7 @@ class OptMan():
                 new_tests = TSD(new_tests)
                 new_tests.use_rheobase_score = tests.use_rheobase_score
                 previous = new_tests['TimeConstantTest'].observation['value']
-                #new_tests['TimeConstantTest'].observation['value'] = 0.001*previous
-                new_tests['TimeConstantTest'].observation['mean'] = 0.001*previous
+                add_to_confusion = 0.001*previous
                 for t in new_tests.values():
                     if 'value' in t.observation.keys():
                         t.observation['mean'] = t.observation['value']
@@ -2323,9 +2313,7 @@ class OptMan():
                 # it's critical that paramaters are assigned here
                 t.params = dtc.protocols[k]
 
-                #if "RheobaseTest" in  t.name:
-                #    t.score_type = scores.ZScore
-
+         
                 try:
                     assert hasattr(self.tests,'use_rheobase_score')
                 except:
@@ -2371,7 +2359,7 @@ class OptMan():
             for s in scores_:
                 assert isinstance(s,type(float()))
         dtc.SA = ScoreArray(dtc.tests, scores_)
-        dtc.SA = dtc.ordered_score()
+        #dtc.SA = dtc.ordered_score()
 
         obs = {}
         pred = {}
@@ -2672,8 +2660,7 @@ class OptMan():
                 for t in dtc.tests.values():
                     assert 'std' in t.observation.keys()
                     if float(t.observation['std']) == 0.0:
-                        t.observation['std'] = 0.1*copy.copy(t.observation['mean'])#*t.observation['mean'].units
-                    assert t.observation['mean'] != 0.0
+                        t.observation['std'] = 0.1*copy.copy(t.observation['mean'])
                     assert t.observation['std'] != 0.0
 
     @timer
