@@ -97,13 +97,14 @@ def test_all_tests_pop(dtcpop, tests):
         assert len(list(d.attrs.values())) > 0
 
     dtcpop = list(map(dtc_to_rheo,dtcpop))
+    dtcpop = [d for d in dtcpop if d.rheobase is not None]
     print([d for d in dtcpop],len(dtcpop))
     for d in dtcpop:
         d.tests = all_tests
         d.backend = str('RAW')
         assert len(list(d.attrs.values())) > 0
     if len(dtcpop)>2:
-        
+
         b0 = db.from_sequence(dtcpop, npartitions=2)
         dtcpop = list(b0.map(format_test_).compute())
         b0 = db.from_sequence(dtcpop, npartitions=2)
