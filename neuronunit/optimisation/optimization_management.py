@@ -603,7 +603,7 @@ def get_rh(dtc,rtest_class):
     '''
     place_holder = {'n': 86, 'mean': 10 * pq.pA, 'std': 10 * pq.pA, 'value': 10 * pq.pA}
     backend_ = dtc.backend
-    if 'NEURON' in backend_ or 'HH' in backend_ 'ADEXP' in backend_ or 'GLIF' in backend_ or 'BHH' in backend_:
+    if 'NEURON' in backend_ or 'HH' in backend_ or 'ADEXP' in backend_ or 'GLIF' in backend_ or 'BHH' in backend_:
         #rtest = RheobaseTest(observation=place_holder,
         #                        name='RheobaseTest')
 
