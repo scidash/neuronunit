@@ -382,6 +382,12 @@ def make_new_random(dtc_,backend):
 @cython.wraparound(False)
 def random_p(backend):
     ranges = MODEL_PARAMS[backend]
+    try:
+        from datetime import datetime
+        numpy.random.seed(datetime.now())
+    except:
+        numpy.random.seed()#self.seed)
+
     random_param = {} # randomly sample a point in the viable parameter space.
     for k in ranges.keys():
         try:
@@ -740,8 +746,10 @@ def inject_and_plot_model(attrs,backend):
     pre_model = DataTC()
     pre_model.attrs = attrs
     pre_model.backend = backend
+
     # get rheobase injection value
     # get an object of class ReducedModel with known attributes and known rheobase current injection value.
+    pre_model = dtc_to_rheo(pre_model)
     model = pre_model.dtc_to_model()
     uc = {'amplitude':model.rheobase,'duration':DURATION,'delay':DELAY}
     model.inject_square_current(uc)
@@ -1572,7 +1580,11 @@ def evaluate(dtc):
         return []
     else:
         #ordered_score = dtc.ordered_score()
-        fitness = [v for v in dtc.SA.values()]
+        fitness = [np.abs(v) for v in dtc.SA.values]
+        for f in fitness:
+            if f==np.inf:
+                f = 100.0
+        
         fitness = tuple(fitness,)
         return fitness
 
@@ -1895,12 +1907,14 @@ class OptMan():
             rp = right[k].observation[key]
             if lp is not None:
                 lp = lp.rescale(rp.units)
+                closeness_[k] = np.abs(lp-rp)
+
             else:
                 print('test ',k, 'prediction is None',lp)
+                closeness_[k] = None
             rps.append(rp)
             lps.append(lp)
 
-            closeness_[k] = np.abs(lp-rp)
         return closeness_,lps,rps
 
 
@@ -2155,7 +2169,7 @@ class OptMan():
                         continue
                     dsolution.rheobase = new_tests['RheobaseTest'].observation
             print('Random simulated data tests made')
-            test_origin_target = dsolution# for i in range(0,len(ga_out['pf'])) ][0:2]
+            test_origin_target = dsolution
             return test_origin_target,new_tests
 
     def grid_search(self,explore_ranges,test_frame,backend=None):
@@ -2298,7 +2312,7 @@ class OptMan():
         if take_anything is None or type(take_anything) is type(int()):
             take_anything = list(pred.values())[1]
 
-        pred['std'] = t.observation['std']# 15*take_anything.magnitude * take_anything.units
+        #pred['std'] = t.observation['std']# 15*take_anything.magnitude * take_anything.units
         return pred
 
 
@@ -2341,23 +2355,26 @@ class OptMan():
         scores_ = []
         suite = TestSuite(dtc.tests)
         for t in suite:
-            if float(t.observation['std']) == 0.0:
-                units = t.observation['mean'].units
-                t.observation['std'] = 0.1*copy.copy(t.observation['mean'])#*units
-            if 'Rheobase' in t.name:
-                t.score_type = sciunit.scores.ZScore
-            try:
-                score = t.judge(model)
+            if 'Rheobase' in t.name: t.score_type = sciunit.scores.ZScore
+            try:    
+                t.observation['mean'] = t.observation['value']
             except:
-                import pdb
-                pdb.set_trace()
+                assert t.observation['mean']
+            score = t.judge(model)
             if isinstance(score, sciunit.scores.incomplete.InsufficientDataScore):
-                score.score = -np.inf
+                t.observation['n'] = 10
+
+                score = t.judge(model)
             score_ = score.score
 
             scores_.append(score_)
             for s in scores_:
-                assert isinstance(s,type(float()))
+                #print(isinstance(s,type(float())))
+                try:
+                    assert isinstance(s,type(float()))
+                except:
+                    import pdb
+                    pdb.set_trace()
         dtc.SA = ScoreArray(dtc.tests, scores_)
         #dtc.SA = dtc.ordered_score()
 
@@ -2659,9 +2676,9 @@ class OptMan():
             if type(dtc.tests) is type(dict()):
                 for t in dtc.tests.values():
                     assert 'std' in t.observation.keys()
-                    if float(t.observation['std']) == 0.0:
-                        t.observation['std'] = 0.1*copy.copy(t.observation['mean'])
-                    assert t.observation['std'] != 0.0
+                    #if float(t.observation['std']) == 0.0:
+                        #t.observation['std'] = 0.1*copy.copy(t.observation['mean'])
+                    #assert t.observation['std'] != 0.0
 
     @timer
     def obtain_rheobase(self,pop,tests):#, td, tests):
