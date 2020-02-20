@@ -805,6 +805,27 @@ def check_binary_match(dtc0,dtc1):
     return plt
 
 
+def check_match_front(dtc0,dtcpop):
+
+    vm0 =inject_and_not_plot_model(dtc0)
+
+    vms = []
+    for dtc in dtcpop:
+        vms.append(inject_and_not_plot_model(dtc))
+
+    plt.figure()
+    if dtc0.backend in str("HH"):
+        plt.title('Check for waveform Alignment')
+    else:
+        plt.title('membrane potential plot')
+    plt.plot(vm0.times, vm0.magnitude,label="target")
+    for v in vms:
+        plt.plot(v.times, v.magnitude,label="solutions")
+    plt.ylabel('V (mV)')
+    #plt.plot(vm.times,vm.magnitude)
+    return plt    
+
+
 def score_proc(dtc,t,score):
     dtc.score[str(t)] = {}
     if hasattr(score,'norm_score'):
