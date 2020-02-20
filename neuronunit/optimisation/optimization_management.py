@@ -20,7 +20,6 @@ import logging
 # optional imports
 
 
-
 # Rationale Many methods inside the file optimization_management.py cannot be easily monkey patched using
 #```pdb.set_trace()``` unless at the top of the file,
 # the parallel_confident static variable is declared false
@@ -383,16 +382,29 @@ def make_new_random(dtc_,backend):
 @cython.wraparound(False)
 def random_p(backend):
     ranges = MODEL_PARAMS[backend]
-    random_param = {} # randomly sample a point in the viable parameter space.
+    #try:
+    import numpy, time
+    date_int = int(time.time())
+    numpy.random.seed(date_int)
+    #except:
+    #    numpy.random.seed()#self.seed)
+
+    random_param1 = {} # randomly sample a point in the viable parameter space.
     for k in ranges.keys():
-        try:
-            mean = np.mean(ranges[k])
-            std = np.std(ranges[k])
-            sample = numpy.random.normal(loc=mean, scale=0.25*std, size=1)[0]
-            random_param[k] = sample
-        except:
-            random_param[k] = ranges[k]
-    return random_param
+        mean = np.mean(ranges[k])
+        std = np.std(ranges[k])
+        sample = numpy.random.normal(loc=mean, scale=std, size=1)[0]
+        random_param1[k] = sample
+
+    random_param2 = {} # randomly sample a point in the viable parameter space.
+
+    for k in ranges.keys():
+        mean = np.mean(ranges[k])
+        std = np.std(ranges[k])
+        sample = numpy.random.normal(loc=mean, scale=std, size=1)[0]
+        random_param1[k] = sample
+    assert set(random_param1.values()) is not set(random_param2.values())
+    return random_param1
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -525,29 +537,27 @@ def write_opt_to_nml(path,param_dict):
     return
 @timer
 def pred_only(test_and_models):
-    # Temporarily patch sciunit judge code, which seems to be broken.
-    #
+    # To obtain simulated data sets
     #
     (test, dtc) = test_and_models
-    #obs = test.observation
     backend_ = dtc.backend
     model = dtc.dtc_to_model()
-    #model = mint_generic_model(backend_)
-    model.set_attrs(dtc.attrs)
+    print(test.name)
+
     if test.passive:
         test.setup_protocol(model)
-        try:
-            pred = test.extract_features(model,test.get_result(model))
-        except:
-            pred = None
+        pred = test.extract_features(model,test.get_result(model))
+
     else:
-        pred = test.generate_prediction(model)
+        pred = test.extract_features(model)
+    print(pred,'is this called?')
     return pred
 
 #from functools import partial
 #t2m = partial(_pseudo_decor, argument=arg)
 
 #@_pseudo_decor
+"""
 @timer
 def bridge_judge(test_and_dtc):
     (test, dtc) = test_and_dtc
@@ -573,7 +583,7 @@ def bridge_judge(test_and_dtc):
         score = test.compute_score(test.observation,pred)
 
     return score, dtc
-
+"""
 def bridge_dm_test(test_and_dtc):
     (test, dtc) = test_and_dtc
 
@@ -608,7 +618,7 @@ def get_rh(dtc,rtest_class):
     '''
     place_holder = {'n': 86, 'mean': 10 * pq.pA, 'std': 10 * pq.pA, 'value': 10 * pq.pA}
     backend_ = dtc.backend
-    if 'NEURON' in backend_ or 'HH' in backend_ 'ADEXP' in backend_ or 'GLIF' in backend_ or 'BHH' in backend_:
+    if 'NEURON' in backend_ or 'HH' in backend_ or 'ADEXP' in backend_ or 'GLIF' in backend_ or 'BHH' in backend_:
         #rtest = RheobaseTest(observation=place_holder,
         #                        name='RheobaseTest')
 
@@ -741,13 +751,14 @@ def mint_NEURON_model(dtc):
     model.attrs = pre_model.attrs
     return model
 
-def inject_and_plot_model(attrs,backend):
-    pre_model = DataTC()
-    pre_model.attrs = attrs
-    pre_model.backend = backend
+def inject_and_plot_model(pre_model):
+    #pre_model = DataTC()
+    #pre_model.attrs = attrs
+    #pre_model.backend = backend
+
     # get rheobase injection value
     # get an object of class ReducedModel with known attributes and known rheobase current injection value.
-
+    pre_model = dtc_to_rheo(pre_model)
     model = pre_model.dtc_to_model()
     uc = {'amplitude':model.rheobase,'duration':DURATION,'delay':DELAY}
     model.inject_square_current(uc)
@@ -762,6 +773,36 @@ def inject_and_plot_model(attrs,backend):
     plt.ylabel('V (mV)')
     #plt.plot(vm.times,vm.magnitude)
     return vm,plt
+
+
+def inject_and_not_plot_model(pre_model):
+    #pre_model = DataTC()
+    #pre_model.attrs = attrs
+    #pre_model.backend = backend
+
+    # get rheobase injection value
+    # get an object of class ReducedModel with known attributes and known rheobase current injection value.
+    pre_model = dtc_to_rheo(pre_model)
+    model = pre_model.dtc_to_model()
+    uc = {'amplitude':model.rheobase,'duration':DURATION,'delay':DELAY}
+    model.inject_square_current(uc)
+    vm = model.get_membrane_potential()
+    return vm
+
+def check_binary_match(dtc0,dtc1):
+    vm0 =inject_and_not_plot_model(dtc0)
+    vm1 =inject_and_not_plot_model(dtc1)
+
+    plt.figure()
+    if dtc0.backend in str("HH"):
+        plt.title('Check for waveform Alignment')
+    else:
+        plt.title('membrane potential plot')
+    plt.plot(vm0.times, vm0.magnitude,label="solution")
+    plt.plot(vm1.times, vm1.magnitude,label="target")
+    plt.ylabel('V (mV)')
+    #plt.plot(vm.times,vm.magnitude)
+    return plt
 
 
 def score_proc(dtc,t,score):
@@ -1577,8 +1618,11 @@ def evaluate(dtc):
     if not hasattr(dtc,str('SA')):
         return []
     else:
-        #ordered_score = dtc.ordered_score()
-        fitness = [v for v in dtc.SA.values()]
+
+        fitness = [v for v in dtc.SA.values]
+        for f in fitness:
+            if f==np.inf:
+                f = 100.0
         fitness = tuple(fitness,)
         return fitness
 
@@ -1901,12 +1945,14 @@ class OptMan():
             rp = right[k].observation[key]
             if lp is not None:
                 lp = lp.rescale(rp.units)
+                closeness_[k] = np.abs(lp-rp)
+
             else:
                 print('test ',k, 'prediction is None',lp)
+                closeness_[k] = None
             rps.append(rp)
             lps.append(lp)
 
-            closeness_[k] = np.abs(lp-rp)
         return closeness_,lps,rps
 
 
@@ -2001,7 +2047,7 @@ class OptMan():
                     key = which_key(v.observation)
                     v.observation['std'] =  0.1*np.abs(v.observation[key])
                     new_tests[k] = v
-                
+
             print('Random simulated data tests made')
             # made not none through keyword argument.
 
@@ -2064,29 +2110,28 @@ class OptMan():
                 [(value.name,value.observation) for value in new_tests.values()]
                 new_tests = TSD(new_tests)
                 new_tests.use_rheobase_score = tests.use_rheobase_score
-
+                previous = new_tests['TimeConstantTest'].observation['value']
+                add_to_confusion = 0.001*previous
                 for t in new_tests.values():
                     if 'value' in t.observation.keys():
                         t.observation['mean'] = t.observation['value']
                         t.observation['std'] = np.abs(t.observation['mean'])
                     if float(t.observation['std'] == 0.0):
                         t.observation['std'] = np.abs(t.observation['mean'])
-                        #assert float(t.observation['std']) >0.0
 
-                #ga_out = new_tests.optimize(self,param_edges,**kwargs)
                 ga_out = new_tests.optimize(ranges,
                                             backend=backend,
                                             protocol={'allen': False, 'elephant': True},\
                                             MU=5,NGEN=5)
+
                 results = copy.copy(ga_out['pf'][0].dtc.scores)
             ga_converged = [ p.dtc for p in ga_out['pf'][0:2] ]
             test_origin_target = [ dsolution for i in range(0,len(ga_out['pf'])) ][0:2]
             print(test_origin_target)
             print(new_tests['RheobaseTest'].observation)
             print('ranges',ranges,'maybe ranges are wrong')
-            print([t.observation for t in new_tests.values()])
-            #import pdb
-            #pdb.set_trace()
+            print([(t.name,t.observation['std']) for t in new_tests.values()])
+
 
             if self.verbose:
                 print(ga_out['pf'][0].dtc.scores)
@@ -2096,6 +2141,73 @@ class OptMan():
             closeness_,_,_ = self.closeness(left,new_tests)
             #inject_and_plot(ga_converged,second_pop=test_origin_target,third_pop=[ga_converged[0]],figname='not_a_problem.png',snippets=True)
             return ga_out,ga_converged,test_origin_target,new_tests,closeness_
+
+
+
+    def simulate_data(self,
+                        tests,
+                        backend,
+                        free_paramaters=None):
+        '''
+        # Inputs:
+        #    -- tests, a list of NU test types,
+        #    -- backend a string encoding what model, backend, simulator to use.
+        # Outputs:
+        #    -- a score, that should be close to zero larger is worse.
+        # Synopsis:
+        #    -- Given any models
+        # check if the optimiser can find arbitarily sampeled points in
+        # a parameter space, using only the information in the error gradient.
+        # make some new tests based on internally generated data
+        # as opposed to experimental data.
+        '''
+
+        out_tests = []
+        ranges = MODEL_PARAMS[backend]
+        #self.simulated_obs = True
+        if self.protocol['allen']:
+            dtc = False
+            while dtc is False or type(new_tests) is type(None):
+                _,rp,chosen_keys,_ = process_rparam(backend)
+                new_tests,dtc = self.make_simulated_observations(tests,backend,rp)
+            test_origin_target=dtc
+            observations = dtc.preds
+            target_spikes = dtc.spike_number#+10
+            observation_spike = {'value': target_spikes}
+            new_tests = TSD(new_tests)
+
+            new_tests.use_rheobase_score = False
+            ga_out, DO = run_ga(ranges,NGEN,new_tests,free_params=rp.keys(), MU = MU, backend=backend, selection=str('selNSGA3'), protocol={'allen':True,'elephant':False,'tsr':[target_spikes-2,target_spikes+5]})
+            ga_converged = [ p for p in ga_out['pf'] ]
+            ga_out,ga_converged,test_origin_target,new_tests
+            return ga_out,ga_converged,test_origin_target,new_tests,self.protocol['tsr']
+
+
+        elif self.protocol['elephant']:
+            new_tests = False
+            while new_tests is False:
+                dsolution,rp,chosen_keys,_ = process_rparam(backend)
+                (new_tests,dtc) = self.make_simulated_observations(tests,backend,rp,dsolution=dsolution)
+                if new_tests is False:
+                    continue
+                new_tests = {k:v for k,v in new_tests.items() if v.observation[which_key(v.observation)] is not None}
+                if type(new_tests) is not type(bool()):
+                    for t in new_tests.values():
+                        key = which_key(t.observation)
+                        if t.observation[key] is None:
+                            new_tests = False
+                            break
+                    if type(new_tests) is type(bool()):
+                        print(new_tests,'not useable sample')
+
+                        continue
+                    if 'RheobaseTest' not in new_tests.keys():
+                        new_tests = False
+                        continue
+                    dsolution.rheobase = new_tests['RheobaseTest'].observation
+            print('Random simulated data tests made')
+            test_origin_target = dsolution
+            return test_origin_target,new_tests
 
     def grid_search(self,explore_ranges,test_frame,backend=None):
         '''
@@ -2228,7 +2340,7 @@ class OptMan():
             except:
                 dtcpop = list(map(OM.elephant_evaluation,dtcpop))
             for i,j in enumerate(dtcpop):
-                df.iloc[l][i] = np.sum(list(j.scores.values()))/len(list(j.scores.values()))
+                df.iloc[l][i] = np.sum(list(j.SA.values))/len(list(j.SA.values))
 
         return df
     #@timer
@@ -2237,7 +2349,7 @@ class OptMan():
         if take_anything is None or type(take_anything) is type(int()):
             take_anything = list(pred.values())[1]
 
-        pred['std'] = t.observation['std']# 15*take_anything.magnitude * take_anything.units
+        #pred['std'] = t.observation['std']# 15*take_anything.magnitude * take_anything.units
         return pred
 
 
@@ -2252,6 +2364,7 @@ class OptMan():
                 # it's critical that paramaters are assigned here
                 t.params = dtc.protocols[k]
 
+
                 try:
                     assert hasattr(self.tests,'use_rheobase_score')
                 except:
@@ -2261,9 +2374,9 @@ class OptMan():
                     continue
                 t.params = dtc.protocols[k]
                 if not 'std' in t.observation.keys():
-                    t.observation['std'] = t.observation['mean']
+                    t.observation['std'] = copy.copy(t.observation['mean'])
                 if float(t.observation['std']) == 0.0:
-                    t.observation['std'] = t.observation['mean']
+                    t.observation['std'] = copy.copy(t.observation['mean'])
         return tests
     def elephant_evaluation(self,dtc):
         # Inputs single data transport container modules, and neuroelectro observations that
@@ -2276,21 +2389,20 @@ class OptMan():
             if hasattr(dtc,'SA'):
                 pass
         dtc.tests = self.preprocess(dtc)
-=
         scores_ = []
         suite = TestSuite(dtc.tests)
         for t in suite:
-            if float(t.observation['std']) == 0.0: t.observation['std'] = t.observation['mean']
             if 'Rheobase' in t.name: t.score_type = sciunit.scores.ZScore
-            try:
-                score = t.judge(model)
-            except:
-                import pdb
-                pdb.set_trace()
+            if 'mean' not in t.observation.keys():
+                t.observation['mean'] = t.observation['value']
+            else:
+                assert t.observation['mean']
+            score = t.judge(model)
             if isinstance(score, sciunit.scores.incomplete.InsufficientDataScore):
-                score.score = -np.inf
-            score_ = score.score
+                t.observation['n'] = 10
+                score = t.judge(model)
 
+            score_ = np.abs(score.log_norm_score)
             scores_.append(score_)
             for s in scores_:
                 assert isinstance(s,type(float()))
@@ -2595,10 +2707,9 @@ class OptMan():
             if type(dtc.tests) is type(dict()):
                 for t in dtc.tests.values():
                     assert 'std' in t.observation.keys()
-                    if float(t.observation['std']) == 0.0:
-                        t.observation['std'] = t.observation['mean']
-                    assert t.observation['mean'] != 0.0
-                    assert t.observation['std'] != 0.0
+                    #if float(t.observation['std']) == 0.0:
+                        #t.observation['std'] = 0.1*copy.copy(t.observation['mean'])
+                    #assert t.observation['std'] != 0.0
 
     @timer
     def obtain_rheobase(self,pop,tests):#, td, tests):

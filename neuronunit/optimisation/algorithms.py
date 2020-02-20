@@ -99,7 +99,6 @@ def cleanse(temp):
 		   for x,j in enumerate(t):
 		       temp_[i][x] = j
 	   temp = temp_
-
 	   for t in temp:
 		   t.dtc.tests = None
 		   t.dtc = None

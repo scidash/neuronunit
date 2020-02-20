@@ -97,6 +97,7 @@ def test_all_tests_pop(dtcpop, tests):
         assert len(list(d.attrs.values())) > 0
 
     dtcpop = list(map(dtc_to_rheo,dtcpop))
+    dtcpop = [d for d in dtcpop if d.rheobase is not None]
     print([d for d in dtcpop],len(dtcpop))
     for d in dtcpop:
         d.tests = all_tests

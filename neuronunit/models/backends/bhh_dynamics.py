@@ -3,7 +3,7 @@ import brian2 as b2
 from neurodynex.hodgkin_huxley import HH
 #b2.defaultclock.dt = 1 * b2.ms
 #import brian2 as b2
-
+second = 1000*b2.units.ms
 b2.A = 1000000000000*b2.pA
 b2.units.V = 1000.0*b2.units.mV
 # Hodgkin Huxley parameters
@@ -83,8 +83,69 @@ def simulate_HH_neuron_local(input_current=None,
         StateMonitor: Brian2 StateMonitor with recorded fields
         ["vm", "I_e", "m", "n", "h"]
 
+    https://brian2.readthedocs.io/en/stable/examples/IF_curve_Hodgkin_Huxley.html
+    area = 20000*umetre**2
+    Cm = 1*ufarad*cm**-2 * area
+    gl = 5e-5*siemens*cm**-2 * area
+    El = -65*mV
+    EK = -90*mV
+    ENa = 50*mV
+    g_na = 100*msiemens*cm**-2 * area
+    g_kd = 30*msiemens*cm**-2 * area
+    VT = -63*mV
     """
+    area = 20000*b2.umetre**2
+    Cm = float(C) *b2.ufarad*b2.cm**-2 * area
+    VT = -63*b2.mV
     assert float(El)<0.0
+    # The model
+    eqs = ('''
+    dvm/dt = (gl*(El-vm) - g_na*(m*m*m)*h*(vm-ENa) - g_kd*(n*n*n*n)*(vm-EK) + input_current)/Cm : volt
+    dm/dt = 0.32*(mV**-1)*4*mV/exprel((13.*mV-vm+VT)/(4*mV))/ms*(1-m)-0.28*(mV**-1)*5*mV/exprel((vm-VT-40.*mV)/(5*mV))/ms*m : 1
+    dn/dt = 0.032*(mV**-1)*5*mV/exprel((15.*mV-vm+VT)/(5*mV))/ms*(1.-n)-.5*exp((10.*mV-vm+VT)/(40.*mV))/ms*n : 1
+    dh/dt = 0.128*exp((17.*mV-vm+VT)/(18.*mV))/ms*(1.-h)-4./(1+exp((40.*mV-vm+VT)/(5.*mV)))/ms*h : 1
+    input_current : amp
+    ''')
+    # Threshold and refractoriness are only used for spike counting
+    neuron = b2.NeuronGroup(1, eqs,
+                        threshold='v > -40*mV',
+                        refractory='v > -40*mV',
+                        method='exponential_euler')
+    neuron.vm = El#*b2.units.mV
+    
+    #neuron.v = El
+    #neuron = b2.NeuronGroup(1, eqs, method="exponential_euler")
+    # parameter initialization
+    #neuron.m = 0.05
+    #neuron.h = 0.60
+    #neuron.n = 0.32
+
+    #spike_monitor = b2.SpikeMonitor(neuron)
+    # tracking parameters
+    st_mon = b2.StateMonitor(neuron, ["vm"], record=True)
+
+    # running the simulation
+    neuron = b2.Network(neuron)
+    neuron.add(st_mon)
+    # dur0 = 0.1*second
+    neuron.I = '0.0*nA'
+
+    dur0 = int(input_current['delay'])*second
+    neuron.run(dur0)
+    amp = input_current['amp']
+    
+    neuron.I = str(amp)+str('nA')
+    dur1 = int(input_current['delay']+input_current['duration'])*second
+    neuron.run(dur1)
+    dur2 = 0.2*second
+    neuron.I = '0.0*nA'
+    neuron.run(dur2)
+    import pdb
+    pdb.set_trace()
+    vm_b = neuron.vm
+    vm_b = [ float(i) for i in vm_b ]
+    vm_b = AnalogSignal(vm_b,units = pq.V,sampling_period = float(0.001) * pq.s)
+    self.vM = vm_b
     """
     eqs =
     I_e = input_current(t,i) : amp
@@ -101,51 +162,7 @@ def simulate_HH_neuron_local(input_current=None,
     dn/dt = alphan*(1-n)-betan*n : 1
     dvm/dt = membrane_Im/C : volt
     """
-    # The model
-    eqs = Equations('''
-    dvm/dt = (gl*(El-vm) - g_na*(m*m*m)*h*(vm-ENa) - g_kd*(n*n*n*n)*(vm-EK) + input_current)/Cm : volt
-    dm/dt = 0.32*(mV**-1)*4*mV/exprel((13.*mV-vm+VT)/(4*mV))/ms*(1-m)-0.28*(mV**-1)*5*mV/exprel((vm-VT-40.*mV)/(5*mV))/ms*m : 1
-    dn/dt = 0.032*(mV**-1)*5*mV/exprel((15.*mV-vm+VT)/(5*mV))/ms*(1.-n)-.5*exp((10.*mV-vm+VT)/(40.*mV))/ms*n : 1
-    dh/dt = 0.128*exp((17.*mV-vm+VT)/(18.*mV))/ms*(1.-h)-4./(1+exp((40.*mV-vm+VT)/(5.*mV)))/ms*h : 1
-    input_current : amp
-    ''')
-    # Threshold and refractoriness are only used for spike counting
-    neuron = NeuronGroup(1, eqs,
-                        threshold='v > -40*mV',
-                        refractory='v > -40*mV',
-                        method='exponential_euler')
-    neuron.v = El
-    neuron = b2.NeuronGroup(1, eqs, method="exponential_euler")
-    # parameter initialization
-    neuron.vm = El#*b2.units.mV
-    #neuron.m = 0.05
-    #neuron.h = 0.60
-    #neuron.n = 0.32
 
-    #spike_monitor = b2.SpikeMonitor(neuron)
-    # tracking parameters
-    st_mon = b2.StateMonitor(neuron, ["vm", "m", "n", "h"], record=True)
-
-    # running the simulation
-    neuron = b2.Network(neuron)
-    neuron.add(st_mon)
-    # dur0 = 0.1*second
-    neuron.I = '0.0*nA'
-
-    dur0 = input_current['delay']
-    run(dur0)
-    amp = input_current['amp']
-    
-    neuron.I = str(amp)*str('b2.nA')
-    dur1 = input_current['delay']+input_current['duration']#1.0*second
-    run(dur1)
-    dur2 = 0.2*second
-    neuron.I = '0.0*nA'
-    run(dur2)
-    vm_b = state_dic['v']
-    vm_b = [ float(i) for i in vm_b ]
-    vm_b = AnalogSignal(vm_b,units = pq.V,sampling_period = float(0.001) * pq.s)
-    self.vM = vm_b
     return st_mon,selfvM,vm
 
     """
@@ -311,9 +328,9 @@ class BHHBackend(Backend):
             gNa = attrs['gNa'] * b2.units.msiemens,
             C = attrs['C'] * b2.units.ufarad,
             Vr = attrs['Vr'],
-            input_current = {'delay':delay,'duration':duration,'amp':amp},
-            st=st,
-            params = params)
+            input_current = {'delay':delay,'duration':duration,'amp':amp}
+            )
+            #params = params)
 
         #self.state_monitor.clock.dt = 1 *b2.ms
         self.dt = self.state_monitor.clock.dt
