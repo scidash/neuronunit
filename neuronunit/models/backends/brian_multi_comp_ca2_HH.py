@@ -320,16 +320,16 @@ def bind_NU_interface():
         return len(threshold_detection(vm,threshold=-45.0*mV))
     #model.add_attribute(init_backend)
     
-    model.init_backend = MethodType(init_backend,.model)
-    model.get_spike_count = MethodType(get_spike_count,self.model)
-    model.get_APs = MethodType(get_APs,model)
-    model.get_spike_train = MethodType(get_spike_train,model)
+    model.init_backend = MethodType(init_backend, model)
+    model.get_spike_count = MethodType(get_spike_count, model)
+    model.get_APs = MethodType(get_APs, model)
+    model.get_spike_train = MethodType(get_spike_train, model)
     model.set_attrs = MethodType(set_attrs, model) # Bind to the score.
     model.inject_square_current = MethodType(inject_square_current, model) # Bind to the score.
     model.set_attrs = MethodType(set_attrs, model) # Bind to the score.
-    model.get_membrane_potential = MethodType(get_membrane_potential,model)
+    model.get_membrane_potential = MethodType(get_membrane_potential, model)
     model.load_model = MethodType(load_model, model) # Bind to the score.
-    model._local_run = MethodType(_local_run,model)
+    model._local_run = MethodType(_local_run, model)
     model.init_backend(model)
 
     return model
