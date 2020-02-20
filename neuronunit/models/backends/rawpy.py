@@ -22,7 +22,7 @@ from elephant.spike_train_generation import threshold_detection
 from numba import jit
 import cython
 @jit
-def get_vm(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.364525297619-65.2261863636364), vr=-65.2261863636364, vt=-50, dt=0.030, Iext=[]):
+def get_vm(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.364525297619-65.2261863636364), vr=-65.2261863636364, vt=-50, dt=0.010, Iext=[]):
     '''
     dt determined by
     Apply izhikevich equation as model
@@ -49,7 +49,7 @@ def get_vm(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.36452
 
     return v
 
-def get_vm_regular(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.364525297619-65.2261863636364), vr=-65.2261863636364, vt=-50, dt=0.030, Iext=[]):
+def get_vm_regular(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.364525297619-65.2261863636364), vr=-65.2261863636364, vt=-50, dt=0.010, Iext=[]):
     '''
     dt determined by
     Apply izhikevich equation as model
@@ -75,7 +75,7 @@ def get_vm_regular(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(
 class RAWBackend(Backend):
 
     name = 'RAW'
-    
+
     def init_backend(self, attrs=None, cell_name='alice',
                      current_src_name='hannah', DTC=None,
                      debug = False):
@@ -122,7 +122,7 @@ class RAWBackend(Backend):
 
             self.vM = AnalogSignal(v,
                                 units=pq.mV,
-                                sampling_period=0.0051*pq.ms)
+                                sampling_period=0.01*pq.ms)
 
             #self.vM = AnalogSignal(v,
             #                       units = voltage_units,
@@ -160,16 +160,18 @@ class RAWBackend(Backend):
 
         self.set_stop_time(tMax*pq.ms)
         tMax = self.tstop
+        """
         if str('dt') in attrs:
             if np.isnan(tMax/attrs['dt']):
                 if np.isnan(attrs['dt']):
-                   attrs['dt'] = 0.03
+                   attrs['dt'] = 0.01
                    N = int(tMax/attrs['dt'])
 
             else:
                N = int(tMax/attrs['dt'])
         else:
-            attrs['dt'] = 0.03
+        """
+        attrs['dt'] = 0.01
         NORMAL = True
         if NORMAL == True:
             N = int(tMax/attrs['dt'])
@@ -194,7 +196,7 @@ class RAWBackend(Backend):
 
         self.vM = AnalogSignal(v,
                             units=pq.mV,
-                            sampling_period=0.03*pq.ms)
+                            sampling_period=0.01*pq.ms)
 
         #print(self.vM.times[-1],c['delay']+c['duration']+200*pq.ms)
         #assert self.vM.times[-1] == (c['delay']+c['duration']+200*pq.ms)
@@ -209,10 +211,9 @@ class RAWBackend(Backend):
         else:
             v = get_vm(self.attrs)
 
-        period = 0.03*pq.ms
         self.vM = AnalogSignal(v,
                                units = voltage_units,
-                               sampling_period = period)
+                               sampling_period = 0.01*pq.ms)
         results['vm'] = self.vM.magnitude
         results['t'] = self.vM.times
         results['run_number'] = results.get('run_number',0) + 1
