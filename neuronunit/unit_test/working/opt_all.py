@@ -39,7 +39,7 @@ from neuronunit.tests import dynamics
 from neuronunit.optimisation import data_transport_container
 
 from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
-from neuronunit import aibs
+#from neuronunit import aibs
 from neuronunit.optimisation.optimisations import run_ga
 from neuronunit.optimisation import model_parameters
 from neuronunit.optimisation import mint_tests
