@@ -382,22 +382,29 @@ def make_new_random(dtc_,backend):
 @cython.wraparound(False)
 def random_p(backend):
     ranges = MODEL_PARAMS[backend]
-    try:
-        from datetime import datetime
-        numpy.random.seed(datetime.now())
-    except:
-        numpy.random.seed()#self.seed)
+    #try:
+    import numpy, time
+    date_int = int(time.time())
+    numpy.random.seed(date_int)
+    #except:
+    #    numpy.random.seed()#self.seed)
 
-    random_param = {} # randomly sample a point in the viable parameter space.
+    random_param1 = {} # randomly sample a point in the viable parameter space.
     for k in ranges.keys():
-        try:
-            mean = np.mean(ranges[k])
-            std = np.std(ranges[k])
-            sample = numpy.random.normal(loc=mean, scale=0.25*std, size=1)[0]
-            random_param[k] = sample
-        except:
-            random_param[k] = ranges[k]
-    return random_param
+        mean = np.mean(ranges[k])
+        std = np.std(ranges[k])
+        sample = numpy.random.normal(loc=mean, scale=std, size=1)[0]
+        random_param1[k] = sample
+
+    random_param2 = {} # randomly sample a point in the viable parameter space.
+
+    for k in ranges.keys():
+        mean = np.mean(ranges[k])
+        std = np.std(ranges[k])
+        sample = numpy.random.normal(loc=mean, scale=std, size=1)[0]
+        random_param1[k] = sample
+    assert set(random_param1.values()) is not set(random_param2.values())
+    return random_param1
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -535,13 +542,15 @@ def pred_only(test_and_models):
     (test, dtc) = test_and_models
     backend_ = dtc.backend
     model = dtc.dtc_to_model()
+    print(test.name)
+
     if test.passive:
         test.setup_protocol(model)
         pred = test.extract_features(model,test.get_result(model))
 
     else:
         pred = test.extract_features(model)
-    print(pred)    
+    print(pred,'is this called?')
     return pred
 
 #from functools import partial
@@ -742,10 +751,10 @@ def mint_NEURON_model(dtc):
     model.attrs = pre_model.attrs
     return model
 
-def inject_and_plot_model(attrs,backend):
-    pre_model = DataTC()
-    pre_model.attrs = attrs
-    pre_model.backend = backend
+def inject_and_plot_model(pre_model):
+    #pre_model = DataTC()
+    #pre_model.attrs = attrs
+    #pre_model.backend = backend
 
     # get rheobase injection value
     # get an object of class ReducedModel with known attributes and known rheobase current injection value.
@@ -764,6 +773,36 @@ def inject_and_plot_model(attrs,backend):
     plt.ylabel('V (mV)')
     #plt.plot(vm.times,vm.magnitude)
     return vm,plt
+
+
+def inject_and_not_plot_model(pre_model):
+    #pre_model = DataTC()
+    #pre_model.attrs = attrs
+    #pre_model.backend = backend
+
+    # get rheobase injection value
+    # get an object of class ReducedModel with known attributes and known rheobase current injection value.
+    pre_model = dtc_to_rheo(pre_model)
+    model = pre_model.dtc_to_model()
+    uc = {'amplitude':model.rheobase,'duration':DURATION,'delay':DELAY}
+    model.inject_square_current(uc)
+    vm = model.get_membrane_potential()
+    return vm
+
+def check_binary_match(dtc0,dtc1):
+    vm0 =inject_and_not_plot_model(dtc0)
+    vm1 =inject_and_not_plot_model(dtc1)
+
+    plt.figure()
+    if dtc0.backend in str("HH"):
+        plt.title('Check for waveform Alignment')
+    else:
+        plt.title('membrane potential plot')
+    plt.plot(vm0.times, vm0.magnitude,label="solution")
+    plt.plot(vm1.times, vm1.magnitude,label="target")
+    plt.ylabel('V (mV)')
+    #plt.plot(vm.times,vm.magnitude)
+    return plt
 
 
 def score_proc(dtc,t,score):
@@ -1579,12 +1618,11 @@ def evaluate(dtc):
     if not hasattr(dtc,str('SA')):
         return []
     else:
-        #ordered_score = dtc.ordered_score()
-        fitness = [np.abs(v) for v in dtc.SA.values]
+
+        fitness = [v for v in dtc.SA.values]
         for f in fitness:
             if f==np.inf:
                 f = 100.0
-        
         fitness = tuple(fitness,)
         return fitness
 
@@ -2009,7 +2047,7 @@ class OptMan():
                     key = which_key(v.observation)
                     v.observation['std'] =  0.1*np.abs(v.observation[key])
                     new_tests[k] = v
-                
+
             print('Random simulated data tests made')
             # made not none through keyword argument.
 
@@ -2093,8 +2131,7 @@ class OptMan():
             print(new_tests['RheobaseTest'].observation)
             print('ranges',ranges,'maybe ranges are wrong')
             print([(t.name,t.observation['std']) for t in new_tests.values()])
-            #import pdb
-            #pdb.set_trace()
+
 
             if self.verbose:
                 print(ga_out['pf'][0].dtc.scores)
@@ -2303,7 +2340,7 @@ class OptMan():
             except:
                 dtcpop = list(map(OM.elephant_evaluation,dtcpop))
             for i,j in enumerate(dtcpop):
-                df.iloc[l][i] = np.sum(list(j.scores.values()))/len(list(j.scores.values()))
+                df.iloc[l][i] = np.sum(list(j.SA.values))/len(list(j.SA.values))
 
         return df
     #@timer
@@ -2327,7 +2364,7 @@ class OptMan():
                 # it's critical that paramaters are assigned here
                 t.params = dtc.protocols[k]
 
-         
+
                 try:
                     assert hasattr(self.tests,'use_rheobase_score')
                 except:
@@ -2356,25 +2393,19 @@ class OptMan():
         suite = TestSuite(dtc.tests)
         for t in suite:
             if 'Rheobase' in t.name: t.score_type = sciunit.scores.ZScore
-            try:    
+            if 'mean' not in t.observation.keys():
                 t.observation['mean'] = t.observation['value']
-            except:
+            else:
                 assert t.observation['mean']
             score = t.judge(model)
             if isinstance(score, sciunit.scores.incomplete.InsufficientDataScore):
                 t.observation['n'] = 10
-
                 score = t.judge(model)
-            score_ = score.score
 
+            score_ = np.abs(score.log_norm_score)
             scores_.append(score_)
             for s in scores_:
-                #print(isinstance(s,type(float())))
-                try:
-                    assert isinstance(s,type(float()))
-                except:
-                    import pdb
-                    pdb.set_trace()
+                assert isinstance(s,type(float()))
         dtc.SA = ScoreArray(dtc.tests, scores_)
         #dtc.SA = dtc.ordered_score()
 
