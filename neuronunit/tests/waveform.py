@@ -10,6 +10,13 @@ try:
 except:
     ascii_plot = False
 
+def asciplot_code(vm,spkcnt):
+    t = [float(f) for f in vm.times]
+    v = [float(f) for f in vm.magnitude]
+    fig = apl.figure()
+    fig.plot(t, v, label=str('spikes: ')+str(spkcnt), width=100, height=20)
+    fig.show()
+
 class InjectedCurrent:
     """Metaclass to mixin with InjectedCurrent tests."""
 
@@ -56,13 +63,8 @@ class APWidthTest(VmTest):
         model.get_membrane_potential()
         widths = model.get_AP_widths()
         if ascii_plot:
-            t = [float(f) for f in model.vM.times]
-            v = [float(f) for f in model.vM.magnitude]
+             asciplot_code(model.vM,model.get_spike_count())
 
-            fig = apl.figure()
-
-            fig.plot(t, v, label=str('spikes: ')+str(model.get_spike_count()), width=100, height=20)
-            fig.show()
         try:
             prediction = {'mean': np.mean(widths) if len(widths) else None,
                       'std': np.std(widths) if len(widths) else None,
@@ -79,8 +81,7 @@ class APWidthTest(VmTest):
         """Implement sciunit.Test.score_prediction."""
         #if isinstance(prediction, type(None)):
         #    score = scores.InsufficientDataScore(None)
-        #import pdb
-        #pdb.set_trace()
+
         if prediction['n'] == 0:
             score = scores.InsufficientDataScore(None)
         else:
@@ -124,13 +125,7 @@ class InjectedCurrentAPWidthTest(InjectedCurrent, APWidthTest):
         model.inject_square_current(self.params['injected_square_current'])
         model.get_membrane_potential()
         if ascii_plot:
-            t = [float(f) for f in model.vM.times]
-            v = [float(f) for f in model.vM.magnitude]
-
-            fig = apl.figure()
-
-            fig.plot(t, v, label=str('spikes: ')+str(model.get_spike_count()), width=100, height=20)
-            fig.show()
+            asciplot_code(model.vM,model.get_spike_count())
 
         prediction = super(InjectedCurrentAPWidthTest, self).\
             generate_prediction(model)
@@ -173,24 +168,16 @@ class APAmplitudeTest(VmTest):
         model.inject_square_current(self.params['injected_square_current'])
         model.get_membrane_potential()
         if ascii_plot:
-            t = [float(f) for f in model.vM.times]
-            v = [float(f) for f in model.vM.magnitude]
+            asciplot_code(model.vM,model.get_spike_count())
 
-            fig = apl.figure()
-
-            fig.plot(t, v, label=str('spikes: ')+str(model.get_spike_count()), width=100, height=20)
-            fig.show()
         #if False:
         #    height = np.max(model.get_membrane_potential()) -float(np.min(model.get_membrane_potential()))/1000.0*model.get_membrane_potential().units #- model.get_AP_thresholds()
         #    prediction = {'mean':height, 'n':1, 'std':height}
 
         #heights = model.get_AP_amplitudes() - model.get_AP_thresholds()
-        #import pdb
-        #pdb.set_trace()
         # Put prediction in a form that compute_score() can use.
         height = np.max(model.get_membrane_potential())-model.get_AP_thresholds()
-
-        prediction = {'value': height,
+        prediction = {'value': height[0],
                       'mean':np.mean(height) if len(height) else None,
                       'std': np.std(height) if len(height) else None,
                       'n': len(height)}
@@ -220,16 +207,7 @@ class APAmplitudeTest(VmTest):
 class InjectedCurrentAPAmplitudeTest(InjectedCurrent, APAmplitudeTest):
     """Test the heights (peak amplitude) of action potentials.
     Uses current injection.
-    def __init__(self):# *args, **kwargs):
-        super(InjectedCurrentAPAmplitudeTest, self).__init__()#*args, **kwargs)
-        if hasattr(self,'params'):# in .keys():
-            if self.verbose:
-                print(self.params)
-            #self.params = kwargs['params']
 
-        #self.params['injected_square_current'] = {'amplitude': 100.0*pq.pA,
-        #                                          'delay': DELAY,
-        #                                              'duration': DURATION}
     """
     required_capabilities = (ncap.ReceivesSquareCurrent,)
 
@@ -243,13 +221,8 @@ class InjectedCurrentAPAmplitudeTest(InjectedCurrent, APAmplitudeTest):
         model.inject_square_current(self.params['injected_square_current'])
         model.get_membrane_potential()
         if ascii_plot:
-            t = [float(f) for f in model.vM.times]
-            v = [float(f) for f in model.vM.magnitude]
+            asciplot_code(model.vM,model.get_spike_count())
 
-            fig = apl.figure()
-
-            fig.plot(t, v, label=str('spikes: ')+str(model.get_spike_count()), width=100, height=20)
-            fig.show()
         prediction = super(InjectedCurrentAPAmplitudeTest, self).\
             generate_prediction(model)
         # useful to retain inside object.
@@ -295,14 +268,10 @@ class APThresholdTest(VmTest):
         model.inject_square_current(self.params['injected_square_current'])
         model.get_membrane_potential()
 
+
         if ascii_plot:
-            t = [float(f) for f in model.vM.times]
-            v = [float(f) for f in model.vM.magnitude]
+            asciplot_code(model.vM,model.get_spike_count())
 
-            fig = apl.figure()
-
-            fig.plot(t, v, label=str('spikes: ')+str(model.get_spike_count()), width=100, height=20)
-            fig.show()
         try:
             threshes = model.get_AP_thresholds()
         except:
@@ -351,13 +320,8 @@ class InjectedCurrentAPThresholdTest(InjectedCurrent, APThresholdTest):
 
         model.get_membrane_potential()
         if ascii_plot:
-            t = [float(f) for f in model.vM.times]
-            v = [float(f) for f in model.vM.magnitude]
+            asciplot_code(model.vM,model.get_spike_count())
 
-            fig = apl.figure()
-
-            fig.plot(t, v, label=str('spikes: ')+str(model.get_spike_count()), width=100, height=20)
-            fig.show()
 
         # useful to retain inside object.
         prediction =  super(InjectedCurrentAPThresholdTest, self).\

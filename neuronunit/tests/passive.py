@@ -260,16 +260,6 @@ class TimeConstantTest(TestPulseTest):
     units = pq.ms
 
     ephysprop_name = 'Membrane Time Constant'
-    """
-    def __init__(self):
-        super(TimeConstantTest, self).__init__()
-        self.param = {}
-        self.params['tmax'] = 1000.0*pq.ms
-        if str('params') in kwargs:
-            self.params = kwargs['params']
-        else:
-            self.params = None
-    """
 
     def extract_features(self, model, result):
         features = super(TimeConstantTest, self).\
@@ -278,7 +268,6 @@ class TimeConstantTest(TestPulseTest):
             i, vm = features
             tau = self.__class__.get_tau(vm, i)
             try:
-                tau = tau.simplified
                 # Put prediction in a form that compute_score() can use.
                 features = {'value': tau}
             except:
