@@ -334,9 +334,9 @@ ax.set_zlabel('sentiment polarity')
 fignum = fignum + 1
 for x,i in enumerate(zip(y_kmeans,dfs['clue_words'])):
     try:
-        #print(i[0],i[1],dfs['link'][x],dfs['publication'][x],dfs['clue_links'][x],dfs['sp_norm'][x],dfs['ss_norm'][x],dfs['uniqueness'][x])
+        pass#print(i[0],i[1],dfs['link'][x],dfs['publication'][x],dfs['clue_links'][x],dfs['sp_norm'][x],dfs['ss_norm'][x],dfs['uniqueness'][x])
     except:
-            #print(i)
+        pass#print(i)
 
 fig.savefig('3dCluster.png')
 
