@@ -1,7 +1,7 @@
 python:
    version: 3.7
    install:
-      - requirements: requirements.txt
+      - requirements: docs/rtfd-requirements.txt
       - method: pip
         path: .
    system_packages: true
