@@ -138,8 +138,7 @@ class DataTC(object):
             model = VeryReducedModel(backend=self.backend)
             model.backend = self.backend
             model.attrs = self.attrs
-            model.rheobase = self.rheobase
-
+        model.rheobase = self.rheobase
         try:
             model.inj = self.params
         except:
@@ -147,7 +146,6 @@ class DataTC(object):
                 model.inj = self.vparams
             except:
                 model.inj = None
-
 
         return model
 
