@@ -9,10 +9,10 @@ if SILENT:
 # optional imports
 import matplotlib
 
-try:
-    matplotlib.use('agg')
-except:
-    warnings.warn('X11 plotting backend not available, consider installing')
+#try:
+#    matplotlib.use('agg')
+#except:
+#    warnings.warn('X11 plotting backend not available, consider installing')
 
 import cython
 import logging
@@ -277,7 +277,8 @@ class TSD(dict):
                     'NGEN':5,\
                     'free_params':None,\
                     'seed_pop':None,\
-                    'hold_constant':None\
+                    'hold_constant':None,
+                    'plot':False
                     }
         defaults.update(kwargs)
         kwargs = defaults
@@ -311,11 +312,11 @@ class TSD(dict):
             if DM:
                 pop,dtcpop = get_dm(local,pop=ga_out['pf'])
         self.backend = kwargs['backend']
-        PLOT = False
-        if PLOT == True:
-            if str(self.cell_name) not in str('simulated data'):
+        #kwargs['plot']  = False
+        if kwargs['plot'] == True:
+            #if str(self.cell_name) not in str('simulated data'):
                 # is this a data driven test? if so its worth plotting results
-                ga_out = self.elaborate_plots(self,ga_out)
+            ga_out = self.elaborate_plots(self,ga_out)
         # make ga_out pickleable by cleansing sciunit and deap objects
         for pop in ga_out.values():
             if hasattr(pop,'len'):
@@ -622,7 +623,7 @@ def get_rh(dtc,rtest_class):
         #rtest = RheobaseTest(observation=place_holder,
         #                        name='RheobaseTest')
 
-        rtest = RheobaseTestP(observation=place_holder,
+        rtest = RheobaseTest(observation=place_holder,
                                 name='RheobaseTest')
     else:
         rtest = RheobaseTest(observation=place_holder,
@@ -786,13 +787,11 @@ def inject_and_not_plot_model(pre_model):
     vm = model.get_membrane_potential()
     return vm
 
-def check_binary_match_front(dtc0,dtcpop):
+def check_binary_match(dtc0,dtc1):
 
     vm0 =inject_and_not_plot_model(dtc0)
+    vm1 =inject_and_not_plot_model(dtc1)
 
-    vms = []
-    for dtc in dtcpop:
-        vms.append(inject_and_not_plot_model(dtc))
 
     plt.figure()
     if dtc0.backend in str("HH"):
@@ -800,8 +799,8 @@ def check_binary_match_front(dtc0,dtcpop):
     else:
         plt.title('membrane potential plot')
     plt.plot(vm0.times, vm0.magnitude,label="target")
-    for v in vms:
-        plt.plot(v.times, v.magnitude,label="solutions")
+    #for v in vms:
+    plt.plot(vm1.times, vm1.magnitude,label="solutions")
     plt.ylabel('V (mV)')
     #plt.plot(vm.times,vm.magnitude)
     return plt
@@ -822,10 +821,10 @@ def check_match_front(dtc0,dtcpop):
         plt.title('membrane potential plot')
     plt.plot(vm0.times, vm0.magnitude,label="target")
     for v in vms:
-        plt.plot(v.times, v.magnitude,label="solutions")
+        plt.plot(v.times, v.magnitude,label="solutions",c='grey')
     plt.ylabel('V (mV)')
     #plt.plot(vm.times,vm.magnitude)
-    return plt    
+    return plt
 
 
 def score_proc(dtc,t,score):
@@ -2415,20 +2414,28 @@ class OptMan():
         scores_ = []
         suite = TestSuite(dtc.tests)
         for t in suite:
-            if 'Rheobase' in t.name: t.score_type = sciunit.scores.ZScore
+            if 'RheobaseTest' in t.name: t.score_type = sciunit.scores.ZScore
+            if 'RheobaseTestP' in t.name: t.score_type = sciunit.scores.ZScore
+
             if 'mean' not in t.observation.keys():
                 t.observation['mean'] = t.observation['value']
-            else:
-                assert t.observation['mean']
-            score = t.judge(model)
-            if isinstance(score, sciunit.scores.incomplete.InsufficientDataScore):
-                t.observation['n'] = 10
-                score = t.judge(model)
 
-            score_ = np.abs(score.log_norm_score)
-            scores_.append(score_)
+            try:
+                score = t.judge(model)
+                if isinstance(score, sciunit.scores.incomplete.InsufficientDataScore):
+                    score = t.judge(model)
+                score_ = np.abs(score.log_norm_score)
+                scores_.append(score_)
+
+            except:
+                score_ = 100
+                scores_.append(score_)
+
+
+
             for s in scores_:
-                assert isinstance(s,type(float()))
+                if not isinstance(s,type(float())):
+                    s = 100.0
         dtc.SA = ScoreArray(dtc.tests, scores_)
         #dtc.SA = dtc.ordered_score()
 
