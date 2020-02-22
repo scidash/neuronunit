@@ -192,15 +192,15 @@ def get_neuron_criteria(cell_id,file_name = None):#,observation = None):
                      waveform.InjectedCurrentAPThresholdTest]#,
     observations = {}
     for index, t in enumerate(test_classes):
-        try:
-            obs = t.neuroelectro_summary_observation(cell_id)
-
-            if obs is not None:
-                if 'mean' in obs.keys():
-                    tests[t.name] = t(obs)
-                    observations[t.ephysprop_name] = obs
-        except:
-            pass
+        obs = t.neuroelectro_summary_observation(cell_id)
+        
+        if obs is not None:
+            if 'mean' in obs.keys():
+                print(test_classes[index])
+                print(t.name)
+                tt = t(obs)
+                tests[t.name] = tt
+                observations[t.ephysprop_name] = obs
     #hooks = {tests[0]:{'f':update_amplitude}} #This is a trick to dynamically insert the method
     #update amplitude at the location in sciunit thats its passed to, without any loss of generality.
     #suite = sciunit.TestSuite(tests,name="vm_suite")
@@ -275,11 +275,13 @@ def switch_logic(xtests):
 
 def process_all_cells():
     try:
+        assert 1==2
         with open('processed_multicellular_constraints.p','rb') as f:
             filtered_cells = pickle.load(f)
         return filtered_cells
     except:
         try:
+            assert 1==2
             cell_constraints = pickle.load(open("multicellular_suite_constraints.p","rb"))
         except:
 	        cell_constraints = get_all_cells()
@@ -422,8 +424,6 @@ def remake_tests():#,observation = None):
                      waveform.InjectedCurrentAPAmplitudeTest,
                      waveform.InjectedCurrentAPThresholdTest]#,
     electro_obs = do_use_cache()
-    import pdb
-    pdb.set_trace()
     test_cell_dict = {}
     for eo in electro_obs:
         tests = []

@@ -22,7 +22,8 @@ class TestPulseTest(ProtocolToFeaturesTest):
 
     def __init__(self, *args, **kwargs,):
         super(TestPulseTest, self).__init__(*args, **kwargs)
-        self.verbose = kwargs['verbose']
+        #self.verbose = kwargs['verbose']
+        #self.verbose = False
 
     default_params = dict(VmTest.default_params)
     default_params['amplitude'] = -10.0 * pq.pA
