@@ -304,6 +304,7 @@ def process_all_cells():
 	                    filtered_cell_constraints.append(t)
 
         filtered_cells[key] = TestSuite(filtered_cell_constraints)
+        """
         for t in filtered_cells[key].tests:
             t = switch_logic(t)
             assert hasattr(t,'active')
@@ -311,7 +312,7 @@ def process_all_cells():
         for t in filtered_cells[key].tests:
             assert hasattr(t,'active')
             assert hasattr(t,'passive')	
-
+        """
         with open('processed_multicellular_constraints.p','wb') as f:
            pickle.dump(filtered_cells,f)
     return filtered_cells
