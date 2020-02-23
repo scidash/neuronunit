@@ -465,11 +465,13 @@ def elaborate_plots(self,ga_out):
         for i,(k,v) in enumerate(objectives.items()):
             #if i < len(everything.select("avg")[0]):
 
-            ax2[i].logy(list(range(0,len(all_over_gen[k]))),all_over_gen[k])
+            ax2[i].plot(list(range(0,len(all_over_gen[k]))),all_over_gen[k])
             temp = [0 for i in range(0,len(all_over_gen[k])) ]
             ax2[i].plot(list(range(0,len(all_over_gen[k]))),temp)
             #ax2[i].set_ylim([0.0, 1.0])
             #if i!=len(objectives)-1:
+            ax2[i].set_yscale('log')
+
             ax2[i].tick_params(
                 axis='x',          # changes apply to the x-axis
                 which='both',      # both major and minor ticks are affected
@@ -482,20 +484,22 @@ def elaborate_plots(self,ga_out):
         for i,(k,v) in enumerate(objectives.items()):
             #if i < len(everything.select("avg")[0]):
 
-            ax2.logy(list(range(0,len(all_over_gen[k]))),all_over_gen[k])
+            ax2.plot(list(range(0,len(all_over_gen[k]))),all_over_gen[k])
             temp = [0 for i in range(0,len(all_over_gen[k])) ]
             ax2.plot(list(range(0,len(all_over_gen[k]))),temp)
             #ax2[i].set_ylim([0.0, 1.0])
             #if i!=len(objectives)-1:
+            ax2.set_yscale('log')
+
             ax2.tick_params(
                 axis='x',          # changes apply to the x-axis
                 which='both',      # both major and minor ticks are affected
                 bottom=False,      # ticks along the bottom edge are off
                 top=False,         # ticks along the top edge are off
                 labelbottom=False) # labels along the bottom edge are off
-            h.set_rotation(90)
-          plt.xlabel('Generations')
-          plt.title("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)))
+            #h.set_rotation(90)
+        plt.xlabel('Generations')
+        plt.title("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)))
 
         #plt.savefig(str('history_plot_')+str(self.cell_name)+str(self.backend)+str('.png'))
 
