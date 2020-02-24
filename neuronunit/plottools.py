@@ -494,9 +494,9 @@ def elaborate_plots(self,ga_out):
             ax2.tick_params(
                 axis='x',          # changes apply to the x-axis
                 which='both',      # both major and minor ticks are affected
-                bottom=False,      # ticks along the bottom edge are off
-                top=False,         # ticks along the top edge are off
-                labelbottom=False) # labels along the bottom edge are off
+                bottom=True,      # ticks along the bottom edge are off
+                top=True,         # ticks along the top edge are off
+                labelbottom=True) # labels along the bottom edge are off
             #h.set_rotation(90)
         plt.xlabel('Generations')
         plt.title("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)))
