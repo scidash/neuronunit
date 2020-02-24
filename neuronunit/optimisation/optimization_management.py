@@ -778,7 +778,7 @@ def inject_passive_plot_model(pre_model):
     # get an object of class ReducedModel with known attributes and known rheobase current injection value.
     pre_model = dtc_to_rheo(pre_model)
     model = pre_model.dtc_to_model()
-    uc = {'amplitude':-10*qt.pA,'duration':500*qt.ms,'delay':100*qt.ms}
+    uc = {'amplitude':-10*pq.pA,'duration':500*pq.ms,'delay':100*pq.ms}
     model.inject_square_current(uc)
     vm = model.get_membrane_potential()
 
@@ -2497,7 +2497,7 @@ class OptMan():
         dtc.tests = self.preprocess(dtc)
         scores_ = []
         suite = TestSuite(dtc.tests)
-        
+
         for t in suite:
             if 'RheobaseTest' in t.name: t.score_type = sciunit.scores.ZScore
             if 'RheobaseTestP' in t.name: t.score_type = sciunit.scores.ZScore
