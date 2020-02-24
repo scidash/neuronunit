@@ -45,11 +45,14 @@ class APWidthTest(VmTest):
     score_type = scores.RatioScore
 
     units = pq.ms
+    print('gets here')
 
     ephysprop_name = 'Spike Half-Width'
-    def __init__():
+    def __init__(self,*args,**kwargs):
+        print(args)
+        print(kwargs)
         super(APWidthTest,self).__init__(*args,**kwargs)
-        self.verbose = False
+        #self.verbose = False
     def generate_prediction(self, model):
         """Implement sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
@@ -93,18 +96,11 @@ class APWidthTest(VmTest):
 class InjectedCurrentAPWidthTest(InjectedCurrent, APWidthTest):
     """Tests the full widths of APs at their half-maximum
     under current injection.
-
-
-    def __init__(self,**kwargs):
-        super(InjectedCurrentAPWidthTest, self).__init__()#*args,**kwargs)#*args, **kwargs)
-        #print(params)
-        #if str('params') in kwargs.keys():
-        #    self.params = kwargs['params']
-
-        #self.params['injected_square_current'] = {'amplitude': 100.0*pq.pA,
-        #                                          'delay': DELAY,
-        #                                          'duration': DURATION}
     """
+    def __init__(self,*args,**kwargs):
+    #    self = APWidthTest
+        super(InjectedCurrentAPWidthTest,self).__init__(*args,**kwargs)
+
     required_capabilities = (ncap.ReceivesSquareCurrent,)
 
     score_type = scores.ZScore
@@ -118,7 +114,7 @@ class InjectedCurrentAPWidthTest(InjectedCurrent, APWidthTest):
                    "is injected into cell.")
 
     def generate_prediction(self, model):
-        self.verbose = False
+        #self.verbose = False
         if self.verbose is True:
             print(self.params['injected_square_current'])
 
