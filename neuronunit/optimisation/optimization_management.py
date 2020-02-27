@@ -97,7 +97,7 @@ from sciunit import scores
 from neuronunit.optimisation.optimisations import SciUnitOptimisation
 import random
 from neuronunit.plottools import elaborate_plots
-from neuronunit.plottools import inject_and_plot
+#from neuronunit.plottools import inject_and_plot
 # Helper tests are dummy instances of NU tests.
 # They are used by other methods analogous to a base class,
 # these are base instances that become more derived
@@ -724,10 +724,9 @@ def dtc_to_rheo(dtc):
         dtc = get_rh(dtc,rtest)
     return dtc
 
-def inject_and_plot_passive_model(attrs,backend):
-    pre_model = DataTC()
-    pre_model.attrs = attrs
-    pre_model.backend = backend
+def inject_and_plot_passive_model(pre_model):
+
+    
     # get an object of class ReducedModel with known attributes and known rheobase current injection value.
     model = pre_model.dtc_to_model()
     DURATION = 500.0*pq.ms
@@ -735,6 +734,9 @@ def inject_and_plot_passive_model(attrs,backend):
     uc = {'amplitude':-10*pq.pA,'duration':DURATION,'delay':DELAY}
     model.inject_square_current(uc)
     vm = model.get_membrane_potential()
+    plt.figure()
+
+    plt.clf()
     plt.plot(vm.times,vm.magnitude)
     plt.show()
     return vm,plt
@@ -764,7 +766,7 @@ def inject_and_plot_model(pre_model):
     uc = {'amplitude':model.rheobase,'duration':DURATION,'delay':DELAY}
     model.inject_square_current(uc)
     vm = model.get_membrane_potential()
-
+    plt.clf()
     plt.figure()
     if pre_model.backend in str("HH"):
         plt.title('Hodgkin-Huxley Neuron')
@@ -871,7 +873,7 @@ def switch_logic(xtests):
             t.active = True
             t.passive = False
         elif str('RestingPotentialTest') == t.name:
-            t.passive = True
+            t.passive = False
             t.active = False
         elif str('InputResistanceTest') == t.name:
             t.passive = True
@@ -903,6 +905,15 @@ def active_values(keyed,rheobase,square = None):
         keyed['injected_square_current']['delay'] = square['Time_Start']
         keyed['injected_square_current']['amplitude'] = square['prediction']#value'])*pq.pA
 
+    return keyed
+
+def passive_values(keyed):
+    PASSIVE_DURATION = 500.0*pq.ms
+    PASSIVE_DELAY = 200.0*pq.ms
+    keyed['injected_square_current'] = {}
+    keyed['injected_square_current']['delay']= PASSIVE_DELAY
+    keyed['injected_square_current']['duration'] = PASSIVE_DURATION
+    keyed['injected_square_current']['amplitude'] = 0*pq.pA
     return keyed
 
 def passive_values(keyed):
@@ -2502,14 +2513,18 @@ class OptMan():
         for v in dtc.tests:
             k = v.name
             dtc.protocols[k] = {}
-            if hasattr(v,'active'): #['protocol']:
-                if v.passive == False and v.active == True:
-                    keyed = dtc.protocols[k]#.params
-                    dtc.protocols[k] = active_values(keyed,dtc.rheobase)
-            if hasattr(v,'passive'):
-                if v.passive == True and v.active == False:
-                    keyed = dtc.protocols[k]#.params
-                    dtc.protocols[k] = passive_values(keyed)
+            #if hasattr(v,'active'): #['protocol']:
+            if v.passive == False and v.active == True:
+                keyed = dtc.protocols[k]#.params
+                dtc.protocols[k] = active_values(keyed,dtc.rheobase)
+            #if hasattr(v,'passive'):
+            #if v.passive == True and v.active == False:
+            #    keyed = dtc.protocols[k]#.params
+            #    dtc.protocols[k] = passive_values(keyed)
+
+            #elif v.passive == False and v.active == False:
+            #    self.protocols[k]['injected_square_current']['amplitude'] = 0.0*pq.pA
+    
             if v.name in str('RestingPotentialTest'):
 
                 dtc.protocols[k]['injected_square_current']['amplitude'] = 0.0*pq.pA
