@@ -897,8 +897,8 @@ def active_values(keyed,rheobase,square = None):
         else:
             keyed['injected_square_current']['amplitude'] = rheobase
 
-        keyed['injected_square_current']['delay'] = DELAY
-        keyed['injected_square_current']['duration'] = DURATION
+        #keyed['injected_square_current']['delay'] = DELAY
+        #keyed['injected_square_current']['duration'] = DURATION
 
     else:
         keyed['injected_square_current']['duration'] = square['Time_End'] - square['Time_Start']
@@ -2525,9 +2525,8 @@ class OptMan():
             #elif v.passive == False and v.active == False:
             #    self.protocols[k]['injected_square_current']['amplitude'] = 0.0*pq.pA
     
-            if v.name in str('RestingPotentialTest'):
-
-                dtc.protocols[k]['injected_square_current']['amplitude'] = 0.0*pq.pA
+            #if v.name in str('RestingPotentialTest'):
+            #    dtc.protocols[k]['injected_square_current']['amplitude'] = 0.0*pq.pA
 
         return dtc
     @timer
