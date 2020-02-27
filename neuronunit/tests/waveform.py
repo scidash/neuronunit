@@ -228,10 +228,14 @@ class InjectedCurrentAPAmplitudeTest(InjectedCurrent, APAmplitudeTest):
 
     def extract_features(self, model):
         prediction = self.generate_prediction(model)
+        self.prediction = prediction
+
         return prediction
 
     def compute_score(self, observation, prediction):
         """Implement sciunit.Test.score_prediction."""
+        self.prediction = prediction
+
         if prediction['n'] == 0:
             score = scores.InsufficientDataScore(None)
         else:

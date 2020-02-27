@@ -465,11 +465,13 @@ def elaborate_plots(self,ga_out):
         for i,(k,v) in enumerate(objectives.items()):
             #if i < len(everything.select("avg")[0]):
 
-            ax2[i].logy(list(range(0,len(all_over_gen[k]))),all_over_gen[k])
+            ax2[i].plot(list(range(0,len(all_over_gen[k]))),all_over_gen[k])
             temp = [0 for i in range(0,len(all_over_gen[k])) ]
             ax2[i].plot(list(range(0,len(all_over_gen[k]))),temp)
             #ax2[i].set_ylim([0.0, 1.0])
             #if i!=len(objectives)-1:
+            ax2[i].set_yscale('log')
+
             ax2[i].tick_params(
                 axis='x',          # changes apply to the x-axis
                 which='both',      # both major and minor ticks are affected
@@ -485,9 +487,10 @@ def elaborate_plots(self,ga_out):
             ax2.plot(list(range(0,len(all_over_gen[k]))),all_over_gen[k])
             temp = [0 for i in range(0,len(all_over_gen[k])) ]
             ax2.plot(list(range(0,len(all_over_gen[k]))),temp)
-            ax2.set_yscale('log')
             #ax2[i].set_ylim([0.0, 1.0])
             #if i!=len(objectives)-1:
+            ax2.set_yscale('log')
+
             ax2.tick_params(
                 axis='x',          # changes apply to the x-axis
                 which='both',      # both major and minor ticks are affected
