@@ -543,15 +543,14 @@ def pred_only(test_and_models):
     (test, dtc) = test_and_models
     backend_ = dtc.backend
     model = dtc.dtc_to_model()
-    print(test.name)
 
-    if test.passive:
+    if test.passive or test.active is False:
         test.setup_protocol(model)
         pred = test.extract_features(model,test.get_result(model))
 
     else:
         pred = test.extract_features(model)
-    print(pred,'is this called?')
+
     return pred
 
 #from functools import partial
@@ -724,9 +723,10 @@ def dtc_to_rheo(dtc):
         dtc = get_rh(dtc,rtest)
     return dtc
 
-def inject_and_plot_passive_model(pre_model):
-
-    
+def inject_and_plot_passive_model(attrs,backend):
+    pre_model = DataTC()
+    pre_model.attrs = attrs
+    pre_model.backend = backend
     # get an object of class ReducedModel with known attributes and known rheobase current injection value.
     model = pre_model.dtc_to_model()
     DURATION = 500.0*pq.ms
@@ -734,9 +734,6 @@ def inject_and_plot_passive_model(pre_model):
     uc = {'amplitude':-10*pq.pA,'duration':DURATION,'delay':DELAY}
     model.inject_square_current(uc)
     vm = model.get_membrane_potential()
-    plt.figure()
-
-    plt.clf()
     plt.plot(vm.times,vm.magnitude)
     plt.show()
     return vm,plt
@@ -755,9 +752,7 @@ def mint_NEURON_model(dtc):
     return model
 
 def inject_and_plot_model(pre_model):
-    #pre_model = DataTC()
-    #pre_model.attrs = attrs
-    #pre_model.backend = backend
+
 
     # get rheobase injection value
     # get an object of class ReducedModel with known attributes and known rheobase current injection value.
@@ -777,6 +772,26 @@ def inject_and_plot_model(pre_model):
     #plt.plot(vm.times,vm.magnitude)
     return vm,plt
 
+def inject_passive_plot_model(pre_model):
+
+
+    # get rheobase injection value
+    # get an object of class ReducedModel with known attributes and known rheobase current injection value.
+    pre_model = dtc_to_rheo(pre_model)
+    model = pre_model.dtc_to_model()
+    uc = {'amplitude':-10*pq.pA,'duration':500*pq.ms,'delay':100*pq.ms}
+    model.inject_square_current(uc)
+    vm = model.get_membrane_potential()
+
+    plt.figure()
+    if pre_model.backend in str("HH"):
+        plt.title('Hodgkin-Huxley Neuron')
+    else:
+        plt.title('membrane potential plot')
+    plt.plot(vm.times, vm.magnitude, 'k')
+    plt.ylabel('V (mV)')
+    #plt.plot(vm.times,vm.magnitude)
+    return vm,plt
 
 def inject_and_not_plot_model(pre_model):
 
@@ -892,11 +907,11 @@ def switch_logic(xtests):
 def active_values(keyed,rheobase,square = None):
     keyed['injected_square_current'] = {}
     if square is None:
-        if type(rheobase) is type({str('k'):str('v')}):
+        if isinstance(rheobase,type(dict())):
             keyed['injected_square_current']['amplitude'] = float(rheobase['value'])*pq.pA
         else:
             keyed['injected_square_current']['amplitude'] = rheobase
-
+    """
         #keyed['injected_square_current']['delay'] = DELAY
         #keyed['injected_square_current']['duration'] = DURATION
 
@@ -904,16 +919,7 @@ def active_values(keyed,rheobase,square = None):
         keyed['injected_square_current']['duration'] = square['Time_End'] - square['Time_Start']
         keyed['injected_square_current']['delay'] = square['Time_Start']
         keyed['injected_square_current']['amplitude'] = square['prediction']#value'])*pq.pA
-
-    return keyed
-
-def passive_values(keyed):
-    PASSIVE_DURATION = 500.0*pq.ms
-    PASSIVE_DELAY = 200.0*pq.ms
-    keyed['injected_square_current'] = {}
-    keyed['injected_square_current']['delay']= PASSIVE_DELAY
-    keyed['injected_square_current']['duration'] = PASSIVE_DURATION
-    keyed['injected_square_current']['amplitude'] = 0*pq.pA
+    """
     return keyed
 
 def passive_values(keyed):
@@ -923,6 +929,15 @@ def passive_values(keyed):
     keyed['injected_square_current']['delay']= PASSIVE_DELAY
     keyed['injected_square_current']['duration'] = PASSIVE_DURATION
     keyed['injected_square_current']['amplitude'] = -10*pq.pA
+    return keyed
+
+def neutral_values(keyed):
+    PASSIVE_DURATION = 500.0*pq.ms
+    PASSIVE_DELAY = 200.0*pq.ms
+    keyed['injected_square_current'] = {}
+    keyed['injected_square_current']['delay']= PASSIVE_DELAY
+    keyed['injected_square_current']['duration'] = PASSIVE_DURATION
+    keyed['injected_square_current']['amplitude'] = 0*pq.pA
     return keyed
 
 
@@ -1798,6 +1813,49 @@ class OptMan():
             break
         self.helper_tests = helper_tests
 
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    @timer
+    def format_test(self,dtc):
+        '''
+        pre format the current injection dictionary based on pre computed
+        rheobase values of current injection.
+        This is much like the hooked method from the old get neab file.
+        '''
+        if type(dtc) is type(str()):
+            #from Exceptions import Raise
+            #from Error import Raise
+
+            print('error dtc is string')
+
+        #dtc.protocols = {}
+        if not hasattr(dtc,'tests'):
+            dtc.tests = copy.copy(self.tests)
+
+        if isinstance(dtc.tests,type(dict())):
+            for t in dtc.tests.values():
+                assert 'std' in t.observation.keys()
+
+
+        if hasattr(dtc.tests,'keys'):# is type(dict):
+            tests = [key for key in dtc.tests.values()]
+            dtc.tests = switch_logic(tests)#,self.tests.use_rheobase_score)
+        else:
+            dtc.tests = switch_logic(dtc.tests)
+        dtc.protocols = {}
+        for v in dtc.tests:
+            k = v.name
+            dtc.protocols[k] = {}
+            #dtc.protocols[k] = v.params
+            if v.passive == False and v.active == True:
+                keyed = dtc.protocols[k]#.params
+                temp = active_values(keyed,dtc.rheobase)
+                v.params['amplitude'] = temp['injected_square_current']['amplitude']
+                v.params['injected_square_current']['amplitude'] = temp['injected_square_current']['amplitude']
+
+
+        return dtc
+
 
     def new_single_gene(self,dtc,td):
         random.seed(datetime.now())
@@ -2327,7 +2385,7 @@ class OptMan():
             tests = {t.name:t for t in tests}
         for k,t in tests.items():
             #if str('RheobaseTest') != t.name and str('RheobaseTestP') != t.name:
-            t.params = dtc.protocols[k]
+            #t.params = dtc.protocols[k]
             test_and_models = (t, dtc)
             pred = pred_only(test_and_models)
             dtc.preds[str(t.name)] = pred
@@ -2395,7 +2453,7 @@ class OptMan():
             for t in tests:
                 k = str(t.name)
                 # it's critical that paramaters are assigned here
-                t.params = dtc.protocols[k]
+                #t.params = dtc.protocols[k]
 
 
                 try:
@@ -2405,7 +2463,7 @@ class OptMan():
                     self.tests.use_rheobase_score = True
                 if self.tests.use_rheobase_score == False and "RheobaseTest" in str(k):
                     continue
-                t.params = dtc.protocols[k]
+                #t.params = dtc.protocols[k]
                 if not 'std' in t.observation.keys():
                     t.observation['std'] = copy.copy(t.observation['mean'])
                 if float(t.observation['std']) == 0.0:
@@ -2427,7 +2485,6 @@ class OptMan():
         for t in suite:
             if 'RheobaseTest' in t.name: t.score_type = sciunit.scores.ZScore
             if 'RheobaseTestP' in t.name: t.score_type = sciunit.scores.ZScore
-
             if 'mean' not in t.observation.keys():
                 t.observation['mean'] = t.observation['value']
 
@@ -2484,51 +2541,6 @@ class OptMan():
                 dtc = self.elephant_evaluation((dtc,tests))
 
             return pop, dtc
-    @cython.boundscheck(False)
-    @cython.wraparound(False)
-    @timer
-    def format_test(self,dtc):
-        # pre format the current injection dictionary based on pre computed
-        # rheobase values of current injection.
-        # This is much like the hooked method from the old get neab file.
-        if type(dtc) is type(str()):
-            print('error dtc is string')
-            import pdb
-            pdb.set_trace()
-        dtc.protocols = {}
-        if not hasattr(dtc,'tests'):
-            dtc.tests = copy.copy(self.tests)
-
-        if type(dtc.tests) is type(dict()):
-            for t in dtc.tests.values():
-                assert 'std' in t.observation.keys()
-
-
-        if hasattr(dtc.tests,'keys'):# is type(dict):
-            tests = [key for key in dtc.tests.values()]
-            dtc.tests = switch_logic(tests)#,self.tests.use_rheobase_score)
-        else:
-            dtc.tests = switch_logic(dtc.tests)
-
-        for v in dtc.tests:
-            k = v.name
-            dtc.protocols[k] = {}
-            #if hasattr(v,'active'): #['protocol']:
-            if v.passive == False and v.active == True:
-                keyed = dtc.protocols[k]#.params
-                dtc.protocols[k] = active_values(keyed,dtc.rheobase)
-            #if hasattr(v,'passive'):
-            #if v.passive == True and v.active == False:
-            #    keyed = dtc.protocols[k]#.params
-            #    dtc.protocols[k] = passive_values(keyed)
-
-            #elif v.passive == False and v.active == False:
-            #    self.protocols[k]['injected_square_current']['amplitude'] = 0.0*pq.pA
-    
-            #if v.name in str('RestingPotentialTest'):
-            #    dtc.protocols[k]['injected_square_current']['amplitude'] = 0.0*pq.pA
-
-        return dtc
     @timer
     def make_simulated_observations(self,original_test_dic,backend,random_param,dsolution=None):
         #self.simulated_obs = True
