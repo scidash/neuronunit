@@ -9,6 +9,9 @@ from matplotlib import pyplot as plt
 
 from numba import jit
 
+class Neuron:
+    pass
+
 class FNNeuron(Neuron):
     """FitzHugh-Naguno neuron.
     The units in this model are different from the HH ones.
