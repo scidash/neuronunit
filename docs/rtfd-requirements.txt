@@ -1,2 +1,1 @@
-deap
-lmfit
+sphinxcontrib.apidoc
