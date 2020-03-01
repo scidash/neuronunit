@@ -41,6 +41,9 @@ apidoc_output_dir = '../build'
 apidoc_excluded_paths = ['*unit_test*']
 apidoc_separate_modules = True
 
+# The master toctree document.
+master_doc = 'index'
+
 # Add any paths that contain templates here, relative to this directory.
 #templates_path = ['_templates']
 
