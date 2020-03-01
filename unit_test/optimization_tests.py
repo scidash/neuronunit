@@ -66,11 +66,11 @@ from neuronunit import tests
 
 #test_0_run_exhaust()
 
-os.system('ipcluster start -n 8 --profile=default & sleep 5;')
-import ipyparallel as ipp
-rc = ipp.Client(profile='default')
-rc[:].use_cloudpickle()
-dview = rc[:]
+#os.system('ipcluster start -n 8 --profile=default & sleep 5;')
+#import ipyparallel as ipp
+#rc = ipp.Client(profile='default')
+#rc[:].use_cloudpickle()
+#dview = rc[:]
 
 class ReducedModelTestCase(unittest.TestCase):
     """Test instantiation of the reduced model"""

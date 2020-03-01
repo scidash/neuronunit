@@ -1,18 +1,22 @@
-scipy>=0.17
+allensdk==0.14.5
+bluepyopt
+dask[bag, distributed]
+deap
+elephant==0.4.1
+execnet
+igor==0.3
+lmfit
 matplotlib>=2.0
 neo==0.5.2
-elephant==0.4.1
-igor==0.3
-allensdk==0.14.5
-pyNeuroML @ git+https://github.com/rgerkin/pyneuroml@master#egg=pyneuroml-9999
-pyNN>=0.9
-execnet
-sciunit @ git+https://github.com/scidash/sciunit@dev#egg=sciunit-9999
-requests
-validators
-lmfit
+neuron
 numba
-dask[complete]
-deap
-bluepyopt @ git+https://github.com/russelljjarvis/BluePyOpt@scidash#egg=bluepyopt-9999
 pylmeasure
+pyNN
+pyNeuroML @ git+https://github.com/rgerkin/pyneuroml@master#egg=pyneuroml-9999
+radon
+requests
+sciunit @ git+https://github.com/scidash/sciunit@dev#egg=sciunit-9999
+scipy>=0.17
+seaborn
+sklearn
+validators

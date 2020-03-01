@@ -1,4 +1,5 @@
-from neuronunit.optimzation import optimization_management
+from neuronunit.optimization import optimization_management
+from deap import base, benchmarks, creator
 
 creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
 creator.create("Individual", list, fitness=creator.FitnessMin)

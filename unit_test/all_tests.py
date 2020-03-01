@@ -1,12 +1,3 @@
-"""Unit testing module for NeuronUnit"""
-
-import warnings
-
-import matplotlib as mpl
-
-mpl.use('Agg')  # Needed for headless testing
-warnings.filterwarnings('ignore')  # Suppress all warning messages
-
 from .base import *
 from .import_tests import ImportTestCase
 from .doc_tests import DocumentationTestCase
