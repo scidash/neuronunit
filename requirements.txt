@@ -8,10 +8,8 @@ igor==0.3
 lmfit
 matplotlib>=2.0
 neo==0.5.2
-neuron
 numba
 pylmeasure
-pyNN
 pyNeuroML @ git+https://github.com/rgerkin/pyneuroml@master#egg=pyneuroml-9999
 radon
 requests
