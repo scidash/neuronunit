@@ -24,6 +24,7 @@ setup(
     test_suite="neuronunit.unit_test.core_tests",
     install_requires=read_requirements(),
     extras_require={
-        'morphology': ['pylmeasure']
+        'morphology': ['pylmeasure'],
+        'simulators': ['neuron', 'pyNN'],
     }
 )
