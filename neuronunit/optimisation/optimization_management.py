@@ -1796,7 +1796,7 @@ class OptMan():
         self.simulated_data_tests = self.round_trip_test
         # note this is not effective at changing parallel behavior yet
         if PARALLEL_CONFIDENT not in globals():
-            self.PARALLEL_CONFIDENT = False
+            self.PARALLEL_CONFIDENT = True
         else:
             self.PARALLEL_CONFIDENT = PARALLEL_CONFIDENT
         if verbosity is None:
@@ -2229,7 +2229,10 @@ class OptMan():
                 print(results)
                 print(ga_out['pf'][0].dtc.attrs)
             left = ga_out['pf'][0].dtc.tests
-            closeness_,_,_ = self.closeness(left,new_tests)
+            try:
+                closeness_,_,_ = self.closeness(left,new_tests)
+            except:
+                pass
             #inject_and_plot(ga_converged,second_pop=test_origin_target,third_pop=[ga_converged[0]],figname='not_a_problem.png',snippets=True)
             return ga_out,ga_converged,test_origin_target,new_tests,closeness_
 
@@ -2474,13 +2477,13 @@ class OptMan():
         # inform test error error_criterion
         # Outputs Neuron Unit evaluation scores over error criterion
         model = dtc.dtc_to_model()
+        scores_ = []
         if not hasattr(dtc,'scores') or dtc.scores is None:
             dtc.scores = None
             dtc.scores = {}
             if hasattr(dtc,'SA'):
                 pass
         dtc.tests = self.preprocess(dtc)
-        scores_ = []
         suite = TestSuite(dtc.tests)
         for t in suite:
             if 'RheobaseTest' in t.name: t.score_type = sciunit.scores.ZScore
@@ -2510,37 +2513,46 @@ class OptMan():
         obs = {}
         pred = {}
         temp = {t.name:t for t in dtc.tests}
+ 
         if dtc.rheobase is not None:
-            similarity,lps,rps =  self.closeness(temp,temp)
-            scores_ = {}
-            for k,p,o in zip(list(similarity.keys()),lps,rps):
-                obs[k] = o
-                pred[k] = p
+            scores_d = {}
+            for k in dtc.SA.keys():
                 if hasattr(dtc.SA[k],'score'):
-                    scores_[k] = dtc.SA[k].score
+                    scores_d[k] = dtc.SA[k].score
                 else:
-                    scores_[k] = dtc.SA[k]
-            scores_["total"] = np.sum([ np.abs(v) for v in scores_.values()])
-            dtc.obs_preds = pd.DataFrame([obs,pred,scores_],index=['observations','predictions','scores'])
-            assert dtc.SA is not None
+                    scores_d[k] = dtc.SA[k]
+                    scores_d["total"] = np.sum([ np.abs(v) for v in scores_d.values()])
+ 
+            pre = len(temp)
+            post = len({k:v for k,v in temp.items() if hasattr(v,'prediction')})
+            if pre == post:
+                similarity,lps,rps =  self.closeness(temp,temp)
+                scores_ = {}
+                for k,p,o in zip(list(similarity.keys()),lps,rps):
+                    obs[k] = o
+                    pred[k] = p
+                dtc.obs_preds = pd.DataFrame([obs,pred,scores_d],index=['observations','predictions','scores'])
+            else:
+                print('sys log no prediction')
+        assert dtc.SA is not None
         return dtc
 
 
-        @timer
-        def serial_route(self,pop,td,tests):
-            '''
-            parallel list mapping only works with an iterable collection.
-            Serial route is intended for single items.
-            '''
-            if type(dtc.rheobase) is type(None):
-                for t in tests:
-                    dtc.scores[t.names] = 1.0
-                    dtc.get_ss()
-            else:
-                dtc = self.format_test((dtc,tests))
-                dtc = self.elephant_evaluation((dtc,tests))
+    @timer
+    def serial_route(self,pop,td,tests):
+        '''
+        parallel list mapping only works with an iterable collection.
+        Serial route is intended for single items.
+        '''
+        if type(dtc.rheobase) is type(None):
+            for t in tests:
+                dtc.scores[t.names] = 1.0
+                dtc.get_ss()
+        else:
+            dtc = self.format_test((dtc,tests))
+            dtc = self.elephant_evaluation((dtc,tests))
 
-            return pop, dtc
+        return pop, dtc
     @timer
     def make_simulated_observations(self,original_test_dic,backend,random_param,dsolution=None):
         #self.simulated_obs = True
@@ -2709,6 +2721,7 @@ class OptMan():
             xargs = zip(pop,repeat(self.td),repeat(self.backend))
             npart = np.min([multiprocessing.cpu_count(),len(pop)])
             bag = db.from_sequence(xargs, npartitions = npart)
+
             dtcpop = list(bag.map(transform).compute())
             if self.verbose:
                 print(dtcpop)
@@ -2885,14 +2898,14 @@ class OptMan():
 
                 for d in dtcpop:
                     assert hasattr(d, 'tests')
-                    assert dtc.SA is not None
+                    assert d.SA is not None
 
                 for d in dtcpop:
                     d.tests = copy.copy(self.tests)
 
             if not self.PARALLEL_CONFIDENT:
-                dtcpop = list(map(self.format_test,dtcpop))
-                dtcpop = list(map(self.elephant_evaluation,dtcpop))
+                dtcpop = iter(map(self.format_test,dtcpop))
+                dtcpop = iter(map(self.elephant_evaluation,dtcpop))
 
                 for d in dtcpop:
                     d.tests = copy.copy(self.tests)
