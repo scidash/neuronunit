@@ -28,20 +28,19 @@ import hide_imports
 
 plt.clf()
 import copy
-get_ipython().run_line_magic('matplotlib', 'inline')
+#get_ipython().run_line_magic('matplotlib', 'inline')
 
 def permutations(use_test,backend):
     use_test = hide_imports.TSD(use_test)
     use_test.use_rheobase_score = True
     edges = hide_imports.model_parameters.MODEL_PARAMS[backend]
-    ga_out0 = use_test.optimize(edges,backend=backend,        protocol={'allen': False, 'elephant': True}, MU=8,NGEN=1)
-    ga_out1 =  use_test.optimize(edges,backend=backend,        protocol={'allen': False, 'elephant': True},            MU=8,NGEN=8,seed_pop=ga_out0['pf'][0])
+    ga_out0 = use_test.optimize(edges,backend=backend,        protocol={'allen': False, 'elephant': True}, MU=100,NGEN=100)
 
     
-    dtc = ga_out1['pf'][0].dtc
-    vm,plt = hide_imports.inject_and_plot_model(dtc.attrs,dtc.backend)
+    dtc = ga_out0['pf'][0].dtc
+    vm,plt = hide_imports.inject_and_plot_model(dtc)
     plt.show()
-    return dtc, ga_out1['DO'], vm
+    return dtc, ga_out0['DO'], vm
 
 
 # In[4]:
