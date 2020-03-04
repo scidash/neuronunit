@@ -5,44 +5,46 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import hide_imports
 import copy
-plt.plot([0,1],[1,0])
-plt.show()
-
+#plt.plot([0,1],[1,0])
+#plt.show()
+mpl.use('agg')
 plt.clf()
 
-def permutations(use_test,backend,MU=100,NGEN=100):
+def permutations(use_test,backend,MU=4,NGEN=100):
     use_test = hide_imports.TSD(use_test)
     use_test.use_rheobase_score = True
     edges = hide_imports.model_parameters.MODEL_PARAMS[backend]
     ga_out = use_test.optimize(edges,backend=backend,protocol={'allen': False, 'elephant': True}, MU=MU,NGEN=NGEN)
     dtc = ga_out['pf'][0].dtc
     vm,plt = hide_imports.inject_and_plot_model(dtc)
-    return dtc, ga_out1['DO'], vm
+    plt.savefig("for_example.png")
+    return dtc, ga_out['DO'], vm
 
-
-#test_frame.pop('Olfactory bulb (main) mitral cell',None)
+test_frame = hide_imports.test_frame
+test_frame.pop('Olfactory bulb (main) mitral cell',None)
 OMObjects = []
 backends = ["RAW","HH"]#"ADEXP","BHH"]
 t = test_frame['Neocortex pyramidal cell layer 5-6']
 
 
-backends = ["RAW","HH","ADEXP","BHH"]
+backends = ["RAW","HH"]#,"ADEXP","BHH"]
 
-
+MU = 75
+NGEN = 10
 for t in test_frame.values():
     b = backends[0]
     (dtc,DO,vm) = permutations(copy.copy(t),b,MU,NGEN)
-    display(dtc.SM)
-    display(dtc.obs_preds)
+    #display(dtc.SM)
+    #display(dtc.obs_preds)
 
 
 for t in test_frame.values():
     b = backends[1]
     (dtc,DO,vm) = permutations(copy.copy(t),b)
-    display(dtc.SM)
-    display(dtc.obs_preds)
-    plt.plot(vm.times,vm.magnitude)
-    plt.show()
+    #display(dtc.SM)
+    #display(dtc.obs_preds)
+    #plt.plot(vm.times,vm.magnitude)
+    #plt.show()
 
 
 # In[ ]:
@@ -52,10 +54,10 @@ for t in test_frame.values():
     #for b in backends:
     b = backends[2]
     (dtc,DO,vm) = permutations(copy.copy(t),b)
-    display(dtc.SM)
-    display(dtc.obs_preds)
-    plt.plot(vm.times,vm.magnitude)
-    plt.show()
+    #display(dtc.SM)
+    #display(dtc.obs_preds)
+    #plt.plot(vm.times,vm.magnitude)
+    #plt.show()
 
 
 # In[ ]:
