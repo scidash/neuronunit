@@ -29,6 +29,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import dask.bag as db
+import dask.delayed as delay
 import pandas as pd
 import pickle
 # The rheobase has been obtained seperately and cannot be db mapped.
@@ -1813,9 +1814,10 @@ class OptMan():
             break
         self.helper_tests = helper_tests
 
-    @cython.boundscheck(False)
-    @cython.wraparound(False)
-    @timer
+    #@cython.boundscheck(False)
+    #@cython.wraparound(False)
+    #@timer
+    #@delay
     def format_test(self,dtc):
         '''
         pre format the current injection dictionary based on pre computed
@@ -2886,15 +2888,15 @@ class OptMan():
             #print(len(dtcpop),'length after filtering')
             if self.PARALLEL_CONFIDENT:# and self.backend is not str('ADEXP'):
                 passed = False
-
+                print(NPART,'number of petitions used')
                 dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
-                dtcpop = list(dtcbag.map(self.format_test).compute())
+                dtcpop = dtcbag.map(self.format_test).compute()
                 passed = True
-                #except:
-                #    dtcpop = list(map(self.format_test,dtcpop))
+                if not passed:
+                    self.PARALLEL_CONFIDENT = False
 
                 dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
-                dtcpop = list(dtcbag.map(self.elephant_evaluation).compute())
+                dtcpop = dtcbag.map(self.elephant_evaluation).compute()
 
                 for d in dtcpop:
                     assert hasattr(d, 'tests')
