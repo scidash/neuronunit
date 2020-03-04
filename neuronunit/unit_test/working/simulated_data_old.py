@@ -126,85 +126,25 @@ three = hide_imports.TSD([simulated_data_tests["InjectedCurrentAPWidthTest"],sim
 three = three['pf'][0].dtc
 three.obs_preds
 
-
-# # How about using all the objectives together?
-# 
-
-# In[11]:
-
-
-ga_out = simulated_data_tests.optimize(OMObjects[0].boundary_dict,backend=OMObjects[0].backend,        protocol={'allen': False, 'elephant': True},            MU=20,NGEN=20)
+ga_out = simulated_data_tests.optimize(OMObjects[0].boundary_dict,backend=OMObjects[0].backend, protocol={'allen': False, 'elephant': True}, MU=100,NGEN=100)
 opt = ga_out['pf'][0].dtc
 front = [ind.dtc for ind in ga_out['pf']]
-
-
-# In[ ]:
-
-
-
-
-
-# In[12]:
 
 
 opt.rheobase
 
 
-# In[13]:
-
 
 inject_and_plot_model(opt)
 
 
-# In[14]:
-
 
 opt.obs_preds
-
-
-# In[ ]:
-
-
-
-
-
-# In[15]:
-
-
-model = opt.dtc_to_model()
-score = simulated_data_tests['TimeConstantTest'].judge(model)
-pred = simulated_data_tests['TimeConstantTest'].prediction
-print(pred)
-
-
-# In[19]:
-
 
 from neuronunit.optimisation.optimization_management import check_match_front
 check_match_front(target,front[0:10])
 
 
-# In[ ]:
-
 
 from neuronunit.optimisation.algorithms import cleanse
 seed_pop = cleanse(copy.copy(ga_out['pf']))
-OMObjects.MU =6
-ga_out = simulated_data_tests.optimize(OMObjects[0].boundary_dict,backend=OMObjects[0].backend,\
-        protocol={'allen': False, 'elephant': True},\
-            MU=6,NGEN=6,seed_pop=seed_pop)
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# ##### 
