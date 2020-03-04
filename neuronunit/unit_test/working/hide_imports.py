@@ -40,6 +40,6 @@ from neuronunit.optimisation.optimisations import run_ga
 from neuronunit.optimisation import model_parameters
 from neuronunit.optimisation import mint_tests
 from neuronunit.optimisation import get_neab
-#test_frame = get_neab.process_all_cells()
-#test_frame.pop('Olfactory bulb (main) mitral cell',None)
+test_frame = get_neab.process_all_cells()
+test_frame.pop('Olfactory bulb (main) mitral cell',None)
 from IPython.display import HTML, display

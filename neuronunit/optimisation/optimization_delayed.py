@@ -869,12 +869,7 @@ def switch_logic(xtests):
     '''
     Hopefuly depreciated by future NU debugging.
     '''
-    try:
-        aTSD = TSD()
-    except:
-        #basically an object defined in this file:
-        aTSD = neuronunit.optimisation.optimization_management.TSD()
-
+    aTSD = neuronunit.optimisation.optimization_delayed.TSD()
     if type(xtests) is type(aTSD):
         xtests = list(xtests.values())
     if type(xtests) is type(list()):
