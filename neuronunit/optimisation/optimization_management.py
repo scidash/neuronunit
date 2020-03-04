@@ -1712,17 +1712,18 @@ def add_constant(hold_constant, pop, td):
     return pop,td
 
 def filtered(pop,dtcpop):
+    '''
     NPART = min(npartitions,len(dtcpop))
 
     # the fast way:
     dtcbag = db.from_sequence(dtcpop, npartitions = NPART)                
-    dtcbag = dtcbag.filter(lambda dtc: not hasattr(dtc,'rheobase'))
+    #dtcbag = dtcbag.filter(lambda dtc: not hasattr(dtc,'rheobase'))
     dtcpop_ = list(dtcbag.filter(lambda dtc: not isinstance(type(dtc.rheobase),type(None))).compute())
 
     dtcbag = db.from_sequence(pop, npartitions = NPART)                
-    dtcbag = dtcbag.filter(lambda dtc: not hasattr(dtc,'rheobase'))
+    #dtcbag = dtcbag.filter(lambda dtc: not hasattr(dtc,'rheobase'))
     pop_ = list(dtcbag.filter(lambda dtc: not isinstance(type(dtc.rheobase),type(None))).compute())
-
+    '''
     # The slow way
     dtcpop = [ dtc for dtc in dtcpop if type(dtc.rheobase) is not type(None) ]
     pop = [ p for p in pop if type(p.rheobase) is not type(None) ]
@@ -1730,8 +1731,8 @@ def filtered(pop,dtcpop):
     if len(pop) != len(dtcpop):
         print('fatal')
     assert len(pop) == len(dtcpop)
-    assert len(pop_) == len(pop)
-    assert len(dtcpop_) == len(dtcpop)
+    #assert len(pop_) == len(pop)
+    #assert len(dtcpop_) == len(dtcpop)
     return pop, dtcpop
 
 
