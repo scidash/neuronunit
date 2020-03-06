@@ -368,7 +368,7 @@ def elaborate_plots(self,ga_out,savefigs=False):
     #plt.figure()
 
     if len(objectives)>1:
-        fig2, ax2 = plt.subplots(len(objectives)+1,1,figsize=(10,10))
+        fig2, ax2 = plt.subplots(len(objectives)+1,1,figsize=(50,50),facecolor='white')
         for i,(k,v) in enumerate(objectives.items()):
 
             ax2[i].plot(list(range(0,len(all_over_gen[k]))),all_over_gen[k])
