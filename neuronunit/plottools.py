@@ -275,9 +275,9 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                 plt.show()
     return [dtc,second_pop,third_pop]
 
-def elaborate_plots(self,ga_out):
+def elaborate_plots(self,ga_out,savefigs=False):
     plt.style.use('ggplot')
-    fig, axes = plt.subplots(figsize=(10, 10), facecolor='white')
+    fig, axes = plt.subplots(figsize=(50, 50), facecolor='white')
     '''
     Move to slides
     The plot shows the mean error value of the population as the GA evolves it's population. The red interval at any instant is the standard deviation of the error. The fact that the mean GA error is able to have a net upwards trajectory, after experiencing a temporary downwards trajectory, demonstrates that the GA retains a drive to explore, and is resiliant against being stuck in a local minima. Also in the above plot population variance in error stays remarkably constant, in this way BluePyOpts selection criteria SELIBEA contrasts with DEAPs native selection strategy NSGA2
@@ -342,110 +342,17 @@ def elaborate_plots(self,ga_out):
     axes.set_ylabel('Sum of objectives')
     axes.legend()
     fig.tight_layout()
-    #plt.savefig(str('classic_evolution_')+str(self.cell_name)+str(self.backend)+str('.png'))
-    plt.show()
-    plt.clf()
-    #except:
-    #    print('mistake, plotting routine access logbook stats')
+    if savefigs:
+        plt.savefig(str('classic_evolution_')+str(self.backend)+str('.png'))
+    else:
+        plt.show()
 
-    #sns.set_style("darkgrid")
-    plt.figure()
-    sns.set_style("darkgrid")
+    plt.style.use('ggplot')
+    fig, axes = plt.subplots(figsize=(50, 50), facecolor='white')
+
     logbook = ga_out['log']
-    """
-    fig2, ax2 = plt.subplots(len(objectives)+2,1,figsize=(10,10))
 
     plt.clf()
-    plt.figure()
-    sns.set_style("darkgrid")
-
-    gen = logbook.select("gen")
-    fit_min = logbook.select("min")
-    fit_max = logbook.select("max")
-    fit_avg = logbook.select("avg")
-
-    for i,k in enumerate(objectives):
-        mean = [i['avg'] for i in logbook ]
-        std = [i['std'] for i in logbook ]
-        minimum = [i['min'] for i in logbook ]
-
-        gen_numbers = [i['gen'] for i in logbook ]
-        #gen_numbers =[ i for i in range(0,len(log.select('gen'))) ]
-        #mean = np.array([ np.sum(i) for i in log.select('avg')])
-        #std = np.array([ np.sum(i) for i in log.select('std')])
-        #minimum = np.array([ np.sum(i) for i in log.select('min')])
-
-        stdminus = np.array(mean) - np.array(std)
-        stdplus = np.array(mean) + np.array(std)
-
-        if i < len(mean[0]):
-            #[j[i] for j in everything.select("avg")]
-            line2 = ax2[i].plot([j[i] for j in avg], "r-", label="Evolution objectives")
-
-            #[j[i] for j in avg]
-            #ax2[i].set_ylim([0.0, 1.0])
-            #if i!=len(objectives):
-            ax2[i].tick_params(
-                axis='x',          # changes apply to the x-axis
-                which='both',      # both major and minor ticks are affected
-                bottom=False,      # ticks along the bottom edge are off
-                top=False,         # ticks along the top edge are off
-                labelbottom=False) # labels along the bottom edge are off
-            ax2[len(objectives)].plot(
-                gen_numbers,
-                mean,
-                color='black',
-                linewidth=2,
-                label='population average')
-
-
-            stdplus = [i[0] for i in stdplus]
-            stdminus = [i[0] for i in stdminus]
-            #fit_min = [i[0] for i in fit_min]
-            ax2[len(objectives)].fill_between(gen_numbers, stdminus, stdplus)
-            ax2[len(objectives)].plot(gen_numbers, stdminus, label='std variation lower limit')
-            ax2[len(objectives)].plot(gen_numbers, stdplus, label='std variation upper limit')
-            ax2[len(objectives)].set_xlim(np.min(gen_numbers) - 1, np.max(gen_numbers) + 1)
-            h = ax2[len(objectives)].set_xlabel("NeuronUnit Test: {0}".format(k))
-    #plt.savefig(str('reliable_history_plot_')+str(self.cell_name)+str(self.backend)+str('.png'))
-    plt.show()
-    """
-
-    """
-    plt.clf()
-    plt.figure()
-
-
-    #logbook = ga_out['log']
-    logbook = ga_out['log']
-    #ret = logbook.chapters
-    #logbook = ret['fitness']
-    fit_avg = [i['avg'] for i in logbook ]
-    gen = [i['gen'] for i in logbook ]
-
-    #gen = logbook.select("gen")
-    fit_min = [i['min'] for i in logbook ]
-    fit_max = [i['max'] for i in logbook ]
-
-    #fit_mins = logbook.select("min")
-    #fit_max = logbook.select("max")
-    #fit_avgs = logbook.select("avg")
-
-
-    fig, ax1 = plt.subplots(figsize=(10,10))
-    line1 = ax1.plot(gen, fit_min, "r-", label="Minimum Fitness")
-    line2 = ax1.plot(gen, fit_avg, "g-", label="Average Fitness")
-    line3 = ax1.plot(gen, fit_max, "b-", label="Maximum Fitness")
-    ax1.set_xlabel("Generation")
-    ax1.set_ylabel("Fitness out of: {0}".format(len(objectives)))
-    lns = line1 + line2 + line3
-    labs = [l.get_label() for l in lns]
-    ax1.legend(lns, labs, loc="center right")
-    #plt.show()
-    plt.show()
-    """
-    plt.clf()
-
     plt.figure()
     sns.set_style("darkgrid")
 
@@ -463,13 +370,11 @@ def elaborate_plots(self,ga_out):
     if len(objectives)>1:
         fig2, ax2 = plt.subplots(len(objectives)+1,1,figsize=(10,10))
         for i,(k,v) in enumerate(objectives.items()):
-            #if i < len(everything.select("avg")[0]):
 
             ax2[i].plot(list(range(0,len(all_over_gen[k]))),all_over_gen[k])
             temp = [0 for i in range(0,len(all_over_gen[k])) ]
             ax2[i].plot(list(range(0,len(all_over_gen[k]))),temp)
-            #ax2[i].set_ylim([0.0, 1.0])
-            #if i!=len(objectives)-1:
+
             ax2[i].set_yscale('log')
 
             ax2[i].tick_params(
@@ -502,46 +407,11 @@ def elaborate_plots(self,ga_out):
         plt.title("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)))
 
         #plt.savefig(str('history_plot_')+str(self.cell_name)+str(self.backend)+str('.png'))
+    if savefigs:
+        plt.savefig(str('error_component_evolution')+str(self.cell_name)+str(self.backend)+str('.png'))
+    else:
+        plt.show()
 
-    plt.show()
-    """
-    ga_out['history_plot_'] = (fig2,plt)
-    plt.clf()
-    plt.figure()
-    sns.set_style("darkgrid")
-    all_over_gen = {}
-    for i,k in enumerate(objectives):
-        all_over_gen[k] = []
-        for gen in ga_out['gen_vs_pop']:
-            sorted_pop = sorted([(np.sum(ind.fitness.values),ind) for ind in gen if len(ind.fitness.values)==len(objectives) ], key=lambda tup: tup[0])
-            ind = sorted_pop[0][1]
-            all_over_gen[k].append(ind.fitness.values[i])# if type(ind.dtc) is not type(None) ]
-
-
-
-    fig2, ax2 = plt.subplots(len(objectives)+1,1,figsize=(10,10))
-    for i,k in enumerate(objectives):
-        ax2[i].plot(list(range(0,len(all_over_gen[k]))),all_over_gen[k])
-        temp = [0 for i in range(0,len(all_over_gen[k])) ]
-        ax2[i].plot(list(range(0,len(all_over_gen[k]))),temp)
-        #ax2[i].set_ylim([0.0, 1.0])
-        #if i!=len(objectives)-1:
-        ax2[i].tick_params(
-            axis='x',          # changes apply to the x-axis
-            which='both',      # both major and minor ticks are affected
-            bottom=False,      # ticks along the bottom edge are off
-            top=False,         # ticks along the top edge are off
-            labelbottom=False) # labels along the bottom edge are off
-        h = ax2[i].set_xlabel("NeuronUnit Test: {0}".format(k))
-        #h.set_rotation(90)
-    #plt.savefig(str('crazy_plot_')+str(self.cell_name)+str(self.backend)+str('.png'))
-    plt.show()
-    plt.clf()
-    plt.figure()
-
-
-    ga_out['crazy_plot_'] = (fig2,plt)
-    """
     return ga_out
 
 
