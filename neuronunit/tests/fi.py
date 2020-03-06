@@ -370,8 +370,8 @@ class RheobaseTestP(RheobaseTest):
                 model.inject_square_current(uc)
 
                 vm = model.get_membrane_potential()
-                one_d = [v[0] for v in vm.magnitude]
-                peak_idx,_ = find_peaks(one_d,threshold=0)
+                one_d = [float(v[0]) for v in vm.magnitude]
+                peak_idx,_ = find_peaks(one_d,threshold=0.010)
                 n_spikes = len(peak_idx)
 
 
