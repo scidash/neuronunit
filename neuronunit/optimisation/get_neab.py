@@ -193,7 +193,7 @@ def get_neuron_criteria(cell_id,file_name = None):#,observation = None):
     observations = {}
     for index, t in enumerate(test_classes):
         obs = t.neuroelectro_summary_observation(cell_id)
-        
+
         if obs is not None:
             if 'mean' in obs.keys():
                 print(test_classes[index])
@@ -311,7 +311,7 @@ def process_all_cells():
             assert hasattr(t,'passive')
         for t in filtered_cells[key].tests:
             assert hasattr(t,'active')
-            assert hasattr(t,'passive')	
+            assert hasattr(t,'passive')
         """
         with open('processed_multicellular_constraints.p','wb') as f:
            pickle.dump(filtered_cells,f)
