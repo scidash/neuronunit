@@ -43,14 +43,15 @@ from neuronunit.capabilities.spike_functions import get_spike_waveforms, spikes2
 #fig.plot([1,0], [0,1])
 
 try:
-	import asciiplotlib as apl
-	fig = apl.figure()
-	fig.plot([0,1], [0,1], label=str('spikes: '), width=100, height=20)
-	fig.show()
-	import gc
+    import asciiplotlib as apl
+    fig = apl.figure()
+    fig.plot([0,1], [0,1], label=str('spikes: '), width=100, height=20)
+    fig.show()
+    import gc
     ascii_plot = True
 except:
     ascii_plot = False
+
 def asciplot_code(vm,spkcnt):
     t = [float(f) for f in vm.times]
     v = [float(f) for f in vm.magnitude]
@@ -393,7 +394,7 @@ class RheobaseTestP(RheobaseTest):
                 model.inject_square_current(current)
                 n_spikes = model.get_spike_count()
                 vm = model.get_membrane_potential()
-				if ascii_plot:
+                if False:
 	                asciplot_code(vm,n_spikes)
 
 
