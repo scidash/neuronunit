@@ -1,6 +1,8 @@
 """Optimisation class This file is part of BluePyOpt <https://github.com/BlueBrain/BluePyOpt>"""
 # https://deap.readthedocs.io/en/master/tutorials/basic/part3.html
 from neuronunit.optimisation import optimization_management
+from neuronunit.optimisation import exhaustive_search as es
+from neuronunit.optimisation import optimization_management as om
 
 import random
 import functools
@@ -12,12 +14,10 @@ import deap.algorithms
 import deap.tools as tools
 
 from . import algorithms
-#from . import tools
 
-#import bluepyopt.optimisations
 import numpy
 from numba import jit
-#import bluepyopt.optimisations
+import dask
 
 import logging
 logger = logging.getLogger('__main__')
@@ -30,8 +30,6 @@ logger = logging.getLogger('__main__')
 import numpy as np
 from collections import Iterable, OrderedDict
 
-from neuronunit.optimisation import exhaustive_search as es
-from neuronunit.optimisation import optimization_management as om
 
 #import neuronunit.optimisation.optimization_management as om
 
@@ -163,7 +161,7 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
         return mps, tl
 
     def setnparams(self, nparams = 10, boundary_dict = None):
-        self.params = optimization_management.create_subset(nparams = nparams,boundary_dict = boundary_dict)
+        self.params = om.create_subset(nparams = nparams,boundary_dict = boundary_dict)
         self.params, self.td = self.transdict(boundary_dict)
         return self.params, self.td
 
@@ -171,7 +169,7 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
         if self.benchmark == True:
             self.toolbox.register("evaluate", benchmarks.zdt1)
         else:
-            self.toolbox.register("evaluate", optimization_management.evaluate)
+            self.toolbox.register("evaluate", om.evaluate)
 
     def grid_sample_init(self, nparams):
         '''
@@ -348,7 +346,12 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
 
             invalid_dtc = [ i.dtc for i in invalid_pop if hasattr(i,'dtc') ]
             assert len(invalid_pop) == len(invalid_dtc)
-            fitnesses = list(map(om.evaluate, invalid_dtc))
+            lazy = []
+            for i in invalid_dtc:
+                lazy.append(om.evaluate(i))
+
+            fitnesses = dask.compute(lazy)[0]
+            #fitnesses = list(map(om.evaluate, invalid_dtc))
             return (invalid_pop,fitnesses)
 
         self.toolbox.register("evaluate", custom_code)

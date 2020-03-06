@@ -2,6 +2,7 @@
 # coding: utf-8
 
 # In[1]:
+"""
 import sys
 import traceback
 
@@ -12,7 +13,7 @@ class TracePrints(object):
         self.stdout.write("Writing %r\n" % s)
         traceback.print_stack(file=self.stdout)
 sys.stdout = TracePrints()
-
+"""
 #get_ipython().run_line_magic('matplotlib', 'inline')
 #plt.plot([0,1],[1,0])
 #plt.show()
@@ -85,6 +86,8 @@ tests = get_neab.process_all_cells()
 
 
 def get_table(tests):
+    import pdb
+    pdb.set_trace()
     temp = {t.name:t for t in tests}
     from neuronunit.optimisation.optimization_management import OptMan
     import pandas as pd
