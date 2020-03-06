@@ -994,6 +994,7 @@ def get_dtc_pop(contains_dtcpop,filtered_tests,model_parameters,backend = 'ADEXP
         dtcpop = []
         for i in v:
             dtcpop.append(transform((i,DO.td,backend)))
+            dtcpop[-1] = dask.compute(dtcpop[-1])
             dtcpop[-1].backend = backend
             dtcpop[-1] = DO.OptMan.dtc_to_rheo(dtcpop[-1])
             dtcpop[-1] = DO.OptMan.format_test(dtcpop[-1])
@@ -1690,7 +1691,7 @@ def get_trans_list(param_dict):
 
 from sciunit import scores
 
-
+@dask.delayed
 def transform(xargs):
     (ind,td,backend) = xargs
     dtc = DataTC()
@@ -2561,7 +2562,7 @@ class OptMan():
 
         obs = {}
         pred = {}
-        temp = {t.name:t for t in dtc.tests}
+        temp = {t.name:t for t in dtc.tests if hasattr(t,'prediction')}
         if dtc.rheobase is not None:
             similarity,lps,rps =  self.closeness(temp,temp)
             scores_ = {}
@@ -2825,10 +2826,10 @@ class OptMan():
             _backend = self.backend
         if isinstance(pop, Iterable):# and type(pop[0]) is not type(str('')):
             xargs = zip(pop,repeat(self.td),repeat(self.backend))
-            npart = np.min([multiprocessing.cpu_count(),len(pop)])
-            bag = db.from_sequence(xargs, npartitions = npart)
-
-            dtcpop = list(bag.map(transform).compute())
+            lazy = []
+            for x in xargs:
+                lazy.append(transform(x))
+            dtcpop = dask.compute(lazy)[0]
             if self.verbose:
                 print(dtcpop)
             assert len(dtcpop) == len(pop)
@@ -2852,7 +2853,7 @@ class OptMan():
             # In this case pop is not really a population but an individual
             # but parsimony of naming variables
             # suggests not to change the variable name to reflect this.
-            dtc = [ transform(xargs) ]
+            dtc = [ dask.compute(transform(xargs)) ]
             dtc.boundary_dict = None
             dtc.boundary_dict = self.boundary_dict
             return dtc
@@ -3005,9 +3006,9 @@ class OptMan():
                     i = self.elephant_evaluation_delayed(i)
                     lazy.append(i)
                 dtcpop = dask.compute(lazy,schedular='distributed')[0]
-                dtcbag = db.from_sequence(dtcpop, npartitions = NPART)                
-                dtcpop = list(dtcbag.filter(lambda dtc: not hasattr(dtc,'rheobase')).compute())
-                dtcpop = list(dtcbag.filter(lambda dtc: not isinstance(type(dtc.rheobase),type(None))).compute())
+                #dtcbag = db.from_sequence(dtcpop, npartitions = NPART)                
+                #dtcpop = list(dtcbag.filter(lambda dtc: not hasattr(dtc,'rheobase')).compute())
+                #dtcpop = list(dtcbag.filter(lambda dtc: not isinstance(type(dtc.rheobase),type(None))).compute())
 
                 for d in dtcpop:
                     assert hasattr(d, 'tests')
