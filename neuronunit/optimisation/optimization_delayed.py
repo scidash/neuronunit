@@ -32,6 +32,8 @@ import dask.bag as db
 import pandas as pd
 import pickle
 import dask
+#from dask.distributed import Client
+#client = Client()
 # The rheobase has been obtained seperately and cannot be db mapped.
 # Nested DB mappings dont work.
 import multiprocessing
@@ -270,8 +272,7 @@ class TSD(dict):
        else:
            self.cell_name = 'simulated data'
 
-    def to_dict(self):
-        return {k:v for k,v in self.items() }
+
     def optimize(self,param_edges,**kwargs):
         defaults = {'backend':None,\
                     'protocol':{'allen': False, 'elephant': True},\
@@ -299,7 +300,7 @@ class TSD(dict):
         self.DO.MU = kwargs['MU']
         self.DO.NGEN = kwargs['NGEN']
         ga_out = self.DO.run(NGEN = self.DO.NGEN)
-        #ga_out['DO'] = self.DO
+        ga_out['DO'] = self.DO
         if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
             _,dtc_pop = self.DO.OM.test_runner(copy.copy(ga_out['pf']),self.DO.OM.td,self.DO.OM.tests)
             ga_out['dtc_pop'] = dtc_pop
@@ -320,18 +321,13 @@ class TSD(dict):
                 # is this a data driven test? if so its worth plotting results
             ga_out = self.elaborate_plots(self,ga_out)
         # make ga_out pickleable by cleansing sciunit and deap objects
-        """
         for pop in ga_out.values():
             if hasattr(pop,'len'):
                 if len(pop):
                     if hasattr(pop[0],'dtc'):
                         for ind in pop:
                             ind.dtc.tests ={ k:v for k,v in ind.dtc.tests.items() }
-        """
         self.ga_out = ga_out
-        self.DO = None # destroy this here, as its used once and not pickleable
-
-
         return self.ga_out
 
     def display(self):
@@ -758,7 +754,7 @@ def mint_NEURON_model(dtc):
     model.attrs = pre_model.attrs
     return model
 
-def inject_and_plot_model(pre_model,figname=None):
+def inject_and_plot_model(pre_model):
 
 
     # get rheobase injection value
@@ -776,12 +772,10 @@ def inject_and_plot_model(pre_model,figname=None):
         plt.title('membrane potential plot')
     plt.plot(vm.times, vm.magnitude, 'k')
     plt.ylabel('V (mV)')
-    if figname is not None:
-        plt.savefig(figname)
     #plt.plot(vm.times,vm.magnitude)
     return vm,plt
 
-def inject_and_plot_passive_model(pre_model,figname=None):
+def inject_passive_plot_model(pre_model):
 
 
     # get rheobase injection value
@@ -799,8 +793,6 @@ def inject_and_plot_passive_model(pre_model,figname=None):
         plt.title('membrane potential plot')
     plt.plot(vm.times, vm.magnitude, 'k')
     plt.ylabel('V (mV)')
-    if figname is not None:
-        plt.savefig(figname)
     #plt.plot(vm.times,vm.magnitude)
     return vm,plt
 
@@ -834,7 +826,7 @@ def check_binary_match(dtc0,dtc1):
     return plt
 
 
-def check_match_front(dtc0,dtcpop,figname = None):
+def check_match_front(dtc0,dtcpop):
 
     vm0 =inject_and_not_plot_model(dtc0)
 
@@ -847,16 +839,10 @@ def check_match_front(dtc0,dtcpop,figname = None):
         plt.title('Check for waveform Alignment')
     else:
         plt.title('membrane potential plot')
-    plt.plot(vm0.times, vm0.magnitude,label="target",c='red')
-    plt.plot(vms[0].times, vms[0].magnitude,label="best candidate",c='blue')
-
+    plt.plot(vm0.times, vm0.magnitude,label="target")
     for v in vms:
         plt.plot(v.times, v.magnitude,label="solutions",c='grey')
     plt.ylabel('V (mV)')
-    if not isinstance(type(figname),type(None)):
-        plt.savefig(figname)
-    plt.legend(loc="upper left")
-
     #plt.plot(vm.times,vm.magnitude)
     return plt
 
@@ -883,12 +869,7 @@ def switch_logic(xtests):
     '''
     Hopefuly depreciated by future NU debugging.
     '''
-    try:
-        aTSD = TSD()
-    except:
-        #basically an object defined in this file:
-        aTSD = neuronunit.optimisation.optimization_management.TSD()
-
+    aTSD = neuronunit.optimisation.optimization_delayed.TSD()
     if type(xtests) is type(aTSD):
         xtests = list(xtests.values())
     if type(xtests) is type(list()):
@@ -1726,18 +1707,17 @@ def add_constant(hold_constant, pop, td):
     return pop,td
 
 def filtered(pop,dtcpop):
-    '''
     NPART = min(npartitions,len(dtcpop))
 
     # the fast way:
     dtcbag = db.from_sequence(dtcpop, npartitions = NPART)                
-    #dtcbag = dtcbag.filter(lambda dtc: not hasattr(dtc,'rheobase'))
+    dtcbag = dtcbag.filter(lambda dtc: not hasattr(dtc,'rheobase'))
     dtcpop_ = list(dtcbag.filter(lambda dtc: not isinstance(type(dtc.rheobase),type(None))).compute())
 
     dtcbag = db.from_sequence(pop, npartitions = NPART)                
-    #dtcbag = dtcbag.filter(lambda dtc: not hasattr(dtc,'rheobase'))
+    dtcbag = dtcbag.filter(lambda dtc: not hasattr(dtc,'rheobase'))
     pop_ = list(dtcbag.filter(lambda dtc: not isinstance(type(dtc.rheobase),type(None))).compute())
-    '''
+
     # The slow way
     dtcpop = [ dtc for dtc in dtcpop if type(dtc.rheobase) is not type(None) ]
     pop = [ p for p in pop if type(p.rheobase) is not type(None) ]
@@ -1745,8 +1725,8 @@ def filtered(pop,dtcpop):
     if len(pop) != len(dtcpop):
         print('fatal')
     assert len(pop) == len(dtcpop)
-    #assert len(pop_) == len(pop)
-    #assert len(dtcpop_) == len(dtcpop)
+    assert len(pop_) == len(pop)
+    assert len(dtcpop_) == len(dtcpop)
     return pop, dtcpop
 
 
@@ -1908,15 +1888,12 @@ class OptMan():
         for v in dtc.tests:
             k = v.name
             dtc.protocols[k] = {}
-
             if v.passive == False and v.active == True:
                 keyed = dtc.protocols[k]#.params
                 temp = active_values(keyed,dtc.rheobase)
                 v.params['amplitude'] = temp['injected_square_current']['amplitude']
                 v.params['injected_square_current']['amplitude'] = temp['injected_square_current']['amplitude']
         return dtc
-
-
 
 
 
@@ -2292,10 +2269,7 @@ class OptMan():
                 print(results)
                 print(ga_out['pf'][0].dtc.attrs)
             left = ga_out['pf'][0].dtc.tests
-            try:
-                closeness_,_,_ = self.closeness(left,new_tests)
-            except:
-                pass
+            closeness_,_,_ = self.closeness(left,new_tests)
             #inject_and_plot(ga_converged,second_pop=test_origin_target,third_pop=[ga_converged[0]],figname='not_a_problem.png',snippets=True)
             return ga_out,ga_converged,test_origin_target,new_tests,closeness_
 
@@ -2634,46 +2608,38 @@ class OptMan():
         obs = {}
         pred = {}
         temp = {t.name:t for t in dtc.tests}
- 
         if dtc.rheobase is not None:
-            scores_d = {}
-            for k in dtc.SA.keys():
+            similarity,lps,rps =  self.closeness(temp,temp)
+            scores_ = {}
+            for k,p,o in zip(list(similarity.keys()),lps,rps):
+                obs[k] = o
+                pred[k] = p
                 if hasattr(dtc.SA[k],'score'):
-                    scores_d[k] = dtc.SA[k].score
+                    scores_[k] = dtc.SA[k].score
                 else:
-                    scores_d[k] = dtc.SA[k]
-                    scores_d["total"] = np.sum([ np.abs(v) for v in scores_d.values()])
- 
-            pre = len(temp)
-            post = len({k:v for k,v in temp.items() if hasattr(v,'prediction')})
-            if pre == post:
-                similarity,lps,rps =  self.closeness(temp,temp)
-                scores_ = {}
-                for k,p,o in zip(list(similarity.keys()),lps,rps):
-                    obs[k] = o
-                    pred[k] = p
-                dtc.obs_preds = pd.DataFrame([obs,pred,scores_d],index=['observations','predictions','scores'])
-            else:
-                print('sys log no prediction')
-        assert dtc.SA is not None
+                    scores_[k] = dtc.SA[k]
+            scores_["total"] = np.sum([ np.abs(v) for v in scores_.values()])
+            dtc.obs_preds = pd.DataFrame([obs,pred,scores_],index=['observations','predictions','scores'])
+            assert dtc.SA is not None
         return dtc
 
 
-    @timer
-    def serial_route(self,pop,td,tests):
-        '''
-        parallel list mapping only works with an iterable collection.
-        Serial route is intended for single items.
-        '''
-        if type(dtc.rheobase) is type(None):
-            for t in tests:
-                dtc.scores[t.names] = 1.0
-                dtc.get_ss()
-        else:
-            dtc = self.format_test((dtc,tests))
-            dtc = self.elephant_evaluation((dtc,tests))
 
-        return pop, dtc
+        @timer
+        def serial_route(self,pop,td,tests):
+            '''
+            parallel list mapping only works with an iterable collection.
+            Serial route is intended for single items.
+            '''
+            if type(dtc.rheobase) is type(None):
+                for t in tests:
+                    dtc.scores[t.names] = 1.0
+                    dtc.get_ss()
+            else:
+                dtc = self.format_test((dtc,tests))
+                dtc = self.elephant_evaluation((dtc,tests))
+
+            return pop, dtc
     @timer
     def make_simulated_observations(self,original_test_dic,backend,random_param,dsolution=None):
         #self.simulated_obs = True
@@ -2842,7 +2808,6 @@ class OptMan():
             xargs = zip(pop,repeat(self.td),repeat(self.backend))
             npart = np.min([multiprocessing.cpu_count(),len(pop)])
             bag = db.from_sequence(xargs, npartitions = npart)
-
             dtcpop = list(bag.map(transform).compute())
             if self.verbose:
                 print(dtcpop)
@@ -2954,7 +2919,6 @@ class OptMan():
         for ind,d in zip(pop,dtcpop):
             if type(d.rheobase) is not type(None):
                 ind.rheobase = d.rheobase
-
             else:
                 ind.rheobase = None
                 d.rheobase = None
@@ -3060,7 +3024,6 @@ class OptMan():
 
             pop_, dtcpop = self.obtain_rheobase(pop, tests)
 
-            
 
             if not hasattr(self,'exhaustive'):
                 # there are many models, which have no actual rheobase current injection value.
