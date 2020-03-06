@@ -28,7 +28,7 @@ from numba import jit
 import time
 import numba
 import copy
-
+import dask
 import matplotlib as mpl
 try:
     mpl.use('Agg')
@@ -38,7 +38,25 @@ import matplotlib.pyplot as plt
 from neuronunit.capabilities.spike_functions import get_spike_waveforms, spikes2amplitudes, threshold_detection
 #
 # When using differentiation based spike detection is used this is faster.
+#try:
+#import asciiplotlib as apl
+#fig.plot([1,0], [0,1])
 
+try:
+	import asciiplotlib as apl
+	fig = apl.figure()
+	fig.plot([0,1], [0,1], label=str('spikes: '), width=100, height=20)
+	fig.show()
+	import gc
+    ascii_plot = True
+except:
+    ascii_plot = False
+def asciplot_code(vm,spkcnt):
+    t = [float(f) for f in vm.times]
+    v = [float(f) for f in vm.magnitude]
+    fig = apl.figure()
+    fig.plot(t, v, label=str('spikes: ')+str(spkcnt), width=100, height=20)
+    fig.show()
 #@jit
 def diff(vm):
     return np.diff(vm)
@@ -352,7 +370,7 @@ class RheobaseTestP(RheobaseTest):
             sub = np.array(sorted(list(set(sub))))
             supra = np.array(sorted(list(set(supra))))
             return sub, supra
-
+        @dask.delayed
         def check_current(dtc):
             '''
             Inputs are an amplitude to test and a virtual model
@@ -365,14 +383,20 @@ class RheobaseTestP(RheobaseTest):
 
             ampl = dtc.ampl
             if float(ampl) not in dtc.lookup or len(dtc.lookup) == 0:
-                uc = {'amplitude':dtc.ampl,'duration':DURATION,'delay':DELAY}
-                dtc.run_number += 1
-                model.inject_square_current(uc)
 
+                if False:
+                    uc = {'amplitude':ampl,'duration':DURATION,'delay':DELAY}
+                    model.inject_square_current(uc)
+                    n_spikes = model._backend.get_spike_count()
+                current = self.get_injected_square_current()
+                current['amplitude'] = ampl
+                model.inject_square_current(current)
+                n_spikes = model.get_spike_count()
                 vm = model.get_membrane_potential()
-                one_d = [float(v[0]) for v in vm.magnitude]
-                peak_idx,_ = find_peaks(one_d,threshold=0.010)
-                n_spikes = len(peak_idx)
+				if ascii_plot:
+	                asciplot_code(vm,n_spikes)
+
+
 
 
 
@@ -427,7 +451,7 @@ class RheobaseTestP(RheobaseTest):
                 dtc.initiated = True
             return dtc
 
-        def find_rheobase(self, dtc):
+        def find_rheobase(self, global_dtc):
             #if hasattr(dtc,'model_path'):
             #    assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
             # If this it not the first pass/ first generation
@@ -440,47 +464,38 @@ class RheobaseTestP(RheobaseTest):
 
             big = 25
 
-            while dtc.boolean == False and cnt< big:
+            while global_dtc.boolean == False and cnt< big:
 
                 if len(sub):
                     if sub.max() < -1.0:
                         pass
 
 
-                be = dtc.backend
-                dtc_clones = [ dtc for i in range(0,len(dtc.current_steps)) ]
-                for i,s in enumerate(dtc.current_steps):
+
+                dtc_clones = [ global_dtc for i in range(0,len(global_dtc.current_steps)) ]
+                for i,s in enumerate(global_dtc.current_steps):
                     dtc_clones[i] = copy.copy(dtc_clones[i])
-                    dtc_clones[i].ampl = copy.copy(dtc.current_steps[i])
+                    dtc_clones[i].ampl = copy.copy(global_dtc.current_steps[i])
                 dtc_clones = [d for d in dtc_clones if not np.isnan(d.ampl)]
-                try:
-                    b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
-                    dtc_clone = list(b0.map(check_current).compute())
-
-                except:
-                    set_clones = set([ float(d.ampl) for d in dtc_clones ])
-                    dtc_clone = []
-                    for dtc,sc in zip(dtc_clones,set_clones):
-                        dtc = copy.copy(dtc)
-                        dtc.ampl = sc*pq.pA
-                        dtc = check_current(dtc)
-                        dtc.backend = be
-                        dtc_clone.append(dtc)
-
+                set_clones = set([ float(d.ampl) for d in dtc_clones ])
+                dtc_clone = []
+                for dtc_local,sc in zip(dtc_clones,set_clones):
+                    dtc_local = copy.copy(dtc_local)
+                    dtc_local.ampl = sc*pq.pA
+                    dtc_local = check_current(dtc_local)
+                    dtc_clone.append(dtc_local)
+                dtc_clone = dask.compute(dtc_clone)[0]
 
                 smaller = sorted([ (dtc.ampl,dtc) for dtc in dtc_clone if dtc.boolean == True ])
                 if len(smaller):
-
-                    return smaller[-1][1]
+                    return smaller[0][1]
 
 
                 for d in dtc_clone:
-                    dtc.lookup.update(d.lookup)
-                dtc = check_fix_range(dtc)
-
-
-
+                    global_dtc.lookup.update(d.lookup)
+                dtc = check_fix_range(global_dtc)
                 sub, supra = get_sub_supra(dtc.lookup)
+                print(dtc.lookup)
                 if len(supra) and len(sub):
 
                     delta = float(supra.min()) - float(sub.max())
@@ -537,14 +552,12 @@ class RheobaseTestP(RheobaseTest):
             if type(temp) is type({'dict':0}):
                 if temp['value'] is None:
                     prediction['value'] = None
-                    return prediction
                 else:
                     prediction['value'] =  float(temp['value'])* pq.pA
             else:
                 prediction['value'] =  float(temp)* pq.pA
         else:
             prediction['value'] = None
-            return prediction
         self.prediction = prediction
         return prediction
 

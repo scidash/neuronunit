@@ -113,6 +113,9 @@ class DataTC(object):
                 elif v.passive == True and v.active == False:
                     keyed = self.protocols[k]#.params
                     self.protocols[k] = passive_values(keyed)
+                elif v.passive == False and v.active == False:
+                    self.protocols[k]['injected_square_current']['amplitude'] = 0.0*qt.pA
+
                     #tests.protocols[k] = self.protocols
             if v.name in str('RestingPotentialTest'):
                 self.protocols[k]['injected_square_current']['amplitude'] = 0.0*qt.pA

@@ -137,10 +137,10 @@ class testHighLevelOptimisation(unittest.TestCase):
         edges = model_parameters.MODEL_PARAMS["RAW"]
         OM = OptMan(use_test,protocol={'elephant':True,'allen':False,'dm':False})
         results,converged,target,simulated_tests,goodness_of_fit = OM.round_trip_test(use_test,str('RAW'),MU=2,NGEN=2)#,stds = easy_standards)
-        temp = [results,converged,target,simulated_tests,goodness_of_fit]
+        #temp = [results,converged,target,simulated_tests,goodness_of_fit]
 
-        with open('jd.p','wb') as f:
-            pickle.dump(temp,f)
+        #with open('jd.p','wb') as f:
+        #    pickle.dump(temp,f)
         param_edges = model_parameters.MODEL_PARAMS['HH']
 
         ga_out = use_test.optimize(edges,backend="RAW",protocol={'allen': False, 'elephant': True},\
