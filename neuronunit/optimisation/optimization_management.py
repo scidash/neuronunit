@@ -271,7 +271,8 @@ class TSD(dict):
        else:
            self.cell_name = 'simulated data'
 
-
+    def to_dict(self):
+        return {k:v for k,v in self.items() }
     def optimize(self,param_edges,**kwargs):
         defaults = {'backend':None,\
                     'protocol':{'allen': False, 'elephant': True},\
@@ -299,7 +300,7 @@ class TSD(dict):
         self.DO.MU = kwargs['MU']
         self.DO.NGEN = kwargs['NGEN']
         ga_out = self.DO.run(NGEN = self.DO.NGEN)
-        ga_out['DO'] = self.DO
+        #ga_out['DO'] = self.DO
         if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
             _,dtc_pop = self.DO.OM.test_runner(copy.copy(ga_out['pf']),self.DO.OM.td,self.DO.OM.tests)
             ga_out['dtc_pop'] = dtc_pop
@@ -320,13 +321,18 @@ class TSD(dict):
                 # is this a data driven test? if so its worth plotting results
             ga_out = self.elaborate_plots(self,ga_out)
         # make ga_out pickleable by cleansing sciunit and deap objects
+        """
         for pop in ga_out.values():
             if hasattr(pop,'len'):
                 if len(pop):
                     if hasattr(pop[0],'dtc'):
                         for ind in pop:
                             ind.dtc.tests ={ k:v for k,v in ind.dtc.tests.items() }
+        """
         self.ga_out = ga_out
+        self.DO = None # destroy this here, as its used once and not pickleable
+
+
         return self.ga_out
 
     def display(self):
@@ -753,7 +759,7 @@ def mint_NEURON_model(dtc):
     model.attrs = pre_model.attrs
     return model
 
-def inject_and_plot_model(pre_model):
+def inject_and_plot_model(pre_model,figname=None):
 
 
     # get rheobase injection value
@@ -771,10 +777,12 @@ def inject_and_plot_model(pre_model):
         plt.title('membrane potential plot')
     plt.plot(vm.times, vm.magnitude, 'k')
     plt.ylabel('V (mV)')
+    if figname is not None:
+        plt.savefig(figname)
     #plt.plot(vm.times,vm.magnitude)
     return vm,plt
 
-def inject_passive_plot_model(pre_model):
+def inject_and_plot_passive_model(pre_model,figname=None):
 
 
     # get rheobase injection value
@@ -792,6 +800,8 @@ def inject_passive_plot_model(pre_model):
         plt.title('membrane potential plot')
     plt.plot(vm.times, vm.magnitude, 'k')
     plt.ylabel('V (mV)')
+    if figname is not None:
+        plt.savefig(figname)
     #plt.plot(vm.times,vm.magnitude)
     return vm,plt
 
@@ -825,7 +835,7 @@ def check_binary_match(dtc0,dtc1):
     return plt
 
 
-def check_match_front(dtc0,dtcpop):
+def check_match_front(dtc0,dtcpop,figname = None):
 
     vm0 =inject_and_not_plot_model(dtc0)
 
@@ -838,10 +848,16 @@ def check_match_front(dtc0,dtcpop):
         plt.title('Check for waveform Alignment')
     else:
         plt.title('membrane potential plot')
-    plt.plot(vm0.times, vm0.magnitude,label="target")
+    plt.plot(vm0.times, vm0.magnitude,label="target",c='red')
+    plt.plot(vms[0].times, vms[0].magnitude,label="best candidate",c='blue')
+
     for v in vms:
         plt.plot(v.times, v.magnitude,label="solutions",c='grey')
     plt.ylabel('V (mV)')
+    if not isinstance(type(figname),type(None)):
+        plt.savefig(figname)
+    plt.legend(loc="upper left")
+
     #plt.plot(vm.times,vm.magnitude)
     return plt
 
