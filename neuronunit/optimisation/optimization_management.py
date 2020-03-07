@@ -1676,7 +1676,7 @@ def evaluate(dtc):
 
         fitness = [v for v in dtc.SA.values]
         for f in fitness:
-            if f==np.inf:
+            if np.isinf(f):
                 f = 100.0
         fitness = tuple(fitness,)
         return fitness
@@ -1714,18 +1714,18 @@ def filtered(pop,dtcpop):
     NPART = min(npartitions,len(dtcpop))
 
     # the fast way:
-    dtcbag = db.from_sequence(dtcpop, npartitions = NPART)                
+    dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
     #dtcbag = dtcbag.filter(lambda dtc: not hasattr(dtc,'rheobase'))
     dtcpop_ = list(dtcbag.filter(lambda dtc: not isinstance(type(dtc.rheobase),type(None))).compute())
 
-    dtcbag = db.from_sequence(pop, npartitions = NPART)                
+    dtcbag = db.from_sequence(pop, npartitions = NPART)
     #dtcbag = dtcbag.filter(lambda dtc: not hasattr(dtc,'rheobase'))
     pop_ = list(dtcbag.filter(lambda dtc: not isinstance(type(dtc.rheobase),type(None))).compute())
     '''
     # The slow way
     dtcpop = [ dtc for dtc in dtcpop if type(dtc.rheobase) is not type(None) ]
     pop = [ p for p in pop if type(p.rheobase) is not type(None) ]
-    
+
     if len(pop) != len(dtcpop):
         print('fatal')
     assert len(pop) == len(dtcpop)
@@ -2054,6 +2054,7 @@ class OptMan():
                 dtcpop[i] = dtc
 
         if self.PARALLEL_CONFIDENT:
+            # switch to delayed syntax
             dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
             dtcpop = list(dtcbag.map(nuunit_allen_evaluation).compute())
 
@@ -2061,17 +2062,7 @@ class OptMan():
             dtcpop = list(map(nuunit_allen_evaluation,dtcpop))
 
         return pop, dtcpop
-    '''
-    def closeness(self,left,right):
-        closeness_ = {}
-        for k in left.keys():
-            key = which_key(left[k].prediction)
-            lp = left[k].prediction[key]
-            key = which_key(right[k].prediction)
-            rp = right[k].prediction[key]
-            closeness_[k] = np.abs(lp-rp)
-        return closeness_
-    '''
+
     def closeness(self,left,right):
         closeness_ = {}
         lps = []
@@ -2276,10 +2267,7 @@ class OptMan():
                 print(results)
                 print(ga_out['pf'][0].dtc.attrs)
             left = ga_out['pf'][0].dtc.tests
-            try:
-                closeness_,_,_ = self.closeness(left,new_tests)
-            except:
-                pass
+            closeness_,_,_ = self.closeness(left,new_tests)
             #inject_and_plot(ga_converged,second_pop=test_origin_target,third_pop=[ga_converged[0]],figname='not_a_problem.png',snippets=True)
             return ga_out,ga_converged,test_origin_target,new_tests,closeness_
 
@@ -2560,7 +2548,7 @@ class OptMan():
 
         obs = {}
         pred = {}
-        temp = {t.name:t for t in dtc.tests}
+        temp = {t.name:t for t in dtc.tests if hasattr(t,'prediction')}
         if dtc.rheobase is not None:
             similarity,lps,rps =  self.closeness(temp,temp)
             scores_ = {}
@@ -2604,6 +2592,10 @@ class OptMan():
                 scores_.append(score_)
 
             except:
+                print(dtc.attrs)
+                print(model.attrs)
+                import pdb
+                pdb.set_trace()
                 score_ = 100
                 scores_.append(score_)
 
@@ -2618,7 +2610,7 @@ class OptMan():
         obs = {}
         pred = {}
         temp = {t.name:t for t in dtc.tests}
- 
+
         if dtc.rheobase is not None:
             scores_d = {}
             for k in dtc.SA.keys():
@@ -2627,7 +2619,7 @@ class OptMan():
                 else:
                     scores_d[k] = dtc.SA[k]
                     scores_d["total"] = np.sum([ np.abs(v) for v in scores_d.values()])
- 
+
             pre = len(temp)
             post = len({k:v for k,v in temp.items() if hasattr(v,'prediction')})
             if pre == post:
@@ -2992,7 +2984,7 @@ class OptMan():
             if self.PARALLEL_CONFIDENT:# and self.backend is not str('ADEXP'):
                 passed = False
                 lazy = []
-                
+
                 for dtc in dtcpop:
                     if not hasattr(dtc,'tests'):
                         dtc.tests = copy.copy(self.tests)
@@ -3005,7 +2997,7 @@ class OptMan():
                     i = self.elephant_evaluation_delayed(i)
                     lazy.append(i)
                 dtcpop = dask.compute(lazy,schedular='distributed')[0]
-                dtcbag = db.from_sequence(dtcpop, npartitions = NPART)                
+                dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
                 dtcpop = list(dtcbag.filter(lambda dtc: not hasattr(dtc,'rheobase')).compute())
                 dtcpop = list(dtcbag.filter(lambda dtc: not isinstance(type(dtc.rheobase),type(None))).compute())
 
@@ -3015,7 +3007,7 @@ class OptMan():
 
                 for d in dtcpop:
                     d.tests = copy.copy(self.tests)
-                
+
             if not self.PARALLEL_CONFIDENT:
 
                 dtcpop = iter(map(self.format_test,dtcpop))
@@ -3044,7 +3036,7 @@ class OptMan():
 
             pop_, dtcpop = self.obtain_rheobase(pop, tests)
 
-            
+
 
             if not hasattr(self,'exhaustive'):
                 # there are many models, which have no actual rheobase current injection value.
