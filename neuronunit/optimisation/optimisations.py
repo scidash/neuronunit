@@ -1,6 +1,5 @@
 """Optimisation class This file is part of BluePyOpt <https://github.com/BlueBrain/BluePyOpt>"""
 # https://deap.readthedocs.io/en/master/tutorials/basic/part3.html
-from neuronunit.optimisation import optimization_management
 from neuronunit.optimisation import exhaustive_search as es
 from neuronunit.optimisation import optimization_management as om
 
@@ -350,8 +349,7 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
             for i in invalid_dtc:
                 lazy.append(om.evaluate(i))
 
-            fitnesses = dask.compute(lazy,scheduler='distributed')[0]
-            #fitnesses = list(map(om.evaluate, invalid_dtc))
+            fitnesses = dask.compute(lazy)[0]
             return (invalid_pop,fitnesses)
 
         self.toolbox.register("evaluate", custom_code)
