@@ -39,7 +39,7 @@ install:
   - git clone https://github.com/fun-zoological-computing/deap
   - cp deap/tools/support.py /home/travis/miniconda/lib/python3.7/site-packages/deap/tools/support.py
 script:
-  - sh test.sh
-   cd neuronunit/examples
+  - cd neuronunit/neuronunit/unit_test/working
+  - python -m unittest sim_data_unit_test.py
 after_success:
   - coveralls

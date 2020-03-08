@@ -857,8 +857,9 @@ def check_match_front(dtc0,dtcpop,figname = None):
     for v in vms:
         plt.plot(v.times, v.magnitude,label="solutions",c='grey')
     plt.ylabel('V (mV)')
-    plt.legend(loc="upper right")
-    if not isinstance(type(figname),type(None)):
+    plt.legend(loc="upper left")
+    #if not isinstance(type(figname),type(None)):
+    if figname is not None:
         plt.savefig(figname)
 
 
@@ -2582,7 +2583,7 @@ class OptMan():
             if not isinstance(s,type(float())):
                 s = 100.0
         dtc.SA = ScoreArray(dtc.tests, scores_)
-        print(dtc.SA)
+        #print(dtc.SA)
         #dtc.SA = dtc.ordered_score()
 
         obs = {}

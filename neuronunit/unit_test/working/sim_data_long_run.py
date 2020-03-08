@@ -92,12 +92,8 @@ def sim_data_tests(backend,MU,NGEN):
 
     return ga_out,target,front
 
-MU = NGEN = 35
-backend = str("HH")
-
+MU = NGEN = 10
+backend = str("RAW")
 ga_out,target,front = sim_data_tests(backend,MU,NGEN)
-'''
 backend = str("HH")
-
 ga_out,target,front = sim_data_tests(backend,MU,NGEN)
-'''
