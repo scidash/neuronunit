@@ -164,9 +164,10 @@ def dALLdt(X, t, attrs):
     g_K = attrs['g_K'] #/ Cm) * np.power(n, 4.0)
     g_Na = attrs['g_Na'] #/ Cm) * np.power(m, 3.0) * h
     g_L = attrs['g_L'] #/ Cm
-    delay,duration,T,amplitude = attrs['I']
+    #delay,duration,T,amplitude = attrs['I']
     Iext = Id(t,delay,duration,np.max(T),amplitude)
-
+    #print(Iext)
+    #print(np.abs(Iext))
 
     I_Na = g_Na * m**3.0 * h * (V - E_Na)
     I_K = g_K  * n**4.0 * (V - E_K)
@@ -203,6 +204,7 @@ def get_vm(attrs):
     # Solve ODE system
     T = attrs['T']
     dt = attrs['dt']
+
     X = odeint(dALLdt, Y, T, args=(attrs,))
     vm = V = X[:,0]
     m = X[:,1]
@@ -232,7 +234,7 @@ def get_vm(attrs):
 class HHBackend(Backend):
 
     name = 'HH'
-    
+
     def init_backend(self, attrs = None, cell_name = 'alice', current_src_name = 'hannah', DTC = None):
         super(HHBackend,self).init_backend()
         self.model._backend.use_memory_cache = False
@@ -310,7 +312,7 @@ class HHBackend(Backend):
         tmin = 0.0
         #DT = 0.01
         #T = np.linspace(tmin, tmax, int(tmax/DT))
-        dt = 0.001
+        dt = 0.025
         T = np.arange(0.0, tmax, dt)
         #dt = T[1]-T[0]
 
@@ -318,6 +320,7 @@ class HHBackend(Backend):
         attrs['I'] = (delay,duration,tmax,amplitude)
         attrs['dt'] = dt
         attrs['T'] = T
+        #try:
+        self.vM = get_vm(attrs)
 
-        self.vM  = get_vm(attrs)
         return self.vM

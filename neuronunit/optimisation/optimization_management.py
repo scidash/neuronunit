@@ -1829,7 +1829,10 @@ class OptMan():
         self.simulated_data_tests = self.round_trip_test
         # note this is not effective at changing parallel behavior yet
         #if PARALLEL_CONFIDENT not in globals():
-        self.PARALLEL_CONFIDENT = True
+        if self.backend is "RAW":
+            self.PARALLEL_CONFIDENT = True
+        else:
+            self.PARALLEL_CONFIDENT = False
         #else:
         #    self.PARALLEL_CONFIDENT = PARALLEL_CONFIDENT
         if verbosity is None:
@@ -2553,7 +2556,10 @@ class OptMan():
             if 'RheobaseTestP' in t.name: t.score_type = sciunit.scores.ZScore
             if 'mean' not in t.observation.keys():
                 t.observation['mean'] = t.observation['value']
-            #try:
+                if dtc.backend is str("HH"):
+                    import pdb
+                    pdb.set_trace()
+                #try:
             score = t.judge(model)
             if isinstance(score, sciunit.scores.incomplete.InsufficientDataScore):
                 score = t.judge(model)
