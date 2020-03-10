@@ -198,12 +198,15 @@ class RheobaseTest(VmTest):
                 current = self.get_injected_square_current()
                 current['amplitude'] = ampl
                 model.inject_square_current(current)
-                n_spikes = model.get_spike_count()
-                self.n_spikes = n_spikes
-                if self.n_spikes == 1:
-                    self.params['injected_square_current'] = current
-                temp = model._backend.get_spike_count()
+                try:
+                    n_spikes = model.get_spike_count()
 
+                except:
+                    n_spikes = model._backend.get_spike_count()
+                #asciplot_code(model.get_membrane_potential(),n_spikes)
+
+                self.n_spikes = n_spikes
+                
                 if self.verbose >= 2:
                     print("Injected %s current and got %d spikes" % \
                             (ampl,n_spikes))
@@ -233,7 +236,11 @@ class RheobaseTest(VmTest):
             # The actual part of the Rheobase test that is
             # computation intensive and therefore
             # a target for parellelization.
-
+            temp_ = [ v for v in lookup.values() if v==1 ]
+            if len(temp_) >= 4:
+                break
+            #if 1 in set(lookup.values()):
+            #    break
             if len(supra) and len(sub):
                 delta = float(supra.min()) - float(sub.max())
                 temp = [ v for v in lookup.values() if v>1 ]
@@ -391,11 +398,18 @@ class RheobaseTestP(RheobaseTest):
                     n_spikes = model._backend.get_spike_count()
                 current = self.get_injected_square_current()
                 current['amplitude'] = ampl
+                #if current['amplitude']<0.0:
+                print(current['amplitude'],'ampl')
+                #if float(current['amplitude'])>0:
+                    #try:
                 model.inject_square_current(current)
+
                 n_spikes = model.get_spike_count()
+                #if n_spikes ==1:
+                
                 vm = model.get_membrane_potential()
-                if False:
-	                asciplot_code(vm,n_spikes)
+                # if True:
+	            #    asciplot_code(vm,n_spikes)
 
 
 
@@ -414,6 +428,8 @@ class RheobaseTestP(RheobaseTest):
                     dtc.lookup[float(ampl)] = 1
                     dtc.rheobase['value'] = float(ampl)*pq.pA
                     dtc.boolean = True
+                    #dtc.rheobase_vm = model.get_membrane_potential()
+
                     return dtc
 
                 dtc.lookup[float(ampl)] = n_spikes
@@ -463,7 +479,7 @@ class RheobaseTestP(RheobaseTest):
             sub = np.array([0,0]);
             supra = np.array([0,0])
 
-            big = 25
+            big = 40
 
             while global_dtc.boolean == False and cnt< big:
 
@@ -488,7 +504,8 @@ class RheobaseTestP(RheobaseTest):
                 dtc_clone = dask.compute(dtc_clone)[0]
 
                 smaller = sorted([ (dtc.ampl,dtc) for dtc in dtc_clone if dtc.boolean == True ])
-                if len(smaller):
+                if len(smaller)>=4:
+
                     return smaller[0][1]
 
 
@@ -496,7 +513,6 @@ class RheobaseTestP(RheobaseTest):
                     global_dtc.lookup.update(d.lookup)
                 dtc = check_fix_range(global_dtc)
                 sub, supra = get_sub_supra(dtc.lookup)
-                print(dtc.lookup)
                 if len(supra) and len(sub):
 
                     delta = float(supra.min()) - float(sub.max())
@@ -518,13 +534,13 @@ class RheobaseTestP(RheobaseTest):
                         else:
                             if len(supra)<10:
 
-                                dtc.rheobase = float(supra.min())
+                                dtc.rheobase = float(supra.min())*units
                                 dtc.boolean = True
                                 dtc.lookup[float(supra.min())] = len(supra)
                             else:
                                 dtc.rheobase = float(supra.min())
                                 dtc.boolean = True
-                                dtc.lookup[float(supra.min())] = len(supra)
+                                dtc.lookup[float(supra.min())] = len(supra)*units
 
                         return dtc
 
@@ -548,6 +564,7 @@ class RheobaseTestP(RheobaseTest):
         dtc = init_dtc(dtc)
         prediction = {}
         temp = find_rheobase(self,dtc).rheobase
+        #self.rheobase_vm = dtc.rheobase_vm
 
         if type(temp) is not type(None):
             if type(temp) is type({'dict':0}):

@@ -467,13 +467,24 @@ class testLowLevelOptimisation(unittest.TestCase):
             observation = aibs.get_observation(dataset_id,'rheobase')
             rt = RheobaseTest(observation = observation)
             rtp = RheobaseTestP(observation = observation)
+        #model = self.dtc_to_model()
+        model = self.dtc.dtc_to_model()
 
-        model = self.model
+
         preds = rt.generate_prediction(model)#,stop_on_error = False, deep_error = True)
+        model = None
+        model = self.dtc.dtc_to_model()
+        import matplotlib.pyplot as plt
+        plt.plot(rt.rheobase_vm.times,rt.rheobase_vm.magnitude)
+        #model = self.dtc_to_model()
+
         predp = rtp.generate_prediction(model)#,stop_on_error = False, deep_error = True)
         print(preds,predp)
+        #plt.plot(rtp.rheobase_vm.times,rt.rheobase_vm.magnitude)
         check_less_thresh = float(np.abs(preds['value'] - predp['value']))
-        self.assertLessEqual(check_less_thresh, 255.0
+
+        #model.inject_square_current(rt.)
+        self.assertLessEqual(check_less_thresh, 20.0)
 
     #@unittest.skip("Not implemented")
     def test_subset(self):
