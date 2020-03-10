@@ -215,6 +215,7 @@ class TSS(TestSuite):
             free_params=param_edges.keys()
         self.DO = make_ga_DO(param_edges, NGEN, self, free_params=free_params, \
                            backend=backend, MU = 8,  protocol=protocol,seed_pop = seed_pop, hc=hold_constant)
+        print(self.DO)
         self.DO.MU = MU
         self.DO.NGEN = NGEN
         ga_out = self.DO.run(NGEN = self.DO.NGEN)
@@ -286,6 +287,8 @@ class TSD(dict):
         kwargs = defaults
         if kwargs['free_params'] is None:
             free_params=param_edges.keys()
+        else:
+            free_params = kwargs['free_params']
         self.DO = make_ga_DO(param_edges, \
                              kwargs['NGEN'], \
                              self, \
@@ -415,24 +418,35 @@ def random_p(backend):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def process_rparam(backend):
+def process_rparam(backend,free_parameters):
     random_param = random_p(backend)
 
     if 'GLIF' in str(backend):
         random_param['init_AScurrents'] = [0.0,0.0]
         random_param['asc_tau_array'] = [0.3333333333333333,0.01]
         rp = random_param
-        chosen_keys = rp.keys()
+        #chosen_keys = rp.keys()
     else:
         random_param.pop('Iext',None)
         rp = random_param
-        chosen_keys = rp.keys()
-
+        #chosen_keys = rp.keys()
+            
+    
+    if free_parameters is not None:
+        reduced_parameter_set = {}
+        for k in free_parameters: 
+            reduced_parameter_set[k] = rp[k]
+        rp = reduced_parameter_set
 
     dsolution = DataTC()
-    dsolution.attrs = rp
+    import hide_imports
+    defaults = hide_imports.model_parameters.MODEL_PARAMS[backend]
+    dsolution.attrs = {k:np.mean(v) for k,v in defaults.items() }
+    dsolution.attrs.update(rp)
+
+    #dsolution.attrs = rp
     dsolution.backend = backend
-    return dsolution,rp,chosen_keys,random_param
+    return dsolution,rp,None,random_param
 def check_test(new_tests):
     replace = False
     for k,t in new_tests.items():
@@ -883,6 +897,18 @@ def score_proc(dtc,t,score):
                     dtc.score[str(t)][str('agreement')] = np.abs(score.observation['value'] - score.prediction['value'])
         dtc.agreement = dtc.score
     return dtc
+
+def jrt(use_test,backend):
+    import hide_imports
+    use_test = hide_imports.TSD(use_test)
+    use_test.use_rheobase_score = True
+    edges = hide_imports.model_parameters.MODEL_PARAMS[backend]
+    OM = hide_imports.OptMan(use_test,
+        backend=backend,
+        boundary_dict=edges,
+        protocol={'allen': False, 'elephant': True})
+
+    return OM
 
 def switch_logic(xtests):
     # move this logic into sciunit tests
@@ -1827,7 +1853,7 @@ class OptMan():
         self.boundary_dict= boundary_dict
         self.protocol = protocol
         self.julia = False
-        self.simulated_data_tests = self.round_trip_test
+        #self.simulated_data_tests = self.round_trip_test
         # note this is not effective at changing parallel behavior yet
         #if PARALLEL_CONFIDENT not in globals():
         if self.backend is "RAW":
@@ -2114,7 +2140,7 @@ class OptMan():
         return closeness_,lps,rps
 
 
-
+    '''
     def round_trip_test(self,
                         tests,
                         backend,
@@ -2125,8 +2151,6 @@ class OptMan():
                         stds=None):
         from neuronunit.optimisation.optimisations import run_ga
 
-
-        '''
         # Inputs:
         #    -- tests, a list of NU test types,
         #    -- backend a string encoding what model, backend, simulator to use.
@@ -2138,8 +2162,7 @@ class OptMan():
         # a parameter space, using only the information in the error gradient.
         # make some new tests based on internally generated data
         # as opposed to experimental data.
-        '''
-
+        
         out_tests = []
 
         if NGEN is None:
@@ -2300,13 +2323,41 @@ class OptMan():
             closeness_,_,_ = self.closeness(left,new_tests)
             #inject_and_plot(ga_converged,second_pop=test_origin_target,third_pop=[ga_converged[0]],figname='not_a_problem.png',snippets=True)
             return ga_out,ga_converged,test_origin_target,new_tests,closeness_
+        '''
+    def make_sim_data_tests(self,backend,MU,NGEN,free_parameters=None):
+        import hide_imports
+        with open('processed_multicellular_constraints.p','rb') as f:
+            test_frame = pickle.load(f)
+        stds = {}
+        for k,v in hide_imports.TSD(test_frame['Neocortex pyramidal cell layer 5-6']).items():
+            temp = hide_imports.TSD(test_frame['Neocortex pyramidal cell layer 5-6'])[k]
+            stds[k] = temp.observation['std']
+        OMObjects = []
+        cloned_tests = copy.copy(test_frame['Neocortex pyramidal cell layer 5-6'])
 
+        OM = jrt(cloned_tests,backend)
+        x= {k:v for k,v in OM.tests.items() if 'mean' in v.observation.keys() or 'value' in v.observation.keys()}
+        cloned_tests = copy.copy(OM.tests)
+        OM.tests = hide_imports.TSD(cloned_tests)
+        rt_out = OM.simulate_data(OM.tests,OM.backend,free_parameters=free_parameters)
+        print(rt_out[0])
+        penultimate_tests = hide_imports.TSD(test_frame['Neocortex pyramidal cell layer 5-6'])
+        for k,v in penultimate_tests.items():
+            temp = penultimate_tests[k]
+
+            v = rt_out[1][k].observation
+            v['std'] = stds[k]
+        simulated_data_tests = hide_imports.TSD(penultimate_tests)
+        # # Show what the randomly generated target waveform the optimizer needs to find actually looks like
+        # # first lets just optimize over all objective functions all the time.
+        # # Commence optimization of models on simulated data sets
+        return simulated_data_tests, OM, rt_out[0]
 
 
     def simulate_data(self,
                         tests,
                         backend,
-                        free_paramaters=None):
+                        free_parameters=None):
         '''
         # Inputs:
         #    -- tests, a list of NU test types,
@@ -2327,7 +2378,7 @@ class OptMan():
         if self.protocol['allen']:
             dtc = False
             while dtc is False or type(new_tests) is type(None):
-                _,rp,chosen_keys,_ = process_rparam(backend)
+                dsolution,rp,_,_ = process_rparam(backend,free_parameters=free_parameters)
                 new_tests,dtc = self.make_simulated_observations(tests,backend,rp)
             test_origin_target=dtc
             observations = dtc.preds
@@ -2345,8 +2396,9 @@ class OptMan():
         elif self.protocol['elephant']:
             new_tests = False
             while new_tests is False:
-                dsolution,rp,chosen_keys,_ = process_rparam(backend)
+                dsolution,rp,_,_ = process_rparam(backend,free_parameters=free_parameters)
                 (new_tests,dtc) = self.make_simulated_observations(tests,backend,rp,dsolution=dsolution)
+
                 if new_tests is False:
                     continue
                 new_tests = {k:v for k,v in new_tests.items() if v.observation[which_key(v.observation)] is not None}
@@ -2693,13 +2745,17 @@ class OptMan():
     def make_simulated_observations(self,original_test_dic,backend,random_param,dsolution=None):
         #self.simulated_obs = True
         # to be used in conjunction with round_trip_test below.
-
+        '''
         if dsolution is None:
             dtc = DataTC()
-            dtc.attrs = random_param
+            dtc.attrs = {k:np.mean(v) for k,v in MODEL_PARAMS.model_parameters[backend].items() }
+            
+            dtc.attrs.update(random_param)
+            #print(dtc.attrs)
             dtc.backend = copy.copy(backend)
         else:
-            dtc = dsolution
+        '''    
+        dtc = dsolution
         if self.protocol['elephant']:
             if 'protocol' in  original_test_dic.keys():
                 original_test_dic.pop('protocol',None)
@@ -2711,7 +2767,7 @@ class OptMan():
                 elif type(dtc.rheobase) is type(float(0.0)):
                     pass
 
-            dtc = make_new_random(dtc, copy.copy(backend))
+            #dtc = make_new_random(dtc, copy.copy(backend))
             xtests = list(copy.copy(original_test_dic).values())
 
             dtc.tests = xtests

@@ -2,6 +2,8 @@
 # coding: utf-8
 
 # # Set up the environment
+import warnings
+warnings.filterwarnings("ignore")
 
 import matplotlib.pyplot as plt
 import matplotlib
@@ -9,171 +11,129 @@ import hide_imports
 from neuronunit.optimisation.optimization_management import inject_and_plot_model, inject_and_plot_passive_model
 import copy
 import pickle
-from neuronunit.optimisation.optimization_management import check_match_front
+from neuronunit.optimisation.optimization_management import check_match_front, jrt
 from scipy.stats import linregress
-import warnings
-warnings.filterwarnings("ignore")
-
-# # Design simulated data tests
-
-def jrt(use_test,backend):
-    use_test = hide_imports.TSD(use_test)
-    use_test.use_rheobase_score = True
-    edges = hide_imports.model_parameters.MODEL_PARAMS[backend]
-    OM = hide_imports.OptMan(use_test,
-        backend=backend,
-        boundary_dict=edges,
-        protocol={'allen': False, 'elephant': True})
-
-    return OM
-
 import unittest
-class TestSum(unittest.TestCase):
-    def sim_data_tests(self,backend,MU,NGEN):
-        test_frame = pickle.load(open('processed_multicellular_constraints.p','rb'))
+#from neuronunit.optimisation.optimization_management import make_sim_data_tests
+# # Design simulated data tests
+class Test_opt_tests(unittest.TestCase):
+
+    def setUp(self):
+        backend = "RAW"
+        MU = 20
+        NGEN = 20
+        with open('processed_multicellular_constraints.p','rb') as f:
+            test_frame = pickle.load(f)
         stds = {}
         for k,v in hide_imports.TSD(test_frame['Neocortex pyramidal cell layer 5-6']).items():
             temp = hide_imports.TSD(test_frame['Neocortex pyramidal cell layer 5-6'])[k]
             stds[k] = temp.observation['std']
-        OMObjects = []
         cloned_tests = copy.copy(test_frame['Neocortex pyramidal cell layer 5-6'])
 
         OM = jrt(cloned_tests,backend)
-        rt_outs = []
+        self.OM = OM
+        #self.hide_imports = hide_imports
+    def test_single_objective_test(self):
+        #hide_imports = self.hide_imports 
 
-        x= {k:v for k,v in OM.tests.items() if 'mean' in v.observation.keys() or 'value' in v.observation.keys()}
-        cloned_tests = copy.copy(OM.tests)
-        OM.tests = hide_imports.TSD(cloned_tests)
-        rt_out = OM.simulate_data(OM.tests,OM.backend,OM.boundary_dict)
-        penultimate_tests = hide_imports.TSD(test_frame['Neocortex pyramidal cell layer 5-6'])
-        for k,v in penultimate_tests.items():
-            temp = penultimate_tests[k]
-
-            v = rt_out[1][k].observation
-            v['std'] = stds[k]
-        simulated_data_tests = hide_imports.TSD(penultimate_tests)
-        # # Show what the randomly generated target waveform the optimizer needs to find actually looks like
-        # # first lets just optimize over all objective functions all the time.
-        # # Commence optimization of models on simulated data sets
-        return simulated_data_tests, OM
-
-    def test_two_objectives_test(self):
-        results = []
-        tests = []
         backend = "RAW"
-        MU = NGEN = 25
-        simulated_data_tests, OM = self.sim_data_tests(backend,MU,NGEN)
+        MU = 20
+        NGEN = 20
 
+        results = {}
+        tests = {}
+        simulated_data_tests, OM, target = self.OM.make_sim_data_tests(backend,MU,NGEN,free_parameters=['a'])
+
+        for k in simulated_data_tests.keys():
+            #if k =='TimeConstantTest':
+            #    continue
+            #if k =='CapicitanceTest':
+            #    continue
+            #if k == 'InjectedCurrentAPWidthTest':
+            #    continue
+            tests[k] = hide_imports.TSD([simulated_data_tests[k]])
+            #print('resistance to optimization',tests[k].observation['std'])
+            reserve = copy.copy(tests[k])
+            results[k] = tests[k].optimize(OM.boundary_dict,backend=OM.backend,\
+                    protocol={'allen': False, 'elephant': True},\
+                        MU=MU,NGEN=NGEN,plot=True,free_params=['a'])#,'b','C'])
+            import numpy as np
+            min_ = np.min([ p for p in results[k]['history'].genealogy_history.values() ])
+            max_ = np.max([ p for p in results[k]['history'].genealogy_history.values() ])
+            model = target.dtc_to_model()
+            tests[k][list(tests[k].keys())[0]].judge(model)
+            print(min_<target.attrs['a']<max_)
+            print(min_)
+            print(max_)
+
+            opt = results[k]['pf'][0].dtc
+            print(opt.attrs)
+            front = results[k]['pf']
+            print(opt.obs_preds)
+
+            if opt.obs_preds['total']['scores'] < 0.100:
+                y1 = [i['avg'][0] for i in results[k]['log']]
+                y = [i['min'][0] for i in results[k]['log']]
+                x = [i['gen'] for i in results[k]['log']]
+
+                slope = linregress(x, y)
+                print(slope[0])
+                slope = linregress(x, y1)
+                print(slope[0])            
+                print(tests[k])
+                gene = results[k]['pf'][0].dtc
+                mm = results[k]['pf'][0].dtc.dtc_to_model()
+                this_test = tests[k][list(tests[k].keys())[0]]
+                score_gene = this_test.judge(mm)
+                pred_gene = this_test.prediction
+
+
+                model = target.dtc_to_model()
+                this_test.judge(model)
+                pred_target = this_test.prediction
+
+                inject_and_plot_passive_model(target,second=results[k]['pf'][0].dtc,figname='debug_target_gene.png')
+
+                test_dump = this_test.to_dict()
+                with open(str(gene.attrs)+str(k) as f:
+                    pickle.dump(f,[target,gene,test_dump])
+                '''
+                    import pdb
+                    pdb.set_trace()
+                    break
+                    #tests = hide_imports.TSD(tests[k].to_dict())
+                    #tests[k] = None
+                    results[k] = reserve.optimize(OM.boundary_dict,backend=OM.backend,\
+                    protocol={'allen': False, 'elephant': True},\
+                        MU=MU,NGEN=NGEN,plot=True,free_params=['a'])#,'b','C'])
+                    print(opt.obs_preds['total']['scores'] < 0.100)
+                    import pdb
+                    pdb.set_trace()
+                    '''
+    '''
+    def test_two_objectives_test(self):
+        results = {}
+        #tests = []
+        backend = "RAW"
+        MU = NGEN = 45
+        #simulated_data_tests, OM = self.OM.make_sim_data_tests(backend,MU,NGEN)
+        simulated_data_tests, OM, target = self.OM.make_sim_data_tests(backend,MU,NGEN,free_parameters=['a','b','c'])
+
+        print('already here?')
 
         for i,k in enumerate(simulated_data_tests.keys()):
             for j,l in enumerate(simulated_data_tests.keys()):
                 if i!=j:
                     tests = None
                     tests = hide_imports.TSD([simulated_data_tests[k],simulated_data_tests[l]])
-                    results.append(tests.optimize(OM.boundary_dict,backend=OM.backend,\
-                            protocol={'allen': False, 'elephant': True},\
-                                MU=MU,NGEN=NGEN,plot=True))
-                    opt = results[-1]['pf'][0].dtc
-                    front = [p.dtc for p in results[-1]['pf']]
-                    print(opt.obs_preds)
-                    try:
-                        self.assertLess(opt.obs_preds['total']['scores'],0.0125)
-                    except:
-                        results[k] = tests[k].optimize(OM.boundary_dict,backend=OM.backend,\
-                                    protocol={'allen': False, 'elephant': True},\
-                                        MU=MU+5,NGEN=NGEN+5,plot=True)
-                        opt = results[k]['pf'][0].dtc
-                        front = results[k]['pf']
-                        print(opt.obs_preds)
-                        try:
-                            self.assertLess(opt.obs_preds['total']['scores'],0.025)
-                            print('the score was bad the gradient of the optimizer good?')
-                        except:
-                            y1 = [i['avg'][0] for i in results[k]['log'][0:7]]
-                            y = [i['min'][0] for i in results[k]['log'][0:7]]
-                            x = [i['gen'] for i in results[k]['log'][0:7]]
-
-                            out = linregress(x, y)
-                            self.assertLess(out[0],-0.0025465789127244809)
-                            out = linregress(x, y1)
-                            self.assertLess(out[0],-0.0025465789127244809)
-                    break
-            break
-    def triple_objective_test(self):
-        results = []
-        tests = []
-        backend = "RAW"
-        MU = NGEN = 40
-        simulated_data_tests, OM = self.sim_data_tests(backend,MU,NGEN)
-
-        for i,k in enumerate(simulated_data_tests.keys()):
-            for j,l in enumerate(simulated_data_tests.keys()):
-                for m,n in enumerate(simulated_data_tests.keys()):
-                    if i!=j and i!=m and m!=j:
-                        tests = None
-                        tests = hide_imports.TSD([simulated_data_tests[m],simulated_data_tests[k],simulated_data_tests[l]])
-                        results.append(tests.optimize(OM.boundary_dict,backend=OM.backend,\
+                    results[k] = tests.optimize(OM.boundary_dict,backend=OM.backend,\
                                 protocol={'allen': False, 'elephant': True},\
-                                    MU=MU,NGEN=NGEN,plot=True))
-                        opt = results[-1]['pf'][0].dtc
-                        front = [p.dtc for p in results[-1]['pf']]
-                        print(opt.obs_preds)
-                        try:
-                            self.assertLess(opt.obs_preds['total']['scores'],0.0125)
-                        except:
-                            results[k] = tests[k].optimize(OM.boundary_dict,backend=OM.backend,\
-                                    protocol={'allen': False, 'elephant': True},\
-                                        MU=MU+5,NGEN=NGEN+5,plot=True)
-                            opt = results[k]['pf'][0].dtc
-                            front = results[k]['pf']
-                            print(opt.obs_preds)
-                            try:
-                                self.assertLess(opt.obs_preds['total']['scores'],0.025)
-                                print('the score was bad the gradient of the optimizer good?')
-                            except:
-                                y1 = [i['avg'][0] for i in results[k]['log'][0:7]]
-                                y = [i['min'][0] for i in results[k]['log'][0:7]]
-                                x = [i['gen'] for i in results[k]['log'][0:7]]
-
-                                out = linregress(x, y)
-                                self.assertLess(out[0],-0.0025465789127244809)
-                                out = linregress(x, y1)
-                                self.assertLess(out[0],-0.0025465789127244809)
-                        break
-                break
-            break
-    def test_single_objective_test(self):
-        '''
-        Test the gradient of a slope
-        '''
-        results = {}
-        tests = {}
-        backend = "RAW"
-        MU = NGEN = 20
-        simulated_data_tests, OM = self.sim_data_tests(backend,MU,NGEN)
-
-        for k in simulated_data_tests.keys():
-            tests[k] = hide_imports.TSD([simulated_data_tests[k]])
-            results[k] = tests[k].optimize(OM.boundary_dict,backend=OM.backend,\
-                    protocol={'allen': False, 'elephant': True},\
-                        MU=MU,NGEN=NGEN,plot=True)
-            opt = results[k]['pf'][0].dtc
-            front = results[k]['pf']
-            print(opt.obs_preds)
-            try:
-                self.assertLess(opt.obs_preds['total']['scores'],0.025)
-                print('the score was bad the gradient of the optimizer good?')
-            except:
-                results[k] = tests[k].optimize(OM.boundary_dict,backend=OM.backend,\
-                        protocol={'allen': False, 'elephant': True},\
-                            MU=MU+8,NGEN=NGEN+8,plot=True)
-                opt = results[k]['pf'][0].dtc
-                front = results[k]['pf']
-                print(opt.obs_preds)
-                try:
-                    self.assertLess(opt.obs_preds['total']['scores'],0.025)
+                                    MU=MU,NGEN=NGEN,plot=True)#,free_parameters=['a','b','C'])
+                    opt = results[k]['pf'][0].dtc
+                    front = results[k]['pf']
+                    print(opt.obs_preds)
+                    self.assertLess(opt.obs_preds['total']['scores'],0.125)
                     print('the score was bad the gradient of the optimizer good?')
-                except:
                     y1 = [i['avg'][0] for i in results[k]['log'][0:7]]
                     y = [i['min'][0] for i in results[k]['log'][0:7]]
                     x = [i['gen'] for i in results[k]['log'][0:7]]
@@ -182,7 +142,38 @@ class TestSum(unittest.TestCase):
                     self.assertLess(out[0],-0.0025465789127244809)
                     out = linregress(x, y1)
                     self.assertLess(out[0],-0.0025465789127244809)
- 
+                    break
+            break
+    def triple_objective_test(self):
+        results = {}
+        tests = []
+        backend = "RAW"
+        MU = NGEN = 40
+        simulated_data_tests, OM = OM.make_sim_data_tests(backend,MU,NGEN,free_parameters=['a','b','C'])
 
+        for i,k in enumerate(simulated_data_tests.keys()):
+            for j,l in enumerate(simulated_data_tests.keys()):
+                for m,n in enumerate(simulated_data_tests.keys()):
+                    if i!=j and i!=m and m!=j:
+                        tests = None
+                        tests = hide_imports.TSD([simulated_data_tests[m],simulated_data_tests[k],simulated_data_tests[l]])
+                        results[k] = tests.optimize(OM.boundary_dict,backend=OM.backend,\
+                                protocol={'allen': False, 'elephant': True},\
+                                    MU=MU,NGEN=NGEN,plot=True,free_parameters=['a','b','C'])
+                        opt = results[k]['pf'][0].dtc
+                        front = results[k]['pf']
+                        print(opt.obs_preds)
+                        y1 = [i['avg'][0] for i in results[k]['log'][0:7]]
+                        y = [i['min'][0] for i in results[k]['log'][0:7]]
+                        x = [i['gen'] for i in results[k]['log'][0:7]]
+
+                        out = linregress(x, y)
+                        self.assertLess(out[0],-0.0025465789127244809)
+                        out = linregress(x, y1)
+                        self.assertLess(out[0],-0.0025465789127244809)
+                        break
+                break
+            break
+'''            
 if __name__ == '__main__':
     unittest.main()
