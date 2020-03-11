@@ -215,7 +215,6 @@ class TSS(TestSuite):
             free_params=param_edges.keys()
         self.DO = make_ga_DO(param_edges, NGEN, self, free_params=free_params, \
                            backend=backend, MU = 8,  protocol=protocol,seed_pop = seed_pop, hc=hold_constant)
-        print(self.DO)
         self.DO.MU = MU
         self.DO.NGEN = NGEN
         ga_out = self.DO.run(NGEN = self.DO.NGEN)
@@ -273,6 +272,14 @@ class TSD(dict):
 
     def to_dict(self):
         return {k:v for k,v in self.items() }
+    '''
+    def update(self,tests= None):
+        if tests is None:
+            self.DO.OM.tests = self
+        else:
+            self.DO.OM.tests = tests
+    '''        
+
     def optimize(self,param_edges,**kwargs):
         defaults = {'backend':None,\
                     'protocol':{'allen': False, 'elephant': True},\
@@ -316,20 +323,9 @@ class TSD(dict):
             if DM:
                 pop,dtcpop = get_dm(local,pop=ga_out['pf'])
         self.backend = kwargs['backend']
-        #kwargs['plot']  = False
-        #if kwargs['plot'] == True:
-            #if str(self.cell_name) not in str('simulated data'):
-                # is this a data driven test? if so its worth plotting results
+
         ga_out = self.elaborate_plots(self,ga_out,savefigs=True)
         # make ga_out pickleable by cleansing sciunit and deap objects
-        """
-        for pop in ga_out.values():
-            if hasattr(pop,'len'):
-                if len(pop):
-                    if hasattr(pop[0],'dtc'):
-                        for ind in pop:
-                            ind.dtc.tests ={ k:v for k,v in ind.dtc.tests.items() }
-        """
         self.ga_out = ga_out
         self.DO = None # destroy this here, as its used once and not pickleable
 

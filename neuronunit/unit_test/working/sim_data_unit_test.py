@@ -33,7 +33,6 @@ class Test_opt_tests(unittest.TestCase):
         self.OM = OM
         
     def test_single_objective_test(self):
-
         backend = "RAW"
         MU = 20
         NGEN = 20
@@ -41,11 +40,14 @@ class Test_opt_tests(unittest.TestCase):
         results = {}
         tests = {}
         simulated_data_tests, OM, target = self.OM.make_sim_data_tests(backend,MU,NGEN,free_parameters=['a','b','C'])
+        simulated_data_tests = {k:v for k,v in simulated_data_tests.items() if k != str('TimeConstantTest')}
+        simulated_data_tests = {k:v for k,v in simulated_data_tests.items() if k != str('CapacitanceTest')}
+        simulated_data_tests = {k:v for k,v in simulated_data_tests.items() if k != str('InjectedCurrentAPWidthTest')}
 
         for k in simulated_data_tests.keys():
             if k =='TimeConstantTest':
                 continue
-            if k =='CapicitanceTest':
+            if k =='CapacitanceTest':
                 continue
             if k == 'InjectedCurrentAPWidthTest':
                 continue
@@ -88,43 +90,32 @@ class Test_opt_tests(unittest.TestCase):
 
                 inject_and_plot_passive_model(target,second=results[k]['pf'][0].dtc,figname='debug_target_gene.png')
                 try:
-                    test_dump = this_test
-                    with open(str(gene.attrs)+str(k)) as f:
-                        pickle.dump(f,[target,gene,test_dump])
+                    gene.tests = target.tests = None
+                    with open(str(gene.attrs)+str(gene.backend)+str(k)+'.p','wb') as f:
+                        pickle.dump([target,gene,test_dump],f)
+
                 except:
-                    import pdb
-                    pdb.set_trace()
-                    '''
-                    import pdb
-                    pdb.set_trace()
-                    break
-                    #tests = hide_imports.TSD(tests[k].to_dict())
-                    #tests[k] = None
-                    results[k] = reserve.optimize(OM.boundary_dict,backend=OM.backend,\
-                    protocol={'allen': False, 'elephant': True},\
-                        MU=MU,NGEN=NGEN,plot=True,free_params=['a'])#,'b','C'])
-                    print(opt.obs_preds['total']['scores'] < 0.100)
-                    import pdb
-                    pdb.set_trace()
-                    '''
+                    pass
+    '''    
+                
     def test_two_objectives_test(self):
         results = {}
         #tests = []
         backend = "RAW"
         MU = NGEN = 45
         #simulated_data_tests, OM = self.OM.make_sim_data_tests(backend,MU,NGEN)
-        simulated_data_tests, OM, target = self.OM.make_sim_data_tests(backend,MU,NGEN,free_parameters=['a','b','c'])
+        simulated_data_tests, OM, target = self.OM.make_sim_data_tests(backend,MU,NGEN,free_parameters=['a','b','C'])
         simulated_data_tests = {k:v for k,v in simulated_data_tests.items() if k != str('TimeConstantTest')}
-        simulated_data_tests = {k:v for k,v in simulated_data_tests.items() if k != str('CapicitanceTest')}
+        simulated_data_tests = {k:v for k,v in simulated_data_tests.items() if k != str('CapacitanceTest')}
         simulated_data_tests = {k:v for k,v in simulated_data_tests.items() if k != str('InjectedCurrentAPWidthTest')}
-        for i,k in enumerate(simulated_data_tests.keys()):
-            for j,l in enumerate(simulated_data_tests.keys()):
+        for i,(k,v0) in enumerate(simulated_data_tests.items()):
+            for j,(l,v1) in enumerate(simulated_data_tests.items()):
                 if i!=j:
-                    #tests = None
-                    tests = hide_imports.TSD([simulated_data_tests[k],simulated_data_tests[l]])
+                    
+                    tests = hide_imports.TSD([v0,v1])
                     results[k] = tests.optimize(OM.boundary_dict,backend=OM.backend,\
                                 protocol={'allen': False, 'elephant': True},\
-                                    MU=MU,NGEN=NGEN,plot=True)#,free_parameters=['a','b','C'])
+                                    MU=MU,NGEN=NGEN,plot=True,free_parameters=['a','b','C'])
                     opt = results[k]['pf'][0].dtc
                     front = results[k]['pf']
                     print(opt.obs_preds)
@@ -140,7 +131,6 @@ class Test_opt_tests(unittest.TestCase):
                     self.assertLess(out[0],-0.0025465789127244809)
                     break
             break
-    '''    
     def triple_objective_test(self):
         results = {}
         tests = []
