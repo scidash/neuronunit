@@ -14,8 +14,6 @@ import pickle
 from neuronunit.optimisation.optimization_management import check_match_front, jrt
 from scipy.stats import linregress
 import unittest
-#from neuronunit.optimisation.optimization_management import make_sim_data_tests
-# # Design simulated data tests
 import numpy as np
 
 class Test_opt_tests(unittest.TestCase):
@@ -31,12 +29,10 @@ class Test_opt_tests(unittest.TestCase):
             temp = hide_imports.TSD(test_frame['Neocortex pyramidal cell layer 5-6'])[k]
             stds[k] = temp.observation['std']
         cloned_tests = copy.copy(test_frame['Neocortex pyramidal cell layer 5-6'])
-
         OM = jrt(cloned_tests,backend)
         self.OM = OM
-        #self.hide_imports = hide_imports
+        
     def test_single_objective_test(self):
-        #hide_imports = self.hide_imports 
 
         backend = "RAW"
         MU = 20
@@ -64,10 +60,9 @@ class Test_opt_tests(unittest.TestCase):
             max_ = np.max([ p for p in results[k]['history'].genealogy_history.values() ])
             model = target.dtc_to_model()
             tests[k][list(tests[k].keys())[0]].judge(model)
-            print(min_<target.attrs['a']<max_)
-            print(min_)
-            print(max_)
 
+            assert min_<target.attrs['a']<max_
+            
             opt = results[k]['pf'][0].dtc
             print(opt.attrs)
             front = results[k]['pf']
@@ -99,7 +94,7 @@ class Test_opt_tests(unittest.TestCase):
                 except:
                     import pdb
                     pdb.set_trace()
-                '''
+                    '''
                     import pdb
                     pdb.set_trace()
                     break
@@ -145,6 +140,7 @@ class Test_opt_tests(unittest.TestCase):
                     self.assertLess(out[0],-0.0025465789127244809)
                     break
             break
+    '''    
     def triple_objective_test(self):
         results = {}
         tests = []
@@ -175,6 +171,6 @@ class Test_opt_tests(unittest.TestCase):
                         break
                 break
             break
-'''            
+    '''            
 if __name__ == '__main__':
     unittest.main()
