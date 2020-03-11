@@ -64,11 +64,12 @@ class Test_opt_tests(unittest.TestCase):
             tests[k][list(tests[k].keys())[0]].judge(model)
 
             assert min_<target.attrs['a']<max_
-            
+            self.assertLess(min_,target.attrs['a'])
             opt = results[k]['pf'][0].dtc
             print(opt.attrs)
             front = results[k]['pf']
             print(opt.obs_preds)
+            self.assertLess(opt.obs_preds['total']['scores'],0.10)
 
             if opt.obs_preds['total']['scores'] < 0.100:
                 y1 = [i['avg'][0] for i in results[k]['log']]
@@ -88,8 +89,9 @@ class Test_opt_tests(unittest.TestCase):
                 this_test.judge(model)
                 pred_target = this_test.prediction
 
-                inject_and_plot_passive_model(target,second=results[k]['pf'][0].dtc,figname='debug_target_gene.png')
                 try:
+                    inject_and_plot_passive_model(target,second=results[k]['pf'][0].dtc,figname='debug_target_gene.png')
+                
                     gene.tests = target.tests = None
                     with open(str(gene.attrs)+str(gene.backend)+str(k)+'.p','wb') as f:
                         pickle.dump([target,gene,test_dump],f)
