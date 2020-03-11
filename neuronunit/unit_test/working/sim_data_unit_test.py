@@ -16,6 +16,8 @@ from scipy.stats import linregress
 import unittest
 #from neuronunit.optimisation.optimization_management import make_sim_data_tests
 # # Design simulated data tests
+import numpy as np
+
 class Test_opt_tests(unittest.TestCase):
 
     def setUp(self):
@@ -42,22 +44,22 @@ class Test_opt_tests(unittest.TestCase):
 
         results = {}
         tests = {}
-        simulated_data_tests, OM, target = self.OM.make_sim_data_tests(backend,MU,NGEN,free_parameters=['a'])
+        simulated_data_tests, OM, target = self.OM.make_sim_data_tests(backend,MU,NGEN,free_parameters=['a','b','C'])
 
         for k in simulated_data_tests.keys():
-            #if k =='TimeConstantTest':
-            #    continue
-            #if k =='CapicitanceTest':
-            #    continue
-            #if k == 'InjectedCurrentAPWidthTest':
-            #    continue
+            if k =='TimeConstantTest':
+                continue
+            if k =='CapicitanceTest':
+                continue
+            if k == 'InjectedCurrentAPWidthTest':
+                continue
+
             tests[k] = hide_imports.TSD([simulated_data_tests[k]])
             #print('resistance to optimization',tests[k].observation['std'])
             reserve = copy.copy(tests[k])
             results[k] = tests[k].optimize(OM.boundary_dict,backend=OM.backend,\
                     protocol={'allen': False, 'elephant': True},\
-                        MU=MU,NGEN=NGEN,plot=True,free_params=['a'])#,'b','C'])
-            import numpy as np
+                        MU=MU,NGEN=NGEN,plot=True,free_params=['a','b','C'])
             min_ = np.min([ p for p in results[k]['history'].genealogy_history.values() ])
             max_ = np.max([ p for p in results[k]['history'].genealogy_history.values() ])
             model = target.dtc_to_model()
@@ -76,11 +78,8 @@ class Test_opt_tests(unittest.TestCase):
                 y = [i['min'][0] for i in results[k]['log']]
                 x = [i['gen'] for i in results[k]['log']]
 
-                slope = linregress(x, y)
-                print(slope[0])
-                slope = linregress(x, y1)
-                print(slope[0])            
-                print(tests[k])
+                slopem = linregress(x, y)
+                slopea = linregress(x, y1)
                 gene = results[k]['pf'][0].dtc
                 mm = results[k]['pf'][0].dtc.dtc_to_model()
                 this_test = tests[k][list(tests[k].keys())[0]]
@@ -93,10 +92,13 @@ class Test_opt_tests(unittest.TestCase):
                 pred_target = this_test.prediction
 
                 inject_and_plot_passive_model(target,second=results[k]['pf'][0].dtc,figname='debug_target_gene.png')
-
-                test_dump = this_test.to_dict()
-                with open(str(gene.attrs)+str(k) as f:
-                    pickle.dump(f,[target,gene,test_dump])
+                try:
+                    test_dump = this_test
+                    with open(str(gene.attrs)+str(k)) as f:
+                        pickle.dump(f,[target,gene,test_dump])
+                except:
+                    import pdb
+                    pdb.set_trace()
                 '''
                     import pdb
                     pdb.set_trace()
@@ -110,7 +112,6 @@ class Test_opt_tests(unittest.TestCase):
                     import pdb
                     pdb.set_trace()
                     '''
-    '''
     def test_two_objectives_test(self):
         results = {}
         #tests = []
@@ -118,13 +119,13 @@ class Test_opt_tests(unittest.TestCase):
         MU = NGEN = 45
         #simulated_data_tests, OM = self.OM.make_sim_data_tests(backend,MU,NGEN)
         simulated_data_tests, OM, target = self.OM.make_sim_data_tests(backend,MU,NGEN,free_parameters=['a','b','c'])
-
-        print('already here?')
-
+        simulated_data_tests = {k:v for k,v in simulated_data_tests.items() if k != str('TimeConstantTest')}
+        simulated_data_tests = {k:v for k,v in simulated_data_tests.items() if k != str('CapicitanceTest')}
+        simulated_data_tests = {k:v for k,v in simulated_data_tests.items() if k != str('InjectedCurrentAPWidthTest')}
         for i,k in enumerate(simulated_data_tests.keys()):
             for j,l in enumerate(simulated_data_tests.keys()):
                 if i!=j:
-                    tests = None
+                    #tests = None
                     tests = hide_imports.TSD([simulated_data_tests[k],simulated_data_tests[l]])
                     results[k] = tests.optimize(OM.boundary_dict,backend=OM.backend,\
                                 protocol={'allen': False, 'elephant': True},\

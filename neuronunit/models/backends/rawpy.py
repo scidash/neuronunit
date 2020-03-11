@@ -87,11 +87,19 @@ class RAWBackend(Backend):
         self.attrs = attrs
         self.debug = debug
         self.temp_attrs = None
+        self.default_attrs = {'C':89.7960714285714, 'a':0.01, 'b':15, 'c':-60, 'd':10, 'k':1.6, 'vPeak':(86.364525297619-65.2261863636364), 'vr':-65.2261863636364, 'vt':-50, 'dt':0.010, 'Iext':[]}
 
         if type(attrs) is not type(None):
-            self.set_attrs(**attrs)
-            self.sim_attrs = attrs
+            self.attrs = attrs
+        '''
+            self.sim_attrs.update(attrs)
+        else:
+            self.attrs = self.default_attrs
+            self.model.attrs = self.default_attrs
+        '''
 
+
+            # set default parameters anyway.
         if type(DTC) is not type(None):
             if type(DTC.attrs) is not type(None):
                 self.set_attrs(**DTC.attrs)
@@ -130,11 +138,18 @@ class RAWBackend(Backend):
 
         return self.vM
 
-    def set_attrs(self, **attrs):
+    def set_attrs(self, attrs):
         self.attrs = attrs
         self.model.attrs.update(attrs)
 
-
+        #self.model.attrs = {'C':89.7960714285714, 'a':0.01, 'b':15, 'c':-60, 'd':10, 'k':1.6, 'vPeak':(86.364525297619-65.2261863636364), 'vr':-65.2261863636364, 'vt':-50, 'dt':0.010, 'Iext':[]}
+        '''
+        print(self.model.attrs)
+        for k,v in attrs.items():
+            #self.attrs[k] = v
+            self.model.attrs[k] = v
+        print(self.model.attrs)
+        '''
     @cython.boundscheck(False)
     @cython.wraparound(False)
     def inject_square_current(self, current):#, section = None, debug=False):

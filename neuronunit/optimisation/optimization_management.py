@@ -412,7 +412,8 @@ def random_p(backend):
         mean = np.mean(ranges[k])
         std = np.std(ranges[k])
         sample = numpy.random.normal(loc=mean, scale=std, size=1)[0]
-        random_param1[k] = sample
+        random_param2[k] = sample
+
     assert set(random_param1.values()) is not set(random_param2.values())
     return random_param1
 
@@ -438,13 +439,12 @@ def process_rparam(backend,free_parameters):
             reduced_parameter_set[k] = rp[k]
         rp = reduced_parameter_set
 
-    dsolution = DataTC()
-    import hide_imports
-    defaults = hide_imports.model_parameters.MODEL_PARAMS[backend]
-    dsolution.attrs = {k:np.mean(v) for k,v in defaults.items() }
-    dsolution.attrs.update(rp)
+    dsolution = DataTC(backend =backend,attrs=rp)
+    temp_model = dsolution.dtc_to_model()
+    dsolution.attrs = temp_model.default_attrs
 
-    #dsolution.attrs = rp
+    for k,v in rp.items():
+        dsolution.attrs[k] = rp[k]
     dsolution.backend = backend
     return dsolution,rp,None,random_param
 def check_test(new_tests):
@@ -748,21 +748,6 @@ def dtc_to_rheo(dtc):
         dtc = get_rh(dtc,rtest)
     return dtc
 
-def inject_and_plot_passive_model(attrs,backend):
-    pre_model = DataTC()
-    pre_model.attrs = attrs
-    pre_model.backend = backend
-    # get an object of class ReducedModel with known attributes and known rheobase current injection value.
-    model = pre_model.dtc_to_model()
-    DURATION = 500.0*pq.ms
-    DELAY = 200.0*pq.m
-    uc = {'amplitude':-10*pq.pA,'duration':DURATION,'delay':DELAY}
-    model.inject_square_current(uc)
-    vm = model.get_membrane_potential()
-    plt.plot(vm.times,vm.magnitude)
-    plt.show()
-    return vm,plt
-
 def mint_NEURON_model(dtc):
     LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
     pre_model.model_path = LEMS_MODEL_PATH
@@ -799,12 +784,12 @@ def inject_and_plot_model(pre_model,figname=None):
     #plt.plot(vm.times,vm.magnitude)
     return vm,plt
 
-def inject_and_plot_passive_model(pre_model,figname=None):
+def inject_and_plot_passive_model(pre_model,second=None,figname=None):
 
 
     # get rheobase injection value
     # get an object of class ReducedModel with known attributes and known rheobase current injection value.
-    pre_model = dtc_to_rheo(pre_model)
+    #pre_model = dtc_to_rheo(pre_model)
     model = pre_model.dtc_to_model()
     uc = {'amplitude':-10*pq.pA,'duration':500*pq.ms,'delay':100*pq.ms}
     model.inject_square_current(uc)
@@ -814,12 +799,23 @@ def inject_and_plot_passive_model(pre_model,figname=None):
     if pre_model.backend in str("HH"):
         plt.title('Hodgkin-Huxley Neuron')
     else:
-        plt.title('membrane potential plot')
-    plt.plot(vm.times, vm.magnitude, 'k')
+        plt.title('membrane potential plot Izhi model')
+    plt.plot(vm.times, vm.magnitude, c='r',label=str('target')+str(model.attrs['a']))
+    if second is not None:
+        model2 = second.dtc_to_model()
+        uc = {'amplitude':-10*pq.pA,'duration':500*pq.ms,'delay':100*pq.ms}
+        model2.inject_square_current(uc)
+        vm2 = model2.get_membrane_potential()
+        plt.plot(vm2.times, vm2.magnitude, c='g',label=str('optimal')+str(model2.attrs['a']))
+
+
     plt.ylabel('V (mV)')
+    plt.legend(loc="upper left")
+
     if figname is not None:
         plt.savefig(figname)
     #plt.plot(vm.times,vm.magnitude)
+
     return vm,plt
 
 def inject_and_not_plot_model(pre_model):
@@ -831,6 +827,8 @@ def inject_and_not_plot_model(pre_model):
     uc = {'amplitude':model.rheobase,'duration':DURATION,'delay':DELAY}
     model.inject_square_current(uc)
     vm = model.get_membrane_potential()
+    #plt.legend(loc="upper left")
+
     return vm
 
 def check_binary_match(dtc0,dtc1):
@@ -848,6 +846,8 @@ def check_binary_match(dtc0,dtc1):
     #for v in vms:
     plt.plot(vm1.times, vm1.magnitude,label="solutions")
     plt.ylabel('V (mV)')
+    plt.legend(loc="upper left")
+
     #plt.plot(vm.times,vm.magnitude)
     return plt
 
@@ -1725,9 +1725,7 @@ def evaluate(dtc):
     else:
 
         fitness = [v for v in dtc.SA.values]
-        for f in fitness:
-            if np.isinf(f):
-                f = 100.0
+
         fitness = tuple(fitness,)
         return fitness
 
@@ -1739,6 +1737,15 @@ def get_trans_list(param_dict):
 
 from sciunit import scores
 
+@dask.delayed
+def transform_delayed(xargs):
+    (ind,td,backend) = xargs
+    dtc = DataTC()
+    dtc.attrs = {}
+    for i,j in enumerate(ind):
+        dtc.attrs[str(td[i])] = j
+    dtc.evaluated = False
+    return dtc
 
 def transform(xargs):
     (ind,td,backend) = xargs
@@ -1748,7 +1755,6 @@ def transform(xargs):
         dtc.attrs[str(td[i])] = j
     dtc.evaluated = False
     return dtc
-
 
 def add_constant(hold_constant, pop, td):
     hold_constant = OrderedDict(hold_constant)
@@ -1906,7 +1912,8 @@ class OptMan():
                 v.params['injected_square_current']['amplitude'] = temp['injected_square_current']['amplitude']
                 v.params['injected_square_current']['delay'] = v.params['delay']
                 v.params['injected_square_current']['duration'] = v.params['duration']
-
+                #(Pdb) t.params['injected_square_current']['delay'] = t.params['delay']
+                #(Pdb) t.params['injected_square_current']['duration'] = t.params['duration']
                 #temp['injected_square_current']['amplitude']
         return dtc
 
@@ -1947,12 +1954,14 @@ class OptMan():
             if v.passive == False and v.active == True:
                 keyed = dtc.protocols[k]#.params
                 temp = active_values(keyed,dtc.rheobase)
-                #if not 
                 v.params['amplitude'] = temp['injected_square_current']['amplitude']
                 if not 'injected_square_current' in v.params.keys():
                     v.params['injected_square_current'] = {}
 
                 v.params['injected_square_current']['amplitude'] = temp['injected_square_current']['amplitude']
+                v.params['injected_square_current']['delay'] = v.params['delay']
+                v.params['injected_square_current']['duration'] = v.params['duration']
+                
         return dtc
 
 
@@ -2340,7 +2349,7 @@ class OptMan():
         cloned_tests = copy.copy(OM.tests)
         OM.tests = hide_imports.TSD(cloned_tests)
         rt_out = OM.simulate_data(OM.tests,OM.backend,free_parameters=free_parameters)
-        print(rt_out[0])
+
         penultimate_tests = hide_imports.TSD(test_frame['Neocortex pyramidal cell layer 5-6'])
         for k,v in penultimate_tests.items():
             temp = penultimate_tests[k]
@@ -2398,7 +2407,8 @@ class OptMan():
             while new_tests is False:
                 dsolution,rp,_,_ = process_rparam(backend,free_parameters=free_parameters)
                 (new_tests,dtc) = self.make_simulated_observations(tests,backend,rp,dsolution=dsolution)
-
+                #import pdb
+                #pdb.set_trace()
                 if new_tests is False:
                     continue
                 new_tests = {k:v for k,v in new_tests.items() if v.observation[which_key(v.observation)] is not None}
@@ -2616,27 +2626,23 @@ class OptMan():
             score = t.judge(model)
             if isinstance(score, sciunit.scores.incomplete.InsufficientDataScore):
                 score = t.judge(model)
-            score_ = np.abs(score.log_norm_score)
-            #except:
-            #    print('before fail',t)
-            #    score_ = 100.0
+            #score_ = np.abs(score.log_norm_score)
+            #if score_ == np.inf:
+            score_ = float(np.abs(score.raw))
             scores_.append(score_)
 
-            #except:
-            #    score_ = 100
-            #    scores_.append(score_)
 
-
-
+        #import pdb
         for i,s in enumerate(scores_):
             if s==np.inf:
                 scores_[i] = 100.0
-
+                #pdb.set_trace()
             if not isinstance(s,type(float())):
                 s = 100.0
+                #pdb.set_trace()
+
         dtc.SA = ScoreArray(dtc.tests, scores_)
-        #print(dtc.SA)
-        #dtc.SA = dtc.ordered_score()
+
 
         obs = {}
         pred = {}
@@ -2676,27 +2682,25 @@ class OptMan():
             if 'mean' not in t.observation.keys():
                 t.observation['mean'] = t.observation['value']
 
-            try:
+            score_gene = t.judge(model)
+            score_ = np.abs(1.0-score_gene.norm_score)
+            lns = np.abs(score_gene.log_norm_score)
+
+            scores_.append(lns)
+
+            '''
+            if isinstance(score, sciunit.scores.incomplete.InsufficientDataScore):
                 score = t.judge(model)
-                if isinstance(score, sciunit.scores.incomplete.InsufficientDataScore):
-                    score = t.judge(model)
-                score_ = np.abs(score.log_norm_score)
-                scores_.append(score_)
+            score_ = np.abs(score.log_norm_score)
+            if score_ == np.inf:
+                score_ = float(score.raw)
+            scores_.append(score_)
+            '''
 
-            except:
-                #import pickle
-                #with open('contents.p','wb') as f:
-                #    pickle.dump(f,[t,dtc])
-                score_ = 100
-                scores_.append(score_)
-
-
-
-            for s in scores_:
-                if not isinstance(s,type(float())):
-                    s = 100.0
+        for i,s in enumerate(scores_):
+            if s==np.inf:
+                scores_[i] = np.abs(float(score_gene.raw))            
         dtc.SA = ScoreArray(dtc.tests, scores_)
-        #dtc.SA = dtc.ordered_score()
 
         obs = {}
         pred = {}
@@ -2911,10 +2915,11 @@ class OptMan():
             _backend = self.backend
         if isinstance(pop, Iterable):# and type(pop[0]) is not type(str('')):
             xargs = zip(pop,repeat(self.td),repeat(self.backend))
-            npart = np.min([multiprocessing.cpu_count(),len(pop)])
-            bag = db.from_sequence(xargs, npartitions = npart)
+            dtcpops = []
+            for i in xargs:
+                dtcpops.append(transform_delayed(i))
+            dtcpop = dask.compute(dtcpops)[0]
 
-            dtcpop = list(bag.map(transform).compute())
             if self.verbose:
                 print(dtcpop)
             assert len(dtcpop) == len(pop)
@@ -3001,8 +3006,11 @@ class OptMan():
             for dtc in dtcpop:
                 if type(dtc.tests) is type(dict()):
                     for t in dtc.tests.values():
-                        assert 'std' in t.observation.keys()
-
+                        try:
+                            assert 'std' in t.observation.keys()
+                        except:
+                            import pdb
+                            pdb.set_trace()
             dtcpop = list(map(self.format_test,dtcpop))
             dtcpop = [d for d in dtcpop if d is not None]
         else:
@@ -3087,12 +3095,18 @@ class OptMan():
                     if isinstance(dtc.tests,type(dict())):
                         for t in dtc.tests.values():
                             assert 'std' in t.observation.keys()
+                '''
                 for i in dtcpop:
                     i = self.format_test_delayed(i)
                     i = self.elephant_evaluation_delayed(i)
                     lazy.append(i)
+                '''    
+                for i in dtcpop:    
+                    i = self.elephant_evaluation(i)
 
-                dtcpop = dask.compute(lazy,schedular='distributed')[0]
+                #dtcpop = dask.compute(lazy,schedular='distributed')[0]
+                # smaller_pop = [d for d in dtcpop for _,fitness in d.SA.values if fitness != 100 ]
+                # pop, dtcpop = self.make_up_lost(pop,smaller_pop,self.td)
                 for d in dtcpop:
                     assert hasattr(d, 'tests')
                     assert d.SA is not None
