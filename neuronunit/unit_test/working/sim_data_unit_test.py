@@ -39,7 +39,12 @@ class Test_opt_tests(unittest.TestCase):
 
         results = {}
         tests = {}
+        
         simulated_data_tests, OM, target = self.OM.make_sim_data_tests(backend,MU,NGEN,free_parameters=['a','b','C'])
+        simulated_data_tests.pop('TimeConstantTest',None)
+        simulated_data_tests.pop('CapacitanceTest',None)
+        simulated_data_tests.pop('InjectedCurrentAPWidthTest',None)
+
         simulated_data_tests = {k:v for k,v in simulated_data_tests.items() if k != str('TimeConstantTest')}
         simulated_data_tests = {k:v for k,v in simulated_data_tests.items() if k != str('CapacitanceTest')}
         simulated_data_tests = {k:v for k,v in simulated_data_tests.items() if k != str('InjectedCurrentAPWidthTest')}
@@ -69,7 +74,7 @@ class Test_opt_tests(unittest.TestCase):
             print(opt.attrs)
             front = results[k]['pf']
             print(opt.obs_preds)
-            self.assertLess(opt.obs_preds['total']['scores'],0.10)
+            self.assertLess(opt.obs_preds['total']['scores'],0.100)
 
             if opt.obs_preds['total']['scores'] < 0.100:
                 y1 = [i['avg'][0] for i in results[k]['log']]
@@ -88,16 +93,140 @@ class Test_opt_tests(unittest.TestCase):
                 model = target.dtc_to_model()
                 this_test.judge(model)
                 pred_target = this_test.prediction
-
+                #inject_and_plot_passive_model(target,second=results[k]['pf'][0].dtc,figname='debug_target_gene.png')
+                '''
                 try:
-                    inject_and_plot_passive_model(target,second=results[k]['pf'][0].dtc,figname='debug_target_gene.png')
                 
                     gene.tests = target.tests = None
                     with open(str(gene.attrs)+str(gene.backend)+str(k)+'.p','wb') as f:
                         pickle.dump([target,gene,test_dump],f)
 
                 except:
-                    pass
+                    print('does not plot')
+                '''
+    def test_all_objective_test(self):
+        backend = "RAW"
+        MU = 20
+        NGEN = 20
+
+        results = {}
+        tests = {}
+        simulated_data_tests, OM, target = self.OM.make_sim_data_tests(backend,MU,NGEN,free_parameters=['a','b','C'])
+        simulated_data_tests.pop('TimeConstantTest',None)
+        simulated_data_tests.pop('CapacitanceTest',None)
+        simulated_data_tests.pop('InjectedCurrentAPWidthTest',None)
+
+        simulated_data_tests = {k:v for k,v in simulated_data_tests.items() if k != str('TimeConstantTest')}
+        simulated_data_tests = {k:v for k,v in simulated_data_tests.items() if k != str('CapacitanceTest')}
+        simulated_data_tests = {k:v for k,v in simulated_data_tests.items() if k != str('InjectedCurrentAPWidthTest')}
+
+        tests = hide_imports.TSD(simulated_data_tests)
+        reserve = copy.copy(tests)
+        results[k] = tests.optimize(OM.boundary_dict,backend=OM.backend,\
+                protocol={'allen': False, 'elephant': True},\
+                    MU=MU,NGEN=NGEN,plot=True,free_params=['a','b','C'])
+        min_ = np.min([ p for p in results[k]['history'].genealogy_history.values() ])
+        max_ = np.max([ p for p in results[k]['history'].genealogy_history.values() ])
+        model = target.dtc_to_model()
+        tests[list(tests.keys())[0]].judge(model)
+
+        assert min_<target.attrs['a']<max_
+        self.assertLess(min_,target.attrs['a'])
+        opt = results[k]['pf'][0].dtc
+        print(opt.attrs)
+        front = results[k]['pf']
+        print(opt.obs_preds)
+        self.assertLess(opt.obs_preds['total']['scores'],0.100)
+
+        if opt.obs_preds['total']['scores'] < 0.100:
+            y1 = [i['avg'][0] for i in results[k]['log']]
+            y = [i['min'][0] for i in results[k]['log']]
+            x = [i['gen'] for i in results[k]['log']]
+
+            slopem = linregress(x, y)
+            slopea = linregress(x, y1)
+            gene = results[k]['pf'][0].dtc
+            mm = results[k]['pf'][0].dtc.dtc_to_model()
+            this_test = tests[list(tests.keys())[0]]
+            score_gene = this_test.judge(mm)
+            pred_gene = this_test.prediction
+
+
+            model = target.dtc_to_model()
+            this_test.judge(model)
+            pred_target = this_test.prediction
+            #inject_and_plot_passive_model(target,second=results[k]['pf'][0].dtc,figname='debug_target_gene.png')
+            '''
+            try:
+            
+                gene.tests = target.tests = None
+                with open(str(gene.attrs)+str(gene.backend)+str('all_tests')+'.p','wb') as f:
+                    pickle.dump([target,gene,test_dump],f)
+
+            except:
+                print('does not plot')
+            '''
+    def test_all_objective_test_HH(self):
+        backend = "HH"
+        MU = 5
+        NGEN = 5
+
+        #results = {}
+        #tests = {}
+        simulated_data_tests, OM, target = self.OM.make_sim_data_tests(backend,MU,NGEN)#,free_parameters=['a','b','C'])
+        simulated_data_tests.pop('TimeConstantTest',None)
+        simulated_data_tests.pop('CapacitanceTest',None)
+        simulated_data_tests.pop('InjectedCurrentAPWidthTest',None)
+
+        simulated_data_tests = {k:v for k,v in simulated_data_tests.items() if k != str('TimeConstantTest')}
+        simulated_data_tests = {k:v for k,v in simulated_data_tests.items() if k != str('CapacitanceTest')}
+        simulated_data_tests = {k:v for k,v in simulated_data_tests.items() if k != str('InjectedCurrentAPWidthTest')}
+
+        tests = hide_imports.TSD(simulated_data_tests)
+        reserve = copy.copy(tests)
+        results = tests.optimize(OM.boundary_dict,backend=OM.backend,\
+                protocol={'allen': False, 'elephant': True},\
+                    MU=MU,NGEN=NGEN,plot=True)#,free_params=['a','b','C'])
+        #min_ = np.min([ p for p in results['history'].genealogy_history.values() ])
+        #max_ = np.max([ p for p in results['history'].genealogy_history.values() ])
+        model = target.dtc_to_model()
+        tests[list(tests.keys())[0]].judge(model)
+
+        opt = results['pf'][0].dtc
+        print(opt.attrs)
+        front = results['pf']
+        print(opt.obs_preds)
+        self.assertLess(opt.obs_preds['total']['scores'],0.250)
+
+        if opt.obs_preds['total']['scores'] < 0.100:
+            y1 = [i['avg'][0] for i in results['log']]
+            y = [i['min'][0] for i in results['log']]
+            x = [i['gen'] for i in results['log']]
+
+            slopem = linregress(x, y)
+            slopea = linregress(x, y1)
+            gene = results['pf'][0].dtc
+            mm = results['pf'][0].dtc.dtc_to_model()
+            this_test = tests[list(tests.keys())[0]]
+            score_gene = this_test.judge(mm)
+            pred_gene = this_test.prediction
+
+
+            model = target.dtc_to_model()
+            this_test.judge(model)
+            pred_target = this_test.prediction
+            #inject_and_plot_passive_model(target,second=results[k]['pf'][0].dtc,figname='debug_target_gene.png')
+            '''
+            try:
+            
+                gene.tests = target.tests = None
+                with open(str(gene.attrs)+str(gene.backend)+str('all_tests')+'.p','wb') as f:
+                    pickle.dump([target,gene,test_dump],f)
+
+            except:
+                print('does not plot')
+
+            '''
     '''    
                 
     def test_two_objectives_test(self):
