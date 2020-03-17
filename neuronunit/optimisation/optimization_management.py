@@ -634,12 +634,15 @@ def get_rh(dtc,rtest_class):
     '''
     place_holder = {'n': 86, 'mean': 10 * pq.pA, 'std': 10 * pq.pA, 'value': 10 * pq.pA}
     backend_ = dtc.backend
-    if 'NEURON' in backend_ or 'ADEXP' in backend_ or 'GLIF' in backend_ or 'BHH' in backend_:
-        #rtest = RheobaseTest(observation=place_holder,
-        #                        name='RheobaseTest')
-
-        rtest = RheobaseTest(observation=place_holder,
+    if 'NEURON' in backend_ or 'ADEXP' in backend_ or 'GLIF' in backend_ or 'BHH' in backend_:# or 'HH' in backend_:
+        rtest = RheobaseTestP(observation=place_holder,
                                 name='RheobaseTest')
+
+        temp = RheobaseTest(observation=place_holder,
+                                name='RheobaseTest')
+        rtest.params = copy.copy(temp.params)
+        temp = None
+        print(rtest)
     else:
         rtest = RheobaseTest(observation=place_holder,
                          name='RheobaseTest')
@@ -708,8 +711,9 @@ def dtc_to_rheo(dtc):
     if hasattr(dtc,'tests'):
         if type(dtc.tests) is type({}) and str('RheobaseTest') in dtc.tests.keys():
             rtest = dtc.tests['RheobaseTest']
-            if str('JHH') in dtc.backend or str('BHH') in dtc.backend or str('ADEXP') in dtc.backend or str("GLIF") in dtc.backend or str("HH") in dtc.backend:
+            if str('JHH') in dtc.backend or str('BHH') in dtc.backend or str('ADEXP') in dtc.backend or str("GLIF") in dtc.backend:# or str("HH") in dtc.backend:
                  rtest = RheobaseTestP(dtc.tests['RheobaseTest'].observation)
+                 rtest.params = dtc.tests['RheobaseTest'].params
         else:
             rtest = get_rtest(dtc)
     else:
@@ -894,15 +898,21 @@ def score_proc(dtc,t,score):
         dtc.agreement = dtc.score
     return dtc
 
-def jrt(use_test,backend):
+def jrt(use_test,backend,protocol='elephant'):
     import hide_imports
     use_test = hide_imports.TSD(use_test)
     use_test.use_rheobase_score = True
     edges = hide_imports.model_parameters.MODEL_PARAMS[backend]
-    OM = hide_imports.OptMan(use_test,
-        backend=backend,
-        boundary_dict=edges,
-        protocol={'allen': False, 'elephant': True})
+    if protocol is 'elephant':
+        OM = hide_imports.OptMan(use_test,
+            backend=backend,
+            boundary_dict=edges,
+            protocol={'allen': False, 'elephant': True})
+    else:
+        OM = hide_imports.OptMan(use_test,
+            backend=backend,
+            boundary_dict=edges,
+            protocol={'allen': True, 'elephant': False})
 
     return OM
 
@@ -1763,12 +1773,22 @@ def add_constant(hold_constant, pop, td):
 
 def filtered(pop,dtcpop):
    # The slow way
-    dtcpop = [ dtc for dtc in dtcpop if type(dtc.rheobase) is not type(None) ]
-    pop = [ p for p in pop if type(p.rheobase) is not type(None) ]
+    #for i,j in zip(dtcpop,pop):
+    #    j.rheobase = i.rheobase
+
+    #dtcpop = [ dtc for dtc in dtcpop if type(dtc.rheobase) is not type(None) ]
+    both = [ (d,p) for d,p in zip(dtcpop,pop) if type(p.rheobase) is not type(None) ]
+    pop = [i[0] for i in both]
+    dtcpop = [i[1] for i in both]
 
     if len(pop) != len(dtcpop):
         print('fatal')
-    assert len(pop) == len(dtcpop)
+    try:
+        assert len(pop) == len(dtcpop)
+    except:
+        
+        import pdb
+        pdb.set_trace()
     return pop, dtcpop
 
 
@@ -2437,12 +2457,14 @@ class OptMan():
         grid = ParameterGrid(explore_ranges)
 
         size = len(grid)
+        '''
         temp = []
         if size > npoints:
             sparsify = np.linspace(0,len(grid)-1,npoints)
             for i in sparsify:
                 temp.append(grid[int(i)])
             grid = temp
+        '''
         dtcpop = []
         for local_attrs in grid:
             store_results[str(local_attrs.values())] = {}
@@ -2679,8 +2701,25 @@ class OptMan():
                 t.observation['mean'] = t.observation['value']
 
             score_gene = t.judge(model)
-            score_ = np.abs(1.0-score_gene.norm_score)
-            lns = np.abs(score_gene.log_norm_score)
+            #   score_ = np.abs(1.0-score_gene.norm_score)
+            if not isinstance(type(score_gene),type(None)):
+                print(type(score_gene))
+                if not isinstance(type(score_gene),sciunit.scores.InsufficientDataScore):
+                    if not isinstance(type(score_gene.log_norm_score),type(None)):
+                        try:
+                            lns = np.abs(score_gene.log_norm_score)
+                        except:
+                            print('try to make lns here')
+                            import pdb
+                            pdb.set_trace()
+                    else:
+                        import pdb
+                        pdb.set_trace()
+                        lns = np.abs(score_gene.raw)
+                else:
+                    import pdb
+                    pdb.set_trace()
+           
 
             scores_.append(lns)
 
@@ -2745,16 +2784,7 @@ class OptMan():
     def make_simulated_observations(self,original_test_dic,backend,random_param,dsolution=None):
         #self.simulated_obs = True
         # to be used in conjunction with round_trip_test below.
-        '''
-        if dsolution is None:
-            dtc = DataTC()
-            dtc.attrs = {k:np.mean(v) for k,v in MODEL_PARAMS.model_parameters[backend].items() }
-            
-            dtc.attrs.update(random_param)
-            #print(dtc.attrs)
-            dtc.backend = copy.copy(backend)
-        else:
-        '''    
+
         dtc = dsolution
         if self.protocol['elephant']:
             if 'protocol' in  original_test_dic.keys():
@@ -3135,7 +3165,7 @@ class OptMan():
                 for t in tests:
                     assert 'std' in t.observation.keys()
             pop_, dtcpop = self.obtain_rheobase(pop, tests)
-
+            pop, dtcpop = self.make_up_lost(copy.copy(pop_), dtcpop, td)
 
             if not hasattr(self,'exhaustive'):
                 # there are many models, which have no actual rheobase current injection value.

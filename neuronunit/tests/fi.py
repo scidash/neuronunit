@@ -309,12 +309,20 @@ class RheobaseTestP(RheobaseTest):
     ephysprop_name = 'Rheobase'
     #score_type = scores.RatioScore
     get_rheobase_vm = True
-    def condition_model(self, model):
-        """
-        condition model
-        """
-        model.set_run_params(t_stop=self.params['tmax'])
+    default_params = dict(VmTest.default_params)
+    default_params.update({'amplitude': 100*pq.pA,
+                           'duration': DURATION,
+                           'delay': DELAY,
+                           'tolerance': 1.0*pq.pA})
 
+    params_schema = dict(VmTest.params_schema)
+    params_schema.update({'tolerance': {'type': 'current', 'min': 1, 'required': False}})
+
+    def condition_model(self, model):
+        if not 'tmax' in self.params:
+            self.params['tmax'] = 2000.0*pq.ms
+        else:
+            model.set_run_params(t_stop=self.params['tmax'])
 
     default_params = dict(VmTest.default_params)
     default_params.update({'amplitude': 100*pq.pA,
@@ -387,30 +395,22 @@ class RheobaseTestP(RheobaseTest):
             dtc.boolean = False
 
             model = dtc.dtc_to_model()
-
+            self.condition_model(model)
+            print(model.attrs)
 
             ampl = dtc.ampl
+            print(ampl)
             if float(ampl) not in dtc.lookup or len(dtc.lookup) == 0:
 
-                if False:
-                    uc = {'amplitude':ampl,'duration':DURATION,'delay':DELAY}
-                    model.inject_square_current(uc)
-                    n_spikes = model._backend.get_spike_count()
-                current = self.get_injected_square_current()
+                current = {'amplitude':ampl,'duration':DURATION,'delay':DELAY}
+                float(current['delay']) > 100
                 current['amplitude'] = ampl
-                #if current['amplitude']<0.0:
-                print(current['amplitude'],'ampl')
-                #if float(current['amplitude'])>0:
-                    #try:
-                model.inject_square_current(current)
-
-                n_spikes = model.get_spike_count()
-                #if n_spikes ==1:
-                
-                vm = model.get_membrane_potential()
-                # if True:
-	            #    asciplot_code(vm,n_spikes)
-
+                try:
+                    model.inject_square_current(current)
+                    n_spikes = model.get_spike_count()
+                except:
+                    n_spikes = 100
+                print(n_spikes)
 
 
 
@@ -419,14 +419,14 @@ class RheobaseTestP(RheobaseTest):
 
                 dtc.rheobase = {}
 
-                if float(ampl) < -1.0:
+                if float(ampl) < 0.0:
                     dtc.rheobase['value'] = None
                     dtc.boolean = True
                     return dtc
 
                 if n_spikes == 1:
                     dtc.lookup[float(ampl)] = 1
-                    dtc.rheobase['value'] = float(ampl)*pq.pA
+                    dtc.rheobase['value'] = ampl
                     dtc.boolean = True
                     #dtc.rheobase_vm = model.get_membrane_potential()
 
@@ -454,6 +454,10 @@ class RheobaseTestP(RheobaseTest):
             # check for memory and exploit it.
             if dtc.initiated == True:
                 dtc = check_current(dtc)
+                print('yes returns')
+
+                dtc = dask.compute(dtc)[0]
+                print('yes returns')
                 if dtc.boolean:
                     return dtc
                 #else:
