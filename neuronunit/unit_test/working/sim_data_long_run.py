@@ -3,9 +3,6 @@
 
 # # Set up the environment
 
-# In[ ]:
-
-
 import matplotlib.pyplot as plt
 import matplotlib
 #get_ipython().run_line_magic('matplotlib', 'inline')
@@ -19,7 +16,6 @@ import pickle
 
 # # Design simulated data tests
 
-# In[ ]:
 
 
 def jrt(use_test,backend):
@@ -34,13 +30,8 @@ def jrt(use_test,backend):
     return OM
 
 
-# In[ ]:
-
-
 backend = str("RAW")
-MU = 12
-NGEN = 12
-
+MU = NGEN = 200
 
 test_frame = pickle.load(open('processed_multicellular_constraints.p','rb'))
 stds = {}
@@ -103,13 +94,14 @@ with open('sim data.p','wb') as f: pickle.dump([target,front_only],f)
 front = [ind.dtc for ind in ga_out['pf']]
 
 from neuronunit.optimisation.optimization_management import check_match_front
-check_match_front(target,front[0:10],figname ='front'+str('MU_')+str(MU)+('_NGEN_')+str(NGEN)+str(backend)+'_.png')
+figname ='front'+str('MU_')+str(MU)+('_NGEN_')+str(NGEN)+str(backend)+'_.png'
+check_match_front(target,front[0:10],figname)
 
 opt.rheobase
 
 inject_and_plot_model(target,figname ='just_target_of_opt_'+str('MU_')+str(MU)+('_NGEN_')+str(NGEN)+str(backend)+'_.png')
 
-
+x
 inject_and_plot_model(opt,figname ='just_opt_active_'+str('MU_')+str(MU)+('_NGEN_')+str(NGEN)+str(backend)+'_.png')
 
 #inject_and_plot_model()
