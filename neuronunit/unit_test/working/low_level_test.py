@@ -1,4 +1,7 @@
-"RAW""""Tests of NeuronUnit test classes"""
+#import matplotlib.pyplot as plt
+#plt.plot([1,0],[0,1])
+#plt.show()
+"""Tests of NeuronUnit test classes"""
 import unittest
 import os
 import sys
@@ -98,7 +101,7 @@ def test_all_tests_pop(dtcpop, tests):
 
     dtcpop = list(map(dtc_to_rheo,dtcpop))
     dtcpop = [d for d in dtcpop if d.rheobase is not None]
-    print([d for d in dtcpop],len(dtcpop))
+    #print([d for d in dtcpop],len(dtcpop))
     for d in dtcpop:
         d.tests = all_tests
         d.backend = str("RAW")
@@ -141,7 +144,7 @@ class testLowLevelOptimisation(unittest.TestCase):
 
         self.test_rheobase_dtc = test_rheobase_dtc
         self.dtcpop = test_rheobase_dtc(dtcpop,self.electro_tests)
-        print(self.dtcpop,len(self.dtcpop))
+        #print(self.dtcpop,len(self.dtcpop))
         #self.dtcpop = test_all_tests_pop(self.dtcpop,self.electro_tests)
         self.dtc = self.dtcpop[0]
         self.rheobase = self.dtc.rheobase
@@ -467,25 +470,37 @@ class testLowLevelOptimisation(unittest.TestCase):
             observation = aibs.get_observation(dataset_id,'rheobase')
             rt = RheobaseTest(observation = observation)
             rtp = RheobaseTestP(observation = observation)
-        #model = self.dtc_to_model()
+        rtp.params = rt.params
+        self.dtc.tests[rtp.name] = rtp
+        self.dtc = format_test_(self.dtc)
         model = self.dtc.dtc_to_model()
-
-
         preds = rt.generate_prediction(model)#,stop_on_error = False, deep_error = True)
         model = None
         model = self.dtc.dtc_to_model()
-        import matplotlib.pyplot as plt
-        plt.plot(rt.rheobase_vm.times,rt.rheobase_vm.magnitude)
-        #model = self.dtc_to_model()
-
         predp = rtp.generate_prediction(model)#,stop_on_error = False, deep_error = True)
-        print(preds,predp)
+        rtp.params['amplitude'] = predp['value']
+        current = rtp.params#['injected_square_current']
+        model.inject_square_current(current)
+        vm = model.get_membrane_potential()
+        '''
+        plt.plot(vm.times,vm.magnitude)
+        plt.plot(rt.rheobase_vm.times,rt.rheobase_vm.magnitude)
+        plt.savefig('debug_rheobase.png')
+        plt.clf()
+        plt.plot(rt.rheobase_vm.times,rt.rheobase_vm.magnitude)
+        plt.savefig('serial_debug_rheobase.png')
+        plt.clf()
+        plt.plot(vm.times,vm.magnitude)
+        plt.savefig('parallel_debug_rheobase.png')
+        '''
+        #print(current)
         #plt.plot(rtp.rheobase_vm.times,rt.rheobase_vm.magnitude)
         check_less_thresh = float(np.abs(preds['value'] - predp['value']))
-
+        print(check_less_thresh)
         #model.inject_square_current(rt.)
-        self.assertLessEqual(check_less_thresh, 20.0)
-
+        self.assertLessEqual(check_less_thresh, 0.50)
+        if check_less_thresh<0.5:
+            print('passed')
     #@unittest.skip("Not implemented")
     def test_subset(self):
         from neuronunit.optimisation import create_subset
