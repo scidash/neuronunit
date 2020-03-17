@@ -1,7 +1,7 @@
 # Its not that this file is responsible for doing plotting,
 # but it calls many modules that are, such that it needs to pre-empt
 import warnings
-
+import dask
 SILENT = True
 if SILENT:
     warnings.filterwarnings("ignore")
@@ -191,7 +191,7 @@ def make_ga_DO(explore_edges, max_ngen, test, \
     return DO
 
 from sciunit import TestSuite
-
+'''
 class TSS(TestSuite):
     def __init__(self,tests={},use_rheobase_score=False):
        self.DO = None
@@ -237,14 +237,12 @@ class TSS(TestSuite):
             #p in ga_out['pf']],pop=ga_out['pf'])
 
         self.backend = backend
-        '''
         if str(self.cell_name) not in str('simulated data'):
             #pass
             # is this a data driven test? if so its worth plotting results
             ga_out = self.elaborate_plots(self,ga_out)
-        '''
         return ga_out, self.DO
-
+'''
 class TSD(dict):
     def __init__(self,tests={},use_rheobase_score=False):
        self.DO = None
@@ -852,9 +850,9 @@ def check_match_front(dtc0,dtcpop,figname = None):
     for v in vms:
         plt.plot(v.times, v.magnitude,label="solutions",c='grey')
     plt.ylabel('V (mV)')
-    if not isinstance(type(figname),type(None)):
-        plt.savefig(figname)
     plt.legend(loc="upper right")
+    if type(figname) is not type(None):
+        plt.savefig(figname)
 
     #plt.plot(vm.times,vm.magnitude)
     return plt
@@ -1005,7 +1003,7 @@ def get_dtc_pop(contains_dtcpop,filtered_tests,model_parameters,backend = 'ADEXP
         dtcpop = []
         for i in v:
             dtcpop.append(transform((i,DO.td,backend)))
-            dtcpop[-1] = dask.compute(dtcpop[-1])
+            dtcpop[-1] = dask.compute(dtcpop[-1])[0]
             dtcpop[-1].backend = backend
             dtcpop[-1] = DO.OptMan.dtc_to_rheo(dtcpop[-1])
             dtcpop[-1] = DO.OptMan.format_test(dtcpop[-1])
@@ -1688,7 +1686,7 @@ def evaluate(dtc):
 
         fitness = [v for v in dtc.SA.values]
         for f in fitness:
-            if f==np.inf:
+            if np.isinf(f):
                 f = 100.0
         fitness = tuple(fitness,)
         return fitness
@@ -2530,6 +2528,8 @@ class OptMan():
                 scores_.append(score_)
 
             except:
+                with open(str(dtc.attrs),'rb') as f:
+                    pickle.dump(f,dtc.attrs)
                 score_ = 100
                 scores_.append(score_)
 
@@ -2543,12 +2543,7 @@ class OptMan():
 
         obs = {}
         pred = {}
-<<<<<<< HEAD
         temp = {t.name:t for t in dtc.tests if hasattr(t,'prediction')}
-=======
-        temp = {t.name:t for t in dtc.tests}
-
->>>>>>> 4ad4101bb743c45511917c2c4220aa423a942071
         if dtc.rheobase is not None:
             similarity,lps,rps =  self.closeness(temp,temp)
             scores_ = {}
@@ -2746,16 +2741,13 @@ class OptMan():
             _backend = self.backend
         if isinstance(pop, Iterable):# and type(pop[0]) is not type(str('')):
             xargs = zip(pop,repeat(self.td),repeat(self.backend))
-<<<<<<< HEAD
             lazy = []
             for x in xargs:
                 lazy.append(transform(x))
             dtcpop = dask.compute(lazy)[0]
-=======
-            npart = np.min([multiprocessing.cpu_count(),len(pop)])
-            bag = db.from_sequence(xargs, npartitions = npart)
-            dtcpop = list(bag.map(transform).compute())
->>>>>>> 4ad4101bb743c45511917c2c4220aa423a942071
+            #npart = np.min([multiprocessing.cpu_count(),len(pop)])
+            #bag = db.from_sequence(xargs, npartitions = npart)
+            #dtcpop = list(bag.map(transform).compute())
             if self.verbose:
                 print(dtcpop)
             assert len(dtcpop) == len(pop)
@@ -2779,7 +2771,7 @@ class OptMan():
             # In this case pop is not really a population but an individual
             # but parsimony of naming variables
             # suggests not to change the variable name to reflect this.
-            dtc = [ dask.compute(transform(xargs)) ]
+            dtc = [ dask.compute(transform(xargs))[0] ]
             dtc.boundary_dict = None
             dtc.boundary_dict = self.boundary_dict
             return dtc
@@ -2919,7 +2911,6 @@ class OptMan():
             #print(len(dtcpop),'length after filtering')
             if self.PARALLEL_CONFIDENT:# and self.backend is not str('ADEXP'):
                 passed = False
-<<<<<<< HEAD
                 lazy = []                
                 for dtc in dtcpop:
                     if not hasattr(dtc,'tests'):
@@ -2933,20 +2924,6 @@ class OptMan():
                     i = self.elephant_evaluation_delayed(i)
                     lazy.append(i)
                 dtcpop = dask.compute(lazy,schedular='distributed')[0]
-                #dtcbag = db.from_sequence(dtcpop, npartitions = NPART)                
-                #dtcpop = list(dtcbag.filter(lambda dtc: not hasattr(dtc,'rheobase')).compute())
-                #dtcpop = list(dtcbag.filter(lambda dtc: not isinstance(type(dtc.rheobase),type(None))).compute())
-=======
-
-                dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
-                dtcpop = list(dtcbag.map(self.format_test).compute())
-                passed = True
-                #except:
-                #    dtcpop = list(map(self.format_test,dtcpop))
-
-                dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
-                dtcpop = list(dtcbag.map(self.elephant_evaluation).compute())
->>>>>>> 4ad4101bb743c45511917c2c4220aa423a942071
 
                 for d in dtcpop:
                     assert hasattr(d, 'tests')
