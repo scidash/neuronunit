@@ -40,7 +40,6 @@ import matplotlib as mpl
 @cython.wraparound(False)
 def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippets=False,experimental_cell_type="neo_cortical",ground_truth = None,BPO=True):
     sns.set_style("darkgrid")
-    #from neuronunit.optimisation.optimization_management import mint_generic_model
     if not isinstance(dtc, Iterable):
         model = dtc.dtc_to_model()
         if hasattr(dtc,'rheobase'):
@@ -340,14 +339,14 @@ def elaborate_plots(self,ga_out,savefigs=False):
     #axes.set_xlim(np.min(gen_numbers) - 1, np.max(gen_numbers) + 1)
     axes.set_xlabel('Generations')
     axes.set_ylabel('Sum of objectives')
-    axes.legend()
+    #axes.legend()
     fig.tight_layout()
     if savefigs:
-        plt.savefig(str('classic_evolution_')+str(self.backend)+str('.png'))
+        plt.savefig(str('MU+NGEN')+str(gen_numbers)+'_'+str(len(ga_out['pf']))+str('mean_evolution_')+str(self.backend)+str('.png'))
     else:
         plt.show()
 
-    plt.style.use('ggplot')
+    #plt.style.use('ggplot')
     fig, axes = plt.subplots(figsize=(50, 50), facecolor='white')
 
     logbook = ga_out['log']
