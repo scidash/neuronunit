@@ -242,6 +242,9 @@ class HHBackend(Backend):
         self.cell_name = cell_name
         self.vM = None
         self.attrs = attrs
+        self.default_attrs = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3, \
+                                'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -77.0, \
+                                'E_Na' : 50.0, 'vr':-65.0 }
 
         self.temp_attrs = None
 
