@@ -1779,8 +1779,8 @@ def filtered(pop,dtcpop):
 
     #dtcpop = [ dtc for dtc in dtcpop if type(dtc.rheobase) is not type(None) ]
     both = [ (d,p) for d,p in zip(dtcpop,pop) if type(p.rheobase) is not type(None) ]
-    pop = [i[0] for i in both]
-    dtcpop = [i[1] for i in both]
+    pop = [i[1] for i in both]
+    dtcpop = [i[0] for i in both]
 
     if len(pop) != len(dtcpop):
         print('fatal')
@@ -2724,15 +2724,6 @@ class OptMan():
 
             scores_.append(lns)
 
-            '''
-            if isinstance(score, sciunit.scores.incomplete.InsufficientDataScore):
-                score = t.judge(model)
-            score_ = np.abs(score.log_norm_score)
-            if score_ == np.inf:
-                score_ = float(score.raw)
-            scores_.append(score_)
-            '''
-
         for i,s in enumerate(scores_):
             if s==np.inf:
                 scores_[i] = np.abs(float(score_gene.raw))            
@@ -3085,7 +3076,6 @@ class OptMan():
     @timer
     def parallel_route(self,pop,dtcpop,tests):
         td = self.td
-        #NPART = np.min([multiprocessing.cpu_count(),len(dtcpop)])
 
         if self.protocol['allen']:
             pop, dtcpop = self.get_allen(pop,dtcpop,tests,td,tsr=self.protocol['tsr'])
@@ -3099,17 +3089,7 @@ class OptMan():
                 return pop, dtcpop
 
         elif self.protocol['elephant']:
-            #for d in dtcpop:
-            #    d.tests = copy.copy(self.tests)
-            '''
-            b4 = len(dtcpop)
-            delta = [d for d in dtcpop if d.rheobase is None]
 
-            pop, dtcpop = self.make_up_lost(copy.copy(pop), dtcpop, self.td)
-            delta = [d for d in dtcpop if d.rheobase is None]
-            '''
-
-            #print(len(dtcpop),'length after filtering')
             if self.PARALLEL_CONFIDENT:# and self.backend is not str('ADEXP'):
                 passed = False
                 lazy = []
@@ -3160,7 +3140,7 @@ class OptMan():
                     assert 'std' in t.observation.keys()
             pop_, dtcpop = self.obtain_rheobase(pop, tests)
             pop, dtcpop = self.make_up_lost(copy.copy(pop_), dtcpop, td)
-
+            
             if not hasattr(self,'exhaustive'):
                 # there are many models, which have no actual rheobase current injection value.
                 # filter, filters out such models,
