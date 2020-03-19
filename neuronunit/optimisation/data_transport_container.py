@@ -18,12 +18,12 @@ class DataTC(object):
     with the distinction that unlike the LEMS model this class
     can be cheaply transported across HOSTS/CPUs
     '''
-    def __init__(self):
+    def __init__(self,attrs = None,backend = None):
         self.lookup = {}
         self.rheobase = None
         self.previous = 0
         self.run_number = 0
-        self.attrs = None
+        self.attrs = attrs
         self.steps = None
         self.name = None
         self.results = None
@@ -41,7 +41,7 @@ class DataTC(object):
         self.cached_attrs = {}
         self.predictions = {}
         self.observations = {}
-        self.backend = None
+        self.backend = backend
         self.summed = None
         self.constants = None
         self.scores_ratio = None
@@ -50,7 +50,7 @@ class DataTC(object):
         self.td = {}
         self.errors = {}
         self.SM = None
-
+        self.attrs = {}
     def get_ss(self):
         # get summed score
         if self.scores is not None:

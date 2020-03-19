@@ -9,4 +9,5 @@ class TracePrints(object):
     self.stdout.write("Writing %r\n" % s)
     traceback.print_stack(file=self.stdout)
 
-import opt_all    
+sys.stdout = TracePrints()
+import oale   

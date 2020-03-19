@@ -27,7 +27,7 @@ from neuronunit.optimisation.optimization_management import dtc_to_rheo
 from neuronunit.optimisation.optimization_management import OptMan as OM
 elephant_evaluation = OM.elephant_evaluation
 format_test = OM.format_test
-round_trip_test = OM.format_test
+round_trip_test = OM.round_trip_test
 
 #mint_generic_model = OM.mint_generic_model
 
