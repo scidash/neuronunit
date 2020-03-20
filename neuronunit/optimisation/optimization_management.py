@@ -280,8 +280,9 @@ class TSD(dict):
             self.DO.OM.tests = tests
     '''        
 
-    def optimize(self,param_edges,**kwargs):
-        defaults = {'backend':None,\
+    def optimize(self,**kwargs):
+        defaults = {'param_edges':None,
+                    'backend':None,\
                     'protocol':{'allen': False, 'elephant': True},\
                     'MU':5,\
                     'NGEN':5,\
@@ -292,8 +293,12 @@ class TSD(dict):
                     }
         defaults.update(kwargs)
         kwargs = defaults
+
+        if type(kwargs['param_edges']) is type(None):
+            from neuronunit.optimisation import model_parameters
+            param_edges = kwargs['free_params'] = free_params = model_parameters.MODEL_PARAMS[kwargs['backend']]
         if kwargs['free_params'] is None:
-            free_params=param_edges.keys()
+            free_params=kwargs['param_edges'].keys()
         else:
             free_params = kwargs['free_params']
         self.DO = make_ga_DO(param_edges, \
@@ -2003,12 +2008,18 @@ class OptMan():
         dtc_ = self.update_dtc_pop(gene)#,self.td)
         #dtc_ = pop2dtc(gene,dtc_)
         return gene[0], dtc_[0]
-
+    '''
     def optimize(self,free_params=None,NGEN=10,MU=10,seed_pop=None,hold_constant=None):
         from neuronunit.optimisation.optimisations import run_ga
-        ranges = self.boundary_dict
+        from neuronunit.optimisation import model_parameters
+
         subset = OrderedDict()
         if type(free_params) is type(None):
+            if type(self.boundary_dict) is type(None):
+                ranges = model_parameters.MODEL_PARAMS[backend]
+            else:
+                ranges = self.boundary_dict
+
             free_params = list(ranges.keys())
 
         if type(hold_constant) is type(None):
@@ -2032,6 +2043,7 @@ class OptMan():
                            hc=hold_constant)
         self.DO = DO
         return ga_out
+    '''
     def run_simple_grid(self,npoints=10,free_params=None):
         self.exhaustive = True
         from neuronunit.optimisation.exhaustive_search import sample_points, add_constant, chunks
@@ -2594,7 +2606,8 @@ class OptMan():
 
     def preprocess(self,dtc):
         tests = dtc.tests
-
+        if isinstance(tests,type(dict())):
+            tests = list(tests.values())
         if isinstance(dtc.rheobase,type(None)) or type(dtc.rheobase) is type(None):
             dtc = allocate_worst(tests, dtc)
         else:
@@ -2654,10 +2667,8 @@ class OptMan():
         for i,s in enumerate(scores_):
             if s==np.inf:
                 scores_[i] = 100.0
-                #pdb.set_trace()
             if not isinstance(s,type(float())):
                 s = 100.0
-                #pdb.set_trace()
 
         dtc.SA = ScoreArray(dtc.tests, scores_)
 
@@ -2723,14 +2734,6 @@ class OptMan():
 
             scores_.append(lns)
 
-            '''
-            if isinstance(score, sciunit.scores.incomplete.InsufficientDataScore):
-                score = t.judge(model)
-            score_ = np.abs(score.log_norm_score)
-            if score_ == np.inf:
-                score_ = float(score.raw)
-            scores_.append(score_)
-            '''
 
         for i,s in enumerate(scores_):
             if s==np.inf:
