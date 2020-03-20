@@ -2700,11 +2700,13 @@ class OptMan():
             if 'RheobaseTestP' in t.name: t.score_type = sciunit.scores.ZScore
             if 'mean' not in t.observation.keys():
                 t.observation['mean'] = t.observation['value']
-
-            score_gene = t.judge(model)
+            try:
+                score_gene = t.judge(model)
+            except:
+                score_gene = None
+                lns = 200.0
             #   score_ = np.abs(1.0-score_gene.norm_score)
             if not isinstance(type(score_gene),type(None)):
-                print(type(score_gene))
                 if not isinstance(type(score_gene),sciunit.scores.InsufficientDataScore):
                     if not isinstance(type(score_gene.log_norm_score),type(None)):
                         try:
@@ -2721,7 +2723,7 @@ class OptMan():
                     import pdb
                     pdb.set_trace()
            
-
+            
             scores_.append(lns)
 
         for i,s in enumerate(scores_):
