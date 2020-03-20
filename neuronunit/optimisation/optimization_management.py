@@ -1778,8 +1778,8 @@ def filtered(pop,dtcpop):
 
     #dtcpop = [ dtc for dtc in dtcpop if type(dtc.rheobase) is not type(None) ]
     both = [ (d,p) for d,p in zip(dtcpop,pop) if type(p.rheobase) is not type(None) ]
-    pop = [i[0] for i in both]
-    dtcpop = [i[1] for i in both]
+    pop = [i[1] for i in both]
+    dtcpop = [i[0] for i in both]
 
     if len(pop) != len(dtcpop):
         print('fatal')

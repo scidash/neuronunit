@@ -13,18 +13,7 @@ from neuronunit.optimisation.optimization_management import check_match_front
 
 
 # # Design simulated data tests
-
-def jrt(use_test,backend):
-    use_test = hide_imports.TSD(use_test)
-    use_test.use_rheobase_score = True
-    edges = hide_imports.model_parameters.MODEL_PARAMS[backend]
-    OM = hide_imports.OptMan(use_test,
-        backend=backend,
-        boundary_dict=edges,
-        protocol={'allen': False, 'elephant': True})
-
-    return OM
-
+from neuronunit.optimisation.optimization_management import check_match_front, jrt
 
 def sim_data_tests(backend,MU,NGEN):
     test_frame = pickle.load(open('processed_multicellular_constraints.p','rb'))
@@ -32,7 +21,6 @@ def sim_data_tests(backend,MU,NGEN):
     for k,v in hide_imports.TSD(test_frame['Neocortex pyramidal cell layer 5-6']).items():
         temp = hide_imports.TSD(test_frame['Neocortex pyramidal cell layer 5-6'])[k]
         stds[k] = temp.observation['std']
-    OMObjects = []
     cloned_tests = copy.copy(test_frame['Neocortex pyramidal cell layer 5-6'])
 
     OM = jrt(cloned_tests,backend)
@@ -68,17 +56,19 @@ def sim_data_tests(backend,MU,NGEN):
                                         MU=MU,NGEN=NGEN)
 
     ga_out['DO'] = None
-    front_only = copy.copy(ga_out['pf'])
-    for d in front_only:
+    front = ga_out['pf']
+    for d in front:
         d.dtc.tests.DO = None
         d.dtc.tests = d.dtc.tests.to_dict()
+    front = [ind.dtc for ind in ga_out['pf']]
+
     opt = ga_out['pf'][0].dtc
     #target
 
     target.DO = None
     #target.tests = d.dtc.tests.to_dict()
-    front = [ind.dtc for ind in ga_out['pf']]
-
+    #import pdb
+    #pdb.set_trace()
     check_match_front(target,front[0:10],figname ='front'+str('MU_')+str(MU)+('_NGEN_')+str(NGEN)+str(backend)+'_.png')
     inject_and_plot_model(target,figname ='just_target_of_opt_'+str('MU_')+str(MU)+('_NGEN_')+str(NGEN)+str(backend)+'_.png')
     inject_and_plot_model(opt,figname ='just_opt_active_'+str('MU_')+str(MU)+('_NGEN_')+str(NGEN)+str(backend)+'_.png')
@@ -90,10 +80,19 @@ def sim_data_tests(backend,MU,NGEN):
 
     sim_data = pickle.load(open('sim data.p','rb'))
 
-    return ga_out,target,front
+    return ga_out['log'],target,front,opt
 
-MU = NGEN = 10
+#MUrange =
+NGEN = 150
 backend = str("RAW")
-ga_out,target,front = sim_data_tests(backend,MU,NGEN)
-backend = str("HH")
-ga_out,target,front = sim_data_tests(backend,MU,NGEN)
+import pickle
+for MU in range(40,140,1):
+    #print(MU)
+    ga_out,target,front,opt = sim_data_tests(backend,MU,NGEN)
+    results = [ga_out,target,front,opt]
+    with open('sim_data_'+str(MU)+'_.p','wb') as f:
+        pickle.dump(MU,f)
+import sys
+sys.exit()
+#backend = str("HH")
+#ga_out,target,front = sim_data_tests(backend,MU,NGEN)
