@@ -49,9 +49,9 @@ def sim_data_tests(backend,MU,NGEN):
     # # first lets just optimize over all objective functions all the time.
     # # Commence optimization of models on simulated data sets
 
-
-    ga_out = simulated_data_tests.optimize(
-                                        OM.boundary_dict,backend=OM.backend,
+    #import pdb
+    #pdb.set_trace()
+    ga_out = simulated_data_tests.optimize(backend=OM.backend,
                                         protocol={'allen': False, 'elephant': True},
                                         MU=MU,NGEN=NGEN)
 
