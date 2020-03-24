@@ -299,7 +299,7 @@ def elaborate_plots(self,ga_out,savefigs=False):
     gen_numbers =[ i for i in range(0,len(logbook.select('gen'))) ]
     pf = ga_out['pf']
     #mean = np.array(logbook.select('stats_fit'))
-
+    import numpy as np
     mean = np.array(logbook.select('avg'))
     std = np.array(logbook.select('std'))
     minimum = logbook.select('min')
@@ -342,7 +342,8 @@ def elaborate_plots(self,ga_out,savefigs=False):
     #axes.legend()
     fig.tight_layout()
     if savefigs:
-        plt.savefig(str('MU+NGEN')+str(gen_numbers)+'_'+str(len(ga_out['pf']))+str('mean_evolution_')+str(self.backend)+str('.png'))
+        import numpy as np
+        plt.savefig(str('MU+NGEN')+str(np.max(gen_numbers))+'_'+str(len(ga_out['pf']))+str('mean_evolution_')+str(self.backend)+str('.png'))
     else:
         plt.show()
 
