@@ -324,7 +324,7 @@ def elaborate_plots(self,ga_out,savefigs=False):
     axes.legend()
     fig.tight_layout()
     if savefigs:
-        plt.savefig(str('avg_converg_over_gen_')+str(self.backend)+str(self.MU)+str(self.NGEN)+str('.png'))
+        plt.savefig(str('avg_converg_over_gen_')+str(self.backend)+str('_')+str(self.MU)+str('_')+str(self.NGEN)+str('_')+str('.png'))
     else:
         plt.show()
 
