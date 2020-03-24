@@ -246,6 +246,7 @@ for i,k in enumerate(temp.keys()):
         temp[k].append(v[i])
 
 explore_param = {k:(np.min(v),np.max(v)) for k,v in temp.items()}
+explore_param['b'] = [-2,8]
 #IZHI_PARAMS = OrderedDict(explore_param)
 
 
@@ -271,7 +272,7 @@ for index,key in enumerate(reduced_cells.keys()):
 IZHI_PARAMS = {k:(np.min(v),np.max(v)) for k,v in trans_dict.items()}
 
 IZHI_PARAMS = OrderedDict(IZHI_PARAMS)
-IZHI_PARAMS['dt'] = [0.005, 0.005]
+# IZHI_PARAMS['dt'] = [0.005, 0.005]
 print(IZHI_PARAMS['vr'])
 MODEL_PARAMS['RAW'] = IZHI_PARAMS
 
@@ -335,8 +336,8 @@ vanilla_NRN['d'] = 0.1# (nA)
 vanilla_NRN['C'] = 1.0E-4# (microfarads)
 #print(pred0,pred1)
 MODEL_PARAMS['NEURON'] = vanilla_NRN
-
-# General parameters
+#MODEL_PARAMS['RAW'] = vanilla_NRN
+# General parameters 
 
 SEED_LTS = 428577
 SEED_CONN = 193566
