@@ -8,12 +8,12 @@ test_types = ['Neocortex pyramidal cell layer 5-6', \
     ]
 models = ["RAW", "HH"]
 
-samples_sd = [75,100,125,150]
+samples_sd = [50,75,100,125,150]
 for test_type in test_types:
     for model in models:
         for s in samples_sd:
             pm.execute_notebook(
            'paramaterized.ipynb',
            'milled_nbooks_{0}_{1}.ipynb'.format(model,test_type),
-            parameters = dict(model_type=str(model), test_type=test_type, NGEN =s, MU =s)
+            parameters = dict(model_type=str(model), test_type=test_type, NGEN =150, MU =s)
         )

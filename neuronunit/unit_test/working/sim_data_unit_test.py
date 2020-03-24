@@ -52,7 +52,7 @@ class Test_opt_tests(unittest.TestCase):
                 x = np.abs(std/mean)
         tests = hide_imports.TSD(simulated_data_tests)
         reserve = copy.copy(tests)
-        results = tests.optimize(OM.boundary_dict,backend=OM.backend,\
+        results = tests.optimize(backend=OM.backend,\
                 protocol={'allen': False, 'elephant': True},\
                     MU=MU,NGEN=NGEN,plot=True)#,free_params=['a','b','C'])
         model = target.dtc_to_model()
