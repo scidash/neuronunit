@@ -346,7 +346,7 @@ def elaborate_plots(self,ga_out,savefigs=False):
     fitevol = [ m['min'] for m in ga_out['log'] ]
     
     get_min = [(np.sum(j),i) for i,j in enumerate(fitevol)]
-    min_x = sorted(get_min,key = elem[1])[0][1]+1
+    min_x = sorted(get_min,key = lambda x: x[1])[0][1]+1
     gen = np.max([ m['gen'] for m in ga_out['log'] ])
     
     if len(objectives)>1:
