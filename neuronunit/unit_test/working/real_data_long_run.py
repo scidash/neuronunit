@@ -11,6 +11,8 @@ import copy
 import pickle
 from neuronunit.optimisation.optimization_management import TSD
 from collections import OrderedDict
+import pickle
+import sys
 
 # # Design simulated data tests
 from neuronunit.optimisation.optimization_management import check_match_front, jrt
@@ -39,8 +41,8 @@ def data_driven_tests(backend,MU,NGEN,t_index):
     opt = ga_out['pf'][0].dtc
     #check_match_front(target,front[0:10],figname ='front'+str('MU_')+str(MU)+('_NGEN_')+str(NGEN)+str(backend)+'_.png')
     #inject_and_plot_model(target,figname ='just_target_of_opt_'+str('MU_')+str(MU)+('_NGEN_')+str(NGEN)+str(backend)+'_.png')
-    inject_and_plot_model(opt,figname ='just_opt_active_'+str('MU_')+str(MU)+('_NGEN_')+str(NGEN)+str(backend)+'_.png')
-    inject_and_plot_passive_model(opt,figname ='just_opt_'+str('MU_')+str(MU)+('_NGEN_')+str(NGEN)+str(backend)+'_.png')#,figname=None)
+    inject_and_plot_model(opt,figname ='optimal_active_waveform'+str('MU_')+str(MU)+('_NGEN_')+str(NGEN)+str(backend)+'_.png')
+    inject_and_plot_passive_model(opt,figname ='optimal_passive_wave_form'+str('MU_')+str(MU)+('_NGEN_')+str(NGEN)+str(backend)+'_.png')#,figname=None)
     with open('.p','wb') as f:
         pickle.dump([opt.obs_preds],f)
 
@@ -49,9 +51,10 @@ def data_driven_tests(backend,MU,NGEN,t_index):
     return [ga_out['log'],front,opt,test_name]
 
 #MUrange =
-NGEN = 100
+NGEN = 160
+
 backend = str("RAW")
-import pickle
+
 test_frame = pickle.load(open('processed_multicellular_constraints.p','rb'))
 
 for MU in range(20,140,20):
@@ -63,7 +66,6 @@ for MU in range(20,140,20):
         results = [ga_out,front,opt,test_name]
         with open('real_data_'+str(MU)+str(test_name)+'_.p','wb') as f:
             pickle.dump(results,f)
-import sys
 sys.exit()
 #backend = str("HH")
 #ga_out,target,front = sim_data_tests(backend,MU,NGEN)
