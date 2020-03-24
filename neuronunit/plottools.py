@@ -275,13 +275,9 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
     return [dtc,second_pop,third_pop]
 
 def elaborate_plots(self,ga_out,savefigs=False):
-    plt.style.use('ggplot')
-    fig, axes = plt.subplots(figsize=(50, 50), facecolor='white')
-    '''
-    Move to slides
-    The plot shows the mean error value of the population as the GA evolves it's population. The red interval at any instant is the standard deviation of the error. The fact that the mean GA error is able to have a net upwards trajectory, after experiencing a temporary downwards trajectory, demonstrates that the GA retains a drive to explore, and is resiliant against being stuck in a local minima. Also in the above plot population variance in error stays remarkably constant, in this way BluePyOpts selection criteria SELIBEA contrasts with DEAPs native selection strategy NSGA2
-    #for index, val in enumerate(ga_out.values()):
-    '''
+    #plt.style.use('ggplot')
+    fig, axes = plt.subplots(figsize=(30, 30), facecolor='white')
+    matplotlib.rcParams.update({'font.size': 55})
 
     try:
        temp = copy.copy(ga_out['pf'][0].dtc.SA)
@@ -289,44 +285,30 @@ def elaborate_plots(self,ga_out,savefigs=False):
        temp = copy.copy(ga_out['dtc_pop'][0].dtc.SA)
 
     objectives = {k:v for k,v in temp.items() }
-
     assert len(objectives)
-
     logbook = ga_out['log']
-
-
-
-    gen_numbers =[ i for i in range(0,len(logbook.select('gen'))) ]
+    gen_numbers =[ i+1 for i in range(0,len(logbook.select('gen'))) ]
     pf = ga_out['pf']
-    #mean = np.array(logbook.select('stats_fit'))
     import numpy as np
     mean = np.array(logbook.select('avg'))
     std = np.array(logbook.select('std'))
     minimum = logbook.select('min')
-    #try:
     stdminus = mean - std
     stdplus = mean + std
     try:
         assert len(gen_numbers) == len(stdminus) == len(stdplus)
     except:
         pass
-    #print(len(gen_numbers))
-    #print(mean)
-    #print(gen_numbers)
-    print(np.shape(mean))
-    #if np.shape(mean)[0] ==1:
+
     mean = [i[0] for i in mean]
     stdminus = [i[0] for i in stdminus]
     stdplus = [i[0] for i in stdplus]
-
-    #import pdb; pdb.set_trace()
     axes.plot(
         gen_numbers,
         mean,
         color='black',
         linewidth=2,
         label='population average')
-#    objectives = {k:v for k,v in temp.items() }
     if len(objectives) ==1:
         key = list(ga_out['pf'][0].dtc.SA.keys())[0]
         val = list(ga_out['pf'][0].dtc.SA.values)[0]
@@ -341,51 +323,50 @@ def elaborate_plots(self,ga_out,savefigs=False):
     axes.set_ylabel('Sum of objectives')
     #axes.legend()
     fig.tight_layout()
-    if savefigs:
-        import numpy as np
-        plt.savefig(str('MU+NGEN')+str(np.max(gen_numbers))+'_'+str(len(ga_out['pf']))+str('mean_evolution_')+str(self.backend)+str('.png'))
-    else:
-        plt.show()
+    import numpy as np
 
     #plt.style.use('ggplot')
     fig, axes = plt.subplots(figsize=(50, 50), facecolor='white')
+    if savefigs:
+    
+        plt.savefig(str('avg_converg_over_gen_')+str(self.backend)+str('_')+str(self.MU)+str('_')+str(self.NGEN)+str('_')+str('.png'))
+    else:
+        plt.show()
 
+    plt.style.use('ggplot')
+    #fig, axes = plt.subplots(figsize=(50, 50), facecolor='white')
+    fig, axes = plt.subplots(figsize=(30, 30), facecolor='white')
+    matplotlib.rcParams.update({'font.size': 35})
     logbook = ga_out['log']
 
     plt.clf()
     plt.figure()
     sns.set_style("darkgrid")
 
-    #plt.savefig(str('evolution_')+str(self.cell_name)+str(self.backend)+str('.png'))
-    #ga_out['stats_plot_1'] = ax1, fig# ax2, ax3, fig
-
     avg, max_, min_, std_ = logbook.select("avg", "max", "min","std")
     all_over_gen = {}
-    for i,(k,v) in enumerate(objectives.items()):
-        all_over_gen[k] = []
-        for value in ga_out['history'].genealogy_history.values():
-            all_over_gen[k].append(value.fitness.values[i])# if type(ind.dtc) is not type(None) ]
-    #plt.figure()
+    pf_loc = 0
 
+    fitevol = [ m['min'] for m in ga_out['log'] ]
+    
+    get_min = [(np.sum(j),i) for i,j in enumerate(fitevol)]
+    min_x = sorted(get_min,key = lambda x: x[1])[0][1]+1
+    gen = np.max([ m['gen'] for m in ga_out['log'] ])
+    
     if len(objectives)>1:
-        fig2, ax2 = plt.subplots(len(objectives)+1,1,figsize=(50,50),facecolor='white')
+        fig2, ax2 = plt.subplots(len(objectives),1,figsize=(30,30),facecolor='white')
+        matplotlib.rcParams.update({'font.size': 55})
+
         for i,(k,v) in enumerate(objectives.items()):
+            ax2[i].plot(gen_numbers,[j[i] for j in fitevol ])#,label=("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)), fontsize = 35.0)
+            ax2[i].axvline(x=min_x , ymin=0.02, ymax=0.99,color='blue')
+            h = ax2[i].set_xlabel("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)), fontsize = 35.0)#, rotation = 45)
+            #ax2[i].set_xticklabels(xticklabels, rotation = 45)
+            ax2[i].legend()
 
-            ax2[i].plot(list(range(0,len(all_over_gen[k]))),all_over_gen[k])
-            temp = [0 for i in range(0,len(all_over_gen[k])) ]
-            ax2[i].plot(list(range(0,len(all_over_gen[k]))),temp)
-
-            ax2[i].set_yscale('log')
-
-            ax2[i].tick_params(
-                axis='x',          # changes apply to the x-axis
-                which='both',      # both major and minor ticks are affected
-                bottom=False,      # ticks along the bottom edge are off
-                top=False,         # ticks along the top edge are off
-                labelbottom=False) # labels along the bottom edge are off
-            h = ax2[i].set_xlabel("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)))
+    
     else:
-        fig2, ax2 = plt.subplots(1,1,figsize=(10,10))
+        fig2, ax2 = plt.subplots(1,1,figsize=(30,30))
         for i,(k,v) in enumerate(objectives.items()):
             #if i < len(everything.select("avg")[0]):
 
@@ -403,12 +384,12 @@ def elaborate_plots(self,ga_out,savefigs=False):
                 top=True,         # ticks along the top edge are off
                 labelbottom=True) # labels along the bottom edge are off
             #h.set_rotation(90)
-        plt.xlabel('Generations')
-        plt.title("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)))
+        plt.xlabel('Generations', fontsize = 35.0)
+        plt.title("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)), fontsize = 35.0)
 
         #plt.savefig(str('history_plot_')+str(self.cell_name)+str(self.backend)+str('.png'))
     if savefigs:
-        plt.savefig(str('error_component_evolution')+str(self.cell_name)+str(self.backend)+str('.png'))
+        plt.savefig(str('error_components_')+str(self.MU)+str('_')+str(self.NGEN)+str('_')+str(self.backend)+str('.png'))
     else:
         plt.show()
 

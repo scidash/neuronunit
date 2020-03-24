@@ -216,8 +216,11 @@ class TSS(TestSuite):
             free_params=param_edges.keys()
         self.DO = make_ga_DO(param_edges, NGEN, self, free_params=free_params, \
                            backend=backend, MU = 8,  protocol=protocol,seed_pop = seed_pop, hc=hold_constant)
-        self.DO.MU = MU
-        self.DO.NGEN = NGEN
+        self.MU = None
+        self.NGEN = None
+        self.MU = self.DO.MU = MU
+        self.NGEN = self.DO.NGEN = NGEN
+
         ga_out = self.DO.run(NGEN = self.DO.NGEN)
         ga_out['DO'] = self.DO
         if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
@@ -292,7 +295,6 @@ class TSD(dict):
                     }
         defaults.update(kwargs)
         kwargs = defaults
-
         if type(kwargs['param_edges']) is type(None):
             from neuronunit.optimisation import model_parameters
             param_edges = kwargs['free_params'] = free_params = model_parameters.MODEL_PARAMS[kwargs['backend']]
@@ -310,8 +312,11 @@ class TSD(dict):
                              seed_pop = kwargs['seed_pop'], \
                              hc=kwargs['hold_constant']
                              )
-        self.DO.MU = kwargs['MU']
-        self.DO.NGEN = kwargs['NGEN']
+        self.MU = self.DO.MU = kwargs['MU']
+        self.NGEN = self.DO.NGEN = kwargs['NGEN']
+        #self.MU = MU
+        #NGEN
+
         ga_out = self.DO.run(NGEN = self.DO.NGEN)
         if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
             _,dtc_pop = self.DO.OM.test_runner(copy.copy(ga_out['pf']),self.DO.OM.td,self.DO.OM.tests)
@@ -1881,6 +1886,7 @@ class OptMan():
         self.boundary_dict= boundary_dict
         self.protocol = protocol
         self.julia = False
+        self.NGEN = None
         #self.simulated_data_tests = self.round_trip_test
         # note this is not effective at changing parallel behavior yet
         #if PARALLEL_CONFIDENT not in globals():
@@ -2632,7 +2638,7 @@ class OptMan():
                     t.observation['std'] = copy.copy(t.observation['mean'])
         return tests
     @dask.delayed
-    def elephant_evaluation_delayed(self,dtc):
+    def elephant_evaluation_delayed_old(self,dtc):
         # Inputs single data transport container modules, and neuroelectro observations that
         # inform test error error_criterion
         # Outputs Neuron Unit evaluation scores over error criterion
@@ -2666,7 +2672,7 @@ class OptMan():
 
         #import pdb
         for i,s in enumerate(scores_):
-            if s==np.inf:
+            if s==np.inf or s==-np.inf:
                 scores_[i] = 100.0
             if not isinstance(s,type(float())):
                 s = 100.0
@@ -2761,6 +2767,92 @@ class OptMan():
             else:
                 print('sys log no prediction')
         assert dtc.SA is not None
+        return dtc
+
+    @dask.delayed
+    def elephant_evaluation_delayed(self,dtc):
+        # Inputs single data transport container modules, and neuroelectro observations that
+        # inform test error error_criterion
+        # Outputs Neuron Unit evaluation scores over error criterion
+
+        model = dtc.dtc_to_model()
+        if not hasattr(dtc,'scores') or dtc.scores is None:
+            dtc.scores = None
+            dtc.scores = {}
+            if hasattr(dtc,'SA'):
+                pass
+        dtc.tests = self.preprocess(dtc)
+        scores_ = []
+        suite = TestSuite(dtc.tests)
+        for t in suite:
+            if 'RheobaseTest' in t.name: t.score_type = sciunit.scores.ZScore
+            if 'RheobaseTestP' in t.name: t.score_type = sciunit.scores.ZScore
+            if 'mean' not in t.observation.keys():
+                t.observation['mean'] = t.observation['value']
+
+            score_gene = t.judge(model)
+            if not isinstance(type(score_gene),type(None)):
+                if not isinstance(type(score_gene),sciunit.scores.InsufficientDataScore):
+                    if not isinstance(type(score_gene.log_norm_score),type(None)):
+                        try:
+                            lns = np.abs(score_gene.log_norm_score)
+                        except:
+                            print('try to make lns here')
+                    else:
+                        lns = np.abs(score_gene.raw)
+                else:
+                    pass
+
+            scores_.append(lns)
+
+
+        for i,s in enumerate(scores_):
+            if s==np.inf:
+                scores_[i] = np.abs(float(score_gene.raw))            
+        dtc.SA = ScoreArray(dtc.tests, scores_)
+
+        '''
+        for content in dir(dtc):
+            #if str(content)!='backend' and str(content)!='SA' and str(content)!='attrs' and str(content)!='rheobase' and str(content)!='gen':
+            if str(content)=='tests':
+                #and str(content)!='SA' and str(content)!='attrs' and str(content)!='rheobase' and str(content)!='gen':
+
+                try:
+                    exec('del dtc.'+str(content))
+                except:
+                    pass
+                    #exec('print(dtc.'+str(content)+str(')'))
+        '''            
+        if not hasattr(dtc,'gen'):
+            dtc.gen = None    
+            dtc.gen = 1                
+        dtc.gen += 1
+        if dtc.gen == self.NGEN:
+            obs = {}
+            pred = {}
+            temp = {t.name:t for t in self.tests}
+
+            if dtc.rheobase is not None:
+                scores_d = {}
+                for k in dtc.SA.keys():
+                    if hasattr(dtc.SA[k],'score'):
+                        scores_d[k] = dtc.SA[k].score
+                    else:
+                        scores_d[k] = dtc.SA[k]
+                        scores_d["total"] = np.sum([ np.abs(v) for v in scores_d.values()])
+
+                pre = len(temp)
+                post = len({k:v for k,v in temp.items() if hasattr(v,'prediction')})
+                if pre == post:
+                    similarity,lps,rps =  self.closeness(temp,temp)
+                    scores_ = {}
+                    for k,p,o in zip(list(similarity.keys()),lps,rps):
+                        obs[k] = o
+                        pred[k] = p
+                    dtc.obs_preds = pd.DataFrame([obs,pred,scores_d],index=['observations','predictions','scores'])
+                else:
+                    print('sys log no prediction')
+            assert dtc.SA is not None
         return dtc
 
 
@@ -3108,10 +3200,12 @@ class OptMan():
                     if isinstance(dtc.tests,type(dict())):
                         for t in dtc.tests.values():
                             assert 'std' in t.observation.keys()
-                for i in dtcpop:    
-                    i = self.elephant_evaluation(i)
+                for i in dtcpop:
+                    i = self.format_test_delayed(i)
+                    i = self.elephant_evaluation_delayed(i)
+                    lazy.append(i)
 
-                #dtcpop = dask.compute(lazy,schedular='distributed')[0]
+                dtcpop = dask.compute(lazy)[0]
                 # smaller_pop = [d for d in dtcpop for _,fitness in d.SA.values if fitness != 100 ]
                 # pop, dtcpop = self.make_up_lost(pop,smaller_pop,self.td)
                 for d in dtcpop:
@@ -3136,6 +3230,8 @@ class OptMan():
                if not hasattr(d, 'tests'):
                    pass
         return pop, dtcpop
+
+        
     def test_runner(self,pop,td,tests):
         if self.protocol['elephant']:
             if type(tests) is type(dict()):
@@ -3178,11 +3274,11 @@ class OptMan():
             ind.dtc = None
             ind.dtc = dtc
             if dtc.SA is not None:
-                ind = copy.copy(both[0][0])
-                dtc = copy.copy(both[0][1])
+                ind = both[0][0]
+                dtc = both[0][1]
 
             if not hasattr(ind,'fitness'):
-                ind.fitness = copy.copy(pop_[0].fitness)
+                ind.fitness = pop_[0].fitness
                 for i,v in enumerate(list(ind.fitness.values)):
                     ind.fitness.values[i] = list(ind.dtc.SA.values())[i]
 

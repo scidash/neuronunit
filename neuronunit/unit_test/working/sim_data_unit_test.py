@@ -63,6 +63,8 @@ class Test_opt_tests(unittest.TestCase):
         front = results['pf']
         print(opt.obs_preds)
         #self.assertLess(opt.obs_preds['total']['scores'],0.250)
+        gene = results['pf'][0].dtc
+            
         gene.tests = target.tests = None
         with open(str('HH')+str(gene.attrs)+str(gene.backend)+str('all_tests')+'.p','wb') as f:
             pickle.dump([target,gene,test_dump],f)
@@ -210,7 +212,6 @@ class Test_opt_tests(unittest.TestCase):
 
             slopem = linregress(x, y)
             slopea = linregress(x, y1)
-            gene = results['pf'][0].dtc
             mm = results['pf'][0].dtc.dtc_to_model()
             this_test = tests[list(tests.keys())[0]]
             score_gene = this_test.judge(mm)
