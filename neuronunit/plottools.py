@@ -346,7 +346,7 @@ def elaborate_plots(self,ga_out,savefigs=False):
     fitevol = [ m['min'] for m in ga_out['log'] ]
     
     get_min = [(np.sum(j),i) for i,j in enumerate(fitevol)]
-    min_x = sorted(get_min)[0][1]
+    min_x = sorted(get_min,key = take_second)[0][1]+1
     gen = np.max([ m['gen'] for m in ga_out['log'] ])
     
     if len(objectives)>1:
@@ -356,7 +356,8 @@ def elaborate_plots(self,ga_out,savefigs=False):
         for i,(k,v) in enumerate(objectives.items()):
             ax2[i].plot(gen_numbers,[j[i] for j in fitevol ])#,label=("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)), fontsize = 35.0)
             ax2[i].axvline(x=min_x , ymin=0.02, ymax=0.99,color='blue')
-            h = ax2[i].set_ylabel("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)), fontsize = 35.0)
+            h = ax2[i].set_xlabel("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)), fontsize = 35.0)#, rotation = 45)
+            #ax2[i].set_xticklabels(xticklabels, rotation = 45)
             ax2[i].legend()
 
     
