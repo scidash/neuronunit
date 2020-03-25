@@ -8,6 +8,7 @@ if SILENT:
 # setting of an appropriate backend.
 # optional imports
 import matplotlib
+matplotlib.rcParams.update({'font.size': 15})
 
 #try:
 #    matplotlib.use('agg')
@@ -459,6 +460,7 @@ def check_test(new_tests):
             replace = True
             return replace
 
+
 def score_only(dtc,pred,test):
     '''
 
@@ -770,6 +772,7 @@ def mint_NEURON_model(dtc):
     model.attrs = pre_model.attrs
     return model
 
+
 def inject_and_plot_model(pre_model,figname=None):
 
 
@@ -795,6 +798,7 @@ def inject_and_plot_model(pre_model,figname=None):
 
 def inject_and_plot_passive_model(pre_model,second=None,figname=None):
 
+    matplotlib.rcParams.update({'font.size': 15})
 
     # get rheobase injection value
     # get an object of class ReducedModel with known attributes and known rheobase current injection value.
@@ -840,7 +844,7 @@ def inject_and_not_plot_model(pre_model):
 
     return vm
 
-def check_binary_match(dtc0,dtc1):
+def check_binary_match(dtc0,dtc1,figname=None):
 
     vm0 =inject_and_not_plot_model(dtc0)
     vm1 =inject_and_not_plot_model(dtc1)
@@ -858,6 +862,32 @@ def check_binary_match(dtc0,dtc1):
     plt.legend(loc="upper left")
 
     #plt.plot(vm.times,vm.magnitude)
+    if figname is not None:
+        plt.savefig(figname)
+
+    return plt
+
+def contrast(dtc0,dtc1,figname=None):
+    matplotlib.rcParams.update({'font.size': 15})
+
+    vm0 =inject_and_not_plot_model(dtc0)
+    vm1 =inject_and_not_plot_model(dtc1)
+
+
+    plt.figure()
+    if dtc0.backend in str("HH"):
+        plt.title('Check for waveform Alignment')
+    else:
+        plt.title('membrane potential plot')
+    plt.plot(vm0.times, vm0.magnitude,label="best solution")
+    plt.plot(vm1.times, vm1.magnitude,label="worst solution")
+    plt.ylabel('V (mV)')
+    plt.legend(loc="upper left")
+
+    #plt.plot(vm.times,vm.magnitude)
+    if figname is not None:
+        plt.savefig(figname)
+
     return plt
 
 
@@ -1910,6 +1940,34 @@ class OptMan():
             break
         self.helper_tests = helper_tests
 
+    def get_agreement(self,dtc):
+        obs = {}
+        pred = {}
+        if type(self.tests) is type(list):
+            temp = {t.name:t for t in self.tests}
+        else:
+            temp = self.tests
+        if dtc.rheobase is not None:
+            scores_d = {}
+            for k in dtc.SA.keys():
+                if hasattr(dtc.SA[k],'score'):
+                    scores_d[k] = dtc.SA[k].score
+                else:
+                    scores_d[k] = dtc.SA[k]
+                    scores_d["total"] = np.sum([ np.abs(v) for v in scores_d.values()])
+
+            pre = len(temp)
+            post = len({k:v for k,v in temp.items() if hasattr(v,'prediction')})
+            if pre == post:
+                similarity,lps,rps =  self.closeness(temp,temp)
+                scores_ = {}
+                for k,p,o in zip(list(similarity.keys()),lps,rps):
+                    obs[k] = o
+                    pred[k] = p
+                dtc.obs_preds = pd.DataFrame([obs,pred,scores_d],index=['observations','predictions','scores'])
+            else:
+                print('sys log no prediction')
+        return dtc
 
     @dask.delayed
     def format_test_delayed(self,dtc):
@@ -2827,32 +2885,7 @@ class OptMan():
             dtc.gen = None    
             dtc.gen = 1                
         dtc.gen += 1
-        if dtc.gen == self.NGEN - 1:
-            obs = {}
-            pred = {}
-            temp = {t.name:t for t in self.tests}
-
-            if dtc.rheobase is not None:
-                scores_d = {}
-                for k in dtc.SA.keys():
-                    if hasattr(dtc.SA[k],'score'):
-                        scores_d[k] = dtc.SA[k].score
-                    else:
-                        scores_d[k] = dtc.SA[k]
-                        scores_d["total"] = np.sum([ np.abs(v) for v in scores_d.values()])
-
-                pre = len(temp)
-                post = len({k:v for k,v in temp.items() if hasattr(v,'prediction')})
-                if pre == post:
-                    similarity,lps,rps =  self.closeness(temp,temp)
-                    scores_ = {}
-                    for k,p,o in zip(list(similarity.keys()),lps,rps):
-                        obs[k] = o
-                        pred[k] = p
-                    dtc.obs_preds = pd.DataFrame([obs,pred,scores_d],index=['observations','predictions','scores'])
-                else:
-                    print('sys log no prediction')
-            assert dtc.SA is not None
+        assert dtc.SA is not None
         return dtc
 
 
