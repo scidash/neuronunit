@@ -1943,6 +1943,8 @@ class OptMan():
     def get_agreement(self,dtc):
         obs = {}
         pred = {}
+        dtc.obs_preds = None
+        dtc.obs_preds = {}
         if type(self.tests) is type(list):
             temp = {t.name:t for t in self.tests}
         else:
