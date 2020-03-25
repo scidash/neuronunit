@@ -6,17 +6,19 @@
 import matplotlib.pyplot as plt
 import matplotlib
 import hide_imports
-from neuronunit.optimisation.optimization_management import inject_and_plot_model, inject_and_plot_passive_model
+from neuronunit.optimisation.optimization_management import inject_and_plot_model, inject_and_plot_passive_model, check_binary_match
 import copy
 import pickle
 from neuronunit.optimisation.optimization_management import TSD
 from collections import OrderedDict
 import pickle
 import sys
+from neuronunit.optimisation.optimization_management import contrast
 
 # # Design simulated data tests
 from neuronunit.optimisation.optimization_management import check_match_front, jrt
-
+#from neuronunit.optimisation.optimization_management import get_agreement
+    
 def data_driven_tests(backend,MU,NGEN,t_index):
     test_frame = pickle.load(open('processed_multicellular_constraints.p','rb'))
 
@@ -39,6 +41,17 @@ def data_driven_tests(backend,MU,NGEN,t_index):
     front = [ind.dtc for ind in ga_out['pf']]
 
     opt = ga_out['pf'][0].dtc
+    OM = opt.dtc_to_opt_man()
+ 
+    opt = OM.get_agreement(opt)
+    hist = ga_out['history'].genealogy_history
+    hist_val = hist.values()
+    
+    get_max = [(sum(j.fitness.values),i) for i,j in enumerate(hist_val)]
+    worst = sorted(get_max,key = lambda x: x[0])[-1][1]+1
+    worst_dtc = ga_out['history'].genealogy_history[worst].dtc
+    contrast(opt,worst_dtc,figname='contrast_best_worst'+str('MU_')+str(MU)+('_NGEN_')+str(NGEN)+str(backend)+'_.png')
+
     #check_match_front(target,front[0:10],figname ='front'+str('MU_')+str(MU)+('_NGEN_')+str(NGEN)+str(backend)+'_.png')
     #inject_and_plot_model(target,figname ='just_target_of_opt_'+str('MU_')+str(MU)+('_NGEN_')+str(NGEN)+str(backend)+'_.png')
     inject_and_plot_model(opt,figname ='optimal_active_waveform'+str('MU_')+str(MU)+('_NGEN_')+str(NGEN)+str(backend)+'_.png')

@@ -140,7 +140,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                 #dtc.run_number += 1
                 model.set_attrs(dtc.attrs)
                 model.inject_square_current(uc)
-                #if model.get_spike_count()>1:
+                #if model.get_spike_count1:
                 #    break
                 if str(dtc.backend) in str('ADEXP'):
                     model.finalize()
@@ -295,10 +295,7 @@ def elaborate_plots(self,ga_out,savefigs=False):
     minimum = logbook.select('min')
     stdminus = mean - std
     stdplus = mean + std
-    try:
-        assert len(gen_numbers) == len(stdminus) == len(stdplus)
-    except:
-        pass
+    assert len(gen_numbers) == len(stdminus) == len(stdplus)
 
     mean = [i[0] for i in mean]
     stdminus = [i[0] for i in stdminus]
@@ -319,6 +316,7 @@ def elaborate_plots(self,ga_out,savefigs=False):
     axes.plot(gen_numbers, stdminus, label='std variation lower limit')
     axes.plot(gen_numbers, stdplus, label='std variation upper limit')
     #axes.set_xlim(np.min(gen_numbers) - 1, np.max(gen_numbers) + 1)
+    axes.tick_params(labelsize=50)
     axes.set_xlabel('Generations')
     axes.set_ylabel('Sum of objectives')
     #axes.legend()
@@ -350,8 +348,9 @@ def elaborate_plots(self,ga_out,savefigs=False):
     fitevol = [ m['min'] for m in ga_out['log'] ]
     
     get_min = [(np.sum(j),i) for i,j in enumerate(fitevol)]
-    min_x = sorted(get_min,key = lambda x: x[1])[0][1]+1
-    gen = np.max([ m['gen'] for m in ga_out['log'] ])
+    min_x = sorted(get_min,key = lambda x: x[0])[0][1]+1
+    #min_x = sorted(get_min,key = lambda x: x[1])[0][1]+1
+    gen = np.max([ m['gen']+1 for m in ga_out['log'] ])
     
     if len(objectives)>1:
         fig2, ax2 = plt.subplots(len(objectives),1,figsize=(30,30),facecolor='white')
@@ -361,9 +360,17 @@ def elaborate_plots(self,ga_out,savefigs=False):
             ax2[i].plot(gen_numbers,[j[i] for j in fitevol ])#,label=("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)), fontsize = 35.0)
             ax2[i].axvline(x=min_x , ymin=0.02, ymax=0.99,color='blue')
             h = ax2[i].set_xlabel("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)), fontsize = 35.0)#, rotation = 45)
-            #ax2[i].set_xticklabels(xticklabels, rotation = 45)
+            ax2[i].set_xticklabels(xticklabels, rotation = 0)
             ax2[i].legend()
-
+            ax2[i].tick_params(
+                axis='x',          # changes apply to the x-axis
+                which='major',      # both major and minor ticks are affected
+                bottom=True,      # ticks along the bottom edge are off
+                top=False,         # ticks along the top edge are off
+                labelbottom=True, 
+                labelsize=50) # labels along the bottom edge are off
+            #ax2[i].tick_params(axis="y")
+            ax2[i].legend()
     
     else:
         fig2, ax2 = plt.subplots(1,1,figsize=(30,30))
@@ -1830,3 +1837,5 @@ def bar_chart(vms,name=None):
     html_file.write(html)
     html_file.close()
     return df, threed, columns1 ,stacked, html, test_dic
+
+matplotlib.rcParams.update({'font.size': 15})
