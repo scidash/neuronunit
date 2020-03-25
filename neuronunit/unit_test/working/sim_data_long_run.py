@@ -66,12 +66,14 @@ def sim_data_tests(backend,MU,NGEN):
     inject_and_plot_model(target,figname ='just_target_of_opt_'+str('MU_')+str(MU)+('_NGEN_')+str(NGEN)+str(backend)+'_.png')
     inject_and_plot_model(opt,figname ='just_opt_active_'+str('MU_')+str(MU)+('_NGEN_')+str(NGEN)+str(backend)+'_.png')
     inject_and_plot_passive_model(opt,figname ='just_opt_'+str('MU_')+str(MU)+('_NGEN_')+str(NGEN)+str(backend)+'_.png')#,figname=None)
-
-    with open('sim data.p','wb') as f:
+    OM = opt.dtc_to_opt_man()
+ 
+    opt = OM.get_agreement(opt)
+    with open('sim_data.p','wb') as f:
         pickle.dump([target,opt.obs_preds],f)
 
 
-    sim_data = pickle.load(open('sim data.p','rb'))
+    sim_data = pickle.load(open('sim_data.p','rb'))
 
     return ga_out['log'],target,front,opt
 
