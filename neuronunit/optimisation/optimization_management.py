@@ -2827,7 +2827,7 @@ class OptMan():
             dtc.gen = None    
             dtc.gen = 1                
         dtc.gen += 1
-        if dtc.gen == self.NGEN:
+        if dtc.gen == self.NGEN - 1:
             obs = {}
             pred = {}
             temp = {t.name:t for t in self.tests}

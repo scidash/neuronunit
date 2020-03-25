@@ -43,11 +43,11 @@ def data_driven_tests(backend,MU,NGEN,t_index):
     #inject_and_plot_model(target,figname ='just_target_of_opt_'+str('MU_')+str(MU)+('_NGEN_')+str(NGEN)+str(backend)+'_.png')
     inject_and_plot_model(opt,figname ='optimal_active_waveform'+str('MU_')+str(MU)+('_NGEN_')+str(NGEN)+str(backend)+'_.png')
     inject_and_plot_passive_model(opt,figname ='optimal_passive_wave_form'+str('MU_')+str(MU)+('_NGEN_')+str(NGEN)+str(backend)+'_.png')#,figname=None)
-    with open('.p','wb') as f:
-        pickle.dump([opt.obs_preds],f)
+    #with open('.p','wb') as f:
+    #    pickle.dump([opt.obs_preds],f)
 
 
-    sim_data = pickle.load(open('sim data.p','rb'))
+    #sim_data = pickle.load(open('sim data.p','rb'))
     return [ga_out['log'],front,opt,test_name]
 
 #MUrange =
