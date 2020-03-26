@@ -5,6 +5,8 @@ import quantities as qt
 import copy
 from collections import OrderedDict
 from sciunit import scores
+from sciunit.scores.collections import ScoreArray
+
 try:
     import asciiplotlib as apl
 except:
@@ -61,10 +63,28 @@ class DataTC(object):
         else:
             self.summed = None
         return self.summed
+    
+    def self_evaluate(self):    
+        OM = self.dtc_to_opt_man()
+        d = OM.format_test(self)
+        model = self.dtc_to_model()
+        #suite = TestSuite(self.tests)
+        scores_ = []
+
+        rs = self.tests[0].judge(model)
+        import pdb
+        pdb.set_trace()
+        for t in self.tests:
+        
+            score = t.judge(model)
+            scores_.append(score)
+        self.scores_ = scores_
+        self.SA = ScoreArray(self.tests, self.scores_)
+        return self
 
     def dtc_to_opt_man(self):
         from neuronunit.optimisation.optimization_management import OptMan
-        OM = Optman(self.tests,self.backend)
+        OM = OptMan(self.tests,self.backend)
         return OM
 
     def ordered_score(self):
