@@ -17,6 +17,8 @@ matplotlib.rcParams.update({'font.size': 15})
 
 import cython
 import logging
+matplotlib.rcParams.update({'font.size': 12})
+
 
 # optional imports
 
@@ -296,13 +298,18 @@ class TSD(dict):
                     }
         defaults.update(kwargs)
         kwargs = defaults
+        
         if type(kwargs['param_edges']) is type(None):
             from neuronunit.optimisation import model_parameters
-            param_edges = kwargs['free_params'] = free_params = model_parameters.MODEL_PARAMS[kwargs['backend']]
+            param_edges = model_parameters.MODEL_PARAMS[kwargs['backend']]
         if kwargs['free_params'] is None:
             free_params=kwargs['param_edges'].keys()
         else:
             free_params = kwargs['free_params']
+            
+        if kwargs['hold_constant'] is None:
+            if len(free_params) < len(param_edges):
+                pass        
         self.DO = make_ga_DO(param_edges, \
                              kwargs['NGEN'], \
                              self, \
@@ -675,6 +682,7 @@ def substitute_parallel_for_serial(rtest):
 
 def is_parallel_rheobase_compatible(backend):
     incompatible_backends = ['RAW', 'HH']
+
     incompatible = any([x in backend for x in incompatible_backends])
     return not incompatible
 
@@ -714,10 +722,9 @@ def dtc_to_model(dtc):
 def dtc_to_rheo(dtc):
     # If  test taking data, and objects are present (observations etc).
     # Take the rheobase test and store it in the data transport container.
-    if not hasattr(dtc,'scores'):
-        dtc.scores = None
-    if type(dtc.scores) is type(None):
-        dtc.scores = {}
+    if not hasattr(dtc,'SA'):
+        dtc.SA = None
+
 
     if hasattr(dtc,'tests'):
         if type(dtc.tests) is type({}) and str('RheobaseTest') in dtc.tests.keys():
@@ -892,6 +899,7 @@ def contrast(dtc0,dtc1,figname=None):
 
 
 def check_match_front(dtc0,dtcpop,figname = None):
+    matplotlib.rcParams.update({'font.size': 12})
 
     vm0 =inject_and_not_plot_model(dtc0)
 
@@ -908,7 +916,7 @@ def check_match_front(dtc0,dtcpop,figname = None):
     plt.plot(vms[0].times, vms[0].magnitude,label="best candidate",c='blue', linewidth=4)
 
     for v in vms:
-        plt.plot(v.times, v.magnitude,label="solutions",c='grey')
+        plt.plot(v.times, v.magnitude,c='grey')
     plt.ylabel('V (mV)')
     #plt.legend(loc="upper right")
     #if type(figname) is not type(None):
@@ -1943,6 +1951,8 @@ class OptMan():
     def get_agreement(self,dtc):
         obs = {}
         pred = {}
+        dtc.obs_preds = None
+        dtc.obs_preds = {}
         if type(self.tests) is type(list):
             temp = {t.name:t for t in self.tests}
         else:
@@ -2500,8 +2510,6 @@ class OptMan():
             while new_tests is False:
                 dsolution,rp,_,_ = process_rparam(backend,free_parameters=free_parameters)
                 (new_tests,dtc) = self.make_simulated_observations(tests,backend,rp,dsolution=dsolution)
-                #import pdb
-                #pdb.set_trace()
                 if new_tests is False:
                     continue
                 new_tests = {k:v for k,v in new_tests.items() if v.observation[which_key(v.observation)] is not None}
@@ -2695,6 +2703,7 @@ class OptMan():
                 if float(t.observation['std']) == 0.0:
                     t.observation['std'] = copy.copy(t.observation['mean'])
         return tests
+    '''
     @dask.delayed
     def elephant_evaluation_delayed_old(self,dtc):
         # Inputs single data transport container modules, and neuroelectro observations that
@@ -2755,7 +2764,7 @@ class OptMan():
             dtc.obs_preds = pd.DataFrame([obs,pred,scores_],index=['observations','predictions','scores'])
             assert dtc.SA is not None
         return dtc
-
+    '''
     def elephant_evaluation(self,dtc):
         # Inputs single data transport container modules, and neuroelectro observations that
         # inform test error error_criterion
