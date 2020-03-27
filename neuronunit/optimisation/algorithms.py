@@ -174,8 +174,8 @@ def eaAlphaMuPlusLambdaCheckpoint(
         hof = None,
         pf = None,
         nelite = 3,
-        cp_frequency = 1,
-        cp_filename = None,
+        cp_frequency = 20,
+        cp_filename = 'big_run.p',
         continue_cp = False,
         selection = 'selNSGA3',
         td=None):
@@ -256,6 +256,18 @@ def eaAlphaMuPlusLambdaCheckpoint(
             record = stats.compile(pop)
             logbook.record(gen=gen, evals=len(invalid_ind), **record)
             pop = [p for p in pop if len(p.fitness.values) ]
+    
+            if(cp_filename and cp_frequency and gen % cp_frequency == 0):
+                cp = dict(population=population,
+                        generation=gen,
+                        parents=parents,
+                        halloffame=hof,
+                        history=history,
+                        logbook=logbook,
+                        rndstate=random.getstate())
+                pickle.dump(cp, open(cp_filename, "wb"))
+                print('Wrote checkpoint to %s', cp_filename)
+                logger.debug('Wrote checkpoint to %s', cp_filename)        
 
             #print(logbook.stream)
     return pop, hof, pf, logbook, history, gen_vs_pop

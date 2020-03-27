@@ -296,6 +296,7 @@ def elaborate_plots(self,ga_out,savefigs=False):
     stdminus = mean - std
     stdplus = mean + std
     assert len(gen_numbers) == len(stdminus) == len(stdplus)
+    minimum = [i[0] for i in minimum]
 
     mean = [i[0] for i in mean]
     stdminus = [i[0] for i in stdminus]
@@ -312,7 +313,13 @@ def elaborate_plots(self,ga_out,savefigs=False):
         plt.title("NeuronUnit Test: {0}".format(str(key)+str(' ')+str(val)))
 
     axes.fill_between(gen_numbers, stdminus, stdplus)
-
+    axes.plot(gen_numbers, mean, label='mean')
+    axes.plot(
+        gen_numbers,
+        minimum,
+        color='black',
+        linewidth=2,
+        label='population minimum')
     axes.plot(gen_numbers, stdminus, label='std variation lower limit')
     axes.plot(gen_numbers, stdplus, label='std variation upper limit')
     #axes.set_xlim(np.min(gen_numbers) - 1, np.max(gen_numbers) + 1)
@@ -324,7 +331,7 @@ def elaborate_plots(self,ga_out,savefigs=False):
     import numpy as np
 
     #plt.style.use('ggplot')
-    fig, axes = plt.subplots(figsize=(50, 50), facecolor='white')
+    #fig, axes = plt.subplots(figsize=(50, 50), facecolor='white')
     if savefigs:
     
         plt.savefig(str('avg_converg_over_gen_')+str(self.backend)+str('_')+str(self.MU)+str('_')+str(self.NGEN)+str('_')+str('.png'))
@@ -360,7 +367,6 @@ def elaborate_plots(self,ga_out,savefigs=False):
             ax2[i].plot(gen_numbers,[j[i] for j in fitevol ])#,label=("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)), fontsize = 35.0)
             ax2[i].axvline(x=min_x , ymin=0.02, ymax=0.99,color='blue')
             h = ax2[i].set_xlabel("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)), fontsize = 35.0)#, rotation = 45)
-            ax2[i].set_xticklabels(xticklabels, rotation = 0)
             ax2[i].legend()
             ax2[i].tick_params(
                 axis='x',          # changes apply to the x-axis
