@@ -274,7 +274,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                 plt.show()
     return [dtc,second_pop,third_pop]
 
-def elaborate_plots(self,ga_out,savefigs=False):
+def elaborate_plots(self,ga_out,savefigs=False,figname=None):
     #plt.style.use('ggplot')
     fig, axes = plt.subplots(figsize=(30, 30), facecolor='white')
     matplotlib.rcParams.update({'font.size': 55})
@@ -333,8 +333,9 @@ def elaborate_plots(self,ga_out,savefigs=False):
     #plt.style.use('ggplot')
     #fig, axes = plt.subplots(figsize=(50, 50), facecolor='white')
     if savefigs:
-    
-        plt.savefig(str('avg_converg_over_gen_')+str(self.backend)+str('_')+str(self.MU)+str('_')+str(self.NGEN)+str('_')+str('.png'))
+        if figname is None:
+            figname = ' '
+        plt.savefig(str(figname)+str('avg_converg_over_gen_')+str(self.backend)+str('_')+str(self.MU)+str('_')+str(self.NGEN)+str('_')+str('.png'))
     else:
         plt.show()
 
@@ -402,7 +403,9 @@ def elaborate_plots(self,ga_out,savefigs=False):
 
         #plt.savefig(str('history_plot_')+str(self.cell_name)+str(self.backend)+str('.png'))
     if savefigs:
-        plt.savefig(str('error_components_')+str(self.MU)+str('_')+str(self.NGEN)+str('_')+str(self.backend)+str('.png'))
+        if figname is None:
+            figname = ' '
+        plt.savefig(str(figname)+str('error_components_')+str(self.MU)+str('_')+str(self.NGEN)+str('_')+str(self.backend)+str('.png'))
     else:
         plt.show()
 
