@@ -9,6 +9,7 @@ from neuronunit.tests.fi import RheobaseTestP
 from neuronunit.tests import passive, waveform, druckman2013
 from neuronunit.tests import druckman2013 as dm
 import neuronunit
+import sciunit
 
 from neuronunit.optimisation import get_neab
 from neuronunit import tests as _, neuroelectro
@@ -134,6 +135,7 @@ def executable_druckman_tests(cell_id,file_name = None):
 
     return tests,observations
 
+
 def executable_tests(cell_id,file_name = None):#,observation = None):
     # Use neuroelectro experimental obsevations to find test
     # criterion that will be used to inform scientific unit testing.
@@ -154,6 +156,11 @@ def executable_tests(cell_id,file_name = None):#,observation = None):
                      waveform.InjectedCurrentAPThresholdTest]#,
     observations = {}
     for index, t in enumerate(test_classes):
+        if 'RheobaseTest' in t.name: 
+            t.score_type = sciunit.scores.ZScore
+        if 'RheobaseTestP' in t.name: 
+            t.score_type = sciunit.scores.ZScore
+
         obs = t.neuroelectro_summary_observation(cell_id)
 
         if obs is not None:

@@ -244,7 +244,6 @@ temp = {k:[] for k in ['C','k','vr','vt','vPeak','a','b','c','d']  }
 for i,k in enumerate(temp.keys()):
     for v in type2007.values():
         temp[k].append(v[i])
-
 explore_param = {k:(np.min(v),np.max(v)) for k,v in temp.items()}
 explore_param['b'] = [-2,8]
 #IZHI_PARAMS = OrderedDict(explore_param)
