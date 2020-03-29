@@ -6,7 +6,7 @@ import copy
 from collections import OrderedDict
 from sciunit import scores
 from sciunit.scores.collections import ScoreArray
-
+import sciunit
 try:
     import asciiplotlib as apl
 except:
@@ -70,12 +70,14 @@ class DataTC(object):
         model = self.dtc_to_model()
         #suite = TestSuite(self.tests)
         scores_ = []
-
-        rs = self.tests[0].judge(model)
-        import pdb
-        pdb.set_trace()
+        #sc = self.tests[0].compute_score(self.tests[0].observation,self.tests[0].generate_prediction(model))
+        #print(sc)
+        #rs = self.tests[0].judge(model)
+        #print(self)
         for t in self.tests:
-        
+            if 'RheobaseTest' in t.name: t.score_type = sciunit.scores.ZScore
+            if 'RheobaseTestP' in t.name: t.score_type = sciunit.scores.ZScore
+
             score = t.judge(model)
             scores_.append(score)
         self.scores_ = scores_
