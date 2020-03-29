@@ -274,7 +274,7 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                 plt.show()
     return [dtc,second_pop,third_pop]
 
-def elaborate_plots(self,ga_out,savefigs=False):
+def elaborate_plots(self,ga_out,savefigs=False,figname=None):
     #plt.style.use('ggplot')
     fig, axes = plt.subplots(figsize=(30, 30), facecolor='white')
     matplotlib.rcParams.update({'font.size': 55})
@@ -296,6 +296,7 @@ def elaborate_plots(self,ga_out,savefigs=False):
     stdminus = mean - std
     stdplus = mean + std
     assert len(gen_numbers) == len(stdminus) == len(stdplus)
+    minimum = [i[0] for i in minimum]
 
     mean = [i[0] for i in mean]
     stdminus = [i[0] for i in stdminus]
@@ -312,7 +313,13 @@ def elaborate_plots(self,ga_out,savefigs=False):
         plt.title("NeuronUnit Test: {0}".format(str(key)+str(' ')+str(val)))
 
     axes.fill_between(gen_numbers, stdminus, stdplus)
-
+    axes.plot(gen_numbers, mean, label='mean')
+    axes.plot(
+        gen_numbers,
+        minimum,
+        color='black',
+        linewidth=2,
+        label='population minimum')
     axes.plot(gen_numbers, stdminus, label='std variation lower limit')
     axes.plot(gen_numbers, stdplus, label='std variation upper limit')
     #axes.set_xlim(np.min(gen_numbers) - 1, np.max(gen_numbers) + 1)
@@ -321,9 +328,12 @@ def elaborate_plots(self,ga_out,savefigs=False):
     axes.set_ylabel('Sum of objectives')
     axes.legend()
     fig.tight_layout()
+    import numpy as np
+
     if savefigs:
-    
-        plt.savefig(str('avg_converg_over_gen_')+str(self.backend)+str('_')+str(self.MU)+str('_')+str(self.NGEN)+str('_')+str('.png'))
+        if figname is None:
+            figname = ' '
+        plt.savefig(str(figname)+str('avg_converg_over_gen_')+str(self.backend)+str('_')+str(self.MU)+str('_')+str(self.NGEN)+str('_')+str('.png'))
     else:
         plt.show()
 
@@ -356,70 +366,6 @@ def elaborate_plots(self,ga_out,savefigs=False):
             ax2[i].plot(gen_numbers,[j[i] for j in fitevol ])#,label=("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)), fontsize = 35.0)
             ax2[i].axvline(x=min_x , ymin=0.02, ymax=0.99,color='blue')
             h = ax2[i].set_xlabel("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)), fontsize = 35.0)#, rotation = 45)
-            #ax2[i].set_xticklabels(xticklabels, rotation = 0)
-            ax2[i].legend()
-            ax2[i].tick_params(
-                axis='x',          # changes apply to the x-axis
-                which='major',      # both major and minor ticks are affected
-                bottom=True,      # ticks along the bottom edge are off
-                top=False,         # ticks along the top edge are off
-                labelbottom=True, 
-                labelsize=50) # labels along the bottom edge are off
-            #ax2[i].tick_params(axis="y")
-            ax2[i].legend()
-    
-    else:
-        fig2, ax2 = plt.subplots(1,1,figsize=(30,30))
-        for i,(k,v) in enumerate(objectives.items()):
-            #if i < len(everything.select("avg")[0]):
-
-            ax2.plot(list(range(0,len(all_over_gen[k]))),all_over_gen[k])
-            temp = [0 for i in range(0,len(all_over_gen[k])) ]
-            ax2.plot(list(range(0,len(all_over_gen[k]))),temp)
-            #ax2[i].set_ylim([0.0, 1.0])
-            #if i!=len(objectives)-1:
-            ax2.set_yscale('log')
-
-            ax2.tick_params(
-                axis='x',          # changes apply to the x-axis
-                which='both',      # both major and minor ticks are affected
-                bottom=True,      # ticks along the bottom edge are off
-                top=True,         # ticks along the top edge are off
-                labelbottom=True) # labels along the bottom edge are off
-            #h.set_rotation(90)
-        plt.xlabel('Generations', fontsize = 35.0)
-        plt.title("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)), fontsize = 35.0)
-
-        #plt.savefig(str('history_plot_')+str(self.cell_name)+str(self.backend)+str('.png'))
-    if savefigs:
-        plt.savefig(str('error_components_')+str(self.MU)+str('_')+str(self.NGEN)+str('_')+str(self.backend)+str('.png'))
-    else:
-        plt.show()
-
-    return ga_out
-
-
-def adjust_spines(ax, spines, color='k', d_out=10, d_down=None):
-
-    if d_down in [None,[]]:
-        d_down = d_out
-
-    ax.set_frame_on(True)
-    ax.patch.set_visible(False)
-
-    for loc, spine in ax.spines.items():
-        if loc in spines:
-            if loc == 'bottom':
-                spine.set_position(('outward', d_down))  # outward by 10 points
-            else:
-                spine.set_position(('outward', d_out))  # outward by 10 points
-            #spine.set_smart_bounds(True)
-        else:
-            spine.set_visible(False) # set_color('none') # don't draw spine
-
-    # turn off ticks where there is no spine
-    if 'left' in spines:
-        ax.yaxis.set_ticks_position('left')
 
         if color != 'k':
 

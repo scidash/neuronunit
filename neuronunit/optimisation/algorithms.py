@@ -37,6 +37,9 @@ class WSListIndividual(list):
         #super(WSListIndividual, self).__init__()
         #self.extend(args)
         self.obj_size = len(args)
+        print(self.obj_size,'number of objectives')
+        import pdb
+        pdb.set_trace()
         #self.set_fitness()
         #self.fitness = tuple(1.0 for i in range(0,self.obj_size))
         self.set_fitness(obj_size=self.obj_size)
@@ -89,9 +92,11 @@ def cleanse(temp):
 	   try:
 		   import brian as b2
 		   b2.clear_cache("cython")
-		   b2 = None
+		   del b2
+           #b2 = None
 	   except:
-		   brian2 = None
+           del brian2
+		   #brian2 = None
 	   OM = dtc.dtc_to_opt_man()
 	   temp_,_ = OM.boot_new_genes(len(temp),dtcpop)
 	   for i,t in enumerate(temp):
@@ -100,8 +105,8 @@ def cleanse(temp):
 		       temp_[i][x] = j
 	   temp = temp_
 	   for t in temp:
-		   t.dtc.tests = None
-		   t.dtc = None
+		   del t.dtc.tests #= None
+		   del t.dtc #= None
    return temp
 
 def _update_history_and_hof(halloffame,pf, history, population,GEN,MU):
@@ -174,10 +179,10 @@ def eaAlphaMuPlusLambdaCheckpoint(
         hof = None,
         pf = None,
         nelite = 3,
-        cp_frequency = 1,
-        cp_filename = None,
+        cp_frequency = 20,
+        cp_filename = 'big_run.p',
         continue_cp = False,
-        selection = 'selNSGA3',
+        selection = 'selNSGA2',
         td=None):
     gen_vs_pop = []
 
@@ -256,6 +261,18 @@ def eaAlphaMuPlusLambdaCheckpoint(
             record = stats.compile(pop)
             logbook.record(gen=gen, evals=len(invalid_ind), **record)
             pop = [p for p in pop if len(p.fitness.values) ]
+    
+            if(cp_filename and cp_frequency and gen % cp_frequency == 0):
+                cp = dict(population=population,
+                        generation=gen,
+                        parents=parents,
+                        halloffame=hof,
+                        history=history,
+                        logbook=logbook,
+                        rndstate=random.getstate())
+                pickle.dump(cp, open(cp_filename, "wb"))
+                print('Wrote checkpoint to %s', cp_filename)
+                logger.debug('Wrote checkpoint to %s', cp_filename)        
 
             #print(logbook.stream)
     return pop, hof, pf, logbook, history, gen_vs_pop
