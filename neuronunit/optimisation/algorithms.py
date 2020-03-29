@@ -37,6 +37,9 @@ class WSListIndividual(list):
         #super(WSListIndividual, self).__init__()
         #self.extend(args)
         self.obj_size = len(args)
+        print(self.obj_size,'number of objectives')
+        import pdb
+        pdb.set_trace()
         #self.set_fitness()
         #self.fitness = tuple(1.0 for i in range(0,self.obj_size))
         self.set_fitness(obj_size=self.obj_size)
@@ -89,9 +92,11 @@ def cleanse(temp):
 	   try:
 		   import brian as b2
 		   b2.clear_cache("cython")
-		   b2 = None
+		   del b2
+           #b2 = None
 	   except:
-		   brian2 = None
+           del brian2
+		   #brian2 = None
 	   OM = dtc.dtc_to_opt_man()
 	   temp_,_ = OM.boot_new_genes(len(temp),dtcpop)
 	   for i,t in enumerate(temp):
@@ -100,8 +105,8 @@ def cleanse(temp):
 		       temp_[i][x] = j
 	   temp = temp_
 	   for t in temp:
-		   t.dtc.tests = None
-		   t.dtc = None
+		   del t.dtc.tests #= None
+		   del t.dtc #= None
    return temp
 
 def _update_history_and_hof(halloffame,pf, history, population,GEN,MU):
@@ -177,7 +182,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
         cp_frequency = 20,
         cp_filename = 'big_run.p',
         continue_cp = False,
-        selection = 'selNSGA3',
+        selection = 'selNSGA2',
         td=None):
     gen_vs_pop = []
 
