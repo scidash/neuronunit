@@ -319,12 +319,8 @@ def elaborate_plots(self,ga_out,savefigs=False):
     axes.tick_params(labelsize=50)
     axes.set_xlabel('Generations')
     axes.set_ylabel('Sum of objectives')
-    #axes.legend()
+    axes.legend()
     fig.tight_layout()
-    import numpy as np
-
-    #plt.style.use('ggplot')
-    fig, axes = plt.subplots(figsize=(50, 50), facecolor='white')
     if savefigs:
     
         plt.savefig(str('avg_converg_over_gen_')+str(self.backend)+str('_')+str(self.MU)+str('_')+str(self.NGEN)+str('_')+str('.png'))
@@ -360,7 +356,7 @@ def elaborate_plots(self,ga_out,savefigs=False):
             ax2[i].plot(gen_numbers,[j[i] for j in fitevol ])#,label=("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)), fontsize = 35.0)
             ax2[i].axvline(x=min_x , ymin=0.02, ymax=0.99,color='blue')
             h = ax2[i].set_xlabel("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)), fontsize = 35.0)#, rotation = 45)
-            ax2[i].set_xticklabels(xticklabels, rotation = 0)
+            #ax2[i].set_xticklabels(xticklabels, rotation = 0)
             ax2[i].legend()
             ax2[i].tick_params(
                 axis='x',          # changes apply to the x-axis
