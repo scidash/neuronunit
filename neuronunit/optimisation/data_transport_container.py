@@ -65,23 +65,40 @@ class DataTC(object):
         return self.summed
     
     def self_evaluate(self):    
+        from neuronunit.optimisation import optimization_management as om_
         OM = self.dtc_to_opt_man()
+        self = om_.dtc_to_rheo(self)
         d = OM.format_test(self)
         model = self.dtc_to_model()
-        #suite = TestSuite(self.tests)
         scores_ = []
-        #sc = self.tests[0].compute_score(self.tests[0].observation,self.tests[0].generate_prediction(model))
-        #print(sc)
-        #rs = self.tests[0].judge(model)
-        #print(self)
         for t in self.tests:
             if 'RheobaseTest' in t.name: t.score_type = sciunit.scores.ZScore
             if 'RheobaseTestP' in t.name: t.score_type = sciunit.scores.ZScore
+            score_gene = t.judge(model)
+            if not isinstance(type(score_gene),type(None)):
+                if not isinstance(type(score_gene),sciunit.scores.InsufficientDataScore):
+                    if not isinstance(type(score_gene.log_norm_score),type(None)):
+                        try:
 
-            score = t.judge(model)
-            scores_.append(score)
+                            lns = np.abs(score_gene.log_norm_score)
+                        except:
+                            lns = np.abs(float(score_gene.raw))
+                    else:
+                        lns = np.abs(float(score_gene.raw))
+                else:
+                    lns = np.abs(score_gene.raw)
+            if lns==np.inf or lns==-np.inf:
+                lns = np.abs(float(score_gene.raw))
+
+
+            scores_.append(lns)
+        for i,s in enumerate(scores_):
+            if s==np.inf or s==-np.inf:
+                scores_[i] = 100 #np.abs(float(score_gene.raw))
+        #self.SA = ScoreArray(self.tests, scores_)
         self.scores_ = scores_
         self.SA = ScoreArray(self.tests, self.scores_)
+        self = OM.get_agreement(self)
         return self
 
     def dtc_to_opt_man(self):
