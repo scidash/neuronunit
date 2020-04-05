@@ -22,9 +22,14 @@ except:
     pass
 import numpy
 from deap import algorithms
+from sklearn.cluster import KMeans
+import numpy as np
+#X = np.array([[1, 2], [1, 4], [1, 0],
+#               [10, 2], [10, 4], [10, 0]])
 
 from neuronunit.optimisation import optimization_management as om
 #from neuronunit.optimisation.optimization_management import WSListIndividual
+'''
 class WSListIndividual(list):
     """Individual consisting of list with weighted sum field"""
     def set_fitness(self,obj_size):
@@ -37,13 +42,11 @@ class WSListIndividual(list):
         #super(WSListIndividual, self).__init__()
         #self.extend(args)
         self.obj_size = len(args)
-        print(self.obj_size,'number of objectives')
-        import pdb
-        pdb.set_trace()
+        #print(self.obj_size,'number of objectives')
         #self.set_fitness()
         #self.fitness = tuple(1.0 for i in range(0,self.obj_size))
         self.set_fitness(obj_size=self.obj_size)
-
+'''
 
 logger = logging.getLogger('__main__')
 def _evaluate_invalid_fitness(toolbox, population):
@@ -87,27 +90,25 @@ def purify2(population):
 '''
 
 def cleanse(temp):
-   dtc = temp[0].dtc
-   if "ADEXP" in temp[0].dtc.backend or "BHH" in temp[0].dtc.backend:
-	   try:
-		   import brian as b2
-		   b2.clear_cache("cython")
-		   del b2
-           #b2 = None
-	   except:
-           del brian2
-		   #brian2 = None
-	   OM = dtc.dtc_to_opt_man()
-	   temp_,_ = OM.boot_new_genes(len(temp),dtcpop)
-	   for i,t in enumerate(temp):
-		   temp_[i].fitness = t.fitness
-		   for x,j in enumerate(t):
-		       temp_[i][x] = j
-	   temp = temp_
-	   for t in temp:
-		   del t.dtc.tests #= None
-		   del t.dtc #= None
-   return temp
+    dtc = temp[0].dtc
+    if "ADEXP" in temp[0].dtc.backend or "BHH" in temp[0].dtc.backend:
+        try:
+            import brian as b2
+            b2.clear_cache("cython")
+            del b2
+        except:
+            del brian2
+        OM = dtc.dtc_to_opt_man()
+        temp_,_ = OM.boot_new_genes(len(temp),dtcpop)
+        for i,t in enumerate(temp):
+            temp_[i].fitness = t.fitness
+            for x,j in enumerate(t):
+                temp_[i][x] = j 
+        temp = temp_
+        for t in temp:
+            del t.dtc.tests #= None
+            del t.dtc #= None
+    return temp
 
 def _update_history_and_hof(halloffame,pf, history, population,GEN,MU):
     '''Update the hall of fame with the generated individuals
@@ -129,7 +130,7 @@ def _update_history_and_hof(halloffame,pf, history, population,GEN,MU):
             temp = cleanse(temp)
             history.update(temp)
 
-            print(temp,'temp bad')
+            #print(temp,'temp bad')
     if pf is not None:
         if GEN ==0:
             pf = deap.tools.ParetoFront()
@@ -166,8 +167,8 @@ def prune_constants(parents,num_constants):
             del p[-1]
     return parents
 
-CXPB = 1.0
-MUTPB = 1.0
+CXPB = 0.95
+MUTPB = 0.95
 def eaAlphaMuPlusLambdaCheckpoint(
         pop,
         toolbox,
@@ -226,42 +227,63 @@ def eaAlphaMuPlusLambdaCheckpoint(
         record = stats.compile(pop)
         logbook.record(gen=0, evals=len(invalid_ind), **record)
         temp_pop = copy.copy(pop)
-        hof, pf,history = _update_history_and_hof(hof, pf, history, temp_pop ,0,MU)
+        #hof, _,history = _update_history_and_hof(hof, pf, history, temp_pop ,0,MU)
         for p in pop:
             assert hasattr(p,'dtc')
         #print(logbook.stream)
 
+
+
         # Begin the generational process
         for gen in range(1, NGEN):
             offspring = algorithms.varAnd(pop, toolbox, CXPB, MUTPB)
+            if False:
+                from neuronunit import plottools 
+                ga_out = {'pop':pop,'hof':hof,'pf':pf,'log':logbook,'history':history,'td':td,'gen_vs_pop':gen_vs_pop}
+                ga_out = plottools.elaborate_plots(plottools,ga_out,savefigs=True,figname=str(gen))
 
             # Evaluate the individuals with an invalid fitness
             invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
             invalid_ind,fitnesses = toolbox.evaluate(invalid_ind)
 
-            #fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
 
             for ind, fit in zip(invalid_ind, fitnesses):
                 ind.fitness.values = fit
-            hof, pf,history = _update_history_and_hof(hof, pf, history, invalid_ind,gen,MU)
+
 
             # Select the next generation population from parents and offspring
             pop = [p for p in pop if len(p.fitness.values) ]
             offspring = [p for p in offspring if len(p.fitness.values) ]
+
+
             pool = pop
             pool.extend(offspring)
+
             if len(pool)>=MU:
                 try:
+
                     pop = toolbox.select(pop + offspring, MU)
                 except:
-                    pop = toolbox.select(offspring,MU)
+                    pop = toolbox.select(pop, len(pop))
+
+                    #pop = toolbox.select(offspring,MU)
             else:
                pop = toolbox.select(pool,MU)
             # Compile statistics about the new population
             record = stats.compile(pop)
             logbook.record(gen=gen, evals=len(invalid_ind), **record)
             pop = [p for p in pop if len(p.fitness.values) ]
-    
+
+            X = np.array(pop[0:-1])
+            kmeans = KMeans(n_clusters=1, random_state=0).fit(X)
+            piercing = kmeans.cluster_centers_
+            pierce = toolbox.population(n=1)
+            for j,param in enumerate(pierce[0]): 
+                pierce[0][j] = piercing[j]
+            invalid_ind_,fitnesses_ = toolbox.evaluate(pierce)
+            print(fitnesses_)
+            import pdb
+            pdb.set_trace()
             if(cp_filename and cp_frequency and gen % cp_frequency == 0):
                 cp = dict(population=population,
                         generation=gen,
@@ -275,4 +297,5 @@ def eaAlphaMuPlusLambdaCheckpoint(
                 logger.debug('Wrote checkpoint to %s', cp_filename)        
 
             #print(logbook.stream)
+    hof, pf,history = _update_history_and_hof(hof, pf, history, invalid_ind,gen,MU)
     return pop, hof, pf, logbook, history, gen_vs_pop
