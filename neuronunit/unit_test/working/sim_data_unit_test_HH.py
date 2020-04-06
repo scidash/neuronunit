@@ -35,7 +35,7 @@ class Test_opt_tests(unittest.TestCase):
     def test_all_objective_test(self):
         backend = "HH"
         MU = 10
-        NGEN = 45
+        NGEN = 65
 
         results = {}
         tests = {}
@@ -96,7 +96,7 @@ class Test_opt_tests(unittest.TestCase):
         model = target.dtc_to_model()
         opt = results['pf'][0].dtc
 
-        check_binary_match(opt,target,figname='checkbin.png')
+        check_binary_match(opt,target,figname=str(backend)+str(MU)+str(NGEN)+'check_binary_match.png')
         opt = OM.format_test(opt)
         OM.tests = opt.tests
         opt = self.OM.get_agreement(opt)
@@ -146,8 +146,8 @@ class Test_opt_tests(unittest.TestCase):
         a = pickle.load(open("RAWoptimum_versus_target.p","rb"))
         import pdb
         pdb.set_trace()
-        import system
-        system.exit()
+        import sys
+        sys.exit()
 
         if opt.obs_preds['total']['scores'] < 0.100:
             y1 = [i['avg'][0] for i in results['log']]
