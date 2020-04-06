@@ -31,13 +31,15 @@ def data_driven_tests(backend,MU,NGEN,t_index):
     this_test = TSD(lt.tests)
 
     ga_out = this_test.optimize(backend=backend,protocol={'allen': False, 'elephant': True},
-                                        MU=MU,NGEN=NGEN,figname='real_data')
+                                        MU=MU,NGEN=NGEN,free_param=['a','b','c'])
 
     ga_out['DO'] = None
     front = ga_out['pf']
     for d in front:
-        d.dtc.tests.DO = None
-        d.dtc.tests = d.dtc.tests.to_dict()
+        if hasattr(d,'dtc'):
+            d.dtc.tests.DO = None
+            d.dtc.tests = d.dtc.tests.to_dict()
+            
     front = [ind.dtc for ind in ga_out['pf']]
 
     opt = ga_out['pf'][0].dtc
@@ -64,7 +66,7 @@ def data_driven_tests(backend,MU,NGEN,t_index):
     return [ga_out['log'],front,opt,test_name]
 
 #MUrange =
-NGEN = 20
+NGEN = 40
 MU = 10
 backend = str("RAW")
 

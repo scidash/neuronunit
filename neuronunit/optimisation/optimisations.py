@@ -11,9 +11,13 @@ import deap
 import deap.base
 import deap.algorithms
 import deap.tools as tools
+import array
+from deap import base
+
+toolbox = base.Toolbox()
 
 from . import algorithms
-
+from . import alg
 import numpy
 from numba import jit
 import dask
@@ -34,14 +38,19 @@ from collections import Iterable, OrderedDict
 
 import copy
 #WeightedSumFitness = deap.base.Fitness
+
+#creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0))
+#creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMin)
+'''
 class WeightedSumFitness(deap.base.Fitness):
 
     """Fitness that compares by weighted sum"""
 
     def __init__(self, values=(), obj_size=None):
-        self.weights = [-1.0] * obj_size if obj_size is not None else [-1]
+        self.weights = [1.0] * obj_size if obj_size is not None else [1]
 
         super(WeightedSumFitness, self).__init__(values)
+        #obj_size=len(values)
 
     @property
     def weighted_sum(self):
@@ -71,7 +80,6 @@ class WeightedSumFitness(deap.base.Fitness):
         result = cls.__new__(cls)
         result.__dict__.update(self.__dict__)
         return result
-
 
 
 class WSListIndividual(list):
@@ -105,12 +113,13 @@ class WSFloatIndividual(float):
     def set_fitness(self,obj_size):
         self.fitness = WeightedSumFitness(obj_size=obj_size)
 
-
+'''
+from deap import base
 class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
 
     """DEAP Optimisation class"""
-    def __init__(self, error_criterion = None, evaluator = None,
-                 selection = 'selIBEA',
+    def __init__(self, tests = None, evaluator = None,
+                 selection = 'selNSGA2',
                  benchmark = False,
                  seed=None,
                  MU=15,
@@ -123,7 +132,9 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
                  boundary_dict= {},
                  hc = None,
                  verbose = 0,
-                 seed_pop = None, protocol={'allen':False,'elephant':True},simulated_obs=None):
+                 seed_pop = None,
+                 protocol={'allen':False,'elephant':True},
+                 simulated_obs=None):
         self.seed_pop = seed_pop
         self.verbose = verbose
         """Constructor"""
@@ -133,8 +144,8 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
         self.selection = selection
         self.benchmark = benchmark
 
-        self.error_criterion = error_criterion
-        self.error_length = len(error_criterion)
+        self.tests = tests
+        self.OBJ_SIZE = len(self.tests)+1
         #import pdb; pdb.set_trace()
         self.seed = seed
         self.MU = MU
@@ -257,7 +268,7 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
         # Bounds for the parameters
         IND_SIZE = len(list(self.params.values()))
 
-        OBJ_SIZE = len(self.error_criterion)
+        #OBJ_SIZE = len(self.error_criterion)
         #self.OBJ_SIZE = OBJ_SIZE
         def glif_modifications(UPPER,LOWER):
             for index, i in enumerate(UPPER):
@@ -312,12 +323,38 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
                     for _ in range(dimensions)]
             return other
         # Register the 'uniform' function
-        self.toolbox.register("uniform_params", uniform_params, LOWER, UPPER, IND_SIZE)
+        #self.toolbox.register("uniform_params", uniform_params, LOWER, UPPER, IND_SIZE)
+        ##
+        # DEEP BADNESS LINES
+        ##
+        from deap import creator
+        #creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0))
 
+        creator.create("FitnessMin", base.Fitness, weights=tuple(-1.0 for i in range(0,self.OBJ_SIZE)))
+        creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMin)
+        NDIM = len(LOWER)
+        #self.toolbox.register("FitnessMin", base.Fitness, weights=(-1.0 for i in range(0,len(self.OBJ_SIZE))))
+        #self.toolbox.register("Individual", array.array, typecode='d', fitness=creator.FitnessMin)
+        self.toolbox.register("attr_float", uniform_params, LOWER, UPPER, NDIM)
+
+        #self.toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
+        self.toolbox.register("individual", tools.initIterate, creator.Individual, self.toolbox.attr_float)
+        self.toolbox.register("population", tools.initRepeat, list, self.toolbox.individual)
+
+        self.toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=LOWER, up=UPPER, eta=20.0)
+        self.toolbox.register("mutate", tools.mutPolynomialBounded, low=LOWER, up=UPPER, eta=20.0, indpb=1.0/NDIM)
+        self.toolbox.register("select", tools.selNSGA2)
+
+        #weights=tuple(-1.0 for i in range(0,self.OBJ_SIZE))
+        #print(weights)
+        
+        #pop = self.toolbox.population(n=10)
+        #del pop
+        '''
         self.toolbox.register(
             "Individual",
             deap.tools.initIterate,
-            functools.partial(WSListIndividual, obj_size=OBJ_SIZE),
+            functools.partial(WSListIndividual, obj_size=self.OBJ_SIZE),
             self.toolbox.uniform_params)
 
         # Register the population format. It is a list of individuals
@@ -326,30 +363,33 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
             deap.tools.initRepeat,
             list,
             self.toolbox.Individual)
+
+
+        '''    
         #self.error_criterion['protocol'] = self.protocol # ={'allen':False,'elephant':True,'dm':False}
-        self.OM = om.OptMan(self.error_criterion,self.td, backend = self.backend, \
+        self.OM = om.OptMan(self.tests,self.td, backend = self.backend, \
                                               hc = self.hc,boundary_dict = self.boundary_dict, \
-                                              error_length=self.error_length,protocol=self.protocol)
+                                              error_length=self.OBJ_SIZE,protocol=self.protocol)
 
         def custom_code(invalid_ind):
 
             if self.backend is None:
                 self.backend = 'RAW'
             if self.verbose:
-                print(self.error_criterion.use_rheobase_score)
-            invalid_pop = list(self.OM.update_deap_pop(invalid_ind, self.error_criterion, \
+                print(self.tests.use_rheobase_score)
+            invalid_pop = list(self.OM.update_deap_pop(invalid_ind, self.tests, \
                                                   td = self.td, backend = self.backend, \
                                                   hc = self.hc,boundary_dict = self.boundary_dict, \
-                                                  error_length=self.error_length))
+                                                  error_length=self.OBJ_SIZE))
 
 
             invalid_dtc = [ i.dtc for i in invalid_pop if hasattr(i,'dtc') ]
             assert len(invalid_pop) == len(invalid_dtc)
-            lazy = []
+            fitnesses = []
             for i in invalid_dtc:
-                lazy.append(om.evaluate(i))
-
-            fitnesses = dask.compute(lazy)[0]
+                fitnesses.append(om.evaluate(i))
+    
+            #fitnesses = dask.compute(lazy)[0]
 
             return (invalid_pop,fitnesses)
 
@@ -380,21 +420,27 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
 
     def set_pop(self, boot_new_random=0):
         IND_SIZE = len(list(self.params.values()))
-        OBJ_SIZE = len(self.error_criterion)
+        OBJ_SIZE = self.OBJ_SIZE
         if boot_new_random == 0:
-            pop = []
-            for g in self.grid_init:
-                p = WSListIndividual(obj_size=OBJ_SIZE)
-                p.extend(g)
-                pop.append(p)
+            #pop = []
+            
+            pop = self.toolbox.population(n=len(self.grid_init))
+            for i,g in enumerate(self.grid_init):   
+                for j,param in enumerate(pop[i]): 
+                    pop[i][j] = g[j]
         else:
             pop = self.toolbox.population(n=boot_new_random)
+            """
             pop_ = [p[0] for p in copy.copy(pop)]
             pop = []
             for g in pop_:
-                p = WSListIndividual(obj_size=OBJ_SIZE)
-                p.extend(g)
+                p = self.toolbox.population(n=0)
+                for j,param in enumerate(p):
+                    p[j] = g[j]
+
                 pop.append(p)
+            print(pop)
+            """
         return pop
 
     def run(self,
@@ -416,7 +462,7 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
 
         stats = tools.Statistics(lambda ind: ind.fitness.values)
 
-        pop, hof, pf, log, history, gen_vs_pop = algorithms.eaAlphaMuPlusLambdaCheckpoint(
+        pop, hof, pf, log, history, gen_vs_pop = alg.eaAlphaMuPlusLambdaCheckpoint(
             pop,
             self.toolbox,
             MU,
@@ -435,8 +481,8 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
 
         # insert the initial HOF value back in.
         td = self.td
-        self.results = {'pop':pop,'hof':hof,'pf':pf,'log':log,'history':history,'td':td,'gen_vs_pop':gen_vs_pop}
-        return self.results
+        self.ga_out = {'pop':pop,'hof':hof,'pf':pf,'log':log,'history':history,'td':td,'gen_vs_pop':gen_vs_pop}
+        return self.ga_out
 
 def run_ga(explore_edges, NGEN, test, \
         free_params = None, hc = None,
@@ -463,7 +509,7 @@ def run_ga(explore_edges, NGEN, test, \
     NGEN = int(np.floor(NGEN))
     if not isinstance(test, Iterable):
         test = [test]
-    DO = SciUnitOptimisation(MU = MU, error_criterion = test,\
+    DO = SciUnitOptimisation(MU = MU, tests = test,\
      boundary_dict = ss, backend = backend, hc = hc, \
                              selection = selection,protocol=protocol)
 
