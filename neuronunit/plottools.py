@@ -278,7 +278,7 @@ def elaborate_plots(self,ga_out,savefigs=False,figname=None):
     #plt.style.use('ggplot')
     fig, axes = plt.subplots(figsize=(30, 30), facecolor='white')
     matplotlib.rcParams.update({'font.size': 55})
-
+    
     try:
        temp = copy.copy(ga_out['pf'][0].dtc.SA)
     except:
@@ -296,11 +296,11 @@ def elaborate_plots(self,ga_out,savefigs=False,figname=None):
     stdminus = mean - std
     stdplus = mean + std
     assert len(gen_numbers) == len(stdminus) == len(stdplus)
-    minimum = [i[0] for i in minimum]
+    minimum = [np.sum(i) for i in minimum]
 
-    mean = [i[0] for i in mean]
-    stdminus = [i[0] for i in stdminus]
-    stdplus = [i[0] for i in stdplus]
+    mean = [np.sum(i) for i in mean]
+    stdminus = [np.sum(i) for i in stdminus]
+    stdplus = [np.sum(i) for i in stdplus]
     axes.plot(
         gen_numbers,
         mean,
@@ -314,6 +314,15 @@ def elaborate_plots(self,ga_out,savefigs=False,figname=None):
 
     axes.fill_between(gen_numbers, stdminus, stdplus)
     axes.plot(gen_numbers, mean, label='mean')
+    if 'random_search' in ga_out.keys():
+        rs = ga_out['random_search']
+        brst = ga_out['random_search']['best_random_sum_total']
+        brst_vect = [brst for i in range(0,len(logbook.select('gen'))) ]
+        
+        axes.plot(gen_numbers, brst_vect, label='best random sum total')
+    mean_ = np.array(logbook.select('avg'))
+    meanx = [i[0] for i in mean_]
+    #print(mean_,meanx)
     axes.plot(
         gen_numbers,
         minimum,
@@ -333,7 +342,11 @@ def elaborate_plots(self,ga_out,savefigs=False,figname=None):
     if savefigs:
         if figname is None:
             figname = ' '
-        plt.savefig(str(figname)+str('avg_converg_over_gen_')+str(self.backend)+str('_')+str(self.MU)+str('_')+str(self.NGEN)+str('_')+str('.png'))
+        try:
+            plt.savefig(str(figname)+str('avg_converg_over_gen_')+str(self.backend)+str('_')+str(self.MU)+str('_')+str(self.NGEN)+str('_')+str('.png'))
+        except:
+            plt.savefig(str(figname)+str('avg_converg_over_gen_')+str('_')+str('_')+str('_')+str('.png'))
+
     else:
         plt.show()
 
@@ -357,20 +370,88 @@ def elaborate_plots(self,ga_out,savefigs=False,figname=None):
     min_x = sorted(get_min,key = lambda x: x[0])[0][1]+1
     #min_x = sorted(get_min,key = lambda x: x[1])[0][1]+1
     gen = np.max([ m['gen']+1 for m in ga_out['log'] ])
-    
-    if len(objectives)>1:
+    if len(objectives)>1 and len(ga_out['pf'][0].fitness.values)>1:
         fig2, ax2 = plt.subplots(len(objectives),1,figsize=(30,30),facecolor='white')
         matplotlib.rcParams.update({'font.size': 55})
 
         for i,(k,v) in enumerate(objectives.items()):
+            #if 'random_search' in ga_out.keys():
+            #    ax2[i].plot(gen_numbers, [ga_out['random_search'][k][0] for i in gen_numbers])
             ax2[i].plot(gen_numbers,[j[i] for j in fitevol ])#,label=("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)), fontsize = 35.0)
             ax2[i].axvline(x=min_x , ymin=0.02, ymax=0.99,color='blue')
             h = ax2[i].set_xlabel("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)), fontsize = 35.0)#, rotation = 45)
+<<<<<<< HEAD
             ax2[i].legend()
         if savefigs:
             if figname is None:
                 figname = ' '
             plt.savefig(str(figname)+str('error_components_over_gen_')+str(self.backend)+str('_')+str(self.MU)+str('_')+str(self.NGEN)+str('_')+str('.png'))
+=======
+            #ax2[i].legend()
+            ax2[i].tick_params(
+                axis='x',          # changes apply to the x-axis
+                which='major',      # both major and minor ticks are affected
+                bottom=True,      # ticks along the bottom edge are off
+                top=False,         # ticks along the top edge are off
+                labelbottom=True, 
+                labelsize=50) # labels along the bottom edge are off
+            #ax2[i].tick_params(axis="y")
+            ax2[i].legend()
+    
+    else:
+        pass
+        '''
+        fig2, ax2 = plt.subplots(1,1,figsize=(30,30))
+        for i,(k,v) in enumerate(objectives.items()):
+            #if i < len(everything.select("avg")[0]):
+
+            ax2.plot(list(range(0,len(all_over_gen[k]))),all_over_gen[k])
+            temp = [0 for i in range(0,len(all_over_gen[k])) ]
+            ax2.plot(list(range(0,len(all_over_gen[k]))),temp)
+            #ax2[i].set_ylim([0.0, 1.0])
+            #if i!=len(objectives)-1:
+            ax2.set_yscale('log')
+
+            ax2.tick_params(
+                axis='x',          # changes apply to the x-axis
+                which='both',      # both major and minor ticks are affected
+                bottom=True,      # ticks along the bottom edge are off
+                top=True,         # ticks along the top edge are off
+                labelbottom=True) # labels along the bottom edge are off
+            #h.set_rotation(90)
+        plt.xlabel('Generations', fontsize = 35.0)
+        plt.title("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)), fontsize = 35.0)
+        '''
+        #plt.savefig(str('history_plot_')+str(self.cell_name)+str(self.backend)+str('.png'))
+    if savefigs:
+        if figname is None:
+            figname = ' '
+        try:
+            plt.savefig(str(figname)+str('error_components_')+str(self.MU)+str('_')+str(self.NGEN)+str('_')+str(self.backend)+str('.png'))
+        except:
+            plt.savefig(str(figname)+str('error_components_')+str('.png'))
+
+    else:
+        plt.show()
+
+    return ga_out
+
+
+def adjust_spines(ax, spines, color='k', d_out=10, d_down=None):
+
+    if d_down in [None,[]]:
+        d_down = d_out
+
+    ax.set_frame_on(True)
+    ax.patch.set_visible(False)
+
+    for loc, spine in ax.spines.items():
+        if loc in spines:
+            if loc == 'bottom':
+                spine.set_position(('outward', d_down))  # outward by 10 points
+            else:
+                spine.set_position(('outward', d_out))  # outward by 10 points
+            #spine.set_smart_bounds(True)
         else:
             plt.show()
 
@@ -626,7 +707,6 @@ def shadow(dtcpop,best_vm):#This method must be pickle-able for ipyparallel to w
             #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
             model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
 
-            #import pdb; pdb.set_trace()
             assert type(vms.rheobase) is not type(None)
             if k == 0:
                 v.prediction = {}
