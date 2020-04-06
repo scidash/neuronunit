@@ -32,91 +32,14 @@ class Test_opt_tests(unittest.TestCase):
         cloned_tests = copy.copy(test_frame['Neocortex pyramidal cell layer 5-6'])
         OM = jrt(cloned_tests,backend,protocol='elephant')
         self.OM = OM
-    '''
-    def test_single_objective_test(self):
-        backend = "RAW"
-        MU = 10
-        NGEN = 20
-
-        results = {}
-        tests = {}
-        fps = ['a','k','vPeak','vr']
-
-        simulated_data_tests, OM, target = self.OM.make_sim_data_tests(backend,
-        MU,NGEN,free_parameters=fps)
-        simulated_data_tests.pop('TimeConstantTest',None)
-        simulated_data_tests.pop('CapacitanceTest',None)
-        simulated_data_tests.pop('InjectedCurrentAPWidthTest',None)
-
-        simulated_data_tests = {k:v for k,v in simulated_data_tests.items() if k != str('TimeConstantTest')}
-        simulated_data_tests = {k:v for k,v in simulated_data_tests.items() if k != str('CapacitanceTest')}
-        simulated_data_tests = {k:v for k,v in simulated_data_tests.items() if k != str('InjectedCurrentAPWidthTest')}
-        for k in simulated_data_tests.keys():
-            #import pdb
-            #pdb.set_trace()
-           #if 1==1:
-            if k =='TimeConstantTest':
-                continue
-            if k =='CapacitanceTest':
-                continue
-            if k == 'InjectedCurrentAPWidthTest':
-                continue
-            
-            #tests[k] = hide_imports.TSD(simulated_data_tests)#,
-            tests[k] = hide_imports.TSD([simulated_data_tests['InjectedCurrentAPWidthTest'],
-            simulated_data_tests['InjectedCurrentAPThresholdTest'],
-            simulated_data_tests['InjectedCurrentAPAmplitudeTest'],
-            simulated_data_tests['RheobaseTest']])
-            #simulated_data_tests['InjectedCurrentAPWidthTest']])
-            #print('resistance to optimization',tests[k].observation['std']
-            reserve = copy.copy(tests[k])
-            results[k] = tests[k].optimize(backend=OM.backend,\
-                    protocol={'allen': False, 'elephant': True},\
-                        MU=MU,NGEN=NGEN,plot=True,free_params=fps,figname='single_test'+str(k))
-            min_ = np.min([ p for p in results[k]['history'].genealogy_history.values() ])
-            max_ = np.max([ p for p in results[k]['history'].genealogy_history.values() ])
-            model = target.dtc_to_model()
-            tests[k][list(tests[k].keys())[0]].judge(model)
-
-            assert min_<target.attrs['a']<max_
-            self.assertLess(min_,target.attrs['a'])
-            opt = results[k]['pf'][0].dtc
-            print(opt.attrs)
-            front = results[k]['pf']
-            #opt = OM.get_agreement(opt)
-            import pdb
-            pdb.set_trace()
-            print(opt.obs_preds)
-            self.assertLess(opt.obs_preds['total']['scores'],0.100)
-
-            if opt.obs_preds['total']['scores'] < 0.100:
-                y1 = [i['avg'][0] for i in results[k]['log']]
-                y = [i['min'][0] for i in results[k]['log']]
-                x = [i['gen'] for i in results[k]['log']]
-
-                slopem = linregress(x, y)
-                slopea = linregress(x, y1)
-                gene = results[k]['pf'][0].dtc
-                mm = results[k]['pf'][0].dtc.dtc_to_model()
-                this_test = tests[k][list(tests[k].keys())[0]]
-                score_gene = this_test.judge(mm)
-                pred_gene = this_test.prediction
-
-
-                model = target.dtc_to_model()
-                this_test.judge(model)
-                pred_target = this_test.prediction
-
-
-    '''
     def test_all_objective_test(self):
         backend = "RAW"
-        MU = 40
-        NGEN = 250
+        MU = 10
+        NGEN = 350
 
         results = {}
         tests = {}
-        fps = ['k','a','c','d']
+        fps = ['k','a','c','d','b','vPeak','C','vr']
         simulated_data_tests, OM, target = self.OM.make_sim_data_tests(
             backend,MU,NGEN,free_parameters=fps)
 
@@ -190,7 +113,7 @@ class Test_opt_tests(unittest.TestCase):
         opt = self.OM.get_agreement(opt)
         print(opt.obs_preds)
         
-        pickle.dump(model,open('model_pickle.p','wb'))
+        #pickle.dump(model,open('model_pickle.p','wb'))
         target = OM.format_test(target)
         
         simulated_data_tests = target.tests
@@ -228,13 +151,15 @@ class Test_opt_tests(unittest.TestCase):
         front = results['hof']
         for i,t in enumerate(opt.tests): 
             assert t.observation['mean']==target.tests[i].observation['mean']
-        sys.exit()
         #self.assertLess(opt.obs_preds['total']['scores'],1.250)
         with open(str('RAW')+str('optimum_versus_target.p'),'wb') as f:
             pickle.dump([target,opt],f)
         a = pickle.load(open("RAWoptimum_versus_target.p","rb"))
         import pdb
         pdb.set_trace()
+        import sys
+        sys.exit()
+
         if opt.obs_preds['total']['scores'] < 0.100:
             y1 = [i['avg'][0] for i in results['log']]
             y = [i['min'][0] for i in results['log']]
