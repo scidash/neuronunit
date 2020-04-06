@@ -335,12 +335,10 @@ def elaborate_plots(self,ga_out,savefigs=False,figname=None):
     axes.tick_params(labelsize=50)
     axes.set_xlabel('Generations')
     axes.set_ylabel('Sum of objectives')
-    #axes.legend()
+    axes.legend()
     fig.tight_layout()
     import numpy as np
-
-    #plt.style.use('ggplot')
-    #fig, axes = plt.subplots(figsize=(50, 50), facecolor='white')
+ 
     if savefigs:
         if figname is None:
             figname = ' '
@@ -382,6 +380,13 @@ def elaborate_plots(self,ga_out,savefigs=False,figname=None):
             ax2[i].plot(gen_numbers,[j[i] for j in fitevol ])#,label=("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)), fontsize = 35.0)
             ax2[i].axvline(x=min_x , ymin=0.02, ymax=0.99,color='blue')
             h = ax2[i].set_xlabel("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)), fontsize = 35.0)#, rotation = 45)
+<<<<<<< HEAD
+            ax2[i].legend()
+        if savefigs:
+            if figname is None:
+                figname = ' '
+            plt.savefig(str(figname)+str('error_components_over_gen_')+str(self.backend)+str('_')+str(self.MU)+str('_')+str(self.NGEN)+str('_')+str('.png'))
+=======
             #ax2[i].legend()
             ax2[i].tick_params(
                 axis='x',          # changes apply to the x-axis
@@ -448,42 +453,9 @@ def adjust_spines(ax, spines, color='k', d_out=10, d_down=None):
                 spine.set_position(('outward', d_out))  # outward by 10 points
             #spine.set_smart_bounds(True)
         else:
-            spine.set_visible(False) # set_color('none') # don't draw spine
+            plt.show()
 
-    # turn off ticks where there is no spine
-    if 'left' in spines:
-        ax.yaxis.set_ticks_position('left')
-
-        if color != 'k':
-
-            ax.spines['left'].set_color(color)
-            ax.yaxis.label.set_color(color)
-            ax.tick_params(axis='y', colors=color)
-
-
-    elif 'right' not in spines:
-        # no yaxis ticks
-        ax.yaxis.set_ticks([])
-
-    if 'right' in spines:
-        ax.yaxis.set_ticks_position('right')
-
-        if color != 'k':
-
-            ax.spines['right'].set_color(color)
-            ax.yaxis.label.set_color(color)
-            ax.tick_params(axis='y', colors=color)
-
-    if 'bottom' in spines:
-        #pass
-        ax.xaxis.set_ticks_position('bottom')
-        #ax.axes.get_xaxis().set_visible(True)
-
-    else:
-        # no xaxis ticks
-        ax.xaxis.set_ticks([])
-        ax.axes.get_xaxis().set_visible(False)
-
+       
 
 def light_palette(color, n_colors=6, reverse=False, lumlight=0.8, light=None):
 
