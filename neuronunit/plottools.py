@@ -380,13 +380,12 @@ def elaborate_plots(self,ga_out,savefigs=False,figname=None):
             ax2[i].plot(gen_numbers,[j[i] for j in fitevol ])#,label=("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)), fontsize = 35.0)
             ax2[i].axvline(x=min_x , ymin=0.02, ymax=0.99,color='blue')
             h = ax2[i].set_xlabel("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)), fontsize = 35.0)#, rotation = 45)
-<<<<<<< HEAD
             ax2[i].legend()
         if savefigs:
             if figname is None:
                 figname = ' '
             plt.savefig(str(figname)+str('error_components_over_gen_')+str(self.backend)+str('_')+str(self.MU)+str('_')+str(self.NGEN)+str('_')+str('.png'))
-=======
+            """
             #ax2[i].legend()
             ax2[i].tick_params(
                 axis='x',          # changes apply to the x-axis
@@ -397,7 +396,7 @@ def elaborate_plots(self,ga_out,savefigs=False,figname=None):
                 labelsize=50) # labels along the bottom edge are off
             #ax2[i].tick_params(axis="y")
             ax2[i].legend()
-    
+            """
     else:
         pass
         '''

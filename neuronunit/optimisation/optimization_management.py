@@ -2697,7 +2697,8 @@ class OptMan():
                 dsolution,rp,_,_ = process_rparam(backend,free_parameters=free_parameters)
                 (new_tests,dtc) = self.make_simulated_observations(tests,backend,rp,dsolution=dsolution)
                 if float(dsolution.rheobase['value'])==0:
-                    print("hit")
+                    new_tests = False
+                    #print("hit")
                     continue
                 if new_tests is False:
                     continue
