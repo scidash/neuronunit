@@ -298,7 +298,7 @@ class TSS(TestSuite):
         return ga_out, self.DO
 '''
 class TSD(dict):
-    def __init__(self,tests={},use_rheobase_score=False):
+    def __init__(self,tests={},use_rheobase_score=True):
        self.DO = None
        self.use_rheobase_score = use_rheobase_score
        self.elaborate_plots  = elaborate_plots
@@ -341,7 +341,8 @@ class TSD(dict):
                     'free_params':None,\
                     'seed_pop':None,\
                     'hold_constant':None,
-                    'plot':False,'figname':None
+                    'plot':False,'figname':None,
+                    'use_rheobase_score':self.use_rheobase_score
                     }
         defaults.update(kwargs)
         kwargs = defaults
@@ -479,7 +480,10 @@ def random_p(backend):
         #sample = numpy.random.normal(loc=mean, scale=std/4.0, size=1)[0]
         random_param1[k] = sample
         print(ranges[k][0],sample,ranges[k][1])
-        assert ranges[k][0]<sample<ranges[k][1]
+        if ranges[k][0]>0:
+            assert ranges[k][0]<sample<ranges[k][1]
+        if ranges[k][0]<0:
+            assert ranges[k][0]>sample>ranges[k][1] or ranges[k][1]>sample> ranges[k][0]
 
     random_param2 = {} # randomly sample a point in the viable parameter space.
 
@@ -494,8 +498,10 @@ def random_p(backend):
         random_param2[k] = sample
         print(ranges[k][0],sample,ranges[k][1])
 
-        assert ranges[k][0]<sample<ranges[k][1]
-
+        if ranges[k][0]>0:
+            assert ranges[k][0]<sample<ranges[k][1]
+        if ranges[k][0]<0:
+            assert ranges[k][0]>sample>ranges[k][1] or ranges[k][1]>sample> ranges[k][0]
 
     assert set(random_param1.values()) is not set(random_param2.values())
     return random_param1
@@ -863,7 +869,7 @@ def inject_and_plot_model(pre_model,figname=None):
     plt.plot(vm.times, vm.magnitude, 'k')
     plt.ylabel('V (mV)')
     if figname is not None:
-        plt.savefig(figname)
+        plt.savefig(str(figname)+str('.png'))
     #plt.plot(vm.times,vm.magnitude)
     return vm,plt
 
@@ -1860,7 +1866,7 @@ def evaluate(dtc):
         return []
     else:
         #dtc = get_agreement(dtc)
-        prefix = dtc.obs_preds
+        prefix = dtc.agreement
         fitness = []
         for k in dtc.SA.keys():
             whole_thing = prefix[str(k)]
@@ -1913,6 +1919,8 @@ def filtered(pop,dtcpop):
     #    j.rheobase = i.rheobase
 
     #dtcpop = [ dtc for dtc in dtcpop if type(dtc.rheobase) is not type(None) ]
+    both = [ (d,p) for d,p in zip(dtcpop,pop) if type(d.rheobase) is not type(None) ]
+
     both = [ (d,p) for d,p in zip(dtcpop,pop) if type(p.rheobase) is not type(None) ]
     pop = [i[1] for i in both]
     dtcpop = [i[0] for i in both]
@@ -2027,7 +2035,7 @@ class OptMan():
         #self.simulated_data_tests = self.round_trip_test
         # note this is not effective at changing parallel behavior yet
         #if PARALLEL_CONFIDENT not in globals():
-        if self.backend is "RAW":
+        if self.backend is "RAW" or self.backend is "HH":
             self.PARALLEL_CONFIDENT = True
         else:
             self.PARALLEL_CONFIDENT = False
@@ -2113,15 +2121,16 @@ class OptMan():
             pre = len(temp)
             post = len({k:v for k,v in temp.items() if hasattr(v,'prediction')})
             if pre == post:
+
                 similarity,lps,rps =  self.closeness(temp,temp)
                 scores_ = {}
                 for k,p,o in zip(list(similarity.keys()),lps,rps):
                     obs[str(k)] = o
                     pred[str(k)] = p
-                dtc.obs_preds = pd.DataFrame([obs,pred,scores_d],index=['observations','predictions','scores'])
+                dtc.agreement = pd.DataFrame([obs,pred,scores_d],index=['observations','predictions','scores'])
             else:
                 print('sys log no prediction')
-        dtc.agreement = dtc.obs_preds
+        #dtc.agreement = dtc.obs_preds
 
         return dtc
 
@@ -2666,7 +2675,7 @@ class OptMan():
         #self.simulated_obs = True
         if self.protocol['allen']:
             dtc = False
-            while dtc is False or type(new_tests) is type(None):
+            while dtc is False or type(new_tests) is type(None) or float(dtc.rheobase)==0:
                 dsolution,rp,_,_ = process_rparam(backend,free_parameters=free_parameters)
                 new_tests,dtc = self.make_simulated_observations(tests,backend,rp)
             test_origin_target=dtc
@@ -2687,6 +2696,9 @@ class OptMan():
             while new_tests is False:
                 dsolution,rp,_,_ = process_rparam(backend,free_parameters=free_parameters)
                 (new_tests,dtc) = self.make_simulated_observations(tests,backend,rp,dsolution=dsolution)
+                if float(dsolution.rheobase['value'])==0:
+                    print("hit")
+                    continue
                 if new_tests is False:
                     continue
                 new_tests = {k:v for k,v in new_tests.items() if v.observation[which_key(v.observation)] is not None}
@@ -2885,11 +2897,11 @@ class OptMan():
 
 
                 try:
-                    assert hasattr(dtc.tests,'use_rheobase_score')
+                    assert hasattr(self,'use_rheobase_score')
                 except:
                     print('warning please add whether or not model should be scored on rheobase to protocol')
-                    dtc.tests.use_rheobase_score = True
-                if dtc.tests.use_rheobase_score == False and "RheobaseTest" in str(k):
+                    self.use_rheobase_score = True
+                if self.use_rheobase_score == False and "RheobaseTest" in str(k):
                     continue
                 #t.params = dtc.protocols[k]
                 if not 'std' in t.observation.keys():
@@ -2999,10 +3011,9 @@ class OptMan():
                     try:
                         lns = np.abs(score_gene.log_norm_score)
                     except:
-                        lns = np.abs(score_gene.raw)
-
+                        lns = 200.0
                 else:
-                    lns = np.abs(score_gene.raw)
+                    lns = np.abs(float(score_gene.raw))
 
 
             scores_.append(lns)
@@ -3356,39 +3367,32 @@ class OptMan():
 
         if 'RAW' in self.backend  or 'HH' in self.backend or str('ADEXP') in self.backend:
             self.assert_against_zero_std(copy.copy(dtcpop),tests)
-            dtcpop = list(map(dtc_to_rheo,dtcpop))
-            for dtc in dtcpop:
-                if type(dtc.tests) is type(dict()):
-                    for t in dtc.tests.values():
-                        try:
-                            assert 'std' in t.observation.keys()
-                        except:
-                            import pdb
-                            pdb.set_trace()
+            #dtcpop = list(map(dtc_to_rheo,dtcpop))
+            dtcbag = [ delayed(dtc_to_rheo(d)) for d in dtcpop ]
+            dtcpop = compute(*dtcbag)
+            for p,d in zip(pop,dtcpop):
+                p.rheobase = None
+                p.rheobase = d.rheobase
+
+            (pop,dtcpop) = filtered(pop,dtcpop)
             dtcpop = list(map(self.format_test,dtcpop))
-            dtcpop = [d for d in dtcpop if d is not None]
+            #dtcpop = [d for d in dtcpop if d is not None]
+            #dtcpop = [d for d in dtcpop if d.rheobase is not None]
+
         else:
             #dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
             #dtcpop = list(dtcbag.map(dtc_to_rheo))
 
             dtcbag = [ delayed(dtc_to_rheo(d)) for d in dtcpop ]
             dtcpop = compute(*dtcbag)
+            for p,d in zip(pop,dtcpop):
+                p.rheobase = None
+                p.rheobase = d.rheobase
 
+            (pop,dtcpop) = filtered(pop,dtcpop)
+            #dtcpop = [d for d in dtcpop if d.rheobase is not None]
+            dtcpop = list(map(self.format_test,dtcpop))
 
-        '''
-        if not hasattr(pop[0],'rheobase'):
-            self.julia = True
-            pop_ = []
-            for ind,d in zip(pop,dtcpop):
-                if type(ind) is not type(WSListIndividual()):
-                    temp = ind.tolist()
-                    temp_ind = WSListIndividual(obj_size=len(self.tests))
-                    temp_ind.extend(temp)
-                    ind = temp_ind
-                    ind.dtc = d
-                    pop_.append(ind)
-            pop = pop_
-        '''
         for ind,d in zip(pop,dtcpop):
 
             if type(d.rheobase) is not type(None):
@@ -3454,9 +3458,6 @@ class OptMan():
                     lazy.append(d)
 
                 dtcpop = dask.compute(lazy)[0]
-                if __name__ == '__main__':
-                    import pdb
-                    pdb.set_trace()
                 # smaller_pop = [d for d in dtcpop for _,fitness in d.SA.values if fitness != 100 ]
                 # pop, dtcpop = self.make_up_lost(pop,smaller_pop,self.td)
                 for d in dtcpop:
@@ -3467,7 +3468,11 @@ class OptMan():
                 #    d.tests = copy.copy(self.tests)
 
             if not self.PARALLEL_CONFIDENT:
-
+                for d in dtcpop:
+                    
+                    figname = d.rheobase
+                    inject_and_plot_model(d,figname=str(self.backend)+str(figname))
+                    assert d.rheobase is not None
                 dtcpop = list(map(self.format_test,dtcpop))
                 dtcpop = list(map(self.elephant_evaluation,dtcpop))
 
@@ -3553,65 +3558,67 @@ class OptMan():
         if not delta:
             return pop, dtcpop
         if delta:
-            pop.extend(pop[0:delta])
-            dtcpop.extend(dtcpop[0:delta])
-        return pop, dtcpop
-        """
-            cnt = 0
-            while delta:
-                print(delta)
-                import pdb
-                pdb.set_trace()
-                pop_,dtcpop_ = self.boot_new_genes(delta,spare)
-                for dtc,ind in zip(pop_,dtcpop_):
-                    ind.from_imputation = None
-                    ind.from_imputation = True
-                    dtc.from_imputation = True
+            if delta<len(pop):
+                pop.extend(pop[0:delta])
+                dtcpop.extend(dtcpop[0:delta])
+                return pop, dtcpop
+            elif len(pop)>1:
+                for i in range(0,delta):
+                    pop.extend(pop[0:len(pop)])
+                    dtcpop.extend(dtcpop[0:len(pop)])
+            elif len(pop)==1:
+                for i in range(0,delta):
+                    pop.append(pop[0])
+                    dtcpop.append(dtcpop[0])
 
-                    #temp = OrderedDict({t.name:t for t in dtc.tests })
-                    #self.tests = temp
-                    #dtc.tests = tests = list(temp.values())
-                    if len(spare)>1:
-                        sp = spare[0]
+
+
+            else:
+                cnt = 0
+                while delta:
+                    pop_,dtcpop_ = self.boot_new_genes(delta,spare)
+                    for dtc,ind in zip(pop_,dtcpop_):
+                        ind.from_imputation = None
+                        ind.from_imputation = True
+                        dtc.from_imputation = True
+
+                        if len(spare)>1:
+                            sp = spare[0]
+                        else:
+                            sp = spare
+                        dtc.tests = copy.copy(sp.tests)
+                        for i,t in enumerate(dtc.tests):
+                            k = t.name
+                            assert dtc.tests[i].observation['mean'] == self.tests[k].observation['mean']
+    
+                        dtc = self.format_test(dtc)
+
+                        for i,_ in enumerate(dtc.tests):
+                            k = t.name
+                            assert dtc.tests[i].observation['mean'] == self.tests[k].observation['mean']
+                
+
+                        ind.dtc = dtc
+
+                    pop_ = [ p for p in pop_ if len(p)>1 ]
+
+                    pop.extend(pop_)
+                    dtcpop.extend(dtcpop_)
+                    (pop,dtcpop) = filtered(pop,dtcpop)
+                    for i,p in enumerate(pop):
+                        if not hasattr(p,'fitness'):
+                            p.fitness = fitness_attr
+
+                    after = len(pop)
+                    delta = before-after
+                    if delta:
+                        continue
                     else:
-                        sp = spare
-                    dtc.tests = copy.copy(sp.tests)
-                    #assert dtc.tests['APThresholdTest'].observation['mean'] == self.tests['APThresholdTest'].observation['mean']
-                    for i,t in enumerate(dtc.tests):
-                        k = t.name
-                        assert dtc.tests[i].observation['mean'] == self.tests[k].observation['mean']
+                        break
 
-                        
-                    dtc = self.format_test(dtc)
-
-
-                    
-                    for i,_ in enumerate(dtc.tests):
-                        k = t.name
-                        assert dtc.tests[i].observation['mean'] == self.tests[k].observation['mean']
-            
-                    #assert dtc.tests['APThresholdTest'].observation['mean'] == self.tests['APThresholdTest'].observation['mean']
-
-                    ind.dtc = dtc
-
-                pop_ = [ p for p in pop_ if len(p)>1 ]
-
-                pop.extend(pop_)
-                dtcpop.extend(dtcpop_)
-                (pop,dtcpop) = filtered(pop,dtcpop)
-                for i,p in enumerate(pop):
-                    if not hasattr(p,'fitness'):
-                        p.fitness = fitness_attr
-
-                after = len(pop)
-                delta = before-after
-                if delta:
-                    continue
-                else:
-                    break
-
-            return pop, dtcpop
-        """
+                return pop, dtcpop
+    """        
+    """
     @timer
     def update_deap_pop(self,pop, tests, td, backend = None,hc = None,boundary_dict = None, error_length=None):
         '''

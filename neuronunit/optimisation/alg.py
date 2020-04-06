@@ -127,11 +127,18 @@ def ugly_fix(pool,toolbox):
     filtered = [p for p in pool if len(p.fitness.values)==0]
     pool = [p for p in pool if len(p.fitness.values)!=0]
     if len(filtered):
-        invalid_ind_,fitnesses_ = toolbox.evaluate(filtered)
-        for ind, fit in zip(invalid_ind_, fitnesses_):
-            assert len(fit) != 0
-            ind.fitness.values = fit
-            pool.append(ind)
+        if True:
+            for i in range(0,len(filtered)):
+                ind = pool[i]
+                ind = toolbox.clone(ind)
+                pool.append(ind)
+
+        if False:
+            invalid_ind_,fitnesses_ = toolbox.evaluate(filtered)
+            for ind, fit in zip(invalid_ind_, fitnesses_):
+                assert len(fit) != 0
+                ind.fitness.values = fit
+                pool.append(ind)
 
     last = len(pool[0].fitness.values)
     for p in pool: 
@@ -140,6 +147,7 @@ def ugly_fix(pool,toolbox):
         last = current
         print(len(p.fitness.values))
     return pool
+
     def get_center(pf,pop):
         X = np.array(pf[0:-1])
         kmeans = KMeans(n_clusters=1, random_state=0).fit(X)
