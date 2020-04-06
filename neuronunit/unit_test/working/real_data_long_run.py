@@ -31,7 +31,7 @@ def data_driven_tests(backend,MU,NGEN,t_index):
     this_test = TSD(lt.tests)
 
     ga_out = this_test.optimize(backend=backend,protocol={'allen': False, 'elephant': True},
-                                        MU=MU,NGEN=NGEN,free_param=['a','b','c'])
+                                        MU=MU,NGEN=NGEN,figname='real_data')
 
     ga_out['DO'] = None
     front = ga_out['pf']
