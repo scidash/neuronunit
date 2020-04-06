@@ -31,7 +31,7 @@ def data_driven_tests(backend,MU,NGEN,t_index):
     this_test = TSD(lt.tests)
 
     ga_out = this_test.optimize(backend=backend,protocol={'allen': False, 'elephant': True},
-                                        MU=MU,NGEN=NGEN)
+                                        MU=MU,NGEN=NGEN,figname='real_data')
 
     ga_out['DO'] = None
     front = ga_out['pf']
@@ -70,7 +70,8 @@ backend = str("RAW")
 
 test_frame = pickle.load(open('processed_multicellular_constraints.p','rb'))
 
-for MU in range(20,140,20):
+for MU in range(100,140,20):
+
     for t_index in range(0,len(test_frame)):
         out = data_driven_tests(backend,MU,NGEN,t_index)
         if type(out) is type(None):

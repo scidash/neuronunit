@@ -329,7 +329,7 @@ def elaborate_plots(self,ga_out,savefigs=False,figname=None):
     axes.legend()
     fig.tight_layout()
     import numpy as np
-
+ 
     if savefigs:
         if figname is None:
             figname = ' '
@@ -366,37 +366,15 @@ def elaborate_plots(self,ga_out,savefigs=False,figname=None):
             ax2[i].plot(gen_numbers,[j[i] for j in fitevol ])#,label=("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)), fontsize = 35.0)
             ax2[i].axvline(x=min_x , ymin=0.02, ymax=0.99,color='blue')
             h = ax2[i].set_xlabel("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)), fontsize = 35.0)#, rotation = 45)
+            ax2[i].legend()
+        if savefigs:
+            if figname is None:
+                figname = ' '
+            plt.savefig(str(figname)+str('error_components_over_gen_')+str(self.backend)+str('_')+str(self.MU)+str('_')+str(self.NGEN)+str('_')+str('.png'))
+        else:
+            plt.show()
 
-        if color != 'k':
-
-            ax.spines['left'].set_color(color)
-            ax.yaxis.label.set_color(color)
-            ax.tick_params(axis='y', colors=color)
-
-
-    elif 'right' not in spines:
-        # no yaxis ticks
-        ax.yaxis.set_ticks([])
-
-    if 'right' in spines:
-        ax.yaxis.set_ticks_position('right')
-
-        if color != 'k':
-
-            ax.spines['right'].set_color(color)
-            ax.yaxis.label.set_color(color)
-            ax.tick_params(axis='y', colors=color)
-
-    if 'bottom' in spines:
-        #pass
-        ax.xaxis.set_ticks_position('bottom')
-        #ax.axes.get_xaxis().set_visible(True)
-
-    else:
-        # no xaxis ticks
-        ax.xaxis.set_ticks([])
-        ax.axes.get_xaxis().set_visible(False)
-
+       
 
 def light_palette(color, n_colors=6, reverse=False, lumlight=0.8, light=None):
 
