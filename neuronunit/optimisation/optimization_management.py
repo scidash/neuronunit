@@ -2671,7 +2671,8 @@ class OptMan():
 
         dtc = self.format_test(dtc)
         tests = self.tests
-        if type(tests) is not type(dict()):
+
+        if type(tests) is not type(TSD()) or type(tests) is type(list()):
             tests = {t.name:t for t in tests}
         for k,t in tests.items():
             #if str('RheobaseTest') != t.name and str('RheobaseTestP') != t.name:

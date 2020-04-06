@@ -89,24 +89,22 @@ def purify2(population):
 def cleanse(temp):
    dtc = temp[0].dtc
    if "ADEXP" in temp[0].dtc.backend or "BHH" in temp[0].dtc.backend:
-	   try:
-		   import brian as b2
-		   b2.clear_cache("cython")
-		   del b2
-           #b2 = None
-	   except:
+       try:
+           import brian as b2
+           b2.clear_cache("cython")
+           del b2
+       except:
            del brian2
-		   #brian2 = None
-	   OM = dtc.dtc_to_opt_man()
-	   temp_,_ = OM.boot_new_genes(len(temp),dtcpop)
-	   for i,t in enumerate(temp):
-		   temp_[i].fitness = t.fitness
-		   for x,j in enumerate(t):
-		       temp_[i][x] = j
-	   temp = temp_
-	   for t in temp:
-		   del t.dtc.tests #= None
-		   del t.dtc #= None
+       OM = dtc.dtc_to_opt_man()
+       temp_,_ = OM.boot_new_genes(len(temp),dtcpop)
+       for i,t in enumerate(temp):
+           temp_[i].fitness = t.fitness
+           for x,j in enumerate(t):
+               temp_[i][x] = j
+       temp = temp_
+       for t in temp:
+           del t.dtc.tests #= None
+           del t.dtc #= None
    return temp
 
 def _update_history_and_hof(halloffame,pf, history, population,GEN,MU):
