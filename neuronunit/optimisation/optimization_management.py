@@ -382,13 +382,16 @@ class TSD(dict):
 
 
         ga_out = self.elaborate_plots(self,ga_out,savefigs=True,figname=kwargs['figname'])
-
+        _,front = self.DO.OM.test_runner(copy.copy(ga_out['pf']),self.DO.OM.td,self.DO.OM.tests)
+        ga_out['front'] = front
+        '''    
         if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
             _,dtc_pop = self.DO.OM.test_runner(copy.copy(ga_out['pf'][0:1]),self.DO.OM.td,self.DO.OM.tests)
             ga_out['dtc_pop'] = dtc_pop
             for x,(i,j) in enumerate(zip(ga_out['dtc_pop'],ga_out['pf'][0:1])):
                 ga_out['pf'][x].dtc = None
                 ga_out['pf'][x].dtc = i
+        '''        
         self.ga_out = ga_out
         self.DO = None # destroy this here, as its used once and not pickleable
         return self.ga_out
@@ -2696,10 +2699,7 @@ class OptMan():
             while new_tests is False:
                 dsolution,rp,_,_ = process_rparam(backend,free_parameters=free_parameters)
                 (new_tests,dtc) = self.make_simulated_observations(tests,backend,rp,dsolution=dsolution)
-                if float(dsolution.rheobase['value'])==0:
-                    new_tests = False
-                    #print("hit")
-                    continue
+                
                 if new_tests is False:
                     continue
                 new_tests = {k:v for k,v in new_tests.items() if v.observation[which_key(v.observation)] is not None}
@@ -2716,6 +2716,10 @@ class OptMan():
                     if 'RheobaseTest' not in new_tests.keys():
                         new_tests = False
                         continue
+                    if float(dsolution.rheobase['value'])==0:
+                        new_tests = False
+                        continue
+
                     dsolution.rheobase = new_tests['RheobaseTest'].observation
             print('Random simulated data tests made')
             target = dsolution
