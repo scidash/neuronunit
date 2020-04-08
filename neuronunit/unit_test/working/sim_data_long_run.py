@@ -52,13 +52,10 @@ def sim_data_tests(backend,MU,NGEN):
                                         MU=MU,NGEN=NGEN)
 
     ga_out['DO'] = None
-    front = ga_out['pf']
-    for d in front:
-        d.dtc.tests.DO = None
-        d.dtc.tests = d.dtc.tests.to_dict()
-    front = [ind.dtc for ind in ga_out['pf']]
-
-    opt = ga_out['pf'][0].dtc
+    front = ga_out['front']
+    #front = [ind.dtc for ind in ga_out['pf']]
+    opt = front[0]
+    #opt = ga_out['pf'][0].dtc
     #target
 
     target.DO = None
