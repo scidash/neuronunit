@@ -82,8 +82,6 @@ def _update_history_and_hof(halloffame,pf, history, population,GEN,MU):
         except:
             temp = cleanse(temp)
             history.update(temp)
-
-            #print(temp,'temp bad')
     if pf is not None:
         if GEN ==0:
             pf = deap.tools.ParetoFront()
@@ -145,7 +143,6 @@ def ugly_fix(pool,toolbox):
         current = len(p.fitness.values)
         assert current==last
         last = current
-        print(len(p.fitness.values))
     return pool
 
     def get_center(pf,pop):
@@ -223,19 +220,14 @@ def eaAlphaMuPlusLambdaCheckpoint(
         temp_pop = copy.copy(pop)
         for p in pop:
             assert hasattr(p,'dtc')
-        #print(logbook.stream)
-
 
 
         # Begin the generational process
         for gen in range(1, NGEN):
-            #offspring = tools.selTournamentDCD(pop, len(pop))
             offspring = toolbox.select(pop, int(MU/2))
             offspring = [toolbox.clone(ind) for ind in offspring]
-            #CXPB = 0.9
             cnt = 0
             for ind1, ind2 in zip(offspring[::int(MU/4)], offspring[1::int(MU/4)]):
-                print(ind1,ind2,'cross over genes')
                 toolbox.mate(ind1, ind2)
                 toolbox.mutate(ind1)
                 toolbox.mutate(ind2)
@@ -256,9 +248,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
 
             pop = toolbox.select(pool, MU)
             record = stats.compile(pop)
-            logbook.record(gen=gen, evals=len(invalid_ind), **record)
-            print(logbook.stream)
-            
+            logbook.record(gen=gen, evals=len(invalid_ind), **record)            
             hof, pf,history = _update_history_and_hof(hof, pf, history, pop ,gen,MU)
             if(cp_filename and cp_frequency and gen % cp_frequency == 0):
                 cp = dict(population=population,

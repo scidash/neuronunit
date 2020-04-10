@@ -35,7 +35,7 @@ class Test_opt_tests(unittest.TestCase):
     def test_all_objective_test(self):
         backend = "HH"
         MU = 10
-        NGEN = 65
+        NGEN = 5
 
         results = {}
         tests = {}
@@ -55,8 +55,6 @@ class Test_opt_tests(unittest.TestCase):
                 mean = simulated_data_tests[k].observation[keyed]
                 std = simulated_data_tests[k].observation['std']
                 x = np.abs(std/mean)
-            #import pdb
-            #pdb.set_trace()
             if k == str('TimeConstantTest') or k == str('CapacitanceTest') or k == str('InjectedCurrentAPWidthTest'):
                 # or k == str('InjectedCurrentAPWidthTest'):
                 mean = simulated_data_tests[k].observation[keyed]
@@ -87,9 +85,14 @@ class Test_opt_tests(unittest.TestCase):
         ##
         # Optimize
         ##
-        results = tests.optimize(backend=OM.backend,\
+        ga_out = tests.optimize(backend=OM.backend,\
                 protocol={'allen': False, 'elephant': True},\
                     MU=MU,NGEN=NGEN,plot=True,free_parameters=fps)
+
+        from neuronunit.plottools import plot_score_history, plot_score_history_SA
+        plot_score_history(ga_out,figname=str('HH_')+str(MU)+' '+str(NGEN)+'_fitness.png')
+        plot_score_history_SA(ga_out,figname=str('HH_')+str(MU)+' '+str(NGEN)+'_scores_SA.png')
+
         min_ = np.min([ p for p in results['history'].genealogy_history.values() ])
         max_ = np.max([ p for p in results['history'].genealogy_history.values() ])
         temp = [ p for p in results['history'].genealogy_history.values() ]
@@ -100,9 +103,8 @@ class Test_opt_tests(unittest.TestCase):
         opt = OM.format_test(opt)
         OM.tests = opt.tests
         opt = self.OM.get_agreement(opt)
-        print(opt.obs_preds)
+        print(opt.agreement)
         
-        #pickle.dump(model,open('model_pickle.p','wb'))
         target = OM.format_test(target)
         
         simulated_data_tests = target.tests
@@ -133,7 +135,7 @@ class Test_opt_tests(unittest.TestCase):
                 import pdb
                 pdb.set_trace()
 
- 
+
         print(opt.attrs)
         print(target.attrs)
         front = results['pf']
@@ -141,11 +143,11 @@ class Test_opt_tests(unittest.TestCase):
         for i,t in enumerate(opt.tests): 
             assert t.observation['mean']==target.tests[i].observation['mean']
         #self.assertLess(opt.obs_preds['total']['scores'],1.250)
-        with open(str('RAW')+str('optimum_versus_target.p'),'wb') as f:
+        with open(str('HH_')+str('optimum_versus_target.p'),'wb') as f:
             pickle.dump([target,opt],f)
-        a = pickle.load(open("RAWoptimum_versus_target.p","rb"))
-        import pdb
-        pdb.set_trace()
+        a = pickle.load(open("HH_optimum_versus_target.p","rb"))
+        #import pdb
+        #pdb.set_trace()
         import sys
         sys.exit()
 
