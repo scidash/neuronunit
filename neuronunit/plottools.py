@@ -2,6 +2,11 @@
 import matplotlib.pyplot as plt
 #plt.plot([0,1],[1,0])
 #plt.show()
+
+import matplotlib as mpl
+mpl.rcParams.update(mpl.rcParamsDefault)
+print(mpl.rcParamsDefault)
+
 import seaborn as sns
 import matplotlib
 import matplotlib.colors as mplcol
@@ -274,17 +279,20 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
                 plt.show()
     return [dtc,second_pop,third_pop]
 
-def elaborate_plots(self,ga_out,savefigs=False,figname=None):
+def elaborate_plots(ga_out,figname=None):
     #plt.style.use('ggplot')
     fig, axes = plt.subplots(figsize=(30, 30), facecolor='white')
-    matplotlib.rcParams.update({'font.size': 55})
-    
+    #matplotlib.rcParams.update({'font.size': 55})
     try:
-       temp = copy.copy(ga_out['pf'][0].dtc.SA)
+       front = ga_out['pf'][0:10]
     except:
-       temp = copy.copy(ga_out['dtc_pop'][0].dtc.SA)
+        x = ga_out['pf'][0:10]
+        import pdb
+        pdb.set_trace()
+        _,front = ga_out['rerun'](ga_out['rerun'],x)
+    objectives = {k:v for k,v in front[0].dtc.SA.items() }
 
-    objectives = {k:v for k,v in temp.items() }
+    #objectives = {k:v for k,v in temp.items() }
     assert len(objectives)
     logbook = ga_out['log']
     gen_numbers =[ i+1 for i in range(0,len(logbook.select('gen'))) ]
@@ -297,6 +305,10 @@ def elaborate_plots(self,ga_out,savefigs=False,figname=None):
     stdplus = mean + std
     assert len(gen_numbers) == len(stdminus) == len(stdplus)
     minimum = [np.sum(i) for i in minimum]
+
+    get_min = [(np.sum(j),i) for i,j in enumerate(minimum)]
+    min_x = sorted(get_min,key = lambda x: x[0])[0][1]+1
+
 
     mean = [np.sum(i) for i in mean]
     stdminus = [np.sum(i) for i in stdminus]
@@ -322,7 +334,7 @@ def elaborate_plots(self,ga_out,savefigs=False,figname=None):
         axes.plot(gen_numbers, brst_vect, label='best random sum total')
     mean_ = np.array(logbook.select('avg'))
     meanx = [i[0] for i in mean_]
-    #print(mean_,meanx)
+    
     axes.plot(
         gen_numbers,
         minimum,
@@ -330,7 +342,11 @@ def elaborate_plots(self,ga_out,savefigs=False,figname=None):
         linewidth=2,
         label='population minimum')
     axes.plot(gen_numbers, stdminus, label='std variation lower limit')
+    axes.axvline(x=min_x , ymin=0.02, ymax=0.99,color='blue',label='best candidate sampled')
+
     axes.plot(gen_numbers, stdplus, label='std variation upper limit')
+    axes.set_ylim([0, np.max(stdplus)])
+
     #axes.set_xlim(np.min(gen_numbers) - 1, np.max(gen_numbers) + 1)
     axes.tick_params(labelsize=50)
     axes.set_xlabel('Generations')
@@ -343,40 +359,111 @@ def elaborate_plots(self,ga_out,savefigs=False,figname=None):
         if figname is None:
             figname = ' '
         try:
-            plt.savefig(str(figname)+str('avg_converg_over_gen_')+str(self.backend)+str('_')+str(self.MU)+str('_')+str(self.NGEN)+str('_')+str('.png'))
+            plt.savefig(str(figname)+str('avg_converg_over_gen_')+str(ga_out['DO'].OM.backend)+str('_')+str(ga_out['DO'].OM.MU)+str('_')+str(ga_out['DO'].OM.NGEN)+str('_')+str('.png'))
         except:
             plt.savefig(str(figname)+str('avg_converg_over_gen_')+str('_')+str('_')+str('_')+str('.png'))
 
     else:
         plt.show()
-
-    plt.style.use('ggplot')
-    #fig, axes = plt.subplots(figsize=(50, 50), facecolor='white')
-    fig, axes = plt.subplots(figsize=(30, 30), facecolor='white')
-    matplotlib.rcParams.update({'font.size': 35})
+import math
+def plot_score_history(ga_out,figname=None):
+    """
+    Adapted from pyfrume.
+    """
+    try:
+       front = ga_out['pf'][0:10]
+    except:
+        x = ga_out['pf'][0:10]
+        _,front = ga_out['rerun'](x)
+    objectives = {k:v for k,v in front[0].dtc.SA.items() }
     logbook = ga_out['log']
+    scores = [ m['min'] for m in logbook ]
+    get_min = [(np.sum(j),i) for i,j in enumerate(scores)]
+    min_x = sorted(get_min,key = lambda x: x[0])[0][1]
+    fig,axes = plt.subplots(2,math.ceil(len(objectives)/2+1),figsize=(20,8))
+    axes[0,0].plot(scores)
+    axes[0,0].set_title('Observation/Prediction Disagreement')
+    for i,(k,v) in enumerate(objectives.items()):
+        ax = axes.flat[i+1]
+        history = [j[i] for j in scores ]
+        ax.axvline(x=min_x , ymin=0.02, ymax=0.99,color='blue',label='best candidate sampled')
+        ax.plot(history)
+        ax.set_title(str(k))
+        ax.set_ylim([np.min(0.0), np.max(history)])
+        try:
+            ax.set_ylabel(front[i].dtc.tests[k].observation['std'].units)
+        except:
+            pass
+    axes[0,0].set_xlabel("Generation")
+    plt.tight_layout()
+    if figname is not None:
+        plt.savefig(figname)
+    else:
+        plt.show()
 
+def plot_score_history_SA(ga_out,figname=None):
+    """
+    Adapted from pyfrume.
+    """
+    #try:
+    #   front = ga_out['pf'][0:10]
+    #except:
+    x = ga_out['pf'][0:10]
+    _,front = ga_out['rerun'](x)
+    #x = ga_out['pf'][0:1]
+    #front = ga_out['rerun'](x)
+    repop = list(ga_out['history'].genealogy_history.values())
+    dtcpop = ga_out['rerun'](repop)
+    logbook = ga_out['log']
+    scores = [ m['min'] for m in logbook ]
+    get_min = [(np.sum(j),i) for i,j in enumerate(scores)]
+    min_x = sorted(get_min,key = lambda x: x[0])[0][1]
+    objectives = {k:v for k,v in front[0].SA.items() }
+    fig,axes = plt.subplots(2,math.ceil((len(objectives)+1)/2),figsize=(20,8))
+    axes[0,0].plot(scores)
+    axes[0,0].set_title('Total')
+    for i,(k,v) in enumerate(objectives.items()): 
+        ax = axes.flat[i+1]
+        history1 = [d.SA[k] for d in dtcpop ]
+        ax.plot(history1)
+        #history0 = [j[i] for j in scores ]
+        #ax.axvline(x=min_x , ymin=0.02, ymax=0.99,color='blue',label='best candidate sampled')
+        #ax.plot(history0)
+        ax.set_title(str(k))
+        ax.set_ylim([0,np.max(history1)])
+        ax.set_ylabel('logarithmic normalised score')
+
+    axes[0,0].set_xlabel("Generation")
+    plt.tight_layout()
+    if figname is not None:
+        plt.savefig(figname)
+    else:
+        plt.show()
+
+def elaborate_plots_two(ga_out,savefigs=False,figname=None):
+    try:
+       front = copy.copy(ga_out['pf'][0].dtc.SA)
+    except:
+       _,front = self.DO.OM.test_runner(copy.copy(ga_out['pf'][0:10]),self.DO.OM.td,self.DO.OM.tests)
+    objectives = {k:v for k,v in front[0].dtc.SA.items() }
+    fig, axes = plt.subplots(figsize=(30, 30), facecolor='white')
+    matplotlib.rcParams.update({'font.size': 25})
+    logbook = ga_out['log']
     plt.clf()
     plt.figure()
     sns.set_style("darkgrid")
-
     avg, max_, min_, std_ = logbook.select("avg", "max", "min","std")
     all_over_gen = {}
     pf_loc = 0
-
     fitevol = [ m['min'] for m in ga_out['log'] ]
-    
     get_min = [(np.sum(j),i) for i,j in enumerate(fitevol)]
     min_x = sorted(get_min,key = lambda x: x[0])[0][1]+1
-    #min_x = sorted(get_min,key = lambda x: x[1])[0][1]+1
     gen = np.max([ m['gen']+1 for m in ga_out['log'] ])
     if len(objectives)>1 and len(ga_out['pf'][0].fitness.values)>1:
         fig2, ax2 = plt.subplots(len(objectives),1,figsize=(30,30),facecolor='white')
         matplotlib.rcParams.update({'font.size': 55})
 
         for i,(k,v) in enumerate(objectives.items()):
-            #if 'random_search' in ga_out.keys():
-            #    ax2[i].plot(gen_numbers, [ga_out['random_search'][k][0] for i in gen_numbers])
             ax2[i].plot(gen_numbers,[j[i] for j in fitevol ])#,label=("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)), fontsize = 35.0)
             ax2[i].axvline(x=min_x , ymin=0.02, ymax=0.99,color='blue')
             h = ax2[i].set_xlabel("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)), fontsize = 35.0)#, rotation = 45)
@@ -385,43 +472,8 @@ def elaborate_plots(self,ga_out,savefigs=False,figname=None):
             if figname is None:
                 figname = ' '
             plt.savefig(str(figname)+str('error_components_over_gen_')+str(self.backend)+str('_')+str(self.MU)+str('_')+str(self.NGEN)+str('_')+str('.png'))
-            """
-            #ax2[i].legend()
-            ax2[i].tick_params(
-                axis='x',          # changes apply to the x-axis
-                which='major',      # both major and minor ticks are affected
-                bottom=True,      # ticks along the bottom edge are off
-                top=False,         # ticks along the top edge are off
-                labelbottom=True, 
-                labelsize=50) # labels along the bottom edge are off
-            #ax2[i].tick_params(axis="y")
-            ax2[i].legend()
-            """
     else:
         pass
-        '''
-        fig2, ax2 = plt.subplots(1,1,figsize=(30,30))
-        for i,(k,v) in enumerate(objectives.items()):
-            #if i < len(everything.select("avg")[0]):
-
-            ax2.plot(list(range(0,len(all_over_gen[k]))),all_over_gen[k])
-            temp = [0 for i in range(0,len(all_over_gen[k])) ]
-            ax2.plot(list(range(0,len(all_over_gen[k]))),temp)
-            #ax2[i].set_ylim([0.0, 1.0])
-            #if i!=len(objectives)-1:
-            ax2.set_yscale('log')
-
-            ax2.tick_params(
-                axis='x',          # changes apply to the x-axis
-                which='both',      # both major and minor ticks are affected
-                bottom=True,      # ticks along the bottom edge are off
-                top=True,         # ticks along the top edge are off
-                labelbottom=True) # labels along the bottom edge are off
-            #h.set_rotation(90)
-        plt.xlabel('Generations', fontsize = 35.0)
-        plt.title("NeuronUnit Test: {0}".format(str(k)+str(' ')+str(v)), fontsize = 35.0)
-        '''
-        #plt.savefig(str('history_plot_')+str(self.cell_name)+str(self.backend)+str('.png'))
     if savefigs:
         if figname is None:
             figname = ' '
@@ -702,7 +754,7 @@ def shadow(dtcpop,best_vm):#This method must be pickle-able for ipyparallel to w
             from neuronunit.models import backends
             from neuronunit.models.reduced import ReducedModel
 
-            print(get_neab.LEMS_MODEL_PATH)
+            #print(get_neab.LEMS_MODEL_PATH)
             #new_file_path = str(get_neab.LEMS_MODEL_PATH)+str(os.getpid())
             model = ReducedModel(get_neab.LEMS_MODEL_PATH,name=str('vanilla'),backend='NEURON')
 
@@ -711,7 +763,7 @@ def shadow(dtcpop,best_vm):#This method must be pickle-able for ipyparallel to w
                 v.prediction = {}
                 v.prediction['value'] = vms.rheobase * pq.pA
 
-                print(v.prediction)
+               # print(v.prediction)
             if k != 0:
                 v.prediction = None
 

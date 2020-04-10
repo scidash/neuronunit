@@ -17,6 +17,7 @@ import unittest
 import numpy as np
 from neuronunit.optimisation.optimization_management import check_binary_match
 from neuronunit.optimisation.optimization_management import which_key
+from neuronunit.plottools import plot_score_history
 
 class Test_opt_tests(unittest.TestCase):
 
@@ -35,7 +36,7 @@ class Test_opt_tests(unittest.TestCase):
     def test_all_objective_test(self):
         backend = "HH"
         MU = 10
-        NGEN = 65
+        NGEN = 20
 
         results = {}
         tests = {}
@@ -43,7 +44,7 @@ class Test_opt_tests(unittest.TestCase):
         fps = list(MODEL_PARAMS["HH"].keys())
         #import pdb
         # pdb.set_trace()
-        #fps = ['k','a','c','d','b','vPeak','C','vr']
+        #fps = ['k','a','c','vr']#,'b','vPeak','C','vr']
         simulated_data_tests, OM, target = self.OM.make_sim_data_tests(
             backend,MU,NGEN,free_parameters=fps)
 
@@ -106,6 +107,10 @@ class Test_opt_tests(unittest.TestCase):
         target = OM.format_test(target)
         
         simulated_data_tests = target.tests
+        import pdb
+        pdb.set_trace()
+        plot_score_history(results,figname='filename.png')
+
         for k,t in enumerate(simulated_data_tests): 
             print(t.judge(target.dtc_to_model()))
             print(target.tests[k].judge(target.dtc_to_model()))
@@ -143,6 +148,8 @@ class Test_opt_tests(unittest.TestCase):
         #self.assertLess(opt.obs_preds['total']['scores'],1.250)
         with open(str('RAW')+str('optimum_versus_target.p'),'wb') as f:
             pickle.dump([target,opt],f)
+
+        check_binary_match(opt,target,figname='bin_match.png')    
         a = pickle.load(open("RAWoptimum_versus_target.p","rb"))
         import pdb
         pdb.set_trace()

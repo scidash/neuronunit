@@ -380,8 +380,7 @@ class TSD(dict):
 
         #ga_out['random_search'] = self.DO.OM.random_search(ga_out['pf'][0].dtc,100)
 
-
-        ga_out = self.elaborate_plots(self,ga_out,savefigs=True,figname=kwargs['figname'])
+        #ga_out = self.elaborate_plots(self,ga_out,savefigs=True,figname=kwargs['figname'])
 
         if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
             _,dtc_pop = self.DO.OM.test_runner(copy.copy(ga_out['pf'][0:1]),self.DO.OM.td,self.DO.OM.tests)
