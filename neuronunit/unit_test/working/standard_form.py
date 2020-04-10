@@ -119,7 +119,8 @@ for gen in range(1, NGEN):
     # Evaluate the individuals with an invalid fitness
     invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
     dtcbag = [ dask.delayed(toolbox.evaluate(d)) for d in invalid_ind ]
-    fitnesses = dask.compute(*dtcbag)
+    fitnesses = [ dtc.compute(scheduler='distributed') for dtc in dtcbag ]
+    #fitnesses = dask.compute(*dtcbag)
     #fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
     for ind, fit in zip(invalid_ind, fitnesses):
         ind.fitness.values = fit

@@ -5,7 +5,7 @@ import warnings
 import dask
 #from dask.distributed import Client
 #client = Client()
-
+#from joblib import Parallel, delayed
 SILENT = True
 if SILENT:
     warnings.filterwarnings("ignore")
@@ -23,7 +23,14 @@ matplotlib.rcParams.update({'font.size': 12})
 
 import cython
 import logging
+mpl = matplotlib
+mpl.rcParams['figure.figsize'] = [8.0, 6.0]
+mpl.rcParams['figure.dpi'] = 80
+mpl.rcParams['savefig.dpi'] = 100
 
+mpl.rcParams['font.size'] = 12
+mpl.rcParams['legend.fontsize'] = 'large'
+mpl.rcParams['figure.titlesize'] = 'medium'
 # optional imports
 
 
@@ -297,22 +304,26 @@ class TSS(TestSuite):
             ga_out = self.elaborate_plots(self,ga_out)
         return ga_out, self.DO
 '''
+from neuronunit.plottools import plot_score_history
+
 class TSD(dict):
+    """
+    Test Suite Dictionary class
+
+    A container for sciunit tests, Indexable by dictionary keys.
+
+    Contains a method called optimize.
+    """
     def __init__(self,tests={},use_rheobase_score=True):
        self.DO = None
        self.use_rheobase_score = use_rheobase_score
-       self.elaborate_plots  = elaborate_plots
        self.backend = None
-
-      # self.use_rheobase_score = None
-
        if type(tests) is TestSuite:
            tests = OrderedDict({t.name:t for t in tests.tests})
        if type(tests) is type(dict()):
            pass
        if type(tests) is type(list()):
           tests = OrderedDict({t.name:t for t in tests})
-
        super(TSD,self).__init__()
        self.update(tests)
 
@@ -322,15 +333,15 @@ class TSD(dict):
        else:
            self.cell_name = 'simulated data'
 
-    def to_dict(self):
+    def to_pickleable_dict(self):
+        """
+        A pickleable version of instance object.
+        """
         return {k:v for k,v in self.items() }
-    '''
-    def update(self,tests= None):
-        if tests is None:
-            self.DO.OM.tests = self
-        else:
-            self.DO.OM.tests = tests
-    '''
+
+    def rerun(self,x):
+        _,front = self.DO.OM.test_runner(x,self.DO.OM.td,self.DO.OM.tests)
+        return front
 
     def optimize(self,**kwargs):
         defaults = {'param_edges':None,
@@ -378,22 +389,17 @@ class TSD(dict):
         ga_out = self.DO.run(NGEN = self.DO.NGEN)
         self.backend = kwargs['backend']
 
-        #ga_out['random_search'] = self.DO.OM.random_search(ga_out['pf'][0].dtc,100)
+        #ga_out = elaborate_plots(ga_out,savefigs=True,figname=kwargs['figname'])
+        ga_out['rerun'] = self.rerun
+        try:
+            front = [p.dtc for p in ga_out['pf']]
+            ga_out['front'] = front
+        except:
+            front = self.rerun(ga_out['pf'])
+        plot_score_history(ga_out,figname=kwargs['figname'])
 
-
-        ga_out = self.elaborate_plots(self,ga_out,savefigs=True,figname=kwargs['figname'])
-        _,front = self.DO.OM.test_runner(copy.copy(ga_out['pf']),self.DO.OM.td,self.DO.OM.tests)
-        ga_out['front'] = front
-        '''    
-        if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
-            _,dtc_pop = self.DO.OM.test_runner(copy.copy(ga_out['pf'][0:1]),self.DO.OM.td,self.DO.OM.tests)
-            ga_out['dtc_pop'] = dtc_pop
-            for x,(i,j) in enumerate(zip(ga_out['dtc_pop'],ga_out['pf'][0:1])):
-                ga_out['pf'][x].dtc = None
-                ga_out['pf'][x].dtc = i
-        '''        
-        self.ga_out = ga_out
-        self.DO = None # destroy this here, as its used once and not pickleable
+        self.ga_out = ga_out 
+        #self.DO = None # destroy this here, as its used once and not pickleable
         return self.ga_out
         '''    
         if type(ga_out['pf'][0].dtc) is type(None):
@@ -476,13 +482,8 @@ def random_p(backend):
 
     random_param1 = {} # randomly sample a point in the viable parameter space.
     for k in ranges.keys():
-        #mean = np.mean(ranges[k])
-        #var = np.var(ranges[k])
-        #std = np.sqrt(var)
         sample = random.uniform(ranges[k][0], ranges[k][1])
-        #sample = numpy.random.normal(loc=mean, scale=std/4.0, size=1)[0]
         random_param1[k] = sample
-        print(ranges[k][0],sample,ranges[k][1])
         if ranges[k][0]>0:
             assert ranges[k][0]<sample<ranges[k][1]
         if ranges[k][0]<0:
@@ -491,16 +492,9 @@ def random_p(backend):
     random_param2 = {} # randomly sample a point in the viable parameter space.
 
     for k in ranges.keys():
-        #mean = np.mean(ranges[k])
-        #var = np.var(ranges[k])
-        #std = np.sqrt(var)
-
-        #sample = numpy.random.normal(loc=mean, scale=std/4.0, size=1)[0]
         sample = random.uniform(ranges[k][0], ranges[k][1])
 
         random_param2[k] = sample
-        print(ranges[k][0],sample,ranges[k][1])
-
         if ranges[k][0]>0:
             assert ranges[k][0]<sample<ranges[k][1]
         if ranges[k][0]<0:
@@ -947,12 +941,22 @@ def check_binary_match(dtc0,dtc1,figname=None):
         plt.savefig(figname)
 
     return plt
-
-def contrast(dtc0,dtc1,figname=None):
+    
+from neuronunit.capabilities.spike_functions import get_spike_waveforms
+def contrast(dtc0,dtc1,figname=None,snippets=True):
     matplotlib.rcParams.update({'font.size': 10})
 
     vm0 =inject_and_not_plot_model(dtc0)
     vm1 =inject_and_not_plot_model(dtc1)
+
+
+    if snippets:
+        snippets_ = get_spike_waveforms(vm)
+        dtc.snippets = snippets_
+        plt.plot(snippets_.times,snippets_,color=color,label=str('model type: ')+label)#,label='ground truth')
+    else:
+        plt.plot(vm.times,vm,color=color,label=str('model type: ')+label)#,label='ground truth')
+    ax.legend()
 
 
     plt.figure()
@@ -2647,7 +2651,6 @@ class OptMan():
             t.score_type = scores.ZScore
             score = t.judge(target.dtc_to_model())
             assert float(score.score)==0.0
-            print(score)
 
         # # Show what the randomly generated target waveform the optimizer needs to find actually looks like
         # # first lets just optimize over all objective functions all the time.
@@ -2710,8 +2713,6 @@ class OptMan():
                             new_tests = False
                             break
                     if type(new_tests) is type(bool()):
-                        print(new_tests,'not useable sample')
-
                         continue
                     if 'RheobaseTest' not in new_tests.keys():
                         new_tests = False
@@ -2775,14 +2776,19 @@ class OptMan():
                 dtcpop = list(map(dtc_to_rheo,dtcpop))
             #dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
             #dtcpop = list(dtcbag.map(self.format_test))
-            #if __name__ == '__main__':
             dtcbag = [ delayed(self.format_test(d)) for d in dtcpop ]
             dtcpop = compute(*dtcbag)
+            
+            #dtcpop = Parallel(n_jobs=joblib.cpu_count)(
+            #        delayed(self.format_test)(d) for d in dtcpop) 
 
             dtcpop = [ dtc for dtc in dtcpop if type(dtc.rheobase) is not type(None) ]
             #dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
             #dtcpop = list(dtcbag.map(self.elephant_evaluation))
-            #if __name__ == '__main__':
+
+
+            #dtcpop = Parallel(n_jobs=joblib.cpu_count)(
+            #        delayed(self.elephant_evaluation)(d) for d in dtcpop) 
             dtcbag = [ delayed(self.elephant_evaluation(d)) for d in dtcpop ]
             dtcpop = compute(*dtcbag)
 
@@ -3447,7 +3453,6 @@ class OptMan():
 
             if self.PARALLEL_CONFIDENT:# and self.backend is not str('ADEXP'):
                 passed = False
-                lazy = []
 
                 for dtc in dtcpop:
                     if not hasattr(dtc,'tests'):
@@ -3456,13 +3461,15 @@ class OptMan():
                     if isinstance(dtc.tests,type(dict())):
                         for t in dtc.tests.values():
                             assert 'std' in t.observation.keys()
+                lazy = []
                 for d in dtcpop:
                     dask.delayed(d.self_evaluate())
                     #i = self.format_test_delayed(i)
                     #i = self.elephant_evaluation_delayed(i)
                     lazy.append(d)
-
                 dtcpop = dask.compute(lazy)[0]
+                #with Parallel(n_jobs=joblib.cpu_count) as parallel:
+                #    dtcpop = Parallel(n_jobs=joblib.cpu_count)(delayed(self.elephant_evaluation)(d) for d in dtcpop[0:2])
                 # smaller_pop = [d for d in dtcpop for _,fitness in d.SA.values if fitness != 100 ]
                 # pop, dtcpop = self.make_up_lost(pop,smaller_pop,self.td)
                 for d in dtcpop:

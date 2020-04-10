@@ -53,24 +53,18 @@ def sim_data_tests(backend,MU,NGEN):
 
     ga_out['DO'] = None
     front = ga_out['front']
-    #front = [ind.dtc for ind in ga_out['pf']]
     opt = front[0]
-    #opt = ga_out['pf'][0].dtc
-    #target
 
     target.DO = None
     check_match_front(target,front[0:10],figname ='front'+str('MU_')+str(MU)+('_NGEN_')+str(NGEN)+str(backend)+'_.png')
-    inject_and_plot_model(target,figname ='just_target_of_opt_'+str('MU_')+str(MU)+('_NGEN_')+str(NGEN)+str(backend)+'_.png')
-    inject_and_plot_model(opt,figname ='just_opt_active_'+str('MU_')+str(MU)+('_NGEN_')+str(NGEN)+str(backend)+'_.png')
-    inject_and_plot_passive_model(opt,figname ='just_opt_'+str('MU_')+str(MU)+('_NGEN_')+str(NGEN)+str(backend)+'_.png')#,figname=None)
     OM = opt.dtc_to_opt_man()
  
     opt = OM.get_agreement(opt)
     with open('sim_data.p','wb') as f:
-        pickle.dump([target,opt.obs_preds],f)
+        pickle.dump([target,opt],f)
 
 
-    sim_data = pickle.load(open('sim_data.p','rb'))
+    sim_data = pickle.load(open(str(backend)+'_'+str(NGEN)+'_'+str(MU)+'_sim_data.p','rb'))
 
     return ga_out['log'],target,front,opt
 
@@ -78,7 +72,7 @@ def sim_data_tests(backend,MU,NGEN):
 NGEN = 150
 backend = str("RAW")
 import pickle
-for MU in range(40,140,1):
+for MU in range(40,140,20):
     #print(MU)
     ga_out,target,front,opt = sim_data_tests(backend,MU,NGEN)
     results = [ga_out,target,front,opt]
