@@ -845,25 +845,15 @@ def dtc_to_rheo(dtc):
 
         if isinstance(rtest,Iterable):
             rtest = rtest[0]
-        '''
+        """
         if str("HH") in dtc.backend: 
-
             rtest1 = RheobaseTestP(rtest.observation)
             dtc.rheobase = rtest1.generate_prediction(model)['value']
-        '''
-        #else:
+            return dtc
+        """    
+
         dtc.rheobase = rtest.generate_prediction(model)['value']
         return dtc
-        '''
-        if dtc.rheobase is not None:
-            if type(dtc.rheobase['value']) is not type(None):
-                if not hasattr(dtc,'prediction'):
-                    dtc.prediction = {}
-                dtc.prediction[str(rtest.name)] = dtc.rheobase
-                dtc.rheobase = dtc.rheobase['value']
-                rtest.prediction = dtc.rheobase
-                return dtc
-        '''
     else:
         # otherwise, if no observation is available, or if rheobase test score is not desired.
         # Just generate rheobase predictions, giving the models the freedom of rheobase
@@ -1956,9 +1946,9 @@ def get_trans_list(param_dict):
     return trans_list
 
 from sciunit import scores
-"""
-Decorator is dumb makes function harder to
-use normaly and generally unflexible.
+
+#Decorator is dumb makes function harder to
+#use normaly and generally unflexible.
 @dask.delayed
 def transform_delayed(xargs):
     (ind,td,backend) = xargs
@@ -1968,7 +1958,7 @@ def transform_delayed(xargs):
         dtc.attrs[str(td[i])] = j
     dtc.evaluated = False
     return dtc
-"""
+
 def transform(xargs):
     (ind,td,backend) = xargs
     dtc = DataTC()
@@ -2847,12 +2837,11 @@ class OptMan():
             else:
                 serial_faster = False
                 dtcpop = list(map(dtc_to_rheo,dtcpop))
-
-	    """
+            """
             The dask bag mapping works.
             It is faster, its just not the most memory
             friendly. It will exhaust RAM on HPC
-	    For MU>=150, NGEN>=150 
+            For MU>=150, NGEN>=150 
             joblib has similar syntax 
             and would probably work under same 
             parallel circumstances without memory exhaustion  		

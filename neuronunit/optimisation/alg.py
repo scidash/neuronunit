@@ -118,8 +118,6 @@ def prune_constants(parents,num_constants):
             del p[-1]
     return parents
 
-#CXPB = 0.95
-#MUTPB = 0.95
 
 def remove_and_replace(pool,toolbox):    
     '''
