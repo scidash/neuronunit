@@ -145,7 +145,7 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
         self.benchmark = benchmark
 
         self.tests = tests
-        self.OBJ_SIZE = len(self.tests)+1
+        self.OBJ_SIZE = len(self.tests)#+1
         #import pdb; pdb.set_trace()
         self.seed = seed
         self.MU = MU
@@ -193,7 +193,7 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
         npoints = 2 ** len(list(self.params))
         npoints = np.ceil(npoints)
         if len(self.params)>1:
-            dic_grid = es.create_grid(mp_in = self.params,npoints = self.MU, free_params = self.params)
+            dic_grid = es.create_grid(mp_in = self.params,npoints = self.MU, free_parameters = self.params)
         else:
             npoints = self.MU
             values = np.linspace(np.min(list(self.params.values())[0]),np.max(list(self.params.values())[0]),npoints)
@@ -220,7 +220,7 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
         elif size <= self.MU:
             delta = self.MU - size
             pop = []
-            dic_grid = es.create_grid(mp_in = self.params,npoints = self.MU+delta, free_params = self.params)
+            dic_grid = es.create_grid(mp_in = self.params,npoints = self.MU+delta, free_parameters = self.params)
             size = len(dic_grid)
             delta = self.MU - size
 
@@ -485,12 +485,12 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
         return self.ga_out
 
 def run_ga(explore_edges, NGEN, test, \
-        free_params = None, hc = None,
+        free_parameters = None, hc = None,
         selection = None, MU = None, seed_pop = None, \
            backend = str('RAW'),protocol={'allen':False,'elephant':True}):
     ss = {}
     try:
-        free_params.pop('dt')
+        free_parameters.pop('dt')
     except:
         pass
     #if 'Iext' in explore_edges:
@@ -498,14 +498,14 @@ def run_ga(explore_edges, NGEN, test, \
         explore_edges.pop('Iext')
     except:
         pass
-    for k in free_params:
+    for k in free_parameters:
         if k not in "Iext":
             if not k in explore_edges.keys() and k not in str('Iext') and k not in str('dt'):
-                ss[k] = explore_edges[str(free_params)]
+                ss[k] = explore_edges[str(free_parameters)]
             else:
                 ss[k] = explore_edges[k]
     if type(MU) == type(None):
-        MU = 2**len(list(free_params))
+        MU = 2**len(list(free_parameters))
     NGEN = int(np.floor(NGEN))
     if not isinstance(test, Iterable):
         test = [test]
@@ -515,16 +515,16 @@ def run_ga(explore_edges, NGEN, test, \
 
     if seed_pop is not None:
         # This is a re-run condition.
-        DO.setnparams(nparams = len(free_params), boundary_dict = ss)
+        DO.setnparams(nparams = len(free_parameters), boundary_dict = ss)
 
         DO.seed_pop = seed_pop
         DO.setup_deap()
         DO.error_length = len(test)
     ga_out = DO.run(NGEN = NGEN)
-
+    print(DO.OM.td)
+    import pdb
+    pdb.set_trace()
     pop,dtc_pop = DO.OM.test_runner(ga_out['pf'], DO.OM.td, DO.OM.tests)
     ga_out['dtc_pop'] = dtc_pop
-
-
 
     return ga_out, DO

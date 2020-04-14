@@ -10,6 +10,8 @@ from neo import AnalogSignal
 
 try:
     import asciiplotlib as apl
+    fig = apl.figure()
+
     fig.plot([1,0], [0,1])
 
     ascii_plot = True
@@ -17,10 +19,17 @@ try:
 
 except:
     ascii_plot = False
+ascii_plot = False
+def asciplot_code(vm):
+    t = [float(f) for f in vm.times]
+    v = [float(f) for f in vm.magnitude]
+    fig = apl.figure()
+    fig.plot(t, v, width=100, height=20)
+    fig.show()
 class TestPulseTest(ProtocolToFeaturesTest):
     """A base class for tests that use a square test pulse."""
 
-    def __init__(self, *args, **kwargs,):
+    def __init__(self, *args, **kwargs):
         super(TestPulseTest, self).__init__(*args, **kwargs)
         #self.verbose = kwargs['verbose']
         #self.verbose = False
@@ -305,16 +314,6 @@ class CapacitanceTest(TestPulseTest):
     units = pq.pF
 
     ephysprop_name = 'Cell Capacitance'
-    """
-    def __init__(self):
-        super(CapacitanceTest, self).__init__()
-        self.param = {}
-        self.params['tmax'] = 1000.0*pq.ms
-        if str('params') in kwargs:
-            self.params = kwargs['params']
-        else:
-            self.params = None
-    """
     def extract_features(self, model, result):
         features = super(CapacitanceTest, self).extract_features(model, result)
         if features is not None:
@@ -363,20 +362,12 @@ class RestingPotentialTest(TestPulseTest):
     units = pq.mV
 
     ephysprop_name = 'Resting membrane potential'
-    """
-    def __init__(self, *args, **kwargs):
-        print(args,kwargs)
-        super(RestingPotentialTest, self).__init__()
-        self.param = {}
-        #self.params['tmax'] = 1000.0*pq.ms
-        #if str('params') in kwargs:
-        #    self.params = kwargs['params']
-        #else:
-        #    self.params = None
-    """
+
     def extract_features(self, model, result):
+        self.params['injected_square_current']['amplitude'] = 0.0*pq.mV
         features = super(RestingPotentialTest, self).\
                             extract_features(model, result)
+        #asciplot_code(model.get_membrane_potential())
         if features is not None:
             median = model.get_median_vm()  # Use median for robustness.
             std = model.get_std_vm()

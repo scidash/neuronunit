@@ -49,10 +49,10 @@ def chunks(l, n):
 
 
 #@jit
-def build_chunk_grid(npoints, free_params, hold_constant = None, mp_in = None):
+def build_chunk_grid(npoints, free_parameters, hold_constant = None, mp_in = None):
 
 
-    #grid_points, maps = create_grid(mp_in, npoints = npoints, free_params = free_params)
+    #grid_points, maps = create_grid(mp_in, npoints = npoints, free_parameters = free_parameters)
 
     temp = OrderedDict(grid_points[0]).keys()
     tds = list(temp)
@@ -133,15 +133,15 @@ def create_a_map(subset):
             maps[k][j] = ind
     return maps
 
-def create_grid(mp_in = None, npoints = 2, free_params = None, ga = None):
+def create_grid(mp_in = None, npoints = 2, free_parameters = None, ga = None):
     #print(mp_in)
     #import pdb; pdb.set_trace()
     #try:
     if mp_in is not None:
         grid = ParameterGrid(mp_in)
     #except:
-    if free_params is not None:
-        grid = ParameterGrid(free_params)
+    if free_parameters is not None:
+        grid = ParameterGrid(free_parameters)
     return grid
     '''
     check for overlap in parameter space.
@@ -149,18 +149,18 @@ def create_grid(mp_in = None, npoints = 2, free_params = None, ga = None):
 
     '''
 
-    if len(free_params)> 1:
-        subset = OrderedDict(free_params)
+    if len(free_parameters)> 1:
+        subset = OrderedDict(free_parameters)
     else:
-        subset = {free_params[0]:None}
+        subset = {free_parameters[0]:None}
 
     ndim = len(subset)
     #nsteps = np.floor(float(npoints)/float(ndim))
     if type(mp_in) is not type(None):
         for k,v in mp_in.items():
-            if k in free_params:
-                subset[k] = np.linspace(np.min(free_params[k]),np.max(free_params[k]), npoints)
-                #subset[k] = ( np.min(free_params[k]),np.max(free_params[k]) )
+            if k in free_parameters:
+                subset[k] = np.linspace(np.min(free_parameters[k]),np.max(free_parameters[k]), npoints)
+                #subset[k] = ( np.min(free_parameters[k]),np.max(free_parameters[k]) )
             else:
                 subset[k] = v
     # The function of maps is to map floating point sample spaces onto a  monochromataic matrix indicies.
@@ -168,7 +168,7 @@ def create_grid(mp_in = None, npoints = 2, free_params = None, ga = None):
     '''
 
 
-def create_grid1(mp_in=None,npoints=3,free_params=None,ga=None):
+def create_grid1(mp_in=None,npoints=3,free_parameters=None,ga=None):
     '''
     Description, create a grid of evenly spaced samples in model parameters to search over.
     Inputs: npoints, type: Integer: number of sample points per parameter
@@ -199,14 +199,14 @@ def create_grid1(mp_in=None,npoints=3,free_params=None,ga=None):
     whole_p_set = OrderedDict(sp)
 
     #print(type(free_params), 'free_params')
-    if type(free_params) is type(dict):
-        subset = OrderedDict( {k:whole_p_set[k] for k in list(free_params.keys())})
+    if type(free_parameters) is type(dict):
+        subset = OrderedDict( {k:whole_p_set[k] for k in list(free_parameters.keys())})
 
-    elif len(free_params) == 1 or type(free_params) is type(str('')):
-        subset = OrderedDict( {free_params: whole_p_set[free_params] } )
+    elif len(free_parameters) == 1 or type(free_parameters) is type(str('')):
+        subset = OrderedDict( {free_parameters: whole_p_set[free_parameters] } )
 
     else:
-        subset = OrderedDict( {k:whole_p_set[k] for k in free_params})
+        subset = OrderedDict( {k:whole_p_set[k] for k in free_parameters})
 
     #print('subset is wrong')
     #pdb.set_trace()
@@ -294,13 +294,13 @@ def run_rick_grid(rick_grid, tests,td):
         grid_results.extend(results)
     return grid_results
 
-def run_simple_grid(npoints, tests, ranges, free_params, hold_constant = None, backend=str('RAW')):
+def run_simple_grid(npoints, tests, ranges, free_parameters, hold_constant = None, backend=str('RAW')):
     from neuronunit.optimisation.optimization_management import update_deap_pop
     from neuronunit.optimisation.optimization_management import update_dtc_pop
 
     subset = OrderedDict()
     for k,v in ranges.items():
-        if k in free_params:
+        if k in free_parameters:
             subset[k] = ( np.min(ranges[k]),np.max(ranges[k]) )
     # The function of maps is to map floating point sample spaces onto a  monochromataic matrix indicies.
     subset = OrderedDict(subset)
