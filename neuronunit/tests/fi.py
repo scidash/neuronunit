@@ -399,7 +399,6 @@ class RheobaseTestP(RheobaseTest):
             #print(model.attrs)
 
             ampl = dtc.ampl
-            #print(ampl)
             if float(ampl) not in dtc.lookup or len(dtc.lookup) == 0:
 
                 current = {'amplitude':ampl,'duration':DURATION,'delay':DELAY}
@@ -410,20 +409,16 @@ class RheobaseTestP(RheobaseTest):
                     n_spikes = model.get_spike_count()
                 except:
                     n_spikes = 100
-                #print(n_spikes)
-
-
 
 
                 dtc.previous = ampl
-
                 dtc.rheobase = {}
-
+                """
                 if float(ampl) < 0.0:
                     dtc.rheobase['value'] = None
                     dtc.boolean = True
                     return dtc
-
+                """
                 if n_spikes == 1:
                     dtc.lookup[float(ampl)] = 1
                     dtc.rheobase['value'] = ampl
@@ -530,12 +525,11 @@ class RheobaseTestP(RheobaseTest):
                     tolerance = 0.0
                     if delta < tolerance or (str(supra.min()) == str(sub.max())):
                         if self.verbose >= 2:
-                            warning(delta, 'a neuron, close to the edge! Multi spiking rheobase. # spikes: ',len(supra))
-                            warning(delta, 'a neuron, close to the edge! Multi spiking rheobase. # spikes: ',len(supra))
+                            print(delta, 'a neuron, close to the edge! Multi spiking rheobase. # spikes: ',len(supra))
                         too_many_spikes = np.min([ v for v in dtc.lookup.values() if v>1 ])
                         if too_many_spikes>15:
 
-                            warning(delta, 'elephant tests dont work well on high frequency spikes, therefore, this trace excluded. # spikes: ',len(supra))
+                            print(delta, 'elephant tests dont work well on high frequency spikes, therefore, this trace excluded. # spikes: ',len(supra))
                             dtc.rheobase = {}
                             dtc.rheobase['value'] = None
                             dtc.boolean = True

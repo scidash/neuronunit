@@ -29,7 +29,6 @@ def setUp(model_type):
         stds[k] = temp.observation['std']
     cloned_tests = copy.copy(test_frame['Neocortex pyramidal cell layer 5-6'])
     cloned_tests = hide_imports.TSD(cloned_tests)
-    #{'RestingPotentialTest':cloned_tests['RestingPotentialTest']}
     OM = jrt(cloned_tests,backend,protocol='elephant')
     return OM
 def test_all_objective_test(free_parameters,model_type="RAW"):
