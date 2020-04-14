@@ -82,8 +82,6 @@ def _update_history_and_hof(halloffame,pf, history, population,GEN,MU):
         except:
             temp = cleanse(temp)
             history.update(temp)
-
-            #print(temp,'temp bad')
     if pf is not None:
         if GEN ==0:
             pf = deap.tools.ParetoFront()
@@ -141,7 +139,7 @@ def remove_and_replace(pool,toolbox):
 
         if False:
             '''
-            Tries to re-evaluate broken gene/model.
+            Trys to re-evaluate broken gene/model.
             '''
             invalid_ind_,fitnesses_ = toolbox.evaluate(filtered)
             for ind, fit in zip(invalid_ind_, fitnesses_):
@@ -265,6 +263,9 @@ def eaAlphaMuPlusLambdaCheckpoint(
             offspring = [toolbox.clone(ind) for ind in offspring]
             #CXPB = 0.9
             cnt = 0
+            # using the line below would lead to higher gene mutation
+            # but less stabile increases in error score.
+	    # for ind1, ind2 in zip(offspring[::int(MU/4)], offspring[1::int(MU/4)]):
             for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
                 toolbox.mate(ind1, ind2)
                 toolbox.mutate(ind1)

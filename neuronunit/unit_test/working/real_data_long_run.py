@@ -34,13 +34,8 @@ def data_driven_tests(backend,MU,NGEN,t_index):
                                         MU=MU,NGEN=NGEN,figname='real_data')
 
     ga_out['DO'] = None
-    front = ga_out['pf']
-    for d in front:
-        d.dtc.tests.DO = None
-        d.dtc.tests = d.dtc.tests.to_dict()
-    front = [ind.dtc for ind in ga_out['pf']]
-
-    opt = ga_out['pf'][0].dtc
+    front = ga_out['front']
+    opt =front[0]  #ga_out['pf'][0].dtc
     OM = opt.dtc_to_opt_man()
  
     opt = OM.get_agreement(opt)
@@ -64,8 +59,8 @@ def data_driven_tests(backend,MU,NGEN,t_index):
     return [ga_out['log'],front,opt,test_name]
 
 #MUrange =
-NGEN = 20
-MU = 10
+NGEN = 200
+MU = 100
 backend = str("RAW")
 
 test_frame = pickle.load(open('processed_multicellular_constraints.p','rb'))

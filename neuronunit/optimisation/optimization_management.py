@@ -5,6 +5,7 @@ import warnings
 import dask
 #from dask.distributed import Client
 #client = Client()
+#from joblib import Parallel, delayed
 from tqdm import tqdm
 
 SILENT = True
@@ -25,6 +26,7 @@ matplotlib.rcParams.update({'font.size': 12})
 import cython
 import logging
 mpl = matplotlib
+'''
 mpl.rcParams['figure.figsize'] = [8.0, 6.0]
 mpl.rcParams['figure.dpi'] = 80
 mpl.rcParams['savefig.dpi'] = 100
@@ -32,6 +34,7 @@ mpl.rcParams['savefig.dpi'] = 100
 mpl.rcParams['font.size'] = 12
 mpl.rcParams['legend.fontsize'] = 'large'
 mpl.rcParams['figure.titlesize'] = 'medium'
+'''
 # optional imports
 
 
@@ -318,16 +321,12 @@ class TSD(dict):
        self.use_rheobase_score = use_rheobase_score
        self.elaborate_plots  = elaborate_plots
        self.backend = None
-
-      # self.use_rheobase_score = None
-
        if type(tests) is TestSuite:
            tests = OrderedDict({t.name:t for t in tests.tests})
        if type(tests) is type(dict()):
            pass
        if type(tests) is type(list()):
           tests = OrderedDict({t.name:t for t in tests})
-
        super(TSD,self).__init__()
        self.update(tests)
 
@@ -340,7 +339,10 @@ class TSD(dict):
     def to_pickleable_dict(self):
         """
         A pickleable version of instance object.
-        """
+	https://joblib.readthedocs.io/en/latest/        
+	"""
+
+	# This might work joblib.dump(self, filename + '.compressed', compress=True)  
         return {k:v for k,v in self.items() }
     '''
     def update(self,tests= None):
@@ -489,6 +491,9 @@ def random_p(backend):
 
     random_param1 = {} # randomly sample a point in the viable parameter space.
     for k in ranges.keys():
+	# if model is Hodgkin Huxley 
+	# using a bell-curve might produce
+	# less "ringing" models.
         #mean = np.mean(ranges[k])
         #var = np.var(ranges[k])
         #std = np.sqrt(var)
@@ -504,6 +509,9 @@ def random_p(backend):
     random_param2 = {} # randomly sample a point in the viable parameter space.
 
     for k in ranges.keys():
+	# if model is Hodgkin Huxley 
+	# using a bell-curve might produce
+	# less "ringing" models.
         #mean = np.mean(ranges[k])
         #var = np.var(ranges[k])
         #std = np.sqrt(var)
@@ -512,7 +520,7 @@ def random_p(backend):
         sample = random.uniform(ranges[k][0], ranges[k][1])
 
         random_param2[k] = sample
-        print(ranges[k][0],sample,ranges[k][1])
+
 
         if ranges[k][0]>0:
             assert ranges[k][0]<sample<ranges[k][1]
@@ -672,7 +680,11 @@ def pred_only(test_and_models):
 
     else:
         pred = test.extract_features(model)
-
+	
+    """
+    Beware a down-stream bug fix follows.
+    Resting potential injection current units set to mV, instead of Amps
+    """
     if str('RestingPotentialTest') in test.name:
         test.params['injected_square_current']['amplitude'] = \
         float(test.params['injected_square_current']['amplitude'])*pq.pA
@@ -835,7 +847,7 @@ def dtc_to_rheo(dtc):
             rtest = rtest[0]
         '''
         if str("HH") in dtc.backend: 
-            print("\n\n\n\ slow because parallel Rheobase")
+
             rtest1 = RheobaseTestP(rtest.observation)
             dtc.rheobase = rtest1.generate_prediction(model)['value']
         '''
@@ -943,13 +955,13 @@ def inject_and_not_plot_model(pre_model):
     #plt.legend(loc="upper left")
 
     return vm
-
+from neuronunit.capabilities.spike_functions import get_spike_waveforms
 def check_binary_match(dtc0,dtc1,figname=None,snippets=True):
     matplotlib.rcParams.update({'font.size': 8})
 
     vm0 =inject_and_not_plot_model(dtc0)
     vm1 =inject_and_not_plot_model(dtc1)
-    from neuronunit.capabilities.spike_functions import get_spike_waveforms
+
     plt.figure()
 
     if snippets:
@@ -994,12 +1006,22 @@ def check_binary_match(dtc0,dtc1,figname=None,snippets=True):
             plt.savefig(figname)
 
     return plt
-
-def contrast(dtc0,dtc1,figname=None):
+    
+from neuronunit.capabilities.spike_functions import get_spike_waveforms
+def contrast(dtc0,dtc1,figname=None,snippets=True):
     matplotlib.rcParams.update({'font.size': 10})
 
     vm0 =inject_and_not_plot_model(dtc0)
     vm1 =inject_and_not_plot_model(dtc1)
+
+
+    if snippets:
+        snippets_ = get_spike_waveforms(vm)
+        dtc.snippets = snippets_
+        plt.plot(snippets_.times,snippets_,color=color,label=str('model type: ')+label)#,label='ground truth')
+    else:
+        plt.plot(vm.times,vm,color=color,label=str('model type: ')+label)#,label='ground truth')
+    ax.legend()
 
 
     plt.figure()
@@ -1902,15 +1924,16 @@ def evaluate(dtc):
         return []
     else:
         fitness = tuple(v for v in dtc.SA.values)
-        #fitness.insert(0,np.sum(fitness))
-        #print(dtc.obs_preds)
-        #print(fitness,'fitness')
-        #fitness = fitness
-        #fitness = tuple(np.sum(fitness))
 
         return fitness
 
 def evaluate_new(dtc):
+    """
+    optimize against means of observations
+    don't use SciUnit lognorm score 
+    NU test results are still computed
+    but they are not optimized against.
+    """
     # assign worst case errors, and then over write them with situation informed errors as they become available.
     if not hasattr(dtc,str('SA')):
         return []
@@ -1923,8 +1946,7 @@ def evaluate_new(dtc):
             temp = (whole_thing['observations'] - whole_thing['predictions'])
             temp = np.abs(float(temp.simplified))
             fitness.append(temp)
-        #fitness.append(np.sum(fitness))
-        #print(fitness)
+  
         return fitness
 
 def get_trans_list(param_dict):
@@ -1934,7 +1956,9 @@ def get_trans_list(param_dict):
     return trans_list
 
 from sciunit import scores
-
+"""
+Decorator is dumb makes function harder to
+use normaly and generally unflexible.
 @dask.delayed
 def transform_delayed(xargs):
     (ind,td,backend) = xargs
@@ -1944,7 +1968,7 @@ def transform_delayed(xargs):
         dtc.attrs[str(td[i])] = j
     dtc.evaluated = False
     return dtc
-
+"""
 def transform(xargs):
     (ind,td,backend) = xargs
     dtc = DataTC()
@@ -1974,9 +1998,7 @@ def filtered(pop,dtcpop):
     both = [ (d,p) for d,p in zip(dtcpop,pop) if type(p.rheobase) is not type(None) ]
     pop = [i[1] for i in both]
     dtcpop = [i[0] for i in both]
-
     assert len(pop) == len(dtcpop), print('fatal')
-
     return pop, dtcpop
 
 
@@ -2688,16 +2710,13 @@ class OptMan():
             print(score)
         '''    
         target.tests = simulated_data_tests
-        print(target.tests)
         target = self.format_test(target)
         for t in simulated_data_tests.values(): 
             if 'value' in t.observation.keys() and 'mean' not in  t.observation.keys():
                 t.observation['mean'] =  t.observation['value']
             t.score_type = scores.ZScore
             score = t.judge(target.dtc_to_model())
-            print(score.score)
             assert float(score.score)==0.0
-            print(score)
 
         # # Show what the randomly generated target waveform the optimizer needs to find actually looks like
         # # first lets just optimize over all objective functions all the time.
@@ -2761,7 +2780,7 @@ class OptMan():
                             new_tests = False
                             break
                     if type(new_tests) is type(bool()):
-                        print(new_tests,'not useable sample')
+
 
                         continue
                     if 'RheobaseTest' not in new_tests.keys():
@@ -2828,16 +2847,24 @@ class OptMan():
             else:
                 serial_faster = False
                 dtcpop = list(map(dtc_to_rheo,dtcpop))
+
+	    """
+            The dask bag mapping works.
+            It is faster, its just not the most memory
+            friendly. It will exhaust RAM on HPC
+	    For MU>=150, NGEN>=150 
+            joblib has similar syntax 
+            and would probably work under same 
+            parallel circumstances without memory exhaustion  		
+            """	
             #dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
             #dtcpop = list(dtcbag.map(self.format_test))
-            #if __name__ == '__main__':
+
             dtcbag = [ delayed(self.format_test(d)) for d in dtcpop ]
             dtcpop = compute(*dtcbag)
-
             dtcpop = [ dtc for dtc in dtcpop if type(dtc.rheobase) is not type(None) ]
             #dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
             #dtcpop = list(dtcbag.map(self.elephant_evaluation))
-            #if __name__ == '__main__':
             dtcbag = [ delayed(self.elephant_evaluation(d)) for d in dtcpop ]
             dtcpop = compute(*dtcbag)
 
@@ -2882,7 +2909,6 @@ class OptMan():
             #if str('RheobaseTest') != t.name and str('RheobaseTestP') != t.name:
             #t.params = dtc.protocols[k]
             test_and_models = (t, dtc)
-
             pred = pred_only(test_and_models)
             dtc.preds[str(t.name)] = pred
         return dtc
@@ -3522,7 +3548,8 @@ class OptMan():
                     lazy.append(d)
                 
                 dtcpop = list(dask.compute(*lazy))
-
+                #with Parallel(n_jobs=joblib.cpu_count) as parallel:
+                #    dtcpop = Parallel(n_jobs=joblib.cpu_count)(delayed(self.elephant_evaluation)(d) for d in dtcpop[0:2])
                 # smaller_pop = [d for d in dtcpop for _,fitness in d.SA.values if fitness != 100 ]
                 # pop, dtcpop = self.make_up_lost(pop,smaller_pop,self.td)
                 for d in dtcpop:

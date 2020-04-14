@@ -132,9 +132,15 @@ HH_attrs = {
         'g_Na' : 120,
         'C_m' : 1.0,
         'vr':-65.0}
+HH_attrs['Vr'] = HH_attrs['E_L']
+
+
+HH_attrs = {'g_L' : 0.3,
+        'g_K' : 36,
+        'g_Na' : 120,
+        'vr':-65.0}
 
 HH_dic1 = { k:(float(v)-0.25*float(v),float(v)+0.25*float(v)) for k,v in HH_attrs.items() }
-HH_dic1['Vr'] = HH_dic1['E_L']
 
 MODEL_PARAMS['HH'] = HH_dic1
 

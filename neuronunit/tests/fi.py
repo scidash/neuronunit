@@ -4,7 +4,7 @@ For example, investigating firing rates and patterns as a
 function of input current.
 """
 import warnings
-
+from joblib import delayed, Parallel
 import os
 import multiprocessing
 global cpucount
@@ -500,12 +500,22 @@ class RheobaseTestP(RheobaseTest):
                 dtc_clones = [d for d in dtc_clones if not np.isnan(d.ampl)]
                 set_clones = set([ float(d.ampl) for d in dtc_clones ])
                 dtc_clone = []
+                """
                 for dtc_local,sc in zip(dtc_clones,set_clones):
                     dtc_local = copy.copy(dtc_local)
                     dtc_local.ampl = sc*pq.pA
                     dtc_local = check_current(dtc_local)
                     dtc_clone.append(dtc_local)
                 dtc_clone = dask.compute(dtc_clone)[0]
+                """
+                for dtc_local,sc in zip(dtc_clones,set_clones):
+                    dtc_local = copy.copy(dtc_local)
+                    dtc_local.ampl = sc*pq.pA
+                    #dtc_local = check_current(dtc_local)                                                                                                                                                          
+                    dtc_clone.append(dtc_local)
+                dtc_clone = Parallel(n_jobs=4)(delayed(check_current)(dtc) for dtc in dtc_clone)
+                dtc_clone = [ d.compute() for d in dtc_clone ]
+
 
                 smaller = sorted([ (dtc.ampl,dtc) for dtc in dtc_clone if dtc.boolean == True ])
                 if len(smaller)>=4:

@@ -3,18 +3,15 @@ warnings.filterwarnings('ignore')
 s = io.StringIO()
 
 import papermill as pm
-#import sklearn
-#backends = [str("RAW"), str("HH")]
-backends = str("RAW")#, str("HH")]
+backends = [str("RAW"), str("HH")]
 
-#samples = [75,100]
-samples_sd = [5,10,12]
-#for b in backends:
-b = str("RAW")
+#pop_size = [20,40,60,80,100]
+s = 40
 with contextlib.redirect_stdout(s):
-   for s in samples_sd:
-       pm.execute_notebook(
-       'simulated_data_paramaterized_3.ipynb',
-       'milled_nbooks_{0}_{1}.ipynb'.format(s,s),
-       parameters = dict(backend=b,NGEN =10, MU =s)
-    )
+   for b in backends:
+      #for s in pop_size:
+      pm.execute_notebook(
+         'simulated_data_paramaterized_3.ipynb',
+         'milled_nbooks_sim_data_{0}_{1}_{2}.ipynb'.format(s,s,b),
+         parameters = dict(backend=b,NGEN =200, MU =s)
+      )
