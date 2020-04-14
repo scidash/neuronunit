@@ -89,8 +89,6 @@ class DataTC(object):
                     lns = np.abs(score_gene.raw)
             if lns==np.inf or lns==-np.inf:
                 lns = np.abs(float(score_gene.raw))
-
-
             scores_.append(lns)
         for i,s in enumerate(scores_):
             if s==np.inf or s==-np.inf:
@@ -104,6 +102,13 @@ class DataTC(object):
     def dtc_to_opt_man(self):
         from neuronunit.optimisation.optimization_management import OptMan
         OM = OptMan(self.tests,self.backend)
+        return OM
+
+
+    def get_agreement(self):
+        self = self.self_evaluate()
+        OM = self.dtc_to_opt_man()
+        self = OM.get_agreement(self)
         return OM
 
     def ordered_score(self):
