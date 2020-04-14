@@ -30,7 +30,7 @@ from deap.benchmarks.tools import diversity, convergence, hypervolume
 from deap import creator
 from deap import tools
 
-from neuronunit.optimisation import optimisations
+#from neuronunit.optimisation import optimisations
 
 creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0))
 creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMin)
@@ -74,7 +74,7 @@ import pickle
 
 
 NGEN = 250
-MU = 100
+MU = 2
 CXPB = 0.8
 
 stats = tools.Statistics(lambda ind: ind.fitness.values)
@@ -105,13 +105,15 @@ print(logbook.stream)
 # Begin the generational process
 for gen in range(1, NGEN):
     # Vary the population
-    offspring = tools.selTournamentDCD(pop, len(pop))
+    offspring = toolbox.select(pop, len(pop))
+
+    #offspring = tools.selTournamentDCD(pop, len(pop))
     offspring = [toolbox.clone(ind) for ind in offspring]
     
     for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
         if random.random() <= CXPB:
             toolbox.mate(ind1, ind2)
-            CXPB = 0.8
+            CXPB = 1
             toolbox.mutate(ind1)
             toolbox.mutate(ind2)
             del ind1.fitness.values, ind2.fitness.values
@@ -229,4 +231,4 @@ for i,f in enumerate(range(0,2)):
     ax2[i].plot(gen_numbers,[j[i] for j in fitevol ])#,label=("NeuronUnit Test: {0}".format(str(k)str(' ')str(v)), fontsize = 35.0)
 plt.savefig(str(figname)+str('components_over_gen_.png'))#str('_')str(MU)str('_')str(NGEN)str('_')str('.png'))
 
-plt.show()
+#plt.savefig('b')
