@@ -17,7 +17,8 @@ import unittest
 import numpy as np
 from neuronunit.optimisation.optimization_management import check_binary_match
 from neuronunit.optimisation.optimization_management import which_key
-from neuronunit.plottools import plot_score_history
+from neuronunit.plottools import plot_score_history1
+from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 
 class Test_opt_tests(unittest.TestCase):
 
@@ -31,24 +32,23 @@ class Test_opt_tests(unittest.TestCase):
             temp = hide_imports.TSD(test_frame['Neocortex pyramidal cell layer 5-6'])[k]
             stds[k] = temp.observation['std']
         cloned_tests = copy.copy(test_frame['Neocortex pyramidal cell layer 5-6'])
+        cloned_tests = hide_imports.TSD(cloned_tests)
+        #{'RestingPotentialTest':cloned_tests['RestingPotentialTest']}
         OM = jrt(cloned_tests,backend,protocol='elephant')
         self.OM = OM
     def test_all_objective_test(self):
-        backend = "HH"
-        MU = 10
-        NGEN = 20
-
+        backend = "RAW"
+        MU = 20
+        NGEN = 50
         results = {}
         tests = {}
-        from neuronunit.optimisation.model_parameters import MODEL_PARAMS
-        fps = list(MODEL_PARAMS["HH"].keys())
-        #import pdb
-        # pdb.set_trace()
-        #fps = ['k','a','c','vr']#,'b','vPeak','C','vr']
-        simulated_data_tests, OM, target = self.OM.make_sim_data_tests(
-            backend,MU,NGEN,free_parameters=fps)
-
-        
+        fps = ['a','c','vr','d']
+        simulated_data_tests, OM, target = self.OM.make_sim_data_tests(   
+            backend,
+            MU,
+            NGEN,
+            free_parameters=fps, 
+            test_key=["RheobaseTest","RestingPotentialTest","InputResistanceTest","CapacitanceTest","InjectedCurrentAPWidthTest","InjectedCurrentAPAmplitudeTest","InjectedCurrentAPThresholdTest"])  
         stds = {}
         for k,v in simulated_data_tests.items():
             keyed = which_key(simulated_data_tests[k].observation)
@@ -56,8 +56,6 @@ class Test_opt_tests(unittest.TestCase):
                 mean = simulated_data_tests[k].observation[keyed]
                 std = simulated_data_tests[k].observation['std']
                 x = np.abs(std/mean)
-            #import pdb
-            #pdb.set_trace()
             if k == str('TimeConstantTest') or k == str('CapacitanceTest') or k == str('InjectedCurrentAPWidthTest'):
                 # or k == str('InjectedCurrentAPWidthTest'):
                 mean = simulated_data_tests[k].observation[keyed]
@@ -66,13 +64,10 @@ class Test_opt_tests(unittest.TestCase):
                 mean = simulated_data_tests[k].observation[keyed]
                 simulated_data_tests[k].observation['std'] = np.abs(mean)*2.0
             stds[k] = (x,mean,std)
-        with open('standard_scales.p','wb') as f:
-            pickle.dump(stds,f)
-        with open('standard_scales.p','rb') as f:
-            standards = pickle.load(f)    
-        
 
         target.tests = simulated_data_tests
+        model = target.dtc_to_model()
+
         for t in simulated_data_tests.values(): 
             score0 = t.judge(target.dtc_to_model())
             score1 = target.tests[t.name].judge(target.dtc_to_model())
@@ -83,7 +78,7 @@ class Test_opt_tests(unittest.TestCase):
 
         tests = hide_imports.TSD(copy.copy(simulated_data_tests))
         check_tests = copy.copy(tests)
-        reserve = copy.copy(tests)
+        #reserve = copy.copy(tests)
 
         ##
         # Optimize
@@ -98,19 +93,15 @@ class Test_opt_tests(unittest.TestCase):
         opt = results['pf'][0].dtc
 
         check_binary_match(opt,target,figname=str(backend)+str(MU)+str(NGEN)+'check_binary_match.png')
-        opt = OM.format_test(opt)
         OM.tests = opt.tests
-        opt = self.OM.get_agreement(opt)
-        print(opt.obs_preds)
+        opt = OM.format_test(opt)
+        opt.self_evaluate()
+        opt = OM.get_agreement(opt)
+        print(opt.agreement)
         
-        #pickle.dump(model,open('model_pickle.p','wb'))
         target = OM.format_test(target)
-        
         simulated_data_tests = target.tests
-        import pdb
-        pdb.set_trace()
-        plot_score_history(results,figname='filename.png')
-
+        plot_score_history1(results,figname='filename.png')
         for k,t in enumerate(simulated_data_tests): 
             print(t.judge(target.dtc_to_model()))
             print(target.tests[k].judge(target.dtc_to_model()))
@@ -149,7 +140,9 @@ class Test_opt_tests(unittest.TestCase):
         with open(str('RAW')+str('optimum_versus_target.p'),'wb') as f:
             pickle.dump([target,opt],f)
 
-        check_binary_match(opt,target,figname='bin_match.png')    
+        check_binary_match(opt,target,figname='bin_match.png',snippets=False)    
+        check_binary_match(opt,target,figname="snippets.png",snippets=True)
+
         a = pickle.load(open("RAWoptimum_versus_target.p","rb"))
         import pdb
         pdb.set_trace()
