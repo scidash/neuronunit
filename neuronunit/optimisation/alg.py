@@ -123,17 +123,26 @@ def prune_constants(parents,num_constants):
 #CXPB = 0.95
 #MUTPB = 0.95
 
-def ugly_fix(pool,toolbox):    
+def remove_and_replace(pool,toolbox):    
+    '''
+    Remove and replace genes rheobase == None, unstable bifurcation.
+    '''
     filtered = [p for p in pool if len(p.fitness.values)==0]
     pool = [p for p in pool if len(p.fitness.values)!=0]
     if len(filtered):
         if True:
+            '''
+            Amplifies number genes that work at expense of gene diversity.
+            '''
             for i in range(0,len(filtered)):
                 ind = pool[i]
                 ind = toolbox.clone(ind)
                 pool.append(ind)
 
         if False:
+            '''
+            Tries to re-evaluate broken gene/model.
+            '''
             invalid_ind_,fitnesses_ = toolbox.evaluate(filtered)
             for ind, fit in zip(invalid_ind_, fitnesses_):
                 assert len(fit) != 0
@@ -145,21 +154,43 @@ def ugly_fix(pool,toolbox):
         current = len(p.fitness.values)
         assert current==last
         last = current
-        print(len(p.fitness.values))
     return pool
 
-    def get_center(pf,pop):
-        X = np.array(pf[0:-1])
-        kmeans = KMeans(n_clusters=1, random_state=0).fit(X)
-        piercing = kmeans.cluster_centers_
-        pierce = [toolbox.clone(ind) for ind in pop][0]
-        pierce.rheobase = None
-        for j,param in enumerate(pierce):
-            pierce[j] = piercing[0][j]
-        temp_invalid_ind,temp_fitnesses = toolbox.evaluate([pierce])
-        temp_invalid_ind[0].fitness.values = temp_fitnesses[0]
-        pop.append(temp_invalid_ind[0])
-        return pop
+def get_center(pf,pop):
+    """ 
+    for use in scope of this file object.
+    """
+    X = np.array(pf[0:-1])
+    kmeans = KMeans(n_clusters=1, random_state=0).fit(X)
+    piercing = kmeans.cluster_centers_
+    pierce = [toolbox.clone(ind) for ind in pop][0]
+    pierce.rheobase = None
+    for j,param in enumerate(pierce):
+        pierce[j] = piercing[0][j]
+    temp_invalid_ind,temp_fitnesses = toolbox.evaluate([pierce])
+    temp_invalid_ind[0].fitness.values = temp_fitnesses[0]
+    pop.append(temp_invalid_ind[0])
+    return pop
+import copy
+def get_center_nb(pf,pop,OM):
+    """
+    same as above but works out of scope, like in notebooks
+    """
+    X = np.array(pf[0:-1])
+    kmeans = KMeans(n_clusters=1, random_state=0).fit(X)
+    piercing = kmeans.cluster_centers_
+    pierce = copy.copy(pop[0])
+    for j,param in enumerate(pierce):
+        pierce[j] = piercing[0][j]
+    OM.td = results['td']
+    dtc = OM.update_dtc_pop([pierce])[0]
+    dtc.tests = OM.tests
+    dtc.self_evaluate()
+    dtc.SA
+    return dtc
+
+
+from tqdm import tqdm
 
 
 def eaAlphaMuPlusLambdaCheckpoint(
@@ -223,19 +254,18 @@ def eaAlphaMuPlusLambdaCheckpoint(
         temp_pop = copy.copy(pop)
         for p in pop:
             assert hasattr(p,'dtc')
-        #print(logbook.stream)
 
 
 
         # Begin the generational process
-        for gen in range(1, NGEN):
+        
+        for gen in tqdm(range(1, NGEN), desc='GA Generation Progress'):
             #offspring = tools.selTournamentDCD(pop, len(pop))
             offspring = toolbox.select(pop, int(MU/2))
             offspring = [toolbox.clone(ind) for ind in offspring]
             #CXPB = 0.9
             cnt = 0
-            for ind1, ind2 in zip(offspring[::int(MU/4)], offspring[1::int(MU/4)]):
-                print(ind1,ind2,'cross over genes')
+            for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
                 toolbox.mate(ind1, ind2)
                 toolbox.mutate(ind1)
                 toolbox.mutate(ind2)
@@ -252,12 +282,11 @@ def eaAlphaMuPlusLambdaCheckpoint(
             pool = pop
             pool.extend(offspring)
             
-            pool = ugly_fix(pool,toolbox)
+            pool = remove_and_replace(pool,toolbox)
 
             pop = toolbox.select(pool, MU)
             record = stats.compile(pop)
             logbook.record(gen=gen, evals=len(invalid_ind), **record)
-            print(logbook.stream)
             
             hof, pf,history = _update_history_and_hof(hof, pf, history, pop ,gen,MU)
             if(cp_filename and cp_frequency and gen % cp_frequency == 0):
@@ -269,7 +298,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
                         logbook=logbook,
                         rndstate=random.getstate())
                 pickle.dump(cp, open(cp_filename, "wb"))
-                print('Wrote checkpoint to %s', cp_filename)
+                #print('Wrote checkpoint to %s', cp_filename)
                 logger.debug('Wrote checkpoint to %s', cp_filename)        
 
             #print(logbook.stream)

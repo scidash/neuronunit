@@ -84,7 +84,9 @@ class APWidthTest(VmTest):
         """Implement sciunit.Test.score_prediction."""
         #if isinstance(prediction, type(None)):
         #    score = scores.InsufficientDataScore(None)
-
+        if prediction is None:
+            return scores.InsufficientDataScore(None)
+        
         if prediction['n'] == 0:
             score = scores.InsufficientDataScore(None)
         else:
@@ -122,17 +124,67 @@ class InjectedCurrentAPWidthTest(InjectedCurrent, APWidthTest):
         model.get_membrane_potential()
         if ascii_plot:
             asciplot_code(model.vM,model.get_spike_count())
-
+        #try:
         prediction = super(InjectedCurrentAPWidthTest, self).\
             generate_prediction(model)
-        # useful to retain inside object.
         self.prediction = prediction
+
+        #except:
+        #    prediction = None
+        # useful to retain inside object.
 
         return prediction
 
     def extract_features(self, model):
         prediction = self.generate_prediction(model)
         return prediction
+
+class TotalAPAmplitudeTest(VmTest):
+    """
+    Test the heights (peak amplitude) of action potentials.
+    """
+    required_capabilities = (ncap.ProducesActionPotentials,)
+    name = "AP amplitude test"
+    description = ("A test of the amplitude (peak minus threshold) of "
+                   "action potentials.")
+    score_type = scores.ZScore
+    units = pq.mV
+    ephysprop_name = 'Spike Amplitude'
+    def generate_prediction(self, model):
+        """Implement sciunit.Test.generate_prediction."""
+        # Method implementation guaranteed by
+        # ProducesActionPotentials capability.
+        model.inject_square_current(self.params['injected_square_current'])
+        model.get_membrane_potential()
+        #if ascii_plot:
+        if model._backend is str("HH"):
+            asciplot_code(model.vM,model.get_spike_count()) 
+        height = np.max(model.get_membrane_potential())-model.get_membrane_potential().magnitude[-1]
+        prediction = {'value': height[0],
+                      'mean':np.mean(height) if len(height) else None,
+                      'std': np.std(height) if len(height) else None,
+                      'n': len(height)}
+
+
+
+        # useful to retain inside object.
+        self.prediction = prediction
+        # Put prediction in a form that compute_score() can use.
+        return prediction
+
+    def extract_features(self, model):
+        prediction = self.generate_prediction(model)
+        return prediction
+
+    def compute_score(self, observation, prediction):
+        """Implementat sciunit.Test.score_prediction."""
+        if prediction['n'] == 0:
+            score = scores.InsufficientDataScore(None)
+        else:
+            score = super(TotalAPAmplitudeTest, self).compute_score(observation,
+                                                               prediction)
+        return score
+
 
 
 class APAmplitudeTest(VmTest):
@@ -163,15 +215,12 @@ class APAmplitudeTest(VmTest):
         # ProducesActionPotentials capability.
         model.inject_square_current(self.params['injected_square_current'])
         model.get_membrane_potential()
-        if ascii_plot:
+        #if ascii_plot:
+        if model._backend is str("HH"):
             asciplot_code(model.vM,model.get_spike_count())
-
-        #if False:
-        #    height = np.max(model.get_membrane_potential()) -float(np.min(model.get_membrane_potential()))/1000.0*model.get_membrane_potential().units #- model.get_AP_thresholds()
-        #    prediction = {'mean':height, 'n':1, 'std':height}
-
-        #heights = model.get_AP_amplitudes() - model.get_AP_thresholds()
-        # Put prediction in a form that compute_score() can use.
+        
+            import pdb
+            pdb.set_trace()
         height = np.max(model.get_membrane_potential())-model.get_AP_thresholds()
         prediction = {'value': height[0],
                       'mean':np.mean(height) if len(height) else None,

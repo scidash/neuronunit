@@ -152,7 +152,14 @@ def dALLdt(X, t, attrs):
     """
     defaults = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3, \
              'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -77.0, 'E_Na' : 50.0, 'vr':-65.0 }
-
+    new_attrs = {}
+    defaults.update(attrs)
+    attrs = defaults
+    #for k,v in defaults.items():
+    #    if k in attrs.keys():
+    #        new_attrs[k] = attrs[k]
+    #    else:
+    #        new_attrs[k] = attrs[k]
     delay,duration,T,amplitude = copy.copy(attrs['I'])
     V, m, h, n = X
 
@@ -275,10 +282,12 @@ class HHBackend(Backend):
         """Must return a neo.core.AnalogSignal.
         And must destroy the hoc vectors that comprise it.
         """
+        if type(self.vM) is type(None):
+            self.vM = get_vm(attrs)
         return self.vM
 
     def get_spike_count(self):
-        thresh = threshold_detection(self.vM,0.0*pq.mV)
+        thresh = threshold_detection(self.vM)#,0.0*pq.mV)
         return len(thresh)
 
     def set_attrs(self, **attrs):
@@ -286,6 +295,11 @@ class HHBackend(Backend):
 
     def _backend_run(self):
         results = {}
+        if len(self.attrs) > 1:
+            self.vM = get_vm(**self.attrs)
+        else:
+            self.vM = get_vm(self.attrs)
+
         results['vm'] = self.vM
         results['t'] = self.vM.times
         results['run_number'] = results.get('run_number',0) + 1

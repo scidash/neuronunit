@@ -5,6 +5,7 @@ import warnings
 import dask
 #from dask.distributed import Client
 #client = Client()
+from tqdm import tqdm
 
 SILENT = True
 if SILENT:
@@ -23,7 +24,14 @@ matplotlib.rcParams.update({'font.size': 12})
 
 import cython
 import logging
+mpl = matplotlib
+mpl.rcParams['figure.figsize'] = [8.0, 6.0]
+mpl.rcParams['figure.dpi'] = 80
+mpl.rcParams['savefig.dpi'] = 100
 
+mpl.rcParams['font.size'] = 12
+mpl.rcParams['legend.fontsize'] = 'large'
+mpl.rcParams['figure.titlesize'] = 'medium'
 # optional imports
 
 
@@ -198,29 +206,28 @@ class WSListIndividual(list):
 
 
 def make_ga_DO(explore_edges, max_ngen, test, \
-        free_params = None, hc = None,
+        free_parameters = None, hc = None,
         selection = None, MU = None, seed_pop = None, \
            backend = str('RAW'),protocol={'allen':False,'elephant':True}):
     '''
     construct an DEAP Optimization Object, suitable for this test class and caching etc.
     '''
-
     ss = {}
-    if type(free_params) is type(dict()):
-        if 'dt' in free_params:
-            free_params.pop('dt')
-        if 'Iext' in free_params:
-            free_params.pop('Iext')
+    if type(free_parameters) is type(dict()):
+        if 'dt' in free_parameters:
+            free_parameters.pop('dt')
+        if 'Iext' in free_parameters:
+            free_parameters.pop('Iext')
     else:
-        free_params = [f for f in free_params if str(f) not in 'Iext' and str(f) not in str('dt')]
-    for k in free_params:
-        if not k in explore_edges.keys() and k not in str('Iext') and k not in str('dt'):
+        free_parameters = [f for f in free_parameters if str(f) != 'Iext' and str(f) != str('dt')]
+    for k in free_parameters:
+        if not k in explore_edges.keys() and k != str('Iext') and k != str('dt'):
 
             ss[k] = explore_edges[k]
         else:
             ss[k] = explore_edges[k]
     if type(MU) == type(None):
-        MU = 2**len(list(free_params))
+        MU = 2**len(list(free_parameters))
     else:
         MU = MU
     max_ngen = int(np.floor(max_ngen))
@@ -233,7 +240,8 @@ def make_ga_DO(explore_edges, max_ngen, test, \
 
     if seed_pop is not None:
         # This is a re-run condition.
-        DO.setnparams(nparams = len(free_params), boundary_dict = ss)
+
+        DO.setnparams(nparams = len(free_parameters), boundary_dict = ss)
 
         DO.seed_pop = seed_pop
         DO.setup_deap()
@@ -261,10 +269,10 @@ class TSS(TestSuite):
 
 
     def optimize(self,param_edges,backend=None,protocol={'allen': False, 'elephant': True},\
-        MU=5,NGEN=5,free_params=None,seed_pop=None,hold_constant=None):
-        if type(free_params) is type(None):
-            free_params=param_edges.keys()
-        self.DO = make_ga_DO(param_edges, NGEN, self, free_params=free_params, \
+        MU=5,NGEN=5,free_parameters=None,seed_pop=None,hold_constant=None):
+        if type(free_parameters) is type(None):
+            free_parameters=param_edges.keys()
+        self.DO = make_ga_DO(param_edges, NGEN, self, free_parameters=free_parameters, \
                            backend=backend, MU = 8,  protocol=protocol,seed_pop = seed_pop, hc=hold_constant)
         self.MU = None
         self.NGEN = None
@@ -298,6 +306,13 @@ class TSS(TestSuite):
         return ga_out, self.DO
 '''
 class TSD(dict):
+    """
+    Test Suite Dictionary class
+
+    A container for sciunit tests, Indexable by dictionary keys.
+
+    Contains a method called optimize.
+    """
     def __init__(self,tests={},use_rheobase_score=True):
        self.DO = None
        self.use_rheobase_score = use_rheobase_score
@@ -322,7 +337,10 @@ class TSD(dict):
        else:
            self.cell_name = 'simulated data'
 
-    def to_dict(self):
+    def to_pickleable_dict(self):
+        """
+        A pickleable version of instance object.
+        """
         return {k:v for k,v in self.items() }
     '''
     def update(self,tests= None):
@@ -338,7 +356,7 @@ class TSD(dict):
                     'protocol':{'allen': False, 'elephant': True},\
                     'MU':5,\
                     'NGEN':5,\
-                    'free_params':None,\
+                    'free_parameters':None,\
                     'seed_pop':None,\
                     'hold_constant':None,
                     'plot':False,'figname':None,
@@ -350,22 +368,22 @@ class TSD(dict):
         if type(kwargs['param_edges']) is type(None):
             from neuronunit.optimisation import model_parameters
             param_edges = model_parameters.MODEL_PARAMS[kwargs['backend']]
-        if type(kwargs['free_params']) is type(None):
+        if type(kwargs['free_parameters']) is type(None):
             if type(kwargs['param_edges']) is not type(None):
-                free_params=kwargs['param_edges'].keys()
+                free_parameters=kwargs['param_edges'].keys()
             else:
                 from neuronunit.optimisation import model_parameters
-                free_params = model_parameters.MODEL_PARAMS[kwargs['backend']].keys()
+                free_parameters = model_parameters.MODEL_PARAMS[kwargs['backend']].keys()
         else:
-            free_params = kwargs['free_params']
+            free_parameters = kwargs['free_parameters']
 
         if kwargs['hold_constant'] is None:
-            if len(free_params) < len(param_edges):
+            if len(free_parameters) < len(param_edges):
                 pass
         self.DO = make_ga_DO(param_edges, \
                              kwargs['NGEN'], \
                              self, \
-                             free_params=free_params, \
+                             free_parameters=free_parameters, \
                              backend=kwargs['backend'], \
                              MU = kwargs['MU'], \
                              protocol=kwargs['protocol'],
@@ -374,12 +392,11 @@ class TSD(dict):
                              )
         self.MU = self.DO.MU = kwargs['MU']
         self.NGEN = self.DO.NGEN = kwargs['NGEN']
-
+        
         ga_out = self.DO.run(NGEN = self.DO.NGEN)
         self.backend = kwargs['backend']
 
         #ga_out['random_search'] = self.DO.OM.random_search(ga_out['pf'][0].dtc,100)
-
         #ga_out = self.elaborate_plots(self,ga_out,savefigs=True,figname=kwargs['figname'])
 
         if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
@@ -530,7 +547,8 @@ def process_rparam(backend,free_parameters):
     dsolution = DataTC(backend =backend)
     temp_model = dsolution.dtc_to_model()
     dsolution.attrs = temp_model.default_attrs
-    for k,v in rp.items(): dsolution.attrs[k] = rp[k]
+    for k,v in rp.items(): 
+        dsolution.attrs[k] = rp[k]
     dsolution.backend = backend
     return dsolution,rp,None,random_param
 def check_test(new_tests):
@@ -655,6 +673,10 @@ def pred_only(test_and_models):
     else:
         pred = test.extract_features(model)
 
+    if str('RestingPotentialTest') in test.name:
+        test.params['injected_square_current']['amplitude'] = \
+        float(test.params['injected_square_current']['amplitude'])*pq.pA
+        assert test.params['injected_square_current']['amplitude'].units == pq.pA
     return pred
 
 #from functools import partial
@@ -811,10 +833,12 @@ def dtc_to_rheo(dtc):
 
         if isinstance(rtest,Iterable):
             rtest = rtest[0]
-        #if str("HH") in dtc.backend:
-        #    rtest1 = RheobaseTestP(rtest.observation)
-        #    dtc.rheobase = rtest1.generate_prediction(model)['value']
-
+        '''
+        if str("HH") in dtc.backend: 
+            print("\n\n\n\ slow because parallel Rheobase")
+            rtest1 = RheobaseTestP(rtest.observation)
+            dtc.rheobase = rtest1.generate_prediction(model)['value']
+        '''
         #else:
         dtc.rheobase = rtest.generate_prediction(model)['value']
         return dtc
@@ -920,27 +944,54 @@ def inject_and_not_plot_model(pre_model):
 
     return vm
 
-def check_binary_match(dtc0,dtc1,figname=None):
+def check_binary_match(dtc0,dtc1,figname=None,snippets=True):
     matplotlib.rcParams.update({'font.size': 8})
 
     vm0 =inject_and_not_plot_model(dtc0)
     vm1 =inject_and_not_plot_model(dtc1)
-
-
+    from neuronunit.capabilities.spike_functions import get_spike_waveforms
     plt.figure()
-    if dtc0.backend in str("HH"):
-        plt.title('Check for waveform Alignment')
-    else:
-        plt.title('membrane potential plot')
-    plt.plot(vm0.times, vm0.magnitude,label="target")
-    #for v in vms:
-    plt.plot(vm1.times, vm1.magnitude,label="solutions")
-    plt.ylabel('V (mV)')
-    plt.legend(loc="upper left")
 
-    #plt.plot(vm.times,vm.magnitude)
-    if figname is not None:
-        plt.savefig(figname)
+    if snippets:
+        plt.figure()
+
+        snippets1 = get_spike_waveforms(vm1)
+        snippets0 = get_spike_waveforms(vm0)
+
+        #dtc.snippets = snippets_
+        plt.plot(snippets0.times,snippets0.magnitude,label=str('model type: '))#+label)#,label='ground truth')
+
+        plt.plot(snippets1.times,snippets1.magnitude,label=str('model type: '))#+label)#,label='ground truth')
+        if dtc0.backend in str("HH"):
+            plt.title('Check for waveform Alignment')
+        else:
+            plt.title('membrane potential plot')
+        #plt.plot(vm0.times, vm0.magnitude,label="target")
+        #for v in vms:
+        #plt.plot(vm1.times, vm1.magnitude,label="solutions")
+        plt.ylabel('V (mV)')
+        plt.legend(loc="upper left")
+
+        #plt.plot(vm.times,vm.magnitude)
+        if figname is not None:
+            plt.savefig(figname)
+
+    else:
+        #plt.plot(vm.times,vm,label=str('model type: '))#+label)#,label='ground truth')
+
+        if dtc0.backend in str("HH"):
+            plt.title('Check for waveform Alignment')
+        else:
+            plt.title('membrane potential plot')
+        plt.plot(vm0.times, vm0.magnitude,label="target")
+        #for v in vms:
+        plt.plot(vm1.times, vm1.magnitude,label="solutions")
+        plt.ylabel('V (mV)')
+        plt.legend(loc="upper left")
+
+        #plt.plot(vm.times,vm.magnitude)
+        if figname is not None:
+            plt.savefig(figname)
 
     return plt
 
@@ -1845,7 +1896,7 @@ def evaluate_sm(dtc,regularization=False,elastic_net=False):
 """
 #@dask.delayed
 
-def evaluate_new(dtc):
+def evaluate(dtc):
     # assign worst case errors, and then over write them with situation informed errors as they become available.
     if not hasattr(dtc,str('SA')):
         return []
@@ -1859,7 +1910,7 @@ def evaluate_new(dtc):
 
         return fitness
 
-def evaluate(dtc):
+def evaluate_new(dtc):
     # assign worst case errors, and then over write them with situation informed errors as they become available.
     if not hasattr(dtc,str('SA')):
         return []
@@ -1872,7 +1923,7 @@ def evaluate(dtc):
             temp = (whole_thing['observations'] - whole_thing['predictions'])
             temp = np.abs(float(temp.simplified))
             fitness.append(temp)
-        fitness.append(np.sum(fitness))
+        #fitness.append(np.sum(fitness))
         #print(fitness)
         return fitness
 
@@ -1924,14 +1975,8 @@ def filtered(pop,dtcpop):
     pop = [i[1] for i in both]
     dtcpop = [i[0] for i in both]
 
-    if len(pop) != len(dtcpop):
-        print('fatal')
-    try:
-        assert len(pop) == len(dtcpop)
-    except:
+    assert len(pop) == len(dtcpop), print('fatal')
 
-        import pdb
-        pdb.set_trace()
     return pop, dtcpop
 
 
@@ -2243,22 +2288,22 @@ class OptMan():
         #dtc_ = pop2dtc(gene,dtc_)
         return gene[0], dtc_[0]
     '''
-    def optimize(self,free_params=None,NGEN=10,MU=10,seed_pop=None,hold_constant=None):
+    def optimize(self,free_parameters=None,NGEN=10,MU=10,seed_pop=None,hold_constant=None):
         from neuronunit.optimisation.optimisations import run_ga
         from neuronunit.optimisation import model_parameters
 
         subset = OrderedDict()
-        if type(free_params) is type(None):
+        if type(free_parameters) is type(None):
             if type(self.boundary_dict) is type(None):
                 ranges = model_parameters.MODEL_PARAMS[backend]
             else:
                 ranges = self.boundary_dict
 
-            free_params = list(ranges.keys())
+            free_parameters = list(ranges.keys())
 
         if type(hold_constant) is type(None):
             temp = copy.copy(self.boundary_dict)
-            for k in free_params:
+            for k in free_parameters:
                 temp.pop(k,None)
             if len(temp)==0:
                 hold_constant = None
@@ -2269,7 +2314,7 @@ class OptMan():
 
 
         ga_out,DO = run_ga(self.boundary_dict, NGEN, self.tests, \
-                           free_params=free_params, \
+                           free_parameters=free_parameters, \
                            backend=self.backend, \
                            MU = MU,  \
                            protocol=self.protocol\
@@ -2278,15 +2323,15 @@ class OptMan():
         self.DO = DO
         return ga_out
     '''
-    def run_simple_grid(self,npoints=10,free_params=None):
+    def run_simple_grid(self,npoints=10,free_parameters=None):
         self.exhaustive = True
         from neuronunit.optimisation.exhaustive_search import sample_points, add_constant, chunks
         ranges = self.boundary_dict
         subset = OrderedDict()
-        if type(free_params) is type(None):
-            free_params = list(ranges.keys())
+        if type(free_parameters) is type(None):
+            free_parameters = list(ranges.keys())
         for k,v in ranges.items():
-            if k in free_params:
+            if k in free_parameters:
                 subset[k] = ( np.min(ranges[k]),np.max(ranges[k]) )
         # The function of maps is to map floating point sample spaces onto a  monochromataic matrix indicies.
         subset = OrderedDict(subset)
@@ -2461,7 +2506,7 @@ class OptMan():
             new_tests = TSD(new_tests)
 
             new_tests.use_rheobase_score = False
-            ga_out, DO = run_ga(ranges,NGEN,new_tests,free_params=rp.keys(), MU = MU, backend=backend, selection=str('selNSGA3'), protocol={'allen':True,'elephant':False,'tsr':[target_spikes-2,target_spikes+5]})
+            ga_out, DO = run_ga(ranges,NGEN,new_tests,free_parameters=rp.keys(), MU = MU, backend=backend, selection=str('selNSGA3'), protocol={'allen':True,'elephant':False,'tsr':[target_spikes-2,target_spikes+5]})
             ga_converged = [ p for p in ga_out['pf'] ]
             ga_out,ga_converged,test_origin_target,new_tests
             return ga_out,ga_converged,test_origin_target,new_tests,self.protocol['tsr']
@@ -2547,7 +2592,7 @@ class OptMan():
                             v['mean'] = v['std'] = v['value']
 
 
-                    ga_out, DO = run_ga(ranges,NGEN,mt,free_params=rp.keys(), MU = MU, \
+                    ga_out, DO = run_ga(ranges,NGEN,mt,free_parameters=rp.keys(), MU = MU, \
                         backend=backend,protocol={'elephant':True,'allen':False})
                     results[k] = copy.copy(ga_out['pf'][0].dtc.scores)
 
@@ -2602,7 +2647,7 @@ class OptMan():
             #inject_and_plot(ga_converged,second_pop=test_origin_target,third_pop=[ga_converged[0]],figname='not_a_problem.png',snippets=True)
             return ga_out,ga_converged,test_origin_target,new_tests,closeness_
         '''
-    def make_sim_data_tests(self,backend,MU,NGEN,free_parameters=None):
+    def make_sim_data_tests(self,backend,free_parameters=None,test_key=None):
         import hide_imports
         with open('processed_multicellular_constraints.p','rb') as f:
             test_frame = pickle.load(f)
@@ -2616,16 +2661,23 @@ class OptMan():
         OM = jrt(cloned_tests,backend)
         x= {k:v for k,v in OM.tests.items() if 'mean' in v.observation.keys() or 'value' in v.observation.keys()}
         cloned_tests = copy.copy(OM.tests)
-        OM.tests = hide_imports.TSD(cloned_tests)
+        if test_key is not None:
+            if len(test_key)==1:
+                OM.tests = hide_imports.TSD({test_key:cloned_tests[test_key]})
+            else:
+                OM.tests = hide_imports.TSD({tk:cloned_tests[tk] for tk in test_key})
+
+        else:
+            OM.tests = hide_imports.TSD(cloned_tests)
         rt_out = OM.simulate_data(OM.tests,OM.backend,free_parameters=free_parameters)
         target = rt_out[0]
         penultimate_tests = hide_imports.TSD(test_frame['Neocortex pyramidal cell layer 5-6'])
-        for k,v in penultimate_tests.items():
+        for k,v in OM.tests.items():
             temp = penultimate_tests[k]
 
             v = rt_out[1][k].observation
             v['std'] = stds[k]
-        simulated_data_tests = hide_imports.TSD(penultimate_tests)
+        simulated_data_tests = hide_imports.TSD(OM.tests)
         '''
         for t in simulated_data_tests.values(): 
             if 'value' in t.observation.keys():
@@ -2636,12 +2688,14 @@ class OptMan():
             print(score)
         '''    
         target.tests = simulated_data_tests
+        print(target.tests)
         target = self.format_test(target)
         for t in simulated_data_tests.values(): 
             if 'value' in t.observation.keys() and 'mean' not in  t.observation.keys():
                 t.observation['mean'] =  t.observation['value']
             t.score_type = scores.ZScore
             score = t.judge(target.dtc_to_model())
+            print(score.score)
             assert float(score.score)==0.0
             print(score)
 
@@ -2684,7 +2738,7 @@ class OptMan():
             new_tests = TSD(new_tests)
 
             new_tests.use_rheobase_score = False
-            ga_out, DO = run_ga(ranges,NGEN,new_tests,free_params=rp.keys(), MU = MU, backend=backend, selection=str('selNSGA3'), protocol={'allen':True,'elephant':False,'tsr':[target_spikes-2,target_spikes+5]})
+            ga_out, DO = run_ga(ranges,NGEN,new_tests,free_parameters=rp.keys(), MU = MU, backend=backend, selection=str('selNSGA3'), protocol={'allen':True,'elephant':False,'tsr':[target_spikes-2,target_spikes+5]})
             ga_converged = [ p for p in ga_out['pf'] ]
             ga_out,ga_converged,test_origin_target,new_tests
             return ga_out,ga_converged,test_origin_target,new_tests,self.protocol['tsr']
@@ -2695,10 +2749,8 @@ class OptMan():
             while new_tests is False:
                 dsolution,rp,_,_ = process_rparam(backend,free_parameters=free_parameters)
                 (new_tests,dtc) = self.make_simulated_observations(tests,backend,rp,dsolution=dsolution)
-                if float(dsolution.rheobase['value'])==0:
-                    new_tests = False
-                    #print("hit")
-                    continue
+     
+    
                 if new_tests is False:
                     continue
                 new_tests = {k:v for k,v in new_tests.items() if v.observation[which_key(v.observation)] is not None}
@@ -2716,6 +2768,14 @@ class OptMan():
                         new_tests = False
                         continue
                     dsolution.rheobase = new_tests['RheobaseTest'].observation
+                    if dsolution.rheobase['value'] is not None:
+                        if float(dsolution.rheobase['value'])==0:
+                            new_tests = False
+                            continue
+                    else: # Rheobase is None    
+                        new_tests = False
+                        continue
+        
             print('Random simulated data tests made')
             target = dsolution
             #target.tests = new_tests
@@ -2822,6 +2882,7 @@ class OptMan():
             #if str('RheobaseTest') != t.name and str('RheobaseTestP') != t.name:
             #t.params = dtc.protocols[k]
             test_and_models = (t, dtc)
+
             pred = pred_only(test_and_models)
             dtc.preds[str(t.name)] = pred
         return dtc
@@ -3367,8 +3428,8 @@ class OptMan():
 
         if 'RAW' in self.backend  or 'HH' in self.backend or str('ADEXP') in self.backend:
             self.assert_against_zero_std(copy.copy(dtcpop),tests)
-            #dtcpop = list(map(dtc_to_rheo,dtcpop))
             dtcbag = [ delayed(dtc_to_rheo(d)) for d in dtcpop ]
+            #dtcbag = [ delayed(dtc_to_rheo(d)) for d in tqdm(dtcpop, desc='Rheobase Calculations') ]
             dtcpop = compute(*dtcbag)
             for p,d in zip(pop,dtcpop):
                 p.rheobase = None
@@ -3452,12 +3513,16 @@ class OptMan():
                         for t in dtc.tests.values():
                             assert 'std' in t.observation.keys()
                 for d in dtcpop:
-                    dask.delayed(d.self_evaluate())
-                    #i = self.format_test_delayed(i)
-                    #i = self.elephant_evaluation_delayed(i)
-                    lazy.append(d)
+                    d = self.format_test_delayed(d)
 
-                dtcpop = dask.compute(lazy)[0]
+                #for d in tqdm(dtcpop,desc='NU test evaluation'): 
+                
+                for d in dtcpop: 
+                    dask.delayed(d.self_evaluate())
+                    lazy.append(d)
+                
+                dtcpop = list(dask.compute(*lazy))
+
                 # smaller_pop = [d for d in dtcpop for _,fitness in d.SA.values if fitness != 100 ]
                 # pop, dtcpop = self.make_up_lost(pop,smaller_pop,self.td)
                 for d in dtcpop:
