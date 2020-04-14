@@ -39,14 +39,25 @@ def _evaluate_invalid_fitness(toolbox, population):
 
     for j, ind in enumerate(invalid_pop):
         ind.fitness.values = fitnesses[j]
-        #ind.dtc = None
     return invalid_pop
 
 def cleanse(temp):
-    dtc = temp[0].dtc
+    temp = population
+    for t in temp:
+        if hasattr(t,'dtc'):
+            if "ADEXP" in t.dtc.backend or "BHH" in t.dtc.backend:
+                del t.dtc 
+        try:
+            import brian2 as b2
+            b2.clear_cache("cython")
+            del b2
+        except:
+            pass
+
+    #dtc = temp[0].dtc
     if "ADEXP" in temp[0].dtc.backend or "BHH" in temp[0].dtc.backend:
         try:
-            import brian as b2
+            import brian2 as b2
             b2.clear_cache("cython")
             del b2
         except:
@@ -69,11 +80,31 @@ def _update_history_and_hof(halloffame,pf, history, population,GEN,MU):
     Note: History and Hall-of-Fame behave like dictionaries
     '''
     temp = population
+    for t in temp:
+        if hasattr(t,'dtc'):
+            if "ADEXP" in t.dtc.backend or "BHH" in t.dtc.backend:
+                del t.dtc 
+        try:
+            import brian2 as b2
+            b2.clear_cache("cython")
+            del b2
+        except:
+            pass
+    
+    else:
+        try:
+            import brian2 as b2
+            b2.clear_cache("cython")
+            del b2
+        except:
+            pass
 
     if halloffame is not None:
         try:
             halloffame.update(temp)
         except:
+            import pdb
+            pdb.set_trace()
             temp = cleanse(temp)
             halloffame.update(temp)
     if history is not None:
@@ -248,8 +279,8 @@ def eaAlphaMuPlusLambdaCheckpoint(
         record = stats.compile(pop)
         logbook.record(gen=0, evals=len(invalid_ind), **record)
         temp_pop = copy.copy(pop)
-        for p in pop:
-            assert hasattr(p,'dtc')
+        #for p in pop:
+        #    assert hasattr(p,'dtc')
 
 
 
@@ -263,7 +294,7 @@ def eaAlphaMuPlusLambdaCheckpoint(
             cnt = 0
             # using the line below would lead to higher gene mutation
             # but less stabile increases in error score.
-	    # for ind1, ind2 in zip(offspring[::int(MU/4)], offspring[1::int(MU/4)]):
+	        # for ind1, ind2 in zip(offspring[::int(MU/4)], offspring[1::int(MU/4)]):
             for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
                 toolbox.mate(ind1, ind2)
                 toolbox.mutate(ind1)

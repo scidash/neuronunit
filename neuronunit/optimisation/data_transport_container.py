@@ -84,9 +84,16 @@ class DataTC(object):
                         except:
                             lns = np.abs(float(score_gene.raw))
                     else:
-                        lns = np.abs(float(score_gene.raw))
+                        try:
+                            lns = np.abs(float(score_gene.raw))
+                        except:
+                            lns = 100
                 else:
-                    lns = np.abs(score_gene.raw)
+                    try:
+                        lns = np.abs(float(score_gene.raw))
+                    except:
+                        lns = 100
+
             if lns==np.inf or lns==-np.inf:
                 lns = np.abs(float(score_gene.raw))
             scores_.append(lns)
@@ -109,7 +116,7 @@ class DataTC(object):
         self = self.self_evaluate()
         OM = self.dtc_to_opt_man()
         self = OM.get_agreement(self)
-        return OM
+        return self  
 
     def ordered_score(self):
         """
