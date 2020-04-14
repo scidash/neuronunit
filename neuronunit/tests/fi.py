@@ -396,10 +396,10 @@ class RheobaseTestP(RheobaseTest):
 
             model = dtc.dtc_to_model()
             self.condition_model(model)
-            print(model.attrs)
+            #print(model.attrs)
 
             ampl = dtc.ampl
-            print(ampl)
+            #print(ampl)
             if float(ampl) not in dtc.lookup or len(dtc.lookup) == 0:
 
                 current = {'amplitude':ampl,'duration':DURATION,'delay':DELAY}
@@ -410,7 +410,7 @@ class RheobaseTestP(RheobaseTest):
                     n_spikes = model.get_spike_count()
                 except:
                     n_spikes = 100
-                print(n_spikes)
+                #print(n_spikes)
 
 
 
@@ -454,10 +454,6 @@ class RheobaseTestP(RheobaseTest):
             # check for memory and exploit it.
             if dtc.initiated == True:
                 dtc = check_current(dtc)
-                print('yes returns')
-
-                dtc = dask.compute(dtc)[0]
-                print('yes returns')
                 if dtc.boolean:
                     return dtc
                 #else:
@@ -506,14 +502,14 @@ class RheobaseTestP(RheobaseTest):
                     dtc_local.ampl = sc*pq.pA
                     dtc_local = check_current(dtc_local)
                     dtc_clone.append(dtc_local)
-                dtc_clone = dask.compute(dtc_clone)[0]
+                dtc_clone = dask.compute(*dtc_clone)
                 """
                 for dtc_local,sc in zip(dtc_clones,set_clones):
                     dtc_local = copy.copy(dtc_local)
                     dtc_local.ampl = sc*pq.pA
                     #dtc_local = check_current(dtc_local)                                                                                                                                                          
                     dtc_clone.append(dtc_local)
-                dtc_clone = Parallel(n_jobs=4)(delayed(check_current)(dtc) for dtc in dtc_clone)
+                dtc_clone = Parallel(n_jobs=8)(delayed(check_current)(dtc) for dtc in dtc_clone)
                 dtc_clone = [ d.compute() for d in dtc_clone ]
 
 
