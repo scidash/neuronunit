@@ -29,11 +29,15 @@ try:
 
 except:
     ascii_plot = False
+ascii_plot = False
+
 import numpy
+"""
 try:
     brian2.clear_cache('cython')
 except:
     pass
+"""
     #I_stim = stim, simulation_time=st)
 
 from scipy.interpolate import interp1d
@@ -108,9 +112,9 @@ def simulate_AdEx_neuron_local(
 
 getting_started = False
 class ADEXPBackend(Backend):
-    
-    name = 'adexp'
-    
+
+    name = 'ADEXP'
+
     def get_spike_count(self):
         return int(self.spike_monitor.count[0])
     def init_backend(self, attrs=None, cell_name='thembi',
@@ -144,6 +148,19 @@ class ADEXPBackend(Backend):
             if hasattr(DTC,'cell_name'):
                 self.cell_name = DTC.cell_name
 
+        from neurodynex.adex_model import AdEx as AdEx0
+        self.default_attrs = {
+            'ADAPTATION_TIME_CONSTANT_tau_w':AdEx0.ADAPTATION_TIME_CONSTANT_tau_w,
+            'ADAPTATION_VOLTAGE_COUPLING_a':AdEx0.ADAPTATION_VOLTAGE_COUPLING_a,
+            'FIRING_THRESHOLD_v_spike':AdEx0.FIRING_THRESHOLD_v_spike,
+            'MEMBRANE_RESISTANCE_R':AdEx0.MEMBRANE_RESISTANCE_R,
+            'MEMBRANE_TIME_SCALE_tau_m':AdEx0.MEMBRANE_TIME_SCALE_tau_m,
+            'RHEOBASE_THRESHOLD_v_rh':AdEx0.RHEOBASE_THRESHOLD_v_rh,
+            'SHARPNESS_delta_T':AdEx0.SHARPNESS_delta_T,
+            'SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b':AdEx0.SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b,
+            'V_RESET':AdEx0.V_RESET,
+            'V_REST':AdEx0.V_REST
+            }
 
 
     def set_stop_time(self, stop_time = 650*pq.ms):
@@ -163,7 +180,6 @@ class ADEXPBackend(Backend):
 
         self.AdEx = None
         self.AdEx = AdEx
-
         if len(attrs):
             self.AdEx.ADAPTATION_TIME_CONSTANT_tau_w = attrs['ADAPTATION_TIME_CONSTANT_tau_w']*AdEx.b2.units.ms
             self.AdEx.ADAPTATION_VOLTAGE_COUPLING_a = attrs['ADAPTATION_VOLTAGE_COUPLING_a']*AdEx.b2.units.nS
@@ -184,6 +200,7 @@ class ADEXPBackend(Backend):
             #from neurodynex.adex_model import AdEx
             b2.defaultclock.dt = 1 * b2.ms
 
+            neurodynex.defaultclock = b2.defaultclock.dt
             self.AdEx =AdEx
     def finalize(self):
         '''
@@ -208,6 +225,8 @@ class ADEXPBackend(Backend):
 
         """
         b2.defaultclock.dt = 1 * b2.ms
+        neurodynex.defaultclock = b2.defaultclock.dt
+
         self.state_monitor = None
         self.spike_monitor = None
         self.AdEx = None
@@ -218,7 +237,7 @@ class ADEXPBackend(Backend):
         else:
             self.set_attrs(**attrs)
         if 'injected_square_current' in current.keys():
-            c = current['injected_square_current']
+            c = current['injected_square_current']*1000.0
         else:
             c = current
 
@@ -239,6 +258,7 @@ class ADEXPBackend(Backend):
         if self.model.attrs is None or not len(self.model.attrs):
             #from neurodynex.adex_model import AdEx
             b2.defaultclock.dt = 1 * b2.ms
+            neurodynex.defaultclock = b2.defaultclock.dt
 
             self.AdEx = AdEx
             self.state_monitor, self.spike_monitor = simulate_AdEx_neuron_local(I_stim = stim, simulation_time=st)
@@ -268,21 +288,21 @@ class ADEXPBackend(Backend):
 
 
 
-        #self.state_monitor.clock.dt = 1 *b2.ms
+        self.state_monitor.clock.dt = 1 *b2.ms
         self.dt = self.state_monitor.clock.dt
+        neurodynex.defaultclock = b2.defaultclock.dt
+
 
         state_dic = self.state_monitor.get_states()
         vm = state_dic['v']
         vm = [ float(i) for i in vm ]
-
-        self.vM = AnalogSignal(vm,units = mV,sampling_period = float(0.0001) * pq.s)
-
-
+        self.vM = AnalogSignal(vm,units = mV,sampling_period = 1 * pq.ms)
         tdic = self.spike_monitor.spike_trains()
         if str('peak_v') in attrs.keys():
-            self.peak_v = attrs['peak_v']
+            self.peak_v = attrs['peak_v']*10.5
         else:
-            self.peak_v = 2
+            self.peak_v = 25#*qt.mV
+
         if self.verbose:
 
             print(self.peak_v)

@@ -20,16 +20,11 @@ backend_paths = ['base.EmptyBackend',
                  'jNeuroML.jNeuroMLBackend',
                  'neuron.NEURONBackend',
                  'general_pyNN.PYNNBackend',
-                 #'hh_wraper.JHHBackend',
                  'rawpy.RAWBackend',
                  'hhrawf.HHBackend',
                  'glif.GLIFBackend',
                  'badexp_dynamics.ADEXPBackend',
                  'bhh_dynamics.BHHBackend',
-                ]
-failed_backend_paths = [
-                 'badexp.ADEXPBackend',
-                 'bhh.BHHBackend',
                 ]
 
 def check_backend(partial_path):
@@ -63,7 +58,6 @@ def register_backends(backend_paths):
 
 
 try:
-    register_backends(failed_backend_paths)
     register_backends(backend_paths)
 
 except:

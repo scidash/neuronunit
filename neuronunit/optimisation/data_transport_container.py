@@ -82,7 +82,10 @@ class DataTC(object):
 
                             lns = np.abs(score_gene.log_norm_score)
                         except:
-                            lns = np.abs(float(score_gene.raw))
+                            if score_gene.raw is not None:
+                                lns = np.abs(float(score_gene.raw))
+                            else:
+                                lns = 100.0
                     else:
                         try:
                             lns = np.abs(float(score_gene.raw))
@@ -108,7 +111,12 @@ class DataTC(object):
 
     def dtc_to_opt_man(self):
         from neuronunit.optimisation.optimization_management import OptMan
+        from collections import OrderedDict
+        from neuronunit.optimisation.model_parameters import MODEL_PARAMS
         OM = OptMan(self.tests,self.backend)
+        OM.boundary_dict = MODEL_PARAMS[self.backend]
+        OM.backend = self.backend
+        OM.td = list(OrderedDict(OM.boundary_dict).keys())
         return OM
 
 

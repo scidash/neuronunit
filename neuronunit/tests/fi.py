@@ -144,7 +144,7 @@ class RheobaseTest(VmTest):
         spikes_one = sorted([ (k,v) for k,v in lookup.items() if v==1 ])
         #lookup2 = {k:v for k,v in lookup.items() if float(v)==1.0 }
 
-        if len(spikes_one)>=1:
+        if len(spikes_one)>=3:
             prediction['value'] = np.abs(spikes_one[0][0]*units)
             return prediction
 
@@ -332,6 +332,7 @@ class RheobaseTestP(RheobaseTest):
     #self.default_params = default_params
     params_schema = dict(VmTest.params_schema)
     params_schema.update({'tolerance': {'type': 'current', 'min': 1, 'required': False}})
+    units = pq.pA
 
 
     def generate_prediction(self, model):
@@ -386,7 +387,7 @@ class RheobaseTestP(RheobaseTest):
             sub = np.array(sorted(list(set(sub))))
             supra = np.array(sorted(list(set(supra))))
             return sub, supra
-        @dask.delayed
+        #@dask.delayed
         def check_current(dtc):
             '''
             Inputs are an amplitude to test and a virtual model
@@ -464,6 +465,8 @@ class RheobaseTestP(RheobaseTest):
             return dtc
 
         def find_rheobase(self, global_dtc):
+            units = pq.pA
+
             #if hasattr(dtc,'model_path'):
             #    assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
             # If this it not the first pass/ first generation
@@ -491,27 +494,17 @@ class RheobaseTestP(RheobaseTest):
                 dtc_clones = [d for d in dtc_clones if not np.isnan(d.ampl)]
                 set_clones = set([ float(d.ampl) for d in dtc_clones ])
                 dtc_clone = []
-                """
+
                 for dtc_local,sc in zip(dtc_clones,set_clones):
                     dtc_local = copy.copy(dtc_local)
                     dtc_local.ampl = sc*pq.pA
-                    dtc_local = check_current(dtc_local)
                     dtc_clone.append(dtc_local)
-                dtc_clone = dask.compute(*dtc_clone)
-                """
-                for dtc_local,sc in zip(dtc_clones,set_clones):
-                    dtc_local = copy.copy(dtc_local)
-                    dtc_local.ampl = sc*pq.pA
-                    #dtc_local = check_current(dtc_local)                                                                                                                                                          
-                    dtc_clone.append(dtc_local)
-                dtc_clone = Parallel(n_jobs=8)(delayed(check_current)(dtc) for dtc in dtc_clone)
-                dtc_clone = [ d.compute() for d in dtc_clone ]
+                bag = db.from_sequence(dtc_clone,npartitions=8)
+                dtc_clone = list(bag.map(check_current).compute())
+                spikes_one = sorted([ (dtc.ampl,dtc) for dtc in dtc_clone if dtc.boolean == True ])
+                if len(spikes_one)>=3:
 
-
-                smaller = sorted([ (dtc.ampl,dtc) for dtc in dtc_clone if dtc.boolean == True ])
-                if len(smaller)>=4:
-
-                    return smaller[0][1]
+                    return spikes_one[0][1]
 
 
                 for d in dtc_clone:

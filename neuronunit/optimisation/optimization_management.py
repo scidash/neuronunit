@@ -339,10 +339,10 @@ class TSD(dict):
     def to_pickleable_dict(self):
         """
         A pickleable version of instance object.
-	https://joblib.readthedocs.io/en/latest/        
+	https://joblib.readthedocs.io/en/latest/
 	"""
 
-	# This might work joblib.dump(self, filename + '.compressed', compress=True)  
+	# This might work joblib.dump(self, filename + '.compressed', compress=True)
         return {k:v for k,v in self.items() }
     '''
     def update(self,tests= None):
@@ -394,7 +394,7 @@ class TSD(dict):
                              )
         self.MU = self.DO.MU = kwargs['MU']
         self.NGEN = self.DO.NGEN = kwargs['NGEN']
-        
+
         ga_out = self.DO.run(NGEN = self.DO.NGEN)
         self.backend = kwargs['backend']
 
@@ -410,7 +410,7 @@ class TSD(dict):
         self.ga_out = ga_out
         self.DO = None # destroy this here, as its used once and not pickleable
         return self.ga_out
-        '''    
+        '''
         if type(ga_out['pf'][0].dtc) is type(None):
             _,ga_out['dtc_pop'] = self.DO.OM.test_runner(copy.copy(ga_out['pf']),self.DO.OM.td,self.DO.OM.tests)
             DM = False
@@ -491,14 +491,16 @@ def random_p(backend):
 
     random_param1 = {} # randomly sample a point in the viable parameter space.
     for k in ranges.keys():
-	# if model is Hodgkin Huxley 
-	# using a bell-curve might produce
-	# less "ringing" models.
-        #mean = np.mean(ranges[k])
-        #var = np.var(ranges[k])
-        #std = np.sqrt(var)
-        sample = random.uniform(ranges[k][0], ranges[k][1])
-        #sample = numpy.random.normal(loc=mean, scale=std/4.0, size=1)[0]
+        # if model is Hodgkin Huxley
+        # using a bell-curve might produce
+        # less "ringing" models.
+        if backend == "HH" or backend == "ADEXP":
+            mean = np.mean(ranges[k])
+            var = np.var(ranges[k])
+            std = np.sqrt(var)
+            sample = numpy.random.normal(loc=mean, scale=std/4.0, size=1)[0]
+        else:
+            sample = random.uniform(ranges[k][0], ranges[k][1])
         random_param1[k] = sample
         #print(ranges[k][0],sample,ranges[k][1])
         #if ranges[k][0]>0:
@@ -509,15 +511,16 @@ def random_p(backend):
     random_param2 = {} # randomly sample a point in the viable parameter space.
 
     for k in ranges.keys():
-	# if model is Hodgkin Huxley 
-	# using a bell-curve might produce
-	# less "ringing" models.
-        #mean = np.mean(ranges[k])
-        #var = np.var(ranges[k])
-        #std = np.sqrt(var)
-
-        #sample = numpy.random.normal(loc=mean, scale=std/4.0, size=1)[0]
-        sample = random.uniform(ranges[k][0], ranges[k][1])
+        # if model is Hodgkin Huxley
+        # using a bell-curve might produce
+        # less "ringing" models.
+        if backend == "HH" or backend == "ADEXP":
+            mean = np.mean(ranges[k])
+            var = np.var(ranges[k])
+            std = np.sqrt(var)
+            sample = numpy.random.normal(loc=mean, scale=std/4.0, size=1)[0]
+        else:
+            sample = random.uniform(ranges[k][0], ranges[k][1])
 
         random_param2[k] = sample
 
@@ -555,7 +558,7 @@ def process_rparam(backend,free_parameters):
     dsolution = DataTC(backend =backend)
     temp_model = dsolution.dtc_to_model()
     dsolution.attrs = temp_model.default_attrs
-    for k,v in rp.items(): 
+    for k,v in rp.items():
         dsolution.attrs[k] = rp[k]
     dsolution.backend = backend
     return dsolution,rp,None,random_param
@@ -680,7 +683,7 @@ def pred_only(test_and_models):
 
     else:
         pred = test.extract_features(model)
-	
+
     """
     Beware a down-stream bug fix follows.
     Resting potential injection current units set to mV, instead of Amps
@@ -846,11 +849,11 @@ def dtc_to_rheo(dtc):
         if isinstance(rtest,Iterable):
             rtest = rtest[0]
         """
-        if str("HH") in dtc.backend: 
+        if str("HH") in dtc.backend:
             rtest1 = RheobaseTestP(rtest.observation)
             dtc.rheobase = rtest1.generate_prediction(model)['value']
             return dtc
-        """    
+        """
 
         dtc.rheobase = rtest.generate_prediction(model)['value']
         return dtc
@@ -861,7 +864,10 @@ def dtc_to_rheo(dtc):
         dtc = get_rh(dtc,rtest)
     return dtc
 
+
 def setUp(model_type):
+    from neuronunit.unit_test import hide_imports
+
     backend = model_type
     with open('processed_multicellular_constraints.p','rb') as f: test_frame = pickle.load(f)
     stds = {}
@@ -876,10 +882,10 @@ def test_all_objective_test(free_parameters,model_type="RAW"):
     results = {}
     tests = {}
     OM = setUp(model_type)
-    simulated_data_tests, OM, target = OM.make_sim_data_tests(   
+    simulated_data_tests, OM, target = OM.make_sim_data_tests(
         model_type,
-        free_parameters=free_parameters, 
-        test_key=["RheobaseTest","TimeConstantTest","RestingPotentialTest","InputResistanceTest","CapacitanceTest","InjectedCurrentAPWidthTest","InjectedCurrentAPAmplitudeTest","InjectedCurrentAPThresholdTest"])  
+        free_parameters=free_parameters,
+        test_key=["RheobaseTest","TimeConstantTest","RestingPotentialTest","InputResistanceTest","CapacitanceTest","InjectedCurrentAPWidthTest","InjectedCurrentAPAmplitudeTest","InjectedCurrentAPThresholdTest"])
     stds = {}
     for k,v in simulated_data_tests.items():
         keyed = which_key(simulated_data_tests[k].observation)
@@ -897,7 +903,7 @@ def test_all_objective_test(free_parameters,model_type="RAW"):
         stds[k] = (x,mean,std)
     target.tests = simulated_data_tests
     model = target.dtc_to_model()
-    for t in simulated_data_tests.values(): 
+    for t in simulated_data_tests.values():
         score0 = t.judge(target.dtc_to_model())
         score1 = target.tests[t.name].judge(target.dtc_to_model())
         assert float(score0.score)==0.0
@@ -961,7 +967,7 @@ def inject_and_plot_passive_model(pre_model,second=None,figname=None):
         plt.title('Hodgkin-Huxley Neuron')
     else:
         plt.title('membrane potential plot Izhi model')
-    plt.plot(vm.times, vm.magnitude, c='r',label=str('target')+str(model.attrs['a']))
+    plt.plot(vm.times, vm.magnitude, c='r',label=str('target'))#+str(model.attrs['a']))
     if second is not None:
         model2 = second.dtc_to_model()
         uc = {'amplitude':-10*pq.pA,'duration':500*pq.ms,'delay':100*pq.ms}
@@ -1042,7 +1048,7 @@ def check_binary_match(dtc0,dtc1,figname=None,snippets=True):
             plt.savefig(figname)
 
     return plt
-    
+
 from neuronunit.capabilities.spike_functions import get_spike_waveforms
 def contrast(dtc0,dtc1,figname=None,snippets=True):
     matplotlib.rcParams.update({'font.size': 10})
@@ -1608,6 +1614,7 @@ def new_model(dtc):
     #model = mint_generic_model(dtc.backend)
     model.set_attrs(dtc.attrs)
     return model
+#from collections.abc import Iterable
 
 def make_stim_waves_func():
     import allensdk.core.json_utilities as json_utilities
@@ -1966,7 +1973,7 @@ def evaluate(dtc):
 def evaluate_new(dtc):
     """
     optimize against means of observations
-    don't use SciUnit lognorm score 
+    don't use SciUnit lognorm score
     NU test results are still computed
     but they are not optimized against.
     """
@@ -1982,7 +1989,7 @@ def evaluate_new(dtc):
             temp = (whole_thing['observations'] - whole_thing['predictions'])
             temp = np.abs(float(temp.simplified))
             fitness.append(temp)
-  
+
         return fitness
 
 def get_trans_list(param_dict):
@@ -2181,10 +2188,13 @@ class OptMan():
                 if type(v) is not type(None):
                     try:
                         lns = np.abs(v.log_norm_score)
-                        if lns==-np.inf:
+                        if lns==-np.inf or lns==np.inf:
                             lns = np.abs(v.score)
                     except:
-                        lns = np.abs(v.score)
+                        if type(v) is type(float()):
+                            lns = v
+                        else:
+                            lns = np.abs(v.score)
                     container[k.name].append(lns)
             for k,v in container.items():
                 try:
@@ -2192,6 +2202,9 @@ class OptMan():
                 except:
                     stats[k] = (100.0,0.0,0.0)
         stats['best_random_sum_total'] = np.min(sum_list)
+        temp = {k:v[0] for k,v in stats.items() if isinstance(v,Iterable)}
+        frame = pd.DataFrame([temp])
+        stats['frame'] = frame
         return stats
 
     def get_dummy_tests(self):
@@ -2293,7 +2306,7 @@ class OptMan():
             '''
             for k,t in dtc.tests.items():
                 assert 'std' in t.observation.keys()
-            
+
 
 
         if hasattr(dtc.tests,'keys'):# is type(dict):
@@ -2547,10 +2560,10 @@ class OptMan():
                 v = rt_out[1][k].observation
                 v['std'] = stds[k]
         simulated_data_tests = hide_imports.TSD(OM.tests)
- 
+
         target.tests = simulated_data_tests
         target = self.format_test(target)
-        for t in simulated_data_tests.values(): 
+        for t in simulated_data_tests.values():
             if 'value' in t.observation.keys() and 'mean' not in  t.observation.keys():
                 t.observation['mean'] =  t.observation['value']
             t.score_type = scores.ZScore
@@ -2607,7 +2620,7 @@ class OptMan():
             while new_tests is False:
                 dsolution,rp,_,_ = process_rparam(backend,free_parameters=free_parameters)
                 (new_tests,dtc) = self.make_simulated_observations(tests,backend,rp,dsolution=dsolution)
-     
+
                 #print(dsolution,rp,new_tests['RheobaseTest'].observation,'stuck')
                 if new_tests is False:
                     continue
@@ -2630,10 +2643,10 @@ class OptMan():
                         if float(dsolution.rheobase['value'])==0:
                             new_tests = False
                             continue
-                    else: # Rheobase is None    
+                    else: # Rheobase is None
                         new_tests = False
                         continue
-        
+
             print('Random simulated data tests made')
             target = dsolution
             #target.tests = new_tests
@@ -2690,11 +2703,11 @@ class OptMan():
             The dask bag mapping works.
             It is faster, its just not the most memory
             friendly. It will exhaust RAM on HPC
-            For MU>=150, NGEN>=150 
-            joblib has similar syntax 
-            and would probably work under same 
-            parallel circumstances without memory exhaustion  		
-            """	
+            For MU>=150, NGEN>=150
+            joblib has similar syntax
+            and would probably work under same
+            parallel circumstances without memory exhaustion
+            """
             #dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
             #dtcpop = list(dtcbag.map(self.format_test))
 
@@ -2808,7 +2821,7 @@ class OptMan():
 
 
     def preprocess(self,dtc):
-        tests = dtc.tests 
+        tests = dtc.tests
         #temp = OrderedDict({t.name:t for t in dtc.tests })
         #self.tests = temp
         #dtc.tests = tests = list(temp.values())
@@ -2839,7 +2852,7 @@ class OptMan():
                     if "RheobaseTestP" not in self.tests:
                         self.tests[k] = dtc.tests[i]
                 assert dtc.tests[i].observation['mean'] == self.tests[k].observation['mean']
-          
+
         return tests
     '''
     @dask.delayed
@@ -2917,7 +2930,7 @@ class OptMan():
         dtc.tests = self.preprocess(dtc)
         for i,_ in enumerate(dtc.tests):
             assert dtc.tests[i].observation['mean'] == dtc.tests[i].observation['mean']
-            
+
         #assert dtc.tests['APThresholdTest'].observation['mean'] == dtc.tests['APThresholdTest'].observation['mean']
 
         scores_ = []
@@ -3216,7 +3229,7 @@ class OptMan():
             dtcpops = []
             for i in xargs:
                 dtcpops.append(transform_delayed(i))
-            dtcpop = dask.compute(dtcpops)[0]
+            dtcpop = dask.compute(*dtcpops)#[0]
 
             assert len(dtcpop) == len(pop)
             for dtc in dtcpop:
@@ -3385,12 +3398,12 @@ class OptMan():
                 for d in dtcpop:
                     d = self.format_test_delayed(d)
 
-                #for d in tqdm(dtcpop,desc='NU test evaluation'): 
-                
-                for d in dtcpop: 
+                #for d in tqdm(dtcpop,desc='NU test evaluation'):
+
+                for d in dtcpop:
                     dask.delayed(d.self_evaluate())
                     lazy.append(d)
-                
+
                 dtcpop = list(dask.compute(*lazy))
                 #with Parallel(n_jobs=joblib.cpu_count) as parallel:
                 #    dtcpop = Parallel(n_jobs=joblib.cpu_count)(delayed(self.elephant_evaluation)(d) for d in dtcpop[0:2])
@@ -3405,7 +3418,7 @@ class OptMan():
 
             if not self.PARALLEL_CONFIDENT:
                 for d in dtcpop:
-                    
+
                     #figname = d.rheobase
                     #inject_and_plot_model(d,figname=str(self.backend)+str(figname))
                     assert d.rheobase is not None
@@ -3526,13 +3539,13 @@ class OptMan():
                         for i,t in enumerate(dtc.tests):
                             k = t.name
                             assert dtc.tests[i].observation['mean'] == self.tests[k].observation['mean']
-    
+
                         dtc = self.format_test(dtc)
 
                         for i,_ in enumerate(dtc.tests):
                             k = t.name
                             assert dtc.tests[i].observation['mean'] == self.tests[k].observation['mean']
-                
+
 
                         ind.dtc = dtc
 
@@ -3553,7 +3566,7 @@ class OptMan():
                         break
 
                 return pop, dtcpop
-    """        
+    """
     """
     @timer
     def update_deap_pop(self,pop, tests, td, backend = None,hc = None,boundary_dict = None, error_length=None):
@@ -3617,10 +3630,6 @@ class OptMan():
         else:
             pop = DO.set_pop(boot_new_random=number_genes)
         dtcpop_ = self.update_dtc_pop(pop)
-        #delayed = []
-        #for d in dtcpop_:
-        #    delayed.append(dask.delayed(dtc_to_rheo(d)))
-        #dtcpop_ = list(dask.compute(delayed))
         dtcbag = [ delayed(dtc_to_rheo(d)) for d in dtcpop_ ]
         dtcpop = compute(*dtcbag)
         #dtcpop_ = list(map(dtc_to_rheo,dtcpop_))
