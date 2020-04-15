@@ -7,6 +7,7 @@ import quantities as pq
 import neuronunit.capabilities as cap
 
 import neuronunit.capabilities.spike_functions as sf
+from neuronunit.optimisation.data_transport_container import DataTC
 from .static import ExternalModel
 
 class VeryReducedModel(ExternalModel,
@@ -28,13 +29,24 @@ class VeryReducedModel(ExternalModel,
         self.attrs = attrs
         self.run_number = 0
         self.tstop = None
-   
+        self.rheobse = None
+
+    def model_to_dtc(self):
+        dtc = DataTC()
+        dtc.attrs = self.attrs
+        try:
+            dtc.backend = self.get_backend()
+        except:
+            dtc.backend = self.backend
+        if hasattr(self,'rheobase'):
+            dtc.rheobase = self.rheobase
+        return dtc
 
     def inject_square_current(self, current):
         #pass
         vm = self._backend.inject_square_current(current)
         return vm
-        
+
     def get_membrane_potential(self,**run_params):
         vm = self._backend.get_membrane_potential()
         return vm

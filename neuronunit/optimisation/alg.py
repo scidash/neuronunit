@@ -47,21 +47,21 @@ def cleanse(temp):
         if hasattr(t,'dtc'):
             if "ADEXP" in t.dtc.backend or "BHH" in t.dtc.backend:
                 del t.dtc 
-        try:
-            import brian2 as b2
-            b2.clear_cache("cython")
-            del b2
-        except:
-            pass
+        # try:
+        #     import brian2 as b2
+        #     b2.clear_cache("cython")
+        #     del b2
+        # except:
+        #     pass
 
     #dtc = temp[0].dtc
     if "ADEXP" in temp[0].dtc.backend or "BHH" in temp[0].dtc.backend:
-        try:
-            import brian2 as b2
-            b2.clear_cache("cython")
-            del b2
-        except:
-            del brian2
+        # try:
+        #     import brian2 as b2
+        #     b2.clear_cache("cython")
+        #     del b2
+        # except:
+        #     del brian2
         OM = dtc.dtc_to_opt_man()
         temp_,_ = OM.boot_new_genes(len(temp),dtcpop)
         for i,t in enumerate(temp):

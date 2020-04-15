@@ -72,24 +72,24 @@ BAE1['V_REST'] = -70#*AdEx.b2.units.mV
 BAE1['ADAPTATION_TIME_CONSTANT_tau_w'] = [BAE1['ADAPTATION_TIME_CONSTANT_tau_w'] - 0.5 * np.abs(BAE1['ADAPTATION_TIME_CONSTANT_tau_w']), BAE1['ADAPTATION_TIME_CONSTANT_tau_w']+0.5*BAE1['ADAPTATION_TIME_CONSTANT_tau_w']]
 BAE1['ADAPTATION_VOLTAGE_COUPLING_a'] = [BAE1['ADAPTATION_VOLTAGE_COUPLING_a'] -0.5 * np.abs(BAE1['ADAPTATION_VOLTAGE_COUPLING_a']), BAE1['ADAPTATION_VOLTAGE_COUPLING_a']+ 0.5 * BAE1['ADAPTATION_VOLTAGE_COUPLING_a']]
 BAE1['FIRING_THRESHOLD_v_spike'] = [ BAE1['FIRING_THRESHOLD_v_spike'],BAE1['FIRING_THRESHOLD_v_spike'] ]
-BAE1['MEMBRANE_RESISTANCE_R'] = [BAE1['MEMBRANE_RESISTANCE_R']- 0.125 * np.abs(BAE1['MEMBRANE_RESISTANCE_R']), BAE1['MEMBRANE_RESISTANCE_R']*0.125 * BAE1['MEMBRANE_RESISTANCE_R']]
-BAE1['MEMBRANE_TIME_SCALE_tau_m'] = [BAE1['MEMBRANE_TIME_SCALE_tau_m'] - 0.125 * BAE1['MEMBRANE_TIME_SCALE_tau_m'], BAE1['MEMBRANE_TIME_SCALE_tau_m']+ 0.125*BAE1['MEMBRANE_TIME_SCALE_tau_m']]
-BAE1['RHEOBASE_THRESHOLD_v_rh'] = [BAE1['RHEOBASE_THRESHOLD_v_rh'] - 0.125 * BAE1['RHEOBASE_THRESHOLD_v_rh'], BAE1['RHEOBASE_THRESHOLD_v_rh']+ 0.125 * BAE1['RHEOBASE_THRESHOLD_v_rh']]
-BAE1['SHARPNESS_delta_T'] = [BAE1['SHARPNESS_delta_T']-0.125 * BAE1['SHARPNESS_delta_T'], 0.125 * BAE1['SHARPNESS_delta_T']]
+BAE1['MEMBRANE_RESISTANCE_R'] = [BAE1['MEMBRANE_RESISTANCE_R']- 0.5 * np.abs(BAE1['MEMBRANE_RESISTANCE_R']), BAE1['MEMBRANE_RESISTANCE_R']*0.125 * BAE1['MEMBRANE_RESISTANCE_R']]
+BAE1['MEMBRANE_TIME_SCALE_tau_m'] = [BAE1['MEMBRANE_TIME_SCALE_tau_m'] - 0.5 * BAE1['MEMBRANE_TIME_SCALE_tau_m'], BAE1['MEMBRANE_TIME_SCALE_tau_m']+ 0.125*BAE1['MEMBRANE_TIME_SCALE_tau_m']]
+BAE1['RHEOBASE_THRESHOLD_v_rh'] = [BAE1['RHEOBASE_THRESHOLD_v_rh'] - 0.5 * BAE1['RHEOBASE_THRESHOLD_v_rh'], BAE1['RHEOBASE_THRESHOLD_v_rh']+ 0.125 * BAE1['RHEOBASE_THRESHOLD_v_rh']]
+BAE1['SHARPNESS_delta_T'] = [BAE1['SHARPNESS_delta_T']-0.5 * BAE1['SHARPNESS_delta_T'], 0.5 * BAE1['SHARPNESS_delta_T']]
 BAE1['SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b'] = [BAE1['SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b'] -0.5 \
                                                   * BAE1['SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b'], \
                                                   BAE1['SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b'] +0.5 * BAE1['SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b']]
 BAE1['V_RESET'] = [ BAE1['V_RESET'] -0.125*np.abs(BAE1['V_RESET']),  BAE1['V_RESET']+0.125*BAE1['V_RESET']]
 BAE1['V_REST'] = [  BAE1['V_REST']-0.5*np.abs(BAE1['V_REST']),BAE1['V_REST']+0.5*BAE1['V_REST']]
 #[  BAE1['V_REST'] - 0.75*BAE1['V_REST'], BAE1['V_REST']+0.25*BAE1['V_REST']]
-BAE1['b'] = [BAE1['b'] - 0.125 * np.abs(BAE1['b']),  BAE1['b']+ 0.125 * BAE1['b']]
-BAE1['C'] = [BAE1['C']- 0.125 * np.abs(BAE1['C']), BAE1['C'] + 0.125 * BAE1['C'] ]
+BAE1['b'] = [BAE1['b'] - 0.5 * np.abs(BAE1['b']),  BAE1['b']+ 0.5 * BAE1['b']]
+BAE1['C'] = [BAE1['C']- 0.5 * np.abs(BAE1['C']), BAE1['C'] + 0.5 * BAE1['C'] ]
 
 
 BAE1['peak_v'] = [0.010, 0.060]
 
 MODEL_PARAMS['ADEXP'] = BAE1
-
+"""
 JHH = {
   'Vr':-68.9346,
   'Cm':0.0002,
@@ -101,6 +101,9 @@ JHH = {
   'gK': 0.006,
   'Vt': -63.0
 }
+
+
+
 JHH = { k:(float(v)-0.25*float(v),float(v)+0.25*float(v)) for k,v in JHH.items() }
 MODEL_PARAMS['JHH'] = JHH
 
@@ -118,11 +121,12 @@ HH_dic = { k:(float(v)-0.25*float(v),float(v)+0.25*float(v)) for k,v in HH_dic.i
 HH_dic['Vr'] = [-85,-45]
 MODEL_PARAMS['BHH'] = HH_dic
 
+"""
 
 
 #defaults = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3, \
 #		 'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -77.0, 'E_Na' : 50.0, 'vr':-65.0 }
-
+"""
 HH_attrs = {
         'E_L' : -54.387,
         'E_K' : -77.0,
@@ -133,14 +137,28 @@ HH_attrs = {
         'C_m' : 1.0,
         'vr':-65.0}
 HH_attrs['Vr'] = HH_attrs['E_L']
+"""
+
+HH_attrs = {
+        'E_L' : -65.0,
+        'E_K' : -90.0,
+        'E_Na' : 50.0,
+        'g_L' : 0.1,
+        'g_K' : 6,
+        'g_Na' : 200,
+        'C_m' : 1.0,
+        'vr':-68.9346}
+HH_attrs['Vr'] = HH_attrs['E_L']
 
 
+"""
 HH_attrs = {'g_L' : 0.3,
         'g_K' : 36,
         'g_Na' : 120,
-        'vr':-65.0}
-
-HH_dic1 = { k:(float(v)-0.25*float(v),float(v)+0.25*float(v)) for k,v in HH_attrs.items() }
+        'vr':-65.0,
+        'C_m':1.0}
+"""
+HH_dic1 = { k:(float(v)-0.5*float(v),float(v)+0.5*float(v)) for k,v in HH_attrs.items() }
 
 MODEL_PARAMS['HH'] = HH_dic1
 
