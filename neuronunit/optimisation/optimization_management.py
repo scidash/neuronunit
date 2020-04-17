@@ -26,15 +26,7 @@ matplotlib.rcParams.update({'font.size': 12})
 import cython
 import logging
 mpl = matplotlib
-'''
-mpl.rcParams['figure.figsize'] = [8.0, 6.0]
-mpl.rcParams['figure.dpi'] = 80
-mpl.rcParams['savefig.dpi'] = 100
 
-mpl.rcParams['font.size'] = 12
-mpl.rcParams['legend.fontsize'] = 'large'
-mpl.rcParams['figure.titlesize'] = 'medium'
-'''
 # optional imports
 
 
@@ -43,6 +35,8 @@ mpl.rcParams['figure.titlesize'] = 'medium'
 # the parallel_confident static variable is declared false
 # This converts parallel mapping functions to serial mapping functions.
 # scheduled Parallel mapping functions cannot tolerate being paused, serial ones can.
+
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -51,8 +45,6 @@ import dask.delayed as delay
 import pandas as pd
 import pickle
 import dask
-# The rheobase has been obtained seperately and cannot be db mapped.
-# Nested DB mappings dont work.
 import multiprocessing
 npartitions = multiprocessing.cpu_count()
 from sklearn.model_selection import ParameterGrid
@@ -105,6 +97,11 @@ try:
     from sklearn.cluster import KMeans
 except:
     warnings.warn('SKLearn library not available, consider installing')
+from sciunit import TestSuite
+
+
+import sciunit
+import deap
 
 import time
 import seaborn as sns
@@ -115,7 +112,7 @@ import pdb
 import quantities as pq
 from sciunit import scores
 import random
-from neuronunit.plottools import elaborate_plots
+#from neuronunit.plottools import elaborate_plots
 
 # Helper tests are dummy instances of NU tests.
 # They are used by other methods analogous to a base class,
@@ -125,10 +122,17 @@ import os
 import neuronunit
 anchor = neuronunit.__file__
 anchor = os.path.dirname(anchor)
-mypath = os.path.join(os.sep,anchor,'tests/multicellular_constraints.p')
+try:
+    mypath = os.path.join(os.sep,anchor,'tests/multicellular_constraints.p')
+except:
+    from neuronunit import get_neab
+    get_neab.process_all_cells()
+    # TODO 
+    # pickle and create path in try.
+
 
 #quantities.pq.PREFERRED = [pq.mV, pq.pA, pq.UnitQuantity('femtocoulomb', 1e-15*pq.C, 'fC')]
-import sciunit
+
 sciunit.utils.settings['LOGGING'] = False
 VERBOSE = False
 def timer(func):
@@ -145,68 +149,54 @@ def timer(func):
             logging.info('Runtime taken to evaluate function {1} {0} seconds'.format(t2-t1,func))
         return f
     return inner
-import deap
-'''
-class WeightedSumFitness(deap.base.Fitness):
-
-    """Fitness that compares by weighted sum"""
-
-    def __init__(self, values=(), obj_size=None):
-        self.weights = [1.0] * obj_size if obj_size is not None else [1]
-
-        super(WeightedSumFitness, self).__init__(values)
-        #obj_size=len(values)
-
-    @property
-    def weighted_sum(self):
-        """Weighted sum of wvalues"""
-        return sum(self.wvalues)
-
-    @property
-    def sum(self):
-        """Weighted sum of values"""
-        return sum(self.values)
-
-    @property
-    def norm(self):
-        """Frobenius norm of values"""
-        return numpy.linalg.norm(self.values)
-
-    def __le__(self, other):
-        return self.weighted_sum <= other.weighted_sum
-
-    def __lt__(self, other):
-        return self.weighted_sum < other.weighted_sum
-
-    def __deepcopy__(self, _):
-        """Override deepcopy"""
-
-        cls = self.__class__
-        result = cls.__new__(cls)
-        result.__dict__.update(self.__dict__)
-        return result
-'''
 
 
 
-class WSListIndividual(list):
-    #from neuronunit.optimisation.optimisations import WeightedSumFitness
-
-    """Individual consisting of list with weighted sum field"""
-    def set_fitness(self,obj_size):
-        self.fitness = WeightedSumFitness(obj_size=obj_size)
-    def __init__(self, *args, **kwargs):
-        """Constructor"""
-        self.rheobase = None
-        if 'dtc' in kwargs:
-           self.dtc = kwargs['dtc']
-        else:
-           self.dtc = None
-        super(WSListIndividual, self).__init__(args)#args)#, **kwargs)
-        self.obj_size = len(args)
-        #self.fitness = tuple(1.0 for i in range(0,self.obj_size))
-        self.set_fitness(obj_size=self.obj_size)
-
+def setUp(model_type):
+    backend = model_type
+    with open('processed_multicellular_constraints.p','rb') as f: test_frame = pickle.load(f)
+    stds = {}
+    for k,v in TSD(test_frame['Neocortex pyramidal cell layer 5-6']).items():
+        temp = TSD(test_frame['Neocortex pyramidal cell layer 5-6'])[k]
+        stds[k] = temp.observation['std']
+    cloned_tests = copy.copy(test_frame['Neocortex pyramidal cell layer 5-6'])
+    cloned_tests = TSD(cloned_tests)
+    #{'RestingPotentialTest':cloned_tests['RestingPotentialTest']}
+    OM = jrt(cloned_tests,backend,protocol='elephant')
+    return OM
+def test_all_objective_test(free_parameters,model_type="RAW"):
+    results = {}
+    tests = {}
+    OM = setUp(model_type)
+    simulated_data_tests, OM, target = OM.make_sim_data_tests(   
+        model_type,
+        free_parameters=free_parameters, 
+        test_key=["RheobaseTest","TimeConstantTest","RestingPotentialTest","InputResistanceTest","CapacitanceTest","InjectedCurrentAPWidthTest","InjectedCurrentAPAmplitudeTest","InjectedCurrentAPThresholdTest"])  
+    stds = {}
+    for k,v in simulated_data_tests.items():
+        keyed = which_key(simulated_data_tests[k].observation)
+        if k == str('RheobaseTest'):
+            mean = simulated_data_tests[k].observation[keyed]
+            std = simulated_data_tests[k].observation['std']
+            x = np.abs(std/mean)
+        if k == str('TimeConstantTest') or k == str('CapacitanceTest') or k == str('InjectedCurrentAPWidthTest'):
+            # or k == str('InjectedCurrentAPWidthTest'):
+            mean = simulated_data_tests[k].observation[keyed]
+            simulated_data_tests[k].observation['std'] = np.abs(mean)*2.0
+        elif k == str('InjectedCurrentAPThresholdTest') or k == str('InjectedCurrentAPAmplitudeTest'):
+            mean = simulated_data_tests[k].observation[keyed]
+            simulated_data_tests[k].observation['std'] = np.abs(mean)*2.0
+        stds[k] = (x,mean,std)
+    target.tests = simulated_data_tests
+    model = target.dtc_to_model()
+    for t in simulated_data_tests.values(): 
+        score0 = t.judge(target.dtc_to_model())
+        score1 = target.tests[t.name].judge(target.dtc_to_model())
+        assert float(score0.score)==0.0
+        assert float(score1.score)==0.0
+    tests = TSD(copy.copy(simulated_data_tests))
+    check_tests = copy.copy(tests)
+    return tests, OM, target
 
 def make_ga_DO(explore_edges, max_ngen, test, \
         free_parameters = None, hc = None,
@@ -252,62 +242,6 @@ def make_ga_DO(explore_edges, max_ngen, test, \
 
     return DO
 
-from sciunit import TestSuite
-'''
-class TSS(TestSuite):
-    def __init__(self,tests={},use_rheobase_score=False):
-       self.DO = None
-       tt = list(tests.values())[0:-1]
-       super(TSS,self).__init__(tt)
-       #self.update(tests)
-       if 'name' in self.keys():
-           self.cell_name = tests['name']
-           self.pop('name',None)
-       else:
-           self.cell_name = 'simulated data'
-
-       self.use_rheobase_score = use_rheobase_score
-       self.elaborate_plots  = elaborate_plots
-       self.backend = None
-
-
-    def optimize(self,param_edges,backend=None,protocol={'allen': False, 'elephant': True},\
-        MU=5,NGEN=5,free_parameters=None,seed_pop=None,hold_constant=None):
-        if type(free_parameters) is type(None):
-            free_parameters=param_edges.keys()
-        self.DO = make_ga_DO(param_edges, NGEN, self, free_parameters=free_parameters, \
-                           backend=backend, MU = 8,  protocol=protocol,seed_pop = seed_pop, hc=hold_constant)
-        self.MU = None
-        self.NGEN = None
-        self.MU = self.DO.MU = MU
-        self.NGEN = self.DO.NGEN = NGEN
-
-        ga_out = self.DO.run(NGEN = self.DO.NGEN)
-        ga_out['DO'] = self.DO
-        if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
-            _,dtc_pop = self.DO.OM.test_runner(copy.copy(ga_out['pf']),self.DO.OM.td,self.DO.OM.tests)
-            ga_out['dtc_pop'] = dtc_pop
-        if type(ga_out['pf'][0].dtc) is type(None):
-            _,ga_out['dtc_pop'] = self.DO.OM.test_runner(copy.copy(ga_out['pf']),self.DO.OM.td,self.DO.OM.tests)
-            # druckman tests can optionally be run on optimized cells here.
-            DM = False
-            if DM:
-                pop,dtcpop = get_dm(ga_out['dtc_pop'],pop=ga_out['pf'])
-        else:
-            local = [p.dtc for p in ga_out['pf']]
-            #ga_out['dtc_pop'] = [ i.dtc for i in ga_out['pf'] ]
-            DM = False
-            if DM:
-                pop,dtcpop = get_dm(local,pop=ga_out['pf'])
-            #p in ga_out['pf']],pop=ga_out['pf'])
-
-        self.backend = backend
-        if str(self.cell_name) not in str('simulated data'):
-            #pass
-            # is this a data driven test? if so its worth plotting results
-            ga_out = self.elaborate_plots(self,ga_out)
-        return ga_out, self.DO
-'''
 class TSD(dict):
     """
     Test Suite Dictionary class
@@ -339,18 +273,11 @@ class TSD(dict):
     def to_pickleable_dict(self):
         """
         A pickleable version of instance object.
-	https://joblib.readthedocs.io/en/latest/
-	"""
+        https://joblib.readthedocs.io/en/latest/
+        """
 
-	# This might work joblib.dump(self, filename + '.compressed', compress=True)
+        # This might work joblib.dump(self, filename + '.compressed', compress=True)
         return {k:v for k,v in self.items() }
-    '''
-    def update(self,tests= None):
-        if tests is None:
-            self.DO.OM.tests = self
-        else:
-            self.DO.OM.tests = tests
-    '''
 
     def optimize(self,**kwargs):
         defaults = {'param_edges':None,
@@ -410,20 +337,6 @@ class TSD(dict):
         self.ga_out = ga_out
         self.DO = None # destroy this here, as its used once and not pickleable
         return self.ga_out
-        '''
-        if type(ga_out['pf'][0].dtc) is type(None):
-            _,ga_out['dtc_pop'] = self.DO.OM.test_runner(copy.copy(ga_out['pf']),self.DO.OM.td,self.DO.OM.tests)
-            DM = False
-            if DM:
-                pop,dtcpop = get_dm(ga_out['dtc_pop'],pop=ga_out['pf'])
-        else:
-            local = [p.dtc for p in ga_out['pf']]
-            DM = False
-            if DM:
-                pop,dtcpop = get_dm(local,pop=ga_out['pf'])
-        #random_search(dtc,500)
-        # make ga_out pickleable by cleansing sciunit and deap objects
-        '''
 
     def display(self):
         from IPython.display import display
@@ -498,15 +411,10 @@ def random_p(backend):
             mean = np.mean(ranges[k])
             var = np.var(ranges[k])
             std = np.sqrt(var)
-            sample = numpy.random.normal(loc=mean, scale=std/4.0, size=1)[0]
+            sample = numpy.random.normal(loc=mean, scale=std/1.5, size=1)[0]
         else:
             sample = random.uniform(ranges[k][0], ranges[k][1])
         random_param1[k] = sample
-        #print(ranges[k][0],sample,ranges[k][1])
-        #if ranges[k][0]>0:
-        #    assert ranges[k][0]<sample<ranges[k][1]
-        #if ranges[k][0]<0:
-        #    assert ranges[k][0]>sample>ranges[k][1] or ranges[k][1]>sample> ranges[k][0]
 
     random_param2 = {} # randomly sample a point in the viable parameter space.
 
@@ -518,18 +426,12 @@ def random_p(backend):
             mean = np.mean(ranges[k])
             var = np.var(ranges[k])
             std = np.sqrt(var)
-            sample = numpy.random.normal(loc=mean, scale=std/4.0, size=1)[0]
+            sample = numpy.random.normal(loc=mean, scale=std/1.5, size=1)[0]
         else:
             sample = random.uniform(ranges[k][0], ranges[k][1])
 
         random_param2[k] = sample
-
-
-        #if ranges[k][0]>0:
-        #    assert ranges[k][0]<sample<ranges[k][1]
-        #if ranges[k][0]<0:
-        #    assert ranges[k][0]>sample>ranges[k][1] or ranges[k][1]>sample> ranges[k][0]
-
+    # a check of randomness:
     assert set(random_param1.values()) is not set(random_param2.values())
     return random_param1
 
@@ -569,38 +471,6 @@ def check_test(new_tests):
             replace = True
             return replace
 
-'''
-def score_only(dtc,pred,test):
-    if pred is not None:
-        if hasattr(dtc,'prediction'):# is not None:
-            dtc.prediction[test.name] = pred
-            dtc.observation[test.name] = test.observation['mean']
-
-        else:
-            dtc.prediction = None
-            dtc.observation = None
-            dtc.prediction = {test.name: pred}
-            dtc.observation = {test.name: test.observation['mean']}
-
-        #dtc.prediction = pred
-        score = test.compute_score(obs,pred)
-        if not hasattr(dtc,'agreement'):
-            dtc.agreement = None
-            dtc.agreement = {}
-        try:
-            dtc.agreement[str(test.name)] = np.abs(test.observation['mean'] - pred['mean'])
-        except:
-            try:
-                dtc.agreement[str(test.name)] = np.abs(test.observation['value'] - pred['value'])
-            except:
-                try:
-                    dtc.agreement[str(test.name)] = np.abs(test.observation['mean'] - pred['value'])
-                except:
-                    pass
-    else:
-        score = None
-    return score, dtc
-'''
 # this method is not currently used, but it could also be too prospectively usefull to delete.
 # TODO move to a utils file.
 
@@ -620,7 +490,7 @@ def get_centres(ga_out):
     X_labels = all_val[list(all_val.keys())[0]].keys()
     df1 = pd.DataFrame(X)
     X = np.array(X)
-    est = KMeans(n_clusters=3)
+    est = KMeans(n_clusters=1)
     est.fit(X)
     y_kmeans = est.predict(X)
     centers = est.cluster_centers_
@@ -634,7 +504,6 @@ def mint_generic_model(backend):
     model = dtc.to_model()
     return model
 
-import pandas as pd
 
 def save_models_for_justas(dtc):
     with open(str(list(dtc.attrs.values()))+'.csv', 'w') as writeFile:
@@ -694,58 +563,25 @@ def pred_only(test_and_models):
         assert test.params['injected_square_current']['amplitude'].units == pq.pA
     return pred
 
-#from functools import partial
-#t2m = partial(_pseudo_decor, argument=arg)
+import pandas as pd
 
-#@_pseudo_decor
-"""
-@timer
-def bridge_judge(test_and_dtc):
-    (test, dtc) = test_and_dtc
-    obs = test.observation
-    backend_ = dtc.backend
-    model = dtc.dtc_to_model()
-    model.set_attrs(dtc.attrs)
-    if test.passive:
-        test.setup_protocol(model)
-        pred = test.extract_features(model,test.get_result(model))
-    else:
-        pred = test.generate_prediction(model)
-    dtc.predictions[test.name] = pred
-    dtc.observations[test.name] = test.observation
-    if 'mean' in dtc.observations.keys():
-        temp = copy.copy(dtc.observations[test.name]['mean'].simplified)
-        dtc.observations[test.name]['mean'] = temp
-        temp = copy.copy(dtc.predictions[test.name]['mean'].simplified)
-    if 'mean' in pred.keys():
-        dtc.predictions[test.name]['value'] = pred['mean']
 
-    if type(pred) is not type(None):
-        score = test.compute_score(test.observation,pred)
-
-    return score, dtc
-"""
 def bridge_dm_test(test_and_dtc):
     (test, dtc) = test_and_dtc
-
     pred_dm = nuunit_dm_rheo_evaluation(dtc)
     if pred_dm.dm_test_features['AP1AmplitudeTest'] is not None:
         width = pred_dm.dm_test_features['AP1WidthHalfHeightTest']
         width_obs = {'mean': width}
         width_obs['std'] = 1.0
         width_obs['n'] = 1
-
         height = pred_dm.dm_test_features['AP1AmplitudeTest'][0]
         height_obs = {'mean': height}
         height_obs['std'] = 1.0
         height_obs['n'] = 1
         if str('InjectedCurrentAPWidthTest') in test.name:
-
             score = test.compute_score(test.observation,width_obs)
             return score, dtc
-
         elif str('InjectedCurrentAPAmplitudeTest') in test.name:
-
             score = test.compute_score(test.observation,height_obs)
             return score, dtc
 
@@ -865,53 +701,6 @@ def dtc_to_rheo(dtc):
     return dtc
 
 
-def setUp(model_type):
-    from neuronunit.unit_test import hide_imports
-
-    backend = model_type
-    with open('processed_multicellular_constraints.p','rb') as f: test_frame = pickle.load(f)
-    stds = {}
-    for k,v in hide_imports.TSD(test_frame['Neocortex pyramidal cell layer 5-6']).items():
-        temp = hide_imports.TSD(test_frame['Neocortex pyramidal cell layer 5-6'])[k]
-        stds[k] = temp.observation['std']
-    cloned_tests = copy.copy(test_frame['Neocortex pyramidal cell layer 5-6'])
-    cloned_tests = hide_imports.TSD(cloned_tests)
-    OM = jrt(cloned_tests,backend,protocol='elephant')
-    return OM
-def test_all_objective_test(free_parameters,model_type="RAW"):
-    results = {}
-    tests = {}
-    OM = setUp(model_type)
-    simulated_data_tests, OM, target = OM.make_sim_data_tests(
-        model_type,
-        free_parameters=free_parameters,
-        test_key=["RheobaseTest","TimeConstantTest","RestingPotentialTest","InputResistanceTest","CapacitanceTest","InjectedCurrentAPWidthTest","InjectedCurrentAPAmplitudeTest","InjectedCurrentAPThresholdTest"])
-    stds = {}
-    for k,v in simulated_data_tests.items():
-        keyed = which_key(simulated_data_tests[k].observation)
-        if k == str('RheobaseTest'):
-            mean = simulated_data_tests[k].observation[keyed]
-            std = simulated_data_tests[k].observation['std']
-            x = np.abs(std/mean)
-        if k == str('TimeConstantTest') or k == str('CapacitanceTest') or k == str('InjectedCurrentAPWidthTest'):
-            # or k == str('InjectedCurrentAPWidthTest'):
-            mean = simulated_data_tests[k].observation[keyed]
-            simulated_data_tests[k].observation['std'] = np.abs(mean)*2.0
-        elif k == str('InjectedCurrentAPThresholdTest') or k == str('InjectedCurrentAPAmplitudeTest'):
-            mean = simulated_data_tests[k].observation[keyed]
-            simulated_data_tests[k].observation['std'] = np.abs(mean)*2.0
-        stds[k] = (x,mean,std)
-    target.tests = simulated_data_tests
-    model = target.dtc_to_model()
-    for t in simulated_data_tests.values():
-        score0 = t.judge(target.dtc_to_model())
-        score1 = target.tests[t.name].judge(target.dtc_to_model())
-        assert float(score0.score)==0.0
-        assert float(score1.score)==0.0
-    tests = hide_imports.TSD(copy.copy(simulated_data_tests))
-    check_tests = copy.copy(tests)
-    return tests, OM, target
-
 
 def mint_NEURON_model(dtc):
     LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
@@ -1011,18 +800,12 @@ def check_binary_match(dtc0,dtc1,figname=None,snippets=True):
 
         snippets1 = get_spike_waveforms(vm1)
         snippets0 = get_spike_waveforms(vm0)
-
-        #dtc.snippets = snippets_
         plt.plot(snippets0.times,snippets0.magnitude,label=str('model type: '))#+label)#,label='ground truth')
-
         plt.plot(snippets1.times,snippets1.magnitude,label=str('model type: '))#+label)#,label='ground truth')
         if dtc0.backend in str("HH"):
             plt.title('Check for waveform Alignment')
         else:
             plt.title('membrane potential plot')
-        #plt.plot(vm0.times, vm0.magnitude,label="target")
-        #for v in vms:
-        #plt.plot(vm1.times, vm1.magnitude,label="solutions")
         plt.ylabel('V (mV)')
         plt.legend(loc="upper left")
 
@@ -1133,17 +916,18 @@ def score_proc(dtc,t,score):
     return dtc
 
 def jrt(use_test,backend,protocol='elephant'):
-    import hide_imports
-    use_test = hide_imports.TSD(use_test)
+    #import hide_imports
+    from neuronunit.optimisation import model_parameters
+    use_test = TSD(use_test)
     use_test.use_rheobase_score = True
-    edges = hide_imports.model_parameters.MODEL_PARAMS[backend]
+    edges = model_parameters.MODEL_PARAMS[backend]
     if protocol is 'elephant':
-        OM = hide_imports.OptMan(use_test,
+        OM = OptMan(use_test,
             backend=backend,
             boundary_dict=edges,
             protocol={'allen': False, 'elephant': True})
     else:
-        OM = hide_imports.OptMan(use_test,
+        OM = OptMan(use_test,
             backend=backend,
             boundary_dict=edges,
             protocol={'allen': True, 'elephant': False})
@@ -1158,7 +942,8 @@ def switch_logic(xtests):
     try:
         aTSD = TSD()
     except:
-        #basically an object defined in this file:
+        #basically an object defined in the currently inhabited file:
+        # mystery why above won't work.
         aTSD = neuronunit.optimisation.optimization_management.TSD()
 
     if type(xtests) is type(aTSD):
@@ -1205,15 +990,6 @@ def active_values(keyed,rheobase,square = None):
             keyed['injected_square_current']['amplitude'] = float(rheobase['value'])*pq.pA
         else:
             keyed['injected_square_current']['amplitude'] = rheobase
-    """
-        #keyed['injected_square_current']['delay'] = DELAY
-        #keyed['injected_square_current']['duration'] = DURATION
-
-    else:
-        keyed['injected_square_current']['duration'] = square['Time_End'] - square['Time_Start']
-        keyed['injected_square_current']['delay'] = square['Time_Start']
-        keyed['injected_square_current']['amplitude'] = square['prediction']#value'])*pq.pA
-    """
     return keyed
 
 
@@ -1238,27 +1014,12 @@ def neutral_values(keyed):
 
 
 
-'''
-def allocate_worst(xtests,dtc):
-    # If the model fails tests, and cannot produce model driven data
-    # Allocate the worst score available.
-    if not hasattr(dtc,'scores'):
-        dtc.scores = {}
-    if type(dtc.scores) is type(None):
-        dtc.scores = {}
-    for t in xtests:
-        dtc.scores[str(t.name)] = 100.0
-
-    return dtc
-'''
-
-
 
 def sigmoid(x):
     return math.exp(-np.logaddexp(0, -x))
 
 import copy
-
+'''
 def get_dtc_pop(contains_dtcpop,filtered_tests,model_parameters,backend = 'ADEXP'):
     from neuronunit.optimisation.optimisations import SciUnitOptimisation
 
@@ -1290,7 +1051,7 @@ def get_dtc_pop(contains_dtcpop,filtered_tests,model_parameters,backend = 'ADEXP
 
         dtcdic[k] = copy.copy(dtcpop)
     return dtcdic, DO
-
+'''
 def allen_wave_predictions(vm30):
     dtc = DataTC()
     try:
@@ -1948,18 +1709,6 @@ def evaluate_allen(dtc):
     else:
         fitness[int_] = dtc.ascores[str(t)]
     return tuple(fitness,)
-"""
-def evaluate_sm(dtc,regularization=False,elastic_net=False):
-    # assign worst case errors, and then over write them with situation informed errors as they become available.
-
-    if not hasattr(dtc,str('SA')):
-        return fitness
-    fitness = []
-    for key,value in zip(dtc.SA.keys(),dtc.SA.values()):
-        fitness.append(float(value))
-    return tuple(fitness,)
-"""
-#@dask.delayed
 
 def evaluate(dtc):
     # assign worst case errors, and then over write them with situation informed errors as they become available.
@@ -2092,15 +1841,6 @@ from dask import compute, delayed
 def get_dm(dtcpop,pop=None):
     if PARALLEL_CONFIDENT:
         NPART = min(npartitions,len(dtcpop))
-        #@delayed
-        #nuunit_dm_evaluationd = nuunit_dm_evaluation
-
-        #dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
-        #dtcpop = list(dtcbag.map(nuunit_dm_evaluation).compute())
-        #dtcbag = []
-        #for d in dtcpop:
-        #    dtcbag.append(delayed(nuunit_dm_evaluation(d)))
-
         dtcbag = [ delayed(nuunit_dm_evaluation(d)) for d in dtcpop ]
         dtcpop = compute(*dtcbag)
 
@@ -2141,15 +1881,10 @@ class OptMan():
         self.protocol = protocol
         self.julia = False
         self.NGEN = None
-        #self.simulated_data_tests = self.round_trip_test
-        # note this is not effective at changing parallel behavior yet
-        #if PARALLEL_CONFIDENT not in globals():
         if self.backend is "RAW" or self.backend is "HH":
             self.PARALLEL_CONFIDENT = True
         else:
             self.PARALLEL_CONFIDENT = False
-        #else:
-        #    self.PARALLEL_CONFIDENT = PARALLEL_CONFIDENT
         if verbosity is None:
             self.verbose = 0
         else:
@@ -2160,16 +1895,15 @@ class OptMan():
     def random_search(self,dtc,search_size):
         pop,dtcpop = self.boot_new_genes(search_size,dtc)
         dtcpop = [d for d in dtcpop if type(d.rheobase) is not type(None)]
-        #for d in dtcpop: print(d.attrs)
         for d in dtcpop:
             d.tests = self.tests
-
         OM = dtcpop[0].dtc_to_opt_man()
-        #if __name__ == '__main__':
         try:
+            # Memory friendly
             dtcbag = [ delayed(self.elephant_evaluation(OM.format_test(d))) for d in dtcpop ]
             dtcpop = compute(*dtcbag)
         except:
+            # Speed friendly
             dtcbag = [ delayed(OM.format_test(d)) for d in dtcpop ]
             dtcpop = compute(*dtcbag)
             dtcbag = [ delayed(d.self_evaluate()) for d in dtcpop ]
@@ -2278,9 +2012,7 @@ class OptMan():
                 v.params['injected_square_current']['amplitude'] = temp['injected_square_current']['amplitude']
                 v.params['injected_square_current']['delay'] = v.params['delay']
                 v.params['injected_square_current']['duration'] = v.params['duration']
-                #(Pdb) t.params['injected_square_current']['delay'] = t.params['delay']
-                #(Pdb) t.params['injected_square_current']['duration'] = t.params['duration']
-                #temp['injected_square_current']['amplitude']
+                
         return dtc
 
     @cython.boundscheck(False)
@@ -2297,17 +2029,8 @@ class OptMan():
         if not hasattr(dtc,'tests'):
             dtc.tests = copy.copy(self.tests)
         if isinstance(dtc.tests,type(dict())):
-            '''
-            for k,t in dtc.tests.items():
-                if 'std' not in t.observation.keys():
-                    temp = k
-                    break
-            dtc.tests.pop(temp,None)
-            '''
             for k,t in dtc.tests.items():
                 assert 'std' in t.observation.keys()
-
-
 
         if hasattr(dtc.tests,'keys'):# is type(dict):
             tests = [key for key in dtc.tests.values()]
@@ -2355,42 +2078,7 @@ class OptMan():
         dtc_ = self.update_dtc_pop(gene)#,self.td)
         #dtc_ = pop2dtc(gene,dtc_)
         return gene[0], dtc_[0]
-    '''
-    def optimize(self,free_parameters=None,NGEN=10,MU=10,seed_pop=None,hold_constant=None):
-        from neuronunit.optimisation.optimisations import run_ga
-        from neuronunit.optimisation import model_parameters
 
-        subset = OrderedDict()
-        if type(free_parameters) is type(None):
-            if type(self.boundary_dict) is type(None):
-                ranges = model_parameters.MODEL_PARAMS[backend]
-            else:
-                ranges = self.boundary_dict
-
-            free_parameters = list(ranges.keys())
-
-        if type(hold_constant) is type(None):
-            temp = copy.copy(self.boundary_dict)
-            for k in free_parameters:
-                temp.pop(k,None)
-            if len(temp)==0:
-                hold_constant = None
-            else:
-                hold_constant = temp
-            for k,v in hold_constant.items():
-                hold_constant[k] = np.mean(v)
-
-
-        ga_out,DO = run_ga(self.boundary_dict, NGEN, self.tests, \
-                           free_parameters=free_parameters, \
-                           backend=self.backend, \
-                           MU = MU,  \
-                           protocol=self.protocol\
-                           ,seed_pop = seed_pop,\
-                           hc=hold_constant)
-        self.DO = DO
-        return ga_out
-    '''
     def run_simple_grid(self,npoints=10,free_parameters=None):
         self.exhaustive = True
         from neuronunit.optimisation.exhaustive_search import sample_points, add_constant, chunks
@@ -2810,21 +2498,17 @@ class OptMan():
                 df.iloc[l][i] = np.sum(list(j.SA.values))/len(list(j.SA.values))
 
         return df
-    #@timer
+
     def pred_std(self,pred,t):
         take_anything = list(pred.values())[0]
         if take_anything is None or type(take_anything) is type(int()):
             take_anything = list(pred.values())[1]
 
-        #pred['std'] = t.observation['std']# 15*take_anything.magnitude * take_anything.units
         return pred
 
 
     def preprocess(self,dtc):
         tests = dtc.tests
-        #temp = OrderedDict({t.name:t for t in dtc.tests })
-        #self.tests = temp
-        #dtc.tests = tests = list(temp.values())
         if isinstance(tests,type(dict())):
             tests = list(tests.values())
         if isinstance(dtc.rheobase,type(None)) or type(dtc.rheobase) is type(None):
@@ -2832,8 +2516,6 @@ class OptMan():
         else:
             for t in tests:
                 k = str(t.name)
-
-
                 try:
                     assert hasattr(self,'use_rheobase_score')
                 except:
@@ -2854,68 +2536,6 @@ class OptMan():
                 assert dtc.tests[i].observation['mean'] == self.tests[k].observation['mean']
 
         return tests
-    '''
-    @dask.delayed
-    def elephant_evaluation_delayed_old(self,dtc):
-        # Inputs single data transport container modules, and neuroelectro observations that
-        # inform test error error_criterion
-        # Outputs Neuron Unit evaluation scores over error criterion
-        model = dtc.dtc_to_model()
-        if not hasattr(dtc,'scores') or dtc.scores is None:
-            dtc.scores = None
-            dtc.scores = {}
-            if hasattr(dtc,'SA'):
-                pass
-        dtc.tests = self.preprocess(dtc)
-        scores_ = []
-        suite = TestSuite(dtc.tests)
-
-        for t in suite:
-            if 'RheobaseTest' in t.name: t.score_type = sciunit.scores.ZScore
-            if 'RheobaseTestP' in t.name: t.score_type = sciunit.scores.ZScore
-            if 'mean' not in t.observation.keys():
-                t.observation['mean'] = t.observation['value']
-                if dtc.backend is str("HH"):
-                    import pdb
-                    pdb.set_trace()
-                #try:
-            score = t.judge(model)
-            if isinstance(score, sciunit.scores.incomplete.InsufficientDataScore):
-                score = t.judge(model)
-            #score_ = np.abs(score.log_norm_score)
-            #if score_ == np.inf:
-            score_ = float(np.abs(score.raw))
-            scores_.append(score_)
-
-
-        #import pdb
-        for i,s in enumerate(scores_):
-            if s==np.inf or s==-np.inf:
-                scores_[i] = 100.0
-            if not isinstance(s,type(float())):
-                s = 100.0
-
-        dtc.SA = ScoreArray(dtc.tests, scores_)
-
-
-        obs = {}
-        pred = {}
-        temp = {t.name:t for t in dtc.tests if hasattr(t,'prediction')}
-        if dtc.rheobase is not None:
-            similarity,lps,rps =  self.closeness(temp,temp)
-            scores_ = {}
-            for k,p,o in zip(list(similarity.keys()),lps,rps):
-                obs[k] = o
-                pred[k] = p
-                if hasattr(dtc.SA[k],'score'):
-                    scores_[k] = dtc.SA[k].score
-                else:
-                    scores_[k] = dtc.SA[k]
-            scores_["total"] = np.sum([ np.abs(v) for v in scores_.values()])
-            dtc.obs_preds = pd.DataFrame([obs,pred,scores_],index=['observations','predictions','scores'])
-            assert dtc.SA is not None
-        return dtc
-    '''
     def elephant_evaluation(self,dtc):
         # Inputs single data transport container modules, and neuroelectro observations that
         # inform test error error_criterion
@@ -2931,8 +2551,6 @@ class OptMan():
         for i,_ in enumerate(dtc.tests):
             assert dtc.tests[i].observation['mean'] == dtc.tests[i].observation['mean']
 
-        #assert dtc.tests['APThresholdTest'].observation['mean'] == dtc.tests['APThresholdTest'].observation['mean']
-
         scores_ = []
         suite = TestSuite(dtc.tests)
         for t in suite:
@@ -2946,7 +2564,6 @@ class OptMan():
                 score_gene = None
                 lns = 200.0
 
-            #   score_ = np.abs(1.0-score_gene.norm_score)
             if not isinstance(type(score_gene),type(None)):
                 if not isinstance(type(score_gene),sciunit.scores.InsufficientDataScore):
                     try:
@@ -2955,8 +2572,6 @@ class OptMan():
                         lns = 200.0
                 else:
                     lns = np.abs(float(score_gene.raw))
-
-
             scores_.append(lns)
 
         for i,s in enumerate(scores_):
@@ -3016,6 +2631,9 @@ class OptMan():
                 t.observation['mean'] = t.observation['value']
 
             score_gene = t.judge(model)
+
+            # All this nested uglyness can go away by making log_norm_score more robust.
+
             if not isinstance(type(score_gene),type(None)):
                 if not isinstance(type(score_gene),sciunit.scores.InsufficientDataScore):
                     if not isinstance(type(score_gene.log_norm_score),type(None)):
@@ -3023,18 +2641,18 @@ class OptMan():
 
                             lns = np.abs(score_gene.log_norm_score)
                         except:
+                            # works 1/2 time that log_norm_score does not work
+                            # more informative than nominal bad score 100
                             lns = np.abs(score_gene.raw)
-
-                            print('try to make lns here')
                     else:
-
+                        # works 1/2 time that log_norm_score does not work
+                        # more informative than nominal bad score 100
+ 
                         lns = np.abs(score_gene.raw)
                 else:
                     pass
 
             scores_.append(lns)
-        #import pdb
-        #pdb.set_trace()
         for i,s in enumerate(scores_):
             if s==np.inf:
                 scores_[i] = 100 #np.abs(float(score_gene.raw))
@@ -3067,8 +2685,6 @@ class OptMan():
         return pop, dtc
     @timer
     def make_simulated_observations(self,original_test_dic,backend,random_param,dsolution=None):
-        #self.simulated_obs = True
-        # to be used in conjunction with round_trip_test below.
 
         dtc = dsolution
         if self.protocol['elephant']:
@@ -3082,7 +2698,6 @@ class OptMan():
                 elif type(dtc.rheobase) is type(float(0.0)):
                     pass
 
-            #dtc = make_new_random(dtc, copy.copy(backend))
             xtests = list(copy.copy(original_test_dic).values())
 
             dtc.tests = xtests
@@ -3096,12 +2711,8 @@ class OptMan():
                 else:
                     return (dtc,False)
 
-            #if False not in set(means):
-            #    simulated_observations = {t.name:copy.copy(t.observation['mean']) for t in xtests}
-            #    simulated_observations = {k:v for k,v in simulated_observations.items() if v is not None}
             dtc.observation = simulated_observations
             dtc = self.pred_evaluation(dtc)
-
             simulated_observations = {k:p for k,p in dtc.preds.items() if type(k) is not type(None) and type(p) is not type(None) }
 
             while len(dtc.preds)!= len(simulated_observations):
@@ -3312,21 +2923,13 @@ class OptMan():
         if 'RAW' in self.backend  or 'HH' in self.backend or str('ADEXP') in self.backend:
             self.assert_against_zero_std(copy.copy(dtcpop),tests)
             dtcbag = [ delayed(dtc_to_rheo(d)) for d in dtcpop ]
-            #dtcbag = [ delayed(dtc_to_rheo(d)) for d in tqdm(dtcpop, desc='Rheobase Calculations') ]
             dtcpop = compute(*dtcbag)
             for p,d in zip(pop,dtcpop):
                 p.rheobase = None
                 p.rheobase = d.rheobase
-
             (pop,dtcpop) = filtered(pop,dtcpop)
             dtcpop = list(map(self.format_test,dtcpop))
-            #dtcpop = [d for d in dtcpop if d is not None]
-            #dtcpop = [d for d in dtcpop if d.rheobase is not None]
-
         else:
-            #dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
-            #dtcpop = list(dtcbag.map(dtc_to_rheo))
-
             dtcbag = [ delayed(dtc_to_rheo(d)) for d in dtcpop ]
             dtcpop = compute(*dtcbag)
             for p,d in zip(pop,dtcpop):
@@ -3334,11 +2937,9 @@ class OptMan():
                 p.rheobase = d.rheobase
 
             (pop,dtcpop) = filtered(pop,dtcpop)
-            #dtcpop = [d for d in dtcpop if d.rheobase is not None]
             dtcpop = list(map(self.format_test,dtcpop))
 
         for ind,d in zip(pop,dtcpop):
-
             if type(d.rheobase) is not type(None):
                 if not hasattr(ind,'rheobase'):
                     ind.rheobase = None
@@ -3564,10 +3165,7 @@ class OptMan():
                         continue
                     else:
                         break
-
                 return pop, dtcpop
-    """
-    """
     @timer
     def update_deap_pop(self,pop, tests, td, backend = None,hc = None,boundary_dict = None, error_length=None):
         '''
@@ -3623,6 +3221,10 @@ class OptMan():
         DO.setnparams(nparams = len(self.td), boundary_dict = self.boundary_dict)
         DO.setup_deap()
         if 1==number_genes:
+            # you asked for one gene but I will give you 5 assuming at least
+            # one in 5 has a stable rheobase.
+            # extras disgarded below.
+            # price of genes very cheap.
             pop = DO.set_pop(boot_new_random=5)
         if 1<number_genes and number_genes<5:
             pop = DO.set_pop(boot_new_random=5)

@@ -144,21 +144,21 @@ HH_attrs = {
         'E_K' : -90.0,
         'E_Na' : 50.0,
         'g_L' : 0.1,
-        'g_K' : 6,
+        'g_K' : 36,
         'g_Na' : 200,
         'C_m' : 1.0,
-        'vr':-68.9346}
+        'vr':
+        }
 HH_attrs['Vr'] = HH_attrs['E_L']
-
-
 """
+
 HH_attrs = {'g_L' : 0.3,
         'g_K' : 36,
         'g_Na' : 120,
         'vr':-65.0,
         'C_m':1.0}
 """
-HH_dic1 = { k:(float(v)-0.5*float(v),float(v)+0.5*float(v)) for k,v in HH_attrs.items() }
+HH_dic1 = { k:(float(v)-0.25*float(v),float(v)+0.25*float(v)) for k,v in HH_attrs.items() }
 
 MODEL_PARAMS['HH'] = HH_dic1
 
