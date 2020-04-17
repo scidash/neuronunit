@@ -147,7 +147,7 @@ HH_attrs = {
         'g_K' : 36,
         'g_Na' : 200,
         'C_m' : 1.0,
-        'vr':
+        'vr':-65.0
         }
 HH_attrs['Vr'] = HH_attrs['E_L']
 """
