@@ -253,7 +253,7 @@ class TSD(dict):
     def __init__(self,tests={},use_rheobase_score=True):
        self.DO = None
        self.use_rheobase_score = use_rheobase_score
-       self.elaborate_plots  = elaborate_plots
+       #self.elaborate_plots  = elaborate_plots
        self.backend = None
        if type(tests) is TestSuite:
            tests = OrderedDict({t.name:t for t in tests.tests})
