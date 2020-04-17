@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 
 import matplotlib as mpl
 mpl.rcParams.update(mpl.rcParamsDefault)
-print(mpl.rcParamsDefault)
+
+plot_defaults = mpl.rcParamsDefault
 
 import seaborn as sns
 import matplotlib
@@ -366,7 +367,16 @@ def elaborate_plots(ga_out,figname=None):
     else:
         plt.show()
 import math
-def plot_score_history(ga_out,figname=None):
+
+
+import numpy as np
+import matplotlib
+matplotlib.rcParams.update({'font.size':16})
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy.spatial
+import pylab
+def plot_score_history1(ga_out,figname=None):
     """
     Adapted from pyfrume.
     """
@@ -390,17 +400,14 @@ def plot_score_history(ga_out,figname=None):
         ax.plot(history)
         ax.set_title(str(k))
         ax.set_ylim([np.min(0.0), np.max(history)])
-        try:
-            ax.set_ylabel(front[i].dtc.tests[k].observation['std'].units)
-        except:
-            pass
+        ax.set_ylabel(str(front[0].dtc.tests[i].observation['std'].units))
     axes[0,0].set_xlabel("Generation")
     plt.tight_layout()
     if figname is not None:
         plt.savefig(figname)
     else:
         plt.show()
-
+    return plt
 def plot_score_history_SA(ga_out,figname=None):
     """
     Adapted from pyfrume.
@@ -591,14 +598,6 @@ def tiled_figure(figname='', frames=1, columns=2,
     return axs
 
 
-
-import numpy as np
-import matplotlib
-matplotlib.rcParams.update({'font.size':16})
-import matplotlib.pyplot as plt
-import numpy as np
-import scipy.spatial
-import pylab
 
 def plot_surface(fig_trip,ax_trip,model_param0,model_param1,history):
     '''
