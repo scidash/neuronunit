@@ -277,6 +277,9 @@ class TSD(dict):
         """
 
         # This might work joblib.dump(self, filename + '.compressed', compress=True)
+        # somewhere in job lib there are tools for pickling more complex objects
+        # including simulation results.
+
         return {k:v for k,v in self.items() }
 
     def optimize(self,**kwargs):
@@ -324,9 +327,10 @@ class TSD(dict):
 
         ga_out = self.DO.run(NGEN = self.DO.NGEN)
         self.backend = kwargs['backend']
-
-        #ga_out['random_search'] = self.DO.OM.random_search(ga_out['pf'][0].dtc,100)
-        #ga_out = self.elaborate_plots(self,ga_out,savefigs=True,figname=kwargs['figname'])
+        EXTRA_OPTIONS = False
+        if EXTRA_OPTIONS:
+            ga_out['random_search'] = self.DO.OM.random_search(ga_out['pf'][0].dtc,100)
+            self.ga_out = elaborate_plots(ga_out,savefigs=True,figname=kwargs['figname'])
 
         if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
             _,dtc_pop = self.DO.OM.test_runner(copy.copy(ga_out['pf'][0:1]),self.DO.OM.td,self.DO.OM.tests)
@@ -411,7 +415,7 @@ def random_p(backend):
             mean = np.mean(ranges[k])
             var = np.var(ranges[k])
             std = np.sqrt(var)
-            sample = numpy.random.normal(loc=mean, scale=std/1.5, size=1)[0]
+            sample = numpy.random.normal(loc=mean, scale=std/4.5, size=1)[0]
         else:
             sample = random.uniform(ranges[k][0], ranges[k][1])
         random_param1[k] = sample
@@ -426,7 +430,7 @@ def random_p(backend):
             mean = np.mean(ranges[k])
             var = np.var(ranges[k])
             std = np.sqrt(var)
-            sample = numpy.random.normal(loc=mean, scale=std/1.5, size=1)[0]
+            sample = numpy.random.normal(loc=mean, scale=std/4.5, size=1)[0]
         else:
             sample = random.uniform(ranges[k][0], ranges[k][1])
 
@@ -1899,11 +1903,9 @@ class OptMan():
             d.tests = self.tests
         OM = dtcpop[0].dtc_to_opt_man()
         try:
-            # Memory friendly
             dtcbag = [ delayed(self.elephant_evaluation(OM.format_test(d))) for d in dtcpop ]
             dtcpop = compute(*dtcbag)
         except:
-            # Speed friendly
             dtcbag = [ delayed(OM.format_test(d)) for d in dtcpop ]
             dtcpop = compute(*dtcbag)
             dtcbag = [ delayed(d.self_evaluate()) for d in dtcpop ]
@@ -1936,6 +1938,7 @@ class OptMan():
                 except:
                     stats[k] = (100.0,0.0,0.0)
         stats['best_random_sum_total'] = np.min(sum_list)
+        stats['models'] = dtcpop
         temp = {k:v[0] for k,v in stats.items() if isinstance(v,Iterable)}
         frame = pd.DataFrame([temp])
         stats['frame'] = frame
@@ -2305,11 +2308,27 @@ class OptMan():
 
         elif self.protocol['elephant']:
             new_tests = False
-            while new_tests is False:
-                dsolution,rp,_,_ = process_rparam(backend,free_parameters=free_parameters)
-                (new_tests,dtc) = self.make_simulated_observations(tests,backend,rp,dsolution=dsolution)
+            cnt = 0
+            pbar = tqdm(total = 35)
 
-                #print(dsolution,rp,new_tests['RheobaseTest'].observation,'stuck')
+            while new_tests is False:
+                cnt+=1
+                pbar.update(1)
+                if cnt == 35:
+                    print("this is not working")
+                    stats = self.DO.OM.random_search(dsolution,30)
+                    dtcpop = stats['models']
+                    # TODO
+                    # find element of dtcpop where all tests return a sensible score
+                    # no reason to believe dtcpop[0] has succeeded in this way.
+                    rp = dtcpop[0].attrs.values
+                    (new_tests,dtc) = self.make_simulated_observations(place_holder_tests,dtcpop[0].backend,rp,dsolution=dsolution)
+                    break
+
+                dsolution,rp,_,_ = process_rparam(backend,free_parameters=free_parameters)
+                (new_tests,dtc) = self.make_simulated_observations(place_holder_tests,backend,rp,dsolution=dsolution)
+                if cnt % 5 ==0:
+                    print(dsolution,rp,new_tests['RheobaseTest'].observation,'stuck')
                 if new_tests is False:
                     continue
                 new_tests = {k:v for k,v in new_tests.items() if v.observation[which_key(v.observation)] is not None}
@@ -2320,8 +2339,6 @@ class OptMan():
                             new_tests = False
                             break
                     if type(new_tests) is type(bool()):
-
-
                         continue
                     if 'RheobaseTest' not in new_tests.keys():
                         new_tests = False
