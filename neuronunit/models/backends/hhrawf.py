@@ -152,14 +152,8 @@ def dALLdt(X, t, attrs):
     """
     defaults = { 'g_K' : 36.0, 'g_Na' : 200.0, 'g_L' : 0.1, \
              'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -90.0, 'E_Na' : 50.0, 'vr':-68.9346 }
-    new_attrs = {}
     defaults.update(attrs)
     attrs = defaults
-    #for k,v in defaults.items():
-    #    if k in attrs.keys():
-    #        new_attrs[k] = attrs[k]
-    #    else:
-    #        new_attrs[k] = attrs[k]
     delay,duration,T,amplitude = copy.copy(attrs['I'])
     V, m, h, n = X
 
@@ -202,6 +196,11 @@ def get_vm(attrs):
     '''
     # State (Vm, n, m, h)
     # saturation value
+    defaults = { 'g_K' : 36.0, 'g_Na' : 200.0, 'g_L' : 0.1, \
+             'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -90.0, 'E_Na' : 50.0, 'vr':-68.9346 }
+    defaults.update(attrs)
+    attrs = defaults
+    
     vr = attrs['vr']
     m = 0.05#*1000.0
     h = 0.60#*1000.0
