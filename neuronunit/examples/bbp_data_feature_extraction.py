@@ -12,7 +12,7 @@ plt.plot([0,1],[1,0])
 import matplotlib.pyplot as plt
 #pip install natsort
 from neuronunit.optimisation import dm_test_interoperable #import Interoperabe
-
+import scipy
 #pip install igor
 """NeuronUnit module for interaction with the Blue Brain Project data."""
 import os
@@ -100,6 +100,20 @@ def get_sweeps(url, sweeps=None):
     return data
 
 
+
+
+def find_data(url):
+    """Find or download data from the given URL.
+    Return a path to a local directory containing the unzipped data found
+    at the provided url.  The zipped file will be downloaded and unzipped if
+    the directory cannot be found.  The path to the directory is returned.
+    """
+    zipped = url.split('/')[-1]  # Name of zip file
+    unzipped = zipped.split('.')[0]  # Name when unzipped
+
+    return unzipped
+
+
 def find_or_download_data(url):
     """Find or download data from the given URL.
     Return a path to a local directory containing the unzipped data found
@@ -118,7 +132,6 @@ def find_or_download_data(url):
             z = zipfile.ZipFile(BytesIO(r.content))
         z.extractall(unzipped)
     return unzipped
-
 
 def list_sweeps(url, extension='.ibw'):
     """List all sweeps available in the file at the given URL."""
@@ -188,120 +201,10 @@ def plot_rheobase(data):
             target = j
             plot_data(vms[target][1],injections[target][1])
 import quantities as pq
-def like_plot_rheobase(data):
-    currents = {}
-    vms = {}
-    rekey3 = {}
-    rekey0 = {}
-    for k,v in data.items():
-        if "Ch3" in k:
-            rekey3[k] = v
-        if "Ch0" in k:
-            rekey0[k] = v
-    vms = natsort.humansorted([(k,v) for k,v in rekey3.items()])
-    injections = natsort.humansorted([(k,v) for k,v in rekey0.items()])
-    comprehendable = [np.max(ind[1]) for ind in injections if ind[1].units==pq.pA]
-    print(comprehendable)
-    threshes = []
-    
-    for _,(_,v) in enumerate(vms):
-        threshold = spike_functions.threshold_detection(v)
-        if np.max(v.times)>2.8*pq.s and len(threshold):            
-            threshes.append(len(threshold))
-        
-    for j,(k,v) in enumerate(vms):
-        threshold = spike_functions.threshold_detection(v)
-        if len(threshold) == np.min(threshes) and np.max(v.times)>2.8*pq.s:
-            rheobase_vm = v
-            model = StaticModel(rheobase_vm)
-            model.inj = []
-            one_five = float(comprehendable[j])*1.5
-            three = float(comprehendable[j])*3.0
-
-            model.druckmann2013_standard_current = one_five
-            model.druckmann2013_strong_current = three
-            one_five = find_nearest(comprehendable,one_five)
-            model.rheobase_current = comprehendable[j]
-            model.vm15 = vms[one_five[1]]
-            three = find_nearest(comprehendable,three)
-            model.vm30 = vms[three[1]]
-            return model, one_five,three
-
-
-
-
-# In[54]:
-
-
-from neuronunit.models import StaticModel
-def get_15_30(data):
-    currents = {}
-    vms = {}
-    rekey3 = {} # Membrane Potentials
-    rekey0 = {} # Current injections
-    for k,v in data.items():
-        if "Ch3" in k:
-            rekey3[k] = v
-        if "Ch0" in k:
-            rekey0[k] = v
-    vms = natsort.humansorted([(k,v) for k,v in rekey3.items()])
-    injections = natsort.humansorted([(k,v) for k,v in rekey0.items()])
-    inj_list = [i for i in injections]
-
-    threshes = []
-    for j,(k,v) in enumerate(vms):
-        threshold = spike_functions.threshold_detection(v)
-        threshes.append(len(threshold))
-    for j,(k,v) in enumerate(vms):
-        threshold = spike_functions.threshold_detection(v)
-        if len(threshold) == np.min(threshes) and np.max(v.times)>2.8*pq.s:
-            target_idx = j
-            rheobase = injections[target_idx][1]
-            vmrh = (vms[target_idx][1],rheobase)
-            model = StaticModel(vms[target_idx][1])
-            plot_rheobase(vmrh)
-            return (model,inj_list)
-
-
-#injections
-models = pickle.load(open('models.p','rb'))    
-
-from neuronunit.optimisation.get_three_feature_sets_from_nml_db import three_feature_sets_on_static_models
-    
-np.shape(models)    
-models[2][-1]
-
-
-# In[65]:
-
-
-import pickle
-
-try:
-    data = pickle.load(open('models.p','rb'))    
-except:
-    data_ids = list_curated_data()[0:5]
-    tuples = []
-    models = []
-    results = []
-    for di in data_ids:
-
-        data = get_curated_data(di)
-        out = like_plot_rheobase(data)        
-        if out is not None:
-            models.append([di,out[0]])
-
-    pickle.dump(models,open('models.p','wb'))     
-for mod in models:   
-    model = None
-    model = mod[1]
-    model.name = mod[0]
+def process_models(mod):   
+    model = mod
     model.vm30 = model.vm30[1]
     model.vm15 = model.vm15[1]
-    
-    #import pdb
-    #pdb.set_trace()
-    
     times = np.array([float(t) for t in model.vm30.times])
     volts = np.array([float(v) for v in model.vm30])
     try:
@@ -315,23 +218,52 @@ for mod in models:
     # Allen Features
     ##
     #frame_shape,frame_dynamics,per_spike_info, meaned_features_overspikes
-    from neuronunit.optimisation.get_three_feature_sets_from_nml_db import allen_format
-    all_allen_features30, allen_features30 = allen_format(volts,times,optional_vm=model.vm30)
-    #if frame30 is not None:
-    #    frame30['protocol'] = 3.0
-    ##
+    try:
 
-    # wrangle data in preperation for computing
-    # Allen Features
-    ##
-    times = np.array([float(t) for t in model.vm15.times])
-    volts = np.array([float(v) for v in model.vm15])
+        volts = scipy.signal.resample(volts, 2000,t = times)#, t=None, axis=0, window=None)
+        times = scipy.signal.resample(times, 2000,t = times)#, t=None, axis=0, window=None)
+        volts = np.array(volts[0])
+        times = np.array(times[0])
 
-    ##
-    # Allen Features
-    ##
+        ext = EphysSweepSetFeatureExtractor([times],[volts])
+        ext.process_spikes()
+        swp = ext.sweeps()[0]
+        spikes = swp.spikes()
 
-    all_allen_features15, allen_features15 = allen_format(volts,times,optional_vm=model.vm15)
+        #import pdb
+        #pdb.set_trace()
+        import asciiplotlib as apl
+        fig = apl.figure()
+        fig.plot(times, volts, label="V_{m} (mV), versus time (ms)", width=100, height=80)
+        fig.show()
+
+        all_allen_features30, allen_features30 = allen_format(volts,times,optional_vm=model.vm30)
+        #if frame30 is not None:
+        #    frame30['protocol'] = 3.0
+        ##
+
+        # wrangle data in preperation for computing
+        # Allen Features
+        ##
+        times = np.array([float(t) for t in model.vm15.times])
+        volts = np.array([float(v) for v in model.vm15])
+        volts = scipy.signal.resample(volts,2000,t = times)#, t=None, axis=0, window=None)
+        times = scipy.signal.resample(times,2000,t = times)#, t=None, axis=0, window=None)
+        volts = np.array(volts[0])
+        times = np.array(times[0])
+
+        import asciiplotlib as apl
+        fig = apl.figure()
+        fig.plot(times, volts, label="V_{m} (mV), versus time (ms)", width=100, height=80)
+        fig.show()
+        ##
+        # Allen Features
+        ##
+
+        all_allen_features15, allen_features15 = allen_format(volts,times,optional_vm=model.vm15)
+    except:
+        all_allen_features15 = None
+        all_allen_features30 = None
     ##
     # Get Druckman features, this is mainly handled in external files.
     ##
@@ -344,8 +276,8 @@ for mod in models:
     else:
         DMTNMLO.test_setup(None,None,model= model,ir_current_limited=True)
     dm_test_features = DMTNMLO.runTest()
-    print(dm_test_features)
-    import pdb; pdb.set_trace()
+    #print(dm_test_features)
+    #import pdb; pdb.set_trace()
     ##
     # Wrangle data to prepare for EFEL feature calculation.
     ##
@@ -353,6 +285,11 @@ for mod in models:
     trace3['T'] = [ float(t) for t in model.vm30.times.rescale('ms') ]
     trace3['V'] = [ float(v) for v in model.vm30.magnitude]#temp_vm
     trace3['stimulus_current'] = [ model.druckmann2013_strong_current ]
+    model.protocol = {}
+
+    model.protocol['Time_End'] = 2700.0 * pq.ms
+    model.protocol['Time_Start'] = 700.0 * pq.ms
+    
     if not hasattr(model,'allen'):
         trace3['stim_end'] = [ trace3['T'][-1] ]
         trace3['stim_start'] = [ float(model.protocol['Time_Start']) ]
@@ -434,8 +371,136 @@ for mod in models:
         efel_30 = None
 
     efel.reset()
-out_dic = {'model_id':model.name,'model_information':'allen_data','efel_15':efel_15,'efel_30':efel_30,'dm':dm_test_features,'allen_15':all_allen_features15,'allen_30':all_allen_features30}
-results.append(out_dic)
+    out_dic = {'model_id':model.name,'model_information':'HBP_data','efel_15':efel_15,'efel_30':efel_30,'dm':dm_test_features,'allen_15':all_allen_features15,'allen_30':all_allen_features30}
+    mod.out_dic = out_dic
+    return mod
+
+
+def like_plot_rheobase(data,di):
+    currents = {}
+    vms = {}
+    rekey3 = {}
+    rekey0 = {}
+    for k,v in data.items():
+        if "Ch3" in k:
+            rekey3[k] = v
+        if "Ch0" in k:
+            rekey0[k] = v
+    vms = natsort.humansorted([(k,v) for k,v in rekey3.items()])
+    injections = natsort.humansorted([(k,v) for k,v in rekey0.items()])
+    comprehendable = [np.max(ind[1]) for ind in injections if ind[1].units==pq.pA]
+    threshes = []
+    
+    for _,(_,v) in enumerate(vms):
+        threshold = spike_functions.threshold_detection(v)
+        if np.max(v.times)>2.8*pq.s and len(threshold):            
+            threshes.append(len(threshold))
+        
+    for j,(k,v) in enumerate(vms):
+        threshold = spike_functions.threshold_detection(v)
+        if len(threshold) == np.min(threshes) and np.max(v.times)>2.8*pq.s:
+            rheobase_vm = v
+            model = StaticModel(rheobase_vm)
+            model.inj = []
+            one_five = float(comprehendable[j])*1.5
+            three = float(comprehendable[j])*3.0
+
+            model.druckmann2013_standard_current = one_five
+            model.druckmann2013_strong_current = three
+            one_five = find_nearest(comprehendable,one_five)
+            model.rheobase_current = comprehendable[j]
+            model.vm15 = vms[one_five[1]]
+            three = find_nearest(comprehendable,three)
+            model.vm30 = vms[three[1]]
+            model.name = di
+            model.protocol = {}
+            model.protocol['Time_Start'] = 700
+            model.protocol['Time_Stop'] = 2700
+            return model#, one_five,three
+
+
+
+
+# In[54]:
+
+
+from neuronunit.models import StaticModel
+#injections
+#models = pickle.load(open('models.p','rb'))    
+
+from neuronunit.optimisation.get_three_feature_sets_from_nml_db import three_feature_sets_on_static_models
+
+import quantities as pq
+import efel
+from neuronunit.capabilities.spike_functions import threshold_detection    
+#np.shape(models)    
+#models[2][-1]
+
+
+# In[65]:
+
+
+import pickle
+from neuronunit.optimisation.get_three_feature_sets_from_nml_db import allen_format
+from allensdk.ephys.ephys_extractor import EphysSweepSetFeatureExtractor
+
+#try:
+
+cells = list_curated_data()
+#dirs = []
+models = []
+cnt = 0
+import tqdm
+
+for cell in tqdm.tqdm(cells):
+    dirs = find_data(cell)
+    try:
+        sweeps = find_sweeps(dirs)
+        di = cell 
+
+        data = {sweep: open_data(sweep) for sweep in sweeps}
+        try:
+            model = like_plot_rheobase(data,di)        
+            print(model.name,di,model)
+        except:
+            model = None
+        if model is not None:
+            model = process_models(model)
+            models.append(model)
+    except:
+        continue
+pickle.dump(models,open('models.p','wb')) 
+models = pickle.load(open('models.p','rb'))    
+#import pdb
+#pdb.set_trace()
+    #assert 1==2
+    #models = pickle.load(open('models.p','rb'))    
+#except:
+'''
+data_ids = list_curated_data()#[0:5]
+tuples = []
+models = []
+results = []
+for di in data_ids:
+
+    data = get_curated_data(di)
+    try:
+        model = like_plot_rheobase(data,di)        
+        if model is not None:
+            models.append(model)
+        print('success')
+    except:
+        pass
+pickle.dump(models,open('models.p','wb')) 
+'''
+results = []        
+
+for mod in tqdm.tqdm(models):   
+
+    #results.append(out_dic)
+
+pickle.dump(results,open('hbp_data.p','wb'))        
+
 print(results)
 import pdb
 pdb.set_trace()
