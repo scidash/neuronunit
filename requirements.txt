@@ -15,8 +15,12 @@ neurodynex
 pyneuroml
 simplejson
 seaborn
-quantities @ git+https://github.com/scidash/python-quantities@master#egg=quantitities-9999
+pprint
+shelve
+plotly
+maps
+tqdm
+quantities @ git+https://github.com/scidash/python-quantities.git@master
 deap @ git+https://github.com/fun-zoological-computing/deap.git
 allensdk @ git+https://github.com/fun-zoological-computing/AllenSDK.git
-sciunit @ git+https://github.com/russelljjarvis/sciunit@dev#egg=sciunit-9999
-
+sciunit @ git+https://github.com/russelljjarvis/sciunit.git@dev

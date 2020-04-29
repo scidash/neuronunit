@@ -7,14 +7,14 @@ import dask
 #client = Client()
 #from joblib import Parallel, delayed
 from tqdm import tqdm
-
 SILENT = True
 if SILENT:
     warnings.filterwarnings("ignore")
-# setting of an appropriate backend.
-# optional imports
 import matplotlib
 matplotlib.rcParams.update({'font.size': 12})
+
+# setting of an appropriate backend.
+# optional imports
 
 #matplotlib.rcParams.update({'font.size': 15})
 
@@ -29,15 +29,6 @@ mpl = matplotlib
 
 # optional imports
 
-
-# Rationale Many methods inside the file optimization_management.py cannot be easily monkey patched using
-#```pdb.set_trace()``` unless at the top of the file,
-# the parallel_confident static variable is declared false
-# This converts parallel mapping functions to serial mapping functions.
-# scheduled Parallel mapping functions cannot tolerate being paused, serial ones can.
-
-
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import dask.bag as db
@@ -46,7 +37,7 @@ import pandas as pd
 import pickle
 import dask
 import multiprocessing
-npartitions = multiprocessing.cpu_count()
+NPART = multiprocessing.cpu_count()
 from sklearn.model_selection import ParameterGrid
 from collections import OrderedDict
 
@@ -80,7 +71,10 @@ this.cpucount = multiprocessing.cpu_count()
 from neuronunit.tests.fi import RheobaseTestP
 from neuronunit.tests.target_spike_current import SpikeCountSearch, SpikeCountRangeSearch
 #make_stim_waves = pickle.load(open('waves.p','rb'))
-
+try:
+    import plotly.offline as py
+except:
+    warnings.warn('plotly')
 try:
     import asciiplotlib as apl
 except:
@@ -242,6 +236,14 @@ def make_ga_DO(explore_edges, max_ngen, test, \
 
     return DO
 
+import shelve
+from deap import creator
+from deap import base
+import array
+
+import maps
+import pprint
+
 class TSD(dict):
     """
     Test Suite Dictionary class
@@ -279,7 +281,8 @@ class TSD(dict):
         # This might work joblib.dump(self, filename + '.compressed', compress=True)
         # somewhere in job lib there are tools for pickling more complex objects
         # including simulation results.
-
+        del self.ga_out.DO 
+        del self.DO
         return {k:v for k,v in self.items() }
 
     def optimize(self,**kwargs):
@@ -292,55 +295,77 @@ class TSD(dict):
                     'seed_pop':None,\
                     'hold_constant':None,
                     'plot':False,'figname':None,
-                    'use_rheobase_score':self.use_rheobase_score
+                    'use_rheobase_score':self.use_rheobase_score,
+                    'ignore_cached':False
                     }
         defaults.update(kwargs)
         kwargs = defaults
-
-        if type(kwargs['param_edges']) is type(None):
-            from neuronunit.optimisation import model_parameters
-            param_edges = model_parameters.MODEL_PARAMS[kwargs['backend']]
-        if type(kwargs['free_parameters']) is type(None):
-            if type(kwargs['param_edges']) is not type(None):
-                free_parameters=kwargs['param_edges'].keys()
-            else:
+        d = shelve.open('opt_models_cache')  # open -- file may get suffix added by low-level
+        kwargs['name'] = self.name
+        check_cache = str(hash(pprint.pprint(maps.FrozenMap(kwargs))))
+        flag = check_cache in d
+        if flag and not kwargs['ignore_cached']:
+            ###
+            # Hack
+            ###
+            creator.create("FitnessMin", base.Fitness, weights=tuple(-1.0 for i in range(0,10)))
+            creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMin)
+            ###
+            # End hack
+            ###
+            ga_out = d[check_cache]
+            d.close()                  
+            return ga_out
+        else:                        
+            if type(kwargs['param_edges']) is type(None):
                 from neuronunit.optimisation import model_parameters
-                free_parameters = model_parameters.MODEL_PARAMS[kwargs['backend']].keys()
-        else:
-            free_parameters = kwargs['free_parameters']
+                param_edges = model_parameters.MODEL_PARAMS[kwargs['backend']]
+            if type(kwargs['free_parameters']) is type(None):
+                if type(kwargs['param_edges']) is not type(None):
+                    free_parameters=kwargs['param_edges'].keys()
+                else:
+                    from neuronunit.optimisation import model_parameters
+                    free_parameters = model_parameters.MODEL_PARAMS[kwargs['backend']].keys()
+            else:
+                free_parameters = kwargs['free_parameters']
 
-        if kwargs['hold_constant'] is None:
-            if len(free_parameters) < len(param_edges):
-                pass
-        self.DO = make_ga_DO(param_edges, \
-                             kwargs['NGEN'], \
-                             self, \
-                             free_parameters=free_parameters, \
-                             backend=kwargs['backend'], \
-                             MU = kwargs['MU'], \
-                             protocol=kwargs['protocol'],
-                             seed_pop = kwargs['seed_pop'], \
-                             hc=kwargs['hold_constant']
-                             )
-        self.MU = self.DO.MU = kwargs['MU']
-        self.NGEN = self.DO.NGEN = kwargs['NGEN']
+            if kwargs['hold_constant'] is None:
+                if len(free_parameters) < len(param_edges):
+                    pass
+            self.DO = make_ga_DO(param_edges, \
+                                kwargs['NGEN'], \
+                                self, \
+                                free_parameters=free_parameters, \
+                                backend=kwargs['backend'], \
+                                MU = kwargs['MU'], \
+                                protocol=kwargs['protocol'],
+                                seed_pop = kwargs['seed_pop'], \
+                                hc=kwargs['hold_constant']
+                                )
+            self.MU = self.DO.MU = kwargs['MU']
+            self.NGEN = self.DO.NGEN = kwargs['NGEN']
 
-        ga_out = self.DO.run(NGEN = self.DO.NGEN)
-        self.backend = kwargs['backend']
-        EXTRA_OPTIONS = False
-        if EXTRA_OPTIONS:
-            ga_out['random_search'] = self.DO.OM.random_search(ga_out['pf'][0].dtc,100)
-            self.ga_out = elaborate_plots(ga_out,savefigs=True,figname=kwargs['figname'])
+            ga_out = self.DO.run(NGEN = self.DO.NGEN)
+            self.backend = kwargs['backend']
+            EXTRA_OPTIONS = False
+            if EXTRA_OPTIONS:
+                ga_out['random_search'] = self.DO.OM.random_search(ga_out['pf'][0].dtc,100)
+                self.ga_out = elaborate_plots(ga_out,savefigs=True,figname=kwargs['figname'])
 
-        if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
-            _,dtc_pop = self.DO.OM.test_runner(copy.copy(ga_out['pf'][0:1]),self.DO.OM.td,self.DO.OM.tests)
-            ga_out['dtc_pop'] = dtc_pop
-            for x,(i,j) in enumerate(zip(ga_out['dtc_pop'],ga_out['pf'][0:1])):
-                ga_out['pf'][x].dtc = None
-                ga_out['pf'][x].dtc = i
-        self.ga_out = ga_out
-        self.DO = None # destroy this here, as its used once and not pickleable
-        return self.ga_out
+            if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
+                _,dtc_pop = self.DO.OM.test_runner(copy.copy(ga_out['pf'][0:1]),self.DO.OM.td,self.DO.OM.tests)
+                ga_out['dtc_pop'] = dtc_pop
+                for x,(i,j) in enumerate(zip(ga_out['dtc_pop'],ga_out['pf'][0:1])):
+                    ga_out['pf'][x].dtc = None
+                    ga_out['pf'][x].dtc = i
+
+
+            self.ga_out = ga_out
+            del self.DO #= None # destroy this here, as its used once and not pickleable
+            d[check_cache] = ga_out
+            d.close()    
+            ga_out['check_cache'] = check_cache             
+            return ga_out
 
     def display(self):
         from IPython.display import display
@@ -419,24 +444,6 @@ def random_p(backend):
         else:
             sample = random.uniform(ranges[k][0], ranges[k][1])
         random_param1[k] = sample
-
-    random_param2 = {} # randomly sample a point in the viable parameter space.
-
-    for k in ranges.keys():
-        # if model is Hodgkin Huxley
-        # using a bell-curve might produce
-        # less "ringing" models.
-        if backend == "HH" or backend == "ADEXP":
-            mean = np.mean(ranges[k])
-            var = np.var(ranges[k])
-            std = np.sqrt(var)
-            sample = numpy.random.normal(loc=mean, scale=std/4.5, size=1)[0]
-        else:
-            sample = random.uniform(ranges[k][0], ranges[k][1])
-
-        random_param2[k] = sample
-    # a check of randomness:
-    assert set(random_param1.values()) is not set(random_param2.values())
     return random_param1
 
 @cython.boundscheck(False)
@@ -719,10 +726,9 @@ def mint_NEURON_model(dtc):
     model.attrs = pre_model.attrs
     return model
 
+import plotly.express as px
 
-def inject_and_plot_model(pre_model,figname=None):
-
-
+def inject_and_plot_model(pre_model,figname=None,plotly=True):
     # get rheobase injection value
     # get an object of class ReducedModel with known attributes and known rheobase current injection value.
     pre_model = dtc_to_rheo(pre_model)
@@ -730,22 +736,25 @@ def inject_and_plot_model(pre_model,figname=None):
     uc = {'amplitude':model.rheobase,'duration':DURATION,'delay':DELAY}
     model.inject_square_current(uc)
     vm = model.get_membrane_potential()
-    plt.clf()
-    plt.figure()
-    if pre_model.backend in str("HH"):
-        plt.title('Hodgkin-Huxley Neuron')
-    else:
-        plt.title('membrane potential plot')
-    plt.plot(vm.times, vm.magnitude, 'k')
-    plt.ylabel('V (mV)')
-    if figname is not None:
-        plt.savefig(str(figname)+str('.png'))
-    #plt.plot(vm.times,vm.magnitude)
+    if plotly:
+        fig = px.line(x=vm.times, y=vm.magnitude, labels={'x':'t (ms)', 'y':'V (mV)'})
+        fig.write_image(str(figname)+str('.png'))
+    if not plotly:
+        plt.clf()
+        plt.figure()
+        if pre_model.backend in str("HH"):
+            plt.title('Hodgkin-Huxley Neuron')
+        else:
+            plt.title('membrane potential plot')
+        plt.plot(vm.times, vm.magnitude, 'k')
+        plt.ylabel('V (mV)')
+        if figname is not None:
+            plt.savefig(str(figname)+str('.png'))
+        #plt.plot(vm.times,vm.magnitude)
     return vm,plt
 
-def inject_and_plot_passive_model(pre_model,second=None,figname=None):
+def inject_and_plot_passive_model(pre_model,second=None,figname=None,plotly=True):
 
-    matplotlib.rcParams.update({'font.size': 15})
 
     # get rheobase injection value
     # get an object of class ReducedModel with known attributes and known rheobase current injection value.
@@ -754,26 +763,30 @@ def inject_and_plot_passive_model(pre_model,second=None,figname=None):
     uc = {'amplitude':-10*pq.pA,'duration':500*pq.ms,'delay':100*pq.ms}
     model.inject_square_current(uc)
     vm = model.get_membrane_potential()
+    if plotly:
+        fig = px.line(x=vm.times, y=vm.magnitude, labels={'x':'t (ms)', 'y':'V (mV)'})
+        fig.write_image(str(figname)+str('.png'))
+    if not plotly:
+        matplotlib.rcParams.update({'font.size': 15})
+        plt.figure()
+        if pre_model.backend in str("HH"):
+            plt.title('Hodgkin-Huxley Neuron')
+        else:
+            plt.title('membrane potential plot Izhi model')
+        plt.plot(vm.times, vm.magnitude, c='r',label=str('target'))#+str(model.attrs['a']))
+        if second is not None:
+            model2 = second.dtc_to_model()
+            uc = {'amplitude':-10*pq.pA,'duration':500*pq.ms,'delay':100*pq.ms}
+            model2.inject_square_current(uc)
+            vm2 = model2.get_membrane_potential()
+            plt.plot(vm2.times, vm2.magnitude, c='g',label=str('optimal')+str(model2.attrs['a']))
 
-    plt.figure()
-    if pre_model.backend in str("HH"):
-        plt.title('Hodgkin-Huxley Neuron')
-    else:
-        plt.title('membrane potential plot Izhi model')
-    plt.plot(vm.times, vm.magnitude, c='r',label=str('target'))#+str(model.attrs['a']))
-    if second is not None:
-        model2 = second.dtc_to_model()
-        uc = {'amplitude':-10*pq.pA,'duration':500*pq.ms,'delay':100*pq.ms}
-        model2.inject_square_current(uc)
-        vm2 = model2.get_membrane_potential()
-        plt.plot(vm2.times, vm2.magnitude, c='g',label=str('optimal')+str(model2.attrs['a']))
 
+        plt.ylabel('V (mV)')
+        plt.legend(loc="upper left")
 
-    plt.ylabel('V (mV)')
-    plt.legend(loc="upper left")
-
-    if figname is not None:
-        plt.savefig(figname)
+        if figname is not None:
+            plt.savefig(figname)
     #plt.plot(vm.times,vm.magnitude)
 
     return vm,plt
@@ -790,49 +803,81 @@ def inject_and_not_plot_model(pre_model):
     #plt.legend(loc="upper left")
 
     return vm
+import plotly.graph_objects as go    
 from neuronunit.capabilities.spike_functions import get_spike_waveforms
-def check_binary_match(dtc0,dtc1,figname=None,snippets=True):
-    matplotlib.rcParams.update({'font.size': 8})
 
-    vm0 =inject_and_not_plot_model(dtc0)
-    vm1 =inject_and_not_plot_model(dtc1)
-
-    plt.figure()
-
+def plotly_version(vm0,vm1):
     if snippets:
-        plt.figure()
-
         snippets1 = get_spike_waveforms(vm1)
         snippets0 = get_spike_waveforms(vm0)
-        plt.plot(snippets0.times,snippets0.magnitude,label=str('model type: '))#+label)#,label='ground truth')
-        plt.plot(snippets1.times,snippets1.magnitude,label=str('model type: '))#+label)#,label='ground truth')
-        if dtc0.backend in str("HH"):
-            plt.title('Check for waveform Alignment')
-        else:
-            plt.title('membrane potential plot')
-        plt.ylabel('V (mV)')
-        plt.legend(loc="upper left")
 
-        #plt.plot(vm.times,vm.magnitude)
-        if figname is not None:
-            plt.savefig(figname)
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=snippets0.times, y=snippets0.magnitude,
+                            mode='lines',
+                            name='lines'))
+        fig.add_trace(go.Scatter(x=snippets1.times, y=snippets1.magnitude,
+                            mode='lines',
+                            name='lines'))
+        fig.write_image(str(figname)+str('.png'))
+
 
     else:
-        #plt.plot(vm.times,vm,label=str('model type: '))#+label)#,label='ground truth')
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=vm0.times, y=vm0.magnitude,
+                            mode='lines',
+                            name='lines'))
+        fig.add_trace(go.Scatter(x=vm1.times, y=vm1.magnitude,
+                            mode='lines',
+                            name='lines'))
+        fig.write_image(str(figname)+str('.png'))
 
-        if dtc0.backend in str("HH"):
-            plt.title('Check for waveform Alignment')
+
+def check_binary_match(dtc0,dtc1,figname=None,snippets=True,plotly=True):
+
+    vm0 = inject_and_not_plot_model(dtc0)
+    vm1 = inject_and_not_plot_model(dtc1)
+
+    if plotly:
+        plotly_version(vm0,vm1)
+    else:
+        matplotlib.rcParams.update({'font.size': 8})
+
+        plt.figure()
+
+        if snippets:
+            plt.figure()
+
+            snippets1 = get_spike_waveforms(vm1)
+            snippets0 = get_spike_waveforms(vm0)
+            plt.plot(snippets0.times,snippets0.magnitude,label=str('model type: '))#+label)#,label='ground truth')
+            plt.plot(snippets1.times,snippets1.magnitude,label=str('model type: '))#+label)#,label='ground truth')
+            if dtc0.backend in str("HH"):
+                plt.title('Check for waveform Alignment')
+            else:
+                plt.title('membrane potential plot')
+            plt.ylabel('V (mV)')
+            plt.legend(loc="upper left")
+
+            #plt.plot(vm.times,vm.magnitude)
+            if figname is not None:
+                plt.savefig(figname)
+
         else:
-            plt.title('membrane potential plot')
-        plt.plot(vm0.times, vm0.magnitude,label="target")
-        #for v in vms:
-        plt.plot(vm1.times, vm1.magnitude,label="solutions")
-        plt.ylabel('V (mV)')
-        plt.legend(loc="upper left")
+            #plt.plot(vm.times,vm,label=str('model type: '))#+label)#,label='ground truth')
 
-        #plt.plot(vm.times,vm.magnitude)
-        if figname is not None:
-            plt.savefig(figname)
+            if dtc0.backend in str("HH"):
+                plt.title('Check for waveform Alignment')
+            else:
+                plt.title('membrane potential plot')
+            plt.plot(vm0.times, vm0.magnitude,label="target")
+            #for v in vms:
+            plt.plot(vm1.times, vm1.magnitude,label="solutions")
+            plt.ylabel('V (mV)')
+            plt.legend(loc="upper left")
+
+            #plt.plot(vm.times,vm.magnitude)
+            if figname is not None:
+                plt.savefig(figname)
 
     return plt
 
@@ -1524,7 +1569,7 @@ def nuunit_dm_evaluation(dtc):
     dtc.dm_test_features = dm_test_features
     return dtc
 
-
+import joblib
 def input_resistance_dm_evaluation(dtc):
     model = dtc.dtc_to_model()
     #model = mint_generic_model(dtc.backend)
@@ -1616,7 +1661,136 @@ def nuunit_dm_rheo_evaluation(dtc):
 
 
 from allensdk.ephys.ephys_extractor import EphysSweepFeatureExtractor
+def feature_mine(dtc):
+    dtc = onefive(dtc)
+    dtc = retestobs(dtc)
+    vm30_2 = dtc.vm30
+    vm30,params,_,dtc=inject_and_plot_model30(dtc)
+    if vm30 is None:
+        return dtc
+    dtc.self_evaluate()
+    #dtc.tests = TSD(dtc.tests)
+    #OM = dtc.dtc_to_opt_man()
+    #dtc = OM.elephant_evaluation(dtc)
+    dtc,ephys = allen_wave_predictions(dtc,thirty=True)
+    dtc,ephys = allen_wave_predictions(dtc,thirty=False)
+    dtc = efel_evaluation(dtc)
+    dtc = nuunit_dm_evaluation(dtc)
+    if hasattr(dtc,'allen_30'):
+        dtc = rekeyed(dtc)
+    return dtc
 
+def onefive(dtc):
+    vm30,params,_,dtc = inject_and_plot_model30(dtc)
+    dtc.vm30 = vm30
+    return dtc
+def retestobs(dtc):
+    if type(dtc.tests) is not type(list()):
+        dtc.tests = list(dtc.tests.values())
+    for t in dtc.tests:
+        t.observation['std'] = np.abs(t.observation['std'])
+    return dtc
+def rekeyeddm(dtc):
+    standard = 0
+    strong = 0
+    easy_map = [
+                {'AP12AmplitudeDropTest':standard},
+                {'AP1SSAmplitudeChangeTest':standard},
+                {'AP1AmplitudeTest':standard},
+                {'AP1WidthHalfHeightTest':standard},
+                {'AP1WidthPeakToTroughTest':standard},
+                {'AP1RateOfChangePeakToTroughTest':standard},
+                {'AP1AHPDepthTest':standard},
+                {'AP2AmplitudeTest':standard},
+                {'AP2WidthHalfHeightTest':standard},
+                {'AP2WidthPeakToTroughTest':standard},
+                {'AP2RateOfChangePeakToTroughTest':standard},
+                {'AP2AHPDepthTest':standard},
+                {'AP12AmplitudeChangePercentTest':standard},
+                {'AP12HalfWidthChangePercentTest':standard},
+                {'AP12RateOfChangePeakToTroughPercentChangeTest':standard},
+                {'AP12AHPDepthPercentChangeTest':standard},
+                {'InputResistanceTest':str('ir_currents')},
+                {'AP1DelayMeanTest':standard},
+                {'AP1DelaySDTest':standard},
+                {'AP2DelayMeanTest':standard},
+                {'AP2DelaySDTest':standard},
+                {'Burst1ISIMeanTest':standard},
+                {'Burst1ISISDTest':standard},
+                {'InitialAccommodationMeanTest':standard},
+                {'SSAccommodationMeanTest':standard},
+                {'AccommodationRateToSSTest':standard},
+                {'AccommodationAtSSMeanTest':standard},
+                {'AccommodationRateMeanAtSSTest':standard},
+                {'ISICVTest':standard},
+                {'ISIMedianTest':standard},
+                {'ISIBurstMeanChangeTest':standard},
+                {'SpikeRateStrongStimTest':strong},
+                {'AP1DelayMeanStrongStimTest':strong},
+                {'AP1DelaySDStrongStimTest':strong},
+                {'AP2DelayMeanStrongStimTest':strong},
+                {'AP2DelaySDStrongStimTest':strong},
+                {'Burst1ISIMeanStrongStimTest':strong},
+                {'Burst1ISISDStrongStimTest':strong},
+            ]
+    dm_labels = [list(keys.keys())[0] for keys in easy_map ]
+    rekeyed = {}
+    dmtf = dtc.dm_test_features
+
+    keep_columns = {}
+    for l in easy_map:
+        for k in l.keys():
+            if str(k)+str('_3.0x') in dmtf.keys():
+                keep_columns.append(str(k)+str('_3.0x'))
+            elif str(k)+str('_1.5x') in df.columns:
+                keep_columns.append(str(k)+str('_1.5x'))
+    return keep_columns
+def rekeyed(dtc):
+    rekey = {}
+    for k,v in dtc.allen_30.items():
+        rekey[str(k)+str('_3.0x')] = v
+    for k,v in dtc.allen_15.items():
+        rekey[str(k)+str('_1.5x')] = v
+    for k,v in dtc.efel_30[0].items():
+        rekey[str(k)+str('_3.0x')] = v
+    for k,v in dtc.efel_15[0].items():
+        rekey[str(k)+str('_1.5x')] = v
+    dtc.everything = rekey
+    return dtc
+
+def inject_and_plot_model30(dtc,figname=None):
+    # get rheobase injection value
+    # get an object of class ReducedModel with known attributes and known rheobase current injection value.
+    dtc = dtc_to_rheo(dtc)
+    print(dtc.backend,dtc.attrs)
+    print(dtc.rheobase)
+    if dtc.rheobase is None:
+        return None,None,None,dtc
+    OM = dtc.dtc_to_opt_man()
+    dtc = OM.format_test(dtc)
+    model = dtc.dtc_to_model()
+    uc = {'amplitude':3.0*dtc.rheobase,'duration':DURATION,'delay':DELAY}
+    params = {'amplitude':dtc.rheobase,'duration':DURATION,'delay':DELAY}
+    model.inject_square_current(uc)
+    vm30 = model.get_membrane_potential()
+    dtc.vm30 = vm30
+    uc = {'amplitude':1.5*dtc.rheobase,'duration':DURATION,'delay':DELAY}
+    params = {'amplitude':dtc.rheobase,'duration':DURATION,'delay':DELAY}
+    model.inject_square_current(uc)
+    vm15 = model.get_membrane_potential()
+    vm = dtc.vm15 = vm15
+    plt.clf()
+    plt.figure()
+    if dtc.backend in str("HH"):
+        plt.title('Hodgkin-Huxley Neuron')
+    else:
+        plt.title('membrane potential plot')
+    plt.plot(vm.times, vm.magnitude, 'k')
+    plt.ylabel('V (mV)')
+    if figname is not None:
+        plt.savefig(figname)
+    #plt.plot(vm.times,vm.magnitude)
+    return vm30,params,plt,dtc
 
 def efel_evaluation(dtc):
 
@@ -1887,7 +2061,11 @@ class OptMan():
         self.NGEN = None
         if self.backend is "RAW" or self.backend is "HH":
             self.PARALLEL_CONFIDENT = True
+            self.MEMORY_FRIENDLY = False
+
         else:
+            self.MEMORY_FRIENDLY = True
+
             self.PARALLEL_CONFIDENT = False
         if verbosity is None:
             self.verbose = 0
@@ -2137,11 +2315,18 @@ class OptMan():
         for dtc in dtcpop: dtc.pre_obs = self.tests
         for dtc in dtcpop: dtc.tsr = tsr #not a property but an aim
         if self.PARALLEL_CONFIDENT:
-            dtcbag = [ delayed(nuunit_allen_evaluation(d)) for d in dtcpop ]
-            dtcpop = compute(*dtcbag)
+            dtcbag = db.from_sequence(dtcpop,NPART)
+            dtcpop = list(dtcbag.map(nuunit_allen_evaluation).compute())
+            #dtcbag = [ delayed(nuunit_allen_evaluation(d)) for d in dtcpop ]
+            #dtcpop = compute(*dtcbag)
 
             #dtcbag = db.from_sequence(dtcpop, npartitions = NPART)
             #dtcpop = list(dtcbag.map(nuunit_allen_evaluation).compute())
+
+        elif self.MEMORY_FRIENDLY:
+            #self.MEMORY_FRIENDLY = True
+            dtcbag = [ delayed(nuunit_allen_evaluation(d)) for d in dtcpop ]
+            dtcpop = compute(*dtcbag)
 
         else:
             dtcpop = list(map(nuunit_allen_evaluation,dtcpop))
@@ -2309,26 +2494,28 @@ class OptMan():
         elif self.protocol['elephant']:
             new_tests = False
             cnt = 0
-            pbar = tqdm(total = 35)
 
             while new_tests is False:
                 cnt+=1
-                pbar.update(1)
-                if cnt == 35:
-                    print("this is not working")
-                    stats = self.DO.OM.random_search(dsolution,30)
+                if cnt == 15:
+                    print("search space has \
+                     too many unstable modeles \
+                      try refining model parameter edges")
+                    stats = self.random_search(dsolution,30)
                     dtcpop = stats['models']
                     # TODO
                     # find element of dtcpop where all tests return a sensible score
                     # no reason to believe dtcpop[0] has succeeded in this way.
                     rp = dtcpop[0].attrs.values
-                    (new_tests,dtc) = self.make_simulated_observations(place_holder_tests,dtcpop[0].backend,rp,dsolution=dsolution)
+                    import pdb
+                    pdb.set_trace()
+                    (new_tests,dtc) = self.make_simulated_observations(tests,dtcpop[0].backend,rp,dsolution=dsolution)
                     break
 
                 dsolution,rp,_,_ = process_rparam(backend,free_parameters=free_parameters)
-                (new_tests,dtc) = self.make_simulated_observations(place_holder_tests,backend,rp,dsolution=dsolution)
+                (new_tests,dtc) = self.make_simulated_observations(tests,backend,rp,dsolution=dsolution)
                 if cnt % 5 ==0:
-                    print(dsolution,rp,new_tests['RheobaseTest'].observation,'stuck')
+                    print(dsolution,rp,new_tests,'stuck')
                 if new_tests is False:
                     continue
                 new_tests = {k:v for k,v in new_tests.items() if v.observation[which_key(v.observation)] is not None}
@@ -2985,6 +3172,10 @@ class OptMan():
                 if t.passive==b:
                     parallel_dtc[-1].tests.append(t)
         return parallel_dtc
+
+    def seval(self,dtc):
+        dtc.self_evaluate()
+        return dtc    
     @timer
     def parallel_route(self,pop,dtcpop,tests):
         td = self.td
@@ -3001,22 +3192,33 @@ class OptMan():
                 return pop, dtcpop
 
         elif self.protocol['elephant']:
+            for dtc in dtcpop:
+                if not hasattr(dtc,'tests'):
+                    dtc.tests = copy.copy(self.tests)
 
-            if self.PARALLEL_CONFIDENT:# and self.backend is not str('ADEXP'):
+                if isinstance(dtc.tests,type(dict())):
+                    for t in dtc.tests.values():
+                        assert 'std' in t.observation.keys()
+
+
+            NPART = joblib.cpu_count()
+            if self.PARALLEL_CONFIDENT:
+                dtcbag = db.from_sequence(dtcpop,NPART)
+                dtcpop = list(dtcbag.map(self.format_test).compute())
+                dtcbag = db.from_sequence(dtcpop,NPART)
+                dtcpop = list(dtcbag.map(self.seval).compute())
+                #dtcpop = compute(*dtcbag)
+                #with Parallel(n_jobs=joblib.cpu_count()) as parallel:
+                #    dtcpop = Parallel(n_jobs=joblib.cpu_count())(delayed(self.seval)(d) for d in dtcpop[0:2])
+
+
+
+            elif self.MEMORY_FRIENDLY:# and self.backend is not str('ADEXP'):
                 passed = False
                 lazy = []
 
-                for dtc in dtcpop:
-                    if not hasattr(dtc,'tests'):
-                        dtc.tests = copy.copy(self.tests)
-
-                    if isinstance(dtc.tests,type(dict())):
-                        for t in dtc.tests.values():
-                            assert 'std' in t.observation.keys()
                 for d in dtcpop:
                     d = self.format_test_delayed(d)
-
-                #for d in tqdm(dtcpop,desc='NU test evaluation'):
 
                 for d in dtcpop:
                     dask.delayed(d.self_evaluate())
@@ -3036,22 +3238,13 @@ class OptMan():
 
             if not self.PARALLEL_CONFIDENT:
                 for d in dtcpop:
-
-                    #figname = d.rheobase
-                    #inject_and_plot_model(d,figname=str(self.backend)+str(figname))
                     assert d.rheobase is not None
                 dtcpop = list(map(self.format_test,dtcpop))
                 dtcpop = list(map(self.elephant_evaluation,dtcpop))
-
-                #for d in dtcpop:
-                #    d.tests = copy.copy(self.tests)
                 for d in dtcpop:
                     assert hasattr(d, 'tests')
 
 
-            for d in dtcpop:
-               if not hasattr(d, 'tests'):
-                   pass
         return pop, dtcpop
 
 

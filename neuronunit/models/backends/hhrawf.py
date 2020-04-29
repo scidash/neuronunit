@@ -17,16 +17,16 @@ import quantities as qt
 from quantities import mV, ms, s, Hz
 from sciunit.utils import redirect_stdout
 from elephant.spike_train_generation import threshold_detection
-
+"""
 try:
     import asciiplotlib as apl
     fig = apl.figure()
-    fig.plot([1,0], [0,1])
     ascii_plot = True
     import gc
 
 except:
     ascii_plot = False
+"""    
 SLOW_ZOOM = True
 import time
 import logging
