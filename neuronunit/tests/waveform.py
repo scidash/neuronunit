@@ -1,14 +1,16 @@
 """Waveform neuronunit tests, e.g. testing AP waveform properties"""
 from .base import np, pq, ncap, VmTest, scores, AMPL, DELAY, DURATION
-
+'''
 try:
     import asciiplotlib as apl
     fig = apl.figure()
-    fig.plot([0,1], [0,1], label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
+    #fig.plot([0,1], [0,1], label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
     fig.show()
     ascii_plot = True
 except:
     ascii_plot = False
+'''
+ascii_plot = False
 
 def asciplot_code(vm,spkcnt):
     t = [float(f) for f in vm.times]
@@ -45,8 +47,6 @@ class APWidthTest(VmTest):
     score_type = scores.RatioScore
 
     units = pq.ms
-    print('gets here')
-
     ephysprop_name = 'Spike Half-Width'
     def __init__(self,*args,**kwargs):
         print(args)

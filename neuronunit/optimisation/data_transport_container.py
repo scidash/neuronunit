@@ -106,7 +106,7 @@ class DataTC(object):
         #self.SA = ScoreArray(self.tests, scores_)
         self.scores_ = scores_
         self.SA = ScoreArray(self.tests, self.scores_)
-        self = OM.get_agreement(self)
+        #self = OM.get_agreement(self)
         return self
 
     def dtc_to_opt_man(self):
@@ -186,6 +186,7 @@ class DataTC(object):
             model = SimpleModel(attrs)
 
         if self.backend is str('NEURON') or self.backend is str('jNEUROML'):
+            import neuronunit
             LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
             self.model_path = LEMS_MODEL_PATH
             from neuronunit.models.reduced import ReducedModel#, VeryReducedModel
@@ -211,16 +212,23 @@ class DataTC(object):
 
         return model
 
-    def dtc_to_gene(self):
-        from neuronunit.optimisation.optimization_management import WSListIndividual
-        print('warning translation dictionary should be used, to garuntee correct attribute order from random access dictionaries')
-        if hasattr(self,'td'):
-            gene = WSListIndividual()
-            for i in self.td:
-                gene.append(self.attrs[i])
 
-        else:
-            gene = WSListIndividual(list(self.attrs.values()))
+
+    def dtc_to_gene(self):
+        from deap import base
+        import array
+        from deap import creator
+        
+        creator.create("FitnessMin", base.Fitness, weights=tuple(-1.0 for i in range(0,10)))
+        creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMin)
+            
+        #from neuronunit.optimisation.optimization_management import WSListIndividual
+        #print('warning translation dictionary should be used, to garuntee correct attribute order from random access dictionaries')
+        self.attrs.pop('dt',None)
+        self.attrs.pop('Iext',None)
+        pre_gene = OrderedDict(self.attrs)
+        pre_gene = list(pre_gene.values())
+        gene = creator.Individual(pre_gene)
         return gene
 
     def judge_test(self,index=0):

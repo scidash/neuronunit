@@ -12,7 +12,6 @@ if SILENT:
     warnings.filterwarnings("ignore")
 import matplotlib
 matplotlib.rcParams.update({'font.size': 12})
-
 # setting of an appropriate backend.
 # optional imports
 
@@ -45,6 +44,9 @@ import copy
 import math
 import quantities as pq
 import numpy
+import plotly
+plotly.io.orca.config.executable = '/usr/bin/orca'
+
 try:
     from sciunit import TestSuite
 except:
@@ -244,6 +246,36 @@ import array
 import maps
 import pprint
 
+
+import copy
+
+def make_hash(o):
+
+    """
+    https://stackoverflow.com/questions/5884066/hashing-a-dictionary
+    Makes a hash from a dictionary, list, tuple or set to any level, that contains
+    only other hashable types (including any lists, tuples, sets, and
+    dictionaries).
+    """
+
+    if isinstance(o, (set, tuple, list)):
+
+        return tuple([make_hash(e) for e in o])    
+
+    elif not isinstance(o, dict):
+
+        return hash(o)
+
+    new_o = copy.deepcopy(o)
+    for k, v in new_o.items():
+        try:
+            new_o[k] = make_hash(v)
+        except:
+            new_o[k] = make_hash(float(v))
+
+    return hash(tuple(frozenset(sorted(new_o.items()))))
+from frozendict import frozendict
+
 class TSD(dict):
     """
     Test Suite Dictionary class
@@ -300,23 +332,39 @@ class TSD(dict):
                     }
         defaults.update(kwargs)
         kwargs = defaults
+
+
         d = shelve.open('opt_models_cache')  # open -- file may get suffix added by low-level
-        kwargs['name'] = self.name
-        check_cache = str(hash(pprint.pprint(maps.FrozenMap(kwargs))))
-        flag = check_cache in d
+        #kwargs['name'] = self.name
+        #kwargs_ = frozendict(kwargs)
+        #preferred_query_key = str(make_hash(kwargs))
+        
+
+        query_key = str(kwargs['NGEN']) +\
+        str(kwargs['free_parameters']) +\
+        str(kwargs['backend']) +\
+        str(kwargs['MU']) +\
+        str(kwargs['protocol']) +\
+        str(kwargs['hold_constant'])
+        flag = query_key in d
+
         if flag and not kwargs['ignore_cached']:
             ###
             # Hack
             ###
-            creator.create("FitnessMin", base.Fitness, weights=tuple(-1.0 for i in range(0,10)))
-            creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMin)
+            #creator.create("FitnessMin", base.Fitness, weights=tuple(-1.0 for i in range(0,10)))
+            #creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMin)
             ###
             # End hack
             ###
-            ga_out = d[check_cache]
-            d.close()                  
+            ga_out = d[query_key]
+
+            d.close()           
+            del d       
             return ga_out
         else:                        
+            d.close()                  
+            del d
             if type(kwargs['param_edges']) is type(None):
                 from neuronunit.optimisation import model_parameters
                 param_edges = model_parameters.MODEL_PARAMS[kwargs['backend']]
@@ -349,7 +397,6 @@ class TSD(dict):
             self.backend = kwargs['backend']
             EXTRA_OPTIONS = False
             if EXTRA_OPTIONS:
-                ga_out['random_search'] = self.DO.OM.random_search(ga_out['pf'][0].dtc,100)
                 self.ga_out = elaborate_plots(ga_out,savefigs=True,figname=kwargs['figname'])
 
             if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
@@ -358,13 +405,19 @@ class TSD(dict):
                 for x,(i,j) in enumerate(zip(ga_out['dtc_pop'],ga_out['pf'][0:1])):
                     ga_out['pf'][x].dtc = None
                     ga_out['pf'][x].dtc = i
+            self.DO.OM.kwargs = kwargs
+            """
+            ga_out['random_sample'] = self.DO.OM.random_sample(ga_out['pf'][0].dtc,150)
+            d = shelve.open('opt_models_cache')  # open -- file may get suffix added by low-level
+            try:
+                d[query_key] = ga_out
 
-
-            self.ga_out = ga_out
-            del self.DO #= None # destroy this here, as its used once and not pickleable
-            d[check_cache] = ga_out
+            except:
+                pickle_able = d[query_key]=[ind.dtc for ind in ga_out['pf'][0:-1] if hasattr(ind,'dtc')]            
+                d[query_key] = pickle_able
             d.close()    
-            ga_out['check_cache'] = check_cache             
+            del d
+            """
             return ga_out
 
     def display(self):
@@ -1893,9 +1946,11 @@ def evaluate(dtc):
     if not hasattr(dtc,str('SA')):
         return []
     else:
-        fitness = tuple(v for v in dtc.SA.values)
 
-        return fitness
+        # fitness = tuple(v for v in dtc.SA.values])
+
+        fitness = np.sum(dtc.SA.values)
+        return (fitness,)
 
 def evaluate_new(dtc):
     """
@@ -2060,13 +2115,13 @@ class OptMan():
         self.julia = False
         self.NGEN = None
         if self.backend is "RAW" or self.backend is "HH":
-            self.PARALLEL_CONFIDENT = True
-            self.MEMORY_FRIENDLY = False
-
-        else:
+            self.PARALLEL_CONFIDENT = False
             self.MEMORY_FRIENDLY = True
 
-            self.PARALLEL_CONFIDENT = False
+        else:
+            self.MEMORY_FRIENDLY = False
+
+            self.PARALLEL_CONFIDENT = True
         if verbosity is None:
             self.verbose = 0
         else:
@@ -2074,53 +2129,95 @@ class OptMan():
         if type(tsr) is not None:
             self.tsr = tsr
 
-    def random_search(self,dtc,search_size):
-        pop,dtcpop = self.boot_new_genes(search_size,dtc)
-        dtcpop = [d for d in dtcpop if type(d.rheobase) is not type(None)]
-        for d in dtcpop:
-            d.tests = self.tests
-        OM = dtcpop[0].dtc_to_opt_man()
-        try:
-            dtcbag = [ delayed(self.elephant_evaluation(OM.format_test(d))) for d in dtcpop ]
-            dtcpop = compute(*dtcbag)
-        except:
-            dtcbag = [ delayed(OM.format_test(d)) for d in dtcpop ]
-            dtcpop = compute(*dtcbag)
-            dtcbag = [ delayed(d.self_evaluate()) for d in dtcpop ]
-            dtcpop = compute(*dtcbag)
-        container = {}
-        stats = {}
-        sum_list = []
+    def random_sample(self,dtc,search_size):
+        d = shelve.open('random_sample_models_cache')  # open -- file may get suffix added by low-level
+        flag = False            
+        if hasattr(self,'kwargs'):
+            kwargs = self.kwargs
+            query_key = str(kwargs['free_parameters']) +\
+            str(kwargs['backend']) +\
+            str(kwargs['protocol']) +\
+            str(kwargs['hold_constant'])
+            flag = query_key in d
+            flag = False
+            if flag:
+                stats = d[query_key]
+                d.close()
+                del d                  
+                return stats
 
-        for k,v in dtcpop[0].SA.items():container[k.name] = []
-        for d in dtcpop:sum_list.append(np.sum([v for v in d.SA.values ]))
 
-        for d in dtcpop:
+        if not flag:
+            d.close()
+            del d                  
+            #import pdb
+            #pdb.set_trace()
+            pop,dtcpop = self.boot_new_genes(search_size,dtc)
+            dtcpop = [d for d in dtcpop if type(d.rheobase) is not type(None)]
+            for d in dtcpop: d.tests = self.tests
+            OM = dtcpop[0].dtc_to_opt_man()
+            self.PARALLEL_CONFIDENT = False
+            self.PARALLEL_CONFIDENT = True
 
-            for k,v in d.SA.items():
+            if self.PARALLEL_CONFIDENT:
+                dtcbag = db.from_sequence(dtcpop,NPART)
+                dtcpop = list(dtcbag.map(self.format_test).compute())
+                dtcbag = db.from_sequence(dtcpop,NPART)
+                dtcpop = list(dtcbag.map(self.seval).compute())
 
-                if type(v) is not type(None):
+            elif self.MEMORY_FRIENDLY:# and self.backend is not str('ADEXP'):
+                passed = False
+                lazy = []
+                for d in dtcpop: 
+                    d = self.format_test_delayed(d)
+                for d in dtcpop:
+                    d = dask.delayed(d.self_evaluate())
+                    lazy.append(d)
+                dtcpop = list(dask.compute(*lazy))
+
+            container = {}
+            stats = {}
+            dtcpop = [dtc for dtc in dtcpop if dtc.SA is not None ]
+            for k,v in dtcpop[0].SA.items():
+                container[k.name] = []
+            cnt = 0
+            sum_list = []
+            for d in dtcpop:
+                sum_list.append((np.sum([v for v in d.SA.values ]),cnt))
+                cnt+=1
+            sorted_sum_list = sorted(sum_list,key=lambda tup: tup[0])
+            best = sorted_sum_list[0]
+            stats['best_random_model'] = dtcpop[best[1]]
+
+            for d in dtcpop:
+
+                for k,v in d.SA.items():
+
+                    if type(v) is not type(None):
+                        try:
+                            lns = np.abs(v.log_norm_score)
+                            if lns==-np.inf or lns==np.inf:
+                                lns = np.abs(v.score)
+                        except:
+                            if type(v) is type(float()):
+                                lns = v
+                            else:
+                                lns = np.abs(v.score)
+                        container[k.name].append(lns)
+                for k,v in container.items():
                     try:
-                        lns = np.abs(v.log_norm_score)
-                        if lns==-np.inf or lns==np.inf:
-                            lns = np.abs(v.score)
+                        stats[k] = (np.mean(container[k]),np.std(container[k]),np.var(container[k]))
                     except:
-                        if type(v) is type(float()):
-                            lns = v
-                        else:
-                            lns = np.abs(v.score)
-                    container[k.name].append(lns)
-            for k,v in container.items():
-                try:
-                    stats[k] = (np.mean(container[k]),np.std(container[k]),np.var(container[k]))
-                except:
-                    stats[k] = (100.0,0.0,0.0)
-        stats['best_random_sum_total'] = np.min(sum_list)
-        stats['models'] = dtcpop
-        temp = {k:v[0] for k,v in stats.items() if isinstance(v,Iterable)}
-        frame = pd.DataFrame([temp])
-        stats['frame'] = frame
-        return stats
+                        stats[k] = (100.0,0.0,0.0)
+            stats['best_random_sum_total'] = np.min(sum_list)
+
+            stats['models'] = dtcpop
+            temp = {k:v[0] for k,v in stats.items() if isinstance(v,Iterable)}
+            frame = pd.DataFrame([temp])
+            stats['frame'] = frame
+            d = shelve.open('random_sample_models_cache')  # open -- file may get suffix added by low-level
+            d[query_key] = stats
+            return stats
 
     def get_dummy_tests(self):
         from neuronunit.optimisation import get_neab
@@ -2411,8 +2508,8 @@ class OptMan():
         with open('processed_multicellular_constraints.p','rb') as f:
             test_frame = pickle.load(f)
         stds = {}
-        for k,v in hide_imports.TSD(test_frame['Neocortex pyramidal cell layer 5-6']).items():
-            temp = hide_imports.TSD(test_frame['Neocortex pyramidal cell layer 5-6'])[k]
+        for k,v in TSD(test_frame['Neocortex pyramidal cell layer 5-6']).items():
+            temp = TSD(test_frame['Neocortex pyramidal cell layer 5-6'])[k]
             stds[k] = temp.observation['std']
         OMObjects = []
         cloned_tests = copy.copy(test_frame['Neocortex pyramidal cell layer 5-6'])
@@ -2422,12 +2519,12 @@ class OptMan():
         cloned_tests = copy.copy(OM.tests)
         if test_key is not None:
             if len(test_key)==1:
-                OM.tests = hide_imports.TSD({test_key:cloned_tests[test_key]})
+                OM.tests = TSD({test_key:cloned_tests[test_key]})
             else:
-                OM.tests = hide_imports.TSD({tk:cloned_tests[tk] for tk in test_key})
+                OM.tests = TSD({tk:cloned_tests[tk] for tk in test_key})
 
         else:
-            OM.tests = hide_imports.TSD(cloned_tests)
+            OM.tests = TSD(cloned_tests)
         rt_out = OM.simulate_data(OM.tests,OM.backend,free_parameters=free_parameters)
         target = rt_out[0]
         penultimate_tests = hide_imports.TSD(test_frame['Neocortex pyramidal cell layer 5-6'])
@@ -2501,14 +2598,12 @@ class OptMan():
                     print("search space has \
                      too many unstable modeles \
                       try refining model parameter edges")
-                    stats = self.random_search(dsolution,30)
+                    stats = self.random_sample(dsolution,30)
                     dtcpop = stats['models']
                     # TODO
                     # find element of dtcpop where all tests return a sensible score
                     # no reason to believe dtcpop[0] has succeeded in this way.
                     rp = dtcpop[0].attrs.values
-                    import pdb
-                    pdb.set_trace()
                     (new_tests,dtc) = self.make_simulated_observations(tests,dtcpop[0].backend,rp,dsolution=dsolution)
                     break
 
@@ -2867,7 +2962,7 @@ class OptMan():
             dtc.gen = 1
         dtc.gen += 1
         assert dtc.SA is not None
-        dtc = self.get_agreement(dtc)
+        #dtc = self.get_agreement(dtc)
 
         return dtc
 
@@ -3221,7 +3316,7 @@ class OptMan():
                     d = self.format_test_delayed(d)
 
                 for d in dtcpop:
-                    dask.delayed(d.self_evaluate())
+                    d = dask.delayed(d.self_evaluate())
                     lazy.append(d)
 
                 dtcpop = list(dask.compute(*lazy))
@@ -3235,15 +3330,15 @@ class OptMan():
 
                 #for d in dtcpop:
                 #    d.tests = copy.copy(self.tests)
-
-            if not self.PARALLEL_CONFIDENT:
+            '''
+            if not self.PARALLEL_CONFIDENT or self.MEMORY_FRIENDLY:
                 for d in dtcpop:
                     assert d.rheobase is not None
                 dtcpop = list(map(self.format_test,dtcpop))
                 dtcpop = list(map(self.elephant_evaluation,dtcpop))
                 for d in dtcpop:
                     assert hasattr(d, 'tests')
-
+            '''
 
         return pop, dtcpop
 

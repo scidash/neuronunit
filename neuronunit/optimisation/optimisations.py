@@ -24,96 +24,24 @@ import dask
 
 import logging
 logger = logging.getLogger('__main__')
+from neuronunit.optimisation.data_transport_container import DataTC
 
 # TODO decide which variables go in constructor, which ones go in 'run' function
 # TODO abstract the algorithm by creating a class for every algorithm, that way
 # settings of the algorithm can be stored in objects of these classes
 
+class BetterFitness(base.Fitness):
+    def __le__(self, other):
+        return sum(self.wvalues) <= sum(other.wvalues)
+
+    def __lt__(self, other):
+        return sum(self.wvalues) < sum(other.wvalues)
+
 
 import numpy as np
 from collections import Iterable, OrderedDict
 
-
-#import neuronunit.optimisation.optimization_management as om
-
 import copy
-#WeightedSumFitness = deap.base.Fitness
-
-#creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0))
-#creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMin)
-'''
-class WeightedSumFitness(deap.base.Fitness):
-
-    """Fitness that compares by weighted sum"""
-
-    def __init__(self, values=(), obj_size=None):
-        self.weights = [1.0] * obj_size if obj_size is not None else [1]
-
-        super(WeightedSumFitness, self).__init__(values)
-        #obj_size=len(values)
-
-    @property
-    def weighted_sum(self):
-        """Weighted sum of wvalues"""
-        return sum(self.wvalues)
-
-    @property
-    def sum(self):
-        """Weighted sum of values"""
-        return sum(self.values)
-
-    @property
-    def norm(self):
-        """Frobenius norm of values"""
-        return numpy.linalg.norm(self.values)
-
-    def __le__(self, other):
-        return self.weighted_sum <= other.weighted_sum
-
-    def __lt__(self, other):
-        return self.weighted_sum < other.weighted_sum
-
-    def __deepcopy__(self, _):
-        """Override deepcopy"""
-
-        cls = self.__class__
-        result = cls.__new__(cls)
-        result.__dict__.update(self.__dict__)
-        return result
-
-
-class WSListIndividual(list):
-
-    """Individual consisting of list with weighted sum field"""
-    def set_fitness(self,obj_size):
-        self.fitness = WeightedSumFitness(obj_size=obj_size)
-    def __init__(self, *args, **kwargs):
-        """Constructor"""
-        #self.fitness = WeightedSumFitness(obj_size=kwargs['obj_size'])
-        self.dtc = None
-        self.rheobase = None
-        #del kwargs['obj_size']
-        super(WSListIndividual, self).__init__(args)#, **kwargs)
-        self.set_fitness(obj_size=kwargs['obj_size'])
-        #self.extend(args)
-
-        #s
-        #self.set_fitness(obj_size=self.obj_size)
-
-
-
-class WSFloatIndividual(float):
-    """Individual consisting of list with weighted sum field"""
-    def __init__(self, *args, **kwargs):
-        """Constructor"""
-        self.dtc = None
-        self.rheobase = None
-        super(WSFloatIndividual, self).__init__()
-
-    def set_fitness(self,obj_size):
-        self.fitness = WeightedSumFitness(obj_size=obj_size)
-
-'''
 from deap import base
 class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
 
@@ -145,7 +73,7 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
         self.benchmark = benchmark
 
         self.tests = tests
-        self.OBJ_SIZE = len(self.tests)#+1
+        self.OBJ_SIZE = 1 #len(self.tests)#+1
         #import pdb; pdb.set_trace()
         self.seed = seed
         self.MU = MU
@@ -161,6 +89,11 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
         #self.OBJ_SIZE = None
         self.setnparams(nparams = nparams, boundary_dict = boundary_dict)
         self.setup_deap()
+
+    def dask_map(self, f, x):
+        x = db.from_sequence(x, npartitions=self.npartitions) 
+        return db.map(f, x).compute()
+
 
     def transdict(self,dictionaries):
         mps = OrderedDict()
@@ -310,10 +243,26 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
             self.grid_init.append(ind)
             self.td = list(ordered.keys())
 
+
+    
         elif type(self.seed_pop) is None:
-            self.grid_init = self.grid_sample_init(self.params)#(LOWER, UPPER, self.MU)
+            #.grid_init = self.grid_sample_init(self.params)#(LOWER, UPPER, self.MU)
+            from deap import creator
+
+            creator.create("FitnessMin", base.Fitness, weights=tuple(-1.0 for i in range(0,self.OBJ_SIZE)))
+            creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMin)
+            self.toolbox.register("population", tools.initRepeat, list, creator.Individual)
+
+            self.grid_init = self.set_pop(boot_new_random=150)
         if not hasattr(self,'grid_init'):
-             self.grid_init = self.grid_sample_init(self.params)
+            #self.grid_init = self.grid_sample_init(self.params)#(LOWER, UPPER, self.MU)
+            from deap import creator
+            creator.create("FitnessMin", base.Fitness, weights=tuple(-1.0 for i in range(0,self.OBJ_SIZE)))
+            creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMin)
+            self.toolbox.register("population", tools.initRepeat, list, creator.Individual)
+
+            self.grid_init = self.set_pop(boot_new_random=150)
+
 
         def uniform_params(lower_list, upper_list, dimensions):
             if hasattr(lower_list, '__iter__'):
@@ -367,6 +316,22 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
 
         '''    
         #self.error_criterion['protocol'] = self.protocol # ={'allen':False,'elephant':True,'dm':False}
+        #if self.rescale_weights:
+        #   self.compute_weight_stats()
+        '''
+        def compute_weight_stats(self):
+            """Compute weight stats for random populations to use for rescaling of fitness"""
+            n_iter = 100
+            weight_names = [x[0] for x in self.weights]
+            
+            fitnesses = pd.DataFrame(index=range(n_iter), columns=weight_names)
+            for i in range(n_iter):
+                ind = np.random.choice(range(self.library_size), self.n_desired, replace=False)
+                fitnesses.loc[i, :] = self.eval_individual(ind, rescale=False)
+            self.stds = fitnesses.std()
+            self.means = fitnesses.mean()
+        '''
+
         self.OM = om.OptMan(self.tests,self.td, backend = self.backend, \
                                               hc = self.hc,boundary_dict = self.boundary_dict, \
                                               error_length=self.OBJ_SIZE,protocol=self.protocol)
@@ -430,17 +395,6 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
                     pop[i][j] = g[j]
         else:
             pop = self.toolbox.population(n=boot_new_random)
-            """
-            pop_ = [p[0] for p in copy.copy(pop)]
-            pop = []
-            for g in pop_:
-                p = self.toolbox.population(n=0)
-                for j,param in enumerate(p):
-                    p[j] = g[j]
-
-                pop.append(p)
-            print(pop)
-            """
         return pop
 
     def run(self,
@@ -455,7 +409,8 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
         #if MU is None:
         MU = self.MU
 
-        pop = self.set_pop()
+        #pop = self.set_pop()
+        pop = self.set_pop(boot_new_random=150)
         hof = deap.tools.HallOfFame(MU)
         pf = deap.tools.ParetoFront()
         #pf = deap.tools.ParetoFront(MU) # Wrong because first arg to ParetoFront is similarity metric not pop size
@@ -522,8 +477,8 @@ def run_ga(explore_edges, NGEN, test, \
         DO.error_length = len(test)
     ga_out = DO.run(NGEN = NGEN)
     print(DO.OM.td)
-    import pdb
-    pdb.set_trace()
+    #import pdb
+    #pdb.set_trace()
     pop,dtc_pop = DO.OM.test_runner(ga_out['pf'], DO.OM.td, DO.OM.tests)
     ga_out['dtc_pop'] = dtc_pop
 
