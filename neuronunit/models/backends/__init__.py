@@ -19,7 +19,7 @@ warnings.filterwarnings('ignore', message='mpi4py')
 backend_paths = ['base.EmptyBackend',
                  'jNeuroML.jNeuroMLBackend',
                  'neuron.NEURONBackend',
-                 'general_pyNN.PYNNBackend',
+                 'neuron_hh.NEURONHHBackend',
                  'rawpy.RAWBackend',
                  'hhrawf.HHBackend',
                  'glif.GLIFBackend',

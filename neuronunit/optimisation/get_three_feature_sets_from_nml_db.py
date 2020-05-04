@@ -281,7 +281,6 @@ def three_feature_sets_on_static_models(model,unit_test = False, challenging=Fal
     # Allen Features
     ##
 
-    #import pdb; pdb.set_trace()
     if type(model) is type(DataTC()):
         temp = model.protocols
         model = model.dtc_to_model()

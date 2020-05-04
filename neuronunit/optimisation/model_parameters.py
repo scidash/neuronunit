@@ -9,15 +9,7 @@ from neuronunit.optimisation import get_neab
 import collections
 from collections import OrderedDict
 import numpy as np
-try:
-    import pyNN
-    from pyNN import neuron
-    from pyNN.neuron import EIF_cond_exp_isfa_ista
-    from pyNN import neuron
-except:
-    pass#print('consider installing pynn a heavier backend')
 import pickle
-#import pdb
 
 from neurodynex.adex_model import AdEx
 import brian2 as b2
@@ -27,39 +19,13 @@ THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 
 path_params = {}
 path_params['model_path'] = os.path.realpath(os.path.join(THIS_DIR,'..','models','NeuroML2','LEMS_2007One.xml'))
-'''
-try:
-    GLIF = pickle.load(open('glif_params.p','rb'))
-except:
-    from neuronunit.optimisation import get_neab
-'''
 
 MODEL_PARAMS = {}
-
-'''
-DEFAULTS
-BAE = {}
-#AdEx.b2.units.pF
-#from neurodynex.adex_model.AdEx.units import *
-# Parameters
-BAE['C'] = 281 #* AdEx.b2.units.pF
-BAE['gL'] = 30# * AdEx.b2.units.nS
-BAE['taum'] = BAE['C'] / BAE['gL']
-BAE['EL'] = -70.6# * AdEx.b2.units.mV
-BAE['VT'] = -50.4# * AdEx.b2.units.mV
-BAE['DeltaT'] = 2# * AdEx.b2.units.mV
-BAE['Vcut'] = BAE['VT'] + 5 * BAE['DeltaT']
-a = 4#*AdEx.b2.units.nS
-b = 0.08#*AdEx.b2.units.nA
-'''
 BAE1 = {}
 BAE1['ADAPTATION_TIME_CONSTANT_tau_w'] = 100#*AdEx.b2.units.ms
 BAE1['ADAPTATION_VOLTAGE_COUPLING_a'] = 0.5#*AdEx.b2.units.nS
 BAE1['b'] = 0.09#*AdEx.b2.units.nS
 BAE1['C'] = 1.0
-#BAE1['gL'] = 30.0
-#BAE1['EL'] = -70.0
-#BAE1['a'] = 4
 BAE1['FIRING_THRESHOLD_v_spike'] = -30#*AdEx.b2.units.mV
 BAE1['MEMBRANE_RESISTANCE_R'] =  0.5#*AdEx.b2.units.Gohm
 BAE1['MEMBRANE_TIME_SCALE_tau_m'] = 5#*AdEx.b2.units.ms
@@ -140,9 +106,9 @@ HH_attrs['Vr'] = HH_attrs['E_L']
 """
 
 HH_attrs = {
-        'E_L' : -65.0,
+        'E_L' : -68.9346,
         'E_K' : -90.0,
-        'E_Na' : 50.0,
+        'E_Na' : 120.0,
         'g_L' : 0.1,
         'g_K' : 36,
         'g_Na' : 200,
@@ -161,6 +127,29 @@ HH_attrs = {'g_L' : 0.3,
 HH_dic1 = { k:(float(v)-0.25*float(v),float(v)+0.25*float(v)) for k,v in HH_attrs.items() }
 
 MODEL_PARAMS['HH'] = HH_dic1
+
+
+HH_dic1 = { k:(float(v)-0.25*float(v),float(v)+0.25*float(v)) for k,v in HH_attrs.items() }
+
+
+#seg.hh.gnabar = 0.12  # Sodium conductance in S/cm2
+#seg.hh.gkbar = 0.036  # Potassium conductance in S/cm2
+MODEL_PARAMS['NEURONHH'] = {'gnabar':0.12,\
+                            'gkbar':0.036,\
+                            'Ra':100,\
+                            'L':12.6157,\
+                            'diam':12.6157,\
+                            'gkbar':0.036,\
+                            'el':-54.3,\
+                            'gk':0.0,\
+                            'gl':0.0003,\
+                            'ena':50.0,\
+                            'ek':-77.0,\
+                            'vr':-65,\
+                            'cm':1.0,\
+                            'ena':50.0,\
+                            'ek':-77}
+MODEL_PARAMS['NEURONHH'] = { k:(float(v)-0.95*float(v),float(v)+0.95*float(v)) for k,v in MODEL_PARAMS['NEURONHH'].items() }
 
 #I = .8*nA
 #Vcut = VT + 5 * DeltaT  # practical threshold condition
@@ -293,6 +282,10 @@ for index,key in enumerate(reduced_cells.keys()):
         reduced_cells[key][k] = v[index]
 
 IZHI_PARAMS = {k:(np.min(v),np.max(v)) for k,v in trans_dict.items()}
+
+#IZHI_PARAMS['b'] = (-2,5)
+IZHI_PARAMS['C'] = (40,670)
+IZHI_PARAMS['vPeak'] = (20,100)
 
 IZHI_PARAMS = OrderedDict(IZHI_PARAMS)
 # IZHI_PARAMS['dt'] = [0.005, 0.005]
