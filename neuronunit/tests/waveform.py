@@ -216,19 +216,18 @@ class APAmplitudeTest(VmTest):
         model.inject_square_current(self.params['injected_square_current'])
         model.get_membrane_potential()
         #if ascii_plot:
-        if model._backend is str("HH"):
-            asciplot_code(model.vM,model.get_spike_count())
-        
-            import pdb
-            pdb.set_trace()
-        height = np.max(model.get_membrane_potential())-model.get_AP_thresholds()
-        prediction = {'value': height[0],
-                      'mean':np.mean(height) if len(height) else None,
-                      'std': np.std(height) if len(height) else None,
-                      'n': len(height)}
+        #if model._backend is str("HH"):
+        #    asciplot_code(model.vM,model.get_spike_count())
+        try:
+            height = np.max(model.get_membrane_potential())-model.get_AP_thresholds()
+            prediction = {'value': height[0],
+                        'mean':np.mean(height) if len(height) else None,
+                        'std': np.std(height) if len(height) else None,
+                        'n': len(height)}
 
 
-
+        except:
+            prediction = None
         # useful to retain inside object.
         self.prediction = prediction
 

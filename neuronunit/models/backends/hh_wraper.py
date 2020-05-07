@@ -5,7 +5,6 @@ import neuronunit
 import os
 import pathlib
 anchor = pathlib.Path(__file__).parent.absolute()
-print(anchor)
 jl.eval("using SpikingNeuralNetworks")
 jl.eval("SNN = SpikingNeuralNetworks")
 try:
@@ -201,7 +200,6 @@ class JHHBackend(Backend):
         
         Main.eval('SNN.sim!([E2], []; dt = 0.015*ms,delay = current["delay"], duration = current["duration],s')
         Main.eval("v = SNN.getrecord(E2, :v)")
-        print('gets here')
         # jl.eval("SNN.sim!([param], []; dt = 0.015*ms, duration = dur*ms)")
         #Main.eval("SNN.monitor(E2, [:I])")
 

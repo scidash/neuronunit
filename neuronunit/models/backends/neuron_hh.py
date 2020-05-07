@@ -71,8 +71,21 @@ class NEURONHHBackend(Backend):
         self.h.load_file("stdlib.hoc")
 
         self.h.load_file("stdgui.hoc")
-
-
+        self.default_attrs = {'gnabar':0.12,\
+                            'gkbar':0.036,\
+                            'Ra':100,\
+                            'L':12.6157,\
+                            'diam':12.6157,\
+                            'gkbar':0.036,\
+                            'el':-54.3,\
+                            'gk':0.0,\
+                            'gl':0.0003,\
+                            'ena':50.0,\
+                            'ek':-77.0,\
+                            'vr':-65,\
+                            'cm':1.0,\
+                            'ena':50.0,\
+                            'ek':-77}
         super(NEURONHHBackend, self).init_backend()
         self.model._backend.use_memory_cache = False
         self.model.unpicklable += ['h', 'ns', '_backend']
@@ -106,9 +119,8 @@ class NEURONHHBackend(Backend):
         """
         self.h = neuronVar.h
         self.neuron = neuronVar
-        h = neuron.h
+        # h = neuron.h
         self.h.load_file("stdlib.hoc")
-
         self.h.load_file("stdgui.hoc")
 
 

@@ -3,9 +3,6 @@
 # but it calls many modules that are, such that it needs to pre-empt
 import warnings
 import dask
-#from dask.distributed import Client
-#client = Client()
-#from joblib import Parallel, delayed
 from tqdm import tqdm
 SILENT = True
 if SILENT:
@@ -766,7 +763,10 @@ def dtc_to_rheo(dtc):
 
 
 
-def mint_NEURON_model(dtc):
+def mint_izhi_NEURON_model(dtc):
+    """
+    Depricated.
+    """
     LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
     pre_model.model_path = LEMS_MODEL_PATH
     pre_model = dtc_to_rheo(pre_model)
@@ -791,7 +791,10 @@ def inject_and_plot_model(pre_model,figname=None,plotly=True):
     vm = model.get_membrane_potential()
     if plotly:
         fig = px.line(x=vm.times, y=vm.magnitude, labels={'x':'t (ms)', 'y':'V (mV)'})
-        fig.write_image(str(figname)+str('.png'))
+        if figname is not None:
+            fig.write_image(str(figname)+str('.png'))
+        else:
+            return fig
     if not plotly:
         plt.clf()
         plt.figure()
@@ -859,39 +862,101 @@ def inject_and_not_plot_model(pre_model):
 import plotly.graph_objects as go    
 from neuronunit.capabilities.spike_functions import get_spike_waveforms
 
-def plotly_version(vm0,vm1):
+def plotly_version(vm0,vm1,figname=None,snippets=False):
+    
+    import plotly.graph_objects as go
     if snippets:
         snippets1 = get_spike_waveforms(vm1)
         snippets0 = get_spike_waveforms(vm0)
 
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=snippets0.times, y=snippets0.magnitude,
-                            mode='lines',
-                            name='lines'))
-        fig.add_trace(go.Scatter(x=snippets1.times, y=snippets1.magnitude,
-                            mode='lines',
-                            name='lines'))
-        fig.write_image(str(figname)+str('.png'))
+        import plotly.graph_objects as go
+        from plotly.subplots import make_subplots
 
+        # Create figure with secondary y-axis
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
+        # Add traces
+        fig.add_trace(
+            go.Scatter(x=[float(i) for i in snippets0.times[0:-1]], y=[float(i) for i in snippets0.magnitude[0:-1]], name="yaxis data"),
+            secondary_y=False,
+        )
+
+        fig.add_trace(
+            go.Scatter(x=[float(i) for i in snippets1.times[0:-1]], y=[float(i) for i in snippets1.magnitude[0:-1]], name="yaxis2 data"),
+            secondary_y=True,
+        )
+
+        # Add figure title
+        fig.update_layout(
+            title_text="Double Y Axis Example"
+        )
+
+        # Set x-axis title
+        fig.update_xaxes(title_text="xaxis title")
+
+        # Set y-axes titles
+        fig.update_yaxes(title_text="<b>primary</b> yaxis title", secondary_y=False)
+        fig.update_yaxes(title_text="<b>secondary</b> yaxis title", secondary_y=True)
+
+        fig.show()
+        if figname is not None:
+            fig.write_image(str(figname)+str('.png'))
+        else:
+            fig.show()
 
     else:
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=vm0.times, y=vm0.magnitude,
-                            mode='lines',
-                            name='lines'))
-        fig.add_trace(go.Scatter(x=vm1.times, y=vm1.magnitude,
-                            mode='lines',
-                            name='lines'))
-        fig.write_image(str(figname)+str('.png'))
+        import plotly.graph_objects as go
+        from plotly.subplots import make_subplots
+
+        # Create figure with secondary y-axis
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
+        # Add traces
+        fig.add_trace(
+            go.Scatter(x=[float(i) for i in vm0.times[0:-1]], y=[float(i) for i in vm0.magnitude[0:-1]], name="yaxis data"),
+            secondary_y=False,
+        )
+
+        fig.add_trace(
+            go.Scatter(x=[float(i) for i in vm1.times[0:-1]], y=[float(i) for i in vm1.magnitude[0:-1]], name="yaxis2 data"),
+            secondary_y=True,
+        )
+
+        # Add figure title
+        fig.update_layout(
+            title_text="Double Y Axis Example"
+        )
+
+        # Set x-axis title
+        fig.update_xaxes(title_text="xaxis title")
+
+        # Set y-axes titles
+        fig.update_yaxes(title_text="<b>primary</b> yaxis title", secondary_y=False)
+        fig.update_yaxes(title_text="<b>secondary</b> yaxis title", secondary_y=True)
+
+        if figname is not None:
+            fig.write_image(str(figname)+str('.png'))
+        else:
+            fig.show()
 
 
+
+def model_trace(pre_model):
+    from neuronunit.tests.base import AMPL, DELAY, DURATION
+
+    # get rheobase injection value
+    # get an object of class ReducedModel with known attributes and known rheobase current injection value.
+    pre_model = dtc_to_rheo(pre_model)
+    model = pre_model.dtc_to_model()
+    uc = {'amplitude':model.rheobase,'duration':DURATION,'delay':DELAY}
+    model.inject_square_current(uc)
+    vm = model.get_membrane_potential()
+    return vm
 def check_binary_match(dtc0,dtc1,figname=None,snippets=True,plotly=True):
 
-    vm0 = inject_and_not_plot_model(dtc0)
-    vm1 = inject_and_not_plot_model(dtc1)
+    vm0 = model_trace(dtc0)
+    vm1 = model_trace(dtc1)
 
     if plotly:
-        plotly_version(vm0,vm1)
+        plotly_version(vm0,vm1,figname,snippets)
     else:
         matplotlib.rcParams.update({'font.size': 8})
 
@@ -1947,10 +2012,9 @@ def evaluate(dtc):
         return []
     else:
 
-        # fitness = tuple(v for v in dtc.SA.values])
+        fitness = tuple(v for v in dtc.SA.values)
 
-        fitness = np.sum(dtc.SA.values)
-        return (fitness,)
+        return fitness
 
 def evaluate_new(dtc):
     """
@@ -2131,9 +2195,11 @@ class OptMan():
 
     def random_sample(self,dtc,search_size):
         d = shelve.open('random_sample_models_cache')  # open -- file may get suffix added by low-level
-        flag = False            
+        flag = False
+        query_key = None            
         if hasattr(self,'kwargs'):
             kwargs = self.kwargs
+            
             query_key = str(kwargs['free_parameters']) +\
             str(kwargs['backend']) +\
             str(kwargs['protocol']) +\
@@ -2149,9 +2215,7 @@ class OptMan():
 
         if not flag:
             d.close()
-            del d                  
-            #import pdb
-            #pdb.set_trace()
+            del d               
             pop,dtcpop = self.boot_new_genes(search_size,dtc)
             dtcpop = [d for d in dtcpop if type(d.rheobase) is not type(None)]
             for d in dtcpop: d.tests = self.tests
@@ -2216,6 +2280,8 @@ class OptMan():
             frame = pd.DataFrame([temp])
             stats['frame'] = frame
             d = shelve.open('random_sample_models_cache')  # open -- file may get suffix added by low-level
+            if query_key is None:
+                query_key = str(dtc.backend)+str(search_size)+str(list(dtc.attrs.keys()))
             d[query_key] = stats
             return stats
 
@@ -3149,8 +3215,6 @@ class OptMan():
                 for d in dtcpop:
                     d.attrs.update(self.hc)
 
-                #dtc.boundary_dict = None
-                #dtc.boundary_dict = self.boundary_dict
             return dtcpop
         else:
             ind = pop
@@ -3537,6 +3601,8 @@ class OptMan():
         else:
             pop = DO.set_pop(boot_new_random=number_genes)
         dtcpop_ = self.update_dtc_pop(pop)
+        #import pdb
+        #pdb.set_trace()
         dtcbag = [ delayed(dtc_to_rheo(d)) for d in dtcpop_ ]
         dtcpop = compute(*dtcbag)
         #dtcpop_ = list(map(dtc_to_rheo,dtcpop_))

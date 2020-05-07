@@ -27,6 +27,7 @@ try:
 except:
     ascii_plot = False
 """    
+ascii_plot = False
 SLOW_ZOOM = True
 import time
 import logging
@@ -46,16 +47,6 @@ def timer(func):
 
 ascii_plot = False
 #@timer
-@jit
-def Id(t,delay,duration,tmax,amplitude):
-
-    if 0.0 < t < delay:
-        return 0.0
-    elif delay < t < delay+duration:
-        return amplitude#(100.0)
-    elif delay+duration < t < tmax:
-        return 0.0
-    return 0.0
 
 # Compute derivatives
 # Average potassium channel conductance per unit area (mS/cm^2)
@@ -127,7 +118,7 @@ def I_L(V):
 	return g_L * (V - E_L)
 #@timer
 @jit
-def I_inj(t,delay,duration,tMax,amplitude):
+def I_inj(t,delay,duration,amplitude):
 	"""
 	External Current
 
@@ -138,10 +129,22 @@ def I_inj(t,delay,duration,tMax,amplitude):
 	|           nothing uA/cm^2 at delay+duration>t>end
 	"""
 
-	return 0*(t<delay) +amplitude*(t>delay) -amplitude*(t>delay+duration)
+	return 0*(t<delay) +amplitude*(t>delay) +0*(t>delay+duration) # a scalar value.
+"""
+@jit
+def Id(t,delay,duration,tmax,amplitude):
 
+    if 0.0 < t < delay:
+        return 0.0
+    elif delay < t < delay+duration:
+        return amplitude#(100.0)
+    elif delay+duration < t < tmax:
+        return 0.0
+    return 0.0
+"""
 
-@jit(forceobj=True)
+#@jit # forceobj=True)
+
 def dALLdt(X, t, attrs):
     """
     Integrate
@@ -154,7 +157,7 @@ def dALLdt(X, t, attrs):
              'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -90.0, 'E_Na' : 50.0, 'vr':-68.9346 }
     defaults.update(attrs)
     attrs = defaults
-    delay,duration,T,amplitude = copy.copy(attrs['I'])
+    delay,duration,T,amplitude = attrs['I']
     V, m, h, n = X
 
     C_m = attrs['C_m']
@@ -165,22 +168,20 @@ def dALLdt(X, t, attrs):
     g_K = attrs['g_K'] #/ Cm) * np.power(n, 4.0)
     g_Na = attrs['g_Na'] #/ Cm) * np.power(m, 3.0) * h
     g_L = attrs['g_L'] #/ Cm
-    #delay,duration,T,amplitude = attrs['I']
-    Iext = Id(t,delay,duration,np.max(T),amplitude)
-    #print(Iext)
-    #print(np.abs(Iext))
+	
+    #I_inj(t,delay,duration,amplitude)
+    #Iext = Id(t,delay,duration,np.max(T),amplitude)
 
     I_Na = g_Na * m**3.0 * h * (V - E_Na)
     I_K = g_K  * n**4.0 * (V - E_K)
     #  Leak
     I_L = g_L * (V - E_L)
-    #ina = I_Na(V, m, h, g_Na)
-    #ik = I_K(V, n, g_K)
-    #il = I_L(V, g_L)
 
 
     # use time to time this
-    dVdt1 = (Iext - I_Na - I_K - I_L) / C_m
+    # dVdt1 = (Iext - I_Na - I_K - I_L) / C_m
+    inj_current = I_inj(t,delay,duration,amplitude)
+    dVdt1 = (inj_current - I_Na - I_K - I_L) / C_m
     dmdt = alpha_m(V)*(1.0-m) - beta_m(V)*m
     dhdt = alpha_h(V)*(1.0-h) - beta_h(V)*h
     dndt = alpha_n(V)*(1.0-n) - beta_n(V)*n
@@ -212,13 +213,12 @@ def get_vm(attrs):
     dt = attrs['dt']
 
     X = odeint(dALLdt, Y, T, args=(attrs,))
-    vm = V = X[:,0]
+    vm = X[:,0]
     m = X[:,1]
     h = X[:,2]
     n = X[:,3]
 
 
-    #vm = [ v[0] for v in Vy ]
     size = len(vm)
     scale = 1.0/1.3
     vm = AnalogSignal(vm,
@@ -326,9 +326,7 @@ class HHBackend(Backend):
         self.set_stop_time(tmax*pq.ms)
         tmax = self.tstop
         tmin = 0.0
-        #DT = 0.01
-        #T = np.linspace(tmin, tmax, int(tmax/DT))
-        dt = 0.025
+        dt = 0.01 
         T = np.arange(0.0, tmax, dt)
         #dt = T[1]-T[0]
 
@@ -336,7 +334,6 @@ class HHBackend(Backend):
         attrs['I'] = (delay,duration,tmax,amplitude)
         attrs['dt'] = dt
         attrs['T'] = T
-        #try:
         self.vM = get_vm(attrs)
 
         return self.vM

@@ -41,7 +41,7 @@ from neuronunit.capabilities.spike_functions import get_spike_waveforms, spikes2
 #try:
 #import asciiplotlib as apl
 #fig.plot([1,0], [0,1])
-
+'''
 try:
     import asciiplotlib as apl
     fig = apl.figure()
@@ -51,6 +51,8 @@ try:
     ascii_plot = True
 except:
     ascii_plot = False
+'''
+ascii_plot = False
 
 def asciplot_code(vm,spkcnt):
     t = [float(f) for f in vm.times]

@@ -20,17 +20,17 @@ import matplotlib.pyplot as plt
 
 
 getting_started = False
+"""
 try:
     import asciiplotlib as apl
     fig = apl.figure()
-    fig.plot([1,0], [0,1])
     ascii_plot = True
     import gc
 
 except:
     ascii_plot = False
 ascii_plot = False
-
+"""
 import numpy
 """
 try:

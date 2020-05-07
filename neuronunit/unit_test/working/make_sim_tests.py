@@ -27,7 +27,7 @@ def setUp(model_type):
         temp = TSD(test_frame['Neocortex pyramidal cell layer 5-6'])[k]
         stds[k] = temp.observation['std']
     cloned_tests = copy.copy(test_frame['Neocortex pyramidal cell layer 5-6'])
-    cloned_tests = TSD(cloned_tests)
+    cloned_tests = TSD(cloned_tests)a
     #{'RestingPotentialTest':cloned_tests['RestingPotentialTest']}
     OM = jrt(cloned_tests,backend,protocol='elephant')
     return OM

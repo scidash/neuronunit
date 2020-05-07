@@ -73,7 +73,7 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
         self.benchmark = benchmark
 
         self.tests = tests
-        self.OBJ_SIZE = 1 #len(self.tests)#+1
+        self.OBJ_SIZE = len(self.tests)#+1
         #import pdb; pdb.set_trace()
         self.seed = seed
         self.MU = MU
@@ -253,7 +253,7 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
             creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMin)
             self.toolbox.register("population", tools.initRepeat, list, creator.Individual)
 
-            self.grid_init = self.set_pop(boot_new_random=150)
+            #self.grid_init = self.set_pop(boot_new_random=self.MU)
         if not hasattr(self,'grid_init'):
             #self.grid_init = self.grid_sample_init(self.params)#(LOWER, UPPER, self.MU)
             from deap import creator
@@ -261,7 +261,7 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
             creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMin)
             self.toolbox.register("population", tools.initRepeat, list, creator.Individual)
 
-            self.grid_init = self.set_pop(boot_new_random=150)
+           # self.grid_init = self.set_pop(boot_new_random=self.MU)
 
 
         def uniform_params(lower_list, upper_list, dimensions):
@@ -271,66 +271,19 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
                 other = [random.uniform(lower_list, upper_list)
                     for _ in range(dimensions)]
             return other
-        # Register the 'uniform' function
-        #self.toolbox.register("uniform_params", uniform_params, LOWER, UPPER, IND_SIZE)
-        ##
-        # DEEP BADNESS LINES
-        ##
-        from deap import creator
-        #creator.create("FitnessMin", base.Fitness, weights=(-1.0, -1.0))
 
-        creator.create("FitnessMin", base.Fitness, weights=tuple(-1.0 for i in range(0,self.OBJ_SIZE)))
+        from deap import creator
+
+        #creator.create("FitnessMin", base.Fitness, weights=tuple(-1.0 for i in range(0,self.OBJ_SIZE)))
         creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMin)
         NDIM = len(LOWER)
-        #self.toolbox.register("FitnessMin", base.Fitness, weights=(-1.0 for i in range(0,len(self.OBJ_SIZE))))
-        #self.toolbox.register("Individual", array.array, typecode='d', fitness=creator.FitnessMin)
         self.toolbox.register("attr_float", uniform_params, LOWER, UPPER, NDIM)
-
-        #self.toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
         self.toolbox.register("individual", tools.initIterate, creator.Individual, self.toolbox.attr_float)
         self.toolbox.register("population", tools.initRepeat, list, self.toolbox.individual)
 
         self.toolbox.register("mate", tools.cxSimulatedBinaryBounded, low=LOWER, up=UPPER, eta=20.0)
         self.toolbox.register("mutate", tools.mutPolynomialBounded, low=LOWER, up=UPPER, eta=20.0, indpb=1.0/NDIM)
         self.toolbox.register("select", tools.selNSGA2)
-
-        #weights=tuple(-1.0 for i in range(0,self.OBJ_SIZE))
-        #print(weights)
-        
-        #pop = self.toolbox.population(n=10)
-        #del pop
-        '''
-        self.toolbox.register(
-            "Individual",
-            deap.tools.initIterate,
-            functools.partial(WSListIndividual, obj_size=self.OBJ_SIZE),
-            self.toolbox.uniform_params)
-
-        # Register the population format. It is a list of individuals
-        self.toolbox.register(
-            "population",
-            deap.tools.initRepeat,
-            list,
-            self.toolbox.Individual)
-
-
-        '''    
-        #self.error_criterion['protocol'] = self.protocol # ={'allen':False,'elephant':True,'dm':False}
-        #if self.rescale_weights:
-        #   self.compute_weight_stats()
-        '''
-        def compute_weight_stats(self):
-            """Compute weight stats for random populations to use for rescaling of fitness"""
-            n_iter = 100
-            weight_names = [x[0] for x in self.weights]
-            
-            fitnesses = pd.DataFrame(index=range(n_iter), columns=weight_names)
-            for i in range(n_iter):
-                ind = np.random.choice(range(self.library_size), self.n_desired, replace=False)
-                fitnesses.loc[i, :] = self.eval_individual(ind, rescale=False)
-            self.stds = fitnesses.std()
-            self.means = fitnesses.mean()
-        '''
 
         self.OM = om.OptMan(self.tests,self.td, backend = self.backend, \
                                               hc = self.hc,boundary_dict = self.boundary_dict, \
@@ -354,8 +307,6 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
             for i in invalid_dtc:
                 fitnesses.append(om.evaluate(i))
     
-            #fitnesses = dask.compute(lazy)[0]
-
             return (invalid_pop,fitnesses)
 
         self.toolbox.register("evaluate", custom_code)
@@ -427,7 +378,6 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
             stats=stats,
             hof=hof,
             pf=pf,
-            nelite=self.elite_size,
             cp_frequency=cp_frequency,
             continue_cp=continue_cp,
             cp_filename=cp_filename,

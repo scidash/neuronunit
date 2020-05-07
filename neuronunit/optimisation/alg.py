@@ -11,6 +11,7 @@ import math
 import pdb
 import pickle
 import random
+from tqdm import tqdm
 
 import deap.algorithms
 import deap.tools
@@ -103,8 +104,6 @@ def _update_history_and_hof(halloffame,pf, history, population,GEN,MU):
         try:
             halloffame.update(temp)
         except:
-            #import pdb
-            #pdb.set_trace()
             temp = cleanse(temp)
             halloffame.update(temp)
     if history is not None:
@@ -227,10 +226,53 @@ def get_center_nb(pf,pop,OM):
     dtc.SA
     return dtc
 
+def update_custom_NSGA2(individuals, k, nd='standard'):
+    """Apply NSGA-II selection operator on the *individuals*. Usually, the
+    size of *individuals* will be larger than *k* because any individual
+    present in *individuals* will appear in the returned list at most once.
+    Having the size of *individuals* equals to *k* will have no effect other
+    than sorting the population according to their front rank. The
+    list returned contains references to the input *individuals*. For more
+    details on the NSGA-II operator see [Deb2002]_.
 
-from tqdm import tqdm
+    :param individuals: A list of individuals to select from.
+    :param k: The number of individuals to select.
+    :param nd: Specify the non-dominated algorithm to use: 'standard' or 'log'.
+    :returns: A list of selected individuals.
 
-'''
+    .. [Deb2002] Deb, Pratab, Agarwal, and Meyarivan, "A fast elitist
+       non-dominated sorting genetic algorithm for multi-objective
+       optimization: NSGA-II", 2002.
+    """
+    if nd == 'standard':
+        pareto_fronts = sortNondominated(individuals, k)
+    elif nd == 'log':
+        pareto_fronts = sortLogNondominated(individuals, k)
+    else:
+        raise Exception('selNSGA2: The choice of non-dominated sorting '
+                        'method "{0}" is invalid.'.format(nd))
+
+
+    for front in pareto_fronts:
+        assignCrowdingDist(front)
+    return pareto_fronts
+    
+
+def sel_custom_NSGA2(pareto_fronts):
+    chosen = list(chain(*pareto_fronts[:-1]))
+    k = k - len(chosen)
+    if k > 0:
+        sorted_front = sorted(pareto_fronts[-1], key=attrgetter("fitness.crowding_dist"), reverse=True)
+        chosen.extend(sorted_front[:k])
+
+    # need to now.
+    # artificially keep the chosen front small.
+    # put some of the best solutions back in, even if they are very crowded together.
+    # constellation.
+    
+    return chosen
+    '''
+
 class WeightedSumFitness(deap.base.Fitness):
 
    
@@ -268,7 +310,7 @@ class WeightedSumFitness(deap.base.Fitness):
         result = cls.__new__(cls)
         result.__dict__.update(self.__dict__)
         return result
-
+'''
 def best(x):
     weight_names, weight_functions, weight_values = zip(*weights)
     scores = [np.dot(hof.keys[i].values, weight_values)
@@ -277,19 +319,7 @@ def best(x):
     return np.array([scores[i]] + list(hof.keys[i].values))
 
 
-def normalise_fitness(fitnesses):
-    for i,_ in enumerate(fitnesses): 
-        temps = []
-        for f in fitnesses[i]:
-            temp = np.abs(f-np.mean(fitnesses[i])/np.std(fitnesses[i]))
-            temps.append(temp)
-        fitnesses[i] = temps
-    for ind, fit in zip(invalid_ind, fitnesses):
-        ind.fitness.values = fit
-    return fitnesses
-'''
 
-#@jit
 def select_best(pop,size):
     sum_list = []
     cnt = 0
@@ -311,7 +341,6 @@ def eaAlphaMuPlusLambdaCheckpoint(
         stats=None,
         hof = None,
         pf = None,
-        nelite = 3,
         cp_frequency = 20,
         cp_filename = 'big_run.p',
         continue_cp = False,
@@ -337,10 +366,31 @@ def eaAlphaMuPlusLambdaCheckpoint(
         toolbox.register("select", tools.selNSGA2)#, ref_points=ref_points)
         random.seed()
 
-        stats.register("avg", numpy.mean, axis=0)
-        stats.register("std", numpy.std, axis=0)
-        stats.register("min", numpy.min, axis=0)
-        stats.register("max", numpy.max, axis=0)
+        def min_fitness(pop):
+            sum_list = []
+            for i,p in enumerate(pop):
+                sum_list.append((np.sum([v for v in p ]),i))
+            sorted_sum_list = sorted(sum_list,key=lambda tup: tup[0])
+            pre_selection = sorted_sum_list[0][1]            
+            selected_fitness_values = pop[pre_selection]
+            return selected_fitness_values
+
+        def max_fitness(pop):
+            sum_list = []
+            for i,p in enumerate(pop):
+                sum_list.append((np.sum([v for v in p ]),i))
+            sorted_sum_list = sorted(sum_list,key=lambda tup: tup[0])
+            pre_selection = sorted_sum_list[-1][1]
+            selected_fitness_values = pop[pre_selection]
+            return selected_fitness_values
+
+
+        stats = tools.Statistics(key=lambda ind: ind.fitness.values)
+
+        stats.register("avg", numpy.mean)#, axis=0)
+        stats.register("std", numpy.std)#, axis=0)
+        stats.register("min", min_fitness)
+        stats.register("max", max_fitness)
 
         logbook = tools.Logbook()
         logbook.header = "gen", "evals", "std", "min", "avg", "max"
@@ -353,24 +403,23 @@ def eaAlphaMuPlusLambdaCheckpoint(
         #for f in fitnesses:
         #    weighted_fitnesses.append(WeightedSumFitness(values=f))
     
-        hof, pf,history = _update_history_and_hof(hof, pf, history, pop ,0,MU)
-
+        
         for ind, fit in zip(invalid_ind, fitnesses): 
-            ind.fitness.values = fit#.values
-        #for ind, fit in zip(invalid_ind, fitnesses):
-        #    ind.fitness.values = fit
-
+            ind.fitness.values = fit
+        
 
         # Compile statistics about the population
         pop = [p for p in pop if len(p.fitness.values) ]
         record = stats.compile(pop)
         logbook.record(gen=0, evals=len(invalid_ind), **record)
-        temp_pop = copy.copy(pop)
+        #temp_pop = copy.copy(pop)
         
+        hof, pf,history = _update_history_and_hof(hof, pf, history, pop ,0,MU)
 
         # Begin the generational process
         
         for gen in tqdm(range(1, NGEN), desc='GA Generation Progress'):
+
             #offspring = tools.selTournamentDCD(pop, len(pop))
             
             #offspring = toolbox.select(pop, int(MU/2))
@@ -382,7 +431,10 @@ def eaAlphaMuPlusLambdaCheckpoint(
 	        # for ind1, ind2 in zip(offspring[::int(MU/4)], offspring[1::int(MU/4)]):
             temp = select_best(offspring,1)
             offspring.insert(0,temp[0]) # force the best gene to always bread.
-            for ind1, ind2 in zip(offspring[::4], offspring[1::4]):
+
+            # [::4] means slicing list in reverse.
+            # means start at beggining of list.
+            for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
                 toolbox.mate(ind1, ind2)
                 toolbox.mutate(ind1)
                 toolbox.mutate(ind2)
@@ -391,12 +443,12 @@ def eaAlphaMuPlusLambdaCheckpoint(
             # Evaluate the individuals with an invalid fitness
             invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
             invalid_ind,fitnesses = toolbox.evaluate(invalid_ind)
+            record = stats.compile(pop)
+            logbook.record(gen=gen, evals=len(invalid_ind), **record)
             #weighted_fitnesses = []       
             #for f in fitnesses:
             #   weighted_fitnesses.append(WeightedSumFitness(values=f))
                     
-            #for ind, fit in zip(invalid_ind, fitnesses):
-            #    ind.fitness.values = fit
             for ind, fit in zip(invalid_ind, fitnesses): 
                 ind.fitness.values = fit
 
@@ -405,26 +457,10 @@ def eaAlphaMuPlusLambdaCheckpoint(
             
             pool = remove_and_replace(pool,toolbox)
             pop = select_best(pool,MU)
-
+            #fronts = update_custom_NSGA2(pop)
+            #if gen == NGEN:
+            #    custom_front =sel_custom_NSGA2(fronts)
             #pop = toolbox.select(pool, MU)
 
-            record = stats.compile(pop)
-            logbook.record(gen=gen, evals=len(invalid_ind), **record)
-            
             hof, pf,history = _update_history_and_hof(hof, pf, history, pop ,gen,MU)
-            
-            # pop = get_center(pf,pop,toolbox)
-            
-            if(cp_filename and cp_frequency and gen % cp_frequency == 0):
-                cp = dict(population=population,
-                        generation=gen,
-                        parents=parents,
-                        halloffame=hof,
-                        history=history,
-                        logbook=logbook,
-                        rndstate=random.getstate())
-                pickle.dump(cp, open(cp_filename, "wb"))
-                logger.debug('Wrote checkpoint to %s', cp_filename)        
-        
-            #hof, pf,history = _update_history_and_hof(hof, pf, history, invalid_ind,gen,MU)
     return pop, hof, pf, logbook, history, gen_vs_pop

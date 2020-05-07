@@ -7,18 +7,19 @@ import gc
 from neuronunit import neuroelectro
 import numpy as np
 from neo import AnalogSignal
-
+'''
 try:
     import asciiplotlib as apl
     fig = apl.figure()
 
-    fig.plot([1,0], [0,1])
+    #fig.plot([1,0], [0,1])
 
     ascii_plot = True
     import gc
 
 except:
     ascii_plot = False
+'''
 ascii_plot = False
 def asciplot_code(vm):
     t = [float(f) for f in vm.times]
