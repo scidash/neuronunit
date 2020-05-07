@@ -21,6 +21,7 @@ voltage_units = mV
 from sciunit.utils import redirect_stdout
 
 from elephant.spike_train_generation import threshold_detection
+from neuronunit.optimisation.model_parameters import path_params
 
 class NEURONBackend(Backend):
     """Use for simulation with NEURON, a popular simulator.
@@ -75,7 +76,7 @@ class NEURONBackend(Backend):
         if type(DTC) is not type(None):
             if type(DTC.attrs) is not type(None):
 
-                self.set_attrs(**DTC.attrs)
+                self.set_attrs(DTC.attrs)
                 if len(DTC.attrs):
                     assert len(self.model.attrs) > 0
 
@@ -260,6 +261,8 @@ class NEURONBackend(Backend):
         Create a pyhoc file using jneuroml to convert from NeuroML to pyhoc.
         import the contents of the file into the current names space.
         """
+        self.model.orig_lems_file_path = path_params['model_path']
+        #import pdb; pdb.set_trace()
         assert os.path.isfile(self.model.orig_lems_file_path)
         base_name = os.path.splitext(self.model.orig_lems_file_path)[0]
         NEURON_file_path = '{0}_nrn.py'.format(base_name)

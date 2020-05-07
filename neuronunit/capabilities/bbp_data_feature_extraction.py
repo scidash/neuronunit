@@ -50,6 +50,13 @@ def list_curated_data():
     """
     url = "http://microcircuits.epfl.ch/data/articles/article_4_eph.json"
     cells = []
+    import pickle
+
+    try:
+        with open('data_cache.p','rb') as f:
+            cells = pickle.load(f)
+    except:
+        pass
     try:
         response = urlopen(url)
     except URLError:
@@ -62,6 +69,8 @@ def list_curated_data():
                 if 'term' in row:
                     cell = row['term'].split(' ')[1]
                     cells.append(cell)
+    with open('data_cache.p','wb') as f:
+        pickle.dump(cells,f)
     return cells
 
 
@@ -202,11 +211,14 @@ def plot_rheobase(data):
             plot_data(vms[target][1],injections[target][1])
 import quantities as pq
 def process_models(mod):   
+    if mod.name == "B1" or mod.name == "B92":
+        return None
     model = mod
     model.vm30 = model.vm30[1]
     model.vm15 = model.vm15[1]
     times = np.array([float(t) for t in model.vm30.times])
     volts = np.array([float(v) for v in model.vm30])
+    '''
     try:
         import asciiplotlib as apl
         fig = apl.figure()
@@ -214,6 +226,7 @@ def process_models(mod):
         fig.show()
     except:
         pass
+    '''
     ##
     # Allen Features
     ##
@@ -232,11 +245,12 @@ def process_models(mod):
 
         #import pdb
         #pdb.set_trace()
+        '''
         import asciiplotlib as apl
         fig = apl.figure()
         fig.plot(times, volts, label="V_{m} (mV), versus time (ms)", width=100, height=80)
         fig.show()
-
+        '''
         all_allen_features30, allen_features30 = allen_format(volts,times,optional_vm=model.vm30)
         #if frame30 is not None:
         #    frame30['protocol'] = 3.0
@@ -245,17 +259,23 @@ def process_models(mod):
         # wrangle data in preperation for computing
         # Allen Features
         ##
+    
+    except:
+        all_allen_features30 = None
+
+    try:
         times = np.array([float(t) for t in model.vm15.times])
         volts = np.array([float(v) for v in model.vm15])
         volts = scipy.signal.resample(volts,2000,t = times)#, t=None, axis=0, window=None)
         times = scipy.signal.resample(times,2000,t = times)#, t=None, axis=0, window=None)
         volts = np.array(volts[0])
         times = np.array(times[0])
-
+        '''
         import asciiplotlib as apl
         fig = apl.figure()
         fig.plot(times, volts, label="V_{m} (mV), versus time (ms)", width=100, height=80)
         fig.show()
+        '''
         ##
         # Allen Features
         ##
@@ -263,9 +283,9 @@ def process_models(mod):
         all_allen_features15, allen_features15 = allen_format(volts,times,optional_vm=model.vm15)
     except:
         all_allen_features15 = None
-        all_allen_features30 = None
+    #        all_allen_features30 = None
     ##
-    # Get Druckman features, this is mainly handled in external files.
+    # Get Druckman features, this is mainly hadled in external files.
     ##
     #if model.ir_currents
     DMTNMLO = dm_test_interoperable.DMTNMLO()
@@ -337,8 +357,11 @@ def process_models(mod):
 
     if np.min(model.vm15.magnitude)<0:
         try:
+            print('before seg fault x',mod.name)
+
             efel_15 = efel.getMeanFeatureValues(traces15,list(efel.getFeatureNames()))
         except:
+
             efel_15 = None
 
     else:
@@ -350,7 +373,7 @@ def process_models(mod):
 
         print(len(threshold_detection(model.vm30, threshold=threshold)))
         print(threshold,'threshold', np.max(model.vm30.magnitude),np.min(model.vm30.magnitude))
-
+        print('before seg fault 1',mod.name)
     #efel_30 = efel.getMeanFeatureValues(traces3,list(efel.getFeatureNames()))
 
 
@@ -359,19 +382,24 @@ def process_models(mod):
         efel.setThreshold(threshold)
         print(len(threshold_detection(model.vm15, threshold=threshold)))
         print(threshold,'threshold', np.max(model.vm15.magnitude))
+        print('before seg fault 2',mod.name)
 
     if np.min(model.vm30.magnitude)<0:
         #efel_30 = efel.getMeanFeatureValues(traces3,list(efel.getFeatureNames()))
         try:
+            print('before seg fault y',mod.name)
+
             efel_30 = efel.getMeanFeatureValues(traces3,list(efel.getFeatureNames()))
         except:
             efel_30 = None
 
     else:
         efel_30 = None
-
+    #print(allen_features15)
+    #import pdb
+    #Epdb.set_trace()
     efel.reset()
-    out_dic = {'model_id':model.name,'model_information':'HBP_data','efel_15':efel_15,'efel_30':efel_30,'dm':dm_test_features,'allen_15':all_allen_features15,'allen_30':all_allen_features30}
+    out_dic = {'model_id':model.name,'efel_15':efel_15,'efel_30':efel_30,'dm':dm_test_features,'allen_15':all_allen_features15,'allen_30':all_allen_features30}
     mod.out_dic = out_dic
     return mod
 
@@ -445,7 +473,7 @@ from neuronunit.optimisation.get_three_feature_sets_from_nml_db import allen_for
 from allensdk.ephys.ephys_extractor import EphysSweepSetFeatureExtractor
 
 #try:
-
+"""
 cells = list_curated_data()
 #dirs = []
 models = []
@@ -465,12 +493,34 @@ for cell in tqdm.tqdm(cells):
         except:
             model = None
         if model is not None:
-            model = process_models(model)
+            #model = process_models(model)
             models.append(model)
+            with open('models.p','wb') as f:
+                pickle.dump(models,f) 
+
     except:
         continue
-pickle.dump(models,open('models.p','wb')) 
+"""        
 models = pickle.load(open('models.p','rb'))    
+
+cnt = 0
+import tqdm
+
+results = []        
+for mod in tqdm.tqdm(models):
+    try:   
+        model = process_models(mod)
+    except:
+        model = None
+    print(cnt)
+    results.append(model)
+
+with open('hbp_data.p','wb') as f:
+    pickle.dump(results,f)        
+
+with open('hbp_data.p','rb') as f:
+    results = pickle.load(f)        
+
 #import pdb
 #pdb.set_trace()
     #assert 1==2
@@ -492,12 +542,11 @@ for di in data_ids:
     except:
         pass
 pickle.dump(models,open('models.p','wb')) 
-'''
 results = []        
 
 for mod in tqdm.tqdm(models):   
 
-    #results.append(out_dic)
+    results.append(out_dic)
 
 pickle.dump(results,open('hbp_data.p','wb'))        
 
@@ -524,3 +573,4 @@ except:
         if out is not None:
             models.append([di,out[0]])
     pickle.dump(models,open('models.p','wb'))        
+'''

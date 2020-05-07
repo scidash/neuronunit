@@ -1,7 +1,8 @@
 """Tools for plotting (contributed by Blue Brain Project)"""
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 #plt.plot([0,1],[1,0])
 #plt.show()
+import plotly.offline as py
 
 import matplotlib as mpl
 mpl.rcParams.update(mpl.rcParamsDefault)
@@ -376,14 +377,68 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.spatial
 import pylab
+
+
+
+def plot_score_history_standardized(ga_out,figname=None):
+    """
+    Adapted from pyfrume.
+    """
+    import shelve
+    d = shelve.open('random_sample_models_cache')  # open -- file may get suffix added by low-level
+    llp=list(d.keys())
+    rand = d[llp[1]]
+    dtc = rand['best_random_model']#.attrs
+    mean = {}
+    std = {}
+    for k in dtc.SA.keys(): 
+        mean[k.name] = rand[k.name][0]
+        std[k.name] = rand[k.name][1]
+
+    gene = dtc.dtc_to_gene()
+
+    try:
+       front = ga_out['pf'][0:2]
+    except:
+        x = ga_out['pf'][0:2]
+        _,front = ga_out['rerun'](x)
+    objectives = {k:v for k,v in front[0].dtc.SA.items() }
+    logbook = ga_out['log']
+    scores = [ m['min'] for m in logbook ]
+    get_min = [(np.sum(j),i) for i,j in enumerate(scores)]
+    min_x = sorted(get_min,key = lambda x: x[0])[0][1]
+    fig,axes = plt.subplots(2,math.ceil(len(objectives)/2+1),figsize=(20,8))
+    axes[0,0].plot(scores)
+    axes[0,0].set_title('Observation/Prediction Disagreement')
+    for i,(k,v) in enumerate(objectives.items()):
+        ax = axes.flat[i+1]
+        mn = mean[k.name] 
+        std =std[k.name] 
+
+        history = [(j[i]-mn)/std for j in scores ]
+
+        ax.axvline(x=min_x , ymin=0.02, ymax=0.99,color='blue',label='best candidate sampled')
+        ax.plot(history)
+        ax.set_title(str(k))
+        ax.set_ylim([np.min(0.0), np.max(history)])
+        ax.set_ylabel(str(front[0].dtc.tests[i].observation['std'].units))
+    axes[0,0].set_xlabel("Generation")
+    plt.tight_layout()
+    if figname is not None:
+        plt.savefig(figname)
+    else:
+        plt.show()
+    return plt
+
+
 def plot_score_history1(ga_out,figname=None):
     """
     Adapted from pyfrume.
     """
     try:
-       front = ga_out['pf'][0:10]
+       front = ga_out['pf'][0:2]
     except:
-        x = ga_out['pf'][0:10]
+        x = ga_out['pf'][0:2]
         _,front = ga_out['rerun'](x)
     objectives = {k:v for k,v in front[0].dtc.SA.items() }
     logbook = ga_out['log']
@@ -420,7 +475,7 @@ def plot_score_history_SA(ga_out,figname=None):
     #x = ga_out['pf'][0:1]
     #front = ga_out['rerun'](x)
     repop = list(ga_out['history'].genealogy_history.values())
-    dtcpop = ga_out['rerun'](repop)
+    #dtcpop = ga_out['rerun'](repop)
     logbook = ga_out['log']
     scores = [ m['min'] for m in logbook ]
     get_min = [(np.sum(j),i) for i,j in enumerate(scores)]

@@ -176,8 +176,13 @@ def spikes2thresholds(spike_waveforms):
     Return an empty list with the appropriate units
 
     """
+    try:
+        n_spikes = spike_waveforms.shape[1]
+    except:
+        return None
+        #return thresholds * spike_waveforms.units
 
-    n_spikes = spike_waveforms.shape[1]
+
     thresholds = []
     if n_spikes > 1:
         # good to know can handle multispikeing
@@ -196,8 +201,10 @@ def spikes2thresholds(spike_waveforms):
             # try this next.
             # return thresholds * spike_waveforms.units
 
-
-        x_loc = np.where(dvdt >= trigger)[0][0]
-        thresh = (s[x_loc]+s[x_loc+1])/2
+        try:
+            x_loc = np.where(dvdt >= trigger)[0][0]
+            thresh = (s[x_loc]+s[x_loc+1])/2
+        except:
+            thresh = None
         thresholds.append(thresh)
     return thresholds * spike_waveforms.units

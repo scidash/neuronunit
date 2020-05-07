@@ -43,32 +43,6 @@ def get_vm(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.36452
             v[m] = vPeak;# % padding the spike amplitude
             v[m+1] = c;# % membrane voltage reset
             u[m+1] = u[m+1] + d;# % recovery variable update
-    #for m in range(0,N):
-    #    v[m] = v[m]/1000.0
-
-
-    return v
-
-def get_vm_regular(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.364525297619-65.2261863636364), vr=-65.2261863636364, vt=-50, dt=0.010, Iext=[]):
-    '''
-    dt determined by
-    Apply izhikevich equation as model
-    This function can't get too pythonic (functional), it needs to be a simple loop for
-    numba/jit to understand it.
-    '''
-    N = len(Iext)
-    v = np.zeros(N)
-    u = np.zeros(N)
-    v[0] = vr
-    for m in range(0,N-1):
-        vT = v[m]+ (dt/2) * (k*(v[m] - vr)*(v[m] - vt)-u[m] + Iext[m])/C;
-        v[m+1] = vT + (dt/2)  * (k*(v[m] - vr)*(v[m] - vt)-u[m] + Iext[m])/C;
-        u[m+1] = u[m] + dt * a*(b*(v[m]-vr)-u[m]);
-        u[m+1] = u[m] + dt * a*(b*(v[m+1]-vr)-u[m]);
-        if v[m+1]>= vPeak:# % a spike is fired!
-            v[m] = vPeak;# % padding the spike amplitude
-            v[m+1] = c;# % membrane voltage reset
-            u[m+1] = u[m+1] + d;# % recovery variable update
 
 
     return v
@@ -91,12 +65,7 @@ class RAWBackend(Backend):
 
         if type(attrs) is not type(None):
             self.attrs = attrs
-        '''
-            self.sim_attrs.update(attrs)
-        else:
-            self.attrs = self.default_attrs
-            self.model.attrs = self.default_attrs
-        '''
+
 
 
             # set default parameters anyway.
@@ -132,24 +101,12 @@ class RAWBackend(Backend):
                                 units=pq.mV,
                                 sampling_period=0.01*pq.ms)
 
-            #self.vM = AnalogSignal(v,
-            #                       units = voltage_units,
-            #                       sampling_period = self.attrs['dt'] * qt.s)
-
         return self.vM
 
     def set_attrs(self, attrs):
         self.attrs = attrs
         self.model.attrs.update(attrs)
 
-        #self.model.attrs = {'C':89.7960714285714, 'a':0.01, 'b':15, 'c':-60, 'd':10, 'k':1.6, 'vPeak':(86.364525297619-65.2261863636364), 'vr':-65.2261863636364, 'vt':-50, 'dt':0.010, 'Iext':[]}
-        '''
-        print(self.model.attrs)
-        for k,v in attrs.items():
-            #self.attrs[k] = v
-            self.model.attrs[k] = v
-        print(self.model.attrs)
-        '''
     @cython.boundscheck(False)
     @cython.wraparound(False)
     def inject_square_current(self, current):#, section = None, debug=False):
@@ -166,7 +123,7 @@ class RAWBackend(Backend):
             c = current['injected_square_current']
         else:
             c = current
-        amplitude = float(c['amplitude']) #this needs to be in every backends
+        amplitude = float(c['amplitude'])#*10.0#*1000.0 #this needs to be in every backends
         duration = float(c['duration'])#/dt#/dt.rescale('ms')
         delay = float(c['delay'])#/dt#.rescale('ms')
         #if 'sim_length' in c.keys():
@@ -213,7 +170,7 @@ class RAWBackend(Backend):
                             units=pq.mV,
                             sampling_period=0.01*pq.ms)
 
-        #print(self.vM.times[-1],c['delay']+c['duration']+200*pq.ms)
+        #(self.vM.times[-1],c['delay']+c['duration']+200*pq.ms)
         #assert self.vM.times[-1] == (c['delay']+c['duration']+200*pq.ms)
 
         return self.vM
