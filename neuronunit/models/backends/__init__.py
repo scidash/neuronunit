@@ -20,10 +20,10 @@ backend_paths = ['base.EmptyBackend',
                  'jNeuroML.jNeuroMLBackend',
                  'neuron.NEURONBackend',
                  'neuron_hh.NEURONHHBackend',
-                 'rawpy.RAWBackend',
+                 'izhi.IZHIBackend',
                  'hhrawf.HHBackend',
                  'glif.GLIFBackend',
-                 'badexp_dynamics.ADEXPBackend',
+                 'run_adexp.ADEXPBackend',
                  'bhh_dynamics.BHHBackend',
                 ]
 
