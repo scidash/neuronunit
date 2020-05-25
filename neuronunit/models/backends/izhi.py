@@ -6,8 +6,7 @@ import neuronunit.capabilities as cap
 import numpy as np
 from .base import *
 import quantities as qt
-from quantities import mV, ms, s, V
-import matplotlib as mpl
+#import matplotlib as mpl
 try:
     import asciiplotlib as apl
 except:
@@ -16,8 +15,7 @@ import numpy
 voltage_units = mV
 
 from elephant.spike_train_generation import threshold_detection
-#import matplotlib.pyplot as plt
-#mpl.use('Agg')
+
 
 from numba import jit
 import cython
@@ -46,14 +44,14 @@ def get_vm(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.36452
 
 
     return v
-class RAWBackend(Backend):
+class IZHIBackend(Backend):
 
-    name = 'RAW'
+    name = 'IZHI'
 
     def init_backend(self, attrs=None, cell_name='alice',
                      current_src_name='hannah', DTC=None,
                      debug = False):
-        super(RAWBackend,self).init_backend()
+        super(IZHIBackend,self).init_backend()
         self.model._backend.use_memory_cache = False
         self.current_src_name = current_src_name
         self.cell_name = cell_name
@@ -65,9 +63,6 @@ class RAWBackend(Backend):
 
         if type(attrs) is not type(None):
             self.attrs = attrs
-
-
-
             # set default parameters anyway.
         if type(DTC) is not type(None):
             if type(DTC.attrs) is not type(None):
