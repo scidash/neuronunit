@@ -21,7 +21,7 @@ sudo pip install neuronunit-opt==0.1
 * A very Python native model-data optimization toolchain derived from ***neuronunit*** and tightly interfaced with other community supported modules, levarging standard workflows in: feature extraction, data scraping and model simulation. 
 * A collection of compact, parsimonious biological neuronal models, implemented in community supported python modules and  tightly integrated into a fast data driven muliti-objective optimization routine (deap, numba, dask etc).
 * Neo, elephant, Brian2 and dask interoperability ships with the most minimal install. A wide range of feature extraction, data source, and interfaces and simulator backend support: NeuroML-DB, NeurML, Allen-SDK, PyNN and NEURON are provided with an easy to use [Docker container]().
-* Brian2 Interoperability ships with the most minimal install. A wide range of interfaces and simulator backend support: Allen-SDK, PyNN and NEURON are provided with an [easy to use Docker container](https://github.com/russelljjarvis/docker-stacks-returned/blob/scidash/efel_dm/Dockerfile).
+*  A wide range of interfaces and simulator backend support: Allen-SDK, PyNN and NEURON are provided with an [easy to use Docker container](https://github.com/russelljjarvis/docker-stacks-returned/blob/scidash/efel_dm/Dockerfile).
 
 # Advantages
 * Appeals to interest in AP shape, electrophysiology and Rheobase current injection value. 
@@ -31,7 +31,7 @@ sudo pip install neuronunit-opt==0.1
 <img src="docs/brian2_logo.png" width="200" height="150" /> <img src="docs/numba.png" width="200" height="150" /> <img src="docs/dask_logo.png" width="175" height="125" /> <img src="docs/deap.png" width="200" height="150" />
 
 * Feature extraction routines: AllenSDK, Druckman, Elephant.
-* Simulator Backends: brian2, Allen-GLIF, NEURON, PyNN
+* Simulator Backends:  Allen-GLIF, NEURON
 
 ``` BASH
 docker pull russelljarvis/efel_allen_dm
