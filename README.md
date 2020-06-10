@@ -27,8 +27,7 @@ sudo pip install neuronunit-opt==0.1
 * Appeals to interest in AP shape, electrophysiology and Rheobase current injection value. 
 * 
 * Relatively fast, but with little administrative overhead. Optionally no C/NEURON building required.
-
-<img src="docs/brian2_logo.png" width="200" height="150" /> <img src="docs/numba.png" width="200" height="150" /> <img src="docs/dask_logo.png" width="175" height="125" /> <img src="docs/deap.png" width="200" height="150" />
+ <img src="docs/numba.png" width="200" height="150" /> <img src="docs/dask_logo.png" width="175" height="125" /> <img src="docs/deap.png" width="200" height="150" />
 
 * Feature extraction routines: AllenSDK, Druckman, Elephant.
 * Simulator Backends:  Allen-GLIF, NEURON
