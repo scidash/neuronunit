@@ -72,6 +72,8 @@ class DataTC(object):
         model = self.dtc_to_model()
         scores_ = []
         for t in self.tests:
+            if hasattr(t,'allen'): 
+                continue
             if 'RheobaseTest' in t.name: t.score_type = sciunit.scores.ZScore
             if 'RheobaseTestP' in t.name: t.score_type = sciunit.scores.ZScore
             try:
@@ -111,7 +113,9 @@ class DataTC(object):
                 scores_[i] = 100 #np.abs(float(score_gene.raw))
         #self.SA = ScoreArray(self.tests, scores_)
         self.scores_ = scores_
-        self.SA = ScoreArray(self.tests, self.scores_)
+
+        temp = [ t for t in self.tests if not hasattr(t,'allen')  ]
+        self.SA = ScoreArray(temp, self.scores_)
         #self = OM.get_agreement(self)
         return self
 
@@ -168,7 +172,6 @@ class DataTC(object):
 
 
         for v in self.tests:
-        #for k,v in enumerate(self.tests):
             k = v.name
             self.protocols[k] = {}
             if hasattr(v,'passive'):#['protocol']:
@@ -178,13 +181,12 @@ class DataTC(object):
                 elif v.passive == True and v.active == False:
                     keyed = self.protocols[k]#.params
                     self.protocols[k] = passive_values(keyed)
-                elif v.passive == False and v.active == False:
-                    self.protocols[k]['injected_square_current']['amplitude'] = 0.0*qt.pA
 
-                    #tests.protocols[k] = self.protocols
             if v.name in str('RestingPotentialTest'):
+                self.protocols[k]['injected_square_current'] = {}
                 self.protocols[k]['injected_square_current']['amplitude'] = 0.0*qt.pA
-
+            keyed = v.params['injected_square_current']
+            v.params['t_max'] = keyed['delay']+keyed['duration'] + 200.0*pq.ms
         return self.tests
     def dtc_to_model(self):
         if self.backend is str("JULIA"):
@@ -449,6 +451,7 @@ class DataTCModel(VeryReducedModel):
         #self.SA = ScoreArray(self.tests, scores_)
         self.scores_ = scores_
         self.SA = ScoreArray(self.tests, self.scores_)
+        print(self.SA)
         #self = OM.get_agreement(self)
         return self
 
@@ -515,11 +518,12 @@ class DataTCModel(VeryReducedModel):
                 elif v.passive == True and v.active == False:
                     keyed = self.protocols[k]#.params
                     self.protocols[k] = passive_values(keyed)
-                elif v.passive == False and v.active == False:
-                    self.protocols[k]['injected_square_current']['amplitude'] = 0.0*qt.pA
+                    #elif v.passive == False and v.active == False:
+                    #    self.protocols[k]['injected_square_current']['amplitude'] = 0.0*qt.pA
 
                     #tests.protocols[k] = self.protocols
             if v.name in str('RestingPotentialTest'):
+                self.protocols[k] = passive_values(keyed)
                 self.protocols[k]['injected_square_current']['amplitude'] = 0.0*qt.pA
 
         return self.tests

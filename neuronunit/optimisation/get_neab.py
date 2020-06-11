@@ -200,7 +200,9 @@ def get_neuron_criteria(cell_id,file_name = None):#,observation = None):
     observations = {}
     for index, t in enumerate(test_classes):
         obs = t.neuroelectro_summary_observation(cell_id)
-
+        print(obs)
+        import pdb
+        pdb.set_trace()
         if obs is not None:
             if 'mean' in obs.keys():
                 print(test_classes[index])
@@ -219,6 +221,27 @@ def get_neuron_criteria(cell_id,file_name = None):#,observation = None):
 
     return tests,observations
 
+def get_olf_cell():
+    cell_constraints = {}
+    olf_mitral = {"id": 129, \
+                  "name": "Olfactory bulb (main) mitral cell", \
+                  "neuron_db_id": 267, \
+                  "nlex_id": "nlx_anat_100201"}
+
+                  #NLXANAT:100201
+
+    olf_mitral = {"id": 129, "name": "Olfactory bulb (main) mitral cell", "neuron_db_id": 267, "nlex_id": "nlx_anat_100201"}
+    #olf_mitral['id'] = 'nlx_anat_100201'
+    #olf_mitral['nlex_id'] = 'nlx_anat_100201'              
+    tests,observations = get_neuron_criteria(olf_mitral)
+    #import pdb
+    #pdb.set_trace()
+    cell_constraints['olf_mitral'] = tests
+    with open('olf.p','wb') as f:
+	    pickle.dump(cell_constraints,f)
+
+    return cell_constraints
+    
 def get_all_cells():
 	purkinje ={"id": 18, "name": "Cerebellum Purkinje cell", "neuron_db_id": 271, "nlex_id": "sao471801888"}
 	#fi_basket = {"id": 65, "name": "Dentate gyrus basket cell", "neuron_db_id": None, "nlex_id": "nlx_cell_100201"}

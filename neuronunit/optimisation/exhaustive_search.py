@@ -294,7 +294,7 @@ def run_rick_grid(rick_grid, tests,td):
         grid_results.extend(results)
     return grid_results
 
-def run_simple_grid(npoints, tests, ranges, free_parameters, hold_constant = None, backend=str('RAW')):
+def run_simple_grid(npoints, tests, ranges, free_parameters, hold_constant = None, backend=str('IZHI')):
     from neuronunit.optimisation.optimization_management import update_deap_pop
     from neuronunit.optimisation.optimization_management import update_dtc_pop
 
@@ -337,7 +337,7 @@ def run_simple_grid(npoints, tests, ranges, free_parameters, hold_constant = Non
                 grid_results.extend(results)
     return grid_results
 
-def run_grid(npoints, tests, provided_keys = None, hold_constant = None, ranges=None, backend=str('RAW') ):
+def run_grid(npoints, tests, provided_keys = None, hold_constant = None, ranges=None, backend=str('IZHI') ):
     from neuronunit.optimisation.optimization_management import update_deap_pop, OptMan
 
     subset = mp_in[provided_keys]

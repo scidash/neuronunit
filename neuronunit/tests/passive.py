@@ -97,9 +97,9 @@ class TestPulseTest(ProtocolToFeaturesTest):
             self.get_injected_square_current()
 
     def condition_model(self, model):
-        if str('tmax') not in self.params.keys():
-            self.params['tmax'] = 1000.0*pq.ms
-        t_stop = self.params['tmax']
+        if str('t_max') not in self.params.keys():
+            self.params['t_max'] = 1000.0*pq.ms
+        t_stop = self.params['t_max']
         model.get_backend().set_stop_time(t_stop)
         return model
 
@@ -217,7 +217,7 @@ class InputResistanceTest(TestPulseTest):
     def __init__(self, **kwargs):
         super(InputResistanceTest, self).__init__(**kwargs)
         self.param = {}
-        self.params['tmax'] = 1000.0*pq.ms
+        self.params['t_max'] = 1000.0*pq.ms
         if str('params') in kwargs:
             self.params = kwargs['params']
         else:
@@ -238,6 +238,7 @@ class InputResistanceTest(TestPulseTest):
                             extract_features(model, result)
         if features is not None:
             i, vm = features
+            self.vm = vm
             r_in = self.__class__.get_rin(vm, i)
             #print("r_in = r_in.simplified")
             #print("Put prediction in a form that compute_score() can use.")
@@ -258,6 +259,9 @@ class InputResistanceTest(TestPulseTest):
             #observation['value'] = observation['value'].simplified
             score = super(InputResistanceTest, self).compute_score(observation,
                                                                 prediction)
+        #if self.rheobase_vm is not None:
+        score.related_data['vm'] = self.vm
+
 
         return score
 
@@ -277,6 +281,7 @@ class TimeConstantTest(TestPulseTest):
                             extract_features(model, result)
         if features is not None:
             i, vm = features
+            self.vm = vm
             tau = self.__class__.get_tau(vm, i)
             try:
                 # Put prediction in a form that compute_score() can use.
@@ -301,6 +306,7 @@ class TimeConstantTest(TestPulseTest):
         else:
             score = super(TimeConstantTest, self).compute_score(observation,
                                                                 prediction)
+        score.related_data['vm'] = self.vm
 
         return score
 
@@ -319,6 +325,7 @@ class CapacitanceTest(TestPulseTest):
         features = super(CapacitanceTest, self).extract_features(model, result)
         if features is not None:
             i, vm = features
+            self.vm = vm
             r_in = self.__class__.get_rin(vm, i)
             tau = self.__class__.get_tau(vm, i)
             if tau is not None:
@@ -343,6 +350,8 @@ class CapacitanceTest(TestPulseTest):
                 score = super(CapacitanceTest, self).compute_score(observation,prediction)
         else:
             score = super(CapacitanceTest, self).compute_score(observation,prediction)
+        score.related_data['vm'] = self.vm
+
         return score
 
 

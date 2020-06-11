@@ -32,7 +32,7 @@ HH_dic1 = { k:(float(v)-0.25*float(v),float(v)+0.25*float(v)) for k,v in OSB_HH_
 MODEL_PARAMS['OSB_HH_attrs'] = HH_dic1
 
 
-
+#gnabar_hh=0.12 gkbar_hh=0.036 gl_hh=0.0003 el_hh=-54.3
 MODEL_PARAMS['NEURONHH'] = {'gnabar':0.12,\
                             'gkbar':0.036,\
                             'Ra':100,\
@@ -40,11 +40,9 @@ MODEL_PARAMS['NEURONHH'] = {'gnabar':0.12,\
                             'diam':12.6157,\
                             'gkbar':0.036,\
                             'el':-54.3,\
-                            'gk':0.0,\
                             'gl':0.0003,\
                             'ena':50.0,\
                             'ek':-77.0,\
-                            'vr':-65,\
                             'cm':1.0,\
                             'ena':50.0,\
                             'ek':-77}
@@ -95,16 +93,61 @@ for index,key in enumerate(reduced_cells.keys()):
     reduced_cells[key] = {}
     for k,v in trans_dict.items():
         reduced_cells[key][k] = v[index]
+IZHI_PARAMS = {k:(np.mean(v)-np.abs(np.mean(v))*0.25,np.mean(v)*0.25+np.mean(v)) for k,v in trans_dict.items()}
 
-IZHI_PARAMS = {k:(np.min(v),np.max(v)) for k,v in trans_dict.items()}
-
-IZHI_PARAMS['C'] = (40,670)
+#IZHI_PARAMS = {k:(np.min(v),np.max(v)) for k,v in trans_dict.items()}
+'''
+IZHI_PARAMS['C'] = (40,200)
 IZHI_PARAMS['k'] = (0.7, 2.5)
 IZHI_PARAMS['vt'] = (-70, -40)
 IZHI_PARAMS['a'] = (0.001, 0.03)
 IZHI_PARAMS['b'] = (-2, 28)
 IZHI_PARAMS['c'] = (-90, -40)
 IZHI_PARAMS['vPeak'] = (20,100)
-
+'''
 IZHI_PARAMS = OrderedDict(IZHI_PARAMS)
-MODEL_PARAMS['RAW'] = IZHI_PARAMS
+MODEL_PARAMS['IZHI'] = IZHI_PARAMS
+
+
+
+'''
+BAE1['ADAPTATION_TIME_CONSTANT_tau_w'] = 100#*AdEx.b2.units.ms
+BAE1['ADAPTATION_VOLTAGE_COUPLING_a'] = 0.5#*AdEx.b2.units.nS
+BAE1['b'] = 0.09#*AdEx.b2.units.nS
+BAE1['C'] = 1.0
+BAE1['FIRING_THRESHOLD_v_spike'] = -30#*AdEx.b2.units.mV
+BAE1['MEMBRANE_RESISTANCE_R'] =  0.5#*AdEx.b2.units.Gohm
+BAE1['MEMBRANE_TIME_SCALE_tau_m'] = 5#*AdEx.b2.units.ms
+BAE1['RHEOBASE_THRESHOLD_v_rh'] = -50.0#*AdEx.b2.units.mV
+BAE1['SHARPNESS_delta_T'] = 2.0#*AdEx.b2.units.mV
+BAE1['SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b'] = 7#*AdEx.b2.units.pA
+BAE1['V_RESET'] = -51.0#*AdEx.b2.units.mV
+BAE1['V_REST'] = -70#*AdEx.b2.units.mV
+
+'''
+BAE1 = {}
+
+
+BAE1['cm']=0.281
+BAE1['tau_refrac']=0.1
+BAE1['v_spike']=-40.0 
+BAE1['v_reset']=-70.6 
+BAE1['v_rest']=-70.6 
+BAE1['tau_m']=9.3667 
+BAE1['i_offset']=0.0 
+BAE1['a']=4.0
+BAE1['b']=0.0805
+BAE1['delta_T']=2.0
+BAE1['tau_w']=144.0
+BAE1['v_thresh']=-50.4
+BAE1['e_rev_E']=0.0
+BAE1['tau_syn_E']=5.0
+BAE1['e_rev_I']=-80.0 
+BAE1['tau_syn_I']=5.0
+#BAE1['N']=1
+#BAE1['tau_psc']=5.0
+#BAE1['connectivity']=None
+BAE1['spike_delta']=30
+BAE1['scale']=0.5
+BAE1 = {k:(np.mean(v)-np.abs(np.mean(v))*0.25,np.mean(v)*0.25+np.mean(v)) for k,v in BAE1.items()}
+MODEL_PARAMS['ADEXP'] = BAE1

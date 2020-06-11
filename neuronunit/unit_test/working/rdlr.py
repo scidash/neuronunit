@@ -66,6 +66,7 @@ def data_driven_tests(backend,MU,NGEN,t_index):
     for d in del_list:
         del d
     del ga_out
+    
     del tt
     del OM
     with open('protect_RAM.p','rb') as f:
