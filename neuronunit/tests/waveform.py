@@ -49,10 +49,8 @@ class APWidthTest(VmTest):
     units = pq.ms
     ephysprop_name = 'Spike Half-Width'
     def __init__(self,*args,**kwargs):
-        print(args)
-        print(kwargs)
         super(APWidthTest,self).__init__(*args,**kwargs)
-        #self.verbose = False
+        
     def generate_prediction(self, model):
         """Implement sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
@@ -64,7 +62,10 @@ class APWidthTest(VmTest):
         if self.verbose is True:
             print(self.params['injected_square_current'])
         model.get_membrane_potential()
+        
         widths = model.get_AP_widths()
+        self.vm = model.vM
+
         if ascii_plot:
              asciplot_code(model.vM,model.get_spike_count())
 
@@ -92,6 +93,8 @@ class APWidthTest(VmTest):
         else:
             score = super(APWidthTest, self).compute_score(observation,
                                                            prediction)
+        score.related_data['vm'] = self.vm
+
         return score
 
 
@@ -122,6 +125,8 @@ class InjectedCurrentAPWidthTest(InjectedCurrent, APWidthTest):
 
         model.inject_square_current(self.params['injected_square_current'])
         model.get_membrane_potential()
+        self.vm = model.vM
+
         if ascii_plot:
             asciplot_code(model.vM,model.get_spike_count())
         #try:
@@ -129,15 +134,28 @@ class InjectedCurrentAPWidthTest(InjectedCurrent, APWidthTest):
             generate_prediction(model)
         self.prediction = prediction
 
-        #except:
-        #    prediction = None
-        # useful to retain inside object.
 
         return prediction
 
     def extract_features(self, model):
         prediction = self.generate_prediction(model)
         return prediction
+
+    def compute_score(self, observation, prediction):
+        """Implement sciunit.Test.score_prediction."""
+        #if isinstance(prediction, type(None)):
+        #    score = scores.InsufficientDataScore(None)
+        if prediction is None:
+            return scores.InsufficientDataScore(None)
+        
+        if prediction['n'] == 0:
+            score = scores.InsufficientDataScore(None)
+        else:
+            score = super(APWidthTest, self).compute_score(observation,
+                                                           prediction)
+        score.related_data['vm'] = self.vm
+
+        return score
 
 class TotalAPAmplitudeTest(VmTest):
     """
@@ -156,9 +174,14 @@ class TotalAPAmplitudeTest(VmTest):
         # ProducesActionPotentials capability.
         model.inject_square_current(self.params['injected_square_current'])
         model.get_membrane_potential()
+        sim_length = self.params['delay'] + self.params['duration']
+
+        print(model.vM.times[-1],sim_length)
+
         #if ascii_plot:
         if model._backend is str("HH"):
             asciplot_code(model.vM,model.get_spike_count()) 
+        self.vm = model.vM
         height = np.max(model.get_membrane_potential())-model.get_membrane_potential().magnitude[-1]
         prediction = {'value': height[0],
                       'mean':np.mean(height) if len(height) else None,
@@ -183,6 +206,8 @@ class TotalAPAmplitudeTest(VmTest):
         else:
             score = super(TotalAPAmplitudeTest, self).compute_score(observation,
                                                                prediction)
+        score.related_data['vm'] = self.vm
+                                                       
         return score
 
 
@@ -215,6 +240,12 @@ class APAmplitudeTest(VmTest):
         # ProducesActionPotentials capability.
         model.inject_square_current(self.params['injected_square_current'])
         model.get_membrane_potential()
+        sim_length = self.params['delay'] + self.params['duration']
+        self.vm = model.vM
+        #print('model.vM.times[-1]','self.params["delay"] + self.params["duration"]','self.params["t_max"]', 'from waveform')
+
+        #print(model.vM.times[-1],float(sim_length)+200.0,self.params['t_max'], 'from waveform')
+
         #if ascii_plot:
         #if model._backend is str("HH"):
         #    asciplot_code(model.vM,model.get_spike_count())
@@ -245,6 +276,8 @@ class APAmplitudeTest(VmTest):
         else:
             score = super(APAmplitudeTest, self).compute_score(observation,
                                                                prediction)
+        score.related_data['vm'] = self.vm
+
         return score
 
 
@@ -264,6 +297,10 @@ class InjectedCurrentAPAmplitudeTest(InjectedCurrent, APAmplitudeTest):
     def generate_prediction(self, model):
         model.inject_square_current(self.params['injected_square_current'])
         model.get_membrane_potential()
+        sim_length = self.params['delay'] + self.params['duration']
+
+        print(model.vM.times[-1],sim_length)
+
         if ascii_plot:
             asciplot_code(model.vM,model.get_spike_count())
 
@@ -271,6 +308,7 @@ class InjectedCurrentAPAmplitudeTest(InjectedCurrent, APAmplitudeTest):
             generate_prediction(model)
         # useful to retain inside object.
         self.prediction = prediction
+        self.vm = model.vM
 
         return prediction
 
@@ -289,6 +327,8 @@ class InjectedCurrentAPAmplitudeTest(InjectedCurrent, APAmplitudeTest):
         else:
             score = super(InjectedCurrentAPAmplitudeTest, self).compute_score(observation,
                                                                prediction)
+        score.related_data['vm'] = self.vm
+
         return score
 
 
@@ -315,6 +355,10 @@ class APThresholdTest(VmTest):
         # ProducesActionPotentials capability.
         model.inject_square_current(self.params['injected_square_current'])
         model.get_membrane_potential()
+        sim_length = self.params['delay'] + self.params['duration']
+        #print(model.vM.times[-1],sim_length)
+        self.vm = model.vM
+
 
 
         if ascii_plot:
@@ -348,6 +392,8 @@ class APThresholdTest(VmTest):
         else:
             score = super(APThresholdTest, self).compute_score(observation,
                                                                prediction)
+        score.related_data['vm'] = self.vm
+
         return score
 
 
@@ -367,9 +413,13 @@ class InjectedCurrentAPThresholdTest(InjectedCurrent, APThresholdTest):
             model.inject_square_current(self.params)
 
         model.get_membrane_potential()
+        self.vm = model.vM
+
         if ascii_plot:
             asciplot_code(model.vM,model.get_spike_count())
 
+        sim_length = self.params['delay'] + self.params['duration']
+        #print(model.vM.times[-1],sim_length)
 
         # useful to retain inside object.
         prediction =  super(InjectedCurrentAPThresholdTest, self).\
@@ -390,4 +440,6 @@ class InjectedCurrentAPThresholdTest(InjectedCurrent, APThresholdTest):
         else:
             score = super(InjectedCurrentAPThresholdTest, self).compute_score(observation,
                                                                prediction)
+        score.related_data['vm'] = self.vm
+
         return score

@@ -43,11 +43,11 @@ from collections import Iterable, OrderedDict
 
 import copy
 from deap import base
-class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
+class SciUnitOptimisation(object):
+    from bluepyopt.optimisations import DEAPOptimisation
 
     """DEAP Optimisation class"""
-    def __init__(self, tests = None, evaluator = None,
-                 selection = 'selNSGA2',
+    def __init__(self, tests = None, 
                  benchmark = False,
                  seed=None,
                  MU=15,
@@ -69,14 +69,17 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
         #self.simulated_obs = simulated_obs
         self.protocol = protocol
         #super(SciUnitOptimisation, self).__init__()
-        self.selection = selection
         self.benchmark = benchmark
 
         self.tests = tests
-        self.OBJ_SIZE = len(self.tests)#+1
-        #import pdb; pdb.set_trace()
+        self.OBJ_SIZE = 1#len(self.tests)#+1
         self.seed = seed
         self.MU = MU
+        try:
+            self.DO_other = DEAPOptimisation(offspring_size=self.MU, \
+                selector_name='IBEA')
+        except:
+            pass
         self.elite_size = elite_size
         self.eta = eta
         self.cxpb = cxpb
@@ -109,10 +112,7 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
         return self.params, self.td
 
     def set_evaluate(self):
-        if self.benchmark == True:
-            self.toolbox.register("evaluate", benchmarks.zdt1)
-        else:
-            self.toolbox.register("evaluate", om.evaluate)
+        self.toolbox.register("evaluate", om.evaluate)
 
     def grid_sample_init(self, nparams):
         '''
@@ -292,7 +292,8 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
         def custom_code(invalid_ind):
 
             if self.backend is None:
-                self.backend = 'RAW'
+                self.backend = 'IZHI'
+                print('should not happen')
             if self.verbose:
                 print(self.tests.use_rheobase_score)
             invalid_pop = list(self.OM.update_deap_pop(invalid_ind, self.tests, \
@@ -306,7 +307,12 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
             fitnesses = []
             for i in invalid_dtc:
                 fitnesses.append(om.evaluate(i))
-    
+            """
+            Add this bit:
+            for i in invalid_dtc:
+                fitnesses.append(om.evaluate_new(i))
+            """
+            
             return (invalid_pop,fitnesses)
 
         self.toolbox.register("evaluate", custom_code)
@@ -361,14 +367,13 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
         MU = self.MU
 
         #pop = self.set_pop()
-        pop = self.set_pop(boot_new_random=150)
+        pop = self.set_pop(boot_new_random=MU)
         hof = deap.tools.HallOfFame(MU)
         pf = deap.tools.ParetoFront()
         #pf = deap.tools.ParetoFront(MU) # Wrong because first arg to ParetoFront is similarity metric not pop size
 
         stats = tools.Statistics(lambda ind: ind.fitness.values)
-
-        pop, hof, pf, log, history, gen_vs_pop = alg.eaAlphaMuPlusLambdaCheckpoint(
+        pop, hof, pf, log, history, min_gene = alg.eaAlphaMuPlusLambdaCheckpoint(
             pop,
             self.toolbox,
             MU,
@@ -378,21 +383,17 @@ class SciUnitOptimisation(object):#bluepyopt.optimisations.Optimisation):
             stats=stats,
             hof=hof,
             pf=pf,
-            cp_frequency=cp_frequency,
-            continue_cp=continue_cp,
-            cp_filename=cp_filename,
-            selection = self.selection,
             td = self.td)
 
         # insert the initial HOF value back in.
         td = self.td
-        self.ga_out = {'pop':pop,'hof':hof,'pf':pf,'log':log,'history':history,'td':td,'gen_vs_pop':gen_vs_pop}
+        self.ga_out = {'pop':pop,'hof':hof,'pf':pf,'log':log,'history':history,'td':td,'min_gene':min_gene}
         return self.ga_out
 
 def run_ga(explore_edges, NGEN, test, \
         free_parameters = None, hc = None,
-        selection = None, MU = None, seed_pop = None, \
-           backend = str('RAW'),protocol={'allen':False,'elephant':True}):
+        MU = None, seed_pop = None, \
+           backend = str('IZHI'),protocol={'allen':False,'elephant':True}):
     ss = {}
     try:
         free_parameters.pop('dt')
@@ -416,7 +417,7 @@ def run_ga(explore_edges, NGEN, test, \
         test = [test]
     DO = SciUnitOptimisation(MU = MU, tests = test,\
      boundary_dict = ss, backend = backend, hc = hc, \
-                             selection = selection,protocol=protocol)
+                             protocol=protocol)
 
     if seed_pop is not None:
         # This is a re-run condition.
@@ -426,10 +427,5 @@ def run_ga(explore_edges, NGEN, test, \
         DO.setup_deap()
         DO.error_length = len(test)
     ga_out = DO.run(NGEN = NGEN)
-    print(DO.OM.td)
-    #import pdb
-    #pdb.set_trace()
-    pop,dtc_pop = DO.OM.test_runner(ga_out['pf'], DO.OM.td, DO.OM.tests)
-    ga_out['dtc_pop'] = dtc_pop
 
     return ga_out, DO

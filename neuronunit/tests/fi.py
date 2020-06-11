@@ -115,10 +115,10 @@ class RheobaseTest(VmTest):
     params_schema.update({'tolerance': {'type': 'current', 'min': 1, 'required': False}})
 
     def condition_model(self, model):
-        if not 'tmax' in self.params:
-            self.params['tmax'] = 2000.0*pq.ms
+        if not 't_max' in self.params:
+            self.params['t_max'] = 2000.0*pq.ms
         else:
-            model.set_run_params(t_stop=self.params['tmax'])
+            model.set_run_params(t_stop=self.params['t_max'])
 
     def generate_prediction(self, model):
         """Implement sciunit.Test.generate_prediction."""
@@ -208,7 +208,6 @@ class RheobaseTest(VmTest):
                 #asciplot_code(model.get_membrane_potential(),n_spikes)
 
                 self.n_spikes = n_spikes
-                
                 if self.verbose >= 2:
                     print("Injected %s current and got %d spikes" % \
                             (ampl,n_spikes))
@@ -283,7 +282,7 @@ class RheobaseTest(VmTest):
             score = scores.InsufficientDataScore(None)
         else:
             score = super(RheobaseTest, self).\
-                          compute_score(observation, prediction)
+                          compute_score(observation, prediction)#max
             # self.bind_score(score,None,observation,prediction)
         return score
 
@@ -321,10 +320,10 @@ class RheobaseTestP(RheobaseTest):
     params_schema.update({'tolerance': {'type': 'current', 'min': 1, 'required': False}})
 
     def condition_model(self, model):
-        if not 'tmax' in self.params:
-            self.params['tmax'] = 2000.0*pq.ms
+        if not 't_max' in self.params:
+            self.params['t_max'] = 2000.0*pq.ms
         else:
-            model.set_run_params(t_stop=self.params['tmax'])
+            model.set_run_params(t_stop=self.params['t_max'])
 
     default_params = dict(VmTest.default_params)
     default_params.update({'amplitude': 100*pq.pA,
@@ -399,7 +398,6 @@ class RheobaseTestP(RheobaseTest):
 
             model = dtc.dtc_to_model()
             self.condition_model(model)
-            #print(model.attrs)
 
             ampl = dtc.ampl
             if float(ampl) not in dtc.lookup or len(dtc.lookup) == 0:
@@ -407,11 +405,11 @@ class RheobaseTestP(RheobaseTest):
                 current = {'amplitude':ampl,'duration':DURATION,'delay':DELAY}
                 float(current['delay']) > 100
                 current['amplitude'] = ampl
-                try:
-                    model.inject_square_current(current)
-                    n_spikes = model.get_spike_count()
-                except:
-                    n_spikes = 100
+                #try:
+                model.inject_square_current(current)
+                n_spikes = model.get_spike_count()
+                #except:
+                #    n_spikes = 100
 
 
                 dtc.previous = ampl

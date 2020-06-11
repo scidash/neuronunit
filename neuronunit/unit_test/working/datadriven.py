@@ -19,60 +19,6 @@ import array
 #creator.create("FitnessMin", base.Fitness, weights=tuple(-1.0 for i in range(0,10)))
 #creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMin)
 
-def single_objective(ga_out,figname):
-    import math
-    import matplotlib.pyplot as plt
-
-    front = ga_out['pf'][0:2]
-
-    objectives = {k:v for k,v in front[0].dtc.SA.items() }
-    logbook = ga_out['log']
-    scores = [ m['min'] for m in logbook ]
-    get_min = [(np.sum(j),i) for i,j in enumerate(scores)]
-    min_x = sorted(get_min,key = lambda x: x[0])[0][1]
-    fig,axes = plt.subplots(2,math.ceil(len(objectives)/2+1),figsize=(20,8))
-    axes[0,0].plot(scores)
-    axes[0,0].set_title('Observation/Prediction Disagreement')
-    for i,(k,v) in enumerate(objectives.items()):
-        ax = axes.flat[i+1]
-        #import pdb; pdb.set_trace()
-        history = [j for j in scores ]
-        ax.axvline(x=min_x , ymin=0.02, ymax=0.99,color='blue',label='best candidate sampled')
-        ax.plot(history)
-        ax.set_title(str(k))
-        ax.set_ylim([np.min(0.0), np.max(history)])
-        ax.set_ylabel(str(front[0].dtc.tests[i].observation['std'].units))
-        break
-    axes[0,0].set_xlabel("Generation")
-    plt.tight_layout()
-    #figname = 'sanit_check.png'
-    #if figname is not None:
-    plt.savefig(figname)
-
-
-
-# In[2]:
-
-
-#with open('neo.p','rb') as f:
-#    opt = pickle.load(f)
-    
-#from neuronunit.optimisation.optimization_management import feature_mine
-#opt.self_evaluate()
-#agreement = opt.get_agreement().agreement
-#display(agreement)
-#opt.attrs['vt']
-#opt = feature_mine(opt)    
-"""
-import joblib
-
-with open('neo.p','rb') as f:
-    results = joblib.load(f)#, compress=5, protocol=None)    
-"""
-
-
-# In[3]:
-
 import pickle
 cells = pickle.load(open("processed_multicellular_constraints.p","rb"))
 
@@ -85,9 +31,20 @@ ncl5_vr = ncl5["RestingPotentialTest"].observation['mean']
 
 ca1 = TSD(cells['Hippocampus CA1 pyramidal cell'])
 ca1_vr = ca1["RestingPotentialTest"].observation['mean']
-cap = ca1["CapacitanceTest"].observation['mean']/1000.0
-rin = ca1["InputResistanceTest"].observation['mean']
+#cap = ca1["CapacitanceTest"].observation['mean']/1000.0
+#rin = ca1["InputResistanceTest"].observation['mean']
 
+#from SALib.test_functions import Ishigami
+import numpy as np
+from neuronunit.optimisation.model_parameters import MODEL_PARAMS
+print(MODEL_PARAMS.keys())
+
+fps_izhi = list(MODEL_PARAMS['IZHI'].keys())
+import pickle
+rt = pickle.load(open("contains_mitral.p","rb"))
+olf = TSD(rt[1]['olf_mit'])
+olf_vr = olf["RestingPotentialTest"].observation['mean']
+olf.use_rheobase_score = False
 
 # # Simulated Data 
 # and select model parameters that are free to vary
@@ -96,6 +53,139 @@ rin = ca1["InputResistanceTest"].observation['mean']
 from neuronunit.optimisation.optimization_management import inject_and_plot_model, inject_and_plot_passive_model
 from neuronunit.optimisation.data_transport_container import DataTC, DataTCModel
 from neuronunit.optimisation.model_parameters import MODEL_PARAMS
+
+import numpy as np
+
+import shelve
+model_type = "RAW"
+fps_izhi = list(MODEL_PARAMS['IZHI'].keys())
+#model_type="NEURONHH"
+#fps_hh = list(MODEL_PARAMS['NEURONHH'].keys())
+'''
+results = olf.optimize(backend=model_type,protocol={'allen': False, 'elephant': True}
+    ,MU=200,NGEN=1,
+    free_parameters=fps_izhi,
+    ignore_cached=False,hc={'vr':olf_vr})#,seed_pop=saltelli_values)
+
+
+results = olf.optimize(backend=model_type,protocol={'allen': False, 'elephant': True}
+    ,MU=10,NGEN=200,
+    free_parameters=fps_izhi,
+    ignore_cached=False,hc={'vr':olf_vr},seed_pop=results['pf'][0:9])
+
+opt = results['pf'][0].dtc
+opt = results['pf'][0].dtc
+with open('../../data/dump_izhi_olf.p','wb') as f:
+    pickle.dump(opt,f)
+
+'''
+#opt.plt = None
+#opt.plt = plt
+#import pdb
+#pdb.set_trace()
+
+model_type = 'NEURONHH'
+fps_hh = list(MODEL_PARAMS['NEURONHH'].keys())
+
+'''
+rand = olf.optimize(backend=model_type,\
+    protocol={'allen': False, 'elephant': True}
+    ,MU=80,NGEN=1,
+    free_parameters=fps_hh,
+    ignore_cached=False)#,hc={'vr':olf_vr})#,seed_pop=saltelli_values)
+'''    
+
+with open('simulated_tests.p','rb') as f:
+    sim_tests = pickle.load(f)
+MU = 10
+NGEN = 100
+
+for k,v in olf.items(): 
+    olf[k].observation['std'] = sim_tests[k].observation['std']
+results = olf.optimize(backend=model_type,\
+    protocol={'allen': False, 'elephant': True}
+    ,MU=MU,NGEN=NGEN,
+    free_parameters=fps_hh,
+    ignore_cached=False)#,seed_pop=rand['pf'][0:MU])
+
+opt = [ results['min_gene'], results['pf'] ]
+with open('../../data/dump_neuron_olf.p','wb') as f:
+    pickle.dump(opt,f)
+
+
+
+model_type = 'ADEXP'
+fps_hh = list(MODEL_PARAMS['ADEXP'].keys())
+
+
+rand = olf.optimize(backend=model_type,\
+    protocol={'allen': False, 'elephant': True}
+    ,MU=80,NGEN=1,
+    free_parameters=fps_hh,
+    ignore_cached=False)#,hc={'vr':olf_vr})#,seed_pop=saltelli_values)
+MU = 20
+NGEN = 20
+results = olf.optimize(backend=model_type,\
+    protocol={'allen': False, 'elephant': True}
+    ,MU=MU,NGEN=NGEN,
+    free_parameters=fps_hh,
+    ignore_cached=False,seed_pop=rand['pf'][0:MU])
+
+model_type = 'NEURONHH'
+fps_hh = list(MODEL_PARAMS['NEURONHH'].keys())
+
+
+rand = olf.optimize(backend=model_type,\
+    protocol={'allen': False, 'elephant': True}
+    ,MU=80,NGEN=1,
+    free_parameters=fps_hh,
+    ignore_cached=False)#,hc={'vr':olf_vr})#,seed_pop=saltelli_values)
+MU = 20
+NGEN = 20
+results = olf.optimize(backend=model_type,\
+    protocol={'allen': False, 'elephant': True}
+    ,MU=MU,NGEN=NGEN,
+    free_parameters=fps_hh,
+    ignore_cached=False,seed_pop=rand['pf'][0:MU])
+
+opt = results['pf'][0].dtc #  [ results['min_gene'], results['pf'] ]
+with open('../../data/dump_neuron_olf.p','wb') as f:
+    pickle.dump(opt,f)
+
+with open('../../data/dump_neuron_olf_results.p','wb') as f:
+    pickle.dump(results,f)
+
+'''
+rand_sample = olf.optimize(backend=model_type,protocol={'allen': False, 'elephant': True}
+    ,MU=100,NGEN=1,plot=True,
+    free_parameters=fps_hh,
+    ignore_cached=False,hc={'vr':olf_vr})
+'''
+MU = 10
+NGEN =100
+
+results = olf.optimize(backend=model_type,protocol={'allen': False, 'elephant': True}
+    ,MU=MU,NGEN=NGEN,plot=True,
+    free_parameters=fps_hh,
+    ignore_cached=False)#,seed_pop=rand_sample['pf'][0:9])
+
+opt = [ results['min_gene'], results['pf'] ]
+with open('../../data/dump_hh_olf.p','wb') as f:
+    pickle.dump(opt,f)
+
+import numpy as np
+MU = 10 #2**len(fps)
+NGEN = 100
+import shelve
+model_type = "RAW"
+fps_izhi = list(MODEL_PARAMS['RAW'].keys())
+
+results = ncl5.optimize(backend=model_type,protocol={'allen': False, 'elephant': True}
+    ,MU=MU,NGEN=NGEN,plot=True,
+    free_parameters=fps_izhi,
+    ignore_cached=False,hc={'vr':ncl5_vr})#,seed_pop=[gene,gene,gene,gene,gene])
+plot_score_history1(results,figname=str('ncl5')+model_type+str('.png'))
+opt = [ results['min_gene'], results['pf'] ]
 
 
 import numpy as np
@@ -110,7 +200,7 @@ results = ncl5.optimize(backend=model_type,protocol={'allen': False, 'elephant':
     free_parameters=fps_izhi,
     ignore_cached=False,hc={'vr':ncl5_vr})#,seed_pop=[gene,gene,gene,gene,gene])
 plot_score_history1(results,figname=str('ncl5')+model_type+str('.png'))
-opt = results['pf'][0].dtc
+opt = [ results['min_gene'], results['pf'] ]
 #with open('dump_izhi_ncl5.p','wb') as f:
 #    pickle.dump(opt,f)
 
@@ -128,8 +218,8 @@ results = ncl5.optimize(backend=model_type,protocol={'allen': False, 'elephant':
     free_parameters=fps_izhi,
     ignore_cached=False,hc={'vr':ncl5_vr})#,seed_pop=[gene,gene,gene,gene,gene])
 #plot_score_history_standardized(results,figname=str('ncl5')+model_type+str('.png'))
-opt = results['pf'][0].dtc
-with open('dump_izhi_ncl5.p','wb') as f:
+opt = [ results['min_gene'], results['pf'] ]
+with open('../../data/dump_izhi_ncl5.p','wb') as f:
     pickle.dump(opt,f)
 
 
@@ -137,19 +227,20 @@ results = ca1.optimize(backend=model_type, \
     protocol={'allen': False, 'elephant': True},  \
     MU=MU,NGEN=NGEN,plot=True,free_parameters=fps_izhi, 
     ignore_cached=True,hc={'vr':ca1_vr})
-opt = results['pf'][0].dtc
-with open('dump_izhi_ca1.p','wb') as f:
+opt = results['min_gene']
+with open('../../data/dump_izhi_ca1.p','wb') as f:
     pickle.dump(opt,f)
 
 results = purk.optimize(backend=model_type, \
     protocol={'allen': False, 'elephant': True},  \
     MU=MU,NGEN=NGEN,plot=True,free_parameters=fps_izhi, 
     ignore_cached=True)
-opt = results['pf'][0].dtc
-with open('dump_izhi_purk.p','wb') as f:
+opt = [ results['min_gene'], results['pf'] ]
+with open('../../data/dump_izhi_purk.p','wb') as f:
     pickle.dump(opt,f)
-
 # HH
+MU = 90
+NGEN = 20
 model_type="NEURONHH"
 fps_hh = list(MODEL_PARAMS['NEURONHH'].keys())
 
@@ -157,9 +248,8 @@ results = ncl5.optimize(backend=model_type,protocol={'allen': False, 'elephant':
     ,MU=MU,NGEN=NGEN,plot=True,
     free_parameters=fps_hh,
     ignore_cached=False,hc={'vr':ncl5_vr})#,seed_pop=[gene,gene,gene,gene,gene])
-plot_score_history_standardized(results,figname=str('HH')+str('ncl5')+str(model_type)+str('.png'))
-opt = results['pf'][0].dtc
-with open('dump_hh_ncl5.p','wb') as f:
+opt = [ results['min_gene'], results['pf'] ]
+with open('../../data/dump_hh_ncl5.p','wb') as f:
     pickle.dump(opt,f)
 
 
@@ -167,16 +257,16 @@ results = ca1.optimize(backend=model_type, \
     protocol={'allen': False, 'elephant': True},  \
     MU=MU,NGEN=NGEN,plot=True,free_parameters=fps_hh, 
     ignore_cached=True,hc={'vr':ca1_vr})
-opt = results['pf'][0].dtc
-with open('dump_hh_ca1.p','wb') as f:
+opt = [ results['min_gene'], results['pf'] ]
+with open('../../data/dump_hh_ca1.p','wb') as f:
     pickle.dump(opt,f)
 
 results = purk.optimize(backend=model_type, \
     protocol={'allen': False, 'elephant': True},  \
     MU=MU,NGEN=NGEN,plot=True,free_parameters=fps_hh, 
     ignore_cached=True,hc={'vr':purk_vr})
-opt = results['pf'][0].dtc
-with open('dump_hh_purk.p','wb') as f:
+opt = [ results['min_gene'], results['pf'] ]
+with open('../../data/dump_hh_purk.p','wb') as f:
     pickle.dump(opt,f)
 
 
@@ -190,7 +280,7 @@ with open('dump_hh_purk.p','wb') as f:
     #import pdb
     #pdb.set_trace()
 
-    pickle.dump(f,opt)
+#pickle.dump(f,opt)
 
 #results = ca1.optimize(backend=model_type, protocol={'allen': False, 'elephant': True}, MU=30,NGEN=5,plot=True,free_parameters=fps, hold_constant={'vr':vr},ignore_cached=False,seed_pop = results['pf'])
 #single_objective(results,figname='with_seed_very_larger_pop.png')
@@ -217,23 +307,7 @@ for v in results.values():
         agreement = opt.get_agreement().agreement
         display(agreement)
 '''
-
-# In[ ]:
-
-
-#opt.attrs['vt'] =
-#opt.attrs['C'] =
-
-#from neuronunit.optimisation.optimization_management import feature_mine
-
-
-# In[ ]:
-
-
-#OM = opt.dtc_to_opt_man()
-#out = OM.random_search(opt,100)
-#display(out['frame'])
-opt = results['pf'][0].dtc
+opt = results['min_gene'][0]
 
 opt = feature_mine(opt)
 

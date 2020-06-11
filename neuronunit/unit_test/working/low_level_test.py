@@ -72,7 +72,7 @@ import pandas as pd
 def grid_points():
     npoints = 10
     nparams = 10
-    free_params = MODEL_PARAMS[str("RAW")]
+    free_params = MODEL_PARAMS[str("IZHI")]
     USE_CACHED_GS = False
     grid_points = exhaustive_search.create_grid(npoints = npoints,free_params=free_params)
     dtcpop = []

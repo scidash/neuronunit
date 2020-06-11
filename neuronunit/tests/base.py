@@ -16,6 +16,7 @@ import neuronunit.capabilities as ncap
 import sciunit.capabilities as scap
 from neuronunit import neuroelectro
 import pickle
+#from neuronunit.optimisation.optimization_management import dtc_to_rheo
 
 
 AMPL = 100.0*pq.pA
@@ -65,7 +66,7 @@ class VmTest(ProtocolToFeaturesTest):
                       'padding': 200*pq.ms}
 
     params_schema = {'dt': {'type': 'time', 'min': 0, 'required': False},
-                     'tmax': {'type': 'time', 'min': 0, 'required': False},
+                     't_max': {'type': 'time', 'min': 0, 'required': False},
                      'delay': {'type': 'time', 'min': 0, 'required': False},
                      'duration': {'type': 'time', 'min': 0, 'required': False},
                      'amplitude': {'type': 'current', 'required': False},
@@ -75,9 +76,21 @@ class VmTest(ProtocolToFeaturesTest):
         pass
 
     def compute_params(self):
-        self.params['tmax'] = (self.params['delay'] +
+        self.params['t_max'] = (self.params['delay'] +
                                self.params['duration'] +
                                self.params['padding'])
+
+
+    def set_observation(self,prediction):
+        self.observation = {}
+        self.observation['mean'] = observation
+        self.observation['std'] = observation
+
+
+    def set_prediction(self,prediction):
+        self.prediction = {}
+        self.prediction['mean'] = prediction
+        self.prediction['std'] = prediction
 
     def validate_observation(self, observation):
         # Catch another case that is trickier
@@ -94,8 +107,16 @@ class VmTest(ProtocolToFeaturesTest):
         return observation
 
     def condition_model(self, model):
-        model.set_run_params(t_stop=self.params['tmax'])
+        model.set_run_params(t_stop=self.params['t_max'])
 
+        
+    def format_self_protocol(self,model):
+        dtc = model.model_to_dtc()
+        dtc = dtc_to_rheo(dtc)
+        self.params['injected_square_current_one_five']['amplitude'] = 1.5 * dtc.rheobase['value']
+        self.params['injected_square_current_one_five']['amplitude'] = 3.0 * dtc.rheobase['value']
+
+    '''
     def bind_score(self, score, model, observation, prediction):
         model.inject_square_current(self.params['injected_square_current'])
         score.related_data['vm'] = model.get_membrane_potential()
@@ -116,7 +137,7 @@ class VmTest(ProtocolToFeaturesTest):
             ax.set_ylabel('Vm (mV)')
         score.plot_vm = MethodType(plot_vm, score)  # Bind to the score.
         score.unpicklable.append('plot_vm')
-
+    '''
     @classmethod
     def neuroelectro_summary_observation(cls, neuron, cached=False):
         reference_data = neuroelectro.NeuroElectroSummary(

@@ -142,8 +142,22 @@ def get_static_models(cell_id):
 
     wlist = model_contents['waveform_list']
     long_squares = [ w for w in wlist if w['Protocol_ID'] == 'LONG_SQUARE' ]
+
     applied_current_injections = [ w for w in wlist if w["Protocol_ID"] == "LONG_SQUARE" and w["Variable_Name"] == "Current" ]
     currents = [ w for w in wlist if w["Protocol_ID"] == "LONG_SQUARE" and w["Variable_Name"] == "Voltage" ]
+
+    rs_squares = [ w for w in wlist if w['Protocol_ID'] == 'SQUARE' ]
+    rs_applied_current_injections = [ w for w in wlist if w["Protocol_ID"] == "SQUARE" and w["Variable_Name"] == "Current" ]
+    rs_currents = [ w for w in wlist if w["Protocol_ID"] == "SQUARE" and w["Variable_Name"] == "Voltage" ]
+    for wl in long_squares:
+        wid = wl['ID']
+        url = str("https://neuroml-db.org/api/waveform?id=")+str(wid)
+    """
+    update.
+
+
+    """
+
     in_current_filter = [ w for w in wlist if w["Protocol_ID"] == "SQUARE" and w["Variable_Name"] == "Voltage" ]
     rheobases = []
     for wl in long_squares:

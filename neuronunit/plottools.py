@@ -280,7 +280,8 @@ def inject_and_plot(dtc,second_pop=None,third_pop=None,figname='problem',snippet
             else:
                 plt.show()
     return [dtc,second_pop,third_pop]
-
+import numpy as np
+'''
 def elaborate_plots(ga_out,figname=None):
     #plt.style.use('ggplot')
     fig, axes = plt.subplots(figsize=(30, 30), facecolor='white')
@@ -299,7 +300,6 @@ def elaborate_plots(ga_out,figname=None):
     logbook = ga_out['log']
     gen_numbers =[ i+1 for i in range(0,len(logbook.select('gen'))) ]
     pf = ga_out['pf']
-    import numpy as np
     mean = np.array(logbook.select('avg'))
     std = np.array(logbook.select('std'))
     minimum = logbook.select('min')
@@ -367,6 +367,7 @@ def elaborate_plots(ga_out,figname=None):
 
     else:
         plt.show()
+'''
 import math
 
 
@@ -378,25 +379,32 @@ import numpy as np
 import scipy.spatial
 import pylab
 
-
-
-def plot_score_history_standardized(ga_out,figname=None):
+def plot_score_history_standardized(ga_out,rand_sample=None,figname=None):
     """
     Adapted from pyfrume.
     """
-    import shelve
-    d = shelve.open('random_sample_models_cache')  # open -- file may get suffix added by low-level
-    llp=list(d.keys())
-    rand = d[llp[1]]
-    dtc = rand['best_random_model']#.attrs
-    mean = {}
-    std = {}
-    for k in dtc.SA.keys(): 
-        mean[k.name] = rand[k.name][0]
-        std[k.name] = rand[k.name][1]
+    
+    if rand_sample is None:
+        import shelve
+        d = shelve.open('random_sample_models_cache')  # open -- file may get suffix added by low-level
+        llp=list(d.keys())
+        rand = d[llp[1]]
+        dtc = rand['best_random_model']#.attrs
+        mean = {}
+        std = {}
+        for k in dtc.SA.keys(): 
+            mean[k.name] = rand[k.name][0]
+            std[k.name] = rand[k.name][1]
 
-    gene = dtc.dtc_to_gene()
-
+        gene = dtc.dtc_to_gene()
+    else:
+        mean = {}
+        std = {}
+        dtc = ga_out['pf'][0].dtc
+        for k in dtc.SA.keys(): 
+            #print(rand_sample[k.name])
+            mean[k.name] = rand_sample[k.name][0]
+            std[k.name] = rand_sample[k.name][1]
     try:
        front = ga_out['pf'][0:2]
     except:
@@ -413,16 +421,21 @@ def plot_score_history_standardized(ga_out,figname=None):
     for i,(k,v) in enumerate(objectives.items()):
         ax = axes.flat[i+1]
         mn = mean[k.name] 
-        std =std[k.name] 
-
-        history = [(j[i]-mn)/std for j in scores ]
+        st = std[k.name] 
+        history = [(j[i]-mn)/st for j in scores ]
+        #ax.axhline(y=mn , xmin=0.02, xmax=0.99,color='red',label='best candidate sampled')
 
         ax.axvline(x=min_x , ymin=0.02, ymax=0.99,color='blue',label='best candidate sampled')
         ax.plot(history)
         ax.set_title(str(k))
-        ax.set_ylim([np.min(0.0), np.max(history)])
+        bigger = np.max([np.max(history),mn])
+        smaller = np.max([np.min(history),mn])
+
+        ax.set_ylim([np.min(history),np.max(history)])
         ax.set_ylabel(str(front[0].dtc.tests[i].observation['std'].units))
     axes[0,0].set_xlabel("Generation")
+    axes[0,0].set_ylabel("standardized error")
+
     plt.tight_layout()
     if figname is not None:
         plt.savefig(figname)
@@ -463,10 +476,10 @@ def plot_score_history1(ga_out,figname=None):
     else:
         plt.show()
     return plt
+"""
+
 def plot_score_history_SA(ga_out,figname=None):
-    """
     Adapted from pyfrume.
-    """
     #try:
     #   front = ga_out['pf'][0:10]
     #except:
@@ -501,6 +514,37 @@ def plot_score_history_SA(ga_out,figname=None):
         plt.savefig(figname)
     else:
         plt.show()
+
+def single_objective(ga_out,figname):
+    import math
+    import matplotlib.pyplot as plt
+
+    front = ga_out['pf'][0:2]
+
+    objectives = {k:v for k,v in front[0].dtc.SA.items() }
+    logbook = ga_out['log']
+    scores = [ m['min'] for m in logbook ]
+    get_min = [(np.sum(j),i) for i,j in enumerate(scores)]
+    min_x = sorted(get_min,key = lambda x: x[0])[0][1]
+    fig,axes = plt.subplots(2,math.ceil(len(objectives)/2+1),figsize=(20,8))
+    axes[0,0].plot(scores)
+    axes[0,0].set_title('Observation/Prediction Disagreement')
+    for i,(k,v) in enumerate(objectives.items()):
+        ax = axes.flat[i+1]
+        #import pdb; pdb.set_trace()
+        history = [j for j in scores ]
+        ax.axvline(x=min_x , ymin=0.02, ymax=0.99,color='blue',label='best candidate sampled')
+        ax.plot(history)
+        ax.set_title(str(k))
+        ax.set_ylim([np.min(0.0), np.max(history)])
+        ax.set_ylabel(str(front[0].dtc.tests[i].observation['std'].units))
+        break
+    axes[0,0].set_xlabel("Generation")
+    plt.tight_layout()
+    #figname = 'sanit_check.png'
+    #if figname is not None:
+    plt.savefig(figname)
+
 
 def elaborate_plots_two(ga_out,savefigs=False,figname=None):
     try:
@@ -548,6 +592,7 @@ def elaborate_plots_two(ga_out,savefigs=False,figname=None):
         plt.show()
 
     return ga_out
+"""
 
 
 def adjust_spines(ax, spines, color='k', d_out=10, d_down=None):
