@@ -2,6 +2,7 @@
 
 import os
 import io
+import pathlib
 import tempfile
 
 from pyneuroml import pynml
@@ -50,7 +51,14 @@ class jNeuroMLBackend(Backend):
     def _backend_run(self):
         """Run the simulation."""
         f = pynml.run_lems_with_jneuroml
-        self.exec_in_dir = tempfile.mkdtemp()
+        try:
+            self.exec_in_dir = self.model.temp_dir.name
+        except:
+            self.exec_in_dir = tempfile.mkdtemp()
+        
+        path = pathlib.Path(self.exec_in_dir)
+        (path / 'results').mkdir(exist_ok=True)
+        
         lems_path = os.path.dirname(self.model.orig_lems_file_path)
         with redirect_stdout(self.stdout):
             results = f(self.model.lems_file_path,
