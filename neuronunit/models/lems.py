@@ -207,3 +207,12 @@ class LEMSModel(RunnableModel):
         if not hasattr(self, '_temp_dir'):
             self._temp_dir = TemporaryDirectory()
         return self._temp_dir
+
+    def get_state_variables(self):
+        lems_tree = etree.parse(self.lems_file_path)
+        state_variables = {'t': 't'}
+        for output_column in lems_tree.iter('OutputColumn'):
+            id = output_column.attrib['id']
+            quantity = output_column.attrib['quantity']
+            state_variables[id] = quantity
+        return state_variables
