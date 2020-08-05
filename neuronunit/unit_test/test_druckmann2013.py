@@ -7,6 +7,7 @@ from neuronunit.tests.druckmann2013 import *
 from neuronunit.neuromldb import NeuroMLDBStaticModel
 from numpy import array
 from quantities import *
+from pathlib import Path
 
 DELTA = 0.3
 
@@ -268,7 +269,10 @@ class Druckmann2013BaseTestCase:
 
         def test_37(self):
             self.run_test(37)
-
+            
+        def test_get_files(self):
+            self.assertIsInstance(self.model.nmldb_model.get_files(), Path)
+            
         @classmethod
         def print_predicted(cls):
 
