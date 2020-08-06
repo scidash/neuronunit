@@ -27,3 +27,6 @@ class DocumentationTestCase(NotebookTools,
     @unittest.skip("Skipping chapter 5")
     def test_chapter5(self):
         self.do_notebook('chapter5')
+
+if __name__ == '__main__':
+    unittest.main()
