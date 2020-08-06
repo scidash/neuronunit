@@ -23,10 +23,7 @@ class Druckmann2013BaseTestCase:
 
         try:
             with open(pickle_file, 'rb') as f:
-                if sys.version_info[0] >= 3:
-                    model_cache = pickle.load(f, encoding='Latin-1')
-                else:
-                    model_cache = pickle.load(f)
+                model_cache = pickle.load(f, encoding='Latin-1')
         except:
             model_cache = {}
 
