@@ -800,5 +800,19 @@ class Model11TestCase(Druckmann2013BaseTestCase.BaseTest):
 
         super(Model11TestCase, self).setUp()
 
+class OthersTestCase(Druckmann2013BaseTestCase.BaseTest):
+    def test_get_diff_spikes(self):
+        arr = np.array([1,2,3])
+        result = get_diff_spikes(arr)
+        self.assertEqual(result, 1)
+
+    def test_get_diff(self):
+        arr = np.array([1,2,3])
+        result = get_diff(arr)
+        self.assertEqual(list(result), [1, 1])
+
+    def test_get_files(self):
+        self.assertIsInstance(self.model.nmldb_model.get_files(), Path)
+
 if __name__ == '__main__':
     unittest.main()
