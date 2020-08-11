@@ -812,10 +812,10 @@ class OthersTestCase(unittest.TestCase):
     def test_exceptions(self):
         model = NeuroMLDBStaticModel("NMLCL001139")
         model.nmldb_model.waveforms = []
-        self.assertRaises(model.nmldb_model.waveforms.get_druckmann2013_strong_current, Exception)
-        self.assertRaises(model.nmldb_model.waveforms.get_steady_state_waveform, Exception)
-        self.assertRaises(model.nmldb_model.waveforms.get_waveform_by_current, Exception)
-        self.assertRaises(model.nmldb_model.waveforms.get_druckmann2013_standard_current, Exception)
+        self.assertRaises(model.nmldb_model.get_druckmann2013_strong_current, Exception)
+        self.assertRaises(model.nmldb_model.get_steady_state_waveform, Exception)
+        self.assertRaises(model.nmldb_model.get_waveform_by_current, Exception)
+        self.assertRaises(model.nmldb_model.get_druckmann2013_standard_current, Exception)
 
 if __name__ == '__main__':
     unittest.main()
