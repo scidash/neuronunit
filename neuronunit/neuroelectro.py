@@ -35,12 +35,8 @@ import shelve
 import hashlib
 import pickle
 import requests
-try:  # Python 2
-    from urllib import urlencode
-    from urllib2 import urlopen, URLError
-except ImportError:  # Python 3
-    from urllib.parse import urlencode
-    from urllib.request import urlopen, URLError
+from urllib.parse import urlencode
+from urllib.request import urlopen, URLError
 
 import numpy as np
 DUMP = True

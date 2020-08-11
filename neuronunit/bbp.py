@@ -7,15 +7,9 @@ import json
 import requests
 import matplotlib.pyplot as plt
 from neo.io import IgorIO
-
-try:  # Python 3
-    from io import BytesIO
-    from urllib.request import urlopen, URLError
-    MAJOR_VERSION = 3
-except ImportError:  # Python 2
-    from StringIO import StringIO
-    from urllib2 import urlopen, URLError
-    MAJOR_VERSION = 2
+from io import BytesIO
+from urllib.request import urlopen, URLError
+MAJOR_VERSION = 3
 
 
 def is_bbp_up():
@@ -95,12 +89,8 @@ def find_or_download_data(url):
     unzipped = zipped.split('.')[0]  # Name when unzipped
     z = None
     if not os.path.isdir(unzipped):  # If unzipped version not found
-        if MAJOR_VERSION == 2:
-            r = requests.get(url, stream=True)
-            z = zipfile.ZipFile(StringIO(r.content))
-        elif MAJOR_VERSION == 3:
-            r = requests.get(url)
-            z = zipfile.ZipFile(BytesIO(r.content))
+        r = requests.get(url)
+        z = zipfile.ZipFile(BytesIO(r.content))
         z.extractall(unzipped)
     return unzipped
 
