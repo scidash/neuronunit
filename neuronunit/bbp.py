@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 from neo.io import IgorIO
 from io import BytesIO
 from urllib.request import urlopen, URLError
-MAJOR_VERSION = 3
 
 
 def is_bbp_up():
