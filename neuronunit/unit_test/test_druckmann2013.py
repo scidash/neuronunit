@@ -814,7 +814,7 @@ class OthersTestCase(unittest.TestCase):
         model.nmldb_model.waveforms = []
         self.assertRaises(model.nmldb_model.get_druckmann2013_strong_current, Exception)
         self.assertRaises(model.nmldb_model.get_steady_state_waveform, Exception)
-        self.assertRaises(model.nmldb_model.get_waveform_by_current, Exception)
+        self.assertRaises(model.nmldb_model.get_waveform_by_current, Exception, 1)
         self.assertRaises(model.nmldb_model.get_druckmann2013_standard_current, Exception)
 
 if __name__ == '__main__':
