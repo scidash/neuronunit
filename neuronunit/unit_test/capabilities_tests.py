@@ -40,5 +40,41 @@ class CapabilitiesTestCases(unittest.TestCase):
         self.assertEqual(my_pmp.get_initial_vm()[1], 2* pq.V)
         self.assertEqual(my_pmp.get_initial_vm()[2], 3* pq.V)
 
+    def test_produces_spikes(self):
+        from neuronunit.capabilities import ProducesSpikes
+        ps = ProducesSpikes()
+        with self.assertRaises(NotImplementedError):
+            ps.get_spike_count()
+            ps.get_spike_train()
+        
+        from neo.core import SpikeTrain
+        class MyPS(ProducesSpikes):
+            def get_spike_train(self):
+                from quantities import s
+                return [SpikeTrain([3, 4, 5]*s, t_stop=10.0)]
+
+        ps = MyPS()
+        self.assertIsInstance(ps.get_spike_train()[0], SpikeTrain)
+        self.assertEqual(ps.get_spike_count(), 1)
+
+    def test_produces_action_potentials(self):
+        from neuronunit.capabilities import ProducesActionPotentials
+        pap = ProducesActionPotentials()
+        with self.assertRaises(NotImplementedError):
+            pap.get_APs()
+
+    def test_receives_square_current(self):
+        from neuronunit.capabilities import ReceivesSquareCurrent
+        rsc = ReceivesSquareCurrent()
+        with self.assertRaises(NotImplementedError):
+            rsc.inject_square_current(0)
+
+    def test_receives_current(self):
+        from neuronunit.capabilities import ReceivesCurrent
+        rc = ReceivesCurrent()
+        with self.assertRaises(NotImplementedError):
+            rc.inject_current(0)
+
+
 if __name__ == '__main__':
     unittest.main()
