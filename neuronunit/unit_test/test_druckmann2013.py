@@ -269,7 +269,10 @@ class Druckmann2013BaseTestCase:
             
         def test_get_files(self):
             self.assertIsInstance(self.model.nmldb_model.get_files(), Path)
-            
+
+        def test_get_files(self):
+            self.assertIsInstance(self.model.nmldb_model.get_files(), Path)
+
         @classmethod
         def print_predicted(cls):
 
@@ -805,9 +808,6 @@ class OthersTestCase(unittest.TestCase):
         arr = np.array([1,2,3])
         result = get_diff(arr)
         self.assertEqual(list(result), [1, 1])
-
-    def test_get_files(self):
-        self.assertIsInstance(self.model.nmldb_model.get_files(), Path)
 
     def test_exceptions(self):
         model = NeuroMLDBStaticModel("NMLCL001139")
