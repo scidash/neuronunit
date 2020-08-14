@@ -75,6 +75,13 @@ class CapabilitiesTestCases(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             rc.inject_current(0)
 
+    def test_nml2_channel_analysis(self):
+        from neuronunit.capabilities.channel import NML2ChannelAnalysis
+        nml2ca = NML2ChannelAnalysis()
+        self.assertIsInstance(nml2ca.ca_make_lems_file(), NotImplementedError)
+        self.assertIsInstance(nml2ca.ca_run_lems_file(), NotImplementedError)
+        self.assertIsInstance(nml2ca.compute_iv_curve(None), NotImplementedError)
+        self.assertIsInstance(nml2ca.plot_iv_curve(None, None), NotImplementedError)
 
 if __name__ == '__main__':
     unittest.main()

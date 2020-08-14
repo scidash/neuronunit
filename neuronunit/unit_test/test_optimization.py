@@ -304,8 +304,8 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         from neuronunit.optimization import get_neab
         from neuronunit.tests.waveform import InjectedCurrentAPThresholdTest as T
         from neuronunit.optimization.optimization_management import format_test
-        from neuronunit.optimization import data_transport_container
-        dtc = data_transport_container.DataTC()
+        from neuronunit.optimization.data_transport_container import DataTC
+        dtc = DataTC()
         dtc.rheobase = self.rheobase
         dtc = format_test(dtc)
         self.model = ReducedModel(get_neab.LEMS_MODEL_PATH, backend=('NEURON',{'DTC':dtc}))
@@ -314,8 +314,14 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         assert score.norm_score is not None
         self.assertTrue(score.norm_score is not None)
 
-
-
+    def test_get_ss(self):
+        from neuronunit.optimization.data_transport_container import DataTC
+        dtc = DataTC()
+        self.assertIsNone(dtc.get_ss())
+        dtc.scores = {'score1' : 1}
+        self.assertEqual(dtc.get_ss(), 1)
+        dtc.scores = {'score1' : 1, 'score2' : 2}
+        self.assertEqual(dtc.get_ss(), 3)
 
     def test_rheobase_single_value_parallel_and_serial_comparison(self):
         from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
