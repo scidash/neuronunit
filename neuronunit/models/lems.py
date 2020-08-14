@@ -209,6 +209,14 @@ class LEMSModel(RunnableModel):
         return self._temp_dir
 
     def get_state_variables(self):
+        """
+        Parses LEMS xml file and gets simulation's state variables from
+        OutputFile element.
+
+        Returns:
+            Dict of type "string: string" with the format "id: quantity"
+
+         """
         lems_tree = etree.parse(self.lems_file_path)
         state_variables = {'t': 't'}
         for output_column in lems_tree.iter('OutputColumn'):
