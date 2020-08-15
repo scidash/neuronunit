@@ -12,7 +12,7 @@ mpl.use('Agg') # Avoid any problems with Macs or headless displays.
 from sciunit.utils import NotebookTools,import_all_modules
 from neuronunit import neuroelectro,bbp,aibs
 
-from base import *
+from .base import *
 
 class DataTCTestCase(unittest.TestCase):
     def test_get_ss(self):
