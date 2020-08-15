@@ -14,6 +14,15 @@ from neuronunit import neuroelectro,bbp,aibs
 
 from base import *
 
+class DataTCTestCase(unittest.TestCase):
+    def test_get_ss(self):
+        from neuronunit.optimization.data_transport_container import DataTC
+        dtc = DataTC()
+        self.assertIsNone(dtc.get_ss())
+        dtc.scores = {'score1' : 1}
+        self.assertEqual(dtc.get_ss(), 1)
+        dtc.scores = {'score1' : 1, 'score2' : 2}
+        self.assertEqual(dtc.get_ss(), 3)
 
 def grid_points():
     from neuronunit.optimization.optimization_management import map_wrapper

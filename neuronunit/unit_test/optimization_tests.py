@@ -10,16 +10,6 @@ import os
 import quantities as pq
 import numpy as np
 
-class DataTCTestCase(unittest.TestCase):
-    def test_get_ss(self):
-        from neuronunit.optimization.data_transport_container import DataTC
-        dtc = DataTC()
-        self.assertIsNone(dtc.get_ss())
-        dtc.scores = {'score1' : 1}
-        self.assertEqual(dtc.get_ss(), 1)
-        dtc.scores = {'score1' : 1, 'score2' : 2}
-        self.assertEqual(dtc.get_ss(), 3)
-
 
 def create_list():
     from neuronunit.optimization import model_parameters as modelp
@@ -81,8 +71,6 @@ import ipyparallel as ipp
 rc = ipp.Client(profile='default')
 rc[:].use_cloudpickle()
 dview = rc[:]
-
-
 
 class ReducedModelTestCase(unittest.TestCase):
     """Test instantiation of the reduced model"""
