@@ -16,7 +16,7 @@ from .model_tests import ReducedModelTestCase, ExtraCapabilitiesTestCase
 from .observation_tests import ObservationsTestCase
 from .test_tests import TestsPassiveTestCase, TestsWaveformTestCase,\
                         TestsFITestCase, TestsDynamicsTestCase,\
-                        TestsChannelTestCase
+                        TestsChannelTestCase, FakeTestCase
 from .misc_tests import EphysPropertiesTestCase
 from .sciunit_tests import SciUnitTestCase
 from .cache_tests import BackendCacheTestCase
@@ -27,5 +27,5 @@ from .test_druckmann2013 import Model1TestCase, Model2TestCase, \
     Model10TestCase, Model11TestCase, OthersTestCase
 
 from .test_morphology import MorphologyTestCase
-
+from .optimization_tests import DataTCTestCase
 from .capabilities_tests import *

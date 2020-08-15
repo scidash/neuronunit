@@ -314,15 +314,6 @@ class testOptimizationBackend(NotebookTools,unittest.TestCase):
         assert score.norm_score is not None
         self.assertTrue(score.norm_score is not None)
 
-    def test_get_ss(self):
-        from neuronunit.optimization.data_transport_container import DataTC
-        dtc = DataTC()
-        self.assertIsNone(dtc.get_ss())
-        dtc.scores = {'score1' : 1}
-        self.assertEqual(dtc.get_ss(), 1)
-        dtc.scores = {'score1' : 1, 'score2' : 2}
-        self.assertEqual(dtc.get_ss(), 3)
-
     def test_rheobase_single_value_parallel_and_serial_comparison(self):
         from neuronunit.tests.fi import RheobaseTest, RheobaseTestP
         from neuronunit.optimization import get_neab
