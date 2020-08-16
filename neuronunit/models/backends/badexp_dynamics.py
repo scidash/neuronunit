@@ -111,9 +111,9 @@ def simulate_AdEx_neuron_local(
 
 
 getting_started = False
-class ADEXPBackend(Backend):
+class BADEXPBackend(Backend):
 
-    name = 'ADEXP'
+    name = 'BADEXP'
 
     def get_spike_count(self):
         return int(self.spike_monitor.count[0])

@@ -50,6 +50,8 @@ MODEL_PARAMS['NEURONHH'] = { k:(float(v)-0.95*float(v),float(v)+0.95*float(v)) f
 MODEL_PARAMS['NEURONHH']['gkbar'] = (0.0018,0.1)
 MODEL_PARAMS['NEURONHH']['diam'] = (0.630785,50.0)
 MODEL_PARAMS['NEURONHH']['gnabar'] = (0.006,0.2539)
+MODEL_PARAMS['NEURONHH']['L'] = (5.0,1000.0)
+MODEL_PARAMS['NEURONHH']['diam'] = (5.0,1000.0)
 
 # Which Parameters
 
@@ -72,7 +74,6 @@ for i,k in enumerate(temp.keys()):
     for v in type2007.values():
         temp[k].append(v[i])
 explore_param = {k:(np.min(v),np.max(v)) for k,v in temp.items()}
-#explore_param['b'] = [-2,8]
 
 
 # Fast spiking cannot be reproduced as it requires modifications to the standard Izhi equation,
@@ -93,41 +94,16 @@ for index,key in enumerate(reduced_cells.keys()):
     reduced_cells[key] = {}
     for k,v in trans_dict.items():
         reduced_cells[key][k] = v[index]
-IZHI_PARAMS = {k:(np.mean(v)-np.abs(np.mean(v))*0.25,np.mean(v)*0.25+np.mean(v)) for k,v in trans_dict.items()}
+IZHI_PARAMS = explore_param#{k:(np.mean(v)-np.abs(np.mean(v))*0.1,np.mean(v)*0.1+np.mean(v)) for k,v in trans_dict.items()}
 
-#IZHI_PARAMS = {k:(np.min(v),np.max(v)) for k,v in trans_dict.items()}
-'''
-IZHI_PARAMS['C'] = (40,200)
-IZHI_PARAMS['k'] = (0.7, 2.5)
-IZHI_PARAMS['vt'] = (-70, -40)
-IZHI_PARAMS['a'] = (0.001, 0.03)
-IZHI_PARAMS['b'] = (-2, 28)
-IZHI_PARAMS['c'] = (-90, -40)
-IZHI_PARAMS['vPeak'] = (20,100)
-'''
+
 IZHI_PARAMS = OrderedDict(IZHI_PARAMS)
 MODEL_PARAMS['IZHI'] = IZHI_PARAMS
 
 
-
-'''
-BAE1['ADAPTATION_TIME_CONSTANT_tau_w'] = 100#*AdEx.b2.units.ms
-BAE1['ADAPTATION_VOLTAGE_COUPLING_a'] = 0.5#*AdEx.b2.units.nS
-BAE1['b'] = 0.09#*AdEx.b2.units.nS
-BAE1['C'] = 1.0
-BAE1['FIRING_THRESHOLD_v_spike'] = -30#*AdEx.b2.units.mV
-BAE1['MEMBRANE_RESISTANCE_R'] =  0.5#*AdEx.b2.units.Gohm
-BAE1['MEMBRANE_TIME_SCALE_tau_m'] = 5#*AdEx.b2.units.ms
-BAE1['RHEOBASE_THRESHOLD_v_rh'] = -50.0#*AdEx.b2.units.mV
-BAE1['SHARPNESS_delta_T'] = 2.0#*AdEx.b2.units.mV
-BAE1['SPIKE_TRIGGERED_ADAPTATION_INCREMENT_b'] = 7#*AdEx.b2.units.pA
-BAE1['V_RESET'] = -51.0#*AdEx.b2.units.mV
-BAE1['V_REST'] = -70#*AdEx.b2.units.mV
-
-'''
 BAE1 = {}
 
-
+'''
 BAE1['cm']=0.281
 BAE1['tau_refrac']=0.1
 BAE1['v_spike']=-40.0 
@@ -149,5 +125,44 @@ BAE1['tau_syn_I']=5.0
 #BAE1['connectivity']=None
 BAE1['spike_delta']=30
 BAE1['scale']=0.5
-BAE1 = {k:(np.mean(v)-np.abs(np.mean(v))*0.25,np.mean(v)*0.25+np.mean(v)) for k,v in BAE1.items()}
+'''
+
+'''
+C = 281; % capacitance in pF ... this is 281*10^(-12) F
+g_L = 30; % leak conductance in nS
+E_L = -70.6; % leak reversal potential in mV ... this is -0.0706 V
+delta_T = 2; % slope factor in mV
+V_T = -50.4; % spike threshold in mV
+tau_w = 144; % adaptation time constant in ms
+V_peak = 20; % when to call action potential in mV
+b = 0.0805; % spike-triggered adaptation
+'''
+'''
+# Physiologic neuron parameters from Gerstner et al.
+BAE1['C']       = 238.96205752321424  # capacitance in pF ... this is 281*10^(-12) F
+BAE1['g_L']     = 52.33847145920891     # leak conductance in nS
+BAE1['E_L']     = -128.24969985688054  # leak reversal potential in mV ... this is -0.0706 V
+BAE1['delta_T'] =  3.3496462271892624    # slope factor in mV
+BAE1['V_T']     = -50.4  # spike threshold in mV
+BAE1['tau_w']   = 144    # adaptation time constant in ms
+BAE1['V_peak']  = 30.0     # when to call action potential in mV
+BAE1['b']       = 0.16705627559842062,# spike-triggered adaptation
+BAE1['a']       = 7.198877237743017
+BAE1['v_rest'] = -70
+'''
+
+BAE1 = {}
+BAE1['cm']=0.281
+BAE1['v_spike']=-40.0
+BAE1['v_reset']=-70.6
+BAE1['v_rest']=-70.6
+BAE1['tau_m']=9.3667
+BAE1['a']=4.0
+BAE1['b']=0.0805
+
+BAE1['delta_T']=2.0
+BAE1['tau_w']=144.0
+BAE1['v_thresh']=-50.4
+BAE1['spike_delta']=30
+BAE1 = {k:(np.mean(v)-np.abs(np.mean(v))*0.5,np.mean(v)*0.5+np.mean(v)) for k,v in BAE1.items()}
 MODEL_PARAMS['ADEXP'] = BAE1

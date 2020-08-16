@@ -23,20 +23,30 @@ from elephant.spike_train_generation import threshold_detection
 
 import numpy as np
 from numba import jit
+
+import numpy as np
+from numba import jit
+import time
+def timer(func):
+    def inner(*args, **kwargs):
+        t1 = time.time()
+        f = func(*args, **kwargs)
+        t2 = time.time()
+        print('time taken on block {0} '.format(t2-t1))
+        return f
+    return inner
+
 #@jit
 
 # code is a very aggressive
 # hack on this repository:
 # https://github.com/ericjang/pyN
 @jit
-def update_currents(I_ext, i, t, dt):
-  #I_rec = np.zeros(self.I_rec.shape)
-  stim = I_ext['Charly the Neuron'][0]
-  I_ext_out = 0
-  if stim['start'] <= t <= stim['stop']:
-    I_ext_out = stim['mV']
-    #print(I_ext_out)
-  return I_ext_out
+def update_currents(amp, i, t, dt,start,stop):   
+  scalar = 0
+  if start <= t <= stop:
+    scalar = amp
+  return scalar
 
 @jit
 def I_inj(t,delay,duration,amplitude):
@@ -51,37 +61,42 @@ def I_inj(t,delay,duration,amplitude):
 	"""
 
 	return 0*(t<delay) +amplitude*(t>delay) +0*(t>delay+duration) # a scalar value.
+
 @jit
-def update_state(p, i, T, t, dt):
-  #compute v and adaptation resets
-  prev_spiked = np.nonzero(p.spike_raster[:,i-1] == True)
-  p.v[prev_spiked] = p.v_reset
-  p.w[prev_spiked] += p.b
+def update_state(i, T, t, dt,I_ext,v,w,spike_raster,v_reset,b,a,spike_delta,v_rest,tau_m,tau_w,v_thresh,delta_T,cm):
+
+  prev_spiked = np.nonzero(spike_raster[:,i-1] == True)
+  v[prev_spiked] = v_reset
+  w[prev_spiked] += b
   #compute deltas and apply to state variables
-  dv  = (((p.v_rest-p.v) + \
-        p.delta_T*np.exp((p.v - p.v_thresh)/p.delta_T))/p.tau_m + \
-        (p.i_offset + p.I_ext + p.I_rec - p.w)/p.cm) *dt
-  #if np.sum(p.I_ext)>0:
-  #  import pdb
-  #  pdb.set_trace()
-  p.v += dv
-  p.w += dt * (p.a*(p.v - p.v_rest) - p.w)/p.tau_w * dt
+  dv  = (((v_rest-v) + \
+        delta_T*np.exp((v - v_thresh)/delta_T))/tau_m + \
+        (I_ext - w)/cm) *dt
+  v += dv
+  w += dt * (a*(v - v_rest) - w)/tau_w * dt
   #decide whether to spike or not
-  spiked = np.nonzero(p.v > p.v_thresh)
-  p.v[spiked] = p.spike_delta
-  p.spike_raster[spiked,i] = 1
-  #print(p.spike_raster[spiked,i])
+  spiked = np.nonzero(v > v_thresh)
+  v[spiked] = spike_delta
+  spike_raster[spiked,i] = 1
 
-  p.I_ext = 0#np.zeros(p.I_ext)
-  return p
-
+  return v,w,spike_raster
 @jit
-def evaluate_vm(p,time_trace,I_ext,dt,T):
+def evaluate_vm(time_trace,dt,T,v,w,b,a,spike_delta,spike_raster,v_reset,v_rest,tau_m,tau_w,v_thresh,delta_T,cm,amp,start,stop):
   vm = []
-  for i, t in enumerate(time_trace[1:],1):
-    p.I_ext = update_currents(I_ext=I_ext, i=i, t=t, dt=dt)
-    p = update_state(p,i=i, T=T, t=t, dt=dt)
-    vm.append(p.v[0])
+  i = 0
+  #for t in time_trace[1:]:
+  for t in time_trace:
+    if i!=0:
+      I_scalar = update_currents(amp, i=i, t=t, dt=dt,start=start,stop=stop)
+      v,w,spike_raster = update_state(i=i, T=T, t=t, dt=dt,
+                                        I_ext=I_scalar,v=v,
+                                        w=w,spike_raster=spike_raster,
+                                        v_reset=v_reset,
+                                        b=b,a=a,spike_delta=spike_delta,
+                                        v_rest=v_rest,tau_m=tau_m,tau_w=tau_w,
+                                        v_thresh=v_thresh, delta_T =delta_T,cm=cm)
+      vm.append(v[0])
+    i+=1
   return vm
 
 class Base_Population():
@@ -139,10 +154,11 @@ class Network():
       else:
         print("%s not found!" % pname)
         return None
-    def setup(self, experiment_name='My Experiment', T=50,dt=0.125,integration_time=30, I_ext={},spike_delta=50):
+    def setup(self, experiment_name='My Experiment', T=50,dt=0.25,integration_time=30, I_ext={},spike_delta=50):
       self.T          = T
       self.dt         = dt
       self.time_trace = np.arange(0,T+dt,dt)#time array
+      #del self.time_trace[0]
       self.I_ext = I_ext
 
       self.params = {
@@ -173,7 +189,7 @@ class Network():
 
     def _setup(self,
 	    experiment_name='My Experiment',
-	    T=50,dt=0.125,integration_time=30,
+	    T=50,dt=0.25,integration_time=30,
 	    I_ext={},spike_delta=50):
       _ = self.setup(experiment_name,
 			T,dt,
@@ -182,18 +198,18 @@ class Network():
 			spike_delta)
 
 
-    def simulate(self, attrs=None, T=50,dt=0.125,integration_time=30, I_ext={},spike_delta=50):#,v_rest = v_rest):
+    def simulate(self, attrs=None, T=50,dt=0.25,integration_time=30, I_ext={},spike_delta=50):#,v_rest = v_rest):
       self.spike_delta = spike_delta
       N = 1
       #self.T = None #needs to be set upon starting simulation.
       #self.v = np.ones(N) * v_rest #voltage trace
       #self.I_ext = np.zeros(N) #externally injected current
-      self.I_rec = np.zeros(N) #current from recurrent connections + other populations
+      #self.I_rec = np.zeros(N) #current from recurrent connections + other populations
 
       self.T          = T
       self.dt         = dt
       self.time_trace = np.arange(0,T+dt,dt)#time array
-      self.I_ext = I_ext
+      #I_ext
       len_time_trace = len(self.time_trace)
       #self.T = T
       integration_time = 30.0
@@ -206,24 +222,29 @@ class Network():
         self.integrate_window = len_time_trace #if we are running a short simulation then integrate window will overflow available time slots!
       p = self.populations['Charly the Neuron']
       self.attrs = attrs
-      p.cm = self.attrs['cm']
-      p.tau_refrac = self.attrs['tau_refrac']
-      p.v_spike = self.attrs['v_spike']
-      p.v_rest =  self.attrs['v_rest']
-      p.tau_m = self.attrs['tau_m']
-      p.i_offset = self.attrs['i_offset']
-      p.a = self.attrs['a']
-      p.b = self.attrs['b']
-      p.delta_T = self.attrs['delta_T']
-      p.tau_w = self.attrs['tau_w']
-      p.v_thresh = self.attrs['v_thresh']
-      p.e_rev_E = self.attrs['e_rev_E']
-      p.tau_syn_E = self.attrs['tau_syn_E']
-      p.e_rev_I = self.attrs['e_rev_I']
-      p.tau_syn_I = self.attrs['tau_syn_I']
-      p.spike_delta = self.attrs['spike_delta']
-      p.scale = self.attrs['scale']
-      vm = evaluate_vm(p,self.time_trace,self.I_ext,self.dt,T)
+      v = p.v
+      w = p.w
+      spike_raster = p.spike_raster
+      v_reset = p.v_reset
+      v_rest =  self.attrs['v_rest']
+      tau_m = self.attrs['tau_m']
+      delta_T = self.attrs['delta_T']
+      spike_delta = self.attrs['spike_delta']
+
+      a = self.attrs['a']
+      b = self.attrs['b']
+      v_thresh = self.attrs['v_thresh']
+      cm = self.attrs['cm']
+      tau_w = self.attrs['tau_w']
+    
+      
+      amp = I_ext['mV']
+      start = I_ext['start']
+      stop = I_ext['stop']
+
+      vm = evaluate_vm(self.time_trace,self.dt,T,v,w,b,a,
+                       spike_delta,spike_raster,v_reset,v_rest,
+                       tau_m,tau_w,v_thresh,delta_T,cm,amp,start,stop)
       return vm
 
 
@@ -281,26 +302,23 @@ class ADEXPBackend(Backend):
     #self.attrs = attrs
     #self.debug = debug
     self.temp_attrs = None
+    #def __init__(self, name, cm=0.281,
+    # v_spike=-40.0, v_reset=-70.6, v_rest=-70.6, tau_m=9.3667, a=4.0, b=0.0805, delta_T=2.0,tau_w=144.0,
+    # v_thresh=-50.4, spike_delta=30):
 
     BAE1 = {}
     BAE1['cm']=0.281
-    BAE1['tau_refrac']=0.1
     BAE1['v_spike']=-40.0
     BAE1['v_reset']=-70.6
     BAE1['v_rest']=-70.6
     BAE1['tau_m']=9.3667
-    BAE1['i_offset']=0.0
     BAE1['a']=4.0
     BAE1['b']=0.0805
+
     BAE1['delta_T']=2.0
     BAE1['tau_w']=144.0
     BAE1['v_thresh']=-50.4
-    BAE1['e_rev_E']=0.0
-    BAE1['tau_syn_E']=5.0
-    BAE1['e_rev_I']=-80.0
-    BAE1['tau_syn_I']=5.0
     BAE1['spike_delta']=30
-    BAE1['scale']=0.5
 
     self.default_attrs = BAE1
     super(ADEXPBackend,self).init_backend()
@@ -342,7 +360,7 @@ class ADEXPBackend(Backend):
       """
       self.tstop = float(stop_time.rescale(pq.ms))
 
-
+  #@timer
   def inject_square_current(self,current):#, section = None, debug=False):
     """Inputs: current : a dictionary with exactly three items, whose keys are: 'amplitude', 'delay', 'duration'
     Example: current = {'amplitude':float*pq.pA, 'delay':float*pq.ms, 'duration':float*pq.ms}}
@@ -360,7 +378,7 @@ class ADEXPBackend(Backend):
     #self.init_backend()
     if len(temp_attrs):
       self.set_attrs(temp_attrs)
-
+    #print(temp_attrs)
     if 'injected_square_current' in current.keys():
         c = current['injected_square_current']
     else:
@@ -373,7 +391,7 @@ class ADEXPBackend(Backend):
     self.set_stop_time(stop_time = tMax*pq.ms)
     tMax = float(self.tstop)
     # from pyN import Network
-    stim = [{'start':delay,'stop':duration+delay,'mV':amplitude,'neurons':[0]}]
+    stim = {'start':delay,'stop':duration+delay,'mV':amplitude}#,'neurons':[0]}
     #self.neuron = self.set_attrs(self.attrs)
    
     #self.neuron = self.set_attrs(self.attrs)
@@ -381,14 +399,14 @@ class ADEXPBackend(Backend):
         experiment_name='Single Neuron exhibiting tonic spiking',\
         T=tMax,\
         dt=0.25,\
-        I_ext={'Charly the Neuron':stim})
+        I_ext=stim)
     
     #v_rest = temp_attrs['v_rest']
     vm = self.neuron.simulate(
         attrs=temp_attrs,\
         T=tMax,\
         dt=0.25,\
-        I_ext={'Charly the Neuron':stim})#,v_rest=v_rest)
+        I_ext=stim)#,v_rest=v_rest)
     vM = AnalogSignal(vm,
                           units = voltage_units,
                           sampling_period = 0.25*pq.ms)
