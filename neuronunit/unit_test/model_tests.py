@@ -35,7 +35,11 @@ class ExtraCapabilitiesTestCase(NotebookTools,
 
     def test_receives_current(self):
         self.do_notebook('nml_extra_capability_check')
-        
+
+    def test_geppetto_backend(self):
+        from neuronunit.models.backends.geppetto import GeppettoBackend
+        gb = GeppettoBackend()
+        gb._backend_run()
 
 if __name__ == '__main__':
     unittest.main()
