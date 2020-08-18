@@ -36,10 +36,29 @@ class ExtraCapabilitiesTestCase(NotebookTools,
     def test_receives_current(self):
         self.do_notebook('nml_extra_capability_check')
 
+class GeppettoBackendTestCase(unittest.TestCase):
+    """Testing GeppettoBackend"""
+
     def test_geppetto_backend(self):
         from neuronunit.models.backends.geppetto import GeppettoBackend
         gb = GeppettoBackend()
+        #gb.init_backend()
         gb._backend_run()
+
+class HasSegmentTestCase(unittest.TestCase):
+    """Testing HasSegment and SingleCellModel"""
+
+    def test_(self):
+        from neuronunit.models.section_extension import HasSegment
+        hs = HasSegment()
+
+        def section(location):
+            return location
+
+        hs.setSegment(section)
+        self.assertEqual(hs.getSegment(), 0.5)
+
+        
 
 if __name__ == '__main__':
     unittest.main()
