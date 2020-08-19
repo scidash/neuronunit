@@ -8,7 +8,7 @@ import neuronunit.capabilities as cap
 from .lems import LEMSModel
 from .static import ExternalModel
 import neuronunit.capabilities.spike_functions as sf
-
+from copy import deepcopy
 
 class ReducedModel(LEMSModel,
                    cap.ReceivesSquareCurrent,
@@ -109,11 +109,11 @@ class VeryReducedModel(ExternalModel,
 
 
     def set_backend(self, backend):
-        if isinstance(backend,str):
+        if isinstance(backend, str):
             name = backend
             args = []
             kwargs = {}
-        elif isinstance(backend,(tuple,list)):
+        elif isinstance(backend, (tuple, list)):
             name = ''
             args = []
             kwargs = {}
@@ -121,7 +121,7 @@ class VeryReducedModel(ExternalModel,
                 if i==0:
                     name = backend[i]
                 else:
-                    if isinstance(backend[i],dict):
+                    if isinstance(backend[i], dict):
                         kwargs.update(backend[i])
                     else:
                         args += backend[i]
