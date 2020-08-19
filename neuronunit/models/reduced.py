@@ -9,6 +9,7 @@ from .lems import LEMSModel
 from .static import ExternalModel
 import neuronunit.capabilities.spike_functions as sf
 from copy import deepcopy
+import sciunit
 
 class ReducedModel(LEMSModel,
                    cap.ReceivesSquareCurrent,
@@ -127,15 +128,15 @@ class VeryReducedModel(ExternalModel,
                         args += backend[i]
         else:
             raise TypeError("Backend must be string, tuple, or list")
-        if name in available_backends:
+        if name in sciunit.available_backends:
             self.backend = name
-            self._backend = available_backends[name]()
+            self._backend = sciunit.available_backends[name]()
         elif name is None:
             # The base class should not be called.
             raise Exception(("A backend (e.g. 'jNeuroML' or 'NEURON') "
                              "must be selected"))
         else:
-            print(name,available_backends)
+            print(name, sciunit.available_backends)
             #import pdb; pdb.set_trace()
             raise Exception("Backend %s not found in backends.py" \
                             % name)
