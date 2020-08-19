@@ -1,6 +1,4 @@
 #-*- coding: utf-8 -*-
-from __future__ import (print_function, division,
-                        absolute_import, unicode_literals)
 import numpy as np
 from scipy import integrate as spint
 from matplotlib import pyplot as plt
