@@ -58,7 +58,49 @@ class HasSegmentTestCase(unittest.TestCase):
         hs.setSegment(section)
         self.assertEqual(hs.getSegment(), 0.5)
 
+class VeryReducedModelTestCase(unittest.TestCase):
+    def setUp(self):
+        from sciunit.models.backends import Backend
         
+        class MyBackend(Backend):
+            def _backend_run(self) -> str:
+                return sum(self.run_params.items())
+
+            def local_run(self):
+                return
+
+            def set_run_params(self, **params):
+                self.run_params = params
+
+            def inject_square_current(*args, **kwargs):
+                pass
+
+        self.backend = MyBackend
+        from sciunit.models.backends import register_backends
+        register_backends({"My" : self.backend})
+
+    def test_very_reduced_using_lems(self):
+        from neuronunit.models.reduced import VeryReducedModel
+        
+        vrm = VeryReducedModel(name="test very redueced model", backend="My", attrs={})
+        
+        vrm.rerun = False
+        vrm.run_defaults = {}
+        vrm.set_default_run_params(param1=1)
+
+        vrm.set_attrs(a="a")
+        vrm.get_membrane_potential()
+        vrm.get_APs()
+        vrm.get_spike_train()
+        vrm.inject_square_current(0)
+
+        self.assertIsInstance(vrm.get_backend(), self.backend)
+        vrm.run(param2=2)
+
+    def test_very_reduced_not_using_lems(self):
+        from neuronunit.models.very_reduced import VeryReducedModel
+        vrm = VeryReducedModel(name="test very redueced model", backend="My", attrs={})
+        pass
 
 if __name__ == '__main__':
     unittest.main()

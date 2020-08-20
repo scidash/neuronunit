@@ -12,7 +12,8 @@ from .import_tests import ImportTestCase
 from .doc_tests import DocumentationTestCase
 from .resource_tests import NeuroElectroTestCase, BlueBrainTestCase,\
                             AIBSTestCase
-from .model_tests import ReducedModelTestCase, ExtraCapabilitiesTestCase, HasSegmentTestCase, GeppettoBackendTestCase
+from .model_tests import ReducedModelTestCase, ExtraCapabilitiesTestCase, HasSegmentTestCase, \
+                         GeppettoBackendTestCase, VeryReducedModelTestCase
 from .observation_tests import ObservationsTestCase
 from .test_tests import TestsPassiveTestCase, TestsWaveformTestCase,\
                         TestsFITestCase, TestsDynamicsTestCase,\
