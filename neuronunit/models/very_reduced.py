@@ -31,6 +31,7 @@ class VeryReducedModel(mod.ExternalModel,
 
     def get_membrane_potential(self, **run_params):
         self.run(**run_params)
+        v = None
         for rkey in self.results.keys():
             if 'v' in rkey or 'vm' in rkey:
                 v = np.array(self.results[rkey])
