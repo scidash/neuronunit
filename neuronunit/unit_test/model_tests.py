@@ -85,7 +85,7 @@ class VeryReducedModelTestCase(unittest.TestCase):
         vrm = VeryReducedModel(name="test very redueced model", backend="My", attrs={})
         
         vrm.rerun = False
-        vrm.run_defaults = {}
+        vrm.run_defaults = {"param3": 3}
         vrm.set_default_run_params(param1=1)
 
         vrm.set_attrs(a="a")
