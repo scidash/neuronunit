@@ -43,7 +43,7 @@ class StaticModel(sciunit.Model,
         pass
 
 
-class ExternalModel(sciunit.Model,
+class ExternalModel(sciunit.models.RunnableModel,
                     cap.ProducesMembranePotential,
                     scap.Runnable):
     """A model which produces a frozen membrane potential waveform."""
