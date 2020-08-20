@@ -48,8 +48,9 @@ class ExternalModel(sciunit.models.RunnableModel,
                     scap.Runnable):
     """A model which produces a frozen membrane potential waveform."""
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         """Create an instace of a model that produces a static waveform."""
+        super(ExternalModel, self).__init__(*args, **kwargs)
 
     def set_membrane_potential(self, vm):
         self.vm = vm
