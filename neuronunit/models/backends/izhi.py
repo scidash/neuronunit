@@ -44,6 +44,53 @@ def get_vm(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.36452
 
 
     return v
+'''
+def get_vm(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.364525297619-65.2261863636364), vr=-65.2261863636364, vt=-50, dt=0.010, Iext=[]):
+
+    M = N = len(Iext)
+    #N = size(current,1);
+    #M = size(current,2);
+    delta = 0.5; % resolution of simulation
+
+    #%% Neuron Parameters
+    C = 281;# % capacitance in pF ... this is 281*10^(-12) F
+    g_L = 30;# % leak conductance in nS
+    E_L = -70.6;# % leak reversal potential in mV ... this is -0.0706 V
+    delta_T = 2;# % slope factor in mV
+    V_T = -50.4;# % spike threshold in mV
+    tau_w = 144;# % adaptation time constant in ms
+    V_peak = 20;# % when to call action potential in mV
+    b = 0.0805;# % spike-triggered adaptation
+
+    #loadPhysicalConstants;
+
+    #%% Init variables
+    V = zeros(N,M);
+    w = zeros(N,M);
+
+    #%% Boltzmann distributed initial conditions
+    sigma_sq = 1/(thermoBeta*(C*10^(-12))); % make sure C is in F
+    #% This variance is on the order of 1.5*10^(-11)
+    V[1,:] = E_L/1000 + sqrt(sigma_sq)*randn(1,M); % make sure E_L is in V
+    V[1,:] = V(1,:)*1000; % convert initial conditions into mV
+    w[1,:] = 0; % initial condition is w = 0
+
+    for n in range(0,N-1):
+
+        V[n+1,:] = V[n,:] + (delta/C)*(spiking(V[n,:],g_L,E_L,delta_T,V_T)-w[n,:]+ current[n+1,:]);
+        w[n+1,:] = w[n,:] + (delta/tau_w)*(a*(V[n,:]-E_L) - w[n,:]);
+        
+        #% spiking mechanism
+        alreadySpiked = (V[n,:] == V_peak);
+        V[n+1,alreadySpiked] = E_L;
+        w[n+1,alreadySpiked] = w[n,alreadySpiked] + b;
+
+        justSpiked = (V[n+1,:] > V_peak);
+        V[n+1,justSpiked] = V_peak;
+ 
+    return V
+'''
+
 class IZHIBackend(Backend):
 
     name = 'IZHI'
@@ -113,7 +160,7 @@ class IZHIBackend(Backend):
 
         """
         attrs = copy.copy(self.model.attrs)
-
+        self.attrs = attrs
         if 'injected_square_current' in current.keys():
             c = current['injected_square_current']
         else:
@@ -155,7 +202,7 @@ class IZHIBackend(Backend):
         Iext[delay_ind+duration_ind::] = 0.0
 
         attrs['Iext'] = Iext
-        self.attrs = attrs
+
 
         v = get_vm(**self.attrs)
 

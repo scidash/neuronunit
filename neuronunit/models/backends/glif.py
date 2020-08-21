@@ -115,6 +115,9 @@ class GLIFBackend(Backend):
         #'asc_tau_array': [0.3333333333333333, 0.01], 'init_AScurrents': [0.0, 0.0]
         self.nc['asc_tau_array'] = [0.3333333333333333,0.01]
         self.glif = GlifNeuron.from_dict(self.nc)
+
+        self.default_attrs = self.nc
+
         if type(attrs) is not type(None):
             self.set_attrs(**attrs)
             self.sim_attrs = attrs
@@ -255,6 +258,7 @@ class GLIFBackend(Backend):
             vm = list(map(lambda x: isv if np.isnan(x) else x, vm))
         #vm = [v-0.0650 for v in vm]
         self.vM = AnalogSignal(vm,units = V,sampling_period =  dt * s)
+        '''
         t = [float(f) for f in self.vM.times]
         v = [float(f) for f in self.vM.magnitude]
         try:
@@ -263,7 +267,7 @@ class GLIFBackend(Backend):
             fig.show()
         except:
             pass
-        '''
+        
         except:
             pass
         try:

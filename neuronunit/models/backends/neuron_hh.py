@@ -39,8 +39,7 @@ class NEURONHHBackend(Backend):
 
     name = 'NEURONHH'
     
-    def init_backend(self, attrs=None, cell_name=None, current_src_name=None,
-                     DTC=None):
+    def init_backend(self, attrs=None,DTC=None):
         """Initialize the NEURON backend for neuronunit.
 
         Arguments should be consistent with an underlying model files.
@@ -78,7 +77,6 @@ class NEURONHHBackend(Backend):
                             'diam':12.6157,\
                             'gkbar':0.036,\
                             'el':-54.3,\
-                            'gk':0.0,\
                             'gl':0.0003,\
                             'ena':50.0,\
                             'ek':-77.0,\
@@ -294,18 +292,23 @@ class NEURONHHBackend(Backend):
 
 
     def set_attrs(self, attrs):
+        # make sure all attributes are acoounted for.
+        # if assingment is incomplete assume user does not want to explicitly specify 
+        # everything and is satisfied by defaults.
+        self.default_attrs.update(attrs)
+        attrs = self.default_attrs
+
+        
         if not hasattr(self.model,'attrs'):# is None:
             self.model.attrs = {}
             self.model.attrs.update(attrs)
         else:
             self.model.attrs.update(attrs)
 
-        self.soma(0.5).hh.gk = attrs['gk']
         self.soma(0.5).hh.gl = attrs['gl']
         self.soma(0.5).hh.gnabar = attrs['gnabar']
         self.soma(0.5).hh.gkbar = attrs['gkbar']
         self.soma(0.5).cm = attrs['cm']
-        self.soma.v = attrs['vr']
         self.soma.L = attrs['L']
         
         self.soma.diam = attrs['diam']#12.6157 # Makes a soma of 500 microns squared.
@@ -375,7 +378,7 @@ class NEURONHHBackend(Backend):
         # to make sure that pico amps are not erroneously interpreted as a larger nano amp.
         # current injection value, the value is divided by 1000.
         stim = self.h.IClamp(self.soma(0.5))
-        amp = float(c['amplitude'])/1000.0
+        amp = float(c['amplitude'])#*1000.0
         dur = float(c['duration'])#.rescale('ms'))
         delay = float(c['delay'])#.rescale('ms'))
         stim.amp = amp

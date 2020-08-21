@@ -25,7 +25,8 @@ backend_paths = ['base.EmptyBackend',
                  'glif.GLIFBackend',
                  'run_adexp.ADEXPBackend',
                  'bhh_dynamics.BHHBackend',
-                ]
+                 'badexp_dynamics.BADEXPBackend',
+                 'l5pcSciUnit.L5PCBackend']
 
 def check_backend(partial_path):
     full_path = 'neuronunit.models.backends.%s' % partial_path
@@ -64,3 +65,5 @@ except:
     register_backends(backend_paths)
 
 available_backends = su_backends.available_backends
+from .run_adexp import ADEXPBackend
+from .l5pcSciUnit import L5PCBackend

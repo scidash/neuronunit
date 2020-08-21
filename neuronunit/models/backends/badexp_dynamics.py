@@ -1,4 +1,4 @@
-
+import neurodynex
 import brian2 as b2
 from neurodynex.adex_model import AdEx
 b2.defaultclock.dt = 1 * b2.ms
@@ -20,7 +20,6 @@ import matplotlib.pyplot as plt
 
 
 getting_started = False
-"""
 try:
     import asciiplotlib as apl
     fig = apl.figure()
@@ -30,7 +29,7 @@ try:
 except:
     ascii_plot = False
 ascii_plot = False
-"""
+
 import numpy
 """
 try:
@@ -120,7 +119,7 @@ class BADEXPBackend(Backend):
     def init_backend(self, attrs=None, cell_name='thembi',
                      current_src_name='spanner', DTC=None,
                      debug = False):
-        super(ADEXPBackend,self).init_backend()
+        super(BADEXPBackend,self).init_backend()
         self.debug = None
         self.model._backend.use_memory_cache = False
         self.current_src_name = current_src_name
@@ -320,22 +319,13 @@ class BADEXPBackend(Backend):
         self.n_spikes = int(self.spike_monitor.count[0])
         self.attrs = attrs
 
-        if ascii_plot:
-            if SLOW_ZOOM and self.get_spike_count()>=1 :
-                from neuronunit.capabilities.spike_functions import get_spike_waveforms
-                vm = get_spike_waveforms(self.vM)
-            else:
-                vm = self.vM
-            try:
-                t = [float(f) for f in vm.times]
-                v = [float(f) for f in vm.magnitude]
-                fig = apl.figure()
-                fig.plot(t, v, label=str('brain adexp: ')+str(vm.units), width=100, height=20)
-                fig.show()
-                gc.collect()
-                fig = None
-            except:
-                print('strange error')
+        vm = self.vM
+        #t = [float(f) for f in vm.times]
+        #v = [float(f) for f in vm.magnitude]
+        #fig = apl.figure()
+        #fig.plot(t, v, label=str('brain adexp: ')+str(vm.units), width=100, height=20)
+        #fig.show()
+        #gc.collect()
         return self.vM
 
     def _backend_run(self):

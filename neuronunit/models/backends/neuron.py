@@ -68,6 +68,17 @@ class NEURONBackend(Backend):
         self.neuron = None
         self.model_path = None
         self.h = h
+        self.default_attrs = {
+            'k': 0.0007,
+            'vr': -60,
+            'vt': -40,
+            'vpeak': 35,
+            'a': 0.03,
+            'b': -0.002,
+            'c': -50,
+            'd': 0.1,
+            'C': 0.0001
+        }
 
         super(NEURONBackend, self).init_backend()
         self.model._backend.use_memory_cache = False
@@ -331,7 +342,7 @@ class NEURONBackend(Backend):
                 .format(self.cell_name,self.cell_name,'v0',ass_vr))
 
 
-    def set_attrs(self, attrs):
+    def set_attrs(self, attrs={}):
         if not hasattr(self.model,'attrs'):# is None:
             self.model.attrs = {}
             self.model.attrs.update(attrs)

@@ -154,7 +154,7 @@ def dALLdt(X, t, attrs):
     |  :return: calculate membrane potential & activation variables
     """
     defaults = { 'g_K' : 36.0, 'g_Na' : 200.0, 'g_L' : 0.1, \
-             'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -90.0, 'E_Na' : 50.0, 'vr':-68.9346 }
+             'C_m' : 10.0, 'E_L' : -54.387, 'E_K' : -90.0, 'E_Na' : 50.0, 'vr':-68.9346 }
     defaults.update(attrs)
     attrs = defaults
     delay,duration,T,amplitude = attrs['I']
