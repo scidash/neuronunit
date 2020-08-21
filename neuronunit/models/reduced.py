@@ -71,18 +71,17 @@ class ReducedModel(LEMSModel,
         self.set_run_params(injected_square_current=current)
         self._backend.inject_square_current(current)
 
+    def set_attrs(self,attrs):
+        self.attrs.update(attrs)
+    
 
+"""
 class VeryReducedModel(ReducedModel,
                    cap.ReceivesCurrent,
                    cap.ProducesActionPotentials,
                    ):
-    """Base class for reduced models, using LEMS"""
-
+   
     def __init__(self, name=None, backend=None, attrs=None):
-        """Instantiate a reduced model.
-        LEMS_file_path: Path to LEMS file (an xml file).
-        name: Optional model name.
-        """
         LEMS_MODEL_PATH = path_params['model_path']
         #model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = str(backend))
         super(VeryReducedModel,self).__init__(LEMS_MODEL_PATH,name=name,backend=backend)
@@ -168,4 +167,4 @@ class VeryReducedModel(ReducedModel,
         pass
     def inject_square_current(self, current):
         pass
-    '''
+"""    
