@@ -85,22 +85,14 @@ class VeryReducedModel(ReducedModel,
         """
         LEMS_MODEL_PATH = path_params['model_path']
         #model = ReducedModel(LEMS_MODEL_PATH,name = str('vanilla'),backend = str(backend))
-        super(VeryReducedModel,self).__init__(LEMS_MODEL_PATH,name=name,backend=backend)
+        super(VeryReducedModel, self).__init__(LEMS_MODEL_PATH, name=name, backend=backend, attrs=attrs)
         #self.name=name,
         #self.backend=backend,
-        self.attrs=attrs
         #self.run_number = 0
         #self.tstop = None
         #self.attrs = attrs if attrs else {}
         #    self.unpicklable = []
         #self._backend = backend
-
-    def set_attrs(self,attrs):
-        self._backend.set_attrs(**attrs)
-
-
-    def get_backend(self):
-        return self._backend
 
     '''
     def run(self, rerun=None, **run_params):
