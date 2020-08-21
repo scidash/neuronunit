@@ -215,22 +215,15 @@ MODEL_PARAMS['PYNN']['parallelRheobase'] = True
 GLIF_RANGE = {'El_reference': [-0.08569469261169435, -0.05463626766204832], \
               'C': [3.5071610042390286e-11, 7.630189223327981e-10], \
               'init_threshold': [0.009908733642683513, 0.04939040414685865], \
-              'threshold_reset_method': {'params': {}, 'name': 'inf'}, \
               'th_inf': [0.009908733642683513, 0.04939040414685865], \
               'spike_cut_length': [20, 199],
               'init_AScurrents': [0.0, 0.0], \
-              'init_voltage': [-70.0, 0.0], 'threshold_dynamics_method': {'params': {}, 'name': 'inf'}, \
-              'voltage_reset_method': {'params': {}, 'name': 'zero'}, \
-              'extrapolation_method_name': ['endpoints', 'endpoints'], \
-              'dt': [5e-05, 5e-05], 'voltage_dynamics_method': {'params': {}, 'name': 'linear_forward_euler'}, \
+              'init_voltage': [-70.0, 0.0], 
+              'dt': [5e-05, 5e-05], 
               'El': [0.0, 0.0], 'asc_tau_array': [[0.01, 0.0033333333333333335],[0.3333333333333333, 0.1]], \
-              'R_input': [27743752.593817078, 1792774179.3647704], \
-              'AScurrent_dynamics_method': {'params': {}, 'name': 'none'}, \
-              'AScurrent_reset_method': {'params': {}, 'name': 'none'}, \
-              'dt_multiplier': [10, 10], \
-              'th_adapt': None, 'coeffs': {'a': 1, 'C': 1, 'b': 1, 'G': 1, \
-                                           'th_inf': 1.0212937371199788, 'asc_amp_array': [1.0, 1.0]}, \
-              'type': ['GLIF', 'GLIF']}
+              'R_input': [27743752.593817078, 1792774179.3647704] }
+              #'th_adapt': None, 'coeffs': {'a': 1, 'C': 1, 'b': 1, 'G': 1, \
+              #                             'th_inf': 1.0212937371199788, 'asc_amp_array': [1.0, 1.0]}}
 MODEL_PARAMS['GLIF'] = GLIF_RANGE
 #MODEL_PARAMS['GLIF']
 
@@ -289,8 +282,7 @@ IZHI_PARAMS['vPeak'] = (20,100)
 
 IZHI_PARAMS = OrderedDict(IZHI_PARAMS)
 # IZHI_PARAMS['dt'] = [0.005, 0.005]
-print(IZHI_PARAMS['vr'])
-MODEL_PARAMS['RAW'] = IZHI_PARAMS
+MODEL_PARAMS['IZHI'] = IZHI_PARAMS
 
 # page 1
 # http://www.rctn.org/vs265/izhikevich-nn03.pdf
@@ -351,7 +343,7 @@ vanilla_NRN['c'] = -50# (mV)
 vanilla_NRN['d'] = 0.1# (nA)
 vanilla_NRN['C'] = 1.0E-4# (microfarads)
 #print(pred0,pred1)
-MODEL_PARAMS['NEURON'] = vanilla_NRN
+MODEL_PARAMS['NEURON_IZHI'] = vanilla_NRN
 #MODEL_PARAMS['RAW'] = vanilla_NRN
 # General parameters 
 
