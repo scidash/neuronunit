@@ -99,7 +99,17 @@ class VeryReducedModelTestCase(unittest.TestCase):
 
     def test_very_reduced_not_using_lems(self):
         from neuronunit.models.very_reduced import VeryReducedModel
-        vrm = VeryReducedModel(name="test very redueced model", backend="My", attrs={})
+        import quantities as pq
+        class MyVRM(VeryReducedModel):
+            def run(self):
+                self.results = {
+                    'vm': [0.01*pq.V, 0.05*pq.V, 0*pq.V], 
+                    't': [0.1*pq.s, 0.2*pq.s, 0.3*pq.s]
+                }
+        vrm = MyVRM(name="test very redueced model", backend="My", attrs={})
+        vrm.get_APs()
+        vrm.get_spike_train()
+        vrm.inject_square_current(0.01 * pq.mA)
         pass
 
 if __name__ == '__main__':
