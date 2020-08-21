@@ -14,9 +14,13 @@ See the Documentation notebooks:
 ![NeuronUnit Logo](https://raw.githubusercontent.com/scidash/assets/master/logos/neuronunit/NeuronUnitBlack2.png)
 
 # Installation:
-```
-sudo pip install neuronunit-opt==0.1 
-```
+
+# Description
+* A very Python native model-data optimization toolchain derived from ***neuronunit*** and tightly interfaced with other community supported modules, levarging standard workflows in: feature extraction, data scraping and model simulation. 
+* A collection of compact, parsimonious biological neuronal models, implemented in community supported python modules and  tightly integrated into a fast data driven muliti-objective optimization routine (deap, numba, dask etc).
+* Neo, elephant, Brian2 and dask interoperability ships with the most minimal install. A wide range of feature extraction, data source, and interfaces and simulator backend support: NeuroML-DB, NeurML, Allen-SDK, PyNN and NEURON are provided with an easy to use [Docker container]().
+*  A wide range of interfaces and simulator backend support: Allen-SDK, PyNN and NEURON are provided with an [easy to use Docker container](https://github.com/russelljjarvis/docker-stacks-returned/blob/scidash/efel_dm/Dockerfile).
+
 # Description
 * A very Python native model-data optimization toolchain derived from ***neuronunit*** and tightly interfaced with other community supported modules, levarging standard workflows in: feature extraction, data scraping and model simulation. 
 * A collection of compact, parsimonious biological neuronal models, implemented in community supported python modules and  tightly integrated into a fast data driven muliti-objective optimization routine (deap, numba, dask etc).

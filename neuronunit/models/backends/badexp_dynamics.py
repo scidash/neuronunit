@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 
 
 getting_started = False
+"""
 try:
     import asciiplotlib as apl
     fig = apl.figure()
@@ -29,7 +30,7 @@ try:
 except:
     ascii_plot = False
 ascii_plot = False
-
+"""
 import numpy
 """
 try:

@@ -44,7 +44,7 @@ class jNeuroMLBackend(Backend):
 
     def set_time_step(self, dt):
         """Set the time step of the simulation."""
-        self.model.run_params['dt'] = dt*2.0
+        self.model.run_params['dt'] = dt
         self.set_run_params()
 
     def _backend_run(self):
