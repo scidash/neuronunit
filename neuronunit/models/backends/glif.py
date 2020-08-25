@@ -179,7 +179,6 @@ class GLIFBackend(Backend):
     def get_membrane_potential(self):
         """Must return a neo.core.AnalogSignal.
         And must destroy the hoc vectors that comprise it.
-        """
         threshold = self.results['threshold']
         interpolated_spike_times = self.results['interpolated_spike_times']
 
@@ -195,7 +194,13 @@ class GLIFBackend(Backend):
             vm = list(map(lambda x: isv if np.isnan(x) else x, vm))
         dt =  self.glif.dt
         #vm = [v-0.0650 for v in vm]
-        self.vM = AnalogSignal(vm,units = mV,sampling_period =  dt * ms)
+
+        vm = [v/1000.0 for v in vm]
+
+        vm = [v-0.0650 for v in vm]
+
+        self.vM = AnalogSignal(vm,units = mV,sampling_period =  dt * s)
+        """
         return self.vM
 
 
@@ -247,17 +252,25 @@ class GLIFBackend(Backend):
 
         Iext[0:delay_ind-1] = 0.0
         Iext[delay_ind:delay_ind+duration_ind-1] = amplitude #amplitude
-        Iext[delay_ind+N::] = 0.0
-
+        #Iext[delay_ind+N::] = 0.0
+        Iext = list(Iext)
+        Iext.extend([0 for i in range(0,int(N/2))])
 
         self.results = self.glif.run(Iext)
         vm = self.results['voltage']
         if len(self.results['interpolated_spike_voltage']) > 0:
             isv = self.results['interpolated_spike_voltage'].tolist()[0]
             self.spikes = self.results['interpolated_spike_voltage']
-            vm = list(map(lambda x: isv if np.isnan(x) else x, vm))
-        #vm = [v-0.0650 for v in vm]
-        self.vM = AnalogSignal(vm,units = V,sampling_period =  dt * s)
+            vm = list(map(lambda x: isv if np.isnan(x) else float(-0.065), vm))
+        vm = [v/1000.0 for v in vm]
+
+        vm = [v-0.0650 for v in vm]
+        #self.vM = AnalogSignal(vm,units = mV,sampling_period = self.glif.dt*s)
+        self.vM = AnalogSignal(vm,units = mV,sampling_period =  self.glif.dt * s)
+        # neuronal_model_id = 566302806
+    
+        return self.vM
+
         '''
         t = [float(f) for f in self.vM.times]
         v = [float(f) for f in self.vM.magnitude]
@@ -278,50 +291,48 @@ class GLIFBackend(Backend):
             pass
         '''
 
-        neuronal_model_id = 566302806
-        # download model metadata
-        def do_once():
-            glif_api = GlifApi()
-            nm = glif_api.get_neuronal_models_by_id([neuronal_model_id])[0]
+    # download model metadata
+    def do_once():
+        glif_api = GlifApi()
+        nm = glif_api.get_neuronal_models_by_id([neuronal_model_id])[0]
 
-            # download the model configuration file
-            nc = glif_api.get_neuron_configs([neuronal_model_id])[neuronal_model_id]
-            neuron_config = glif_api.get_neuron_configs([neuronal_model_id])
-            json_utilities.write('neuron_config.json', neuron_config)
+        # download the model configuration file
+        nc = glif_api.get_neuron_configs([neuronal_model_id])[neuronal_model_id]
+        neuron_config = glif_api.get_neuron_configs([neuronal_model_id])
+        json_utilities.write('neuron_config.json', neuron_config)
 
-            # download information about the cell
-            ctc = CellTypesCache()
-            #ctc.get_ephys_data(nm['specimen_id'], file_name='stimulus.nwb')
-            #ctc.get_ephys_sweeps(nm['specimen_id'], file_name='ephys_sweeps.json')
+        # download information about the cell
+        ctc = CellTypesCache()
+        #ctc.get_ephys_data(nm['specimen_id'], file_name='stimulus.nwb')
+        #ctc.get_ephys_sweeps(nm['specimen_id'], file_name='ephys_sweeps.json')
 
-        # initialize the neuron
-        def check_defaults():
-            neuron_config = json_utilities.read('neuron_config.json')['566302806']
-            neuron = GlifNeuron.from_dict(neuron_config)
+    # initialize the neuron
+    def check_defaults():
+        neuron_config = json_utilities.read('neuron_config.json')['566302806']
+        neuron = GlifNeuron.from_dict(neuron_config)
 
-            # make a short square pulse. stimulus units should be in Amps.
-            #stimulus = [ 0.0 ] * 100 + [ 10e-9 ] * 100 + [ 0.0 ] * 100
-            # important! set the neuron's dt value for your stimulus in seconds
-            neuron.dt = 5e-6
-            # simulate the neuron
-            output = neuron.run(Iext)
-            vm = output['voltage']
-            threshold = output['threshold']
-            spike_times = output['interpolated_spike_times']
-            #vm = self.results['voltage']
-            if len(output['interpolated_spike_voltage']) > 0:
-                isv = output['interpolated_spike_voltage'].tolist()[0]
-                spikes = output['interpolated_spike_voltage']
-                vm = list(map(lambda x: isv if np.isnan(x) else x, vm))
-            #vm = [v/10.0 for v in vm]
-            vM = AnalogSignal(vm,units = V,sampling_period =  dt * s)
-            t = [float(f) for f in vM.times]
-            v = [float(f) for f in vM.magnitude]
-
+        # make a short square pulse. stimulus units should be in Amps.
+        #stimulus = [ 0.0 ] * 100 + [ 10e-9 ] * 100 + [ 0.0 ] * 100
+        # important! set the neuron's dt value for your stimulus in seconds
+        neuron.dt = 5e-6
+        # simulate the neuron
+        output = neuron.run(Iext)
+        vm = output['voltage']
+        threshold = output['threshold']
+        spike_times = output['interpolated_spike_times']
+        #vm = self.results['voltage']
+        if len(output['interpolated_spike_voltage']) > 0:
+            isv = output['interpolated_spike_voltage'].tolist()[0]
+            spikes = output['interpolated_spike_voltage']
+            vm = list(map(lambda x: isv if np.isnan(x) else x, vm))
+        #vm = [v/10.0 for v in vm]
+        vM = AnalogSignal(vm,units = V,sampling_period =  dt * s)
+        t = [float(f) for f in vM.times]
+        v = [float(f) for f in vM.magnitude]
 
 
 
-        return self.vM
+
 
 
     def do_once():
@@ -409,7 +420,7 @@ class GLIFBackend(Backend):
             self.spikes = self.results['interpolated_spike_voltage']
             vm = list(map(lambda x: isv if np.isnan(x) else x, vm))
 
-        self.vM = AnalogSignal(vm,units = V,sampling_period =  dt * s)
+        self.vM = AnalogSignal(vm,units = mV,sampling_period =  dt * s)
         t = [float(f) for f in self.vM.times]
         v = [float(f) for f in self.vM.magnitude]
         #try:

@@ -176,7 +176,6 @@ class TotalAPAmplitudeTest(VmTest):
         model.get_membrane_potential()
         sim_length = self.params['delay'] + self.params['duration']
 
-        print(model.vM.times[-1],sim_length)
 
         #if ascii_plot:
         if model._backend is str("HH"):
@@ -242,9 +241,6 @@ class APAmplitudeTest(VmTest):
         model.get_membrane_potential()
         sim_length = self.params['delay'] + self.params['duration']
         self.vm = model.vM
-        #print('model.vM.times[-1]','self.params["delay"] + self.params["duration"]','self.params["t_max"]', 'from waveform')
-
-        #print(model.vM.times[-1],float(sim_length)+200.0,self.params['t_max'], 'from waveform')
 
         #if ascii_plot:
         #if model._backend is str("HH"):
@@ -298,8 +294,6 @@ class InjectedCurrentAPAmplitudeTest(InjectedCurrent, APAmplitudeTest):
         model.inject_square_current(self.params['injected_square_current'])
         model.get_membrane_potential()
         sim_length = self.params['delay'] + self.params['duration']
-
-        print(model.vM.times[-1],sim_length)
 
         if ascii_plot:
             asciplot_code(model.vM,model.get_spike_count())
@@ -356,7 +350,6 @@ class APThresholdTest(VmTest):
         model.inject_square_current(self.params['injected_square_current'])
         model.get_membrane_potential()
         sim_length = self.params['delay'] + self.params['duration']
-        #print(model.vM.times[-1],sim_length)
         self.vm = model.vM
 
 
@@ -419,7 +412,6 @@ class InjectedCurrentAPThresholdTest(InjectedCurrent, APThresholdTest):
             asciplot_code(model.vM,model.get_spike_count())
 
         sim_length = self.params['delay'] + self.params['duration']
-        #print(model.vM.times[-1],sim_length)
 
         # useful to retain inside object.
         prediction =  super(InjectedCurrentAPThresholdTest, self).\

@@ -7,7 +7,6 @@ tested using NeuronUnit. These capabilities exchange 'neo' objects.
 import numpy as np
 import quantities as pq
 import sciunit
-import matplotlib.pyplot as plt
 from .spike_functions import spikes2amplitudes, spikes2widths,\
                              spikes2thresholds
 
@@ -49,6 +48,7 @@ class ProducesMembranePotential(sciunit.Capability):
 
     def plot_membrane_potential(self, ax=None, ylim=(None, None), **kwargs):
         """Plot the membrane potential."""
+        import matplotlib.pyplot as plt
         vm = self.get_membrane_potential(**kwargs)
         if ax is None:
             ax = plt.gca()
@@ -60,7 +60,7 @@ class ProducesMembranePotential(sciunit.Capability):
         ax.set_ylim(y_min, y_max)
         ax.set_xlabel('Time (s)')
         ax.set_ylabel('Vm (mV)')
-
+        #plt.savefig("debug_hh_width.png")
 
 class ProducesSpikes(sciunit.Capability):
     """Indicate that the model produces spikes.
@@ -102,7 +102,11 @@ class ProducesActionPotentials(ProducesSpikes,
     def get_AP_widths(self):
         """Get widths of action potentials."""
         action_potentials = self.get_APs()
-        widths = spikes2widths(action_potentials)
+        try:
+            widths = spikes2widths(action_potentials)
+        except:
+            #self.plot_membrane_potential()
+            widths = np.nan*pq.ms
         return widths
 
     def get_AP_amplitudes(self):

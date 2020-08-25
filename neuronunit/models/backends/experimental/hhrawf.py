@@ -11,7 +11,7 @@ import io
 import math
 import pdb
 from numba import jit
-from .base import *
+#from .base import *
 import quantities as qt
 from quantities import mV, ms, s
 

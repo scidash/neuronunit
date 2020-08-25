@@ -1,3 +1,17 @@
+from __future__ import print_function
+from brian2 import *
+
+try:
+    import julia
+    j = julia.Julia()
+    print('no')
+    j.eval('using Pkg; Pkg.add("https://github.com/russelljjarvis/SpikingNeuralNetworks.jl")')
+    x1 = j.include("hh_neuron.jl")
+    print(x1)
+    x2 = j.include("hh_net.jl")
+
+except:
+    print('raises exception')
 import brian2 as b2
 from neo import AnalogSignal
 import neuronunit.capabilities.spike_functions as sf
@@ -6,8 +20,7 @@ cap.ReceivesCurrent
 cap.ProducesActionPotentials
 from types import MethodType
 
-from brian2 import *
-from __future__ import print_function
+
 
 from brian2.units.constants import (zero_celsius, faraday_constant as F,
     gas_constant as R)

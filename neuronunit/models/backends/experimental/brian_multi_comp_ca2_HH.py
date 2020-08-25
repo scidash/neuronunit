@@ -4,10 +4,10 @@
 # first demonstrate that the brian backend works:
 # bash
 # ```sudo /opt/conda/bin/conda install cython
-# 
+#
 # sudo /opt/conda/bin/pip install git+https://github.co
 # m/brian-team/brian2.git
-# 
+#
 # ```
 
 # In[1]:
@@ -49,7 +49,7 @@ betan = 0.125*exp(-v/(80*mV))/ms : Hz
 gNa : siemens/meter**2
 '''
 
-neuron = SpatialNeuron(morphology=morpho, model=eqs, method="exponential_euler", 
+neuron = SpatialNeuron(morphology=morpho, model=eqs, method="exponential_euler",
                        refractory="m > 0.4", threshold="m > 0.5",
                        Cm=1*uF/cm**2, Ri=35.4*ohm*cm)
 neuron.v = 0*mV
@@ -117,7 +117,7 @@ from brian2.units.constants import (zero_celsius, faraday_constant as F,
 
 
 #print(type(model))
-#HH_cond_exp = bind_NU_interface(model)    
+#HH_cond_exp = bind_NU_interface(model)
 
 
 
@@ -173,15 +173,15 @@ def bind_NU_interface():
         tau_h_T = (int(v<-81*mV) * exp((v/mV + 466)/66.6) +
                    int(v>=-81*mV) * (28 + exp(-(v/mV + 21)/10.5))) * ms / tadj_h_T: second
         ''')
-        model = SpatialNeuron(morphology=morpho, model=eqs, method="exponential_euler", 
+        model = SpatialNeuron(morphology=morpho, model=eqs, method="exponential_euler",
                                refractory="m > 0.4", threshold="m > 0.5",
                                Cm=1*uF/cm**2, Ri=35.4*ohm*cm)
         self.model = model
-    
+
 
     def load_model(self):
-        neuron = None        
-        self.neuron = self.model 
+        neuron = None
+        self.neuron = self.model
         self.M = StateMonitor(neuron, 'v', record=True)
 
     def init_backend(self, attrs = None, cell_name= 'HH_cond_exp', current_src_name = 'hannah', DTC = None, dt=0.01):
@@ -208,7 +208,7 @@ def bind_NU_interface():
         if type(DTC) is not type(None):
             if type(DTC.attrs) is not type(None):
 
-                self.set_attrs(**DTC.attrs)
+                self.set_attrs(DTC.attrs)
                 #assert len(self.model.attrs.keys()) > 0
 
             if hasattr(DTC,'current_src_name'):
@@ -216,14 +216,14 @@ def bind_NU_interface():
 
             if hasattr(DTC,'cell_name'):
                 self.cell_name = DTC.cell_name
-                
+
         self.load_model()
 
     def get_membrane_potential(self):
         """Must return a neo.core.AnalogSignal.
         And must destroy the hoc vectors that comprise it.
         """
-        
+
         vm = AnalogSignal(volts,
              units = mV,
              sampling_period = self.dt *ms)
@@ -234,10 +234,10 @@ def bind_NU_interface():
         '''
         results = {}
         DURATION = 1000.0
-        
+
         #ctx_cells.celltype.recordable
-        
-        
+
+
         if self.celltype == 'HH_cond_exp':
 
             self.hhcell.record('spikes','v')
@@ -261,7 +261,7 @@ def bind_NU_interface():
 
 
 
-    def set_attrs(self,**attrs):                
+    def set_attrs(self,**attrs):
         '''
         example params:
             neuron.v = 0*mV
@@ -296,30 +296,30 @@ def bind_NU_interface():
         run(stop*ms)
 
         self.vm = self.results['vm']
-                 
-                 
+
+
 
 
     def get_APs(self,vm):
-        # 
+        #
 
         vm = self.get_membrane_potential()
         waveforms = sf.get_spike_waveforms(vm,threshold=-45.0*mV)
         return waveforms
 
     def get_spike_train(self,**run_params):
-                 
+
         vm = self.get_membrane_potential()
 
         spike_train = threshold_detection(vm,threshold=-45.0*mV)
 
         return spike_train# self.M(self.neuron)
-    
+
     def get_spike_count(self,**run_params):
         vm = self.get_membrane_potential()
         return len(threshold_detection(vm,threshold=-45.0*mV))
     #model.add_attribute(init_backend)
-    
+
     model.init_backend = MethodType(init_backend,.model)
     model.get_spike_count = MethodType(get_spike_count,self.model)
     model.get_APs = MethodType(get_APs,model)
@@ -339,7 +339,7 @@ def bind_NU_interface():
 # In[13]:
 
 
-HH_cond_exp = bind_NU_interface()    
+HH_cond_exp = bind_NU_interface()
 
 
 # In[ ]:
@@ -380,7 +380,7 @@ betan = 0.125*exp(-v/(80*mV))/ms : Hz
 gNa : siemens/meter**2
 '''
 
-neuron = SpatialNeuron(morphology=morpho, model=eqs, method="exponential_euler", 
+neuron = SpatialNeuron(morphology=morpho, model=eqs, method="exponential_euler",
                        refractory="m > 0.4", threshold="m > 0.5",
                        Cm=1*uF/cm**2, Ri=35.4*ohm*cm)
 neuron.v = 0*mV
@@ -515,7 +515,7 @@ def bind_NU_interface(model):
 
             if hasattr(DTC,'cell_name'):
                 self.cell_name = DTC.cell_name
-                
+
         self.load_model()
 
     def get_membrane_potential(self):
@@ -539,10 +539,10 @@ def bind_NU_interface(model):
         '''
         results = {}
         DURATION = 1000.0
-        
+
         #ctx_cells.celltype.recordable
-        
-        
+
+
         if self.celltype == 'HH_cond_exp':
 
             self.hhcell.record('spikes','v')
@@ -605,11 +605,11 @@ def bind_NU_interface(model):
         spike_train = threshold_detection(vm,threshold=-45.0*mV)
 
         return spike_train
-    
+
     def get_spike_count(self,**run_params):
         vm = self.get_membrane_potential()
         return len(threshold_detection(vm,threshold=-45.0*mV))
-    
+
     model.init_backend = MethodType(init_backend,model)
     model.get_spike_count = MethodType(get_spike_count,model)
     model.get_APs = MethodType(get_APs,model)
@@ -624,7 +624,7 @@ def bind_NU_interface(model):
     #model.load_model() #= MethodType(load_model, model) # Bind to the score.
 
     return model
-HH_cond_exp = bind_NU_interface(HH_cond_exp)    
+HH_cond_exp = bind_NU_interface(HH_cond_exp)
 #HH_cond_exp
 
 
@@ -635,7 +635,7 @@ obs_frame = {}
 test_frame = {}
 import os
 import pickle
-try: 
+try:
 
     electro_path = str(os.getcwd())+'all_tests.p'
 
@@ -676,7 +676,7 @@ from neuronunit.optimization import optimization_management as om
 explore_ranges = {'e_rev_Na' : (40,70), 'e_rev_K': (-90.0,-75.0), 'cm' : (0.25,1.5)}
 npcl, DO = om.run_ga(explore_ranges,NGEN,use_test,free_params=explore_ranges.keys(), NSGA = True, MU = MU,model_type=None)
 
-#hc = 
+#hc =
 
 
 # In[ ]:
@@ -774,23 +774,20 @@ cell[0].get_parameters()
 
 explore_ranges = {'E_Na' : (40,70), 'E_K': (-90.0,-75.0), 'C_m' : (0.25,1.5), 'g_K':(30,40), 'g_Na':(100,140), 'g_L':(0.1,0.5), 'E_L':(-60.0,-45)}
 
-attrs = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3,          'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -77.0, 'E_Na' : 50.0, 'vr':-65.0 } 
+attrs = { 'g_K' : 36.0, 'g_Na' : 120.0, 'g_L' : 0.3,          'C_m' : 1.0, 'E_L' : -54.387, 'E_K' : -77.0, 'E_Na' : 50.0, 'vr':-65.0 }
 
-    
+
 from neuronunit.optimization import optimization_management as om
-print(test_frame)    
+print(test_frame)
 MU = 12
 NGEN = 25
 cnt = 1
 #hc = { 'g_L' : 0.3, 'E_L' : -54.387,
-hc = {'vr':-65.0 } 
+hc = {'vr':-65.0 }
 
 #npcl, DO = om.run_g
 npcl, DO = om.run_ga(explore_ranges,NGEN,use_test,free_params=explore_ranges.keys(), hc = hc, NSGA = True, MU = MU,model_type='HH')
-    
+
 
 
 # In[ ]:
-
-
-

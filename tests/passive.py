@@ -19,7 +19,10 @@ class TestPulseTest(VmTest):
         t_stop = self.params['injected_square_current']['delay'] + \
                    self.params['injected_square_current']['duration'] + \
                    100.0 * pq.ms
-        model.get_backend().set_stop_time(t_stop)
+        try:
+            model.get_backend().set_stop_time(t_stop)
+        except:
+            print('backend none')
         model.inject_square_current(self.params['injected_square_current'])
         vm = model.get_membrane_potential()
         i = self.params['injected_square_current']

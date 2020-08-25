@@ -52,7 +52,7 @@ class DataTC(object):
         self.td = {}
         self.errors = {}
         self.SM = None
-        self.attrs = {}
+        #self.attrs = {}
     def get_ss(self):
         # get summed score
         if self.scores is not None:
@@ -64,8 +64,11 @@ class DataTC(object):
             self.summed = None
         return self.summed
     
-    def self_evaluate(self):    
+    def self_evaluate(self,tests=None):    
         from neuronunit.optimisation import optimization_management as om_
+        if tests is not None:
+            self.tests = tests
+
         OM = self.dtc_to_opt_man()
         self = om_.dtc_to_rheo(self)
         d = OM.format_test(self)
@@ -202,14 +205,25 @@ class DataTC(object):
             self.current_src_name = model._backend.current_src_name
             assert type(self.current_src_name) is not type(None)
             self.cell_name = model._backend.cell_name
-            model.attrs = self.attrs
+            #model.attrs = self.attrs
         else:
             # The most likely outcome
             from neuronunit.models.very_reduced_sans_lems import VeryReducedModel
-            model = VeryReducedModel(backend=self.backend)
+            model = VeryReducedModel(backend=self.backend,attrs=self.attrs)
             model.backend = self.backend
-            model.attrs = self.attrs
+            #print(self.attrs)
+            #try:
+            model.set_attrs(self.attrs)
+            #except:
+            #import pdb
+            #pdb.set_trace()
+            
+        assert len(self.attrs)
+        assert len(model.attrs)
+
         model.rheobase = self.rheobase
+
+        '''
         try:
             model.inj = self.params
         except:
@@ -217,12 +231,15 @@ class DataTC(object):
                 model.inj = self.vparams
             except:
                 model.inj = None
-
+        '''
         return model
 
 
 
-    def dtc_to_gene(self):
+    def dtc_to_gene(self,subset_params=None):
+        '''
+        These imports probably need to be contained to stop recursive imports
+        '''
         from deap import base
         import array
         from deap import creator
@@ -232,9 +249,15 @@ class DataTC(object):
             
         #from neuronunit.optimisation.optimization_management import WSListIndividual
         #print('warning translation dictionary should be used, to garuntee correct attribute order from random access dictionaries')
-        self.attrs.pop('dt',None)
-        self.attrs.pop('Iext',None)
-        pre_gene = OrderedDict(self.attrs)
+        if self.backend is "IZHI":
+            self.attrs.pop('dt',None)
+            self.attrs.pop('Iext',None)
+        if subset_params:
+            pre_gene = OrderedDict()
+            for k in subset_params:
+                pre_gene[k] = self.attrs[k]
+        else:
+            pre_gene = OrderedDict(self.attrs)
         pre_gene = list(pre_gene.values())
         gene = creator.Individual(pre_gene)
         return gene
@@ -319,40 +342,25 @@ class DataTC(object):
         fig.plot(t, v, label=str('observation waveform from inside dtc: '), width=100, height=20)
         fig.show()
 
-    def iap(self):
+    def iap(self,tests=None):
         '''
         Inject and plot to terminal with ascii
         This is useful for debugging new backends, in bash big/fast command line orientated optimization routines.
         '''
+        from neuronunit.optimisation import optimization_management as om_
+        if tests is not None:
+            self.tests = tests
+
+        OM = self.dtc_to_opt_man()
+        self = om_.dtc_to_rheo(self)
 
         model = self.dtc_to_model()
-        #new_tests['RheobaseTest']
-        if type(self.tests) is type({'1':1}):
-            if 'RheobaseTest' in self.tests.keys():
-                uset_t = self.tests['RheobaseTest']
-            else:
-                uset_t = self.tests['RheobaseTestP']
-
-        elif type(self.tests) is type(list):
-            for t in self.tests:
-                if t.name in str('RheobaseTest'):
-                    uset_t = t
-                    break
-
         pms = uset_t.params
         pms['injected_square_current']['amplitude'] = self.rheobase
         model.inject_square_current(pms['injected_square_current'])
         nspike = model.get_spike_train()
+        self.nspike = nspike
         vm = model.get_membrane_potential()
-        t = [float(f) for f in vm.times]
-        v = [float(f) for f in vm.magnitude]
-        try:
-            fig = apl.figure()
-            fig.plot(t, v, label=str('observation waveform from inside dtc: ')+str(nspike), width=100, height=20)
-            fig.show()
-        except:
-            import warnings
-            print('ascii plot not installed')
         return vm
 
 from neuronunit.models import VeryReducedModel
@@ -420,12 +428,14 @@ class DataTCModel(VeryReducedModel):
             if 'RheobaseTest' in t.name: t.score_type = sciunit.scores.ZScore
             if 'RheobaseTestP' in t.name: t.score_type = sciunit.scores.ZScore
             score_gene = t.judge(model)
+            
             if not isinstance(type(score_gene),type(None)):
                 if not isinstance(type(score_gene),sciunit.scores.InsufficientDataScore):
                     if not isinstance(type(score_gene.log_norm_score),type(None)):
                         try:
 
-                            lns = np.abs(score_gene.log_norm_score)
+                            lns = np.abs(score_gene.log_norm_score.raw)
+                            print(lns)
                         except:
                             if score_gene.raw is not None:
                                 lns = np.abs(float(score_gene.raw))

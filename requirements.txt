@@ -6,7 +6,7 @@ backports.tempfile
 lmfit
 numba
 dask[complete]
-brian2
+neuron
 efel
 tabulate
 nbimporter
@@ -15,10 +15,7 @@ neurodynex
 pyneuroml
 simplejson
 seaborn
-pprint
-shelve
 plotly
-maps
 tqdm
 quantities @ git+https://github.com/scidash/python-quantities.git@master
 deap @ git+https://github.com/fun-zoological-computing/deap.git

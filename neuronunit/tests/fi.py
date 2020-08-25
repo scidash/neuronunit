@@ -36,6 +36,16 @@ except:
     pass
 import matplotlib.pyplot as plt
 from neuronunit.capabilities.spike_functions import get_spike_waveforms, spikes2amplitudes, threshold_detection
+import time
+
+def timer(func):
+    def inner(*args, **kwargs):
+        t1 = time.time()
+        f = func(*args, **kwargs)
+        t2 = time.time()
+        print('time taken on block {0} '.format(t2-t1))
+        return f
+    return inner
 #
 # When using differentiation based spike detection is used this is faster.
 #try:
@@ -119,7 +129,7 @@ class RheobaseTest(VmTest):
             self.params['t_max'] = 2000.0*pq.ms
         else:
             model.set_run_params(t_stop=self.params['t_max'])
-
+    #@timer
     def generate_prediction(self, model):
         """Implement sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
@@ -169,7 +179,7 @@ class RheobaseTest(VmTest):
         if len(sub) and len(supra) and single_spike_found:# or too_many_spikes<5:
             rheobase = supra.min()
             #rheobase = spikes_one[-1][1]
-        elif too_many_spikes>=4:
+        elif too_many_spikes>=5:
             rheobase = None
         else:
             rheobase = None
@@ -195,8 +205,10 @@ class RheobaseTest(VmTest):
             if float(ampl) not in lookup:
                 if False:
                     uc = {'amplitude':ampl,'duration':DURATION,'delay':DELAY}
+                    #print(uc)
                     model.inject_square_current(uc)
                     n_spikes = model._backend.get_spike_count()
+                    #print(n_spikes)
                 current = self.get_injected_square_current()
                 current['amplitude'] = ampl
                 model.inject_square_current(current)
@@ -205,6 +217,7 @@ class RheobaseTest(VmTest):
 
                 except:
                     n_spikes = model._backend.get_spike_count()
+    
                 #asciplot_code(model.get_membrane_potential(),n_spikes)
 
                 self.n_spikes = n_spikes
@@ -217,7 +230,7 @@ class RheobaseTest(VmTest):
                 if n_spikes and n_spikes <= spike_counts.min():
                     self.rheobase_vm = model.get_membrane_potential()
 
-        max_iters = 25
+        max_iters = 45
 
         # evaluate once with a current injection at 0pA
         high = self.high
@@ -277,13 +290,18 @@ class RheobaseTest(VmTest):
 
     def compute_score(self, observation, prediction):
         """Implement sciunit.Test.score_prediction."""
+        from sciunit.scores import ZScore, BooleanScore
+
+        if type(self.score_type) != type(ZScore) or self.score_type == BooleanScore:
+            print('warning using unusual score type')
         if prediction is None or \
            (isinstance(prediction, dict) and prediction['value'] is None):
             score = scores.InsufficientDataScore(None)
         else:
+
             score = super(RheobaseTest, self).\
-                          compute_score(observation, prediction)#max
-            # self.bind_score(score,None,observation,prediction)
+                            compute_score(observation, prediction)#max
+        self.bind_score(score,None,observation,prediction)
         return score
 
     def bind_score(self, score, model, observation, prediction):
@@ -335,7 +353,7 @@ class RheobaseTestP(RheobaseTest):
     params_schema.update({'tolerance': {'type': 'current', 'min': 1, 'required': False}})
     units = pq.pA
 
-
+    #@timer
     def generate_prediction(self, model):
         def check_fix_range(dtc):
             '''
@@ -405,26 +423,16 @@ class RheobaseTestP(RheobaseTest):
                 current = {'amplitude':ampl,'duration':DURATION,'delay':DELAY}
                 float(current['delay']) > 100
                 current['amplitude'] = ampl
-                #try:
                 model.inject_square_current(current)
                 n_spikes = model.get_spike_count()
-                #except:
-                #    n_spikes = 100
 
 
                 dtc.previous = ampl
                 dtc.rheobase = {}
-                """
-                if float(ampl) < 0.0:
-                    dtc.rheobase['value'] = None
-                    dtc.boolean = True
-                    return dtc
-                """
                 if n_spikes == 1:
                     dtc.lookup[float(ampl)] = 1
                     dtc.rheobase['value'] = ampl
                     dtc.boolean = True
-                    #dtc.rheobase_vm = model.get_membrane_potential()
 
                     return dtc
 
@@ -477,7 +485,7 @@ class RheobaseTestP(RheobaseTest):
             sub = np.array([0,0]);
             supra = np.array([0,0])
 
-            big = 40
+            big = 20
 
             while global_dtc.boolean == False and cnt< big:
 
@@ -502,9 +510,8 @@ class RheobaseTestP(RheobaseTest):
                 bag = db.from_sequence(dtc_clone,npartitions=8)
                 dtc_clone = list(bag.map(check_current).compute())
                 spikes_one = sorted([ (dtc.ampl,dtc) for dtc in dtc_clone if dtc.boolean == True ])
-                if len(spikes_one)>=3:
-
-                    return spikes_one[0][1]
+                if len(spikes_one)>=2:
+                    return spikes_one[0][0]
 
 
                 for d in dtc_clone:
@@ -520,7 +527,7 @@ class RheobaseTestP(RheobaseTest):
                         if self.verbose >= 2:
                             print(delta, 'a neuron, close to the edge! Multi spiking rheobase. # spikes: ',len(supra))
                         too_many_spikes = np.min([ v for v in dtc.lookup.values() if v>1 ])
-                        if too_many_spikes>15:
+                        if too_many_spikes>10:
 
                             print(delta, 'elephant tests dont work well on high frequency spikes, therefore, this trace excluded. # spikes: ',len(supra))
                             dtc.rheobase = {}
@@ -529,7 +536,7 @@ class RheobaseTestP(RheobaseTest):
                             dtc.lookup[float(supra.min())] = len(supra)
 
                         else:
-                            if len(supra)<10:
+                            if len(supra)<=10:
 
                                 dtc.rheobase = float(supra.min())*units
                                 dtc.boolean = True
@@ -538,8 +545,8 @@ class RheobaseTestP(RheobaseTest):
                                 dtc.rheobase = float(supra.min())
                                 dtc.boolean = True
                                 dtc.lookup[float(supra.min())] = len(supra)*units
-
-                        return dtc
+                        #print(dtc.rheobase)
+                        return dtc.rheobase
 
 
                 if self.verbose >= 2:
@@ -560,17 +567,20 @@ class RheobaseTestP(RheobaseTest):
 
         dtc = init_dtc(dtc)
         prediction = {}
-        temp = find_rheobase(self,dtc).rheobase
-        #self.rheobase_vm = dtc.rheobase_vm
-
+        temp = find_rheobase(self,dtc)#.rheobase
+        if type(temp) is type(pq.pA):
+            prediction['value'] =  temp
+            return prediction
         if type(temp) is not type(None):
-            if type(temp) is type({'dict':0}):
+            if hasattr(temp,'rheobase'):
+                temp = temp.rheobase
+            if type(temp) is type(dict()):
                 if temp['value'] is None:
                     prediction['value'] = None
                 else:
                     prediction['value'] =  float(temp['value'])* pq.pA
             else:
-                prediction['value'] =  float(temp)* pq.pA
+                prediction['value'] =  temp #float(temp)* pq.pA
         else:
             prediction['value'] = None
         self.prediction = prediction

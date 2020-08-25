@@ -17,9 +17,10 @@ done
 if [ $run_all ]; then
   coverage run neuronunit/examples/use_edt.py
 fi
-python neuronunit/unit_test/doc_tests.py
+python3.6 neuronunit/unit_test/doc_tests.py
 coverage run neuronunit/unit_test/working/high_level_test.py
-python neuronunit/unit_test/working/opt_all.py
+python3.6 neuronunit/unit_test/working/opt_all.py
+coverage run neuronunit/examples/use_edt.py
 #cd neuronunit/examples
 #jupyter nbconvert --to notebook --execute chapter1.ipynb
 #jupyter nbconvert --to notebook --execute chapter10.ipynb

@@ -422,7 +422,7 @@ class SpikeCountRangeSearch(VmTest):
                 uc = {'amplitude':ampl*pq.pA,'duration':DURATION,'delay':DELAY}
 
                 dtc.run_number += 1
-                model.set_attrs(**dtc.attrs)
+                model.set_attrs(dtc.attrs)
                 model.inject_square_current(uc)
                 n_spikes = model.get_spike_count()
 

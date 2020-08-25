@@ -1,4 +1,7 @@
-from neuronunit.tests 
+from neuronunit.tests.base import VmTest
+import pickle
+import numpy as np
+from allensdk.core.cell_types_cache import CellTypesCache
 
 
 class AllenTest(VmTest):
@@ -16,6 +19,7 @@ class AllenTest(VmTest):
     # units = pass #
     # ephysprop_name = ''
     aliases = ''
+    '''
     def generate_prediction(self):
         if self.GENERIC:
             return {'mean':prediction['mean'],'std':prediction['std']}
@@ -25,7 +29,7 @@ class AllenTest(VmTest):
             self.ephys
             #import pdb
             #pdb.set_trace()
-
+    '''
 
     def compute_params(self):
         self.params['t_max'] = (self.params['delay'] +
@@ -33,7 +37,7 @@ class AllenTest(VmTest):
                                self.params['padding'])
 
 
-    def set_observation(self,prediction):
+    def set_observation(self,observation):
         self.observation = {}
         self.observation['mean'] = observation
         self.observation['std'] = observation
@@ -43,4 +47,25 @@ class AllenTest(VmTest):
         self.prediction = {}
         self.prediction['mean'] = prediction
         self.prediction['std'] = prediction
-    
+
+df = pickle.load(open("onefive_df.pkl","rb"))    
+allen_indexs = [ i for i in df.index if str("NML") not in str(i)]
+ctc = CellTypesCache(manifest_file='manifest.json')
+features = ctc.get_ephys_features() 
+'''
+for i in allen_indexs:
+    for f in features[0].keys():
+        for c in df.columns:
+            
+            at = AllenTest()
+            if str(f) in str(c):# and str(f) == str(c):
+                print(i,f,c)
+                try:
+                    temp = np.mean(df.loc[i,c])
+                except:
+                    temp = df.loc[i,f]
+                print(temp)
+
+                at.set_observation(temp)
+                print(at)
+'''

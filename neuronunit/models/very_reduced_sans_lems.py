@@ -9,6 +9,7 @@ import numpy as np
 from neo.core import AnalogSignal
 import quantities as pq
 from neuronunit.optimisation.data_transport_container import DataTC
+import copy
 
 import neuronunit.capabilities.spike_functions as sf
 class VeryReducedModel(RunnableModel,
@@ -33,7 +34,6 @@ class VeryReducedModel(RunnableModel,
         self.run_number = 0
         self.tstop = None
         self.rheobse = None
-    import copy
 
     def model_test_eval(self,tests):
         """

@@ -17,9 +17,11 @@
 #python /home/rjjarvis/NeuronunitOpt/neuronunit/unit_test/working/real_data_long_run.py
 #python /home/rjjarvis/NeuronunitOpt/neuronunit/unit_test/working/sim_data_unit_test.py
 #python 
-echo sim_data_long_run.py real_data_long_run.py | xargs python | xargs parallel
+python3 sim_data_long_run.py
+python3 real_data_long_run.py
+# | xargs python3 
 
-python real_data_long_run.py
-python sim_data_long_run.py
-python /home/rjjarvis/NeuronunitOpt/neuronunit/unit_test/working/mill_books_data_driven.py
-python /home/rjjarvis/NeuronunitOpt/neuronunit/unit_test/working/mill_books_sim_data.py
+#python3 real_data_long_run.py
+#python3 sim_data_long_run.py
+#python3 /home/rjjarvis/NeuronunitOpt/neuronunit/unit_test/working/mill_books_data_driven.py
+#python3 /home/rjjarvis/NeuronunitOpt/neuronunit/unit_test/working/mill_books_sim_data.py

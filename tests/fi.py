@@ -15,13 +15,6 @@ from .base import np, pq, cap, VmTest, scores, AMPL, DELAY, DURATION
 from .. import optimisation
 import quantities
 
-
-
-import os
-import os
-
-import os
-import os
 #import neuronunit
 try:
     from neuronunit.models.reduced import ReducedModel#, VeryReducedModel
@@ -128,18 +121,9 @@ class RheobaseTest(VmTest, ABC):
 
         def f(ampl):
             if float(ampl) not in lookup:
-                #try:
-                #    current = self.params.copy()['injected_square_current']
-                #except:
-                #    current = self.params
-
                 uc = {'amplitude':ampl,'duration':DURATION,'delay':DELAY}
-                #uc = {'amplitude':ampl}
-                #current.update(uc)
-
                 model.inject_square_current(uc)
                 n_spikes = model.get_spike_count()
-
                 if self.verbose >= 2:
                     print("Injected %s current and got %d spikes" % \
                             (ampl,n_spikes))

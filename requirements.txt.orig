@@ -1,0 +1,26 @@
+matplotlib==3.1.1
+neo==0.5.2
+elephant==0.4.1
+execnet
+backports.tempfile
+lmfit
+numba
+dask[complete]
+brian2
+efel
+tabulate
+nbimporter
+sklearn
+neurodynex
+pyneuroml
+simplejson
+seaborn
+quantities @ git+https://github.com/scidash/python-quantities@master#egg=quantitities-9999
+deap @ git+https://github.com/fun-zoological-computing/deap.git
+allensdk @ git+https://github.com/fun-zoological-computing/AllenSDK.git
+<<<<<<< HEAD
+sciunit @ git+https://github.com/russelljjarvis/sciunit@dev#egg=sciunit-9999
+
+=======
+sciunit @ git+https://github.com/russelljjarvis/sciunit@dev
+>>>>>>> c70236733a3cffc270fa7a558a46cd3b187d6335

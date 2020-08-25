@@ -17,6 +17,7 @@ except:
     pass
 import numpy
 voltage_units = mV
+import cython
 
 from elephant.spike_train_generation import threshold_detection
 
@@ -49,8 +50,8 @@ def update_currents(amp, i, t, dt,start,stop):
   return scalar
 
 #@jit
-def I_inj(t,delay,duration,amplitude):
-	return 0*(t<delay) +amplitude*(t>delay) +0*(t>delay+duration) # a scalar value.
+#def I_inj(t,delay,duration,amplitude):#
+#	return 0*(t<delay) +amplitude*(t>delay) +0*(t>delay+duration) # a scalar value.
 
 '''
 V[0]    = v0                # this gives us a chance to say what the membrane voltage starts at
@@ -95,6 +96,57 @@ def update_state(i, T, t, dt,I_ext,v,w,spike_raster,v_reset,b,a,spike_delta,v_re
   spike_raster[spiked,i] = 1
 
   return v,w,spike_raster,len(spike_raster)
+
+@jit
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def update_state_new(T, dt,v,w,spike_raster,v_reset,b,a,spike_delta,v_rest,tau_m,tau_w,v_thresh,delta_T,cm,time_trace,amp,start,stop):
+  i = 0
+  vm = []
+  for t in time_trace:
+    if i!=0:
+      I_scalar = 0
+      if start <= t <= stop:
+        I_scalar = amp
+
+      prev_spiked = np.nonzero(spike_raster[:,i-1] == True)
+      v[prev_spiked] = v_reset
+      w[prev_spiked] += b
+      #compute deltas and apply to state variables
+      dv  = (((v_rest-v) + \
+            delta_T*np.exp((v - v_thresh)/delta_T))/tau_m + \
+            (I_scalar - w)/cm) *dt
+      v += dv
+      w += dt * (a*(v - v_rest) - w)/tau_w * dt
+      #decide whether to spike or not
+      spiked = np.nonzero(v > v_thresh)
+      ### https://github.com/lmcintosh/masters-thesis/blob/master/mastersFunctions.py
+      v[spiked] = spike_delta
+      spike_raster[spiked,i] = 1
+      vm.append(v[0])
+    i+=1
+
+
+  return v,w,spike_raster,len(spike_raster),vm
+
+@jit
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def evaluate_vm_new(time_trace,dt,T,v,w,b,a,spike_delta,spike_raster,v_reset,v_rest,tau_m,tau_w,v_thresh,delta_T,cm,amp,start,stop):
+  v,w,spike_raster,n_spikes,vm = update_state_new(T=T, dt=dt,
+                                    v=v,
+                                    w=w,
+                                    spike_raster=spike_raster,
+                                    v_reset=v_reset,
+                                    b=b,a=a,spike_delta=spike_delta,
+                                    v_rest=v_rest,tau_m=tau_m,tau_w=tau_w,
+                                    v_thresh=v_thresh,
+                                    delta_T =delta_T,cm=cm,time_trace=time_trace,
+                                    amp = amp,start = start,stop = stop)
+  
+  return vm,n_spikes
+
+
 @jit
 def evaluate_vm(time_trace,dt,T,v,w,b,a,spike_delta,spike_raster,v_reset,v_rest,tau_m,tau_w,v_thresh,delta_T,cm,amp,start,stop):
   vm = []
@@ -113,6 +165,7 @@ def evaluate_vm(time_trace,dt,T,v,w,b,a,spike_delta,spike_raster,v_reset,v_rest,
       vm.append(v[0])
     i+=1
   return vm,n_spikes
+
 
 
 
@@ -197,7 +250,12 @@ class ADEXPBackend(Backend):
     start = I_ext['start']
     stop = I_ext['stop']
 
-    vm,n_spikes = evaluate_vm(time_trace,dt,T,v,w,b,a,
+
+    #vm,n_spikes = evaluate_vm(time_trace,dt,T,v,w,b,a,
+    #                  spike_delta,spike_raster,v_reset,v_rest,
+    #                  tau_m,tau_w,v_thresh,delta_T,cm,amp,start,stop)
+
+    vm,n_spikes = evaluate_vm_new(time_trace,dt,T,v,w,b,a,
                       spike_delta,spike_raster,v_reset,v_rest,
                       tau_m,tau_w,v_thresh,delta_T,cm,amp,start,stop)
     return vm,n_spikes
@@ -253,6 +311,8 @@ class ADEXPBackend(Backend):
       self.tstop = float(stop_time.rescale(pq.ms))
 
   #@timer
+  @cython.boundscheck(False)
+  @cython.wraparound(False)
   def inject_square_current(self,current):#, section = None, debug=False):
     """Inputs: current : a dictionary with exactly three items, whose keys are: 'amplitude', 'delay', 'duration'
     Example: current = {'amplitude':float*pq.pA, 'delay':float*pq.ms, 'duration':float*pq.ms}}

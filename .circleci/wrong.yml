@@ -1,0 +1,10 @@
+version: 2
+jobs:
+  NUOPT:
+  build:
+    machine:
+      image: ubuntu-1604:201903-01
+      docker_layer_caching: true    # default - false
+      steps:
+      - checkout
+      - run: bash ../test.sh

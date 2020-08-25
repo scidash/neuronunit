@@ -1,4 +1,5 @@
 using Pkg
+Pkg.add("UnicodePlots")
 #=
 try
    Pkg.add("Py2Jl")
@@ -12,8 +13,8 @@ ENV["PYTHON"]="/usr/local/lib/python3.5"
 ENV["PYTHON"]="/usr/bin/python3.5"
 using Pkg
 Pkg.build("PyCall")
-=#
 using Debugger
+=#
 using PyCall
 using Random: bitrand, randperm, shuffle
 using LinearAlgebra: dot

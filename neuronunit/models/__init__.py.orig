@@ -1,0 +1,17 @@
+"""Model classes for NeuronUnit"""
+
+import warnings
+from .static import StaticModel, ExternalModel
+from .lems import LEMSModel
+from .channel import ChannelModel
+<<<<<<< HEAD
+from .reduced import ReducedModel#, VeryReducedModel
+from . import backends  # Required to register backends
+#from .very_reduced import 
+from .very_reduced_sans_lems import VeryReducedModel
+
+=======
+from .reduced import ReducedModel, VeryReducedModel
+from . import backends  # Required to register backends
+#from .very_reduced import 
+>>>>>>> 1964ef177dad51092253d1f65ab6e99d2b85ba25

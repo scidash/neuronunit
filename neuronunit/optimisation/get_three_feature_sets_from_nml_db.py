@@ -169,7 +169,6 @@ def get_static_models(cell_id):
             rheobases.append(temp)
     if len(rheobases) == 0:
         return None
-
     in_current = []
     for check in in_current_filter:
         amp = get_waveform_current_amplitude(check)
@@ -203,7 +202,7 @@ def get_static_models(cell_id):
 
     return model
 
-def allen_format(volts,times,optional_vm=None):
+def allen_format(volts,times,optional_vm=None,bbp=False):
     '''
     Synposis:
         At its most fundamental level, AllenSDK still calls a single trace a sweep.
@@ -220,16 +219,29 @@ def allen_format(volts,times,optional_vm=None):
         we out put features from the middle spike of a spike train.
 
     '''
+    from scipy import interpolate
+
+    dt = times[1]-times[0]
     if optional_vm is not None:
-
-
+    
         spike_train = threshold_detection(optional_vm, threshold=0)
+    if bbp:
+        func = interpolate.interp1d(times,volts)#,fill_value="extrapolate")
+        print(len(times))
+        xnew = np.arange(min(times), max(times), dt*0.1)
+        print(len(xnew))
+        volts = func(xnew)
+        times = xnew
+    
+    # Convert to neo.AnalogSignal
+    #signal = AnalogSignal(signal,units=units, sampling_period=resolution_ms*quantities.ms)
 
     ext = EphysSweepSetFeatureExtractor([times],[volts])
 
     ext.process_spikes()
     swp = ext.sweeps()[0]
     spikes = swp.spikes()
+    #print(spikes)
     if len(spikes)==0:
         return (None,None)
 
@@ -239,13 +251,14 @@ def allen_format(volts,times,optional_vm=None):
         if str('isi_type') not in sk:
             meaned_features_1[sk] = np.mean([ i[sk] for i in spikes if type(i) is not type(str(''))] )
     allen_features = {}
-    meaned_features_overspikes = {}
+    #meaned_features_overspikes = {}
     for s in swp.sweep_feature_keys():# print(swp.sweep_feature(s))
         if str('isi_type') not in s:
             allen_features[s] = swp.sweep_feature(s)
-
+    #print(meaned_features_1)
     allen_features.update(meaned_features_1)
-    return meaned_features_overspikes, allen_features
+    #print(allen_features)
+    return allen_features
 
     '''
     for sk in skeys:
@@ -276,7 +289,7 @@ def allen_format(volts,times,optional_vm=None):
 
 #from elephant.spike_train_generation import threshold_detection
 from neuronunit.optimisation.optimization_management import DataTC
-def three_feature_sets_on_static_models(model,unit_test = False, challenging=False):
+def three_feature_sets_on_static_models(model,unit_test = False, challenging=False,bbp=False):
     '''
     Conventions:
         variables ending with 15 refer to 1.5 current injection protocols.
@@ -330,7 +343,7 @@ def three_feature_sets_on_static_models(model,unit_test = False, challenging=Fal
     # Allen Features
     ##
     #frame_shape,frame_dynamics,per_spike_info, meaned_features_overspikes
-    all_allen_features30, allen_features30 = allen_format(volts,times,optional_vm=model.vm30)
+    all_allen_features30 = allen_format(volts,times,optional_vm=model.vm30,bbp=bbp)
     #if frame30 is not None:
     #    frame30['protocol'] = 3.0
     ##
@@ -345,7 +358,7 @@ def three_feature_sets_on_static_models(model,unit_test = False, challenging=Fal
     # Allen Features
     ##
 
-    all_allen_features15, allen_features15 = allen_format(volts,times,optional_vm=model.vm15)
+    all_allen_features15 = allen_format(volts,times,optional_vm=model.vm15,bbp=bbp)
     ##
     # Get Druckman features, this is mainly handled in external files.
     ##
@@ -358,8 +371,6 @@ def three_feature_sets_on_static_models(model,unit_test = False, challenging=Fal
     else:
         DMTNMLO.test_setup(None,None,model= model,ir_current_limited=True)
     dm_test_features = DMTNMLO.runTest()
-    print(dm_test_features)
-    import pdb; pdb.set_trace()
     ##
     # Wrangle data to prepare for EFEL feature calculation.
     ##

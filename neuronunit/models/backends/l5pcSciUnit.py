@@ -26,6 +26,7 @@ import numpy as np
 #from .base import Backend
 from .base import *
 import quantities as qt
+from bluepyopt.parameters import Parameter
 
 def timer(func):
     def inner(*args, **kwargs):
@@ -59,6 +60,11 @@ class L5PCBackend(Backend):
 
         self.default_attrs = L5PC
         self.attrs = attrs
+        lop={}
+        for k,v in self.attrs.items():
+            p = Parameter(name=k,bounds=v,frozen=False)
+            lop[k] = p
+        self.params = lop
 
         super(L5PCBackend,self).init_backend()
 
@@ -75,8 +81,14 @@ class L5PCBackend(Backend):
         not_fronzen = {k:v for k,v in self.evaluator.cell_model.params.items() if not v.frozen}
         for k,v in attrs.items():
            self.test_params[i] = v
-        print(self.test_params)
+        #print(self.test_params)
         self.attrs = attrs
+
+        lop={}
+        for k,v in self.attrs.items():
+            p = Parameter(name=k,bounds=v,frozen=False)
+            lop[k] = p
+        self.params = lop
         '''
         cnt = 0
         
@@ -91,6 +103,12 @@ class L5PCBackend(Backend):
         '''
     #@timer
     def inject_square_current(self,current):
+        '''
+        self.evaluator = l5pc_evaluator.create()
+        self.evaluator.fitness_protocols.pop('bAP',None)
+        self.evaluator.fitness_protocols.pop('Step3',None)
+        self.evaluator.fitness_protocols.pop('Step2',None)
+        '''
         protocol = self.evaluator.fitness_protocols['Step1']
         if 'injected_square_current' in current.keys():
             current = current['injected_square_current']
@@ -98,11 +116,22 @@ class L5PCBackend(Backend):
         protocol.stimuli[0].step_delay = float(current['delay'])#/(1000.0*1000.0*1000.0)#*1000.0
         protocol.stimuli[0].step_duration = float(current['duration'])#/(1000.0*1000.0*1000.0)#*1000.0
         
+
+        #self.init_backend(attrs=self.attrs)
         feature_outputs = self.evaluator.evaluate(self.test_params)
 
-        self.vm = feature_outputs['neo_Step1.soma.v']
+        #self.destroy()
+        #self.init_backend(attrs=self.attrs)# DTC=self.model_to_dtc())
+        try:
+            self.vm = feature_outputs['neo_Step1.soma.v']
+        except:
+            import pdb
+            pdb.set_trace()
+        
         self.vM = self.vm
-        plt.plot(self.vm.times,self.vm)
+        #plt.plot(self.vm.times,self.vm)
+        #self.evaluator = None
+        #del self.evaluator
         return feature_outputs['neo_Step1.soma.v']
     
     def get_spike_count(self):

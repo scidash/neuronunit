@@ -313,6 +313,7 @@ def min_fitness(pop):
     sorted_sum_list = sorted(sum_list,key=lambda tup: tup[0])
     pre_selection = sorted_sum_list[0][1]            
     selected_fitness_values = pop[pre_selection]
+
     return selected_fitness_values
 
 def max_fitness(pop):
@@ -362,6 +363,7 @@ def parameter_report(self, ind):
          + str(pv) + " Low: " \
          + str(param["low"]) \
          + " High: " + str(param["high"]) + " ATTR: " + param["attr"] + " in " + str(param["lists"]))
+from bluepyopt.deapext.tools import selIBEA
 
 def eaAlphaMuPlusLambdaCheckpoint(
         pop,
@@ -424,9 +426,10 @@ def eaAlphaMuPlusLambdaCheckpoint(
     n_elite_offspring = int(round(MU * (1-F_DIVERSITY)))
     n_diversity_offspring = int(round(MU * F_DIVERSITY / 2.0))
     # Begin the generational process
-    
     for gen in tqdm(range(1, NGEN), desc='GA Generation Progress'):
-        offspring = select_best(pop,int(MU/2))
+        #offspring = select_best(pop,int(MU/2))
+        offspring = selIBEA(pop,int(MU))
+        
         #nsga2ii = toolbox.select(pop,int(MU/2))
         #offspring.extend(nsga2ii)
 
@@ -444,6 +447,8 @@ def eaAlphaMuPlusLambdaCheckpoint(
         
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+        valid_ind = [ind for ind in offspring if ind.fitness.valid]
+
         invalid_ind,fitnesses = toolbox.evaluate(invalid_ind)
         record = stats.compile(pop)
         logbook.record(gen=gen, evals=len(invalid_ind), **record)
@@ -455,9 +460,11 @@ def eaAlphaMuPlusLambdaCheckpoint(
         
         pool = remove_and_replace(pool,toolbox)
         try:
-            pop = select_best(pool,MU)
+            pop = selIBEA(pool,MU)
+
         except:
-            print(gen)
+            pop = select_best(pop,MU)
+
         # add some diversity by selecting with NSGA too.
         #nsga2ii = toolbox.select(pool, 2)
         #pop.extend(nsga2ii)

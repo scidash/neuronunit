@@ -26,6 +26,64 @@ import logging
 logger = logging.getLogger('__main__')
 from neuronunit.optimisation.data_transport_container import DataTC
 
+
+class WSListIndividual(list):
+    #from neuronunit.optimisation.optimisations import WeightedSumFitness
+
+    """Individual consisting of list with weighted sum field"""
+    def set_fitness(self,obj_size):
+        self.fitness = WeightedSumFitness(obj_size=obj_size)
+    def __init__(self, *args, **kwargs):
+        """Constructor"""
+        self.rheobase = None
+        if 'dtc' in kwargs:
+           self.dtc = kwargs['dtc']
+        else:
+           self.dtc = None
+        super(WSListIndividual, self).__init__(args)#args)#, **kwargs)
+        self.obj_size = len(args)
+        #self.fitness = tuple(1.0 for i in range(0,self.obj_size))
+        self.set_fitness(obj_size=self.obj_size)
+
+class WeightedSumFitness(deap.base.Fitness):
+
+    """Fitness that compares by weighted sum"""
+
+    def __init__(self, values=(), obj_size=None):
+        self.weights = [1.0] * obj_size if obj_size is not None else [1]
+
+        super(WeightedSumFitness, self).__init__(values)
+        #obj_size=len(values)
+
+    @property
+    def weighted_sum(self):
+        """Weighted sum of wvalues"""
+        return sum(self.wvalues)
+
+    @property
+    def sum(self):
+        """Weighted sum of values"""
+        return sum(self.values)
+
+    @property
+    def norm(self):
+        """Frobenius norm of values"""
+        return numpy.linalg.norm(self.values)
+
+    def __le__(self, other):
+        return self.weighted_sum <= other.weighted_sum
+
+    def __lt__(self, other):
+        return self.weighted_sum < other.weighted_sum
+
+    def __deepcopy__(self, _):
+        """Override deepcopy"""
+
+        cls = self.__class__
+        result = cls.__new__(cls)
+        result.__dict__.update(self.__dict__)
+        return result
+
 # TODO decide which variables go in constructor, which ones go in 'run' function
 # TODO abstract the algorithm by creating a class for every algorithm, that way
 # settings of the algorithm can be stored in objects of these classes
@@ -72,12 +130,13 @@ class SciUnitOptimisation(object):
         self.benchmark = benchmark
 
         self.tests = tests
-        self.OBJ_SIZE = 1#len(self.tests)#+1
+        self.OBJ_SIZE = len(self.tests)
         self.seed = seed
         self.MU = MU
         try:
             self.DO_other = DEAPOptimisation(offspring_size=self.MU, \
                 selector_name='IBEA')
+            del self.DO_other
         except:
             pass
         self.elite_size = elite_size

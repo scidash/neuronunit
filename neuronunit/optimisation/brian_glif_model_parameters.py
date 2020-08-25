@@ -224,7 +224,13 @@ GLIF_RANGE = {'El_reference': [-0.08569469261169435, -0.05463626766204832], \
               'R_input': [27743752.593817078, 1792774179.3647704] }
               #'th_adapt': None, 'coeffs': {'a': 1, 'C': 1, 'b': 1, 'G': 1, \
               #                             'th_inf': 1.0212937371199788, 'asc_amp_array': [1.0, 1.0]}}
+
+GLIF_RANGE.pop('init_AScurrents',None)
+GLIF_RANGE.pop('dt',None)
+GLIF_RANGE.pop('asc_tau_array',None)
+GLIF_RANGE.pop('El',None)
 MODEL_PARAMS['GLIF'] = GLIF_RANGE
+
 #MODEL_PARAMS['GLIF']
 
 # Which Parameters
