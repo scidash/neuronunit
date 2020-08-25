@@ -133,7 +133,8 @@ class StaticExternalTestCase(unittest.TestCase):
 
     def test_static_model(self):
         from neuronunit.models.static import StaticModel
-        
+        with self.assertRaises(TypeError):
+            sm = StaticModel(None)
         sm = StaticModel(self.vm)
         sm.inject_square_current(0.1 * pq.mA)
 
