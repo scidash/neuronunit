@@ -111,6 +111,29 @@ class VeryReducedModelTestCase(unittest.TestCase):
         vrm.get_spike_train()
         vrm.inject_square_current(0.01 * pq.mA)
         pass
+import quantities as pq
+import numpy as np
+from neo.core import AnalogSignal
+class StaticExternalTestCase(unittest.TestCase):
+    def setUp(self):
+        array = np.ones(10000) * -60.0 * pq.mV
+        dt = 1 * pq.ms
+        self.vm = AnalogSignal(array,units=pq.mV,sampling_rate=1.0/dt)
+
+    def test_external_model(self):
+        from neuronunit.models.static import ExternalModel
+        import quantities as pq
+        em = ExternalModel(name='test external model obj')
+        em.set_membrane_potential(self.vm)
+        em.set_model_attrs({'a': 1, 'b': 2, 'c': 3})
+        vm = em.get_membrane_potential()
+        self.assertIsInstance(vm, AnalogSignal)
+
+    def test_static_model(self):
+        from neuronunit.models.static import StaticModel
+        
+        sm = StaticModel(self.vm)
+        sm.inject_square_current(0.1 * pq.mA)
 
 if __name__ == '__main__':
     unittest.main()
