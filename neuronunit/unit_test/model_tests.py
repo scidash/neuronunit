@@ -1,6 +1,9 @@
 """Tests of NeuronUnit model classes"""
 
 from .base import *
+import quantities as pq
+import numpy as np
+from neo.core import AnalogSignal
 
 class ReducedModelTestCase(unittest.TestCase):
     """Test instantiation of the reduced model"""
@@ -111,9 +114,8 @@ class VeryReducedModelTestCase(unittest.TestCase):
         vrm.get_spike_train()
         vrm.inject_square_current(0.01 * pq.mA)
         pass
-import quantities as pq
-import numpy as np
-from neo.core import AnalogSignal
+
+
 class StaticExternalTestCase(unittest.TestCase):
     def setUp(self):
         array = np.ones(10000) * -60.0 * pq.mV
