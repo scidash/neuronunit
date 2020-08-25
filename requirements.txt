@@ -13,12 +13,10 @@ nbimporter
 sklearn
 neurodynex
 pyneuroml
-simplejson
 seaborn
-shelve
 plotly
 tqdm
-quantities @ git+https://github.com/scidash/python-quantities.git@master
 deap
+quantities @ git+https://github.com/scidash/python-quantities.git@master
 allensdk @ git+https://github.com/fun-zoological-computing/AllenSDK.git
 sciunit @ git+https://github.com/russelljjarvis/sciunit.git@dev
