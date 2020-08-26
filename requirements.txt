@@ -19,4 +19,3 @@ tqdm
 deap
 quantities @ git+https://github.com/scidash/python-quantities.git@master
 allensdk @ git+https://github.com/fun-zoological-computing/AllenSDK.git
-sciunit @ git+https://github.com/russelljjarvis/sciunit.git@dev
