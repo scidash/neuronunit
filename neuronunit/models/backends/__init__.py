@@ -66,4 +66,4 @@ except:
 
 available_backends = su_backends.available_backends
 from .run_adexp import ADEXPBackend
-from .l5pcSciUnit import L5PCBackend
+#from .l5pcSciUnit import L5PCBackend
