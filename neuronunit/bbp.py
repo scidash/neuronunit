@@ -13,7 +13,7 @@ from urllib.request import urlopen, URLError
 
 def is_bbp_up():
     """Check whether the BBP microcircuit portal is up."""
-    url = "http://microcircuits.epfl.ch/released_data/B95_folder.zip"
+    url = "http://microcircuits.epfl.ch/data/released_data/B95.zip"
     request = requests.get(url)
     return request.status_code == 200
 
