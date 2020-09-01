@@ -7,6 +7,7 @@ from neuronunit.tests.druckmann2013 import *
 from neuronunit.neuromldb import NeuroMLDBStaticModel
 from numpy import array
 from quantities import *
+from pathlib import Path
 
 DELTA = 0.3
 
@@ -22,10 +23,7 @@ class Druckmann2013BaseTestCase:
 
         try:
             with open(pickle_file, 'rb') as f:
-                if sys.version_info[0] >= 3:
-                    model_cache = pickle.load(f, encoding='Latin-1')
-                else:
-                    model_cache = pickle.load(f)
+                model_cache = pickle.load(f, encoding='Latin-1')
         except:
             model_cache = {}
 
@@ -268,6 +266,12 @@ class Druckmann2013BaseTestCase:
 
         def test_37(self):
             self.run_test(37)
+            
+        def test_get_files(self):
+            self.assertIsInstance(self.model.nmldb_model.get_files(), Path)
+
+        def test_get_files(self):
+            self.assertIsInstance(self.model.nmldb_model.get_files(), Path)
 
         @classmethod
         def print_predicted(cls):
@@ -798,6 +802,25 @@ class Model11TestCase(Druckmann2013BaseTestCase.BaseTest):
 
 
         super(Model11TestCase, self).setUp()
+
+class OthersTestCase(unittest.TestCase):
+    def test_get_diff(self):
+        arr = np.array([1,2,3])
+        result = get_diff(arr)
+        self.assertEqual(list(result), [1, 1])
+
+    def test_exceptions(self):
+        model = NeuroMLDBStaticModel("NMLCL001139")
+        model.nmldb_model.waveforms = []
+        with self.assertRaises(Exception):
+            model.nmldb_model.get_druckmann2013_strong_current()
+        with self.assertRaises(Exception):
+            model.nmldb_model.get_steady_state_waveform()
+        with self.assertRaises(Exception):
+            model.nmldb_model.get_waveform_by_current(1)
+        with self.assertRaises(Exception):
+            model.nmldb_model.get_druckmann2013_standard_current()
+        
 
 if __name__ == '__main__':
     unittest.main()

@@ -2,10 +2,7 @@
 
 import os
 import shutil
-try:
-    from urllib.parse import urljoin
-except ImportError:
-    from urlparse import urljoin
+from urllib.parse import urljoin
 
 import requests
 import validators
@@ -67,13 +64,13 @@ class LEMSModel(RunnableModel):
             download_path = os.path.join(base, file_name)
             try:
                 r = requests.get(possible_url, allow_redirects=True)
+                if r.status_code != 200:
+                    print("URL %s gave a response code %d" % (possible_url, r.status_code))
+                with open(download_path, 'wb') as f:
+                    f.write(r.content)
             except requests.ConnectionError:
                 print("Could not connect to server at %s" % possible_url)
-            if r.status_code != 200:
-                print("URL %s gave a response code %d" % (possible_url,
-                                                          r.status_code))
-            with open(download_path, 'wb') as f:
-                f.write(r.content)
+            
             self.from_url = possible_url
         else:
             download_path = possible_url

@@ -10,10 +10,7 @@ import collections
 
 import sys
 KERNEL = ('ipykernel' in sys.modules)
-try:
-    from io import StringIO
-except ImportError:
-    from StringIO import StringIO
+from io import StringIO
 
 import numpy as np
 import pandas as pd

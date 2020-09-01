@@ -5,10 +5,7 @@ import sys
 import os
 import warnings
 import pdb
-try:  # Python 2
-    from urllib import urlretrieve
-except ImportError:  # Python 3
-    from urllib.request import urlretrieve
+from urllib.request import urlretrieve
 
 import matplotlib as mpl
 
