@@ -8,7 +8,7 @@ import neuronunit.capabilities as cap
 from .lems import LEMSModel
 from .static import ExternalModel
 import neuronunit.capabilities.spike_functions as sf
-
+from copy import deepcopy
 
 class ReducedModel(LEMSModel,
                    cap.ReceivesSquareCurrent,
@@ -30,6 +30,7 @@ class ReducedModel(LEMSModel,
 
     def get_membrane_potential(self, **run_params):
         self.run(**run_params)
+        v = None
         for rkey in self.results.keys():
             if 'v' in rkey or 'vm' in rkey:
                 v = np.array(self.results[rkey])
@@ -67,23 +68,9 @@ class VeryReducedModel(ExternalModel,
         LEMS_file_path: Path to LEMS file (an xml file).
         name: Optional model name.
         """
-        super(VeryReducedModel,self).__init__()
-        self.name=name,
-        self.backend=backend,
-        self.attrs=attrs,
+        super(VeryReducedModel,self).__init__(name=name, backend=backend, attrs=attrs)
         self.run_number = 0
         self.tstop = None
-        self.attrs = attrs if attrs else {}
-        self.unpicklable = []
-        self._backend = backend
-
-    def set_attrs(self,attrs):
-        self._backend.set_attrs(**attrs)
-
-
-    def get_backend(self):
-        return self._backend
-
 
     def run(self, rerun=None, **run_params):
         if rerun is None:
@@ -107,40 +94,6 @@ class VeryReducedModel(ExternalModel,
     def set_run_params(self, **params):
         self._backend.set_run_params(**params)
 
-
-    def set_backend(self, backend):
-        if isinstance(backend,str):
-            name = backend
-            args = []
-            kwargs = {}
-        elif isinstance(backend,(tuple,list)):
-            name = ''
-            args = []
-            kwargs = {}
-            for i in range(len(backend)):
-                if i==0:
-                    name = backend[i]
-                else:
-                    if isinstance(backend[i],dict):
-                        kwargs.update(backend[i])
-                    else:
-                        args += backend[i]
-        else:
-            raise TypeError("Backend must be string, tuple, or list")
-        if name in available_backends:
-            self.backend = name
-            self._backend = available_backends[name]()
-        elif name is None:
-            # The base class should not be called.
-            raise Exception(("A backend (e.g. 'jNeuroML' or 'NEURON') "
-                             "must be selected"))
-        else:
-            print(name,available_backends)
-            #import pdb; pdb.set_trace()
-            raise Exception("Backend %s not found in backends.py" \
-                            % name)
-        self._backend.model = self
-        self._backend.init_backend(*args, **kwargs)
     # Methods to override using inheritance.
     def get_membrane_potential(self, **run_params):
         pass

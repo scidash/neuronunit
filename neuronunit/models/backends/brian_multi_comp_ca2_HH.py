@@ -110,7 +110,6 @@ cap.ProducesActionPotentials
 from types import MethodType
 
 from brian2 import *
-from __future__ import print_function
 
 from brian2.units.constants import (zero_celsius, faraday_constant as F,
     gas_constant as R)

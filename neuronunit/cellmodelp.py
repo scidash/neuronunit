@@ -2,10 +2,7 @@
 # steady state v of a cell defined in a hoc file in the given directory.
 # Usage: python getCellProperties /path/To/dir/with/.hoc
 
-try:  # Python 2
-    import cPickle
-except ImportError:  # Python 3
-    import _pickle as cPickle
+import _pickle as cPickle
 import csv
 import json
 import os

@@ -4,7 +4,7 @@ import inspect
 import warnings
 
 import sciunit.models.backends as su_backends
-from sciunit.utils import PLATFORM, PYTHON_MAJOR_VERSION
+from sciunit.utils import PLATFORM
 from .base import Backend
 
 warnings.filterwarnings('ignore', message='nested set')
