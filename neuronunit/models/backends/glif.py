@@ -60,13 +60,18 @@ import pickle
 class GLIFBackend(Backend):
     
     name = 'GLIF'
+
+
+    def init_backend(self, attrs=None,DTC=None,
+                     debug = False):
+        super(GLIFBackend,self).init_backend()
     
-    def init_backend(self, attrs = None, cell_name = 'alice', current_src_name = 'hannah', DTC = None, debug = False):
+
         super(GLIFBackend,self).init_backend()
 
         self.model._backend.use_memory_cache = False
-        self.current_src_name = current_src_name
-        self.cell_name = cell_name
+        #self.current_src_name = current_src_name
+        #self.cell_name = cell_name
         self.vM = None
         #self.allen_id = None
         self.allen_id = 566302806
@@ -74,7 +79,7 @@ class GLIFBackend(Backend):
         self.attrs = attrs
         self.nc = None
 
-        self.temp_attrs = None
+
         self.debug = debug
 
         if self.allen_id == None:
@@ -117,22 +122,14 @@ class GLIFBackend(Backend):
         self.glif = GlifNeuron.from_dict(self.nc)
 
         self.default_attrs = self.nc
-
+        assert self.default_attrs is not None
         if type(attrs) is not type(None):
-            self.set_attrs(**attrs)
-            self.sim_attrs = attrs
+            self.attrs = attrs
+            #self.sim_attrs = attrs
 
         if type(DTC) is not type(None):
             if type(DTC.attrs) is not type(None):
-
-                self.set_attrs(**DTC.attrs)
-
-
-            if hasattr(DTC,'current_src_name'):
-                self._current_src_name = DTC.current_src_name
-
-            if hasattr(DTC,'cell_name'):
-                self.cell_name = DTC.cell_name
+                self.set_attrs(DTC.attrs)
 
         #print(self.internal_params)
     def as_lems_model(self, backend=None):
@@ -173,8 +170,9 @@ class GLIFBackend(Backend):
         return np.array(self.results['grid_spike_times'])
     def get_spike_count(self):
         #print('npsikes: ',len(self.results['interpolated_spike_times']))
-        self.results['interpolated_spike_times']
-        return len(self.results['grid_spike_times'])
+        #self.results['interpolated_spike_times']
+        
+        return len(self.results['interpolated_spike_times'])
         #return np.array(spike_times)
     def get_membrane_potential(self):
         """Must return a neo.core.AnalogSignal.
@@ -204,20 +202,29 @@ class GLIFBackend(Backend):
         return self.vM
 
 
-    def set_attrs(self, **attrs):
-        self.model.attrs.update(attrs)
-        #self.nc.update(attrs)
-        for k,v in attrs.items():
-            self.nc[k] = v
+    def set_attrs(self,attrs):
+        #print(attrs)
+        #self.model.attrs.update(attrs)
+        temp = self.default_attrs
+
+        #print(temp)
+        if self.nc is not None:
+            self.nc.update(temp)
+            #self.nc.update(attrs)
+        if self.attrs is not None:
+            self.attrs = attrs
+        assert self.attrs is not None
+        self.nc.update(attrs)
+
         self.nc['asc_tau_array'] = [0.3333333333333333,0.01]
         self.nc['init_AScurrents'] = [0.0,0.0]
-        #import pdb; pdb.set_trace()
+        from allensdk.model.glif.glif_neuron import GlifNeuron
+
+        
+        #self.glif = GlifNeuron.from_dict(attrs)
         self.glif = GlifNeuron.from_dict(self.nc)
-        #print(self.nc)
-        self.glif.init_voltage = -0.065
-        #import pdb
-        #pdb.set_trace()
-        return self.glif
+
+        self.glif.init_voltage = attrs['El_reference']
 
 
     def set_stop_time(self, stop_time = 650*pq.ms):
@@ -255,7 +262,8 @@ class GLIFBackend(Backend):
         #Iext[delay_ind+N::] = 0.0
         Iext = list(Iext)
         Iext.extend([0 for i in range(0,int(N/2))])
-
+        #self.set_attrs(self.attrs)
+        #print(self.attrs)
         self.results = self.glif.run(Iext)
         vm = self.results['voltage']
         if len(self.results['interpolated_spike_voltage']) > 0:
@@ -265,8 +273,10 @@ class GLIFBackend(Backend):
         vm = [v/1000.0 for v in vm]
 
         vm = [v-0.0650 for v in vm]
+
         #self.vM = AnalogSignal(vm,units = mV,sampling_period = self.glif.dt*s)
         self.vM = AnalogSignal(vm,units = mV,sampling_period =  self.glif.dt * s)
+        print(np.std(self.vM),np.mean(self.vM))
         # neuronal_model_id = 566302806
     
         return self.vM
@@ -386,53 +396,23 @@ class GLIFBackend(Backend):
         start = float(c['delay'])
         duration = float(c['duration'])
         amplitude = float(c['amplitude'])#/100 000 000 000.0
-        '''
-        ls1 = pickle.load(open('../models/backends/generic_current_injection.p','rb'))
-        ls = ls1[0]['stimulus']
-        DT = sampling_period = 1.0/ls1[0]['sampling_rate']#*pq.s
-        on_indexs = np.where(ls==np.max(ls))
-
-        ALLEN_STIM = ls
-        ALLEN_ONSET = start = np.min(on_indexs)*DT
-        ALLEN_STOP = stop = np.max(on_indexs)*DT
-        ALLEN_FINISH = len(ls)*DT
-
-        ls = ls1[0]['stimulus']
-
-
-        old_max = np.max(ls)
-        on_indexs = np.where(ls==np.max(ls))
-
-        ls[on_indexs] = amplitude
-
-        assert np.max(ls)!= old_max
-        self.stim = ls
-        '''
+        
 
         self.glif.dt = sampling_period
         dt =  self.glif.dt
         #print(np.max(self.stim),'max current')
         self.results = self.glif.run(self.stim)
         vm = self.results['voltage']
-        if len(self.results['interpolated_spike_voltage']) > 0:
+        #if len(self.results['interpolated_spike_voltage']) > 0:
             #print('npsikes: ',len(self.results['interpolated_spike_times']), 'called by rheobase?')
-            isv = self.results['interpolated_spike_voltage'].tolist()[0]
-            self.spikes = self.results['interpolated_spike_voltage']
-            vm = list(map(lambda x: isv if np.isnan(x) else x, vm))
+        #    isv = self.results['interpolated_spike_voltage'].tolist()[0]
+        #    self.spikes = self.results['interpolated_spike_voltage']
+        #    vm = list(map(lambda x: isv if np.isnan(x) else x, vm))
 
         self.vM = AnalogSignal(vm,units = mV,sampling_period =  dt * s)
         t = [float(f) for f in self.vM.times]
         v = [float(f) for f in self.vM.magnitude]
-        #try:
-        #plt.clf()
-        #plt.plot(t,v)
-        #plt.show()
-        try:
-            fig = apl.figure()
-            fig.plot(t, v, label=str('spikes: ')+str(len(self.results['grid_spike_times'])), width=100, height=20)
-            fig.show()
-        except:
-            pass
+
         return self.vM
 
 

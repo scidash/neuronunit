@@ -20,7 +20,7 @@ from elephant.spike_train_generation import threshold_detection
 from numba import jit
 import cython
 @jit
-def get_vm(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.364525297619-65.2261863636364), vr=-65.2261863636364, vt=-50, dt=0.010, Iext=[]):
+def get_vm(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.364525297619-65.2261863636364), vr=-65.2261863636364, vt=-50, Iext=[]):
     '''
     dt determined by
     Apply izhikevich equation as model
@@ -28,7 +28,10 @@ def get_vm(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.36452
     numba/jit to understand it.
     '''
     N = len(Iext)
-
+    ## was
+    # dt = 0.005
+    ##
+    dt = 0.01
     v = np.zeros(N)
     u = np.zeros(N)
     v[0] = vr
@@ -95,18 +98,15 @@ class IZHIBackend(Backend):
 
     name = 'IZHI'
 
-    def init_backend(self, attrs=None, cell_name='alice',
-                     current_src_name='hannah', DTC=None,
+    def init_backend(self, attrs=None,DTC=None,
                      debug = False):
         super(IZHIBackend,self).init_backend()
         self.model._backend.use_memory_cache = False
-        self.current_src_name = current_src_name
-        self.cell_name = cell_name
         self.vM = None
         self.attrs = attrs
         self.debug = debug
         self.temp_attrs = None
-        self.default_attrs = {'C':89.7960714285714, 'a':0.01, 'b':15, 'c':-60, 'd':10, 'k':1.6, 'vPeak':(86.364525297619-65.2261863636364), 'vr':-65.2261863636364, 'vt':-50, 'dt':0.010, 'Iext':[]}
+        self.default_attrs = {'C':89.7960714285714, 'a':0.01, 'b':15, 'c':-60, 'd':10, 'k':1.6, 'vPeak':(86.364525297619-65.2261863636364), 'vr':-65.2261863636364, 'vt':-50}
 
         if type(attrs) is not type(None):
             self.attrs = attrs
@@ -114,10 +114,13 @@ class IZHIBackend(Backend):
         if type(DTC) is not type(None):
             if type(DTC.attrs) is not type(None):
                 self.set_attrs(**DTC.attrs)
-            if hasattr(DTC,'current_src_name'):
-                self._current_src_name = DTC.current_src_name
-            if hasattr(DTC,'cell_name'):
-                self.cell_name = DTC.cell_name
+        if self.attrs is None:
+            self.attrs = self.default_attrs
+
+            #if hasattr(DTC,'current_src_name'):
+            #    self._current_src_name = DTC.current_src_name
+            #if hasattr(DTC,'cell_name'):
+            #    self.cell_name = DTC.cell_name
 
     def get_spike_count(self):
         thresh = threshold_detection(self.vM)
@@ -137,7 +140,13 @@ class IZHIBackend(Backend):
         """
 
         if type(self.vM) is type(None):
-            v = get_vm(**self.attrs)
+
+            everything = copy.copy(self.attrs)
+            everything.update({'Iext':self.Iext})
+
+            v = get_vm(**everything)
+
+            #v = get_vm(**self.attrs)
 
             self.vM = AnalogSignal(v,
                                 units=pq.mV,
@@ -185,13 +194,12 @@ class IZHIBackend(Backend):
                N = int(tMax/attrs['dt'])
         else:
         """
-        attrs['dt'] = 0.01
         NORMAL = True
         if NORMAL == True:
-            N = int(tMax/attrs['dt'])
+            N = int(tMax/0.01)
         else:
             print('adding in larger N seems to artificially dilate the width of neural events')
-            N = int(tMax/attrs['dt'])*100
+            N = int(tMax/0.01)*100
 
         Iext = np.zeros(N)
         delay_ind = int((delay/tMax)*N)
@@ -200,11 +208,12 @@ class IZHIBackend(Backend):
         Iext[0:delay_ind-1] = 0.0
         Iext[delay_ind:delay_ind+duration_ind-1] = amplitude
         Iext[delay_ind+duration_ind::] = 0.0
+        self.Iext = None
+        self.Iext = Iext
+        everything = copy.copy(self.attrs)
+        everything.update({'Iext':Iext})
 
-        attrs['Iext'] = Iext
-
-
-        v = get_vm(**self.attrs)
+        v = get_vm(**everything)
 
         self.model.attrs.update(attrs)
 

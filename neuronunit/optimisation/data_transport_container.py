@@ -52,6 +52,7 @@ class DataTC(object):
         self.td = {}
         self.errors = {}
         self.SM = None
+        self.obs_preds = None
         #self.attrs = {}
     def get_ss(self):
         # get summed score
@@ -119,8 +120,22 @@ class DataTC(object):
 
         temp = [ t for t in self.tests if not hasattr(t,'allen')  ]
         self.SA = ScoreArray(temp, self.scores_)
+
         #self = OM.get_agreement(self)
         return self
+    def make_pretty(self,tests):
+        self.self_evaluate(tests=tests)
+        import pandas as pd
+        self.obs_preds = pd.DataFrame(columns=["observations","predictions"])
+        self.obs_preds["observations"] = pd.Series([ t.observation['mean'] for t in self.tests if not hasattr(t,'allen')])
+        grab_keys = []
+        for t in self.tests: 
+            if 'value' in t.prediction.keys() :
+                grab_keys.append('value')
+            else:
+                grab_keys.append('mean')
+        self.obs_preds["predictions"] = pd.Series([ t.prediction[k] for t,k in zip(self.tests,grab_keys) if not hasattr(t,'allen')])
+        return self.obs_preds
 
     def dtc_to_opt_man(self):
         from neuronunit.optimisation.optimization_management import OptMan
@@ -202,6 +217,8 @@ class DataTC(object):
             self.model_path = LEMS_MODEL_PATH
             from neuronunit.models.reduced import ReducedModel#, VeryReducedModel
             model = ReducedModel(self.model_path,name='vanilla', backend=(self.backend, {'DTC':self}))
+            print(type(model))
+            print(model._backend)
             self.current_src_name = model._backend.current_src_name
             assert type(self.current_src_name) is not type(None)
             self.cell_name = model._backend.cell_name

@@ -8,6 +8,8 @@ from pyneuroml import pynml
 
 from sciunit.utils import redirect_stdout
 from .base import Backend
+from elephant.spike_train_generation import threshold_detection
+        
 
 
 class jNeuroMLBackend(Backend):
@@ -36,7 +38,8 @@ class jNeuroMLBackend(Backend):
         """Inject a square current into the cell."""
         self.model.run_params['injected_square_current'] = current
         self.set_run_params()  # Doesn't work yet.
-
+        self._backend_run()
+        self.vm
     def set_stop_time(self, t_stop):
         """Set the stop time of the simulation."""
         self.model.run_params['t_stop'] = t_stop
@@ -46,6 +49,9 @@ class jNeuroMLBackend(Backend):
         """Set the time step of the simulation."""
         self.model.run_params['dt'] = dt
         self.set_run_params()
+    def get_spike_count(self):
+        thresh = threshold_detection(self.vm)
+        return len(thresh)
 
     def _backend_run(self):
         """Run the simulation."""
@@ -60,4 +66,5 @@ class jNeuroMLBackend(Backend):
                         load_saved_data=True, plot=False,
                         exec_in_dir=self.exec_in_dir,
                         verbose=self.model.run_params['v'])
+            self.vm = results['vm']
         return results

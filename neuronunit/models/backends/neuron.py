@@ -393,7 +393,8 @@ class NEURONBackend(Backend):
         self.vVector = self.h.v_v_of0
         return self
 
-    def inject_square_current(self, current, section=None, debug=False):
+    def inject_square_current(self, current):#, section=None, debug=False):
+        debug = False
         """Apply current injection into the soma or a specific compartment.
 
         Example: current = {'amplitude':float*pq.pA, 'delay':float*pq.ms,

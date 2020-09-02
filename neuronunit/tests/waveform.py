@@ -132,7 +132,7 @@ class InjectedCurrentAPWidthTest(InjectedCurrent, APWidthTest):
         #try:
         prediction = super(InjectedCurrentAPWidthTest, self).\
             generate_prediction(model)
-        self.prediction = prediction
+        #self.prediction = prediction
 
 
         return prediction
@@ -190,7 +190,7 @@ class TotalAPAmplitudeTest(VmTest):
 
 
         # useful to retain inside object.
-        self.prediction = prediction
+        #self.prediction = prediction
         # Put prediction in a form that compute_score() can use.
         return prediction
 
@@ -256,7 +256,7 @@ class APAmplitudeTest(VmTest):
         except:
             prediction = None
         # useful to retain inside object.
-        self.prediction = prediction
+        #self.prediction = prediction
 
         # Put prediction in a form that compute_score() can use.
         return prediction
@@ -301,20 +301,20 @@ class InjectedCurrentAPAmplitudeTest(InjectedCurrent, APAmplitudeTest):
         prediction = super(InjectedCurrentAPAmplitudeTest, self).\
             generate_prediction(model)
         # useful to retain inside object.
-        self.prediction = prediction
+        #self.prediction = prediction
         self.vm = model.vM
 
         return prediction
 
     def extract_features(self, model):
         prediction = self.generate_prediction(model)
-        self.prediction = prediction
+        #self.prediction = prediction
 
         return prediction
 
     def compute_score(self, observation, prediction):
         """Implement sciunit.Test.score_prediction."""
-        self.prediction = prediction
+        #self.prediction = prediction
 
         if prediction['n'] == 0:
             score = scores.InsufficientDataScore(None)
@@ -370,7 +370,7 @@ class APThresholdTest(VmTest):
                           'std':  None,
                           'n': 0 }
         # useful to retain inside object.
-        self.prediction = prediction
+        #self.prediction = prediction
 
         return prediction
 
@@ -417,7 +417,7 @@ class InjectedCurrentAPThresholdTest(InjectedCurrent, APThresholdTest):
         prediction =  super(InjectedCurrentAPThresholdTest, self).\
             generate_prediction(model)
 
-        self.prediction = prediction
+        #self.prediction = prediction
 
         return prediction
 

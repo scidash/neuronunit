@@ -282,15 +282,17 @@ class RheobaseTestP(VmTest, ABC):
             '''
             dtc.boolean = False
 
-            LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
-            dtc.model_path = LEMS_MODEL_PATH
-            model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
-            m = VeryReducedModel(dtc.backend)
-            m.attrs = dtc.attrs
             if dtc.backend is str('NEURON') or dtc.backend is str('jNEUROML'):
+                LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
+                dtc.model_path = LEMS_MODEL_PATH
+                model = ReducedModel(dtc.model_path,name='vanilla', backend=(dtc.backend, {'DTC':dtc}))
+
                 dtc.current_src_name = model._backend.current_src_name
                 assert type(dtc.current_src_name) is not type(None)
                 dtc.cell_name = model._backend.cell_name
+            else:
+                model = VeryReducedModel(dtc.backend)
+                model.attrs = dtc.attrs
 
             #DELAY = 100.0*pq.ms
             #DURATION = 1000.0*pq.ms
@@ -304,7 +306,11 @@ class RheobaseTestP(VmTest, ABC):
 
                 dtc.run_number += 1
                 model.set_attrs(**dtc.attrs)
-                model.inject_square_current(uc)
+                try:
+                    model.inject_square_current(uc)
+                except:
+                    import pdb
+                    pdb.set_trace()
                 # n_spikes = model.get_spike_count()
 
                 dtc.previous = ampl

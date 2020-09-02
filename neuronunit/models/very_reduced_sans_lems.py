@@ -80,7 +80,7 @@ class VeryReducedModel(RunnableModel,
 
     def get_APs(self, **run_params):
         vm = self.get_membrane_potential(**run_params)
-        waveforms = sf.get_spike_waveforms(vm)
+        waveforms = sf.get_spike_waveforms(vm)#,width=10*ms)
         return waveforms
 
     def get_spike_train(self, **run_params):

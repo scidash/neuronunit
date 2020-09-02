@@ -37,36 +37,38 @@ MODEL_PARAMS['OSB_HH_attrs'] = HH_dic1
 #gnabar_hh=0.12 gkbar_hh=0.036 gl_hh=0.0003 el_hh=-54.3
 MODEL_PARAMS['NEURONHH'] = {'gnabar':0.12,\
                             'gkbar':0.036,\
-                            'Ra':100,\
-                            'L':12.6157,\
-                            'diam':12.6157,\
-                            'gkbar':0.036,\
+                            'Ra':35,\
+                            'L':100,\
+                            'diam':500, #12.6157,\
                             'el':-54.3,\
                             'gl':0.0003,\
                             'ena':50.0,\
                             'ek':-77.0,\
-                            'cm':1.0,\
+                            'cm':1,\
                             'ena':50.0,\
                             'ek':-77}
-MODEL_PARAMS['NEURONHH'] = { k:(float(v)-0.95*float(v),float(v)+0.95*float(v)) for k,v in MODEL_PARAMS['NEURONHH'].items() }
-MODEL_PARAMS['NEURONHH']['gkbar'] = (0.0018,0.1)
-MODEL_PARAMS['NEURONHH']['diam'] = (0.630785,50.0)
-MODEL_PARAMS['NEURONHH']['gnabar'] = (0.006,0.2539)
-MODEL_PARAMS['NEURONHH']['L'] = (5.0,1000.0)
-MODEL_PARAMS['NEURONHH']['diam'] = (5.0,1000.0)
-MODEL_PARAMS['NEURONHH']['cm'] = (0.5,1.0)
+MODEL_PARAMS['NEURONHH'] = { k:(float(v)-0.5*float(v),float(v)+0.5*float(v)) for k,v in MODEL_PARAMS['NEURONHH'].items() }
+MODEL_PARAMS['NEURONHH'] = { k:sorted(v) for k,v in MODEL_PARAMS['NEURONHH'].items() }
+#import streamlit as st
+#st.text(MODEL_PARAMS['NEURONHH']['el'])
+#MODEL_PARAMS['NEURONHH']['gkbar'] = (0.0018,0.1)
+#MODEL_PARAMS['NEURONHH']['diam'] = (0.630785,50.0)
+#MODEL_PARAMS['NEURONHH']['gnabar'] = (0.006,0.2539)
+#MODEL_PARAMS['NEURONHH']['L'] = (5.0,1000.0)
+#MODEL_PARAMS['NEURONHH']['diam'] = (5.0,1000.0)
+#MODEL_PARAMS['NEURONHH']['cm'] = (0.5,1.0)
 
 # Which Parameters
 
 # https://www.izhikevich.org/publications/spikes.htm
 type2007 = collections.OrderedDict([
   #              C    k     vr  vt vpeak   a      b   c    d  celltype
-  ('RS',        (100, 0.7,  -60, -40, 35, 0.03,   -2, -50,  100,  1)),
-  ('IB',        (150, 1.2,  -75, -45, 50, 0.01,   5, -56,  130,   2)),
-  ('TC',        (200, 1.6,  -60, -50, 35, 0.01,  15, -60,   10,   6)),
-  ('TC_burst',  (200, 1.6,  -60, -50, 35, 0.01,  15, -60,   10,   6)),
-  ('LTS',       (100, 1.0,  -56, -42, 40, 0.03,   8, -53,   20,   4)),
-  ('CH',        (50,  1.5,  -60, -40, 25, 0.03,   1, -40,  150,   3))])
+  ('RS',        (100, 0.7,  -60, -40, 35, 0.01,   -2, -50,  100,  1)),
+  ('IB',        (150, 1.2,  -75, -45, 50, 0.1,   5, -56,  130,   2)),
+  ('TC',        (200, 1.6,  -60, -50, 35, 0.1,  15, -60,   10,   6)),
+  ('TC_burst',  (200, 1.6,  -60, -50, 35, 0.1,  15, -60,   10,   6)),
+  ('LTS',       (100, 1.0,  -56, -42, 40, 0.01,   8, -53,   20,   4)),
+  ('CH',        (50,  1.5,  -60, -40, 25, 0.01,   1, -40,  150,   3))])
 
 # http://www.physics.usyd.edu.au/teach_res/mp/mscripts/
 # ns_izh002.m

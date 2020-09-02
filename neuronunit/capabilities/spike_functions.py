@@ -70,17 +70,17 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
     last_t = spike_train[-1]
     first_t = spike_train[0]
 
-    if first_t-width/2.0 < 0.0*ms:
-        too_short = True
+    #if first_t-width/2.0 < 0.0*ms:
+    #    too_short = True
     if last_t+width/2.0 > vm.times[-1]:
         too_long = True
 
     if not too_short and not too_long:
-        snippets = [vm.time_slice(t-width/2, t+width/2) for t in spike_train]
+        snippets = [vm.time_slice(t-width/2, t) for t in spike_train]
     elif too_long:
         snippets = [vm.time_slice(t-width/2, t) for t in spike_train]
-    elif too_short:
-        snippets = [vm.time_slice(t, t+width/2) for t in spike_train]
+    #elif too_short:
+    #    snippets = [vm.time_slice(t, t+width/2) for t in spike_train]
 
     result = neo.core.AnalogSignal(np.array(snippets).T.squeeze(),
                                    units=vm.units,
@@ -162,8 +162,103 @@ def spikes2widths(spike_waveforms):
         widths_ = widths*spike_waveforms.sampling_period.simplified
     return widths_
 
+def spikes2_base_widths(spike_waveforms):
+    """
+    IN:
+     spike_waveforms: Spike waveforms, e.g. from get_spike_waveforms().
+        neo.core.AnalogSignal
+    OUT:
+     1D numpy array of spike widths, specifically the full width
+     at half the maximum amplitude.
+    """
+    n_spikes = spike_waveforms.shape[1]
+    widths = []
+    index_high = 0
 
+    for i in range(n_spikes):
+        s = spike_waveforms[:,i].squeeze()
+        try:
+            index_high = int(np.argmax(s))
+            high = s[index_high]
+        except:
+            index_high = 0
+            # dont assume spikes are above zero.
+            high = np.mean(s)
+            for k in s:
+                for i,j in enumerate(k):
+                    if j>high:
+                        high  = j
+                        index_high = i
+
+        if index_high > 0:
+            y = np.array(s)
+            dvdt = diff(y)
+            trigger = dvdt.max()/10.0
+            x_loc = int(np.where(dvdt >= trigger)[0][0])
+            thresh = (s[x_loc]+s[x_loc+1])/2
+
+            n_samples = sum(s > thresh)  # Number of samples above the threshold.
+            widths.append(n_samples)
+    widths = np.array(widths, dtype='float')
+    if n_spikes:
+        # Convert from samples to time.
+        widths_ = widths*spike_waveforms.sampling_period.simplified
+    return widths_
+
+import matplotlib.pyplot as plt
 def spikes2thresholds(spike_waveforms):
+    """
+    IN:
+     spike_waveforms: Spike waveforms, e.g. from get_spike_waveforms().
+        neo.core.AnalogSignal
+    OUT:
+     1D numpy array of spike thresholds, specifically the membrane potential
+     at which 1/10 the maximum slope is reached.
+
+    If the derivative contains NaNs, probably because vm contains NaNs
+    Return an empty list with the appropriate units
+
+    """
+    try:
+        n_spikes = spike_waveforms.shape[1]
+    except:
+        return None
+        #return thresholds * spike_waveforms.units
+
+
+    thresholds = []
+    if n_spikes > 1:
+        # good to know can handle multispikeing
+        pass
+    for i in range(n_spikes):
+        s = spike_waveforms[:, i].squeeze()
+        #plt.plot(s.times,s.magnitude)
+        s = np.array(s)
+        dvdt = np.diff(s)
+        for j in dvdt:
+            if math.isnan(j):
+                return thresholds * spike_waveforms.units
+        try:
+            trigger = dvdt.max()/10.0
+        except:
+            return None
+            # try this next.
+            # return thresholds * spike_waveforms.units
+
+        try:
+            x_loc = np.where(dvdt >= trigger)[0][0]
+            
+            thresh = (s[x_loc]+s[x_loc+1])/2
+            #plt.scatter(x_loc,thresh)
+
+        except:
+            thresh = None
+        thresholds.append(thresh)
+        #plt.savefig("debug_threshold.png")
+        
+    return thresholds * spike_waveforms.units
+
+def spikes2thresholds_debug(spike_waveforms):
     """
     IN:
      spike_waveforms: Spike waveforms, e.g. from get_spike_waveforms().
@@ -203,8 +298,16 @@ def spikes2thresholds(spike_waveforms):
 
         try:
             x_loc = np.where(dvdt >= trigger)[0][0]
+            
             thresh = (s[x_loc]+s[x_loc+1])/2
+            
         except:
             thresh = None
         thresholds.append(thresh)
+        plt.plot(s.times,s.magnitude)        
+        plt.axvline(x_loc)
+        plt.scatter(x_loc,thresh)
+        plt.show()
+        #plt.savefig("debug_threshold.png")
+        
     return thresholds * spike_waveforms.units
