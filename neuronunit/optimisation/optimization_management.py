@@ -1931,8 +1931,8 @@ def three_step_protocol(dtc):
         #dtc = train_length(dtc)
         if hasattr(dtc,'dm_test_features'):
             dtc.everything.update(dtc.dm_test_features)
-    vm30,vm15,_,_,dtc=inject_and_plot_model30(dtc)
-    dtc = train_length(dtc,vm30,vm15)
+    #vm30,vm15,_,_,dtc=inject_and_plot_model30(dtc)
+    #dtc = train_length(dtc,vm30,vm15)
         #print(dtc.dm_test_features)
     #del dtc.vm30
     #del dtc.vm15
@@ -2022,6 +2022,7 @@ import quantities as pq
 def inject_and_plot_model30(dtc,figname=None):
     # get rheobase injection value
     # get an object of class ReducedModel with known attributes and known rheobase current injection value.
+    
     if dtc.rheobase is None:
         rt = RheobaseTest(observation={'mean':0*pq.pA,'std':0*pq.pA})
         dtc.rheobase = rt.generate_prediction(dtc.dtc_to_model())
@@ -2041,28 +2042,67 @@ def inject_and_plot_model30(dtc,figname=None):
     dtc.vmrh = None
     dtc.vmrh = model.get_membrane_potential()
     del model
+    
+    
+    
     model = dtc.dtc_to_model()
+    ########
+    # a big thing to note
+    ##
+    # rheobase = 300 * pq.pA
+    ##
+    # a big thing to note
+    #     #####
+    ##
+    # uc = {'amplitude':3.0*rheobase,'duration':DURATION,'delay':DELAY}
+    # model.inject_square_current(uc)
+    # vm30 = model.get_membrane_potential()
+    # dtc.vm30 = copy.copy(vm30)
+    # del model
+    ##
+    model = dtc.dtc_to_model()
+    if hasattr(dtc,'current_spike_number_search'):
+        from neuronunit.tests import SpikeCountSearch
+        #SpikeCountSearch()
 
-    uc = {'amplitude':3.0*rheobase,'duration':DURATION,'delay':DELAY}
-    model.inject_square_current(uc)
-    vm30 = model.get_membrane_potential()
-    dtc.vm30 = copy.copy(vm30)
-    del model
-    model = dtc.dtc_to_model()
-    uc = {'amplitude':1.5*rheobase,'duration':DURATION,'delay':DELAY}
-    model.inject_square_current(uc)
-    vm15 = model.get_membrane_potential()
-    dtc.vm15 = copy.copy(vm15)
+        observation_spike_count={}
+        observation_spike_count['value'] = dtc.current_spike_number_search
+        scs = SpikeCountSearch(observation_spike_count)
+        assert model is not None
+        target_current = scs.generate_prediction(model)
 
-    del model
-    model = dtc.dtc_to_model()
-    uc = {'amplitude':00*pq.pA,'duration':DURATION,'delay':DELAY}
-    params = {'amplitude':rheobase,'duration':DURATION,'delay':DELAY}
-    model.inject_square_current(uc)
-    vr = model.get_membrane_potential()
-    dtc.vmr = np.mean(vr)
-    del model
-    return vm30,vm15,params,None,dtc
+        uc = {'amplitude':target_current,'duration':DURATION,'delay':DELAY}
+        model.inject_square_current(uc)
+        vm15 = model.get_membrane_potential()
+        dtc.vm15 = copy.copy(vm15)
+
+        del model
+        model = dtc.dtc_to_model()
+        uc = {'amplitude':00*pq.pA,'duration':DURATION,'delay':DELAY}
+        params = {'amplitude':rheobase,'duration':DURATION,'delay':DELAY}
+        model.inject_square_current(uc)
+        vr = model.get_membrane_potential()
+        dtc.vmr = np.mean(vr)
+        del model
+        return vm30,vm15,params,None,dtc
+
+    else:
+            #find_target_current
+
+        uc = {'amplitude':1.5*rheobase,'duration':DURATION,'delay':DELAY}
+        model.inject_square_current(uc)
+        vm15 = model.get_membrane_potential()
+        dtc.vm15 = copy.copy(vm15)
+
+        del model
+        model = dtc.dtc_to_model()
+        uc = {'amplitude':00*pq.pA,'duration':DURATION,'delay':DELAY}
+        params = {'amplitude':rheobase,'duration':DURATION,'delay':DELAY}
+        model.inject_square_current(uc)
+        vr = model.get_membrane_potential()
+        dtc.vmr = np.mean(vr)
+        del model
+        return vm30,vm15,params,None,dtc
 
     '''
     plt.clf()
@@ -2084,10 +2124,11 @@ from neuronunit.capabilities.spike_functions import get_spike_waveforms, spikes2
 from quantities import mV, ms
 
 def efel_evaluation(dtc,thirty=False):
-    if type(dtc.rheobase) is type(dict()):
-        rheobase = dtc.rheobase['value']
-    else:
-        rheobase = dtc.rheobase
+    #if type(dtc.rheobase) is type(dict()):
+    #    rheobase = dtc.rheobase['value']
+    #else:
+    #    rheobase = dtc.rheobase
+    rheobase = 300*pq.pA
     if not thirty:
         vm30 = dtc.vm15    
         current = 1.5*float(rheobase)
@@ -2096,10 +2137,13 @@ def efel_evaluation(dtc,thirty=False):
         current = 3.0*float(rheobase)
 
     efel.reset()
-    snippets1 = get_spike_waveforms(vm30,width=10*ms)
-    threshold = float(spikes2thresholds(snippets1)[0])
+    #try:
+    #    snippets1 = get_spike_waveforms(vm30,width=20*ms)
+    #    threshold = float(spikes2thresholds(snippets1)[0])
+    #except:
     #threshold = float(np.max(vm30.magnitude)-0.2*np.abs(np.std(vm30.magnitude)))
-    efel.setThreshold(threshold)
+
+    efel.setThreshold(-0.01)
 
     trace3 = {'T': [float(t)*1000.0 for t in vm30.times], 
               'V': [float(v) for v in vm30.magnitude],
