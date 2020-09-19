@@ -96,14 +96,49 @@ def update_state(i, T, t, dt,I_ext,v,w,spike_raster,v_reset,b,a,spike_delta,v_re
   spike_raster[spiked,i] = 1
 
   return v,w,spike_raster,len(spike_raster)
+#@timer
+@jit(nopython=True)
+#@cython.boundscheck(False)
+#@cython.wraparound(False)
+def update_state_new_new(T, dt,v,w,spike_raster,v_reset,b,a,spike_delta,v_rest,tau_m,tau_w,v_thresh,delta_T,cm,time_trace,amp,start,stop):
+  i = 0
+  spike_raster = [0 for ix in range(0,len(time_trace))]
+  vm = []
+  v = v[0]
+  w = w[0]
+  for t_ind in range(0,len(time_trace)):
+    t = time_trace[t_ind]
+    if i!=0:
+      I_scalar = 0
+      if start <= t <= stop:
+        I_scalar = amp
+      #for indx in range(0,i-1):
+      if spike_raster[i-1]:
+        v = v_reset
+        w += b
+      dv  = (((v_rest-v) + \
+            delta_T*np.exp((v - v_thresh)/delta_T))/tau_m + \
+            (I_scalar - w)/cm) *dt
+      v += dv
+      w += dt * (a*(v - v_rest) - w)/tau_w * dt
+      if v>v_thresh:
+        v = spike_delta
+        spike_raster[i] = 1
+      else:
+        spike_raster[i] = 0
+      vm.append(v)
+    i+=1
 
-@jit
-@cython.boundscheck(False)
-@cython.wraparound(False)
+  return v,w,spike_raster,len(spike_raster),vm
+#@timer
+#@jit(nopython=True)
+#@cython.boundscheck(False)
+#@cython.wraparound(False)
 def update_state_new(T, dt,v,w,spike_raster,v_reset,b,a,spike_delta,v_rest,tau_m,tau_w,v_thresh,delta_T,cm,time_trace,amp,start,stop):
   i = 0
-  vm = []
-  for t in time_trace:
+  vm = []#np.array([0 for i in time_trace])
+  for t_ind in range(0,len(time_trace)):
+    t = time_trace[t_ind]
     if i!=0:
       I_scalar = 0
       if start <= t <= stop:
@@ -120,6 +155,7 @@ def update_state_new(T, dt,v,w,spike_raster,v_reset,b,a,spike_delta,v_rest,tau_m
       w += dt * (a*(v - v_rest) - w)/tau_w * dt
       #decide whether to spike or not
       spiked = np.nonzero(v > v_thresh)
+
       ### https://github.com/lmcintosh/masters-thesis/blob/master/mastersFunctions.py
       v[spiked] = spike_delta
       spike_raster[spiked,i] = 1
@@ -130,10 +166,11 @@ def update_state_new(T, dt,v,w,spike_raster,v_reset,b,a,spike_delta,v_rest,tau_m
   return v,w,spike_raster,len(spike_raster),vm
 
 @jit
-@cython.boundscheck(False)
-@cython.wraparound(False)
+#@cython.boundscheck(False)
+#@cython.wraparound(False)
+
 def evaluate_vm_new(time_trace,dt,T,v,w,b,a,spike_delta,spike_raster,v_reset,v_rest,tau_m,tau_w,v_thresh,delta_T,cm,amp,start,stop):
-  v,w,spike_raster,n_spikes,vm = update_state_new(T=T, dt=dt,
+  v,w,spike_raster,n_spikes,vm = update_state_new_new(T=T, dt=dt,
                                     v=v,
                                     w=w,
                                     spike_raster=spike_raster,
@@ -143,6 +180,7 @@ def evaluate_vm_new(time_trace,dt,T,v,w,b,a,spike_delta,spike_raster,v_reset,v_r
                                     v_thresh=v_thresh,
                                     delta_T =delta_T,cm=cm,time_trace=time_trace,
                                     amp = amp,start = start,stop = stop)
+
   
   return vm,n_spikes
 
@@ -278,7 +316,7 @@ class ADEXPBackend(Backend):
       #else:
       self.model.attrs.update(attrs)
       
-      #self.model_ = AdExPopulation(name='Charly the Neuron',N=1)
+      #self.model_ = ADEXPopulation(name='Charly the Neuron',N=1)
       #self.neuron = Network(populations=[self.model_],attrs = attrs)
     
       return self
@@ -320,19 +358,9 @@ class ADEXPBackend(Backend):
     Description: A parameterized means of applying current injection into defined
     Currently only single section neuronal models are supported, the neurite section is understood to be simply the soma.
     """
-    #try:
-    #  assert len(self.model.attrs)
-    #except:
-    #  print("this means you didnt instance a model and then add in model parameters",self.model.attrs)
-    #  print(self.attrs)
+
     temp_attrs =  self.attrs
-    #assert len(temp_attrs)
-    #assert len(self.model.attrs) == 
-    #self.attrs
-    #if len(temp_attrs):
-    #self.set_attrs(temp_attrs)
-    # attrs = copy.copy(self.model.attrs)
-    #self.attrs = attrs
+
     if 'injected_square_current' in current.keys():
         c = current['injected_square_current']
     else:
@@ -355,6 +383,11 @@ class ADEXPBackend(Backend):
     vM = AnalogSignal(vm,
                           units = voltage_units,
                           sampling_period = 0.25*pq.ms)
+    #import asciiplotlib as apl
+    #fig = apl.figure()
+    #fig.plot([float(f) for f in vM.times], [float(f) for f in vM], width=100, height=20)
+    #fig.show()
+
     self.vM = vM
     self.n_spikes = n_spikes
     return vM

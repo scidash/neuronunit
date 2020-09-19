@@ -7,6 +7,8 @@ from collections import OrderedDict
 from sciunit import scores
 from sciunit.scores.collections import ScoreArray
 import sciunit
+import pandas as pd
+
 try:
     import asciiplotlib as apl
 except:
@@ -115,26 +117,46 @@ class DataTC(object):
         for i,s in enumerate(scores_):
             if s==np.inf or s==-np.inf:
                 scores_[i] = 100 #np.abs(float(score_gene.raw))
-        #self.SA = ScoreArray(self.tests, scores_)
         self.scores_ = scores_
 
         temp = [ t for t in self.tests if not hasattr(t,'allen')  ]
         self.SA = ScoreArray(temp, self.scores_)
 
-        #self = OM.get_agreement(self)
         return self
     def make_pretty(self,tests):
         self.self_evaluate(tests=tests)
-        import pandas as pd
         self.obs_preds = pd.DataFrame(columns=["observations","predictions"])
-        self.obs_preds["observations"] = pd.Series([ t.observation['mean'] for t in self.tests if not hasattr(t,'allen')])
+        holding_obs = { t.name:np.round(t.observation['mean'],2) for t in self.tests if not hasattr(t,'allen')}
         grab_keys = []
         for t in self.tests: 
             if 'value' in t.prediction.keys() :
                 grab_keys.append('value')
             else:
                 grab_keys.append('mean')
-        self.obs_preds["predictions"] = pd.Series([ t.prediction[k] for t,k in zip(self.tests,grab_keys) if not hasattr(t,'allen')])
+        holding_preds = { t.name:t.prediction[k] for t,k in zip(self.tests,grab_keys) if not hasattr(t,'allen')}
+        ##
+        # This step only partially undoes quantities sins.
+        ##
+        qt.quantity.PREFERRED = [qt.mV, qt.pA, qt.MOhm, qt.ms, qt.pF]
+
+        for k,v in holding_preds.items():
+            if k in holding_obs.keys() and k in holding_preds:
+                v.rescale_preferred()
+                v = v.simplified
+                v = np.round(v,2)
+        for k,v in holding_preds.items():
+            if k in holding_obs.keys() and k in holding_preds:      
+                units1 = holding_preds[k].rescale_preferred().units#v.units)
+                holding_preds[k] = holding_preds[k].rescale(units1)
+                holding_preds[k] = np.round(holding_preds[k],2)
+
+        temp_obs = pd.DataFrame([holding_obs],index=['observations'])
+        temp_preds = pd.DataFrame([holding_preds],index=['predictions']) 
+        # like a score array but nicer reporting of test name instead of test data type.
+        not_SA = {t.name: np.round(score,2) for t,score in zip(self.tests, self.scores_)}       
+        temp_scores = pd.DataFrame([not_SA],index=['Z-Scores'])
+        self.obs_preds = pd.concat([temp_obs,temp_preds,temp_scores])
+        self.obs_preds = self.obs_preds.T
         return self.obs_preds
 
     def dtc_to_opt_man(self):
@@ -379,17 +401,16 @@ class DataTC(object):
         self.nspike = nspike
         vm = model.get_membrane_potential()
         return vm
+'''
+#from neuronunit.models import VeryReducedModel
+import neuronunit
+class DataTCModel(neuronunit.models.VeryReducedModel):
+    #Data Transport Container
 
-from neuronunit.models import VeryReducedModel
-class DataTCModel(VeryReducedModel):
-    '''
-    Data Transport Container
-
-    This Object class serves as a data type for storing rheobase search
-    attributes and apriori model parameters,
-    with the distinction that unlike the LEMS model this class
-    can be cheaply transported across HOSTS/CPUs
-    '''
+    #This Object class serves as a data type for storing rheobase search
+    #attributes and apriori model parameters,
+    #with the distinction that unlike the LEMS model this class
+    #can be cheaply transported across HOSTS/CPUs
     def __init__(self,attrs = None,backend = None):
         self.lookup = {}
         self.rheobase = None
@@ -475,11 +496,8 @@ class DataTCModel(VeryReducedModel):
         for i,s in enumerate(scores_):
             if s==np.inf or s==-np.inf:
                 scores_[i] = 100 #np.abs(float(score_gene.raw))
-        #self.SA = ScoreArray(self.tests, scores_)
         self.scores_ = scores_
-        self.SA = ScoreArray(self.tests, self.scores_)
-        print(self.SA)
-        #self = OM.get_agreement(self)
+        self.SA = ScoreArray([t for t in self.tests], self.scores_)
         return self
 
     def dtc_to_opt_man(self):
@@ -526,29 +544,24 @@ class DataTCModel(VeryReducedModel):
         self.protocols = {}
         if not hasattr(self,'tests'):
             self.tests = copy.copy(self.tests)
-        if hasattr(self.tests,'keys'):# is type(dict):
+        if hasattr(self.tests,'keys'):
             tests = [key for key in self.tests.values()]
-            self.tests = switch_logic(tests)#,self.tests.use_rheobase_score)
+            self.tests = switch_logic(tests)
         else:
             self.tests = switch_logic(self.tests)
 
 
 
         for v in self.tests:
-        #for k,v in enumerate(self.tests):
             k = v.name
             self.protocols[k] = {}
-            if hasattr(v,'passive'):#['protocol']:
+            if hasattr(v,'passive'):
                 if v.passive == False and v.active == True:
-                    keyed = self.protocols[k]#.params
+                    keyed = self.protocols[k]
                     self.protocols[k] = active_values(keyed,self.rheobase)
                 elif v.passive == True and v.active == False:
-                    keyed = self.protocols[k]#.params
+                    keyed = self.protocols[k]
                     self.protocols[k] = passive_values(keyed)
-                    #elif v.passive == False and v.active == False:
-                    #    self.protocols[k]['injected_square_current']['amplitude'] = 0.0*qt.pA
-
-                    #tests.protocols[k] = self.protocols
             if v.name in str('RestingPotentialTest'):
                 self.protocols[k] = passive_values(keyed)
                 self.protocols[k]['injected_square_current']['amplitude'] = 0.0*qt.pA
@@ -612,7 +625,6 @@ class DataTCModel(VeryReducedModel):
             return dtc
 
         ts = self.tests
-        #this_test = ts[index]
         if not hasattr(self,'preds'):
             self.preds = {}
         for this_test in self.tests:
@@ -650,17 +662,14 @@ class DataTCModel(VeryReducedModel):
                 this_test.params['injected_square_current']['delay'] = 200*qt.ms
 
                 pred = this_test.generate_prediction(model)
-            #self.preds[this_test.name] = pred
             ratio_type = scores.RatioScore
             temp = copy.copy(this_test.score_type)
             this_test.score_type = ratio_type
             try:
-                #print(this_test.name)
                 self.rscores[rscores.name] = this_test.compute_score(this_test.observation,pred)
 
             except:
                 this_test.score_type = temp
-                #self.rscores = this_test.compute_score(model)
                 self.rscores[rscores.name] = this_test.compute_score(this_test.observation,pred)
 
                 self.failed = {}
@@ -674,10 +683,9 @@ class DataTCModel(VeryReducedModel):
 
         return self.preds
     def plot_obs(self,ow):
-        '''
-        assuming a waveform exists (observed waved-form) plot to terminal with ascii
-        This is useful for debugging new backends, in bash big/fast command line orientated optimization routines.
-        '''
+        #assuming a waveform exists (observed waved-form) plot to terminal with ascii
+        #This is useful for debugging new backends, in bash big/fast command line orientated optimization routines.
+        
 
         t = [float(f) for f in ow.times]
         v = [float(f) for f in ow.magnitude]
@@ -686,11 +694,10 @@ class DataTCModel(VeryReducedModel):
         fig.show()
 
     def iap(self):
-        '''
-        Inject and plot to terminal with ascii
-        This is useful for debugging new backends, in bash big/fast command line orientated optimization routines.
-        '''
-
+        
+        #Inject and plot to terminal with ascii
+        #This is useful for debugging new backends, in bash big/fast command line orientated optimization routines.
+        
         model = self.dtc_to_model()
         #new_tests['RheobaseTest']
         if type(self.tests) is type({'1':1}):
@@ -720,3 +727,4 @@ class DataTCModel(VeryReducedModel):
             import warnings
             print('ascii plot not installed')
         return vm
+'''
