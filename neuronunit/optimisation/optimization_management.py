@@ -1924,16 +1924,18 @@ def three_step_protocol(dtc,known_current=None):
         vm30,vm15,_,_,dtc=inject_and_plot_model30(dtc)
         if vm30 is None:
             return dtc
-        dtc = efel_evaluation(dtc,thirty=False) 
-        #dtc = efel_evaluation(dtc,thirty=True) 
+        try:
+            dtc = efel_evaluation(dtc,thirty=False) 
+        except:
+            print('efel error')
+            dtc.vm15 = None
     else:
         vm15,_,_,dtc=inject_and_plot_model30(dtc,known_current=known_current)
-        #if vm30 is None:
-        #    return dtc
+        if vm15 is None:
+            return dtc
         dtc = efel_evaluation(dtc,thirty=False) 
         #dtc = efel_evaluation(dtc,thirty=True) 
-
-    #dtc = nuunit_dm_evaluation(dtc)
+    #if dtc.
     dtc = rekeyed(dtc)
 
     if hasattr(dtc,'allen_30'):
@@ -1942,7 +1944,8 @@ def three_step_protocol(dtc,known_current=None):
         if hasattr(dtc,'dm_test_features'):
             dtc.everything.update(dtc.dm_test_features)
     #vm30,vm15,_,_,dtc=inject_and_plot_model30(dtc)
-    dtc = train_length(dtc)#,vm30,vm15)
+    if dtc.everything is not None:
+        dtc = train_length(dtc)#,vm30,vm15)
         #print(dtc.dm_test_features)
     #del dtc.vm30
     #del dtc.vm15
@@ -2022,9 +2025,12 @@ def rekeyed(dtc):
     if hasattr(dtc,'efel_30'):        
         for k,v in dtc.efel_30[0].items():
             rekey[str(k)+str('_3.0x')] = v
-    if hasattr(dtc,'efel_15'):        
-        for k,v in dtc.efel_15[0].items():
-            rekey[str(k)+str('_1.5x')] = v
+    if hasattr(dtc,'efel_15'):      
+        if dtc.efel_15 is not None:  
+            for k,v in dtc.efel_15[0].items():
+                rekey[str(k)+str('_1.5x')] = v
+        else:
+            rekey = None
     dtc.everything = rekey
     return dtc
 
@@ -2084,19 +2090,30 @@ class NUFeature_standard_suite(object):
         self.model = model
     def calculate_score(self,responses):
         model = responses['model'].dtc_to_model()
-        if responses['model'].backend in "IZHI":
+        if responses['model'].backend in "ADEXP":
             # This allows you to state this as a hypothesis test with a p-value.  
             # The chi-square statistic would simply be x=np.sum(zscores**2), and the p-value would be 1-scipy.stats.chi2.cdf(x, 8) where 8 is the number of elephant tests (and Z-scores).  
             from capabilities.spike_functions import spikes2widths, get_spike_waveforms
             if type(responses['response']) is type(list()):
-                return 1000.0
-    
-            snippets = get_spike_waveforms(responses['response'])
-            widths = spikes2widths(snippets)
-            #print(widths)
-            if widths >= 5*qt.ms:
+                #print('stuck')
+
 
                 return 1000.0
+            '''
+            try:
+                snippets = get_spike_waveforms(responses['response'])
+                widths = spikes2widths(snippets)
+                if widths >= 15*qt.ms:
+                    #print('stuck')
+
+                    return 1000.0
+
+            except:
+                #print(widths)
+                #if widths >= 5*qt.ms:
+                print('width failed')
+                return 1000.0
+            '''
             # get threshold
             # get spike width.
             # if spike width >= 6ms
@@ -2347,9 +2364,21 @@ def instance_opt(experimental_constraints,MODEL_PARAMS,test_key,model_value,MU,N
         st.pyplot()
 
         st.markdown("----")
+
+        st.write(r"""
+        Given:
+        - A document is a sequence of $N$ words denoted by $\textbf{w} = (w_1,w_2,... ,w_N)$, where $w_n$ is the nth word b in the sequence.
+        - A corpus is a collection of $M$ documents denoted by $D = \textbf{w}_1, \textbf{w}_2,...\textbf{w}_m$
+        - $\alpha$ is the Dirichlet prior on the per-document topic distributions
+        - $\beta$ is the Dirichlet prior on the per-topic  word distributions
+        - $\Theta$ is the topic distribution for document $m$
+        - $z_{mn}$ is the topic for $n^{\text{th}}$  word in document $m$
+        """)
+        st.write("The $\chi^{2}$ and $p-value$ statistics are:")
+        st.write("($\chi^{2}$, $p-value$)=")
         st.markdown("""
         -----
-        The chi squared: {0}, and p-value statistics are {1}:    
+        ({0}, and {1}):    
         -----
         """.format(chi_sqr_opt, p_value))
 
@@ -2391,19 +2420,19 @@ def instance_opt(experimental_constraints,MODEL_PARAMS,test_key,model_value,MU,N
 
 
 
-        st.markdown("""
-        -----
-        Model Performance Relative to fitting data {0}    
-        -----
-        """.format(sum(best_ind.fitness.values)/(30*len(experimental_constraints))))
+        #st.markdown("""
+        #-----
+        #Model Performance Relative to fitting data {0}    
+        #-----
+        #""".format(sum(best_ind.fitness.values)/(30*len(experimental_constraints))))
         # radio_value = st.sidebar.radtio("Target Number of Samples",[10,20,30])
-        st.markdown("""
-        -----
-        This score is {0} worst score is {1}  
-        -----
-        """.format(sum(best_ind.fitness.values),30*len(experimental_constraints)))
-        plot_as_normal(opt)
-
+        #st.markdown("""
+        #-----
+        #This score is {0} worst score is {1}  
+        #-----
+        #""".format(sum(best_ind.fitness.values),30*len(experimental_constraints)))
+        #plot_as_normal(opt)
+        
         return final_pop, hall_of_fame, logs, hist, opt, obs_preds, chi_sqr_opt, p_value
     
 
@@ -2743,6 +2772,49 @@ def inject_and_plot_model30(dtc,figname=None,known_current=None):
     #plt.plot(vm.times,vm.magnitude)
     '''
 
+
+def display_fitting_data():
+    cells = pickle.load(open("processed_multicellular_constraints.p","rb"))
+
+    purk = TSD(cells['Cerebellum Purkinje cell'])#.tests
+    purk_vr = purk["RestingPotentialTest"].observation['mean']
+
+    ncl5 = TSD(cells["Neocortex pyramidal cell layer 5-6"])
+    ncl5.name = str("Neocortex pyramidal cell layer 5-6")
+    ncl5_vr = ncl5["RestingPotentialTest"].observation['mean']
+
+    ca1 = TSD(cells['Hippocampus CA1 pyramidal cell'])
+    ca1_vr = ca1["RestingPotentialTest"].observation['mean']
+
+
+    olf = TSD(pickle.load(open("olf_tests.p","rb")))
+    olf.use_rheobase_score = False
+    cells.pop('Olfactory bulb (main) mitral cell',None)
+    cells['Olfactory bulb (main) mitral cell'] = olf
+
+    #experimental_constraints= cells
+
+    list_of_dicts = []
+    for k,v in cells.items():
+        observations = {}
+        for k1 in ca1.keys():
+            vsd = TSD(v)
+            if k1 in vsd.keys():
+                vsd[k1].observation['mean']
+                observations[k1] = float(vsd[k1].observation['mean'])##,2)
+                
+                observations[k1] = np.round(vsd[k1].observation['mean'],2)
+                observations['name'] = k
+        list_of_dicts.append(observations)
+    df = pd.DataFrame(list_of_dicts)
+    #df
+    #df.round(decimals=3)
+    
+    df = df.set_index('name').T
+
+    #df.style.background_gradient(cmap=cm)
+    return df
+
 #import multiprocessing
 #pool = multiprocessing.Pool()
 from neuronunit.capabilities.spike_functions import get_spike_waveforms, spikes2widths, spikes2thresholds, spikes2amplitudes
@@ -2766,52 +2838,88 @@ def efel_evaluation(dtc,thirty=False):
     else:
         vm_used = dtc.vm30
 
+    try:
+        efel.reset()
+    except:
+        pass
 
-    efel.reset()
+    if type(vm_used) is type(list()):
+        #print('gets here b')
+
+        return dtc
+   # try:
+    '''
+    if type(vm_used) is not type(None):
+        snippets = get_spike_waveforms(vm_used)
+        print(snippets)
+        widths = spikes2widths(snippets)
+        print(widths)
+        if widths >= 15*qt.ms:
+            print('gets here a')
+            return dtc
+    else:
+        return dtc
+    '''    
+    #except:
+    #    print('gets here c')
+
+    #    return dtc
+
     #try:
     #    snippets1 = get_spike_waveforms(vm30,width=20*ms)
     #    threshold = float(spikes2thresholds(snippets1)[0])
     #except:
     #    threshold = float(np.max(vm30.magnitude)-0.2*np.abs(np.std(vm30.magnitude)))
         #print(0.0,threshold)
+
+
+
     efel.setThreshold(0.0)
 
     trace3 = {'T': [float(t)*1000.0 for t in vm_used.times], 
               'V': [float(v) for v in vm_used.magnitude],
               'stimulus_current': [current]}
-    #trace3 = {'T': [float(t) for t in vm30.times], 
-    #          'V': [float(v) for v in vm30.magnitude],
-    #          'stimulus_current': [current]}
-    #t = [float(f) for f in self.vM.times]
-    #v = [float(f) for f in self.vM.magnitude]
-    #try:
-    
-    #apl = figure()
-    #apl.plot([float(t)*1000.0 for t in vm30.times],[float(v) for v in vm30.magnitude])
-    #apl.show()
     ALLEN_DURATION = 2000*qt.ms
     ALLEN_DELAY = 1000*qt.ms
 
     trace3['stim_end'] = [ float(ALLEN_DELAY)+float(ALLEN_DURATION) ]
     trace3['stim_start'] = [ float(ALLEN_DELAY)]
+    #from neuronunit.capabilities.spike_functions import get_spike_waveforms, spikes2widths, spikes2thresholds
+    #try:
+    #snippets1 = get_spike_waveforms(vm_used)#,width=20*ms)
+    #print(spikes2widths(snippets1))
+    #assert spikes2widths(snippets1) < 15
+    #except:
+    #    print('width efel error')
+    #    dtc.efel_15 = None
+    #    return dtc
+    simple_yes_list = ['mean_AP_amplitude','mean_frequenc','min_AHP_values','min_voltage_between_spikes','minimum_voltage ','all_ISI_values','ISI_log_slope','mean_frequency','adaptation_index2','first_isi','ISI_CV','median_isi','AHP_depth_abs','sag_ratio2','ohmic_input_resistance','sag_ratio2','peak_voltage','voltage_base','Spikecount','ohmic_input_resistance_vb_ssse']
 
-    if np.min(vm_used.magnitude)<0:
+    #simple_yes_list = ['all_ISI_values','ISI_log_slope','mean_frequency','adaptation_index2','first_isi','ISI_CV','median_isi','AHP_depth_abs','sag_ratio2','ohmic_input_resistance','sag_ratio2','peak_voltage','voltage_base','Spikecount','ohmic_input_resistance_vb_ssse']
+    efel_list = list(efel.getFeatureNames())
+    reduced_list = [ i for i in efel_list if i in simple_yes_list ]
+    if np.min(vm_used.magnitude)<0 and np.max(vm_used.magnitude)>0:
 
-        
-        results = efel.getMeanFeatureValues([trace3],list(efel.getFeatureNames()))#, parallel_map=pool.map)
+        #fig = apl.figure()
+        #fig.plot([float(t)*1000.0 for t in vm_used.times],[float(v) for v in vm_used.magnitude],label='wave caused crash', width=100, height=20)
+        #fig.show()
+
+        try:
+            results = efel.getMeanFeatureValues([trace3],reduced_list)#, parallel_map=pool.map)
+            #results = efel.getMeanFeatureValues([trace3],simple_yes_list)#, parallel_map=pool.map)
+              
+        except:
+            print('efel error')
+            dtc.efel_15 = None
+            return dtc
         if thirty:
             dtc.efel_30 = None
             dtc.efel_30 = results         
-    
+
         else:
             dtc.efel_15 = None
             dtc.efel_15 = results
-            #fig = apl.figure()
-            #fig.plot(trace3['T'], trace3['V'], label=str('spikes: ')+str(dtc.efel_15[0]['Spikecount']), width=100, height=20)
-            #fig.show()
-
-
-    efel.reset()        
+        efel.reset()      
     return dtc
     '''
     # possibly depricated
@@ -2908,10 +3016,18 @@ def evaluate(dtc,allen=None):
 def check_bin_vm30(target,opt):
     plt.plot(target.vm30.times,target.vm30.magnitude)
     plt.plot(opt.vm30.times,opt.vm30.magnitude)
+    signal = target.vm30
+    plt.xlabel(qt.s)
+    plt.ylabel(signal.dimensionality)
+
     plt.show()
 def check_bin_vm15(target,opt):
     plt.plot(target.vm15.times,target.vm15.magnitude)
     plt.plot(opt.vm15.times,opt.vm15.magnitude)
+    signal = target.vm15
+    plt.xlabel(qt.s)
+    plt.ylabel(signal.dimensionality)
+
     plt.show()
 
 

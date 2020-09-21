@@ -28,7 +28,7 @@ OSB_HH_attrs = {
         'vr':-68.9346
         }
 OSB_HH_attrs['Vr'] = OSB_HH_attrs['E_L']
-HH_dic1 = { k:(float(v)-0.25*float(v),float(v)+0.25*float(v)) for k,v in OSB_HH_attrs.items() }
+HH_dic1 = { k:(float(v)-0.75*float(v),float(v)+0.75*float(v)) for k,v in OSB_HH_attrs.items() }
 HH_dic1 = { k:sorted(v) for k,v in HH_dic1.items() }
 
 MODEL_PARAMS['OSB_HH_attrs'] = HH_dic1
@@ -47,18 +47,27 @@ MODEL_PARAMS['NEURONHH'] = {'gnabar':0.12,\
                             'cm':1,\
                             'ena':50.0,\
                             'ek':-77}
-MODEL_PARAMS['NEURONHH'] = { k:(float(v)-0.5*float(v),float(v)+0.5*float(v)) for k,v in MODEL_PARAMS['NEURONHH'].items() }
+MODEL_PARAMS['NEURONHH'] = { k:(float(v)-0.75*float(v),float(v)+0.75*float(v)) for k,v in MODEL_PARAMS['NEURONHH'].items() }
 MODEL_PARAMS['NEURONHH'] = { k:sorted(v) for k,v in MODEL_PARAMS['NEURONHH'].items() }
-#import streamlit as st
-#st.text(MODEL_PARAMS['NEURONHH']['el'])
-#MODEL_PARAMS['NEURONHH']['gkbar'] = (0.0018,0.1)
-#MODEL_PARAMS['NEURONHH']['diam'] = (0.630785,50.0)
-#MODEL_PARAMS['NEURONHH']['gnabar'] = (0.006,0.2539)
-#MODEL_PARAMS['NEURONHH']['L'] = (5.0,1000.0)
-#MODEL_PARAMS['NEURONHH']['diam'] = (5.0,1000.0)
-#MODEL_PARAMS['NEURONHH']['cm'] = (0.5,1.0)
 
 # Which Parameters
+
+HH_attrs = {
+        'E_L' : -68.9346,
+        'E_K' : -90.0,
+        'E_Na' : 120.0,
+        'g_L' : 0.1,
+        'g_K' : 36,
+        'g_Na' : 200,
+        'C_m' : 1.0,
+        'vr':-68.9346
+        }
+
+HH_attrs['Vr'] = HH_attrs['E_L']
+
+HH_dic1 = { k:sorted([float(v)-0.25*float(v),float(v)+0.25*float(v)]) for k,v in HH_attrs.items() }
+
+MODEL_PARAMS['HH'] = HH_dic1
 
 # https://www.izhikevich.org/publications/spikes.htm
 type2007 = collections.OrderedDict([
@@ -169,7 +178,7 @@ BAE1['delta_T']=2.0
 BAE1['tau_w']=144.0
 BAE1['v_thresh']=-50.4
 BAE1['spike_delta']=30
-BAE1 = {k:(np.mean(v)-np.mean(v)*0.5,np.mean(v)*0.5+np.mean(v)) for k,v in BAE1.items()}
+BAE1 = {k:(np.mean(v)-np.mean(v)*2.0,np.mean(v)+np.mean(v)*2.0) for k,v in BAE1.items()}
 BAE1 = {k:sorted(v) for k,v in BAE1.items()}
 
 MODEL_PARAMS['ADEXP'] = BAE1
