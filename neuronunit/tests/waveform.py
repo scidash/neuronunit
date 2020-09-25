@@ -2,7 +2,7 @@
 from .base import np, pq, ncap, VmTest, scores, AMPL, DELAY, DURATION
 '''
 try:
-    import asciiplotlib as apl
+    
     fig = apl.figure()
     #fig.plot([0,1], [0,1], label=str('spikes: ')+str(self.n_spikes), width=100, height=20)
     fig.show()
@@ -13,6 +13,7 @@ except:
 ascii_plot = False
 
 def asciplot_code(vm,spkcnt):
+    import asciiplotlib as apl
     t = [float(f) for f in vm.times]
     v = [float(f) for f in vm.magnitude]
     fig = apl.figure()
@@ -132,7 +133,7 @@ class InjectedCurrentAPWidthTest(InjectedCurrent, APWidthTest):
         #try:
         prediction = super(InjectedCurrentAPWidthTest, self).\
             generate_prediction(model)
-        #self.prediction = prediction
+        self.prediction = prediction
 
 
         return prediction
@@ -190,7 +191,7 @@ class TotalAPAmplitudeTest(VmTest):
 
 
         # useful to retain inside object.
-        #self.prediction = prediction
+        self.prediction = prediction
         # Put prediction in a form that compute_score() can use.
         return prediction
 
@@ -245,8 +246,12 @@ class APAmplitudeTest(VmTest):
         #if ascii_plot:
         #if model._backend is str("HH"):
         #    asciplot_code(model.vM,model.get_spike_count())
+        if hasattr(model,'STATIC_THRESHOLD'):
+            THRESH = model.STATIC_THRESHOLD
+        else:
+            THRESH = model.get_AP_thresholds()
         try:
-            height = np.max(model.get_membrane_potential())-model.get_AP_thresholds()
+            height = np.max(model.get_membrane_potential())-THRESH
             prediction = {'value': height[0],
                         'mean':np.mean(height) if len(height) else None,
                         'std': np.std(height) if len(height) else None,
@@ -256,7 +261,7 @@ class APAmplitudeTest(VmTest):
         except:
             prediction = None
         # useful to retain inside object.
-        #self.prediction = prediction
+        self.prediction = prediction
 
         # Put prediction in a form that compute_score() can use.
         return prediction
@@ -301,7 +306,7 @@ class InjectedCurrentAPAmplitudeTest(InjectedCurrent, APAmplitudeTest):
         prediction = super(InjectedCurrentAPAmplitudeTest, self).\
             generate_prediction(model)
         # useful to retain inside object.
-        #self.prediction = prediction
+        self.prediction = prediction
         self.vm = model.vM
 
         return prediction
@@ -354,8 +359,8 @@ class APThresholdTest(VmTest):
 
 
 
-        if ascii_plot:
-            asciplot_code(model.vM,model.get_spike_count())
+        #if ascii_plot:
+        #    asciplot_code(model.vM,model.get_spike_count())
 
         try:
             threshes = model.get_AP_thresholds()
@@ -370,7 +375,7 @@ class APThresholdTest(VmTest):
                           'std':  None,
                           'n': 0 }
         # useful to retain inside object.
-        #self.prediction = prediction
+        self.prediction = prediction
 
         return prediction
 
@@ -417,7 +422,7 @@ class InjectedCurrentAPThresholdTest(InjectedCurrent, APThresholdTest):
         prediction =  super(InjectedCurrentAPThresholdTest, self).\
             generate_prediction(model)
 
-        #self.prediction = prediction
+        self.prediction = prediction
 
         return prediction
 

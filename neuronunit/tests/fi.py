@@ -137,6 +137,7 @@ class RheobaseTest(VmTest):
         self.condition_model(model)
         prediction = {'value': None}
         model.rerun = True
+        #print('are we here?',model.backend)
         try:
             units = self.observation['value'].units
         except KeyError:
@@ -211,12 +212,15 @@ class RheobaseTest(VmTest):
                     #print(n_spikes)
                 current = self.get_injected_square_current()
                 current['amplitude'] = ampl
-                model.inject_square_current(current)
-                try:
+                if not str(model.backend) in "NEURON" and not str(model.backend) in "jNeuroML":
+
+                    model.inject_square_current(current)
                     n_spikes = model.get_spike_count()
 
-                except:
+                else:
+                    model._backend.inject_square_current(current)
                     n_spikes = model._backend.get_spike_count()
+
     
                 #asciplot_code(model.get_membrane_potential(),n_spikes)
 
@@ -230,7 +234,7 @@ class RheobaseTest(VmTest):
                 if n_spikes and n_spikes <= spike_counts.min():
                     self.rheobase_vm = model.get_membrane_potential()
 
-        max_iters = 45
+        max_iters = 40
 
         # evaluate once with a current injection at 0pA
         high = self.high
@@ -251,7 +255,7 @@ class RheobaseTest(VmTest):
             # computation intensive and therefore
             # a target for parellelization.
             temp_ = [ v for v in lookup.values() if v==1 ]
-            if len(temp_) >= 4:
+            if len(temp_) >= 3:
                 break
             #if 1 in set(lookup.values()):
             #    break

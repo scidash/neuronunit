@@ -28,7 +28,7 @@ except:
     ascii_plot = False
 """    
 ascii_plot = False
-SLOW_ZOOM = True
+#SLOW_ZOOM = True
 import time
 import logging
 VERBOSE = True
@@ -144,7 +144,7 @@ def Id(t,delay,duration,tmax,amplitude):
 """
 
 #@jit # forceobj=True)
-
+@jit
 def dALLdt(X, t, attrs):
     """
     Integrate
@@ -187,7 +187,6 @@ def dALLdt(X, t, attrs):
     dndt = alpha_n(V)*(1.0-n) - beta_n(V)*n
     return dVdt1, dmdt, dhdt, dndt
 
-
 def get_vm(attrs):
     '''
     dt determined by
@@ -210,7 +209,7 @@ def get_vm(attrs):
     Y = [vr, m, h, n]
     # Solve ODE system
     T = attrs['T']
-    dt = attrs['dt']
+    #dt = attrs['dt']
 
     X = odeint(dALLdt, Y, T, args=(attrs,))
     vm = X[:,0]
@@ -224,6 +223,7 @@ def get_vm(attrs):
     vm = AnalogSignal(vm,
                  units = mV,
                  sampling_rate = (size*scale)*Hz)
+    '''
     if ascii_plot:
         t = [float(f) for f in vm.times]
         v = [float(f) for f in vm.magnitude]
@@ -234,6 +234,7 @@ def get_vm(attrs):
         fig = None
 
     fig  = None
+    '''
     return vm
 
 
@@ -330,9 +331,9 @@ class HHBackend(Backend):
         T = np.arange(0.0, tmax, dt)
         #dt = T[1]-T[0]
 
-        attrs = copy.copy(self.model.attrs)
+        attrs = self.model.attrs
         attrs['I'] = (delay,duration,tmax,amplitude)
-        attrs['dt'] = dt
+        #attrs['dt'] = dt
         attrs['T'] = T
         self.vM = get_vm(attrs)
 

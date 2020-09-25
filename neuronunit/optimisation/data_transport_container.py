@@ -81,7 +81,7 @@ class DataTC(object):
             if hasattr(t,'allen'): 
                 continue
             if 'RheobaseTest' in t.name: t.score_type = sciunit.scores.ZScore
-            if 'RheobaseTestP' in t.name: t.score_type = sciunit.scores.ZScore
+            #if 'RheobaseTestP' in t.name: t.score_type = sciunit.scores.ZScore
             try:
                 score_gene = t.judge(model)
             except:
@@ -239,8 +239,8 @@ class DataTC(object):
             self.model_path = LEMS_MODEL_PATH
             from neuronunit.models.reduced import ReducedModel#, VeryReducedModel
             model = ReducedModel(self.model_path,name='vanilla', backend=(self.backend, {'DTC':self}))
-            print(type(model))
-            print(model._backend)
+            #print(type(model))
+            #print(model._backend)
             self.current_src_name = model._backend.current_src_name
             assert type(self.current_src_name) is not type(None)
             self.cell_name = model._backend.cell_name
@@ -250,12 +250,15 @@ class DataTC(object):
             from neuronunit.models.very_reduced_sans_lems import VeryReducedModel
             model = VeryReducedModel(backend=self.backend,attrs=self.attrs)
             model.backend = self.backend
-            #print(self.attrs)
-            #try:
-            model.set_attrs(self.attrs)
-            #except:
-            #import pdb
-            #pdb.set_trace()
+            #self.attrs,'from data TC')
+            if "GLIF" in self.backend:
+                model._backend.set_attrs(self.attrs)
+                model.attrs = self.attrs
+                #print(model._backend.attrs,'worked?')
+            else:
+                model.set_attrs(self.attrs)
+            if model.attrs is None:
+                model.attrs = self.attrs
             
         assert len(self.attrs)
         assert len(model.attrs)

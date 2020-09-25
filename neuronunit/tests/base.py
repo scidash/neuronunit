@@ -40,6 +40,7 @@ class VmTest(ProtocolToFeaturesTest):
             cap += cls.required_capabilities
         self.required_capabilities += tuple(cap)
         self._extra()
+        self.prediction = None
 
     required_capabilities = (scap.Runnable, ncap.ProducesMembranePotential,)
 

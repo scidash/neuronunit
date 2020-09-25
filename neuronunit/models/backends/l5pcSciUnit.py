@@ -74,7 +74,66 @@ class L5PCBackend(Backend):
             if type(DTC.attrs) is type(None):
                 self.attrs = self.default_attrs
 
+    '''
+    def params_by_names(self, param_names):
+        """Get parameter objects by name"""
 
+        return [self.params[param_name] for param_name in param_names]
+
+    def freeze(self, param_dict):
+        """Set params"""
+
+        for param_name, param_value in param_dict.items():
+            self.params[param_name].freeze(param_value)
+
+    def unfreeze(self, param_names):
+        """Unset params"""
+
+        for param_name in param_names:
+            self.params[param_name].unfreeze()
+
+    def instantiate(self, sim=None):
+        """
+        Instantiate model in simulator
+        As if called from a genetic algorithm.
+        """
+        #self.icell.gid = self.gid
+        if self.params is not None:
+            self.attrs = self.params
+
+        dtc = self.model_to_dtc()
+        for k,v in self.params.items():
+            v = float(v.value)
+            dtc.attrs[k] = v
+            self.attrs[k] = v
+        return dtc
+
+    def destroy(self, sim=None):  # pylint: disable=W0613
+        """Destroy instantiated model in simulator"""
+
+        # Make sure the icell's destroy() method is called
+        # without it a circular reference exists between CellRef and the object
+        # this prevents the icells from being garbage collected, and
+        # cell objects pile up in the simulator
+        self.icell.destroy()
+
+        # The line below is some M. Hines magic
+        # DON'T remove it, because it will make sure garbage collection
+
+        del self.icell# = None
+        for param in self.params.values():
+            param.destroy(sim=sim)
+            print('destroyed param')
+
+    def check_nonfrozen_params(self, param_names):  # pylint: disable=W0613
+        """Check if all nonfrozen params are set"""
+        for param_name, param in self.params.items():
+            if not param.frozen:
+                raise Exception(
+                    'CellModel: Nonfrozen param %s needs to be '
+                    'set before simulation' %
+                    param_name)
+    '''
 
     def set_attrs(self,attrs=None):
         #print('these are parameters that can be modified.')
@@ -82,26 +141,55 @@ class L5PCBackend(Backend):
         for k,v in attrs.items():
            self.test_params[i] = v
         #print(self.test_params)
-        self.attrs = attrs
-
+        #self.attrs = attrs
+        '''
         lop={}
         for k,v in self.attrs.items():
             p = Parameter(name=k,bounds=v,frozen=False)
             lop[k] = p
         self.params = lop
         '''
-        cnt = 0
-        
-        for i,v in enumerate(self.test_params):
-            self.default_params[i] = v
-            cnt+=1
-            if cnt%2==0:
-                self.test_params[i] = self.test_params[i]+self.test_params[i]*0.059
-            else:    
-                self.test_params[i] = self.test_params[i]-self.test_params[i]*0.059
-            self.attrs[i] = self.test_params[i] 
-        '''
-    #@timer
+
+    def model_to_dtc(self,attrs=None):
+        """
+        Args:
+            self
+        Returns: 
+            dtc
+            DTC is a simulator indipendent data transport container object.
+        """
+            
+        dtc = DataTC(backend=self.backend)
+        if hasattr(self,'tests'):
+            if type(self.tests) is not type(None):
+                dtc.tests = self.tests
+
+        if type(attrs) is not type(None):
+            if len(attrs):
+                dtc.attrs = attrs
+                self.attrs = attrs
+            assert self._backend is not None
+            return dtc
+        else:
+            if type(self.attrs) is not type(None):
+                if len(self.attrs):
+                    try:
+                        dynamic_attrs = {str(k):float(v) for k,v in self.attrs.items()}
+                    except:
+                        dynamic_attrs = {str(k):float(v.value) for k,v in self.attrs.items()}
+
+        if self._backend is None:
+            super(VeryReducedModel, self).__init__(name=self.name,backend=self.backend)#,attrs=dtc.attrs)
+            assert self._backend is not None
+        frozen_attrs = self._backend.default_attrs
+        if 'dynamic_attrs' in locals():
+            frozen_attrs.update(dynamic_attrs)
+        all_attrs = frozen_attrs
+        dtc.attrs = all_attrs
+        assert dtc.attrs is not None
+        return dtc
+
+
     def inject_square_current(self,current):
         '''
         self.evaluator = l5pc_evaluator.create()

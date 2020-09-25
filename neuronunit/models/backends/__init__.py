@@ -24,8 +24,6 @@ backend_paths = ['base.EmptyBackend',
                  'hhrawf.HHBackend',
                  'glif.GLIFBackend',
                  'run_adexp.ADEXPBackend',
-                 'bhh_dynamics.BHHBackend',
-                 'badexp_dynamics.BADEXPBackend',
                  'l5pcSciUnit.L5PCBackend']
 
 def check_backend(partial_path):
@@ -66,4 +64,5 @@ except:
 
 available_backends = su_backends.available_backends
 from .run_adexp import ADEXPBackend
+from .glif import GLIFBackend
 #from .l5pcSciUnit import L5PCBackend

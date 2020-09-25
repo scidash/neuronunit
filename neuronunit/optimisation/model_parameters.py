@@ -78,8 +78,8 @@ MODEL_PARAMS['HH'] = HH_dic1
 # https://www.izhikevich.org/publications/spikes.htm
 type2007 = collections.OrderedDict([
   #              C    k     vr  vt vpeak   a      b   c    d  celltype
-  ('RS',        (100, 0.7,  -60, -40, 35, 0.01,   -2, -50,  100,  1)),
-  ('IB',        (150, 1.2,  -75, -45, 50, 0.1,   5, -56,  130,   2)),
+  ('RS',        (100, 0.7,  -60, -40, 35, 0.01,   -2, -50,  100,  3)),
+  ('IB',        (150, 1.2,  -75, -45, 50, 0.1,   5, -56,  130,   3)),
   ('CH',        (50,  1.5,  -60, -40, 25, 0.01,   1, -40,  150,   3)),
   ('LTS',       (100, 1.0,  -56, -42, 40, 0.01,   8, -53,   20,   4)),
   ('FS',        (20,  1,    -55, -40, 25, 0.2,    2, -45,   55,   5)),
@@ -112,8 +112,10 @@ IZHI_PARAMS = {k:sorted(v) for k,v in explore_param.items()}
 
 IZHI_PARAMS = OrderedDict(IZHI_PARAMS)
 IZHI_PARAMS['d'] = [0,150]
-IZHI_PARAMS['c'] = [-65,-40]
+IZHI_PARAMS['c'] = [-65,-20]
 IZHI_PARAMS['a'] = [0.01,0.2]
+IZHI_PARAMS['vr'] = [-85,-50]
+
 
 MODEL_PARAMS['IZHI'] = IZHI_PARAMS
 
@@ -191,7 +193,7 @@ MODEL_PARAMS['L5PC'] = L5PC
 
 
 GLIF_RANGE = {'El_reference': [-0.08569469261169435, -0.05463626766204832], \
-              'C': [3.5071610042390286e-11, 7.630189223327981e-10], \
+              'C': [3.5071610042390286e-11-0.5*3.5071610042390286e-11, 10*7.630189223327981e-10], \
               'init_threshold': [0.009908733642683513, 0.04939040414685865], \
               'th_inf': [0.009908733642683513, 0.04939040414685865], \
               'spike_cut_length': [20, 199],
@@ -199,7 +201,7 @@ GLIF_RANGE = {'El_reference': [-0.08569469261169435, -0.05463626766204832], \
               'init_voltage': [-70.0, 0.0], 
               'dt': [5e-05, 5e-05], 
               'El': [0.0, 0.0], 'asc_tau_array': [[0.01, 0.0033333333333333335],[0.3333333333333333, 0.1]], \
-              'R_input': [27743752.593817078, 1792774179.3647704] }
+              'R_input': [27743752.593817078-0.5*27743752.593817078, 2*1792774179.3647704] }
               #'th_adapt': None, 'coeffs': {'a': 1, 'C': 1, 'b': 1, 'G': 1, \
               #                             'th_inf': 1.0212937371199788, 'asc_amp_array': [1.0, 1.0]}}
 
@@ -207,4 +209,6 @@ GLIF_RANGE.pop('init_AScurrents',None)
 GLIF_RANGE.pop('dt',None)
 GLIF_RANGE.pop('asc_tau_array',None)
 GLIF_RANGE.pop('El',None)
+GLIF_RANGE = {k:sorted(v) for k,v in GLIF_RANGE.items()}
+
 MODEL_PARAMS['GLIF'] = GLIF_RANGE

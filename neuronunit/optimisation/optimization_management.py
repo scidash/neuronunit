@@ -829,7 +829,8 @@ def dtc_to_rheo(dtc):
 
     if rtest is not None:
         model = dtc.dtc_to_model()
-        model.attrs = dtc.attrs
+        if dtc.attrs is not None:
+            model.attrs = dtc.attrs
         if isinstance(rtest,Iterable):
             rtest = rtest[0]
         dtc.rheobase = rtest.generate_prediction(model)['value']
@@ -2240,13 +2241,20 @@ def make_evaluator(nu_tests,
         name='simple_cell',
         params=MODEL_PARAMS[model],backend=model)  
 
-
+    '''
     if "GLIF" in model:
-        nu_tests_ = glif_specific_modifications(nu_tests)
-        nu_tests = list(nu_tests_.values())
+        temp = TSD(nu_tests)
+        if 
+            temp.pop('')
+        #del nu_tests[-1]
+        #del nu_tests[-1]
+        #del nu_tests[-1]
+        
+        #nu_tests_ = glif_specific_modifications(nu_tests)
+        #nu_tests = list(nu_tests_.values())
         simple_cell.name = "GLIF"
-
-    elif "L5PC" in model:
+    '''
+    if "L5PC" in model:
         nu_tests_ = l5pc_specific_modifications(nu_tests)
         nu_tests = list(nu_tests_.values())
         simple_cell.name = "L5PC"
@@ -2325,6 +2333,8 @@ def instance_opt(experimental_constraints,MODEL_PARAMS,test_key,model_value,MU,N
     import utils #as utils
     import bluepyopt as bpop
     #import streamlit as st
+    for t in experimental_constraints:
+        print(t)
     cell_evaluator, simple_cell, score_calc, test_names = make_evaluator(
                                                           experimental_constraints,
                                                           MODEL_PARAMS,
@@ -2333,17 +2343,17 @@ def instance_opt(experimental_constraints,MODEL_PARAMS,test_key,model_value,MU,N
     #cell_evaluator, simple_cell, score_calc = make_evaluator(cells,MODEL_PARAMS)
     model_type = str('_best_fit_')+str(model_value)+'_'+str(test_key)+'_.p'
     #MU =10
-    mut = 0.1
-    cxp = 0.35
+    mut = 0.25
+    cxp = 0.25
     #pebble_used = pebble.ProcessPool(max_workers=1, max_tasks=4, initializer=None, initargs=None)
     
     if model_value is not "HH" and model_value is not "NEURONHH" and model_value is not "IZHI":
-        print('2 backend, parallel slow down circumnavigated',cell_model.backend)
+        #print('2 backend, parallel slow down circumnavigated',cell_model.backend)
 
         optimisation = bpop.optimisations.DEAPOptimisation(
                 evaluator=cell_evaluator,
                 offspring_size = MU,
-                map_function = utils.dask_map_function,
+                map_function = map,
                 selector_name=diversity,
                 mutpb=mut,
                 cxpb=cxp)
@@ -2673,10 +2683,11 @@ def inject_and_plot_model30(dtc,figname=None,known_current=None):
     if type(known_current) is not type(None):
         #print('previously known current \n\n\n',known_current)
         observation_range={}
-
+        model = dtc.dtc_to_model() 
+        model.attrs = dtc.attrs   
         observation_range['value'] = dtc.spk_count
         scs = SpikeCountSearch(observation_range)
-        target_current = scs.generate_prediction(dtc.dtc_to_model())
+        target_current = scs.generate_prediction(model)
         if type(target_current) is not type(None):
             known_current = target_current['value']
             #print(known_current,'recalculated per model')
@@ -3169,7 +3180,7 @@ def check_bin_vm15(target,opt):
     plt.show()
 
 
-from sciunit.scores import ZScore
+from sciunit.scores import ZScore, RatioScore
 
 def augment_with_three_step(dtc,fitness):
     temp_tests = copy.copy(dtc.tests)

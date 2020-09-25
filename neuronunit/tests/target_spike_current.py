@@ -5,9 +5,9 @@ import os
 import multiprocessing
 global cpucount
 npartitions = cpucount = multiprocessing.cpu_count()
-from .base import np, pq, ncap, VmTest, scores, AMPL, DELAY, DURATION
-#DURATION = 2000
-#DELAY = 200
+from .base import np, pq, ncap, VmTest, scores, AMPL#, DELAY, DURATION
+DURATION = 2000
+DELAY = 1000
 from .. import optimisation
 
 from neuronunit.optimisation.data_transport_container import DataTC
@@ -50,8 +50,8 @@ class SpikeCountSearch(VmTest):
      def _extra(self):
          self.verbose = 1
 
-     # def __init__(self,other_current=None):
-     #     self.other_current = other_current
+    #def __init__(self,threshold=None):
+    #     self.threshold = threshold
 
 
      required_capabilities = (ncap.ReceivesSquareCurrent,
@@ -146,8 +146,18 @@ class SpikeCountSearch(VmTest):
                 uc = {'amplitude':ampl*pq.pA,'duration':DURATION,'delay':DELAY}
 
                 dtc.run_number += 1
-                model.set_attrs(**dtc.attrs)
+                model.set_attrs(dtc.attrs)
                 model.inject_square_current(uc)
+                '''
+                ToDO
+                if self.threshold is not None:
+                    from elephant.spike_train_generation import threshold_detection
+                    print(self.threshold)
+                    n_spikes = len(threshold_detection(model.get_membrane_potential(), threshold=self.threshold))
+                '''
+                    #from neuronunit.capabilities.spike_functions import get_spike_waveforms, spikes2widths, spikes2thresholds
+
+                #else:                      
                 n_spikes = model.get_spike_count()
                 if float(ampl) < -1.0:
                     dtc.rheobase = {}
@@ -237,20 +247,20 @@ class SpikeCountSearch(VmTest):
                 for i,s in enumerate(dtc.current_steps):
                     dtc_clones[i] = copy.copy(dtc_clones[i])
                     dtc_clones[i].ampl = copy.copy(dtc.current_steps[i])
-                    dtc_clones[i].backend = copy.copy(dtc.backend[i])
+                    dtc_clones[i].backend = copy.copy(dtc.backend)
 
                 dtc_clones = [d for d in dtc_clones if not np.isnan(d.ampl)]
-                try:
-                    b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
-                    dtc_clone = list(b0.map(check_current).compute())
-                except:
-                    set_clones = set([float(d.ampl) for d in dtc_clones ])
-                    dtc_clone = []
-                    for dtc,sc in zip(dtc_clones,set_clones):
-                        dtc = copy.copy(dtc)
-                        dtc.ampl = sc*pq.pA
-                        dtc = check_current(dtc)
-                        dtc_clone.append(dtc)
+                #try:
+                #    b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
+                #    dtc_clone = list(b0.map(check_current).compute())
+                #except:
+                set_clones = set([float(d.ampl) for d in dtc_clones ])
+                dtc_clone = []
+                for dtc,sc in zip(dtc_clones,set_clones):
+                    dtc = copy.copy(dtc)
+                    dtc.ampl = sc*pq.pA
+                    dtc = check_current(dtc)
+                    dtc_clone.append(dtc)
 
 
                 for dtc in dtc_clone:
@@ -522,18 +532,18 @@ class SpikeCountRangeSearch(VmTest):
                     dtc_clones[i].backend = copy.copy(dtc.backend)
 
                 dtc_clones = [d for d in dtc_clones if not np.isnan(d.ampl)]
-                try:
-                    b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
-                    dtc_clone = list(b0.map(check_current).compute())
-                except:
-                    set_clones = set([ float(d.ampl) for d in dtc_clones ])
-                    dtc_clone = []
-                    for dtc,sc in zip(dtc_clones,set_clones):
-                        dtc = copy.copy(dtc)
-                        dtc.ampl = sc*pq.pA
-                        dtc = check_current(dtc)
-                        #dtc.backend = be
-                        dtc_clone.append(dtc)
+                #try:
+                #    b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
+                #    dtc_clone = list(b0.map(check_current).compute())
+                #except:
+                set_clones = set([ float(d.ampl) for d in dtc_clones ])
+                dtc_clone = []
+                for dtc,sc in zip(dtc_clones,set_clones):
+                    dtc = copy.copy(dtc)
+                    dtc.ampl = sc*pq.pA
+                    dtc = check_current(dtc)
+                    #dtc.backend = be
+                    dtc_clone.append(dtc)
 
 
                 for dtc in dtc_clone:

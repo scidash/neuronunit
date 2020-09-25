@@ -125,7 +125,7 @@ class NEURONHHBackend(Backend):
     def set_run_params(self, **run_params):
         pass
 
-    def set_stop_time(self, stop_time=650*pq.ms):
+    def set_stop_time(self, stop_time=1200*pq.ms):
         """Set the simulation duration
         stopTimeMs: duration in milliseconds
         """
@@ -155,7 +155,7 @@ class NEURONHHBackend(Backend):
         """
         self.h.cvode.atol(tolerance)
 
-    def set_integration_method(self, method="fixed"):
+    def set_integration_method(self, method="variable"):
         """Set the simulation itegration method.
 
         cvode is used when method is "variable"
@@ -167,36 +167,10 @@ class NEURONHHBackend(Backend):
         self.h.cvode.active(1 if method == "variable" else 0)
 
         try:
-            assert self.cvode.active()
+            assert self.h.cvode.active()
         except AssertionError:
-            self.cvode = self.h.CVode()
-            self.cvode.active(1 if method == "variable" else 0)
-
-    def get_membrane_potential(self):
-        """Get a membrane potential traces from the simulation.
-
-        Must destroy the hoc vectors that comprise it.
-
-        Returns:
-            neo.core.AnalogSignal: the membrane potential trace
-        """
-
-        if self.h.cvode.active() == 0:
-            dt = float(copy.copy(self.h.dt))
-            fixed_signal = copy.copy(self.vVector.to_python())
-        else:
-            dt = float(copy.copy(self.fixedTimeStep))
-            fixed_signal = copy.copy(self.get_variable_step_analog_signal())
-
-        self.h.dt = dt
-        self.fixedTimeStep = float(1.0/dt)
-        fixed_signal = [ v for v in fixed_signal ]
-        self.vM = AnalogSignal(fixed_signal,
-                            units=pq.mV,
-                            sampling_period=self.h.dt*pq.ms)
-
-        return self.vM       #waves0 = [i.rescale(qt.mV) for i in waves0 ]
-
+            self.h.cvode = self.h.CVode()
+            self.h.cvode.active(1 if method == "variable" else 0)
     def get_variable_step_analog_signal(self):
         """Convert variable dt array values to fixed dt array.
 
@@ -245,6 +219,34 @@ class NEURONHHBackend(Backend):
 
         return fPots
 
+    def get_membrane_potential(self):
+        """Get a membrane potential traces from the simulation.
+
+        Must destroy the hoc vectors that comprise it.
+
+        Returns:
+            neo.core.AnalogSignal: the membrane potential trace
+        """
+
+        #if self.h.cvode.active() == 0:
+        dt = float(self.h.dt)
+        fixed_signal = self.vVector.to_python()
+        #else:
+            #dt = float(self.fixedTimeStep)
+        #    dt = self.h.dt
+        #    self.fixedTimeStep = float(dt)
+
+            #fixed_signal = self.get_variable_step_analog_signal()
+
+        #self.h.dt = dt
+        fixed_signal = [ v for v in fixed_signal ]
+        self.vM = AnalogSignal(fixed_signal,
+                            units=pq.mV,
+                            sampling_period=self.h.dt*pq.ms)
+
+        return self.vM       #waves0 = [i.rescale(qt.mV) for i in waves0 ]
+
+
     def linearInterpolate(self, tStart, tEnd, vStart, vEnd, tTarget):
         """Perform linear interpolation."""
         tRange = float(tEnd - tStart)
@@ -262,8 +264,8 @@ class NEURONHHBackend(Backend):
         self.reset_neuron(nrn.neuron)
         self.h.tstop = tstop
         self.set_stop_time(tstop)  # previously 500ms add on 150ms of recovery
-        with redirect_stdout(self.stdout):
-            self.ns = nrn.NeuronSimulation(self.h.tstop, dt=0.0025)
+        #with redirect_stdout(self.stdout):
+        self.ns = nrn.NeuronSimulation(self.h.tstop, dt=0.01)
 
     def load_mechanisms(self):
         with redirect_stdout(self.stdout):
@@ -330,6 +332,7 @@ class NEURONHHBackend(Backend):
 
 
     def inject_square_current(self, current, section=None, debug=False):
+
         """Apply current injection into the soma or a specific compartment.
 
         Example: current = {'amplitude':float*pq.pA, 'delay':float*pq.ms,
@@ -355,14 +358,16 @@ class NEURONHHBackend(Backend):
             assert len(self.model.attrs)
         except:
             print("this means you didnt instance a model and then add in model parameters")
-        temp_attrs = copy.copy(self.model.attrs)
+        temp_attrs = self.model.attrs
         assert len(temp_attrs)
 
+
         self.init_backend()
+        #self.set_integration_method()
         if len(temp_attrs):
             self.set_attrs(temp_attrs)
 
-        current = copy.copy(current)
+        current = current
         self.last_current = current
         if 'injected_square_current' in current.keys():
             c = current['injected_square_current']
@@ -372,7 +377,8 @@ class NEURONHHBackend(Backend):
         ##
         # critical code:
         ##
-        self.set_stop_time(c['delay']+c['duration']+200.0*pq.ms)
+        stop_time = float(c['delay'])*pq.ms+float(c['duration'])*pq.ms+200.0*pq.ms
+        self.set_stop_time(stop_time)
         # translate pico amps to nano amps
         # NEURONs default unit multiplier for current injection values is nano amps.
         # to make sure that pico amps are not erroneously interpreted as a larger nano amp.
@@ -388,21 +394,27 @@ class NEURONHHBackend(Backend):
         #simdur = dur+delay #2000.0
         tMax = delay + dur + 200.0
         self.h.tstop = tMax
-        b4 = time.perf_counter()
+        #b4 = time.perf_counter()
         self.h('run()')
-        af = time.perf_counter()
+        #af = time.perf_counter()
         #print('time:',af - b4)
         self.vM = AnalogSignal([float(x) for x in
-                         copy.copy(self.vVector)],
+                         self.vVector],
                                              units=pq.mV,
                                              sampling_period=self.h.dt*pq.ms)
+        is_nan_in_vm = False
+        for v in self.vM:
+            if np.isnan(float(v)):
+                is_nan_in_vm = True
+        if is_nan_in_vm:
+            print(self.attrs)
         return self.vM
     def local_run(self):
         #with redirect_stdout(self.stdout):
         self.h('run()')
         results = {}
         results['vm'] = AnalogSignal([float(x) for x in
-                         copy.copy(self.vVector)],
+                         self.vVector],
                                              units=pq.mV,
                                              sampling_period=self.h.dt*pq.ms)
         results['t'] = results['vm'].times

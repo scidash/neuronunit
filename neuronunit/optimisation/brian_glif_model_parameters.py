@@ -124,16 +124,17 @@ HH_attrs = {'g_L' : 0.3,
         'vr':-65.0,
         'C_m':1.0}
 """
-HH_dic1 = { k:(float(v)-0.25*float(v),float(v)+0.25*float(v)) for k,v in HH_attrs.items() }
+HH_dic1 = { k:sorted([float(v)-0.25*float(v),float(v)+0.25*float(v)]) for k,v in HH_attrs.items() }
 
 MODEL_PARAMS['HH'] = HH_dic1
 
 
-HH_dic1 = { k:(float(v)-0.25*float(v),float(v)+0.25*float(v)) for k,v in HH_attrs.items() }
+HH_dic1 = { k:sorted([float(v)-0.25*float(v),float(v)+0.25*float(v)]) for k,v in HH_attrs.items() }
 
 
 #seg.hh.gnabar = 0.12  # Sodium conductance in S/cm2
 #seg.hh.gkbar = 0.036  # Potassium conductance in S/cm2
+'''
 MODEL_PARAMS['NEURONHH'] = {'gnabar':0.12,\
                             'gkbar':0.036,\
                             'Ra':100,\
@@ -150,7 +151,7 @@ MODEL_PARAMS['NEURONHH'] = {'gnabar':0.12,\
                             'ena':50.0,\
                             'ek':-77}
 MODEL_PARAMS['NEURONHH'] = { k:(float(v)-0.95*float(v),float(v)+0.95*float(v)) for k,v in MODEL_PARAMS['NEURONHH'].items() }
-
+'''
 #I = .8*nA
 #Vcut = VT + 5 * DeltaT  # practical threshold condition
 #N = 200
