@@ -71,6 +71,7 @@ for i in xrange(N-1):
 
 return [V.transpose(),w.transpose(),spikes.transpose(),sptimes]  
 '''
+'''
 @jit
 def update_state(i, T, t, dt,I_ext,v,w,spike_raster,v_reset,b,a,spike_delta,v_rest,tau_m,tau_w,v_thresh,delta_T,cm):
  
@@ -96,22 +97,32 @@ def update_state(i, T, t, dt,I_ext,v,w,spike_raster,v_reset,b,a,spike_delta,v_re
   spike_raster[spiked,i] = 1
 
   return v,w,spike_raster,len(spike_raster)
+'''  
 #@timer
+#
+@cython.boundscheck(False)
+@cython.wraparound(False)
 @jit(nopython=True)
-#@cython.boundscheck(False)
-#@cython.wraparound(False)
-def update_state_new_new(T, dt,v,w,spike_raster,v_reset,b,a,spike_delta,v_rest,tau_m,tau_w,v_thresh,delta_T,cm,time_trace,amp,start,stop):
+def update_state_new_new(T, dt,v,w,
+                        v_reset,b,a,spike_raster,
+                        spike_delta,v_rest,tau_m,
+                        tau_w,v_thresh,delta_T,cm,time_trace,amp,start,stop):
+  #print(v,w)
   i = 0
   spike_raster = [0 for ix in range(0,len(time_trace))]
   vm = []
-  v = v[0]
-  w = w[0]
+  
+  #v = v[0]
+  #w = w[0]
   for t_ind in range(0,len(time_trace)):
     t = time_trace[t_ind]
     if i!=0:
       I_scalar = 0
       if start <= t <= stop:
         I_scalar = amp
+      #else:
+      #  I_scalar = 0
+
       #for indx in range(0,i-1):
       if spike_raster[i-1]:
         v = v_reset
@@ -128,8 +139,9 @@ def update_state_new_new(T, dt,v,w,spike_raster,v_reset,b,a,spike_delta,v_rest,t
         spike_raster[i] = 0
       vm.append(v)
     i+=1
-
-  return v,w,spike_raster,len(spike_raster),vm
+  #print(vm)
+  return len(spike_raster),vm
+'''
 #@timer
 #@jit(nopython=True)
 #@cython.boundscheck(False)
@@ -164,18 +176,19 @@ def update_state_new(T, dt,v,w,spike_raster,v_reset,b,a,spike_delta,v_rest,tau_m
 
 
   return v,w,spike_raster,len(spike_raster),vm
-
-@jit
+'''
+@jit#(nopython=True)
 #@cython.boundscheck(False)
 #@cython.wraparound(False)
-
 def evaluate_vm_new(time_trace,dt,T,v,w,b,a,spike_delta,spike_raster,v_reset,v_rest,tau_m,tau_w,v_thresh,delta_T,cm,amp,start,stop):
-  v,w,spike_raster,n_spikes,vm = update_state_new_new(T=T, dt=dt,
+  n_spikes,vm = update_state_new_new(T=T, 
+                                    dt=dt,
                                     v=v,
                                     w=w,
                                     spike_raster=spike_raster,
                                     v_reset=v_reset,
-                                    b=b,a=a,spike_delta=spike_delta,
+                                    b=b,a=a,
+                                    spike_delta=spike_delta,
                                     v_rest=v_rest,tau_m=tau_m,tau_w=tau_w,
                                     v_thresh=v_thresh,
                                     delta_T =delta_T,cm=cm,time_trace=time_trace,
@@ -183,9 +196,10 @@ def evaluate_vm_new(time_trace,dt,T,v,w,b,a,spike_delta,spike_raster,v_reset,v_r
 
   
   return vm,n_spikes
-
-
-@jit
+'''
+@jit(nopython=True)
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def evaluate_vm(time_trace,dt,T,v,w,b,a,spike_delta,spike_raster,v_reset,v_rest,tau_m,tau_w,v_thresh,delta_T,cm,amp,start,stop):
   vm = []
   i = 0
@@ -203,7 +217,7 @@ def evaluate_vm(time_trace,dt,T,v,w,b,a,spike_delta,spike_raster,v_reset,v_rest,
       vm.append(v[0])
     i+=1
   return vm,n_spikes
-
+'''
 
 
 
@@ -252,7 +266,7 @@ class ADEXPBackend(Backend):
   def simulate(self, attrs={}, T=50,dt=0.25,integration_time=30, I_ext={},spike_delta=50):
     spike_delta = spike_delta
     N = 1
-    w = np.ones(N)
+    w = 1#np.ones(N)
 
     dt         = dt
     time_trace = np.arange(0,T+dt,dt)#time array
@@ -270,8 +284,8 @@ class ADEXPBackend(Backend):
     attrs = self.default_attrs
     attrs.update(self.model.attrs)
     v_rest =  attrs['v_rest']
-
-    v = np.ones(N) * v_rest #voltage trace
+    v = v_rest 
+    #v = v_rest #voltage trace
     v_reset = attrs['v_reset']
     tau_m = attrs['tau_m']
     delta_T = attrs['delta_T']
@@ -296,6 +310,7 @@ class ADEXPBackend(Backend):
     vm,n_spikes = evaluate_vm_new(time_trace,dt,T,v,w,b,a,
                       spike_delta,spike_raster,v_reset,v_rest,
                       tau_m,tau_w,v_thresh,delta_T,cm,amp,start,stop)
+    #print(vm)
     return vm,n_spikes
 
 
@@ -349,8 +364,9 @@ class ADEXPBackend(Backend):
       self.tstop = float(stop_time.rescale(pq.ms))
 
   #@timer
-  @cython.boundscheck(False)
-  @cython.wraparound(False)
+  #@cython.boundscheck(False)
+  #@cython.wraparound(False)
+  #@jit
   def inject_square_current(self,current):#, section = None, debug=False):
     """Inputs: current : a dictionary with exactly three items, whose keys are: 'amplitude', 'delay', 'duration'
     Example: current = {'amplitude':float*pq.pA, 'delay':float*pq.ms, 'duration':float*pq.ms}}

@@ -1,3 +1,4 @@
+import math
 
 from quantities import mV, ms, s, V
 import sciunit
@@ -39,7 +40,7 @@ def get_vm_new(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.3
     ## was
     # dt = 0.005
     ##
-    dt = 0.25
+    dt = 0.125
     v = []#0 for i in range(0,N)]#np.zeros(N)
     u = []#0 for i in range(0,N)]#np.zeros(N)
     v.app(vr)
@@ -63,15 +64,19 @@ def get_vm_new(C=89.7960714285714, a=0.01, b=15, c=-60, d=10, k=1.6, vPeak=(86.3
 #@cython.boundscheck(False)
 #@cython.wraparound(False)
 #@jit#(nopython=True)
-@jit(fastmath=True)
+@jit(nopython=True)
 def get_vm_matlab(C=89.7960714285714,
          a=0.01, b=15, c=-60, d=10, k=1.6, 
          vPeak=(86.364525297619-65.2261863636364),
           vr=-65.2261863636364, vt=-50,celltype=1, N=0,start=0,stop=0,amp=0):
-    tau = dt = 0.25
+
+    '''
+    this was very slow
+    '''
+    tau = dt = 0.125
     u = []
     v = []
-    #tau=0.25; #dt
+    #tau=0.125; #dt
     #I = 0
     u.append(0)
     v.append(vr)
@@ -90,11 +95,11 @@ def get_vm_matlab(C=89.7960714285714,
         if celltype < 5: ## default 
             u[i+1]=u[i]+tau*a*(b*(v[i]-vr)-u[i]); # Calculate recovery variable
         else:
-            if celltype == 5:  # For FS neurons, include nonlinear U(v): U(v) = 0 when v<vb ; U(v) = 0.25(v-vb) when v>=vb (d=vb=-55)
+            if celltype == 5:  # For FS neurons, include nonlinear U(v): U(v) = 0 when v<vb ; U(v) = 0.125(v-vb) when v>=vb (d=vb=-55)
                 if v[i+1] < d:
                     u[i+1] = u[i] + tau*a*(0-u[i])
                 else:
-                    u[i+1] = u[i] + tau*a*((0.25*(v[i]-d)**3)-u[i])
+                    u[i+1] = u[i] + tau*a*((0.125*(v[i]-d)**3)-u[i])
                 
             if celltype == 6: # For TC neurons, reset b
                if v[i+1] > -65: 
@@ -125,7 +130,7 @@ def get_vm_matlab(C=89.7960714285714,
             if v[i+1] > (vPeak - 0.1*u[i+1]):
                 v[i]= vPeak - 0.1*u[i+1];
                 v[i+1] = c+0.04*u[i+1]; # Reset voltage
-                if (u+d)<670:
+                if (u[i]+d)<670:
                     u[i+1]=u[i+1]+d; # Reset recovery variable
                 else:
                     u[i+1] = 670;
@@ -143,7 +148,7 @@ def get_vm_matlab_four(C=89.7960714285714,
          a=0.01, b=15, c=-60, d=10, k=1.6, 
          vPeak=(86.364525297619-65.2261863636364),
           vr=-65.2261863636364, vt=-50,celltype=1, N=0,start=0,stop=0,amp=0):
-    tau = dt = 0.25
+    tau = dt = 0.125
     #I = 0
     v = np.zeros(N)
     u = np.zeros(N)
@@ -173,7 +178,7 @@ def get_vm_matlab_five(C=89.7960714285714,
          vPeak=(86.364525297619-65.2261863636364),
           vr=-65.2261863636364, vt=-50,celltype=1, N=0,start=0,stop=0,amp=0):
     
-    tau= dt = 0.25; #dt
+    tau= dt = 0.125; #dt
     #I = 0
     v = np.zeros(N)
     u = np.zeros(N)
@@ -191,7 +196,7 @@ def get_vm_matlab_five(C=89.7960714285714,
         if v[i+1] < d:
             u[i+1] = u[i] + tau*a*(0-u[i])
         else:
-            u[i+1] = u[i] + tau*a*((0.25*(v[i]-d)**3)-u[i])
+            u[i+1] = u[i] + tau*a*((0.125*(v[i]-d)**3)-u[i])
         if v[i+1]>=vPeak:
             v[i]=vPeak;
             v[i+1]=c;
@@ -204,7 +209,7 @@ def get_vm_matlab_seven(C=89.7960714285714,
          a=0.01, b=15, c=-60, d=10, k=1.6, 
          vPeak=(86.364525297619-65.2261863636364),
           vr=-65.2261863636364, vt=-50,celltype=1, N=0,start=0,stop=0,amp=0):
-    tau= dt = 0.25; #dt
+    tau= dt = 0.125; #dt
 
     #I = 0
     v = np.zeros(N)
@@ -239,7 +244,7 @@ def get_vm_matlab_six(C=89.7960714285714,
          a=0.01, b=15, c=-60, d=10, k=1.6, 
          vPeak=(86.364525297619-65.2261863636364),
           vr=-65.2261863636364, vt=-50,celltype=1, N=0,start=0,stop=0,amp=0):
-    tau= dt = 0.25; #dt
+    tau= dt = 0.125; #dt
 
     #I = 0
     v = np.zeros(N)
@@ -275,7 +280,7 @@ def get_vm_matlab_one_two_three(C=89.7960714285714,
          vPeak=(86.364525297619-65.2261863636364),
           vr=-65.2261863636364, vt=-50,
           N=0,start=0,stop=0,amp=0):
-    tau= dt = 0.25; #dt
+    tau= dt = 0.125; #dt
 
     v = np.zeros(N)
     u = np.zeros(N)
@@ -443,12 +448,11 @@ class IZHIBackend(Backend):
             everything = copy.copy(self.attrs)
             if 'current_inj' in everything.keys():
                 everything.pop('current_inj',None)
-            self.attrs['celltype'] = int(self.attrs['celltype'])
+            self.attrs['celltype'] = math.ceil(self.attrs['celltype'])
             if self.attrs['celltype'] <= 3:   
                 everything.pop('celltype',None)         
                 v = get_vm_matlab_one_two_three(**everything)
             else:
-                #print('still slow',self.attrs['celltype'])
                 if self.attrs['celltype'] == 4:
                     v = get_vm_matlab_four(**everything)
                 if self.attrs['celltype'] == 5:
@@ -456,23 +460,25 @@ class IZHIBackend(Backend):
                 if self.attrs['celltype'] == 6:
                     v = get_vm_matlab_six(**everything)
                 if self.attrs['celltype'] == 7:
+                    #print('gets into multiple regimes',self.attrs['celltype'])
+
                     v = get_vm_matlab_six(**everything)
             #import pdb
             #pdb.set_trace()
             self.vM = AnalogSignal(v,
                                 units=pq.mV,
-                                sampling_period=0.25*pq.ms)
-            '''
-            self.get_spike_count()
-            import asciiplotlib as apl
-            fig = apl.figure()
-            fig.plot([float(f) for f in self.vM.times], [float(f) for f in self.vM], width=100, height=20)
-            try:
-                fig.show()
-            except:
-                pass    
-            '''
-        
+                                sampling_period=0.125*pq.ms)
+            #if np.min(self.vM)<-70:
+            #    print(np.min(self.vM))
+            #self.get_spike_count()
+            #import asciiplotlib as apl
+            #fig = apl.figure()
+            #fig.plot([float(f) for f in self.vM.times], [float(f) for f in self.vM], width=100, height=20)
+            #try:
+            #    fig.show()
+            #except:
+            #    pass    
+            
         return self.vM
 
     def set_attrs(self, attrs):
@@ -498,7 +504,7 @@ class IZHIBackend(Backend):
             c = current['injected_square_current']
         else:
             c = current
-        amplitude = float(c['amplitude'])#*10.25.0.25#*1000.0 #this needs to be in every backends
+        amplitude = float(c['amplitude'])#*10.125.0.125#*1000.0 #this needs to be in every backends
         duration = float(c['duration'])#/dt#/dt.rescale('ms')
         delay = float(c['delay'])#/dt#.rescale('ms')
         #if 'sim_length' in c.keys():
@@ -510,10 +516,10 @@ class IZHIBackend(Backend):
 
         NORMAL = True
         if NORMAL == True:
-            N = int(tMax/0.25)
+            N = int(tMax/0.125)
         else:
             #print('adding in larger N seems to artificially dilate the width of neural events')
-            N = int(tMax/0.25)*100
+            N = int(tMax/0.125)*100
 
         Iext = np.zeros(N)
         delay_ind = int((delay/tMax)*N)
@@ -536,11 +542,14 @@ class IZHIBackend(Backend):
 
         if 'current_inj' in everything.keys():
             everything.pop('current_inj',None)
-        self.attrs['celltype'] = int(self.attrs['celltype'])
+
+        self.attrs['celltype'] = math.ceil(self.attrs['celltype'])
         if self.attrs['celltype'] <= 3:   
             everything.pop('celltype',None)         
             v = get_vm_matlab_one_two_three(**everything)
         else:
+            #print('gets into multiple regimes',self.attrs['celltype'])
+
             #print('still slow',self.attrs['celltype'])
             if self.attrs['celltype'] == 4:
                 v = get_vm_matlab_four(**everything)
@@ -549,22 +558,25 @@ class IZHIBackend(Backend):
             if self.attrs['celltype'] == 6:
                 v = get_vm_matlab_six(**everything)
             if self.attrs['celltype'] == 7:
-                v = get_vm_matlab_six(**everything)
+                v = get_vm_matlab_seven(**everything)
         
 
         self.model.attrs.update(attrs)
 
         self.vM = AnalogSignal(v,
                             units=pq.mV,
-                            sampling_period=0.25*pq.ms)
+                            sampling_period=0.125*pq.ms)
+        #if np.min(self.vM)<-70:
+        #    print(np.min(self.vM))
+
         #print(self.attrs['celltype'])
         #print(np.var(v))
-        '''
-        import asciiplotlib as apl
-        fig = apl.figure()
-        fig.plot([float(f) for f in self.vM.times], [float(f) for f in self.vM], width=100, height=20)
-        fig.show()
-        '''
+  
+        #import asciiplotlib as apl
+        #fig = apl.figure()
+        #fig.plot([float(f) for f in self.vM.times], [float(f) for f in self.vM], width=100, height=20)
+        #fig.show()
+        
         #(self.vM.times[-1],c['delay']+c['duration']+200*pq.ms)
         #assert self.vM.times[-1] == (c['delay']+c['duration']+200*pq.ms)
 

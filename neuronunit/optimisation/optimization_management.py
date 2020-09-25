@@ -68,7 +68,7 @@ this = sys.modules[__name__]
 
 # we can explicitly make assignments on it
 this.cpucount = multiprocessing.cpu_count()
-from neuronunit.tests.fi import RheobaseTestP
+#from neuronunit.tests.fi import RheobaseTestP
 from neuronunit.tests.target_spike_current import SpikeCountSearch, SpikeCountRangeSearch
 #make_stim_waves = pickle.load(open('waves.p','rb'))
 try:
@@ -205,6 +205,8 @@ def test_all_objective_test(free_parameters,model_type="IZHI",protocol=None):
     tests = TSD(copy.copy(simulated_data_tests))
     check_tests = copy.copy(tests)
     return tests, OM, target
+
+
 
 def make_ga_DO(explore_edges, max_ngen, test, \
         free_parameters = None, hc = None,
@@ -656,7 +658,61 @@ def pred_only(test_and_models):
 
 import pandas as pd
 
+def ugly_score_wrangler(model,objectives2,to_latex_string=False):
+    strict_scores = {}
 
+
+    pd.set_option('display.max_rows', None)
+    pd.set_option('display.max_columns', None)
+    pd.set_option('display.width', None)
+    pd.set_option('display.max_colwidth', None)
+    for i in objectives2:
+        test = i.features[0].test
+        #print(test.name)
+        if "Spikecount" in test.name:
+            print(test.observation,test.prediction)
+        try:
+            test.observation['value'] = np.abs(float(test.observation['mean']))*pq.dimensionless
+            #test.observation['std'] = test.observation['mean']#*pq.mV
+            test.observation['n'] = 1
+        except:
+            temp = {}
+            temp['value'] = np.abs(test.observation['value'])*pq.dimensionless
+            #temp['std'] = temp['mean']#*pq.dimensionless
+            temp['n'] = 1
+            test.observation = temp
+
+        try:
+            test.prediction['value'] = np.abs(float(test.prediction))*pq.dimensionless
+        except:
+            temp = {}
+            try:
+                temp['value'] = np.abs(float(test.prediction))*pq.dimensionless#*pq.dimensionless
+            except:
+                #print(test.prediction.keys())
+                try:
+                    temp['value'] = np.abs(float(test.prediction['mean']))*pq.dimensionless#*pq.dimensionless
+                except:
+                    temp['value'] = np.abs(float(test.prediction['value']))*pq.dimensionless#*pq.dimensionless
+                #temp['std'] = temp['mean']#*pq.dimensionless
+            temp['n'] = 1
+            test.prediction = temp
+
+        test.score_type = RatioScore
+        for k,v in test.observation.items():
+            test.observation[k] = np.abs(test.observation[k]) #* test.observation[k]#.units
+
+        for k,v in test.prediction.items():
+            test.prediction[k] = np.abs(test.prediction[k])# * test.prediction[k]#.units
+
+        re_score = test.compute_score(test.observation,test.prediction)
+        strict_scores[test.name] = re_score
+        #print(t.name)
+    df = pd.DataFrame([strict_scores])
+
+    df = df.T    
+    return df
+'''
 def bridge_dm_test(test_and_dtc):
     (test, dtc) = test_and_dtc
     pred_dm = nuunit_dm_rheo_evaluation(dtc)
@@ -675,8 +731,8 @@ def bridge_dm_test(test_and_dtc):
         elif str('InjectedCurrentAPAmplitudeTest') in test.name:
             score = test.compute_score(test.observation,height_obs)
             return score, dtc
-
-from neuronunit.tests import RheobaseTest, RheobaseTestP
+'''
+#from neuronunit.tests import RheobaseTest, RheobaseTestP
 def get_rh(dtc,rtest_class):
     '''
     :param dtc:
@@ -707,9 +763,9 @@ def get_rh(dtc,rtest_class):
     return dtc
 
 
-def substitute_parallel_for_serial(rtest):
-    rtest = RheobaseTestP(rtest.observation)
-    return rtest
+#def substitute_parallel_for_serial(rtest):
+#    rtest = RheobaseTestP(rtest.observation)
+#    return rtest
 
 def is_parallel_rheobase_compatible(backend):
     incompatible_backends = ['IZHI', 'HH', 'ADEXP']
@@ -779,7 +835,8 @@ def dtc_to_rheo(dtc):
         dtc.rheobase = rtest.generate_prediction(model)['value']
 
         temp_vm = model.get_membrane_potential()
-        if np.isnan(np.min(temp_vm)):
+        #min = np.min(temp_vm)
+        if np.isnan(temp_vm.any()):
             print('sampled nan')
 
             dtc.rheobase = None
@@ -793,7 +850,7 @@ def dtc_to_rheo(dtc):
     return dtc
 
 
-
+'''
 def mint_izhi_NEURON_model(dtc):
     """
     Depricated.
@@ -809,7 +866,7 @@ def mint_izhi_NEURON_model(dtc):
     dtc.cell_name = model._backend.cell_name
     model.attrs = pre_model.attrs
     return model
-
+'''
 import plotly.express as px
 import time
 def timer(func):
@@ -824,9 +881,14 @@ def timer(func):
 def inject_and_plot_model(pre_model,figname=None,plotly=True):
     # get rheobase injection value
     # get an object of class ReducedModel with known attributes and known rheobase current injection value.
+    #print(pre_model.attrs,'attrs in before plot \n\n\n\n')
+
     pre_model = dtc_to_rheo(pre_model)
+    #print(pre_model.attrs,'attrs in after b plot \n\n\n\n')
 
     model = pre_model.dtc_to_model()
+    #print(pre_model.attrs,'attrs in after a plot \n\n\n\n')
+
     uc = {'amplitude':model.rheobase,'duration':DURATION,'delay':DELAY}
     if not str(model.backend) in "NEURON":
         model.inject_square_current(uc)
@@ -1233,9 +1295,9 @@ def switch_logic(xtests):
         if str('RheobaseTest') == t.name:
             t.active = True
             t.passive = False
-        elif str('RheobaseTestP') == t.name:
-            t.active = True
-            t.passive = False
+        #elif str('RheobaseTestP') == t.name:
+        #    t.active = True
+        #    t.passive = False
         elif str('InjectedCurrentAPWidthTest') == t.name:
             t.active = True
             t.passive = False
@@ -2089,31 +2151,33 @@ class NUFeature_standard_suite(object):
         self.test = test
         self.model = model
     def calculate_score(self,responses):
-        model = responses['model'].dtc_to_model()
+
+        if 'model' in responses.keys():
+            model = responses['model'].dtc_to_model()
+        else:
+            return 1000.0
+
+        '''
+        if type(responses['response']) is type(list()):
+            return 1000.0            
+
         if responses['model'].backend in "ADEXP":
             # This allows you to state this as a hypothesis test with a p-value.  
             # The chi-square statistic would simply be x=np.sum(zscores**2), and the p-value would be 1-scipy.stats.chi2.cdf(x, 8) where 8 is the number of elephant tests (and Z-scores).  
             from capabilities.spike_functions import spikes2widths, get_spike_waveforms
             if type(responses['response']) is type(list()):
-                #print('stuck')
-
-
-                return 1000.0
-            '''
+                return 1000.0            
             try:
                 snippets = get_spike_waveforms(responses['response'])
                 widths = spikes2widths(snippets)
-                if widths >= 15*qt.ms:
-                    #print('stuck')
-
+                if not len(widths):
                     return 1000.0
-
+                if widths[0] >= 15*qt.ms:
+                    return 1000.0
             except:
-                #print(widths)
-                #if widths >= 5*qt.ms:
-                print('width failed')
                 return 1000.0
-            '''
+        '''
+            
             # get threshold
             # get spike width.
             # if spike width >= 6ms
@@ -2257,7 +2321,7 @@ def parmap(f, X, nprocs=multiprocessing.cpu_count()):
 
     return [x for i, x in sorted(res)]
 
-def instance_opt(experimental_constraints,MODEL_PARAMS,test_key,model_value,MU,NGEN,diversity,use_streamlit=True):
+def instance_opt(experimental_constraints,MODEL_PARAMS,test_key,model_value,MU,NGEN,diversity,full_test_list=None,use_streamlit=True):
     import utils #as utils
     import bluepyopt as bpop
     #import streamlit as st
@@ -2273,7 +2337,9 @@ def instance_opt(experimental_constraints,MODEL_PARAMS,test_key,model_value,MU,N
     cxp = 0.35
     #pebble_used = pebble.ProcessPool(max_workers=1, max_tasks=4, initializer=None, initargs=None)
     
-    if model_value is not "HH" and model_value is not "NEURONHH":
+    if model_value is not "HH" and model_value is not "NEURONHH" and model_value is not "IZHI":
+        print('2 backend, parallel slow down circumnavigated',cell_model.backend)
+
         optimisation = bpop.optimisations.DEAPOptimisation(
                 evaluator=cell_evaluator,
                 offspring_size = MU,
@@ -2304,27 +2370,20 @@ def instance_opt(experimental_constraints,MODEL_PARAMS,test_key,model_value,MU,N
     if hasattr(experimental_constraints,'tests'):# is type(TestSuite):
         experimental_constraints = experimental_constraints.tests
     opt.tests = experimental_constraints
-    obs_preds = opt.make_pretty(experimental_constraints)
-
-    zvalues_opt = opt.SA.values
-    chi_sqr_opt= np.sum(np.array(zvalues_opt)**2)
-    p_value = 1-scipy.stats.chi2.cdf(chi_sqr_opt, 8)
-
-
-
-    #st.dataframe(score_frame.style.background_gradient(cmap ='viridis').set_properties(**{'font-size': '20px'}))
-    
-    #plot_imshow_plotly(score_frame.T)
-    frame = opt.SA.to_frame()
-    score_frame = frame.T
-
-    #st.markdown('\n\n\n\n')
-
-    
-    # st.dataframe(score_frame.style.applymap(color_large_red))
-
-    #import seaborn as sns
-    obs_preds = opt.obs_preds.T
+    #opt.self_evaluate(tests=experimental_constraints)
+    if len(experimental_constraints)>1:
+        try:
+            obs_preds = opt.make_pretty(experimental_constraints)
+            zvalues_opt = opt.SA.values
+            chi_sqr_opt= np.sum(np.array(zvalues_opt)**2)
+            p_value = 1-scipy.stats.chi2.cdf(chi_sqr_opt, 8)
+            frame = opt.SA.to_frame()
+            score_frame = frame.T
+            obs_preds = opt.obs_preds.T
+        except:
+            return final_pop, hall_of_fame, logs, hist, opt
+    else:
+        return final_pop, hall_of_fame, logs, hist, opt
 
     if not use_streamlit:
         return final_pop, hall_of_fame, logs, hist, opt, obs_preds, chi_sqr_opt, p_value
@@ -2332,7 +2391,18 @@ def instance_opt(experimental_constraints,MODEL_PARAMS,test_key,model_value,MU,N
     else:
 
         import streamlit as st
-        opt.make_pretty(opt.tests)
+        #opt.self_evaluate(tests=use_tests)
+
+        #opt.self_evaluate(opt.tests)
+        if full_test_list is not None:
+            opt.make_pretty(full_test_list)
+        else:
+            if len(experimental_constraints)<len(opt.tests):
+                use_tests = opt.tests
+            else:
+                use_tests = experimental_constraints
+            opt.make_pretty(use_tests)
+
         st.markdown('---')
         st.success("Model best fit to experiment {0}".format(test_key))
         #st.markdown("Would you like to pickle the optimal model? (Note not implemented yet, but trivial)")
@@ -2343,7 +2413,7 @@ def instance_opt(experimental_constraints,MODEL_PARAMS,test_key,model_value,MU,N
         st.markdown('\n\n\n\n')
 
         #obs_preds.rename(columns=)
-        st.dataframe(obs_preds)
+        st.table(obs_preds)
         st.markdown('\n\n\n\n')
 
         #try:
@@ -2363,24 +2433,11 @@ def instance_opt(experimental_constraints,MODEL_PARAMS,test_key,model_value,MU,N
 
         st.pyplot()
 
-        st.markdown("----")
-
-        st.write(r"""
-        Given:
-        - A document is a sequence of $N$ words denoted by $\textbf{w} = (w_1,w_2,... ,w_N)$, where $w_n$ is the nth word b in the sequence.
-        - A corpus is a collection of $M$ documents denoted by $D = \textbf{w}_1, \textbf{w}_2,...\textbf{w}_m$
-        - $\alpha$ is the Dirichlet prior on the per-document topic distributions
-        - $\beta$ is the Dirichlet prior on the per-topic  word distributions
-        - $\Theta$ is the topic distribution for document $m$
-        - $z_{mn}$ is the topic for $n^{\text{th}}$  word in document $m$
-        """)
-        st.write("The $\chi^{2}$ and $p-value$ statistics are:")
-        st.write("($\chi^{2}$, $p-value$)=")
-        st.markdown("""
-        -----
-        ({0}, and {1}):    
-        -----
-        """.format(chi_sqr_opt, p_value))
+        #st.markdown("""
+        #-----
+        #({0}, and {1}):    
+        #-----
+        #""")
 
         st.markdown('\n\n\n\n')
 
@@ -2415,6 +2472,10 @@ def instance_opt(experimental_constraints,MODEL_PARAMS,test_key,model_value,MU,N
         st.markdown("Model behavior at -10pA current injection")
         fig = inject_and_plot_passive_model(opt,opt,plotly=True)
         st.write(fig)
+        st.markdown("----")
+        st.write("($\chi^{2}$ and $p-value$) =")
+        #st.write("($\chi^{2}$, $p-value$)=")
+        st.markdown("({0} , {1})".format(chi_sqr_opt, p_value))
 
         #plt.show()
 
@@ -2843,11 +2904,12 @@ def efel_evaluation(dtc,thirty=False):
     except:
         pass
 
-    if type(vm_used) is type(list()):
+    #if type(vm_used) is type(list()):
         #print('gets here b')
 
-        return dtc
-   # try:
+    #    return dtc
+    # try:
+    #print(dtc.attrs)
     '''
     if type(vm_used) is not type(None):
         snippets = get_spike_waveforms(vm_used)
@@ -2869,12 +2931,12 @@ def efel_evaluation(dtc,thirty=False):
     #    snippets1 = get_spike_waveforms(vm30,width=20*ms)
     #    threshold = float(spikes2thresholds(snippets1)[0])
     #except:
-    #    threshold = float(np.max(vm30.magnitude)-0.2*np.abs(np.std(vm30.magnitude)))
+    #threshold = float(np.max(vm_used.magnitude)-0.125*np.abs(np.std(vm_used.magnitude)))
         #print(0.0,threshold)
 
 
 
-    efel.setThreshold(0.0)
+    efel.setThreshold(0)
 
     trace3 = {'T': [float(t)*1000.0 for t in vm_used.times], 
               'V': [float(v) for v in vm_used.magnitude],
@@ -2884,30 +2946,103 @@ def efel_evaluation(dtc,thirty=False):
 
     trace3['stim_end'] = [ float(ALLEN_DELAY)+float(ALLEN_DURATION) ]
     trace3['stim_start'] = [ float(ALLEN_DELAY)]
-    #from neuronunit.capabilities.spike_functions import get_spike_waveforms, spikes2widths, spikes2thresholds
-    #try:
-    #snippets1 = get_spike_waveforms(vm_used)#,width=20*ms)
-    #print(spikes2widths(snippets1))
-    #assert spikes2widths(snippets1) < 15
-    #except:
-    #    print('width efel error')
-    #    dtc.efel_15 = None
-    #    return dtc
-    simple_yes_list = ['mean_AP_amplitude','mean_frequenc','min_AHP_values','min_voltage_between_spikes','minimum_voltage ','all_ISI_values','ISI_log_slope','mean_frequency','adaptation_index2','first_isi','ISI_CV','median_isi','AHP_depth_abs','sag_ratio2','ohmic_input_resistance','sag_ratio2','peak_voltage','voltage_base','Spikecount','ohmic_input_resistance_vb_ssse']
 
-    #simple_yes_list = ['all_ISI_values','ISI_log_slope','mean_frequency','adaptation_index2','first_isi','ISI_CV','median_isi','AHP_depth_abs','sag_ratio2','ohmic_input_resistance','sag_ratio2','peak_voltage','voltage_base','Spikecount','ohmic_input_resistance_vb_ssse']
+
+    simple_extended = ['AHP1_depth_from_peak',
+    'AHP2_depth_from_peak',
+    'AHP_depth',
+    'AHP_depth_diff',
+    'AHP_depth_from_peak',
+    'AHP_slow_time',
+    'AHP_time_from_peak',
+    'AP1_amp',
+    'AP1_begin_voltage',
+    'AP1_begin_width',
+    'AP1_peak',
+    'AP1_width',
+    'AP2_AP1_begin_width_diff',
+    'AP2_AP1_diff',
+    'AP2_AP1_peak_diff',
+    'AP2_amp',
+    'AP2_begin_voltage',
+    'AP2_begin_width',
+    'AP2_peak',
+    'AP2_width',
+    'AP_amplitude',
+    'AP_amplitude_change',
+    'AP_amplitude_diff',
+    'AP_amplitude_from_voltagebase',
+    'AP_begin_indices',
+    'AP_begin_time',
+    'AP_begin_voltage',
+    'AP_begin_width',
+    'AP_duration',
+    'AP_duration_change',
+    'AP_duration_half_width',
+    'AP_duration_half_width_change',
+    'AP_fall_rate',
+    'AP_fall_time',
+    'AP_height'
+    'number_initial_spikes',
+    'peak_time',
+    'peak_voltage',
+    'sag_ratio2',
+    'single_burst_ratio',
+    'spike_half_width',
+    'spike_width2',
+    'steady_state_hyper',
+    'steady_state_voltage',
+    'steady_state_voltage_stimend',
+    'time_to_first_spike',
+    'time_to_last_spike',
+    'time_to_second_spike',
+    'voltage',
+    'voltage_after_stim',
+    'voltage_base',
+    'voltage_deflection',
+    'voltage_deflection_begin',
+    'voltage_deflection_vb_ssse',
+    'voltage']
+    #simple_yes_list = ['ISI_CV','median_isi','first_isi','ISI_CV','all_ISI_values','ISI_log_slope','mean_AP_amplitude','mean_frequency','min_AHP_values','min_voltage_between_spikes','minimum_voltage','all_ISI_values','ISI_log_slope','mean_frequency','adaptation_index2','first_isi','ISI_CV','median_isi','AHP_depth_abs','sag_ratio2','sag_ratio2','peak_voltage','voltage_base','Spikecount','ohmic_input_resistance_vb_ssse','ohmic_input_resistance']
+
+    simple_yes_list = ['ISI_CV','median_isi','first_isi','ISI_CV','all_ISI_values','ISI_log_slope','mean_AP_amplitude','mean_frequency','min_AHP_values','min_voltage_between_spikes','minimum_voltage ','mean_frequency','adaptation_index2','AHP_depth_abs','sag_ratio2','sag_ratio2','peak_voltage','voltage_base','Spikecount']
+    simple_yes_list.extend(simple_extended)
+    #simple_yes_list = [,'mean_frequency','adaptation_index2',,'median_isi','AHP_depth_abs','sag_ratio2','ohmic_input_resistance','sag_ratio2','peak_voltage','voltage_base','Spikecount','ohmic_input_resistance_vb_ssse']
     efel_list = list(efel.getFeatureNames())
     reduced_list = [ i for i in efel_list if i in simple_yes_list ]
-    if np.min(vm_used.magnitude)<0 and np.max(vm_used.magnitude)>0:
+    #print('gets to a')
+    #print(np.min(vm_used.magnitude)<0 and np.max(vm_used.magnitude)>0)
+    if np.min(vm_used.magnitude)<0:
+        if not np.max(vm_used.magnitude)>0:
+            vm_used_mag = [v+np.mean([0,float(np.max(v))])*pq.mV for v in vm_used]
+            if not np.max(vm_used_mag)>0:
+                dtc.efel_15 = None
+                return dtc
 
-        #fig = apl.figure()
-        #fig.plot([float(t)*1000.0 for t in vm_used.times],[float(v) for v in vm_used.magnitude],label='wave caused crash', width=100, height=20)
-        #fig.show()
+            trace3['V'] = vm_used_mag
+            #print('gets to b')
+            #print(np.min(vm_used.magnitude)<0 and np.max(vm_used.magnitude)>0)
+            #fig = apl.figure()
+            #fig.plot([float(t)*1000.0 for t in vm_used.times],[float(v) for v in vm_used_mag],label=str(dtc.attrs), width=100, height=20)
+            #fig.show()
+
+            # and np.max(vm_used.magnitude)>0:
+        else:
+            pass
+            #fig = apl.figure()
+            #fig.plot([float(t)*1000.0 for t in vm_used.times],[float(v) for v in vm_used.magnitude],label=str(dtc.attrs), width=100, height=20)
+            #fig.show()
 
         try:
             results = efel.getMeanFeatureValues([trace3],reduced_list)#, parallel_map=pool.map)
             #results = efel.getMeanFeatureValues([trace3],simple_yes_list)#, parallel_map=pool.map)
-              
+            #for k,v in results.items():
+            #    print(k,v)
+            #    if v==np.nan:
+            #        print(k,'np.nan \n\n\n')
+            #
+            nans = {k:v for k,v in results[0].items() if type(v) is type(None)}
+            #print(nans)
         except:
             print('efel error')
             dtc.efel_15 = None
@@ -2917,8 +3052,11 @@ def efel_evaluation(dtc,thirty=False):
             dtc.efel_30 = results         
 
         else:
+ 
+
             dtc.efel_15 = None
             dtc.efel_15 = results
+            #print(dtc.efel_15)
         efel.reset()      
     return dtc
     '''
@@ -3448,10 +3586,24 @@ class OptMan():
     @cython.boundscheck(False)
     @cython.wraparound(False)
     #@timer
-    def format_test(self,dtc):
+    def make_static_threshold(self,dtc):
+        
+        model.attrs = model._backend.default_attrs
+        ##
+        #
+        ##
+        thresh = model.get_AP_thresholds()
+        self.STATIC_THRESHOLD = tresh
         PASSIVE_DURATION = 500.0*pq.ms
         PASSIVE_DELAY = 200.0*pq.ms
-        
+
+
+    def format_test(self,dtc):
+        model = dtc.dtc_to_model()
+
+        ##
+        # self.make_static_threshold(dtc)
+        ##
         '''
         pre format the current injection dictionary based on pre computed
         rheobase values of current injection.
@@ -3464,8 +3616,6 @@ class OptMan():
         if isinstance(dtc.tests,type(dict())):
             for k,t in dtc.tests.items():
                 assert 'std' in t.observation.keys()
-
-        if isinstance(dtc.tests,type(dict())):
             tests = [key for key in dtc.tests.values()]
             dtc.tests = switch_logic(tests)
         else:
@@ -3930,7 +4080,7 @@ class OptMan():
         for key, use_test in test_frame.items():
             for dtc in dtcpop:
                 dtc.tests = use_test
-
+            '''
             if 'IZHI' in dtc.backend  or 'HH' in dtc.backend:#Backend:
                 serial_faster = True # because of numba
                 #dtcbag = db.from_sequence(dtcpop,npartitions=npartitions)
@@ -3940,8 +4090,9 @@ class OptMan():
                 dtcpop = compute(*dtcbag)
 
             else:
-                serial_faster = False
-                dtcpop = list(map(dtc_to_rheo,dtcpop))
+            '''    
+            serial_faster = False
+            dtcpop = list(map(dtc_to_rheo,dtcpop))
             """
             The dask bag mapping works.
             It is faster, its just not the most memory

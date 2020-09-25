@@ -33,13 +33,13 @@ HH_dic1 = { k:sorted(v) for k,v in HH_dic1.items() }
 
 MODEL_PARAMS['OSB_HH_attrs'] = HH_dic1
 
-
+ #12.6157,\
 #gnabar_hh=0.12 gkbar_hh=0.036 gl_hh=0.0003 el_hh=-54.3
 MODEL_PARAMS['NEURONHH'] = {'gnabar':0.12,\
                             'gkbar':0.036,\
                             'Ra':35,\
                             'L':100,\
-                            'diam':500, #12.6157,\
+                            'diam':500,\
                             'el':-54.3,\
                             'gl':0.0003,\
                             'ena':50.0,\
@@ -47,7 +47,13 @@ MODEL_PARAMS['NEURONHH'] = {'gnabar':0.12,\
                             'cm':1,\
                             'ena':50.0,\
                             'ek':-77}
-MODEL_PARAMS['NEURONHH'] = { k:(float(v)-0.75*float(v),float(v)+0.75*float(v)) for k,v in MODEL_PARAMS['NEURONHH'].items() }
+
+MODEL_PARAMS['NEURONHH'] = { k:(float(v)-0.75*float(np.abs(v)),float(v)+0.75*float(v)) for k,v in MODEL_PARAMS['NEURONHH'].items() }
+MODEL_PARAMS['NEURONHH']['L'] = [1,250]
+MODEL_PARAMS['NEURONHH']['diam'] = [1,850]
+MODEL_PARAMS['NEURONHH']['el'] = [-100,-40]
+
+MODEL_PARAMS['NEURONHH']['ek'] = [-100,-40]
 MODEL_PARAMS['NEURONHH'] = { k:sorted(v) for k,v in MODEL_PARAMS['NEURONHH'].items() }
 
 # Which Parameters
@@ -74,21 +80,46 @@ type2007 = collections.OrderedDict([
   #              C    k     vr  vt vpeak   a      b   c    d  celltype
   ('RS',        (100, 0.7,  -60, -40, 35, 0.01,   -2, -50,  100,  1)),
   ('IB',        (150, 1.2,  -75, -45, 50, 0.1,   5, -56,  130,   2)),
-  ('TC',        (200, 1.6,  -60, -50, 35, 0.1,  15, -60,   10,   6)),
-  ('TC_burst',  (200, 1.6,  -60, -50, 35, 0.1,  15, -60,   10,   6)),
+  ('CH',        (50,  1.5,  -60, -40, 25, 0.01,   1, -40,  150,   3)),
   ('LTS',       (100, 1.0,  -56, -42, 40, 0.01,   8, -53,   20,   4)),
-  ('CH',        (50,  1.5,  -60, -40, 25, 0.01,   1, -40,  150,   3))])
+  ('FS',        (20,  1,    -55, -40, 25, 0.2,    2, -45,   55,   5)),
+  ('TC',        (200, 1.6,  -60, -50, 35, 0.1,  15, -60,   10,   6)),
+  ('TC_burst',  (200, 1.6,  -60, -50, 35, 0.1,  15, -60,   10,   7))])
 
 # http://www.physics.usyd.edu.au/teach_res/mp/mscripts/
 # ns_izh002.m
 
 
-temp = {k:[] for k in ['C','k','vr','vt','vPeak','a','b','c','d']  }
+"""
+<izhikevichCell id="izTonicSpiking" v0 = "-70mV" thresh = "30mV" a ="0.02" b = "0.2" c = "-65" d = "6"/>
+<izhikevichCell id="izPhasicSpiking" v0 = "-64mV" thresh = "30mV" a ="0.02" b = "0.25" c = "-65" d = "6"/>
+<izhikevichCell id="izTonicBursting" v0 = "-70mV" thresh = "30mV" a ="0.02" b = "0.2" c = "-50" d = "2"/>
+<izhikevichCell id="izPhasicBursting" v0 = "-64mV" thresh = "30mV" a ="0.02" b = "0.25" c = "-55" d = "0.05"/>
+<izhikevichCell id="izMixedMode" v0 = "-70mV" thresh = "30mV" a ="0.02" b = "0.2" c = "-55" d = "4"/>
+<izhikevichCell id="izSpikeFreqAdapt" v0 = "-70mV" thresh = "30mV" a ="0.01" b = "0.2" c = "-65" d = "8"/>
+<generalizedIzhikevichCell id="izClass1Exc" v0 = "-60mV" thresh = "30mV" a ="0.02" b = "-0.1" c = "-55" d = "6" X="0.04" Y="4.1" Z="108"/>
+<izhikevichCell id="izClass2Exc" v0 = "-64mV" thresh = "30mV" a ="0.2" b = "0.26" c = "-65" d = "0"/>
+<izhikevichCell id="izSpikeLatency" v0 = "-70mV" thresh = "30mV" a ="0.02" b = "0.2" c = "-65" d = "6"/>
+<izhikevichCell id="izSubthreshOsc" v0 = "-62mV" thresh = "30mV" a ="0.05" b = "0.26" c = "-60" d = "0"/>
+"""
+
+temp = {k:[] for k in ['C','k','vr','vt','vPeak','a','b','c','d','celltype']  }
 for i,k in enumerate(temp.keys()):
     for v in type2007.values():
         temp[k].append(v[i])
 explore_param = {k:(np.min(v),np.max(v)) for k,v in temp.items()}
+IZHI_PARAMS = {k:sorted(v) for k,v in explore_param.items()}
 
+IZHI_PARAMS = OrderedDict(IZHI_PARAMS)
+IZHI_PARAMS['d'] = [0,150]
+IZHI_PARAMS['c'] = [-65,-40]
+IZHI_PARAMS['a'] = [0.01,0.2]
+
+MODEL_PARAMS['IZHI'] = IZHI_PARAMS
+
+
+#IZHI_PARAMS['c'] = [10,150]
+#IZHI_PARAMS = explore_param#{k:(np.mean(v)-np.abs(np.mean(v))*0.1,np.mean(v)*0.1+np.mean(v)) for k,v in trans_dict.items()}
 
 # Fast spiking cannot be reproduced as it requires modifications to the standard Izhi equation,
 # which are expressed in this mod file.
@@ -108,62 +139,12 @@ for index,key in enumerate(reduced_cells.keys()):
     reduced_cells[key] = {}
     for k,v in trans_dict.items():
         reduced_cells[key][k] = v[index]
-IZHI_PARAMS = explore_param#{k:(np.mean(v)-np.abs(np.mean(v))*0.1,np.mean(v)*0.1+np.mean(v)) for k,v in trans_dict.items()}
 
 
-IZHI_PARAMS = OrderedDict(IZHI_PARAMS)
-MODEL_PARAMS['IZHI'] = IZHI_PARAMS
 
 
 BAE1 = {}
 
-'''
-BAE1['cm']=0.281
-BAE1['tau_refrac']=0.1
-BAE1['v_spike']=-40.0 
-BAE1['v_reset']=-70.6 
-BAE1['v_rest']=-70.6 
-BAE1['tau_m']=9.3667 
-BAE1['i_offset']=0.0 
-BAE1['a']=4.0
-BAE1['b']=0.0805
-BAE1['delta_T']=2.0
-BAE1['tau_w']=144.0
-BAE1['v_thresh']=-50.4
-BAE1['e_rev_E']=0.0
-BAE1['tau_syn_E']=5.0
-BAE1['e_rev_I']=-80.0 
-BAE1['tau_syn_I']=5.0
-#BAE1['N']=1
-#BAE1['tau_psc']=5.0
-#BAE1['connectivity']=None
-BAE1['spike_delta']=30
-BAE1['scale']=0.5
-'''
-
-'''
-C = 281; % capacitance in pF ... this is 281*10^(-12) F
-g_L = 30; % leak conductance in nS
-E_L = -70.6; % leak reversal potential in mV ... this is -0.0706 V
-delta_T = 2; % slope factor in mV
-V_T = -50.4; % spike threshold in mV
-tau_w = 144; % adaptation time constant in ms
-V_peak = 20; % when to call action potential in mV
-b = 0.0805; % spike-triggered adaptation
-'''
-'''
-# Physiologic neuron parameters from Gerstner et al.
-BAE1['C']       = 238.96205752321424  # capacitance in pF ... this is 281*10^(-12) F
-BAE1['g_L']     = 52.33847145920891     # leak conductance in nS
-BAE1['E_L']     = -128.24969985688054  # leak reversal potential in mV ... this is -0.0706 V
-BAE1['delta_T'] =  3.3496462271892624    # slope factor in mV
-BAE1['V_T']     = -50.4  # spike threshold in mV
-BAE1['tau_w']   = 144    # adaptation time constant in ms
-BAE1['V_peak']  = 30.0     # when to call action potential in mV
-BAE1['b']       = 0.16705627559842062,# spike-triggered adaptation
-BAE1['a']       = 7.198877237743017
-BAE1['v_rest'] = -70
-'''
 
 BAE1 = {}
 BAE1['cm']=281
@@ -178,8 +159,21 @@ BAE1['delta_T']=2.0
 BAE1['tau_w']=144.0
 BAE1['v_thresh']=-50.4
 BAE1['spike_delta']=30
-BAE1 = {k:(np.mean(v)-np.mean(v)*2.0,np.mean(v)+np.mean(v)*2.0) for k,v in BAE1.items()}
+BAE1 = {k:(np.mean(v)-np.abs(np.mean(v)*2.5),np.mean(v)+np.mean(v)*2.5) for k,v in BAE1.items()}
 BAE1 = {k:sorted(v) for k,v in BAE1.items()}
+BAE1['b']=[0.01,20]
+BAE1['a']=[0.01,20]
+
+BAE1['delta_T']=[0.01,10]
+BAE1['v_spike']=[-60.0,-20]
+BAE1['cm'] = [1, 983.5]
+BAE1['v_reset'] = [1, 983.5]
+BAE1['v_thresh'] = [-75, -10]
+BAE1['delta_T'] = [0, 27]
+BAE1['v_reset'] = [-100, -25]
+BAE1['v_rest'] = [-100, -25]
+BAE1['tau_m'] = [0.01, 62.78345]
+BAE1['tau_w']= [0.01,344]
 
 MODEL_PARAMS['ADEXP'] = BAE1
 
@@ -193,3 +187,24 @@ for k,v in zip(l5_pc_keys,l5_pc_values):
     L5PC[k] = sorted((v-0.1*v,v+0.1*v))
 
 MODEL_PARAMS['L5PC'] = L5PC
+
+
+
+GLIF_RANGE = {'El_reference': [-0.08569469261169435, -0.05463626766204832], \
+              'C': [3.5071610042390286e-11, 7.630189223327981e-10], \
+              'init_threshold': [0.009908733642683513, 0.04939040414685865], \
+              'th_inf': [0.009908733642683513, 0.04939040414685865], \
+              'spike_cut_length': [20, 199],
+              'init_AScurrents': [0.0, 0.0], \
+              'init_voltage': [-70.0, 0.0], 
+              'dt': [5e-05, 5e-05], 
+              'El': [0.0, 0.0], 'asc_tau_array': [[0.01, 0.0033333333333333335],[0.3333333333333333, 0.1]], \
+              'R_input': [27743752.593817078, 1792774179.3647704] }
+              #'th_adapt': None, 'coeffs': {'a': 1, 'C': 1, 'b': 1, 'G': 1, \
+              #                             'th_inf': 1.0212937371199788, 'asc_amp_array': [1.0, 1.0]}}
+
+GLIF_RANGE.pop('init_AScurrents',None)
+GLIF_RANGE.pop('dt',None)
+GLIF_RANGE.pop('asc_tau_array',None)
+GLIF_RANGE.pop('El',None)
+MODEL_PARAMS['GLIF'] = GLIF_RANGE
