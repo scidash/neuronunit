@@ -161,6 +161,7 @@ def get_vm_matlab_four(C=89.7960714285714,
 
         # forward Euler method
         v[i+1] = v[i] + tau * (k * (v[i] - vr) * (v[i] - vt) - u[i] + I) / C
+        u[i+1] = u[i]+tau*a*(b*(v[i]-vr)-u[i]); # Calculate recovery variable
 
         if v[i+1] > (vPeak - 0.1*u[i+1]):
             v[i] = vPeak - 0.1*u[i+1]
@@ -293,6 +294,8 @@ def get_vm_matlab_one_two_three(C=89.7960714285714,
         # forward Euler method
         v[i+1] = v[i] + tau * (k * (v[i] - vr) * (v[i] - vt) - u[i] + I) / C    
         u[i+1]=u[i]+tau*a*(b*(v[i]-vr)-u[i]); # Calculate recovery variable
+        #u[i+1]=u[i]+tau*a*(b*(v[i]-vr)-u[i]); # Calculate recovery variable
+
         if v[i+1]>=vPeak:
             v[i]=vPeak
             v[i+1]=c
@@ -448,7 +451,7 @@ class IZHIBackend(Backend):
             everything = copy.copy(self.attrs)
             if 'current_inj' in everything.keys():
                 everything.pop('current_inj',None)
-            self.attrs['celltype'] = math.ceil(self.attrs['celltype'])
+            self.attrs['celltype'] = round(self.attrs['celltype'])
             if self.attrs['celltype'] <= 3:   
                 everything.pop('celltype',None)         
                 v = get_vm_matlab_one_two_three(**everything)
@@ -543,21 +546,21 @@ class IZHIBackend(Backend):
         if 'current_inj' in everything.keys():
             everything.pop('current_inj',None)
 
-        self.attrs['celltype'] = math.ceil(self.attrs['celltype'])
-        if self.attrs['celltype'] <= 3:   
+        self.attrs['celltype'] = round(self.attrs['celltype'])
+        if np.bool_(self.attrs['celltype'] <= 3):   
             everything.pop('celltype',None)         
             v = get_vm_matlab_one_two_three(**everything)
         else:
             #print('gets into multiple regimes',self.attrs['celltype'])
 
             #print('still slow',self.attrs['celltype'])
-            if self.attrs['celltype'] == 4:
+            if np.bool_(self.attrs['celltype'] == 4):
                 v = get_vm_matlab_four(**everything)
-            if self.attrs['celltype'] == 5:
+            if np.bool_(self.attrs['celltype'] == 5):
                 v = get_vm_matlab_five(**everything)
-            if self.attrs['celltype'] == 6:
+            if np.bool_(self.attrs['celltype'] == 6):
                 v = get_vm_matlab_six(**everything)
-            if self.attrs['celltype'] == 7:
+            if np.bool_(self.attrs['celltype'] == 7):
                 v = get_vm_matlab_seven(**everything)
         
 

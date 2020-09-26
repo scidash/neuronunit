@@ -39,7 +39,7 @@ class Test_opt_tests(unittest.TestCase):
 
         results = {}
         tests = {}
-        original_test_dic ALLEN_TESTS
+        #original_test_dic ALLEN_TESTS
         self.OM.make_simulated_observations(original_test_dic,backend,random_param)
         simulated_data_tests, OM, target = self.OM.simulate_data
         simulated_data_tests, OM, target = self.OM.make_sim_data_tests(backend,MU,NGEN,free_parameters=['a','b','C'])

@@ -318,8 +318,8 @@ class GLIFBackend(Backend):
 
         vm = [v+self.attrs['El_reference']*1000 for v in vm]
         
-        #self.vM = AnalogSignal(vm,units = mV,sampling_period = self.glif.dt*s)
-        self.vM = AnalogSignal(vm,units = mV,sampling_period = 1000/tMax*self.glif.dt*qt.s)
+        self.vM = AnalogSignal(vm,units = mV,sampling_period = self.glif.dt*s)
+        #self.vM = AnalogSignal(vm,units = mV,sampling_period = (1.0/1.3)*self.glif.dt*qt.s)
         #print(np.std(self.vM),np.mean(self.vM))
         # neuronal_model_id = 566302806
     
