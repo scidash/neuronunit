@@ -2159,7 +2159,6 @@ class NUFeature_standard_suite(object):
         else:
             return 1000.0
 
-        '''
         if type(responses['response']) is type(list()):
             return 1000.0            
 
@@ -2174,11 +2173,10 @@ class NUFeature_standard_suite(object):
                 widths = spikes2widths(snippets)
                 if not len(widths):
                     return 1000.0
-                if widths[0] >= 15*qt.ms:
+                if widths[0] >= 35*qt.ms:
                     return 1000.0
             except:
                 return 1000.0
-        '''
             
             # get threshold
             # get spike width.

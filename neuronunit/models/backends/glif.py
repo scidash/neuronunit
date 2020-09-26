@@ -1,5 +1,6 @@
 #from neuronunit.tests.base import ALLEN_ONSET, DT, ALLEN_STOP, ALLEN_FINISH
-
+import matplotlib.pyplot as plt
+            
 from quantities import mV, ms, s, V
 import sciunit
 from neo import AnalogSignal
@@ -44,6 +45,7 @@ logger.setLevel(logging.DEBUG)
 del logger
 
 logging.disable(logging.CRITICAL)
+import numpy as np
 
 from allensdk.api.queries.cell_types_api import CellTypesApi
 # 
@@ -281,10 +283,22 @@ class GLIFBackend(Backend):
         tMax = (float(c['delay'])+float(c['duration'])+200.0)/1000.0
         delay = start = float(c['delay']/1000.0)
         duration = float(c['duration']/100.0)
-        amplitude = float(c['amplitude'])*10e-8
+        ##
+        # currently in pico amps
+        ##
+        # make a short square pulse. stimulus units should be in Amps.
+
+        amplitude = float(c['amplitude'])*10e-12
+
+
+        #stimulus = [ 0.0 ] * 100 + [ 10e-9 ] * 100 + [ 0.0 ] * 100
+
+        # important! set the neuron's dt value for your stimulus in seconds
+        #neuron.dt = 5e-6
+
         #self.glif.dt = DT
-        dt = 0.030
-        self.glif.dt = dt
+        dt = float(5e-3*qt.s)
+        self.glif.dt = float(5e-3*qt.s)
 
         if 'sim_length' in c.keys():
             sim_length = c['sim_length']
@@ -302,6 +316,7 @@ class GLIFBackend(Backend):
         #Iext[delay_ind+N::] = 0.0
         Iext = list(Iext)
         Iext.extend([0 for i in range(0,int(N/2))])
+        stimulus = Iext
         #self.set_attrs(self.attrs)
         #print(self.attrs)
 
@@ -311,25 +326,85 @@ class GLIFBackend(Backend):
         if len(self.results['interpolated_spike_voltage']) > 0:
             isv = self.results['interpolated_spike_voltage'].tolist()[0]
             self.spikes = self.results['interpolated_spike_voltage']
+            #interpolated_spike_voltages = output['interpolated_spike_voltage']
+
             vm = list(map(lambda x: isv if np.isnan(x) else float(-0.065), vm))
         
 
         #vm = [v/1000.0 for v in vm]
 
-        vm = [v+self.attrs['El_reference']*1000 for v in vm]
+        #vm = [v+self.attrs['El_reference'] for v in vm]
         
-        self.vM = AnalogSignal(vm,units = mV,sampling_period = self.glif.dt*s)
-        #self.vM = AnalogSignal(vm,units = mV,sampling_period = (1.0/1.3)*self.glif.dt*qt.s)
-        #print(np.std(self.vM),np.mean(self.vM))
-        # neuronal_model_id = 566302806
-    
-        #t = [float(f) for f in self.vM.times]
-        #v = [float(f) for f in self.vM.magnitude]
+        self.vM = AnalogSignal(vm,units =pq.V,sampling_period = float(5e-3)*pq.s)
+
+        t = [float(f) for f in self.vM.times]
+        v = [float(f) for f in self.vM.magnitude]
         #try:
         #fig = apl.figure()
         #fig.plot(t, v, width=100, height=20)
         #fig.show()
         
+        if len(self.results['interpolated_spike_voltage']) > 0:
+            pass
+            '''
+            #import numpy as np
+            output = self.results
+            voltage = output['voltage']
+            threshold = output['threshold']
+            interpolated_spike_times = output['interpolated_spike_times']
+            spike_times = output['interpolated_spike_times']
+            interpolated_spike_voltages = output['interpolated_spike_voltage']
+            interpolated_spike_thresholds = output['interpolated_spike_threshold']
+            grid_spike_indices = output['spike_time_steps']
+            grid_spike_times = output['grid_spike_times']
+            after_spike_currents = output['AScurrents']
+
+            # create a time array for plotting
+            time = np.arange(len(stimulus))*self.glif.dt
+
+            plt.figure(figsize=(10, 10))
+
+            # plot stimulus
+            plt.subplot(3,1,1)
+            plt.plot(time, stimulus)
+            plt.xlabel('time (s)')
+            plt.ylabel('current (A)')
+            plt.title('Stimulus')
+
+            # plot model output
+            plt.subplot(3,1,2)
+            plt.plot(time,  voltage, label='voltage')
+            plt.plot(time,  threshold, label='threshold')
+
+            if grid_spike_indices is not None:
+                plt.plot(interpolated_spike_times, interpolated_spike_voltages, 'x', 
+                        label='interpolated spike')
+
+                plt.plot((grid_spike_indices-1)*self.glif.dt, voltage[grid_spike_indices-1], '.', 
+                        label='last step before spike')
+
+            plt.xlabel('time (s)')
+            plt.ylabel('voltage (V)')
+            plt.legend(loc=3)
+            plt.title('Model Response')
+
+            # plot after spike currents
+            plt.subplot(3,1,3)
+            for ii in range(np.shape(after_spike_currents)[1]):
+                plt.plot(time, after_spike_currents[:,ii])
+            plt.xlabel('time (s)')
+            plt.ylabel('current (A)')
+            plt.title('After Spike Currents')
+
+            plt.tight_layout()
+            plt.savefig(str(self.attrs.values)+'glif_debug.png')
+            '''
+            #plt.show()
+
+        #self.vM = AnalogSignal(vm,units = mV,sampling_period = (1.0/1.3)*self.glif.dt*qt.s)
+        #print(np.std(self.vM),np.mean(self.vM))
+        # neuronal_model_id = 566302806
+    
         return self.vM
 
         '''
@@ -371,7 +446,7 @@ class GLIFBackend(Backend):
         # make a short square pulse. stimulus units should be in Amps.
         #stimulus = [ 0.0 ] * 100 + [ 10e-9 ] * 100 + [ 0.0 ] * 100
         # important! set the neuron's dt value for your stimulus in seconds
-        neuron.dt = 5e-6
+        neuron.dt = 5e-3
         # simulate the neuron
         if 'injected_square_current' in current.keys():
             c = current['injected_square_current']
