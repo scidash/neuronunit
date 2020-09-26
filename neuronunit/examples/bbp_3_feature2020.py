@@ -156,8 +156,6 @@ def plot_data(signal,current):
     
 
 
-# In[2]:
-
 
 import pickle
 import pandas as pd
@@ -168,7 +166,7 @@ models_hbp = pickle.load(open("hbp_data2.p","rb"))
 bbp = pd.DataFrame([m.everything for m in models_hbp if m is not None and hasattr(m,'everything')])
 models_hbp = pickle.load(open("hbp_data.p","rb"))
 for i,m in enumerate(models_hbp):
-    if hasattr(m,'vm30') and m is not None and i!=190 and i!=86 and str(m)!=str('A87') i!=189:
+    if hasattr(m,'vm30') and m is not None and i!=190 and i!=86 and str(m)!=str('A87') and i!=189:
         print('crashed at index',i,m)#,m['model_information'])
 
         m.features = three_feature_sets_on_static_models(m,bbp=True)

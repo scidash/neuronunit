@@ -19,6 +19,8 @@ def get_spike_train(vm, threshold=0.0*mV):
     Returns:
      a neo.core.SpikeTrain containing the times of spikes.
     """
+    if vm is None:
+        return []
     spike_train = threshold_detection(vm, threshold=threshold)
     return spike_train
 
@@ -70,21 +72,23 @@ def get_spike_waveforms(vm, threshold=0.0*mV, width=10*ms):
     last_t = spike_train[-1]
     first_t = spike_train[0]
 
-    #if first_t-width/2.0 < 0.0*ms:
-    #    too_short = True
+    if first_t-width/2.0 < 0.0*ms:
+        too_short = True
     if last_t+width/2.0 > vm.times[-1]:
         too_long = True
 
     if not too_short and not too_long:
         snippets = [vm.time_slice(t-width/2, t) for t in spike_train]
-    elif too_long:
-        snippets = [vm.time_slice(t-width/2, t) for t in spike_train]
+    #elif too_long:
+    #    snippets = [vm.time_slice(t-width/2, t) for t in spike_train]
     #elif too_short:
     #    snippets = [vm.time_slice(t, t+width/2) for t in spike_train]
 
-    result = neo.core.AnalogSignal(np.array(snippets).T.squeeze(),
-                                   units=vm.units,
-                                   sampling_rate=vm.sampling_rate)
+        result = neo.core.AnalogSignal(np.array(snippets).T.squeeze(),
+                                    units=vm.units,
+                                    sampling_rate=vm.sampling_rate)
+    else: 
+        None
     return result
 
 
@@ -113,7 +117,7 @@ def spikes2amplitudes(spike_waveforms):
 
     return ampls * spike_waveforms.units
 
-def spikes2widths(spike_waveforms):
+def spikes2widths(spike_waveforms,STATIC_THRESHOLD=None):
     """
     IN:
      spike_waveforms: Spike waveforms, e.g. from get_spike_waveforms().
@@ -146,8 +150,12 @@ def spikes2widths(spike_waveforms):
                 y = np.array(s)
                 dvdt = diff(y)
                 trigger = dvdt.max()/10.0
-                x_loc = int(np.where(dvdt >= trigger)[0][0])
-                thresh = (s[x_loc]+s[x_loc+1])/2
+
+                if STATIC_THRESHOLD is not None:
+                    thresh = STATIC_THRESHOLD
+                else:                
+                    x_loc = int(np.where(dvdt >= trigger)[0][0])
+                    thresh = (s[x_loc]+s[x_loc+1])/2
                 mid = (high+thresh)/2
             except: # Use minimum value to compute half-max.
                 #sciunit.log(("Could not compute threshold; using pre-spike "

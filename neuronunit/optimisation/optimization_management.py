@@ -978,16 +978,17 @@ def inject_and_plot_passive_model(pre_model,second=None,figname=None,plotly=True
         if pre_model.backend in str("HH"):
             plt.title('Hodgkin-Huxley Neuron')
         else:
-            plt.title('membrane potential plot Izhi model')
-        plt.plot(vm.times, vm.magnitude, c='r',label=str('target'))#+str(model.attrs['a']))
+            plt.title('Membrane Potential')
+        plt.plot(vm.times, vm.magnitude, c='b')#+str(model.attrs['a']))
 
         plt.plot(vm2.times, vm2.magnitude, c='g')
+        plt.ylabel('Time (sec)')
 
         plt.ylabel('V (mV)')
         plt.legend(loc="upper left")
 
         if figname is not None:
-            plt.savefig(figname)
+            plt.savefig('thesis_simulated_data_match.png')
     #plt.plot(vm.times,vm.magnitude)
 
     return vm,plt
