@@ -149,7 +149,7 @@ BAE1 = {}
 
 
 BAE1 = {}
-BAE1['cm']=281
+BAE1['cm']=0.281
 BAE1['v_spike']=-40.0
 BAE1['v_reset']=-70.6
 BAE1['v_rest']=-70.6
@@ -163,19 +163,26 @@ BAE1['v_thresh']=-50.4
 BAE1['spike_delta']=30
 BAE1 = {k:(np.mean(v)-np.abs(np.mean(v)*2.5),np.mean(v)+np.mean(v)*2.5) for k,v in BAE1.items()}
 BAE1 = {k:sorted(v) for k,v in BAE1.items()}
+BAE1['v_spike']=[-60.0,-20]
+BAE1['v_reset'] = [1, 983.5]
+BAE1['v_rest'] = [-100, -35]
+BAE1['v_thresh'] = [-65, -15]
+
+
 BAE1['b']=[0.01,20]
 BAE1['a']=[0.01,20]
-
 BAE1['delta_T']=[0.01,10]
-BAE1['v_spike']=[-60.0,-20]
-BAE1['cm'] = [1, 983.5]
-BAE1['v_reset'] = [1, 983.5]
-BAE1['v_thresh'] = [-75, -10]
+BAE1['cm'] = [0.1, 8]
 BAE1['delta_T'] = [0, 27]
 BAE1['v_reset'] = [-100, -25]
-BAE1['v_rest'] = [-100, -25]
 BAE1['tau_m'] = [0.01, 62.78345]
 BAE1['tau_w']= [0.01,344]
+BAE1['cm'] = [1, 983.5]
+#BAE1['cm'] = [0.1, 50]
+
+for v in BAE1.values():
+    assert v[1] -v[0] !=0
+
 
 MODEL_PARAMS['ADEXP'] = BAE1
 
@@ -194,17 +201,21 @@ MODEL_PARAMS['L5PC'] = L5PC
 
 GLIF_RANGE = {'El_reference': [-0.08569469261169435, -0.05463626766204832], \
               'C': [3.5071610042390286e-11-0.5*3.5071610042390286e-11, 10*7.630189223327981e-10], \
-              'init_threshold': [0.009908733642683513, 0.04939040414685865], \
+              'init_threshold': [0.009908733642683513, 0.06939040414685865], \
+                   
               'th_inf': [0.009908733642683513, 0.04939040414685865], \
               'spike_cut_length': [20, 199],
               'init_AScurrents': [0.0, 0.0], \
-              'init_voltage': [-70.0, 0.0], 
-              'dt': [5e-05, 5e-05], 
-              'El': [0.0, 0.0], 'asc_tau_array': [[0.01, 0.0033333333333333335],[0.3333333333333333, 0.1]], \
+              'init_voltage': [-0.09, -0.01], 
+              'spike_cut_length':[4,94],
+              'El': [-0.08569469261169435, -0.05463626766204832], 'asc_tau_array': [[0.01, 0.0033333333333333335],[0.3333333333333333, 0.1]], \
               'R_input': [27743752.593817078-0.5*27743752.593817078, 2*1792774179.3647704] }
               #'th_adapt': None, 'coeffs': {'a': 1, 'C': 1, 'b': 1, 'G': 1, \
               #                             'th_inf': 1.0212937371199788, 'asc_amp_array': [1.0, 1.0]}}
 
+#'init_threshold': 0.02964956889477108,
+
+GLIF_RANGE['th_adapt']=[0,0.1983063518904063]
 GLIF_RANGE.pop('init_AScurrents',None)
 GLIF_RANGE.pop('dt',None)
 GLIF_RANGE.pop('asc_tau_array',None)

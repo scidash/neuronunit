@@ -60,6 +60,7 @@ from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 from collections.abc import Iterable
 from neuronunit.tests import dm_test_container #import Interoperabe
 from neuronunit.tests.base import VmTest
+from neuronunit.tests.dynamics import FITest
 
 import sys
 
@@ -158,19 +159,30 @@ def setUp(model_type):
     #{'RestingPotentialTest':cloned_tests['RestingPotentialTest']}
     OM = jrt(cloned_tests,backend,protocol={'elephant':True,'allen':False})
     return OM
-def test_all_objective_test(free_parameters,model_type="IZHI",protocol=None):
+def test_all_objective_test(free_parameters,
+                            model_type="IZHI",
+                            protocol=None,tract=True):
     ''' a wrapper and a short cut to
     jump to a simulated data context
     '''
     results = {}
     tests = {}
     OM = setUp(model_type)
+    #if test_keys is None:
+
+    if tract == False:
+        test_keys = ["RheobaseTest","TimeConstantTest","RestingPotentialTest",
+        "InputResistanceTest","CapacitanceTest","InjectedCurrentAPWidthTest",
+        "InjectedCurrentAPAmplitudeTest","InjectedCurrentAPThresholdTest"]    
+    else:
+        test_keys = ["RheobaseTest","TimeConstantTest","RestingPotentialTest",
+        "InputResistanceTest","CapacitanceTest"]#,"FITest"]    
+
+
     simulated_data_tests, OM, target = OM.make_sim_data_tests(   
         model_type,
         free_parameters=free_parameters, 
-        test_key=["RheobaseTest","TimeConstantTest","RestingPotentialTest",
-        "InputResistanceTest","CapacitanceTest","InjectedCurrentAPWidthTest",
-        "InjectedCurrentAPAmplitudeTest","InjectedCurrentAPThresholdTest"],
+        test_key=test_keys,
         protocol=protocol
         )  
     stds = {}
@@ -632,13 +644,30 @@ def pred_only(test_and_models):
     # To obtain simulated data sets
     #
     (test, dtc) = test_and_models
-    backend_ = dtc.backend
+    #backend_ = dtc.backend
     model = dtc.dtc_to_model()
-    total_time = test.params['injected_square_current']['delay'] + \
-        test.params['injected_square_current']['duration'] #+ 300
-    tt = float(total_time) + 200.0
-    test.params['t_max'] = tt*pq.ms
-    assert float(test.params['t_max']) ==  tt 
+    #import pdb
+    #pdb.set_trace()
+    #dtc = test_and_models[1]
+    #single_test = test_and_models[0]
+    #dtc = OptMan([single_test]).format_test(dtc)
+    #test_and_models = OptMan().format_tests(test_and_models)
+    #test = dtc.tests[0]
+    #import pdb
+    #pdb.set_trace()
+    if test.name in 'FITest':
+        pred = test.generate_prediction(model)
+        print(pred)
+    
+
+    if test.name not in 'FITest':
+        total_time = test.params['injected_square_current']['delay'] + \
+            test.params['injected_square_current']['duration'] #+ 300
+        tt = float(total_time) + 200.0
+        test.params['t_max'] = tt*pq.ms
+        assert float(test.params['t_max']) ==  tt 
+    #print(test.params['t_max'])
+
     if test.passive or test.active is False:
         test.setup_protocol(model)
         pred = test.extract_features(model,test.get_result(model))
@@ -2687,6 +2716,7 @@ def inject_and_plot_model30(dtc,figname=None,known_current=None):
         observation_range['value'] = dtc.spk_count
         scs = SpikeCountSearch(observation_range)
         target_current = scs.generate_prediction(model)
+        print(target_current,scs)
         if type(target_current) is not type(None):
             known_current = target_current['value']
             #print(known_current,'recalculated per model')
@@ -3557,34 +3587,7 @@ class OptMan():
         #dtc.agreement = dtc.obs_preds
 
         return dtc
-    '''
-    @dask.delayed
-    def format_test_delayed(self,dtc):
-        if type(dtc) is type(str()):
-            print('error dtc is string')
 
-
-        if hasattr(dtc.tests,'keys'):# is type(dict):
-            tests = [key for key in dtc.tests.values()]
-            dtc.tests = switch_logic(tests)#,self.tests.use_rheobase_score)
-        else:
-            dtc.tests = switch_logic(dtc.tests)
-        dtc.protocols = {}
-        for v in dtc.tests:
-            k = v.name
-            dtc.protocols[k] = {}
-            if v.passive == False and v.active == True:
-                keyed = dtc.protocols[k]#.params
-                temp = active_values(keyed,dtc.rheobase)
-                v.params['amplitude'] = temp['injected_square_current']['amplitude']
-                if not 'injected_square_current' in v.params.keys():
-                    v.params['injected_square_current'] = {}
-                v.params['injected_square_current']['amplitude'] = temp['injected_square_current']['amplitude']
-                v.params['injected_square_current']['delay'] = v.params['delay']
-                v.params['injected_square_current']['duration'] = v.params['duration']
-                
-        return dtc
-    '''
 
     def active_values(keyed,rheobase):#:,square = None):
         if isinstance(rheobase,type(dict())):
@@ -3632,6 +3635,9 @@ class OptMan():
             dtc.tests = switch_logic(dtc.tests)
         for v in dtc.tests:
             k = v.name
+            #print(k,'optman')
+            
+
             if not hasattr(v,'params'):
                 v.params = {}
             if not 'injected_square_current' in v.params.keys():    
@@ -3656,6 +3662,20 @@ class OptMan():
                 v.params['t_max'] = keyed['delay']+keyed['duration'] + 200.0*pq.ms
             except:
                 pass        
+            '''
+            if str("InjectedCurrentAPThresholdTest") in v.name and not dtc.threshold:
+                model = dtc.dtc_to_model()
+                model.set_attrs(model._backend.default_attrs)
+                model.attrs = model._backend.default_attrs
+                #print(model.attrs)
+                threshold = v.generate_prediction(model)
+                dtc.threshold = threshold
+
+            if str("APThresholdTest") in v.name:
+                v.threshold = None
+                v.threshold = dtc.threshold
+            '''
+                #print(v.threshold)
 
         return dtc
 
@@ -3830,33 +3850,61 @@ class OptMan():
         return closeness_,lps,rps
 
     def make_sim_data_tests(self,backend,free_parameters=None,test_key=None,protocol=None):
+        #print(test_key)
+        ###
+        # new code
+        ###
         with open('processed_multicellular_constraints.p','rb') as f:
             test_frame = pickle.load(f)
         stds = {}
         for k,v in TSD(test_frame['Neocortex pyramidal cell layer 5-6']).items():
             temp = TSD(test_frame['Neocortex pyramidal cell layer 5-6'])[k]
             stds[k] = temp.observation['std']
+        
         OMObjects = []
-        cloned_tests = copy.copy(test_frame['Neocortex pyramidal cell layer 5-6'])
+        '''
+        if "FITest" in test_key:
+            from neuronunit.tests.dynamics import FITest
 
+            test_frame['Neocortex pyramidal cell layer 5-6'].tests.append(FITest(observation={'mean':10*pq.Hz/pq.pA,'std':10*pq.Hz/pq.pA}))
+        '''
+        cloned_tests = copy.copy(test_frame['Neocortex pyramidal cell layer 5-6'])
+        ### new code  
+        ####
+        
         OM = jrt(cloned_tests,backend,protocol=protocol)
         x= {k:v for k,v in OM.tests.items() if 'mean' in v.observation.keys() or 'value' in v.observation.keys()}
         cloned_tests = copy.copy(OM.tests)
+        #print(test_key)
         if test_key is not None:
             if len(test_key)==1:
+                #print(test_key)
                 OM.tests = TSD({test_key:cloned_tests[test_key]})
             else:
                 OM.tests = TSD({tk:cloned_tests[tk] for tk in test_key})
 
         else:
             OM.tests = TSD(cloned_tests)
+        #import pdb; pdb.set_trace()
         rt_out = OM.simulate_data(OM.tests,OM.backend,free_parameters=free_parameters)
+        #import pdb; pdb.set_trace()
+        
         target = rt_out[0]
         penultimate_tests = TSD(test_frame['Neocortex pyramidal cell layer 5-6'])
+        '''
+        if "FITest" in test_key:
+            penultimate_tests["FITest"] = FITest(observation={'mean':10*pq.Hz/pq.pA,'std':10*pq.Hz/pq.pA})
+            #import pdb
+            #pdb.set_trace()
+            #test_frame['Neocortex pyramidal cell layer 5-6'].tests.append(FITest(observation={'mean':10*pq.Hz/pq.pA,'std':10*pq.Hz/pq.pA}))
+        '''
         for k,v in OM.tests.items():
             if k in rt_out[1].keys():
                 v = rt_out[1][k].observation
-                v['std'] = stds[k]
+                if k not in stds.keys():
+                    v['std'] = v['value']
+                else:
+                    v['std'] = stds[k]
         simulated_data_tests = TSD(OM.tests)
 
         target.tests = simulated_data_tests
@@ -3903,6 +3951,8 @@ class OptMan():
         # make some new tests based on internally generated data
         # as opposed to experimental data.
         '''
+        #print('does not get here')
+        #import pdb; pdb.set_trace()
 
         out_tests = []
         ranges = MODEL_PARAMS[backend]
@@ -3912,22 +3962,7 @@ class OptMan():
             cnt = 0
 
             while new_tests is False:
-                '''
-                if cnt == 15:
-                    print("search space has \
-                     too many unstable modeles \
-                      try refining model parameter edges")
-                    stats = self.random_sample(dsolution,30)
-                    dtcpop = stats['models']
-                    # find element of dtcpop where all tests return a sensible score
-                    # no reason to believe dtcpop[0] has succeeded in this way.
-                    rp = dtcpop[0].attrs.values
-                    (new_tests,dtc) = self.make_simulated_observations(tests,
-                                                            dtcpop[0].backend,
-                                                            rp,
-                                                            dsolution=dsolution)
-                    break
-                '''
+
                 self.protocol = {'allen':False,'elephant':True} 
 
                 dsolution,rp,_,_ = process_rparam(backend,
@@ -3935,13 +3970,10 @@ class OptMan():
                 (new_tests,dtc) = self.make_simulated_observations(tests,
                                                                     backend,rp,
                                                                     dsolution=dsolution)
-                if cnt % 5 ==0:
-                    print(dsolution,rp,new_tests,'stuck')
+                #if cnt % 5 ==0:
+                #    #print(dsolution,rp,new_tests,'stuck')
                 if new_tests is False:
                     continue
-                #new_tests = {k:v 
-                #for k,v in new_tests.items(): 
-                #    print(v)#[which_key(v.observation)] is not None}
 
                 new_tests = {k:v for k,v in new_tests.items() if v.observation[which_key(v.observation)] is not None}
                 if type(new_tests) is not type(bool()):
@@ -4014,15 +4046,18 @@ class OptMan():
                     print("search space has \
                      too many unstable modeles \
                       try refining model parameter edges")
-                    stats = self.random_sample(dsolution,30)
+                    stats = self.random_sample(dsolution,55)
                     dtcpop = stats['models']
                     # find element of dtcpop where all tests return a sensible score
                     # no reason to believe dtcpop[0] has succeeded in this way.
                     rp = dtcpop[0].attrs.values
+
                     (new_tests,dtc) = self.make_simulated_observations(tests,dtcpop[0].backend,rp,dsolution=dsolution)
                     break
 
                 dsolution,rp,_,_ = process_rparam(backend,free_parameters=free_parameters)
+
+                dsolution = dtc_to_rheo(dsolution)
                 (new_tests,dtc) = self.make_simulated_observations(tests,backend,rp,dsolution=dsolution)
                 if cnt % 5 ==0:
                     print(dsolution,rp,new_tests,'stuck')
@@ -4422,6 +4457,7 @@ class OptMan():
             dtc.tests = xtests
             simulated_observations = {}
             xtests = [t for t in xtests if 'mean' in t.observation.keys() or 'value' in t.observation.keys() ]
+
             for i,t in enumerate(xtests):
                 if 'mean' in t.observation.keys():
                     simulated_observations[t.name] = copy.copy(t.observation['mean'])
@@ -4431,11 +4467,15 @@ class OptMan():
                     return (False,dtc)
 
             dtc.observation = simulated_observations
+                
             try:
                 dtc = self.pred_evaluation(dtc)
+
+                
             except:
                 return (False,dtc)
             simulated_observations = {k:p for k,p in dtc.preds.items() if type(k) is not type(None) and type(p) is not type(None) }
+       
 
             while len(dtc.preds)!= len(simulated_observations):
                 dtc = make_new_random(dtc, copy.copy(backend))
@@ -4614,8 +4654,7 @@ class OptMan():
         if not hasattr(self,'exhaustive'):
             if self.hc is not None:
                 for d in dtcpop:
-                    if self.verbose:
-                        
+                    if self.verbose:                        
                         print(self.hc)
                     d.attrs.update(self.hc)
 
@@ -4753,7 +4792,6 @@ class OptMan():
 
                 #for d in dtcpop:
                 #   d = self.format_test_delayed(d)
-                print('backend ',dtcpop[0].backend)
                 lazy = (dask.delayed(self.format_test)(d) for d in dtcpop)
                 dtcpop = list(dask.compute(*lazy))
 

@@ -8,12 +8,25 @@ from sciunit import scores
 from sciunit.scores.collections import ScoreArray
 import sciunit
 import pandas as pd
-
+from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 try:
     import asciiplotlib as apl
 except:
     pass
+
+
 class DataTC(object):
+
+    def model_default(self):
+        if self.backend is not None:
+            if self.attrs is None:
+                attrs = {k:np.mean(v) for k,v in MODEL_PARAMS[self.backend].items()}
+                self = DataTC(backend=self.backend,attrs=attrs)
+                self.attrs = model._backend.default_attrs
+            else:
+                model = self.dtc_to_model()
+                self.attrs = model._backend.default_attrs
+
     '''
     Data Transport Container
 
@@ -28,6 +41,13 @@ class DataTC(object):
         self.previous = 0
         self.run_number = 0
         self.attrs = attrs
+        '''
+        if attrs is None:
+            self.attrs = None
+            self.model_default()
+        else:
+            self.attrs = attrs
+        '''
         self.steps = None
         self.name = None
         self.results = None
@@ -55,7 +75,11 @@ class DataTC(object):
         self.errors = {}
         self.SM = None
         self.obs_preds = None
+        self.threshold = False
         #self.attrs = {}
+
+
+
     def get_ss(self):
         # get summed score
         if self.scores is not None:
@@ -137,18 +161,21 @@ class DataTC(object):
         ##
         # This step only partially undoes quantities sins.
         ##
-        qt.quantity.PREFERRED = [qt.mV, qt.pA, qt.MOhm, qt.ms, qt.pF]
+        qt.quantity.PREFERRED = [qt.mV, qt.pA, qt.MOhm, qt.ms, qt.pF, qt.Hz/qt.pA]
 
         for k,v in holding_preds.items():
             if k in holding_obs.keys() and k in holding_preds:
                 v.rescale_preferred()
                 v = v.simplified
-                v = np.round(v,2)
+                if np.round(v,2) !=0:
+                    v = np.round(v,2)
         for k,v in holding_preds.items():
             if k in holding_obs.keys() and k in holding_preds:      
                 units1 = holding_preds[k].rescale_preferred().units#v.units)
+                holding_preds[k] = holding_preds[k].simplified
                 holding_preds[k] = holding_preds[k].rescale(units1)
-                holding_preds[k] = np.round(holding_preds[k],2)
+                if np.round(holding_preds[k],2) != 0:
+                    holding_preds[k] = np.round(holding_preds[k],2)
 
         temp_obs = pd.DataFrame([holding_obs],index=['observations'])
         temp_preds = pd.DataFrame([holding_preds],index=['predictions']) 
@@ -214,10 +241,22 @@ class DataTC(object):
         for v in self.tests:
             k = v.name
             self.protocols[k] = {}
-            if hasattr(v,'passive'):#['protocol']:
+            if hasattr(v,'passive'):
                 if v.passive == False and v.active == True:
                     keyed = self.protocols[k]#.params
                     self.protocols[k] = active_values(keyed,self.rheobase)
+                    print(k,'from dtc pop')
+
+                    if str("APThresholdTest") in v.name and not self.threshold:
+                        model = self.dtc_to_model()
+                        model.attrs = model._backend.default_attrs
+                        treshold = v.generate_prediction(model)
+                        self.threshold = treshold
+
+                    if str("APThresholdTest") in v.name:
+                        v.threshold = None
+                        v.threshold = self.threshold
+                        print(v.threshold)
                 elif v.passive == True and v.active == False:
                     keyed = self.protocols[k]#.params
                     self.protocols[k] = passive_values(keyed)
@@ -228,6 +267,7 @@ class DataTC(object):
             keyed = v.params['injected_square_current']
             v.params['t_max'] = keyed['delay']+keyed['duration'] + 200.0*pq.ms
         return self.tests
+    
     def dtc_to_model(self):
         if self.backend is str("JULIA"):
             from neuronunit.models import simple_with_current_injection

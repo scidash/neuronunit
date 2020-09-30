@@ -490,7 +490,7 @@ class SpikeCountRangeSearch(VmTest):
                     steps = np.linspace(100,1000,7.0)
                 else:
 
-                    steps = np.linspace(0,55,7.0)
+                    steps = np.linspace(-20,85,7.0)
 
                 steps_current = [ i*pq.pA for i in steps ]
                 dtc.current_steps = steps_current
@@ -513,7 +513,7 @@ class SpikeCountRangeSearch(VmTest):
             if dtc.backend is 'GLIF':
                 big = 100
             else:
-                big = 26
+                big = 37
 
             while dtc.boolean == False and cnt< big:
 

@@ -397,7 +397,7 @@ class IZHIBackend(Backend):
         self.default_attrs = {'C':89.7960714285714, 
             'a':0.01, 'b':15, 'c':-60, 'd':10, 'k':1.6, 
             'vPeak':(86.364525297619-65.2261863636364), 
-            'vr':-65.2261863636364, 'vt':-50, 'celltype':1}
+            'vr':-65.2261863636364, 'vt':-50, 'celltype':3}
 
         if type(attrs) is not type(None):
             self.attrs = attrs
@@ -449,8 +449,7 @@ class IZHIBackend(Backend):
             if 'current_inj' in everything.keys():
                 everything.pop('current_inj',None)
             everything = copy.copy(self.attrs)
-            if 'current_inj' in everything.keys():
-                everything.pop('current_inj',None)
+
             self.attrs['celltype'] = round(self.attrs['celltype'])
             if self.attrs['celltype'] <= 3:   
                 everything.pop('celltype',None)         
@@ -500,7 +499,10 @@ class IZHIBackend(Backend):
         Currently only single section neuronal models are supported, the neurite section is understood to be simply the soma.
 
         """
+        
         attrs = copy.copy(self.model.attrs)
+        if attrs is None:
+            attrs = self.default_attrs
         #print(attrs)
         self.attrs = attrs
         if 'injected_square_current' in current.keys():
@@ -545,7 +547,7 @@ class IZHIBackend(Backend):
 
         if 'current_inj' in everything.keys():
             everything.pop('current_inj',None)
-
+        #import pdb; pdb.set_trace()
         self.attrs['celltype'] = round(self.attrs['celltype'])
         if np.bool_(self.attrs['celltype'] <= 3):   
             everything.pop('celltype',None)         

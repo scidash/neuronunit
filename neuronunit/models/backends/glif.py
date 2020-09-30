@@ -130,10 +130,10 @@ class GLIFBackend(Backend):
 
             ref_neuron_config = glif_api.get_neuron_configs(['491546962'])
             #ref_neuron_config = json_utilities.read('neuron_config.json')#['491546962']
-
+        #print(ref_neuron_config)
         self.default_attrs = ref_neuron_config
-        self.default_attrs['dt'] = 0.01
-        #self.default_attrs['El'] = attrs['El_reference']
+        #self.default_attrs['dt'] = 0.01
+        self.default_attrs['El_reference'] = -0.065
         self.default_attrs['init_AScurrents'] = [0.0,0.0]
         self.default_attrs['asc_tau_array'] = [0.3333333333333333,0.01]
         self.default_attrs['init_AScurrents'] = [0.0,0.0]
@@ -229,15 +229,17 @@ class GLIFBackend(Backend):
         #self.model.attrs.update(attrs)
         ref_neuron_config = json_utilities.read('neuron_config.json')#['491546962']
         self.default_attrs = ref_neuron_config
-        self.default_attrs['dt'] = 0.01
+        #self.default_attrs['dt'] = 0.01
         #self.default_attrs['El'] = attrs['El_reference']
+        # print(attrs)
         self.default_attrs['init_AScurrents'] = [0.0,0.0]
         self.default_attrs['asc_tau_array'] = [0.3333333333333333,0.01]
         self.default_attrs['init_AScurrents'] = [0.0,0.0]
         self.default_attrs['threshold_reset_method'] = {'params': {'a_spike': 0.005021924962510285,'b_spike': 506.8413774098697}, 'name': 'three_components'}
 
         if attrs is not None:
-            self.default_attrs.update(attrs)
+            #print(attrs)
+            self.default_attrs.update(**attrs)
         for k,v in ref_neuron_config.items():
             if 'method' in str(k):
                 self.default_attrs[k] = v
@@ -262,10 +264,10 @@ class GLIFBackend(Backend):
         
         #self.glif = GlifNeuron.from_dict(attrs)
         if self.attrs is not None:
-            self.glif.C =  self.attrs['C']#,
+            self.glif.C =  self.default_attrs['C']#,
             #self.glif.G =  self.attrs['G']#,
-            self.glif.R_input =  self.attrs['R_input']#,
-            self.glif.init_voltage = self.attrs['El_reference']
+            self.glif.R_input =  self.default_attrs['R_input']#,
+            #self.glif.init_voltage = self.default_attrs['El_reference']
 
     def set_stop_time(self, stop_time = 650*pq.ms):
         """Sets the simulation duration
@@ -329,21 +331,20 @@ class GLIFBackend(Backend):
             #interpolated_spike_voltages = output['interpolated_spike_voltage']
 
             vm = list(map(lambda x: isv if np.isnan(x) else float(-0.065), vm))
-        
+            vm = [v+self.glif.init_voltage for v in vm]
+            if np.max(vm)<=0:
+                vm = [v+np.mean([np.abs(np.min(vm)),np.abs(np.max(vm))]) for v in vm]
+                assert np.max(vm)>0
+        vm = [v*1000.0 for v in vm]
 
-        #vm = [v/1000.0 for v in vm]
+        self.vM = AnalogSignal(vm,units =pq.mV,sampling_period = float(5e-3)*pq.s)
 
-        #vm = [v+self.attrs['El_reference'] for v in vm]
-        
-        self.vM = AnalogSignal(vm,units =pq.V,sampling_period = float(5e-3)*pq.s)
-
-        t = [float(f) for f in self.vM.times]
-        v = [float(f) for f in self.vM.magnitude]
-        #try:
+        #t = [float(f) for f in self.vM.times]
+        #v = [float(f) for f in self.vM.magnitude]
         #fig = apl.figure()
-        #fig.plot(t, v, width=100, height=20)
+        #fig.plot(t, v, label=str('spikes: ')+str(len(self.results['grid_spike_times'])), width=100, height=20)
         #fig.show()
-        
+
         if len(self.results['interpolated_spike_voltage']) > 0:
             pass
             '''
