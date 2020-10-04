@@ -1,5 +1,7 @@
 """Waveform neuronunit tests, e.g. testing AP waveform properties"""
 from .base import np, pq, ncap, VmTest, scores, AMPL, DELAY, DURATION
+from allensdk.ephys.ephys_extractor import EphysSweepFeatureExtractor        
+
 '''
 try:
     
@@ -26,7 +28,8 @@ class InjectedCurrent:
     required_capabilities = (ncap.ReceivesSquareCurrent,)
 
     default_params = dict(VmTest.default_params)
-    default_params.update({'amplitude': 100*pq.pA})
+    print(default_params)
+    #default_params.update({'amplitude': 100*pq.pA})
     def compute_params(self):
         self.verbose = False
         self.params['injected_square_current'] = \
@@ -62,20 +65,31 @@ class APWidthTest(VmTest):
         self.verbose = False
         if self.verbose is True:
             print(self.params['injected_square_current'])
-        model.get_membrane_potential()
-        
+        vm = model.get_membrane_potential()
         widths = model.get_AP_widths()
+
+        #vx = [float(v) for v in vm.magnitude]
+        #tx = [float(t) for t in vm.times]
+        #from allensdk.ephys.ephys_extractor import EphysSweepFeatureExtractor        
+        #ephys = EphysSweepFeatureExtractor(t=np.array(tx),v=np.array(vx))#,\
+        #ephys.filter = None
+        #try:
+        #threshes = [ephys._process_individual_spikes()] *pq.mV
+
         self.vm = model.vM
 
         if ascii_plot:
              asciplot_code(model.vM,model.get_spike_count())
 
-        try:
+        if widths is not None:
             prediction = {'mean': np.mean(widths) if len(widths) else None,
                       'std': np.std(widths) if len(widths) else None,
                       'n': len(widths)}
-        except:
+        else:
+            print(widths)
             prediction = None
+            import pdb; 
+            pdb.set_trace()
         return prediction
 
     def extract_features(self, model):
@@ -87,8 +101,12 @@ class APWidthTest(VmTest):
         #if isinstance(prediction, type(None)):
         #    score = scores.InsufficientDataScore(None)
         if prediction is None:
+            print(scores.InsufficientDataScore(None))
             return scores.InsufficientDataScore(None)
-        
+
+        if prediction['value']>50*pq.ms:
+            import pdb; pdb.set_trace()
+
         if prediction['n'] == 0:
             score = scores.InsufficientDataScore(None)
         else:
@@ -99,7 +117,7 @@ class APWidthTest(VmTest):
         return score
 
 
-class InjectedCurrentAPWidthTest(InjectedCurrent, APWidthTest):
+class InjectedCurrentAPWidthTest(InjectedCurrent,APWidthTest):
     """Tests the full widths of APs at their half-maximum
     under current injection.
     """
@@ -282,7 +300,7 @@ class APAmplitudeTest(VmTest):
         return score
 
 
-class InjectedCurrentAPAmplitudeTest(InjectedCurrent, APAmplitudeTest):
+class InjectedCurrentAPAmplitudeTest(InjectedCurrent,APAmplitudeTest):
     """Test the heights (peak amplitude) of action potentials.
     Uses current injection.
 
@@ -352,20 +370,25 @@ class APThresholdTest(VmTest):
         """Implement sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
-        model.inject_square_current(self.params['injected_square_current'])
-        model.get_membrane_potential()
+        vm = model.inject_square_current(self.params['injected_square_current'])
+        #vm = model.get_membrane_potential()
         sim_length = self.params['delay'] + self.params['duration']
-        self.vm = model.vM
+        self.vm = vm
 
 
-
-        #if ascii_plot:
-        #    asciplot_code(model.vM,model.get_spike_count())
 
         try:
-            threshes = model.get_AP_thresholds()
+            
+            vx = [float(v) for v in vm.magnitude]
+            tx = [float(t) for t in vm.times]
+            ephys = EphysSweepFeatureExtractor(t=np.array(tx),v=np.array(vx))#,\
+            ephys.filter = None
+            threshes = [ephys._process_individual_spikes()] *pq.mV
+            
+
         except:
-            threshes = None
+            threshes = model.get_AP_thresholds()
+
         if type(threshes) is not type(None):
             prediction = {'mean': np.mean(threshes) if len(threshes) else None,
                       'std': np.std(threshes) if len(threshes) else None,
@@ -395,7 +418,7 @@ class APThresholdTest(VmTest):
         return score
 
 
-class InjectedCurrentAPThresholdTest(InjectedCurrent, APThresholdTest):
+class InjectedCurrentAPThresholdTest(InjectedCurrent,APThresholdTest):
     """Test the thresholds of action potentials under current injection."""
 
     name = "Injected current AP threshold test"

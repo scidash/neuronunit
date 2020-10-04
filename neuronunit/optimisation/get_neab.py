@@ -9,10 +9,11 @@ from neuronunit.tests.fi import RheobaseTestP
 from neuronunit.tests import passive, waveform, druckman2013
 from neuronunit.tests import druckman2013 as dm
 import neuronunit
+import pandas as pd
 import sciunit
 
 from neuronunit.optimisation import get_neab
-from neuronunit import tests as _, neuroelectro
+#from neuronunit import tests as _, neuroelectro
 from neuronunit.tests import fi, passive, waveform
 import pickle
 
@@ -28,6 +29,143 @@ import pickle
 import urllib.request, json
 
 from neuronunit import neuroelectro
+
+def id_to_frame(df_n,df_e,nxid):
+    ntype = str(df_n[df_n["NeuroLex ID"]==nxid]["Neuron Type"].values[0])
+    pyr = df_e[df_e["NeuronType"]==ntype]
+    return pyr
+
+from scipy import stats
+import numpy as np
+
+
+
+def id_to_frame(df_n,df_e,nxid):
+    ntype = str(df_n[df_n["NeuroLex ID"]==nxid]["Neuron Type"].values[0])
+    pyr = df_e[df_e["NeuronType"]==ntype]
+    return pyr
+
+def column_to_sem(df,column):
+    
+    temp = [i for i in df[column].values if not np.isnan(i)]
+    sem = stats.sem(temp, axis=None, ddof=0)
+    std = np.std(temp)#, axis=None, ddof=0)
+    mean = np.mean(temp)
+    #print(column,sem)
+    df = pd.DataFrame([{'sem':sem,'std':std,'mean':mean}],index=[column])
+    return df
+
+def cell_to_frame(df_n,df_e,nxid):
+    pyr = id_to_frame(df_n,df_e,nxid)
+    for cnt,key in enumerate(pyr.columns):
+        empty = pd.DataFrame()
+        if not key in "Species":
+            if cnt==0: 
+                df_old = column_to_sem(pyr,key)        
+            else:
+                df_new = column_to_sem(pyr,key)
+                df_old = pd.concat([df_new,df_old])
+        else:
+            break
+    return df_old.T
+
+
+
+def make_allen():
+    '''
+    Manually specificy 4-5 
+    different passive/static electrical properties
+    over 4 Allen specimen id's.
+    FITest
+    623960880
+    623893177
+    471819401
+    482493761
+    '''
+    rt = RheobaseTest(observation={'mean':70*qt.pA,'std':70*qt.pA})
+    tc = TimeConstantTest(observation={'mean':23.8*qt.ms,'std':23.8*qt.ms})
+    ir = InputResistanceTest(observation={'mean':241*qt.MOhm,'std':241*qt.MOhm})
+    rp = RestingPotentialTest(observation={'mean':-65.1*qt.mV,'std':65.1*qt.mV})
+
+    capacitance = (float(tc.observation['mean']))/float((ir.observation['mean']))*qt.pF
+
+    ct = CapacitanceTest(observation={'mean':capacitance,'std':capacitance})
+    fislope = FITest(observation={'value':0.18*(pq.Hz/pq.pA),'mean':0.18*(pq.Hz/pq.pA)})
+    fislope.score_type = RatioScore
+
+    allen_tests = [fislope,tc,rp,ir,ct]
+    for t in allen_tests:
+        t.score_type = RatioScore
+    allen_tests[-1].score_type = RatioScore
+    allen_suite_623960880 = TestSuite(allen_tests)
+    allen_suite_623960880.name = "http://celltypes.brain-map.org/mouse/experiment/electrophysiology/623960880"
+
+    
+    
+    fislope = FITest(observation={'value':0.31*(pq.Hz/pq.pA),'mean':0.31*(pq.Hz/pq.pA)})
+    fislope.score_type = RatioScore
+
+    
+    #ID	623893177
+    rt = RheobaseTest(observation={'mean':190*qt.pA,'std':190*qt.pA})
+    tc = TimeConstantTest(observation={'mean':27.8*qt.ms,'std':27.8*qt.ms})
+    ir = InputResistanceTest(observation={'mean':136*qt.MOhm,'std':136*qt.MOhm})
+    rp = RestingPotentialTest(observation={'mean':-77.0*qt.mV,'std':77.0*qt.mV})
+    
+    capacitance = (float(tc.observation['mean']))/float((ir.observation['mean']))#*qt.pF
+
+    ct = CapacitanceTest(observation={'mean':capacitance,'std':capacitance})
+
+    allen_tests = [fislope,tc,rp,ir,ct]
+    for t in allen_tests:
+        t.score_type = RatioScore
+    allen_tests[-1].score_type = RatioScore
+    allen_suite_623893177 = TestSuite(allen_tests)
+    allen_suite_623893177.name = "http://celltypes.brain-map.org/mouse/experiment/electrophysiology/623893177"
+
+    
+    rt = RheobaseTest(observation={'mean':70*qt.pA,'std':70*qt.pA})
+    tc = TimeConstantTest(observation={'mean':24.4*qt.ms,'std':24.4*qt.ms})
+    ir = InputResistanceTest(observation={'mean':132*qt.MOhm,'std':132*qt.MOhm})
+    rp = RestingPotentialTest(observation={'mean':-71.6*qt.mV,'std':77.5*qt.mV})
+
+    allen_tests = [rt,tc,rp,ir]
+    for t in allen_tests:
+        t.score_type = RatioScore
+    allen_tests[-1].score_type = ZScore
+    allen_suite482493761 = TestSuite(allen_tests)
+    allen_suite482493761.name = "http://celltypes.brain-map.org/mouse/experiment/electrophysiology/482493761"
+
+    rt = RheobaseTest(observation={'mean':190*qt.pA,'std':190*qt.pA})
+    tc = TimeConstantTest(observation={'mean':13.8*qt.ms,'std':13.8*qt.ms})
+    ir = InputResistanceTest(observation={'mean':132*qt.MOhm,'std':132*qt.MOhm})
+    rp = RestingPotentialTest(observation={'mean':-77.5*qt.mV,'std':77.5*qt.mV})
+
+    allen_tests = [rt,tc,rp,ir]
+    for t in allen_tests:
+        t.score_type = RatioScore
+    allen_tests[-1].score_type = ZScore
+    allen_suite471819401 = TestSuite(allen_tests)
+    allen_suite471819401.name = "http://celltypes.brain-map.org/mouse/experiment/electrophysiology/471819401"
+    list_of_dicts = []
+    cells={}
+    cells['471819401'] = TSD(allen_suite471819401)
+    cells['482493761'] = TSD(allen_suite482493761)
+
+    for k,v in cells.items():
+        observations = {}
+        for k1 in cells['482493761'].keys():
+            vsd = TSD(v)
+            if k1 in vsd.keys():
+                vsd[k1].observation['mean']
+                
+                observations[k1] = np.round(vsd[k1].observation['mean'],2)
+                observations['name'] = k
+        list_of_dicts.append(observations)
+    df = pd.DataFrame(list_of_dicts)
+    df
+
+    return allen_suite_623960880,allen_suite_623893177
 
 def neuroelectro_summary_observation(neuron_name,ontology):
     ephysprop_name = ''
@@ -196,13 +334,12 @@ def get_neuron_criteria(cell_id,file_name = None):#,observation = None):
                      passive.RestingPotentialTest,
                      waveform.InjectedCurrentAPWidthTest,
                      waveform.InjectedCurrentAPAmplitudeTest,
-                     waveform.InjectedCurrentAPThresholdTest]#,
+                     waveform.InjectedCurrentAPThresholdTest,
+                     dynamics.FITest]#,
     observations = {}
     for index, t in enumerate(test_classes):
         obs = t.neuroelectro_summary_observation(cell_id)
-        print(obs)
-        import pdb
-        pdb.set_trace()
+
         if obs is not None:
             if 'mean' in obs.keys():
                 print(test_classes[index])
@@ -243,20 +380,23 @@ def get_olf_cell():
     return cell_constraints
     
 def get_all_cells():
-	purkinje ={"id": 18, "name": "Cerebellum Purkinje cell", "neuron_db_id": 271, "nlex_id": "sao471801888"}
-	#fi_basket = {"id": 65, "name": "Dentate gyrus basket cell", "neuron_db_id": None, "nlex_id": "nlx_cell_100201"}
-	pvis_cortex = {"id": 111, "name": "Neocortex pyramidal cell layer 5-6", "neuron_db_id": 265, "nlex_id": "nifext_50"}
-	#This olfactory mitral cell does not have datum about rheobase, current injection values.
-	olf_mitral = {"id": 129, "name": "Olfactory bulb (main) mitral cell", "neuron_db_id": 267, "nlex_id": "nlx_anat_100201"}
-	ca1_pyr = {"id": 85, "name": "Hippocampus CA1 pyramidal cell", "neuron_db_id": 258, "nlex_id": "sao830368389"}
-	cell_list = [ olf_mitral, ca1_pyr, purkinje,  pvis_cortex]
-	cell_constraints = {}
-	for cell in cell_list:
-	    tests,observations = get_neuron_criteria(cell)
-	    cell_constraints[cell["name"]] = tests
-	with open('multicellular_constraints.p','wb') as f:
-	    pickle.dump(cell_constraints,f)
-	return cell_constraints
+    ###
+    # sagratio
+    ###
+    purkinje ={"id": 18, "name": "Cerebellum Purkinje cell", "neuron_db_id": 271, "nlex_id": "sao471801888"}
+    #fi_basket = {"id": 65, "name": "Dentate gyrus basket cell", "neuron_db_id": None, "nlex_id": "nlx_cell_100201"}
+    pvis_cortex = {"id": 111, "name": "Neocortex pyramidal cell layer 5-6", "neuron_db_id": 265, "nlex_id": "nifext_50"}
+    #This olfactory mitral cell does not have datum about rheobase, current injection values.
+    olf_mitral = {"id": 129, "name": "Olfactory bulb (main) mitral cell", "neuron_db_id": 267, "nlex_id": "nlx_anat_100201"}
+    ca1_pyr = {"id": 85, "name": "Hippocampus CA1 pyramidal cell", "neuron_db_id": 258, "nlex_id": "sao830368389"}
+    cell_list = [ olf_mitral, ca1_pyr, purkinje,  pvis_cortex]
+    cell_constraints = {}
+    for cell in cell_list:
+        tests,observations = get_neuron_criteria(cell)
+        cell_constraints[cell["name"]] = tests
+    with open('multicellular_constraints.p','wb') as f:
+        pickle.dump(cell_constraints,f)
+    return cell_constraints
 
 
 
