@@ -70,6 +70,10 @@ def cell_to_frame(df_n,df_e,nxid):
     return df_old.T
 
 
+from neuronunit.tests import *
+from neuronunit.tests.dynamics import FITest
+import quantities as qt
+from sciunit.scores import RatioScore, ZScore
 
 def make_allen():
     '''
@@ -82,18 +86,22 @@ def make_allen():
     471819401
     482493761
     '''
-    rt = RheobaseTest(observation={'mean':70*qt.pA,'std':70*qt.pA})
+    from neuronunit.optimisation.optimization_management import TSD
+    ##
+    # 623960880
+    ##
+    rt = RheobaseTest(observation={'mean':70*qt.pA,'std':70*qt.pA}) # yes
     tc = TimeConstantTest(observation={'mean':23.8*qt.ms,'std':23.8*qt.ms})
     ir = InputResistanceTest(observation={'mean':241*qt.MOhm,'std':241*qt.MOhm})
     rp = RestingPotentialTest(observation={'mean':-65.1*qt.mV,'std':65.1*qt.mV})
 
-    capacitance = (float(tc.observation['mean']))/float((ir.observation['mean']))*qt.pF
+    #capacitance = ((tc.observation['mean']))/((ir.observation['mean']))#*qt.pF
 
-    ct = CapacitanceTest(observation={'mean':capacitance,'std':capacitance})
+    #ct = CapacitanceTest(observation={'mean':capacitance,'std':capacitance})
     fislope = FITest(observation={'value':0.18*(pq.Hz/pq.pA),'mean':0.18*(pq.Hz/pq.pA)})
     fislope.score_type = RatioScore
 
-    allen_tests = [fislope,tc,rp,ir,ct]
+    allen_tests = [fislope,tc,rp,ir,rt]
     for t in allen_tests:
         t.score_type = RatioScore
     allen_tests[-1].score_type = RatioScore
@@ -102,59 +110,82 @@ def make_allen():
 
     
     
-    fislope = FITest(observation={'value':0.31*(pq.Hz/pq.pA),'mean':0.31*(pq.Hz/pq.pA)})
-    fislope.score_type = RatioScore
 
-    
-    #ID	623893177
-    rt = RheobaseTest(observation={'mean':190*qt.pA,'std':190*qt.pA})
+    ##
+    # ID	623893177
+    ##
+    rt = RheobaseTest(observation={'mean':190*qt.pA,'std':190*qt.pA}) # yes
     tc = TimeConstantTest(observation={'mean':27.8*qt.ms,'std':27.8*qt.ms})
     ir = InputResistanceTest(observation={'mean':136*qt.MOhm,'std':136*qt.MOhm})
     rp = RestingPotentialTest(observation={'mean':-77.0*qt.mV,'std':77.0*qt.mV})
     
-    capacitance = (float(tc.observation['mean']))/float((ir.observation['mean']))#*qt.pF
+    capacitance = ((tc.observation['mean']))/((ir.observation['mean']))#*qt.pF
 
     ct = CapacitanceTest(observation={'mean':capacitance,'std':capacitance})
 
-    allen_tests = [fislope,tc,rp,ir,ct]
+
+    ##
+    fislope = FITest(observation={'value':0.12*(pq.Hz/pq.pA),'mean':0.12*(pq.Hz/pq.pA)})
+    fislope.score_type = RatioScore
+    ##
+
+    allen_tests = [fislope,tc,rp,ir,rt]
     for t in allen_tests:
         t.score_type = RatioScore
     allen_tests[-1].score_type = RatioScore
     allen_suite_623893177 = TestSuite(allen_tests)
     allen_suite_623893177.name = "http://celltypes.brain-map.org/mouse/experiment/electrophysiology/623893177"
+    cells = {}
+    cells['623960880'] = TSD(allen_suite_623960880)
+    cells['623893177'] = TSD(allen_suite_623893177)
 
+
+    ##
+    # 482493761
+    ##
     
-    rt = RheobaseTest(observation={'mean':70*qt.pA,'std':70*qt.pA})
+    
+    rt = RheobaseTest(observation={'mean':70*qt.pA,'std':70*qt.pA}) # yes
     tc = TimeConstantTest(observation={'mean':24.4*qt.ms,'std':24.4*qt.ms})
     ir = InputResistanceTest(observation={'mean':132*qt.MOhm,'std':132*qt.MOhm})
-    rp = RestingPotentialTest(observation={'mean':-71.6*qt.mV,'std':77.5*qt.mV})
+    rp = RestingPotentialTest(observation={'mean':-71.6*qt.mV,'std':71.6*qt.mV})
+    
+    fislope = FITest(observation={'value':0.09*(pq.Hz/pq.pA),'mean':0.09*(pq.Hz/pq.pA)})
+    fislope.score_type = RatioScore
 
-    allen_tests = [rt,tc,rp,ir]
+
+    allen_tests = [rt,tc,rp,ir,fislope]
     for t in allen_tests:
         t.score_type = RatioScore
     allen_tests[-1].score_type = ZScore
     allen_suite482493761 = TestSuite(allen_tests)
     allen_suite482493761.name = "http://celltypes.brain-map.org/mouse/experiment/electrophysiology/482493761"
-
-    rt = RheobaseTest(observation={'mean':190*qt.pA,'std':190*qt.pA})
+    ##
+    # 471819401
+    ##
+    rt = RheobaseTest(observation={'mean':190*qt.pA,'std':190*qt.pA}) # yes
     tc = TimeConstantTest(observation={'mean':13.8*qt.ms,'std':13.8*qt.ms})
     ir = InputResistanceTest(observation={'mean':132*qt.MOhm,'std':132*qt.MOhm})
     rp = RestingPotentialTest(observation={'mean':-77.5*qt.mV,'std':77.5*qt.mV})
 
-    allen_tests = [rt,tc,rp,ir]
+    fislope = FITest(observation={'value':0.18*(pq.Hz/pq.pA),'mean':0.18*(pq.Hz/pq.pA)})
+    fislope.score_type = RatioScore
+
+    #F/I Curve Slope	0.18
+    allen_tests = [rt,tc,rp,ir,fislope]
     for t in allen_tests:
         t.score_type = RatioScore
     allen_tests[-1].score_type = ZScore
     allen_suite471819401 = TestSuite(allen_tests)
     allen_suite471819401.name = "http://celltypes.brain-map.org/mouse/experiment/electrophysiology/471819401"
     list_of_dicts = []
-    cells={}
+    #cells={}
     cells['471819401'] = TSD(allen_suite471819401)
     cells['482493761'] = TSD(allen_suite482493761)
 
     for k,v in cells.items():
         observations = {}
-        for k1 in cells['482493761'].keys():
+        for k1 in cells['623960880'].keys():
             vsd = TSD(v)
             if k1 in vsd.keys():
                 vsd[k1].observation['mean']
@@ -165,7 +196,7 @@ def make_allen():
     df = pd.DataFrame(list_of_dicts)
     df
 
-    return allen_suite_623960880,allen_suite_623893177
+    return allen_suite_623960880,allen_suite_623893177,allen_suite471819401,allen_suite482493761,cells,df
 
 def neuroelectro_summary_observation(neuron_name,ontology):
     ephysprop_name = ''

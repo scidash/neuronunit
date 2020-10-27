@@ -15,6 +15,14 @@ except:
     pass
 
 
+from bluepyopt.parameters import Parameter
+def bpo_param(attrs):
+    p = Parameter(name=k,bounds=v,frozen=False)
+    for k,v in attrs.items():
+        lop[k] = p
+    return lop
+
+
 class DataTC(object):
 
     def model_default(self):
@@ -90,8 +98,8 @@ class DataTC(object):
         else:
             self.summed = None
         return self.summed
-    
-    def self_evaluate(self,tests=None):    
+
+    def self_evaluate(self,tests=None):
         from neuronunit.optimisation import optimization_management as om_
         if tests is not None:
             self.tests = tests
@@ -102,7 +110,7 @@ class DataTC(object):
         model = self.dtc_to_model()
         scores_ = []
         for t in self.tests:
-            if hasattr(t,'allen'): 
+            if hasattr(t,'allen'):
                 continue
             if 'RheobaseTest' in t.name: t.score_type = sciunit.scores.ZScore
             #if 'RheobaseTestP' in t.name: t.score_type = sciunit.scores.ZScore
@@ -148,11 +156,14 @@ class DataTC(object):
 
         return self
     def make_pretty(self,tests):
+        import pandas as pd
+        #pd.set_precision(3)
         self.self_evaluate(tests=tests)
         self.obs_preds = pd.DataFrame(columns=["observations","predictions"])
-        holding_obs = { t.name:np.round(t.observation['mean'],2) for t in self.tests if not hasattr(t,'allen')}
+        # holding_obs = { t.name:np.round(t.observation['mean'],2) for t in self.tests if not hasattr(t,'allen')}
+        holding_obs = { t.name:t.observation['mean'] for t in self.tests if not hasattr(t,'allen')}
         grab_keys = []
-        for t in self.tests: 
+        for t in self.tests:
             if 'value' in t.prediction.keys() :
                 grab_keys.append('value')
             else:
@@ -169,18 +180,34 @@ class DataTC(object):
                 v = v.simplified
                 if np.round(v,2) !=0:
                     v = np.round(v,2)
+
+
+        for k,v in holding_obs.items():
+            if k in holding_obs.keys() and k in holding_preds:
+                v.rescale_preferred()
+                v = v.simplified
+                if np.round(v,2) !=0:
+                    v = np.round(v,2)
+
         for k,v in holding_preds.items():
-            if k in holding_obs.keys() and k in holding_preds:      
+            if k in holding_obs.keys() and k in holding_preds:
                 units1 = holding_preds[k].rescale_preferred().units#v.units)
+
                 holding_preds[k] = holding_preds[k].simplified
                 holding_preds[k] = holding_preds[k].rescale(units1)
                 if np.round(holding_preds[k],2) != 0:
                     holding_preds[k] = np.round(holding_preds[k],2)
 
+                holding_obs[k] = holding_obs[k].simplified
+                holding_obs[k] = holding_obs[k].rescale(units1)
+                if np.round(holding_obs[k],2) != 0:
+                    holding_obs[k] = np.round(holding_obs[k],2)
+
+
         temp_obs = pd.DataFrame([holding_obs],index=['observations'])
-        temp_preds = pd.DataFrame([holding_preds],index=['predictions']) 
+        temp_preds = pd.DataFrame([holding_preds],index=['predictions'])
         # like a score array but nicer reporting of test name instead of test data type.
-        not_SA = {t.name: np.round(score,2) for t,score in zip(self.tests, self.scores_)}       
+        not_SA = {t.name: np.round(score,2) for t,score in zip(self.tests, self.scores_)}
         temp_scores = pd.DataFrame([not_SA],index=['Z-Scores'])
         self.obs_preds = pd.concat([temp_obs,temp_preds,temp_scores])
         self.obs_preds = self.obs_preds.T
@@ -201,7 +228,7 @@ class DataTC(object):
         self = self.self_evaluate()
         OM = self.dtc_to_opt_man()
         self = OM.get_agreement(self)
-        return self  
+        return self
 
     def ordered_score(self):
         """
@@ -267,13 +294,14 @@ class DataTC(object):
             keyed = v.params['injected_square_current']
             v.params['t_max'] = keyed['delay']+keyed['duration'] + 200.0*pq.ms
         return self.tests
-    
+
     def dtc_to_model(self):
         if self.backend is str("JULIA"):
             from neuronunit.models import simple_with_current_injection
             model = SimpleModel(attrs)
+            model.rheobase = self.rheobase
 
-        if self.backend is str('NEURON') or self.backend is str('jNEUROML'):
+        if (self.backend is str('NEURON') and not self.backend is str('NEURONHH')) or self.backend is str('jNEUROML'):
             import neuronunit
             LEMS_MODEL_PATH = str(neuronunit.__path__[0])+str('/models/NeuroML2/LEMS_2007One.xml')
             self.model_path = LEMS_MODEL_PATH
@@ -299,11 +327,20 @@ class DataTC(object):
                 model.set_attrs(self.attrs)
             if model.attrs is None:
                 model.attrs = self.attrs
-            
+
         assert len(self.attrs)
         assert len(model.attrs)
+        if not hasattr(model,'rheobase'):
+            if hasattr(self,'rheobase'):
+                model.rheobase = None
+                model.rheobase = {}
+                if self.rheobase is not None:
+                    #if type(self.rheobase) is type(dict()):
+                    model.rheobase = self.rheobase
+                    #else:
+                    #assert model.rheobase['value'] == self.rheobase['value']
 
-        model.rheobase = self.rheobase
+
 
         '''
         try:
@@ -325,10 +362,10 @@ class DataTC(object):
         from deap import base
         import array
         from deap import creator
-        
+
         creator.create("FitnessMin", base.Fitness, weights=tuple(-1.0 for i in range(0,10)))
         creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMin)
-            
+
         #from neuronunit.optimisation.optimization_management import WSListIndividual
         #print('warning translation dictionary should be used, to garuntee correct attribute order from random access dictionaries')
         if self.backend is "IZHI":
@@ -497,8 +534,8 @@ class DataTCModel(neuronunit.models.VeryReducedModel):
         else:
             self.summed = None
         return self.summed
-    
-    def self_evaluate(self):    
+
+    def self_evaluate(self):
         from neuronunit.optimisation import optimization_management as om_
         OM = self.dtc_to_opt_man()
         self = om_.dtc_to_rheo(self)
@@ -509,7 +546,7 @@ class DataTCModel(neuronunit.models.VeryReducedModel):
             if 'RheobaseTest' in t.name: t.score_type = sciunit.scores.ZScore
             if 'RheobaseTestP' in t.name: t.score_type = sciunit.scores.ZScore
             score_gene = t.judge(model)
-            
+
             if not isinstance(type(score_gene),type(None)):
                 if not isinstance(type(score_gene),sciunit.scores.InsufficientDataScore):
                     if not isinstance(type(score_gene.log_norm_score),type(None)):
@@ -558,7 +595,7 @@ class DataTCModel(neuronunit.models.VeryReducedModel):
         self = self.self_evaluate()
         OM = self.dtc_to_opt_man()
         self = OM.get_agreement(self)
-        return self  
+        return self
 
     def ordered_score(self):
         """
@@ -648,10 +685,10 @@ class DataTCModel(neuronunit.models.VeryReducedModel):
         from deap import base
         import array
         from deap import creator
-        
+
         creator.create("FitnessMin", base.Fitness, weights=tuple(-1.0 for i in range(0,10)))
         creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMin)
-            
+
         #from neuronunit.optimisation.optimization_management import WSListIndividual
         #print('warning translation dictionary should be used, to garuntee correct attribute order from random access dictionaries')
         self.attrs.pop('dt',None)
@@ -728,7 +765,7 @@ class DataTCModel(neuronunit.models.VeryReducedModel):
     def plot_obs(self,ow):
         #assuming a waveform exists (observed waved-form) plot to terminal with ascii
         #This is useful for debugging new backends, in bash big/fast command line orientated optimization routines.
-        
+
 
         t = [float(f) for f in ow.times]
         v = [float(f) for f in ow.magnitude]
@@ -737,10 +774,10 @@ class DataTCModel(neuronunit.models.VeryReducedModel):
         fig.show()
 
     def iap(self):
-        
+
         #Inject and plot to terminal with ascii
         #This is useful for debugging new backends, in bash big/fast command line orientated optimization routines.
-        
+
         model = self.dtc_to_model()
         #new_tests['RheobaseTest']
         if type(self.tests) is type({'1':1}):

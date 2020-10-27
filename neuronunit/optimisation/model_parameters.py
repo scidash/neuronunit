@@ -9,8 +9,16 @@ import numpy as np
 import pickle
 
 
+from bluepyopt.parameters import Parameter
+def bpo_param(attrs):
+    p = Parameter(name=k,bounds=v,frozen=False)
+    for k,v in attrs.items():
+        lop[k] = p
+    return lop
+#        model.attrs[k] = np.mean(v)
+
 def check_if_param_stradles_boundary(opt,model_type):
-    for k,v in MODEL_PARAMS[model_type].items(): 
+    for k,v in MODEL_PARAMS[model_type].items():
         print(v,opt.attrs[k],k)
 
 MODEL_PARAMS = {}
@@ -35,6 +43,7 @@ MODEL_PARAMS['OSB_HH_attrs'] = HH_dic1
 
  #12.6157,\
 #gnabar_hh=0.12 gkbar_hh=0.036 gl_hh=0.0003 el_hh=-54.3
+'''
 MODEL_PARAMS['NEURONHH'] = {'gnabar':0.12,\
                             'gkbar':0.036,\
                             'Ra':35,\
@@ -47,10 +56,23 @@ MODEL_PARAMS['NEURONHH'] = {'gnabar':0.12,\
                             'cm':1,\
                             'ena':50.0,\
                             'ek':-77}
+'''
+MODEL_PARAMS['NEURONHH'] = {'gnabar':0.12,\
+                            'gkbar':0.036,\
+                            'Ra':160.0,\
+                            'L':20.4,\
+                            'diam':20.4,\
+                            'el':-54.3,\
+                            'gl':0.0003,\
+                            'ena':50.0,\
+                            'ek':-77.0,\
+                            'cm':1,\
+                            'ena':50.0,\
+                            'ek':-77}
 
 MODEL_PARAMS['NEURONHH'] = { k:(float(v)-0.75*float(np.abs(v)),float(v)+0.75*float(v)) for k,v in MODEL_PARAMS['NEURONHH'].items() }
-MODEL_PARAMS['NEURONHH']['L'] = [1,250]
-MODEL_PARAMS['NEURONHH']['diam'] = [1,850]
+MODEL_PARAMS['NEURONHH']['L'] = [5,45]
+MODEL_PARAMS['NEURONHH']['diam'] = [5,45]
 MODEL_PARAMS['NEURONHH']['el'] = [-100,-40]
 
 MODEL_PARAMS['NEURONHH']['ek'] = [-100,-40]
@@ -111,10 +133,12 @@ explore_param = {k:(np.min(v),np.max(v)) for k,v in temp.items()}
 IZHI_PARAMS = {k:sorted(v) for k,v in explore_param.items()}
 
 IZHI_PARAMS = OrderedDict(IZHI_PARAMS)
-IZHI_PARAMS['d'] = [0,150]
-IZHI_PARAMS['c'] = [-65,-20]
-IZHI_PARAMS['a'] = [0.01,0.2]
-IZHI_PARAMS['vr'] = [-85,-50]
+#IZHI_PARAMS['d'] = [0,150]
+#IZHI_PARAMS['c'] = [-65,-20]
+#IZHI_PARAMS['a'] = [0.01,0.2]
+#IZHI_PARAMS['vr'] = [-85,-50]
+#MODEL_PARAMS['IZHI']['celltype']
+#IZHI_PARAMS = {k:(np.mean(v)-np.abs(np.mean(v)*0.75),np.mean(v)+np.mean(v)*0.75) for k,v in IZHI_PARAMS.items()}
 
 
 MODEL_PARAMS['IZHI'] = IZHI_PARAMS
@@ -163,26 +187,54 @@ BAE1['v_thresh']=-50.4
 BAE1['spike_delta']=30
 BAE1 = {k:(np.mean(v)-np.abs(np.mean(v)*2.5),np.mean(v)+np.mean(v)*2.5) for k,v in BAE1.items()}
 BAE1 = {k:sorted(v) for k,v in BAE1.items()}
-BAE1['v_spike']=[-60.0,-20]
+BAE1['v_spike']=[-70.0,-20]
 BAE1['v_reset'] = [1, 983.5]
 BAE1['v_rest'] = [-100, -35]
 BAE1['v_thresh'] = [-65, -15]
+BAE1['spike_delta']=[1.25,135]
 
+
+#BAE1['b']=[0.01,25]
+#BAE1['a']=[0.01,40]
 
 BAE1['b']=[0.01,20]
 BAE1['a']=[0.01,20]
-BAE1['delta_T']=[0.01,10]
-BAE1['cm'] = [0.1, 8]
-BAE1['delta_T'] = [0, 27]
+
+#BAE1['delta_T']=[0.001,10]
+#BAE1['delta_T'] = [0, 27]
 BAE1['v_reset'] = [-100, -25]
 BAE1['tau_m'] = [0.01, 62.78345]
-BAE1['tau_w']= [0.01,344]
+#BAE1['tau_w']= [0.01,500]
+BAE1['tau_w']= [0.01,354]
+
 BAE1['cm'] = [1, 983.5]
+
+
+
+BAE1['v_spike']=[-60.0,-20]
+#+BAE1['v_spike']=[-70.0,-20]
+BAE1['v_reset'] = [1, 983.5]
+BAE1['v_rest'] = [-100, -35]
+BAE1['v_thresh'] = [-65, -15]
+#+BAE1['spike_delta']=[5,30]
+
+
+#+BAE1['b']=[0.01,25]
+#+BAE1['a']=[0.01,40]
+BAE1['delta_T']=[1,10]
+#-BAE1['cm'] = [0.1, 8]
+#BAE1['delta_T'] = [0, 27]
+BAE1['v_reset'] = [-100, -25]
+BAE1['tau_m'] = [0.01, 62.78345]
+#+BAE1['tau_w']= [0.01,500]
+
+
 #BAE1['cm'] = [0.1, 50]
 
 for v in BAE1.values():
     assert v[1] -v[0] !=0
 
+#BAE1 = {k:(np.mean(v)-np.abs(np.mean(v)*0.125),np.mean(v)+np.abs(v)*0.125) for k,v in BAE1.items()}
 
 MODEL_PARAMS['ADEXP'] = BAE1
 
@@ -197,25 +249,28 @@ for k,v in zip(l5_pc_keys,l5_pc_values):
 
 MODEL_PARAMS['L5PC'] = L5PC
 
-
+# -0.5*3.5071610042390286e-11
+# 'C': [3.5071610042390286e-11, 10*7.630189223327981e-10], \
 
 GLIF_RANGE = {'El_reference': [-0.08569469261169435, -0.05463626766204832], \
-              'C': [3.5071610042390286e-11-0.5*3.5071610042390286e-11, 10*7.630189223327981e-10], \
+              'C': [3.5071610042390286e-13, 10*7.630189223327981e-10], \
               'init_threshold': [0.009908733642683513, 0.06939040414685865], \
-                   
               'th_inf': [0.009908733642683513, 0.04939040414685865], \
-              'spike_cut_length': [20, 199],
+              #'spike_cut_length': [1, 199],
               'init_AScurrents': [0.0, 0.0], \
-              'init_voltage': [-0.09, -0.01], 
-              'spike_cut_length':[4,94],
-              'El': [-0.08569469261169435, -0.05463626766204832], 'asc_tau_array': [[0.01, 0.0033333333333333335],[0.3333333333333333, 0.1]], \
-              'R_input': [27743752.593817078-0.5*27743752.593817078, 2*1792774179.3647704] }
+              'init_voltage': [-0.09, -0.01],
+              'spike_cut_length':[0.25,94],
+              'El': [-0.08569469261169435, -0.05463626766204832],
+              'asc_tau_array': [[0.01, 0.0033333333333333335],[0.3333333333333333, 0.1]], \
+              'R_input': [17743752.593817078, 10*1792774179.3647704] }
               #'th_adapt': None, 'coeffs': {'a': 1, 'C': 1, 'b': 1, 'G': 1, \
               #                             'th_inf': 1.0212937371199788, 'asc_amp_array': [1.0, 1.0]}}
 
 #'init_threshold': 0.02964956889477108,
-
-GLIF_RANGE['th_adapt']=[0,0.1983063518904063]
+#'th_adapt': 983063518904063
+GLIF_RANGE['th_adapt']=[0.01,1]#0.1983063518904063]
+GLIF_RANGE['C']=[0,10]
+#GLIF_RANGE['coeffs'] = {'a': 1, 'C': 1, 'b': 1, 'G': 1, 'th_inf': 1.2041478747026297, 'asc_amp_array': [0.5039881591123325, 0.1618054251789342]}
 GLIF_RANGE.pop('init_AScurrents',None)
 GLIF_RANGE.pop('dt',None)
 GLIF_RANGE.pop('asc_tau_array',None)
