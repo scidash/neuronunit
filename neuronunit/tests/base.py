@@ -14,6 +14,16 @@ import sciunit.scores as scores
 import neuronunit.capabilities as ncap
 import sciunit.capabilities as scap
 from neuronunit import neuroelectro
+import pickle
+
+
+
+AMPL = 100.0*pq.pA
+DELAY = 100.0*pq.ms
+DURATION = 1000.0*pq.ms
+PASSIVE_AMPL = -10.0*pq.pA
+PASSIVE_DELAY = 100.0*pq.ms
+PASSIVE_DURATION = 300.0*pq.ms
 
 
 class VmTest(ProtocolToFeaturesTest):
