@@ -17,12 +17,6 @@ except ImportError:
     print('Could not load StaticBackend')
 
 try:
-    from .jNeuroML import jNeuroMLBackend
-except ImportError:
-    jNeuroMLBackend = None
-    print('Could not load jNeuroMLBackend')
-
-try:
     from .geppetto import GeppettoBackend
 except ImportError:
     GeppettoBackend = None
