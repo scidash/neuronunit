@@ -40,31 +40,22 @@ class SpikeCountSearch(VmTest):
      A parallel Implementation of a Binary search algorithm,
      which finds a rheobase prediction.
 
-     Strengths: this algorithm is faster than the serial class, present in this file for model backends that are not able to
-     implement numba jit optimisation, which actually happens to be typical of a signifcant number of backends
-
-     Weaknesses this serial class is significantly slower, for many backend implementations including raw NEURON
-     NEURON via PyNN, and possibly GLIF.
-
+     Strengths: this algorithm is faster than the serial class present in this file for model backends that are not able to
+     implement numba jit optimisation.
+     Failure to implement JIT happens to be typical of a signifcant number of backends
      """
      def _extra(self):
          self.verbose = 1
 
-    #def __init__(self,threshold=None):
-    #     self.threshold = threshold
-
 
      required_capabilities = (ncap.ReceivesSquareCurrent,
                               ncap.ProducesSpikes)
-     #DELAY = 100.0*pq.ms
-     # DURATION = 1000.0*pq.ms
      params = {'injected_square_current':
                  {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
      name = "Rheobase test"
      description = ("A test of the rheobase, i.e. the minimum injected current "
                     "needed to evoke at least one spike.")
      units = pq.pA
-     #tolerance  # Rheobase search tolerance in `self.units`.
      ephysprop_name = 'Rheobase'
      score_type = scores.ZScore
 
@@ -85,11 +76,6 @@ class SpikeCountSearch(VmTest):
             dtc.rheobase = {}
             dtc.rheobase['value'] = None
             sub, supra = get_sub_supra(dtc.lookup)
-
-            #if 0. in supra and len(sub) == 0:
-            #    dtc.boolean = True
-            #    dtc.rheobase = None
-            #    return dtc
             if (len(sub) + len(supra)) == 0:
                 # This assertion would only be occur if there was a bug
                 assert sub.max() <= supra.min()
@@ -148,16 +134,6 @@ class SpikeCountSearch(VmTest):
                 dtc.run_number += 1
                 model.set_attrs(dtc.attrs)
                 model.inject_square_current(uc)
-                '''
-                ToDO
-                if self.threshold is not None:
-                    from elephant.spike_train_generation import threshold_detection
-                    print(self.threshold)
-                    n_spikes = len(threshold_detection(model.get_membrane_potential(), threshold=self.threshold))
-                '''
-                    #from neuronunit.capabilities.spike_functions import get_spike_waveforms, spikes2widths, spikes2thresholds
-
-                #else:                      
                 n_spikes = model.get_spike_count()
                 if float(ampl) < -1.0:
                     dtc.rheobase = {}
@@ -184,7 +160,6 @@ class SpikeCountSearch(VmTest):
             '''
             Exploit memory of last model in genes.
             '''
-            # check for memory and exploit it.
             if dtc.initiated == True:
 
                 dtc = check_current(dtc)
@@ -226,8 +201,6 @@ class SpikeCountSearch(VmTest):
             # If its not true enter a search, with ranges informed by memory
             cnt = 0
             sub = np.array([0,0]); supra = np.array([0,0])
-
-            #use_diff = False
             if dtc.backend is 'GLIF':
                 big = 100
             else:
@@ -239,10 +212,6 @@ class SpikeCountSearch(VmTest):
                 if len(sub):
                     if sub.max() < -1.0:
                         pass
-                        #use_diff = True # differentiate the wave to look for spikes
-
-
-                #be = dtc.backend
                 dtc_clones = [ dtc for i in range(0,len(dtc.current_steps)) ]
                 for i,s in enumerate(dtc.current_steps):
                     dtc_clones[i] = copy.copy(dtc_clones[i])
@@ -250,10 +219,6 @@ class SpikeCountSearch(VmTest):
                     dtc_clones[i].backend = copy.copy(dtc.backend)
 
                 dtc_clones = [d for d in dtc_clones if not np.isnan(d.ampl)]
-                #try:
-                #    b0 = db.from_sequence(dtc_clones, npartitions=npartitions)
-                #    dtc_clone = list(b0.map(check_current).compute())
-                #except:
                 set_clones = set([float(d.ampl) for d in dtc_clones ])
                 dtc_clone = []
                 for dtc,sc in zip(dtc_clones,set_clones):
@@ -372,10 +337,6 @@ class SpikeCountRangeSearch(VmTest):
             dtc.rheobase = None
             sub, supra = get_sub_supra(dtc.lookup)
 
-            #if 0. in supra and len(sub) == 0:
-            #    dtc.boolean = True
-            #    dtc.rheobase = None
-            #    return dtc
             if (len(sub) + len(supra)) == 0:
                 # This assertion would only be occur if there was a bug
                 assert sub.max() <= supra.min()
@@ -498,18 +459,8 @@ class SpikeCountRangeSearch(VmTest):
             return dtc
 
         def find_target_current(self, dtc):
-            # This line should not be necessary:
-            # a class, VeryReducedModel has been made to circumvent this.
-            #if hasattr(dtc,'model_path'):
-            #    assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
-            # If this it not the first pass/ first generation
-            # then assume the rheobase value found before mutation still holds until proven otherwise.
-            # dtc = check_current(model.rheobase,dtc)
-            # If its not true enter a search, with ranges informed by memory
             cnt = 0
             sub = np.array([0,0]); supra = np.array([0,0])
-
-            #use_diff = False
             if dtc.backend is 'GLIF':
                 big = 100
             else:
@@ -580,9 +531,9 @@ class SpikeCountRangeSearch(VmTest):
 
                 if self.verbose >= 2:
                     print('not rheobase alg')
-                    #print("Try %d: SubMax = %s; SupraMin = %s" % \
-                    #(cnt, sub.max() if len(sub) else None,
-                    #supra.min() if len(supra) else None))
+                    print("Try %d: SubMax = %s; SupraMin = %s" % \
+                    (cnt, sub.max() if len(sub) else None,
+                    supra.min() if len(supra) else None))
                 cnt += 1
             return dtc
 
