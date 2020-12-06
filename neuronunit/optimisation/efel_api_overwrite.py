@@ -474,7 +474,7 @@ def get_cpp_feature(featureName, raise_warnings=None):
     try:
        exitCode = cppcore.getFeature(featureName, cppcoreFeatureValues)
     except:
-        print('get s here')
+        #print('get s here')
         exitCode = -1
     if exitCode < 0:
         if raise_warnings:
