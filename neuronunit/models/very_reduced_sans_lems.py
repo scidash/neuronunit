@@ -73,18 +73,24 @@ class VeryReducedModel(RunnableModel,
         #pass
         vm = self._backend.inject_square_current(current)
         return vm
-
+    '''
     def get_membrane_potential(self,**run_params):
-        vm = self._backend.get_membrane_potential()
-        return vm
+        #try:
+        #    vm = self._backend.get_membrane_potential()
+        #except:
+        #vm = self.get_membrane_potential()
+        print(run_params)
+        vm = self.get_membrane_potential(**run_params)
 
+        return vm
+    '''
     def get_APs(self, **run_params):
         vm = self.get_membrane_potential(**run_params)
         waveforms = sf.get_spike_waveforms(vm)#,width=10*ms)
         return waveforms
 
     def get_spike_train(self, **run_params):
-        vm = self.get_membrane_potential(**run_params)
+        vm = self._backend.get_membrane_potential(**run_params)
         spike_train = sf.get_spike_train(vm)
         return spike_train
 

@@ -1,6 +1,6 @@
 #from neuronunit.tests.base import ALLEN_ONSET, DT, ALLEN_STOP, ALLEN_FINISH
 import matplotlib.pyplot as plt
-            
+
 from quantities import mV, ms, s, V
 import sciunit
 from neo import AnalogSignal
@@ -48,7 +48,7 @@ logging.disable(logging.CRITICAL)
 import numpy as np
 
 from allensdk.api.queries.cell_types_api import CellTypesApi
-# 
+#
 try:
     from allensdk.api.queries.glif_api import GlifApi
     from allensdk.core.cell_types_cache import CellTypesCache
@@ -81,7 +81,7 @@ import allensdk.core.json_utilities as json_utilities
 import pickle
 from .base import *
 class GLIFBackend(Backend):
-    
+
     name = 'GLIF'
 
     def init_backend(self, attrs=None,DTC=None,
@@ -189,11 +189,11 @@ class GLIFBackend(Backend):
         ##print(self.results['interpolated_spike_times'])
         #assert  np.array(self.results['grid_spike_times'])
         return len(spike_times)
-        
+
     def get_spike_count(self):
         #print('npsikes: ',len(self.results['interpolated_spike_times']))
         #self.results['interpolated_spike_times']
-        
+
         return len(self.results['interpolated_spike_times'])
         #return np.array(spike_times)
     def get_membrane_potential(self):
@@ -229,6 +229,9 @@ class GLIFBackend(Backend):
         #self.model.attrs.update(attrs)
         ref_neuron_config = json_utilities.read('neuron_config.json')#['491546962']
         self.default_attrs = ref_neuron_config
+        #print(ref_neuron_config.keys())
+        #print(ref_neuron_config)
+
         #self.default_attrs['dt'] = 0.01
         #self.default_attrs['El'] = attrs['El_reference']
         # print(attrs)
@@ -261,7 +264,7 @@ class GLIFBackend(Backend):
         else:
             self.attrs.update(self.default_attrs)
         assert self.attrs is not None
-        
+
         #self.glif = GlifNeuron.from_dict(attrs)
         if self.attrs is not None:
             self.glif.C =  self.default_attrs['C']#,
@@ -282,9 +285,9 @@ class GLIFBackend(Backend):
             c = current['injected_square_current']
         else:
             c = current
-        tMax = (float(c['delay'])+float(c['duration'])+200.0)/1000.0
-        delay = start = float(c['delay']/1000.0)
-        duration = float(c['duration']/100.0)
+        tMax = (float(c['delay'])+float(c['duration'])+200.0)#/#1000.0
+        delay = start = float(c['delay'])#/1000.0)
+        duration = float(c['duration'])#/100.0)
         ##
         # currently in pico amps
         ##
@@ -300,7 +303,7 @@ class GLIFBackend(Backend):
 
         #self.glif.dt = DT
         dt = float(5e-3*qt.s)
-        self.glif.dt = float(5e-3*qt.s)
+        self.glif.dt = dt
 
         if 'sim_length' in c.keys():
             sim_length = c['sim_length']
@@ -319,11 +322,20 @@ class GLIFBackend(Backend):
         Iext = list(Iext)
         Iext.extend([0 for i in range(0,int(N/2))])
         stimulus = Iext
+
+        if amplitude>0:
+            stimulus = [ 0.0 ] * 20 + [ amplitude ] * 200 + [ 0 ] * 40
+        else:
+            stimulus = [ 0.0 ] * 20 + [ amplitude ] * 100 + [ 0 ] * 40
+        assert stimulus[-1] == 0
+
+        #stimulus = [ 0.0 ] * int(delay/1000*2) + [ amplitude ] * int(duration/1000*2) + [ 0.0 ] * 200
+
         #self.set_attrs(self.attrs)
         #print(self.attrs)
 
         #print(self.glif.to_dict())
-        self.results = self.glif.run(Iext)
+        self.results = self.glif.run(stimulus)
         vm = self.results['voltage']
         if len(self.results['interpolated_spike_voltage']) > 0:
             isv = self.results['interpolated_spike_voltage'].tolist()[0]
@@ -334,16 +346,15 @@ class GLIFBackend(Backend):
             vm = [v+self.glif.init_voltage for v in vm]
             if np.max(vm)<=0:
                 vm = [v+np.mean([np.abs(np.min(vm)),np.abs(np.max(vm))]) for v in vm]
-                assert np.max(vm)>0
-        vm = [v*1000.0 for v in vm]
+                #assert np.max(vm)>0
+        #vm = [v*1000.0 for v in vm]
 
-        self.vM = AnalogSignal(vm,units =pq.mV,sampling_period = float(5e-3)*pq.s)
-
-        #t = [float(f) for f in self.vM.times]
-        #v = [float(f) for f in self.vM.magnitude]
-        #fig = apl.figure()
-        #fig.plot(t, v, label=str('spikes: ')+str(len(self.results['grid_spike_times'])), width=100, height=20)
-        #fig.show()
+        self.vM = AnalogSignal(vm,units =pq.V,sampling_period = float(5e-3)*pq.s)
+        t = [float(f) for f in self.vM.times]
+        v = [float(f) for f in self.vM.magnitude]
+        fig = apl.figure()
+        fig.plot(t, v, label=str('spikes: ')+str(len(self.results['grid_spike_times'])), width=100, height=20)
+        fig.show()
 
         if len(self.results['interpolated_spike_voltage']) > 0:
             pass
@@ -378,10 +389,10 @@ class GLIFBackend(Backend):
             plt.plot(time,  threshold, label='threshold')
 
             if grid_spike_indices is not None:
-                plt.plot(interpolated_spike_times, interpolated_spike_voltages, 'x', 
+                plt.plot(interpolated_spike_times, interpolated_spike_voltages, 'x',
                         label='interpolated spike')
 
-                plt.plot((grid_spike_indices-1)*self.glif.dt, voltage[grid_spike_indices-1], '.', 
+                plt.plot((grid_spike_indices-1)*self.glif.dt, voltage[grid_spike_indices-1], '.',
                         label='last step before spike')
 
             plt.xlabel('time (s)')
@@ -405,7 +416,7 @@ class GLIFBackend(Backend):
         #self.vM = AnalogSignal(vm,units = mV,sampling_period = (1.0/1.3)*self.glif.dt*qt.s)
         #print(np.std(self.vM),np.mean(self.vM))
         # neuronal_model_id = 566302806
-    
+
         return self.vM
 
         '''
@@ -501,7 +512,7 @@ class GLIFBackend(Backend):
         #    fig.show()
         #except:
         #    pass
-        
+
         return self.vM
 
 
@@ -514,7 +525,7 @@ class GLIFBackend(Backend):
         start = float(c['delay'])
         duration = float(c['duration'])
         amplitude = float(c['amplitude'])#/100 000 000 000.0
-        
+
 
         self.glif.dt = sampling_period
         dt =  self.glif.dt

@@ -28,7 +28,7 @@ class InjectedCurrent:
     required_capabilities = (ncap.ReceivesSquareCurrent,)
 
     default_params = dict(VmTest.default_params)
-    print(default_params)
+    #default_params)
     #default_params.update({'amplitude': 100*pq.pA})
     def compute_params(self):
         self.verbose = False
@@ -86,10 +86,10 @@ class APWidthTest(VmTest):
                       'std': np.std(widths) if len(widths) else None,
                       'n': len(widths)}
         else:
-            print(widths)
+            #print(widths)
             prediction = None
-            import pdb; 
-            pdb.set_trace()
+            #import pdb; 
+            #pdb.set_trace()
         return prediction
 
     def extract_features(self, model):
@@ -101,7 +101,7 @@ class APWidthTest(VmTest):
         #if isinstance(prediction, type(None)):
         #    score = scores.InsufficientDataScore(None)
         if prediction is None:
-            print(scores.InsufficientDataScore(None))
+            #print(scores.InsufficientDataScore(None))
             return scores.InsufficientDataScore(None)
 
         if prediction['value']>50*pq.ms:

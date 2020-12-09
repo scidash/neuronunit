@@ -293,17 +293,27 @@ class NeuroElectroDataMap(NeuroElectroData):
         We will use 'params' in the future to specify metadata
         (e.g. temperature) that neuroelectro.org will provide.
         """
-        data = super(NeuroElectroDataMap, self).get_values(params=params,
+        data_list = super(NeuroElectroDataMap, self).get_values(params=params,
                                                            quiet=quiet)
-        if data:
-            self.neuron.name = data['ncm']['n']['name']
-            # Set the neuron name from the json data.
-            self.ephysprop.name = data['ecm']['e']['name']
-            # Set the ephys property name from the json data.
-            self.val = data['val']
-            self.sem = data['err']
-            self.n = data['n']
-            self.check()
+        
+        
+        #print(type(data))
+        #import pdb
+        #pdb.set_trace()
+        import copy
+        container = []
+        if data_list:
+            for data in data_list:
+                self.neuron.name = data['ncm']['n']['name']
+                # Set the neuron name from the json data.
+                self.ephysprop.name = data['ecm']['e']['name']
+                # Set the ephys property name from the json data.
+                self.val = data['val']
+                self.sem = data['err']
+                self.n = data['n']
+                self.check()
+                container.append(copy.copy(self))
+
         return data
 
 
@@ -313,7 +323,7 @@ class NeuroElectroSummary(NeuroElectroData):
     """
 
     url = API_URL+'nes/'
-    require_attrs = ['mean', 'std']
+    require_attrs = ['mean', 'std','sem']
 
     def get_values(self, params=None, quiet=False):
         """Get values from neuroelectro.org.
@@ -332,6 +342,9 @@ class NeuroElectroSummary(NeuroElectroData):
             self.std = data['value_sd']
             self.n = data['num_articles']
             self.check()
+            print(data.keys())
+            #self.sem = data['value_sem']
+ 
         return data
 
     def get_observation(self, params=None, show=False):
@@ -339,7 +352,7 @@ class NeuroElectroSummary(NeuroElectroData):
         values = self.get_values(params=params)
         if show:
             pprint(values)
-        observation = {'mean': self.mean, 'std': self.std}
+        observation = {'mean': self.mean, 'std': self.std,'sem':self.sem}
         return observation
 
 
@@ -358,20 +371,23 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
 
         params['limit'] = 999
 
-        data = super(NeuroElectroPooledSummary, self).get_values(params=params,
+        data_list = super(NeuroElectroPooledSummary, self).get_values(params=params,
                                                                  quiet=quiet)
 
-        if data:
-            # Ensure data from api matches the requested params
-            data = [item for item in data
-                    if (item['ecm']['e']['name'] == self.ephysprop.name.lower()
-                        or
-                        item['ecm']['e']['id'] == self.ephysprop.id)
-                    and
-                       (item['ncm']['n']['nlex_id'] == self.neuron.nlex_id
-                        or
-                        item['ncm']['n']['id'] == self.neuron.id)
-                    ]
+
+
+        if data_list:
+            for data in data_list:
+                # Ensure data from api matches the requested params
+                data = [item for item in data
+                        if (item['ecm']['e']['name'] == self.ephysprop.name.lower()
+                            or
+                            item['ecm']['e']['id'] == self.ephysprop.id)
+                        and
+                        (item['ncm']['n']['nlex_id'] == self.neuron.nlex_id
+                            or
+                            item['ncm']['n']['id'] == self.neuron.id)
+                        ]
 
             # Set the neuron name and prop from the first json data object.
             self.neuron_name = data[0]['ncm']['n']['name']
@@ -403,7 +419,7 @@ class NeuroElectroPooledSummary(NeuroElectroDataMap):
         if show:
             pprint(values)
 
-        observation = {'mean': self.mean, 'std': self.std, 'n': self.n}
+        observation = {'mean': self.mean, 'std': self.std, 'n': self.n,'sem':self.sem}
 
         return observation
 

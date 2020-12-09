@@ -332,11 +332,11 @@ def elaborate_plots(ga_out,figname=None):
         rs = ga_out['random_search']
         brst = ga_out['random_search']['best_random_sum_total']
         brst_vect = [brst for i in range(0,len(logbook.select('gen'))) ]
-        
+
         axes.plot(gen_numbers, brst_vect, label='best random sum total')
     mean_ = np.array(logbook.select('avg'))
     meanx = [i[0] for i in mean_]
-    
+
     axes.plot(
         gen_numbers,
         minimum,
@@ -356,7 +356,7 @@ def elaborate_plots(ga_out,figname=None):
     axes.legend()
     fig.tight_layout()
     import numpy as np
- 
+
     if savefigs:
         if figname is None:
             figname = ' '
@@ -383,7 +383,7 @@ def plot_score_history_standardized(ga_out,rand_sample=None,figname=None):
     """
     Adapted from pyfrume.
     """
-    
+
     if rand_sample is None:
         import shelve
         d = shelve.open('random_sample_models_cache')  # open -- file may get suffix added by low-level
@@ -392,7 +392,7 @@ def plot_score_history_standardized(ga_out,rand_sample=None,figname=None):
         dtc = rand['best_random_model']#.attrs
         mean = {}
         std = {}
-        for k in dtc.SA.keys(): 
+        for k in dtc.SA.keys():
             mean[k.name] = rand[k.name][0]
             std[k.name] = rand[k.name][1]
 
@@ -401,7 +401,7 @@ def plot_score_history_standardized(ga_out,rand_sample=None,figname=None):
         mean = {}
         std = {}
         dtc = ga_out['pf'][0].dtc
-        for k in dtc.SA.keys(): 
+        for k in dtc.SA.keys():
             #print(rand_sample[k.name])
             mean[k.name] = rand_sample[k.name][0]
             std[k.name] = rand_sample[k.name][1]
@@ -420,8 +420,8 @@ def plot_score_history_standardized(ga_out,rand_sample=None,figname=None):
     axes[0,0].set_title('Observation/Prediction Disagreement')
     for i,(k,v) in enumerate(objectives.items()):
         ax = axes.flat[i+1]
-        mn = mean[k.name] 
-        st = std[k.name] 
+        mn = mean[k.name]
+        st = std[k.name]
         history = [(j[i]-mn)/st for j in scores ]
         #ax.axhline(y=mn , xmin=0.02, xmax=0.99,color='red',label='best candidate sampled')
 
@@ -497,7 +497,7 @@ def plot_score_history_SA(ga_out,figname=None):
     fig,axes = plt.subplots(2,math.ceil((len(objectives)+1)/2),figsize=(20,8))
     axes[0,0].plot(scores)
     axes[0,0].set_title('Total')
-    for i,(k,v) in enumerate(objectives.items()): 
+    for i,(k,v) in enumerate(objectives.items()):
         ax = axes.flat[i+1]
         history1 = [d.SA[k] for d in dtcpop ]
         ax.plot(history1)
@@ -613,7 +613,7 @@ def adjust_spines(ax, spines, color='k', d_out=10, d_down=None):
         else:
             plt.show()
 
-       
+
 
 def light_palette(color, n_colors=6, reverse=False, lumlight=0.8, light=None):
 
@@ -697,14 +697,63 @@ def tiled_figure(figname='', frames=1, columns=2,
 
     return axs
 
-
-
-def plot_surface(fig_trip,ax_trip,model_param0,model_param1,history):
+import matplotlib
+def plot_surface2(fig_trip,ax_trip,model_param0,model_param1,history,simple_cell,opt=None,target=None):
     '''
 
     Move this method back to plottools
     Inputs should be keys, that are parameters see new function definition below
     '''
+    td = list(simple_cell.params.keys())
+    x = [ i for i,j in enumerate(td) if str(model_param0) == j ][0]
+    y = [ i for i,j in enumerate(td) if str(model_param1) == j ][0]
+    z = [ i for i,j in enumerate(td) if str(model_param1) == j ][0]
+
+    all_inds = history.genealogy_history.values()
+    sums = np.array([np.sum(ind.fitness.values) for ind in all_inds])
+
+    xs = np.array([ind[x] for ind in all_inds])
+    ys = np.array([ind[y] for ind in all_inds])
+    zs = np.array([ind[z] for ind in all_inds])
+
+    min_ys = ys[np.where(sums == np.min(sums))]
+    min_xs = xs[np.where(sums == np.min(sums))]
+    min_zs = xs[np.where(sums == np.min(sums))]
+
+
+    data = np.zeros((len(xs),3))
+    data[:,0] = xs
+    data[:,1] = ys
+    data[:,2] = zs
+    trip_axis = ax_trip.tripcolor(xs,ys,sums,20,norm=matplotlib.colors.LogNorm())
+
+    if target is not None:
+        target_xs = target.attrs[model_param0]
+        target_ys = target.attrs[model_param1]
+        plot_axis = ax_trip.plot(target_xs, target_ys, 'o', color='blue',label='global minima',alpha=0.15)
+    else:
+        plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='blue',label='global minima',alpha=0.15)
+
+    if opt is not None:
+        target_xs = opt.attrs[model_param0]
+        target_ys = opt.attrs[model_param1]
+        plot_axis = ax_trip.plot(target_xs, target_ys, '*', color='red',label='GA solution')
+    #else:
+    #    plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue',label='global minima')
+
+
+    if type(td) is not type(None):
+        ax_trip.set_xlabel('Parameter '+str((td[x])))
+        ax_trip.set_ylabel('Parameter '+str((td[y])))
+    plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
+    #plot_axis.legend()
+    return ax_trip,plot_axis
+
+'''
+def plot_surface(fig_trip,ax_trip,model_param0,model_param1,history):
+
+    Move this method back to plottools
+    Inputs should be keys, that are parameters see new function definition below
     td = list(history.genealogy_history[1].dtc.attrs.keys())
     x = [ i for i,j in enumerate(td) if str(model_param0) == j ][0]
     y = [ i for i,j in enumerate(td) if str(model_param1) == j ][0]
@@ -743,6 +792,7 @@ def plot_surface(fig_trip,ax_trip,model_param0,model_param1,history):
     plot_axis = ax_trip.plot(list(min_xs), list(min_ys), 'o', color='lightblue')
     #plot_axis.tight_layout()
     return ax_trip,plot_axis
+'''
 
 def plot_vm(hof,ax,key):
     ax.cla()

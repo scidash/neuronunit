@@ -23,6 +23,79 @@ from sciunit.utils import redirect_stdout
 from elephant.spike_train_generation import threshold_detection
 from neuronunit.optimisation.model_parameters import path_params
 import time
+
+
+
+from numba import jit
+import numpy as np
+
+#@jit(nopython=True)
+@jit
+def inner_core(fPots,vIndex,vTime,fTime,duration,vTimes,vPots,fDt,iter_):
+    for time in iter_:
+        if fTime == vTime:
+            fPots.append(vPots[vIndex])
+
+        # Interpolate between the two nearest vdt times
+        else:
+
+            # Increment vdt time until it surpases the fdt time
+            while fTime > vTime and vIndex < len(vTimes):
+                vIndex += 1
+                vTime = vTimes[vIndex]
+
+            # Once surpassed, use the new vdt time and t-1
+            # for interpolation
+            vIndexMinus1 = max(0, vIndex-1)
+            vTimeMinus1 = vTimes[vIndexMinus1]
+
+            #def linearInterpolate(tStart, tEnd, vStart, vEnd, tTarget):
+            tStart, tEnd, vStart, vEnd, tTarget = vTimeMinus1, vTime,vPots[vIndexMinus1],vPots[vIndex], fTime
+            tRange = (tEnd - tStart)
+            tFractionAlong = (tTarget - tStart)/tRange
+            vRange = vEnd - vStart
+            fPot = vRange*tFractionAlong + vStart
+
+            fPots.append(fPot)
+
+        # Go to the next fdt time step
+        fTime += fDt
+    return fPots
+
+
+@jit
+def get_fixed_step_analog_signal(desired_fixedTimeStep,varied_Pots,varied_Times):#,iterator):
+    """Convert variable dt array values to fixed dt array.
+
+    Uses linear interpolation.
+    """
+    # Fixed dt potential
+    fPots = []
+    fDt = desired_fixedTimeStep
+    # Variable dt potential
+    vPots = varied_Pots
+    #self.vVector.to_python()
+    # Variable dt times
+    vTimes = varied_Times#self.tVector.to_python()
+    duration = vTimes[len(vTimes)-1]
+    # Fixed and Variable dt times
+    fTime = vTimes[0]
+    vTime = vTimes[0]
+    # Index of variable dt time array
+    vIndex = 0
+    # Advance the fixed dt position
+    #
+    iter_ = range(0,int(duration/fDt)-1)
+    fPots = inner_core(fPots,int(vIndex),float(vTime),float(fTime),float(duration),list(vTimes),list(vPots),float(fDt),iter_)
+    return fPots,iter_
+@jit
+def get_int(tvec):
+    list_of_intervals = []
+    for i,t in enumerate(tvec):
+        if i>0:
+            list_of_intervals.append(t-tvec[i-1])
+    return np.min(list_of_intervals)
+
 class NEURONHHBackend(Backend):
     """Use for simulation with NEURON, a popular simulator.
 
@@ -38,7 +111,7 @@ class NEURONHHBackend(Backend):
     """
 
     name = 'NEURONHH'
-    
+
     def init_backend(self, attrs=None,DTC=None):
         """Initialize the NEURON backend for neuronunit.
 
@@ -87,7 +160,7 @@ class NEURONHHBackend(Backend):
         super(NEURONHHBackend, self).init_backend()
         self.model._backend.use_memory_cache = False
         self.model.unpicklable += ['h', 'ns', '_backend']
-
+        self.load_model()
         if type(DTC) is not type(None):
             if type(DTC.attrs) is not type(None):
 
@@ -118,8 +191,9 @@ class NEURONHHBackend(Backend):
         self.h = neuronVar.h
         self.neuron = neuronVar
         # h = neuron.h
-        self.h.load_file("stdlib.hoc")
-        self.h.load_file("stdgui.hoc")
+        #self.h.load_file("stdlib.hoc")
+        #self.h.load_file("stdgui.hoc")
+        self.load_model()
 
 
     def set_run_params(self, **run_params):
@@ -130,11 +204,12 @@ class NEURONHHBackend(Backend):
         stopTimeMs: duration in milliseconds
         """
         self.h.tstop = float(stop_time.rescale(pq.ms))
+
     def get_spike_count(self):
-        thresh = threshold_detection(self.vM)
+        thresh = threshold_detection(self.vM,threshold=0.0*pq.mV,sign=above)
         return len(thresh)
 
-
+    '''
     def set_time_step(self, integrationTimeStep=(pq.ms/128.0)):
         """Set the simulation itegration fixed time step
         integrationTimeStepMs: time step in milliseconds.
@@ -145,8 +220,9 @@ class NEURONHHBackend(Backend):
                 Powers of two preferred. Defaults to 1/128.0
         """
         dt = integrationTimeStep
-        self.h.dt = 0.01#float(dt)0.01
-
+        self.h.dt = 0.1#float(dt)0.01
+    '''
+    '''
     def set_tolerance(self, tolerance=0.001):
         """Set the variable time step integration method absolute tolerance.
 
@@ -154,7 +230,7 @@ class NEURONHHBackend(Backend):
             tolerance (float): absolute tolerance value
         """
         self.h.cvode.atol(tolerance)
-
+    '''
     def set_integration_method(self, method="variable"):
         """Set the simulation itegration method.
 
@@ -163,6 +239,7 @@ class NEURONHHBackend(Backend):
         Args:
             method (string): either "fixed" or "variable". Defaults to fixed.
         """
+
         # This line is compatible with the above cvodes statements.
         self.h.cvode.active(1 if method == "variable" else 0)
 
@@ -171,6 +248,7 @@ class NEURONHHBackend(Backend):
         except AssertionError:
             self.h.cvode = self.h.CVode()
             self.h.cvode.active(1 if method == "variable" else 0)
+    '''
     def get_variable_step_analog_signal(self):
         """Convert variable dt array values to fixed dt array.
 
@@ -218,6 +296,7 @@ class NEURONHHBackend(Backend):
             fTime += fDt
 
         return fPots
+    '''
 
     def get_membrane_potential(self):
         """Get a membrane potential traces from the simulation.
@@ -227,6 +306,7 @@ class NEURONHHBackend(Backend):
         Returns:
             neo.core.AnalogSignal: the membrane potential trace
         """
+        '''
 
         #if self.h.cvode.active() == 0:
         dt = float(self.h.dt)
@@ -243,10 +323,11 @@ class NEURONHHBackend(Backend):
         self.vM = AnalogSignal(fixed_signal,
                             units=pq.mV,
                             sampling_period=self.h.dt*pq.ms)
+        '''
 
         return self.vM       #waves0 = [i.rescale(qt.mV) for i in waves0 ]
 
-
+    '''
     def linearInterpolate(self, tStart, tEnd, vStart, vEnd, tTarget):
         """Perform linear interpolation."""
         tRange = float(tEnd - tStart)
@@ -265,11 +346,12 @@ class NEURONHHBackend(Backend):
         self.h.tstop = tstop
         self.set_stop_time(tstop)  # previously 500ms add on 150ms of recovery
         #with redirect_stdout(self.stdout):
-        self.ns = nrn.NeuronSimulation(self.h.tstop, dt=0.01)
+        self.ns = nrn.NeuronSimulation(self.h.tstop, dt=0.1)
 
     def load_mechanisms(self):
         with redirect_stdout(self.stdout):
             neuron.load_mechanisms(self.neuron_model_dir)
+    '''
 
     def load_model(self, verbose=True):
         """Load a NEURON model.
@@ -286,21 +368,22 @@ class NEURONHHBackend(Backend):
         """
 
         soma = h.Section(name='soma')
+        soma.nseg = 1
         soma.insert('hh')
-        #soma.insert('pas')
-
+        soma.insert('pas')
         self.soma = soma
         return self
 
 
     def set_attrs(self, attrs):
         # make sure all attributes are acoounted for.
-        # if assingment is incomplete assume user does not want to explicitly specify 
+        # if assingment is incomplete assume user does not want to explicitly specify
         # everything and is satisfied by defaults.
         self.default_attrs.update(attrs)
         attrs = self.default_attrs
 
-        
+
+
         if not hasattr(self.model,'attrs'):# is None:
             self.model.attrs = {}
             self.model.attrs.update(attrs)
@@ -312,10 +395,10 @@ class NEURONHHBackend(Backend):
         self.soma(0.5).hh.gkbar = attrs['gkbar']
         self.soma(0.5).cm = attrs['cm']
         self.soma.L = attrs['L']
-        
+
         self.soma.diam = attrs['diam']#12.6157 # Makes a soma of 500 microns squared.
-        
-        
+
+
         for sec in self.h.allsec():
             sec.Ra = attrs['Ra']    # Axial resistance in Ohm * cm
             sec.cm = attrs['cm']      # Membrane capacitance in micro Farads / cm^2
@@ -363,7 +446,8 @@ class NEURONHHBackend(Backend):
 
 
         self.init_backend()
-        #self.set_integration_method()
+        self.h.cvode.active(1)
+        #self.set_integration_method(method="variable")
         if len(temp_attrs):
             self.set_attrs(temp_attrs)
 
@@ -378,13 +462,16 @@ class NEURONHHBackend(Backend):
         # critical code:
         ##
         stop_time = float(c['delay'])*pq.ms+float(c['duration'])*pq.ms+200.0*pq.ms
-        self.set_stop_time(stop_time)
         # translate pico amps to nano amps
         # NEURONs default unit multiplier for current injection values is nano amps.
         # to make sure that pico amps are not erroneously interpreted as a larger nano amp.
         # current injection value, the value is divided by 1000.
         stim = self.h.IClamp(self.soma(0.5))
-        amp = float(c['amplitude'])#*1000.0
+        amp = float(c['amplitude'])/1000.0#*1000.0#.rescale('nA'))#/1000.0#*1000.0*1000.0#*1000.0#.rescale('nA'))#*1000.0#*1.0/1000.0#.rescale('nA'))
+        #print(amp)
+        #amp = amp*0.001#1000.0 # convert back to nano amps
+        #assert amp!=-0.0
+        #print(amp)
         dur = float(c['duration'])#.rescale('ms'))
         delay = float(c['delay'])#.rescale('ms'))
         stim.amp = amp
@@ -395,19 +482,45 @@ class NEURONHHBackend(Backend):
         tMax = delay + dur + 200.0
         self.h.tstop = tMax
         #b4 = time.perf_counter()
-        self.h('run()')
+        self.h.dt = 1
+        self.set_stop_time(stop_time)
+
+        with redirect_stdout(self.stdout):
+            self.h('run()')#+str(tMax)+')')
         #af = time.perf_counter()
         #print('time:',af - b4)
-        self.vM = AnalogSignal([float(x) for x in
-                         self.vVector],
-                                             units=pq.mV,
-                                             sampling_period=self.h.dt*pq.ms)
+        tvec = [float(x) for x in self.tVector]
+        #print(tvec[1],self.h.dt)
+        #get_int(tvec)
+        vm = [float(x) for x in self.vVector]
+        vm_fast,vm_times = get_fixed_step_analog_signal(tvec[1],
+                                            vm,
+                                            tvec)
+        '''
+        self.vM = AnalogSignal(vm,
+                                units=pq.mV,
+                                sampling_period=tvec[1]*pq.ms)
+        t = [float(f) for f in self.vM.times]
+        v = [float(f) for f in self.vM.magnitude]
+        v_fast = [float(f) for f in self.vM_other]
+        t_fast = [float(f) for f in self.vM_other.times]
+        fig = apl.figure()
+        fig.plot(t, v, width=100, height=20)
+        fig.plot(t_fast, v_fast, width=100, height=20)
+        fig.show()
+        '''
+        self.vM = AnalogSignal(vm_fast,
+                                units=pq.mV,
+                                sampling_period=tvec[1]*pq.ms)
+
+
         is_nan_in_vm = False
         for v in self.vM:
             if np.isnan(float(v)):
                 is_nan_in_vm = True
-        if is_nan_in_vm:
-            print(self.attrs)
+                #print('gets to nan')
+        #if is_nan_in_vm:
+        #    print(self.attrs)
         return self.vM
     def local_run(self):
         #with redirect_stdout(self.stdout):

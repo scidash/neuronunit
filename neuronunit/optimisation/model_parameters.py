@@ -10,9 +10,10 @@ import pickle
 
 
 from bluepyopt.parameters import Parameter
-def bpo_param(attrs):
-    p = Parameter(name=k,bounds=v,frozen=False)
+def to_bpo_param(attrs):
+    lop = {}
     for k,v in attrs.items():
+        p = Parameter(name=k,bounds=v,frozen=False)
         lop[k] = p
     return lop
 #        model.attrs[k] = np.mean(v)
@@ -96,7 +97,7 @@ HH_attrs['Vr'] = HH_attrs['E_L']
 HH_dic1 = { k:sorted([float(v)-0.25*float(v),float(v)+0.25*float(v)]) for k,v in HH_attrs.items() }
 
 MODEL_PARAMS['HH'] = HH_dic1
-
+'''
 # https://www.izhikevich.org/publications/spikes.htm
 type2007 = collections.OrderedDict([
   #              C    k     vr  vt vpeak   a      b   c    d  celltype
@@ -107,6 +108,20 @@ type2007 = collections.OrderedDict([
   ('FS',        (20,  1,    -55, -40, 25, 0.2,    2, -45,   55,   5)),
   ('TC',        (200, 1.6,  -60, -50, 35, 0.1,  15, -60,   10,   6)),
   ('TC_burst',  (200, 1.6,  -60, -60, 35, 0.1,  15, -60,   10,   7))])
+'''
+type2007 = collections.OrderedDict([
+  #              C    k     vr  vt vpeak   a      b   c    d  celltype
+  ('RS',        (100, 0.7,  -60, -40, 35, 0.01,   -2, -50,  100,  3)),
+  ('IB',        (150, 1.2,  -75, -45, 50, 0.1,   5, -56,  130,   3)),
+  ('TC',        (200, 1.6,  -60, -50, 35, 0.1,  15, -60,   10,   6)),
+  ('TC_burst',  (200, 1.6,  -60, -50, 35, 0.1,  15, -60,   10,   6)),
+  ('LTS',       (100, 1.0,  -56, -42, 40, 0.01,   8, -53,   20,   4)),
+  ('RTN',       (40,  0.25, -65, -45, 0,  0.015, 10, -55,  50,    7)),
+  ('FS',        (20,  1,    -55, -40, 25, 0.2,   -2, -45,  -55,   5)),
+  ('CH',        (50,  1.5,  -60, -40, 25, 0.01,   1, -40,  150,   3))])
+
+
+
 
 # http://www.physics.usyd.edu.au/teach_res/mp/mscripts/
 # ns_izh002.m
@@ -238,6 +253,11 @@ for v in BAE1.values():
 
 MODEL_PARAMS['ADEXP'] = BAE1
 
+MATNEURON = {'vr':-65.0,'vt':-55.0,'a1':10, 'a2':2, 'b':0, 'w':5, 'R':10, 'tm':10, 't1':10, 't2':200, 'tv':5, 'tref':2}
+MATNEURON = {k:(np.mean(v)-np.abs(np.mean(v)*2.0),np.mean(v)+np.mean(v)*2.0) for k,v in MATNEURON.items()}
+MATNEURON = {k:sorted(v) for k,v in MATNEURON.items()}
+MODEL_PARAMS['MAT'] = MATNEURON
+
 
 
 l5_pc_keys = ['gNaTs2_tbar_NaTs2_t.apical', 'gSKv3_1bar_SKv3_1.apical', 'gImbar_Im.apical', 'gNaTa_tbar_NaTa_t.axonal', 'gNap_Et2bar_Nap_Et2.axonal', 'gK_Pstbar_K_Pst.axonal', 'gK_Tstbar_K_Tst.axonal', 'gSK_E2bar_SK_E2.axonal', 'gSKv3_1bar_SKv3_1.axonal', 'gCa_HVAbar_Ca_HVA.axonal', 'gCa_LVAstbar_Ca_LVAst.axonal', 'gamma_CaDynamics_E2.axonal', 'decay_CaDynamics_E2.axonal', 'gNaTs2_tbar_NaTs2_t.somatic', 'gSKv3_1bar_SKv3_1.somatic', 'gSK_E2bar_SK_E2.somatic', 'gCa_HVAbar_Ca_HVA.somatic', 'gCa_LVAstbar_Ca_LVAst.somatic', 'gamma_CaDynamics_E2.somatic', 'decay_CaDynamics_E2.somatic']
@@ -278,3 +298,6 @@ GLIF_RANGE.pop('El',None)
 GLIF_RANGE = {k:sorted(v) for k,v in GLIF_RANGE.items()}
 
 MODEL_PARAMS['GLIF'] = GLIF_RANGE
+
+
+BPO_PARAMS = {k:to_bpo_param(v) for k,v in MODEL_PARAMS.items()}

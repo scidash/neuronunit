@@ -212,16 +212,19 @@ class RheobaseTest(VmTest):
                     #print(n_spikes)
                 current = self.get_injected_square_current()
                 current['amplitude'] = ampl
-                if not str(model.backend) in "NEURON" and not str(model.backend) in "jNeuroML":
-
-                    model.inject_square_current(current)
+                if "JIT_" in model.backend:
+                    vm = model.inject_square_current(**current)
+                    #print(vm)
+                    #n_spikes = model._backend.get_spike_count()
+                    #model.vM = vm
                     n_spikes = model.get_spike_count()
 
                 else:
+
                     model._backend.inject_square_current(current)
                     n_spikes = model._backend.get_spike_count()
 
-    
+
                 #asciplot_code(model.get_membrane_potential(),n_spikes)
 
                 self.n_spikes = n_spikes
@@ -255,8 +258,8 @@ class RheobaseTest(VmTest):
             # computation intensive and therefore
             # a target for parellelization.
             temp_ = [ v for v in lookup.values() if v==1 ]
-            if len(temp_) >= 3:
-                break
+            #if len(temp_) >= 5:
+            #    break
             #if 1 in set(lookup.values()):
             #    break
             if len(supra) and len(sub):
@@ -275,7 +278,6 @@ class RheobaseTest(VmTest):
 
                     break
 
-
             if i >= max_iters:
                 break
             # Its this part that should be like an evaluate function
@@ -289,6 +291,7 @@ class RheobaseTest(VmTest):
             elif len(supra):
                 f(min(-small, supra.min()*2))
             i += 1
+        #print('returned rheob iter',i)
 
         return lookup
 

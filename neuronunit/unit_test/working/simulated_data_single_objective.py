@@ -353,7 +353,7 @@ print(pred)
 
 
 from neuronunit.optimisation.algorithms import cleanse
-seed_pop = cleanse(copy.copy(ga_out['pf'))
+seed_pop = cleanse(copy.copy(ga_out['pf']))
 OMObjects.MU =6
 ga_out = simulated_data_tests.optimize(OMObjects[0].boundary_dict,backend=OMObjects[0].backend,\
         protocol={'allen': False, 'elephant': True},\

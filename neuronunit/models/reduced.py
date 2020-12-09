@@ -45,10 +45,10 @@ class ReducedModel(LEMSModel,
             vm = self._backend.get_membrane_potential(**run_params)
         except:
             vm = self.get_membrane_potential(**run_params)
-        if str('ADEXP') in self._backend.name:
+        #if str('ADEXP') in self._backend.name:
 
-            self._backend.threshold = np.max(vm)-np.max(vm)/250.0
-            waveforms = sf.get_spike_waveforms(vm,self._backend.threshold)
+            #self._backend.threshold = np.max(vm)-np.max(vm)/250.0
+        #    waveforms = sf.get_spike_waveforms(vm,self._backend.threshold)
         else:
             waveforms = sf.get_spike_waveforms(vm)
         return waveforms
@@ -56,12 +56,12 @@ class ReducedModel(LEMSModel,
     def get_spike_train(self, **run_params):
         vm = self.get_membrane_potential(**run_params)
         #spike_train = sf.get_spike_train(vm)
-        if str('ADEXP') in self._backend.name:
+        #if str('ADEXP') in self._backend.name:
         #if hasattr(self._backend,'name'):
-            self._backend.threshold = np.max(vm)-np.max(vm)/250.0
-            spike_train = sf.get_spike_train(vm,self._backend.threshold)
-        else:
-            spike_train = sf.get_spike_train(vm)
+        #    self._backend.threshold = np.max(vm)-np.max(vm)/250.0
+        #    spike_train = sf.get_spike_train(vm,self._backend.threshold)
+        #else:
+        spike_train = sf.get_spike_train(vm)
 
         return spike_train
     '''

@@ -52,6 +52,7 @@ class ExternalModel(sciunit.Model,
 
     def __init__(self):
         """Create an instace of a model that produces a static waveform."""
+        self.set_backend('Empty')
 
     def set_membrane_potential(self, vm):
         self.vm = vm
@@ -61,3 +62,8 @@ class ExternalModel(sciunit.Model,
 
     def get_membrane_potential(self):
         return self.vm
+    def get_APs(self, **run_params):
+        """Return the APs, if any, contained in the static waveform."""
+        vm = self.get_membrane_potential(**run_params)
+        waveforms = sf.get_spike_waveforms(vm)
+        return waveforms

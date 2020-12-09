@@ -40,7 +40,7 @@ def get_vm_matlab_four(C=89.7960714285714,
     u = np.zeros(N)
     v[0] = vr
     for i in range(N-1):
-        I = 0	
+        I = 0
         if ramp is not None:
             I = ramp[i]
         elif start <= i <= stop:
@@ -72,7 +72,7 @@ def get_vm_matlab_five(C=89.7960714285714,
     u = np.zeros(N)
     v[0] = vr
     for i in range(N-1):
-        I = 0	
+        I = 0
         if ramp is not None:
             I = ramp[i]
         elif start <= i <= stop:
@@ -105,7 +105,7 @@ def get_vm_matlab_seven(C=89.7960714285714,
     u = np.zeros(N)
     v[0] = vr
     for i in range(N-1):
-        I = 0	
+        I = 0
         if ramp is not None:
             I = ramp[i]
         elif start <= i <= stop:
@@ -142,7 +142,7 @@ def get_vm_matlab_six(C=89.7960714285714,
     u = np.zeros(N)
     v[0] = vr
     for i in range(N-1):
-        I = 0	
+        I = 0
         if ramp is not None:
             I = ramp[i]
         elif start <= i <= stop:
@@ -178,7 +178,7 @@ def get_vm_matlab_one_two_three(C=89.7960714285714,
     u = np.zeros(N)
     v[0] = vr
     for i in range(N-1):
-        I = 0	
+        I = 0
         if ramp is not None:
             I = ramp[i]
         elif start <= i <= stop:
@@ -219,7 +219,9 @@ class IZHIBackend(Backend):
         if type(DTC) is not type(None):
             if type(DTC.attrs) is not type(None):
                 self.set_attrs(**DTC.attrs)
+                print('gets here b')
         if self.attrs is None:
+            #print('gets here a')
             self.attrs = self.default_attrs
 
 
@@ -295,11 +297,11 @@ class IZHIBackend(Backend):
         """
         Generate the waveform for a series of current pulses.
         Arguments:
-	amplitude - absolute current value during each pulse
-	onsets - a list or array of times at which pulses begin
-	width - duration of each pulse
-	t_stop - total duration of the waveform
-	baseline - the current value before, between and after pulses.
+		amplitude - absolute current value during each pulse
+		onsets - a list or array of times at which pulses begin
+		width - duration of each pulse
+		t_stop - total duration of the waveform
+		baseline - the current value before, between and after pulses.
         """
         times = [0]
         amps = [baseline]
@@ -316,13 +318,13 @@ class IZHIBackend(Backend):
         Generate the waveform for a current which is initially constant
         and then increases linearly with time.
         Arguments:
-	gradient - gradient of the ramp
-	onset - time at which the ramp begins
-	t_stop - total duration of the waveform
-	baseline - current value before the ramp
-	time_step - interval between increments in the ramp current
-	t_start - time at which the waveform begins (used to construct waveforms
-	          containing multiple ramps).
+		gradient - gradient of the ramp
+		onset - time at which the ramp begins
+		t_stop - total duration of the waveform
+		baseline - current value before the ramp
+		time_step - interval between increments in the ramp current
+		t_start - time at which the waveform begins (used to construct waveforms
+		          containing multiple ramps).
         """
         if onset > t_start:
             times = np.hstack((np.array((t_start, onset)),  # flat part
@@ -334,9 +336,9 @@ class IZHIBackend(Backend):
 
     def inject_ramp_current(self, t_stop, gradient=0.000015, onset=30.0, baseline=0.0, t_start=0.0):
         times, amps = self.ramp(gradient, onset, t_stop, baseline=0.0, t_start=0.0)
- 
+
         everything = copy.copy(self.attrs)
-        
+
         everything.update({'ramp':amps})
         everything.update({'start':onset})
         everything.update({'stop':t_stop})
@@ -368,7 +370,7 @@ class IZHIBackend(Backend):
                             units=pq.mV,
                             sampling_period=0.125*pq.ms)
 
-        return self.vM	
+        return self.vM
 
     def stepify(times, values):
         """
@@ -385,7 +387,7 @@ class IZHIBackend(Backend):
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
-    @timer
+    #@timer
     def inject_square_current(self, current):
         """
         Inputs: current : a dictionary with exactly three items, whose keys are: 'amplitude', 'delay', 'duration'
@@ -397,8 +399,10 @@ class IZHIBackend(Backend):
         """
 
         attrs = self.attrs
+        #print(attrs)
         if attrs is None:
             attrs = self.default_attrs
+            #print('gets here')
 
         self.attrs = attrs
         if 'delay' in current.keys() and 'duration' in current.keys():
@@ -406,8 +410,8 @@ class IZHIBackend(Backend):
             c = current
         if isinstance(c['amplitude'],type(pq)):
             amplitude = float(c['amplitude'].simplified)
-            duration = float(c['duration'].simplified)
-            delay = float(c['delay'].simplified)
+            duration = float(c['duration'])
+            delay = float(c['delay'])
         else:
             amplitude = float(c['amplitude'])
             duration = float(c['duration'])
@@ -460,7 +464,7 @@ class IZHIBackend(Backend):
                 v = get_vm_matlab_seven(**everything)
 
 
-        self.model.attrs.update(attrs)
+        #self.model.attrs.update(attrs)
         if 'v' not in locals():
             print(self.attrs['celltype'])
         self.vM = AnalogSignal(v,

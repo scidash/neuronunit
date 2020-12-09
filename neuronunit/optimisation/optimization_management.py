@@ -19,6 +19,11 @@ matplotlib.rcParams.update({'font.size': 12})
 #except:
 #    warnings.warn('X11 plotting backend not available, consider installing')
 
+from neuronunit.tests import *
+from elephant.spike_train_generation import threshold_detection
+from neuronunit.capabilities.spike_functions import get_spike_waveforms, spikes2widths, spikes2thresholds, spikes2amplitudes
+from quantities import mV, ms
+
 import cython
 import logging
 mpl = matplotlib
@@ -920,10 +925,15 @@ def inject_and_plot_model(pre_model,figname=None,plotly=True):
     #print(pre_model.attrs,'attrs in after a plot \n\n\n\n')
 
     uc = {'amplitude':pre_model.rheobase,'duration':DURATION,'delay':DELAY}
-    if str(pre_model.backend) in "NEURON" and not str(pre_model.backend) in "NEURONHH":
-        vm = model._backend.inject_square_current(uc)
+
+    if pre_model.jithub or "NEURON" in str(pre_model.backend):
+        #if "JIT_" in model.backend:
+        vm = model._backend.inject_square_current(**uc)
     else:
         vm = model.inject_square_current(uc)
+
+    #if (str(pre_model.backend) in "NEURON" and not str(pre_model.backend) in "NEURONHH") or str(pre_model.backend) in "MAT" :
+    #    vm = model._backend.inject_square_current(uc)
     vm = model.get_membrane_potential()
     if vm is not None:
         print(vm[-1],vm[-1]<0*pq.mV)
@@ -2010,17 +2020,17 @@ def train_length(dtc):
     vm = copy.copy(dtc.vm15)
     train_len = float(len(sf.get_spike_train(vm)))
     dtc.everything['Spikecount_1.5x'] = copy.copy(train_len)
-    dtc.everything['vr'] = dtc.vmr
+    #dtc.everything['vr'] = dtc.vmr
 
 
     return dtc
 def three_step_protocol(dtc,known_current=None):
-
+    #print(dtc.attrs)
 
 
     #dtc,ephys = allen_wave_predictions(dtc,thirty=True)
     #dtc,ephys = allen_wave_predictions(dtc,thirty=False)
-
+    #print('get s here? A')
     if known_current is None:
         vm30,vm15,_,_,dtc=inject_model30(dtc)
         if vm30 is None:
@@ -2185,8 +2195,94 @@ def initialise_test(v,rheobase):
 
     return v
 import quantities as qt
-from capabilities.spike_functions import spikes2widths, get_spike_waveforms
-from elephant.spike_train_generation import threshold_detection
+#from capabilities.spike_functions import spikes2widths, get_spike_waveforms
+
+
+#if type(dtc.rheobase) is type(dict()):#
+#    rheobase = dtc.rheobase['value']
+#else:
+#    rheobase = dtc.rheobase
+
+def make_allen_tests():
+
+  rt = RheobaseTest(observation={'mean':70*qt.pA,'std':70*qt.pA})
+  #tc = TimeConstantTest(observation={'mean':24.4*qt.ms,'std':24.4*qt.ms})
+  ir = InputResistanceTest(observation={'mean':132*qt.MOhm,'std':132*qt.MOhm})
+  rp = RestingPotentialTest(observation={'mean':-71.6*qt.mV,'std':77.5*qt.mV})
+
+  allen_tests = [rt,rp,ir]
+  for t in allen_tests:
+      t.score_type = RatioScore
+  allen_tests[-1].score_type = ZScore
+  allen_suite482493761 = TestSuite(allen_tests)
+  allen_suite482493761.name = "http://celltypes.brain-map.org/mouse/experiment/electrophysiology/482493761"
+
+  rt = RheobaseTest(observation={'mean':190*qt.pA,'std':190*qt.pA})
+  #tc = TimeConstantTest(observation={'mean':13.8*qt.ms,'std':13.8*qt.ms})
+  ir = InputResistanceTest(observation={'mean':132*qt.MOhm,'std':132*qt.MOhm})
+  rp = RestingPotentialTest(observation={'mean':-77.5*qt.mV,'std':77.5*qt.mV})
+
+  allen_tests = [rt,rp,ir]
+  for t in allen_tests:
+      t.score_type = RatioScore
+  allen_tests[-1].score_type = ZScore
+  allen_suite471819401 = TestSuite(allen_tests)
+  allen_suite471819401.name = "http://celltypes.brain-map.org/mouse/experiment/electrophysiology/471819401"
+  list_of_dicts = []
+  cells={}
+  cells['471819401'] = TSD(allen_suite471819401)
+  cells['482493761'] = TSD(allen_suite482493761)
+
+  for k,v in cells.items():
+      observations = {}
+      for k1 in cells['482493761'].keys():
+          vsd = TSD(v)
+          if k1 in vsd.keys():
+              vsd[k1].observation['mean']
+
+              observations[k1] = np.round(vsd[k1].observation['mean'],2)
+              observations['name'] = k
+      list_of_dicts.append(observations)
+  df = pd.DataFrame(list_of_dicts)
+  return allen_suite471819401,allen_suite482493761,df
+
+
+def constrain_ahp(vm_used,rheobase):
+    #vm_used = inject_and_not_plot_model(dtc)
+    efel.reset()
+    efel.setThreshold(0)
+    trace3 = {'T': [float(t)*1000.0 for t in vm_used.times],
+          'V': [float(v) for v in vm_used.magnitude]}#,
+    #          'stimulus_current': [float(rheobase)]}
+    DURATION = 1100*qt.ms
+    DELAY = 100*qt.ms
+    trace3['stim_end'] = [ float(DELAY)+float(DURATION) ]
+    trace3['stim_start'] = [ float(DELAY)]
+    simple_yes_list = [
+    'AHP_depth',
+    'AHP_depth_abs',
+    'AHP_depth_last','all_ISI_values','ISI_values', 'time_to_first_spike',
+    'time_to_last_spike',
+    'time_to_second_spike',
+    'trace_check']
+    #'voltage_base',
+    #'min_voltage_between_spikes']
+    #efel_list = list(efel.getFeatureNames())
+    #reduced_list = [ i for i in efel_list if i in simple_yes_list ]
+    #if np.min(vm_used.magnitude)<0:
+    #if not np.max(vm_used.magnitude)>0:
+    #    vm_used_mag = [v+np.abs(np.mean([0,float(np.abs(np.max(v))))])*pq.mV for v in vm_used]
+    #    trace3['V'] = vm_used_mag
+        #if not np.max(vm_used_mag)>0:
+            #dtc.efel_15 = None
+        #    return dtc
+
+
+    results = efel.getMeanFeatureValues([trace3],simple_yes_list)#, parallel_map=pool.map)
+    #nans = {k:v for k,v in results[0].items() if type(v) is type(None)}
+    #efel.reset()
+    #print(results)
+    return results
 
 class NUFeature_standard_suite(object):
     def __init__(self,test,model):
@@ -2195,6 +2291,10 @@ class NUFeature_standard_suite(object):
     def calculate_score(self,responses):
 
         if 'model' in responses.keys():
+            dtc = responses['model']
+
+            #print(results)
+
             model = responses['model'].dtc_to_model()
         else:
             return 100.0
@@ -2206,12 +2306,21 @@ class NUFeature_standard_suite(object):
             # This allows you to state this as a hypothesis test with a p-value.
             # The chi-square statistic would simply be x=np.sum(zscores**2), and the p-value would be 1-scipy.stats.chi2.cdf(x, 8) where 8 is the number of elephant tests (and Z-scores).
         if type(responses['response']) is type(list()):
-            return 100.0
+            return 1000.0
 
         if responses['response'] is not None:
             vm = responses['response']
+            results = constrain_ahp(vm,dtc.rheobase)
+            results = results[0]
+            #print(results['AHP_depth_last'])
+            if results['AHP_depth'] is None or np.abs(results['AHP_depth_abs'])>=80:
+                return 1000.0
+                #'AHP_depth': 140.13713416616957
+            if np.abs(results['AHP_depth'])>=105:
+                return 1000.0
 
-            if np.max(vm)>0:
+            if np.max(vm)>=0:
+
                 snippets = get_spike_waveforms(vm)
                 widths = spikes2widths(snippets)
                 #if isinstace(type(widths),type(Iterable)):
@@ -2225,14 +2334,14 @@ class NUFeature_standard_suite(object):
 
                 if (spike_train[0]+ 2.5*qt.ms) > vm.times[-1]:
                     too_long = True
-                    return 100.0
+                    return 1000.0
 
-                if widths >= 2.5*qt.ms:
-                    return 100.0
+                if widths >= 2.0*qt.ms:
+                    return 1000.0
                 if float(vm[-1])==np.nan or np.isnan(vm[-1]):
-                    return 100.0
+                    return 1000.0
                 if float(vm[-1])>=0.0:
-                    return 100.0
+                    return 1000.0
 
                 assert vm[-1]<0*pq.mV
         model.attrs = responses['params']
@@ -2389,6 +2498,15 @@ def pebble_parmap(f, X, nprocs=multiprocessing.cpu_count()):
 
     return [x for i, x in sorted(res)]
 
+def get_binary_file_downloader_html(bin_file_path, file_label='File'):
+    with open(bin_file_path, 'rb') as f:
+        data = f.read()
+    bin_str = base64.b64encode(data).decode()
+    href = f'<a href="data:application/octet-stream;base64,{bin_str}" download="{os.path.basename(bin_file_path)}">Download {file_label}</a>'
+    return href
+import seaborn as sns
+sns.set(context="paper", font="monospace")
+
 def instance_opt(constraints,MODEL_PARAMS,test_key,model_value,MU,NGEN,diversity,full_test_list=None,use_streamlit=True):
     import utils #as utils
     import bluepyopt as bpop
@@ -2420,7 +2538,7 @@ def instance_opt(constraints,MODEL_PARAMS,test_key,model_value,MU,NGEN,diversity
                 map_function = map,
                 selector_name=diversity,
                 mutpb=mut,
-                cxpb=cxp,model_type=model_value)
+                cxpb=cxp)
 
     final_pop, hall_of_fame, logs, hist = optimisation.run(max_ngen=NGEN)
 
@@ -2505,7 +2623,7 @@ def instance_opt(constraints,MODEL_PARAMS,test_key,model_value,MU,NGEN,diversity
 
         #  sns.heatmap(obs_preds, cmap ='RdYlGn', linewidths = 0.30, annot = True)
         #  st.pyplot()
-
+        '''
         sns.set(context="paper", font="monospace")
 
         # Set up the matplotlib figure
@@ -2515,6 +2633,7 @@ def instance_opt(constraints,MODEL_PARAMS,test_key,model_value,MU,NGEN,diversity
         g.set_xticklabels(g.get_xticklabels(),rotation=45)
 
         st.pyplot()
+        '''
 
         #st.markdown("""
         #-----
@@ -2533,13 +2652,6 @@ def instance_opt(constraints,MODEL_PARAMS,test_key,model_value,MU,NGEN,diversity
         best_params_frame = pd.DataFrame([opt.attrs])
         st.write(best_params_frame)
 
-        download_opt_model = st.radio("\
-        Would you like to download optimal model model?"
-        ,("No","Yes"))
-        if download_opt_model == "Yes":
-            with open('best_frame_path.p','wb') as f:
-                pickle.dump(best_params_frame,f)
-            st.markdown(get_binary_file_downloader_html('best_frame_path.p',model_type), unsafe_allow_html=True)
 
 
 
@@ -2577,7 +2689,7 @@ def instance_opt(constraints,MODEL_PARAMS,test_key,model_value,MU,NGEN,diversity
         #""".format(sum(best_ind.fitness.values),30*len(constraints)))
         #plot_as_normal(opt)
 
-        return final_pop, hall_of_fame, logs, hist, opt, obs_preds, chi_sqr_opt, p_value
+        return final_pop, hall_of_fame, logs, hist, opt, obs_preds, chi_sqr_opt, p_value,best_params_frame
 
 from neuronunit.plottools import plot_surface2
 def surface_plot(opt,hist,figname):
@@ -2870,33 +2982,32 @@ def inject_model30(dtc,figname=None,known_current=None):
     if type(known_current) is not type(None):
         #print('previously known current \n\n\n',known_current)
         observation_range={}
+        #print(dtc.attrs,'changing? 0.1')
+
         model = dtc.dtc_to_model()
+        model._backend.attrs = dtc.attrs
         model.attrs = dtc.attrs
+        temp = copy.copy(model.attrs)
         observation_range['value'] = dtc.spk_count
         scs = SpikeCountSearch(observation_range)
         target_current = scs.generate_prediction(model)
         if type(target_current) is not type(None):
             known_current = target_current['value']
-            #print(known_current,'recalculated per model')
         dtc.known_current = known_current
-
-        #if "current_inj" in dtc.attrs.keys():
-
-            #known_current =  dtc.attrs["current_inj"]
-            #print('gene current \n\n\n',known_current)
-        ALLEN_DELAY = 1000.0*qt.s
-        ALLEN_DURATION = 2000.0*qt.s
-
-
+        ALLEN_DELAY = 1000.0*qt.ms
+        ALLEN_DURATION = 2000.0*qt.ms
         uc = {'amplitude':known_current,'duration':ALLEN_DURATION,'delay':ALLEN_DELAY}
         model = dtc.dtc_to_model()
+        #model.attrs = temp
+        model._backend.attrs = temp
+        #model.set_attrs(temp)
+        #print(dtc.attrs,'changing? 1')
+        try:
+            model.inject_square_current(uc)
+        except:
+            model._backend.inject_square_current(uc)
 
-        model.inject_square_current(uc)
         vm15 = model.get_membrane_potential()
-        #dtc.Spikecount_15 = None
-        #dtc.Spikecount_15 = model.get_spike_count()
-
-        #print(model.get_spike_count(),'spikes', 'should be 9')
         dtc.vm15 = copy.copy(vm15)
 
         del model
@@ -2912,13 +3023,19 @@ def inject_model30(dtc,figname=None,known_current=None):
         del model
 
         '''
+        '''
         model = dtc.dtc_to_model()
         uc = {'amplitude':0.0*pq.pA,'duration':ALLEN_DURATION,'delay':ALLEN_DELAY}
-        model.inject_square_current(uc)
+        try:
+            model.inject_square_current(uc)
+        except:
+            model._backend.inject_square_current(uc)
+
         vr = model.get_membrane_potential()
         dtc.vmr = np.mean(vr)
         del model
-        return vm15,None,None,dtc
+        '''
+        return vm15,uc,None,dtc
     print('falls through \n\n\n')
 
 
@@ -2978,7 +3095,7 @@ def inject_model30(dtc,figname=None,known_current=None):
 
         del model
         model = dtc.dtc_to_model()
-        uc = {'amplitude':00*pq.pA,'duration':ALLEN_DURATION,'delay':ALLEN_DELAY}
+        uc = {'amplitude':0*pq.pA,'duration':ALLEN_DURATION,'delay':ALLEN_DELAY}
         params = {'amplitude':rheobase,'duration':ALLEN_DURATION,'delay':ALLEN_DELAY}
         model.inject_square_current(uc)
         vr = model.get_membrane_potential()
@@ -3032,6 +3149,31 @@ def inject_model30(dtc,figname=None,known_current=None):
     '''
 
 
+'''
+def color_large_red(val):
+    """
+    Takes a scalar and returns a string with
+    the css property `'color: red'` for negative
+    strings, black otherwise.
+    """
+    color = "red" if val > 2.0 else "white"
+    return "color: %s" % color
+
+
+def highlight_min(data, color="yellow"):
+    """highlight the maximum in a Series or DataFrame"""
+    attr = "background-color: {}".format(color)
+    if data.ndim == 1:  # Series from .apply(axis=0) or axis=1
+        is_max = data == data.min()
+        return [attr if v else "" for v in is_max]
+    else:  # from .apply(axis=None)
+        is_max = data == data.min().min()
+        return pd.DataFrame(
+            np.where(is_max, attr, ""), index=data.index, columns=data.columns
+        )
+'''
+
+
 def display_fitting_data():
     cells = pickle.load(open("processed_multicellular_constraints.p","rb"))
 
@@ -3076,9 +3218,32 @@ def display_fitting_data():
 
 #import multiprocessing
 #pool = multiprocessing.Pool()
-from neuronunit.capabilities.spike_functions import get_spike_waveforms, spikes2widths, spikes2thresholds, spikes2amplitudes
-from quantities import mV, ms
-
+'''
+simple_yes_list = [
+'AP_amplitude',
+'adaptation_index',
+'adaptation_index2',
+'time_to_first_spike',
+'mean_AP_amplitude',
+'spike_half_width',
+'AHP_depth',
+'minimum_voltage',
+'peak_voltage',
+'time_to_last_spike',
+'AHP_depth_abs',
+'all_ISI_values',
+'voltage_base',
+'min_voltage_between_spikes',
+'Spikecount',
+'ISI_values',
+'AHP_depth_last',
+'all_ISI_values',
+'ISI_values',
+'time_to_first_spike',
+'time_to_last_spike',
+'time_to_second_spike',
+'trace_check']
+'''
 def efel_evaluation(dtc,thirty=False):
     if hasattr(dtc,'known_current'):
         current = dtc.known_current#['value']
@@ -3102,37 +3267,6 @@ def efel_evaluation(dtc,thirty=False):
     except:
         pass
 
-    #if type(vm_used) is type(list()):
-        #print('gets here b')
-
-    #    return dtc
-    # try:
-    #print(dtc.attrs)
-    '''
-    if type(vm_used) is not type(None):
-        snippets = get_spike_waveforms(vm_used)
-        print(snippets)
-        widths = spikes2widths(snippets)
-        print(widths)
-        if widths >= 15*qt.ms:
-            print('gets here a')
-            return dtc
-    else:
-        return dtc
-    '''
-    #except:
-    #    print('gets here c')
-
-    #    return dtc
-
-    #try:
-    #    snippets1 = get_spike_waveforms(vm30,width=20*ms)
-    #    threshold = float(spikes2thresholds(snippets1)[0])
-    #except:
-    #threshold = float(np.max(vm_used.magnitude)-0.125*np.abs(np.std(vm_used.magnitude)))
-        #print(0.0,threshold)
-
-
 
     efel.setThreshold(0)
 
@@ -3145,86 +3279,9 @@ def efel_evaluation(dtc,thirty=False):
     trace3['stim_end'] = [ float(ALLEN_DELAY)+float(ALLEN_DURATION) ]
     trace3['stim_start'] = [ float(ALLEN_DELAY)]
 
-    '''
-    simple_extended = ['AHP1_depth_from_peak',
-    'AHP2_depth_from_peak',
-    'AHP_depth',
-    'AHP_depth_diff',
-    'AHP_depth_from_peak',
-    'AHP_slow_time',
-    'AHP_time_from_peak',
-    'AP1_amp',
-    'AP1_begin_voltage',
-    'AP1_begin_width',
-    'AP1_peak',
-    'AP1_width',
-    'AP2_AP1_begin_width_diff',
-    'AP2_AP1_diff',
-    'AP2_AP1_peak_diff',
-    'AP2_amp',
-    'AP2_begin_voltage',
-    'AP2_begin_width',
-    'AP2_peak',
-    'AP2_width',
-    'AP_amplitude',
-    'AP_amplitude_change',
-    'AP_amplitude_diff',
-    'AP_amplitude_from_voltagebase',
-    'AP_begin_indices',
-    'AP_begin_time',
-    'AP_begin_voltage',
-    'AP_begin_width',
-    'AP_duration',
-    'AP_duration_change',
-    'AP_duration_half_width',
-    'AP_duration_half_width_change',
-    'AP_fall_rate',
-    'AP_fall_time',
-    'AP_height'
-    'number_initial_spikes',
-    'peak_time',
-    'peak_voltage',
-    'sag_ratio2',
-    'single_burst_ratio',
-    'spike_half_width',
-    'spike_width2',
-    'steady_state_hyper',
-    'steady_state_voltage',
-    'steady_state_voltage_stimend',
-    'time_to_first_spike',
-    'time_to_last_spike',
-    'time_to_second_spike',
-    'voltage',
-    'voltage_after_stim',
-    'voltage_base',
-    'voltage_deflection',
-    'voltage_deflection_begin',
-    'voltage_deflection_vb_ssse',
-    'voltage']
-    #simple_yes_list = ['ISI_CV','median_isi','first_isi','ISI_CV','all_ISI_values','ISI_log_slope','mean_AP_amplitude','mean_frequency','min_AHP_values','min_voltage_between_spikes','minimum_voltage','all_ISI_values','ISI_log_slope','mean_frequency','adaptation_index2','first_isi','ISI_CV','median_isi','AHP_depth_abs','sag_ratio2','sag_ratio2','peak_voltage','voltage_base','Spikecount','ohmic_input_resistance_vb_ssse','ohmic_input_resistance']
-
-    simple_yes_list = ['ISI_CV','median_isi','first_isi','ISI_CV','all_ISI_values','ISI_log_slope','mean_AP_amplitude','mean_frequency','min_AHP_values','min_voltage_between_spikes','minimum_voltage ','mean_frequency','adaptation_index2','AHP_depth_abs','sag_ratio2','sag_ratio2','peak_voltage','voltage_base','Spikecount']
-    simple_yes_list.extend(simple_extended)
-    '''
-    simple_yes_list = [
-    'adaptation_index',
-    'adaptation_index2',
-    'time_to_first_spike',
-    'mean_AP_amplitude',
-    'spike_half_width',
-    'AHP_depth',
-    'minimum_voltage',
-    'peak_voltage',
-    'time_to_last_spike',
-    'AHP_depth_abs',
-    'all_ISI_values',
-    'voltage_base',
-    'min_voltage_between_spikes',
-    'Spikecount',
-    'ISI_values']
     #simple_yes_list = [,'mean_frequency','adaptation_index2',,'median_isi','AHP_depth_abs','sag_ratio2','ohmic_input_resistance','sag_ratio2','peak_voltage','voltage_base','Spikecount','ohmic_input_resistance_vb_ssse']
     efel_list = list(efel.getFeatureNames())
-    reduced_list = [ i for i in efel_list if i in simple_yes_list ]
+    #reduced_list = [ i for i in efel_list if i in simple_yes_list ]
     #print('gets to a')
     #print(np.min(vm_used.magnitude)<0 and np.max(vm_used.magnitude)>0)
     if np.min(vm_used.magnitude)<0:
@@ -3249,7 +3306,37 @@ def efel_evaluation(dtc,thirty=False):
             #fig.show()
 
         try:
-            results = efel.getMeanFeatureValues([trace3],reduced_list)#, parallel_map=pool.map)
+            specific_filter_list = [
+                        'burst_ISI_indices',
+                        'burst_mean_freq',
+                        'burst_number',
+                        'single_burst_ratio',
+                        'ISI_log_slope',
+                        'mean_frequency',
+                        'adaptation_index2',
+                        'first_isi',
+                        'ISI_CV',
+                        'median_isi',
+                        'AHP_depth_abs'
+                        'AHP_depth',
+                        'AHP_depth_abs',
+                        'AHP_depth_last',
+                        'sag_ratio2',
+                        'bus',
+                        'sag_ratio2',
+                        'peak_voltage',
+                        'voltage_base',
+                        'Spikecount',
+                        'all_ISI_values',
+                        'ISI_values',
+                        'time_to_first_spike',
+                        'time_to_last_spike',
+                        'time_to_second_spike',
+                        'voltage',
+                        'spike_times',
+                        'Spikecount']
+            #simple_yes_list = specific_filter_list
+            results = efel.getMeanFeatureValues([trace3],specific_filter_list)#, parallel_map=pool.map)
             #results = efel.getMeanFeatureValues([trace3],simple_yes_list)#, parallel_map=pool.map)
             #for k,v in results.items():
             #    print(k,v)
@@ -3259,6 +3346,8 @@ def efel_evaluation(dtc,thirty=False):
             nans = {k:v for k,v in results[0].items() if type(v) is type(None)}
             #print(nans)
         except:
+            import pdb
+            pdb.set_trace()
             print('efel error')
             dtc.efel_15 = None
             return dtc
@@ -3271,8 +3360,8 @@ def efel_evaluation(dtc,thirty=False):
 
             dtc.efel_15 = None
             dtc.efel_15 = results
-            #print(dtc.efel_15)
         efel.reset()
+    #print(dtc.efel_15)
     return dtc
     '''
     # possibly depricated
@@ -3374,14 +3463,26 @@ def check_bin_vm30(target,opt):
     plt.ylabel(signal.dimensionality)
 
     plt.show()
-def check_bin_vm15(target,opt):
-    plt.plot(target.vm15.times,target.vm15.magnitude)
-    plt.plot(opt.vm15.times,opt.vm15.magnitude)
+def check_bin_vm15_uc(target,opt,uc):
+    plt.plot(target.vm15.times,target.vm15.magnitude,label='Allen Experiment')
+    plt.plot(opt.vm15.times,opt.vm15.magnitude,label='Optimized Model')
     signal = target.vm15
     plt.xlabel(qt.s)
     plt.ylabel(signal.dimensionality)
-
+    f, (ax1, ax2) = plt.subplots(1, 2, sharex=True)
+    ax1.plot([t for t in uc], uc)
+    plt.legend()
     plt.show()
+def check_bin_vm15(target,opt):
+    plt.plot(target.vm15.times,target.vm15.magnitude,label='Allen Experiment')
+    plt.plot(opt.vm15.times,opt.vm15.magnitude,label='Optimized Model')
+    signal = target.vm15
+    plt.xlabel(qt.s)
+    plt.ylabel(signal.dimensionality)
+    plt.legend()
+    plt.show()
+
+    #[ uc['delay']*0, uc['duration'] * uc['amp'],
 
 
 from sciunit.scores import ZScore, RatioScore

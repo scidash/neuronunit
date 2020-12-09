@@ -16,11 +16,8 @@ except:
 
 
 from bluepyopt.parameters import Parameter
-def bpo_param(attrs):
-    p = Parameter(name=k,bounds=v,frozen=False)
-    for k,v in attrs.items():
-        lop[k] = p
-    return lop
+
+from jithub.models import model_classes
 
 
 class DataTC(object):
@@ -43,7 +40,7 @@ class DataTC(object):
     with the distinction that unlike the LEMS model this class
     can be cheaply transported across HOSTS/CPUs
     '''
-    def __init__(self,attrs = None,backend = None):
+    def __init__(self,attrs = None,backend = None,_backend=None):
         self.lookup = {}
         self.rheobase = None
         self.previous = 0
@@ -74,6 +71,8 @@ class DataTC(object):
         self.predictions = {}
         self.observations = {}
         self.backend = backend
+        self._backend = _backend
+
         self.summed = None
         self.constants = None
         self.scores_ratio = None
@@ -84,20 +83,19 @@ class DataTC(object):
         self.SM = None
         self.obs_preds = None
         self.threshold = False
-        #self.attrs = {}
 
-
-
-    def get_ss(self):
-        # get summed score
-        if self.scores is not None:
-            if len(self.scores) == 1:
-                self.summed = list(self.scores.values())[0]
-            else:
-                self.summed = np.sum(list(self.scores.values()))
+        if self.backend is str("MAT") or self.backend is str("IZHI"):
+            self.jithub = True
         else:
-            self.summed = None
-        return self.summed
+            self.jithub = False
+
+    def to_bpo_param(self,attrs):
+        lop = {}
+        for k,v in attrs.items():
+            p = Parameter(name=k,bounds=v,frozen=False)
+            lop[k] = p
+        self.param = lop
+        return lop
 
     def self_evaluate(self,tests=None):
         from neuronunit.optimisation import optimization_management as om_
@@ -296,6 +294,34 @@ class DataTC(object):
         return self.tests
 
     def dtc_to_model(self):
+        if self.backend is str("MAT") or self.backend is str("IZHI"):
+            self.jithub = True
+        else:
+            self.jithub = False
+
+        if self.jithub:
+            #iz = model_classes.IzhiModel()
+            if self.backend is str("MAT"):
+                model = model_classes.MATModel()
+                model.attrs = self.attrs
+                model.params = self.to_bpo_param(self.attrs)
+                model.rheobase = self.rheobase
+                assert len(self.attrs)
+                assert len(model.attrs)
+                return model
+            else:
+                model = model_classes.IzhiModel()
+                model.attrs = self.attrs
+                model.params = self.to_bpo_param(self.attrs)
+                model.rheobase = self.rheobase
+                assert len(self.attrs)
+                assert len(model.attrs)
+                #print('hit')
+
+                return model
+
+            #= self.attrs
+
         if self.backend is str("JULIA"):
             from neuronunit.models import simple_with_current_injection
             model = SimpleModel(attrs)
@@ -326,10 +352,9 @@ class DataTC(object):
             else:
                 model.set_attrs(self.attrs)
             if model.attrs is None:
+
                 model.attrs = self.attrs
 
-        assert len(self.attrs)
-        assert len(model.attrs)
         if not hasattr(model,'rheobase'):
             if hasattr(self,'rheobase'):
                 model.rheobase = None
@@ -337,20 +362,6 @@ class DataTC(object):
                 if self.rheobase is not None:
                     #if type(self.rheobase) is type(dict()):
                     model.rheobase = self.rheobase
-                    #else:
-                    #assert model.rheobase['value'] == self.rheobase['value']
-
-
-
-        '''
-        try:
-            model.inj = self.params
-        except:
-            try:
-                model.inj = self.vparams
-            except:
-                model.inj = None
-        '''
         return model
 
 
@@ -397,7 +408,7 @@ class DataTC(object):
             pred1 = this_test.generate_prediction(model)
             self.preds[this_test.name] = pred
         return self.preds
-
+    '''
     def jt_ratio(self,index=0):
         from sciunit import scores
         model = self.dtc_to_model()
@@ -444,7 +455,7 @@ class DataTC(object):
                 self.failed['observation'] = this_test.observation
 
         return self.preds
-
+    '''
     def check_params(self):
         self.judge_test()
 

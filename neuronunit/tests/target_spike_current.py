@@ -28,7 +28,7 @@ import numba
 import copy
 
 import matplotlib as mpl
-mpl.use('Agg')
+#mpl.use('Agg')
 import matplotlib.pyplot as plt
 from neuronunit.capabilities.spike_functions import get_spike_waveforms, spikes2amplitudes, threshold_detection
 #
@@ -125,17 +125,24 @@ class SpikeCountSearch(VmTest):
             else:
                 model = dtc.dtc_to_model()
             params = {'injected_square_current':
-                      {'amplitude':100.0*pq.pA, 'delay':DELAY, 'duration':DURATION}}
+                      {'amplitude':None, 'delay':DELAY, 'duration':DURATION}}
 
             ampl = float(dtc.ampl)
             if ampl not in dtc.lookup or len(dtc.lookup) == 0:
                 uc = {'amplitude':ampl*pq.pA,'duration':DURATION,'delay':DELAY}
-
                 dtc.run_number += 1
                 model.set_attrs(dtc.attrs)
-                model.inject_square_current(uc)
-                n_spikes = model.get_spike_count()
-                if float(ampl) < -1.0:
+                if model.backend is str("JIT_MATBackend"):
+                    vm = model._backend.inject_square_current(**uc)
+                    n_spikes = len(model._backend.spikes)
+                    #print(n_spikes)
+
+                else:
+                    _ = model.inject_square_current(**uc)
+
+                    n_spikes = model.get_spike_count()
+                    print(n_spikes)
+                if float(ampl) < -10.0:
                     dtc.rheobase = {}
                     dtc.rheobase['value'] = None
                     dtc.boolean = True
@@ -154,7 +161,7 @@ class SpikeCountSearch(VmTest):
                     return dtc
 
                 dtc.lookup[float(ampl)] = n_spikes
-            return dtc
+                return dtc
 
         def init_dtc(dtc):
             '''
@@ -183,7 +190,7 @@ class SpikeCountSearch(VmTest):
                     steps = np.linspace(100,1000,7.0)
                 else:
 
-                    steps = np.linspace(0,55,7.0)
+                    steps = np.linspace(0.0,65,7.0)
 
                 steps_current = [ i*pq.pA for i in steps ]
                 dtc.current_steps = steps_current
@@ -264,6 +271,8 @@ class SpikeCountSearch(VmTest):
         # this is not a perservering assignment, of value,
         # but rather a multi statement assertion that will be checked.
         dtc.backend = model.backend
+        #print(dtc,dtc.backend)
+
 
         dtc = init_dtc(dtc)
 
@@ -366,12 +375,13 @@ class SpikeCountRangeSearch(VmTest):
             sub = np.array(sorted(list(set(sub))))
             supra = np.array(sorted(list(set(supra))))
             return sub, supra
+        '''
 
         def check_current(dtc):
-            '''
-            Inputs are an amplitude to test and a virtual model
-            output is an virtual model with an updated dictionary.
-            '''
+
+            #Inputs are an amplitude to test and a virtual model
+            #output is an virtual model with an updated dictionary.
+
             dtc.boolean = False
 
             if dtc.backend is str('NEURON') or dtc.backend is str('jNEUROML'):
@@ -416,7 +426,7 @@ class SpikeCountRangeSearch(VmTest):
 
                 dtc.lookup[float(ampl)] = n_spikes
             return dtc
-
+        '''
         def init_dtc(dtc):
             '''
             Exploit memory of last model in genes.
@@ -451,7 +461,7 @@ class SpikeCountRangeSearch(VmTest):
                     steps = np.linspace(100,1000,7.0)
                 else:
 
-                    steps = np.linspace(-20,85,7.0)
+                    steps = np.linspace(0,85,8.0)
 
                 steps_current = [ i*pq.pA for i in steps ]
                 dtc.current_steps = steps_current
