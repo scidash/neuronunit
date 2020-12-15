@@ -4,10 +4,17 @@
 from elephant.statistics import isi
 from elephant.statistics import cv
 from elephant.statistics import lv
+from elephant.spike_train_generation import threshold_detection
+
 from neuronunit.capabilities.channel import *
-from .base import np, pq, ncap, VmTest, scores
+from .base import np, pq, ncap, VmTest, scores, AMPL, DELAY, DURATION
 from .waveform import InjectedCurrentAPWidthTest
 from .fi import RheobaseTest
+
+
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.linear_model import LinearRegression
 
 
 class TFRTypeTest(RheobaseTest):
@@ -179,6 +186,99 @@ class ISITest(VmTest):
             score = self.score_type.compute(observation, prediction)
         return score
 
+
+
+class InjectedCurrent:
+    """Metaclass to mixin with InjectedCurrent tests."""
+    def __init__(self,amp):
+        self.amp = amp
+        default_params = dict(VmTest.default_params)
+        default_params.update({'amplitude': 100*pq.pA})
+        default_params.update({'delay': 100*pq.ms})
+        default_params.update({'duration': 1000*pq.ms})
+        self.default_params = default_params
+    required_capabilities = (ncap.ReceivesSquareCurrent,)
+
+
+    def get_params(self):
+        self.verbose = False
+        self.params = {}
+        self.params['injected_square_current'] = self.default_params
+        self.params['injected_square_current']['amplitude'] = \
+            self.amp
+        return self.params
+
+def get_firing_rate(model, input_current):
+
+    # inject a test current into the neuron and call it's run() function.
+    # get the spike times using spike_tools.get_spike_times
+    # from the spike times, calculate the firing rate f
+    IC = InjectedCurrent(amp = input_current*pq.pA)
+    params = IC.get_params()
+    model.inject_square_current(params)
+    vm = model.get_membrane_potential()
+    spikes = threshold_detection(vm,threshold=0*pq.mV)
+    if len(spikes):
+        isi_easy = isi(spikes)
+        rate = 1.0/np.mean(isi_easy)
+
+        if rate == np.nan or np.isnan(rate):
+            rate = 0
+        rate = rate*pq.Hz
+    else:
+        rate = 0*pq.Hz
+    return rate
+
+
+
+class FITest(VmTest):
+    name = "FITest"
+    '''
+    file:///home/user/Downloads/CellTypes_Ephys_Overview.pdf
+    For all long square responses, the average firing rate and the stimulus amplitude were combined to estimate
+    the curve of frequency response of the cell versus stimulus intensity (“f-I curve”). The suprathreshold part of this
+    curve was fit to a straight line, and the slope of this line was recorded as a cell-wide feature (Figure 6C).
+    '''
+    def generate_prediction(self,model,plot=False):
+        I = np.arange(-20,200,10.0)  # a range of current inputs
+
+        fr = []
+        # loop over current values
+        supra_thresh_I = []
+        for I_amp in I:
+            firing_rate = get_firing_rate(model, I_amp)
+            if firing_rate>0:
+                supra_thresh_I.append(I_amp)
+                fr.append(firing_rate)
+        model = LinearRegression()
+        x = np.array(supra_thresh_I).reshape(-1, 1)
+        y = np.array(fr)
+        if len(x):
+            model.fit(x, y)
+            m = model.coef_*(pq.Hz/pq.pA)
+            if type(m) is type(list()):
+                m = m[0]
+            self.prediction = {'value':m}
+            if plot:
+                c = model.intercept_
+                y = supra_thresh_I*float(m) +c
+                plt.figure()  # new figure
+                plt.plot(supra_thresh_I, fr)
+                plt.plot(supra_thresh_I, y)
+                plt.xlabel('Amplitude of Injecting step current (pA)')
+                plt.ylabel('Firing rate (Hz)')
+                plt.grid()
+                plt.show()
+        else:
+            self.prediction = None#{'value':m}
+        return self.prediction
+    def compute_score(self, observation, prediction):
+        """Implement sciunit.Test.score_prediction."""
+        if prediction is None:
+            score = scores.InsufficientDataScore(None)
+        else:
+            score = self.score_type.compute(observation, prediction)
+        return score
 
 class FiringRateTest(RheobaseTest):
     """Test whether a model exhibits the observed burstiness"""
