@@ -2,6 +2,8 @@
 
 from .passive import *
 from .waveform import *
+from .dynamics import FITest
+
 from .dynamics import *
 from .fi import *
 

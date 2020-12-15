@@ -8,6 +8,8 @@ dependencies:
   - elephant
   - dask
   - numba
+  - git+https://github.com/russelljjarvis/jit_jub@neuronunit
+  - git+https://github.com/russelljjarvis/BluePyOpt
   - git+http://github.com/scidash/sciunit@dev#egg=sciunit-1.5.6
   - git+http://github.com/rgerkin/AllenSDK@python3.5#egg=allensdk-0.12.4.1
   - git+http://github.com/rgerkin/pyNeuroML@master#egg=pyneuroml-0.2.3
