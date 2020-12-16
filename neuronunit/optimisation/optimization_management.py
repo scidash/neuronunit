@@ -782,7 +782,7 @@ def get_rh(dtc,rtest_class):
     dtc.rheobase = None
     assert len(dtc.attrs)
     model = dtc.dtc_to_model()
-    model.set_attrs(dtc.attrs)
+    #model.set_attrs(**dtc.attrs)
     rtest.params['injected_square_current'] = {}
     rtest.params['injected_square_current']['delay'] = DELAY
     rtest.params['injected_square_current']['duration'] = DURATION
@@ -868,9 +868,9 @@ def dtc_to_rheo(dtc):
         if isinstance(rtest,Iterable):
             rtest = rtest[0]
         dtc.rheobase = rtest.generate_prediction(model)['value']
-
+        #print(dtc.rheobase)
         temp_vm = model.get_membrane_potential()
-        #min = np.min(temp_vm)
+        min = np.min(temp_vm)
         if np.isnan(temp_vm.any()):
             print('sampled nan')
 
@@ -2011,58 +2011,40 @@ import neuronunit.capabilities.spike_functions as sf
 def train_length(dtc):
     if not hasattr(dtc,'everything'):
         dtc.everything = {}
-
-    #vm = copy.copy(dtc.vm30)
-    #train_len = float(len(sf.get_spike_train(vm)))
-    #dtc.everything['Spikecount_3.0x'] = copy.copy(train_len)
-    #del vm
-    #del train_len
     vm = copy.copy(dtc.vm15)
     train_len = float(len(sf.get_spike_train(vm)))
     dtc.everything['Spikecount_1.5x'] = copy.copy(train_len)
-    #dtc.everything['vr'] = dtc.vmr
-
-
     return dtc
-def three_step_protocol(dtc,known_current=None):
-    #print(dtc.attrs)
 
-
-    #dtc,ephys = allen_wave_predictions(dtc,thirty=True)
-    #dtc,ephys = allen_wave_predictions(dtc,thirty=False)
-    #print('get s here? A')
-    if known_current is None:
+def three_step_protocol(dtc,solve_for_current=None):
+    if solve_for_current is None:
         vm30,vm15,_,_,dtc=inject_model30(dtc)
+        #print(np.max(vm15),np.mean(vm15),np.std(vm15))
         if vm30 is None:
             return dtc
         try:
             dtc = efel_evaluation(dtc,thirty=False)
         except:
-            print('efel error')
             dtc.vm15 = None
     else:
-        vm15,_,_,dtc=inject_model30(dtc,known_current=known_current)
+        vm15,_,_,dtc=inject_model30(dtc,solve_for_current=solve_for_current)
+        #print(solve_for_current)
+        #import pdb
+        #pdb.set_trace()
         if vm15 is None:
             return dtc
+        #print(np.max(vm15),np.mean(vm15),np.std(vm15))
+
         dtc = efel_evaluation(dtc,thirty=False)
-        #dtc = efel_evaluation(dtc,thirty=True)
-    #if dtc.
     dtc = rekeyed(dtc)
 
     if hasattr(dtc,'allen_30'):
         dtc = rekeyed(dtc)
-        #dtc = train_length(dtc)
         if hasattr(dtc,'dm_test_features'):
             dtc.everything.update(dtc.dm_test_features)
-    #vm30,vm15,_,_,dtc=inject_model30(dtc)
     if dtc.everything is not None:
-        dtc = train_length(dtc)#,vm30,vm15)
-        #print(dtc.dm_test_features)
-    #del dtc.vm30
-    #del dtc.vm15
+        dtc = train_length(dtc)
     return dtc
-
-    #return dtc
 
 
 def retestobs(dtc):
@@ -2973,68 +2955,38 @@ def zplot(x_point,y_point,title,area=0.68, two_tailed=True, align_right=False, m
 
 
 
-def inject_model30(dtc,figname=None,known_current=None):
+def inject_model30(dtc,figname=None,solve_for_current=None,fixed=False):
     from neuronunit.tests.target_spike_current import SpikeCountSearch
 
     # get rheobase injection value
     # get an object of class ReducedModel with known attributes and known rheobase current injection value.
-    #print(known_current)
-    if type(known_current) is not type(None):
-        #print('previously known current \n\n\n',known_current)
+    if type(solve_for_current) is not type(None):
         observation_range={}
-        #print(dtc.attrs,'changing? 0.1')
-
+        #print(dtc.attrs)
         model = dtc.dtc_to_model()
-        model._backend.attrs = dtc.attrs
-        model.attrs = dtc.attrs
+        #model._backend.attrs = dtc.attrs
+        #model.attrs = dtc.attrs
         temp = copy.copy(model.attrs)
-        observation_range['value'] = dtc.spk_count
-        scs = SpikeCountSearch(observation_range)
-        target_current = scs.generate_prediction(model)
-        if type(target_current) is not type(None):
-            known_current = target_current['value']
-        dtc.known_current = known_current
-        ALLEN_DELAY = 1000.0*qt.ms
-        ALLEN_DURATION = 2000.0*qt.ms
-        uc = {'amplitude':known_current,'duration':ALLEN_DURATION,'delay':ALLEN_DELAY}
-        model = dtc.dtc_to_model()
-        #model.attrs = temp
-        model._backend.attrs = temp
-        #model.set_attrs(temp)
-        #print(dtc.attrs,'changing? 1')
-        try:
-            model.inject_square_current(uc)
-        except:
-            model._backend.inject_square_current(uc)
 
+        if not fixed:
+            observation_range['value'] = dtc.spk_count
+            scs = SpikeCountSearch(observation_range)
+            #print(model,type(model),'here a',dtc.spk_count,scs)
+            target_current = scs.generate_prediction(model)
+            if type(target_current) is not type(None):
+                solve_for_current = target_current['value']
+            dtc.solve_for_current = solve_for_current
+            ALLEN_DELAY = 1000.0*qt.ms
+            ALLEN_DURATION = 2000.0*qt.ms
+        #print(solve_for_current,model.attrs,'changing?',observation_range)
+        uc = {'amplitude':solve_for_current,'duration':ALLEN_DURATION,'delay':ALLEN_DELAY}
+        model = dtc.dtc_to_model()
+        model._backend.attrs = temp
+        model.inject_square_current(**uc)
         vm15 = model.get_membrane_potential()
         dtc.vm15 = copy.copy(vm15)
 
         del model
-        '''
-        model = dtc.dtc_to_model()
-        uc = {'amplitude':1.5*known_current,'duration':ALLEN_DURATION,'delay':ALLEN_DELAY}
-        model.inject_square_current(uc)
-        vm30 = model.get_membrane_potential()
-
-        #print(model.get_spike_count(),'spikes')
-
-        dtc.vm30 = copy.copy(vm30)
-        del model
-
-        '''
-        '''
-        model = dtc.dtc_to_model()
-        uc = {'amplitude':0.0*pq.pA,'duration':ALLEN_DURATION,'delay':ALLEN_DELAY}
-        try:
-            model.inject_square_current(uc)
-        except:
-            model._backend.inject_square_current(uc)
-
-        vr = model.get_membrane_potential()
-        dtc.vmr = np.mean(vr)
-        del model
-        '''
         return vm15,uc,None,dtc
     print('falls through \n\n\n')
 
@@ -3119,9 +3071,9 @@ def inject_model30(dtc,figname=None,known_current=None):
         model.inject_square_current(uc)
         vm30 = model.get_membrane_potential()
         dtc.vm30 = copy.copy(vm30)
-        print('still gets here mayhem \n\n',type(known_current))
+        print('still gets here mayhem \n\n',type(solve_for_current))
 
-        #print('still gets here mayhem',dtc.vm30,type(known_current))
+        #print('still gets here mayhem',dtc.vm30,type(solve_for_current))
         #print('before, crash out e ',rheobase)
 
         del model
@@ -3244,9 +3196,11 @@ simple_yes_list = [
 'time_to_second_spike',
 'trace_check']
 '''
+from elephant.spike_train_generation import threshold_detection
+
 def efel_evaluation(dtc,thirty=False):
-    if hasattr(dtc,'known_current'):
-        current = dtc.known_current#['value']
+    if hasattr(dtc,'solve_for_current'):
+        current = dtc.solve_for_current#['value']
     else:
         if type(dtc.rheobase) is type(dict()):
             rheobase = dtc.rheobase['value']
@@ -3261,6 +3215,7 @@ def efel_evaluation(dtc,thirty=False):
         vm_used = dtc.vm15
     else:
         vm_used = dtc.vm30
+    #print(np.max(vm_used),np.mean(vm_used),np.std(vm_used))
 
     try:
         efel.reset()
@@ -3269,6 +3224,8 @@ def efel_evaluation(dtc,thirty=False):
 
 
     efel.setThreshold(0)
+
+    #return list(thresh_cross)
 
     trace3 = {'T': [float(t)*1000.0 for t in vm_used.times],
               'V': [float(v) for v in vm_used.magnitude],
@@ -3301,56 +3258,45 @@ def efel_evaluation(dtc,thirty=False):
             # and np.max(vm_used.magnitude)>0:
         else:
             pass
-            #fig = apl.figure()
-            #fig.plot([float(t)*1000.0 for t in vm_used.times],[float(v) for v in vm_used.magnitude],label=str(dtc.attrs), width=100, height=20)
-            #fig.show()
 
-        try:
-            specific_filter_list = [
-                        'burst_ISI_indices',
-                        'burst_mean_freq',
-                        'burst_number',
-                        'single_burst_ratio',
-                        'ISI_log_slope',
-                        'mean_frequency',
-                        'adaptation_index2',
-                        'first_isi',
-                        'ISI_CV',
-                        'median_isi',
-                        'AHP_depth_abs'
-                        'AHP_depth',
-                        'AHP_depth_abs',
-                        'AHP_depth_last',
-                        'sag_ratio2',
-                        'bus',
-                        'sag_ratio2',
-                        'peak_voltage',
-                        'voltage_base',
-                        'Spikecount',
-                        'all_ISI_values',
-                        'ISI_values',
-                        'time_to_first_spike',
-                        'time_to_last_spike',
-                        'time_to_second_spike',
-                        'voltage',
-                        'spike_times',
-                        'Spikecount']
-            #simple_yes_list = specific_filter_list
-            results = efel.getMeanFeatureValues([trace3],specific_filter_list)#, parallel_map=pool.map)
-            #results = efel.getMeanFeatureValues([trace3],simple_yes_list)#, parallel_map=pool.map)
-            #for k,v in results.items():
-            #    print(k,v)
-            #    if v==np.nan:
-            #        print(k,'np.nan \n\n\n')
-            #
-            nans = {k:v for k,v in results[0].items() if type(v) is type(None)}
-            #print(nans)
-        except:
-            import pdb
-            pdb.set_trace()
-            print('efel error')
-            dtc.efel_15 = None
-            return dtc
+        #try:
+        specific_filter_list = [
+                    'burst_ISI_indices',
+                    'burst_mean_freq',
+                    'burst_number',
+                    'single_burst_ratio',
+                    'ISI_log_slope',
+                    'mean_frequency',
+                    'adaptation_index2',
+                    'first_isi',
+                    'ISI_CV',
+                    'median_isi',
+                    'Spikecount',
+                    'all_ISI_values',
+                    'ISI_values',
+                    'time_to_first_spike',
+                    'time_to_last_spike',
+                    'time_to_second_spike',
+                    'Spikecount']
+        '''
+        'voltage',
+        'AHP_depth_abs'
+        'AHP_depth',
+        'AHP_depth_abs',
+        'AHP_depth_last',
+        'sag_ratio2',
+        'bus',
+        'sag_ratio2',
+        'peak_voltage',
+        'voltage_base',
+        '''
+        results = efel.getMeanFeatureValues([trace3],specific_filter_list)#, parallel_map=pool.map)
+        thresh_cross = threshold_detection(vm_used,0*qt.mV)
+        for index,tc in enumerate(thresh_cross):
+            results[0]['spike_'+str(index)]=float(tc)
+            #print(tc,tc.units)
+
+        nans = {k:v for k,v in results[0].items() if type(v) is type(None)}
         if thirty:
             dtc.efel_30 = None
             dtc.efel_30 = results

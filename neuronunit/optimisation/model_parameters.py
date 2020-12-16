@@ -254,7 +254,7 @@ for v in BAE1.values():
 MODEL_PARAMS['ADEXP'] = BAE1
 
 MATNEURON = {'vr':-65.0,'vt':-55.0,'a1':10, 'a2':2, 'b':0, 'w':5, 'R':10, 'tm':10, 't1':10, 't2':200, 'tv':5, 'tref':2}
-MATNEURON = {k:(np.mean(v)-np.abs(np.mean(v)*2.0),np.mean(v)+np.mean(v)*2.0) for k,v in MATNEURON.items()}
+MATNEURON = {k:(np.mean(v)-np.abs(np.mean(v)*5.0),np.mean(v)+np.mean(v)*5.0) for k,v in MATNEURON.items()}
 MATNEURON = {k:sorted(v) for k,v in MATNEURON.items()}
 MODEL_PARAMS['MAT'] = MATNEURON
 

@@ -1,10 +1,9 @@
 """Dynamic neuronunit tests, e.g. investigating dynamical systems properties"""
 
 
-from elephant.statistics import isi#, rate
+from elephant.statistics import isi
 from elephant.statistics import cv
 from elephant.statistics import lv
-#from elephant.statistics.SpikeTrain import get_spike_times
 from elephant.spike_train_generation import threshold_detection
 
 from neuronunit.capabilities.channel import *
@@ -237,19 +236,11 @@ def get_firing_rate(model, input_current):
     #AMPL = input_current
     IC = InjectedCurrent(amp = input_current*pq.pA)
     params = IC.get_params()
-    #print(params)
     model.inject_square_current(params)
     vm = model.get_membrane_potential()
     spikes = threshold_detection(vm,threshold=0*pq.mV)
-    #if input_current> 100:
-        #import pdb
-        #pdb.set_trace()
-    #spikes = model.get_spike_train()
     if len(spikes):
         isi_easy = isi(spikes)
-        #print
-        #isis_ = elephant.statistics.isi(spikes)
-        #isi_easy = spikes[1:]-spikes[:-1]
         rate = 1.0/np.mean(isi_easy)
 
         if rate == np.nan or np.isnan(rate):
@@ -303,7 +294,7 @@ class FITest(VmTest):
                 plt.grid()
                 plt.show()
         else:
-            self.prediction = None#{'value':m}
+            self.prediction = None
         return self.prediction
     def compute_score(self, observation, prediction):
         """Implement sciunit.Test.score_prediction."""

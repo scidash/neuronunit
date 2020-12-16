@@ -84,7 +84,7 @@ class DataTC(object):
         self.obs_preds = None
         self.threshold = False
 
-        if self.backend is str("MAT") or self.backend is str("IZHI"):
+        if self.backend is str("MAT") or self.backend is str("IZHI") or self.backend is str("ADEXP"):
             self.jithub = True
         else:
             self.jithub = False
@@ -294,7 +294,7 @@ class DataTC(object):
         return self.tests
 
     def dtc_to_model(self):
-        if self.backend is str("MAT") or self.backend is str("IZHI"):
+        if self.backend is str("MAT") or self.backend is str("IZHI") or self.backend is str("ADEXP"):
             self.jithub = True
         else:
             self.jithub = False
@@ -303,17 +303,34 @@ class DataTC(object):
             #iz = model_classes.IzhiModel()
             if self.backend is str("MAT"):
                 model = model_classes.MATModel()
+                model._backend.attrs =  self.attrs
+                print(model._backend.attrs)
                 model.attrs = self.attrs
                 model.params = self.to_bpo_param(self.attrs)
-                model.rheobase = self.rheobase
+                #model.rheobase = self.rheobase
                 assert len(self.attrs)
                 assert len(model.attrs)
                 return model
-            else:
+            if self.backend is str("IZHI"):
                 model = model_classes.IzhiModel()
+                model._backend.attrs =  self.attrs
+
                 model.attrs = self.attrs
                 model.params = self.to_bpo_param(self.attrs)
-                model.rheobase = self.rheobase
+                #model.rheobase = self.rheobase
+                assert len(self.attrs)
+                assert len(model.attrs)
+                #print('hit')
+
+                return model
+            if self.backend is str("ADEXP"):
+                model = model_classes.ADEXPModel()
+                model._backend.attrs =  self.attrs
+
+                model.attrs = self.attrs
+                #print(model.attrs,'gets here')
+                model.params = self.to_bpo_param(self.attrs)
+                #model.rheobase = self.rheobase
                 assert len(self.attrs)
                 assert len(model.attrs)
                 #print('hit')
