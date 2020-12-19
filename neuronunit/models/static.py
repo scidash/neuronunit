@@ -1,9 +1,12 @@
-import pickle
 from neo.core import AnalogSignal
-import sciunit
-import sciunit.capabilities as scap
 import neuronunit.capabilities as cap
 import neuronunit.capabilities.spike_functions as sf
+import numpy as np
+import pickle
+import quantities as pq
+import sciunit
+import sciunit.capabilities as scap
+from sciunit.models import RunnableModel
 
 
 class StaticModel(sciunit.Model,
@@ -26,6 +29,9 @@ class StaticModel(sciunit.Model,
             raise TypeError('vm must be a neo.core.AnalogSignal')
 
         self.vm = vm
+        
+    def run(self, **kwargs):
+        pass
 
     def get_membrane_potential(self, **kwargs):
         """Return the Vm passed into the class constructor."""
@@ -59,3 +65,14 @@ class ExternalModel(sciunit.Model,
 
     def get_membrane_potential(self):
         return self.vm
+
+    
+class RandomVmModel(RunnableModel, cap.ProducesMembranePotential, cap.ReceivesCurrent):
+    def get_membrane_potential(self):
+        # Random membrane potential signal
+        vm = (np.random.randn(10000)-60)*pq.mV
+        vm = AnalogSignal(vm, sampling_period=0.1*pq.ms)
+        return vm
+    
+    def inject_square_current(self, current):
+        pass
