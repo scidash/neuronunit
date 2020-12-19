@@ -11,6 +11,12 @@ warnings.filterwarnings('ignore', message='nested set')
 warnings.filterwarnings('ignore', message='mpi4py')
 
 try:
+    from .static import StaticBackend
+except ImportError:
+    StaticBackend = None
+    print('Could not load StaticBackend')
+
+try:
     from .jNeuroML import jNeuroMLBackend
 except ImportError:
     jNeuroMLBackend = None
