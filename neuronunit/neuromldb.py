@@ -12,10 +12,7 @@ import numpy as np
 from neo import AnalogSignal
 from neuronunit.models.static import StaticModel
 
-if sys.version_info[0] >= 3:
-    import urllib.request as urllib
-else:
-    import urllib
+import urllib.request as urllib
 
 class NeuroMLDBModel:
     def __init__(self, model_id = "NMLCL000086"):
@@ -40,10 +37,7 @@ class NeuroMLDBModel:
     def read_api_url(self, url):
         if url not in self.url_responses:
             response = urllib.urlopen(url).read()
-
-            if sys.version_info[0] >= 3:
-                response = response.decode("utf-8")
-
+            response = response.decode("utf-8")
             self.url_responses[url] = json.loads(response)
 
         return self.url_responses[url]

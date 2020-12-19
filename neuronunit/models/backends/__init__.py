@@ -4,7 +4,7 @@ import inspect
 import warnings
 
 import sciunit.models.backends as su_backends
-from sciunit.utils import PLATFORM, PYTHON_MAJOR_VERSION
+from sciunit.utils import PLATFORM
 from .base import Backend
 
 warnings.filterwarnings('ignore', message='nested set')
@@ -15,12 +15,6 @@ try:
 except ImportError:
     StaticBackend = None
     print('Could not load StaticBackend')
-
-try:
-    from .jNeuroML import jNeuroMLBackend
-except ImportError:
-    jNeuroMLBackend = None
-    print('Could not load jNeuroMLBackend')
 
 try:
     from .jNeuroML import jNeuroMLBackend

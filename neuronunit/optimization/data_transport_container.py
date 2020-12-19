@@ -34,7 +34,7 @@ class DataTC(object):
         self.summed = None
         self.constants = None
 
-    @jit
+    @jit(forceobj=True)
     def get_ss(self):
         # get summed score
         if self.scores is not None:

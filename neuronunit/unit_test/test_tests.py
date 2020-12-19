@@ -129,5 +129,18 @@ class TestsChannelTestCase(unittest.TestCase):
         #self.assertTrue(0.2 < score < 0.3)
 
 
+class FakeTestCase(unittest.TestCase):
+    def test_fake_test(self):
+        from neuronunit.tests import FakeTest
+        from sciunit import Model
+        observation = {'a' : 1, 'b' : 1}
+        ft = FakeTest(observation, name="a_b_test")
+        m = Model(name="a_b_model")
+        m.attrs = {'a' : 1, 'b' : 1}
+        prediction = ft.generate_prediction(m)
+        score = ft.compute_score([0.9, 1.1], prediction).score
+        self.assertAlmostEqual(score, 0.09, 2)
+        
+
 if __name__ == '__main__':
     unittest.main()
