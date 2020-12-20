@@ -61,7 +61,7 @@ from neuronunit.optimisation import model_parameters as modelp
 from itertools import repeat
 from neuronunit.tests.base import AMPL, DELAY, DURATION
 
-from neuronunit.optimisation.model_parameters import MODEL_PARAMS
+from neuronunit.optimisation.model_parameters import MODEL_PARAMS, BPO_PARAMS
 from collections.abc import Iterable
 from neuronunit.tests import dm_test_container #import Interoperabe
 from neuronunit.tests.base import VmTest
@@ -133,7 +133,7 @@ except:
 
 #quantities.pq.PREFERRED = [pq.mV, pq.pA, pq.UnitQuantity('femtocoulomb', 1e-15*pq.C, 'fC')]
 
-sciunit.utils.settings['LOGGING'] = False
+#sciunit.utils.settings['LOGGING'] = False
 VERBOSE = False
 def timer(func):
     def inner(*args, **kwargs):
@@ -2019,7 +2019,6 @@ def train_length(dtc):
 def three_step_protocol(dtc,solve_for_current=None):
     if solve_for_current is None:
         vm30,vm15,_,_,dtc=inject_model30(dtc)
-        #print(np.max(vm15),np.mean(vm15),np.std(vm15))
         if vm30 is None:
             return dtc
         try:
@@ -2028,15 +2027,11 @@ def three_step_protocol(dtc,solve_for_current=None):
             dtc.vm15 = None
     else:
         vm15,_,_,dtc=inject_model30(dtc,solve_for_current=solve_for_current)
-        #print(solve_for_current)
-        #import pdb
-        #pdb.set_trace()
         if vm15 is None:
             return dtc
-        #print(np.max(vm15),np.mean(vm15),np.std(vm15))
 
         dtc = efel_evaluation(dtc,thirty=False)
-    dtc = rekeyed(dtc)
+        dtc = rekeyed(dtc)
 
     if hasattr(dtc,'allen_30'):
         dtc = rekeyed(dtc)
@@ -2275,8 +2270,6 @@ class NUFeature_standard_suite(object):
         if 'model' in responses.keys():
             dtc = responses['model']
 
-            #print(results)
-
             model = responses['model'].dtc_to_model()
         else:
             return 100.0
@@ -2327,7 +2320,8 @@ class NUFeature_standard_suite(object):
 
                 assert vm[-1]<0*pq.mV
         model.attrs = responses['params']
-        self.test = initialise_test(self.test,responses['rheobase'])
+        if 'rheobase' in responses.keys():
+            self.test = initialise_test(self.test,responses['rheobase'])
         if "RheobaseTest" in str(self.test.name):
             self.test.score_type = ZScore
             prediction = {'value':responses['rheobase']}
@@ -2335,8 +2329,17 @@ class NUFeature_standard_suite(object):
             lns = np.abs(np.float(score_gene.raw))
             return lns
         else:
+
+            #import pdb
+            #pdb.set_trace()
+            prediction = self.test.generate_prediction(model)
+            score_gene = self.test.judge(model)
+            print(prediction,score_gene)
+
+            #import pdb
+            #pdb.set_trace()
+
             try:
-                self.test.generate_prediction(model)
                 score_gene = self.test.judge(model)
             except:
 
@@ -2371,9 +2374,10 @@ class NUFeature_standard_suite(object):
             #lns = np.abs(np.float(score_gene.raw))
         #print(lns,self.test.name)
         return lns
+from jithub.models import model_classes
 
 def make_evaluator(nu_tests,
-                    MODEL_PARAMS,
+                    PARAMS,
                     experiment=str('Neocortex pyramidal cell layer 5-6'),
                     model=str('IZHI')):
 
@@ -2385,10 +2389,18 @@ def make_evaluator(nu_tests,
             nu_tests["RheobaseTest"].score_type = ZScore
         nu_tests = list(nu_tests.values())
 
-    simple_cell = ephys.models.ReducedCellModel(
-        name='simple_cell',
-        params=MODEL_PARAMS[model],backend=model)
 
+    if model == "IZHI":
+        simple_cell = model_classes.IzhiModel()
+    if model == "MAT":
+        simple_cell = model_classes.MATModel()
+    if model == "ADEXP":
+        simple_cell = model_classes.ADEXPModel()
+    dtc = DataTC()
+    dtc.backend = simple_cell.backend
+    dtc._backend = simple_cell._backend
+    simple_cell.params = PARAMS#simple_cell._backend.default_attrs
+    simple_cell.NU = True
     if "L5PC" in model:
         nu_tests_ = l5pc_specific_modifications(nu_tests)
         nu_tests = list(nu_tests_.values())
@@ -2396,15 +2408,6 @@ def make_evaluator(nu_tests,
 
     else:
         simple_cell.name = model+experiment
-    simple_cell.backend = model
-    simple_cell.params = {k:np.mean(v) for k,v in simple_cell.params.items() }
-
-    lop={}
-    for k,v in MODEL_PARAMS[model].items():
-        p = Parameter(name=k,bounds=v,frozen=False)
-        lop[k] = p
-
-    simple_cell.params = lop
     objectives = []
     for tt in nu_tests:
         feature_name = tt.name
@@ -2413,20 +2416,18 @@ def make_evaluator(nu_tests,
             feature_name,
             ft)
         objectives.append(objective)
-        #print(tt.name)
     score_calc = ephys.objectivescalculators.ObjectivesCalculator(objectives)
     sweep_protocols = []
     protocol = ephys.protocols.SweepProtocol('step1', [None], [None])
     sweep_protocols.append(protocol)
     onestep_protocol = ephys.protocols.SequenceProtocol('onestep', protocols=sweep_protocols)
-
     cell_evaluator = ephys.evaluators.CellEvaluator(
             cell_model=simple_cell,
-            param_names=MODEL_PARAMS[model].keys(),
+            param_names=BPO_PARAMS[model].keys(),
             fitness_protocols={onestep_protocol.name: onestep_protocol},
             fitness_calculator=score_calc,
             sim='euler')
-    simple_cell.params_by_names(MODEL_PARAMS[model].keys())
+    simple_cell.params_by_names(BPO_PARAMS[model].keys())
     return cell_evaluator, simple_cell, score_calc , [tt.name for tt in nu_tests]
 import scipy
 
@@ -2489,7 +2490,7 @@ def get_binary_file_downloader_html(bin_file_path, file_label='File'):
 import seaborn as sns
 sns.set(context="paper", font="monospace")
 
-def instance_opt(constraints,MODEL_PARAMS,test_key,model_value,MU,NGEN,diversity,full_test_list=None,use_streamlit=True):
+def instance_opt(constraints,PARAMS,test_key,model_value,MU,NGEN,diversity,full_test_list=None,use_streamlit=True):
     import utils #as utils
     import bluepyopt as bpop
     #import streamlit as st
@@ -2500,12 +2501,10 @@ def instance_opt(constraints,MODEL_PARAMS,test_key,model_value,MU,NGEN,diversity
         constraints = list(constraints.values())
     cell_evaluator, simple_cell, score_calc, test_names = make_evaluator(
                                                           constraints,
-                                                          MODEL_PARAMS,
+                                                          PARAMS,
                                                           test_key,
                                                           model=model_value)
-    #cell_evaluator, simple_cell, score_calc = make_evaluator(cells,MODEL_PARAMS)
     model_type = str('_best_fit_')+str(model_value)+'_'+str(test_key)+'_.p'
-    #MU =10
     mut = 0.1
     cxp = 0.4
     #pebble_used = pebble.ProcessPool(max_workers=1, max_tasks=4, initializer=None, initargs=None)
@@ -2513,6 +2512,9 @@ def instance_opt(constraints,MODEL_PARAMS,test_key,model_value,MU,NGEN,diversity
     #if model_value is not "HH" and model_value is not "NEURONHH" and model_value is not "IZHI":
         #print('2 backend, parallel slow down circumnavigated',cell_model.backend)
 
+    print(cell_evaluator)
+    #import pdb
+    #pdb.set_trace()
 
     optimisation = bpop.optimisations.DEAPOptimisation(
                 evaluator=cell_evaluator,
@@ -2983,12 +2985,15 @@ def inject_model30(dtc,figname=None,solve_for_current=None,fixed=False):
         model = dtc.dtc_to_model()
         model._backend.attrs = temp
         model.inject_square_current(**uc)
+        if hasattr(dtc,'spikes'):
+            dtc.spikes = model._backend.spikes
+        #print(len(model._backend.spikes),'not enough spikes')
         vm15 = model.get_membrane_potential()
         dtc.vm15 = copy.copy(vm15)
 
         del model
         return vm15,uc,None,dtc
-    print('falls through \n\n\n')
+    #print('falls through \n\n\n')
 
 
     if dtc.rheobase is None:
@@ -3009,7 +3014,7 @@ def inject_model30(dtc,figname=None,solve_for_current=None,fixed=False):
     ALLEN_DURATION = 2000.0*qt.s
     #print('before, crash out b ',rheobase)
     uc = {'amplitude':rheobase,'duration':ALLEN_DURATION,'delay':ALLEN_DELAY}
-    model.inject_square_current(uc)
+    model._backend.inject_square_current(**uc)
     dtc.vmrh = None
     dtc.vmrh = model.get_membrane_potential()
     del model
@@ -3060,7 +3065,7 @@ def inject_model30(dtc,figname=None,solve_for_current=None,fixed=False):
         #print('before, crash out c ',rheobase)
 
         uc = {'amplitude':1.5*rheobase,'duration':ALLEN_DURATION,'delay':ALLEN_DELAY}
-        model.inject_square_current(uc)
+        model._backend.inject_square_current(**uc)
         vm15 = model.get_membrane_potential()
         dtc.vm15 = copy.copy(vm15)
         del model
@@ -3068,10 +3073,12 @@ def inject_model30(dtc,figname=None,solve_for_current=None,fixed=False):
         #print('before, crash out d ',rheobase)
 
         uc = {'amplitude':3.0*rheobase,'duration':ALLEN_DURATION,'delay':ALLEN_DELAY}
-        model.inject_square_current(uc)
+        #model.inject_square_current(uc)
+        model._backend.inject_square_current(**uc)
+
         vm30 = model.get_membrane_potential()
         dtc.vm30 = copy.copy(vm30)
-        print('still gets here mayhem \n\n',type(solve_for_current))
+        #print('still gets here mayhem \n\n',type(solve_for_current))
 
         #print('still gets here mayhem',dtc.vm30,type(solve_for_current))
         #print('before, crash out e ',rheobase)
@@ -3080,7 +3087,9 @@ def inject_model30(dtc,figname=None,solve_for_current=None,fixed=False):
         model = dtc.dtc_to_model()
         uc = {'amplitude':00*pq.pA,'duration':DURATION,'delay':DELAY}
         params = {'amplitude':rheobase,'duration':DURATION,'delay':DELAY}
-        model.inject_square_current(uc)
+        #model.inject_square_current(uc)
+        model._backend.inject_square_current(**uc)
+
         vr = model.get_membrane_potential()
         dtc.vmr = np.mean(vr)
         del model
@@ -3215,6 +3224,12 @@ def efel_evaluation(dtc,thirty=False):
         vm_used = dtc.vm15
     else:
         vm_used = dtc.vm30
+
+    #print(np.min(vm_used),np.max(vm_used))
+    #fig = apl.figure()
+    #fig.plot([float(t)*1000.0 for t in vm_used.times],[float(v) for v in vm_used.magnitude],label=str(dtc.attrs), width=100, height=20)
+    #fig.show()
+
     #print(np.max(vm_used),np.mean(vm_used),np.std(vm_used))
 
     try:
@@ -3251,9 +3266,6 @@ def efel_evaluation(dtc,thirty=False):
             trace3['V'] = vm_used_mag
             #print('gets to b')
             #print(np.min(vm_used.magnitude)<0 and np.max(vm_used.magnitude)>0)
-            #fig = apl.figure()
-            #fig.plot([float(t)*1000.0 for t in vm_used.times],[float(v) for v in vm_used_mag],label=str(dtc.attrs), width=100, height=20)
-            #fig.show()
 
             # and np.max(vm_used.magnitude)>0:
         else:
@@ -3291,9 +3303,17 @@ def efel_evaluation(dtc,thirty=False):
         'voltage_base',
         '''
         results = efel.getMeanFeatureValues([trace3],specific_filter_list)#, parallel_map=pool.map)
-        thresh_cross = threshold_detection(vm_used,0*qt.mV)
-        for index,tc in enumerate(thresh_cross):
-            results[0]['spike_'+str(index)]=float(tc)
+        if "MAT" not in dtc.backend:
+            thresh_cross = threshold_detection(vm_used,0*qt.mV)
+            for index,tc in enumerate(thresh_cross):
+                results[0]['spike_'+str(index)]=float(tc)
+        else:
+            #print('gets here')
+            if hasattr(dtc,'spikes'):
+                dtc.spikes = model._backend.spikes
+                for index,tc in enumerate(dtc.spikes):
+                    results[0]['spike_'+str(index)]=float(tc)
+
             #print(tc,tc.units)
 
         nans = {k:v for k,v in results[0].items() if type(v) is type(None)}
