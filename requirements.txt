@@ -7,18 +7,15 @@ requests==2.22.0
 multiprocess==0.70.10
 numpy==1.17.2
 scipy==1.3.1
-Brian2==2.3
 dask==2.5.2
 natsort==7.0.1
 
 elephant==0.4.1
 tables==3.5.2
 deap==1.3.0
-joblib==0.13.2
 
 allensdk==0.16.3
 seaborn==0.9.0
-libNeuroML==0.2.47
 frozendict==1.2
 distributed==2.5.2
 neo==0.5.2
@@ -39,12 +36,9 @@ backports.statistics==0.1.0
 beautifulsoup4==4.9.1
 
 bmtk==0.0.7
-brian==1.4.4
 collector==0.3
 
-ipython==7.17.0
 
-peewee==3.13.3
 prettyplotlib==0.1.7
 pymop==0.2.4
 rickpy==0.1.4
