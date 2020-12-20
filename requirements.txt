@@ -1,4 +1,4 @@
-neurodynex==0.3.4
+git+https://github.com/scidash/sciunit@dev
 efel==3.0.72
 nbformat==4.4.0
 quantities==0.12.4
@@ -36,14 +36,5 @@ backports.statistics==0.1.0
 beautifulsoup4==4.9.1
 
 bmtk==0.0.7
-collector==0.3
-
-
-prettyplotlib==0.1.7
-pymop==0.2.4
-rickpy==0.1.4
-rpy2==3.3.5
 scikit_learn==0.23.2
-sciunit==0.2.2.3
-sshtunnel==0.1.5
-ucl==0.8.1
+
