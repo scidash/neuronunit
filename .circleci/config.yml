@@ -1,20 +1,42 @@
+defaults: &defaults
+  working_directory: ~/markovmodel/PyEMMA
+  docker:
+    - image: continuumio/miniconda3
+
+inst_conda_bld: &inst_conda_bld
+  - run: conda config --add channels conda-forge
+  - run: conda config --set always_yes true
+  - run: conda config --set quiet true
+  - run: conda install conda-build
+
 version: 2
+
 jobs:
   build:
-    machine:
-      - image: ubuntu-1604:201903-01
+    <<: *defaults
+    parallelism: 1
     steps:
       - checkout
-      - run: bash ../test.sh
-  test:
-    machine:
-      - image: ubuntu-1604:201903-01
-    steps:
-      - checkout
-      - run: bash ../test.sh
-workflows:
-  version: 2
-  build_and_test:
-    jobs:
-      - build
-      - test
+      - run: git fetch --unshallow || true
+      - run: apt-get install -y cpp gcc
+      - run: apt-get install -y libx11-6 python-dev git build-essential
+      - run: apt-get install -y autoconf automake gcc g++ make gfortran
+      - run: apt-get install -y python-tables
+      - run: conda config --add channels conda-forge
+      - run: conda config --set always_yes true
+      - run: conda config --set quiet true
+      - run: conda install conda-build
+      - run: which pip
+      - run: conda install scipy;
+      - run: conda install numpy;
+      - run: conda install numba;
+      - run: conda install dask;
+      - run: echo "REDO 8"
+      - run: pip install tables
+      - run: pip install pip --upgrade; pip install -r requirements.txt;
+      - run: git clone -b neuronunit https://github.com/russelljjarvis/jit_hub.git
+      - run: cd jit_hub; pip install -e .; cd ..;
+      - run: pip install cython
+      - run: pip install asciiplotlib
+      - run: pip install -e .
+
