@@ -12,7 +12,7 @@ jobs:
     steps:
       - checkout
       - run: git fetch --unshallow || true
-      - run: apt-get install -y cpp gcc
+      - run: apt-get install -y cpp gcc g++
       - run: apt-get install -y libx11-6 python-dev git build-essential
       - run: apt-get install -y autoconf automake gcc g++ make gfortran
       - run: apt-get install -y python-tables
@@ -24,6 +24,8 @@ jobs:
       - run: conda install numpy;
       - run: conda install numba;
       - run: conda install dask;
+      - run: conda install h5py;
+      - run: pip install h5py;
       - run: pip install tables;
       - run: pip install cython;
       - run: pip install asciiplotlib;
