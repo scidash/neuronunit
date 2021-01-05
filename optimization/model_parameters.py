@@ -8,6 +8,7 @@ import numpy as np
 import numpy as np
 import pickle
 
+
 def to_bpo_param(attrs):
     from bluepyopt.parameters import Parameter
 
@@ -39,11 +40,89 @@ MODEL_PARAMS = {}
 THIS_DIR = os.path.dirname(os.path.realpath(__file__))
 path_params = {}
 path_params['model_path'] = os.path.realpath(os.path.join(THIS_DIR,'..','models','NeuroML2','LEMS_2007One.xml'))
+OSB_HH_attrs = {
+        'E_L' : -68.9346,
+        'E_K' : -90.0,
+        'E_Na' : 120.0,
+        'g_L' : 0.1,
+        'g_K' : 36,
+        'g_Na' : 200,
+        'C_m' : 1.0,
+        'vr':-68.9346
+        }
+OSB_HH_attrs['Vr'] = OSB_HH_attrs['E_L']
+HH_dic1 = { k:(float(v)-0.75*float(v),float(v)+0.75*float(v)) for k,v in OSB_HH_attrs.items() }
+HH_dic1 = { k:sorted(v) for k,v in HH_dic1.items() }
+
+MODEL_PARAMS['OSB_HH_attrs'] = HH_dic1
+
+ #12.6157,\
+#gnabar_hh=0.12 gkbar_hh=0.036 gl_hh=0.0003 el_hh=-54.3
+'''
+MODEL_PARAMS['NEURONHH'] = {'gnabar':0.12,\
+                            'gkbar':0.036,\
+                            'Ra':35,\
+                            'L':100,\
+                            'diam':500,\
+                            'el':-54.3,\
+                            'gl':0.0003,\
+                            'ena':50.0,\
+                            'ek':-77.0,\
+                            'cm':1,\
+                            'ena':50.0,\
+                            'ek':-77}
+'''
+MODEL_PARAMS['NEURONHH'] = {'gnabar':0.12,\
+                            'gkbar':0.036,\
+                            'Ra':160.0,\
+                            'L':20.4,\
+                            'diam':20.4,\
+                            'el':-54.3,\
+                            'gl':0.0003,\
+                            'ena':50.0,\
+                            'ek':-77.0,\
+                            'cm':1,\
+                            'ena':50.0,\
+                            'ek':-77}
+
+MODEL_PARAMS['NEURONHH'] = { k:(float(v)-0.75*float(np.abs(v)),float(v)+0.75*float(v)) for k,v in MODEL_PARAMS['NEURONHH'].items() }
+MODEL_PARAMS['NEURONHH']['L'] = [5,45]
+MODEL_PARAMS['NEURONHH']['diam'] = [5,45]
+MODEL_PARAMS['NEURONHH']['el'] = [-100,-40]
+
+MODEL_PARAMS['NEURONHH']['ek'] = [-100,-40]
+MODEL_PARAMS['NEURONHH'] = { k:sorted(v) for k,v in MODEL_PARAMS['NEURONHH'].items() }
+
 # Which Parameters
+
+HH_attrs = {
+        'E_L' : -68.9346,
+        'E_K' : -90.0,
+        'E_Na' : 120.0,
+        'g_L' : 0.1,
+        'g_K' : 36,
+        'g_Na' : 200,
+        'C_m' : 1.0,
+        'vr':-68.9346
+        }
+
+HH_attrs['Vr'] = HH_attrs['E_L']
+
+HH_dic1 = { k:sorted([float(v)-0.25*float(v),float(v)+0.25*float(v)]) for k,v in HH_attrs.items() }
+
+MODEL_PARAMS['HH'] = HH_dic1
+'''
 # https://www.izhikevich.org/publications/spikes.htm
-
-
-
+type2007 = collections.OrderedDict([
+  #              C    k     vr  vt vpeak   a      b   c    d  celltype
+  ('RS',        (100, 0.7,  -60, -20, 35, 0.01,   -2, -50,  100,  3)),
+  ('IB',        (150, 1.2,  -75, -45, 50, 0.1,   5, -56,  130,   3)),
+  ('CH',        (50,  1.5,  -60, -40, 25, 0.01,   1, -40,  150,   3)),
+  ('LTS',       (100, 1.0,  -56, -42, 40, 0.01,   8, -53,   20,   4)),
+  ('FS',        (20,  1,    -55, -40, 25, 0.2,    2, -45,   55,   5)),
+  ('TC',        (200, 1.6,  -60, -50, 35, 0.1,  15, -60,   10,   6)),
+  ('TC_burst',  (200, 1.6,  -60, -60, 35, 0.1,  15, -60,   10,   7))])
+'''
 type2007 = collections.OrderedDict([
   #              C    k     vr  vt vpeak   a      b   c    d  celltype
   ('RS',        (100, 0.7,  -60, -40, 35, 0.01,   -2, -50,  100,  3)),
@@ -58,12 +137,27 @@ type2007 = collections.OrderedDict([
 
 
 
+# http://www.physics.usyd.edu.au/teach_res/mp/mscripts/
+# ns_izh002.m
+
+
+"""
+<izhikevichCell id="izTonicSpiking" v0 = "-70mV" thresh = "30mV" a ="0.02" b = "0.2" c = "-65" d = "6"/>
+<izhikevichCell id="izPhasicSpiking" v0 = "-64mV" thresh = "30mV" a ="0.02" b = "0.25" c = "-65" d = "6"/>
+<izhikevichCell id="izTonicBursting" v0 = "-70mV" thresh = "30mV" a ="0.02" b = "0.2" c = "-50" d = "2"/>
+<izhikevichCell id="izPhasicBursting" v0 = "-64mV" thresh = "30mV" a ="0.02" b = "0.25" c = "-55" d = "0.05"/>
+<izhikevichCell id="izMixedMode" v0 = "-70mV" thresh = "30mV" a ="0.02" b = "0.2" c = "-55" d = "4"/>
+<izhikevichCell id="izSpikeFreqAdapt" v0 = "-70mV" thresh = "30mV" a ="0.01" b = "0.2" c = "-65" d = "8"/>
+<generalizedIzhikevichCell id="izClass1Exc" v0 = "-60mV" thresh = "30mV" a ="0.02" b = "-0.1" c = "-55" d = "6" X="0.04" Y="4.1" Z="108"/>
+<izhikevichCell id="izClass2Exc" v0 = "-64mV" thresh = "30mV" a ="0.2" b = "0.26" c = "-65" d = "0"/>
+<izhikevichCell id="izSpikeLatency" v0 = "-70mV" thresh = "30mV" a ="0.02" b = "0.2" c = "-65" d = "6"/>
+<izhikevichCell id="izSubthreshOsc" v0 = "-62mV" thresh = "30mV" a ="0.05" b = "0.26" c = "-60" d = "0"/>
+"""
 
 temp = {k:[] for k in ['C','k','vr','vt','vPeak','a','b','c','d','celltype']  }
 for i,k in enumerate(temp.keys()):
     for v in type2007.values():
         temp[k].append(v[i])
-
 explore_param = {k:(np.min(v),np.max(v)) for k,v in temp.items()}
 IZHI_PARAMS = {k:sorted(v) for k,v in explore_param.items()}
 
@@ -144,7 +238,6 @@ BAE1['tau_w']= [0.05,354] # Tau_w 0, means very low adaption
 # must be made to be 0.05 to avoid divide by zero error
 
 BAE1['cm'] = [1, 983.5]
-
 
 
 
