@@ -443,11 +443,7 @@ class SpikeCountRangeSearch(VmTest):
                 dtc.boolean = False
 
 
-                if str('PYNN') in dtc.backend:
-                    steps = np.linspace(100,1000,7.0)
-                else:
-
-                    steps = np.linspace(0,85,8.0)
+                steps = np.linspace(0,85,8.0)
 
                 steps_current = [ i*pq.pA for i in steps ]
                 dtc.current_steps = steps_current
@@ -489,7 +485,6 @@ class SpikeCountRangeSearch(VmTest):
                     dtc = copy.copy(dtc)
                     dtc.ampl = sc*pq.pA
                     dtc = check_current(dtc)
-                    #dtc.backend = be
                     dtc_clone.append(dtc)
 
 
@@ -542,12 +537,11 @@ class SpikeCountRangeSearch(VmTest):
         # this is not a perservering assignment, of value,
         # but rather a multi statement assertion that will be checked.
         dtc.backend = model.backend
-
         dtc = init_dtc(dtc)
 
-        if hasattr(model,'orig_lems_file_path'):
-            dtc.model_path = model.orig_lems_file_path
-            assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
+        #if hasattr(model,'orig_lems_file_path'):
+        #    dtc.model_path = model.orig_lems_file_path
+        #    assert os.path.isfile(dtc.model_path), "%s is not a file" % dtc.model_path
 
         prediction = {}
 

@@ -911,7 +911,7 @@ def timer(func):
         return f
     return inner
 #@timer
-def inject_and_plot_model(pre_model,figname=None,plotly=True):
+def inject_and_plot_model(pre_model,figname=None,plotly=True, verbose=False):
     # get rheobase injection value
     # get an object of class ReducedModel with known attributes and known rheobase current injection value.
     #print(pre_model.attrs,'attrs in before plot \n\n\n\n')
@@ -933,8 +933,9 @@ def inject_and_plot_model(pre_model,figname=None,plotly=True):
     #if (str(pre_model.backend) in "NEURON" and not str(pre_model.backend) in "NEURONHH") or str(pre_model.backend) in "MAT" :
     #    vm = model._backend.inject_square_current(uc)
     vm = model.get_membrane_potential()
-    if vm is not None:
-        print(vm[-1],vm[-1]<0*pq.mV)
+    if verbose:
+        if vm is not None:
+            print(vm[-1],vm[-1]<0*pq.mV)
     if vm is None:
         return None,None,None
 
@@ -2964,6 +2965,7 @@ def inject_model30(dtc,figname=None,solve_for_current=None,fixed=False):
     # get an object of class ReducedModel with known attributes and known rheobase current injection value.
     if type(solve_for_current) is not type(None):
         observation_range={}
+        print(dtc.backend)
         model = dtc.dtc_to_model()
         temp = copy.copy(model.attrs)
 

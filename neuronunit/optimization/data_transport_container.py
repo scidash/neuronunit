@@ -91,7 +91,6 @@ class DataTC(object):
 
     def to_bpo_param(self,attrs):
         from bluepyopt.parameters import Parameter
-
         lop = {}
         for k,v in attrs.items():
             p = Parameter(name=k,bounds=v,frozen=False)
@@ -272,7 +271,6 @@ class DataTC(object):
                 if v.passive == False and v.active == True:
                     keyed = self.protocols[k]#.params
                     self.protocols[k] = active_values(keyed,self.rheobase)
-                    print(k,'from dtc pop')
 
                     if str("APThresholdTest") in v.name and not self.threshold:
                         model = self.dtc_to_model()
@@ -283,7 +281,6 @@ class DataTC(object):
                     if str("APThresholdTest") in v.name:
                         v.threshold = None
                         v.threshold = self.threshold
-                        print(v.threshold)
                 elif v.passive == True and v.active == False:
                     keyed = self.protocols[k]#.params
                     self.protocols[k] = passive_values(keyed)
@@ -296,14 +293,14 @@ class DataTC(object):
         return self.tests
 
     def dtc_to_model(self):
-        if self.backend is str("MAT") or self.backend is str("IZHI") or self.backend is str("ADEXP"):
+        if str("MAT") in self.backend or str("IZHI") in self.backend or str("ADEXP") in self.backend:
             self.jithub = True
+
         else:
             self.jithub = False
-
         if self.jithub:
             #iz = model_classes.IzhiModel()
-            if self.backend is str("MAT"):
+            if str("MAT") in self.backend:
                 model = model_classes.MATModel()
                 model._backend.attrs =  self.attrs
                 #print(model._backend.attrs)
@@ -313,7 +310,7 @@ class DataTC(object):
                 assert len(self.attrs)
                 assert len(model.attrs)
                 return model
-            if self.backend is str("IZHI"):
+            if str("IZHI") in self.backend:
                 model = model_classes.IzhiModel()
                 model._backend.attrs =  self.attrs
 
@@ -322,40 +319,33 @@ class DataTC(object):
                 #model.rheobase = self.rheobase
                 assert len(self.attrs)
                 assert len(model.attrs)
-                #print('hit')
 
                 return model
-            if self.backend is str("ADEXP"):
+            if str("ADEXP") in self.backend:
                 model = model_classes.ADEXPModel()
                 model._backend.attrs =  self.attrs
 
                 model.attrs = self.attrs
-                #print(model.attrs,'gets here')
                 model.params = self.to_bpo_param(self.attrs)
                 #model.rheobase = self.rheobase
                 assert len(self.attrs)
                 assert len(model.attrs)
-                #print('hit')
 
                 return model
 
         else:
-            #print(self.backend)
-            # The most likely outcome
             from neuronunit.models.very_reduced_sans_lems import VeryReducedModel
             model = VeryReducedModel(backend=self.backend,attrs=self.attrs)
-            model.backend = self.backend
-            #self.attrs,'from data TC')
+            #model._backend = self.backend
             if "GLIF" in self.backend:
                 model._backend.set_attrs(self.attrs)
                 model.attrs = self.attrs
-                #print(model._backend.attrs,'worked?')
             else:
                 model.set_attrs(self.attrs)
             if model.attrs is None:
 
                 model.attrs = self.attrs
-
+        '''
         if not hasattr(model,'rheobase'):
             if hasattr(self,'rheobase'):
                 model.rheobase = None
@@ -364,6 +354,7 @@ class DataTC(object):
                     #if type(self.rheobase) is type(dict()):
                     model.rheobase = self.rheobase
         return model
+        '''
 
 
 
