@@ -6,10 +6,7 @@ from sciunit import scores
 from sciunit.scores.collections import ScoreArray
 import sciunit
 import pandas as pd
-try:
-    import asciiplotlib as apl
-except:
-    pass
+
 
 
 
