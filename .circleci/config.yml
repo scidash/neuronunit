@@ -47,9 +47,8 @@ jobs:
       - run: cd BluePyOpt; pip install -e .
       - run: python unittest/latest_file_adexp.py
       - run: pip install coverage
-      # now prefix "coverage" to your command.
       - run: coverage run unittest/latest_file_adexp.py
-
+      - run: coverage report
 
   test:
     <<: *defaults
@@ -77,3 +76,6 @@ jobs:
       - run: pip install pip --upgrade;
       - run: pip install -e .
       - run: python unittest/latest_file_adexp.py
+      - run: pip install coverage
+      - run: coverage run unittest/latest_file_adexp.py
+      - run: coverage report

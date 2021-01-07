@@ -11,35 +11,29 @@ import matplotlib
 matplotlib.rcParams.update({'font.size': 12})
 # setting of an appropriate backend.
 # optional imports
-
-#matplotlib.rcParams.update({'font.size': 15})
-
-#try:
-#    matplotlib.use('agg')
-#except:
-#    warnings.warn('X11 plotting backend not available, consider installing')
-
+''' coveralls says no
 from neuronunit.tests import *
 from elephant.spike_train_generation import threshold_detection
 from neuronunit.capabilities.spike_functions import get_spike_waveforms, spikes2widths, spikes2thresholds, spikes2amplitudes
 from quantities import mV, ms
 
-import cython
 import logging
 mpl = matplotlib
+'''
+import cython
+
 import pebble
 
-# optional imports
 
 import matplotlib.pyplot as plt
 import numpy as np
 import dask.bag as db
 import dask.delayed as delay
 import pandas as pd
-import pickle
-import dask
-import multiprocessing
-NPART = multiprocessing.cpu_count()
+#import pickle
+#import dask
+#import multiprocessing
+#NPART = multiprocessing.cpu_count()
 from sklearn.model_selection import ParameterGrid
 from collections import OrderedDict
 
@@ -47,32 +41,34 @@ import copy
 import math
 import quantities as pq
 import numpy
-import plotly
-plotly.io.orca.config.executable = '/usr/bin/orca'
-
 try:
-    from sciunit import TestSuite
+    import plotly
+    plotly.io.orca.config.executable = '/usr/bin/orca'
 except:
-    print('sciunit older version')
+    print('silently fail on plotly')
+#try:
+#    from sciunit import TestSuite
+#except:
+#    print('sciunit older version')
 from neuronunit.optimization.data_transport_container import DataTC
 
 #from neuronunit.optimization.model_parameters import path_params
-from neuronunit.optimization import model_parameters as modelp
+#from neuronunit.optimization import model_parameters as modelp
 from itertools import repeat
 from neuronunit.tests.base import AMPL, DELAY, DURATION
 
-from neuronunit.optimization.model_parameters import MODEL_PARAMS, BPO_PARAMS
+#from neuronunit.optimization.model_parameters import MODEL_PARAMS, BPO_PARAMS
 from collections.abc import Iterable
-from neuronunit.tests.base import VmTest
-from neuronunit.tests.dynamics import FITest
+#from neuronunit.tests.base import VmTest
+#from neuronunit.tests.dynamics import FITest
 
-import sys
 
 # this is a pointer to the module object instance itself.
-this = sys.modules[__name__]
+#import sys
+#this = sys.modules[__name__]
 
 # we can explicitly make assignments on it
-this.cpucount = multiprocessing.cpu_count()
+#this.cpucount = multiprocessing.cpu_count()
 #from neuronunit.tests.fi import RheobaseTestP
 from neuronunit.tests.target_spike_current import SpikeCountSearch, SpikeCountRangeSearch
 #make_stim_waves = pickle.load(open('waves.p','rb'))
@@ -105,11 +101,11 @@ import deap
 import time
 import seaborn as sns
 import random
-from datetime import datetime
+#from datetime import datetime
 
 import pdb
 import quantities as pq
-from sciunit import scores
+#from sciunit import scores
 import random
 #from neuronunit.plottools import elaborate_plots
 
@@ -2965,14 +2961,12 @@ def inject_model30(dtc,figname=None,solve_for_current=None,fixed=False):
     # get an object of class ReducedModel with known attributes and known rheobase current injection value.
     if type(solve_for_current) is not type(None):
         observation_range={}
-        print(dtc.backend)
         model = dtc.dtc_to_model()
         temp = copy.copy(model.attrs)
 
         if not fixed:
             observation_range['value'] = dtc.spk_count
             scs = SpikeCountSearch(observation_range)
-            #print(model,type(model),'here a',dtc.spk_count,scs)
             target_current = scs.generate_prediction(model)
             if type(target_current) is not type(None):
                 solve_for_current = target_current['value']
