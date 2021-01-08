@@ -1,10 +1,9 @@
 import numpy as np
 import os
 from collections import OrderedDict
-#from numpy import sqrt, pi
 import collections
 import numpy as np
-import pickle
+#import pickle
 
 def to_bpo_param(attrs):
     from bluepyopt.parameters import Parameter

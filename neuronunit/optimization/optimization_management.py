@@ -9,21 +9,12 @@ if SILENT:
     warnings.filterwarnings("ignore")
 import matplotlib
 matplotlib.rcParams.update({'font.size': 12})
-# setting of an appropriate backend.
-# optional imports
-''' coveralls says no
-from neuronunit.tests import *
-from elephant.spike_train_generation import threshold_detection
-from neuronunit.capabilities.spike_functions import get_spike_waveforms, spikes2widths, spikes2thresholds, spikes2amplitudes
-from quantities import mV, ms
 
-import logging
-mpl = matplotlib
-'''
 import cython
 
 import pebble
 
+# optional imports
 
 import matplotlib.pyplot as plt
 import numpy as np
