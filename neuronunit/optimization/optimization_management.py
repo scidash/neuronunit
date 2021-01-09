@@ -37,6 +37,14 @@ try:
     plotly.io.orca.config.executable = '/usr/bin/orca'
 except:
     print('silently fail on plotly')
+
+from deap import creator
+from deap import base
+import array
+#import pprint
+import copy
+from frozendict import frozendict
+
 #try:
 #    from sciunit import TestSuite
 #except:
@@ -259,40 +267,6 @@ def make_ga_DO(explore_edges, max_ngen, test, \
 
     return DO
 
-import shelve
-from deap import creator
-from deap import base
-import array
-
-import maps
-import pprint
-
-
-import copy
-"""
-def make_hash(o):
-
-
-    https://stackoverflow.com/questions/5884066/hashing-a-dictionary
-    Makes a hash from a dictionary, list, tuple or set to any level, that contains
-    only other hashable types (including any lists, tuples, sets, and
-    dictionaries).
-    if isinstance(o, (set, tuple, list)):
-        return tuple([make_hash(e) for e in o])
-
-    elif not isinstance(o, dict):
-        return hash(o)
-    new_o = copy.deepcopy(o)
-    for k, v in new_o.items():
-        try:
-            new_o[k] = make_hash(v)
-        except:
-            new_o[k] = make_hash(float(v))
-
-    return hash(tuple(frozenset(sorted(new_o.items()))))
-"""
-
-from frozendict import frozendict
 
 class TSD(dict):
     """
@@ -342,6 +316,8 @@ class TSD(dict):
         return {k:v for k,v in self.items() }
 
     def optimize(self,**kwargs):
+        import shelve
+
         defaults = {'param_edges':None,
                     'backend':None,\
                     'protocol':{'allen': False, 'elephant': True},\
@@ -3670,6 +3646,8 @@ class OptMan():
             self.tsr = tsr
 
     def random_sample(self,dtc,search_size):
+        import shelve
+
         d = shelve.open('random_sample_models_cache')  # open -- file may get suffix added by low-level
         flag = False
         query_key = None
