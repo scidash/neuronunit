@@ -35,8 +35,9 @@ jobs:
       - run: pip install tables
       - run: pip install scipy==1.5.4
       - run: pip install pip --upgrade;
-      - run: python setup.py install
-      #- run: pip install -e .
+      #- run: python setup.py install
+      - run: pip install -e .
+
       - run: pip install coverage
       - run: git clone -b neuronunit https://github.com/russelljjarvis/jit_hub.git
       - run: cd jit_hub; pip install -e .; cd ..;
