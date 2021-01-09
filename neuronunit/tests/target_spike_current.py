@@ -2,13 +2,12 @@
 function of input current"""
 
 import os
-#import multiprocessing
-#global cpucount
-#npartitions = cpucount = multiprocessing.cpu_count()
-from .base import np, pq, ncap, VmTest, scores, AMPL#, DELAY, DURATION
+import multiprocessing
+global cpucount
+cpucount = multiprocessing.cpu_count()
+from .base import np, pq, ncap, VmTest, scores, AMPL
 DURATION = 2000
 DELAY = 1000
-#from .. import optimization
 
 from neuronunit.optimization.data_transport_container import DataTC
 import os
