@@ -1,6 +1,4 @@
 import numpy as np
-#from neuronunit.optimisation.optimisation_management import mint_generic_model
-#from sciunit.models.runnable import RunnableModel
 import quantities as qt
 import copy
 from collections import OrderedDict
@@ -8,10 +6,7 @@ from sciunit import scores
 from sciunit.scores.collections import ScoreArray
 import sciunit
 import pandas as pd
-try:
-    import asciiplotlib as apl
-except:
-    pass
+
 
 
 

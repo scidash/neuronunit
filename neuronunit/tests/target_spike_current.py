@@ -2,20 +2,18 @@
 function of input current"""
 
 import os
-import multiprocessing
-global cpucount
-npartitions = cpucount = multiprocessing.cpu_count()
+#import multiprocessing
+#global cpucount
+#npartitions = cpucount = multiprocessing.cpu_count()
 from .base import np, pq, ncap, VmTest, scores, AMPL#, DELAY, DURATION
 DURATION = 2000
 DELAY = 1000
-from .. import optimization
+#from .. import optimization
 
 from neuronunit.optimization.data_transport_container import DataTC
 import os
 import quantities
 import neuronunit
-#from neuronunit.models import ReducedModel# , VeryReducedModel
-#from neuronunit.models import VeryReducedModel
 
 import dask.bag as db
 import quantities as pq
@@ -180,11 +178,8 @@ class SpikeCountSearch(VmTest):
                 dtc.boolean = False
 
 
-                if str('PYNN') in dtc.backend:
-                    steps = np.linspace(100,1000,7.0)
-                else:
 
-                    steps = np.linspace(-10.0,65,7.0)
+                steps = np.linspace(-10.0,65.0,7.0)
 
                 steps_current = [ i*pq.pA for i in steps ]
                 dtc.current_steps = steps_current
@@ -443,7 +438,7 @@ class SpikeCountRangeSearch(VmTest):
                 dtc.boolean = False
 
 
-                steps = np.linspace(0,85,8.0)
+                steps = np.linspace(0,85.0,8.0)
 
                 steps_current = [ i*pq.pA for i in steps ]
                 dtc.current_steps = steps_current

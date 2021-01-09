@@ -22,6 +22,8 @@ jobs:
       - run: apt-get install -y libx11-6 python-dev git build-essential
       - run: apt-get install -y autoconf automake gcc g++ make gfortran
       - run: apt-get install -y python-tables
+      - run: apt-get install -y libhdf5-serial-dev
+
       - run: conda config --add channels conda-forge
       - run: conda config --set always_yes true
       - run: conda config --set quiet true
@@ -32,23 +34,25 @@ jobs:
       - run: conda install numba;
       - run: conda install dask;
       - run: pip install tables
-      - run: pip install pip --upgrade;
+      - run: pip install pip --upgrade; pip install -r requirements.txt;
+      - run: pip install -e .
+      - run: pip install coverage
       - run: git clone -b neuronunit https://github.com/russelljjarvis/jit_hub.git
       - run: cd jit_hub; pip install -e .; cd ..;
-      #- run: pip install -e .
-      - run: echo "redo"
-      - run: git clone -b dev https://github.com/social-hacks-for-mental-health/neuronunit@dev
-      - run: cd neuronunit; pip install -e .; cd ..;
-
-      #- run: pip install git+https://github.com/social-hacks-for-mental-health/neuronunit@dev
       - run: pip install cython
       - run: pip install asciiplotlib;
       - run: git clone -b master https://github.com/russelljjarvis/BluePyOpt.git
       - run: cd BluePyOpt; pip install -e .
-      - run: python unittest/latest_file_adexp.py
-      - run: pip install coverage
-      - run: coverage run unittest/latest_file_adexp.py
-      - run: coverage report
+      - run: pip install streamlit
+      - run: pip install sklearn
+      - run: pip install seaborn
+      - run: pip install frozendict
+      # - run: conda install hdf5
+      # - run: conda install -c conda-forge pytables
+      - run: pip install allensdk==0.16.3
+      - run: cd BluePyOpt/unittest; python adexp_opt.py
+      - run: cd BluePyOpt/unittest; coverage run adexp_opt.py
+      - run: cd BluePyOpt/unittest; coverage report
 
   test:
     <<: *defaults
@@ -73,7 +77,7 @@ jobs:
       - run: pip install tables
       - run: pip install git+https://github.com/russelljjarvis/jit_hub.git@neuronunit
       - run: apt-get update
-      - run: pip install pip --upgrade;
+      - run: pip install pip --upgrade; pip install -r requirements.txt;
       - run: pip install -e .
       - run: python unittest/latest_file_adexp.py
       - run: pip install coverage
