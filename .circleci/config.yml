@@ -36,19 +36,19 @@ jobs:
       - run: pip install scipy==1.5.4
       - run: pip install pip --upgrade;
       - run: python setup.py install
-      - run: pip install -e .
+      #- run: pip install -e .
       - run: pip install coverage
       - run: git clone -b neuronunit https://github.com/russelljjarvis/jit_hub.git
       - run: cd jit_hub; pip install -e .; cd ..;
       - run: pip install cython
-      - run: pip install asciiplotlib;
+      #- run: pip install asciiplotlib;
       - run: git clone -b master https://github.com/russelljjarvis/BluePyOpt.git
       - run: cd BluePyOpt; pip install -e .
-      - run: pip install streamlit
-      - run: pip install sklearn
-      - run: pip install seaborn
-      - run: pip install frozendict
-      - run: pip install plotly
+      #- run: pip install streamlit
+      #- run: pip install sklearn
+      #- run: pip install seaborn
+      #- run: pip install frozendict
+      #- run: pip install plotly
 
       # - run: conda install hdf5
       # - run: conda install -c conda-forge pytables
