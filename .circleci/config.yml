@@ -42,8 +42,7 @@ jobs:
       - run: pip install asciiplotlib;
       - run: git clone -b master https://github.com/russelljjarvis/BluePyOpt.git
       - run: cd BluePyOpt; pip install -e .
-      - run: cd BluePyOpt; pwd
-      - run: cd BluePyOpt; ls *
+      - run: pip install streamlit
       - run: cd BluePyOpt/unittest; python adexp_opt.py
       - run: cd BluePyOpt/unittest; coverage run adexp_opt.py
       - run: cd BluePyOpt/unittest; coverage report
