@@ -35,7 +35,9 @@ jobs:
       - run: pip install pip --upgrade;
       # install this package
       - run: pip install -e .
-      - run: cd neuronunit; sh test.sh; cd ..;
+      - run: pwd
+      - run: ls *.sh
+      - run: sh test.sh; 
       - run: git clone -b neuronunit https://github.com/russelljjarvis/jit_hub.git
       - run: cd jit_hub; pip install -e .; cd ..;
       #- run: pip install -e .
