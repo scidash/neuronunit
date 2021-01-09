@@ -33,12 +33,13 @@ jobs:
       - run: conda install dask;
       - run: pip install tables
       - run: pip install pip --upgrade;
+      # install this package
+      - run: pip install -e .
+      - run: cd neuronunit; sh test.sh; cd ..;
       - run: git clone -b neuronunit https://github.com/russelljjarvis/jit_hub.git
       - run: cd jit_hub; pip install -e .; cd ..;
       #- run: pip install -e .
-      - run: echo "redo"
-      - run: git clone -b dev https://github.com/social-hacks-for-mental-health/neuronunit@dev
-      - run: cd neuronunit; pip install -e .; cd ..;
+      #- run: git clone -b dev https://github.com/social-hacks-for-mental-health/neuronunit@dev
 
       #- run: pip install git+https://github.com/social-hacks-for-mental-health/neuronunit@dev
       - run: pip install cython
