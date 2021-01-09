@@ -46,6 +46,8 @@ jobs:
       - run: pip install sklearn
       - run: pip install seaborn
       - run: pip install frozendict
+      - run: conda install hdf5
+      - run: conda install -c conda-forge pytables
       - run: pip install --upgrade --force-reinstall allensdk
       - run: cd BluePyOpt/unittest; python adexp_opt.py
       - run: cd BluePyOpt/unittest; coverage run adexp_opt.py
