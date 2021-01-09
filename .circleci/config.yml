@@ -43,6 +43,7 @@ jobs:
       - run: git clone -b master https://github.com/russelljjarvis/BluePyOpt.git
       - run: cd BluePyOpt; pip install -e .
       - run: pip install streamlit
+      - run: pip install sklearn
       - run: cd BluePyOpt/unittest; python adexp_opt.py
       - run: cd BluePyOpt/unittest; coverage run adexp_opt.py
       - run: cd BluePyOpt/unittest; coverage report
