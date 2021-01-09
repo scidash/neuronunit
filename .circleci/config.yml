@@ -37,7 +37,7 @@ jobs:
       - run: pip install -e .
       - run: pwd
       - run: ls *.sh
-      - run: sh test.sh; 
+      - run: sh test.sh;
       - run: git clone -b neuronunit https://github.com/russelljjarvis/jit_hub.git
       - run: cd jit_hub; pip install -e .; cd ..;
       #- run: pip install -e .
@@ -48,9 +48,11 @@ jobs:
       - run: pip install asciiplotlib;
       - run: git clone -b master https://github.com/russelljjarvis/BluePyOpt.git
       - run: cd BluePyOpt; pip install -e .
-      - run: python unittest/latest_file_adexp.py
+      - run: cd unittest
+      - run: python -m unittest latest_file_adexp.py
       - run: pip install coverage
-      - run: coverage run unittest/latest_file_adexp.py
+      - run: cd ../examples
+      - run: coverage run latest_file_adexp.py
       - run: coverage report
 
   test:
