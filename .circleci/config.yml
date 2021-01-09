@@ -44,6 +44,7 @@ jobs:
       - run: cd BluePyOpt; pip install -e .
       - run: pip install streamlit
       - run: pip install sklearn
+      - run: pip install seaborn
       - run: cd BluePyOpt/unittest; python adexp_opt.py
       - run: cd BluePyOpt/unittest; coverage run adexp_opt.py
       - run: cd BluePyOpt/unittest; coverage report
