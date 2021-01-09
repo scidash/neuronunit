@@ -35,9 +35,9 @@ jobs:
       - run: pip install pip --upgrade;
       # install this package
       - run: pip install -e .
-      - run: pwd
-      - run: ls *.sh
-      - run: sh test.sh;
+      - run: pip install coverage
+      #- run: ls *.sh
+      #- run: sh test.sh;
       - run: git clone -b neuronunit https://github.com/russelljjarvis/jit_hub.git
       - run: cd jit_hub; pip install -e .; cd ..;
       #- run: pip install -e .
@@ -49,8 +49,7 @@ jobs:
       - run: git clone -b master https://github.com/russelljjarvis/BluePyOpt.git
       - run: cd BluePyOpt; pip install -e .
       - run: cd unittest
-      - run: python -m unittest latest_file_adexp.py
-      - run: pip install coverage
+      - run: python -m unittest adexp_opt.py
       - run: cd ../examples
       - run: coverage run latest_file_adexp.py
       - run: coverage report
