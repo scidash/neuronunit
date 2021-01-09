@@ -48,10 +48,12 @@ jobs:
       - run: pip install asciiplotlib;
       - run: git clone -b master https://github.com/russelljjarvis/BluePyOpt.git
       - run: cd BluePyOpt; pip install -e .
+      - run: pwd
+      - run: ls *
       - run: cd unittest
-      - run: python -m unittest adexp_opt.py
-      - run: cd ../examples
-      - run: coverage run latest_file_adexp.py
+      - run: python adexp_opt.py
+      #- run: cd ../examples
+      - run: coverage run adexp_opt.py
       - run: coverage report
 
   test:
