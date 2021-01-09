@@ -29,11 +29,11 @@ jobs:
       - run: conda config --set quiet true
       - run: conda install conda-build
       - run: which pip
-      - run: conda install scipy;
       - run: conda install numpy;
       - run: conda install numba;
       - run: conda install dask;
       - run: pip install tables
+      - run: pip install scipy==1.5.4
       - run: pip install pip --upgrade;
       - run: python setup.py install
       - run: pip install -e .
