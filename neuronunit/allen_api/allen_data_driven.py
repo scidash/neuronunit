@@ -1,7 +1,9 @@
 import pickle
-from bluepyopt.allenapi import make_allen_tests_from_id
+from neuronunit.allenapi import make_allen_tests_from_id
 
-from bluepyopt.allenapi.make_allen_tests_from_id import *
+from neuronunit.allenapi.make_allen_tests_from_id import *
+from neuronunit.allenapi.make_allen_tests import AllenTest
+
 from neuronunit.optimization.optimization_management import dtc_to_rheo
 from neuronunit.optimization.optimization_management import inject_model30,check_bin_vm30,check_bin_vm15
 
@@ -29,7 +31,6 @@ from neuronunit.optimization.model_parameters import MODEL_PARAMS, BPO_PARAMS
 import copy
 
 import numpy as np
-from bluepyopt.allenapi.make_allen_tests import AllenTest
 
 from sciunit.scores import ZScore
 from collections.abc import Iterable
