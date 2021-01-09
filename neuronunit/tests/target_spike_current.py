@@ -174,13 +174,8 @@ class SpikeCountSearch(VmTest):
                         dtc.current_steps = [ s * 1.25 for s in dtc.current_steps ]
                     dtc.initiated = True # logically unnecessary but included for readibility
             if dtc.initiated == False:
-
                 dtc.boolean = False
-
-
-
-                steps = np.linspace(-10.0,65.0,7.0)
-
+                steps = np.linspace(-10,65,int(7))
                 steps_current = [ i*pq.pA for i in steps ]
                 dtc.current_steps = steps_current
                 dtc.initiated = True
@@ -438,7 +433,7 @@ class SpikeCountRangeSearch(VmTest):
                 dtc.boolean = False
 
 
-                steps = np.linspace(0,85.0,8.0)
+                steps = np.linspace(0,85.0,int(8))
 
                 steps_current = [ i*pq.pA for i in steps ]
                 dtc.current_steps = steps_current
