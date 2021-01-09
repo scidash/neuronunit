@@ -36,25 +36,17 @@ jobs:
       # install this package
       - run: pip install -e .
       - run: pip install coverage
-      #- run: ls *.sh
-      #- run: sh test.sh;
       - run: git clone -b neuronunit https://github.com/russelljjarvis/jit_hub.git
       - run: cd jit_hub; pip install -e .; cd ..;
-      #- run: pip install -e .
-      #- run: git clone -b dev https://github.com/social-hacks-for-mental-health/neuronunit@dev
-
-      #- run: pip install git+https://github.com/social-hacks-for-mental-health/neuronunit@dev
       - run: pip install cython
       - run: pip install asciiplotlib;
       - run: git clone -b master https://github.com/russelljjarvis/BluePyOpt.git
       - run: cd BluePyOpt; pip install -e .
-      - run: pwd
-      - run: ls *
-      - run: cd unittest
-      - run: python adexp_opt.py
-      #- run: cd ../examples
-      - run: coverage run adexp_opt.py
-      - run: coverage report
+      - run: cd BluePyOpt; pwd
+      - run: cd BluePyOpt; ls *
+      - run: cd BluePyOpt/unittest; python adexp_opt.py
+      - run: cd BluePyOpt/unittest; coverage run adexp_opt.py
+      - run: cd BluePyOpt/unittest; coverage report
 
   test:
     <<: *defaults
