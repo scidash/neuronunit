@@ -45,6 +45,9 @@ jobs:
       - run: pip install streamlit
       - run: pip install sklearn
       - run: pip install seaborn
+      - run: pip install frozendict
+      - run: pip install shelve      
+      - run: pip install --upgrade --force-reinstall allensdk
       - run: cd BluePyOpt/unittest; python adexp_opt.py
       - run: cd BluePyOpt/unittest; coverage run adexp_opt.py
       - run: cd BluePyOpt/unittest; coverage report
