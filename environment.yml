@@ -9,6 +9,10 @@ dependencies:
   - dask
   - numba
   - streamlit
+  - sklearn
+  - seaborn
+  - frozendict
+  - plotly
   - git+https://github.com/russelljjarvis/jit_jub@neuronunit
   - git+https://github.com/russelljjarvis/BluePyOpt
   - git+http://github.com/scidash/sciunit@dev#egg=sciunit-1.5.6
