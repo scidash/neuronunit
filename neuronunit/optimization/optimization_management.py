@@ -21,10 +21,6 @@ import numpy as np
 import dask.bag as db
 import dask.delayed as delay
 import pandas as pd
-#import pickle
-#import dask
-#import multiprocessing
-#NPART = multiprocessing.cpu_count()
 from sklearn.model_selection import ParameterGrid
 from collections import OrderedDict
 
@@ -32,53 +28,33 @@ import copy
 import math
 import quantities as pq
 import numpy
+
+from deap import creator
+from deap import base
+import array
+import copy
+from frozendict import frozendict
+
+from neuronunit.optimization.data_transport_container import DataTC
+from itertools import repeat
+from neuronunit.tests.base import AMPL, DELAY, DURATION
+from collections.abc import Iterable
+from neuronunit.tests.target_spike_current import SpikeCountSearch, SpikeCountRangeSearch
+try:
+    import plotly.offline as py
+except:
+    warnings.warn('plotly')
+#try:
+#    import asciiplotlib as apl
+#except:#
+#    warnings.warn('ASCII plot (gnu plot) plotting backend not available, consider installing')
 try:
     import plotly
     plotly.io.orca.config.executable = '/usr/bin/orca'
 except:
     print('silently fail on plotly')
 
-from deap import creator
-from deap import base
-import array
-#import pprint
-import copy
-from frozendict import frozendict
 
-#try:
-#    from sciunit import TestSuite
-#except:
-#    print('sciunit older version')
-from neuronunit.optimization.data_transport_container import DataTC
-
-#from neuronunit.optimization.model_parameters import path_params
-#from neuronunit.optimization import model_parameters as modelp
-from itertools import repeat
-from neuronunit.tests.base import AMPL, DELAY, DURATION
-
-#from neuronunit.optimization.model_parameters import MODEL_PARAMS, BPO_PARAMS
-from collections.abc import Iterable
-#from neuronunit.tests.base import VmTest
-#from neuronunit.tests.dynamics import FITest
-
-
-# this is a pointer to the module object instance itself.
-#import sys
-#this = sys.modules[__name__]
-
-# we can explicitly make assignments on it
-#this.cpucount = multiprocessing.cpu_count()
-#from neuronunit.tests.fi import RheobaseTestP
-from neuronunit.tests.target_spike_current import SpikeCountSearch, SpikeCountRangeSearch
-#make_stim_waves = pickle.load(open('waves.p','rb'))
-try:
-    import plotly.offline as py
-except:
-    warnings.warn('plotly')
-try:
-    import asciiplotlib as apl
-except:
-    warnings.warn('ASCII plot (gnu plot) plotting backend not available, consider installing')
 try:
     import efel
 except:
@@ -106,12 +82,20 @@ import pdb
 import quantities as pq
 #from sciunit import scores
 import random
+import pandas as pd
+from neuronunit.tests.target_spike_current import SpikeCountSearch, SpikeCountRangeSearch
+from sciunit import scores
+import seaborn as sns
+sns.set(context="paper", font="monospace")
+from jithub.models import model_classes
+
 #from neuronunit.plottools import elaborate_plots
 
 # Helper tests are dummy instances of NU tests.
 # They are used by other methods analogous to a base class,
 # these are base instances that become more derived
 # contexts, that modify copies of the helper class in place.
+'''
 import os
 import neuronunit
 anchor = neuronunit.__file__
@@ -143,6 +127,7 @@ def timer(func):
             logging.info('Runtime taken to evaluate function {1} {0} seconds'.format(t2-t1,func))
         return f
     return inner
+'''
 
 
 
@@ -223,9 +208,9 @@ def make_ga_DO(explore_edges, max_ngen, test, \
         free_parameters = None, hc = None,
         MU = None, seed_pop = None, \
            backend = str('IZHI'),protocol={'allen':False,'elephant':True}):
-    '''
+
     construct an DEAP Optimization Object, suitable for this test class and caching etc.
-    '''
+
     ss = {}
     if type(free_parameters) is type(dict()):
         if 'dt' in free_parameters:
@@ -395,29 +380,6 @@ class TSD(dict):
 
             ga_out = self.DO.run(NGEN = self.DO.NGEN)
             self.backend = kwargs['backend']
-            #EXTRA_OPTIONS = False
-            ##if EXTRA_OPTIONS:
-            #    self.ga_out = elaborate_plots(ga_out,savefigs=True,figname=kwargs['figname'])
-            """
-
-            if not hasattr(ga_out['pf'][0],'dtc') and 'dtc_pop' not in ga_out.keys():
-                _,dtc_pop = self.DO.OM.test_runner(copy.copy(ga_out['pf'][0:1]),self.DO.OM.td,self.DO.OM.tests)
-                ga_out['dtc_pop'] = dtc_pop
-                for x,(i,j) in enumerate(zip(ga_out['dtc_pop'],ga_out['pf'][0:1])):
-                    ga_out['pf'][x].dtc = None
-                    ga_out['pf'][x].dtc = i
-            self.DO.OM.kwargs = kwargs
-            ga_out['random_sample'] = self.DO.OM.random_sample(ga_out['pf'][0].dtc,150)
-            d = shelve.open('opt_models_cache')  # open -- file may get suffix added by low-level
-            try:
-                d[query_key] = ga_out
-
-            except:
-                pickle_able = d[query_key]=[ind.dtc for ind in ga_out['pf'][0:-1] if hasattr(ind,'dtc')]
-                d[query_key] = pickle_able
-            d.close()
-            del d
-            """
             return ga_out
 
     def display(self):
@@ -427,6 +389,7 @@ class TSD(dict):
         else:
             print('optimize first')
             return None
+'''
 # DEAP mutation strategies:
 # https://deap.readthedocs.io/en/master/api/tools.html#deap.tools.mutESLogNormal
 class WSFloatIndividual(float):
@@ -469,7 +432,7 @@ def make_new_random(dtc_,backend):
             temp = dtc.rheobase
             dtc.rheobase = {'value': temp}
     return dtc
-
+'''
 
 import random
 
@@ -486,17 +449,6 @@ def random_p(backend):
 
     random_param1 = {} # randomly sample a point in the viable parameter space.
     for k in ranges.keys():
-        # if model is Hodgkin Huxley
-        # using a bell-curve might produce
-        # less "ringing" models.
-        '''
-        if backend == "HH":# or backend == "ADEXP":
-            mean = np.mean(ranges[k])
-            var = np.var(ranges[k])
-            std = np.sqrt(var)
-            sample = numpy.random.normal(loc=mean, scale=std/4.5, size=1)[0]
-        else:
-        '''
         sample = random.uniform(ranges[k][0], ranges[k][1])
         random_param1[k] = sample
     return random_param1
@@ -510,12 +462,9 @@ def process_rparam(backend,free_parameters):
         random_param['init_AScurrents'] = [0.0,0.0]
         random_param['asc_tau_array'] = [0.3333333333333333,0.01]
         rp = random_param
-        #chosen_keys = rp.keys()
     else:
         random_param.pop('Iext',None)
         rp = random_param
-        #chosen_keys = rp.keys()
-
 
     if free_parameters is not None:
         reduced_parameter_set = {}
@@ -527,9 +476,6 @@ def process_rparam(backend,free_parameters):
     temp_model = dsolution.dtc_to_model()
     dsolution.attrs = temp_model.default_attrs
     dsolution.attrs.update(rp)
-    #for k,v in rp.items():
-    #    dsolution.attrs[k] = rp[k]
-    #dsolution.backend = backend
     return dsolution,rp,None,random_param
 def check_test(new_tests):
     replace = False
@@ -563,14 +509,14 @@ def get_centres(ga_out):
     centers = est.cluster_centers_
     return td, test_opt, centres
 
-
+'''
 def mint_generic_model(backend):
     #this is almost a depricated method
     dtc = DataTC()
     dtc.backend = backend
     model = dtc.to_model()
     return model
-
+'''
 
 def save_models_for_justas(dtc):
     with open(str(list(dtc.attrs.values()))+'.csv', 'w') as writeFile:
@@ -606,21 +552,13 @@ def write_opt_to_nml(path,param_dict):
     fopen.close()
     return
 #@timer
+'''
 def pred_only(test_and_models):
     # To obtain simulated data sets
     #
     (test, dtc) = test_and_models
-    #backend_ = dtc.backend
     model = dtc.dtc_to_model()
-    #import pdb
-    #pdb.set_trace()
-    #dtc = test_and_models[1]
-    #single_test = test_and_models[0]
-    #dtc = OptMan([single_test]).format_test(dtc)
-    #test_and_models = OptMan().format_tests(test_and_models)
-    #test = dtc.tests[0]
-    #import pdb
-    #pdb.set_trace()
+
     if test.name in 'FITest':
         pred = test.generate_prediction(model)
         print(pred)
@@ -641,17 +579,14 @@ def pred_only(test_and_models):
     else:
         pred = test.extract_features(model)
 
-    """
-    Beware a down-stream bug fix follows.
-    Resting potential injection current units set to mV, instead of Amps
-    """
+    # Beware a down-stream bug fix follows.
+    # Resting potential injection current units set to mV, instead of Amps
     if str('RestingPotentialTest') in test.name:
         test.params['injected_square_current']['amplitude'] = \
         float(test.params['injected_square_current']['amplitude'])*pq.pA
         assert test.params['injected_square_current']['amplitude'].units == pq.pA
     return pred
-
-import pandas as pd
+'''
 
 def ugly_score_wrangler(model,objectives2,to_latex_string=False):
     strict_scores = {}
@@ -663,9 +598,6 @@ def ugly_score_wrangler(model,objectives2,to_latex_string=False):
     pd.set_option('display.max_colwidth', None)
     for i in objectives2:
         test = i.features[0].test
-        #print(test.name)
-        #if "Spikecount" in test.name:
-        #    print(test.observation,test.prediction)
         try:
             test.observation['value'] = np.abs(float(test.observation['mean']))*pq.dimensionless
             #test.observation['std'] = test.observation['mean']#*pq.mV
@@ -1161,28 +1093,21 @@ def check_binary_match(dtc0,dtc1,figname=None,snippets=True,plotly=True):
             plt.ylabel('V (mV)')
             plt.legend(loc="upper left")
 
-            #plt.plot(vm.times,vm.magnitude)
             if figname is not None:
                 plt.savefig(figname)
 
         else:
-            #plt.plot(vm.times,vm,label=str('model type: '))#+label)#,label='ground truth')
-
             if dtc0.backend in str("HH"):
                 plt.title('Check for waveform Alignment')
             else:
                 plt.title('membrane potential plot')
             plt.plot(vm0.times, vm0.magnitude,label="target")
-            #for v in vms:
             plt.plot(vm1.times, vm1.magnitude,label="solutions")
             plt.ylabel('V (mV)')
             plt.legend(loc="upper left")
 
-            #plt.plot(vm.times,vm.magnitude)
             if figname is not None:
                 plt.savefig(figname)
-
-    #return plt
 
 from neuronunit.capabilities.spike_functions import get_spike_waveforms
 def contrast(dtc0,dtc1,figname=None,snippets=True):
@@ -1210,8 +1135,6 @@ def contrast(dtc0,dtc1,figname=None,snippets=True):
     plt.plot(vm1.times, vm1.magnitude,label="worst solution")
     plt.ylabel('V (mV)')
     plt.legend(loc="upper left")
-
-    #plt.plot(vm.times,vm.magnitude)
     if figname is not None:
         plt.savefig(figname)
 
@@ -1238,15 +1161,9 @@ def check_match_front(dtc0,dtcpop,figname = None):
     for v in vms:
         plt.plot(v.times, v.magnitude,c='grey')
     plt.ylabel('V (mV)')
-    #plt.legend(loc="upper right")
-    #if type(figname) is not type(None):
-    #    plt.savefig(figname)
     plt.legend(loc="upper left")
-    #if not isinstance(type(figname),type(None)):
     if figname is not None:
         plt.savefig(figname)
-
-    #plt.plot(vm.times,vm.magnitude)
     return plt
 
 
@@ -1504,21 +1421,13 @@ def append_spikes(ephys_dict,dtc):
                 prediction['std'] = 10.0
                 dtc.preds[wavef+str('_half')] = prediction
 
-            '''
-            Fit all the spikes
-            for i in ephys_dict['spikes']:
-                for wavef in i.keys():
-                    temp = i[wavef]
-                    prediction['mean'] = temp
-                    prediction['std'] = 10.0
-                    dtc.preds[wavef+str(i) = prediction
-            '''
+
         dtc.spike_cnt = len(ephys_dict['spikes'])
         dtc.preds['spikes'] = dtc.spike_cnt
     return dtc
 
-from neuronunit.tests.target_spike_current import SpikeCountSearch, SpikeCountRangeSearch
 
+'''
 def just_allen_predictions(dtc):
     if type(dtc.ampl) is not type(None):
         current = {'injected_square_current':
@@ -1581,16 +1490,10 @@ def just_allen_predictions(dtc):
         ephys.process_spikes()
 
     except:
-        '''
-        rectify unfilterable high sample frequencies by downsampling them
-        downsample too densely sampled signals.
-        Making them amenable to Allen analysis
-        '''
+        # rectify unfilterable high sample frequencies by downsampling them
+        # downsample too densely sampled signals.
+        # Making them amenable to Allen analysis
 
-        #if dtc.backend in str('ADEXP'):
-        #    vm30 = model.finalize()
-        #    v = [ float(v*1000.0) for v in vm30.magnitude]
-        #    t = [ float(t) for t in vm30.times ]
         try:
             ephys = EphysSweepFeatureExtractor(t=np.array(t),v=np.array(v))#,\
             ephys.process_spikes()
@@ -1603,16 +1506,13 @@ def just_allen_predictions(dtc):
         return dtc
     else:
         def use_later(npts):
-            '''
-            garuntee a maximum number of aligned reference indexs in disparate length spike trains.
-            '''
+            # garuntee a maximum number of aligned reference indexs in disparate length spike trains.
             garunteed_reference_points = downsample(list(range(0,len(ephys_dict['spikes'])), npts))
         dtc = append_spikes(ephys_dict,dtc)
         return dtc,compare,ephys
+'''
 
-
-from sciunit import scores
-
+'''
 def prediction_current_and_features(dtc):
     returned = just_allen_predictions(dtc)
     try:
@@ -1620,27 +1520,20 @@ def prediction_current_and_features(dtc):
     except:
         dtc = returned
         return dtc
-
     ephys_dict = ephys.as_dict()
     dtc.scores = None
     dtc.scores = {}
     for k,v in compare.items():
         dtc.scores[k] = 1.0
     helper = helper[0]
-    #score_type = scores.RatioScore
     score_type = scores.ZScore
-    #helper.score_type = score_type
-
     helper.score_type = score_type
-
     dtc.preds = {}
     dtc.tests = {}
 
     for k,observation in compare.items():
         if  str('spikes') not in k:
-            '''
-            compute interspike firing frame_dynamics
-            '''
+            # compute interspike firing frame_dynamics
 
             obs = {}
             if type(observation) is not type({'1':0}):
@@ -1665,9 +1558,7 @@ def prediction_current_and_features(dtc):
                 else:
                     dtc.scores[k] = 1.0
 
-        '''
-        compute perspike waveform features on just the first spike
-        '''
+        # compute perspike waveform features on just the first spike
         first_spike = ephys_dict['spikes'][0]
         half_spike = ephys_dict['spikes'][int(len(ephys_dict['spikes'])/2.0)]
         last_spike = ephys_dict['spikes'][-1]
@@ -1683,15 +1574,9 @@ def prediction_current_and_features(dtc):
                 elif i == 2:
                     obs = {'mean': compare[key+str('_last')]['mean']}
 
-                #if not str('direct') in key and not str('adp_i') in key and not str('peak_i') in key and not str('fast_trough_i') and not str('fast_trough_i') and not str('trough_i'):
-                #try:
-
 
                 prediction = {'mean': ephys_dict['spikes'][0][key]}
                 helper.name = str(key)
-                #obs['std']=10.0
-                #prediction['std']=10.0
-                #dtc.preds[key] = prediction
                 obs['std'] = obs['mean']/15.0
                 dtc.preds[k] = prediction
                 if type(prediction['mean']) is not type(str()):
@@ -1718,14 +1603,13 @@ def prediction_current_and_features(dtc):
         pass
 
     return dtc
-
+    '''
 def new_model(dtc):
     model = dtc.dtc_to_model()
-    #model = mint_generic_model(dtc.backend)
     model.set_attrs(dtc.attrs)
     return model
-#from collections.abc import Iterable
 
+'''
 def make_stim_waves_func():
     import allensdk.core.json_utilities as json_utilities
     import pickle
@@ -1747,20 +1631,13 @@ def make_stim_waves_func():
         ephys_sweeps = json_utilities.read('ephys_sweeps.json')
 
     ephys_file_name = 'stimulus.nwb'
-
-
     sweep_numbers = [ s['sweep_number'] for s in ephys_sweeps if s['stimulus_units'] == 'Amps' ]
-
-    #snumber = [ s for s in ephys_sweeps if s['stimulus_units'] == 'Amps' if s['num_spikes']>=1]
     stimulus = [ s for s in ephys_sweeps if s['stimulus_units'] == 'Amps' \
      if s['num_spikes'] != None \
      if s['stimulus_name']!='Ramp' and s['stimulus_name']!='Short Square']
-
     amplitudes = [ s['stimulus_absolute_amplitude'] for s in stimulus ]
     durations = [ s['stimulus_duration'] for s in stimulus ]
-
     expeceted_spikes = [ s['num_spikes'] for s in stimulus ]
-    #durations = [ s['stimulus_absolute_amplitude'] for s in stimulus ]
     delays = [ s['stimulus_start_time'] for s in stimulus ]
     sn = [ s['sweep_number'] for s in stimulus ]
     make_stim_waves = {}
@@ -1770,16 +1647,14 @@ def make_stim_waves_func():
         make_stim_waves[j]['delay'] = delays[i]
         make_stim_waves[j]['durations'] = durations[i]
         make_stim_waves[j]['expeceted_spikes'] = expeceted_spikes[i]
-
     pickle.dump(make_stim_waves,open('waves.p','wb'))
     return make_stim_waves
-
+'''
 
 
 
 
 def nuunit_allen_evaluation(dtc):
-
     if hasattr(dtc,'vtest'):
         values = [v for v in dtc.vtest.values()]
         for value in values:
@@ -1820,41 +1695,21 @@ def nuunit_allen_evaluation(dtc):
             dtc.ampl = dtc.rheobase['value']*3.0
             dtc = prediction_current_and_features(dtc)
             dtc = filter_predictions(dtc)
-
             dtc.error_length = len(dtc.preds)
-
         return dtc
 
 
 def nuunit_dm_evaluation(dtc):
     model = dtc.dtc_to_model()
     model.set_attrs(dtc.attrs)
-    #try:
-    #    values = [v for v in dtc.protocols.values()][0]
-    #
-    #except:
-    #    values = [v for v in dtc.tests.values()][0]
-    #current = values['injected_square_current']
-
-    #current['amplitude'] = dtc.rheobase * 1.5
-    #model.inject_square_current(current)
-    #vm15 = model.get_membrane_potential()
-
     model.vm15 = None
     model.vm15 = dtc.vm15
-
     if type(dtc.rheobase) is type(dict()):
         rheobase = dtc.rheobase['value']
     else:
         rheobase = dtc.rheobase
-
     model.druckmann2013_standard_current = None
     model.druckmann2013_standard_current = rheobase * 1.5
-    #current['amplitude'] = dtc.rheobase * 3.0
-
-    #vm30 = model.inject_square_current(current)
-    #vm30 = model.get_membrane_potential()
-
     model.vm30 = None
     model.vm30 = dtc.vm30
     if rheobase <0.0 or np.max(dtc.vm30)<0.0:# or model.get_spike_count()<1:
@@ -1872,30 +1727,22 @@ def nuunit_dm_evaluation(dtc):
     dtc.AP1DelayMeanTest = None
     dtc.AP1DelayMeanTest = dm_test_features['AP1DelayMeanTest']
     dtc.InputResistanceTest = dm_test_features['InputResistanceTest']
-
     dtc.dm_test_features = None
     dtc.dm_test_features = dm_test_features
     return dtc
 
-import joblib
 def input_resistance_dm_evaluation(dtc):
     model = dtc.dtc_to_model()
-    #model = mint_generic_model(dtc.backend)
     model.set_attrs(dtc.attrs)
     try:
         values = [v for v in dtc.protocols.values()][0]
 
     except:
         values = [v for v in dtc.tests.values()][0]
-
-        #values = [v for v in dtc.vtest.values()][0]
-
     current = values['injected_square_current']
-
     current['amplitude'] = dtc.rheobase * 1.5
     model.inject_square_current(current)
     vm15 = model.get_membrane_potential()
-
     model.vm15 = None
     model.vm15 = vm15
     model.druckmann2013_standard_current = None
@@ -1924,30 +1771,24 @@ def input_resistance_dm_evaluation(dtc):
     dtc.dm_test_features = None
     dtc.dm_test_features = dm_test_features
     return dtc
-
+'''
 def nuunit_dm_rheo_evaluation(dtc):
     model = dtc.dtc_to_model()
-    #model = mint_generic_model(dtc.backend)
     model.set_attrs(dtc.attrs)
-    #values = [v for v in dtc.vtest.values()][0]
-
     try:
         values = [v for v in dtc.protocols.values()][0]
     except:
         values = [v for v in dtc.tests.values()][0]
 
     current = values['injected_square_current']
-
     current['amplitude'] = dtc.rheobase
     model.inject_square_current(current)
     vm15 = model.get_membrane_potential()
-
     model.vm15 = None
     model.vm15 = vm15
     model.druckmann2013_standard_current = None
     model.druckmann2013_standard_current = dtc.rheobase * 1.5
     current['amplitude'] = dtc.rheobase * 3.0
-
     vm30 = model.inject_square_current(current)
     vm30 = model.get_membrane_potential()
     if dtc.rheobase <0.0 or np.max(vm30)<0.0 or model.get_spike_count()<1:
@@ -1956,20 +1797,17 @@ def nuunit_dm_rheo_evaluation(dtc):
     model.vm30 = vm30
     model.druckmann2013_strong_current = None
     model.druckmann2013_strong_current = dtc.rheobase * 3.0
-
     model.druckmann2013_input_resistance_currents =[ -5.0*pq.pA, -10.0*pq.pA, -15.0*pq.pA]#,copy.copy(current)
-
     DMTNMLO = dm_test_container.DMTNMLO()
     DMTNMLO.test_setup_subset(None,None,model= model)
     dm_test_features = DMTNMLO.runTest()
-
     dtc.dm_test_features = None
     dtc.dm_test_features = dm_test_features
     return dtc
 
-
 from allensdk.ephys.ephys_extractor import EphysSweepFeatureExtractor
 import neuronunit.capabilities.spike_functions as sf
+
 
 def train_length(dtc):
     if not hasattr(dtc,'everything'):
@@ -1978,7 +1816,7 @@ def train_length(dtc):
     train_len = float(len(sf.get_spike_train(vm)))
     dtc.everything['Spikecount_1.5x'] = copy.copy(train_len)
     return dtc
-
+'''
 def three_step_protocol(dtc,solve_for_current=None):
     if solve_for_current is None:
         vm30,vm15,_,_,dtc=inject_model30(dtc)
@@ -2004,7 +1842,7 @@ def three_step_protocol(dtc,solve_for_current=None):
         dtc = train_length(dtc)
     return dtc
 
-
+'''
 def retestobs(dtc):
     if type(dtc.tests) is not type(list()):
         dtc.tests = list(dtc.tests.values())
@@ -2084,10 +1922,10 @@ def rekeyed(dtc):
             rekey = None
     dtc.everything = rekey
     return dtc
-
+'''
 from neuronunit.tests.fi import RheobaseTest
 import quantities as pq
-
+'''
 import scipy.stats as scs
 from scipy.stats import norm
 
@@ -2103,6 +1941,7 @@ def z_val(sig_level=0.05, two_tailed=True):
     z = z_dist.ppf(area)
 
     return z
+'''
 import bluepyopt.ephys as ephys
 from bluepyopt.parameters import Parameter
 import quantities as pq
@@ -2205,23 +2044,8 @@ def constrain_ahp(vm_used,rheobase):
     'time_to_last_spike',
     'time_to_second_spike',
     'trace_check']
-    #'voltage_base',
-    #'min_voltage_between_spikes']
-    #efel_list = list(efel.getFeatureNames())
-    #reduced_list = [ i for i in efel_list if i in simple_yes_list ]
-    #if np.min(vm_used.magnitude)<0:
-    #if not np.max(vm_used.magnitude)>0:
-    #    vm_used_mag = [v+np.abs(np.mean([0,float(np.abs(np.max(v))))])*pq.mV for v in vm_used]
-    #    trace3['V'] = vm_used_mag
-        #if not np.max(vm_used_mag)>0:
-            #dtc.efel_15 = None
-        #    return dtc
-
 
     results = efel.getMeanFeatureValues([trace3],simple_yes_list)#, parallel_map=pool.map)
-    #nans = {k:v for k,v in results[0].items() if type(v) is type(None)}
-    #efel.reset()
-    #print(results)
     return results
 
 class NUFeature_standard_suite(object):
@@ -2229,20 +2053,11 @@ class NUFeature_standard_suite(object):
         self.test = test
         self.model = model
     def calculate_score(self,responses):
-
         if 'model' in responses.keys():
             dtc = responses['model']
-
             model = responses['model'].dtc_to_model()
         else:
             return 100.0
-
-        if type(responses['response']) is type(list()):
-            return 100.0
-
-        #if responses['model'].backend in "ADEXP":
-            # This allows you to state this as a hypothesis test with a p-value.
-            # The chi-square statistic would simply be x=np.sum(zscores**2), and the p-value would be 1-scipy.stats.chi2.cdf(x, 8) where 8 is the number of elephant tests (and Z-scores).
         if type(responses['response']) is type(list()):
             return 1000.0
 
@@ -2250,15 +2065,12 @@ class NUFeature_standard_suite(object):
             vm = responses['response']
             results = constrain_ahp(vm,dtc.rheobase)
             results = results[0]
-            #print(results['AHP_depth_last'])
             if results['AHP_depth'] is None or np.abs(results['AHP_depth_abs'])>=80:
                 return 1000.0
-                #'AHP_depth': 140.13713416616957
             if np.abs(results['AHP_depth'])>=105:
                 return 1000.0
 
             if np.max(vm)>=0:
-
                 snippets = get_spike_waveforms(vm)
                 widths = spikes2widths(snippets)
                 #if isinstace(type(widths),type(Iterable)):
@@ -2292,41 +2104,27 @@ class NUFeature_standard_suite(object):
             lns = np.abs(np.float(score_gene.raw))
             return lns
         else:
-
-            #import pdb
-            #pdb.set_trace()
             prediction = self.test.generate_prediction(model)
             score_gene = self.test.judge(model)
-            print(prediction,score_gene)
-
-            #import pdb
-            #pdb.set_trace()
-
             try:
                 score_gene = self.test.judge(model)
             except:
-
                 return 100.0
 
         if not isinstance(type(score_gene),type(None)):
             if not isinstance(score_gene,sciunit.scores.InsufficientDataScore):
                 try:
                     if not isinstance(type(score_gene.raw),type(None)):
-                    #lns = np.abs(np.float(score_gene.raw))
                         lns = np.abs(np.float(score_gene.raw))
                     else:
                         if not isinstance(type(score_gene.raw),type(None)):
                             # works 1/2 time that log_norm_score does not work
                             # more informative than nominal bad score 100
                             lns = np.abs(np.float(score_gene.raw))
-                            #else:
                             # works 1/2 time that log_norm_score does not work
                             # more informative than nominal bad score 100
 
-                            #lns = np.abs(np.float(score_gene.raw))
                 except:
-                    #print(prediction,self.test.observation)
-                    #print(score_gene,'\n\n\n')
                     lns = 100
             else:
                 lns = 100
@@ -2334,10 +2132,7 @@ class NUFeature_standard_suite(object):
             lns = 100
         if lns==np.inf or lns==np.nan:
             lns = 100
-            #lns = np.abs(np.float(score_gene.raw))
-        #print(lns,self.test.name)
         return lns
-from jithub.models import model_classes
 
 def make_evaluator(nu_tests,
                     PARAMS,
@@ -2406,7 +2201,7 @@ def fun(f, q_in, q_out):
             break
         q_out.put((i, f(x)))
 
-
+'''
 def parmap(f, X, nprocs=multiprocessing.cpu_count()):
     q_in = multiprocessing.Queue(1)
     q_out = multiprocessing.Queue()
@@ -2443,22 +2238,17 @@ def pebble_parmap(f, X, nprocs=multiprocessing.cpu_count()):
     [p.join() for p in proc]
 
     return [x for i, x in sorted(res)]
-
+'''
 def get_binary_file_downloader_html(bin_file_path, file_label='File'):
     with open(bin_file_path, 'rb') as f:
         data = f.read()
     bin_str = base64.b64encode(data).decode()
     href = f'<a href="data:application/octet-stream;base64,{bin_str}" download="{os.path.basename(bin_file_path)}">Download {file_label}</a>'
     return href
-import seaborn as sns
-sns.set(context="paper", font="monospace")
 
 def instance_opt(constraints,PARAMS,test_key,model_value,MU,NGEN,diversity,full_test_list=None,use_streamlit=True):
     import utils #as utils
     import bluepyopt as bpop
-    #import streamlit as st
-    #for t in constraints:
-    #    print(t)
 
     if type(constraints) is not type(list()):
         constraints = list(constraints.values())
