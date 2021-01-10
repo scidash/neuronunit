@@ -1,4 +1,4 @@
-### Circle CI:
+### Circle CI russelljjarvis/optimization build:
 [![Build Status](https://circleci.com/gh/russelljjarvis/neuronunit/tree/optimization.svg?style=svg)](https://app.circleci.com/pipelines/github/russelljjarvis/neuronunit/)
 ### Travis CI scidash/optimization build:
 [![Travis](https://travis-ci.org/scidash/neuronunit.svg?branch=optimization)](https://travis-ci.org/scidash/neuronunit)  
