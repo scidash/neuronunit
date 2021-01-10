@@ -306,7 +306,7 @@ class DataTC(object):
                 return model
             if str("ADEXP") in self.backend:
                 model = model_classes.ADEXPModel()
-                model._backend.attrs =  self.attrs
+                model._backend.attrs = self.attrs
                 model.attrs = self.attrs
                 model.params = self.to_bpo_param(self.attrs)
                 assert len(self.attrs)
