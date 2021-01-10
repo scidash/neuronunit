@@ -46,6 +46,7 @@ jobs:
       - run: git clone -b master https://github.com/russelljjarvis/BluePyOpt.git
       - run: cd BluePyOpt; pip install -e .
       - run: pip install git+https://github.com/russelljjarvis/eFEL
+      - run: pip install git+https://github.com/russelljjarvis/sciunit@dev
       - run: pip install ipfx
       - run: pip install streamlit
       - run: pip install sklearn

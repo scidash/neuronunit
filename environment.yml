@@ -17,4 +17,4 @@ dependencies:
   - ipfx
   - git+https://github.com/russelljjarvis/jit_jub@neuronunit
   - git+https://github.com/russelljjarvis/BluePyOpt
-  - git+http://github.com/scidash/sciunit@dev
+  - git+https://github.com/russelljjarvis/sciunit@dev
