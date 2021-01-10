@@ -107,16 +107,14 @@ class NUFeatureAllenMultiSpike(object):
         else:
             if features[feature_name] is None:
                 return 1000.0
-            #self.test.score_type = RelativeDifferenceScore
+            self.test.score_type = ZScore
             prediction = {'value':np.mean(features[self.test.name])}
-            try:
-                score_gene = self.test.feature_judge()
-            except:
-                score_gene = self.test.feature_judge()
-                score_gene2 = self.test.judge(self.model,prediction=prediction)
-                print(score_gene.raw,score_gene2.raw)
-            #assert score_gene2.raw == score_gene.raw
-            #score_gene = self.test.feature_judge()
+            #try:
+            score_gene = self.test.feature_judge()
+            #except:
+            #    score_gene = self.test.feature_judge()
+            #    score_gene2 = self.test.judge(self.model,prediction=prediction)
+            #    print(score_gene.raw,score_gene2.raw)
             if score_gene is not None:
                 if score_gene.raw is not None:
                     delta = np.abs(float(score_gene.raw))

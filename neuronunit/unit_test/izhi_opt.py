@@ -74,16 +74,16 @@ class testOptimization(unittest.TestCase):
         model.seeded_current
         model.NU = True
         cell_evaluator,simple_cell = opt_setup_two(model,cellmodel, suite, nu_tests, target_current, spk_count,provided_model=model)
-        NGEN = 45
-        MU = 16
+        NGEN = 100
+        MU = 20
 
         mapping_funct = dask_map_function
-        final_pop, hall_of_fame, logs, hist = opt_exec(MU,NGEN,mapping_funct,cell_evaluator)
+        final_pop, hall_of_fame, logs, hist = opt_exec(MU,NGEN,mapping_funct,cell_evaluator,cxpb=0.4,mutpb=0.04)
         opt,target = opt_to_model(hall_of_fame,cell_evaluator,suite, target_current, spk_count)
         best_ind = hall_of_fame[0]
         fitnesses = cell_evaluator.evaluate_with_lists(best_ind)
-        assert np.sum(fitnesses)<8.5
-        self.assertGreater(8.5,np.sum(fitnesses))
+        assert np.sum(fitnesses)<6.5
+        self.assertGreater(6.5,np.sum(fitnesses))
 
         gen_numbers = logs.select('gen')
         min_fitness = logs.select('min')
