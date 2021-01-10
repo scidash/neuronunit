@@ -74,8 +74,8 @@ class testOptimization(unittest.TestCase):
         model.seeded_current
         model.NU = True
         cell_evaluator,simple_cell = opt_setup_two(model,cellmodel, suite, nu_tests, target_current, spk_count,provided_model=model)
-        NGEN = 100
-        MU = 20
+        NGEN = 200
+        MU = 12
 
         mapping_funct = dask_map_function
         final_pop, hall_of_fame, logs, hist = opt_exec(MU,NGEN,mapping_funct,cell_evaluator,cxpb=0.4,mutpb=0.04)
