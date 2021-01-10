@@ -46,14 +46,15 @@ jobs:
       - run: git clone -b master https://github.com/russelljjarvis/BluePyOpt.git
       - run: cd BluePyOpt; pip install -e .
       - run: pip install git+https://github.com/russelljjarvis/eFEL
-      - run: pip install git+https://github.com/russelljjarvis/sciunit@dev
       - run: pip install ipfx
       - run: pip install streamlit
       - run: pip install sklearn
       - run: pip install seaborn
       - run: pip install frozendict
       - run: pip install plotly
-
+      - run: rm -rf /opt/conda/lib/python3.8/site-packages/sciunit
+      - run: git clone -b dev https://github.com/russelljjarvis/sciunit.git
+      - run: cd sciunit; pip install -e .; cd ..;
       # - run: conda install hdf5
       # - run: conda install -c conda-forge pytables
       - run: pip install allensdk==0.16.3
