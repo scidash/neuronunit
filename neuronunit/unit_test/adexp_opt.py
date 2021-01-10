@@ -59,12 +59,21 @@ class testOptimization(unittest.TestCase):
         self.assertIsNotNone(dtc.rheobase)
         vm,plt,dtc = inject_and_plot_model(dtc,plotly=False)
         fixed_current = 122 *qt.pA
-        model, suite, nu_tests, target_current, spk_count = opt_setup(specimen_id,
-                                                                      cellmodel,
-                                                                      target_num_spikes,
-                                                                      provided_model=model,
-                                                                      fixed_current=False,
-                                                                      cached=True)
+        try:
+            model, suite, nu_tests, target_current, spk_count = opt_setup(specimen_id,
+                                                                          cellmodel,
+                                                                          target_num_spikes,
+                                                                          provided_model=model,
+                                                                          fixed_current=False,
+                                                                          cached=True)
+        except:
+            model, suite, nu_tests, target_current, spk_count = opt_setup(specimen_id,
+                                                                          cellmodel,
+                                                                          target_num_spikes,
+                                                                          provided_model=model,
+                                                                          fixed_current=False,
+                                                                          cached=None)
+
         model = dtc.dtc_to_model()
         model.seeded_current = target_current['value']
         model.allen = True

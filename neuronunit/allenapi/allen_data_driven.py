@@ -1,41 +1,34 @@
 import pickle
-from neuronunit.allenapi import make_allen_tests_from_id
-
-from neuronunit.allenapi.make_allen_tests_from_id import *
-from neuronunit.allenapi.make_allen_tests import AllenTest
-
-from neuronunit.optimization.optimization_management import dtc_to_rheo
-from neuronunit.optimization.optimization_management import inject_model30,check_bin_vm30,check_bin_vm15
-
 import pandas as pd
 import seaborn as sns
-from bluepyopt.allenapi.utils import dask_map_function
 
 import bluepyopt as bpop
 import bluepyopt.ephys as ephys
 import pickle
-from sciunit.scores import RelativeDifferenceScore
-from sciunit import TestSuite
-from sciunit.scores.collections import ScoreArray
-from neuronunit.tests.base import AMPL, DELAY, DURATION
 
 import quantities as pq
 PASSIVE_DURATION = 500.0*pq.ms
 PASSIVE_DELAY = 200.0*pq.ms
 import matplotlib.pyplot as plt
-
 import numpy
+import copy
+import numpy as np
+from sciunit.scores import ZScore
+from collections.abc import Iterable
+from bluepyopt.parameters import Parameter
+from neuronunit.allenapi import make_allen_tests_from_id
+from neuronunit.allenapi.make_allen_tests_from_id import *
+from neuronunit.allenapi.make_allen_tests import AllenTest
+from neuronunit.optimization.optimization_management import dtc_to_rheo
+from neuronunit.optimization.optimization_management import inject_model30,check_bin_vm30,check_bin_vm15
+from sciunit.scores import RelativeDifferenceScore
+from sciunit import TestSuite
+from sciunit.scores.collections import ScoreArray
+from neuronunit.tests.base import AMPL, DELAY, DURATION
 from neuronunit.optimization.optimization_management import test_all_objective_test
 from neuronunit.optimization.optimization_management import check_binary_match, three_step_protocol,inject_and_plot_passive_model
 from neuronunit.optimization.model_parameters import MODEL_PARAMS, BPO_PARAMS
-import copy
-
-import numpy as np
-
-from sciunit.scores import ZScore
-from collections.abc import Iterable
-
-from bluepyopt.parameters import Parameter
+from bluepyopt.allenapi.utils import dask_map_function
 
 def opt_setup(specimen_id,cellmodel,target_num,provided_model = None,cached=None,fixed_current=False):
     if cached is not None:
@@ -53,7 +46,6 @@ def opt_setup(specimen_id,cellmodel,target_num,provided_model = None,cached=None
     target = StaticModel(vm=suite.traces['vm15'])
     target.vm15 = suite.traces['vm15']
     nu_tests = suite.tests;
-
     check_bin_vm15(target,target)
     attrs = {k:np.mean(v) for k,v in MODEL_PARAMS[cellmodel].items()}
     dtc = DataTC(backend=cellmodel,attrs=attrs)
@@ -67,9 +59,6 @@ def opt_setup(specimen_id,cellmodel,target_num,provided_model = None,cached=None
     provided_model.allen = None
     provided_model.allen = True
     model = provided_model
-    #print(model.params)
-
-
     if fixed_current:
         uc = {'amplitude':fixed_current,'duration':ALLEN_DURATION,'delay':ALLEN_DELAY}
         target_current = None
@@ -79,13 +68,8 @@ def opt_setup(specimen_id,cellmodel,target_num,provided_model = None,cached=None
         ALLEN_DELAY = 1000.0*qt.s
         ALLEN_DURATION = 2000.0*qt.s
         uc = {'amplitude':target_current['value'],'duration':ALLEN_DURATION,'delay':ALLEN_DELAY}
-        #tg = target_current['value']
-
     model = dtc.dtc_to_model()
     model._backend.inject_square_current(**uc)
-
-
-
     return model, suite, nu_tests, target_current, spk_count
 
 class NUFeatureAllenMultiSpike(object):
@@ -95,15 +79,11 @@ class NUFeatureAllenMultiSpike(object):
         self.spike_obs = spike_obs
         self.cnt = cnt
         self.target = target
-        #self.print_stuff = print_stuff
     def calculate_score(self,responses):
 
         if not 'features' in responses.keys():# or not 'model' in responses.keys():
             return 1000.0
         features = responses['features']
-        #print(features.keys())
-        #print(features.values())
-
         if features is None:
             return 1000.0
         self.test.score_type = RelativeDifferenceScore
@@ -127,35 +107,26 @@ class NUFeatureAllenMultiSpike(object):
         else:
             if features[feature_name] is None:
                 return 1000.0
-
-            ###
-            # Ratio score breaks this for unknown reasons.
-            ###
-            self.test.score_type = ZScore
+            #self.test.score_type = RelativeDifferenceScore
             prediction = {'value':np.mean(features[self.test.name])}
-            #score_gene2 = self.test.judge(self.model,prediction=prediction)
-            score_gene = self.test.feature_judge()
-            #print(score_gene.raw,score_gene2.raw)
+            try:
+                score_gene = self.test.feature_judge()
+            except:
+                score_gene = self.test.feature_judge()
+                score_gene2 = self.test.judge(self.model,prediction=prediction)
+                print(score_gene.raw,score_gene2.raw)
             #assert score_gene2.raw == score_gene.raw
             #score_gene = self.test.feature_judge()
-            #print(score_gene)
             if score_gene is not None:
                 if score_gene.raw is not None:
                     delta = np.abs(float(score_gene.raw))
-                    #print('legitimate fitness',delta)
                 else:
                     delta = None
-
             else:
                 delta = None
             if delta is None:
-                print('this occurs often')
                 delta = np.abs(features[self.test.name]-np.mean(self.test.observation['mean']))
-
-
             if np.nan==delta or delta==np.inf:
-                print('this occurs often')
-
                 delta = np.abs(features[self.test.name]-np.mean(self.test.observation['mean']))
             if np.nan==delta or delta==np.inf:
                 delta = 1000.0
@@ -164,20 +135,13 @@ def opt_setup_two(model, cellmodel, suite, nu_tests, target_current, spk_count,p
     objectives = []
     spike_obs = []
     for tt in nu_tests:
-        #if 'Spikecount_3.0x' == tt.name:
-        #    spike_obs.append(tt.observation)
         if 'Spikecount_1.5x' == tt.name:
-            #print(tt.observation)
             spike_obs.append(tt.observation)
     spike_obs = sorted(spike_obs, key=lambda k: k['mean'],reverse=True)
 
     for cnt,tt in enumerate(nu_tests):
         feature_name = '%s' % (tt.name)
-        #if feature_name in specific_filter_list:
-            #if 'Spikecount_3.0x' == tt.name or
         if 'Spikecount_1.5x' == tt.name:
-            #def __init__(self,test,model,cnt,target,spike_obs,print_stuff=False):
-
             ft = NUFeatureAllenMultiSpike(tt,model,cnt,target_current,spike_obs)
             objective = ephys.objectives.SingletonObjective(
                 feature_name,
@@ -186,11 +150,6 @@ def opt_setup_two(model, cellmodel, suite, nu_tests, target_current, spk_count,p
 
 
     score_calc = ephys.objectivescalculators.ObjectivesCalculator(objectives)
-
-    #lop={}
-    #for k,v in MODEL_PARAMS[cellmodel].items():
-    #    p = Parameter(name=k,bounds=v,frozen=False)
-    #    lop[k] = p
 
     if provided_model is None:
         print('depriciated')
@@ -250,7 +209,6 @@ def opt_setup_two(model, cellmodel, suite, nu_tests, target_current, spk_count,p
     return cell_evaluator2,simple_cell
 
 
-MU = 20
 def multi_layered(MU,NGEN,mapping_funct,cell_evaluator2):
     optimisation = bpop.optimisations.DEAPOptimisation(
             evaluator=cell_evaluator2,
@@ -261,13 +219,14 @@ def multi_layered(MU,NGEN,mapping_funct,cell_evaluator2):
     return final_pop, hall_of_fame, logs, hist
 
 
-MU = 20
-def opt_exec(MU,NGEN,mapping_funct,cell_evaluator2):
+def opt_exec(MU,NGEN,mapping_funct,cell_evaluator2,mutpb=0.05,cxpb=0.6):
     optimisation = bpop.optimisations.DEAPOptimisation(
             evaluator=cell_evaluator2,
             offspring_size = MU,
             map_function = map,
-            selector_name='IBEA',mutpb=0.05,cxpb=0.6)
+            selector_name='IBEA',
+            mutpb=mutpb,
+            cxpb=cxpb)
     final_pop, hall_of_fame, logs, hist = optimisation.run(max_ngen=NGEN)
     return final_pop, hall_of_fame, logs, hist
 

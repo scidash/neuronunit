@@ -11,11 +11,6 @@ import matplotlib
 matplotlib.rcParams.update({'font.size': 12})
 
 import cython
-
-import pebble
-
-# optional imports
-
 import matplotlib.pyplot as plt
 import numpy as np
 import dask.bag as db
@@ -23,8 +18,6 @@ import dask.delayed as delay
 import pandas as pd
 from sklearn.model_selection import ParameterGrid
 from collections import OrderedDict
-
-import copy
 import math
 import quantities as pq
 import numpy
@@ -40,14 +33,12 @@ from itertools import repeat
 from neuronunit.tests.base import AMPL, DELAY, DURATION
 from collections.abc import Iterable
 from neuronunit.tests.target_spike_current import SpikeCountSearch, SpikeCountRangeSearch
+import neuronunit.capabilities.spike_functions as sf
+
 try:
     import plotly.offline as py
 except:
     warnings.warn('plotly')
-#try:
-#    import asciiplotlib as apl
-#except:#
-#    warnings.warn('ASCII plot (gnu plot) plotting backend not available, consider installing')
 try:
     import plotly
     plotly.io.orca.config.executable = '/usr/bin/orca'
@@ -72,64 +63,24 @@ from sciunit import TestSuite
 
 import sciunit
 import deap
-
 import time
 import seaborn as sns
-import random
-#from datetime import datetime
-
-import pdb
 import quantities as pq
-#from sciunit import scores
 import random
 import pandas as pd
 from neuronunit.tests.target_spike_current import SpikeCountSearch, SpikeCountRangeSearch
+from neuronunit.tests.fi import RheobaseTest
 from sciunit import scores
 import seaborn as sns
 sns.set(context="paper", font="monospace")
 from jithub.models import model_classes
 
-#from neuronunit.plottools import elaborate_plots
-
-# Helper tests are dummy instances of NU tests.
-# They are used by other methods analogous to a base class,
-# these are base instances that become more derived
-# contexts, that modify copies of the helper class in place.
-'''
-import os
-import neuronunit
-anchor = neuronunit.__file__
-anchor = os.path.dirname(anchor)
-try:
-    mypath = os.path.join(os.sep,anchor,'tests/multicellular_constraints.p')
-except:
-    from neuronunit import get_neab
-    get_neab.process_all_cells()
-    # TODO
-    # pickle and create path in try.
-
-
-#quantities.pq.PREFERRED = [pq.mV, pq.pA, pq.UnitQuantity('femtocoulomb', 1e-15*pq.C, 'fC')]
-
-#sciunit.utils.settings['LOGGING'] = False
-VERBOSE = False
-def timer(func):
-    def inner(*args, **kwargs):
-        t1 = time.time()
-        f = func(*args, **kwargs)
-        t2 = time.time()
-        try:
-            logger.sciunit.utils.logging
-        except:
-            logger = logging.getLogger('__main__')
-        logging.basicConfig(level=logging.DEBUG)
-        if VERBOSE:
-            logging.info('Runtime taken to evaluate function {1} {0} seconds'.format(t2-t1,func))
-        return f
-    return inner
-'''
-
-
+import quantities as qt
+import bluepyopt.ephys as ephys
+from bluepyopt.parameters import Parameter
+import quantities as pq
+PASSIVE_DURATION = 500.0*pq.ms
+PASSIVE_DELAY = 200.0*pq.ms
 
 def setUp(model_type):
     backend = model_type
@@ -209,7 +160,7 @@ def make_ga_DO(explore_edges, max_ngen, test, \
         MU = None, seed_pop = None, \
            backend = str('IZHI'),protocol={'allen':False,'elephant':True}):
 
-    construct an DEAP Optimization Object, suitable for this test class and caching etc.
+    # construct an DEAP Optimization Object, suitable for this test class and caching etc.
 
     ss = {}
     if type(free_parameters) is type(dict()):
@@ -233,11 +184,7 @@ def make_ga_DO(explore_edges, max_ngen, test, \
     if not isinstance(test, Iterable):
         test = [test]
     from neuronunit.optimization.optimizations import SciUnitoptimization
-
     from bluepyopt.optimizations import DEAPoptimization
-    #DO_other = DEAPoptimization(offspring_size=MU,selector_name='IBEA')
-
-
     DO = SciUnitoptimization(MU = MU, tests = test,\
          boundary_dict = ss, backend = backend, hc = hc, \
                              protocol=protocol)
@@ -288,10 +235,10 @@ class TSD(dict):
            self.cell_name = 'simulated data'
 
     def to_pickleable_dict(self):
-        """
-        A pickleable version of instance object.
-        https://joblib.readthedocs.io/en/latest/
-        """
+
+        # A pickleable version of instance object.
+        # https://joblib.readthedocs.io/en/latest/
+
 
         # This might work joblib.dump(self, filename + '.compressed', compress=True)
         # somewhere in job lib there are tools for pickling more complex objects
@@ -302,7 +249,6 @@ class TSD(dict):
 
     def optimize(self,**kwargs):
         import shelve
-
         defaults = {'param_edges':None,
                     'backend':None,\
                     'protocol':{'allen': False, 'elephant': True},\
@@ -317,14 +263,7 @@ class TSD(dict):
                     }
         defaults.update(kwargs)
         kwargs = defaults
-
-
         d = shelve.open('opt_models_cache')  # open -- file may get suffix added by low-level
-        #kwargs['name'] = self.name
-        #kwargs_ = frozendict(kwargs)
-        #preferred_query_key = str(make_hash(kwargs))
-
-
         query_key = str(kwargs['NGEN']) +\
         str(kwargs['free_parameters']) +\
         str(kwargs['backend']) +\
@@ -387,66 +326,16 @@ class TSD(dict):
         if hasattr(self,'ga_out'):
             return display(self.ga_out['pf'][0].dtc.obs_preds)
         else:
-            print('optimize first')
             return None
-'''
-# DEAP mutation strategies:
-# https://deap.readthedocs.io/en/master/api/tools.html#deap.tools.mutESLogNormal
-class WSFloatIndividual(float):
-    """Individual consisting of list with weighted sum field"""
-    def __init__(self, *args, **kwargs):
-        """Constructor"""
-        self.rheobase = None
-        super(WSFloatIndividual, self).__init__()
 
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-def filter_predictions(dtc):
-    if not hasattr(dtc,'preds'):
-        dtc.preds = {}
-    dtc.preds = {k:v for k,v in dtc.preds.items() if type(v) is not type(int(1))}
-    dtc.preds = {k:v for k,v in dtc.preds.items() if type(v['mean']) is not type(None)}
-    dtc.preds = {k:v for k,v in dtc.preds.items() if v['mean']!=1.0}
-    dtc.preds = {k:v for k,v in dtc.preds.items() if v['mean']!=False}
-    dtc.preds = {k:v for k,v in dtc.preds.items() if type(v['mean']) is not type(str(''))}
-    dtc.preds = {k:v for k,v in dtc.preds.items() if not np.isnan(v['mean'])}
-    return dtc
-@cython.boundscheck(False)
-@cython.wraparound(False)
-def make_new_random(dtc_,backend):
-    dtc = DataTC()
-    dtc.backend = backend
-
-    dtc.attrs = random_p(backend)
-    dtc = dtc_to_rheo(dtc)
-    if type(dtc.rheobase) is not type({'1':1}):
-        temp = dtc.rheobase
-        dtc.rheobase = {'value': temp}
-    while dtc.rheobase['value'] is None:
-        dtc = DataTC()
-        dtc.backend = backend
-        dtc.attrs = random_p(backend)
-        dtc = dtc_to_rheo(dtc)
-        if type(dtc.rheobase) is not type({'1':1}):
-            temp = dtc.rheobase
-            dtc.rheobase = {'value': temp}
-    return dtc
-'''
-
-import random
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def random_p(backend):
     ranges = MODEL_PARAMS[backend]
-    #try:
     import numpy, time
     date_int = int(time.time())
     numpy.random.seed(date_int)
-    #except:
-    #    numpy.random.seed()#self.seed)
-
     random_param1 = {} # randomly sample a point in the viable parameter space.
     for k in ranges.keys():
         sample = random.uniform(ranges[k][0], ranges[k][1])
@@ -457,7 +346,6 @@ def random_p(backend):
 @cython.wraparound(False)
 def process_rparam(backend,free_parameters):
     random_param = random_p(backend)
-
     if 'GLIF' in str(backend):
         random_param['init_AScurrents'] = [0.0,0.0]
         random_param['asc_tau_array'] = [0.3333333333333333,0.01]
@@ -465,32 +353,30 @@ def process_rparam(backend,free_parameters):
     else:
         random_param.pop('Iext',None)
         rp = random_param
-
     if free_parameters is not None:
         reduced_parameter_set = {}
         for k in free_parameters:
             reduced_parameter_set[k] = rp[k]
         rp = reduced_parameter_set
-
     dsolution = DataTC(backend =backend,attrs=rp)
     temp_model = dsolution.dtc_to_model()
     dsolution.attrs = temp_model.default_attrs
     dsolution.attrs.update(rp)
     return dsolution,rp,None,random_param
+'''
 def check_test(new_tests):
     replace = False
     for k,t in new_tests.items():
         if type(t.observation['value']) is type(None):
             replace = True
             return replace
-
+'''
 # this method is not currently used, but it could also be too prospectively usefull to delete.
 # TODO move to a utils file.
-
+'''
 def get_centres(ga_out):
-    '''
+
     Do optimization, but then get cluster centres of parameters
-    '''
     for key,value in ga_out['pf']:
         all_val[key] = {}
         for k in td.keys():
@@ -508,14 +394,6 @@ def get_centres(ga_out):
     y_kmeans = est.predict(X)
     centers = est.cluster_centers_
     return td, test_opt, centres
-
-'''
-def mint_generic_model(backend):
-    #this is almost a depricated method
-    dtc = DataTC()
-    dtc.backend = backend
-    model = dtc.to_model()
-    return model
 '''
 
 def save_models_for_justas(dtc):
@@ -532,7 +410,6 @@ def write_opt_to_nml(path,param_dict):
 
         -- Synopsis: Write optimimal simulation parameters back to NeuroML2.
     '''
-    #orig_lems_file_path = path_params['model_path']
     more_attributes = pynml.read_lems_file(orig_lems_file_path,
                                            include_includes=True,
                                            debug=False)
@@ -551,42 +428,7 @@ def write_opt_to_nml(path,param_dict):
     more_attributes.export_to_file(fopen)
     fopen.close()
     return
-#@timer
-'''
-def pred_only(test_and_models):
-    # To obtain simulated data sets
-    #
-    (test, dtc) = test_and_models
-    model = dtc.dtc_to_model()
 
-    if test.name in 'FITest':
-        pred = test.generate_prediction(model)
-        print(pred)
-
-
-    if test.name not in 'FITest':
-        total_time = test.params['injected_square_current']['delay'] + \
-            test.params['injected_square_current']['duration'] #+ 300
-        tt = float(total_time) + 200.0
-        test.params['t_max'] = tt*pq.ms
-        assert float(test.params['t_max']) ==  tt
-    #print(test.params['t_max'])
-
-    if test.passive or test.active is False:
-        test.setup_protocol(model)
-        pred = test.extract_features(model,test.get_result(model))
-
-    else:
-        pred = test.extract_features(model)
-
-    # Beware a down-stream bug fix follows.
-    # Resting potential injection current units set to mV, instead of Amps
-    if str('RestingPotentialTest') in test.name:
-        test.params['injected_square_current']['amplitude'] = \
-        float(test.params['injected_square_current']['amplitude'])*pq.pA
-        assert test.params['injected_square_current']['amplitude'].units == pq.pA
-    return pred
-'''
 
 def ugly_score_wrangler(model,objectives2,to_latex_string=False):
     strict_scores = {}
@@ -600,12 +442,10 @@ def ugly_score_wrangler(model,objectives2,to_latex_string=False):
         test = i.features[0].test
         try:
             test.observation['value'] = np.abs(float(test.observation['mean']))*pq.dimensionless
-            #test.observation['std'] = test.observation['mean']#*pq.mV
             test.observation['n'] = 1
         except:
             temp = {}
             temp['value'] = np.abs(test.observation['value'])*pq.dimensionless
-            #temp['std'] = temp['mean']#*pq.dimensionless
             temp['n'] = 1
             test.observation = temp
 
@@ -1804,10 +1644,8 @@ def nuunit_dm_rheo_evaluation(dtc):
     dtc.dm_test_features = None
     dtc.dm_test_features = dm_test_features
     return dtc
-
-from allensdk.ephys.ephys_extractor import EphysSweepFeatureExtractor
-import neuronunit.capabilities.spike_functions as sf
-
+'''
+#from allensdk.ephys.ephys_extractor import EphysSweepFeatureExtractor
 
 def train_length(dtc):
     if not hasattr(dtc,'everything'):
@@ -1816,7 +1654,7 @@ def train_length(dtc):
     train_len = float(len(sf.get_spike_train(vm)))
     dtc.everything['Spikecount_1.5x'] = copy.copy(train_len)
     return dtc
-'''
+
 def three_step_protocol(dtc,solve_for_current=None):
     if solve_for_current is None:
         vm30,vm15,_,_,dtc=inject_model30(dtc)
@@ -1849,6 +1687,7 @@ def retestobs(dtc):
     for t in dtc.tests:
         t.observation['std'] = np.abs(t.observation['std'])
     return dtc
+
 def rekeyeddm(dtc):
     standard = 0
     strong = 0
@@ -1903,6 +1742,7 @@ def rekeyeddm(dtc):
             elif str(k)+str('_1.5x') in df.columns:
                 keep_columns.append(str(k)+str('_1.5x'))
     return dtc
+'''
 def rekeyed(dtc):
     rekey = {}
     if hasattr(dtc,'allen_30'):
@@ -1925,7 +1765,7 @@ def rekeyed(dtc):
 '''
 from neuronunit.tests.fi import RheobaseTest
 import quantities as pq
-'''
+
 import scipy.stats as scs
 from scipy.stats import norm
 
@@ -1942,11 +1782,6 @@ def z_val(sig_level=0.05, two_tailed=True):
 
     return z
 '''
-import bluepyopt.ephys as ephys
-from bluepyopt.parameters import Parameter
-import quantities as pq
-PASSIVE_DURATION = 500.0*pq.ms
-PASSIVE_DELAY = 200.0*pq.ms
 
 def initialise_test(v,rheobase):
     v = switch_logic([v])
@@ -1973,14 +1808,7 @@ def initialise_test(v,rheobase):
         v.params['injected_square_current']['amplitude'] = 0.0*pq.pA
 
     return v
-import quantities as qt
-#from capabilities.spike_functions import spikes2widths, get_spike_waveforms
 
-
-#if type(dtc.rheobase) is type(dict()):#
-#    rheobase = dtc.rheobase['value']
-#else:
-#    rheobase = dtc.rheobase
 
 def make_allen_tests():
 
