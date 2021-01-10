@@ -24,11 +24,17 @@ install:
   - pip install sklearn
   - pip install coveralls
   - pip install pylmeasure # required by morphology tests
+  - sudo bash build.sh
 ######################################################
 
 script:
   - export NC_HOME='.' # NeuroConstruct isn't used but tests need this
                        # variable set to pass.
+  - cd neuronunit/unit_test; coverage run rheobase_dtc_test.py; cd -;
+  - cd neuronunit/unit_test; coverage run adexp_opt.py; cd -;
+  - cd neuronunit/unit_test; coverage run izhi_opt.py; cd -;
+  - cd neuronunit/unit_test; coverage report; cd -;
+
   - sh test.sh
 after_success:
   - coveralls
