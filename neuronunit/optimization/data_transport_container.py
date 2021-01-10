@@ -37,6 +37,18 @@ class DataTC(object):
         self.previous = 0
         self.run_number = 0
         self.attrs = attrs
+
+
+        self.boolean = False
+        self.initiated = False
+        self.backend = backend
+        self._backend = _backend
+        if self.backend is not None:
+            if str("MAT") in self.backend or str("IZHI") in self.backend or str("ADEXP") in self.backend:
+                self.jithub = True
+            else:
+                self.jithub = False
+
         '''
         if attrs is None:
             self.attrs = None
@@ -44,16 +56,14 @@ class DataTC(object):
         else:
             self.attrs = attrs
         '''
-        self.steps = None
-        self.name = None
+        #self.steps = None
+        #self.name = None
         #self.results = None
         #self.fitness = None
         #self.score = None
         #self.scores = None
 
-        self.boolean = False
-        self.initiated = False
-        self.delta = []
+        #self.delta = []
         #self.evaluated = False
         #self.results = {}
         #self.searched = []
@@ -61,8 +71,6 @@ class DataTC(object):
         #self.cached_attrs = {}
         #self.predictions = {}
         #self.observations = {}
-        self.backend = backend
-        self._backend = _backend
 
         #self.summed = None
         #self.constants = None
@@ -75,10 +83,6 @@ class DataTC(object):
         #self.obs_preds = None
         #self.threshold = False
 
-        if self.backend is str("MAT") or self.backend is str("IZHI") or self.backend is str("ADEXP"):
-            self.jithub = True
-        else:
-            self.jithub = False
 
     def to_bpo_param(self,attrs):
         from bluepyopt.parameters import Parameter
@@ -132,7 +136,6 @@ class DataTC(object):
                         lns = np.abs(float(score_gene.raw))
                     except:
                         lns = 100
-
             if lns==np.inf or lns==-np.inf:
                 lns = np.abs(float(score_gene.raw))
             scores_.append(lns)
