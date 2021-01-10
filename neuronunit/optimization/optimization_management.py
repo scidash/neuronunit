@@ -3054,45 +3054,7 @@ def inject_model30(dtc,figname=None,solve_for_current=None,fixed=False):
         dtc.vmr = np.mean(vr)
         del model
         return vm30,vm15,params,None,dtc
-
-    '''
-    plt.clf()
-    plt.figure()
-    if dtc.backend in str("HH"):
-        plt.title('Hodgkin-Huxley Neuron')
-    else:
-        plt.title('membrane potential plot')
-    plt.plot(vm.times, vm.magnitude, 'k')
-    plt.ylabel('V (mV)')
-    if figname is not None:
-        plt.savefig(figname)
-    #plt.plot(vm.times,vm.magnitude)
-    '''
-
-
-'''
-def color_large_red(val):
-    """
-    Takes a scalar and returns a string with
-    the css property `'color: red'` for negative
-    strings, black otherwise.
-    """
-    color = "red" if val > 2.0 else "white"
-    return "color: %s" % color
-
-
-def highlight_min(data, color="yellow"):
-    """highlight the maximum in a Series or DataFrame"""
-    attr = "background-color: {}".format(color)
-    if data.ndim == 1:  # Series from .apply(axis=0) or axis=1
-        is_max = data == data.min()
-        return [attr if v else "" for v in is_max]
-    else:  # from .apply(axis=None)
-        is_max = data == data.min().min()
-        return pd.DataFrame(
-            np.where(is_max, attr, ""), index=data.index, columns=data.columns
-        )
-'''
+from elephant.spike_train_generation import threshold_detection
 
 
 def display_fitting_data():
@@ -3134,38 +3096,8 @@ def display_fitting_data():
 
     df = df.set_index('name').T
 
-    #df.style.background_gradient(cmap=cm)
     return df
 
-#import multiprocessing
-#pool = multiprocessing.Pool()
-'''
-simple_yes_list = [
-'AP_amplitude',
-'adaptation_index',
-'adaptation_index2',
-'time_to_first_spike',
-'mean_AP_amplitude',
-'spike_half_width',
-'AHP_depth',
-'minimum_voltage',
-'peak_voltage',
-'time_to_last_spike',
-'AHP_depth_abs',
-'all_ISI_values',
-'voltage_base',
-'min_voltage_between_spikes',
-'Spikecount',
-'ISI_values',
-'AHP_depth_last',
-'all_ISI_values',
-'ISI_values',
-'time_to_first_spike',
-'time_to_last_spike',
-'time_to_second_spike',
-'trace_check']
-'''
-from elephant.spike_train_generation import threshold_detection
 
 def efel_evaluation(dtc,thirty=False):
     if hasattr(dtc,'solve_for_current'):
