@@ -59,4 +59,5 @@ jobs:
       - run: cd neuronunit/unit_test; python rheobase_dtc_test.py
       - run: cd neuronunit/unit_test; python adexp_opt.py
       - run: cd neuronunit/unit_test; coverage run adexp_opt.py
+      - run: cd neuronunit/unit_test; coverage run izhi_opt.py
       - run: cd neuronunit/unit_test; coverage report
