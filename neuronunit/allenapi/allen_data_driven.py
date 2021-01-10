@@ -63,19 +63,6 @@ def opt_setup(specimen_id,cellmodel,target_num,provided_model = None,cached=None
             break
     observation_range={}
     observation_range['value'] = spk_count
-    #if provided_model is not None:
-    #    model = provided_model
-    #else:
-    #    model = dtc.dtc_to_model()
-
-    if provided_model is None:
-        print('depricated in favor of jithub model')
-        assert 1==2
-        provided_model = ephys.models.ReducedCellModel(
-                name='simple_cell',
-                params=BPO_PARAMS[cellmodel],backend=cellmodel)
-        provided_model.params = {k:np.mean(v) for k,v in model.params.items() }
-
     provided_model.backend = cellmodel
     provided_model.allen = None
     provided_model.allen = True
@@ -146,7 +133,7 @@ class NUFeatureAllenMultiSpike(object):
             ###
             self.test.score_type = ZScore
             prediction = {'value':np.mean(features[self.test.name])}
-            score_gene2 = self.test.judge(self.model,prediction=prediction)
+            #score_gene2 = self.test.judge(self.model,prediction=prediction)
             score_gene = self.test.feature_judge()
             #print(score_gene.raw,score_gene2.raw)
             #assert score_gene2.raw == score_gene.raw
