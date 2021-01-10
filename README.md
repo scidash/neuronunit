@@ -1,7 +1,8 @@
-
+### Circle CI:
 [![Build Status](https://circleci.com/gh/russelljjarvis/neuronunit/tree/optimization.svg?style=svg)](https://app.circleci.com/pipelines/github/russelljjarvis/neuronunit/)
-
-| Master  | Dev |
+### Travis CI:
+[![Travis](https://travis-ci.org/scidash/neuronunit.svg?branch=optimization)](https://travis-ci.org/scidash/neuronunit)  
+| Master  | Dev | 
 | ------------- | ------------- |
 | [![Travis](https://travis-ci.org/scidash/neuronunit.svg?branch=master)](https://travis-ci.org/scidash/neuronunit) | [![Travis](https://travis-ci.org/scidash/neuronunit.svg?branch=dev)](https://travis-ci.org/scidash/neuronunit)  |
 | [![RTFD](https://readthedocs.org/projects/neuronunit/badge/?version=master)](http://neuronunit.readthedocs.io/en/latest/?badge=master) | [![RTFD](https://readthedocs.org/projects/neuronunit/badge/?version=dev)](http://neuronunit.readthedocs.io/en/latest/?badge=dev) |
