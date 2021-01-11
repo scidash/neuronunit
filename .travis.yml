@@ -35,6 +35,6 @@ script:
   - cd neuronunit/unit_test; coverage run izhi_opt.py; cd -;
   - cd neuronunit/unit_test; coverage report; cd -;
 
-  - sh test.sh
+  #- sh test.sh
 after_success:
   - coveralls
