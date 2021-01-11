@@ -71,8 +71,8 @@ class testOptimization(unittest.TestCase):
                                                                           fixed_current=False,
                                                                           cached=None)
 
-        NGEN = 15
-        MU = 12
+        NGEN = 55
+        MU = 22
 
         mapping_funct = dask_map_function
         final_pop, hall_of_fame, logs, hist = opt_exec(MU,NGEN,mapping_funct,cell_evaluator,cxpb=0.5,mutpb=0.05)
