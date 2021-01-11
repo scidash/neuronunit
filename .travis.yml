@@ -22,9 +22,11 @@ install:
   - pip install -U pip
   - pip install .
   - pip install sklearn
+  - pip install seaborn
   - pip install coveralls
   - pip install pylmeasure # required by morphology tests
-  - sudo bash build.sh
+  - sudo sh build.sh
+
 ######################################################
 
 script:

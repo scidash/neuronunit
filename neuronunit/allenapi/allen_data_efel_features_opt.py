@@ -1,16 +1,12 @@
 import pickle
-import pandas as pd
-import seaborn as sns
 
 import bluepyopt as bpop
 import bluepyopt.ephys as ephys
-import pickle
 
 import quantities as pq
 PASSIVE_DURATION = 500.0*pq.ms
 PASSIVE_DELAY = 200.0*pq.ms
 import matplotlib.pyplot as plt
-import numpy
 import copy
 import numpy as np
 from collections.abc import Iterable
