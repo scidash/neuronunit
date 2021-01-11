@@ -79,8 +79,8 @@ class testOptimization(unittest.TestCase):
         opt,target = opt_to_model(hall_of_fame,cell_evaluator,suite, target_current, spk_count)
         best_ind = hall_of_fame[0]
         fitnesses = cell_evaluator.evaluate_with_lists(best_ind)
-        assert np.sum(fitnesses)<0.1
-        self.assertGreater(0.1,np.sum(fitnesses))
+        assert np.sum(fitnesses)<0.7
+        self.assertGreater(0.7,np.sum(fitnesses))
 
 
         gen_numbers = logs.select('gen')
