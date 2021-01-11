@@ -1,21 +1,23 @@
 #!/usr/bin/env python
 # coding: utf-8
+
 import unittest
+import numpy as np
+import efel
+import matplotlib.pyplot as plt
+import quantities as qt
+
 import matplotlib
 matplotlib.use('Agg')
-from neuronunit.allenapi.allen_data_driven import opt_setup, opt_setup_two, opt_exec, opt_to_model
-from neuronunit.allenapi.allen_data_driven import opt_to_model
+from neuronunit.allenapi.allen_data_efel_features_opt import opt_setup, opt_setup_two, opt_exec, opt_to_model
+from neuronunit.allenapi.allen_data_efel_features_opt import opt_to_model
 from neuronunit.allenapi.utils import dask_map_function
 
 from neuronunit.optimization.optimization_management import check_bin_vm15
 from neuronunit.optimization.model_parameters import MODEL_PARAMS, BPO_PARAMS, to_bpo_param
 from neuronunit.optimization.optimization_management import dtc_to_rheo,inject_and_plot_model
-import numpy as np
 from neuronunit.optimization.data_transport_container import DataTC
-import efel
 from jithub.models import model_classes
-import matplotlib.pyplot as plt
-import quantities as qt
 
 class testOptimization(unittest.TestCase):
     def setUp(self):
@@ -54,28 +56,23 @@ class testOptimization(unittest.TestCase):
         vm,plt,dtc = inject_and_plot_model(dtc,plotly=False)
         fixed_current = 122 *qt.pA
         try:
-            model, suite, nu_tests, target_current, spk_count = opt_setup(specimen_id,
+            suite, target_current, spk_count, cell_evaluator, simple_cell = opt_setup(specimen_id,
                                                                           cellmodel,
                                                                           target_num_spikes,
                                                                           provided_model=model,
                                                                           fixed_current=False,
                                                                           cached=True)
+
         except:
-            model, suite, nu_tests, target_current, spk_count = opt_setup(specimen_id,
+            suite, target_current, spk_count, cell_evaluator, simple_cell = opt_setup(specimen_id,
                                                                           cellmodel,
                                                                           target_num_spikes,
                                                                           provided_model=model,
                                                                           fixed_current=False,
                                                                           cached=None)
 
-        model = dtc.dtc_to_model()
-        model.seeded_current = target_current['value']
-        model.allen = True
-        model.seeded_current
-        model.NU = True
-        cell_evaluator,simple_cell = opt_setup_two(model,cellmodel, suite, nu_tests, target_current, spk_count,provided_model=model)
-        NGEN = 250
-        MU = 25
+        NGEN = 15
+        MU = 12
 
         mapping_funct = dask_map_function
         final_pop, hall_of_fame, logs, hist = opt_exec(MU,NGEN,mapping_funct,cell_evaluator,cxpb=0.4,mutpb=0.04)

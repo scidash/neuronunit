@@ -12,17 +12,19 @@ from jithub.models import model_classes
 class DataTC(object):
 
     def model_default(self):
-        from neuronunit.optimisation.model_parameters import MODEL_PARAMS
 
         if self.backend is not None:
             if self.attrs is None:
-                attrs = {k:np.mean(v) for k,v in MODEL_PARAMS[self.backend].items()}
-                self = DataTC(backend=self.backend,attrs=attrs)
+                from neuronunit.optimization.model_parameters import MODEL_PARAMS
+                self.attrs = {k:np.mean(v) for k,v in MODEL_PARAMS[self.backend].items()}
+                self = DataTC(backend=self.backend,attrs=self.attrs)
+                model = self.dtc_to_model()
                 self.attrs = model._backend.default_attrs
+                del model
             else:
                 model = self.dtc_to_model()
                 self.attrs = model._backend.default_attrs
-
+                del model
     '''
     Data Transport Container
 
@@ -290,6 +292,8 @@ class DataTC(object):
 
         else:
             self.jithub = False
+        if self.attrs is None:
+            self.model_default()
         if self.jithub:
             if str("MAT") in self.backend:
                 model = model_classes.MATModel()
@@ -326,7 +330,12 @@ class DataTC(object):
                 model.set_attrs(self.attrs)
             if model.attrs is None:
                 model.attrs = self.attrs
+            return model
 
+    def dtc_to_sciunit_model(self):
+        model = self.dtc_to_model()
+        sciunit_model = model._backend.as_sciunit_model()
+        return sciunit_model
     def dtc_to_gene(self,subset_params=None):
         '''
         These imports probably need to be contained to stop recursive imports
