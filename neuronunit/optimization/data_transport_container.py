@@ -17,7 +17,7 @@ class DataTC(object):
             if self.attrs is None:
                 from neuronunit.optimization.model_parameters import MODEL_PARAMS
                 self.attrs = {k:np.mean(v) for k,v in MODEL_PARAMS[self.backend].items()}
-                self = DataTC(backend=self.backend,attrs=self.attrs)
+                #self = DataTC(backend=self.backend,attrs=self.attrs)
                 model = self.dtc_to_model()
                 self.attrs = model._backend.default_attrs
                 del model
