@@ -4,8 +4,6 @@ import bluepyopt as bpop
 import bluepyopt.ephys as ephys
 
 import quantities as pq
-PASSIVE_DURATION = 500.0*pq.ms
-PASSIVE_DELAY = 200.0*pq.ms
 import matplotlib.pyplot as plt
 import copy
 import numpy as np
@@ -14,8 +12,8 @@ from bluepyopt.parameters import Parameter
 
 from sciunit.scores import RelativeDifferenceScore
 from sciunit import TestSuite
-from sciunit.scores.collections import ScoreArray
 from sciunit.scores import ZScore
+from sciunit.scores.collections import ScoreArray
 
 from neuronunit.allenapi import make_allen_tests_from_id
 from neuronunit.allenapi.make_allen_tests_from_id import *
@@ -36,34 +34,28 @@ def opt_setup_two(model, cellmodel, suite, nu_tests, target_current, spk_count,p
         if 'Spikecount_1.5x' == tt.name:
             spike_obs.append(tt.observation)
     spike_obs = sorted(spike_obs, key=lambda k: k['mean'],reverse=True)
-
     provided_model.backend = cellmodel
     provided_model.params = BPO_PARAMS[cellmodel]
     provided_model.params_by_names(BPO_PARAMS[cellmodel].keys())
     provided_model.params;
     provided_model.seeded_current = target_current['value']
     provided_model.spk_count = spk_count
-
     sweep_protocols = []
     for protocol_name, amplitude in [('step1', 0.05)]:
         protocol = ephys.protocols.SweepProtocol(protocol_name, [None], [None])
         sweep_protocols.append(protocol)
     onestep_protocol = ephys.protocols.SequenceProtocol('onestep', protocols=sweep_protocols)
-
-
-    objectives2 = []
+    objectives = []
     for cnt,tt in enumerate(nu_tests):
         feature_name = '%s' % (tt.name)
         ft = NUFeatureAllenMultiSpike(tt,model,cnt,target_current,spike_obs,print_stuff=False,score_type=score_type)
         objective = ephys.objectives.SingletonObjective(
             feature_name,
             ft)
-        objectives2.append(objective)
-    score_calc = ephys.objectivescalculators.ObjectivesCalculator(objectives2)
+        objectives.append(objective)
+    score_calc = ephys.objectivescalculators.ObjectivesCalculator(objectives)
     provided_model.params_by_names(BPO_PARAMS[cellmodel].keys())
     provided_model.params;
-
-
     cell_evaluator = ephys.evaluators.CellEvaluator(
             cell_model=provided_model,
             param_names=list(BPO_PARAMS[cellmodel].keys()),
@@ -111,13 +103,12 @@ def opt_setup(specimen_id,cellmodel,target_num,provided_model = None,cached=None
         ALLEN_DELAY = 1000.0*qt.s
         ALLEN_DURATION = 2000.0*qt.s
         uc = {'amplitude':target_current['value'],'duration':ALLEN_DURATION,'delay':ALLEN_DELAY}
-    model = dtc.dtc_to_model()
-    model._backend.inject_square_current(**uc)
+    #model = dtc.dtc_to_model()
+    #model._backend.inject_square_current(**uc)
     model.seeded_current = target_current['value']
     model.allen = True
     model.NU = True
     cell_evaluator,simple_cell = opt_setup_two(model,cellmodel, suite, nu_tests, target_current, spk_count,provided_model=model,score_type=ZScore)
-
     return suite, target_current, spk_count, cell_evaluator, simple_cell
 
 class NUFeatureAllenMultiSpike(object):
@@ -128,6 +119,7 @@ class NUFeatureAllenMultiSpike(object):
         self.cnt = cnt
         self.target = target
         self.score_type = score_type
+        self.score_array = None
 
     def calculate_score(self,responses):
 
@@ -158,9 +150,11 @@ class NUFeatureAllenMultiSpike(object):
             if features[feature_name] is None:
                 return 1000.0
             prediction = {'value':np.mean(features[self.test.name])}
-            sciunit_model = self.model#._backend.as_sciunit_model()
+            sciunit_model = self.model
             self.test.score_type = self.score_type
-            score_gene = self.test.judge(sciunit_model,prediction=prediction)
+            score_gene0 = self.test.judge(sciunit_model,prediction=prediction)
+            score_gene = self.test.feature_judge()
+            assert score_gene==score_gene0
             if self.score_type is RelativeDifferenceScore:
                 score_gene.raw = score_gene.log_norm_score
 
@@ -173,8 +167,9 @@ class NUFeatureAllenMultiSpike(object):
                 delta = None
             #if delta is None:
             #    delta = np.abs(features[self.test.name]-np.mean(self.test.observation['mean']))
-            if np.nan==delta or delta==np.inf:
-                delta = np.abs(features[self.test.name]-np.mean(self.test.observation['mean']))
+                #print('activated')
+            #if np.nan==delta or delta==np.inf:
+            #    delta = np.abs(features[self.test.name]-np.mean(self.test.observation['mean']))
             if np.nan==delta or delta==np.inf:
                 delta = 1000.0
             return delta

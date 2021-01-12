@@ -51,13 +51,12 @@ class DataTC(object):
             else:
                 self.jithub = False
 
-        '''
+
         if attrs is None:
             self.attrs = None
             self.model_default()
         else:
             self.attrs = attrs
-        '''
         #self.steps = None
         #self.name = None
         #self.results = None

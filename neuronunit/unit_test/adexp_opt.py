@@ -9,13 +9,14 @@ import quantities as qt
 
 import matplotlib
 matplotlib.use('Agg')
-from neuronunit.allenapi.allen_data_efel_features_opt import opt_setup, opt_setup_two, opt_exec, opt_to_model
+from neuronunit.allenapi.allen_data_driven import opt_setup, opt_exec#, opt_setup2
+from neuronunit.allenapi.allen_data_efel_features_opt import opt_setup, opt_exec, opt_to_model
 from neuronunit.allenapi.allen_data_efel_features_opt import opt_to_model
 from neuronunit.allenapi.utils import dask_map_function
 
 from neuronunit.optimization.optimization_management import check_bin_vm15
 from neuronunit.optimization.model_parameters import MODEL_PARAMS, BPO_PARAMS, to_bpo_param
-from neuronunit.optimization.optimization_management import dtc_to_rheo,inject_and_plot_model
+#from neuronunit.optimization.optimization_management import dtc_to_rheo,inject_and_plot_model
 from neuronunit.optimization.data_transport_container import DataTC
 from jithub.models import model_classes
 
@@ -44,16 +45,16 @@ class testOptimization(unittest.TestCase):
 
 
         target_num_spikes = 8
-        dtc = DataTC()
-        dtc.backend = cellmodel
-        dtc._backend = model._backend
-        dtc.attrs = model.attrs
-        dtc.params = {k:np.mean(v) for k,v in MODEL_PARAMS[cellmodel].items()}
+        #dtc = DataTC()
+        #dtc.backend = cellmodel
+        #dtc._backend = model._backend
+        #dtc.attrs = model.attrs
+        #dtc.params = {k:np.mean(v) for k,v in MODEL_PARAMS[cellmodel].items()}
 
-        dtc = dtc_to_rheo(dtc)
-        assert dtc.rheobase is not None
-        self.assertIsNotNone(dtc.rheobase)
-        vm,plt,dtc = inject_and_plot_model(dtc,plotly=False)
+        #dtc = dtc_to_rheo(dtc)
+        #assert dtc.rheobase is not None
+        #self.assertIsNotNone(dtc.rheobase)
+        #vm,plt,dtc = inject_and_plot_model(dtc,plotly=False)
         fixed_current = 122 *qt.pA
         try:
             suite, target_current, spk_count, cell_evaluator, simple_cell = opt_setup(specimen_id,
@@ -72,10 +73,10 @@ class testOptimization(unittest.TestCase):
                                                                           cached=None)
 
         NGEN = 55
-        MU = 22
+        MU = 12
 
         mapping_funct = dask_map_function
-        final_pop, hall_of_fame, logs, hist = opt_exec(MU,NGEN,mapping_funct,cell_evaluator,cxpb=0.5,mutpb=0.05)
+        final_pop, hall_of_fame, logs, hist = opt_exec(MU,NGEN,mapping_funct,cell_evaluator,cxpb=0.4,mutpb=0.01)
         opt,target = opt_to_model(hall_of_fame,cell_evaluator,suite, target_current, spk_count)
         best_ind = hall_of_fame[0]
         fitnesses = cell_evaluator.evaluate_with_lists(best_ind)
