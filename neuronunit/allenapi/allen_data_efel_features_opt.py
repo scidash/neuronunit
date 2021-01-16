@@ -64,8 +64,7 @@ def opt_setup_two(model, cellmodel, suite, nu_tests, target_current, spk_count,p
             sim='euler')
     return cell_evaluator,provided_model
 
-
-def opt_setup(specimen_id,cellmodel,target_num,provided_model = None,cached=None,fixed_current=False):
+def opt_setup(specimen_id,cellmodel,target_num,provided_model = None,cached=None,fixed_current=False,score_type=ZScore):
     if cached is not None:
         with open(str(specimen_id)+'later_allen_NU_tests.p','rb') as f:
             suite = pickle.load(f)
@@ -103,12 +102,10 @@ def opt_setup(specimen_id,cellmodel,target_num,provided_model = None,cached=None
         ALLEN_DELAY = 1000.0*qt.s
         ALLEN_DURATION = 2000.0*qt.s
         uc = {'amplitude':target_current['value'],'duration':ALLEN_DURATION,'delay':ALLEN_DELAY}
-    #model = dtc.dtc_to_model()
-    #model._backend.inject_square_current(**uc)
     model.seeded_current = target_current['value']
     model.allen = True
     model.NU = True
-    cell_evaluator,simple_cell = opt_setup_two(model,cellmodel, suite, nu_tests, target_current, spk_count,provided_model=model,score_type=ZScore)
+    cell_evaluator,simple_cell = opt_setup_two(model,cellmodel, suite, nu_tests, target_current, spk_count,provided_model=model,score_type=score_type)
     return suite, target_current, spk_count, cell_evaluator, simple_cell
 
 class NUFeatureAllenMultiSpike(object):

@@ -1,6 +1,7 @@
 import pickle
 import pandas as pd
 import seaborn as sns
+import os
 
 import bluepyopt as bpop
 import bluepyopt.ephys as ephys
@@ -30,7 +31,8 @@ from neuronunit.optimization.optimization_management import check_binary_match, 
 from neuronunit.optimization.model_parameters import MODEL_PARAMS, BPO_PARAMS
 from bluepyopt.allenapi.utils import dask_map_function
 
-def opt_setup(specimen_id,cellmodel,target_num,provided_model = None,cached=None,fixed_current=False):
+from sciunit.scores import ZScore
+def opt_setup(specimen_id,cellmodel,target_num, template_model = None,cached=None,fixed_current=False,score_type=ZScore):
     if cached is not None:
         with open(str(specimen_id)+'later_allen_NU_tests.p','rb') as f:
             suite = pickle.load(f)
@@ -55,42 +57,67 @@ def opt_setup(specimen_id,cellmodel,target_num,provided_model = None,cached=None
             break
     observation_range={}
     observation_range['value'] = spk_count
-    provided_model.backend = cellmodel
-    provided_model.allen = None
-    provided_model.allen = True
-    model = provided_model
+    template_model.backend = cellmodel
+    template_model.allen = None
+    template_model.allen = True
+    #model = template_model
     if fixed_current:
         uc = {'amplitude':fixed_current,'duration':ALLEN_DURATION,'delay':ALLEN_DELAY}
         target_current = None
     else:
         scs = SpikeCountSearch(observation_range)
-        target_current = scs.generate_prediction(provided_model)
+        target_current = scs.generate_prediction(template_model)
         ALLEN_DELAY = 1000.0*qt.s
         ALLEN_DURATION = 2000.0*qt.s
         uc = {'amplitude':target_current['value'],'duration':ALLEN_DURATION,'delay':ALLEN_DELAY}
-    model = dtc.dtc_to_model()
-    model._backend.inject_square_current(**uc)
-    return model, suite, nu_tests, target_current, spk_count
+    template_model = dtc.dtc_to_model()
+    template_model._backend.inject_square_current(**uc)
+    return template_model, suite, nu_tests, target_current, spk_count
+def meta_setup(specimen_id,
+          model_type,
+          target_num_spikes,
+          template_model=None,
+          fixed_current=False,
+          cached=True,score_type=ZScore):
+    if os.path.isfile("325479788later_allen_NU_tests.p"):
+        model, suite, nu_tests, target_current, spk_count = opt_setup(specimen_id,
+                                                                      model_type,
+                                                                      target_num_spikes,
+                                                                      template_model=template_model,
+                                                                      fixed_current=False,
+                                                                      cached=True,score_type=score_type)
+    else:
+        template_model, suite, nu_tests, target_current, spk_count = opt_setup(specimen_id,
+                                                                      model_type,
+                                                                      target_num_spikes,
+                                                                      template_model=template_model,
+                                                                      fixed_current=False,
+                                                                      cached=None,score_type=score_type)
+    template_model.seeded_current = target_current['value']
+    template_model.allen = True
+    template_model.seeded_current
+    template_model.NU = True
+    cell_evaluator,simple_cell = opt_setup_two(model,model_type, suite, nu_tests, target_current, spk_count,template_model=template_model, score_type=score_type)
+    return cell_evaluator,simple_cell,suite,target_current,spk_count
 
 class NUFeatureAllenMultiSpike(object):
-    def __init__(self,test,model,cnt,target,spike_obs,print_stuff=False):
+    def __init__(self,test,model,cnt,target,spike_obs,print_stuff=False, score_type = None):
         self.test = test
         self.model = model
         self.spike_obs = spike_obs
         self.cnt = cnt
         self.target = target
+        self.score_type = score_type
     def calculate_score(self,responses):
-
-        if not 'features' in responses.keys():# or not 'model' in responses.keys():
+        if not 'features' in responses.keys():
             return 1000.0
         features = responses['features']
         if features is None:
             return 1000.0
-        self.test.score_type = RelativeDifferenceScore
+        self.test.score_type = self.score_type
         feature_name = self.test.name
         if feature_name not in features.keys():
             return 1000.0
-
         if features[feature_name] is None:
             return 1000.0
         if type(features[self.test.name]) is type(Iterable):
@@ -107,14 +134,9 @@ class NUFeatureAllenMultiSpike(object):
         else:
             if features[feature_name] is None:
                 return 1000.0
-            self.test.score_type = ZScore
+
             prediction = {'value':np.mean(features[self.test.name])}
-            #try:
             score_gene = self.test.feature_judge()
-            #except:
-            #    score_gene = self.test.feature_judge()
-            #    score_gene2 = self.test.judge(self.model,prediction=prediction)
-            #    print(score_gene.raw,score_gene2.raw)
             if score_gene is not None:
                 if score_gene.raw is not None:
                     delta = np.abs(float(score_gene.raw))
@@ -129,7 +151,7 @@ class NUFeatureAllenMultiSpike(object):
             if np.nan==delta or delta==np.inf:
                 delta = 1000.0
             return delta
-def opt_setup_two(model, cellmodel, suite, nu_tests, target_current, spk_count,provided_model = None):
+def opt_setup_two(model, cellmodel, suite, nu_tests, target_current, spk_count,template_model = None, score_type=ZScore):
     objectives = []
     spike_obs = []
     for tt in nu_tests:
@@ -140,7 +162,7 @@ def opt_setup_two(model, cellmodel, suite, nu_tests, target_current, spk_count,p
     for cnt,tt in enumerate(nu_tests):
         feature_name = '%s' % (tt.name)
         if 'Spikecount_1.5x' == tt.name:
-            ft = NUFeatureAllenMultiSpike(tt,model,cnt,target_current,spike_obs)
+            ft = NUFeatureAllenMultiSpike(tt,model,cnt,target_current,spike_obs,score_type=score_type)
             objective = ephys.objectives.SingletonObjective(
                 feature_name,
                 ft)
@@ -148,8 +170,8 @@ def opt_setup_two(model, cellmodel, suite, nu_tests, target_current, spk_count,p
 
 
     score_calc = ephys.objectivescalculators.ObjectivesCalculator(objectives)
-
-    if provided_model is None:
+    '''
+    if template_model is None:
         print('depriciated')
         assert 1==2
 
@@ -157,7 +179,8 @@ def opt_setup_two(model, cellmodel, suite, nu_tests, target_current, spk_count,p
                 name='simple_cell',
                 params=BPO_PARAMS[cellmodel],backend=cellmodel)
     else:
-        simple_cell = provided_model
+    '''
+    simple_cell = template_model
     simple_cell.backend = cellmodel
     simple_cell.params = BPO_PARAMS[cellmodel]
     sweep_protocols = []
@@ -186,7 +209,7 @@ def opt_setup_two(model, cellmodel, suite, nu_tests, target_current, spk_count,p
     objectives2 = []
     for cnt,tt in enumerate(nu_tests):
         feature_name = '%s' % (tt.name)
-        ft = NUFeatureAllenMultiSpike(tt,model,cnt,target_current,spike_obs,print_stuff=True)
+        ft = NUFeatureAllenMultiSpike(tt,model,cnt,target_current,spike_obs,score_type=score_type)
         objective = ephys.objectives.SingletonObjective(
             feature_name,
             ft)
