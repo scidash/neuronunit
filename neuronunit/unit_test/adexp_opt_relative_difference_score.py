@@ -1,14 +1,11 @@
 import unittest
-#!/usr/bin/env python
-# coding: utf-8
 import matplotlib
 matplotlib.use('Agg')
-#try:
 from neuronunit.allenapi.allen_data_driven import opt_setup, opt_setup_two, opt_exec
 from neuronunit.allenapi.allen_data_driven import opt_to_model, meta_setup
 from neuronunit.allenapi.utils import dask_map_function
 
-#except:
+# except:
 #    from bluepyopt.allenapi.allen_data_driven import opt_setup, opt_setup_two, opt_exec, opt_to_model
 #    from bluepyopt.allenapi.allen_data_driven import opt_to_model
 #    from bluepyopt.allenapi.utils import dask_map_function
@@ -100,5 +97,15 @@ class testOptimization(unittest.TestCase):
         best_ind = hall_of_fame[0]
         fitnesses = cell_evaluator.evaluate_with_lists(best_ind)
         self.assertGreater(0.7,np.sum(fitnesses))
-if __name__ == '__main__':
-    unittest.main()
+#if __name__ == '__main__':
+#    unittest.main()
+
+tt = testOptimization()
+tt.setUp()
+
+# +
+
+tt.test_opt_relative_diff()
+# -
+
+tt.test_opt_ZScore()
