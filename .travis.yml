@@ -32,6 +32,7 @@ install:
 script:
   - export NC_HOME='.' # NeuroConstruct isn't used but tests need this
                        # variable set to pass.
+  - cd neuronunit/unit_test; adexp_opt_relative_difference_score.py; cd -;                   
   - cd neuronunit/unit_test; coverage run rheobase_dtc_test.py; cd -;
   - cd neuronunit/unit_test; coverage run adexp_opt.py; cd -;
   - cd neuronunit/unit_test; coverage run izhi_opt.py; cd -;
