@@ -1123,12 +1123,12 @@ def neutral_values(keyed):
 
 
 
+'''
 
 def sigmoid(x):
     return math.exp(-np.logaddexp(0, -x))
 
 import copy
-'''
 def get_dtc_pop(contains_dtcpop,filtered_tests,model_parameters,backend = 'ADEXP'):
     from neuronunit.optimization.optimizations import SciUnitoptimization
 
@@ -1160,13 +1160,13 @@ def get_dtc_pop(contains_dtcpop,filtered_tests,model_parameters,backend = 'ADEXP
 
         dtcdic[k] = copy.copy(dtcpop)
     return dtcdic, DO
-'''
+
 def allen_wave_predictions(dtc,thirty=False):
 
     if thirty:
         vm30 = dtc.vm30
     else:
-        vm30 = dtc.vm15
+        vm30 = dtc.vm_soma
 
     try:
         vm30.rescale(pq.V)
@@ -1180,11 +1180,10 @@ def allen_wave_predictions(dtc,thirty=False):
         ephys.process_spikes()
 
     except:
-        '''
+
         rectify unfilterable high sample frequencies by downsampling them
         downsample too densely sampled signals.
         Making them amenable to Allen analysis
-        '''
         v = [ float(v*1000.0) for v in vm30.magnitude]
         t = [ float(t) for t in vm30.times ]
         ephys = EphysSweepFeatureExtractor(t=np.array(t),v=np.array(v))#,\
@@ -1226,7 +1225,7 @@ def allen_wave_predictions(dtc,thirty=False):
 from scipy.interpolate import interp1d
 
 # from scipy.interpolate import interp1d
-
+'''
 def downsample(array, npts):
     interpolated = interp1d(np.arange(len(array)), array, axis = 0, fill_value = 'extrapolate')
     downsampled = interpolated(np.linspace(0, len(array), npts))
@@ -1542,8 +1541,8 @@ def nuunit_allen_evaluation(dtc):
 def nuunit_dm_evaluation(dtc):
     model = dtc.dtc_to_model()
     model.set_attrs(dtc.attrs)
-    model.vm15 = None
-    model.vm15 = dtc.vm15
+    model.vm_soma = None
+    model.vm_soma = dtc.vm_soma
     if type(dtc.rheobase) is type(dict()):
         rheobase = dtc.rheobase['value']
     else:
@@ -1583,8 +1582,8 @@ def input_resistance_dm_evaluation(dtc):
     current['amplitude'] = dtc.rheobase * 1.5
     model.inject_square_current(current)
     vm15 = model.get_membrane_potential()
-    model.vm15 = None
-    model.vm15 = vm15
+    model.vm_soma = None
+    model.vm_soma = vm15
     model.druckmann2013_standard_current = None
     model.druckmann2013_standard_current = dtc.rheobase * 1.5
     current['amplitude'] = dtc.rheobase * 3.0
@@ -1624,8 +1623,8 @@ def nuunit_dm_rheo_evaluation(dtc):
     current['amplitude'] = dtc.rheobase
     model.inject_square_current(current)
     vm15 = model.get_membrane_potential()
-    model.vm15 = None
-    model.vm15 = vm15
+    model.vm_soma = None
+    model.vm_soma = vm15
     model.druckmann2013_standard_current = None
     model.druckmann2013_standard_current = dtc.rheobase * 1.5
     current['amplitude'] = dtc.rheobase * 3.0
@@ -1650,35 +1649,35 @@ def nuunit_dm_rheo_evaluation(dtc):
 def train_length(dtc):
     if not hasattr(dtc,'everything'):
         dtc.everything = {}
-    vm = copy.copy(dtc.vm15)
+    vm = copy.copy(dtc.vm_soma)
     train_len = float(len(sf.get_spike_train(vm)))
     dtc.everything['Spikecount_1.5x'] = copy.copy(train_len)
     return dtc
 
 def three_step_protocol(dtc,solve_for_current=None):
     if solve_for_current is None:
-        vm30,vm15,_,_,dtc=inject_model30(dtc)
-        if vm30 is None:
+        _,_,_,_,dtc = inject_model_soma(dtc)
+        if dtc.vm_soma is None:
             return dtc
         try:
             dtc = efel_evaluation(dtc,thirty=False)
         except:
-            dtc.vm15 = None
+            dtc.vm_soma = None
     else:
-        vm15,_,_,dtc=inject_model30(dtc,solve_for_current=solve_for_current)
-        if vm15 is None:
+        _,_,_,dtc = inject_model_soma(dtc,solve_for_current=solve_for_current)
+        if dtc.vm_soma is None:
             return dtc
-
         dtc = efel_evaluation(dtc,thirty=False)
-        dtc = rekeyed(dtc)
 
-    if hasattr(dtc,'allen_30'):
-        dtc = rekeyed(dtc)
-        if hasattr(dtc,'dm_test_features'):
-            dtc.everything.update(dtc.dm_test_features)
+    dtc = rekeyed(dtc)
     if dtc.everything is not None:
         dtc = train_length(dtc)
     return dtc
+
+    #if hasattr(dtc,'allen_30'):
+    #    dtc = rekeyed(dtc)
+    #    if hasattr(dtc,'dm_test_features'):
+    #        dtc.everything.update(dtc.dm_test_features)
 
 '''
 def retestobs(dtc):
@@ -2539,7 +2538,7 @@ def zplot(x_point,y_point,title,area=0.68, two_tailed=True, align_right=False, m
 
 
 
-def inject_model30(dtc,figname=None,solve_for_current=None,fixed=False):
+def inject_model_soma(dtc,figname=None,solve_for_current=None,fixed=False):
     from neuronunit.tests.target_spike_current import SpikeCountSearch
 
     # get rheobase injection value
@@ -2567,7 +2566,7 @@ def inject_model30(dtc,figname=None,solve_for_current=None,fixed=False):
             dtc.spikes = model._backend.spikes
         #print(len(model._backend.spikes),'not enough spikes')
         vm15 = model.get_membrane_potential()
-        dtc.vm15 = copy.copy(vm15)
+        dtc.vm_soma = copy.copy(vm15)
 
         del model
         return vm15,uc,None,dtc
@@ -2626,7 +2625,7 @@ def inject_model30(dtc,figname=None,solve_for_current=None,fixed=False):
         uc = {'amplitude':target_current,'duration':ALLEN_DURATION,'delay':ALLEN_DELAY}
         model.inject_square_current(uc)
         vm15 = model.get_membrane_potential()
-        dtc.vm15 = copy.copy(vm15)
+        dtc.vm_soma = copy.copy(vm15)
 
         del model
         model = dtc.dtc_to_model()
@@ -2645,7 +2644,7 @@ def inject_model30(dtc,figname=None,solve_for_current=None,fixed=False):
         uc = {'amplitude':1.5*rheobase,'duration':ALLEN_DURATION,'delay':ALLEN_DELAY}
         model._backend.inject_square_current(**uc)
         vm15 = model.get_membrane_potential()
-        dtc.vm15 = copy.copy(vm15)
+        dtc.vm_soma = copy.copy(vm15)
         del model
         model = dtc.dtc_to_model()
         #print('before, crash out d ',rheobase)
@@ -2731,7 +2730,7 @@ def efel_evaluation(dtc,thirty=False):
             current = 3.0*float(rheobase)
 
     if not thirty:
-        vm_used = dtc.vm15
+        vm_used = dtc.vm_soma
     else:
         vm_used = dtc.vm30
 
@@ -2858,8 +2857,8 @@ def efel_evaluation(dtc,thirty=False):
     traces3 = [trace3]# Now we pass 'traces' to the efel and ask it to calculate the feature# values
 
     trace15 = {}
-    trace15['T'] = [float(t) for t in model.vm15.times.rescale('ms')]
-    trace15['V'] = [float(v) for v in model.vm15.magnitude]
+    trace15['T'] = [float(t) for t in model.vm_soma.times.rescale('ms')]
+    trace15['V'] = [float(v) for v in model.vm_soma.magnitude]
     trace15['stim_start'] = [ trace15['T'][0] ]
     trace15['stimulus_current'] = [ model.druckmann2013_standard_current ]
     trace15['stim_end'] = [ trace15['T'][-1] ]
@@ -2871,15 +2870,15 @@ def efel_evaluation(dtc,thirty=False):
     ##
     efel.reset()
 
-    if len(threshold_detection(model.vm15, threshold=0)):
-        threshold = float(np.max(model.vm15.magnitude)-0.5*np.abs(np.std(model.vm15.magnitude)))
+    if len(threshold_detection(model.vm_soma, threshold=0)):
+        threshold = float(np.max(model.vm_soma.magnitude)-0.5*np.abs(np.std(model.vm_soma.magnitude)))
 
 
     #efel_15 = efel.getMeanFeatureValues(traces15,list(efel.getFeatureNames()))#
     else:
-        threshold = float(np.max(model.vm15.magnitude)-0.2*np.abs(np.std(model.vm15.magnitude)))
+        threshold = float(np.max(model.vm_soma.magnitude)-0.2*np.abs(np.std(model.vm_soma.magnitude)))
     efel.setThreshold(threshold)
-    if np.min(model.vm15.magnitude)<0:
+    if np.min(model.vm_soma.magnitude)<0:
         efel_15 = efel.getMeanFeatureValues(traces15,list(efel.getFeatureNames()))
     else:
         efel_15 = None
@@ -2940,19 +2939,19 @@ def check_bin_vm30(target,opt):
 
     plt.show()
 def check_bin_vm15_uc(target,opt,uc):
-    plt.plot(target.vm15.times,target.vm15.magnitude,label='Allen Experiment')
-    plt.plot(opt.vm15.times,opt.vm15.magnitude,label='Optimized Model')
-    signal = target.vm15
+    plt.plot(target.vm_soma.times,target.vm_soma.magnitude,label='Allen Experiment')
+    plt.plot(opt.vm_soma.times,opt.vm_soma.magnitude,label='Optimized Model')
+    signal = target.vm_soma
     plt.xlabel(qt.s)
     plt.ylabel(signal.dimensionality)
     f, (ax1, ax2) = plt.subplots(1, 2, sharex=True)
     ax1.plot([t for t in uc], uc)
     plt.legend()
     plt.show()
-def check_bin_vm15(target,opt):
-    plt.plot(target.vm15.times,target.vm15.magnitude,label='Allen Experiment')
-    plt.plot(opt.vm15.times,opt.vm15.magnitude,label='Optimized Model')
-    signal = target.vm15
+def check_bin_vm_soma(target,opt):
+    plt.plot(target.vm_soma.times,target.vm_soma.magnitude,label='Allen Experiment')
+    plt.plot(opt.vm_soma.times,opt.vm_soma.magnitude,label='Optimized Model')
+    signal = target.vm_soma
     plt.xlabel(qt.s)
     plt.ylabel(signal.dimensionality)
     plt.legend()

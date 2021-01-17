@@ -21,13 +21,13 @@ from neuronunit.allenapi import make_allen_tests_from_id
 from neuronunit.allenapi.make_allen_tests_from_id import *
 from neuronunit.allenapi.make_allen_tests import AllenTest
 from neuronunit.optimization.optimization_management import dtc_to_rheo
-from neuronunit.optimization.optimization_management import inject_model30,check_bin_vm30,check_bin_vm15
+from neuronunit.optimization.optimization_management import check_bin_vm_soma,inject_model_soma
 from sciunit.scores import RelativeDifferenceScore
 from sciunit import TestSuite
 from sciunit.scores.collections import ScoreArray
 from neuronunit.tests.base import AMPL, DELAY, DURATION
-from neuronunit.optimization.optimization_management import test_all_objective_test
-from neuronunit.optimization.optimization_management import check_binary_match, three_step_protocol,inject_and_plot_passive_model
+#from neuronunit.optimization.optimization_management import test_all_objective_test,inject_model_soma
+#from neuronunit.optimization.optimization_management import check_binary_match#, three_step_protocol#,inject_and_plot_passive_model
 from neuronunit.optimization.model_parameters import MODEL_PARAMS, BPO_PARAMS
 from bluepyopt.allenapi.utils import dask_map_function
 
@@ -44,11 +44,16 @@ def opt_setup(specimen_id,cellmodel,target_num, template_model = None,cached=Non
         suite,specimen_id = make_allen_tests_from_id.make_suite_known_sweep_from_static_models(vmm,stimulus,specimen_id)
         with open(str(specimen_id)+'later_allen_NU_tests.p','wb') as f:
             pickle.dump(suite,f)
+    if 'vm_soma' in suite.traces.keys():
+        target = StaticModel(vm=suite.traces['vm_soma'])
+        target.vm_soma = suite.traces['vm_soma']
+    #if 'vm15' in suite.traces.keys():
+    else:
+        target = StaticModel(vm=suite.traces['vm15'])
+        target.vm_soma = suite.traces['vm15']
 
-    target = StaticModel(vm=suite.traces['vm15'])
-    target.vm15 = suite.traces['vm15']
     nu_tests = suite.tests;
-    check_bin_vm15(target,target)
+    check_bin_vm_soma(target,target)
     attrs = {k:np.mean(v) for k,v in MODEL_PARAMS[cellmodel].items()}
     dtc = DataTC(backend=cellmodel,attrs=attrs)
     for t in nu_tests:
@@ -73,7 +78,7 @@ def opt_setup(specimen_id,cellmodel,target_num, template_model = None,cached=Non
     template_model = dtc.dtc_to_model()
     template_model._backend.inject_square_current(**uc)
     return template_model, suite, nu_tests, target_current, spk_count
-def meta_setup(specimen_id,
+def wrap_setups(specimen_id,
           model_type,
           target_num_spikes,
           template_model=None,
@@ -136,16 +141,14 @@ class NUFeatureAllenMultiSpike(object):
                 return 1000.0
 
             prediction = {'value':np.mean(features[self.test.name])}
-            score_gene = self.test.feature_judge()
+            score_gene = self.test.judge(responses['model'],prediction=prediction)
             if score_gene is not None:
-                if score_gene.raw is not None:
-                    delta = np.abs(float(score_gene.raw))
+                if score_gene.log_norm_score is not None:
+                    delta = np.abs(float(score_gene.log_norm_score))
                 else:
-                    delta = None
+                    delta = 1000.0
             else:
-                delta = None
-            if delta is None:
-                delta = np.abs(features[self.test.name]-np.mean(self.test.observation['mean']))
+                delta = 1000.0
             if np.nan==delta or delta==np.inf:
                 delta = np.abs(features[self.test.name]-np.mean(self.test.observation['mean']))
             if np.nan==delta or delta==np.inf:
@@ -170,16 +173,7 @@ def opt_setup_two(model, cellmodel, suite, nu_tests, target_current, spk_count,t
 
 
     score_calc = ephys.objectivescalculators.ObjectivesCalculator(objectives)
-    '''
-    if template_model is None:
-        print('depriciated')
-        assert 1==2
 
-        simple_cell = ephys.models.ReducedCellModel(
-                name='simple_cell',
-                params=BPO_PARAMS[cellmodel],backend=cellmodel)
-    else:
-    '''
     simple_cell = template_model
     simple_cell.backend = cellmodel
     simple_cell.params = BPO_PARAMS[cellmodel]
@@ -264,7 +258,10 @@ def opt_to_model(hall_of_fame,cell_evaluator2,suite, target_current, spk_count):
     opt.attrs = {str(k):float(v) for k,v in cell_evaluator2.param_dict(best_ind).items()}
     model._backend.attrs = opt.attrs
     target = copy.copy(opt)
-    target.vm15 = suite.traces['vm15']
+    if 'vm_soma' in suite.traces.keys():
+        target.vm_soma = suite.traces['vm_soma']
+    else: # backwards compatibility
+        target.vm_soma = suite.traces['vm15']
     opt.seeded_current = target_current['value']
     opt.spk_count = spk_count
 
@@ -272,18 +269,18 @@ def opt_to_model(hall_of_fame,cell_evaluator2,suite, target_current, spk_count):
     target.spk_count = spk_count
 
 
-    vm301,vm151,_,target = inject_model30(target,solve_for_current=target_current['value'])
-    vm302,vm152,_,opt = inject_model30(opt,solve_for_current=target_current['value'])
+    _,_,_,target = inject_model_soma(target,solve_for_current=target_current['value'])
+    _,_,_,opt = inject_model_soma(opt,solve_for_current=target_current['value'])
     return opt,target
     '''
     #check_bin_vm30(opt,opt)
-    check_bin_vm15(opt,opt)
+    check_bin_.vm_soma(opt,opt)
 
 
     #check_bin_vm30(target,target)
 
 
-    check_bin_vm15(target,target)
+    check_bin_.vm_soma(target,target)
 
 
 
