@@ -14,13 +14,13 @@ import matplotlib.pyplot as plt
 import numpy
 import copy
 import numpy as np
-from sciunit.scores import ZScore
+#from sciunit.scores import ZScore
 from collections.abc import Iterable
 from bluepyopt.parameters import Parameter
 from neuronunit.allenapi import make_allen_tests_from_id
 from neuronunit.allenapi.make_allen_tests_from_id import *
 from neuronunit.allenapi.make_allen_tests import AllenTest
-from neuronunit.optimization.optimization_management import dtc_to_rheo
+#from neuronunit.optimization.optimization_management import dtc_to_rheo
 from neuronunit.optimization.optimization_management import check_bin_vm_soma,inject_model_soma
 from sciunit.scores import RelativeDifferenceScore
 from sciunit import TestSuite
@@ -102,7 +102,9 @@ def wrap_setups(specimen_id,
     template_model.allen = True
     template_model.seeded_current
     template_model.NU = True
+    #template_model.params = BPO_PARAMS[model_type]
     cell_evaluator,simple_cell = opt_setup_two(model,model_type, suite, nu_tests, target_current, spk_count,template_model=template_model, score_type=score_type)
+    cell_evaluator.cell_model.params = BPO_PARAMS[model_type]
     return cell_evaluator,simple_cell,suite,target_current,spk_count
 
 class NUFeatureAllenMultiSpike(object):
@@ -154,7 +156,7 @@ class NUFeatureAllenMultiSpike(object):
             if np.nan==delta or delta==np.inf:
                 delta = 1000.0
             return delta
-def opt_setup_two(model, cellmodel, suite, nu_tests, target_current, spk_count,template_model = None, score_type=ZScore):
+def opt_setup_two(model_type, template_model, suite, nu_tests, target_current, spk_count,template_model = None, score_type=ZScore):
     objectives = []
     spike_obs = []
     for tt in nu_tests:
@@ -175,8 +177,8 @@ def opt_setup_two(model, cellmodel, suite, nu_tests, target_current, spk_count,t
     score_calc = ephys.objectivescalculators.ObjectivesCalculator(objectives)
 
     simple_cell = template_model
-    simple_cell.backend = cellmodel
-    simple_cell.params = BPO_PARAMS[cellmodel]
+    simple_cell.backend = model_type
+    simple_cell.params = BPO_PARAMS[model_type]
     sweep_protocols = []
     for protocol_name, amplitude in [('step1', 0.05)]:
 
@@ -195,7 +197,6 @@ def opt_setup_two(model, cellmodel, suite, nu_tests, target_current, spk_count,t
             sim='euler')
 
     simple_cell.params_by_names(BPO_PARAMS[cellmodel].keys())
-    simple_cell.params;
     simple_cell.seeded_current = target_current['value']
     simple_cell.spk_count = spk_count
 
@@ -212,7 +213,6 @@ def opt_setup_two(model, cellmodel, suite, nu_tests, target_current, spk_count,t
 
 
     simple_cell.params_by_names(BPO_PARAMS[cellmodel].keys())
-    simple_cell.params;
 
 
     cell_evaluator2 = ephys.evaluators.CellEvaluator(
@@ -221,6 +221,8 @@ def opt_setup_two(model, cellmodel, suite, nu_tests, target_current, spk_count,t
             fitness_protocols={onestep_protocol.name: onestep_protocol},
             fitness_calculator=score_calc2,
             sim='euler')
+    print(cell_evaluator2.cell_model.params)
+    cell_evaluator2.cell_model.params = BPO_PARAMS[model_type]
     return cell_evaluator2,simple_cell
 
 
