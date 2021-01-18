@@ -149,9 +149,9 @@ class NUFeatureAllenMultiSpike(object):
             prediction = {'value':np.mean(features[self.test.name])}
             sciunit_model = self.model
             self.test.score_type = self.score_type
-            score_gene0 = self.test.judge(sciunit_model,prediction=prediction)
-            score_gene = self.test.feature_judge()
-            assert score_gene==score_gene0
+            score_gene = self.test.judge(sciunit_model,prediction=prediction)
+            #score_gene = self.test.feature_judge()
+            #assert score_gene==score_gene0
             if self.score_type is RelativeDifferenceScore:
                 score_gene.raw = score_gene.log_norm_score
 

@@ -22,15 +22,10 @@ from neuronunit.optimization.optimization_management import check_bin_vm_soma,in
 from sciunit.scores import RelativeDifferenceScore
 from sciunit import TestSuite
 from sciunit.scores.collections import ScoreArray
-#from neuronunit.optimization.optimization_management import test_all_objective_test,inject_model_soma
-#from neuronunit.optimization.optimization_management import check_binary_match#, three_step_protocol#,inject_and_plot_passive_model
 from neuronunit.optimization.model_parameters import MODEL_PARAMS, BPO_PARAMS
 from bluepyopt.allenapi.utils import dask_map_function
 
 import quantities as pq
-from neuronunit.tests.base import AMPL, DELAY, DURATION
-PASSIVE_DURATION = 500.0*pq.ms
-PASSIVE_DELAY = 200.0*pq.ms
 
 
 from sciunit.scores import ZScore
@@ -84,9 +79,10 @@ def wrap_setups(specimen_id,
           target_num_spikes,
           template_model=None,
           fixed_current=False,
-          cached=True,score_type=ZScore):
+          cached=False,
+          score_type=ZScore):
     if os.path.isfile("325479788later_allen_NU_tests.p"):
-        model, suite, nu_tests, target_current, spk_count = opt_setup(specimen_id,
+        template_model, suite, nu_tests, target_current, spk_count = opt_setup(specimen_id,
                                                                       model_type,
                                                                       target_num_spikes,
                                                                       template_model=template_model,
@@ -103,7 +99,16 @@ def wrap_setups(specimen_id,
     template_model.allen = True
     template_model.seeded_current
     template_model.NU = True
-    cell_evaluator,simple_cell = opt_setup_two(model,model_type, suite, nu_tests, target_current, spk_count,template_model=template_model, score_type=score_type)
+    template_model.backend = model_type
+
+    cell_evaluator,simple_cell = opt_setup_two(model_type,
+                                                suite,
+                                                nu_tests,
+                                                target_current,
+                                                spk_count,
+                                                template_model=template_model,
+                                                score_type=score_type)
+    #cell_evaluator.cell_model.params = copy.copy(BPO_PARAMS[model_type])
     return cell_evaluator,simple_cell,suite,target_current,spk_count
 
 class NUFeatureAllenMultiSpike(object):
@@ -155,7 +160,7 @@ class NUFeatureAllenMultiSpike(object):
             if np.nan==delta or delta==np.inf:
                 delta = 1000.0
             return delta
-def opt_setup_two(model, model_type, suite, nu_tests, target_current, spk_count,template_model = None, score_type=ZScore):
+def opt_setup_two(model_type, suite, nu_tests, target_current, spk_count,template_model = None, score_type=ZScore):
     objectives = []
     spike_obs = []
     for tt in nu_tests:
@@ -166,7 +171,7 @@ def opt_setup_two(model, model_type, suite, nu_tests, target_current, spk_count,
     for cnt,tt in enumerate(nu_tests):
         feature_name = '%s' % (tt.name)
         if 'Spikecount_1.5x' == tt.name:
-            ft = NUFeatureAllenMultiSpike(tt,model,cnt,target_current,spike_obs,score_type=score_type)
+            ft = NUFeatureAllenMultiSpike(tt,template_model,cnt,target_current,spike_obs,score_type=score_type)
             objective = ephys.objectives.SingletonObjective(
                 feature_name,
                 ft)
@@ -176,33 +181,31 @@ def opt_setup_two(model, model_type, suite, nu_tests, target_current, spk_count,
     score_calc = ephys.objectivescalculators.ObjectivesCalculator(objectives)
 
     simple_cell = template_model
-    simple_cell.backend = model_type
-    simple_cell.params = BPO_PARAMS[model_type]
     sweep_protocols = []
     for protocol_name, amplitude in [('step1', 0.05)]:
 
         protocol = ephys.protocols.SweepProtocol(protocol_name, [None], [None])
         sweep_protocols.append(protocol)
     onestep_protocol = ephys.protocols.SequenceProtocol('onestep', protocols=sweep_protocols)
-
-    simple_cell.params_by_names(BPO_PARAMS[model_type].keys())
-
     cell_evaluator = ephys.evaluators.CellEvaluator(
             cell_model=simple_cell,
-            param_names=BPO_PARAMS[model_type].keys(),
+            param_names=copy.copy(BPO_PARAMS)[model_type].keys(),
             fitness_protocols={onestep_protocol.name: onestep_protocol},
             fitness_calculator=score_calc,
             sim='euler')
 
-    simple_cell.params_by_names(BPO_PARAMS[model_type].keys())
     simple_cell.seeded_current = target_current['value']
     simple_cell.spk_count = spk_count
+    ##
+    # Essential line:
+    ##
+    simple_cell.params = copy.copy(BPO_PARAMS[model_type])
 
 
     objectives2 = []
     for cnt,tt in enumerate(nu_tests):
         feature_name = '%s' % (tt.name)
-        ft = NUFeatureAllenMultiSpike(tt,model,cnt,target_current,spike_obs,score_type=score_type)
+        ft = NUFeatureAllenMultiSpike(tt,template_model,cnt,target_current,spike_obs,score_type=score_type)
         objective = ephys.objectives.SingletonObjective(
             feature_name,
             ft)
@@ -210,12 +213,9 @@ def opt_setup_two(model, model_type, suite, nu_tests, target_current, spk_count,
     score_calc2 = ephys.objectivescalculators.ObjectivesCalculator(objectives2)
 
 
-    simple_cell.params_by_names(BPO_PARAMS[model_type].keys())
-
-
     cell_evaluator2 = ephys.evaluators.CellEvaluator(
             cell_model=simple_cell,
-            param_names=list(BPO_PARAMS[model_type].keys()),
+            param_names=copy.copy(BPO_PARAMS[model_type]).keys(),
             fitness_protocols={onestep_protocol.name: onestep_protocol},
             fitness_calculator=score_calc2,
             sim='euler')
@@ -232,9 +232,10 @@ def multi_layered(MU,NGEN,mapping_funct,cell_evaluator2):
     return final_pop, hall_of_fame, logs, hist
 
 
-def opt_exec(MU,NGEN,mapping_funct,cell_evaluator2,mutpb=0.05,cxpb=0.6):
+def opt_exec(MU,NGEN,mapping_funct,cell_evaluator,mutpb=0.05,cxpb=0.6):
+
     optimisation = bpop.optimisations.DEAPOptimisation(
-            evaluator=cell_evaluator2,
+            evaluator=cell_evaluator,
             offspring_size = MU,
             map_function = map,
             selector_name='IBEA',

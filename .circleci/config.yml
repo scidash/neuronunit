@@ -57,7 +57,7 @@ jobs:
       - run: git clone -b dev https://github.com/russelljjarvis/sciunit.git
       - run: cd sciunit; pip install -e .; cd ..;
       - run: pip install allensdk==0.16.3
-      - run: cd neuronunit/unit_test; adexp_opt_relative_difference_score.py
+      - run: cd neuronunit/unit_test; python -m unittest scores_unit_test.py
       - run: cd neuronunit/unit_test; python rheobase_dtc_test.py
       - run: cd neuronunit/unit_test; python adexp_opt.py
 

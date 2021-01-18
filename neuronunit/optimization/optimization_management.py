@@ -2008,11 +2008,12 @@ def make_evaluator(nu_tests,
     onestep_protocol = ephys.protocols.SequenceProtocol('onestep', protocols=sweep_protocols)
     cell_evaluator = ephys.evaluators.CellEvaluator(
             cell_model=simple_cell,
-            param_names=BPO_PARAMS[model].keys(),
+            param_names=copy.copy(BPO_PARAMS)[model].keys(),
             fitness_protocols={onestep_protocol.name: onestep_protocol},
             fitness_calculator=score_calc,
             sim='euler')
-    simple_cell.params_by_names(BPO_PARAMS[model].keys())
+    simple_cell.params_by_names(copy.copy(BPO_PARAMS)[model].keys())
+    print('called')
     return cell_evaluator, simple_cell, score_calc , [tt.name for tt in nu_tests]
 import scipy
 
