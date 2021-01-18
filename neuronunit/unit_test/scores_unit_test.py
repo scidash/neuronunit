@@ -3,6 +3,8 @@
 
 import unittest
 import matplotlib
+matplotlib.use('Agg')
+
 from neuronunit.allenapi.allen_data_driven import opt_setup, opt_setup_two, opt_exec
 from neuronunit.allenapi.allen_data_driven import opt_to_model,wrap_setups
 from neuronunit.allenapi.utils import dask_map_function
