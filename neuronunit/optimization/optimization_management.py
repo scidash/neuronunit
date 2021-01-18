@@ -907,6 +907,7 @@ def model_trace(pre_model):
     model.inject_square_current(uc)
     vm = model.get_membrane_potential()
     return vm
+'''
 def check_binary_match(dtc0,dtc1,figname=None,snippets=True,plotly=True):
 
     vm0 = model_trace(dtc0)
@@ -1023,7 +1024,7 @@ def score_proc(dtc,t,score):
                     dtc.score[str(t)][str('agreement')] = np.abs(score.observation['value'] - score.prediction['value'])
         dtc.agreement = dtc.score
     return dtc
-
+'''
 def jrt(use_test,backend,protocol={'elephant':True,'allen':False}):
     from neuronunit.optimization import model_parameters
     use_test = TSD(use_test)
@@ -2255,7 +2256,7 @@ def instance_opt(constraints,PARAMS,test_key,model_value,MU,NGEN,diversity,full_
         #plot_as_normal(opt)
 
         return final_pop, hall_of_fame, logs, hist, opt, obs_preds, chi_sqr_opt, p_value,best_params_frame
-
+'''
 def surface_plot(opt,hist,figname):
     dim = len(opt.attrs.keys())
 
@@ -2274,7 +2275,7 @@ def surface_plot(opt,hist,figname):
         cnt+=1
     plt.legend()
     plt.savefig(figname)
-
+'''
 def full_statistical_description(constraints,\
                                 exp_cell,MODEL_PARAMS,test_key,\
                                 model_value,MU,NGEN,diversity,\
@@ -2931,6 +2932,7 @@ def evaluate(dtc,allen=None):
         if allen is None:
             fitness = (v for v in dtc.SA.values)
             return fitness
+'''
 def check_bin_vm30(target,opt):
     plt.plot(target.vm30.times,target.vm30.magnitude)
     plt.plot(opt.vm30.times,opt.vm30.magnitude)
@@ -2949,6 +2951,7 @@ def check_bin_vm15_uc(target,opt,uc):
     ax1.plot([t for t in uc], uc)
     plt.legend()
     plt.show()
+'''
 def check_bin_vm_soma(target,opt):
     plt.plot(target.vm_soma.times,target.vm_soma.magnitude,label='Allen Experiment')
     plt.plot(opt.vm_soma.times,opt.vm_soma.magnitude,label='Optimized Model')
@@ -3180,14 +3183,14 @@ class OptMan():
         self.NGEN = None
         self.MU = None
 
-        if self.backend is "IZHI" or self.backend is "ADEXP" or self.backend is "NEURONHH":
-            self.PARALLEL_CONFIDENT = False
-            self.MEMORY_FRIENDLY = True
+        #if self.backend is "IZHI" or self.backend is "ADEXP" or self.backend is "NEURONHH":
+        self.PARALLEL_CONFIDENT = False
+        self.MEMORY_FRIENDLY = True
 
-        else:
-            self.MEMORY_FRIENDLY = False
+        #else:
+        #self.MEMORY_FRIENDLY = False
 
-            self.PARALLEL_CONFIDENT = True
+        #self.PARALLEL_CONFIDENT = True
         if verbosity is None:
             self.verbose = 0
         else:

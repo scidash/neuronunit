@@ -1,34 +1,29 @@
 import pickle
-import pandas as pd
 import seaborn as sns
 import os
 
 import bluepyopt as bpop
 import bluepyopt.ephys as ephys
-import pickle
 
 import matplotlib.pyplot as plt
-import numpy
 import copy
 import numpy as np
-from sciunit.scores import ZScore
 from collections.abc import Iterable
 from bluepyopt.parameters import Parameter
+from sciunit.scores import RelativeDifferenceScore
+from sciunit import TestSuite
+from sciunit.scores import ZScore
+from sciunit.scores.collections import ScoreArray
+
 from neuronunit.allenapi import make_allen_tests_from_id
 from neuronunit.allenapi.make_allen_tests_from_id import *
 from neuronunit.allenapi.make_allen_tests import AllenTest
-from neuronunit.optimization.optimization_management import dtc_to_rheo
 from neuronunit.optimization.optimization_management import check_bin_vm_soma,inject_model_soma
-from sciunit.scores import RelativeDifferenceScore
-from sciunit import TestSuite
-from sciunit.scores.collections import ScoreArray
+
 from neuronunit.optimization.model_parameters import MODEL_PARAMS, BPO_PARAMS
 from bluepyopt.allenapi.utils import dask_map_function
 
-import quantities as pq
 
-
-from sciunit.scores import ZScore
 def opt_setup(specimen_id,model_type,target_num, template_model = None,cached=None,fixed_current=False,score_type=ZScore):
     if cached is not None:
         with open(str(specimen_id)+'later_allen_NU_tests.p','rb') as f:
@@ -49,7 +44,7 @@ def opt_setup(specimen_id,model_type,target_num, template_model = None,cached=No
         target.vm_soma = suite.traces['vm15']
 
     nu_tests = suite.tests;
-    check_bin_vm_soma(target,target)
+
     attrs = {k:np.mean(v) for k,v in MODEL_PARAMS[model_type].items()}
     dtc = DataTC(backend=model_type,attrs=attrs)
     for t in nu_tests:
@@ -61,18 +56,20 @@ def opt_setup(specimen_id,model_type,target_num, template_model = None,cached=No
     template_model.backend = model_type
     template_model.allen = None
     template_model.allen = True
-    #model = template_model
+    template_model.NU = True
+
     if fixed_current:
         uc = {'amplitude':fixed_current,'duration':ALLEN_DURATION,'delay':ALLEN_DELAY}
         target_current = None
     else:
         scs = SpikeCountSearch(observation_range)
         target_current = scs.generate_prediction(template_model)
-        ALLEN_DELAY = 1000.0*qt.s
-        ALLEN_DURATION = 2000.0*qt.s
-        uc = {'amplitude':target_current['value'],'duration':ALLEN_DURATION,'delay':ALLEN_DELAY}
-    template_model = dtc.dtc_to_model()
-    template_model._backend.inject_square_current(**uc)
+        #ALLEN_DELAY = 1000.0*qt.s
+        #ALLEN_DURATION = 2000.0*qt.s
+        #uc = {'amplitude':target_current['value'],'duration':ALLEN_DURATION,'delay':ALLEN_DELAY}
+
+    template_model.seeded_current = target_current['value']
+    #template_model._backend.inject_square_current(**uc)
     return template_model, suite, nu_tests, target_current, spk_count
 def wrap_setups(specimen_id,
           model_type,
@@ -119,6 +116,8 @@ class NUFeatureAllenMultiSpike(object):
         self.cnt = cnt
         self.target = target
         self.score_type = score_type
+        self.score_array = None
+
     def calculate_score(self,responses):
         if not 'features' in responses.keys():
             return 1000.0
@@ -129,6 +128,7 @@ class NUFeatureAllenMultiSpike(object):
         feature_name = self.test.name
         if feature_name not in features.keys():
             return 1000.0
+
         if features[feature_name] is None:
             return 1000.0
         if type(features[self.test.name]) is type(Iterable):
@@ -160,6 +160,43 @@ class NUFeatureAllenMultiSpike(object):
             if np.nan==delta or delta==np.inf:
                 delta = 1000.0
             return delta
+def opt_setup_two(template_model, suite, nu_tests, target_current, spk_count,score_type=ZScore):
+    objectives = []
+    spike_obs = []
+    for tt in nu_tests:
+        if 'Spikecount_1.5x' == tt.name:
+            spike_obs.append(tt.observation)
+    spike_obs = sorted(spike_obs, key=lambda k: k['mean'],reverse=True)
+    #template_model.backend = cellmodel
+    template_model.params = BPO_PARAMS[template_model.backend]
+    template_model.params_by_names(list(BPO_PARAMS[template_model.backend].keys()))
+    template_model.seeded_current = target_current['value']
+    template_model.spk_count = spk_count
+    sweep_protocols = []
+    for protocol_name, amplitude in [('step1', 0.05)]:
+        protocol = ephys.protocols.SweepProtocol(protocol_name, [None], [None])
+        sweep_protocols.append(protocol)
+    onestep_protocol = ephys.protocols.SequenceProtocol('onestep', protocols=sweep_protocols)
+    objectives = []
+    for cnt,tt in enumerate(nu_tests):
+        feature_name = '%s' % (tt.name)
+        ft = NUFeatureAllenMultiSpike(tt,template_model,cnt,target_current,spike_obs,score_type=score_type)
+        objective = ephys.objectives.SingletonObjective(
+            feature_name,
+            ft)
+        objectives.append(objective)
+    score_calc = ephys.objectivescalculators.ObjectivesCalculator(objectives)
+    template_model.params_by_names(BPO_PARAMS[template_model.backend].keys())
+
+    cell_evaluator = ephys.evaluators.CellEvaluator(
+            cell_model=template_model,
+            param_names=list(BPO_PARAMS[template_model.backend].keys()),
+            fitness_protocols={onestep_protocol.name: onestep_protocol},
+            fitness_calculator=score_calc,
+            sim='euler')
+    return cell_evaluator,template_model
+
+'''
 def opt_setup_two(model_type, suite, nu_tests, target_current, spk_count,template_model = None, score_type=ZScore):
     objectives = []
     spike_obs = []
@@ -193,7 +230,6 @@ def opt_setup_two(model_type, suite, nu_tests, target_current, spk_count,templat
             fitness_protocols={onestep_protocol.name: onestep_protocol},
             fitness_calculator=score_calc,
             sim='euler')
-
     simple_cell.seeded_current = target_current['value']
     simple_cell.spk_count = spk_count
     ##
@@ -220,7 +256,7 @@ def opt_setup_two(model_type, suite, nu_tests, target_current, spk_count,templat
             fitness_calculator=score_calc2,
             sim='euler')
     return cell_evaluator2,simple_cell
-
+'''
 
 def multi_layered(MU,NGEN,mapping_funct,cell_evaluator2):
     optimisation = bpop.optimisations.DEAPOptimisation(
@@ -271,55 +307,3 @@ def opt_to_model(hall_of_fame,cell_evaluator2,suite, target_current, spk_count):
     _,_,_,target = inject_model_soma(target,solve_for_current=target_current['value'])
     _,_,_,opt = inject_model_soma(opt,solve_for_current=target_current['value'])
     return opt,target
-    '''
-    #check_bin_vm30(opt,opt)
-    check_bin_.vm_soma(opt,opt)
-
-
-    #check_bin_vm30(target,target)
-
-
-    check_bin_.vm_soma(target,target)
-
-
-
-    gen_numbers = logs.select('gen')
-    min_fitness = logs.select('min')
-    max_fitness = logs.select('max')
-    avg_fitness = logs.select('avg')
-    plt.plot(gen_numbers, max_fitness, label='max fitness')
-    plt.plot(gen_numbers, avg_fitness, label='avg fitness')
-    plt.plot(gen_numbers, min_fitness, label='min fitness')
-
-    plt.plot(gen_numbers, min_fitness, label='min fitness')
-    plt.semilogy()
-    plt.xlabel('generation #')
-    plt.ylabel('score (# std)')
-    plt.legend()
-    plt.xlim(min(gen_numbers) - 1, max(gen_numbers) + 1)
-    plt.show()
-    '''
-'''
-cp = {}
-cp['final_pop'] = final_pop
-cp['hall_of_fame'] = hall_of_fame
-
-
-#with open('allen_opt.p','wb') as f:
-#    pickle.dump(f,[final_pop, hall_of_fame, logs, hist])
-
-
-
-
-
-
-
-
-
-optimisation = bpop.optimisations.DEAPOptimisation(
-        evaluator=cell_evaluator2,
-        offspring_size = MU,
-        map_function = dask_map_function,
-        selector_name='IBEA',mutpb=0.1,cxpb=0.35,seeded_pop=[cp['final_pop'],cp['hall_of_fame']])#,seeded_current=target_current)
-final_pop, hall_of_fame, logs, hist = optimisation.run(max_ngen=50)
-'''

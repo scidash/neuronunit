@@ -94,48 +94,6 @@ def sweeps_build_fi_tests(data_set,sweep_numbers,specimen_id):
     return slope
 
 
-    #return relation_map
-    '''
-    if len(spike_times) == 1:
-        if np.max(stimulus)> rheobase and rheobase==-1:
-            rheobase = np.max(stimulus)
-            stim = rheobase
-            currents['rh']=stim
-            sampling_rate = sweep_data['sampling_rate']
-            vmrh = AnalogSignal([v*1000 for v in sweep_data['response']],sampling_rate=sampling_rate*qt.Hz,units=qt.mV)
-            vmrh = vmrh[0:int(len(vmrh)/2.1)]
-    if len(spike_times) >= 1:
-        reponse = sweep_data['response']
-        sampling_rate = sweep_data['sampling_rate']
-        vmm = AnalogSignal([v*1000 for v in sweep_data['response']],sampling_rate=sampling_rate*qt.Hz,units=qt.mV)
-        vmm = vmm[0:int(len(vmm)/2.1)]
-        above_threshold_sn.append((np.max(stimulus),sn,vmm))
-if rheobase==-1:
-    rheobase = above_threshold_sn[0][0]
-    vmrh = above_threshold_sn[0][2]#AnalogSignal([v*1000 for v in sweep_data['response']],sampling_rate=sampling_rate*qt.Hz,units=qt.mV)
-    print(len(spike_times))
-myNumber = 3.0*rheobase
-currents_ = [t[0] for t in above_threshold_sn]
-indexvm30 = closest(currents_, myNumber)
-stim = above_threshold_sn[indexvm30][0]
-currents['30']=stim
-vm30 = above_threshold_sn[indexvm30][2]
-myNumber = 1.5*rheobase
-currents_ = [t[0] for t in above_threshold_sn]
-indexvm15 = closest(currents_, myNumber)
-stim = above_threshold_sn[indexvm15][0]
-currents['15']=stim
-vm15 = above_threshold_sn[indexvm15][2]
-vm15.sn = None
-vm15.sn = above_threshold_sn[0][1]
-vm15.specimen_id = None
-vm15.specimen_id = specimen_id
-
-del sweep_numbers
-del data_set
-return vm15,vm30,rheobase,currents,vmrh
-'''
-
 def get_rheobase(numbers,sets):
     rheobase_numbers = [sweep_number for sweep_number in numbers if len(sets.get_spike_times(sweep_number))==1]
     sweeps = [sets.get_sweep(n) for n in rheobase_numbers ]
@@ -200,7 +158,6 @@ def get_model_parts(data_set,sweep_numbers,specimen_id):
 
     del sweep_numbers
     del data_set
-    #if 'vmrh' in locals():
     return vm15,vm30,rheobase,currents,vmrh
 
 
@@ -260,17 +217,15 @@ def get_model_parts_sweep_from_number(sn,data_set,sweep_numbers,specimen_id):
 
     return vmm,stimulus,sn,spike_times
 
-def make_suite_known_sweep_from_static_models(vm15,stimulus,specimen_id):
-    sm = StaticModel(vm = vm15)
+def make_suite_known_sweep_from_static_models(vm_soma,stimulus,specimen_id):
+    sm = StaticModel(vm = vm_soma)
     sm.backend = 'static_model'
-    sm.vm15 = vm15
+    sm.vm_soma = vm_soma
     sm.rheobase = np.max(stimulus)
     sm = efel_evaluation(sm,thirty=False)
-    #import pdb
-    #pdb.set_trace()
     sm = rekeyed(sm)
     useable = False
-    sm.vmrh = vm15
+    sm.vmrh = vm_soma
     allen_tests = []
     if sm.efel_15 is not None:
         for k,v in sm.efel_15[0].items():
@@ -282,14 +237,10 @@ def make_suite_known_sweep_from_static_models(vm15,stimulus,specimen_id):
                 allen_tests.append(at)
             except:
                 pass
-            #if k in simple_yes_list:
-            #    useable = True
-            #else:
-            #    useable = False
     suite = TestSuite(allen_tests,name=str(specimen_id))
     suite.traces = None
     suite.traces = {}
-    suite.traces['vm15'] = sm.vm15
+    suite.traces['vm_soma'] = sm.vm_soma
     suite.model = None
     suite.useable = None
     suite.useable = useable
@@ -309,17 +260,15 @@ def wrangle_tests(t):
         t.observation['std'] = np.mean(t.observation['mean'])
     return t
 
-def make_suite_from_static_models(vm15,vm30,rheobase,currents,vmrh,specimen_id):
+def make_suite_from_static_models(vm_soma,vm30,rheobase,currents,vmrh,specimen_id):
 
     if vmrh is not None:
         sm = StaticModel(vm = vmrh)
     else:
         sm = StaticModel(vm = vm30)
     sm.rheobase = rheobase
-    sm.vm15 = vm15
-    #sm.vm30 = vm30
-    #import pdb;
-    #pdb.set_trace()
+    sm.vm_soma = vm_soma
+
     sm = efel_evaluation(sm,thirty=False)
 
     #sm = efel_evaluation(sm,thirty=True)
@@ -375,7 +324,7 @@ def make_suite_from_static_models(vm15,vm30,rheobase,currents,vmrh,specimen_id):
     ##
 
 
-    suite.traces['vm15'] = sm.vm15
+    suite.traces['vm_soma'] = sm.vm_soma
     #suite.traces['vm30'] = sm.vm30
     suite.model = None
     suite.useable = None

@@ -4,6 +4,7 @@
 import unittest
 import matplotlib
 matplotlib.use('Agg')
+
 from neuronunit.allenapi.allen_data_driven import opt_setup, opt_setup_two, opt_exec
 from neuronunit.allenapi.allen_data_driven import opt_to_model,wrap_setups
 from neuronunit.allenapi.utils import dask_map_function
@@ -41,7 +42,7 @@ class testOptimization(unittest.TestCase):
         model = dtc.dtc_to_model()
         model.params = BPO_PARAMS[model_type]
         fixed_current = 122 *qt.pA
-        if model_type is "ADEXP":
+        if model_type == "ADEXP":
             NGEN = 100
             MU = 20
         else:
