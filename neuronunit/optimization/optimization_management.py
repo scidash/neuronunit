@@ -34,30 +34,6 @@ from neuronunit.tests.base import AMPL, DELAY, DURATION
 from collections.abc import Iterable
 from neuronunit.tests.target_spike_current import SpikeCountSearch, SpikeCountRangeSearch
 import neuronunit.capabilities.spike_functions as sf
-
-try:
-    import plotly.offline as py
-except:
-    warnings.warn('plotly')
-try:
-    import plotly
-    plotly.io.orca.config.executable = '/usr/bin/orca'
-except:
-    print('silently fail on plotly')
-
-
-try:
-    import efel
-except:
-    warnings.warn('Blue brain feature extraction not available, consider installing')
-try:
-    import seaborn as sns
-except:
-    warnings.warn('Seaborne plotting sub library not available, consider installing')
-try:
-    from sklearn.cluster import KMeans
-except:
-    warnings.warn('SKLearn library not available, consider installing')
 from sciunit import TestSuite
 
 
@@ -82,7 +58,31 @@ import quantities as pq
 PASSIVE_DURATION = 500.0*pq.ms
 PASSIVE_DELAY = 200.0*pq.ms
 
-def setUp(model_type):
+try:
+    import plotly.offline as py
+except:
+    warnings.warn('plotly')
+try:
+    import plotly
+    plotly.io.orca.config.executable = '/usr/bin/orca'
+except:
+    print('silently fail on plotly')
+
+
+try:
+    import efel
+except:
+    warnings.warn('Blue brain feature extraction not available, consider installing')
+try:
+    import seaborn as sns
+except:
+    warnings.warn('Seaborne plotting sub library not available, consider installing')
+try:
+    from sklearn.cluster import KMeans
+except:
+    warnings.warn('SKLearn library not available, consider installing')
+
+def set_up_obj_tests(model_type):
     backend = model_type
     with open('processed_multicellular_constraints.p','rb') as f: test_frame = pickle.load(f)
     stds = {}
@@ -102,7 +102,7 @@ def test_all_objective_test(free_parameters,
     '''
     results = {}
     tests = {}
-    OM = setUp(model_type)
+    OM = set_up_obj_tests(model_type)
     #if test_keys is None:
 
     if tract == False:

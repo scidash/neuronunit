@@ -7,9 +7,6 @@ import bluepyopt as bpop
 import bluepyopt.ephys as ephys
 import pickle
 
-import quantities as pq
-PASSIVE_DURATION = 500.0*pq.ms
-PASSIVE_DELAY = 200.0*pq.ms
 import matplotlib.pyplot as plt
 import numpy
 import copy
@@ -25,14 +22,19 @@ from neuronunit.optimization.optimization_management import check_bin_vm_soma,in
 from sciunit.scores import RelativeDifferenceScore
 from sciunit import TestSuite
 from sciunit.scores.collections import ScoreArray
-from neuronunit.tests.base import AMPL, DELAY, DURATION
 #from neuronunit.optimization.optimization_management import test_all_objective_test,inject_model_soma
 #from neuronunit.optimization.optimization_management import check_binary_match#, three_step_protocol#,inject_and_plot_passive_model
 from neuronunit.optimization.model_parameters import MODEL_PARAMS, BPO_PARAMS
 from bluepyopt.allenapi.utils import dask_map_function
 
+import quantities as pq
+from neuronunit.tests.base import AMPL, DELAY, DURATION
+PASSIVE_DURATION = 500.0*pq.ms
+PASSIVE_DELAY = 200.0*pq.ms
+
+
 from sciunit.scores import ZScore
-def opt_setup(specimen_id,cellmodel,target_num, template_model = None,cached=None,fixed_current=False,score_type=ZScore):
+def opt_setup(specimen_id,model_type,target_num, template_model = None,cached=None,fixed_current=False,score_type=ZScore):
     if cached is not None:
         with open(str(specimen_id)+'later_allen_NU_tests.p','rb') as f:
             suite = pickle.load(f)
@@ -47,22 +49,21 @@ def opt_setup(specimen_id,cellmodel,target_num, template_model = None,cached=Non
     if 'vm_soma' in suite.traces.keys():
         target = StaticModel(vm=suite.traces['vm_soma'])
         target.vm_soma = suite.traces['vm_soma']
-    #if 'vm15' in suite.traces.keys():
     else:
         target = StaticModel(vm=suite.traces['vm15'])
         target.vm_soma = suite.traces['vm15']
 
     nu_tests = suite.tests;
     check_bin_vm_soma(target,target)
-    attrs = {k:np.mean(v) for k,v in MODEL_PARAMS[cellmodel].items()}
-    dtc = DataTC(backend=cellmodel,attrs=attrs)
+    attrs = {k:np.mean(v) for k,v in MODEL_PARAMS[model_type].items()}
+    dtc = DataTC(backend=model_type,attrs=attrs)
     for t in nu_tests:
         if t.name == 'Spikecount_1.5x':
             spk_count = float(t.observation['mean'])
             break
     observation_range={}
     observation_range['value'] = spk_count
-    template_model.backend = cellmodel
+    template_model.backend = model_type
     template_model.allen = None
     template_model.allen = True
     #model = template_model
@@ -154,7 +155,7 @@ class NUFeatureAllenMultiSpike(object):
             if np.nan==delta or delta==np.inf:
                 delta = 1000.0
             return delta
-def opt_setup_two(model, cellmodel, suite, nu_tests, target_current, spk_count,template_model = None, score_type=ZScore):
+def opt_setup_two(model, model_type, suite, nu_tests, target_current, spk_count,template_model = None, score_type=ZScore):
     objectives = []
     spike_obs = []
     for tt in nu_tests:
@@ -175,8 +176,8 @@ def opt_setup_two(model, cellmodel, suite, nu_tests, target_current, spk_count,t
     score_calc = ephys.objectivescalculators.ObjectivesCalculator(objectives)
 
     simple_cell = template_model
-    simple_cell.backend = cellmodel
-    simple_cell.params = BPO_PARAMS[cellmodel]
+    simple_cell.backend = model_type
+    simple_cell.params = BPO_PARAMS[model_type]
     sweep_protocols = []
     for protocol_name, amplitude in [('step1', 0.05)]:
 
@@ -184,18 +185,16 @@ def opt_setup_two(model, cellmodel, suite, nu_tests, target_current, spk_count,t
         sweep_protocols.append(protocol)
     onestep_protocol = ephys.protocols.SequenceProtocol('onestep', protocols=sweep_protocols)
 
-    simple_cell.params_by_names(BPO_PARAMS[cellmodel].keys())
-    simple_cell.params;
+    simple_cell.params_by_names(BPO_PARAMS[model_type].keys())
 
     cell_evaluator = ephys.evaluators.CellEvaluator(
             cell_model=simple_cell,
-            param_names=BPO_PARAMS[cellmodel].keys(),
+            param_names=BPO_PARAMS[model_type].keys(),
             fitness_protocols={onestep_protocol.name: onestep_protocol},
             fitness_calculator=score_calc,
             sim='euler')
 
-    simple_cell.params_by_names(BPO_PARAMS[cellmodel].keys())
-    simple_cell.params;
+    simple_cell.params_by_names(BPO_PARAMS[model_type].keys())
     simple_cell.seeded_current = target_current['value']
     simple_cell.spk_count = spk_count
 
@@ -211,13 +210,12 @@ def opt_setup_two(model, cellmodel, suite, nu_tests, target_current, spk_count,t
     score_calc2 = ephys.objectivescalculators.ObjectivesCalculator(objectives2)
 
 
-    simple_cell.params_by_names(BPO_PARAMS[cellmodel].keys())
-    simple_cell.params;
+    simple_cell.params_by_names(BPO_PARAMS[model_type].keys())
 
 
     cell_evaluator2 = ephys.evaluators.CellEvaluator(
             cell_model=simple_cell,
-            param_names=list(BPO_PARAMS[cellmodel].keys()),
+            param_names=list(BPO_PARAMS[model_type].keys()),
             fitness_protocols={onestep_protocol.name: onestep_protocol},
             fitness_calculator=score_calc2,
             sim='euler')
