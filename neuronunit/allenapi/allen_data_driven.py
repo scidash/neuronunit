@@ -8,10 +8,7 @@ import bluepyopt.ephys as ephys
 import pickle
 
 import quantities as pq
-PASSIVE_DURATION = 500.0*pq.ms
-PASSIVE_DELAY = 200.0*pq.ms
 import matplotlib.pyplot as plt
-import numpy
 import copy
 import numpy as np
 from collections.abc import Iterable
@@ -22,12 +19,13 @@ from neuronunit.allenapi.make_allen_tests import AllenTest
 from neuronunit.optimization.optimization_management import check_bin_vm_soma,inject_model_soma
 from sciunit.scores import RelativeDifferenceScore
 from sciunit import TestSuite
+from sciunit.scores import ZScore
 from sciunit.scores.collections import ScoreArray
-from neuronunit.tests.base import AMPL, DELAY, DURATION
+
 from neuronunit.optimization.model_parameters import MODEL_PARAMS, BPO_PARAMS
 from bluepyopt.allenapi.utils import dask_map_function
 
-from sciunit.scores import ZScore
+
 def opt_setup(specimen_id,model_type,target_num, template_model = None,cached=None,fixed_current=False,score_type=ZScore):
     if cached is not None:
         with open(str(specimen_id)+'later_allen_NU_tests.p','rb') as f:
@@ -118,6 +116,8 @@ class NUFeatureAllenMultiSpike(object):
         self.cnt = cnt
         self.target = target
         self.score_type = score_type
+        self.score_array = None
+
     def calculate_score(self,responses):
         if not 'features' in responses.keys():
             return 1000.0
@@ -128,6 +128,7 @@ class NUFeatureAllenMultiSpike(object):
         feature_name = self.test.name
         if feature_name not in features.keys():
             return 1000.0
+
         if features[feature_name] is None:
             return 1000.0
         if type(features[self.test.name]) is type(Iterable):

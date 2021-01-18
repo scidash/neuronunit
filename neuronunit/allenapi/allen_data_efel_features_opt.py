@@ -27,43 +27,6 @@ from neuronunit.optimization.model_parameters import MODEL_PARAMS, BPO_PARAMS
 from bluepyopt.allenapi.utils import dask_map_function
 
 
-def opt_setup_two(model, cellmodel, suite, nu_tests, target_current, spk_count,provided_model = None,score_type=ZScore):
-    objectives = []
-    spike_obs = []
-    for tt in nu_tests:
-        if 'Spikecount_1.5x' == tt.name:
-            spike_obs.append(tt.observation)
-    spike_obs = sorted(spike_obs, key=lambda k: k['mean'],reverse=True)
-    provided_model.backend = cellmodel
-    provided_model.params = BPO_PARAMS[cellmodel]
-    provided_model.params_by_names(BPO_PARAMS[cellmodel].keys())
-    provided_model.params;
-    provided_model.seeded_current = target_current['value']
-    provided_model.spk_count = spk_count
-    sweep_protocols = []
-    for protocol_name, amplitude in [('step1', 0.05)]:
-        protocol = ephys.protocols.SweepProtocol(protocol_name, [None], [None])
-        sweep_protocols.append(protocol)
-    onestep_protocol = ephys.protocols.SequenceProtocol('onestep', protocols=sweep_protocols)
-    objectives = []
-    for cnt,tt in enumerate(nu_tests):
-        feature_name = '%s' % (tt.name)
-        ft = NUFeatureAllenMultiSpike(tt,model,cnt,target_current,spike_obs,print_stuff=False,score_type=score_type)
-        objective = ephys.objectives.SingletonObjective(
-            feature_name,
-            ft)
-        objectives.append(objective)
-    score_calc = ephys.objectivescalculators.ObjectivesCalculator(objectives)
-    provided_model.params_by_names(BPO_PARAMS[cellmodel].keys())
-    provided_model.params;
-    cell_evaluator = ephys.evaluators.CellEvaluator(
-            cell_model=provided_model,
-            param_names=list(BPO_PARAMS[cellmodel].keys()),
-            fitness_protocols={onestep_protocol.name: onestep_protocol},
-            fitness_calculator=score_calc,
-            sim='euler')
-    return cell_evaluator,provided_model
-
 def opt_setup(specimen_id,cellmodel,target_num,provided_model = None,cached=None,fixed_current=False,score_type=ZScore):
     if cached is not None:
         with open(str(specimen_id)+'later_allen_NU_tests.p','rb') as f:
@@ -119,13 +82,12 @@ class NUFeatureAllenMultiSpike(object):
         self.score_array = None
 
     def calculate_score(self,responses):
-
-        if not 'features' in responses.keys():# or not 'model' in responses.keys():
+        if not 'features' in responses.keys():
             return 1000.0
         features = responses['features']
         if features is None:
             return 1000.0
-
+        self.test.score_type = self.score_type
         feature_name = self.test.name
         if feature_name not in features.keys():
             return 1000.0
@@ -146,31 +108,57 @@ class NUFeatureAllenMultiSpike(object):
         else:
             if features[feature_name] is None:
                 return 1000.0
-            prediction = {'value':np.mean(features[self.test.name])}
-            sciunit_model = self.model
-            self.test.score_type = self.score_type
-            score_gene = self.test.judge(sciunit_model,prediction=prediction)
-            #score_gene = self.test.feature_judge()
-            #assert score_gene==score_gene0
-            if self.score_type is RelativeDifferenceScore:
-                score_gene.raw = score_gene.log_norm_score
 
+            prediction = {'value':np.mean(features[self.test.name])}
+            score_gene = self.test.judge(responses['model'],prediction=prediction)
             if score_gene is not None:
-                if score_gene.raw is not None:
-                    delta = np.abs(float(score_gene.raw))
+                if score_gene.log_norm_score is not None:
+                    delta = np.abs(float(score_gene.log_norm_score))
                 else:
-                    delta = None
+                    delta = 1000.0
             else:
-                delta = None
-            #if delta is None:
-            #    delta = np.abs(features[self.test.name]-np.mean(self.test.observation['mean']))
-                #print('activated')
-            #if np.nan==delta or delta==np.inf:
-            #    delta = np.abs(features[self.test.name]-np.mean(self.test.observation['mean']))
+                delta = 1000.0
+            if np.nan==delta or delta==np.inf:
+                delta = np.abs(features[self.test.name]-np.mean(self.test.observation['mean']))
             if np.nan==delta or delta==np.inf:
                 delta = 1000.0
             return delta
-
+def opt_setup_two(model, cellmodel, suite, nu_tests, target_current, spk_count,provided_model = None,score_type=ZScore):
+    objectives = []
+    spike_obs = []
+    for tt in nu_tests:
+        if 'Spikecount_1.5x' == tt.name:
+            spike_obs.append(tt.observation)
+    spike_obs = sorted(spike_obs, key=lambda k: k['mean'],reverse=True)
+    provided_model.backend = cellmodel
+    provided_model.params = BPO_PARAMS[cellmodel]
+    provided_model.params_by_names(BPO_PARAMS[cellmodel].keys())
+    provided_model.params;
+    provided_model.seeded_current = target_current['value']
+    provided_model.spk_count = spk_count
+    sweep_protocols = []
+    for protocol_name, amplitude in [('step1', 0.05)]:
+        protocol = ephys.protocols.SweepProtocol(protocol_name, [None], [None])
+        sweep_protocols.append(protocol)
+    onestep_protocol = ephys.protocols.SequenceProtocol('onestep', protocols=sweep_protocols)
+    objectives = []
+    for cnt,tt in enumerate(nu_tests):
+        feature_name = '%s' % (tt.name)
+        ft = NUFeatureAllenMultiSpike(tt,model,cnt,target_current,spike_obs,print_stuff=False,score_type=score_type)
+        objective = ephys.objectives.SingletonObjective(
+            feature_name,
+            ft)
+        objectives.append(objective)
+    score_calc = ephys.objectivescalculators.ObjectivesCalculator(objectives)
+    provided_model.params_by_names(BPO_PARAMS[cellmodel].keys())
+    provided_model.params;
+    cell_evaluator = ephys.evaluators.CellEvaluator(
+            cell_model=provided_model,
+            param_names=list(BPO_PARAMS[cellmodel].keys()),
+            fitness_protocols={onestep_protocol.name: onestep_protocol},
+            fitness_calculator=score_calc,
+            sim='euler')
+    return cell_evaluator,provided_model
 
 def multi_layered(MU,NGEN,mapping_funct,cell_evaluator2):
     optimisation = bpop.optimisations.DEAPOptimisation(
