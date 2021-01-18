@@ -42,7 +42,7 @@ class testOptimization(unittest.TestCase):
         model = dtc.dtc_to_model()
         model.params = BPO_PARAMS[model_type]
         fixed_current = 122 *qt.pA
-        if model_type is "ADEXP":
+        if model_type == "ADEXP":
             NGEN = 100
             MU = 20
         else:

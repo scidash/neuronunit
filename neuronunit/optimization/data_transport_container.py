@@ -348,7 +348,7 @@ class DataTC(object):
 
         #from neuronunit.optimisation.optimization_management import WSListIndividual
         #print('warning translation dictionary should be used, to garuntee correct attribute order from random access dictionaries')
-        if self.backend is "IZHI":
+        if "IZHI" in self.backend:
             self.attrs.pop('dt',None)
             self.attrs.pop('Iext',None)
         if subset_params:

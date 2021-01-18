@@ -3180,14 +3180,14 @@ class OptMan():
         self.NGEN = None
         self.MU = None
 
-        if self.backend is "IZHI" or self.backend is "ADEXP" or self.backend is "NEURONHH":
-            self.PARALLEL_CONFIDENT = False
-            self.MEMORY_FRIENDLY = True
+        #if self.backend is "IZHI" or self.backend is "ADEXP" or self.backend is "NEURONHH":
+        self.PARALLEL_CONFIDENT = False
+        self.MEMORY_FRIENDLY = True
 
-        else:
-            self.MEMORY_FRIENDLY = False
+        #else:
+        #self.MEMORY_FRIENDLY = False
 
-            self.PARALLEL_CONFIDENT = True
+        #self.PARALLEL_CONFIDENT = True
         if verbosity is None:
             self.verbose = 0
         else:
