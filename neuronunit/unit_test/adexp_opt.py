@@ -18,16 +18,14 @@ from neuronunit.allenapi.allen_data_efel_features_opt import opt_to_model,opt_se
 from neuronunit.allenapi.allen_data_efel_features_opt import opt_to_model
 from neuronunit.allenapi.utils import dask_map_function
 
-#from neuronunit.optimization.optimization_management import check_bin_vm_soma
 from neuronunit.optimization.model_parameters import MODEL_PARAMS, BPO_PARAMS, to_bpo_param
 from neuronunit.optimization.optimization_management import inject_model_soma
-#from neuronunit.optimization.optimization_management import dtc_to_rheo,inject_and_plot_model
 from neuronunit.optimization.data_transport_container import DataTC
 from jithub.models import model_classes
 
 class testOptimization(unittest.TestCase):
     def setUp(self):
-        self = self
+        #self = self
         self.ids = [ 324257146,
                 325479788,
                 476053392,

@@ -27,9 +27,6 @@ from quantities import Hz,pA
 
 cells = pickle.load(open("processed_multicellular_constraints.p","rb"))
 
-#purk = TSD(cells['Cerebellum Purkinje cell'])#.tests
-#purk_vr = purk["RestingPotentialTest"].observation['mean']
-
 ncl5 = TSD(cells["Neocortex pyramidal cell layer 5-6"])
 ncl5.name = str("Neocortex pyramidal cell layer 5-6")
 ncl5_vr = ncl5["RestingPotentialTest"].observation['mean']
@@ -40,25 +37,8 @@ ca1.name = str("Hippocampus CA1 pyramidal cell")
 ca1_vr = ca1["RestingPotentialTest"].observation['mean']
 experimental_constraints= cells
 
-'''
-
-def make_observations_frame():
-    list_of_dicts = []
-    for k,v in cells.items():
-        observations = {}
-        for k1 in ca1.keys():
-            vsd = TSD(v)
-            if k1 in vsd.keys():
-                vsd[k1].observation['mean']
-                observations[k1] = vsd[k1].observation['mean']
-                observations['name'] = k
-        list_of_dicts.append(observations)
-    df = pd.DataFrame(list_of_dicts)
-    df = df.set_index('name').T
-    s = df.style.background_gradient(cmap=cm)
-    return s
-'''
 def make_allen():
+  # hard/hand code ephys constraints
 
   rt = RheobaseTest(observation={'mean':70*qt.pA,'std':70*qt.pA})
   tc = TimeConstantTest(observation={'mean':24.4*qt.ms,'std':24.4*qt.ms})
@@ -92,7 +72,7 @@ def make_allen():
      t.score_type = RelativeDifferenceScore
   allen_suite3 = TestSuite(allen_tests)
 
-  cells['3'] = TSD(allen_suite3)
+  cells['fi_curve'] = TSD(allen_suite3)
 
   for k,v in cells.items():
       observations = {}
@@ -105,76 +85,84 @@ def make_allen():
               observations['name'] = k
       list_of_dicts.append(observations)
   df = pd.DataFrame(list_of_dicts)
-  df
-
-
   return allen_suite471819401,allen_suite482493761,df,cells
 
-allen_suite471819401,allen_suite482493761,_,cells = make_allen()
 
-NC=TSD(experimental_constraints["Neocortex pyramidal cell layer 5-6"])
-NC.pop("InjectedCurrentAPWidthTest",None)
-NC.pop("InjectedCurrentAPAmplitudeTest",None)
-NC.pop("InjectedCurrentAPThresholdTest",None)
-MU = 100
-NGEN = 25
+class testOptimizationEphysCase(unittest.TestCase):
+    def setUp(self):
+        _,_,_,a_cells = make_allen()
+        self.MU = 100
+        self.NGEN = 25
+        self.a_cells = a_cells
+        NC = TSD(experimental_constraints["Neocortex pyramidal cell layer 5-6"])
+        NC.pop("InjectedCurrentAPWidthTest",None)
+        NC.pop("InjectedCurrentAPAmplitudeTest",None)
+        NC.pop("InjectedCurrentAPThresholdTest",None)
+        self.NC = NC
+    def test_allen_good_agreement_opt(self):
+        final_pop, hall_of_fame, logs, hist,best_ind,best_fit_val,opt = instance_opt(
+            a_cells['471819401'],
+            BPO_PARAMS,
+            '471819401',
+            "ADEXP",
+            self.MU,
+            self.NGEN,
+            "IBEA",
+            use_streamlit=False
+            )
+    def test_allen_fi_curve_opt(self):
+        final_pop, hall_of_fame, logs, hist,best_ind,best_fit_val,opt = instance_opt(
+            a_cells['fi_curve'],
+            BPO_PARAMS,
+            'fi_curve',
+            "ADEXP",
+            self.MU,
+            self.NGEN,
+            "IBEA",
+            use_streamlit=False
+            )
+    def test_neuro_electro_adexp_opt(self):
+        self.MU = 35
+        self.NGEN = 100
+        final_pop, hall_of_fame, logs, hist,best_ind,best_fit_val,opt = instance_opt(
+            self.NC,
+            BPO_PARAMS,
+            "Neocortex pyramidal cell layer 5-6",
+            "ADEXP",
+            self.MU,
+            self.NGEN,
+            "IBEA",
+            use_streamlit=False
+            )
 
 
 
+    def test_neuro_electro_izhi_opt_pyr(self):
+        self.MU = 100
+        self.NGEN = 100
 
-final_pop, hall_of_fame, logs, hist,best_ind,best_fit_val,opt = instance_opt(
-    cells['471819401'],
-    BPO_PARAMS,
-    '471819401',
-    "ADEXP",
-    MU,
-    NGEN,
-    "IBEA",
-    use_streamlit=False
-    )
-final_pop, hall_of_fame, logs, hist,best_ind,best_fit_val,opt = instance_opt(
-    cells['3'],
-    BPO_PARAMS,
-    '3',
-    "ADEXP",
-    MU,
-    NGEN,
-    "IBEA",
-    use_streamlit=False
-    )
+        final_pop, hall_of_fame, logs, hist,best_ind,best_fit_val,opt = instance_opt(
+            NC,
+            BPO_PARAMS,
+            "Neocortex pyramidal cell layer 5-6",
+            "IZHI",
+            MU,
+            NGEN,
+            "IBEA",
+            use_streamlit=False
+            )
 
-final_pop, hall_of_fame, logs, hist,best_ind,best_fit_val,opt = instance_opt(
-    NC,
-    BPO_PARAMS,
-    "Neocortex pyramidal cell layer 5-6",
-    "ADEXP",
-    MU,
-    NGEN,
-    "IBEA",
-    use_streamlit=False
-    )
+    def test_neuro_electro_adexp_opt_ca1(self):
+        self.MU = 100
+        self.NGEN = 100
 
-
-
-MU = 100
-NGEN = 150
-final_pop, hall_of_fame, logs, hist,best_ind,best_fit_val,opt = instance_opt(
-    NC,
-    BPO_PARAMS,
-    "Neocortex pyramidal cell layer 5-6",
-    "IZHI",
-    MU,
-    NGEN,
-    "IBEA",
-    use_streamlit=False
-    )
-final_pop, hall_of_fame, logs, hist,best_ind,best_fit_val,opt = instance_opt(
-    NC,
-    BPO_PARAMS,
-    "Hippocampus CA1 pyramidal cell",
-    "ADEXP",
-    MU,
-    NGEN,
-    "IBEA",
-    use_streamlit=False
-    )
+        final_pop, hall_of_fame, logs, hist,best_ind,best_fit_val,opt = instance_opt(
+            NC,
+            BPO_PARAMS,
+            "Hippocampus CA1 pyramidal cell",
+            "ADEXP",
+            self.MU,
+            self.NGEN,
+            "IBEA",
+            use_streamlit=False
+            )

@@ -27,7 +27,7 @@ import copy
 
 
 
-class testOptimization(unittest.TestCase):
+class testOptimizationAllenMultiSpike(unittest.TestCase):
     def setUp(self):
         self = self
         self.ids = [ 324257146,
@@ -78,7 +78,6 @@ class testOptimization(unittest.TestCase):
         model_type = "ADEXP"
         sum_fit = self.optimize_job(model_type,score_type=ZScore)
         assert sum_fit<0.7
-    '''
     def test_opt_relative_diff_izhi(self):
         model_type = "IZHI"
         self.optimize_job(model_type,score_type=RelativeDifferenceScore)
@@ -88,4 +87,3 @@ class testOptimization(unittest.TestCase):
         model_type = "IZHI"
         self.optimize_job(model_type,score_type=ZScore)
         assert sum_fit<0.7
-    '''
