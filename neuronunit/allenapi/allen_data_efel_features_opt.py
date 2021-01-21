@@ -18,8 +18,8 @@ from sciunit.scores.collections import ScoreArray
 from neuronunit.allenapi import make_allen_tests_from_id
 from neuronunit.allenapi.make_allen_tests_from_id import *
 from neuronunit.allenapi.make_allen_tests import AllenTest
+from neuronunit.optimization.optimization_management import check_bin_vm_soma,inject_model_soma
 
-from neuronunit.optimization.optimization_management import inject_and_plot_model,check_bin_vm_soma
 from neuronunit.optimization.model_parameters import MODEL_PARAMS, BPO_PARAMS
 from bluepyopt.allenapi.utils import dask_map_function
 
@@ -64,13 +64,16 @@ def opt_setup(specimen_id,model_type,target_num, template_model = None,cached=No
     else:
         scs = SpikeCountSearch(observation_range)
         target_current = scs.generate_prediction(template_model)
-        #ALLEN_DELAY = 1000.0*qt.s
-        #ALLEN_DURATION = 2000.0*qt.s
-        #uc = {'amplitude':target_current['value'],'duration':ALLEN_DURATION,'delay':ALLEN_DELAY}
     template_model.seeded_current = target_current['value']
 
 
-    cell_evaluator,template_model = opt_setup_two(template_model, suite, nu_tests, target_current, spk_count,score_type=score_type)
+    cell_evaluator,template_model = opt_setup_two(model_type,
+						    suite,
+						    nu_tests,
+						    target_current,
+							spk_count,
+							template_model=template_model,
+                            score_type=score_type)
     return suite, target_current, spk_count, cell_evaluator, template_model
 
 class NUFeatureAllenMultiSpike(object):
@@ -125,17 +128,10 @@ class NUFeatureAllenMultiSpike(object):
             if np.nan==delta or delta==np.inf:
                 delta = 1000.0
             return delta
-
-def opt_setup_two(template_model, suite, nu_tests, target_current, spk_count,score_type=ZScore):
-    objectives = []
-    spike_obs = []
-    for tt in nu_tests:
-        if 'Spikecount_1.5x' == tt.name:
-            spike_obs.append(tt.observation)
-    spike_obs = sorted(spike_obs, key=lambda k: k['mean'],reverse=True)
-    #template_model.backend = cellmodel
-    template_model.params = BPO_PARAMS[template_model.backend]
-    template_model.params_by_names(list(BPO_PARAMS[template_model.backend].keys()))
+def opt_setup_two(model_type, suite, nu_tests, target_current, spk_count,template_model=None,score_type=ZScore):
+    assert template_model.backend == model_type
+    template_model.params = BPO_PARAMS[model_type]
+    template_model.params_by_names(list(BPO_PARAMS[model_type].keys()))
     template_model.seeded_current = target_current['value']
     template_model.spk_count = spk_count
     sweep_protocols = []
@@ -144,6 +140,11 @@ def opt_setup_two(template_model, suite, nu_tests, target_current, spk_count,sco
         sweep_protocols.append(protocol)
     onestep_protocol = ephys.protocols.SequenceProtocol('onestep', protocols=sweep_protocols)
     objectives = []
+    spike_obs = []
+    for tt in nu_tests:
+        if 'Spikecount_1.5x' == tt.name:
+            spike_obs.append(tt.observation)
+    spike_obs = sorted(spike_obs, key=lambda k: k['mean'],reverse=True)
     for cnt,tt in enumerate(nu_tests):
         feature_name = '%s' % (tt.name)
         ft = NUFeatureAllenMultiSpike(tt,template_model,cnt,target_current,spike_obs,score_type=score_type)
@@ -160,6 +161,7 @@ def opt_setup_two(template_model, suite, nu_tests, target_current, spk_count,sco
             fitness_protocols={onestep_protocol.name: onestep_protocol},
             fitness_calculator=score_calc,
             sim='euler')
+    assert cell_evaluator.cell_model is not None
     return cell_evaluator,template_model
 
 def multi_layered(MU,NGEN,mapping_funct,cell_evaluator2):
@@ -172,9 +174,10 @@ def multi_layered(MU,NGEN,mapping_funct,cell_evaluator2):
     return final_pop, hall_of_fame, logs, hist
 
 
-def opt_exec(MU,NGEN,mapping_funct,cell_evaluator2,mutpb=0.05,cxpb=0.6):
+def opt_exec(MU,NGEN,mapping_funct,cell_evaluator,mutpb=0.05,cxpb=0.6):
+
     optimisation = bpop.optimisations.DEAPOptimisation(
-            evaluator=cell_evaluator2,
+            evaluator=cell_evaluator,
             offspring_size = MU,
             map_function = map,
             selector_name='IBEA',
@@ -183,20 +186,22 @@ def opt_exec(MU,NGEN,mapping_funct,cell_evaluator2,mutpb=0.05,cxpb=0.6):
     final_pop, hall_of_fame, logs, hist = optimisation.run(max_ngen=NGEN)
     return final_pop, hall_of_fame, logs, hist
 
-def opt_to_model(hall_of_fame,cell_evaluator2,suite, target_current, spk_count):
+def opt_to_model(hall_of_fame,cell_evaluator,suite, target_current, spk_count):
     best_ind = hall_of_fame[0]
-    best_ind_dict = cell_evaluator2.param_dict(best_ind)
-    model = cell_evaluator2.cell_model
-    cell_evaluator2.param_dict(best_ind)
-
-    model.attrs = {str(k):float(v) for k,v in cell_evaluator2.param_dict(best_ind).items()}
-    model._backend.attrs = model.attrs
+    #best_ind_dict = cell_evaluator.param_dict(best_ind)
+    #cell_evaluator.param_dict(best_ind)
+    model = cell_evaluator.cell_model
+    #model.attrs = {str(k):float(v) for k,v in cell_evaluator.param_dict(best_ind).items()}
+    #model._backend.attrs = model.attrs
+    #model._backend.attrs = opt.attrs
 
     opt = model.model_to_dtc()
-    opt.attrs = {str(k):float(v) for k,v in cell_evaluator2.param_dict(best_ind).items()}
-    model._backend.attrs = opt.attrs
+    opt.attrs = {str(k):float(v) for k,v in cell_evaluator.param_dict(best_ind).items()}
     target = copy.copy(opt)
-    target.vm_soma = suite.traces['vm_soma']
+    if 'vm_soma' in suite.traces.keys():
+        target.vm_soma = suite.traces['vm_soma']
+    else: # backwards compatibility
+        target.vm_soma = suite.traces['vm15']
     opt.seeded_current = target_current['value']
     opt.spk_count = spk_count
 

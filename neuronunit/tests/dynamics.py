@@ -145,7 +145,7 @@ class ISICVTest(VmTest):
         if prediction is None:
             score = scores.InsufficientDataScore(None)
         else:
-            print(observation, prediction)
+            #print(observation, prediction)
             score = self.score_type.compute(observation, prediction, key='cv')
         return score
 
@@ -215,18 +215,28 @@ def get_firing_rate(model, input_current):
     # from the spike times, calculate the firing rate f
     IC = InjectedCurrent(amp = input_current*pq.pA)
     params = IC.get_params()
-    model.inject_square_current(params)
+    if 'injected_square_current'  in params.keys():
+        params = params['injected_square_current']
+    if 'dt'  in params.keys():
+        params.pop('dt',None)
+    if 'padding'  in params.keys():
+        params.pop('padding',None)
+
+    model.inject_square_current(**params)
     vm = model.get_membrane_potential()
     spikes = threshold_detection(vm,threshold=0*pq.mV)
+
     if len(spikes):
         isi_easy = isi(spikes)
         rate = 1.0/np.mean(isi_easy)
+        #print(rate,spikes)
 
         if rate == np.nan or np.isnan(rate):
             rate = 0
         rate = rate*pq.Hz
     else:
         rate = 0*pq.Hz
+    #print(rate,spikes)
     return rate
 
 
@@ -240,7 +250,7 @@ class FITest(VmTest):
     curve was fit to a straight line, and the slope of this line was recorded as a cell-wide feature (Figure 6C).
     '''
     def generate_prediction(self,model,plot=False):
-        I = np.arange(-20,200,10.0)  # a range of current inputs
+        I = np.arange(-5,200,10.0)  # a range of current inputs
 
         fr = []
         # loop over current values

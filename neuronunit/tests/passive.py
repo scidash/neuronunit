@@ -34,7 +34,7 @@ class TestPulseTest(VmTest):
     def setup_protocol(self, model):
         """Implement sciunit.tests.ProtocolToFeatureTest.setup_protocol."""
         self.condition_model(model)
-        model.inject_square_current(self.params['injected_square_current'])
+        model.inject_square_current(**self.params['injected_square_current'])
 
     def get_result(self, model):
         vm = model.get_membrane_potential()

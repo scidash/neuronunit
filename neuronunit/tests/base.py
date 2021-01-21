@@ -90,7 +90,14 @@ class VmTest(ProtocolToFeaturesTest):
         model.set_run_params(t_stop=self.params['tmax'])
 
     def bind_score(self, score, model, observation, prediction):
-        score.related_data['vm'] = model.get_membrane_potential()
+        try:
+            score.related_data['vm'] = model.get_membrane_potential()
+        except:
+            try:
+                score.related_data['vm'] = model._backend.get_membrane_potential()
+                print(score.related_data['vm'])
+            except:
+                score.related_data['vm'] = None
         score.related_data['model_name'] = '%s_%s' % (model.name, self.name)
 
         def plot_vm(self, ax=None, ylim=(None, None)):

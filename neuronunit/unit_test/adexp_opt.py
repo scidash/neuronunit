@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 # coding: utf-8
+SILENT = True
+import warnings
+if SILENT:
+    warnings.filterwarnings("ignore")
 
 import unittest
 import numpy as np

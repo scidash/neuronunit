@@ -4,6 +4,10 @@
 import unittest
 import matplotlib
 matplotlib.use('Agg')
+SILENT = True
+import warnings
+if SILENT:
+    warnings.filterwarnings("ignore")
 
 from neuronunit.allenapi.allen_data_driven import opt_setup, opt_setup_two, opt_exec
 from neuronunit.allenapi.allen_data_driven import opt_to_model,wrap_setups

@@ -64,13 +64,10 @@ def opt_setup(specimen_id,model_type,target_num, template_model = None,cached=No
     else:
         scs = SpikeCountSearch(observation_range)
         target_current = scs.generate_prediction(template_model)
-        #ALLEN_DELAY = 1000.0*qt.s
-        #ALLEN_DURATION = 2000.0*qt.s
-        #uc = {'amplitude':target_current['value'],'duration':ALLEN_DURATION,'delay':ALLEN_DELAY}
-
     template_model.seeded_current = target_current['value']
-    #template_model._backend.inject_square_current(**uc)
+
     return template_model, suite, nu_tests, target_current, spk_count
+
 def wrap_setups(specimen_id,
           model_type,
           target_num_spikes,
@@ -163,7 +160,6 @@ class NUFeatureAllenMultiSpike(object):
             return delta
 def opt_setup_two(model_type, suite, nu_tests, target_current, spk_count,template_model=None,score_type=ZScore):
     assert template_model.backend == model_type
-    objectives = []
     template_model.params = BPO_PARAMS[model_type]
     template_model.params_by_names(list(BPO_PARAMS[model_type].keys()))
     template_model.seeded_current = target_current['value']
@@ -197,68 +193,6 @@ def opt_setup_two(model_type, suite, nu_tests, target_current, spk_count,templat
             sim='euler')
     assert cell_evaluator.cell_model is not None
     return cell_evaluator,template_model
-
-'''
-def opt_setup_two(model_type, suite, nu_tests, target_current, spk_count,template_model = None, score_type=ZScore):
-    objectives = []
-    spike_obs = []
-    for tt in nu_tests:
-        if 'Spikecount_1.5x' == tt.name:
-            spike_obs.append(tt.observation)
-    spike_obs = sorted(spike_obs, key=lambda k: k['mean'],reverse=True)
-
-    for cnt,tt in enumerate(nu_tests):
-        feature_name = '%s' % (tt.name)
-        if 'Spikecount_1.5x' == tt.name:
-            ft = NUFeatureAllenMultiSpike(tt,template_model,cnt,target_current,spike_obs,score_type=score_type)
-            objective = ephys.objectives.SingletonObjective(
-                feature_name,
-                ft)
-            objectives.append(objective)
-
-
-    score_calc = ephys.objectivescalculators.ObjectivesCalculator(objectives)
-
-    simple_cell = template_model
-    sweep_protocols = []
-    for protocol_name, amplitude in [('step1', 0.05)]:
-
-        protocol = ephys.protocols.SweepProtocol(protocol_name, [None], [None])
-        sweep_protocols.append(protocol)
-    onestep_protocol = ephys.protocols.SequenceProtocol('onestep', protocols=sweep_protocols)
-    cell_evaluator = ephys.evaluators.CellEvaluator(
-            cell_model=simple_cell,
-            param_names=copy.copy(BPO_PARAMS)[model_type].keys(),
-            fitness_protocols={onestep_protocol.name: onestep_protocol},
-            fitness_calculator=score_calc,
-            sim='euler')
-    simple_cell.seeded_current = target_current['value']
-    simple_cell.spk_count = spk_count
-    ##
-    # Essential line:
-    ##
-    simple_cell.params = copy.copy(BPO_PARAMS[model_type])
-
-
-    objectives2 = []
-    for cnt,tt in enumerate(nu_tests):
-        feature_name = '%s' % (tt.name)
-        ft = NUFeatureAllenMultiSpike(tt,template_model,cnt,target_current,spike_obs,score_type=score_type)
-        objective = ephys.objectives.SingletonObjective(
-            feature_name,
-            ft)
-        objectives2.append(objective)
-    score_calc2 = ephys.objectivescalculators.ObjectivesCalculator(objectives2)
-
-
-    cell_evaluator2 = ephys.evaluators.CellEvaluator(
-            cell_model=simple_cell,
-            param_names=copy.copy(BPO_PARAMS[model_type]).keys(),
-            fitness_protocols={onestep_protocol.name: onestep_protocol},
-            fitness_calculator=score_calc2,
-            sim='euler')
-    return cell_evaluator2,simple_cell
-'''
 
 def multi_layered(MU,NGEN,mapping_funct,cell_evaluator2):
     optimisation = bpop.optimisations.DEAPOptimisation(
