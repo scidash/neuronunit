@@ -16,7 +16,7 @@ import unittest
 from neuronunit.optimization.optimization_management import instance_opt
 from neuronunit.optimization.optimization_management import TSD
 from neuronunit.optimization.model_parameters import MODEL_PARAMS, BPO_PARAMS
-from neuronunit.allenapi.allen_data_driven import make_allen_hard_coded
+from neuronunit.allenapi.allen_data_driven import make_allen_hard_coded_limited as make_allen_hard_coded
 
 from sciunit.scores import RelativeDifferenceScore, ZScore
 from sciunit import TestSuite
@@ -24,7 +24,10 @@ from sciunit import TestSuite
 import warnings
 warnings.filterwarnings("ignore")
 
-cells = pickle.load(open("processed_multicellular_constraints.p","rb"))
+if os.path.exists("processed_multicellular_constraints.p"):
+    cells = pickle.load(open("processed_multicellular_constraints.p","rb"))
+else:
+    cells = process_all_cells()
 
 ncl5 = TSD(cells["Neocortex pyramidal cell layer 5-6"])
 ncl5.name = str("Neocortex pyramidal cell layer 5-6")

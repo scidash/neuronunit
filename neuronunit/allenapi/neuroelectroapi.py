@@ -7,7 +7,6 @@ from neuronunit.tests import passive, waveform, fi
 from neuronunit.tests.fi import RheobaseTestP
 
 from neuronunit.tests import *
-#from neuronunit.tests.dynamics import FITest
 import quantities as qt
 from sciunit.scores import RatioScore, ZScore, RelativeDifferenceScore
 import neuronunit
@@ -37,7 +36,7 @@ def id_to_frame(df_n,df_e,nxid):
 
 
 def column_to_sem(df,column):
-    
+
     temp = [i for i in df[column].values if not np.isnan(i)]
     sem = stats.sem(temp, axis=None, ddof=0)
     std = np.std(temp)#, axis=None, ddof=0)
@@ -51,8 +50,8 @@ def cell_to_frame(df_n,df_e,nxid):
     for cnt,key in enumerate(pyr.columns):
         empty = pd.DataFrame()
         if not key in "Species":
-            if cnt==0: 
-                df_old = column_to_sem(pyr,key)        
+            if cnt==0:
+                df_old = column_to_sem(pyr,key)
             else:
                 df_new = column_to_sem(pyr,key)
                 df_old = pd.concat([df_new,df_old])
@@ -101,15 +100,15 @@ def substitute_criteria(observations_donar,observations_acceptor):
                 if k in observations_donar.keys():
                     oa[k] = observations_donar[index][k]
     return observations_acceptor
-
+'''
 def substitute_parallel_for_serial(electro_tests):
     for test,obs in electro_tests:
         if str('Rheobase') in obs.keys():
-            
+
             test[0] = RheobaseTestP(obs['Rheobase'])
 
     return electro_tests
-
+'''
 def replace_zero_std(electro_tests):
     for test,obs in electro_tests:
         if str('Rheobase') in obs.keys():
@@ -182,15 +181,12 @@ def executable_tests(cell_id,file_name = None):
                      passive.InputResistanceTest,
                      passive.TimeConstantTest,
                      passive.CapacitanceTest,
-                     passive.RestingPotentialTest,
-                     waveform.InjectedCurrentAPWidthTest,
-                     waveform.InjectedCurrentAPAmplitudeTest,
-                     waveform.InjectedCurrentAPThresholdTest]#,
+                     passive.RestingPotentialTest]#,
     observations = {}
     for index, t in enumerate(test_classes):
-        if 'RheobaseTest' in t.name: 
+        if 'RheobaseTest' in t.name:
             t.score_type = sciunit.scores.ZScore
-        if 'RheobaseTestP' in t.name: 
+        if 'RheobaseTestP' in t.name:
             t.score_type = sciunit.scores.ZScore
 
         obs = t.neuroelectro_summary_observation(cell_id)
@@ -225,11 +221,7 @@ def get_neuron_criteria(cell_id,file_name = None):#,observation = None):
                      passive.InputResistanceTest,
                      passive.TimeConstantTest,
                      passive.CapacitanceTest,
-                     passive.RestingPotentialTest,
-                     waveform.InjectedCurrentAPWidthTest,
-                     waveform.InjectedCurrentAPAmplitudeTest,
-                     waveform.InjectedCurrentAPThresholdTest,
-                     dynamics.FITest]#,
+                     passive.RestingPotentialTest]
     observations = {}
     for index, t in enumerate(test_classes):
         obs = t.neuroelectro_summary_observation(cell_id)
@@ -263,7 +255,7 @@ def get_olf_cell():
 
     olf_mitral = {"id": 129, "name": "Olfactory bulb (main) mitral cell", "neuron_db_id": 267, "nlex_id": "nlx_anat_100201"}
     #olf_mitral['id'] = 'nlx_anat_100201'
-    #olf_mitral['nlex_id'] = 'nlx_anat_100201'              
+    #olf_mitral['nlex_id'] = 'nlx_anat_100201'
     tests,observations = get_neuron_criteria(olf_mitral)
     #import pdb
     #pdb.set_trace()
@@ -272,7 +264,7 @@ def get_olf_cell():
 	    pickle.dump(cell_constraints,f)
 
     return cell_constraints
-    
+
 def get_all_cells():
     ###
     # sagratio
@@ -478,10 +470,7 @@ def remake_tests():
                      passive.InputResistanceTest,
                      passive.TimeConstantTest,
                      passive.CapacitanceTest,
-                     passive.RestingPotentialTest,
-                     waveform.InjectedCurrentAPWidthTest,
-                     waveform.InjectedCurrentAPAmplitudeTest,
-                     waveform.InjectedCurrentAPThresholdTest]#,
+                     passive.RestingPotentialTest]
     electro_obs = do_use_cache()
     test_cell_dict = {}
     for eo in electro_obs:

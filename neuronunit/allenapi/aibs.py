@@ -109,7 +109,7 @@ def get_value_dict(experiment_params, sweep_ids, kind):
         return {'value': value}
 
 
-    
+
 """Auxiliary helper functions for analysis of spiking."""
 
 
@@ -158,87 +158,6 @@ def get_spike_count(model):
     vm = model.get_membrane_potential()
     train = get_spike_train(vm)
     return len(train)
-
-
-def get_nwb(specimen_id = 324257146):
-    file_name = 'cell_types/specimen_'+str(specimen_id)+'/ephys.nwb'
-    data_set = NwbDataSet(file_name)
-
-    try:
-        sweep_numbers = data_set.get_sweep_numbers()
-    except:
-        return
-    try:
-        sweeps = ctc.get_ephys_sweeps(specimen_id)
-        for sn in sweep_numbers:
-            spike_times = data_set.get_spike_times(sn)
-            sweep_data = data_set.get_sweep(sn)
-    except:
-        ctc = CellTypesCache(manifest_file='cell_types/manifest.json')
-        data_set = ctc.get_ephys_data(specimen_id)
-
-    sweeps = ctc.get_ephys_sweeps(specimen_id)
-
-    sweep_numbers = defaultdict(list)
-    for sweep in sweeps:
-        sweep_numbers[sweep['stimulus_name']].append(sweep['sweep_number'])
-
-
-    cell_features = extract_cell_features(data_set, sweep_numbers['Ramp'],sweep_numbers['Short Square'],sweep_numbers['Long Square'])
-
-    sweep_numbers = data_set.get_sweep_numbers()
-    smallest_multi = 1000
-    all_currents = []
-    for sn in sweep_numbers:
-        spike_times = data_set.get_spike_times(sn)
-        sweep_data = data_set.get_sweep(sn)
-
-        if len(spike_times) == 1:
-            inj_rheobase = np.max(sweep_data['stimulus'])
-
-        if len(spike_times) < smallest_multi and len(spike_times) > 1:
-            smallest_multi = len(spike_times)
-            inj_multi_spike = np.max(sweep_data['stimulus'])
-            temp_vm = sweep_data['response']
-        val = np.max(sweep_data['stimulus'])#*qt.pA
-        all_currents.append(val)
-    dmrheobase15 = (1.5*inj_rheobase)#cell_features['long_squares']['rheobase_i'])#*qt.pA
-    (nearest_allen15,idx_nearest_allen) = find_nearest(all_currents,dmrheobase15)
-    dmrheobase30 = (3.0*inj_rheobase)#cell_features['long_squares']['rheobase_i'])#*qt.pA
-    (nearest_allen30,idx_nearest_allen) = find_nearest(all_currents,dmrheobase30)
-    if inj_multi_spike < nearest_allen15 and inj_rheobase!=nearest_allen15:# != inj_rheobase:
-        pass
-        #dm_tests = init_dm_tests(inj_rheobase,nearest_allen15)
-    else:
-        pass
-    dm_tests = init_dm_tests(inj_rheobase,inj_multi_spike)
-
-    # Two things need to be done.
-    # 1. Apply these stimulations to allen models.
-    # 2. Apply the feature extraction to optimized models.
-    injection = sweep_data['stimulus']
-    # sampling rate is in Hz
-    sampling_rate = sweep_data['sampling_rate']
-    vm = AnalogSignal(temp_vm,sampling_rate=sampling_rate*qt.Hz,units=qt.V)
-    #plt.plot(vm.times,vm.magnitude)
-    #plt.savefig('too_small_debug.png')
-
-    sm = models.StaticModel(vm)
-    sm.data_set = data_set
-    sm.inject_square_current = MethodType(inject_square_current,sm)
-    sm.get_membrane_potential = MethodType(get_membrane_potential,sm)
-    sm.get_spike_count = MethodType(get_spike_count,sm)
-    # these lines are functional
-    sm.inject_square_current(inj_rheobase)
-    preds = list(zip(preds,names))
-    spiking_sweeps = cell_features['long_squares']['spiking_sweeps'][0]
-    multi_spike_features = cell_features['long_squares']['hero_sweep']
-    biophysics = cell_features['long_squares']
-    shapes =  cell_features['long_squares']['spiking_sweeps'][0]['spikes'][0]
-
-    everything = (preds,cell_features)
-    return everything
-
 
 
 def appropriate_features():

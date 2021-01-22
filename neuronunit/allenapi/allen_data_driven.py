@@ -244,7 +244,136 @@ def opt_to_model(hall_of_fame,cell_evaluator,suite, target_current, spk_count):
     _,_,_,opt = inject_model_soma(opt,solve_for_current=target_current['value'])
     return opt,target
 
-def make_allen_hard_coded():
+def make_allen_hard_coded_complete():
+    '''
+    Manually specificy 4-5
+    different passive/static electrical properties
+    over 4 Allen specimen id's.
+    FITest
+    623960880
+    623893177
+    471819401
+    482493761
+    '''
+    from neuronunit.optimisation.optimization_management import TSD
+    ##
+    # 623960880
+    ##
+    rt = RheobaseTest(observation={'mean':70*qt.pA,'std':70*qt.pA}) # yes
+    tc = TimeConstantTest(observation={'mean':23.8*qt.ms,'std':23.8*qt.ms})
+    ir = InputResistanceTest(observation={'mean':241*qt.MOhm,'std':241*qt.MOhm})
+    rp = RestingPotentialTest(observation={'mean':-65.1*qt.mV,'std':65.1*qt.mV})
+
+    #capacitance = ((tc.observation['mean']))/((ir.observation['mean']))#*qt.pF
+
+    #ct = CapacitanceTest(observation={'mean':capacitance,'std':capacitance})
+    fislope = FITest(observation={'value':0.18*(pq.Hz/pq.pA),'mean':0.18*(pq.Hz/pq.pA)})
+    fislope.score_type = RatioScore
+
+    allen_tests = [fislope,tc,rp,ir,rt]
+    for t in allen_tests:
+        t.score_type = RatioScore
+    allen_tests[-1].score_type = RatioScore
+    allen_suite_623960880 = TestSuite(allen_tests)
+    allen_suite_623960880.name = "http://celltypes.brain-map.org/mouse/experiment/electrophysiology/623960880"
+
+
+
+
+    ##
+    # ID	623893177
+    ##
+    rt = RheobaseTest(observation={'mean':190*qt.pA,'std':190*qt.pA}) # yes
+    tc = TimeConstantTest(observation={'mean':27.8*qt.ms,'std':27.8*qt.ms})
+    ir = InputResistanceTest(observation={'mean':136*qt.MOhm,'std':136*qt.MOhm})
+    rp = RestingPotentialTest(observation={'mean':-77.0*qt.mV,'std':77.0*qt.mV})
+
+    capacitance = ((tc.observation['mean']))/((ir.observation['mean']))#*qt.pF
+
+    ct = CapacitanceTest(observation={'mean':capacitance,'std':capacitance})
+
+
+    ##
+    fislope = FITest(observation={'value':0.12*(pq.Hz/pq.pA),'mean':0.12*(pq.Hz/pq.pA)})
+    fislope.score_type = RatioScore
+    ##
+
+    allen_tests = [fislope,tc,rp,ir,rt]
+    for t in allen_tests:
+        t.score_type = RatioScore
+    allen_tests[-1].score_type = RatioScore
+    allen_suite_623893177 = TestSuite(allen_tests)
+    allen_suite_623893177.name = "http://celltypes.brain-map.org/mouse/experiment/electrophysiology/623893177"
+    cells = {}
+    cells['623960880'] = TSD(allen_suite_623960880)
+    cells['623893177'] = TSD(allen_suite_623893177)
+
+
+    ##
+    # 482493761
+    ##
+
+
+    rt = RheobaseTest(observation={'mean':70*qt.pA,'std':70*qt.pA}) # yes
+    tc = TimeConstantTest(observation={'mean':24.4*qt.ms,'std':24.4*qt.ms})
+    ir = InputResistanceTest(observation={'mean':132*qt.MOhm,'std':132*qt.MOhm})
+    rp = RestingPotentialTest(observation={'mean':-71.6*qt.mV,'std':71.6*qt.mV})
+
+    fislope = FITest(observation={'value':0.09*(pq.Hz/pq.pA),'mean':0.09*(pq.Hz/pq.pA)})
+    fislope.score_type = RatioScore
+
+
+    allen_tests = [rt,tc,rp,ir,fislope]
+    for t in allen_tests:
+        t.score_type = RatioScore
+    allen_tests[-1].score_type = ZScore
+    allen_suite482493761 = TestSuite(allen_tests)
+    allen_suite482493761.name = "http://celltypes.brain-map.org/mouse/experiment/electrophysiology/482493761"
+    ##
+    # 471819401
+    ##
+    rt = RheobaseTest(observation={'mean':190*qt.pA,'std':190*qt.pA}) # yes
+    tc = TimeConstantTest(observation={'mean':13.8*qt.ms,'std':13.8*qt.ms})
+    ir = InputResistanceTest(observation={'mean':132*qt.MOhm,'std':132*qt.MOhm})
+    rp = RestingPotentialTest(observation={'mean':-77.5*qt.mV,'std':77.5*qt.mV})
+
+    fislope = FITest(observation={'value':0.18*(pq.Hz/pq.pA),'mean':0.18*(pq.Hz/pq.pA)})
+    fislope.score_type = RatioScore
+
+    #F/I Curve Slope	0.18
+    allen_tests = [rt,tc,rp,ir,fislope]
+    for t in allen_tests:
+        t.score_type = RatioScore
+    allen_tests[-1].score_type = ZScore
+    allen_suite471819401 = TestSuite(allen_tests)
+    allen_suite471819401.name = "http://celltypes.brain-map.org/mouse/experiment/electrophysiology/471819401"
+    list_of_dicts = []
+    #cells={}
+    cells['471819401'] = TSD(allen_suite471819401)
+    cells['482493761'] = TSD(allen_suite482493761)
+
+    for k,v in cells.items():
+        observations = {}
+        for k1 in cells['623960880'].keys():
+            vsd = TSD(v)
+            if k1 in vsd.keys():
+                vsd[k1].observation['mean']
+
+                observations[k1] = np.round(vsd[k1].observation['mean'],2)
+                observations['name'] = k
+        list_of_dicts.append(observations)
+    df = pd.DataFrame(list_of_dicts)
+    df
+
+    return (allen_suite_623960880,
+           allen_suite_623893177,
+           allen_suite471819401,
+           allen_suite482493761,
+           cells,
+           df)
+
+
+def make_allen_hard_coded_limited():
   # hard/hand code ephys constraints
   from quantities import Hz,pA
   from neuronunit.optimization.optimization_management import TSD
