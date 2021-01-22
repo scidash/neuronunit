@@ -10,8 +10,7 @@ class ImportTestCase(unittest.TestCase):
         import neuronunit
         # Recursively import all submodules
         import_all_modules(neuronunit,
-                           skip=['neuroconstruct','optimization',
-                                 'backends','unit_test'],
+                           skip=['neuroconstruct'],
                            verbose=True)
 
 

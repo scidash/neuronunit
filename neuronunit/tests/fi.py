@@ -157,10 +157,12 @@ class RheobaseTest(VmTest):
 
                 current['amplitude'] = ampl*pq.pA
                 if "JIT_" in model.backend:
-                    model._backend.inject_square_current(**current)
+                    try:
+                        model.inject_square_current(**current)
+                    except:
+                        model._backend.inject_square_current(**current)
 
                     n_spikes = model.get_spike_count()
-
                 else:
 
                     model._backend.inject_square_current(**current)
@@ -230,7 +232,7 @@ class RheobaseTest(VmTest):
 
         return lookup
 
-    def compute_score(self, observation, prediction):
+    def compute_score(self,observation, prediction):
         """Implement sciunit.Test.score_prediction."""
         from sciunit.scores import BooleanScore
 
@@ -243,7 +245,6 @@ class RheobaseTest(VmTest):
 
             score = super(RheobaseTest, self).\
                             compute_score(observation, prediction)#max
-        self.bind_score(score,None,observation,prediction)
         return score
 
     def bind_score(self, score, model, observation, prediction):
@@ -531,11 +532,11 @@ class RheobaseTestP(RheobaseTest):
     def extract_features(self,model):
         prediction = self.generate_prediction(model)
         return prediction
+    '''
 
     def bind_score(self, score, model, observation, prediction):
         super(RheobaseTestP,self).bind_score(score, model,
                                             observation, prediction)
-
     def compute_score(self, observation, prediction):
         """Implementation of sciunit.Test.score_prediction."""
         score = None
@@ -543,3 +544,4 @@ class RheobaseTestP(RheobaseTest):
         score = super(RheobaseTestP,self).\
                      compute_score(observation, prediction)
         return score
+    '''
