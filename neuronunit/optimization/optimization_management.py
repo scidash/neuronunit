@@ -616,7 +616,8 @@ def three_step_protocol(dtc,solve_for_current=None):
     if dtc.everything is not None:
         dtc = train_length(dtc)
     return dtc
-def rekeyed(dtc):
+
+def rekeyed(dtc: Any=object())-> Any:
     rekey = {}
     if hasattr(dtc,'allen_30'):
         for k,v in dtc.allen_30.items():
@@ -636,11 +637,11 @@ def rekeyed(dtc):
     dtc.everything = rekey
     return dtc
 
-def constrain_ahp(vm_used,rheobase):
+def constrain_ahp(vm_used: Any=object()) -> dict:
     efel.reset()
     efel.setThreshold(0)
     trace3 = {'T': [float(t)*1000.0 for t in vm_used.times],
-          'V': [float(v) for v in vm_used.magnitude]}#,
+          'V': [float(v) for v in vm_used.magnitude]}
     DURATION = 1100*pq.ms
     DELAY = 100*pq.ms
     trace3['stim_end'] = [ float(DELAY)+float(DURATION) ]
@@ -659,7 +660,7 @@ def exclude_non_viable_deflections(responses: dict={}) -> float:
     '''
     if responses['response'] is not None:
         vm = responses['response']
-        results = constrain_ahp(vm,responses['dtc'].rheobase)
+        results = constrain_ahp(vm)
         results = results[0]
         if results['AHP_depth'] is None or np.abs(results['AHP_depth_abs'])>=80:
             return 1000.0
@@ -670,7 +671,6 @@ def exclude_non_viable_deflections(responses: dict={}) -> float:
             snippets = get_spike_waveforms(vm)
             widths = spikes2widths(snippets)
             spike_train = threshold_detection(vm, threshold=0*pq.mV)
-            #
             if not len(spike_train):
                 return 1000.0
 
@@ -680,12 +680,10 @@ def exclude_non_viable_deflections(responses: dict={}) -> float:
             if isinstance(widths, Iterable):
                 for w in widths:
                     if w >= 3.5*pq.ms:
-                        print('gets here a')
                         return 1000.0
             else:
                 width = widths
                 if width >= 2.0*pq.ms:
-                    print('gets here b')
                     return 1000.0
             if float(vm[-1])==np.nan or np.isnan(vm[-1]):
                 return 1000.0
@@ -703,7 +701,7 @@ class NUFeature_standard_suite(object):
         model = dtc.dtc_to_model()
         model.attrs = responses['params']
         self.test = initialise_test(self.test)
-        if self.test.active:
+        if self.test.active and responses['dtc'].rheobase is not None:
             result = exclude_non_viable_deflections(responses)
             if result != 0:
                 return result

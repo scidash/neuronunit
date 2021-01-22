@@ -1,10 +1,6 @@
 import pickle
 import seaborn as sns
 import os
-
-import bluepyopt as bpop
-import bluepyopt.ephys as ephys
-
 import matplotlib.pyplot as plt
 import copy
 import numpy as np
@@ -15,12 +11,15 @@ from sciunit import TestSuite
 from sciunit.scores import ZScore
 from sciunit.scores.collections import ScoreArray
 
+import bluepyopt as bpop
+import bluepyopt.ephys as ephys
+
 from neuronunit.allenapi import make_allen_tests_from_id
 from neuronunit.allenapi.make_allen_tests_from_id import *
 from neuronunit.allenapi.make_allen_tests import AllenTest
-from neuronunit.optimization.optimization_management import check_bin_vm_soma,inject_model_soma
+from neuronunit.optimization.optimization_management import inject_model_soma
 
-from neuronunit.optimization.model_parameters import MODEL_PARAMS, BPO_PARAMS
+from neuronunit.optimization.model_parameters import BPO_PARAMS
 from bluepyopt.allenapi.utils import dask_map_function
 
 
