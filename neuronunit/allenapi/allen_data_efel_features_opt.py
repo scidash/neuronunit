@@ -5,22 +5,22 @@ import matplotlib.pyplot as plt
 import copy
 import numpy as np
 from collections.abc import Iterable
+
 from bluepyopt.parameters import Parameter
+import bluepyopt as bpop
+import bluepyopt.ephys as ephys
+
 from sciunit.scores import RelativeDifferenceScore
 from sciunit import TestSuite
 from sciunit.scores import ZScore
 from sciunit.scores.collections import ScoreArray
 
-import bluepyopt as bpop
-import bluepyopt.ephys as ephys
-
 from neuronunit.allenapi import make_allen_tests_from_id
 from neuronunit.allenapi.make_allen_tests_from_id import *
 from neuronunit.allenapi.make_allen_tests import AllenTest
-from neuronunit.optimization.optimization_management import inject_model_soma
 
+from neuronunit.optimization.optimization_management import inject_model_soma
 from neuronunit.optimization.model_parameters import BPO_PARAMS
-from bluepyopt.allenapi.utils import dask_map_function
 
 
 def opt_setup(specimen_id,model_type,target_num, template_model = None,cached=None,fixed_current=False,score_type=ZScore):
