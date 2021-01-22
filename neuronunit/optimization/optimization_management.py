@@ -14,8 +14,7 @@ import matplotlib
 import cython
 import matplotlib.pyplot as plt
 import numpy as np
-#import dask.bag as db
-import dask.delayed as delay
+#import dask.delayed as delay
 import pandas as pd
 from sklearn.model_selection import ParameterGrid
 from collections import OrderedDict
@@ -167,52 +166,6 @@ def test_all_objective_test(free_parameters,
     return tests, OM, target
 
 
-'''
-def make_ga_DO(explore_edges, max_ngen, test, \
-        free_parameters = None, hc = None,
-        MU = None, seed_pop = None, \
-           backend = str('IZHI'),protocol={'allen':False,'elephant':True}):
-    """
-    -- Synopsis:
-    construct an DEAP Optimization Object, suitable for this test class and caching etc.
-    """
-    ss = {}
-    if type(free_parameters) is type(dict()):
-        if 'dt' in free_parameters:
-            free_parameters.pop('dt')
-        if 'Iext' in free_parameters:
-            free_parameters.pop('Iext')
-    else:
-        free_parameters = [f for f in free_parameters if str(f) != 'Iext' and str(f) != str('dt')]
-    for k in free_parameters:
-        if not k in explore_edges.keys() and k != str('Iext') and k != str('dt'):
-
-            ss[k] = explore_edges[k]
-        else:
-            ss[k] = explore_edges[k]
-    if type(MU) == type(None):
-        MU = 2**len(list(free_parameters))
-    else:
-        MU = MU
-    max_ngen = int(np.floor(max_ngen))
-    if not isinstance(test, Iterable):
-        test = [test]
-    from neuronunit.optimization.optimizations import SciUnitoptimization
-    from bluepyopt.optimizations import DEAPoptimization
-    DO = SciUnitoptimization(MU = MU, tests = test,\
-         boundary_dict = ss, backend = backend, hc = hc, \
-                             protocol=protocol)
-
-    if seed_pop is not None:
-        # This is a re-run condition.
-        DO.setnparams(nparams = len(free_parameters), boundary_dict = ss)
-
-        DO.seed_pop = seed_pop
-        DO.setup_deap()
-        DO.error_length = len(test)
-
-    return DO
-'''
 
 class TSD(dict):
     """
@@ -266,6 +219,7 @@ class TSD(dict):
         del self.DO
         return {k:v for k,v in self.items() }
     '''
+    PROBABLY REWRITE THIS
     def optimize(self,**kwargs):
         import shelve
         defaults = {'param_edges':None,
@@ -408,7 +362,7 @@ def write_opt_to_nml(path,param_dict):
     fopen.close()
     return
 
-
+'''
 def ugly_score_wrangler(model,objectives2,to_latex_string=False):
     strict_scores = {}
     pd.set_option('display.max_rows', None)
@@ -433,12 +387,10 @@ def ugly_score_wrangler(model,objectives2,to_latex_string=False):
             try:
                 temp['value'] = np.abs(float(test.prediction))*pq.dimensionless#*pq.dimensionless
             except:
-                #print(test.prediction.keys())
                 try:
                     temp['value'] = np.abs(float(test.prediction['mean']))*pq.dimensionless#*pq.dimensionless
                 except:
                     temp['value'] = np.abs(float(test.prediction['value']))*pq.dimensionless#*pq.dimensionless
-                #temp['std'] = temp['mean']#*pq.dimensionless
             temp['n'] = 1
             test.prediction = temp
 
@@ -447,15 +399,13 @@ def ugly_score_wrangler(model,objectives2,to_latex_string=False):
             test.observation[k] = np.abs(test.observation[k]) #* test.observation[k]#.units
 
         for k,v in test.prediction.items():
-            test.prediction[k] = np.abs(test.prediction[k])# * test.prediction[k]#.units
-
+            test.prediction[k] = np.abs(test.prediction[k])
         re_score = test.compute_score(test.observation,test.prediction)
         strict_scores[test.name] = re_score
-        #print(t.name)
     df = pd.DataFrame([strict_scores])
-
     df = df.T
     return df
+'''
 def get_rh(dtc,rtest_class,bind_vm=False)->Any:
     '''
     --args:
@@ -475,7 +425,6 @@ def get_rh(dtc,rtest_class,bind_vm=False)->Any:
     rtest.params['injected_square_current'] = {}
     rtest.params['injected_square_current']['delay'] = DELAY
     rtest.params['injected_square_current']['duration'] = DURATION
-
     dtc.rheobase = rtest.generate_prediction(model)['value']
     temp_vm = model.get_membrane_potential()
     if bind_vm:
@@ -486,13 +435,6 @@ def get_rh(dtc,rtest_class,bind_vm=False)->Any:
         dtc.rheobase = None
     return dtc
 
-'''
-def is_parallel_rheobase_compatible(backend):
-    incompatible_backends = ['IZHI', 'HH', 'ADEXP']
-
-    incompatible = any([x in backend for x in incompatible_backends])
-    return not incompatible
-'''
 def get_new_rtest(dtc):
     place_holder = {'mean': 10 * pq.pA}
     f = RheobaseTest
@@ -516,10 +458,11 @@ def get_rtest(dtc):
             rtest = get_new_rtest(dtc)
     return rtest
 
-def dtc_to_rheo(dtc,bind_vm=False):
-    # If  test taking data, and objects are present (observations etc).
-    # Take the rheobase test and store it in the data transport container.
-
+def dtc_to_rheo(Any:dtc=object(),bind_vm=False)->Any:
+    '''
+    --Synopsis: If  test taking data, and objects are present (observations etc).
+    Take the rheobase test and store it in the data transport container.
+    '''
 
     if hasattr(dtc,'tests'):
         if type(dtc.tests) is type({}) and str('RheobaseTest') in dtc.tests.keys():
@@ -552,11 +495,11 @@ def dtc_to_rheo(dtc,bind_vm=False):
         dtc = get_rh(dtc,rtest,bind_vm=bind_vm)
         if bind_vm:
             dtc.vmrh = temp_vm
-
     return dtc
+
 def basic_expVar(trace1, trace2):
-    # https://github.com/AllenInstitute/GLIF_Teeter_et_al_2018/blob/master/query_biophys/query_biophys_expVar.py
     '''
+    https://github.com/AllenInstitute/GLIF_Teeter_et_al_2018/blob/master/query_biophys/query_biophys_expVar.py
     --Synopsis: This is the fundamental calculation that is used in all different types of explained variation.
     At a basic level, the explained variance is calculated between two traces.  These traces can be PSTH's
     or single spike trains that have been convolved with a kernel (in this case always a Gaussian)
@@ -696,7 +639,7 @@ class NUFeature_standard_suite(object):
     def __init__(self,test,model):
         self.test = test
         self.model = model
-    def calculate_score(self,responses):
+    def calculate_score(self,responses:dict={}) -> float:
         dtc = responses['dtc']
         model = dtc.dtc_to_model()
         model.attrs = responses['params']
@@ -710,13 +653,7 @@ class NUFeature_standard_suite(object):
 
         if responses['rheobase'] is not None:
             if self.test.prediction is not None:
-                #try:
                 score_gene = self.test.judge(model,prediction=self.test.prediction,deep_error=True)
-                #except:
-                #    self.test.score_type = ZScore
-                #    score_gene = self.test.judge(model,prediction=self.test.prediction,deep_error=True)
-                    #print(self.test.observation,self.test.prediction,'test prediction')
-
             else:
                 return 1000.0
         else:
@@ -1009,28 +946,6 @@ def full_statistical_description(constraints,\
     min_fitness = logs.select('min')
     max_fitness = logs.select('max')
     mean_fitness = logs.select('avg')
-
-    plt.plot(gen_numbers, min_fitness, label='min fitness')
-    plt.plot(gen_numbers, max_fitness, label='max fitness')
-    plt.plot(gen_numbers, mean_fitness, label='mean fitness')
-    plt.semilogy()
-
-    plt.xlabel('generation #')
-
-    plt.ylabel('score (# std)')
-    plt.legend()
-    plt.xlim(min(gen_numbers) - 1, max(gen_numbers) + 1)
-    #plt.ylim(0.9*min(min_fitness), 1.1 * max(np.log(max_fitness)))
-    plt.savefig(str('log_evolution_stats_')+str(exp_cell)+str('_')+str(model_value)+'_.png')
-    plt.clf()
-    plt.plot(gen_numbers, min_fitness, label='min fitness')
-    plt.plot(gen_numbers, max_fitness, label='max fitness')
-    plt.plot(gen_numbers, mean_fitness, label='mean fitness')
-    plt.xlabel('generation #')
-    plt.ylabel('score (# std)')
-    plt.legend()
-    plt.xlim(min(gen_numbers) - 1, max(gen_numbers) + 1)
-    plt.savefig(str('no_log_evolution_stats_')+str(exp_cell)+str('_')+str(model_value)+'_.png')
     final_pop, hall_of_fame, logs, hist, opt, obs_preds, chi_sqr_opt, p_value = temp
     if not dry_run:
         if tf is None:
@@ -1061,12 +976,21 @@ def full_statistical_description(constraints,\
 
 
 
-def inject_model_soma(dtc,figname=None,solve_for_current=None,fixed=False):
+def inject_model_soma(dtc:Any,
+    figname=None,
+    solve_for_current=None,
+    Boolean:fixed=False) -> Tuple[Any,Any,dict,Any,Any]:
     from neuronunit.tests.target_spike_current import SpikeCountSearch
     '''
-    Synopsis:
-     get rheobase injection value
-     get an object of class ReducedModel with known attributes and known rheobase current injection value.
+    -- args: dtc
+    -- outputs: voltage at 3.0 rheobase,
+                voltage at 1.5 rheobase,
+                current Injection Parameters,
+                dtc
+    -- Synopsis:
+     produce an rheobase injection value
+     produce an object of class Neuronunit runnable Model
+     with known attributes and known rheobase current injection value.
     '''
     if type(solve_for_current) is not type(None):
         observation_range={}
@@ -1099,11 +1023,11 @@ def inject_model_soma(dtc,figname=None,solve_for_current=None,fixed=False):
         rt.score_type = RelativeDifferenceScore
         dtc.rheobase = rt.generate_prediction(dtc.dtc_to_model())
         if dtc.rheobase is None:
-            return None,None,None,None,dtc
+            return [None,None,None,None,dtc]
     model = dtc.dtc_to_model()
     if type(dtc.rheobase) is type(dict()):
         if dtc.rheobase['value'] is None:
-            return None,None,None,None,dtc
+            return [None,None,None,None,dtc]
         else:
             rheobase = dtc.rheobase['value']
     else:
@@ -1147,7 +1071,7 @@ def inject_model_soma(dtc,figname=None,solve_for_current=None,fixed=False):
         vr = model.get_membrane_potential()
         dtc.vmr = np.mean(vr)
         del model
-        return vm30,vm15,params,None,dtc
+        return [vm30,vm15,params,None,dtc]
 
     else:
 
@@ -1172,12 +1096,16 @@ def inject_model_soma(dtc,figname=None,solve_for_current=None,fixed=False):
         vr = model.get_membrane_potential()
         dtc.vmr = np.mean(vr)
         del model
-        return vm30,vm15,params,None,dtc
+        return [vm30,vm15,params,None,dtc]
 
 
-def efel_evaluation(dtc,thirty=False):
+def efel_evaluation(dtc,thirty=False) -> Any:
+    '''
+    -- Synopsis: evaluate efel feature extraction criteria against on
+    reduced cell models and probably efel data.
+    '''
     if hasattr(dtc,'solve_for_current'):
-        current = dtc.solve_for_current#['value']
+        current = dtc.solve_for_current
     else:
         if type(dtc.rheobase) is type(dict()):
             rheobase = dtc.rheobase['value']
@@ -1255,9 +1183,10 @@ def efel_evaluation(dtc,thirty=False):
 
 
 def inject_and_plot_model(pre_model,figname=None,plotly=True, verbose=False):
-    # get rheobase injection value
-    # get an object of class ReducedModel with known attributes and known rheobase current injection value.
-
+    '''
+     get rheobase injection value
+     get an object of class ReducedModel with known attributes and known rheobase current injection value.
+    '''
     pre_model = dtc_to_rheo(pre_model)
     model = pre_model.dtc_to_model()
     uc = {'amplitude':pre_model.rheobase,'duration':DURATION,'delay':DELAY}
@@ -1296,8 +1225,6 @@ def inject_and_plot_model(pre_model,figname=None,plotly=True, verbose=False):
 
 
 def switch_logic(xtests):
-    # move this logic into sciunit tests
-    # Hopefuly depreciated by future NU debugging.
     try:
         aTSD = TSD()
     except:
