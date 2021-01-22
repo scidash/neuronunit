@@ -30,3 +30,6 @@ from .test_druckmann2013 import Model1TestCase, Model2TestCase, \
 from .test_morphology import MorphologyTestCase
 from .test_optimization import DataTCTestCase
 from .capabilities_tests import *
+from .adexp_opt import *
+from .opt_ephys_properties import testOptimizationEphysCase
+from .scores_unit_test import testOptimizationAllenMultiSpike

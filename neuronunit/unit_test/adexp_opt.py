@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 # coding: utf-8
+SILENT = True
+import warnings
+if SILENT:
+    warnings.filterwarnings("ignore")
 
 import unittest
 import numpy as np
@@ -9,20 +13,19 @@ import quantities as qt
 
 import matplotlib
 matplotlib.use('Agg')
-from neuronunit.allenapi.allen_data_driven import opt_setup, opt_exec#, opt_setup2
-from neuronunit.allenapi.allen_data_efel_features_opt import opt_setup, opt_exec, opt_to_model
+#from neuronunit.allenapi.allen_data_driven import opt_setup, opt_exec
+from neuronunit.allenapi.allen_data_efel_features_opt import opt_to_model,opt_setup, opt_exec
 from neuronunit.allenapi.allen_data_efel_features_opt import opt_to_model
 from neuronunit.allenapi.utils import dask_map_function
 
-from neuronunit.optimization.optimization_management import check_bin_vm15
 from neuronunit.optimization.model_parameters import MODEL_PARAMS, BPO_PARAMS, to_bpo_param
-#from neuronunit.optimization.optimization_management import dtc_to_rheo,inject_and_plot_model
+from neuronunit.optimization.optimization_management import inject_model_soma
 from neuronunit.optimization.data_transport_container import DataTC
 from jithub.models import model_classes
 
 class testOptimization(unittest.TestCase):
     def setUp(self):
-        self = self
+        #self = self
         self.ids = [ 324257146,
                 325479788,
                 476053392,
@@ -55,12 +58,12 @@ class testOptimization(unittest.TestCase):
         #assert dtc.rheobase is not None
         #self.assertIsNotNone(dtc.rheobase)
         #vm,plt,dtc = inject_and_plot_model(dtc,plotly=False)
-        fixed_current = 122 *qt.pA
+        #fixed_current = 122 *qt.pA
         try:
             suite, target_current, spk_count, cell_evaluator, simple_cell = opt_setup(specimen_id,
                                                                           cellmodel,
                                                                           target_num_spikes,
-                                                                          provided_model=model,
+                                                                          template_model=model,
                                                                           fixed_current=False,
                                                                           cached=True)
 
@@ -68,12 +71,12 @@ class testOptimization(unittest.TestCase):
             suite, target_current, spk_count, cell_evaluator, simple_cell = opt_setup(specimen_id,
                                                                           cellmodel,
                                                                           target_num_spikes,
-                                                                          provided_model=model,
+                                                                          template_model=model,
                                                                           fixed_current=False,
                                                                           cached=None)
 
         NGEN = 55
-        MU = 12
+        MU = 15
 
         mapping_funct = dask_map_function
         final_pop, hall_of_fame, logs, hist = opt_exec(MU,NGEN,mapping_funct,cell_evaluator,cxpb=0.4,mutpb=0.01)
@@ -82,7 +85,7 @@ class testOptimization(unittest.TestCase):
         fitnesses = cell_evaluator.evaluate_with_lists(best_ind)
         assert np.sum(fitnesses)<0.7
         self.assertGreater(0.7,np.sum(fitnesses))
-
+        '''
 
         gen_numbers = logs.select('gen')
         min_fitness = logs.select('min')
@@ -104,5 +107,6 @@ class testOptimization(unittest.TestCase):
         plt.plot(target.vm15.times,target.vm15)
         target.vm15 = suite.traces['vm15']
         check_bin_vm15(target,opt)
+        '''
 if __name__ == '__main__':
     unittest.main()

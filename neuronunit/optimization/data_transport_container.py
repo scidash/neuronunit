@@ -15,9 +15,16 @@ class DataTC(object):
 
         if self.backend is not None:
             if self.attrs is None:
-                from neuronunit.optimization.model_parameters import MODEL_PARAMS
-                self.attrs = {k:np.mean(v) for k,v in MODEL_PARAMS[self.backend].items()}
-                #self = DataTC(backend=self.backend,attrs=self.attrs)
+                from neuronunit.optimization.model_parameters import MODEL_PARAMS, BPO_PARAMS
+                if str("MAT") in self.backend:
+                    self.backend_ref = str("MAT")
+                if str("IZHI") in self.backend:
+                    self.backend_ref = str("IZHI")
+                if str("ADEXP") in self.backend:
+                    self.backend_ref = str("ADEXP")
+
+                self.attrs = {k:np.mean(v) for k,v in MODEL_PARAMS[self.backend_ref].items()}
+                self = DataTC(backend=self.backend,attrs=self.attrs)
                 model = self.dtc_to_model()
                 self.attrs = model._backend.default_attrs
                 del model
@@ -39,8 +46,6 @@ class DataTC(object):
         self.previous = 0
         self.run_number = 0
         self.attrs = attrs
-
-
         self.boolean = False
         self.initiated = False
         self.backend = backend
@@ -50,40 +55,11 @@ class DataTC(object):
                 self.jithub = True
             else:
                 self.jithub = False
-
-
         if attrs is None:
             self.attrs = None
             self.model_default()
         else:
             self.attrs = attrs
-        #self.steps = None
-        #self.name = None
-        #self.results = None
-        #self.fitness = None
-        #self.score = None
-        #self.scores = None
-
-        #self.delta = []
-        #self.evaluated = False
-        #self.results = {}
-        #self.searched = []
-        #self.searchedd = {}
-        #self.cached_attrs = {}
-        #self.predictions = {}
-        #self.observations = {}
-
-        #self.summed = None
-        #self.constants = None
-        #self.scores_ratio = None
-        #self.from_imputation = False
-        #self.preds = {}
-        #self.td = {}
-        #self.errors = {}
-        #self.SM = None
-        #self.obs_preds = None
-        #self.threshold = False
-
 
     def to_bpo_param(self,attrs):
         from bluepyopt.parameters import Parameter
@@ -95,7 +71,7 @@ class DataTC(object):
         return lop
 
     def self_evaluate(self,tests=None):
-        from neuronunit.optimisation import optimization_management as om_
+        from neuronunit.optimization import optimization_management as om_
         if tests is not None:
             self.tests = tests
 
@@ -107,8 +83,8 @@ class DataTC(object):
         for t in self.tests:
             if hasattr(t,'allen'):
                 continue
-            if 'RheobaseTest' in t.name: t.score_type = sciunit.scores.ZScore
-            #if 'RheobaseTestP' in t.name: t.score_type = sciunit.scores.ZScore
+            if 'RheobaseTest' in t.name:
+                t.score_type = sciunit.scores.ZScore
             try:
                 score_gene = t.judge(model)
             except:
@@ -206,9 +182,9 @@ class DataTC(object):
         return self.obs_preds
 
     def dtc_to_opt_man(self):
-        from neuronunit.optimisation.optimization_management import OptMan
+        from neuronunit.optimization.optimization_management import OptMan
         from collections import OrderedDict
-        from neuronunit.optimisation.model_parameters import MODEL_PARAMS
+        from neuronunit.optimization.model_parameters import MODEL_PARAMS
         OM = OptMan(self.tests,self.backend)
         OM.boundary_dict = MODEL_PARAMS[self.backend]
         OM.backend = self.backend
@@ -221,21 +197,7 @@ class DataTC(object):
         OM = self.dtc_to_opt_man()
         self = OM.get_agreement(self)
         return self
-    '''
-    def ordered_score(self):
-        """
-        hopefuly depricated
-        """
-        if not hasattr(self,'os'):
-            self.os = OrderedDict({k.name:self.SA[k] for k in self.SA.to_dict()})
-        else:
-            self.os = {k:self.SA[k] for k in self.os.keys()}
-        for k,v in self.os.items():
-            if v is scores.InsufficientDataScore(None):
-                v.score = -np.inf
 
-        return self.os
-    '''
     def add_constant(self):
         if self.constants is not None:
             self.attrs.update(self.constants)
@@ -348,7 +310,7 @@ class DataTC(object):
 
         #from neuronunit.optimisation.optimization_management import WSListIndividual
         #print('warning translation dictionary should be used, to garuntee correct attribute order from random access dictionaries')
-        if self.backend is "IZHI":
+        if "IZHI" in self.backend:
             self.attrs.pop('dt',None)
             self.attrs.pop('Iext',None)
         if subset_params:

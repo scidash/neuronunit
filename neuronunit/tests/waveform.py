@@ -7,7 +7,7 @@ class InjectedCurrent:
     """Metaclass to mixin with InjectedCurrent tests."""
 
     required_capabilities = (ncap.ReceivesSquareCurrent,)
-    
+
     default_params = dict(VmTest.default_params)
     default_params.update({'amplitude': 100*pq.pA})
 
@@ -40,7 +40,7 @@ class APWidthTest(VmTest):
         # ProducesActionPotentials capability.
         # if get_spike_count is zero, then widths will be None
         # len of None returns an exception that is not handled
-        model.inject_square_current(self.params['injected_square_current'])
+        model.inject_square_current(**self.params['injected_square_current'])
 
         widths = model.get_AP_widths()
         # Put prediction in a form that compute_score() can use.
@@ -78,7 +78,8 @@ class InjectedCurrentAPWidthTest(InjectedCurrent, APWidthTest):
                    "is injected into cell.")
 
     def generate_prediction(self, model):
-        model.inject_square_current(self.params['injected_square_current'])
+        print(self.params['injected_square_current'])
+        model.inject_square_current(**self.params['injected_square_current'])
         prediction = super(InjectedCurrentAPWidthTest, self).\
             generate_prediction(model)
 
@@ -105,7 +106,7 @@ class APAmplitudeTest(VmTest):
         """Implement sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
-        model.inject_square_current(self.params['injected_square_current'])
+        model.inject_square_current(**self.params['injected_square_current'])
 
         heights = model.get_AP_amplitudes() - model.get_AP_thresholds()
         # Put prediction in a form that compute_score() can use.
@@ -137,7 +138,7 @@ class InjectedCurrentAPAmplitudeTest(InjectedCurrent, APAmplitudeTest):
                    "is injected into cell.")
 
     def generate_prediction(self, model):
-        model.inject_square_current(self.params['injected_square_current'])
+        model.inject_square_current(**self.params['injected_square_current'])
         prediction = super(InjectedCurrentAPAmplitudeTest, self).\
             generate_prediction(model)
         return prediction
@@ -163,7 +164,7 @@ class APThresholdTest(VmTest):
         """Implement sciunit.Test.generate_prediction."""
         # Method implementation guaranteed by
         # ProducesActionPotentials capability.
-        model.inject_square_current(self.params['injected_square_current'])
+        model.inject_square_current(**self.params['injected_square_current'])
 
         threshes = model.get_AP_thresholds()
         # Put prediction in a form that compute_score() can use.

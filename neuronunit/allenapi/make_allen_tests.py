@@ -3,7 +3,7 @@ import pickle
 import numpy as np
 from allensdk.core.cell_types_cache import CellTypesCache
 from neuronunit.optimization.data_transport_container import DataTC
-from neuronunit.optimization.optimization_management import allen_wave_predictions, three_step_protocol
+#from neuronunit.optimization.optimization_management import allen_wave_predictions, three_step_protocol
 from sciunit.scores import RelativeDifferenceScore
 class AllenTest(VmTest):
     def __init__(self,

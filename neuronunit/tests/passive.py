@@ -6,6 +6,8 @@ from scipy.optimize import curve_fit
 DURATION = 500.0*pq.ms
 DELAY = 200.0*pq.ms
 
+import warnings
+warnings.filterwarnings("ignore")
 
 class TestPulseTest(VmTest):
     """A base class for tests that use a square test pulse."""
@@ -34,7 +36,7 @@ class TestPulseTest(VmTest):
     def setup_protocol(self, model):
         """Implement sciunit.tests.ProtocolToFeatureTest.setup_protocol."""
         self.condition_model(model)
-        model.inject_square_current(self.params['injected_square_current'])
+        model.inject_square_current(**self.params['injected_square_current'])
 
     def get_result(self, model):
         vm = model.get_membrane_potential()
