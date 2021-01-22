@@ -29,5 +29,3 @@ rm -rf /opt/conda/lib/python3.8/site-packages/sciunit
 git clone -b dev https://github.com/russelljjarvis/sciunit.git
 cd sciunit; pip install -e .; cd ..;
 pip install allensdk==0.16.3
-
-pip install pycuda
